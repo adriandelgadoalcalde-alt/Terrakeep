@@ -23,7 +23,11 @@ public readonly record struct PlrItemSlot(int Id, int Count, byte Prefix, bool F
         byte prefix = reader.ReadByte();
         bool favorited = includeFavorite && reader.ReadByte() != 0;
 
-        if (id == 0) return Empty;
+        // OJO: NO colapsar a Empty cuando id==0. Un .plr real puede tener un slot "fantasma"
+        // (id ya en 0 pero count/prefix con basura residual de una carga anterior - fenomeno
+        // real y documentado en el historial de Terrasavr-Calamity-Beta, ver PROYECTO-
+        // TERRASAVR.md "Slots fantasma") - forzar Empty aqui perderia esos bytes en el
+        // round-trip aunque IsEmpty siga dando true igualmente (solo depende de Id).
         return new PlrItemSlot(id, count, prefix, favorited);
     }
 
