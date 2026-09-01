@@ -551,11 +551,52 @@ testear), `dotnet build` limpio, la app arranca sin excepción. **No verificado 
 reales** (mover un slider de verdad, guardar y comprobar que el color persiste) - misma
 limitación de siempre.
 
+### Instalador (Fase 6 del plan) - probado de extremo a extremo en este PC
+
+`installer/install.ps1` + `installer/uninstall.ps1`, solo PowerShell + el objeto COM
+`WScript.Shell` (integrado en Windows) - sin MSI/WiX ni ninguna herramienta externa.
+
+- **Perfil de publicación** (`TerrasavrNative.App/Properties/PublishProfiles/win-x64.pubxml`):
+  se probó primero **autocontenido** (`SelfContained=true`) y salió un `.exe` de **140MB** -
+  WPF/PresentationFramework no se puede recortar de forma segura (`PublishTrimmed`), así que
+  arrastra el runtime completo entero, casi tan pesado como la propia versión Electron que se
+  quería dejar atrás. Cambiado a **dependiente del framework** (`SelfContained=false`,
+  `PublishSingleFile=true`) - **~27MB** publicados (sobre todo los iconos reales; el propio
+  `.exe` de un solo archivo pesa <1MB), único requisito real: tener instalado el .NET Desktop
+  Runtime 10 - razonable para uso propio en este PC (es donde se ha compilado/ejecutado toda
+  la sesión).
+- **Bug real encontrado probando de verdad** (no hipotético): la primera vez que
+  `install.ps1` corrió, la app instalada arrancaba con
+  `FileNotFoundException: ...\Assets\calamity\catalog.json` - **`dotnet publish` reutilizando
+  una carpeta `publish/` con caché incremental de una publicación ANTERIOR con ajustes
+  distintos** (aquí: autocontenido probado primero, luego dependiente del framework en el
+  MISMO directorio) puede terminar **sin copiar ningún `Content` (todo `Assets/*.json`/
+  `*.png`) y sin ningún error ni aviso** - el build en sí sale "correcto". Confirmado
+  republicando a una carpeta nueva (sí funcionó) y luego reproducido borrando `publish/`
+  primero (también funcionó). Arreglado en el propio `install.ps1`: borra `publish/` SIEMPRE
+  antes de publicar, más una comprobación defensiva después (`Test-Path` de `catalog.json`,
+  aborta con error claro si falta) para que este mismo fallo silencioso no pueda colar una
+  instalación rota una segunda vez por otra causa.
+- **`install.ps1`**: publica, copia a `%LocalAppData%\Programs\Terrakeep`, crea acceso directo
+  en el menú Inicio (y en el Escritorio con `-Desktop`), y copia `uninstall.ps1` dentro de la
+  propia instalación para poder desinstalar sin necesitar el repo a mano.
+- **`uninstall.ps1`**: borra los accesos directos y programa el borrado de la carpeta de
+  instalación en un proceso aparte con un pequeño retardo (no puede borrarse a sí mismo
+  mientras sigue corriendo desde dentro de esa carpeta) - mismo patrón que un desinstalador
+  real de Windows.
+
+**Verificado de extremo a extremo en este PC, no solo "debería funcionar"**: `install.ps1`
+ejecutado de verdad (instaló en `%LocalAppData%\Programs\Terrakeep`, acceso directo real
+creado), el `.exe` instalado lanzado y confirmado con `tasklist` que sigue vivo, **el acceso
+directo del menú Inicio lanzado con `Start-Process` sobre el `.lnk`** (mismo camino que un
+doble clic real) y confirmado con `Get-Process`, `uninstall.ps1` ejecutado y confirmado que
+borra carpeta + accesos directos, y una segunda instalación limpia después para dejar la app
+disponible. 97 tests xUnit siguen en verde (sin tocar Core/App).
+
 ## Pendiente (visible desde fuera)
 
 - **Preview de sprite compuesto** en Apariencia (pelo+cuerpo+ropa reales, no solo color) -
   necesita el atlas de sprites del jugador, sin extraer.
-- Instalador (Fase 6 del plan) - ni empezado.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 
