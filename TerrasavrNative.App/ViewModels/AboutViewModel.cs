@@ -3,9 +3,8 @@ using System.Reflection;
 namespace TerrasavrNative.App.ViewModels;
 
 // Panel "Sobre esta version" - identidad propia de esta app ("Terrakeep"), separada de
-// Terrasavr/YellowAfterlife: esta es una reescritura
-// nativa desde cero, con su propio motor de formato (ver TerrasavrNative.Core), no una copia ni
-// un fork del editor original.
+// Terrasavr/YellowAfterlife: esta es una reescritura nativa desde cero, con su propio motor
+// de formato (ver TerrasavrNative.Core), no una copia ni un fork del editor original.
 public sealed class AboutViewModel
 {
     public string AppName => "Terrakeep";

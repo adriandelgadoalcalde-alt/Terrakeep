@@ -18,11 +18,17 @@ public partial class MainViewModel : ObservableObject
     private readonly CharacterFileService _service = new();
     private LoadedCharacter? _loaded;
 
-    // Indice de la pestaña externa (Personaje=0, Libreria=1, ...) - se usa para saltar
-    // automaticamente a la Libreria al pulsar "Elegir objeto" en un slot, y volver a
-    // Personaje en cuanto se coloca el objeto elegido.
-    private const int PersonajeTabIndex = 0;
-    private const int LibreriaTabIndex = 1;
+    // Indice de la pestaña externa (Inicio=0, Personaje=1, Libreria=2, ...) - Personaje/
+    // Libreria se usan para saltar automaticamente a la Libreria al pulsar "Elegir objeto" en
+    // un slot y volver en cuanto se coloca el objeto elegido; el resto solo los usa la pagina
+    // de Inicio para sus tarjetas de navegacion (GoToTabCommand).
+    private const int InicioTabIndex = 0;
+    private const int PersonajeTabIndex = 1;
+    private const int LibreriaTabIndex = 2;
+    private const int BuildsTabIndex = 3;
+    private const int NovedadesTabIndex = 4;
+    private const int ExploracionTabIndex = 5;
+    private const int AcercaDeTabIndex = 6;
 
     [ObservableProperty] private string _statusMessage = "Sin personaje cargado.";
     [ObservableProperty] private string? _characterName;
@@ -54,6 +60,19 @@ public partial class MainViewModel : ObservableObject
         Buffs = new BuffsViewModel(_service);
         PrefixPicker = new PrefixPickerViewModel(_service);
     }
+
+    // Usado por las tarjetas de la pagina de Inicio para saltar directamente a una seccion.
+    [RelayCommand]
+    private void GoToTab(string tab) => SelectedTabIndex = tab switch
+    {
+        "Personaje" => PersonajeTabIndex,
+        "Libreria" => LibreriaTabIndex,
+        "Builds" => BuildsTabIndex,
+        "Novedades" => NovedadesTabIndex,
+        "Exploracion" => ExploracionTabIndex,
+        "AcercaDe" => AcercaDeTabIndex,
+        _ => InicioTabIndex,
+    };
 
     private void RequestPickForSlot(ItemSlotViewModel slot)
     {

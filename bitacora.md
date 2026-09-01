@@ -935,13 +935,41 @@ monta una ventana con un ejemplar de cada control nuevo, y renderiza a PNG con
 Inspección visual del PNG resultante: todos los controles se ven coherentes con el tema oscuro
 y el acento ámbar, sin ningún control con apariencia por defecto.
 
+## Página de Inicio/bienvenida (1-sep-2026)
+
+Nueva primera pestaña "Inicio" (índice 0, la app arranca ahí), preferencia del usuario:
+explicativa de lo que se puede hacer, no un preview de personaje como en el Terrasavr
+original. Logo + nombre + tagline, un párrafo explicando qué es Terrakeep (vanilla + Calamity
+con el mismo archivo, nativo sin Electron), una tarjeta principal de acento "Empezar: cargar un
+personaje" y una rejilla de tarjetas secundarias (Librería/Builds/Exploración/Novedades/Acerca
+de) - todas usando el nuevo estilo `NavCardButton` del pulido estético anterior, con hover
+elevado real.
+
+Cada tarjeta navega directamente a su pestaña vía un `GoToTabCommand(string tab)` nuevo en
+`MainViewModel` (switch sobre 6 constantes de índice, `InicioTabIndex=0` hasta
+`AcercaDeTabIndex=6` - se desplazaron `PersonajeTabIndex`/`LibreriaTabIndex`, que ya existían
+para el flujo de "Elegir objeto", de 0/1 a 1/2). `dotnet build`/`dotnet test` en verde
+(101/101).
+
+**Verificación de extremo a extremo, no solo visual**: la app real se lanzó en segundo plano,
+y se hizo clic de verdad (coordenadas de pantalla reales vía `user32.dll`
+`SetCursorPos`/`mouse_event`, con el truco de pulsación de Alt para saltar el bloqueo de foco
+de Windows que había hecho fallar una captura anterior) sobre la tarjeta "Librería" de Inicio;
+la captura posterior confirma la navegación real: la pestaña Librería queda seleccionada con
+la barra de acento, el contenido carga ("8164 objetos en total") y el campo de búsqueda
+muestra el estado de foco del nuevo tema (raya inferior de acento). Confirma en el mismo gesto
+que el pulido estético anterior funciona en la app real, no solo en la galería aislada.
+
 ## Pendiente (visible desde fuera)
 
 - Todos los huecos de la auditoría Terrasavr JS vs puerto están cerrados (1-6), la segunda
-  auditoría de completitud/consistencia está cerrada (2 hallazgos, ambos arreglados), y el
-  pulido estético de `Theme.xaml` está hecho y verificado. Pendiente ahora mismo: la página de
-  bienvenida/explicación (pedida explícitamente, preferencia del usuario: explicativa de lo
-  que se puede hacer, no solo un preview de personaje como en el Terrasavr original).
+  auditoría de completitud/consistencia está cerrada (2 hallazgos, ambos arreglados), el
+  pulido estético de `Theme.xaml` está hecho y verificado, y la página de Inicio está hecha y
+  verificada de extremo a extremo. Con esto se cierran las 6 partes del pedido del usuario del
+  1-sep-2026 (cuerpo completo, TabVersion, repaso, estética, página de Inicio, renombrado a
+  Terrakeep). No hay pendientes explícitos abiertos ahora mismo - el siguiente paso natural
+  seria seguir puliendo detalles menores si aparecen, o esperar el siguiente pedido del
+  usuario.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 

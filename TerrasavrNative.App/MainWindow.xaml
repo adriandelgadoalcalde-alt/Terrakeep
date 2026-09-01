@@ -198,6 +198,89 @@
     </Window.Resources>
 
     <TabControl Style="{StaticResource NavTabControl}" SelectedIndex="{Binding SelectedTabIndex}">
+        <!-- ===================== INICIO ===================== -->
+        <TabItem Header="Inicio">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="14">
+                <StackPanel MaxWidth="880" HorizontalAlignment="Left">
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,6">
+                        <Image Source="pack://siteoforigin:,,,/Assets/branding/logo-128.png" Width="56" Height="56" />
+                        <StackPanel VerticalAlignment="Center" Margin="16,0,0,0">
+                            <TextBlock Text="{Binding About.AppName}" Style="{StaticResource TitleText}" FontSize="26" />
+                            <TextBlock Text="{Binding About.Tagline}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,10,0,24" MaxWidth="700">
+                        <Run Text="Editor de personajes de Terraria - vanilla y Calamity Mod (tModLoader) a la vez, con el mismo archivo. Edicion nativa: sin Electron, sin Chromium embebido, arranque instantaneo. Carga un " />
+                        <Run Text=".plr" FontStyle="Italic" />
+                        <Run Text=" (con su " />
+                        <Run Text=".tplr" FontStyle="Italic" />
+                        <Run Text=" si lo tiene) y edita inventario, equipo por loadout, buffs, investigacion, mascotas/monturas, apariencia y mas - los objetos de Calamity se detectan y editan igual que los vanilla, marcados en " />
+                        <Run Text="rojo" Foreground="{StaticResource CalamityBrush}" FontWeight="SemiBold" />
+                        <Run Text=" para distinguirlos." />
+                    </TextBlock>
+
+                    <Button Style="{StaticResource NavCardButton}" HorizontalAlignment="Left" Margin="0,0,0,26"
+                            Command="{Binding GoToTabCommand}" CommandParameter="Personaje">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Width="4" Background="{StaticResource AccentBrush}" CornerRadius="2" Margin="0,0,16,0" />
+                            <StackPanel>
+                                <TextBlock Text="Empezar: cargar un personaje" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" />
+                                <TextBlock Text="Abre un archivo .plr real y edita todo su contenido, incluido Calamity si el .tplr esta al lado."
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="520" Margin="0,3,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+
+                    <TextBlock Text="Que mas puedes hacer" Style="{StaticResource SectionText}" Margin="0,0,0,12" />
+                    <ItemsControl>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <Button Style="{StaticResource NavCardButton}" Width="270" Height="108" Margin="0,0,14,14"
+                                Command="{Binding GoToTabCommand}" CommandParameter="Libreria">
+                            <StackPanel>
+                                <TextBlock Text="Libreria" Style="{StaticResource SectionText}" />
+                                <TextBlock Text="Busca entre miles de objetos vanilla y de Calamity por nombre y colocalos directamente en cualquier slot."
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource NavCardButton}" Width="270" Height="108" Margin="0,0,14,14"
+                                Command="{Binding GoToTabCommand}" CommandParameter="Builds">
+                            <StackPanel>
+                                <TextBlock Text="Builds" Style="{StaticResource SectionText}" />
+                                <TextBlock Text="Equipo recomendado por clase y etapa del juego (vanilla y Calamity), con auto-equipar de un click."
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource NavCardButton}" Width="270" Height="108" Margin="0,0,14,14"
+                                Command="{Binding GoToTabCommand}" CommandParameter="Exploracion">
+                            <StackPanel>
+                                <TextBlock Text="Exploracion" Style="{StaticResource SectionText}" />
+                                <TextBlock Text="Carga un mundo .wld y navega su mapa completo: pan, zoom y NPCs de pueblo con su posicion."
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource NavCardButton}" Width="270" Height="108" Margin="0,0,14,14"
+                                Command="{Binding GoToTabCommand}" CommandParameter="Novedades">
+                            <StackPanel>
+                                <TextBlock Text="Novedades" Style="{StaticResource SectionText}" />
+                                <TextBlock Text="Que ha cambiado en cada version del propio editor."
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource NavCardButton}" Width="270" Height="108" Margin="0,0,14,14"
+                                Command="{Binding GoToTabCommand}" CommandParameter="AcercaDe">
+                            <StackPanel>
+                                <TextBlock Text="Acerca de" Style="{StaticResource SectionText}" />
+                                <TextBlock Text="Version instalada y creditos."
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                            </StackPanel>
+                        </Button>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
         <!-- ===================== PERSONAJE ===================== -->
         <TabItem Header="Personaje">
             <DockPanel Margin="14">
