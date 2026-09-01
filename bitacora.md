@@ -459,6 +459,43 @@ el de arriba). `dotnet build` limpio, la app arranca sin excepción. **No verifi
 reales** (mover el ratón sobre el mapa de verdad en la UI) - misma limitación de siempre, pero
 la lógica que alimenta el tooltip ya está confirmada con datos reales a nivel Core.
 
+### Sprites reales en TODO lo que faltaba (inventario, buffs, NPCs, Builds)
+
+Pedido explícito del usuario ("¿todo tendrá también sus sprites?") - hasta ahora solo la
+Librería mostraba iconos reales; el resto (tarjetas de objeto en Personaje, buffs, NPCs de
+Exploración, panel Builds) se quedaba en texto. Cerrado en un único barrido:
+
+- **`img/buffs.png` es la MISMA rejilla que `items.png`** (32 columnas, celdas 40x40, índice =
+  id real del buff en fila-mayor) - confirmado leyendo el comentario real de `overrides.js`
+  ("40*(id&31), 40*(id>>5) in drawBuff") y verificado visualmente contra `id=1`/Obsidian Skin
+  e `id=353`/Shimmer. Extraídos **354/354** buffs vanilla a
+  `Assets/vanilla/buff_icons/{id}.png` (cobertura del 100%, a diferencia de los objetos donde
+  faltaba 1 de 5455).
+- **Iconos de buff de Calamity** (308, ya extraídos en Terrasavr-Calamity-Beta) y **de NPC**
+  (27 - solo cubre `VanillaTownNpcRoster`, los mismos que la app JS original tenía
+  extraídos para su buscador de NPCs) copiados tal cual.
+- **`VanillaBuffIconResolver`/`NpcIconResolver`** (nuevos, `App/Services`) - mismo patrón que
+  `VanillaIconResolver`: id → ruta si el archivo existe, null si no.
+- **`BuffRowViewModel`**, **`WorldNpcRowViewModel`** (y el nuevo **`MissingNpcRowViewModel`**,
+  antes la lista de "NPCs que faltan" era solo `ObservableCollection<string>`) ganan
+  `IconPath`, resuelto vanilla/Calamity según corresponda.
+- **`ItemSlotViewModel`** (tarjetas de objeto en Personaje - Inventario/Banco/Equipo puesto/
+  Loadouts...) gana `IconPath`, misma resolución que ya usaba la Librería. `ItemSlotCard`
+  (`Theme.xaml`) se ensancha de 148 a 188 para hacer sitio al icono de 32x32 sin apretar el
+  texto.
+- **Panel Builds**: `BuildItemRef` (Core) no tiene noción de icono/ruta de asset a propósito
+  (Core no debe saber de `pack://` ni de rutas de App) - se crearon
+  `BuildItemRowViewModel`/`BuildClassGearViewModel`/`BuildStageViewModel` (nuevos, `App/
+  ViewModels`) que envuelven los tipos de Core y resuelven el icono por `pid` (misma lógica de
+  `BuildItemResolver` pero solo para mostrar, no para colocar) al construir `BuildsViewModel` -
+  que ahora recibe también `CharacterFileService`. `BuildClassGearViewModel.Source` conserva
+  el `BuildClassGear` original para que "Auto-equipar" siga funcionando sin cambios.
+
+**Verificado**: 94 tests xUnit siguen en verde (pieza de UI + extracción, sin lógica nueva en
+Core que testear), `dotnet build` limpio, la app arranca sin excepción con los 354+308+27
+iconos nuevos copiados a la salida. **No verificado con clics reales** (ver los iconos de
+verdad en pantalla) - misma limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
 - **Exploración**: fondo degradado por zona (falta leer GroundLevel/RockLevel de la cabecera,

@@ -177,7 +177,7 @@
 
     <!-- Tarjeta de slot de item -->
     <Style x:Key="ItemSlotCard" TargetType="Border">
-        <Setter Property="Width" Value="148" />
+        <Setter Property="Width" Value="188" />
         <Setter Property="Height" Value="92" />
         <Setter Property="Margin" Value="4" />
         <Setter Property="Padding" Value="8,6" />

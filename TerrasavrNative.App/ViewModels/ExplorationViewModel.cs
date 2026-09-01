@@ -14,6 +14,15 @@ public sealed class WorldNpcRowViewModel(int id, string name, int x, int y, bool
     public int Id { get; } = id;
     public string Name { get; } = name;
     public string Position { get; } = homeless ? $"({x}, {y}) - sin casa" : $"({x}, {y})";
+    public string? IconPath { get; } = NpcIconResolver.GetIconPath(id);
+}
+
+// Un NPC del roster que el jugador todavia no tiene en este mundo - solo nombre+icono, sin
+// posicion (no esta en el mundo).
+public sealed class MissingNpcRowViewModel(int id, string name)
+{
+    public string Name { get; } = name;
+    public string? IconPath { get; } = NpcIconResolver.GetIconPath(id);
 }
 
 // Pestaña "Exploracion" - cargar un .wld real, pintarlo entero (WorldRenderer), listar sus
@@ -37,7 +46,7 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private string _hoverInfo = string.Empty;
 
     public ObservableCollection<WorldNpcRowViewModel> Npcs { get; } = [];
-    public ObservableCollection<string> MissingNpcs { get; } = [];
+    public ObservableCollection<MissingNpcRowViewModel> MissingNpcs { get; } = [];
 
     public ExplorationViewModel(CharacterFileService service)
     {
@@ -90,7 +99,7 @@ public partial class ExplorationViewModel : ObservableObject
             MissingNpcs.Clear();
             foreach (int id in VanillaTownNpcRoster.Ids)
                 if (!foundIds.Contains(id))
-                    MissingNpcs.Add(_npcNames.GetName(id));
+                    MissingNpcs.Add(new MissingNpcRowViewModel(id, _npcNames.GetName(id)));
 
             WorldTitle = world.Header.Title;
             IsWorldLoaded = true;

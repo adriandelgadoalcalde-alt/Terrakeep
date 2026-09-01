@@ -58,17 +58,22 @@
                         </Button.Style>
                     </Button>
 
-                    <StackPanel VerticalAlignment="Center" Margin="0,0,20,0">
-                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}"
-                                   TextWrapping="Wrap" MaxHeight="32" />
-                        <TextBlock Text="{Binding PrefixDisplay, Mode=OneWay}" Style="{StaticResource CaptionText}" />
-                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
-                                    Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="Cant." Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
-                            <TextBox Text="{Binding Count, UpdateSourceTrigger=PropertyChanged}"
-                                     Width="46" Margin="5,0,0,0" Padding="3,1" FontSize="12"
-                                     Background="{StaticResource BgPrimaryBrush}"
-                                     Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+                        <Image Source="{Binding IconPath}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,8,0"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                        <StackPanel>
+                            <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}"
+                                       TextWrapping="Wrap" MaxHeight="32" />
+                            <TextBlock Text="{Binding PrefixDisplay, Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
+                                        Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Cant." Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                <TextBox Text="{Binding Count, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="46" Margin="5,0,0,0" Padding="3,1" FontSize="12"
+                                         Background="{StaticResource BgPrimaryBrush}"
+                                         Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                            </StackPanel>
                         </StackPanel>
                     </StackPanel>
                 </DockPanel>
@@ -85,41 +90,56 @@
             </ScrollViewer>
         </DataTemplate>
 
-        <!-- Un objeto/arma/accesorio recomendado dentro de una build -->
-        <DataTemplate DataType="{x:Type data:BuildItemRef}">
+        <!-- Un objeto/arma/accesorio recomendado dentro de una build, ya con icono real -->
+        <DataTemplate DataType="{x:Type vm:BuildItemRowViewModel}">
             <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="8,5">
-                <StackPanel>
-                    <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}" />
-                    <TextBlock Text="{Binding Prefix}" Style="{StaticResource CaptionText}"
-                               Visibility="{Binding Prefix, Converter={StaticResource NullToVis}}" />
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                <Setter Property="BorderThickness" Value="1" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal">
+                    <Image Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform" Margin="0,0,7,0"
+                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <StackPanel>
+                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}" />
+                        <TextBlock Text="{Binding PrefixText}" Style="{StaticResource CaptionText}"
+                                   Visibility="{Binding PrefixText, Converter={StaticResource NullToVis}}" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </DataTemplate>
 
         <!-- Una clase dentro de una etapa (melee/ranged/mage/summoner/rogue) -->
-        <DataTemplate x:Key="BuildClassTemplate">
+        <DataTemplate x:Key="BuildClassTemplate" DataType="{x:Type vm:BuildClassGearViewModel}">
             <StackPanel Margin="0,0,24,16" MinWidth="220">
                 <DockPanel Margin="0,0,0,6">
                     <Button DockPanel.Dock="Right" Content="Auto-equipar" FontSize="11" Padding="7,2"
                             Background="{StaticResource AccentBrush}" Foreground="{StaticResource BgPrimaryBrush}"
                             BorderThickness="0"
                             Command="{Binding DataContext.AutoEquipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                            CommandParameter="{Binding Value}"
+                            CommandParameter="{Binding Source}"
                             IsEnabled="{Binding DataContext.IsCharacterLoaded, RelativeSource={RelativeSource AncestorType=Window}}"
                             ToolTip="Coloca esta armadura/accesorios/armas en el personaje cargado" />
-                    <TextBlock Text="{Binding Key}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding ClassName}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
                 </DockPanel>
                 <TextBlock Text="Armadura" Style="{StaticResource CaptionText}" Margin="0,4,0,2" />
-                <ItemsControl ItemsSource="{Binding Value.Armor}" />
+                <ItemsControl ItemsSource="{Binding Armor}" />
                 <TextBlock Text="Armas" Style="{StaticResource CaptionText}" Margin="0,6,0,2" />
-                <ItemsControl ItemsSource="{Binding Value.Weapons}" />
+                <ItemsControl ItemsSource="{Binding Weapons}" />
                 <TextBlock Text="Accesorios" Style="{StaticResource CaptionText}" Margin="0,6,0,2" />
-                <ItemsControl ItemsSource="{Binding Value.Accessories}" />
+                <ItemsControl ItemsSource="{Binding Accessories}" />
             </StackPanel>
         </DataTemplate>
 
         <!-- Una etapa completa (Pre-Hardmode/Hardmode temprano/Endgame) -->
-        <DataTemplate DataType="{x:Type data:BuildStage}">
+        <DataTemplate DataType="{x:Type vm:BuildStageViewModel}">
             <StackPanel Margin="0,0,0,28">
                 <TextBlock Text="{Binding Label}" Style="{StaticResource TitleText}" Margin="0,0,0,10" />
                 <ItemsControl ItemsSource="{Binding Classes}" ItemTemplate="{StaticResource BuildClassTemplate}">
@@ -219,9 +239,13 @@
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
-                                                <TextBlock Text="{Binding Duration}" Style="{StaticResource CaptionText}" />
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
+                                                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
+                                                    <TextBlock Text="{Binding Duration}" Style="{StaticResource CaptionText}" />
+                                                </StackPanel>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
@@ -409,9 +433,13 @@
                                   Visibility="{Binding Exploration.MissingNpcs.Count, Converter={StaticResource CountToVis}}">
                             <ItemsControl ItemsSource="{Binding Exploration.MissingNpcs}" Margin="0,6,0,0">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}"
-                                                   Foreground="{StaticResource CalamityBrush}" Margin="0,0,0,3" />
+                                    <DataTemplate DataType="{x:Type vm:MissingNpcRowViewModel}">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                            <Image Source="{Binding IconPath}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,5,0"
+                                                   Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                            <TextBlock Text="{Binding Name}" Style="{StaticResource CaptionText}"
+                                                       Foreground="{StaticResource CalamityBrush}" />
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -422,9 +450,13 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
                                         <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,0,5" Padding="8,5">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
-                                                <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
+                                                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
+                                                    <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
+                                                </StackPanel>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>

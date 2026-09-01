@@ -41,7 +41,7 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
-        Builds = new BuildsViewModel(_service.VanillaBuilds, _service.CalamityBuilds);
+        Builds = new BuildsViewModel(_service.VanillaBuilds, _service.CalamityBuilds, _service);
         WhatsNew = new WhatsNewViewModel(_service.WhatsNew);
         Exploration = new ExplorationViewModel(_service);
         Library = new LibraryViewModel(_service);

@@ -24,6 +24,7 @@ public partial class ItemSlotViewModel : ObservableObject
     [ObservableProperty] private bool _isEmpty = true;
     [ObservableProperty] private string _prefixDisplay = string.Empty;
     [ObservableProperty] private bool _hasBestPrefixSuggestion;
+    [ObservableProperty] private string? _iconPath;
 
     public bool IsNotEmpty => !IsEmpty;
     partial void OnIsEmptyChanged(bool value) => OnPropertyChanged(nameof(IsNotEmpty));
@@ -51,12 +52,21 @@ public partial class ItemSlotViewModel : ObservableObject
             DisplayName = string.Empty;
             PrefixDisplay = string.Empty;
             HasBestPrefixSuggestion = false;
+            IconPath = null;
             return;
         }
 
-        DisplayName = item.IsCalamity
-            ? _service.CalamityCatalog.BySyntheticId(item.Id)?.DisplayName ?? $"Calamity #{item.Id}"
-            : _service.VanillaCatalog.GetName(item.Id);
+        if (item.IsCalamity)
+        {
+            var entry = _service.CalamityCatalog.BySyntheticId(item.Id);
+            DisplayName = entry?.DisplayName ?? $"Calamity #{item.Id}";
+            IconPath = entry?.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
+        }
+        else
+        {
+            DisplayName = _service.VanillaCatalog.GetName(item.Id);
+            IconPath = VanillaIconResolver.GetIconPath(item.Id);
+        }
 
         RefreshPrefixDisplay();
 
