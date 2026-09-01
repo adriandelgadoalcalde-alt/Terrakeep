@@ -814,7 +814,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
-                            <Setter Property="Foreground" Value="{StaticResource PinkColor}" />
+                            <Setter Property="Foreground" Value="{StaticResource PinkBrush}" />
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
