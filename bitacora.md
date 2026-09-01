@@ -1418,3 +1418,45 @@ verde (118/118); verificación visual en vivo bloqueada por la misma limitación
 documentada arriba - la lógica reutiliza un patrón ya probado en vivo esta misma sesión para
 `OnNavigateToTile`, así que se da por buena por revisión de código + compilación + tests,
 dejando constancia aquí de que no se ha podido confirmar con una captura real.
+
+## Rework estructural pedido tras comparar con capturas reales de Terrasavr (1-sep-2026)
+
+Feedback extenso y crítico del usuario tras usar la app y comparar con 4 capturas reales de
+Terrasavr aportadas por él (no de Terrakeep): *"me da la sensación que no estás captando la
+estética de Terrasavr... la gracia de la estética de Terrasavr... hace que todo sea super
+práctico"*. Investigación de campo real antes de tocar nada: `script.js` beautificado
+(js-beautify) de `Terrasavr-Calamity-Beta` para entender la estructura real, más un agente de
+planificación (Opus, vía `EnterPlanMode`/Plan agent, pedido explícito del usuario -
+"opusplan") que verificó todo contra el código decompilado real de tModLoader en
+`tModLoader-Decompiled\`. Plan completo de 7 fases guardado y aprobado (ver
+`C:\Users\adrian\.claude\plans\streamed-leaping-balloon.md` mientras siga vigente el archivo).
+
+Hallazgo estructural clave: `app.TabInventory` (clase base real de la que heredan
+Equipamiento/Banco/Caja fuerte/Forja/Bóveda/Mascotas) lleva un panel lateral persistente con
+pestañas "Edit"/"Library" (`app.TabEdit`/`app.TabLibrary`, script.js líneas ~2676/~3986) - por
+eso "acompaña desde Equipamiento hasta Forja del Vacío" (cita del usuario). Terrakeep no tiene
+el equivalente a `TabEdit` todavía (fase 3 del plan, pendiente).
+
+### Bug real de crash corregido primero (antes del rework): `PinkColor` sobre `Foreground`
+
+El usuario mandó la captura real del error: `InvalidOperationException: "#FFFF5D8F" no es un
+valor válido para la propiedad "Foreground"`. Diagnosticado exacto: `Theme.xaml`,
+`CircleCloseButton`, trigger `IsMouseOver` - `<Setter Property="Foreground"
+Value="{StaticResource PinkColor}" />` asignaba un `Color` (no un `Brush`) directamente.
+Arreglado a `PinkBrush`. `dotnet build`/`dotnet test` en verde. Commit `abfcfa2`.
+
+### Fase 1 del plan - Buffs: "Añadir buff..." salía vacío hasta escribir
+
+Verificado leyendo `BuffsViewModel.ApplyFilter()` (no fue necesario reproducir en vivo, dada
+la limitación de entorno para capturas ya documentada arriba): con `SearchText` vacío, el
+método hacía `return` justo después de `Results.Clear()` - el panel "Añadir buff..." se abría
+completamente vacío hasta escribir algo, dando la sensación de "no hay sprites de buffs"
+cuando en realidad el problema era que no se mostraba NADA de entrada (los buffs YA activos sí
+tenían sprite correcto todo el tiempo - 662 iconos vanilla+Calamity verificados presentes en
+`Assets/vanilla/buff_icons/` y en el build de salida, resolución correcta para ambos tipos).
+Arreglado con el mismo criterio que ya usan `LibraryViewModel`/`PrefixPickerViewModel`:
+búsqueda vacía muestra los primeros `MaxResults=200` de entrada, no una lista vacía. Envuelto
+además en un `ScrollViewer MaxHeight="240"` en `MainWindow.xaml` para que la lista de
+resultados no empuje la lista de buffs activos fuera de la pantalla. `dotnet build`/`dotnet
+test` en verde (118/118) - verificación por revisión de código, mismo criterio que el resto de
+esta sección dado el bloqueo de captura de pantalla ya establecido.

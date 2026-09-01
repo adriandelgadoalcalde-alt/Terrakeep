@@ -76,18 +76,20 @@ public partial class BuffsViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
+    // Bug real reportado 1-sep-2026 ("el sistema de buff sigue sin ser de sprites"): con
+    // busqueda vacia esto dejaba Results vacio del todo - el panel "Añadir buff..." se abria
+    // sin nada dentro hasta escribir algo, dando la sensacion de que los sprites no
+    // funcionaban. LibraryViewModel/PrefixPickerViewModel SI muestran todo de entrada con
+    // busqueda vacia (limitado por MaxResults) - mismo criterio aqui, por consistencia.
     private void ApplyFilter()
     {
         Results.Clear();
-        if (string.IsNullOrWhiteSpace(SearchText))
-        {
-            ResultsSummary = $"{_all.Count} buffs en total (vanilla + Calamity) - escribe para buscar.";
-            return;
-        }
-        var matches = _all.Where(b => b.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)).ToList();
+        var matches = string.IsNullOrWhiteSpace(SearchText)
+            ? _all
+            : _all.Where(b => b.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)).ToList();
         foreach (var m in matches.Take(MaxResults)) Results.Add(m);
         ResultsSummary = matches.Count > MaxResults
-            ? $"Mostrando {MaxResults} de {matches.Count} resultados - afina la busqueda."
+            ? $"Mostrando {MaxResults} de {matches.Count} - {(string.IsNullOrWhiteSpace(SearchText) ? "escribe para afinar la busqueda." : "afina la busqueda.")}"
             : $"{matches.Count} resultado(s).";
     }
 

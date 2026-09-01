@@ -520,39 +520,41 @@
                                     </StackPanel>
                                 </Border>
 
-                                <ItemsControl ItemsSource="{Binding Buffs.Results}" Margin="0,10,0,0"
+                                <ScrollViewer Margin="0,10,0,0" MaxHeight="240" VerticalScrollBarVisibility="Auto"
                                               Visibility="{Binding Buffs.IsPicking, Converter={StaticResource BoolToVis}}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type vm:BuffCatalogEntryViewModel}">
-                                            <Button Command="{Binding DataContext.Buffs.PickBuffCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                    CommandParameter="{Binding}" Margin="0,0,6,6" Padding="0" Background="Transparent" BorderThickness="0">
-                                                <Border Width="96" Height="96" Padding="6" CornerRadius="6"
-                                                        Background="{StaticResource BgElevatedBrush}" BorderThickness="1">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                                    <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-                                                    <DockPanel>
-                                                        <TextBlock DockPanel.Dock="Bottom" Text="{Binding DisplayName}"
-                                                                   Style="{StaticResource CaptionText}" TextWrapping="Wrap"
-                                                                   TextAlignment="Center" MaxHeight="30" Margin="0,4,0,0" />
-                                                        <Image Source="{Binding IconPath}" Stretch="Uniform" MaxHeight="40"
-                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                    </DockPanel>
-                                                </Border>
-                                            </Button>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                    <ItemsControl ItemsSource="{Binding Buffs.Results}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:BuffCatalogEntryViewModel}">
+                                                <Button Command="{Binding DataContext.Buffs.PickBuffCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}" Margin="0,0,6,6" Padding="0" Background="Transparent" BorderThickness="0">
+                                                    <Border Width="96" Height="96" Padding="6" CornerRadius="6"
+                                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="1">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                                        <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <DockPanel>
+                                                            <TextBlock DockPanel.Dock="Bottom" Text="{Binding DisplayName}"
+                                                                       Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                                                       TextAlignment="Center" MaxHeight="30" Margin="0,4,0,0" />
+                                                            <Image Source="{Binding IconPath}" Stretch="Uniform" MaxHeight="40"
+                                                                   Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                        </DockPanel>
+                                                    </Border>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
                             </StackPanel>
 
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
