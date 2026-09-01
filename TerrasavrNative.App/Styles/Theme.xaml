@@ -1,25 +1,38 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Paleta - minimalista, oscura, un unico color de acento (ambar/cobre, distinto del
-         azul generico de Fluent) mas el rojo ya establecido para marcar objetos de Calamity.
-         Ronda de pulido estetico (1-sep-2026, pedido explicito) - tokens de Fluent 2 real como
-         referencia (fluent2.microsoft.design/design-tokens): radio 4px por defecto/8px tarjetas/
-         12px paneles grandes, escala de espaciado de base 4 (4/8/12/16/20/24/32). -->
-    <Color x:Key="BgPrimaryColor">#121212</Color>
-    <Color x:Key="BgSecondaryColor">#1B1B1E</Color>
-    <Color x:Key="BgElevatedColor">#242427</Color>
-    <Color x:Key="BgHoverColor">#2D2D31</Color>
-    <Color x:Key="BgPressedColor">#3A3A40</Color>
-    <Color x:Key="BorderColor">#333338</Color>
-    <Color x:Key="BorderStrongColor">#46464D</Color>
-    <Color x:Key="TextPrimaryColor">#F2F2F0</Color>
-    <Color x:Key="TextSecondaryColor">#9A9AA2</Color>
-    <Color x:Key="AccentColor">#E0A458</Color>
-    <Color x:Key="AccentHoverColor">#F0BA70</Color>
-    <Color x:Key="AccentPressedColor">#C8893F</Color>
-    <Color x:Key="AccentMutedColor">#4A3A24</Color>
+    <!-- Paleta REAL de Terrasavr (2-sep-2026, segunda pasada estetica pedida explicitamente
+         tras comprobar que la primera no captaba bien el espiritu del original) - no inventada
+         ni sacada de tokens genericos de Fluent: extraida directamente de
+         Terrasavr-Calamity-Beta\resources\app\local-site\overrides.css, la hoja de estilo real
+         que reviste el Terrasavr autentico (violeta #6C63FF de acento, fondos azul-marino muy
+         oscuros en vez de gris neutro, degradados en los botones fuertes, tarjetas con borde
+         de color, sombras marcadas). Colores secundarios (teal/rosa/naranja) tomados de los
+         botones flotantes reales de Terrasavr (cada accion con su propio color, no todo del
+         mismo tono) - se usan aqui para dar variedad a las tarjetas de navegacion de Inicio,
+         mismo espiritu. Rojo de Calamity sin tocar (ya establecido, concepto propio de este
+         puerto que Terrasavr original no tiene). -->
+    <Color x:Key="BgPrimaryColor">#10121c</Color>
+    <Color x:Key="BgSecondaryColor">#171a26</Color>
+    <Color x:Key="BgElevatedColor">#1e2233</Color>
+    <Color x:Key="BgHoverColor">#262b40</Color>
+    <Color x:Key="BgPressedColor">#2f3550</Color>
+    <Color x:Key="BorderColor">#2a2f42</Color>
+    <Color x:Key="BorderStrongColor">#3d4460</Color>
+    <Color x:Key="TextPrimaryColor">#f0f1f8</Color>
+    <Color x:Key="TextSecondaryColor">#8a8fa3</Color>
+    <Color x:Key="AccentColor">#6C63FF</Color>
+    <Color x:Key="AccentHoverColor">#8079ff</Color>
+    <Color x:Key="AccentPressedColor">#5951e0</Color>
+    <Color x:Key="AccentDeepColor">#4834d4</Color>
+    <Color x:Key="AccentMutedColor">#2a2856</Color>
     <Color x:Key="CalamityColor">#C0392B</Color>
+    <Color x:Key="TealColor">#00d2a6</Color>
+    <Color x:Key="TealDeepColor">#00997a</Color>
+    <Color x:Key="PinkColor">#ff5d8f</Color>
+    <Color x:Key="PinkDeepColor">#c92a5e</Color>
+    <Color x:Key="OrangeColor">#ffb84d</Color>
+    <Color x:Key="OrangeDeepColor">#ff7a18</Color>
 
     <SolidColorBrush x:Key="BgPrimaryBrush" Color="{StaticResource BgPrimaryColor}" />
     <SolidColorBrush x:Key="BgSecondaryBrush" Color="{StaticResource BgSecondaryColor}" />
@@ -35,13 +48,42 @@
     <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource AccentPressedColor}" />
     <SolidColorBrush x:Key="AccentMutedBrush" Color="{StaticResource AccentMutedColor}" />
     <SolidColorBrush x:Key="CalamityBrush" Color="{StaticResource CalamityColor}" />
+    <SolidColorBrush x:Key="TealBrush" Color="{StaticResource TealColor}" />
+    <SolidColorBrush x:Key="PinkBrush" Color="{StaticResource PinkColor}" />
+    <SolidColorBrush x:Key="OrangeBrush" Color="{StaticResource OrangeColor}" />
+
+    <!-- Degradados reales (135deg en el CSS original -> equivalente en WPF con StartPoint/
+         EndPoint en esquinas opuestas) - los botones fuertes de Terrasavr real nunca son de
+         color plano, siempre en degradado. -->
+    <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource AccentHoverColor}" Offset="0" />
+        <GradientStop Color="{StaticResource AccentDeepColor}" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="OrangeGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource OrangeColor}" Offset="0" />
+        <GradientStop Color="{StaticResource OrangeDeepColor}" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="TealGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource TealColor}" Offset="0" />
+        <GradientStop Color="{StaticResource TealDeepColor}" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="PinkGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource PinkColor}" Offset="0" />
+        <GradientStop Color="{StaticResource PinkDeepColor}" Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="HeaderGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#21253a" Offset="0" />
+        <GradientStop Color="#171a26" Offset="1" />
+    </LinearGradientBrush>
 
     <FontFamily x:Key="AppFont">Segoe UI Variable Display, Segoe UI</FontFamily>
 
-    <!-- Sombra sutil para dar profundidad a tarjetas/paneles elevados (elevacion Fluent 2:
-         desenfoque pequeño = superficie cercana). Un unico DropShadowEffect compartido,
-         barato, en vez de definirlo suelto en cada sitio. -->
+    <!-- Dos niveles de sombra (real Terrasavr: 0 4px 14px en reposo -> 0 8px 20px al pasar el
+         raton, mas marcada) - antes solo habia una sombra fija, sin la sensacion de que la
+         tarjeta "sube" de verdad. -->
     <DropShadowEffect x:Key="CardShadow" Color="Black" Direction="270" ShadowDepth="2" BlurRadius="10" Opacity="0.28" />
+    <DropShadowEffect x:Key="CardShadowHover" Color="Black" Direction="270" ShadowDepth="5" BlurRadius="18" Opacity="0.42" />
+    <DropShadowEffect x:Key="AccentGlow" Color="{StaticResource AccentColor}" ShadowDepth="0" BlurRadius="16" Opacity="0.55" />
 
     <!-- Tipografia -->
     <Style x:Key="TitleText" TargetType="TextBlock">
@@ -83,8 +125,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToolTip">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource BorderStrongBrush}"
-                            BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}"
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource AccentBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="{TemplateBinding Padding}"
                             Effect="{StaticResource CardShadow}">
                         <ContentPresenter />
                     </Border>
@@ -123,10 +165,15 @@
         </Setter>
     </Style>
 
-    <!-- Boton plano minimalista - el de acento (IsDefault-like) se marca con Tag="Accent".
-         Transicion de color suave en hover/pressed (Fluent real usa ~150ms). -->
+    <!-- Boton - ya no un cambio de color instantaneo: anima de verdad (Storyboard sobre un
+         SolidColorBrush propio de cada instancia, no el recurso compartido - animar un
+         StaticResource compartido "sangraria" a todos los botones que lo usan). Tag="Accent" =
+         degradado violeta + LEVANTA 2px al pasar el raton (la firma visual mas caracteristica
+         de los botones reales de Terrasavr, antes ausente del todo). Tambien hay Tag="Teal"/
+         "Pink"/"Orange" para las mismas variantes con degradado de otro color (pedido
+         implicito: que no todo sea del mismo tono, como hace el propio Terrasavr con sus
+         botones flotantes). -->
     <Style TargetType="Button">
-        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
         <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
         <Setter Property="FontSize" Value="12.5" />
@@ -136,45 +183,169 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="5"
-                            Padding="{TemplateBinding Padding}">
+                    <Border x:Name="Bd" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                        <Border.Background>
+                            <SolidColorBrush x:Name="BdBrush" Color="{StaticResource BgElevatedColor}" />
+                        </Border.Background>
                         <Border.RenderTransform>
-                            <ScaleTransform x:Name="BdScale" CenterX="0.5" CenterY="0.5" ScaleX="1" ScaleY="1" />
+                            <TranslateTransform x:Name="BdLift" Y="0" />
                         </Border.RenderTransform>
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource BgHoverColor}" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource BgElevatedColor}" Duration="0:0:0.15" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgPressedBrush}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource BgPressedColor}" Duration="0:0:0.05" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource BgHoverColor}" Duration="0:0:0.08" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
                         </Trigger>
                         <Trigger Property="Tag" Value="Accent">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentBrush}" />
-                            <Setter Property="Foreground" Value="{StaticResource BgPrimaryBrush}" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentGradientBrush}" />
+                            <Setter Property="Foreground" Value="White" />
                             <Setter Property="FontWeight" Value="SemiBold" />
                         </Trigger>
+                        <Trigger Property="Tag" Value="Teal">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource TealGradientBrush}" />
+                            <Setter Property="Foreground" Value="#06281f" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Pink">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PinkGradientBrush}" />
+                            <Setter Property="Foreground" Value="White" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Orange">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource OrangeGradientBrush}" />
+                            <Setter Property="Foreground" Value="#1a1200" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                        <!-- El levantamiento (translateY(-2px) real de Terrasavr) solo se aplica a
+                             las variantes de color solido al pasar el raton, no al boton gris
+                             normal - asi se reserva el gesto mas llamativo para las acciones
+                             importantes. TargetName solo es valido dentro de
+                             ControlTemplate.Triggers (a diferencia de Style.Triggers, que dio
+                             MC4011 al intentarlo ahi la primera vez). -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="Tag" Value="Accent" />
+                            </MultiTrigger.Conditions>
+                            <MultiTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.EnterActions>
+                            <MultiTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.ExitActions>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="Tag" Value="Teal" />
+                            </MultiTrigger.Conditions>
+                            <MultiTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.EnterActions>
+                            <MultiTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.ExitActions>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="Tag" Value="Pink" />
+                            </MultiTrigger.Conditions>
+                            <MultiTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.EnterActions>
+                            <MultiTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.ExitActions>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="Tag" Value="Orange" />
+                            </MultiTrigger.Conditions>
+                            <MultiTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.EnterActions>
+                            <MultiTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.ExitActions>
+                        </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
-    <!-- Variante Tag="Accent": hover/pressed propios (definidos aparte porque el trigger de
-         Tag ya fijo el fondo a AccentBrush arriba y los triggers de MouseOver/Pressed de la
-         plantilla base corren ANTES en el orden de declaracion - se resuelve con un estilo
-         explicito que se aplica poniendo Tag=Accent, ver arriba: los triggers posteriores
-         (Tag=Accent) ganan sobre los anteriores en WPF cuando varias condiciones son cierto a
-         la vez, asi que hover sobre un boton de acento SI se ve mas claro gracias a
-         AccentHoverBrush aplicado explicitamente aqui. -->
 
-    <!-- TextBox - estilo "filled" de Fluent: fondo solido, esquinas redondeadas solo arriba,
-         raya inferior que se vuelve de acento y se engorda al enfocar (misma idea que un
-         campo de Material/Fluent, mas barato de implementar en WPF que un borde animado
-         entero). -->
+    <!-- TextBox - estilo "filled": fondo solido, esquinas redondeadas solo arriba, raya
+         inferior que se anima al color de acento y se engorda al enfocar. -->
     <Style TargetType="TextBox">
         <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
@@ -188,7 +359,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Grid>
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4,4,0,0" />
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6,6,0,0" />
                         <Border x:Name="Underline" Height="2" VerticalAlignment="Bottom" Background="{StaticResource BorderStrongBrush}" />
                         <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" />
                     </Grid>
@@ -216,7 +387,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
                     <Grid>
-                        <Border x:Name="Bd" Background="{StaticResource BgElevatedBrush}" CornerRadius="4,4,0,0" />
+                        <Border x:Name="Bd" Background="{StaticResource BgElevatedBrush}" CornerRadius="6,6,0,0" />
                         <Border Height="2" VerticalAlignment="Bottom" Background="{StaticResource BorderStrongBrush}" x:Name="Underline" />
                         <Path x:Name="Arrow" Data="M0,0 L4,4 L8,0" Stroke="{StaticResource TextSecondaryBrush}"
                               StrokeThickness="1.6" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
@@ -242,7 +413,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBoxItem">
-                    <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Margin="3,1" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Margin="3,1" Padding="{TemplateBinding Padding}">
                         <ContentPresenter />
                     </Border>
                     <ControlTemplate.Triggers>
@@ -251,7 +422,7 @@
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource AccentHoverBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -282,7 +453,7 @@
                         <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
                                AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
                             <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource BorderStrongBrush}"
-                                    BorderThickness="1" CornerRadius="6" Margin="0,4,0,0" Padding="0,4"
+                                    BorderThickness="1" CornerRadius="8" Margin="0,4,0,0" Padding="0,4"
                                     MinWidth="{TemplateBinding ActualWidth}" Effect="{StaticResource CardShadow}"
                                     SnapsToDevicePixels="True">
                                 <ScrollViewer MaxHeight="280" SnapsToDevicePixels="True">
@@ -296,8 +467,7 @@
         </Setter>
     </Style>
 
-    <!-- CheckBox - cuadrado pequeño redondeado (radio 4px, escala Fluent para elementos
-         &lt;32px), relleno de acento con marca de verificacion cuando esta activo. -->
+    <!-- CheckBox - cuadrado pequeño redondeado, relleno de acento con marca de verificacion. -->
     <Style TargetType="CheckBox">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
         <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
@@ -307,10 +477,10 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
                     <StackPanel Orientation="Horizontal">
-                        <Border x:Name="Box" Width="18" Height="18" CornerRadius="4"
+                        <Border x:Name="Box" Width="18" Height="18" CornerRadius="5"
                                 Background="Transparent" BorderThickness="1.4" BorderBrush="{StaticResource BorderStrongBrush}"
                                 VerticalAlignment="Center">
-                            <Path x:Name="Check" Data="M1,5 L4.2,8.4 L10.5,1" Stroke="{StaticResource BgPrimaryBrush}"
+                            <Path x:Name="Check" Data="M1,5 L4.2,8.4 L10.5,1" Stroke="White"
                                   StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                   StrokeLineJoin="Round" Visibility="Collapsed" />
                         </Border>
@@ -321,8 +491,8 @@
                             <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Box" Property="Background" Value="{StaticResource AccentBrush}" />
-                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            <Setter TargetName="Box" Property="Background" Value="{StaticResource AccentGradientBrush}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentColor}" />
                             <Setter TargetName="Check" Property="Visibility" Value="Visible" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
@@ -368,8 +538,8 @@
         </Setter>
     </Style>
 
-    <!-- Slider - pista fina, tramo recorrido en acento, pomo circular que crece un poco al
-         pasar el raton (mismo gesto "interactivo" que ya pedia el objetivo de diseño). -->
+    <!-- Slider - pista fina, tramo recorrido en acento, pomo circular que crece al pasar el
+         raton. -->
     <Style x:Key="SliderThumb" TargetType="Thumb">
         <Setter Property="Template">
             <Setter.Value>
@@ -420,10 +590,8 @@
         </Setter>
     </Style>
 
-    <!-- Nav rail izquierda: un TabControl con TabStripPlacement=Left restilado para que las
-         "pestañas" parezcan una lista de navegacion plana, no fichas de cuaderno. Indicador de
-         seleccion = barra vertical de acento a la izquierda (patron real de nav rail de
-         Fluent/WinUI 3), no un simple relleno de fondo. -->
+    <!-- Nav rail izquierda - indicador de seleccion = barra vertical de acento, fondo elevado
+         detras del item activo. -->
     <Style x:Key="NavTabItem" TargetType="TabItem">
         <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
         <Setter Property="FontSize" Value="13" />
@@ -433,7 +601,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
                     <Grid Margin="8,2">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6"
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="8"
                                 Padding="{TemplateBinding Padding}">
                             <DockPanel>
                                 <Border x:Name="Indicator" DockPanel.Dock="Left" Width="3" CornerRadius="2"
@@ -446,7 +614,7 @@
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgElevatedBrush}" />
                             <Setter TargetName="Indicator" Property="Opacity" Value="1" />
-                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource AccentHoverBrush}" />
                             <Setter Property="FontWeight" Value="SemiBold" />
                         </Trigger>
                         <MultiTrigger>
@@ -471,37 +639,35 @@
         <Setter Property="Padding" Value="0" />
     </Style>
 
-    <!-- Pestañas internas (contenedores del personaje: Inventario/Banco/...) - horizontales,
-         igual de planas, sin la barra lateral. Indicador = subrayado de acento (patron real de
-         "pivot"/pestañas Fluent), en vez de una pastilla solida que competia visualmente con
-         los botones de acento del resto de la app. -->
+    <!-- Pestañas internas - pastilla real de Terrasavr (fondo alfa-tintado de acento + borde
+         de acento cuando esta activa, ver .tsx-tab.active del CSS real: background:
+         #6C63FF22; border-color: #6C63FF) en vez del subrayado plano anterior. -->
     <Style x:Key="InnerTabItem" TargetType="TabItem">
         <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
         <Setter Property="FontSize" Value="12.5" />
-        <Setter Property="Padding" Value="4,7,4,9" />
-        <Setter Property="Margin" Value="0,0,18,0" />
+        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="Margin" Value="0,0,6,4" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
-                    <Grid Margin="{TemplateBinding Margin}">
-                        <StackPanel>
-                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                              Margin="{TemplateBinding Padding}" />
-                            <Border x:Name="Underline" Height="2" CornerRadius="1" Background="{StaticResource AccentBrush}" Opacity="0" />
-                        </StackPanel>
-                    </Grid>
+                    <Border x:Name="Bd" Margin="{TemplateBinding Margin}" Padding="{TemplateBinding Padding}"
+                            CornerRadius="8" BorderThickness="1" BorderBrush="Transparent" Background="Transparent">
+                        <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource AccentHoverBrush}" />
                             <Setter Property="FontWeight" Value="SemiBold" />
-                            <Setter TargetName="Underline" Property="Opacity" Value="1" />
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsMouseOver" Value="True" />
                                 <Condition Property="IsSelected" Value="False" />
                             </MultiTrigger.Conditions>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
                             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
                         </MultiTrigger>
                     </ControlTemplate.Triggers>
@@ -517,35 +683,35 @@
         <Setter Property="ItemContainerStyle" Value="{StaticResource InnerTabItem}" />
     </Style>
 
-    <!-- Tarjeta de slot de item - encogida 1-sep-2026 (pedido explicito, "cajas mas
-         pequeñas... sabes como es terrasav") de 188x92 a 148x74. -->
+    <!-- Tarjeta de slot de item. -->
     <Style x:Key="ItemSlotCard" TargetType="Border">
         <Setter Property="Width" Value="148" />
         <Setter Property="Height" Value="74" />
         <Setter Property="Margin" Value="3" />
         <Setter Property="Padding" Value="6,4" />
-        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
     </Style>
 
-    <!-- Tarjeta generica elevada (paneles de bienvenida, resumenes...) - radio 8px de tarjeta
-         + sombra sutil, mismo lenguaje que ItemSlotCard pero para bloques de contenido mas
-         grandes y libres (no una rejilla de slots). -->
+    <!-- Tarjeta generica elevada - cabecera en degradado real (ver .tsx-modal-header del CSS
+         real: linear-gradient(135deg, #21253a, #171a26)) disponible como HeaderGradientBrush
+         para quien la quiera usar en su propia cabecera. -->
     <Style x:Key="ElevatedCard" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="12" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
         <Setter Property="Padding" Value="20" />
     </Style>
 
-    <!-- Tarjeta de navegacion clicable (pagina de Inicio) - mismo aspecto que ElevatedCard en
-         reposo, se ilumina y sube ligeramente (sombra mas marcada) al pasar el raton, dando la
-         sensacion "interactiva" pedida explicitamente en el objetivo de diseño. Se usa sobre
-         un Button para heredar clics/teclado gratis, con plantilla propia por encima del
-         Button plano de la app. -->
+    <!-- Tarjeta de navegacion clicable (pagina de Inicio) - anima de verdad al pasar el raton
+         (antes solo cambiaba el color al instante): sube 3px, la sombra crece, el borde se
+         tiñe del color de acento QUE SE LE PASE (Tag) - permite reproducir la variedad de
+         color real de los FABs de Terrasavr (cada tarjeta puede llevar Tag="Accent"/"Teal"/
+         "Pink"/"Orange" y su borde/icono de hover cambia a ese color en vez de ser siempre
+         violeta). -->
     <Style x:Key="NavCardButton" TargetType="Button">
         <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}" />
         <Setter Property="Cursor" Value="Hand" />
@@ -553,18 +719,116 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="10"
-                            BorderThickness="1" BorderBrush="{StaticResource BorderBrush0}" Padding="18">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="12"
+                            BorderThickness="1" Padding="18" Effect="{StaticResource CardShadow}">
+                        <Border.BorderBrush>
+                            <SolidColorBrush x:Name="BdBorderBrush" Color="{StaticResource BorderColor}" />
+                        </Border.BorderBrush>
+                        <Border.RenderTransform>
+                            <TranslateTransform x:Name="BdLift" Y="0" />
+                        </Border.RenderTransform>
                         <ContentPresenter />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-                            <Setter TargetName="Bd" Property="Effect" Value="{StaticResource CardShadow}" />
+                            <Setter TargetName="Bd" Property="Effect" Value="{StaticResource CardShadowHover}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="-3" Duration="0:0:0.15" />
+                                        <ColorAnimation Storyboard.TargetName="BdBorderBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource AccentColor}" Duration="0:0:0.15" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.15" />
+                                        <ColorAnimation Storyboard.TargetName="BdBorderBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource BorderColor}" Duration="0:0:0.15" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgPressedBrush}" />
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Teal">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBorderBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource TealColor}" Duration="0" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Pink">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBorderBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource PinkColor}" Duration="0" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Orange">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBorderBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource OrangeColor}" Duration="0" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Boton circular pequeño (cerrar/quitar/vaciar) - gira 90 grados y se tiñe de rojo al
+         pasar el raton, gesto real de Terrasavr (.tsx-close-btn:hover { background: #ff4d4d;
+         transform: rotate(90deg) }) que antes no existia en absoluto (los botones "X" solo
+         cambiaban de color, sin ningun movimiento). -->
+    <Style x:Key="CircleCloseButton" TargetType="Button">
+        <Setter Property="Width" Value="22" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" CornerRadius="99" Background="Transparent">
+                        <Border.RenderTransform>
+                            <RotateTransform x:Name="BdRotate" Angle="0" CenterX="11" CenterY="11" />
+                        </Border.RenderTransform>
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource PinkColor}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdRotate" Storyboard.TargetProperty="Angle" To="90" Duration="0:0:0.18" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdRotate" Storyboard.TargetProperty="Angle" To="0" Duration="0:0:0.18" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

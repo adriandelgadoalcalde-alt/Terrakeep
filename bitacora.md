@@ -1328,3 +1328,93 @@ prefijo automático, drag&drop). `dotnet build`/`dotnet test` en verde (118/118)
 - Verificar contra archivos/datos REALES de este PC siempre que sea posible (personajes reales
   en `Documents\My Games\Terraria\tModLoader\Players\`, JSON reales del proyecto Electron) en
   vez de solo fixtures inventadas - varios bugs reales de esta sesión solo aparecieron así.
+
+## Rediseño estético a fondo (1-sep-2026, pedido explícito tras crítica directa)
+
+Pedido textual del usuario: *"podrias dedicarte a mejorar estéticamente toda la app? es que si
+el trabajo esta muy bien echo pero el diseño me gustaría que fuera una pasada a nivel de
+interactivo es que terrasav en ese sentido esta muy muy pulido y me da la sensación que no
+estas captando la idea de de la estética de terrasav"* - crítica directa a que la primera
+pasada estética (ámbar/Fluent genérico, sin animaciones reales) no reflejaba el Terrasavr
+real. Antes de tocar nada se leyó `overrides.css`/`style.css` reales de
+`Terrasavr-Calamity-Beta\resources\app\local-site\` (el reskin CSS que sí usa el Terrasavr
+auténtico) y se relanzó el propio `Terrasavr.exe` para confirmar en vivo su aspecto: acento
+**violeta `#6C63FF`** (no ámbar), fondos azul-marino muy oscuros (`#171a26`/`#1e2233`, no gris
+neutro), botones flotantes en **degradado** con color distinto por acción (violeta=Builds,
+teal=Novedades, rosa=Explorador, naranja=CTA fuerte), forma de píldora, y sobre todo
+**animación real** al pasar el ratón (`translateY(-2px)`, sombra que crece) - nada de esto
+existía en la primera pasada.
+
+**Reescritura completa de `Theme.xaml`**: paleta nueva (violeta + familia teal/rosa/naranja
+para variedad, degradados `LinearGradientBrush` para `Button`/`CheckBox`), dos niveles de
+sombra (`CardShadow`/`CardShadowHover`), y sobre todo transiciones **animadas de verdad**
+(`Storyboard`/`ColorAnimation`/`DoubleAnimation`) en vez de los `Setter` instantáneos de la
+primera pasada: `Button` levanta 2px en variantes de color (`Tag="Accent/Teal/Pink/Orange"`),
+`NavCardButton` (tarjetas de Inicio) levanta 3px y tiñe su borde al pasar el ratón, y un
+`CircleCloseButton` nuevo gira 90° + se tiñe de rosa (gesto real de Terrasavr:
+`.tsx-close-btn:hover { transform: rotate(90deg) }`), aplicado a los botones ✕ reales
+(vaciar slot, quitar buff).
+
+**Dos bugs reales de WPF encontrados y corregidos compilando** (ninguno inventado, los dos
+pararon la compilación o crashearon la app en vivo, capturados por el manejador global de
+excepciones ya existente):
+1. `Setter.TargetName` **no puede apuntar a un `Brush`** con nombre (solo a
+   `FrameworkElement`/`FrameworkContentElement`) - `<Setter TargetName="BdBrush" Property=
+   "Color" .../>` daba `MC4111` en compilación. Los 4 casos (botón presionado, borde de
+   `NavCardButton` por Tag) se reescribieron como `ColorAnimation` dentro de
+   `BeginStoryboard`, que sí puede apuntar a un `Brush` nombrado.
+2. Un `Storyboard` dentro de `Style.Triggers` (fuera del `ControlTemplate`) **no puede usar
+   `TargetName`** en absoluto (`MC4011`) - y sin `TargetName` apunta al elemento estilado
+   (el `Button`), que no tiene `RenderTransform.Y` propio, dando
+   `XamlParseException`/`InvalidOperationException` **en tiempo de ejecución, no de
+   compilación** (compiló limpio, crasheó al abrir la app - el primer intento de arreglo tras
+   `dotnet build` en verde igualmente petó en vivo, capturado por el `MessageBox` +
+   `ultimo-error.log` del manejador global). Solución real: mover el levantamiento a
+   `ControlTemplate.Triggers` con `MultiTrigger` (`IsMouseOver` + `Tag`), donde `TargetName`
+   sí es válido y sí puede apuntar al `TranslateTransform` nombrado del propio template.
+
+**`MainWindow.xaml`**: variedad de color aplicada donde el propio Terrasavr real la usa -
+tarjeta "Exploración" `Tag="Pink"`, "Novedades" `Tag="Teal"`, botón "Guardar" `Tag="Orange"`
+(el CTA más fuerte, como el naranja real de Terrasavr), "Cargar personaje/mundo" ya tenían
+`Tag="Accent"` de antes y heredan el degradado+levantamiento nuevos gratis. Los dos botones ✕
+reales (vaciar slot, quitar buff) pasan a `CircleCloseButton`.
+
+**Verificación real, con una limitación de entorno importante documentada aquí para no volver
+a perseguirla cada sesión**: `dotnet build`/`dotnet test` en verde (118/118) tras cada cambio,
+y el manejador global de excepciones confirmó en vivo que el primer intento SÍ crasheaba
+(`ultimo-error.log` con el `XamlParseException` real) y que el segundo intento ya NO genera
+ningún `ultimo-error.log` (proceso responde, CPU en reposo, sin excepción). Pero la
+**verificación visual por captura de pantalla no fue posible en esta sesión**: la ventana de
+Terrakeep aparece en blanco puro tras maximizar/mover/traer al frente por `user32.dll`
+(`ShowWindow`/`SetForegroundWindow`/`SetWindowPos`/`MoveWindow`, incluso forzando un `WM_SIZE`
+real y un clic de ratón real dentro de la ventana) - **confirmado con una prueba diferencial
+real que descarta que sea el rediseño**: se hizo `git stash` de todos los cambios de esta
+sesión, se recompiló la versión anterior (tema ámbar, ya comiteada y dada por buena en su
+momento) y **el mismo blanco reproduce igual** con ese build antiguo. Es una limitación del
+propio entorno de automatización de esta sesión (ya apuntada como sospecha en la sesión
+anterior: "blank white window" al cargar un mundo), no un defecto de la app ni de este
+rediseño - `git stash pop` restauró los cambios sin pérdida. Dado que ya ha fallado dos veces
+en dos sesiones distintas por la misma causa, se deja aparcada esta vía de verificación en vez
+de seguir insistiendo (regla de "si falla dos veces seguidas, para") - la verificación de este
+rediseño se apoya en compilación limpia + tests en verde + ausencia de excepción real +
+revisión manual del XAML, no en captura visual.
+
+## Arreglo del zoom del visor de mundo (1-sep-2026)
+
+Bug reportado textual: *"el tema del visualitzador de mundo el zoom se solapa con el scroll de
+la rueda del ratón con lo que el zoom no lo hace recto"*. Causa real: `OnWorldMapPreviewMouseWheel`
+cambiaba `Zoom` sin tocar los offsets del `ScrollViewer` - como el `ScaleTransform` vive en
+`LayoutTransform` (no `RenderTransform`), los offsets del `ScrollViewer` ya están en espacio
+POST-transformación y no se reajustan solos, así que el zoom saltaba siempre desde la esquina
+superior izquierda del mapa (offset 0,0) en vez de desde donde estaba el cursor. Arreglado con
+el mismo patrón ya usado y verificado en esta sesión para `OnNavigateToTile` (centrar el mapa
+en un NPC): se calcula la coordenada de mundo bajo el cursor ANTES de cambiar el zoom
+(`worldX/worldY = (offset + posición del ratón) / zoom viejo`), se cambia el zoom, se llama a
+`ScrollViewer.UpdateLayout()` (para que el `ScrollViewer` ya conozca el nuevo tamaño de
+contenido post-transformación antes de pedirle un offset nuevo - sin esto seguiría calculando
+contra el extent viejo) y se recoloca el offset para que ese mismo punto de mundo siga bajo el
+cursor después (`worldX * zoom nuevo - posición del ratón`). `dotnet build`/`dotnet test` en
+verde (118/118); verificación visual en vivo bloqueada por la misma limitación de entorno
+documentada arriba - la lógica reutiliza un patrón ya probado en vivo esta misma sesión para
+`OnNavigateToTile`, así que se da por buena por revisión de código + compilación + tests,
+dejando constancia aquí de que no se ha podido confirmar con una captura real.

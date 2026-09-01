@@ -63,9 +63,29 @@ public partial class MainWindow : Window
 
     // Rueda del raton = zoom directamente (sin necesitar Ctrl, pedido explicito - el arrastre ya
     // cubre el desplazamiento normal, asi que la rueda no hace falta para nada mas aqui).
+    //
+    // Bug real corregido (1-sep-2026, reportado: "el zoom no lo hace recto"): cambiar solo
+    // Zoom sin tocar los offsets del ScrollViewer hace zoom desde la esquina superior
+    // izquierda del mapa (offset 0,0), no desde donde esta el cursor - la vista "salta" en vez
+    // de hacer zoom centrado en el punto que se esta mirando. Se calcula la coordenada de
+    // mundo bajo el cursor ANTES de cambiar el zoom, y se recoloca el offset para que ese
+    // mismo punto de mundo siga bajo el cursor DESPUES. UpdateLayout() fuerza a que el
+    // ScrollViewer ya conozca el nuevo tamaño de contenido (post-LayoutTransform) antes de
+    // pedirle el nuevo offset - sin esto, ScrollToHorizontalOffset calcularia contra el
+    // extent viejo todavia y el resultado seguiria sin cuadrar.
     private void OnWorldMapPreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        _viewModel.Exploration.Zoom *= e.Delta > 0 ? 1.15 : 1 / 1.15;
+        double oldZoom = _viewModel.Exploration.Zoom;
+        var mousePos = e.GetPosition(WorldMapScroll);
+        double worldX = (WorldMapScroll.HorizontalOffset + mousePos.X) / oldZoom;
+        double worldY = (WorldMapScroll.VerticalOffset + mousePos.Y) / oldZoom;
+
+        _viewModel.Exploration.Zoom = oldZoom * (e.Delta > 0 ? 1.15 : 1 / 1.15);
+        double newZoom = _viewModel.Exploration.Zoom;
+
+        WorldMapScroll.UpdateLayout();
+        WorldMapScroll.ScrollToHorizontalOffset(worldX * newZoom - mousePos.X);
+        WorldMapScroll.ScrollToVerticalOffset(worldY * newZoom - mousePos.Y);
         e.Handled = true;
     }
 

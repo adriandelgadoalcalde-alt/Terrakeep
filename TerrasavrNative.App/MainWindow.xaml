@@ -47,9 +47,8 @@
                                 Background="Transparent"
                                 Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
                         <Button Content="&#10005;" Command="{Binding ClearCommand}"
-                                ToolTip="Vaciar este slot"
-                                Padding="2,0" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"
-                                Background="Transparent"
+                                ToolTip="Vaciar este slot" Style="{StaticResource CircleCloseButton}"
+                                Width="18" Height="18" FontSize="10"
                                 Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
                     </StackPanel>
 
@@ -298,7 +297,7 @@
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource NavCardButton}" Width="270" Height="108" Margin="0,0,14,14"
-                                Command="{Binding GoToTabCommand}" CommandParameter="Exploracion">
+                                Tag="Pink" Command="{Binding GoToTabCommand}" CommandParameter="Exploracion">
                             <StackPanel>
                                 <TextBlock Text="Exploracion" Style="{StaticResource SectionText}" />
                                 <TextBlock Text="Carga un mundo .wld y navega su mapa completo: pan, zoom y NPCs de pueblo con su posicion."
@@ -306,7 +305,7 @@
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource NavCardButton}" Width="270" Height="108" Margin="0,0,14,14"
-                                Command="{Binding GoToTabCommand}" CommandParameter="Novedades">
+                                Tag="Teal" Command="{Binding GoToTabCommand}" CommandParameter="Novedades">
                             <StackPanel>
                                 <TextBlock Text="Novedades" Style="{StaticResource SectionText}" />
                                 <TextBlock Text="Que ha cambiado en cada version del propio editor."
@@ -331,7 +330,7 @@
             <DockPanel Margin="14">
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
                     <Button Content="Cargar personaje (.plr)..." Tag="Accent" Click="OnLoadClick" />
-                    <Button Content="Guardar" Margin="10,0,0,0" Command="{Binding SaveCommand}" />
+                    <Button Content="Guardar" Tag="Orange" Margin="10,0,0,0" Command="{Binding SaveCommand}" />
                     <TextBlock Text="{Binding CharacterName, StringFormat='Personaje: {0}'}"
                                Style="{StaticResource SectionText}" VerticalAlignment="Center" Margin="20,0,0,0"
                                Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}" />
@@ -577,8 +576,7 @@
                                                 <DockPanel>
                                                     <Button DockPanel.Dock="Top" Content="&#10005;" Command="{Binding RemoveCommand}"
                                                             ToolTip="Quitar este buff" HorizontalAlignment="Right"
-                                                            Padding="4,0" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
-                                                            Background="Transparent" />
+                                                            Style="{StaticResource CircleCloseButton}" Width="18" Height="18" FontSize="10" />
                                                     <StackPanel Orientation="Horizontal">
                                                         <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
                                                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
