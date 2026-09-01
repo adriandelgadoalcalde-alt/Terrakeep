@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
 using TerrasavrNative.Core.Model;
+using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels;
 
@@ -21,6 +22,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _hasCalamityData;
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
+    public ObservableCollection<BuffRowViewModel> Buffs { get; } = [];
+    public ObservableCollection<ResearchRowViewModel> Research { get; } = [];
     public BuildsViewModel Builds { get; }
     public WhatsNewViewModel WhatsNew { get; }
     public AboutViewModel About { get; } = new();
@@ -74,6 +77,8 @@ public partial class MainViewModel : ObservableObject
     private void RebuildContainers()
     {
         Containers.Clear();
+        Buffs.Clear();
+        Research.Clear();
         if (_loaded == null) return;
 
         // Contenedores con fusion real de Calamity (mismos 7 que CalamityCharacterSync cubre).
@@ -91,6 +96,65 @@ public partial class MainViewModel : ObservableObject
         AddContainer("loadoutArmor", "Equipo puesto - armadura/accesorios (vanilla; Calamity pendiente)", _loaded.Character.PrimaryLoadout.Items.ToGameItems());
         AddContainer("loadoutSocial", "Equipo puesto - vanidad (vanilla; Calamity pendiente)", _loaded.Character.PrimaryLoadout.Social.ToGameItems());
         AddContainer("loadoutDyes", "Equipo puesto - tintes (vanilla; Calamity pendiente)", _loaded.Character.PrimaryLoadout.Dyes.ToGameItems());
+
+        // Buffs vanilla solamente por ahora - los de Calamity viven en "modBuffs" dentro del
+        // .tplr, sin fusionar todavia (ver bitacora.md).
+        foreach (var buff in _loaded.Character.Buffs)
+        {
+            if (buff.Id == 0) continue;
+            Buffs.Add(BuffRowViewModel.From(buff, _service.VanillaBuffs));
+        }
+
+        RebuildResearch();
+    }
+
+    private void RebuildResearch()
+    {
+        Research.Clear();
+        if (_loaded == null) return;
+        foreach (var entry in _loaded.Character.Research.OrderBy(e => e.Pid))
+        {
+            bool isCalamity = entry.Pid.Contains('/');
+            string displayName = isCalamity
+                ? ResolveCalamityPidName(entry.Pid)
+                : _service.VanillaCatalog.GetNameByKey(entry.Pid);
+            Research.Add(new ResearchRowViewModel(displayName, entry.Count, isCalamity));
+        }
+    }
+
+    private string ResolveCalamityPidName(string pid)
+    {
+        int slash = pid.IndexOf('/');
+        if (slash < 0) return pid;
+        string mod = pid[..slash], internalName = pid[(slash + 1)..];
+        return _service.CalamityCatalog.ByModAndInternal(mod, internalName)?.DisplayName ?? pid;
+    }
+
+    // "Investigar todo": rellena PlrCharacter.Research con una entrada por cada objeto conocido
+    // (vanilla + Calamity) que todavia no estuviera investigado, con un conteo alto fijo
+    // (mismo criterio que la version JS: no se conoce la tabla real de "cuantos hacen falta"
+    // por objeto, un valor alto de sobra garantiza el desbloqueo completo igualmente).
+    [RelayCommand(CanExecute = nameof(IsCharacterLoaded))]
+    private void ResearchAll()
+    {
+        if (_loaded == null) return;
+        const int placeholderCount = 9999;
+        var existingPids = new HashSet<string>(_loaded.Character.Research.Select(e => e.Pid));
+
+        foreach (var pid in _service.VanillaCatalog.AllInternalNames())
+        {
+            if (existingPids.Add(pid))
+                _loaded.Character.Research.Add(new PlrResearchEntry { Pid = pid, Count = placeholderCount });
+        }
+        foreach (var entry in _service.CalamityCatalog.Entries)
+        {
+            string pid = $"{entry.Mod}/{entry.Internal}";
+            if (existingPids.Add(pid))
+                _loaded.Character.Research.Add(new PlrResearchEntry { Pid = pid, Count = placeholderCount });
+        }
+
+        RebuildResearch();
+        StatusMessage = $"Investigacion completa aplicada ({Research.Count} objetos) - pulsa Guardar para conservarlo.";
     }
 
     private void AddContainer(string key, string displayName, GameItem[] items)

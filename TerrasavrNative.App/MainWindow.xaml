@@ -28,15 +28,23 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}"
-                               TextWrapping="Wrap" MaxHeight="32" />
-                    <TextBlock Style="{StaticResource CaptionText}">
-                        <Run Text="{Binding Count, Mode=OneWay}" />
-                        <Run Text=" " />
-                        <Run Text="{Binding PrefixDisplay, Mode=OneWay}" />
-                    </TextBlock>
-                </StackPanel>
+                <Grid>
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,20,0">
+                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}"
+                                   TextWrapping="Wrap" MaxHeight="32" />
+                        <TextBlock Style="{StaticResource CaptionText}">
+                            <Run Text="{Binding Count, Mode=OneWay}" />
+                            <Run Text=" " />
+                            <Run Text="{Binding PrefixDisplay, Mode=OneWay}" />
+                        </TextBlock>
+                    </StackPanel>
+                    <Button Content="&#9733;" Command="{Binding ApplyBestPrefixCommand}"
+                            ToolTip="Aplicar el mejor prefijo real"
+                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                            Padding="4,0" FontSize="13" Foreground="{StaticResource AccentBrush}"
+                            Background="Transparent"
+                            Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
+                </Grid>
             </Border>
         </DataTemplate>
 
@@ -143,15 +151,68 @@
                 <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Style="{StaticResource CaptionText}"
                            Margin="0,10,0,0" TextWrapping="Wrap" />
 
-                <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
-                    <TabControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
-                            <TextBlock Text="{Binding DisplayName}" />
-                        </DataTemplate>
-                    </TabControl.ItemTemplate>
-                    <TabControl.ContentTemplate>
-                        <StaticResource ResourceKey="ContainerTabTemplate" />
-                    </TabControl.ContentTemplate>
+                <TabControl Style="{StaticResource InnerTabControl}">
+                    <TabItem Header="Objetos">
+                        <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
+                            <TabControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </TabControl.ItemTemplate>
+                            <TabControl.ContentTemplate>
+                                <StaticResource ResourceKey="ContainerTabTemplate" />
+                            </TabControl.ContentTemplate>
+                        </TabControl>
+                    </TabItem>
+                    <TabItem Header="Buffs">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Buffs}" Margin="0,10,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:BuffRowViewModel}">
+                                        <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="9,6">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
+                                                <TextBlock Text="{Binding Duration}" Style="{StaticResource CaptionText}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="Investigacion">
+                        <DockPanel Margin="0,10,0,0">
+                            <Button DockPanel.Dock="Top" Content="Investigar todo" Tag="Accent"
+                                    Command="{Binding ResearchAllCommand}" HorizontalAlignment="Left" Margin="0,0,0,10" />
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding Research}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:ResearchRowViewModel}">
+                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="4" Margin="0,0,6,6" Padding="7,3">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                                                <Setter Property="BorderThickness" Value="1" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </TabItem>
                 </TabControl>
             </DockPanel>
         </TabItem>

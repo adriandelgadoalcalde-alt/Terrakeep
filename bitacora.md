@@ -137,7 +137,46 @@ pulsar "Cargar mundo" no se ha podido comprobar visualmente - la lógica de mezc
 sencilla y de bajo riesgo (usa datos ya probados de `WldReader`/`MapColorCatalog`), pero
 conviene que el usuario lo abra y mire si el mapa se ve bien de verdad.
 
+### Fase 3 — Paridad funcional (buffs, ★ mejor prefijo, Investigación)
+
+Retomada tras un aviso del usuario de que me había saltado el orden de fases del plan por
+seguir sus peticiones más recientes (Exploración/Builds/Novedades/tema) - las dos cosas se
+hacen, pero el plan manda primero.
+
+- **Buffs**: pestaña nueva dentro de "Personaje", solo lectura. Nombres vanilla generados
+  desde `BuffID.cs` decompilado (354 buffs) - **sin traducción real todavía** (`lang.zip` solo
+  trae la categoría "Items", no una categoría de Buffs aparte con `BuffName` - se usa una
+  versión "humanizada" del nombre interno en inglés como placeholder honesto, no inventado).
+  Los buffs de Calamity (`modBuffs` en el `.tplr`) NO están fusionados todavía - mismo alcance
+  documentado que el resto de piezas de Calamity pendientes.
+- **Investigación**: lista de lo ya investigado (`PlrCharacter.Research`, ya lo leía el
+  formato desde la Fase 1) + botón "Investigar todo" que añade una entrada por cada objeto
+  conocido (vanilla + Calamity) con un conteo alto fijo - mismo criterio que la versión JS (no
+  se conoce la tabla real de "cuántos hacen falta" por objeto). PID vanilla confirmado como el
+  mismo nombre interno de `ItemID.cs` sin "/" (verificado cruzando "MoltenHelmet" contra
+  `builds.json`, que ya usaba ese mismo formato).
+- **Botón ★ (mejor prefijo)**: `PrefixSuggester` en Core, con test unitario. Vanilla y
+  Calamity genérico vía `best_prefix.json` (243 objetos vanilla, 996 de Calamity, ya generado
+  y verificado en Terrasavr-Calamity-Beta); armas Pícaro detectadas por `damageType` real
+  (`RogueDamageClass.Instance` en `catalog.json`) usan en cambio el prefijo real más fuerte de
+  Calamity (`RoguePrefixCatalog.Best.Weapon`), no la tabla genérica - mismo criterio que el
+  README de la versión JS. Aparece como un botón ★ en la esquina de cada tarjeta de objeto,
+  solo si hay una sugerencia real distinta del prefijo actual.
+- **Mascota/montura/gancho + tintes**: ya estaba cubierto desde la Fase 2 (`miscEquips`/
+  `miscDyes`, con fusión de Calamity incluida).
+
+**Verificado**: 75 tests xUnit (6 nuevos de `PrefixSuggester`, con fixtures que distinguen
+explícitamente "es Pícaro de verdad" de "está en la tabla genérica pero no es Pícaro" - un
+caso donde una detección ingenua podría confundirse). `dotnet build` limpio, la app arranca
+cargando también los 3 catálogos nuevos (`vanilla_buff_names.json`,
+`vanilla_item_names_by_key.json`, `best_prefix.json`) sin excepciones.
+
+**No verificado con la UI en sí**: pulsar el botón ★ de verdad, ver la lista de buffs/
+investigación en pantalla, pulsar "Investigar todo" - misma limitación de siempre.
+
 ## Pendiente (visible desde fuera, sin entrar en el detalle de Fase 1 de más arriba)
+
+- **Fase 4 (Librería/Buscador)**: sin empezar todavía - es lo siguiente según el plan.
 
 - **Exploración**: zoom real (de momento solo scroll a tamaño 1:1), fondo degradado por zona
   (falta leer GroundLevel/RockLevel), buscador/filtro de NPCs (ya se listan todos, falta

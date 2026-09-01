@@ -11,25 +11,43 @@ namespace TerrasavrNative.Core.Data;
 public sealed class VanillaItemCatalog
 {
     private readonly Dictionary<int, string> _namesById;
+    private readonly Dictionary<string, string> _namesByKey;
 
-    private VanillaItemCatalog(Dictionary<int, string> namesById) => _namesById = namesById;
+    private VanillaItemCatalog(Dictionary<int, string> namesById, Dictionary<string, string> namesByKey)
+    {
+        _namesById = namesById;
+        _namesByKey = namesByKey;
+    }
 
     public string GetName(int itemId) =>
         _namesById.TryGetValue(itemId, out var name) ? name : $"Item #{itemId}";
 
-    public static VanillaItemCatalog LoadFromFile(string path)
+    // Por nombre interno (ej. "MoltenHelmet") - el mismo formato que usan los PID de
+    // investigacion vanilla (sin "/", a diferencia de los PID de mods) y los "pid" de
+    // builds.json. Ver Assets/vanilla_item_names_by_key.json.
+    public string GetNameByKey(string internalName) =>
+        _namesByKey.TryGetValue(internalName, out var name) ? name : internalName;
+
+    public IReadOnlyCollection<string> AllInternalNames() => _namesByKey.Keys;
+
+    public static VanillaItemCatalog LoadFromFile(string path, string byKeyPath)
     {
         using var stream = File.OpenRead(path);
-        return LoadFromStream(stream);
+        using var keyStream = File.OpenRead(byKeyPath);
+        return LoadFromStreams(stream, keyStream);
     }
 
-    public static VanillaItemCatalog LoadFromStream(Stream stream)
+    public static VanillaItemCatalog LoadFromStreams(Stream stream, Stream byKeyStream)
     {
         var raw = JsonSerializer.Deserialize<Dictionary<string, string>>(stream)
             ?? throw new InvalidDataException("vanilla_item_names.json invalido.");
         var byId = new Dictionary<int, string>(raw.Count);
         foreach (var (key, value) in raw)
             byId[int.Parse(key)] = value;
-        return new VanillaItemCatalog(byId);
+
+        var byKey = JsonSerializer.Deserialize<Dictionary<string, string>>(byKeyStream)
+            ?? throw new InvalidDataException("vanilla_item_names_by_key.json invalido.");
+
+        return new VanillaItemCatalog(byId, byKey);
     }
 }

@@ -37,13 +37,17 @@ public sealed class CharacterFileService
     public MapColorCatalog MapColors { get; }
     public TileNameCatalog TileNames { get; }
     public NpcNameCatalog NpcNames { get; }
+    public VanillaBuffCatalog VanillaBuffs { get; }
+    public BestPrefixCatalog BestPrefixes { get; }
 
     public CharacterFileService()
     {
         string assetsDir = Path.Combine(AppContext.BaseDirectory, "Assets");
         CalamityCatalog = CalamityCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "catalog.json"));
         RoguePrefixCatalog = RoguePrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "rogue_prefixes.json"));
-        VanillaCatalog = VanillaItemCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_item_names.json"));
+        VanillaCatalog = VanillaItemCatalog.LoadFromFile(
+            Path.Combine(assetsDir, "vanilla_item_names.json"),
+            Path.Combine(assetsDir, "vanilla_item_names_by_key.json"));
         VanillaPrefixCatalog = VanillaPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "prefixes.json"));
         VanillaBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds.json"));
         CalamityBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds_calamity.json"));
@@ -51,6 +55,8 @@ public sealed class CharacterFileService
         MapColors = MapColorCatalog.LoadFromFile(Path.Combine(assetsDir, "map_colors.json"));
         TileNames = TileNameCatalog.LoadFromFile(Path.Combine(assetsDir, "tile_names.json"));
         NpcNames = NpcNameCatalog.LoadFromFile(Path.Combine(assetsDir, "npc_names.json"));
+        VanillaBuffs = VanillaBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_buff_names.json"));
+        BestPrefixes = BestPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "best_prefix.json"));
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
         var codec = new CalamityItemCodec(CalamityCatalog, translator);
