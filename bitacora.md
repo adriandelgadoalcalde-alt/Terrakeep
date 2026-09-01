@@ -653,13 +653,7 @@ NO barridos todavía (quedan documentados aquí para la siguiente ronda, prioriz
 3. **Panel de "Spawn Points" (servidores favoritos)** - dato ya leído/escrito
    (`PlrCharacter.Servers`/`PlrServerEntry`, `PlrBodySerializer`), cero UI. Cada entrada:
    nombre, dirección, `spawnX`/`spawnY`.
-4. **Campos de estadísticas del personaje sin panel** (`app.TabMain`) - TODOS ya leídos en
-   `PlrCharacter.cs`, solo falta UI (mismo patrón que `AppearanceViewModel`, sin parsing
-   nuevo): `Difficulty` (Softcore/Mediumcore/Hardcore/Journey), `HealthNow`/`HealthMax`/
-   `ManaNow`/`ManaMax`, `FishingQuestsCompleted`, `GolferScore`, tiempo jugado (el puerto solo
-   tiene `PlayTimeLow`/`PlayTimeHigh` en crudo, sin exponer como segundos). El hueco más
-   barato de cerrar. `BartenderQuests` NO añadir - el propio JS lo tiene eliminado de la UI a
-   propósito (`this.remove(this.lbBarQuests)`), es basura reconocida por el propio autor.
+4. ~~**Campos de estadísticas del personaje sin panel**~~ **CERRADO** (ver más abajo).
 5. **Cambiar la versión objetivo del guardado** (`app.TabVersion`) - nicho/avanzado,
    `PlrCharacter.Version` ya existe sin editor. Prioridad baja (riesgo si se usa mal).
 6. **`TabFlags` ("Edit permanent buffs")** - contenido real SIN determinar en esta pasada
@@ -672,9 +666,38 @@ ya tomada y documentada): el campo "Code" de edición de objetos (exclusivo del 
 tModLoader, este proyecto es 100% tModLoader así que no aplica); `TabShelf` (bandeja temporal
 de items - la Librería como selector directo por slot ya cubre el mismo caso de uso).
 
+### Estadísticas del personaje (hueco #4 de la auditoría, cerrado)
+
+Añadidas a `AppearanceViewModel` (mismo agrupamiento que la versión JS real: `app.TabMain`/
+`Sa` cubre apariencia+estadísticas en un único panel, no dos separados) y a la pestaña
+Apariencia: Dificultad (Softcore/Mediumcore/Hardcore/Journey, `ComboBox`), Vida actual/máxima,
+Maná actual/máximo, misiones de pesca completadas, puntuación de golf, horas jugadas.
+
+- **Dificultad**: confirmado en `script.readable.js` que la convención real es 0=Softcore,
+  1=Mediumcore, 2=Hardcore, 3=Journey (`btDiff` array de 4 botones + `3 == a.difficulty`
+  gateando el slot extra de accesorio de Journey - coincide con la convención pública conocida
+  de Terraria).
+- **Horas jugadas**: `PlrCharacter` solo guardaba `PlayTimeLow`/`PlayTimeHigh` (dos `UInt32`)
+  sin exponer. Confirmado en `script.readable.js` que juntos forman un contador de 64 bits a
+  **10 millones de ticks/segundo** (comentario real: *"there are 10 million 'ticks' in one
+  second"*) - **exactamente** la resolución de `System.TimeSpan.Ticks`. Se usa
+  `TimeSpan.FromTicks/.Ticks` con aritmética entera de 64 bits en vez de replicar la fórmula
+  en coma flotante del original (que tiene una pérdida de precisión real y medible:
+  `429.4967295` en vez de `429.4967296` = 2³²/10⁷ exacto) - mismo criterio ya aplicado a los
+  campos `LONG` del NBT en la Fase 1 (opacos en JS por no tener enteros de 64 bits nativos;
+  aquí sí los hay, se usan).
+- `BartenderQuests` NO se añadió - el propio JS lo tiene eliminado de la UI a propósito
+  (`this.remove(this.lbBarQuests)`), es basura reconocida por el propio autor.
+
+**Verificado**: 97 tests xUnit siguen en verde (pieza de UI, sin lógica nueva en Core),
+`dotnet build` limpio, la app arranca sin excepción. Matemática de ida y vuelta de
+horas→ticks→horas verificada a mano (1h → 36 000 000 000 ticks → High=8/Low=1 640 261 632 →
+recompuesto → 1.0h exacto). **No verificado con clics reales** - misma limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
-- Huecos 1-6 de la auditoría de arriba, por orden de prioridad (el 4 es el más barato).
+- Huecos 1, 2, 3, 5, 6 de la auditoría de arriba, por orden de prioridad (el 4 ya está
+  cerrado, ver arriba).
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 

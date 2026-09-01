@@ -338,6 +338,52 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+
+                                <TextBlock Text="Estadisticas" Style="{StaticResource SectionText}" Margin="0,20,0,8" />
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                                    <StackPanel Margin="0,0,24,0">
+                                        <TextBlock Text="Dificultad" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                        <ComboBox ItemsSource="{Binding Appearance.DifficultyLabels}" SelectedIndex="{Binding Appearance.Difficulty}"
+                                                  Width="120" Padding="6,4" />
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,24,0">
+                                        <TextBlock Text="Vida (actual / max.)" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBox Text="{Binding Appearance.HealthNow, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="6,4"
+                                                     Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                            <TextBlock Text="/" VerticalAlignment="Center" Margin="4,0" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <TextBox Text="{Binding Appearance.HealthMax, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="6,4"
+                                                     Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Mana (actual / max.)" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBox Text="{Binding Appearance.ManaNow, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="6,4"
+                                                     Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                            <TextBlock Text="/" VerticalAlignment="Center" Margin="4,0" Foreground="{StaticResource TextSecondaryBrush}" />
+                                            <TextBox Text="{Binding Appearance.ManaMax, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="6,4"
+                                                     Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                                    <StackPanel Margin="0,0,24,0">
+                                        <TextBlock Text="Misiones de pesca completadas" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                        <TextBox Text="{Binding Appearance.FishingQuestsCompleted, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="6,4"
+                                                 Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,24,0">
+                                        <TextBlock Text="Puntuacion de golf" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                        <TextBox Text="{Binding Appearance.GolferScore, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="6,4"
+                                                 Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Horas jugadas" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                        <TextBox Text="{Binding Appearance.PlayHours, UpdateSourceTrigger=PropertyChanged, StringFormat=N1}" Width="70" Padding="6,4"
+                                                 Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                    </StackPanel>
+                                </StackPanel>
                             </StackPanel>
                         </ScrollViewer>
                     </TabItem>

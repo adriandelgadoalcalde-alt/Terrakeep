@@ -6,12 +6,13 @@ using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels;
 
-// Pestaña "Apariencia" - estilo de pelo, genero, tinte de pelo y los 7 colores reales del
-// personaje (pelo/piel/ojos/camisa/camiseta interior/pantalones/zapatos), todos campos que
+// Pestaña "Apariencia" - estilo de pelo, genero, tinte de pelo, los 7 colores reales del
+// personaje (pelo/piel/ojos/camisa/camiseta interior/pantalones/zapatos) y las estadisticas
+// del personaje (dificultad, vida/mana, pesca, golf, horas jugadas) - todos campos que
 // PlrCharacter ya traia leidos desde la Fase 1 pero sin ningun panel para verlos/editarlos.
-// PreviewImage se recalcula en cada cambio (ver PlayerPreviewRenderer para el detalle real
-// del atlas/tintado, y su propia limitacion documentada: es un icono de cabeza pequeño, no
-// un personaje de cuerpo completo - asi era ya en el Terrasavr original).
+// Mismo agrupamiento que la version JS real (app.TabMain/Sa cubre appearance+stats en un
+// unico panel, confirmado en la auditoria de bitacora.md). PreviewImage se recalcula en cada
+// cambio (ver PlayerPreviewRenderer para el detalle real del atlas/tintado).
 public partial class AppearanceViewModel : ObservableObject
 {
     private PlrCharacter? _character;
@@ -37,6 +38,31 @@ public partial class AppearanceViewModel : ObservableObject
 
     public ObservableCollection<ColorSwatchViewModel> Swatches { get; } = [];
 
+    // Estadisticas del personaje - en la version JS real viven en el mismo panel que
+    // pelo/colores (app.TabMain, clase Sa, mismo constructor que ya se investigo para el
+    // preview), asi que se quedan aqui en vez de en una pestaña aparte. Todos campos que
+    // PlrCharacter ya traia leidos/escritos, solo faltaba UI (ver bitacora.md, auditoria
+    // Terrasavr JS vs puerto).
+    public string[] DifficultyLabels { get; } = ["Softcore", "Mediumcore", "Hardcore", "Journey"];
+
+    [ObservableProperty] private int _difficulty;
+    [ObservableProperty] private int _healthNow;
+    [ObservableProperty] private int _healthMax;
+    [ObservableProperty] private int _manaNow;
+    [ObservableProperty] private int _manaMax;
+    [ObservableProperty] private int _fishingQuestsCompleted;
+    [ObservableProperty] private int _golferScore;
+    // Horas jugadas, editable - PlrCharacter solo guarda PlayTimeLow/PlayTimeHigh (dos UInt32
+    // que juntos forman un tick count de 64 bits, 10 millones de ticks/segundo - EXACTAMENTE
+    // la resolucion de System.TimeSpan.Ticks, confirmado leyendo el real
+    // script.readable.js: "there are 10 million 'ticks' in one second" mas la formula real de
+    // guardado/carga con el mismo divisor 1E7). Se usa TimeSpan/aritmetica entera de 64 bits
+    // en vez de replicar la formula en coma flotante del original (que tiene perdida de
+    // precision real, 429.4967295 en vez de 429.4967296 = 2^32/1E7 exacto) - mismo criterio
+    // que ya se aplico a los campos LONG del NBT en Fase 1 (blob opaco en JS por no tener
+    // enteros de 64 bits nativos; aqui SI los hay, se usan).
+    [ObservableProperty] private double _playHours;
+
     public void LoadFrom(PlrCharacter character)
     {
         _character = null; // evita que los Add() de abajo disparen escrituras a medio construir
@@ -53,6 +79,15 @@ public partial class AppearanceViewModel : ObservableObject
         HairStyle = character.HairStyle;
         HairDye = character.HairDye;
         IsMale = character.Gender == 1;
+        Difficulty = character.Difficulty;
+        HealthNow = character.HealthNow;
+        HealthMax = character.HealthMax;
+        ManaNow = character.ManaNow;
+        ManaMax = character.ManaMax;
+        FishingQuestsCompleted = character.FishingQuestsCompleted;
+        GolferScore = character.GolferScore;
+        long totalTicks = (long)(((ulong)character.PlayTimeHigh << 32) | character.PlayTimeLow);
+        PlayHours = TimeSpan.FromTicks(totalTicks).TotalHours;
         _suppressWriteback = false;
 
         foreach (var swatch in Swatches)
@@ -81,6 +116,27 @@ public partial class AppearanceViewModel : ObservableObject
         RefreshPreview();
         if (_suppressWriteback || _character == null) return;
         _character.Gender = (byte)(value ? 1 : 0);
+    }
+
+    partial void OnDifficultyChanged(int value)
+    {
+        if (_suppressWriteback || _character == null) return;
+        _character.Difficulty = (byte)Math.Clamp(value, 0, 3);
+    }
+
+    partial void OnHealthNowChanged(int value) { if (!_suppressWriteback && _character != null) _character.HealthNow = value; }
+    partial void OnHealthMaxChanged(int value) { if (!_suppressWriteback && _character != null) _character.HealthMax = value; }
+    partial void OnManaNowChanged(int value) { if (!_suppressWriteback && _character != null) _character.ManaNow = value; }
+    partial void OnManaMaxChanged(int value) { if (!_suppressWriteback && _character != null) _character.ManaMax = value; }
+    partial void OnFishingQuestsCompletedChanged(int value) { if (!_suppressWriteback && _character != null) _character.FishingQuestsCompleted = value; }
+    partial void OnGolferScoreChanged(int value) { if (!_suppressWriteback && _character != null) _character.GolferScore = value; }
+
+    partial void OnPlayHoursChanged(double value)
+    {
+        if (_suppressWriteback || _character == null) return;
+        long ticks = TimeSpan.FromHours(Math.Max(0, value)).Ticks;
+        _character.PlayTimeLow = unchecked((uint)ticks);
+        _character.PlayTimeHigh = unchecked((uint)(ticks >> 32));
     }
 
     // Indices en Swatches, mismo orden en que se anaden arriba en LoadFrom.
