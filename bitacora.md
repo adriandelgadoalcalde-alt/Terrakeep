@@ -406,6 +406,13 @@ verificado con clics reales** (ver equipo de Calamity puesto de verdad en pantal
 limitación de siempre. Con esto, el único hueco documentado de la Fase 1 que queda es
 coins/ammo/tempItems, que la propia app JS tampoco sincroniza con Calamity (solo protege).
 
+**Añadido en el mismo commit siguiente**: los 3 loadouts reales (Loadouts[0..2], solo si
+`Version>=269`) ganan sus propios contenedores en la pestaña Objetos ("Loadout 1/2/3 -
+armadura/accesorios/vanidad/tintes"), reutilizando el mismo mecanismo genérico de
+`AddContainer`/`SyncEditsBackToMerged` que ya tenían el resto - sin código nuevo en el
+ViewModel aparte del bucle sobre `Character.Loadouts`. Antes solo se veía/editaba el loadout 0
+(equipo puesto).
+
 ## Pendiente (visible desde fuera)
 
 - **Exploración**: zoom real (de momento solo scroll a tamaño 1:1), fondo degradado por zona
@@ -413,8 +420,6 @@ coins/ammo/tempItems, que la propia app JS tampoco sincroniza con Calamity (solo
   tile/pared - ya está `TileNameCatalog`, falta guardar u/v por tile en `WldTile` para
   resolver variantes exactas y conectarlo a la UI).
 - **Apariencia** (pelo/piel con preview) - ni empezada.
-- **Panel de los 3 loadouts reales** (hoy solo se ve/edita el "equipo puesto" = loadout 0/
-  mirror; Loadouts[0..2] ya se fusionan/sincronizan con Calamity pero no tienen UI propia).
 - Instalador (Fase 6 del plan) - ni empezado.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)

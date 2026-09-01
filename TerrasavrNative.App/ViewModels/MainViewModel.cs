@@ -121,6 +121,17 @@ public partial class MainViewModel : ObservableObject
         AddContainer("loadout0Social", "Equipo puesto - vanidad", _loaded.MergedContainers["loadout0Social"]);
         AddContainer("loadout0Dyes", "Equipo puesto - tintes", _loaded.MergedContainers["loadout0Dyes"]);
 
+        // Los 3 loadouts reales seleccionables (indice 1..3 en el esquema de
+        // CalamityCharacterSync = Loadouts[0..2]) - solo existen si Version>=269. Vacio en
+        // caracteres mas antiguos, se salta solo.
+        for (int i = 0; i < _loaded.Character.Loadouts.Length; i++)
+        {
+            int key = i + 1;
+            AddContainer($"loadout{key}Items", $"Loadout {i + 1} - armadura/accesorios", _loaded.MergedContainers[$"loadout{key}Items"]);
+            AddContainer($"loadout{key}Social", $"Loadout {i + 1} - vanidad", _loaded.MergedContainers[$"loadout{key}Social"]);
+            AddContainer($"loadout{key}Dyes", $"Loadout {i + 1} - tintes", _loaded.MergedContainers[$"loadout{key}Dyes"]);
+        }
+
         // Buffs vanilla + Calamity (modBuffs), ya fusionados en Character.Buffs por
         // CharacterFileService.Load (CalamityCharacterSync.MergeBuffs).
         foreach (var buff in _loaded.Character.Buffs)
