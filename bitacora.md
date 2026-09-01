@@ -57,12 +57,10 @@ Solución + 3 proyectos, `.gitignore`, sin lógica todavía.
   (fusiona/enmascara objetos de Calamity en los 7 contenedores que la app JS sincroniza de
   verdad: inventory/bank/bank2/bank3/bank4/miscEquips/miscDyes).
 
-**Pendiente dentro de la Fase 1** (documentado también en `CalamityCharacterSync.cs`):
-armadura/tinte de Calamity POR LOADOUT (`calamityMergeArmorDyeIntoPlayer`/
-`calamitySyncArmorDyeFromPlayer` en la versión JS - incluye una peculiaridad real y confirmada,
-no un bug de este port: `calamityActiveLoadout` usa `player.loadouts[currentLoadout]` SIN el
-`+1` que sí usa el guardado vanilla nativo); coins/ammo/tempItems (la app JS tampoco los
-sincroniza con Calamity, solo los protege al enmascarar).
+**Pendiente dentro de la Fase 1** (ya cerrado salvo un punto - ver la sección "Armadura/tinte
+de Calamity POR LOADOUT" más abajo para el detalle completo): armadura/tinte de Calamity POR
+LOADOUT, ya fusionado/sincronizado. Queda solo coins/ammo/tempItems, que la app JS tampoco
+sincroniza con Calamity (solo los protege al enmascarar).
 
 **Verificación real**: 65 tests xUnit, incluido un round-trip **byte a byte perfecto** (con
 cifrado AES incluido) contra dos personajes reales de este PC (`Eldelgas.plr` vanilla,
@@ -365,8 +363,48 @@ ocupados, sincronización de vuelta con el formato correcto por origen, y round-
 merge→sync→merge preservando un buff de Calamity). `dotnet build` limpio, la app arranca sin
 excepción con `buffs.json` copiado. **No verificado con clics reales** (ver un buff de
 Calamity de verdad en pantalla, guardar y comprobar que sigue ahí al recargar) - misma
-limitación de siempre. Loadouts (armadura/tinte por loadout, `calamityMergeArmorDyeIntoPlayer`)
-sigue sin portar - ver la sección de Fase 1 más arriba.
+limitación de siempre.
+
+### Armadura/tinte de Calamity POR LOADOUT fusionados - último hueco de paridad de Calamity cerrado
+
+`CalamityCharacterSync` gana `MergeLoadoutArmorDye`/`SyncLoadoutArmorDye`, puerto literal de
+`calamityMergeArmorDyeIntoPlayer`/`calamitySyncArmorDyeFromPlayer` reales:
+
+- **Vista combinada por loadout**: cada uno de los 4 loadouts conceptuales (`[PrimaryLoadout,
+  ...Loadouts]`, índice 0 = mirror de "lo puesto", 1-3 = los 3 loadouts reales) gana claves
+  `loadout{i}Items`/`loadout{i}Social`/`loadout{i}Dyes` en el mismo diccionario que ya
+  devuelve `MergeAll` para los 7 contenedores planos - armadura+vanidad viven en un único
+  espacio conceptual de 20 slots en el `.tplr` (0-9 armadura/accesorios, 10-19 vanidad, mismo
+  criterio que `calamityArmorSlot` real), repartido de vuelta a `Items`/`Social` tras fusionar.
+- **Dos rutas de fusión, igual que el original**: (1) claves PLANAS `armor`/`dye` del
+  `.tplr`, que van al "loadout activo" - **`calamityActiveLoadout(player)` real usa
+  `player.loadouts[currentLoadout]` SIN el `+1` que sí usa el guardado vanilla nativo**
+  (confirmado leyendo `overrides.js`, era el punto marcado como "sin verificar" en el plan
+  original). Con `CurrentLoadout==0` cae en el mirror (lo que la UI ya muestra como "equipo
+  puesto"); con `CurrentLoadout>=1` cae en `Loadouts[CurrentLoadout-1]` **en vez de** en el
+  mirror - una discrepancia real de la app original entre lo que esta ruta fusiona y lo que el
+  juego/la UI consideran "puesto de verdad", replicada tal cual, no corregida. (2) claves POR
+  LOADOUT `loadout{i}Armor`/`loadout{i}Dye` (una por cada uno de los 4), sin ambigüedad,
+  ejecutadas después de la ruta plana.
+- **`PlrLoadout.Items`/`Social`/`Dyes` son propiedades `init`-only** (no se puede reasignar el
+  array tras construirlo) - `SyncLoadoutArmorDye` muta sus elementos uno a uno en vez de
+  reasignar la referencia, sin tocar el modelo de datos.
+- **UI**: los contenedores "Equipo puesto" en Personaje pasan de leer
+  `Character.PrimaryLoadout.Items/Social/Dyes` en crudo a leer `MergedContainers["loadout0Items
+  /Social/Dyes"]` (ya con Calamity fusionado) - mismo mecanismo genérico de sincronización de
+  vuelta (`SyncEditsBackToMerged`) que ya usaban los 7 contenedores planos, sin código nuevo en
+  el ViewModel aparte de las claves. Loadouts 1-3 (los 3 loadouts reales seleccionables)
+  **siguen sin tener panel propio en la UI** - se fusionan/sincronizan igualmente (no se pierde
+  nada al guardar), pero no hay dónde verlos/editarlos todavía.
+
+**Verificado**: 88 tests xUnit (3 nuevos: fusión de armadura+vanidad+tinte vía claves planas
+con `CurrentLoadout=0`, el quirk de índice confirmado con `CurrentLoadout=1` cayendo en
+`Loadouts[0]` y NO en el mirror, y un round-trip completo merge→sync→merge). `dotnet build`
+limpio, la app arranca sin excepción, y la prueba de extremo a extremo contra el personaje
+real "adrian" (que ya pasaba por este camino sin la lógica de loadouts) sigue en verde. **No
+verificado con clics reales** (ver equipo de Calamity puesto de verdad en pantalla) - misma
+limitación de siempre. Con esto, el único hueco documentado de la Fase 1 que queda es
+coins/ammo/tempItems, que la propia app JS tampoco sincroniza con Calamity (solo protege).
 
 ## Pendiente (visible desde fuera)
 
@@ -375,8 +413,8 @@ sigue sin portar - ver la sección de Fase 1 más arriba.
   tile/pared - ya está `TileNameCatalog`, falta guardar u/v por tile en `WldTile` para
   resolver variantes exactas y conectarlo a la UI).
 - **Apariencia** (pelo/piel con preview) - ni empezada.
-- Armadura/tinte de Calamity POR LOADOUT sin fusionar todavía (ver la sección de Fase 1 más
-  arriba) - los buffs ya sí están fusionados (ver arriba).
+- **Panel de los 3 loadouts reales** (hoy solo se ve/edita el "equipo puesto" = loadout 0/
+  mirror; Loadouts[0..2] ya se fusionan/sincronizan con Calamity pero no tienen UI propia).
 - Instalador (Fase 6 del plan) - ni empezado.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)

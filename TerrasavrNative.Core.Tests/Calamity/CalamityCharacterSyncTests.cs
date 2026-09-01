@@ -277,4 +277,84 @@ public class CalamityCharacterSyncTests
         Assert.Equal(expectedBuffId, reCharacter.Buffs[0].Id);
         Assert.Equal(300, reCharacter.Buffs[0].Time);
     }
+
+    [Fact]
+    public void MergeAll_FlatArmorDye_WithCurrentLoadoutZero_MergesIntoPrimaryLoadout()
+    {
+        var sync = MakeSync(out var catalog);
+        var character = MakeBlankCharacter(); // CurrentLoadout=0 por defecto
+
+        var tplrRoot = NbtCompound.Of(
+            ("armor", new NbtList(NbtTagType.Compound, [
+                NbtCompound.Of(("mod", new NbtString("CalamityMod")), ("name", new NbtString("Abaddon")), ("slot", new NbtShort(3))), // accesorio (items[3])
+                NbtCompound.Of(("mod", new NbtString("CalamityMod")), ("name", new NbtString("Calamity")), ("slot", new NbtShort(12))) // vanidad (social[2])
+            ])),
+            ("dye", new NbtList(NbtTagType.Compound, [
+                NbtCompound.Of(("mod", new NbtString("CalamityMod")), ("name", new NbtString("Abaddon")), ("slot", new NbtShort(1)))
+            ]))
+        );
+
+        var merged = sync.MergeAll(character, tplrRoot);
+
+        var abaddonId = catalog.ByModAndInternal("CalamityMod", "Abaddon")!.SyntheticId;
+        var calamityId = catalog.ByModAndInternal("CalamityMod", "Calamity")!.SyntheticId;
+        Assert.Equal(abaddonId, merged["loadout0Items"][3].Id);
+        Assert.Equal(calamityId, merged["loadout0Social"][2].Id);
+        Assert.Equal(abaddonId, merged["loadout0Dyes"][1].Id);
+        // El resto de loadouts (si version>=269 los tuviera) no existen aqui - solo el mirror.
+        Assert.False(merged.ContainsKey("loadout1Items"));
+    }
+
+    [Fact]
+    public void MergeAll_FlatArmorDye_ActiveLoadoutQuirk_CurrentLoadoutOneTargetsLoadoutsZero_NotPrimary()
+    {
+        // calamityActiveLoadout(player) = player.loadouts[currentLoadout] SIN el +1 que si usa
+        // el guardado vanilla nativo - con CurrentLoadout=1 esto cae en Loadouts[0] (indice 1
+        // del array conceptual [PrimaryLoadout, ...Loadouts]), NUNCA en PrimaryLoadout. Ver el
+        // comentario de MergeLoadoutArmorDye.
+        var sync = MakeSync(out var catalog);
+        var character = MakeBlankCharacter();
+        character.Loadouts = [PlrLoadout.CreateEmpty(false), PlrLoadout.CreateEmpty(false), PlrLoadout.CreateEmpty(false)];
+        character.CurrentLoadout = 1;
+
+        var tplrRoot = NbtCompound.Of(
+            ("armor", new NbtList(NbtTagType.Compound, [
+                NbtCompound.Of(("mod", new NbtString("CalamityMod")), ("name", new NbtString("Abaddon")), ("slot", new NbtShort(0)))
+            ]))
+        );
+
+        var merged = sync.MergeAll(character, tplrRoot);
+
+        var abaddonId = catalog.ByModAndInternal("CalamityMod", "Abaddon")!.SyntheticId;
+        Assert.Equal(abaddonId, merged["loadout1Items"][0].Id); // Loadouts[0], no el mirror
+        Assert.True(merged["loadout0Items"][0].IsEmpty); // el mirror (PrimaryLoadout) NO se toca
+    }
+
+    [Fact]
+    public void RoundTrip_MergeThenMaskAndSync_PreservesLoadoutArmorAndDye()
+    {
+        var sync = MakeSync(out var catalog);
+        var character = MakeBlankCharacter();
+
+        var tplrRoot = NbtCompound.Of(
+            ("armor", new NbtList(NbtTagType.Compound, [
+                NbtCompound.Of(("mod", new NbtString("CalamityMod")), ("name", new NbtString("Abaddon")), ("slot", new NbtShort(3)))
+            ])),
+            ("dye", new NbtList(NbtTagType.Compound, []))
+        );
+
+        var merged = sync.MergeAll(character, tplrRoot);
+        var abaddonId = catalog.ByModAndInternal("CalamityMod", "Abaddon")!.SyntheticId;
+        Assert.Equal(abaddonId, merged["loadout0Items"][3].Id);
+
+        var newTplrRoot = sync.MaskAndSyncAll(character, merged, tplrRoot);
+
+        // El .plr enmascarado no debe conocer el objeto de Calamity en el slot de armadura.
+        Assert.True(character.PrimaryLoadout.Items[3].IsEmpty);
+
+        // Releido desde cero, el mismo objeto debe reaparecer en el mismo slot.
+        var reCharacter = MakeBlankCharacter();
+        var reMerged = sync.MergeAll(reCharacter, newTplrRoot);
+        Assert.Equal(abaddonId, reMerged["loadout0Items"][3].Id);
+    }
 }

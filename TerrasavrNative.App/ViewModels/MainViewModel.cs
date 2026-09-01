@@ -109,12 +109,17 @@ public partial class MainViewModel : ObservableObject
         AddContainer("miscEquips", "Mascota / Montura / Gancho", _loaded.MergedContainers["miscEquips"]);
         AddContainer("miscDyes", "Tintes (mascota/montura/gancho)", _loaded.MergedContainers["miscDyes"]);
 
-        // Vanilla-only por ahora (ver CalamityCharacterSync.cs para el alcance documentado):
+        // Monedas/municion: vanilla-only (ver CalamityCharacterSync.cs para el alcance
+        // documentado - la app JS tampoco los sincroniza con Calamity, solo los protege).
         AddContainer("coins", "Monedas", _loaded.Character.Coins.ToGameItems());
         AddContainer("ammo", "Municion", _loaded.Character.Ammo.ToGameItems());
-        AddContainer("loadoutArmor", "Equipo puesto - armadura/accesorios (vanilla; Calamity pendiente)", _loaded.Character.PrimaryLoadout.Items.ToGameItems());
-        AddContainer("loadoutSocial", "Equipo puesto - vanidad (vanilla; Calamity pendiente)", _loaded.Character.PrimaryLoadout.Social.ToGameItems());
-        AddContainer("loadoutDyes", "Equipo puesto - tintes (vanilla; Calamity pendiente)", _loaded.Character.PrimaryLoadout.Dyes.ToGameItems());
+
+        // Equipo puesto (loadout 0 = PrimaryLoadout, el mirror de "lo que lleva puesto ahora")
+        // - claves "loadout0Items/Social/Dyes", ya con objetos de Calamity fusionados por
+        // MergeAll/MergeLoadoutArmorDye.
+        AddContainer("loadout0Items", "Equipo puesto - armadura/accesorios", _loaded.MergedContainers["loadout0Items"]);
+        AddContainer("loadout0Social", "Equipo puesto - vanidad", _loaded.MergedContainers["loadout0Social"]);
+        AddContainer("loadout0Dyes", "Equipo puesto - tintes", _loaded.MergedContainers["loadout0Dyes"]);
 
         // Buffs vanilla + Calamity (modBuffs), ya fusionados en Character.Buffs por
         // CharacterFileService.Load (CalamityCharacterSync.MergeBuffs).
@@ -190,7 +195,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (_loaded == null || gear == null) return;
 
-        var armorSlots = Containers.First(c => c.Key == "loadoutArmor").Slots;
+        var armorSlots = Containers.First(c => c.Key == "loadout0Items").Slots;
         var inventorySlots = Containers.First(c => c.Key == "inventory").Slots;
         int placed = 0, skipped = 0;
 
