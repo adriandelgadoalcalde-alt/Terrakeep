@@ -1261,7 +1261,58 @@ Verificado en vivo: pasar el ratón sobre "Espada Terra" (Terra Blade) en el inv
 Eldelgas muestra "Daño: 85 / Nudillo: 6,5 / Velocidad de uso: 18 / Rareza: 8" - valores reales
 conocidos del arma. `dotnet build`/`dotnet test` en verde (118/118).
 
-**Pendiente de la lista original**: solo queda drag&drop visual.
+### Punto 9 CERRADO - drag&drop real + Librería como panel siempre visible (último punto de la lista)
+
+Dos piezas, la segunda descubierta como necesaria mientras se verificaba la primera:
+
+1. **Arrastrar y soltar de verdad**: `ItemSlotViewModel.SwapWith` (nuevo, Core-side) intercambia
+   el contenido COMPLETO de dos slots (prefijo/cantidad/favorito/datos de Calamity incluidos).
+   El gesto de arrastre (deteccion de umbral de movimiento + `DragDrop.DoDragDrop`) vive en
+   `MainWindow.xaml.cs` (`OnLibraryCardMouseDown/Move`, `OnItemSlotMouseDown/Move/Drop`), mismo
+   criterio que el resto de manejadores de raton de este proyecto (code-behind, no MVVM puro,
+   porque son eventos de UI de bajo nivel que la ViewModel no deberia conocer). Detección de
+   arrastre estándar de WPF (guardar posición en botón-abajo, solo arrancar `DoDragDrop` si el
+   ratón se mueve más allá de `SystemParameters.Minimum*DragDistance`) para no robarle el clic
+   normal a los botones de dentro de la tarjeta (Cambiar/★/✎/✕), que ya funcionaban por clic.
+2. **Bug de diseño real, encontrado verificando el punto 1**: con la Librería como pestaña
+   interna SEPARADA de Objetos (como quedó tras el punto 2), arrastrar una tarjeta de la
+   Librería hasta un slot es **inalcanzable en la práctica** - las dos pestañas nunca están
+   visibles a la vez, así que no hay ningún slot visible sobre el que soltar mientras se ve la
+   Librería. Solucionado moviendo la Librería DENTRO de la propia pestaña "Objetos", como panel
+   siempre visible debajo del inventario (árbol a la izquierda, buscador+tarjetas a la
+   derecha) - esto es además más fiel al layout real de Terrasavr (capturas aportadas por el
+   usuario: inventario arriba, Librería abajo a la derecha, simultáneos) que el diseño de
+   pestaña separada del punto 2. `MainViewModel` se simplifica de paso: ya no hace falta un
+   índice de pestaña interna distinto para Librería, "Elegir objeto" solo necesita asegurar que
+   la pestaña interna activa es "Objetos" (donde la Librería ya vive siempre).
+
+**Verificado en vivo con capturas antes/después para cada gesto, no solo build limpio**:
+arrastrar el slot 1 ("Espada Terra") sobre el slot 2 ("Durendal") los intercambia de verdad
+(confirmado por captura: los nombres cambian de sitio, ambos con su prefijo real intacto);
+arrastrar "Hacha de hierro" desde la Librería (categoría "Armas" ya filtrada) hasta un slot
+visible del inventario arriba lo coloca ahí, con el prefijo "Legendario" aplicado automático
+(confirma de paso que el punto 8 sigue funcionando). Nota de proceso: la automatización con
+`user32.dll`/`SetCursorPos` necesita movimiento incremental real (no un simple teleport de
+posición) para que el bucle interno de `DoDragDrop` de WPF lo reconozca como un arrastre de
+verdad - un mensaje único de movimiento no basta. `dotnet build`/`dotnet test` en verde
+(118/118).
+
+### Corrección real - Investigación NO tenía sprites (afirmación anterior errónea, no verificada)
+
+Al redactar el cierre de la lista se afirmó sin comprobar que "Investigación ya tenía sprites
+desde antes" - **falso**, `ResearchRowViewModel` solo tenía `DisplayName`/`Count`/`IsCalamity`,
+ningún icono. Detectado y corregido en el momento (mismo criterio de esta bitácora: no dar
+nada por bueno sin mirar el código real). Arreglado de verdad: `ResearchRowViewModel` gana
+`IconPath`; `MainViewModel.RebuildResearch` resuelve el id real por `Pid` (vanilla vía
+`VanillaCatalog.GetIdByKey` + `VanillaIconResolver`, Calamity vía `CalamityCatalog.
+ByModAndInternal` + su icono propio) y lo pasa. XAML de Investigación gana una `Image` junto
+al nombre. Verificado en vivo con "Investigar todo" sobre Eldelgas (8164 objetos) - cada
+entrada muestra su sprite real (herramientas, materiales, estatuas...), no solo texto.
+
+**Con esto se cierran de verdad las 9 partes del pedido de rework de interfaz del 1-sep-2026**
+(mapa interactivo, reorganización de menús, crash de Novedades, sprites en Librería +
+Investigación, sprites en Apariencia/Buffs, Builds con armas, tooltips de estadísticas, mejor
+prefijo automático, drag&drop). `dotnet build`/`dotnet test` en verde (118/118).
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 

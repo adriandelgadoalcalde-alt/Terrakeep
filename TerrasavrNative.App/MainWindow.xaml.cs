@@ -120,4 +120,58 @@ public partial class MainWindow : Window
         WorldMapScroll.ScrollToHorizontalOffset(tileX * zoom - WorldMapScroll.ViewportWidth / 2);
         WorldMapScroll.ScrollToVerticalOffset(tileY * zoom - WorldMapScroll.ViewportHeight / 2);
     }
+
+    // Arrastrar y soltar (pedido explicito 1-sep-2026: "se puede arrastar para poder ir
+    // poniendo en el inventario o en accesorios pero todo se visualiza en sprites"). Deteccion
+    // de arrastre estandar de WPF: se guarda la posicion en el boton-abajo, y solo se arranca
+    // DoDragDrop de verdad si el raton se mueve mas alla del umbral del sistema con el boton
+    // aun pulsado - asi un simple clic (sin mover el raton) sigue llegando normal a los
+    // botones de dentro de la tarjeta (Cambiar/★/✎/✕), que ya funcionaban por clic.
+    private Point? _dragStartLibrary;
+    private Point? _dragStartSlot;
+
+    private void OnLibraryCardMouseDown(object sender, MouseButtonEventArgs e) => _dragStartLibrary = e.GetPosition(null);
+
+    private void OnLibraryCardMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _dragStartLibrary is not { } start) return;
+        var pos = e.GetPosition(null);
+        if (Math.Abs(pos.X - start.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(pos.Y - start.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        _dragStartLibrary = null;
+
+        if (sender is FrameworkElement { DataContext: LibraryItemViewModel item } element)
+            DragDrop.DoDragDrop(element, new DataObject(typeof(LibraryItemViewModel), item), DragDropEffects.Copy);
+    }
+
+    private void OnItemSlotMouseDown(object sender, MouseButtonEventArgs e) => _dragStartSlot = e.GetPosition(null);
+
+    private void OnItemSlotMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _dragStartSlot is not { } start) return;
+        var pos = e.GetPosition(null);
+        if (Math.Abs(pos.X - start.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(pos.Y - start.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        _dragStartSlot = null;
+
+        if (sender is FrameworkElement { DataContext: ItemSlotViewModel { IsEmpty: false } slot } element)
+            DragDrop.DoDragDrop(element, new DataObject(typeof(ItemSlotViewModel), slot), DragDropEffects.Move);
+    }
+
+    // Soltar una tarjeta de la Libreria coloca ese objeto (igual que "Cambiar objeto"); soltar
+    // otro slot arrastrado los intercambia entero (prefijo/cantidad/favorito incluidos).
+    private void OnItemSlotDrop(object sender, DragEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: ItemSlotViewModel targetSlot }) return;
+
+        if (e.Data.GetDataPresent(typeof(LibraryItemViewModel)) && e.Data.GetData(typeof(LibraryItemViewModel)) is LibraryItemViewModel libraryItem)
+        {
+            targetSlot.PlaceItem(libraryItem.Id);
+        }
+        else if (e.Data.GetDataPresent(typeof(ItemSlotViewModel)) && e.Data.GetData(typeof(ItemSlotViewModel)) is ItemSlotViewModel sourceSlot
+                 && !ReferenceEquals(sourceSlot, targetSlot))
+        {
+            sourceSlot.SwapWith(targetSlot);
+        }
+    }
 }

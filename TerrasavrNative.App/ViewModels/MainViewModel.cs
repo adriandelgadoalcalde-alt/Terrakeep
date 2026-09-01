@@ -27,13 +27,12 @@ public partial class MainViewModel : ObservableObject
     private const int ExploracionTabIndex = 4;
     private const int AcercaDeTabIndex = 5;
 
-    // Indice de la pestaña INTERNA dentro de Personaje (Objetos=0, Libreria=1, ...) - la
-    // Libreria vive ahora dentro de Personaje (pedido explicito 1-sep-2026, "la libreria
-    // deberia estar tambien dentro de personaje... como es terrasav"), asi que saltar a ella
-    // al pulsar "Elegir objeto" en un slot necesita mover DOS indices: el externo (a
-    // Personaje) y este interno (a Libreria).
+    // Indice de la pestaña INTERNA dentro de Personaje (Objetos=0, ...) - la Libreria vive
+    // ahora DENTRO de la propia pestaña Objetos, siempre visible debajo del inventario
+    // (pedido explicito 1-sep-2026, "la libreria deberia estar tambien dentro de personaje...
+    // como es terrasav" - y ademas necesario para que arrastrar una tarjeta hasta un slot sea
+    // posible: si Libreria fuera una pestaña aparte, nunca se verian los dos a la vez).
     private const int ObjetosInnerTabIndex = 0;
-    private const int LibreriaInnerTabIndex = 1;
 
     [ObservableProperty] private string _statusMessage = "Sin personaje cargado.";
     [ObservableProperty] private string? _characterName;
@@ -72,18 +71,19 @@ public partial class MainViewModel : ObservableObject
     }
 
     // Usado por las tarjetas de la pagina de Inicio para saltar directamente a una seccion.
+    // "Libreria" ya no es una pestaña propia (ver el comentario de ObjetosInnerTabIndex) - vive
+    // dentro de Objetos, asi que la tarjeta de Inicio salta ahi igual que "Personaje".
     [RelayCommand]
     private void GoToTab(string tab)
     {
-        if (tab == "Libreria")
+        if (tab is "Personaje" or "Libreria")
         {
             SelectedTabIndex = PersonajeTabIndex;
-            PersonajeInnerTabIndex = LibreriaInnerTabIndex;
+            PersonajeInnerTabIndex = ObjetosInnerTabIndex;
             return;
         }
         SelectedTabIndex = tab switch
         {
-            "Personaje" => PersonajeTabIndex,
             "Builds" => BuildsTabIndex,
             "Novedades" => NovedadesTabIndex,
             "Exploracion" => ExploracionTabIndex,
@@ -100,7 +100,7 @@ public partial class MainViewModel : ObservableObject
         PrefixPicker.PickTarget = null;
         Library.PickTarget = slot;
         SelectedTabIndex = PersonajeTabIndex;
-        PersonajeInnerTabIndex = LibreriaInnerTabIndex;
+        PersonajeInnerTabIndex = ObjetosInnerTabIndex;
     }
 
     // El picker de prefijo se queda en la misma pestaña (Objetos) - a diferencia de la
@@ -205,19 +205,24 @@ public partial class MainViewModel : ObservableObject
         foreach (var entry in _loaded.Character.Research.OrderBy(e => e.Pid))
         {
             bool isCalamity = entry.Pid.Contains('/');
-            string displayName = isCalamity
-                ? ResolveCalamityPidName(entry.Pid)
-                : _service.VanillaCatalog.GetNameByKey(entry.Pid);
-            Research.Add(new ResearchRowViewModel(displayName, entry.Count, isCalamity));
+            string displayName;
+            string? iconPath;
+            if (isCalamity)
+            {
+                int slash = entry.Pid.IndexOf('/');
+                string mod = entry.Pid[..slash], internalName = entry.Pid[(slash + 1)..];
+                var calEntry = _service.CalamityCatalog.ByModAndInternal(mod, internalName);
+                displayName = calEntry?.DisplayName ?? entry.Pid;
+                iconPath = calEntry?.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + calEntry.Icon : null;
+            }
+            else
+            {
+                displayName = _service.VanillaCatalog.GetNameByKey(entry.Pid);
+                int? vanillaId = _service.VanillaCatalog.GetIdByKey(entry.Pid);
+                iconPath = vanillaId.HasValue ? VanillaIconResolver.GetIconPath(vanillaId.Value) : null;
+            }
+            Research.Add(new ResearchRowViewModel(displayName, entry.Count, isCalamity, iconPath));
         }
-    }
-
-    private string ResolveCalamityPidName(string pid)
-    {
-        int slash = pid.IndexOf('/');
-        if (slash < 0) return pid;
-        string mod = pid[..slash], internalName = pid[(slash + 1)..];
-        return _service.CalamityCatalog.ByModAndInternal(mod, internalName)?.DisplayName ?? pid;
     }
 
     // "Investigar todo": rellena PlrCharacter.Research con una entrada por cada objeto conocido

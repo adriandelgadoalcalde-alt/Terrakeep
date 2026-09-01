@@ -96,6 +96,19 @@ public partial class ItemSlotViewModel : ObservableObject
         UpdateFrom(item);
     }
 
+    // Arrastrar y soltar un slot sobre otro (pedido explicito 1-sep-2026: "se puede arrastar
+    // para poder ir poniendo en el inventario o en accesorios") - intercambia el contenido
+    // completo de los dos slots (prefijo/cantidad/favorito/datos de Calamity incluidos), igual
+    // que el propio juego al arrastrar un item sobre otro slot ocupado. El gesto de arrastre en
+    // si vive en el code-behind (MainWindow.xaml.cs), que es quien conoce los eventos de raton
+    // WPF - esto solo hace el intercambio de datos una vez decidido.
+    public void SwapWith(ItemSlotViewModel other)
+    {
+        var temp = Item;
+        UpdateFrom(other.Item);
+        other.UpdateFrom(temp);
+    }
+
     [RelayCommand]
     private void Clear() => UpdateFrom(GameItem.Empty);
 

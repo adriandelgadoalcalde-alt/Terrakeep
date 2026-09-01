@@ -14,7 +14,13 @@
 
         <!-- Tarjeta de un slot de item (Inventario/Banco/...) -->
         <DataTemplate DataType="{x:Type vm:ItemSlotViewModel}">
-            <Border ToolTip="{Binding StatsTooltip}">
+            <!-- Arrastrar y soltar (pedido explicito 1-sep-2026): un slot ya puesto se puede
+                 arrastrar sobre otro para intercambiarlos, y aqui tambien se pueden soltar
+                 tarjetas arrastradas desde la Libreria - ver los manejadores reales en
+                 MainWindow.xaml.cs (OnItemSlotMouseDown/Move/Drop). -->
+            <Border ToolTip="{Binding StatsTooltip}" AllowDrop="True"
+                    PreviewMouseLeftButtonDown="OnItemSlotMouseDown" MouseMove="OnItemSlotMouseMove"
+                    Drop="OnItemSlotDrop">
                 <Border.Style>
                     <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCard}">
                         <Style.Triggers>
@@ -336,148 +342,160 @@
 
                 <TabControl Style="{StaticResource InnerTabControl}" SelectedIndex="{Binding PersonajeInnerTabIndex}">
                     <TabItem Header="Objetos">
-                        <DockPanel>
-                            <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="10,7" Margin="0,0,0,10"
-                                    Visibility="{Binding PrefixPicker.IsPicking, Converter={StaticResource BoolToVis}}">
-                                <StackPanel>
-                                    <DockPanel Margin="0,0,0,8">
-                                        <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding PrefixPicker.CancelPickCommand}"
-                                                Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" />
-                                        <TextBlock Text="Elige un prefijo para el objeto seleccionado (vanilla + Calamity)"
-                                                   Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                    </DockPanel>
-                                    <TextBox Text="{Binding PrefixPicker.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                             Padding="8,6" Background="{StaticResource BgPrimaryBrush}"
-                                             Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                             MaxWidth="380" HorizontalAlignment="Left" FontSize="13" />
-                                    <TextBlock Text="{Binding PrefixPicker.ResultsSummary}" Foreground="{StaticResource BgPrimaryBrush}"
-                                               FontSize="11" Margin="0,5,0,8" />
-                                    <ItemsControl ItemsSource="{Binding PrefixPicker.Results}" MaxHeight="220">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
-                                                <Button Content="{Binding DisplayName}" Padding="8,5" Margin="0,0,6,6"
-                                                        Command="{Binding DataContext.PrefixPicker.PickPrefixCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                        CommandParameter="{Binding}"
-                                                        Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0">
-                                                    <Button.Style>
-                                                        <Style TargetType="Button">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                                    <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Button.Style>
-                                                </Button>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
+                        <!-- Layout real de Terrasavr (pedido explicito 1-sep-2026): el inventario/equipo
+                             arriba, la Libreria (arbol + buscador) siempre visible debajo, a la derecha
+                             del arbol - nunca una pestaña aparte a la que hay que ir, para que arrastrar
+                             una tarjeta de la Libreria hasta un slot visible sea posible de verdad. -->
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="270" />
+                            </Grid.RowDefinitions>
 
-                            <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
-                                <TabControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
-                                        <TextBlock Text="{Binding DisplayName}" />
-                                    </DataTemplate>
-                                </TabControl.ItemTemplate>
-                                <TabControl.ContentTemplate>
-                                    <StaticResource ResourceKey="ContainerTabTemplate" />
-                                </TabControl.ContentTemplate>
-                            </TabControl>
-                        </DockPanel>
-                    </TabItem>
-                    <TabItem Header="Libreria">
-                        <DockPanel Margin="0,10,0,0">
-                            <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="10,7" Margin="0,0,0,10"
-                                    Visibility="{Binding Library.IsPicking, Converter={StaticResource BoolToVis}}">
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding Library.CancelPickCommand}"
-                                            Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" />
-                                    <TextBlock Text="Elige un objeto para colocarlo en el slot seleccionado..."
-                                               Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                </DockPanel>
-                            </Border>
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="190" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Arbol de carpetas real (vanilla + Calamity, categorias reales - ver
-                                     LibraryViewModel.BuildCategoryTree) - inspirado en la Libreria real
-                                     de Terrasavr, pedido explicito 1-sep-2026. -->
-                                <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8"
-                                        Padding="6" Margin="0,0,10,0">
-                                    <DockPanel>
-                                        <Button DockPanel.Dock="Top" Content="Ver todo" HorizontalAlignment="Left"
-                                                Padding="6,3" FontSize="10.5" Margin="0,0,0,6"
-                                                Command="{Binding Library.ClearCategoryCommand}" />
-                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                            <ItemsControl ItemsSource="{Binding Library.RootCategories}"
-                                                          ItemTemplate="{StaticResource CategoryNodeTemplate}" />
-                                        </ScrollViewer>
-                                    </DockPanel>
-                                </Border>
-
-                                <DockPanel Grid.Column="1">
-                                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-                                        <TextBlock Text="Buscar objeto (vanilla + Calamity)" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
-                                        <TextBox Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                 Padding="10,7" Background="{StaticResource BgElevatedBrush}"
+                            <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                                <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="10,7" Margin="0,0,0,10"
+                                        Visibility="{Binding PrefixPicker.IsPicking, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,8">
+                                            <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding PrefixPicker.CancelPickCommand}"
+                                                    Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" />
+                                            <TextBlock Text="Elige un prefijo para el objeto seleccionado (vanilla + Calamity)"
+                                                       Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        </DockPanel>
+                                        <TextBox Text="{Binding PrefixPicker.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="8,6" Background="{StaticResource BgPrimaryBrush}"
                                                  Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                 MaxWidth="420" HorizontalAlignment="Left" FontSize="13" />
-                                        <TextBlock Text="{Binding Library.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
-                                    </StackPanel>
-                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                        <ItemsControl ItemsSource="{Binding Library.Results}">
+                                                 MaxWidth="380" HorizontalAlignment="Left" FontSize="13" />
+                                        <TextBlock Text="{Binding PrefixPicker.ResultsSummary}" Foreground="{StaticResource BgPrimaryBrush}"
+                                                   FontSize="11" Margin="0,5,0,8" />
+                                        <ItemsControl ItemsSource="{Binding PrefixPicker.Results}" MaxHeight="220">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type vm:LibraryItemViewModel}">
-                                                    <Border Width="92" Height="100" Margin="3" Padding="5" CornerRadius="6"
-                                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
-                                                            ToolTip="{Binding StatsTooltip}">
-                                                        <Border.Style>
-                                                            <Style TargetType="Border">
-                                                                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                                                <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
+                                                    <Button Content="{Binding DisplayName}" Padding="8,5" Margin="0,0,6,6"
+                                                            Command="{Binding DataContext.PrefixPicker.PickPrefixCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"
+                                                            Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button">
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                                        <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                                                        <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
-                                                        </Border.Style>
-                                                        <DockPanel>
-                                                            <TextBlock DockPanel.Dock="Bottom" Text="{Binding DisplayName}"
-                                                                       Style="{StaticResource CaptionText}" FontSize="9.5" TextWrapping="Wrap"
-                                                                       TextAlignment="Center" MaxHeight="26" Margin="0,3,0,0" />
-                                                            <Button DockPanel.Dock="Bottom" Content="Colocar" FontSize="9" Padding="0,2"
-                                                                    Background="{StaticResource AccentBrush}" BorderThickness="0"
-                                                                    Foreground="{StaticResource BgPrimaryBrush}"
-                                                                    Command="{Binding DataContext.Library.PlaceInTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Visibility="{Binding DataContext.Library.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
-                                                            <Image Source="{Binding IconPath}" Stretch="Uniform" MaxHeight="38"
-                                                                   Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                            <TextBlock DockPanel.Dock="Top" Text="?" Style="{StaticResource BodyText}"
-                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                       Foreground="{StaticResource TextSecondaryBrush}"
-                                                                       Visibility="{Binding IconPath, Converter={StaticResource NullToCollapsed}}" />
-                                                        </DockPanel>
-                                                    </Border>
+                                                        </Button.Style>
+                                                    </Button>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
-                                    </ScrollViewer>
+                                    </StackPanel>
+                                </Border>
+
+                                <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
+                                    <TabControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
+                                            <TextBlock Text="{Binding DisplayName}" />
+                                        </DataTemplate>
+                                    </TabControl.ItemTemplate>
+                                    <TabControl.ContentTemplate>
+                                        <StaticResource ResourceKey="ContainerTabTemplate" />
+                                    </TabControl.ContentTemplate>
+                                </TabControl>
+                            </DockPanel>
+
+                            <!-- Libreria: arbol de carpetas real (vanilla + Calamity, ver
+                                 LibraryViewModel.BuildCategoryTree) + buscador, SIEMPRE visible aqui abajo. -->
+                            <Border Grid.Row="1" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8">
+                                <DockPanel>
+                                    <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
+                                            Visibility="{Binding Library.IsPicking, Converter={StaticResource BoolToVis}}">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding Library.CancelPickCommand}"
+                                                    Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" Padding="6,2" />
+                                            <TextBlock Text="Elige (o arrastra) un objeto para colocarlo en el slot seleccionado..."
+                                                       Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" FontSize="11.5" />
+                                        </DockPanel>
+                                    </Border>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="170" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Background="{StaticResource BgPrimaryBrush}" CornerRadius="6"
+                                                Padding="5" Margin="0,0,8,0">
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Top" Content="Ver todo" HorizontalAlignment="Left"
+                                                        Padding="5,2" FontSize="10" Margin="0,0,0,4"
+                                                        Command="{Binding Library.ClearCategoryCommand}" />
+                                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                    <ItemsControl ItemsSource="{Binding Library.RootCategories}"
+                                                                  ItemTemplate="{StaticResource CategoryNodeTemplate}" />
+                                                </ScrollViewer>
+                                            </DockPanel>
+                                        </Border>
+
+                                        <DockPanel Grid.Column="1">
+                                            <TextBox DockPanel.Dock="Top" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                     Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                                     Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4" />
+                                            <TextBlock DockPanel.Dock="Top" Text="{Binding Library.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl ItemsSource="{Binding Library.Results}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:LibraryItemViewModel}">
+                                                            <!-- Arrastrar una tarjeta hasta un slot visible arriba lo coloca alli
+                                                                 (o pulsar "Colocar" si el picker esta activo) - pedido explicito
+                                                                 1-sep-2026. -->
+                                                            <Border Width="80" Height="86" Margin="3" Padding="4" CornerRadius="6"
+                                                                    Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
+                                                                    ToolTip="{Binding StatsTooltip}" Cursor="Hand"
+                                                                    PreviewMouseLeftButtonDown="OnLibraryCardMouseDown" MouseMove="OnLibraryCardMouseMove">
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <DockPanel>
+                                                                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding DisplayName}"
+                                                                               Style="{StaticResource CaptionText}" FontSize="9" TextWrapping="Wrap"
+                                                                               TextAlignment="Center" MaxHeight="22" Margin="0,2,0,0" />
+                                                                    <Button DockPanel.Dock="Bottom" Content="Colocar" FontSize="8.5" Padding="0,1"
+                                                                            Background="{StaticResource AccentBrush}" BorderThickness="0"
+                                                                            Foreground="{StaticResource BgPrimaryBrush}"
+                                                                            Command="{Binding DataContext.Library.PlaceInTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Visibility="{Binding DataContext.Library.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
+                                                                    <Image Source="{Binding IconPath}" Stretch="Uniform" MaxHeight="32"
+                                                                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                                    <TextBlock DockPanel.Dock="Top" Text="?" Style="{StaticResource BodyText}"
+                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToCollapsed}}" />
+                                                                </DockPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </DockPanel>
+                                    </Grid>
                                 </DockPanel>
-                            </Grid>
-                        </DockPanel>
+                            </Border>
+                        </Grid>
                     </TabItem>
                     <TabItem Header="Buffs">
                         <DockPanel Margin="0,10,0,0">
@@ -594,7 +612,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:ResearchRowViewModel}">
-                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="4" Margin="0,0,6,6" Padding="7,3">
+                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="4" Margin="0,0,6,6" Padding="6,4">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
                                                         <Style.Triggers>
@@ -605,7 +623,11 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </Border.Style>
-                                                <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" />
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Image Source="{Binding IconPath}" Width="20" Height="20" Stretch="Uniform" Margin="0,0,6,0"
+                                                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                    <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                </StackPanel>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
