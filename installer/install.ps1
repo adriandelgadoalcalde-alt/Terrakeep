@@ -1,4 +1,4 @@
-# Instala Terrakeep (Terrasavr Native) para el usuario actual.
+# Instala Terrakeep para el usuario actual.
 #
 # Publica un build Release dependiente del framework (ver ..\TerrasavrNative.App\Properties\
 # PublishProfiles\win-x64.pubxml - se probo autocontenido primero y salio un .exe de 140MB,

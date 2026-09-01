@@ -20,10 +20,14 @@ el detalle byte a byte del formato `.plr`/`.tplr` tal y como se confirmó
 investigando `script.js`/`overrides.js`/`calamity-nbt.js` reales. No se
 duplica aquí, se referencia.
 
-**Identidad propia**: nombre de trabajo **"Terrakeep"** (pendiente de que el
-usuario lo confirme o proponga otro - fácil de cambiar, son solo strings).
-Logo generado desde cero (hexágono ámbar + "T" en negativo), no reciclado de
-Terrasavr. Tema visual propio (`TerrasavrNative.App/Styles/Theme.xaml`).
+**Identidad propia**: nombre **"Terrakeep"** (confirmado por el usuario, 1-sep-2026). Ya
+estaba puesto en el título de la ventana y en "Acerca de" desde que se propuso; el 1-sep-2026
+se añadieron también `<Product>`/`<AssemblyTitle>`/`<Description>` al `.csproj` (antes el
+`.exe` mostraba el nombre en crudo del ensamblado, `TerrasavrNative.App`, en Propiedades de
+Windows/Administrador de tareas - verificado con `Get-Item ... .VersionInfo` antes y después).
+Logo generado desde cero (hexágono ámbar + "T" en negativo), no reciclado de Terrasavr. Tema
+visual propio (`TerrasavrNative.App/Styles/Theme.xaml`) - pendiente una ronda de pulido
+estético dedicada (ver "Objetivo de diseño de la UI" más abajo).
 
 ## Arquitectura
 

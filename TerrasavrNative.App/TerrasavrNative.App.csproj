@@ -27,6 +27,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- Metadatos visibles en Propiedades del .exe / Administrador de tareas de Windows -
+         sin esto, .NET usa el nombre del ensamblado en crudo (TerrasavrNative.App). -->
+    <AssemblyTitle>Terrakeep</AssemblyTitle>
+    <Product>Terrakeep</Product>
+    <Description>Editor de personajes de Terraria (vanilla + Calamity Mod)</Description>
+    <Company></Company>
   </PropertyGroup>
 
 </Project>
