@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
 
 namespace TerrasavrNative.App.ViewModels;
@@ -10,6 +11,11 @@ namespace TerrasavrNative.App.ViewModels;
 // rapido de usar, y evita tener que replicar esa limitacion que no existe aqui. Solo se
 // renderizan los primeros N resultados a la vez (rendimiento con WrapPanel sin virtualizar) -
 // para 8200 objetos sin filtrar no tendria sentido mostrarlos todos de golpe de todas formas.
+//
+// Tambien hace de selector de objetos: cuando un ItemSlotViewModel pide "elegir objeto"
+// (boton en un slot vacio o "cambiar objeto" en uno lleno), MainViewModel pone ese slot en
+// PickTarget y cambia la pestaña activa a esta - al pulsar una tarjeta aqui con PickTarget
+// puesto, el objeto se coloca en ese slot y se dispara ItemPlaced para volver a Personaje.
 public partial class LibraryViewModel : ObservableObject
 {
     private const int MaxResults = 300;
@@ -18,6 +24,11 @@ public partial class LibraryViewModel : ObservableObject
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _resultsSummary = string.Empty;
+    [ObservableProperty] private ItemSlotViewModel? _pickTarget;
+
+    public bool IsPicking => PickTarget != null;
+
+    public event Action? ItemPlaced;
 
     public ObservableCollection<LibraryItemViewModel> Results { get; } = [];
 
@@ -53,4 +64,18 @@ public partial class LibraryViewModel : ObservableObject
             ? $"Mostrando {MaxResults} de {matches.Count} resultados - afina la busqueda."
             : $"{matches.Count} resultado(s).";
     }
+
+    partial void OnPickTargetChanged(ItemSlotViewModel? value) => OnPropertyChanged(nameof(IsPicking));
+
+    [RelayCommand]
+    private void PlaceInTarget(LibraryItemViewModel entry)
+    {
+        if (PickTarget == null) return;
+        PickTarget.PlaceItem(entry.Id);
+        PickTarget = null;
+        ItemPlaced?.Invoke();
+    }
+
+    [RelayCommand]
+    private void CancelPick() => PickTarget = null;
 }

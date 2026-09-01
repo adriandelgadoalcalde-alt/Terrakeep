@@ -28,23 +28,50 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <Grid>
+                <DockPanel LastChildFill="True">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="&#9733;" Command="{Binding ApplyBestPrefixCommand}"
+                                ToolTip="Aplicar el mejor prefijo real"
+                                Padding="4,0" FontSize="13" Foreground="{StaticResource AccentBrush}"
+                                Background="Transparent"
+                                Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
+                        <Button Content="&#10005;" Command="{Binding ClearCommand}"
+                                ToolTip="Vaciar este slot"
+                                Padding="4,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                                Background="Transparent"
+                                Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
+
+                    <Button DockPanel.Dock="Bottom" Command="{Binding ChooseFromLibraryCommand}"
+                            HorizontalAlignment="Left" Padding="6,2" FontSize="11" Margin="0,4,0,0"
+                            Background="Transparent" Foreground="{StaticResource AccentBrush}"
+                            BorderThickness="0">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Content" Value="Cambiar objeto" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                        <Setter Property="Content" Value="Elegir objeto..." />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
                     <StackPanel VerticalAlignment="Center" Margin="0,0,20,0">
                         <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}"
                                    TextWrapping="Wrap" MaxHeight="32" />
-                        <TextBlock Style="{StaticResource CaptionText}">
-                            <Run Text="{Binding Count, Mode=OneWay}" />
-                            <Run Text=" " />
-                            <Run Text="{Binding PrefixDisplay, Mode=OneWay}" />
-                        </TextBlock>
+                        <TextBlock Text="{Binding PrefixDisplay, Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
+                                    Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Cant." Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                            <TextBox Text="{Binding Count, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="46" Margin="5,0,0,0" Padding="3,1" FontSize="12"
+                                     Background="{StaticResource BgPrimaryBrush}"
+                                     Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                        </StackPanel>
                     </StackPanel>
-                    <Button Content="&#9733;" Command="{Binding ApplyBestPrefixCommand}"
-                            ToolTip="Aplicar el mejor prefijo real"
-                            HorizontalAlignment="Right" VerticalAlignment="Top"
-                            Padding="4,0" FontSize="13" Foreground="{StaticResource AccentBrush}"
-                            Background="Transparent"
-                            Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
-                </Grid>
+                </DockPanel>
             </Border>
         </DataTemplate>
 
@@ -136,7 +163,7 @@
         </DataTemplate>
     </Window.Resources>
 
-    <TabControl Style="{StaticResource NavTabControl}">
+    <TabControl Style="{StaticResource NavTabControl}" SelectedIndex="{Binding SelectedTabIndex}">
         <!-- ===================== PERSONAJE ===================== -->
         <TabItem Header="Personaje">
             <DockPanel Margin="14">
@@ -221,6 +248,15 @@
         <TabItem Header="Libreria">
             <DockPanel Margin="14">
                 <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                    <Border Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="10,7" Margin="0,0,0,10"
+                            Visibility="{Binding Library.IsPicking, Converter={StaticResource BoolToVis}}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding Library.CancelPickCommand}"
+                                    Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" />
+                            <TextBlock Text="Elige un objeto para colocarlo en el slot seleccionado..."
+                                       Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
                     <TextBlock Text="Buscar objeto (vanilla + Calamity)" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
                     <TextBox Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
                              Padding="10,7" Background="{StaticResource BgElevatedBrush}"
@@ -251,6 +287,12 @@
                                         <TextBlock DockPanel.Dock="Bottom" Text="{Binding DisplayName}"
                                                    Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                                                    TextAlignment="Center" MaxHeight="30" Margin="0,4,0,0" />
+                                        <Button DockPanel.Dock="Bottom" Content="Colocar aqui" FontSize="10" Padding="0,2"
+                                                Background="{StaticResource AccentBrush}" BorderThickness="0"
+                                                Foreground="{StaticResource BgPrimaryBrush}"
+                                                Command="{Binding DataContext.Library.PlaceInTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                Visibility="{Binding DataContext.Library.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
                                         <Image Source="{Binding IconPath}" Stretch="Uniform" MaxHeight="48"
                                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                                         <TextBlock DockPanel.Dock="Top" Text="?" Style="{StaticResource BodyText}"

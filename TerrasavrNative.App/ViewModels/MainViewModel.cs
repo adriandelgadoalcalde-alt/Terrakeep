@@ -16,10 +16,17 @@ public partial class MainViewModel : ObservableObject
     private readonly CharacterFileService _service = new();
     private LoadedCharacter? _loaded;
 
+    // Indice de la pestaña externa (Personaje=0, Libreria=1, ...) - se usa para saltar
+    // automaticamente a la Libreria al pulsar "Elegir objeto" en un slot, y volver a
+    // Personaje en cuanto se coloca el objeto elegido.
+    private const int PersonajeTabIndex = 0;
+    private const int LibreriaTabIndex = 1;
+
     [ObservableProperty] private string _statusMessage = "Sin personaje cargado.";
     [ObservableProperty] private string? _characterName;
     [ObservableProperty] private bool _isCharacterLoaded;
     [ObservableProperty] private bool _hasCalamityData;
+    [ObservableProperty] private int _selectedTabIndex;
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
     public ObservableCollection<BuffRowViewModel> Buffs { get; } = [];
@@ -36,12 +43,20 @@ public partial class MainViewModel : ObservableObject
         WhatsNew = new WhatsNewViewModel(_service.WhatsNew);
         Exploration = new ExplorationViewModel(_service);
         Library = new LibraryViewModel(_service);
+        Library.ItemPlaced += () => SelectedTabIndex = PersonajeTabIndex;
+    }
+
+    private void RequestPickForSlot(ItemSlotViewModel slot)
+    {
+        Library.PickTarget = slot;
+        SelectedTabIndex = LibreriaTabIndex;
     }
 
     public void LoadFromPath(string plrPath)
     {
         try
         {
+            Library.PickTarget = null;
             _loaded = _service.Load(plrPath);
             RebuildContainers();
             CharacterName = _loaded.Character.Name;
@@ -163,7 +178,7 @@ public partial class MainViewModel : ObservableObject
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
-            slots.Add(new ItemSlotViewModel(_service, i, items[i]));
+            slots.Add(new ItemSlotViewModel(_service, i, items[i], RequestPickForSlot));
         Containers.Add(new ContainerViewModel(key, displayName, slots));
     }
 

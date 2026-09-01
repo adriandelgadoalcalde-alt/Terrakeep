@@ -221,6 +221,37 @@ testear), `dotnet build` limpio, la app arranca con los iconos copiados a la car
 (3244 archivos confirmados). No verificado con clics reales (escribir en el buscador, ver los
 resultados de verdad) - misma limitación de siempre.
 
+### Edición real de objetos (añadir/quitar/cantidad)
+
+Antes solo se podía cambiar el prefijo de un objeto ya existente (botón ★). Ahora cada slot
+(`ItemSlotViewModel`) soporta:
+
+- **Colocar/cambiar objeto**: botón "Elegir objeto.../Cambiar objeto" que pone ese slot como
+  `LibraryViewModel.PickTarget`, salta automáticamente a la pestaña Librería
+  (`MainViewModel.SelectedTabIndex`, enlazado al `SelectedIndex` del `TabControl` externo) y
+  muestra un aviso ambar + un botón "Colocar aquí" en cada tarjeta de resultado mientras dura
+  la selección. Al pulsar una tarjeta, `LibraryViewModel.PlaceInTargetCommand` llama a
+  `ItemSlotViewModel.PlaceItem(id)` (objeto nuevo: cantidad 1, sin prefijo, sin `GlobalData`
+  heredado - es un objeto distinto) y dispara el evento `ItemPlaced`, que `MainViewModel`
+  escucha para volver solo a la pestaña Personaje.
+- **Vaciar slot**: botón ✕ visible solo si el slot no está vacío (`IsNotEmpty`, propiedad
+  calculada a partir de `IsEmpty` con `OnIsEmptyChanged` notificando el cambio), llama a
+  `GameItem.Empty`.
+- **Cantidad editable**: `TextBox` de dos vías sobre `ItemSlotViewModel.Count`, con
+  `OnCountChanged` escribiendo de vuelta en `Item.Count` y sujetando el valor entre 1 y 9999
+  (0 no tiene sentido con un id de objeto puesto - para eso está el botón Vaciar explícito).
+  Un flag `_suppressCountWriteback` evita que `UpdateFrom` (recarga desde el modelo) dispare
+  una escritura de vuelta espuria.
+
+`ItemSlotCard` (`Theme.xaml`) se agrandó de 132×56 a 148×92 para hacer sitio a los botones
+nuevos y la fila de cantidad sin apretar el texto.
+
+**Verificado**: 75 tests xUnit siguen en verde (edición vive solo en la capa de ViewModels,
+sin lógica nueva en Core), `dotnet build` limpio, la app arranca sin excepción (mismo método
+de lanzar en segundo plano + comprobar el proceso con `tasklist`). **No verificado con clics
+reales** (elegir un objeto de verdad, escribir una cantidad, guardar y releer el `.plr` para
+confirmar que el nuevo objeto persiste) - misma limitación de siempre en este entorno.
+
 ## Pendiente (visible desde fuera)
 
 - **Exploración**: zoom real (de momento solo scroll a tamaño 1:1), fondo degradado por zona
@@ -229,9 +260,6 @@ resultados de verdad) - misma limitación de siempre.
   reales, `VANILLA_TOWN_NPC_ROSTER` en la versión JS, todavía no se ha portado), tooltip por
   tile al pasar el ratón (nombre real de tile/pared - ya está `TileNameCatalog`, falta
   guardar u/v por tile en `WldTile` para resolver variantes exactas y conectarlo a la UI).
-- **Edición real de objetos**: añadir/quitar un objeto de un slot vacío, cambiar cantidad -
-  hoy solo se puede cambiar el prefijo (botón ★). El botón Guardar ya funciona con lo que haya
-  en memoria en cualquier caso.
 - **Auto-equipar desde Builds**: el panel ya muestra el equipo recomendado, pero no lo aplica
   al personaje cargado (necesita resolver `pid`→id real y escribir en los slots correctos).
 - **Iconos vanilla**: siguen sin extraer (atlas `img/items.png`/`img/nitems.png`, formato UV
