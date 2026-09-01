@@ -48,7 +48,7 @@ public partial class MainViewModel : ObservableObject
     public AboutViewModel About { get; } = new();
     public ExplorationViewModel Exploration { get; }
     public LibraryViewModel Library { get; }
-    public AppearanceViewModel Appearance { get; } = new();
+    public AppearanceViewModel Appearance { get; }
     public ServersViewModel Servers { get; } = new();
     public FlagsViewModel Flags { get; } = new();
     public VersionEditorViewModel VersionEditor { get; } = new();
@@ -61,6 +61,7 @@ public partial class MainViewModel : ObservableObject
         WhatsNew = new WhatsNewViewModel(_service.WhatsNew);
         Exploration = new ExplorationViewModel(_service);
         Library = new LibraryViewModel(_service);
+        Appearance = new AppearanceViewModel(_service);
         Library.ItemPlaced += () =>
         {
             SelectedTabIndex = PersonajeTabIndex;

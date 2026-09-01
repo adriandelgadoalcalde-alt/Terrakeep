@@ -731,7 +731,7 @@
                     <TabItem Header="Apariencia">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
                             <StackPanel MaxWidth="640" HorizontalAlignment="Left">
-                                <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego) - sin armadura/vestuario equipado, item en mano ni animacion, solo la pose de reposo."
+                                <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego) - sin armadura/vestuario equipado, item en mano ni animacion, solo la pose de reposo. No aplica el efecto visual del tinte de pelo (shader especial que este preview no reproduce), solo su color de pelo base."
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10" />
 
                                 <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="8" Padding="16"
@@ -758,12 +758,51 @@
                                         </Button>
                                     </StackPanel>
                                     <StackPanel>
-                                        <TextBlock Text="Tinte de pelo (id)" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding Appearance.HairDye, UpdateSourceTrigger=PropertyChanged}"
-                                                 Width="70" Padding="6,4" Background="{StaticResource BgElevatedBrush}"
-                                                 Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                        <TextBlock Text="Tinte de pelo" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
+                                        <Button Command="{Binding Appearance.OpenHairDyePickerCommand}" Padding="8,6" HorizontalContentAlignment="Left">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Appearance.HairDyeDisplayName}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                                <TextBlock Text="&#9998;" FontSize="11" VerticalAlignment="Center" Foreground="{StaticResource AccentBrush}" />
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
                                 </StackPanel>
+
+                                <!-- Selector visual de tinte de pelo - pedido explicito 1-sep-2026 (sprites en vez
+                                     de escribir un id a mano) - mismo patron de overlay que el peinado de arriba. -->
+                                <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource AccentBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,18"
+                                        Visibility="{Binding Appearance.IsHairDyePickerOpen, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,8">
+                                            <Button DockPanel.Dock="Right" Content="Cerrar" Command="{Binding Appearance.CloseHairDyePickerCommand}" Padding="8,3" />
+                                            <TextBlock Text="Elige un tinte de pelo" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                                        </DockPanel>
+                                        <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding Appearance.HairDyeOptions}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vm:HairDyeOptionViewModel}">
+                                                        <Button Command="{Binding DataContext.Appearance.SelectHairDyeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding Index}" Margin="2" Padding="6"
+                                                                Background="{StaticResource BgElevatedBrush}" BorderThickness="0"
+                                                                ToolTip="{Binding DisplayName}">
+                                                            <StackPanel Width="54">
+                                                                <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform"
+                                                                       HorizontalAlignment="Center"
+                                                                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                                <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}"
+                                                                           FontSize="9" TextWrapping="Wrap" TextAlignment="Center" Margin="0,3,0,0" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </StackPanel>
+                                </Border>
 
                                 <!-- Selector visual de peinado - pedido explicito 1-sep-2026 (sprites en vez de
                                      ids a mano). Mismo patron de overlay que ya usan el picker de prefijo y de

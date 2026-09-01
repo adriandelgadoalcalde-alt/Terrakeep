@@ -16,6 +16,7 @@ namespace TerrasavrNative.App.ViewModels;
 // cambio (ver PlayerPreviewRenderer para el detalle real del atlas/tintado).
 public partial class AppearanceViewModel : ObservableObject
 {
+    private readonly CharacterFileService _service;
     private PlrCharacter? _character;
     private bool _suppressWriteback;
 
@@ -23,6 +24,13 @@ public partial class AppearanceViewModel : ObservableObject
 
     [ObservableProperty] private int _hairStyle;
     [ObservableProperty] private int _hairDye;
+    [ObservableProperty] private string _hairDyeDisplayName = "Ninguno";
+
+    public AppearanceViewModel(CharacterFileService service)
+    {
+        _service = service;
+        BuildHairDyeOptions();
+    }
     // Convencion vanilla estandar (Player.Male en Terraria): true = chico. La version binaria
     // invertida documentada en el proyecto es de formatos MUY antiguos (version<145), fuera
     // del alcance de este lector (ver PlrCharacter.cs).
@@ -67,6 +75,39 @@ public partial class AppearanceViewModel : ObservableObject
 
     [RelayCommand]
     private void CloseHairPicker() => IsHairPickerOpen = false;
+
+    // Selector visual de tinte de pelo (pedido explicito 1-sep-2026: "Apariencia sigue
+    // siendo por ID" referido en concreto al tinte, ya que el peinado arriba SI tenia
+    // selector visual) - 12 tintes reales extraidos de DyeInitializer.cs
+    // (scripts/extraer-tintes-pelo.py) mas "Ninguno" (indice 0). A diferencia del peinado no
+    // hace falta renderizar nada bajo demanda: son sprites de objetos reales del catalogo
+    // vanilla, ya resueltos una vez en el constructor.
+    [ObservableProperty] private bool _isHairDyePickerOpen;
+    public ObservableCollection<HairDyeOptionViewModel> HairDyeOptions { get; } = [];
+
+    private void BuildHairDyeOptions()
+    {
+        HairDyeOptions.Add(new HairDyeOptionViewModel(0, "Ninguno", null));
+        foreach (var entry in _service.HairDyes.Entries)
+        {
+            string name = _service.VanillaCatalog.GetName(entry.ItemId);
+            string? icon = VanillaIconResolver.GetIconPath(entry.ItemId);
+            HairDyeOptions.Add(new HairDyeOptionViewModel(entry.Index, name, icon));
+        }
+    }
+
+    [RelayCommand]
+    private void OpenHairDyePicker() => IsHairDyePickerOpen = true;
+
+    [RelayCommand]
+    private void SelectHairDye(int index)
+    {
+        HairDye = index;
+        IsHairDyePickerOpen = false;
+    }
+
+    [RelayCommand]
+    private void CloseHairDyePicker() => IsHairDyePickerOpen = false;
 
     // Estadisticas del personaje - en la version JS real viven en el mismo panel que
     // pelo/colores (app.TabMain, clase Sa, mismo constructor que ya se investigo para el
@@ -141,6 +182,7 @@ public partial class AppearanceViewModel : ObservableObject
 
     partial void OnHairDyeChanged(int value)
     {
+        HairDyeDisplayName = HairDyeOptions.FirstOrDefault(o => o.Index == value)?.DisplayName ?? $"Tinte #{value}";
         if (_suppressWriteback || _character == null) return;
         _character.HairDye = (byte)Math.Clamp(value, 0, 255);
     }

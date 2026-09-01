@@ -1611,3 +1611,41 @@ ninguno inventado. Monedas editadas a 777 y Munición cambiada a "Flecha de made
 **sobreviven de verdad** a guardar + recargar (antes se perdían sin ningún error visible).
 
 `dotnet build`/`dotnet test` en verde (126/126, sin regresiones).
+
+### Fase 5 del plan - selector visual de tinte de pelo
+
+El peinado ya tenía selector visual (228 miniaturas) desde antes de este rework; el tinte de
+pelo seguía siendo un `TextBox` numérico puro - el "Apariencia sigue siendo por ID" concreto
+que señaló el usuario.
+
+`scripts/extraer-tintes-pelo.py` (nuevo) extrae el índice REAL de cada tinte de
+`DyeInitializer.cs`/`HairShaderDataSet.cs` reales. **Matiz real encontrado leyendo el código
+con cuidado** (no asumido por orden de aparición en el fichero): `DyeInitializer.
+LoadHairDyes()` llama primero a `LoadLegacyHairdyes()` (los 11 ids "legacy", definidos
+DESPUÉS en el texto por número de línea) y solo entonces enlaza su propio id 3259 - el orden
+de llamada real (que es el que fija el índice, `HairShaderDataSet.BindShader` hace
+`_shaderLookupDictionary[itemId] = ++_shaderDataCount`) es `[1977,1978,1979,1980,1981,1982,
+1983,1984,1985,1986,2863,3259]`, NO el orden en que aparecen las líneas en el archivo. Se
+confirmó también que `GameShaders.Hair.BindShader` no se llama desde ningún otro sitio en
+todo el código decompilado - estos 12 son todos los que hay, sin más fuentes que puedan
+desplazar los índices.
+
+Nuevo `TerrasavrNative.Core/Data/HairDyeCatalog.cs` (mismo patrón `LoadFromFile`),
+`HairDyeOptionViewModel.cs` (a diferencia del peinado no hace falta renderizar nada: el tinte
+se muestra con el sprite+nombre reales del objeto que lo aplica, ya resueltos una vez en el
+constructor de `AppearanceViewModel`, que ahora recibe `CharacterFileService` - antes se
+construía sin parámetros). `MainWindow.xaml`: el `TextBox` de tinte pasa a un botón con
+overlay de selección visual, mismo patrón que el peinado. Nota honesta añadida al texto del
+preview: el shader visual del tinte no se reproduce ahí (solo el color base de pelo) - no se
+finge un efecto que no está implementado.
+
+Test nuevo `HairDyeCatalogTests.cs` (smoke test real): 12 entradas, índices 1-12
+contiguos, `Entries[0].ItemId==1977`, `Entries[11].ItemId==3259` (confirma el orden de
+llamada real, no el de aparición en el texto).
+
+**Verificación real** (mismo arnés de consola, copia de `Eldelgas.plr`/`.tplr`): 13 opciones
+(Ninguno + 12 reales) con nombre e icono correctos para cada una (`Tinta vital`, `Tinte de
+maná`, ..., `Tinte de pelo de crepúsculo`); elegir "Tinte de equipo" (índice 6) actualiza
+`HairDye=6` y el nombre mostrado; sobrevive a guardar + recargar.
+
+`dotnet build`/`dotnet test` en verde (127/127, sin regresiones).
