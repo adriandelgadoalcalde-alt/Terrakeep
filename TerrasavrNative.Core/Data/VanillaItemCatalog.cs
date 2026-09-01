@@ -30,6 +30,8 @@ public sealed class VanillaItemCatalog
 
     public IReadOnlyCollection<string> AllInternalNames() => _namesByKey.Keys;
 
+    public IEnumerable<(int Id, string Name)> AllEntries() => _namesById.Select(kv => (kv.Key, kv.Value));
+
     public static VanillaItemCatalog LoadFromFile(string path, string byKeyPath)
     {
         using var stream = File.OpenRead(path);

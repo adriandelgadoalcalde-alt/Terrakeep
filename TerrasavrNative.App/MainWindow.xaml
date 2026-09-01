@@ -217,6 +217,55 @@
             </DockPanel>
         </TabItem>
 
+        <!-- ===================== LIBRERIA ===================== -->
+        <TabItem Header="Libreria">
+            <DockPanel Margin="14">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                    <TextBlock Text="Buscar objeto (vanilla + Calamity)" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                    <TextBox Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Padding="10,7" Background="{StaticResource BgElevatedBrush}"
+                             Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                             MaxWidth="420" HorizontalAlignment="Left" FontSize="13" />
+                    <TextBlock Text="{Binding Library.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Library.Results}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:LibraryItemViewModel}">
+                                <Border Width="112" Height="112" Margin="4" Padding="6" CornerRadius="6"
+                                        Background="{StaticResource BgElevatedBrush}" BorderThickness="1">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Bottom" Text="{Binding DisplayName}"
+                                                   Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                                   TextAlignment="Center" MaxHeight="30" Margin="0,4,0,0" />
+                                        <Image Source="{Binding IconPath}" Stretch="Uniform" MaxHeight="48"
+                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                        <TextBlock DockPanel.Dock="Top" Text="?" Style="{StaticResource BodyText}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Visibility="{Binding IconPath, Converter={StaticResource NullToCollapsed}}" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </TabItem>
+
         <!-- ===================== BUILDS ===================== -->
         <TabItem Header="Builds">
             <TabControl Style="{StaticResource InnerTabControl}" Margin="14">

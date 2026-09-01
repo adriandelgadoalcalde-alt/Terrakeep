@@ -28,12 +28,14 @@ public partial class MainViewModel : ObservableObject
     public WhatsNewViewModel WhatsNew { get; }
     public AboutViewModel About { get; } = new();
     public ExplorationViewModel Exploration { get; }
+    public LibraryViewModel Library { get; }
 
     public MainViewModel()
     {
         Builds = new BuildsViewModel(_service.VanillaBuilds, _service.CalamityBuilds);
         WhatsNew = new WhatsNewViewModel(_service.WhatsNew);
         Exploration = new ExplorationViewModel(_service);
+        Library = new LibraryViewModel(_service);
     }
 
     public void LoadFromPath(string plrPath)
