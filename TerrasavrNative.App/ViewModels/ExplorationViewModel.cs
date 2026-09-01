@@ -13,6 +13,8 @@ public sealed class WorldNpcRowViewModel(int id, string name, int x, int y, bool
 {
     public int Id { get; } = id;
     public string Name { get; } = name;
+    public int TileX { get; } = x;
+    public int TileY { get; } = y;
     public string Position { get; } = homeless ? $"({x}, {y}) - sin casa" : $"({x}, {y})";
     public string? IconPath { get; } = NpcIconResolver.GetIconPath(id);
 }
@@ -47,6 +49,13 @@ public partial class ExplorationViewModel : ObservableObject
 
     public ObservableCollection<WorldNpcRowViewModel> Npcs { get; } = [];
     public ObservableCollection<MissingNpcRowViewModel> MissingNpcs { get; } = [];
+
+    // El code-behind (unico sitio que conoce el ScrollViewer real del mapa) se suscribe a esto
+    // para centrar la vista - la ViewModel no puede tocar controles de UI directamente.
+    public event Action<int, int>? NavigateToTileRequested;
+
+    [RelayCommand]
+    private void GoToNpc(WorldNpcRowViewModel npc) => NavigateToTileRequested?.Invoke(npc.TileX, npc.TileY);
 
     public ExplorationViewModel(CharacterFileService service)
     {

@@ -1091,6 +1091,44 @@ pestaña Novedades se ve y funciona bien (verificado con captura de pantalla rea
 `dotnet build`/`dotnet test` en verde (118/118, sin tests nuevos para este bug - es un fallo de
 activación de binding XAML, no reproducible con xUnit sin montar un `Window` real).
 
+### Punto 1 CERRADO - Explorador (mapa) interactivo
+
+Cinco cambios reales sobre `ExplorationViewModel.cs`/`MainWindow.xaml`/`MainWindow.xaml.cs`:
+
+1. **Arrastrar para desplazar (pan)**: nuevos manejadores en el code-behind
+   (`OnWorldMapMouseDown`/`OnWorldMapMouseMove`/`OnWorldMapMouseUp`) que capturan el ratón al
+   pulsar y mueven `ScrollViewer.ScrollToHorizontalOffset`/`VerticalOffset` según el
+   desplazamiento real del cursor - los manejadores viven en el `ScrollViewer` (no en la
+   `Image`) para que sigan disparándose durante el arrastre, cuando el ratón tiene captura (con
+   captura activa los eventos ya no llegan al hijo de la forma normal).
+2. **Rueda del ratón = zoom directo**, sin necesitar Ctrl (antes hacía falta Ctrl+rueda).
+3. **NPCs marcados sobre el propio mapa**: nuevo `ItemsControl`+`Canvas` superpuesto a la
+   imagen, dentro del mismo `Grid` con el `LayoutTransform` de zoom (para que los marcadores
+   escalen/se desplacen junto con el mapa), un punto por NPC posicionado en
+   `Canvas.Left/Top={Binding TileX/TileY}` (nuevas propiedades en `WorldNpcRowViewModel`, antes
+   solo tenía un `Position` en texto). Esto también resuelve de paso "los NPCs escondidos como
+   el Mercader esquelético no te lo dice": al tener marcador, su posición se ve en el mapa
+   aunque esté enterrado bajo tierra (la lista "NPCs que faltan" ya detectaba correctamente al
+   Mercader esquelético como no conseguido, eso ya funcionaba - lo que faltaba era el propio
+   marcador visual).
+4. **Clic en un NPC de la lista -> centra el mapa en su posición**: nuevo
+   `GoToNpcCommand`+evento `NavigateToTileRequested` en la ViewModel (la ViewModel no puede
+   tocar el `ScrollViewer` directamente, así que solo dispara el evento y el code-behind hace el
+   `ScrollToHorizontalOffset`/`VerticalOffset` real, centrando el viewport).
+5. **Tooltip de tiles/paredes al pasar el ratón** - ya existía y funcionaba
+   (`ExplorationViewModel.UpdateHover`), verificado en vivo que sigue funcionando tras la
+   reforma del mapa, incluidas variantes pintadas ("Ladrillo rosa"). Pendiente aparte: el
+   contenido de los cofres (no solo el nombre del tile) no está implementado - `WldReader` no
+   parsea la lista de cofres del `.wld` todavía, haría falta extenderlo.
+
+**Verificación real, no solo build limpio**: la app se lanzó de verdad, se cargó un mundo real
+(`adriandres.wld`, vía `pywinauto`/clics de pantalla reales con `user32.dll` para manejar el
+diálogo nativo de archivo) y se comprobó cada punto con capturas de pantalla antes/después: el
+terreno visible cambia tras arrastrar, el zoom sube de 100% a 231% con la rueda sin Ctrl, varios
+marcadores magenta aparecen agrupados sobre una construcción real del mundo, y el tooltip de
+tile se actualiza correctamente durante todo el proceso. `dotnet build`/`dotnet test` en verde
+(118/118, sin tests nuevos - todo interacción de UI real, no lógica de `Core`).
+
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 
 - Commit tras cada cambio verificado (no solo antes de cambios grandes) - mismo criterio que

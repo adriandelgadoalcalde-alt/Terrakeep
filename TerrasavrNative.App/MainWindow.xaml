@@ -814,16 +814,42 @@
                                     Visibility="{Binding Exploration.HoverInfo, Converter={StaticResource EmptyToCollapsed}}">
                                 <TextBlock Text="{Binding Exploration.HoverInfo}" Style="{StaticResource CaptionText}" />
                             </Border>
-                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                                          PreviewMouseWheel="OnWorldMapPreviewMouseWheel">
-                                <Image x:Name="WorldMapImage" Source="{Binding Exploration.WorldImage}" Stretch="None"
-                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                       HorizontalAlignment="Left" VerticalAlignment="Top"
-                                       MouseMove="OnWorldMapMouseMove" MouseLeave="OnWorldMapMouseLeave">
-                                    <Image.LayoutTransform>
+                            <!-- Arrastrar para desplazar (pan) + rueda para zoom, sin necesitar Ctrl - los
+                                 gestores reales viven en el code-behind (MainWindow.xaml.cs) porque
+                                 necesitan tocar los offsets del ScrollViewer, que la ViewModel no conoce. -->
+                            <ScrollViewer x:Name="WorldMapScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                          PreviewMouseWheel="OnWorldMapPreviewMouseWheel"
+                                          PreviewMouseLeftButtonDown="OnWorldMapMouseDown"
+                                          PreviewMouseMove="OnWorldMapMouseMove"
+                                          PreviewMouseLeftButtonUp="OnWorldMapMouseUp"
+                                          MouseLeave="OnWorldMapMouseLeave"
+                                          Cursor="SizeAll">
+                                <Grid HorizontalAlignment="Left" VerticalAlignment="Top">
+                                    <Grid.LayoutTransform>
                                         <ScaleTransform ScaleX="{Binding Exploration.Zoom}" ScaleY="{Binding Exploration.Zoom}" />
-                                    </Image.LayoutTransform>
-                                </Image>
+                                    </Grid.LayoutTransform>
+                                    <Image x:Name="WorldMapImage" Source="{Binding Exploration.WorldImage}" Stretch="None"
+                                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                           HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False" />
+                                    <ItemsControl ItemsSource="{Binding Exploration.Npcs}" IsHitTestVisible="True">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><Canvas IsItemsHost="True" /></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemContainerStyle>
+                                            <Style TargetType="ContentPresenter">
+                                                <Setter Property="Canvas.Left" Value="{Binding TileX}" />
+                                                <Setter Property="Canvas.Top" Value="{Binding TileY}" />
+                                            </Style>
+                                        </ItemsControl.ItemContainerStyle>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
+                                                <Ellipse Width="11" Height="11" Margin="-5.5,-5.5,0,0"
+                                                         Fill="Magenta" Stroke="White" StrokeThickness="1.5"
+                                                         ToolTip="{Binding Name}" Cursor="Hand" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
                             </ScrollViewer>
                         </DockPanel>
                     </Border>
@@ -856,16 +882,22 @@
                             <ItemsControl ItemsSource="{Binding Exploration.Npcs}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
-                                        <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,0,5" Padding="8,5">
-                                            <StackPanel Orientation="Horizontal">
-                                                <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
-                                                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
-                                                    <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
+                                        <Button Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,5"
+                                                HorizontalContentAlignment="Stretch" Cursor="Hand"
+                                                ToolTip="Ir a su posicion en el mapa"
+                                                Command="{Binding DataContext.Exploration.GoToNpcCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}">
+                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Padding="8,5">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
+                                                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
+                                                        <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
+                                                    </StackPanel>
                                                 </StackPanel>
-                                            </StackPanel>
-                                        </Border>
+                                            </Border>
+                                        </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
