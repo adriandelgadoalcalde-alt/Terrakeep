@@ -42,14 +42,14 @@ public partial class LibraryViewModel : ObservableObject
 
         foreach (var (id, name) in service.VanillaCatalog.AllEntries())
         {
-            string? stats = ItemStatsFormatter.Format(false, id, service.VanillaStats, service.CalamityCatalog);
+            string? stats = ItemStatsFormatter.Format(false, id, service.VanillaStats, service.CalamityCatalog, service.VanillaCategories);
             _all.Add(new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats));
         }
 
         foreach (var entry in service.CalamityCatalog.Entries)
         {
             string? iconPath = entry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
-            string? stats = ItemStatsFormatter.Format(true, entry.SyntheticId, service.VanillaStats, service.CalamityCatalog);
+            string? stats = ItemStatsFormatter.Format(true, entry.SyntheticId, service.VanillaStats, service.CalamityCatalog, service.VanillaCategories);
             _all.Add(new LibraryItemViewModel(entry.DisplayName, true, iconPath, entry.SyntheticId, entry.Category, stats));
         }
 

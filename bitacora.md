@@ -1763,3 +1763,71 @@ ahora dice "Agua"/"Lava"/"Miel" en vez de "(vacío)". `dotnet build`/`dotnet tes
 completos con fórmulas reales de Terrasavr, descripciones de buffs, contorno de mejor
 prefijo, espaciado, reducir el número de pestañas de contenedor para que no se amontonen al
 reducir la ventana, confirmación visual de guardado).
+
+Plan completo de 7 fases (A-G) escrito y aprobado tras investigación real (fórmulas exactas de
+`script.js`, traducción real de `Terrasavr.es-ES.json`, descripciones reales de buff, y el
+descubrimiento de que sí existe una descompilación real de Calamity Mod en este PC - ver
+`C:\Users\adrian\.claude\plans\streamed-leaping-balloon.md`). Dos correcciones reales hechas
+durante la propia planificación: el punto "contorno" no era sobre el indicador de mejor
+prefijo (confundido al principio) sino sobre el panel Equipamiento necesitando su propio
+contorno visual, separado del Inventario - aclarado con una pregunta directa al usuario en
+vez de seguir adivinando.
+
+### Fase A - Tooltips reales de estadísticas + bug real grave encontrado en la extracción vanilla
+
+**`ItemStatsFormatter.cs` reescrito** con las fórmulas y texto REALES de Terrasavr (extraídos
+de `script.js` y `Terrasavr.es-ES.json` reales, ver el plan): DPS = `round(60·daño/useTime)`,
+ritmo = `floor(6000/useTime)/100`, 8 tramos reales de velocidad y 8 de retroceso con su texto
+español real (incluido el typo real "Extremandamente", no corregido - no es nuestro). Nuevo
+parámetro `VanillaCategoryCatalog` para resolver la etiqueta real de tipo de daño (Cuerpo a
+cuerpo/A distancia/Magia/Invocación) vanilla por categoría ya extraída, y por `DamageType`
+real (substring) para Calamity. Además, `useTime`/`retroceso` solo se muestran junto al daño
+(objetos de combate real) - antes salían también en pociones/bloques que técnicamente tienen
+un `useTime` real en el motor (velocidad de animación de beber/colocar) pero no venían a
+cuento en un tooltip de "estadísticas de combate".
+
+**Bug real grave encontrado y arreglado al verificar** (pedido explícito del usuario: "busca
+en la descompilación de terraria todas las estadísticas de las armas"), en `scripts/
+extraer-categorias-vanilla.py` y `extraer-estadisticas-vanilla.py`, en DOS capas:
+
+1. La versión original partía el texto de `Item.cs` por CUALQUIER `"case N:"` que apareciera
+   en todo el archivo concatenado, sin respetar anidamiento de llaves - un item con lógica
+   interna propia (ej. una animación de color de partículas con su propio `switch(frame) {
+   case 1: ... }` anidado DENTRO de su bloque) generaba `"case N:"` FALSOS que se confundían
+   con límites de item real. Ejemplo real detectado: la Espada corta de hierro (id 1, con
+   `melee = true` real en su propio bloque) salía clasificada como "Materiales" porque un
+   `"case 1:"` anidado en la animación de OTRO objeto, mucho más adelante en el archivo,
+   sobrescribía el diccionario por ser el último en aparecer.
+2. Al arreglar el punto 1 contando profundidad de llaves relativa a un ÚNICO
+   `"switch (type) { ... }"` por método, la cobertura se desplomó (2226 de ~5455 items reales)
+   y objetos de sobra conocidos (Excalibur id 368, Terrarian id 3389) desaparecieron por
+   completo del todo. Motivo real, confirmado leyendo el propio archivo: cada método
+   `SetDefaults#` no tiene un único switch - tiene VARIOS bloques `"switch (type) { ... }"`
+   **seguidos uno detrás de otro** dentro del mismo método (`SetDefaults1` cierra su primer
+   switch tras el id 121 y literalmente abre otro `switch (type) { case 122: ...` a
+   continuación). Buscar solo el PRIMER `"switch(type){"` con una única búsqueda hacía que el
+   escaneo se detuviera ahí y perdiera todo lo que venía después.
+
+Arreglado de verdad con un escáner de estados que recorre el método entero: fuera de un
+switch, busca el siguiente `"switch (type) {"`; dentro, cuenta profundidad de llaves real
+(saltando cadenas/chars/comentarios, que si no también podían desincronizar el conteo) y solo
+trata un `"case N:"` a profundidad 1 relativa a ESE switch como límite de item; al cerrar ese
+switch, sigue buscando el siguiente. Verificado a fondo: cobertura 1-500 completa (0 huecos),
+Excalibur y Terrarian presentes, ~4575 ids únicos reales en categorías (antes 5262 con
+contaminación o 2226 con cobertura rota) y 2576 con alguna estadística real (antes 2968
+inflado por la misma contaminación). Regenerados `vanilla_categories.json`,
+`vanilla_stats.json` y `vanilla_prefix_rules.json` (depende del primero) con los scripts ya
+corregidos - los tres documentan el bug real en su propia cabecera de comentarios.
+
+**Verificación real**: arnés de consola - Espada de cobre (1) ahora sale "5 daño de cuerpo a
+cuerpo (~23 DPS) / Use time 13 (4.61/s, Muy Rapido) / Retroceso 2 (Muy Debil)"; Excalibur
+(368) "72 daño de cuerpo a cuerpo (~216 DPS) / Use time 20 (3/s, Muy Rapido) / Retroceso 4.5
+(Normal) / Rareza 5"; Poción de vida menor (28) solo "Restaura 50 de Vida" (sin useTime
+espurio); Tierra (2) sin ninguna estadística (`null`). Un objeto de Calamity
+(`AcidwoodSword`) verificado línea a línea contra su propio `.cs` decompilado real
+(`damage=12, useTime=18, knockBack=3` - coincide exacto); otro (`ShieldoftheHighRuler`,
+`DamageType="DamageClass.MeleeNoSpeed"`) confirma que la etiqueta de tipo de daño real
+también funciona para Calamity ("300 daño de cuerpo a cuerpo").
+
+`dotnet build`/`dotnet test` en verde (128/128, sin regresiones pese al cambio de datos -
+los tests de humo ya eran lo bastante generales).
