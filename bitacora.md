@@ -1733,3 +1733,33 @@ capturas reales de Terrasavr** (buffs, prefijos reales por tipo de objeto, panel
 compartido, tooltips en Builds + arreglo de guardado de Monedas/Munición, tinte de pelo
 visual, cursor/tooltip del mapa, y el changelog real separado del juego). Plan completo en
 `C:\Users\adrian\.claude\plans\streamed-leaping-balloon.md` mientras siga vigente el archivo.
+
+## Segunda ronda de feedback tras probar el rework (2-sep-2026)
+
+Nuevo feedback, con dos capturas reales de Terrasavr y de Terrakeep de referencia: faltan
+datos en los tooltips de armas/armaduras/accesorios y en los buffs; el indicador de "mejor
+prefijo" debería ser un contorno, no solo una estrellita; falta espaciado en el inventario; el
+visor de mundo no distingue agua/lava (todo en rojo); la ventana se colapsa mucho al hacerse
+pequeña (demasiadas pestañas de contenedor amontonadas); el guardado necesita una confirmación
+visual más clara que el mensaje pequeño actual.
+
+### Bug real de mapa arreglado ya: agua/lava intercambiadas
+
+Diagnosticado y arreglado antes de investigar el resto: `WorldRenderer.LiquidColor` tenía los
+códigos de líquido AL REVÉS. Confirmado contra la fuente real de TEdit
+(`World.FileV2.cs`, el escritor real de `.wld`, en `Terrasavr-Calamity-Beta\resources\app\
+xnb-lzx-tool-refs\`): el bit-pattern real es Agua → código 1, Lava → código 2, Miel/Shimmer →
+código 3 - exactamente lo que ya decodificaba bien `WldReader.cs` (`liquidHeader = (header1 &
+0x18) >> 3`), pero el switch de colores asumía 1=lava. Verificado con un mundo real
+(`adriandres.wld`): 355.359 tiles de lava real (código 2) y 259.330 de agua real (código 1) -
+bajo el código antiguo esos habrían salido pintados de amarillo (miel) y naranja (lava)
+respectivamente, una mezcla amarillo/naranja que encaja con "todo en rojo". Se arregló también
+`ExplorationViewModel.UpdateHover`, que decía "(vacío)" para cualquier tile sin bloque sólido
+sin comprobar si tenía líquido - un charco/lago/lava real (`IsActive=false`, `LiquidAmount>0`)
+ahora dice "Agua"/"Lava"/"Miel" en vez de "(vacío)". `dotnet build`/`dotnet test` en verde
+(128/128).
+
+**Pendiente de investigar y planificar**: el resto de esta ronda de feedback (tooltips más
+completos con fórmulas reales de Terrasavr, descripciones de buffs, contorno de mejor
+prefijo, espaciado, reducir el número de pestañas de contenedor para que no se amontonen al
+reducir la ventana, confirmación visual de guardado).

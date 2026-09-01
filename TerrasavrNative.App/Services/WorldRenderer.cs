@@ -79,12 +79,19 @@ public static class WorldRenderer
     // Colores de liquido aproximados (agua/lava/miel/shimmer) - map_colors.json no trae estos
     // (son un efecto de render, no un tile/pared reales), asi que se fijan a mano con los
     // colores reales conocidos del juego en vez de mezclarlos desde otra fuente.
+    //
+    // Bug real corregido (2-sep-2026, reportado: "no distingue el agua o la lava... todo en
+    // rojo"): los codigos 1/2/3 estaban asignados al REVES. Confirmado contra la fuente real
+    // de TEdit (World.FileV2.cs, escritor real): Agua -> header1 |= 0b0000_1000 (codigo 1),
+    // Lava -> header1 |= 0b0001_0000 (codigo 2), Miel -> header1 |= 0b0001_1000 (codigo 3) -
+    // exactamente lo que ya decodifica bien WldReader.cs (liquidHeader = (header1 & 0x18) >>
+    // 3), pero este switch asumia 1=lava en vez de 1=agua, asi que TODA el agua real (la
+    // mayoria del liquido de cualquier mapa tipico) salia pintada del color de la lava.
     private static (byte R, byte G, byte B, byte A) LiquidColor(byte liquidType) => liquidType switch
     {
-        1 => (250, 100, 0, 200),   // lava
-        2 => (255, 214, 63, 200),  // miel
-        3 => (200, 170, 255, 200), // shimmer
-        _ => (30, 110, 220, 160),  // agua
+        2 => (250, 100, 0, 200),   // lava
+        3 => (200, 170, 255, 200), // miel/shimmer (mismo codigo interno para las dos, ver WldReader)
+        _ => (30, 110, 220, 160),  // agua (codigo 1, y cualquier valor de reserva)
     };
 
     private static (byte R, byte G, byte B, byte A) Blend(Color c) => (c.R, c.G, c.B, 255);

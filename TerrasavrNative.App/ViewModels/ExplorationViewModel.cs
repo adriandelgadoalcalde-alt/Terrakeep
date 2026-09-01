@@ -77,12 +77,28 @@ public partial class ExplorationViewModel : ObservableObject
         }
 
         var tile = _world.Tiles[tileX, tileY];
-        string tileText = tile.IsActive ? _tileNames.TileVariantName(tile.Type, tile.U, tile.V) : "(vacio)";
+        // Bug real corregido (2-sep-2026, reportado: "pone que esta vacio" sobre agua/lava
+        // real): un tile de liquido puro (charco/lago/lava) tiene IsActive=false (no hay
+        // bloque solido) pero LiquidAmount>0 - antes esto caia siempre en "(vacio)" sin mirar
+        // el liquido. Los codigos reales (1=Agua/2=Lava/3=Miel-o-Shimmer) son los mismos que
+        // ya corrige WorldRenderer.LiquidColor, confirmados contra TEdit real.
+        string tileText = tile.IsActive
+            ? _tileNames.TileVariantName(tile.Type, tile.U, tile.V)
+            : tile.LiquidAmount > 0
+                ? LiquidName(tile.LiquidType)
+                : "(vacio)";
         string wallText = _tileNames.WallName(tile.Wall);
         HoverInfo = string.IsNullOrEmpty(wallText)
             ? $"({tileX}, {tileY}) - {tileText}"
             : $"({tileX}, {tileY}) - {tileText} / pared: {wallText}";
     }
+
+    private static string LiquidName(byte liquidType) => liquidType switch
+    {
+        2 => "Lava",
+        3 => "Miel",
+        _ => "Agua",
+    };
 
     public void LoadFromPath(string wldPath)
     {
