@@ -35,11 +35,11 @@ public partial class BuffsViewModel : ObservableObject
 
         _all = [];
         foreach (var (id, name) in _vanillaCatalog.AllEntries())
-            _all.Add(new BuffCatalogEntryViewModel(name, id, false, VanillaBuffIconResolver.GetIconPath(id)));
+            _all.Add(new BuffCatalogEntryViewModel(name, id, false, VanillaBuffIconResolver.GetIconPath(id), _vanillaCatalog.GetDescription(id)));
         foreach (var entry in _calamityCatalog.Entries)
         {
             string? iconPath = entry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/buff_icons/" + entry.Icon : null;
-            _all.Add(new BuffCatalogEntryViewModel(entry.DisplayName, entry.SyntheticId, true, iconPath));
+            _all.Add(new BuffCatalogEntryViewModel(entry.DisplayName, entry.SyntheticId, true, iconPath, entry.Description));
         }
     }
 

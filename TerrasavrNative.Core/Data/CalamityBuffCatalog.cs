@@ -16,13 +16,17 @@ public sealed class CalamityBuffEntryData
 
 // Una entrada del catalogo de buffs con su id sintetico ya resuelto (BuffIdBase + indice en
 // el array de buffs.json) - mismo esquema secuencial que CalamityCatalog para objetos.
-public sealed class CalamityBuffEntry(CalamityBuffEntryData data, int syntheticId)
+public sealed class CalamityBuffEntry(CalamityBuffEntryData data, int syntheticId, string? description)
 {
     public int SyntheticId { get; } = syntheticId;
     public string Internal => data.Internal;
     public string Mod => data.Mod;
     public string DisplayName => data.DisplayNameEs ?? data.DisplayNameFallback ?? data.Internal;
     public string? Icon => data.Icon;
+    // Descripcion real EN INGLES (scripts/extraer-descripciones-buffs-calamity.js, del
+    // .tmod real instalado) - esta instalacion de Calamity no trae es-ES, no se inventa una
+    // traduccion. Null si de verdad no hay ninguna.
+    public string? Description { get; } = description;
 }
 
 // Los buffs reales de Calamity (calamity/buffs.json) - usado para fusionar/sincronizar
@@ -48,21 +52,27 @@ public sealed class CalamityBuffCatalog
     public CalamityBuffEntry? ByModAndInternal(string mod, string internalName) =>
         _byModInternal.TryGetValue((mod, internalName), out var e) ? e : null;
 
-    public static CalamityBuffCatalog LoadFromFile(string path)
+    public static CalamityBuffCatalog LoadFromFile(string path, string descriptionsPath)
     {
         using var stream = File.OpenRead(path);
-        return LoadFromStream(stream);
+        using var descStream = File.OpenRead(descriptionsPath);
+        return LoadFromStream(stream, descStream);
     }
 
-    public static CalamityBuffCatalog LoadFromStream(Stream stream)
+    public static CalamityBuffCatalog LoadFromStream(Stream stream, Stream descriptionsStream)
     {
         var raw = JsonSerializer.Deserialize<List<CalamityBuffEntryData>>(stream)
             ?? throw new InvalidDataException("buffs.json no contiene un array valido.");
+        var descriptions = JsonSerializer.Deserialize<Dictionary<string, string>>(descriptionsStream)
+            ?? throw new InvalidDataException("calamity_buff_descriptions.json invalido.");
 
         // El orden del array IMPORTA - determina el id sintetico de cada buff. No reordenar.
         var entries = new List<CalamityBuffEntry>(raw.Count);
         for (int i = 0; i < raw.Count; i++)
-            entries.Add(new CalamityBuffEntry(raw[i], CalamityIds.BuffIdBase + i));
+        {
+            descriptions.TryGetValue(raw[i].Internal, out var desc);
+            entries.Add(new CalamityBuffEntry(raw[i], CalamityIds.BuffIdBase + i, desc));
+        }
 
         return new CalamityBuffCatalog(entries);
     }

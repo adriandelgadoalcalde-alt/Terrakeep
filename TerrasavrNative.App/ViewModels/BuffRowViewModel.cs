@@ -22,17 +22,19 @@ public partial class BuffRowViewModel : ObservableObject
     public string Name { get; }
     public bool IsCalamity { get; }
     public string? IconPath { get; }
+    public string? Description { get; }
 
     // Duracion en segundos, editable - PlrBuff.Time va en ticks (60/seg, mismo criterio que
     // ya usaba la version solo-lectura).
     [ObservableProperty] private int _durationSeconds;
 
-    public BuffRowViewModel(PlrBuff buff, string name, bool isCalamity, string? iconPath, Action<BuffRowViewModel> requestRemove)
+    public BuffRowViewModel(PlrBuff buff, string name, bool isCalamity, string? iconPath, string? description, Action<BuffRowViewModel> requestRemove)
     {
         Buff = buff;
         Name = name;
         IsCalamity = isCalamity;
         IconPath = iconPath;
+        Description = description;
         _requestRemove = requestRemove;
 
         _suppressWriteback = true;
@@ -54,17 +56,20 @@ public partial class BuffRowViewModel : ObservableObject
         bool isCalamity = buff.Id >= CalamityIds.BuffIdBase;
         string name;
         string? iconPath;
+        string? description;
         if (isCalamity)
         {
             var entry = calamityCatalog.BySyntheticId(buff.Id);
             name = entry?.DisplayName ?? $"Calamity #{buff.Id}";
             iconPath = entry?.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/buff_icons/" + entry.Icon : null;
+            description = entry?.Description;
         }
         else
         {
             name = vanillaCatalog.GetName(buff.Id);
             iconPath = VanillaBuffIconResolver.GetIconPath(buff.Id);
+            description = vanillaCatalog.GetDescription(buff.Id);
         }
-        return new BuffRowViewModel(buff, name, isCalamity, iconPath, requestRemove);
+        return new BuffRowViewModel(buff, name, isCalamity, iconPath, description, requestRemove);
     }
 }

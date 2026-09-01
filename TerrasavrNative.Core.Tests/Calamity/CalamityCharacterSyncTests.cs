@@ -37,7 +37,9 @@ public class CalamityCharacterSyncTests
     private static CalamityCharacterSync MakeSync(out CalamityCatalog catalog, out CalamityBuffCatalog buffCatalog)
     {
         catalog = CalamityCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(CatalogJson)));
-        buffCatalog = CalamityBuffCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(BuffsJson)));
+        buffCatalog = CalamityBuffCatalog.LoadFromStream(
+            new MemoryStream(Encoding.UTF8.GetBytes(BuffsJson)),
+            new MemoryStream(Encoding.UTF8.GetBytes("{}")));
         var prefixes = RoguePrefixCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(RoguePrefixesJson)));
         var translator = new CalamityPrefixTranslator(prefixes);
         var codec = new CalamityItemCodec(catalog, translator);

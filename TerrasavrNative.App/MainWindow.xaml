@@ -664,7 +664,8 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type vm:BuffCatalogEntryViewModel}">
                                                 <Button Command="{Binding DataContext.Buffs.PickBuffCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                        CommandParameter="{Binding}" Margin="0,0,6,6" Padding="0" Background="Transparent" BorderThickness="0">
+                                                        CommandParameter="{Binding}" Margin="0,0,6,6" Padding="0" Background="Transparent" BorderThickness="0"
+                                                        ToolTip="{Binding Description}">
                                                     <Border Width="96" Height="96" Padding="6" CornerRadius="6"
                                                             Background="{StaticResource BgElevatedBrush}" BorderThickness="1">
                                                         <Border.Style>
@@ -699,7 +700,8 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:BuffRowViewModel}">
-                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="9,6">
+                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="9,6"
+                                                    ToolTip="{Binding Description}">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
                                                         <Style.Triggers>

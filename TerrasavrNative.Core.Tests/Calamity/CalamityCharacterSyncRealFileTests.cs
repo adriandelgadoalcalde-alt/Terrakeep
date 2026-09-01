@@ -14,18 +14,20 @@ public class CalamityCharacterSyncRealFileTests(ITestOutputHelper output)
 {
     private const string PlayersDir = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players";
     private const string LocalSiteDir = @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Calamity-Beta\resources\app\local-site";
+    private const string DescriptionsPath = @"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\calamity_buff_descriptions.json";
 
     private static bool RealFilesExist() =>
         File.Exists(Path.Combine(PlayersDir, "adrian.plr")) &&
         File.Exists(Path.Combine(PlayersDir, "adrian.tplr")) &&
         File.Exists(Path.Combine(LocalSiteDir, "calamity", "catalog.json")) &&
         File.Exists(Path.Combine(LocalSiteDir, "calamity", "rogue_prefixes.json")) &&
-        File.Exists(Path.Combine(LocalSiteDir, "calamity", "buffs.json"));
+        File.Exists(Path.Combine(LocalSiteDir, "calamity", "buffs.json")) &&
+        File.Exists(DescriptionsPath);
 
     private static CalamityCharacterSync MakeRealSync(out CalamityCatalog catalog)
     {
         catalog = CalamityCatalog.LoadFromFile(Path.Combine(LocalSiteDir, "calamity", "catalog.json"));
-        var buffCatalog = CalamityBuffCatalog.LoadFromFile(Path.Combine(LocalSiteDir, "calamity", "buffs.json"));
+        var buffCatalog = CalamityBuffCatalog.LoadFromFile(Path.Combine(LocalSiteDir, "calamity", "buffs.json"), DescriptionsPath);
         var prefixes = RoguePrefixCatalog.LoadFromFile(Path.Combine(LocalSiteDir, "calamity", "rogue_prefixes.json"));
         var codec = new CalamityItemCodec(catalog, new CalamityPrefixTranslator(prefixes));
         return new CalamityCharacterSync(codec, buffCatalog);

@@ -1831,3 +1831,48 @@ también funciona para Calamity ("300 daño de cuerpo a cuerpo").
 
 `dotnet build`/`dotnet test` en verde (128/128, sin regresiones pese al cambio de datos -
 los tests de humo ya eran lo bastante generales).
+
+### Fase B - Descripciones reales de buff (vanilla en español + Calamity en inglés) como tooltip
+
+Dos scripts nuevos de extracción: `scripts/extraer-descripciones-buffs.py` lee `BuffDescription`
+de `Terraria.Localization.Content.es-ES.Game.json` real (`tModLoader-Decompiled\TerrariaVanilla\`)
+→ `Assets/vanilla_buff_descriptions.json` (353 entradas reales, clave = nombre interno tal cual,
+ej. `"Regeneration"`). `scripts/extraer-descripciones-buffs-calamity.js` (Node, reutiliza
+`tmod-extract.js` YA existente de `Terrasavr-Calamity-Beta`) lee el `.tmod` real instalado de
+Calamity, `Localization/en-US/Mods.CalamityMod.Buffs.hjson` → `Assets/calamity_buff_descriptions.json`
+(302 entradas, EN INGLÉS - esta instalación de Calamity no trae `es-ES`, confirmado, no se
+inventa una traducción).
+
+`VanillaBuffCatalog.LoadFromFile`/`LoadFromStream` ahora piden TAMBIÉN la ruta/stream de
+descripciones (segundo parámetro) y exponen `GetDescription(int buffId)` - como
+`vanilla_buff_names.json` guarda el nombre YA humanizado ("Obsidian Skin") pero
+`BuffDescription` usa la clave interna real en PascalCase sin espacios ("ObsidianSkin"), se
+reconstruye quitando los espacios (290/354 aciertos reales - los 64 fallos son buffs de ir en
+minecart, que de verdad no tienen descripción de cara al jugador en el propio juego).
+`CalamityBuffEntry` gana un tercer parámetro `description` (resuelto por nombre interno exacto,
+292/305 con descripción real). Propagado por toda la cadena: `CharacterFileService` (carga
+ambos catálogos con las dos rutas), `BuffCatalogEntryViewModel`/`BuffRowViewModel` (nueva
+propiedad `Description`, null si de verdad no hay ninguna - nunca se inventa un texto vacío),
+`BuffsViewModel` (la rellena al construir el catálogo completo). `MainWindow.xaml`:
+`ToolTip="{Binding Description}"` en la tarjeta del picker "Añadir buff..." y en la tarjeta de
+cada buff activo - sin tooltip cuando `Description` es null (WPF no muestra nada si el valor
+enlazado es null, no hace falta un converter aparte).
+
+**Bug de compilación real encontrado al reconstruir tras el cambio de firma** (no roto por mí a
+propósito, efecto colateral esperado de cambiar `LoadFromFile`/`LoadFromStream` a pedir un
+segundo parámetro): 3 sitios de test (`CalamityCharacterSyncRealFileTests.cs`,
+`CalamityCharacterSyncTests.cs`, `VanillaBuffCatalogTests.cs`) llamaban a las firmas viejas de
+un solo parámetro - corregidos pasando un stream/fichero de descripciones real o mínimo
+(`{}` para los tests sintéticos que no necesitan datos reales; la ruta real de
+`Assets/calamity_buff_descriptions.json` para la prueba de extremo a extremo contra el
+personaje real "adrian", añadida también a `RealFilesExist()` para que se salte en silencio si
+algún día falta).
+
+**Verificación real** (arnés de consola, `TerrasavrNative.Core` referenciado directo): buff
+vanilla "Regeneration" → `Description == "Regenera la vida"` (exacto, tal y como pedía el
+criterio de cierre del plan); 290/354 buffs vanilla con descripción real, 292/305 de Calamity;
+ejemplo Calamity: "Gelatina Astral" (`AbandonedSlimeBuff`) → `"Back from the heavens just to
+protect you!"` (en inglés, real, sin traducir).
+
+`dotnet build`/`dotnet test` en verde (128/128) tras corregir los 3 tests; build de
+`TerrasavrNative.App` (WPF, XAML incluido) también en verde.

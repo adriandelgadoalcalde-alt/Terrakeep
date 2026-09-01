@@ -7,9 +7,12 @@ namespace TerrasavrNative.Core.Tests.Data;
 public class VanillaBuffCatalogTests
 {
     private const string SampleJson = """{"1":"Obsidian Skin","353":"Shimmer"}""";
+    private const string SampleDescriptionsJson = """{"ObsidianSkin":"Inmune a fuego de lava"}""";
 
     private static VanillaBuffCatalog Load() =>
-        VanillaBuffCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(SampleJson)));
+        VanillaBuffCatalog.LoadFromStream(
+            new MemoryStream(Encoding.UTF8.GetBytes(SampleJson)),
+            new MemoryStream(Encoding.UTF8.GetBytes(SampleDescriptionsJson)));
 
     [Fact]
     public void GetName_ResolvesKnownAndUnknown()
