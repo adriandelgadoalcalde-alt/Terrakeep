@@ -367,6 +367,24 @@
 
                     <DockPanel Grid.Column="1">
                         <TextBlock DockPanel.Dock="Top" Text="NPCs de pueblo" Style="{StaticResource SectionText}" Margin="0,0,0,8" />
+                        <TextBox DockPanel.Dock="Top" Text="{Binding Exploration.NpcSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                 Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                 FontSize="12" Margin="0,0,0,10" />
+
+                        <Expander DockPanel.Dock="Bottom" Header="NPCs que faltan" Foreground="{StaticResource TextPrimaryBrush}"
+                                  Margin="0,10,0,0" IsExpanded="True"
+                                  Visibility="{Binding Exploration.MissingNpcs.Count, Converter={StaticResource CountToVis}}">
+                            <ItemsControl ItemsSource="{Binding Exploration.MissingNpcs}" Margin="0,6,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}"
+                                                   Foreground="{StaticResource CalamityBrush}" Margin="0,0,0,3" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Expander>
+
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding Exploration.Npcs}">
                                 <ItemsControl.ItemTemplate>

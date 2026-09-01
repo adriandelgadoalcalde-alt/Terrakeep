@@ -284,14 +284,32 @@ limpio, la app arranca sin excepción con el asset nuevo copiado. **No verificad
 reales** (pulsar Auto-equipar de verdad y comprobar el resultado en pantalla) - misma
 limitación de siempre.
 
+### Buscador/roster de NPCs en Exploración
+
+- **`VanillaTownNpcRoster`** (`Core/Data`, nuevo): los 27 NPCs de pueblo reales de Terraria
+  vanilla, portados literal de `VANILLA_TOWN_NPC_ROSTER` en `overrides.js` de
+  Terrasavr-Calamity-Beta - `[17, 18, 19, 20, 22, 37, 38, 54, 107, 108, 124, 142, 160, 178,
+  207, 208, 209, 227, 228, 229, 353, 369, 453, 550, 588, 633, 663]`.
+- **`ExplorationViewModel`**: guarda la lista completa de NPCs encontrados (`_allNpcs`) aparte
+  de la colección enlazada a la UI (`Npcs`), que ahora se recalcula por texto
+  (`NpcSearchText`/`ApplyNpcFilter`, mismo patrón que `LibraryViewModel`). Al cargar un mundo
+  se calcula tambien `MissingNpcs` (nombres reales de los ids del roster que NO aparecen en
+  `world.Npcs`) - aparece en un `Expander` "NPCs que faltan" bajo la lista, en rojo Calamity
+  para que resalte. `WorldNpcRowViewModel` gana el campo `Id` (antes solo nombre/posicion,
+  hacia falta para el diff contra el roster) y ahora marca "- sin casa" en la posicion si el
+  NPC no tiene casa asignada (`Homeless`, ya leido por `WldReader` pero sin usar en la UI).
+
+**Verificado**: 82 tests xUnit (2 nuevos: `VanillaTownNpcRosterTests`, cuenta y sin
+duplicados, mas dos ids conocidos). `dotnet build` limpio, la app arranca sin excepción. **No
+verificado con clics reales** (buscar de verdad, cargar un mundo real y comprobar que la
+lista de "NPCs que faltan" tiene sentido) - misma limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
 - **Exploración**: zoom real (de momento solo scroll a tamaño 1:1), fondo degradado por zona
-  (falta leer GroundLevel/RockLevel), buscador/filtro de NPCs (ya se listan todos, falta
-  buscar por nombre y marcar cuáles NO tiene el jugador - el "roster" de NPCs de pueblo
-  reales, `VANILLA_TOWN_NPC_ROSTER` en la versión JS, todavía no se ha portado), tooltip por
-  tile al pasar el ratón (nombre real de tile/pared - ya está `TileNameCatalog`, falta
-  guardar u/v por tile en `WldTile` para resolver variantes exactas y conectarlo a la UI).
+  (falta leer GroundLevel/RockLevel), tooltip por tile al pasar el ratón (nombre real de
+  tile/pared - ya está `TileNameCatalog`, falta guardar u/v por tile en `WldTile` para
+  resolver variantes exactas y conectarlo a la UI).
 - **Iconos vanilla**: siguen sin extraer (atlas `img/items.png`/`img/nitems.png`, formato UV
   todavía no investigado) - la Librería los muestra con un icono de reserva por ahora.
 - **Apariencia** (pelo/piel con preview) - ni empezada.

@@ -8,26 +8,31 @@ using TerrasavrNative.Core.WldFormat;
 
 namespace TerrasavrNative.App.ViewModels;
 
-public sealed class WorldNpcRowViewModel(string name, int x, int y)
+public sealed class WorldNpcRowViewModel(int id, string name, int x, int y, bool homeless)
 {
+    public int Id { get; } = id;
     public string Name { get; } = name;
-    public string Position { get; } = $"({x}, {y})";
+    public string Position { get; } = homeless ? $"({x}, {y}) - sin casa" : $"({x}, {y})";
 }
 
-// Pestaña "Exploracion" - cargar un .wld real, pintarlo entero (WorldRenderer) y listar sus
-// NPCs de pueblo con su posicion. Solo lectura, no coloca/quita tiles (misma restriccion que
-// el visor JS de referencia).
+// Pestaña "Exploracion" - cargar un .wld real, pintarlo entero (WorldRenderer), listar sus
+// NPCs de pueblo con su posicion (con buscador por nombre) y marcar cuales NPCs de pueblo
+// reales (VanillaTownNpcRoster) todavia no tiene el jugador en este mundo. Solo lectura, no
+// coloca/quita tiles (misma restriccion que el visor JS de referencia).
 public partial class ExplorationViewModel : ObservableObject
 {
     private readonly NpcNameCatalog _npcNames;
     private readonly MapColorCatalog _mapColors;
+    private List<WorldNpcRowViewModel> _allNpcs = [];
 
     [ObservableProperty] private BitmapSource? _worldImage;
     [ObservableProperty] private string _statusMessage = "Sin mundo cargado.";
     [ObservableProperty] private string? _worldTitle;
     [ObservableProperty] private bool _isWorldLoaded;
+    [ObservableProperty] private string _npcSearchText = string.Empty;
 
     public ObservableCollection<WorldNpcRowViewModel> Npcs { get; } = [];
+    public ObservableCollection<string> MissingNpcs { get; } = [];
 
     public ExplorationViewModel(CharacterFileService service)
     {
@@ -45,18 +50,39 @@ public partial class ExplorationViewModel : ObservableObject
             StatusMessage = "Pintando mapa...";
             WorldImage = WorldRenderer.Render(world, _mapColors);
 
-            Npcs.Clear();
-            foreach (var npc in world.Npcs.OrderBy(n => _npcNames.GetName(n.Id)))
-                Npcs.Add(new WorldNpcRowViewModel(_npcNames.GetName(npc.Id), npc.TileX, npc.TileY));
+            _allNpcs = world.Npcs
+                .OrderBy(n => _npcNames.GetName(n.Id))
+                .Select(n => new WorldNpcRowViewModel(n.Id, _npcNames.GetName(n.Id), n.TileX, n.TileY, n.Homeless))
+                .ToList();
+            NpcSearchText = string.Empty;
+            ApplyNpcFilter();
+
+            var foundIds = world.Npcs.Select(n => n.Id).ToHashSet();
+            MissingNpcs.Clear();
+            foreach (int id in VanillaTownNpcRoster.Ids)
+                if (!foundIds.Contains(id))
+                    MissingNpcs.Add(_npcNames.GetName(id));
 
             WorldTitle = world.Header.Title;
             IsWorldLoaded = true;
-            StatusMessage = $"'{world.Header.Title}' - {world.Header.TilesWide}x{world.Header.TilesHigh} tiles, {Npcs.Count} NPC(s) de pueblo.";
+            StatusMessage = $"'{world.Header.Title}' - {world.Header.TilesWide}x{world.Header.TilesHigh} tiles, " +
+                $"{_allNpcs.Count} NPC(s) de pueblo, {MissingNpcs.Count} todavia sin conseguir.";
         }
         catch (Exception ex)
         {
             IsWorldLoaded = false;
             StatusMessage = $"Error al leer el mundo: {ex.Message}";
         }
+    }
+
+    partial void OnNpcSearchTextChanged(string value) => ApplyNpcFilter();
+
+    private void ApplyNpcFilter()
+    {
+        Npcs.Clear();
+        var matches = string.IsNullOrWhiteSpace(NpcSearchText)
+            ? _allNpcs
+            : _allNpcs.Where(n => n.Name.Contains(NpcSearchText, StringComparison.OrdinalIgnoreCase));
+        foreach (var npc in matches) Npcs.Add(npc);
     }
 }
