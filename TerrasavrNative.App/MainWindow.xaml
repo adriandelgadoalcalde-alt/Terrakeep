@@ -633,10 +633,13 @@
                                         </StackPanel>
                                     </StackPanel>
                                     <StackPanel Margin="0,0,24,0">
-                                        <TextBlock Text="Estilo de pelo (id)" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
-                                        <TextBox Text="{Binding Appearance.HairStyle, UpdateSourceTrigger=PropertyChanged}"
-                                                 Width="70" Padding="6,4" Background="{StaticResource BgElevatedBrush}"
-                                                 Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                        <TextBlock Text="Peinado" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
+                                        <Button Command="{Binding Appearance.OpenHairPickerCommand}" Padding="8,6" HorizontalContentAlignment="Left">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Appearance.HairStyle, StringFormat='Estilo #{0}'}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                                <TextBlock Text="&#9998;" FontSize="11" VerticalAlignment="Center" Foreground="{StaticResource AccentBrush}" />
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
                                     <StackPanel>
                                         <TextBlock Text="Tinte de pelo (id)" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
@@ -645,6 +648,38 @@
                                                  Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                     </StackPanel>
                                 </StackPanel>
+
+                                <!-- Selector visual de peinado - pedido explicito 1-sep-2026 (sprites en vez de
+                                     ids a mano). Mismo patron de overlay que ya usan el picker de prefijo y de
+                                     buffs (Border de acento superpuesto, no un Popup real). -->
+                                <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource AccentBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,18"
+                                        Visibility="{Binding Appearance.IsHairPickerOpen, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,8">
+                                            <Button DockPanel.Dock="Right" Content="Cerrar" Command="{Binding Appearance.CloseHairPickerCommand}" Padding="8,3" />
+                                            <TextBlock Text="Elige un peinado" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                                        </DockPanel>
+                                        <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding Appearance.HairOptions}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vm:HairOptionViewModel}">
+                                                        <Button Command="{Binding DataContext.Appearance.SelectHairCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding Id}" Margin="2" Padding="4"
+                                                                Background="{StaticResource BgElevatedBrush}" BorderThickness="0"
+                                                                ToolTip="{Binding Id}">
+                                                            <Image Source="{Binding Thumbnail}" Width="30" Height="42"
+                                                                   RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="Uniform" />
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </StackPanel>
+                                </Border>
 
                                 <ItemsControl ItemsSource="{Binding Appearance.Swatches}">
                                     <ItemsControl.ItemsPanel>

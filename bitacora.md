@@ -1211,6 +1211,32 @@ recordado), colocar "Hacha de hierro" desde ahí vuelve solo a Objetos Y le apli
 "Legendario" automáticamente (confirma de paso que el punto 8 sigue funcionando con el nuevo
 layout). `dotnet build`/`dotnet test` en verde (118/118).
 
+### Punto 5 (mitad) CERRADO - selector visual de peinado con sprites reales
+
+`PlayerPreviewRenderer.RenderHairThumbnail` (nuevo) reutiliza el mismo sprite/tintado real del
+preview de cuerpo completo para renderizar una miniatura de un único peinado. `AppearanceViewModel`
+genera las 228 miniaturas bajo demanda al abrir el selector (no en `LoadFrom`, para no pagar
+228 renders si nunca se abre), usando el color de pelo actual en ese momento - se invalidan
+(`HairOptions.Clear()`) si el color de pelo cambia después, para no quedar desincronizadas. El
+campo "Estilo de pelo (id)" (TextBox numérico) pasa a ser un botón "Peinado: Estilo #N ✎" que
+abre una rejilla de miniaturas reales (mismo patrón de overlay que ya usan los pickers de
+prefijo/buffs). El tinte de pelo (número real de Terraria, sin catálogo de nombres/sprites
+propios conocido) se queda como campo numérico.
+
+**Buffs YA tenía selección visual con sprites reales** (`BuffCatalogEntryViewModel`, picker de
+"Añadir buff...") desde una fase anterior de este mismo proyecto - no hacía falta ningún
+cambio ahí, ya cumplía lo pedido.
+
+Verificado en vivo: selector abierto muestra 228 miniaturas reales tintadas con el color de
+pelo del personaje cargado (Eldelgas, pelo rojizo), clic en una miniatura distinta cambia el
+"Estilo #" mostrado Y el preview de cuerpo completo reflejó el nuevo peinado al momento.
+`dotnet build`/`dotnet test` en verde (118/118).
+
+**Pendiente de la lista original**: selección visual para el resto de campos de Apariencia
+(piel/pantalones/etc ya son colores editables por deslizador con preview en vivo, no ids -
+esa parte ya estaba resuelta desde antes; lo que quedaba pendiente específicamente era el
+peinado, ya cerrado), tooltips de estadísticas de objeto, y drag&drop visual.
+
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 
 - Commit tras cada cambio verificado (no solo antes de cambios grandes) - mismo criterio que

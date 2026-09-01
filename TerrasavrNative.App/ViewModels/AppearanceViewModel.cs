@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
 using TerrasavrNative.Core.PlrFormat;
 
@@ -37,6 +38,35 @@ public partial class AppearanceViewModel : ObservableObject
     }
 
     public ObservableCollection<ColorSwatchViewModel> Swatches { get; } = [];
+
+    // Selector visual de peinado (pedido explicito 1-sep-2026: sprites en vez de escribir un
+    // id a mano) - las 228 miniaturas se generan bajo demanda al abrir el selector (no en
+    // LoadFrom, para no pagar 228 renders en cada carga de personaje si nunca se abre) con el
+    // color de pelo actual en ese momento.
+    [ObservableProperty] private bool _isHairPickerOpen;
+    public ObservableCollection<HairOptionViewModel> HairOptions { get; } = [];
+
+    [RelayCommand]
+    private void OpenHairPicker()
+    {
+        if (HairOptions.Count == 0 && Swatches.Count > HairIdx)
+        {
+            var hairColor = new PlayerPreviewRenderer.Tint((byte)Swatches[HairIdx].R, (byte)Swatches[HairIdx].G, (byte)Swatches[HairIdx].B);
+            for (int id = 1; id <= PlayerPreviewRenderer.HairStyleCount; id++)
+                HairOptions.Add(new HairOptionViewModel(id, PlayerPreviewRenderer.RenderHairThumbnail(id, hairColor)));
+        }
+        IsHairPickerOpen = true;
+    }
+
+    [RelayCommand]
+    private void SelectHair(int id)
+    {
+        HairStyle = id;
+        IsHairPickerOpen = false;
+    }
+
+    [RelayCommand]
+    private void CloseHairPicker() => IsHairPickerOpen = false;
 
     // Estadisticas del personaje - en la version JS real viven en el mismo panel que
     // pelo/colores (app.TabMain, clase Sa, mismo constructor que ya se investigo para el
@@ -90,8 +120,13 @@ public partial class AppearanceViewModel : ObservableObject
         PlayHours = TimeSpan.FromTicks(totalTicks).TotalHours;
         _suppressWriteback = false;
 
-        foreach (var swatch in Swatches)
+        for (int i = 0; i < Swatches.Count; i++)
+        {
+            var swatch = Swatches[i];
             swatch.PropertyChanged += (_, _) => RefreshPreview();
+            if (i == HairIdx) swatch.PropertyChanged += (_, _) => HairOptions.Clear(); // color de pelo cambio, las miniaturas quedan obsoletas
+        }
+        HairOptions.Clear();
 
         _character = character;
         RefreshPreview();

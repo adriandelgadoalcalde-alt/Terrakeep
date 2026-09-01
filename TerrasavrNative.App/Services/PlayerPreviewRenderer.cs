@@ -72,6 +72,21 @@ public static class PlayerPreviewRenderer
         return bitmap;
     }
 
+    // Miniatura de un unico peinado (sin cuerpo) para el selector visual de Apariencia -
+    // pedido explicito 1-sep-2026, "sprites de los diferentes cabeza corte de pelo... que se
+    // pueda ver". Reusa el mismo sprite/tintado real que el preview completo.
+    public static WriteableBitmap RenderHairThumbnail(int hairStyle, Tint hairColor)
+    {
+        var canvas = new byte[Height * Width * 4];
+        Composite(canvas, LoadHair(hairStyle), hairColor);
+        var bitmap = new WriteableBitmap(Width, Height, 96, 96, PixelFormats.Bgra32, null);
+        bitmap.WritePixels(new Int32Rect(0, 0, Width, Height), canvas, Width * 4, 0);
+        bitmap.Freeze();
+        return bitmap;
+    }
+
+    public static int HairStyleCount => HairStyleMax;
+
     private static byte[] LoadBody(string name) =>
         LoadCached(Path.Combine(AppContext.BaseDirectory, "Assets", "player", "body", name + ".png"));
 
