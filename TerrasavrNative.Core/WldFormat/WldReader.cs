@@ -65,6 +65,38 @@ public static class WldReader
         int tilesHigh = reader.ReadInt32();
         int tilesWide = reader.ReadInt32();
 
+        if (version >= 209)
+        {
+            reader.ReadInt32(); // GameMode
+            if (version >= 222) reader.ReadBoolean();
+            if (version >= 227) reader.ReadBoolean();
+            if (version >= 238) reader.ReadBoolean();
+            if (version >= 239) reader.ReadBoolean();
+            if (version >= 241) reader.ReadBoolean();
+            if (version >= 249) reader.ReadBoolean();
+            if (version >= 266) reader.ReadBoolean();
+            if (version >= 267) reader.ReadBoolean(); // ZenithWorld
+            if (version >= 302) reader.ReadBoolean();
+        }
+        else if (version == 208 || version >= 112)
+        {
+            reader.ReadBoolean();
+        }
+
+        if (version >= 141) reader.ReadBytes(8); // CreationTime
+        if (version >= 284) reader.ReadBytes(8); // LastPlayed
+        reader.ReadByte(); // MoonType
+        reader.ReadBytes(4 * 3); // TreeX[0..2]
+        reader.ReadBytes(4 * 4); // TreeStyle0..3
+        reader.ReadBytes(4 * 3); // CaveBackX[0..2]
+        reader.ReadBytes(4 * 4); // CaveBackStyle0..3
+        reader.ReadBytes(4 * 3); // Ice/Jungle/HellBackStyle
+
+        int spawnX = reader.ReadInt32();
+        int spawnY = reader.ReadInt32();
+        double groundLevel = reader.ReadDouble();
+        double rockLevel = reader.ReadDouble();
+
         return new WldHeader
         {
             Version = version,
@@ -74,6 +106,10 @@ public static class WldReader
             WorldId = worldId,
             TilesHigh = tilesHigh,
             TilesWide = tilesWide,
+            SpawnX = spawnX,
+            SpawnY = spawnY,
+            GroundLevel = groundLevel,
+            RockLevel = rockLevel,
         };
     }
 

@@ -496,10 +496,35 @@ Core que testear), `dotnet build` limpio, la app arranca sin excepción con los 
 iconos nuevos copiados a la salida. **No verificado con clics reales** (ver los iconos de
 verdad en pantalla) - misma limitación de siempre.
 
+### Fondo degradado por zona en el visor de mundo
+
+`WldHeader` se amplía hasta `GroundLevel`/`RockLevel`/`SpawnX`/`SpawnY` (antes el lector paraba
+justo después de las dimensiones, a propósito). Campos leídos en el mismo orden exacto que
+`parseWorldHeader` real (`overrides.js`): GameMode + hasta 9 bools condicionados por versión
+(o 1 bool si `version==208||version>=112` y `<209`), CreationTime/LastPlayed (8 bytes cada
+uno si aplica), MoonType, 3+4+3+4+3 enteros de árboles/fondos de cueva, `SpawnX`/`SpawnY`
+(`Int32`), `GroundLevel`/`RockLevel` (**`Double`**, no entero). Como la lectura de tiles ya
+saltaba directamente a `pointers[1]` (no seguía leyendo secuencialmente desde la cabecera), un
+fallo aquí solo podría estropear estos 4 campos nuevos, nunca desalinear el mapa - aun así se
+verificó con datos reales: `GroundLevel`/`RockLevel`/`Spawn` de los 2 mundos reales de este PC
+salen coherentes (orden Ground<Rock<alto del mundo, spawn por encima de la roca) - ver
+`WldReaderRealFileTests.Read_RealWorld_GroundRockLevelsAndSpawnAreSane`.
+
+`WldHeader.ZoneFor(worldY)` decide la zona por profundidad (Espacio si y<80, Infierno en las
+últimas 192 filas, Roca/Tierra según RockLevel/GroundLevel, Cielo el resto) - mismo criterio
+que `zoneFor` real. `WorldRenderer` ya no usa un fondo sólido fijo: calcula el color de zona
+una vez POR FILA (no por píxel, la profundidad no cambia por columna) vía
+`MapColorCatalog.Global(zona)` - ese método y los datos de `map_colors.json` (`"global"`) ya
+existían de antes, sin usar; solo hacía falta la cabecera.
+
+**Verificado**: 97 tests xUnit (2 tests reales nuevos de cabecera + 1 fixture de `ZoneFor` con
+los 5 límites exactos de zona). `dotnet build` limpio, la app arranca sin excepción. **No
+verificado visualmente** (ver el degradado de verdad en el mapa renderizado) - el pipeline de
+renderizado en sí (`WorldRenderer`) no tiene tests automatizados propios en ninguna fase
+anterior tampoco, coherente con el resto del proyecto.
+
 ## Pendiente (visible desde fuera)
 
-- **Exploración**: fondo degradado por zona (falta leer GroundLevel/RockLevel de la cabecera,
-  que `WldHeader` no lee todavía a propósito).
 - **Apariencia** (pelo/piel con preview) - ni empezada.
 - Instalador (Fase 6 del plan) - ni empezado.
 

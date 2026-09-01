@@ -72,4 +72,27 @@ public class WldReaderRealFileTests(ITestOutputHelper output)
             Assert.False(string.IsNullOrEmpty(npc.GivenName) && npc.Id == 0);
         }
     }
+
+    [Theory]
+    [MemberData(nameof(RealWldFiles))]
+    public void Read_RealWorld_GroundRockLevelsAndSpawnAreSane(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        var world = WldReader.Read(File.ReadAllBytes(path));
+        var h = world.Header;
+        output.WriteLine($"{Path.GetFileName(path)}: spawn=({h.SpawnX},{h.SpawnY}) groundLevel={h.GroundLevel} rockLevel={h.RockLevel}");
+
+        // Orden real de las capas por profundidad: superficie (GroundLevel) esta siempre por
+        // encima (Y menor) de la roca (RockLevel), y ambas caen dentro del alto del mundo.
+        Assert.InRange(h.GroundLevel, 0, h.TilesHigh);
+        Assert.InRange(h.RockLevel, 0, h.TilesHigh);
+        Assert.True(h.GroundLevel < h.RockLevel, $"GroundLevel ({h.GroundLevel}) deberia estar por encima de RockLevel ({h.RockLevel})");
+
+        // El punto de aparicion siempre esta dentro del mundo, y por encima o cerca de la
+        // superficie (nunca en las profundidades) - Terraria coloca el spawn en la superficie.
+        Assert.InRange(h.SpawnX, 0, h.TilesWide);
+        Assert.InRange(h.SpawnY, 0, h.TilesHigh);
+        Assert.True(h.SpawnY < h.RockLevel, $"El spawn ({h.SpawnY}) deberia estar por encima de la roca ({h.RockLevel})");
+    }
 }

@@ -12,14 +12,15 @@ namespace TerrasavrNative.App.Services;
 // que reimplementar un renderizador incremental por region visible, como hace el visor JS
 // original con su canvas).
 //
-// Orden de mezcla por pixel confirmado contra el visor JS real (fondo de zona -> pared -> tile
-// -> liquido, cada capa solo si tiene alpha/cantidad > 0): DE MOMENTO sin el fondo degradado
-// por zona (Espacio/Cielo/Tierra/Roca/Infierno) - eso necesita GroundLevel/RockLevel de la
-// cabecera del .wld, que WldHeader no lee todavia a proposito (ver su comentario). Se usa un
-// fondo solido oscuro en su lugar; el degradado por profundidad queda pendiente.
+// Orden de mezcla por pixel confirmado contra el visor JS real: fondo de zona (segun
+// profundidad, ver WldHeader.ZoneFor) -> pared -> tile -> liquido, cada capa solo si tiene
+// alpha/cantidad > 0.
 public static class WorldRenderer
 {
-    private static readonly Color BackgroundColor = Color.FromRgb(0x12, 0x12, 0x12);
+    // Color de reserva si alguna zona no aparece en map_colors.json (no deberia pasar, las 5
+    // zonas reales - Space/Sky/Earth/Rock/Hell - siempre estan, pero Global() devuelve
+    // Transparent en un fallo de datos y no queremos un fondo invisible).
+    private static readonly Color FallbackBackgroundColor = Color.FromRgb(0x12, 0x12, 0x12);
 
     public static WriteableBitmap Render(WldWorld world, MapColorCatalog colors)
     {
@@ -30,12 +31,21 @@ public static class WorldRenderer
         int stride = width * 4;
         var pixels = new byte[height * stride];
 
+        // El fondo depende solo de la fila (profundidad), no de la columna - se calcula una
+        // vez por fila en vez de una vez por pixel.
+        var rowBackgrounds = new (byte R, byte G, byte B, byte A)[height];
+        for (int y = 0; y < height; y++)
+        {
+            var zoneColor = colors.Global(world.Header.ZoneFor(y));
+            rowBackgrounds[y] = zoneColor.A > 0 ? (zoneColor.R, zoneColor.G, zoneColor.B, (byte)255) : Blend(FallbackBackgroundColor);
+        }
+
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
                 var tile = world.Tiles[x, y];
-                var pixel = Blend(BackgroundColor);
+                var pixel = rowBackgrounds[y];
 
                 if (tile.Wall != 0)
                 {
