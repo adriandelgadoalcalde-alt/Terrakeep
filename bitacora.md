@@ -1460,3 +1460,63 @@ además en un `ScrollViewer MaxHeight="240"` en `MainWindow.xaml` para que la li
 resultados no empuje la lista de buffs activos fuera de la pantalla. `dotnet build`/`dotnet
 test` en verde (118/118) - verificación por revisión de código, mismo criterio que el resto de
 esta sección dado el bloqueo de captura de pantalla ya establecido.
+
+### Fase 2 del plan - tablas reales de elegibilidad de prefijo (Core, sin UI todavía)
+
+Objetivo: reemplazar la lista plana de 118 prefijos del `PrefixPickerViewModel` actual (que
+deja poner cualquier prefijo a cualquier objeto) por la elegibilidad REAL del propio juego -
+sin inventar nada, extraída del código decompilado real de tModLoader.
+
+`scripts/extraer-prefijos-vanilla.py` (nuevo) lee 3 fuentes reales:
+- `PrefixLegacy.cs`: los 7 arrays `PrefixesFor{Swords,Spears,GunsBows,MagicAndSummons,
+  BoomeransAndChakrums,BoomeransAndChakrums_TerrarianYoyo,Accessories}` (el pool de ids de
+  prefijo legal por tipo) y los 6 `ItemSets.*` bool-set (qué objetos son de cada tipo).
+- `ItemID.cs`, `Sets.CanGetPrefixes`: confirmado que es una lista NEGRA (el primer argumento
+  de `CreateBoolSet` es el valor por defecto `true`; los 89 ids listados son la excepción).
+- `Item.cs`, `GetRollablePrefixes()`/`GetPrefixCategories()`/`IsAPrefixableAccessory()`:
+  replicadas 1:1, mismo orden de prioridad real (Swords > Spears > GunsBows > MagicAndSummon
+  > BoomerangsChakrams > TerrarianYoyo > Accessory). Para accessory/vanity se reutiliza
+  `vanilla_categories.json` (ya extraído en esta sesión con el mismo método de bloques
+  `SetDefaults#`) en vez de volver a escanear `Item.cs`.
+
+**Bug real cometido y corregido en el propio script durante la verificación**: la primera
+versión guardaba en `itemPool` una etiqueta semántica ("melee") en vez de la clave real del
+diccionario `prefixesByCategory` ("swords") - el test de humo contra el fichero real
+(`PrefixRulesCatalogRealFileTests`) lo detectó de inmediato (`IsLegal(1, 81)` daba `false`
+cuando debía dar `true`). Corregido y regenerado antes de comitear - no se dio nada por bueno
+sin que el test pasara.
+
+Salida: `Assets/vanilla_prefix_rules.json` (742 objetos con al menos una categoría real de
+prefijo - todos los demás, materiales/bloques/etc, no admiten ninguno).
+
+**Nuevo en `TerrasavrNative.Core/Data/`**:
+- `PrefixRulesCatalog.cs`: `PrefixCategory` (flags: Melee/Ranged/Magic/AnyWeapon/Accessory/
+  Summon - Summon solo existe para Calamity, Terraria vanilla no tiene esa categoría propia,
+  los objetos de invocación vanilla caen dentro de Magic vía el set `MagicAndSummon` real),
+  `VanillaCategories(id)`, `LegalPrefixes(id)`, `IsLegal(id, prefixId)`.
+- `PrefixEligibility.cs`: punto único que decide la categoría de un `GameItem` cualquiera,
+  vanilla (delega en `PrefixRulesCatalog`) o Calamity (vía `entry.Category`/`DamageType` ya
+  presentes en `catalog.json`).
+- `PrefixGroupCatalog.cs`: la tabla `pfxMeta` LITERAL del Terrasavr real (`script.js`, clase
+  `app.TabEdit`, líneas 2600-2657 del beautificado) - 3 metas (Biblioteca/Positivos/
+  Negativos) con sus grupos reales (Mejor/Daño/Crítico, Accesorio(+), Universal(±), Común(±),
+  Cuerpo a cuerpo(±), A distancia(±), Magia(±), Invocación(±)), cada uno con su `Requires:
+  PrefixCategory`. Los ids de invocación de Calamity (85-97) vienen de las constantes reales
+  `M.PFabled=85 … M.PScraggling=97` del propio `script.js` (líneas ~10453-10466) - **no son
+  vanilla** (`PrefixID.Count==85` real), quedan marcados como tal para cuando la Fase 3
+  necesite pintarlos en rojo Calamity. `GroupsFor`/`PrefixIdsFor` intersectan cada grupo con
+  la lista de prefijos REALMENTE legal del objeto (vía `PrefixRulesCatalog`, solo vanilla -
+  Calamity no tiene tabla de legalidad por-objeto propia en este proyecto, se confía en el
+  `Requires` ya calculado por `PrefixEligibility`) - **esto es lo que arregla de verdad el bug
+  reportado**: un bloque de tierra no tiene ningún grupo en ninguna meta; un arco no ve
+  "Legendario" (81, solo en el pool de espadas) aunque "Daño" lo liste en la tabla original.
+- `CharacterFileService.cs`: carga `PrefixRulesCatalog` una vez más, mismo patrón que el
+  resto de catálogos.
+
+Tests nuevos (`PrefixRulesCatalogTests.cs`, `PrefixGroupCatalogTests.cs`, fixtures inline +
+un smoke test contra el fichero real que se salta si no existe la carpeta, patrón `*RealFile
+Tests` ya establecido en el proyecto): bloque sin categoría → sin grupos en ninguna meta;
+espada → solo grupos Cuerpo a cuerpo/Universal, nunca A distancia/Magia/Accesorio/Invocación;
+objeto de Calamity con categoría Invocación simulada → grupo "Invocación +" sin filtrar por
+pool vanilla. `dotnet build`/`dotnet test` en verde (126/126). Fase puramente de Core, sin
+UI todavía - la Fase 3 (panel "Editar" compartido) es la que expone esto de verdad.

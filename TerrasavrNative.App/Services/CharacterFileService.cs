@@ -42,6 +42,7 @@ public sealed class CharacterFileService
     public BestPrefixCatalog BestPrefixes { get; }
     public VanillaCategoryCatalog VanillaCategories { get; }
     public VanillaItemStatsCatalog VanillaStats { get; }
+    public PrefixRulesCatalog PrefixRules { get; }
 
     public CharacterFileService()
     {
@@ -64,6 +65,7 @@ public sealed class CharacterFileService
         BestPrefixes = BestPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "best_prefix.json"));
         VanillaCategories = VanillaCategoryCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_categories.json"));
         VanillaStats = VanillaItemStatsCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_stats.json"));
+        PrefixRules = PrefixRulesCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_prefix_rules.json"));
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
         var codec = new CalamityItemCodec(CalamityCatalog, translator);
