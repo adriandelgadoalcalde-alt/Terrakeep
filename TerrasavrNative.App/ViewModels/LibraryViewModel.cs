@@ -5,12 +5,13 @@ using TerrasavrNative.App.Services;
 
 namespace TerrasavrNative.App.ViewModels;
 
-// Fase 4: Libreria/Buscador. En vez de un arbol de carpetas paginado (el motor Haxe original
-// tenia un limite artificial de 19 hijos por carpeta que obligaba a eso) se usa busqueda por
-// texto sobre el catalogo COMPLETO (vanilla + Calamity, ~8200 objetos) - mas simple, mas
-// rapido de usar, y evita tener que replicar esa limitacion que no existe aqui. Solo se
-// renderizan los primeros N resultados a la vez (rendimiento con WrapPanel sin virtualizar) -
-// para 8200 objetos sin filtrar no tendria sentido mostrarlos todos de golpe de todas formas.
+// Libreria/Buscador (Fase 4, ampliada 1-sep-2026 con arbol de carpetas real - pedido explicito
+// de inspirarse en la Libreria real de Terrasavr). Dos formas de encontrar un objeto, que se
+// pueden combinar: buscar por texto sobre el catalogo COMPLETO (vanilla + Calamity, ~8200
+// objetos), o navegar el arbol de categorias reales (Category de CalamityCatalogEntry para
+// Calamity, VanillaCategoryCatalog - extraido de Item.cs decompilado real, ver
+// scripts/extraer-categorias-vanilla.py - para vanilla) y elegir una carpeta. Solo se
+// renderizan los primeros N resultados a la vez (rendimiento con WrapPanel sin virtualizar).
 //
 // Tambien hace de selector de objetos: cuando un ItemSlotViewModel pide "elegir objeto"
 // (boton en un slot vacio o "cambiar objeto" en uno lleno), MainViewModel pone ese slot en
@@ -25,19 +26,21 @@ public partial class LibraryViewModel : ObservableObject
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _resultsSummary = string.Empty;
     [ObservableProperty] private ItemSlotViewModel? _pickTarget;
+    [ObservableProperty] private CategoryNodeViewModel? _selectedCategory;
 
     public bool IsPicking => PickTarget != null;
 
     public event Action? ItemPlaced;
 
     public ObservableCollection<LibraryItemViewModel> Results { get; } = [];
+    public ObservableCollection<CategoryNodeViewModel> RootCategories { get; } = [];
 
     public LibraryViewModel(CharacterFileService service)
     {
         _all = [];
 
         foreach (var (id, name) in service.VanillaCatalog.AllEntries())
-            _all.Add(new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, "Vanilla"));
+            _all.Add(new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id)));
 
         foreach (var entry in service.CalamityCatalog.Entries)
         {
@@ -45,24 +48,91 @@ public partial class LibraryViewModel : ObservableObject
             _all.Add(new LibraryItemViewModel(entry.DisplayName, true, iconPath, entry.SyntheticId, entry.Category));
         }
 
-        ResultsSummary = $"{_all.Count} objetos en total (vanilla + Calamity) - escribe para buscar.";
+        BuildCategoryTree();
+        ApplyFilter();
     }
 
-    partial void OnSearchTextChanged(string value)
+    private void BuildCategoryTree()
+    {
+        var byPath = new Dictionary<string, CategoryNodeViewModel>();
+
+        CategoryNodeViewModel GetOrCreate(string parentPath, string name)
+        {
+            string fullPath = parentPath.Length == 0 ? name : $"{parentPath}/{name}";
+            if (byPath.TryGetValue(fullPath, out var existing)) return existing;
+
+            var node = new CategoryNodeViewModel(name, fullPath);
+            byPath[fullPath] = node;
+            if (parentPath.Length == 0) RootCategories.Add(node);
+            else byPath[parentPath].Children.Add(node);
+            return node;
+        }
+
+        foreach (var item in _all)
+        {
+            string parentPath = string.Empty;
+            foreach (string segment in item.Category.Split('/'))
+            {
+                var node = GetOrCreate(parentPath, segment);
+                node.ItemCount++;
+                node.IconPath ??= item.IconPath;
+                parentPath = node.FullPath;
+            }
+        }
+    }
+
+    partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    [RelayCommand]
+    private void SelectCategory(CategoryNodeViewModel node)
+    {
+        if (SelectedCategory != null) SelectedCategory.IsSelected = false;
+        if (SelectedCategory == node)
+        {
+            SelectedCategory = null; // pulsar la misma carpeta otra vez la deselecciona
+        }
+        else
+        {
+            SelectedCategory = node;
+            node.IsSelected = true;
+        }
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void ClearCategory()
+    {
+        if (SelectedCategory != null) SelectedCategory.IsSelected = false;
+        SelectedCategory = null;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
     {
         Results.Clear();
-        if (string.IsNullOrWhiteSpace(value))
+
+        IEnumerable<LibraryItemViewModel> matches = _all;
+        string? categoryPrefix = SelectedCategory?.FullPath;
+        if (categoryPrefix != null)
+            matches = matches.Where(i => i.Category == categoryPrefix || i.Category.StartsWith(categoryPrefix + "/", StringComparison.Ordinal));
+
+        bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
+        if (hasSearch)
+            matches = matches.Where(i => i.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+
+        if (!hasSearch && categoryPrefix == null)
         {
-            ResultsSummary = $"{_all.Count} objetos en total (vanilla + Calamity) - escribe para buscar.";
+            ResultsSummary = $"{_all.Count} objetos en total (vanilla + Calamity) - escribe para buscar o elige una carpeta.";
             return;
         }
 
-        var matches = _all.Where(i => i.DisplayName.Contains(value, StringComparison.OrdinalIgnoreCase)).ToList();
-        foreach (var item in matches.Take(MaxResults)) Results.Add(item);
+        var list = matches.ToList();
+        foreach (var item in list.Take(MaxResults)) Results.Add(item);
 
-        ResultsSummary = matches.Count > MaxResults
-            ? $"Mostrando {MaxResults} de {matches.Count} resultados - afina la busqueda."
-            : $"{matches.Count} resultado(s).";
+        string categoryLabel = categoryPrefix != null ? $" en \"{SelectedCategory!.Name}\"" : string.Empty;
+        ResultsSummary = list.Count > MaxResults
+            ? $"Mostrando {MaxResults} de {list.Count} resultados{categoryLabel} - afina la busqueda."
+            : $"{list.Count} resultado(s){categoryLabel}.";
     }
 
     partial void OnPickTargetChanged(ItemSlotViewModel? value) => OnPropertyChanged(nameof(IsPicking));

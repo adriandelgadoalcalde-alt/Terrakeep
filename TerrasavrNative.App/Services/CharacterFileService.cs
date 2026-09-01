@@ -40,6 +40,7 @@ public sealed class CharacterFileService
     public NpcNameCatalog NpcNames { get; }
     public VanillaBuffCatalog VanillaBuffs { get; }
     public BestPrefixCatalog BestPrefixes { get; }
+    public VanillaCategoryCatalog VanillaCategories { get; }
 
     public CharacterFileService()
     {
@@ -60,6 +61,7 @@ public sealed class CharacterFileService
         NpcNames = NpcNameCatalog.LoadFromFile(Path.Combine(assetsDir, "npc_names.json"));
         VanillaBuffs = VanillaBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_buff_names.json"));
         BestPrefixes = BestPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "best_prefix.json"));
+        VanillaCategories = VanillaCategoryCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_categories.json"));
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
         var codec = new CalamityItemCodec(CalamityCatalog, translator);

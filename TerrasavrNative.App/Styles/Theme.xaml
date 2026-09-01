@@ -517,13 +517,14 @@
         <Setter Property="ItemContainerStyle" Value="{StaticResource InnerTabItem}" />
     </Style>
 
-    <!-- Tarjeta de slot de item -->
+    <!-- Tarjeta de slot de item - encogida 1-sep-2026 (pedido explicito, "cajas mas
+         pequeñas... sabes como es terrasav") de 188x92 a 148x74. -->
     <Style x:Key="ItemSlotCard" TargetType="Border">
-        <Setter Property="Width" Value="188" />
-        <Setter Property="Height" Value="92" />
-        <Setter Property="Margin" Value="4" />
-        <Setter Property="Padding" Value="8,6" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Width" Value="148" />
+        <Setter Property="Height" Value="74" />
+        <Setter Property="Margin" Value="3" />
+        <Setter Property="Padding" Value="6,4" />
+        <Setter Property="CornerRadius" Value="7" />
         <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />

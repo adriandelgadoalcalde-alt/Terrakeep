@@ -18,23 +18,29 @@ public partial class MainViewModel : ObservableObject
     private readonly CharacterFileService _service = new();
     private LoadedCharacter? _loaded;
 
-    // Indice de la pestaña externa (Inicio=0, Personaje=1, Libreria=2, ...) - Personaje/
-    // Libreria se usan para saltar automaticamente a la Libreria al pulsar "Elegir objeto" en
-    // un slot y volver en cuanto se coloca el objeto elegido; el resto solo los usa la pagina
-    // de Inicio para sus tarjetas de navegacion (GoToTabCommand).
+    // Indice de la pestaña externa (Inicio=0, Personaje=1, ...) - el resto solo lo usa la
+    // pagina de Inicio para sus tarjetas de navegacion (GoToTabCommand).
     private const int InicioTabIndex = 0;
     private const int PersonajeTabIndex = 1;
-    private const int LibreriaTabIndex = 2;
-    private const int BuildsTabIndex = 3;
-    private const int NovedadesTabIndex = 4;
-    private const int ExploracionTabIndex = 5;
-    private const int AcercaDeTabIndex = 6;
+    private const int BuildsTabIndex = 2;
+    private const int NovedadesTabIndex = 3;
+    private const int ExploracionTabIndex = 4;
+    private const int AcercaDeTabIndex = 5;
+
+    // Indice de la pestaña INTERNA dentro de Personaje (Objetos=0, Libreria=1, ...) - la
+    // Libreria vive ahora dentro de Personaje (pedido explicito 1-sep-2026, "la libreria
+    // deberia estar tambien dentro de personaje... como es terrasav"), asi que saltar a ella
+    // al pulsar "Elegir objeto" en un slot necesita mover DOS indices: el externo (a
+    // Personaje) y este interno (a Libreria).
+    private const int ObjetosInnerTabIndex = 0;
+    private const int LibreriaInnerTabIndex = 1;
 
     [ObservableProperty] private string _statusMessage = "Sin personaje cargado.";
     [ObservableProperty] private string? _characterName;
     [ObservableProperty] private bool _isCharacterLoaded;
     [ObservableProperty] private bool _hasCalamityData;
     [ObservableProperty] private int _selectedTabIndex;
+    [ObservableProperty] private int _personajeInnerTabIndex;
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
     public ObservableCollection<ResearchRowViewModel> Research { get; } = [];
@@ -56,23 +62,35 @@ public partial class MainViewModel : ObservableObject
         WhatsNew = new WhatsNewViewModel(_service.WhatsNew);
         Exploration = new ExplorationViewModel(_service);
         Library = new LibraryViewModel(_service);
-        Library.ItemPlaced += () => SelectedTabIndex = PersonajeTabIndex;
+        Library.ItemPlaced += () =>
+        {
+            SelectedTabIndex = PersonajeTabIndex;
+            PersonajeInnerTabIndex = ObjetosInnerTabIndex;
+        };
         Buffs = new BuffsViewModel(_service);
         PrefixPicker = new PrefixPickerViewModel(_service);
     }
 
     // Usado por las tarjetas de la pagina de Inicio para saltar directamente a una seccion.
     [RelayCommand]
-    private void GoToTab(string tab) => SelectedTabIndex = tab switch
+    private void GoToTab(string tab)
     {
-        "Personaje" => PersonajeTabIndex,
-        "Libreria" => LibreriaTabIndex,
-        "Builds" => BuildsTabIndex,
-        "Novedades" => NovedadesTabIndex,
-        "Exploracion" => ExploracionTabIndex,
-        "AcercaDe" => AcercaDeTabIndex,
-        _ => InicioTabIndex,
-    };
+        if (tab == "Libreria")
+        {
+            SelectedTabIndex = PersonajeTabIndex;
+            PersonajeInnerTabIndex = LibreriaInnerTabIndex;
+            return;
+        }
+        SelectedTabIndex = tab switch
+        {
+            "Personaje" => PersonajeTabIndex,
+            "Builds" => BuildsTabIndex,
+            "Novedades" => NovedadesTabIndex,
+            "Exploracion" => ExploracionTabIndex,
+            "AcercaDe" => AcercaDeTabIndex,
+            _ => InicioTabIndex,
+        };
+    }
 
     private void RequestPickForSlot(ItemSlotViewModel slot)
     {
@@ -81,7 +99,8 @@ public partial class MainViewModel : ObservableObject
         // (bug real encontrado en la auditoria del 1-sep-2026).
         PrefixPicker.PickTarget = null;
         Library.PickTarget = slot;
-        SelectedTabIndex = LibreriaTabIndex;
+        SelectedTabIndex = PersonajeTabIndex;
+        PersonajeInnerTabIndex = LibreriaInnerTabIndex;
     }
 
     // El picker de prefijo se queda en la misma pestaña (Objetos) - a diferencia de la

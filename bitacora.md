@@ -1160,6 +1160,57 @@ la tabla curada, valor 81 = Legendario) sí le puso "Legendario" automáticament
 que el arreglo funciona en el caso real que debía cubrir. `dotnet build`/`dotnet test` en verde
 (118/118).
 
+### Punto 2 CERRADO - Librería dentro de Personaje, árbol de carpetas real, cajas más pequeñas
+
+Cambio grande, en varias piezas:
+
+1. **Categorías vanilla reales, no inventadas**: `scripts/extraer-categorias-vanilla.py`
+   extrae una categoría por id directamente de los bloques `SetDefaults1..5` de `Item.cs`
+   (decompilado real de tModLoader, `case <id>:` numérico coincide 1:1 con `GameItem.Id`) -
+   mismo criterio que ya se usó para `tile_names.json`/`map_colors.json` en el proyecto
+   hermano: mirar qué campos reales asigna el juego (`accessory`/`melee`/`ranged`/`headSlot`/
+   `ammo`/`createTile`/`potion`...) en vez de adivinar una taxonomía. 5262 objetos
+   clasificados en 20 categorías reales (`Armas/Cuerpo a cuerpo`, `Armadura/Vanidad`,
+   `Materiales`...). Verificado con pociones conocidas (`LesserHealingPotion`=28 -> "Pociones",
+   confirmado con el propio bloque `case 28:` real, `potion=true`). Salida:
+   `TerrasavrNative.App/Assets/vanilla_categories.json`, cargado por el nuevo
+   `VanillaCategoryCatalog` (Core). Para Calamity ya existía una categoría real jerárquica
+   (`Category` de `catalog.json`, con "/" - ej. `Armor/Vanity`) que simplemente no se estaba
+   usando en la Librería (antes se le ponía "Vanilla"/la categoría cruda de Calamity sin
+   aprovechar la jerarquía).
+2. **Árbol de carpetas real en la UI**: `CategoryNodeViewModel` (nuevo) + `LibraryViewModel.
+   BuildCategoryTree` construyen un único árbol vanilla+Calamity a partir de esas categorías
+   reales (segmentos separados por "/"), con icono representativo (el del primer objeto real
+   de esa carpeta) y contador de objetos por carpeta. `SelectCategoryCommand` selecciona/
+   deselecciona una carpeta como filtro Y pliega/despliega sus subcarpetas a la vez;
+   `ApplyFilter` combina categoría + texto de búsqueda a la vez si se usan ambos. La plantilla
+   de un nodo (`CategoryNodeTemplate`, recursiva) se referencia a sí misma con
+   `DynamicResource` en vez de `StaticResource` - **bug real encontrado y arreglado en el
+   momento**: un `StaticResource` que se referencia a sí mismo dentro de su propia definición
+   falla en WPF (se resuelve en tiempo de parseo, antes de que el recurso exista todavía),
+   lanzando `XamlParseException` al abrir la pestaña - la app no llegó a cerrarse gracias a la
+   red de seguridad global añadida en el punto 3 (mensaje de error real en vez de cierre
+   silencioso), lo que permitió diagnosticarlo y arreglarlo al momento.
+3. **Librería movida DENTRO de Personaje** (pedido explícito: "la librería debería estar
+   también dentro de personaje... sabes cómo es terrasav") - ya no es una pestaña externa
+   propia, es una pestaña interna más (`Objetos | Libreria | Buffs | Investigacion |
+   Apariencia | Spawn Points | Desbloqueos | Version`). Esto obligó a un segundo nivel de
+   navegación en `MainViewModel` (`PersonajeInnerTabIndex`, nuevo) - "Elegir objeto" en un
+   slot ahora mueve DOS índices (externo a Personaje + interno a Librería) en vez de uno, y
+   volver a Objetos al colocar un objeto hace lo mismo a la inversa.
+4. **Cajas más pequeñas** (pedido explícito, "cajas de las armas y de todo más pequeñas") -
+   `ItemSlotCard` (Theme.xaml) de 188x92 a 148x74 (caben 6 columnas en vez de 5 en el ancho
+   habitual), tarjetas de la propia Librería de 112x112 a 92x100, con el contenido interno
+   reajustado (iconos más pequeños, fuentes más pequeñas, botones "Cambiar"/"Elegir..." en vez
+   de los textos largos anteriores) para que siga siendo legible.
+
+**Verificado en vivo por completo, no solo build limpio**: personaje real cargado, árbol
+navegado (categoría "Armas" -> 450 resultados con sprites reales), "Elegir objeto..." desde un
+slot salta automáticamente a Personaje > Librería (con el filtro de categoría anterior
+recordado), colocar "Hacha de hierro" desde ahí vuelve solo a Objetos Y le aplica el prefijo
+"Legendario" automáticamente (confirma de paso que el punto 8 sigue funcionando con el nuevo
+layout). `dotnet build`/`dotnet test` en verde (118/118).
+
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 
 - Commit tras cada cambio verificado (no solo antes de cambios grandes) - mismo criterio que
