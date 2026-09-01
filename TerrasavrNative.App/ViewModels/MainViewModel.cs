@@ -45,6 +45,7 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<ResearchRowViewModel> Research { get; } = [];
     public BuildsViewModel Builds { get; }
     public WhatsNewViewModel WhatsNew { get; }
+    public ChangelogViewModel Changelog { get; }
     public AboutViewModel About { get; } = new();
     public ExplorationViewModel Exploration { get; }
     public LibraryViewModel Library { get; }
@@ -59,6 +60,7 @@ public partial class MainViewModel : ObservableObject
     {
         Builds = new BuildsViewModel(_service.VanillaBuilds, _service.CalamityBuilds, _service);
         WhatsNew = new WhatsNewViewModel(_service.WhatsNew);
+        Changelog = new ChangelogViewModel(_service.Changelog);
         Exploration = new ExplorationViewModel(_service);
         Library = new LibraryViewModel(_service);
         Appearance = new AppearanceViewModel(_service);

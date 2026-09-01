@@ -1,0 +1,55 @@
+[
+  {
+    "version": "1.2.0",
+    "date": "1 de septiembre de 2026",
+    "summary": "Rework estructural tras comparar con capturas reales de Terrasavr: panel \"Editar\" compartido, prefijos reales por tipo de objeto, tinte de pelo visual, tooltips en Builds, cursor y tooltip flotante en el mapa.",
+    "added": [
+      "Panel \"Editar\" compartido (equivalente real de app.TabEdit) que sigue al slot seleccionado en cualquier contenedor - Inventario, Banco, Caja fuerte, Fragua, Bóveda, Mascotas, Loadouts.",
+      "Selector de prefijo de 3 niveles (Biblioteca/Positivos/Negativos → grupo por tipo de objeto → prefijos reales) filtrado por la elegibilidad REAL de cada objeto, extraída del código decompilado de Terraria (PrefixLegacy.cs/ItemID.cs/Item.cs) - antes se podía poner cualquiera de los 118 prefijos a cualquier objeto.",
+      "Campo \"Índice\" (id) editable a mano en el panel Editar, además de Cantidad y Prefijo.",
+      "Selector visual de tinte de pelo (sprite + nombre real), extraído de DyeInitializer.cs real - antes era un campo numérico puro.",
+      "Tooltips de estadísticas reales (daño/defensa/etc.) también en el panel Builds, no solo en la Librería.",
+      "Tooltip flotante que sigue al cursor sobre el visor de mundo, además del texto fijo de abajo a la izquierda."
+    ],
+    "fixed": [
+      "El panel \"Añadir buff...\" salía completamente vacío hasta escribir algo en el buscador.",
+      "Las ediciones de Monedas y Munición se perdían al guardar, sin ningún aviso.",
+      "El cursor del visor de mundo eran 4 flechas en vez de una mano al poder arrastrar el mapa.",
+      "Crash real: un color se asignaba directamente a una propiedad que esperaba un pincel (Foreground)."
+    ]
+  },
+  {
+    "version": "1.1.0",
+    "date": "1 de septiembre de 2026",
+    "summary": "Rediseño estético a fondo inspirado en el Terrasavr real: paleta violeta, degradados y animaciones de verdad en vez de cambios de color instantáneos.",
+    "added": [
+      "Paleta violeta (#6C63FF) con degradados en botones y tarjetas, sustituyendo la paleta ámbar/genérica anterior.",
+      "Animaciones reales (Storyboard) en botones y tarjetas: levantamiento al pasar el ratón, botón de cerrar que gira 90°.",
+      "Variedad de color por acción en las tarjetas de Inicio, como los botones flotantes del Terrasavr real."
+    ],
+    "fixed": [
+      "El zoom del visor de mundo saltaba desde la esquina superior izquierda del mapa en vez de anclarse al cursor."
+    ]
+  },
+  {
+    "version": "1.0.0",
+    "date": "1 de septiembre de 2026",
+    "summary": "Núcleo funcional completo: lectura/escritura real de .plr/.tplr (vanilla + Calamity Mod), editor completo de personaje, explorador de mundo y librería de objetos.",
+    "added": [
+      "Motor completo de lectura/escritura de personajes .plr (cifrado AES real) y .tplr (NBT + Calamity), verificado byte a byte contra personajes reales.",
+      "Fusión completa de objetos, armadura por loadout, tintes y buffs de Calamity Mod con el personaje vanilla.",
+      "Edición real de inventario/equipo/banco/caja fuerte/fragua/bóveda: colocar, cambiar, vaciar y cantidad editable.",
+      "Librería con árbol de categorías real (vanilla + Calamity) y buscador por texto, con iconos reales extraídos de items.png.",
+      "Mejor prefijo automático al colocar un objeto, y selector manual de cualquier prefijo.",
+      "Panel Builds con equipo recomendado por clase/etapa (vanilla y Calamity) y auto-equipar de un clic.",
+      "Explorador de mundo real: mapa interactivo con arrastrar, zoom con rueda, marcadores y buscador de NPCs, tooltip por tile.",
+      "Panel de Apariencia con preview de cuerpo completo, selector visual de peinado, y los 7 colores reales del personaje.",
+      "Editor de buffs, Investigación, Spawn Points, Desbloqueos y editor de versión objetivo - cierre completo de la auditoría Terrasavr JS vs puerto.",
+      "Página de Inicio explicativa, instalador propio (install.ps1/uninstall.ps1), identidad y marca propias (Terrakeep)."
+    ],
+    "fixed": [
+      "Crash real de la pestaña Novedades (binding de solo lectura en modo TwoWay).",
+      "Compatibilidad de formato .plr ampliada de Terraria 1.1.2 a 1.4.5.8."
+    ]
+  }
+]

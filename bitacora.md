@@ -1687,3 +1687,49 @@ en cada movimiento sin fallar. No se pudo confirmar visualmente el aspecto exact
 excepción en interacción real, no solo por revisión de código.
 
 `dotnet build`/`dotnet test` en verde (127/127, sin regresiones).
+
+### Fase 7 del plan (última) - separar "Novedades" (juego) de "¡Sobre esta versión!" (editor)
+
+Confirmado leyendo el propio `whats_new.json` real que su contenido es del JUEGO/Calamity
+("El Brote de Arcilla ahora siempre empuja...") - la tarjeta de Inicio decía "Que ha cambiado
+en cada version del propio editor", descriptivamente falso. Arreglado el texto, y añadido un
+changelog real y propio del editor.
+
+`Assets/changelog.json` (nuevo) - **contenido real, nada inventado**: 3 versiones agrupadas
+por hitos genuinos del propio historial de commits/bitácora (no una entrada por commit, eso
+sería ruido) - 1.0.0 (núcleo funcional completo, desde el esqueleto inicial hasta el cierre de
+la auditoría Terrasavr JS vs puerto), 1.1.0 (rediseño estético violeta + arreglo del zoom),
+1.2.0 (este mismo rework de 7 fases). Cada línea de "Añadido"/"Arreglado" corresponde a un
+commit o entrada real de bitácora, no a nada nuevo.
+
+Nuevo `TerrasavrNative.Core/Data/ChangelogCatalog.cs` (copia estructural de
+`WhatsNewCatalog.cs`) y `ViewModels/ChangelogViewModel.cs` (copia de `WhatsNewViewModel`) -
+`CharacterFileService`/`MainViewModel` lo cargan igual que el resto de catálogos.
+`MainWindow.xaml`: tarjeta de Inicio "Novedades" corrige su texto (ahora dice explícitamente
+"JUEGO... Calamity Mod"); la tarjeta que antes era "Acerca de" pasa a **"¡Sobre esta
+versión!"** (`Tag="Orange"`, el CTA más fuerte por color, mismo criterio que el resto del
+rediseño estético); la propia pestaña "Novedades" gana una nota aclaratoria arriba; "Acerca
+de" gana el changelog real debajo de versión+créditos, con plantilla nueva `ChangelogEntry`
+(Añadido en teal, Arreglado en rosa, mismo lenguaje visual que el resto de la app).
+`TerrasavrNative.App.csproj` gana `<Version>1.2.0</Version>` real (antes caía al `1.0.0.0`
+por defecto de .NET sin significar nada - `AboutViewModel.Version` ya leía el ensamblado,
+solo faltaba fijarlo).
+
+Test nuevo `ChangelogCatalogTests.cs` (smoke test real): entradas no vacías, cada una con
+versión/resumen/al menos una línea de Añadido o Arreglado, orden descendente por versión real
+(`System.Version`, no comparación de texto).
+
+**Verificación real**: arnés de consola - `About.Version=='1.2.0'`, `Changelog.Entries.Count
+==3` con el contenido esperado, `WhatsNew.Entries` intacto (2 entradas del juego, sin tocar).
+Navegación real vía UI Automation a "Novedades" y "Acerca de" sin excepción; tarjeta "¡Sobre
+esta versión!" localizada de verdad en Inicio (no solo comprobada por código).
+
+`dotnet build`/`dotnet test` en verde (128/128, sin regresiones).
+
+---
+
+**Con esto se cierran las 7 fases del rework estructural pedido tras comparar Terrakeep con
+capturas reales de Terrasavr** (buffs, prefijos reales por tipo de objeto, panel Editar
+compartido, tooltips en Builds + arreglo de guardado de Monedas/Munición, tinte de pelo
+visual, cursor/tooltip del mapa, y el changelog real separado del juego). Plan completo en
+`C:\Users\adrian\.claude\plans\streamed-leaping-balloon.md` mientras siga vigente el archivo.
