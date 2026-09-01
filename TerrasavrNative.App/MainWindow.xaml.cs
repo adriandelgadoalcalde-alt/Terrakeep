@@ -1,23 +1,39 @@
-﻿using System.Text;
+using System.IO;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Microsoft.Win32;
+using TerrasavrNative.App.ViewModels;
 
 namespace TerrasavrNative.App;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window
 {
+    private readonly MainViewModel _viewModel = new();
+
     public MainWindow()
     {
         InitializeComponent();
+        DataContext = _viewModel;
+    }
+
+    private void OnLoadClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Cargar personaje de Terraria",
+            Filter = "Personaje de Terraria (*.plr)|*.plr|Todos los archivos (*.*)|*.*",
+            InitialDirectory = GetDefaultPlayersDirectory(),
+        };
+
+        if (dialog.ShowDialog(this) == true)
+        {
+            _viewModel.LoadFromPath(dialog.FileName);
+        }
+    }
+
+    private static string GetDefaultPlayersDirectory()
+    {
+        string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string candidate = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Players");
+        return Directory.Exists(candidate) ? candidate : documents;
     }
 }

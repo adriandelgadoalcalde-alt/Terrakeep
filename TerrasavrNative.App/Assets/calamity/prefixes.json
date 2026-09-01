@@ -1,0 +1,584 @@
+[
+ {
+  "id": 1,
+  "internal": "Large",
+  "es": "Grande",
+  "en": "Large"
+ },
+ {
+  "id": 2,
+  "internal": "Massive",
+  "es": "Enorme",
+  "en": "Massive"
+ },
+ {
+  "id": 3,
+  "internal": "Dangerous",
+  "es": "Peligroso",
+  "en": "Dangerous"
+ },
+ {
+  "id": 4,
+  "internal": "Savage",
+  "es": "Salvaje",
+  "en": "Savage"
+ },
+ {
+  "id": 5,
+  "internal": "Sharp",
+  "es": "Afilado",
+  "en": "Sharp"
+ },
+ {
+  "id": 6,
+  "internal": "Pointy",
+  "es": "Puntiagudo",
+  "en": "Pointy"
+ },
+ {
+  "id": 7,
+  "internal": "Tiny",
+  "es": "Diminuto",
+  "en": "Tiny"
+ },
+ {
+  "id": 8,
+  "internal": "Terrible",
+  "es": "Malo",
+  "en": "Terrible"
+ },
+ {
+  "id": 9,
+  "internal": "Small",
+  "es": "Pequeño",
+  "en": "Small"
+ },
+ {
+  "id": 10,
+  "internal": "Dull",
+  "es": "Romo",
+  "en": "Dull"
+ },
+ {
+  "id": 11,
+  "internal": "Unhappy",
+  "es": "Infeliz",
+  "en": "Unhappy"
+ },
+ {
+  "id": 12,
+  "internal": "Bulky",
+  "es": "Voluminoso",
+  "en": "Bulky"
+ },
+ {
+  "id": 13,
+  "internal": "Shameful",
+  "es": "Deshonroso",
+  "en": "Shameful"
+ },
+ {
+  "id": 14,
+  "internal": "Heavy",
+  "es": "Pesado",
+  "en": "Heavy"
+ },
+ {
+  "id": 15,
+  "internal": "Light",
+  "es": "Ligero",
+  "en": "Light"
+ },
+ {
+  "id": 16,
+  "internal": "Sighted",
+  "es": "Perspicaz",
+  "en": "Sighted"
+ },
+ {
+  "id": 17,
+  "internal": "Rapid",
+  "es": "Rápido",
+  "en": "Rapid"
+ },
+ {
+  "id": 18,
+  "internal": "Hasty",
+  "es": "Precipitado",
+  "en": "Hasty"
+ },
+ {
+  "id": 19,
+  "internal": "Intimidating",
+  "es": "Intimidante",
+  "en": "Intimidating"
+ },
+ {
+  "id": 20,
+  "internal": "Deadly",
+  "es": "Letal",
+  "en": "Deadly"
+ },
+ {
+  "id": 21,
+  "internal": "Staunch",
+  "es": "Firme",
+  "en": "Staunch"
+ },
+ {
+  "id": 22,
+  "internal": "Awful",
+  "es": "Atroz",
+  "en": "Awful"
+ },
+ {
+  "id": 23,
+  "internal": "Lethargic",
+  "es": "Letárgico",
+  "en": "Lethargic"
+ },
+ {
+  "id": 24,
+  "internal": "Awkward",
+  "es": "Torpe",
+  "en": "Awkward"
+ },
+ {
+  "id": 25,
+  "internal": "Powerful",
+  "es": "Poderoso",
+  "en": "Powerful"
+ },
+ {
+  "id": 26,
+  "internal": "Mystic",
+  "es": "Místico",
+  "en": "Mystic"
+ },
+ {
+  "id": 27,
+  "internal": "Adept",
+  "es": "Experto",
+  "en": "Adept"
+ },
+ {
+  "id": 28,
+  "internal": "Masterful",
+  "es": "Maestro",
+  "en": "Masterful"
+ },
+ {
+  "id": 29,
+  "internal": "Inept",
+  "es": "Inepto",
+  "en": "Inept"
+ },
+ {
+  "id": 30,
+  "internal": "Ignorant",
+  "es": "Ignorante",
+  "en": "Ignorant"
+ },
+ {
+  "id": 31,
+  "internal": "Deranged",
+  "es": "Trastornado",
+  "en": "Deranged"
+ },
+ {
+  "id": 32,
+  "internal": "Intense",
+  "es": "Intenso",
+  "en": "Intense"
+ },
+ {
+  "id": 33,
+  "internal": "Taboo",
+  "es": "Prohibido",
+  "en": "Taboo"
+ },
+ {
+  "id": 34,
+  "internal": "Celestial",
+  "es": "Celeste",
+  "en": "Celestial"
+ },
+ {
+  "id": 35,
+  "internal": "Furious",
+  "es": "Furioso",
+  "en": "Furious"
+ },
+ {
+  "id": 36,
+  "internal": "Keen",
+  "es": "Incisivo",
+  "en": "Keen"
+ },
+ {
+  "id": 37,
+  "internal": "Superior",
+  "es": "Superior",
+  "en": "Superior"
+ },
+ {
+  "id": 38,
+  "internal": "Forceful",
+  "es": "Fuerte",
+  "en": "Forceful"
+ },
+ {
+  "id": 39,
+  "internal": "Broken",
+  "es": "Roto",
+  "en": "Broken"
+ },
+ {
+  "id": 40,
+  "internal": "Damaged",
+  "es": "Estropeado",
+  "en": "Damaged"
+ },
+ {
+  "id": 41,
+  "internal": "Shoddy",
+  "es": "Chapucero",
+  "en": "Shoddy"
+ },
+ {
+  "id": 42,
+  "internal": "Quick",
+  "es": "Veloz",
+  "en": "Quick"
+ },
+ {
+  "id": 43,
+  "internal": "Deadly2",
+  "es": "Letal",
+  "en": "Deadly"
+ },
+ {
+  "id": 44,
+  "internal": "Agile",
+  "es": "Ágil",
+  "en": "Agile"
+ },
+ {
+  "id": 45,
+  "internal": "Nimble",
+  "es": "Listo",
+  "en": "Nimble"
+ },
+ {
+  "id": 46,
+  "internal": "Murderous",
+  "es": "Asesino",
+  "en": "Murderous"
+ },
+ {
+  "id": 47,
+  "internal": "Slow",
+  "es": "Lento",
+  "en": "Slow"
+ },
+ {
+  "id": 48,
+  "internal": "Sluggish",
+  "es": "Perezoso",
+  "en": "Sluggish"
+ },
+ {
+  "id": 49,
+  "internal": "Lazy",
+  "es": "Gandul",
+  "en": "Lazy"
+ },
+ {
+  "id": 50,
+  "internal": "Annoying",
+  "es": "Molesto",
+  "en": "Annoying"
+ },
+ {
+  "id": 51,
+  "internal": "Nasty",
+  "es": "Feo",
+  "en": "Nasty"
+ },
+ {
+  "id": 52,
+  "internal": "Manic",
+  "es": "Maníaco",
+  "en": "Manic"
+ },
+ {
+  "id": 53,
+  "internal": "Hurtful",
+  "es": "Hiriente",
+  "en": "Hurtful"
+ },
+ {
+  "id": 54,
+  "internal": "Strong",
+  "es": "Vigoroso",
+  "en": "Strong"
+ },
+ {
+  "id": 55,
+  "internal": "Unpleasant",
+  "es": "Desagradable",
+  "en": "Unpleasant"
+ },
+ {
+  "id": 56,
+  "internal": "Weak",
+  "es": "Débil",
+  "en": "Weak"
+ },
+ {
+  "id": 57,
+  "internal": "Ruthless",
+  "es": "Despiadado",
+  "en": "Ruthless"
+ },
+ {
+  "id": 58,
+  "internal": "Frenzying",
+  "es": "Frenético",
+  "en": "Frenzying"
+ },
+ {
+  "id": 59,
+  "internal": "Godly",
+  "es": "Piadoso",
+  "en": "Godly"
+ },
+ {
+  "id": 60,
+  "internal": "Demonic",
+  "es": "Demoníaco",
+  "en": "Demonic"
+ },
+ {
+  "id": 61,
+  "internal": "Zealous",
+  "es": "Fanático",
+  "en": "Zealous"
+ },
+ {
+  "id": 62,
+  "internal": "Hard",
+  "es": "Duro",
+  "en": "Hard"
+ },
+ {
+  "id": 63,
+  "internal": "Guarding",
+  "es": "Protector",
+  "en": "Guarding"
+ },
+ {
+  "id": 64,
+  "internal": "Armored",
+  "es": "Blindado",
+  "en": "Armored"
+ },
+ {
+  "id": 65,
+  "internal": "Warding",
+  "es": "Defensivo",
+  "en": "Warding"
+ },
+ {
+  "id": 66,
+  "internal": "Arcane",
+  "es": "Arcano",
+  "en": "Arcane"
+ },
+ {
+  "id": 67,
+  "internal": "Precise",
+  "es": "Preciso",
+  "en": "Precise"
+ },
+ {
+  "id": 68,
+  "internal": "Lucky",
+  "es": "Afortunado",
+  "en": "Lucky"
+ },
+ {
+  "id": 69,
+  "internal": "Jagged",
+  "es": "Dentado",
+  "en": "Jagged"
+ },
+ {
+  "id": 70,
+  "internal": "Spiked",
+  "es": "Claveteado",
+  "en": "Spiked"
+ },
+ {
+  "id": 71,
+  "internal": "Angry",
+  "es": "Enojado",
+  "en": "Angry"
+ },
+ {
+  "id": 72,
+  "internal": "Menacing",
+  "es": "Amenazante",
+  "en": "Menacing"
+ },
+ {
+  "id": 73,
+  "internal": "Brisk",
+  "es": "Enérgico",
+  "en": "Brisk"
+ },
+ {
+  "id": 74,
+  "internal": "Fleeting",
+  "es": "Fugaz",
+  "en": "Fleeting"
+ },
+ {
+  "id": 75,
+  "internal": "Hasty2",
+  "es": "Precipitado",
+  "en": "Hasty"
+ },
+ {
+  "id": 76,
+  "internal": "Quick2",
+  "es": "Veloz",
+  "en": "Quick"
+ },
+ {
+  "id": 77,
+  "internal": "Wild",
+  "es": "Salvaje",
+  "en": "Wild"
+ },
+ {
+  "id": 78,
+  "internal": "Rash",
+  "es": "Temerario",
+  "en": "Rash"
+ },
+ {
+  "id": 79,
+  "internal": "Intrepid",
+  "es": "Intrépido",
+  "en": "Intrepid"
+ },
+ {
+  "id": 80,
+  "internal": "Violent",
+  "es": "Violento",
+  "en": "Violent"
+ },
+ {
+  "id": 81,
+  "internal": "Legendary",
+  "es": "Legendario",
+  "en": "Legendary"
+ },
+ {
+  "id": 82,
+  "internal": "Unreal",
+  "es": "Irreal",
+  "en": "Unreal"
+ },
+ {
+  "id": 83,
+  "internal": "Mythical",
+  "es": "Mítico",
+  "en": "Mythical"
+ },
+ {
+  "id": 84,
+  "internal": "Legendary2",
+  "es": "Legendario",
+  "en": "Legendary"
+ },
+ {
+  "id": 85,
+  "internal": "Fabled",
+  "es": "Fabuloso",
+  "en": "Fabled"
+ },
+ {
+  "id": 86,
+  "internal": "Loyal",
+  "es": "Fiel",
+  "en": "Loyal"
+ },
+ {
+  "id": 87,
+  "internal": "Worthy",
+  "es": "Digno",
+  "en": "Worthy"
+ },
+ {
+  "id": 88,
+  "internal": "Focused",
+  "es": "Centrado",
+  "en": "Focused"
+ },
+ {
+  "id": 89,
+  "internal": "Patient",
+  "es": "Paciente",
+  "en": "Patient"
+ },
+ {
+  "id": 90,
+  "internal": "Rabid",
+  "es": "Rabioso",
+  "en": "Rabid"
+ },
+ {
+  "id": 91,
+  "internal": "IllTempered",
+  "es": "Irritable",
+  "en": "Ill-Tempered"
+ },
+ {
+  "id": 92,
+  "internal": "Petty",
+  "es": "Ruin",
+  "en": "Petty"
+ },
+ {
+  "id": 93,
+  "internal": "Feeble",
+  "es": "Débil",
+  "en": "Feeble"
+ },
+ {
+  "id": 94,
+  "internal": "Skittish",
+  "es": "Miedica",
+  "en": "Skittish"
+ },
+ {
+  "id": 95,
+  "internal": "Eager",
+  "es": "Anhelante",
+  "en": "Eager"
+ },
+ {
+  "id": 96,
+  "internal": "Ballistic",
+  "es": "Balístico",
+  "en": "Ballistic"
+ },
+ {
+  "id": 97,
+  "internal": "Scraggling",
+  "es": "Desgreñado",
+  "en": "Scraggling"
+ }
+]

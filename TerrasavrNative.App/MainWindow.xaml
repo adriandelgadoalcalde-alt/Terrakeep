@@ -1,12 +1,80 @@
-﻿<Window x:Class="TerrasavrNative.App.MainWindow"
+<Window x:Class="TerrasavrNative.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TerrasavrNative.App"
+        xmlns:vm="clr-namespace:TerrasavrNative.App.ViewModels"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Terrasavr Native (Fase 2 - nucleo basico)" Height="720" Width="1100">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
-    </Grid>
+        <DataTemplate DataType="{x:Type vm:ItemSlotViewModel}">
+            <Border Width="150" Height="60" Margin="3" Padding="6"
+                    BorderBrush="#666" BorderThickness="1" CornerRadius="3">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="#2A2A2A" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                <Setter Property="Background" Value="#1A1A1A" />
+                                <Setter Property="Opacity" Value="0.4" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                <Setter Property="BorderBrush" Value="#C0392B" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel>
+                    <TextBlock Text="{Binding DisplayName}" Foreground="White" FontSize="11"
+                               TextWrapping="Wrap" MaxHeight="32" />
+                    <TextBlock Foreground="#AAA" FontSize="10">
+                        <Run Text="{Binding Count, Mode=OneWay}" />
+                        <Run Text=" " />
+                        <Run Text="{Binding PrefixDisplay, Mode=OneWay}" />
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ContainerTabTemplate" DataType="{x:Type vm:ContainerViewModel}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Slots}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </ScrollViewer>
+        </DataTemplate>
+    </Window.Resources>
+
+    <DockPanel Background="#1E1E1E">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10" >
+            <Button Content="Cargar personaje (.plr)..." Padding="10,4" Click="OnLoadClick" />
+            <Button Content="Guardar" Padding="10,4" Margin="10,0,0,0"
+                    Command="{Binding SaveCommand}" />
+            <TextBlock Text="{Binding CharacterName, StringFormat='Personaje: {0}'}"
+                       Foreground="White" VerticalAlignment="Center" Margin="20,0,0,0"
+                       Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}" />
+        </StackPanel>
+
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Foreground="#CCC"
+                   Margin="10" TextWrapping="Wrap" />
+
+        <TabControl ItemsSource="{Binding Containers}" Margin="10" Background="#1E1E1E">
+            <TabControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
+                    <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+            <TabControl.ContentTemplate>
+                <StaticResource ResourceKey="ContainerTabTemplate" />
+            </TabControl.ContentTemplate>
+        </TabControl>
+    </DockPanel>
 </Window>
