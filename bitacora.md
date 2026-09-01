@@ -174,6 +174,33 @@ cargando también los 3 catálogos nuevos (`vanilla_buff_names.json`,
 **No verificado con la UI en sí**: pulsar el botón ★ de verdad, ver la lista de buffs/
 investigación en pantalla, pulsar "Investigar todo" - misma limitación de siempre.
 
+## Objetivo de diseño de la UI (pedido explícito, 2-sep-2026) - el tema actual NO es el final
+
+El usuario confirmó explícitamente que el tema/layout actual (`Styles/Theme.xaml`, nav lateral,
+tarjetas planas) es una primera pasada funcional, no el diseño definitivo. Reglas para la
+ronda de pulido de verdad, cuando llegue (Fase 6, o antes si el usuario lo pide):
+
+- **Super intuitiva** - flujos obvios sin tener que pensar, sin instrucciones.
+- **Interactiva** - transiciones/feedback reales al usar la app (hover, seleccion, arrastrar
+  objetos...), no una interfaz estatica de solo lectura.
+- **Moderna** - referencia de lenguaje visual actual (Fluent 2/WinUI 3, o similar), no un
+  clon de Win32 clasico.
+- **Minimalista** - poco ruido visual, un solo acento de color (ya se eligio ambar/cobre, se
+  puede revisar), tipografia limpia, espacio en blanco real.
+
+Pedido explicito: "inspirate mucho, busca, informate" antes de esa ronda - no reinventar sin
+mirar referencias reales de apps modernas de escritorio (WinUI 3 Gallery, apps nativas de
+Windows 11 bien valoradas, etc.) en vez de improvisar de memoria. No hace falta hacerlo ya -
+se sigue avanzando fase a fase con el tema actual mientras tanto, esto queda apuntado para
+cuando toque esa ronda dedicada.
+
+## Autonomia ampliada (2-sep-2026)
+
+Pedido explicito del usuario: seguir con el resto de fases del proyecto sin parar a preguntar
+en cada una - solo commit + bitacora en cada hito verificado, igual que se ha hecho hasta
+ahora. Reportar de vuelta cuando haya algo sustancial que enseñar o si se llega a un bloqueo
+real, no en cada paso intermedio.
+
 ## Pendiente (visible desde fuera, sin entrar en el detalle de Fase 1 de más arriba)
 
 - **Fase 4 (Librería/Buscador)**: sin empezar todavía - es lo siguiente según el plan.
