@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
 using TerrasavrNative.App.ViewModels;
@@ -126,10 +127,44 @@ public partial class MainWindow : Window
             var current = e.GetPosition(WorldMapScroll);
             WorldMapScroll.ScrollToHorizontalOffset(_mapDragStartH - (current.X - start.X));
             WorldMapScroll.ScrollToVerticalOffset(_mapDragStartV - (current.Y - start.Y));
+            MapTooltipBorder.SetCurrentValue(UIElement.VisibilityProperty, Visibility.Collapsed); // no molesta mientras se arrastra
+        }
+        else
+        {
+            PositionMapTooltip(e.GetPosition(MapTooltipCanvas));
         }
     }
 
-    private void OnWorldMapMouseLeave(object sender, MouseEventArgs e) => _viewModel.Exploration.UpdateHover(-1, -1);
+    // Tooltip flotante estilo TEdit: se coloca con un pequeño margen respecto al cursor y se
+    // voltea al otro lado si no cabe por el borde derecho/inferior del propio Canvas (que
+    // ocupa exactamente el area visible del mapa, ver MainWindow.xaml) - sin esto el texto se
+    // saldria cortado fuera del visor en los bordes.
+    private void PositionMapTooltip(Point cursorPos)
+    {
+        const double offset = 16, marginY = 18;
+        MapTooltipBorder.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var size = MapTooltipBorder.DesiredSize;
+
+        double left = cursorPos.X + offset;
+        if (left + size.Width > MapTooltipCanvas.ActualWidth) left = cursorPos.X - offset - size.Width;
+
+        double top = cursorPos.Y + marginY;
+        if (top + size.Height > MapTooltipCanvas.ActualHeight) top = cursorPos.Y - marginY - size.Height;
+
+        Canvas.SetLeft(MapTooltipBorder, Math.Max(0, left));
+        Canvas.SetTop(MapTooltipBorder, Math.Max(0, top));
+        // SetCurrentValue, no el setter directo: Visibility ya tiene un Binding real en el XAML
+        // (a Exploration.HoverInfo via EmptyToCollapsed) - asignar la propiedad a secas
+        // reemplazaria ese binding para siempre; SetCurrentValue solo empuja un valor puntual
+        // sin desengancharlo.
+        MapTooltipBorder.SetCurrentValue(UIElement.VisibilityProperty, Visibility.Visible);
+    }
+
+    private void OnWorldMapMouseLeave(object sender, MouseEventArgs e)
+    {
+        _viewModel.Exploration.UpdateHover(-1, -1);
+        MapTooltipBorder.SetCurrentValue(UIElement.VisibilityProperty, Visibility.Collapsed);
+    }
 
     // Centra el mapa sobre la posicion de un NPC (pedido desde ExplorationViewModel via
     // NavigateToTileRequested al pulsar un NPC en la lista) - los offsets del ScrollViewer ya

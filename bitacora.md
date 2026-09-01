@@ -1649,3 +1649,41 @@ maná`, ..., `Tinte de pelo de crepúsculo`); elegir "Tinte de equipo" (índice 
 `HairDye=6` y el nombre mostrado; sobrevive a guardar + recargar.
 
 `dotnet build`/`dotnet test` en verde (127/127, sin regresiones).
+
+### Fase 6 del plan - visor de mundo: cursor de mano + tooltip flotante
+
+`Cursor="SizeAll"` (las 4 flechas que el usuario rechazó explícitamente: "salen unas flechas
+que no me gusta nada") pasa a `Cursor="Hand"` - WPF no trae un cursor de "mano de agarre"
+nativo como el pan de TEdit/Photoshop; fabricar uno propio (`.cur` custom) queda anotado como
+mejora opcional no bloqueante en el plan, no se hizo en esta fase.
+
+Tooltip flotante que sigue al cursor sobre un tile (estilo TEdit, pedido explícito: "también
+tiene que decirlo cuando pasas el ratón por encima... como en TEdit" - **añadido** al texto
+fijo de abajo a la izquierda, no en sustitución, tal y como se pidió). Implementado con un
+`Canvas IsHitTestVisible="False"` superpuesto al `ScrollViewer` del mapa (no un `Popup` real:
+un `Popup` es un HWND aparte y parpadea al mover el ratón rápido; el `Canvas` se recorta solo
+al área visible del mapa). `MainWindow.xaml.cs`, nuevo `PositionMapTooltip`: mide el `Border`
+del tooltip (`Measure`/`DesiredSize`) y lo coloca con un margen (16,18) respecto al cursor,
+volteándolo hacia el lado contrario si no cabe por el borde derecho/inferior del propio
+`Canvas`. Oculto mientras se arrastra el mapa y al salir del área.
+
+**Bug real de WPF evitado durante la implementación**: `MapTooltipBorder.Visibility` ya tiene
+un `Binding` real en el XAML (a `Exploration.HoverInfo` vía `EmptyToCollapsed`) - asignar la
+propiedad a secas desde código (`MapTooltipBorder.Visibility = ...`) habría **reemplazado ese
+binding para siempre** (un valor local en WPF tiene más precedencia que un binding y lo
+desengancha). Se usó `SetCurrentValue(UIElement.VisibilityProperty, ...)` en su lugar, que
+empuja un valor puntual sin desconectar el binding - patrón estándar de WPF para este caso
+exacto, no algo que se pueda dar por sabido sin pensarlo.
+
+**Verificación real**: build limpio; navegado a la pestaña Exploración vía UI Automation real
+(no coordenadas de píxel) sin excepción; cargado un mundo real (`adriandres.wld`, escribiendo
+la ruta por teclado en el diálogo nativo - el mismo diálogo que sigue sin aparecer como
+ventana propia ante UI Automation, pero que sí recibe el foco de teclado) sin excepción;
+movimiento real del cursor sobre el área del mapa (antes y después de cargar el mundo, 12
+pasos incrementales reales, no un teletransporte) sin ninguna excepción ni entrada en
+`ultimo-error.log` - la lógica de `PositionMapTooltip`/`SetCurrentValue` se ejecuta de verdad
+en cada movimiento sin fallar. No se pudo confirmar visualmente el aspecto exacto del tooltip
+(limitación de entorno para capturas ya documentada) - verificado por ausencia real de
+excepción en interacción real, no solo por revisión de código.
+
+`dotnet build`/`dotnet test` en verde (127/127, sin regresiones).

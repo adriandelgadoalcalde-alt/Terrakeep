@@ -1069,41 +1069,63 @@
                             </Border>
                             <!-- Arrastrar para desplazar (pan) + rueda para zoom, sin necesitar Ctrl - los
                                  gestores reales viven en el code-behind (MainWindow.xaml.cs) porque
-                                 necesitan tocar los offsets del ScrollViewer, que la ViewModel no conoce. -->
-                            <ScrollViewer x:Name="WorldMapScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                                          PreviewMouseWheel="OnWorldMapPreviewMouseWheel"
-                                          PreviewMouseLeftButtonDown="OnWorldMapMouseDown"
-                                          PreviewMouseMove="OnWorldMapMouseMove"
-                                          PreviewMouseLeftButtonUp="OnWorldMapMouseUp"
-                                          MouseLeave="OnWorldMapMouseLeave"
-                                          Cursor="SizeAll">
-                                <Grid HorizontalAlignment="Left" VerticalAlignment="Top">
-                                    <Grid.LayoutTransform>
-                                        <ScaleTransform ScaleX="{Binding Exploration.Zoom}" ScaleY="{Binding Exploration.Zoom}" />
-                                    </Grid.LayoutTransform>
-                                    <Image x:Name="WorldMapImage" Source="{Binding Exploration.WorldImage}" Stretch="None"
-                                           RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                           HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False" />
-                                    <ItemsControl ItemsSource="{Binding Exploration.Npcs}" IsHitTestVisible="True">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate><Canvas IsItemsHost="True" /></ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemContainerStyle>
-                                            <Style TargetType="ContentPresenter">
-                                                <Setter Property="Canvas.Left" Value="{Binding TileX}" />
-                                                <Setter Property="Canvas.Top" Value="{Binding TileY}" />
-                                            </Style>
-                                        </ItemsControl.ItemContainerStyle>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
-                                                <Ellipse Width="11" Height="11" Margin="-5.5,-5.5,0,0"
-                                                         Fill="Magenta" Stroke="White" StrokeThickness="1.5"
-                                                         ToolTip="{Binding Name}" Cursor="Hand" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Grid>
-                            </ScrollViewer>
+                                 necesitan tocar los offsets del ScrollViewer, que la ViewModel no conoce.
+                                 Cursor="Hand" (no "SizeAll", las 4 flechas que el usuario rechazo
+                                 explicitamente 1-sep-2026) - WPF no trae un cursor de "mano de agarre"
+                                 nativo como el pan de TEdit/Photoshop, esto es lo mas cercano sin
+                                 fabricar un .cur propio. -->
+                            <Grid>
+                                <ScrollViewer x:Name="WorldMapScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                              PreviewMouseWheel="OnWorldMapPreviewMouseWheel"
+                                              PreviewMouseLeftButtonDown="OnWorldMapMouseDown"
+                                              PreviewMouseMove="OnWorldMapMouseMove"
+                                              PreviewMouseLeftButtonUp="OnWorldMapMouseUp"
+                                              MouseLeave="OnWorldMapMouseLeave"
+                                              Cursor="Hand">
+                                    <Grid HorizontalAlignment="Left" VerticalAlignment="Top">
+                                        <Grid.LayoutTransform>
+                                            <ScaleTransform ScaleX="{Binding Exploration.Zoom}" ScaleY="{Binding Exploration.Zoom}" />
+                                        </Grid.LayoutTransform>
+                                        <Image x:Name="WorldMapImage" Source="{Binding Exploration.WorldImage}" Stretch="None"
+                                               RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                               HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False" />
+                                        <ItemsControl ItemsSource="{Binding Exploration.Npcs}" IsHitTestVisible="True">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><Canvas IsItemsHost="True" /></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemContainerStyle>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Canvas.Left" Value="{Binding TileX}" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding TileY}" />
+                                                </Style>
+                                            </ItemsControl.ItemContainerStyle>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
+                                                    <Ellipse Width="11" Height="11" Margin="-5.5,-5.5,0,0"
+                                                             Fill="Magenta" Stroke="White" StrokeThickness="1.5"
+                                                             ToolTip="{Binding Name}" Cursor="Hand" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </ScrollViewer>
+
+                                <!-- Tooltip flotante que sigue al cursor sobre el mapa (estilo TEdit),
+                                     ADEMAS del texto fijo de abajo (pedido explicito 1-sep-2026: "tambien
+                                     tiene que decirlo cuando pasas el raton por encima", sin quitar el de
+                                     abajo). Canvas superpuesto en vez de Popup real - un Popup es un HWND
+                                     aparte y parpadea al mover el raton rapido; el Canvas se recorta solo
+                                     al area visible del mapa. Reposicionado a mano en
+                                     OnWorldMapMouseMove (MainWindow.xaml.cs), que es quien ya conoce la
+                                     posicion real del cursor sobre el mapa. -->
+                                <Canvas x:Name="MapTooltipCanvas" IsHitTestVisible="False">
+                                    <Border x:Name="MapTooltipBorder" Background="{StaticResource BgElevatedBrush}"
+                                            CornerRadius="4" Padding="8,4" Effect="{StaticResource CardShadow}"
+                                            Visibility="{Binding Exploration.HoverInfo, Converter={StaticResource EmptyToCollapsed}}">
+                                        <TextBlock Text="{Binding Exploration.HoverInfo}" Style="{StaticResource CaptionText}" />
+                                    </Border>
+                                </Canvas>
+                            </Grid>
                         </DockPanel>
                     </Border>
 
