@@ -377,16 +377,24 @@
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,0">
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                                      PreviewMouseWheel="OnWorldMapPreviewMouseWheel">
-                            <Image Source="{Binding Exploration.WorldImage}" Stretch="None"
-                                   RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                   HorizontalAlignment="Left" VerticalAlignment="Top">
-                                <Image.LayoutTransform>
-                                    <ScaleTransform ScaleX="{Binding Exploration.Zoom}" ScaleY="{Binding Exploration.Zoom}" />
-                                </Image.LayoutTransform>
-                            </Image>
-                        </ScrollViewer>
+                        <DockPanel>
+                            <Border DockPanel.Dock="Bottom" Background="{StaticResource BgElevatedBrush}"
+                                    CornerRadius="0,0,8,8" Padding="10,6"
+                                    Visibility="{Binding Exploration.HoverInfo, Converter={StaticResource EmptyToCollapsed}}">
+                                <TextBlock Text="{Binding Exploration.HoverInfo}" Style="{StaticResource CaptionText}" />
+                            </Border>
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                          PreviewMouseWheel="OnWorldMapPreviewMouseWheel">
+                                <Image x:Name="WorldMapImage" Source="{Binding Exploration.WorldImage}" Stretch="None"
+                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                       HorizontalAlignment="Left" VerticalAlignment="Top"
+                                       MouseMove="OnWorldMapMouseMove" MouseLeave="OnWorldMapMouseLeave">
+                                    <Image.LayoutTransform>
+                                        <ScaleTransform ScaleX="{Binding Exploration.Zoom}" ScaleY="{Binding Exploration.Zoom}" />
+                                    </Image.LayoutTransform>
+                                </Image>
+                            </ScrollViewer>
+                        </DockPanel>
                     </Border>
 
                     <DockPanel Grid.Column="1">

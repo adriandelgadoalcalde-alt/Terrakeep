@@ -429,11 +429,40 @@ cuando Ctrl está pulsado para no robarle el scroll normal al `ScrollViewer`). S
 `dotnet build` limpio, la app arranca sin excepción. **No verificado con clics reales** (zoom
 de verdad con los botones o Ctrl+rueda) - misma limitación de siempre.
 
+### Tooltip por tile (nombre exacto de variante) en el visor de mundo
+
+`WldTile` gana los campos `U`/`V` (ya se leían durante el RLE para no desalinear el archivo,
+pero se descartaban - ver el historial del archivo). `TileNameCatalog` gana
+`TileVariantName(type, u, v)`: `tile_names.json` guarda un objeto `frames` por tile con clave
+literal `"u,v"` **en píxeles reales de la hoja de sprites** (ej. tile 21/Cofres: `"36,0"` →
+"Cofre de oro", `"648,0"` → "Cofre de la selva" - el caso citado en la documentación del
+proyecto, mismo id de tile, sprite distinto) - si no hay coincidencia exacta (o el tile no
+tiene `frames` en absoluto) cae al nombre base, nunca se inventa una variante.
+
+En la UI: `ExplorationViewModel` guarda el `WldWorld` cargado (antes era una variable local
+que se tiraba tras pintar el mapa) y expone `UpdateHover(tileX, tileY)` → `HoverInfo` (texto
+"(x, y) - Nombre de tile / pared: Nombre de pared"). El code-behind engancha `MouseMove`/
+`MouseLeave` sobre la `Image` del mapa - `e.GetPosition(WorldMapImage)` ya devuelve la
+posición en píxel NATIVO de la imagen (WPF deshace el `LayoutTransform` del zoom
+automáticamente), y como `WorldRenderer` pinta 1 píxel = 1 tile, ese píxel ES la coordenada de
+tile directamente, sin cuentas propias. Se muestra en una franja bajo el mapa (visible solo
+con `HoverInfo` no vacío vía `EmptyToCollapsed`), no como un `ToolTip` de WPF flotante - más
+simple y fiable que gestionar el `Popup`/temporización propios de `ToolTip`.
+
+**Verificado de extremo a extremo con datos reales** (no solo fixtures): un test nuevo
+(`TileVariantRealFileTests`) recorre un mundo real (`El_Musgo_de_Accidentes.wld`) buscando
+cofres (tile 21) y confirma que el `u`/`v` real leído del archivo resuelve variantes
+correctas - salida real del test: `u=72,v=0` → "Cofre de oro (con candado)", `u=648,v=0` →
+"Cofre de la selva", `u=612,v=0` → "Cofre de agua", `u=972,v=0` → "Cofre congelado (con
+candado)". 94 tests xUnit en total (6 nuevos: 5 de `TileNameCatalogTests` con fixture propia +
+el de arriba). `dotnet build` limpio, la app arranca sin excepción. **No verificado con clics
+reales** (mover el ratón sobre el mapa de verdad en la UI) - misma limitación de siempre, pero
+la lógica que alimenta el tooltip ya está confirmada con datos reales a nivel Core.
+
 ## Pendiente (visible desde fuera)
 
-- **Exploración**: fondo degradado por zona (falta leer GroundLevel/RockLevel), tooltip por
-  tile al pasar el ratón (nombre real de tile/pared - ya está `TileNameCatalog`, falta guardar
-  u/v por tile en `WldTile` para resolver variantes exactas y conectarlo a la UI).
+- **Exploración**: fondo degradado por zona (falta leer GroundLevel/RockLevel de la cabecera,
+  que `WldHeader` no lee todavía a propósito).
 - **Apariencia** (pelo/piel con preview) - ni empezada.
 - Instalador (Fase 6 del plan) - ni empezado.
 

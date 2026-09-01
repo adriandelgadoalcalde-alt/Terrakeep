@@ -69,4 +69,16 @@ public partial class MainWindow : Window
         _viewModel.Exploration.Zoom *= e.Delta > 0 ? 1.15 : 1 / 1.15;
         e.Handled = true;
     }
+
+    // GetPosition(WorldMapImage) ya devuelve la posicion en el espacio de pixel NATIVO de la
+    // imagen (WPF deshace el LayoutTransform/zoom automaticamente para el elemento sobre el
+    // que se pide la posicion) - y WorldRenderer pinta a 1 pixel por tile, asi que el pixel es
+    // directamente la coordenada de tile.
+    private void OnWorldMapMouseMove(object sender, MouseEventArgs e)
+    {
+        var pos = e.GetPosition(WorldMapImage);
+        _viewModel.Exploration.UpdateHover((int)pos.X, (int)pos.Y);
+    }
+
+    private void OnWorldMapMouseLeave(object sender, MouseEventArgs e) => _viewModel.Exploration.UpdateHover(-1, -1);
 }

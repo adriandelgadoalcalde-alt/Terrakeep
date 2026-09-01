@@ -4,23 +4,34 @@ namespace TerrasavrNative.Core.Data;
 
 // Nombres reales de tile/pared (tile_names.json, generado en Terrasavr-Calamity-Beta cruzando
 // Data/tiles.json y Data/walls.json de TEdit contra la traduccion real del juego). Cada
-// entrada tiene variantes por sprite (clave "u,v") - de momento esta capa solo resuelve el
-// nombre BASE (id de tile/pared), no las variantes por frame, porque WldTile todavia no
-// guarda u/v (ver el comentario en WldTile.cs) - ampliar esto si el visor llega a necesitar
-// tooltips por variante exacta.
+// entrada de tile puede traer variantes por sprite exacto (objeto "frames", clave "u,v" en
+// PIXELES reales de la hoja de sprites - ej. distinguir un cofre de oro de uno de la jungla,
+// mismo id de tile 21) - TileVariantName las resuelve usando el u/v que WldTile ya guarda.
 public sealed class TileNameCatalog
 {
     private readonly Dictionary<int, string> _tiles;
+    private readonly Dictionary<int, Dictionary<(short U, short V), string>> _tileFrames;
     private readonly Dictionary<int, string> _walls;
 
-    private TileNameCatalog(Dictionary<int, string> tiles, Dictionary<int, string> walls)
+    private TileNameCatalog(Dictionary<int, string> tiles, Dictionary<int, Dictionary<(short, short), string>> tileFrames, Dictionary<int, string> walls)
     {
         _tiles = tiles;
+        _tileFrames = tileFrames;
         _walls = walls;
     }
 
     public string TileName(int type) => _tiles.TryGetValue(type, out var n) ? n : $"Tile #{type}";
     public string WallName(int wallId) => wallId == 0 ? string.Empty : _walls.TryGetValue(wallId, out var n) ? n : $"Pared #{wallId}";
+
+    // Nombre de variante exacta si el tile tiene frames registrados y el u/v coincide con
+    // alguno; si no hay frames para este tile, o el u/v no coincide con ninguno conocido, cae
+    // al nombre base (TileName) - nunca se inventa una variante.
+    public string TileVariantName(int type, short u, short v)
+    {
+        if (_tileFrames.TryGetValue(type, out var frames) && frames.TryGetValue((u, v), out var variantName))
+            return variantName;
+        return TileName(type);
+    }
 
     public static TileNameCatalog LoadFromFile(string path)
     {
@@ -32,7 +43,8 @@ public sealed class TileNameCatalog
     {
         using var doc = JsonDocument.Parse(stream);
         var root = doc.RootElement;
-        return new TileNameCatalog(ReadNames(root.GetProperty("tiles")), ReadNames(root.GetProperty("walls")));
+        var (tiles, tileFrames) = ReadTileEntries(root.GetProperty("tiles"));
+        return new TileNameCatalog(tiles, tileFrames, ReadNames(root.GetProperty("walls")));
     }
 
     private static Dictionary<int, string> ReadNames(JsonElement obj)
@@ -41,11 +53,41 @@ public sealed class TileNameCatalog
         foreach (var prop in obj.EnumerateObject())
         {
             if (!int.TryParse(prop.Name, out int id)) continue;
-            string? name = prop.Value.TryGetProperty("name_es", out var esEl) ? esEl.GetString()
-                : prop.Value.TryGetProperty("name", out var nameEl) ? nameEl.GetString()
-                : null;
+            string? name = ReadEntryName(prop.Value);
             if (name != null) result[id] = name;
         }
         return result;
     }
+
+    private static (Dictionary<int, string> Tiles, Dictionary<int, Dictionary<(short, short), string>> Frames) ReadTileEntries(JsonElement obj)
+    {
+        var tiles = new Dictionary<int, string>();
+        var allFrames = new Dictionary<int, Dictionary<(short, short), string>>();
+        foreach (var prop in obj.EnumerateObject())
+        {
+            if (!int.TryParse(prop.Name, out int id)) continue;
+            string? name = ReadEntryName(prop.Value);
+            if (name != null) tiles[id] = name;
+
+            if (!prop.Value.TryGetProperty("frames", out var framesEl)) continue;
+            var frames = new Dictionary<(short, short), string>();
+            foreach (var frameProp in framesEl.EnumerateObject())
+            {
+                string? frameName = ReadEntryName(frameProp.Value);
+                if (frameName == null) continue;
+                int comma = frameProp.Name.IndexOf(',');
+                if (comma < 0) continue;
+                if (!short.TryParse(frameProp.Name[..comma], out short u)) continue;
+                if (!short.TryParse(frameProp.Name[(comma + 1)..], out short v)) continue;
+                frames[(u, v)] = frameName;
+            }
+            if (frames.Count > 0) allFrames[id] = frames;
+        }
+        return (tiles, allFrames);
+    }
+
+    private static string? ReadEntryName(JsonElement entry) =>
+        entry.TryGetProperty("name_es", out var esEl) ? esEl.GetString()
+        : entry.TryGetProperty("name", out var nameEl) ? nameEl.GetString()
+        : null;
 }

@@ -24,7 +24,9 @@ public partial class ExplorationViewModel : ObservableObject
 {
     private readonly NpcNameCatalog _npcNames;
     private readonly MapColorCatalog _mapColors;
+    private readonly TileNameCatalog _tileNames;
     private List<WorldNpcRowViewModel> _allNpcs = [];
+    private WldWorld? _world;
 
     [ObservableProperty] private BitmapSource? _worldImage;
     [ObservableProperty] private string _statusMessage = "Sin mundo cargado.";
@@ -32,6 +34,7 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private bool _isWorldLoaded;
     [ObservableProperty] private string _npcSearchText = string.Empty;
     [ObservableProperty] private double _zoom = 1.0;
+    [ObservableProperty] private string _hoverInfo = string.Empty;
 
     public ObservableCollection<WorldNpcRowViewModel> Npcs { get; } = [];
     public ObservableCollection<string> MissingNpcs { get; } = [];
@@ -40,6 +43,27 @@ public partial class ExplorationViewModel : ObservableObject
     {
         _npcNames = service.NpcNames;
         _mapColors = service.MapColors;
+        _tileNames = service.TileNames;
+    }
+
+    // Llamado desde el code-behind con la posicion del raton YA en espacio de tile (pixel
+    // nativo del bitmap = 1 tile, ver WorldRenderer) - actualiza el texto informativo de
+    // "tooltip" (tile/pared/coordenadas) bajo el mapa. Fuera de rango o sin mundo cargado
+    // limpia el texto en vez de mostrar basura.
+    public void UpdateHover(int tileX, int tileY)
+    {
+        if (_world == null || tileX < 0 || tileY < 0 || tileX >= _world.Header.TilesWide || tileY >= _world.Header.TilesHigh)
+        {
+            HoverInfo = string.Empty;
+            return;
+        }
+
+        var tile = _world.Tiles[tileX, tileY];
+        string tileText = tile.IsActive ? _tileNames.TileVariantName(tile.Type, tile.U, tile.V) : "(vacio)";
+        string wallText = _tileNames.WallName(tile.Wall);
+        HoverInfo = string.IsNullOrEmpty(wallText)
+            ? $"({tileX}, {tileY}) - {tileText}"
+            : $"({tileX}, {tileY}) - {tileText} / pared: {wallText}";
     }
 
     public void LoadFromPath(string wldPath)
@@ -48,6 +72,7 @@ public partial class ExplorationViewModel : ObservableObject
         {
             StatusMessage = "Leyendo mundo...";
             var world = WldReader.Read(File.ReadAllBytes(wldPath));
+            _world = world;
 
             StatusMessage = "Pintando mapa...";
             WorldImage = WorldRenderer.Render(world, _mapColors);
@@ -58,6 +83,7 @@ public partial class ExplorationViewModel : ObservableObject
                 .ToList();
             NpcSearchText = string.Empty;
             Zoom = 1.0;
+            HoverInfo = string.Empty;
             ApplyNpcFilter();
 
             var foundIds = world.Npcs.Select(n => n.Id).ToHashSet();
@@ -73,6 +99,7 @@ public partial class ExplorationViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _world = null;
             IsWorldLoaded = false;
             StatusMessage = $"Error al leer el mundo: {ex.Message}";
         }

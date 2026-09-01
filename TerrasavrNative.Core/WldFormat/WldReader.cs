@@ -128,6 +128,7 @@ public static class WldReader
         short type = -1;
         short wall = 0;
         byte liquidType = 0, liquidAmount = 0;
+        short u = 0, v = 0;
 
         if (isActive)
         {
@@ -146,8 +147,8 @@ public static class WldReader
             bool isFramed = tileType < header.TileFrameImportant.Length ? header.TileFrameImportant[tileType] : true;
             if (isFramed)
             {
-                reader.ReadInt16(); // u
-                reader.ReadInt16(); // v
+                u = reader.ReadInt16();
+                v = reader.ReadInt16();
             }
             if ((header3 & 0x08) != 0) reader.ReadByte(); // TileColor
 
@@ -183,7 +184,7 @@ public static class WldReader
             _ => 0,
         };
 
-        return (new WldTile(type, wall, liquidType, liquidAmount), rle);
+        return (new WldTile(type, wall, liquidType, liquidAmount, u, v), rle);
     }
 
     private static List<WldNpc> ReadNpcs(BinaryReader reader, uint version)
