@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
 using TerrasavrNative.Core.Calamity;
+using TerrasavrNative.Core.Data;
 using TerrasavrNative.Core.Model;
 
 namespace TerrasavrNative.App.ViewModels;
@@ -26,6 +27,7 @@ public partial class ItemSlotViewModel : ObservableObject
     [ObservableProperty] private string _prefixDisplay = string.Empty;
     [ObservableProperty] private bool _hasBestPrefixSuggestion;
     [ObservableProperty] private string? _iconPath;
+    [ObservableProperty] private string? _statsTooltip;
 
     public bool IsNotEmpty => !IsEmpty;
     partial void OnIsEmptyChanged(bool value) => OnPropertyChanged(nameof(IsNotEmpty));
@@ -55,6 +57,7 @@ public partial class ItemSlotViewModel : ObservableObject
             PrefixDisplay = string.Empty;
             HasBestPrefixSuggestion = false;
             IconPath = null;
+            StatsTooltip = null;
             return;
         }
 
@@ -69,6 +72,8 @@ public partial class ItemSlotViewModel : ObservableObject
             DisplayName = _service.VanillaCatalog.GetName(item.Id);
             IconPath = VanillaIconResolver.GetIconPath(item.Id);
         }
+
+        StatsTooltip = ItemStatsFormatter.Format(item.IsCalamity, item.Id, _service.VanillaStats, _service.CalamityCatalog);
 
         RefreshPrefixDisplay();
 

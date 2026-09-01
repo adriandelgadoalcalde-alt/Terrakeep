@@ -14,7 +14,7 @@
 
         <!-- Tarjeta de un slot de item (Inventario/Banco/...) -->
         <DataTemplate DataType="{x:Type vm:ItemSlotViewModel}">
-            <Border>
+            <Border ToolTip="{Binding StatsTooltip}">
                 <Border.Style>
                     <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCard}">
                         <Style.Triggers>
@@ -441,7 +441,8 @@
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate DataType="{x:Type vm:LibraryItemViewModel}">
                                                     <Border Width="92" Height="100" Margin="3" Padding="5" CornerRadius="6"
-                                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="1">
+                                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
+                                                            ToolTip="{Binding StatsTooltip}">
                                                         <Border.Style>
                                                             <Style TargetType="Border">
                                                                 <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />

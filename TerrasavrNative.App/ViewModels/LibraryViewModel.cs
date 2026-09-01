@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
+using TerrasavrNative.Core.Data;
 
 namespace TerrasavrNative.App.ViewModels;
 
@@ -40,12 +41,16 @@ public partial class LibraryViewModel : ObservableObject
         _all = [];
 
         foreach (var (id, name) in service.VanillaCatalog.AllEntries())
-            _all.Add(new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id)));
+        {
+            string? stats = ItemStatsFormatter.Format(false, id, service.VanillaStats, service.CalamityCatalog);
+            _all.Add(new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats));
+        }
 
         foreach (var entry in service.CalamityCatalog.Entries)
         {
             string? iconPath = entry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
-            _all.Add(new LibraryItemViewModel(entry.DisplayName, true, iconPath, entry.SyntheticId, entry.Category));
+            string? stats = ItemStatsFormatter.Format(true, entry.SyntheticId, service.VanillaStats, service.CalamityCatalog);
+            _all.Add(new LibraryItemViewModel(entry.DisplayName, true, iconPath, entry.SyntheticId, entry.Category, stats));
         }
 
         BuildCategoryTree();

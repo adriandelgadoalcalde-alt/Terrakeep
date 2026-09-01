@@ -1235,7 +1235,33 @@ pelo del personaje cargado (Eldelgas, pelo rojizo), clic en una miniatura distin
 **Pendiente de la lista original**: selección visual para el resto de campos de Apariencia
 (piel/pantalones/etc ya son colores editables por deslizador con preview en vivo, no ids -
 esa parte ya estaba resuelta desde antes; lo que quedaba pendiente específicamente era el
-peinado, ya cerrado), tooltips de estadísticas de objeto, y drag&drop visual.
+peinado, ya cerrado), drag&drop visual.
+
+### Punto 7 CERRADO - tooltips de estadísticas reales de objeto
+
+Igual que las categorías vanilla (punto 2), extraído directamente de los bloques
+`SetDefaults1..5` de `Item.cs` decompilado real - `scripts/extraer-estadisticas-vanilla.py`
+(nuevo) saca `damage`/`defense`/`knockBack`/`useTime`/`crit`/`mana`/`healLife`/`healMana`/
+`rare` por id, SOLO cuando el propio bloque de ese objeto concreto asigna ese campo (nunca se
+rellena con 0 - un objeto sin estadística de combate no debe aparentar tenerla). 2968 objetos
+vanilla con al menos una estadística real. Verificado con Excalibur (id 368):
+`damage=72, knockBack=4.5, useTime=20, rare=5` - coincide con los valores reales conocidos del
+juego. Salida: `TerrasavrNative.App/Assets/vanilla_stats.json`, cargado por el nuevo
+`VanillaItemStatsCatalog` (Core). Para Calamity ya existía `CalamityItemStats` en
+`catalog.json` (con `damageType` real, ej. "Rogue") desde antes, sin usar en la UI.
+
+Nuevo `ItemStatsFormatter` (Core.Data) unifica ambas fuentes en un único texto de tooltip
+("Daño: 85\nNudillo: 6.5\nVelocidad de uso: 18\nRareza: 8"), devuelve `null` si el objeto no
+tiene ninguna estadística conocida (WPF no muestra `ToolTip` si el valor enlazado es null, así
+que un objeto sin combate simplemente no muestra tooltip, en vez de uno vacío). Enlazado como
+`StatsTooltip` en `ItemSlotViewModel` (objetos ya puestos, todos los contenedores) y
+`LibraryItemViewModel` (tarjetas de la Librería) - las dos superficies donde se ven objetos.
+
+Verificado en vivo: pasar el ratón sobre "Espada Terra" (Terra Blade) en el inventario real de
+Eldelgas muestra "Daño: 85 / Nudillo: 6,5 / Velocidad de uso: 18 / Rareza: 8" - valores reales
+conocidos del arma. `dotnet build`/`dotnet test` en verde (118/118).
+
+**Pendiente de la lista original**: solo queda drag&drop visual.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 
