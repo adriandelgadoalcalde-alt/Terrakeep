@@ -71,6 +71,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             Library.PickTarget = null;
+            PrefixPicker.PickTarget = null;
             _loaded = _service.Load(plrPath);
             RebuildContainers();
             Appearance.LoadFrom(_loaded.Character);

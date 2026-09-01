@@ -405,12 +405,12 @@
                     <TabItem Header="Apariencia">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
                             <StackPanel MaxWidth="640" HorizontalAlignment="Left">
-                                <TextBlock Text="Preview real (icono de cabeza, no cuerpo completo - asi era ya en el Terrasavr original, la propia app traia la nota &quot;preview is broken atm&quot; en este mismo panel)."
+                                <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego) - sin armadura/vestuario equipado, item en mano ni animacion, solo la pose de reposo."
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10" />
 
                                 <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="8" Padding="16"
                                         HorizontalAlignment="Left" Margin="0,0,0,18">
-                                    <Image Source="{Binding Appearance.PreviewImage}" Width="160" Height="224"
+                                    <Image Source="{Binding Appearance.PreviewImage}" Width="240" Height="336"
                                            RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="Uniform" />
                                 </Border>
 

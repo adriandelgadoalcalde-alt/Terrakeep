@@ -813,12 +813,76 @@ prioridad baja en la auditoría.
 `dotnet build` limpio, la app arranca sin excepción. **No verificado con clics reales** -
 misma limitación de siempre.
 
+### Preview de personaje de CUERPO COMPLETO con sprites reales del juego (pedido explícito, 1-sep-2026)
+
+Sustituye al icono de cabeza pequeño anterior (que usaba el atlas propio simplificado de
+Terrasavr, `visual.png`) por una figura de pie de cuerpo completo usando los sprites REALES
+del jugador de Terraria, extraídos de la instalación vanilla de este PC (Steam, copia legítima
+del propio usuario).
+
+- **Formato real confirmado** (auditoría dedicada, `Terraria/ID/PlayerTextureID.cs` +
+  `Terraria/DataStructures/PlayerDrawSet.cs` decompilados reales): `Player_0_Y.xnb` (X=0 =
+  variante de piel "StarterMale", la única con las 15 piezas completas en la instalación
+  real) - Y=0 Head, 1 EyeWhites, 2 Eyes, 3 TorsoSkin, 4 Undershirt, 6 Shirt, 10 LegSkin,
+  11 Pants, 12 Shoes (más 5/7/8/9/13 = Hands/ArmSkin/ArmUndershirt/ArmHand/ArmShirt,
+  extraídos pero NO usados en el compositor final, ver más abajo). El pelo es aparte,
+  `Player_Hair_N.xnb` (N=1-228, un archivo por estilo real, confirmados los 228 en la
+  instalación de este PC), con capas frente/detrás documentadas en el motor real (aquí
+  simplificado a una sola capa, ver limitación de alcance abajo).
+- **Todos los sprites son hojas de 40x56 por frame** (mismo tamaño que ya usaba el icono
+  simplificado anterior - no es casualidad, es la convención real del propio juego) - los de
+  cabeza/piernas/pelo son tiras verticales (frame 0 = fila superior), los de torso/brazo son
+  rejillas 9x4 (celda(0,0) = esquina superior-izquierda). **El frame de reposo/celda(0,0) SÍ
+  tiene contenido real en Head/EyeWhites/Eyes/TorsoSkin/Undershirt/Shirt/LegSkin/Pants/Shoes**
+  (verificado recortando y viendo cada uno) - **pero NO en ArmSkin/ArmShirt** (esas dos hojas
+  tienen la celda(0,0) totalmente vacía; inspeccionada la rejilla completa, solo tienen
+  contenido en frames de brazo en movimiento/sujetando algo, ninguno con el brazo simplemente
+  caído a un lado). Por eso el compositor final NO dibuja una capa de brazo aparte - el propio
+  silueta de TorsoSkin ya incluye un brazo pegado al cuerpo, así que el resultado sigue siendo
+  coherente sin esa capa extra (arreglo real encontrado a mitad de la implementación, no
+  hipotético: el primer intento con ArmSkin en `celda(0,0)` salía completamente en blanco).
+- **Extracción real de los `.xnb`** (formato confirmado: cabecera `XNB`+`w`+versión 5,
+  comprimido **LZX** - reimplementarlo a mano habría sido un riesgo real, coincide con lo que
+  ya advertía la investigación) con la herramienta **`xnb` (npm, LGPL-3.0, alias de `xnbcli`
+  de LeonBlade)**, instalada en el Node portable ya usado en otros proyectos
+  (`Downloads\dev-tools\node-v24.20.0-win-x64`) - no como dependencia del propio proyecto
+  .NET, solo como herramienta de extracción puntual (mismo criterio que `pngjs` para
+  `items.png`/`buffs.png` en su momento). 14 piezas de cuerpo + 228 hojas de pelo extraídas y
+  recortadas al frame de reposo, guardadas como PNG individuales en `Assets/player/{body,
+  hair}/` (~320KB en total).
+- **Compositor** (`PlayerPreviewRenderer.cs`, reescrito): todas las piezas se superponen en el
+  MISMO origen (0,0) - cada hoja de 40x56 ya trae el sprite posicionado en su sitio dentro de
+  ese lienzo (cabeza arriba, piernas abajo...), así que no hace falta ninguna cuenta de
+  offset, exactamente el mismo mecanismo que ya usaba el icono simplificado. Tintado =
+  multiplicación RGB pura, mapeo de color confirmado 1:1 contra los 7 campos ya en
+  `PlrCharacter`.
+- **Alcance deliberadamente limitado** (documentado en el propio archivo, no oculto): sin
+  armadura/vestuario equipado real, item en mano, accesorios, alas, ni animación (solo el
+  frame de reposo) - necesitarían el catálogo de sprites de armadura entero y el motor de
+  animación real, un proyecto en sí mismo. Solo la variante de piel "0" (StarterMale) para
+  ambos géneros - la variante "femenina" no se investigó a fondo por no ser el foco de esta
+  ronda, y a este tamaño la piel en sí no cambia de forma de manera perceptible. El id de
+  pelo del `.plr` se usa tal cual como nombre de archivo (1-228) sin verificar pixel a pixel
+  que el `HairID` interno del juego y el número de archivo coincidan exactamente - si no hay
+  archivo para un id, cae al estilo 1 en vez de fallar.
+
+**Verificado de extremo a extremo, no solo "debería funcionar"**: recortes individuales de
+cada pieza inspeccionados visualmente antes de dar la rejilla por buena (exactamente igual que
+se hizo con `items.png`); un composite de prueba en Node.js con colores de ejemplo generó una
+figura de Terraria real y reconocible (pelo, camisa roja, pantalón azul, zapatos marrones) -
+solo tras verlo correctamente se escribió el compositor en C#; y **el propio compositor C# se
+volvió a probar por separado** (proyecto de usar-y-tirar en el scratchpad que invoca
+`PlayerPreviewRenderer.Render` real con los assets reales ya copiados a `TerrasavrNative.App`)
+con 3 peinados distintos, confirmando que el `.exe` final produce el mismo resultado correcto
+que el prototipo. 101 tests xUnit siguen en verde (pieza de `App`, sin lógica nueva en `Core`),
+`dotnet build` limpio, la app arranca sin excepción con los 242 sprites nuevos copiados.
+
 ## Pendiente (visible desde fuera)
 
-- Todos los huecos de la auditoría Terrasavr JS vs puerto están cerrados (1-6). Pendiente
-  ahora mismo: preview de personaje de CUERPO COMPLETO (pedido explícito, en curso - ver
-  investigación de sprites reales del jugador), y una ronda de pulido estético dedicada
-  (pendiente desde el 2-sep-2026, ver "Objetivo de diseño de la UI" más arriba).
+- Todos los huecos de la auditoría Terrasavr JS vs puerto están cerrados (1-6), y el preview
+  de personaje ya es de cuerpo completo con sprites reales. Pendiente ahora mismo: una ronda
+  de pulido estético dedicada (pendiente desde el 2-sep-2026, ver "Objetivo de diseño de la
+  UI" más arriba) y una página de bienvenida/explicación.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 
