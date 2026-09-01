@@ -2077,21 +2077,55 @@ selección. Verificado con arnés de consola contra el personaje real: el 100% d
 `EquipmentGroup.AllContainers` tiene `IsEquipped=true`, el 100% de los de `Containers`
 (Inventario/Banco/...) tiene `IsEquipped=false`.
 
-Queda pendiente de aclarar con el usuario la mitad de este punto que mencionaba "las armas" del
-Inventario en sí (no Equipamiento) - el `.plr` no guarda ningún concepto de "arma
-actualmente empuñada" que se pueda leer de forma fiable, así que antes de adivinar una
-interpretación (¿toda la barra rápida 0-9? ¿solo el primer slot?) se le preguntó directamente,
-mismo criterio que [[feedback_preguntar-ante-ambiguedad-densa]].
+Aclarado con el usuario vía pregunta directa (mismo criterio que
+[[feedback_preguntar-ante-ambiguedad-densa]] - el `.plr` no guarda ningún concepto real de
+"arma actualmente empuñada" fiable, así que no se podía adivinar): "toda la barra rápida
+(slots 0-9)". Implementado - `MainViewModel.AddContainer` marca `IsEquipped=true` para los
+primeros `HotbarSlotCount=10` slots del contenedor `"inventory"` únicamente (confirmado en
+`Player.cs` decompilado real: `inventory = new Item[59]` y los 10 triggers reales
+`Hotbar1`..`Hotbar0` - slots 0-9 son la barra rápida real de Terraria). Verificado con arnés
+de consola: slots 0-9 de Inventario con `IsEquipped=true`, el resto (10-49) con `false`.
 
-`dotnet build`/`dotnet test` en verde (128/128) para los tres puntos ya cerrados.
+`dotnet build`/`dotnet test` en verde (128/128) para los cuatro puntos ya cerrados de esta
+ronda (botón, NPCs del mapa, contorno verde en Equipamiento Y en la barra rápida de
+Inventario).
 
-### Pendiente de esta ronda
-- Aclarar con el usuario el alcance de "equipado" dentro de Inventario (ver arriba).
-- Reestructurar la Librería (y aplicar lo mismo a Investigación): Calamity con su propia
-  carpeta madre + subcarpetas reales (armaduras/armas a distancia/armas de mago/armas
-  mele/armas arrojadizas/accesorios/...), vanilla organizado igual calcando la estructura
-  real de Terrasavr (la actual "Materiales"/"Colocables" mezclan tintes+lingotes+minerales+
-  construcción sin ningún criterio real) - investigación en curso de cómo está montada la
-  lista real en `script.js`/`overrides.js` antes de proponer un plan concreto.
-- Investigación (pestaña) muy larga en forma de lista plana (8164 objetos) - pensar
-  paginación o reutilizar el mismo árbol de carpetas ya corregido de la Librería.
+### Pendiente de esta ronda - reestructurar Librería/Investigación (la grande)
+
+Investigación real ya hecha (no de memoria) sobre `reference\terrasavr-real\script.beautified.js`
++ `Terrasavr-Calamity-Beta\resources\app\local-site\overrides.js` antes de proponer nada:
+
+- **Calamity YA tiene, en el propio Electron real, una función `calamityBuildLibraryNode()`
+  completa y ya en producción** (`overrides.js` líneas ~1352-1417) que construye exactamente
+  "una carpeta madre + subcarpetas reales" - agrupa las 121 categorías reales YA PRESENTES en
+  `calamity/catalog.json` (`category`, ej. `"Armor/Aerospec"`, `"Weapons/Melee"` - con barra,
+  no planas como se pensó en un primer vistazo superficial) por su segmento raíz
+  (Armor/Weapons/Accessories/...), pagina cualquier grupo de más de 40 objetos en "Page N", y
+  pagina la propia lista de carpetas si supera 19 hijos (límite real de la UI Canvas antigua,
+  documentado en el propio código con el bug real que motivó el límite). Terrasavr-Native
+  YA CARGA este mismo `category` con barra desde el mismo fichero
+  (`TerrasavrNative.App/Assets/calamity/catalog.json`) pero `LibraryViewModel.BuildCategoryTree`
+  ya lo parte en segmentos igual - lo que falta de verdad es envolver el resultado en una
+  única carpeta "Calamity (mod)" en vez de dejar los segmentos sueltos mezclados con los de
+  vanilla, más los rótulos en español reales (`CALAMITY_CATEGORY_LABELS` en `overrides.js`).
+  Alcance mucho más pequeño de lo que parecía al principio.
+- **Vanilla es la parte grande de verdad**: el árbol real (`Hc.deploy()`,
+  `script.beautified.js` líneas ~2060-2256) NO viene de un campo "categoría" simple por
+  objeto - es un árbol curado a mano con listas de ids literales por carpeta hoja (ej.
+  "Materiales/Pre-Hardmode/Copper & Tin" = 40 ids concretos mezclando barra+mineral+
+  herramienta+armadura de ese material) MÁS carpetas calculadas por predicado sobre un
+  campo `metatype` compacto por objeto (ej. `"Categorías/Armas/Daño cuerpo a cuerpo"` = todo
+  objeto cuyo `metatype` contiene `"d"`), con paginación automática real ya integrada (bloques
+  de "Page N" cada 40 objetos, "Pages N+" agrupando de 10 en 10 si un grupo supera 480) - esto
+  es la respuesta real y ya existente al "hay que pensar algo rollo que tenga páginas", no
+  hace falta inventar nada nuevo, hay que replicar este mismo mecanismo.
+- El campo `metatype`/`pid`/nombre por objeto viene de un formato compacto propio embebido en
+  el propio `script.js` (`za.$name`/`za.pid`/`za.meta`, clases `terra.data.TdItem`/
+  `terra.ItemParser`/`terra.Item.loadMeta`) - parsearlo a mano reimplementando el formato
+  sería frágil; la vía más fiable es ejecutar el propio `script.js` real en un sandbox de
+  Node (con las APIs mínimas de navegador que necesite stubadas) y volcar el resultado real
+  de `Hc.deploy()` a JSON - mismo criterio de "confiar en el comportamiento real, no en una
+  reimplementación a ciegas" que ya se siguió con `tmod-extract.js`.
+
+Queda por proponer un plan concreto (fases, archivos, verificación) y pasar por modo plan para
+aprobación antes de tocar código - tarea de tamaño comparable a las Fases A-G anteriores.

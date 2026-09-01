@@ -305,11 +305,22 @@ public partial class MainViewModel : ObservableObject
         SelectedTabIndex = PersonajeTabIndex;
     }
 
+    // Los primeros 10 slots reales de "inventory" son la barra rapida (Player.inventory[0..9]
+    // en el propio Terraria - confirmado en Player.cs decompilado, "Hotbar1".."Hotbar0" son 10
+    // triggers reales) - contorno verde de "equipado" tambien ahi, igual que en Equipamiento
+    // (pedido explicito 2-sep-2026, confirmado con el usuario tras preguntar: el .plr no
+    // guarda ningun campo real de "arma empuñada ahora mismo" fiable, asi que la barra rapida
+    // entera es el criterio, no un unico slot).
+    private const int HotbarSlotCount = 10;
+
     private void AddContainer(string key, string displayName, GameItem[] items)
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
-            slots.Add(new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot));
+        {
+            bool isEquipped = key == "inventory" && i < HotbarSlotCount;
+            slots.Add(new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped));
+        }
         Containers.Add(new ContainerViewModel(key, displayName, slots));
     }
 
