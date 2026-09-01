@@ -413,12 +413,27 @@ armadura/accesorios/vanidad/tintes"), reutilizando el mismo mecanismo genérico 
 ViewModel aparte del bucle sobre `Character.Loadouts`. Antes solo se veía/editaba el loadout 0
 (equipo puesto).
 
+### Zoom real en el visor de mundo
+
+`ExplorationViewModel.Zoom` (double, 1.0 por defecto, sujeto entre 0.1x y 6x en
+`OnZoomChanged`) + `ZoomInCommand`/`ZoomOutCommand`/`ZoomResetCommand` (x1.25 por paso).
+Aplicado con un `ScaleTransform` en `Image.LayoutTransform` (no `RenderTransform` - con
+`LayoutTransform` el `ScrollViewer` que ya envolvía la imagen recalcula solo el area
+desplazable al tamaño escalado, con `RenderTransform` los scrollbars no se habrían enterado
+del nuevo tamaño). Botones +/-/Restablecer en la barra de Exploración, más Ctrl+rueda del
+ratón sobre el mapa (`OnWorldMapPreviewMouseWheel` en el code-behind, solo captura el evento
+cuando Ctrl está pulsado para no robarle el scroll normal al `ScrollViewer`). Se reinicia a
+1.0 en cada carga de mundo.
+
+**Verificado**: 88 tests siguen en verde (pieza puramente de UI, sin lógica nueva en Core),
+`dotnet build` limpio, la app arranca sin excepción. **No verificado con clics reales** (zoom
+de verdad con los botones o Ctrl+rueda) - misma limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
-- **Exploración**: zoom real (de momento solo scroll a tamaño 1:1), fondo degradado por zona
-  (falta leer GroundLevel/RockLevel), tooltip por tile al pasar el ratón (nombre real de
-  tile/pared - ya está `TileNameCatalog`, falta guardar u/v por tile en `WldTile` para
-  resolver variantes exactas y conectarlo a la UI).
+- **Exploración**: fondo degradado por zona (falta leer GroundLevel/RockLevel), tooltip por
+  tile al pasar el ratón (nombre real de tile/pared - ya está `TileNameCatalog`, falta guardar
+  u/v por tile en `WldTile` para resolver variantes exactas y conectarlo a la UI).
 - **Apariencia** (pelo/piel con preview) - ni empezada.
 - Instalador (Fase 6 del plan) - ni empezado.
 

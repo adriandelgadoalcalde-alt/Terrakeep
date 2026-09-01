@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
 using TerrasavrNative.Core.Data;
 using TerrasavrNative.Core.WldFormat;
@@ -30,6 +31,7 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private string? _worldTitle;
     [ObservableProperty] private bool _isWorldLoaded;
     [ObservableProperty] private string _npcSearchText = string.Empty;
+    [ObservableProperty] private double _zoom = 1.0;
 
     public ObservableCollection<WorldNpcRowViewModel> Npcs { get; } = [];
     public ObservableCollection<string> MissingNpcs { get; } = [];
@@ -55,6 +57,7 @@ public partial class ExplorationViewModel : ObservableObject
                 .Select(n => new WorldNpcRowViewModel(n.Id, _npcNames.GetName(n.Id), n.TileX, n.TileY, n.Homeless))
                 .ToList();
             NpcSearchText = string.Empty;
+            Zoom = 1.0;
             ApplyNpcFilter();
 
             var foundIds = world.Npcs.Select(n => n.Id).ToHashSet();
@@ -76,6 +79,18 @@ public partial class ExplorationViewModel : ObservableObject
     }
 
     partial void OnNpcSearchTextChanged(string value) => ApplyNpcFilter();
+
+    private const double MinZoom = 0.1, MaxZoom = 6.0;
+
+    partial void OnZoomChanged(double value)
+    {
+        double clamped = Math.Clamp(value, MinZoom, MaxZoom);
+        if (clamped != value) Zoom = clamped; // reentra, se estabiliza al segundo paso
+    }
+
+    [RelayCommand] private void ZoomIn() => Zoom *= 1.25;
+    [RelayCommand] private void ZoomOut() => Zoom /= 1.25;
+    [RelayCommand] private void ZoomReset() => Zoom = 1.0;
 
     private void ApplyNpcFilter()
     {

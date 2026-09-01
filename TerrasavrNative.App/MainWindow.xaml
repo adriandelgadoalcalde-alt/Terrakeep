@@ -358,6 +358,14 @@
                     <TextBlock Text="{Binding Exploration.WorldTitle, StringFormat='Mundo: {0}'}"
                                Style="{StaticResource SectionText}" VerticalAlignment="Center" Margin="20,0,0,0"
                                Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
+                    <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center"
+                                Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
+                        <Button Content="&#8722;" Command="{Binding Exploration.ZoomOutCommand}" Padding="10,2" />
+                        <TextBlock Text="{Binding Exploration.Zoom, StringFormat={}{0:P0}}" Style="{StaticResource CaptionText}"
+                                   VerticalAlignment="Center" Width="50" TextAlignment="Center" />
+                        <Button Content="+" Command="{Binding Exploration.ZoomInCommand}" Padding="10,2" Margin="4,0,0,0" />
+                        <Button Content="Restablecer" Command="{Binding Exploration.ZoomResetCommand}" Padding="8,2" Margin="8,0,0,0" />
+                    </StackPanel>
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Bottom" Text="{Binding Exploration.StatusMessage}"
                            Style="{StaticResource CaptionText}" Margin="0,10,0,0" TextWrapping="Wrap" />
@@ -369,9 +377,15 @@
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,0">
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                      PreviewMouseWheel="OnWorldMapPreviewMouseWheel">
                             <Image Source="{Binding Exploration.WorldImage}" Stretch="None"
-                                   RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                                   RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                   HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <Image.LayoutTransform>
+                                    <ScaleTransform ScaleX="{Binding Exploration.Zoom}" ScaleY="{Binding Exploration.Zoom}" />
+                                </Image.LayoutTransform>
+                            </Image>
                         </ScrollViewer>
                     </Border>
 

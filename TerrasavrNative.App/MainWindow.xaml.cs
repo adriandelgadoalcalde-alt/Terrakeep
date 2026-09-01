@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Input;
 using Microsoft.Win32;
 using TerrasavrNative.App.ViewModels;
 
@@ -57,5 +58,15 @@ public partial class MainWindow : Window
         string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string candidate = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Worlds");
         return Directory.Exists(candidate) ? candidate : documents;
+    }
+
+    // Ctrl+rueda para hacer zoom sobre el visor de mundo, ademas de los botones +/-/
+    // Restablecer - marca el evento como manejado solo cuando de verdad hace zoom, para no
+    // robarle el scroll normal (sin Ctrl) al ScrollViewer.
+    private void OnWorldMapPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (Keyboard.Modifiers != ModifierKeys.Control) return;
+        _viewModel.Exploration.Zoom *= e.Delta > 0 ? 1.15 : 1 / 1.15;
+        e.Handled = true;
     }
 }
