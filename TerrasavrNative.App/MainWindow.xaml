@@ -181,12 +181,48 @@
 
         <!-- ===================== EXPLORACION ===================== -->
         <TabItem Header="Exploracion">
-            <StackPanel Margin="14" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="Visor de mundo" Style="{StaticResource TitleText}" HorizontalAlignment="Center" />
-                <TextBlock Style="{StaticResource CaptionText}" Margin="0,10,0,0" TextWrapping="Wrap" MaxWidth="420"
-                           TextAlignment="Center"
-                           Text="Explorador de mapas .wld con zoom/desplazamiento y buscador de NPCs - en construccion. Llega en una proxima ronda." />
-            </StackPanel>
+            <DockPanel Margin="14">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+                    <Button Content="Cargar mundo (.wld)..." Tag="Accent" Click="OnLoadWorldClick" />
+                    <TextBlock Text="{Binding Exploration.WorldTitle, StringFormat='Mundo: {0}'}"
+                               Style="{StaticResource SectionText}" VerticalAlignment="Center" Margin="20,0,0,0"
+                               Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Bottom" Text="{Binding Exploration.StatusMessage}"
+                           Style="{StaticResource CaptionText}" Margin="0,10,0,0" TextWrapping="Wrap" />
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="220" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,0">
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                            <Image Source="{Binding Exploration.WorldImage}" Stretch="None"
+                                   RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                        </ScrollViewer>
+                    </Border>
+
+                    <DockPanel Grid.Column="1">
+                        <TextBlock DockPanel.Dock="Top" Text="NPCs de pueblo" Style="{StaticResource SectionText}" Margin="0,0,0,8" />
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Exploration.Npcs}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
+                                        <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,0,5" Padding="8,5">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
+                                                <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Grid>
+            </DockPanel>
         </TabItem>
 
         <!-- ===================== ACERCA DE ===================== -->

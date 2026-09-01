@@ -114,13 +114,37 @@ catálogos, pero NO sustituye a que el usuario abra la app y mire si algo se ve 
 cargar/guardar un personaje real funciona de punta a punta con los botones de verdad - eso
 sigue pendiente de que lo prueben ellos.
 
+### Exploración — primer resultado visible (commit `5d82441` + siguiente)
+
+Lector de `.wld` completo (`WldFormat/`: cabecera mínima hasta dimensiones, salto directo a
+`pointers[1]`/`pointers[4]` para tiles/NPCs sin parsear el resto de la cabecera
+version-dependiente que no hace falta para pintar el mapa, RLE de tiles completo, NPCs con
+posición real según homeless o no) - formato confirmado por investigación dirigida sobre el
+lector JS ya real y verificado en `overrides.js` de Terrasavr-Calamity-Beta (a su vez
+verificado ahí contra TEdit real), no adivinado. Verificado con 4 tests contra DOS mundos
+reales de este PC (dimensiones realistas, rejilla completamente rellena por el RLE sin
+excepciones, proporción de tiles activos en rango realista 15-95%).
+
+`WorldRenderer` (App, no Core - usa `WriteableBitmap`) pinta el mundo entero a 1px/tile
+(pared→tile→líquido, mezcla alfa) y se muestra con scroll para desplazarse. **Simplificación
+deliberada**: sin el fondo degradado por zona (Espacio/Cielo/Tierra/Roca/Infierno) - necesita
+`GroundLevel`/`RockLevel` de la cabecera, que `WldHeader` no lee a propósito (ver su propio
+comentario) - fondo sólido oscuro por ahora. Sin zoom todavía (solo scroll a tamaño real, que
+para un mundo Grande son ~8400x2400 píxeles) - pendiente añadir un control de zoom real.
+
+**No verificado con la UI en sí** (misma limitación de siempre): el renderizado en pantalla al
+pulsar "Cargar mundo" no se ha podido comprobar visualmente - la lógica de mezcla de color es
+sencilla y de bajo riesgo (usa datos ya probados de `WldReader`/`MapColorCatalog`), pero
+conviene que el usuario lo abra y mire si el mapa se ve bien de verdad.
+
 ## Pendiente (visible desde fuera, sin entrar en el detalle de Fase 1 de más arriba)
 
-- **Exploración**: visor de mundo (`.wld`, zoom/desplazamiento, buscador de NPCs) - la pieza
-  más grande que queda. Ya se construyó una vez en la versión JS de Terrasavr-Calamity-Beta
-  esta misma sesión (ver su propio `PROYECTO-TERRASAVR.md`/README para el detalle real del
-  formato `.wld`, ya investigado contra TEdit) - aquí hay que portarlo, no reinventarlo desde
-  cero. Sin empezar todavía.
+- **Exploración**: zoom real (de momento solo scroll a tamaño 1:1), fondo degradado por zona
+  (falta leer GroundLevel/RockLevel), buscador/filtro de NPCs (ya se listan todos, falta
+  buscar por nombre y marcar cuáles NO tiene el jugador - el "roster" de NPCs de pueblo
+  reales, `VANILLA_TOWN_NPC_ROSTER` en la versión JS, todavía no se ha portado), tooltip por
+  tile al pasar el ratón (nombre real de tile/pared - ya está `TileNameCatalog`, falta
+  guardar u/v por tile en `WldTile` para resolver variantes exactas y conectarlo a la UI).
 - **Edición real**: todo lo mostrado hoy es de solo lectura (ver un objeto, no añadirlo/
   quitarlo/cambiarle el prefijo). El botón Guardar ya funciona con lo que haya en memoria, pero
   nada en la UI actual permite modificarlo todavía.

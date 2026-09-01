@@ -34,6 +34,9 @@ public sealed class CharacterFileService
     public BuildsCatalog VanillaBuilds { get; }
     public BuildsCatalog CalamityBuilds { get; }
     public WhatsNewCatalog WhatsNew { get; }
+    public MapColorCatalog MapColors { get; }
+    public TileNameCatalog TileNames { get; }
+    public NpcNameCatalog NpcNames { get; }
 
     public CharacterFileService()
     {
@@ -45,6 +48,9 @@ public sealed class CharacterFileService
         VanillaBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds.json"));
         CalamityBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds_calamity.json"));
         WhatsNew = WhatsNewCatalog.LoadFromFile(Path.Combine(assetsDir, "whats_new.json"));
+        MapColors = MapColorCatalog.LoadFromFile(Path.Combine(assetsDir, "map_colors.json"));
+        TileNames = TileNameCatalog.LoadFromFile(Path.Combine(assetsDir, "tile_names.json"));
+        NpcNames = NpcNameCatalog.LoadFromFile(Path.Combine(assetsDir, "npc_names.json"));
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
         var codec = new CalamityItemCodec(CalamityCatalog, translator);
