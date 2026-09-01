@@ -1,0 +1,189 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Paleta - minimalista, oscura, un unico color de acento (ambar/cobre, distinto del
+         azul generico de Fluent) mas el rojo ya establecido para marcar objetos de Calamity. -->
+    <Color x:Key="BgPrimaryColor">#121212</Color>
+    <Color x:Key="BgSecondaryColor">#1B1B1E</Color>
+    <Color x:Key="BgElevatedColor">#242427</Color>
+    <Color x:Key="BgHoverColor">#2D2D31</Color>
+    <Color x:Key="BorderColor">#333338</Color>
+    <Color x:Key="TextPrimaryColor">#F2F2F0</Color>
+    <Color x:Key="TextSecondaryColor">#9A9AA2</Color>
+    <Color x:Key="AccentColor">#E0A458</Color>
+    <Color x:Key="AccentHoverColor">#F0BA70</Color>
+    <Color x:Key="CalamityColor">#C0392B</Color>
+
+    <SolidColorBrush x:Key="BgPrimaryBrush" Color="{StaticResource BgPrimaryColor}" />
+    <SolidColorBrush x:Key="BgSecondaryBrush" Color="{StaticResource BgSecondaryColor}" />
+    <SolidColorBrush x:Key="BgElevatedBrush" Color="{StaticResource BgElevatedColor}" />
+    <SolidColorBrush x:Key="BgHoverBrush" Color="{StaticResource BgHoverColor}" />
+    <SolidColorBrush x:Key="BorderBrush0" Color="{StaticResource BorderColor}" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHoverColor}" />
+    <SolidColorBrush x:Key="CalamityBrush" Color="{StaticResource CalamityColor}" />
+
+    <FontFamily x:Key="AppFont">Segoe UI Variable Display, Segoe UI</FontFamily>
+
+    <!-- Tipografia -->
+    <Style x:Key="TitleText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+    <Style x:Key="SectionText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+    <Style x:Key="BodyText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+    <Style x:Key="CaptionText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+    </Style>
+
+    <!-- Ventana / controles base -->
+    <Style TargetType="Window">
+        <Setter Property="Background" Value="{StaticResource BgPrimaryBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+        <Setter Property="TextElement.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+
+    <Style TargetType="ScrollBar">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Width" Value="8" />
+    </Style>
+
+    <!-- Boton plano minimalista - el de acento (IsDefault-like) se marca con Tag="Accent" -->
+    <Style TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Padding" Value="14,8" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Accent">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource BgPrimaryBrush}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Nav rail izquierda: un TabControl con TabStripPlacement=Left restilado para que las
+         "pestañas" parezcan una lista de navegacion plana, no fichas de cuaderno. -->
+    <Style x:Key="NavTabItem" TargetType="TabItem">
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Setter Property="Padding" Value="16,10" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Margin="8,2"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter ContentSource="Header" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgElevatedBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="IsSelected" Value="False" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="NavTabControl" TargetType="TabControl">
+        <Setter Property="TabStripPlacement" Value="Left" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource NavTabItem}" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <!-- Pestañas internas (contenedores del personaje: Inventario/Banco/...) - horizontales,
+         igual de planas, sin la barra lateral. -->
+    <Style x:Key="InnerTabItem" TargetType="TabItem">
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="5" Margin="0,0,4,4"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource BgPrimaryBrush}" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="IsSelected" Value="False" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="InnerTabControl" TargetType="TabControl">
+        <Setter Property="TabStripPlacement" Value="Top" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource InnerTabItem}" />
+    </Style>
+
+    <!-- Tarjeta de slot de item -->
+    <Style x:Key="ItemSlotCard" TargetType="Border">
+        <Setter Property="Width" Value="132" />
+        <Setter Property="Height" Value="56" />
+        <Setter Property="Margin" Value="4" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+    </Style>
+</ResourceDictionary>

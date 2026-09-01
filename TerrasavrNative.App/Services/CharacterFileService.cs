@@ -31,6 +31,9 @@ public sealed class CharacterFileService
     public RoguePrefixCatalog RoguePrefixCatalog { get; }
     public VanillaItemCatalog VanillaCatalog { get; }
     public VanillaPrefixCatalog VanillaPrefixCatalog { get; }
+    public BuildsCatalog VanillaBuilds { get; }
+    public BuildsCatalog CalamityBuilds { get; }
+    public WhatsNewCatalog WhatsNew { get; }
 
     public CharacterFileService()
     {
@@ -39,6 +42,9 @@ public sealed class CharacterFileService
         RoguePrefixCatalog = RoguePrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "rogue_prefixes.json"));
         VanillaCatalog = VanillaItemCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_item_names.json"));
         VanillaPrefixCatalog = VanillaPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "prefixes.json"));
+        VanillaBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds.json"));
+        CalamityBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds_calamity.json"));
+        WhatsNew = WhatsNewCatalog.LoadFromFile(Path.Combine(assetsDir, "whats_new.json"));
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
         var codec = new CalamityItemCodec(CalamityCatalog, translator);

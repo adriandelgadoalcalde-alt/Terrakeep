@@ -5,33 +5,33 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TerrasavrNative.App"
         xmlns:vm="clr-namespace:TerrasavrNative.App.ViewModels"
+        xmlns:data="clr-namespace:TerrasavrNative.Core.Data;assembly=TerrasavrNative.Core"
         mc:Ignorable="d"
-        Title="Terrasavr Native (Fase 2 - nucleo basico)" Height="720" Width="1100">
+        Title="Terrakeep" Height="760" Width="1180"
+        Background="{StaticResource BgPrimaryBrush}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
+        <!-- Tarjeta de un slot de item (Inventario/Banco/...) -->
         <DataTemplate DataType="{x:Type vm:ItemSlotViewModel}">
-            <Border Width="150" Height="60" Margin="3" Padding="6"
-                    BorderBrush="#666" BorderThickness="1" CornerRadius="3">
+            <Border>
                 <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Background" Value="#2A2A2A" />
+                    <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCard}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-                                <Setter Property="Background" Value="#1A1A1A" />
-                                <Setter Property="Opacity" Value="0.4" />
+                                <Setter Property="Opacity" Value="0.35" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                <Setter Property="BorderBrush" Value="#C0392B" />
+                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
                                 <Setter Property="BorderThickness" Value="2" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <StackPanel>
-                    <TextBlock Text="{Binding DisplayName}" Foreground="White" FontSize="11"
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}"
                                TextWrapping="Wrap" MaxHeight="32" />
-                    <TextBlock Foreground="#AAA" FontSize="10">
+                    <TextBlock Style="{StaticResource CaptionText}">
                         <Run Text="{Binding Count, Mode=OneWay}" />
                         <Run Text=" " />
                         <Run Text="{Binding PrefixDisplay, Mode=OneWay}" />
@@ -44,37 +44,166 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Slots}">
                     <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel />
-                        </ItemsPanelTemplate>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>
             </ScrollViewer>
         </DataTemplate>
+
+        <!-- Un objeto/arma/accesorio recomendado dentro de una build -->
+        <DataTemplate DataType="{x:Type data:BuildItemRef}">
+            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="8,5">
+                <StackPanel>
+                    <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}" />
+                    <TextBlock Text="{Binding Prefix}" Style="{StaticResource CaptionText}"
+                               Visibility="{Binding Prefix, Converter={StaticResource NullToVis}}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- Una clase dentro de una etapa (melee/ranged/mage/summoner/rogue) -->
+        <DataTemplate x:Key="BuildClassTemplate">
+            <StackPanel Margin="0,0,24,16" MinWidth="220">
+                <TextBlock Text="{Binding Key}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
+                <TextBlock Text="Armadura" Style="{StaticResource CaptionText}" Margin="0,4,0,2" />
+                <ItemsControl ItemsSource="{Binding Value.Armor}" />
+                <TextBlock Text="Armas" Style="{StaticResource CaptionText}" Margin="0,6,0,2" />
+                <ItemsControl ItemsSource="{Binding Value.Weapons}" />
+                <TextBlock Text="Accesorios" Style="{StaticResource CaptionText}" Margin="0,6,0,2" />
+                <ItemsControl ItemsSource="{Binding Value.Accessories}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Una etapa completa (Pre-Hardmode/Hardmode temprano/Endgame) -->
+        <DataTemplate DataType="{x:Type data:BuildStage}">
+            <StackPanel Margin="0,0,0,28">
+                <TextBlock Text="{Binding Label}" Style="{StaticResource TitleText}" Margin="0,0,0,10" />
+                <ItemsControl ItemsSource="{Binding Classes}" ItemTemplate="{StaticResource BuildClassTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Una entrada de "Novedades" -->
+        <DataTemplate DataType="{x:Type data:WhatsNewEntry}">
+            <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,0,14" Padding="16">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Version}" Style="{StaticResource TitleText}" />
+                        <TextBlock Text="{Binding DisplayDate}" Style="{StaticResource CaptionText}"
+                                   Margin="10,0,0,0" VerticalAlignment="Bottom" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding DisplayNote}" Style="{StaticResource CaptionText}"
+                               Margin="0,4,0,8" TextWrapping="Wrap"
+                               Visibility="{Binding DisplayNote, Converter={StaticResource EmptyToCollapsed}}" />
+                    <ItemsControl ItemsSource="{Binding Changes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type data:WhatsNewChange}">
+                                <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,2">
+                                    <Run Text="- " Foreground="{StaticResource AccentBrush}" />
+                                    <Run Text="{Binding DisplayText}" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="Objetos nuevos" Style="{StaticResource SectionText}" Margin="0,10,0,4"
+                               Visibility="{Binding Items.Count, Converter={StaticResource CountToVis}}" />
+                    <ItemsControl ItemsSource="{Binding Items}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type data:WhatsNewItem}">
+                                <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="4" Margin="0,0,6,6" Padding="7,3">
+                                    <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
     </Window.Resources>
 
-    <DockPanel Background="#1E1E1E">
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10" >
-            <Button Content="Cargar personaje (.plr)..." Padding="10,4" Click="OnLoadClick" />
-            <Button Content="Guardar" Padding="10,4" Margin="10,0,0,0"
-                    Command="{Binding SaveCommand}" />
-            <TextBlock Text="{Binding CharacterName, StringFormat='Personaje: {0}'}"
-                       Foreground="White" VerticalAlignment="Center" Margin="20,0,0,0"
-                       Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}" />
-        </StackPanel>
+    <TabControl Style="{StaticResource NavTabControl}">
+        <!-- ===================== PERSONAJE ===================== -->
+        <TabItem Header="Personaje">
+            <DockPanel Margin="14">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+                    <Button Content="Cargar personaje (.plr)..." Tag="Accent" Click="OnLoadClick" />
+                    <Button Content="Guardar" Margin="10,0,0,0" Command="{Binding SaveCommand}" />
+                    <TextBlock Text="{Binding CharacterName, StringFormat='Personaje: {0}'}"
+                               Style="{StaticResource SectionText}" VerticalAlignment="Center" Margin="20,0,0,0"
+                               Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
 
-        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Foreground="#CCC"
-                   Margin="10" TextWrapping="Wrap" />
+                <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Style="{StaticResource CaptionText}"
+                           Margin="0,10,0,0" TextWrapping="Wrap" />
 
-        <TabControl ItemsSource="{Binding Containers}" Margin="10" Background="#1E1E1E">
-            <TabControl.ItemTemplate>
-                <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
-                    <TextBlock Text="{Binding DisplayName}" />
-                </DataTemplate>
-            </TabControl.ItemTemplate>
-            <TabControl.ContentTemplate>
-                <StaticResource ResourceKey="ContainerTabTemplate" />
-            </TabControl.ContentTemplate>
-        </TabControl>
-    </DockPanel>
+                <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
+                    <TabControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                    </TabControl.ItemTemplate>
+                    <TabControl.ContentTemplate>
+                        <StaticResource ResourceKey="ContainerTabTemplate" />
+                    </TabControl.ContentTemplate>
+                </TabControl>
+            </DockPanel>
+        </TabItem>
+
+        <!-- ===================== BUILDS ===================== -->
+        <TabItem Header="Builds">
+            <TabControl Style="{StaticResource InnerTabControl}" Margin="14">
+                <TabItem Header="Vanilla">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Builds.VanillaStages}" Margin="4,10,0,0" />
+                    </ScrollViewer>
+                </TabItem>
+                <TabItem Header="Calamity Mod">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Builds.CalamityStages}" Margin="4,10,0,0" />
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
+        </TabItem>
+
+        <!-- ===================== NOVEDADES ===================== -->
+        <TabItem Header="Novedades">
+            <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding WhatsNew.Entries}" MaxWidth="760" HorizontalAlignment="Left" />
+            </ScrollViewer>
+        </TabItem>
+
+        <!-- ===================== EXPLORACION ===================== -->
+        <TabItem Header="Exploracion">
+            <StackPanel Margin="14" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="Visor de mundo" Style="{StaticResource TitleText}" HorizontalAlignment="Center" />
+                <TextBlock Style="{StaticResource CaptionText}" Margin="0,10,0,0" TextWrapping="Wrap" MaxWidth="420"
+                           TextAlignment="Center"
+                           Text="Explorador de mapas .wld con zoom/desplazamiento y buscador de NPCs - en construccion. Llega en una proxima ronda." />
+            </StackPanel>
+        </TabItem>
+
+        <!-- ===================== ACERCA DE ===================== -->
+        <TabItem Header="Acerca de">
+            <StackPanel Margin="14" MaxWidth="560">
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,20">
+                    <Image Source="pack://siteoforigin:,,,/Assets/branding/logo-128.png" Width="72" Height="72" />
+                    <StackPanel VerticalAlignment="Center" Margin="16,0,0,0">
+                        <TextBlock Text="{Binding About.AppName}" Style="{StaticResource TitleText}" FontSize="28" />
+                        <TextBlock Text="{Binding About.Tagline}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                        <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0">
+                            <Run Text="Version " /><Run Text="{Binding About.Version, Mode=OneWay}" />
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock Text="{Binding About.CreditsText}" Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" />
+            </StackPanel>
+        </TabItem>
+    </TabControl>
 </Window>

@@ -21,6 +21,15 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _hasCalamityData;
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
+    public BuildsViewModel Builds { get; }
+    public WhatsNewViewModel WhatsNew { get; }
+    public AboutViewModel About { get; } = new();
+
+    public MainViewModel()
+    {
+        Builds = new BuildsViewModel(_service.VanillaBuilds, _service.CalamityBuilds);
+        WhatsNew = new WhatsNewViewModel(_service.WhatsNew);
+    }
 
     public void LoadFromPath(string plrPath)
     {
