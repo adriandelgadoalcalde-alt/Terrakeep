@@ -31,6 +31,19 @@
                                 <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
                                 <Setter Property="BorderThickness" Value="2" />
                             </DataTrigger>
+                            <!-- Contorno verde real para lo que esta puesto de verdad (pedido explicito
+                                 2-sep-2026, en vez de solo un hueco de separacion): cualquier slot que
+                                 venga de la pantalla Equipamiento (armadura/accesorios/vanidad/tintes de
+                                 un loadout) - ver ItemSlotViewModel.IsEquipped/EquipmentGroupViewModel.
+                                 Solo si tiene algo dentro, un slot vacio no necesita destacarse. -->
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsEquipped}" Value="True" />
+                                    <Condition Binding="{Binding IsEmpty}" Value="False" />
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="BorderBrush" Value="{StaticResource EquippedGreenBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </MultiDataTrigger>
                             <!-- Slot seleccionado para el panel "Editar" compartido - pedido explicito
                                  1-sep-2026 (equivalente real de resaltar el slot activo de app.TabEdit). -->
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
@@ -290,9 +303,14 @@
         <DataTemplate x:Key="BuildClassTemplate" DataType="{x:Type vm:BuildClassGearViewModel}">
             <StackPanel Margin="0,0,24,16" MinWidth="220">
                 <DockPanel Margin="0,0,0,6">
+                    <!-- Bug real encontrado 2-sep-2026 ("el boton apenas se diferencia con el
+                         fondo"): Background/Foreground puestos a mano aqui NO HACEN NADA - la
+                         plantilla real de Button (Theme.xaml) ignora la propiedad Background
+                         del control (usa un SolidColorBrush con nombre fijo) y solo reacciona
+                         a Tag="Accent"/"Teal"/"Pink"/"Orange", igual que el resto de botones
+                         de color solido de la app (Cargar/Guardar/...). -->
                     <Button DockPanel.Dock="Right" Content="Auto-equipar" FontSize="11" Padding="7,2"
-                            Background="{StaticResource AccentBrush}" Foreground="{StaticResource BgPrimaryBrush}"
-                            BorderThickness="0"
+                            Tag="Accent"
                             Command="{Binding DataContext.AutoEquipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding Source}"
                             IsEnabled="{Binding DataContext.IsCharacterLoaded, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -1254,10 +1272,25 @@
                                                 </Style>
                                             </ItemsControl.ItemContainerStyle>
                                             <ItemsControl.ItemTemplate>
+                                                <!-- Sprite real del NPC (pedido explicito 2-sep-2026: "los npc deben
+                                                     salir con sus sprites no puntos rosas que no distingues nada") -
+                                                     Assets/npc_icons/{id}.png ya existia en el proyecto (copiado de
+                                                     Terrasavr-Calamity-Beta), solo faltaba usarlo aqui. Ancla abajo-
+                                                     centro (como un personaje de pie sobre su tile), no centrado como
+                                                     el punto de antes. Si algun dia aparece un NPC sin icono real
+                                                     (IconPath null - solo pasa con los que no son de pueblo/
+                                                     reclutables), cae al punto magenta de siempre en vez de no
+                                                     mostrar nada. -->
                                                 <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
-                                                    <Ellipse Width="11" Height="11" Margin="-5.5,-5.5,0,0"
-                                                             Fill="Magenta" Stroke="White" StrokeThickness="1.5"
-                                                             ToolTip="{Binding Name}" Cursor="Hand" />
+                                                    <Grid ToolTip="{Binding Name}" Cursor="Hand">
+                                                        <Image Source="{Binding IconPath}" Width="16" Stretch="Uniform"
+                                                               RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                                               Margin="-8,-22,0,0"
+                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                        <Ellipse Width="11" Height="11" Margin="-5.5,-5.5,0,0"
+                                                                 Fill="Magenta" Stroke="White" StrokeThickness="1.5"
+                                                                 Visibility="{Binding IconPath, Converter={StaticResource NullToCollapsed}}" />
+                                                    </Grid>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>

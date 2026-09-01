@@ -24,6 +24,11 @@ public partial class ItemSlotViewModel : ObservableObject
     // panel vive fuera del TabControl de contenedores (pedido explicito 1-sep-2026: el panel
     // debe "acompañar desde Equipamiento hasta Forja del Vacio").
     public string ContainerName { get; }
+    // true solo para los slots que vienen de EquipmentGroupViewModel (armadura/accesorios/
+    // vanidad/tintes de un loadout - genuinamente "puesto" en el personaje) - pedido explicito
+    // 2-sep-2026: contorno verde real en vez de solo un hueco de separacion. Los slots de
+    // Inventario/Banco/... normales se quedan en false.
+    public bool IsEquipped { get; }
     public GameItem Item { get; private set; } = GameItem.Empty;
 
     [ObservableProperty] private string _displayName = string.Empty;
@@ -41,12 +46,13 @@ public partial class ItemSlotViewModel : ObservableObject
     public bool IsNotEmpty => !IsEmpty;
     partial void OnIsEmptyChanged(bool value) => OnPropertyChanged(nameof(IsNotEmpty));
 
-    public ItemSlotViewModel(CharacterFileService service, int slotIndex, string containerName, GameItem item, Action<ItemSlotViewModel>? requestPick = null)
+    public ItemSlotViewModel(CharacterFileService service, int slotIndex, string containerName, GameItem item, Action<ItemSlotViewModel>? requestPick = null, bool isEquipped = false)
     {
         _service = service;
         SlotIndex = slotIndex;
         ContainerName = containerName;
         _requestPick = requestPick;
+        IsEquipped = isEquipped;
         UpdateFrom(item);
     }
 

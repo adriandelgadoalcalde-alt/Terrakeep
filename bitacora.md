@@ -2028,3 +2028,70 @@ Copia real (no solo documentada) dentro del propio repo, comiteada:
   hizo falta tocar ningún `.gitignore`.
 
 `dotnet build` en verde (confirma que `reference\` no interfiere con la compilación normal).
+
+## Tercera ronda de feedback (2-sep-2026)
+
+Mensaje denso nuevo, 5 puntos: botón "Auto-equipar" sin contraste, reestructurar la Librería
+para que Calamity tenga su propia carpeta madre (calcando la organización real de Terrasavr,
+en vez de las categorías actuales que mezclan cosas sin sentido) + lo mismo para Investigación
++ paginarla porque es larguísima, NPCs del visor de mundo como puntos rosas en vez de sus
+sprites reales, y contorno verde para lo que está puesto (equipado) tanto en Inventario como
+en Equipamiento. Los tres primeros puntos "rápidos" ya cerrados en este mismo turno:
+
+### Bug real encontrado y arreglado - botón "Auto-equipar" sin contraste
+
+Causa raíz real (no un simple ajuste de color): el `Style TargetType="Button"` por defecto de
+`Theme.xaml` tiene una plantilla que IGNORA la propiedad `Background`/`Foreground` puestas a
+mano en el propio `<Button>` - el `Border` interno de la plantilla usa un
+`SolidColorBrush x:Name="BdBrush"` fijo, y solo los `Trigger Property="Tag"` (`Accent`/`Teal`/
+`Pink`/`Orange`) lo cambian de verdad. El botón "Auto-equipar" (`BuildClassTemplate`) ponía
+`Background="{StaticResource AccentBrush}"` a mano, que literalmente no hacía nada - por eso
+salía con el gris por defecto, casi igual que la tarjeta de fondo. Arreglado usando
+`Tag="Accent"` (el mecanismo real que sí funciona, igual que todos los demás botones de color
+sólido de la app). Revisado el resto de `MainWindow.xaml` por el mismo patrón - solo hay otro
+caso (`Background="Transparent"` en la fila de NPC de la lista lateral), pero ahí no es un bug
+visible real porque el contenido lleva su propio `Border` con el fondo correcto encima.
+
+### NPCs del visor de mundo con sprite real (antes: puntos rosas)
+
+`Assets/npc_icons/{id}.png` YA EXISTÍA en el proyecto (copiado de Terrasavr-Calamity-Beta,
+27 NPCs de pueblo reales) y `NpcIconResolver`/`WorldNpcRowViewModel.IconPath` ya lo resolvían
+- solo faltaba usarlo en el propio mapa (la lista lateral de NPCs sí lo mostraba ya). El
+`ItemTemplate` del `ItemsControl` de NPCs sobre el mapa (`MainWindow.xaml`) pasa de un
+`Ellipse Fill="Magenta"` fijo a una `Image` con el sprite real (ancla abajo-centro, como un
+personaje de pie sobre su tile, `RenderOptions.BitmapScalingMode="NearestNeighbor"` igual que
+el propio mapa) - si algún día aparece un NPC sin icono real (`IconPath` null), cae al punto
+magenta de siempre en vez de no mostrar nada.
+
+### Contorno verde real para lo "equipado" (Equipamiento cerrado; Inventario pendiente de aclarar alcance)
+
+Nuevo `ItemSlotViewModel.IsEquipped` (parámetro opcional, `false` por defecto - no toca los
+sitios existentes) - `EquipmentGroupViewModel.AddSlotSet` lo pasa a `true` para los 12
+sub-contenedores reales (armadura/accesorios/vanidad/tintes de cualquier loadout, genuinamente
+"puesto" en el personaje). Nuevo `EquippedGreenColor`/`EquippedGreenBrush` en `Theme.xaml`
+(deliberadamente distinto del `TealBrush`, ya reservado para "acción con éxito" - el banner de
+guardado). `MainWindow.xaml`: `MultiDataTrigger` (`IsEquipped==true` Y `IsEmpty==false`) en la
+plantilla compartida de `ItemSlotViewModel` que pinta el borde en verde - antes del trigger de
+`IsSelected`, para que seguir pudiendo editar un slot equipado no pierda su resaltado de
+selección. Verificado con arnés de consola contra el personaje real: el 100% de los slots de
+`EquipmentGroup.AllContainers` tiene `IsEquipped=true`, el 100% de los de `Containers`
+(Inventario/Banco/...) tiene `IsEquipped=false`.
+
+Queda pendiente de aclarar con el usuario la mitad de este punto que mencionaba "las armas" del
+Inventario en sí (no Equipamiento) - el `.plr` no guarda ningún concepto de "arma
+actualmente empuñada" que se pueda leer de forma fiable, así que antes de adivinar una
+interpretación (¿toda la barra rápida 0-9? ¿solo el primer slot?) se le preguntó directamente,
+mismo criterio que [[feedback_preguntar-ante-ambiguedad-densa]].
+
+`dotnet build`/`dotnet test` en verde (128/128) para los tres puntos ya cerrados.
+
+### Pendiente de esta ronda
+- Aclarar con el usuario el alcance de "equipado" dentro de Inventario (ver arriba).
+- Reestructurar la Librería (y aplicar lo mismo a Investigación): Calamity con su propia
+  carpeta madre + subcarpetas reales (armaduras/armas a distancia/armas de mago/armas
+  mele/armas arrojadizas/accesorios/...), vanilla organizado igual calcando la estructura
+  real de Terrasavr (la actual "Materiales"/"Colocables" mezclan tintes+lingotes+minerales+
+  construcción sin ningún criterio real) - investigación en curso de cómo está montada la
+  lista real en `script.js`/`overrides.js` antes de proponer un plan concreto.
+- Investigación (pestaña) muy larga en forma de lista plana (8164 objetos) - pensar
+  paginación o reutilizar el mismo árbol de carpetas ya corregido de la Librería.

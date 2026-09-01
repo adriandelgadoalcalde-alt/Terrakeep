@@ -33,6 +33,10 @@
     <Color x:Key="PinkDeepColor">#c92a5e</Color>
     <Color x:Key="OrangeColor">#ffb84d</Color>
     <Color x:Key="OrangeDeepColor">#ff7a18</Color>
+    <!-- Verde de "equipado" (pedido explicito 2-sep-2026) - deliberadamente distinto del Teal
+         (ya reservado para "accion con exito", ej. el banner de guardado) para que ambos
+         significados no se confundan. -->
+    <Color x:Key="EquippedGreenColor">#3ddc6e</Color>
 
     <SolidColorBrush x:Key="BgPrimaryBrush" Color="{StaticResource BgPrimaryColor}" />
     <SolidColorBrush x:Key="BgSecondaryBrush" Color="{StaticResource BgSecondaryColor}" />
@@ -51,6 +55,7 @@
     <SolidColorBrush x:Key="TealBrush" Color="{StaticResource TealColor}" />
     <SolidColorBrush x:Key="PinkBrush" Color="{StaticResource PinkColor}" />
     <SolidColorBrush x:Key="OrangeBrush" Color="{StaticResource OrangeColor}" />
+    <SolidColorBrush x:Key="EquippedGreenBrush" Color="{StaticResource EquippedGreenColor}" />
 
     <!-- Degradados reales (135deg en el CSS original -> equivalente en WPF con StartPoint/
          EndPoint en esquinas opuestas) - los botones fuertes de Terrasavr real nunca son de

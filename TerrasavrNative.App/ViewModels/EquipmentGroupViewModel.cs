@@ -78,7 +78,7 @@ public partial class EquipmentGroupViewModel : ObservableObject
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
-            slots.Add(new ItemSlotViewModel(service, i, displayName, items[i], requestPickForSlot));
+            slots.Add(new ItemSlotViewModel(service, i, displayName, items[i], requestPickForSlot, isEquipped: true));
         string key = kind switch
         {
             EquipmentKind.Items => $"loadout{loadout}Items",
