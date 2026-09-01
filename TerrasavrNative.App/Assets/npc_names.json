@@ -1,0 +1,4148 @@
+[
+	{
+		"id": 1,
+		"key": "BlueSlime",
+		"en": "Blue Slime",
+		"es": "Slime azul"
+	},
+	{
+		"id": 2,
+		"key": "DemonEye",
+		"en": "Demon Eye",
+		"es": "Ojo demoníaco"
+	},
+	{
+		"id": 3,
+		"key": "Zombie",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 4,
+		"key": "EyeofCthulhu",
+		"en": "Eye of Cthulhu",
+		"es": "Ojo de Cthulhu"
+	},
+	{
+		"id": 5,
+		"key": "ServantofCthulhu",
+		"en": "Servant of Cthulhu",
+		"es": "Siervo de Cthulhu"
+	},
+	{
+		"id": 6,
+		"key": "EaterofSouls",
+		"en": "Eater of Souls",
+		"es": "Devoraalmas"
+	},
+	{
+		"id": 7,
+		"key": "DevourerHead",
+		"en": "Devourer",
+		"es": "Devorador"
+	},
+	{
+		"id": 8,
+		"key": "DevourerBody",
+		"en": "Devourer",
+		"es": "Devorador"
+	},
+	{
+		"id": 9,
+		"key": "DevourerTail",
+		"en": "Devourer",
+		"es": "Devorador"
+	},
+	{
+		"id": 10,
+		"key": "GiantWormHead",
+		"en": "Giant Worm",
+		"es": "Gusano gigante"
+	},
+	{
+		"id": 11,
+		"key": "GiantWormBody",
+		"en": "Giant Worm",
+		"es": "Gusano gigante"
+	},
+	{
+		"id": 12,
+		"key": "GiantWormTail",
+		"en": "Giant Worm",
+		"es": "Gusano gigante"
+	},
+	{
+		"id": 13,
+		"key": "EaterofWorldsHead",
+		"en": "Eater of Worlds",
+		"es": "Devoramundos"
+	},
+	{
+		"id": 14,
+		"key": "EaterofWorldsBody",
+		"en": "Eater of Worlds",
+		"es": "Devoramundos"
+	},
+	{
+		"id": 15,
+		"key": "EaterofWorldsTail",
+		"en": "Eater of Worlds",
+		"es": "Devoramundos"
+	},
+	{
+		"id": 16,
+		"key": "MotherSlime",
+		"en": "Mother Slime",
+		"es": "Mamá slime"
+	},
+	{
+		"id": 17,
+		"key": "Merchant",
+		"en": "Merchant",
+		"es": "Mercader"
+	},
+	{
+		"id": 18,
+		"key": "Nurse",
+		"en": "Nurse",
+		"es": "Enfermera"
+	},
+	{
+		"id": 19,
+		"key": "ArmsDealer",
+		"en": "Arms Dealer",
+		"es": "Traficante de armas"
+	},
+	{
+		"id": 20,
+		"key": "Dryad",
+		"en": "Dryad",
+		"es": "Dríada"
+	},
+	{
+		"id": 21,
+		"key": "Skeleton",
+		"en": "Skeleton",
+		"es": "Esqueleto"
+	},
+	{
+		"id": 22,
+		"key": "Guide",
+		"en": "Guide",
+		"es": "Guía"
+	},
+	{
+		"id": 23,
+		"key": "MeteorHead",
+		"en": "Meteor Head",
+		"es": "Cabeza meteorito"
+	},
+	{
+		"id": 24,
+		"key": "FireImp",
+		"en": "Fire Imp",
+		"es": "Diablillo de fuego"
+	},
+	{
+		"id": 25,
+		"key": "BurningSphere",
+		"en": "Burning Sphere",
+		"es": "Esfera ardiente"
+	},
+	{
+		"id": 26,
+		"key": "GoblinPeon",
+		"en": "Goblin Peon",
+		"es": "Duende peón"
+	},
+	{
+		"id": 27,
+		"key": "GoblinThief",
+		"en": "Goblin Thief",
+		"es": "Duende ladrón"
+	},
+	{
+		"id": 28,
+		"key": "GoblinWarrior",
+		"en": "Goblin Warrior",
+		"es": "Duende guerrero"
+	},
+	{
+		"id": 29,
+		"key": "GoblinSorcerer",
+		"en": "Goblin Sorcerer",
+		"es": "Duende hechicero"
+	},
+	{
+		"id": 30,
+		"key": "ChaosBall",
+		"en": "Chaos Ball",
+		"es": "Bola del caos"
+	},
+	{
+		"id": 31,
+		"key": "AngryBones",
+		"en": "Angry Bones",
+		"es": "Huesitos furiosos"
+	},
+	{
+		"id": 32,
+		"key": "DarkCaster",
+		"en": "Dark Caster",
+		"es": "Mago siniestro"
+	},
+	{
+		"id": 33,
+		"key": "WaterSphere",
+		"en": "Water Sphere",
+		"es": "Esfera de agua"
+	},
+	{
+		"id": 34,
+		"key": "CursedSkull",
+		"en": "Cursed Skull",
+		"es": "Cráneo maldito"
+	},
+	{
+		"id": 35,
+		"key": "SkeletronHead",
+		"en": "Skeletron",
+		"es": "Esqueletrón"
+	},
+	{
+		"id": 36,
+		"key": "SkeletronHand",
+		"en": "Skeletron",
+		"es": "Esqueletrón"
+	},
+	{
+		"id": 37,
+		"key": "OldMan",
+		"en": "Old Man",
+		"es": "Anciano"
+	},
+	{
+		"id": 38,
+		"key": "Demolitionist",
+		"en": "Demolitionist",
+		"es": "Demoledor"
+	},
+	{
+		"id": 39,
+		"key": "BoneSerpentHead",
+		"en": "Bone Serpent",
+		"es": "Serpiente de hueso"
+	},
+	{
+		"id": 40,
+		"key": "BoneSerpentBody",
+		"en": "Bone Serpent",
+		"es": "Serpiente de hueso"
+	},
+	{
+		"id": 41,
+		"key": "BoneSerpentTail",
+		"en": "Bone Serpent",
+		"es": "Serpiente de hueso"
+	},
+	{
+		"id": 42,
+		"key": "Hornet",
+		"en": "Hornet",
+		"es": "Avispón"
+	},
+	{
+		"id": 43,
+		"key": "ManEater",
+		"en": "Man Eater",
+		"es": "Devorahombres"
+	},
+	{
+		"id": 44,
+		"key": "UndeadMiner",
+		"en": "Undead Miner",
+		"es": "Minero no muerto"
+	},
+	{
+		"id": 45,
+		"key": "Tim",
+		"en": "Tim",
+		"es": "Tim"
+	},
+	{
+		"id": 46,
+		"key": "Bunny",
+		"en": "Bunny",
+		"es": "Conejo"
+	},
+	{
+		"id": 47,
+		"key": "CorruptBunny",
+		"en": "Corrupt Bunny",
+		"es": "Conejito corrompido"
+	},
+	{
+		"id": 48,
+		"key": "Harpy",
+		"en": "Harpy",
+		"es": "Arpía"
+	},
+	{
+		"id": 49,
+		"key": "CaveBat",
+		"en": "Cave Bat",
+		"es": "Murciélago de cueva"
+	},
+	{
+		"id": 50,
+		"key": "KingSlime",
+		"en": "King Slime",
+		"es": "Rey slime"
+	},
+	{
+		"id": 51,
+		"key": "JungleBat",
+		"en": "Jungle Bat",
+		"es": "Murciélago de selva"
+	},
+	{
+		"id": 52,
+		"key": "DoctorBones",
+		"en": "Doctor Bones",
+		"es": "Doctor Látigo"
+	},
+	{
+		"id": 53,
+		"key": "TheGroom",
+		"en": "The Groom",
+		"es": "El novio"
+	},
+	{
+		"id": 54,
+		"key": "Clothier",
+		"en": "Clothier",
+		"es": "Sastre"
+	},
+	{
+		"id": 55,
+		"key": "Goldfish",
+		"en": "Goldfish",
+		"es": "Pececillo"
+	},
+	{
+		"id": 56,
+		"key": "Snatcher",
+		"en": "Snatcher",
+		"es": "Atrapadora"
+	},
+	{
+		"id": 57,
+		"key": "CorruptGoldfish",
+		"en": "Corrupt Goldfish",
+		"es": "Pececillo corrompido"
+	},
+	{
+		"id": 58,
+		"key": "Piranha",
+		"en": "Piranha",
+		"es": "Piraña"
+	},
+	{
+		"id": 59,
+		"key": "LavaSlime",
+		"en": "Lava Slime",
+		"es": "Slime de lava"
+	},
+	{
+		"id": 60,
+		"key": "Hellbat",
+		"en": "Hellbat",
+		"es": "Murciélago infernal"
+	},
+	{
+		"id": 61,
+		"key": "Vulture",
+		"en": "Vulture",
+		"es": "Buitre"
+	},
+	{
+		"id": 62,
+		"key": "Demon",
+		"en": "Demon",
+		"es": "Demonio"
+	},
+	{
+		"id": 63,
+		"key": "BlueJellyfish",
+		"en": "Blue Jellyfish",
+		"es": "Medusa azul"
+	},
+	{
+		"id": 64,
+		"key": "PinkJellyfish",
+		"en": "Pink Jellyfish",
+		"es": "Medusa rosa"
+	},
+	{
+		"id": 65,
+		"key": "Shark",
+		"en": "Shark",
+		"es": "Tiburón"
+	},
+	{
+		"id": 66,
+		"key": "VoodooDemon",
+		"en": "Voodoo Demon",
+		"es": "Demonio vudú"
+	},
+	{
+		"id": 67,
+		"key": "Crab",
+		"en": "Crab",
+		"es": "Cangrejo"
+	},
+	{
+		"id": 68,
+		"key": "DungeonGuardian",
+		"en": "Dungeon Guardian",
+		"es": "Guardián de la mazmorra"
+	},
+	{
+		"id": 69,
+		"key": "Antlion",
+		"en": "Antlion",
+		"es": "Hormiga león"
+	},
+	{
+		"id": 70,
+		"key": "SpikeBall",
+		"en": "Spike Ball",
+		"es": "Bola de pinchos"
+	},
+	{
+		"id": 71,
+		"key": "DungeonSlime",
+		"en": "Dungeon Slime",
+		"es": "Slime de las mazmorras"
+	},
+	{
+		"id": 72,
+		"key": "BlazingWheel",
+		"en": "Blazing Wheel",
+		"es": "Rueda ardiente"
+	},
+	{
+		"id": 73,
+		"key": "GoblinScout",
+		"en": "Goblin Scout",
+		"es": "Duende explorador"
+	},
+	{
+		"id": 74,
+		"key": "Bird",
+		"en": "Bird",
+		"es": "Pájaro"
+	},
+	{
+		"id": 75,
+		"key": "Pixie",
+		"en": "Pixie",
+		"es": "Duendecillo"
+	},
+	{
+		"id": 77,
+		"key": "ArmoredSkeleton",
+		"en": "Armored Skeleton",
+		"es": "Esqueleto con armadura"
+	},
+	{
+		"id": 78,
+		"key": "Mummy",
+		"en": "Mummy",
+		"es": "Momia"
+	},
+	{
+		"id": 79,
+		"key": "DarkMummy",
+		"en": "Dark Mummy",
+		"es": "Momia de la oscuridad"
+	},
+	{
+		"id": 80,
+		"key": "LightMummy",
+		"en": "Light Mummy",
+		"es": "Momia de la luz"
+	},
+	{
+		"id": 81,
+		"key": "CorruptSlime",
+		"en": "Corrupt Slime",
+		"es": "Slime corrompido"
+	},
+	{
+		"id": 82,
+		"key": "Wraith",
+		"en": "Wraith",
+		"es": "Espectro"
+	},
+	{
+		"id": 83,
+		"key": "CursedHammer",
+		"en": "Cursed Hammer",
+		"es": "Martillo maldito"
+	},
+	{
+		"id": 84,
+		"key": "EnchantedSword",
+		"en": "Enchanted Sword",
+		"es": "Espada encantada"
+	},
+	{
+		"id": 85,
+		"key": "Mimic",
+		"en": "Mimic",
+		"es": "Cofre falso"
+	},
+	{
+		"id": 86,
+		"key": "Unicorn",
+		"en": "Unicorn",
+		"es": "Unicornio"
+	},
+	{
+		"id": 87,
+		"key": "WyvernHead",
+		"en": "Wyvern",
+		"es": "Guiverno"
+	},
+	{
+		"id": 88,
+		"key": "WyvernLegs",
+		"en": "Wyvern",
+		"es": "Guiverno"
+	},
+	{
+		"id": 89,
+		"key": "WyvernBody",
+		"en": "Wyvern",
+		"es": "Guiverno"
+	},
+	{
+		"id": 90,
+		"key": "WyvernBody2",
+		"en": "Wyvern",
+		"es": "Guiverno"
+	},
+	{
+		"id": 91,
+		"key": "WyvernBody3",
+		"en": "Wyvern",
+		"es": "Guiverno"
+	},
+	{
+		"id": 92,
+		"key": "WyvernTail",
+		"en": "Wyvern",
+		"es": "Guiverno"
+	},
+	{
+		"id": 93,
+		"key": "GiantBat",
+		"en": "Giant Bat",
+		"es": "Murciélago gigante"
+	},
+	{
+		"id": 94,
+		"key": "Corruptor",
+		"en": "Corruptor",
+		"es": "Corruptor"
+	},
+	{
+		"id": 95,
+		"key": "DiggerHead",
+		"en": "Digger",
+		"es": "Excavador"
+	},
+	{
+		"id": 96,
+		"key": "DiggerBody",
+		"en": "Digger",
+		"es": "Excavador"
+	},
+	{
+		"id": 97,
+		"key": "DiggerTail",
+		"en": "Digger",
+		"es": "Excavador"
+	},
+	{
+		"id": 98,
+		"key": "SeekerHead",
+		"en": "World Feeder",
+		"es": "Tragamundos"
+	},
+	{
+		"id": 99,
+		"key": "SeekerBody",
+		"en": "World Feeder",
+		"es": "Tragamundos"
+	},
+	{
+		"id": 100,
+		"key": "SeekerTail",
+		"en": "World Feeder",
+		"es": "Tragamundos"
+	},
+	{
+		"id": 101,
+		"key": "Clinger",
+		"en": "Clinger",
+		"es": "Lapa"
+	},
+	{
+		"id": 102,
+		"key": "AnglerFish",
+		"en": "Angler Fish",
+		"es": "Pez abisal"
+	},
+	{
+		"id": 103,
+		"key": "GreenJellyfish",
+		"en": "Green Jellyfish",
+		"es": "Medusa verde"
+	},
+	{
+		"id": 104,
+		"key": "Werewolf",
+		"en": "Werewolf",
+		"es": "Hombre lobo"
+	},
+	{
+		"id": 105,
+		"key": "BoundGoblin",
+		"en": "Bound Goblin",
+		"es": "Duende cautivo"
+	},
+	{
+		"id": 106,
+		"key": "BoundWizard",
+		"en": "Bound Wizard",
+		"es": "Mago cautivo"
+	},
+	{
+		"id": 107,
+		"key": "GoblinTinkerer",
+		"en": "Goblin Tinkerer",
+		"es": "Duende chapucero"
+	},
+	{
+		"id": 108,
+		"key": "Wizard",
+		"en": "Wizard",
+		"es": "Mago"
+	},
+	{
+		"id": 109,
+		"key": "Clown",
+		"en": "Clown",
+		"es": "Payaso"
+	},
+	{
+		"id": 110,
+		"key": "SkeletonArcher",
+		"en": "Skeleton Archer",
+		"es": "Esqueleto arquero"
+	},
+	{
+		"id": 111,
+		"key": "GoblinArcher",
+		"en": "Goblin Archer",
+		"es": "Duende arquero"
+	},
+	{
+		"id": 112,
+		"key": "VileSpit",
+		"en": "Vile Spit",
+		"es": "Escupitajo vil"
+	},
+	{
+		"id": 113,
+		"key": "WallofFlesh",
+		"en": "Wall of Flesh",
+		"es": "Muro carnoso"
+	},
+	{
+		"id": 114,
+		"key": "WallofFleshEye",
+		"en": "Wall of Flesh",
+		"es": "Muro carnoso"
+	},
+	{
+		"id": 115,
+		"key": "TheHungry",
+		"en": "The Hungry",
+		"es": "El Famélico"
+	},
+	{
+		"id": 116,
+		"key": "TheHungryII",
+		"en": "The Hungry",
+		"es": "El Famélico"
+	},
+	{
+		"id": 117,
+		"key": "LeechHead",
+		"en": "Leech",
+		"es": "Sanguijuela"
+	},
+	{
+		"id": 118,
+		"key": "LeechBody",
+		"en": "Leech",
+		"es": "Sanguijuela"
+	},
+	{
+		"id": 119,
+		"key": "LeechTail",
+		"en": "Leech",
+		"es": "Sanguijuela"
+	},
+	{
+		"id": 120,
+		"key": "ChaosElemental",
+		"en": "Chaos Elemental",
+		"es": "Caos elemental"
+	},
+	{
+		"id": 121,
+		"key": "Slimer",
+		"en": "Slimer",
+		"es": "Slimer"
+	},
+	{
+		"id": 122,
+		"key": "Gastropod",
+		"en": "Gastropod",
+		"es": "Gasterópodo"
+	},
+	{
+		"id": 123,
+		"key": "BoundMechanic",
+		"en": "Bound Mechanic",
+		"es": "Mecánico cautivo"
+	},
+	{
+		"id": 124,
+		"key": "Mechanic",
+		"en": "Mechanic",
+		"es": "Mecánica"
+	},
+	{
+		"id": 125,
+		"key": "Retinazer",
+		"en": "Retinazer",
+		"es": "Retinator"
+	},
+	{
+		"id": 126,
+		"key": "Spazmatism",
+		"en": "Spazmatism",
+		"es": "Espasmatizador"
+	},
+	{
+		"id": 127,
+		"key": "SkeletronPrime",
+		"en": "Skeletron Prime",
+		"es": "Esqueletrón mayor"
+	},
+	{
+		"id": 128,
+		"key": "PrimeCannon",
+		"en": "Prime Cannon",
+		"es": "Cañón mayor"
+	},
+	{
+		"id": 129,
+		"key": "PrimeSaw",
+		"en": "Prime Saw",
+		"es": "Sierra mayor"
+	},
+	{
+		"id": 130,
+		"key": "PrimeVice",
+		"en": "Prime Vice",
+		"es": "Torno mayor"
+	},
+	{
+		"id": 131,
+		"key": "PrimeLaser",
+		"en": "Prime Laser",
+		"es": "Láser mayor"
+	},
+	{
+		"id": 132,
+		"key": "BaldZombie",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 133,
+		"key": "WanderingEye",
+		"en": "Wandering Eye",
+		"es": "Ojo errante"
+	},
+	{
+		"id": 134,
+		"key": "TheDestroyer",
+		"en": "The Destroyer",
+		"es": "El Destructor"
+	},
+	{
+		"id": 135,
+		"key": "TheDestroyerBody",
+		"en": "The Destroyer",
+		"es": "El Destructor"
+	},
+	{
+		"id": 136,
+		"key": "TheDestroyerTail",
+		"en": "The Destroyer",
+		"es": "El Destructor"
+	},
+	{
+		"id": 137,
+		"key": "IlluminantBat",
+		"en": "Illuminant Bat",
+		"es": "Murciélago luminoso"
+	},
+	{
+		"id": 138,
+		"key": "IlluminantSlime",
+		"en": "Illuminant Slime",
+		"es": "Slime luminoso"
+	},
+	{
+		"id": 139,
+		"key": "Probe",
+		"en": "Probe",
+		"es": "Sonda"
+	},
+	{
+		"id": 140,
+		"key": "PossessedArmor",
+		"en": "Possessed Armor",
+		"es": "Armadura poseída"
+	},
+	{
+		"id": 141,
+		"key": "ToxicSludge",
+		"en": "Toxic Sludge",
+		"es": "Fango tóxico"
+	},
+	{
+		"id": 142,
+		"key": "SantaClaus",
+		"en": "Santa Claus",
+		"es": "Papá Noel"
+	},
+	{
+		"id": 143,
+		"key": "SnowmanGangsta",
+		"en": "Snowman Gangsta",
+		"es": "Muñeco de nieve malote"
+	},
+	{
+		"id": 144,
+		"key": "MisterStabby",
+		"en": "Mister Stabby",
+		"es": "Señor Stabby"
+	},
+	{
+		"id": 145,
+		"key": "SnowBalla",
+		"en": "Snow Balla",
+		"es": "Triunfador de nieve"
+	},
+	{
+		"id": 147,
+		"key": "IceSlime",
+		"en": "Ice Slime",
+		"es": "Slime de hielo"
+	},
+	{
+		"id": 148,
+		"key": "Penguin",
+		"en": "Penguin",
+		"es": "Pingüino"
+	},
+	{
+		"id": 149,
+		"key": "PenguinBlack",
+		"en": "Penguin",
+		"es": "Pingüino"
+	},
+	{
+		"id": 150,
+		"key": "IceBat",
+		"en": "Ice Bat",
+		"es": "Murciélago de hielo"
+	},
+	{
+		"id": 151,
+		"key": "Lavabat",
+		"en": "Lava Bat",
+		"es": "Murciélago de lava"
+	},
+	{
+		"id": 152,
+		"key": "GiantFlyingFox",
+		"en": "Giant Flying Fox",
+		"es": "Zorro volador gigante"
+	},
+	{
+		"id": 153,
+		"key": "GiantTortoise",
+		"en": "Giant Tortoise",
+		"es": "Tortuga gigante"
+	},
+	{
+		"id": 154,
+		"key": "IceTortoise",
+		"en": "Ice Tortoise",
+		"es": "Tortuga de hielo"
+	},
+	{
+		"id": 155,
+		"key": "Wolf",
+		"en": "Wolf",
+		"es": "Lobo"
+	},
+	{
+		"id": 156,
+		"key": "RedDevil",
+		"en": "Red Devil",
+		"es": "Diablo rojo"
+	},
+	{
+		"id": 157,
+		"key": "Arapaima",
+		"en": "Arapaima",
+		"es": "Arapaima"
+	},
+	{
+		"id": 158,
+		"key": "VampireBat",
+		"en": "Vampire",
+		"es": "Vampiro"
+	},
+	{
+		"id": 159,
+		"key": "Vampire",
+		"en": "Vampire",
+		"es": "Vampiro"
+	},
+	{
+		"id": 160,
+		"key": "Truffle",
+		"en": "Truffle",
+		"es": "Trufa"
+	},
+	{
+		"id": 161,
+		"key": "ZombieEskimo",
+		"en": "Frozen Zombie",
+		"es": "Zombi congelado"
+	},
+	{
+		"id": 162,
+		"key": "Frankenstein",
+		"en": "Frankenstein",
+		"es": "Frankenstein"
+	},
+	{
+		"id": 163,
+		"key": "BlackRecluse",
+		"en": "Black Recluse",
+		"es": "Ermitaño negro"
+	},
+	{
+		"id": 164,
+		"key": "WallCreeper",
+		"en": "Wall Creeper",
+		"es": "Criatura de pared"
+	},
+	{
+		"id": 165,
+		"key": "WallCreeperWall",
+		"en": "Wall Creeper",
+		"es": "Criatura de pared"
+	},
+	{
+		"id": 166,
+		"key": "SwampThing",
+		"en": "Swamp Thing",
+		"es": "Cosa del pantano"
+	},
+	{
+		"id": 167,
+		"key": "UndeadViking",
+		"en": "Undead Viking",
+		"es": "Vikingo no muerto"
+	},
+	{
+		"id": 168,
+		"key": "CorruptPenguin",
+		"en": "Corrupt Penguin",
+		"es": "Pingüino corrupto"
+	},
+	{
+		"id": 169,
+		"key": "IceElemental",
+		"en": "Ice Elemental",
+		"es": "Ente de hielo"
+	},
+	{
+		"id": 170,
+		"key": "PigronCorruption",
+		"en": "Pigron",
+		"es": "Cerdidragón"
+	},
+	{
+		"id": 171,
+		"key": "PigronHallow",
+		"en": "Pigron",
+		"es": "Cerdidragón"
+	},
+	{
+		"id": 172,
+		"key": "RuneWizard",
+		"en": "Rune Wizard",
+		"es": "Mago rúnico"
+	},
+	{
+		"id": 173,
+		"key": "Crimera",
+		"en": "Crimera",
+		"es": "Carmebicho"
+	},
+	{
+		"id": 174,
+		"key": "Herpling",
+		"en": "Herpling",
+		"es": "Lerduno"
+	},
+	{
+		"id": 175,
+		"key": "AngryTrapper",
+		"en": "Angry Trapper",
+		"es": "Trampero enfadado"
+	},
+	{
+		"id": 176,
+		"key": "MossHornet",
+		"en": "Moss Hornet",
+		"es": "Avispón del musgo"
+	},
+	{
+		"id": 177,
+		"key": "Derpling",
+		"en": "Derpling",
+		"es": "Tontuno"
+	},
+	{
+		"id": 178,
+		"key": "Steampunker",
+		"en": "Steampunker",
+		"es": "Steampunker"
+	},
+	{
+		"id": 179,
+		"key": "CrimsonAxe",
+		"en": "Crimson Axe",
+		"es": "Hacha carmesí"
+	},
+	{
+		"id": 180,
+		"key": "PigronCrimson",
+		"en": "Pigron",
+		"es": "Cerdidragón"
+	},
+	{
+		"id": 181,
+		"key": "FaceMonster",
+		"en": "Face Monster",
+		"es": "Caramonstruo"
+	},
+	{
+		"id": 182,
+		"key": "FloatyGross",
+		"en": "Floaty Gross",
+		"es": "Flotasquillo"
+	},
+	{
+		"id": 183,
+		"key": "Crimslime",
+		"en": "Crimslime",
+		"es": "Slime carmesí"
+	},
+	{
+		"id": 184,
+		"key": "SpikedIceSlime",
+		"en": "Spiked Ice Slime",
+		"es": "Slime de hielo puntiagudo"
+	},
+	{
+		"id": 185,
+		"key": "SnowFlinx",
+		"en": "Snow Flinx",
+		"es": "Copito de nieve"
+	},
+	{
+		"id": 186,
+		"key": "PincushionZombie",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 187,
+		"key": "SlimedZombie",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 188,
+		"key": "SwampZombie",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 189,
+		"key": "TwiggyZombie",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 190,
+		"key": "CataractEye",
+		"en": "Demon Eye",
+		"es": "Ojo demoníaco"
+	},
+	{
+		"id": 191,
+		"key": "SleepyEye",
+		"en": "Demon Eye",
+		"es": "Ojo demoníaco"
+	},
+	{
+		"id": 192,
+		"key": "DialatedEye",
+		"en": "Demon Eye",
+		"es": "Ojo demoníaco"
+	},
+	{
+		"id": 193,
+		"key": "GreenEye",
+		"en": "Demon Eye",
+		"es": "Ojo demoníaco"
+	},
+	{
+		"id": 194,
+		"key": "PurpleEye",
+		"en": "Demon Eye",
+		"es": "Ojo demoníaco"
+	},
+	{
+		"id": 195,
+		"key": "LostGirl",
+		"en": "Lost Girl",
+		"es": "Niña perdida"
+	},
+	{
+		"id": 196,
+		"key": "Nymph",
+		"en": "Nymph",
+		"es": "Ninfa"
+	},
+	{
+		"id": 197,
+		"key": "ArmoredViking",
+		"en": "Armored Viking",
+		"es": "Vikingo acorazado"
+	},
+	{
+		"id": 198,
+		"key": "Lihzahrd",
+		"en": "Lihzahrd",
+		"es": "Lihzahrd"
+	},
+	{
+		"id": 199,
+		"key": "LihzahrdCrawler",
+		"en": "Lihzahrd",
+		"es": "Lihzahrd"
+	},
+	{
+		"id": 200,
+		"key": "FemaleZombie",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 201,
+		"key": "HeadacheSkeleton",
+		"en": "Skeleton",
+		"es": "Esqueleto"
+	},
+	{
+		"id": 202,
+		"key": "MisassembledSkeleton",
+		"en": "Skeleton",
+		"es": "Esqueleto"
+	},
+	{
+		"id": 203,
+		"key": "PantlessSkeleton",
+		"en": "Skeleton",
+		"es": "Esqueleto"
+	},
+	{
+		"id": 204,
+		"key": "SpikedJungleSlime",
+		"en": "Spiked Jungle Slime",
+		"es": "Slime selvático puntiagudo"
+	},
+	{
+		"id": 205,
+		"key": "Moth",
+		"en": "Moth",
+		"es": "Polilla"
+	},
+	{
+		"id": 206,
+		"key": "IcyMerman",
+		"en": "Icy Merman",
+		"es": "Tritón helado"
+	},
+	{
+		"id": 207,
+		"key": "DyeTrader",
+		"en": "Dye Trader",
+		"es": "Comerciante de tintes"
+	},
+	{
+		"id": 208,
+		"key": "PartyGirl",
+		"en": "Party Girl",
+		"es": "Chica fiestera"
+	},
+	{
+		"id": 209,
+		"key": "Cyborg",
+		"en": "Cyborg",
+		"es": "Ciborg"
+	},
+	{
+		"id": 210,
+		"key": "Bee",
+		"en": "Bee",
+		"es": "Abeja"
+	},
+	{
+		"id": 211,
+		"key": "BeeSmall",
+		"en": "Bee",
+		"es": "Abeja"
+	},
+	{
+		"id": 212,
+		"key": "PirateDeckhand",
+		"en": "Pirate Deckhand",
+		"es": "Pirata de cubierta"
+	},
+	{
+		"id": 213,
+		"key": "PirateCorsair",
+		"en": "Pirate Corsair",
+		"es": "Corsario pirata"
+	},
+	{
+		"id": 214,
+		"key": "PirateDeadeye",
+		"en": "Pirate Deadeye",
+		"es": "Pirata pistolero"
+	},
+	{
+		"id": 215,
+		"key": "PirateCrossbower",
+		"en": "Pirate Crossbower",
+		"es": "Pirata con arco"
+	},
+	{
+		"id": 216,
+		"key": "PirateCaptain",
+		"en": "Pirate Captain",
+		"es": "Capitán pirata"
+	},
+	{
+		"id": 217,
+		"key": "CochinealBeetle",
+		"en": "Cochineal Beetle",
+		"es": "Cochinilla"
+	},
+	{
+		"id": 218,
+		"key": "CyanBeetle",
+		"en": "Cyan Beetle",
+		"es": "Escarabajo turquesa"
+	},
+	{
+		"id": 219,
+		"key": "LacBeetle",
+		"en": "Lac Beetle",
+		"es": "Escarabajo laca"
+	},
+	{
+		"id": 220,
+		"key": "SeaSnail",
+		"en": "Sea Snail",
+		"es": "Caracol marino"
+	},
+	{
+		"id": 221,
+		"key": "Squid",
+		"en": "Squid",
+		"es": "Calamar"
+	},
+	{
+		"id": 222,
+		"key": "QueenBee",
+		"en": "Queen Bee",
+		"es": "Abeja reina"
+	},
+	{
+		"id": 223,
+		"key": "ZombieRaincoat",
+		"en": "Raincoat Zombie",
+		"es": "Zombi con chubasquero"
+	},
+	{
+		"id": 224,
+		"key": "FlyingFish",
+		"en": "Flying Fish",
+		"es": "Pez volador"
+	},
+	{
+		"id": 225,
+		"key": "UmbrellaSlime",
+		"en": "Umbrella Slime",
+		"es": "Slime paraguas"
+	},
+	{
+		"id": 226,
+		"key": "FlyingSnake",
+		"en": "Flying Snake",
+		"es": "Serpiente voladora"
+	},
+	{
+		"id": 227,
+		"key": "Painter",
+		"en": "Painter",
+		"es": "Pintor"
+	},
+	{
+		"id": 228,
+		"key": "WitchDoctor",
+		"en": "Witch Doctor",
+		"es": "Médico brujo"
+	},
+	{
+		"id": 229,
+		"key": "Pirate",
+		"en": "Pirate",
+		"es": "Pirata"
+	},
+	{
+		"id": 230,
+		"key": "GoldfishWalker",
+		"en": "Goldfish",
+		"es": "Pececillo"
+	},
+	{
+		"id": 231,
+		"key": "HornetFatty",
+		"en": "Hornet",
+		"es": "Avispón"
+	},
+	{
+		"id": 232,
+		"key": "HornetHoney",
+		"en": "Hornet",
+		"es": "Avispón"
+	},
+	{
+		"id": 233,
+		"key": "HornetLeafy",
+		"en": "Hornet",
+		"es": "Avispón"
+	},
+	{
+		"id": 234,
+		"key": "HornetSpikey",
+		"en": "Hornet",
+		"es": "Avispón"
+	},
+	{
+		"id": 235,
+		"key": "HornetStingy",
+		"en": "Hornet",
+		"es": "Avispón"
+	},
+	{
+		"id": 236,
+		"key": "JungleCreeper",
+		"en": "Jungle Creeper",
+		"es": "Criatura selvática"
+	},
+	{
+		"id": 237,
+		"key": "JungleCreeperWall",
+		"en": "Jungle Creeper",
+		"es": "Criatura selvática"
+	},
+	{
+		"id": 238,
+		"key": "BlackRecluseWall",
+		"en": "Black Recluse",
+		"es": "Ermitaño negro"
+	},
+	{
+		"id": 239,
+		"key": "BloodCrawler",
+		"en": "Blood Crawler",
+		"es": "Trepasangre"
+	},
+	{
+		"id": 240,
+		"key": "BloodCrawlerWall",
+		"en": "Blood Crawler",
+		"es": "Trepasangre"
+	},
+	{
+		"id": 241,
+		"key": "BloodFeeder",
+		"en": "Blood Feeder",
+		"es": "Tragasangre"
+	},
+	{
+		"id": 242,
+		"key": "BloodJelly",
+		"en": "Blood Jelly",
+		"es": "Medusa de sangre"
+	},
+	{
+		"id": 243,
+		"key": "IceGolem",
+		"en": "Ice Golem",
+		"es": "Gólem de hielo"
+	},
+	{
+		"id": 244,
+		"key": "RainbowSlime",
+		"en": "Rainbow Slime",
+		"es": "Slime arcoíris"
+	},
+	{
+		"id": 245,
+		"key": "Golem",
+		"en": "Golem",
+		"es": "Gólem"
+	},
+	{
+		"id": 246,
+		"key": "GolemHead",
+		"en": "Golem Head",
+		"es": "Cabeza de gólem"
+	},
+	{
+		"id": 247,
+		"key": "GolemFistLeft",
+		"en": "Golem Fist",
+		"es": "Puño de gólem"
+	},
+	{
+		"id": 248,
+		"key": "GolemFistRight",
+		"en": "Golem Fist",
+		"es": "Puño de gólem"
+	},
+	{
+		"id": 249,
+		"key": "GolemHeadFree",
+		"en": "Golem Head",
+		"es": "Cabeza de gólem"
+	},
+	{
+		"id": 250,
+		"key": "AngryNimbus",
+		"en": "Angry Nimbus",
+		"es": "Nimbo enfadado"
+	},
+	{
+		"id": 251,
+		"key": "Eyezor",
+		"en": "Eyezor",
+		"es": "Ojozor"
+	},
+	{
+		"id": 252,
+		"key": "Parrot",
+		"en": "Parrot",
+		"es": "Loro"
+	},
+	{
+		"id": 253,
+		"key": "Reaper",
+		"en": "Reaper",
+		"es": "Muerte"
+	},
+	{
+		"id": 254,
+		"key": "ZombieMushroom",
+		"en": "Spore Zombie",
+		"es": "Zombi espora"
+	},
+	{
+		"id": 255,
+		"key": "ZombieMushroomHat",
+		"en": "Spore Zombie",
+		"es": "Zombi espora"
+	},
+	{
+		"id": 256,
+		"key": "FungoFish",
+		"en": "Fungo Fish",
+		"es": "Pez mohoso"
+	},
+	{
+		"id": 257,
+		"key": "AnomuraFungus",
+		"en": "Anomura Fungus",
+		"es": "Hongo anomura"
+	},
+	{
+		"id": 258,
+		"key": "MushiLadybug",
+		"en": "Mushi Ladybug",
+		"es": "Mariquita mushi"
+	},
+	{
+		"id": 259,
+		"key": "FungiBulb",
+		"en": "Fungi Bulb",
+		"es": "Bulbo mohoso"
+	},
+	{
+		"id": 260,
+		"key": "GiantFungiBulb",
+		"en": "Giant Fungi Bulb",
+		"es": "Bulbo mohoso gigantesco"
+	},
+	{
+		"id": 261,
+		"key": "FungiSpore",
+		"en": "Fungi Spore",
+		"es": "Esporas de hongo"
+	},
+	{
+		"id": 262,
+		"key": "Plantera",
+		"en": "Plantera",
+		"es": "Plantera"
+	},
+	{
+		"id": 263,
+		"key": "PlanterasHook",
+		"en": "Plantera's Hook",
+		"es": "Garfio de Plantera"
+	},
+	{
+		"id": 264,
+		"key": "PlanterasTentacle",
+		"en": "Plantera's Tentacle",
+		"es": "Tentáculo de Plantera"
+	},
+	{
+		"id": 265,
+		"key": "Spore",
+		"en": "Spore",
+		"es": "Esporas de hongo"
+	},
+	{
+		"id": 266,
+		"key": "BrainofCthulhu",
+		"en": "Brain of Cthulhu",
+		"es": "Cerebro de Cthulhu"
+	},
+	{
+		"id": 267,
+		"key": "Creeper",
+		"en": "Creeper",
+		"es": "Criatura"
+	},
+	{
+		"id": 268,
+		"key": "IchorSticker",
+		"en": "Ichor Sticker",
+		"es": "Pegatina de icor"
+	},
+	{
+		"id": 269,
+		"key": "RustyArmoredBonesAxe",
+		"en": "Rusty Armored Bones",
+		"es": "Huesos viejos acorazados"
+	},
+	{
+		"id": 270,
+		"key": "RustyArmoredBonesFlail",
+		"en": "Rusty Armored Bones",
+		"es": "Huesos viejos acorazados"
+	},
+	{
+		"id": 271,
+		"key": "RustyArmoredBonesSword",
+		"en": "Rusty Armored Bones",
+		"es": "Huesos viejos acorazados"
+	},
+	{
+		"id": 272,
+		"key": "RustyArmoredBonesSwordNoArmor",
+		"en": "Rusty Armored Bones",
+		"es": "Huesos viejos acorazados"
+	},
+	{
+		"id": 273,
+		"key": "BlueArmoredBones",
+		"en": "Blue Armored Bones",
+		"es": "Huesos azules acorazados"
+	},
+	{
+		"id": 274,
+		"key": "BlueArmoredBonesMace",
+		"en": "Blue Armored Bones",
+		"es": "Huesos azules acorazados"
+	},
+	{
+		"id": 275,
+		"key": "BlueArmoredBonesNoPants",
+		"en": "Blue Armored Bones",
+		"es": "Huesos azules acorazados"
+	},
+	{
+		"id": 276,
+		"key": "BlueArmoredBonesSword",
+		"en": "Blue Armored Bones",
+		"es": "Huesos azules acorazados"
+	},
+	{
+		"id": 277,
+		"key": "HellArmoredBones",
+		"en": "Hell Armored Bones",
+		"es": "Huesos infernales acorazados"
+	},
+	{
+		"id": 278,
+		"key": "HellArmoredBonesSpikeShield",
+		"en": "Hell Armored Bones",
+		"es": "Huesos infernales acorazados"
+	},
+	{
+		"id": 279,
+		"key": "HellArmoredBonesMace",
+		"en": "Hell Armored Bones",
+		"es": "Huesos infernales acorazados"
+	},
+	{
+		"id": 280,
+		"key": "HellArmoredBonesSword",
+		"en": "Hell Armored Bones",
+		"es": "Huesos infernales acorazados"
+	},
+	{
+		"id": 281,
+		"key": "RaggedCaster",
+		"en": "Ragged Caster",
+		"es": "Mago harapiento"
+	},
+	{
+		"id": 282,
+		"key": "RaggedCasterOpenCoat",
+		"en": "Ragged Caster",
+		"es": "Mago harapiento"
+	},
+	{
+		"id": 283,
+		"key": "Necromancer",
+		"en": "Necromancer",
+		"es": "Nigromante"
+	},
+	{
+		"id": 284,
+		"key": "NecromancerArmored",
+		"en": "Necromancer",
+		"es": "Nigromante"
+	},
+	{
+		"id": 285,
+		"key": "DiabolistRed",
+		"en": "Diabolist",
+		"es": "Diablista"
+	},
+	{
+		"id": 286,
+		"key": "DiabolistWhite",
+		"en": "Diabolist",
+		"es": "Diablista"
+	},
+	{
+		"id": 287,
+		"key": "BoneLee",
+		"en": "Bone Lee",
+		"es": "Hueso Lee"
+	},
+	{
+		"id": 288,
+		"key": "DungeonSpirit",
+		"en": "Dungeon Spirit",
+		"es": "Espíritu de la mazmorra"
+	},
+	{
+		"id": 289,
+		"key": "GiantCursedSkull",
+		"en": "Giant Cursed Skull",
+		"es": "Calavera maldita gigante"
+	},
+	{
+		"id": 290,
+		"key": "Paladin",
+		"en": "Paladin",
+		"es": "Paladín"
+	},
+	{
+		"id": 291,
+		"key": "SkeletonSniper",
+		"en": "Skeleton Sniper",
+		"es": "Esqueleto francotirador"
+	},
+	{
+		"id": 292,
+		"key": "TacticalSkeleton",
+		"en": "Tactical Skeleton",
+		"es": "Esqueleto táctico"
+	},
+	{
+		"id": 293,
+		"key": "SkeletonCommando",
+		"en": "Skeleton Commando",
+		"es": "Esqueleto comando"
+	},
+	{
+		"id": 294,
+		"key": "AngryBonesBig",
+		"en": "Angry Bones",
+		"es": "Huesitos furiosos"
+	},
+	{
+		"id": 295,
+		"key": "AngryBonesBigMuscle",
+		"en": "Angry Bones",
+		"es": "Huesitos furiosos"
+	},
+	{
+		"id": 296,
+		"key": "AngryBonesBigHelmet",
+		"en": "Angry Bones",
+		"es": "Huesitos furiosos"
+	},
+	{
+		"id": 297,
+		"key": "BirdBlue",
+		"en": "Blue Jay",
+		"es": "Arrendajo azul"
+	},
+	{
+		"id": 298,
+		"key": "BirdRed",
+		"en": "Cardinal",
+		"es": "Cardenal"
+	},
+	{
+		"id": 299,
+		"key": "Squirrel",
+		"en": "Squirrel",
+		"es": "Ardilla"
+	},
+	{
+		"id": 300,
+		"key": "Mouse",
+		"en": "Mouse",
+		"es": "Ratón"
+	},
+	{
+		"id": 301,
+		"key": "Raven",
+		"en": "Raven",
+		"es": "Cuervo"
+	},
+	{
+		"id": 302,
+		"key": "SlimeMasked",
+		"en": "Slime",
+		"es": "Slime"
+	},
+	{
+		"id": 303,
+		"key": "BunnySlimed",
+		"en": "Bunny",
+		"es": "Conejo"
+	},
+	{
+		"id": 304,
+		"key": "HoppinJack",
+		"en": "Hoppin' Jack",
+		"es": "Jack saltarín"
+	},
+	{
+		"id": 305,
+		"key": "Scarecrow1",
+		"en": "Scarecrow",
+		"es": "Espantapájaros"
+	},
+	{
+		"id": 306,
+		"key": "Scarecrow2",
+		"en": "Scarecrow",
+		"es": "Espantapájaros"
+	},
+	{
+		"id": 307,
+		"key": "Scarecrow3",
+		"en": "Scarecrow",
+		"es": "Espantapájaros"
+	},
+	{
+		"id": 308,
+		"key": "Scarecrow4",
+		"en": "Scarecrow",
+		"es": "Espantapájaros"
+	},
+	{
+		"id": 309,
+		"key": "Scarecrow5",
+		"en": "Scarecrow",
+		"es": "Espantapájaros"
+	},
+	{
+		"id": 310,
+		"key": "Scarecrow6",
+		"en": "Scarecrow",
+		"es": "Espantapájaros"
+	},
+	{
+		"id": 311,
+		"key": "Scarecrow7",
+		"en": "Scarecrow",
+		"es": "Espantapájaros"
+	},
+	{
+		"id": 312,
+		"key": "Scarecrow8",
+		"en": "Scarecrow",
+		"es": "Espantapájaros"
+	},
+	{
+		"id": 313,
+		"key": "Scarecrow9",
+		"en": "Scarecrow",
+		"es": "Espantapájaros"
+	},
+	{
+		"id": 314,
+		"key": "Scarecrow10",
+		"en": "Scarecrow",
+		"es": "Espantapájaros"
+	},
+	{
+		"id": 315,
+		"key": "HeadlessHorseman",
+		"en": "Headless Horseman",
+		"es": "Caballero sin cabeza"
+	},
+	{
+		"id": 316,
+		"key": "Ghost",
+		"en": "Ghost",
+		"es": "Fantasma"
+	},
+	{
+		"id": 317,
+		"key": "DemonEyeOwl",
+		"en": "Demon Eye",
+		"es": "Ojo demoníaco"
+	},
+	{
+		"id": 318,
+		"key": "DemonEyeSpaceship",
+		"en": "Demon Eye",
+		"es": "Ojo demoníaco"
+	},
+	{
+		"id": 319,
+		"key": "ZombieDoctor",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 320,
+		"key": "ZombieSuperman",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 321,
+		"key": "ZombiePixie",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 322,
+		"key": "SkeletonTopHat",
+		"en": "Skeleton",
+		"es": "Esqueleto"
+	},
+	{
+		"id": 323,
+		"key": "SkeletonAstonaut",
+		"en": "Skeleton",
+		"es": "Esqueleto"
+	},
+	{
+		"id": 324,
+		"key": "SkeletonAlien",
+		"en": "Skeleton",
+		"es": "Esqueleto"
+	},
+	{
+		"id": 325,
+		"key": "MourningWood",
+		"en": "Mourning Wood",
+		"es": "Árbol de luto"
+	},
+	{
+		"id": 326,
+		"key": "Splinterling",
+		"en": "Splinterling",
+		"es": "Astilleante"
+	},
+	{
+		"id": 327,
+		"key": "Pumpking",
+		"en": "Pumpking",
+		"es": "Rey calabaza"
+	},
+	{
+		"id": 328,
+		"key": "PumpkingBlade",
+		"en": "Pumpking",
+		"es": "Rey calabaza"
+	},
+	{
+		"id": 329,
+		"key": "Hellhound",
+		"en": "Hellhound",
+		"es": "Perro infernal"
+	},
+	{
+		"id": 330,
+		"key": "Poltergeist",
+		"en": "Poltergeist",
+		"es": "Poltergeist"
+	},
+	{
+		"id": 331,
+		"key": "ZombieXmas",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 332,
+		"key": "ZombieSweater",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 333,
+		"key": "SlimeRibbonWhite",
+		"en": "Slime",
+		"es": "Slime"
+	},
+	{
+		"id": 334,
+		"key": "SlimeRibbonYellow",
+		"en": "Slime",
+		"es": "Slime"
+	},
+	{
+		"id": 335,
+		"key": "SlimeRibbonGreen",
+		"en": "Slime",
+		"es": "Slime"
+	},
+	{
+		"id": 336,
+		"key": "SlimeRibbonRed",
+		"en": "Slime",
+		"es": "Slime"
+	},
+	{
+		"id": 337,
+		"key": "BunnyXmas",
+		"en": "Bunny",
+		"es": "Conejo"
+	},
+	{
+		"id": 338,
+		"key": "ZombieElf",
+		"en": "Zombie Elf",
+		"es": "Elfo zombi"
+	},
+	{
+		"id": 339,
+		"key": "ZombieElfBeard",
+		"en": "Zombie Elf",
+		"es": "Elfo zombi"
+	},
+	{
+		"id": 340,
+		"key": "ZombieElfGirl",
+		"en": "Zombie Elf",
+		"es": "Elfo zombi"
+	},
+	{
+		"id": 341,
+		"key": "PresentMimic",
+		"en": "Present Mimic",
+		"es": "Regalo falso"
+	},
+	{
+		"id": 342,
+		"key": "GingerbreadMan",
+		"en": "Gingerbread Man",
+		"es": "Hombre de jengibre"
+	},
+	{
+		"id": 343,
+		"key": "Yeti",
+		"en": "Yeti",
+		"es": "Yeti"
+	},
+	{
+		"id": 344,
+		"key": "Everscream",
+		"en": "Everscream",
+		"es": "Gritoeterno"
+	},
+	{
+		"id": 345,
+		"key": "IceQueen",
+		"en": "Ice Queen",
+		"es": "Reina de Hielo"
+	},
+	{
+		"id": 346,
+		"key": "SantaNK1",
+		"en": "Santa-NK1",
+		"es": "Papá-NK1"
+	},
+	{
+		"id": 347,
+		"key": "ElfCopter",
+		"en": "Elf Copter",
+		"es": "Elfocóptero"
+	},
+	{
+		"id": 348,
+		"key": "Nutcracker",
+		"en": "Nutcracker",
+		"es": "Cascanueces"
+	},
+	{
+		"id": 349,
+		"key": "NutcrackerSpinning",
+		"en": "Nutcracker",
+		"es": "Cascanueces"
+	},
+	{
+		"id": 350,
+		"key": "ElfArcher",
+		"en": "Elf Archer",
+		"es": "Arquero elfo"
+	},
+	{
+		"id": 351,
+		"key": "Krampus",
+		"en": "Krampus",
+		"es": "Krampus"
+	},
+	{
+		"id": 352,
+		"key": "Flocko",
+		"en": "Flocko",
+		"es": "Copito"
+	},
+	{
+		"id": 353,
+		"key": "Stylist",
+		"en": "Stylist",
+		"es": "Estilista"
+	},
+	{
+		"id": 354,
+		"key": "WebbedStylist",
+		"en": "Webbed Stylist",
+		"es": "Estilisa entelarañada"
+	},
+	{
+		"id": 355,
+		"key": "Firefly",
+		"en": "Firefly",
+		"es": "Luciérnaga"
+	},
+	{
+		"id": 356,
+		"key": "Butterfly",
+		"en": "Butterfly",
+		"es": "Mariposa"
+	},
+	{
+		"id": 357,
+		"key": "Worm",
+		"en": "Worm",
+		"es": "Gusano"
+	},
+	{
+		"id": 358,
+		"key": "LightningBug",
+		"en": "Lightning Bug",
+		"es": "Insecto rayo"
+	},
+	{
+		"id": 359,
+		"key": "Snail",
+		"en": "Snail",
+		"es": "Caracol"
+	},
+	{
+		"id": 360,
+		"key": "GlowingSnail",
+		"en": "Glowing Snail",
+		"es": "Caracol brillante"
+	},
+	{
+		"id": 361,
+		"key": "Frog",
+		"en": "Frog",
+		"es": "Rana"
+	},
+	{
+		"id": 362,
+		"key": "Duck",
+		"en": "Duck",
+		"es": "Pato"
+	},
+	{
+		"id": 363,
+		"key": "Duck2",
+		"en": "Duck",
+		"es": "Pato"
+	},
+	{
+		"id": 364,
+		"key": "DuckWhite",
+		"en": "Duck",
+		"es": "Pato"
+	},
+	{
+		"id": 365,
+		"key": "DuckWhite2",
+		"en": "Duck",
+		"es": "Pato"
+	},
+	{
+		"id": 366,
+		"key": "ScorpionBlack",
+		"en": "Scorpion",
+		"es": "Escorpión"
+	},
+	{
+		"id": 367,
+		"key": "Scorpion",
+		"en": "Scorpion",
+		"es": "Escorpión"
+	},
+	{
+		"id": 368,
+		"key": "TravellingMerchant",
+		"en": "Traveling Merchant",
+		"es": "Mercader ambulante"
+	},
+	{
+		"id": 369,
+		"key": "Angler",
+		"en": "Angler",
+		"es": "Pescador"
+	},
+	{
+		"id": 370,
+		"key": "DukeFishron",
+		"en": "Duke Fishron",
+		"es": "Duque Fishron"
+	},
+	{
+		"id": 371,
+		"key": "DetonatingBubble",
+		"en": "Detonating Bubble",
+		"es": "Burbuja detonante"
+	},
+	{
+		"id": 372,
+		"key": "Sharkron",
+		"en": "Sharkron",
+		"es": "Tiburrón"
+	},
+	{
+		"id": 373,
+		"key": "Sharkron2",
+		"en": "Sharkron",
+		"es": "Tiburrón"
+	},
+	{
+		"id": 374,
+		"key": "TruffleWorm",
+		"en": "Truffle Worm",
+		"es": "Gusano de trufa"
+	},
+	{
+		"id": 375,
+		"key": "TruffleWormDigger",
+		"en": "Truffle Worm",
+		"es": "Gusano de trufa"
+	},
+	{
+		"id": 376,
+		"key": "SleepingAngler",
+		"en": "Sleeping Angler",
+		"es": "Rape dormido"
+	},
+	{
+		"id": 377,
+		"key": "Grasshopper",
+		"en": "Grasshopper",
+		"es": "Saltamontes"
+	},
+	{
+		"id": 378,
+		"key": "ChatteringTeethBomb",
+		"en": "Chattering Teeth Bomb",
+		"es": "Bomba castañeante"
+	},
+	{
+		"id": 379,
+		"key": "CultistArcherBlue",
+		"en": "Cultist Archer",
+		"es": "Arquero cultista"
+	},
+	{
+		"id": 380,
+		"key": "CultistArcherWhite",
+		"en": "Cultist Archer",
+		"es": "Arquero cultista"
+	},
+	{
+		"id": 381,
+		"key": "BrainScrambler",
+		"en": "Brain Scrambler",
+		"es": "Destrozacerebros"
+	},
+	{
+		"id": 382,
+		"key": "RayGunner",
+		"en": "Ray Gunner",
+		"es": "Artillero de rayos"
+	},
+	{
+		"id": 383,
+		"key": "MartianOfficer",
+		"en": "Martian Officer",
+		"es": "Oficial marciano"
+	},
+	{
+		"id": 384,
+		"key": "ForceBubble",
+		"en": "Bubble Shield",
+		"es": "Escudo burbuja"
+	},
+	{
+		"id": 385,
+		"key": "GrayGrunt",
+		"en": "Gray Grunt",
+		"es": "Matón gris"
+	},
+	{
+		"id": 386,
+		"key": "MartianEngineer",
+		"en": "Martian Engineer",
+		"es": "Ingeniero marciano"
+	},
+	{
+		"id": 387,
+		"key": "MartianTurret",
+		"en": "Tesla Turret",
+		"es": "Torreta Tesla"
+	},
+	{
+		"id": 388,
+		"key": "MartianDrone",
+		"en": "Martian Drone",
+		"es": "Drone marciano"
+	},
+	{
+		"id": 389,
+		"key": "GigaZapper",
+		"en": "Gigazapper",
+		"es": "Gigazapper"
+	},
+	{
+		"id": 390,
+		"key": "ScutlixRider",
+		"en": "Scutlix Gunner",
+		"es": "Artillero scutlix"
+	},
+	{
+		"id": 391,
+		"key": "Scutlix",
+		"en": "Scutlix",
+		"es": "Scutlix"
+	},
+	{
+		"id": 392,
+		"key": "MartianSaucer",
+		"en": "Martian Saucer",
+		"es": "Platillo marciano"
+	},
+	{
+		"id": 393,
+		"key": "MartianSaucerTurret",
+		"en": "Martian Saucer Turret",
+		"es": "Torreta de platillo marciano"
+	},
+	{
+		"id": 394,
+		"key": "MartianSaucerCannon",
+		"en": "Martian Saucer Cannon",
+		"es": "Cañón de platillo marciano"
+	},
+	{
+		"id": 395,
+		"key": "MartianSaucerCore",
+		"en": "Martian Saucer",
+		"es": "Platillo marciano"
+	},
+	{
+		"id": 396,
+		"key": "MoonLordHead",
+		"en": "Moon Lord",
+		"es": "Señor de la Luna"
+	},
+	{
+		"id": 397,
+		"key": "MoonLordHand",
+		"en": "Moon Lord's Hand",
+		"es": "Mano del Señor de la Luna"
+	},
+	{
+		"id": 398,
+		"key": "MoonLordCore",
+		"en": "Moon Lord's Core",
+		"es": "Núcleo del Señor de la Luna"
+	},
+	{
+		"id": 399,
+		"key": "MartianProbe",
+		"en": "Martian Probe",
+		"es": "Sonda marciana"
+	},
+	{
+		"id": 400,
+		"key": "MoonLordFreeEye",
+		"en": "True Eye of Cthulhu",
+		"es": "Auténtico ojo de Cthulhu"
+	},
+	{
+		"id": 401,
+		"key": "MoonLordLeechBlob",
+		"en": "Moon Leech Clot",
+		"es": "Coágulo de sanguijuela lunar"
+	},
+	{
+		"id": 402,
+		"key": "StardustWormHead",
+		"en": "Milkyway Weaver",
+		"es": "Tejedor de la vía láctea"
+	},
+	{
+		"id": 405,
+		"key": "StardustCellBig",
+		"en": "Star Cell",
+		"es": "Célula estelar"
+	},
+	{
+		"id": 406,
+		"key": "StardustCellSmall",
+		"en": "Mini Star Cell",
+		"es": "Minicélula estelar"
+	},
+	{
+		"id": 407,
+		"key": "StardustJellyfishBig",
+		"en": "Flow Invader",
+		"es": "Invasor del flujo"
+	},
+	{
+		"id": 409,
+		"key": "StardustSpiderBig",
+		"en": "Twinkle Popper",
+		"es": "Lanzacentelleos"
+	},
+	{
+		"id": 410,
+		"key": "StardustSpiderSmall",
+		"en": "Twinkle",
+		"es": "Centelleo"
+	},
+	{
+		"id": 411,
+		"key": "StardustSoldier",
+		"en": "Stargazer",
+		"es": "Observaestrellas"
+	},
+	{
+		"id": 412,
+		"key": "SolarCrawltipedeHead",
+		"en": "Crawltipede",
+		"es": "Arrastrapiés"
+	},
+	{
+		"id": 413,
+		"key": "SolarCrawltipedeBody",
+		"en": "Crawltipede",
+		"es": "Arrastrapiés"
+	},
+	{
+		"id": 414,
+		"key": "SolarCrawltipedeTail",
+		"en": "Crawltipede",
+		"es": "Arrastrapiés"
+	},
+	{
+		"id": 415,
+		"key": "SolarDrakomire",
+		"en": "Drakomire",
+		"es": "Drakomira"
+	},
+	{
+		"id": 416,
+		"key": "SolarDrakomireRider",
+		"en": "Drakomire Rider",
+		"es": "Jinete de drakomira"
+	},
+	{
+		"id": 417,
+		"key": "SolarSroller",
+		"en": "Sroller",
+		"es": "Srodante"
+	},
+	{
+		"id": 418,
+		"key": "SolarCorite",
+		"en": "Corite",
+		"es": "Corita"
+	},
+	{
+		"id": 419,
+		"key": "SolarSolenian",
+		"en": "Selenian",
+		"es": "Selenio"
+	},
+	{
+		"id": 420,
+		"key": "NebulaBrain",
+		"en": "Nebula Floater",
+		"es": "Flotante de nebulosa"
+	},
+	{
+		"id": 421,
+		"key": "NebulaHeadcrab",
+		"en": "Brain Suckler",
+		"es": "Lactacerebros"
+	},
+	{
+		"id": 423,
+		"key": "NebulaBeast",
+		"en": "Evolution Beast",
+		"es": "Bestia evolutiva"
+	},
+	{
+		"id": 424,
+		"key": "NebulaSoldier",
+		"en": "Predictor",
+		"es": "Predictor"
+	},
+	{
+		"id": 425,
+		"key": "VortexRifleman",
+		"en": "Storm Diver",
+		"es": "Navegatormentas"
+	},
+	{
+		"id": 426,
+		"key": "VortexHornetQueen",
+		"en": "Alien Queen",
+		"es": "Reina alienígena"
+	},
+	{
+		"id": 427,
+		"key": "VortexHornet",
+		"en": "Alien Hornet",
+		"es": "Avispa alienígena"
+	},
+	{
+		"id": 428,
+		"key": "VortexLarva",
+		"en": "Alien Larva",
+		"es": "Larva alienígena"
+	},
+	{
+		"id": 429,
+		"key": "VortexSoldier",
+		"en": "Vortexian",
+		"es": "Vorticiano"
+	},
+	{
+		"id": 430,
+		"key": "ArmedZombie",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 431,
+		"key": "ArmedZombieEskimo",
+		"en": "Frozen Zombie",
+		"es": "Zombi congelado"
+	},
+	{
+		"id": 432,
+		"key": "ArmedZombiePincussion",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 433,
+		"key": "ArmedZombieSlimed",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 434,
+		"key": "ArmedZombieSwamp",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 435,
+		"key": "ArmedZombieTwiggy",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 436,
+		"key": "ArmedZombieCenx",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 437,
+		"key": "CultistTablet",
+		"en": "Mysterious Tablet",
+		"es": "Tablilla misteriosa"
+	},
+	{
+		"id": 438,
+		"key": "CultistDevote",
+		"en": "Lunatic Devotee",
+		"es": "Devoto lunático"
+	},
+	{
+		"id": 439,
+		"key": "CultistBoss",
+		"en": "Lunatic Cultist",
+		"es": "Sectario lunático"
+	},
+	{
+		"id": 440,
+		"key": "CultistBossClone",
+		"en": "Lunatic Cultist",
+		"es": "Sectario lunático"
+	},
+	{
+		"id": 442,
+		"key": "GoldBird",
+		"en": "Gold Bird",
+		"es": "Pájaro dorado"
+	},
+	{
+		"id": 443,
+		"key": "GoldBunny",
+		"en": "Gold Bunny",
+		"es": "Conejo dorado"
+	},
+	{
+		"id": 444,
+		"key": "GoldButterfly",
+		"en": "Gold Butterfly",
+		"es": "Mariposa dorada"
+	},
+	{
+		"id": 445,
+		"key": "GoldFrog",
+		"en": "Gold Frog",
+		"es": "Rana dorada"
+	},
+	{
+		"id": 446,
+		"key": "GoldGrasshopper",
+		"en": "Gold Grasshopper",
+		"es": "Saltamontes dorado"
+	},
+	{
+		"id": 447,
+		"key": "GoldMouse",
+		"en": "Gold Mouse",
+		"es": "Ratón dorado"
+	},
+	{
+		"id": 448,
+		"key": "GoldWorm",
+		"en": "Gold Worm",
+		"es": "Gusano dorado"
+	},
+	{
+		"id": 449,
+		"key": "BoneThrowingSkeleton",
+		"en": "Skeleton",
+		"es": "Esqueleto"
+	},
+	{
+		"id": 450,
+		"key": "BoneThrowingSkeleton2",
+		"en": "Skeleton",
+		"es": "Esqueleto"
+	},
+	{
+		"id": 451,
+		"key": "BoneThrowingSkeleton3",
+		"en": "Skeleton",
+		"es": "Esqueleto"
+	},
+	{
+		"id": 452,
+		"key": "BoneThrowingSkeleton4",
+		"en": "Skeleton",
+		"es": "Esqueleto"
+	},
+	{
+		"id": 453,
+		"key": "SkeletonMerchant",
+		"en": "Skeleton Merchant",
+		"es": "Mercader esquelético"
+	},
+	{
+		"id": 454,
+		"key": "CultistDragonHead",
+		"en": "Phantasm Dragon",
+		"es": "Dragón fantasma"
+	},
+	{
+		"id": 455,
+		"key": "CultistDragonBody1",
+		"en": "Phantasm Dragon",
+		"es": "Dragón fantasma"
+	},
+	{
+		"id": 456,
+		"key": "CultistDragonBody2",
+		"en": "Phantasm Dragon",
+		"es": "Dragón fantasma"
+	},
+	{
+		"id": 457,
+		"key": "CultistDragonBody3",
+		"en": "Phantasm Dragon",
+		"es": "Dragón fantasma"
+	},
+	{
+		"id": 458,
+		"key": "CultistDragonBody4",
+		"en": "Phantasm Dragon",
+		"es": "Dragón fantasma"
+	},
+	{
+		"id": 459,
+		"key": "CultistDragonTail",
+		"en": "Phantasm Dragon",
+		"es": "Dragón fantasma"
+	},
+	{
+		"id": 460,
+		"key": "Butcher",
+		"en": "Butcher",
+		"es": "Carnicero"
+	},
+	{
+		"id": 461,
+		"key": "CreatureFromTheDeep",
+		"en": "Creature from the Deep",
+		"es": "Criatura de las Profundidades"
+	},
+	{
+		"id": 462,
+		"key": "Fritz",
+		"en": "Fritz",
+		"es": "Fritz"
+	},
+	{
+		"id": 463,
+		"key": "Nailhead",
+		"en": "Nailhead",
+		"es": "Cabezaclavo"
+	},
+	{
+		"id": 464,
+		"key": "CrimsonBunny",
+		"en": "Vicious Bunny",
+		"es": "Conejo violento"
+	},
+	{
+		"id": 465,
+		"key": "CrimsonGoldfish",
+		"en": "Vicious Goldfish",
+		"es": "Pececillo violento"
+	},
+	{
+		"id": 466,
+		"key": "Psycho",
+		"en": "Psycho",
+		"es": "Psicópata"
+	},
+	{
+		"id": 467,
+		"key": "DeadlySphere",
+		"en": "Deadly Sphere",
+		"es": "Esfera letal"
+	},
+	{
+		"id": 468,
+		"key": "DrManFly",
+		"en": "Dr. Man Fly",
+		"es": "Dr. Moscahombre"
+	},
+	{
+		"id": 469,
+		"key": "ThePossessed",
+		"en": "The Possessed",
+		"es": "La Poseída"
+	},
+	{
+		"id": 470,
+		"key": "CrimsonPenguin",
+		"en": "Vicious Penguin",
+		"es": "Pingüino violento"
+	},
+	{
+		"id": 471,
+		"key": "GoblinSummoner",
+		"en": "Goblin Warlock",
+		"es": "Duende bruja"
+	},
+	{
+		"id": 472,
+		"key": "ShadowFlameApparition",
+		"en": "Shadowflame Apparition",
+		"es": "Aparición de llama oscura"
+	},
+	{
+		"id": 473,
+		"key": "BigMimicCorruption",
+		"en": "Corrupt Mimic",
+		"es": "Cofre falso corrupto"
+	},
+	{
+		"id": 474,
+		"key": "BigMimicCrimson",
+		"en": "Crimson Mimic",
+		"es": "Cofre falso carmesí"
+	},
+	{
+		"id": 475,
+		"key": "BigMimicHallow",
+		"en": "Hallowed Mimic",
+		"es": "Cofre falso sagrado"
+	},
+	{
+		"id": 476,
+		"key": "BigMimicJungle",
+		"en": "Jungle Mimic",
+		"es": "Cofre falso de la selva"
+	},
+	{
+		"id": 477,
+		"key": "Mothron",
+		"en": "Mothron",
+		"es": "Polillón"
+	},
+	{
+		"id": 478,
+		"key": "MothronEgg",
+		"en": "Mothron Egg",
+		"es": "Huevo de polillón"
+	},
+	{
+		"id": 479,
+		"key": "MothronSpawn",
+		"en": "Baby Mothron",
+		"es": "Polillón bebé"
+	},
+	{
+		"id": 480,
+		"key": "Medusa",
+		"en": "Medusa",
+		"es": "Medusa"
+	},
+	{
+		"id": 481,
+		"key": "GreekSkeleton",
+		"en": "Hoplite",
+		"es": "Hoplita"
+	},
+	{
+		"id": 482,
+		"key": "GraniteGolem",
+		"en": "Granite Golem",
+		"es": "Gólem de granito"
+	},
+	{
+		"id": 483,
+		"key": "GraniteFlyer",
+		"en": "Granite Elemental",
+		"es": "Granito elemental"
+	},
+	{
+		"id": 484,
+		"key": "EnchantedNightcrawler",
+		"en": "Enchanted Nightcrawler",
+		"es": "Rondador encantado"
+	},
+	{
+		"id": 485,
+		"key": "Grubby",
+		"en": "Grubby",
+		"es": "Mugriento"
+	},
+	{
+		"id": 486,
+		"key": "Sluggy",
+		"en": "Sluggy",
+		"es": "Baboso"
+	},
+	{
+		"id": 487,
+		"key": "Buggy",
+		"en": "Buggy",
+		"es": "Bichito"
+	},
+	{
+		"id": 488,
+		"key": "TargetDummy",
+		"en": "Target Dummy",
+		"es": "Muñeco de pruebas"
+	},
+	{
+		"id": 489,
+		"key": "BloodZombie",
+		"en": "Blood Zombie",
+		"es": "Zombi sangriento"
+	},
+	{
+		"id": 490,
+		"key": "Drippler",
+		"en": "Drippler",
+		"es": "Goteador"
+	},
+	{
+		"id": 491,
+		"key": "PirateShip",
+		"en": "Flying Dutchman",
+		"es": "Holandés volador"
+	},
+	{
+		"id": 492,
+		"key": "PirateShipCannon",
+		"en": "Dutchman Cannon",
+		"es": "Cañón holandés"
+	},
+	{
+		"id": 493,
+		"key": "LunarTowerStardust",
+		"en": "Stardust Pillar",
+		"es": "Columna de polvo estelar"
+	},
+	{
+		"id": 494,
+		"key": "Crawdad",
+		"en": "Crawdad",
+		"es": "Padre cangrejo"
+	},
+	{
+		"id": 495,
+		"key": "Crawdad2",
+		"en": "Crawdad",
+		"es": "Padre cangrejo"
+	},
+	{
+		"id": 496,
+		"key": "GiantShelly",
+		"en": "Giant Shelly",
+		"es": "Conchito gigante"
+	},
+	{
+		"id": 497,
+		"key": "GiantShelly2",
+		"en": "Giant Shelly",
+		"es": "Conchito gigante"
+	},
+	{
+		"id": 498,
+		"key": "Salamander",
+		"en": "Salamander",
+		"es": "Salamandra"
+	},
+	{
+		"id": 499,
+		"key": "Salamander2",
+		"en": "Salamander",
+		"es": "Salamandra"
+	},
+	{
+		"id": 500,
+		"key": "Salamander3",
+		"en": "Salamander",
+		"es": "Salamandra"
+	},
+	{
+		"id": 501,
+		"key": "Salamander4",
+		"en": "Salamander",
+		"es": "Salamandra"
+	},
+	{
+		"id": 502,
+		"key": "Salamander5",
+		"en": "Salamander",
+		"es": "Salamandra"
+	},
+	{
+		"id": 503,
+		"key": "Salamander6",
+		"en": "Salamander",
+		"es": "Salamandra"
+	},
+	{
+		"id": 504,
+		"key": "Salamander7",
+		"en": "Salamander",
+		"es": "Salamandra"
+	},
+	{
+		"id": 505,
+		"key": "Salamander8",
+		"en": "Salamander",
+		"es": "Salamandra"
+	},
+	{
+		"id": 506,
+		"key": "Salamander9",
+		"en": "Salamander",
+		"es": "Salamandra"
+	},
+	{
+		"id": 507,
+		"key": "LunarTowerNebula",
+		"en": "Nebula Pillar",
+		"es": "Columna de nebulosa"
+	},
+	{
+		"id": 422,
+		"key": "LunarTowerVortex",
+		"en": "Vortex Pillar",
+		"es": "Columna de vórtice"
+	},
+	{
+		"id": 441,
+		"key": "TaxCollector",
+		"en": "Tax Collector",
+		"es": "Recaudador de impuestos"
+	},
+	{
+		"id": 508,
+		"key": "GiantWalkingAntlion",
+		"en": "Giant Antlion Charger",
+		"es": "Cargador de hormigas león gigantes"
+	},
+	{
+		"id": 509,
+		"key": "GiantFlyingAntlion",
+		"en": "Giant Antlion Swarmer",
+		"es": "Enjambre de hormigas león gigantes"
+	},
+	{
+		"id": 510,
+		"key": "DuneSplicerHead",
+		"en": "Dune Splicer",
+		"es": "Atraviesadunas"
+	},
+	{
+		"id": 511,
+		"key": "DuneSplicerBody",
+		"en": "Dune Splicer",
+		"es": "Atraviesadunas"
+	},
+	{
+		"id": 512,
+		"key": "DuneSplicerTail",
+		"en": "Dune Splicer",
+		"es": "Atraviesadunas"
+	},
+	{
+		"id": 513,
+		"key": "TombCrawlerHead",
+		"en": "Tomb Crawler",
+		"es": "Trepatumbas"
+	},
+	{
+		"id": 514,
+		"key": "TombCrawlerBody",
+		"en": "Tomb Crawler",
+		"es": "Trepatumbas"
+	},
+	{
+		"id": 515,
+		"key": "TombCrawlerTail",
+		"en": "Tomb Crawler",
+		"es": "Trepatumbas"
+	},
+	{
+		"id": 516,
+		"key": "SolarFlare",
+		"en": "Solar Flare",
+		"es": "Bengala solar"
+	},
+	{
+		"id": 517,
+		"key": "LunarTowerSolar",
+		"en": "Solar Pillar",
+		"es": "Columna solar"
+	},
+	{
+		"id": 518,
+		"key": "SolarSpearman",
+		"en": "Drakanian",
+		"es": "Drakaniano"
+	},
+	{
+		"id": 519,
+		"key": "SolarGoop",
+		"en": "Solar Fragment",
+		"es": "Fragmento solar"
+	},
+	{
+		"id": 520,
+		"key": "MartianWalker",
+		"en": "Martian Walker",
+		"es": "Caminante marciano"
+	},
+	{
+		"id": 521,
+		"key": "AncientCultistSquidhead",
+		"en": "Ancient Vision",
+		"es": "Visión antigua"
+	},
+	{
+		"id": 522,
+		"key": "AncientLight",
+		"en": "Ancient Light",
+		"es": "Luz antigua"
+	},
+	{
+		"id": 523,
+		"key": "AncientDoom",
+		"en": "Ancient Doom",
+		"es": "Muerte antigua"
+	},
+	{
+		"id": 524,
+		"key": "DesertGhoul",
+		"en": "Ghoul",
+		"es": "Ghul"
+	},
+	{
+		"id": 525,
+		"key": "DesertGhoulCorruption",
+		"en": "Vile Ghoul",
+		"es": "Ghul vil"
+	},
+	{
+		"id": 526,
+		"key": "DesertGhoulCrimson",
+		"en": "Tainted Ghoul",
+		"es": "Ghul contaminado"
+	},
+	{
+		"id": 527,
+		"key": "DesertGhoulHallow",
+		"en": "Dreamer Ghoul",
+		"es": "Ghul soñador"
+	},
+	{
+		"id": 528,
+		"key": "DesertLamiaLight",
+		"en": "Lamia",
+		"es": "Lamia"
+	},
+	{
+		"id": 529,
+		"key": "DesertLamiaDark",
+		"en": "Lamia",
+		"es": "Lamia"
+	},
+	{
+		"id": 530,
+		"key": "DesertScorpionWalk",
+		"en": "Sand Poacher",
+		"es": "Cazador de las arenas"
+	},
+	{
+		"id": 531,
+		"key": "DesertScorpionWall",
+		"en": "Sand Poacher",
+		"es": "Cazador de las arenas"
+	},
+	{
+		"id": 532,
+		"key": "DesertBeast",
+		"en": "Basilisk",
+		"es": "Basilisco"
+	},
+	{
+		"id": 533,
+		"key": "DesertDjinn",
+		"en": "Desert Spirit",
+		"es": "Espíritu del desierto"
+	},
+	{
+		"id": 534,
+		"key": "DemonTaxCollector",
+		"en": "Tortured Soul",
+		"es": "Alma torturada"
+	},
+	{
+		"id": 535,
+		"key": "SlimeSpiked",
+		"en": "Spiked Slime",
+		"es": "Slime puntiagudo"
+	},
+	{
+		"id": 536,
+		"key": "TheBride",
+		"en": "The Bride",
+		"es": "La Novia"
+	},
+	{
+		"id": 537,
+		"key": "SandSlime",
+		"en": "Sand Slime",
+		"es": "Slime de arena"
+	},
+	{
+		"id": 538,
+		"key": "SquirrelRed",
+		"en": "Red Squirrel",
+		"es": "Ardilla roja"
+	},
+	{
+		"id": 539,
+		"key": "SquirrelGold",
+		"en": "Gold Squirrel",
+		"es": "Ardilla dorada"
+	},
+	{
+		"id": 540,
+		"key": "PartyBunny",
+		"en": "Bunny",
+		"es": "Conejo"
+	},
+	{
+		"id": 541,
+		"key": "SandElemental",
+		"en": "Sand Elemental",
+		"es": "Elemental de arena"
+	},
+	{
+		"id": 542,
+		"key": "SandShark",
+		"en": "Sand Shark",
+		"es": "Tiburón de arena"
+	},
+	{
+		"id": 543,
+		"key": "SandsharkCorrupt",
+		"en": "Bone Biter",
+		"es": "Muerdehuesos"
+	},
+	{
+		"id": 544,
+		"key": "SandsharkCrimson",
+		"en": "Flesh Reaver",
+		"es": "Segador de carne"
+	},
+	{
+		"id": 545,
+		"key": "SandsharkHallow",
+		"en": "Crystal Thresher",
+		"es": "Trilladora de cristal"
+	},
+	{
+		"id": 546,
+		"key": "Tumbleweed",
+		"en": "Angry Tumbler",
+		"es": "Volteador enfadado"
+	},
+	{
+		"id": 547,
+		"key": "DD2AttackerTest",
+		"en": "???",
+		"es": "¿¿¿???"
+	},
+	{
+		"id": 548,
+		"key": "DD2EterniaCrystal",
+		"en": "Eternia Crystal",
+		"es": "Cristal eternia"
+	},
+	{
+		"id": 549,
+		"key": "DD2LanePortal",
+		"en": "Mysterious Portal",
+		"es": "Portal misterioso"
+	},
+	{
+		"id": 550,
+		"key": "DD2Bartender",
+		"en": "Tavernkeep",
+		"es": "Tabernero"
+	},
+	{
+		"id": 551,
+		"key": "DD2Betsy",
+		"en": "Betsy",
+		"es": "Betsy"
+	},
+	{
+		"id": 552,
+		"key": "DD2GoblinT1",
+		"en": "Etherian Goblin",
+		"es": "Duende etéreo"
+	},
+	{
+		"id": 553,
+		"key": "DD2GoblinT2",
+		"en": "{$NPCName.DD2GoblinT1}",
+		"es": "{$NPCName.DD2GoblinT1}"
+	},
+	{
+		"id": 554,
+		"key": "DD2GoblinT3",
+		"en": "{$NPCName.DD2GoblinT1}",
+		"es": "{$NPCName.DD2GoblinT1}"
+	},
+	{
+		"id": 555,
+		"key": "DD2GoblinBomberT1",
+		"en": "Etherian Goblin Bomber",
+		"es": "Duende etéreo bombardero"
+	},
+	{
+		"id": 556,
+		"key": "DD2GoblinBomberT2",
+		"en": "{$NPCName.DD2GoblinBomberT1}",
+		"es": "{$NPCName.DD2GoblinBomberT1}"
+	},
+	{
+		"id": 557,
+		"key": "DD2GoblinBomberT3",
+		"en": "{$NPCName.DD2GoblinBomberT1}",
+		"es": "{$NPCName.DD2GoblinBomberT1}"
+	},
+	{
+		"id": 558,
+		"key": "DD2WyvernT1",
+		"en": "Etherian Wyvern",
+		"es": "Guiverno etéreo"
+	},
+	{
+		"id": 559,
+		"key": "DD2WyvernT2",
+		"en": "{$NPCName.DD2WyvernT1}",
+		"es": "{$NPCName.DD2WyvernT1}"
+	},
+	{
+		"id": 560,
+		"key": "DD2WyvernT3",
+		"en": "{$NPCName.DD2WyvernT1}",
+		"es": "{$NPCName.DD2WyvernT1}"
+	},
+	{
+		"id": 561,
+		"key": "DD2JavelinstT1",
+		"en": "Etherian Javelin Thrower",
+		"es": "Lanzajabalinas etéreo"
+	},
+	{
+		"id": 562,
+		"key": "DD2JavelinstT2",
+		"en": "{$NPCName.DD2JavelinstT1}",
+		"es": "{$NPCName.DD2JavelinstT1}"
+	},
+	{
+		"id": 563,
+		"key": "DD2JavelinstT3",
+		"en": "{$NPCName.DD2JavelinstT1}",
+		"es": "{$NPCName.DD2JavelinstT1}"
+	},
+	{
+		"id": 564,
+		"key": "DD2DarkMageT1",
+		"en": "Dark Mage",
+		"es": "Mago negro"
+	},
+	{
+		"id": 565,
+		"key": "DD2DarkMageT3",
+		"en": "{$NPCName.DD2DarkMageT1}",
+		"es": "{$NPCName.DD2DarkMageT1}"
+	},
+	{
+		"id": 566,
+		"key": "DD2SkeletonT1",
+		"en": "Old One's Skeleton",
+		"es": "Esqueleto del Antiguo"
+	},
+	{
+		"id": 567,
+		"key": "DD2SkeletonT3",
+		"en": "{$NPCName.DD2SkeletonT1}",
+		"es": "{$NPCName.DD2SkeletonT1}"
+	},
+	{
+		"id": 568,
+		"key": "DD2WitherBeastT2",
+		"en": "Wither Beast",
+		"es": "Bestia marchita"
+	},
+	{
+		"id": 569,
+		"key": "DD2WitherBeastT3",
+		"en": "{$NPCName.DD2WitherBeastT2}",
+		"es": "{$NPCName.DD2WitherBeastT2}"
+	},
+	{
+		"id": 570,
+		"key": "DD2DrakinT2",
+		"en": "Drakin",
+		"es": "Drakin"
+	},
+	{
+		"id": 571,
+		"key": "DD2DrakinT3",
+		"en": "{$NPCName.DD2DrakinT2}",
+		"es": "{$NPCName.DD2DrakinT2}"
+	},
+	{
+		"id": 572,
+		"key": "DD2KoboldWalkerT2",
+		"en": "Kobold",
+		"es": "Kobold"
+	},
+	{
+		"id": 573,
+		"key": "DD2KoboldWalkerT3",
+		"en": "{$NPCName.DD2KoboldWalkerT2}",
+		"es": "{$NPCName.DD2KoboldWalkerT2}"
+	},
+	{
+		"id": 574,
+		"key": "DD2KoboldFlyerT2",
+		"en": "Kobold Glider",
+		"es": "Planeador kobold"
+	},
+	{
+		"id": 575,
+		"key": "DD2KoboldFlyerT3",
+		"en": "{$NPCName.DD2KoboldFlyerT2}",
+		"es": "{$NPCName.DD2KoboldFlyerT2}"
+	},
+	{
+		"id": 576,
+		"key": "DD2OgreT2",
+		"en": "Ogre",
+		"es": "Ogro"
+	},
+	{
+		"id": 577,
+		"key": "DD2OgreT3",
+		"en": "{$NPCName.DD2OgreT2}",
+		"es": "{$NPCName.DD2OgreT2}"
+	},
+	{
+		"id": 578,
+		"key": "DD2LightningBugT3",
+		"en": "Etherian Lightning Bug",
+		"es": "Insecto rayo etéreo"
+	},
+	{
+		"id": 579,
+		"key": "BartenderUnconscious",
+		"en": "Unconscious Man",
+		"es": "Hombre inconsciente"
+	},
+	{
+		"id": 580,
+		"key": "WalkingAntlion",
+		"en": "Antlion Charger",
+		"es": "Cargador de hormigas león"
+	},
+	{
+		"id": 581,
+		"key": "FlyingAntlion",
+		"en": "Antlion Swarmer",
+		"es": "Enjambre de hormigas león"
+	},
+	{
+		"id": 582,
+		"key": "LarvaeAntlion",
+		"en": "Antlion Larva",
+		"es": "Larva de hormiga león"
+	},
+	{
+		"id": 583,
+		"key": "FairyCritterPink",
+		"en": "Pink Fairy",
+		"es": "Hada rosa"
+	},
+	{
+		"id": 584,
+		"key": "FairyCritterGreen",
+		"en": "Green Fairy",
+		"es": "Hada verde"
+	},
+	{
+		"id": 585,
+		"key": "FairyCritterBlue",
+		"en": "Blue Fairy",
+		"es": "Hada azul"
+	},
+	{
+		"id": 586,
+		"key": "ZombieMerman",
+		"en": "Zombie Merman",
+		"es": "Tritón zombi"
+	},
+	{
+		"id": 587,
+		"key": "EyeballFlyingFish",
+		"en": "Wandering Eye Fish",
+		"es": "Pez ojo errante"
+	},
+	{
+		"id": 588,
+		"key": "Golfer",
+		"en": "Golfer",
+		"es": "Golfista"
+	},
+	{
+		"id": 589,
+		"key": "GolferRescue",
+		"en": "Golfer",
+		"es": "Golfista"
+	},
+	{
+		"id": 590,
+		"key": "TorchZombie",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 591,
+		"key": "ArmedTorchZombie",
+		"en": "Zombie",
+		"es": "Zombi"
+	},
+	{
+		"id": 592,
+		"key": "GoldGoldfish",
+		"en": "Gold Goldfish",
+		"es": "Pececillo dorado"
+	},
+	{
+		"id": 593,
+		"key": "GoldGoldfishWalker",
+		"en": "Gold Goldfish",
+		"es": "Pececillo dorado"
+	},
+	{
+		"id": 594,
+		"key": "WindyBalloon",
+		"en": "Windy Balloon",
+		"es": "Globo ventoso"
+	},
+	{
+		"id": 595,
+		"key": "BlackDragonfly",
+		"en": "Dragonfly",
+		"es": "Libélula"
+	},
+	{
+		"id": 596,
+		"key": "BlueDragonfly",
+		"en": "Dragonfly",
+		"es": "Libélula"
+	},
+	{
+		"id": 597,
+		"key": "GreenDragonfly",
+		"en": "Dragonfly",
+		"es": "Libélula"
+	},
+	{
+		"id": 598,
+		"key": "OrangeDragonfly",
+		"en": "Dragonfly",
+		"es": "Libélula"
+	},
+	{
+		"id": 599,
+		"key": "RedDragonfly",
+		"en": "Dragonfly",
+		"es": "Libélula"
+	},
+	{
+		"id": 600,
+		"key": "YellowDragonfly",
+		"en": "Dragonfly",
+		"es": "Libélula"
+	},
+	{
+		"id": 601,
+		"key": "GoldDragonfly",
+		"en": "Gold Dragonfly",
+		"es": "Libélula dorada"
+	},
+	{
+		"id": 602,
+		"key": "Seagull",
+		"en": "Seagull",
+		"es": "Gaviota"
+	},
+	{
+		"id": 603,
+		"key": "Seagull2",
+		"en": "Seagull",
+		"es": "Gaviota"
+	},
+	{
+		"id": 604,
+		"key": "LadyBug",
+		"en": "Ladybug",
+		"es": "Mariquita"
+	},
+	{
+		"id": 605,
+		"key": "GoldLadyBug",
+		"en": "Gold Ladybug",
+		"es": "Mariquita dorada"
+	},
+	{
+		"id": 606,
+		"key": "Maggot",
+		"en": "Maggot",
+		"es": "Larva de gusano"
+	},
+	{
+		"id": 607,
+		"key": "Pupfish",
+		"en": "Pupfish",
+		"es": "Pez cachorrito"
+	},
+	{
+		"id": 608,
+		"key": "Grebe",
+		"en": "Grebe",
+		"es": "Somormujo"
+	},
+	{
+		"id": 609,
+		"key": "Grebe2",
+		"en": "Grebe",
+		"es": "Somormujo"
+	},
+	{
+		"id": 610,
+		"key": "Rat",
+		"en": "Rat",
+		"es": "Rata"
+	},
+	{
+		"id": 611,
+		"key": "Owl",
+		"en": "Owl",
+		"es": "Búho"
+	},
+	{
+		"id": 612,
+		"key": "WaterStrider",
+		"en": "Water Strider",
+		"es": "Tejedor"
+	},
+	{
+		"id": 613,
+		"key": "GoldWaterStrider",
+		"en": "Gold Water Strider",
+		"es": "Tejedor dorado"
+	},
+	{
+		"id": 614,
+		"key": "ExplosiveBunny",
+		"en": "Explosive Bunny",
+		"es": "Conejo explosivo"
+	},
+	{
+		"id": 615,
+		"key": "Dolphin",
+		"en": "Dolphin",
+		"es": "Delfín"
+	},
+	{
+		"id": 616,
+		"key": "Turtle",
+		"en": "Turtle",
+		"es": "Tortuga"
+	},
+	{
+		"id": 617,
+		"key": "TurtleJungle",
+		"en": "Jungle Turtle",
+		"es": "Tortuga de la jungla"
+	},
+	{
+		"id": 618,
+		"key": "BloodNautilus",
+		"en": "Dreadnautilus",
+		"es": "Nautilo terrible"
+	},
+	{
+		"id": 619,
+		"key": "BloodSquid",
+		"en": "Blood Squid",
+		"es": "Calamar de sangre"
+	},
+	{
+		"id": 620,
+		"key": "GoblinShark",
+		"en": "Hemogoblin Shark",
+		"es": "Tiburón hemoduende"
+	},
+	{
+		"id": 621,
+		"key": "BloodEelHead",
+		"en": "Blood Eel",
+		"es": "Anguila de sangre"
+	},
+	{
+		"id": 622,
+		"key": "BloodEelBody",
+		"en": "Blood Eel",
+		"es": "Anguila de sangre"
+	},
+	{
+		"id": 623,
+		"key": "BloodEelTail",
+		"en": "Blood Eel",
+		"es": "Anguila de sangre"
+	},
+	{
+		"id": 624,
+		"key": "Gnome",
+		"en": "Gnome",
+		"es": "Gnomo"
+	},
+	{
+		"id": 625,
+		"key": "SeaTurtle",
+		"en": "Sea Turtle",
+		"es": "Tortuga marina"
+	},
+	{
+		"id": 626,
+		"key": "Seahorse",
+		"en": "Seahorse",
+		"es": "Caballito de mar"
+	},
+	{
+		"id": 627,
+		"key": "GoldSeahorse",
+		"en": "Gold Seahorse",
+		"es": "Caballito de mar dorado"
+	},
+	{
+		"id": 628,
+		"key": "Dandelion",
+		"en": "Angry Dandelion",
+		"es": "Diente de león enfadado"
+	},
+	{
+		"id": 629,
+		"key": "IceMimic",
+		"en": "Ice Mimic",
+		"es": "Cofre falso de hielo"
+	},
+	{
+		"id": 630,
+		"key": "BloodMummy",
+		"en": "Blood Mummy",
+		"es": "Momia de sangre"
+	},
+	{
+		"id": 631,
+		"key": "RockGolem",
+		"en": "Rock Golem",
+		"es": "Gólem de piedra"
+	},
+	{
+		"id": 632,
+		"key": "MaggotZombie",
+		"en": "Maggot Zombie",
+		"es": "Larva de gusano zombi"
+	},
+	{
+		"id": 633,
+		"key": "BestiaryGirl",
+		"en": "Zoologist",
+		"es": "Zoóloga"
+	},
+	{
+		"id": 634,
+		"key": "SporeBat",
+		"en": "Spore Bat",
+		"es": "Murciélago de esporas"
+	},
+	{
+		"id": 635,
+		"key": "SporeSkeleton",
+		"en": "Spore Skeleton",
+		"es": "Esqueleto de esporas"
+	},
+	{
+		"id": 636,
+		"key": "HallowBoss",
+		"en": "Empress of Light",
+		"es": "Emperatriz de la luz"
+	},
+	{
+		"id": 637,
+		"key": "TownCat",
+		"en": "Cat",
+		"es": "Gato"
+	},
+	{
+		"id": 638,
+		"key": "TownDog",
+		"en": "Dog",
+		"es": "Perro"
+	},
+	{
+		"id": 639,
+		"key": "GemSquirrelAmethyst",
+		"en": "Amethyst Squirrel",
+		"es": "Ardilla de amatista"
+	},
+	{
+		"id": 640,
+		"key": "GemSquirrelTopaz",
+		"en": "Topaz Squirrel",
+		"es": "Ardilla de topacio"
+	},
+	{
+		"id": 641,
+		"key": "GemSquirrelSapphire",
+		"en": "Sapphire Squirrel",
+		"es": "Ardilla de zafiro"
+	},
+	{
+		"id": 642,
+		"key": "GemSquirrelEmerald",
+		"en": "Emerald Squirrel",
+		"es": "Ardilla de esmeralda"
+	},
+	{
+		"id": 643,
+		"key": "GemSquirrelRuby",
+		"en": "Ruby Squirrel",
+		"es": "Ardilla de rubí"
+	},
+	{
+		"id": 644,
+		"key": "GemSquirrelDiamond",
+		"en": "Diamond Squirrel",
+		"es": "Ardilla de diamante"
+	},
+	{
+		"id": 645,
+		"key": "GemSquirrelAmber",
+		"en": "Amber Squirrel",
+		"es": "Ardilla de ámbar"
+	},
+	{
+		"id": 646,
+		"key": "GemBunnyAmethyst",
+		"en": "Amethyst Bunny",
+		"es": "Conejo de amatista"
+	},
+	{
+		"id": 647,
+		"key": "GemBunnyTopaz",
+		"en": "Topaz Bunny",
+		"es": "Conejo de topacio"
+	},
+	{
+		"id": 648,
+		"key": "GemBunnySapphire",
+		"en": "Sapphire Bunny",
+		"es": "Conejo de zafiro"
+	},
+	{
+		"id": 649,
+		"key": "GemBunnyEmerald",
+		"en": "Emerald Bunny",
+		"es": "Conejo de esmeralda"
+	},
+	{
+		"id": 650,
+		"key": "GemBunnyRuby",
+		"en": "Ruby Bunny",
+		"es": "Conejo de rubí"
+	},
+	{
+		"id": 651,
+		"key": "GemBunnyDiamond",
+		"en": "Diamond Bunny",
+		"es": "Conejo de diamante"
+	},
+	{
+		"id": 652,
+		"key": "GemBunnyAmber",
+		"en": "Amber Bunny",
+		"es": "Conejo de ámbar"
+	},
+	{
+		"id": 653,
+		"key": "HellButterfly",
+		"en": "Hell Butterfly",
+		"es": "Mariposa infernal"
+	},
+	{
+		"id": 654,
+		"key": "Lavafly",
+		"en": "Lavafly",
+		"es": "Luciérnaga de lava"
+	},
+	{
+		"id": 655,
+		"key": "MagmaSnail",
+		"en": "Magma Snail",
+		"es": "Caracol de magma"
+	},
+	{
+		"id": 656,
+		"key": "TownBunny",
+		"en": "Bunny",
+		"es": "Conejo"
+	},
+	{
+		"id": 657,
+		"key": "QueenSlimeBoss",
+		"en": "Queen Slime",
+		"es": "Reina slime"
+	},
+	{
+		"id": 658,
+		"key": "QueenSlimeMinionBlue",
+		"en": "Crystal Slime",
+		"es": "Slime de cristal"
+	},
+	{
+		"id": 659,
+		"key": "QueenSlimeMinionPink",
+		"en": "Bouncy Slime",
+		"es": "Slime rebotante"
+	},
+	{
+		"id": 660,
+		"key": "QueenSlimeMinionPurple",
+		"en": "Heavenly Slime",
+		"es": "Slime celestial"
+	},
+	{
+		"id": 661,
+		"key": "EmpressButterfly",
+		"en": "Prismatic Lacewing",
+		"es": "Crisopa prismática"
+	},
+	{
+		"id": 662,
+		"key": "PirateGhost",
+		"en": "Pirate's Curse",
+		"es": "La maldición pirata"
+	},
+	{
+		"id": 663,
+		"key": "Princess",
+		"en": "Princess",
+		"es": "Princesa"
+	},
+	{
+		"id": 664,
+		"key": "TorchGod",
+		"en": "The Torch God",
+		"es": "El Dios Antorcha"
+	},
+	{
+		"id": 665,
+		"key": "ChaosBallTim",
+		"en": "{$NPCName.ChaosBall}",
+		"es": "{$NPCName.ChaosBall}"
+	},
+	{
+		"id": 666,
+		"key": "VileSpitEaterOfWorlds",
+		"en": "{$NPCName.VileSpit}",
+		"es": "{$NPCName.VileSpit}"
+	},
+	{
+		"id": 667,
+		"key": "GoldenSlime",
+		"en": "Golden Slime",
+		"es": "Slime dorado"
+	},
+	{
+		"id": 668,
+		"key": "Deerclops",
+		"en": "Deerclops",
+		"es": "Ciervíclope"
+	},
+	{
+		"id": 669,
+		"key": "Stinkbug",
+		"en": "Stinkbug",
+		"es": "Chinche apestosa"
+	},
+	{
+		"id": 670,
+		"key": "TownSlimeBlue",
+		"en": "Nerdy Slime",
+		"es": "Slime empollón"
+	},
+	{
+		"id": 671,
+		"key": "ScarletMacaw",
+		"en": "Scarlet Macaw",
+		"es": "Guacamayo escarlata"
+	},
+	{
+		"id": 672,
+		"key": "BlueMacaw",
+		"en": "Blue Macaw",
+		"es": "Guacamayo azul"
+	},
+	{
+		"id": 673,
+		"key": "Toucan",
+		"en": "Toucan",
+		"es": "Tucán"
+	},
+	{
+		"id": 674,
+		"key": "YellowCockatiel",
+		"en": "Yellow Cockatiel",
+		"es": "Ninfa amarilla"
+	},
+	{
+		"id": 675,
+		"key": "GrayCockatiel",
+		"en": "Gray Cockatiel",
+		"es": "Ninfa gris"
+	},
+	{
+		"id": 676,
+		"key": "ShimmerSlime",
+		"en": "Shimmer Slime",
+		"es": "Slime fulgurante"
+	},
+	{
+		"id": 677,
+		"key": "Shimmerfly",
+		"en": "Faeling",
+		"es": "Hada candela"
+	},
+	{
+		"id": 678,
+		"key": "TownSlimeGreen",
+		"en": "Cool Slime",
+		"es": "Slime molón"
+	},
+	{
+		"id": 679,
+		"key": "TownSlimeOld",
+		"en": "Elder Slime",
+		"es": "Slime anciano"
+	},
+	{
+		"id": 680,
+		"key": "TownSlimePurple",
+		"en": "Clumsy Slime",
+		"es": "Slime patoso"
+	},
+	{
+		"id": 681,
+		"key": "TownSlimeRainbow",
+		"en": "Diva Slime",
+		"es": "Slime superestrella"
+	},
+	{
+		"id": 682,
+		"key": "TownSlimeRed",
+		"en": "Surly Slime",
+		"es": "Slime malhumorado"
+	},
+	{
+		"id": 683,
+		"key": "TownSlimeYellow",
+		"en": "Mystic Slime",
+		"es": "Slime místico"
+	},
+	{
+		"id": 684,
+		"key": "TownSlimeCopper",
+		"en": "Squire Slime",
+		"es": "Slime escudero"
+	},
+	{
+		"id": 685,
+		"key": "BoundTownSlimeOld",
+		"en": "Old Shaking Chest",
+		"es": "Cofre viejo tembloroso"
+	},
+	{
+		"id": 686,
+		"key": "BoundTownSlimePurple",
+		"en": "Clumsy Balloon Slime",
+		"es": "Slime globo patoso"
+	},
+	{
+		"id": 687,
+		"key": "BoundTownSlimeYellow",
+		"en": "Mystic Frog",
+		"es": "Rana mística"
+	},
+	{
+		"id": 688,
+		"key": "Pufferfish",
+		"en": "Pufferfish",
+		"es": "Pez globo"
+	},
+	{
+		"id": 689,
+		"key": "OwlMimic",
+		"en": "Owl",
+		"es": "Búho"
+	},
+	{
+		"id": 690,
+		"key": "StatueMimic",
+		"en": "Statue",
+		"es": "Estatua"
+	},
+	{
+		"id": 691,
+		"key": "MossZombie",
+		"en": "Moss Zombie",
+		"es": "Zombi de musgo"
+	},
+	{
+		"id": 692,
+		"key": "Orca",
+		"en": "Orca",
+		"es": "Orca"
+	},
+	{
+		"id": 693,
+		"key": "LibrarianSkeleton",
+		"en": "Librarian Skeleton",
+		"es": "Esqueleto bibliotecario"
+	},
+	{
+		"id": 694,
+		"key": "WaterBoltMimic",
+		"en": "Water Bolt Mimic",
+		"es": "Proyectil de agua falso"
+	},
+	{
+		"id": 695,
+		"key": "PalworldCattivaDistressed",
+		"en": "{$ItemName.PalworldMinionCattiva}",
+		"es": "{$ItemName.PalworldMinionCattiva}"
+	},
+	{
+		"id": 696,
+		"key": "PalworldFoxsparksDistressed",
+		"en": "{$ItemName.PalworldMinionFoxsparks}",
+		"es": "{$ItemName.PalworldMinionFoxsparks}"
+	}
+]
