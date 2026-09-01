@@ -201,9 +201,27 @@ en cada una - solo commit + bitacora en cada hito verificado, igual que se ha he
 ahora. Reportar de vuelta cuando haya algo sustancial que enseñar o si se llega a un bloqueo
 real, no en cada paso intermedio.
 
-## Pendiente (visible desde fuera, sin entrar en el detalle de Fase 1 de más arriba)
+### Fase 4 — Librería/Buscador
 
-- **Fase 4 (Librería/Buscador)**: sin empezar todavía - es lo siguiente según el plan.
+Decisión de diseño real (no solo copiar el original): en vez del árbol de carpetas paginado
+del motor Haxe (que tenía un límite artificial de 19 hijos por carpeta, forzándolo a agrupar
+categorías), se implementó **búsqueda por texto sobre el catálogo completo** (vanilla +
+Calamity, ~8200 objetos) - más simple, más rápido de usar, y ya encaja con el objetivo de
+diseño "moderna/minimalista" pedido por el usuario (ver la sección de más abajo) sin tener que
+rehacerlo luego. Resultados limitados a 300 a la vez sin filtro activo (con el catálogo entero
+sin buscar no tendría sentido pintarlo todo de golpe).
+
+Iconos reales de Calamity copiados (3244 PNG, ~12MB, ya extraídos y verificados en
+Terrasavr-Calamity-Beta). **Los iconos vanilla siguen sin resolver** - vienen en un atlas de
+sprites (`img/items.png`/`img/nitems.png`) sin extraer todavía, los objetos vanilla se
+muestran con un icono de reserva ("?") en la Librería por ahora.
+
+**Verificado**: 75 tests siguen en verde (esta pieza es solo UI, sin lógica nueva en Core que
+testear), `dotnet build` limpio, la app arranca con los iconos copiados a la carpeta de salida
+(3244 archivos confirmados). No verificado con clics reales (escribir en el buscador, ver los
+resultados de verdad) - misma limitación de siempre.
+
+## Pendiente (visible desde fuera)
 
 - **Exploración**: zoom real (de momento solo scroll a tamaño 1:1), fondo degradado por zona
   (falta leer GroundLevel/RockLevel), buscador/filtro de NPCs (ya se listan todos, falta
@@ -211,12 +229,16 @@ real, no en cada paso intermedio.
   reales, `VANILLA_TOWN_NPC_ROSTER` en la versión JS, todavía no se ha portado), tooltip por
   tile al pasar el ratón (nombre real de tile/pared - ya está `TileNameCatalog`, falta
   guardar u/v por tile en `WldTile` para resolver variantes exactas y conectarlo a la UI).
-- **Edición real**: todo lo mostrado hoy es de solo lectura (ver un objeto, no añadirlo/
-  quitarlo/cambiarle el prefijo). El botón Guardar ya funciona con lo que haya en memoria, pero
-  nada en la UI actual permite modificarlo todavía.
+- **Edición real de objetos**: añadir/quitar un objeto de un slot vacío, cambiar cantidad -
+  hoy solo se puede cambiar el prefijo (botón ★). El botón Guardar ya funciona con lo que haya
+  en memoria en cualquier caso.
 - **Auto-equipar desde Builds**: el panel ya muestra el equipo recomendado, pero no lo aplica
   al personaje cargado (necesita resolver `pid`→id real y escribir en los slots correctos).
-- Librería/Buscador de objetos, apariencia (pelo/piel con preview) - ni empezados.
+- **Iconos vanilla**: siguen sin extraer (atlas `img/items.png`/`img/nitems.png`, formato UV
+  todavía no investigado) - la Librería los muestra con un icono de reserva por ahora.
+- **Apariencia** (pelo/piel con preview) - ni empezada.
+- Buffs/loadouts de Calamity sin fusionar todavía (ver la sección de Fase 1 más arriba).
+- Instalador (Fase 6 del plan) - ni empezado.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 
