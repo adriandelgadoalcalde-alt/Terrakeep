@@ -387,6 +387,50 @@
                             </StackPanel>
                         </ScrollViewer>
                     </TabItem>
+                    <TabItem Header="Spawn Points">
+                        <DockPanel Margin="0,10,0,0">
+                            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                                <TextBlock Text="Puntos de aparicion guardados por mundo. &quot;Id&quot; es un identificador interno del mundo, no un texto legible - no suele hacer falta tocarlo."
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                                <Button Content="Añadir spawn point" Tag="Accent" Command="{Binding Servers.AddEntryCommand}" HorizontalAlignment="Left" />
+                            </StackPanel>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding Servers.Entries}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:ServerEntryRowViewModel}">
+                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Margin="0,0,0,8" Padding="12,8">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <StackPanel Width="220" Margin="0,0,14,0">
+                                                        <TextBlock Text="Nombre" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"
+                                                                 Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                                    </StackPanel>
+                                                    <StackPanel Width="80" Margin="0,0,14,0">
+                                                        <TextBlock Text="Spawn X" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                        <TextBox Text="{Binding SpawnX, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"
+                                                                 Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                                    </StackPanel>
+                                                    <StackPanel Width="80" Margin="0,0,14,0">
+                                                        <TextBlock Text="Spawn Y" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                        <TextBox Text="{Binding SpawnY, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"
+                                                                 Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                                    </StackPanel>
+                                                    <StackPanel Width="100" Margin="0,0,14,0">
+                                                        <TextBlock Text="Id" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                        <TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"
+                                                                 Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                                    </StackPanel>
+                                                    <Button Content="Quitar" VerticalAlignment="Bottom" Padding="8,5"
+                                                            Command="{Binding DataContext.Servers.RemoveEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </TabItem>
                 </TabControl>
             </DockPanel>
         </TabItem>

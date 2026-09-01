@@ -470,6 +470,15 @@ public static class PlrBodySerializer
 
     // --- listas terminadas en sentinela ---
 
+    // Entradas todo-a-cero (spawnX=spawnY=address=0) se descartan tanto al leer como al
+    // escribir - confirmado en script.readable.js real: "0==l.spawnX&&0==l.spawnY&&0==
+    // l.address||this.servers.push(l)" al leer, y "if(0!=l.spawnX||0!=l.spawnY||0!=l.address)
+    // ...writeInt..." al escribir (defensivo por partida doble en el original). No es solo un
+    // detalle cosmetico: sin este filtro en la lectura, una entrada asi (rara, pero posible en
+    // un archivo real) se leeria y luego se re-escribiria tal cual, divergiendo del
+    // comportamiento real.
+    private static bool IsBlankServerEntry(int spawnX, int spawnY, int address) => spawnX == 0 && spawnY == 0 && address == 0;
+
     private static List<PlrServerEntry> ReadServers(BinaryReader reader)
     {
         var servers = new List<PlrServerEntry>();
@@ -480,6 +489,7 @@ public static class PlrBodySerializer
             int spawnY = reader.ReadInt32();
             int address = reader.ReadInt32();
             string name = reader.ReadSharpString();
+            if (IsBlankServerEntry(spawnX, spawnY, address)) continue;
             servers.Add(new PlrServerEntry { SpawnX = spawnX, SpawnY = spawnY, Address = address, Name = name });
         }
         return servers;
@@ -489,6 +499,7 @@ public static class PlrBodySerializer
     {
         foreach (var s in servers)
         {
+            if (IsBlankServerEntry(s.SpawnX, s.SpawnY, s.Address)) continue;
             writer.Write(s.SpawnX);
             writer.Write(s.SpawnY);
             writer.Write(s.Address);

@@ -694,10 +694,36 @@ Maná actual/máximo, misiones de pesca completadas, puntuación de golf, horas 
 horas→ticks→horas verificada a mano (1h → 36 000 000 000 ticks → High=8/Low=1 640 261 632 →
 recompuesto → 1.0h exacto). **No verificado con clics reales** - misma limitación de siempre.
 
+### Panel de Spawn Points (hueco #3, cerrado) + bug real encontrado por el camino
+
+Nueva pestaña interna "Spawn Points" (dentro de Personaje): `PlrCharacter.Servers` ya se
+leía/escribía desde la Fase 1 pero sin ningún panel. `ServerEntryRowViewModel` envuelve cada
+`PlrServerEntry` real y escribe en el mismo objeto (mismo patrón que `ColorSwatchViewModel`);
+`ServersViewModel` con `AddEntryCommand`/`RemoveEntryCommand`. Campos: nombre, Spawn X/Y, e
+"Id" (el campo `Address`, un entero interno - **no** una dirección de texto pese al nombre,
+confirmado leyendo `script.readable.js` real: `writeInt(l.address)`, no un string).
+
+**Bug real encontrado revisando el formato para este panel** (no hipotético, confirmado
+comparando byte a byte contra `script.readable.js`): `PlrBodySerializer.ReadServers`/
+`WriteServers` no descartaban las entradas "todo a cero" (`spawnX=spawnY=address=0`) - el
+lector/escritor real SÍ lo hace por partida doble (`0==l.spawnX&&0==l.spawnY&&0==l.address||
+this.servers.push(l)` al leer, `if(0!=l.spawnX||0!=l.spawnY||0!=l.address)...write...` al
+escribir). Sin este filtro, una entrada así en un `.plr` real (rara, pero posible) se leería y
+se re-escribiría tal cual, divergiendo del comportamiento real. Arreglado con
+`IsBlankServerEntry` aplicado en ambos sentidos. Los 2 personajes reales de este PC no tienen
+ninguna entrada así (los tests de round-trip byte a byte siguieron en verde sin cambios), así
+que el fallo no se pudo demostrar con datos reales - **no se añadió test dedicado** por ese
+mismo motivo (construir un `PlrCharacter` sintético completo solo para este caso no compensaba
+el esfuerzo frente a lo acotado y verificable-por-lectura-directa del arreglo).
+
+**Verificado**: 97 tests xUnit siguen en verde (incluidos los round-trip byte a byte contra
+los 2 personajes reales, sin regresión), `dotnet build` limpio, la app arranca sin excepción.
+**No verificado con clics reales** - misma limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
-- Huecos 1, 2, 3, 5, 6 de la auditoría de arriba, por orden de prioridad (el 4 ya está
-  cerrado, ver arriba).
+- Huecos 1, 2, 5, 6 de la auditoría de arriba, por orden de prioridad (el 3 y el 4 ya están
+  cerrados, ver arriba).
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 
