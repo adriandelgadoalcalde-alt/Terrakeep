@@ -172,7 +172,7 @@
                             <DataTemplate DataType="{x:Type data:WhatsNewChange}">
                                 <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,2">
                                     <Run Text="- " Foreground="{StaticResource AccentBrush}" />
-                                    <Run Text="{Binding DisplayText}" />
+                                    <Run Text="{Binding DisplayText, Mode=OneWay}" />
                                 </TextBlock>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

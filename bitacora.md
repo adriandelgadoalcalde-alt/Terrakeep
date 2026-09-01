@@ -1061,6 +1061,36 @@ objeto son bloques bastante autocontenidos; la reorganización de menús y el si
 visuales para Apariencia/Buffs/Librería comparten mucha base y conviene hacerlos junto con el
 propio rework de Librería). Se actualizará esta sección a medida que se cierre cada punto.
 
+### Punto 3 CERRADO - crash real de Novedades
+
+Reproducido en esta misma máquina (lanzando la app real y haciendo clic de verdad en la
+pestaña, coordenadas de pantalla reales vía `user32.dll`) antes de tocar nada, siguiendo la
+regla del proyecto de verificar contra la app real en vez de adivinar. Causa real (log de
+excepción no capturada): `Run.Text` tiene modo de enlace `TwoWay` por DEFECTO en WPF (mismo
+quirk que `TextBox.Text`), y el `DataTemplate` de `WhatsNewChange` en `MainWindow.xaml` lo
+enlazaba contra `DisplayText`, una propiedad de solo lectura (`Es ?? En ?? ""`) - WPF lanza
+`InvalidOperationException`/`XamlParseException` al intentar activar ese enlace, y al no haber
+ningún manejador de excepciones global, esa excepción no capturada mataba el proceso entero sin
+ningún aviso visible - de ahí "se cierra el programa" reportado por la probadora. Arreglado
+añadiendo `Mode=OneWay` explícito a ese único binding (el resto de bindings `Display*` del
+archivo son sobre `TextBlock.Text`/`Button.Content`, cuyo modo por defecto ya es `OneWay`, no
+tenían el problema).
+
+Añadida además una red de seguridad real en `App.xaml.cs`
+(`DispatcherUnhandledException`/`AppDomain.UnhandledException`): cualquier excepción no
+capturada futura en el hilo de UI ya no cierra todo el programa en silencio - se muestra un
+`MessageBox` con el tipo/mensaje real del error, se deja un volcado en
+`ultimo-error.log` junto al `.exe`, y la app sigue viva (`e.Handled = true`). Motivo: este
+mismo bug fue muy difícil de diagnosticar a ciegas sin la red de seguridad - un futuro fallo
+similar (que sin duda los habrá, dado el tamaño del rework de interfaz pedido) ahora será
+reportable con el mensaje real en vez de "se cierra sin más".
+
+Verificado: reproducido el crash primero (proceso muerto tras el clic), luego arreglado,
+recompilado, relanzado, mismo clic real en las mismas coordenadas -> la app sigue viva y la
+pestaña Novedades se ve y funciona bien (verificado con captura de pantalla real).
+`dotnet build`/`dotnet test` en verde (118/118, sin tests nuevos para este bug - es un fallo de
+activación de binding XAML, no reproducible con xUnit sin montar un `Window` real).
+
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 
 - Commit tras cada cambio verificado (no solo antes de cambios grandes) - mismo criterio que
