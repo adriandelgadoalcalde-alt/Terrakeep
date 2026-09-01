@@ -33,6 +33,7 @@ public sealed class BuildsViewModel
     private static BuildItemRowViewModel ResolveItem(BuildItemRef itemRef, CharacterFileService service)
     {
         string? iconPath = null;
+        string? statsTooltip = null;
         bool isCalamity = false;
 
         if (!string.IsNullOrEmpty(itemRef.Pid))
@@ -43,14 +44,19 @@ public sealed class BuildsViewModel
                 isCalamity = true;
                 var entry = service.CalamityCatalog.ByModAndInternal(itemRef.Pid[..slash], itemRef.Pid[(slash + 1)..]);
                 if (entry?.Icon != null) iconPath = "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon;
+                if (entry != null) statsTooltip = ItemStatsFormatter.Format(true, entry.SyntheticId, service.VanillaStats, service.CalamityCatalog);
             }
             else
             {
                 var id = service.VanillaCatalog.GetIdByKey(itemRef.Pid);
-                if (id != null) iconPath = VanillaIconResolver.GetIconPath(id.Value);
+                if (id != null)
+                {
+                    iconPath = VanillaIconResolver.GetIconPath(id.Value);
+                    statsTooltip = ItemStatsFormatter.Format(false, id.Value, service.VanillaStats, service.CalamityCatalog);
+                }
             }
         }
 
-        return new BuildItemRowViewModel(itemRef.DisplayName, itemRef.Prefix, iconPath, isCalamity);
+        return new BuildItemRowViewModel(itemRef.DisplayName, itemRef.Prefix, iconPath, isCalamity, statsTooltip);
     }
 }

@@ -1584,3 +1584,30 @@ usuario). Resultados, todos correctos:
 `dotnet build`/`dotnet test` en verde (126/126, sin regresiones). Proyecto de verificación y
 copia temporal borrados tras el uso (uno de los dos, la copia en `%TEMP%`, quedó pendiente de
 borrar por un permiso denegado puntual - no contiene nada sensible, es una copia descartable).
+
+### Fase 4 del plan - tooltips de estadísticas en Builds + arreglo real de Monedas/Munición
+
+**`BuildItemRowViewModel.cs`** gana `StatsTooltip` (antes ni siquiera guardaba el id numérico
+del objeto - imposible calcular nada). **`BuildsViewModel.ResolveItem`** ya resolvía ese id
+localmente para el icono pero no lo reutilizaba - ahora también llama
+`ItemStatsFormatter.Format(...)`, mismo patrón exacto que `LibraryViewModel`. `MainWindow.xaml`
+gana `ToolTip="{Binding StatsTooltip}"` en la plantilla de `BuildItemRowViewModel`. Arregla el
+bug reportado: "no salen [tooltips]... debería aplicarse a builds".
+
+**Bug real de guardado encontrado por el agente de planificación y arreglado aquí**:
+`MainViewModel.SyncEditsBackToMerged` solo escribía de vuelta contenedores presentes en
+`MergedContainers` - pero `CalamityCharacterSync.MergeAll` nunca crea las claves `coins`/
+`ammo` (son vanilla-only a propósito, ver el comentario de `RebuildContainers`), así que el
+`continue` del bucle las saltaba en silencio: **cualquier edición de Monedas o Munición se
+perdía al guardar, sin ningún aviso**. Arreglado escribiéndolas aparte, directo a
+`PlrCharacter.Coins`/`Ammo` (mismo patrón `CopyInto` elemento a elemento que ya usa
+`CalamityCharacterSync` para los loadouts, vía el nuevo helper `CopySlotsInto`).
+
+**Verificación real** (mismo arnés de consola temporal que la Fase 3, contra una copia nueva
+de `Eldelgas.plr`/`.tplr`): tooltip real en un arma vanilla ("Filo de la noche": Daño 40,
+Nudillo 4.5, Velocidad de uso 25, Rareza 3) y en una de Calamity ("Cometa Humeante": Daño 17,
+tipo `DamageClass.MeleeNoSpeed`, Nudillo 1.5, Velocidad de uso 25) - ambos con datos reales,
+ninguno inventado. Monedas editadas a 777 y Munición cambiada a "Flecha de madera" x333
+**sobreviven de verdad** a guardar + recargar (antes se perdían sin ningún error visible).
+
+`dotnet build`/`dotnet test` en verde (126/126, sin regresiones).

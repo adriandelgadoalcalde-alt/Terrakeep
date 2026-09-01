@@ -304,17 +304,30 @@ public partial class MainViewModel : ObservableObject
     }
 
     // Vuelca lo que haya en las colecciones enlazadas a la UI de vuelta a MergedContainers
-    // antes de guardar - todavia no hay edicion real (Fase 2 basica), pero esto deja el
-    // camino listo para cuando la UI empiece a modificar ItemSlotViewModel.Item de verdad.
+    // antes de guardar.
+    //
+    // Bug real encontrado y arreglado (fase 4 del rework, 1-sep-2026): "coins"/"ammo" NUNCA
+    // estan en MergedContainers (CalamityCharacterSync.MergeAll no los toca, son vanilla-only
+    // a proposito - ver el comentario de RebuildContainers) - el "continue" de abajo los
+    // saltaba en silencio, asi que CUALQUIER edicion de Monedas/Municion se perdia al
+    // guardar sin ningun aviso. Se escriben aparte, directo a PlrCharacter.Coins/Ammo.
     private void SyncEditsBackToMerged()
     {
         if (_loaded == null) return;
         foreach (var container in Containers)
         {
+            if (container.Key == "coins") { CopySlotsInto(_loaded.Character.Coins, container.Slots); continue; }
+            if (container.Key == "ammo") { CopySlotsInto(_loaded.Character.Ammo, container.Slots); continue; }
             if (!_loaded.MergedContainers.TryGetValue(container.Key, out var arr)) continue;
             for (int i = 0; i < container.Slots.Count && i < arr.Length; i++)
                 arr[i] = container.Slots[i].Item;
         }
+    }
+
+    private static void CopySlotsInto(PlrItemSlot[] target, IReadOnlyList<ItemSlotViewModel> source)
+    {
+        var items = source.Select(s => s.Item).ToArray().ToPlrItemSlots();
+        for (int i = 0; i < target.Length && i < items.Length; i++) target[i] = items[i];
     }
 
     partial void OnIsCharacterLoadedChanged(bool value)

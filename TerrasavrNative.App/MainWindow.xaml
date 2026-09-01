@@ -261,7 +261,8 @@
 
         <!-- Un objeto/arma/accesorio recomendado dentro de una build, ya con icono real -->
         <DataTemplate DataType="{x:Type vm:BuildItemRowViewModel}">
-            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="8,5">
+            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="8,5"
+                    ToolTip="{Binding StatsTooltip}">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="BorderThickness" Value="0" />
