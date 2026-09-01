@@ -1876,3 +1876,12 @@ protect you!"` (en inglés, real, sin traducir).
 
 `dotnet build`/`dotnet test` en verde (128/128) tras corregir los 3 tests; build de
 `TerrasavrNative.App` (WPF, XAML incluido) también en verde.
+
+### Fase C - Espaciado entre tarjetas de objeto
+
+Pedido explícito ("que quede como espaciado un poco no junto con todo el inventario"):
+`ItemSlotCard` (`Theme.xaml`) pasa de `Margin="3"` a `Margin="6"` - único cambio, todas las
+tarjetas de objeto de cualquier contenedor (Inventario/Banco/CajaFuerte/loadouts/Librería...)
+usan este mismo estilo, así que se propaga solo sin tocar más sitios. `dotnet build` en verde.
+(El contorno propio del panel Equipamiento, la otra mitad de este punto del feedback, se hace
+en la Fase D - ver más abajo.)
