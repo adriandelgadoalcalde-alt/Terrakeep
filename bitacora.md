@@ -1520,3 +1520,67 @@ espada → solo grupos Cuerpo a cuerpo/Universal, nunca A distancia/Magia/Acceso
 objeto de Calamity con categoría Invocación simulada → grupo "Invocación +" sin filtrar por
 pool vanilla. `dotnet build`/`dotnet test` en verde (126/126). Fase puramente de Core, sin
 UI todavía - la Fase 3 (panel "Editar" compartido) es la que expone esto de verdad.
+
+### Fase 3 del plan - panel "Editar" compartido (equivalente real de app.TabEdit)
+
+La fase grande: sustituye los botones ★/✎/✕ diminutos por tarjeta + el `PrefixPickerViewModel`
+plano (118 prefijos sin filtrar) por un panel lateral persistente que sigue al slot
+SELECCIONADO en cualquier contenedor - Inventario/Banco/Caja fuerte/Fragua/Bóveda/Mascotas/
+Loadouts, no solo uno fijo. Esto es literalmente lo que el usuario describió como "esa
+ventana naranja acompaña desde equipamiento hasta forja del vacío".
+
+**`ItemSlotViewModel.cs`**: nuevo `ContainerName` (para que el panel sepa "sobre qué está
+editando" al vivir fuera del `TabControl` de contenedores), `IsSelected` (borde de acento +
+`AccentGlow` en la tarjeta), `ItemId`/`PrefixId` observables con escritura real - editar
+`ItemId` a mano reutiliza `PlaceItem` (mismo criterio que elegir desde la Librería, mejor
+prefijo automático incluido); editar `PrefixId` construye `ItemPrefix.Vanilla(byte)` y llama
+`SetPrefix` (cubre 0-97, incluidos los ids reales de invocación de Calamity 85-97 - un
+prefijo Rogue auténtico con id sintético ≥10000 no cabe en un campo de un byte, se deja solo
+para la rejilla de botones). Se elimina `ChoosePrefixCommand`.
+
+**`ItemEditViewModel.cs` (nuevo)** - deliberadamente delgado: Nombre/Índice/Contar/Prefijo se
+enlazan DIRECTAMENTE a `Slot.*` en el XAML, esta clase solo añade el selector categorizado de
+3 niveles (`Metas`→`Groups`→`Prefixes`, construido con `PrefixGroupCatalog`/
+`PrefixEligibility` de la Fase 2). Se suscribe a `PropertyChanged` del slot activo para
+refrescarse solo con cualquier cambio relevante (objeto puesto, prefijo cambiado, slot
+vaciado). Si la meta seleccionada deja de aplicar al cambiar de objeto, salta sola a la
+primera que sí aplica - equivalente real de `btMeta[0].click()`.
+
+**`MainViewModel.cs`**: `SelectSlot(slot)` (deselecciona el anterior, marca el nuevo,
+`ItemEdit.Slot = slot`) es el único punto de entrada; se llama tanto al hacer clic en un slot
+(`MainWindow.xaml.cs`, `OnItemSlotMouseDown`) como al elegir un objeto desde la Librería para
+un slot (mismo criterio: el panel sigue viendo lo que se acaba de colocar). Se elimina
+`PrefixPickerViewModel.cs` entero (con su comentario ya obsoleto sobre "no hay tabla
+prefijo→categoría fiable" - la Fase 2 demostró que sí la hay).
+
+**`MainWindow.xaml`**: "Objetos" pasa a `Grid` de 2 filas: fila 0 con 2 columnas
+(contenedores | panel Editar, 300px fijos), fila 1 la Librería sin tocar, a todo el ancho
+como ya estaba. Nuevo `InverseBooleanToVisibilityConverter` (`Converters/
+VisibilityConverters.cs`, registrado como `InverseBoolToVis` en `App.xaml`) para el mensaje
+"Selecciona un slot"/"No admite prefijos". Nuevos estilos en `Theme.xaml`: `SidePanelCard`,
+`PrefixMetaButton`/`PrefixGroupButton` (pastilla con estado seleccionado en violeta).
+
+**Verificación real, sin depender de capturas de pantalla** (la limitación de entorno ya
+documentada seguía bloqueando el diálogo nativo de abrir archivo incluso probando con UI
+Automation real en vez de coordenadas de píxel - el botón se localiza y se invoca sin error,
+pero el `OpenFileDialog` nunca llega a aparecer como ventana de nivel superior; documentado
+aquí, no se insistió más de dos intentos): se montó un proyecto de consola temporal
+(`%TEMP%\...\scratchpad\verify-fase3\Verify`, con `ProjectReference` directa a
+`TerrasavrNative.App.csproj`) que instancia `MainViewModel` de verdad y ejercita todo el flujo
+sin pasar por WPF, contra una **copia** de `Eldelgas.plr`/`.tplr` real (nunca el archivo del
+usuario). Resultados, todos correctos:
+- Tierra (id 2) → `CanHavePrefix=False`, 0 grupos en ninguna meta.
+- Espada de cobre (id 1) → categoría "Cuerpo a cuerpo"; meta Positivos muestra solo
+  Universal+/Común+/Cuerpo a cuerpo+ (nunca A distancia+/Magia+/Accesorio); "Legendario"
+  presente en el grupo real; aplicarlo actualiza `PrefixId=81` y se marca `IsCurrent=True` al
+  reconstruir la rejilla.
+- Editar `ItemId=368` a mano cambia el slot a "Excalibur" con tooltip de estadísticas real.
+- Editar `PrefixId=60` a mano cambia `PrefixDisplay` a "Demoníaco".
+- Seleccionar un slot del Banco cambia `ItemEdit.Slot.ContainerName` a "Banco" y deselecciona
+  el slot anterior del Inventario - **el panel sigue de verdad entre contenedores distintos**.
+- Guardar + recargar la copia conserva Excalibur con prefijo 60 - persistencia real
+  confirmada, no solo en memoria.
+
+`dotnet build`/`dotnet test` en verde (126/126, sin regresiones). Proyecto de verificación y
+copia temporal borrados tras el uso (uno de los dos, la copia en `%TEMP%`, quedó pendiente de
+borrar por un permiso denegado puntual - no contiene nada sensible, es una copia descartable).

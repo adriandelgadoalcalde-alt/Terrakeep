@@ -31,6 +31,13 @@
                                 <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
                                 <Setter Property="BorderThickness" Value="2" />
                             </DataTrigger>
+                            <!-- Slot seleccionado para el panel "Editar" compartido - pedido explicito
+                                 1-sep-2026 (equivalente real de resaltar el slot activo de app.TabEdit). -->
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                                <Setter Property="Effect" Value="{StaticResource AccentGlow}" />
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
@@ -41,11 +48,6 @@
                                 Padding="2,0" FontSize="11" Foreground="{StaticResource AccentBrush}"
                                 Background="Transparent"
                                 Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
-                        <Button Content="&#9998;" Command="{Binding ChoosePrefixCommand}"
-                                ToolTip="Elegir un prefijo a mano (vanilla + Calamity)"
-                                Padding="2,0" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"
-                                Background="Transparent"
-                                Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
                         <Button Content="&#10005;" Command="{Binding ClearCommand}"
                                 ToolTip="Vaciar este slot" Style="{StaticResource CircleCloseButton}"
                                 Width="18" Height="18" FontSize="10"
@@ -87,6 +89,124 @@
                     </StackPanel>
                 </DockPanel>
             </Border>
+        </DataTemplate>
+
+        <!-- Panel "Editar" compartido - equivalente real de app.TabEdit: sigue al slot
+             SELECCIONADO (ItemEditViewModel.Slot), no a uno fijo, para poder vivir fuera del
+             TabControl de contenedores y "acompañar" a Inventario/Banco/Caja fuerte/Fragua/
+             Boveda/Loadouts por igual (pedido explicito 1-sep-2026). -->
+        <DataTemplate x:Key="ItemEditTemplate" DataType="{x:Type vm:ItemEditViewModel}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Editar" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
+
+                <TextBlock DockPanel.Dock="Top" Text="{Binding NoPrefixMessage}" Style="{StaticResource CaptionText}"
+                           TextWrapping="Wrap" Margin="0,0,0,10"
+                           Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}" />
+
+                <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Image Source="{Binding Slot.IconPath}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,8,0"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding Slot.IconPath, Converter={StaticResource NullToVis}}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Slot.DisplayName}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="220" />
+                            <TextBlock Style="{StaticResource CaptionText}">
+                                <Run Text="{Binding Slot.ContainerName, Mode=OneWay}" />
+                                <Run Text=" · slot " />
+                                <Run Text="{Binding Slot.SlotIndex, Mode=OneWay}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="Índice (id)" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <TextBox Text="{Binding Slot.ItemId, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,8"
+                             Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+
+                    <TextBlock Text="Cantidad" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <TextBox Text="{Binding Slot.Count, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,8"
+                             Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+
+                    <TextBlock Text="Prefijo (id)" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBox Text="{Binding Slot.PrefixId, UpdateSourceTrigger=PropertyChanged}" Width="50" Padding="6,4"
+                                 Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                        <Button Content="★" Command="{Binding ApplyBestPrefixCommand}" ToolTip="Aplicar el mejor prefijo real"
+                                Padding="6,2" Margin="6,0,0,0" FontSize="12" Foreground="{StaticResource AccentBrush}"
+                                Background="Transparent"
+                                Visibility="{Binding Slot.HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
+                        <Button Content="Quitar" Command="{Binding ClearPrefixCommand}" ToolTip="Quitar el prefijo actual"
+                                Padding="6,2" Margin="6,0,0,0" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                                Background="Transparent" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Slot.PrefixDisplay}" Style="{StaticResource CaptionText}" Margin="0,0,0,6"
+                               Visibility="{Binding Slot.PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
+
+                    <TextBlock Text="{Binding CategoriesLabel}" Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}"
+                               Margin="0,4,0,10" Visibility="{Binding CanHavePrefix, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+
+                <!-- Selector de prefijo real de 3 niveles (equivalente exacto de los botones
+                     btMeta/btGroups/btPrefix reales de app.TabEdit, ya filtrados por lo que es
+                     legal de verdad para este objeto - ver PrefixGroupCatalog/PrefixRulesCatalog). -->
+                <StackPanel Visibility="{Binding CanHavePrefix, Converter={StaticResource BoolToVis}}">
+                    <ItemsControl ItemsSource="{Binding Metas}" Margin="0,0,0,6">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PrefixMetaButtonViewModel}">
+                                <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
+                                        Command="{Binding DataContext.ItemEdit.SelectMetaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding Groups}" Margin="0,0,0,6">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PrefixGroupButtonViewModel}">
+                                <Button Content="{Binding Label}" Style="{StaticResource PrefixGroupButton}"
+                                        Command="{Binding DataContext.ItemEdit.SelectGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Prefixes}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
+                                    <Button Content="{Binding DisplayName}"
+                                            Command="{Binding DataContext.ItemEdit.ApplyPrefixCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}" Padding="7,4" Margin="0,0,5,5" FontSize="11"
+                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                        <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </DockPanel>
         </DataTemplate>
 
         <!-- Nodo del arbol de categorias de la Libreria (recursivo - se referencia a si mismo
@@ -351,49 +471,17 @@
                                 <RowDefinition Height="270" />
                             </Grid.RowDefinitions>
 
-                            <DockPanel Grid.Row="0" Margin="0,0,0,8">
-                                <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="10,7" Margin="0,0,0,10"
-                                        Visibility="{Binding PrefixPicker.IsPicking, Converter={StaticResource BoolToVis}}">
-                                    <StackPanel>
-                                        <DockPanel Margin="0,0,0,8">
-                                            <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding PrefixPicker.CancelPickCommand}"
-                                                    Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" />
-                                            <TextBlock Text="Elige un prefijo para el objeto seleccionado (vanilla + Calamity)"
-                                                       Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                        </DockPanel>
-                                        <TextBox Text="{Binding PrefixPicker.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                 Padding="8,6" Background="{StaticResource BgPrimaryBrush}"
-                                                 Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                 MaxWidth="380" HorizontalAlignment="Left" FontSize="13" />
-                                        <TextBlock Text="{Binding PrefixPicker.ResultsSummary}" Foreground="{StaticResource BgPrimaryBrush}"
-                                                   FontSize="11" Margin="0,5,0,8" />
-                                        <ItemsControl ItemsSource="{Binding PrefixPicker.Results}" MaxHeight="220">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
-                                                    <Button Content="{Binding DisplayName}" Padding="8,5" Margin="0,0,6,6"
-                                                            Command="{Binding DataContext.PrefixPicker.PickPrefixCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                            CommandParameter="{Binding}"
-                                                            Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0">
-                                                        <Button.Style>
-                                                            <Style TargetType="Button">
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                                        <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Button.Style>
-                                                    </Button>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </Border>
+                            <!-- Contenedores a la izquierda + panel "Editar" a la derecha (equivalente real
+                                 de app.TabInventory.initSide: sideCtr con las pestañas Edit/Library reales -
+                                 aqui Library ya vive fijo abajo, ver Grid.Row=1, y Editar sigue al slot
+                                 SELECCIONADO sea cual sea el contenedor activo). -->
+                            <Grid Grid.Row="0" Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="300" />
+                                </Grid.ColumnDefinitions>
 
-                                <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
+                                <TabControl Grid.Column="0" Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}" Margin="0,0,10,0">
                                     <TabControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
                                             <TextBlock Text="{Binding DisplayName}" />
@@ -403,7 +491,11 @@
                                         <StaticResource ResourceKey="ContainerTabTemplate" />
                                     </TabControl.ContentTemplate>
                                 </TabControl>
-                            </DockPanel>
+
+                                <Border Grid.Column="1" Style="{StaticResource SidePanelCard}">
+                                    <ContentControl Content="{Binding ItemEdit}" ContentTemplate="{StaticResource ItemEditTemplate}" />
+                                </Border>
+                            </Grid>
 
                             <!-- Libreria: arbol de carpetas real (vanilla + Calamity, ver
                                  LibraryViewModel.BuildCategoryTree) + buscador, SIEMPRE visible aqui abajo. -->

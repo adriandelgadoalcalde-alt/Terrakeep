@@ -53,7 +53,7 @@ public partial class MainViewModel : ObservableObject
     public FlagsViewModel Flags { get; } = new();
     public VersionEditorViewModel VersionEditor { get; } = new();
     public BuffsViewModel Buffs { get; }
-    public PrefixPickerViewModel PrefixPicker { get; }
+    public ItemEditViewModel ItemEdit { get; }
 
     public MainViewModel()
     {
@@ -67,7 +67,17 @@ public partial class MainViewModel : ObservableObject
             PersonajeInnerTabIndex = ObjetosInnerTabIndex;
         };
         Buffs = new BuffsViewModel(_service);
-        PrefixPicker = new PrefixPickerViewModel(_service);
+        ItemEdit = new ItemEditViewModel(_service);
+    }
+
+    // Selecciona un slot para el panel "Editar" compartido (equivalente real de app.TabEdit)
+    // - un unico slot seleccionado a la vez, sea cual sea el contenedor donde este (pedido
+    // explicito 1-sep-2026: el panel debe "acompañar" a cualquier pestaña de objetos).
+    public void SelectSlot(ItemSlotViewModel slot)
+    {
+        if (ItemEdit.Slot != null) ItemEdit.Slot.IsSelected = false;
+        slot.IsSelected = true;
+        ItemEdit.Slot = slot;
     }
 
     // Usado por las tarjetas de la pagina de Inicio para saltar directamente a una seccion.
@@ -94,22 +104,10 @@ public partial class MainViewModel : ObservableObject
 
     private void RequestPickForSlot(ItemSlotViewModel slot)
     {
-        // Cierra el picker de prefijo si estaba abierto - sin este cierre cruzado podia
-        // quedar huerfano mientras el usuario elegia objeto para otro slot en la Libreria
-        // (bug real encontrado en la auditoria del 1-sep-2026).
-        PrefixPicker.PickTarget = null;
         Library.PickTarget = slot;
+        SelectSlot(slot); // el panel Editar sigue al slot que se esta rellenando desde la Libreria
         SelectedTabIndex = PersonajeTabIndex;
         PersonajeInnerTabIndex = ObjetosInnerTabIndex;
-    }
-
-    // El picker de prefijo se queda en la misma pestaña (Objetos) - a diferencia de la
-    // Libreria (8200 objetos, hace falta la pantalla entera) el catalogo de prefijos son solo
-    // 118 entradas, cabe como overlay sobre los propios contenedores sin cambiar de pestaña.
-    private void RequestPickPrefixForSlot(ItemSlotViewModel slot)
-    {
-        Library.PickTarget = null;
-        PrefixPicker.PickTarget = slot;
     }
 
     public void LoadFromPath(string plrPath)
@@ -117,7 +115,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             Library.PickTarget = null;
-            PrefixPicker.PickTarget = null;
+            ItemEdit.Slot = null;
             _loaded = _service.Load(plrPath);
             RebuildContainers();
             Appearance.LoadFrom(_loaded.Character);
@@ -301,7 +299,7 @@ public partial class MainViewModel : ObservableObject
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
-            slots.Add(new ItemSlotViewModel(_service, i, items[i], RequestPickForSlot, RequestPickPrefixForSlot));
+            slots.Add(new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot));
         Containers.Add(new ContainerViewModel(key, displayName, slots));
     }
 

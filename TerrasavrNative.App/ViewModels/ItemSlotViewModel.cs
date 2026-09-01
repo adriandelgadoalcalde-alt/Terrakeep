@@ -14,10 +14,16 @@ public partial class ItemSlotViewModel : ObservableObject
 {
     private readonly CharacterFileService _service;
     private readonly Action<ItemSlotViewModel>? _requestPick;
-    private readonly Action<ItemSlotViewModel>? _requestPickPrefix;
     private bool _suppressCountWriteback;
+    private bool _suppressIdWriteback;
+    private bool _suppressPrefixIdWriteback;
 
     public int SlotIndex { get; }
+    // Nombre real del contenedor al que pertenece este slot (Inventario/Banco/Caja fuerte/...)
+    // - lo muestra el panel "Editar" compartido para saber sobre que esta editando, ya que ese
+    // panel vive fuera del TabControl de contenedores (pedido explicito 1-sep-2026: el panel
+    // debe "acompañar desde Equipamiento hasta Forja del Vacio").
+    public string ContainerName { get; }
     public GameItem Item { get; private set; } = GameItem.Empty;
 
     [ObservableProperty] private string _displayName = string.Empty;
@@ -28,16 +34,19 @@ public partial class ItemSlotViewModel : ObservableObject
     [ObservableProperty] private bool _hasBestPrefixSuggestion;
     [ObservableProperty] private string? _iconPath;
     [ObservableProperty] private string? _statsTooltip;
+    [ObservableProperty] private bool _isSelected;
+    [ObservableProperty] private int _itemId;
+    [ObservableProperty] private int _prefixId;
 
     public bool IsNotEmpty => !IsEmpty;
     partial void OnIsEmptyChanged(bool value) => OnPropertyChanged(nameof(IsNotEmpty));
 
-    public ItemSlotViewModel(CharacterFileService service, int slotIndex, GameItem item, Action<ItemSlotViewModel>? requestPick = null, Action<ItemSlotViewModel>? requestPickPrefix = null)
+    public ItemSlotViewModel(CharacterFileService service, int slotIndex, string containerName, GameItem item, Action<ItemSlotViewModel>? requestPick = null)
     {
         _service = service;
         SlotIndex = slotIndex;
+        ContainerName = containerName;
         _requestPick = requestPick;
-        _requestPickPrefix = requestPickPrefix;
         UpdateFrom(item);
     }
 
@@ -50,6 +59,19 @@ public partial class ItemSlotViewModel : ObservableObject
         _suppressCountWriteback = true;
         Count = item.Count;
         _suppressCountWriteback = false;
+
+        _suppressIdWriteback = true;
+        ItemId = item.IsEmpty ? 0 : item.Id;
+        _suppressIdWriteback = false;
+
+        _suppressPrefixIdWriteback = true;
+        // Campo "Indice (id)" real de TabEdit - solo representa el byte de prefijo vanilla
+        // (incluye 85-97, los reales de invocacion de Calamity, que se escriben igual como
+        // byte). Un prefijo Rogue autentico de Calamity (modPrefixMod/modPrefixName, ids
+        // sinteticos >= 10000) no cabe en un campo numerico de un byte - se deja en 0 aqui
+        // (se edita solo desde la rejilla de botones, no a mano).
+        PrefixId = item.Prefix.IsCalamity ? 0 : item.Prefix.VanillaId;
+        _suppressPrefixIdWriteback = false;
 
         if (item.IsEmpty)
         {
@@ -132,6 +154,10 @@ public partial class ItemSlotViewModel : ObservableObject
 
     private void RefreshPrefixDisplay()
     {
+        _suppressPrefixIdWriteback = true;
+        PrefixId = Item.Prefix.IsCalamity ? 0 : Item.Prefix.VanillaId;
+        _suppressPrefixIdWriteback = false;
+
         var prefix = Item.Prefix;
         if (prefix.IsCalamity)
         {
@@ -169,6 +195,21 @@ public partial class ItemSlotViewModel : ObservableObject
         HasBestPrefixSuggestion = suggestion.HasValue && !suggestion.Value.Equals(Item.Prefix);
     }
 
-    [RelayCommand]
-    private void ChoosePrefix() => _requestPickPrefix?.Invoke(this);
+    // Campo "Indice" editable (equivalente real de fdIndex en TabEdit) - escribir un id
+    // nuevo cambia el objeto del slot igual que elegirlo desde la Libreria (mismo criterio,
+    // mejor prefijo automatico incluido via PlaceItem).
+    partial void OnItemIdChanged(int value)
+    {
+        if (_suppressIdWriteback || value <= 0 || value == Item.Id) return;
+        PlaceItem(value);
+    }
+
+    // Campo "Prefijo" editable a mano por numero (equivalente real de fdPrefix) - separado
+    // de los botones de la rejilla, que llaman a SetPrefix directamente con el ItemPrefix ya
+    // resuelto (vanilla o Calamity synthetic).
+    partial void OnPrefixIdChanged(int value)
+    {
+        if (_suppressPrefixIdWriteback || Item.IsEmpty) return;
+        SetPrefix(ItemPrefix.Vanilla((byte)Math.Clamp(value, 0, 255)));
+    }
 }

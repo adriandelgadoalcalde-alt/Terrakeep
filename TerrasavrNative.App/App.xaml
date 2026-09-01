@@ -13,6 +13,7 @@
             <conv:NullToCollapsedConverter x:Key="NullToCollapsed" />
             <conv:EmptyToCollapsedConverter x:Key="EmptyToCollapsed" />
             <conv:CountToVisibilityConverter x:Key="CountToVis" />
+            <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

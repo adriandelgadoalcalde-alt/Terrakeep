@@ -706,6 +706,60 @@
         <Setter Property="Padding" Value="20" />
     </Style>
 
+    <!-- Panel lateral persistente (Editar/Librería) - equivalente real del sideCtr de
+         app.TabInventory, pedido explicito 1-sep-2026 ("acompaña desde Equipamiento hasta
+         Forja del Vacio"). -->
+    <Style x:Key="SidePanelCard" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+        <Setter Property="Padding" Value="12" />
+    </Style>
+
+    <!-- Botones "meta" (Biblioteca/Positivos/Negativos) y "grupo" (Cuerpo a cuerpo +/...) del
+         selector de prefijo real (app.TabEdit btMeta/btGroups) - pastilla pequeña, acento
+         solido cuando esta seleccionado en vez del fondo gris por defecto. -->
+    <Style x:Key="PrefixMetaButton" TargetType="Button">
+        <Setter Property="Padding" Value="9,4" />
+        <Setter Property="Margin" Value="0,0,5,5" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="99" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+            </Trigger>
+            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="PrefixGroupButton" TargetType="Button" BasedOn="{StaticResource PrefixMetaButton}">
+        <Setter Property="FontSize" Value="10.5" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource AccentHoverBrush}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- Tarjeta de navegacion clicable (pagina de Inicio) - anima de verdad al pasar el raton
          (antes solo cambiaba el color al instante): sube 3px, la sombra crece, el borde se
          tiñe del color de acento QUE SE LE PASE (Tag) - permite reproducir la variedad de

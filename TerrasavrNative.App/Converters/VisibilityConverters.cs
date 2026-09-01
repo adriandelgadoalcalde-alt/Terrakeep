@@ -41,3 +41,15 @@ public sealed class CountToVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 }
+
+// Inverso de BooleanToVisibilityConverter - true -> Collapsed, false -> Visible (para el
+// mensaje "sin seleccion"/"no admite prefijos" del panel Editar compartido, que se muestra
+// justo cuando la condicion contraria NO se cumple).
+public sealed class InverseBooleanToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value is true ? Visibility.Collapsed : Visibility.Visible;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}

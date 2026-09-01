@@ -79,8 +79,8 @@ public partial class BuffsViewModel : ObservableObject
     // Bug real reportado 1-sep-2026 ("el sistema de buff sigue sin ser de sprites"): con
     // busqueda vacia esto dejaba Results vacio del todo - el panel "Añadir buff..." se abria
     // sin nada dentro hasta escribir algo, dando la sensacion de que los sprites no
-    // funcionaban. LibraryViewModel/PrefixPickerViewModel SI muestran todo de entrada con
-    // busqueda vacia (limitado por MaxResults) - mismo criterio aqui, por consistencia.
+    // funcionaban. LibraryViewModel SI muestra todo de entrada con busqueda vacia (limitado
+    // por MaxResults) - mismo criterio aqui, por consistencia.
     private void ApplyFilter()
     {
         Results.Clear();

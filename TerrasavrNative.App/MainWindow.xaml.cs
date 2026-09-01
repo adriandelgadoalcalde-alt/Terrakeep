@@ -164,7 +164,15 @@ public partial class MainWindow : Window
             DragDrop.DoDragDrop(element, new DataObject(typeof(LibraryItemViewModel), item), DragDropEffects.Copy);
     }
 
-    private void OnItemSlotMouseDown(object sender, MouseButtonEventArgs e) => _dragStartSlot = e.GetPosition(null);
+    // Un clic en cualquier slot (incluidos los botones ★/✕/Cambiar de dentro, ya que este
+    // manejador es PreviewMouseLeftButtonDown en el Border completo) lo selecciona para el
+    // panel "Editar" compartido - pedido explicito 1-sep-2026.
+    private void OnItemSlotMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStartSlot = e.GetPosition(null);
+        if (sender is FrameworkElement { DataContext: ItemSlotViewModel slot })
+            _viewModel.SelectSlot(slot);
+    }
 
     private void OnItemSlotMouseMove(object sender, MouseEventArgs e)
     {
