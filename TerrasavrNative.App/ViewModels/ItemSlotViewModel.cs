@@ -13,6 +13,7 @@ public partial class ItemSlotViewModel : ObservableObject
 {
     private readonly CharacterFileService _service;
     private readonly Action<ItemSlotViewModel>? _requestPick;
+    private readonly Action<ItemSlotViewModel>? _requestPickPrefix;
     private bool _suppressCountWriteback;
 
     public int SlotIndex { get; }
@@ -29,11 +30,12 @@ public partial class ItemSlotViewModel : ObservableObject
     public bool IsNotEmpty => !IsEmpty;
     partial void OnIsEmptyChanged(bool value) => OnPropertyChanged(nameof(IsNotEmpty));
 
-    public ItemSlotViewModel(CharacterFileService service, int slotIndex, GameItem item, Action<ItemSlotViewModel>? requestPick = null)
+    public ItemSlotViewModel(CharacterFileService service, int slotIndex, GameItem item, Action<ItemSlotViewModel>? requestPick = null, Action<ItemSlotViewModel>? requestPickPrefix = null)
     {
         _service = service;
         SlotIndex = slotIndex;
         _requestPick = requestPick;
+        _requestPickPrefix = requestPickPrefix;
         UpdateFrom(item);
     }
 
@@ -127,8 +129,20 @@ public partial class ItemSlotViewModel : ObservableObject
         var suggestion = PrefixSuggester.Suggest(Item, _service.CalamityCatalog, _service.BestPrefixes, _service.RoguePrefixCatalog);
         if (suggestion == null) return;
 
-        Item.Prefix = suggestion.Value;
-        RefreshPrefixDisplay();
-        HasBestPrefixSuggestion = false;
+        SetPrefix(suggestion.Value);
     }
+
+    // Aplica un prefijo elegido a mano (picker categorizado, hueco #2 de la auditoria - antes
+    // solo se podia usar el "mejor prefijo" auto-sugerido). Vale tanto para el picker como
+    // para ApplyBestPrefix de arriba.
+    public void SetPrefix(ItemPrefix prefix)
+    {
+        Item.Prefix = prefix;
+        RefreshPrefixDisplay();
+        var suggestion = PrefixSuggester.Suggest(Item, _service.CalamityCatalog, _service.BestPrefixes, _service.RoguePrefixCatalog);
+        HasBestPrefixSuggestion = suggestion.HasValue && !suggestion.Value.Equals(Item.Prefix);
+    }
+
+    [RelayCommand]
+    private void ChoosePrefix() => _requestPickPrefix?.Invoke(this);
 }

@@ -766,11 +766,38 @@ literalmente en el código real, no es un fallo de este puerto.
 `dotnet build` limpio, la app arranca sin excepción. **No verificado con clics reales** -
 misma limitación de siempre.
 
+### Selector de prefijo manual (hueco #2, cerrado) - mejora real sobre el propio original
+
+Antes solo existía el botón ★ (mejor prefijo auto-sugerido). Nuevo picker en la pestaña
+Objetos (botón ✎ en cada tarjeta) que deja elegir CUALQUIERA de los 97 prefijos vanilla + 21
+reales de Calamity/Pícaro, con buscador. Mismo patrón "picker con `PickTarget`" que
+`LibraryViewModel`/`BuffsViewModel`, pero se queda en la misma pestaña (Objetos) en vez de
+cambiar de pantalla - con solo 118 entradas totales (frente a ~8200 objetos o ~660 buffs) cabe
+como overlay sobre los propios contenedores, mostrando TODAS de entrada.
+
+- **`VanillaPrefixCatalog.AllEntries()`** (nuevo, `Core/Data`) - hacía falta enumerar los 97
+  prefijos vanilla, antes solo `ById`/`ByInternal` puntuales. Mismo patrón ya aplicado a
+  `VanillaBuffCatalog`.
+- **Deliberadamente SIN agrupar por categoría** (arma/armadura/accesorio) pese a que la
+  auditoría lo señalaba como mejora deseable: investigado `PrefixID.cs` decompilado real y
+  confirmado que Terraria NO expone la categoría como una propiedad simple del prefijo - la
+  elegibilidad depende de la lógica de `Item.Prefix()` por tipo de objeto, no hay una tabla
+  estática prefijo→categoría fiable sin decompilar y verificar esa lógica entera. Se prefirió
+  un selector plano y 100% verificable a inventar categorías sin confirmar.
+- **Mejora real sobre el propio Terrasavr original**: el original solo tenía botón dedicado
+  para 1 de los 21 prefijos de Calamity (el resto había que teclear el id 10000-10020 a mano,
+  documentado en su propio README) - aquí los 21 están en el picker con nombre real.
+
+**Verificado**: 101 tests xUnit (2 nuevos: `VanillaPrefixCatalogTests`, `ById`/`ByInternal` +
+`AllEntries` completo). `dotnet build` limpio, la app arranca sin excepción. **No verificado
+con clics reales** (elegir un prefijo de verdad, guardar y comprobar que persiste) - misma
+limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
-- Huecos 2 (selector de prefijo categorizado) y 5 (versión objetivo del guardado, prioridad
-  baja, riesgo si se usa mal) de la auditoría de arriba - el resto (1, 3, 4, 6) ya están
-  cerrados.
+- Hueco 5 de la auditoría (versión objetivo del guardado) - prioridad baja a propósito, riesgo
+  real si se usa mal (podría generar un archivo con version-gates inconsistentes). El resto
+  (1, 2, 3, 4, 6) ya están cerrados.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 

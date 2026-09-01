@@ -30,6 +30,8 @@ public sealed class VanillaPrefixCatalog
     public VanillaPrefixEntryData? ByInternal(string internalName) =>
         _byInternal.TryGetValue(internalName, out var e) ? e : null;
 
+    public IEnumerable<VanillaPrefixEntryData> AllEntries() => _byId.Values;
+
     public static VanillaPrefixCatalog LoadFromFile(string path)
     {
         using var stream = File.OpenRead(path);

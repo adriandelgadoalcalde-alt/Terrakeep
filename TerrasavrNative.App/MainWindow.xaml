@@ -35,6 +35,11 @@
                                 Padding="4,0" FontSize="13" Foreground="{StaticResource AccentBrush}"
                                 Background="Transparent"
                                 Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
+                        <Button Content="&#9998;" Command="{Binding ChoosePrefixCommand}"
+                                ToolTip="Elegir un prefijo a mano (vanilla + Calamity)"
+                                Padding="4,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                                Background="Transparent"
+                                Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
                         <Button Content="&#10005;" Command="{Binding ClearCommand}"
                                 ToolTip="Vaciar este slot"
                                 Padding="4,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
@@ -209,16 +214,59 @@
 
                 <TabControl Style="{StaticResource InnerTabControl}">
                     <TabItem Header="Objetos">
-                        <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
-                            <TabControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
-                                    <TextBlock Text="{Binding DisplayName}" />
-                                </DataTemplate>
-                            </TabControl.ItemTemplate>
-                            <TabControl.ContentTemplate>
-                                <StaticResource ResourceKey="ContainerTabTemplate" />
-                            </TabControl.ContentTemplate>
-                        </TabControl>
+                        <DockPanel>
+                            <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="10,7" Margin="0,0,0,10"
+                                    Visibility="{Binding PrefixPicker.IsPicking, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding PrefixPicker.CancelPickCommand}"
+                                                Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" />
+                                        <TextBlock Text="Elige un prefijo para el objeto seleccionado (vanilla + Calamity)"
+                                                   Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </DockPanel>
+                                    <TextBox Text="{Binding PrefixPicker.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             Padding="8,6" Background="{StaticResource BgPrimaryBrush}"
+                                             Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                             MaxWidth="380" HorizontalAlignment="Left" FontSize="13" />
+                                    <TextBlock Text="{Binding PrefixPicker.ResultsSummary}" Foreground="{StaticResource BgPrimaryBrush}"
+                                               FontSize="11" Margin="0,5,0,8" />
+                                    <ItemsControl ItemsSource="{Binding PrefixPicker.Results}" MaxHeight="220">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
+                                                <Button Content="{Binding DisplayName}" Padding="8,5" Margin="0,0,6,6"
+                                                        Command="{Binding DataContext.PrefixPicker.PickPrefixCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"
+                                                        Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{StaticResource CalamityBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
+                                <TabControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
+                                        <TextBlock Text="{Binding DisplayName}" />
+                                    </DataTemplate>
+                                </TabControl.ItemTemplate>
+                                <TabControl.ContentTemplate>
+                                    <StaticResource ResourceKey="ContainerTabTemplate" />
+                                </TabControl.ContentTemplate>
+                            </TabControl>
+                        </DockPanel>
                     </TabItem>
                     <TabItem Header="Buffs">
                         <DockPanel Margin="0,10,0,0">
