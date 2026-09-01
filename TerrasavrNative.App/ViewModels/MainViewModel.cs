@@ -39,6 +39,7 @@ public partial class MainViewModel : ObservableObject
     public LibraryViewModel Library { get; }
     public AppearanceViewModel Appearance { get; } = new();
     public ServersViewModel Servers { get; } = new();
+    public FlagsViewModel Flags { get; } = new();
     public BuffsViewModel Buffs { get; }
 
     public MainViewModel()
@@ -66,6 +67,7 @@ public partial class MainViewModel : ObservableObject
             RebuildContainers();
             Appearance.LoadFrom(_loaded.Character);
             Servers.LoadFrom(_loaded.Character);
+            Flags.LoadFrom(_loaded.Character);
             Buffs.LoadFrom(_loaded.Character);
             CharacterName = _loaded.Character.Name;
             HasCalamityData = _loaded.TplrPath != null;

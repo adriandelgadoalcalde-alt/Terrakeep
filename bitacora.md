@@ -744,10 +744,32 @@ desconocido + `AllEntries` completo). `dotnet build` limpio, la app arranca sin 
 **No verificado con clics reales** (añadir/quitar un buff de verdad, cambiar su duración,
 guardar y comprobar que persiste) - misma limitación de siempre.
 
+### `TabFlags` investigado y cerrado (hueco #6)
+
+Quedó "sin determinar" en la primera pasada de la auditoría - investigado aparte leyendo `Vb`
+(`app.TabFlags`) en `script.readable.js`: **13 casillas de desbloqueos/activaciones
+permanentes**, todas sobre campos que `PlrCharacter` ya tenía leídos/escritos desde la Fase 1
+(mismo patrón barato que el panel de estadísticas, hueco #4). Nueva pestaña interna
+"Desbloqueos": accesorio extra (experto/maestro), cambio de antorcha de bioma
+(desbloqueado/activado, dos casillas distintas), alcance de mesa de trabajo (Pan del
+Artesano), regeneración de vida (Cristal Vital), defensa (Fruta de Égida), regeneración de
+maná (Cristal Arcano), suerte (Perla de Galaxia), pesca (Gusano de Gominola), minería/
+colocación (Ambrosia), evento DD2 completado, y carrito potenciado (desbloqueado/activado).
+
+`FlagsViewModel` (nuevo) - mutación directa de `PlrCharacter.ExtraAccessory`/
+`UnlockedBiomeTorches`/`UsingBiomeTorches`/`ExtraUsingFlags[0..6]`/`FinishedDD2Event`/
+`SuperCartByte` (bit 0). **Replicado tal cual, no "corregido"**: las dos casillas de carrito
+potenciado leen y escriben el MISMO bit en el original (`superCartByte&1`) - confirmado
+literalmente en el código real, no es un fallo de este puerto.
+
+**Verificado**: 99 tests xUnit siguen en verde (pieza de UI pura, sin lógica nueva en Core),
+`dotnet build` limpio, la app arranca sin excepción. **No verificado con clics reales** -
+misma limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
-- Huecos 2 (selector de prefijo categorizado), 5 (versión objetivo del guardado, prioridad
-  baja) y 6 (`TabFlags`, sin determinar) de la auditoría de arriba - el 1, 3 y 4 ya están
+- Huecos 2 (selector de prefijo categorizado) y 5 (versión objetivo del guardado, prioridad
+  baja, riesgo si se usa mal) de la auditoría de arriba - el resto (1, 3, 4, 6) ya están
   cerrados.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)

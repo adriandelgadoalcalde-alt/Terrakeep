@@ -502,6 +502,27 @@
                             </ScrollViewer>
                         </DockPanel>
                     </TabItem>
+                    <TabItem Header="Desbloqueos">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                            <StackPanel MaxWidth="440">
+                                <TextBlock Text="Desbloqueos y activaciones permanentes del personaje."
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                <CheckBox Content="Accesorio extra (modo experto/maestro)" IsChecked="{Binding Flags.ExtraAccessory}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Cambio de antorcha de bioma desbloqueado" IsChecked="{Binding Flags.UnlockedBiomeTorches}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Cambio de antorcha de bioma activado" IsChecked="{Binding Flags.UsingBiomeTorches}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Alcance de mesa de trabajo aumentado (Pan del Artesano)" IsChecked="{Binding Flags.ArtisanBread}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Regeneracion de vida aumentada (Cristal Vital)" IsChecked="{Binding Flags.VitalCrystal}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Defensa aumentada (Fruta de Egida)" IsChecked="{Binding Flags.AegisFruit}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Regeneracion de mana aumentada (Cristal Arcano)" IsChecked="{Binding Flags.ArcaneCrystal}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Suerte aumentada (Perla de Galaxia)" IsChecked="{Binding Flags.GalaxyPearl}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Poder de pesca aumentado (Gusano de Gominola)" IsChecked="{Binding Flags.GummyWorm}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Velocidad de mineria y colocacion aumentada (Ambrosia)" IsChecked="{Binding Flags.Ambrosia}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Evento de la Segunda Defensa de las Dimensiones completado (puede usar invocaciones)" IsChecked="{Binding Flags.FinishedDD2Event}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Carrito potenciado desbloqueado" IsChecked="{Binding Flags.UnlockedSuperMinecart}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <CheckBox Content="Carrito potenciado activado" IsChecked="{Binding Flags.UsingSuperMinecart}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
                 </TabControl>
             </DockPanel>
         </TabItem>
