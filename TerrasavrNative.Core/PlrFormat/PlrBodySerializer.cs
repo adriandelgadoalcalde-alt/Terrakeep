@@ -5,28 +5,45 @@ namespace TerrasavrNative.Core.PlrFormat;
 // script.js dentro de ma.prototype.handle, solo que aplicado en la capa criptografica en vez
 // de en el escritor del cuerpo; el resultado es el mismo).
 //
-// LIMITACION DELIBERADA: solo soporta version (invVersion) >= 145 - se comprueba y se lanza
-// NotSupportedException si no, en vez de intentar las variantes de formato mas antiguas
-// (gender binario invertido, loadouts de 8 slots, ausencia de guid/playtime/taxMoney...).
-// Cualquier personaje jugado en años recientes cae de sobra en este rango.
-//
-// maxId de item (clamp de ids por encima del maximo real de esa version de Terraria) NO esta
-// implementado todavia - haria falta la tabla real maxId-por-version, no confirmada aun por la
-// investigacion. Se usa int.MaxValue (sin clamp) - suficiente para round-trip de un archivo ya
-// valido, pero revisar antes de dejar que la UI asigne libremente ids nuevos a un personaje.
+// Soporta TODO el rango de version (invVersion) que el propio motor real entiende - confirmado
+// campo a campo contra ma.prototype.handle/P.prototype.handle/na.prototype.handle reales en
+// script.js (investigacion dirigida de 1-sep-2026, ver bitacora.md "Compatibilidad completa de
+// versiones"), sin ningun umbral minimo inventado: el motor real tampoco tiene guarda de
+// minimo (intenta parsear cualquier version no negativa cayendo en la rama mas baja de cada
+// condicional), asi que este puerto hace lo mismo. El umbral con nombre de version de juego
+// conocido mas bajo es 39 (Terraria 1.1.2); por debajo de eso el formato no cambia mas, sigue
+// usando la misma rama que 1.1.2.
 public static class PlrBodySerializer
 {
     private const uint Magic1 = 1869374834;
     private const uint Magic2 = 56846695;
-    private const int MinSupportedVersion = 145;
-    private const int MaxIdPlaceholder = int.MaxValue;
+
+    // Techo real de id de item por invVersion (ja.getMaxIds real, confirmado 1-sep-2026) - se
+    // calcula UNA VEZ por Read() a partir de la version y se aplica igual a TODOS los slots de
+    // TODOS los contenedores (incluidos loadouts y tempItems), igual que el motor real. Solo
+    // afecta a lectura ("id > maxId && (id = 0)"), nunca a escritura. Los ids sinteticos de
+    // Calamity (>= CalamityIds.ItemIdBase, 20000000) nunca pasan por aqui: se inyectan en una
+    // capa por encima de este lector, que solo ve el .plr vanilla puro.
+    private static int GetMaxItemId(int version) => version switch
+    {
+        > 200 => 16384,
+        >= 190 => 3929,
+        >= 184 => 3883,
+        >= 175 => 3796,
+        >= 168 => 3729,
+        >= 145 => 3601,
+        >= 98 => 2748,
+        >= 93 => 2288,
+        >= 77 => 1965,
+        >= 70 => 1725,
+        >= 69 => 1614,
+        _ => 603,
+    };
 
     public static PlrCharacter Read(BinaryReader reader)
     {
         int version = reader.ReadInt32();
-        if (version < MinSupportedVersion)
-            throw new NotSupportedException(
-                $"Version de personaje {version} no soportada todavia (minimo {MinSupportedVersion}) - ver PlrBodySerializer.");
+        int maxId = GetMaxItemId(version);
 
         var character = new PlrCharacter
         {
@@ -35,23 +52,29 @@ public static class PlrBodySerializer
             PrimaryLoadout = PlrLoadout.CreateEmpty(isPrimary: true),
         };
 
-        uint m1 = reader.ReadUInt32();
-        uint m2 = reader.ReadUInt32();
-        if (m1 != Magic1 || m2 != Magic2)
-            throw new InvalidDataException("That doesn't seem to be a valid profile.");
+        if (version >= 145)
+        {
+            uint m1 = reader.ReadUInt32();
+            uint m2 = reader.ReadUInt32();
+            if (m1 != Magic1 || m2 != Magic2)
+                throw new InvalidDataException("That doesn't seem to be a valid profile.");
 
-        character.MetaVersion = reader.ReadUInt32();
-        character.MetaFlags1 = reader.ReadUInt32();
-        character.MetaFlags2 = reader.ReadUInt32();
+            character.MetaVersion = reader.ReadUInt32();
+            character.MetaFlags1 = reader.ReadUInt32();
+            character.MetaFlags2 = reader.ReadUInt32();
 
-        if (character.IsSwitch)
-            character.Guid = reader.ReadSharpString();
+            if (character.IsSwitch)
+                character.Guid = reader.ReadSharpString();
+        }
 
         character.Name = reader.ReadSharpString();
         character.Difficulty = reader.ReadByte();
 
-        character.PlayTimeLow = reader.ReadUInt32();
-        character.PlayTimeHigh = reader.ReadUInt32();
+        if (version >= 145)
+        {
+            character.PlayTimeLow = reader.ReadUInt32();
+            character.PlayTimeHigh = reader.ReadUInt32();
+        }
 
         character.HairStyle = reader.ReadInt32();
         if (version >= 82) character.HairDye = reader.ReadByte();
@@ -59,35 +82,53 @@ public static class PlrBodySerializer
         if (version >= 83)
         {
             character.HideVisual1 = reader.ReadByte();
-            character.HideVisual2 = reader.ReadByte(); // version>=145 ya garantizado por la linea base
+            if (version >= 145) character.HideVisual2 = reader.ReadByte();
         }
-        character.HideMisc = reader.ReadByte();
-        character.Gender = reader.ReadByte();
+        if (version >= 145) character.HideMisc = reader.ReadByte();
+
+        if (version >= 145)
+        {
+            character.Gender = reader.ReadByte();
+        }
+        else
+        {
+            // Genero binario invertido en saves antiguos: solo distingue dos valores de
+            // Gender (0 y 4), no el byte plano moderno - confirmado contra ma.prototype.handle
+            // real (b_bool ? gender=0 : gender=4).
+            character.Gender = reader.ReadBoolean() ? (byte)0 : (byte)4;
+        }
 
         character.HealthNow = reader.ReadInt32();
         character.HealthMax = reader.ReadInt32();
         character.ManaNow = reader.ReadInt32();
         character.ManaMax = reader.ReadInt32();
 
-        character.ExtraAccessory = reader.ReadByte() != 0;
-        if (version >= 230)
+        if (version >= 145)
         {
-            character.UnlockedBiomeTorches = reader.ReadByte() != 0;
-            character.UsingBiomeTorches = reader.ReadByte() != 0;
-        }
-        if (version >= 269)
-        {
-            character.ExtraUsingFlags[0] = reader.ReadByte() != 0;
-            if (version >= 324) reader.ReadByte(); // 1 byte reservado, valor 0
-            for (int i = 1; i <= 6; i++)
-                character.ExtraUsingFlags[i] = reader.ReadByte() != 0;
-        }
-        character.FinishedDD2Event = reader.ReadByte() != 0; // isSwitch ? e>190 : e>=184, ya cubierto por linea base salvo el caso raro Switch
-        character.TaxMoney = reader.ReadInt32();
-        if (version >= 269)
-        {
-            character.PveDeaths = reader.ReadInt32();
-            character.PvpDeaths = reader.ReadInt32();
+            character.ExtraAccessory = reader.ReadByte() != 0;
+            if (version >= 230)
+            {
+                character.UnlockedBiomeTorches = reader.ReadByte() != 0;
+                character.UsingBiomeTorches = reader.ReadByte() != 0;
+            }
+            if (version >= 269)
+            {
+                character.ExtraUsingFlags[0] = reader.ReadByte() != 0;
+                if (version >= 324) reader.ReadByte(); // 1 byte reservado, valor 0
+                for (int i = 1; i <= 6; i++)
+                    character.ExtraUsingFlags[i] = reader.ReadByte() != 0;
+            }
+            // Umbral real (isSwitch ? version>190 : version>=184) - bug real corregido
+            // 1-sep-2026: antes se leia sin condicion ninguna, asumiendo erroneamente que
+            // version>=145 ya lo garantizaba (existe un hueco real 145-183 sin este campo).
+            bool hasFinishedDD2Event = character.IsSwitch ? version > 190 : version >= 184;
+            if (hasFinishedDD2Event) character.FinishedDD2Event = reader.ReadByte() != 0;
+            character.TaxMoney = reader.ReadInt32();
+            if (version >= 269)
+            {
+                character.PveDeaths = reader.ReadInt32();
+                character.PvpDeaths = reader.ReadInt32();
+            }
         }
 
         character.HairColor = ReadRgb(reader);
@@ -98,25 +139,35 @@ public static class PlrBodySerializer
         character.PantsColor = ReadRgb(reader);
         character.ShoesColor = ReadRgb(reader);
 
-        character.PrimaryLoadout = ReadLoadout(reader, isPrimary: true, version);
+        character.PrimaryLoadout = ReadLoadout(reader, isPrimary: true, version, maxId);
 
-        character.Inventory = ReadContainer(reader, PlrContainerSpec.Inventory, version);
-        character.Coins = ReadContainer(reader, PlrContainerSpec.Coins, version);
-        character.Ammo = ReadContainer(reader, PlrContainerSpec.Ammo, version);
+        character.Inventory = ReadContainer(reader, PlrContainerSpec.Inventory, version, maxId);
+        character.Coins = ReadContainer(reader, PlrContainerSpec.Coins, version, maxId);
+        character.Ammo = ReadContainer(reader, PlrContainerSpec.Ammo, version, maxId);
 
         character.EquipmentItems = new PlrItemSlot[5];
         character.EquipmentDyes = new PlrItemSlot[5];
-        for (int i = 0; i < 5; i++)
+        Array.Fill(character.EquipmentItems, PlrItemSlot.Empty);
+        Array.Fill(character.EquipmentDyes, PlrItemSlot.Empty);
+        // Bug real corregido 1-sep-2026: este bloque nunca comprobaba version>=145 aunque
+        // PlrContainerSpec.Equipment.IsAvailable ya lo decia - invisible mientras el suelo de
+        // esta app era 145 (siempre disponible), pero revienta el resto del stream en
+        // cualquier version mas antigua (pet/mascota "miscEquips" no existe antes de 145, vive
+        // solo dentro del loadout primario de 8 slots, ver ReadLoadout).
+        if (version >= 145)
         {
-            character.EquipmentItems[i] = PlrItemSlot.Read(reader, PlrContainerSpec.Equipment.Multi, PlrContainerSpec.Equipment.IncludesFavoriteByte(version), MaxIdPlaceholder);
-            character.EquipmentDyes[i] = PlrItemSlot.Read(reader, PlrContainerSpec.Equipment.Multi, PlrContainerSpec.Equipment.IncludesFavoriteByte(version), MaxIdPlaceholder);
+            for (int i = 0; i < 5; i++)
+            {
+                character.EquipmentItems[i] = PlrItemSlot.Read(reader, PlrContainerSpec.Equipment.Multi, PlrContainerSpec.Equipment.IncludesFavoriteByte(version), maxId);
+                character.EquipmentDyes[i] = PlrItemSlot.Read(reader, PlrContainerSpec.Equipment.Multi, PlrContainerSpec.Equipment.IncludesFavoriteByte(version), maxId);
+            }
         }
 
         bool sequentialBankSafe = version >= 168 || character.IsSwitch;
-        (character.BankItems, character.SafeItems) = ReadBankAndSafe(reader, version, sequentialBankSafe);
+        (character.BankItems, character.SafeItems) = ReadBankAndSafe(reader, version, maxId, sequentialBankSafe);
 
-        character.ForgeItems = ReadContainer(reader, PlrContainerSpec.Forge, version);
-        character.VoidItems = ReadContainer(reader, PlrContainerSpec.Void, version);
+        character.ForgeItems = ReadContainer(reader, PlrContainerSpec.Forge, version, maxId);
+        character.VoidItems = ReadContainer(reader, PlrContainerSpec.Void, version, maxId);
         if (version >= 200) character.VoidVaultByte = reader.ReadByte();
 
         int buffCount = version >= 269 ? 44 : version >= 77 ? 22 : 10;
@@ -168,7 +219,7 @@ public static class PlrBodySerializer
             for (int bit = 0; bit < 4; bit++)
             {
                 if ((tempBitmask & (1 << bit)) != 0)
-                    character.TempItems[bit] = ReadSimpleSlot(reader, multi: true);
+                    character.TempItems[bit] = ReadSimpleSlot(reader, multi: true, maxId);
             }
         }
 
@@ -182,7 +233,7 @@ public static class PlrBodySerializer
         {
             character.Loadouts = new PlrLoadout[3];
             for (int i = 0; i < 3; i++)
-                character.Loadouts[i] = ReadLoadout(reader, isPrimary: false, version);
+                character.Loadouts[i] = ReadLoadout(reader, isPrimary: false, version, maxId);
         }
 
         long remaining = reader.BaseStream.Length - reader.BaseStream.Position;
@@ -194,25 +245,29 @@ public static class PlrBodySerializer
     public static void Write(BinaryWriter writer, PlrCharacter character)
     {
         int version = character.Version;
-        if (version < MinSupportedVersion)
-            throw new NotSupportedException(
-                $"Version de personaje {version} no soportada todavia (minimo {MinSupportedVersion}) - ver PlrBodySerializer.");
 
         writer.Write(version);
-        writer.Write(Magic1);
-        writer.Write(Magic2);
-        writer.Write(character.MetaVersion);
-        writer.Write(character.MetaFlags1);
-        writer.Write(character.MetaFlags2);
 
-        if (character.IsSwitch)
-            writer.WriteSharpString(character.Guid ?? string.Empty);
+        if (version >= 145)
+        {
+            writer.Write(Magic1);
+            writer.Write(Magic2);
+            writer.Write(character.MetaVersion);
+            writer.Write(character.MetaFlags1);
+            writer.Write(character.MetaFlags2);
+
+            if (character.IsSwitch)
+                writer.WriteSharpString(character.Guid ?? string.Empty);
+        }
 
         writer.WriteSharpString(character.Name);
         writer.Write(character.Difficulty);
 
-        writer.Write(character.PlayTimeLow);
-        writer.Write(character.PlayTimeHigh);
+        if (version >= 145)
+        {
+            writer.Write(character.PlayTimeLow);
+            writer.Write(character.PlayTimeHigh);
+        }
 
         writer.Write(character.HairStyle);
         if (version >= 82) writer.Write(character.HairDye);
@@ -220,35 +275,47 @@ public static class PlrBodySerializer
         if (version >= 83)
         {
             writer.Write(character.HideVisual1);
-            writer.Write(character.HideVisual2);
+            if (version >= 145) writer.Write(character.HideVisual2);
         }
-        writer.Write(character.HideMisc);
-        writer.Write(character.Gender);
+        if (version >= 145) writer.Write(character.HideMisc);
+
+        if (version >= 145)
+        {
+            writer.Write(character.Gender);
+        }
+        else
+        {
+            writer.Write(character.Gender < 4); // genero binario invertido, ver Read()
+        }
 
         writer.Write(character.HealthNow);
         writer.Write(character.HealthMax);
         writer.Write(character.ManaNow);
         writer.Write(character.ManaMax);
 
-        writer.Write((byte)(character.ExtraAccessory ? 1 : 0));
-        if (version >= 230)
+        if (version >= 145)
         {
-            writer.Write((byte)(character.UnlockedBiomeTorches ? 1 : 0));
-            writer.Write((byte)(character.UsingBiomeTorches ? 1 : 0));
-        }
-        if (version >= 269)
-        {
-            writer.Write((byte)(character.ExtraUsingFlags[0] ? 1 : 0));
-            if (version >= 324) writer.Write((byte)0);
-            for (int i = 1; i <= 6; i++)
-                writer.Write((byte)(character.ExtraUsingFlags[i] ? 1 : 0));
-        }
-        writer.Write((byte)(character.FinishedDD2Event ? 1 : 0));
-        writer.Write(character.TaxMoney);
-        if (version >= 269)
-        {
-            writer.Write(character.PveDeaths);
-            writer.Write(character.PvpDeaths);
+            writer.Write((byte)(character.ExtraAccessory ? 1 : 0));
+            if (version >= 230)
+            {
+                writer.Write((byte)(character.UnlockedBiomeTorches ? 1 : 0));
+                writer.Write((byte)(character.UsingBiomeTorches ? 1 : 0));
+            }
+            if (version >= 269)
+            {
+                writer.Write((byte)(character.ExtraUsingFlags[0] ? 1 : 0));
+                if (version >= 324) writer.Write((byte)0);
+                for (int i = 1; i <= 6; i++)
+                    writer.Write((byte)(character.ExtraUsingFlags[i] ? 1 : 0));
+            }
+            bool hasFinishedDD2Event = character.IsSwitch ? version > 190 : version >= 184;
+            if (hasFinishedDD2Event) writer.Write((byte)(character.FinishedDD2Event ? 1 : 0));
+            writer.Write(character.TaxMoney);
+            if (version >= 269)
+            {
+                writer.Write(character.PveDeaths);
+                writer.Write(character.PvpDeaths);
+            }
         }
 
         WriteRgb(writer, character.HairColor);
@@ -259,16 +326,19 @@ public static class PlrBodySerializer
         WriteRgb(writer, character.PantsColor);
         WriteRgb(writer, character.ShoesColor);
 
-        WriteLoadout(writer, character.PrimaryLoadout, isPrimary: true);
+        WriteLoadout(writer, character.PrimaryLoadout, isPrimary: true, version);
 
         WriteContainer(writer, PlrContainerSpec.Inventory, version, character.Inventory);
         WriteContainer(writer, PlrContainerSpec.Coins, version, character.Coins);
         WriteContainer(writer, PlrContainerSpec.Ammo, version, character.Ammo);
 
-        for (int i = 0; i < 5; i++)
+        if (version >= 145)
         {
-            character.EquipmentItems[i].Write(writer, PlrContainerSpec.Equipment.Multi, PlrContainerSpec.Equipment.IncludesFavoriteByte(version));
-            character.EquipmentDyes[i].Write(writer, PlrContainerSpec.Equipment.Multi, PlrContainerSpec.Equipment.IncludesFavoriteByte(version));
+            for (int i = 0; i < 5; i++)
+            {
+                character.EquipmentItems[i].Write(writer, PlrContainerSpec.Equipment.Multi, PlrContainerSpec.Equipment.IncludesFavoriteByte(version));
+                character.EquipmentDyes[i].Write(writer, PlrContainerSpec.Equipment.Multi, PlrContainerSpec.Equipment.IncludesFavoriteByte(version));
+            }
         }
 
         bool sequentialBankSafe = version >= 168 || character.IsSwitch;
@@ -289,8 +359,13 @@ public static class PlrBodySerializer
         WriteServers(writer, character.Servers);
 
         writer.Write((byte)(character.HotbarLocked ? 1 : 0));
-        for (int i = 0; i < 13; i++)
-            writer.Write((byte)(character.HideInfo[i] ? 1 : 0));
+        // Bug real corregido 1-sep-2026: igual que Equipment, este bucle nunca comprobaba
+        // version>=145 (invisible mientras el suelo de esta app era 145).
+        if (version >= 145)
+        {
+            for (int i = 0; i < 13; i++)
+                writer.Write((byte)(character.HideInfo[i] ? 1 : 0));
+        }
         if (version >= 98) writer.Write(character.FishingQuestsCompleted);
         if (version >= 168 && (!character.IsSwitch || version > 190))
         {
@@ -340,7 +415,7 @@ public static class PlrBodySerializer
         if (version >= 269)
         {
             for (int i = 0; i < 3; i++)
-                WriteLoadout(writer, character.Loadouts[i], isPrimary: false);
+                WriteLoadout(writer, character.Loadouts[i], isPrimary: false, version);
         }
 
         if (character.Trail.Length > 0)
@@ -349,13 +424,13 @@ public static class PlrBodySerializer
 
     // --- contenedores ---
 
-    private static PlrItemSlot[] ReadContainer(BinaryReader reader, PlrContainerSpec spec, int version)
+    private static PlrItemSlot[] ReadContainer(BinaryReader reader, PlrContainerSpec spec, int version, int maxId)
     {
         var slots = new PlrItemSlot[spec.SlotCount];
         for (int i = 0; i < spec.SlotCount; i++)
         {
             slots[i] = spec.IsAvailable(version, i)
-                ? PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), MaxIdPlaceholder)
+                ? PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), maxId)
                 : PlrItemSlot.Empty;
         }
         return slots;
@@ -370,7 +445,7 @@ public static class PlrBodySerializer
         }
     }
 
-    private static (PlrItemSlot[] Bank, PlrItemSlot[] Safe) ReadBankAndSafe(BinaryReader reader, int version, bool sequential)
+    private static (PlrItemSlot[] Bank, PlrItemSlot[] Safe) ReadBankAndSafe(BinaryReader reader, int version, int maxId, bool sequential)
     {
         var bank = new PlrItemSlot[40];
         var safe = new PlrItemSlot[40];
@@ -379,17 +454,17 @@ public static class PlrBodySerializer
         if (sequential)
         {
             for (int i = 0; i < 40; i++)
-                bank[i] = spec.IsAvailable(version, i) ? PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), MaxIdPlaceholder) : PlrItemSlot.Empty;
+                bank[i] = spec.IsAvailable(version, i) ? PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), maxId) : PlrItemSlot.Empty;
             for (int i = 0; i < 40; i++)
-                safe[i] = spec.IsAvailable(version, i) ? PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), MaxIdPlaceholder) : PlrItemSlot.Empty;
+                safe[i] = spec.IsAvailable(version, i) ? PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), maxId) : PlrItemSlot.Empty;
         }
         else
         {
             for (int i = 0; i < 40; i++)
             {
                 if (!spec.IsAvailable(version, i)) { bank[i] = PlrItemSlot.Empty; safe[i] = PlrItemSlot.Empty; continue; }
-                bank[i] = PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), MaxIdPlaceholder);
-                safe[i] = PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), MaxIdPlaceholder);
+                bank[i] = PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), maxId);
+                safe[i] = PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), maxId);
             }
         }
         return (bank, safe);
@@ -417,10 +492,12 @@ public static class PlrBodySerializer
     }
 
     // tempItems usa el formato SIMPLE (na.prototype.save/load): id + count-opcional + prefix,
-    // sin favorito, sin gate de disponibilidad (ya resuelto por el bitmask exterior).
-    private static PlrItemSlot ReadSimpleSlot(BinaryReader reader, bool multi)
+    // sin favorito, sin gate de disponibilidad (ya resuelto por el bitmask exterior). Tambien
+    // pasa por el clamp real de maxId (na.maxId se aplica a TODOS los slots, sin excepcion).
+    private static PlrItemSlot ReadSimpleSlot(BinaryReader reader, bool multi, int maxId)
     {
         int id = reader.ReadInt32();
+        if (id > maxId) id = 0;
         int count = multi ? reader.ReadInt32() : (id != 0 ? 1 : 0);
         byte prefix = reader.ReadByte();
         return id == 0 ? PlrItemSlot.Empty : new PlrItemSlot(id, count, prefix, Favorited: false);
@@ -435,15 +512,32 @@ public static class PlrBodySerializer
 
     // --- loadouts ---
 
-    private static PlrLoadout ReadLoadout(BinaryReader reader, bool isPrimary, int version)
+    // P.prototype.handle real: el numero de slots de items/social/dyes del "equipo puesto"
+    // depende de la version (confirmado 1-sep-2026, esto es lo que el comentario antiguo de
+    // este archivo llamaba "loadouts de 8 slots" - NO tiene nada que ver con los loadouts
+    // multiples modernos, es el formato viejo del unico set de equipo que existia antes de
+    // v269). PlrLoadout sigue modelandose siempre como 10+10+10 en memoria por simplicidad de
+    // la UI - los slots que no existen en el formato de esa version se quedan vacios al leer y
+    // se descartan en silencio al escribir, igual que el motor real.
+    private static (int Items, int Social, int Dyes) GetLoadoutSlotCounts(int version) => version switch
     {
-        var spec = PlrContainerSpec.LoadoutSlot;
-        var items = new PlrItemSlot[10];
-        var social = new PlrItemSlot[10];
-        var dyes = new PlrItemSlot[10];
-        for (int i = 0; i < 10; i++) items[i] = PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), MaxIdPlaceholder);
-        for (int i = 0; i < 10; i++) social[i] = PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), MaxIdPlaceholder);
-        for (int i = 0; i < 10; i++) dyes[i] = PlrItemSlot.Read(reader, spec.Multi, spec.IncludesFavoriteByte(version), MaxIdPlaceholder);
+        >= 145 => (10, 10, 10),
+        >= 81 => (8, 8, 8),
+        _ => (8, 3, version > 39 ? 3 : 0),
+    };
+
+    private static PlrLoadout ReadLoadout(BinaryReader reader, bool isPrimary, int version, int maxId)
+    {
+        var (itemCount, socialCount, dyeCount) = GetLoadoutSlotCounts(version);
+        bool multi = !isPrimary; // bug real corregido 1-sep-2026: los 3 loadouts alternos SI llevan Int32 count por slot, el primario no
+        bool includeFavorite = PlrContainerSpec.LoadoutSlot.IncludesFavoriteByte(version); // favFlagMinVersion=322, bug real corregido 1-sep-2026 (antes era 0, nunca se leia)
+
+        var items = CreateEmptyLoadoutSlots();
+        var social = CreateEmptyLoadoutSlots();
+        var dyes = CreateEmptyLoadoutSlots();
+        for (int i = 0; i < itemCount; i++) items[i] = PlrItemSlot.Read(reader, multi, includeFavorite, maxId);
+        for (int i = 0; i < socialCount; i++) social[i] = PlrItemSlot.Read(reader, multi, includeFavorite, maxId);
+        for (int i = 0; i < dyeCount; i++) dyes[i] = PlrItemSlot.Read(reader, multi, includeFavorite, maxId);
 
         bool[]? hide = null;
         if (!isPrimary)
@@ -454,18 +548,28 @@ public static class PlrBodySerializer
         return new PlrLoadout { Items = items, Social = social, Dyes = dyes, Hide = hide };
     }
 
-    private static void WriteLoadout(BinaryWriter writer, PlrLoadout loadout, bool isPrimary)
+    private static void WriteLoadout(BinaryWriter writer, PlrLoadout loadout, bool isPrimary, int version)
     {
-        var spec = PlrContainerSpec.LoadoutSlot;
-        for (int i = 0; i < 10; i++) loadout.Items[i].Write(writer, spec.Multi, false);
-        for (int i = 0; i < 10; i++) loadout.Social[i].Write(writer, spec.Multi, false);
-        for (int i = 0; i < 10; i++) loadout.Dyes[i].Write(writer, spec.Multi, false);
+        var (itemCount, socialCount, dyeCount) = GetLoadoutSlotCounts(version);
+        bool multi = !isPrimary;
+        bool includeFavorite = PlrContainerSpec.LoadoutSlot.IncludesFavoriteByte(version);
+
+        for (int i = 0; i < itemCount; i++) loadout.Items[i].Write(writer, multi, includeFavorite);
+        for (int i = 0; i < socialCount; i++) loadout.Social[i].Write(writer, multi, includeFavorite);
+        for (int i = 0; i < dyeCount; i++) loadout.Dyes[i].Write(writer, multi, includeFavorite);
 
         if (!isPrimary)
         {
             var hide = loadout.Hide ?? new bool[10];
             for (int i = 0; i < 10; i++) writer.Write((byte)(hide[i] ? 1 : 0));
         }
+    }
+
+    private static PlrItemSlot[] CreateEmptyLoadoutSlots()
+    {
+        var slots = new PlrItemSlot[10];
+        Array.Fill(slots, PlrItemSlot.Empty);
+        return slots;
     }
 
     // --- listas terminadas en sentinela ---

@@ -75,16 +75,18 @@ public sealed class PlrContainerSpec
         IsAvailable = (version, _) => version >= 200,
     };
 
-    // Slots de un loadout (items/social/dyes) - SUPUESTO no confirmado explicitamente por la
-    // investigacion (que documento la tabla de los 9 contenedores con nombre propio, pero no
-    // dio un spec aparte para P.prototype.handle): se asume el mismo comportamiento que
-    // Equipment (no apilable, sin byte de favorito) por ser conceptualmente lo mismo ("equipo
-    // puesto"), pero revisar esto primero si un round-trip real con loadouts falla.
+    // Slots de un loadout (items/social/dyes) - CONFIRMADO 1-sep-2026 contra el constructor P
+    // real: favFlagMinVersion=322 (bug real corregido, antes se asumia 0 y nunca se leia/
+    // escribia el byte de favorito). Multi difiere entre el loadout primario (false) y los 3
+    // alternos (true, SI llevan Int32 count) - se resuelve directamente en
+    // PlrBodySerializer.ReadLoadout/WriteLoadout, no aqui, asi que el campo Multi de este spec
+    // no se usa para loadouts. El numero de slots (10/10/10 en v>=145, menos en versiones mas
+    // antiguas) tambien depende de la version - ver PlrBodySerializer.GetLoadoutSlotCounts.
     public static readonly PlrContainerSpec LoadoutSlot = new()
     {
         SlotCount = 10,
         Multi = false,
-        FavFlagMinVersion = 0,
-        IsAvailable = (_, _) => true, // el propio numero de slots (10) ya depende de la version en PlrLoadout
+        FavFlagMinVersion = 322,
+        IsAvailable = (_, _) => true,
     };
 }

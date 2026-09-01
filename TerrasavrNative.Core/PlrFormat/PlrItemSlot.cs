@@ -17,7 +17,10 @@ public readonly record struct PlrItemSlot(int Id, int Count, byte Prefix, bool F
     public static PlrItemSlot Read(BinaryReader reader, bool multi, bool includeFavorite, int maxId)
     {
         int id = reader.ReadInt32();
-        if (id < 0 || id > maxId) id = 0;
+        // Clamp real (na.maxId, confirmado 1-sep-2026): SOLO "id > maxId", sin clamp para
+        // ids negativos - no es fiel al original tener el clamp de negativos, aunque en la
+        // practica nunca aparecen en un archivo real (se retiro deliberadamente).
+        if (id > maxId) id = 0;
 
         int count = multi ? reader.ReadInt32() : (id != 0 ? 1 : 0);
         byte prefix = reader.ReadByte();

@@ -21,12 +21,13 @@ public sealed class PlrServerEntry
 }
 
 // Modelo completo del cuerpo de un .plr YA DESCIFRADO (ver PlrCrypto para AES/PKCS7). Layout
-// y condiciones de version confirmados campo a campo contra ma.prototype.handle real en
-// script.js (dos rondas de investigacion dirigida, ver el plan). SIMPLIFICACION DELIBERADA:
-// solo se soporta version (invVersion) >= 145 - todo personaje real jugado en los ultimos años
-// cae ahi de sobra; las variantes de formato anteriores a 145 (gender binario invertido,
-// loadouts de 8 slots, ausencia de guid/playtime/taxMoney...) no estan implementadas, ver
-// PlrBodySerializer.
+// y condiciones de version confirmados campo a campo contra ma.prototype.handle/
+// P.prototype.handle/na.prototype.handle reales en script.js (tres rondas de investigacion
+// dirigida, la ultima 1-sep-2026 para cerrar TODO el rango de version, ver bitacora.md
+// "Compatibilidad completa de versiones"). Soporta el rango completo que el propio motor
+// entiende, desde Terraria 1.1.2 (invVersion=39) hasta la version actual - ver
+// PlrBodySerializer para el detalle de cada variante de formato antigua (gender binario
+// invertido, loadout primario de 8 slots, ausencia de guid/playtime/taxMoney...).
 public sealed class PlrCharacter
 {
     public required int Version { get; set; }

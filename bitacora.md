@@ -960,16 +960,106 @@ la barra de acento, el contenido carga ("8164 objetos en total") y el campo de b
 muestra el estado de foco del nuevo tema (raya inferior de acento). Confirma en el mismo gesto
 que el pulido estético anterior funciona en la app real, no solo en la galería aislada.
 
-## Pendiente (visible desde fuera)
+## Compatibilidad completa de versiones .plr, Terraria 1.1.2 a 1.4.5.8 (1-sep-2026)
 
-- Todos los huecos de la auditoría Terrasavr JS vs puerto están cerrados (1-6), la segunda
-  auditoría de completitud/consistencia está cerrada (2 hallazgos, ambos arreglados), el
-  pulido estético de `Theme.xaml` está hecho y verificado, y la página de Inicio está hecha y
-  verificada de extremo a extremo. Con esto se cierran las 6 partes del pedido del usuario del
-  1-sep-2026 (cuerpo completo, TabVersion, repaso, estética, página de Inicio, renombrado a
-  Terrakeep). No hay pendientes explícitos abiertos ahora mismo - el siguiente paso natural
-  seria seguir puliendo detalles menores si aparecen, o esperar el siguiente pedido del
-  usuario.
+Pedido explícito del usuario: "terrakeep tiene que ser si o si compatible con todas las
+versiones de terraria desde la 1.1.2 hasta la 1.4.5.8 al igual que con tmodloader". Hasta ahora
+`PlrBodySerializer` tenía una limitación deliberada: solo `version (invVersion) >= 145`
+(Terraria 1.3.0), documentada en su propia cabecera como pendiente.
+
+**Investigación** (fork independiente, sin contexto previo, con instrucción de leer
+`ma.prototype.handle`/`P.prototype.handle`/`na.prototype.handle` reales en `script.js` vía
+`js-beautify`): informe completo campo a campo con TODOS los umbrales de versión reales por
+debajo de 145, más una tabla real `ja.getMaxIds` (techo de id de item por versión). Cruzado
+además con un hallazgo propio: un gist real de **YellowAfterlife** (`Player.hx`,
+`gist.github.com/YellowAfterlife/ced985a0d2f770c37b07`, implementación Haxe de referencia hasta
+Terraria 1.3.4), que confirma independientemente la tabla de versión de juego -> `invVersion`
+(1.1.2=39, 1.2.0=69, 1.2.4=98, 1.3.0=145... hasta 1.4.5.0=315) y varios umbrales bajos - los dos
+coincidieron exactamente en todo lo comparable, alta confianza.
+
+**Cambios reales en `PlrBodySerializer.cs`** (ver también `PlrCharacter.cs`/
+`PlrContainerSpec.cs`/`PlrLoadout.cs`): quitado el suelo artificial de 145 (el motor real
+tampoco tiene guarda de mínimo); bloque completo de magic/metaVersion/guid/playTime envuelto en
+`version>=145` (antes se leía siempre); segundo byte de `HideVisual` y `HideMisc` gateados
+correctamente; género binario invertido para `version<145` (`bool ? 0 : 4`, antes solo existía
+el byte plano); bloque `extraAccessory/torches/extraUsingFlags/finishedDD2Event/taxMoney/
+pve-pvpDeaths` envuelto en `version>=145`; loadout primario con recuento de slots por tramo real
+(`10/10/10` desde 145, `8/8/8` desde 81, `8/3/(0 o 3)` por debajo, con el hueco de "dyes" a
+partir de v=40 exacto); tabla real de `maxId` de item por versión (`GetMaxItemId`, antes
+`int.MaxValue` sin clamp real) aplicada a TODOS los contenedores incluidos loadouts/tempItems.
+
+**Dos bugs reales encontrados en el rango YA soportado (>=145), no solo en el rango nuevo**:
+1. `FinishedDD2Event` se leía/escribía SIN condición ninguna (el comentario decía "ya cubierto
+   por línea base" - falso: el umbral real es `isSwitch ? version>190 : version>=184`, así que
+   para `145<=version<184` el campo no existe en absoluto y el port lo desalineaba todo lo que
+   venía detrás). Corregido con el gate real.
+2. Los loadouts (primario y los 3 alternos) nunca llevaban el byte de favorito real
+   (`favFlagMinVersion=322` en `P` real, el port usaba `0`) - afecta a cualquier personaje real
+   con `invVersion>=322` (1.4.5.x reciente). Corregido en `PlrContainerSpec.LoadoutSlot`. Los 3
+   loadouts alternos tampoco usaban `Multi=true` (SÍ llevan `Int32 count` por slot, a diferencia
+   del primario) - corregido.
+
+**Dos bugs adicionales encontrados durante la propia escritura de tests** (mismo patrón:
+bucles que nunca comprobaban `version>=145`, invisibles mientras el suelo de la app era 145):
+el bloque `EquipmentItems`/`EquipmentDyes` (5+5 slots de mascota/montura/gancho) en `Read()` Y
+`Write()`, y el array `HideInfo[13]` en `Write()` (`Read()` sí lo tenía bien gateado, `Write()`
+no). Ambos se habrían disparado con cualquier `.plr` de verdad por debajo de 145.
+
+**Verificación**: sin `.plr` reales tan antiguos en este PC, así que
+`PlrBodySerializerOldVersionsTests.cs` (17 tests nuevos) construye el stream de bytes A MANO
+para cada versión de prueba (39/58/100/145/200/322), de forma independiente del propio
+serializador (mismo criterio que `PlrItemSlotTests`) - round-trip byte a byte, género invertido,
+ausencia real de `FinishedDD2Event`/metadata/playTime por debajo de 145, clamp real de `maxId`,
+recuento de slots de loadout por tramo. Total **118/118 tests en verde** (101 anteriores +17),
+incluidos los round-trip byte-a-byte contra los 2 `.plr` reales de este PC (ambos claramente
+`invVersion` alto, así que ejercitan de paso los dos bugs del rango >=145 ya corregidos).
+`VersionEditorViewModel` ampliado con los grupos "1.1.x"/"1.2.x" (antes omitidos a propósito por
+esta misma limitación, ya no aplica).
+
+**tModLoader/`.tplr`**: confirmado que el NBT del `.tplr` es agnóstico de versión por completo
+(sin ninguna lógica condicional de versión de Terraria/tModLoader dentro del propio formato,
+solo el `.plr` vanilla la tiene) - no hace falta ningún cambio ahí, ya funciona para cualquier
+versión de tModLoader que produzca ese mismo NBT.
+
+## Rework de interfaz inspirado en Terrasavr real (pedido 1-sep-2026, en curso)
+
+Pedido explícito del usuario, con permiso confirmado de YellowAfterlife y crédito ya puesto en
+Acerca de: inspirarse "al máximo" en la interfaz REAL de Terrasavr (capturas de pantalla
+aportadas por el usuario) para un rework a fondo. Lista completa tal cual se pidió, para no
+perder ningún hilo entre sesiones:
+
+1. **Explorador (mapa)**: arrastrar con el ratón para desplazar el mapa (pan), rueda del ratón
+   para zoom/zoom out. Los NPCs no salen marcados visualmente sobre el mapa. Los NPCs
+   escondidos/no encontrados (ej. Mercader Esquelético) no se indican como tales. Tooltip real
+   al pasar el ratón por tiles/cofres (información del bloque). Clic en un NPC de la lista debe
+   llevar la vista del mapa hasta su posición.
+2. **Reorganización de menús**: Librería debería estar DENTRO de la pestaña Personaje (como en
+   Terrasavr real: Inventario arriba, Librería con árbol de carpetas/subcarpetas por categoría
+   con sprite propio abajo/derecha), no como pestaña externa separada. Cajas de objetos más
+   pequeñas que las actuales.
+3. **Bug real, reportado por una probadora ("chicas")**: la sección Novedades cierra el
+   programa automáticamente - **crash real a investigar y arreglar, prioridad alta**.
+4. **Librería e Investigación con sprites visuales** (no solo iconos pequeños en grid - la idea
+   es un árbol de carpetas visual tipo Terrasavr real, ver capturas).
+5. **Apariencia con selección visual por sprite** (pelo/pantalones/etc por miniatura, no
+   escribiendo un id a mano como ahora) - **mismo criterio para Buffs**.
+6. **Builds**: hoy solo auto-equipa armadura/accesorios, debería auto-equipar también las armas
+   al inventario.
+7. **Tooltips de estadísticas de objeto**: ningún arma/armadura/accesorio (vanilla o Calamity)
+   muestra sus estadísticas reales (daño, defensa, etc.) como hace Terrasavr real - falta del
+   todo.
+8. **Mejor prefijo automático al colocar un objeto**: al poner un arma/objeto en el inventario
+   (sobre todo desde la Librería), debería aplicarse el mejor prefijo real automáticamente, no
+   dejarlo en "Ninguno" a mano.
+9. **Picker de prefijo + Librería visibles/accesibles desde cualquier ventana del jugador**, con
+   drag&drop para colocar directamente en inventario/accesorios/etc, todo con sprites reales
+   (no texto) para saber de un vistazo qué se está tocando/poniendo/editando.
+
+Orden de trabajo decidido: (3) el crash de Novedades primero por ser el único bug de estabilidad
+real, luego el resto por orden de dependencia técnica (el Explorador y las estadísticas de
+objeto son bloques bastante autocontenidos; la reorganización de menús y el sistema de sprites
+visuales para Apariencia/Buffs/Librería comparten mucha base y conviene hacerlos junto con el
+propio rework de Librería). Se actualizará esta sección a medida que se cierre cada punto.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 

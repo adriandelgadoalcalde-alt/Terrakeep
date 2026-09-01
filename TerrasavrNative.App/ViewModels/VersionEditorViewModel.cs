@@ -13,10 +13,11 @@ public sealed record VersionGroup(string Label, IReadOnlyList<VersionOption> Opt
 // version-gates de PlrBodySerializer), asi que un valor incoherente con el contenido real del
 // personaje puede producir un archivo que ni este programa ni el juego real sepan releer bien.
 //
-// Solo se ofrecen los grupos 1.3.x/1.4.x reales (tabla exacta de ya.initPC en
-// script.readable.js) - 1.1.x/1.2.x (version<145) se omiten a proposito: esta app solo sabe
-// LEER version>=145 (PlrCharacter.cs, limitacion deliberada de la Fase 1), ofrecer una version
-// mas antigua invitaria a escribir un archivo que este mismo programa no podria volver a abrir.
+// Grupos 1.1.x-1.4.x reales: 1.3.x/1.4.x de la tabla exacta de ya.initPC en script.readable.js
+// (ya conocida), 1.1.x/1.2.x de la tabla real de version de juego -> invVersion confirmada
+// 1-sep-2026 contra script.js (misma investigacion que cerro el soporte completo de version en
+// PlrBodySerializer - ver bitacora.md "Compatibilidad completa de versiones"). Ya no hay
+// limitacion de lectura por debajo de 145, asi que ofrecerlas es seguro.
 public partial class VersionEditorViewModel : ObservableObject
 {
     private PlrCharacter? _character;
@@ -26,6 +27,8 @@ public partial class VersionEditorViewModel : ObservableObject
 
     public IReadOnlyList<VersionGroup> Groups { get; } =
     [
+        new("1.1.x", [new("1.1.2", 39)]),
+        new("1.2.x", [new("1.2.0", 69), new("1.2.1", 73), new("1.2.2", 77), new("1.2.3", 93), new("1.2.4", 98)]),
         new("1.3.x", [new("1.3.0", 145), new("1.3.1", 168), new("1.3.3", 175), new("1.3.4", 184), new("1.3.5", 190)]),
         new("1.4.x", [new("1.4.0", 225), new("1.4.0.5", 230), new("1.4.1.2", 237), new("1.4.3.0", 248), new("1.4.4.0", 269), new("1.4.5.0 / 1.4.5.x", 315)]),
     ];
