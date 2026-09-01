@@ -209,6 +209,16 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type vm:BuffRowViewModel}">
                                         <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="9,6">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                                            <Setter Property="BorderThickness" Value="1" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
                                             <StackPanel>
                                                 <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
                                                 <TextBlock Text="{Binding Duration}" Style="{StaticResource CaptionText}" />

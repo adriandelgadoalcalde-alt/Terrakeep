@@ -116,12 +116,12 @@ public partial class MainViewModel : ObservableObject
         AddContainer("loadoutSocial", "Equipo puesto - vanidad (vanilla; Calamity pendiente)", _loaded.Character.PrimaryLoadout.Social.ToGameItems());
         AddContainer("loadoutDyes", "Equipo puesto - tintes (vanilla; Calamity pendiente)", _loaded.Character.PrimaryLoadout.Dyes.ToGameItems());
 
-        // Buffs vanilla solamente por ahora - los de Calamity viven en "modBuffs" dentro del
-        // .tplr, sin fusionar todavia (ver bitacora.md).
+        // Buffs vanilla + Calamity (modBuffs), ya fusionados en Character.Buffs por
+        // CharacterFileService.Load (CalamityCharacterSync.MergeBuffs).
         foreach (var buff in _loaded.Character.Buffs)
         {
             if (buff.Id == 0) continue;
-            Buffs.Add(BuffRowViewModel.From(buff, _service.VanillaBuffs));
+            Buffs.Add(BuffRowViewModel.From(buff, _service.VanillaBuffs, _service.CalamityBuffCatalog));
         }
 
         RebuildResearch();

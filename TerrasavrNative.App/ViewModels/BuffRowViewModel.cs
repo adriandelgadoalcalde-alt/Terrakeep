@@ -1,14 +1,17 @@
+using TerrasavrNative.Core.Calamity;
+using TerrasavrNative.Core.Data;
 using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels;
 
 // Un buff activo del personaje - solo lectura por ahora (quitar/anadir un buff es un paso
-// posterior). Los buffs de Calamity (modBuffs en el .tplr) NO estan cubiertos todavia - esta
-// vista solo muestra los que caben en el array vanilla del .plr (PlrCharacter.Buffs).
-public sealed class BuffRowViewModel(string name, int seconds)
+// posterior). Cubre tanto buffs vanilla como de Calamity (fusionados en character.Buffs por
+// CalamityCharacterSync.MergeBuffs, ids sinteticos >= CalamityIds.BuffIdBase).
+public sealed class BuffRowViewModel(string name, int seconds, bool isCalamity)
 {
     public string Name { get; } = name;
     public string Duration { get; } = FormatDuration(seconds);
+    public bool IsCalamity { get; } = isCalamity;
 
     private static string FormatDuration(int seconds)
     {
@@ -17,6 +20,12 @@ public sealed class BuffRowViewModel(string name, int seconds)
         return h > 0 ? $"{h}h {m}m" : m > 0 ? $"{m}m {s}s" : $"{s}s";
     }
 
-    public static BuffRowViewModel From(PlrBuff buff, TerrasavrNative.Core.Data.VanillaBuffCatalog catalog) =>
-        new(catalog.GetName(buff.Id), buff.Time / 60); // Time viene en ticks (60/seg)
+    public static BuffRowViewModel From(PlrBuff buff, VanillaBuffCatalog vanillaCatalog, CalamityBuffCatalog calamityCatalog)
+    {
+        bool isCalamity = buff.Id >= CalamityIds.BuffIdBase;
+        string name = isCalamity
+            ? calamityCatalog.BySyntheticId(buff.Id)?.DisplayName ?? $"Calamity #{buff.Id}"
+            : vanillaCatalog.GetName(buff.Id);
+        return new BuffRowViewModel(name, buff.Time / 60, isCalamity); // Time viene en ticks (60/seg)
+    }
 }

@@ -333,6 +333,41 @@ del proyecto .NET, sin lógica nueva en Core), `dotnet build` limpio, la app arr
 5454 PNGs copiados a la carpeta de salida. **No verificado con clics reales** (abrir la
 Libreria y ver los iconos vanilla de verdad en pantalla) - misma limitación de siempre.
 
+### Buffs de Calamity (modBuffs) fusionados
+
+`CalamityCharacterSync` gana `MergeBuffs`/`SyncBuffs`, invocados desde `MergeAll`/
+`MaskAndSyncAll` igual que los 7 contenedores de items:
+
+- **`CalamityBuffCatalog`** (nuevo, `Core/Data`, mismo patrón que `CalamityCatalog`): carga
+  `calamity/buffs.json` (305 buffs reales), id sintético = `CalamityIds.BuffIdBase` (25000000,
+  nuevo) + índice en el array.
+- **Fusión (carga)**: a diferencia de los contenedores de items, `modBuffs` en el `.tplr` NO
+  está filtrado a "mod != Terraria" - confirmado en el propio comentario de `overrides.js`:
+  tModLoader desactiva el guardado del array de buffs vanilla nativo en cuanto un mod añade
+  sus propios slots, así que para un personaje modeado `modBuffs` es la ÚNICA fuente completa,
+  buffs vanilla incluidos. Por eso `MergeBuffs` no fusiona "por encima" de `character.Buffs`
+  sino que rellena huecos vacíos en orden, uno por entrada de `modBuffs` (respeta cualquier
+  buff que el array nativo ya trajera puesto, si lo trajera).
+- **Sincronización (guardado)**: `SyncBuffs` reconstruye `modBuffs` entero desde
+  `character.Buffs` (mismo criterio que `calamitySyncBuffsFromPlayer` real, sin preservar nada
+  del `modBuffs` anterior) - id < `BuffIdBase` → `mod=Terraria,id`; id ≥ `BuffIdBase` →
+  `mod,name` reales vía `BySyntheticId`. **Deliberadamente NO se enmascara** el id sintético en
+  `character.Buffs` antes de escribir el `.plr` (a diferencia de los items) - confirmado que la
+  versión JS tampoco lo hace (`calamityMaskForVanillaSave` nunca toca `player.buffs`), y es
+  seguro replicarlo tal cual porque el escritor nativo de buffs no aplica ningún clamp de rango
+  (a diferencia del de items, que sí necesita el masking para no corromper la carga) y
+  tModLoader deja de leer ese array en cuanto hay mods instalados.
+- **UI**: `BuffRowViewModel.From` ahora resuelve nombre vanilla o Calamity según el id, con
+  borde rojo Calamity igual que el resto de objetos de Calamity en pantalla.
+
+**Verificado**: 85 tests xUnit (3 nuevos: mezcla vanilla+Calamity respetando huecos ya
+ocupados, sincronización de vuelta con el formato correcto por origen, y round-trip completo
+merge→sync→merge preservando un buff de Calamity). `dotnet build` limpio, la app arranca sin
+excepción con `buffs.json` copiado. **No verificado con clics reales** (ver un buff de
+Calamity de verdad en pantalla, guardar y comprobar que sigue ahí al recargar) - misma
+limitación de siempre. Loadouts (armadura/tinte por loadout, `calamityMergeArmorDyeIntoPlayer`)
+sigue sin portar - ver la sección de Fase 1 más arriba.
+
 ## Pendiente (visible desde fuera)
 
 - **Exploración**: zoom real (de momento solo scroll a tamaño 1:1), fondo degradado por zona
@@ -340,7 +375,8 @@ Libreria y ver los iconos vanilla de verdad en pantalla) - misma limitación de 
   tile/pared - ya está `TileNameCatalog`, falta guardar u/v por tile en `WldTile` para
   resolver variantes exactas y conectarlo a la UI).
 - **Apariencia** (pelo/piel con preview) - ni empezada.
-- Buffs/loadouts de Calamity sin fusionar todavía (ver la sección de Fase 1 más arriba).
+- Armadura/tinte de Calamity POR LOADOUT sin fusionar todavía (ver la sección de Fase 1 más
+  arriba) - los buffs ya sí están fusionados (ver arriba).
 - Instalador (Fase 6 del plan) - ni empezado.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)

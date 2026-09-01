@@ -19,14 +19,16 @@ public class CalamityCharacterSyncRealFileTests(ITestOutputHelper output)
         File.Exists(Path.Combine(PlayersDir, "adrian.plr")) &&
         File.Exists(Path.Combine(PlayersDir, "adrian.tplr")) &&
         File.Exists(Path.Combine(LocalSiteDir, "calamity", "catalog.json")) &&
-        File.Exists(Path.Combine(LocalSiteDir, "calamity", "rogue_prefixes.json"));
+        File.Exists(Path.Combine(LocalSiteDir, "calamity", "rogue_prefixes.json")) &&
+        File.Exists(Path.Combine(LocalSiteDir, "calamity", "buffs.json"));
 
     private static CalamityCharacterSync MakeRealSync(out CalamityCatalog catalog)
     {
         catalog = CalamityCatalog.LoadFromFile(Path.Combine(LocalSiteDir, "calamity", "catalog.json"));
+        var buffCatalog = CalamityBuffCatalog.LoadFromFile(Path.Combine(LocalSiteDir, "calamity", "buffs.json"));
         var prefixes = RoguePrefixCatalog.LoadFromFile(Path.Combine(LocalSiteDir, "calamity", "rogue_prefixes.json"));
         var codec = new CalamityItemCodec(catalog, new CalamityPrefixTranslator(prefixes));
-        return new CalamityCharacterSync(codec);
+        return new CalamityCharacterSync(codec, buffCatalog);
     }
 
     [Fact]

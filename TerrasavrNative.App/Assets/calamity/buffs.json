@@ -1,0 +1,2442 @@
+[
+ {
+  "internal": "AbandonedSlimeBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Gelatina Astral",
+  "displayName_fallback": "Abandoned Slime",
+  "icon": "AbandonedSlimeBuff.png"
+ },
+ {
+  "internal": "AbsorberAffliction",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Aflicción del Absorbedor",
+  "displayName_fallback": "Absorber Affliction",
+  "icon": "AbsorberAffliction.png"
+ },
+ {
+  "internal": "AbsorberRegen",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Regeneraga",
+  "displayName_fallback": "Absorber Regen",
+  "icon": "AbsorberRegen.png"
+ },
+ {
+  "internal": "AbyssalDivingSuitBuff",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Traje de Buceo Abisal",
+  "displayName_fallback": "Abyssal Diving Suit",
+  "icon": "AbyssalDivingSuitBuff.png"
+ },
+ {
+  "internal": "AbyssalMadness",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Locura Abisal",
+  "displayName_fallback": "Abyssal Madness",
+  "icon": "AbyssalMadness.png"
+ },
+ {
+  "internal": "AdrenalineMode",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Modo Adrenalina",
+  "displayName_fallback": "Adrenaline Mode",
+  "icon": "AdrenalineMode.png"
+ },
+ {
+  "internal": "AeolianEarthBuff",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Tierra Eólica",
+  "displayName_fallback": "Aeolian Earth",
+  "icon": "AeolianEarthBuff.png"
+ },
+ {
+  "internal": "Afflicted",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Afligido",
+  "displayName_fallback": "Afflicted",
+  "icon": "Afflicted.png"
+ },
+ {
+  "internal": "AkatoBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Akato",
+  "displayName_fallback": "Akato",
+  "icon": "AkatoBuff.png"
+ },
+ {
+  "internal": "AlcoholPoisoning",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Intoxicación Etílica",
+  "displayName_fallback": "Alcohol Poisoning",
+  "icon": "AlcoholPoisoning.png"
+ },
+ {
+  "internal": "AmidiasBlessing",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Bendición de Amidias",
+  "displayName_fallback": "Amidias Blessing",
+  "icon": "AmidiasBlessing.png"
+ },
+ {
+  "internal": "AmphibiansGuitarBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Guitarras de Anfibio",
+  "displayName_fallback": "Amphibians Guitar",
+  "icon": "AmphibiansGuitarBuff.png"
+ },
+ {
+  "internal": "AncientMineralSharkBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Tiburón Mineral Antiguo",
+  "displayName_fallback": "Ancient Mineral Shark",
+  "icon": "AncientMineralSharkBuff.png"
+ },
+ {
+  "internal": "AndromedaBuff",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "Andrómeda",
+  "displayName_fallback": "Andromeda",
+  "icon": "AndromedaBuff.png"
+ },
+ {
+  "internal": "AndromedaCripple",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Tullido por Andrómeda",
+  "displayName_fallback": "Andromeda Cripple",
+  "icon": "AndromedaCripple.png"
+ },
+ {
+  "internal": "AndromedaSmallBuff",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "Andrómeda Pequeña",
+  "displayName_fallback": "Andromeda Small",
+  "icon": "AndromedaSmallBuff.png"
+ },
+ {
+  "internal": "AnechoicCoatingBuff",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Revestimiento Anecoico",
+  "displayName_fallback": "Anechoic Coating",
+  "icon": "AnechoicCoatingBuff.png"
+ },
+ {
+  "internal": "AquaticHeartBuff",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Elemental de Agua",
+  "displayName_fallback": "Aquatic Heart",
+  "icon": "AquaticHeartBuff.png"
+ },
+ {
+  "internal": "AquaticHeartWaterSpeed",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Bendición del Océano",
+  "displayName_fallback": "Aquatic Heart Water Speed",
+  "icon": "AquaticHeartWaterSpeed.png"
+ },
+ {
+  "internal": "AquaticStar",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Estrella Acuática",
+  "displayName_fallback": "Aquatic Star",
+  "icon": "AquaticStar.png"
+ },
+ {
+  "internal": "AqueousHunterDroneBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Dron Cazador Acuático",
+  "displayName_fallback": "Aqueous Hunter Drone",
+  "icon": "AqueousHunterDroneBuff.png"
+ },
+ {
+  "internal": "ArcherofLunamoon",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Arquero de Lunamoon",
+  "displayName_fallback": "Archerof Lunamoon",
+  "icon": "ArcherofLunamoon.png"
+ },
+ {
+  "internal": "ArmorCrunch",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Trituración de Armadura",
+  "displayName_fallback": "Armor Crunch",
+  "icon": "ArmorCrunch.png"
+ },
+ {
+  "internal": "AstralInfectionDebuff",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Infección Astral",
+  "displayName_fallback": "Astral Infection Debuff",
+  "icon": "AstralInfectionDebuff.png"
+ },
+ {
+  "internal": "AstralInjectionBuff",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Inyección Astral",
+  "displayName_fallback": "Astral Injection",
+  "icon": "AstralInjectionBuff.png"
+ },
+ {
+  "internal": "AstralProbeBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Sonda Astral",
+  "displayName_fallback": "Astral Probe",
+  "icon": "AstralProbeBuff.png"
+ },
+ {
+  "internal": "AstrophageBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Astrófago",
+  "displayName_fallback": "Astrophage",
+  "icon": "AstrophageBuff.png"
+ },
+ {
+  "internal": "AuricRebuke",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Reprimenda Áurica",
+  "displayName_fallback": "Auric Rebuke",
+  "icon": "AuricRebuke.png"
+ },
+ {
+  "internal": "AvertorBonus",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Bonificación de Avertor",
+  "displayName_fallback": "Avertor Bonus",
+  "icon": "AvertorBonus.png"
+ },
+ {
+  "internal": "BabyBloodCrawlerBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Bebé Trepador de Sangre",
+  "displayName_fallback": "Baby Blood Crawler",
+  "icon": "BabyBloodCrawlerBuff.png"
+ },
+ {
+  "internal": "BabyGhostBellBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Bebé Campana Fantasma",
+  "displayName_fallback": "Baby Ghost Bell",
+  "icon": "BabyGhostBellBuff.png"
+ },
+ {
+  "internal": "BabyPaladinBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": null,
+  "displayName_fallback": "Baby Paladin",
+  "icon": "BabyPaladinBuff.png"
+ },
+ {
+  "internal": "BabyStormlionBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Bebé León de las Tormentas",
+  "displayName_fallback": "Baby Stormlion",
+  "icon": "BabyStormlionBuff.png"
+ },
+ {
+  "internal": "BaconOilBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": null,
+  "displayName_fallback": "Bacon Oil",
+  "icon": "BaconOilBuff.png"
+ },
+ {
+  "internal": "BaguetteBuff",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Baguette",
+  "displayName_fallback": "Baguette",
+  "icon": "BaguetteBuff.png"
+ },
+ {
+  "internal": "Bane",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": null,
+  "displayName_fallback": "Bane",
+  "icon": "Bane.png"
+ },
+ {
+  "internal": "BanishingFire",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Fuego Desterrador",
+  "displayName_fallback": "Banishing Fire",
+  "icon": "BanishingFire.png"
+ },
+ {
+  "internal": "BearBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Oso",
+  "displayName_fallback": "Bear",
+  "icon": "BearBuff.png"
+ },
+ {
+  "internal": "BeldumBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": null,
+  "displayName_fallback": "Beldum",
+  "icon": "BeldumBuff.png"
+ },
+ {
+  "internal": "BelladonnaSpiritBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Espíritu de Belladona",
+  "displayName_fallback": "Belladonna Spirit",
+  "icon": "BelladonnaSpiritBuff.png"
+ },
+ {
+  "internal": "BlackHawkBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Halcón Negro",
+  "displayName_fallback": "Black Hawk",
+  "icon": "BlackHawkBuff.png"
+ },
+ {
+  "internal": "BlightedSlime",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": null,
+  "displayName_fallback": "Blighted Slime",
+  "icon": "BlightedSlime.png"
+ },
+ {
+  "internal": "BloodBound",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Vínculo de Sangre",
+  "displayName_fallback": "Blood Bound",
+  "icon": "BloodBound.png"
+ },
+ {
+  "internal": "BloodfinBoost",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Mejora de Aleta Sangrienta",
+  "displayName_fallback": "Bloodfin Boost",
+  "icon": "BloodfinBoost.png"
+ },
+ {
+  "internal": "BloodflareBloodFrenzy",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Frenesí Sangriento",
+  "displayName_fallback": "Bloodflare Blood Frenzy",
+  "icon": "BloodflareBloodFrenzy.png"
+ },
+ {
+  "internal": "BloodyMaryBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Bloody Mary",
+  "displayName_fallback": "Bloody Mary",
+  "icon": "BloodyMaryBuff.png"
+ },
+ {
+  "internal": "BlueCandleBuff",
+  "mod": "CalamityMod",
+  "category": "Placeables",
+  "displayName_es": "Ágil",
+  "displayName_fallback": "Blue Candle",
+  "icon": "BlueCandleBuff.png"
+ },
+ {
+  "internal": "BossEffects",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Efectos de Jefe",
+  "displayName_fallback": "Boss Effects",
+  "icon": "BossEffects.png"
+ },
+ {
+  "internal": "BoundingBuff",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Salto Alto",
+  "displayName_fallback": "Bounding",
+  "icon": "BoundingBuff.png"
+ },
+ {
+  "internal": "BrainRot",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Podredumbre Cerebral",
+  "displayName_fallback": "Brain Rot",
+  "icon": "BrainRot.png"
+ },
+ {
+  "internal": "BrimflameFrenzyBuff",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Frenesí de Llama de Azufre",
+  "displayName_fallback": "Brimflame Frenzy",
+  "icon": "BrimflameFrenzyBuff.png"
+ },
+ {
+  "internal": "BrimlingBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Engendro de Azufre",
+  "displayName_fallback": "Brimling",
+  "icon": "BrimlingBuff.png"
+ },
+ {
+  "internal": "BrimroseMount",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "Montura de Rosa de Azufre",
+  "displayName_fallback": "Brimrose Mount",
+  "icon": "BrimroseMount.png"
+ },
+ {
+  "internal": "BrimseekerBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Buscador de Azufre",
+  "displayName_fallback": "Brimseeker",
+  "icon": "BrimseekerBuff.png"
+ },
+ {
+  "internal": "BrimstoneElemental",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Elemental de Azufre",
+  "displayName_fallback": "Brimstone Elemental",
+  "icon": "BrimstoneElemental.png"
+ },
+ {
+  "internal": "BrimstoneFlames",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Llamas de Azufre",
+  "displayName_fallback": "Brimstone Flames",
+  "icon": "BrimstoneFlames.png"
+ },
+ {
+  "internal": "BrittleStar",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Estrella Quebradiza",
+  "displayName_fallback": "Brittle Star",
+  "icon": "BrittleStar.png"
+ },
+ {
+  "internal": "BumbledogeMount",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "Bumbledoge",
+  "displayName_fallback": "Bumbledoge Mount",
+  "icon": "BumbledogeMount.png"
+ },
+ {
+  "internal": "BurningBlood",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Sangre Ardiente",
+  "displayName_fallback": "Burning Blood",
+  "icon": "BurningBlood.png"
+ },
+ {
+  "internal": "BurrowerBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Excavador",
+  "displayName_fallback": "Burrower",
+  "icon": "BurrowerBuff.png"
+ },
+ {
+  "internal": "CalamarisLamentBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Calamar",
+  "displayName_fallback": "Calamaris Lament",
+  "icon": "CalamarisLamentBuff.png"
+ },
+ {
+  "internal": "CalciumBuff",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Calcio",
+  "displayName_fallback": "Calcium",
+  "icon": "CalciumBuff.png"
+ },
+ {
+  "internal": "CaribbeanRumBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Ron Caribeño",
+  "displayName_fallback": "Caribbean Rum",
+  "icon": "CaribbeanRumBuff.png"
+ },
+ {
+  "internal": "CausticStaffBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Dragón Cáustico",
+  "displayName_fallback": "Caustic Staff",
+  "icon": "CausticStaffBuff.png"
+ },
+ {
+  "internal": "CeaselessHunger",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Hambre Incesante",
+  "displayName_fallback": "Ceaseless Hunger",
+  "icon": "CeaselessHunger.png"
+ },
+ {
+  "internal": "ChaosCandleBuff",
+  "mod": "CalamityMod",
+  "category": "Placeables",
+  "displayName_es": "Vela del Caos",
+  "displayName_fallback": "Chaos Candle",
+  "icon": "ChaosCandleBuff.png"
+ },
+ {
+  "internal": "ChiBuff",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Chi",
+  "displayName_fallback": "Chi",
+  "icon": "ChiBuff.png"
+ },
+ {
+  "internal": "ChibiiDoGBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Chibii Devorador",
+  "displayName_fallback": "Chibii Do G",
+  "icon": "ChibiiDoGBuff.png"
+ },
+ {
+  "internal": "CinderBlossomBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Flor de Ceniza",
+  "displayName_fallback": "Cinder Blossom",
+  "icon": "CinderBlossomBuff.png"
+ },
+ {
+  "internal": "CinnamonRollBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Rollo de Canela",
+  "displayName_fallback": "Cinnamon Roll",
+  "icon": "CinnamonRollBuff.png"
+ },
+ {
+  "internal": "Clamity",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Clamidad",
+  "displayName_fallback": "Clamity",
+  "icon": "Clamity.png"
+ },
+ {
+  "internal": "ClassicSCalPetBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Calamitas Suprema Clásica",
+  "displayName_fallback": "Classic S Cal Pet",
+  "icon": "ClassicSCalPetBuff.png"
+ },
+ {
+  "internal": "CloudElemental",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Elemental de las Nubes",
+  "displayName_fallback": "Cloud Elemental",
+  "icon": "CloudElemental.png"
+ },
+ {
+  "internal": "CoralSymbiosis",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Simbiosis de Coral",
+  "displayName_fallback": "Coral Symbiosis",
+  "icon": "CoralSymbiosis.png"
+ },
+ {
+  "internal": "CorruptionEffigyBuff",
+  "mod": "CalamityMod",
+  "category": "Placeables",
+  "displayName_es": "Efigie de la Corrupción",
+  "displayName_fallback": "Corruption Effigy",
+  "icon": "CorruptionEffigyBuff.png"
+ },
+ {
+  "internal": "CorvidHarbringerBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Cuervo",
+  "displayName_fallback": "Corvid Harbringer",
+  "icon": "CorvidHarbringerBuff.png"
+ },
+ {
+  "internal": "CosmicEnergy",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Energía Cósmica",
+  "displayName_fallback": "Cosmic Energy",
+  "icon": "CosmicEnergy.png"
+ },
+ {
+  "internal": "CosmicFreeze",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Congelación Cósmica",
+  "displayName_fallback": "Cosmic Freeze",
+  "icon": "CosmicFreeze.png"
+ },
+ {
+  "internal": "CosmicViperEngineBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Víbora Cósmica",
+  "displayName_fallback": "Cosmic Viper Engine",
+  "icon": "CosmicViperEngineBuff.png"
+ },
+ {
+  "internal": "CosmilampBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Cósmilámpara",
+  "displayName_fallback": "Cosmilamp",
+  "icon": "CosmilampBuff.png"
+ },
+ {
+  "internal": "CrimsonEffigyBuff",
+  "mod": "CalamityMod",
+  "category": "Placeables",
+  "displayName_es": "Efigie del Carmesí",
+  "displayName_fallback": "Crimson Effigy",
+  "icon": "CrimsonEffigyBuff.png"
+ },
+ {
+  "internal": "Crumbling",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Desmoronamiento",
+  "displayName_fallback": "Crumbling",
+  "icon": "Crumbling.png"
+ },
+ {
+  "internal": "CrushDepth",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Profundidad de Aplastamiento",
+  "displayName_fallback": "Crush Depth",
+  "icon": "CrushDepth.png"
+ },
+ {
+  "internal": "DaedalusCrystalBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Cristal de Dédalo",
+  "displayName_fallback": "Daedalus Crystal",
+  "icon": "DaedalusCrystalBuff.png"
+ },
+ {
+  "internal": "DaedalusGolemBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Golem de Dédalo",
+  "displayName_fallback": "Daedalus Golem",
+  "icon": "DaedalusGolemBuff.png"
+ },
+ {
+  "internal": "DankCreeperBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Trepador Lúgubre",
+  "displayName_fallback": "Dank Creeper",
+  "icon": "DankCreeperBuff.png"
+ },
+ {
+  "internal": "DannyDevito",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Danny Devito",
+  "displayName_fallback": "Danny Devito",
+  "icon": "DannyDevito.png"
+ },
+ {
+  "internal": "Daybroken",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Día Roto",
+  "displayName_fallback": "Daybroken",
+  "icon": "Daybroken.png"
+ },
+ {
+  "internal": "DazzlingStabberBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Apuñalador Deslumbrante",
+  "displayName_fallback": "Dazzling Stabber",
+  "icon": "DazzlingStabberBuff.png"
+ },
+ {
+  "internal": "DemonicFlames",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Llamas Demoníacas",
+  "displayName_fallback": "Demonic Flames",
+  "icon": "DemonicFlames.png"
+ },
+ {
+  "internal": "DivineBless",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Bendición Divina",
+  "displayName_fallback": "Divine Bless",
+  "icon": "DivineBless.png"
+ },
+ {
+  "internal": "DoGExtremeGravity",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Gravedad Extrema",
+  "displayName_fallback": "Do G Extreme Gravity",
+  "icon": "DoGExtremeGravity.png"
+ },
+ {
+  "internal": "DraedonGamerChairBuff",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "Silla Exo",
+  "displayName_fallback": "Draedon Gamer Chair",
+  "icon": "DraedonGamerChairBuff.png"
+ },
+ {
+  "internal": "Dragonfire",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Fuego de Dragón",
+  "displayName_fallback": "Dragonfire",
+  "icon": "Dragonfire.png"
+ },
+ {
+  "internal": "Dreamfog",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Niebla de Ensueño",
+  "displayName_fallback": "Dreamfog",
+  "icon": "Dreamfog.png"
+ },
+ {
+  "internal": "EffigyOfDecayBuff",
+  "mod": "CalamityMod",
+  "category": "Placeables",
+  "displayName_es": "Efigie de la Decadencia",
+  "displayName_fallback": "Effigy Of Decay",
+  "icon": "EffigyOfDecayBuff.png"
+ },
+ {
+  "internal": "EidolonSnailBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Caracol de Eidolón",
+  "displayName_fallback": "Eidolon Snail",
+  "icon": "EidolonSnailBuff.png"
+ },
+ {
+  "internal": "ElectricTroublemaker",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Alborotador Eléctrico",
+  "displayName_fallback": "Electric Troublemaker",
+  "icon": "ElectricTroublemaker.png"
+ },
+ {
+  "internal": "ElementalMix",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Mezcla Elemental",
+  "displayName_fallback": "Elemental Mix",
+  "icon": "ElementalMix.png"
+ },
+ {
+  "internal": "EmpyreanWrath",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Ira Empírea",
+  "displayName_fallback": "Empyrean Wrath",
+  "icon": "EmpyreanWrath.png"
+ },
+ {
+  "internal": "Encased",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Encerrado",
+  "displayName_fallback": "Encased",
+  "icon": "Encased.png"
+ },
+ {
+  "internal": "EnchantedKnifeStaffBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Cuchillo Encantado",
+  "displayName_fallback": "Enchanted Knife Staff",
+  "icon": "EnchantedKnifeStaffBuff.png"
+ },
+ {
+  "internal": "EndoCooperBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Endo Cooper",
+  "displayName_fallback": "Endo Cooper",
+  "icon": "EndoCooperBuff.png"
+ },
+ {
+  "internal": "EndoHydraBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Endohidra",
+  "displayName_fallback": "Endo Hydra",
+  "icon": "EndoHydraBuff.png"
+ },
+ {
+  "internal": "Enraged",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Enfurecido",
+  "displayName_fallback": "Enraged",
+  "icon": "Enraged.png"
+ },
+ {
+  "internal": "EntropysVigilBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Vigilia de la Entropía",
+  "displayName_fallback": "Entropys Vigil",
+  "icon": "EntropysVigilBuff.png"
+ },
+ {
+  "internal": "Eutrophication",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Eutrofización",
+  "displayName_fallback": "Eutrophication",
+  "icon": "Eutrophication.png"
+ },
+ {
+  "internal": "EverclearBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Everclear",
+  "displayName_fallback": "Everclear",
+  "icon": "EverclearBuff.png"
+ },
+ {
+  "internal": "EvergreenGinBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Ginebra Perenne",
+  "displayName_fallback": "Evergreen Gin",
+  "icon": "EvergreenGinBuff.png"
+ },
+ {
+  "internal": "ExoTankBuff",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "Apisonadora Arcoíris",
+  "displayName_fallback": "Exo Tank",
+  "icon": "ExoTankBuff.png"
+ },
+ {
+  "internal": "ExoskeletonCannons",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Cañones de Ares",
+  "displayName_fallback": "Exoskeleton Cannons",
+  "icon": "ExoskeletonCannons.png"
+ },
+ {
+  "internal": "EyeOfNightBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Ojo de la Noche",
+  "displayName_fallback": "Eye Of Night",
+  "icon": "EyeOfNightBuff.png"
+ },
+ {
+  "internal": "FieryDraconidBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Dracónido Ígneo",
+  "displayName_fallback": "Fiery Draconid",
+  "icon": "FieryDraconidBuff.png"
+ },
+ {
+  "internal": "FireballBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Fireball",
+  "displayName_fallback": "Fireball",
+  "icon": "FireballBuff.png"
+ },
+ {
+  "internal": "FishAlert",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Alerta de Pez",
+  "displayName_fallback": "Fish Alert",
+  "icon": "FishAlert.png"
+ },
+ {
+  "internal": "FlakHermitBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Ermitaño de Flak",
+  "displayName_fallback": "Flak Hermit",
+  "icon": "FlakHermitBuff.png"
+ },
+ {
+  "internal": "FleshBallBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Bola de Carne",
+  "displayName_fallback": "Flesh Ball",
+  "icon": "FleshBallBuff.png"
+ },
+ {
+  "internal": "FlowersOfMortalityBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Flores de la Mortalidad",
+  "displayName_fallback": "Flowers Of Mortality",
+  "icon": "FlowersOfMortalityBuff.png"
+ },
+ {
+  "internal": "FoxPetBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Mascota Zorro",
+  "displayName_fallback": "Fox Pet",
+  "icon": "FoxPetBuff.png"
+ },
+ {
+  "internal": "FrostBlossomBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Flor de la Escarcha",
+  "displayName_fallback": "Frost Blossom",
+  "icon": "FrostBlossomBuff.png"
+ },
+ {
+  "internal": "FrostyBatBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Amigo Murciélago Gélido",
+  "displayName_fallback": "Frosty Bat",
+  "icon": "FrostyBatBuff.png"
+ },
+ {
+  "internal": "FrozenLungs",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Pulmones Congelados",
+  "displayName_fallback": "Frozen Lungs",
+  "icon": "FrozenLungs.png"
+ },
+ {
+  "internal": "FulfilledContract",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": null,
+  "displayName_fallback": "Fulfilled Contract",
+  "icon": "FulfilledContract.png"
+ },
+ {
+  "internal": "FungalClumpBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Grupo Fúngico",
+  "displayName_fallback": "Fungal Clump",
+  "icon": "FungalClumpBuff.png"
+ },
+ {
+  "internal": "FurtasticDuoBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Dúo Peludástico",
+  "displayName_fallback": "Furtastic Duo",
+  "icon": "FurtasticDuoBuff.png"
+ },
+ {
+  "internal": "GalvanicCorrosion",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Corrosión Galvánica",
+  "displayName_fallback": "Galvanic Corrosion",
+  "icon": "GalvanicCorrosion.png"
+ },
+ {
+  "internal": "GammaHydraBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Hidra Gamma",
+  "displayName_fallback": "Gamma Hydra",
+  "icon": "GammaHydraBuff.png"
+ },
+ {
+  "internal": "GastricAberrationBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Aberración Gástrica",
+  "displayName_fallback": "Gastric Aberration",
+  "icon": "GastricAberrationBuff.png"
+ },
+ {
+  "internal": "GazeOfCrysthamyrBuff",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "Mirada de Crysthamyr",
+  "displayName_fallback": "Gaze Of Crysthamyr",
+  "icon": "GazeOfCrysthamyrBuff.png"
+ },
+ {
+  "internal": "GlacialEmbraceBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Abrazo Glacial",
+  "displayName_fallback": "Glacial Embrace",
+  "icon": "GlacialEmbraceBuff.png"
+ },
+ {
+  "internal": "GodSlayerInferno",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Infierno del Cazadioses",
+  "displayName_fallback": "God Slayer Inferno",
+  "icon": "GodSlayerInferno.png"
+ },
+ {
+  "internal": "GoldieBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Goldie",
+  "displayName_fallback": "Goldie",
+  "icon": "GoldieBuff.png"
+ },
+ {
+  "internal": "GrapeBeerBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Cerveza de Uva",
+  "displayName_fallback": "Grape Beer",
+  "icon": "GrapeBeerBuff.png"
+ },
+ {
+  "internal": "GravityNormalizerBuff",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Normalizador de Gravedad",
+  "displayName_fallback": "Gravity Normalizer",
+  "icon": "GravityNormalizerBuff.png"
+ },
+ {
+  "internal": "GraxBoost",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Mejora de Grax",
+  "displayName_fallback": "Grax Boost",
+  "icon": "GraxBoost.png"
+ },
+ {
+  "internal": "GreenJellyRegen",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Regeneración de Gelatina Verde",
+  "displayName_fallback": "Green Jelly Regen",
+  "icon": "GreenJellyRegen.png"
+ },
+ {
+  "internal": "HadopelagicPressure",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Presión Hadopelágica",
+  "displayName_fallback": "Hadopelagic Pressure",
+  "icon": "HadopelagicPressure.png"
+ },
+ {
+  "internal": "HallowedRuneDefense",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Defensa Sagrada",
+  "displayName_fallback": "Hallowed Rune Defense",
+  "icon": "HallowedRuneDefense.png"
+ },
+ {
+  "internal": "HallowedRunePower",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Poder Sagrado",
+  "displayName_fallback": "Hallowed Rune Power",
+  "icon": "HallowedRunePower.png"
+ },
+ {
+  "internal": "HallowedRuneRegeneration",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Regeneración Sagrada",
+  "displayName_fallback": "Hallowed Rune Regeneration",
+  "icon": "HallowedRuneRegeneration.png"
+ },
+ {
+  "internal": "Haste",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Prisa",
+  "displayName_fallback": "Haste",
+  "icon": "Haste.png"
+ },
+ {
+  "internal": "HauntedDishesBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Platos Encantados",
+  "displayName_fallback": "Haunted Dishes",
+  "icon": "HauntedDishesBuff.png"
+ },
+ {
+  "internal": "HeavyBleeding",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Sangrado Abundante",
+  "displayName_fallback": "Heavy Bleeding",
+  "icon": "HeavyBleeding.png"
+ },
+ {
+  "internal": "HermitCrab",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Cangrejo Ermitaño",
+  "displayName_fallback": "Hermit Crab",
+  "icon": "HermitCrab.png"
+ },
+ {
+  "internal": "Herring",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Arenque",
+  "displayName_fallback": "Herring",
+  "icon": "Herring.png"
+ },
+ {
+  "internal": "HolyFlames",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Llamas Sagradas",
+  "displayName_fallback": "Holy Flames",
+  "icon": "HolyFlames.png"
+ },
+ {
+  "internal": "HolyInferno",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Infierno Sagrado",
+  "displayName_fallback": "Holy Inferno",
+  "icon": "HolyInferno.png"
+ },
+ {
+  "internal": "HotE",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Corazón de los Elementos",
+  "displayName_fallback": "Hot E",
+  "icon": "HotE.png"
+ },
+ {
+  "internal": "HowlTrio",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Corazón de Howl",
+  "displayName_fallback": "Howl Trio",
+  "icon": "HowlTrio.png"
+ },
+ {
+  "internal": "HydrothermicVentBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Fumarola Hidrotermal",
+  "displayName_fallback": "Hydrothermic Vent",
+  "icon": "HydrothermicVentBuff.png"
+ },
+ {
+  "internal": "IcarusFolly",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Locura de Ícaro",
+  "displayName_fallback": "Icarus Folly",
+  "icon": "IcarusFolly.png"
+ },
+ {
+  "internal": "IceClasperBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Pinza de Hielo",
+  "displayName_fallback": "Ice Clasper",
+  "icon": "IceClasperBuff.png"
+ },
+ {
+  "internal": "IceShieldBuff",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Escudo de Hielo",
+  "displayName_fallback": "Ice Shield",
+  "icon": "IceShieldBuff.png"
+ },
+ {
+  "internal": "IgneousExaltationBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Hoja Ígnea",
+  "displayName_fallback": "Igneous Exaltation",
+  "icon": "IgneousExaltationBuff.png"
+ },
+ {
+  "internal": "Irradiated",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Irradiado",
+  "displayName_fallback": "Irradiated",
+  "icon": "Irradiated.png"
+ },
+ {
+  "internal": "KalandraMirrorBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Espejo de Kalandra",
+  "displayName_fallback": "Kalandra Mirror",
+  "icon": "KalandraMirrorBuff.png"
+ },
+ {
+  "internal": "Kendra",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Kendra",
+  "displayName_fallback": "Kendra",
+  "icon": "Kendra.png"
+ },
+ {
+  "internal": "KingofConstellationsBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Dragones Celestiales",
+  "displayName_fallback": "Kingof Constellations",
+  "icon": "KingofConstellationsBuff.png"
+ },
+ {
+  "internal": "Laceration",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Laceración",
+  "displayName_fallback": "Laceration",
+  "icon": "Laceration.png"
+ },
+ {
+  "internal": "LadBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "El Padre",
+  "displayName_fallback": "Lad",
+  "icon": "LadBuff.png"
+ },
+ {
+  "internal": "LegionofCelestiaBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Hacha Celestial",
+  "displayName_fallback": "Legionof Celestia",
+  "icon": "LegionofCelestiaBuff.png"
+ },
+ {
+  "internal": "LeviBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Levi",
+  "displayName_fallback": "Levi",
+  "icon": "LeviBuff.png"
+ },
+ {
+  "internal": "LilPlaguebringerBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Pequeña Portadora de la Peste",
+  "displayName_fallback": "Lil Plaguebringer",
+  "icon": "LilPlaguebringerBuff.png"
+ },
+ {
+  "internal": "LiliesOfFinalityBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Finalidad",
+  "displayName_fallback": "Lilies Of Finality",
+  "icon": "LiliesOfFinalityBuff.png"
+ },
+ {
+  "internal": "LittleLightBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Pequeña Luz",
+  "displayName_fallback": "Little Light",
+  "icon": "LittleLightBuff.png"
+ },
+ {
+  "internal": "LordeBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Lil'orde",
+  "displayName_fallback": "Lorde",
+  "icon": "LordeBuff.png"
+ },
+ {
+  "internal": "MagicHatBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Sombrero Mágico",
+  "displayName_fallback": "Magic Hat",
+  "icon": "MagicHatBuff.png"
+ },
+ {
+  "internal": "Malnourished",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": null,
+  "displayName_fallback": "Malnourished",
+  "icon": "Malnourished.png"
+ },
+ {
+  "internal": "ManaBurn",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Quemadura de Maná",
+  "displayName_fallback": "Mana Burn",
+  "icon": "ManaBurn.png"
+ },
+ {
+  "internal": "ManhattanBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Manhattan",
+  "displayName_fallback": "Manhattan",
+  "icon": "ManhattanBuff.png"
+ },
+ {
+  "internal": "MargaritaBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Margarita",
+  "displayName_fallback": "Margarita",
+  "icon": "MargaritaBuff.png"
+ },
+ {
+  "internal": "MarkedforDeath",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Marcado para Morir",
+  "displayName_fallback": "Markedfor Death",
+  "icon": "MarkedforDeath.png"
+ },
+ {
+  "internal": "MarniteLiftBuff",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "Ascensor de Marnita",
+  "displayName_fallback": "Marnite Lift",
+  "icon": "MarniteLiftBuff.png"
+ },
+ {
+  "internal": "MidnightSunBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "OVNI del Sol de Medianoche",
+  "displayName_fallback": "Midnight Sun",
+  "icon": "MidnightSunBuff.png"
+ },
+ {
+  "internal": "MiniMindBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Minimente",
+  "displayName_fallback": "Mini Mind",
+  "icon": "MiniMindBuff.png"
+ },
+ {
+  "internal": "MiniPlaguebringerBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Mini Portadora de la Peste",
+  "displayName_fallback": "Mini Plaguebringer",
+  "icon": "MiniPlaguebringerBuff.png"
+ },
+ {
+  "internal": "MiniatureEyeofCthulhu",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Ojo de Cthulhu en Miniatura",
+  "displayName_fallback": "Miniature Eyeof Cthulhu",
+  "icon": "MiniatureEyeofCthulhu.png"
+ },
+ {
+  "internal": "MiracleBlight",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Plaga Milagrosa",
+  "displayName_fallback": "Miracle Blight",
+  "icon": "MiracleBlight.png"
+ },
+ {
+  "internal": "MoonFistBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Puño Lunar",
+  "displayName_fallback": "Moon Fist",
+  "icon": "MoonFistBuff.png"
+ },
+ {
+  "internal": "MoonshineBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Moonshine",
+  "displayName_fallback": "Moonshine",
+  "icon": "MoonshineBuff.png"
+ },
+ {
+  "internal": "MoscowMuleBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Moscow Mule",
+  "displayName_fallback": "Moscow Mule",
+  "icon": "MoscowMuleBuff.png"
+ },
+ {
+  "internal": "MountedScannerBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Escáner Montado",
+  "displayName_fallback": "Mounted Scanner",
+  "icon": "MountedScannerBuff.png"
+ },
+ {
+  "internal": "Mushy",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Acolchado",
+  "displayName_fallback": "Mushy",
+  "icon": "Mushy.png"
+ },
+ {
+  "internal": "MutatedTruffleBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Baby Boomer",
+  "displayName_fallback": "Mutated Truffle",
+  "icon": "MutatedTruffleBuff.png"
+ },
+ {
+  "internal": "NOU",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "NO U",
+  "displayName_fallback": "NOU",
+  "icon": "NOU.png"
+ },
+ {
+  "internal": "Nightwither",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Marchitez Nocturna",
+  "displayName_fallback": "Nightwither",
+  "icon": "Nightwither.png"
+ },
+ {
+  "internal": "OasisElementalBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": null,
+  "displayName_fallback": "Oasis Elemental",
+  "icon": "OasisElementalBuff.png"
+ },
+ {
+  "internal": "OceanSpiritBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Espíritu del Océano",
+  "displayName_fallback": "Ocean Spirit",
+  "icon": "OceanSpiritBuff.png"
+ },
+ {
+  "internal": "OldFashionedBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Old Fashioned",
+  "displayName_fallback": "Old Fashioned",
+  "icon": "OldFashionedBuff.png"
+ },
+ {
+  "internal": "Omniscience",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Omnisciencia",
+  "displayName_fallback": "Omniscience",
+  "icon": "Omniscience.png"
+ },
+ {
+  "internal": "OnyxExcavatorBuff",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "Excavadora de Ónice",
+  "displayName_fallback": "Onyx Excavator",
+  "icon": "OnyxExcavatorBuff.png"
+ },
+ {
+  "internal": "PearlAura",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Aura de Perla",
+  "displayName_fallback": "Pearl Aura",
+  "icon": "PearlAura.png"
+ },
+ {
+  "internal": "PerditionBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Perdición",
+  "displayName_fallback": "Perdition",
+  "icon": "PerditionBuff.png"
+ },
+ {
+  "internal": "Phantom",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Fantasma",
+  "displayName_fallback": "Phantom",
+  "icon": "Phantom.png"
+ },
+ {
+  "internal": "PhantomicEmpowerment",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Potenciación Fantasmática",
+  "displayName_fallback": "Phantomic Empowerment",
+  "icon": "PhantomicEmpowerment.png"
+ },
+ {
+  "internal": "PhantomicRegen",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Regeneración Fantasmática",
+  "displayName_fallback": "Phantomic Regen",
+  "icon": "PhantomicRegen.png"
+ },
+ {
+  "internal": "PhantomicShield",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Escudo Fantasmática",
+  "displayName_fallback": "Phantomic Shield",
+  "icon": "PhantomicShield.png"
+ },
+ {
+  "internal": "PhotosynthesisBuff",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Fotosíntesis",
+  "displayName_fallback": "Photosynthesis",
+  "icon": "PhotosynthesisBuff.png"
+ },
+ {
+  "internal": "PineappleBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Piña",
+  "displayName_fallback": "Pineapple",
+  "icon": "PineappleBuff.png"
+ },
+ {
+  "internal": "PinkCandleBuff",
+  "mod": "CalamityMod",
+  "category": "Placeables",
+  "displayName_es": "Vigor",
+  "displayName_fallback": "Pink Candle",
+  "icon": "PinkCandleBuff.png"
+ },
+ {
+  "internal": "PinkJellyRegen",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Regeneración de Gelatina Rosa",
+  "displayName_fallback": "Pink Jelly Regen",
+  "icon": "PinkJellyRegen.png"
+ },
+ {
+  "internal": "Plague",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Peste",
+  "displayName_fallback": "Plague",
+  "icon": "Plague.png"
+ },
+ {
+  "internal": "PlaguebringerBabBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Portadora de la Peste Bebé",
+  "displayName_fallback": "Plaguebringer Bab",
+  "icon": "PlaguebringerBabBuff.png"
+ },
+ {
+  "internal": "PlantationStaffBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Plantación",
+  "displayName_fallback": "Plantation Staff",
+  "icon": "PlantationStaffBuff.png"
+ },
+ {
+  "internal": "PoleWarperBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Deformador de Polos",
+  "displayName_fallback": "Pole Warper",
+  "icon": "PoleWarperBuff.png"
+ },
+ {
+  "internal": "PopoBuff",
+  "mod": "CalamityMod",
+  "category": "",
+  "displayName_es": "Popo",
+  "displayName_fallback": "Popo",
+  "icon": "PopoBuff.png"
+ },
+ {
+  "internal": "PopoNoselessBuff",
+  "mod": "CalamityMod",
+  "category": "",
+  "displayName_es": "Popo Sin Nariz",
+  "displayName_fallback": "Popo Noseless",
+  "icon": "PopoNoselessBuff.png"
+ },
+ {
+  "internal": "ProfanedCrystalBuff",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Devoción",
+  "displayName_fallback": "Profaned Crystal",
+  "icon": "ProfanedCrystalBuff.png"
+ },
+ {
+  "internal": "ProfanedSoulGuardians",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "El Alma Profana",
+  "displayName_fallback": "Profaned Soul Guardians",
+  "icon": "ProfanedSoulGuardians.png"
+ },
+ {
+  "internal": "ProfanedWeakness",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Debilidad Profana",
+  "displayName_fallback": "Profaned Weakness",
+  "icon": "ProfanedWeakness.png"
+ },
+ {
+  "internal": "PuffWarriorBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Guerrero Puff",
+  "displayName_fallback": "Puff Warrior",
+  "icon": "PuffWarriorBuff.png"
+ },
+ {
+  "internal": "PurpleCandleBuff",
+  "mod": "CalamityMod",
+  "category": "Placeables",
+  "displayName_es": "Resiliencia",
+  "displayName_fallback": "Purple Candle",
+  "icon": "PurpleCandleBuff.png"
+ },
+ {
+  "internal": "PurpleHazeBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Neblina Púrpura",
+  "displayName_fallback": "Purple Haze",
+  "icon": "PurpleHazeBuff.png"
+ },
+ {
+  "internal": "RadiatorBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Radiador",
+  "displayName_fallback": "Radiator",
+  "icon": "RadiatorBuff.png"
+ },
+ {
+  "internal": "RageMode",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Modo Furia",
+  "displayName_fallback": "Rage Mode",
+  "icon": "RageMode.png"
+ },
+ {
+  "internal": "ReaverRage",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Furia de Saqueador",
+  "displayName_fallback": "Reaver Rage",
+  "icon": "ReaverRage.png"
+ },
+ {
+  "internal": "RedWineBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Vino Tinto",
+  "displayName_fallback": "Red Wine",
+  "icon": "RedWineBuff.png"
+ },
+ {
+  "internal": "ResurrectionButterflyBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Mariposa de la Resurrección",
+  "displayName_fallback": "Resurrection Butterfly",
+  "icon": "ResurrectionButterflyBuff.png"
+ },
+ {
+  "internal": "RimehoundBuff",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "Sabueso de la Escarcha",
+  "displayName_fallback": "Rimehound",
+  "icon": "RimehoundBuff.png"
+ },
+ {
+  "internal": "RiptideDebuff",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Corriente de Resaca",
+  "displayName_fallback": "Riptide Debuff",
+  "icon": "RiptideDebuff.png"
+ },
+ {
+  "internal": "RumBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Ron",
+  "displayName_fallback": "Rum",
+  "icon": "RumBuff.png"
+ },
+ {
+  "internal": "SagePoison",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Veneno de Sabio",
+  "displayName_fallback": "Sage Poison",
+  "icon": "SagePoison.png"
+ },
+ {
+  "internal": "SageSpiritBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Espíritu de Sabio",
+  "displayName_fallback": "Sage Spirit",
+  "icon": "SageSpiritBuff.png"
+ },
+ {
+  "internal": "SandElemental",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Elemental de Arena",
+  "displayName_fallback": "Sand Elemental",
+  "icon": "SandElemental.png"
+ },
+ {
+  "internal": "Sandnado",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Tornado de Arena",
+  "displayName_fallback": "Sandnado",
+  "icon": "Sandnado.png"
+ },
+ {
+  "internal": "SandsWindBuff",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Viento de Arena",
+  "displayName_fallback": "Sands Wind",
+  "icon": "SandsWindBuff.png"
+ },
+ {
+  "internal": "SarosPossessionBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Posesión de Saros",
+  "displayName_fallback": "Saros Possession",
+  "icon": "SarosPossessionBuff.png"
+ },
+ {
+  "internal": "ScrewdriverBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Destornillador",
+  "displayName_fallback": "Screwdriver",
+  "icon": "ScrewdriverBuff.png"
+ },
+ {
+  "internal": "SeaSnailBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Caracol Marino",
+  "displayName_fallback": "Sea Snail",
+  "icon": "SeaSnailBuff.png"
+ },
+ {
+  "internal": "SearingLava",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Lava Abrasadora",
+  "displayName_fallback": "Searing Lava",
+  "icon": "SearingLava.png"
+ },
+ {
+  "internal": "SepulcherMinionBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Sepulcro",
+  "displayName_fallback": "Sepulcher Minion",
+  "icon": "SepulcherMinionBuff.png"
+ },
+ {
+  "internal": "ShadowBuff",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Sombra",
+  "displayName_fallback": "Shadow",
+  "icon": "ShadowBuff.png"
+ },
+ {
+  "internal": "Shadowflame",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Llama Sombría",
+  "displayName_fallback": "Shadowflame",
+  "icon": "Shadowflame.png"
+ },
+ {
+  "internal": "ShellfishBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Molusco",
+  "displayName_fallback": "Shellfish",
+  "icon": "ShellfishBuff.png"
+ },
+ {
+  "internal": "ShellfishClaps",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Pinzas de Molusco",
+  "displayName_fallback": "Shellfish Claps",
+  "icon": "ShellfishClaps.png"
+ },
+ {
+  "internal": "Shred",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Desgarrar",
+  "displayName_fallback": "Shred",
+  "icon": "Shred.png"
+ },
+ {
+  "internal": "SilvaCrystalBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Cristal de Silva",
+  "displayName_fallback": "Silva Crystal",
+  "icon": "SilvaCrystalBuff.png"
+ },
+ {
+  "internal": "SilvaRevival",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Inmunidad de Silva",
+  "displayName_fallback": "Silva Revival",
+  "icon": "SilvaRevival.png"
+ },
+ {
+  "internal": "SiriusBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Sirio",
+  "displayName_fallback": "Sirius",
+  "icon": "SiriusBuff.png"
+ },
+ {
+  "internal": "SkeletalDragonsBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Dragones Esqueléticos",
+  "displayName_fallback": "Skeletal Dragons",
+  "icon": "SkeletalDragonsBuff.png"
+ },
+ {
+  "internal": "SmallSkeletonBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Esqueleto Pequeño",
+  "displayName_fallback": "Small Skeleton",
+  "icon": "SmallSkeletonBuff.png"
+ },
+ {
+  "internal": "SmashedEvil",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": null,
+  "displayName_fallback": "Smashed Evil",
+  "icon": "SmashedEvil.png"
+ },
+ {
+  "internal": "SnakeEyesBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Ojos de Serpiente",
+  "displayName_fallback": "Snake Eyes",
+  "icon": "SnakeEyesBuff.png"
+ },
+ {
+  "internal": "SnapClamDebuff",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Atrapado por Almejas",
+  "displayName_fallback": "Snap Clam Debuff",
+  "icon": "SnapClamDebuff.png"
+ },
+ {
+  "internal": "Soaring",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Planeo",
+  "displayName_fallback": "Soaring",
+  "icon": "Soaring.png"
+ },
+ {
+  "internal": "SolarGodSpiritBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Espíritu Solar Vengativo",
+  "displayName_fallback": "Solar God Spirit",
+  "icon": "SolarGodSpiritBuff.png"
+ },
+ {
+  "internal": "SolarSpirit",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Espíritu Solar",
+  "displayName_fallback": "Solar Spirit",
+  "icon": "SolarSpirit.png"
+ },
+ {
+  "internal": "SoulSeekerBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Buscador de Almas",
+  "displayName_fallback": "Soul Seeker",
+  "icon": "SoulSeekerBuff.png"
+ },
+ {
+  "internal": "SparksBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Chispas",
+  "displayName_fallback": "Sparks",
+  "icon": "SparksBuff.png"
+ },
+ {
+  "internal": "SpiritDefense",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Defensa de Espíritu",
+  "displayName_fallback": "Spirit Defense",
+  "icon": "SpiritDefense.png"
+ },
+ {
+  "internal": "SpiritPower",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Poder de Espíritu",
+  "displayName_fallback": "Spirit Power",
+  "icon": "SpiritPower.png"
+ },
+ {
+  "internal": "SpiritRegen",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Regeneración de Espíritu",
+  "displayName_fallback": "Spirit Regen",
+  "icon": "SpiritRegen.png"
+ },
+ {
+  "internal": "SquishyBeanBuff",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "Alubia Blandita",
+  "displayName_fallback": "Squishy Bean",
+  "icon": "SquishyBeanBuff.png"
+ },
+ {
+  "internal": "StarBeamRyeBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Centeno de Rayo Estelar",
+  "displayName_fallback": "Star Beam Rye",
+  "icon": "StarBeamRyeBuff.png"
+ },
+ {
+  "internal": "StarSwallowerPetBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": null,
+  "displayName_fallback": "Star Swallower Pet",
+  "icon": "StarSwallowerPetBuff.png"
+ },
+ {
+  "internal": "StaticDischarge",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Descarga Estática",
+  "displayName_fallback": "Static Discharge",
+  "icon": "StaticDischarge.png"
+ },
+ {
+  "internal": "StellarTorusBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Toro Estelar",
+  "displayName_fallback": "Stellar Torus",
+  "icon": "StellarTorusBuff.png"
+ },
+ {
+  "internal": "SulphuricPoisoning",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Envenenamiento Sulfúrico",
+  "displayName_fallback": "Sulphuric Poisoning",
+  "icon": "SulphuricPoisoning.png"
+ },
+ {
+  "internal": "SulphurskinBuff",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Piel Sulfúrica",
+  "displayName_fallback": "Sulphurskin",
+  "icon": "SulphurskinBuff.png"
+ },
+ {
+  "internal": "SwinesWrathBuff",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": null,
+  "displayName_fallback": "Swines Wrath",
+  "icon": "SwinesWrathBuff.png"
+ },
+ {
+  "internal": "TacticalPlagueEngineBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Motor Táctico de la Peste",
+  "displayName_fallback": "Tactical Plague Engine",
+  "icon": "TacticalPlagueEngineBuff.png"
+ },
+ {
+  "internal": "TarraLifeRegen",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Vida de Estragón",
+  "displayName_fallback": "Tarra Life Regen",
+  "icon": "TarraLifeRegen.png"
+ },
+ {
+  "internal": "TarragonCloak",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Capa de Estragón",
+  "displayName_fallback": "Tarragon Cloak",
+  "icon": "TarragonCloak.png"
+ },
+ {
+  "internal": "TarragonImmunity",
+  "mod": "CalamityMod",
+  "category": "StatBuffs",
+  "displayName_es": "Inmunidad de Estragón",
+  "displayName_fallback": "Tarragon Immunity",
+  "icon": "TarragonImmunity.png"
+ },
+ {
+  "internal": "TemporalSadness",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Tristeza Temporal",
+  "displayName_fallback": "Temporal Sadness",
+  "icon": "TemporalSadness.png"
+ },
+ {
+  "internal": "TequilaBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Tequila",
+  "displayName_fallback": "Tequila",
+  "icon": "TequilaBuff.png"
+ },
+ {
+  "internal": "TequilaSunriseBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Tequila Sunrise",
+  "displayName_fallback": "Tequila Sunrise",
+  "icon": "TequilaSunriseBuff.png"
+ },
+ {
+  "internal": "TheCartofGodsBuff",
+  "mod": "CalamityMod",
+  "category": "Mounts",
+  "displayName_es": "El Vagoneto de los Dioses",
+  "displayName_fallback": "The Cartof Gods",
+  "icon": "TheCartofGodsBuff.png"
+ },
+ {
+  "internal": "ThirdSageBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Tercer Sabio",
+  "displayName_fallback": "Third Sage",
+  "icon": "ThirdSageBuff.png"
+ },
+ {
+  "internal": "TimeDistortion",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Distorsión Temporal",
+  "displayName_fallback": "Time Distortion",
+  "icon": "TimeDistortion.png"
+ },
+ {
+  "internal": "ToastyBatBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Amigo Murciélago Ardiente",
+  "displayName_fallback": "Toasty Bat",
+  "icon": "ToastyBatBuff.png"
+ },
+ {
+  "internal": "TranquilityCandleBuff",
+  "mod": "CalamityMod",
+  "category": "Placeables",
+  "displayName_es": "Vela de la Tranquilidad",
+  "displayName_fallback": "Tranquility Candle",
+  "icon": "TranquilityCandleBuff.png"
+ },
+ {
+  "internal": "Trippy",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Alucinación",
+  "displayName_fallback": "Trippy",
+  "icon": "Trippy.png"
+ },
+ {
+  "internal": "TrueVulnerabilityHex",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Maleficio de Vulnerabilidad Verdadera",
+  "displayName_fallback": "True Vulnerability Hex",
+  "icon": "TrueVulnerabilityHex.png"
+ },
+ {
+  "internal": "TundraFlameBlossomsBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Flor de Llama de la Tundra",
+  "displayName_fallback": "Tundra Flame Blossoms",
+  "icon": "TundraFlameBlossomsBuff.png"
+ },
+ {
+  "internal": "ValkyrieBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Valquiria",
+  "displayName_fallback": "Valkyrie",
+  "icon": "ValkyrieBuff.png"
+ },
+ {
+  "internal": "Vaporfied",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Evaporado",
+  "displayName_fallback": "Vaporfied",
+  "icon": "Vaporfied.png"
+ },
+ {
+  "internal": "VermillionFlux",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": null,
+  "displayName_fallback": "Vermillion Flux",
+  "icon": "VermillionFlux.png"
+ },
+ {
+  "internal": "VileFeederBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Alimentador Vil",
+  "displayName_fallback": "Vile Feeder",
+  "icon": "VileFeederBuff.png"
+ },
+ {
+  "internal": "ViridVanguardBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Vanguardia Vívida",
+  "displayName_fallback": "Virid Vanguard",
+  "icon": "ViridVanguardBuff.png"
+ },
+ {
+  "internal": "ViriliBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Virili",
+  "displayName_fallback": "Virili",
+  "icon": "ViriliBuff.png"
+ },
+ {
+  "internal": "VodkaBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Vodka",
+  "displayName_fallback": "Vodka",
+  "icon": "VodkaBuff.png"
+ },
+ {
+  "internal": "VoidConcentrationBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Vacío Concentrado",
+  "displayName_fallback": "Void Concentration",
+  "icon": "VoidConcentrationBuff.png"
+ },
+ {
+  "internal": "VoidEaterMarionetteBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Marioneta del Devorador de Vacío",
+  "displayName_fallback": "Void Eater Marionette",
+  "icon": "VoidEaterMarionetteBuff.png"
+ },
+ {
+  "internal": "Voidfrost",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Escarcha del Vacío",
+  "displayName_fallback": "Voidfrost",
+  "icon": "Voidfrost.png"
+ },
+ {
+  "internal": "VulnerabilityHex",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Maleficio de Vulnerabilidad",
+  "displayName_fallback": "Vulnerability Hex",
+  "icon": "VulnerabilityHex.png"
+ },
+ {
+  "internal": "Warped",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Distorsionado",
+  "displayName_fallback": "Warped",
+  "icon": "Warped.png"
+ },
+ {
+  "internal": "WaterElemental",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Anahita",
+  "displayName_fallback": "Water Elemental",
+  "icon": "WaterElemental.png"
+ },
+ {
+  "internal": "WeakBrimstoneFlames",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Llamas de Azufre Débiles",
+  "displayName_fallback": "Weak Brimstone Flames",
+  "icon": "WeakBrimstoneFlames.png"
+ },
+ {
+  "internal": "WeakPetrification",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Petrificación Débil",
+  "displayName_fallback": "Weak Petrification",
+  "icon": "WeakPetrification.png"
+ },
+ {
+  "internal": "WeaponImbueBrimstone",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Imbuición de Arma: Azufre",
+  "displayName_fallback": "Weapon Imbue Brimstone",
+  "icon": "WeaponImbueBrimstone.png"
+ },
+ {
+  "internal": "WeaponImbueCrumbling",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Imbuición de Arma: Desmoronamiento",
+  "displayName_fallback": "Weapon Imbue Crumbling",
+  "icon": "WeaponImbueCrumbling.png"
+ },
+ {
+  "internal": "WeaponImbueHolyFlames",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Imbuición de Arma: Llamas Sagradas",
+  "displayName_fallback": "Weapon Imbue Holy Flames",
+  "icon": "WeaponImbueHolyFlames.png"
+ },
+ {
+  "internal": "WhiskeyBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Whisky",
+  "displayName_fallback": "Whiskey",
+  "icon": "WhiskeyBuff.png"
+ },
+ {
+  "internal": "WhisperingDeath",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Muerte Susurrante",
+  "displayName_fallback": "Whispering Death",
+  "icon": "WhisperingDeath.png"
+ },
+ {
+  "internal": "WhiteWineBuff",
+  "mod": "CalamityMod",
+  "category": "Alcohol",
+  "displayName_es": "Vino Blanco",
+  "displayName_fallback": "White Wine",
+  "icon": "WhiteWineBuff.png"
+ },
+ {
+  "internal": "WindChilled",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": null,
+  "displayName_fallback": "Wind Chilled",
+  "icon": "WindChilled.png"
+ },
+ {
+  "internal": "WitherBlossomsBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Flores de Marchitez",
+  "displayName_fallback": "Wither Blossoms",
+  "icon": "WitherBlossomsBuff.png"
+ },
+ {
+  "internal": "WitherDebuff",
+  "mod": "CalamityMod",
+  "category": "StatDebuffs",
+  "displayName_es": "Marchitar",
+  "displayName_fallback": "Wither Debuff",
+  "icon": "WitherDebuff.png"
+ },
+ {
+  "internal": "Withered",
+  "mod": "CalamityMod",
+  "category": "DamageOverTime",
+  "displayName_es": "Marchito",
+  "displayName_fallback": "Withered",
+  "icon": "Withered.png"
+ },
+ {
+  "internal": "WulfrumDroidBuff",
+  "mod": "CalamityMod",
+  "category": "Summon",
+  "displayName_es": "Droide de Wulfrum",
+  "displayName_fallback": "Wulfrum Droid",
+  "icon": "WulfrumDroidBuff.png"
+ },
+ {
+  "internal": "YellowCandleBuff",
+  "mod": "CalamityMod",
+  "category": "Placeables",
+  "displayName_es": "Rencor",
+  "displayName_fallback": "Yellow Candle",
+  "icon": "YellowCandleBuff.png"
+ },
+ {
+  "internal": "YharonSonBuff",
+  "mod": "CalamityMod",
+  "category": "Pets",
+  "displayName_es": "Hijo de Yharon",
+  "displayName_fallback": "Yharon Son",
+  "icon": "YharonSonBuff.png"
+ },
+ {
+  "internal": "Zen",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Zen",
+  "displayName_fallback": "Zen",
+  "icon": "Zen.png"
+ },
+ {
+  "internal": "Zerg",
+  "mod": "CalamityMod",
+  "category": "Potions",
+  "displayName_es": "Zerg",
+  "displayName_fallback": "Zerg",
+  "icon": "Zerg.png"
+ }
+]

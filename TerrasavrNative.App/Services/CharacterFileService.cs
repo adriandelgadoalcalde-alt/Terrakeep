@@ -28,6 +28,7 @@ public sealed class CharacterFileService
     private readonly CalamityCharacterSync _sync;
 
     public CalamityCatalog CalamityCatalog { get; }
+    public CalamityBuffCatalog CalamityBuffCatalog { get; }
     public RoguePrefixCatalog RoguePrefixCatalog { get; }
     public VanillaItemCatalog VanillaCatalog { get; }
     public VanillaPrefixCatalog VanillaPrefixCatalog { get; }
@@ -44,6 +45,7 @@ public sealed class CharacterFileService
     {
         string assetsDir = Path.Combine(AppContext.BaseDirectory, "Assets");
         CalamityCatalog = CalamityCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "catalog.json"));
+        CalamityBuffCatalog = CalamityBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "buffs.json"));
         RoguePrefixCatalog = RoguePrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "rogue_prefixes.json"));
         VanillaCatalog = VanillaItemCatalog.LoadFromFile(
             Path.Combine(assetsDir, "vanilla_item_names.json"),
@@ -61,7 +63,7 @@ public sealed class CharacterFileService
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
         var codec = new CalamityItemCodec(CalamityCatalog, translator);
-        _sync = new CalamityCharacterSync(codec);
+        _sync = new CalamityCharacterSync(codec, CalamityBuffCatalog);
     }
 
     public LoadedCharacter Load(string plrPath)

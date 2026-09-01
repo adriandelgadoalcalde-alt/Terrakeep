@@ -26,13 +26,22 @@ public class CalamityCharacterSyncTests
     }
     """;
 
-    private static CalamityCharacterSync MakeSync(out CalamityCatalog catalog)
+    private const string BuffsJson = """
+    [
+      { "internal": "AbandonedSlimeBuff", "mod": "CalamityMod", "displayName_es": "Gelatina Astral", "displayName_fallback": "Abandoned Slime" }
+    ]
+    """;
+
+    private static CalamityCharacterSync MakeSync(out CalamityCatalog catalog) => MakeSync(out catalog, out _);
+
+    private static CalamityCharacterSync MakeSync(out CalamityCatalog catalog, out CalamityBuffCatalog buffCatalog)
     {
         catalog = CalamityCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(CatalogJson)));
+        buffCatalog = CalamityBuffCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(BuffsJson)));
         var prefixes = RoguePrefixCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(RoguePrefixesJson)));
         var translator = new CalamityPrefixTranslator(prefixes);
         var codec = new CalamityItemCodec(catalog, translator);
-        return new CalamityCharacterSync(codec);
+        return new CalamityCharacterSync(codec, buffCatalog);
     }
 
     private static PlrCharacter MakeBlankCharacter()
@@ -45,6 +54,7 @@ public class CalamityCharacterSyncTests
         Array.Fill(character.VoidItems, PlrItemSlot.Empty);
         Array.Fill(character.EquipmentItems, PlrItemSlot.Empty);
         Array.Fill(character.EquipmentDyes, PlrItemSlot.Empty);
+        for (int i = 0; i < 44; i++) character.Buffs.Add(new PlrBuff { Id = 0, Time = 0 });
         return character;
     }
 
@@ -171,5 +181,100 @@ public class CalamityCharacterSyncTests
         Assert.Equal(1, character.Inventory[0].Id); // vanilla intacto en el .plr
         var invList = (NbtList)tplrRoot.Get("inventory")!;
         Assert.Empty(invList.Items); // nada de Calamity que escribir
+    }
+
+    [Fact]
+    public void MergeAll_ModBuffs_FillsEmptySlots_VanillaAndCalamityMixed()
+    {
+        var sync = MakeSync(out _, out var buffCatalog);
+        var character = MakeBlankCharacter();
+        // Caso realista: el .plr de un personaje modeado normalmente trae su propio array de
+        // buffs YA VACIO (tModLoader deja de escribirlo en cuanto hay mods instalados, ver el
+        // comentario de MergeBuffs) - modBuffs es la fuente completa. Aqui se simula ademas el
+        // caso raro de que el array nativo SI trajera algo que no aparece en modBuffs (id=99,
+        // dato antiguo/ajeno): debe respetarse sin duplicar, y los buffs de modBuffs caen en
+        // los siguientes huecos libres en orden.
+        character.Buffs[0] = new PlrBuff { Id = 99, Time = 100 };
+
+        var tplrRoot = NbtCompound.Of(
+            ("modBuffs", new NbtList(NbtTagType.Compound, [
+                NbtCompound.Of(("mod", new NbtString("Terraria")), ("id", new NbtInt(12)), ("time", new NbtInt(600))),
+                NbtCompound.Of(("mod", new NbtString("CalamityMod")), ("name", new NbtString("AbandonedSlimeBuff")), ("time", new NbtInt(300)))
+            ]))
+        );
+
+        var merged = sync.MergeAll(character, tplrRoot);
+
+        // El slot 0 ya estaba ocupado (dato ajeno a modBuffs) - se respeta, no se toca.
+        Assert.Equal(99, character.Buffs[0].Id);
+        // Los dos buffs de modBuffs (uno vanilla, uno de Calamity) caen en los siguientes
+        // huecos libres, EN ORDEN.
+        Assert.Equal(12, character.Buffs[1].Id);
+        Assert.Equal(600, character.Buffs[1].Time);
+        var expectedBuffId = buffCatalog.ByModAndInternal("CalamityMod", "AbandonedSlimeBuff")!.SyntheticId;
+        Assert.Equal(expectedBuffId, character.Buffs[2].Id);
+        Assert.Equal(300, character.Buffs[2].Time);
+    }
+
+    [Fact]
+    public void MaskAndSyncAll_WritesModBuffs_VanillaAsIdCalamityAsModName()
+    {
+        var sync = MakeSync(out _, out var buffCatalog);
+        var character = MakeBlankCharacter();
+        var calamityBuffId = buffCatalog.ByModAndInternal("CalamityMod", "AbandonedSlimeBuff")!.SyntheticId;
+        character.Buffs[0] = new PlrBuff { Id = 12, Time = 600 };
+        character.Buffs[1] = new PlrBuff { Id = calamityBuffId, Time = 300 };
+
+        var merged = new Dictionary<string, GameItem[]>
+        {
+            ["inventory"] = character.Inventory.ToGameItems(),
+            ["bank"] = character.BankItems.ToGameItems(),
+            ["bank2"] = character.SafeItems.ToGameItems(),
+            ["bank3"] = character.ForgeItems.ToGameItems(),
+            ["bank4"] = character.VoidItems.ToGameItems(),
+            ["miscEquips"] = character.EquipmentItems.ToGameItems(),
+            ["miscDyes"] = character.EquipmentDyes.ToGameItems(),
+        };
+
+        var tplrRoot = sync.MaskAndSyncAll(character, merged, existingTplrRoot: null);
+
+        // A diferencia de los items, el id sintetico de Calamity NO se enmascara en el .plr -
+        // se escribe tal cual (ver el comentario de SyncBuffs: no corrompe la carga como si lo
+        // hace un id de objeto fuera de rango, y tModLoader ignora este array igualmente en
+        // cuanto hay mods instalados).
+        Assert.Equal(calamityBuffId, character.Buffs[1].Id);
+
+        var buffList = (NbtList)tplrRoot.Get("modBuffs")!;
+        Assert.Equal(2, buffList.Items.Count);
+        var vanillaEntry = (NbtCompound)buffList.Items[0];
+        Assert.Equal("Terraria", ((NbtString)vanillaEntry.Get("mod")!).Value);
+        Assert.Equal(12, ((NbtInt)vanillaEntry.Get("id")!).Value);
+        var calamityEntry = (NbtCompound)buffList.Items[1];
+        Assert.Equal("CalamityMod", ((NbtString)calamityEntry.Get("mod")!).Value);
+        Assert.Equal("AbandonedSlimeBuff", ((NbtString)calamityEntry.Get("name")!).Value);
+        Assert.Equal(300, ((NbtInt)calamityEntry.Get("time")!).Value);
+    }
+
+    [Fact]
+    public void RoundTrip_MergeThenMaskAndSync_PreservesCalamityBuff()
+    {
+        var sync = MakeSync(out _, out var buffCatalog);
+        var character = MakeBlankCharacter();
+
+        var tplrRoot = NbtCompound.Of(
+            ("modBuffs", new NbtList(NbtTagType.Compound, [
+                NbtCompound.Of(("mod", new NbtString("CalamityMod")), ("name", new NbtString("AbandonedSlimeBuff")), ("time", new NbtInt(300)))
+            ]))
+        );
+
+        var merged = sync.MergeAll(character, tplrRoot);
+        var newTplrRoot = sync.MaskAndSyncAll(character, merged, tplrRoot);
+
+        var reCharacter = MakeBlankCharacter();
+        sync.MergeAll(reCharacter, newTplrRoot);
+
+        var expectedBuffId = buffCatalog.ByModAndInternal("CalamityMod", "AbandonedSlimeBuff")!.SyntheticId;
+        Assert.Equal(expectedBuffId, reCharacter.Buffs[0].Id);
+        Assert.Equal(300, reCharacter.Buffs[0].Time);
     }
 }
