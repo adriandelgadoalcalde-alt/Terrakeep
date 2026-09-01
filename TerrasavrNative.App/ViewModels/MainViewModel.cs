@@ -3,6 +3,8 @@ using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
+using TerrasavrNative.Core.Calamity;
+using TerrasavrNative.Core.Data;
 using TerrasavrNative.Core.Model;
 using TerrasavrNative.Core.PlrFormat;
 
@@ -174,6 +176,51 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = $"Investigacion completa aplicada ({Research.Count} objetos) - pulsa Guardar para conservarlo.";
     }
 
+    // Auto-equipar desde el panel Builds: arma+armadura+accesorios de una clase/etapa
+    // concreta se colocan directamente en el personaje cargado. Armadura -> los 3 primeros
+    // slots del equipo puesto (cabeza/cuerpo/piernas), accesorios -> los 5 siguientes
+    // (Items[3..7] del loadout, ver PROYECTO-TERRASAVR.md); las armas no tienen slot fijo en
+    // Terraria, se colocan en el primer hueco libre del inventario. Objetos que no se
+    // consigan resolver (pid no encontrado en el catalogo) o para los que no quede hueco se
+    // cuentan aparte y se avisa en el mensaje de estado - nunca se sobrescribe un objeto ya
+    // puesto salvo en los 3+5 slots fijos de armadura/accesorios, que es justo lo que este
+    // botón promete reemplazar.
+    [RelayCommand(CanExecute = nameof(IsCharacterLoaded))]
+    private void AutoEquip(BuildClassGear? gear)
+    {
+        if (_loaded == null || gear == null) return;
+
+        var armorSlots = Containers.First(c => c.Key == "loadoutArmor").Slots;
+        var inventorySlots = Containers.First(c => c.Key == "inventory").Slots;
+        int placed = 0, skipped = 0;
+
+        void PlaceInSlot(ItemSlotViewModel slot, BuildItemRef itemRef)
+        {
+            var resolved = BuildItemResolver.Resolve(itemRef, _service.VanillaCatalog, _service.CalamityCatalog, _service.VanillaPrefixCatalog);
+            if (resolved == null) { skipped++; return; }
+            slot.UpdateFrom(resolved);
+            placed++;
+        }
+
+        for (int i = 0; i < gear.Armor.Count && i < 3; i++)
+            PlaceInSlot(armorSlots[i], gear.Armor[i]);
+
+        for (int i = 0; i < gear.Accessories.Count && i < 5; i++)
+            PlaceInSlot(armorSlots[3 + i], gear.Accessories[i]);
+
+        foreach (var weapon in gear.Weapons)
+        {
+            var emptySlot = inventorySlots.FirstOrDefault(s => s.IsEmpty);
+            if (emptySlot == null) { skipped++; continue; }
+            PlaceInSlot(emptySlot, weapon);
+        }
+
+        StatusMessage = skipped > 0
+            ? $"Auto-equipar: {placed} objeto(s) colocado(s), {skipped} sin resolver o sin hueco libre - pulsa Guardar para conservarlo."
+            : $"Auto-equipar: {placed} objeto(s) colocado(s) - pulsa Guardar para conservarlo.";
+        SelectedTabIndex = PersonajeTabIndex;
+    }
+
     private void AddContainer(string key, string displayName, GameItem[] items)
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
@@ -196,5 +243,10 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    partial void OnIsCharacterLoadedChanged(bool value) => SaveCommand.NotifyCanExecuteChanged();
+    partial void OnIsCharacterLoadedChanged(bool value)
+    {
+        SaveCommand.NotifyCanExecuteChanged();
+        ResearchAllCommand.NotifyCanExecuteChanged();
+        AutoEquipCommand.NotifyCanExecuteChanged();
+    }
 }

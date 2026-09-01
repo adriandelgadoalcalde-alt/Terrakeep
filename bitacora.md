@@ -252,6 +252,38 @@ de lanzar en segundo plano + comprobar el proceso con `tasklist`). **No verifica
 reales** (elegir un objeto de verdad, escribir una cantidad, guardar y releer el `.plr` para
 confirmar que el nuevo objeto persiste) - misma limitación de siempre en este entorno.
 
+### Auto-equipar desde Builds
+
+Cada grupo clase/etapa del panel Builds tiene ahora un botón "Auto-equipar" que coloca ese
+equipo de verdad en el personaje cargado, en vez de ser solo informativo:
+
+- **Resolución `pid` → objeto real** (`Core/Calamity/BuildItemResolver.cs`): un `pid` con `/`
+  es de Calamity (`mod/nombreInterno`, resuelto contra `CalamityCatalog.ByModAndInternal`);
+  sin `/` es vanilla (nombre interno tal cual, resuelto contra el nuevo
+  `VanillaItemCatalog.GetIdByKey`). El prefijo sugerido en el JSON se resuelve aparte: campo
+  `prefix` (nombre interno en inglés, ej. `"Legendary"`) contra el nuevo
+  `VanillaPrefixCatalog.ByInternal`, o campo `prefixId` (Calamity/Pícaro, id sintético
+  ≥10000) directo a `ItemPrefix.CalamitySynthetic`.
+- **`vanilla_item_ids_by_key.json` (nuevo asset)**: hasta ahora `VanillaItemCatalog` solo
+  tenía nombre-interno→nombre-mostrado, no nombre-interno→id real - hacía falta para resolver
+  el `pid` de builds.json a un `GameItem.Id` real. Generado con el mismo criterio que
+  `vanilla_item_names.json` (regex `public const short Nombre = valor;` sobre `ItemID.cs`
+  decompilado, carpeta `tModLoader\` no `TerrariaVanilla\`), 5455 entradas, verificado contra
+  hechos ya conocidos (`IronPickaxe`→1, `MoltenHelmet`→231).
+- **Colocación**: armadura → los 3 primeros slots del equipo puesto (cabeza/cuerpo/piernas),
+  accesorios → los 5 siguientes (mismo contenedor `loadoutArmor` ya mostrado en Personaje) -
+  estos 8 slots se SOBRESCRIBEN a propósito, es justo lo que el botón promete. Armas → primer
+  hueco libre del inventario (Terraria no tiene un "slot de arma" fijo), sin sobrescribir
+  nada. Objetos sin resolver o sin hueco se cuentan aparte y se avisan en el mensaje de
+  estado; la pestaña vuelve sola a Personaje al terminar.
+
+**Verificado**: 80 tests xUnit (5 nuevos: `BuildItemResolverTests` con fixtures que cubren
+vanilla+prefijo vanilla, vanilla sin prefijo, Calamity+prefijo sintético, y `pid` no
+encontrado; más `VanillaItemCatalogRealFileTests` contra el asset real nuevo). `dotnet build`
+limpio, la app arranca sin excepción con el asset nuevo copiado. **No verificado con clics
+reales** (pulsar Auto-equipar de verdad y comprobar el resultado en pantalla) - misma
+limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
 - **Exploración**: zoom real (de momento solo scroll a tamaño 1:1), fondo degradado por zona
@@ -260,8 +292,6 @@ confirmar que el nuevo objeto persiste) - misma limitación de siempre en este e
   reales, `VANILLA_TOWN_NPC_ROSTER` en la versión JS, todavía no se ha portado), tooltip por
   tile al pasar el ratón (nombre real de tile/pared - ya está `TileNameCatalog`, falta
   guardar u/v por tile en `WldTile` para resolver variantes exactas y conectarlo a la UI).
-- **Auto-equipar desde Builds**: el panel ya muestra el equipo recomendado, pero no lo aplica
-  al personaje cargado (necesita resolver `pid`→id real y escribir en los slots correctos).
 - **Iconos vanilla**: siguen sin extraer (atlas `img/items.png`/`img/nitems.png`, formato UV
   todavía no investigado) - la Librería los muestra con un icono de reserva por ahora.
 - **Apariencia** (pelo/piel con preview) - ni empezada.

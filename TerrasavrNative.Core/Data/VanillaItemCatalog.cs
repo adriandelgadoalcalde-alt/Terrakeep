@@ -12,11 +12,13 @@ public sealed class VanillaItemCatalog
 {
     private readonly Dictionary<int, string> _namesById;
     private readonly Dictionary<string, string> _namesByKey;
+    private readonly Dictionary<string, int> _idsByKey;
 
-    private VanillaItemCatalog(Dictionary<int, string> namesById, Dictionary<string, string> namesByKey)
+    private VanillaItemCatalog(Dictionary<int, string> namesById, Dictionary<string, string> namesByKey, Dictionary<string, int> idsByKey)
     {
         _namesById = namesById;
         _namesByKey = namesByKey;
+        _idsByKey = idsByKey;
     }
 
     public string GetName(int itemId) =>
@@ -28,18 +30,25 @@ public sealed class VanillaItemCatalog
     public string GetNameByKey(string internalName) =>
         _namesByKey.TryGetValue(internalName, out var name) ? name : internalName;
 
+    // Id real por nombre interno - usado para resolver "pid" de builds.json a un GameItem.Id
+    // real (auto-equipar). Ver Assets/vanilla_item_ids_by_key.json (generado desde
+    // ItemID.cs decompilado, mismo criterio que vanilla_item_names.json).
+    public int? GetIdByKey(string internalName) =>
+        _idsByKey.TryGetValue(internalName, out var id) ? id : null;
+
     public IReadOnlyCollection<string> AllInternalNames() => _namesByKey.Keys;
 
     public IEnumerable<(int Id, string Name)> AllEntries() => _namesById.Select(kv => (kv.Key, kv.Value));
 
-    public static VanillaItemCatalog LoadFromFile(string path, string byKeyPath)
+    public static VanillaItemCatalog LoadFromFile(string path, string byKeyPath, string idsByKeyPath)
     {
         using var stream = File.OpenRead(path);
         using var keyStream = File.OpenRead(byKeyPath);
-        return LoadFromStreams(stream, keyStream);
+        using var idsStream = File.OpenRead(idsByKeyPath);
+        return LoadFromStreams(stream, keyStream, idsStream);
     }
 
-    public static VanillaItemCatalog LoadFromStreams(Stream stream, Stream byKeyStream)
+    public static VanillaItemCatalog LoadFromStreams(Stream stream, Stream byKeyStream, Stream idsByKeyStream)
     {
         var raw = JsonSerializer.Deserialize<Dictionary<string, string>>(stream)
             ?? throw new InvalidDataException("vanilla_item_names.json invalido.");
@@ -50,6 +59,9 @@ public sealed class VanillaItemCatalog
         var byKey = JsonSerializer.Deserialize<Dictionary<string, string>>(byKeyStream)
             ?? throw new InvalidDataException("vanilla_item_names_by_key.json invalido.");
 
-        return new VanillaItemCatalog(byId, byKey);
+        var idsByKey = JsonSerializer.Deserialize<Dictionary<string, int>>(idsByKeyStream)
+            ?? throw new InvalidDataException("vanilla_item_ids_by_key.json invalido.");
+
+        return new VanillaItemCatalog(byId, byKey, idsByKey);
     }
 }

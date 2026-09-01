@@ -15,10 +15,20 @@ public sealed class VanillaPrefixEntryData
 public sealed class VanillaPrefixCatalog
 {
     private readonly Dictionary<int, VanillaPrefixEntryData> _byId;
+    private readonly Dictionary<string, VanillaPrefixEntryData> _byInternal;
 
-    private VanillaPrefixCatalog(Dictionary<int, VanillaPrefixEntryData> byId) => _byId = byId;
+    private VanillaPrefixCatalog(Dictionary<int, VanillaPrefixEntryData> byId, Dictionary<string, VanillaPrefixEntryData> byInternal)
+    {
+        _byId = byId;
+        _byInternal = byInternal;
+    }
 
     public VanillaPrefixEntryData? ById(int id) => _byId.TryGetValue(id, out var e) ? e : null;
+
+    // Por nombre interno en ingles (ej. "Legendary") - el formato que usa el campo "prefix" de
+    // builds.json (auto-equipar).
+    public VanillaPrefixEntryData? ByInternal(string internalName) =>
+        _byInternal.TryGetValue(internalName, out var e) ? e : null;
 
     public static VanillaPrefixCatalog LoadFromFile(string path)
     {
@@ -30,6 +40,6 @@ public sealed class VanillaPrefixCatalog
     {
         var raw = JsonSerializer.Deserialize<List<VanillaPrefixEntryData>>(stream)
             ?? throw new InvalidDataException("prefixes.json invalido.");
-        return new VanillaPrefixCatalog(raw.ToDictionary(e => e.Id));
+        return new VanillaPrefixCatalog(raw.ToDictionary(e => e.Id), raw.ToDictionary(e => e.Internal));
     }
 }

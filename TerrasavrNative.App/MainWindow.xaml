@@ -99,7 +99,16 @@
         <!-- Una clase dentro de una etapa (melee/ranged/mage/summoner/rogue) -->
         <DataTemplate x:Key="BuildClassTemplate">
             <StackPanel Margin="0,0,24,16" MinWidth="220">
-                <TextBlock Text="{Binding Key}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" Margin="0,0,0,6" />
+                <DockPanel Margin="0,0,0,6">
+                    <Button DockPanel.Dock="Right" Content="Auto-equipar" FontSize="11" Padding="7,2"
+                            Background="{StaticResource AccentBrush}" Foreground="{StaticResource BgPrimaryBrush}"
+                            BorderThickness="0"
+                            Command="{Binding DataContext.AutoEquipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding Value}"
+                            IsEnabled="{Binding DataContext.IsCharacterLoaded, RelativeSource={RelativeSource AncestorType=Window}}"
+                            ToolTip="Coloca esta armadura/accesorios/armas en el personaje cargado" />
+                    <TextBlock Text="{Binding Key}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                </DockPanel>
                 <TextBlock Text="Armadura" Style="{StaticResource CaptionText}" Margin="0,4,0,2" />
                 <ItemsControl ItemsSource="{Binding Value.Armor}" />
                 <TextBlock Text="Armas" Style="{StaticResource CaptionText}" Margin="0,6,0,2" />

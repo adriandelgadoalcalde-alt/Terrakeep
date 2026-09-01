@@ -47,7 +47,8 @@ public sealed class CharacterFileService
         RoguePrefixCatalog = RoguePrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "rogue_prefixes.json"));
         VanillaCatalog = VanillaItemCatalog.LoadFromFile(
             Path.Combine(assetsDir, "vanilla_item_names.json"),
-            Path.Combine(assetsDir, "vanilla_item_names_by_key.json"));
+            Path.Combine(assetsDir, "vanilla_item_names_by_key.json"),
+            Path.Combine(assetsDir, "vanilla_item_ids_by_key.json"));
         VanillaPrefixCatalog = VanillaPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "prefixes.json"));
         VanillaBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds.json"));
         CalamityBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds_calamity.json"));

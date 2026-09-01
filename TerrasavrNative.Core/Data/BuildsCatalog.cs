@@ -9,6 +9,10 @@ public sealed class BuildItemRef
     [JsonPropertyName("en")] public string? En { get; init; }
     [JsonPropertyName("es")] public string? Es { get; init; }
     [JsonPropertyName("prefix")] public string? Prefix { get; init; }
+    // Solo Calamity/Picaro: prefijo real de Calamity (modPrefixMod/modPrefixName), identificado
+    // por su id sintetico (>= CalamityIds.PrefixIdBase) en vez de por nombre interno vanilla -
+    // ver la nota de builds_calamity.json.
+    [JsonPropertyName("prefixId")] public int? PrefixId { get; init; }
 
     public string DisplayName => Es ?? En ?? Pid ?? "?";
 }
