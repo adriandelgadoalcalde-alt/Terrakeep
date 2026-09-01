@@ -1,8 +1,9 @@
 namespace TerrasavrNative.App.ViewModels;
 
 // Una entrada del catalogo completo (vanilla o Calamity) para la Libreria/Buscador. IconPath
-// es una URI pack://siteoforigin real solo para Calamity (los iconos vanilla vienen en un
-// atlas de sprites sin extraer todavia, ver bitacora.md) - null ahi, la UI cae a texto.
+// es una URI pack://siteoforigin real para ambos (vanilla via VanillaIconResolver, extraidos
+// de items.png; Calamity via su propio icono ya copiado) - null solo para el puñado de casos
+// sin icono real (ver VanillaIconResolver), donde la UI cae a un "?" de texto.
 public sealed class LibraryItemViewModel(string displayName, bool isCalamity, string? iconPath, int id, string category)
 {
     public string DisplayName { get; } = displayName;

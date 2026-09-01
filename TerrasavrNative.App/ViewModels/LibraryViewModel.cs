@@ -37,7 +37,7 @@ public partial class LibraryViewModel : ObservableObject
         _all = [];
 
         foreach (var (id, name) in service.VanillaCatalog.AllEntries())
-            _all.Add(new LibraryItemViewModel(name, false, null, id, "Vanilla"));
+            _all.Add(new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, "Vanilla"));
 
         foreach (var entry in service.CalamityCatalog.Entries)
         {

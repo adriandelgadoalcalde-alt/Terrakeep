@@ -304,14 +304,41 @@ duplicados, mas dos ids conocidos). `dotnet build` limpio, la app arranca sin ex
 verificado con clics reales** (buscar de verdad, cargar un mundo real y comprobar que la
 lista de "NPCs que faltan" tiene sentido) - misma limitación de siempre.
 
+### Iconos vanilla reales (ya extraídos)
+
+`img/items.png` (Terrasavr-Calamity-Beta) resultó ser una rejilla uniforme: 32 columnas,
+celdas de 40x40, **índice = id real del objeto directamente, fila-mayor** (`row = id / 32,
+col = id % 32`) - confirmado visualmente recortando la celda de `id=1` (Pico de hierro) y
+`id=231` (Casco fundido/`MoltenHelmet`, el mismo objeto ya usado como caso de prueba en
+`vanilla_item_ids_by_key.json`) y viendo que el sprite es el correcto. Sin necesidad de tocar
+`script.js`/decompilar nada - se dedujo del propio tamaño de la imagen (1280x7720) más el
+comentario ya existente en `overrides.js` ("items.png's own per-item cells are already
+exactly 40x40").
+
+Extraídos con `pngjs` (ya instalado en Terrasavr-Calamity-Beta) los 5455 ids reales de
+`vanilla_item_names.json` a PNGs individuales, uno por id, en
+`TerrasavrNative.App/Assets/vanilla/icons/{id}.png` - **5454 de 5455** (el único que falta,
+`1189`/`Taladro de paladio`, cae en una celda totalmente transparente en el atlas original;
+limitación real y documentada, no un fallo de la extracción - mismo criterio que las ~13
+traducciones vanilla sin equivalente real). `nitems.png` (ids negativos/objetos obsoletos) se
+descarta a propósito, mismo criterio que ya se aplicó al generar
+`vanilla_item_ids_by_key.json` (solo ids > 0).
+
+`VanillaIconResolver` (nuevo, `App/Services`) resuelve id → ruta `pack://siteoforigin` si el
+archivo existe, null si no (el objeto sin icono real, o cualquier id fuera de rango) - la
+Libreria ya lo usa para los objetos vanilla en vez de mostrar siempre el "?" de reserva.
+
+**Verificado**: 82 tests xUnit siguen en verde (extracción es un script Node puntual fuera
+del proyecto .NET, sin lógica nueva en Core), `dotnet build` limpio, la app arranca con los
+5454 PNGs copiados a la carpeta de salida. **No verificado con clics reales** (abrir la
+Libreria y ver los iconos vanilla de verdad en pantalla) - misma limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
 - **Exploración**: zoom real (de momento solo scroll a tamaño 1:1), fondo degradado por zona
   (falta leer GroundLevel/RockLevel), tooltip por tile al pasar el ratón (nombre real de
   tile/pared - ya está `TileNameCatalog`, falta guardar u/v por tile en `WldTile` para
   resolver variantes exactas y conectarlo a la UI).
-- **Iconos vanilla**: siguen sin extraer (atlas `img/items.png`/`img/nitems.png`, formato UV
-  todavía no investigado) - la Librería los muestra con un icono de reserva por ahora.
 - **Apariencia** (pelo/piel con preview) - ni empezada.
 - Buffs/loadouts de Calamity sin fusionar todavía (ver la sección de Fase 1 más arriba).
 - Instalador (Fase 6 del plan) - ni empezado.
