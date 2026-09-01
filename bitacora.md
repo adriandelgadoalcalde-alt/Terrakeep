@@ -1995,3 +1995,36 @@ simulado en el arnés de consola): sin banner antes de guardar: confirmado; bann
 1.5s): confirmado; ya no está a ~1.9s (se apagó solo, sin excepción): confirmado.
 
 `dotnet build`/`dotnet test` en verde (128/128).
+
+### Fases F y G - `CLAUDE.md` nuevo + copia permanente de fuentes de referencia
+
+Pedido explícito repetido tres veces en modo plan ("añade en el proyecto una ruta para
+consultar siempre el código decompilado de Terraria/tModLoader/Calamity mod... a todo tipo de
+herramientas de decompilación... y si no decompila la version final que hicimos y la añades
+tambien... haz commit de todo esto y bitacora"). Este proyecto no tenía `CLAUDE.md` propio
+todavía (a diferencia de `Terrasavr-Calamity-Beta`) - creado
+`Terrasavr-Native\CLAUDE.md` documentando: rutas reales de las 3 fuentes decompiladas
+(`TerrariaVanilla`/`tModLoader`/`CalamityMod`, con la corrección explícita de que Calamity SÍ
+tiene fuente real, corrigiendo una afirmación errónea de una sesión anterior de este mismo
+proyecto), `tmod-extract.js` para contenido crudo de cualquier `.tmod`, el índice real de
+herramientas (`herramientas.json`) y una sección nueva "Verdades del entorno WPF" con los
+gotchas reales descubiertos en toda esta sesión (Setter.TargetName no puede apuntar a un
+Brush, Storyboard sin TargetName dentro de Style.Triggers, Visibility roto por asignación
+directa en code-behind, MinWidth/MinHeight SÍ fiables aquí, el bug real de doble-ventana-
+fantasma por StartupUri encontrado verificando la Fase D, capturas de pantalla poco fiables)
+- mismo criterio que las "Verdades del entorno" de `Terrasavr-Calamity-Beta\CLAUDE.md`, para
+que una sesión futura no tenga que redescubrir nada de esto.
+
+Copia real (no solo documentada) dentro del propio repo, comiteada:
+- `reference\terrasavr-real\script.beautified.js` (10472 líneas, volcado con `js-beautify`
+  del `script.js` real fechado 31-ago-2026) + `PROCEDENCIA.md` con el comando exacto de
+  regeneración.
+- `reference\terrakeep-decompilado\TerrasavrNative.App.decompiled.cs` (15988 líneas,
+  `ilspycmd` real contra la build Debug propia) + `PROCEDENCIA.md`. Verificado que es real y
+  actual buscando dentro las clases recién creadas en esta misma sesión
+  (`EquipmentGroupViewModel`, `MainViewModel`) - ambas aparecen.
+- `reference\` vive fuera de cualquier carpeta de proyecto (`.csproj`), así que MSBuild no la
+  incluye ni la copia a `bin\`/publica con la app por diseño de los proyectos SDK-style - no
+  hizo falta tocar ningún `.gitignore`.
+
+`dotnet build` en verde (confirma que `reference\` no interfiere con la compilación normal).
