@@ -593,10 +593,88 @@ doble clic real) y confirmado con `Get-Process`, `uninstall.ps1` ejecutado y con
 borra carpeta + accesos directos, y una segunda instalación limpia después para dejar la app
 disponible. 97 tests xUnit siguen en verde (sin tocar Core/App).
 
+### Preview de personaje real en Apariencia (pedido explícito, 1-sep-2026)
+
+Investigado a fondo (auditoría dedicada, ver la sección de más abajo) el sistema real de
+sprites del jugador de Terrasavr y **verificado visualmente generando y viendo 4 previews
+reales** (pelo distinto, género distinto - salen cabezas de Terraria reconocibles de verdad,
+con el pelo/piel/camisa teñidos correctamente).
+
+- **Atlas real**: `img/visual.png` (copiado a `Assets/player/visual.png`, 640x416, ~22KB).
+  Confirmado NO es un cuerpo entero sino un **icono de cabeza pequeño** - recortando cada
+  parte a mano, casi todo el lienzo de 40x56 es transparente salvo un detalle facial/de
+  cuello pequeño en la esquina superior izquierda.
+- **9 "partes"** superpuestas TODAS en el mismo origen (0,0) - formato confirmado leyendo el
+  motor real (`Sa`/`app.TabMain` + `qa`/`app.BitPart` en `script.readable.js`): 8 partes de
+  40x56 (base sin tinte, piel, ojos, piel de torso, camisa, camiseta interior, pantalones,
+  zapatos - offsets X exactos documentados en `PlayerPreviewRenderer.cs`) + el pelo (40x40,
+  **134 estilos** en rejilla de 16 columnas, `x=40*(id&15), y=56+40*(id>>4)` - misma fórmula
+  de rejilla que ya se usó para `items.png`/`buffs.png`).
+- **Tintado = multiplicación RGB pura** sobre el sprite ya recortado (sin tocar alfa) - mismo
+  mecanismo que `BitPart.set_color` real. Los sprites base están en gris/blanco para que el
+  multiply dé el color final.
+- **`PlayerPreviewRenderer`** (nuevo, `App/Services`): compone las 9 partes en un
+  `WriteableBitmap` de 40x56, recalculado en cada cambio de pelo/género/color desde
+  `AppearanceViewModel` (suscrito al `PropertyChanged` de cada `ColorSwatchViewModel`).
+- **Género no verificado al 100%**: el motor real decide con `gender>=4?0:1`, un umbral sin
+  sentido para el `Gender` de 0/1 simple que lee este proyecto (probablemente una
+  codificación de un formato mucho más antiguo, fuera de alcance) - se usa `IsMale` en su
+  lugar para elegir entre las dos variantes de sprite, documentado como asunción razonable
+  pero no verificada pixel a pixel.
+- **NO se clona el layout roto del original**: la propia UI de Terrasavr trae la etiqueta
+  literal `"(preview is broken atm)"` en este panel - nunca tuvo un posicionamiento que
+  funcionara del todo. Esta versión compone las 9 partes apiladas en el mismo origen, que es
+  justo lo que la rejilla real espera (y es exactamente lo que produjo un preview correcto al
+  probarlo).
+
+**Verificado**: generado un proyecto WPF de usar-y-tirar en el scratchpad que invoca
+`PlayerPreviewRenderer.Render` directamente con 4 combinaciones (pelo 0/16/50, chico/chica) y
+guarda el resultado a PNG - las 4 imágenes muestran cabezas de Terraria reales y coherentes,
+no basura ni sprites descolocados. 97 tests xUnit siguen en verde (`PlayerPreviewRenderer` es
+puro `App`, sin lógica nueva en `Core`), `dotnet build` limpio, la app arranca sin excepción.
+
+### Auditoría exhaustiva Terrasavr JS vs puerto nativo (pedido explícito, 1-sep-2026)
+
+Pasada dedicada leyendo `overrides.js`/`script.readable.js` (versión legible del motor
+compilado, en `tModLoader-Decompiled\Terrasavr-script-readable\`) completos, no solo greps
+puntuales, para confirmar que no queda ninguna función real de Terrasavr sin portar. Hallazgos
+NO barridos todavía (quedan documentados aquí para la siguiente ronda, priorizados):
+
+1. **Editor de buffs completo** (`app.TabEffects`, clase `L`) - el puerto solo LEE buffs
+   (`BuffRowViewModel`), el original permite añadir/quitar/cambiar duración por slot, más
+   guardar/cargar/añadir presets de buffs a un fichero `.json`/`.tsb`. `PlrCharacter.Buffs`
+   ya soporta escritura (usado internamente), solo falta la UI de edición.
+2. **Selector de prefijo manual categorizado** (`app.TabEdit`, clase `X`) - el puerto solo
+   tiene el botón ★ (mejor prefijo auto-sugerido). El original tiene un picker clicable de
+   TODOS los prefijos agrupados por categoría, más el nombre del prefijo actual coloreado por
+   tier de rareza. Nota: el propio original solo tenía botón dedicado para 1 de los 21
+   prefijos de Calamity (el resto había que teclear el id a mano) - un selector categorizado
+   sería una mejora real sobre el propio original, no solo paridad.
+3. **Panel de "Spawn Points" (servidores favoritos)** - dato ya leído/escrito
+   (`PlrCharacter.Servers`/`PlrServerEntry`, `PlrBodySerializer`), cero UI. Cada entrada:
+   nombre, dirección, `spawnX`/`spawnY`.
+4. **Campos de estadísticas del personaje sin panel** (`app.TabMain`) - TODOS ya leídos en
+   `PlrCharacter.cs`, solo falta UI (mismo patrón que `AppearanceViewModel`, sin parsing
+   nuevo): `Difficulty` (Softcore/Mediumcore/Hardcore/Journey), `HealthNow`/`HealthMax`/
+   `ManaNow`/`ManaMax`, `FishingQuestsCompleted`, `GolferScore`, tiempo jugado (el puerto solo
+   tiene `PlayTimeLow`/`PlayTimeHigh` en crudo, sin exponer como segundos). El hueco más
+   barato de cerrar. `BartenderQuests` NO añadir - el propio JS lo tiene eliminado de la UI a
+   propósito (`this.remove(this.lbBarQuests)`), es basura reconocida por el propio autor.
+5. **Cambiar la versión objetivo del guardado** (`app.TabVersion`) - nicho/avanzado,
+   `PlrCharacter.Version` ya existe sin editor. Prioridad baja (riesgo si se usa mal).
+6. **`TabFlags` ("Edit permanent buffs")** - contenido real SIN determinar en esta pasada
+   (necesita una pasada dedicada antes de decidir si implementarlo).
+7. **UI de loadouts como pestañas 1/2/3 conmutables** - el puerto ya expone los 3 loadouts
+   reales como contenedores planos en Objetos (mismos datos, distinta UX) - prioridad baja.
+
+**No son huecos reales** (mismo límite que ya tenía el propio original, o decisión de diseño
+ya tomada y documentada): el campo "Code" de edición de objetos (exclusivo del build web sin
+tModLoader, este proyecto es 100% tModLoader así que no aplica); `TabShelf` (bandeja temporal
+de items - la Librería como selector directo por slot ya cubre el mismo caso de uso).
+
 ## Pendiente (visible desde fuera)
 
-- **Preview de sprite compuesto** en Apariencia (pelo+cuerpo+ropa reales, no solo color) -
-  necesita el atlas de sprites del jugador, sin extraer.
+- Huecos 1-6 de la auditoría de arriba, por orden de prioridad (el 4 es el más barato).
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 

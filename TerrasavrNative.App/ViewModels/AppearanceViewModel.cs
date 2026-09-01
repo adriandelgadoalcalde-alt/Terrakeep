@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using TerrasavrNative.App.Services;
 using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels;
@@ -7,13 +9,15 @@ namespace TerrasavrNative.App.ViewModels;
 // Pestaña "Apariencia" - estilo de pelo, genero, tinte de pelo y los 7 colores reales del
 // personaje (pelo/piel/ojos/camisa/camiseta interior/pantalones/zapatos), todos campos que
 // PlrCharacter ya traia leidos desde la Fase 1 pero sin ningun panel para verlos/editarlos.
-// Sin preview de sprite real (dibujar el personaje completo por capas - pelo/cuerpo/ropa -
-// necesitaria el atlas de sprites del jugador, que no esta extraido; los cuadros de color de
-// cada swatch SI son el color real, solo no hay una silueta compuesta encima).
+// PreviewImage se recalcula en cada cambio (ver PlayerPreviewRenderer para el detalle real
+// del atlas/tintado, y su propia limitacion documentada: es un icono de cabeza pequeño, no
+// un personaje de cuerpo completo - asi era ya en el Terrasavr original).
 public partial class AppearanceViewModel : ObservableObject
 {
     private PlrCharacter? _character;
     private bool _suppressWriteback;
+
+    [ObservableProperty] private WriteableBitmap? _previewImage;
 
     [ObservableProperty] private int _hairStyle;
     [ObservableProperty] private int _hairDye;
@@ -51,11 +55,16 @@ public partial class AppearanceViewModel : ObservableObject
         IsMale = character.Gender == 1;
         _suppressWriteback = false;
 
+        foreach (var swatch in Swatches)
+            swatch.PropertyChanged += (_, _) => RefreshPreview();
+
         _character = character;
+        RefreshPreview();
     }
 
     partial void OnHairStyleChanged(int value)
     {
+        RefreshPreview();
         if (_suppressWriteback || _character == null) return;
         _character.HairStyle = value;
     }
@@ -69,7 +78,20 @@ public partial class AppearanceViewModel : ObservableObject
     partial void OnIsMaleChanged(bool value)
     {
         OnPropertyChanged(nameof(IsFemale));
+        RefreshPreview();
         if (_suppressWriteback || _character == null) return;
         _character.Gender = (byte)(value ? 1 : 0);
+    }
+
+    // Indices en Swatches, mismo orden en que se anaden arriba en LoadFrom.
+    private const int HairIdx = 0, SkinIdx = 1, EyesIdx = 2, ShirtIdx = 3, UnderIdx = 4, PantsIdx = 5, ShoesIdx = 6;
+
+    private void RefreshPreview()
+    {
+        if (Swatches.Count < 7) return;
+        PlayerPreviewRenderer.Tint T(int i) => new((byte)Swatches[i].R, (byte)Swatches[i].G, (byte)Swatches[i].B);
+
+        var colors = new PlayerPreviewRenderer.PlayerColors(T(HairIdx), T(SkinIdx), T(EyesIdx), T(ShirtIdx), T(UnderIdx), T(PantsIdx), T(ShoesIdx));
+        PreviewImage = PlayerPreviewRenderer.Render(HairStyle, IsMale, colors);
     }
 }
