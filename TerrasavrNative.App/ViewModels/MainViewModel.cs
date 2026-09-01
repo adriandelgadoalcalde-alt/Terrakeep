@@ -31,7 +31,6 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private int _selectedTabIndex;
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
-    public ObservableCollection<BuffRowViewModel> Buffs { get; } = [];
     public ObservableCollection<ResearchRowViewModel> Research { get; } = [];
     public BuildsViewModel Builds { get; }
     public WhatsNewViewModel WhatsNew { get; }
@@ -40,6 +39,7 @@ public partial class MainViewModel : ObservableObject
     public LibraryViewModel Library { get; }
     public AppearanceViewModel Appearance { get; } = new();
     public ServersViewModel Servers { get; } = new();
+    public BuffsViewModel Buffs { get; }
 
     public MainViewModel()
     {
@@ -48,6 +48,7 @@ public partial class MainViewModel : ObservableObject
         Exploration = new ExplorationViewModel(_service);
         Library = new LibraryViewModel(_service);
         Library.ItemPlaced += () => SelectedTabIndex = PersonajeTabIndex;
+        Buffs = new BuffsViewModel(_service);
     }
 
     private void RequestPickForSlot(ItemSlotViewModel slot)
@@ -65,6 +66,7 @@ public partial class MainViewModel : ObservableObject
             RebuildContainers();
             Appearance.LoadFrom(_loaded.Character);
             Servers.LoadFrom(_loaded.Character);
+            Buffs.LoadFrom(_loaded.Character);
             CharacterName = _loaded.Character.Name;
             HasCalamityData = _loaded.TplrPath != null;
             IsCharacterLoaded = true;
@@ -100,7 +102,6 @@ public partial class MainViewModel : ObservableObject
     private void RebuildContainers()
     {
         Containers.Clear();
-        Buffs.Clear();
         Research.Clear();
         if (_loaded == null) return;
 
@@ -134,14 +135,6 @@ public partial class MainViewModel : ObservableObject
             AddContainer($"loadout{key}Items", $"Loadout {i + 1} - armadura/accesorios", _loaded.MergedContainers[$"loadout{key}Items"]);
             AddContainer($"loadout{key}Social", $"Loadout {i + 1} - vanidad", _loaded.MergedContainers[$"loadout{key}Social"]);
             AddContainer($"loadout{key}Dyes", $"Loadout {i + 1} - tintes", _loaded.MergedContainers[$"loadout{key}Dyes"]);
-        }
-
-        // Buffs vanilla + Calamity (modBuffs), ya fusionados en Character.Buffs por
-        // CharacterFileService.Load (CalamityCharacterSync.MergeBuffs).
-        foreach (var buff in _loaded.Character.Buffs)
-        {
-            if (buff.Id == 0) continue;
-            Buffs.Add(BuffRowViewModel.From(buff, _service.VanillaBuffs, _service.CalamityBuffCatalog));
         }
 
         RebuildResearch();

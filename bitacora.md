@@ -720,10 +720,35 @@ el esfuerzo frente a lo acotado y verificable-por-lectura-directa del arreglo).
 los 2 personajes reales, sin regresión), `dotnet build` limpio, la app arranca sin excepción.
 **No verificado con clics reales** - misma limitación de siempre.
 
+### Editor de buffs completo (hueco #1, cerrado - salvo presets)
+
+`BuffRowViewModel` deja de ser solo-lectura: envuelve el `PlrBuff` real, duración editable
+(`DurationSeconds`, escribe `Buff.Time` directamente) y botón "Quitar" (vacía el slot,
+`Id=0`). `BuffsViewModel` (nuevo, reemplaza la `ObservableCollection<BuffRowViewModel>` que
+antes vivía suelta en `MainViewModel`) añade buscador+picker de "Añadir buff" - mismo patrón
+que la Librería de objetos pero sin cambiar de pestaña (el catálogo de buffs es mucho más
+pequeño, ~660 entradas, cabe inline en la propia pestaña Buffs): busca en vanilla+Calamity
+combinados, al pulsar una tarjeta coloca el buff en el primer slot libre del array fijo de
+`character.Buffs` con una duración por defecto de 10 minutos.
+
+- **`VanillaBuffCatalog.AllEntries()`** (nuevo, `Core/Data`) - hacía falta enumerar los 354
+  buffs vanilla para el buscador, antes solo tenía `GetName(id)` puntual. Mismo patrón que
+  `VanillaItemCatalog.AllEntries()`.
+- **NO se portó el guardado/carga de presets de buffs a fichero `.json`/`.tsb`** del original
+  (`btSave`/`btLoad`/`btAppend` en `app.TabEffects`) - decisión de alcance explícita, no un
+  olvido: el caso de uso principal (editar los buffs de ESTE personaje) ya está cubierto,
+  presets reutilizables entre personajes es una función aparte y más nicho.
+
+**Verificado**: 99 tests xUnit (2 nuevos: `VanillaBuffCatalogTests`, `GetName` conocido/
+desconocido + `AllEntries` completo). `dotnet build` limpio, la app arranca sin excepción.
+**No verificado con clics reales** (añadir/quitar un buff de verdad, cambiar su duración,
+guardar y comprobar que persiste) - misma limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
-- Huecos 1, 2, 5, 6 de la auditoría de arriba, por orden de prioridad (el 3 y el 4 ya están
-  cerrados, ver arriba).
+- Huecos 2 (selector de prefijo categorizado), 5 (versión objetivo del guardado, prioridad
+  baja) y 6 (`TabFlags`, sin determinar) de la auditoría de arriba - el 1, 3 y 4 ya están
+  cerrados.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 

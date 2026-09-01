@@ -1,3 +1,5 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
 using TerrasavrNative.Core.Calamity;
 using TerrasavrNative.Core.Data;
@@ -5,24 +7,49 @@ using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels;
 
-// Un buff activo del personaje - solo lectura por ahora (quitar/anadir un buff es un paso
-// posterior). Cubre tanto buffs vanilla como de Calamity (fusionados en character.Buffs por
-// CalamityCharacterSync.MergeBuffs, ids sinteticos >= CalamityIds.BuffIdBase).
-public sealed class BuffRowViewModel(string name, int seconds, bool isCalamity, string? iconPath)
+// Un buff activo del personaje - editable de verdad (duracion + quitar), cierra el hueco #1
+// de la auditoria Terrasavr JS vs puerto (ver bitacora.md; NO se porto el guardado/carga de
+// presets de buffs a fichero .json/.tsb del original, decision de alcance documentada).
+// Cubre tanto buffs vanilla como de Calamity (fusionados en character.Buffs por
+// CalamityCharacterSync.MergeBuffs, ids sinteticos >= CalamityIds.BuffIdBase). Envuelve el
+// PlrBuff real y escribe en el mismo objeto - mismo patron que ColorSwatchViewModel.
+public partial class BuffRowViewModel : ObservableObject
 {
-    public string Name { get; } = name;
-    public string Duration { get; } = FormatDuration(seconds);
-    public bool IsCalamity { get; } = isCalamity;
-    public string? IconPath { get; } = iconPath;
+    private readonly Action<BuffRowViewModel> _requestRemove;
+    private bool _suppressWriteback;
 
-    private static string FormatDuration(int seconds)
+    public PlrBuff Buff { get; }
+    public string Name { get; }
+    public bool IsCalamity { get; }
+    public string? IconPath { get; }
+
+    // Duracion en segundos, editable - PlrBuff.Time va en ticks (60/seg, mismo criterio que
+    // ya usaba la version solo-lectura).
+    [ObservableProperty] private int _durationSeconds;
+
+    public BuffRowViewModel(PlrBuff buff, string name, bool isCalamity, string? iconPath, Action<BuffRowViewModel> requestRemove)
     {
-        if (seconds <= 0) return "";
-        int h = seconds / 3600, m = seconds % 3600 / 60, s = seconds % 60;
-        return h > 0 ? $"{h}h {m}m" : m > 0 ? $"{m}m {s}s" : $"{s}s";
+        Buff = buff;
+        Name = name;
+        IsCalamity = isCalamity;
+        IconPath = iconPath;
+        _requestRemove = requestRemove;
+
+        _suppressWriteback = true;
+        DurationSeconds = buff.Time / 60;
+        _suppressWriteback = false;
     }
 
-    public static BuffRowViewModel From(PlrBuff buff, VanillaBuffCatalog vanillaCatalog, CalamityBuffCatalog calamityCatalog)
+    partial void OnDurationSecondsChanged(int value)
+    {
+        if (_suppressWriteback) return;
+        Buff.Time = Math.Max(0, value) * 60;
+    }
+
+    [RelayCommand]
+    private void Remove() => _requestRemove(this);
+
+    public static BuffRowViewModel From(PlrBuff buff, VanillaBuffCatalog vanillaCatalog, CalamityBuffCatalog calamityCatalog, Action<BuffRowViewModel> requestRemove)
     {
         bool isCalamity = buff.Id >= CalamityIds.BuffIdBase;
         string name;
@@ -38,6 +65,6 @@ public sealed class BuffRowViewModel(string name, int seconds, bool isCalamity, 
             name = vanillaCatalog.GetName(buff.Id);
             iconPath = VanillaBuffIconResolver.GetIconPath(buff.Id);
         }
-        return new BuffRowViewModel(name, buff.Time / 60, isCalamity, iconPath); // Time viene en ticks (60/seg)
+        return new BuffRowViewModel(buff, name, isCalamity, iconPath, requestRemove);
     }
 }

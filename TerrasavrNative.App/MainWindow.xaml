@@ -221,37 +221,108 @@
                         </TabControl>
                     </TabItem>
                     <TabItem Header="Buffs">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding Buffs}" Margin="0,10,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type vm:BuffRowViewModel}">
-                                        <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="9,6">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                            <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
-                                                            <Setter Property="BorderThickness" Value="1" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <StackPanel Orientation="Horizontal">
-                                                <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
-                                                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
-                                                    <TextBlock Text="{Binding Duration}" Style="{StaticResource CaptionText}" />
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                        <DockPanel Margin="0,10,0,0">
+                            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                                <Button Content="Añadir buff..." Tag="Accent" Command="{Binding Buffs.BeginAddCommand}"
+                                        HorizontalAlignment="Left" Margin="0,0,0,10" />
+
+                                <Border Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="10,7"
+                                        Visibility="{Binding Buffs.IsPicking, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,8">
+                                            <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding Buffs.CancelAddCommand}"
+                                                    Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" />
+                                            <TextBlock Text="Buscar buff para añadir (vanilla + Calamity)"
+                                                       Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        </DockPanel>
+                                        <TextBox Text="{Binding Buffs.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="8,6" Background="{StaticResource BgPrimaryBrush}"
+                                                 Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                 MaxWidth="380" HorizontalAlignment="Left" FontSize="13" />
+                                        <TextBlock Text="{Binding Buffs.ResultsSummary}" Foreground="{StaticResource BgPrimaryBrush}"
+                                                   FontSize="11" Margin="0,5,0,0" />
+                                    </StackPanel>
+                                </Border>
+
+                                <ItemsControl ItemsSource="{Binding Buffs.Results}" Margin="0,10,0,0"
+                                              Visibility="{Binding Buffs.IsPicking, Converter={StaticResource BoolToVis}}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:BuffCatalogEntryViewModel}">
+                                            <Button Command="{Binding DataContext.Buffs.PickBuffCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}" Margin="0,0,6,6" Padding="0" Background="Transparent" BorderThickness="0">
+                                                <Border Width="96" Height="96" Padding="6" CornerRadius="6"
+                                                        Background="{StaticResource BgElevatedBrush}" BorderThickness="1">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Bottom" Text="{Binding DisplayName}"
+                                                                   Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                                                   TextAlignment="Center" MaxHeight="30" Margin="0,4,0,0" />
+                                                        <Image Source="{Binding IconPath}" Stretch="Uniform" MaxHeight="40"
+                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                    </DockPanel>
+                                                </Border>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding Buffs.Active}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:BuffRowViewModel}">
+                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="9,6">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                                                <Setter Property="BorderThickness" Value="1" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <DockPanel>
+                                                    <Button DockPanel.Dock="Top" Content="&#10005;" Command="{Binding RemoveCommand}"
+                                                            ToolTip="Quitar este buff" HorizontalAlignment="Right"
+                                                            Padding="4,0" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
+                                                            Background="Transparent" />
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
+                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" MaxWidth="130" TextWrapping="Wrap" />
+                                                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                                <TextBox Text="{Binding DurationSeconds, UpdateSourceTrigger=PropertyChanged}"
+                                                                         Width="50" Padding="3,1" FontSize="12"
+                                                                         Background="{StaticResource BgPrimaryBrush}"
+                                                                         Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                                                <TextBlock Text=" s" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
                     </TabItem>
                     <TabItem Header="Investigacion">
                         <DockPanel Margin="0,10,0,0">

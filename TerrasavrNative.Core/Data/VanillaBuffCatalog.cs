@@ -17,6 +17,8 @@ public sealed class VanillaBuffCatalog
     public string GetName(int buffId) =>
         _namesById.TryGetValue(buffId, out var name) ? name : $"Buff #{buffId}";
 
+    public IEnumerable<(int Id, string Name)> AllEntries() => _namesById.Select(kv => (kv.Key, kv.Value));
+
     public static VanillaBuffCatalog LoadFromFile(string path)
     {
         using var stream = File.OpenRead(path);
