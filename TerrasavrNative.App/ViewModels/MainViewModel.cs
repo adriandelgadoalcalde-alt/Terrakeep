@@ -42,6 +42,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private int _personajeInnerTabIndex;
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
+    [ObservableProperty] private EquipmentGroupViewModel? _equipmentGroup;
     public ObservableCollection<ResearchRowViewModel> Research { get; } = [];
     public BuildsViewModel Builds { get; }
     public WhatsNewViewModel WhatsNew { get; }
@@ -162,6 +163,7 @@ public partial class MainViewModel : ObservableObject
     {
         Containers.Clear();
         Research.Clear();
+        EquipmentGroup = null;
         if (_loaded == null) return;
 
         // Contenedores con fusion real de Calamity (mismos 7 que CalamityCharacterSync cubre).
@@ -178,23 +180,12 @@ public partial class MainViewModel : ObservableObject
         AddContainer("coins", "Monedas", _loaded.Character.Coins.ToGameItems());
         AddContainer("ammo", "Municion", _loaded.Character.Ammo.ToGameItems());
 
-        // Equipo puesto (loadout 0 = PrimaryLoadout, el mirror de "lo que lleva puesto ahora")
-        // - claves "loadout0Items/Social/Dyes", ya con objetos de Calamity fusionados por
-        // MergeAll/MergeLoadoutArmorDye.
-        AddContainer("loadout0Items", "Equipo puesto - armadura/accesorios", _loaded.MergedContainers["loadout0Items"]);
-        AddContainer("loadout0Social", "Equipo puesto - vanidad", _loaded.MergedContainers["loadout0Social"]);
-        AddContainer("loadout0Dyes", "Equipo puesto - tintes", _loaded.MergedContainers["loadout0Dyes"]);
-
-        // Los 3 loadouts reales seleccionables (indice 1..3 en el esquema de
-        // CalamityCharacterSync = Loadouts[0..2]) - solo existen si Version>=269. Vacio en
-        // caracteres mas antiguos, se salta solo.
-        for (int i = 0; i < _loaded.Character.Loadouts.Length; i++)
-        {
-            int key = i + 1;
-            AddContainer($"loadout{key}Items", $"Loadout {i + 1} - armadura/accesorios", _loaded.MergedContainers[$"loadout{key}Items"]);
-            AddContainer($"loadout{key}Social", $"Loadout {i + 1} - vanidad", _loaded.MergedContainers[$"loadout{key}Social"]);
-            AddContainer($"loadout{key}Dyes", $"Loadout {i + 1} - tintes", _loaded.MergedContainers[$"loadout{key}Dyes"]);
-        }
+        // Equipo puesto + los 3 loadouts reales seleccionables (Version>=269, si no
+        // Loadouts.Length==0) - consolidados en una unica pantalla "Equipamiento" con
+        // selector, ver EquipmentGroupViewModel (antes eran 12 pestañas planas mas aqui
+        // mismo, 21 pestañas en total - pedido explicito 2-sep-2026 tras el amontonamiento
+        // real al reducir la ventana: "¿es necesario que haya tantos botones?").
+        EquipmentGroup = new EquipmentGroupViewModel(_service, RequestPickForSlot, _loaded.MergedContainers, _loaded.Character.Loadouts.Length);
 
         RebuildResearch();
     }
@@ -265,9 +256,9 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(IsCharacterLoaded))]
     private void AutoEquip(BuildClassGear? gear)
     {
-        if (_loaded == null || gear == null) return;
+        if (_loaded == null || gear == null || EquipmentGroup == null) return;
 
-        var armorSlots = Containers.First(c => c.Key == "loadout0Items").Slots;
+        var armorSlots = EquipmentGroup.EquippedItems.Slots;
         var inventorySlots = Containers.First(c => c.Key == "inventory").Slots;
         int placed = 0, skipped = 0;
 
@@ -317,7 +308,14 @@ public partial class MainViewModel : ObservableObject
     private void SyncEditsBackToMerged()
     {
         if (_loaded == null) return;
-        foreach (var container in Containers)
+        SyncContainersBackToMerged(Containers);
+        if (EquipmentGroup != null) SyncContainersBackToMerged(EquipmentGroup.AllContainers);
+    }
+
+    private void SyncContainersBackToMerged(IEnumerable<ContainerViewModel> containers)
+    {
+        if (_loaded == null) return;
+        foreach (var container in containers)
         {
             if (container.Key == "coins") { CopySlotsInto(_loaded.Character.Coins, container.Slots); continue; }
             if (container.Key == "ammo") { CopySlotsInto(_loaded.Character.Ammo, container.Slots); continue; }

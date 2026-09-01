@@ -1885,3 +1885,88 @@ tarjetas de objeto de cualquier contenedor (Inventario/Banco/CajaFuerte/loadouts
 usan este mismo estilo, así que se propaga solo sin tocar más sitios. `dotnet build` en verde.
 (El contorno propio del panel Equipamiento, la otra mitad de este punto del feedback, se hace
 en la Fase D - ver más abajo.)
+
+### Fase D - Ventana con tamaño mínimo + "Equipamiento" consolidado (21 pestañas -> 2+9)
+
+La fase más grande del plan. Investigación real de `script.js` (clase `app.TabEquips`/`Sb`,
+~líneas 3110-3165 del beautificado) confirmó que Terrasavr real NO tiene 12 pestañas de
+loadout separadas - tiene 3 botones pequeños ("1"/"2"/"3") dentro de UNA única pantalla
+"Equipamiento" que intercambian que loadout se ve. `MainViewModel.RebuildContainers` en
+cambio registraba 21 pestañas planas en un solo `TabControl` (9 contenedores normales + 12 de
+loadout puesto/1/2/3 × armadura/vanidad/tintes) - de ahí el amontonamiento real reportado al
+reducir la ventana ("¿es necesario que haya tantos botones?").
+
+**`Window` gana `MinWidth="1000" MinHeight="620"`** - verificado de verdad que se respeta a
+nivel de SO (no solo declarado en XAML y esperar que "funcione": ver la lección de
+`min()`/`max()` de CSS de este mismo proyecto hermano, un valor declarado no siempre se
+aplica de verdad) - `SetWindowPos` real vía P/Invoke forzando la ventana a 400x300 real, el
+`GetWindowRect` posterior confirma que se quedó en 1000x620, no en 400x300: WPF intercepta
+`WM_GETMINMAXINFO` de verdad.
+
+**Nuevo `EquipmentGroupViewModel.cs`**: consolida los 12 `ContainerViewModel` de siempre
+(MISMOS objetos, mismas claves `loadout0Items`/`loadout1Social`/...) en una unidad con
+`LoadoutOptions` (Puesto/1/2/3, `ObservableCollection<EquipmentOptionViewModel>`) y
+`KindOptions` (Armadura/Vanidad/Tintes) - mismo patrón `Label`+`IsSelected` que
+`PrefixMetaButtonViewModel`/`PrefixGroupButtonViewModel` de la Fase 3 anterior, con
+`SelectLoadoutCommand`/`SelectKindCommand` (RelayCommand) que actualizan la selección y
+recalculan `CurrentSlots` (el `ContainerViewModel.Slots` de la combinación activa).
+`EquippedItems` (atajo a loadout 0/Armadura) y `AllContainers` (los 12) quedan expuestos para
+que `MainViewModel` seguir operando sobre ellos sin duplicar lógica:
+- `RebuildContainers`: las 12 llamadas `AddContainer("loadout...", ...)` se sustituyen por un
+  único `EquipmentGroup = new EquipmentGroupViewModel(...)`; `Containers` se queda con los 9
+  contenedores normales (Inventario/Banco/CajaFuerte/Fragua/Bóveda/Mascotas/TintesMascota/
+  Monedas/Munición).
+- `AutoEquip`: `Containers.First(c => c.Key == "loadout0Items")` -> `EquipmentGroup.EquippedItems`.
+- `SyncEditsBackToMerged`: factorizado en `SyncContainersBackToMerged(IEnumerable<
+  ContainerViewModel>)`, llamado una vez para `Containers` y otra para
+  `EquipmentGroup.AllContainers` - si no, cualquier edición dentro de "Equipamiento" se
+  perdería en silencio al guardar (mismo tipo de bug real que ya se encontró y arregló con
+  Monedas/Munición en la Fase 4 del rework anterior - aprendida la lección, aquí se cubrió
+  desde el principio).
+
+**`MainWindow.xaml`**: el `TabControl` que antes tenía `ItemsSource="{Binding Containers}"`
+(los 21 planos) pasa a tener solo 2 `TabItem` fijos: "Equipamiento" (selector Loadout+Vista
+con `ItemsControl`+botones `PrefixMetaButton`/`PrefixGroupButton` reutilizados tal cual +
+`ItemsControl` de `CurrentSlots`, reutilizando el `DataTemplate` implícito de
+`ItemSlotViewModel` que ya trae drag&drop) e "Inventario" (el `TabControl` de siempre, ahora
+con 9 en vez de 21). **Contorno propio distintivo** (pedido explícito, confirmado tras
+pregunta directa al usuario el 2-sep-2026 - no tenía nada que ver con el indicador ★ de mejor
+prefijo, que se quedó igual): `Border BorderBrush="{StaticResource OrangeBrush}"
+BorderThickness="2"` envolviendo todo el contenido de "Equipamiento", separándolo con
+claridad visual del Inventario general.
+
+**Verificación real, dos niveles**:
+
+1. *Arnés de consola* (`TerrasavrNative.App` referenciado directo, sin ventana) contra una
+   COPIA desechable del personaje real "adrian" (nunca el fichero real del usuario): las 12
+   combinaciones Loadout×Vista recorridas una a una tienen sus slots reales (10 cada una,
+   conteo de objetos correcto); `AutoEquip` con la build "melee" Pre-Hardmode coloca
+   correctamente casco/coraza/grebas/accesorios en `EquipmentGroup.EquippedItems` (11
+   objetos colocados); colocar a mano un objeto (id 47) en Loadout 2/Vanidad slot 0, guardar,
+   y volver a cargar desde disco EN UNA INSTANCIA NUEVA de `MainViewModel` confirma
+   `roundtrip OK` - el objeto sigue ahí tal cual.
+2. *UI Automation real* contra la app WPF de verdad renderizada (arnés `Application` en
+   blanco + `MainWindow` con el personaje precargado por reflexión sobre el campo privado
+   `_viewModel` - ver nota de bug de metodología abajo): navegando Personaje → Objetos →
+   Equipamiento aparecen de verdad los 7 botones reales (`Puesto`/`1`/`2`/`3`/`Armadura`/
+   `Vanidad`/`Tintes`) como elementos de automatización reales, y entrando en Inventario
+   aparecen las 9 pestañas de contenedor reales - confirmado que la UI renderizada coincide
+   con lo que predice el arnés de consola, no solo que compila.
+
+**Bug de metodología real encontrado y corregido durante esta misma verificación** (no del
+código de producción, del arnés de prueba): un primer arnés de UI Automation usaba
+`new TerrasavrNative.App.App()` + `InitializeComponent()` para cargar los recursos de tema
+reales antes de mostrar una `MainWindow` ya cargada a mano - pero `App.xaml` real tiene
+`StartupUri="MainWindow.xaml"` compilado, y WPF crea una SEGUNDA `MainWindow` (sin personaje
+cargado) en cuanto se llama `Run()`, sin importar que `Application.MainWindow` ya se hubiera
+asignado a mano antes - esa ventana fantasma resultó ser la que UI Automation encontraba
+(mismo título "Terrakeep", así que no era evidente por fuera). Arreglado usando un
+`Application` completamente en blanco (sin `StartupUri` en absoluto) y añadiendo a mano solo
+los recursos que hacían falta (`Theme.xaml` + los 5 conversores de `App.xaml.Resources`) -
+así solo existe la `MainWindow` creada explícitamente. Un segundo despiste menor del arnés
+(no del código real): `Path.GetTempPath()` no resolvía al mismo directorio visible desde
+PowerShell al lanzar el proceso desde Git Bash - se cambió a una ruta absoluta fija del propio
+scratchpad de la sesión.
+
+`dotnet build`/`dotnet test` en verde (128/128) tras los cambios de `MainViewModel`/nuevo
+`EquipmentGroupViewModel`/`MainWindow.xaml`.

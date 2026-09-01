@@ -7,7 +7,7 @@
         xmlns:vm="clr-namespace:TerrasavrNative.App.ViewModels"
         xmlns:data="clr-namespace:TerrasavrNative.Core.Data;assembly=TerrasavrNative.Core"
         mc:Ignorable="d"
-        Title="Terrakeep" Height="760" Width="1180"
+        Title="Terrakeep" Height="760" Width="1180" MinWidth="1000" MinHeight="620"
         Background="{StaticResource BgPrimaryBrush}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -524,15 +524,76 @@
                                     <ColumnDefinition Width="300" />
                                 </Grid.ColumnDefinitions>
 
-                                <TabControl Grid.Column="0" Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}" Margin="0,0,10,0">
-                                    <TabControl.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
-                                            <TextBlock Text="{Binding DisplayName}" />
-                                        </DataTemplate>
-                                    </TabControl.ItemTemplate>
-                                    <TabControl.ContentTemplate>
-                                        <StaticResource ResourceKey="ContainerTabTemplate" />
-                                    </TabControl.ContentTemplate>
+                                <!-- Antes: 21 pestañas planas en una sola fila (9 contenedores + 12 de
+                                     loadout puesto/1/2/3 x armadura/vanidad/tintes) - se amontonaba
+                                     al reducir la ventana (pedido explicito 2-sep-2026). Ahora: solo 2
+                                     pestañas externas, "Equipamiento" consolida los 12 sub-contenedores
+                                     con su propio selector (equivalente real de app.TabEquips/Sb, ver
+                                     bitacora.md "Fase D"). -->
+                                <TabControl Grid.Column="0" Style="{StaticResource InnerTabControl}" Margin="0,0,10,0">
+                                    <TabItem Header="Equipamiento">
+                                        <!-- Contorno propio distintivo (confirmado tras pregunta directa al
+                                             usuario 2-sep-2026: el panel Equipamiento necesita su propia
+                                             distincion visual, separada del Inventario general). -->
+                                        <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
+                                            <DockPanel DataContext="{Binding EquipmentGroup}">
+                                                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                                        <TextBlock Text="Loadout:" Style="{StaticResource CaptionText}"
+                                                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                        <ItemsControl ItemsSource="{Binding LoadoutOptions}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
+                                                                    <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
+                                                                            Command="{Binding DataContext.EquipmentGroup.SelectLoadoutCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}" />
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="Vista:" Style="{StaticResource CaptionText}"
+                                                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                        <ItemsControl ItemsSource="{Binding KindOptions}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
+                                                                    <Button Content="{Binding Label}" Style="{StaticResource PrefixGroupButton}"
+                                                                            Command="{Binding DataContext.EquipmentGroup.SelectKindCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}" />
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                    <ItemsControl ItemsSource="{Binding CurrentSlots}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                    </ItemsControl>
+                                                </ScrollViewer>
+                                            </DockPanel>
+                                        </Border>
+                                    </TabItem>
+                                    <TabItem Header="Inventario">
+                                        <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
+                                            <TabControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
+                                                    <TextBlock Text="{Binding DisplayName}" />
+                                                </DataTemplate>
+                                            </TabControl.ItemTemplate>
+                                            <TabControl.ContentTemplate>
+                                                <StaticResource ResourceKey="ContainerTabTemplate" />
+                                            </TabControl.ContentTemplate>
+                                        </TabControl>
+                                    </TabItem>
                                 </TabControl>
 
                                 <Border Grid.Column="1" Style="{StaticResource SidePanelCard}">
