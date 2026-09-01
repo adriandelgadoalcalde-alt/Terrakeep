@@ -57,6 +57,10 @@ public partial class MainViewModel : ObservableObject
 
     private void RequestPickForSlot(ItemSlotViewModel slot)
     {
+        // Cierra el picker de prefijo si estaba abierto - sin este cierre cruzado podia
+        // quedar huerfano mientras el usuario elegia objeto para otro slot en la Libreria
+        // (bug real encontrado en la auditoria del 1-sep-2026).
+        PrefixPicker.PickTarget = null;
         Library.PickTarget = slot;
         SelectedTabIndex = LibreriaTabIndex;
     }
@@ -64,7 +68,11 @@ public partial class MainViewModel : ObservableObject
     // El picker de prefijo se queda en la misma pestaña (Objetos) - a diferencia de la
     // Libreria (8200 objetos, hace falta la pantalla entera) el catalogo de prefijos son solo
     // 118 entradas, cabe como overlay sobre los propios contenedores sin cambiar de pestaña.
-    private void RequestPickPrefixForSlot(ItemSlotViewModel slot) => PrefixPicker.PickTarget = slot;
+    private void RequestPickPrefixForSlot(ItemSlotViewModel slot)
+    {
+        Library.PickTarget = null;
+        PrefixPicker.PickTarget = slot;
+    }
 
     public void LoadFromPath(string plrPath)
     {

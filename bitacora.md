@@ -877,12 +877,71 @@ con 3 peinados distintos, confirmando que el `.exe` final produce el mismo resul
 que el prototipo. 101 tests xUnit siguen en verde (pieza de `App`, sin lógica nueva en `Core`),
 `dotnet build` limpio, la app arranca sin excepción con los 242 sprites nuevos copiados.
 
+## Segunda auditoría de completitud/consistencia (1-sep-2026)
+
+Fork independiente (sin contexto previo) con instrucción explícita de comprobar tanto los
+huecos frente al Terrasavr JS original como el propio trabajo añadido en esta sesión: 5
+`ViewModels` con `LoadFrom` invocadas todas desde `MainViewModel.LoadFromPath`, bindings XAML
+↔ ViewModel revisados a mano contra las 12 ViewModels reales, `AutoEquip`/resolución de items
+Calamity+vanilla sin bug, carpetas de `Assets` con el recuento exacto esperado (vanilla 5454
+iconos/354 buffs, Calamity 3244 iconos/308 buffs, NPCs 27, cuerpo 14, pelo 228), cap de 300/200
+resultados en Librería/Buffs coherente con el mensaje mostrado, instalador con branding
+correcto, sin restos de "Terrasavr Native" de cara al usuario ni TODO/FIXME reales. `dotnet
+build`/`dotnet test` en verde (101/101), confirmado de nuevo de forma independiente.
+
+Encontró 2 problemas reales, ambos arreglados y verificados en el momento:
+1. Comentario desactualizado en `AboutViewModel.cs` ("nombre de trabajo Terrakeep, pendiente
+   de confirmar") - el nombre ya estaba confirmado. Arreglado (solo comentario).
+2. **Bug real**: `PrefixPicker.PickTarget` y `Library.PickTarget` no se limpiaban entre sí al
+   abrir uno con el otro ya abierto (`MainViewModel.RequestPickForSlot`/
+   `RequestPickPrefixForSlot`) - secuencia alcanzable: abrir selector de prefijo para un slot,
+   sin cancelarlo pulsar "Elegir objeto" en otro slot, el picker de prefijo original quedaba
+   huérfano y reaparecía al volver de la Librería. No corrompía datos pero era un estado
+   inconsistente real. Arreglado poniendo a `null` el `PickTarget` del otro picker al abrir
+   cada uno. `dotnet build`/`dotnet test` en verde tras el arreglo (101/101).
+
+## Pulido estético a fondo de `Theme.xaml` (1-sep-2026)
+
+Investigación previa (`WebSearch`) de tokens reales de Fluent 2/WinUI 3
+(`fluent2.microsoft.design`): radio de esquina 4px por defecto (2px controles <32px, 8/12px
+tarjetas/paneles grandes), escala de espaciado de base 4 (2/4/8/12/16/20/24/32), elevación vía
+sombra con desenfoque. Se detectó el problema más importante antes de tocar nada: `TextBox`,
+`ComboBox`, `CheckBox`, `RadioButton` y `Slider` no tenían NINGÚN estilo por defecto en
+`Theme.xaml` - salían como controles Win32 claros de fábrica, rompiendo por completo el tema
+oscuro cada vez que aparecían (Dificultad en Apariencia, género, deslizadores RGB, casillas de
+Desbloqueos...).
+
+Reescrito `Theme.xaml` completo añadiendo plantillas propias para los 5 controles que
+faltaban (estilo "filled" de Fluent para TextBox/ComboBox con raya inferior de acento al
+enfocar, CheckBox/RadioButton con relleno de acento al marcar, Slider con pista/pomo de
+acento), más una sombra compartida (`CardShadow`) para dar profundidad a tarjetas, una tarjeta
+genérica (`ElevatedCard`) y una tarjeta de navegación clicable con hover elevado
+(`NavCardButton`, pensada para la futura página de bienvenida). Se refinó también el indicador
+de selección de las pestañas: la nav rail (`NavTabItem`) pasa de relleno sólido a barra
+vertical de acento (patrón real de nav rail Fluent/WinUI 3) y las pestañas internas
+(`InnerTabItem`, Inventario/Banco/...) pasan de "pastilla" sólida a subrayado tipo pivot, para
+no competir visualmente con los botones de acento del resto de la app.
+
+**Verificación**: `dotnet build` limpio (0 errores/avisos, incluidas las plantillas complejas
+de ComboBox/Slider que si tuvieran nombres de parte mal puestos fallarían en tiempo de
+ejecución, no en compilación) + `dotnet test` 101/101. La captura de pantalla en vivo de la
+ventana real resultó NO fiable en este entorno (foreground lock de Windows: `SetForegroundWindow`
+no falla pero `CopyFromScreen` capturaba otra ventana por encima) - en vez de insistir, se
+reusó el método ya validado para el preview de personaje: un proyecto WPF de usar-y-tirar en
+el scratchpad que carga el `Theme.xaml` real vía `ResourceDictionary.Source` con ruta absoluta,
+monta una ventana con un ejemplar de cada control nuevo, y renderiza a PNG con
+`RenderTargetBitmap` en un hilo STA explícito (los top-level statements de C# no llevan
+`[STAThread]` real, hace falta un `Thread` con `SetApartmentState(ApartmentState.STA)`).
+Inspección visual del PNG resultante: todos los controles se ven coherentes con el tema oscuro
+y el acento ámbar, sin ningún control con apariencia por defecto.
+
 ## Pendiente (visible desde fuera)
 
-- Todos los huecos de la auditoría Terrasavr JS vs puerto están cerrados (1-6), y el preview
-  de personaje ya es de cuerpo completo con sprites reales. Pendiente ahora mismo: una ronda
-  de pulido estético dedicada (pendiente desde el 2-sep-2026, ver "Objetivo de diseño de la
-  UI" más arriba) y una página de bienvenida/explicación.
+- Todos los huecos de la auditoría Terrasavr JS vs puerto están cerrados (1-6), la segunda
+  auditoría de completitud/consistencia está cerrada (2 hallazgos, ambos arreglados), y el
+  pulido estético de `Theme.xaml` está hecho y verificado. Pendiente ahora mismo: la página de
+  bienvenida/explicación (pedida explícitamente, preferencia del usuario: explicativa de lo
+  que se puede hacer, no solo un preview de personaje como en el Terrasavr original).
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 
