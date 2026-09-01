@@ -40,6 +40,7 @@ public partial class MainViewModel : ObservableObject
     public AppearanceViewModel Appearance { get; } = new();
     public ServersViewModel Servers { get; } = new();
     public FlagsViewModel Flags { get; } = new();
+    public VersionEditorViewModel VersionEditor { get; } = new();
     public BuffsViewModel Buffs { get; }
     public PrefixPickerViewModel PrefixPicker { get; }
 
@@ -75,6 +76,7 @@ public partial class MainViewModel : ObservableObject
             Appearance.LoadFrom(_loaded.Character);
             Servers.LoadFrom(_loaded.Character);
             Flags.LoadFrom(_loaded.Character);
+            VersionEditor.LoadFrom(_loaded.Character);
             Buffs.LoadFrom(_loaded.Character);
             CharacterName = _loaded.Character.Name;
             HasCalamityData = _loaded.TplrPath != null;

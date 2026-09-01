@@ -793,11 +793,28 @@ como overlay sobre los propios contenedores, mostrando TODAS de entrada.
 con clics reales** (elegir un prefijo de verdad, guardar y comprobar que persiste) - misma
 limitación de siempre.
 
+### Editor de versión objetivo (hueco #5, cerrado - los 6 huecos de la auditoría ya están cerrados)
+
+Nueva pestaña "Versión": campo numérico en crudo + botones rápidos agrupados por versión real
+de Terraria (tabla exacta de `ya.initPC` en `script.readable.js`: 1.3.0=145 ... 1.4.5.0=315).
+**Deliberadamente solo se ofrecen los grupos 1.3.x/1.4.x** (`version>=145`) - 1.1.x/1.2.x se
+omiten a propósito: esta app solo sabe LEER `version>=145` (limitación deliberada de la
+Fase 1, `PlrCharacter.cs`), ofrecer una versión más antigua invitaría a escribir un archivo
+que este mismo programa no podría volver a abrir. Aviso rojo visible en el panel explicando
+el riesgo real (un valor que no encaje con el contenido del personaje puede producir un
+archivo que ni esta app ni el juego sepan releer bien) - razón por la que quedó como
+prioridad baja en la auditoría.
+
+**Verificado**: 101 tests xUnit siguen en verde (pieza de UI pura, sin lógica nueva en Core),
+`dotnet build` limpio, la app arranca sin excepción. **No verificado con clics reales** -
+misma limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
-- Hueco 5 de la auditoría (versión objetivo del guardado) - prioridad baja a propósito, riesgo
-  real si se usa mal (podría generar un archivo con version-gates inconsistentes). El resto
-  (1, 2, 3, 4, 6) ya están cerrados.
+- Todos los huecos de la auditoría Terrasavr JS vs puerto están cerrados (1-6). Pendiente
+  ahora mismo: preview de personaje de CUERPO COMPLETO (pedido explícito, en curso - ver
+  investigación de sprites reales del jugador), y una ronda de pulido estético dedicada
+  (pendiente desde el 2-sep-2026, ver "Objetivo de diseño de la UI" más arriba).
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 

@@ -571,6 +571,42 @@
                             </StackPanel>
                         </ScrollViewer>
                     </TabItem>
+                    <TabItem Header="Version">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                            <StackPanel MaxWidth="500">
+                                <Border Background="{StaticResource CalamityBrush}" CornerRadius="6" Padding="10,8" Margin="0,0,0,14">
+                                    <TextBlock Foreground="White" TextWrapping="Wrap" FontSize="12"
+                                               Text="Cuidado: cambiar la version cambia que campos lee/escribe el guardado. Un valor que no encaje con el contenido real del personaje puede producir un archivo que ni esta app ni el juego sepan releer bien." />
+                                </Border>
+                                <TextBlock Text="Numero de version en crudo" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
+                                <TextBox Text="{Binding VersionEditor.RawVersion, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="90" Padding="6,4" HorizontalAlignment="Left" Margin="0,0,0,16"
+                                         Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+
+                                <ItemsControl ItemsSource="{Binding VersionEditor.Groups}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:VersionGroup}">
+                                            <StackPanel Margin="0,0,0,14">
+                                                <TextBlock Text="{Binding Label}" Style="{StaticResource CaptionText}" Margin="0,0,0,6" />
+                                                <ItemsControl ItemsSource="{Binding Options}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:VersionOption}">
+                                                            <Button Content="{Binding Label}" Margin="0,0,6,6" Padding="8,4"
+                                                                    Command="{Binding DataContext.VersionEditor.SetVersionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    CommandParameter="{Binding Number}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
                 </TabControl>
             </DockPanel>
         </TabItem>
