@@ -77,10 +77,18 @@ public partial class ItemSlotViewModel : ObservableObject
     }
 
     // Coloca un objeto nuevo del catalogo (id real vanilla, o sintetico de Calamity) en este
-    // slot - cantidad 1, sin prefijo, sin datos de Calamity heredados (es un objeto nuevo).
+    // slot - cantidad 1, sin datos de Calamity heredados (es un objeto nuevo). El mejor
+    // prefijo real (vanilla + Calamity/Rogue) se aplica automaticamente si el objeto admite
+    // prefijo - pedido explicito del usuario (1-sep-2026): "siempre que pongas un objeto...
+    // sobre todo armas, el mejor prefijo se ha de poner de manera automática". Se puede
+    // cambiar despues a mano igual que con cualquier objeto ya puesto (boton de editar
+    // prefijo).
     public void PlaceItem(int id)
     {
-        UpdateFrom(new GameItem { Id = id, Count = 1 });
+        var item = new GameItem { Id = id, Count = 1 };
+        var suggestion = PrefixSuggester.Suggest(item, _service.CalamityCatalog, _service.BestPrefixes, _service.RoguePrefixCatalog);
+        if (suggestion.HasValue) item.Prefix = suggestion.Value;
+        UpdateFrom(item);
     }
 
     [RelayCommand]

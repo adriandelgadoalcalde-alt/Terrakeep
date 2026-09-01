@@ -1129,6 +1129,37 @@ marcadores magenta aparecen agrupados sobre una construcción real del mundo, y 
 tile se actualiza correctamente durante todo el proceso. `dotnet build`/`dotnet test` en verde
 (118/118, sin tests nuevos - todo interacción de UI real, no lógica de `Core`).
 
+### Punto 6 VERIFICADO (no era un bug) - Builds ya equipa también las armas
+
+Probado en vivo con el personaje real `Eldelgas.plr` (inventario ya casi lleno): pulsar
+"Auto-equipar" en una clase de Builds dio "8 objeto(s) colocado(s), 3 sin resolver o sin hueco
+libre" - los 8 son los 3 de armadura + 5 accesorios (van a slots fijos, siempre se pueden
+sobrescribir), y los 3 "sin hueco libre" son justo las 3 armas de esa clase: el código YA
+intenta colocarlas (`AutoEquip` en `MainViewModel.cs`, busca el primer slot vacío del
+inventario), lo que pasa es que si el inventario está lleno no hay dónde ponerlas, y por diseño
+`AutoEquip` nunca sobrescribe un slot de inventario ya ocupado (a diferencia de armadura/
+accesorios, que sí tienen sitio fijo reservado). Probable causa real de la queja: el personaje
+de quien la probó tenía el inventario lleno. No se ha tocado el comportamiento (sobrescribir
+inventario sin avisar sería peligroso) - el mensaje de estado ya deja claro cuántas armas no
+entraron y por qué.
+
+### Punto 8 CERRADO - mejor prefijo automático al colocar un objeto
+
+`ItemSlotViewModel.PlaceItem` (llamado al colocar algo desde la Librería) ahora calcula el
+mejor prefijo real (mismo `PrefixSuggester` que ya usaba el botón ★ manual, vanilla + Calamity/
+Rogue) y lo aplica de inmediato al objeto recién colocado, en vez de dejarlo siempre en
+"Ninguno". `BuildItemResolver` (usado por Auto-equipar en Builds) ya aplicaba el prefijo curado
+de `builds.json` desde antes - no hacía falta tocarlo.
+
+**Verificado en vivo, con un caso que SÍ tiene prefijo curado y uno que NO, para no dar el
+arreglo por bueno con un solo dato favorable**: colocar "Excalibur" (id 368) desde la Librería
+no le puso prefijo - investigado y confirmado que es correcto, `best_prefix.json` solo cubre
+243 objetos vanilla curados y Excalibur no es uno de ellos (la misma limitación que ya tenía el
+botón ★ manual, no es un bug nuevo). Colocar "Furia de estrellas"/Starfury (id 65, sí está en
+la tabla curada, valor 81 = Legendario) sí le puso "Legendario" automáticamente, confirmando
+que el arreglo funciona en el caso real que debía cubrir. `dotnet build`/`dotnet test` en verde
+(118/118).
+
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)
 
 - Commit tras cada cambio verificado (no solo antes de cambios grandes) - mismo criterio que
