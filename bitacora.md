@@ -523,9 +523,38 @@ verificado visualmente** (ver el degradado de verdad en el mapa renderizado) - e
 renderizado en sí (`WorldRenderer`) no tiene tests automatizados propios en ninguna fase
 anterior tampoco, coherente con el resto del proyecto.
 
+### Panel de Apariencia
+
+Nueva pestaña interna "Apariencia" (dentro de Personaje, junto a Objetos/Buffs/Investigación):
+género, estilo de pelo (id), tinte de pelo (id) y los 7 colores reales del personaje (pelo,
+piel, ojos, camisa, camiseta interior, pantalones, zapatos) - todos campos que `PlrCharacter`
+ya traía leídos desde la Fase 1 pero sin ningún panel para verlos/editarlos.
+
+- **`ColorSwatchViewModel`** (nuevo): envuelve el `byte[3]` REAL de `PlrCharacter` (ej.
+  `HairColor`) y escribe en el mismo array en cuanto cambia un canal - no hace falta
+  sincronizar nada al guardar, `Save()` ya escribe el mismo `PlrCharacter` que comparte el
+  array (mismo patrón de "mutar en sitio" ya usado para `PlrLoadout` en la fusión de
+  armadura/tinte). R/G/B expuestos como `int` (0-255) para enlazar `Slider` sin conversor, más
+  un `Brush` calculado para la muestra de color.
+- **`AppearanceViewModel`** (nuevo): `HairStyle`/`HairDye` (numéricos, sin catálogo de nombres
+  - no hay uno real disponible) y `IsMale`/`IsFemale` (género - convención vanilla estándar,
+  `Gender==1`→chico, la variante invertida documentada en el proyecto es de formatos
+  `version<145` fuera del alcance de este lector). `IsFemale` es un espejo de `IsMale` para
+  poder enlazar dos `RadioButton` por dos vías sin un conversor dedicado.
+- **Sin preview de sprite compuesto a propósito**: dibujar el personaje completo por capas
+  (pelo+cuerpo+ropa) necesitaría el atlas de sprites del jugador, que no está extraído - las
+  muestras de color SÍ son el color real de cada parte, solo no hay una silueta encima. Queda
+  anotado como posible ampliación futura, no bloquea el panel.
+
+**Verificado**: 97 tests xUnit siguen en verde (pieza de UI pura, sin lógica nueva en Core que
+testear), `dotnet build` limpio, la app arranca sin excepción. **No verificado con clics
+reales** (mover un slider de verdad, guardar y comprobar que el color persiste) - misma
+limitación de siempre.
+
 ## Pendiente (visible desde fuera)
 
-- **Apariencia** (pelo/piel con preview) - ni empezada.
+- **Preview de sprite compuesto** en Apariencia (pelo+cuerpo+ropa reales, no solo color) -
+  necesita el atlas de sprites del jugador, sin extraer.
 - Instalador (Fase 6 del plan) - ni empezado.
 
 ## Reglas de este proyecto (heredadas de las globales, sin repetirlas todas)

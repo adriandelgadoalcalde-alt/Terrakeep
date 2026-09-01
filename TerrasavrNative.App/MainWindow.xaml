@@ -283,6 +283,58 @@
                             </ScrollViewer>
                         </DockPanel>
                     </TabItem>
+                    <TabItem Header="Apariencia">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                            <StackPanel MaxWidth="640" HorizontalAlignment="Left">
+                                <TextBlock Text="Sin preview de personaje completo (necesitaria el atlas de sprites del jugador, no extraido todavia) - los cuadros de abajo SI son el color real de cada parte."
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,14" />
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                                    <StackPanel Margin="0,0,24,0">
+                                        <TextBlock Text="Genero" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton GroupName="Gender" Content="Chico" IsChecked="{Binding Appearance.IsMale}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,12,0" />
+                                            <RadioButton GroupName="Gender" Content="Chica" IsChecked="{Binding Appearance.IsFemale}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,24,0">
+                                        <TextBlock Text="Estilo de pelo (id)" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
+                                        <TextBox Text="{Binding Appearance.HairStyle, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="70" Padding="6,4" Background="{StaticResource BgElevatedBrush}"
+                                                 Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Tinte de pelo (id)" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
+                                        <TextBox Text="{Binding Appearance.HairDye, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="70" Padding="6,4" Background="{StaticResource BgElevatedBrush}"
+                                                 Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <ItemsControl ItemsSource="{Binding Appearance.Swatches}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:ColorSwatchViewModel}">
+                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Margin="0,0,10,10" Padding="10">
+                                                <StackPanel Width="150">
+                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                        <Border Width="20" Height="20" CornerRadius="3" Background="{Binding Preview}"
+                                                                BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1" Margin="0,0,7,0" />
+                                                        <TextBlock Text="{Binding Label}" Style="{StaticResource BodyText}" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <Slider Minimum="0" Maximum="255" Value="{Binding R}" Foreground="#E05555" Margin="0,2" />
+                                                    <Slider Minimum="0" Maximum="255" Value="{Binding G}" Foreground="#55C065" Margin="0,2" />
+                                                    <Slider Minimum="0" Maximum="255" Value="{Binding B}" Foreground="#5580E0" Margin="0,2" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
                 </TabControl>
             </DockPanel>
         </TabItem>
