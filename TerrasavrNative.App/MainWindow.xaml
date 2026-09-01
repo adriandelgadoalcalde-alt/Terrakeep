@@ -490,6 +490,7 @@
 
         <!-- ===================== PERSONAJE ===================== -->
         <TabItem Header="Personaje">
+            <Grid>
             <DockPanel Margin="14">
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
                     <Button Content="Cargar personaje (.plr)..." Tag="Accent" Click="OnLoadClick" />
@@ -1114,6 +1115,45 @@
                     </TabItem>
                 </TabControl>
             </DockPanel>
+
+            <!-- Confirmacion visual real de guardado (pedido explicito 2-sep-2026: "debe ser
+                 mas visual que se allá confirmado el guardado no solamente un mensajito abajo
+                 a la izquierda") - banner flotante con animacion de entrada real, aparte del
+                 StatusMessage de siempre (que se queda para los errores, que no deben ser tan
+                 efimeros). MainViewModel.Save() lo activa un momento tras un guardado con
+                 exito real, ver SaveConfirmationVisible/DispatcherTimer ahi mismo. -->
+            <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0"
+                    Background="{StaticResource TealGradientBrush}" CornerRadius="10" Padding="18,10"
+                    Effect="{StaticResource CardShadow}" IsHitTestVisible="False"
+                    Visibility="{Binding SaveConfirmationVisible, Converter={StaticResource BoolToVis}}"
+                    RenderTransformOrigin="0.5,0.5" Panel.ZIndex="99">
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
+                </Border.RenderTransform>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Opacity" Value="0" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SaveConfirmationVisible}" Value="True">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" />
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.18" />
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.18" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#10003;" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Text="Guardado" FontSize="13.5" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+            </Grid>
         </TabItem>
 
         <!-- ===================== BUILDS ===================== -->

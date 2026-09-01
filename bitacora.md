@@ -1970,3 +1970,28 @@ scratchpad de la sesión.
 
 `dotnet build`/`dotnet test` en verde (128/128) tras los cambios de `MainViewModel`/nuevo
 `EquipmentGroupViewModel`/`MainWindow.xaml`.
+
+### Fase E - Confirmación visual real de guardado
+
+Pedido explícito ("cuando le des a guardar personaje debe ser mas visual que se allá
+confirmado el guardado no solamente un mensajito abajo a la izquierda"). `MainViewModel`:
+nueva `[ObservableProperty] bool SaveConfirmationVisible` + un `DispatcherTimer` propio
+(1.5s) - `Save()` la pone a `true` tras un guardado con éxito real (dentro del mismo bloque
+que ya escribía `StatusMessage`) y reinicia el timer (`Stop()+Start()`, para que dos
+guardados seguidos alarguen la ventana en vez de cortarla a medias); el `Tick` del timer la
+vuelve a `false` y se para solo. `StatusMessage` se queda tal cual para errores - esos no
+deben desaparecer solos.
+
+`MainWindow.xaml`: el `TabItem` "Personaje" pasa de `DockPanel` suelto a un `Grid` que
+superpone un banner (`Border` con degradado `TealGradientBrush`, ✓ + "Guardado") centrado
+arriba, con animación de entrada real (`Storyboard` de opacidad 0→1 + escala 0.9→1 vía
+`DataTrigger` sobre `SaveConfirmationVisible`, mismo patrón de animación real ya usado en el
+resto del tema rediseñado - nunca solo un cambio de `Visibility` sin transición).
+
+**Verificación real con interacción de verdad** (UI Automation contra la app renderizada con
+el personaje real precargado, click real en el botón "Guardar" vía `InvokePattern`, no
+simulado en el arnés de consola): sin banner antes de guardar: confirmado; banner presente
+~0.3s después de pulsar Guardar: confirmado; sigue presente a ~1.2s (dentro de la ventana de
+1.5s): confirmado; ya no está a ~1.9s (se apagó solo, sin excepción): confirmado.
+
+`dotnet build`/`dotnet test` en verde (128/128).

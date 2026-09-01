@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -17,6 +18,12 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly CharacterFileService _service = new();
     private LoadedCharacter? _loaded;
+
+    // Confirmacion visual real de guardado (pedido explicito 2-sep-2026: "debe ser mas visual
+    // que se allá confirmado el guardado no solamente un mensajito abajo a la izquierda") -
+    // se activa un momento tras un Save() con exito y se apaga sola; StatusMessage se queda
+    // para errores, que no deben ser tan efimeros. Ver el banner real en MainWindow.xaml.
+    private readonly DispatcherTimer _saveConfirmationTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
 
     // Indice de la pestaña externa (Inicio=0, Personaje=1, ...) - el resto solo lo usa la
     // pagina de Inicio para sus tarjetas de navegacion (GoToTabCommand).
@@ -40,6 +47,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _hasCalamityData;
     [ObservableProperty] private int _selectedTabIndex;
     [ObservableProperty] private int _personajeInnerTabIndex;
+    [ObservableProperty] private bool _saveConfirmationVisible;
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
     [ObservableProperty] private EquipmentGroupViewModel? _equipmentGroup;
@@ -72,6 +80,11 @@ public partial class MainViewModel : ObservableObject
         };
         Buffs = new BuffsViewModel(_service);
         ItemEdit = new ItemEditViewModel(_service);
+        _saveConfirmationTimer.Tick += (_, _) =>
+        {
+            SaveConfirmationVisible = false;
+            _saveConfirmationTimer.Stop();
+        };
     }
 
     // Selecciona un slot para el panel "Editar" compartido (equivalente real de app.TabEdit)
@@ -152,6 +165,9 @@ public partial class MainViewModel : ObservableObject
             _service.Save(_loaded);
             StatusMessage = $"Guardado: {Path.GetFileName(_loaded.PlrPath)}" +
                 (_loaded.TplrPath != null ? $" + {Path.GetFileName(_loaded.TplrPath)}" : "");
+            SaveConfirmationVisible = true;
+            _saveConfirmationTimer.Stop();
+            _saveConfirmationTimer.Start();
         }
         catch (Exception ex)
         {
