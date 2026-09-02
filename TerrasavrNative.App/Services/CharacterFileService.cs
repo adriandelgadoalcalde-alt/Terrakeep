@@ -46,6 +46,7 @@ public sealed class CharacterFileService
     public PrefixRulesCatalog PrefixRules { get; }
     public HairDyeCatalog HairDyes { get; }
     public VanillaLibraryTreeCatalog VanillaLibraryTree { get; }
+    public LibraryLabelCatalog LibraryLabels { get; }
 
     public CharacterFileService()
     {
@@ -72,6 +73,7 @@ public sealed class CharacterFileService
         PrefixRules = PrefixRulesCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_prefix_rules.json"));
         HairDyes = HairDyeCatalog.LoadFromFile(Path.Combine(assetsDir, "hair_dyes.json"));
         VanillaLibraryTree = VanillaLibraryTreeCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_library_tree.json"));
+        LibraryLabels = LibraryLabelCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_library_labels_es.json"));
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
         var codec = new CalamityItemCodec(CalamityCatalog, translator);

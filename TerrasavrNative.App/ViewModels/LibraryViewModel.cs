@@ -23,6 +23,7 @@ public partial class LibraryViewModel : ObservableObject
     private const int MaxResults = 300;
 
     private readonly List<LibraryItemViewModel> _all;
+    private readonly Dictionary<int, LibraryItemViewModel> _byId;
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _resultsSummary = string.Empty;
@@ -39,18 +40,23 @@ public partial class LibraryViewModel : ObservableObject
     public LibraryViewModel(CharacterFileService service)
     {
         _all = [];
+        _byId = new Dictionary<int, LibraryItemViewModel>();
 
         foreach (var (id, name) in service.VanillaCatalog.AllEntries())
         {
             string? stats = ItemStatsFormatter.Format(false, id, service.VanillaStats, service.CalamityCatalog, service.VanillaCategories);
-            _all.Add(new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats));
+            var item = new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats);
+            _all.Add(item);
+            _byId[id] = item;
         }
 
         foreach (var entry in service.CalamityCatalog.Entries)
         {
             string? iconPath = entry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
             string? stats = ItemStatsFormatter.Format(true, entry.SyntheticId, service.VanillaStats, service.CalamityCatalog, service.VanillaCategories);
-            _all.Add(new LibraryItemViewModel(entry.DisplayName, true, iconPath, entry.SyntheticId, entry.Category, stats));
+            var item = new LibraryItemViewModel(entry.DisplayName, true, iconPath, entry.SyntheticId, entry.Category, stats);
+            _all.Add(item);
+            _byId[entry.SyntheticId] = item;
         }
 
         // Arbol real de Terrasavr (vanilla + carpeta madre "Calamity (mod)") - compartido con
@@ -101,11 +107,18 @@ public partial class LibraryViewModel : ObservableObject
     {
         Results.Clear();
 
-        IEnumerable<LibraryItemViewModel> matches = _all;
-        if (SelectedCategory != null)
-            matches = matches.Where(i => SelectedCategory.ItemIdSet.Contains(i.Id));
-
+        // Bug real encontrado y corregido 2-sep-2026 (pedido explicito: "reordenar todos los
+        // ítems... para que coincidan 100 por 100 de como lo tenemos en terrasav"): filtrar
+        // _all por ItemIdSet.Contains (un HashSet, sin orden garantizado) daba el orden
+        // arbitrario del catalogo completo, no el orden curado real de Terrasavr. Con una
+        // carpeta elegida se recorre ItemIdsOrdered (que SI respeta ese orden real) y se
+        // resuelve cada id por diccionario - sin carpeta elegida (busqueda libre sobre todo
+        // el catalogo) no hay ningun orden real de Terrasavr al que igualar, se deja _all.
         bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
+        IEnumerable<LibraryItemViewModel> matches = SelectedCategory != null
+            ? SelectedCategory.ItemIdsOrdered.Select(id => _byId[id])
+            : _all;
+
         if (hasSearch)
             matches = matches.Where(i => i.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
 

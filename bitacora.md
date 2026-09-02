@@ -2422,3 +2422,65 @@ guardada en algún sitio sin efecto. Mismo fichero reveló el ID real de AnyDesk
 
 No hay ningún cambio de código de Terrakeep en este punto - instalación/configuración del
 sistema únicamente, documentado aquí por continuidad con el resto de la sesión.
+
+## Librería vanilla: traducción real de rótulos + orden real de objetos (2-sep-2026)
+
+Tras revisar el esquema de raíces/subcarpetas que se le pasó, el usuario pidió dos cosas más:
+traducir TODOS los rótulos de la Librería (no solo Calamity) al español, y que el orden de los
+objetos dentro de cada carpeta coincida al 100% con el real de Terrasavr.
+
+### Traducción real - namespace `lib.item` (no inventada)
+
+Investigado en el propio `script.js` real antes de traducir nada a mano: la clase base de los
+nodos del árbol de la Librería (`app.Shelf`/`ha`, de la que heredan `Dir`/`Items` - `ub`/`mb`)
+SÍ traduce sus nombres vía `l.loc("lib.item", this.enName, this.enName)` en su `updateLang()`
+real - hay una tabla de traducciones oficial de verdad, dentro de `Terrasavr.es-ES.json`
+(`local-site/lang/lang.zip`), namespace `lib.item`, **258 entradas reales**. Nuevo script
+`scripts/extraer-etiquetas-libreria-es.js` (Node, usa `Expand-Archive` de PowerShell para el
+zip - `tar` de Git Bash interpreta `C:\...` como sintaxis remota `host:ruta` y falla en este
+Windows real) → `Assets/vanilla_library_labels_es.json`.
+
+El propio `updateLang()` real no es un simple `dict[nombre]` - tiene 4 casos reales, en este
+orden (confirmado leyendo `ha.rxPage`/`rxPages`/`rxAuto`/`rxNum`, las 4 expresiones regulares
+reales): rango numérico puro (`^\d+-\d+$`, nunca se traduce), `"Page N"` (traduce la plantilla
+`"Page $1"` y sustituye), `"Pages N+"` (idem con `"Pages $1+"`), y cualquier nombre terminado
+en `"(N)"` (`^(.+?)\((\d+)\)$` - traduce `"<prefijo> ($1)"` y sustituye, ej. `"Melee damage
+(316)"` → `"Daño de Cuerpo a Cuerpo (316)"`, no una plantilla sin resolver). Nuevo
+`LibraryLabelCatalog.cs` (Core) replica ese algoritmo exacto con las mismas 4 expresiones
+regulares reales - `LibraryCategoryTreeBuilder` lo usa tanto para los nombres vanilla
+(traduciendo `VanillaLibraryNode.Name`, dejando `FullPath` en inglés como clave interna
+estable) como para las etiquetas `"Page N"` que el propio código genera para paginar las hojas
+de Calamity (ahora también salen en español real, `"Pagina N"` - SIN tilde, un typo real del
+propio fichero de idioma de Terrasavr que se respeta tal cual, no se "corrige" algo que no es
+nuestro, mismo criterio ya aplicado antes con "Extremandamente").
+
+### Bug real encontrado y corregido - orden de los objetos dentro de cada carpeta
+
+Causa raíz real: `CategoryNodeViewModel.ItemIdSet` es un `HashSet<int>` - **no garantiza
+ningún orden de enumeración** - filtrar `_all`/`_researchedCounts` por `ItemIdSet.Contains(id)`
+daba como resultado el orden arbitrario del catálogo completo (aprox. ascendente por id), NO
+el orden curado real de Terrasavr (ej. "Copper & Tin" real es `[12, 3507, 3509, 89, 699,
+3501, ...]`, mezclando mineral+lingote+arma+armadura de ese material a propósito, no ids
+ascendentes). En `ResearchViewModel` el bug era aún más directo: un `.OrderBy(id => id)`
+explícito, deliberado pero equivocado con esta información nueva.
+
+Arreglado con una segunda lista, `CategoryNodeViewModel.ItemIdsOrdered` (`List<int>`) que SÍ
+preserva el orden real - para una hoja, tal cual viene del propio JSON extraído (que a su vez
+preserva el orden real de `Hc.deploy()`); para una carpeta intermedia, sus hijos concatenados
+en su propio orden real, sin duplicar un id que caiga en más de un hijo a la vez (pertenencia
+múltiple real). `ItemIdSet` se queda solo para pertenencia rápida (`Contains`).
+`LibraryViewModel`/`ResearchViewModel.ApplyFilter` recorren `ItemIdsOrdered` y resuelven cada
+id por diccionario en vez de filtrar la lista completa por conjunto.
+
+**Verificado con arnés de consola contra datos reales**: las 10 raíces reales traducidas
+(`Materiales`, `Decoraciones`, `Mascotas, Monturas, Herramientas`, `Pociones (regeneracion)`,
+`Pociones (efectos)`, `Jefes & Eventos`, `Mision de Pez`, `Categorias`, `Objectos por ID` -
+typo real "Objectos" preservado, `Calamity (mod)`); `"Copper & Tin"` sale como `"Cobre &
+Estaño"` con el orden real exacto `[12, 3507, 3509, 89, 699, 3501, 3503, 687, 20, 3508, 3505,
+80, ...]`, y `Results` tras seleccionarla muestra los objetos reales en ESE MISMO orden
+(Mineral de cobre, Espada corta de cobre, Pico de cobre, Casco de cobre, Mineral de estaño...);
+la carpeta de predicado real sale `"Daño de Cuerpo a Cuerpo (316)"` (sustitución de número
+real, no una plantilla suelta); la paginación de Calamity sale `"Pagina 1"/"Pagina 2"/...`
+igual que el resto del árbol.
+
+`dotnet build`/`dotnet test` en verde (128/128).

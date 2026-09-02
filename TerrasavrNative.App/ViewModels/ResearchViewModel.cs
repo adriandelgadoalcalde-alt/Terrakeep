@@ -106,9 +106,11 @@ public sealed partial class ResearchViewModel : ObservableObject
             return;
         }
 
-        var matches = SelectedCategory.ItemIdSet
+        // Mismo bug real corregido en LibraryViewModel.ApplyFilter - ver ahi el porque:
+        // ItemIdsOrdered respeta el orden curado real de Terrasavr, un HashSet (ItemIdSet) o
+        // un OrderBy(id) numerico no.
+        var matches = SelectedCategory.ItemIdsOrdered
             .Where(_researchedCounts.ContainsKey)
-            .OrderBy(id => id)
             .ToList();
 
         foreach (int id in matches)

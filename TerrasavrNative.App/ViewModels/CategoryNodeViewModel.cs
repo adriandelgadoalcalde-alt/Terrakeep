@@ -20,8 +20,20 @@ public sealed partial class CategoryNodeViewModel(string name, string fullPath) 
     // union de todos sus descendientes si es una carpeta intermedia. Pertenencia MULTIPLE de
     // verdad (un mismo objeto puede estar en el conjunto de mas de un nodo a la vez, igual que
     // el arbol real de Terrasavr - ej. una espada de hierro cae en "Materials/Iron & Lead" Y
-    // en "Categories/Weapons/Melee damage").
+    // en "Categories/Weapons/Melee damage"). Solo para pertenencia rapida (Contains) - para
+    // MOSTRAR los objetos usar ItemIdsOrdered, que respeta el orden curado real.
     public HashSet<int> ItemIdSet { get; set; } = [];
+
+    // Bug real encontrado y corregido 2-sep-2026 (pedido explicito del usuario: "reordenar
+    // todos los ítems... para que coincidan 100 por 100 de como lo tenemos en terrasav"):
+    // HashSet<int> no garantiza NINGUN orden de enumeracion - filtrar por ItemIdSet.Contains
+    // producia el orden arbitrario de "todos los objetos del catalogo", no el orden curado
+    // real de Terrasavr (ej. "Copper & Tin" es [12, 3507, 3509, 89, 699, ...], no ids
+    // ascendentes). Esta lista SI preserva ese orden real - para una hoja, tal cual viene del
+    // propio JSON extraido (que a su vez preserva el orden real de Hc.deploy); para una
+    // carpeta intermedia, sus hijos concatenados en orden real, sin duplicados (por si un
+    // mismo objeto cae en mas de un hijo a la vez).
+    public List<int> ItemIdsOrdered { get; set; } = [];
 
     [ObservableProperty] private int _itemCount;
     [ObservableProperty] private string? _iconPath;

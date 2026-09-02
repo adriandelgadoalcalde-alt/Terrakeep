@@ -7,8 +7,11 @@ namespace TerrasavrNative.App.Services;
 // scripts/extraer-arbol-libreria-vanilla.js) + una unica carpeta madre "Calamity (mod)" (puerto
 // fiel de calamityBuildLibraryNode, overrides.js real) - compartido entre la Libreria y la
 // pestaña Investigacion (pedido explicito 2-sep-2026: "quiero que calques exactamente la
-// estructura de carpetas orden y organizacion de terrasav para esta librera Y investigacion"),
-// para no duplicar el algoritmo de agrupado de Calamity en dos sitios.
+// estructura de carpetas orden y organizacion de terrasav para esta librera Y investigacion").
+// Los nombres se traducen con las etiquetas reales de Terrasavr (LibraryLabelCatalog, namespace
+// "lib.item" real) y el orden de los objetos dentro de cada carpeta respeta el orden curado
+// real (ItemIdsOrdered - ver CategoryNodeViewModel para el porque, un HashSet no vale para
+// esto).
 public static class LibraryCategoryTreeBuilder
 {
     // Mismo tope real que usa el propio Terrasavr (b()/c() en Hc.deploy real) para paginar una
@@ -20,46 +23,47 @@ public static class LibraryCategoryTreeBuilder
     {
         var roots = new List<CategoryNodeViewModel>();
         foreach (var root in service.VanillaLibraryTree.RootNodes)
-            roots.Add(BuildVanillaNode(root, string.Empty));
+            roots.Add(BuildVanillaNode(root, string.Empty, service.LibraryLabels));
         roots.Add(BuildCalamityRoot(service));
         return roots;
     }
 
-    private static CategoryNodeViewModel BuildVanillaNode(VanillaLibraryNode node, string parentPath)
+    private static CategoryNodeViewModel BuildVanillaNode(VanillaLibraryNode node, string parentPath, LibraryLabelCatalog labels)
     {
+        // FullPath se construye siempre a partir del nombre INGLES real (clave estable) -
+        // Name (lo que se muestra) usa la traduccion real de Terrasavr.
         string fullPath = parentPath.Length == 0 ? node.Name : $"{parentPath}/{node.Name}";
-        var vm = new CategoryNodeViewModel(node.Name, fullPath)
+        var vm = new CategoryNodeViewModel(labels.Translate(node.Name), fullPath)
         {
             IconPath = node.Icon != 0 ? VanillaIconResolver.GetIconPath(node.Icon) : null,
         };
 
         if (node.IsLeaf)
         {
-            vm.ItemIdSet = new HashSet<int>(node.ItemIds);
+            vm.ItemIdsOrdered = node.ItemIds.ToList();
+            vm.ItemIdSet = new HashSet<int>(vm.ItemIdsOrdered);
             vm.ItemCount = vm.ItemIdSet.Count;
             return vm;
         }
 
         foreach (var child in node.Children)
-        {
-            var childVm = BuildVanillaNode(child, fullPath);
-            vm.Children.Add(childVm);
-            vm.ItemIdSet.UnionWith(childVm.ItemIdSet);
-        }
-        vm.ItemCount = vm.ItemIdSet.Count;
+            vm.Children.Add(BuildVanillaNode(child, fullPath, labels));
+        ApplyOrderedUnion(vm);
         return vm;
     }
 
     // Puerto real de calamityBuildLibraryNode (Terrasavr-Calamity-Beta\resources\app\
     // local-site\overrides.js, ya en produccion en el Electron real) - agrupa las categorias
     // reales de calamity/catalog.json (con barra, ej. "Armor/Aerospec") por su segmento raiz,
-    // pagina cualquier hoja de mas de 40 objetos en "Page N", etiquetas en español portadas de
+    // pagina cualquier hoja de mas de 40 objetos en "Page N" (traducido con la misma etiqueta
+    // real "Page $1" que usa el resto del arbol), etiquetas en español portadas de
     // CALAMITY_CATEGORY_LABELS. Deliberadamente SIN el limite de 19 carpetas por pantalla del
     // Electron original (LIBRARY_FOLDER_CAP) - era un parche a una limitacion real del motor
     // Haxe/OpenFL antiguo (lista de lineas fija sin scroll), que no existe en este arbol real
     // de WPF.
     private static CategoryNodeViewModel BuildCalamityRoot(CharacterFileService service)
     {
+        var labels = service.LibraryLabels;
         var byCategory = service.CalamityCatalog.Entries
             .GroupBy(e => e.Category)
             .ToDictionary(g => g.Key, g => g.Select(e => e.SyntheticId).ToList());
@@ -78,6 +82,7 @@ public static class LibraryCategoryTreeBuilder
 
             if (ids.Count <= LeafPageSize)
             {
+                node.ItemIdsOrdered = ids.ToList();
                 node.ItemIdSet = new HashSet<int>(ids);
                 node.ItemCount = node.ItemIdSet.Count;
                 return node;
@@ -86,16 +91,16 @@ public static class LibraryCategoryTreeBuilder
             for (int i = 0; i < ids.Count; i += LeafPageSize)
             {
                 var chunk = ids.Skip(i).Take(LeafPageSize).ToList();
-                var page = new CategoryNodeViewModel($"Page {i / LeafPageSize + 1}", $"{node.FullPath}/Page{i / LeafPageSize + 1}")
+                var page = new CategoryNodeViewModel(labels.Translate($"Page {i / LeafPageSize + 1}"), $"{node.FullPath}/Page{i / LeafPageSize + 1}")
                 {
                     IconPath = IconOf(chunk[0]),
+                    ItemIdsOrdered = chunk,
                     ItemIdSet = new HashSet<int>(chunk),
                 };
                 page.ItemCount = page.ItemIdSet.Count;
                 node.Children.Add(page);
-                node.ItemIdSet.UnionWith(chunk);
             }
-            node.ItemCount = node.ItemIdSet.Count;
+            ApplyOrderedUnion(node);
             return node;
         }
 
@@ -126,18 +131,30 @@ public static class LibraryCategoryTreeBuilder
                 var childNodes = members.Select(BuildCategoryNode).ToList();
                 int totalIds = members.Sum(m => byCategory[m].Count);
                 node = new CategoryNodeViewModel($"{CalamityCategoryLabel(top)} ({totalIds})", "Calamity/" + top) { IconPath = childNodes[0].IconPath };
-                foreach (var child in childNodes)
-                {
-                    node.Children.Add(child);
-                    node.ItemIdSet.UnionWith(child.ItemIdSet);
-                }
-                node.ItemCount = node.ItemIdSet.Count;
+                foreach (var child in childNodes) node.Children.Add(child);
+                ApplyOrderedUnion(node);
             }
             root.Children.Add(node);
-            root.ItemIdSet.UnionWith(node.ItemIdSet);
         }
-        root.ItemCount = root.ItemIdSet.Count;
+        ApplyOrderedUnion(root);
         return root;
+    }
+
+    // Rellena ItemIdsOrdered/ItemIdSet/ItemCount de una carpeta intermedia a partir de sus
+    // hijos YA construidos, concatenados en su propio orden real, sin duplicar un id que caiga
+    // en mas de un hijo a la vez (pertenencia multiple real - ver CategoryNodeViewModel).
+    private static void ApplyOrderedUnion(CategoryNodeViewModel node)
+    {
+        var seen = new HashSet<int>();
+        var ordered = new List<int>();
+        foreach (var child in node.Children)
+        {
+            foreach (int id in child.ItemIdsOrdered)
+                if (seen.Add(id)) ordered.Add(id);
+        }
+        node.ItemIdsOrdered = ordered;
+        node.ItemIdSet = seen;
+        node.ItemCount = seen.Count;
     }
 
     // Portado de CALAMITY_CATEGORY_LABELS (overrides.js real) y ampliado a mano (2-sep-2026,
