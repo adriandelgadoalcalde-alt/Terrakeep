@@ -2129,3 +2129,49 @@ Investigación real ya hecha (no de memoria) sobre `reference\terrasavr-real\scr
 
 Queda por proponer un plan concreto (fases, archivos, verificación) y pasar por modo plan para
 aprobación antes de tocar código - tarea de tamaño comparable a las Fases A-G anteriores.
+
+## Rediseño de Librería/Investigación (plan aprobado, 2-sep-2026)
+
+Plan completo aprobado en `C:\Users\adrian\.claude\plans\streamed-leaping-balloon.md` (Fases
+A-E). Empezada la ejecución.
+
+### Fase A - Extractor real del árbol vanilla (`scripts/extraer-arbol-libreria-vanilla.js`)
+
+**Mejor resultado de lo esperado**: en vez de reimplementar a mano el formato compacto
+propio de `script.js` (arrays `za.$name`/`za.pid`/`za.meta` separados por `;` en paralelo) o
+la lógica de `Hc.deploy()` (los helpers `a()`/`b()`/`c()` con su paginación real), se
+EXTRAEN Y EJECUTAN los statements/funciones REALES tal cual del `script.js` real en un
+sandbox de Node (`vm`), con solo las dependencias externas mínimas que `Hc.deploy` necesita
+para construir el árbol (nunca llama métodos de sus nodos, solo los crea y enlaza) - clases
+`ub`/`mb` (Dir/Items reales), `A.list` (reconstruido con la misma lógica simple y real de
+`terra.ItemParser.run`/`Item.loadMeta`), `y.cca`/`y.indexOf` (HxOverrides real,
+charCodeAt/indexOf), `D.endsWith`/`D.replace` (helpers de string real, triviales). Mismo
+criterio ya establecido en el proyecto ("confiar en el comportamiento real, no reimplementar
+a ciegas" - precedente `tmod-extract.js`).
+
+**Extracción de statements de un fichero minificado de una sola línea gigante**: un
+`indexOf`/regex ingenuo NO vale (el propio contenido de las cadenas puede llevar `;`/`"`) -
+`extractStatement()` escanea carácter a carácter respetando literales de cadena (con escapes)
+y profundidad real de paréntesis/corchetes/llaves, cortando solo en el `;` de profundidad 0
+que cierra el statement completo.
+
+**Verificado de dos formas independientes, ambas en verde**:
+1. Cruce contra datos YA verificados por un camino totalmente distinto (decompilación real de
+   `Item.cs`, ronda anterior): `za.meta[4]` (Iron Broadsword) decodifica
+   `metatype="d", d=12, t=20, k=5.5` - EXACTO igual que `vanilla_stats.json`
+   (`{"damage":12,"knockBack":5.5,"useTime":20}`), extraído de forma completamente
+   independiente. Coincidencia perfecta entre dos fuentes reales distintas.
+2. El propio script hace su propia verificación antes de escribir el JSON (falla ruidosamente
+   si no se cumple, no en silencio): cobertura completa (6146/6146 ids reales cubiertos al
+   menos una vez, gracias a la carpeta real "Items by ID" de último recurso) y spot-check de
+   posición real de Iron Broadsword/Excalibur/Terrarian - los tres aparecen en MÁS DE UNA
+   carpeta a la vez (confirmando que el árbol real permite pertenencia múltiple, a diferencia
+   del sistema de categoría única de hoy): Iron Broadsword en
+   `Materials > Pre-Hardmode > Iron & Lead`, `Categories > Weapons > Melee damage > Page 1` Y
+   `Items by ID > 1-400 > 1-40`.
+
+Salida real: `TerrasavrNative.App/Assets/vanilla_library_tree.json` (94 KB, 9 carpetas raíz
+reales en el mismo orden que Terrasavr: `Materials`, `Decorative`, `Pets, mounts, tools`,
+`Potions (regeneration)`, `Potions (effects)`, `Bosses & events`, `Quest fish`, `Categories`,
+`Items by ID`). Los ids `0` dentro de las listas de una carpeta hoja son huecos reales de la
+rejilla curada a mano (relleno, no un objeto real) - el consumidor C# (Fase B) debe saltarlos.
