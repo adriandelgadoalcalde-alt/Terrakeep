@@ -2484,3 +2484,47 @@ real, no una plantilla suelta); la paginación de Calamity sale `"Pagina 1"/"Pag
 igual que el resto del árbol.
 
 `dotnet build`/`dotnet test` en verde (128/128).
+
+## Pulido de UI tras revisión visual del usuario (2-sep-2026)
+
+Tres pedidos tras ver la app real: quitar el scroll del panel Equipamiento (que la cuadrícula
+escale con la ventana en vez de recortar), nombres cortados en el árbol de Librería/
+Investigación, y autoocultar la barra de tareas de Windows.
+
+### Panel Equipamiento sin scroll - `Viewbox` en vez de `ScrollViewer`
+
+`ScrollViewer` con `WrapPanel` sustituido por `Viewbox Stretch="Uniform" StretchDirection="Both"`
+- escala el bloque ENTERO de tarjetas para caber siempre en el espacio real disponible (crece o
+encoge con la ventana, nunca recorta ni necesita scroll) - la entrada del propio Viewbox sigue
+funcionando bien con el ratón (WPF transforma las coordenadas del click automáticamente), así
+que arrastrar/soltar/editar un slot sigue intacto. El `WrapPanel` interno necesita un ancho
+FIJO (`Width="820"`) - si no, el Viewbox le da ancho infinito al medir y el WrapPanel nunca
+envuelve, saldría todo en una sola fila rarísima. 820px = 5 columnas reales de las tarjetas de
+slot (148+2×6 de margen ≈ 160px cada una) - `PlrLoadout.cs` confirma que Items/Social/Dyes
+tienen SIEMPRE 10 slots, así que 5×2 es la forma real exacta, nunca sobra ni falta hueco.
+
+### Nombres cortados en el árbol de Librería/Investigación
+
+Causa real: el `TextBlock` del nombre vive dentro de un `StackPanel Orientation="Horizontal"`
+(para ir junto al icono) - un `StackPanel` horizontal le da ancho INFINITO a sus hijos al
+medir, así que `TextWrapping` solo no hacía nada (nunca había un límite del que envolver) - el
+texto se desbordaba en silencio más allá de la columna fija de la barra lateral y quedaba
+recortado visualmente. Arreglado con `MaxWidth="165"` + `TextWrapping="Wrap"` en el propio
+`TextBlock` (las dos plantillas, `CategoryNodeTemplate` de Librería y
+`ResearchCategoryNodeTemplate` de Investigación) - ahora los nombres largos reales
+("Mascotas, Monturas, Herramientas", "Pociones (regeneracion)"...) envuelven a 2 líneas en vez
+de cortarse. Ensanchada también la columna del árbol de 170 a 210px en ambas pestañas.
+
+### Barra de tareas de Windows en autoocultar
+
+Pedido de sistema, no de la app - hecho vía la API real de Windows (`SHAppBarMessage` con
+`ABM_SETSTATE`/`ABS_AUTOHIDE`), no tocando el registro binario a ciegas (`StuckRects3` es
+frágil de editar a mano). Verificado de verdad consultando el estado real después
+(`ABM_GETSTATE`), no solo confiando en el código de retorno del `SETSTATE`: `1` = autoocultar
+activo. Efecto inmediato, sin reiniciar sesión ni el Explorador.
+
+`dotnet build`/`dotnet test` en verde (128/128) para los cambios de XAML. Verificación visual
+del Viewbox/wrap de texto en sí pendiente de que el usuario la confirme en vivo - son cambios
+puramente estructurales de WPF (patrones estándar y bien soportados, sin lógica nueva de por
+medio), pero esta sesión ya tiene documentado que las capturas de pantalla no son fiables aquí
+y no hay forma de "ver" el resultado visual desde este lado con certeza.

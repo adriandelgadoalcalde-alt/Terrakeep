@@ -257,7 +257,13 @@
                              ej. "Melee damage (316)") - añadir otro aqui duplicaria el numero.
                              Las carpetas con lista literal de ids (ej. "Copper & Tin") tampoco
                              llevan recuento en el Terrasavr real, asi que no se inventa uno. -->
-                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center" />
+                        <!-- Bug real encontrado 2-sep-2026 ("hay nombres cortados"): un
+                             StackPanel Horizontal le da ancho infinito a este TextBlock al
+                             medir, asi que TextWrapping no bastaba solo - hacia falta un
+                             MaxWidth real para que el texto tuviera un limite del que
+                             envolver, en vez de desbordar en silencio fuera de la columna. -->
+                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
+                                   MaxWidth="165" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
                 <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
@@ -295,7 +301,13 @@
                         <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
                                VerticalAlignment="Center"
                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center" />
+                        <!-- Bug real encontrado 2-sep-2026 ("hay nombres cortados"): un
+                             StackPanel Horizontal le da ancho infinito a este TextBlock al
+                             medir, asi que TextWrapping no bastaba solo - hacia falta un
+                             MaxWidth real para que el texto tuviera un limite del que
+                             envolver, en vez de desbordar en silencio fuera de la columna. -->
+                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
+                                   MaxWidth="165" TextWrapping="Wrap" />
                     </StackPanel>
                 </Button>
                 <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
@@ -633,13 +645,24 @@
                                                         </ItemsControl>
                                                     </StackPanel>
                                                 </StackPanel>
-                                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <!-- Pedido explicito 2-sep-2026 ("no quiero que tengan scroll,
+                                                     quiero que muestren todos los objetos en esa misma cuadricula
+                                                     y que la cuadricula se haga mas grande o pequeña segun la app
+                                                     la encoges o no"): Viewbox escala TODA la cuadricula (nunca
+                                                     recorta ni necesita barra de scroll) para caber siempre en el
+                                                     espacio real disponible - crece o encoge con la ventana. El
+                                                     WrapPanel necesita un ancho FIJO (no el "infinito" que le daria
+                                                     el propio Viewbox al medir) para que siempre envuelva en la
+                                                     misma forma real (10 slots = 5 columnas x 2 filas, PlrLoadout
+                                                     siempre tiene 10 - ver PlrLoadout.cs) antes de que el Viewbox
+                                                     escale ese bloque entero. -->
+                                                <Viewbox Stretch="Uniform" StretchDirection="Both">
                                                     <ItemsControl ItemsSource="{Binding CurrentSlots}">
                                                         <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                            <ItemsPanelTemplate><WrapPanel Width="820" /></ItemsPanelTemplate>
                                                         </ItemsControl.ItemsPanel>
                                                     </ItemsControl>
-                                                </ScrollViewer>
+                                                </Viewbox>
                                             </DockPanel>
                                         </Border>
                                     </TabItem>
@@ -678,7 +701,7 @@
 
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="170" />
+                                            <ColumnDefinition Width="210" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
 
@@ -871,7 +894,7 @@
                                     Command="{Binding ResearchAllCommand}" HorizontalAlignment="Left" Margin="0,0,0,10" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="170" />
+                                    <ColumnDefinition Width="210" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
