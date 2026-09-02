@@ -316,14 +316,24 @@
             </StackPanel>
         </DataTemplate>
 
+        <!-- Pedido explicito 2-sep-2026 ("todas las ventanas que estan por encima de libreria...
+             en ese formato de cuadricula que toda la informacion se pueda ver de golpe y que
+             escale con la ventana"): mismo Viewbox real que ya se aplico al panel Equipamiento -
+             escala la cuadricula ENTERA para caber siempre en el espacio disponible (crece o
+             encoge con la ventana, nunca recorta ni hace falta scroll). WrapPanel con ancho FIJO
+             de 10 columnas (1600px = 10 x ~160px por tarjeta) - mismo ancho real de rejilla que
+             usa el propio Terraria para Inventario/Banco/Caja fuerte/Fragua/Boveda (10 columnas x
+             4-5 filas, ver PlrCharacter.cs: Inventory=50, Bank/Safe/Forge/Void=40) - Monedas/
+             Municion (4 slots) quedan en una unica fila corta dentro de esa misma rejilla de 10,
+             sin problema. -->
         <DataTemplate x:Key="ContainerTabTemplate" DataType="{x:Type vm:ContainerViewModel}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Viewbox Stretch="Uniform" StretchDirection="Both">
                 <ItemsControl ItemsSource="{Binding Slots}">
                     <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        <ItemsPanelTemplate><WrapPanel Width="1600" /></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>
-            </ScrollViewer>
+            </Viewbox>
         </DataTemplate>
 
         <!-- Un objeto/arma/accesorio recomendado dentro de una build, ya con icono real -->

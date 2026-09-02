@@ -2528,3 +2528,19 @@ del Viewbox/wrap de texto en sí pendiente de que el usuario la confirme en vivo
 puramente estructurales de WPF (patrones estándar y bien soportados, sin lógica nueva de por
 medio), pero esta sesión ya tiene documentado que las capturas de pantalla no son fiables aquí
 y no hay forma de "ver" el resultado visual desde este lado con certeza.
+
+### Mismo `Viewbox` para TODOS los contenedores (Inventario/Banco/Caja fuerte/Fragua/Bóveda/...)
+
+Pedido explícito de ampliar el arreglo del panel Equipamiento a "todas las ventanas que están
+por encima de librería" - `ContainerTabTemplate` (la plantilla COMPARTIDA por las 9 pestañas
+de Inventario: Inventario/Banco/Caja fuerte/Fragua del Defensor/Bóveda del Vacío/Mascota-
+Montura-Gancho/Tintes/Monedas/Munición) pasa del mismo `ScrollViewer` a `Viewbox
+Stretch="Uniform" StretchDirection="Both"`, un único cambio que cubre las 9 a la vez.
+
+`WrapPanel Width="1600"` (10 columnas reales de ~160px cada una) en vez de los 820px/5
+columnas de Equipamiento - 10 columnas es la propia rejilla real de Terraria para estos
+contenedores (`PlrCharacter.cs`: `Inventory=50`, `Bank/Safe/Forge/Void=40`, ambos múltiplos
+exactos de 10), no un número inventado. Monedas/Munición (4 slots cada uno) caben sin problema
+en esa misma rejilla de 10, en una única fila corta.
+
+`dotnet build`/`dotnet test` en verde (128/128).
