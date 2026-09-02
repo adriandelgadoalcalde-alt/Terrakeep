@@ -2544,3 +2544,15 @@ exactos de 10), no un número inventado. Monedas/Munición (4 slots cada uno) ca
 en esa misma rejilla de 10, en una única fila corta.
 
 `dotnet build`/`dotnet test` en verde (128/128).
+
+### Contorno naranja también en Inventario (pedido explícito, "me gusta")
+
+El `Border BorderBrush="{StaticResource OrangeBrush}"` que ya llevaba Equipamiento se añade
+igual alrededor del `TabControl` de las 9 pestañas de Inventario (Inventario/Banco/Caja
+fuerte/Fragua/Bóveda/...) - un único `Border` envolviendo el `TabControl` entero, mismo estilo
+exacto que Equipamiento para que ambos paneles se sientan de la misma familia visual. Pedido
+explícito tras ver el resultado real - la distinción semántica original ("Equipamiento
+separado de Inventario") pasa a ser solo cuestión de qué contenedor hay a cada lado del
+`TabControl` externo, no del contorno en sí.
+
+`dotnet build`/`dotnet test` en verde (128/128).

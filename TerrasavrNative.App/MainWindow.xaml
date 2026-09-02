@@ -677,16 +677,24 @@
                                         </Border>
                                     </TabItem>
                                     <TabItem Header="Inventario">
-                                        <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
-                                            <TabControl.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
-                                                    <TextBlock Text="{Binding DisplayName}" />
-                                                </DataTemplate>
-                                            </TabControl.ItemTemplate>
-                                            <TabControl.ContentTemplate>
-                                                <StaticResource ResourceKey="ContainerTabTemplate" />
-                                            </TabControl.ContentTemplate>
-                                        </TabControl>
+                                        <!-- Mismo contorno que Equipamiento (pedido explicito 2-sep-2026,
+                                             "me gusta") - mismo Border, mismo estilo, para que las 9
+                                             pestañas de aqui dentro (Inventario/Banco/Caja fuerte/
+                                             Fragua/Boveda/...) se sientan parte de la misma familia
+                                             visual. -->
+                                        <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
+                                            <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
+                                                <TabControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
+                                                        <TextBlock Text="{Binding DisplayName}" />
+                                                    </DataTemplate>
+                                                </TabControl.ItemTemplate>
+                                                <TabControl.ContentTemplate>
+                                                    <StaticResource ResourceKey="ContainerTabTemplate" />
+                                                </TabControl.ContentTemplate>
+                                            </TabControl>
+                                        </Border>
                                     </TabItem>
                                 </TabControl>
 
