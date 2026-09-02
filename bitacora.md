@@ -3422,3 +3422,48 @@ las fases siguientes, en vez de ejecutar las 7 de un tirón y verificar solo con
 automático - el arnés puede confirmar que algo "funciona" (no hay excepciones, no hay solape)
 sin poder juzgar si de verdad es más cómodo de usar que lo anterior, que es una decisión que
 solo puede tomar el usuario viéndolo con sus propios ojos.
+
+### Arreglo real: las armaduras de Calamity no mostraban ninguna estadística al pasar el ratón
+
+Reportado directamente por el usuario tras probar el estado revertido: *"las armaduras de
+calamity no dicen especificaciones cuando pasas el raton"*. Investigado antes de tocar nada
+(regla del proyecto: mirar el código real de Calamity antes de suponer) - la causa NO era un
+bug de formato como parecía a primera vista (`ItemStatsFormatter.Format` pasaba `defense: null`
+a propósito en la rama de Calamity), sino un hueco de datos más profundo: `catalog.json`
+(`TerrasavrNative.App/Assets/calamity/catalog.json`, 2709 objetos reales) nunca tuvo `defense`
+en su `stats` para NINGÚN objeto de Calamity - comprobado antes de cambiar nada: 0 de 186
+armaduras reales con `defense`. El mismo fichero compartido en la app Electron original
+(`Terrasavr-Calamity-Beta/local-site/calamity/catalog.json`) tiene exactamente el mismo hueco -
+no es un bug introducido en el puerto, es un hueco real de extracción de datos heredado desde
+antes.
+
+**Arreglo real, no un parche de formato**: nuevo `scripts/extraer-defensa-calamity.js` indexa
+los 7489 nombres de clase reales del código decompilado de Calamity
+(`Downloads\tModLoader-Decompiled\CalamityMod`) y extrae `Item.defense = N` de verdad del
+`SetDefaults()` real de cada objeto (mismo criterio que `extraer-estadisticas-vanilla.py` para
+vanilla) - verificado a mano contra el fuente real antes de confiar en el regex
+(`AerospecBreastplate.cs:33`, `base.Item.defense = 7;`, coincide exacto con lo extraído).
+Resultado real: 147 objetos con defensa real (130 armaduras + 17 accesorios, ej. "Corazón de
+Draedon" = 20 defensa), 56 armaduras sin ninguna encontrada - comprobado que estas últimas son
+piezas VANITY reales (ej. `AncientGodSlayerHelm`, `namespace CalamityMod.Items.Armor.Vanity`,
+`Item.vanity = true`), que en el juego real nunca tienen defensa - correcto que se queden sin
+tooltip de estadísticas, igual que ya pasa con la vanidad vanilla, no un fallo de la extracción.
+
+`CalamityItemStats` (Core) gana el campo `Defense` (antes ausente del modelo entero, ni
+siquiera deserializable). `ItemStatsFormatter.Format` ya no hardcodea `defense: null` en la
+rama de Calamity, pasa `s.Defense` real.
+
+**Verificación real** (proyecto standalone en el scratchpad, referencia directa a
+`TerrasavrNative.App`/`CharacterFileService` real, sin necesidad de UI Automation ya que es
+lógica de datos/formato, no de layout): `AerospecBreastplate` → "7 defensa",
+`DraedonsHeart` → "20 defensa", `AncientGodSlayerHelm` (vanity real) → sin tooltip (correcto).
+130/186 armaduras de Calamity con "defensa" real en su tooltip tras el arreglo. `dotnet build`
+limpio, `dotnet test` 134/134 en toda la solución.
+
+**Pendiente, fuera de alcance de este arreglo puntual** (documentado, no resuelto): el bono de
+set completo y la descripción textual de accesorios de Calamity siguen sin extraer (ya
+documentado como pendiente en `ItemStatsFormatter` desde antes - el `.tmod` real solo trae
+localización en inglés en esta instalación). Si en algún momento se quiere sincronizar este
+mismo arreglo de `defense` en la app Electron (`Terrasavr-Calamity-Beta`), su `catalog.json`
+tiene el mismo hueco real y el mismo script (adaptando la ruta de salida) lo resolvería igual -
+no se ha tocado esa app en esta pasada, el reporte vino de Terrakeep (Terrasavr-Native).

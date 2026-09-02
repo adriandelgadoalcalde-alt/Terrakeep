@@ -12,6 +12,12 @@ public sealed class CalamityItemStats
     [JsonPropertyName("knockBack")] public double? KnockBack { get; init; }
     [JsonPropertyName("mana")] public int? Mana { get; init; }
     [JsonPropertyName("damageType")] public string? DamageType { get; init; }
+    // Defensa real (armaduras y algunos accesorios) - antes ausente del todo en catalog.json
+    // (pedido explicito del usuario: "las armaduras de calamity no dicen especificaciones
+    // cuando pasas el raton"). Extraida de verdad de Item.defense en el SetDefaults() real de
+    // cada objeto, ver scripts/extraer-defensa-calamity.js - null para lo que de verdad no
+    // tiene (armaduras vanity, la mayoria de accesorios), nunca inventado ni puesto a 0.
+    [JsonPropertyName("defense")] public int? Defense { get; init; }
 }
 
 public sealed class CalamityCatalogEntryData

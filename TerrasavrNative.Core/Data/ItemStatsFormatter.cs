@@ -59,7 +59,13 @@ public static class ItemStatsFormatter
             var s = entry?.Stats;
             if (s != null)
             {
-                string? numeric = FormatLines(damage: s.Damage, damageLabel: DamageLabelForCalamity(s.DamageType), defense: null,
+                // Defensa real (pedido explicito del usuario: "las armaduras de calamity no
+                // dicen especificaciones cuando pasas el raton") - antes hardcodeada a null
+                // aqui, pero el hueco real era mas profundo: catalog.json no tenia defense
+                // para NINGUN objeto de Calamity (0 de 186 armaduras reales, comprobado antes
+                // de tocar nada) - ver scripts/extraer-defensa-calamity.js, que la extrae de
+                // verdad de Item.defense en el SetDefaults() real de cada objeto.
+                string? numeric = FormatLines(damage: s.Damage, damageLabel: DamageLabelForCalamity(s.DamageType), defense: s.Defense,
                     crit: s.Crit, knockBack: s.KnockBack, useTime: s.UseTime, mana: s.Mana, healLife: null, healMana: null, rare: null);
                 if (numeric != null) sections.Add(numeric);
             }
