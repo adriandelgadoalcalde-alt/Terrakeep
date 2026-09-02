@@ -51,7 +51,7 @@ public partial class MainViewModel : ObservableObject
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
     [ObservableProperty] private EquipmentGroupViewModel? _equipmentGroup;
-    public ObservableCollection<ResearchRowViewModel> Research { get; } = [];
+    public ResearchViewModel Research { get; }
     public BuildsViewModel Builds { get; }
     public WhatsNewViewModel WhatsNew { get; }
     public ChangelogViewModel Changelog { get; }
@@ -72,6 +72,7 @@ public partial class MainViewModel : ObservableObject
         Changelog = new ChangelogViewModel(_service.Changelog);
         Exploration = new ExplorationViewModel(_service);
         Library = new LibraryViewModel(_service);
+        Research = new ResearchViewModel(_service);
         Appearance = new AppearanceViewModel(_service);
         Library.ItemPlaced += () =>
         {
@@ -178,8 +179,8 @@ public partial class MainViewModel : ObservableObject
     private void RebuildContainers()
     {
         Containers.Clear();
-        Research.Clear();
         EquipmentGroup = null;
+        Research.Reset();
         if (_loaded == null) return;
 
         // Contenedores con fusion real de Calamity (mismos 7 que CalamityCharacterSync cubre).
@@ -203,34 +204,7 @@ public partial class MainViewModel : ObservableObject
         // real al reducir la ventana: "¿es necesario que haya tantos botones?").
         EquipmentGroup = new EquipmentGroupViewModel(_service, RequestPickForSlot, _loaded.MergedContainers, _loaded.Character.Loadouts.Length);
 
-        RebuildResearch();
-    }
-
-    private void RebuildResearch()
-    {
-        Research.Clear();
-        if (_loaded == null) return;
-        foreach (var entry in _loaded.Character.Research.OrderBy(e => e.Pid))
-        {
-            bool isCalamity = entry.Pid.Contains('/');
-            string displayName;
-            string? iconPath;
-            if (isCalamity)
-            {
-                int slash = entry.Pid.IndexOf('/');
-                string mod = entry.Pid[..slash], internalName = entry.Pid[(slash + 1)..];
-                var calEntry = _service.CalamityCatalog.ByModAndInternal(mod, internalName);
-                displayName = calEntry?.DisplayName ?? entry.Pid;
-                iconPath = calEntry?.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + calEntry.Icon : null;
-            }
-            else
-            {
-                displayName = _service.VanillaCatalog.GetNameByKey(entry.Pid);
-                int? vanillaId = _service.VanillaCatalog.GetIdByKey(entry.Pid);
-                iconPath = vanillaId.HasValue ? VanillaIconResolver.GetIconPath(vanillaId.Value) : null;
-            }
-            Research.Add(new ResearchRowViewModel(displayName, entry.Count, isCalamity, iconPath));
-        }
+        Research.LoadFrom(_loaded.Character);
     }
 
     // "Investigar todo": rellena PlrCharacter.Research con una entrada por cada objeto conocido
@@ -256,8 +230,8 @@ public partial class MainViewModel : ObservableObject
                 _loaded.Character.Research.Add(new PlrResearchEntry { Pid = pid, Count = placeholderCount });
         }
 
-        RebuildResearch();
-        StatusMessage = $"Investigacion completa aplicada ({Research.Count} objetos) - pulsa Guardar para conservarlo.";
+        Research.LoadFrom(_loaded.Character);
+        StatusMessage = $"Investigacion completa aplicada ({_loaded.Character.Research.Count} objetos) - pulsa Guardar para conservarlo.";
     }
 
     // Auto-equipar desde el panel Builds: arma+armadura+accesorios de una clase/etapa

@@ -2221,3 +2221,55 @@ correctos (Pico de hierro, Hacha de hierro, Mineral de hierro...) - confirma que
 selección/colocación tampoco se rompió.
 
 `dotnet build`/`dotnet test` en verde (128/128).
+
+### Fase D - Investigación reutiliza el mismo árbol real (antes: lista plana de miles de objetos)
+
+Extraído `LibraryCategoryTreeBuilder.cs` (`TerrasavrNative.App/Services/`) - la construcción
+del árbol (vanilla real + carpeta madre Calamity, ~150 líneas) que estaba duplicada dentro de
+`LibraryViewModel` pasa a ser un builder compartido y estático, reutilizado tal cual por la
+Librería y por la nueva `ResearchViewModel.cs` - mismo pedido explícito para ambas
+("investigacion lo acotaria de alguna forma... que tenga paginas o algo asi").
+
+`ResearchViewModel` navega el árbol real igual que la Librería (`RootCategories`/
+`SelectedCategory`/`SelectCategoryCommand`), pero sus hojas muestran `ResearchRowViewModel`
+(mismos nombres/sprites de siempre) filtrados a los objetos que YA tienen una entrada real en
+`PlrCharacter.Research` (misma resolución de Pid→id que ya usaba
+`MainViewModel.RebuildResearch`: Calamity si el Pid lleva `/`, si no vanilla por clave interna)
+- sin carpeta elegida se muestra solo un resumen con el total, exactamente el mismo patrón ya
+usado en la Librería para "8164 objetos en total". `MainViewModel.Research` pasa de
+`ObservableCollection<ResearchRowViewModel>` a la nueva `ResearchViewModel` (con
+`LoadFrom(character)`/`Reset()` reemplazando a `RebuildResearch()`); `ResearchAllCommand` sigue
+mutando `PlrCharacter.Research` directamente igual que antes, solo cambia cómo se refresca la
+vista después.
+
+`MainWindow.xaml`: nueva plantilla `ResearchCategoryNodeTemplate` (casi idéntica a
+`CategoryNodeTemplate` de la Librería, pero apuntando a `Research.SelectCategoryCommand` en vez
+de `Library.SelectCategoryCommand` - un `DataTemplate` con `x:Key` no puede parametrizarse por
+la pestaña que lo usa) + layout de árbol+resultados igual que la Librería.
+
+**Bug real grave encontrado y corregido durante la verificación con UI Automation real** (no
+se veía con el arnés de consola, que manipula `Children`/`ItemIdSet` directamente sin pasar
+por los `Binding` de XAML): `CategoryNodeViewModel.IsExpanded` NUNCA se ponía a `true` en
+ningún sitio del código - ni en la Librería original ni en la nueva Investigación - y el
+`ItemsControl` de `Children` en el árbol solo se muestra cuando `IsExpanded=true`
+(`Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}"`). Resultado real:
+**ninguna carpeta por debajo del nivel raíz era alcanzable haciendo click de verdad** - un bug
+que ya existía antes de esta ronda (con el árbol plano de categoría única probablemente pasaba
+más desapercibido, con como mucho 2 niveles), pero que se vuelve bloqueante con el árbol real
+de Terrasavr (hasta 4 niveles de profundidad: `Categories > Weapons > Melee damage > Page 1`).
+Arreglado añadiendo `node.IsExpanded = !node.IsExpanded;` al principio de `SelectCategory` en
+ambos ViewModels (alternar despliegue en cada click, independiente de la selección).
+**Verificado con clicks reales de UI Automation** (no simulados en el arnés de consola):
+navegación de 3 niveles reales `Materials → Pre-Hardmode → Iron & Lead` confirmada paso a paso
+(cada nivel invisible ANTES de pulsar su padre, visible DESPUÉS), resultado final "33
+resultado(s)"; misma comprobación para `Calamity (mod) → Armadura (186)`, resultado "186
+resultado(s)".
+
+**Resto de verificación real con UI Automation** (además del arnés de consola: 5389 objetos
+investigados reales antes de "Investigar todo", 8164 después, "Iron & Lead" con 33 objetos):
+las 10 carpetas raíz reales aparecen tal cual en la pestaña Investigación
+(`Materials`/`Decorative`/`Pets, mounts, tools`/`Potions (regeneration)`/`Potions (effects)`/
+`Bosses & events`/`Quest fish`/`Categories`/`Items by ID`/`Calamity (mod)`), y seleccionar
+`Materials` de verdad (click real) resume "1583 objeto(s) investigado(s)".
+
+`dotnet build`/`dotnet test` en verde (128/128).

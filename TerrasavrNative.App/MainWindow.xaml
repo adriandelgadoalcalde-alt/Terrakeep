@@ -266,6 +266,44 @@
             </StackPanel>
         </DataTemplate>
 
+        <!-- Mismo arbol que CategoryNodeTemplate de arriba, pero apuntando al
+             SelectCategoryCommand de Research en vez de Library - las dos pestañas comparten
+             el mismo arbol REAL de carpetas (LibraryCategoryTreeBuilder) pero cada una tiene
+             su propia seleccion/resultados independientes. -->
+        <DataTemplate x:Key="ResearchCategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
+            <StackPanel>
+                <Button Command="{Binding DataContext.Research.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
+                        Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
+                              ItemTemplate="{DynamicResource ResearchCategoryNodeTemplate}"
+                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" />
+            </StackPanel>
+        </DataTemplate>
+
         <DataTemplate x:Key="ContainerTabTemplate" DataType="{x:Type vm:ContainerViewModel}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Slots}">
@@ -823,37 +861,65 @@
                         </DockPanel>
                     </TabItem>
                     <TabItem Header="Investigacion">
+                        <!-- Antes: una unica lista plana (hasta miles de objetos, "es
+                             larguisimo" - pedido explicito 2-sep-2026). Ahora: mismo arbol de
+                             carpetas real que la Libreria (Research.RootCategories, ver
+                             LibraryCategoryTreeBuilder) - mismos nombres y sprites de
+                             siempre, solo cambia como se navega. -->
                         <DockPanel Margin="0,10,0,0">
                             <Button DockPanel.Dock="Top" Content="Investigar todo" Tag="Accent"
                                     Command="{Binding ResearchAllCommand}" HorizontalAlignment="Left" Margin="0,0,0,10" />
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <ItemsControl ItemsSource="{Binding Research}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type vm:ResearchRowViewModel}">
-                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="4" Margin="0,0,6,6" Padding="6,4">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
-                                                                <Setter Property="BorderThickness" Value="1" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Image Source="{Binding IconPath}" Width="20" Height="20" Stretch="Uniform" Margin="0,0,6,0"
-                                                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                    <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="170" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Background="{StaticResource BgPrimaryBrush}" CornerRadius="6"
+                                        Padding="5" Margin="0,0,8,0">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Top" Content="Ver todo" HorizontalAlignment="Left"
+                                                Padding="5,2" FontSize="10" Margin="0,0,0,4"
+                                                Command="{Binding Research.ClearCategoryCommand}" />
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding Research.RootCategories}"
+                                                          ItemTemplate="{StaticResource ResearchCategoryNodeTemplate}" />
+                                        </ScrollViewer>
+                                    </DockPanel>
+                                </Border>
+
+                                <DockPanel Grid.Column="1">
+                                    <TextBlock DockPanel.Dock="Top" Text="{Binding Research.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding Research.Results}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:ResearchRowViewModel}">
+                                                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="4" Margin="0,0,6,6" Padding="6,4">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                                                        <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                                                        <Setter Property="BorderThickness" Value="1" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Image Source="{Binding IconPath}" Width="20" Height="20" Stretch="Uniform" Margin="0,0,6,0"
+                                                                   Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                            <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Grid>
                         </DockPanel>
                     </TabItem>
                     <TabItem Header="Apariencia">
