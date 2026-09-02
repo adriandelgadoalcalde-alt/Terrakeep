@@ -495,6 +495,118 @@
                 </StackPanel>
             </Border>
         </DataTemplate>
+
+        <!-- Rework de Buffs (pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada: "la
+             misma rejilla cantidad de slots y contorno y todo que inventario"). Tarjeta
+             compacta de un slot de buff - calco de SlotCompactTemplate, sin Count/estrella de
+             prefijo (un buff no tiene cantidad ni prefijo). -->
+        <DataTemplate x:Key="BuffSlotCompactTemplate" DataType="{x:Type vm:BuffSlotViewModel}">
+            <Border AllowDrop="True" ToolTipService.IsEnabled="{Binding IsNotEmpty}"
+                    PreviewMouseLeftButtonDown="OnBuffSlotMouseDown" MouseMove="OnBuffSlotMouseMove"
+                    Drop="OnBuffSlotDrop">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding ChooseFromLibraryCommand}" />
+                </Border.InputBindings>
+                <Border.ToolTip>
+                    <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <StackPanel MaxWidth="240">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Description}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                       Visibility="{Binding Description, Converter={StaticResource NullToVis}}" />
+                        </StackPanel>
+                    </ToolTip>
+                </Border.ToolTip>
+                <Border.ContextMenu>
+                    <ContextMenu DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="Vaciar slot" Command="{Binding ClearCommand}"
+                                  Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
+                    </ContextMenu>
+                </Border.ContextMenu>
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCardCompact}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                                <Setter Property="Effect" Value="{StaticResource AccentGlow}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
+                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+            </Border>
+        </DataTemplate>
+
+        <!-- Rejilla compacta de los 44/22/10 slots de buff reales - calco de
+             ContainerCompactTemplate, misma SlotGridPanel/ReferenceColumns=10 (mismo tamaño de
+             icono que el resto de rejillas de la app). -->
+        <DataTemplate x:Key="BuffContainerCompactTemplate" DataType="{x:Type vm:BuffContainerViewModel}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource BuffSlotCompactTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="44" MaxCell="96" Gap="4"
+                                                     ReferenceColumns="10"
+                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </ScrollViewer>
+        </DataTemplate>
+
+        <!-- Panel "Editar buff seleccionado" - calco reducido de ItemEditTemplate. -->
+        <DataTemplate x:Key="BuffEditTemplate" DataType="{x:Type vm:BuffEditViewModel}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="Editar buff" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
+
+                <TextBlock DockPanel.Dock="Top" Text="{Binding NoSelectionMessage}" Style="{StaticResource CaptionText}"
+                           TextWrapping="Wrap" Margin="0,0,0,10"
+                           Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}" />
+
+                <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                    <DockPanel Margin="0,0,0,10">
+                        <Button DockPanel.Dock="Right" Content="Vaciar slot" Command="{Binding ClearSlotCommand}"
+                                ToolTip="Vaciar este slot" Padding="6,3" FontSize="10.5" VerticalAlignment="Center"
+                                Foreground="{StaticResource PinkBrush}" Background="Transparent" BorderThickness="0" />
+                        <Image Source="{Binding Slot.IconPath}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,8,0"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding Slot.IconPath, Converter={StaticResource NullToVis}}" />
+                        <TextBlock Text="{Binding Slot.DisplayName}" Style="{StaticResource BodyText}" TextWrapping="Wrap"
+                                   MaxWidth="200" VerticalAlignment="Center" />
+                    </DockPanel>
+
+                    <TextBlock Text="{Binding Slot.Description}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                               Margin="0,0,0,10" Visibility="{Binding Slot.Description, Converter={StaticResource NullToVis}}" />
+
+                    <TextBlock Text="Duración (s)" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                    <TextBox Text="{Binding Slot.DurationSeconds, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,10"
+                             Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+
+                    <!-- 3 botones reales (pregunta a Opus sobre el diseño 2-sep-2026, cuarta
+                         pasada): Minima = dato real extraido del buffTime de la pocion base (o
+                         la moda real como aproximacion honesta, ver MinTooltip); Media = 2x
+                         Minima (unico precedente real de escalera, Pocion de la suerte);
+                         Maxima = S.getMaxTime() real del propio Terrasavr. -->
+                    <UniformGrid Columns="3" Rows="1">
+                        <Button Content="{Binding MinLabel}" Command="{Binding ApplyMinCommand}" ToolTip="{Binding MinTooltip}"
+                                FontSize="10.5" Padding="4,6" Margin="0,0,4,0" />
+                        <Button Content="{Binding MediaLabel}" Command="{Binding ApplyMediaCommand}"
+                                ToolTip="2x la duración mínima - único precedente real de escalera en el juego (Poción de la suerte)"
+                                FontSize="10.5" Padding="4,6" Margin="0,0,4,0" />
+                        <Button Content="{Binding MaxLabel}" Command="{Binding ApplyMaxCommand}"
+                                ToolTip="Duración máxima real permitida por Terrasavr"
+                                FontSize="10.5" Padding="4,6" />
+                    </UniformGrid>
+                </StackPanel>
+            </DockPanel>
+        </DataTemplate>
     </Window.Resources>
 
     <TabControl Style="{StaticResource NavTabControl}" SelectedIndex="{Binding SelectedTabIndex}">
@@ -912,7 +1024,29 @@
                         </Grid>
                     </TabItem>
                     <TabItem Header="Buffs">
+                        <!-- Rework 2-sep-2026, cuarta pasada (pregunta a Opus sobre el diseño):
+                             misma rejilla/contorno/tamaño de icono que Objetos>Inventario, con
+                             el panel Editar a la derecha (mismo patron que ItemEditTemplate).
+                             El buscador "Añadir buff..." se queda debajo tal cual estaba - la
+                             Libreria de buffs con arbol real de Terrasavr es la Fase 2 de este
+                             rework, todavia sin implementar (ver bitacora.md). -->
                         <DockPanel Margin="0,10,0,0">
+                            <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="300" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                        Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,0,10,0" Height="380">
+                                    <ContentControl Content="{Binding Buffs.Container}" ContentTemplate="{StaticResource BuffContainerCompactTemplate}" />
+                                </Border>
+
+                                <Border Grid.Column="1" Style="{StaticResource SidePanelCard}">
+                                    <ContentControl Content="{Binding BuffEdit}" ContentTemplate="{StaticResource BuffEditTemplate}" />
+                                </Border>
+                            </Grid>
+
                             <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                                 <Button Content="Añadir buff..." Tag="Accent" Command="{Binding Buffs.BeginAddCommand}"
                                         HorizontalAlignment="Left" Margin="0,0,0,10" />
@@ -972,50 +1106,6 @@
                                     </ItemsControl>
                                 </ScrollViewer>
                             </StackPanel>
-
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <ItemsControl ItemsSource="{Binding Buffs.Active}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type vm:BuffRowViewModel}">
-                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="9,6"
-                                                    ToolTip="{Binding Description}">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
-                                                                <Setter Property="BorderThickness" Value="1" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <DockPanel>
-                                                    <Button DockPanel.Dock="Top" Content="&#10005;" Command="{Binding RemoveCommand}"
-                                                            ToolTip="Quitar este buff" HorizontalAlignment="Right"
-                                                            Style="{StaticResource CircleCloseButton}" Width="18" Height="18" FontSize="10" />
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
-                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" MaxWidth="130" TextWrapping="Wrap" />
-                                                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                                                <TextBox Text="{Binding DurationSeconds, UpdateSourceTrigger=PropertyChanged}"
-                                                                         Width="50" Padding="3,1" FontSize="12"
-                                                                         Background="{StaticResource BgPrimaryBrush}"
-                                                                         Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
-                                                                <TextBlock Text=" s" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
-                                                            </StackPanel>
-                                                        </StackPanel>
-                                                    </StackPanel>
-                                                </DockPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
                         </DockPanel>
                     </TabItem>
                     <TabItem Header="Investigacion">

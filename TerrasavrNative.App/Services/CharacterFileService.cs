@@ -50,6 +50,7 @@ public sealed class CharacterFileService
     public VanillaItemTooltipCatalog VanillaItemTooltips { get; }
     public VanillaArmorSetCatalog VanillaArmorSets { get; }
     public PrefixEffectCatalog PrefixEffects { get; }
+    public VanillaBuffDurationCatalog VanillaBuffDurations { get; }
 
     // Los 6 catalogos que ItemStatsFormatter.Format necesita, agrupados en un unico record -
     // pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada: la firma ya iba por 5
@@ -76,7 +77,7 @@ public sealed class CharacterFileService
         MapColors = MapColorCatalog.LoadFromFile(Path.Combine(assetsDir, "map_colors.json"));
         TileNames = TileNameCatalog.LoadFromFile(Path.Combine(assetsDir, "tile_names.json"));
         NpcNames = NpcNameCatalog.LoadFromFile(Path.Combine(assetsDir, "npc_names.json"));
-        VanillaBuffs = VanillaBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_buff_names.json"), Path.Combine(assetsDir, "vanilla_buff_descriptions.json"));
+        VanillaBuffs = VanillaBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_buff_names.json"), Path.Combine(assetsDir, "vanilla_buff_descriptions.json"), Path.Combine(assetsDir, "vanilla_buff_names_es.json"));
         BestPrefixes = BestPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "best_prefix.json"));
         VanillaCategories = VanillaCategoryCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_categories.json"));
         VanillaStats = VanillaItemStatsCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_stats.json"));
@@ -87,6 +88,7 @@ public sealed class CharacterFileService
         VanillaItemTooltips = VanillaItemTooltipCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_item_tooltips.json"));
         VanillaArmorSets = VanillaArmorSetCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_armor_sets.json"));
         PrefixEffects = PrefixEffectCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_prefix_effects.json"));
+        VanillaBuffDurations = VanillaBuffDurationCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_buff_durations.json"));
         TooltipCatalogs = new ItemTooltipCatalogs(VanillaStats, CalamityCatalog, VanillaCategories, VanillaItemTooltips, VanillaArmorSets, PrefixEffects);
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);

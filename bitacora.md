@@ -2863,4 +2863,63 @@ matemático exacto y más preciso que una redondez inventada.
 bonus de daño a distancia + el bonus de set completo real de Shroomite; sin excepciones,
 `dotnet test` 128/128 verde.
 
-### Fase 1+ (rework de Buffs) - en curso, ver mensajes siguientes de esta misma sesión
+### Fase 1 (rework de Buffs) - rejilla + panel Editar, ya implementada y verificada
+
+Pregunta a Opus sobre el diseño, punto 3 ("rejilla cantidad de slots y contorno... editar buff
+seleccionado... 3 botones de duración"). Hallazgo real que simplificó todo: `PlrCharacter.Buffs`
+YA es un `List<PlrBuff>` de tamaño FIJO real según versión (44/22/10, mismo umbral 269 que ya
+usa `PlrBodySerializer`) - antes la UI solo mostraba los slots CON buff (`if (buff.Id == 0)
+continue`), ahora se trata exactamente igual que un contenedor de objetos: 44 slots reales,
+algunos vacíos, en la MISMA `SlotGridPanel`/`ReferenceColumns=10` que ya usan Inventario/
+Equipamiento/Almacenes/Monturas/Monedas.
+
+- **`BuffSlotViewModel.cs`** (nuevo) - calco reducido de `ItemSlotViewModel` (sin prefijo/
+  cantidad/favorito, un buff no los tiene). `PlaceBuff` usa la duración MÍNIMA real como valor
+  inicial (mismo criterio que "mejor prefijo automático" ya usa `ItemSlotViewModel.PlaceItem`).
+- **`BuffContainerViewModel.cs`** (nuevo) - gemelo de `ContainerViewModel` pero para buffs.
+  Deliberadamente NO se generalizó `ContainerViewModel` en sí (está tipado a
+  `ItemSlotViewModel` y lo consumen `AutoEquip`/`SyncEditsBackToMerged`/`StorageGroupViewModel`/
+  `EquipmentGroupViewModel` - hacerlo genérico habría sido riesgo real por cero beneficio).
+- **`BuffEditViewModel.cs`** (nuevo) - panel "Editar buff seleccionado", gemelo reducido de
+  `ItemEditViewModel`. El campo de duración se enlaza DIRECTO a `Slot.DurationSeconds` (mismo
+  criterio que `Slot.Count` en `ItemEditTemplate`) - esta clase solo añade los 3 botones de
+  preset.
+- **`scripts/extraer-duraciones-buffs.py`** → `vanilla_buff_durations.json` (30 buffs reales,
+  mismo `split_by_case` ya usado 3 veces en este proyecto) + `VanillaBuffDurationCatalog.cs` +
+  **`BuffDurationPresets.cs`** (Core, con tests reales en `BuffDurationPresetsTests.cs`):
+  Mínima = dato real extraído (o la moda real de 28800 ticks/8min como aproximación honesta,
+  `IsRealMin` distingue los dos casos para la UI); Media = 2x Mínima salvo el buff 257 (Suerte),
+  que usa sus 3 tiers reales tal cual (18000/36000/54000, ratio exacto 1:2:3 - único precedente
+  real de escalera en todo el juego); Máxima = `S.getMaxTime()` REAL del propio Terrasavr
+  (1999999980 ticks ≈ 385,8 días si `Version>=269`, 1080000 si no) - el valor que el usuario
+  pidió explícitamente ("el tiempo maximo quiero que sea lo maximo permitido"), no una
+  aproximación propia.
+- **`scripts/extraer-nombres-buffs-es.py`** → `vanilla_buff_names_es.json` (352 nombres reales,
+  clave `BuffName` de `Game.json`) + `VanillaBuffCatalog.GetDisplayName` - cierra un TODO real
+  que llevaba documentado en el propio código desde antes de esta sesión ("SIN traduccion real
+  al español todavia... hasta que se investigue de donde saca el juego real el nombre").
+- `BuffsViewModel.cs` reescrito: `Container` con los slots reales en vez de `Active` filtrado.
+  El buscador "Añadir buff..." se queda TAL CUAL por decisión explícita de fases (Opus: "deja
+  de momento el panel actual... con eso la pestaña ya está rediseñada de arriba a abajo") -
+  rellena el primer slot vacío real, con la duración mínima real aplicada automáticamente.
+- `MainWindow.xaml`: `BuffSlotCompactTemplate`/`BuffContainerCompactTemplate`/`BuffEditTemplate`
+  nuevos (mismo lenguaje visual que el resto: contorno naranja, fondo de hueco vacío heredado
+  de `ItemSlotCardCompact`, tooltip compuesto). `MainWindow.xaml.cs`:
+  `OnBuffSlotMouseDown/Move/Drop` gemelos de los de `ItemSlotViewModel` (arrastrar un buff sobre
+  otro los intercambia entero). `BuffRowViewModel.cs` borrado (dead code real, sin ningún
+  consumidor tras el rework).
+- **Pendiente, documentado con claridad para no perder el hilo**: la Librería de buffs con
+  árbol real de Terrasavr (`app.BuffSide` - Utilidad/Offensivo/Defensivo/Special/Mascota/
+  Negativo + Índice paginado, ya investigada por Opus con las 6 listas reales) es la Fase 2 de
+  este rework, todavía SIN implementar - el buscador viejo "Añadir buff..." sigue siendo el
+  único mecanismo de añadir un buff nuevo por ahora.
+
+**Verificación real** (arnés de UI Automation ampliado): `Buffs.Container.Slots.Count=44`
+confirmado (version 279 ≥ 269); buff colocado vía el mismo comando real que pulsaría el
+usuario (`PickBuffCommand`) con nombre real en español ("Piel de obsidiana"); duración mínima
+real aplicada automáticamente al colocar (6 min, dato real extraído, no el fallback); slot
+seleccionado de verdad (`BuffEdit.Slot` coincide con el slot colocado); los 3 botones
+encontrados y pulsados por su NOMBRE dinámico real vía `InvokePattern` - "Máxima" deja
+`DurationSeconds=33333333`, exactamente `1999999980/60`, el valor real de Terrasavr. Sin
+`ultimo-error.log`. `dotnet test` 134/134 verde (128 previos + 1 de `VanillaBuffCatalog.
+GetDisplayName` + 5 de `BuffDurationPresets`, todos con datos reales, no mockeados).

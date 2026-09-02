@@ -237,4 +237,39 @@ public partial class MainWindow : Window
             sourceSlot.SwapWith(targetSlot);
         }
     }
+
+    // Gemelos de los 3 de arriba, para la rejilla de Buffs (pregunta a Opus sobre el diseño
+    // 2-sep-2026, cuarta pasada) - mismo patron exacto, solo cambia el tipo (BuffSlotViewModel
+    // en vez de ItemSlotViewModel). Arrastrar un buff sobre otro los intercambia entero
+    // (id+duracion).
+    private Point? _dragStartBuffSlot;
+
+    private void OnBuffSlotMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStartBuffSlot = e.GetPosition(null);
+        if (sender is FrameworkElement { DataContext: BuffSlotViewModel slot })
+            _viewModel.SelectBuffSlot(slot);
+    }
+
+    private void OnBuffSlotMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _dragStartBuffSlot is not { } start) return;
+        var pos = e.GetPosition(null);
+        if (Math.Abs(pos.X - start.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(pos.Y - start.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        _dragStartBuffSlot = null;
+
+        if (sender is FrameworkElement { DataContext: BuffSlotViewModel { IsEmpty: false } slot } element)
+            DragDrop.DoDragDrop(element, new DataObject(typeof(BuffSlotViewModel), slot), DragDropEffects.Move);
+    }
+
+    private void OnBuffSlotDrop(object sender, DragEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: BuffSlotViewModel targetSlot }) return;
+        if (e.Data.GetDataPresent(typeof(BuffSlotViewModel)) && e.Data.GetData(typeof(BuffSlotViewModel)) is BuffSlotViewModel sourceSlot
+            && !ReferenceEquals(sourceSlot, targetSlot))
+        {
+            sourceSlot.SwapWith(targetSlot);
+        }
+    }
 }

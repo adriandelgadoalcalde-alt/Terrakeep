@@ -2,40 +2,47 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
+using TerrasavrNative.Core.Calamity;
 using TerrasavrNative.Core.Data;
 using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels;
 
-// Pestaña "Buffs" - edicion real (cierra el hueco #1 de la auditoria Terrasavr JS vs puerto,
-// ver bitacora.md): quitar un buff activo, cambiar su duracion, y buscar+añadir uno nuevo a
-// un hueco libre. NO se porto el guardado/carga de presets de buffs a fichero .json/.tsb del
-// original (decision de alcance) - se puede añadir despues si hace falta.
+// Pestaña "Buffs" - rehecha 2-sep-2026 (cuarta pasada, pregunta a Opus sobre el diseño:
+// "la misma rejilla cantidad de slots y contorno y todo que inventario"). Antes solo se
+// mostraban los buffs ACTIVOS en un WrapPanel dinamico (Active, filtrando Id==0) - ahora
+// Container expone los 44/22/10 slots REALES de PlrCharacter.Buffs (segun version, ver
+// PlrBodySerializer), algunos vacios, exactamente igual que un ContainerViewModel de objetos.
+// El buscador "Añadir buff..." se queda tal cual por ahora (rellena el primer slot vacio) -
+// la Libreria de buffs con arbol real de Terrasavr es la Fase 2 de este rework, todavia sin
+// implementar.
 public partial class BuffsViewModel : ObservableObject
 {
     private const int MaxResults = 200;
-    private const int DefaultDurationSeconds = 600; // 10 minutos, mismo criterio "valor razonable" que ResearchAll
 
+    private readonly CharacterFileService _service;
     private readonly VanillaBuffCatalog _vanillaCatalog;
     private readonly CalamityBuffCatalog _calamityCatalog;
     private readonly List<BuffCatalogEntryViewModel> _all;
-    private PlrCharacter? _character;
+    private readonly Action<BuffSlotViewModel> _selectSlot;
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _resultsSummary = string.Empty;
     [ObservableProperty] private bool _isPicking;
+    [ObservableProperty] private BuffContainerViewModel? _container;
 
-    public ObservableCollection<BuffRowViewModel> Active { get; } = [];
     public ObservableCollection<BuffCatalogEntryViewModel> Results { get; } = [];
 
-    public BuffsViewModel(CharacterFileService service)
+    public BuffsViewModel(CharacterFileService service, Action<BuffSlotViewModel> selectSlot)
     {
+        _service = service;
+        _selectSlot = selectSlot;
         _vanillaCatalog = service.VanillaBuffs;
         _calamityCatalog = service.CalamityBuffCatalog;
 
         _all = [];
         foreach (var (id, name) in _vanillaCatalog.AllEntries())
-            _all.Add(new BuffCatalogEntryViewModel(name, id, false, VanillaBuffIconResolver.GetIconPath(id), _vanillaCatalog.GetDescription(id)));
+            _all.Add(new BuffCatalogEntryViewModel(_vanillaCatalog.GetDisplayName(id), id, false, VanillaBuffIconResolver.GetIconPath(id), _vanillaCatalog.GetDescription(id)));
         foreach (var entry in _calamityCatalog.Entries)
         {
             string? iconPath = entry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/buff_icons/" + entry.Icon : null;
@@ -45,22 +52,23 @@ public partial class BuffsViewModel : ObservableObject
 
     public void LoadFrom(PlrCharacter character)
     {
-        _character = character;
-        Active.Clear();
         IsPicking = false;
         SearchText = string.Empty;
-        foreach (var buff in character.Buffs)
-        {
-            if (buff.Id == 0) continue;
-            Active.Add(BuffRowViewModel.From(buff, _vanillaCatalog, _calamityCatalog, RemoveRow));
-        }
+
+        var slots = new ObservableCollection<BuffSlotViewModel>();
+        for (int i = 0; i < character.Buffs.Count; i++)
+            slots.Add(new BuffSlotViewModel(i, character.Buffs[i], _vanillaCatalog, _calamityCatalog,
+                _service.VanillaBuffDurations, character.Version, _selectSlot));
+        // 11 columnas reales (pregunta a Opus sobre el diseño: "44 slots a 11 columnas", real
+        // de app.BuffSide/script.beautified.js - 4 filas exactas de 11, no 10x4+4 suelto).
+        Container = new BuffContainerViewModel("Buffs", slots, 11);
     }
 
-    private void RemoveRow(BuffRowViewModel row)
+    public void Reset()
     {
-        row.Buff.Id = 0;
-        row.Buff.Time = 0;
-        Active.Remove(row);
+        Container = null;
+        IsPicking = false;
+        Results.Clear();
     }
 
     [RelayCommand]
@@ -93,19 +101,15 @@ public partial class BuffsViewModel : ObservableObject
             : $"{matches.Count} resultado(s).";
     }
 
-    // Un personaje solo tiene sitio para 44/22/10 buffs activos a la vez (segun version, ver
-    // PlrBodySerializer) - si no queda ningun slot libre (Id==0), no hace nada en vez de
-    // reventar; caso raro, no hace falta un mensaje de error dedicado.
     [RelayCommand]
     private void PickBuff(BuffCatalogEntryViewModel? entry)
     {
-        if (_character == null || entry == null) return;
-        var slot = _character.Buffs.FirstOrDefault(b => b.Id == 0);
+        if (Container == null || entry == null) return;
+        var slot = Container.Slots.FirstOrDefault(s => s.IsEmpty);
         if (slot == null) return;
 
-        slot.Id = entry.Id;
-        slot.Time = DefaultDurationSeconds * 60; // Time va en ticks, 60/seg
-        Active.Add(BuffRowViewModel.From(slot, _vanillaCatalog, _calamityCatalog, RemoveRow));
+        slot.PlaceBuff(entry.Id);
+        _selectSlot(slot);
         IsPicking = false;
         SearchText = string.Empty;
     }

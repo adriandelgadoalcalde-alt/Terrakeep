@@ -77,6 +77,7 @@ public partial class MainViewModel : ObservableObject
     public FlagsViewModel Flags { get; } = new();
     public VersionEditorViewModel VersionEditor { get; } = new();
     public BuffsViewModel Buffs { get; }
+    public BuffEditViewModel BuffEdit { get; }
     public ItemEditViewModel ItemEdit { get; }
 
     public MainViewModel()
@@ -93,7 +94,8 @@ public partial class MainViewModel : ObservableObject
             SelectedTabIndex = PersonajeTabIndex;
             PersonajeInnerTabIndex = ObjetosInnerTabIndex;
         };
-        Buffs = new BuffsViewModel(_service);
+        BuffEdit = new BuffEditViewModel(_service);
+        Buffs = new BuffsViewModel(_service, SelectBuffSlot);
         ItemEdit = new ItemEditViewModel(_service);
         _saveConfirmationTimer.Tick += (_, _) =>
         {
@@ -110,6 +112,15 @@ public partial class MainViewModel : ObservableObject
         if (ItemEdit.Slot != null) ItemEdit.Slot.IsSelected = false;
         slot.IsSelected = true;
         ItemEdit.Slot = slot;
+    }
+
+    // Mismo patron que SelectSlot de arriba, para el panel "Editar buff seleccionado" (pregunta
+    // a Opus sobre el diseño 2-sep-2026, cuarta pasada) - un unico buff seleccionado a la vez.
+    public void SelectBuffSlot(BuffSlotViewModel slot)
+    {
+        if (BuffEdit.Slot != null) BuffEdit.Slot.IsSelected = false;
+        slot.IsSelected = true;
+        BuffEdit.Slot = slot;
     }
 
     // Usado por las tarjetas de la pagina de Inicio para saltar directamente a una seccion.
@@ -152,6 +163,7 @@ public partial class MainViewModel : ObservableObject
         {
             Library.PickTarget = null;
             ItemEdit.Slot = null;
+            BuffEdit.Slot = null;
             _loaded = _service.Load(plrPath);
             RebuildContainers();
             Appearance.LoadFrom(_loaded.Character);
@@ -159,6 +171,7 @@ public partial class MainViewModel : ObservableObject
             Flags.LoadFrom(_loaded.Character);
             VersionEditor.LoadFrom(_loaded.Character);
             Buffs.LoadFrom(_loaded.Character);
+            BuffEdit.SetCharacterVersion(_loaded.Character.Version);
             CharacterName = _loaded.Character.Name;
             HasCalamityData = _loaded.TplrPath != null;
             IsCharacterLoaded = true;
