@@ -123,9 +123,7 @@ public sealed class SlotGridPanel : Panel
         int n = InternalChildren.Count;
         if (n == 0) return finalSize;
 
-        int rows = (int)Math.Ceiling(n / (double)_cols);
         double contentW = _cols * _cell + Gap * (_cols - 1);
-        double contentH = rows * _cell + Gap * (rows - 1);
         // ItemsPresenter ignora el HorizontalAlignment/VerticalAlignment que se le ponga al
         // panel del ItemsPanelTemplate en XAML (arregla siempre al panel el finalSize
         // completo, sea cual sea su tamaño natural real - gotcha real de WPF, confirmado tras
@@ -134,9 +132,14 @@ public sealed class SlotGridPanel : Panel
         // hacerse aqui, calculando el hueco sobrante entre finalSize (siempre el disponible
         // completo) y el tamaño de contenido real, y desplazando el origen de cada celda -
         // pedido explicito del usuario (quinta pasada, "el panel me queda a un lado izquierdo,
-        // no me gusta" + "se deberia centrar la barra vertical").
+        // no me gusta"). SOLO en horizontal - la queja original era de lado izquierdo/derecho,
+        // nunca de arriba/abajo. Un primer intento centró tambien en vertical y desplazó la
+        // rejilla de Equipamiento (fila "*" con hueco vertical real de sobra) hacia el medio,
+        // separandola de la fila del selector Loadout/Vista - correccion real del usuario:
+        // "los slots tambien de armadura y accesorio vuelvan a la parte superior no al
+        // centro". offsetY se queda siempre en 0 (arriba), como estaba antes de esta pasada.
         double offsetX = Math.Max(0, (finalSize.Width - contentW) / 2);
-        double offsetY = Math.Max(0, (finalSize.Height - contentH) / 2);
+        const double offsetY = 0;
 
         for (int i = 0; i < n; i++)
         {

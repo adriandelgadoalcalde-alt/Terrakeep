@@ -115,14 +115,25 @@ public partial class LibraryViewModel : ObservableObject
         // resuelve cada id por diccionario - sin carpeta elegida (busqueda libre sobre todo
         // el catalogo) no hay ningun orden real de Terrasavr al que igualar, se deja _all.
         bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
+        // Restriccion de slot (consulta a Opus, sexta pasada): con un slot restringido como
+        // destino, el catalogo se reduce a lo valido ANTES de aplicar busqueda/carpeta -
+        // conjuntos tipicamente pequeños (4 monedas, ~20 ganchos, ~100 tintes), seguro
+        // mostrarlos de inmediato sin exigir una busqueda primero, a diferencia del catalogo
+        // completo sin restriccion (~8200 objetos).
+        var target = PickTarget;
+        bool hasSlotRestriction = target != null && target.AcceptedKind != TerrasavrNative.Core.Model.SlotKind.None;
+
         IEnumerable<LibraryItemViewModel> matches = SelectedCategory != null
             ? SelectedCategory.ItemIdsOrdered.Select(id => _byId[id])
             : _all;
 
+        if (hasSlotRestriction)
+            matches = matches.Where(i => target!.AcceptsItem(i.Id));
+
         if (hasSearch)
             matches = matches.Where(i => i.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
 
-        if (!hasSearch && SelectedCategory == null)
+        if (!hasSearch && SelectedCategory == null && !hasSlotRestriction)
         {
             ResultsSummary = $"{_all.Count} objetos en total (vanilla + Calamity) - escribe para buscar o elige una carpeta.";
             return;
@@ -132,12 +143,21 @@ public partial class LibraryViewModel : ObservableObject
         foreach (var item in list.Take(MaxResults)) Results.Add(item);
 
         string categoryLabel = SelectedCategory != null ? $" en \"{SelectedCategory.Name}\"" : string.Empty;
+        string restrictionLabel = hasSlotRestriction ? " válidos para este slot" : string.Empty;
         ResultsSummary = list.Count > MaxResults
-            ? $"Mostrando {MaxResults} de {list.Count} resultados{categoryLabel} - afina la busqueda."
-            : $"{list.Count} resultado(s){categoryLabel}.";
+            ? $"Mostrando {MaxResults} de {list.Count} resultados{restrictionLabel}{categoryLabel} - afina la busqueda."
+            : $"{list.Count} resultado(s){restrictionLabel}{categoryLabel}.";
     }
 
-    partial void OnPickTargetChanged(ItemSlotViewModel? value) => OnPropertyChanged(nameof(IsPicking));
+    partial void OnPickTargetChanged(ItemSlotViewModel? value)
+    {
+        OnPropertyChanged(nameof(IsPicking));
+        // Capa principal de prevencion de la restriccion de slot (consulta a Opus, sexta
+        // pasada: "cero chrome nuevo, cero popups... el problema deja de existir en el 90% de
+        // los casos, el usuario nunca ve un objeto invalido que poder elegir") - al abrir el
+        // selector para un slot restringido, refiltra de inmediato.
+        ApplyFilter();
+    }
 
     [RelayCommand]
     private void PlaceInTarget(LibraryItemViewModel entry)

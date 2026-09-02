@@ -221,6 +221,35 @@ public partial class MainWindow : Window
             DragDrop.DoDragDrop(element, new DataObject(typeof(ItemSlotViewModel), slot), DragDropEffects.Move);
     }
 
+    // Retroalimentación de la restricción de slot MIENTRAS se arrastra, antes de soltar
+    // (consulta a Opus, sexta pasada: "el propio cursor del sistema se convierte en el
+    // símbolo de prohibido... es el idioma del SO, no el tuyo, y llega ANTES de soltar" - la
+    // capa mas barata que existe, cero chrome nuevo). Cubre los dos origenes reales de
+    // arrastre (tarjeta de la Libreria y otro slot).
+    private void OnItemSlotDragOver(object sender, DragEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: ItemSlotViewModel targetSlot }) return;
+
+        bool accepted;
+        if (e.Data.GetDataPresent(typeof(LibraryItemViewModel)) && e.Data.GetData(typeof(LibraryItemViewModel)) is LibraryItemViewModel libraryItem)
+        {
+            accepted = targetSlot.AcceptsItem(libraryItem.Id);
+        }
+        else if (e.Data.GetDataPresent(typeof(ItemSlotViewModel)) && e.Data.GetData(typeof(ItemSlotViewModel)) is ItemSlotViewModel sourceSlot)
+        {
+            // El intercambio mueve el objeto en AMBAS direcciones - hay que validar que cada
+            // slot acepta lo que le va a llegar, no solo el destino.
+            accepted = targetSlot.AcceptsItem(sourceSlot.Item.Id) && sourceSlot.AcceptsItem(targetSlot.Item.Id);
+        }
+        else
+        {
+            accepted = true;
+        }
+
+        e.Effects = accepted ? DragDropEffects.Move : DragDropEffects.None;
+        e.Handled = true;
+    }
+
     // Soltar una tarjeta de la Libreria coloca ese objeto (igual que "Cambiar objeto"); soltar
     // otro slot arrastrado los intercambia entero (prefijo/cantidad/favorito incluidos).
     private void OnItemSlotDrop(object sender, DragEventArgs e)
@@ -232,7 +261,8 @@ public partial class MainWindow : Window
             targetSlot.PlaceItem(libraryItem.Id);
         }
         else if (e.Data.GetDataPresent(typeof(ItemSlotViewModel)) && e.Data.GetData(typeof(ItemSlotViewModel)) is ItemSlotViewModel sourceSlot
-                 && !ReferenceEquals(sourceSlot, targetSlot))
+                 && !ReferenceEquals(sourceSlot, targetSlot)
+                 && targetSlot.AcceptsItem(sourceSlot.Item.Id) && sourceSlot.AcceptsItem(targetSlot.Item.Id))
         {
             sourceSlot.SwapWith(targetSlot);
         }

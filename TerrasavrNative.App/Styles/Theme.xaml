@@ -37,6 +37,12 @@
          (ya reservado para "accion con exito", ej. el banner de guardado) para que ambos
          significados no se confundan. -->
     <Color x:Key="EquippedGreenColor">#3ddc6e</Color>
+    <!-- Oro del Modo Maestro real (consulta a Opus, sexta pasada) - un punto real de la
+         pulsación (255, masterColor*200, 0) que usa el propio juego en el HUD de Maestro
+         (Main.cs:20109-20111, masterColor~=0.85), no inventado - se distingue de OrangeColor
+         (solo aparece como contorno de panel, nunca dentro de un slot) para que ambas señales
+         no se confundan. El 6º hueco (Experto) reutiliza PinkColor, ya existente. -->
+    <Color x:Key="MasterGoldColor">#ffd24a</Color>
 
     <SolidColorBrush x:Key="BgPrimaryBrush" Color="{StaticResource BgPrimaryColor}" />
     <SolidColorBrush x:Key="BgSecondaryBrush" Color="{StaticResource BgSecondaryColor}" />
@@ -56,6 +62,7 @@
     <SolidColorBrush x:Key="PinkBrush" Color="{StaticResource PinkColor}" />
     <SolidColorBrush x:Key="OrangeBrush" Color="{StaticResource OrangeColor}" />
     <SolidColorBrush x:Key="EquippedGreenBrush" Color="{StaticResource EquippedGreenColor}" />
+    <SolidColorBrush x:Key="MasterGoldBrush" Color="{StaticResource MasterGoldColor}" />
 
     <!-- Degradados reales (135deg en el CSS original -> equivalente en WPF con StartPoint/
          EndPoint en esquinas opuestas) - los botones fuertes de Terrasavr real nunca son de

@@ -262,13 +262,31 @@ public partial class MainViewModel : ObservableObject
         var bank4 = AddContainer("bank4", "Boveda del Vacio", _loaded.MergedContainers["bank4"]);
         // columns: 1 (pregunta a Opus sobre el diseño, quinta pasada: "mascotas etc mejor en
         // vertical") - laterales de la Equipamiento fusionada, una sola columna de 5 filas.
-        MountsContainer = AddContainer("miscEquips", "Mascota / Montura / Gancho", _loaded.MergedContainers["miscEquips"], columns: 1);
-        DyesContainer = AddContainer("miscDyes", "Tintes (mascota/montura/gancho)", _loaded.MergedContainers["miscDyes"], columns: 1);
+        // Orden real de los 5 slots (Player.miscEquips, confirmado por Opus contra Player.cs
+        // Y de forma independiente contra el propio script.js real de Terrasavr -
+        // app.TabMiscEquips, slotLabels = ["Pet","Light pet","Minecart","Mount","Hook"], dos
+        // fuentes reales coincidentes): 0=Mascota, 1=Mascota de luz, 2=Vagoneta, 3=Montura,
+        // 4=Gancho. Restriccion de tipo (petición explícita 2-sep-2026: "solo deberian poderse
+        // equipar sus respectivos items") + icono fantasma real por indice.
+        SlotKind[] miscEquipKinds = [SlotKind.VanityPet, SlotKind.LightPet, SlotKind.Cart, SlotKind.Mount, SlotKind.Hook];
+        string?[] miscEquipGhosts = ["pet", "pet_light", "minecart", "mount", "hook"];
+        MountsContainer = AddContainer("miscEquips", "Mascota / Montura / Gancho", _loaded.MergedContainers["miscEquips"], columns: 1,
+            slotKinds: miscEquipKinds, ghostIcons: miscEquipGhosts);
+        // Los 5 tintes van emparejados 1:1 con los 5 slots de arriba, pero un tinte SIEMPRE
+        // es solo un tinte (dye>0) sea cual sea el equipo al que este emparejado - mismo
+        // SlotKind.Dye y mismo ghost "dye" en los 5, a diferencia del contenedor de arriba.
+        DyesContainer = AddContainer("miscDyes", "Tintes (mascota/montura/gancho)", _loaded.MergedContainers["miscDyes"], columns: 1,
+            slotKinds: [SlotKind.Dye, SlotKind.Dye, SlotKind.Dye, SlotKind.Dye, SlotKind.Dye],
+            ghostIcons: ["dye", "dye", "dye", "dye", "dye"]);
 
         // Monedas/municion: vanilla-only (ver CalamityCharacterSync.cs para el alcance
-        // documentado - la app JS tampoco los sincroniza con Calamity, solo los protege).
-        CoinsContainer = AddContainer("coins", "Monedas", _loaded.Character.Coins.ToGameItems());
-        AmmoContainer = AddContainer("ammo", "Municion", _loaded.Character.Ammo.ToGameItems());
+        // documentado - la app JS tampoco los sincroniza con Calamity, solo los protege). Sin
+        // ghost real (el propio juego tampoco dibuja uno en estos dos contextos, ver
+        // ItemSlot.cs real - no se inventa ninguno).
+        CoinsContainer = AddContainer("coins", "Monedas", _loaded.Character.Coins.ToGameItems(),
+            slotKinds: [SlotKind.Coin, SlotKind.Coin, SlotKind.Coin, SlotKind.Coin]);
+        AmmoContainer = AddContainer("ammo", "Municion", _loaded.Character.Ammo.ToGameItems(),
+            slotKinds: [SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo]);
 
         StorageGroup = new StorageGroupViewModel(bank, bank2, bank3, bank4);
 
@@ -365,13 +383,21 @@ public partial class MainViewModel : ObservableObject
     // columns (pregunta a Opus sobre el diseño, quinta pasada - fusion de Equipamiento con
     // Monturas/Monedas como laterales): default 10 para los contenedores de siempre; los
     // laterales que se quieren verticales (Mascota/Montura/Gancho, Tintes) pasan columns: 1.
-    private ContainerViewModel AddContainer(string key, string displayName, GameItem[] items, int columns = 10)
+    // slotKinds/ghostIcons (pedido explicito 2-sep-2026: "los slots de tintes, gancho,
+    // vagoneta, montura y mascota solo deberian poderse equipar sus respectivos items" +
+    // iconos fantasma reales) - null = sin restriccion/sin ghost en todos los slots (el caso
+    // de siempre: Inventario/Banco/Caja fuerte/Fragua/Boveda), o un array del mismo tamaño
+    // que items para fijarlo por indice (miscEquips/miscDyes/coins/ammo).
+    private ContainerViewModel AddContainer(string key, string displayName, GameItem[] items, int columns = 10,
+        SlotKind[]? slotKinds = null, string?[]? ghostIcons = null)
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
         {
             bool isEquipped = key == "inventory" && i < HotbarSlotCount;
-            slots.Add(new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped));
+            var kind = slotKinds != null && i < slotKinds.Length ? slotKinds[i] : SlotKind.None;
+            var ghost = ghostIcons != null && i < ghostIcons.Length ? ghostIcons[i] : null;
+            slots.Add(new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped, kind, ghost));
         }
         var container = new ContainerViewModel(key, displayName, slots) { Columns = columns };
         Containers.Add(container);

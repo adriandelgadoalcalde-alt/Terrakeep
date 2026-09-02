@@ -3073,3 +3073,150 @@ implementado todavía - solo se corrigió el dato del 6º accesorio de las build
 dentro de esa misma tarea, las builds `prehardmode`/`earlyhardmode` (8 combinaciones) NO se
 han revisado contra la wiki para su propio 6º/7º accesorio - solo se hizo la ronda `endgame`.
 Queda como tarea separada, a retomar cuando el usuario confirme prioridad.
+
+## Sexta pasada de feedback (2-sep-2026) - restricciones reales de slot, iconos fantasma reales, 6º/7º accesorio marcado por color, centrado real, cierre de las builds
+
+Mensaje único, denso, 7 peticiones + "consulta con opus y después ejecuta" otra vez. Dos
+investigaciones reales lanzadas en paralelo antes de consultar a Opus (código decompilado de
+tModLoader para las restricciones de slot; wiki para las 8 builds prehardmode/earlyhardmode
+pendientes), después una consulta a Opus con los hallazgos reales ya en mano.
+
+- **Cierre de las builds** (pregunta explícita del usuario: "¿ya has revisado lo de las
+  builds?"): NO estaba cerrado - solo la corrección `endgame` de la ronda anterior. Wiki real
+  confirma 2 correcciones más en `builds.json`: `prehardmode.*.accessories[6]` (Fast Clock,
+  solo obtenible en Hardmode - contradice la etapa) → Bezoar (real de pre-hardmode, cae de
+  Hornets/Toxic Sludges); `earlyhardmode.melee.accessories[6]` (Fire Gauntlet, requiere los 3
+  jefes mecánicos) → Trifold Map (ya usado en las otras 3 clases de esa etapa). Traducciones
+  reales verificadas contra `vanilla_item_names_by_key.json` del propio proyecto antes de
+  escribirlas. Comiteado aparte (`ebb9e5f`) junto al arreglo de centrado, antes del resto de
+  esta pasada.
+- **Centrado real del panel fusionado**: el usuario reportó que quedaba "a un lado izquierdo".
+  Bug real de WPF confirmado con inspección directa del árbol visual (`VisualTreeHelper`, no
+  solo la captura): `ItemsPresenter` SIEMPRE le da al panel de un `ItemsPanelTemplate` el
+  `finalSize` completo en `Arrange`, ignorando por completo el `HorizontalAlignment` puesto en
+  el propio panel en XAML (se probó, compilaba, no tenía ningún efecto visible). El centrado
+  real solo puede hacerse dentro de `SlotGridPanel.ArrangeOverride` (offset = hueco entre
+  `finalSize` y el tamaño de contenido real). Verificado con números reales: 29,6px de offset
+  centrando una celda de 44px en un panel de 103,2px (columna lateral real de 115,2px menos
+  padding) - exacto.
+- **P1 (investigación real, código decompilado de tModLoader 1.4.5.8)**: qué campo valida cada
+  tipo de slot restringido. Confirmado archivo:línea real para los 8 tipos (`ItemSlot.cs`,
+  `Item.cs`, `Projectile.cs`, `Main.cs`, `Initializers/DyeInitializer.cs`, `ID/MountID.cs`) -
+  ver cabecera de `scripts/extraer-slot-kind-vanilla.py` para el detalle citado completo. Dato
+  clave: el gancho/mascota/mascota de luz NO tienen ningún campo directo - se resuelven
+  cruzando `shoot`/`buffType` contra tablas reales del motor (`Main.projHook[]` vía
+  `aiStyle==7` en `Projectile.cs`; `Main.vanityPet[]`/`Main.lightPet[]` indexados por
+  `buffType`). El orden real de los 5 slots de `MountsContainer`/`DyesContainer`
+  (`Player.miscEquips`) se confirmó con DOS fuentes independientes coincidentes: el propio
+  `Player.cs` decompilado Y el `script.beautified.js` real de Terrasavr
+  (`app.TabMiscEquips.slotLabels = ["Pet","Light pet","Minecart","Mount","Hook"]`) - sin
+  ambigüedad.
+- **P2 (investigación real)**: Opus corrigió dos premisas erróneas de mi propia consulta -
+  SÍ existe ya un extractor XNB→PNG probado (`xnb-to-png.js`+`lzx-decoder.js`, hecho el mismo
+  día en el proyecto hermano) y SÍ está el código real que dibuja los iconos fantasma
+  (`ItemSlot.cs`, `TextureAssets.Extra[54]` = `Content/Images/Extra_54.xnb`, atlas 3x6 de
+  34x34 recortado a 32x32). Tabla contexto→frame verbatim del switch real.
+- **Extracción real de los 13 iconos fantasma** (`scripts/extraer-iconos-fantasma-slot.js`,
+  nuevo): extrae `Extra_54.xnb` real de la instalación de Steam, recorta las 13 celdas usadas
+  (armor_head/body/legs, vanity_head/body/legs, accessory, accessory_vanity, dye, hook, mount,
+  minecart, pet, pet_light) y las retiñe a `TextSecondaryBrush` (#8a8fa3, ya existente en
+  Theme.xaml) en vez del blanco original del juego - para que pertenezcan a la paleta de
+  Terrakeep. Verificado visualmente con una hoja de contacto antes de integrar: las 13
+  siluetas encajan exactamente con su significado (gancho = bastón de caramelo real, montura =
+  herradura, mascota = huella, mascota de luz = estrella...). Salida:
+  `Assets/vanilla/slot_ghosts/{nombre}.png`.
+- **`scripts/extraer-slot-kind-vanilla.py`** (nuevo): escanea `Item.cs` (reutilizando
+  `split_by_case`, el escáner de bloques ya depurado de `extraer-categorias-vanilla.py`),
+  `Projectile.cs` (ganchos reales, aiStyle=7), `Main.cs` (mascota/mascota de luz por buffType)
+  y `Initializers/DyeInitializer.cs` (tintes reales - `dye = GameShaders.Armor.
+  GetShaderIdFromItemId(type)` se asigna GLOBAL fuera de cualquier SetDefaults, así que hubo
+  que localizar dónde se REGISTRA cada tinte de verdad, no donde se lee). Salida:
+  `Assets/vanilla_slot_kind.json` (bitmask por id). Cobertura real, no ocultada: 210→314
+  objetos clasificados tras añadir tintes reales (105/120 tintes, 87,5%); monturas/vagonetas
+  solo 37/52 asignaciones reales encontradas (~70%, mismo techo de cobertura ya documentado en
+  `extraer-categorias-vanilla.py` - un id ausente del catálogo NO se restringe, nunca al
+  revés, documentado en el propio script y en `VanillaSlotKindCatalog.cs`).
+- **Core**: `SlotKind` (nuevo, `[Flags] enum`, 8 bits) + `VanillaSlotKindCatalog` (calco de
+  `VanillaCategoryCatalog`, carga `vanilla_slot_kind.json`) - regla obligatoria de Opus
+  ("desconocido = permitir"): un objeto de Calamity SIEMPRE pasa cualquier restricción
+  (`CalamityCatalogEntryData` no tiene ninguno de estos campos reales - validar estricto
+  bloquearía TODAS las monturas/mascotas/tintes reales de Calamity).
+- **`ItemSlotViewModel`**: `AcceptedKind`/`GhostIconPath`/`IsExpertAccessorySlot`/
+  `IsMasterAccessorySlot`/`RejectionMessage` nuevos; `AcceptsItem(id)` público (usado también
+  por el filtro de la Librería y el `DragOver`); `PlaceItem`/`OnItemIdChanged` rechazan un
+  objeto no válido - UX de 3 capas real, ninguna intrusiva (consulta a Opus): (1) la Librería
+  se filtra de inmediato al elegir para un slot restringido (`LibraryViewModel.ApplyFilter`,
+  el usuario nunca ve un objeto inválido que poder elegir - capa principal); (2) arrastrar y
+  soltar cambia el cursor del sistema a "prohibido" ANTES de soltar (`OnItemSlotDragOver`
+  nuevo, `DragDropEffects.None`); (3) el campo "Índice" a mano (único camino donde el silencio
+  confunde de verdad) revierte el número y escribe un aviso corto en el panel Editar.
+- **`MainViewModel`/`EquipmentGroupViewModel`**: `AddContainer`/`AddSlotSet` ahora pasan
+  `SlotKind`/nombre de fantasma por índice real - `miscEquips` con el orden real confirmado
+  (Pet/LightPet/Cart/Mount/Hook), `miscDyes` siempre `Dye`, `coins`/`ammo` con su propio tipo,
+  y la rejilla de Armadura/Accesorios (`loadout0Items`, 10 slots reales) con ghost por índice
+  (0-2 armadura, 3-9 accesorio) y el 6º/7º (índices 8/9) marcados - SOLO en la vista
+  Armadura/Accesorios, no en Vanidad/Tintes (pedido explícito: "en la rejilla de armadura y
+  accesorios").
+- **P3 (6º/7º accesorio)**: franja vertical de 3px en el borde interior izquierdo (no el
+  contorno del slot - ya carga 3 significados mutuamente excluyentes: Calamity/Equipado/
+  Seleccionado, y esto es identidad PERMANENTE que debe leerse a la vez). Rosa (`PinkBrush`,
+  ya existente) para el 6º (Experto/Corazón de Demonio); nuevo `MasterGoldColor`/
+  `MasterGoldBrush` (#ffd24a) para el 7º - un punto real de la pulsación
+  `(255,masterColor*200,0)` que usa el propio juego (`Main.cs:20109-20111`), no inventado.
+  Permanente, nunca condicionado a datos del personaje cargado (hallazgo real de Opus:
+  `Main.masterMode` no tiene NINGÚN dato en el .plr al que condicionarse - condicionar solo el
+  6º sería incoherente). Tooltip explicativo real (visible también con el slot vacío,
+  `ShowTooltip` nuevo en `ItemSlotViewModel`).
+- **XAML** (`SlotCompactTemplate`): `Image` de fantasma detrás del icono real (`Opacity=0.35`,
+  visible solo con `IsEmpty`), las 2 franjas de color, tooltip ampliado, `ToolTipService.
+  IsEnabled` cambiado de `IsNotEmpty` a `ShowTooltip` (el 6º/7º quiere explicarse también
+  vacío). Panel "Editar": `RejectionMessage` con color `CalamityBrush`, sin reservar espacio
+  cuando no hay mensaje (`Collapsed`).
+
+**Verificación real** (arnés de UI Automation ampliado con ids reales conocidos: 84=Gancho de
+escalada, 1914=Campanas de reno, 2191=Jaula de ratón, 603=Zanahoria, 425=Campana de hada,
+1007=Tinte rojo, 40=Flecha de madera, 71=Moneda de cobre): las 8 combinaciones
+restricción/objeto real probadas exactas (aceptado cuando corresponde, rechazado con mensaje
+real cuando no, Calamity siempre aceptado); 6º/7º accesorio marcado correctamente y el 3º
+(normal) sin marcar; fantasma real resuelto para cabeza de armadura. Captura PNG real
+(`RenderTargetBitmap`) revisada a mano: fantasmas grises visibles en los huecos vacíos
+(incluida la ausencia real de fantasma en Munición, el propio juego tampoco dibuja uno ahí),
+franja rosa visible en el 6º accesorio, franja dorada en el 7º, iconos reales de mascota/
+montura/gancho/tinte/monedas renderizados sin solapes. `dotnet build` limpio, `dotnet test`
+134/134. Sin `ultimo-error.log`.
+
+**Pendiente, documentado con claridad**: cobertura de `vanilla_slot_kind.json` no es del
+100% (ver arriba, ~70-87% según el tipo) - un id ausente del catálogo se queda sin restringir
+(nunca al revés, así que no es un riesgo de bloquear algo válido, solo de no restringir algo
+que debería). Ampliar el escáner a los casos que no encuentra queda fuera de esta pasada.
+
+### Dos correcciones del usuario a mitad de esta misma ronda
+
+1. **"rectifica las armaduras y los accesorios si los quiero arriba"** - el usuario SÍ quiere
+   que la rejilla de Armadura/Accesorios (`loadout0Items`, y también Vanidad/`loadout*Social`,
+   mismo campo real) tenga su propia restricción de tipo, igual que tintes/gancho/montura/
+   mascota/moneda/munición - ampliación del alcance original, no solo lo que se había pedido
+   literalmente. Añadidos 4 bits nuevos a `SlotKind` (`ArmorHead=256/ArmorBody=512/
+   ArmorLegs=1024/Accessory=2048`), extraídos con el mismo escáner ya depurado
+   (`extraer-slot-kind-vanilla.py` ampliado con los campos directos reales `headSlot`/
+   `bodySlot`/`legSlot`/`accessory` de `Item.cs` - mismo patrón ya validado en
+   `extraer-categorias-vanilla.py`, sin cross-referencing complejo esta vez). Vale igual para
+   objetos funcionales y de vanidad (`vanity=true` no cambia el equip type real). Cobertura:
+   259 accesorios, 239/171/145 cabeza/cuerpo/piernas reales encontrados - números creíbles.
+   `EquipmentGroupViewModel.AddSlotSet` ahora pasa `SlotKind` por índice también en Items y
+   Social (índices 0-2 = cabeza/cuerpo/piernas, 3-9 = accesorio). Verificado con ids reales
+   conocidos (1546=Tocado de piñonita→ArmorHead, 490=Warrior Emblem→Accessory): un objeto no
+   armadura (3=Bloque de piedra) rechazado de verdad en el slot de cabeza, con mensaje real,
+   sin tocar el objeto que ya había puesto.
+2. **"los slots también de armadura y accesorio vuelvan a la parte superior no al centro"** -
+   corrección real a mi propio sobrealcance: la queja ORIGINAL del centrado (quinta pasada) era
+   solo horizontal ("a un lado izquierdo"); mi primer arreglo centró también en VERTICAL
+   (`offsetY` en `SlotGridPanel.ArrangeOverride`), lo cual desplazaba la rejilla de
+   Equipamiento (fila `"*"` con hueco vertical real de sobra) hacia el medio, separándola
+   visualmente de la fila del selector Loadout/Vista - nadie lo había pedido. Corregido:
+   `offsetY` fijo a 0 (arriba) siempre, solo `offsetX` centra. Verificado con captura real:
+   la rejilla vuelve pegada justo debajo del selector, sin hueco.
+
+**Verificación real de ambas correcciones**: `dotnet build` limpio, `dotnet test` 134/134,
+arnés de UI Automation con nuevas aserciones (`AcceptsItem`/`PlaceItem` sobre slots de cabeza
+y accesorio con ids reales conocidos) y captura PNG real revisada a mano tras cada cambio.

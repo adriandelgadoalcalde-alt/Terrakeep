@@ -29,9 +29,28 @@ public partial class ItemSlotViewModel : ObservableObject
     // 2-sep-2026: contorno verde real en vez de solo un hueco de separacion. Los slots de
     // Inventario/Banco/... normales se quedan en false.
     public bool IsEquipped { get; }
+    // Que tipo de objeto acepta este slot en concreto - None (por defecto) = sin restriccion,
+    // igual que siempre. Pedido explicito 2-sep-2026 ("los slots de tintes, gancho, vagoneta,
+    // montura y mascota solo deberian poderse equipar sus respectivos items") + investigacion
+    // de monedas/municion. Ver TerrasavrNative.Core.Model.SlotKind.
+    public SlotKind AcceptedKind { get; }
+    // Icono "fantasma" real de fondo (extraido del propio juego, ver
+    // scripts/extraer-iconos-fantasma-slot.js) para cuando el slot esta vacio - null en los
+    // slots sin restriccion de tipo (Inventario/Banco/...) o en los que el juego real
+    // tampoco dibuja ninguno (Moneda/Municion, ver GhostIconResolver.cs).
+    public string? GhostIconPath { get; }
+    // 6º hueco de accesorio real (armor[8], solo funciona con el Corazón de Demonio/Cármesí,
+    // ExtraAccessory en el .plr - obtenible desde Modo Experto) / 7º hueco real (armor[9],
+    // automatico en Modo Maestro, sin dato en el .plr - Player.cs:11014-11035, consulta a
+    // Opus sexta pasada). Puramente visual, permanente (nunca condicionado a datos del
+    // personaje cargado - el 7º no tiene NINGÚN dato al que condicionarse, ver el comentario
+    // de EquipmentGroupViewModel.AddSlotSet).
+    public bool IsExpertAccessorySlot { get; }
+    public bool IsMasterAccessorySlot { get; }
     public GameItem Item { get; private set; } = GameItem.Empty;
 
     [ObservableProperty] private string _displayName = string.Empty;
+    [ObservableProperty] private string? _rejectionMessage;
     [ObservableProperty] private int _count;
     [ObservableProperty] private bool _isCalamity;
     [ObservableProperty] private bool _isEmpty = true;
@@ -44,6 +63,11 @@ public partial class ItemSlotViewModel : ObservableObject
     [ObservableProperty] private int _prefixId;
 
     public bool IsNotEmpty => !IsEmpty;
+    // El tooltip normal solo tiene sentido con el slot lleno (ver comentario mas abajo en
+    // MainWindow.xaml), pero el 6º/7º hueco de accesorio quiere explicarse TAMBIEN vacio -
+    // es precisamente cuando mas hace falta (por que hay una franja de color en un slot sin
+    // nada dentro).
+    public bool ShowTooltip => IsNotEmpty || IsExpertAccessorySlot || IsMasterAccessorySlot;
     partial void OnIsEmptyChanged(bool value)
     {
         OnPropertyChanged(nameof(IsNotEmpty));
@@ -55,18 +79,54 @@ public partial class ItemSlotViewModel : ObservableObject
     // algo real (1 unidad no necesita rotularse, igual que hace el propio Terraria).
     public bool ShowCount => !IsEmpty && Count > 1;
 
-    public ItemSlotViewModel(CharacterFileService service, int slotIndex, string containerName, GameItem item, Action<ItemSlotViewModel>? requestPick = null, bool isEquipped = false)
+    public ItemSlotViewModel(CharacterFileService service, int slotIndex, string containerName, GameItem item, Action<ItemSlotViewModel>? requestPick = null, bool isEquipped = false,
+        SlotKind acceptedKind = SlotKind.None, string? ghostIcon = null, bool isExpertAccessorySlot = false, bool isMasterAccessorySlot = false)
     {
         _service = service;
         SlotIndex = slotIndex;
         ContainerName = containerName;
         _requestPick = requestPick;
         IsEquipped = isEquipped;
+        AcceptedKind = acceptedKind;
+        GhostIconPath = SlotGhostIconResolver.GetIconPath(ghostIcon);
+        IsExpertAccessorySlot = isExpertAccessorySlot;
+        IsMasterAccessorySlot = isMasterAccessorySlot;
         UpdateFrom(item);
     }
 
+    // true si este objeto (vanilla o Calamity) encaja en AcceptedKind - AcceptedKind=None
+    // acepta cualquier cosa, igual que siempre. Los objetos de Calamity SIEMPRE se aceptan
+    // (consulta a Opus, sexta pasada: CalamityCatalogEntryData no tiene ninguno de los campos
+    // reales que hacen falta para validar esto - ammo/mountType/buffType/dye/shoot - validar
+    // estricto bloquearia TODAS las monturas/mascotas/tintes reales de Calamity; "desconocido
+    // = permitir").
+    public bool AcceptsItem(int itemId)
+    {
+        if (AcceptedKind == SlotKind.None || itemId <= 0) return true;
+        if (itemId >= CalamityIds.ItemIdBase) return true;
+        return (_service.VanillaSlotKinds.GetKind(itemId) & AcceptedKind) != 0;
+    }
+
+    private string BuildRejectionMessage() => AcceptedKind switch
+    {
+        SlotKind.Ammo => "Este slot solo acepta munición.",
+        SlotKind.Coin => "Este slot solo acepta monedas.",
+        SlotKind.Dye => "Este slot solo acepta tintes.",
+        SlotKind.Hook => "Este slot solo acepta ganchos.",
+        SlotKind.Mount => "Este slot solo acepta monturas.",
+        SlotKind.Cart => "Este slot solo acepta vagonetas.",
+        SlotKind.VanityPet => "Este slot solo acepta mascotas.",
+        SlotKind.LightPet => "Este slot solo acepta mascotas de luz.",
+        SlotKind.ArmorHead => "Este slot solo acepta cascos/tocados.",
+        SlotKind.ArmorBody => "Este slot solo acepta petos/túnicas.",
+        SlotKind.ArmorLegs => "Este slot solo acepta grebas/pantalones.",
+        SlotKind.Accessory => "Este slot solo acepta accesorios.",
+        _ => "Este objeto no encaja en este slot.",
+    };
+
     public void UpdateFrom(GameItem item)
     {
+        RejectionMessage = null;
         Item = item;
         IsEmpty = item.IsEmpty;
         IsCalamity = item.IsCalamity;
@@ -129,6 +189,11 @@ public partial class ItemSlotViewModel : ObservableObject
     // prefijo).
     public void PlaceItem(int id)
     {
+        if (!AcceptsItem(id))
+        {
+            RejectionMessage = BuildRejectionMessage();
+            return;
+        }
         var item = new GameItem { Id = id, Count = 1 };
         var suggestion = PrefixSuggester.Suggest(item, _service.CalamityCatalog, _service.BestPrefixes, _service.RoguePrefixCatalog);
         if (suggestion.HasValue) item.Prefix = suggestion.Value;
@@ -219,6 +284,18 @@ public partial class ItemSlotViewModel : ObservableObject
     partial void OnItemIdChanged(int value)
     {
         if (_suppressIdWriteback || value <= 0 || value == Item.Id) return;
+        // Campo "Indice" a mano - el unico camino de los tres (Libreria filtrada/arrastrar y
+        // soltar/Indice) donde el silencio confunde de verdad (el usuario escribe y no pasa
+        // nada) - revertir el numero escrito y avisar en el propio panel Editar (consulta a
+        // Opus, sexta pasada).
+        if (!AcceptsItem(value))
+        {
+            RejectionMessage = BuildRejectionMessage();
+            _suppressIdWriteback = true;
+            ItemId = Item.IsEmpty ? 0 : Item.Id;
+            _suppressIdWriteback = false;
+            return;
+        }
         PlaceItem(value);
     }
 

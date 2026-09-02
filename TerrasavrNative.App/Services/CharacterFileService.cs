@@ -42,6 +42,7 @@ public sealed class CharacterFileService
     public VanillaBuffCatalog VanillaBuffs { get; }
     public BestPrefixCatalog BestPrefixes { get; }
     public VanillaCategoryCatalog VanillaCategories { get; }
+    public VanillaSlotKindCatalog VanillaSlotKinds { get; }
     public VanillaItemStatsCatalog VanillaStats { get; }
     public PrefixRulesCatalog PrefixRules { get; }
     public HairDyeCatalog HairDyes { get; }
@@ -80,6 +81,7 @@ public sealed class CharacterFileService
         VanillaBuffs = VanillaBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_buff_names.json"), Path.Combine(assetsDir, "vanilla_buff_descriptions.json"), Path.Combine(assetsDir, "vanilla_buff_names_es.json"));
         BestPrefixes = BestPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "best_prefix.json"));
         VanillaCategories = VanillaCategoryCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_categories.json"));
+        VanillaSlotKinds = VanillaSlotKindCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_slot_kind.json"));
         VanillaStats = VanillaItemStatsCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_stats.json"));
         PrefixRules = PrefixRulesCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_prefix_rules.json"));
         HairDyes = HairDyeCatalog.LoadFromFile(Path.Combine(assetsDir, "hair_dyes.json"));

@@ -51,6 +51,14 @@
                     <TextBlock Text="Índice (id)" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
                     <TextBox Text="{Binding Slot.ItemId, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,8"
                              Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                    <!-- Restriccion de slot (consulta a Opus, sexta pasada): el unico camino
+                         de los tres (Libreria filtrada/arrastrar y soltar/Indice a mano) donde
+                         el silencio confunde de verdad - aqui SI hace falta una linea real,
+                         nada modal. Collapsed no reserva espacio, no cambia el espaciado
+                         normal cuando no hay mensaje. -->
+                    <TextBlock Text="{Binding Slot.RejectionMessage}" Style="{StaticResource CaptionText}"
+                               Foreground="{StaticResource CalamityBrush}" TextWrapping="Wrap" Margin="0,-4,0,8"
+                               Visibility="{Binding Slot.RejectionMessage, Converter={StaticResource NullToVis}}" />
 
                     <TextBlock Text="Cantidad" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
                     <TextBox Text="{Binding Slot.Count, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,8"
@@ -282,16 +290,17 @@
              con el glow de acento). Sin Width/Height explicitos - los da SlotGridPanel al
              hacer Arrange. -->
         <DataTemplate x:Key="SlotCompactTemplate" DataType="{x:Type vm:ItemSlotViewModel}">
-            <Border AllowDrop="True" ToolTipService.IsEnabled="{Binding IsNotEmpty}"
+            <Border AllowDrop="True" ToolTipService.IsEnabled="{Binding ShowTooltip}"
                     PreviewMouseLeftButtonDown="OnItemSlotMouseDown" MouseMove="OnItemSlotMouseMove"
-                    Drop="OnItemSlotDrop">
+                    DragOver="OnItemSlotDragOver" Drop="OnItemSlotDrop">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding ChooseFromLibraryCommand}" />
                 </Border.InputBindings>
                 <Border.ToolTip>
                     <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <StackPanel MaxWidth="240">
-                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap"
+                                       Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
                             <TextBlock Style="{StaticResource CaptionText}"
                                        Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}">
                                 <Run Text="Prefijo: " />
@@ -299,6 +308,16 @@
                             </TextBlock>
                             <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                                        Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
+                            <!-- 6º/7º hueco de accesorio real (consulta a Opus, sexta pasada:
+                                 "la etiqueta de color sola es un codigo que el usuario tiene
+                                 que aprender; el tooltip lo resuelve gratis") - se ve tambien
+                                 con el slot vacio, ver ShowTooltip. -->
+                            <TextBlock Text="Hueco extra - Modo Experto (Corazón de Demonio)" Style="{StaticResource CaptionText}"
+                                       Foreground="{StaticResource PinkBrush}" TextWrapping="Wrap"
+                                       Visibility="{Binding IsExpertAccessorySlot, Converter={StaticResource BoolToVis}}" />
+                            <TextBlock Text="Hueco extra - Modo Maestro" Style="{StaticResource CaptionText}"
+                                       Foreground="{StaticResource MasterGoldBrush}" TextWrapping="Wrap"
+                                       Visibility="{Binding IsMasterAccessorySlot, Converter={StaticResource BoolToVis}}" />
                         </StackPanel>
                     </ToolTip>
                 </Border.ToolTip>
@@ -350,6 +369,14 @@
                     </Style>
                 </Border.Style>
                 <Grid>
+                    <!-- Icono fantasma real (extraido del propio juego, ver
+                         SlotGhostIconResolver.cs/scripts/extraer-iconos-fantasma-slot.js) -
+                         solo visible con el slot vacio, igual que en Terraria real
+                         (Color.White*0.35f alli; aqui retintado a TextSecondaryBrush en el
+                         propio PNG, ver el script de extraccion). -->
+                    <Image Source="{Binding GhostIconPath}" Stretch="Uniform" Margin="6" Opacity="0.35"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
                     <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
@@ -363,6 +390,20 @@
                     <TextBlock Text="&#9733;" FontSize="9" Foreground="{StaticResource AccentBrush}"
                                HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,0,0,0"
                                Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
+                    <!-- 6º/7º hueco de accesorio real (consulta a Opus, sexta pasada): una
+                         franja vertical en el borde interior izquierdo en vez del contorno (el
+                         contorno ya carga 3 significados mutuamente excluyentes - Calamity/
+                         Equipado/Seleccionado - y esto es identidad PERMANENTE del hueco, debe
+                         leerse a la vez que esos tres, no competir con ellos). Rosa para el 6º
+                         (Experto, Corazón de Demonio), oro para el 7º (Modo Maestro) - paleta
+                         propia de Terrakeep, no el arcoíris/pulso real del juego (ver el
+                         comentario de EquipmentGroupViewModel para el porque). -->
+                    <Rectangle Width="3" HorizontalAlignment="Left" VerticalAlignment="Stretch" Margin="2"
+                               Fill="{StaticResource PinkBrush}"
+                               Visibility="{Binding IsExpertAccessorySlot, Converter={StaticResource BoolToVis}}" />
+                    <Rectangle Width="3" HorizontalAlignment="Left" VerticalAlignment="Stretch" Margin="2"
+                               Fill="{StaticResource MasterGoldBrush}"
+                               Visibility="{Binding IsMasterAccessorySlot, Converter={StaticResource BoolToVis}}" />
                 </Grid>
             </Border>
         </DataTemplate>

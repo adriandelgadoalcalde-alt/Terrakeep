@@ -83,12 +83,53 @@ public partial class EquipmentGroupViewModel : ObservableObject
         AllContainers = _byKey.Values.ToList();
     }
 
+    // Indices reales dentro de los 10 slots de Items/Social (Player.armor[0..9] real):
+    // 0-2 = cabeza/cuerpo/piernas, 3-9 = 7 accesorios - 8=6º (Corazón de Demonio/Experto),
+    // 9=7º (Modo Maestro). Ghost real por indice (ver ItemSlot.cs, consulta a Opus sexta
+    // pasada): armor_head/body/legs (Items) o vanity_head/body/legs (Social) para 0-2,
+    // accessory (Items) o accessory_vanity (Social) para 3-9 (los 7 comparten el mismo ghost
+    // real, el juego no distingue "accesorio normal" de "6º/7º" con un icono distinto).
+    private static readonly string[] ItemsGhostByIndex =
+        ["armor_head", "armor_body", "armor_legs", "accessory", "accessory", "accessory", "accessory", "accessory", "accessory", "accessory"];
+    private static readonly string[] SocialGhostByIndex =
+        ["vanity_head", "vanity_body", "vanity_legs", "accessory_vanity", "accessory_vanity", "accessory_vanity", "accessory_vanity", "accessory_vanity", "accessory_vanity", "accessory_vanity"];
+
+    // Restriccion real por indice (ampliacion 2-sep-2026, misma sexta pasada: "las armaduras
+    // y los accesorios, si los quiero [restringidos] arriba") - vale IGUAL para Items y
+    // Social, un objeto de vanidad tiene el MISMO campo real headSlot/bodySlot/legSlot/
+    // accessory que su version funcional (vanity=true no cambia el equip type).
+    private static readonly SlotKind[] ItemsKindByIndex =
+        [SlotKind.ArmorHead, SlotKind.ArmorBody, SlotKind.ArmorLegs,
+         SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory];
+
     private void AddSlotSet(CharacterFileService service, Action<ItemSlotViewModel> requestPickForSlot,
         int loadout, EquipmentKind kind, string displayName, GameItem[] items)
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
-            slots.Add(new ItemSlotViewModel(service, i, displayName, items[i], requestPickForSlot, isEquipped: true));
+        {
+            string? ghost = kind switch
+            {
+                EquipmentKind.Items => i < ItemsGhostByIndex.Length ? ItemsGhostByIndex[i] : null,
+                EquipmentKind.Social => i < SocialGhostByIndex.Length ? SocialGhostByIndex[i] : null,
+                EquipmentKind.Dyes => "dye",
+                _ => null,
+            };
+            var slotKind = kind switch
+            {
+                EquipmentKind.Items or EquipmentKind.Social => i < ItemsKindByIndex.Length ? ItemsKindByIndex[i] : SlotKind.None,
+                EquipmentKind.Dyes => SlotKind.Dye,
+                _ => SlotKind.None,
+            };
+            // El 6º/7º hueco de accesorio (indices 8/9) es puramente visual y solo tiene
+            // sentido marcarlo en la rejilla real de Armadura/Accesorios (pedido explicito:
+            // "en la rejilla de armadura y accesorios") - no en Vanidad/Tintes, para no
+            // repetir la misma señal tres veces sin que el usuario la haya pedido ahi.
+            bool isExpert = kind == EquipmentKind.Items && i == 8;
+            bool isMaster = kind == EquipmentKind.Items && i == 9;
+            slots.Add(new ItemSlotViewModel(service, i, displayName, items[i], requestPickForSlot, isEquipped: true,
+                acceptedKind: slotKind, ghostIcon: ghost, isExpertAccessorySlot: isExpert, isMasterAccessorySlot: isMaster));
+        }
         string key = kind switch
         {
             EquipmentKind.Items => $"loadout{loadout}Items",
