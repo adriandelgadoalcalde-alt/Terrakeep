@@ -2923,3 +2923,63 @@ encontrados y pulsados por su NOMBRE dinámico real vía `InvokePattern` - "Máx
 `DurationSeconds=33333333`, exactamente `1999999980/60`, el valor real de Terrasavr. Sin
 `ultimo-error.log`. `dotnet test` 134/134 verde (128 previos + 1 de `VanillaBuffCatalog.
 GetDisplayName` + 5 de `BuffDurationPresets`, todos con datos reales, no mockeados).
+
+### Fase 2 (rework de Buffs) - Librería de buffs con árbol real de Terrasavr, ya implementada y verificada
+
+Cierra el rework de Buffs pedido en la cuarta pasada. Reparto de responsabilidades igual que
+Objetos (`Containers` vs `LibraryViewModel`): `BuffsViewModel` se simplifica a solo construir
+el contenedor de 44/22/10 slots; el picker "buscar+colocar" pasa a un `BuffLibraryViewModel`
+nuevo (calco exacto de `LibraryViewModel`) - el viejo botón "Añadir buff..." desaparece del
+todo, sustituido por la Librería real.
+
+- **`TerrasavrNative.App/Services/BuffLibraryTreeBuilder.cs`** (nuevo, calco de
+  `LibraryCategoryTreeBuilder.cs`) - reutiliza `CategoryNodeViewModel` SIN ningún cambio
+  (`ItemIdsOrdered` guarda ids de buff, la pertenencia múltiple ya estaba soportada y aquí
+  hace falta de verdad: el buff 3 vive en Utilidad Y Special; el 26 en Defensivo Y Special; el
+  86 en Offensivo Y Negativo, todo real). 8 raíces reales:
+  - 6 categorías curadas con listas literales reales (Utilidad=17, Offensivo=18, Defensivo=13,
+    Special=10, Mascota=20, Negativo=26 - **verificado que los conteos reales coinciden
+    exactamente** con los que dio Opus tras leer `app.BuffSide`/`initLibs()` real).
+  - "Índice": páginas de 33 en 33 sobre TODOS los buffs vanilla conocidos (1..N) - mismo
+    espíritu que "Items by ID" en el árbol de objetos, para encontrar cualquier buff que no
+    caiga en las 6 curadas.
+  - "Calamity (mod)": agrupado por el campo real `category` de `calamity/buffs.json` (305
+    buffs reales, 9 categorías reales: Summon=96/StatBuffs=44/DamageOverTime=39/Pets=35/
+    Alcohol=25/StatDebuffs=24/Potions=19/Mounts=12/Placeables=9), mismo patrón de paginación a
+    40 que ya usa `LibraryCategoryTreeBuilder.BuildCalamityRoot` para objetos. Necesitó
+    exponer `CalamityBuffEntry.Category` (antes privado al `record` interno, sin getter
+    público - mismo patrón que `CalamityCatalogEntry.Category` para objetos).
+- **`BuffLibraryViewModel.cs`** (nuevo, calco de `LibraryViewModel`) - `RootCategories`,
+  `Results`, `SearchText`, `SelectedCategory`, `PickTarget` (`BuffSlotViewModel?`),
+  `SelectCategoryCommand`/`ClearCategoryCommand`/`PlaceInTargetCommand`/`CancelPickCommand`,
+  mismo `MaxResults=300`.
+- **`BuffsViewModel.cs` simplificado** a solo `LoadFrom`/`Reset`/`Container` - todo el
+  catálogo+búsqueda que tenía se muda a `BuffLibraryViewModel`.
+- **`MainViewModel.cs`**: `BuffLibrary` (nueva propiedad) + `IsBuffLibraryCollapsed` (plegada
+  por defecto, mismo criterio que `IsLibraryCollapsed`) + `RequestPickForBuffSlot` (gemelo de
+  `RequestPickForSlot`: pone el slot como `PickTarget`, selecciona, cambia a la pestaña Buffs,
+  despliega la Librería) - `Buffs` ahora se construye pasando este método en vez de
+  `SelectBuffSlot` a secas, así que "Elegir..."/doble clic en un slot vacío abre la Librería
+  de verdad en vez de solo seleccionar.
+- **`MainWindow.xaml`**: bloque de Librería de buffs calcado del de Objetos (cabecera plegable
+  + banner "eligiendo" + árbol real a la izquierda + buscador+resultados a la derecha), con
+  `BuffCategoryNodeTemplate` nuevo (tercera copia del árbol recursivo -
+  `CategoryNodeTemplate`/`ResearchCategoryNodeTemplate`/`BuffCategoryNodeTemplate`, mismo
+  patrón ya establecido en el proyecto de no generalizar con un `ICommand` inyectado) y
+  `BuffLibraryCardTemplate` nuevo (tarjeta cuadrada de catálogo, mismo lenguaje visual que
+  `BuffSlotCompactTemplate`, con botón "Colocar" solo mientras `IsPicking`) dentro de la MISMA
+  `SlotGridPanel`/`ReferenceColumns=10` que el resto de rejillas de la app - pedido explícito
+  de Opus ("resultados en rejilla, misma tarjeta que la de arriba").
+
+**Verificación real** (arnés de UI Automation ampliado): las 8 raíces reales confirmadas con
+sus conteos exactos (`Utilidad (17), Offensivo (18), Defensivo (13), Special (10), Mascota
+(20), Negativo (26), Indice, Calamity (mod)`); categoría "Utilidad" seleccionada da
+`Results.Count=17` real; `ChooseFromLibraryCommand` real sobre un slot vacío abre la Librería
+y fija `PickTarget` de verdad; botón "Colocar" real encontrado y pulsado vía `InvokePattern`
+(no simulado) coloca "Piel de obsidiana" (buff 1) con su duración mínima real y selecciona el
+slot; los 3 botones de duración siguen funcionando igual que en la Fase 1. Sin
+`ultimo-error.log`. `dotnet build`/`dotnet test` 134/134 verde (sin tests nuevos de Core en
+esta fase - todo el cambio es de `TerrasavrNative.App`, capa de presentación).
+
+Con esto se cierran las 3 peticiones de la cuarta pasada de feedback (tooltips completos de
+equipo, iconos consistentes, rework completo de Buffs).

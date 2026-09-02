@@ -40,6 +40,10 @@ public partial class MainViewModel : ObservableObject
     // como es terrasav" - y ademas necesario para que arrastrar una tarjeta hasta un slot sea
     // posible: si Libreria fuera una pestaña aparte, nunca se verian los dos a la vez).
     private const int ObjetosInnerTabIndex = 0;
+    // Buffs=1 en el mismo TabControl interno (Objetos/Buffs/Investigacion, ver MainWindow.xaml)
+    // - usado por RequestPickForBuffSlot para saltar a la pestaña correcta al "Elegir..." un
+    // buff, mismo criterio que ObjetosInnerTabIndex para objetos.
+    private const int BuffsInnerTabIndex = 1;
 
     [ObservableProperty] private string _statusMessage = "Sin personaje cargado.";
     [ObservableProperty] private string? _characterName;
@@ -65,6 +69,10 @@ public partial class MainViewModel : ObservableObject
     // prioridad explicita del usuario ("me gusta mucho que los objetos se vean directamente de
     // un plumazo").
     [ObservableProperty] private bool _isLibraryCollapsed = true;
+    // Mismo criterio que IsLibraryCollapsed de arriba, para la Libreria de buffs (Fase 2 del
+    // rework de Buffs, pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada) - plegada por
+    // defecto, auto-despliegue al "Elegir..." un buff (RequestPickForBuffSlot).
+    [ObservableProperty] private bool _isBuffLibraryCollapsed = true;
     public ResearchViewModel Research { get; }
     public BuildsViewModel Builds { get; }
     public WhatsNewViewModel WhatsNew { get; }
@@ -77,6 +85,7 @@ public partial class MainViewModel : ObservableObject
     public FlagsViewModel Flags { get; } = new();
     public VersionEditorViewModel VersionEditor { get; } = new();
     public BuffsViewModel Buffs { get; }
+    public BuffLibraryViewModel BuffLibrary { get; }
     public BuffEditViewModel BuffEdit { get; }
     public ItemEditViewModel ItemEdit { get; }
 
@@ -95,7 +104,13 @@ public partial class MainViewModel : ObservableObject
             PersonajeInnerTabIndex = ObjetosInnerTabIndex;
         };
         BuffEdit = new BuffEditViewModel(_service);
-        Buffs = new BuffsViewModel(_service, SelectBuffSlot);
+        BuffLibrary = new BuffLibraryViewModel(_service);
+        BuffLibrary.BuffPlaced += () =>
+        {
+            SelectedTabIndex = PersonajeTabIndex;
+            PersonajeInnerTabIndex = BuffsInnerTabIndex;
+        };
+        Buffs = new BuffsViewModel(_service, RequestPickForBuffSlot);
         ItemEdit = new ItemEditViewModel(_service);
         _saveConfirmationTimer.Tick += (_, _) =>
         {
@@ -157,11 +172,26 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ToggleLibraryCollapsed() => IsLibraryCollapsed = !IsLibraryCollapsed;
 
+    // Gemelo de RequestPickForSlot de arriba, para buffs (Fase 2 del rework, pregunta a Opus
+    // sobre el diseño 2-sep-2026, cuarta pasada).
+    private void RequestPickForBuffSlot(BuffSlotViewModel slot)
+    {
+        BuffLibrary.PickTarget = slot;
+        SelectBuffSlot(slot);
+        SelectedTabIndex = PersonajeTabIndex;
+        PersonajeInnerTabIndex = BuffsInnerTabIndex;
+        IsBuffLibraryCollapsed = false;
+    }
+
+    [RelayCommand]
+    private void ToggleBuffLibraryCollapsed() => IsBuffLibraryCollapsed = !IsBuffLibraryCollapsed;
+
     public void LoadFromPath(string plrPath)
     {
         try
         {
             Library.PickTarget = null;
+            BuffLibrary.PickTarget = null;
             ItemEdit.Slot = null;
             BuffEdit.Slot = null;
             _loaded = _service.Load(plrPath);

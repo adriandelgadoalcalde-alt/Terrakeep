@@ -23,6 +23,11 @@ public sealed class CalamityBuffEntry(CalamityBuffEntryData data, int syntheticI
     public string Mod => data.Mod;
     public string DisplayName => data.DisplayNameEs ?? data.DisplayNameFallback ?? data.Internal;
     public string? Icon => data.Icon;
+    // Categoria real (calamity/buffs.json, campo "category" - Summon/StatBuffs/
+    // DamageOverTime/Pets/Alcohol/StatDebuffs/Potions/Mounts/Placeables) - usada por
+    // BuffLibraryTreeBuilder para agrupar la carpeta "Calamity (mod)" de la Libreria de buffs,
+    // mismo patron que CalamityCatalogEntry.Category para objetos.
+    public string? Category => data.Category;
     // Descripcion real EN INGLES (scripts/extraer-descripciones-buffs-calamity.js, del
     // .tmod real instalado) - esta instalacion de Calamity no trae es-ES, no se inventa una
     // traduccion. Null si de verdad no hay ninguna.

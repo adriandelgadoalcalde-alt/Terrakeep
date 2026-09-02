@@ -234,6 +234,45 @@
             </StackPanel>
         </DataTemplate>
 
+        <!-- Mismo arbol otra vez, apuntando al SelectCategoryCommand de BuffLibrary (Fase 2 del
+             rework de Buffs, pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada) - arbol
+             REAL distinto (BuffLibraryTreeBuilder, calcado de app.BuffSide de Terrasavr real),
+             mismo patron visual que Libreria/Investigacion. -->
+        <DataTemplate x:Key="BuffCategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
+            <StackPanel>
+                <Button Command="{Binding DataContext.BuffLibrary.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
+                        Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
+                                   MaxWidth="165" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Button>
+                <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
+                              ItemTemplate="{DynamicResource BuffCategoryNodeTemplate}"
+                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" />
+            </StackPanel>
+        </DataTemplate>
+
         <!-- Tarjeta compacta de slot (todos los contenedores reales) - pregunta a Opus sobre
              el diseño 2-sep-2026. Reutiliza los MISMOS handlers de drag&drop que la tarjeta
              rica (leen sender.DataContext, no dependen de la forma de la tarjeta) y el mismo
@@ -606,6 +645,50 @@
                     </UniformGrid>
                 </StackPanel>
             </DockPanel>
+        </DataTemplate>
+
+        <!-- Tarjeta de un buff del catalogo completo en la Libreria de buffs (Fase 2, pregunta
+             a Opus sobre el diseño 2-sep-2026: "resultados en rejilla, misma tarjeta que la de
+             arriba") - mismo lenguaje visual que BuffSlotCompactTemplate (icono cuadrado,
+             borde rojo si es Calamity), sin estados de vacio/seleccion (una entrada de
+             catalogo no tiene ninguno de los dos) y con el boton "Colocar" solo cuando hay un
+             slot esperando (BuffLibrary.IsPicking). -->
+        <DataTemplate x:Key="BuffLibraryCardTemplate" DataType="{x:Type vm:BuffCatalogEntryViewModel}">
+            <Border Padding="0" CornerRadius="6" Background="{StaticResource BgElevatedBrush}" BorderThickness="1" Cursor="Hand">
+                <Border.ToolTip>
+                    <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <StackPanel MaxWidth="240">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Description}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                       Visibility="{Binding Description, Converter={StaticResource NullToVis}}" />
+                        </StackPanel>
+                    </ToolTip>
+                </Border.ToolTip>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <Button Content="Colocar" FontSize="8" Padding="0,1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                            Background="{StaticResource AccentBrush}" Foreground="{StaticResource BgPrimaryBrush}" BorderThickness="0"
+                            Command="{Binding DataContext.BuffLibrary.PlaceInTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}"
+                            Visibility="{Binding DataContext.BuffLibrary.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
+                </Grid>
+            </Border>
         </DataTemplate>
     </Window.Resources>
 
@@ -1024,14 +1107,21 @@
                         </Grid>
                     </TabItem>
                     <TabItem Header="Buffs">
-                        <!-- Rework 2-sep-2026, cuarta pasada (pregunta a Opus sobre el diseño):
-                             misma rejilla/contorno/tamaño de icono que Objetos>Inventario, con
-                             el panel Editar a la derecha (mismo patron que ItemEditTemplate).
-                             El buscador "Añadir buff..." se queda debajo tal cual estaba - la
-                             Libreria de buffs con arbol real de Terrasavr es la Fase 2 de este
-                             rework, todavia sin implementar (ver bitacora.md). -->
-                        <DockPanel Margin="0,10,0,0">
-                            <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <!-- Rework 2-sep-2026, cuarta pasada (pregunta a Opus sobre el diseño).
+                             Fase 1 (ya en produccion): rejilla de 44 slots reales + panel
+                             Editar, mismo formato que Objetos>Inventario. Fase 2 (esta): la
+                             Libreria de buffs de abajo, mismo patron exacto que la de Objetos
+                             (arbol real + buscador + resultados en rejilla, plegable) pero con
+                             el arbol REAL de Terrasavr para buffs (BuffLibraryTreeBuilder,
+                             calcado de app.BuffSide real - no del arbol de objetos). El viejo
+                             boton "Añadir buff..." desaparece, sustituido por esta Libreria. -->
+                        <Grid Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="300" />
@@ -1047,66 +1137,82 @@
                                 </Border>
                             </Grid>
 
-                            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-                                <Button Content="Añadir buff..." Tag="Accent" Command="{Binding Buffs.BeginAddCommand}"
-                                        HorizontalAlignment="Left" Margin="0,0,0,10" />
-
-                                <Border Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="10,7"
-                                        Visibility="{Binding Buffs.IsPicking, Converter={StaticResource BoolToVis}}">
-                                    <StackPanel>
-                                        <DockPanel Margin="0,0,0,8">
-                                            <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding Buffs.CancelAddCommand}"
-                                                    Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" />
-                                            <TextBlock Text="Buscar buff para añadir (vanilla + Calamity)"
-                                                       Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <!-- Libreria de buffs: mismo patron que Objetos (cabecera plegable +
+                                 banner de "eligiendo" + arbol real a la izquierda + buscador y
+                                 resultados en rejilla a la derecha). -->
+                            <Border Grid.Row="1" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Top" Command="{Binding ToggleBuffLibraryCollapsedCommand}"
+                                            HorizontalContentAlignment="Stretch" Padding="8,5" Margin="0,0,0,4"
+                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="▲ Plegar" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsBuffLibraryCollapsed}" Value="True">
+                                                                <Setter Property="Text" Value="▼ Desplegar" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="Librería de buffs" Style="{StaticResource SectionText}" FontSize="12.5" />
                                         </DockPanel>
-                                        <TextBox Text="{Binding Buffs.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                 Padding="8,6" Background="{StaticResource BgPrimaryBrush}"
-                                                 Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                 MaxWidth="380" HorizontalAlignment="Left" FontSize="13" />
-                                        <TextBlock Text="{Binding Buffs.ResultsSummary}" Foreground="{StaticResource BgPrimaryBrush}"
-                                                   FontSize="11" Margin="0,5,0,0" />
-                                    </StackPanel>
-                                </Border>
+                                    </Button>
 
-                                <ScrollViewer Margin="0,10,0,0" MaxHeight="240" VerticalScrollBarVisibility="Auto"
-                                              Visibility="{Binding Buffs.IsPicking, Converter={StaticResource BoolToVis}}">
-                                    <ItemsControl ItemsSource="{Binding Buffs.Results}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="{x:Type vm:BuffCatalogEntryViewModel}">
-                                                <Button Command="{Binding DataContext.Buffs.PickBuffCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                        CommandParameter="{Binding}" Margin="0,0,6,6" Padding="0" Background="Transparent" BorderThickness="0"
-                                                        ToolTip="{Binding Description}">
-                                                    <Border Width="96" Height="96" Padding="6" CornerRadius="6"
-                                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="1">
-                                                        <Border.Style>
-                                                            <Style TargetType="Border">
-                                                                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                                        <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Border.Style>
-                                                        <DockPanel>
-                                                            <TextBlock DockPanel.Dock="Bottom" Text="{Binding DisplayName}"
-                                                                       Style="{StaticResource CaptionText}" TextWrapping="Wrap"
-                                                                       TextAlignment="Center" MaxHeight="30" Margin="0,4,0,0" />
-                                                            <Image Source="{Binding IconPath}" Stretch="Uniform" MaxHeight="40"
-                                                                   Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                        </DockPanel>
-                                                    </Border>
-                                                </Button>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
-                            </StackPanel>
-                        </DockPanel>
+                                    <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
+                                            Visibility="{Binding BuffLibrary.IsPicking, Converter={StaticResource BoolToVis}}">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding BuffLibrary.CancelPickCommand}"
+                                                    Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" Padding="6,2" />
+                                            <TextBlock Text="Elige un buff para colocarlo en el slot seleccionado..."
+                                                       Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" FontSize="11.5" />
+                                        </DockPanel>
+                                    </Border>
+
+                                    <Grid Height="238" Visibility="{Binding IsBuffLibraryCollapsed, Converter={StaticResource InverseBoolToVis}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="210" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Background="{StaticResource BgPrimaryBrush}" CornerRadius="6"
+                                                Padding="5" Margin="0,0,8,0">
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Top" Content="Ver todo" HorizontalAlignment="Left"
+                                                        Padding="5,2" FontSize="10" Margin="0,0,0,4"
+                                                        Command="{Binding BuffLibrary.ClearCategoryCommand}" />
+                                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                    <ItemsControl ItemsSource="{Binding BuffLibrary.RootCategories}"
+                                                                  ItemTemplate="{StaticResource BuffCategoryNodeTemplate}" />
+                                                </ScrollViewer>
+                                            </DockPanel>
+                                        </Border>
+
+                                        <DockPanel Grid.Column="1">
+                                            <TextBox DockPanel.Dock="Top" Text="{Binding BuffLibrary.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                     Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                                     Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4" />
+                                            <TextBlock DockPanel.Dock="Top" Text="{Binding BuffLibrary.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                <ItemsControl ItemsSource="{Binding BuffLibrary.Results}" ItemTemplate="{StaticResource BuffLibraryCardTemplate}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <controls:SlotGridPanel Columns="11" MinCell="44" MaxCell="96" Gap="4"
+                                                                                     ReferenceColumns="10"
+                                                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </DockPanel>
+                                    </Grid>
+                                </DockPanel>
+                            </Border>
+                        </Grid>
                     </TabItem>
                     <TabItem Header="Investigacion">
                         <!-- Antes: una unica lista plana (hasta miles de objetos, "es
