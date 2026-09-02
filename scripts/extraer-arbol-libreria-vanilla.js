@@ -85,6 +85,20 @@ function parseMeta(meta) {
   return { metatype, stats };
 }
 
+// Bug real encontrado y corregido 2-sep-2026 (reportado por el usuario: "Categories >
+// Equipable > Wings" salia con 0 objetos): dos predicados reales del propio Hc.deploy
+// (Wings, Mounts*) no miran metatype/metadata, miran "a.textLq" - el texto de tooltip ya
+// formateado en minusculas, buscando frases literales en ingles ("allows flight",
+// "rideable", "summons"). La clave real "1" dentro de meta (verificado a mano contra la
+// cadena real: id 823 = Fledgling Wings -> "...|1=Allows flight|...", id del reno ->
+// "...|1=Summons a rideable reindeer|...") es exactamente ese texto literal - no hace falta
+// reimplementar el formateador Xa.parse/wa.pairDefs entero, con la clave "1" (cuando existe)
+// basta para los dos unicos predicados reales que usan textLq (confirmado contando
+// ".textLq" en el propio Hc.deploy: exactamente 2 apariciones, Wings y Mounts*).
+function buildTextLq(stats) {
+  return (stats["1"] ?? "").toLowerCase();
+}
+
 const itemList = [];
 for (let c = 0, id = za.minId; c < za.count; c++, id++) {
   let name = za.$name[c];
@@ -92,7 +106,7 @@ for (let c = 0, id = za.minId; c < za.count; c++, id++) {
   let pid = za.pid[c];
   if (pid === "") pid = name.split(" ").join("");
   const { metatype, stats } = parseMeta(za.meta[c]);
-  itemList.push({ id, pid, name, nameLq: name.toLowerCase(), metatype, metadata: za.meta[c], stats, textLq: "" });
+  itemList.push({ id, pid, name, nameLq: name.toLowerCase(), metatype, metadata: za.meta[c], stats, textLq: buildTextLq(stats) });
 }
 
 // --- Paso 3: ejecutar el propio Hc.deploy real (extraido tal cual) con sus closures
@@ -147,6 +161,20 @@ for (const [id, label] of [[4, "Iron Broadsword"], [368, "Excalibur"], [3389, "T
   if (paths.length === 0) throw new Error(`Spot-check fallido: id=${id} (${label}) no aparece en ninguna carpeta real.`);
   console.log(`  id=${id} (${label}): ${paths.join(" | ")}`);
 }
+
+// Pedido explicito 2-sep-2026 tras encontrar "Wings" con 0 objetos: ninguna carpeta hoja real
+// debe quedar vacia - si alguna sale con 0 es una señal real de que falta algo en la
+// reconstruccion (como paso con textLq), no algo a ignorar en silencio.
+const emptyLeaves = [];
+(function findEmptyLeaves(node, trail) {
+  const here = trail.concat([node.name]);
+  if (node.type === 2) { if (node.nodes.length === 0) emptyLeaves.push(here.join(" > ")); return; }
+  node.nodes.forEach(child => findEmptyLeaves(child, here));
+})(tree, []);
+if (emptyLeaves.length > 0) {
+  throw new Error(`${emptyLeaves.length} carpeta(s) hoja real(es) sin ningun objeto:\n  ${emptyLeaves.join("\n  ")}`);
+}
+console.log("Ninguna carpeta hoja real quedo vacia.");
 
 fs.writeFileSync(outPath, JSON.stringify(tree.nodes)); // solo los hijos reales, no el wrapper "" raiz
 console.log(`Guardado: ${outPath}`);

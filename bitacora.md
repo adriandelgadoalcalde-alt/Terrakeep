@@ -2273,3 +2273,36 @@ las 10 carpetas raíz reales aparecen tal cual en la pestaña Investigación
 `Materials` de verdad (click real) resume "1583 objeto(s) investigado(s)".
 
 `dotnet build`/`dotnet test` en verde (128/128).
+
+## Pulido tras revisión del usuario del árbol de Librería (2-sep-2026)
+
+El usuario pidió una lista de raíces/subcarpetas para revisar el trabajo de las Fases A-D y
+encontró él mismo un caso real: `Categories > Equipable > Wings` salía con **0 objetos**.
+
+### Bug real encontrado y corregido - `Wings`/`Mounts*` con 0 objetos
+
+Causa raíz real: de las decenas de carpetas por predicado del árbol, exactamente DOS
+(`Wings`, `Mounts*` - confirmado contando literalmente `.textLq` dentro del propio
+`Hc.deploy`, solo 2 apariciones) no miran `metatype`/`metadata` como el resto, miran
+`a.textLq` - el texto de tooltip ya formateado en minúsculas, buscando frases fijas en
+inglés (`"allows flight"`, `"rideable"`, `"summons"`). El extractor (Fase A) dejaba
+`textLq: ""` siempre (placeholder), así que estas dos carpetas SIEMPRE iban a dar 0 sin
+importar los datos reales.
+
+Investigado a mano contra la cadena real de `za.meta`: la clave `1=` dentro de los pares de
+un objeto es literalmente ese texto (ej. id 823 "Fledgling Wings" →
+`...|1=Allows flight|...`; el reno montable → `...|1=Summons a rideable reindeer|...`) - no
+hace falta reimplementar el formateador completo `Xa.parse`/`wa.pairDefs`, con
+`textLq = (stats["1"] ?? "").toLowerCase()` basta para los dos únicos predicados reales que
+lo necesitan. Corregido en `scripts/extraer-arbol-libreria-vanilla.js`.
+
+**Verificación reforzada por el mismo motivo** (pedido explícito: "que cada categoria/
+subcarpeta tenga sus objetos que deberían de estar no puede marcar 0"): el propio script
+ahora recorre el árbol COMPLETO al final y falla ruidosamente si encuentra cualquier carpeta
+hoja real con 0 objetos, en vez de solo comprobar 3 ids conocidos como antes - así este tipo
+de fallo no puede volver a colarse en silencio. Regenerado `vanilla_library_tree.json`:
+`Wings` pasa de 0 a **7** objetos reales, `Mounts` (la carpeta por predicado, distinta de la
+lista literal `Mounts` de "Pets, mounts, tools") a **25** - verificado con arnés de consola,
+"Ninguna carpeta hoja real quedó vacía" en la propia salida del script.
+
+`dotnet build`/`dotnet test` en verde (128/128).
