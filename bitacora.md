@@ -2306,3 +2306,32 @@ lista literal `Mounts` de "Pets, mounts, tools") a **25** - verificado con arné
 "Ninguna carpeta hoja real quedó vacía" en la propia salida del script.
 
 `dotnet build`/`dotnet test` en verde (128/128).
+
+### Rótulos en español de Calamity ampliados a las 121 categorías reales
+
+`CalamityCategoryLabelsEs` (`LibraryCategoryTreeBuilder.cs`) tenía ~35 entradas (portadas del
+Electron real) y dejaba bastantes subcarpetas a medio traducir (ej. `Colocables -
+FurnitureAncientNavystone`, `Colocables - DraedonStructures - CagedLights`) porque su
+fallback solo traduce el PRIMER segmento del path ("Placeables"→"Colocables") y deja el resto
+tal cual si no hay una entrada directa - la mayoría de subcarpetas de `Placeables` de Calamity
+usan un nombre compuesto en una sola palabra (`FurnitureAcidwood`, no `Furniture/Acidwood`),
+así que nunca se dividían solas. Añadidas ~60 entradas directas nuevas hasta cubrir las 121
+categorías reales por completo (contadas de verdad desde `calamity/catalog.json`, no de
+memoria).
+
+**Criterio aplicado, mismo ya establecido para los ~33 sets de armadura**: se traduce la
+palabra ESTRUCTURAL (Furniture→Muebles, Fountains→Fuentes, Trophies→Trofeos...), los nombres
+de material/set PROPIOS de Calamity (Aerospec, Astral, Basalt, Cosmilite, Marnite, Navystone,
+Silva, Statigel, Stratus, Wulfrum, Acidwood...) se dejan tal cual a propósito - no hay ningún
+es-ES real de Calamity de donde sacar una traducción oficial de esos nombres propios, e
+inventarla iría contra el criterio ya establecido en todo el proyecto ("lo que no encuentra
+coincidencia se queda en inglés, nunca se inventa"). Dos términos SÍ son vanilla real y se
+verificaron contra `vanilla_item_names_by_key.json` en vez de adivinarlos: `Pylon` → real
+"Torre" (`TeleportationPylonVictory` → "Torre universal"), `Fountain` → real "Fuente"
+(`OasisFountain` → "Fuente de agua de oasis") - descartada una primera idea de traducir
+"Pylon" como "Pilón", que habría sido una traducción inventada y además incorrecta frente al
+término oficial real del propio juego.
+
+**Verificado con arnés de consola**: volcado completo del árbol `Calamity (mod)` (177 líneas,
+3 niveles) sin ningún resto de `FurnitureXxx` sin traducir. `dotnet build`/`dotnet test` en
+verde (128/128).
