@@ -2731,3 +2731,43 @@ en la Librería (`SearchText="Sword"`, 3 resultados) renderiza las tarjetas nuev
 compuesto/hover/trimming) sin ninguna excepción. Las 5 pestañas siguen navegables sin excepción
 tras todos los cambios. Sin `ultimo-error.log` ni excepciones de `Dispatcher`.
 `dotnet build`/`dotnet test` en verde (128/128, sin regresiones).
+
+## Tercera pasada: un único formato de tarjeta en toda la app (2-sep-2026)
+
+Feedback directo tras la segunda pasada: *"equipamiento no tiene el mismo formato que
+inventario y el resto de las 9 pestañas asi que nose que es lo que has tocado libreria
+tampoco"*, citando de vuelta mi propia descripción de la rejilla compacta. Error real de
+comunicación/diseño de la ronda anterior: Opus había recomendado (con criterio razonable en
+abstracto - "≤10 slots → tarjeta rica, >10 → compacta") dejar Equipamiento en la tarjeta RICA
+de siempre mientras Inventario/Almacenes ya usaban la rejilla compacta nueva - técnicamente
+justificado, pero el resultado visible es justo lo que el usuario reporta: dos formatos
+distintos conviviendo en la misma pantalla, sin haberlo explicado con suficiente claridad de
+antemano. Corregido por petición directa, sin nueva consulta a Opus (pedido inequívoco, no una
+decisión de diseño con trade-offs que discutir):
+
+- `ContainerCompactTemplate` (antes solo para Inventario/Almacenes) pasa a usarse en los 9
+  contenedores reales - Equipamiento, Monturas (Mascota/Montura/Gancho + Tintes) y Monedas
+  (Monedas + Munición) se convierten de `ContainerTabTemplate` (Viewbox + tarjeta rica) a la
+  misma rejilla `SlotGridPanel` + `SlotCompactTemplate` que ya tenían Inventario/Almacenes -
+  **mismo formato de tarjeta en toda la app**, sin excepción.
+- `SlotGridPanel Columns` pasa de un `10` fijo a `{Binding Columns}` (la propiedad ya añadida en
+  la ronda anterior a `ContainerViewModel`, antes solo usada por el `GridWidth` ahora muerto) -
+  así Equipamiento mantiene su forma real 5×2 (`Columns=5`, fijado en
+  `EquipmentGroupViewModel.AddSlotSet`) en vez de una única fila larga de 10.
+- **Limpieza de código muerto real** (ya no queda ningún consumidor): `ContainerTabTemplate`
+  (la plantilla Viewbox+tarjeta rica) se borra entera de `MainWindow.xaml`, junto con la
+  `DataTemplate` implícita `DataType="{x:Type vm:ItemSlotViewModel}"` de la tarjeta rica (~145
+  líneas) que solo esa plantilla usaba, el estilo `ItemSlotCard` en `Theme.xaml` (base de esa
+  tarjeta), y `ContainerViewModel.GridWidth` (el ancho en píxeles que solo el `WrapPanel` de la
+  plantilla borrada necesitaba - `Columns` se queda, sigue haciendo falta para `SlotGridPanel`).
+  Comentarios que aún citaban `ContainerTabTemplate`/`ItemSlotCard` como referencia viva
+  actualizados para no confundir a una sesión futura.
+
+**Verificación real** (mismo arnés de UI Automation, actualizado tras quitar `GridWidth` -
+ahora imprime `Columns` en su lugar): `EquipmentGroup.Current` confirma `Columns=5` tanto en el
+estado inicial como tras cambiar de píldora a "Vanidad" (clic real, `InvokePattern`); las 5
+pestañas siguen seleccionables sin excepción tras el cambio de plantilla en 3 de ellas
+(Equipamiento pasa de 24 a 13 botones reales, Monturas/Monedas de 16/14 a 6 - coherente con que
+la tarjeta compacta ya no lleva botones propios por slot, solo menú contextual); búsqueda real
+en Librería sigue renderizando sin excepción; sin `ultimo-error.log`. `dotnet build`/
+`dotnet test` en verde (128/128, sin regresiones).

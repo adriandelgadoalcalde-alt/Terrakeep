@@ -97,8 +97,8 @@ public partial class EquipmentGroupViewModel : ObservableObject
             _ => throw new ArgumentOutOfRangeException(nameof(kind)),
         };
         // Columns=5: PlrLoadout.Items/Social/Dyes son siempre 10 slots reales en forma 5x2 -
-        // sin esto GridWidth usaria el default de 10 columnas y el Viewbox escalaria una tira
-        // larga y fina de 10x1 en vez del bloque compacto real.
+        // sin esto SlotGridPanel usaria el default de 10 columnas y organizaria una tira larga
+        // y fina de 10x1 en vez del bloque compacto real.
         _byKey[(loadout, kind)] = new ContainerViewModel(key, displayName, slots) { Columns = 5 };
     }
 

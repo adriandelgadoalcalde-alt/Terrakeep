@@ -13,152 +13,6 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
-        <!-- Tarjeta de un slot de item (Inventario/Banco/...) -->
-        <DataTemplate DataType="{x:Type vm:ItemSlotViewModel}">
-            <!-- Arrastrar y soltar (pedido explicito 1-sep-2026): un slot ya puesto se puede
-                 arrastrar sobre otro para intercambiarlos, y aqui tambien se pueden soltar
-                 tarjetas arrastradas desde la Libreria - ver los manejadores reales en
-                 MainWindow.xaml.cs (OnItemSlotMouseDown/Move/Drop). -->
-            <Border AllowDrop="True" ToolTipService.IsEnabled="{Binding IsNotEmpty}"
-                    PreviewMouseLeftButtonDown="OnItemSlotMouseDown" MouseMove="OnItemSlotMouseMove"
-                    Drop="OnItemSlotDrop">
-                <!-- Doble clic para elegir/cambiar objeto, igual que la tarjeta compacta
-                     (pregunta a Opus sobre el diseño, 2-sep-2026 - segunda consulta: "ya es
-                     memoria muscular desde Inventario"). -->
-                <Border.InputBindings>
-                    <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding ChooseFromLibraryCommand}" />
-                </Border.InputBindings>
-                <!-- Bug real encontrado 2-sep-2026 (pregunta a Opus sobre el diseño): el unico
-                     tooltip vivia en el string StatsTooltip, que ItemStatsFormatter.Format deja
-                     en null para CUALQUIER objeto sin estadisticas de combate (bloques,
-                     materiales, pociones sin stats...) y que NUNCA incluye el nombre del
-                     objeto - compensado aqui con un tooltip compuesto real. PlacementTarget vive
-                     fuera del arbol visual (es un Popup), asi que el DataContext no se hereda
-                     solo - hay que pedirlo explicitamente via RelativeSource Self. -->
-                <Border.ToolTip>
-                    <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                        <StackPanel MaxWidth="240">
-                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
-                            <!-- Pregunta a Opus sobre el diseño (2-sep-2026, segunda consulta,
-                                 "que allí aparezca el prefijo que tiene asignado"): antes era la
-                                 palabra suelta del prefijo, indistinguible de una linea mas de
-                                 estadisticas con el mismo CaptionText - con la etiqueta "Prefijo:"
-                                 y el valor en acento queda inconfundible. -->
-                            <TextBlock Style="{StaticResource CaptionText}"
-                                       Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}">
-                                <Run Text="Prefijo: " />
-                                <Run Text="{Binding PrefixDisplay, Mode=OneWay}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
-                            </TextBlock>
-                            <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
-                                       Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
-                        </StackPanel>
-                    </ToolTip>
-                </Border.ToolTip>
-                <Border.Style>
-                    <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCard}">
-                        <Style.Triggers>
-                            <!-- El fondo de "hueco vacio" ya lo pone el estilo BASE
-                                 (ItemSlotCard/ItemSlotCardCompact en Theme.xaml, pregunta a Opus
-                                 sobre el diseño 2-sep-2026 - segunda consulta). Antes había aquí
-                                 un DataTrigger de Opacity 0.35 que lavaba ese color contra el
-                                 fondo del panel (los triggers del estilo derivado se evalúan
-                                 DESPUÉS que los del base) - quitado a propósito, la opacidad ya
-                                 no debe tocar el fondo del slot vacío. -->
-                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
-                                <Setter Property="BorderThickness" Value="2" />
-                            </DataTrigger>
-                            <!-- Contorno verde real para lo que esta puesto de verdad (pedido explicito
-                                 2-sep-2026, en vez de solo un hueco de separacion): cualquier slot que
-                                 venga de la pantalla Equipamiento (armadura/accesorios/vanidad/tintes de
-                                 un loadout) - ver ItemSlotViewModel.IsEquipped/EquipmentGroupViewModel.
-                                 Solo si tiene algo dentro, un slot vacio no necesita destacarse. -->
-                            <MultiDataTrigger>
-                                <MultiDataTrigger.Conditions>
-                                    <Condition Binding="{Binding IsEquipped}" Value="True" />
-                                    <Condition Binding="{Binding IsEmpty}" Value="False" />
-                                </MultiDataTrigger.Conditions>
-                                <Setter Property="BorderBrush" Value="{StaticResource EquippedGreenBrush}" />
-                                <Setter Property="BorderThickness" Value="2" />
-                            </MultiDataTrigger>
-                            <!-- Slot seleccionado para el panel "Editar" compartido - pedido explicito
-                                 1-sep-2026 (equivalente real de resaltar el slot activo de app.TabEdit). -->
-                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-                                <Setter Property="BorderThickness" Value="2" />
-                                <Setter Property="Effect" Value="{StaticResource AccentGlow}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <DockPanel LastChildFill="True">
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="&#9733;" Command="{Binding ApplyBestPrefixCommand}"
-                                ToolTip="Aplicar el mejor prefijo real"
-                                Padding="2,0" FontSize="11" Foreground="{StaticResource AccentBrush}"
-                                Background="Transparent"
-                                Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
-                        <Button Content="&#10005;" Command="{Binding ClearCommand}"
-                                ToolTip="Vaciar este slot" Style="{StaticResource CircleCloseButton}"
-                                Width="18" Height="18" FontSize="10"
-                                Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
-                    </StackPanel>
-
-                    <Button DockPanel.Dock="Bottom" Command="{Binding ChooseFromLibraryCommand}"
-                            HorizontalAlignment="Left" Padding="4,1" FontSize="10" Margin="0,2,0,0"
-                            Background="Transparent" Foreground="{StaticResource AccentBrush}"
-                            BorderThickness="0">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Content" Value="Cambiar" />
-                                <Style.Triggers>
-                                    <!-- Pregunta a Opus sobre el diseño (2-sep-2026, segunda
-                                         consulta): con el fondo de "hueco vacio" nuevo (ver
-                                         Theme.xaml), este botón es lo único que queda a opacidad
-                                         plena en un slot vacío - un pequeño atenuado aquí (no en
-                                         el Border, que ya lo distingue por color) evita que
-                                         "Elegir..." grite más que el propio contenido real de un
-                                         slot lleno. -->
-                                    <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-                                        <Setter Property="Content" Value="Elegir..." />
-                                        <Setter Property="Opacity" Value="0.6" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
-                        <Image Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform" Margin="0,0,6,0"
-                               VerticalAlignment="Center" RenderOptions.BitmapScalingMode="NearestNeighbor"
-                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                        <StackPanel>
-                            <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}"
-                                       FontSize="11" TextWrapping="Wrap" MaxHeight="26" />
-                            <!-- Pregunta a Opus sobre el diseño (2-sep-2026, segunda consulta):
-                                 antes era solo la palabra suelta del prefijo ("Legendario"),
-                                 indistinguible a simple vista de una linea mas de estadisticas -
-                                 con la etiqueta "Prefijo:" y el valor en acento queda inconfundible.
-                                 Ademas ahora se colapsa si no hay prefijo (antes ocupaba ~12px de
-                                 alto vacios en cualquier objeto sin prefijo). -->
-                            <TextBlock Style="{StaticResource CaptionText}" FontSize="9.5"
-                                       Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}">
-                                <Run Text="Prefijo: " />
-                                <Run Text="{Binding PrefixDisplay, Mode=OneWay}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
-                            </TextBlock>
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
-                                        Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}">
-                                <TextBox Text="{Binding Count, UpdateSourceTrigger=PropertyChanged}"
-                                         Width="34" Margin="0" Padding="2,0" FontSize="10.5"
-                                         Background="{StaticResource BgPrimaryBrush}"
-                                         Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
-                            </StackPanel>
-                        </StackPanel>
-                    </StackPanel>
-                </DockPanel>
-            </Border>
-        </DataTemplate>
-
         <!-- Panel "Editar" compartido - equivalente real de app.TabEdit: sigue al slot
              SELECCIONADO (ItemEditViewModel.Slot), no a uno fijo, para poder vivir fuera del
              TabControl de contenedores y "acompañar" a Inventario/Banco/Caja fuerte/Fragua/
@@ -380,29 +234,7 @@
             </StackPanel>
         </DataTemplate>
 
-        <!-- Pedido explicito 2-sep-2026 ("todas las ventanas que estan por encima de libreria...
-             en ese formato de cuadricula que toda la informacion se pueda ver de golpe y que
-             escale con la ventana"): mismo Viewbox real que ya se aplico al panel Equipamiento -
-             escala la cuadricula ENTERA para caber siempre en el espacio disponible (crece o
-             encoge con la ventana, nunca recorta ni hace falta scroll). Solo para contenedores
-             PEQUEÑOS (Monturas/Tintes=5, Monedas/Municion=4 - pregunta a Opus sobre el diseño,
-             2-sep-2026: "50 tarjetas ricas no caben legibles con ninguna estrategia de
-             escalado", asi que Inventario/Almacenes usan ContainerCompactTemplate en su lugar,
-             ver mas abajo). Ancho real = GridWidth (bug real corregido en ContainerViewModel:
-             antes 1600 fijo aqui dejaba Monedas/Municion/Monturas/Tintes al 42% con 60% de aire
-             muerto, porque un WrapPanel con Width EXPLICITO reporta ese ancho al medir aunque
-             tenga pocos hijos). -->
-        <DataTemplate x:Key="ContainerTabTemplate" DataType="{x:Type vm:ContainerViewModel}">
-            <Viewbox Stretch="Uniform" StretchDirection="Both">
-                <ItemsControl ItemsSource="{Binding Slots}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><WrapPanel Width="{Binding GridWidth}" /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-            </Viewbox>
-        </DataTemplate>
-
-        <!-- Tarjeta compacta de slot (Inventario/Almacenes, >10 slots) - pregunta a Opus sobre
+        <!-- Tarjeta compacta de slot (todos los contenedores reales) - pregunta a Opus sobre
              el diseño 2-sep-2026. Reutiliza los MISMOS handlers de drag&drop que la tarjeta
              rica (leen sender.DataContext, no dependen de la forma de la tarjeta) y el mismo
              ItemSlotCommand/triggers reales (equipado en verde, Calamity en rojo, seleccionado
@@ -444,8 +276,8 @@
                     <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCardCompact}">
                         <Style.Triggers>
                             <!-- El fondo de "hueco vacio" ya lo pone el estilo BASE
-                                 (ItemSlotCard/ItemSlotCardCompact en Theme.xaml, pregunta a Opus
-                                 sobre el diseño 2-sep-2026 - segunda consulta). Antes había aquí
+                                 (ItemSlotCardCompact en Theme.xaml, pregunta a Opus sobre el
+                                 diseño 2-sep-2026 - segunda consulta). Antes había aquí
                                  un DataTrigger de Opacity 0.35 que lavaba ese color contra el
                                  fondo del panel (los triggers del estilo derivado se evalúan
                                  DESPUÉS que los del base) - quitado a propósito, la opacidad ya
@@ -488,11 +320,16 @@
             </Border>
         </DataTemplate>
 
-        <!-- Rejilla compacta de un contenedor grande entero (Inventario=50, o cualquiera de los
-             4 de Almacenes=40) - pregunta a Opus sobre el diseño 2-sep-2026. SlotGridPanel
-             (TerrasavrNative.App/Controls) calcula un tamaño de celda real entre 44 y 96px que
-             crece/encoge con la ventana; si no cabria ni a 44px, aparece scroll (nunca se
-             sacrifica la legibilidad). AvailableHeight se enlaza al ActualHeight del propio
+        <!-- Rejilla compacta de UN contenedor entero - pregunta a Opus sobre el diseño
+             2-sep-2026, unificada tras el feedback del usuario ("equipamiento no tiene el mismo
+             formato que inventario y el resto de las 9 pestañas"): usada ahora por los 9
+             contenedores reales (Equipamiento/Inventario/Almacenes/Monturas/Monedas), no solo
+             los de >10 slots. SlotGridPanel (TerrasavrNative.App/Controls) calcula un tamaño de
+             celda real entre 44 y 96px que crece/encoge con la ventana; si no cabria ni a 44px,
+             aparece scroll (nunca se sacrifica la legibilidad). Columns viene de
+             ContainerViewModel.Columns (10 por defecto, 5 para los contenedores de Equipamiento
+             - ver EquipmentGroupViewModel.AddSlotSet) para que cada uno mantenga su forma real
+             en vez de una unica fila larga. AvailableHeight se enlaza al ActualHeight del propio
              ScrollViewer via RelativeSource AncestorType (recorrido real del arbol visual - un
              ElementName aqui seria fragil, ver SlotGridPanel.cs). -->
         <DataTemplate x:Key="ContainerCompactTemplate" DataType="{x:Type vm:ContainerViewModel}">
@@ -500,7 +337,7 @@
                 <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotCompactTemplate}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <controls:SlotGridPanel Columns="10" MinCell="44" MaxCell="96" Gap="4"
+                            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="44" MaxCell="96" Gap="4"
                                                      AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
@@ -834,20 +671,22 @@
                                                         </ItemsControl>
                                                     </StackPanel>
                                                 </StackPanel>
-                                                <!-- Pregunta a Opus sobre el diseño (2-sep-2026, segunda consulta -
-                                                     "haz lo mismo para equipamientos"): antes este era el UNICO sitio
-                                                     con su propio bloque Viewbox+ItemsControl a medida (con un
-                                                     WrapPanel Width="820" a pelo - 20px de aire muerto respecto a la
-                                                     huella real de 5x160=800, y un numero magico que se rompe en
-                                                     silencio si ItemSlotCard cambia de tamaño). Reusa ahora
-                                                     ContainerTabTemplate, el mismo camino de codigo que ya usan
-                                                     Monturas/Monedas/Almacenes - hereda automaticamente el fondo de
-                                                     "hueco vacio", el tooltip compuesto y cualquier arreglo futuro de
-                                                     esa plantilla compartida, sin poder volver a divergir.
-                                                     EquipmentGroupViewModel.Current expone el ContainerViewModel
-                                                     completo (Columns=5 fijado en AddSlotSet - PlrLoadout siempre
-                                                     tiene 10 slots reales en forma 5x2, ver PlrLoadout.cs). -->
-                                                <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerTabTemplate}" />
+                                                <!-- Pregunta a Opus sobre el diseño (2-sep-2026, tercera pasada tras
+                                                     feedback directo del usuario - "equipamiento no tiene el mismo
+                                                     formato que inventario y el resto de las 9 pestañas"): antes
+                                                     Equipamiento tenia su propio bloque Viewbox+ItemsControl a medida
+                                                     (tarjeta RICA, con WrapPanel Width="820" a pelo - 20px de aire
+                                                     muerto) mientras Inventario/Almacenes ya usaban la rejilla
+                                                     compacta - visualmente inconsistente aunque tecnicamente
+                                                     razonable (Opus recomendo ≤10 slots = tarjeta rica, en la segunda
+                                                     consulta). Ahora los 9 contenedores reales usan el MISMO
+                                                     ContainerCompactTemplate (SlotGridPanel + SlotCompactTemplate),
+                                                     mismo formato en todas partes. EquipmentGroupViewModel.Current
+                                                     expone el ContainerViewModel completo (Columns=5 fijado en
+                                                     AddSlotSet - PlrLoadout siempre tiene 10 slots reales en forma
+                                                     5x2, ver PlrLoadout.cs - ContainerCompactTemplate ahora lee
+                                                     Columns de ahi en vez de un 10 fijo). -->
+                                                <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                             </DockPanel>
                                         </Border>
                                     </TabItem>
@@ -895,9 +734,9 @@
                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding MountsContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                                    <ContentControl Content="{Binding MountsContainer}" ContentTemplate="{StaticResource ContainerTabTemplate}" />
+                                                    <ContentControl Content="{Binding MountsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                     <TextBlock Text="{Binding DyesContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,10,0,4" />
-                                                    <ContentControl Content="{Binding DyesContainer}" ContentTemplate="{StaticResource ContainerTabTemplate}" />
+                                                    <ContentControl Content="{Binding DyesContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                 </StackPanel>
                                             </ScrollViewer>
                                         </Border>
@@ -908,9 +747,9 @@
                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding CoinsContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                                    <ContentControl Content="{Binding CoinsContainer}" ContentTemplate="{StaticResource ContainerTabTemplate}" />
+                                                    <ContentControl Content="{Binding CoinsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                     <TextBlock Text="{Binding AmmoContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,10,0,4" />
-                                                    <ContentControl Content="{Binding AmmoContainer}" ContentTemplate="{StaticResource ContainerTabTemplate}" />
+                                                    <ContentControl Content="{Binding AmmoContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                 </StackPanel>
                                             </ScrollViewer>
                                         </Border>
