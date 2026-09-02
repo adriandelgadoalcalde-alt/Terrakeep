@@ -51,6 +51,20 @@ public partial class MainViewModel : ObservableObject
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
     [ObservableProperty] private EquipmentGroupViewModel? _equipmentGroup;
+    [ObservableProperty] private StorageGroupViewModel? _storageGroup;
+    [ObservableProperty] private ContainerViewModel? _inventoryContainer;
+    [ObservableProperty] private ContainerViewModel? _mountsContainer;
+    [ObservableProperty] private ContainerViewModel? _dyesContainer;
+    [ObservableProperty] private ContainerViewModel? _coinsContainer;
+    [ObservableProperty] private ContainerViewModel? _ammoContainer;
+
+    // Pregunta a Opus sobre el diseño (2-sep-2026): de los ~589px utiles de la pestaña
+    // "Objetos", 270 vivian congelados en la fila de la Libreria (46% del alto) - mas robo de
+    // espacio que las propias 9 pestañas. Plegada por defecto (con auto-despliegue al elegir
+    // objeto, ver RequestPickForSlot) devuelve ese espacio a la cuadricula de items, que es la
+    // prioridad explicita del usuario ("me gusta mucho que los objetos se vean directamente de
+    // un plumazo").
+    [ObservableProperty] private bool _isLibraryCollapsed = true;
     public ResearchViewModel Research { get; }
     public BuildsViewModel Builds { get; }
     public WhatsNewViewModel WhatsNew { get; }
@@ -126,7 +140,11 @@ public partial class MainViewModel : ObservableObject
         SelectSlot(slot); // el panel Editar sigue al slot que se esta rellenando desde la Libreria
         SelectedTabIndex = PersonajeTabIndex;
         PersonajeInnerTabIndex = ObjetosInnerTabIndex;
+        IsLibraryCollapsed = false; // "Elegir..." siempre debe revelar la Libreria, este por defecto plegada o no
     }
+
+    [RelayCommand]
+    private void ToggleLibraryCollapsed() => IsLibraryCollapsed = !IsLibraryCollapsed;
 
     public void LoadFromPath(string plrPath)
     {
@@ -180,22 +198,34 @@ public partial class MainViewModel : ObservableObject
     {
         Containers.Clear();
         EquipmentGroup = null;
+        StorageGroup = null;
+        InventoryContainer = null;
+        MountsContainer = null;
+        DyesContainer = null;
+        CoinsContainer = null;
+        AmmoContainer = null;
         Research.Reset();
         if (_loaded == null) return;
 
         // Contenedores con fusion real de Calamity (mismos 7 que CalamityCharacterSync cubre).
-        AddContainer("inventory", "Inventario", _loaded.MergedContainers["inventory"]);
-        AddContainer("bank", "Banco", _loaded.MergedContainers["bank"]);
-        AddContainer("bank2", "Caja fuerte", _loaded.MergedContainers["bank2"]);
-        AddContainer("bank3", "Fragua del Defensor", _loaded.MergedContainers["bank3"]);
-        AddContainer("bank4", "Boveda del Vacio", _loaded.MergedContainers["bank4"]);
-        AddContainer("miscEquips", "Mascota / Montura / Gancho", _loaded.MergedContainers["miscEquips"]);
-        AddContainer("miscDyes", "Tintes (mascota/montura/gancho)", _loaded.MergedContainers["miscDyes"]);
+        // Se siguen guardando TODOS en Containers (SyncEditsBackToMerged/AutoEquip los buscan
+        // ahi por Key) - las referencias devueltas de mas abajo son solo para la navegacion de
+        // 5 pestañas (pregunta a Opus sobre el diseño, 2-sep-2026), presentacion pura, ningun
+        // dato nuevo ni fusion de colecciones.
+        InventoryContainer = AddContainer("inventory", "Inventario", _loaded.MergedContainers["inventory"]);
+        var bank = AddContainer("bank", "Banco", _loaded.MergedContainers["bank"]);
+        var bank2 = AddContainer("bank2", "Caja fuerte", _loaded.MergedContainers["bank2"]);
+        var bank3 = AddContainer("bank3", "Fragua del Defensor", _loaded.MergedContainers["bank3"]);
+        var bank4 = AddContainer("bank4", "Boveda del Vacio", _loaded.MergedContainers["bank4"]);
+        MountsContainer = AddContainer("miscEquips", "Mascota / Montura / Gancho", _loaded.MergedContainers["miscEquips"]);
+        DyesContainer = AddContainer("miscDyes", "Tintes (mascota/montura/gancho)", _loaded.MergedContainers["miscDyes"]);
 
         // Monedas/municion: vanilla-only (ver CalamityCharacterSync.cs para el alcance
         // documentado - la app JS tampoco los sincroniza con Calamity, solo los protege).
-        AddContainer("coins", "Monedas", _loaded.Character.Coins.ToGameItems());
-        AddContainer("ammo", "Municion", _loaded.Character.Ammo.ToGameItems());
+        CoinsContainer = AddContainer("coins", "Monedas", _loaded.Character.Coins.ToGameItems());
+        AmmoContainer = AddContainer("ammo", "Municion", _loaded.Character.Ammo.ToGameItems());
+
+        StorageGroup = new StorageGroupViewModel(bank, bank2, bank3, bank4);
 
         // Equipo puesto + los 3 loadouts reales seleccionables (Version>=269, si no
         // Loadouts.Length==0) - consolidados en una unica pantalla "Equipamiento" con
@@ -287,7 +317,7 @@ public partial class MainViewModel : ObservableObject
     // entera es el criterio, no un unico slot).
     private const int HotbarSlotCount = 10;
 
-    private void AddContainer(string key, string displayName, GameItem[] items)
+    private ContainerViewModel AddContainer(string key, string displayName, GameItem[] items)
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
@@ -295,7 +325,9 @@ public partial class MainViewModel : ObservableObject
             bool isEquipped = key == "inventory" && i < HotbarSlotCount;
             slots.Add(new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped));
         }
-        Containers.Add(new ContainerViewModel(key, displayName, slots));
+        var container = new ContainerViewModel(key, displayName, slots);
+        Containers.Add(container);
+        return container;
     }
 
     // Vuelca lo que haya en las colecciones enlazadas a la UI de vuelta a MergedContainers

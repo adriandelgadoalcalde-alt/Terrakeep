@@ -44,7 +44,16 @@ public partial class ItemSlotViewModel : ObservableObject
     [ObservableProperty] private int _prefixId;
 
     public bool IsNotEmpty => !IsEmpty;
-    partial void OnIsEmptyChanged(bool value) => OnPropertyChanged(nameof(IsNotEmpty));
+    partial void OnIsEmptyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsNotEmpty));
+        OnPropertyChanged(nameof(ShowCount));
+    }
+
+    // Tarjeta compacta (pregunta a Opus sobre el diseño, 2-sep-2026): sin sitio para un
+    // TextBox de cantidad visible siempre, solo un numero pequeño y unicamente cuando aporta
+    // algo real (1 unidad no necesita rotularse, igual que hace el propio Terraria).
+    public bool ShowCount => !IsEmpty && Count > 1;
 
     public ItemSlotViewModel(CharacterFileService service, int slotIndex, string containerName, GameItem item, Action<ItemSlotViewModel>? requestPick = null, bool isEquipped = false)
     {
@@ -86,6 +95,7 @@ public partial class ItemSlotViewModel : ObservableObject
             HasBestPrefixSuggestion = false;
             IconPath = null;
             StatsTooltip = null;
+            OnPropertyChanged(nameof(ShowCount));
             return;
         }
 
@@ -107,6 +117,7 @@ public partial class ItemSlotViewModel : ObservableObject
 
         var suggestion = PrefixSuggester.Suggest(item, _service.CalamityCatalog, _service.BestPrefixes, _service.RoguePrefixCatalog);
         HasBestPrefixSuggestion = suggestion.HasValue && !suggestion.Value.Equals(item.Prefix);
+        OnPropertyChanged(nameof(ShowCount));
     }
 
     // Coloca un objeto nuevo del catalogo (id real vanilla, o sintetico de Calamity) en este
@@ -156,6 +167,7 @@ public partial class ItemSlotViewModel : ObservableObject
             Count = clamped;
             _suppressCountWriteback = false;
         }
+        OnPropertyChanged(nameof(ShowCount));
     }
 
     private void RefreshPrefixDisplay()

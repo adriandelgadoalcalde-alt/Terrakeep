@@ -6,8 +6,9 @@
         xmlns:local="clr-namespace:TerrasavrNative.App"
         xmlns:vm="clr-namespace:TerrasavrNative.App.ViewModels"
         xmlns:data="clr-namespace:TerrasavrNative.Core.Data;assembly=TerrasavrNative.Core"
+        xmlns:controls="clr-namespace:TerrasavrNative.App.Controls"
         mc:Ignorable="d"
-        Title="Terrakeep" Height="760" Width="1180" MinWidth="1000" MinHeight="620"
+        Title="Terrakeep" Height="860" Width="1180" MinWidth="1000" MinHeight="620"
         Background="{StaticResource BgPrimaryBrush}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -18,9 +19,27 @@
                  arrastrar sobre otro para intercambiarlos, y aqui tambien se pueden soltar
                  tarjetas arrastradas desde la Libreria - ver los manejadores reales en
                  MainWindow.xaml.cs (OnItemSlotMouseDown/Move/Drop). -->
-            <Border ToolTip="{Binding StatsTooltip}" AllowDrop="True"
+            <Border AllowDrop="True" ToolTipService.IsEnabled="{Binding IsNotEmpty}"
                     PreviewMouseLeftButtonDown="OnItemSlotMouseDown" MouseMove="OnItemSlotMouseMove"
                     Drop="OnItemSlotDrop">
+                <!-- Bug real encontrado 2-sep-2026 (pregunta a Opus sobre el diseño): el unico
+                     tooltip vivia en el string StatsTooltip, que ItemStatsFormatter.Format deja
+                     en null para CUALQUIER objeto sin estadisticas de combate (bloques,
+                     materiales, pociones sin stats...) y que NUNCA incluye el nombre del
+                     objeto - compensado aqui con un tooltip compuesto real. PlacementTarget vive
+                     fuera del arbol visual (es un Popup), asi que el DataContext no se hereda
+                     solo - hay que pedirlo explicitamente via RelativeSource Self. -->
+                <Border.ToolTip>
+                    <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <StackPanel MaxWidth="240">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding PrefixDisplay}" Style="{StaticResource CaptionText}"
+                                       Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
+                            <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                       Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
+                        </StackPanel>
+                    </ToolTip>
+                </Border.ToolTip>
                 <Border.Style>
                     <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCard}">
                         <Style.Triggers>
@@ -117,7 +136,15 @@
                            Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}" />
 
                 <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <DockPanel Margin="0,0,0,10">
+                        <!-- La tarjeta compacta (Inventario/Almacenes, pregunta a Opus sobre el
+                             diseño 2-sep-2026) ya no tiene sitio para un boton "✕" propio -
+                             este panel, que acompaña a cualquier slot seleccionado sea cual sea
+                             el contenedor, es donde vive ahora tambien para esos casos (la
+                             tarjeta rica conserva el suyo ademas, por comodidad). -->
+                        <Button DockPanel.Dock="Right" Content="Vaciar slot" Command="{Binding Slot.ClearCommand}"
+                                ToolTip="Vaciar este slot" Padding="6,3" FontSize="10.5" VerticalAlignment="Center"
+                                Foreground="{StaticResource PinkBrush}" Background="Transparent" BorderThickness="0" />
                         <Image Source="{Binding Slot.IconPath}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,8,0"
                                VerticalAlignment="Center"
                                Visibility="{Binding Slot.IconPath, Converter={StaticResource NullToVis}}" />
@@ -129,7 +156,7 @@
                                 <Run Text="{Binding Slot.SlotIndex, Mode=OneWay}" />
                             </TextBlock>
                         </StackPanel>
-                    </StackPanel>
+                    </DockPanel>
 
                     <TextBlock Text="Índice (id)" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
                     <TextBox Text="{Binding Slot.ItemId, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,8"
@@ -320,20 +347,121 @@
              en ese formato de cuadricula que toda la informacion se pueda ver de golpe y que
              escale con la ventana"): mismo Viewbox real que ya se aplico al panel Equipamiento -
              escala la cuadricula ENTERA para caber siempre en el espacio disponible (crece o
-             encoge con la ventana, nunca recorta ni hace falta scroll). WrapPanel con ancho FIJO
-             de 10 columnas (1600px = 10 x ~160px por tarjeta) - mismo ancho real de rejilla que
-             usa el propio Terraria para Inventario/Banco/Caja fuerte/Fragua/Boveda (10 columnas x
-             4-5 filas, ver PlrCharacter.cs: Inventory=50, Bank/Safe/Forge/Void=40) - Monedas/
-             Municion (4 slots) quedan en una unica fila corta dentro de esa misma rejilla de 10,
-             sin problema. -->
+             encoge con la ventana, nunca recorta ni hace falta scroll). Solo para contenedores
+             PEQUEÑOS (Monturas/Tintes=5, Monedas/Municion=4 - pregunta a Opus sobre el diseño,
+             2-sep-2026: "50 tarjetas ricas no caben legibles con ninguna estrategia de
+             escalado", asi que Inventario/Almacenes usan ContainerCompactTemplate en su lugar,
+             ver mas abajo). Ancho real = GridWidth (bug real corregido en ContainerViewModel:
+             antes 1600 fijo aqui dejaba Monedas/Municion/Monturas/Tintes al 42% con 60% de aire
+             muerto, porque un WrapPanel con Width EXPLICITO reporta ese ancho al medir aunque
+             tenga pocos hijos). -->
         <DataTemplate x:Key="ContainerTabTemplate" DataType="{x:Type vm:ContainerViewModel}">
             <Viewbox Stretch="Uniform" StretchDirection="Both">
                 <ItemsControl ItemsSource="{Binding Slots}">
                     <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><WrapPanel Width="1600" /></ItemsPanelTemplate>
+                        <ItemsPanelTemplate><WrapPanel Width="{Binding GridWidth}" /></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>
             </Viewbox>
+        </DataTemplate>
+
+        <!-- Tarjeta compacta de slot (Inventario/Almacenes, >10 slots) - pregunta a Opus sobre
+             el diseño 2-sep-2026. Reutiliza los MISMOS handlers de drag&drop que la tarjeta
+             rica (leen sender.DataContext, no dependen de la forma de la tarjeta) y el mismo
+             ItemSlotCommand/triggers reales (equipado en verde, Calamity en rojo, seleccionado
+             con el glow de acento). Sin Width/Height explicitos - los da SlotGridPanel al
+             hacer Arrange. -->
+        <DataTemplate x:Key="SlotCompactTemplate" DataType="{x:Type vm:ItemSlotViewModel}">
+            <Border AllowDrop="True" ToolTipService.IsEnabled="{Binding IsNotEmpty}"
+                    PreviewMouseLeftButtonDown="OnItemSlotMouseDown" MouseMove="OnItemSlotMouseMove"
+                    Drop="OnItemSlotDrop">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding ChooseFromLibraryCommand}" />
+                </Border.InputBindings>
+                <Border.ToolTip>
+                    <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <StackPanel MaxWidth="240">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding PrefixDisplay}" Style="{StaticResource CaptionText}"
+                                       Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
+                            <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                       Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
+                        </StackPanel>
+                    </ToolTip>
+                </Border.ToolTip>
+                <!-- El menu contextual TAMPOCO hereda el DataContext solo (es un Popup fuera del
+                     arbol visual, igual que el ToolTip de arriba) - mismo remedio real. -->
+                <Border.ContextMenu>
+                    <ContextMenu DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="Elegir objeto..." Command="{Binding ChooseFromLibraryCommand}" />
+                        <MenuItem Header="Aplicar mejor prefijo" Command="{Binding ApplyBestPrefixCommand}"
+                                  Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
+                        <MenuItem Header="Vaciar slot" Command="{Binding ClearCommand}"
+                                  Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
+                    </ContextMenu>
+                </Border.ContextMenu>
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCardCompact}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                <Setter Property="Opacity" Value="0.35" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsEquipped}" Value="True" />
+                                    <Condition Binding="{Binding IsEmpty}" Value="False" />
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="BorderBrush" Value="{StaticResource EquippedGreenBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </MultiDataTrigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                                <Setter Property="Effect" Value="{StaticResource AccentGlow}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <TextBlock Text="{Binding Count}" FontSize="9.5" Foreground="{StaticResource TextPrimaryBrush}"
+                               HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,1"
+                               Visibility="{Binding ShowCount, Converter={StaticResource BoolToVis}}">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="Black" Direction="0" ShadowDepth="0" BlurRadius="3" Opacity="0.9" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                    <TextBlock Text="&#9733;" FontSize="9" Foreground="{StaticResource AccentBrush}"
+                               HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,0,0,0"
+                               Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- Rejilla compacta de un contenedor grande entero (Inventario=50, o cualquiera de los
+             4 de Almacenes=40) - pregunta a Opus sobre el diseño 2-sep-2026. SlotGridPanel
+             (TerrasavrNative.App/Controls) calcula un tamaño de celda real entre 44 y 96px que
+             crece/encoge con la ventana; si no cabria ni a 44px, aparece scroll (nunca se
+             sacrifica la legibilidad). AvailableHeight se enlaza al ActualHeight del propio
+             ScrollViewer via RelativeSource AncestorType (recorrido real del arbol visual - un
+             ElementName aqui seria fragil, ver SlotGridPanel.cs). -->
+        <DataTemplate x:Key="ContainerCompactTemplate" DataType="{x:Type vm:ContainerViewModel}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotCompactTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controls:SlotGridPanel Columns="10" MinCell="44" MaxCell="96" Gap="4"
+                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </ScrollViewer>
         </DataTemplate>
 
         <!-- Un objeto/arma/accesorio recomendado dentro de una build, ya con icono real -->
@@ -594,7 +722,13 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
-                                <RowDefinition Height="270" />
+                                <!-- Antes fija en 270px SIEMPRE (46% del alto util de esta
+                                     pestaña, mas robo de espacio que las propias 9 pestañas de
+                                     antes) - pregunta a Opus sobre el diseño (2-sep-2026): Auto
+                                     deja que la cabecera colapsable de abajo decida su propio
+                                     alto real (barra siempre visible, o barra + 238px de
+                                     contenido cuando esta desplegada). -->
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <!-- Contenedores a la izquierda + panel "Editar" a la derecha (equivalente real
@@ -676,24 +810,68 @@
                                             </DockPanel>
                                         </Border>
                                     </TabItem>
+                                    <!-- Antes: 9 pestañas planas aqui dentro (Inventario/Banco/Caja
+                                         fuerte/Fragua/Boveda/Mascota-Montura-Gancho/Tintes/Monedas/
+                                         Municion) que a los anchos de ventana normales envolvian a 2-3
+                                         lineas, comiendose el alto real de la cuadricula de objetos -
+                                         pregunta a Opus sobre el diseño (2-sep-2026), consolidadas en 3
+                                         destinos: "Almacenes" agrupa los 4 contenedores de 40 slots tras
+                                         un selector de pildoras (mismo patron que Equipamiento), y
+                                         "Monturas"/"Monedas" apilan sus dos contenedores emparejados
+                                         (asi es como los muestra el propio juego: el tinte i corresponde
+                                         al equipo i). Los 9 ContainerViewModel siguen siendo los MISMOS
+                                         de siempre (MainViewModel.Containers) - riesgo cero para
+                                         guardar/cargar, ver StorageGroupViewModel.cs. -->
                                     <TabItem Header="Inventario">
-                                        <!-- Mismo contorno que Equipamiento (pedido explicito 2-sep-2026,
-                                             "me gusta") - mismo Border, mismo estilo, para que las 9
-                                             pestañas de aqui dentro (Inventario/Banco/Caja fuerte/
-                                             Fragua/Boveda/...) se sientan parte de la misma familia
-                                             visual. -->
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
-                                            <TabControl Style="{StaticResource InnerTabControl}" ItemsSource="{Binding Containers}">
-                                                <TabControl.ItemTemplate>
-                                                    <DataTemplate DataType="{x:Type vm:ContainerViewModel}">
-                                                        <TextBlock Text="{Binding DisplayName}" />
-                                                    </DataTemplate>
-                                                </TabControl.ItemTemplate>
-                                                <TabControl.ContentTemplate>
-                                                    <StaticResource ResourceKey="ContainerTabTemplate" />
-                                                </TabControl.ContentTemplate>
-                                            </TabControl>
+                                            <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                        </Border>
+                                    </TabItem>
+                                    <TabItem Header="Almacenes">
+                                        <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
+                                            <DockPanel DataContext="{Binding StorageGroup}">
+                                                <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Options}" Margin="0,0,0,6">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
+                                                            <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
+                                                                    Command="{Binding DataContext.StorageGroup.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                            </DockPanel>
+                                        </Border>
+                                    </TabItem>
+                                    <TabItem Header="Monturas">
+                                        <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding MountsContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                    <ContentControl Content="{Binding MountsContainer}" ContentTemplate="{StaticResource ContainerTabTemplate}" />
+                                                    <TextBlock Text="{Binding DyesContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,10,0,4" />
+                                                    <ContentControl Content="{Binding DyesContainer}" ContentTemplate="{StaticResource ContainerTabTemplate}" />
+                                                </StackPanel>
+                                            </ScrollViewer>
+                                        </Border>
+                                    </TabItem>
+                                    <TabItem Header="Monedas">
+                                        <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding CoinsContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                    <ContentControl Content="{Binding CoinsContainer}" ContentTemplate="{StaticResource ContainerTabTemplate}" />
+                                                    <TextBlock Text="{Binding AmmoContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,10,0,4" />
+                                                    <ContentControl Content="{Binding AmmoContainer}" ContentTemplate="{StaticResource ContainerTabTemplate}" />
+                                                </StackPanel>
+                                            </ScrollViewer>
                                         </Border>
                                     </TabItem>
                                 </TabControl>
@@ -707,6 +885,33 @@
                                  LibraryViewModel.BuildCategoryTree) + buscador, SIEMPRE visible aqui abajo. -->
                             <Border Grid.Row="1" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8">
                                 <DockPanel>
+                                    <!-- Cabecera SIEMPRE visible (pregunta a Opus sobre el diseño,
+                                         2-sep-2026: plegar la Libreria es la mayor ganancia de
+                                         espacio real de toda la pantalla, mas que optimizar las
+                                         pestañas) - se puede plegar/desplegar a mano, y se
+                                         auto-despliega sola al elegir "Elegir..."/"Cambiar" en
+                                         cualquier slot (MainViewModel.RequestPickForSlot), para que
+                                         nunca quede escondida justo cuando hace falta. -->
+                                    <Button DockPanel.Dock="Top" Command="{Binding ToggleLibraryCollapsedCommand}"
+                                            HorizontalContentAlignment="Stretch" Padding="8,5" Margin="0,0,0,4"
+                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="▲ Plegar" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsLibraryCollapsed}" Value="True">
+                                                                <Setter Property="Text" Value="▼ Desplegar" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="Librería" Style="{StaticResource SectionText}" FontSize="12.5" />
+                                        </DockPanel>
+                                    </Button>
+
                                     <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
                                             Visibility="{Binding Library.IsPicking, Converter={StaticResource BoolToVis}}">
                                         <DockPanel>
@@ -717,7 +922,7 @@
                                         </DockPanel>
                                     </Border>
 
-                                    <Grid>
+                                    <Grid Height="238" Visibility="{Binding IsLibraryCollapsed, Converter={StaticResource InverseBoolToVis}}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="210" />
                                             <ColumnDefinition Width="*" />

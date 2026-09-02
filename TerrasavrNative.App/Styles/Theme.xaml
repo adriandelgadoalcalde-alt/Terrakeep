@@ -700,6 +700,17 @@
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
     </Style>
 
+    <!-- Tarjeta compacta de slot (Inventario/Almacenes, >10 slots - pregunta a Opus sobre el
+         diseño 2-sep-2026): a diferencia de ItemSlotCard NO fija Width/Height - los da
+         SlotGridPanel al hacer Arrange (celda cuadrada con suelo/techo real), este estilo
+         solo pone el aspecto visual. -->
+    <Style x:Key="ItemSlotCardCompact" TargetType="Border">
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+    </Style>
+
     <!-- Tarjeta generica elevada - cabecera en degradado real (ver .tsx-modal-header del CSS
          real: linear-gradient(135deg, #21253a, #171a26)) disponible como HeaderGradientBrush
          para quien la quiera usar en su propia cabecera. -->

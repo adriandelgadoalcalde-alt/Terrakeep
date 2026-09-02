@@ -2556,3 +2556,74 @@ separado de Inventario") pasa a ser solo cuestión de qué contenedor hay a cada
 `TabControl` externo, no del contorno en sí.
 
 `dotnet build`/`dotnet test` en verde (128/128).
+
+## Rediseño de las 9 pestañas de contenedor tras pregunta a Opus (2-sep-2026)
+
+Feedback tras ver el resultado real de la ronda anterior: *"hay que hacer algo con esas 9
+pestañas se comen todo el espacio y hace que cuadrícula y los objetos se vean super pequeños...
+me gusta mucho que los objetos se vean directamente de un plumazo, pregunta a opus sobre un
+plan real..."*. Consultado un agente con Opus (contexto completo: geometría real medida,
+tensión entre "ver todo de un plumazo" y legibilidad) - devolvió un diagnóstico con números
+reales: a un ancho de ventana normal, la rejilla de Inventario (50 slots) solo tenía
+~678x165px reales tras restar cabecera + 9 pestañas en 2 líneas + fila fija de Librería, así
+que el `Viewbox` la escalaba a 0,38x - tarjetas de 56x28px con letra de 4pt, exactamente lo que
+se veía en la captura. Diagnóstico: el problema no era Viewbox-vs-scroll, era el tamaño de
+tarjeta - **"cambiar la tarjeta, no la estrategia de escalado"**. Plan implementado completo
+(6 pasos, todos en un mismo commit por ser un rediseño coherente):
+
+1. **Bug real de `GridWidth` fijo**: `ContainerTabTemplate` tenía `WrapPanel Width="1600"`
+   fijo para las 9, así que Monedas/Munición/Mascota-Montura-Gancho/Tintes (4-5 slots) se
+   escalaban igual de pequeño que si tuvieran 50 objetos reales, con 60% de aire muerto.
+   Arreglado con `ContainerViewModel.GridWidth => Math.Min(10, Slots.Count) * 160` (nuevo, la
+   plantilla ahora usa `{Binding GridWidth}`).
+2. **Tooltip compuesto**: `ItemStatsFormatter.Format` devuelve `null` para cualquier objeto sin
+   estadísticas de combate (bloques, materiales...) y nunca incluye el nombre - la tarjeta rica
+   y la nueva compacta llevan ahora un `Border.ToolTip` compuesto (Nombre en negrita + Prefijo +
+   Stats si hay) en vez de depender solo del string. Gotcha real de WPF: el `ToolTip` (como el
+   `ContextMenu`) es un Popup fuera del árbol visual y NO hereda el `DataContext` solo - hace
+   falta `DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"`.
+3. **Librería plegable**: la fila fija de 270px (46% del alto útil de la pestaña, más robo de
+   espacio que las propias 9 pestañas) pasa a `Height="Auto"` con una cabecera siempre visible
+   (botón "▲ Plegar"/"▼ Desplegar", `MainViewModel.IsLibraryCollapsed`, **plegada por defecto**
+   dado que la prioridad explícita del usuario es la cuadrícula de objetos) y contenido de
+   238px solo cuando está desplegada. Auto-despliegue en `RequestPickForSlot` para que "Elegir
+   objeto..." nunca deje la Librería escondida. Ventana `Height` 760→860 (100px extra gratis).
+4. **Consolidación de 9 pestañas a 5** (Equipamiento/Inventario/Almacenes/Monturas/Monedas):
+   nuevo `StorageGroupViewModel.cs` (mismo patrón que `EquipmentGroupViewModel` - selector de 4
+   píldoras Banco/Caja fuerte/Fragua/Bóveda, reutiliza `EquipmentOptionViewModel`). Monturas
+   apila Mascota-Montura-Gancho + Tintes; Monedas apila Monedas + Munición (así los muestra el
+   propio juego: el tinte i corresponde al equipo i). **Riesgo cero para guardar/cargar**: los
+   9 `ContainerViewModel` siguen siendo exactamente los mismos objetos de
+   `MainViewModel.Containers` (`SyncEditsBackToMerged`/`AutoEquip` no cambian) - la
+   consolidación es pura capa de presentación, sin fusionar ninguna colección.
+5. **`SlotGridPanel` (nuevo, `Controls/SlotGridPanel.cs`)**: rejilla propia para Inventario
+   (50) y Almacenes (40 cada uno) en vez de Viewbox - calcula un tamaño de celda real
+   `clamp(min(anchoDisp/cols, altoDisp/filas), MinCell=44, MaxCell=96)`: crece/encoge con la
+   ventana ("de un plumazo") mientras quepa legible, y se congela + aparece scroll si no
+   cabría ni a 44px (nunca se sacrifica la legibilidad). Un `ScrollViewer` mide a su hijo con
+   altura infinita, así que hace falta una DP `AvailableHeight` enlazada al `ActualHeight` del
+   propio `ScrollViewer` - vía `RelativeSource AncestorType` (recorrido real del árbol visual),
+   NO `ElementName` (frágil cruzando el límite de un `ItemsPanelTemplate`, la trampa que Opus
+   avisó por adelantado). Nueva `SlotCompactTemplate` (icono + contador solo si >1 +
+   `RenderOptions.BitmapScalingMode="NearestNeighbor"` para que el pixel art no salga
+   embarrado) con `ContextMenu` (Elegir/Aplicar prefijo/Vaciar) y doble clic para elegir objeto
+   - reutiliza los mismos manejadores de drag&drop que la tarjeta rica sin tocarlos (leen
+   `sender.DataContext`, no dependen de la forma de la tarjeta).
+6. **"Vaciar slot"** añadido al panel Editar compartido (antes solo existía el botón "✕" de la
+   tarjeta rica, que la compacta no tiene sitio para llevar - ahora también vive en el panel
+   que acompaña a cualquier slot seleccionado).
+
+**Verificación real** (no solo build limpio, dado que los bindings `{Binding}` no se comprueban
+en compilación y `SlotGridPanel` es lógica de layout nueva sin probar): arnés WPF de usar-y-tirar
+(mismo patrón ya establecido en esta bitácora - `Application` en blanco con `Theme.xaml` +
+conversores cargados a mano, sin `StartupUri`) que carga un personaje real sintético
+(`PlrCharacter` con `PlrFile.Write`/`LoadFromPath` real, no mockeado), coloca objetos reales en
+12 slots de Inventario y 15 de Banco, y navega las 5 pestañas + la píldora "Fragua del
+Defensor" vía UI Automation real (`SelectionItemPattern`/`InvokePattern`, no coordenadas de
+píxel). Resultado: las 5 pestañas seleccionan sin excepción, `SlotGridPanel` mide/organiza 50 y
+40 slots reales sin fallar (12 y 15 imágenes reales encontradas respectivamente, coincide con
+los objetos colocados), la píldora cambia `StorageGroup.Current` de "Banco" a "Fragua del
+Defensor" de verdad, `GridWidth` da los valores esperados (1600/800/800/640/640), el toggle de
+Librería cambia `IsLibraryCollapsed`, y no aparece `ultimo-error.log` ni ninguna excepción de
+`Dispatcher`. `dotnet build`/`dotnet test` en verde (128/128, sin regresiones - todo el cambio
+es de `TerrasavrNative.App`, `Core` no se tocó).
