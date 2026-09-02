@@ -123,8 +123,15 @@ public partial class LibraryViewModel : ObservableObject
         var target = PickTarget;
         bool hasSlotRestriction = target != null && target.AcceptedKind != TerrasavrNative.Core.Model.SlotKind.None;
 
+        // Bug real reportado 2-sep-2026 (KeyNotFoundException, id 5462, al elegir "Armas"):
+        // el arbol real de la Libreria (extraido de Terrasavr) referencia algun id que no
+        // esta en el catalogo de nombres vanilla (VanillaItemCatalog, cobertura no al 100% -
+        // ver su propio comentario "los ~13 objetos sin traduccion real"). Un id que el arbol
+        // conoce pero el catalogo no se descarta en silencio en vez de tumbar la app entera -
+        // mismo criterio de "lo que no se encuentra no se inventa", aplicado aqui a
+        // "lo que no se encuentra no rompe nada".
         IEnumerable<LibraryItemViewModel> matches = SelectedCategory != null
-            ? SelectedCategory.ItemIdsOrdered.Select(id => _byId[id])
+            ? SelectedCategory.ItemIdsOrdered.Select(id => _byId.GetValueOrDefault(id)).OfType<LibraryItemViewModel>()
             : _all;
 
         if (hasSlotRestriction)

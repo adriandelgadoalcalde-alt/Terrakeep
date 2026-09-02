@@ -91,8 +91,11 @@ public partial class BuffLibraryViewModel : ObservableObject
         Results.Clear();
 
         bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
+        // Mismo arreglo real que LibraryViewModel.ApplyFilter (KeyNotFoundException real
+        // reportada 2-sep-2026) - un id que el arbol conoce pero el catalogo no se descarta
+        // en silencio en vez de tumbar la app entera.
         IEnumerable<BuffCatalogEntryViewModel> matches = SelectedCategory != null
-            ? SelectedCategory.ItemIdsOrdered.Select(id => _byId[id])
+            ? SelectedCategory.ItemIdsOrdered.Select(id => _byId.GetValueOrDefault(id)).OfType<BuffCatalogEntryViewModel>()
             : _all;
 
         if (hasSearch)
