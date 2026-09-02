@@ -921,18 +921,31 @@
                                      principal, Inventario/Almacenes/Equipamiento) se quedaba
                                      con lo que sobrara, hasta cero si hacia falta - "el
                                      Inventario estaba subvencionando a la Libreria" (consulta a
-                                     Opus, septima pasada, tras medir en una captura real que a
-                                     620px de alto con la Libreria desplegada solo se veian ~2
-                                     de las 5 filas reales de Inventario). Las DOS filas ahora
-                                     compiten de verdad por el alto real disponible (ambas "*",
-                                     con MinHeight/MaxHeight reales) - Objetos con prioridad
-                                     3:1 y un suelo real (216px = 5 filas de Inventario a 40px
-                                     + huecos, el caso mas exigente de los 3 sub-tabs que
-                                     comparten esta fila), Libreria entre 150 (util minimo real,
-                                     ver Opus) y 238 (el tamaño de siempre, con la ventana
-                                     grande). -->
+                                     Opus, septima pasada). Las DOS filas compiten de verdad por
+                                     el alto real disponible (ambas "*" cuando la Libreria esta
+                                     desplegada) - Objetos con prioridad y un suelo real (216px
+                                     = 5 filas de Inventario a 40px + huecos, el caso mas
+                                     exigente de los 3 sub-tabs que comparten esta fila).
+                                     Bug real encontrado y corregido (octava pasada, consulta a
+                                     Opus): al pasar de "Auto" a "*" para resolver lo de arriba,
+                                     PLEGAR la Libreria dejo de devolver espacio de verdad - la
+                                     fila seguia siendo "1*" con MinHeight=150 SIEMPRE, asi que
+                                     plegada seguia dejando una banda vacia de 150-238px con
+                                     forma de Libreria (el usuario la veia como "expandida"
+                                     aunque el boton dijera lo contrario). Height/MinHeight de
+                                     la fila de la Libreria ahora dependen de IsLibraryVisible
+                                     (ver MainViewModel) via BoolToGridLength/BoolToDouble -
+                                     colapsada de verdad, Height=Auto MinHeight=0 (se encoge al
+                                     alto real de la barra "Librería ▼ Desplegar", ~34px, cero
+                                     hueco muerto); desplegada, "2*" con suelo 200 (98px de
+                                     chrome interior + 2 filas de rejilla a 48px, calculo real
+                                     de Opus, no "porque si"). MaxHeight=460 se queda fijo, sin
+                                     depender de la visibilidad (un techo generoso no molesta
+                                     estando colapsada, Auto ya no crece de mas por si solo). -->
                                 <RowDefinition Height="3*" MinHeight="216" />
-                                <RowDefinition Height="1*" MinHeight="150" MaxHeight="238" />
+                                <RowDefinition Height="{Binding IsLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
+                                               MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
+                                               MaxHeight="460" />
                             </Grid.RowDefinitions>
 
                             <!-- Contenedores a la izquierda + panel "Editar" a la derecha (equivalente real
@@ -1194,7 +1207,7 @@
                                         </DockPanel>
                                     </Border>
 
-                                    <Grid Visibility="{Binding IsLibraryCollapsed, Converter={StaticResource InverseBoolToVis}}">
+                                    <Grid Visibility="{Binding IsLibraryVisible, Converter={StaticResource BoolToVis}}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="210" />
                                             <ColumnDefinition Width="*" />
@@ -1258,13 +1271,19 @@
                              boton "Añadir buff..." desaparece, sustituido por esta Libreria. -->
                         <Grid Margin="0,10,0,0">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <!-- Mismo arreglo real que la Libreria de Objetos (consulta a
-                                     Opus, septima pasada) - "*" con MinHeight/MaxHeight en vez
-                                     de "Auto" con un hijo de 238px fijo, para que ceda alto de
-                                     verdad si la ventana aprieta en vez de imponer siempre su
-                                     tamaño maximo. -->
-                                <RowDefinition Height="*" MinHeight="150" MaxHeight="238" />
+                                <!-- Bug real encontrado y corregido (octava pasada, consulta a
+                                     Opus): Height="380" fijo en el Border de abajo + esta fila
+                                     en "Auto" es EXACTAMENTE la misma patologia ya diagnosticada
+                                     y arreglada en Objetos en la septima pasada ("el Inventario
+                                     estaba subvencionando a la Libreria") pero que se quedo sin
+                                     arreglar aqui - a 700px de alto (el minimo real de la
+                                     ventana) 380+8 de esta fila + 200 minimo de la Libreria +
+                                     chrome desborda de verdad. Mismo esquema real que Objetos:
+                                     "*" con suelo, sin altura fija en el Border. -->
+                                <RowDefinition Height="3*" MinHeight="216" />
+                                <RowDefinition Height="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
+                                               MinHeight="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
+                                               MaxHeight="460" />
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0" Margin="0,0,0,8">
@@ -1274,7 +1293,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <Border Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                        Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,0,10,0" Height="380">
+                                        Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,0,10,0">
                                     <ContentControl Content="{Binding Buffs.Container}" ContentTemplate="{StaticResource BuffContainerCompactTemplate}" />
                                 </Border>
 
@@ -1318,7 +1337,7 @@
                                         </DockPanel>
                                     </Border>
 
-                                    <Grid Visibility="{Binding IsBuffLibraryCollapsed, Converter={StaticResource InverseBoolToVis}}">
+                                    <Grid Visibility="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToVis}}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="210" />
                                             <ColumnDefinition Width="*" />

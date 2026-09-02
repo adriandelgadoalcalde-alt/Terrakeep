@@ -73,6 +73,21 @@ public partial class MainViewModel : ObservableObject
     // rework de Buffs, pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada) - plegada por
     // defecto, auto-despliegue al "Elegir..." un buff (RequestPickForBuffSlot).
     [ObservableProperty] private bool _isBuffLibraryCollapsed = true;
+
+    // Bug real reportado 2-sep-2026 ("sale la librería expandida y no con su botón", "cada vez
+    // se ve más pequeña" - octava pasada, consulta a Opus): RequestPickForSlot ponia
+    // IsLibraryCollapsed=false directamente, un pestillo de un solo sentido - nada lo volvia a
+    // poner en true jamas (ni PlaceInTarget/CancelPick, ni cambiar de personaje), asi que el
+    // PRIMER "Elegir objeto..." de la sesion dejaba la Libreria desplegada para siempre, sin
+    // que el usuario hubiera tocado el boton. IsLibraryCollapsed vuelve a ser SOLO la
+    // preferencia real del usuario (la que cambia el boton, y solo el boton) - la visibilidad
+    // real es una propiedad derivada que combina esa preferencia con un despliegue TEMPORAL
+    // mientras se esta eligiendo, sin pisarla. Al terminar/cancelar el pick, vuelve sola a la
+    // preferencia real - el boton nunca miente sobre lo que hay en pantalla.
+    public bool IsLibraryVisible => !IsLibraryCollapsed || Library.IsPicking;
+    public bool IsBuffLibraryVisible => !IsBuffLibraryCollapsed || BuffLibrary.IsPicking;
+    partial void OnIsLibraryCollapsedChanged(bool value) => OnPropertyChanged(nameof(IsLibraryVisible));
+    partial void OnIsBuffLibraryCollapsedChanged(bool value) => OnPropertyChanged(nameof(IsBuffLibraryVisible));
     public ResearchViewModel Research { get; }
     public BuildsViewModel Builds { get; }
     public WhatsNewViewModel WhatsNew { get; }
@@ -103,12 +118,22 @@ public partial class MainViewModel : ObservableObject
             SelectedTabIndex = PersonajeTabIndex;
             PersonajeInnerTabIndex = ObjetosInnerTabIndex;
         };
+        // IsLibraryVisible depende de Library.IsPicking (ver su comentario) - Library ya
+        // notifica ese cambio (OnPickTargetChanged), asi que solo hace falta reenviarlo.
+        Library.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(LibraryViewModel.IsPicking)) OnPropertyChanged(nameof(IsLibraryVisible));
+        };
         BuffEdit = new BuffEditViewModel(_service);
         BuffLibrary = new BuffLibraryViewModel(_service);
         BuffLibrary.BuffPlaced += () =>
         {
             SelectedTabIndex = PersonajeTabIndex;
             PersonajeInnerTabIndex = BuffsInnerTabIndex;
+        };
+        BuffLibrary.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(BuffLibraryViewModel.IsPicking)) OnPropertyChanged(nameof(IsBuffLibraryVisible));
         };
         Buffs = new BuffsViewModel(_service, RequestPickForBuffSlot);
         ItemEdit = new ItemEditViewModel(_service);
@@ -166,7 +191,9 @@ public partial class MainViewModel : ObservableObject
         SelectSlot(slot); // el panel Editar sigue al slot que se esta rellenando desde la Libreria
         SelectedTabIndex = PersonajeTabIndex;
         PersonajeInnerTabIndex = ObjetosInnerTabIndex;
-        IsLibraryCollapsed = false; // "Elegir..." siempre debe revelar la Libreria, este por defecto plegada o no
+        // IsLibraryCollapsed YA NO se toca aqui (ver su comentario) - Library.IsPicking (puesto
+        // arriba al fijar PickTarget) ya revela la Libreria via IsLibraryVisible, sin pisar la
+        // preferencia real del usuario.
     }
 
     [RelayCommand]
@@ -180,7 +207,7 @@ public partial class MainViewModel : ObservableObject
         SelectBuffSlot(slot);
         SelectedTabIndex = PersonajeTabIndex;
         PersonajeInnerTabIndex = BuffsInnerTabIndex;
-        IsBuffLibraryCollapsed = false;
+        // IsBuffLibraryCollapsed YA NO se toca aqui, mismo motivo que RequestPickForSlot.
     }
 
     [RelayCommand]
