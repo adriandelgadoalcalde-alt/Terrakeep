@@ -3248,3 +3248,106 @@ y accesorio con ids reales conocidos) y captura PNG real revisada a mano tras ca
 las 4 aserciones Calamity nuevas (armadura Calamity aceptada en cabeza/rechazada en accesorio,
 accesorio Calamity aceptado en accesorio/rechazado en cabeza, las 4 exactas) y captura PNG real
 confirmando celdas más pequeñas sin scrollbar visible en el lateral izquierdo.
+
+## Séptima pasada de feedback (2-sep-2026) - redimensionado real de toda la app + botones ovalados/modernos
+
+Mensaje único, muy denso: solape real en Equipamiento al redimensionar, scroll persistente en
+Mascota/Montura/Tinte, pérdida de contenido en CUALQUIER rejilla al reducir la ventana ("siempre
+ha de verse [el numero real de slots], independientemente de lo pequeña que se haga la ventana"),
+la Librería no se adapta bien, y estética "horrenda" de ciertos botones (captura 1, el selector
+de pestañas de Almacenes/Vista) frente a un "moderno" (captura 2, "Auto-equipar" de Builds) -
+pedido explícito de aplicar el estilo moderno a TODOS los botones. Instrucción final: "consulta
+esto muy bien con Opus y que dedique un buen tiempo a todo esto".
+
+Investigación real ANTES de consultar (capturas `RenderTargetBitmap` a varios tamaños de
+ventana real, incluido el `MinWidth`/`MinHeight` declarado de la propia ventana - no un caso
+extremo forzado): confirmados los 3 bugs tal cual los describió el usuario, con captura real de
+cada uno. Consulta a Opus con estos hallazgos + XAML real citado - respuesta muy extensa
+("dedica el tiempo real que pide el usuario"), con un hallazgo cuantitativo real (midió los
+5454 iconos vanilla reales con PIL: el sprite mediano ocupa 28 de 40px de lienzo) y un modelo de
+presupuesto vertical/horizontal que predijo la altura real disponible en la captura del usuario
+casi exacto antes de verla.
+
+**Implementado, siguiendo el orden de Opus**:
+
+1. **Los paneles de Librería ya no roban espacio al contenido principal**: `Grid Height="238"`
+   fijo (Objetos y Buffs) sustituido por `RowDefinition` reales - las DOS filas (contenido
+   principal / Librería) ahora compiten de verdad por el alto disponible (`3*`/`1*` con
+   `MinHeight`/`MaxHeight` reales en vez de `*`/`Auto` con un hijo fijo que "Auto" cobraba
+   siempre primero, sea cual sea el alto real - "el Inventario estaba subvencionando a la
+   Librería", diagnóstico real de Opus). Esto solo, sin tocar ningún tamaño de icono, resuelve
+   el caso más grave (Inventario mostrando solo ~2 de sus 5 filas reales con la Librería
+   desplegada a la resolución mínima) - **verificado**: ahora se ven las 5 filas completas.
+2. **Suelo/techo universal de celda recalibrado con datos reales**: `MinCell` 44→40 (Opus midió
+   que 44 da una escala `NearestNeighbor` irregular - 0.85x, "peor por píxel" que 40 pese a ser
+   más grande; 40 coincide con el `MinCell` que ya llevaba meses en producción en la Librería
+   sin ninguna queja, el mejor experimento controlado real del proyecto) y `MaxCell` 96→90 (96
+   daba una escala 2.15x irregular; 90 da 2.00x exacto). `ContainerViewModel.MinCell` (ya
+   existía) y `MaxCell` (nuevo) - default 40/90, aplicado en todos los `SlotGridPanel` reales.
+3. **`Window.MinWidth`/`MinHeight`**: 1000×620 → primero 1040×700 (cálculo real de Opus,
+   contando línea a línea el presupuesto fijo real de la pestaña Objetos), luego 1080×700 tras
+   un déficit real de ~18px medido con el arnés al implementar el punto 4 (ver abajo) - todo
+   verificado con números reales del propio arnés, no calculado a ciegas.
+4. **El solape real de Equipamiento**: causa exacta confirmada con la aritmética real
+   (`SlotRowHost` a 1000px de ancho, columna central recibía 214px pero su contenido real
+   pedía 236px - 22px de desborde real, exacto al pixel del solape fotografiado). Columnas
+   `2*/5*/4*` (proporciones puras, sin relación con los anchos mínimos reales de cada bloque)
+   sustituidas por `Auto`+`MinWidth` en los laterales y `*` en el centro (que ahora se queda
+   con TODO el sobrante real) + `ClipToBounds="True"` en el `SlotRowHost` como red de
+   seguridad (nunca debería activarse ya, pero prefiere recortar en silencio a solapar visible
+   si algún caso raro se escapa).
+5. **Etiqueta cortada ("Mascota /" sin "Montura")**: `TextWrapping="Wrap"` - pero se descubrió
+   un gotcha real de WPF no anticipado por Opus: una columna `"Auto"` mide a sus hijos con
+   ancho INFINITO en la primera pasada, así que `Wrap` sin más NO envuelve de verdad (el texto
+   sin envolver, más ancho que la rejilla de iconos, terminaba siendo la etiqueta quien fijaba
+   el ancho real de toda la columna) - hizo falta añadir también `MaxWidth="70"` real para
+   forzar el envoltorio. Encontrado y corregido verificando con el arnés (`ActualWidth` medido
+   de la columna, no dado por bueno solo porque el texto se veía completo).
+6. **Botones ovalados/modernos en toda la app**: `Button` base con `CornerRadius="999"` (WPF
+   clampea el radio real a la mitad del lado más corto - un solo número, óvalo perfecto a
+   cualquier tamaño). `PrefixMetaButton`/`PrefixGroupButton` (ya eran píldora, `CornerRadius=99`,
+   pero PLANOS - sin degradado/elevación/animación) reescritos como `BasedOn` del `Button` base
+   en vez de mantener su propia plantilla duplicada - `IsSelected` ahora se traduce a
+   `Tag="Accent"`/`"AccentSoft"` (lo único que la plantilla base entiende de verdad) en vez de
+   pintar `Background`/`Foreground` a mano. Nuevo `BarButton` (calco del `Button` base con
+   `CornerRadius="8"` en vez de `999`) para las 2 barras reales a todo el ancho donde una
+   píldora completa se vería como un error visual (cabeceras plegables de "Librería"/"Librería
+   de buffs") - los demás casos candidatos (botones "Colocar", fila de NPC del Explorador) NO
+   lo necesitaban tras revisar el XAML real (ya son tan cortos que el clamp de 999 no cambia
+   nada visible, o su fondo real lo pinta un `Border` interior propio). De paso, 2 bugs reales
+   de "`Background` puesto a mano no hace nada" (mismo patrón ya documentado antes en
+   `ItemEditTemplate`/`NavCardButton`) encontrados y corregidos: "Colocar" (`Tag="Accent"`
+   añadido) y "Cancelar" de los banners de "eligiendo" (`Tag="Ghost"` añadido).
+7. **Bug real encontrado DESPUÉS de implementar la recomendación de Opus** (no en su consulta -
+   verificado con el arnés tras el cambio, no dado por bueno a ciegas): con más alto real
+   disponible (tras el punto 3), el lateral Mascota/Montura/Tinte (columna única, sin techo de
+   celda propio hasta ahora) crecía sin límite hacia el techo universal (90), robándole sitio
+   real a la columna central. Arreglado con un `MaxCell` propio (56) para estos 2 contenedores,
+   igual que ya tenían su propio `MinCell` (32).
+8. **Bug real encontrado DESPUÉS, en el mismo ciclo de verificación**: incluso con `MaxCell=56`,
+   Mascota/Montura y Tinte APILADOS (10 filas reales entre los dos) seguían sin caber sin
+   scroll - medido con el arnés: 412px de contenido real contra 278px disponibles, un desfase
+   de 134px que NINGÚN ajuste de `MinCell`/`MaxCell` podía cerrar sin bajar del suelo real de
+   legibilidad (30px, "mancha de color", límite de Opus). Solución real: Mascota/Montura y
+   Tinte uno AL LADO del otro en vez de apilados (hay de sobra más ancho que alto en este
+   lateral) - así cada uno solo necesita 5 filas de alto, no 10. Esto obligó a subir
+   `MinWidth` de la ventana otra vez (1040→1080, punto 3) para compensar el nuevo ancho mínimo
+   real de esta columna (140px, dos rejillas de 1 columna en vez de una).
+
+**Verificación real, en cada paso, no al final**: `dotnet build` limpio en cada cambio,
+`dotnet test` 134/134, arnés de UI Automation con diagnóstico whitebox nuevo (anchos/altos
+REALES de `SlotRowHost.ColumnDefinitions` y cada `SlotGridPanel`, no calculados a mano) y
+captura PNG real revisada a mano en cada iteración - el proceso completo encontró y corrigió 2
+bugs reales que la propia consulta a Opus no había anticipado (puntos 7 y 8), exactamente el
+criterio de este proyecto de "medir lo real, no dar nada por bueno sin comprobarlo". Estado
+final confirmado con captura real a 1080×700 (mínimo) y 1180×860 (grande): sin solape, sin
+scroll en ningún lateral, Inventario/Almacenes muestran sus 40-50 slots completos con la
+Librería desplegada, botones en píldora con degradado en toda la app.
+
+**Pendiente, documentado con claridad** (fuera de esta pasada, aplazado por el propio Opus -
+punto 7 de su respuesta, "lo mas ambicioso... puede esperar a otra ronda"): un scroll único de
+página en vez de scrolls internos por rejilla, y que la fila fusionada de Equipamiento
+reordene sus bloques (Monedas/Munición debajo del centro en vez de al lado) en ventanas
+todavía más pequeñas que el mínimo actual - la respuesta actual (los 3 laterales/centro con
+`MinWidth`/`MinHeight` reales) ya evita solape y pérdida de contenido en todo el rango
+soportado, pero no "reflowea" mas allá de eso.

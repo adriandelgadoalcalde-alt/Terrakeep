@@ -16,11 +16,28 @@ public sealed class ContainerViewModel(string key, string displayName, Observabl
     // EquipmentGroupViewModel.AddSlotSet).
     public int Columns { get; init; } = 10;
 
-    // MinCell real de SlotGridPanel (44 por defecto) - pedido explicito 2-sep-2026: el lateral
-    // de Mascota/Montura+Tinte de la fusion de Equipamiento (5 filas x 2 grupos apiladas en
-    // una columna estrecha) necesitaba scroll a 44px minimo en la resolucion real del
-    // usuario ("los cuadrados... ya que ahora sale scroll y no lo queremos" - celdas mas
-    // pequeñas, no aceptar el scroll). Solo estos dos contenedores lo bajan; el resto se
-    // queda en 44 (el mismo suelo de legibilidad que Inventario/Almacenes).
-    public double MinCell { get; init; } = 44;
+    // MinCell real de SlotGridPanel - suelo universal 40 (consulta a Opus, septima pasada:
+    // midiendo los 5454 iconos vanilla reales, el sprite mediano ocupa 28 de 40px de lienzo;
+    // con render NearestNeighbor la escala 40/40=1.0... en realidad la escala real depende del
+    // Margin/BorderThickness del slot, ver SlotCompactTemplate - 40 da un contenido mediano de
+    // ~21px, todavia reconocible, y coincide con el MinCell que ya llevaba meses en produccion
+    // en la Libreria sin ninguna queja - el mejor experimento controlado real disponible en el
+    // proyecto). Antes era 44 (una eleccion sin medir, "se sentia bien" mas que verificada).
+    // Mascota/Montura/Tinte (columna unica, la identificacion no depende solo del sprite - cada
+    // slot tiene su propio icono fantasma e indice fijo) bajan aparte a 32 en MainViewModel,
+    // excepcion acotada, no el suelo universal.
+    public double MinCell { get; init; } = 40;
+
+    // MaxCell real de SlotGridPanel - techo universal 90 (consulta a Opus, septima pasada:
+    // 96 daba una escala NearestNeighbor irregular de 2.15x; 90 da 2.00x exacto, el pixel art
+    // no "tiembla"). Bug real encontrado verificando esta misma pasada con el arnes de UI
+    // Automation (ActualWidth medido, no calculado a mano): Mascota/Montura/Tinte (columna
+    // UNICA, sin techo propio hasta ahora) crecia sin limite hacia el techo universal en
+    // cuanto sobraba alto disponible - con la fila fusionada ahora mas alta (ventana minima
+    // subida a 700px) eso le robaba sitio real a la columna central (Armadura/Accesorios,
+    // "Auto"+"*" - ver MainWindow.xaml), que es la que de verdad necesita el espacio. Estos 2
+    // contenedores bajan aparte a MaxCell=56 en MainViewModel - siguen creciendo con la
+    // ventana, solo que con un techo bajo, coherente con ser un lateral compacto de una sola
+    // columna, no el bloque protagonista de la pantalla.
+    public double MaxCell { get; init; } = 90;
 }

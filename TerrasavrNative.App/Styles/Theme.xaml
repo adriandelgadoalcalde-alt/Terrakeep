@@ -195,7 +195,15 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                    <!-- CornerRadius="999" (consulta a Opus, septima pasada: "quiero... todos
+                         estos botones de todo Terrakeep... ovalados") - WPF clampea el radio
+                         real a la mitad del lado mas corto, asi que un boton normal (28-36px
+                         de alto) sale como un estadio/pildora perfecto sea cual sea su ancho o
+                         padding real, sin conversores ni MultiBinding, un solo numero. Los
+                         pocos sitios reales donde una pildora completa SI se veria mal (barras
+                         a todo el ancho como la cabecera de la Libreria) usan BarButton en vez
+                         de este estilo base - ver su comentario. -->
+                    <Border x:Name="Bd" CornerRadius="999" Padding="{TemplateBinding Padding}">
                         <Border.Background>
                             <SolidColorBrush x:Name="BdBrush" Color="{StaticResource BgElevatedColor}" />
                         </Border.Background>
@@ -403,6 +411,71 @@
                                     </Storyboard>
                                 </BeginStoryboard>
                             </MultiTrigger.ExitActions>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- BarButton (consulta a Opus, septima pasada) - calco exacto del Button base de arriba,
+         SOLO con CornerRadius="8" en vez de "999". Reservado para las pocas barras reales a
+         todo el ancho donde una pildora completa se veria como un error visual en vez de un
+         boton (WPF clampea el radio a la mitad del lado corto - en una barra de ~800x27px eso
+         da un estadio de verdad, no un boton, desalineado del panel rectangular de debajo):
+         las cabeceras plegables "Librería"/"Librería de buffs". NO se usa en "Colocar" (tan
+         corto de alto, ~10px, que el propio clamp de 999 ya lo deja practicamente igual a 8) ni
+         en la fila de NPC del Explorador (su fondo real lo pinta un Border interior propio con
+         su propio CornerRadius, el Button exterior es solo un envoltorio invisible - cambiar su
+         plantilla no se veria). -->
+    <Style x:Key="BarButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                        <Border.Background>
+                            <SolidColorBrush x:Name="BdBrush" Color="{StaticResource BgElevatedColor}" />
+                        </Border.Background>
+                        <Border.RenderTransform>
+                            <TranslateTransform x:Name="BdLift" Y="0" />
+                        </Border.RenderTransform>
+                        <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource BgHoverColor}" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource BgElevatedColor}" Duration="0:0:0.15" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Accent">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentGradientBrush}" />
+                            <Setter Property="Foreground" Value="White" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Ghost">
+                            <Setter TargetName="Bd" Property="Background" Value="Transparent" />
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="Tag" Value="Ghost" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource PinkBrush}" />
                         </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -880,42 +953,39 @@
     <!-- Botones "meta" (Biblioteca/Positivos/Negativos) y "grupo" (Cuerpo a cuerpo +/...) del
          selector de prefijo real (app.TabEdit btMeta/btGroups) - pastilla pequeña, acento
          solido cuando esta seleccionado en vez del fondo gris por defecto. -->
-    <Style x:Key="PrefixMetaButton" TargetType="Button">
+    <!-- PrefixMetaButton/PrefixGroupButton (consulta a Opus, septima pasada - "estos botones...
+         me parecen muy horrendos... me gustaria algo mas moderno"): YA eran una pildora
+         perfecta (CornerRadius="99", plantilla propia) - lo que los hacia planos/aburridos
+         frente al boton "Auto-equipar" no era la forma, era la ausencia de degradado/
+         elevacion/animacion (fondo solido a secas, sin las Trigger/ColorAnimation/
+         TranslateTransform que el Button base ya tiene escritas para Tag="Accent"/
+         "AccentSoft"). En vez de duplicar esa plantilla aqui otra vez, BasedOn del Button base
+         (que ya sale en pildora completa, ver su propio comentario) y IsSelected se traduce a
+         Tag en vez de pintar Background/Foreground a mano (Tag es lo unico que la plantilla
+         base entiende de verdad - Background puesto a mano no hace nada, ver la nota historica
+         de ItemEditTemplate/NavCardButton). Cero duplicacion: cualquier mejora futura del boton
+         base (sombra, nuevo Tag...) llega aqui gratis. -->
+    <Style x:Key="PrefixMetaButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Padding" Value="9,4" />
         <Setter Property="Margin" Value="0,0,5,5" />
         <Setter Property="FontSize" Value="11" />
-        <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Button">
-                    <Border Background="{TemplateBinding Background}" CornerRadius="99" Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
         <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-            </Trigger>
             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-                <Setter Property="Foreground" Value="White" />
-                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Tag" Value="Accent" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
 
+    <!-- AccentSoft en vez de Accent al seleccionar (no Accent a secas): son varios botones del
+         mismo grupo compitiendo por atencion (ej. "Vista: Armadura/Vanidad/Tintes") - mismo
+         criterio ya establecido para Minima/Media de Buffs, "de la familia del acento pero
+         secundario". -->
     <Style x:Key="PrefixGroupButton" TargetType="Button" BasedOn="{StaticResource PrefixMetaButton}">
         <Setter Property="FontSize" Value="10.5" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                <Setter Property="Foreground" Value="{StaticResource AccentHoverBrush}" />
-                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Tag" Value="AccentSoft" />
             </DataTrigger>
         </Style.Triggers>
     </Style>

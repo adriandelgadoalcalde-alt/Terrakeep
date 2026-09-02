@@ -272,17 +272,20 @@ public partial class MainViewModel : ObservableObject
         string?[] miscEquipGhosts = ["pet", "pet_light", "minecart", "mount", "hook"];
         // minCell: 32 (pedido explicito 2-sep-2026: "los cuadrados... ya que ahora sale
         // scroll y no lo queremos") - 5+5 slots apilados en una columna estrecha no siempre
-        // caben a 44px minimo en la resolucion real del usuario; celdas mas pequeñas en vez
+        // caben a 40px minimo en la resolucion real del usuario; celdas mas pequeñas en vez
         // de aceptar el scroll (el ScrollViewer de seguridad se queda de todos modos, para
-        // ventanas aun mas pequeñas).
+        // ventanas aun mas pequeñas). maxCell: 56 (consulta a Opus, septima pasada - bug real
+        // medido con el arnes: sin techo propio, esta columna UNICA crecia sin limite hacia
+        // el techo universal (90) en cuanto sobraba alto, robandole sitio real a la columna
+        // central "Auto"+"*" de Armadura/Accesorios - ver ContainerViewModel.MaxCell).
         MountsContainer = AddContainer("miscEquips", "Mascota / Montura / Gancho", _loaded.MergedContainers["miscEquips"], columns: 1,
-            slotKinds: miscEquipKinds, ghostIcons: miscEquipGhosts, minCell: 32);
+            slotKinds: miscEquipKinds, ghostIcons: miscEquipGhosts, minCell: 32, maxCell: 56);
         // Los 5 tintes van emparejados 1:1 con los 5 slots de arriba, pero un tinte SIEMPRE
         // es solo un tinte (dye>0) sea cual sea el equipo al que este emparejado - mismo
         // SlotKind.Dye y mismo ghost "dye" en los 5, a diferencia del contenedor de arriba.
         DyesContainer = AddContainer("miscDyes", "Tintes (mascota/montura/gancho)", _loaded.MergedContainers["miscDyes"], columns: 1,
             slotKinds: [SlotKind.Dye, SlotKind.Dye, SlotKind.Dye, SlotKind.Dye, SlotKind.Dye],
-            ghostIcons: ["dye", "dye", "dye", "dye", "dye"], minCell: 32);
+            ghostIcons: ["dye", "dye", "dye", "dye", "dye"], minCell: 32, maxCell: 56);
 
         // Monedas/municion: vanilla-only (ver CalamityCharacterSync.cs para el alcance
         // documentado - la app JS tampoco los sincroniza con Calamity, solo los protege). Sin
@@ -394,7 +397,7 @@ public partial class MainViewModel : ObservableObject
     // de siempre: Inventario/Banco/Caja fuerte/Fragua/Boveda), o un array del mismo tamaño
     // que items para fijarlo por indice (miscEquips/miscDyes/coins/ammo).
     private ContainerViewModel AddContainer(string key, string displayName, GameItem[] items, int columns = 10,
-        SlotKind[]? slotKinds = null, string?[]? ghostIcons = null, double minCell = 44)
+        SlotKind[]? slotKinds = null, string?[]? ghostIcons = null, double minCell = 40, double maxCell = 90)
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
@@ -404,7 +407,7 @@ public partial class MainViewModel : ObservableObject
             var ghost = ghostIcons != null && i < ghostIcons.Length ? ghostIcons[i] : null;
             slots.Add(new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped, kind, ghost));
         }
-        var container = new ContainerViewModel(key, displayName, slots) { Columns = columns, MinCell = minCell };
+        var container = new ContainerViewModel(key, displayName, slots) { Columns = columns, MinCell = minCell, MaxCell = maxCell };
         Containers.Add(container);
         return container;
     }

@@ -8,7 +8,7 @@
         xmlns:data="clr-namespace:TerrasavrNative.Core.Data;assembly=TerrasavrNative.Core"
         xmlns:controls="clr-namespace:TerrasavrNative.App.Controls"
         mc:Ignorable="d"
-        Title="Terrakeep" Height="860" Width="1180" MinWidth="1000" MinHeight="620"
+        Title="Terrakeep" Height="860" Width="1180" MinWidth="1080" MinHeight="700"
         Background="{StaticResource BgPrimaryBrush}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -432,7 +432,7 @@
                                  ReferenceWidth se queda en su default 0 = desactivado,
                                  comportamiento identico a como estaba. Solo tiene efecto real
                                  dentro de la fila fusionada de Equipamiento. -->
-                            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="{Binding MinCell}" MaxCell="96" Gap="4"
+                            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="{Binding MinCell}" MaxCell="{Binding MaxCell}" Gap="4"
                                                      ReferenceColumns="10"
                                                      ReferenceWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=controls:SlotRowHost}}"
                                                      AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
@@ -652,7 +652,7 @@
                 <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource BuffSlotCompactTemplate}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="44" MaxCell="96" Gap="4"
+                            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="40" MaxCell="90" Gap="4"
                                                      ReferenceColumns="10"
                                                      AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
                         </ItemsPanelTemplate>
@@ -752,8 +752,7 @@
                     <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                    <Button Content="Colocar" FontSize="8" Padding="0,1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
-                            Background="{StaticResource AccentBrush}" Foreground="{StaticResource BgPrimaryBrush}" BorderThickness="0"
+                    <Button Content="Colocar" Tag="Accent" FontSize="8" Padding="0,1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
                             Command="{Binding DataContext.Library.PlaceInTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding}"
                             Visibility="{Binding DataContext.Library.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
@@ -797,8 +796,7 @@
                     <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                    <Button Content="Colocar" FontSize="8" Padding="0,1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
-                            Background="{StaticResource AccentBrush}" Foreground="{StaticResource BgPrimaryBrush}" BorderThickness="0"
+                    <Button Content="Colocar" Tag="Accent" FontSize="8" Padding="0,1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
                             Command="{Binding DataContext.BuffLibrary.PlaceInTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding}"
                             Visibility="{Binding DataContext.BuffLibrary.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
@@ -914,14 +912,27 @@
                              una tarjeta de la Libreria hasta un slot visible sea posible de verdad. -->
                         <Grid>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="*" />
                                 <!-- Antes fija en 270px SIEMPRE (46% del alto util de esta
-                                     pestaña, mas robo de espacio que las propias 9 pestañas de
-                                     antes) - pregunta a Opus sobre el diseño (2-sep-2026): Auto
-                                     deja que la cabecera colapsable de abajo decida su propio
-                                     alto real (barra siempre visible, o barra + 238px de
-                                     contenido cuando esta desplegada). -->
-                                <RowDefinition Height="Auto" />
+                                     pestaña) - pregunta a Opus sobre el diseño (2-sep-2026):
+                                     Auto dejaba que la cabecera colapsable de abajo decidiera
+                                     su propio alto real, pero un "Auto" con un hijo de 238px
+                                     fijo SIEMPRE cobra esos 238px primero, sea cual sea el alto
+                                     real disponible - la fila "*" de arriba (el contenido
+                                     principal, Inventario/Almacenes/Equipamiento) se quedaba
+                                     con lo que sobrara, hasta cero si hacia falta - "el
+                                     Inventario estaba subvencionando a la Libreria" (consulta a
+                                     Opus, septima pasada, tras medir en una captura real que a
+                                     620px de alto con la Libreria desplegada solo se veian ~2
+                                     de las 5 filas reales de Inventario). Las DOS filas ahora
+                                     compiten de verdad por el alto real disponible (ambas "*",
+                                     con MinHeight/MaxHeight reales) - Objetos con prioridad
+                                     3:1 y un suelo real (216px = 5 filas de Inventario a 40px
+                                     + huecos, el caso mas exigente de los 3 sub-tabs que
+                                     comparten esta fila), Libreria entre 150 (util minimo real,
+                                     ver Opus) y 238 (el tamaño de siempre, con la ventana
+                                     grande). -->
+                                <RowDefinition Height="3*" MinHeight="216" />
+                                <RowDefinition Height="1*" MinHeight="150" MaxHeight="238" />
                             </Grid.RowDefinitions>
 
                             <!-- Contenedores a la izquierda + panel "Editar" a la derecha (equivalente real
@@ -960,11 +971,27 @@
                                              Inventario, el problema inverso de la cuarta pasada. -->
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
-                                            <controls:SlotRowHost>
+                                            <!-- Columnas de ancho real, no proporciones puras (consulta a
+                                                 Opus, septima pasada): "2*/5*/4*" no guardaba ninguna
+                                                 relacion con los anchos minimos REALES de cada bloque (52/
+                                                 216/192px medidos) - a la resolucion minima de la propia
+                                                 ventana la columna central (Armadura/Accesorios, la que
+                                                 mas lo necesita) se quedaba corta y su contenido real
+                                                 (SlotGridPanel no recorta solo, WPF Panel no clipea a sus
+                                                 hijos por defecto) desbordaba visiblemente sobre el lateral
+                                                 de Monedas/Municion. Los laterales van a "Auto" con un
+                                                 MinWidth real (su contenido ya se autolimita via MinCell/
+                                                 ReferenceWidth, el MinWidth es solo la red de seguridad);
+                                                 el centro se queda con TODO el sobrante ("*"). ClipToBounds
+                                                 en el propio SlotRowHost como segunda red de seguridad -
+                                                 nunca deberia activarse ya con esto, pero si algun caso
+                                                 raro se escapa, prefiere recortar en silencio a solapar
+                                                 visiblemente encima de otro contenido. -->
+                                            <controls:SlotRowHost ClipToBounds="True">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="2*" />
-                                                    <ColumnDefinition Width="5*" />
-                                                    <ColumnDefinition Width="4*" />
+                                                    <ColumnDefinition Width="Auto" MinWidth="140" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" MinWidth="200" />
                                                 </Grid.ColumnDefinitions>
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto" />
@@ -982,12 +1009,45 @@
                                                      scrollear aqui. -->
                                                 <Border Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgPrimaryBrush}"
                                                         CornerRadius="8" Padding="6" Margin="0,0,8,0">
+                                                    <!-- Mascota/Montura y Tinte UNO AL LADO DEL OTRO, no apilados
+                                                         (consulta a Opus, septima pasada, corregido con medicion
+                                                         real tras implementar su recomendacion original): apilados
+                                                         verticalmente son 2 rejillas de 5 filas = 10 filas reales
+                                                         que compartir en la misma columna - medido con el arnes de
+                                                         UI Automation, a la altura minima real de la ventana
+                                                         necesitan ~412px y solo hay ~278px, un desfase real de
+                                                         ~134px que NINGUN ajuste de MinCell/MaxCell puede cerrar
+                                                         sin bajar de 30px (el suelo real de "mancha de color" de
+                                                         Opus) - hay mas ancho de sobra que alto en este lateral
+                                                         (confirmado, Auto ya no tiene techo que perseguir gracias
+                                                         al MaxCell propio de arriba), asi que la solucion real es
+                                                         usar ESE ancho: en horizontal, cada rejilla solo necesita
+                                                         5 filas de alto, no 10 - el ScrollViewer de seguridad se
+                                                         queda (para ventanas aun mas pequeñas que esta), solo
+                                                         VERTICAL - HorizontalScrollBarVisibility="Disabled" sigue
+                                                         siendo correcto, la columna Auto ya crece si hace falta. -->
                                                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                                        <StackPanel>
-                                                            <TextBlock Text="Mascota / Montura" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                                                            <ContentControl Content="{Binding MountsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                            <TextBlock Text="Tinte" Style="{StaticResource CaptionText}" Margin="0,10,0,3" />
-                                                            <ContentControl Content="{Binding DyesContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <StackPanel Margin="0,0,10,0">
+                                                                <!-- TextWrapping="Wrap" + MaxWidth (consulta a Opus,
+                                                                     septima pasada): un TextBlock sin envolver
+                                                                     RECORTA en seco cuando la columna es mas
+                                                                     estrecha que el texto ("Mascota /" sin
+                                                                     "Montura", capturado real a la resolucion
+                                                                     minima) - el MaxWidth es real, no decorativo:
+                                                                     esta columna es "Auto" y WPF mide sus hijos con
+                                                                     ancho INFINITO en la primera pasada, asi que sin
+                                                                     este tope el texto sin envolver (~100px) seria
+                                                                     mas ancho que la propia rejilla de iconos y
+                                                                     terminaria fijando el ancho real de la columna
+                                                                     entera. -->
+                                                                <TextBlock Text="Mascota / Montura" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="70" Margin="0,0,0,3" />
+                                                                <ContentControl Content="{Binding MountsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                            </StackPanel>
+                                                            <StackPanel>
+                                                                <TextBlock Text="Tinte" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="70" Margin="0,0,0,3" />
+                                                                <ContentControl Content="{Binding DyesContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                            </StackPanel>
                                                         </StackPanel>
                                                     </ScrollViewer>
                                                 </Border>
@@ -1105,8 +1165,8 @@
                                          cualquier slot (MainViewModel.RequestPickForSlot), para que
                                          nunca quede escondida justo cuando hace falta. -->
                                     <Button DockPanel.Dock="Top" Command="{Binding ToggleLibraryCollapsedCommand}"
-                                            HorizontalContentAlignment="Stretch" Padding="8,5" Margin="0,0,0,4"
-                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
+                                            Style="{StaticResource BarButton}"
+                                            HorizontalContentAlignment="Stretch" Padding="8,5" Margin="0,0,0,4">
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
                                                 <TextBlock.Style>
@@ -1128,13 +1188,13 @@
                                             Visibility="{Binding Library.IsPicking, Converter={StaticResource BoolToVis}}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding Library.CancelPickCommand}"
-                                                    Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" Padding="6,2" />
+                                                    Tag="Ghost" Foreground="{StaticResource BgPrimaryBrush}" Padding="6,2" />
                                             <TextBlock Text="Elige (o arrastra) un objeto para colocarlo en el slot seleccionado..."
                                                        Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" FontSize="11.5" />
                                         </DockPanel>
                                     </Border>
 
-                                    <Grid Height="238" Visibility="{Binding IsLibraryCollapsed, Converter={StaticResource InverseBoolToVis}}">
+                                    <Grid Visibility="{Binding IsLibraryCollapsed, Converter={StaticResource InverseBoolToVis}}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="210" />
                                             <ColumnDefinition Width="*" />
@@ -1174,7 +1234,7 @@
                                                 <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
-                                                            <controls:SlotGridPanel Columns="12" MinCell="40" MaxCell="96" Gap="4"
+                                                            <controls:SlotGridPanel Columns="12" MinCell="40" MaxCell="90" Gap="4"
                                                                                      ReferenceColumns="10"
                                                                                      AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
                                                         </ItemsPanelTemplate>
@@ -1199,7 +1259,12 @@
                         <Grid Margin="0,10,0,0">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
+                                <!-- Mismo arreglo real que la Libreria de Objetos (consulta a
+                                     Opus, septima pasada) - "*" con MinHeight/MaxHeight en vez
+                                     de "Auto" con un hijo de 238px fijo, para que ceda alto de
+                                     verdad si la ventana aprieta en vez de imponer siempre su
+                                     tamaño maximo. -->
+                                <RowDefinition Height="*" MinHeight="150" MaxHeight="238" />
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0" Margin="0,0,0,8">
@@ -1224,8 +1289,8 @@
                             <Border Grid.Row="1" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8">
                                 <DockPanel>
                                     <Button DockPanel.Dock="Top" Command="{Binding ToggleBuffLibraryCollapsedCommand}"
-                                            HorizontalContentAlignment="Stretch" Padding="8,5" Margin="0,0,0,4"
-                                            Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
+                                            Style="{StaticResource BarButton}"
+                                            HorizontalContentAlignment="Stretch" Padding="8,5" Margin="0,0,0,4">
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
                                                 <TextBlock.Style>
@@ -1247,13 +1312,13 @@
                                             Visibility="{Binding BuffLibrary.IsPicking, Converter={StaticResource BoolToVis}}">
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding BuffLibrary.CancelPickCommand}"
-                                                    Background="Transparent" BorderThickness="0" Foreground="{StaticResource BgPrimaryBrush}" Padding="6,2" />
+                                                    Tag="Ghost" Foreground="{StaticResource BgPrimaryBrush}" Padding="6,2" />
                                             <TextBlock Text="Elige un buff para colocarlo en el slot seleccionado..."
                                                        Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" FontSize="11.5" />
                                         </DockPanel>
                                     </Border>
 
-                                    <Grid Height="238" Visibility="{Binding IsBuffLibraryCollapsed, Converter={StaticResource InverseBoolToVis}}">
+                                    <Grid Visibility="{Binding IsBuffLibraryCollapsed, Converter={StaticResource InverseBoolToVis}}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="210" />
                                             <ColumnDefinition Width="*" />
@@ -1282,7 +1347,7 @@
                                                 <ItemsControl ItemsSource="{Binding BuffLibrary.Results}" ItemTemplate="{StaticResource BuffLibraryCardTemplate}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
-                                                            <controls:SlotGridPanel Columns="11" MinCell="44" MaxCell="96" Gap="4"
+                                                            <controls:SlotGridPanel Columns="11" MinCell="40" MaxCell="90" Gap="4"
                                                                                      ReferenceColumns="10"
                                                                                      AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
                                                         </ItemsPanelTemplate>
