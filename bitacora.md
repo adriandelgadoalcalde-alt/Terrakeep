@@ -3465,3 +3465,42 @@ tiene sentido); Fase 4 (gramática de búsqueda real de Terrasavr: coma=OR, espa
 Editar y columna de carpetas con anchos relativos - la de mayor riesgo de regresión según el
 propio Opus, revisita el binding `ReferenceWidth` de la 4ª/5ª pasada); Fase 6 (panel de
 detalle opcional, explícitamente aplazable); Fase 7 (matriz de verificación completa).
+
+### Octava pasada, Fase 3 - navegador de un solo nivel + migas de pan en la Librería
+
+Sustituye el árbol recursivo indentado (hasta 4 niveles reales de Terrasavr mostrados a la vez)
+por un navegador de un solo nivel, más parecido a explorar carpetas de verdad - decisión
+explícita de Opus tras revisar `app.TabLibrary` real (Terrasavr es de hecho una lista de una
+sola columna sin indentación) y el propio pedido del usuario de que fuera "muy práctica".
+Investigación se queda TAL CUAL con el árbol indentado clásico (decisión también explícita de
+Opus: ahí la profundidad real que se navega es mucho menor y el árbol sigue siendo cómodo) -
+`ResearchViewModel`/`ResearchCategoryNodeTemplate` no se tocan.
+
+`LibraryViewModel`/`BuffLibraryViewModel` ganan `CurrentFolder`, `VisibleFolders` (los hijos de
+`CurrentFolder`, o las raíces reales si no hay ninguna abierta) y `Breadcrumb` (el camino real
+recorrido, clicable). `NavigateCommand` hace las dos cosas a la vez con un solo clic: selecciona
+la carpeta como filtro (sus `ItemIdsOrdered`, ya la unión real de sus descendientes si es
+intermedia) Y, si tiene subcarpetas (`CategoryNodeViewModel.HasChildren`, nuevo), navega dentro
+- una hoja solo filtra, no hay nada que explorar. `GoToCrumbCommand` trunca la pila de
+navegación a esa miga, patrón real de cualquier explorador de archivos. Los viejos
+`SelectCategoryCommand`/`IsExpanded` de Library/BuffLibrary (ya sin ningún uso real tras el
+cambio de plantilla) se eliminaron en vez de dejarlos muertos - `IsExpanded` sigue existiendo
+en `CategoryNodeViewModel` porque Investigación sí lo necesita.
+
+XAML: `CategoryNodeTemplate`/`BuffCategoryNodeTemplate` (el árbol recursivo viejo) se borraron
+enteros, sustituidos por `LibraryFolderRowTemplate`/`BuffLibraryFolderRowTemplate` (una fila
+plana con "›" solo en carpetas navegables) + `LibraryBreadcrumbCrumbTemplate`/
+`BuffLibraryBreadcrumbCrumbTemplate` (migas clicables) + un botón "Raíz" (`ClearCategoryCommand`,
+ahora también resetea la navegación).
+
+**Verificación real** (UI Automation, personaje real cargado): Raíz → 10 carpetas raíz reales
+confirmadas (Materiales, Decoraciones, "Mascotas, Monturas, Herramientas", Pociones
+(regeneración/efectos), Jefes & Eventos, Misión de Pez, Categorías, Objetos por ID, Calamity
+(mod)); entrar en "Materiales" deja `Breadcrumb=[Materiales]` y filtra de verdad
+(`Results.Count=10`, acotado por `PageCapacity` de la Fase 2); entrar en una subcarpeta real
+("Pre-Modo Difícil") deja `Breadcrumb=[Materiales > Pre-Modo Difícil]`; `GoToCrumb` de vuelta a
+"Materiales" trunca la pila exactamente ahí (`Breadcrumb.Count=1`, mismo `VisibleFolders.Count`
+que al entrar la primera vez); "Raíz" limpia `CurrentFolder`/`Breadcrumb` por completo y
+recupera las mismas 10 carpetas raíz. Captura real (`libreria-navegador.png`) confirma el
+mismo mecanismo funcionando también en Buffs (breadcrumb "Raíz", filas con contador real "(N)",
+sin solape). `dotnet build` limpio, `dotnet test` 134/134.

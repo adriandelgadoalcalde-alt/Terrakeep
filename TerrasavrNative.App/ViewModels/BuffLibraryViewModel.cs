@@ -74,29 +74,64 @@ public partial class BuffLibraryViewModel : ObservableObject
 
         foreach (var node in BuffLibraryTreeBuilder.Build(service))
             RootCategories.Add(node);
+        RefreshVisibleFolders();
 
         ApplyFilter();
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
-    [RelayCommand]
-    private void SelectCategory(CategoryNodeViewModel node)
-    {
-        // Mismo bug real corregido en LibraryViewModel.SelectCategory - ver ahi el porque.
-        node.IsExpanded = !node.IsExpanded;
+    // Fase 3 (octava pasada) - mismo navegador de un solo nivel + migas de pan que
+    // LibraryViewModel, ver ahi el porque completo.
+    private readonly List<CategoryNodeViewModel> _navStack = [];
+    [ObservableProperty] private CategoryNodeViewModel? _currentFolder;
 
+    public ObservableCollection<CategoryNodeViewModel> VisibleFolders { get; } = [];
+    public ObservableCollection<CategoryNodeViewModel> Breadcrumb { get; } = [];
+
+    private void RefreshVisibleFolders()
+    {
+        VisibleFolders.Clear();
+        foreach (var n in CurrentFolder?.Children ?? RootCategories) VisibleFolders.Add(n);
+    }
+
+    private void RefreshBreadcrumb()
+    {
+        Breadcrumb.Clear();
+        foreach (var n in _navStack) Breadcrumb.Add(n);
+        if (CurrentFolder != null) Breadcrumb.Add(CurrentFolder);
+    }
+
+    private void SelectCategoryInternal(CategoryNodeViewModel node)
+    {
         if (SelectedCategory != null) SelectedCategory.IsSelected = false;
-        if (SelectedCategory == node)
-        {
-            SelectedCategory = null;
-        }
-        else
-        {
-            SelectedCategory = node;
-            node.IsSelected = true;
-        }
+        SelectedCategory = node;
+        node.IsSelected = true;
         ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void Navigate(CategoryNodeViewModel node)
+    {
+        SelectCategoryInternal(node);
+        if (node.Children.Count == 0) return;
+
+        if (CurrentFolder != null) _navStack.Add(CurrentFolder);
+        CurrentFolder = node;
+        RefreshVisibleFolders();
+        RefreshBreadcrumb();
+    }
+
+    [RelayCommand]
+    private void GoToCrumb(CategoryNodeViewModel node)
+    {
+        if (node == CurrentFolder) return;
+        int idx = _navStack.IndexOf(node);
+        if (idx >= 0) _navStack.RemoveRange(idx, _navStack.Count - idx);
+        CurrentFolder = node;
+        RefreshVisibleFolders();
+        RefreshBreadcrumb();
+        SelectCategoryInternal(node);
     }
 
     [RelayCommand]
@@ -104,6 +139,10 @@ public partial class BuffLibraryViewModel : ObservableObject
     {
         if (SelectedCategory != null) SelectedCategory.IsSelected = false;
         SelectedCategory = null;
+        _navStack.Clear();
+        CurrentFolder = null;
+        RefreshVisibleFolders();
+        RefreshBreadcrumb();
         ApplyFilter();
     }
 

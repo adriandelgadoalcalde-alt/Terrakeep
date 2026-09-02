@@ -91,34 +91,77 @@ public partial class LibraryViewModel : ObservableObject
         // orden y organizacion de terrasav para esta librera Y investigacion").
         foreach (var node in LibraryCategoryTreeBuilder.Build(service))
             RootCategories.Add(node);
+        RefreshVisibleFolders();
 
         ApplyFilter();
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
-    [RelayCommand]
-    private void SelectCategory(CategoryNodeViewModel node)
-    {
-        // Bug real encontrado y corregido 2-sep-2026: IsExpanded no se tocaba nunca aqui, asi
-        // que ninguna carpeta por debajo de la raiz era alcanzable de verdad desde la UI (el
-        // ItemsControl de Children solo se muestra cuando IsExpanded es true) - critico ahora
-        // que el arbol vanilla real tiene hasta 4 niveles de profundidad. Pulsar una carpeta
-        // la selecciona/deselecciona (para "ver todo lo de aqui") Y alterna su despliegue,
-        // independientemente de si tiene hijos o no.
-        node.IsExpanded = !node.IsExpanded;
+    // Fase 3 (octava pasada, consulta a Opus - navegador de un solo nivel + migas de pan,
+    // SOLO para la tira de la Libreria; Investigacion se queda con el arbol indentado clasico,
+    // ver ResearchViewModel, decision explicita de Opus). El viejo arbol recursivo mostraba
+    // los 4 niveles reales de Terrasavr indentados a la vez - "practico" de verdad, pedido
+    // explicito del usuario, es mas parecido a explorar carpetas: se ve UN nivel (VisibleFolders,
+    // hijos de CurrentFolder o la raiz si no hay ninguna abierta) con migas de pan (Breadcrumb)
+    // para volver atras. _navStack guarda los antecesores del nivel actual (sin incluir
+    // CurrentFolder, que ya se añade aparte al construir Breadcrumb).
+    private readonly List<CategoryNodeViewModel> _navStack = [];
+    [ObservableProperty] private CategoryNodeViewModel? _currentFolder;
 
+    public ObservableCollection<CategoryNodeViewModel> VisibleFolders { get; } = [];
+    public ObservableCollection<CategoryNodeViewModel> Breadcrumb { get; } = [];
+
+    private void RefreshVisibleFolders()
+    {
+        VisibleFolders.Clear();
+        foreach (var n in CurrentFolder?.Children ?? RootCategories) VisibleFolders.Add(n);
+    }
+
+    private void RefreshBreadcrumb()
+    {
+        Breadcrumb.Clear();
+        foreach (var n in _navStack) Breadcrumb.Add(n);
+        if (CurrentFolder != null) Breadcrumb.Add(CurrentFolder);
+    }
+
+    private void SelectCategoryInternal(CategoryNodeViewModel node)
+    {
         if (SelectedCategory != null) SelectedCategory.IsSelected = false;
-        if (SelectedCategory == node)
-        {
-            SelectedCategory = null; // pulsar la misma carpeta otra vez la deselecciona
-        }
-        else
-        {
-            SelectedCategory = node;
-            node.IsSelected = true;
-        }
+        SelectedCategory = node;
+        node.IsSelected = true;
         ApplyFilter();
+    }
+
+    // Un clic hace las dos cosas reales a la vez: selecciona la carpeta como filtro (sus
+    // ItemIdsOrdered, union real de sus descendientes si es una carpeta intermedia - por eso
+    // tiene sentido mostrar resultados AUNQUE tenga subcarpetas) y, si tiene subcarpetas
+    // (HasChildren), navega dentro para poder seguir explorando. Una hoja (sin hijos) solo
+    // filtra - no hay a donde navegar.
+    [RelayCommand]
+    private void Navigate(CategoryNodeViewModel node)
+    {
+        SelectCategoryInternal(node);
+        if (node.Children.Count == 0) return;
+
+        if (CurrentFolder != null) _navStack.Add(CurrentFolder);
+        CurrentFolder = node;
+        RefreshVisibleFolders();
+        RefreshBreadcrumb();
+    }
+
+    // Pulsar una miga de pan intermedia trunca la pila a partir de ahi - clasico "ir a esta
+    // carpeta", igual que cualquier explorador de archivos real.
+    [RelayCommand]
+    private void GoToCrumb(CategoryNodeViewModel node)
+    {
+        if (node == CurrentFolder) return;
+        int idx = _navStack.IndexOf(node);
+        if (idx >= 0) _navStack.RemoveRange(idx, _navStack.Count - idx);
+        CurrentFolder = node;
+        RefreshVisibleFolders();
+        RefreshBreadcrumb();
+        SelectCategoryInternal(node);
     }
 
     [RelayCommand]
@@ -126,6 +169,10 @@ public partial class LibraryViewModel : ObservableObject
     {
         if (SelectedCategory != null) SelectedCategory.IsSelected = false;
         SelectedCategory = null;
+        _navStack.Clear();
+        CurrentFolder = null;
+        RefreshVisibleFolders();
+        RefreshBreadcrumb();
         ApplyFilter();
     }
 

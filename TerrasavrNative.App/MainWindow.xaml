@@ -150,60 +150,113 @@
             </DockPanel>
         </DataTemplate>
 
-        <!-- Nodo del arbol de categorias de la Libreria (recursivo - se referencia a si mismo
-             por StaticResource, patron real de WPF para arboles sin usar TreeView). Un clic
-             selecciona/deselecciona la carpeta como filtro Y despliega/pliega sus subcarpetas
-             a la vez (LibraryViewModel.SelectCategoryCommand). -->
-        <DataTemplate x:Key="CategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
-            <StackPanel>
-                <Button Command="{Binding DataContext.Library.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
-                        Cursor="Hand">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-                                </Trigger>
-                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
-                               VerticalAlignment="Center"
-                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                        <!-- Sin sufijo de recuento aparte (pedido explicito 2-sep-2026, "calca
-                             exactamente"): los nombres reales YA llevan su propio "(N)" cuando
-                             el propio Terrasavr lo pone (carpetas calculadas por predicado,
-                             ej. "Melee damage (316)") - añadir otro aqui duplicaria el numero.
-                             Las carpetas con lista literal de ids (ej. "Copper & Tin") tampoco
-                             llevan recuento en el Terrasavr real, asi que no se inventa uno. -->
-                        <!-- Bug real encontrado 2-sep-2026 ("hay nombres cortados"): un
-                             StackPanel Horizontal le da ancho infinito a este TextBlock al
-                             medir, asi que TextWrapping no bastaba solo - hacia falta un
-                             MaxWidth real para que el texto tuviera un limite del que
-                             envolver, en vez de desbordar en silencio fuera de la columna. -->
-                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
-                                   MaxWidth="165" TextWrapping="Wrap" />
-                    </StackPanel>
-                </Button>
-                <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
-                              ItemTemplate="{DynamicResource CategoryNodeTemplate}"
-                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" />
+        <!-- Fila de carpeta del navegador de UN SOLO NIVEL de la Libreria (Fase 3, octava
+             pasada, consulta a Opus - investigacion real de como el propio Terrasavr resuelve
+             esto, app.TabLibrary: una columna, sin indentacion recursiva). Sustituye al viejo
+             arbol indentado recursivo SOLO aqui (Investigacion se queda con
+             ResearchCategoryNodeTemplate, mas abajo, decision explicita de Opus - ese arbol es
+             mucho menos profundo de navegar ahi y la indentacion clasica sigue siendo practica).
+             Un clic selecciona la carpeta como filtro Y, si tiene subcarpetas, navega dentro
+             (LibraryViewModel.NavigateCommand) - el "›" solo se muestra en carpetas navegables,
+             para no sugerir que una hoja tiene mas que explorar. -->
+        <DataTemplate x:Key="LibraryFolderRowTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
+            <Button Command="{Binding DataContext.Library.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                    CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
+                    Cursor="Hand">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Right" Text="›" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{StaticResource TextSecondaryBrush}" Margin="4,0,0,0"
+                               Visibility="{Binding HasChildren, Converter={StaticResource BoolToVis}}" />
+                    <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <!-- Sin sufijo de recuento aparte (pedido explicito 2-sep-2026, "calca
+                         exactamente"): los nombres reales YA llevan su propio "(N)" cuando el
+                         propio Terrasavr lo pone. Bug real ya corregido una vez (2-sep-2026,
+                         "hay nombres cortados"): DockPanel tambien mide el ultimo hijo con
+                         ancho infinito, MaxWidth real + Wrap, igual que antes. -->
+                    <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
+                               MaxWidth="140" TextWrapping="Wrap" />
+                </DockPanel>
+            </Button>
+        </DataTemplate>
+
+        <!-- Miga de pan clicable (Breadcrumb) - vuelve a esa carpeta de un salto, patron real
+             de cualquier explorador de archivos (LibraryViewModel.GoToCrumbCommand). -->
+        <DataTemplate x:Key="LibraryBreadcrumbCrumbTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="›" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="3,0" />
+                <Button Content="{Binding Name}" Tag="Ghost" Padding="5,2" FontSize="10.5"
+                        Command="{Binding DataContext.Library.GoToCrumbCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}" />
             </StackPanel>
         </DataTemplate>
 
-        <!-- Mismo arbol que CategoryNodeTemplate de arriba, pero apuntando al
-             SelectCategoryCommand de Research en vez de Library - las dos pestañas comparten
-             el mismo arbol REAL de carpetas (LibraryCategoryTreeBuilder) pero cada una tiene
-             su propia seleccion/resultados independientes. -->
+        <DataTemplate x:Key="BuffLibraryFolderRowTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
+            <Button Command="{Binding DataContext.BuffLibrary.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                    CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
+                    Cursor="Hand">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Right" Text="›" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{StaticResource TextSecondaryBrush}" Margin="4,0,0,0"
+                               Visibility="{Binding HasChildren, Converter={StaticResource BoolToVis}}" />
+                    <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
+                           VerticalAlignment="Center"
+                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
+                               MaxWidth="140" TextWrapping="Wrap" />
+                </DockPanel>
+            </Button>
+        </DataTemplate>
+
+        <DataTemplate x:Key="BuffLibraryBreadcrumbCrumbTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="›" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="3,0" />
+                <Button Content="{Binding Name}" Tag="Ghost" Padding="5,2" FontSize="10.5"
+                        Command="{Binding DataContext.BuffLibrary.GoToCrumbCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Arbol recursivo indentado clasico - se queda TAL CUAL solo para Investigacion
+             (decision explicita de Opus en la octava pasada, ese arbol es mucho menos profundo
+             de recorrer ahi y no hace falta el navegador de un solo nivel). Ya NO lo usa la
+             Libreria de Objetos ni la de Buffs (ver LibraryFolderRowTemplate/
+             BuffLibraryFolderRowTemplate arriba) - las dos pestañas comparten el mismo arbol
+             REAL de carpetas (LibraryCategoryTreeBuilder) pero cada una tiene su propia
+             seleccion/resultados independientes. -->
         <DataTemplate x:Key="ResearchCategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
             <StackPanel>
                 <Button Command="{Binding DataContext.Research.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -240,45 +293,6 @@
                 </Button>
                 <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
                               ItemTemplate="{DynamicResource ResearchCategoryNodeTemplate}"
-                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" />
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- Mismo arbol otra vez, apuntando al SelectCategoryCommand de BuffLibrary (Fase 2 del
-             rework de Buffs, pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada) - arbol
-             REAL distinto (BuffLibraryTreeBuilder, calcado de app.BuffSide de Terrasavr real),
-             mismo patron visual que Libreria/Investigacion. -->
-        <DataTemplate x:Key="BuffCategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
-            <StackPanel>
-                <Button Command="{Binding DataContext.BuffLibrary.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
-                        Cursor="Hand">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-                                </Trigger>
-                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
-                               VerticalAlignment="Center"
-                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
-                                   MaxWidth="165" TextWrapping="Wrap" />
-                    </StackPanel>
-                </Button>
-                <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
-                              ItemTemplate="{DynamicResource BuffCategoryNodeTemplate}"
                               Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
         </DataTemplate>
@@ -1213,15 +1227,26 @@
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
 
+                                        <!-- Navegador de un solo nivel (Fase 3, octava pasada): "Raiz" vuelve al principio
+                                             de golpe, las migas de pan (Breadcrumb) muestran el camino real recorrido y
+                                             VisibleFolders es SOLO el nivel actual (hijos de CurrentFolder, o las raices
+                                             reales de Terrasavr si no hay ninguna carpeta abierta). -->
                                         <Border Grid.Column="0" Background="{StaticResource BgPrimaryBrush}" CornerRadius="6"
                                                 Padding="5" Margin="0,0,8,0">
                                             <DockPanel>
-                                                <Button DockPanel.Dock="Top" Content="Ver todo" HorizontalAlignment="Left"
-                                                        Padding="5,2" FontSize="10" Margin="0,0,0,4"
-                                                        Command="{Binding Library.ClearCategoryCommand}" />
+                                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                                    <Button Content="Raíz" Tag="Ghost" Padding="5,2" FontSize="10"
+                                                            Command="{Binding Library.ClearCategoryCommand}" />
+                                                    <ItemsControl ItemsSource="{Binding Library.Breadcrumb}"
+                                                                  ItemTemplate="{StaticResource LibraryBreadcrumbCrumbTemplate}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                    </ItemsControl>
+                                                </WrapPanel>
                                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                    <ItemsControl ItemsSource="{Binding Library.RootCategories}"
-                                                                  ItemTemplate="{StaticResource CategoryNodeTemplate}" />
+                                                    <ItemsControl ItemsSource="{Binding Library.VisibleFolders}"
+                                                                  ItemTemplate="{StaticResource LibraryFolderRowTemplate}" />
                                                 </ScrollViewer>
                                             </DockPanel>
                                         </Border>
@@ -1346,12 +1371,19 @@
                                         <Border Grid.Column="0" Background="{StaticResource BgPrimaryBrush}" CornerRadius="6"
                                                 Padding="5" Margin="0,0,8,0">
                                             <DockPanel>
-                                                <Button DockPanel.Dock="Top" Content="Ver todo" HorizontalAlignment="Left"
-                                                        Padding="5,2" FontSize="10" Margin="0,0,0,4"
-                                                        Command="{Binding BuffLibrary.ClearCategoryCommand}" />
+                                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                                    <Button Content="Raíz" Tag="Ghost" Padding="5,2" FontSize="10"
+                                                            Command="{Binding BuffLibrary.ClearCategoryCommand}" />
+                                                    <ItemsControl ItemsSource="{Binding BuffLibrary.Breadcrumb}"
+                                                                  ItemTemplate="{StaticResource BuffLibraryBreadcrumbCrumbTemplate}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                    </ItemsControl>
+                                                </WrapPanel>
                                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                    <ItemsControl ItemsSource="{Binding BuffLibrary.RootCategories}"
-                                                                  ItemTemplate="{StaticResource BuffCategoryNodeTemplate}" />
+                                                    <ItemsControl ItemsSource="{Binding BuffLibrary.VisibleFolders}"
+                                                                  ItemTemplate="{StaticResource BuffLibraryFolderRowTemplate}" />
                                                 </ScrollViewer>
                                             </DockPanel>
                                         </Border>
