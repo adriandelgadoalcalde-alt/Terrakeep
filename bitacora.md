@@ -2185,3 +2185,39 @@ Deliberadamente NO toca `VanillaCategoryCatalog.cs` (se queda tal cual, solo lo 
 en `CharacterFileService.VanillaLibraryTree`. Verificado con arnés de consola: 9 raíces
 reales, Iron Broadsword en las mismas 3 carpetas reales que en la Fase A. `dotnet build` en
 verde.
+
+### Fase C - `LibraryViewModel` rehecho para usar el árbol real
+
+`CategoryNodeViewModel` gana `ItemIdSet` (`HashSet<int>`, siempre poblado - el propio conjunto
+si es hoja, o la unión de todos sus descendientes si es carpeta intermedia) - reemplaza por
+completo el viejo mecanismo de comparar `LibraryItemViewModel.Category` por prefijo, que
+asumía una única categoría por objeto (falso para el árbol real, donde un mismo objeto puede
+caer en varias carpetas a la vez). `ApplyFilter` ahora filtra por pertenencia directa a este
+conjunto - más simple y correcto que antes.
+
+`BuildCategoryTree` reconstruye `RootCategories` así: los 9 nodos raíz reales de
+`VanillaLibraryTreeCatalog` (mismo orden que Terrasavr real, recorridos recursivamente) + una
+única carpeta madre "Calamity (mod)" nueva (`BuildCalamityRoot`, puerto real y fiel de
+`calamityBuildLibraryNode` de `overrides.js` - agrupa las categorías reales de
+`calamity/catalog.json` por segmento raíz, pagina cualquier hoja de más de 40 objetos en
+"Page N", con las 33 etiquetas reales en español de `CALAMITY_CATEGORY_LABELS` portadas tal
+cual). Deliberadamente SIN el límite de 19 carpetas por pantalla del Electron original
+(`LIBRARY_FOLDER_CAP`) - documentado ahí mismo como parche a una limitación real del motor
+Haxe/OpenFL antiguo (lista de líneas fija sin scroll) que no existe en este árbol real de WPF.
+
+`MainWindow.xaml`: quitado el `TextBlock` que añadía un sufijo `" (N)"` aparte al nombre de
+cada carpeta - los nombres reales YA llevan su propio recuento cuando el propio Terrasavr lo
+pone (carpetas calculadas por predicado, ej. "Melee damage (316)"); añadir uno propio habría
+duplicado el número. Las carpetas hoja con lista literal de ids (ej. "Copper & Tin") tampoco
+llevan recuento en el Terrasavr real, así que no se inventa uno ahí tampoco.
+
+**Verificado con arnés de consola contra datos reales** (instancia real de
+`LibraryViewModel`, sin ventana): `RootCategories.Count == 10` (9 vanilla + Calamity);
+`Iron Broadsword` (id 4) sigue apareciendo en las mismas 3 carpetas reales de la Fase A/B
+(pertenencia múltiple confirmada de extremo a extremo); `Calamity (mod)` con 2709 ids en 19
+grupos reales con etiqueta española ("Accesorios (221)", "Armadura (186)"...); seleccionar la
+carpeta real "Iron & Lead" rellena `Results` con 33 objetos reales y nombres en español
+correctos (Pico de hierro, Hacha de hierro, Mineral de hierro...) - confirma que el flujo de
+selección/colocación tampoco se rompió.
+
+`dotnet build`/`dotnet test` en verde (128/128).

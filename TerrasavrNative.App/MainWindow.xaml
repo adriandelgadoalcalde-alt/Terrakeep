@@ -251,9 +251,13 @@
                         <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
                                VerticalAlignment="Center"
                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                        <!-- Sin sufijo de recuento aparte (pedido explicito 2-sep-2026, "calca
+                             exactamente"): los nombres reales YA llevan su propio "(N)" cuando
+                             el propio Terrasavr lo pone (carpetas calculadas por predicado,
+                             ej. "Melee damage (316)") - añadir otro aqui duplicaria el numero.
+                             Las carpetas con lista literal de ids (ej. "Copper & Tin") tampoco
+                             llevan recuento en el Terrasavr real, asi que no se inventa uno. -->
                         <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding ItemCount, StringFormat=' ({0})'}" FontSize="10"
-                                   VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" />
                     </StackPanel>
                 </Button>
                 <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
