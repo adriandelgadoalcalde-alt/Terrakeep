@@ -2771,3 +2771,96 @@ pestañas siguen seleccionables sin excepción tras el cambio de plantilla en 3 
 la tarjeta compacta ya no lleva botones propios por slot, solo menú contextual); búsqueda real
 en Librería sigue renderizando sin excepción; sin `ultimo-error.log`. `dotnet build`/
 `dotnet test` en verde (128/128, sin regresiones).
+
+## Cuarta pasada: tooltips completos de equipo, iconos consistentes, rework de Buffs (2-sep-2026)
+
+Feedback nuevo, 3 peticiones en un mensaje: (1) tooltips de armadura/accesorios incompletos -
+sin porcentajes de prefijo, sin descripción de accesorio, sin bonificación de set completo;
+(2) iconos "enormes" en Equipamiento/Monturas/Monedas tras la rejilla nueva, quería el mismo
+tamaño que Inventario; (3) rework completo de la pestaña Buffs (misma rejilla que Inventario +
+Librería de buffs con jerarquía real de Terrasavr + panel Editar con 3 botones de duración
+real). Pedido explícito: consultar a Opus con investigación real antes de tocar nada.
+
+**Investigación real previa** (dos agentes en paralelo, código decompilado real, sin adivinar
+nada): confirmado que el tooltip de accesorio con porcentajes YA rellenados existe en
+`Terraria.Localization.Content.es-ES.Items.json` clave `ItemTooltip` (2790 entradas, mismo
+espacio de claves PascalCase que `ItemName`, ya usado en el proyecto); confirmado que la
+bonificación de set completo existe en `Game.json` clave `ArmorSetBonus` (67 entradas) con una
+tabla real de condiciones `(head,body,legs)` en `Player.UpdateArmorSets` de `Player.cs`
+decompilado; confirmado que solo existe UN caso real de duraciones min/medio/máx en todo el
+juego (Poción de la suerte, ratio exacto 1:2:3) - el resto de buffs solo tienen un `buffTime`
+real único, sin escalera real que copiar.
+
+**Consulta a Opus con estos hechos ya verificados** - devolvió tres correcciones importantes a
+la investigación previa que cambiaron el diseño: (a) SÍ existe jerarquía real de buffs en
+Terrasavr (`app.BuffSide`, no `app.TabBuffs` que solo pinta iconos) - el grep anterior había
+mirado la clase equivocada; tabla real de 6 categorías (Utilidad/Offensivo/Defensivo/Special/
+Mascota/Negativo) más un índice paginado, con pertenencia múltiple real; (b) la duración
+máxima real SÍ existe como valor fijo (`S.getMaxTime()` real de Terrasavr = 1999999980 ticks
+≈ 385,8 días para personajes version≥269, el mismo umbral que ya usa este puerto para decidir
+44 vs 22 buffs) - no hace falta ningún multiplicador inventado para el botón "Máxima"; (c) la
+tabla de sets de armadura NO está indexada por item id sino por `headSlot`/`bodySlot`/`legSlot`
+(índice de textura de equipo), con un paso de inversión adicional necesario.
+
+**Corrección del usuario sobre la duración máxima**, llegada ANTES de que la consulta a Opus
+terminara: *"el tiempo maximo quiero que sea lo maximo permitido... creo que es 365 dias"*.
+Verificado en el propio `Player.cs` decompilado: `buffTime` es `int[]` igual que `PlrBuff.Time`
+en este puerto, así que el techo matemático exacto sería `int.MaxValue/60 ≈ 414 días` - pero
+usar ese límite exacto arriesga desbordar un `int` al convertir segundos→ticks (`×60`). La
+respuesta real de Opus (`S.getMaxTime()` = 385,8 días) resuelve esto mejor que cualquier
+aproximación propia: es el valor REAL que usa el propio Terrasavr, más seguro que el límite
+matemático exacto y más preciso que una redondez inventada.
+
+### Fase 0 (ya implementada y verificada) - iconos consistentes + tooltips completos
+
+1. **`SlotGridPanel.ReferenceColumns`** (nuevo, `Controls/SlotGridPanel.cs`): antes cada
+   contenedor maximizaba SU PROPIA celda de forma independiente dentro del mismo ancho
+   compartido - con menos columnas (Equipamiento=5), `cellFromWidth` salía mucho mayor que con
+   Inventario (10 columnas), pegándose al `MaxCell=96` mientras Inventario se quedaba en ~64px
+   reales. `ReferenceColumns="10"` (fijado en `ContainerCompactTemplate`, `MainWindow.xaml`)
+   limita la celda al tamaño que tendría un contenedor de 10 columnas en ese mismo ancho -
+   verificado con UI Automation real: `firstImageWidth` de Equipamiento e Inventario ahora
+   coinciden exactamente (86px = 86px, antes muy distintos).
+2. **Tooltips completos de objetos**: `ItemStatsFormatter.Format` reescrito de raíz - antes
+   devolvía `null` si NINGÚN campo numérico estaba presente (un accesorio sin daño/defensa no
+   mostraba nada); ahora compone 4 secciones independientes (efecto de prefijo / stats
+   numéricos / tooltip descriptivo real / bonus de set completo), cada una opcional. Firma
+   nueva: `Format(bool isCalamity, int id, ItemTooltipCatalogs catalogs, ItemPrefix? prefix =
+   null)` - los 6 catálogos que antes eran parámetros sueltos (ya insostenible) se agrupan en
+   un `record` nuevo, expuesto como `CharacterFileService.TooltipCatalogs`, actualizado en los
+   5 call sites reales (`ItemSlotViewModel`, `LibraryViewModel` x2, `BuildsViewModel` x2).
+   - `scripts/extraer-tooltips-vanilla.py` → `vanilla_item_tooltips.json` (2518 objetos reales,
+     texto de `ItemTooltip` con las referencias `{$CommonItemTooltip.X}`/`{$PaintingArtist.X}`
+     ya resueltas recursivamente contra el mismo fichero, `{InputTrigger_X}` sustituido por
+     `[tecla]` literal - documentado como decisión, no un binding real inventado) +
+     `VanillaItemTooltipCatalog.cs` (Core).
+   - `scripts/extraer-efectos-prefijos.py` → `vanilla_prefix_effects.json` (84 prefijos reales:
+     65 de arma vía `Item.TryGetPrefixStatMultipliersForItem`, 19 de accesorio vía
+     `Player.GrantPrefixBenefits`) + `PrefixEffectCatalog.cs` (Core) - compone el texto en
+     español desde los números reales (`dmg=1.15` → "+15% de daño"), nunca una frase inventada.
+   - `scripts/extraer-sets-armadura.py` → `vanilla_armor_sets.json` (177 item ids reales con
+     bonificación de set mapeada, 57 de las 66 claves reales de `ArmorSetBonus` resueltas) +
+     `VanillaArmorSetCatalog.cs` (Core). Dos pasos reales: inversión `headSlot`/`bodySlot`/
+     `legSlot` → item id (mismo `split_by_case` que ya usaba `extraer-estadisticas-vanilla.py`,
+     604 objetos, 1:1 sin colisiones) + evaluación de las condiciones reales de
+     `UpdateArmorSets` contra el producto cartesiano de candidatos por variable (dominio
+     siempre pequeño). Único caso especial real de todo el método (bonus Hallowed vs
+     HallowedSummoner, un `else` sin condición propia) resuelto a mano con los valores reales
+     leídos del propio código en vez de un parser genérico de `else` para un único caso.
+     Verificado con 3 combos reales conocidos (Shroomite, Molten, Hallowed/HallowedSummoner) -
+     los 3 con texto y piezas correctas.
+   - El texto de bonus de set se muestra siempre que se mira una pieza del set (estático por
+     id, etiquetado "Con el set completo: ..." en vez de fingir que ya está activo - el
+     tooltip también lo consume la Librería sobre objetos sueltos, sin personaje cargado). El
+     chequeo reactivo real (equipo puesto de verdad) queda para una fase futura -
+     `VanillaArmorSetCatalog.BonusForEquipped` ya expone lo necesario si se implementa.
+   - Calamity: descripciones de tooltip NO extraídas esta pasada (el problema es idéntico ahí,
+     pero requiere leer 28 ficheros `.hjson` del `.tmod` real en inglés - fuera de alcance de
+     este checkpoint, documentado como pendiente).
+
+**Verificación real** (arnés de UI Automation ampliado): Emblema de Guerrero (id 490) muestra
+"Aumenta un 15% el daño cuerpo a cuerpo" real; Casco de Shroomite (id 1546) muestra su propio
+bonus de daño a distancia + el bonus de set completo real de Shroomite; sin excepciones,
+`dotnet test` 128/128 verde.
+
+### Fase 1+ (rework de Buffs) - en curso, ver mensajes siguientes de esta misma sesión

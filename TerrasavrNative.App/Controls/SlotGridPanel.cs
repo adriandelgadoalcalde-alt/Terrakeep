@@ -43,11 +43,30 @@ public sealed class SlotGridPanel : Panel
         nameof(AvailableHeight), typeof(double), typeof(SlotGridPanel),
         new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
+    // ReferenceColumns (0 = desactivado) - pregunta a Opus sobre el diseño, 2-sep-2026, cuarta
+    // pasada ("al hacer la rejilla nueva para equipamiento y en la pestaña de mascotas y
+    // municion y monedas se ven los iconos enormes... me gustaria que se vieran igual que la
+    // rejilla de inventario de tamaño"). Bug real diagnosticado por Opus con la geometria real
+    // del layout: Equipamiento (5 columnas) e Inventario (10 columnas) comparten el MISMO
+    // ancho disponible (misma columna del mismo Grid), pero cada SlotGridPanel maximizaba SU
+    // PROPIA celda de forma independiente - con menos columnas, cellFromWidth es mucho mayor
+    // (672/5=134 vs 672/10=64), asi que Equipamiento se pegaba al MaxCell=96 mientras
+    // Inventario se quedaba en ~64. Con ReferenceColumns>0, la celda nunca puede superar el
+    // tamaño que tendria un contenedor de ReferenceColumns columnas en ESE MISMO ancho -
+    // todos los contenedores que comparten columna (los 9 reales, ver ContainerCompactTemplate
+    // en MainWindow.xaml, ReferenceColumns="10" = Inventario) salen con el mismo tamaño de
+    // icono, sin perder el "crece con la ventana" (en una ventana grande, todos crecen igual
+    // hasta MaxCell).
+    public static readonly DependencyProperty ReferenceColumnsProperty = DependencyProperty.Register(
+        nameof(ReferenceColumns), typeof(int), typeof(SlotGridPanel),
+        new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
     public int Columns { get => (int)GetValue(ColumnsProperty); set => SetValue(ColumnsProperty, value); }
     public double MinCell { get => (double)GetValue(MinCellProperty); set => SetValue(MinCellProperty, value); }
     public double MaxCell { get => (double)GetValue(MaxCellProperty); set => SetValue(MaxCellProperty, value); }
     public double Gap { get => (double)GetValue(GapProperty); set => SetValue(GapProperty, value); }
     public double AvailableHeight { get => (double)GetValue(AvailableHeightProperty); set => SetValue(AvailableHeightProperty, value); }
+    public int ReferenceColumns { get => (int)GetValue(ReferenceColumnsProperty); set => SetValue(ReferenceColumnsProperty, value); }
 
     private double _cell = 44;
     private int _cols = 1;
@@ -68,7 +87,10 @@ public sealed class SlotGridPanel : Panel
 
         double cellFromWidth = (availW - Gap * (cols - 1)) / cols;
         double cellFromHeight = (availH - Gap * (rows - 1)) / rows;
-        double cell = Math.Clamp(Math.Min(cellFromWidth, cellFromHeight), MinCell, MaxCell);
+        double cellFromReference = ReferenceColumns > 0
+            ? (availW - Gap * (ReferenceColumns - 1)) / ReferenceColumns
+            : double.PositiveInfinity;
+        double cell = Math.Clamp(Math.Min(Math.Min(cellFromWidth, cellFromHeight), cellFromReference), MinCell, MaxCell);
 
         _cell = cell;
         _cols = cols;

@@ -44,7 +44,7 @@ public sealed class BuildsViewModel
                 isCalamity = true;
                 var entry = service.CalamityCatalog.ByModAndInternal(itemRef.Pid[..slash], itemRef.Pid[(slash + 1)..]);
                 if (entry?.Icon != null) iconPath = "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon;
-                if (entry != null) statsTooltip = ItemStatsFormatter.Format(true, entry.SyntheticId, service.VanillaStats, service.CalamityCatalog, service.VanillaCategories);
+                if (entry != null) statsTooltip = ItemStatsFormatter.Format(true, entry.SyntheticId, service.TooltipCatalogs);
             }
             else
             {
@@ -52,7 +52,7 @@ public sealed class BuildsViewModel
                 if (id != null)
                 {
                     iconPath = VanillaIconResolver.GetIconPath(id.Value);
-                    statsTooltip = ItemStatsFormatter.Format(false, id.Value, service.VanillaStats, service.CalamityCatalog, service.VanillaCategories);
+                    statsTooltip = ItemStatsFormatter.Format(false, id.Value, service.TooltipCatalogs);
                 }
             }
         }

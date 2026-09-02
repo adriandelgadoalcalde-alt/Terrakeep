@@ -44,7 +44,7 @@ public partial class LibraryViewModel : ObservableObject
 
         foreach (var (id, name) in service.VanillaCatalog.AllEntries())
         {
-            string? stats = ItemStatsFormatter.Format(false, id, service.VanillaStats, service.CalamityCatalog, service.VanillaCategories);
+            string? stats = ItemStatsFormatter.Format(false, id, service.TooltipCatalogs);
             var item = new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats);
             _all.Add(item);
             _byId[id] = item;
@@ -53,7 +53,7 @@ public partial class LibraryViewModel : ObservableObject
         foreach (var entry in service.CalamityCatalog.Entries)
         {
             string? iconPath = entry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
-            string? stats = ItemStatsFormatter.Format(true, entry.SyntheticId, service.VanillaStats, service.CalamityCatalog, service.VanillaCategories);
+            string? stats = ItemStatsFormatter.Format(true, entry.SyntheticId, service.TooltipCatalogs);
             var item = new LibraryItemViewModel(entry.DisplayName, true, iconPath, entry.SyntheticId, entry.Category, stats);
             _all.Add(item);
             _byId[entry.SyntheticId] = item;

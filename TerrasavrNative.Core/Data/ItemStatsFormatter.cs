@@ -1,8 +1,23 @@
 using System.Globalization;
 using System.Text;
 using TerrasavrNative.Core.Calamity;
+using TerrasavrNative.Core.Model;
 
 namespace TerrasavrNative.Core.Data;
+
+// Los 6 catalogos reales que ItemStatsFormatter.Format necesita, agrupados en un unico record
+// - pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada. Antes eran 5 parametros sueltos
+// en la firma (ya dificil de no equivocarse al llamar) y con los 2 catalogos nuevos de esta
+// pasada (tooltips descriptivos, sets de armadura) habria llegado a 7 - un solo record que
+// CharacterFileService construye una vez y expone (TooltipCatalogs), y los 5 call sites reales
+// (LibraryViewModel, BuildsViewModel, ItemSlotViewModel) lo pasan tal cual.
+public sealed record ItemTooltipCatalogs(
+    VanillaItemStatsCatalog Stats,
+    CalamityCatalog Calamity,
+    VanillaCategoryCatalog Categories,
+    VanillaItemTooltipCatalog Tooltips,
+    VanillaArmorSetCatalog ArmorSets,
+    PrefixEffectCatalog PrefixEffects);
 
 // Texto de tooltip con las estadisticas reales de un objeto (daño/defensa/etc.) - pedido
 // explicito 1-sep-2026: "ninguna de las armas armaduras o accesorios... te muestran las
@@ -12,24 +27,72 @@ namespace TerrasavrNative.Core.Data;
 // script.js (clase de formato de tooltip real, no adivinadas) y de
 // local-site/lang/lang.zip -> Terrasavr.es-ES.json (namespace "meta.item") - ver
 // bitacora.md para el detalle de la verificacion.
+//
+// Reescrito de nuevo 2-sep-2026 (cuarta pasada, pregunta a Opus sobre el diseño): pedido
+// explicito del usuario ("las armaduras no te dicen toda la información... los accesorios
+// tampoco... no te pone el porcentaje... y una pequeña descripción de lo que hace... si
+// tienes el set completo siempre hay una bonificacion"). Bug real de raiz: FormatLines
+// devolvia null si NINGUN campo NUMERICO estaba presente - un accesorio sin daño/defensa no
+// generaba ninguna linea, aunque tuviera un efecto real descrito en el juego. Ahora compone
+// por SECCIONES independientes (efecto de prefijo / stats numericos / tooltip descriptivo /
+// bonus de set), cada una opcional, null solo si TODAS estan vacias.
 public static class ItemStatsFormatter
 {
-    public static string? Format(bool isCalamity, int id, VanillaItemStatsCatalog vanillaStats, CalamityCatalog calamityCatalog, VanillaCategoryCatalog vanillaCategories)
+    public static string? Format(bool isCalamity, int id, ItemTooltipCatalogs catalogs, ItemPrefix? prefix = null)
     {
-        if (isCalamity)
+        var sections = new List<string>();
+
+        // Seccion 1 - efecto real del prefijo (numeros reales extraidos de
+        // Item.TryGetPrefixStatMultipliersForItem/Player.GrantPrefixBenefits, nunca texto
+        // inventado - ver PrefixEffectCatalog). Solo prefijos vanilla por ahora (Calamity no
+        // se investigo esta pasada). El NOMBRE del prefijo ya se muestra aparte en el tooltip
+        // compuesto de MainWindow.xaml - esto es solo el efecto numerico.
+        if (prefix is { IsNone: false, IsCalamity: false } p)
         {
-            var entry = calamityCatalog.BySyntheticId(id);
-            var s = entry?.Stats;
-            if (s == null) return null;
-            return FormatLines(damage: s.Damage, damageLabel: DamageLabelForCalamity(s.DamageType), defense: null,
-                crit: s.Crit, knockBack: s.KnockBack, useTime: s.UseTime, mana: s.Mana, healLife: null, healMana: null, rare: null);
+            string? effect = catalogs.PrefixEffects.Describe(p.VanillaId);
+            if (effect != null) sections.Add(effect);
         }
 
-        var v = vanillaStats.Get(id);
-        if (v == null) return null;
-        string? damageLabel = v.Damage is int ? DamageLabelForVanilla(vanillaCategories.GetCategory(id)) : null;
-        return FormatLines(damage: v.Damage, damageLabel: damageLabel, defense: v.Defense, crit: v.Crit,
-            knockBack: v.KnockBack, useTime: v.UseTime, mana: v.Mana, healLife: v.HealLife, healMana: v.HealMana, rare: v.Rare);
+        if (isCalamity)
+        {
+            var entry = catalogs.Calamity.BySyntheticId(id);
+            var s = entry?.Stats;
+            if (s != null)
+            {
+                string? numeric = FormatLines(damage: s.Damage, damageLabel: DamageLabelForCalamity(s.DamageType), defense: null,
+                    crit: s.Crit, knockBack: s.KnockBack, useTime: s.UseTime, mana: s.Mana, healLife: null, healMana: null, rare: null);
+                if (numeric != null) sections.Add(numeric);
+            }
+            // Descripcion textual/bonus de set de Calamity: no extraidos todavia (fuera de
+            // alcance de esta pasada, ver bitacora.md - el .tmod real SI las trae, hjson de
+            // Localization/en-US, solo en ingles en esta instalacion).
+        }
+        else
+        {
+            var v = catalogs.Stats.Get(id);
+            if (v != null)
+            {
+                string? damageLabel = v.Damage is int ? DamageLabelForVanilla(catalogs.Categories.GetCategory(id)) : null;
+                string? numeric = FormatLines(damage: v.Damage, damageLabel: damageLabel, defense: v.Defense, crit: v.Crit,
+                    knockBack: v.KnockBack, useTime: v.UseTime, mana: v.Mana, healLife: v.HealLife, healMana: v.HealMana, rare: v.Rare);
+                if (numeric != null) sections.Add(numeric);
+            }
+
+            // Seccion 3 - tooltip descriptivo real (texto ya con los porcentajes rellenados
+            // por el propio juego, ej. "Aumenta un 15% el daño cuerpo a cuerpo") - antes un
+            // accesorio sin stats de combate no mostraba NADA.
+            string? tooltip = catalogs.Tooltips.Get(id);
+            if (tooltip != null) sections.Add(tooltip);
+
+            // Seccion 4 - bonus de set completo. Estatico por id (no comprueba el equipo
+            // puesto de verdad - lo consume tambien la Libreria sobre objetos sueltos, sin
+            // personaje cargado), etiquetado explicitamente para no fingir que ya esta activo.
+            var setInfo = catalogs.ArmorSets.Get(id);
+            if (setInfo != null)
+                sections.Add($"Con el set completo: {setInfo.Text}");
+        }
+
+        return sections.Count > 0 ? string.Join("\n", sections) : null;
     }
 
     // Etiqueta de tipo de daño real - vanilla la decide la categoria real ya extraida

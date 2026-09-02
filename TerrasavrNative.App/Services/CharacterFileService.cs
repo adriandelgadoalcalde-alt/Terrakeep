@@ -47,6 +47,16 @@ public sealed class CharacterFileService
     public HairDyeCatalog HairDyes { get; }
     public VanillaLibraryTreeCatalog VanillaLibraryTree { get; }
     public LibraryLabelCatalog LibraryLabels { get; }
+    public VanillaItemTooltipCatalog VanillaItemTooltips { get; }
+    public VanillaArmorSetCatalog VanillaArmorSets { get; }
+    public PrefixEffectCatalog PrefixEffects { get; }
+
+    // Los 6 catalogos que ItemStatsFormatter.Format necesita, agrupados en un unico record -
+    // pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada: la firma ya iba por 5
+    // parametros sueltos, seguir añadiendo uno por catalogo nuevo (tooltip/set de armadura)
+    // habria hecho facil olvidarse de pasar alguno en algun call site. Los 5 call sites reales
+    // (LibraryViewModel, BuildsViewModel, ItemSlotViewModel) pasan esto en vez de 6 argumentos.
+    public ItemTooltipCatalogs TooltipCatalogs { get; }
 
     public CharacterFileService()
     {
@@ -74,6 +84,10 @@ public sealed class CharacterFileService
         HairDyes = HairDyeCatalog.LoadFromFile(Path.Combine(assetsDir, "hair_dyes.json"));
         VanillaLibraryTree = VanillaLibraryTreeCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_library_tree.json"));
         LibraryLabels = LibraryLabelCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_library_labels_es.json"));
+        VanillaItemTooltips = VanillaItemTooltipCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_item_tooltips.json"));
+        VanillaArmorSets = VanillaArmorSetCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_armor_sets.json"));
+        PrefixEffects = PrefixEffectCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_prefix_effects.json"));
+        TooltipCatalogs = new ItemTooltipCatalogs(VanillaStats, CalamityCatalog, VanillaCategories, VanillaItemTooltips, VanillaArmorSets, PrefixEffects);
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
         var codec = new CalamityItemCodec(CalamityCatalog, translator);

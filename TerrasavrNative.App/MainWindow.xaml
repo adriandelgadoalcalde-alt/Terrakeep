@@ -338,6 +338,7 @@
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="44" MaxCell="96" Gap="4"
+                                                     ReferenceColumns="10"
                                                      AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>

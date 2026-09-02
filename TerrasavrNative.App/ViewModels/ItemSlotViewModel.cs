@@ -111,7 +111,7 @@ public partial class ItemSlotViewModel : ObservableObject
             IconPath = VanillaIconResolver.GetIconPath(item.Id);
         }
 
-        StatsTooltip = ItemStatsFormatter.Format(item.IsCalamity, item.Id, _service.VanillaStats, _service.CalamityCatalog, _service.VanillaCategories);
+        StatsTooltip = ItemStatsFormatter.Format(item.IsCalamity, item.Id, _service.TooltipCatalogs, item.Prefix);
 
         RefreshPrefixDisplay();
 
