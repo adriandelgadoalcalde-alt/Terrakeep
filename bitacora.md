@@ -2175,3 +2175,13 @@ reales en el mismo orden que Terrasavr: `Materials`, `Decorative`, `Pets, mounts
 `Potions (regeneration)`, `Potions (effects)`, `Bosses & events`, `Quest fish`, `Categories`,
 `Items by ID`). Los ids `0` dentro de las listas de una carpeta hoja son huecos reales de la
 rejilla curada a mano (relleno, no un objeto real) - el consumidor C# (Fase B) debe saltarlos.
+
+### Fase B - `VanillaLibraryTreeCatalog.cs` (Core)
+
+Nuevo catálogo que carga `vanilla_library_tree.json` a un modelo `VanillaLibraryNode`
+(`Name`/`Icon`/`IsLeaf`/`Children` o `ItemIds`, filtrando ya los `0` de relleno al parsear).
+Deliberadamente NO toca `VanillaCategoryCatalog.cs` (se queda tal cual, solo lo usa
+`ItemStatsFormatter` para la etiqueta de daño de los tooltips - un problema distinto). Cargado
+en `CharacterFileService.VanillaLibraryTree`. Verificado con arnés de consola: 9 raíces
+reales, Iron Broadsword en las mismas 3 carpetas reales que en la Fase A. `dotnet build` en
+verde.
