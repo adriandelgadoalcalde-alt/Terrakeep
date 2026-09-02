@@ -1,0 +1,1623 @@
+[
+  {
+    "clase": "AerospecHeadMagic",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.AerospecHeadMagic.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusManaCostReduction.ToPercent()",
+        "valorNumerico": 8,
+        "texto": "8"
+      },
+      {
+        "expr": "SetBonusMoveSpeedBoost.ToPercent()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "AerospecBreastplate.SetBonusHurtDamageThreshold",
+        "valorNumerico": 25,
+        "texto": "25"
+      }
+    ],
+    "textoFinal": "Reduce el coste de maná un 8%\n5% increased movement speed and magic critical strike chance\nTaking over 25 damage in one hit will cause a spread of homing feathers to fall\nAllows you to fall more quickly and disables fall damage",
+    "miembrosSet": [
+      "AerospecHeadMagic",
+      "AerospecBreastplate",
+      "AerospecLeggings"
+    ]
+  },
+  {
+    "clase": "AerospecHeadMelee",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.AerospecHeadMelee.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMoveSpeedBoost.ToPercent()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "AerospecBreastplate.SetBonusHurtDamageThreshold",
+        "valorNumerico": 25,
+        "texto": "25"
+      }
+    ],
+    "textoFinal": "5% increased movement speed and melee critical strike chance\nEnemies are more likely to target you\nTaking over 25 damage in one hit will cause a spread of homing feathers to fall\nAllows you to fall more quickly and disables fall damage",
+    "miembrosSet": [
+      "AerospecHeadMelee",
+      "AerospecBreastplate",
+      "AerospecLeggings"
+    ]
+  },
+  {
+    "clase": "AerospecHeadRanged",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.AerospecHeadRanged.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMoveSpeedBoost.ToPercent()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "AerospecBreastplate.SetBonusHurtDamageThreshold",
+        "valorNumerico": 25,
+        "texto": "25"
+      }
+    ],
+    "textoFinal": "5% increased movement speed and ranged critical strike chance\nTaking over 25 damage in one hit will cause a spread of homing feathers to fall\nAllows you to fall more quickly and disables fall damage",
+    "miembrosSet": [
+      "AerospecHeadRanged",
+      "AerospecBreastplate",
+      "AerospecLeggings"
+    ]
+  },
+  {
+    "clase": "AerospecHeadRogue",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.AerospecHeadRogue.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 80,
+        "texto": "80"
+      },
+      {
+        "expr": "SetBonusMoveSpeedBoost.ToPercent()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "AerospecBreastplate.SetBonusHurtDamageThreshold",
+        "valorNumerico": 25,
+        "texto": "25"
+      }
+    ],
+    "textoFinal": "+80 maximum stealth\n5% increased movement speed and rogue critical strike chance\nTaking over 25 damage in one hit will cause a spread of homing feathers to fall\nAllows you to fall more quickly and disables fall damage",
+    "miembrosSet": [
+      "AerospecHeadRogue",
+      "AerospecBreastplate",
+      "AerospecLeggings"
+    ]
+  },
+  {
+    "clase": "AerospecHeadSummon",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.AerospecHeadSummon.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 1,
+        "texto": "1"
+      },
+      {
+        "expr": "SetBonusSummonDamageBoost.ToPercent()",
+        "valorNumerico": 11,
+        "texto": "11"
+      },
+      {
+        "expr": "AerospecBreastplate.SetBonusHurtDamageThreshold",
+        "valorNumerico": 25,
+        "texto": "25"
+      }
+    ],
+    "textoFinal": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 11% el daño de invocación\nSummons a valkyrie to protect you\nTaking over 25 damage in one hit will cause a spread of homing feathers to fall\nAllows you to fall more quickly and disables fall damage",
+    "miembrosSet": [
+      "AerospecHeadSummon",
+      "AerospecBreastplate",
+      "AerospecLeggings"
+    ]
+  },
+  {
+    "clase": "AstralHelm",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.AstralHelm.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 3,
+        "texto": "3"
+      },
+      {
+        "expr": "SetBonusDamageBoost.ToPercent()",
+        "valorNumerico": 10,
+        "texto": "10"
+      },
+      {
+        "expr": "StarRainCooldown.FramesToSeconds()",
+        "valorNumerico": 1,
+        "texto": "1"
+      }
+    ],
+    "textoFinal": "Aumenta en 3 el máximo de súbditos que puedes tener\nAumenta un 10% el daño y la probabilidad de ataque crítico\nWhenever you crit an enemy, a barrage of stars will rain down\nThis effect has a 1 second cooldown before it can trigger again",
+    "miembrosSet": [
+      "AstralHelm",
+      "AstralBreastplate",
+      "AstralLeggings"
+    ]
+  },
+  {
+    "clase": "AuricTeslaHeadMagic",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.AuricTeslaHeadMagic.SetBonus",
+    "argsInfo": [],
+    "textoFinal": "Magic Tarragon, Bloodflare and Silva armor effects\nHold Shift to view these set bonus details and press Shift repeatedly to cycle through them",
+    "miembrosSet": [
+      "AuricTeslaHeadMagic",
+      "AuricTeslaBodyArmor",
+      "AuricTeslaCuisses"
+    ]
+  },
+  {
+    "clase": "AuricTeslaHeadMelee",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.AuricTeslaHeadMelee.SetBonus",
+    "argsInfo": [],
+    "textoFinal": "Enemies are more likely to target you\nMelee Tarragon, Bloodflare and God Slayer effects\nHold Shift to view these set bonus details and press Shift repeatedly to cycle through them",
+    "miembrosSet": [
+      "AuricTeslaHeadMelee",
+      "AuricTeslaBodyArmor",
+      "AuricTeslaCuisses"
+    ]
+  },
+  {
+    "clase": "AuricTeslaHeadRanged",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.AuricTeslaHeadRanged.SetBonus",
+    "argsInfo": [],
+    "textoFinal": "Ranged Tarragon, Bloodflare and God Slayer armor effects\nHold Shift to view these set bonus details and press Shift repeatedly to cycle through them",
+    "miembrosSet": [
+      "AuricTeslaHeadRanged",
+      "AuricTeslaBodyArmor",
+      "AuricTeslaCuisses"
+    ]
+  },
+  {
+    "clase": "AuricTeslaHeadRogue",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.AuricTeslaHeadRogue.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 130,
+        "texto": "130"
+      }
+    ],
+    "textoFinal": "+130 maximum stealth\nRogue Tarragon, Bloodflare and God Slayer armor effects\nHold Shift to view these set bonus details and press Shift repeatedly to cycle through them",
+    "miembrosSet": [
+      "AuricTeslaHeadRogue",
+      "AuricTeslaBodyArmor",
+      "AuricTeslaCuisses"
+    ]
+  },
+  {
+    "clase": "AuricTeslaHeadSummon",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.AuricTeslaHeadSummon.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 4,
+        "texto": "4"
+      },
+      {
+        "expr": "SetBonusSummonDamageBoost.ToPercent()",
+        "valorNumerico": 55,
+        "texto": "55"
+      }
+    ],
+    "textoFinal": "Aumenta en 4 el máximo de súbditos que puedes tener\nAumenta un 55% el daño de invocación\nSummoner Tarragon, Bloodflare and Silva armor effects\nHold Shift to view these set bonus details and press Shift repeatedly to cycle through them",
+    "miembrosSet": [
+      "AuricTeslaHeadSummon",
+      "AuricTeslaBodyArmor",
+      "AuricTeslaCuisses"
+    ]
+  },
+  {
+    "clase": "BloodflareHeadMagic",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.BloodflareHeadMagic.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "GhostBoltCooldown.FramesToSeconds()",
+        "valorNumerico": 1.67,
+        "texto": "1.67"
+      },
+      {
+        "expr": "BloodsplosionCooldown.FramesToSeconds()",
+        "valorNumerico": 2,
+        "texto": "2"
+      }
+    ],
+    "textoFinal": "Magic weapons fire ghostly bolts every 1.67 seconds\nMagic critical strikes cause blood explosions every 2 seconds\nEnemies below 50% life drop a heart when struck\nThis effect has a 5 second cooldown",
+    "miembrosSet": [
+      "BloodflareHeadMagic",
+      "BloodflareBodyArmor",
+      "BloodflareCuisses"
+    ]
+  },
+  {
+    "clase": "BloodflareHeadMelee",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.BloodflareHeadMelee.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "HitsToActivateFrenzy",
+        "valorNumerico": 15,
+        "texto": "15"
+      },
+      {
+        "expr": "FrenzyDuration.FramesToSeconds()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "FrenzyMeleeDamageBoost.ToPercent()",
+        "valorNumerico": 25,
+        "texto": "25"
+      },
+      {
+        "expr": "FrenzyContactDamageReduction.ToPercent()",
+        "valorNumerico": 50,
+        "texto": "50"
+      },
+      {
+        "expr": "FrenzyCooldown.FramesToSeconds()",
+        "valorNumerico": 30,
+        "texto": "30"
+      }
+    ],
+    "textoFinal": "Enemies are more likely to target you\nAfter striking an enemy 15 times with true melee you will enter a blood frenzy for 5 seconds\nDuring this you will gain 25% increased melee damage, critical strike chance, and 50% reduced contact damage\nThis effect has a 30 second cooldown\nEnemies below 50% life drop a heart when struck\nThis effect has a 5 second cooldown",
+    "miembrosSet": [
+      "BloodflareHeadMelee",
+      "BloodflareBodyArmor",
+      "BloodflareCuisses"
+    ]
+  },
+  {
+    "clase": "BloodflareHeadRanged",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.BloodflareHeadRanged.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "CalamityUtils.GetArmorSetBonusKey()",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "SoulCooldown.FramesToSeconds()",
+        "valorNumerico": 30,
+        "texto": "30"
+      },
+      {
+        "expr": "BloodBombCooldown.FramesToSeconds()",
+        "valorNumerico": 2.5,
+        "texto": "2.5"
+      }
+    ],
+    "textoFinal": "(tecla configurada) to unleash the lost souls of polterghast to destroy your enemies\nThis effect has a 30 second cooldown\nRanged weapons fire bloodsplosion orbs every 2.5 seconds\nEnemies below 50% life drop a heart when struck\nThis effect has a 5 second cooldown",
+    "miembrosSet": [
+      "BloodflareHeadRanged",
+      "BloodflareBodyArmor",
+      "BloodflareCuisses"
+    ]
+  },
+  {
+    "clase": "BloodflareHeadRogue",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.BloodflareHeadRogue.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 120,
+        "texto": "120"
+      }
+    ],
+    "textoFinal": "+120 maximum stealth\nEnemies below 50% life drop a heart when struck\nThis effect has a 5 second cooldown",
+    "miembrosSet": [
+      "BloodflareHeadRogue",
+      "BloodflareBodyArmor",
+      "BloodflareCuisses"
+    ]
+  },
+  {
+    "clase": "BloodflareHeadSummon",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.BloodflareHeadSummon.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 2,
+        "texto": "2"
+      },
+      {
+        "expr": "SetBonusSummonDamageBoost.ToPercent()",
+        "valorNumerico": 30,
+        "texto": "30"
+      },
+      {
+        "expr": "DefenseBoostBelowHealthThreshold",
+        "valorNumerico": 20,
+        "texto": "20"
+      },
+      {
+        "expr": "DefenseBoostHealthThreshold.ToPercent()",
+        "valorNumerico": 50,
+        "texto": "50"
+      }
+    ],
+    "textoFinal": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 30% el daño de invocación\nSummons polterghast mines to circle you\nGrants 20 defense when below 50% life\nEnemies below 50% life drop a heart when struck\nThis effect has a 5 second cooldown",
+    "miembrosSet": [
+      "BloodflareHeadSummon",
+      "BloodflareBodyArmor",
+      "BloodflareCuisses"
+    ]
+  },
+  {
+    "clase": "BrimflameCowl",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.BrimflameCowl.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMagicDamageBoost.ToPercent()",
+        "valorNumerico": 8,
+        "texto": "8"
+      },
+      {
+        "expr": "color.Hex3()",
+        "texto": "",
+        "especial": "color"
+      },
+      {
+        "expr": "CalamityUtils.GetArmorSetBonusKey()",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "FrenzyDuration.FramesToSeconds()",
+        "valorNumerico": 10,
+        "texto": "10"
+      },
+      {
+        "expr": "FrenzyMagicDamageBoost.ToPercent()",
+        "valorNumerico": 40,
+        "texto": "40"
+      },
+      {
+        "expr": "FrenzyCooldown.FramesToSeconds()",
+        "valorNumerico": 30,
+        "texto": "30"
+      }
+    ],
+    "textoFinal": "Aumenta un 8% el daño mágico y la probabilidad de ataque crítico\nBrimflame Frenzy - (tecla configurada) for 10 seconds of Aumenta el daño de los ataques mágicos en un 40%\nHowever, this inflicts rapid life loss and disables mana regeneration and mana potions\nThis effect can be toggled off and has a cooldown of 30 seconds",
+    "miembrosSet": [
+      "BrimflameCowl",
+      "BrimflameRobes",
+      "BrimflameBoots"
+    ]
+  },
+  {
+    "clase": "DaedalusHeadMagic",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.DaedalusHeadMagic.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "AbsorptionChanceDenominator.GetChanceFromDenominator()",
+        "valorNumerico": 10,
+        "texto": "10"
+      },
+      {
+        "expr": "DamageAbsorptionPercent.ToPercent()",
+        "valorNumerico": 50,
+        "texto": "50"
+      }
+    ],
+    "textoFinal": "You have a 10% chance to heal back 50% of taken damage",
+    "miembrosSet": [
+      "DaedalusHeadMagic",
+      "DaedalusBreastplate",
+      "DaedalusLeggings"
+    ]
+  },
+  {
+    "clase": "DaedalusHeadMelee",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.DaedalusHeadMelee.SetBonus",
+    "argsInfo": [],
+    "textoFinal": "Enemies are more likely to target you\nYou reflect projectiles back at enemies, negating their damage\nProjectiles that deal less than 5% of your max life in damage will not be reflected\nThe reflect has a cooldown that ranges between 20 and 90 seconds depending on the reflected projectile's damage\nThis cooldown is shared with all other dodges and reflects",
+    "miembrosSet": [
+      "DaedalusHeadMelee",
+      "DaedalusBreastplate",
+      "DaedalusLeggings"
+    ]
+  },
+  {
+    "clase": "DaedalusHeadRanged",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.DaedalusHeadRanged.SetBonus",
+    "argsInfo": [],
+    "textoFinal": "Getting hit causes you to emit a blast of crystal shards",
+    "miembrosSet": [
+      "DaedalusHeadRanged",
+      "DaedalusBreastplate",
+      "DaedalusLeggings"
+    ]
+  },
+  {
+    "clase": "DaedalusHeadRogue",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.DaedalusHeadRogue.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 105,
+        "texto": "105"
+      }
+    ],
+    "textoFinal": "+105 maximum stealth\nRogue projectiles throw out crystal shards as they travel",
+    "miembrosSet": [
+      "DaedalusHeadRogue",
+      "DaedalusBreastplate",
+      "DaedalusLeggings"
+    ]
+  },
+  {
+    "clase": "DaedalusHeadSummon",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.DaedalusHeadSummon.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 1,
+        "texto": "1"
+      },
+      {
+        "expr": "SetBonusSummonDamageBoost.ToPercent()",
+        "valorNumerico": 10,
+        "texto": "10"
+      }
+    ],
+    "textoFinal": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 10% el daño de invocación\nA daedalus crystal floats above you to protect you",
+    "miembrosSet": [
+      "DaedalusHeadSummon",
+      "DaedalusBreastplate",
+      "DaedalusLeggings"
+    ]
+  },
+  {
+    "clase": "DemonshadeHelm",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.DemonshadeHelm.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 8,
+        "texto": "8"
+      },
+      {
+        "expr": "SetBonusSummonDamageBoost.ToPercent()",
+        "valorNumerico": 100,
+        "texto": "100"
+      },
+      {
+        "expr": "CalamityUtils.GetArmorSetBonusKey()",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "EnrageDuration.FramesToSeconds()",
+        "valorNumerico": 10,
+        "texto": "10"
+      },
+      {
+        "expr": "(1f + MultDamageBoost).Round()",
+        "valorNumerico": 1.5,
+        "texto": "1.5"
+      },
+      {
+        "expr": "(1.0 + MultDamageTakenBoost).Round()",
+        "valorNumerico": 1.25,
+        "texto": "1.25"
+      }
+    ],
+    "textoFinal": "Aumenta en 8 el máximo de súbditos que puedes tener\nAumenta un 100% el daño de invocación\nShadowbeams and demon scythes will fire down when you are hit\n(tecla configurada) to enrage nearby enemies with a dark magic spell for 10 seconds\nThis makes them take 1.5x total damage, but they will deal 1.25x damage to you",
+    "miembrosSet": [
+      "DemonshadeHelm",
+      "DemonshadeBreastplate",
+      "DemonshadeGreaves"
+    ]
+  },
+  {
+    "clase": "DesertProwlerHat",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.DesertProwlerHat.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 50,
+        "texto": "50"
+      },
+      {
+        "expr": "color.Hex3()",
+        "texto": "",
+        "especial": "color"
+      },
+      {
+        "expr": "CalamityUtils.GetArmorSetBonusKey()",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "FreeCrit",
+        "valorNumerico": 200,
+        "texto": "200"
+      },
+      {
+        "expr": "BonusDamageCap",
+        "valorNumerico": 200,
+        "texto": "200"
+      },
+      {
+        "expr": "LightsOutReset.FramesToSeconds()",
+        "valorNumerico": 2,
+        "texto": "2"
+      }
+    ],
+    "textoFinal": "+50 maximum stealth\nSandsmoke Bomb - (tecla configurada) to shroud yourself in a small cloud of sand\nWhile the sand cloud is active, gain increased mobility but heavily reduced defense\nUsing a rogue weapon instantly dispels the sand cloak, but guarantees a supercrit for 200% damage\nThe supercrit applies only as long as the resulting hit wouldn't exceed 200 damage\nLanding the killing blow on an enemy with this shot shortens the ability's cooldown to 2 seconds",
+    "miembrosSet": [
+      "DesertProwlerHat",
+      "DesertProwlerShirt",
+      "DesertProwlerPants"
+    ]
+  },
+  {
+    "clase": "EmpyreanMask",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.EmpyreanMask.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 115,
+        "texto": "115"
+      },
+      {
+        "expr": "PermanentWrathHealthRatio.ToPercent()",
+        "valorNumerico": 50,
+        "texto": "50"
+      }
+    ],
+    "textoFinal": "+115 maximum stealth\nRogue projectiles have special effects on enemy hits\nImbued with [cbuffplr:CalamityMod/EmpyreanWrath] when you are damaged or while below 50% life",
+    "miembrosSet": [
+      "EmpyreanMask",
+      "EmpyreanCloak",
+      "EmpyreanCuisses"
+    ]
+  },
+  {
+    "clase": "FathomSwarmerVisage",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.FathomSwarmerVisage.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 2,
+        "texto": "2"
+      },
+      {
+        "expr": "SetBonusSummonDamageBoost.ToPercent()",
+        "valorNumerico": 10,
+        "texto": "10"
+      },
+      {
+        "expr": "SetBonusSubmergedSummonDamageBoost.ToPercent()",
+        "valorNumerico": 20,
+        "texto": "20"
+      },
+      {
+        "expr": "SetBonusSubmergedDefenseBoost",
+        "valorNumerico": 10,
+        "texto": "10"
+      },
+      {
+        "expr": "SetBonusSubmergedRegenBoost.ToRegenPerSecond()",
+        "valorNumerico": 2.5,
+        "texto": "2.5"
+      }
+    ],
+    "textoFinal": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 10% el daño de invocación\nGrants the ability to climb walls\nAumenta un 20% el daño de invocación, +10 defense and +2.5 HP/s life regen while underwater\nProvides a moderate amount of light and moderately reduces breath loss in the abyss",
+    "miembrosSet": [
+      "FathomSwarmerVisage",
+      "FathomSwarmerBreastplate",
+      "FathomSwarmerBoots"
+    ]
+  },
+  {
+    "clase": "FearmongerGreathelm",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.FearmongerGreathelm.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 2,
+        "texto": "2"
+      },
+      {
+        "expr": "MinionRegenBoost.ToRegenPerSecond()",
+        "valorNumerico": 2.5,
+        "texto": "2.5"
+      }
+    ],
+    "textoFinal": "Aumenta en 2 el máximo de súbditos que puedes tener\nMinions no longer deal less damage while wielding non-summoner weapons\nImmunity to all but the strongest forms of frost and flame\nMinion attacks grant +2.5 HP/s life regen and massively accelerate life regen",
+    "miembrosSet": [
+      "FearmongerGreathelm",
+      "FearmongerPlateMail",
+      "FearmongerGreaves"
+    ]
+  },
+  {
+    "clase": "ForbiddenCirclet",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.ForbiddenCirclet.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 105,
+        "texto": "105"
+      },
+      {
+        "expr": "CalamityUtils.GetArmorSetBonusKey()",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "num",
+        "valorNumerico": 60,
+        "texto": "60"
+      }
+    ],
+    "textoFinal": "+105 maximum stealth\n(tecla configurada) to call an ancient storm to the cursor location\nThe ancient storm costs 60 mana and benefits from both summon and rogue bonuses\nRogue stealth strikes will tag enemies, causing summons to spawn homing eaters on hit\nUsing summon weapons no longer reset your stealth\nMinions no longer deal less damage while wielding rogue weapons",
+    "miembrosSet": [
+      "ForbiddenCirclet"
+    ]
+  },
+  {
+    "clase": "GemTechHeadgear",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.GemTechHeadgear.AbilityBrief",
+    "argsInfo": [
+      {
+        "expr": "color.Hex3()",
+        "texto": "",
+        "especial": "color"
+      }
+    ],
+    "textoFinal": "Power Gems - Six gem fragments idly orbit you; one for each class, and a base gem",
+    "miembrosSet": [
+      "GemTechHeadgear",
+      "GemTechBodyArmor",
+      "GemTechSchynbaulds"
+    ]
+  },
+  {
+    "clase": "GodSlayerHeadMelee",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.GodSlayerHeadMelee.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusHurtDamageThreshold",
+        "valorNumerico": 80,
+        "texto": "80"
+      },
+      {
+        "expr": "text",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "GodSlayerChestplate.DashCooldown.FramesToSeconds()",
+        "valorNumerico": 45,
+        "texto": "45"
+      }
+    ],
+    "textoFinal": "Enemies are more likely to target you\nReleases a swarm of god killer darts when taking over 80 damage in one hit\nPress (tecla configurada) to [ceffect/dog:Dimensional Drive] towards your cursor for 1.25 seconds\nEnemies you dash through take massive damage\nDuring [ceffect/dog:Dimensional Drive] you are immune to damage and most debuffs\n[ceffect/dog:Dimensional Drive] has a 45 second cooldown",
+    "miembrosSet": [
+      "GodSlayerHeadMelee",
+      "GodSlayerChestplate",
+      "GodSlayerLeggings"
+    ]
+  },
+  {
+    "clase": "GodSlayerHeadRanged",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.GodSlayerHeadRanged.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "ShrapnelRoundCooldown.FramesToSeconds()",
+        "valorNumerico": 2.5,
+        "texto": "2.5"
+      },
+      {
+        "expr": "text",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "GodSlayerChestplate.DashCooldown.FramesToSeconds()",
+        "valorNumerico": 45,
+        "texto": "45"
+      }
+    ],
+    "textoFinal": "Ranged weapons fire a god killer shrapnel round every 2.5 seconds\nPress (tecla configurada) to [ceffect/dog:Dimensional Drive] towards your cursor for 1.25 seconds\nEnemies you dash through take massive damage\nDuring [ceffect/dog:Dimensional Drive] you are immune to damage and most debuffs\n[ceffect/dog:Dimensional Drive] has a 45 second cooldown",
+    "miembrosSet": [
+      "GodSlayerHeadRanged",
+      "GodSlayerChestplate",
+      "GodSlayerLeggings"
+    ]
+  },
+  {
+    "clase": "GodSlayerHeadRogue",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.GodSlayerHeadRogue.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 120,
+        "texto": "120"
+      },
+      {
+        "expr": "RogueDamageBoostAtFullHealth.ToPercent()",
+        "valorNumerico": 10,
+        "texto": "10"
+      },
+      {
+        "expr": "SetBonusHurtDamageThreshold",
+        "valorNumerico": 80,
+        "texto": "80"
+      },
+      {
+        "expr": "text",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "GodSlayerChestplate.DashCooldown.FramesToSeconds()",
+        "valorNumerico": 45,
+        "texto": "45"
+      }
+    ],
+    "textoFinal": "+120 maximum stealth\n10% increased rogue damage, critical strike chance, and velocity when at full health\nIncreased length of invincibility when taking over 80 damage in one hit\nPress (tecla configurada) to [ceffect/dog:Dimensional Drive] towards your cursor for 1.25 seconds\nEnemies you dash through take massive damage\nDuring [ceffect/dog:Dimensional Drive] you are immune to damage and most debuffs\n[ceffect/dog:Dimensional Drive] has a 45 second cooldown",
+    "miembrosSet": [
+      "GodSlayerHeadRogue",
+      "GodSlayerChestplate",
+      "GodSlayerLeggings"
+    ]
+  },
+  {
+    "clase": "HydrothermicHeadMagic",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.HydrothermicHeadMagic.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "HydrothermicArmor.InfernoHealthThreshold.ToPercent()",
+        "valorNumerico": 50,
+        "texto": "50"
+      }
+    ],
+    "textoFinal": "Magic attacks summon damaging and healing flare orbs on hit\nInferno effect when below 50% life\nYou emit a blazing explosion when you are hit",
+    "miembrosSet": [
+      "HydrothermicHeadMagic",
+      "HydrothermicArmor",
+      "HydrothermicSubligar"
+    ]
+  },
+  {
+    "clase": "HydrothermicHeadMelee",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.HydrothermicHeadMelee.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "HydrothermicArmor.InfernoHealthThreshold.ToPercent()",
+        "valorNumerico": 50,
+        "texto": "50"
+      }
+    ],
+    "textoFinal": "Enemies are more likely to target you\nMelee attacks and projectiles cause chaos flames to erupt on enemy hits\nInferno effect when below 50% life\nYou emit a blazing explosion when you are hit",
+    "miembrosSet": [
+      "HydrothermicHeadMelee",
+      "HydrothermicArmor",
+      "HydrothermicSubligar"
+    ]
+  },
+  {
+    "clase": "HydrothermicHeadRanged",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.HydrothermicHeadRanged.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "FlareCooldown.FramesToSeconds()",
+        "valorNumerico": 0.33,
+        "texto": "0.33"
+      },
+      {
+        "expr": "HydrothermicArmor.InfernoHealthThreshold.ToPercent()",
+        "valorNumerico": 50,
+        "texto": "50"
+      }
+    ],
+    "textoFinal": "You fire a homing chaos flare when using ranged weapons every 0.33 seconds\nInferno effect when below 50% life\nYou emit a blazing explosion when you are hit",
+    "miembrosSet": [
+      "HydrothermicHeadRanged",
+      "HydrothermicArmor",
+      "HydrothermicSubligar"
+    ]
+  },
+  {
+    "clase": "HydrothermicHeadRogue",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.HydrothermicHeadRogue.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 110,
+        "texto": "110"
+      },
+      {
+        "expr": "VolleyCooldown.FramesToSeconds()",
+        "valorNumerico": 2,
+        "texto": "2"
+      },
+      {
+        "expr": "HydrothermicArmor.InfernoHealthThreshold.ToPercent()",
+        "valorNumerico": 50,
+        "texto": "50"
+      }
+    ],
+    "textoFinal": "+110 maximum stealth\nRogue weapons unleash a volley of homing chaos flames around the player every 2 seconds\nInferno effect when below 50% life\nYou emit a blazing explosion when you are hit",
+    "miembrosSet": [
+      "HydrothermicHeadRogue",
+      "HydrothermicArmor",
+      "HydrothermicSubligar"
+    ]
+  },
+  {
+    "clase": "HydrothermicHeadSummon",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.HydrothermicHeadSummon.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 1,
+        "texto": "1"
+      },
+      {
+        "expr": "SetBonusSummonDamageBoost.ToPercent()",
+        "valorNumerico": 25,
+        "texto": "25"
+      },
+      {
+        "expr": "HydrothermicArmor.InfernoHealthThreshold.ToPercent()",
+        "valorNumerico": 50,
+        "texto": "50"
+      }
+    ],
+    "textoFinal": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 25% el daño de invocación\nSummons a hydrothermic vent to protect you\nInferno effect when below 50% life\nYou emit a blazing explosion when you are hit",
+    "miembrosSet": [
+      "HydrothermicHeadSummon",
+      "HydrothermicArmor",
+      "HydrothermicSubligar"
+    ]
+  },
+  {
+    "clase": "LunicCorpsHelmet",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.LunicCorpsHelmet.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusJumpSpeedBoost.ToJumpSpeedPercent()",
+        "valorNumerico": 20,
+        "texto": "20"
+      },
+      {
+        "expr": "color.Hex3()",
+        "texto": "",
+        "especial": "color"
+      },
+      {
+        "expr": "ShieldDurabilityMax",
+        "valorNumerico": 50,
+        "texto": "50"
+      },
+      {
+        "expr": "text",
+        "texto": ""
+      },
+      {
+        "expr": "ShieldRechargeDelay.FramesToSeconds()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "TotalShieldRechargeTime.FramesToSeconds()",
+        "valorNumerico": 2,
+        "texto": "2"
+      }
+    ],
+    "textoFinal": "20% increased jump speed\nMJOLNIR Shield - Projects a bubble shield that absorbs up to 50 damage\nThe shield starts recharging 5 seconds after being hit\nRecharging from zero to full charge takes 2 seconds\nBeing hit again while recharging restarts the charge timer\n'Finish the fight'",
+    "miembrosSet": [
+      "LunicCorpsHelmet",
+      "LunicCorpsVest",
+      "LunicCorpsBoots"
+    ]
+  },
+  {
+    "clase": "MarniteArchitectHeadgear",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.MarniteArchitectHeadgear.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "color.Hex3()",
+        "texto": "",
+        "especial": "color"
+      },
+      {
+        "expr": "(MaxLiftHeight + LiftHeightOffset).ToTiles()",
+        "valorNumerico": 10,
+        "texto": "10"
+      }
+    ],
+    "textoFinal": "Marnite Lift - You can summon a lift under your feet to reach higher up\nThe lift gets summoned when the mount hotkey gets pressed without any mounts equipped\nPress UP and ABAJO to change the lift's height, reaching up to 10 tiles above ground",
+    "miembrosSet": [
+      "MarniteArchitectHeadgear",
+      "MarniteArchitectToga"
+    ]
+  },
+  {
+    "clase": "MolluskShellmet",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.MolluskShellmet.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusDR.ToPercent()",
+        "valorNumerico": 10,
+        "texto": "10"
+      }
+    ],
+    "textoFinal": "10% increased damage reduction\nTwo shellfishes aid you in combat, inflicting [cbuff:CalamityMod/ShellfishClaps]",
+    "miembrosSet": [
+      "MolluskShellmet",
+      "MolluskShellplate",
+      "MolluskShelleggings"
+    ]
+  },
+  {
+    "clase": "OmegaBlueHelmet",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.OmegaBlueHelmet.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 2,
+        "texto": "2"
+      },
+      {
+        "expr": "color.Hex3()",
+        "texto": "",
+        "especial": "color"
+      },
+      {
+        "expr": "CalamityUtils.GetArmorSetBonusKey()",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "MadnessDuration.FramesToSeconds()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "MadnessDamageBoost.ToPercent()",
+        "valorNumerico": 10,
+        "texto": "10"
+      },
+      {
+        "expr": "MadnessCooldown.FramesToSeconds()",
+        "valorNumerico": 25,
+        "texto": "25"
+      }
+    ],
+    "textoFinal": "Aumenta en 2 el máximo de súbditos que puedes tener\nShort-ranged tentacles heal you by sucking enemy life\nAbyssal Madness - (tecla configurada) to go berserk for 5 seconds\nWhile active, tentacles attack with greater range and aggression, and always critically strike\nThis also grants Aumenta un 10% el daño y la probabilidad de ataque crítico\nThis effect has a 25 second cooldown",
+    "miembrosSet": [
+      "OmegaBlueHelmet",
+      "OmegaBlueChestplate",
+      "OmegaBlueTentacles"
+    ]
+  },
+  {
+    "clase": "PlaguebringerVisor",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.PlaguebringerVisor.SetBonus",
+    "argsInfo": [],
+    "textoFinal": "Grants a plague dash which can slam through enemies without taking damage\nSummons a lil' plaguebringer which swarms your foes with little bees\nFriendly bees inflict [cbuff:CalamityMod/Plague]",
+    "miembrosSet": [
+      "PlaguebringerVisor",
+      "PlaguebringerCarapace",
+      "PlaguebringerPistons"
+    ]
+  },
+  {
+    "clase": "PlagueReaperMask",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.PlagueReaperMask.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusFlightTimeBoost.ToPercent()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "SetBonusPlaguedRangedDamageMult",
+        "valorNumerico": 1.1,
+        "texto": "1.1"
+      },
+      {
+        "expr": "color.Hex3()",
+        "texto": "",
+        "especial": "color"
+      },
+      {
+        "expr": "CalamityUtils.GetArmorSetBonusKey()",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "BlackoutRangedDamageBoost.ToPercent()",
+        "valorNumerico": 60,
+        "texto": "60"
+      },
+      {
+        "expr": "BlackoutRangedCritBoost",
+        "valorNumerico": 20,
+        "texto": "20"
+      },
+      {
+        "expr": "BlackoutDuration.FramesToSeconds()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "BlackoutCooldown.FramesToSeconds()",
+        "valorNumerico": 25,
+        "texto": "25"
+      }
+    ],
+    "textoFinal": "5% increased flight time\nEnemies afflicted by the Plague take 1.1x damage from ranged projectiles\nPlague Blackout - (tecla configurada) to greatly empower your damage but completely blind yourself\nAumenta un 60% el daño de los ataques a distancia and Aumenta un 20% la probabilidad de asestar ataques críticos a distancia while blacked out\nThis effect lasts 5 seconds and has a cooldown of 25 seconds",
+    "miembrosSet": [
+      "PlagueReaperMask",
+      "PlagueReaperVest",
+      "PlagueReaperStriders"
+    ]
+  },
+  {
+    "clase": "PrismaticHelmet",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.PrismaticHelmet.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "color.Hex3()",
+        "texto": "",
+        "especial": "color"
+      },
+      {
+        "expr": "CalamityUtils.GetArmorSetBonusKey()",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "LaserDuration.FramesToSeconds()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "LaserCooldown.FramesToSeconds()",
+        "valorNumerico": 30,
+        "texto": "30"
+      }
+    ],
+    "textoFinal": "Increased mana regeneration rate\nPrismatic Barrage - (tecla configurada) to unleash a laser barrage at the cursor for 5 seconds\nThis has a 30 second cooldown",
+    "miembrosSet": [
+      "PrismaticHelmet",
+      "PrismaticRegalia",
+      "PrismaticGreaves"
+    ]
+  },
+  {
+    "clase": "ReaverHeadExplore",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.ReaverHeadExplore.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusTileRangeBoost",
+        "valorNumerico": 7,
+        "texto": "7"
+      }
+    ],
+    "textoFinal": "Emits light and shows the location of treasure and ore\nEnemies are less likely to target you and grants underwater breathing\nGreatly enhances visibility in the abyss\nIncreased block placement & tool range by 7\nIncreases pickup range for items",
+    "miembrosSet": [
+      "ReaverHeadExplore",
+      "ReaverScaleMail",
+      "ReaverCuisses"
+    ]
+  },
+  {
+    "clase": "ReaverHeadMobility",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.ReaverHeadMobility.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusFlightBoost.ToPercent()",
+        "valorNumerico": 10,
+        "texto": "10"
+      },
+      {
+        "expr": "SetBonusHookBoost.ToPercent()",
+        "valorNumerico": 50,
+        "texto": "50"
+      },
+      {
+        "expr": "(1f / (float)SetBonusDashDelayReductionInterval).ToPercent()",
+        "valorNumerico": 33.3,
+        "texto": "33.3"
+      }
+    ],
+    "textoFinal": "Grants immunity to fall damage and allows constant jumping\n10% increased flight time and horizontal wing speed\nGrappling hooks retract and pull the player 50% faster\nReduces the cooldown of dashes by 33.3%",
+    "miembrosSet": [
+      "ReaverHeadMobility",
+      "ReaverScaleMail",
+      "ReaverCuisses"
+    ]
+  },
+  {
+    "clase": "ReaverHeadTank",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.ReaverHeadTank.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusDebuffDamageReduction.ToPercent()",
+        "valorNumerico": 50,
+        "texto": "50"
+      },
+      {
+        "expr": "SetBonusMobilityReduction.ToPercent()",
+        "valorNumerico": 30,
+        "texto": "30"
+      },
+      {
+        "expr": "ReaverRageDuration.FramesToSeconds()",
+        "valorNumerico": 5,
+        "texto": "5"
+      }
+    ],
+    "textoFinal": "Enemies are more likely to target you\nReduces the life regen lost from damage over time debuffs by 50%\n30% decreased movement speed and flight time\nGrants [cbuffplr:CalamityMod/ReaverRage] for 5 seconds after taking damage",
+    "miembrosSet": [
+      "ReaverHeadTank",
+      "ReaverScaleMail",
+      "ReaverCuisses"
+    ]
+  },
+  {
+    "clase": "SilvaHeadMagic",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.SilvaHeadMagic.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SilvaArmor.SetBonusRegenBoost.ToRegenPerSecond()",
+        "valorNumerico": 3,
+        "texto": "3"
+      },
+      {
+        "expr": "SilvaArmor.AccelerationBoost.ToPercent()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "SilvaArmor.ReviveDuration.FramesToSeconds()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "(SilvaArmor.ReviveCooldown / 60).FramesToSeconds()",
+        "valorNumerico": 5,
+        "texto": "5"
+      }
+    ],
+    "textoFinal": "Magic projectiles which cannot pierce will occasionally set off potent blasts of nature energy\n+3 HP/s life regen\n5% increased max run speed and acceleration\nTaking fatal damage will revive you and make you invulnerable to all damage for 5 seconds\nThis effect has a 5 minute cooldown, which does not decrement if any bosses or events are active",
+    "miembrosSet": [
+      "SilvaHeadMagic",
+      "SilvaArmor",
+      "SilvaLeggings"
+    ]
+  },
+  {
+    "clase": "SilvaHeadSummon",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.SilvaHeadSummon.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 3,
+        "texto": "3"
+      },
+      {
+        "expr": "SetBonusSummonDamageBoost.ToPercent()",
+        "valorNumerico": 40,
+        "texto": "40"
+      },
+      {
+        "expr": "SilvaArmor.SetBonusRegenBoost.ToRegenPerSecond()",
+        "valorNumerico": 3,
+        "texto": "3"
+      },
+      {
+        "expr": "SilvaArmor.AccelerationBoost.ToPercent()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "SilvaArmor.ReviveDuration.FramesToSeconds()",
+        "valorNumerico": 5,
+        "texto": "5"
+      },
+      {
+        "expr": "(SilvaArmor.ReviveCooldown / 60).FramesToSeconds()",
+        "valorNumerico": 5,
+        "texto": "5"
+      }
+    ],
+    "textoFinal": "Aumenta en 3 el máximo de súbditos que puedes tener\nAumenta un 40% el daño de invocación\nSummons an ancient leaf prism to blast your enemies with life energy\n+3 HP/s life regen\n5% increased max run speed and acceleration\nTaking fatal damage will revive you and make you invulnerable to all damage for 5 seconds\nThis effect has a 5 minute cooldown, which does not decrement if any bosses or events are active",
+    "miembrosSet": [
+      "SilvaHeadSummon",
+      "SilvaArmor",
+      "SilvaLeggings"
+    ]
+  },
+  {
+    "clase": "SnowRuffianMask",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.SnowRuffianMask.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusFrostburnDuration.FramesToSeconds()",
+        "valorNumerico": 2,
+        "texto": "2"
+      }
+    ],
+    "textoFinal": "You can glide to negate fall damage\nRanged critical strikes inflict [cbuff:Frostburn] for 2 seconds",
+    "miembrosSet": [
+      "SnowRuffianMask",
+      "SnowRuffianChestplate",
+      "SnowRuffianGreaves"
+    ]
+  },
+  {
+    "clase": "StatigelHeadMagic",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.StatigelArmor.CommonSetBonus",
+    "argsInfo": [
+      {
+        "expr": "StatigelArmor.SetBonusJumpSpeedBoost.ToJumpSpeedPercent()",
+        "valorNumerico": 12,
+        "texto": "12"
+      }
+    ],
+    "textoFinal": "Grants an extra jump and increased jump height\n12% increased jump speed",
+    "miembrosSet": [
+      "StatigelHeadMagic",
+      "StatigelArmor",
+      "StatigelGreaves"
+    ]
+  },
+  {
+    "clase": "StatigelHeadMelee",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.StatigelHeadMelee.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "StatigelArmor.SetBonusJumpSpeedBoost.ToJumpSpeedPercent()",
+        "valorNumerico": 12,
+        "texto": "12"
+      }
+    ],
+    "textoFinal": "Enemies are more likely to target you\nGrants an extra jump and increased jump height\n12% increased jump speed",
+    "miembrosSet": [
+      "StatigelHeadMelee",
+      "StatigelArmor",
+      "StatigelGreaves"
+    ]
+  },
+  {
+    "clase": "StatigelHeadRanged",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.StatigelArmor.CommonSetBonus",
+    "argsInfo": [
+      {
+        "expr": "StatigelArmor.SetBonusJumpSpeedBoost.ToJumpSpeedPercent()",
+        "valorNumerico": 12,
+        "texto": "12"
+      }
+    ],
+    "textoFinal": "Grants an extra jump and increased jump height\n12% increased jump speed",
+    "miembrosSet": [
+      "StatigelHeadRanged",
+      "StatigelArmor",
+      "StatigelGreaves"
+    ]
+  },
+  {
+    "clase": "StatigelHeadRogue",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.StatigelHeadRogue.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 90,
+        "texto": "90"
+      },
+      {
+        "expr": "StatigelArmor.SetBonusJumpSpeedBoost.ToJumpSpeedPercent()",
+        "valorNumerico": 12,
+        "texto": "12"
+      }
+    ],
+    "textoFinal": "+90 maximum stealth\nGrants an extra jump and increased jump height\n12% increased jump speed",
+    "miembrosSet": [
+      "StatigelHeadRogue",
+      "StatigelArmor",
+      "StatigelGreaves"
+    ]
+  },
+  {
+    "clase": "StatigelHeadSummon",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.StatigelHeadSummon.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusSummonDamageBoost.ToPercent()",
+        "valorNumerico": 15,
+        "texto": "15"
+      },
+      {
+        "expr": "StatigelArmor.SetBonusJumpSpeedBoost.ToJumpSpeedPercent()",
+        "valorNumerico": 12,
+        "texto": "12"
+      }
+    ],
+    "textoFinal": "Aumenta un 15% el daño de invocación\nSummons a mini paladin to fight for you, the type depends on what world evil you have\nGrants an extra jump and increased jump height\n12% increased jump speed",
+    "miembrosSet": [
+      "StatigelHeadSummon",
+      "StatigelArmor",
+      "StatigelGreaves"
+    ]
+  },
+  {
+    "clase": "SulphurousHelmet",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.SulphurousHelmet.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 65,
+        "texto": "65"
+      },
+      {
+        "expr": "SetBonusPoisonDuration.FramesToSeconds()",
+        "valorNumerico": 1,
+        "texto": "1"
+      }
+    ],
+    "textoFinal": "+65 maximum stealth\nAttacking and being attacked by enemies inflicts [cbuff:Poisoned] for 1 second\nGrants an additional jump that summons a sulphurous bubble\nReduces the severity of the sulphuric waters",
+    "miembrosSet": [
+      "SulphurousHelmet",
+      "SulphurousBreastplate",
+      "SulphurousLeggings"
+    ]
+  },
+  {
+    "clase": "TarragonHeadMagic",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.TarragonHeadMagic.SetBonus",
+    "argsInfo": [],
+    "textoFinal": "On every 5th critical strike you will fire a leaf storm\nIncreased heart pickup range\nEnemies have a chance to drop extra hearts on death",
+    "miembrosSet": [
+      "TarragonHeadMagic",
+      "TarragonBreastplate",
+      "TarragonLeggings"
+    ]
+  },
+  {
+    "clase": "TarragonHeadMelee",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.TarragonHeadMelee.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "TarraLifeRegenBoost.ToRegenPerSecond()",
+        "valorNumerico": 1.5,
+        "texto": "1.5"
+      },
+      {
+        "expr": "CalamityUtils.GetArmorSetBonusKey()",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "CloakDuration.FramesToSeconds()",
+        "valorNumerico": 10,
+        "texto": "10"
+      },
+      {
+        "expr": "CloakCooldown.FramesToSeconds()",
+        "valorNumerico": 30,
+        "texto": "30"
+      }
+    ],
+    "textoFinal": "Enemies are more likely to target you\nTaking damage gives [cbuffplr:CalamityMod/TarraLifeRegen], which grants +1.5 HP/s life regen\n(tecla configurada) to cloak yourself in life energy that heavily reduces enemy contact damage for 10 seconds\nThis has a 30 second cooldown\nIncreased heart pickup range\nEnemies have a chance to drop extra hearts on death",
+    "miembrosSet": [
+      "TarragonHeadMelee",
+      "TarragonBreastplate",
+      "TarragonLeggings"
+    ]
+  },
+  {
+    "clase": "TarragonHeadRanged",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.TarragonHeadRanged.SetBonus",
+    "argsInfo": [],
+    "textoFinal": "Ranged projectiles spawn homing life energy and leaves on enemy hits\nIncreased heart pickup range\nEnemies have a chance to drop extra hearts on death",
+    "miembrosSet": [
+      "TarragonHeadRanged",
+      "TarragonBreastplate",
+      "TarragonLeggings"
+    ]
+  },
+  {
+    "clase": "TarragonHeadRogue",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.TarragonHeadRogue.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 115,
+        "texto": "115"
+      },
+      {
+        "expr": "CritsToActivateImmunity",
+        "valorNumerico": 50,
+        "texto": "50"
+      },
+      {
+        "expr": "ImmunityDuration.FramesToSeconds()",
+        "valorNumerico": 2.5,
+        "texto": "2.5"
+      },
+      {
+        "expr": "ImmunityCooldown.FramesToSeconds()",
+        "valorNumerico": 25,
+        "texto": "25"
+      }
+    ],
+    "textoFinal": "+115 maximum stealth\nAfter every 50 rogue critical hits you will gain 2.5 seconds of damage immunity\nThis effect has a cooldown of 25 seconds\nIncreased heart pickup range\nEnemies have a chance to drop extra hearts on death",
+    "miembrosSet": [
+      "TarragonHeadRogue",
+      "TarragonBreastplate",
+      "TarragonLeggings"
+    ]
+  },
+  {
+    "clase": "TarragonHeadSummon",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PostMoonLord.TarragonHeadSummon.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusMinionSlotBoost",
+        "valorNumerico": 2,
+        "texto": "2"
+      },
+      {
+        "expr": "SetBonusSummonDamageBoost.ToPercent()",
+        "valorNumerico": 30,
+        "texto": "30"
+      }
+    ],
+    "textoFinal": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 30% el daño de invocación\nSummons a life aura around you that damages nearby enemies\nIncreased heart pickup range\nEnemies have a chance to drop extra hearts on death",
+    "miembrosSet": [
+      "TarragonHeadSummon",
+      "TarragonBreastplate",
+      "TarragonLeggings"
+    ]
+  },
+  {
+    "clase": "TitanHeartMask",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.TitanHeartMask.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 100,
+        "texto": "100"
+      },
+      {
+        "expr": "StealthStrikeKnockbackMult",
+        "valorNumerico": 2,
+        "texto": "2"
+      }
+    ],
+    "textoFinal": "+100 maximum stealth\nStealth strikes deal 2x knockback and cause an astral explosion\nGrants immunity to knockback",
+    "miembrosSet": [
+      "TitanHeartMask",
+      "TitanHeartMantle",
+      "TitanHeartBoots"
+    ]
+  },
+  {
+    "clase": "UmbraphileHood",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.Hardmode.UmbraphileHood.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "SetBonusRogueStealth.ToStealth()",
+        "valorNumerico": 110,
+        "texto": "110"
+      }
+    ],
+    "textoFinal": "+110 maximum stealth\nRogue weapons have a chance to create explosions on hit\nStealth strikes always create an explosion",
+    "miembrosSet": [
+      "UmbraphileHood",
+      "UmbraphileRegalia",
+      "UmbraphileBoots"
+    ]
+  },
+  {
+    "clase": "VictideHeadMagic",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.VictideHeadMagic.SetBonus + Mods.CalamityMod.Items.Armor.PreHardmode.VictideBreastplate.CommonSetBonus",
+    "argsInfo": [],
+    "textoFinal": "+1.5 HP/s life regen and 10% increased magic damage while submerged in liquid\nWhen using any weapon you have a 10% chance to throw a returning seashell projectile\nThis seashell does true damage and does not benefit from any damage class\nProvides increased underwater mobility and slightly reduces breath loss in the abyss",
+    "miembrosSet": [
+      "VictideHeadMagic",
+      "VictideBreastplate",
+      "VictideGreaves"
+    ]
+  },
+  {
+    "clase": "VictideHeadMelee",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.VictideHeadMelee.SetBonus + Mods.CalamityMod.Items.Armor.PreHardmode.VictideBreastplate.CommonSetBonus",
+    "argsInfo": [],
+    "textoFinal": "Enemies are more likely to target you\n+1.5 HP/s life regen and 10% increased melee damage while submerged in liquid\nWhen using any weapon you have a 10% chance to throw a returning seashell projectile\nThis seashell does true damage and does not benefit from any damage class\nProvides increased underwater mobility and slightly reduces breath loss in the abyss",
+    "miembrosSet": [
+      "VictideHeadMelee",
+      "VictideBreastplate",
+      "VictideGreaves"
+    ]
+  },
+  {
+    "clase": "VictideHeadRanged",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.VictideHeadRanged.SetBonus + Mods.CalamityMod.Items.Armor.PreHardmode.VictideBreastplate.CommonSetBonus",
+    "argsInfo": [],
+    "textoFinal": "+1.5 HP/s life regen and 10% increased ranged damage while submerged in liquid\nWhen using any weapon you have a 10% chance to throw a returning seashell projectile\nThis seashell does true damage and does not benefit from any damage class\nProvides increased underwater mobility and slightly reduces breath loss in the abyss",
+    "miembrosSet": [
+      "VictideHeadRanged",
+      "VictideBreastplate",
+      "VictideGreaves"
+    ]
+  },
+  {
+    "clase": "VictideHeadRogue",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.VictideHeadRogue.SetBonus + Mods.CalamityMod.Items.Armor.PreHardmode.VictideBreastplate.CommonSetBonus",
+    "argsInfo": [],
+    "textoFinal": "+60 maximum stealth\n+1.5 HP/s life regen and 10% increased rogue damage while submerged in liquid\nWhen using any weapon you have a 10% chance to throw a returning seashell projectile\nThis seashell does true damage and does not benefit from any damage class\nProvides increased underwater mobility and slightly reduces breath loss in the abyss",
+    "miembrosSet": [
+      "VictideHeadRogue",
+      "VictideBreastplate",
+      "VictideGreaves"
+    ]
+  },
+  {
+    "clase": "VictideHeadSummon",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.VictideHeadSummon.SetBonus + Mods.CalamityMod.Items.Armor.PreHardmode.VictideBreastplate.CommonSetBonus",
+    "argsInfo": [],
+    "textoFinal": "+1 max minion\nSummons a sea snail to protect you\n+1.5 HP/s life regen and 10% increased summon damage while submerged in liquid\nWhen using any weapon you have a 10% chance to throw a returning seashell projectile\nThis seashell does true damage and does not benefit from any damage class\nProvides increased underwater mobility and slightly reduces breath loss in the abyss",
+    "miembrosSet": [
+      "VictideHeadSummon",
+      "VictideBreastplate",
+      "VictideGreaves"
+    ]
+  },
+  {
+    "clase": "WulfrumHat",
+    "claveLoc": "Mods.CalamityMod.Items.Armor.PreHardmode.WulfrumHat.SetBonus",
+    "argsInfo": [
+      {
+        "expr": "color.Hex3()",
+        "texto": "",
+        "especial": "color"
+      },
+      {
+        "expr": "CalamityUtils.GetArmorSetBonusKey()",
+        "texto": "(tecla configurada)",
+        "especial": "tecla"
+      },
+      {
+        "expr": "BastionTime.FramesToSeconds()",
+        "valorNumerico": 30,
+        "texto": "30"
+      },
+      {
+        "expr": "TimeLostPerHit.FramesToSeconds()",
+        "valorNumerico": 2,
+        "texto": "2"
+      }
+    ],
+    "textoFinal": "Wulfrum Bastion - (tecla configurada) to equip a power armor, costing one [i:CalamityMod/WulfrumMetalScrap] Wulfrum Metal Scrap\nWhile active, you can only use the integrated fusion cannon, but your defensive stats are increased\nThe armor lasts up to 30 seconds, but each hit loses 2 seconds of duration\nHold Shift to see the stats of the fusion cannon",
+    "miembrosSet": [
+      "WulfrumHat",
+      "WulfrumJacket",
+      "WulfrumOveralls"
+    ]
+  }
+]

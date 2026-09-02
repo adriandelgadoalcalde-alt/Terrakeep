@@ -69,9 +69,13 @@ public static class ItemStatsFormatter
                     crit: s.Crit, knockBack: s.KnockBack, useTime: s.UseTime, mana: s.Mana, healLife: null, healMana: null, rare: null);
                 if (numeric != null) sections.Add(numeric);
             }
-            // Descripcion textual/bonus de set de Calamity: no extraidos todavia (fuera de
-            // alcance de esta pasada, ver bitacora.md - el .tmod real SI las trae, hjson de
-            // Localization/en-US, solo en ingles en esta instalacion).
+            // Bono de set completo real (pedido explicito del usuario: "la bonificacion por el
+            // set no [aparece]") - texto real ya resuelto y traducido, ver
+            // scripts/extraer-bonos-set-calamity.js y CalamityCatalogEntryData.SetBonus.
+            if (entry?.SetBonus != null) sections.Add($"Con el set completo: {entry.SetBonus}");
+            // Descripcion textual de un accesorio de Calamity SUELTO (fuera de un set): no
+            // extraida todavia (fuera de alcance de esta pasada, ver bitacora.md - el .tmod
+            // real SI la trae, hjson de Localization/en-US, solo en ingles en esta instalacion).
         }
         else
         {

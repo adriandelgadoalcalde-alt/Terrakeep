@@ -29,6 +29,13 @@ public sealed class CalamityCatalogEntryData
     [JsonPropertyName("displayName_fallback")] public string? DisplayNameFallback { get; init; }
     [JsonPropertyName("icon")] public string? Icon { get; init; }
     [JsonPropertyName("stats")] public CalamityItemStats? Stats { get; init; }
+    // Bono de set completo real (pedido explicito del usuario tras el arreglo de defensa: "la
+    // bonificacion por el set no [aparece]") - texto real resuelto del sistema de plantillas de
+    // localizacion de tModLoader/Calamity (referencias {$Clave@N} anidadas, ver
+    // scripts/extraer-bonos-set-calamity.js) y traducido a mano donde Calamity solo trae texto
+    // en ingles (las partes que coinciden con CommonItemTooltip.* vienen YA en español oficial
+    // de tModLoader). Mismo texto en las 2-3 piezas de un mismo set, igual que el juego real.
+    [JsonPropertyName("setBonus")] public string? SetBonus { get; init; }
 }
 
 // Una entrada del catalogo con su id sintetico ya resuelto (ItemIdBase + indice en el array
@@ -43,6 +50,7 @@ public sealed class CalamityCatalogEntry(CalamityCatalogEntryData data, int synt
     public string DisplayName => data.DisplayNameEs ?? data.DisplayNameFallback ?? data.Internal;
     public string? Icon => data.Icon;
     public CalamityItemStats? Stats => data.Stats;
+    public string? SetBonus => data.SetBonus;
 }
 
 public sealed class CalamityCatalog

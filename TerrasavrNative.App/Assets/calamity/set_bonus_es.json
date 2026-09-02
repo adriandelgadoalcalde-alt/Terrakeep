@@ -1,0 +1,102 @@
+{
+  "AerospecHeadMagic": "Reduce el coste de maná un 8%\nAumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico mágico\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
+  "AerospecHeadMelee": "Aumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico cuerpo a cuerpo\nLos enemigos tienen más probabilidad de fijarse en ti\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
+  "AerospecHeadRanged": "Aumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico a distancia\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
+  "AerospecHeadRogue": "+80 de sigilo máximo\nAumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico pícaro\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
+  "AerospecHeadSummon": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 11% el daño de invocación\nInvoca una valquiria que te protege\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
+
+  "AstralHelm": "Aumenta en 3 el máximo de súbditos que puedes tener\nAumenta un 10% el daño y la probabilidad de ataque crítico\nCada vez que asestas un golpe crítico a un enemigo cae una lluvia de estrellas\nEste efecto tiene 1 segundo de reutilización antes de poder activarse de nuevo",
+
+  "AuricTeslaHeadMagic": "Efectos combinados de las armaduras Tarragon, Bloodflare y Silva de Magia\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
+  "AuricTeslaHeadMelee": "Los enemigos tienen más probabilidad de fijarse en ti\nEfectos combinados de las armaduras Tarragon, Bloodflare y God Slayer de Cuerpo a cuerpo\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
+  "AuricTeslaHeadRanged": "Efectos combinados de las armaduras Tarragon, Bloodflare y God Slayer a Distancia\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
+  "AuricTeslaHeadRogue": "+130 de sigilo máximo\nEfectos combinados de las armaduras Tarragon, Bloodflare y God Slayer Pícaras\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
+  "AuricTeslaHeadSummon": "Aumenta en 4 el máximo de súbditos que puedes tener\nAumenta un 55% el daño de invocación\nEfectos combinados de las armaduras Tarragon, Bloodflare y Silva de Invocación\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
+
+  "BloodflareHeadMagic": "Las armas mágicas disparan proyectiles fantasmales cada 1,67 segundos\nLos críticos mágicos provocan explosiones de sangre cada 2 segundos\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
+  "BloodflareHeadMelee": "Los enemigos tienen más probabilidad de fijarse en ti\nTras golpear a un enemigo 15 veces con un ataque cuerpo a cuerpo real entras en frenesí sangriento durante 5 segundos\nDurante ese tiempo ganas un 25% más de daño y probabilidad de crítico cuerpo a cuerpo, y un 50% menos de daño por contacto\nEste efecto tiene 30 segundos de reutilización\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
+  "BloodflareHeadRanged": "(tecla configurada) para liberar las almas perdidas de Polterghast y destruir a tus enemigos\nEste efecto tiene 30 segundos de reutilización\nLas armas a distancia disparan orbes de sangre explosivos cada 2,5 segundos\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
+  "BloodflareHeadRogue": "+120 de sigilo máximo\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
+  "BloodflareHeadSummon": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 30% el daño de invocación\nInvoca minas de Polterghast que orbitan a tu alrededor\nOtorga 20 de defensa cuando estás por debajo del 50% de vida\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
+
+  "BrimflameCowl": "Aumenta un 8% el daño mágico y la probabilidad de ataque crítico\nFrenesí Brimflame - (tecla configurada) para, durante 10 segundos, aumentar un 40% el daño de los ataques mágicos\nSin embargo, esto provoca pérdida rápida de vida y anula la regeneración de maná y las pociones de maná\nEste efecto se puede desactivar y tiene 30 segundos de reutilización",
+
+  "DaedalusHeadMagic": "Tienes un 10% de probabilidad de recuperar el 50% del daño recibido",
+  "DaedalusHeadMelee": "Los enemigos tienen más probabilidad de fijarse en ti\nReflejas los proyectiles de vuelta a los enemigos, anulando su daño\nLos proyectiles que causen menos del 5% de tu vida máxima en daño no se reflejarán\nEl reflejo tiene una reutilización de entre 20 y 90 segundos según el daño del proyectil reflejado\nEsta reutilización se comparte con el resto de esquivas y reflejos",
+  "DaedalusHeadRanged": "Al recibir un golpe, emites una explosión de fragmentos de cristal",
+  "DaedalusHeadRogue": "+105 de sigilo máximo\nLos proyectiles pícaros lanzan fragmentos de cristal mientras viajan",
+  "DaedalusHeadSummon": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 10% el daño de invocación\nUn cristal de Daedalus flota sobre ti para protegerte",
+
+  "DemonshadeHelm": "Aumenta en 8 el máximo de súbditos que puedes tener\nAumenta un 100% el daño de invocación\nAl recibir un golpe se disparan rayos de sombra y guadañas demoníacas\n(tecla configurada) para enfurecer a los enemigos cercanos con un hechizo de magia oscura durante 10 segundos\nEsto hace que reciban 1,5 veces el daño total, pero te infligirán 1,25 veces más daño a ti",
+
+  "DesertProwlerHat": "+50 de sigilo máximo\nBomba de humo de arena - (tecla configurada) para envolverte en una pequeña nube de arena\nMientras la nube de arena está activa ganas movilidad pero pierdes mucha defensa\nUsar un arma pícara disipa al instante la nube de arena, pero garantiza un supercrítico del 200% de daño\nEl supercrítico solo se aplica si el golpe resultante no supera los 200 de daño\nAsestar el golpe de gracia a un enemigo con este disparo acorta la reutilización de la habilidad a 2 segundos",
+
+  "EmpyreanMask": "+115 de sigilo máximo\nLos proyectiles pícaros tienen efectos especiales al golpear enemigos\nQuedas imbuido de Ira Empírea cuando te dañan o mientras estás por debajo del 50% de vida",
+
+  "FathomSwarmerVisage": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 10% el daño de invocación\nOtorga la capacidad de trepar paredes\nAumenta un 20% el daño de invocación, +10 de defensa y +2,5 de regeneración de vida por segundo mientras estás bajo el agua\nProporciona una luz moderada y reduce moderadamente la pérdida de aire en el abismo",
+
+  "FearmongerGreathelm": "Aumenta en 2 el máximo de súbditos que puedes tener\nLos súbditos ya no hacen menos daño al llevar armas que no sean de invocación\nInmunidad a todas las formas de frío y fuego salvo las más fuertes\nLos ataques de los súbditos otorgan +2,5 de regeneración de vida por segundo y la aceleran muchísimo",
+
+  "ForbiddenCirclet": "+105 de sigilo máximo\n(tecla configurada) para invocar una tormenta ancestral en la posición del cursor\nLa tormenta ancestral cuesta 60 de maná y se beneficia tanto de las bonificaciones de invocación como de las pícaras\nLos golpes furtivos pícaros marcan a los enemigos, haciendo que los súbditos generen devoradores teledirigidos al golpearlos\nUsar armas de invocación ya no reinicia tu sigilo\nLos súbditos ya no hacen menos daño al llevar armas pícaras",
+
+  "GemTechHeadgear": "Gemas de poder - Seis fragmentos de gema orbitan a tu alrededor sin usar energía; uno por cada clase, más una gema base",
+
+  "GodSlayerHeadMelee": "Los enemigos tienen más probabilidad de fijarse en ti\nLibera un enjambre de dardos verdugos de dioses al recibir más de 80 de daño de un solo golpe\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización",
+  "GodSlayerHeadRanged": "Las armas a distancia disparan un proyectil de metralla verdugo de dioses cada 2,5 segundos\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización",
+  "GodSlayerHeadRogue": "+120 de sigilo máximo\nAumenta un 10% el daño, la probabilidad de crítico y la velocidad pícaros estando a vida completa\nMayor duración de la invencibilidad al recibir más de 80 de daño de un solo golpe\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización",
+
+  "HydrothermicHeadMagic": "Los ataques mágicos invocan orbes de fulgor que dañan y curan al golpear\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
+  "HydrothermicHeadMelee": "Los enemigos tienen más probabilidad de fijarse en ti\nLos ataques y proyectiles cuerpo a cuerpo hacen brotar llamas caóticas al golpear enemigos\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
+  "HydrothermicHeadRanged": "Disparas un fulgor caótico teledirigido cada 0,33 segundos al usar armas a distancia\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
+  "HydrothermicHeadRogue": "+110 de sigilo máximo\nLas armas pícaras liberan una ráfaga de llamas caóticas teledirigidas alrededor del jugador cada 2 segundos\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
+  "HydrothermicHeadSummon": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 25% el daño de invocación\nInvoca un respiradero hidrotérmico que te protege\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
+
+  "LunicCorpsHelmet": "Aumenta un 20% la velocidad de salto\nEscudo MJOLNIR - Proyecta un escudo de burbuja que absorbe hasta 50 de daño\nEl escudo empieza a recargarse 5 segundos después de recibir un golpe\nRecargarse del todo desde cero tarda 2 segundos\nRecibir otro golpe mientras se recarga reinicia el temporizador de carga\n«Termina la pelea»",
+
+  "MarniteArchitectHeadgear": "Elevador Marnite - Puedes invocar un elevador bajo tus pies para llegar más alto\nEl elevador se invoca al pulsar la tecla de montura sin ninguna montura equipada\nPulsa ARRIBA y ABAJO para cambiar la altura del elevador, hasta 10 bloques por encima del suelo",
+
+  "MolluskShellmet": "Aumenta un 10% la reducción de daño\nDos moluscos te ayudan en combate, infligiendo el efecto Aplausos de Molusco",
+
+  "OmegaBlueHelmet": "Aumenta en 2 el máximo de súbditos que puedes tener\nLos tentáculos de corto alcance te curan absorbiendo vida enemiga\nLocura Abisal - (tecla configurada) para entrar en modo berserker durante 5 segundos\nMientras está activo, los tentáculos atacan con más alcance y agresividad, y siempre asestan crítico\nEsto también otorga un 10% más de daño y probabilidad de crítico\nEste efecto tiene 25 segundos de reutilización",
+
+  "PlaguebringerVisor": "Otorga un embiste de la plaga que atraviesa enemigos sin recibir daño\nInvoca un mini portador de la plaga que acosa a tus enemigos con pequeñas abejas\nLas abejas aliadas infligen el efecto Plaga",
+
+  "PlagueReaperMask": "Aumenta un 5% el tiempo de vuelo\nLos enemigos afectados por la Plaga reciben 1,1 veces más daño de proyectiles a distancia\nApagón de la Plaga - (tecla configurada) para potenciar enormemente tu daño pero cegarte por completo\nAumenta un 60% el daño a distancia y un 20% la probabilidad de crítico a distancia mientras estás cegado\nEste efecto dura 5 segundos y tiene 25 segundos de reutilización",
+
+  "PrismaticHelmet": "Aumenta la regeneración de maná\nRáfaga Prismática - (tecla configurada) para lanzar una ráfaga de láseres al cursor durante 5 segundos\nTiene 30 segundos de reutilización",
+
+  "ReaverHeadExplore": "Emite luz y muestra la ubicación de tesoros y minerales\nLos enemigos tienen menos probabilidad de fijarse en ti y otorga respiración bajo el agua\nMejora enormemente la visibilidad en el abismo\nAumenta en 7 el alcance de colocación de bloques y herramientas\nAumenta el alcance de recogida de objetos",
+  "ReaverHeadMobility": "Otorga inmunidad al daño por caída y permite saltar sin parar\nAumenta un 10% el tiempo de vuelo y la velocidad horizontal de las alas\nLos ganchos se retraen y tiran de ti un 50% más rápido\nReduce un 33,3% la reutilización de los dashes",
+  "ReaverHeadTank": "Los enemigos tienen más probabilidad de fijarse en ti\nReduce un 50% la regeneración de vida perdida por debuffs de daño continuo\nReduce un 30% la velocidad de movimiento y el tiempo de vuelo\nOtorga Furia de Reaver durante 5 segundos al recibir daño",
+
+  "SilvaHeadMagic": "Los proyectiles mágicos que no atraviesan a veces desatan potentes explosiones de energía natural\n+3 de regeneración de vida por segundo\nAumenta un 5% la velocidad y aceleración máximas al correr\nRecibir daño mortal te revive y te vuelve invulnerable a todo daño durante 5 segundos\nEste efecto tiene 5 minutos de reutilización, que no avanza mientras hay jefes o eventos activos",
+  "SilvaHeadSummon": "Aumenta en 3 el máximo de súbditos que puedes tener\nAumenta un 40% el daño de invocación\nInvoca un prisma de hoja ancestral que golpea a tus enemigos con energía vital\n+3 de regeneración de vida por segundo\nAumenta un 5% la velocidad y aceleración máximas al correr\nRecibir daño mortal te revive y te vuelve invulnerable a todo daño durante 5 segundos\nEste efecto tiene 5 minutos de reutilización, que no avanza mientras hay jefes o eventos activos",
+
+  "SnowRuffianMask": "Puedes planear para anular el daño por caída\nLos críticos a distancia infligen Quemadura Helada durante 2 segundos",
+
+  "StatigelHeadMagic": "Otorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
+  "StatigelHeadMelee": "Los enemigos tienen más probabilidad de fijarse en ti\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
+  "StatigelHeadRanged": "Otorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
+  "StatigelHeadRogue": "+90 de sigilo máximo\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
+  "StatigelHeadSummon": "Aumenta un 15% el daño de invocación\nInvoca a un mini paladín que lucha por ti, su tipo depende del mal del mundo que tengas\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
+
+  "SulphurousHelmet": "+65 de sigilo máximo\nAtacar y ser atacado por enemigos inflige Envenenado durante 1 segundo\nOtorga un salto adicional que invoca una burbuja sulfurosa\nReduce la gravedad de las aguas sulfúricas",
+
+  "TarragonHeadMagic": "Cada 5º golpe crítico disparas una tormenta de hojas\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
+  "TarragonHeadMelee": "Los enemigos tienen más probabilidad de fijarse en ti\nRecibir daño te otorga Regeneración de Vida Tarra, que da +1,5 de regeneración de vida por segundo\n(tecla configurada) para envolverte en energía vital que reduce muchísimo el daño de contacto enemigo durante 10 segundos\nTiene 30 segundos de reutilización\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
+  "TarragonHeadRanged": "Los proyectiles a distancia generan energía vital y hojas teledirigidas al golpear enemigos\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
+  "TarragonHeadRogue": "+115 de sigilo máximo\nCada 50 golpes críticos pícaros ganas 2,5 segundos de inmunidad al daño\nEste efecto tiene 25 segundos de reutilización\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
+  "TarragonHeadSummon": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 30% el daño de invocación\nInvoca un aura de vida a tu alrededor que daña a los enemigos cercanos\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
+
+  "TitanHeartMask": "+100 de sigilo máximo\nLos golpes furtivos causan el doble de retroceso y provocan una explosión astral\nOtorga inmunidad al retroceso",
+
+  "UmbraphileHood": "+110 de sigilo máximo\nLas armas pícaras tienen probabilidad de crear explosiones al golpear\nLos golpes furtivos siempre crean una explosión",
+
+  "VictideHeadMagic": "+1,5 de regeneración de vida por segundo y 10% más de daño mágico mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
+  "VictideHeadMelee": "Los enemigos tienen más probabilidad de fijarse en ti\n+1,5 de regeneración de vida por segundo y 10% más de daño cuerpo a cuerpo mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
+  "VictideHeadRanged": "+1,5 de regeneración de vida por segundo y 10% más de daño a distancia mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
+  "VictideHeadRogue": "+60 de sigilo máximo\n+1,5 de regeneración de vida por segundo y 10% más de daño pícaro mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
+  "VictideHeadSummon": "+1 súbdito máximo\nInvoca un caracol marino que te protege\n+1,5 de regeneración de vida por segundo y 10% más de daño de invocación mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
+
+  "WulfrumHat": "Bastión Wulfrum - (tecla configurada) para equipar una armadura motorizada, cuesta 1 chatarra metálica Wulfrum\nMientras está activa, solo puedes usar el cañón de fusión integrado, pero tus estadísticas defensivas aumentan\nLa armadura dura hasta 30 segundos, pero cada golpe recibido le resta 2 segundos de duración\nMantén pulsado Mayús para ver las estadísticas del cañón de fusión"
+}

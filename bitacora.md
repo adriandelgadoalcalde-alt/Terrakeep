@@ -3467,3 +3467,64 @@ localización en inglés en esta instalación). Si en algún momento se quiere s
 mismo arreglo de `defense` en la app Electron (`Terrasavr-Calamity-Beta`), su `catalog.json`
 tiene el mismo hueco real y el mismo script (adaptando la ruta de salida) lo resolvería igual -
 no se ha tocado esa app en esta pasada, el reporte vino de Terrakeep (Terrasavr-Native).
+
+### Arreglo real: la bonificación por el set completo de Calamity tampoco aparecía
+
+Pedido explícito tras confirmar el arreglo de la defensa: *"si el arreglo de defensa si pero la
+bonificacion por el set no"*. Investigación real antes de tocar nada (preguntado antes de
+implementar cuánto alcance quería el usuario - respuesta: *"haces la opcion 1 pero haces la
+traduccion tambien"*, la versión completa con traducción real):
+
+**El texto del bono de set NO es un string suelto** - `player.setBonus` se rellena en
+`UpdateArmorSet()` con `this.GetLocalization("SetBonus").Format(args...)`, y el propio texto
+usa el sistema REAL de sustitución de tModLoader (`{$Clave.Ruta@N}`, decompilado de
+`LanguageManager.ProcessCopyCommandsInTexts` - `Downloads\tModLoader-Decompiled\tModLoader\
+Terraria\Localization\LanguageManager.cs:562`): las claves referenciadas se buscan subiendo un
+nivel de la ruta de la clave que las usa cada vez (igual que buscar un fichero subiendo
+directorios), tomando la primera que exista; `@N` desplaza los `{0}`/`{1}`/... del texto
+referenciado en N posiciones antes de insertarlo (para no chocar con los propios del texto que
+lo incluye). Descubrimiento real durante la investigación: `{$CommonItemTooltip.X}` (usado
+dentro de varios bonos de set) NO es de Calamity - es un grupo real de tModLoader/Terraria CORE
+(`Language.GetOrRegister("CommonItemTooltip...")`, sin prefijo de mod, confirmado en
+`CalamityGlobalItem.cs`) que **SÍ tiene traducción oficial real al español**
+(`Terraria.Localization.Content.es_ES.tModLoader.json`) - se usa esa, no una traducción propia,
+para esa parte. Lo mismo con `Key.UP`/`Key.DOWN` (`Content.es_ES.Main.json`).
+
+Nuevo `scripts/extraer-bonos-set-calamity.js`: parser hjson real (bloques `'''`, anidación,
+comentarios), registro plano de las 11014 claves reales de Calamity (en-US) + las 38 claves
+reales `CommonItemTooltip.*` (español oficial) + 2 `Key.*` (español oficial), resolutor
+recursivo real de `{$...@N}` (calco exacto del algoritmo decompilado), parser recursivo real de
+expresiones C# de los argumentos de `.Format(...)` (números, campos `static` propios o
+cruzados de otra clase, aritmética con paréntesis/casts, llamadas `static` tipo
+`CalamityUtils.SecondsToFrames(N)`, y las fórmulas REALES de `CalamityUtils.cs` -
+`ToPercent`/`ToStealth`/`FramesToSeconds`/`ToRegenPerSecond`/`ToJumpSpeedPercent`/`ToTiles`/
+`GetChanceFromDenominator`/`ScaleWithDifficulty`, no aproximadas), pluralización real
+`{^N:singular;plural}`, y limpieza real de las etiquetas de color `[c/{N}:texto]` (sin
+traducción visual posible en un tooltip de texto plano, se retira la envoltura y se deja el
+texto). 3 casos genuinamente no resolubles sin simular al jugador real (tecla configurada,
+`player.manaCost`/`CalamityWorld.revenge` en su valor base) se documentan como tal en vez de
+inventar un valor concreto. **Resultado real: 69 de 69 sets de armadura de Calamity resueltos,
+cero plantillas sin resolver.**
+
+Traducción manual real (`set_bonus_es.json`, revisada frase a frase contra el texto en inglés ya
+resuelto y los números reales extraídos) para la parte que Calamity solo trae en inglés -
+`scripts/aplicar-bonos-set-calamity.js` la aplica a `catalog.json` (`CalamityCatalogEntryData.
+SetBonus`, campo nuevo). `CalamityCatalogEntry.SetBonus` expuesto en Core;
+`ItemStatsFormatter.Format` añade la sección "Con el set completo: …" para Calamity, igual que
+ya existía para vanilla.
+
+**Bug real encontrado y corregido durante la propia verificación** (no en el primer intento -
+aplicar el mismo texto a las 2-3 piezas de cada set): la coraza/piernas de sets con VARIAS
+cabezas por clase (Aerospec, Bloodflare, Tarragon...) son la MISMA pieza física compartida por
+las 5 variantes (Cuerpo a cuerpo/A distancia/Magia/Invocación/Pícaro) - aplicar el bono a los 3
+miembros dejaba la coraza con el texto de la ÚLTIMA variante procesada (ej. Invocación),
+incorrecto si el jugador lleva puesta otra cabeza. En el juego real no hay un "bono de la
+coraza sola" fijo - depende de qué cabeza concreta se lleve, algo que este catálogo sin
+personaje cargado no puede saber. Corregido aplicando el texto SOLO a la pieza de cabeza que
+de verdad lo define (`UpdateArmorSet` real) - la coraza/piernas se quedan sin bono propio en su
+tooltip individual (honesto: nunca mostrar un dato erróneo por mostrar algo).
+
+**Verificación real** (mismo proyecto standalone en el scratchpad): `AerospecHeadMelee` → bono
+de cuerpo a cuerpo real y completo; `AerospecBreastplate` (compartida) → sin bono, correcto;
+`StatigelHeadMagic`/`ForbiddenCirclet` → bono real correcto. `dotnet build` limpio, `dotnet
+test` 134/134.
