@@ -965,11 +965,33 @@
                             <!-- Contenedores a la izquierda + panel "Editar" a la derecha (equivalente real
                                  de app.TabInventory.initSide: sideCtr con las pestañas Edit/Library reales -
                                  aqui Library ya vive fijo abajo, ver Grid.Row=1, y Editar sigue al slot
-                                 SELECCIONADO sea cual sea el contenedor activo). -->
-                            <Grid Grid.Row="0" Margin="0,0,0,8">
+                                 SELECCIONADO sea cual sea el contenedor activo).
+                                 Fase 5 (octava pasada, consulta a Opus - "mira todo el espacio que hay y
+                                 que mal desaprovechado" a pantalla grande): antes este Grid llenaba TODO
+                                 el ancho real disponible sin techo (HorizontalAlignment por defecto =
+                                 Stretch), asi que a resoluciones grandes la columna central ("*",
+                                 Equipamiento/Inventario/Almacenes) se estiraba mucho mas de lo que su
+                                 contenido real necesita. HorizontalAlignment="Center" + MaxWidth
+                                 arregla esto de raiz, y por un motivo real de WPF que merece quedar
+                                 escrito (verificado con UI Automation real a 1920x1080, no solo leido):
+                                 las columnas "*" SOLO reparten el sobrante cuando el propio Grid esta
+                                 ESTIRADO (Stretch) por su padre - un Grid Center-aligned se mide primero
+                                 por el tamaño natural real de su contenido (aqui ~994px: SlotRowHost mas
+                                 el suelo de Editar) y LUEGO se centra, sin que las "*" lleguen nunca a
+                                 repartir nada de mas. MaxWidth=1300 queda como techo de seguridad (nunca
+                                 se alcanza en la practica con el contenido real actual) y el efecto real
+                                 visible es que el bloque entero se queda a su tamaño natural, centrado,
+                                 con hueco simetrico real a los lados en vez de estirarse. La columna
+                                 "Editar" pasa de 300px fijo a un peso relativo acotado (280-360px) - con
+                                 el Grid Center-aligned esto en la practica se queda en su suelo de 280px,
+                                 coherente con lo de arriba. ReferenceWidth de los 3 SlotGridPanel de la
+                                 fila fusionada de Equipamiento (mas abajo) sigue atado al SlotRowHost
+                                 real via RelativeSource AncestorType, ajeno del todo a este Grid exterior
+                                 - medido igual (~676px) antes y despues del cambio, cero regresion. -->
+                            <Grid Grid.Row="0" Margin="0,0,0,8" MaxWidth="1300" HorizontalAlignment="Center">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="300" />
+                                    <ColumnDefinition Width="0.24*" MinWidth="280" MaxWidth="360" />
                                 </Grid.ColumnDefinitions>
 
                                 <!-- Antes: 21 pestañas planas en una sola fila (9 contenedores + 12 de
@@ -1223,7 +1245,11 @@
 
                                     <Grid Visibility="{Binding IsLibraryVisible, Converter={StaticResource BoolToVis}}">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="210" />
+                                            <!-- Fase 5 (octava pasada): de 210px fijo a un peso relativo
+                                                 acotado (180-260px real) - crece un poco en ventanas
+                                                 grandes (nombres de carpeta mas largos caben sin envolver
+                                                 tanto) sin des-balancear la columna de resultados. -->
+                                            <ColumnDefinition Width="0.22*" MinWidth="180" MaxWidth="260" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
 
@@ -1312,10 +1338,13 @@
                                                MaxHeight="460" />
                             </Grid.RowDefinitions>
 
-                            <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <!-- Fase 5 (octava pasada): mismo MaxWidth+centrado real que Objetos (ver ahi
+                                 el porque completo) - la rejilla fija de 44 slots (11x4) tambien se veia
+                                 desperdigada en ventanas grandes sin techo. -->
+                            <Grid Grid.Row="0" Margin="0,0,0,8" MaxWidth="1300" HorizontalAlignment="Center">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="300" />
+                                    <ColumnDefinition Width="0.24*" MinWidth="280" MaxWidth="360" />
                                 </Grid.ColumnDefinitions>
 
                                 <Border Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
@@ -1365,7 +1394,11 @@
 
                                     <Grid Visibility="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToVis}}">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="210" />
+                                            <!-- Fase 5 (octava pasada): de 210px fijo a un peso relativo
+                                                 acotado (180-260px real) - crece un poco en ventanas
+                                                 grandes (nombres de carpeta mas largos caben sin envolver
+                                                 tanto) sin des-balancear la columna de resultados. -->
+                                            <ColumnDefinition Width="0.22*" MinWidth="180" MaxWidth="260" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
 
@@ -1430,7 +1463,10 @@
                                     Command="{Binding ResearchAllCommand}" HorizontalAlignment="Left" Margin="0,0,0,10" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="210" />
+                                    <!-- Fase 5 (octava pasada): mismo tratamiento que la columna de
+                                         carpetas de la Libreria (Objetos/Buffs) - relativo acotado en
+                                         vez de 210px fijo. -->
+                                    <ColumnDefinition Width="0.22*" MinWidth="180" MaxWidth="260" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 

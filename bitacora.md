@@ -3526,3 +3526,38 @@ reales) confirmando que busca de verdad en el texto del tooltip y no en el nombr
 limpio, `dotnet test` 134/134 (la gramática vive en `TerrasavrNative.App`, sin cobertura de
 `dotnet test` ahí - verificación end-to-end real vía el arnés, mismo criterio que el resto de
 `ViewModels`).
+
+### Octava pasada, Fase 5 - MaxWidth + centrado real en Equipamiento/Editar/columna de carpetas
+
+La fase de mayor riesgo de regresión según el propio Opus (revisita el binding `ReferenceWidth`
+de la 4ª/5ª pasada). El bloque de Equipamiento/Inventario/Almacenes + panel "Editar" llenaba
+TODO el ancho real disponible sin techo (`HorizontalAlignment` por defecto = Stretch), así que
+a resoluciones grandes se estiraba mucho más de lo que su contenido real necesita - la queja
+explícita del usuario ("mira todo el espacio que hay y que mal desaprovechado", con captura
+real). Mismo arreglo en el bloque de Buffs (contenedor + `BuffEdit`), y la columna de carpetas
+de la Librería (Objetos/Buffs/Investigación, antes 210px fijo) pasó a un peso relativo acotado
+(180-260px).
+
+**Hallazgo real de WPF durante la verificación** (no solo leído, medido con UI Automation a
+1920×1080): las columnas `*` de un `Grid` SOLO reparten el sobrante cuando el propio `Grid` está
+ESTIRADO por su padre - un `Grid` con `HorizontalAlignment="Center"` se mide primero por el
+tamaño NATURAL de su contenido y LUEGO se centra, sin que las `*` lleguen a repartir nada de
+más. Con `MaxWidth="1300"` + `HorizontalAlignment="Center"`, el bloque se mide en ~994px de
+ancho real (su tamaño natural) tanto a 1920×1080 como a cualquier tamaño mayor - el `MaxWidth`
+queda como techo de seguridad que en la práctica nunca se alcanza con el contenido actual; el
+efecto real visible es justo el pedido: el bloque se queda a su tamaño cómodo, centrado, con
+hueco simétrico real a los lados en vez de estirarse. El comentario original en el XAML se
+corrigió tras esta medición para no dejar escrita una explicación que sonaba plausible pero no
+era la real.
+
+**Verificación real** (UI Automation, personaje cargado): a 1920×1080 (mucho más ancha que
+cualquier ventana probada hasta ahora), `Row0Grid.ActualWidth=994` (bajo su propio `MaxWidth`
+de 1300), con 513px reales de margen a cada lado (prueba directa de que está centrado, no
+pegado a la izquierda) - captura real (`fase5-equip-ultrawide.png`) confirma el bloque
+compacto y centrado, sin huecos ni solape. `SlotRowHost.ActualWidth=676` a 1920×1080, IDÉNTICO
+(dentro de margen) al medido antes de esta fase a la resolución mínima (677,8) - cero regresión
+real en `ReferenceWidth`/`MinCell`/`MaxCell` de los 3 `SlotGridPanel` fusionados, el mayor
+riesgo señalado por Opus. Captura a la ventana mínima real (1080×700,
+`fase5-equip-minimo-tras-cambio.png`) confirma que nada de lo ya arreglado en la 7ª/8ª pasada
+se rompió. Pase de regresión completo del arnés (todas las fases 2-5 juntas) sin ningún FALLO.
+`dotnet build` limpio, `dotnet test` 134/134.
