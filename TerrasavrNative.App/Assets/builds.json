@@ -71,9 +71,9 @@
                                                               "es":  "Mantra antimaldición"
                                                           },
                                                           {
-                                                              "pid":  "FastClock",
-                                                              "en":  "Fast Clock",
-                                                              "es":  "Reloj rápido"
+                                                              "pid":  "Bezoar",
+                                                              "en":  "Bezoar",
+                                                              "es":  "Bezoar"
                                                           }
                                                       ],
                                       "buffs":  [
@@ -153,9 +153,9 @@
                                                                "es":  "Mantra antimaldición"
                                                            },
                                                            {
-                                                               "pid":  "FastClock",
-                                                               "en":  "Fast Clock",
-                                                               "es":  "Reloj rápido"
+                                                               "pid":  "Bezoar",
+                                                               "en":  "Bezoar",
+                                                               "es":  "Bezoar"
                                                            }
                                                        ],
                                        "buffs":  [
@@ -235,9 +235,9 @@
                                                              "es":  "Mantra antimaldición"
                                                          },
                                                          {
-                                                             "pid":  "FastClock",
-                                                             "en":  "Fast Clock",
-                                                             "es":  "Reloj rápido"
+                                                             "pid":  "Bezoar",
+                                                             "en":  "Bezoar",
+                                                             "es":  "Bezoar"
                                                          }
                                                      ],
                                      "buffs":  [
@@ -317,9 +317,9 @@
                                                                  "es":  "Mantra antimaldición"
                                                              },
                                                              {
-                                                                 "pid":  "FastClock",
-                                                                 "en":  "Fast Clock",
-                                                                 "es":  "Reloj rápido"
+                                                                 "pid":  "Bezoar",
+                                                                 "en":  "Bezoar",
+                                                                 "es":  "Bezoar"
                                                              }
                                                          ],
                                          "buffs":  [
@@ -402,9 +402,9 @@
                                                                 "es":  "Collar del pánico"
                                                             },
                                                             {
-                                                                "pid":  "FireGauntlet",
-                                                                "en":  "Fire Gauntlet",
-                                                                "es":  "Guantelete de fuego"
+                                                                "pid":  "TrifoldMap",
+                                                                "en":  "Trifold Map",
+                                                                "es":  "Mapa tríptico"
                                                             }
                                                         ],
                                         "buffs":  [

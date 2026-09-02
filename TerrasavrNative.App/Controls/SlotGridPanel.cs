@@ -121,10 +121,27 @@ public sealed class SlotGridPanel : Panel
     protected override Size ArrangeOverride(Size finalSize)
     {
         int n = InternalChildren.Count;
+        if (n == 0) return finalSize;
+
+        int rows = (int)Math.Ceiling(n / (double)_cols);
+        double contentW = _cols * _cell + Gap * (_cols - 1);
+        double contentH = rows * _cell + Gap * (rows - 1);
+        // ItemsPresenter ignora el HorizontalAlignment/VerticalAlignment que se le ponga al
+        // panel del ItemsPanelTemplate en XAML (arregla siempre al panel el finalSize
+        // completo, sea cual sea su tamaño natural real - gotcha real de WPF, confirmado tras
+        // que un HorizontalAlignment="Center" puesto directamente en el XAML no tuviera ningun
+        // efecto visible pese a compilar y ejecutarse sin error). El centrado real solo puede
+        // hacerse aqui, calculando el hueco sobrante entre finalSize (siempre el disponible
+        // completo) y el tamaño de contenido real, y desplazando el origen de cada celda -
+        // pedido explicito del usuario (quinta pasada, "el panel me queda a un lado izquierdo,
+        // no me gusta" + "se deberia centrar la barra vertical").
+        double offsetX = Math.Max(0, (finalSize.Width - contentW) / 2);
+        double offsetY = Math.Max(0, (finalSize.Height - contentH) / 2);
+
         for (int i = 0; i < n; i++)
         {
             int r = i / _cols, c = i % _cols;
-            double x = c * (_cell + Gap), y = r * (_cell + Gap);
+            double x = offsetX + c * (_cell + Gap), y = offsetY + r * (_cell + Gap);
             InternalChildren[i].Arrange(new Rect(x, y, _cell, _cell));
         }
         return finalSize;
