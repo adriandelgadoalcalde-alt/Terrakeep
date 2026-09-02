@@ -3220,3 +3220,31 @@ que debería). Ampliar el escáner a los casos que no encuentra queda fuera de e
 **Verificación real de ambas correcciones**: `dotnet build` limpio, `dotnet test` 134/134,
 arnés de UI Automation con nuevas aserciones (`AcceptsItem`/`PlaceItem` sobre slots de cabeza
 y accesorio con ids reales conocidos) y captura PNG real revisada a mano tras cada cambio.
+
+### Dos correcciones más, ronda de verificación con el usuario
+
+1. **"la armadura me deja colocarla en los huecos de accesorios hay que corregirlo"** - bug
+   real confirmado, causa real identificada: la regla "Calamity siempre pasa" (correcta para
+   los 8 tipos SIN dato real posible - ammo/mountType/buffType/dye/shoot no existen en
+   `CalamityCatalogEntryData`) se aplicaba tambien a Armadura/Accesorio, donde SI hay un campo
+   real utilizable (`Category`, ya en `catalog.json`, ya usado para el árbol de la Librería:
+   `"Armor/..."` / `"Accessories"`/`"Accessories/Vanity"`/`"Accessories/Wings"`) - así que un
+   objeto de armadura de Calamity se aceptaba sin más en cualquier slot de accesorio, y
+   viceversa. `ItemSlotViewModel.AcceptsItem` reescrito: para el grupo Armadura/Accesorio
+   específicamente, consulta `CalamityCatalog.BySyntheticId(id)?.Category` en vez de aceptar a
+   ciegas; para los otros 8 tipos, sigue aceptando siempre (sin cambio, siguen sin dato real).
+   Verificado con ids reales de Calamity (20000243=armadura real Armor/Aerospec,
+   20000000=accesorio real Accessories): armadura de Calamity ahora rechazada en un slot de
+   accesorio, accesorio de Calamity rechazado en un slot de cabeza - antes ambos pasaban.
+2. **"la sección de slot de monturas tintes han de ser más pequeño los cuadrados... ahora sale
+   scroll y no lo queremos"** - `ContainerViewModel.MinCell` nueva (default 44, igual que
+   siempre) - `MountsContainer`/`DyesContainer` bajan a `MinCell=32` (antes el suelo de 44px
+   forzaba el `Clamp` a subir el tamaño de celda por encima de lo que cabía de verdad en la
+   altura real disponible, disparando el `ScrollViewer` de seguridad). El resto de
+   contenedores se queda en 44 sin cambios. `ContainerCompactTemplate` ahora lee
+   `MinCell="{Binding MinCell}"` en vez del literal fijo `"44"`.
+
+**Verificación real**: `dotnet build` limpio, `dotnet test` 134/134, arnés de UI Automation con
+las 4 aserciones Calamity nuevas (armadura Calamity aceptada en cabeza/rechazada en accesorio,
+accesorio Calamity aceptado en accesorio/rechazado en cabeza, las 4 exactas) y captura PNG real
+confirmando celdas más pequeñas sin scrollbar visible en el lateral izquierdo.

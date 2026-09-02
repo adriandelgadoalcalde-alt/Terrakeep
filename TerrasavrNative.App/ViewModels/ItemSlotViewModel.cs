@@ -100,10 +100,29 @@ public partial class ItemSlotViewModel : ObservableObject
     // reales que hacen falta para validar esto - ammo/mountType/buffType/dye/shoot - validar
     // estricto bloquearia TODAS las monturas/mascotas/tintes reales de Calamity; "desconocido
     // = permitir").
+    // Armadura/Accesorio (ampliacion 2-sep-2026) es el UNICO grupo donde Calamity SI tiene un
+    // campo real utilizable: CalamityCatalogEntryData.Category ("Armor/..."/"Accessories...")
+    // ya viene del catalog.json real y ya se usaba para el arbol de la Libreria - a diferencia
+    // de ammo/mountType/buffType/dye/shoot, que no existen en absoluto para Calamity. Bug real
+    // reportado 2-sep-2026 ("la armadura me deja colocarla en los huecos de accesorios"): la
+    // regla "Calamity siempre pasa" (correcta para los otros 8 tipos, sin dato real posible)
+    // se aplicaba tambien aqui por error, donde SI hay dato real y no hacia falta la excepcion.
+    private const SlotKind ArmorAccessoryKinds = SlotKind.ArmorHead | SlotKind.ArmorBody | SlotKind.ArmorLegs | SlotKind.Accessory;
+
     public bool AcceptsItem(int itemId)
     {
         if (AcceptedKind == SlotKind.None || itemId <= 0) return true;
-        if (itemId >= CalamityIds.ItemIdBase) return true;
+        if (itemId >= CalamityIds.ItemIdBase)
+        {
+            if ((AcceptedKind & ArmorAccessoryKinds) == 0) return true; // sin dato real, "desconocido = permitir"
+            string? category = _service.CalamityCatalog.BySyntheticId(itemId)?.Category;
+            if (category == null) return true; // id sintetico sin entrada real - no rechazar a ciegas
+            if (category.StartsWith("Accessories", StringComparison.Ordinal))
+                return (AcceptedKind & SlotKind.Accessory) != 0;
+            if (category.StartsWith("Armor", StringComparison.Ordinal))
+                return (AcceptedKind & (SlotKind.ArmorHead | SlotKind.ArmorBody | SlotKind.ArmorLegs)) != 0;
+            return false; // arma/pocion/material real de Calamity - nunca es armadura ni accesorio
+        }
         return (_service.VanillaSlotKinds.GetKind(itemId) & AcceptedKind) != 0;
     }
 

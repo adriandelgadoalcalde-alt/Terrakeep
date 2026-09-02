@@ -432,7 +432,7 @@
                                  ReferenceWidth se queda en su default 0 = desactivado,
                                  comportamiento identico a como estaba. Solo tiene efecto real
                                  dentro de la fila fusionada de Equipamiento. -->
-                            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="44" MaxCell="96" Gap="4"
+                            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="{Binding MinCell}" MaxCell="96" Gap="4"
                                                      ReferenceColumns="10"
                                                      ReferenceWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=controls:SlotRowHost}}"
                                                      AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />

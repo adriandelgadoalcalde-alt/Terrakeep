@@ -270,14 +270,19 @@ public partial class MainViewModel : ObservableObject
         // equipar sus respectivos items") + icono fantasma real por indice.
         SlotKind[] miscEquipKinds = [SlotKind.VanityPet, SlotKind.LightPet, SlotKind.Cart, SlotKind.Mount, SlotKind.Hook];
         string?[] miscEquipGhosts = ["pet", "pet_light", "minecart", "mount", "hook"];
+        // minCell: 32 (pedido explicito 2-sep-2026: "los cuadrados... ya que ahora sale
+        // scroll y no lo queremos") - 5+5 slots apilados en una columna estrecha no siempre
+        // caben a 44px minimo en la resolucion real del usuario; celdas mas pequeñas en vez
+        // de aceptar el scroll (el ScrollViewer de seguridad se queda de todos modos, para
+        // ventanas aun mas pequeñas).
         MountsContainer = AddContainer("miscEquips", "Mascota / Montura / Gancho", _loaded.MergedContainers["miscEquips"], columns: 1,
-            slotKinds: miscEquipKinds, ghostIcons: miscEquipGhosts);
+            slotKinds: miscEquipKinds, ghostIcons: miscEquipGhosts, minCell: 32);
         // Los 5 tintes van emparejados 1:1 con los 5 slots de arriba, pero un tinte SIEMPRE
         // es solo un tinte (dye>0) sea cual sea el equipo al que este emparejado - mismo
         // SlotKind.Dye y mismo ghost "dye" en los 5, a diferencia del contenedor de arriba.
         DyesContainer = AddContainer("miscDyes", "Tintes (mascota/montura/gancho)", _loaded.MergedContainers["miscDyes"], columns: 1,
             slotKinds: [SlotKind.Dye, SlotKind.Dye, SlotKind.Dye, SlotKind.Dye, SlotKind.Dye],
-            ghostIcons: ["dye", "dye", "dye", "dye", "dye"]);
+            ghostIcons: ["dye", "dye", "dye", "dye", "dye"], minCell: 32);
 
         // Monedas/municion: vanilla-only (ver CalamityCharacterSync.cs para el alcance
         // documentado - la app JS tampoco los sincroniza con Calamity, solo los protege). Sin
@@ -389,7 +394,7 @@ public partial class MainViewModel : ObservableObject
     // de siempre: Inventario/Banco/Caja fuerte/Fragua/Boveda), o un array del mismo tamaño
     // que items para fijarlo por indice (miscEquips/miscDyes/coins/ammo).
     private ContainerViewModel AddContainer(string key, string displayName, GameItem[] items, int columns = 10,
-        SlotKind[]? slotKinds = null, string?[]? ghostIcons = null)
+        SlotKind[]? slotKinds = null, string?[]? ghostIcons = null, double minCell = 44)
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
@@ -399,7 +404,7 @@ public partial class MainViewModel : ObservableObject
             var ghost = ghostIcons != null && i < ghostIcons.Length ? ghostIcons[i] : null;
             slots.Add(new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped, kind, ghost));
         }
-        var container = new ContainerViewModel(key, displayName, slots) { Columns = columns };
+        var container = new ContainerViewModel(key, displayName, slots) { Columns = columns, MinCell = minCell };
         Containers.Add(container);
         return container;
     }
