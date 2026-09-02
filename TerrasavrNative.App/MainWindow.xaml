@@ -1255,7 +1255,8 @@
                                             <TextBox DockPanel.Dock="Top" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
                                                      Padding="7,5" Background="{StaticResource BgElevatedBrush}"
                                                      Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4" />
+                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4"
+                                                     ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id, .texto = busca en la descripción" />
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding Library.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
                                             <!-- Rejilla de CATALOGO real (Fase 2, octava pasada, consulta a Opus -
                                                  patron real del Bestiario decompilado de Terraria, UIBestiaryEntryGrid:
@@ -1392,7 +1393,8 @@
                                             <TextBox DockPanel.Dock="Top" Text="{Binding BuffLibrary.SearchText, UpdateSourceTrigger=PropertyChanged}"
                                                      Padding="7,5" Background="{StaticResource BgElevatedBrush}"
                                                      Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4" />
+                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4"
+                                                     ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id, .texto = busca en la descripción" />
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding BuffLibrary.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
                                             <!-- Mismo LibraryGridPanel real que Objetos (Fase 2, octava pasada) - celda
                                                  casi fija, columnas/filas variables, paginacion real en vez de scroll. -->

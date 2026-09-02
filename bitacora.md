@@ -3504,3 +3504,25 @@ que al entrar la primera vez); "Raíz" limpia `CurrentFolder`/`Breadcrumb` por c
 recupera las mismas 10 carpetas raíz. Captura real (`libreria-navegador.png`) confirma el
 mismo mecanismo funcionando también en Buffs (breadcrumb "Raíz", filas con contador real "(N)",
 sin solape). `dotnet build` limpio, `dotnet test` 134/134.
+
+### Octava pasada, Fase 4 - gramática de búsqueda real de Terrasavr
+
+Se lee el código real de `app.TabLibrary.search` (`reference/terrasavr-real/script.beautified.js`,
+líneas 4001-4055) y se porta su gramática exacta a `LibrarySearchGrammar.cs` (nuevo, compartido
+entre `LibraryViewModel` y `BuffLibraryViewModel`, que no tienen un tipo común para sus entradas
+así que se le pasan los campos ya resueltos): términos separados por coma = OR entre ellos;
+dentro de un término, palabras separadas por espacio = AND; un término de menos de 2 caracteres
+se ignora entero (quirk real, verificado en el propio código); `#123` = por id exacto,
+`#100-200` = por rango (ambos extremos incluidos); `.texto` busca en el tooltip/descripción real
+(`StatsTooltip`/`Description`) en vez de en el nombre. Se añadió un `ToolTip` real al cuadro de
+búsqueda explicando la gramática (ninguna pista visual existía antes).
+
+**Verificación real** (UI Automation, catálogo real cargado): `#10` devuelve exactamente el
+objeto de id 10 ("Hacha de hierro"); `#10-15` devuelve exactamente ese rango; `excalibur,...`
+(coma) incluye Excalibur; `hierro espada` (espacio=AND) devuelve solo objetos con AMBAS palabras
+("Espada larga/corta de hierro", descarta objetos con solo una de las dos); `.daño cuerpo`
+(búsqueda en tooltip real) devuelve un recuento grande y plausible (403 armas cuerpo a cuerpo
+reales) confirmando que busca de verdad en el texto del tooltip y no en el nombre. `dotnet build`
+limpio, `dotnet test` 134/134 (la gramática vive en `TerrasavrNative.App`, sin cobertura de
+`dotnet test` ahí - verificación end-to-end real vía el arnés, mismo criterio que el resto de
+`ViewModels`).
