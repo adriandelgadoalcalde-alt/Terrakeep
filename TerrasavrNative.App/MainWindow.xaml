@@ -22,6 +22,12 @@
             <Border AllowDrop="True" ToolTipService.IsEnabled="{Binding IsNotEmpty}"
                     PreviewMouseLeftButtonDown="OnItemSlotMouseDown" MouseMove="OnItemSlotMouseMove"
                     Drop="OnItemSlotDrop">
+                <!-- Doble clic para elegir/cambiar objeto, igual que la tarjeta compacta
+                     (pregunta a Opus sobre el diseño, 2-sep-2026 - segunda consulta: "ya es
+                     memoria muscular desde Inventario"). -->
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding ChooseFromLibraryCommand}" />
+                </Border.InputBindings>
                 <!-- Bug real encontrado 2-sep-2026 (pregunta a Opus sobre el diseño): el unico
                      tooltip vivia en el string StatsTooltip, que ItemStatsFormatter.Format deja
                      en null para CUALQUIER objeto sin estadisticas de combate (bloques,
@@ -33,8 +39,16 @@
                     <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <StackPanel MaxWidth="240">
                             <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding PrefixDisplay}" Style="{StaticResource CaptionText}"
-                                       Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
+                            <!-- Pregunta a Opus sobre el diseño (2-sep-2026, segunda consulta,
+                                 "que allí aparezca el prefijo que tiene asignado"): antes era la
+                                 palabra suelta del prefijo, indistinguible de una linea mas de
+                                 estadisticas con el mismo CaptionText - con la etiqueta "Prefijo:"
+                                 y el valor en acento queda inconfundible. -->
+                            <TextBlock Style="{StaticResource CaptionText}"
+                                       Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}">
+                                <Run Text="Prefijo: " />
+                                <Run Text="{Binding PrefixDisplay, Mode=OneWay}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
+                            </TextBlock>
                             <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                                        Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
                         </StackPanel>
@@ -43,9 +57,13 @@
                 <Border.Style>
                     <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCard}">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-                                <Setter Property="Opacity" Value="0.35" />
-                            </DataTrigger>
+                            <!-- El fondo de "hueco vacio" ya lo pone el estilo BASE
+                                 (ItemSlotCard/ItemSlotCardCompact en Theme.xaml, pregunta a Opus
+                                 sobre el diseño 2-sep-2026 - segunda consulta). Antes había aquí
+                                 un DataTrigger de Opacity 0.35 que lavaba ese color contra el
+                                 fondo del panel (los triggers del estilo derivado se evalúan
+                                 DESPUÉS que los del base) - quitado a propósito, la opacidad ya
+                                 no debe tocar el fondo del slot vacío. -->
                             <DataTrigger Binding="{Binding IsCalamity}" Value="True">
                                 <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
                                 <Setter Property="BorderThickness" Value="2" />
@@ -94,8 +112,16 @@
                             <Style TargetType="Button">
                                 <Setter Property="Content" Value="Cambiar" />
                                 <Style.Triggers>
+                                    <!-- Pregunta a Opus sobre el diseño (2-sep-2026, segunda
+                                         consulta): con el fondo de "hueco vacio" nuevo (ver
+                                         Theme.xaml), este botón es lo único que queda a opacidad
+                                         plena en un slot vacío - un pequeño atenuado aquí (no en
+                                         el Border, que ya lo distingue por color) evita que
+                                         "Elegir..." grite más que el propio contenido real de un
+                                         slot lleno. -->
                                     <DataTrigger Binding="{Binding IsEmpty}" Value="True">
                                         <Setter Property="Content" Value="Elegir..." />
+                                        <Setter Property="Opacity" Value="0.6" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -104,12 +130,22 @@
 
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
                         <Image Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform" Margin="0,0,6,0"
-                               VerticalAlignment="Center"
+                               VerticalAlignment="Center" RenderOptions.BitmapScalingMode="NearestNeighbor"
                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                         <StackPanel>
                             <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}"
                                        FontSize="11" TextWrapping="Wrap" MaxHeight="26" />
-                            <TextBlock Text="{Binding PrefixDisplay, Mode=OneWay}" Style="{StaticResource CaptionText}" FontSize="9.5" />
+                            <!-- Pregunta a Opus sobre el diseño (2-sep-2026, segunda consulta):
+                                 antes era solo la palabra suelta del prefijo ("Legendario"),
+                                 indistinguible a simple vista de una linea mas de estadisticas -
+                                 con la etiqueta "Prefijo:" y el valor en acento queda inconfundible.
+                                 Ademas ahora se colapsa si no hay prefijo (antes ocupaba ~12px de
+                                 alto vacios en cualquier objeto sin prefijo). -->
+                            <TextBlock Style="{StaticResource CaptionText}" FontSize="9.5"
+                                       Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}">
+                                <Run Text="Prefijo: " />
+                                <Run Text="{Binding PrefixDisplay, Mode=OneWay}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
+                            </TextBlock>
                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
                                         Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}">
                                 <TextBox Text="{Binding Count, UpdateSourceTrigger=PropertyChanged}"
@@ -146,6 +182,7 @@
                                 ToolTip="Vaciar este slot" Padding="6,3" FontSize="10.5" VerticalAlignment="Center"
                                 Foreground="{StaticResource PinkBrush}" Background="Transparent" BorderThickness="0" />
                         <Image Source="{Binding Slot.IconPath}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,8,0"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor"
                                VerticalAlignment="Center"
                                Visibility="{Binding Slot.IconPath, Converter={StaticResource NullToVis}}" />
                         <StackPanel VerticalAlignment="Center">
@@ -382,8 +419,11 @@
                     <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <StackPanel MaxWidth="240">
                             <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding PrefixDisplay}" Style="{StaticResource CaptionText}"
-                                       Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
+                            <TextBlock Style="{StaticResource CaptionText}"
+                                       Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}">
+                                <Run Text="Prefijo: " />
+                                <Run Text="{Binding PrefixDisplay, Mode=OneWay}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
+                            </TextBlock>
                             <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                                        Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
                         </StackPanel>
@@ -403,9 +443,13 @@
                 <Border.Style>
                     <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCardCompact}">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-                                <Setter Property="Opacity" Value="0.35" />
-                            </DataTrigger>
+                            <!-- El fondo de "hueco vacio" ya lo pone el estilo BASE
+                                 (ItemSlotCard/ItemSlotCardCompact en Theme.xaml, pregunta a Opus
+                                 sobre el diseño 2-sep-2026 - segunda consulta). Antes había aquí
+                                 un DataTrigger de Opacity 0.35 que lavaba ese color contra el
+                                 fondo del panel (los triggers del estilo derivado se evalúan
+                                 DESPUÉS que los del base) - quitado a propósito, la opacidad ya
+                                 no debe tocar el fondo del slot vacío. -->
                             <DataTrigger Binding="{Binding IsCalamity}" Value="True">
                                 <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
                                 <Setter Property="BorderThickness" Value="2" />
@@ -481,6 +525,7 @@
                 </Border.Style>
                 <StackPanel Orientation="Horizontal">
                     <Image Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform" Margin="0,0,7,0"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                     <StackPanel>
                         <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}" />
@@ -789,24 +834,20 @@
                                                         </ItemsControl>
                                                     </StackPanel>
                                                 </StackPanel>
-                                                <!-- Pedido explicito 2-sep-2026 ("no quiero que tengan scroll,
-                                                     quiero que muestren todos los objetos en esa misma cuadricula
-                                                     y que la cuadricula se haga mas grande o pequeña segun la app
-                                                     la encoges o no"): Viewbox escala TODA la cuadricula (nunca
-                                                     recorta ni necesita barra de scroll) para caber siempre en el
-                                                     espacio real disponible - crece o encoge con la ventana. El
-                                                     WrapPanel necesita un ancho FIJO (no el "infinito" que le daria
-                                                     el propio Viewbox al medir) para que siempre envuelva en la
-                                                     misma forma real (10 slots = 5 columnas x 2 filas, PlrLoadout
-                                                     siempre tiene 10 - ver PlrLoadout.cs) antes de que el Viewbox
-                                                     escale ese bloque entero. -->
-                                                <Viewbox Stretch="Uniform" StretchDirection="Both">
-                                                    <ItemsControl ItemsSource="{Binding CurrentSlots}">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate><WrapPanel Width="820" /></ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                    </ItemsControl>
-                                                </Viewbox>
+                                                <!-- Pregunta a Opus sobre el diseño (2-sep-2026, segunda consulta -
+                                                     "haz lo mismo para equipamientos"): antes este era el UNICO sitio
+                                                     con su propio bloque Viewbox+ItemsControl a medida (con un
+                                                     WrapPanel Width="820" a pelo - 20px de aire muerto respecto a la
+                                                     huella real de 5x160=800, y un numero magico que se rompe en
+                                                     silencio si ItemSlotCard cambia de tamaño). Reusa ahora
+                                                     ContainerTabTemplate, el mismo camino de codigo que ya usan
+                                                     Monturas/Monedas/Almacenes - hereda automaticamente el fondo de
+                                                     "hueco vacio", el tooltip compuesto y cualquier arreglo futuro de
+                                                     esa plantilla compartida, sin poder volver a divergir.
+                                                     EquipmentGroupViewModel.Current expone el ContainerViewModel
+                                                     completo (Columns=5 fijado en AddSlotSet - PlrLoadout siempre
+                                                     tiene 10 slots reales en forma 5x2, ver PlrLoadout.cs). -->
+                                                <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerTabTemplate}" />
                                             </DockPanel>
                                         </Border>
                                     </TabItem>
@@ -958,15 +999,44 @@
                                                                  (o pulsar "Colocar" si el picker esta activo) - pedido explicito
                                                                  1-sep-2026. -->
                                                             <Border Width="80" Height="86" Margin="3" Padding="4" CornerRadius="6"
-                                                                    Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
-                                                                    ToolTip="{Binding StatsTooltip}" Cursor="Hand"
+                                                                    Background="{StaticResource BgElevatedBrush}" BorderThickness="1" Cursor="Hand"
                                                                     PreviewMouseLeftButtonDown="OnLibraryCardMouseDown" MouseMove="OnLibraryCardMouseMove">
+                                                                <!-- Pregunta a Opus sobre el diseño (2-sep-2026, segunda consulta): el
+                                                                     caption de nombre mide 9pt en ~72px utiles, 2 lineas como mucho - un
+                                                                     nombre mas largo se recortaba EN SILENCIO (sin puntos suspensivos) y
+                                                                     el tooltip de antes (solo StatsTooltip, null para cualquier objeto
+                                                                     sin stats de combate) no lo recuperaba. Aqui SI se compone con el
+                                                                     nombre (a diferencia de los slots, sin linea de prefijo - una entrada
+                                                                     de catalogo no tiene ningun prefijo asignado todavia, pedido
+                                                                     explicito del usuario: "esto solo aplica a todo menos la libreria
+                                                                     logicamente"). -->
+                                                                <Border.ToolTip>
+                                                                    <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                                                        <StackPanel MaxWidth="240">
+                                                                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                                                                            <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                                                                       Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
+                                                                        </StackPanel>
+                                                                    </ToolTip>
+                                                                </Border.ToolTip>
                                                                 <Border.Style>
                                                                     <Style TargetType="Border">
                                                                         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
                                                                         <Style.Triggers>
+                                                                            <!-- Cursor="Hand" ya lo decia, pero sin ningun cambio visual real
+                                                                                 al pasar el raton - pregunta a Opus sobre el diseño, segunda
+                                                                                 consulta. -->
+                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                                                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                                            </Trigger>
                                                                             <DataTrigger Binding="{Binding IsCalamity}" Value="True">
                                                                                 <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                                                                <!-- Antes se quedaba en 1px (el grosor base) mientras que los
+                                                                                     slots de Calamity ya usan 2px - una tarjeta de Calamity en
+                                                                                     la Libreria se veia con una linea roja mucho mas fina que
+                                                                                     en cualquier otro sitio de la app. -->
+                                                                                <Setter Property="BorderThickness" Value="2" />
                                                                             </DataTrigger>
                                                                         </Style.Triggers>
                                                                     </Style>
@@ -974,6 +1044,7 @@
                                                                 <DockPanel>
                                                                     <TextBlock DockPanel.Dock="Bottom" Text="{Binding DisplayName}"
                                                                                Style="{StaticResource CaptionText}" FontSize="9" TextWrapping="Wrap"
+                                                                               TextTrimming="CharacterEllipsis"
                                                                                TextAlignment="Center" MaxHeight="22" Margin="0,2,0,0" />
                                                                     <Button DockPanel.Dock="Bottom" Content="Colocar" FontSize="8.5" Padding="0,1"
                                                                             Background="{StaticResource AccentBrush}" BorderThickness="0"
@@ -982,6 +1053,7 @@
                                                                             CommandParameter="{Binding}"
                                                                             Visibility="{Binding DataContext.Library.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
                                                                     <Image Source="{Binding IconPath}" Stretch="Uniform" MaxHeight="32"
+                                                                           RenderOptions.BitmapScalingMode="NearestNeighbor"
                                                                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                                                                     <TextBlock DockPanel.Dock="Top" Text="?" Style="{StaticResource BodyText}"
                                                                                HorizontalAlignment="Center" VerticalAlignment="Center"

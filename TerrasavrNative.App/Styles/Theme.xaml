@@ -688,6 +688,20 @@
         <Setter Property="ItemContainerStyle" Value="{StaticResource InnerTabItem}" />
     </Style>
 
+    <!-- Fondo de "hueco vacio" compartido por las dos tarjetas de slot de abajo (pregunta a
+         Opus sobre el diseño, 2-sep-2026 - segunda consulta: "las cajas vacías... el fondo
+         podria diferenciar-se un poco mas de las que tienen objetos"). Antes solo se atenuaba
+         el slot vacio entero con Opacity 0.35 sobre el mismo BgElevatedBrush de siempre -
+         compuesto sobre el fondo real del panel (BgSecondaryBrush #171a26) la diferencia
+         lleno/vacio quedaba en ~5-8 por canal, invisible en un tema oscuro. En vez de atenuar,
+         invierte la elevacion: lleno = BgElevatedBrush (mas claro que el panel, "sobresale"),
+         vacio = BgPrimaryBrush (mas oscuro que el panel, "se hunde") - mismo idioma visual que
+         un hueco real, con un token ya existente en la paleta, sin opacidad de por medio (por
+         eso los DataTrigger de Opacity que hacian esto antes en MainWindow.xaml se han
+         quitado). Definido aqui, en los estilos BASE, y no en cada plantilla, para que
+         Equipamiento/Inventario/Almacenes/Monturas/Monedas lo hereden todos igual y no puedan
+         volver a divergir. -->
+
     <!-- Tarjeta de slot de item. -->
     <Style x:Key="ItemSlotCard" TargetType="Border">
         <Setter Property="Width" Value="148" />
@@ -698,6 +712,21 @@
         <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+            </Trigger>
+            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                <Setter Property="Background" Value="{StaticResource BgPrimaryBrush}" />
+            </DataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsEmpty}" Value="True" />
+                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Tarjeta compacta de slot (Inventario/Almacenes, >10 slots - pregunta a Opus sobre el
@@ -709,6 +738,21 @@
         <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+            </Trigger>
+            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                <Setter Property="Background" Value="{StaticResource BgPrimaryBrush}" />
+            </DataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsEmpty}" Value="True" />
+                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Tarjeta generica elevada - cabecera en degradado real (ver .tsx-modal-header del CSS

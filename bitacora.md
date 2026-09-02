@@ -2627,3 +2627,107 @@ Defensor" de verdad, `GridWidth` da los valores esperados (1600/800/800/640/640)
 Librería cambia `IsLibraryCollapsed`, y no aparece `ultimo-error.log` ni ninguna excepción de
 `Dispatcher`. `dotnet build`/`dotnet test` en verde (128/128, sin regresiones - todo el cambio
 es de `TerrasavrNative.App`, `Core` no se tocó).
+
+## Segunda consulta a Opus: Equipamiento, Librería, prefijo en tooltip y fondo de vacío (2-sep-2026)
+
+Feedback tras revisar en vivo la ronda anterior: *"me ha gustado mucho como ha quedado... haz lo
+mismo para equipamientos y para la libreria... cuando pasas el raton y muestra la información
+del arma que allí aparezca el prefijo que tiene asignado esto solo aplica a todo menos a la
+libreria logicamente... las cajas vacías... el fondo podria diferenciar-se un poco mas de las
+que tienen objetos, vuelve a consultar a opus todo esto"*. Segunda consulta a un agente con
+Opus, con el código real ya escrito pegado en el prompt (no descripciones).
+
+**Punto 1 (prefijo en el tooltip) - Opus confirmó que NO había ningún bug**: el tooltip
+compuesto de la ronda anterior ya incluía `PrefixDisplay` con `Visibility` colapsable, y
+Equipamiento ya heredaba ese arreglo (plantilla implícita compartida). Diagnóstico real de por
+qué el usuario lo percibía como ausente: la línea del prefijo se pintaba como una palabra suelta
+("Legendario") con el mismo estilo `CaptionText` que la línea de estadísticas justo debajo -
+visualmente indistinguible de "una línea más de stats", nunca se leía como *el prefijo*. Arreglo
+real aplicado: `Run Text="Prefijo: "` + `Run` con el valor en `AccentBrush`/`SemiBold`, en las
+DOS plantillas (rica y compacta) - tanto en el tooltip como en el cuerpo visible de la tarjeta
+rica (que también mostraba el prefijo suelto, y también le faltaba colapsar la línea cuando no
+hay prefijo, dejando ~12px de hueco vacío en cualquier objeto sin prefijo).
+
+**Punto 2 (fondo de caja vacía) - diagnóstico numérico real de Opus**: el slot vive sobre
+`BgSecondaryBrush` `#171a26`; lleno = `BgElevatedBrush` `#1e2233`; vacío = ese mismo color al
+35% de opacidad compuesto sobre el panel ≈ `#191d2b` - diferencia real lleno↔vacío de solo 5-8
+por canal, invisible en un tema oscuro. **Arreglo: invertir la elevación en vez de atenuar** -
+lleno sigue siendo `BgElevatedBrush` (sobresale del panel), vacío pasa a `BgPrimaryBrush`
+`#10121c` (se hunde por debajo del panel) - diferencia real de 14-16-23 por canal, ~3x más, y
+cambia de signo (deja de ser "lo mismo pero apagado", pasa a leerse como un hueco real). Token
+ya existente en la paleta, sin inventar ningún color nuevo - confirmado que `overrides.css` real
+no tiene ningún precedente de "slot vacío" que copiar (no es un concepto real de Terrasavr).
+Añadido a los estilos BASE (`ItemSlotCard`/`ItemSlotCardCompact` en `Theme.xaml`), no a cada
+plantilla, para que no puedan volver a divergir - con hover propio (sube a `BgHoverBrush` en
+lleno, a `BgElevatedBrush` en vacío). **Crítico**: había que BORRAR los dos
+`DataTrigger Opacity="0.35"` que quedaban en `MainWindow.xaml` (rica y compacta) - los triggers
+del estilo derivado se evalúan DESPUÉS que los del base, así que dejarlos habría vuelto a lavar
+el `#10121c` nuevo contra el panel y el arreglo no habría hecho nada visible. El botón
+"Elegir..." de la tarjeta rica (lo único que queda a opacidad plena en un slot vacío ahora que
+el fondo ya no se atenúa) se atenúa aparte, `Opacity="0.6"` puesto directamente en el botón, no
+en el `Border`.
+
+**Punto 3 (Equipamiento) - dos bugs reales más encontrados por Opus, y una decisión
+estructural**:
+- `WrapPanel Width="820"` a pelo en el bloque Viewbox de Equipamiento - 20px de aire muerto
+  frente a la huella real (5 columnas × 160px = 800), y un número mágico que se rompería en
+  silencio si `ItemSlotCard` cambiara de tamaño.
+- Faltaba `RenderOptions.BitmapScalingMode="NearestNeighbor"` en el icono de la tarjeta rica -
+  más grave que en la compacta porque la rica vive SIEMPRE dentro de un `Viewbox` (siempre bajo
+  un `ScaleTransform`), el caso exacto en que el filtrado bilineal de WPF por defecto embarra el
+  pixel art. Probablemente la razón concreta de que "Equipamiento se viera peor" que Inventario.
+  Mismo arreglo aplicado también al icono del panel Editar compartido y al de las tarjetas de
+  Builds (`BuildItemRowViewModel`), que tenían el mismo problema sin que nadie lo hubiera
+  reportado todavía.
+- **Decisión estructural**: Equipamiento era el único sitio con su propio bloque
+  `Viewbox`+`ItemsControl` a medida en el XAML (Monturas/Monedas/Almacenes ya reusaban
+  `ContainerTabTemplate`). Añadido `ContainerViewModel.Columns` (nuevo, `init`, default 10;
+  `GridWidth` ahora usa `Columns` en vez de un `10` fijo) y
+  `EquipmentGroupViewModel.Current` (expone el `ContainerViewModel` completo, no solo
+  `.Slots`, con `Columns=5` fijado en `AddSlotSet` porque `PlrLoadout.Items/Social/Dyes` son
+  siempre 10 slots reales en forma 5×2, verificado en `PlrLoadout.cs`). El XAML de Equipamiento
+  pasa a `ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource
+  ContainerTabTemplate}"` - un solo camino de código, hereda automáticamente el fondo de vacío,
+  el tooltip compuesto y cualquier arreglo futuro sin poder volver a divergir.
+- Nits: doble clic para elegir objeto añadido a la tarjeta rica (ya lo tenía la compacta, "ya es
+  memoria muscular desde Inventario").
+- **Sin implementar** (P3 de Opus, mayor coste y necesita verificación contra un `.plr` real
+  antes de rotular nada): etiquetas de rol de slot en Equipamiento (Casco/Peto/Grebas/Accesorio
+  1-7) - anotado como mejora futura, no pedida explícitamente esta vez.
+
+**Punto 4 (Librería) - 4 cambios sí, 3 cambios no, con el porqué de cada uno**:
+- Sí: `NearestNeighbor` en el icono (mismo problema de pixel art embarrado).
+- Sí: tooltip compuesto real (nombre en negrita + stats si hay) - el caption de nombre en la
+  tarjeta (9pt, 2 líneas máx en 80px de ancho) se recortaba EN SILENCIO sin puntos suspensivos,
+  y el único tooltip de antes (`StatsTooltip` a pelo) era `null` para cualquier objeto sin stats
+  de combate, así que el nombre recortado era irrecuperable. **Sin línea de prefijo** (pedido
+  explícito del usuario: "esto solo aplica a todo menos a la libreria logicamente" - una entrada
+  de catálogo no tiene ningún prefijo asignado todavía). Añadido también `TextTrimming=
+  "CharacterEllipsis"` al caption.
+- Sí: hover real (`Cursor="Hand"` sin ningún cambio visual antes) - `Background` a
+  `BgHoverBrush` + `BorderBrush` a `AccentBrush`.
+- Sí: grosor de borde Calamity a 2px (antes se quedaba en el 1px base, una tarjeta Calamity de
+  Librería salía con una línea roja mucho más fina que en cualquier otro sitio de la app).
+- **No** (y por qué, ya argumentado para no tener que volver a decidirlo): NO contorno naranja
+  (ese contorno marca hoy "esto escribe en tu `.plr`" - Equipamiento/Inventario/Almacenes/
+  Monturas/Monedas, exactamente las 5 cosas que sí lo hacen; la Librería es una paleta de
+  origen, no escribe nada, ponérselo destruiría la única distinción real que ese contorno
+  transmite). NO pasar a `SlotGridPanel`/celda dinámica (esa rejilla existe para un número
+  *conocido y fijo* de slots en un área acotada sin scroll; la Librería tiene resultados *no
+  acotados* - `MaxResults=300` - en una franja con scroll por definición). NO homogeneizar el
+  tamaño de tarjeta con `ItemSlotCardCompact` (la compacta es cuadrada porque `SlotGridPanel`
+  hace celdas cuadradas; la de Librería es 80×86 porque lleva caption de nombre + botón
+  "Colocar" condicional - forzar la misma métrica mataría el caption o dejaría slots más altos
+  que anchos; lo que sí se unificó fue el lenguaje visual - `CornerRadius`, `BgElevatedBrush`,
+  rojo Calamity a 2px, escalón de hover -, no la métrica).
+
+**Verificación real** (arnés de UI Automation ampliado, mismo patrón ya establecido): objeto
+CON un prefijo real asignado colocado en Equipamiento vía `SetPrefix` (para probar de verdad la
+corrección 1, no un objeto sin prefijo que no habría distinguido el bug de un falso OK) -
+`PrefixDisplay` confirmado poblado y legible. Clic real (`InvokePattern`) en la píldora
+"Vanidad" de Equipamiento confirma que `EquipmentGroup.Current` cambia de verdad
+(`GridWidth=800`, `Columns=5`, tal como se esperaba tras el rediseño estructural). Búsqueda real
+en la Librería (`SearchText="Sword"`, 3 resultados) renderiza las tarjetas nuevas (tooltip
+compuesto/hover/trimming) sin ninguna excepción. Las 5 pestañas siguen navegables sin excepción
+tras todos los cambios. Sin `ultimo-error.log` ni excepciones de `Dispatcher`.
+`dotnet build`/`dotnet test` en verde (128/128, sin regresiones).

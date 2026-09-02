@@ -54,6 +54,16 @@ public partial class EquipmentGroupViewModel : ObservableObject
 
     public ObservableCollection<ItemSlotViewModel> CurrentSlots => _byKey[(SelectedLoadout, SelectedKind)].Slots;
 
+    // Pregunta a Opus sobre el diseño (2-sep-2026, segunda consulta - "haz lo mismo para
+    // equipamientos"): Equipamiento era el unico sitio con su propio bloque Viewbox+ItemsControl
+    // a medida en el XAML en vez de reusar ContainerTabTemplate como Monturas/Monedas/Almacenes -
+    // exponer el ContainerViewModel completo (no solo sus Slots) permite que el XAML haga
+    // <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource
+    // ContainerTabTemplate}" /> y herede automaticamente el fondo de "hueco vacio", el tooltip
+    // compuesto y cualquier arreglo futuro de esa plantilla compartida, sin poder volver a
+    // divergir.
+    public ContainerViewModel Current => _byKey[(SelectedLoadout, SelectedKind)];
+
     public EquipmentGroupViewModel(CharacterFileService service, Action<ItemSlotViewModel> requestPickForSlot,
         Dictionary<string, GameItem[]> mergedContainers, int realLoadoutCount)
     {
@@ -86,7 +96,10 @@ public partial class EquipmentGroupViewModel : ObservableObject
             EquipmentKind.Dyes => $"loadout{loadout}Dyes",
             _ => throw new ArgumentOutOfRangeException(nameof(kind)),
         };
-        _byKey[(loadout, kind)] = new ContainerViewModel(key, displayName, slots);
+        // Columns=5: PlrLoadout.Items/Social/Dyes son siempre 10 slots reales en forma 5x2 -
+        // sin esto GridWidth usaria el default de 10 columnas y el Viewbox escalaria una tira
+        // larga y fina de 10x1 en vez del bloque compacto real.
+        _byKey[(loadout, kind)] = new ContainerViewModel(key, displayName, slots) { Columns = 5 };
     }
 
     [RelayCommand]
@@ -96,6 +109,7 @@ public partial class EquipmentGroupViewModel : ObservableObject
         SelectedLoadout = option.Value;
         foreach (var o in LoadoutOptions) o.IsSelected = o == option;
         OnPropertyChanged(nameof(CurrentSlots));
+        OnPropertyChanged(nameof(Current));
     }
 
     [RelayCommand]
@@ -105,5 +119,6 @@ public partial class EquipmentGroupViewModel : ObservableObject
         SelectedKind = (EquipmentKind)option.Value;
         foreach (var o in KindOptions) o.IsSelected = o == option;
         OnPropertyChanged(nameof(CurrentSlots));
+        OnPropertyChanged(nameof(Current));
     }
 }
