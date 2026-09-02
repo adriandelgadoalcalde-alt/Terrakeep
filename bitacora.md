@@ -3351,3 +3351,32 @@ reordene sus bloques (Monedas/Munición debajo del centro en vez de al lado) en 
 todavía más pequeñas que el mínimo actual - la respuesta actual (los 3 laterales/centro con
 `MinWidth`/`MinHeight` reales) ya evita solape y pérdida de contenido en todo el rango
 soportado, pero no "reflowea" mas allá de eso.
+
+### Corrección real del usuario tras ver el resultado: la forma de los botones era al revés
+
+"los botones era al reves me gustaban mas los otros la has cagado en eso era al reves todos los
+botones como estaban en la ventana de builds donde apretabas autoequipar" - el punto 6 de
+arriba interpretó mal el pedido: puse `CornerRadius="999"` en el estilo BASE de `Button` para
+forzar píldora completa en todos los botones, pero ese es el MISMO estilo que ya usaba
+"Auto-equipar" (`Tag="Accent"`) - el cambio también le cambió la forma AL PROPIO botón de
+referencia que el usuario quería replicar en todos los demás. "Auto-equipar" dejó de parecerse
+a sí mismo, y el resultado fue que TODO se volvió el mismo óvalo en vez de que los demás
+botones se parecieran a como "Auto-equipar" ya estaba antes.
+
+Corregido: `CornerRadius` del `Button` base vuelve a `8` (la forma real que "Auto-equipar" ya
+tenía, esquinas redondeadas normales, nunca fue una píldora completa) - lo que hacía "moderno"
+a "Auto-equipar" frente a los botones planos siempre fue el degradado/elevación/animación
+(`Tag`), nunca la forma. `PrefixMetaButton`/`PrefixGroupButton` (la fusión con el estilo base,
+`Tag`-driven, del punto 6) se queda tal cual - con `CornerRadius=8` heredado del base ya
+replican exactamente el aspecto real de "Auto-equipar", que es lo que se pedía desde el
+principio. `BarButton` se queda (su comentario se actualizó: su razón real de existir nunca fue
+el radio - las 2 cabeceras plegables necesitan `HorizontalAlignment="Stretch"` en el
+`ContentPresenter` para que su `DockPanel` interno con "▲ Plegar" a la derecha se estire de
+verdad, cosa que el `Button` base no permite aunque se le ponga
+`HorizontalContentAlignment="Stretch"` a mano - mismo gotcha de plantilla-manda-sobre-propiedad
+ya documentado varias veces en este archivo).
+
+**Verificación real**: captura PNG real de Builds ("Auto-equipar"/"Vanilla") y de Almacenes
+("Fragua del Defensor" seleccionado) lado a lado - ambos coinciden exactamente en forma
+(esquinas redondeadas, no píldora) y tratamiento (degradado morado/naranja + texto en negrita).
+`dotnet build` limpio, `dotnet test` 134/134.
