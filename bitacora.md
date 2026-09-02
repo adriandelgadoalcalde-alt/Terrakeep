@@ -2335,3 +2335,59 @@ término oficial real del propio juego.
 **Verificado con arnés de consola**: volcado completo del árbol `Calamity (mod)` (177 líneas,
 3 niveles) sin ningún resto de `FurnitureXxx` sin traducir. `dotnet build`/`dotnet test` en
 verde (128/128).
+
+## Acceso remoto (Chrome Remote Desktop) + Terrakeep en blanco vía remoto (2-sep-2026)
+
+Pedido explícito del usuario ("instala alguna cosa para que pueda ver y controlar mi pc a
+distancia... por que ahora no estoy"). Preguntado directamente qué herramienta (Chrome Remote
+Desktop/AnyDesk/RustDesk/otra) antes de instalar nada - decisión de seguridad real que le
+corresponde a él, no algo a decidir por autonomía de herramientas de desarrollo. Eligió
+**Chrome Remote Desktop**.
+
+Instalado el host oficial (`chromeremotedesktophost.msi`, descargado de
+`dl.google.com/edgedl/chrome-remote-desktop/`, instalación silenciosa con `msiexec /qn`).
+Emparejamiento real completado con el flujo "headless" oficial de Google
+(`remotedesktop.google.com/headless`, el usuario generó el código de un solo uso desde su
+móvil con su propia cuenta de Google - la contraseña de Google nunca pasó por esta sesión).
+**Detalle real encontrado**: el comando que copia esa página NO incluye `--pin`, así que
+`remoting_start_host.exe` se queda esperando el PIN por `stdin` - en un proceso lanzado sin
+consola interactiva de verdad (`GetConsoleMode failed` en bucle) eso nunca termina. Arreglado
+pasando `--pin=<8 dígitos generados>` directamente como argumento del propio comando -
+"Host started successfully", servicio `chromoting` en marcha (`Running`, arranque
+`Automatic`, sobrevive a reinicios).
+
+### Diagnóstico real de "no me muestra la pantalla" + "Terrakeep en blanco"
+
+Investigado con las herramientas del propio sistema (nunca a ciegas):
+- `query session` → sesión `adrian` en la consola (`ID 1`) **Activo**, no bloqueada; sin
+  proceso `LogonUI.exe` (confirma que no está en la pantalla de bloqueo).
+- Configuración de energía (`powercfg /query`) → apagado de pantalla y suspensión con
+  corriente alterna ambos a `0x00000000` (nunca) - no es un PC que se duerma solo.
+- Resolución real activa (`System.Windows.Forms.Screen`) → `2560x1440`, 32 bits, monitor
+  primario - hay una superficie de escritorio real y normal, no una pantalla virtual
+  degradada.
+- Registro de sucesos de Windows (`Get-WinEvent -ProviderName chromoting`) → conexiones y
+  desconexiones reales del cliente en minutos seguidos (`09:21` → desconecta `09:24` →
+  reconecta → desconecta de nuevo) - encaja con "veo la pantalla en blanco, lo intento otra
+  vez".
+
+**Causa real 1 - "no me muestra la pantalla" en general**: fallo conocido y documentado de
+Chrome Remote Desktop en Windows con la API de captura `DXGI Desktop Duplication` (se queda
+en negro/en blanco de forma intermitente sin que el escritorio real esté roto) - el arreglo
+práctico real es reiniciar el propio servicio `chromoting`
+(`Restart-Service chromoting -Force`), que reinicializa la tubería de captura. Hecho.
+
+**Causa real 2 - Terrakeep específicamente en blanco**: bug real y bien documentado de WPF -
+usa renderizado por hardware/DirectX de serie, que puede fallar en blanco al capturarse via
+Escritorio Remoto/CRD aunque el resto del escritorio se vea bien (la superficie compuesta por
+DirectX de una ventana WPF no siempre la captura bien esa misma API `DXGI Desktop
+Duplication`, incluso cuando SÍ captura el resto del escritorio con normalidad). Arreglado en
+`App.xaml.cs` (`OnStartup`, antes de crear cualquier ventana):
+`RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;` - fuerza a WPF a dibujar por
+software en vez de por hardware (mismo resultado final en pantalla local, pero ahora se
+captura bien en remoto). Recompilado y **relanzada la instancia real de Terrakeep** que el
+usuario tenía abierta (cerrada primero, `dotnet build` no puede sobrescribir el `.dll` de un
+proceso vivo - regla ya conocida del proyecto, "no hay hot-reload").
+
+`dotnet build`/`dotnet test` en verde (128/128). Pendiente de que el usuario confirme en vivo
+si ya ve la pantalla y Terrakeep bien por Chrome Remote Desktop tras estos dos arreglos.
