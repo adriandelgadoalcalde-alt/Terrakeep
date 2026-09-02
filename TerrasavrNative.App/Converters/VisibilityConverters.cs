@@ -72,6 +72,18 @@ public sealed class CountToVisibilityConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+// Para la barra de paginacion real de la Libreria (Fase 2, octava pasada): PageCount nunca baja
+// de 1 (Math.Max(1, ...)), asi que CountToVisibilityConverter (count > 0) la dejaria siempre
+// visible - esta oculta la barra cuando todo cabe en una sola pagina.
+public sealed class CountGreaterThanOneToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value is int count && count > 1 ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 // Inverso de BooleanToVisibilityConverter - true -> Collapsed, false -> Visible (para el
 // mensaje "sin seleccion"/"no admite prefijos" del panel Editar compartido, que se muestra
 // justo cuando la condicion contraria NO se cumple).

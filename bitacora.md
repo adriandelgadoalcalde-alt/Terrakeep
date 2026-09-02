@@ -3380,3 +3380,88 @@ ya documentado varias veces en este archivo).
 ("Fragua del Defensor" seleccionado) lado a lado - ambos coinciden exactamente en forma
 (esquinas redondeadas, no píldora) y tratamiento (degradado morado/naranja + texto en negrita).
 `dotnet build` limpio, `dotnet test` 134/134.
+
+### Octava pasada - crash real (KeyNotFoundException) + Fase 1 (los 4 bugs estructurales)
+
+Feedback denso con 3 capturas: crash real al cargar un personaje real y pulsar "Armas" en la
+Librería (`KeyNotFoundException: The given key '5462' was not present in the dictionary`,
+`ultimo-error.log` real, stack hasta `LibraryViewModel.cs:127`); solape persistente
+Monedas/Munición-Armadura; fondo fantasma de armadura desaparecido tras el crash; Librería
+"cada vez más pequeña" y con un bug donde aparecía expandida sin pasar por su propio botón;
+espacio mal aprovechado tanto en grande como en pequeño. Pedido explícito de que Opus se tomara
+su tiempo con una investigación real (decompilado de Terraria + Terrasavr real) antes de
+ejecutar nada.
+
+**Causa real del crash**: el árbol real de la Librería (extraído de Terrasavr) referencia al
+menos un id que `VanillaItemCatalog` no tiene en su diccionario de nombres (cobertura conocida,
+no al 100%). `ApplyFilter()` indexaba con `_byId[id]` (lanza si falta la clave) en vez de
+`_byId.GetValueOrDefault(id)`. Corregido en `LibraryViewModel.cs` Y `BuffLibraryViewModel.cs`
+(mismo patrón, mismo riesgo) - un id que el árbol conoce pero el catálogo no se descarta en
+silencio, ya no tumba la app entera. `dotnet build`/`test` 134/134 en verde. Commit 1331ac6.
+
+**Fase 1 (consulta a Opus, con investigación real ya hecha antes de proponer nada)**: el bug de
+"Librería expandida sin su botón" resultó ser un enganche unidireccional real -
+`RequestPickForSlot`/`RequestPickForBuffSlot` ponían `IsLibraryCollapsed = false` cada vez que
+se pedía elegir un objeto, pero nada lo devolvía a `true` al terminar - la propiedad dejaba de
+reflejar el toggle real del usuario desde el primer "Elegir...". Arreglado separando el estado:
+`IsLibraryCollapsed` es AHORA puramente la preferencia del usuario (nunca tocada por el flujo de
+selección), y una propiedad derivada nueva `IsLibraryVisible = !IsLibraryCollapsed ||
+Library.IsPicking` es la que controla de verdad la fila/visibilidad - así "elegir objeto" fuerza
+visible sin pisar el toggle, y al cancelar/colocar vuelve a lo que el usuario tenía. Mismo
+arreglo para Buffs. El bug de "colapsada seguía reservando 150-238px" era la fila de Grid
+llevando una `MinHeight` fija sin importar el estado - ahora `RowDefinition.Height`/`MinHeight`
+están *bindeados* a `IsLibraryVisible` vía dos convertidores nuevos (`BoolToGridLengthConverter`,
+`BoolToDoubleConverter`) confirmado con medición real vía UI Automation: fila desplegada
+272,4px, colapsada 46,6px (solo la barra del botón). El `Height="380"` fijo de Buffs (mismo bug
+de "el de arriba subvenciona al de abajo" ya resuelto en Objetos en la 7ª pasada, pero que se
+quedó sin arreglar aquí) recibió el mismo esquema `3*`/`IsBuffLibraryVisible`. Verificado con
+captura real `resize-buffs-minimo.png`: sin solape. `dotnet build`/`test` 134/134. Commit
+83fd33c.
+
+La hipótesis sobre "fondo de armadura desaparecido" (probable artefacto visual de la pantalla
+en el estado degradado post-crash, no un bug nuevo) queda pendiente de confirmar/refutar en la
+próxima ronda de pruebas del usuario - no se pudo reproducir de forma aislada.
+
+### Octava pasada, Fase 2 - LibraryGridPanel + paginación real (el núcleo del rediseño)
+
+Con el crash y los 4 bugs estructurales cerrados, se ejecuta el núcleo del plan que Opus diseñó
+tras investigar a fondo el Bestiario decompilado de Terraria
+(`Terraria.GameContent.UI.Elements.UIBestiaryEntryGrid`) y la Librería real de Terrasavr
+(`app.TabLibrary`/`app.TabShelf`, paginación real por bloques de 40). La rejilla de resultados
+de la Librería (Objetos y Buffs) tenía scroll interno y una celda que se deformaba con pocos
+resultados - el patrón real del juego es justo el contrario: celda CASI FIJA, columnas/filas
+VARIABLES según el espacio real disponible, y el desbordamiento se resuelve con PÁGINAS, nunca
+con scroll ni encogiendo la celda por debajo de un mínimo legible.
+
+Nuevo `Controls/LibraryGridPanel.cs` (hermano de `SlotGridPanel`, filosofía a propósito
+contraria): mide cuántas columnas caben a `PreferredCell` (64px), calcula el tamaño real de
+celda acotado a `[MinCell, MaxCell]` (44-76px), cuántas filas caben en el alto real disponible,
+y publica `cols*rows` como `PageCapacity` hacia el ViewModel (`Mode=OneWayToSource`, publicado
+vía `Dispatcher.BeginInvoke` para no disparar "Layout cycle detected" al re-medir dentro de su
+propio `MeasureOverride`). `LibraryViewModel`/`BuffLibraryViewModel`: `ApplyFilter()` ya no
+recorta a `MaxResults=300` fijo - ahora separa `_filtered` (TODO lo que casa con el filtro, sin
+tope) de `Results` (solo la página actual, `_filtered.Skip(PageIndex*PageCapacity).Take(...)`),
+con `PageCount`/`RangeText` (calco real de `GetRangeText()` del Bestiario, "N-M de T") y
+comandos `NextPage`/`PrevPage` con `CanExecute` acotado a los límites reales. XAML: se quitó el
+`ScrollViewer` que envolvía la rejilla de resultados en Objetos y Buffs, sustituido por
+`LibraryGridPanel` directo + una barra `‹ RangeText ›` debajo (oculta cuando todo cabe en una
+sola página, convertidor nuevo `CountGreaterThanOneToVisibilityConverter` - el ya existente
+`CountToVis` no servía porque `PageCount` nunca baja de 1).
+
+**Verificación real** (UI Automation, búsqueda amplia "a" sobre el catálogo completo, 7429
+resultados reales): a 1180×860, `PageCapacity=24`, `Results.Count` nunca supera esa capacidad,
+`NextPage`/`PrevPage` cambian de verdad el primer id mostrado (10 → 1024) y vuelven a 0
+correctamente; a 1080×700 (mínimo real), `PageCapacity=10` (una sola fila, coherente con el
+`MinHeight=200` real de la fila entera menos cabecera/buscador/resumen/paginación) - sin
+scroll, sin desbordar, capturas PNG reales confirmando cero solape en ambos tamaños. Mismo
+mecanismo confirmado en `BuffLibraryViewModel` (`PageCapacity=10`, `PageCount=2` con 11
+resultados reales). `dotnet build` limpio, `dotnet test` 134/134.
+
+**Pendiente, documentado con claridad** (siguientes fases del propio plan de Opus, no
+ejecutadas todavía): Fase 3 (navegador de un solo nivel + migas de pan sustituyendo el árbol
+indentado SOLO en la tira de la Librería, dejando el árbol tal cual en Investigación, donde sí
+tiene sentido); Fase 4 (gramática de búsqueda real de Terrasavr: coma=OR, espacio=AND, `#id`,
+`#a-b`, `.texto` para tooltip); Fase 5 (`MaxWidth`+centrado en el borde de Equipamiento, panel
+Editar y columna de carpetas con anchos relativos - la de mayor riesgo de regresión según el
+propio Opus, revisita el binding `ReferenceWidth` de la 4ª/5ª pasada); Fase 6 (panel de
+detalle opcional, explícitamente aplazable); Fase 7 (matriz de verificación completa).

@@ -20,15 +20,41 @@ namespace TerrasavrNative.App.ViewModels;
 // puesto, el objeto se coloca en ese slot y se dispara ItemPlaced para volver a Personaje.
 public partial class LibraryViewModel : ObservableObject
 {
-    private const int MaxResults = 300;
-
     private readonly List<LibraryItemViewModel> _all;
     private readonly Dictionary<int, LibraryItemViewModel> _byId;
+    // Todo lo que casa con el filtro actual (categoria/restriccion/busqueda), SIN paginar -
+    // Results (mas abajo) es solo la PAGINA actual, lo que de verdad se manda a la rejilla.
+    private List<LibraryItemViewModel> _filtered = [];
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _resultsSummary = string.Empty;
     [ObservableProperty] private ItemSlotViewModel? _pickTarget;
     [ObservableProperty] private CategoryNodeViewModel? _selectedCategory;
+
+    // Paginacion real (consulta a Opus, octava pasada - patron real del Bestiario de Terraria
+    // decompilado, UIBestiaryEntryGrid: celda casi fija, columnas/filas variables, desborde
+    // resuelto con paginas, nunca con scroll). PageCapacity lo escribe LibraryGridPanel
+    // (Mode=OneWayToSource, ver MainWindow.xaml) con cuantas tarjetas caben de VERDAD en el
+    // espacio real disponible - 40 de partida (el mismo que ya usaba el arbol para paginar
+    // carpetas hoja, LibraryCategoryTreeBuilder.LeafPageSize) hasta que el primer layout real
+    // llegue.
+    [ObservableProperty] private int _pageCapacity = 40;
+    [ObservableProperty] private int _pageIndex;
+
+    public int PageCount => PageCapacity > 0 ? Math.Max(1, (int)Math.Ceiling(_filtered.Count / (double)PageCapacity)) : 1;
+
+    // Calco real de UIBestiaryEntryGrid.GetRangeText() ("{desde}-{hasta} ({total})") - consulta
+    // a Opus, octava pasada: el mismo idioma que ya usa Terraria de verdad para "N-M de T".
+    public string RangeText
+    {
+        get
+        {
+            if (_filtered.Count == 0) return "0 resultados";
+            int from = PageIndex * PageCapacity + 1;
+            int to = Math.Min(_filtered.Count, from + PageCapacity - 1);
+            return PageCount > 1 ? $"{from}-{to} de {_filtered.Count}" : $"{_filtered.Count} resultado(s)";
+        }
+    }
 
     public bool IsPicking => PickTarget != null;
 
@@ -105,8 +131,6 @@ public partial class LibraryViewModel : ObservableObject
 
     private void ApplyFilter()
     {
-        Results.Clear();
-
         // Bug real encontrado y corregido 2-sep-2026 (pedido explicito: "reordenar todos los
         // ítems... para que coincidan 100 por 100 de como lo tenemos en terrasav"): filtrar
         // _all por ItemIdSet.Contains (un HashSet, sin orden garantizado) daba el orden
@@ -142,19 +166,62 @@ public partial class LibraryViewModel : ObservableObject
 
         if (!hasSearch && SelectedCategory == null && !hasSlotRestriction)
         {
+            _filtered = [];
+            Results.Clear();
+            PageIndex = 0;
             ResultsSummary = $"{_all.Count} objetos en total (vanilla + Calamity) - escribe para buscar o elige una carpeta.";
+            OnPropertyChanged(nameof(PageCount));
+            OnPropertyChanged(nameof(RangeText));
             return;
         }
 
-        var list = matches.ToList();
-        foreach (var item in list.Take(MaxResults)) Results.Add(item);
+        // Paginacion real (consulta a Opus, octava pasada): _filtered guarda TODO lo que casa
+        // (ya no hay tope de 300 - con paginas de verdad, el catalogo entero es navegable,
+        // nunca se renderizan mas de PageCapacity tarjetas a la vez), UpdatePage() manda solo
+        // la pagina actual a Results.
+        _filtered = matches.ToList();
+        PageIndex = 0;
+        UpdatePage();
 
         string categoryLabel = SelectedCategory != null ? $" en \"{SelectedCategory.Name}\"" : string.Empty;
         string restrictionLabel = hasSlotRestriction ? " válidos para este slot" : string.Empty;
-        ResultsSummary = list.Count > MaxResults
-            ? $"Mostrando {MaxResults} de {list.Count} resultados{restrictionLabel}{categoryLabel} - afina la busqueda."
-            : $"{list.Count} resultado(s){restrictionLabel}{categoryLabel}.";
+        ResultsSummary = $"{categoryLabel}{restrictionLabel}".Trim();
+        if (ResultsSummary.Length == 0) ResultsSummary = "Resultados de la búsqueda";
     }
+
+    // Manda solo la pagina actual a Results (lo que la rejilla real renderiza) - se llama al
+    // cambiar de filtro, de pagina, o cuando LibraryGridPanel publica un PageCapacity real
+    // nuevo (el espacio disponible cambio, ej. al redimensionar la ventana).
+    private void UpdatePage()
+    {
+        PageIndex = Math.Clamp(PageIndex, 0, PageCount - 1);
+        Results.Clear();
+        foreach (var item in _filtered.Skip(PageIndex * PageCapacity).Take(Math.Max(1, PageCapacity)))
+            Results.Add(item);
+        OnPropertyChanged(nameof(PageCount));
+        OnPropertyChanged(nameof(RangeText));
+        NextPageCommand.NotifyCanExecuteChanged();
+        PrevPageCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnPageCapacityChanged(int value) => UpdatePage();
+    partial void OnPageIndexChanged(int value)
+    {
+        Results.Clear();
+        foreach (var item in _filtered.Skip(PageIndex * PageCapacity).Take(Math.Max(1, PageCapacity)))
+            Results.Add(item);
+        OnPropertyChanged(nameof(RangeText));
+        NextPageCommand.NotifyCanExecuteChanged();
+        PrevPageCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoNextPage))]
+    private void NextPage() => PageIndex++;
+    private bool CanGoNextPage() => PageIndex < PageCount - 1;
+
+    [RelayCommand(CanExecute = nameof(CanGoPrevPage))]
+    private void PrevPage() => PageIndex--;
+    private bool CanGoPrevPage() => PageIndex > 0;
 
     partial void OnPickTargetChanged(ItemSlotViewModel? value)
     {

@@ -1232,28 +1232,28 @@
                                                      Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
                                                      MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4" />
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding Library.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                            <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada: "la libreria
-                                                 sigue sin tener las rejillas como en inventario... no debe tener scroll a
-                                                 menos que sea una categoria que logicamente tiene muchos ítems"). Misma
-                                                 SlotGridPanel que el resto de la app - con estos parametros reales
-                                                 (medidos contra la franja real de ~772x186px) no aparece scroll hasta
-                                                 ~48 resultados (4 filas x 12 columnas a MinCell=40), y con pocos
-                                                 resultados la celda crece hasta MaxCell=96 topada por ReferenceColumns=10
-                                                 (~73px aqui) - ni vacio ni deforme. MinCell=40 en vez de 44 a proposito:
-                                                 con 44 el scroll aparecia por solo 2px de diferencia real (4*44+12=188
-                                                 contra 186 disponibles). Sin AvailableHeight el panel mediria con alto
-                                                 infinito y SIEMPRE elegiria MaxCell + SIEMPRE scrollearia. -->
-                                            <ScrollViewer x:Name="LibraryResultsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                                <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <controls:SlotGridPanel Columns="12" MinCell="40" MaxCell="90" Gap="4"
-                                                                                     ReferenceColumns="10"
-                                                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
-                                                        </ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                </ItemsControl>
-                                            </ScrollViewer>
+                                            <!-- Rejilla de CATALOGO real (Fase 2, octava pasada, consulta a Opus -
+                                                 patron real del Bestiario decompilado de Terraria, UIBestiaryEntryGrid:
+                                                 celda CASI FIJA, columnas/filas VARIABLES, desbordamiento resuelto con
+                                                 PAGINACION, nunca con scroll). LibraryGridPanel mide cuantas tarjetas
+                                                 caben de verdad en el espacio real disponible y lo publica en
+                                                 Library.PageCapacity (Mode=OneWayToSource) - el ViewModel corta
+                                                 Results a exactamente esa pagina, por eso nunca hace falta scroll aqui. -->
+                                            <DockPanel DockPanel.Dock="Bottom" Margin="0,4,0,0"
+                                                       Visibility="{Binding Library.PageCount, Converter={StaticResource PageCountToVis}}">
+                                                <Button DockPanel.Dock="Left" Content="‹" Command="{Binding Library.PrevPageCommand}" Padding="10,2" />
+                                                <Button DockPanel.Dock="Right" Content="›" Command="{Binding Library.NextPageCommand}" Padding="10,2" />
+                                                <TextBlock Text="{Binding Library.RangeText}" Style="{StaticResource CaptionText}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </DockPanel>
+                                            <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <controls:LibraryGridPanel PreferredCell="64" MinCell="44" MaxCell="76" Gap="4" MaxColumns="30"
+                                                                                    PageCapacity="{Binding Library.PageCapacity, Mode=OneWayToSource}" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                            </ItemsControl>
                                         </DockPanel>
                                     </Grid>
                                 </DockPanel>
@@ -1362,17 +1362,23 @@
                                                      Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
                                                      MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4" />
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding BuffLibrary.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                                <ItemsControl ItemsSource="{Binding BuffLibrary.Results}" ItemTemplate="{StaticResource BuffLibraryCardTemplate}">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate>
-                                                            <controls:SlotGridPanel Columns="11" MinCell="40" MaxCell="90" Gap="4"
-                                                                                     ReferenceColumns="10"
-                                                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
-                                                        </ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                </ItemsControl>
-                                            </ScrollViewer>
+                                            <!-- Mismo LibraryGridPanel real que Objetos (Fase 2, octava pasada) - celda
+                                                 casi fija, columnas/filas variables, paginacion real en vez de scroll. -->
+                                            <DockPanel DockPanel.Dock="Bottom" Margin="0,4,0,0"
+                                                       Visibility="{Binding BuffLibrary.PageCount, Converter={StaticResource PageCountToVis}}">
+                                                <Button DockPanel.Dock="Left" Content="‹" Command="{Binding BuffLibrary.PrevPageCommand}" Padding="10,2" />
+                                                <Button DockPanel.Dock="Right" Content="›" Command="{Binding BuffLibrary.NextPageCommand}" Padding="10,2" />
+                                                <TextBlock Text="{Binding BuffLibrary.RangeText}" Style="{StaticResource CaptionText}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </DockPanel>
+                                            <ItemsControl ItemsSource="{Binding BuffLibrary.Results}" ItemTemplate="{StaticResource BuffLibraryCardTemplate}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <controls:LibraryGridPanel PreferredCell="64" MinCell="44" MaxCell="76" Gap="4" MaxColumns="30"
+                                                                                    PageCapacity="{Binding BuffLibrary.PageCapacity, Mode=OneWayToSource}" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                            </ItemsControl>
                                         </DockPanel>
                                     </Grid>
                                 </DockPanel>

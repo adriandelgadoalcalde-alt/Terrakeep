@@ -14,15 +14,36 @@ namespace TerrasavrNative.App.ViewModels;
 // buff se coloca en ese slot.
 public partial class BuffLibraryViewModel : ObservableObject
 {
-    private const int MaxResults = 300;
-
     private readonly List<BuffCatalogEntryViewModel> _all;
     private readonly Dictionary<int, BuffCatalogEntryViewModel> _byId;
+    // Mismo criterio que LibraryViewModel (objetos): _filtered guarda TODO lo que casa, sin
+    // paginar - Results es solo la pagina actual, lo que de verdad se manda a la rejilla.
+    private List<BuffCatalogEntryViewModel> _filtered = [];
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _resultsSummary = string.Empty;
     [ObservableProperty] private BuffSlotViewModel? _pickTarget;
     [ObservableProperty] private CategoryNodeViewModel? _selectedCategory;
+
+    // Paginacion real, mismo patron que LibraryViewModel (consulta a Opus, octava pasada -
+    // Bestiario de Terraria decompilado: celda casi fija, columnas/filas variables, desborde
+    // resuelto con paginas, nunca con scroll). PageCapacity lo escribe LibraryGridPanel
+    // (Mode=OneWayToSource, ver MainWindow.xaml).
+    [ObservableProperty] private int _pageCapacity = 40;
+    [ObservableProperty] private int _pageIndex;
+
+    public int PageCount => PageCapacity > 0 ? Math.Max(1, (int)Math.Ceiling(_filtered.Count / (double)PageCapacity)) : 1;
+
+    public string RangeText
+    {
+        get
+        {
+            if (_filtered.Count == 0) return "0 resultados";
+            int from = PageIndex * PageCapacity + 1;
+            int to = Math.Min(_filtered.Count, from + PageCapacity - 1);
+            return PageCount > 1 ? $"{from}-{to} de {_filtered.Count}" : $"{_filtered.Count} resultado(s)";
+        }
+    }
 
     public bool IsPicking => PickTarget != null;
 
@@ -88,8 +109,6 @@ public partial class BuffLibraryViewModel : ObservableObject
 
     private void ApplyFilter()
     {
-        Results.Clear();
-
         bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
         // Mismo arreglo real que LibraryViewModel.ApplyFilter (KeyNotFoundException real
         // reportada 2-sep-2026) - un id que el arbol conoce pero el catalogo no se descarta
@@ -103,18 +122,53 @@ public partial class BuffLibraryViewModel : ObservableObject
 
         if (!hasSearch && SelectedCategory == null)
         {
+            _filtered = [];
+            Results.Clear();
+            PageIndex = 0;
             ResultsSummary = $"{_all.Count} buffs en total (vanilla + Calamity) - escribe para buscar o elige una carpeta.";
+            OnPropertyChanged(nameof(PageCount));
+            OnPropertyChanged(nameof(RangeText));
             return;
         }
 
-        var list = matches.ToList();
-        foreach (var item in list.Take(MaxResults)) Results.Add(item);
+        _filtered = matches.ToList();
+        PageIndex = 0;
+        UpdatePage();
 
         string categoryLabel = SelectedCategory != null ? $" en \"{SelectedCategory.Name}\"" : string.Empty;
-        ResultsSummary = list.Count > MaxResults
-            ? $"Mostrando {MaxResults} de {list.Count} resultados{categoryLabel} - afina la busqueda."
-            : $"{list.Count} resultado(s){categoryLabel}.";
+        ResultsSummary = categoryLabel.Length > 0 ? categoryLabel.Trim() : "Resultados de la búsqueda";
     }
+
+    private void UpdatePage()
+    {
+        PageIndex = Math.Clamp(PageIndex, 0, PageCount - 1);
+        Results.Clear();
+        foreach (var item in _filtered.Skip(PageIndex * PageCapacity).Take(Math.Max(1, PageCapacity)))
+            Results.Add(item);
+        OnPropertyChanged(nameof(PageCount));
+        OnPropertyChanged(nameof(RangeText));
+        NextPageCommand.NotifyCanExecuteChanged();
+        PrevPageCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnPageCapacityChanged(int value) => UpdatePage();
+    partial void OnPageIndexChanged(int value)
+    {
+        Results.Clear();
+        foreach (var item in _filtered.Skip(PageIndex * PageCapacity).Take(Math.Max(1, PageCapacity)))
+            Results.Add(item);
+        OnPropertyChanged(nameof(RangeText));
+        NextPageCommand.NotifyCanExecuteChanged();
+        PrevPageCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoNextPage))]
+    private void NextPage() => PageIndex++;
+    private bool CanGoNextPage() => PageIndex < PageCount - 1;
+
+    [RelayCommand(CanExecute = nameof(CanGoPrevPage))]
+    private void PrevPage() => PageIndex--;
+    private bool CanGoPrevPage() => PageIndex > 0;
 
     partial void OnPickTargetChanged(BuffSlotViewModel? value) => OnPropertyChanged(nameof(IsPicking));
 
