@@ -3561,3 +3561,44 @@ riesgo señalado por Opus. Captura a la ventana mínima real (1080×700,
 `fase5-equip-minimo-tras-cambio.png`) confirma que nada de lo ya arreglado en la 7ª/8ª pasada
 se rompió. Pase de regresión completo del arnés (todas las fases 2-5 juntas) sin ningún FALLO.
 `dotnet build` limpio, `dotnet test` 134/134.
+
+### Octava pasada, Fase 6 (decisión: no ejecutada) y Fase 7 - matriz final de verificación
+
+**Fase 6** (panel de detalle opcional para ventanas anchas, mostrando nombre/stats/"Colocar" del
+objeto bajo el cursor): el propio Opus la marcó como explícitamente opcional/aplazable en su
+plan. Revisando `LibraryCardTemplate`/`BuffLibraryCardTemplate` (`MainWindow.xaml`), ya existe un
+`ToolTip` real con nombre completo + `StatsTooltip`/`Description` al pasar el ratón, y el botón
+"Colocar" ya aparece inline en la propia tarjeta cuando `IsPicking` - un panel de detalle
+persistente sería en gran parte redundante con eso, sin ninguna queja concreta del usuario
+pidiéndolo de forma específica. Se decide NO implementarlo (coherente con "no añadir
+funcionalidad especulativa más allá de lo que hace falta") y dejarlo documentado aquí como
+decisión consciente, no como algo pendiente por olvido.
+
+**Fase 7** - matriz final de verificación de las Fases 1-5 juntas (criterios reales de Opus: sin
+scrollbar en la rejilla de resultados, sin solape/recorte, fila plegada ≤40px, hueco sobrante
+centrado), cubriendo combinaciones que ninguna fase por separado había probado juntas:
+
+- "Eligiendo" (`IsPicking`) a 1920×1080: banner + 44 tarjetas con "Colocar" conviven sin solape,
+  `IsLibraryVisible=True` a pesar de estar plegada por defecto (fuerza visible correctamente).
+- Investigación (árbol indentado viejo, sin tocar en esta pasada) a la resolución mínima real
+  (1080×700): sigue funcionando exactamente igual, cero regresión de rebote por las Fases 1-5
+  (comparten `LibraryCategoryTreeBuilder`/`CategoryNodeViewModel`).
+- Buffs "eligiendo" a la resolución mínima real: mismo mecanismo, sin solape.
+- Ambas librerías plegadas a la vez: `IsLibraryVisible`/`IsBuffLibraryVisible` caen a `False`
+  correctamente (la medición en píxeles de esa fila, 272,4/46,6px, ya se hizo en la Fase 1 y no
+  ha cambiado el binding que la produce).
+
+**Hallazgo real durante esta fase, no un bug de la app**: el propio arnés de pruebas usaba
+`SearchText = "a"` para ejercitar la paginación desde antes de la Fase 4 - tras portar la
+gramática real de Terrasavr (términos de menos de 2 caracteres se descartan por completo, ver
+Fase 4), esa búsqueda de 1 solo carácter empezó a devolver 0 resultados de verdad (comportamiento
+correcto, no un fallo), lo que en una primera captura de pantalla de Buffs "eligiendo" parecía
+una rejilla rota/vacía. Aislando la variable (mismo criterio ya establecido en este proyecto) se
+confirmó que era el propio término de prueba, ahora inválido por diseño - se corrigió a "de" (2+
+caracteres, término real y amplio) en el arnés, sin tocar ninguna línea de la app, y la captura
+siguiente mostró las tarjetas reales correctamente.
+
+Pase de regresión completo del arnés (Fases 1-7 juntas) sin ningún FALLO. `dotnet build` limpio,
+`dotnet test` 134/134. Con esto se da por cerrado el rediseño completo de la Librería pedido en
+la octava pasada ("revisad todas las versiones posibles, cread un plan en condiciones, tomaros
+vuestro tiempo, pensad con calma y después ejecutad").
