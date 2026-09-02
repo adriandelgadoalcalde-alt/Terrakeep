@@ -3381,224 +3381,44 @@ ya documentado varias veces en este archivo).
 (esquinas redondeadas, no píldora) y tratamiento (degradado morado/naranja + texto en negrita).
 `dotnet build` limpio, `dotnet test` 134/134.
 
-### Octava pasada - crash real (KeyNotFoundException) + Fase 1 (los 4 bugs estructurales)
+### Octava pasada - crash real + rediseño de la Librería (Fases 1-7), REVERTIDO por feedback directo
 
-Feedback denso con 3 capturas: crash real al cargar un personaje real y pulsar "Armas" en la
-Librería (`KeyNotFoundException: The given key '5462' was not present in the dictionary`,
-`ultimo-error.log` real, stack hasta `LibraryViewModel.cs:127`); solape persistente
-Monedas/Munición-Armadura; fondo fantasma de armadura desaparecido tras el crash; Librería
-"cada vez más pequeña" y con un bug donde aparecía expandida sin pasar por su propio botón;
-espacio mal aprovechado tanto en grande como en pequeño. Pedido explícito de que Opus se tomara
-su tiempo con una investigación real (decompilado de Terraria + Terrasavr real) antes de
-ejecutar nada.
+Tras el arreglo de botones de arriba, esta pasada añadió: (1) arreglo real de un crash
+(`KeyNotFoundException` al elegir "Armas" en la Librería con un personaje real cargado,
+`_byId[id]` sin comprobar existencia) y (2) un rediseño completo de la Librería en 7 fases
+(navegador de un solo nivel con migas de pan en vez del árbol indentado, paginación real en
+vez de scroll, gramática de búsqueda real de Terrasavr, centrado del bloque de Equipamiento a
+tamaño natural en pantallas grandes, matriz final de verificación) - todo consultado con Opus e
+investigado contra el código real decompilado y la propia Terrasavr-Calamity, con verificación
+real vía UI Automation en cada fase y cero fallos en el pase de regresión final.
 
-**Causa real del crash**: el árbol real de la Librería (extraído de Terrasavr) referencia al
-menos un id que `VanillaItemCatalog` no tiene en su diccionario de nombres (cobertura conocida,
-no al 100%). `ApplyFilter()` indexaba con `_byId[id]` (lanza si falta la clave) en vez de
-`_byId.GetValueOrDefault(id)`. Corregido en `LibraryViewModel.cs` Y `BuffLibraryViewModel.cs`
-(mismo patrón, mismo riesgo) - un id que el árbol conoce pero el catálogo no se descarta en
-silencio, ya no tumba la app entera. `dotnet build`/`test` 134/134 en verde. Commit 1331ac6.
+**El usuario rechazó el rediseño completo tras verlo**: *"quiero la estetica de antes del
+cambio no ha solucionado lo que yo creia"*. Preguntado para acotar qué revertir exactamente
+(qué parte de la estética, y qué seguía sin arreglarse), la respuesta fue clara: *"me refiero a
+volver antes de esta ronda las 7 fases que has echo volveria al principio"* y el motivo real:
+*"Es más incómodo de usar que antes"* - no un bug, un rechazo directo de la nueva forma de
+navegar/interactuar con la Librería frente a la anterior.
 
-**Fase 1 (consulta a Opus, con investigación real ya hecha antes de proponer nada)**: el bug de
-"Librería expandida sin su botón" resultó ser un enganche unidireccional real -
-`RequestPickForSlot`/`RequestPickForBuffSlot` ponían `IsLibraryCollapsed = false` cada vez que
-se pedía elegir un objeto, pero nada lo devolvía a `true` al terminar - la propiedad dejaba de
-reflejar el toggle real del usuario desde el primer "Elegir...". Arreglado separando el estado:
-`IsLibraryCollapsed` es AHORA puramente la preferencia del usuario (nunca tocada por el flujo de
-selección), y una propiedad derivada nueva `IsLibraryVisible = !IsLibraryCollapsed ||
-Library.IsPicking` es la que controla de verdad la fila/visibilidad - así "elegir objeto" fuerza
-visible sin pisar el toggle, y al cancelar/colocar vuelve a lo que el usuario tenía. Mismo
-arreglo para Buffs. El bug de "colapsada seguía reservando 150-238px" era la fila de Grid
-llevando una `MinHeight` fija sin importar el estado - ahora `RowDefinition.Height`/`MinHeight`
-están *bindeados* a `IsLibraryVisible` vía dos convertidores nuevos (`BoolToGridLengthConverter`,
-`BoolToDoubleConverter`) confirmado con medición real vía UI Automation: fila desplegada
-272,4px, colapsada 46,6px (solo la barra del botón). El `Height="380"` fijo de Buffs (mismo bug
-de "el de arriba subvenciona al de abajo" ya resuelto en Objetos en la 7ª pasada, pero que se
-quedó sin arreglar aquí) recibió el mismo esquema `3*`/`IsBuffLibraryVisible`. Verificado con
-captura real `resize-buffs-minimo.png`: sin solape. `dotnet build`/`test` 134/134. Commit
-83fd33c.
+**Revertido con `git revert --no-commit 1331ac6..HEAD`** (rango completo de las 7 fases,
+commits `83fd33c`..`1d09c9b`) - se mantuvo DELIBERADAMENTE el arreglo del crash (`1331ac6`,
+commit justo anterior al rango revertido) sin pedírselo explícitamente al usuario, porque
+revertirlo también habría reintroducido un crash real de la app (no una preferencia estética,
+un fallo que tumba la ventana entera) - si el usuario también quiere ese commit fuera, hay que
+pedirlo aparte. Se usó `revert` (no `reset --hard`) a propósito, aunque el repo no tiene remoto
+configurado: preserva el historial completo (las 7 fases originales siguen disponibles en los
+commits `83fd33c`..`1d09c9b` por si se quieren rescatar ideas sueltas de ahí en el futuro - ej.
+la gramática de búsqueda real de Terrasavr de la Fase 4, o `LibraryGridPanel` de la Fase 2) en
+vez de borrarlo sin dejar rastro. El arreglo del crash (`_byId.GetValueOrDefault` en vez del
+indexador directo, tanto en `LibraryViewModel` como en `BuffLibraryViewModel`) vivía por
+completo en `1331ac6`, fuera del rango revertido - se comprobó tras el revert que sigue intacto
+en ambos ficheros.
 
-La hipótesis sobre "fondo de armadura desaparecido" (probable artefacto visual de la pantalla
-en el estado degradado post-crash, no un bug nuevo) queda pendiente de confirmar/refutar en la
-próxima ronda de pruebas del usuario - no se pudo reproducir de forma aislada.
+`dotnet build` limpio, `dotnet test` 134/134 tras el revert.
 
-### Octava pasada, Fase 2 - LibraryGridPanel + paginación real (el núcleo del rediseño)
-
-Con el crash y los 4 bugs estructurales cerrados, se ejecuta el núcleo del plan que Opus diseñó
-tras investigar a fondo el Bestiario decompilado de Terraria
-(`Terraria.GameContent.UI.Elements.UIBestiaryEntryGrid`) y la Librería real de Terrasavr
-(`app.TabLibrary`/`app.TabShelf`, paginación real por bloques de 40). La rejilla de resultados
-de la Librería (Objetos y Buffs) tenía scroll interno y una celda que se deformaba con pocos
-resultados - el patrón real del juego es justo el contrario: celda CASI FIJA, columnas/filas
-VARIABLES según el espacio real disponible, y el desbordamiento se resuelve con PÁGINAS, nunca
-con scroll ni encogiendo la celda por debajo de un mínimo legible.
-
-Nuevo `Controls/LibraryGridPanel.cs` (hermano de `SlotGridPanel`, filosofía a propósito
-contraria): mide cuántas columnas caben a `PreferredCell` (64px), calcula el tamaño real de
-celda acotado a `[MinCell, MaxCell]` (44-76px), cuántas filas caben en el alto real disponible,
-y publica `cols*rows` como `PageCapacity` hacia el ViewModel (`Mode=OneWayToSource`, publicado
-vía `Dispatcher.BeginInvoke` para no disparar "Layout cycle detected" al re-medir dentro de su
-propio `MeasureOverride`). `LibraryViewModel`/`BuffLibraryViewModel`: `ApplyFilter()` ya no
-recorta a `MaxResults=300` fijo - ahora separa `_filtered` (TODO lo que casa con el filtro, sin
-tope) de `Results` (solo la página actual, `_filtered.Skip(PageIndex*PageCapacity).Take(...)`),
-con `PageCount`/`RangeText` (calco real de `GetRangeText()` del Bestiario, "N-M de T") y
-comandos `NextPage`/`PrevPage` con `CanExecute` acotado a los límites reales. XAML: se quitó el
-`ScrollViewer` que envolvía la rejilla de resultados en Objetos y Buffs, sustituido por
-`LibraryGridPanel` directo + una barra `‹ RangeText ›` debajo (oculta cuando todo cabe en una
-sola página, convertidor nuevo `CountGreaterThanOneToVisibilityConverter` - el ya existente
-`CountToVis` no servía porque `PageCount` nunca baja de 1).
-
-**Verificación real** (UI Automation, búsqueda amplia "a" sobre el catálogo completo, 7429
-resultados reales): a 1180×860, `PageCapacity=24`, `Results.Count` nunca supera esa capacidad,
-`NextPage`/`PrevPage` cambian de verdad el primer id mostrado (10 → 1024) y vuelven a 0
-correctamente; a 1080×700 (mínimo real), `PageCapacity=10` (una sola fila, coherente con el
-`MinHeight=200` real de la fila entera menos cabecera/buscador/resumen/paginación) - sin
-scroll, sin desbordar, capturas PNG reales confirmando cero solape en ambos tamaños. Mismo
-mecanismo confirmado en `BuffLibraryViewModel` (`PageCapacity=10`, `PageCount=2` con 11
-resultados reales). `dotnet build` limpio, `dotnet test` 134/134.
-
-**Pendiente, documentado con claridad** (siguientes fases del propio plan de Opus, no
-ejecutadas todavía): Fase 3 (navegador de un solo nivel + migas de pan sustituyendo el árbol
-indentado SOLO en la tira de la Librería, dejando el árbol tal cual en Investigación, donde sí
-tiene sentido); Fase 4 (gramática de búsqueda real de Terrasavr: coma=OR, espacio=AND, `#id`,
-`#a-b`, `.texto` para tooltip); Fase 5 (`MaxWidth`+centrado en el borde de Equipamiento, panel
-Editar y columna de carpetas con anchos relativos - la de mayor riesgo de regresión según el
-propio Opus, revisita el binding `ReferenceWidth` de la 4ª/5ª pasada); Fase 6 (panel de
-detalle opcional, explícitamente aplazable); Fase 7 (matriz de verificación completa).
-
-### Octava pasada, Fase 3 - navegador de un solo nivel + migas de pan en la Librería
-
-Sustituye el árbol recursivo indentado (hasta 4 niveles reales de Terrasavr mostrados a la vez)
-por un navegador de un solo nivel, más parecido a explorar carpetas de verdad - decisión
-explícita de Opus tras revisar `app.TabLibrary` real (Terrasavr es de hecho una lista de una
-sola columna sin indentación) y el propio pedido del usuario de que fuera "muy práctica".
-Investigación se queda TAL CUAL con el árbol indentado clásico (decisión también explícita de
-Opus: ahí la profundidad real que se navega es mucho menor y el árbol sigue siendo cómodo) -
-`ResearchViewModel`/`ResearchCategoryNodeTemplate` no se tocan.
-
-`LibraryViewModel`/`BuffLibraryViewModel` ganan `CurrentFolder`, `VisibleFolders` (los hijos de
-`CurrentFolder`, o las raíces reales si no hay ninguna abierta) y `Breadcrumb` (el camino real
-recorrido, clicable). `NavigateCommand` hace las dos cosas a la vez con un solo clic: selecciona
-la carpeta como filtro (sus `ItemIdsOrdered`, ya la unión real de sus descendientes si es
-intermedia) Y, si tiene subcarpetas (`CategoryNodeViewModel.HasChildren`, nuevo), navega dentro
-- una hoja solo filtra, no hay nada que explorar. `GoToCrumbCommand` trunca la pila de
-navegación a esa miga, patrón real de cualquier explorador de archivos. Los viejos
-`SelectCategoryCommand`/`IsExpanded` de Library/BuffLibrary (ya sin ningún uso real tras el
-cambio de plantilla) se eliminaron en vez de dejarlos muertos - `IsExpanded` sigue existiendo
-en `CategoryNodeViewModel` porque Investigación sí lo necesita.
-
-XAML: `CategoryNodeTemplate`/`BuffCategoryNodeTemplate` (el árbol recursivo viejo) se borraron
-enteros, sustituidos por `LibraryFolderRowTemplate`/`BuffLibraryFolderRowTemplate` (una fila
-plana con "›" solo en carpetas navegables) + `LibraryBreadcrumbCrumbTemplate`/
-`BuffLibraryBreadcrumbCrumbTemplate` (migas clicables) + un botón "Raíz" (`ClearCategoryCommand`,
-ahora también resetea la navegación).
-
-**Verificación real** (UI Automation, personaje real cargado): Raíz → 10 carpetas raíz reales
-confirmadas (Materiales, Decoraciones, "Mascotas, Monturas, Herramientas", Pociones
-(regeneración/efectos), Jefes & Eventos, Misión de Pez, Categorías, Objetos por ID, Calamity
-(mod)); entrar en "Materiales" deja `Breadcrumb=[Materiales]` y filtra de verdad
-(`Results.Count=10`, acotado por `PageCapacity` de la Fase 2); entrar en una subcarpeta real
-("Pre-Modo Difícil") deja `Breadcrumb=[Materiales > Pre-Modo Difícil]`; `GoToCrumb` de vuelta a
-"Materiales" trunca la pila exactamente ahí (`Breadcrumb.Count=1`, mismo `VisibleFolders.Count`
-que al entrar la primera vez); "Raíz" limpia `CurrentFolder`/`Breadcrumb` por completo y
-recupera las mismas 10 carpetas raíz. Captura real (`libreria-navegador.png`) confirma el
-mismo mecanismo funcionando también en Buffs (breadcrumb "Raíz", filas con contador real "(N)",
-sin solape). `dotnet build` limpio, `dotnet test` 134/134.
-
-### Octava pasada, Fase 4 - gramática de búsqueda real de Terrasavr
-
-Se lee el código real de `app.TabLibrary.search` (`reference/terrasavr-real/script.beautified.js`,
-líneas 4001-4055) y se porta su gramática exacta a `LibrarySearchGrammar.cs` (nuevo, compartido
-entre `LibraryViewModel` y `BuffLibraryViewModel`, que no tienen un tipo común para sus entradas
-así que se le pasan los campos ya resueltos): términos separados por coma = OR entre ellos;
-dentro de un término, palabras separadas por espacio = AND; un término de menos de 2 caracteres
-se ignora entero (quirk real, verificado en el propio código); `#123` = por id exacto,
-`#100-200` = por rango (ambos extremos incluidos); `.texto` busca en el tooltip/descripción real
-(`StatsTooltip`/`Description`) en vez de en el nombre. Se añadió un `ToolTip` real al cuadro de
-búsqueda explicando la gramática (ninguna pista visual existía antes).
-
-**Verificación real** (UI Automation, catálogo real cargado): `#10` devuelve exactamente el
-objeto de id 10 ("Hacha de hierro"); `#10-15` devuelve exactamente ese rango; `excalibur,...`
-(coma) incluye Excalibur; `hierro espada` (espacio=AND) devuelve solo objetos con AMBAS palabras
-("Espada larga/corta de hierro", descarta objetos con solo una de las dos); `.daño cuerpo`
-(búsqueda en tooltip real) devuelve un recuento grande y plausible (403 armas cuerpo a cuerpo
-reales) confirmando que busca de verdad en el texto del tooltip y no en el nombre. `dotnet build`
-limpio, `dotnet test` 134/134 (la gramática vive en `TerrasavrNative.App`, sin cobertura de
-`dotnet test` ahí - verificación end-to-end real vía el arnés, mismo criterio que el resto de
-`ViewModels`).
-
-### Octava pasada, Fase 5 - MaxWidth + centrado real en Equipamiento/Editar/columna de carpetas
-
-La fase de mayor riesgo de regresión según el propio Opus (revisita el binding `ReferenceWidth`
-de la 4ª/5ª pasada). El bloque de Equipamiento/Inventario/Almacenes + panel "Editar" llenaba
-TODO el ancho real disponible sin techo (`HorizontalAlignment` por defecto = Stretch), así que
-a resoluciones grandes se estiraba mucho más de lo que su contenido real necesita - la queja
-explícita del usuario ("mira todo el espacio que hay y que mal desaprovechado", con captura
-real). Mismo arreglo en el bloque de Buffs (contenedor + `BuffEdit`), y la columna de carpetas
-de la Librería (Objetos/Buffs/Investigación, antes 210px fijo) pasó a un peso relativo acotado
-(180-260px).
-
-**Hallazgo real de WPF durante la verificación** (no solo leído, medido con UI Automation a
-1920×1080): las columnas `*` de un `Grid` SOLO reparten el sobrante cuando el propio `Grid` está
-ESTIRADO por su padre - un `Grid` con `HorizontalAlignment="Center"` se mide primero por el
-tamaño NATURAL de su contenido y LUEGO se centra, sin que las `*` lleguen a repartir nada de
-más. Con `MaxWidth="1300"` + `HorizontalAlignment="Center"`, el bloque se mide en ~994px de
-ancho real (su tamaño natural) tanto a 1920×1080 como a cualquier tamaño mayor - el `MaxWidth`
-queda como techo de seguridad que en la práctica nunca se alcanza con el contenido actual; el
-efecto real visible es justo el pedido: el bloque se queda a su tamaño cómodo, centrado, con
-hueco simétrico real a los lados en vez de estirarse. El comentario original en el XAML se
-corrigió tras esta medición para no dejar escrita una explicación que sonaba plausible pero no
-era la real.
-
-**Verificación real** (UI Automation, personaje cargado): a 1920×1080 (mucho más ancha que
-cualquier ventana probada hasta ahora), `Row0Grid.ActualWidth=994` (bajo su propio `MaxWidth`
-de 1300), con 513px reales de margen a cada lado (prueba directa de que está centrado, no
-pegado a la izquierda) - captura real (`fase5-equip-ultrawide.png`) confirma el bloque
-compacto y centrado, sin huecos ni solape. `SlotRowHost.ActualWidth=676` a 1920×1080, IDÉNTICO
-(dentro de margen) al medido antes de esta fase a la resolución mínima (677,8) - cero regresión
-real en `ReferenceWidth`/`MinCell`/`MaxCell` de los 3 `SlotGridPanel` fusionados, el mayor
-riesgo señalado por Opus. Captura a la ventana mínima real (1080×700,
-`fase5-equip-minimo-tras-cambio.png`) confirma que nada de lo ya arreglado en la 7ª/8ª pasada
-se rompió. Pase de regresión completo del arnés (todas las fases 2-5 juntas) sin ningún FALLO.
-`dotnet build` limpio, `dotnet test` 134/134.
-
-### Octava pasada, Fase 6 (decisión: no ejecutada) y Fase 7 - matriz final de verificación
-
-**Fase 6** (panel de detalle opcional para ventanas anchas, mostrando nombre/stats/"Colocar" del
-objeto bajo el cursor): el propio Opus la marcó como explícitamente opcional/aplazable en su
-plan. Revisando `LibraryCardTemplate`/`BuffLibraryCardTemplate` (`MainWindow.xaml`), ya existe un
-`ToolTip` real con nombre completo + `StatsTooltip`/`Description` al pasar el ratón, y el botón
-"Colocar" ya aparece inline en la propia tarjeta cuando `IsPicking` - un panel de detalle
-persistente sería en gran parte redundante con eso, sin ninguna queja concreta del usuario
-pidiéndolo de forma específica. Se decide NO implementarlo (coherente con "no añadir
-funcionalidad especulativa más allá de lo que hace falta") y dejarlo documentado aquí como
-decisión consciente, no como algo pendiente por olvido.
-
-**Fase 7** - matriz final de verificación de las Fases 1-5 juntas (criterios reales de Opus: sin
-scrollbar en la rejilla de resultados, sin solape/recorte, fila plegada ≤40px, hueco sobrante
-centrado), cubriendo combinaciones que ninguna fase por separado había probado juntas:
-
-- "Eligiendo" (`IsPicking`) a 1920×1080: banner + 44 tarjetas con "Colocar" conviven sin solape,
-  `IsLibraryVisible=True` a pesar de estar plegada por defecto (fuerza visible correctamente).
-- Investigación (árbol indentado viejo, sin tocar en esta pasada) a la resolución mínima real
-  (1080×700): sigue funcionando exactamente igual, cero regresión de rebote por las Fases 1-5
-  (comparten `LibraryCategoryTreeBuilder`/`CategoryNodeViewModel`).
-- Buffs "eligiendo" a la resolución mínima real: mismo mecanismo, sin solape.
-- Ambas librerías plegadas a la vez: `IsLibraryVisible`/`IsBuffLibraryVisible` caen a `False`
-  correctamente (la medición en píxeles de esa fila, 272,4/46,6px, ya se hizo en la Fase 1 y no
-  ha cambiado el binding que la produce).
-
-**Hallazgo real durante esta fase, no un bug de la app**: el propio arnés de pruebas usaba
-`SearchText = "a"` para ejercitar la paginación desde antes de la Fase 4 - tras portar la
-gramática real de Terrasavr (términos de menos de 2 caracteres se descartan por completo, ver
-Fase 4), esa búsqueda de 1 solo carácter empezó a devolver 0 resultados de verdad (comportamiento
-correcto, no un fallo), lo que en una primera captura de pantalla de Buffs "eligiendo" parecía
-una rejilla rota/vacía. Aislando la variable (mismo criterio ya establecido en este proyecto) se
-confirmó que era el propio término de prueba, ahora inválido por diseño - se corrigió a "de" (2+
-caracteres, término real y amplio) en el arnés, sin tocar ninguna línea de la app, y la captura
-siguiente mostró las tarjetas reales correctamente.
-
-Pase de regresión completo del arnés (Fases 1-7 juntas) sin ningún FALLO. `dotnet build` limpio,
-`dotnet test` 134/134. Con esto se da por cerrado el rediseño completo de la Librería pedido en
-la octava pasada ("revisad todas las versiones posibles, cread un plan en condiciones, tomaros
-vuestro tiempo, pensad con calma y después ejecutad").
+**Lección para la próxima vez que se pida un rediseño grande de UI**: antes de dar por cerrada
+una ronda de varias fases de diseño (por muy verificada que esté técnicamente - sin scroll, sin
+solape, cero fallos en el arnés), enseñar el resultado real al usuario ANTES de encadenar todas
+las fases siguientes, en vez de ejecutar las 7 de un tirón y verificar solo con el arnés
+automático - el arnés puede confirmar que algo "funciona" (no hay excepciones, no hay solape)
+sin poder juzgar si de verdad es más cómodo de usar que lo anterior, que es una decisión que
+solo puede tomar el usuario viéndolo con sus propios ojos.

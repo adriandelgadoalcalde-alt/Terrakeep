@@ -14,36 +14,15 @@ namespace TerrasavrNative.App.ViewModels;
 // buff se coloca en ese slot.
 public partial class BuffLibraryViewModel : ObservableObject
 {
+    private const int MaxResults = 300;
+
     private readonly List<BuffCatalogEntryViewModel> _all;
     private readonly Dictionary<int, BuffCatalogEntryViewModel> _byId;
-    // Mismo criterio que LibraryViewModel (objetos): _filtered guarda TODO lo que casa, sin
-    // paginar - Results es solo la pagina actual, lo que de verdad se manda a la rejilla.
-    private List<BuffCatalogEntryViewModel> _filtered = [];
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _resultsSummary = string.Empty;
     [ObservableProperty] private BuffSlotViewModel? _pickTarget;
     [ObservableProperty] private CategoryNodeViewModel? _selectedCategory;
-
-    // Paginacion real, mismo patron que LibraryViewModel (consulta a Opus, octava pasada -
-    // Bestiario de Terraria decompilado: celda casi fija, columnas/filas variables, desborde
-    // resuelto con paginas, nunca con scroll). PageCapacity lo escribe LibraryGridPanel
-    // (Mode=OneWayToSource, ver MainWindow.xaml).
-    [ObservableProperty] private int _pageCapacity = 40;
-    [ObservableProperty] private int _pageIndex;
-
-    public int PageCount => PageCapacity > 0 ? Math.Max(1, (int)Math.Ceiling(_filtered.Count / (double)PageCapacity)) : 1;
-
-    public string RangeText
-    {
-        get
-        {
-            if (_filtered.Count == 0) return "0 resultados";
-            int from = PageIndex * PageCapacity + 1;
-            int to = Math.Min(_filtered.Count, from + PageCapacity - 1);
-            return PageCount > 1 ? $"{from}-{to} de {_filtered.Count}" : $"{_filtered.Count} resultado(s)";
-        }
-    }
 
     public bool IsPicking => PickTarget != null;
 
@@ -74,64 +53,29 @@ public partial class BuffLibraryViewModel : ObservableObject
 
         foreach (var node in BuffLibraryTreeBuilder.Build(service))
             RootCategories.Add(node);
-        RefreshVisibleFolders();
 
         ApplyFilter();
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
-    // Fase 3 (octava pasada) - mismo navegador de un solo nivel + migas de pan que
-    // LibraryViewModel, ver ahi el porque completo.
-    private readonly List<CategoryNodeViewModel> _navStack = [];
-    [ObservableProperty] private CategoryNodeViewModel? _currentFolder;
-
-    public ObservableCollection<CategoryNodeViewModel> VisibleFolders { get; } = [];
-    public ObservableCollection<CategoryNodeViewModel> Breadcrumb { get; } = [];
-
-    private void RefreshVisibleFolders()
+    [RelayCommand]
+    private void SelectCategory(CategoryNodeViewModel node)
     {
-        VisibleFolders.Clear();
-        foreach (var n in CurrentFolder?.Children ?? RootCategories) VisibleFolders.Add(n);
-    }
+        // Mismo bug real corregido en LibraryViewModel.SelectCategory - ver ahi el porque.
+        node.IsExpanded = !node.IsExpanded;
 
-    private void RefreshBreadcrumb()
-    {
-        Breadcrumb.Clear();
-        foreach (var n in _navStack) Breadcrumb.Add(n);
-        if (CurrentFolder != null) Breadcrumb.Add(CurrentFolder);
-    }
-
-    private void SelectCategoryInternal(CategoryNodeViewModel node)
-    {
         if (SelectedCategory != null) SelectedCategory.IsSelected = false;
-        SelectedCategory = node;
-        node.IsSelected = true;
+        if (SelectedCategory == node)
+        {
+            SelectedCategory = null;
+        }
+        else
+        {
+            SelectedCategory = node;
+            node.IsSelected = true;
+        }
         ApplyFilter();
-    }
-
-    [RelayCommand]
-    private void Navigate(CategoryNodeViewModel node)
-    {
-        SelectCategoryInternal(node);
-        if (node.Children.Count == 0) return;
-
-        if (CurrentFolder != null) _navStack.Add(CurrentFolder);
-        CurrentFolder = node;
-        RefreshVisibleFolders();
-        RefreshBreadcrumb();
-    }
-
-    [RelayCommand]
-    private void GoToCrumb(CategoryNodeViewModel node)
-    {
-        if (node == CurrentFolder) return;
-        int idx = _navStack.IndexOf(node);
-        if (idx >= 0) _navStack.RemoveRange(idx, _navStack.Count - idx);
-        CurrentFolder = node;
-        RefreshVisibleFolders();
-        RefreshBreadcrumb();
-        SelectCategoryInternal(node);
     }
 
     [RelayCommand]
@@ -139,15 +83,13 @@ public partial class BuffLibraryViewModel : ObservableObject
     {
         if (SelectedCategory != null) SelectedCategory.IsSelected = false;
         SelectedCategory = null;
-        _navStack.Clear();
-        CurrentFolder = null;
-        RefreshVisibleFolders();
-        RefreshBreadcrumb();
         ApplyFilter();
     }
 
     private void ApplyFilter()
     {
+        Results.Clear();
+
         bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
         // Mismo arreglo real que LibraryViewModel.ApplyFilter (KeyNotFoundException real
         // reportada 2-sep-2026) - un id que el arbol conoce pero el catalogo no se descarta
@@ -156,64 +98,23 @@ public partial class BuffLibraryViewModel : ObservableObject
             ? SelectedCategory.ItemIdsOrdered.Select(id => _byId.GetValueOrDefault(id)).OfType<BuffCatalogEntryViewModel>()
             : _all;
 
-        // Fase 4 (octava pasada) - misma gramatica real de busqueda de Terrasavr que
-        // LibraryViewModel, ver LibrarySearchGrammar.
         if (hasSearch)
-        {
-            string query = SearchText;
-            matches = matches.Where(i => LibrarySearchGrammar.Matches(
-                query, i.Id, i.DisplayName.ToLowerInvariant(), i.Description?.ToLowerInvariant()));
-        }
+            matches = matches.Where(i => i.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
 
         if (!hasSearch && SelectedCategory == null)
         {
-            _filtered = [];
-            Results.Clear();
-            PageIndex = 0;
             ResultsSummary = $"{_all.Count} buffs en total (vanilla + Calamity) - escribe para buscar o elige una carpeta.";
-            OnPropertyChanged(nameof(PageCount));
-            OnPropertyChanged(nameof(RangeText));
             return;
         }
 
-        _filtered = matches.ToList();
-        PageIndex = 0;
-        UpdatePage();
+        var list = matches.ToList();
+        foreach (var item in list.Take(MaxResults)) Results.Add(item);
 
         string categoryLabel = SelectedCategory != null ? $" en \"{SelectedCategory.Name}\"" : string.Empty;
-        ResultsSummary = categoryLabel.Length > 0 ? categoryLabel.Trim() : "Resultados de la búsqueda";
+        ResultsSummary = list.Count > MaxResults
+            ? $"Mostrando {MaxResults} de {list.Count} resultados{categoryLabel} - afina la busqueda."
+            : $"{list.Count} resultado(s){categoryLabel}.";
     }
-
-    private void UpdatePage()
-    {
-        PageIndex = Math.Clamp(PageIndex, 0, PageCount - 1);
-        Results.Clear();
-        foreach (var item in _filtered.Skip(PageIndex * PageCapacity).Take(Math.Max(1, PageCapacity)))
-            Results.Add(item);
-        OnPropertyChanged(nameof(PageCount));
-        OnPropertyChanged(nameof(RangeText));
-        NextPageCommand.NotifyCanExecuteChanged();
-        PrevPageCommand.NotifyCanExecuteChanged();
-    }
-
-    partial void OnPageCapacityChanged(int value) => UpdatePage();
-    partial void OnPageIndexChanged(int value)
-    {
-        Results.Clear();
-        foreach (var item in _filtered.Skip(PageIndex * PageCapacity).Take(Math.Max(1, PageCapacity)))
-            Results.Add(item);
-        OnPropertyChanged(nameof(RangeText));
-        NextPageCommand.NotifyCanExecuteChanged();
-        PrevPageCommand.NotifyCanExecuteChanged();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanGoNextPage))]
-    private void NextPage() => PageIndex++;
-    private bool CanGoNextPage() => PageIndex < PageCount - 1;
-
-    [RelayCommand(CanExecute = nameof(CanGoPrevPage))]
-    private void PrevPage() => PageIndex--;
-    private bool CanGoPrevPage() => PageIndex > 0;
 
     partial void OnPickTargetChanged(BuffSlotViewModel? value) => OnPropertyChanged(nameof(IsPicking));
 

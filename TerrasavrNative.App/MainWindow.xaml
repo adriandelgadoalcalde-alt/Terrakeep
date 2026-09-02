@@ -150,113 +150,60 @@
             </DockPanel>
         </DataTemplate>
 
-        <!-- Fila de carpeta del navegador de UN SOLO NIVEL de la Libreria (Fase 3, octava
-             pasada, consulta a Opus - investigacion real de como el propio Terrasavr resuelve
-             esto, app.TabLibrary: una columna, sin indentacion recursiva). Sustituye al viejo
-             arbol indentado recursivo SOLO aqui (Investigacion se queda con
-             ResearchCategoryNodeTemplate, mas abajo, decision explicita de Opus - ese arbol es
-             mucho menos profundo de navegar ahi y la indentacion clasica sigue siendo practica).
-             Un clic selecciona la carpeta como filtro Y, si tiene subcarpetas, navega dentro
-             (LibraryViewModel.NavigateCommand) - el "›" solo se muestra en carpetas navegables,
-             para no sugerir que una hoja tiene mas que explorar. -->
-        <DataTemplate x:Key="LibraryFolderRowTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
-            <Button Command="{Binding DataContext.Library.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                    CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
-                    Cursor="Hand">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Background" Value="Transparent" />
-                        <Setter Property="BorderThickness" Value="0" />
-                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                        <Style.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-                            </Trigger>
-                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Right" Text="›" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"
-                               Foreground="{StaticResource TextSecondaryBrush}" Margin="4,0,0,0"
-                               Visibility="{Binding HasChildren, Converter={StaticResource BoolToVis}}" />
-                    <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
-                           VerticalAlignment="Center"
-                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                    <!-- Sin sufijo de recuento aparte (pedido explicito 2-sep-2026, "calca
-                         exactamente"): los nombres reales YA llevan su propio "(N)" cuando el
-                         propio Terrasavr lo pone. Bug real ya corregido una vez (2-sep-2026,
-                         "hay nombres cortados"): DockPanel tambien mide el ultimo hijo con
-                         ancho infinito, MaxWidth real + Wrap, igual que antes. -->
-                    <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
-                               MaxWidth="140" TextWrapping="Wrap" />
-                </DockPanel>
-            </Button>
-        </DataTemplate>
-
-        <!-- Miga de pan clicable (Breadcrumb) - vuelve a esa carpeta de un salto, patron real
-             de cualquier explorador de archivos (LibraryViewModel.GoToCrumbCommand). -->
-        <DataTemplate x:Key="LibraryBreadcrumbCrumbTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="›" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="3,0" />
-                <Button Content="{Binding Name}" Tag="Ghost" Padding="5,2" FontSize="10.5"
-                        Command="{Binding DataContext.Library.GoToCrumbCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                        CommandParameter="{Binding}" />
+        <!-- Nodo del arbol de categorias de la Libreria (recursivo - se referencia a si mismo
+             por StaticResource, patron real de WPF para arboles sin usar TreeView). Un clic
+             selecciona/deselecciona la carpeta como filtro Y despliega/pliega sus subcarpetas
+             a la vez (LibraryViewModel.SelectCategoryCommand). -->
+        <DataTemplate x:Key="CategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
+            <StackPanel>
+                <Button Command="{Binding DataContext.Library.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
+                        Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                        <!-- Sin sufijo de recuento aparte (pedido explicito 2-sep-2026, "calca
+                             exactamente"): los nombres reales YA llevan su propio "(N)" cuando
+                             el propio Terrasavr lo pone (carpetas calculadas por predicado,
+                             ej. "Melee damage (316)") - añadir otro aqui duplicaria el numero.
+                             Las carpetas con lista literal de ids (ej. "Copper & Tin") tampoco
+                             llevan recuento en el Terrasavr real, asi que no se inventa uno. -->
+                        <!-- Bug real encontrado 2-sep-2026 ("hay nombres cortados"): un
+                             StackPanel Horizontal le da ancho infinito a este TextBlock al
+                             medir, asi que TextWrapping no bastaba solo - hacia falta un
+                             MaxWidth real para que el texto tuviera un limite del que
+                             envolver, en vez de desbordar en silencio fuera de la columna. -->
+                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
+                                   MaxWidth="165" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Button>
+                <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
+                              ItemTemplate="{DynamicResource CategoryNodeTemplate}"
+                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
         </DataTemplate>
 
-        <DataTemplate x:Key="BuffLibraryFolderRowTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
-            <Button Command="{Binding DataContext.BuffLibrary.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                    CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
-                    Cursor="Hand">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Background" Value="Transparent" />
-                        <Setter Property="BorderThickness" Value="0" />
-                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                        <Style.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-                            </Trigger>
-                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Right" Text="›" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"
-                               Foreground="{StaticResource TextSecondaryBrush}" Margin="4,0,0,0"
-                               Visibility="{Binding HasChildren, Converter={StaticResource BoolToVis}}" />
-                    <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
-                           VerticalAlignment="Center"
-                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                    <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
-                               MaxWidth="140" TextWrapping="Wrap" />
-                </DockPanel>
-            </Button>
-        </DataTemplate>
-
-        <DataTemplate x:Key="BuffLibraryBreadcrumbCrumbTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="›" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="3,0" />
-                <Button Content="{Binding Name}" Tag="Ghost" Padding="5,2" FontSize="10.5"
-                        Command="{Binding DataContext.BuffLibrary.GoToCrumbCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                        CommandParameter="{Binding}" />
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- Arbol recursivo indentado clasico - se queda TAL CUAL solo para Investigacion
-             (decision explicita de Opus en la octava pasada, ese arbol es mucho menos profundo
-             de recorrer ahi y no hace falta el navegador de un solo nivel). Ya NO lo usa la
-             Libreria de Objetos ni la de Buffs (ver LibraryFolderRowTemplate/
-             BuffLibraryFolderRowTemplate arriba) - las dos pestañas comparten el mismo arbol
-             REAL de carpetas (LibraryCategoryTreeBuilder) pero cada una tiene su propia
-             seleccion/resultados independientes. -->
+        <!-- Mismo arbol que CategoryNodeTemplate de arriba, pero apuntando al
+             SelectCategoryCommand de Research en vez de Library - las dos pestañas comparten
+             el mismo arbol REAL de carpetas (LibraryCategoryTreeBuilder) pero cada una tiene
+             su propia seleccion/resultados independientes. -->
         <DataTemplate x:Key="ResearchCategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
             <StackPanel>
                 <Button Command="{Binding DataContext.Research.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -293,6 +240,45 @@
                 </Button>
                 <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
                               ItemTemplate="{DynamicResource ResearchCategoryNodeTemplate}"
+                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Mismo arbol otra vez, apuntando al SelectCategoryCommand de BuffLibrary (Fase 2 del
+             rework de Buffs, pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada) - arbol
+             REAL distinto (BuffLibraryTreeBuilder, calcado de app.BuffSide de Terrasavr real),
+             mismo patron visual que Libreria/Investigacion. -->
+        <DataTemplate x:Key="BuffCategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
+            <StackPanel>
+                <Button Command="{Binding DataContext.BuffLibrary.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
+                        Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                </Trigger>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
+                                   MaxWidth="165" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Button>
+                <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
+                              ItemTemplate="{DynamicResource BuffCategoryNodeTemplate}"
                               Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
         </DataTemplate>
@@ -935,63 +921,28 @@
                                      principal, Inventario/Almacenes/Equipamiento) se quedaba
                                      con lo que sobrara, hasta cero si hacia falta - "el
                                      Inventario estaba subvencionando a la Libreria" (consulta a
-                                     Opus, septima pasada). Las DOS filas compiten de verdad por
-                                     el alto real disponible (ambas "*" cuando la Libreria esta
-                                     desplegada) - Objetos con prioridad y un suelo real (216px
-                                     = 5 filas de Inventario a 40px + huecos, el caso mas
-                                     exigente de los 3 sub-tabs que comparten esta fila).
-                                     Bug real encontrado y corregido (octava pasada, consulta a
-                                     Opus): al pasar de "Auto" a "*" para resolver lo de arriba,
-                                     PLEGAR la Libreria dejo de devolver espacio de verdad - la
-                                     fila seguia siendo "1*" con MinHeight=150 SIEMPRE, asi que
-                                     plegada seguia dejando una banda vacia de 150-238px con
-                                     forma de Libreria (el usuario la veia como "expandida"
-                                     aunque el boton dijera lo contrario). Height/MinHeight de
-                                     la fila de la Libreria ahora dependen de IsLibraryVisible
-                                     (ver MainViewModel) via BoolToGridLength/BoolToDouble -
-                                     colapsada de verdad, Height=Auto MinHeight=0 (se encoge al
-                                     alto real de la barra "Librería ▼ Desplegar", ~34px, cero
-                                     hueco muerto); desplegada, "2*" con suelo 200 (98px de
-                                     chrome interior + 2 filas de rejilla a 48px, calculo real
-                                     de Opus, no "porque si"). MaxHeight=460 se queda fijo, sin
-                                     depender de la visibilidad (un techo generoso no molesta
-                                     estando colapsada, Auto ya no crece de mas por si solo). -->
+                                     Opus, septima pasada, tras medir en una captura real que a
+                                     620px de alto con la Libreria desplegada solo se veian ~2
+                                     de las 5 filas reales de Inventario). Las DOS filas ahora
+                                     compiten de verdad por el alto real disponible (ambas "*",
+                                     con MinHeight/MaxHeight reales) - Objetos con prioridad
+                                     3:1 y un suelo real (216px = 5 filas de Inventario a 40px
+                                     + huecos, el caso mas exigente de los 3 sub-tabs que
+                                     comparten esta fila), Libreria entre 150 (util minimo real,
+                                     ver Opus) y 238 (el tamaño de siempre, con la ventana
+                                     grande). -->
                                 <RowDefinition Height="3*" MinHeight="216" />
-                                <RowDefinition Height="{Binding IsLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
-                                               MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
-                                               MaxHeight="460" />
+                                <RowDefinition Height="1*" MinHeight="150" MaxHeight="238" />
                             </Grid.RowDefinitions>
 
                             <!-- Contenedores a la izquierda + panel "Editar" a la derecha (equivalente real
                                  de app.TabInventory.initSide: sideCtr con las pestañas Edit/Library reales -
                                  aqui Library ya vive fijo abajo, ver Grid.Row=1, y Editar sigue al slot
-                                 SELECCIONADO sea cual sea el contenedor activo).
-                                 Fase 5 (octava pasada, consulta a Opus - "mira todo el espacio que hay y
-                                 que mal desaprovechado" a pantalla grande): antes este Grid llenaba TODO
-                                 el ancho real disponible sin techo (HorizontalAlignment por defecto =
-                                 Stretch), asi que a resoluciones grandes la columna central ("*",
-                                 Equipamiento/Inventario/Almacenes) se estiraba mucho mas de lo que su
-                                 contenido real necesita. HorizontalAlignment="Center" + MaxWidth
-                                 arregla esto de raiz, y por un motivo real de WPF que merece quedar
-                                 escrito (verificado con UI Automation real a 1920x1080, no solo leido):
-                                 las columnas "*" SOLO reparten el sobrante cuando el propio Grid esta
-                                 ESTIRADO (Stretch) por su padre - un Grid Center-aligned se mide primero
-                                 por el tamaño natural real de su contenido (aqui ~994px: SlotRowHost mas
-                                 el suelo de Editar) y LUEGO se centra, sin que las "*" lleguen nunca a
-                                 repartir nada de mas. MaxWidth=1300 queda como techo de seguridad (nunca
-                                 se alcanza en la practica con el contenido real actual) y el efecto real
-                                 visible es que el bloque entero se queda a su tamaño natural, centrado,
-                                 con hueco simetrico real a los lados en vez de estirarse. La columna
-                                 "Editar" pasa de 300px fijo a un peso relativo acotado (280-360px) - con
-                                 el Grid Center-aligned esto en la practica se queda en su suelo de 280px,
-                                 coherente con lo de arriba. ReferenceWidth de los 3 SlotGridPanel de la
-                                 fila fusionada de Equipamiento (mas abajo) sigue atado al SlotRowHost
-                                 real via RelativeSource AncestorType, ajeno del todo a este Grid exterior
-                                 - medido igual (~676px) antes y despues del cambio, cero regresion. -->
-                            <Grid Grid.Row="0" Margin="0,0,0,8" MaxWidth="1300" HorizontalAlignment="Center">
+                                 SELECCIONADO sea cual sea el contenedor activo). -->
+                            <Grid Grid.Row="0" Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="0.24*" MinWidth="280" MaxWidth="360" />
+                                    <ColumnDefinition Width="300" />
                                 </Grid.ColumnDefinitions>
 
                                 <!-- Antes: 21 pestañas planas en una sola fila (9 contenedores + 12 de
@@ -1243,36 +1194,21 @@
                                         </DockPanel>
                                     </Border>
 
-                                    <Grid Visibility="{Binding IsLibraryVisible, Converter={StaticResource BoolToVis}}">
+                                    <Grid Visibility="{Binding IsLibraryCollapsed, Converter={StaticResource InverseBoolToVis}}">
                                         <Grid.ColumnDefinitions>
-                                            <!-- Fase 5 (octava pasada): de 210px fijo a un peso relativo
-                                                 acotado (180-260px real) - crece un poco en ventanas
-                                                 grandes (nombres de carpeta mas largos caben sin envolver
-                                                 tanto) sin des-balancear la columna de resultados. -->
-                                            <ColumnDefinition Width="0.22*" MinWidth="180" MaxWidth="260" />
+                                            <ColumnDefinition Width="210" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
 
-                                        <!-- Navegador de un solo nivel (Fase 3, octava pasada): "Raiz" vuelve al principio
-                                             de golpe, las migas de pan (Breadcrumb) muestran el camino real recorrido y
-                                             VisibleFolders es SOLO el nivel actual (hijos de CurrentFolder, o las raices
-                                             reales de Terrasavr si no hay ninguna carpeta abierta). -->
                                         <Border Grid.Column="0" Background="{StaticResource BgPrimaryBrush}" CornerRadius="6"
                                                 Padding="5" Margin="0,0,8,0">
                                             <DockPanel>
-                                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                                                    <Button Content="Raíz" Tag="Ghost" Padding="5,2" FontSize="10"
-                                                            Command="{Binding Library.ClearCategoryCommand}" />
-                                                    <ItemsControl ItemsSource="{Binding Library.Breadcrumb}"
-                                                                  ItemTemplate="{StaticResource LibraryBreadcrumbCrumbTemplate}">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                    </ItemsControl>
-                                                </WrapPanel>
+                                                <Button DockPanel.Dock="Top" Content="Ver todo" HorizontalAlignment="Left"
+                                                        Padding="5,2" FontSize="10" Margin="0,0,0,4"
+                                                        Command="{Binding Library.ClearCategoryCommand}" />
                                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                    <ItemsControl ItemsSource="{Binding Library.VisibleFolders}"
-                                                                  ItemTemplate="{StaticResource LibraryFolderRowTemplate}" />
+                                                    <ItemsControl ItemsSource="{Binding Library.RootCategories}"
+                                                                  ItemTemplate="{StaticResource CategoryNodeTemplate}" />
                                                 </ScrollViewer>
                                             </DockPanel>
                                         </Border>
@@ -1281,31 +1217,30 @@
                                             <TextBox DockPanel.Dock="Top" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
                                                      Padding="7,5" Background="{StaticResource BgElevatedBrush}"
                                                      Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4"
-                                                     ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id, .texto = busca en la descripción" />
+                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4" />
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding Library.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                            <!-- Rejilla de CATALOGO real (Fase 2, octava pasada, consulta a Opus -
-                                                 patron real del Bestiario decompilado de Terraria, UIBestiaryEntryGrid:
-                                                 celda CASI FIJA, columnas/filas VARIABLES, desbordamiento resuelto con
-                                                 PAGINACION, nunca con scroll). LibraryGridPanel mide cuantas tarjetas
-                                                 caben de verdad en el espacio real disponible y lo publica en
-                                                 Library.PageCapacity (Mode=OneWayToSource) - el ViewModel corta
-                                                 Results a exactamente esa pagina, por eso nunca hace falta scroll aqui. -->
-                                            <DockPanel DockPanel.Dock="Bottom" Margin="0,4,0,0"
-                                                       Visibility="{Binding Library.PageCount, Converter={StaticResource PageCountToVis}}">
-                                                <Button DockPanel.Dock="Left" Content="‹" Command="{Binding Library.PrevPageCommand}" Padding="10,2" />
-                                                <Button DockPanel.Dock="Right" Content="›" Command="{Binding Library.NextPageCommand}" Padding="10,2" />
-                                                <TextBlock Text="{Binding Library.RangeText}" Style="{StaticResource CaptionText}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </DockPanel>
-                                            <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <controls:LibraryGridPanel PreferredCell="64" MinCell="44" MaxCell="76" Gap="4" MaxColumns="30"
-                                                                                    PageCapacity="{Binding Library.PageCapacity, Mode=OneWayToSource}" />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                            </ItemsControl>
+                                            <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada: "la libreria
+                                                 sigue sin tener las rejillas como en inventario... no debe tener scroll a
+                                                 menos que sea una categoria que logicamente tiene muchos ítems"). Misma
+                                                 SlotGridPanel que el resto de la app - con estos parametros reales
+                                                 (medidos contra la franja real de ~772x186px) no aparece scroll hasta
+                                                 ~48 resultados (4 filas x 12 columnas a MinCell=40), y con pocos
+                                                 resultados la celda crece hasta MaxCell=96 topada por ReferenceColumns=10
+                                                 (~73px aqui) - ni vacio ni deforme. MinCell=40 en vez de 44 a proposito:
+                                                 con 44 el scroll aparecia por solo 2px de diferencia real (4*44+12=188
+                                                 contra 186 disponibles). Sin AvailableHeight el panel mediria con alto
+                                                 infinito y SIEMPRE elegiria MaxCell + SIEMPRE scrollearia. -->
+                                            <ScrollViewer x:Name="LibraryResultsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <controls:SlotGridPanel Columns="12" MinCell="40" MaxCell="90" Gap="4"
+                                                                                     ReferenceColumns="10"
+                                                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                </ItemsControl>
+                                            </ScrollViewer>
                                         </DockPanel>
                                     </Grid>
                                 </DockPanel>
@@ -1323,32 +1258,23 @@
                              boton "Añadir buff..." desaparece, sustituido por esta Libreria. -->
                         <Grid Margin="0,10,0,0">
                             <Grid.RowDefinitions>
-                                <!-- Bug real encontrado y corregido (octava pasada, consulta a
-                                     Opus): Height="380" fijo en el Border de abajo + esta fila
-                                     en "Auto" es EXACTAMENTE la misma patologia ya diagnosticada
-                                     y arreglada en Objetos en la septima pasada ("el Inventario
-                                     estaba subvencionando a la Libreria") pero que se quedo sin
-                                     arreglar aqui - a 700px de alto (el minimo real de la
-                                     ventana) 380+8 de esta fila + 200 minimo de la Libreria +
-                                     chrome desborda de verdad. Mismo esquema real que Objetos:
-                                     "*" con suelo, sin altura fija en el Border. -->
-                                <RowDefinition Height="3*" MinHeight="216" />
-                                <RowDefinition Height="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
-                                               MinHeight="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
-                                               MaxHeight="460" />
+                                <RowDefinition Height="Auto" />
+                                <!-- Mismo arreglo real que la Libreria de Objetos (consulta a
+                                     Opus, septima pasada) - "*" con MinHeight/MaxHeight en vez
+                                     de "Auto" con un hijo de 238px fijo, para que ceda alto de
+                                     verdad si la ventana aprieta en vez de imponer siempre su
+                                     tamaño maximo. -->
+                                <RowDefinition Height="*" MinHeight="150" MaxHeight="238" />
                             </Grid.RowDefinitions>
 
-                            <!-- Fase 5 (octava pasada): mismo MaxWidth+centrado real que Objetos (ver ahi
-                                 el porque completo) - la rejilla fija de 44 slots (11x4) tambien se veia
-                                 desperdigada en ventanas grandes sin techo. -->
-                            <Grid Grid.Row="0" Margin="0,0,0,8" MaxWidth="1300" HorizontalAlignment="Center">
+                            <Grid Grid.Row="0" Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="0.24*" MinWidth="280" MaxWidth="360" />
+                                    <ColumnDefinition Width="300" />
                                 </Grid.ColumnDefinitions>
 
                                 <Border Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                        Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,0,10,0">
+                                        Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,0,10,0" Height="380">
                                     <ContentControl Content="{Binding Buffs.Container}" ContentTemplate="{StaticResource BuffContainerCompactTemplate}" />
                                 </Border>
 
@@ -1392,32 +1318,21 @@
                                         </DockPanel>
                                     </Border>
 
-                                    <Grid Visibility="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToVis}}">
+                                    <Grid Visibility="{Binding IsBuffLibraryCollapsed, Converter={StaticResource InverseBoolToVis}}">
                                         <Grid.ColumnDefinitions>
-                                            <!-- Fase 5 (octava pasada): de 210px fijo a un peso relativo
-                                                 acotado (180-260px real) - crece un poco en ventanas
-                                                 grandes (nombres de carpeta mas largos caben sin envolver
-                                                 tanto) sin des-balancear la columna de resultados. -->
-                                            <ColumnDefinition Width="0.22*" MinWidth="180" MaxWidth="260" />
+                                            <ColumnDefinition Width="210" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
 
                                         <Border Grid.Column="0" Background="{StaticResource BgPrimaryBrush}" CornerRadius="6"
                                                 Padding="5" Margin="0,0,8,0">
                                             <DockPanel>
-                                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                                                    <Button Content="Raíz" Tag="Ghost" Padding="5,2" FontSize="10"
-                                                            Command="{Binding BuffLibrary.ClearCategoryCommand}" />
-                                                    <ItemsControl ItemsSource="{Binding BuffLibrary.Breadcrumb}"
-                                                                  ItemTemplate="{StaticResource BuffLibraryBreadcrumbCrumbTemplate}">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                    </ItemsControl>
-                                                </WrapPanel>
+                                                <Button DockPanel.Dock="Top" Content="Ver todo" HorizontalAlignment="Left"
+                                                        Padding="5,2" FontSize="10" Margin="0,0,0,4"
+                                                        Command="{Binding BuffLibrary.ClearCategoryCommand}" />
                                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                    <ItemsControl ItemsSource="{Binding BuffLibrary.VisibleFolders}"
-                                                                  ItemTemplate="{StaticResource BuffLibraryFolderRowTemplate}" />
+                                                    <ItemsControl ItemsSource="{Binding BuffLibrary.RootCategories}"
+                                                                  ItemTemplate="{StaticResource BuffCategoryNodeTemplate}" />
                                                 </ScrollViewer>
                                             </DockPanel>
                                         </Border>
@@ -1426,26 +1341,19 @@
                                             <TextBox DockPanel.Dock="Top" Text="{Binding BuffLibrary.SearchText, UpdateSourceTrigger=PropertyChanged}"
                                                      Padding="7,5" Background="{StaticResource BgElevatedBrush}"
                                                      Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4"
-                                                     ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id, .texto = busca en la descripción" />
+                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4" />
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding BuffLibrary.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                            <!-- Mismo LibraryGridPanel real que Objetos (Fase 2, octava pasada) - celda
-                                                 casi fija, columnas/filas variables, paginacion real en vez de scroll. -->
-                                            <DockPanel DockPanel.Dock="Bottom" Margin="0,4,0,0"
-                                                       Visibility="{Binding BuffLibrary.PageCount, Converter={StaticResource PageCountToVis}}">
-                                                <Button DockPanel.Dock="Left" Content="‹" Command="{Binding BuffLibrary.PrevPageCommand}" Padding="10,2" />
-                                                <Button DockPanel.Dock="Right" Content="›" Command="{Binding BuffLibrary.NextPageCommand}" Padding="10,2" />
-                                                <TextBlock Text="{Binding BuffLibrary.RangeText}" Style="{StaticResource CaptionText}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </DockPanel>
-                                            <ItemsControl ItemsSource="{Binding BuffLibrary.Results}" ItemTemplate="{StaticResource BuffLibraryCardTemplate}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <controls:LibraryGridPanel PreferredCell="64" MinCell="44" MaxCell="76" Gap="4" MaxColumns="30"
-                                                                                    PageCapacity="{Binding BuffLibrary.PageCapacity, Mode=OneWayToSource}" />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                            </ItemsControl>
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                <ItemsControl ItemsSource="{Binding BuffLibrary.Results}" ItemTemplate="{StaticResource BuffLibraryCardTemplate}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <controls:SlotGridPanel Columns="11" MinCell="40" MaxCell="90" Gap="4"
+                                                                                     ReferenceColumns="10"
+                                                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                </ItemsControl>
+                                            </ScrollViewer>
                                         </DockPanel>
                                     </Grid>
                                 </DockPanel>
@@ -1463,10 +1371,7 @@
                                     Command="{Binding ResearchAllCommand}" HorizontalAlignment="Left" Margin="0,0,0,10" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <!-- Fase 5 (octava pasada): mismo tratamiento que la columna de
-                                         carpetas de la Libreria (Objetos/Buffs) - relativo acotado en
-                                         vez de 210px fijo. -->
-                                    <ColumnDefinition Width="0.22*" MinWidth="180" MaxWidth="260" />
+                                    <ColumnDefinition Width="210" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 

@@ -20,41 +20,15 @@ namespace TerrasavrNative.App.ViewModels;
 // puesto, el objeto se coloca en ese slot y se dispara ItemPlaced para volver a Personaje.
 public partial class LibraryViewModel : ObservableObject
 {
+    private const int MaxResults = 300;
+
     private readonly List<LibraryItemViewModel> _all;
     private readonly Dictionary<int, LibraryItemViewModel> _byId;
-    // Todo lo que casa con el filtro actual (categoria/restriccion/busqueda), SIN paginar -
-    // Results (mas abajo) es solo la PAGINA actual, lo que de verdad se manda a la rejilla.
-    private List<LibraryItemViewModel> _filtered = [];
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _resultsSummary = string.Empty;
     [ObservableProperty] private ItemSlotViewModel? _pickTarget;
     [ObservableProperty] private CategoryNodeViewModel? _selectedCategory;
-
-    // Paginacion real (consulta a Opus, octava pasada - patron real del Bestiario de Terraria
-    // decompilado, UIBestiaryEntryGrid: celda casi fija, columnas/filas variables, desborde
-    // resuelto con paginas, nunca con scroll). PageCapacity lo escribe LibraryGridPanel
-    // (Mode=OneWayToSource, ver MainWindow.xaml) con cuantas tarjetas caben de VERDAD en el
-    // espacio real disponible - 40 de partida (el mismo que ya usaba el arbol para paginar
-    // carpetas hoja, LibraryCategoryTreeBuilder.LeafPageSize) hasta que el primer layout real
-    // llegue.
-    [ObservableProperty] private int _pageCapacity = 40;
-    [ObservableProperty] private int _pageIndex;
-
-    public int PageCount => PageCapacity > 0 ? Math.Max(1, (int)Math.Ceiling(_filtered.Count / (double)PageCapacity)) : 1;
-
-    // Calco real de UIBestiaryEntryGrid.GetRangeText() ("{desde}-{hasta} ({total})") - consulta
-    // a Opus, octava pasada: el mismo idioma que ya usa Terraria de verdad para "N-M de T".
-    public string RangeText
-    {
-        get
-        {
-            if (_filtered.Count == 0) return "0 resultados";
-            int from = PageIndex * PageCapacity + 1;
-            int to = Math.Min(_filtered.Count, from + PageCapacity - 1);
-            return PageCount > 1 ? $"{from}-{to} de {_filtered.Count}" : $"{_filtered.Count} resultado(s)";
-        }
-    }
 
     public bool IsPicking => PickTarget != null;
 
@@ -91,77 +65,34 @@ public partial class LibraryViewModel : ObservableObject
         // orden y organizacion de terrasav para esta librera Y investigacion").
         foreach (var node in LibraryCategoryTreeBuilder.Build(service))
             RootCategories.Add(node);
-        RefreshVisibleFolders();
 
         ApplyFilter();
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
-    // Fase 3 (octava pasada, consulta a Opus - navegador de un solo nivel + migas de pan,
-    // SOLO para la tira de la Libreria; Investigacion se queda con el arbol indentado clasico,
-    // ver ResearchViewModel, decision explicita de Opus). El viejo arbol recursivo mostraba
-    // los 4 niveles reales de Terrasavr indentados a la vez - "practico" de verdad, pedido
-    // explicito del usuario, es mas parecido a explorar carpetas: se ve UN nivel (VisibleFolders,
-    // hijos de CurrentFolder o la raiz si no hay ninguna abierta) con migas de pan (Breadcrumb)
-    // para volver atras. _navStack guarda los antecesores del nivel actual (sin incluir
-    // CurrentFolder, que ya se añade aparte al construir Breadcrumb).
-    private readonly List<CategoryNodeViewModel> _navStack = [];
-    [ObservableProperty] private CategoryNodeViewModel? _currentFolder;
-
-    public ObservableCollection<CategoryNodeViewModel> VisibleFolders { get; } = [];
-    public ObservableCollection<CategoryNodeViewModel> Breadcrumb { get; } = [];
-
-    private void RefreshVisibleFolders()
+    [RelayCommand]
+    private void SelectCategory(CategoryNodeViewModel node)
     {
-        VisibleFolders.Clear();
-        foreach (var n in CurrentFolder?.Children ?? RootCategories) VisibleFolders.Add(n);
-    }
+        // Bug real encontrado y corregido 2-sep-2026: IsExpanded no se tocaba nunca aqui, asi
+        // que ninguna carpeta por debajo de la raiz era alcanzable de verdad desde la UI (el
+        // ItemsControl de Children solo se muestra cuando IsExpanded es true) - critico ahora
+        // que el arbol vanilla real tiene hasta 4 niveles de profundidad. Pulsar una carpeta
+        // la selecciona/deselecciona (para "ver todo lo de aqui") Y alterna su despliegue,
+        // independientemente de si tiene hijos o no.
+        node.IsExpanded = !node.IsExpanded;
 
-    private void RefreshBreadcrumb()
-    {
-        Breadcrumb.Clear();
-        foreach (var n in _navStack) Breadcrumb.Add(n);
-        if (CurrentFolder != null) Breadcrumb.Add(CurrentFolder);
-    }
-
-    private void SelectCategoryInternal(CategoryNodeViewModel node)
-    {
         if (SelectedCategory != null) SelectedCategory.IsSelected = false;
-        SelectedCategory = node;
-        node.IsSelected = true;
+        if (SelectedCategory == node)
+        {
+            SelectedCategory = null; // pulsar la misma carpeta otra vez la deselecciona
+        }
+        else
+        {
+            SelectedCategory = node;
+            node.IsSelected = true;
+        }
         ApplyFilter();
-    }
-
-    // Un clic hace las dos cosas reales a la vez: selecciona la carpeta como filtro (sus
-    // ItemIdsOrdered, union real de sus descendientes si es una carpeta intermedia - por eso
-    // tiene sentido mostrar resultados AUNQUE tenga subcarpetas) y, si tiene subcarpetas
-    // (HasChildren), navega dentro para poder seguir explorando. Una hoja (sin hijos) solo
-    // filtra - no hay a donde navegar.
-    [RelayCommand]
-    private void Navigate(CategoryNodeViewModel node)
-    {
-        SelectCategoryInternal(node);
-        if (node.Children.Count == 0) return;
-
-        if (CurrentFolder != null) _navStack.Add(CurrentFolder);
-        CurrentFolder = node;
-        RefreshVisibleFolders();
-        RefreshBreadcrumb();
-    }
-
-    // Pulsar una miga de pan intermedia trunca la pila a partir de ahi - clasico "ir a esta
-    // carpeta", igual que cualquier explorador de archivos real.
-    [RelayCommand]
-    private void GoToCrumb(CategoryNodeViewModel node)
-    {
-        if (node == CurrentFolder) return;
-        int idx = _navStack.IndexOf(node);
-        if (idx >= 0) _navStack.RemoveRange(idx, _navStack.Count - idx);
-        CurrentFolder = node;
-        RefreshVisibleFolders();
-        RefreshBreadcrumb();
-        SelectCategoryInternal(node);
     }
 
     [RelayCommand]
@@ -169,15 +100,13 @@ public partial class LibraryViewModel : ObservableObject
     {
         if (SelectedCategory != null) SelectedCategory.IsSelected = false;
         SelectedCategory = null;
-        _navStack.Clear();
-        CurrentFolder = null;
-        RefreshVisibleFolders();
-        RefreshBreadcrumb();
         ApplyFilter();
     }
 
     private void ApplyFilter()
     {
+        Results.Clear();
+
         // Bug real encontrado y corregido 2-sep-2026 (pedido explicito: "reordenar todos los
         // ítems... para que coincidan 100 por 100 de como lo tenemos en terrasav"): filtrar
         // _all por ItemIdSet.Contains (un HashSet, sin orden garantizado) daba el orden
@@ -208,74 +137,24 @@ public partial class LibraryViewModel : ObservableObject
         if (hasSlotRestriction)
             matches = matches.Where(i => target!.AcceptsItem(i.Id));
 
-        // Fase 4 (octava pasada) - gramatica de busqueda real de Terrasavr, ver
-        // LibrarySearchGrammar. Coma=OR, espacio=AND, "#id"/"#a-b" por id, ".texto" en el
-        // tooltip real (StatsTooltip) en vez del nombre.
         if (hasSearch)
-        {
-            string query = SearchText;
-            matches = matches.Where(i => LibrarySearchGrammar.Matches(
-                query, i.Id, i.DisplayName.ToLowerInvariant(), i.StatsTooltip?.ToLowerInvariant()));
-        }
+            matches = matches.Where(i => i.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
 
         if (!hasSearch && SelectedCategory == null && !hasSlotRestriction)
         {
-            _filtered = [];
-            Results.Clear();
-            PageIndex = 0;
             ResultsSummary = $"{_all.Count} objetos en total (vanilla + Calamity) - escribe para buscar o elige una carpeta.";
-            OnPropertyChanged(nameof(PageCount));
-            OnPropertyChanged(nameof(RangeText));
             return;
         }
 
-        // Paginacion real (consulta a Opus, octava pasada): _filtered guarda TODO lo que casa
-        // (ya no hay tope de 300 - con paginas de verdad, el catalogo entero es navegable,
-        // nunca se renderizan mas de PageCapacity tarjetas a la vez), UpdatePage() manda solo
-        // la pagina actual a Results.
-        _filtered = matches.ToList();
-        PageIndex = 0;
-        UpdatePage();
+        var list = matches.ToList();
+        foreach (var item in list.Take(MaxResults)) Results.Add(item);
 
         string categoryLabel = SelectedCategory != null ? $" en \"{SelectedCategory.Name}\"" : string.Empty;
         string restrictionLabel = hasSlotRestriction ? " válidos para este slot" : string.Empty;
-        ResultsSummary = $"{categoryLabel}{restrictionLabel}".Trim();
-        if (ResultsSummary.Length == 0) ResultsSummary = "Resultados de la búsqueda";
+        ResultsSummary = list.Count > MaxResults
+            ? $"Mostrando {MaxResults} de {list.Count} resultados{restrictionLabel}{categoryLabel} - afina la busqueda."
+            : $"{list.Count} resultado(s){restrictionLabel}{categoryLabel}.";
     }
-
-    // Manda solo la pagina actual a Results (lo que la rejilla real renderiza) - se llama al
-    // cambiar de filtro, de pagina, o cuando LibraryGridPanel publica un PageCapacity real
-    // nuevo (el espacio disponible cambio, ej. al redimensionar la ventana).
-    private void UpdatePage()
-    {
-        PageIndex = Math.Clamp(PageIndex, 0, PageCount - 1);
-        Results.Clear();
-        foreach (var item in _filtered.Skip(PageIndex * PageCapacity).Take(Math.Max(1, PageCapacity)))
-            Results.Add(item);
-        OnPropertyChanged(nameof(PageCount));
-        OnPropertyChanged(nameof(RangeText));
-        NextPageCommand.NotifyCanExecuteChanged();
-        PrevPageCommand.NotifyCanExecuteChanged();
-    }
-
-    partial void OnPageCapacityChanged(int value) => UpdatePage();
-    partial void OnPageIndexChanged(int value)
-    {
-        Results.Clear();
-        foreach (var item in _filtered.Skip(PageIndex * PageCapacity).Take(Math.Max(1, PageCapacity)))
-            Results.Add(item);
-        OnPropertyChanged(nameof(RangeText));
-        NextPageCommand.NotifyCanExecuteChanged();
-        PrevPageCommand.NotifyCanExecuteChanged();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanGoNextPage))]
-    private void NextPage() => PageIndex++;
-    private bool CanGoNextPage() => PageIndex < PageCount - 1;
-
-    [RelayCommand(CanExecute = nameof(CanGoPrevPage))]
-    private void PrevPage() => PageIndex--;
-    private bool CanGoPrevPage() => PageIndex > 0;
 
     partial void OnPickTargetChanged(ItemSlotViewModel? value)
     {

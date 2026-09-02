@@ -16,11 +16,6 @@ public sealed partial class CategoryNodeViewModel(string name, string fullPath) 
     public string FullPath { get; } = fullPath;
     public ObservableCollection<CategoryNodeViewModel> Children { get; } = [];
 
-    // Fase 3 (octava pasada, navegador de un solo nivel de la Libreria - consulta a Opus):
-    // Children se rellena una unica vez al construir el arbol y no vuelve a cambiar, asi que
-    // un simple get calculado basta, sin necesitar notificacion de cambios.
-    public bool HasChildren => Children.Count > 0;
-
     // Ids reales que caen bajo este nodo - el propio conjunto si es una carpeta hoja, o la
     // union de todos sus descendientes si es una carpeta intermedia. Pertenencia MULTIPLE de
     // verdad (un mismo objeto puede estar en el conjunto de mas de un nodo a la vez, igual que
