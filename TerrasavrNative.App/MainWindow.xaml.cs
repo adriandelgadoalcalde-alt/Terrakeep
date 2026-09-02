@@ -263,11 +263,37 @@ public partial class MainWindow : Window
             DragDrop.DoDragDrop(element, new DataObject(typeof(BuffSlotViewModel), slot), DragDropEffects.Move);
     }
 
+    // Bug real reportado 2-sep-2026 ("los buff no se pueden arrastrar hasta la rejilla de
+    // buff"): OnBuffSlotDrop solo aceptaba OTRO slot arrastrado (intercambio), nunca una
+    // tarjeta arrastrada desde la Libreria de buffs - a diferencia de OnItemSlotDrop, que ya
+    // acepta LibraryItemViewModel ademas de ItemSlotViewModel. Arreglado igual: la tarjeta de
+    // la Libreria de buffs (BuffCatalogEntryViewModel) tambien inicia arrastre.
+    private Point? _dragStartBuffLibrary;
+
+    private void OnBuffLibraryCardMouseDown(object sender, MouseButtonEventArgs e) => _dragStartBuffLibrary = e.GetPosition(null);
+
+    private void OnBuffLibraryCardMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _dragStartBuffLibrary is not { } start) return;
+        var pos = e.GetPosition(null);
+        if (Math.Abs(pos.X - start.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(pos.Y - start.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        _dragStartBuffLibrary = null;
+
+        if (sender is FrameworkElement { DataContext: BuffCatalogEntryViewModel entry } element)
+            DragDrop.DoDragDrop(element, new DataObject(typeof(BuffCatalogEntryViewModel), entry), DragDropEffects.Copy);
+    }
+
     private void OnBuffSlotDrop(object sender, DragEventArgs e)
     {
         if (sender is not FrameworkElement { DataContext: BuffSlotViewModel targetSlot }) return;
-        if (e.Data.GetDataPresent(typeof(BuffSlotViewModel)) && e.Data.GetData(typeof(BuffSlotViewModel)) is BuffSlotViewModel sourceSlot
-            && !ReferenceEquals(sourceSlot, targetSlot))
+
+        if (e.Data.GetDataPresent(typeof(BuffCatalogEntryViewModel)) && e.Data.GetData(typeof(BuffCatalogEntryViewModel)) is BuffCatalogEntryViewModel libraryEntry)
+        {
+            targetSlot.PlaceBuff(libraryEntry.Id);
+        }
+        else if (e.Data.GetDataPresent(typeof(BuffSlotViewModel)) && e.Data.GetData(typeof(BuffSlotViewModel)) is BuffSlotViewModel sourceSlot
+                 && !ReferenceEquals(sourceSlot, targetSlot))
         {
             sourceSlot.SwapWith(targetSlot);
         }

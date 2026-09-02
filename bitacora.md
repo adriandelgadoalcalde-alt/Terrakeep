@@ -2983,3 +2983,93 @@ esta fase - todo el cambio es de `TerrasavrNative.App`, capa de presentación).
 
 Con esto se cierran las 3 peticiones de la cuarta pasada de feedback (tooltips completos de
 equipo, iconos consistentes, rework completo de Buffs).
+
+## Quinta pasada de feedback (2-sep-2026) - contexto menú, botones, Librería, fusión Equipamiento
+
+Mensaje único del usuario, denso, 7 peticiones + instrucción explícita "consulta con opus y
+después ejecuta". Consultado Opus (subagente `Plan`, modelo `opus`) para P1/P3/P4/P5; P2
+(el bug de arrastrar buffs) era un bug claro, corregido directo sin consulta.
+
+- **Bug arreglado sin consulta**: los buffs no se podían arrastrar desde la Librería hasta la
+  rejilla de buffs - `MainWindow.xaml.cs`: `OnBuffLibraryCardMouseDown/Move` nuevos (gemelos de
+  `OnLibraryCardMouseDown/Move`) + `OnBuffSlotDrop` ampliado para aceptar tanto un
+  `BuffCatalogEntryViewModel` soltado (coloca el buff) como un `BuffSlotViewModel` (intercambio
+  ya existente).
+- **Menú contextual de slot de buff**: era un `ContextMenu` casi vacío ("Vaciar slot" a secas,
+  sin ningún equivalente a "añadir/quitar" de las armas) - se añadió `MenuItem "Elegir buff..."`
+  con `ChooseFromLibraryCommand` (mismo comando real que ya abre la Librería con el slot como
+  `PickTarget`, ver Fase 2 arriba), y "Vaciar slot" pasó de `Visibility` a `IsEnabled` (en
+  slots de objeto y de buff) - antes desaparecía del todo con el slot vacío, dejando un
+  recuadro diminuto sin nada útil dentro, exactamente la queja del usuario.
+- **P1 (Opus) - Tema oscuro para TODOS los `ContextMenu`/`MenuItem` de la app**:
+  `Theme.xaml` gana `Style TargetType="ContextMenu"`/`Style TargetType="MenuItem"` (mismo
+  lenguaje visual que el `ComboBox` ya existente - fondo `BgSecondaryBrush`, borde sutil,
+  `CornerRadius`). Nota real de WPF: hace falta `HasDropShadow="True"` en el `ContextMenu`
+  aunque no se quiera sombra explícita, porque WPF deriva `AllowsTransparency` del Popup
+  interno de esa propiedad - sin ella el `CornerRadius` se recorta en seco contra un
+  rectángulo opaco.
+- **P3 (Opus) - Jerarquía de 3 botones**: nuevos `Tag="AccentSoft"` (variante suave del
+  `Accent` ya existente, incluye su propio `MultiTrigger` de elevación en hover) y
+  `Tag="Ghost"` (variante mínima para acciones destructivas/deshacer, con su propio
+  `MultiTrigger` de hover) añadidos al `Style TargetType="Button"` ya existente en
+  `Theme.xaml` (mismo patrón real que `Accent`/`Teal`/`Pink`/`Orange`). Aplicado en
+  `MainWindow.xaml`: botones "Mínima"/"Media" de duración de buff → `AccentSoft`, "Máxima" →
+  `Accent`; botón "★" (mejor prefijo) → `Accent`; botón "Quitar" (prefijo) y ambos "Vaciar
+  slot" (objeto y buff) → `Ghost` - mismo lenguaje visual que "Aplicar build", pedido explícito
+  del usuario.
+- **P4 (Opus) - Rejilla en la Librería de objetos**: nueva `LibraryCardTemplate` (tarjeta
+  cuadrada SIN contorno naranja, calco de `BuffLibraryCardTemplate` - pedido explícito "allí sí
+  que no quiero contorno") dentro de la MISMA `SlotGridPanel`/`ReferenceColumns=10` que el
+  resto de rejillas de la app, sustituyendo el viejo `WrapPanel` de ancho fijo 80×86 con scroll
+  siempre activo. Ahora solo scrollea cuando una categoría tiene de verdad muchos objetos
+  (mismo mecanismo real de `AvailableHeight`/`MinCell`/`MaxCell` ya usado en Inventario).
+- **P5 (Opus) - Fusión de Equipamiento con Monturas/Monedas como laterales**: las pestañas
+  "Monturas" y "Monedas" desaparecen del todo; su contenido pasa a vivir DENTRO de
+  "Equipamiento" como dos columnas laterales de un único `Grid` (marcado con
+  `controls:SlotRowHost`, clase nueva trivial - necesaria porque `RelativeSource
+  AncestorType=Grid` a secas encuentra antes el `Grid` interno de la plantilla del
+  `ScrollViewer`, no el propio; mismo motivo real por el que `AvailableHeight` ya usaba
+  `AncestorType=ScrollViewer`). Un solo contorno naranja para todo el bloque (3 contornos
+  compitiendo en ~672px habría repetido el amontonamiento ya resuelto en la tercera pasada);
+  los laterales se distinguen "hundiéndose" (`BgPrimaryBrush`) en vez de con contorno propio.
+  - Lateral izquierdo: "Mascota / Montura" + "Tinte", en VERTICAL (`Columns=1`, nuevo parámetro
+    en `MainViewModel.AddContainer`), pedido explícito del usuario ("mascotas etc mejor en
+    vertical"). Envuelto en su propio `ScrollViewer` de seguridad (mismo patrón ya probado de
+    la vieja pestaña "Monturas" standalone).
+  - Lateral derecho: "Monedas" + "Munición", en HORIZONTAL (ya lo estaban) - pedido explícito
+    "munición así en horizontal está bien", sin tocar.
+  - `SlotGridPanel.cs` gana `ReferenceWidth` (DP nueva, 0=desactivada): `ReferenceColumns` por
+    sí solo mide contra el ancho PROPIO del panel (`availW`) - funciona cuando los 9
+    contenedores comparten literalmente la misma columna de un mismo `Grid` (como hasta ahora),
+    pero en la fila fusionada (3 `SlotGridPanel` en 3 columnas DISTINTAS y más estrechas) cada
+    uno calcularía su techo contra su propio ancho reducido y los tres colapsarían al
+    `MinCell`. `ReferenceWidth` fija el ancho de referencia real (el de TODA la fila fusionada,
+    vía `SlotRowHost.ActualWidth`) en vez del ancho propio.
+  - **Verificación real, no solo cálculo a mano**: se detectó un hueco real en la aritmética
+    inicial de Opus para el truco `Grid.RowSpan="2"` del lateral izquierdo (su cifra
+    `(300-16)/5≈56,8px` solo contaba UN grupo de 5 slots, no los DOS apilados - Mascota/Montura
+    Y Tinte - que el diseño real necesita) - en vez de fiarse del cálculo, se amplió el arnés
+    de UI Automation (`scratchpad/uia-harness/Program.cs`) para rellenar los 4 contenedores
+    laterales con objetos reales y capturar un PNG real del render (`RenderTargetBitmap` sobre
+    el árbol visual de WPF, no una captura de pantalla dependiente de que la ventana esté
+    visible) - confirma visualmente: ningún solapamiento, 0 barras de scroll a la resolución de
+    prueba (el `ScrollViewer` de seguridad no hace falta ahí pero no estorba), Mascota/Montura y
+    Tinte legibles en vertical, Monedas/Munición legibles en horizontal. Se corrigió además la
+    etiqueta del lateral izquierdo de "Equipo" (ambigua junto a "Equipamiento"/"Equipo puesto")
+    a "Mascota / Montura" tras verla en la captura real.
+
+**Verificación real**: `dotnet build` limpio (0 errores/0 advertencias), `dotnet test`
+134/134 verde. Arnés de UI Automation real: las 3 pestañas restantes
+(Equipamiento/Inventario/Almacenes) seleccionan sin excepción; las píldoras
+Loadout/Vista/Almacenes siguen cambiando `Current` de verdad tras la fusión; captura PNG real
+del Equipamiento fusionado revisada a mano (ver arriba). Sin `ultimo-error.log`.
+
+**Aparte, no incluido en esta consulta a Opus** (petición 5 original del usuario, sobre
+Builds): "Botas de terrospark" corregido en `builds.json` como accesorio real de las 4
+combinaciones `endgame` (antes "Botas del campo helado", apropiadas solo en fases anteriores)
+- verificado contra la wiki real. **Pendiente por completo**: el indicador visual "5 accesorios
+en Normal / 6 en Experto / 7 en Maestro" que pidió el usuario no se ha diseñado ni
+implementado todavía - solo se corrigió el dato del 6º accesorio de las builds `endgame`. Y
+dentro de esa misma tarea, las builds `prehardmode`/`earlyhardmode` (8 combinaciones) NO se
+han revisado contra la wiki para su propio 6º/7º accesorio - solo se hizo la ronda `endgame`.
+Queda como tarea separada, a retomar cuando el usuario confirme prioridad.

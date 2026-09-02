@@ -33,8 +33,7 @@
                              el contenedor, es donde vive ahora tambien para esos casos (la
                              tarjeta rica conserva el suyo ademas, por comodidad). -->
                         <Button DockPanel.Dock="Right" Content="Vaciar slot" Command="{Binding Slot.ClearCommand}"
-                                ToolTip="Vaciar este slot" Padding="6,3" FontSize="10.5" VerticalAlignment="Center"
-                                Foreground="{StaticResource PinkBrush}" Background="Transparent" BorderThickness="0" />
+                                ToolTip="Vaciar este slot" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" />
                         <Image Source="{Binding Slot.IconPath}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,8,0"
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                VerticalAlignment="Center"
@@ -61,13 +60,16 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <TextBox Text="{Binding Slot.PrefixId, UpdateSourceTrigger=PropertyChanged}" Width="50" Padding="6,4"
                                  Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                        <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada): el
+                             Background="Transparent" puesto a mano aqui era letra muerta - la
+                             plantilla real de Button (Theme.xaml) ignora esa propiedad, solo
+                             reacciona a Tag. ★ = accion principal (Accent); Quitar = deshacer
+                             (Ghost, ya sustituye ese Background/Foreground a mano). -->
                         <Button Content="★" Command="{Binding ApplyBestPrefixCommand}" ToolTip="Aplicar el mejor prefijo real"
-                                Padding="6,2" Margin="6,0,0,0" FontSize="12" Foreground="{StaticResource AccentBrush}"
-                                Background="Transparent"
+                                Tag="Accent" Padding="6,2" Margin="6,0,0,0" FontSize="12"
                                 Visibility="{Binding Slot.HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
                         <Button Content="Quitar" Command="{Binding ClearPrefixCommand}" ToolTip="Quitar el prefijo actual"
-                                Padding="6,2" Margin="6,0,0,0" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
-                                Background="Transparent" />
+                                Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
                     </StackPanel>
                     <TextBlock Text="{Binding Slot.PrefixDisplay}" Style="{StaticResource CaptionText}" Margin="0,0,0,6"
                                Visibility="{Binding Slot.PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
@@ -302,13 +304,19 @@
                 </Border.ToolTip>
                 <!-- El menu contextual TAMPOCO hereda el DataContext solo (es un Popup fuera del
                      arbol visual, igual que el ToolTip de arriba) - mismo remedio real. -->
+                <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada: "el menú de
+                     clic derecho... sale un recuadro rectangular super pequeño que no sirve de
+                     nada"). Antes "Vaciar slot" desaparecia por completo si el slot ya estaba
+                     vacio (Visibility) - un slot vacio con un unico item real ("Aplicar mejor
+                     prefijo", tambien oculto ahi) podia acabar con el menu con 0 filas
+                     visibles. IsEnabled en vez de Visibility: la fila SIEMPRE esta, solo se
+                     apaga cuando no aplica - comunica el porque en vez de cambiar de forma. -->
                 <Border.ContextMenu>
                     <ContextMenu DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <MenuItem Header="Elegir objeto..." Command="{Binding ChooseFromLibraryCommand}" />
                         <MenuItem Header="Aplicar mejor prefijo" Command="{Binding ApplyBestPrefixCommand}"
                                   Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
-                        <MenuItem Header="Vaciar slot" Command="{Binding ClearCommand}"
-                                  Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
+                        <MenuItem Header="Vaciar slot" Command="{Binding ClearCommand}" IsEnabled="{Binding IsNotEmpty}" />
                     </ContextMenu>
                 </Border.ContextMenu>
                 <Border.Style>
@@ -376,8 +384,16 @@
                 <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotCompactTemplate}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
+                            <!-- ReferenceWidth (pregunta a Opus sobre el diseño, quinta pasada -
+                                 fusion de Equipamiento con laterales): sin ancestro
+                                 SlotRowHost real (el caso de siempre, Inventario/Almacenes/
+                                 Equipamiento en solitario) este binding no encuentra nada y
+                                 ReferenceWidth se queda en su default 0 = desactivado,
+                                 comportamiento identico a como estaba. Solo tiene efecto real
+                                 dentro de la fila fusionada de Equipamiento. -->
                             <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="44" MaxCell="96" Gap="4"
                                                      ReferenceColumns="10"
+                                                     ReferenceWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=controls:SlotRowHost}}"
                                                      AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
@@ -555,10 +571,15 @@
                         </StackPanel>
                     </ToolTip>
                 </Border.ToolTip>
+                <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada: "mejor sería
+                     que tuviera igual que en las armas añadir buff o quitar buff si lo hay") -
+                     mismo par de acciones reales que ya tiene la tarjeta de objetos
+                     (ChooseFromLibraryCommand ya existe, lo usa el doble clic de arriba) +
+                     IsEnabled en vez de Visibility, mismo criterio que el menu de objetos. -->
                 <Border.ContextMenu>
                     <ContextMenu DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                        <MenuItem Header="Vaciar slot" Command="{Binding ClearCommand}"
-                                  Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
+                        <MenuItem Header="Elegir buff..." Command="{Binding ChooseFromLibraryCommand}" />
+                        <MenuItem Header="Vaciar slot" Command="{Binding ClearCommand}" IsEnabled="{Binding IsNotEmpty}" />
                     </ContextMenu>
                 </Border.ContextMenu>
                 <Border.Style>
@@ -611,8 +632,7 @@
                 <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
                     <DockPanel Margin="0,0,0,10">
                         <Button DockPanel.Dock="Right" Content="Vaciar slot" Command="{Binding ClearSlotCommand}"
-                                ToolTip="Vaciar este slot" Padding="6,3" FontSize="10.5" VerticalAlignment="Center"
-                                Foreground="{StaticResource PinkBrush}" Background="Transparent" BorderThickness="0" />
+                                ToolTip="Vaciar este slot" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" />
                         <Image Source="{Binding Slot.IconPath}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,8,0"
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                VerticalAlignment="Center"
@@ -633,18 +653,71 @@
                          la moda real como aproximacion honesta, ver MinTooltip); Media = 2x
                          Minima (unico precedente real de escalera, Pocion de la suerte);
                          Maxima = S.getMaxTime() real del propio Terrasavr. -->
+                    <!-- Jerarquia real (pregunta a Opus sobre el diseño, quinta pasada): los 3
+                         son valores del MISMO control, no 3 acciones de peso distinto - Maxima
+                         (la que el 95% quiere) en Accent, Minima/Media en AccentSoft. -->
                     <UniformGrid Columns="3" Rows="1">
                         <Button Content="{Binding MinLabel}" Command="{Binding ApplyMinCommand}" ToolTip="{Binding MinTooltip}"
-                                FontSize="10.5" Padding="4,6" Margin="0,0,4,0" />
+                                Tag="AccentSoft" FontSize="10.5" Padding="4,6" Margin="0,0,4,0" />
                         <Button Content="{Binding MediaLabel}" Command="{Binding ApplyMediaCommand}"
                                 ToolTip="2x la duración mínima - único precedente real de escalera en el juego (Poción de la suerte)"
-                                FontSize="10.5" Padding="4,6" Margin="0,0,4,0" />
+                                Tag="AccentSoft" FontSize="10.5" Padding="4,6" Margin="0,0,4,0" />
                         <Button Content="{Binding MaxLabel}" Command="{Binding ApplyMaxCommand}"
                                 ToolTip="Duración máxima real permitida por Terrasavr"
-                                FontSize="10.5" Padding="4,6" />
+                                Tag="Accent" FontSize="10.5" Padding="4,6" />
                     </UniformGrid>
                 </StackPanel>
             </DockPanel>
+        </DataTemplate>
+
+        <!-- Tarjeta de un objeto del catalogo completo en la Libreria (quinta pasada, pregunta a
+             Opus sobre el diseño: "la libreria sigue sin tener las rejillas como en
+             inventario"). Sustituye la tarjeta fija 80x86 con caption de nombre - obligatorio
+             quitar Width/Height fijos porque SlotGridPanel.ArrangeOverride hace
+             Arrange(new Rect(x,y,_cell,_cell)), un tamaño fijo se saldria de una celda pequeña
+             y se solaparia con la vecina. El nombre se quita de la tarjeta (vivia recortado en
+             silencio sin puntos suspensivos en categorias con muchos resultados) y se compone
+             solo en el tooltip, que ya lo hacia - mismo patron ya validado en
+             BuffLibraryCardTemplate. Arrastre igual que siempre (OnLibraryCardMouseDown/Move,
+             no dependen de la forma de la tarjeta). -->
+        <DataTemplate x:Key="LibraryCardTemplate" DataType="{x:Type vm:LibraryItemViewModel}">
+            <Border Padding="0" CornerRadius="6" Background="{StaticResource BgElevatedBrush}" BorderThickness="1" Cursor="Hand"
+                    PreviewMouseLeftButtonDown="OnLibraryCardMouseDown" MouseMove="OnLibraryCardMouseMove">
+                <Border.ToolTip>
+                    <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <StackPanel MaxWidth="240">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                       Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
+                        </StackPanel>
+                    </ToolTip>
+                </Border.ToolTip>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <Button Content="Colocar" FontSize="8" Padding="0,1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                            Background="{StaticResource AccentBrush}" Foreground="{StaticResource BgPrimaryBrush}" BorderThickness="0"
+                            Command="{Binding DataContext.Library.PlaceInTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}"
+                            Visibility="{Binding DataContext.Library.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
+                </Grid>
+            </Border>
         </DataTemplate>
 
         <!-- Tarjeta de un buff del catalogo completo en la Libreria de buffs (Fase 2, pregunta
@@ -654,7 +727,8 @@
              catalogo no tiene ninguno de los dos) y con el boton "Colocar" solo cuando hay un
              slot esperando (BuffLibrary.IsPicking). -->
         <DataTemplate x:Key="BuffLibraryCardTemplate" DataType="{x:Type vm:BuffCatalogEntryViewModel}">
-            <Border Padding="0" CornerRadius="6" Background="{StaticResource BgElevatedBrush}" BorderThickness="1" Cursor="Hand">
+            <Border Padding="0" CornerRadius="6" Background="{StaticResource BgElevatedBrush}" BorderThickness="1" Cursor="Hand"
+                    PreviewMouseLeftButtonDown="OnBuffLibraryCardMouseDown" MouseMove="OnBuffLibraryCardMouseMove">
                 <Border.ToolTip>
                     <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <StackPanel MaxWidth="240">
@@ -827,13 +901,62 @@
                                      bitacora.md "Fase D"). -->
                                 <TabControl Grid.Column="0" Style="{StaticResource InnerTabControl}" Margin="0,0,10,0">
                                     <TabItem Header="Equipamiento">
-                                        <!-- Contorno propio distintivo (confirmado tras pregunta directa al
-                                             usuario 2-sep-2026: el panel Equipamiento necesita su propia
-                                             distincion visual, separada del Inventario general). -->
+                                        <!-- Fusion con Monturas/Monedas como laterales (pregunta a Opus
+                                             sobre el diseño, quinta pasada: "yo juntaría la página de
+                                             munición mascotas gancho... y dinero en equipamiento en una
+                                             sola ventana pero a los lados... mascotas etc mejor en
+                                             vertical"). UN solo marco naranja para todo el bloque (3
+                                             marcos compitiendo en ~672px seria el mismo amontonamiento
+                                             que ya se resolvio en la tercera pasada) - los laterales se
+                                             distinguen "hundiendose" (BgPrimaryBrush, mismo idioma que
+                                             el arbol de la Libreria y los huecos vacios de
+                                             ItemSlotCardCompact) en vez de con su propio contorno.
+                                             SlotRowHost (no un Grid a secas) para que ReferenceWidth de
+                                             los 3 SlotGridPanel de esta fila se enlace de forma fiable
+                                             (ver SlotGridPanel.cs) contra el ancho de TODA la fila
+                                             fusionada, no el de cada columna estrecha por separado -
+                                             sin esto los 3 colapsarian a MinCell=44, mas pequeños que
+                                             Inventario, el problema inverso de la cuarta pasada. -->
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
-                                            <DockPanel DataContext="{Binding EquipmentGroup}">
-                                                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                            <controls:SlotRowHost>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="2*" />
+                                                    <ColumnDefinition Width="5*" />
+                                                    <ColumnDefinition Width="4*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
+                                                </Grid.RowDefinitions>
+
+                                                <!-- Lateral izquierdo: Mascota/Montura/Gancho + Tinte, en
+                                                     vertical (Columns=1, ver MainViewModel.AddContainer).
+                                                     RowSpan=2 para aprovechar tambien la franja del
+                                                     selector Loadout/Vista (que no la necesita, es solo
+                                                     texto+pildoras) - propio ScrollViewer de seguridad:
+                                                     10 slots reales en 1 columna no siempre caben sin
+                                                     scroll en ventanas pequeñas, y NO sacrificar
+                                                     legibilidad (MinCell=44) es mas importante que nunca
+                                                     scrollear aqui. -->
+                                                <Border Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgPrimaryBrush}"
+                                                        CornerRadius="8" Padding="6" Margin="0,0,8,0">
+                                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                        <StackPanel>
+                                                            <TextBlock Text="Mascota / Montura" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                            <ContentControl Content="{Binding MountsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                            <TextBlock Text="Tinte" Style="{StaticResource CaptionText}" Margin="0,10,0,3" />
+                                                            <ContentControl Content="{Binding DyesContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                        </StackPanel>
+                                                    </ScrollViewer>
+                                                </Border>
+
+                                                <!-- Selector Loadout/Vista, ColumnSpan=2 (centro+derecha) -
+                                                     DataContext local a EquipmentGroup, sin heredarlo al
+                                                     resto de la fila fusionada (los laterales necesitan
+                                                     el MainViewModel directamente). -->
+                                                <StackPanel Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="0" Margin="0,0,0,6"
+                                                            DataContext="{Binding EquipmentGroup}">
                                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
                                                         <TextBlock Text="Loadout:" Style="{StaticResource CaptionText}"
                                                                    VerticalAlignment="Center" Margin="0,0,8,0" />
@@ -867,37 +990,35 @@
                                                         </ItemsControl>
                                                     </StackPanel>
                                                 </StackPanel>
-                                                <!-- Pregunta a Opus sobre el diseño (2-sep-2026, tercera pasada tras
-                                                     feedback directo del usuario - "equipamiento no tiene el mismo
-                                                     formato que inventario y el resto de las 9 pestañas"): antes
-                                                     Equipamiento tenia su propio bloque Viewbox+ItemsControl a medida
-                                                     (tarjeta RICA, con WrapPanel Width="820" a pelo - 20px de aire
-                                                     muerto) mientras Inventario/Almacenes ya usaban la rejilla
-                                                     compacta - visualmente inconsistente aunque tecnicamente
-                                                     razonable (Opus recomendo ≤10 slots = tarjeta rica, en la segunda
-                                                     consulta). Ahora los 9 contenedores reales usan el MISMO
-                                                     ContainerCompactTemplate (SlotGridPanel + SlotCompactTemplate),
-                                                     mismo formato en todas partes. EquipmentGroupViewModel.Current
-                                                     expone el ContainerViewModel completo (Columns=5 fijado en
-                                                     AddSlotSet - PlrLoadout siempre tiene 10 slots reales en forma
-                                                     5x2, ver PlrLoadout.cs - ContainerCompactTemplate ahora lee
-                                                     Columns de ahi en vez de un 10 fijo). -->
-                                                <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                            </DockPanel>
+
+                                                <!-- Centro: Equipamiento 5x2 real (Columns=5, ver
+                                                     EquipmentGroupViewModel.AddSlotSet). -->
+                                                <ContentControl Grid.Column="1" Grid.Row="1" Content="{Binding EquipmentGroup.Current}"
+                                                                ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+
+                                                <!-- Lateral derecho: Monedas + Municion, horizontal (ya lo
+                                                     estaba - Columns=10 por defecto, 4 slots caben en una
+                                                     unica fila corta) - pedido explicito "municion asi en
+                                                     horizontal esta bien". -->
+                                                <Border Grid.Column="2" Grid.Row="1" Background="{StaticResource BgPrimaryBrush}"
+                                                        CornerRadius="8" Padding="6" Margin="8,0,0,0">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding CoinsContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                        <ContentControl Content="{Binding CoinsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                        <TextBlock Text="{Binding AmmoContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,10,0,3" />
+                                                        <ContentControl Content="{Binding AmmoContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </controls:SlotRowHost>
                                         </Border>
                                     </TabItem>
-                                    <!-- Antes: 9 pestañas planas aqui dentro (Inventario/Banco/Caja
-                                         fuerte/Fragua/Boveda/Mascota-Montura-Gancho/Tintes/Monedas/
-                                         Municion) que a los anchos de ventana normales envolvian a 2-3
-                                         lineas, comiendose el alto real de la cuadricula de objetos -
-                                         pregunta a Opus sobre el diseño (2-sep-2026), consolidadas en 3
-                                         destinos: "Almacenes" agrupa los 4 contenedores de 40 slots tras
-                                         un selector de pildoras (mismo patron que Equipamiento), y
-                                         "Monturas"/"Monedas" apilan sus dos contenedores emparejados
-                                         (asi es como los muestra el propio juego: el tinte i corresponde
-                                         al equipo i). Los 9 ContainerViewModel siguen siendo los MISMOS
-                                         de siempre (MainViewModel.Containers) - riesgo cero para
-                                         guardar/cargar, ver StorageGroupViewModel.cs. -->
+                                    <!-- Antes: 9 pestañas planas aqui dentro, luego 5 (pregunta a Opus
+                                         sobre el diseño, 2-sep-2026 y quinta pasada) - Monturas/Monedas
+                                         se fusionaron dentro de Equipamiento (arriba) como laterales,
+                                         asi que solo quedan Inventario/Almacenes aqui. Los 9
+                                         ContainerViewModel siguen siendo los MISMOS de siempre
+                                         (MainViewModel.Containers) - riesgo cero para guardar/cargar,
+                                         ver StorageGroupViewModel.cs. -->
                                     <TabItem Header="Inventario">
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
@@ -922,32 +1043,6 @@
                                                 </ItemsControl>
                                                 <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                             </DockPanel>
-                                        </Border>
-                                    </TabItem>
-                                    <TabItem Header="Monturas">
-                                        <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding MountsContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                                    <ContentControl Content="{Binding MountsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                    <TextBlock Text="{Binding DyesContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,10,0,4" />
-                                                    <ContentControl Content="{Binding DyesContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                </StackPanel>
-                                            </ScrollViewer>
-                                        </Border>
-                                    </TabItem>
-                                    <TabItem Header="Monedas">
-                                        <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding CoinsContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                                    <ContentControl Content="{Binding CoinsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                    <TextBlock Text="{Binding AmmoContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,10,0,4" />
-                                                    <ContentControl Content="{Binding AmmoContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                </StackPanel>
-                                            </ScrollViewer>
                                         </Border>
                                     </TabItem>
                                 </TabControl>
@@ -1023,81 +1118,26 @@
                                                      Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
                                                      MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4" />
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding Library.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                                <ItemsControl ItemsSource="{Binding Library.Results}">
+                                            <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada: "la libreria
+                                                 sigue sin tener las rejillas como en inventario... no debe tener scroll a
+                                                 menos que sea una categoria que logicamente tiene muchos ítems"). Misma
+                                                 SlotGridPanel que el resto de la app - con estos parametros reales
+                                                 (medidos contra la franja real de ~772x186px) no aparece scroll hasta
+                                                 ~48 resultados (4 filas x 12 columnas a MinCell=40), y con pocos
+                                                 resultados la celda crece hasta MaxCell=96 topada por ReferenceColumns=10
+                                                 (~73px aqui) - ni vacio ni deforme. MinCell=40 en vez de 44 a proposito:
+                                                 con 44 el scroll aparecia por solo 2px de diferencia real (4*44+12=188
+                                                 contra 186 disponibles). Sin AvailableHeight el panel mediria con alto
+                                                 infinito y SIEMPRE elegiria MaxCell + SIEMPRE scrollearia. -->
+                                            <ScrollViewer x:Name="LibraryResultsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}">
                                                     <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                        <ItemsPanelTemplate>
+                                                            <controls:SlotGridPanel Columns="12" MinCell="40" MaxCell="96" Gap="4"
+                                                                                     ReferenceColumns="10"
+                                                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                                                        </ItemsPanelTemplate>
                                                     </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate DataType="{x:Type vm:LibraryItemViewModel}">
-                                                            <!-- Arrastrar una tarjeta hasta un slot visible arriba lo coloca alli
-                                                                 (o pulsar "Colocar" si el picker esta activo) - pedido explicito
-                                                                 1-sep-2026. -->
-                                                            <Border Width="80" Height="86" Margin="3" Padding="4" CornerRadius="6"
-                                                                    Background="{StaticResource BgElevatedBrush}" BorderThickness="1" Cursor="Hand"
-                                                                    PreviewMouseLeftButtonDown="OnLibraryCardMouseDown" MouseMove="OnLibraryCardMouseMove">
-                                                                <!-- Pregunta a Opus sobre el diseño (2-sep-2026, segunda consulta): el
-                                                                     caption de nombre mide 9pt en ~72px utiles, 2 lineas como mucho - un
-                                                                     nombre mas largo se recortaba EN SILENCIO (sin puntos suspensivos) y
-                                                                     el tooltip de antes (solo StatsTooltip, null para cualquier objeto
-                                                                     sin stats de combate) no lo recuperaba. Aqui SI se compone con el
-                                                                     nombre (a diferencia de los slots, sin linea de prefijo - una entrada
-                                                                     de catalogo no tiene ningun prefijo asignado todavia, pedido
-                                                                     explicito del usuario: "esto solo aplica a todo menos la libreria
-                                                                     logicamente"). -->
-                                                                <Border.ToolTip>
-                                                                    <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                                                        <StackPanel MaxWidth="240">
-                                                                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
-                                                                            <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
-                                                                                       Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
-                                                                        </StackPanel>
-                                                                    </ToolTip>
-                                                                </Border.ToolTip>
-                                                                <Border.Style>
-                                                                    <Style TargetType="Border">
-                                                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
-                                                                        <Style.Triggers>
-                                                                            <!-- Cursor="Hand" ya lo decia, pero sin ningun cambio visual real
-                                                                                 al pasar el raton - pregunta a Opus sobre el diseño, segunda
-                                                                                 consulta. -->
-                                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-                                                                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-                                                                            </Trigger>
-                                                                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                                                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
-                                                                                <!-- Antes se quedaba en 1px (el grosor base) mientras que los
-                                                                                     slots de Calamity ya usan 2px - una tarjeta de Calamity en
-                                                                                     la Libreria se veia con una linea roja mucho mas fina que
-                                                                                     en cualquier otro sitio de la app. -->
-                                                                                <Setter Property="BorderThickness" Value="2" />
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </Border.Style>
-                                                                <DockPanel>
-                                                                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding DisplayName}"
-                                                                               Style="{StaticResource CaptionText}" FontSize="9" TextWrapping="Wrap"
-                                                                               TextTrimming="CharacterEllipsis"
-                                                                               TextAlignment="Center" MaxHeight="22" Margin="0,2,0,0" />
-                                                                    <Button DockPanel.Dock="Bottom" Content="Colocar" FontSize="8.5" Padding="0,1"
-                                                                            Background="{StaticResource AccentBrush}" BorderThickness="0"
-                                                                            Foreground="{StaticResource BgPrimaryBrush}"
-                                                                            Command="{Binding DataContext.Library.PlaceInTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                            CommandParameter="{Binding}"
-                                                                            Visibility="{Binding DataContext.Library.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
-                                                                    <Image Source="{Binding IconPath}" Stretch="Uniform" MaxHeight="32"
-                                                                           RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                                                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                                    <TextBlock DockPanel.Dock="Top" Text="?" Style="{StaticResource BodyText}"
-                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                               Foreground="{StaticResource TextSecondaryBrush}"
-                                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToCollapsed}}" />
-                                                                </DockPanel>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
                                             </ScrollViewer>
                                         </DockPanel>

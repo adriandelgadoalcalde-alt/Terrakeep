@@ -257,6 +257,40 @@
                             <Setter Property="Foreground" Value="#1a1200" />
                             <Setter Property="FontWeight" Value="SemiBold" />
                         </Trigger>
+                        <!-- AccentSoft/Ghost - pregunta a Opus sobre el diseño (2-sep-2026, quinta
+                             pasada: "todo lo que sean botones... me gustaria que la estetica...
+                             fuera la misma que la de aplicar build"). Jerarquia real en vez de
+                             pintar los 5 botones señalados de Accent a secas (Minima/Media/Maxima
+                             de Buffs, ★/Quitar de prefijo): Accent queda para LA accion principal
+                             de cada panel (Maxima, ★) - AccentSoft para la alternativa de la MISMA
+                             familia (Minima/Media: no son 3 acciones de peso distinto, son 3
+                             valores del mismo control, un color por cada una leeria como un
+                             semaforo con 3 significados que no existen) - Ghost para
+                             destructiva/deshacer (Quitar prefijo, Vaciar slot: el degradado rosa
+                             a pantalla completa convertiria "Quitar" en lo mas llamativo de un
+                             panel de 300px). AccentSoft reusa AccentMutedBrush/AccentHoverBrush,
+                             que ya significan "de la familia del acento pero secundario" en
+                             PrefixGroupButton - Ghost es exactamente lo que el Background=
+                             "Transparent" puesto a mano en varios sitios intentaba lograr y la
+                             plantilla ignoraba (documentado ya en NavCardButton/ItemEditTemplate
+                             - Background de un Button normal no hace nada, solo Tag). -->
+                        <Trigger Property="Tag" Value="AccentSoft">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource AccentHoverBrush}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Ghost">
+                            <Setter TargetName="Bd" Property="Background" Value="Transparent" />
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="Tag" Value="Ghost" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource PinkBrush}" />
+                        </MultiTrigger>
                         <!-- El levantamiento (translateY(-2px) real de Terrasavr) solo se aplica a
                              las variantes de color solido al pasar el raton, no al boton gris
                              normal - asi se reserva el gesto mas llamativo para las acciones
@@ -327,6 +361,26 @@
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsMouseOver" Value="True" />
                                 <Condition Property="Tag" Value="Orange" />
+                            </MultiTrigger.Conditions>
+                            <MultiTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.EnterActions>
+                            <MultiTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="BdLift" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiTrigger.ExitActions>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="Tag" Value="AccentSoft" />
                             </MultiTrigger.Conditions>
                             <MultiTrigger.EnterActions>
                                 <BeginStoryboard>
@@ -467,6 +521,74 @@
                             </Border>
                         </Popup>
                     </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ContextMenu/MenuItem - pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada:
+         "el menú este de clic derecho de todo terrakeep es horrendo no va nada acorde con la
+         estética de terrakeep"). Antes NINGUN Style para estos dos - cada menu contextual de
+         la app (Inventario/Almacenes/Equipamiento/Monturas/Monedas/Buffs) usaba el menu blanco
+         por defecto de Windows, sin relacion con la paleta oscura real. Mismo lenguaje que ya
+         usa la Popup del ComboBox de arriba (fondo BgSecondaryBrush, borde BorderStrongBrush,
+         esquinas redondeadas, CardShadow) - Theme.xaml esta fusionado en Application.Resources
+         (App.xaml), asi que estos dos estilos implicitos arreglan TODA la app de golpe, sin
+         tocar cada ContextMenu uno a uno.
+         Gotcha real de WPF: HasDropShadow="True" es obligatorio aunque se ponga un Effect
+         propio - WPF deriva el AllowsTransparency del Popup interno de esa propiedad, y con
+         False el CornerRadius queda recortado contra un rectangulo opaco (4 esquinas negras
+         visibles). MinWidth real en el Border (no en el Style) es lo que arregla de raiz "el
+         recuadro rectangular super pequeño que no sirve de nada" (un menu de 1 solo MenuItem
+         media lo que media ese item solo, a veces casi nada). -->
+    <Style TargetType="ContextMenu">
+        <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HasDropShadow" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="0,4"
+                            Margin="4" MinWidth="170" Effect="{StaticResource CardShadow}" SnapsToDevicePixels="True">
+                        <ItemsPresenter />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Margin="3,1" Padding="{TemplateBinding Padding}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter Grid.Column="0" ContentSource="Icon" VerticalAlignment="Center" />
+                            <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                            <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" Margin="12,0,0,0"
+                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

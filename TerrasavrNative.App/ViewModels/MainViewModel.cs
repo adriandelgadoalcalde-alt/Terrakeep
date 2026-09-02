@@ -260,8 +260,10 @@ public partial class MainViewModel : ObservableObject
         var bank2 = AddContainer("bank2", "Caja fuerte", _loaded.MergedContainers["bank2"]);
         var bank3 = AddContainer("bank3", "Fragua del Defensor", _loaded.MergedContainers["bank3"]);
         var bank4 = AddContainer("bank4", "Boveda del Vacio", _loaded.MergedContainers["bank4"]);
-        MountsContainer = AddContainer("miscEquips", "Mascota / Montura / Gancho", _loaded.MergedContainers["miscEquips"]);
-        DyesContainer = AddContainer("miscDyes", "Tintes (mascota/montura/gancho)", _loaded.MergedContainers["miscDyes"]);
+        // columns: 1 (pregunta a Opus sobre el diseño, quinta pasada: "mascotas etc mejor en
+        // vertical") - laterales de la Equipamiento fusionada, una sola columna de 5 filas.
+        MountsContainer = AddContainer("miscEquips", "Mascota / Montura / Gancho", _loaded.MergedContainers["miscEquips"], columns: 1);
+        DyesContainer = AddContainer("miscDyes", "Tintes (mascota/montura/gancho)", _loaded.MergedContainers["miscDyes"], columns: 1);
 
         // Monedas/municion: vanilla-only (ver CalamityCharacterSync.cs para el alcance
         // documentado - la app JS tampoco los sincroniza con Calamity, solo los protege).
@@ -360,7 +362,10 @@ public partial class MainViewModel : ObservableObject
     // entera es el criterio, no un unico slot).
     private const int HotbarSlotCount = 10;
 
-    private ContainerViewModel AddContainer(string key, string displayName, GameItem[] items)
+    // columns (pregunta a Opus sobre el diseño, quinta pasada - fusion de Equipamiento con
+    // Monturas/Monedas como laterales): default 10 para los contenedores de siempre; los
+    // laterales que se quieren verticales (Mascota/Montura/Gancho, Tintes) pasan columns: 1.
+    private ContainerViewModel AddContainer(string key, string displayName, GameItem[] items, int columns = 10)
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
@@ -368,7 +373,7 @@ public partial class MainViewModel : ObservableObject
             bool isEquipped = key == "inventory" && i < HotbarSlotCount;
             slots.Add(new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped));
         }
-        var container = new ContainerViewModel(key, displayName, slots);
+        var container = new ContainerViewModel(key, displayName, slots) { Columns = columns };
         Containers.Add(container);
         return container;
     }

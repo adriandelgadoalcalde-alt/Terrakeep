@@ -61,12 +61,26 @@ public sealed class SlotGridPanel : Panel
         nameof(ReferenceColumns), typeof(int), typeof(SlotGridPanel),
         new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsMeasure));
 
+    // ReferenceWidth (0 = desactivado) - pregunta a Opus sobre el diseño, quinta pasada
+    // (fusion de Equipamiento con Monturas/Monedas como laterales). ReferenceColumns por si
+    // solo calcula cellFromReference contra el ANCHO PROPIO del panel (availW) - funciona hoy
+    // porque los 9 contenedores comparten literalmente la misma columna del mismo Grid, pero
+    // en un layout fusionado (Equipamiento + 2 laterales, 3 SlotGridPanel en 3 columnas
+    // DISTINTAS mas estrechas) cada uno calcularia su propio techo contra SU PROPIO ancho
+    // reducido y los tres colapsarian al MinCell, no al tamaño real que les corresponde.
+    // ReferenceWidth deja fijar el ancho de referencia real (el de TODA la fila fusionada) en
+    // vez del ancho propio - sin poner (0), comportamiento identico a solo-ReferenceColumns.
+    public static readonly DependencyProperty ReferenceWidthProperty = DependencyProperty.Register(
+        nameof(ReferenceWidth), typeof(double), typeof(SlotGridPanel),
+        new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
     public int Columns { get => (int)GetValue(ColumnsProperty); set => SetValue(ColumnsProperty, value); }
     public double MinCell { get => (double)GetValue(MinCellProperty); set => SetValue(MinCellProperty, value); }
     public double MaxCell { get => (double)GetValue(MaxCellProperty); set => SetValue(MaxCellProperty, value); }
     public double Gap { get => (double)GetValue(GapProperty); set => SetValue(GapProperty, value); }
     public double AvailableHeight { get => (double)GetValue(AvailableHeightProperty); set => SetValue(AvailableHeightProperty, value); }
     public int ReferenceColumns { get => (int)GetValue(ReferenceColumnsProperty); set => SetValue(ReferenceColumnsProperty, value); }
+    public double ReferenceWidth { get => (double)GetValue(ReferenceWidthProperty); set => SetValue(ReferenceWidthProperty, value); }
 
     private double _cell = 44;
     private int _cols = 1;
@@ -87,8 +101,9 @@ public sealed class SlotGridPanel : Panel
 
         double cellFromWidth = (availW - Gap * (cols - 1)) / cols;
         double cellFromHeight = (availH - Gap * (rows - 1)) / rows;
+        double refW = ReferenceWidth > 0 ? ReferenceWidth : availW;
         double cellFromReference = ReferenceColumns > 0
-            ? (availW - Gap * (ReferenceColumns - 1)) / ReferenceColumns
+            ? (refW - Gap * (ReferenceColumns - 1)) / ReferenceColumns
             : double.PositiveInfinity;
         double cell = Math.Clamp(Math.Min(Math.Min(cellFromWidth, cellFromHeight), cellFromReference), MinCell, MaxCell);
 
