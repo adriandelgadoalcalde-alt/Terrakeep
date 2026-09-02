@@ -2391,3 +2391,34 @@ proceso vivo - regla ya conocida del proyecto, "no hay hot-reload").
 
 `dotnet build`/`dotnet test` en verde (128/128). Pendiente de que el usuario confirme en vivo
 si ya ve la pantalla y Terrakeep bien por Chrome Remote Desktop tras estos dos arreglos.
+
+### AnyDesk instalado como segunda opción, más sólida (mismo día)
+
+Pedido explícito tras seguir con dudas sobre Chrome Remote Desktop: "una que sea mucho mas
+sólida... que tú puedas instalarla de casa y yo activarla estando fuera". Preguntado de nuevo
+qué herramienta en concreto (mismo criterio que con CRD - decisión de seguridad real, no
+autonomía de dev-tools) - eligió **AnyDesk**.
+
+Instalado el `.exe` oficial (`download.anydesk.com/AnyDesk.exe`) como servicio, silencioso y
+con arranque automático (`AnyDesk.exe --install "C:\Program Files (x86)\AnyDesk"
+--start-with-win --silent`) - servicio `AnyDesk` en marcha. Contraseña de acceso desatendido
+generada al azar (16 caracteres) y fijada por CLI (`--set-password` con la contraseña por
+stdin).
+
+**Verificación real, no dada por buena a ciegas**: la documentación oficial de AnyDesk sobre
+`--set-password` es contradictoria (una página dice que basta con la CLI, otra dice que hace
+falta pasar por la interfaz gráfica "Settings > Access > Set password"). En vez de fiarme de
+ninguna de las dos, se inspeccionó directamente el fichero real de configuración
+(`C:\ProgramData\AnyDesk\system.conf`) tras ejecutar el comando: aparece
+`ad.security.permission_profiles._unattended_access.pwd=<hash>` y `...salt=<valor>` - prueba
+real de que la contraseña SÍ quedó asociada de verdad al perfil de acceso desatendido, no solo
+guardada en algún sitio sin efecto. Mismo fichero reveló el ID real de AnyDesk de este equipo
+(`ad.anynet.id=599047737`) - `--get-id` por CLI no devolvía nada por su cuenta.
+
+**Datos de conexión reales** (guardados también aquí para no perderlos):
+- ID de AnyDesk: `599 047 737`
+- Contraseña de acceso desatendido: la generada al azar, ya comunicada al usuario en el chat -
+  no se repite aquí por escrito dos veces sin necesidad.
+
+No hay ningún cambio de código de Terrakeep en este punto - instalación/configuración del
+sistema únicamente, documentado aquí por continuidad con el resto de la sesión.
