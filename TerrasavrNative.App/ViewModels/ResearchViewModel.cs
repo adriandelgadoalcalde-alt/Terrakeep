@@ -35,6 +35,8 @@ public sealed partial class ResearchViewModel : ObservableObject
 
     [ObservableProperty] private CategoryNodeViewModel? _selectedCategory;
     [ObservableProperty] private string _resultsSummary = "Sin personaje cargado.";
+    // H4-07 punto 3 (cuarta auditoria de Opus, Fable): ver el comentario real en ApplyFilter.
+    [ObservableProperty] private bool _showRootCategoryCards;
 
     // R-e (segunda auditoria de Opus, Fable): "sin buscador - Libreria y Libreria de buffs si lo
     // tienen, con la misma estructura de arbol. Asimetria pura". Misma gramatica real
@@ -91,6 +93,7 @@ public sealed partial class ResearchViewModel : ObservableObject
         Results.Clear();
         ResultsSummary = "Sin personaje cargado.";
         IsJourneyMode = false;
+        ShowRootCategoryCards = false;
     }
 
     // Misma resolucion de Pid real que ya usaba MainViewModel.RebuildResearch: un Pid con "/"
@@ -165,8 +168,16 @@ public sealed partial class ResearchViewModel : ObservableObject
         if (SelectedCategory == null && !hasSearch)
         {
             ResultsSummary = $"{_researchedCounts.Count}/{_totalKnownObjects} objeto(s) investigado(s) en total - elige una carpeta o escribe para buscar.";
+            // H4-07 punto 3 (cuarta auditoria de Opus, Fable): "el resumen de Investigacion sin
+            // carpeta podria enseñar las carpetas raiz como tarjetas grandes en el area vacia,
+            // en vez de solo una frase" - el area de resultados se quedaba en blanco salvo por
+            // ResultsSummary (una sola linea de texto) mientras a la izquierda ya esta el arbol
+            // completo esperando un clic - las tarjetas son solo un atajo mas grande al MISMO
+            // arbol, RootCategories ya trae su propio SelectCommand real.
+            ShowRootCategoryCards = true;
             return;
         }
+        ShowRootCategoryCards = false;
 
         // Mismo bug real corregido en LibraryViewModel.ApplyFilter - ver ahi el porque:
         // ItemIdsOrdered respeta el orden curado real de Terrasavr, un HashSet (ItemIdSet) o

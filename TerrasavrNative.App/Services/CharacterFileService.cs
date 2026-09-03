@@ -112,6 +112,18 @@ public sealed class CharacterFileService
         return Directory.Exists(candidate) ? candidate : documents;
     }
 
+    // H4-08 (cuarta auditoria de Opus, Fable): version completa del lanzador de mundos - mismo
+    // motivo real que GetDefaultPlayersDirectory de arriba (I-1), esta vez portado desde donde
+    // vivia duplicada y privada, solo para el dialogo de Explorador de archivos
+    // (MainWindow.xaml.cs.GetDefaultWorldsDirectory) - ahora tambien la reutiliza
+    // ExplorationViewModel para listar los mundos reales de un plumazo.
+    public static string GetDefaultWorldsDirectory()
+    {
+        string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string candidate = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Worlds");
+        return Directory.Exists(candidate) ? candidate : documents;
+    }
+
     public LoadedCharacter Load(string plrPath)
     {
         var character = PlrFile.Read(File.ReadAllBytes(plrPath));

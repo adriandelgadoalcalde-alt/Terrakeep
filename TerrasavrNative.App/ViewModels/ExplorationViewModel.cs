@@ -130,11 +130,67 @@ public partial class ExplorationViewModel : ObservableObject
     // depender de un comando pensado solo para NPCs.
     public void NavigateToTile(int x, int y) => NavigateToTileRequested?.Invoke(x, y);
 
+    // H4-08 (cuarta auditoria de Opus, Fable): "la version buena - un lanzador de mundos
+    // calcado del de personajes de Inicio". Mismo patron real que HomeViewModel/I-1: escanea
+    // UNA VEZ al arrancar (y bajo demanda con "Actualizar") la carpeta real de mundos de
+    // tModLoader, con solo la lectura BARATA de cabecera (WldReader.ReadHeader) - nunca decodifica
+    // tiles/NPCs, eso solo pasa al elegir uno de verdad (LoadFromPathAsync). Un mundo ajeno/
+    // corrupto no debe tumbar el listado de los demas, mismo criterio ya establecido en
+    // HomeViewModel.ScanCharacters.
+    public ObservableCollection<WorldListEntryViewModel> Worlds { get; } = [];
+    [ObservableProperty] private bool _isScanningWorlds;
+    [ObservableProperty] private string? _scanMessage;
+
     public ExplorationViewModel(CharacterFileService service)
     {
         _npcNames = service.NpcNames;
         _mapColors = service.MapColors;
         _tileNames = service.TileNames;
+        // Fire-and-forget deliberado, mismo criterio real que HomeViewModel - el constructor no
+        // puede ser async, y no hay nada que esperar aqui (Worlds se rellena un instante
+        // despues, IsScanningWorlds refleja el hueco mientras tanto).
+        _ = RefreshWorldsAsync();
+    }
+
+    [RelayCommand]
+    private async Task RefreshWorldsAsync()
+    {
+        Worlds.Clear();
+        IsScanningWorlds = true;
+        try
+        {
+            string dir = CharacterFileService.GetDefaultWorldsDirectory();
+            var scanned = await Task.Run(() => ScanWorlds(dir));
+            foreach (var entry in scanned) Worlds.Add(entry);
+            ScanMessage = Worlds.Count == 0 ? $"Ningun mundo encontrado en {dir}" : null;
+        }
+        finally
+        {
+            IsScanningWorlds = false;
+        }
+    }
+
+    // Todo el trabajo real de disco (enumerar + leer la cabecera de cada .wld) - se ejecuta en
+    // un hilo de fondo via Task.Run (RefreshWorldsAsync de arriba), nunca toca Worlds
+    // directamente (seria una modificacion desde fuera del hilo de UI).
+    private static List<WorldListEntryViewModel> ScanWorlds(string dir)
+    {
+        var result = new List<WorldListEntryViewModel>();
+        var wldFiles = Directory.Exists(dir) ? Directory.GetFiles(dir, "*.wld") : [];
+        foreach (string path in wldFiles.OrderByDescending(File.GetLastWriteTimeUtc))
+        {
+            try
+            {
+                var header = WldReader.ReadHeader(File.ReadAllBytes(path));
+                result.Add(new WorldListEntryViewModel(path, header.Title, header.TilesWide, header.TilesHigh, File.GetLastWriteTimeUtc(path)));
+            }
+            catch (Exception)
+            {
+                // Un .wld ajeno/corrupto no debe tumbar el listado de los demas - se omite en
+                // silencio, igual que ya hace HomeViewModel.ScanCharacters con los .plr.
+            }
+        }
+        return result;
     }
 
     // Llamado desde el code-behind con la posicion del raton YA en espacio de tile (pixel

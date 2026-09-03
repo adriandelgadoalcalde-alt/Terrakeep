@@ -5806,9 +5806,71 @@ anotado aqui como candidato real para una ronda futura si se decide.
 `dotnet test` 294/294 en verde (136 Core + 158 ViewModels), arnes UIA completo sin
 NO-FOUND/FALLO/EXCEPTION.
 
-### Cuarta auditoria (Fable) - cierre
+### Tanda 4 (los 2 recortes de la Tanda 3, retomados a peticion explicita del usuario)
 
-11 de los 13 hallazgos (H4-01 a H4-13, salvo el punto 3 de H4-07 y la version completa de
-H4-08) cerrados con arreglo real, test, arnes y commit en 3 tandas - los dos recortes de
-alcance estan documentados arriba con su motivo real (menor retorno/mayor riesgo de scope,
-nunca "no daba tiempo" sin mas). Pedido cumplido en su totalidad ("continua sin parar").
+Pedido explicito del usuario: aplicar los dos puntos que la Tanda 3 dejo fuera a proposito,
+siguiendo la sugerencia REAL y literal del propio informe de Fable (citada aqui de nuevo antes
+de implementar cada uno, no de memoria).
+
+**H4-07 punto 3, "el resumen de Investigacion sin carpeta podria enseñar las carpetas raiz como
+tarjetas grandes en el area vacia, en vez de solo una frase"**: nuevo
+`ResearchViewModel.ShowRootCategoryCards` (true solo cuando no hay carpeta elegida NI busqueda
+activa - el mismo caso que antes solo dejaba una frase). En ese caso, el area de resultados
+muestra `Research.RootCategories` (el MISMO arbol real de la izquierda, con su propio
+`SelectCommand` ya asignado - `CategoryNodeViewModel.AssignSelectCommand`, ningun dato nuevo)
+como tarjetas grandes reutilizando `NavCardButton` (el mismo estilo real de las tarjetas de
+Inicio - reutilizar en vez de inventar un tratamiento visual nuevo, P7). Cada tarjeta muestra
+icono+nombre+recuento real (`ItemIdsOrdered.Count`, ya calculado y cacheado por el propio
+arbol - `CategoryNodeViewModel.ItemCount` resulto ser un campo real pero NUNCA poblado en
+ningun sitio del proyecto, así que no se uso). 4 pruebas deterministas nuevas
+(`ResearchRootCategoryCardsTests.cs`).
+
+**H4-08 (version completa), "un lanzador de mundos calcado del de personajes de Inicio"**:
+pedido explicito del usuario tras el cierre de la Tanda 3 ("aplica los dos puntos que dejaste
+fuera, siguiendo la sugerencia literal de Fable") - retomado siguiendo la cita EXACTA del
+informe (no de memoria): "`GetDefaultWorldsDirectory()` ya existe en el code-behind, y el
+patron de tarjetas con escaneo asincrono ya esta probado en `HomeViewModel`".
+
+- `CharacterFileService.GetDefaultWorldsDirectory()` (nuevo) - la misma duplicacion que I-1 ya
+  resolvio para personajes (`GetDefaultPlayersDirectory`), esta vez para mundos: vivia privada
+  y duplicada solo dentro de `MainWindow.xaml.cs` (el dialogo de "Cargar mundo (.wld)..."), sin
+  que la capa de ViewModel pudiera usarla. Movida al servicio, `MainWindow.xaml.cs` ahora la
+  reutiliza en vez de tener su propia copia.
+- `WldReader.ReadHeader(byte[])` (nuevo, publico) - `ReadHeader(BinaryReader)` (privado) YA
+  paraba justo tras Titulo/Dimensiones/GroundLevel/RockLevel sin tocar tiles/NPCs (ver el
+  comentario real de `WldHeader`, "simplificacion deliberada heredada del propio lector JS") -
+  solo faltaba un punto de entrada publico que no siguiera leyendo. Sin esto, escanear varios
+  mundos para el lanzador pagaria el mismo coste real de ~1.4s por mundo que
+  `ExplorationViewModel.LoadFromPathAsync` ya mide (el motivo real por el que la carga completa
+  es async en primer lugar) - con esto, solo lee cabecera (verificado con 2 pruebas contra
+  mundos reales del propio disco: mismo Titulo/TilesWide/TilesHigh/Version que la lectura
+  completa).
+- `WorldListEntryViewModel` (nuevo) - gemelo real de `CharacterListEntryViewModel`, sin doll de
+  vista previa (un mundo no tiene ningun dato real igual de barato - inventar una miniatura
+  seria fingir un dato que no existe, mismo criterio de honestidad ya establecido en el
+  proyecto).
+- `ExplorationViewModel` gana `Worlds`/`IsScanningWorlds`/`ScanMessage`/`RefreshWorldsCommand` -
+  mismo patron real que `HomeViewModel` (constructor dispara un escaneo fire-and-forget,
+  `ScanWorlds` corre en `Task.Run`, un `.wld` ajeno/corrupto se omite en silencio sin tumbar el
+  listado de los demas).
+- XAML: el overlay centrado de la Tanda 3 se amplia con el listado real de tarjetas
+  (`WorldCardTemplate`, gemela de `CharacterCardTemplate` - sin doll ni menu contextual, fuera
+  del alcance real de este hallazgo) + "Actualizar", cayendo al boton manual de siempre solo si
+  el escaneo termino sin ningun mundo real encontrado (mismo `ScanMessage`/`EmptyToCollapsed`
+  que ya usa Inicio). Clic en una tarjeta llama a `OnWorldCardClick` (code-behind, gemelo de
+  `OnLoadWorldClick`) - hace falta code-behind y no un Command porque el ajuste de zoom a la
+  ventana tras cargar solo lo puede dar quien conoce el `ScrollViewer` real del mapa.
+
+3 pruebas deterministas nuevas (`ReadHeader_RealWorld_CoincideConElHeaderDeLaLecturaCompleta`
+en `WldReaderRealFileTests.cs`, `ExplorationWorldLauncherTests.cs`).
+
+`dotnet test` 302/302 en verde (138 Core + 164 ViewModels), arnes UIA completo sin
+NO-FOUND/FALLO/EXCEPTION.
+
+### Cuarta auditoria (Fable) - cierre real
+
+Los 13 hallazgos (H4-01 a H4-13) estan cerrados por completo, incluidos los 2 puntos que la
+Tanda 3 habia dejado fuera a proposito (H4-07 punto 3 y la version completa de H4-08) -
+retomados a peticion explicita del usuario en una Tanda 4, siguiendo la sugerencia literal del
+propio informe de Fable en los dos casos (citada de nuevo antes de implementar cada uno, no de
+memoria). Pedido cumplido en su totalidad.

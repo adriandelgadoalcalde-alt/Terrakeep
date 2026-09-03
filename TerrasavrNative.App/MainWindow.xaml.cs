@@ -144,7 +144,7 @@ public partial class MainWindow : Window
         {
             Title = "Cargar mundo de Terraria",
             Filter = "Mundo de Terraria (*.wld)|*.wld|Todos los archivos (*.*)|*.*",
-            InitialDirectory = GetDefaultWorldsDirectory(),
+            InitialDirectory = Services.CharacterFileService.GetDefaultWorldsDirectory(),
         };
 
         if (dialog.ShowDialog(this) == true)
@@ -157,6 +157,16 @@ public partial class MainWindow : Window
             // necesidad real que UpdateLayout() ya resuelve en el zoom de la rueda, de abajo.
             _ = Dispatcher.BeginInvoke(new Action(FitWorldMapToWindow), System.Windows.Threading.DispatcherPriority.Loaded);
         }
+    }
+
+    // H4-08 (cuarta auditoria de Opus, Fable): gemelo real de OnLoadWorldClick - una tarjeta del
+    // lanzador de mundos ya trae su ruta real (DataContext), no hace falta el dialogo del
+    // Explorador de archivos. Mismo ajuste de zoom real al terminar.
+    private async void OnWorldCardClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: WorldListEntryViewModel entry }) return;
+        await _viewModel.Exploration.LoadFromPathAsync(entry.FilePath);
+        _ = Dispatcher.BeginInvoke(new Action(FitWorldMapToWindow), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     // X-a: boton real "Ajustar a la ventana" - antes solo existia "Restablecer" (vuelve al
@@ -176,13 +186,6 @@ public partial class MainWindow : Window
         _viewModel.Exploration.Zoom = Math.Min(
             WorldMapScroll.ViewportWidth / image.PixelWidth,
             WorldMapScroll.ViewportHeight / image.PixelHeight);
-    }
-
-    private static string GetDefaultWorldsDirectory()
-    {
-        string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        string candidate = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Worlds");
-        return Directory.Exists(candidate) ? candidate : documents;
     }
 
     // Rueda del raton = zoom directamente (sin necesitar Ctrl, pedido explicito - el arrastre ya

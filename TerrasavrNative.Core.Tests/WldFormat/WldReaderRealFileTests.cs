@@ -124,4 +124,23 @@ public class WldReaderRealFileTests(ITestOutputHelper output)
         if (world.Header.Version < 269)
             Assert.Equal(0, shimmerCount); // Shimmer no existia todavia en esa version
     }
+
+    // H4-08 (cuarta auditoria de Opus, Fable): la lectura barata para el lanzador de mundos
+    // debe devolver EXACTAMENTE el mismo titulo/dimensiones que la lectura completa - nunca una
+    // aproximacion, y sin pagar el coste real de decodificar tiles/NPCs para conseguirlo.
+    [Theory]
+    [MemberData(nameof(RealWldFiles))]
+    public void ReadHeader_RealWorld_CoincideConElHeaderDeLaLecturaCompleta(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        var bytes = File.ReadAllBytes(path);
+        var fullHeader = WldReader.Read(bytes).Header;
+        var cheapHeader = WldReader.ReadHeader(bytes);
+
+        Assert.Equal(fullHeader.Title, cheapHeader.Title);
+        Assert.Equal(fullHeader.TilesWide, cheapHeader.TilesWide);
+        Assert.Equal(fullHeader.TilesHigh, cheapHeader.TilesHigh);
+        Assert.Equal(fullHeader.Version, cheapHeader.Version);
+    }
 }

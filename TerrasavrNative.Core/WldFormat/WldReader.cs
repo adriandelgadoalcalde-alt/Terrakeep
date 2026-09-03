@@ -23,6 +23,19 @@ public static class WldReader
         return new WldWorld { Header = header, Tiles = tiles, Npcs = npcs };
     }
 
+    // H4-08 (cuarta auditoria de Opus, Fable): lectura BARATA para el lanzador de mundos de
+    // Exploracion (titulo/dimensiones para las tarjetas, sin decodificar la seccion de tiles -
+    // la parte realmente cara, ~1.4s medidos en un mundo de 11MB, ver ExplorationViewModel.
+    // LoadFromPathAsync) - ReadHeader(BinaryReader) YA se detiene justo despues de
+    // GroundLevel/RockLevel (ver el comentario real en WldHeader), nunca toca tiles/NPCs por si
+    // sola. Solo faltaba un punto de entrada publico que no siguiera leyendo mas.
+    public static WldHeader ReadHeader(byte[] fileBytes)
+    {
+        using var stream = new MemoryStream(fileBytes);
+        using var reader = new BinaryReader(stream);
+        return ReadHeader(reader);
+    }
+
     private static WldHeader ReadHeader(BinaryReader reader)
     {
         uint version = reader.ReadUInt32();
