@@ -243,7 +243,7 @@ public partial class MainViewModel : ObservableObject
         // Apariencia/Spawn Points/Desbloqueos/Version son tambien instancias persistentes -
         // cualquier propiedad que cambien tras cargar un personaje es una edicion real.
         Appearance.PropertyChanged += (_, _) => MarkDirty();
-        Servers.PropertyChanged += (_, _) => MarkDirty();
+        Servers.Changed += MarkDirty; // B-5 (segunda auditoria de Opus): evento real, ver ServersViewModel.Changed
         Flags.PropertyChanged += (_, _) => MarkDirty();
         VersionEditor.PropertyChanged += (_, _) => MarkDirty();
         _saveConfirmationTimer.Tick += (_, _) =>
@@ -476,6 +476,13 @@ public partial class MainViewModel : ObservableObject
         if (_loaded == null) return;
         ResearchAllService.Apply(_loaded, _service);
         Research.LoadFrom(_loaded.Character);
+        // Segunda auditoria de Opus (Fable), B-4 - BUG REAL: ResearchAllService.Apply muta
+        // _loaded.Character.Research DIRECTAMENTE, sin pasar por ningun ViewModel observable -
+        // IsDirty se quedaba en false pese a escribir miles de entradas reales. El usuario leia
+        // "pulsa Guardar para conservarlo", cerraba la ventana sin guardar, y OnWindowClosing no
+        // preguntaba nada (IsDirty==false) - perdida silenciosa de todo el trabajo. Mismo
+        // escenario que N-2 (Bloque 0) existia para cerrar.
+        MarkDirty();
         StatusMessage = $"Investigacion completa aplicada ({_loaded.Character.Research.Count} objetos) - pulsa Guardar para conservarlo.";
     }
 

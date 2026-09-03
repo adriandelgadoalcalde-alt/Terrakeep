@@ -4299,3 +4299,37 @@ de "Elegir...", revelada TEMPORALMENTE durante la eleccion, y confirmado que vue
 "plegada" tras colocar - ya no se queda desplegada para siempre.
 
 `dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### B-3 + B-4 + B-5 + T-A (segunda auditoria, Fable)
+
+**B-3, "Investigar todo" no investigaba todo**: `ResearchAllService.Apply` usaba
+`HashSet.Add` para decidir si un objeto era nuevo - un objeto YA parcialmente investigado
+(entrada real con `Count=37` de un umbral real de 100) se saltaba ENTERO, dejandolo bloqueado
+en el juego real pese al mensaje "Investigacion completa". Arreglado: cualquier entrada
+existente se sube (nunca se baja) al umbral real con `Math.Max`, en vez de saltarse.
+
+**B-4, "Investigar todo" no marcaba el personaje como modificado**: `ResearchAllService.Apply`
+muta `PlrCharacter.Research` directamente, sin pasar por ningun ViewModel observable -
+`MainViewModel.ResearchAll` ahora llama a `MarkDirty()` explicitamente tras aplicar.
+
+**B-5, los Spawn Points tampoco marcaban modificado**: `ServersViewModel` no tenia ninguna
+`[ObservableProperty]` real - los campos editables viven en `ServerEntryRowViewModel` (cuyo
+`PropertyChanged` nunca llegaba arriba) y `Add/RemoveEntry` mutan una `ObservableCollection`
+(`CollectionChanged`, no `PropertyChanged`). Arreglado con el mismo patron real ya probado en
+`BuffsViewModel.SlotChanged`: un evento `Changed` propio, disparado explicitamente en cada
+camino de edicion real (por fila Y por añadir/quitar). De paso, Apariencia (que marcaba sucio
+"por casualidad" via `RefreshPreview` reasignando `PreviewImage`) gano una señal EXPLICITA por
+swatch, para que dejar de reasignar el bitmap algun dia no abra un tercer agujero silencioso.
+
+**T-A, `dotnet test` no probaba nada de la capa App**: nuevo proyecto real
+`TerrasavrNative.App.ViewModels.Tests` (xunit, headless de verdad - sin ventana, sin
+Application, sin UI Automation) en `TerrasavrNative.slnx`, complemento real de
+`TerrasavrNative.App.Tests` (que sigue siendo consola+capturas a proposito, para lo VISUAL).
+Sembrado con 9 pruebas deterministas reales: 4 de `ResearchAllService` (B-3, incluido que un
+`.plr` ajeno con un Pid duplicado no revienta la operacion) y 5 de una "matriz de suciedad"
+real sobre un `MainViewModel` cargado de verdad (B-4, B-5 x3, y el color de Apariencia) - la
+misma matriz que Fable recomendo como via real para cerrar esta categoria de bug para siempre.
+
+Verificado: `dotnet test` ahora ejecuta 143 pruebas reales (134 de Core + 9 nuevas de App,
+todas en verde) en vez de 134 - las 9 nuevas habrian cazado B-3/B-4/B-5 de haber existido antes.
+Arnes visual completo tambien en verde, sin NO-FOUND/FALLO/EXCEPTION.

@@ -171,6 +171,14 @@ public partial class AppearanceViewModel : ObservableObject
             var swatch = Swatches[i];
             swatch.PropertyChanged += (_, _) => RefreshPreview();
             if (i == HairIdx) swatch.PropertyChanged += (_, _) => HairOptions.Clear(); // color de pelo cambio, las miniaturas quedan obsoletas
+            // Segunda auditoria de Opus (Fable), B-5/nota - MainViewModel marca "sin guardar"
+            // suscribiendose a Appearance.PropertyChanged a secas; un cambio de color solo
+            // llegaba ahi POR CASUALIDAD (RefreshPreview reasigna PreviewImage, que si es
+            // [ObservableProperty] de esta clase) - si algun dia el preview se optimiza para no
+            // reasignar el bitmap en cada tick, este seria el tercer agujero silencioso de
+            // guardado (mismo tipo que B-4/B-5). Señal EXPLICITA, no accidental - misma
+            // propiedad publica real (Swatches), sin inventar un evento nuevo solo para esto.
+            swatch.PropertyChanged += (_, _) => OnPropertyChanged(nameof(Swatches));
         }
         HairOptions.Clear();
 
