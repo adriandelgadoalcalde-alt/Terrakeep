@@ -1095,6 +1095,41 @@ internal static class Program
                 sw.Stop();
                 if (task.IsFaulted) throw task.Exception!;
                 Console.WriteLine($"X7-ASYNC: '{worldPath}' ({new FileInfo(worldPath).Length / 1024 / 1024}MB) -> {sw.ElapsedMilliseconds}ms totales, IsLoading={vm.Exploration.IsLoading} (esperado False), IsNotLoading={vm.Exploration.IsNotLoading} (esperado True), StatusMessage={vm.Exploration.StatusMessage}");
+
+                // X-a (segunda auditoria de Opus, Fable): "Restablecer" vuelve al 100%, para un
+                // mundo grande deja ver solo una fraccion minima del ancho real. Boton real
+                // "Ajustar a la ventana" via UI Automation - se comprueba que el mundo ESCALADO
+                // cabe de verdad en el viewport real del ScrollViewer (no solo que el numero de
+                // Zoom cambio a secas).
+                double zoomAntes = vm.Exploration.Zoom;
+                var fitButton = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
+                    new PropertyCondition(AutomationElement.NameProperty, "Ajustar a la ventana")));
+                if (fitButton != null && fitButton.TryGetCurrentPattern(InvokePattern.Pattern, out var fitPat))
+                    ((InvokePattern)fitPat).Invoke();
+                else
+                    Console.WriteLine("Boton 'Ajustar a la ventana' NO-FOUND");
+                DoEvents(); DoEvents();
+                double zoomDespues = vm.Exploration.Zoom;
+                var worldImg = vm.Exploration.WorldImage;
+                double anchoEscalado = (worldImg?.PixelWidth ?? 0) * zoomDespues;
+                double altoEscalado = (worldImg?.PixelHeight ?? 0) * zoomDespues;
+                // WorldMapScroll es x:Name (internal por defecto, invisible desde este ensamblado
+                // distinto) - FindName es el metodo real PUBLICO para resolver un nombre del
+                // namescope XAML sin depender de la accesibilidad del campo generado.
+                var worldScroll = (ScrollViewer)window.FindName("WorldMapScroll");
+                bool cabeDeVerdad = anchoEscalado <= worldScroll.ViewportWidth + 1 && altoEscalado <= worldScroll.ViewportHeight + 1;
+                Console.WriteLine($"X-a AJUSTAR-A-LA-VENTANA: zoom {zoomAntes:P0} -> {zoomDespues:P0}, mundo escalado={anchoEscalado:0}x{altoEscalado:0}px, viewport={worldScroll.ViewportWidth:0}x{worldScroll.ViewportHeight:0}px, cabe={cabeDeVerdad} (esperado True)");
+                if (!cabeDeVerdad) Console.WriteLine("FALLO: X-a (segunda auditoria) - 'Ajustar a la ventana' no dejo el mundo dentro del viewport real");
+                {
+                    var rtbFit = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbFit.Render(window);
+                    var encFit = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encFit.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbFit));
+                    using var fsFit = File.Create(Path.Combine(AppContext.BaseDirectory, "mundo-ajustado-a-la-ventana.png"));
+                    encFit.Save(fsFit);
+                }
             }
             else Console.WriteLine("X7-ASYNC: fichero no encontrado, omitido");
         }

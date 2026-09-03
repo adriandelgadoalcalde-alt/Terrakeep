@@ -167,7 +167,15 @@ public partial class ExplorationViewModel : ObservableObject
 
     partial void OnNpcSearchTextChanged(string value) => ApplyNpcFilter();
 
-    private const double MinZoom = 0.1, MaxZoom = 6.0;
+    // Bug real encontrado verificando X-a (segunda auditoria de Opus, Fable) con un mundo REAL
+    // de 8400x2400 tiles ("Grande", el tamaño maximo real de Terraria): "Ajustar a la ventana"
+    // calculaba el zoom real que hace falta para que quepa entero (ej. 9.4% con un viewport de
+    // 787px), pero el suelo de 0.1 (10%) de antes lo recortaba hacia arriba, dejando el mundo
+    // sin caber del todo pese a que el boton decia "ajustar". Confirmado con una captura real
+    // (arnes) antes de tocar el numero. 0.02 sigue siendo suficiente para frenar un zoom-out
+    // repetido con la rueda antes de llegar a una imagen imperceptible, y deja sitio real para
+    // que un mundo Grande quepa incluso en una ventana bastante estrecha (viewport >= 168px).
+    private const double MinZoom = 0.02, MaxZoom = 6.0;
 
     partial void OnZoomChanged(double value)
     {

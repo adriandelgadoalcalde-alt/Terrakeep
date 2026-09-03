@@ -145,7 +145,32 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true)
         {
             await _viewModel.Exploration.LoadFromPathAsync(dialog.FileName);
+            // X-a (segunda auditoria de Opus, Fable): se ajusta solo la primera vez que se ve el
+            // mundo, sin que el usuario tenga que ir a buscar el boton. DispatcherPriority.Loaded
+            // (no Background) para que el ScrollViewer ya haya completado un layout real con el
+            // nuevo WorldImage/extent antes de leer su ViewportWidth/Height - justo la misma
+            // necesidad real que UpdateLayout() ya resuelve en el zoom de la rueda, de abajo.
+            _ = Dispatcher.BeginInvoke(new Action(FitWorldMapToWindow), System.Windows.Threading.DispatcherPriority.Loaded);
         }
+    }
+
+    // X-a: boton real "Ajustar a la ventana" - antes solo existia "Restablecer" (vuelve al
+    // 100%, que para un mundo grande deja ver una fraccion minima del ancho). El calculo
+    // necesita el tamaño real del viewport del ScrollViewer, que la ViewModel no conoce - vive
+    // aqui, igual que el resto de gestos del mapa (pan/zoom con rueda).
+    private void OnFitToWindowClick(object sender, RoutedEventArgs e)
+    {
+        WorldMapScroll.UpdateLayout();
+        FitWorldMapToWindow();
+    }
+
+    private void FitWorldMapToWindow()
+    {
+        var image = _viewModel.Exploration.WorldImage;
+        if (image == null || WorldMapScroll.ViewportWidth <= 0 || WorldMapScroll.ViewportHeight <= 0) return;
+        _viewModel.Exploration.Zoom = Math.Min(
+            WorldMapScroll.ViewportWidth / image.PixelWidth,
+            WorldMapScroll.ViewportHeight / image.PixelHeight);
     }
 
     private static string GetDefaultWorldsDirectory()

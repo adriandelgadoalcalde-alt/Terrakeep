@@ -4584,3 +4584,28 @@ de un texto fijo).
 `dotnet test` 169/169 en verde, arnes visual completo sin NO-FOUND/FALLO/EXCEPTION, capturas
 reales revisadas a mano (cabecera con nombre editable + aviso de discrepancia + linea de
 archivo/version, y banner de error con texto real).
+
+### X-a (segunda auditoria, Fable) - Ola 3 continua
+
+**"No existe 'ajustar a la ventana'"**: "Restablecer" vuelve al 100%, que para un mundo de
+8400x2400 tiles (tamaño real maximo, "Grande") significa ver el 12% del ancho - "la accion mas
+obviamente ausente de la pantalla". Nuevo boton real "Ajustar a la ventana" junto a Restablecer
+- calcula `min(viewport/anchoMundo, viewport/altoMundo)` (el calculo vive en el code-behind,
+unico sitio que conoce el tamaño real del `ScrollViewer`) y se aplica tambien solo, sin que el
+usuario tenga que ir a buscarlo, justo despues de la carga asincrona real (X-7/T-13).
+
+**Bug real encontrado verificando esto con el mundo real de 11MB (8400x2400 tiles)**: el suelo
+`MinZoom=0.1` (10%) recortaba el calculo real (9.4% con el viewport real del arnes) hacia
+arriba, dejando el mundo SIN caber del todo pese a que el boton decia "ajustar" - confirmado
+con una captura real ANTES de tocar nada (no descartado a la ligera). Bajado a `0.02` (2%,
+sigue siendo suficiente para frenar un zoom-out repetido con la rueda antes de una imagen
+imperceptible, y deja sitio real para que hasta un mundo Grande quepa en una ventana bastante
+estrecha).
+
+Verificado con UI Automation real (click en el boton real, no simulado) mas una captura real
+revisada a mano: el mundo completo (8400x2400) cabe entero en el panel tras pulsar el boton,
+sin recorte horizontal ni vertical.
+
+`dotnet test` 169/169 en verde (sin pruebas nuevas: la logica vive en code-behind, que este
+proyecto ya prueba solo con el arnes visual real, no con xunit), arnes visual completo con
+`X-a AJUSTAR-A-LA-VENTANA: ... cabe=True` y sin ningun otro NO-FOUND/FALLO/EXCEPTION.

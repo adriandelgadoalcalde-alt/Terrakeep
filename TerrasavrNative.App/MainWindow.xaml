@@ -2139,6 +2139,12 @@
                                    VerticalAlignment="Center" Width="50" TextAlignment="Center" />
                         <Button Content="+" Command="{Binding Exploration.ZoomInCommand}" Padding="10,2" Margin="4,0,0,0" />
                         <Button Content="Restablecer" Command="{Binding Exploration.ZoomResetCommand}" Padding="8,2" Margin="8,0,0,0" />
+                        <!-- X-a (segunda auditoria de Opus, Fable): "Restablecer" vuelve al 100%,
+                             que para un mundo de 8400x2400 significa ver el 12% del ancho - "la
+                             accion mas obviamente ausente de la pantalla". El calculo real (necesita
+                             el tamaño real del viewport del ScrollViewer, que la ViewModel no
+                             conoce) vive en el code-behind, igual que el resto de gestos del mapa. -->
+                        <Button Content="Ajustar a la ventana" Click="OnFitToWindowClick" Padding="8,2" Margin="8,0,0,0" />
                     </StackPanel>
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Bottom" Text="{Binding Exploration.StatusMessage}"
