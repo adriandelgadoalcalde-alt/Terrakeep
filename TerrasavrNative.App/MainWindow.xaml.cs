@@ -19,6 +19,11 @@ public partial class MainWindow : Window
         // Auditoria de Opus, Bloque 4 (T-3): restaura el tamaño/posicion real de la ultima
         // sesion - antes de Show(), Width/Height/Left/Top ya se pueden fijar sin parpadeo.
         Services.WindowPlacementService.Apply(this);
+        // Auditoria de Opus, Bloque 4 (T-2): valor inicial real (Width ya refleja lo que
+        // Apply() acaba de restaurar, fiable incluso antes de que el layout corra) - despues,
+        // SizeChanged mantiene SizeClass vivo con el ancho real ya descontado el chrome.
+        _viewModel.UpdateSizeClass(Width);
+        SizeChanged += (_, e) => _viewModel.UpdateSizeClass(e.NewSize.Width);
     }
 
     // Auditoria de Opus, N-2: "se pueden editar 40 slots, cambiar de pestaña, cerrar la app y

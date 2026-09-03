@@ -96,6 +96,15 @@ public partial class EquipmentGroupViewModel : ObservableObject
     // divergir.
     public ContainerViewModel Current => _byKey[(SelectedLoadout, SelectedKind)];
 
+    // Auditoria de Opus, E-2: "las 3 vistas (Armadura/Vanidad/Tintes) se podrian ver a la vez
+    // con sitio real" - los 3 contenedores del loadout ACTUAL, sin importar SelectedKind (que
+    // sigue siendo el que manda en Compacto/Normal, un unico panel + pildoras de siempre). Solo
+    // se leen cuando SizeClass.Amplio los muestra de verdad (ver MainWindow.xaml) - viven aqui
+    // en vez de calcularse en el XAML porque _byKey es privado.
+    public ContainerViewModel CurrentItems => _byKey[(SelectedLoadout, EquipmentKind.Items)];
+    public ContainerViewModel CurrentSocial => _byKey[(SelectedLoadout, EquipmentKind.Social)];
+    public ContainerViewModel CurrentDyes => _byKey[(SelectedLoadout, EquipmentKind.Dyes)];
+
     public EquipmentGroupViewModel(CharacterFileService service, Action<ItemSlotViewModel> requestPickForSlot,
         Dictionary<string, GameItem[]> mergedContainers, int realLoadoutCount)
     {
@@ -127,7 +136,13 @@ public partial class EquipmentGroupViewModel : ObservableObject
         RecomputeDefenseAndBonus();
     }
 
-    partial void OnSelectedLoadoutChanged(int value) => RecomputeDefenseAndBonus();
+    partial void OnSelectedLoadoutChanged(int value)
+    {
+        RecomputeDefenseAndBonus();
+        OnPropertyChanged(nameof(CurrentItems));
+        OnPropertyChanged(nameof(CurrentSocial));
+        OnPropertyChanged(nameof(CurrentDyes));
+    }
 
     private void RecomputeDefenseAndBonus()
     {

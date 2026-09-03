@@ -3902,3 +3902,30 @@ sin `window.json` previo -> tamaño de fabrica, se redimensiona a 1234x789 en (4
 cierra -> `window.json` guardado con esos valores EXACTOS; 2ª ejecucion (proceso nuevo) ->
 restaura esos mismos valores EXACTOS antes de `Show()`. `dotnet build`/`dotnet test` en verde
 (134/134).
+
+### Bloque 4 (parte 2) - T-2/E-2: breakpoint real compartido + las 3 vistas de Equipamiento a la vez
+
+**T-2, breakpoint formal**: `WindowSizeClass` (Compacto/Normal/Amplio, nuevo enum) +
+`MainViewModel.SizeClass` (actualizado en vivo por `MainWindow.xaml.cs` via `SizeChanged`, con
+un valor inicial real ya calculado antes del primer `Show()`) - un unico punto de verdad para
+que cualquier pantalla que necesite reaccionar al ancho real de la ventana se ate a ESTE enum,
+no a un numero de pixeles propio inventado sobre la marcha.
+
+**E-2, primer consumidor real**: en `WindowSizeClass.Amplio`, Equipamiento muestra las 3 vistas
+(Armadura/accesorios, Vanidad, Tintes) del loadout actual LADO A LADO (mismo
+`ContainerCompactTemplate` de siempre, sin plantilla nueva) en vez del selector de pildoras
+"Vista:" + un unico panel - nuevas `EquipmentGroupViewModel.CurrentItems/CurrentSocial/
+CurrentDyes` (los 3 contenedores del loadout actual, actualizados en `OnSelectedLoadoutChanged`)
+y `MainViewModel.IsEquipmentExpanded`. Por debajo del umbral, el comportamiento de siempre
+(pildoras, un panel).
+
+**Umbral real, no adivinado**: `AmplioMinWidth=1500` - medido de verdad con el arnes de UI
+Automation probando la propia pantalla expandida a varios anchos: 1650px se ve limpio de sobra,
+1450px recorta visiblemente la 3ª columna (Tintes, confirmado con captura real). 1500 es el
+primer punto real y seguro entre ambos extremos medidos, no un numero redondo elegido a ciegas.
+`NormalMinWidth=1300` se deja como umbral intermedio razonable, pendiente de que A-4 (su primer
+consumidor real) lo mida y corrija si hiciera falta, mismo criterio.
+
+Verificado con capturas reales a 1450px (SizeClass=Normal, pildoras) y 1550px
+(SizeClass=Amplio, las 3 vistas lado a lado sin recortes). `dotnet build`/`dotnet test` en verde
+(134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.

@@ -1272,7 +1272,12 @@
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>
                                                     </StackPanel>
-                                                    <StackPanel Orientation="Horizontal">
+                                                    <!-- Auditoria de Opus, E-2: con sitio real para las 3 vistas a
+                                                         la vez (SizeClass.Amplio) no hay nada que "elegir" -
+                                                         este selector solo tiene sentido cuando hay que
+                                                         turnarse un unico hueco entre las 3. -->
+                                                    <StackPanel Orientation="Horizontal"
+                                                                Visibility="{Binding DataContext.IsEquipmentExpanded, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolToVis}}">
                                                         <TextBlock Text="Vista:" Style="{StaticResource CaptionText}"
                                                                    VerticalAlignment="Center" Margin="0,0,8,0" />
                                                         <ItemsControl ItemsSource="{Binding KindOptions}">
@@ -1303,9 +1308,39 @@
                                                 </StackPanel>
 
                                                 <!-- Centro: Equipamiento 5x2 real (Columns=5, ver
-                                                     EquipmentGroupViewModel.AddSlotSet). -->
+                                                     EquipmentGroupViewModel.AddSlotSet). Un unico panel a
+                                                     la vez (pildoras "Vista:" de arriba) en Compacto/Normal. -->
                                                 <ContentControl Grid.Column="1" Grid.Row="1" Content="{Binding EquipmentGroup.Current}"
-                                                                ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                                ContentTemplate="{StaticResource ContainerCompactTemplate}"
+                                                                Visibility="{Binding IsEquipmentExpanded, Converter={StaticResource InverseBoolToVis}}" />
+
+                                                <!-- Auditoria de Opus, E-2: "las 3 vistas se podrian ver a la
+                                                     vez con sitio real" - en SizeClass.Amplio, Armadura/
+                                                     Vanidad/Tintes del loadout actual, lado a lado, cada una
+                                                     con su propia etiqueta (sin pildoras que elegir, ver el
+                                                     StackPanel de arriba). Mismo ContainerCompactTemplate de
+                                                     siempre - ninguna plantilla nueva, solo mas sitio para
+                                                     mostrar lo mismo de golpe (P3). -->
+                                                <Grid Grid.Column="1" Grid.Row="1"
+                                                      Visibility="{Binding IsEquipmentExpanded, Converter={StaticResource BoolToVis}}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                                        <TextBlock Text="{Binding EquipmentGroup.CurrentItems.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                        <ContentControl Content="{Binding EquipmentGroup.CurrentItems}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                                        <TextBlock Text="{Binding EquipmentGroup.CurrentSocial.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                        <ContentControl Content="{Binding EquipmentGroup.CurrentSocial}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2">
+                                                        <TextBlock Text="{Binding EquipmentGroup.CurrentDyes.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                        <ContentControl Content="{Binding EquipmentGroup.CurrentDyes}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                    </StackPanel>
+                                                </Grid>
 
                                                 <!-- Lateral derecho: Monedas + Municion, horizontal (ya lo
                                                      estaba - Columns=10 por defecto, 4 slots caben en una

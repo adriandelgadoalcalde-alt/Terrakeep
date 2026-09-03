@@ -92,6 +92,30 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private int _personajeInnerTabIndex;
     [ObservableProperty] private bool _saveConfirmationVisible;
 
+    // Auditoria de Opus, Bloque 4 (T-2): breakpoint real y compartido, ver WindowSizeClass.cs.
+    // AmplioMinWidth=1500 medido de verdad con el arnes de UI Automation contra E-2 (las 3
+    // vistas de Equipamiento lado a lado): 1650px se ve limpio de sobra, 1450px recorta la 3ª
+    // columna (Tintes) - 1500 es el real primer punto seguro entre ambos, no un numero redondo
+    // adivinado. NormalMinWidth=1300 se deja como umbral intermedio razonable (sitio para 2
+    // paneles) hasta que algun consumidor real (A-4) lo mida y, si hace falta, lo corrija igual.
+    [ObservableProperty] private WindowSizeClass _sizeClass = WindowSizeClass.Normal;
+    private const double NormalMinWidth = 1300;
+    private const double AmplioMinWidth = 1500;
+
+    public void UpdateSizeClass(double actualWidth)
+    {
+        SizeClass = actualWidth >= AmplioMinWidth ? WindowSizeClass.Amplio
+            : actualWidth >= NormalMinWidth ? WindowSizeClass.Normal
+            : WindowSizeClass.Compacto;
+    }
+
+    // Auditoria de Opus, E-2: umbral real medido con el arnes (ver bitacora.md) - a partir de
+    // aqui hay sitio de sobra para las 3 vistas de Equipamiento (Armadura/Vanidad/Tintes) a la
+    // vez, sin apretar ninguna. Por debajo, se queda el selector de pildoras de siempre (un
+    // panel a la vez).
+    public bool IsEquipmentExpanded => SizeClass == WindowSizeClass.Amplio;
+    partial void OnSizeClassChanged(WindowSizeClass value) => OnPropertyChanged(nameof(IsEquipmentExpanded));
+
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
     [ObservableProperty] private EquipmentGroupViewModel? _equipmentGroup;
     [ObservableProperty] private StorageGroupViewModel? _storageGroup;
