@@ -4832,3 +4832,26 @@ no lo menciona el hallazgo original pero es el mismo bug).
 
 10 pruebas deterministas nuevas (`HallazgosSueltosTests.cs`). `dotnet test` 186/186 en verde,
 arnes visual completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### L-e + N-d (segunda auditoria, Fable) - lote 2 de hallazgos sueltos
+
+**L-e, el mensaje de rechazo no se limpia nunca**: escribir un id invalido dejaba el aviso rojo
+colgado indefinidamente, incluso cambiando de slot y volviendo. `RejectionMessage` solo se
+limpiaba dentro de `UpdateFrom` (una colocacion CON exito) - si el rechazo era lo ultimo que
+pasaba en ese slot, se quedaba para siempre. Arreglado en ambos slots reales (`ItemSlotViewModel`
+y el `RejectionMessage` que Bu-b acaba de añadir a `BuffSlotViewModel`): se limpia al cambiar de
+seleccion, en cualquiera de los dos sentidos.
+
+**N-d, "Objetos nuevos" es texto, no sprites**: "toda la app enseña sprites; aqui no, y el
+resolvedor de iconos ya esta a mano". Nuevo `WhatsNewItemViewModel`/`WhatsNewEntryViewModel`
+(App) envolviendo los `WhatsNewItem`/`WhatsNewEntry` crudos de Core - `Key` (nombre interno
+real, no un id numerico) se resuelve contra `VanillaItemCatalog.GetIdByKey` +
+`VanillaIconResolver`, mismo mecanismo real ya usado para el Pid de Investigacion. Nota real:
+el `whats_new.json` actual del proyecto describe una version FICTICIA (contenido sintetico
+propio de la demo, "PalworldKinshipPeach" y similares) - ninguna fila muestra icono todavia en
+la app tal cual esta hoy, no porque el mecanismo este mal sino porque ninguna de esas claves es
+un objeto vanilla real ("lo que no se encuentra no se inventa"). Verificado el mecanismo en si
+con una clave vanilla real conocida (IronBroadsword, id 4) en una prueba aparte.
+
+4 pruebas deterministas nuevas (2 en `HallazgosSueltosTests.cs`, 2 en `WhatsNewIconTests.cs`
+nuevo). `dotnet test` 190/190 en verde, arnes visual completo sin NO-FOUND/FALLO/EXCEPTION.

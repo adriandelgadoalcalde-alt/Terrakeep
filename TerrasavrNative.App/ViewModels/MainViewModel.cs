@@ -255,7 +255,7 @@ public partial class MainViewModel : ObservableObject
             PersonajeInnerTabIndex = (int)PersonajeInnerTab.Objetos;
         };
         Builds = new BuildsViewModel(_service.VanillaBuilds, _service.CalamityBuilds, _service);
-        WhatsNew = new WhatsNewViewModel(_service.WhatsNew);
+        WhatsNew = new WhatsNewViewModel(_service.WhatsNew, _service.VanillaCatalog);
         Changelog = new ChangelogViewModel(_service.Changelog);
         Exploration = new ExplorationViewModel(_service);
         Library = new LibraryViewModel(_service);

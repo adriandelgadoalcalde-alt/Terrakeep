@@ -535,7 +535,7 @@
         </DataTemplate>
 
         <!-- Una entrada de "Novedades" -->
-        <DataTemplate DataType="{x:Type data:WhatsNewEntry}">
+        <DataTemplate DataType="{x:Type vm:WhatsNewEntryViewModel}">
             <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,0,14" Padding="16">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
@@ -564,9 +564,16 @@
                             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type data:WhatsNewItem}">
+                            <!-- N-d (segunda auditoria de Opus, Fable): "toda la app enseña
+                                 sprites; aqui no, y el resolvedor de iconos ya esta a mano". -->
+                            <DataTemplate DataType="{x:Type vm:WhatsNewItemViewModel}">
                                 <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="4" Margin="0,0,6,6" Padding="7,3">
-                                    <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <Image Source="{Binding IconPath}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,5,0"
+                                               RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                    </StackPanel>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

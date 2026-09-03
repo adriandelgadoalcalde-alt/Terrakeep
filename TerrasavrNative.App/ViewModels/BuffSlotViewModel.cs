@@ -39,6 +39,9 @@ public partial class BuffSlotViewModel : ObservableObject
     [ObservableProperty] private bool _isEmpty = true;
     [ObservableProperty] private int _durationSeconds;
     [ObservableProperty] private bool _isSelected;
+    // L-e (segunda auditoria de Opus, Fable): mismo arreglo real que ItemSlotViewModel - el
+    // aviso de rechazo no debe sobrevivir a un cambio de seleccion.
+    partial void OnIsSelectedChanged(bool value) => RejectionMessage = null;
 
     // Mismo patron real ya usado en ItemSlotViewModel.RejectionMessage - un aviso real, no
     // modal, que se limpia solo en la siguiente colocacion con exito.

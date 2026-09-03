@@ -5,7 +5,7 @@ using TerrasavrNative.Core.PlrFormat;
 namespace TerrasavrNative.App.ViewModels.Tests;
 
 // Segunda auditoria de Opus (Fable), hallazgos sueltos fuera de las olas nombradas: Bu-a, Bu-b,
-// D-c, Ap-f.
+// D-c, Ap-f, L-e.
 public sealed class HallazgosSueltosTests
 {
     private static MainViewModel NewLoadedViewModel()
@@ -112,5 +112,34 @@ public sealed class HallazgosSueltosTests
         vm.Appearance.ManaNow = 999;
 
         Assert.Equal(200, vm.Appearance.ManaNow);
+    }
+
+    [Fact]
+    public void LE_ElAvisoDeRechazoDeUnObjetoSeLimpiaAlCambiarDeSeleccion()
+    {
+        var vm = NewLoadedViewModel();
+        var accessorySlot = vm.EquipmentGroup!.EquippedItems.Slots[3]; // primer accesorio real
+        accessorySlot.IsSelected = true;
+        accessorySlot.PlaceItem(3); // Iron Broadsword, un arma real - no encaja en un slot de accesorio
+        Assert.NotNull(accessorySlot.RejectionMessage);
+
+        accessorySlot.IsSelected = false;
+
+        Assert.Null(accessorySlot.RejectionMessage); // se limpia al dejar de ser el slot seleccionado
+    }
+
+    [Fact]
+    public void LE_ElAvisoDeRechazoDeUnBuffSeLimpiaAlCambiarDeSeleccion()
+    {
+        var vm = NewLoadedViewModel();
+        var slots = vm.Buffs.Container!.Slots;
+        slots[0].PlaceBuff(1); // Obsidian Skin
+        slots[1].IsSelected = true;
+        slots[1].PlaceBuff(1); // ya esta en otro slot - se rechaza
+        Assert.NotNull(slots[1].RejectionMessage);
+
+        slots[1].IsSelected = false;
+
+        Assert.Null(slots[1].RejectionMessage);
     }
 }

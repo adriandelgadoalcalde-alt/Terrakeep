@@ -86,6 +86,12 @@ public partial class ItemSlotViewModel : ObservableObject
     // (rarezas propias, no investigadas esta pasada) o rareza sin color real conocido.
     [ObservableProperty] private System.Windows.Media.Brush? _rarityBrush;
     [ObservableProperty] private bool _isSelected;
+    // L-e (segunda auditoria de Opus, Fable): "el mensaje de rechazo no se limpia nunca -
+    // escribir un id invalido deja el aviso rojo colgado indefinidamente, incluso cambiando de
+    // slot y volviendo". Se limpia al cambiar de seleccion (en cualquiera de los dos sentidos -
+    // deja de estar activo el aviso de ESTE slot en cuanto deja de ser el que se esta editando,
+    // y no reaparece solo por volver a seleccionarlo).
+    partial void OnIsSelectedChanged(bool value) => RejectionMessage = null;
     [ObservableProperty] private int _itemId;
     [ObservableProperty] private int _prefixId;
     // Auditoria de Opus, Bloque 3 (T-14): "el usuario no tiene ninguna confirmacion visual de
