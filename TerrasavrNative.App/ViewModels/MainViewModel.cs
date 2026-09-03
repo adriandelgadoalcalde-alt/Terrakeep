@@ -265,11 +265,23 @@ public partial class MainViewModel : ObservableObject
     // el WrapPanel de tarjetas reparta una fila mas ancha en vez de quedarse angosto.
     public double InicioContentMaxWidth => SizeClass == WindowSizeClass.Amplio ? 1400 : 880;
 
+    // H4-07 (cuarta auditoria de Opus, Fable): mismo patron real que InicioContentMaxWidth de
+    // arriba (I-c) - Apariencia se quedaba en 640px fijos siempre (pensado para caber en la
+    // ventana minima), dejando ~70% del ancho en negro en Amplio. Las tarjetas de color
+    // (Swatches) ya viven en un WrapPanel real - solo hacia falta dejarle mas ancho real para
+    // repartir mas columnas, no rehacer el layout.
+    public double AppearanceContentMaxWidth => SizeClass == WindowSizeClass.Amplio ? 1000 : 640;
+
     partial void OnSizeClassChanged(WindowSizeClass value)
     {
         OnPropertyChanged(nameof(IsEquipmentExpanded));
         OnPropertyChanged(nameof(IsStorageExpanded));
         OnPropertyChanged(nameof(InicioContentMaxWidth));
+        OnPropertyChanged(nameof(AppearanceContentMaxWidth));
+        // H4-07: la Libreria/Libreria de buffs se revelan solas en Amplio (ver el comentario
+        // real de IsLibraryVisible/IsBuffLibraryVisible arriba).
+        OnPropertyChanged(nameof(IsLibraryVisible));
+        OnPropertyChanged(nameof(IsBuffLibraryVisible));
         // H4-02: si "Almacenes" (indice 2) era la pestaña activa justo cuando se oculta (Amplio
         // real, IsStorageExpanded=true), mover la seleccion a "Inventario" (1) - el mismo
         // StorageGroup ya esta a la vista ahi, lado a lado con el Inventario (A-4).
@@ -307,8 +319,16 @@ public partial class MainViewModel : ObservableObject
     // esta eligiendo, sin pisarla. Al terminar/cancelar el pick, vuelve sola a la preferencia
     // real - el boton nunca miente sobre lo que hay en pantalla. Recuperado de 83fd33c (ver
     // BoolToGridLengthConverter), que un revert por rango demasiado ancho se llevo por delante.
-    public bool IsLibraryVisible => !IsLibraryCollapsed || Library.IsPicking;
-    public bool IsBuffLibraryVisible => !IsBuffLibraryCollapsed || BuffLibrary.IsPicking;
+    // H4-07 (cuarta auditoria de Opus, Fable): "a pantalla completa sobra muchisimo espacio y
+    // la Libreria sigue plegada por defecto" - el motivo real de plegarla por omision
+    // ("devolver espacio a la cuadricula", medido a 1080x700, ver el comentario de
+    // IsLibraryCollapsed arriba) DESAPARECE en Amplio, donde caben las dos cosas holgadamente
+    // (umbral SizeClass ya medido y en produccion para E-2/A-4/I-c). Mismo patron real de B-2
+    // ("preferencia + revelado temporal", ver el comentario de arriba) - IsLibraryCollapsed
+    // sigue siendo SOLO la preferencia del boton, nunca se pisa: al encoger la ventana por
+    // debajo de Amplio, la Libreria vuelve sola a lo que el boton diga.
+    public bool IsLibraryVisible => !IsLibraryCollapsed || Library.IsPicking || SizeClass == WindowSizeClass.Amplio;
+    public bool IsBuffLibraryVisible => !IsBuffLibraryCollapsed || BuffLibrary.IsPicking || SizeClass == WindowSizeClass.Amplio;
     partial void OnIsLibraryCollapsedChanged(bool value) => OnPropertyChanged(nameof(IsLibraryVisible));
     partial void OnIsBuffLibraryCollapsedChanged(bool value) => OnPropertyChanged(nameof(IsBuffLibraryVisible));
     public ResearchViewModel Research { get; }

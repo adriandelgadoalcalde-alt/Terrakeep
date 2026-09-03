@@ -5755,3 +5755,60 @@ siempre en verde aislado. Sugiere una condicion de carrera real en `RefreshAsync
 un simple flake de tiempos - merece una mirada propia en otra sesion, documentado aqui en vez
 de perseguirlo a ciegas dentro de esta ronda (regla real del proyecto: "si algo falla dos veces
 seguidas, parar y escribirlo").
+
+### Tanda 3 (H4-07, H4-08 - los dos unicos hallazgos que cambian layout)
+
+Pedido explicito del usuario ("continua sin parar") tras preguntarle si prefería ir tanda a
+tanda por ser estos los dos unicos que cambian la forma de algo (recomendacion real del propio
+informe, por la leccion del rediseño revertido de la octava pasada) - se implementan igual, sin
+pausa, documentando el resultado aqui con el mismo detalle de siempre para que se pueda revisar
+despues.
+
+**H4-07, "a pantalla completa sobra muchisimo espacio y la Libreria sigue plegada por
+defecto"**: el propio informe proponia 3 mejoras reales por orden de rendimiento - se
+implementaron las 2 primeras (la 3ª, tarjetas grandes de carpetas raiz en el resumen vacio de
+Investigacion, se deja fuera de esta ronda por ser la de menor retorno y la unica que exige
+UI nueva de verdad, no solo parametrizar una ya existente - documentado aqui para que no se
+pierda si se quiere retomar):
+
+1. **Libreria/Libreria de buffs se revelan solas en Amplio**: mismo patron real de B-2
+   ("preferencia + revelado temporal", ya en produccion para el picker) - `IsLibraryVisible`/
+   `IsBuffLibraryVisible` ahora tambien son `true` cuando `SizeClass == Amplio`, SIN pisar
+   `IsLibraryCollapsed`/`IsBuffLibraryCollapsed` (la preferencia real del boton, la unica que se
+   respeta al encoger la ventana por debajo de Amplio otra vez). El motivo real de plegarla por
+   omision ("devolver espacio a la cuadricula", pedido explicito del usuario, medido a
+   1080x700) sigue intacto para ese tamaño - en Amplio ese motivo real ya no aplica.
+2. **Apariencia deja de tener un ancho fijo de 640px siempre**: mismo patron real que
+   `InicioContentMaxWidth` (I-c) - nuevo `AppearanceContentMaxWidth` (640 normal, 1000 en
+   Amplio) en el `StackPanel` que envuelve genero/peinado/tinte/colores/estadisticas - las
+   tarjetas de color (`Swatches`) ya viven en un `WrapPanel` real, solo hacia falta darle mas
+   ancho para que reparta mas columnas solo, sin rehacer ningun layout.
+
+5 pruebas deterministas nuevas (`LibraryRevealInAmplioTests.cs`) - una de ellas (concordancia
+del boton "desplegar a mano en Amplio sigue visible al encoger") encontro un error real en la
+PROPIA prueba al escribirla (doble-toggle innecesario que dejaba `IsLibraryCollapsed` en el
+valor contrario al esperado por el comentario) - corregido a un unico toggle, no era un bug de
+produccion.
+
+**H4-08, "el estado vacio de Exploracion es un lienzo negro sin guia"**: el propio informe daba
+2 opciones (aviso centrado, o un lanzador de mundos completo calcado del de personajes de
+Inicio) - se implemento la primera (aviso real centrado en el lienzo + boton, mismo patron ya
+usado por el overlay de `IsLoading` - nunca los dos avisos a la vez, `ExplorationViewModel.
+IsEmpty = !IsWorldLoaded && !IsLoading`) mas deshabilitar el buscador de NPCs mientras no hay
+mundo (con tooltip real de por que, `ToolTipService.ShowOnDisabled`). El lanzador de mundos
+completo (la "version buena" que cita el propio informe) se deja fuera de esta ronda a
+proposito - es una FUNCION nueva real (escaneo async de `.wld` + tarjetas, calcado de
+`HomeViewModel` pero no trivial), no un ajuste de layout como el resto de esta tanda; queda
+anotado aqui como candidato real para una ronda futura si se decide.
+
+3 pruebas deterministas nuevas (`ExplorationEmptyStateTests.cs`).
+
+`dotnet test` 294/294 en verde (136 Core + 158 ViewModels), arnes UIA completo sin
+NO-FOUND/FALLO/EXCEPTION.
+
+### Cuarta auditoria (Fable) - cierre
+
+11 de los 13 hallazgos (H4-01 a H4-13, salvo el punto 3 de H4-07 y la version completa de
+H4-08) cerrados con arreglo real, test, arnes y commit en 3 tandas - los dos recortes de
+alcance estan documentados arriba con su motivo real (menor retorno/mayor riesgo de scope,
+nunca "no daba tiempo" sin mas). Pedido cumplido en su totalidad ("continua sin parar").

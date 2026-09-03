@@ -2095,7 +2095,11 @@
                             </StackPanel>
 
                             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-                            <StackPanel MaxWidth="640" HorizontalAlignment="Left">
+                            <!-- H4-07 (cuarta auditoria de Opus, Fable): mismo patron real que
+                                 InicioContentMaxWidth (I-c) - 640px fijos dejaban ~70% del ancho en
+                                 negro en Amplio, donde las tarjetas de color (WrapPanel real) tienen
+                                 sitio de sobra para repartirse en mas columnas. -->
+                            <StackPanel MaxWidth="{Binding AppearanceContentMaxWidth}" HorizontalAlignment="Left">
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
                                     <StackPanel Margin="0,0,24,0">
                                         <TextBlock Text="Género" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
@@ -2719,6 +2723,19 @@
                                 <TextBlock Text="Leyendo y pintando el mapa..." Style="{StaticResource CaptionText}" Margin="0,10,0,0" HorizontalAlignment="Center" />
                             </StackPanel>
                         </Border>
+
+                        <!-- H4-08 (cuarta auditoria de Opus, Fable): estado vacio real, centrado
+                             en el propio lienzo - antes solo "Sin mundo cargado." en el tamaño de
+                             letra mas pequeño de la app, en la esquina inferior izquierda. Mismo
+                             patron real que el overlay de IsLoading de arriba. -->
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Visibility="{Binding Exploration.IsEmpty, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Sin mundo cargado" Style="{StaticResource TitleText}" FontSize="18"
+                                       HorizontalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" />
+                            <TextBlock Text="Carga un mundo .wld para ver su mapa completo" Style="{StaticResource CaptionText}"
+                                       HorizontalAlignment="Center" Margin="0,4,0,14" />
+                            <Button Content="Cargar mundo (.wld)..." Tag="Accent" Click="OnLoadWorldClick" HorizontalAlignment="Center" />
+                        </StackPanel>
                         </Grid>
                     </Border>
 
@@ -2728,11 +2745,24 @@
                              tooltip - correcto que no use la gramatica de LibrarySearchGrammar
                              (filtra una lista corta por nombre), pero quien viene de los otros 3
                              no lo sabe sin probarlo. -->
+                        <!-- H4-08: deshabilitado mientras no hay mundo (con tooltip real de por
+                             que) - sin esto sugeria una funcion que todavia no aplica a nada. -->
                         <TextBox DockPanel.Dock="Top" Text="{Binding Exploration.NpcSearchText, UpdateSourceTrigger=PropertyChanged}"
                                  Padding="7,5" Background="{StaticResource BgElevatedBrush}"
                                  Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
                                  FontSize="12" Margin="0,0,0,10"
-                                 ToolTip="Filtra por nombre - no admite la gramática de los otros buscadores (#id, comas, etc.)" />
+                                 IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="ToolTip" Value="Filtra por nombre - no admite la gramática de los otros buscadores (#id, comas, etc.)" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Exploration.IsWorldLoaded}" Value="False">
+                                            <Setter Property="ToolTip" Value="Carga un mundo primero para poder buscar sus NPCs" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
 
                         <!-- X-f (segunda auditoria de Opus, Fable): "'NPCs que faltan' deberia
                              empezar colapsado" - un mundo real recien empezado puede tener 13+

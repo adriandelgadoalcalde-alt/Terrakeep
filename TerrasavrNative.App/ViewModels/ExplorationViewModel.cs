@@ -78,7 +78,19 @@ public partial class ExplorationViewModel : ObservableObject
     // de verdad).
     [ObservableProperty] private bool _isLoading;
     public bool IsNotLoading => !IsLoading;
-    partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(IsNotLoading));
+    partial void OnIsLoadingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsNotLoading));
+        OnPropertyChanged(nameof(IsEmpty));
+    }
+
+    // H4-08 (cuarta auditoria de Opus, Fable): "el estado vacio de Exploracion es un lienzo
+    // negro sin guia" - el unico aviso real ("Sin mundo cargado.") vivia en StatusMessage, en
+    // el tamaño de letra mas pequeño de la app y en la esquina inferior izquierda. Real,
+    // centrado en el propio lienzo (mismo patron ya usado por el overlay de IsLoading, ver
+    // MainWindow.xaml) - nunca durante la carga, para no parpadear entre los dos avisos.
+    public bool IsEmpty => !IsWorldLoaded && !IsLoading;
+    partial void OnIsWorldLoadedChanged(bool value) => OnPropertyChanged(nameof(IsEmpty));
 
     // Siempre TODOS los NPCs del mundo - lo que dibuja los marcadores del mapa (nunca se
     // filtra, ver X-c arriba).
