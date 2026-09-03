@@ -25,6 +25,27 @@
                            TextWrapping="Wrap" Margin="0,0,0,10"
                            Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}" />
 
+                <!-- Auditoria de Opus, Bloque 5 (T-5): leyenda real de los 3 codigos de color de
+                     un slot (fondo verde/punto rojo/borde morado) - antes habia que
+                     descubrirlos por prueba y error. Solo aqui, en el hueco real que deja "sin
+                     seleccion" (StaticResource nunca compite con el contenido de edicion real). -->
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10"
+                            Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}">
+                    <TextBlock Text="Leyenda" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                        <Border Width="14" Height="14" CornerRadius="3" Background="{StaticResource EquippedGreenBrush}" Opacity="0.5" Margin="0,0,6,0" />
+                        <TextBlock Text="Fondo verde = objeto equipado" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                        <Ellipse Width="10" Height="10" Fill="{StaticResource CalamityBrush}" Margin="2,0,6,0" />
+                        <TextBlock Text="Punto rojo = objeto de Calamity" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="14" Height="14" CornerRadius="3" BorderBrush="{StaticResource AccentBrush}" BorderThickness="2" Margin="0,0,6,0" />
+                        <TextBlock Text="Borde morado = slot seleccionado" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                </StackPanel>
+
                 <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
                     <DockPanel Margin="0,0,0,10">
                         <!-- La tarjeta compacta (Inventario/Almacenes, pregunta a Opus sobre el
@@ -703,13 +724,19 @@
                         <MenuItem Header="Vaciar slot" Command="{Binding ClearCommand}" IsEnabled="{Binding IsNotEmpty}" />
                     </ContextMenu>
                 </Border.ContextMenu>
+                <!-- Auditoria de Opus, Bloque 5 (T-4): BUG REAL encontrado y arreglado - mismo
+                     anti-patron ya diagnosticado y arreglado en SlotCompactTemplate (E-1,
+                     octava pasada): "es de Calamity" y "esta seleccionado" competian por
+                     BorderBrush, y en WPF el ULTIMO trigger activo declarado gana. Un buff de
+                     Calamity seleccionado para editarlo (camino real y comun, ver
+                     MainViewModel.SelectBuffSlot) perdia el borde rojo justo mientras se estaba
+                     editando - se perdia la señal "esto es de Calamity" en el momento en que
+                     mas falta hace. Mismo arreglo real: el borde pasa a significar UNA sola
+                     cosa (seleccionado), "Calamity" se mueve a un punto real en la esquina
+                     (Ellipse de mas abajo) - ambos estados se leen siempre a la vez. -->
                 <Border.Style>
                     <Style TargetType="Border" BasedOn="{StaticResource ItemSlotCardCompact}">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
-                                <Setter Property="BorderThickness" Value="2" />
-                            </DataTrigger>
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                 <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                                 <Setter Property="BorderThickness" Value="2" />
@@ -718,9 +745,15 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
-                       RenderOptions.BitmapScalingMode="NearestNeighbor"
-                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                <Grid>
+                    <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <Ellipse Width="8" Height="8" Fill="{StaticResource CalamityBrush}"
+                             HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0"
+                             Visibility="{Binding IsCalamity, Converter={StaticResource BoolToVis}}"
+                             ToolTip="Buff de Calamity" />
+                </Grid>
             </Border>
         </DataTemplate>
 
@@ -749,6 +782,22 @@
                 <TextBlock DockPanel.Dock="Top" Text="{Binding NoSelectionMessage}" Style="{StaticResource CaptionText}"
                            TextWrapping="Wrap" Margin="0,0,0,10"
                            Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}" />
+
+                <!-- Auditoria de Opus, Bloque 5 (T-5): mismo criterio que ItemEditTemplate -
+                     leyenda real, solo en el hueco de "sin seleccion" (aqui sin "equipado",
+                     los buffs no tienen ese estado). -->
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10"
+                            Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVis}}">
+                    <TextBlock Text="Leyenda" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                        <Ellipse Width="10" Height="10" Fill="{StaticResource CalamityBrush}" Margin="2,0,6,0" />
+                        <TextBlock Text="Punto rojo = buff de Calamity" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="14" Height="14" CornerRadius="3" BorderBrush="{StaticResource AccentBrush}" BorderThickness="2" Margin="0,0,6,0" />
+                        <TextBlock Text="Borde morado = slot seleccionado" Style="{StaticResource CaptionText}" />
+                    </StackPanel>
+                </StackPanel>
 
                 <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
                     <DockPanel Margin="0,0,0,10">
@@ -840,7 +889,10 @@
                     <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                    <Button Content="Colocar" Tag="Accent" FontSize="8" Padding="0,1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                    <!-- Auditoria de Opus, T-10: suelo real de legibilidad - 8px era mas pequeño
+                         que cualquier otro texto real de la app (el resto usa 9px o mas para
+                         palabras reales), aqui subido a 9. -->
+                    <Button Content="Colocar" Tag="Accent" FontSize="9" Padding="0,1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
                             Command="{Binding DataContext.Library.PlaceInTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding}"
                             Visibility="{Binding DataContext.Library.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
@@ -884,7 +936,10 @@
                     <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                    <Button Content="Colocar" Tag="Accent" FontSize="8" Padding="0,1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                    <!-- Auditoria de Opus, T-10: suelo real de legibilidad - 8px era mas pequeño
+                         que cualquier otro texto real de la app (el resto usa 9px o mas para
+                         palabras reales), aqui subido a 9. -->
+                    <Button Content="Colocar" Tag="Accent" FontSize="9" Padding="0,1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
                             Command="{Binding DataContext.BuffLibrary.PlaceInTargetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding}"
                             Visibility="{Binding DataContext.BuffLibrary.IsPicking, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />

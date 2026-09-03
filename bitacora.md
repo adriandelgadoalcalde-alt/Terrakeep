@@ -4011,3 +4011,39 @@ Confirmado tambien visualmente con las capturas reales ya existentes a MinWidth/
 
 **Bloque 4 completo** (T-3/T-2/E-2/A-4/P-1/T-1) - las 6 partes de "Armonia a cualquier tamaño"
 del plan de Opus quedan cerradas. Sigue el Bloque 5 (Limpieza visual).
+
+### Bloque 5 (parte 1) - T-4/T-5/T-10: bug real de color en Buffs, leyenda, suelo de legibilidad
+
+**T-4, bug real encontrado (auditado con un fork dedicado a peinar TODO el XAML buscando el
+mismo patron, no solo mirando por encima)**: `BuffSlotCompactTemplate` tenia EXACTAMENTE el
+mismo bug que E-1 (octava pasada, ya arreglado para objetos) - "es de Calamity" y "esta
+seleccionado" competian por `BorderBrush`/`BorderThickness` en el mismo `Style.Triggers`, y en
+WPF el ULTIMO trigger declarado gana siempre que ambos aplican. Un buff de Calamity
+seleccionado para editarlo (camino real y comun, `MainViewModel.SelectBuffSlot`) perdia el
+borde/punto rojo justo mientras se estaba editando - la señal "esto es de Calamity" desaparecia
+en el peor momento. Mismo arreglo real que E-1: el borde vuelve a significar UNA sola cosa
+(seleccionado), "Calamity" se muda a un punto real en la esquina (`Ellipse`, mismo lenguaje
+visual que ya usan objetos). El resto de plantillas revisadas por el fork (`SlotCompactTemplate`,
+`ContainerCompactTemplate`, `LibraryCardTemplate`, `BuffLibraryCardTemplate`,
+`CharacterCardTemplate`, los 3 arboles de carpetas) NO tenian el mismo bug real - un solo
+trigger por propiedad, o triggers cuyas condiciones no compiten de verdad.
+
+Verificado con un buff de Calamity REAL (`CalamityIds.BuffIdBase`, "Gelatina Astral") colocado
+y seleccionado a la vez: `IsCalamity=True IsSelected=True` confirmados por el ViewModel, y
+captura real (`t4-buff-calamity-seleccionado.png`) mostrando el punto rojo Y el borde morado
+coexistiendo en el mismo slot.
+
+**T-5, leyenda real**: el panel "Editar"/"Editar buff" (donde no hay nada seleccionado, hueco
+que antes solo decia "Selecciona un slot para editarlo.") gana una leyenda real de los codigos
+de color (fondo verde=equipado, punto rojo=Calamity, borde morado=seleccionado - la version de
+Buffs sin "equipado", que no aplica ahi). Verificado con captura real
+(`t5-leyenda-buffs.png`).
+
+**T-10, suelo de legibilidad**: el boton "Colocar" superpuesto en las tarjetas de la Libreria
+(objetos y buffs) usaba `FontSize="8"` - mas pequeño que cualquier otro texto real de la app (el
+resto usa 9px o mas para palabras reales, no decoracion). Subido a 9, el mismo suelo que ya usa
+el resto de la app. El contraste real de `CaptionText` (`#8a8fa3` sobre los 3 fondos reales de
+la paleta) se comprobo aparte con la formula real de WCAG - 4.9:1 a 5.8:1 segun el fondo, pasa
+AA (4.5:1) con margen incluso en el tamaño mas pequeño usado - no hizo falta tocar ningun color.
+
+`dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
