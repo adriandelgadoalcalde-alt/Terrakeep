@@ -83,11 +83,6 @@
         <GradientStop Color="{StaticResource PinkColor}" Offset="0" />
         <GradientStop Color="{StaticResource PinkDeepColor}" Offset="1" />
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="HeaderGradientBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#21253a" Offset="0" />
-        <GradientStop Color="#171a26" Offset="1" />
-    </LinearGradientBrush>
-
     <FontFamily x:Key="AppFont">Segoe UI Variable Display, Segoe UI</FontFamily>
 
     <!-- Dos niveles de sombra (real Terrasavr: 0 4px 14px en reposo -> 0 8px 20px al pasar el
@@ -943,17 +938,6 @@
                 <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
             </MultiDataTrigger>
         </Style.Triggers>
-    </Style>
-
-    <!-- Tarjeta generica elevada - cabecera en degradado real (ver .tsx-modal-header del CSS
-         real: linear-gradient(135deg, #21253a, #171a26)) disponible como HeaderGradientBrush
-         para quien la quiera usar en su propia cabecera. -->
-    <Style x:Key="ElevatedCard" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource BgSecondaryBrush}" />
-        <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
-        <Setter Property="Padding" Value="20" />
     </Style>
 
     <!-- Panel lateral persistente (Editar/Librería) - equivalente real del sideCtr de

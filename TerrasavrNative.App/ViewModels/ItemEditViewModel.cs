@@ -53,7 +53,18 @@ public partial class ItemEditViewModel : ObservableObject
     // cambiado a mano, vaciado...) puede volver a cambiar que categorias/grupos aplican -
     // reconstruir es barato (como mucho 19 prefijos), asi que no hace falta filtrar por
     // que propiedad exacta cambio.
-    private void OnSlotPropertyChanged(object? sender, PropertyChangedEventArgs e) => Refresh();
+    //
+    // T-I (segunda auditoria de Opus, Fable): salvo `IsSelected`/`JustEdited` - ninguno de los
+    // dos cambia que prefijos aplican (son solo visuales, seleccion en la rejilla y el flash
+    // real de "acabo de editarse"), y reconstruir Groups/Prefixes en cada uno hacia parpadear
+    // la rejilla de prefijos sin motivo real cada vez que el propio slot editado terminaba su
+    // flash (~600ms despues) - mismo bug real ya cerrado en EquipmentGroupViewModel (B-6) y ya
+    // evitado desde el principio en BuffEditViewModel.
+    private void OnSlotPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited)) return;
+        Refresh();
+    }
 
     private void Refresh()
     {

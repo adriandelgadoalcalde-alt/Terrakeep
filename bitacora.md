@@ -4425,3 +4425,31 @@ confirmado ademas que un personaje 100% vainilla ya no genera ningun `.tplr` al 
 
 **Cierra la Ola 1 entera** (T-A, T-B, T-C mas los 7 defectos criticos B-1 a B-7) de la segunda
 auditoria de Opus (Fable). Sigue la Ola 2.
+
+### T-I + T-F (segunda auditoria, Fable) - Ola 2
+
+**T-I, `ItemEditViewModel` reconstruia la rejilla de prefijos en CUALQUIER cambio del slot**:
+incluidos `IsSelected` (marcar/desmarcar en la rejilla) y `JustEdited` (el flash real de "acabo
+de editarse", que se apaga solo 450ms despues) - ninguno de los dos cambia que prefijos
+aplican, asi que reconstruir por ellos era parpadeo visual real de sobra. Mismo bug real que
+B-6 en `EquipmentGroupViewModel`; `BuffEditViewModel` ya lo evitaba desde el principio (filtra
+a `IsEmpty`). Arreglado con el mismo filtro real de B-6 (excluir solo `IsSelected`/
+`JustEdited`). 1 prueba determinista nueva: seleccionar+flash no reconstruyen `Groups`, cambiar
+de objeto de verdad si.
+
+**T-F, 3 recursos muertos en `Theme.xaml`**: `HeaderGradientBrush` y `ElevatedCard` no los
+usaba nadie y duplicaban roles ya cubiertos (`SidePanelCard`/`BgSecondaryBrush`) - borrados sin
+mas (P6, nada que reusar de verdad). `CircleCloseButton` (gira 90° y se tiñe de rojo al pasar
+el raton, gesto real de Terrasavr) si merecia reuso real: el boton "Quitar" de cada fila de
+Spawn Points era texto plano - pasa a usar `CircleCloseButton` con "✕" + tooltip real.
+
+`dotnet test` 153/153 en verde (152 + 1), arnes visual completo sin NO-FOUND/FALLO/EXCEPTION
+(la compilacion en si ya valida que `CircleCloseButton` resuelve como StaticResource real).
+
+Nota aparte: un `dotnet test` a nivel de solucion fallo una vez de forma no reproducible (9/19
+en `TerrasavrNative.App.ViewModels.Tests`, todos con el mismo patron "IsDirty esperado False
+salio True" en el arranque de `NewLoadedViewModel`) mientras el mismo proyecto solo, y la
+solucion entera relanzada dos veces mas, salieron 100% en verde - pinta a carrera de
+compilacion en paralelo entre proyectos que comparten `TerrasavrNative.App`, no un fallo real
+de los tests. Registrado por si se repite (regla real: "si falla dos veces seguidas, parar") -
+de momento solo fallo una vez de tres, no se ha insistido mas.

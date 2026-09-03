@@ -1958,7 +1958,11 @@
                                                         <TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"
                                                                  Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                                     </StackPanel>
-                                                    <Button Content="Quitar" VerticalAlignment="Bottom" Padding="8,5"
+                                                    <!-- T-F (segunda auditoria de Opus, Fable): CircleCloseButton (gira 90° y se tiñe
+                                                         de rojo al pasar el raton, gesto real de Terrasavr) existia en Theme.xaml sin
+                                                         que ningun boton "quitar" real lo usara todavia - este es el candidato real. -->
+                                                    <Button Content="✕" Style="{StaticResource CircleCloseButton}" VerticalAlignment="Bottom" Margin="0,0,0,4"
+                                                            ToolTip="Quitar este punto de aparicion"
                                                             Command="{Binding DataContext.Servers.RemoveEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                             CommandParameter="{Binding}" />
                                                 </StackPanel>
