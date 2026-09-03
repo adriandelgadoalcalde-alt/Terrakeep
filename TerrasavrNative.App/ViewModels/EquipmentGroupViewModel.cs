@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -8,12 +9,33 @@ namespace TerrasavrNative.App.ViewModels;
 
 // Una opcion de un selector pequeño (loadout o vista) - mismo patron que
 // PrefixMetaButtonViewModel/PrefixGroupButtonViewModel (Label + IsSelected).
-public sealed partial class EquipmentOptionViewModel(string label, int value) : ObservableObject
+public sealed partial class EquipmentOptionViewModel : ObservableObject
 {
-    public string Label { get; } = label;
-    public int Value { get; } = value;
+    public string Label { get; }
+    public int Value { get; }
 
     [ObservableProperty] private bool _isSelected;
+
+    // Auditoria de Opus, A-1: "para saber si el Banco esta lleno hay que pulsar su pildora y
+    // contar". container es opcional (null = pildoras de Loadout/Vista en Equipamiento, que no
+    // tienen un "recuento" real que mostrar) - cuando SI viene un contenedor (las 4 pildoras de
+    // Almacenes), DisplayLabel se recalcula sola y en vivo (P5) suscribiendose una vez a cada
+    // slot real, sin que nadie de fuera tenga que avisar.
+    private readonly ContainerViewModel? _container;
+
+    public EquipmentOptionViewModel(string label, int value, ContainerViewModel? container = null)
+    {
+        Label = label;
+        Value = value;
+        _container = container;
+        if (container != null)
+            foreach (var slot in container.Slots)
+                slot.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ItemSlotViewModel.IsEmpty)) OnPropertyChanged(nameof(DisplayLabel)); };
+    }
+
+    public string DisplayLabel => _container == null
+        ? Label
+        : $"{Label} ({_container.Slots.Count(s => !s.IsEmpty)}/{_container.Slots.Count})";
 }
 
 // Armadura/accesorios, Vanidad (Social) y Tintes de un mismo loadout - los 3 "kinds" reales
@@ -34,7 +56,17 @@ public enum EquipmentKind { Items = 0, Social = 1, Dyes = 2 }
 // MergedContainers.
 public partial class EquipmentGroupViewModel : ObservableObject
 {
+    private readonly CharacterFileService _service;
     private readonly Dictionary<(int Loadout, EquipmentKind Kind), ContainerViewModel> _byKey = new();
+
+    // Auditoria de Opus, E-4: "el personaje tiene defensa real sumable... ya sabemos mostrar
+    // 'Con el set completo: ...' pero es el bono HIPOTETICO, no el que de verdad esta activo
+    // ahora mismo". Ambos se recalculan en vivo (P5) - defensa suma Armadura+Accesorios REALES
+    // del loadout seleccionado (vanilla via VanillaStats, Calamity via CalamityCatalog, ya
+    // extraida), el bono de set usa VanillaArmorSetCatalog.BonusForEquipped (ya existia, sin
+    // usar) contra las 3 piezas de cabeza/cuerpo/piernas puestas de verdad.
+    [ObservableProperty] private int _totalDefense;
+    [ObservableProperty] private string? _activeSetBonusText;
 
     public IReadOnlyList<ContainerViewModel> AllContainers { get; }
 
@@ -67,6 +99,7 @@ public partial class EquipmentGroupViewModel : ObservableObject
     public EquipmentGroupViewModel(CharacterFileService service, Action<ItemSlotViewModel> requestPickForSlot,
         Dictionary<string, GameItem[]> mergedContainers, int realLoadoutCount)
     {
+        _service = service;
         AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Items, "Equipo puesto - armadura/accesorios", mergedContainers["loadout0Items"]);
         AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Social, "Equipo puesto - vanidad", mergedContainers["loadout0Social"]);
         AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Dyes, "Equipo puesto - tintes", mergedContainers["loadout0Dyes"]);
@@ -81,6 +114,41 @@ public partial class EquipmentGroupViewModel : ObservableObject
         }
 
         AllContainers = _byKey.Values.ToList();
+
+        // Auditoria de Opus, E-4: suscripcion real a cada slot de Armadura/Accesorios (de
+        // TODOS los loadouts, no solo el seleccionado - cambiar de Puesto/1/2/3 tambien debe
+        // reflejar la defensa/bono real de ESE loadout) para recalcular en vivo (P5).
+        foreach (var ((loadout, kind), container) in _byKey)
+        {
+            if (kind != EquipmentKind.Items) continue;
+            foreach (var slot in container.Slots)
+                slot.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ItemSlotViewModel.IsEmpty)) RecomputeDefenseAndBonus(); };
+        }
+        RecomputeDefenseAndBonus();
+    }
+
+    partial void OnSelectedLoadoutChanged(int value) => RecomputeDefenseAndBonus();
+
+    private void RecomputeDefenseAndBonus()
+    {
+        var items = _byKey[(SelectedLoadout, EquipmentKind.Items)].Slots;
+        int total = 0;
+        foreach (var slot in items)
+        {
+            if (slot.IsEmpty) continue;
+            total += slot.IsCalamity
+                ? _service.CalamityCatalog.BySyntheticId(slot.Item.Id)?.Stats?.Defense ?? 0
+                : _service.VanillaStats.Get(slot.Item.Id)?.Defense ?? 0;
+        }
+        TotalDefense = total;
+
+        // BonusForEquipped real (VanillaArmorSetCatalog, ya existia sin usar) solo entiende
+        // ids vanilla - una pieza de Calamity en cabeza/cuerpo/piernas nunca forma un set
+        // vanilla real, se pasa -1 (id imposible) para que no case por error con nada.
+        int headId = !items[0].IsEmpty && !items[0].IsCalamity ? items[0].Item.Id : -1;
+        int bodyId = !items[1].IsEmpty && !items[1].IsCalamity ? items[1].Item.Id : -1;
+        int legsId = !items[2].IsEmpty && !items[2].IsCalamity ? items[2].Item.Id : -1;
+        ActiveSetBonusText = _service.VanillaArmorSets.BonusForEquipped(headId, bodyId, legsId)?.Text;
     }
 
     // Indices reales dentro de los 10 slots de Items/Social (Player.armor[0..9] real):

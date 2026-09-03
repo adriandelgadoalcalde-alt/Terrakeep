@@ -45,7 +45,8 @@ public partial class LibraryViewModel : ObservableObject
         foreach (var (id, name) in service.VanillaCatalog.AllEntries())
         {
             string? stats = ItemStatsFormatter.Format(false, id, service.TooltipCatalogs);
-            var item = new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats);
+            var rarityColor = VanillaRarityColorCatalog.Get(service.VanillaStats.Get(id)?.Rare);
+            var item = new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats, rarityColor);
             _all.Add(item);
             _byId[id] = item;
         }

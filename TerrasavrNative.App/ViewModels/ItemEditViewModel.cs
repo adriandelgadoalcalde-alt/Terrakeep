@@ -155,7 +155,10 @@ public partial class ItemEditViewModel : ObservableObject
             // de invocacion que añade Calamity sobre bytes libres del mismo campo prefix.
             bool isCalamityPrefix = id >= 85;
             bool isCurrent = !slot.Item.Prefix.IsCalamity && slot.Item.Prefix.VanillaId == id;
-            Prefixes.Add(new PrefixCatalogEntryViewModel(name, ItemPrefix.Vanilla((byte)id), isCalamityPrefix, isCurrent));
+            // Auditoria de Opus, D-6: efecto real del prefijo (numeros reales, no un nombre
+            // opaco) - null para los de Calamity, ver PrefixCatalogEntryViewModel.
+            string? effect = isCalamityPrefix ? null : _service.PrefixEffects.Describe(id);
+            Prefixes.Add(new PrefixCatalogEntryViewModel(name, ItemPrefix.Vanilla((byte)id), isCalamityPrefix, isCurrent, effect));
         }
     }
 

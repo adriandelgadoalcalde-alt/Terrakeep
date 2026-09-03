@@ -49,6 +49,29 @@ public partial class ItemSlotViewModel : ObservableObject
     public bool IsMasterAccessorySlot { get; }
     public GameItem Item { get; private set; } = GameItem.Empty;
 
+    // Auditoria de Opus, E-3: "un usuario que no conoce el juego no sabe que el slot 3 es
+    // 'Accesorio 1'" - respaldado por el original real (app.TabEquips.updateLang,
+    // locClass[3][4] = "Helmet/Shirt/Pants/Accessory $1"). Derivado de AcceptedKind (ya
+    // restringido por slot real, ver SlotKind) + SlotIndex para numerar accesorios 1-7 -
+    // null para slots sin restriccion real (Inventario/Banco/...), donde no hay ningun "rol"
+    // que anunciar.
+    public string? SlotRoleLabel => AcceptedKind switch
+    {
+        SlotKind.ArmorHead => "Cabeza",
+        SlotKind.ArmorBody => "Cuerpo",
+        SlotKind.ArmorLegs => "Piernas",
+        SlotKind.Accessory => $"Accesorio {SlotIndex - 2}",
+        SlotKind.Dye => "Tinte",
+        SlotKind.Mount => "Montura",
+        SlotKind.Hook => "Gancho",
+        SlotKind.Cart => "Vagoneta",
+        SlotKind.VanityPet => "Mascota",
+        SlotKind.LightPet => "Mascota de luz",
+        SlotKind.Coin => "Moneda",
+        SlotKind.Ammo => "Munición",
+        _ => null,
+    };
+
     [ObservableProperty] private string _displayName = string.Empty;
     [ObservableProperty] private string? _rejectionMessage;
     [ObservableProperty] private int _count;
@@ -58,6 +81,10 @@ public partial class ItemSlotViewModel : ObservableObject
     [ObservableProperty] private bool _hasBestPrefixSuggestion;
     [ObservableProperty] private string? _iconPath;
     [ObservableProperty] private string? _statsTooltip;
+    // Auditoria de Opus, D-3: color REAL de rareza de Terraria (VanillaRarityColorCatalog) para
+    // pintar el NOMBRE del objeto, en vez de "Rareza N" como texto plano - null para Calamity
+    // (rarezas propias, no investigadas esta pasada) o rareza sin color real conocido.
+    [ObservableProperty] private System.Windows.Media.Brush? _rarityBrush;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private int _itemId;
     [ObservableProperty] private int _prefixId;
@@ -174,6 +201,7 @@ public partial class ItemSlotViewModel : ObservableObject
             HasBestPrefixSuggestion = false;
             IconPath = null;
             StatsTooltip = null;
+            RarityBrush = null;
             OnPropertyChanged(nameof(ShowCount));
             return;
         }
@@ -183,11 +211,16 @@ public partial class ItemSlotViewModel : ObservableObject
             var entry = _service.CalamityCatalog.BySyntheticId(item.Id);
             DisplayName = entry?.DisplayName ?? $"Calamity #{item.Id}";
             IconPath = entry?.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
+            RarityBrush = null;
         }
         else
         {
             DisplayName = _service.VanillaCatalog.GetName(item.Id);
             IconPath = VanillaIconResolver.GetIconPath(item.Id);
+            var rarityColor = VanillaRarityColorCatalog.Get(_service.VanillaStats.Get(item.Id)?.Rare);
+            RarityBrush = rarityColor is { } c
+                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(c.R, c.G, c.B))
+                : null;
         }
 
         StatsTooltip = ItemStatsFormatter.Format(item.IsCalamity, item.Id, _service.TooltipCatalogs, item.Prefix);

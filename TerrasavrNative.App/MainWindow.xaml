@@ -39,12 +39,21 @@
                                VerticalAlignment="Center"
                                Visibility="{Binding Slot.IconPath, Converter={StaticResource NullToVis}}" />
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Slot.DisplayName}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="220" />
+                            <!-- Auditoria de Opus, D-3: color real de rareza (null = color de
+                                 texto normal, ver VanillaRarityColorCatalog). -->
+                            <TextBlock Text="{Binding Slot.DisplayName}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="220"
+                                       Foreground="{Binding Slot.RarityBrush, TargetNullValue={StaticResource TextPrimaryBrush}}" />
                             <TextBlock Style="{StaticResource CaptionText}">
                                 <Run Text="{Binding Slot.ContainerName, Mode=OneWay}" />
                                 <Run Text=" · slot " />
                                 <Run Text="{Binding Slot.SlotIndex, Mode=OneWay}" />
                             </TextBlock>
+                            <!-- Auditoria de Opus, E-3: "un usuario que no conoce el juego no
+                                 sabe que el slot 3 es 'Accesorio 1'" - respaldado por el
+                                 original real (locClass Helmet/Shirt/Pants/Accessory $1). -->
+                            <TextBlock Text="{Binding Slot.SlotRoleLabel}" Style="{StaticResource CaptionText}"
+                                       FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"
+                                       Visibility="{Binding Slot.SlotRoleLabel, Converter={StaticResource NullToVis}}" />
                         </StackPanel>
                     </DockPanel>
 
@@ -134,7 +143,10 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:PrefixCatalogEntryViewModel}">
-                                    <Button Content="{Binding DisplayName}"
+                                    <!-- Auditoria de Opus, D-6: antes una lista de 20 nombres
+                                         opacos - el efecto real ya se sabe calcular
+                                         (PrefixEffectCatalog), solo faltaba mostrarlo aqui. -->
+                                    <Button Content="{Binding DisplayName}" ToolTip="{Binding EffectDescription}"
                                             Command="{Binding DataContext.ItemEdit.ApplyPrefixCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}" Padding="7,4" Margin="0,0,5,5" FontSize="11"
                                             Background="{StaticResource BgElevatedBrush}" BorderThickness="0">
@@ -311,7 +323,12 @@
                     <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <StackPanel MaxWidth="240">
                             <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap"
+                                       Foreground="{Binding RarityBrush, TargetNullValue={StaticResource TextPrimaryBrush}}"
                                        Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
+                            <!-- Auditoria de Opus, E-3 -->
+                            <TextBlock Text="{Binding SlotRoleLabel}" Style="{StaticResource CaptionText}"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       Visibility="{Binding SlotRoleLabel, Converter={StaticResource NullToVis}}" />
                             <TextBlock Style="{StaticResource CaptionText}"
                                        Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}">
                                 <Run Text="Prefijo: " />
@@ -765,7 +782,8 @@
                 <Border.ToolTip>
                     <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <StackPanel MaxWidth="240">
-                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap"
+                                       Foreground="{Binding RarityBrush, TargetNullValue={StaticResource TextPrimaryBrush}}" />
                             <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                                        Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
                         </StackPanel>
@@ -1135,6 +1153,18 @@
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>
                                                     </StackPanel>
+                                                    <!-- Auditoria de Opus, E-4: "el dato ya esta, solo falta
+                                                         enseñarlo" - defensa real sumada de este loadout
+                                                         (Armadura+Accesorios) y el bono de set REALMENTE
+                                                         activo (VanillaArmorSetCatalog.BonusForEquipped, ya
+                                                         existia sin usar), en vez del hipotetico del tooltip. -->
+                                                    <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0">
+                                                        <Run Text="Defensa total: " />
+                                                        <Run Text="{Binding TotalDefense, Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding ActiveSetBonusText}" Style="{StaticResource CaptionText}"
+                                                               Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                                               Visibility="{Binding ActiveSetBonusText, Converter={StaticResource NullToVis}}" />
                                                 </StackPanel>
 
                                                 <!-- Centro: Equipamiento 5x2 real (Columns=5, ver
@@ -1180,8 +1210,11 @@
                                                         <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                                                     </ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
+                                                        <!-- Auditoria de Opus, A-1: "para saber si el Banco esta lleno hay
+                                                             que pulsar su pildora y contar" - DisplayLabel ya trae el
+                                                             recuento real en vivo ("Banco (38/40)"). -->
                                                         <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
-                                                            <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
+                                                            <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
                                                                     Command="{Binding DataContext.StorageGroup.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                     CommandParameter="{Binding}" />
                                                         </DataTemplate>

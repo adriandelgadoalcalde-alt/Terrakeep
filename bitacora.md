@@ -3613,3 +3613,38 @@ automatiza alguna otra cosa que cierre la ventana sin un usuario real delante.
 
 Pase de regresión completo del arnés (todos los bloques de esta sesión) sin ningún FALLO ni
 EXCEPTION. `dotnet build` limpio, `dotnet test` 134/134.
+
+### Bloque 2 (parte 1) - Practicidad de golpe: D-6, D-3, A-1, E-3, E-4
+
+**D-6, efecto real del prefijo en cada botón de la rejilla**: `PrefixEffectCatalog.Describe`
+ya existía y ya se usaba en el tooltip del objeto - ahora también como `ToolTip` de cada botón
+de la rejilla de prefijos (`PrefixCatalogEntryViewModel.EffectDescription`, null para prefijos
+de Calamity, no investigados esta pasada).
+
+**D-3, color real de rareza de Terraria**: nuevo `VanillaRarityColorCatalog` (Core) con las 11
+rarezas reales, verificadas a mano contra el decompilado (`Terraria/ID/Colors.cs` +
+`Terraria/GameContent/UI/ItemRarity.cs`, `_rarities.Add(...)`) - antes `ItemStatsFormatter`
+imprimía literalmente "Rareza 5". El nombre del objeto se pinta con su color real
+(`RarityBrush`, null = color de texto normal) en el panel Editar, en el tooltip del propio slot
+y en el tooltip de la Librería - vocabulario exacto que ya conoce cualquier jugador de Terraria.
+
+**A-1, contadores reales en las píldoras de Almacenes**: `EquipmentOptionViewModel` gana un
+`ContainerViewModel?` opcional y `DisplayLabel` calculado ("Banco (15/40)"), suscrito una vez a
+cada slot real - se actualiza solo, en vivo, sin que nadie de fuera tenga que avisar. Verificado
+con captura real: los 4 recuentos correctos de un personaje real cargado.
+
+**E-3, etiquetas de rol de slot**: respaldado por el original real (`app.TabEquips.updateLang`,
+"Helmet/Shirt/Pants/Accessory $1"). `ItemSlotViewModel.SlotRoleLabel` deriva del `AcceptedKind`
++ `SlotIndex` ya existentes (sin parámetro nuevo) - "Cabeza"/"Cuerpo"/"Piernas"/"Accesorio N"
+(numerado 1-7)/"Tinte"/"Montura"/etc., null para slots sin restricción real (Inventario/Banco).
+Visible en el tooltip del propio slot y en el panel Editar.
+
+**E-4, defensa total y bono de set REALMENTE activo**: `VanillaArmorSetCatalog.BonusForEquipped`
+ya existía sin usar - `EquipmentGroupViewModel` gana `TotalDefense` (suma real vanilla+Calamity
+de Armadura+Accesorios del loadout seleccionado) y `ActiveSetBonusText` (el bono real si las 3
+piezas de cabeza/cuerpo/piernas puestas de verdad forman un set conocido), ambos recalculados en
+vivo con la misma suscripción por-slot ya usada en A-1/N-2. Verificado con captura real: "Defensa
+total: 51" + un bono de set real y completo mostrado sin que el usuario tuviera que hacer nada.
+
+Pase de regresión completo del arnés sin ningún FALLO. `dotnet build` limpio, `dotnet test`
+134/134.

@@ -39,7 +39,9 @@ public partial class StorageGroupViewModel : ObservableObject
     private void Add(int index, string label, ContainerViewModel container)
     {
         _byIndex[index] = container;
-        Options.Add(new EquipmentOptionViewModel(label, index));
+        // Auditoria de Opus, A-1: pasar el contenedor real activa el contador en vivo
+        // "Banco (38/40)" en la propia pildora, ver EquipmentOptionViewModel.DisplayLabel.
+        Options.Add(new EquipmentOptionViewModel(label, index, container));
     }
 
     [RelayCommand]
