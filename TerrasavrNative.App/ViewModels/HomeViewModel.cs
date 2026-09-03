@@ -72,11 +72,17 @@ public partial class HomeViewModel : ObservableObject
         IsScanning = true;
         try
         {
-            string dir = CharacterFileService.GetDefaultPlayersDirectory();
-            var scanned = await Task.Run(() => ScanCharacters(dir));
+            // Pedido explicito del usuario: personajes VANILLA (sin ningun mod, carpeta real
+            // "Documents\My Games\Terraria\Players" sin el segmento "tModLoader") tambien
+            // cuentan, no solo los de tModLoader - GetAllPlayersDirectories ya filtra a las que
+            // existen de verdad (0, 1 o las 2), nunca cae a "Documentos entero".
+            var dirs = CharacterFileService.GetAllPlayersDirectories();
+            var scanned = await Task.Run(() => ScanCharacters(dirs));
             foreach (var entry in scanned) Characters.Add(entry);
             ScanMessage = Characters.Count == 0
-                ? $"Ningun personaje encontrado en {dir}"
+                ? dirs.Count == 0
+                    ? "No se encontro ninguna carpeta real de personajes de Terraria (vanilla ni tModLoader)."
+                    : $"Ningun personaje encontrado en {string.Join(" ni en ", dirs)}"
                 : null;
             UpdateCurrentPath(_currentPath); // la lista es nueva de cero, IsCurrent hay que recalcularlo
         }
@@ -89,10 +95,13 @@ public partial class HomeViewModel : ObservableObject
     // Todo el trabajo real de disco (enumerar + leer + descifrar cada .plr) - se ejecuta en un
     // hilo de fondo via Task.Run (RefreshAsync de arriba), nunca toca ninguna ObservableCollection
     // directamente (serian modificaciones desde fuera del hilo de UI).
-    private static List<CharacterListEntryViewModel> ScanCharacters(string dir)
+    private static List<CharacterListEntryViewModel> ScanCharacters(IEnumerable<string> dirs)
     {
         var result = new List<CharacterListEntryViewModel>();
-        var plrFiles = Directory.Exists(dir) ? Directory.GetFiles(dir, "*.plr") : [];
+        // Orden real GLOBAL por fecha (no por carpeta primero) - un personaje vanilla reciente
+        // debe aparecer antes que uno de tModLoader mas antiguo, no al reves solo por venir de
+        // una carpeta distinta.
+        var plrFiles = dirs.SelectMany(dir => Directory.GetFiles(dir, "*.plr"));
         foreach (string path in plrFiles.OrderByDescending(File.GetLastWriteTimeUtc))
         {
             try

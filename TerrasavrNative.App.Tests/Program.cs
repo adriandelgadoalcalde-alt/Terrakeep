@@ -95,6 +95,27 @@ internal static class Program
         // ANTES de Show() - se comprueba aqui, lo antes posible.
         Console.WriteLine($"T3-RESTAURADO: Left={window.Left} Top={window.Top} Width={window.Width} Height={window.Height}");
 
+        // Bug real del propio arnes encontrado verificando H4-07 (cuarta auditoria de Opus,
+        // Fable): el tamaño heredado de window.json (T-3, arriba) puede caer en SizeClass.
+        // Amplio segun la ULTIMA sesion real que uso la app (esta vez, 2576x1408 CON
+        // IsMaximized=true - la ventana se habia quedado maximizada en un monitor grande) -
+        // varios escenarios de este mismo arnes (pildoras "Fragua del Defensor"/"Vanidad",
+        // B-1/B-2 de la Libreria) asumen implicitamente un tamaño NO-Amplio y corren MUCHO
+        // antes del primer `window.Width =` explicito del propio arnes (linea ~1022) - nunca se
+        // habian visto fallar porque el tamaño heredado nunca habia sido tan grande, no porque
+        // de verdad dependieran de un tamaño real. Fijar aqui, justo tras comprobar T-3, deja
+        // el resto del arnes deterministico de verdad sin tocar la comprobacion real de T-3 de
+        // arriba (que ya leyo el tamaño heredado antes de este punto). WindowState TAMBIEN hace
+        // falta (no solo Width/Height, primer intento real de este arreglo que NO basto) -
+        // WPF nunca restaura una ventana Maximized a Normal solo por asignarle Width/Height, el
+        // area real en pantalla se queda siendo la maximizada hasta que WindowState se cambia
+        // a mano.
+        window.WindowState = System.Windows.WindowState.Normal;
+        window.Width = 1180;
+        window.Height = 860;
+        DoEvents(); DoEvents();
+        Console.WriteLine($"ARNES-TAMAÑO-BASE: Width={window.Width} Height={window.Height} (fijado aqui para que el resto del arnes no dependa del tamaño heredado de window.json)");
+
         var hwnd = new WindowInteropHelper(window).Handle;
         var root = AutomationElement.FromHandle(hwnd);
 

@@ -124,6 +124,38 @@ public sealed class CharacterFileService
         return Directory.Exists(candidate) ? candidate : documents;
     }
 
+    // Pedido explicito del usuario: los lanzadores de Inicio/Exploracion solo escaneaban la
+    // carpeta de tModLoader - un personaje o mundo de Terraria VANILLA (sin ningun mod, carpeta
+    // real "Documents\My Games\Terraria\..." SIN el segmento "tModLoader") no aparecia nunca.
+    // El propio formato .plr/.wld es identico en los dos casos (tModLoader reutiliza el formato
+    // vanilla real, no inventa uno propio) - la unica diferencia real es la carpeta. Devuelve
+    // SOLO las carpetas que existen de verdad (0, 1 o las 2), sin duplicar ninguna: no hay
+    // fallback a Documentos aqui (a diferencia de los metodos de arriba, pensados para UN unico
+    // dialogo con UNA sola carpeta inicial) - un lanzador que escanea varias carpetas debe
+    // omitir las que no existen en silencio, nunca "escanear Documentos entero" por error.
+    public static IReadOnlyList<string> GetAllPlayersDirectories()
+    {
+        string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string tModLoader = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Players");
+        string vanilla = Path.Combine(documents, "My Games", "Terraria", "Players");
+        var dirs = new List<string>();
+        if (Directory.Exists(tModLoader)) dirs.Add(tModLoader);
+        if (Directory.Exists(vanilla)) dirs.Add(vanilla);
+        return dirs;
+    }
+
+    // Gemelo real de GetAllPlayersDirectories, para mundos - ver el comentario de arriba.
+    public static IReadOnlyList<string> GetAllWorldsDirectories()
+    {
+        string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string tModLoader = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Worlds");
+        string vanilla = Path.Combine(documents, "My Games", "Terraria", "Worlds");
+        var dirs = new List<string>();
+        if (Directory.Exists(tModLoader)) dirs.Add(tModLoader);
+        if (Directory.Exists(vanilla)) dirs.Add(vanilla);
+        return dirs;
+    }
+
     public LoadedCharacter Load(string plrPath)
     {
         var character = PlrFile.Read(File.ReadAllBytes(plrPath));

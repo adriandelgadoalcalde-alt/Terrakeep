@@ -30,7 +30,14 @@ public sealed class ExplorationWorldLauncherTests
     public async Task TrasElEscaneo_ScanMessageSoloEsRealCuandoNoHayNingunMundo()
     {
         var vm = new MainViewModel();
-        if (vm.Exploration.RefreshWorldsCommand.ExecutionTask is { } enCurso) await enCurso;
+        // Error real encontrado en la PROPIA prueba (no en produccion) escribiendo esta tanda:
+        // el constructor llama al metodo async DIRECTAMENTE (fire-and-forget, mismo patron real
+        // que HomeViewModel), no a traves de RefreshWorldsCommand - ExecutionTask se queda null
+        // hasta la PRIMERA vez que se llama al comando de verdad, asi que el "if" de la prueba
+        // de arriba nunca esperaba nada aqui y las aserciones corrian antes de que el escaneo
+        // en curso hubiera terminado de verdad. Se llama al comando explicitamente y se espera
+        // su propio ExecutionTask, en vez de confiar en el escaneo implicito del constructor.
+        await vm.Exploration.RefreshWorldsCommand.ExecuteAsync(null);
 
         // No se asume nada sobre si esta maquina tiene mundos reales o no - solo la relacion
         // real entre las dos propiedades, valida en los dos casos.

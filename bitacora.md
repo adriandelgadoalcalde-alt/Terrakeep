@@ -5867,10 +5867,56 @@ en `WldReaderRealFileTests.cs`, `ExplorationWorldLauncherTests.cs`).
 `dotnet test` 302/302 en verde (138 Core + 164 ViewModels), arnes UIA completo sin
 NO-FOUND/FALLO/EXCEPTION.
 
+### Tanda 5 (pedido explicito posterior): personajes/mundos VANILLA en los lanzadores + arreglo real del arnes
+
+Pedido explicito del usuario tras cerrar la cuarta auditoria: los lanzadores de Inicio/
+Exploracion (H4-08) solo escaneaban la carpeta de tModLoader - un personaje o mundo de Terraria
+VANILLA (sin ningun mod, carpeta real "Documents\My Games\Terraria\..." SIN el segmento
+"tModLoader") nunca aparecia. Confirmado con el usuario por pregunta explicita (AskUserQuestion):
+alcance "los dos" (personajes Y mundos vanilla, simetria completa entre Inicio y Exploracion).
+
+- `CharacterFileService.GetAllPlayersDirectories()`/`GetAllWorldsDirectories()` (nuevos) -
+  devuelven SOLO las carpetas que existen de verdad (0, 1 o las 2 - tModLoader y vanilla), sin
+  fallback a Documentos (a diferencia de los metodos de un unico dialogo ya existentes, que se
+  dejan intactos). El formato .plr/.wld es identico en los dos casos (tModLoader reutiliza el
+  formato vanilla real).
+- `HomeViewModel.ScanCharacters`/`ExplorationViewModel.ScanWorlds` ahora recorren TODAS las
+  carpetas reales encontradas, con orden GLOBAL por fecha (un personaje vanilla reciente
+  aparece antes que uno de tModLoader mas antiguo, no al reves solo por venir de una carpeta
+  distinta).
+- 4 pruebas deterministas nuevas (`CharacterFileServiceDirectoriesTests.cs`) + 1 prueba real
+  corregida en la PROPIA prueba (no en produccion): `ExplorationWorldLauncherTests.
+  TrasElEscaneo...` esperaba al escaneo del CONSTRUCTOR via `RefreshWorldsCommand.
+  ExecutionTask`, pero el constructor llama al metodo async DIRECTAMENTE (fire-and-forget,
+  mismo patron real que HomeViewModel) - `ExecutionTask` se queda `null` hasta la PRIMERA
+  llamada real al comando, asi que las aserciones corrian antes de que el escaneo hubiera
+  terminado. Corregido llamando al comando explicitamente (`ExecuteAsync`) en vez de confiar en
+  el escaneo implicito del constructor.
+
+**Bug real del propio arnes encontrado verificando esta tanda (no de produccion)**: el arnes
+crasheo con varios FALLO/NO-FOUND reales (pildoras "Fragua del Defensor"/"Vanidad" NO-FOUND,
+B-1/B-2 de la Libreria) que en un primer vistazo parecian una regresion de H4-07 (revelado
+automatico de la Libreria en Amplio, Tanda 3). Investigado a fondo: la causa real era que
+`window.json` se habia quedado `IsMaximized:true` con 2576x1408 (una sesion manual anterior
+dejo la ventana real maximizada en un monitor grande) - el arnes NUNCA fijaba un tamaño
+determinista al arrancar, asumia implicitamente heredar un tamaño razonable de la SESION
+ANTERIOR (fragil de origen, nunca se habia manifestado porque el tamaño heredado nunca habia
+sido tan grande). Con la ventana en SizeClass.Amplio desde el arranque, varios escenarios que
+dependen de un tamaño NO-Amplio (pildoras de un panel a la vez, B-1/B-2) fallaban de verdad -
+tanto el revelado automatico de H4-07 (correcto, intencional) como el desajuste real del propio
+arnes. Arreglado fijando `WindowState=Normal` + `Width=1180`/`Height=860` justo tras la
+comprobacion real de T-3 (que ya habia leido el tamaño heredado antes de este punto) - dos
+intentos reales hasta dar con el arreglo completo: el primero solo toco Width/Height y no
+basto, WPF nunca restaura una ventana Maximized a Normal solo por asignarle un tamaño nuevo.
+
+`dotnet test` 306/306 en verde (138 Core + 168 ViewModels), arnes UIA completo sin
+NO-FOUND/FALLO/EXCEPTION tras el arreglo.
+
 ### Cuarta auditoria (Fable) - cierre real
 
 Los 13 hallazgos (H4-01 a H4-13) estan cerrados por completo, incluidos los 2 puntos que la
 Tanda 3 habia dejado fuera a proposito (H4-07 punto 3 y la version completa de H4-08) -
 retomados a peticion explicita del usuario en una Tanda 4, siguiendo la sugerencia literal del
 propio informe de Fable en los dos casos (citada de nuevo antes de implementar cada uno, no de
-memoria). Pedido cumplido en su totalidad.
+memoria). Pedido cumplido en su totalidad. Una Tanda 5 adicional (arriba) añadio soporte
+vanilla real a los dos lanzadores, pedido tras el cierre.

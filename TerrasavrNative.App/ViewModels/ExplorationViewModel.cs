@@ -159,10 +159,17 @@ public partial class ExplorationViewModel : ObservableObject
         IsScanningWorlds = true;
         try
         {
-            string dir = CharacterFileService.GetDefaultWorldsDirectory();
-            var scanned = await Task.Run(() => ScanWorlds(dir));
+            // Pedido explicito del usuario: mundos VANILLA (carpeta real "Documents\My Games\
+            // Terraria\Worlds" sin el segmento "tModLoader") tambien cuentan, mismo criterio
+            // real que HomeViewModel.RefreshAsync con los personajes.
+            var dirs = CharacterFileService.GetAllWorldsDirectories();
+            var scanned = await Task.Run(() => ScanWorlds(dirs));
             foreach (var entry in scanned) Worlds.Add(entry);
-            ScanMessage = Worlds.Count == 0 ? $"Ningun mundo encontrado en {dir}" : null;
+            ScanMessage = Worlds.Count == 0
+                ? dirs.Count == 0
+                    ? "No se encontro ninguna carpeta real de mundos de Terraria (vanilla ni tModLoader)."
+                    : $"Ningun mundo encontrado en {string.Join(" ni en ", dirs)}"
+                : null;
         }
         finally
         {
@@ -173,10 +180,10 @@ public partial class ExplorationViewModel : ObservableObject
     // Todo el trabajo real de disco (enumerar + leer la cabecera de cada .wld) - se ejecuta en
     // un hilo de fondo via Task.Run (RefreshWorldsAsync de arriba), nunca toca Worlds
     // directamente (seria una modificacion desde fuera del hilo de UI).
-    private static List<WorldListEntryViewModel> ScanWorlds(string dir)
+    private static List<WorldListEntryViewModel> ScanWorlds(IEnumerable<string> dirs)
     {
         var result = new List<WorldListEntryViewModel>();
-        var wldFiles = Directory.Exists(dir) ? Directory.GetFiles(dir, "*.wld") : [];
+        var wldFiles = dirs.SelectMany(dir => Directory.GetFiles(dir, "*.wld"));
         foreach (string path in wldFiles.OrderByDescending(File.GetLastWriteTimeUtc))
         {
             try
