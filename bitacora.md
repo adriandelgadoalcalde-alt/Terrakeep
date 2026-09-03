@@ -3691,3 +3691,35 @@ exacto, mismo criterio real que debe seguir valiendo cuando el contador cambie d
 
 `dotnet build`/`dotnet test` en verde (134/134), pase completo del arnes sin ningun NO-FOUND/
 FALLO/EXCEPTION tras el arreglo.
+
+### Bloque 2 (parte 3) - N-1: cabecera global persistente
+
+**Antes**: el nombre del personaje cargado, su dificultad, la insignia de Calamity, el punto de
+"sin guardar" y las propias acciones de Cargar/Guardar solo existian DENTRO de la pestaña
+Personaje - cambiar a Builds/Exploracion/Novedades perdia de vista con que personaje se estaba
+trabajando de verdad, y Guardar exigia volver a Personaje primero (viola P2 de la auditoria:
+"todo tiene que estar a mano, nada se esconde").
+
+**Ahora**: barra real a nivel de ventana (`MainWindow.xaml`, `Grid` con fila `Auto` para la
+cabecera + fila `*` para el `TabControl` de siempre, en vez de que el `TabControl` fuera la
+raiz) - visible en CUALQUIER pestaña. Doll de cuerpo completo REAL (mismo
+`Appearance.PreviewImage` de `PlayerPreviewRenderer` que ya usa Apariencia, no un icono
+generico), nombre, dificultad (nuevo `AppearanceViewModel.DifficultyLabel` computado - un unico
+sitio real en vez de indexar `DifficultyLabels[Difficulty]` a mano en XAML), insignia
+"Calamity" (mismo criterio `HasCalamityData` que en todos los demas sitios) y el punto de "sin
+guardar" ya real de `IsDirty`/`WindowTitle` (N-2, Bloque 0). Los botones "Cargar personaje..."
+y "Guardar" de dentro de Personaje se retiraron (misma accion, dos sitios - contra P6): solo
+queda el `StatusMessage`, que es especifico de la ultima operacion. El banner de "Guardado"
+(antes solo dentro del `Grid` de la pestaña Personaje) se subio tambien a nivel raiz, hermano
+del `TabControl` - Guardar ya se puede pulsar desde cualquier pestaña, la confirmacion debe
+verse igual sea cual sea la activa.
+
+Verificado con UI Automation real: cambiar a Builds (sin pasar por Personaje) y encontrar el
+nombre real del personaje ("UIA-Test") en la cabecera (`CABECERA-GLOBAL (en Builds): nombre
+real encontrado=True`); pulsar el boton REAL "Guardar" de la cabecera estando en Builds y
+confirmar `SaveConfirmationVisible=True` + `StatusMessage` con el guardado real
+(`GUARDAR-DESDE-BUILDS`). Captura real (`cabecera-global-en-builds.png`) confirma doll+nombre+
+dificultad a la izquierda y Cargar/Guardar a la derecha, con la rejilla de Builds debajo sin
+solapes ni recortes.
+
+`dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.

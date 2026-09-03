@@ -915,7 +915,51 @@
         </DataTemplate>
     </Window.Resources>
 
-    <TabControl Style="{StaticResource NavTabControl}" SelectedIndex="{Binding SelectedTabIndex}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Auditoria de Opus, N-1: "el personaje cargado, si tiene cambios sin guardar, y las
+             propias acciones de Cargar/Guardar solo se veian dentro de la pestaña Personaje" -
+             viola P2 (todo a mano, nada se esconde): cambiar a Builds/Exploracion/etc perdia de
+             vista con QUE personaje se estaba trabajando, y guardar exigia volver a Personaje
+             primero. Barra real, visible en CUALQUIER pestaña - mismo doll de
+             PlayerPreviewRenderer que ya usa Apariencia (real, no un icono generico), nombre,
+             dificultad, insignia de Calamity (mismo criterio que en todos los demas sitios,
+             HasCalamityData) y el punto de "sin guardar" ya real de WindowTitle/IsDirty. -->
+        <Border Grid.Row="0" Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource BorderBrush0}"
+                BorderThickness="0,0,0,1" Padding="16,8">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Cargar personaje (.plr)..." Tag="Accent" Click="OnLoadClick" />
+                    <Button Content="Guardar" Tag="Orange" Margin="10,0,0,0" Command="{Binding SaveCommand}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                            Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}">
+                    <Image Source="{Binding Appearance.PreviewImage}" Width="28" Height="39.2" Stretch="Uniform"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                    <TextBlock Text="{Binding CharacterName}" Style="{StaticResource SectionText}"
+                               VerticalAlignment="Center" Margin="10,0,0,0" />
+                    <TextBlock Text="●" FontSize="16" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="6,0,0,0"
+                               ToolTip="Hay cambios sin guardar"
+                               Visibility="{Binding IsDirty, Converter={StaticResource BoolToVis}}" />
+                    <Border Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Appearance.DifficultyLabel}" Style="{StaticResource CaptionText}" FontSize="11" />
+                    </Border>
+                    <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center"
+                            Visibility="{Binding HasCalamityData, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="Calamity" FontSize="11" Foreground="White" FontWeight="SemiBold" />
+                    </Border>
+                </StackPanel>
+                <TextBlock Text="Sin personaje cargado" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
+                           Visibility="{Binding IsCharacterLoaded, Converter={StaticResource InverseBoolToVis}}" />
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+        <TabControl Style="{StaticResource NavTabControl}" SelectedIndex="{Binding SelectedTabIndex}">
         <!-- ===================== INICIO ===================== -->
         <TabItem Header="Inicio">
             <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="14">
@@ -1025,16 +1069,13 @@
         <TabItem Header="Personaje">
             <Grid>
             <DockPanel Margin="14">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
-                    <Button Content="Cargar personaje (.plr)..." Tag="Accent" Click="OnLoadClick" />
-                    <Button Content="Guardar" Tag="Orange" Margin="10,0,0,0" Command="{Binding SaveCommand}" />
-                    <TextBlock Text="{Binding CharacterName, StringFormat='Personaje: {0}'}"
-                               Style="{StaticResource SectionText}" VerticalAlignment="Center" Margin="20,0,0,0"
-                               Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}" />
-                </StackPanel>
-
-                <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Style="{StaticResource CaptionText}"
-                           Margin="0,10,0,0" TextWrapping="Wrap" />
+                <!-- Auditoria de Opus, N-1: Cargar/Guardar/nombre de personaje ya viven en la
+                     cabecera global (MainWindow.xaml, visible en cualquier pestaña) - repetirlos
+                     aqui era la misma accion dos veces en dos sitios (contra P6, simetria real:
+                     una unica fuente real por accion). Solo se queda el mensaje de estado, que
+                     es especifico de la ultima operacion real. -->
+                <TextBlock DockPanel.Dock="Top" Text="{Binding StatusMessage}" Style="{StaticResource CaptionText}"
+                           Margin="0,0,0,12" TextWrapping="Wrap" />
 
                 <TabControl Style="{StaticResource InnerTabControl}" SelectedIndex="{Binding PersonajeInnerTabIndex}">
                     <TabItem Header="Objetos">
@@ -1863,44 +1904,6 @@
                     </TabItem>
                 </TabControl>
             </DockPanel>
-
-            <!-- Confirmacion visual real de guardado (pedido explicito 2-sep-2026: "debe ser
-                 mas visual que se allá confirmado el guardado no solamente un mensajito abajo
-                 a la izquierda") - banner flotante con animacion de entrada real, aparte del
-                 StatusMessage de siempre (que se queda para los errores, que no deben ser tan
-                 efimeros). MainViewModel.Save() lo activa un momento tras un guardado con
-                 exito real, ver SaveConfirmationVisible/DispatcherTimer ahi mismo. -->
-            <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0"
-                    Background="{StaticResource TealGradientBrush}" CornerRadius="10" Padding="18,10"
-                    Effect="{StaticResource CardShadow}" IsHitTestVisible="False"
-                    Visibility="{Binding SaveConfirmationVisible, Converter={StaticResource BoolToVis}}"
-                    RenderTransformOrigin="0.5,0.5" Panel.ZIndex="99">
-                <Border.RenderTransform>
-                    <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
-                </Border.RenderTransform>
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Opacity" Value="0" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SaveConfirmationVisible}" Value="True">
-                                <DataTrigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" />
-                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.18" />
-                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.18" />
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.EnterActions>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#10003;" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <TextBlock Text="Guardado" FontSize="13.5" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
-                </StackPanel>
-            </Border>
             </Grid>
         </TabItem>
 
@@ -2125,5 +2128,48 @@
                 </StackPanel>
             </ScrollViewer>
         </TabItem>
-    </TabControl>
+        </TabControl>
+
+        <!-- Confirmacion visual real de guardado (pedido explicito 2-sep-2026: "debe ser mas
+             visual que se allá confirmado el guardado no solamente un mensajito abajo a la
+             izquierda") - banner flotante con animacion de entrada real, aparte del
+             StatusMessage de siempre (que se queda para los errores, que no deben ser tan
+             efimeros). MainViewModel.Save() lo activa un momento tras un guardado con exito
+             real, ver SaveConfirmationVisible/DispatcherTimer ahi mismo. Auditoria de Opus,
+             N-1: movido de dentro de la pestaña Personaje a este nivel (hermano del TabControl
+             raiz, Grid.Row=1) - Guardar ya se puede pulsar desde cualquier pestaña via la
+             cabecera global, la confirmacion debe verse igual sea cual sea la pestaña activa. -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0"
+                Background="{StaticResource TealGradientBrush}" CornerRadius="10" Padding="18,10"
+                Effect="{StaticResource CardShadow}" IsHitTestVisible="False"
+                Visibility="{Binding SaveConfirmationVisible, Converter={StaticResource BoolToVis}}"
+                RenderTransformOrigin="0.5,0.5" Panel.ZIndex="99">
+            <Border.RenderTransform>
+                <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
+            </Border.RenderTransform>
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Opacity" Value="0" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SaveConfirmationVisible}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" />
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.18" />
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.18" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#10003;" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBlock Text="Guardado" FontSize="13.5" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
+        </Grid>
+    </Grid>
 </Window>

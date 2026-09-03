@@ -116,6 +116,11 @@ public partial class AppearanceViewModel : ObservableObject
     // Terrasavr JS vs puerto).
     public string[] DifficultyLabels { get; } = ["Softcore", "Mediumcore", "Hardcore", "Journey"];
 
+    // Auditoria de Opus, N-1: la cabecera global (MainWindow.xaml) necesita el texto de la
+    // dificultad sin poder indexar DifficultyLabels[Difficulty] a mano en XAML - un unico sitio
+    // real, reutilizado tambien por el propio selector de Apariencia si hiciera falta.
+    public string DifficultyLabel => DifficultyLabels[Math.Clamp(Difficulty, 0, 3)];
+
     [ObservableProperty] private int _difficulty;
     [ObservableProperty] private int _healthNow;
     [ObservableProperty] private int _healthMax;
@@ -197,6 +202,7 @@ public partial class AppearanceViewModel : ObservableObject
 
     partial void OnDifficultyChanged(int value)
     {
+        OnPropertyChanged(nameof(DifficultyLabel));
         if (_suppressWriteback || _character == null) return;
         _character.Difficulty = (byte)Math.Clamp(value, 0, 3);
     }
