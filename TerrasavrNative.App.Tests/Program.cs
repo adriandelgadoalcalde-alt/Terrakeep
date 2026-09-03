@@ -1798,6 +1798,40 @@ internal static class Program
             encFlags.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbFlags));
             using (var fsFlags = File.Create(Path.Combine(AppContext.BaseDirectory, "desbloqueos-db.png"))) encFlags.Save(fsFlags);
             Console.WriteLine("S-d/D-b: capturas -> spawn-points-sd.png, desbloqueos-db.png");
+
+            // D-d (segunda auditoria de Opus, Fable): "Marcar todos" real - las 13 casillas.
+            vm.Flags.MarkAllCommand.Execute(null);
+            DoEvents();
+            Console.WriteLine($"D-D-MARCAR-TODOS: ExtraAccessory={vm.Flags.ExtraAccessory}, UsingSuperMinecart={vm.Flags.UsingSuperMinecart} (esperado True en ambos)");
+            var rtbFlagsAll = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbFlagsAll.Render(window);
+            var encFlagsAll = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encFlagsAll.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbFlagsAll));
+            using (var fsFlagsAll = File.Create(Path.Combine(AppContext.BaseDirectory, "desbloqueos-marcar-todos.png"))) encFlagsAll.Save(fsFlagsAll);
+
+            // D-e: baja la version real por debajo de TODOS los umbrales reales y confirma que
+            // los 5 avisos reales aparecen (mundo real, no un mock).
+            int versionOriginal = vm.VersionEditor.RawVersion;
+            vm.VersionEditor.RawVersion = 100;
+            vm.PersonajeInnerTabIndex = 0; // fuerza un cambio real de pestaña antes de volver
+            DoEvents();
+            vm.PersonajeInnerTabIndex = 5; // Desbloqueos - dispara el recalculo real
+            DoEvents(); DoEvents();
+            Console.WriteLine($"D-E-AVISO-VERSION: version=100 -> ExtraAccessoryBelowVersion={vm.Flags.ExtraAccessoryBelowVersion}, BiomeTorchesBelowVersion={vm.Flags.BiomeTorchesBelowVersion}, ExtraUsingFlagsBelowVersion={vm.Flags.ExtraUsingFlagsBelowVersion}, FinishedDD2EventBelowVersion={vm.Flags.FinishedDD2EventBelowVersion}, SuperMinecartBelowVersion={vm.Flags.SuperMinecartBelowVersion} (esperado True en los 5)");
+            if (!vm.Flags.ExtraAccessoryBelowVersion || !vm.Flags.SuperMinecartBelowVersion) Console.WriteLine("FALLO: D-e (segunda auditoria) - los avisos de version no se recalcularon de verdad");
+            var rtbFlagsWarn = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbFlagsWarn.Render(window);
+            var encFlagsWarn = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encFlagsWarn.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbFlagsWarn));
+            using (var fsFlagsWarn = File.Create(Path.Combine(AppContext.BaseDirectory, "desbloqueos-aviso-version.png"))) encFlagsWarn.Save(fsFlagsWarn);
+            Console.WriteLine("Capturas D-d/D-e -> desbloqueos-marcar-todos.png, desbloqueos-aviso-version.png");
+
+            // Deja el personaje real como estaba, para no afectar a los pasos siguientes (V-c
+            // baja la version tambien, pero desde su propio punto de partida real).
+            vm.Flags.MarkNoneCommand.Execute(null);
+            vm.VersionEditor.RawVersion = versionOriginal;
         }
         catch (Exception ex) { Console.WriteLine("S-d-D-b-EXCEPTION: " + ex); }
 

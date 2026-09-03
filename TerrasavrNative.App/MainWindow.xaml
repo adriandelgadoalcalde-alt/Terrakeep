@@ -2264,12 +2264,31 @@
                                 <TextBlock Text="Desbloqueos y activaciones permanentes del personaje."
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10" />
 
+                                <!-- D-d (segunda auditoria de Opus, Fable): "sin accion en bloque para
+                                     los flags" - marcar/desmarcar una a una era el unico camino, incluso
+                                     para el caso real mas comun (un completista, "todos los desbloqueos
+                                     puestos" de golpe). -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Button Content="Marcar todos" Tag="Ghost" Padding="8,4" Margin="0,0,8,0" Command="{Binding Flags.MarkAllCommand}" />
+                                    <Button Content="Desmarcar todos" Tag="Ghost" Padding="8,4" Command="{Binding Flags.MarkNoneCommand}" />
+                                </StackPanel>
+
                                 <TextBlock Text="Modo de dificultad" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,0,0,4" />
                                 <CheckBox Content="Accesorio extra (modo experto/maestro)" IsChecked="{Binding Flags.ExtraAccessory}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <!-- D-e (segunda auditoria de Opus, Fable): "sin aviso si el flag no
+                                     existe todavia en la version real del personaje" - umbrales reales
+                                     YA verificados en PlrBodySerializer (no inventados): por debajo,
+                                     Guardar pierde el cambio en silencio (el campo ni se escribe). -->
+                                <TextBlock Text="Este personaje es de una versión anterior a 1.3.0 (145) - este cambio no se guardará."
+                                           Style="{StaticResource CaptionText}" Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,-4,0,8"
+                                           Visibility="{Binding Flags.ExtraAccessoryBelowVersion, Converter={StaticResource BoolToVis}}" />
 
                                 <TextBlock Text="Antorchas de bioma" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,10,0,4" />
                                 <CheckBox Content="Cambio de antorcha de bioma desbloqueado" IsChecked="{Binding Flags.UnlockedBiomeTorches}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
                                 <CheckBox Content="Cambio de antorcha de bioma activado" IsChecked="{Binding Flags.UsingBiomeTorches}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <TextBlock Text="Este personaje es de una versión anterior a 1.4.0.5 (230) - este cambio no se guardará."
+                                           Style="{StaticResource CaptionText}" Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,-4,0,8"
+                                           Visibility="{Binding Flags.BiomeTorchesBelowVersion, Converter={StaticResource BoolToVis}}" />
 
                                 <TextBlock Text="Consumibles permanentes" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,10,0,4" />
                                 <CheckBox Content="Alcance de mesa de trabajo aumentado (Pan del Artesano)" IsChecked="{Binding Flags.ArtisanBread}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
@@ -2279,11 +2298,20 @@
                                 <CheckBox Content="Suerte aumentada (Perla de Galaxia)" IsChecked="{Binding Flags.GalaxyPearl}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
                                 <CheckBox Content="Poder de pesca aumentado (Gusano de Gominola)" IsChecked="{Binding Flags.GummyWorm}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
                                 <CheckBox Content="Velocidad de minería y colocación aumentada (Ambrosia)" IsChecked="{Binding Flags.Ambrosia}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <TextBlock Text="Este personaje es de una versión anterior a 1.4.4.0 (269) - este cambio no se guardará."
+                                           Style="{StaticResource CaptionText}" Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,-4,0,8"
+                                           Visibility="{Binding Flags.ExtraUsingFlagsBelowVersion, Converter={StaticResource BoolToVis}}" />
 
                                 <TextBlock Text="Eventos y otros" Style="{StaticResource CaptionText}" FontWeight="SemiBold" Margin="0,10,0,4" />
                                 <CheckBox Content="Evento de la Segunda Defensa de las Dimensiones completado (puede usar invocaciones)" IsChecked="{Binding Flags.FinishedDD2Event}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <TextBlock Text="Este personaje es de una versión anterior a 1.3.4 (184) - este cambio no se guardará."
+                                           Style="{StaticResource CaptionText}" Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,-4,0,8"
+                                           Visibility="{Binding Flags.FinishedDD2EventBelowVersion, Converter={StaticResource BoolToVis}}" />
                                 <CheckBox Content="Carrito potenciado desbloqueado" IsChecked="{Binding Flags.UnlockedSuperMinecart}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
                                 <CheckBox Content="Carrito potenciado activado" IsChecked="{Binding Flags.UsingSuperMinecart}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                                <TextBlock Text="Este personaje es de una versión demasiado antigua (por debajo de la 253, posterior a 1.4.3.0) - este cambio no se guardará."
+                                           Style="{StaticResource CaptionText}" Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,-4,0,8"
+                                           Visibility="{Binding Flags.SuperMinecartBelowVersion, Converter={StaticResource BoolToVis}}" />
                             </StackPanel>
                         </ScrollViewer>
                     </TabItem>

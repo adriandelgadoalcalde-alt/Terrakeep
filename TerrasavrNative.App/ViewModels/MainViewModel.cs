@@ -62,7 +62,10 @@ public partial class MainViewModel : ObservableObject
     // y ademas necesario para que arrastrar una tarjeta hasta un slot sea posible: si Libreria
     // fuera una pestaña aparte, nunca se verian los dos a la vez). Buffs - usado por
     // RequestPickForBuffSlot para saltar a la pestaña correcta al "Elegir..." un buff.
-    private enum PersonajeInnerTab { Objetos = 0, Buffs = 1 }
+    // D-e (segunda auditoria de Opus, Fable): se completan los 5 valores que faltaban (ya
+    // usados como literal a secas en el arnes UIA) - Desbloqueos hace falta con nombre real
+    // para OnPersonajeInnerTabIndexChanged, aqui abajo.
+    private enum PersonajeInnerTab { Objetos = 0, Buffs = 1, Investigacion = 2, Apariencia = 3, SpawnPoints = 4, Desbloqueos = 5, Version = 6 }
 
     [ObservableProperty] private string _statusMessage = "Sin personaje cargado.";
     [ObservableProperty] private string? _characterName;
@@ -186,6 +189,13 @@ public partial class MainViewModel : ObservableObject
         Exploration.NavigateToTile(row.SpawnX, row.SpawnY);
     }
     [ObservableProperty] private int _personajeInnerTabIndex;
+    // D-e (segunda auditoria de Opus, Fable): recalcula el aviso real de version al ENTRAR en
+    // Desbloqueos - mismo criterio ya establecido (Bd-d/X-g) para no recalcular en cada tecla
+    // de una edicion en la pestaña Version.
+    partial void OnPersonajeInnerTabIndexChanged(int value)
+    {
+        if (value == (int)PersonajeInnerTab.Desbloqueos) Flags.RefreshVersionWarning();
+    }
     [ObservableProperty] private bool _saveConfirmationVisible;
 
     // Auditoria de Opus, Bloque 4 (T-2): breakpoint real y compartido, ver WindowSizeClass.cs.

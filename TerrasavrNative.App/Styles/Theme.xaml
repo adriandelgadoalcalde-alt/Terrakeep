@@ -747,7 +747,18 @@
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Box" Property="Background" Value="{StaticResource AccentGradientBrush}" />
-                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentColor}" />
+                            <!-- Bug real encontrado y arreglado al verificar D-d/D-e con el arnes UIA
+                                 (segunda auditoria de Opus, Fable) - primera vez que este arnes marcaba
+                                 un CheckBox real de verdad: "AccentColor" es un Color (#6C63FF), no un
+                                 Brush - BorderBrush exige un Brush. WPF lo tolera como VALOR LITERAL en
+                                 un atributo XAML (conversion implicita al analizar), pero NO dentro de
+                                 un Setter de un Trigger en tiempo de ejecucion real - DispatcherUnhandledException
+                                 real ("#FF6C63FF no es un valor valido para BorderBrush"), silenciada por
+                                 el manejador global de la app (no tumbaba la ventana) asi que llevaba
+                                 tiempo sin notarse: CADA CheckBox marcado de toda la app perdia su borde
+                                 de color de acento en silencio. AccentBrush (ya definido, mismo patron
+                                 que el Trigger de arriba) en vez de AccentColor. -->
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                             <Setter TargetName="Check" Property="Visibility" Value="Visible" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">

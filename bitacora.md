@@ -5340,3 +5340,42 @@ mapa' -> SelectedTabIndex=4, tile pedido=(100, 50), IsWorldLoaded=True` - mas un
 (`spawn-points-tabla-poblada.png`, nueva, permanente) confirmando la cabecera unica alineada y
 el boton "Ver en el mapa" junto a cada fila real. `dotnet test` 226/226 en verde (134 Core + 92
 ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### D-d/D-e (segunda auditoria, Fable) - accion en bloque + aviso real de version en Desbloqueos
+
+**D-d, "sin accion en bloque para los flags"**: marcar/desmarcar las 13 casillas una a una era
+el unico camino, incluso para el caso real mas comun (un completista, "todos los desbloqueos
+puestos" de golpe). Botones reales "Marcar todos"/"Desmarcar todos" - cada asignacion pasa por
+su propio setter real (`OnXxxChanged` ya escribe al personaje), sin duplicar ninguna logica de
+escritura.
+
+**D-e, "sin aviso si el flag no existe todavia en la version real del personaje"**: los
+umbrales usados son los MISMOS ya verificados y en produccion en `PlrBodySerializer` (no
+inventados - `ExtraAccessory`>=145, antorchas de bioma>=230, consumibles permanentes>=269,
+DD2>=184, carrito potenciado>=253): por debajo del umbral real, `Write()` ni siquiera escribe
+ese campo - marcar la casilla y guardar perderia el cambio en silencio, mismo riesgo real que
+V-c ya cerro para el resto del personaje. Aviso naranja real bajo cada grupo afectado,
+recalculado al cargar personaje Y al entrar en la pestaña (mismo criterio ya establecido -
+Bd-d/X-g). El umbral real 253 (carrito potenciado) no tiene ninguna version con nombre exacto
+en la tabla curada de `VersionEditorViewModel` (cae entre 1.4.3.0=248 y 1.4.4.0=269) - el aviso
+dice el numero real en vez de inventar una etiqueta "1.4.3.x" no verificada.
+
+**Bug real encontrado y arreglado al verificar (no del hallazgo en si)**: el arnes UIA lanzo
+`DispatcherUnhandledException` real (`"#FF6C63FF" no es un valor válido para "BorderBrush"`) la
+PRIMERA VEZ que marcaba un `CheckBox` real de la app - `Theme.xaml`, plantilla de `CheckBox`,
+trigger `IsChecked=True`: `BorderBrush` apuntaba a `AccentColor` (un `Color`, `#6C63FF`) en vez
+de `AccentBrush` (el `SolidColorBrush` real) - WPF lo tolera como valor literal en un atributo
+XAML, pero NO dentro de un `Setter` de un `Trigger` en tiempo real. El manejador global de
+excepciones de la app lo silenciaba sin tumbar la ventana, asi que llevaba tiempo sin notarse -
+**CADA CheckBox marcado de TODA la app** perdia su borde de color de acento en silencio,
+confirmado que no aparecia en NINGUNA ejecucion anterior del arnes (0 ocurrencias en 5 logs
+previos) porque nunca antes se habia marcado un CheckBox real. Arreglado a `AccentBrush`.
+
+7 pruebas deterministas nuevas (`FlagsBulkAndVersionTests.cs`: Marcar/Desmarcar todos ponen las
+13 casillas reales; los 5 umbrales reales, cada uno con el valor justo por debajo/en el limite;
+recalculo real al entrar en Desbloqueos tras cambiar la version). Verificado con capturas
+reales del arnes UIA (`desbloqueos-marcar-todos.png` y `desbloqueos-aviso-version.png`, nuevas,
+permanentes): las 13 casillas marcadas con su borde de acento correcto (bug del CheckBox ya
+arreglado, visible en la propia captura), y los 3 avisos naranjas reales visibles bajo sus
+grupos con version=100. `dotnet test` 239/239 en verde (134 Core + 105 ViewModels), arnes UIA
+completo sin NO-FOUND/FALLO/EXCEPTION/DISPATCHER-EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
