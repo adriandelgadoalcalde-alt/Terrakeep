@@ -147,9 +147,13 @@ public partial class EquipmentGroupViewModel : ObservableObject
         {
             if (kind != EquipmentKind.Items) continue;
             foreach (var slot in container.Slots)
+                // H3-03 (tercera auditoria, Fable): RejectionMessage tambien excluido, por
+                // coherencia con el mismo criterio de arriba - un intento de colocacion
+                // rechazado no cambia ninguna defensa real, recalcularla igual seria trabajo sin
+                // sentido y romperia la simetria con MainViewModel.HookSlotEditing/BuffsViewModel.
                 slot.PropertyChanged += (_, e) =>
                 {
-                    if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited)) return;
+                    if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited) or nameof(ItemSlotViewModel.RejectionMessage)) return;
                     RecomputeDefenseAndBonus();
                 };
         }

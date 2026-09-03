@@ -60,9 +60,12 @@ public partial class ItemEditViewModel : ObservableObject
     // la rejilla de prefijos sin motivo real cada vez que el propio slot editado terminaba su
     // flash (~600ms despues) - mismo bug real ya cerrado en EquipmentGroupViewModel (B-6) y ya
     // evitado desde el principio en BuffEditViewModel.
+    // H3-03 (tercera auditoria, Fable): RejectionMessage tambien excluido, por coherencia -
+    // una colocacion rechazada no cambia el objeto del slot, reconstruir la rejilla de
+    // prefijos por ese motivo seria el mismo parpadeo sin sentido que T-I ya cerro arriba.
     private void OnSlotPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited)) return;
+        if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited) or nameof(ItemSlotViewModel.RejectionMessage)) return;
         Refresh();
     }
 

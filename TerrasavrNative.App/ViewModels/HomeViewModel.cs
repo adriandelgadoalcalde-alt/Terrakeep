@@ -173,8 +173,29 @@ public partial class HomeViewModel : ObservableObject
             File.Copy(plrBak, entry.FilePath, overwrite: true);
             string tplrPath = Path.ChangeExtension(entry.FilePath, ".tplr");
             string tplrBak = tplrPath + ".bak";
-            if (File.Exists(tplrBak)) File.Copy(tplrBak, tplrPath, overwrite: true);
+            if (File.Exists(tplrBak))
+            {
+                File.Copy(tplrBak, tplrPath, overwrite: true);
+            }
+            else if (File.Exists(tplrPath))
+            {
+                // H3-02 (tercera auditoria, Fable): mismo motivo real que MainViewModel.
+                // UndoLastSave - sin .tplr.bak, este .tplr nacio en el mismo guardado que se
+                // esta restaurando por encima, no existia antes. Dejarlo resucitaria su
+                // contenido de Calamity al recargar.
+                File.Delete(tplrPath);
+            }
             _ = RefreshAsync(); // T-G: mismo criterio real que el constructor, fire-and-forget
+
+            // H3-04 (tercera auditoria, Fable): "Restaurar copia de seguridad" restauraba los
+            // ficheros en disco pero no avisaba a MainViewModel - si el personaje restaurado
+            // era el que estaba cargado, el editor seguia mostrando el estado antiguo en
+            // memoria, y un Guardar posterior lo machacaba en silencio. Mismo evento real ya
+            // usado por "Cargar" (CharacterChosen) - MainViewModel ya lo conecta con su propio
+            // aviso real de "cambios sin guardar" (ConfirmDiscardChanges) antes de recargar, asi
+            // que unas ediciones en memoria sin guardar tambien avisan aqui, no solo se pisan.
+            if (_currentPath != null && string.Equals(_currentPath, entry.FilePath, StringComparison.OrdinalIgnoreCase))
+                CharacterChosen?.Invoke(entry.FilePath);
         }
         catch (Exception ex)
         {

@@ -5392,3 +5392,54 @@ visibles mientras `RefreshAsync` corre en segundo plano - ver la seccion de T-G 
 verificado con `T-G-ASYNC: IsScanning justo tras new MainWindow()=True`). No se repite trabajo
 ya hecho y verificado ahi. Si esta lectura resulta no ser la intencion real original, queda
 documentado aqui para poder corregirlo con la pista correcta en cuanto aparezca.
+
+## Tercera auditoria (Fable) - ejecucion completa
+
+Pedido explicito del usuario ("aplica toda la ronda de fable sin descansar") tras publicar el
+informe de la tercera auditoria (independiente, posterior al cierre completo de la segunda -
+18 hallazgos: H3-01 a H3-18, ninguno un rework de Ola 4 salvo H3-07 que pide una decision de
+CONTENIDO, no de codigo). Mismo criterio de siempre: investigacion real, arreglo real, test +
+arnes + bitacora + commit por tanda.
+
+### Tanda 1 (H3-01, H3-02, H3-03, H3-04)
+
+**H3-01, "Deshacer descarta ediciones sin guardar sin preguntar"**: T-B cerro este mismo
+agujero en los otros 3 puntos de entrada reales (Inicio, "Cargar personaje...", Ctrl+O), pero
+`UndoLastSave` se quedo fuera - un clic, siempre visible en la cabecera global, sin ningun
+aviso. Mismo gancho real ya usado en los otros 3 (`ConfirmDiscardChanges?.Invoke()`), solo
+cuando `IsDirty`.
+
+**H3-02, "Deshacer no revierte el `.tplr` recien nacido"**: `WriteAtomic` solo genera un `.bak`
+real cuando el fichero YA EXISTIA (`File.Replace`) - un `.tplr` que nace en el MISMO guardado
+que se esta deshaciendo no tiene `.tplr.bak` (no habia ninguno antes). Sin borrarlo, `MergeAll`
+lo fusiona igual al recargar - el objeto de Calamity "deshecho" reaparecia, y "Deshecho el
+ultimo guardado" era un mensaje falso. Se borra el `.tplr` huerfano (sin `.tplr.bak` pero con
+`.tplr` real) antes de recargar - mismo arreglo aplicado tambien en `HomeViewModel.
+RestoreBackup` (comparte el mismo hueco real, ver H3-04).
+
+**H3-03, "Un rechazo de colocacion ensucia + flash falso"**: `RejectionMessage` es puro estado
+de UI (se escribe precisamente cuando NO cambio ningun dato real - colocacion rechazada, o al
+limpiar el aviso al cambiar de seleccion, L-e) pero no estaba en la lista de exclusion de
+`MainViewModel.HookSlotEditing`/`BuffsViewModel` (junto a `IsSelected`/`JustEdited`, ya
+excluidos) - intentar colocar un objeto invalido marcaba el personaje como "sin guardar" (sin
+nada real que guardar) Y disparaba el flash de "acabo de editarme". Añadida la exclusion en los
+4 sitios reales que ya filtraban `IsSelected`/`JustEdited`: `HookSlotEditing`, `BuffsViewModel`,
+y por coherencia `EquipmentGroupViewModel.RecomputeDefenseAndBonus` y `ItemEditViewModel.
+OnSlotPropertyChanged` (ninguno de los dos necesita recalcular nada por un rechazo).
+
+**H3-04, "Restaurar copia de seguridad" sobre el personaje cargado no recarga el editor**:
+`HomeViewModel.RestoreBackup` restauraba los ficheros en disco pero nunca avisaba a
+`MainViewModel` - si el personaje restaurado era el que estaba cargado, el editor seguia
+mostrando el estado antiguo en memoria, y un Guardar posterior lo machacaba en silencio. Mismo
+evento real ya usado por "Cargar" (`CharacterChosen`) en vez de inventar uno nuevo -
+`MainViewModel` ya lo conecta con su propio `ConfirmDiscardChanges`, asi que una edicion en
+memoria sin guardar TAMBIEN avisa aqui, no solo se pisa. Solo dispara si `entry.FilePath`
+coincide con el personaje realmente cargado - restaurar la copia de OTRO personaje no toca el
+editor actual.
+
+7 pruebas deterministas nuevas (`Tanda1FableTests.cs`). Un error real encontrado en la PROPIA
+prueba al escribirla (no en produccion): `Assert.False(...IsEmpty)` esperaba que el objeto
+guardado sobreviviera a "Deshacer" - al revisar con mas cuidado, el `.bak` real es el estado
+ANTERIOR al guardado (sin el objeto todavia), asi que Deshacer vuelve a ESE estado, corregido a
+`Assert.True`. `dotnet test` 246/246 en verde (134 Core + 112 ViewModels), arnes UIA completo
+sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.

@@ -95,7 +95,13 @@ public partial class MainViewModel : ObservableObject
     {
         slot.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited)) return;
+            // H3-03 (tercera auditoria, Fable): RejectionMessage es puro estado de UI - se
+            // escribe precisamente cuando NO se cambio ningun dato real (colocacion rechazada
+            // por restriccion de slot, o al limpiar el aviso al cambiar de seleccion, L-e).
+            // Sin excluirla aqui, un intento de colocar un objeto invalido marcaba el personaje
+            // como "sin guardar" (sin nada real que guardar) Y disparaba el flash de "acabo de
+            // editarme" - la señal contraria de lo que paso de verdad.
+            if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited) or nameof(ItemSlotViewModel.RejectionMessage)) return;
             MarkDirty();
             if (!_suppressDirty) slot.TriggerEditFlash();
         };
@@ -531,10 +537,16 @@ public partial class MainViewModel : ObservableObject
     // ha guardado algo que no queria no tiene mas remedio que ir a buscarlo a mano en el
     // Explorador de archivos". Restaura el/los .bak reales que CharacterFileService.Save ya deja
     // (WriteAtomic) y recarga - mismo mecanismo real que "Cargar personaje...", no uno nuevo.
+    // H3-01 (tercera auditoria, Fable): "Deshacer" tiraba ediciones sin guardar sin preguntar -
+    // T-B cerro este mismo agujero en los otros 3 puntos de entrada reales (Inicio, "Cargar
+    // personaje...", Ctrl+O), pero "Deshacer ultimo guardado" (un clic, siempre visible en la
+    // cabecera global) se quedo fuera. Mismo gancho real que los otros 3 - ConfirmDiscardChanges
+    // solo cuando de verdad hay algo que perder (IsDirty).
     [RelayCommand(CanExecute = nameof(CanUndoLastSave))]
     private void UndoLastSave()
     {
         if (_loaded == null) return;
+        if (IsDirty && ConfirmDiscardChanges?.Invoke() == false) return;
         string plrPath = _loaded.PlrPath;
         string plrBak = plrPath + ".bak";
         if (!File.Exists(plrBak)) return;
@@ -543,7 +555,21 @@ public partial class MainViewModel : ObservableObject
             File.Copy(plrBak, plrPath, overwrite: true);
             string tplrPath = _loaded.TplrPath ?? Path.ChangeExtension(plrPath, ".tplr");
             string tplrBak = tplrPath + ".bak";
-            if (File.Exists(tplrBak)) File.Copy(tplrBak, tplrPath, overwrite: true);
+            if (File.Exists(tplrBak))
+            {
+                File.Copy(tplrBak, tplrPath, overwrite: true);
+            }
+            else if (File.Exists(tplrPath))
+            {
+                // H3-02 (tercera auditoria, Fable): WriteAtomic solo genera un .bak real cuando
+                // el fichero YA EXISTIA (File.Replace) - si no hay .tplr.bak pero SI hay .tplr,
+                // este .tplr nacio en el MISMO guardado que se esta deshaciendo (no habia
+                // ninguno antes). Dejarlo intacto resucitaria su contenido de Calamity al
+                // recargar (MergeAll lo fusiona igual), aunque el .plr ya se haya revertido -
+                // "Deshecho" seria un mensaje falso. Se borra para volver de verdad al estado
+                // real de antes de ese guardado (sin ningun .tplr).
+                File.Delete(tplrPath);
+            }
             string nombreAntesDeRecargar = CharacterName ?? plrPath;
             LoadFromPath(plrPath);
             // LoadFromPath NUNCA relanza (traga sus propias excepciones, T-22) - si la recarga

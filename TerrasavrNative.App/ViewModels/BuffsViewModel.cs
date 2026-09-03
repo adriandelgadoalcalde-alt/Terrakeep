@@ -49,9 +49,13 @@ public partial class BuffsViewModel : ObservableObject
             // Bu-a (segunda auditoria de Opus, Fable): JustEdited se excluye igual que
             // IsSelected - si no, el propio flash (JustEdited cambiando) re-entraria este mismo
             // manejador sin fin (mismo bug real ya evitado en MainViewModel.HookSlotEditing).
+            // H3-03 (tercera auditoria, Fable): RejectionMessage se excluye igual que
+            // IsSelected/JustEdited - es puro estado de UI (un buff duplicado rechazado, sin
+            // ningun cambio real de datos), mismo motivo real ya cerrado en
+            // MainViewModel.HookSlotEditing.
             slot.PropertyChanged += (_, e) =>
             {
-                if (e.PropertyName is nameof(BuffSlotViewModel.IsSelected) or nameof(BuffSlotViewModel.JustEdited)) return;
+                if (e.PropertyName is nameof(BuffSlotViewModel.IsSelected) or nameof(BuffSlotViewModel.JustEdited) or nameof(BuffSlotViewModel.RejectionMessage)) return;
                 SlotChanged?.Invoke();
                 slot.TriggerEditFlash();
             };
