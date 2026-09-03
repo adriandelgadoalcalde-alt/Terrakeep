@@ -17,8 +17,27 @@ public sealed partial class ResearchViewModel : ObservableObject
     private readonly CharacterFileService _service;
     private Dictionary<int, int> _researchedCounts = new();
 
+    // R-f (segunda auditoria de Opus, Fable): "sin progreso global - el denominador (5.402
+    // objetos reales) ya se conoce y no se muestra". Real y dinamico (mismo universo que
+    // ResearchAllService.Apply ya recorre - vanilla + Calamity), no un numero fijo que pueda
+    // desincronizarse si algun catalogo cambia de tamaño.
+    private readonly int _totalKnownObjects;
+
     [ObservableProperty] private CategoryNodeViewModel? _selectedCategory;
     [ObservableProperty] private string _resultsSummary = "Sin personaje cargado.";
+
+    // R-e (segunda auditoria de Opus, Fable): "sin buscador - Libreria y Libreria de buffs si lo
+    // tienen, con la misma estructura de arbol. Asimetria pura". Misma gramatica real
+    // (LibrarySearchGrammar, L-a) que las otras dos.
+    [ObservableProperty] private string _searchText = string.Empty;
+    partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    // R-g (segunda auditoria de Opus, Fable): "ninguna advertencia si el personaje no es Modo
+    // Viaje - el dato (Appearance.Difficulty) ya esta a mano". La Investigacion (desbloquear
+    // recetas) solo tiene efecto real en el juego en Modo Viaje - investigar sin estarlo no
+    // sirve de nada aunque la pestaña deje hacerlo igual (no es su trabajo impedirlo, solo
+    // avisar).
+    [ObservableProperty] private bool _isJourneyMode;
 
     public ObservableCollection<CategoryNodeViewModel> RootCategories { get; } = [];
     public ObservableCollection<ResearchRowViewModel> Results { get; } = [];
@@ -31,12 +50,14 @@ public sealed partial class ResearchViewModel : ObservableObject
         // Auditoria de Opus, T-18: cada nodo lleva su propio comando real - ver el comentario
         // real en CategoryNodeViewModel.SelectCommand.
         CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
+        _totalKnownObjects = service.VanillaCatalog.AllInternalNames().Count() + service.CalamityCatalog.Entries.Count;
     }
 
     public void LoadFrom(PlrCharacter character)
     {
         Reset();
         _researchedCounts = ResolveResearchedCounts(character);
+        IsJourneyMode = character.Difficulty == 3;
         ApplyFilter();
     }
 
@@ -48,6 +69,7 @@ public sealed partial class ResearchViewModel : ObservableObject
         _researchedCounts = new Dictionary<int, int>();
         Results.Clear();
         ResultsSummary = "Sin personaje cargado.";
+        IsJourneyMode = false;
     }
 
     // Misma resolucion de Pid real que ya usaba MainViewModel.RebuildResearch: un Pid con "/"
@@ -99,43 +121,51 @@ public sealed partial class ResearchViewModel : ObservableObject
         ApplyFilter();
     }
 
+    private (string DisplayName, string? IconPath, bool IsCalamity, int? RequiredCount) ResolveDisplay(int id)
+    {
+        var calEntry = _service.CalamityCatalog.BySyntheticId(id);
+        if (calEntry != null)
+        {
+            string? iconPath = calEntry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + calEntry.Icon : null;
+            return (calEntry.DisplayName ?? $"Calamity #{id}", iconPath, true, null);
+        }
+        return (_service.VanillaCatalog.GetName(id), VanillaIconResolver.GetIconPath(id), false, _service.VanillaResearchCounts.Get(id));
+    }
+
     private void ApplyFilter()
     {
         Results.Clear();
+        bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
 
-        if (SelectedCategory == null)
+        // R-e: sin carpeta elegida pero CON busqueda, se busca en TODO lo ya investigado (mismo
+        // criterio real que Libreria: la busqueda no exige elegir carpeta primero). Sin carpeta
+        // Y sin busqueda, no hay ningun conjunto real que mostrar todavia - Fase 1 no cambia eso
+        // (mostrar tambien lo NO investigado es R-a, Fase 2, layout distinto).
+        if (SelectedCategory == null && !hasSearch)
         {
-            ResultsSummary = $"{_researchedCounts.Count} objeto(s) investigado(s) en total - elige una carpeta para verlos.";
+            ResultsSummary = $"{_researchedCounts.Count}/{_totalKnownObjects} objeto(s) investigado(s) en total - elige una carpeta o escribe para buscar.";
             return;
         }
 
         // Mismo bug real corregido en LibraryViewModel.ApplyFilter - ver ahi el porque:
         // ItemIdsOrdered respeta el orden curado real de Terrasavr, un HashSet (ItemIdSet) o
-        // un OrderBy(id) numerico no.
-        var matches = SelectedCategory.ItemIdsOrdered
-            .Where(_researchedCounts.ContainsKey)
-            .ToList();
+        // un OrderBy(id) numerico no. Sin carpeta (busqueda global), el orden real de Terrasavr
+        // no aplica - se recorre en el orden en que ya estan investigados.
+        IEnumerable<int> candidates = SelectedCategory != null
+            ? SelectedCategory.ItemIdsOrdered.Where(_researchedCounts.ContainsKey)
+            : _researchedCounts.Keys;
 
-        foreach (int id in matches)
+        var matches = new List<ResearchRowViewModel>();
+        foreach (int id in candidates)
         {
-            bool isCalamity = _service.CalamityCatalog.BySyntheticId(id) != null;
-            string displayName;
-            string? iconPath;
-            if (isCalamity)
-            {
-                var calEntry = _service.CalamityCatalog.BySyntheticId(id);
-                displayName = calEntry?.DisplayName ?? $"Calamity #{id}";
-                iconPath = calEntry?.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + calEntry.Icon : null;
-            }
-            else
-            {
-                displayName = _service.VanillaCatalog.GetName(id);
-                iconPath = VanillaIconResolver.GetIconPath(id);
-            }
-            int? requiredCount = isCalamity ? null : _service.VanillaResearchCounts.Get(id);
-            Results.Add(new ResearchRowViewModel(displayName, _researchedCounts[id], requiredCount, isCalamity, iconPath));
+            var (displayName, iconPath, isCalamity, requiredCount) = ResolveDisplay(id);
+            if (hasSearch && !LibrarySearchGrammar.Matches(SearchText, id, displayName.ToLowerInvariant(), null)) continue;
+            matches.Add(new ResearchRowViewModel(displayName, _researchedCounts[id], requiredCount, isCalamity, iconPath));
         }
+        foreach (var row in matches) Results.Add(row);
 
-        ResultsSummary = $"{matches.Count} objeto(s) investigado(s) en \"{SelectedCategory.Name}\".";
+        ResultsSummary = SelectedCategory != null
+            ? $"{matches.Count} objeto(s) investigado(s) en \"{SelectedCategory.Name}\"."
+            : $"{matches.Count} objeto(s) investigado(s) encontrado(s) en total.";
     }
 }

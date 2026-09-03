@@ -9,6 +9,14 @@ namespace TerrasavrNative.App.Services;
 // orquestacion (StatusMessage, Research.LoadFrom) y esto con la regla de negocio en si.
 public static class ResearchAllService
 {
+    // R-d/F1 (segunda auditoria de Opus, Fable): "el '9999' crudo en cada chip de Calamity -
+    // R-1 elimino el numero sospechoso para vanilla, dejandolo visible en ~2.800 chips de
+    // Calamity". Publico para que ResearchRowViewModel pueda reconocer ESTE valor concreto (el
+    // placeholder inventado por esta app) y mostrar "Investigado" en vez de un numero sin
+    // sentido real - sin tocar ningun OTRO conteo real de Calamity que un personaje real pueda
+    // traer de verdad desde el juego (esos SI son datos reales, no un placeholder).
+    public const int PlaceholderCount = 9999;
+
     // Rellena PlrCharacter.Research con una entrada por cada objeto conocido (vanilla +
     // Calamity). Vanilla usa el umbral REAL de cada objeto (VanillaResearchCountCatalog,
     // extraido del TSV real de sacrificios de tModLoader) - Calamity se queda con un
@@ -25,7 +33,6 @@ public static class ResearchAllService
     // de saltarla.
     public static void Apply(LoadedCharacter loaded, CharacterFileService service)
     {
-        const int placeholderCount = 9999;
         // Bucle manual en vez de ToDictionary: un .plr real con un Pid duplicado (dato ajeno,
         // no generado por esta app) no debe reventar "Investigar todo" con una excepcion - el
         // ultimo gana, mismo criterio permisivo que el resto del proyecto con datos externos.
@@ -43,10 +50,10 @@ public static class ResearchAllService
         foreach (var pid in service.VanillaCatalog.AllInternalNames())
         {
             int? id = service.VanillaCatalog.GetIdByKey(pid);
-            int count = (id.HasValue ? service.VanillaResearchCounts.Get(id.Value) : null) ?? placeholderCount;
+            int count = (id.HasValue ? service.VanillaResearchCounts.Get(id.Value) : null) ?? PlaceholderCount;
             EnsureAtLeast(pid, count);
         }
         foreach (var entry in service.CalamityCatalog.Entries)
-            EnsureAtLeast($"{entry.Mod}/{entry.Internal}", placeholderCount);
+            EnsureAtLeast($"{entry.Mod}/{entry.Internal}", PlaceholderCount);
     }
 }

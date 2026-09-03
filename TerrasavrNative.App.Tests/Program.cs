@@ -1054,6 +1054,37 @@ internal static class Program
                 Console.WriteLine($"R1-INVESTIGAR-TODO: primera fila de '{ironNode.Name}' -> CountLabel={row?.CountLabel} (esperado formato real x/N, NO '9999')");
             }
             else Console.WriteLine("R1-INVESTIGAR-TODO: ninguna carpeta real con IronBroadsword encontrada");
+
+            // R-d/R-e/R-f/R-g (segunda auditoria de Opus, Fable): verificacion visual real de
+            // los 4 arreglos de Fase 1 a la vez - aviso de Modo Viaje (UIA-Test es Softcore por
+            // omision), buscador real (mismo cuadro/estilo que Libreria) y progreso "N/Total".
+            vm.Research.ClearCategoryCommand.Execute(null); // sin esto, la busqueda de abajo queda acotada a 'Materiales' (la carpeta que aun seguia elegida)
+            vm.Research.SearchText = "#20000000"; // CalamityIds.ItemIdBase - primer id sintetico real de objeto de Calamity
+            DoEvents();
+            var calamityRow = vm.Research.Results.FirstOrDefault(r => r.IsCalamity);
+            Console.WriteLine($"R-d: fila de Calamity (#20000000) tras Investigar todo -> CountLabel={calamityRow?.CountLabel} (esperado 'Investigado', nunca '9999')");
+            if (calamityRow != null && calamityRow.CountLabel.Contains("9999")) Console.WriteLine("FALLO: R-d (segunda auditoria) - el 9999 crudo sigue visible en un chip de Calamity");
+            vm.Research.SearchText = string.Empty;
+            vm.Research.ClearCategoryCommand.Execute(null);
+            DoEvents();
+            Console.WriteLine($"R-f: ResultsSummary sin carpeta ni busqueda -> \"{vm.Research.ResultsSummary}\" (esperado formato real N/Total)");
+            vm.Research.SearchText = "#4"; // Iron Broadsword, id real vanilla 4
+            DoEvents();
+            Console.WriteLine($"R-e: busqueda '#4' sin carpeta elegida -> {vm.Research.Results.Count} resultado(s) (esperado 1)");
+            vm.SelectedTabIndex = 1; // Personaje (AppTab.Personaje) - el test de AutoEquip de arriba dejo Builds seleccionado
+            vm.PersonajeInnerTabIndex = 2; // Investigacion
+            DoEvents(); DoEvents();
+            {
+                var rtbResearch = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbResearch.Render(window);
+                var encResearch = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encResearch.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbResearch));
+                using var fsResearch = File.Create(Path.Combine(AppContext.BaseDirectory, "investigacion-ola3.png"));
+                encResearch.Save(fsResearch);
+            }
+            vm.Research.SearchText = string.Empty; // no dejar la busqueda puesta para el resto de pruebas
+            DoEvents();
         }
         catch (Exception ex)
         {

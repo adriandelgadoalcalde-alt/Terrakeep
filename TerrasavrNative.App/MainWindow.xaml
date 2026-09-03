@@ -1742,6 +1742,14 @@
                              LibraryCategoryTreeBuilder) - mismos nombres y sprites de
                              siempre, solo cambia como se navega. -->
                         <DockPanel Margin="0,10,0,0">
+                            <!-- R-g (segunda auditoria de Opus, Fable): "ninguna advertencia si el
+                                 personaje no es Modo Viaje - el dato ya esta a mano". La
+                                 Investigacion solo desbloquea recetas de verdad en Modo Viaje. -->
+                            <Border DockPanel.Dock="Top" Background="{StaticResource CalamityBrush}" CornerRadius="6" Padding="10,8" Margin="0,0,0,10"
+                                    Visibility="{Binding Research.IsJourneyMode, Converter={StaticResource InverseBoolToVis}}">
+                                <TextBlock Foreground="White" TextWrapping="Wrap" FontSize="12"
+                                           Text="Este personaje no esta en Modo Viaje - la Investigación solo desbloquea recetas de verdad en una partida de ese modo." />
+                            </Border>
                             <Button DockPanel.Dock="Top" Content="Investigar todo" Tag="Accent"
                                     Command="{Binding ResearchAllCommand}" HorizontalAlignment="Left" Margin="0,0,0,10" />
                             <Grid>
@@ -1764,6 +1772,14 @@
                                 </Border>
 
                                 <DockPanel Grid.Column="1">
+                                    <!-- R-e (segunda auditoria de Opus, Fable): "sin buscador -
+                                         Libreria y Libreria de buffs si lo tienen... asimetria
+                                         pura". Misma gramatica real (LibrarySearchGrammar, L-a). -->
+                                    <TextBox DockPanel.Dock="Top" Text="{Binding Research.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                             Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                             MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4"
+                                             ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id (busca solo entre lo ya investigado)" />
                                     <TextBlock DockPanel.Dock="Top" Text="{Binding Research.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding Research.Results}">

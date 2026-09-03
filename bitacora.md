@@ -4699,3 +4699,45 @@ resolver=` (ninguno) - sin ningun otro NO-FOUND/FALLO/EXCEPTION.
 
 **Deja la Ola 3 lista salvo R-a..R-g Fase 1** (H-1/H-2/H-3, X-a, T-H/F1+F2, Bd-a/Bd-b e I-a/I-b
 ya cerrados) - Investigacion (R-a..R-g Fase 1) sigue siendo el ultimo punto real de esta ola.
+
+### R-d + R-e + R-f + R-g (segunda auditoria, Fable) - cierra la Ola 3 entera
+
+**Investigacion, Fase 1** ("arreglos que no cambian la forma" - mostrar tambien lo NO
+investigado es R-a/R-b, Fase 2, con su propio layout, fuera de esta ronda):
+
+**R-d, el "9999" crudo en cada chip de Calamity**: R-1 elimino el numero sospechoso para
+vanilla pero Calamity seguia mostrando el placeholder real que "Investigar todo" escribe
+cuando no hay umbral conocido (`ResearchAllService.PlaceholderCount`, ahora publico). Solo ESE
+valor concreto se sustituye por "✔ Investigado" en `ResearchRowViewModel.CountLabel` - un
+conteo real de Calamity que un personaje trajera de verdad del juego (no via este boton) sigue
+mostrando su numero real, no es un dato inventado que ocultar.
+
+**R-e, sin buscador**: mismo cuadro/estilo/gramatica real que Libreria (`LibrarySearchGrammar`,
+L-a) - funciona con o sin carpeta elegida (sin carpeta, busca en TODO lo ya investigado, mismo
+criterio real que Libreria).
+
+**R-f, sin progreso global**: el resumen sin carpeta ni busqueda pasa de "N objetos" a
+"N/Total" real (`_totalKnownObjects`, calculado en vivo del mismo universo vanilla+Calamity que
+`ResearchAllService.Apply` ya recorre, no un numero fijo que pudiera desincronizarse).
+
+**R-g, ninguna advertencia si no es Modo Viaje**: `ResearchViewModel.IsJourneyMode`
+(`character.Difficulty==3`) + banner real (mismo estilo de aviso ya usado en Version) cuando no
+lo es - la Investigacion no tiene efecto real en el juego fuera de ese modo.
+
+4 pruebas deterministas nuevas (`ResearchOlaTresTests.cs`) + verificacion visual real completa
+(banner Modo Viaje + busqueda con resultado real "Espada larga de hierro 1/1" + progreso
+"N/Total", los 4 arreglos juntos en una sola captura revisada a mano). 2 bugs propios
+encontrados y corregidos AL PROBAR (no al escribir): la busqueda de Calamity quedaba acotada a
+la carpeta "Materiales" que seguia elegida de un paso anterior (faltaba `ClearCategoryCommand`
+antes de buscar), y la navegacion a Investigacion olvidaba volver primero a la pestaña
+Personaje (se habia quedado en Builds del test anterior).
+
+`dotnet test` 179/179 en verde (tras un fallo transitorio de 22 pruebas en la ejecucion a nivel
+de solucion, mismo patron real de carrera de compilacion en paralelo ya documentado en T-I/T-F
+- resuelto solo en el reintento, confirmado limpio ejecutando el proyecto aislado Y la solucion
+entera dos veces mas), arnes visual completo sin NO-FOUND/FALLO/EXCEPTION.
+
+**Cierra la Ola 3 entera** (H-1/H-2/H-3, X-a, T-H/F1+F2, R-a..R-g Fase 1, Bd-a/Bd-b, I-a/I-b)
+de la segunda auditoria de Opus (Fable). Sigue la Ola 4 (reworks, requiere aprobacion explicita
+antes de tocar nada - terreno de un rediseño ya rechazado una vez) y el resto de hallazgos
+sueltos por seccion no agrupados en ninguna ola.
