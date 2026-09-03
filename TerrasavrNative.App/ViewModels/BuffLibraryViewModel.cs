@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -15,6 +16,13 @@ namespace TerrasavrNative.App.ViewModels;
 public partial class BuffLibraryViewModel : ObservableObject
 {
     private const int MaxResults = 300;
+    // H3-06 (tercera auditoria de Opus, Fable): "el tope+debounce medido de verdad en L-c
+    // (LibraryViewModel) solo se aplico a esa unica superficie - Investigacion (ya arreglado
+    // arriba) y esta Libreria de buffs no tenian NINGUN debounce (reflowaba en cada tecla)".
+    // El tope de 300 se deja igual que siempre (universo de buffs mucho mas pequeño que el de
+    // objetos, no hay medicion propia que justifique bajarlo a 100) - solo faltaba el mismo
+    // intervalo ya medido (180ms).
+    private readonly DispatcherTimer _searchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
 
     private readonly List<BuffCatalogEntryViewModel> _all;
     private readonly Dictionary<int, BuffCatalogEntryViewModel> _byId;
@@ -57,10 +65,22 @@ public partial class BuffLibraryViewModel : ObservableObject
         // real en CategoryNodeViewModel.SelectCommand.
         CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
 
+        _searchDebounceTimer.Tick += (_, _) =>
+        {
+            _searchDebounceTimer.Stop();
+            ApplyFilter();
+        };
+
         ApplyFilter();
     }
 
-    partial void OnSearchTextChanged(string value) => ApplyFilter();
+    // H3-06: mismo debounce real ya en produccion en LibraryViewModel/ResearchViewModel - solo
+    // la busqueda por TEXTO se difiere (elegir/quitar carpeta sigue aplicando al instante).
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchDebounceTimer.Stop();
+        _searchDebounceTimer.Start();
+    }
 
     [RelayCommand]
     private void SelectCategory(CategoryNodeViewModel node)

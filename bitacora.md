@@ -5443,3 +5443,39 @@ guardado sobreviviera a "Deshacer" - al revisar con mas cuidado, el `.bak` real 
 ANTERIOR al guardado (sin el objeto todavia), asi que Deshacer vuelve a ESE estado, corregido a
 `Assert.True`. `dotnet test` 246/246 en verde (134 Core + 112 ViewModels), arnes UIA completo
 sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### Tanda 2 (H3-06, H3-08)
+
+**H3-06, "el tope+debounce medido de verdad en L-c solo se aplico a 1 de las 3 superficies
+gemelas"**: `LibraryViewModel` (objetos) ya tenia el tope de 100 resultados + debounce de
+180ms (medido de verdad: 300 tarjetas sin tope = 802ms de congelacion real, mismo WrapPanel sin
+virtualizar) - `ResearchViewModel` (Investigacion) no tenia NINGUN tope (una carpeta grande
+tras "Investigar todo" pintaba miles de filas de golpe) ni debounce (reflowaba en cada tecla), y
+`BuffLibraryViewModel` (Libreria de buffs) ya tenia el mismo tope+resumen (300, sin medicion
+propia - universo de buffs mucho mas pequeño que el de objetos, se deja igual) pero tampoco
+debounce. Portado el mismo `DispatcherTimer` de 180ms (parar+arrancar en cada tecla, aplicar el
+filtro solo al `Tick`) a los dos, mas el tope de 100 en Investigacion (mismo WrapPanel, mismo
+coste real por tarjeta - no una superficie distinta que necesite remedirse). Regresion propia
+detectada ANTES de tocar nada (no en produccion): `ResearchOlaTresTests.cs` fijaba `SearchText`
+y miraba `Results` de inmediato - con debounce ya no hay resultado sincrono. Añadido un
+`WaitForDispatcher(ms)` local (mismo patron ya documentado del arnes UIA: sin un `Thread.Sleep`
+real intercalado entre vueltas de bombeo, el `WM_TIMER` real del `DispatcherTimer` puede no
+llegar a entregarse nunca dentro de un bucle de pruebas) tras las dos asignaciones de
+`SearchText` de ese fichero.
+
+**H3-08, "Defensa total" ignora la defensa de los prefijos de accesorio reales**: sumaba solo
+la defensa base de cada pieza equipada, nunca el bono plano real de prefijos como
+Warding/Guarding/Menacing/Hardy/Armored (+1..+4 defensa, `Player.GrantPrefixBenefits`
+decompilado, ids vanilla reales 62-65 verificados contra `vanilla_prefix_effects.json`) - un
+personaje real de endgame con varios accesorios "Proteccion" mostraba menos defensa de la que
+realmente tiene en el juego. `PrefixEffectCatalog` ya cargaba `StatDefense` para el texto de
+`Describe()` - ganó `GetDefenseBonus(prefixId)`, un acceso numerico puro (redondeado a entero,
+`StatDefense` real nunca es fraccionario para defensa) reutilizado por
+`EquipmentGroupViewModel.RecomputeDefenseAndBonus` (solo para prefijos vanilla - Calamity/Rogue
+no tienen datos en este catalogo, mismo criterio de "desconocido = 0" del resto de la app).
+
+2 pruebas deterministas nuevas (`PrefixDefenseTests.cs`, Escudo de obsidiana id vanilla real
+397/defensa real 2 + prefijo Warding id vanilla real 65/+4 real = 6, verificado contra
+`vanilla_stats.json`/`vanilla_prefix_effects.json`, no inventado). `dotnet test` 248/248 en
+verde (134 Core + 114 ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION,
+`T-E-TILDES: 0 fallo(s)`, `ultimo-error.log existe: False`.

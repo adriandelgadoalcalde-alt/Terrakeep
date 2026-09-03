@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -14,6 +15,15 @@ namespace TerrasavrNative.App.ViewModels;
 // sprites de siempre (ResearchRowViewModel no cambia), solo cambia COMO se navega.
 public sealed partial class ResearchViewModel : ObservableObject
 {
+    // H3-06 (tercera auditoria de Opus, Fable): "el tope+debounce medido de verdad en L-c
+    // (LibraryViewModel) solo se aplico a esa unica superficie - Investigacion no tenia NINGUN
+    // tope (tras 'Investigar todo', elegir una carpeta grande pintaba miles de filas de golpe)
+    // NI debounce (reflowaba en cada tecla)". Mismo numero y mismo intervalo YA medidos en
+    // produccion (100 resultados, 180ms) - no se remide aqui porque es el MISMO WrapPanel sin
+    // virtualizar con el MISMO coste real por tarjeta, no una superficie distinta.
+    private const int MaxResults = 100;
+    private readonly DispatcherTimer _searchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
+
     private readonly CharacterFileService _service;
     private Dictionary<int, int> _researchedCounts = new();
 
@@ -30,7 +40,13 @@ public sealed partial class ResearchViewModel : ObservableObject
     // tienen, con la misma estructura de arbol. Asimetria pura". Misma gramatica real
     // (LibrarySearchGrammar, L-a) que las otras dos.
     [ObservableProperty] private string _searchText = string.Empty;
-    partial void OnSearchTextChanged(string value) => ApplyFilter();
+    // H3-06: mismo debounce real ya en produccion en LibraryViewModel - solo la busqueda por
+    // TEXTO se difiere (elegir/quitar carpeta sigue aplicando al instante, un clic discreto).
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchDebounceTimer.Stop();
+        _searchDebounceTimer.Start();
+    }
 
     // R-g (segunda auditoria de Opus, Fable): "ninguna advertencia si el personaje no es Modo
     // Viaje - el dato (Appearance.Difficulty) ya esta a mano". La Investigacion (desbloquear
@@ -51,6 +67,11 @@ public sealed partial class ResearchViewModel : ObservableObject
         // real en CategoryNodeViewModel.SelectCommand.
         CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
         _totalKnownObjects = service.VanillaCatalog.AllInternalNames().Count() + service.CalamityCatalog.Entries.Count;
+        _searchDebounceTimer.Tick += (_, _) =>
+        {
+            _searchDebounceTimer.Stop();
+            ApplyFilter();
+        };
     }
 
     public void LoadFrom(PlrCharacter character)
@@ -162,10 +183,14 @@ public sealed partial class ResearchViewModel : ObservableObject
             if (hasSearch && !LibrarySearchGrammar.Matches(SearchText, id, displayName.ToLowerInvariant(), null)) continue;
             matches.Add(new ResearchRowViewModel(displayName, _researchedCounts[id], requiredCount, isCalamity, iconPath));
         }
-        foreach (var row in matches) Results.Add(row);
+        // H3-06: mismo tope real ya medido en LibraryViewModel (100 - WrapPanel sin
+        // virtualizar, 300 tarjetas = 802ms de congelacion real) - una carpeta grande (ej.
+        // "Calamity (mod)", miles de objetos) ya no pinta todo de golpe.
+        foreach (var row in matches.Take(MaxResults)) Results.Add(row);
 
-        ResultsSummary = SelectedCategory != null
-            ? $"{matches.Count} objeto(s) investigado(s) en \"{SelectedCategory.Name}\"."
-            : $"{matches.Count} objeto(s) investigado(s) encontrado(s) en total.";
+        string categoryLabel = SelectedCategory != null ? $" en \"{SelectedCategory.Name}\"" : string.Empty;
+        ResultsSummary = matches.Count > MaxResults
+            ? $"Mostrando {MaxResults} de {matches.Count} objeto(s) investigado(s){categoryLabel} - afina la busqueda."
+            : $"{matches.Count} objeto(s) investigado(s){categoryLabel}.";
     }
 }

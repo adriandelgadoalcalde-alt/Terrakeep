@@ -36,6 +36,16 @@ public sealed class PrefixEffectCatalog
     // inventada) - mismo criterio de "+X%"/"-X%" que ya usa ItemStatsFormatter para
     // daño/defensa/critico. Devuelve null si el prefijo no tiene ningun efecto real conocido
     // (ej. prefijos de Calamity/mods, fuera de este catalogo vanilla-only).
+    // H3-08 (tercera auditoria de Opus, Fable): "Defensa total" solo sumaba la defensa base de
+    // cada pieza, ignorando los prefijos de accesorio reales (Warding/Guarding/Menacing/etc,
+    // confirmados contra Player.GrantPrefixBenefits decompilado: prefijos 62/63/64/65 ->
+    // +1/+2/+3/+4 defensa). Mismo dato ya cargado y en produccion para Describe() de arriba -
+    // solo faltaba un acceso numerico puro (sin formatear a texto) para poder sumarlo de
+    // verdad. Redondeado a entero real (StatDefense siempre es un valor plano, no fraccionario,
+    // para los prefijos de defensa reales - nunca a medias).
+    public int GetDefenseBonus(int prefixId) =>
+        _byId.TryGetValue(prefixId, out var e) ? (int)Math.Round(e.StatDefense ?? 0) : 0;
+
     public string? Describe(int prefixId)
     {
         if (!_byId.TryGetValue(prefixId, out var e)) return null;
