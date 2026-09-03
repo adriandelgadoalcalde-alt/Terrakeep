@@ -488,7 +488,11 @@
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                         <StackPanel>
-                            <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}" />
+                            <!-- Bd-e (segunda auditoria de Opus, Fable): "columnas irregulares" -
+                                 con la columna ahora de ancho fijo (ver BuildClassTemplate), el
+                                 texto necesita poder partirse en dos lineas en vez de desbordar
+                                 el ancho de la tarjeta con un nombre largo. -->
+                            <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
                             <TextBlock Text="{Binding PrefixText}" Style="{StaticResource CaptionText}"
                                        Visibility="{Binding PrefixText, Converter={StaticResource NullToVis}}" />
                         </StackPanel>
@@ -510,7 +514,12 @@
 
         <!-- Una clase dentro de una etapa (melee/ranged/mage/summoner/rogue) -->
         <DataTemplate x:Key="BuildClassTemplate" DataType="{x:Type vm:BuildClassGearViewModel}">
-            <StackPanel Margin="0,0,24,16" MinWidth="220" Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
+            <!-- Bd-e (segunda auditoria de Opus, Fable): "columnas irregulares" - antes solo
+                 MinWidth (el ancho real crecia con el nombre mas largo de CADA clase, asi que
+                 al envolver a una segunda fila las columnas no quedaban alineadas entre si).
+                 Ancho fijo aqui + WrapPanel.ItemWidth a juego (ver el ItemsControl de abajo) -
+                 mismo hueco que antes el Margin de 24, ahora repartido por el propio WrapPanel. -->
+            <StackPanel Margin="0,0,0,16" Width="220" Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
                 <DockPanel Margin="0,0,0,6">
                     <!-- Bug real encontrado 2-sep-2026 ("el boton apenas se diferencia con el
                          fondo"): Background/Foreground puestos a mano aqui NO HACEN NADA - la
@@ -541,7 +550,7 @@
                 <TextBlock Text="{Binding Label}" Style="{StaticResource TitleText}" Margin="0,0,0,10" />
                 <ItemsControl ItemsSource="{Binding Classes}" ItemTemplate="{StaticResource BuildClassTemplate}">
                     <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        <ItemsPanelTemplate><WrapPanel ItemWidth="248" /></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>
             </StackPanel>

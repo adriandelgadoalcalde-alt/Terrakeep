@@ -620,9 +620,20 @@ public partial class MainViewModel : ObservableObject
         var partes = new List<string>();
         if (result.Unresolved > 0) partes.Add($"{result.Unresolved} sin resolver");
         if (result.NoSlot > 0) partes.Add($"{result.NoSlot} sin hueco libre en el Inventario");
-        StatusMessage = partes.Count > 0
+        string mensaje = partes.Count > 0
             ? $"Auto-equipar: {result.Placed} objeto(s) colocado(s), {string.Join(", ", partes)} - pulsa Guardar para conservarlo."
             : $"Auto-equipar: {result.Placed} objeto(s) colocado(s) - pulsa Guardar para conservarlo.";
+        // Bd-f (segunda auditoria de Opus, Fable): "avisar si el personaje no tiene .tplr" -
+        // colocar equipo de Calamity Mod (pid con "/", ver BuildsViewModel.ResolveItem) en un
+        // personaje sin datos de Calamity conocidos (HasCalamityData, real - TplrPath!=null) no
+        // falla ni se pierde (CharacterFileService.Save crea el .tplr solo con guardar, ver
+        // T-C), pero si el mod NO esta realmente instalado en el juego del usuario, esos
+        // objetos no se reconoceran ahi - aviso informativo, no bloqueante (esta app no tiene
+        // forma real de saber si el mod esta instalado, solo si este personaje ya lo uso antes).
+        bool esBuildDeCalamity = gear.Armor.Concat(gear.Weapons).Concat(gear.Accessories).Any(i => i.Pid?.Contains('/') == true);
+        if (esBuildDeCalamity && !HasCalamityData)
+            mensaje = "Aviso: este personaje no tiene datos de Calamity conocidos (sin .tplr) - confirma que el mod esté instalado en el juego antes de usar este equipo. " + mensaje;
+        StatusMessage = mensaje;
         SelectedTabIndex = (int)AppTab.Personaje;
     }
 

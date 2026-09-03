@@ -5011,3 +5011,31 @@ entra en Builds y confirma que la insignia verde sale EXACTAMENTE en esa fila y 
 otra - `BD-D-POSEIDO: fila marcada=True, resto sin marcar=True`). `dotnet test` 206/206 en
 verde (134 Core + 72 ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES:
 0 fallo(s)`.
+
+### Bd-e/Bd-f (segunda auditoria, Fable) - columnas irregulares + aviso sin .tplr en Calamity
+
+**Bd-e, "columnas irregulares"**: la columna de cada clase (`BuildClassTemplate`) solo tenia
+`MinWidth="220"` - el ancho real crecia con el nombre mas largo de ESA clase en concreto, asi
+que al envolver el `WrapPanel` a una segunda fila (Calamity Mod tiene 5 clases, "rogue" incluido)
+las columnas no quedaban alineadas entre si, una rejilla visualmente irregular. Ancho fijo real
+(`Width="220"` en la columna + `WrapPanel.ItemWidth="248"`, mismo hueco que antes daba el
+`Margin` de 24 ahora repartido por el propio panel) - `TextWrapping="Wrap"` añadido al nombre
+del objeto para que un nombre largo se parta en dos lineas en vez de desbordar la tarjeta con
+el ancho ahora fijo.
+
+**Bd-f, "avisar si el personaje no tiene .tplr"**: colocar equipo de Calamity Mod (Auto-equipar
+desde esa sub-pestaña) en un personaje sin datos de Calamity conocidos no falla ni se pierde
+nada de verdad - `CharacterFileService.Save` ya crea el `.tplr` en cuanto hay contenido real de
+Calamity (T-C, cerrado antes en esta misma auditoria) - pero si el mod NO esta realmente
+instalado en el juego del usuario, esos objetos no se reconoceran ahi, y esta app no tiene
+forma real de saberlo (solo si ESTE personaje ya uso Calamity antes, via `HasCalamityData`).
+Aviso informativo (no bloqueante, la app no puede confirmar nada real sobre el juego) antepuesto
+al mensaje normal de Auto-equipar, solo cuando el build tiene algun objeto de Calamity (pid con
+"/") Y el personaje no tiene `.tplr`.
+
+Cambio puramente visual (Bd-e, sin logica nueva) verificado con captura real
+(`builds-poseido.png`, ya reutilizada de Bd-d): las 4 columnas de "Pre-Hardmode" quedan ahora a
+un paso fijo de 248px, alineadas de verdad. Bd-f: 2 pruebas deterministas nuevas
+(`AutoEquipCalamityWarningTests.cs`: un build de Calamity sin `.tplr` avisa; un build vanilla
+nunca avisa aunque tampoco haya `.tplr`). `dotnet test` 208/208 en verde (134 Core + 74
+ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
