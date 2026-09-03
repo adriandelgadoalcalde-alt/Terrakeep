@@ -4089,3 +4089,24 @@ Sin cambio de comportamiento (mismos valores ordinales de siempre) - verificado 
 `dotnet build`/`dotnet test` en verde (134/134) y el arnes completo (navegacion real entre
 las 6 pestañas externas y las 2 internas de Personaje ya se ejercita en decenas de puntos del
 arnes) sin ningun NO-FOUND/FALLO/EXCEPTION.
+
+### Bloque 6 (parte 2) - T-20: AutoEquip/ResearchAll extraidos a servicios dedicados
+
+**Antes**: `MainViewModel` (599 lineas) mezclaba navegacion de pestañas, carga/guardado de
+personaje Y la regla de negocio real de "Auto-equipar" (resolver equipo de una build real a
+slots reales) e "Investigar todo" (rellenar el .plr con umbrales reales de investigacion) en el
+mismo archivo.
+
+**Ahora**: `AutoEquipService.Apply(gear, equipmentGroup, inventoryContainer, service)` y
+`ResearchAllService.Apply(loaded, service)` (nuevos, `TerrasavrNative.App/Services/`) - la
+regla de negocio en si vive ahi, con las mismas firmas/comportamiento exactos de antes
+(ni un numero cambiado). `MainViewModel.AutoEquip`/`ResearchAll` se quedan solo con la
+orquestacion real que si les corresponde (`StatusMessage`, `SelectedTabIndex`,
+`Research.LoadFrom`) - 599 -> 544 lineas.
+
+Verificado sin cambio de comportamiento: `ResearchAll` sigue dando los umbrales reales de R-1
+(`100/100` en Materiales, no `9999`); `AutoEquip` (SIN prueba real previa en el arnes, ni antes
+ni despues del cambio - añadida ahora al tocar este codigo) colocado con datos reales de Builds
+(mismo `Source` que ya usa el boton real "Auto-equipar" del XAML) - cabeza cambio de verdad de
+"Tocado de piñonita" a "Casco fundido", 11 objetos colocados, sin excepciones.
+`dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.

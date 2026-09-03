@@ -441,84 +441,29 @@ public partial class MainViewModel : ObservableObject
         Research.LoadFrom(_loaded.Character);
     }
 
-    // "Investigar todo": rellena PlrCharacter.Research con una entrada por cada objeto conocido
-    // (vanilla + Calamity) que todavia no estuviera investigado. Auditoria de Opus, Bloque 2
-    // (R-1): vanilla ya usa el umbral REAL de cada objeto (VanillaResearchCountCatalog,
-    // extraido del TSV real de sacrificios de tModLoader) en vez de un numero inventado - el
-    // .plr resultante ya no tiene un conteo sospechoso de "9999 de todo", tiene los mismos
-    // numeros que dejaria investigar el objeto de verdad en el juego. Calamity SI se queda con
-    // el placeholder alto (sin tabla real extraida esta pasada, ver el catalogo) - un valor de
-    // sobra sigue garantizando el desbloqueo completo igual, sin fingir un numero real que no
-    // se tiene.
+    // "Investigar todo" - regla de negocio real extraida a ResearchAllService (auditoria de
+    // Opus, Bloque 6, T-20) - aqui solo queda la orquestacion (recargar Research, avisar).
     [RelayCommand(CanExecute = nameof(IsCharacterLoaded))]
     private void ResearchAll()
     {
         if (_loaded == null) return;
-        const int placeholderCount = 9999;
-        var existingPids = new HashSet<string>(_loaded.Character.Research.Select(e => e.Pid));
-
-        foreach (var pid in _service.VanillaCatalog.AllInternalNames())
-        {
-            if (existingPids.Add(pid))
-            {
-                int? id = _service.VanillaCatalog.GetIdByKey(pid);
-                int count = (id.HasValue ? _service.VanillaResearchCounts.Get(id.Value) : null) ?? placeholderCount;
-                _loaded.Character.Research.Add(new PlrResearchEntry { Pid = pid, Count = count });
-            }
-        }
-        foreach (var entry in _service.CalamityCatalog.Entries)
-        {
-            string pid = $"{entry.Mod}/{entry.Internal}";
-            if (existingPids.Add(pid))
-                _loaded.Character.Research.Add(new PlrResearchEntry { Pid = pid, Count = placeholderCount });
-        }
-
+        ResearchAllService.Apply(_loaded, _service);
         Research.LoadFrom(_loaded.Character);
         StatusMessage = $"Investigacion completa aplicada ({_loaded.Character.Research.Count} objetos) - pulsa Guardar para conservarlo.";
     }
 
-    // Auto-equipar desde el panel Builds: arma+armadura+accesorios de una clase/etapa
-    // concreta se colocan directamente en el personaje cargado. Armadura -> los 3 primeros
-    // slots del equipo puesto (cabeza/cuerpo/piernas), accesorios -> los 5 siguientes
-    // (Items[3..7] del loadout, ver PROYECTO-TERRASAVR.md); las armas no tienen slot fijo en
-    // Terraria, se colocan en el primer hueco libre del inventario. Objetos que no se
-    // consigan resolver (pid no encontrado en el catalogo) o para los que no quede hueco se
-    // cuentan aparte y se avisa en el mensaje de estado - nunca se sobrescribe un objeto ya
-    // puesto salvo en los 3+5 slots fijos de armadura/accesorios, que es justo lo que este
-    // botón promete reemplazar.
+    // Auto-equipar desde el panel Builds - regla de negocio real extraida a
+    // AutoEquipService (auditoria de Opus, Bloque 6, T-20) - aqui solo queda la orquestacion
+    // (StatusMessage, saltar a Personaje).
     [RelayCommand(CanExecute = nameof(IsCharacterLoaded))]
     private void AutoEquip(BuildClassGear? gear)
     {
         if (_loaded == null || gear == null || EquipmentGroup == null) return;
 
-        var armorSlots = EquipmentGroup.EquippedItems.Slots;
-        var inventorySlots = Containers.First(c => c.Key == "inventory").Slots;
-        int placed = 0, skipped = 0;
-
-        void PlaceInSlot(ItemSlotViewModel slot, BuildItemRef itemRef)
-        {
-            var resolved = BuildItemResolver.Resolve(itemRef, _service.VanillaCatalog, _service.CalamityCatalog, _service.VanillaPrefixCatalog);
-            if (resolved == null) { skipped++; return; }
-            slot.UpdateFrom(resolved);
-            placed++;
-        }
-
-        for (int i = 0; i < gear.Armor.Count && i < 3; i++)
-            PlaceInSlot(armorSlots[i], gear.Armor[i]);
-
-        for (int i = 0; i < gear.Accessories.Count && i < 5; i++)
-            PlaceInSlot(armorSlots[3 + i], gear.Accessories[i]);
-
-        foreach (var weapon in gear.Weapons)
-        {
-            var emptySlot = inventorySlots.FirstOrDefault(s => s.IsEmpty);
-            if (emptySlot == null) { skipped++; continue; }
-            PlaceInSlot(emptySlot, weapon);
-        }
-
-        StatusMessage = skipped > 0
-            ? $"Auto-equipar: {placed} objeto(s) colocado(s), {skipped} sin resolver o sin hueco libre - pulsa Guardar para conservarlo."
-            : $"Auto-equipar: {placed} objeto(s) colocado(s) - pulsa Guardar para conservarlo.";
+        var result = AutoEquipService.Apply(gear, EquipmentGroup, Containers.First(c => c.Key == "inventory"), _service);
+        StatusMessage = result.Skipped > 0
+            ? $"Auto-equipar: {result.Placed} objeto(s) colocado(s), {result.Skipped} sin resolver o sin hueco libre - pulsa Guardar para conservarlo."
+            : $"Auto-equipar: {result.Placed} objeto(s) colocado(s) - pulsa Guardar para conservarlo.";
         SelectedTabIndex = (int)AppTab.Personaje;
     }
 
