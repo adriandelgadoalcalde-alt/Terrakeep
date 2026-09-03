@@ -1612,7 +1612,13 @@
                                                         <StackPanel Orientation="Horizontal">
                                                             <Image Source="{Binding IconPath}" Width="20" Height="20" Stretch="Uniform" Margin="0,0,6,0"
                                                                    Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                            <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                            <StackPanel VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" />
+                                                                <!-- Auditoria de Opus, R-1: "x/N" real (VanillaResearchCountCatalog, extraido
+                                                                     del TSV real de sacrificios de tModLoader) en vez de solo el conteo guardado
+                                                                     a secas - ver ResearchRowViewModel.CountLabel. -->
+                                                                <TextBlock Text="{Binding CountLabel}" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                            </StackPanel>
                                                         </StackPanel>
                                                     </Border>
                                                 </DataTemplate>

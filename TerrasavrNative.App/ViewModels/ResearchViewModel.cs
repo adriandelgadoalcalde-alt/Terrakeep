@@ -129,7 +129,8 @@ public sealed partial class ResearchViewModel : ObservableObject
                 displayName = _service.VanillaCatalog.GetName(id);
                 iconPath = VanillaIconResolver.GetIconPath(id);
             }
-            Results.Add(new ResearchRowViewModel(displayName, _researchedCounts[id], isCalamity, iconPath));
+            int? requiredCount = isCalamity ? null : _service.VanillaResearchCounts.Get(id);
+            Results.Add(new ResearchRowViewModel(displayName, _researchedCounts[id], requiredCount, isCalamity, iconPath));
         }
 
         ResultsSummary = $"{matches.Count} objeto(s) investigado(s) en \"{SelectedCategory.Name}\".";

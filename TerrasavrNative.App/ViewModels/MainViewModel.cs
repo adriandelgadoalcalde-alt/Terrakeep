@@ -378,9 +378,14 @@ public partial class MainViewModel : ObservableObject
     }
 
     // "Investigar todo": rellena PlrCharacter.Research con una entrada por cada objeto conocido
-    // (vanilla + Calamity) que todavia no estuviera investigado, con un conteo alto fijo
-    // (mismo criterio que la version JS: no se conoce la tabla real de "cuantos hacen falta"
-    // por objeto, un valor alto de sobra garantiza el desbloqueo completo igualmente).
+    // (vanilla + Calamity) que todavia no estuviera investigado. Auditoria de Opus, Bloque 2
+    // (R-1): vanilla ya usa el umbral REAL de cada objeto (VanillaResearchCountCatalog,
+    // extraido del TSV real de sacrificios de tModLoader) en vez de un numero inventado - el
+    // .plr resultante ya no tiene un conteo sospechoso de "9999 de todo", tiene los mismos
+    // numeros que dejaria investigar el objeto de verdad en el juego. Calamity SI se queda con
+    // el placeholder alto (sin tabla real extraida esta pasada, ver el catalogo) - un valor de
+    // sobra sigue garantizando el desbloqueo completo igual, sin fingir un numero real que no
+    // se tiene.
     [RelayCommand(CanExecute = nameof(IsCharacterLoaded))]
     private void ResearchAll()
     {
@@ -391,7 +396,11 @@ public partial class MainViewModel : ObservableObject
         foreach (var pid in _service.VanillaCatalog.AllInternalNames())
         {
             if (existingPids.Add(pid))
-                _loaded.Character.Research.Add(new PlrResearchEntry { Pid = pid, Count = placeholderCount });
+            {
+                int? id = _service.VanillaCatalog.GetIdByKey(pid);
+                int count = (id.HasValue ? _service.VanillaResearchCounts.Get(id.Value) : null) ?? placeholderCount;
+                _loaded.Character.Research.Add(new PlrResearchEntry { Pid = pid, Count = count });
+            }
         }
         foreach (var entry in _service.CalamityCatalog.Entries)
         {

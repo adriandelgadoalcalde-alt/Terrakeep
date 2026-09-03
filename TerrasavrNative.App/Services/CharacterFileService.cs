@@ -52,6 +52,7 @@ public sealed class CharacterFileService
     public VanillaArmorSetCatalog VanillaArmorSets { get; }
     public PrefixEffectCatalog PrefixEffects { get; }
     public VanillaBuffDurationCatalog VanillaBuffDurations { get; }
+    public VanillaResearchCountCatalog VanillaResearchCounts { get; }
 
     // Los 6 catalogos que ItemStatsFormatter.Format necesita, agrupados en un unico record -
     // pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada: la firma ya iba por 5
@@ -91,6 +92,7 @@ public sealed class CharacterFileService
         VanillaArmorSets = VanillaArmorSetCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_armor_sets.json"));
         PrefixEffects = PrefixEffectCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_prefix_effects.json"));
         VanillaBuffDurations = VanillaBuffDurationCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_buff_durations.json"));
+        VanillaResearchCounts = VanillaResearchCountCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_research_counts.json"));
         TooltipCatalogs = new ItemTooltipCatalogs(VanillaStats, CalamityCatalog, VanillaCategories, VanillaItemTooltips, VanillaArmorSets, PrefixEffects);
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);

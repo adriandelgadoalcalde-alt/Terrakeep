@@ -3723,3 +3723,34 @@ dificultad a la izquierda y Cargar/Guardar a la derecha, con la rejilla de Build
 solapes ni recortes.
 
 `dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### Bloque 2 (parte 4, cierre del bloque) - R-1: umbral real de investigacion
+
+**Antes**: "Investigar todo" escribia un conteo fijo inventado (9999) para TODO objeto, vanilla
+y Calamity por igual - funcionalmente desbloqueaba todo igual (el juego solo exige "count >=
+umbral real"), pero el .plr resultante quedaba con un numero sospechoso en vez de uno real, y
+la UI de Investigacion no podia mostrar nunca un "x/N" de verdad por no conocer N.
+
+**Ahora**: `scripts/extraer-recuentos-investigacion.py` (nuevo) lee el TSV REAL embebido de
+tModLoader (`Terraria.GameContent.Creative.Content.Sacrifices.tsv`, decompilado) - cada fila
+"NombreInterno + letra de categoria" se decodifica con la tabla real (verificada contra el
+switch real de `CreativeItemSacrificesCatalog.cs`: a=50 b=25 c=5 d=1 e=invalido/no investigable
+(102 objetos viejos pre-1.4, omitidos) f=2 g=3 h=10 i=15 j=30 k=99 l=100 m=200 n=20 o=400) y se
+resuelve a id real via `vanilla_item_ids_by_key.json` (ya generado, cobertura 100% - 0 nombres
+sin id) -> `vanilla_research_counts.json` (5402 objetos). Nuevo
+`VanillaResearchCountCatalog` (Core) lo carga. `ResearchRowViewModel.CountLabel` ahora es
+"x/N" real (null para Calamity, sin tabla real extraida esta pasada - cae a mostrar solo "x",
+nunca inventa un N que no se tiene), visible en cada chip de Investigacion.
+`MainViewModel.ResearchAll` usa el umbral real por objeto para vanilla (Calamity se queda con
+el placeholder alto de siempre, documentado como alcance deliberado).
+
+Verificado por partida doble: (1) el catalogo en si contra dos valores reales conocidos del
+juego (`IronBroadsword`=1, arma unica -> categoria D; `DirtBlock`=100, bloque comun -> categoria
+L) - ambos exactos; (2) extremo a extremo via la app real: tras "Investigar todo", la primera
+fila real de la carpeta "Materiales" muestra `CountLabel=100/100` (real y coherente, NO
+"9999/9999" ni ningun numero inventado).
+
+`dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
+
+**Bloque 2 completo** (D-6, D-3, A-1, E-3, E-4, I-1, N-1, R-1) - las 3 partes de "Practicidad
+de golpe" del plan de Opus quedan cerradas y comiteadas. Sigue el Bloque 3 (Reactividad).
