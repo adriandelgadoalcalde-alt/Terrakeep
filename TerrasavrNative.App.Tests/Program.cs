@@ -62,6 +62,8 @@ internal static class Program
         app.Resources["EmptyToCollapsed"] = new EmptyToCollapsedConverter();
         app.Resources["CountToVis"] = new CountToVisibilityConverter();
         app.Resources["InverseBoolToVis"] = new InverseBooleanToVisibilityConverter();
+        app.Resources["BoolToGridLength"] = new BoolToGridLengthConverter();
+        app.Resources["BoolToDouble"] = new BoolToDoubleConverter();
         app.DispatcherUnhandledException += (_, e) =>
         {
             Console.WriteLine("DISPATCHER-EXCEPTION: " + e.Exception);
@@ -600,9 +602,14 @@ internal static class Program
         }
 
         // Toggle biblioteca (plegar/desplegar) para confirmar que el binding real funciona.
-        // Octava pasada: medir la ALTURA REAL de la fila (no solo el booleano) - el bug
-        // reportado era precisamente que el booleano cambiaba pero el espacio real no se
-        // liberaba.
+        // Segunda auditoria de Opus (Fable), B-7 - BUG REAL en esta misma comprobacion: el
+        // MaxHeight buscado (460) no coincidia con el real del XAML de entonces (238, residuo
+        // de un revert) - el finder NUNCA encontraba el Grid, AltoFilaLibreria() devolvia
+        // SIEMPRE -1, y como un "-1px" impreso no contaba como FALLO/NO-FOUND/EXCEPTION, esta
+        // comprobacion (la UNICA capaz de detectar B-1, la fila que no libera espacio al
+        // plegar) llevaba rota desde el revert mientras el resto del arnes seguia en verde.
+        // Arreglado de raiz, no solo el numero: un finder que no encuentra nada ahora imprime
+        // FALLO explicito, nunca un numero centinela silencioso.
         try
         {
             Console.WriteLine($"IsLibraryCollapsed antes={vm.IsLibraryCollapsed}");
@@ -616,18 +623,30 @@ internal static class Program
                 for (int i = 0; i < n; i++) FindLibraryGrid(System.Windows.Media.VisualTreeHelper.GetChild(d, i));
             }
             FindLibraryGrid(window);
-            double AltoFilaLibreria() => libraryRowGrid?.RowDefinitions[1].ActualHeight ?? -1;
 
-            DoEvents(); DoEvents();
-            Console.WriteLine($"Alto real fila Libreria (desplegada, IsLibraryCollapsed={vm.IsLibraryCollapsed})={AltoFilaLibreria():0.#}px");
+            if (libraryRowGrid == null)
+            {
+                Console.WriteLine("FALLO: Grid real de la fila de Libreria (RowDefinitions.Count==2, MaxHeight==460) NO-FOUND");
+            }
+            else
+            {
+                double AltoFilaLibreria() => libraryRowGrid.RowDefinitions[1].ActualHeight;
 
-            vm.ToggleLibraryCollapsedCommand.Execute(null);
-            DoEvents(); DoEvents(); DoEvents();
-            Console.WriteLine($"IsLibraryCollapsed despues={vm.IsLibraryCollapsed}");
-            Console.WriteLine($"Alto real fila Libreria (colapsada)={AltoFilaLibreria():0.#}px (esperado: solo la barra del boton, ~30-40px, no 150-238)");
+                DoEvents(); DoEvents();
+                double altoDesplegada = AltoFilaLibreria();
+                Console.WriteLine($"Alto real fila Libreria (desplegada, IsLibraryCollapsed={vm.IsLibraryCollapsed})={altoDesplegada:0.#}px");
+                if (altoDesplegada < 150) Console.WriteLine($"FALLO: desplegada deberia tener sitio real (>=150px), salio {altoDesplegada:0.#}px");
 
-            vm.ToggleLibraryCollapsedCommand.Execute(null); // vuelve a desplegar para el resto de pruebas
-            DoEvents(); DoEvents();
+                vm.ToggleLibraryCollapsedCommand.Execute(null);
+                DoEvents(); DoEvents(); DoEvents();
+                Console.WriteLine($"IsLibraryCollapsed despues={vm.IsLibraryCollapsed}");
+                double altoColapsada = AltoFilaLibreria();
+                Console.WriteLine($"Alto real fila Libreria (colapsada)={altoColapsada:0.#}px (esperado: solo la barra del boton, ~30-40px, no 150-238)");
+                if (altoColapsada > 60) Console.WriteLine($"FALLO: colapsada deberia devolver el espacio real (<=60px), salio {altoColapsada:0.#}px - B-1 (segunda auditoria)");
+
+                vm.ToggleLibraryCollapsedCommand.Execute(null); // vuelve a desplegar para el resto de pruebas
+                DoEvents(); DoEvents();
+            }
         }
         catch (Exception ex)
         {
@@ -669,6 +688,14 @@ internal static class Program
             DoEvents();
             Console.WriteLine($"Categoria 'Utilidad' seleccionada -> Results.Count={vm.BuffLibrary.Results.Count} (esperado: 17)");
 
+            // Segunda auditoria de Opus (Fable), B-2 - BUG REAL: "Elegir..." ponia
+            // IsBuffLibraryCollapsed=false DIRECTAMENTE, un pestillo de un solo sentido - nada
+            // lo devolvia a la preferencia real del usuario. Se fuerza la preferencia real a
+            // "plegada" primero, para poder confirmar de verdad que "Elegir..." la revela
+            // TEMPORALMENTE (via IsBuffLibraryVisible) sin pisar esa preferencia.
+            vm.IsBuffLibraryCollapsed = true;
+            DoEvents();
+
             // Pide "Elegir..." sobre el primer slot vacio real (mismo comando real que dispara
             // el doble clic/menu contextual de la rejilla de arriba).
             var emptySlot = vm.Buffs.Container?.Slots.FirstOrDefault(s => s.IsEmpty);
@@ -676,6 +703,7 @@ internal static class Program
             DoEvents();
             DoEvents();
             Console.WriteLine($"BuffLibrary.IsPicking={vm.BuffLibrary.IsPicking} PickTarget coincide={ReferenceEquals(vm.BuffLibrary.PickTarget, emptySlot)}");
+            Console.WriteLine($"B2-PESTILLO: tras 'Elegir...' con preferencia real=plegada -> IsBuffLibraryCollapsed={vm.IsBuffLibraryCollapsed} (esperado True, SIN pisar), IsBuffLibraryVisible={vm.IsBuffLibraryVisible} (esperado True, revelada TEMPORALMENTE)");
 
             // Buff real conocido: id 1 = Obsidian Skin, esta en la categoria real Utilidad -
             // pulsa el boton "Colocar" real de esa tarjeta via UI Automation real.
@@ -688,6 +716,9 @@ internal static class Program
                 Console.WriteLine("Boton 'Colocar' NO-FOUND");
             DoEvents();
             DoEvents();
+
+            Console.WriteLine($"B2-PESTILLO: tras colocar (PickTarget vuelve a null) -> IsBuffLibraryVisible={vm.IsBuffLibraryVisible} (esperado False - vuelve sola a la preferencia real, ya no se queda desplegada para siempre)");
+            if (vm.IsBuffLibraryVisible) Console.WriteLine("FALLO: B-2 (segunda auditoria) - la Libreria de buffs se quedo desplegada tras colocar, pese a que la preferencia real es plegada");
 
             var placedSlot = vm.Buffs.Container?.Slots.FirstOrDefault(s => !s.IsEmpty);
             Console.WriteLine($"Buff colocado: DisplayName={placedSlot?.DisplayName} DurationSeconds={placedSlot?.DurationSeconds} IsSelected={placedSlot?.IsSelected}");

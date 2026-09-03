@@ -4258,3 +4258,44 @@ recomendado en 4 tandas) publicado como artifact y entregado al usuario. Pendien
 del usuario: qué tanda(s) atacar y en qué orden - el propio informe ya distingue "sin cambiar la
 forma de nada" (tanda 1, bajo riesgo) de "reworks, solo con aprobación explícita" (tanda 4,
 terreno donde ya se pisó una vez con el rediseño de Librería rechazado).
+
+## Plan de la segunda auditoria (Fable) - ejecucion
+
+Pedido explicito del usuario: ejecutar el plan ENTERO de la segunda auditoria (7 defectos
+criticos + hallazgos transversales T-A a T-I + los ~80 hallazgos de las 14 secciones), y al
+terminar pedirle a Fable una TERCERA auditoria, mismo alcance que las dos anteriores.
+
+### B-1 + B-2 + B-7 (recuperados de 83fd33c, perdidos por el revert c38c960)
+
+**B-1**: la fila de la Libreria (Objetos y Buffs) dependia de "*"+MinHeight fijo, sin importar
+si estaba plegada - plegar no devolvia ni un pixel de espacio real. **B-2**: "Elegir
+objeto...tras..." ponia `IsLibraryCollapsed=false` DIRECTAMENTE, un pestillo de un solo
+sentido, sin nada que lo volviera a poner en `true`. Ambos YA estaban arreglados en el commit
+`83fd33c` ("Octava pasada, Fase 1") con el mismo mecanismo real (`IsLibraryVisible`/
+`IsBuffLibraryVisible`, propiedades derivadas que combinan la preferencia real del usuario con
+un despliegue TEMPORAL mientras se elige, mas `BoolToGridLengthConverter`/
+`BoolToDoubleConverter` para que la fila colapse a `Auto`/0 de verdad) - perdidos por
+`c38c960`, un `git revert` de rango demasiado ancho (Fases 1-7) cuando el rechazo real del
+usuario era solo sobre la Fase 2/3/5/7 (navegacion), no sobre estos 2 bugs de layout ya
+medidos y verificados aparte.
+
+Recuperado el mecanismo real de `83fd33c` (no reinventado), adaptado al estado actual del
+fichero (las RowDefinition ya habian evolucionado con mi propio arreglo de la primera ronda,
+B-1 de Bloque 1 - ESE arreglo resolvia un problema distinto y real, "el Inventario
+subvencionando a la Libreria", y sigue siendo valido; el colapso-a-cero es un arreglo
+complementario, no un duplicado).
+
+**B-7** (la comprobacion rota del arnes que era la unica capaz de detectar B-1): el
+`MaxHeight=460` que buscaba SI es ahora el valor real (recuperado de 83fd33c junto con el
+resto), asi que el finder ya encuentra el Grid - pero ademas se arreglo de raiz el patron real
+que Fable señalo: un finder que no encuentra nada ahora imprime `FALLO:` explicito, nunca un
+numero centinela silencioso como el `-1px` de antes.
+
+Verificado con numeros reales: fila desplegada 267px (antes del arreglo real, con el commit
+`83fd33c`, se midio 272px - la diferencia es ruido real de UI, no una regresion), colapsada
+46,6px (antes se quedaba en 150-238px SIEMPRE) - exactamente la misma magnitud de mejora que la
+medicion original. B-2 verificado con el pestillo real: preferencia forzada a "plegada" antes
+de "Elegir...", revelada TEMPORALMENTE durante la eleccion, y confirmado que vuelve sola a
+"plegada" tras colocar - ya no se queda desplegada para siempre.
+
+`dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
