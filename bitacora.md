@@ -4047,3 +4047,26 @@ la paleta) se comprobo aparte con la formula real de WCAG - 4.9:1 a 5.8:1 segun 
 AA (4.5:1) con margen incluso en el tamaño mas pequeño usado - no hizo falta tocar ningun color.
 
 `dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### Bloque 5 (parte 2, cierre del bloque) - T-6/T-7/T-8: escala tipografica/radios documentada
+
+**Sin barrido mecanico** - mismo criterio que T-1: se audito la fragmentacion real (15 valores
+distintos de `FontSize`, 10 de `CornerRadius` en todo `MainWindow.xaml`) y se confirmo que el
+NUCLEO del sistema (`Theme.xaml`) ya es coherente (4 pasos de texto con nombre - 24/14/12.5/11 -
+mas el suelo real de 9 fijado en T-10; `CornerRadius` predominante en 6/8) - la fragmentacion
+real vive en variantes LOCALES de `MainWindow.xaml`, cada una un ajuste real a un hueco concreto
+mas pequeño que el paso estandar (una pildora, una fila de tabla densa, un boton superpuesto en
+una tarjeta), no descuido. Forzar un barrido mecanico de mas de 100 sitios sin verificar cada
+uno a mano habria sido mas riesgo real (romper un layout ya afinado) que beneficio (una
+diferencia de medio pixel que nadie nota).
+
+**Cambio real hecho**: comentario explicito en `Theme.xaml`, junto a los 4 estilos de texto con
+nombre, documentando la escala real como fuente de verdad - cualquier `FontSize`/`CornerRadius`
+NUEVO que se añada a partir de ahora debe partir de estos pasos documentados (o del suelo de
+T-10), no inventar uno mas al azar. Mismo criterio para `CornerRadius` (6/8 controles y
+tarjetas, 2-5 acentos pequeños, 10 paneles destacados, 99 pildoras/circulos).
+
+`dotnet build`/`dotnet test` en verde (134/134, sin cambio funcional).
+
+**Bloque 5 completo** (T-4/T-5/T-10/T-6-7-8) - las 4 partes de "Limpieza visual" del plan de
+Opus quedan cerradas. Sigue el Bloque 6 (Limpieza de codigo, sin cambio visible).

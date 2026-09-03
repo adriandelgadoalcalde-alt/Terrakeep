@@ -97,7 +97,19 @@
     <DropShadowEffect x:Key="CardShadowHover" Color="Black" Direction="270" ShadowDepth="5" BlurRadius="18" Opacity="0.42" />
     <DropShadowEffect x:Key="AccentGlow" Color="{StaticResource AccentColor}" ShadowDepth="0" BlurRadius="16" Opacity="0.55" />
 
-    <!-- Tipografia -->
+    <!-- Tipografia. Auditoria de Opus, Bloque 5 (T-6/T-7/T-8): escala real, documentada aqui a
+         proposito - los 4 pasos con nombre son la fuente de verdad (24/14/12.5/11), y deben
+         preferirse siempre a un FontSize suelto nuevo en MainWindow.xaml. Las variantes locales
+         que ya existen ahi (9-13.5, ~15 valores distintos) NO son descuido: son ajustes reales
+         a huecos concretos mas pequeños que el paso estandar (una pildora, una fila de tabla
+         densa, un boton superpuesto en una tarjeta) - se dejan tal cual en vez de forzar un
+         barrido mecanico de +100 sitios sin verificar cada uno a mano, pero CUALQUIER FontSize
+         nuevo que se añada debe partir de uno de estos 4 pasos (o de 9, el suelo real de
+         legibilidad fijado en T-10) y solo bajar si el hueco real lo exige, nunca al azar.
+         Misma logica para CornerRadius: 6 (controles normales: botones/campos) y 8 (tarjetas/
+         paneles) son los dos pasos reales que ya predominan en Theme.xaml; 2-5 son variantes
+         reales para acentos pequeños (barras de progreso, indicadores), 10 para paneles grandes
+         destacados, 99 para pildoras/circulos - mismo criterio, no un barrido mecanico. -->
     <Style x:Key="TitleText" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
         <Setter Property="FontSize" Value="24" />
