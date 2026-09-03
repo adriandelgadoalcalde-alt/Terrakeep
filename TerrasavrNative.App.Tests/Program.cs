@@ -60,6 +60,12 @@ internal static class Program
         app.Resources["NullToVis"] = new NullToVisibilityConverter();
         app.Resources["NullToCollapsed"] = new NullToCollapsedConverter();
         app.Resources["EmptyToCollapsed"] = new EmptyToCollapsedConverter();
+        // H4-01 (cuarta auditoria de Opus, Fable): este arnes REPLICA a mano el registro real
+        // de App.xaml (nunca lo carga - construye una Application en blanco, ver el comentario
+        // real de arriba) - un StaticResource que se añade a App.xaml y se olvida aqui explota
+        // en runtime SOLO en este arnes, la app real (que si carga App.xaml) nunca lo nota.
+        // Justo lo que paso con este converter la primera vez que se probo esta misma tanda.
+        app.Resources["EmptyToVisible"] = new EmptyToVisibleConverter();
         app.Resources["CountToVis"] = new CountToVisibilityConverter();
         app.Resources["InverseBoolToVis"] = new InverseBooleanToVisibilityConverter();
         app.Resources["BoolToGridLength"] = new BoolToGridLengthConverter();

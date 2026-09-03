@@ -248,6 +248,17 @@ public partial class MainViewModel : ObservableObject
     // un unico breakpoint real, no uno por pantalla).
     public bool IsStorageExpanded => SizeClass == WindowSizeClass.Amplio;
 
+    // H4-02 (cuarta auditoria de Opus, Fable): "Almacenes seleccionada y luego oculta en Amplio
+    // deja un contenido huerfano sin pestaña activa" - la pestaña interna Equipamiento(0)/
+    // Inventario(1)/Almacenes(2) nunca tenia SelectedIndex enlazado, asi que WPF se quedaba
+    // apuntando a un TabItem ya Collapsed (IsStorageExpanded oculta "Almacenes" en Amplio, ver
+    // el binding real de Visibility) - la vista lado a lado de A-4 (el motivo real de ocultarla)
+    // tampoco llegaba a verse en ese caso. Los indices 0/1/2 son un orden REAL y estable de las
+    // 3 unicas pestañas de este TabControl (ver MainWindow.xaml, sin enum propio - lo mismo que
+    // ya hace SelectedTabIndex/PersonajeInnerTabIndex con AppTab/PersonajeInnerTab, aqui no
+    // hacia falta un enum nuevo para 3 valores usados en un unico sitio).
+    [ObservableProperty] private int _objetosSubTabIndex;
+
     // I-c (segunda auditoria de Opus, Fable): "anchos fijos en una pantalla que es puro
     // WrapPanel - en una ventana de 1920px, Inicio usa 880px y deja 1.000px negros". Mismo
     // SizeClass real compartido en vez de un umbral propio - en Amplio, sitio de sobra para que
@@ -259,6 +270,10 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsEquipmentExpanded));
         OnPropertyChanged(nameof(IsStorageExpanded));
         OnPropertyChanged(nameof(InicioContentMaxWidth));
+        // H4-02: si "Almacenes" (indice 2) era la pestaña activa justo cuando se oculta (Amplio
+        // real, IsStorageExpanded=true), mover la seleccion a "Inventario" (1) - el mismo
+        // StorageGroup ya esta a la vista ahi, lado a lado con el Inventario (A-4).
+        if (value == WindowSizeClass.Amplio && ObjetosSubTabIndex == 2) ObjetosSubTabIndex = 1;
     }
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
@@ -408,6 +423,13 @@ public partial class MainViewModel : ObservableObject
         {
             SelectedTabIndex = (int)AppTab.Personaje;
             PersonajeInnerTabIndex = (int)PersonajeInnerTab.Objetos;
+            // H4-03 (cuarta auditoria de Opus, Fable): la tarjeta "Librería" de Inicio (el
+            // camino MAS visible hacia la Libreria) aterrizaba en Objetos sin desplegarla si
+            // IsLibraryCollapsed ya estaba a true (su valor por omision/el que dejo el usuario)
+            // - Ctrl+F si la desplegaba, dos caminos al mismo sitio con resultado distinto.
+            // Mismo comando reutilizado por el atajo de teclado (OnWindowKeyDown), asi que este
+            // desplegado ahora aplica a los dos - no repetir la asignacion en cada sitio.
+            if (tab == "Libreria") IsLibraryCollapsed = false;
             return;
         }
         SelectedTabIndex = tab switch
@@ -418,6 +440,28 @@ public partial class MainViewModel : ObservableObject
             "AcercaDe" => (int)AppTab.AcercaDe,
             _ => (int)AppTab.Inicio,
         };
+    }
+
+    // H4-13 (cuarta auditoria de Opus, Fable): "Ctrl+F solo conoce la Libreria de objetos" -
+    // si la pestaña interna activa YA es Buffs, es la Libreria de BUFFS la que hace falta
+    // desplegar/enfocar, no la de objetos (saltar a Objetos desde Buffs para ver una libreria
+    // que no corresponde seria peor que no hacer nada). Usado por OnWindowKeyDown - el propio
+    // code-behind lee IsBuffsInnerTabActive despues de ejecutar este comando para decidir que
+    // TextBox enfocar (el buscador en si vive en la vista, no en el ViewModel).
+    public bool IsBuffsInnerTabActive => PersonajeInnerTabIndex == (int)PersonajeInnerTab.Buffs;
+
+    [RelayCommand]
+    private void GoToContextualLibrary()
+    {
+        if (IsBuffsInnerTabActive)
+        {
+            SelectedTabIndex = (int)AppTab.Personaje;
+            IsBuffLibraryCollapsed = false;
+        }
+        else
+        {
+            GoToTab("Libreria");
+        }
     }
 
     private void RequestPickForSlot(ItemSlotViewModel slot)

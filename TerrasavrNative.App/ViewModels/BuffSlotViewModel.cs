@@ -123,6 +123,12 @@ public partial class BuffSlotViewModel : ObservableObject
     // objetos: un valor real y razonable de entrada, editable despues a mano o con los 3
     // botones Minima/Media/Maxima del panel Editar).
     //
+    // H4-04 (cuarta auditoria de Opus, Fable): version SIN EFECTO de la comprobacion real que
+    // hace PlaceBuff - usada por OnBuffSlotDragOver (mismo criterio real ya usado por
+    // ItemSlotViewModel.AcceptsItem, un "vistazo" antes de soltar de verdad) para poner el
+    // cursor de prohibido del sistema MIENTRAS se arrastra, no solo al soltar.
+    public bool WouldRejectPlacingBuff(int buffId) => _isPlacedElsewhere?.Invoke(buffId, this) == true;
+
     // Bu-b (segunda auditoria de Opus, Fable): Terraria no tiene dos instancias del mismo buff
     // activas a la vez - rechaza la colocacion (sin tocar el slot) si ese buff YA esta en otro
     // slot, mismo criterio real de "avisar, no fingir" que RejectionMessage ya usa en
@@ -153,6 +159,19 @@ public partial class BuffSlotViewModel : ObservableObject
         (Buff.Time, other.Buff.Time) = (other.Buff.Time, Buff.Time);
         Refresh();
         other.Refresh();
+    }
+
+    // H4-06 (cuarta auditoria de Opus, Fable): usado por BuffContainerViewModel.UndoClear -
+    // restaura un buff EXACTO (id+duracion) tal cual estaba antes de un "Vaciar todos" en
+    // bloque. A diferencia de PlaceBuff (que fija una duracion RAZONABLE para una colocacion
+    // nueva, nunca la exacta de origen), Deshacer necesita el dato real, no una aproximacion -
+    // y no debe volver a comprobar duplicados (en el momento de deshacer, todos los slots ya
+    // estan vacios de verdad, no hay nada con lo que colisionar).
+    public void RestoreExact(int buffId, int time)
+    {
+        Buff.Id = buffId;
+        Buff.Time = time;
+        Refresh();
     }
 
     [RelayCommand]

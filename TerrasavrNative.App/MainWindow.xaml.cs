@@ -86,12 +86,17 @@ public partial class MainWindow : Window
         }
         else if (ctrl && e.Key == Key.F)
         {
-            _viewModel.GoToTabCommand.Execute("Libreria");
-            _viewModel.IsLibraryCollapsed = false;
+            // H4-03/H4-13 (cuarta auditoria de Opus, Fable): el desplegado real ya lo hace
+            // GoToContextualLibraryCommand por si mismo (evita que este atajo y la tarjeta
+            // "Librería" de Inicio puedan divergir de nuevo) - y ahora es CONTEXTUAL: si la
+            // pestaña interna activa ya es Buffs, salta a SU Libreria, no a la de objetos.
+            _viewModel.GoToContextualLibraryCommand.Execute(null);
+            bool buffs = _viewModel.IsBuffsInnerTabActive;
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                LibrarySearchBox.Focus();
-                LibrarySearchBox.SelectAll();
+                var box = buffs ? BuffLibrarySearchBox : LibrarySearchBox;
+                box.Focus();
+                box.SelectAll();
             }), System.Windows.Threading.DispatcherPriority.Background);
             e.Handled = true;
         }
@@ -435,13 +440,32 @@ public partial class MainWindow : Window
             DragDrop.DoDragDrop(element, new DataObject(typeof(BuffCatalogEntryViewModel), entry), DragDropEffects.Copy);
     }
 
+    // H4-04 (cuarta auditoria de Opus, Fable): gemelo real de OnItemSlotDragOver - solo hace
+    // falta comprobar el origen "Libreria de buffs" (un buff duplicado real, ver
+    // WouldRejectPlacingBuff), nunca el intercambio entre dos slots (SwapWith nunca puede crear
+    // un duplicado - cada buff se queda en un unico slot antes y despues).
+    private void OnBuffSlotDragOver(object sender, DragEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: BuffSlotViewModel targetSlot }) return;
+
+        bool accepted = !(e.Data.GetDataPresent(typeof(BuffCatalogEntryViewModel))
+            && e.Data.GetData(typeof(BuffCatalogEntryViewModel)) is BuffCatalogEntryViewModel libraryEntry
+            && targetSlot.WouldRejectPlacingBuff(libraryEntry.Id));
+
+        e.Effects = accepted ? DragDropEffects.Move : DragDropEffects.None;
+        e.Handled = true;
+    }
+
     private void OnBuffSlotDrop(object sender, DragEventArgs e)
     {
         if (sender is not FrameworkElement { DataContext: BuffSlotViewModel targetSlot }) return;
 
         if (e.Data.GetDataPresent(typeof(BuffCatalogEntryViewModel)) && e.Data.GetData(typeof(BuffCatalogEntryViewModel)) is BuffCatalogEntryViewModel libraryEntry)
         {
-            targetSlot.PlaceBuff(libraryEntry.Id);
+            // H4-04: si se rechaza (duplicado real), seleccionar el slot destino - el aviso
+            // real (RejectionMessage, ya puesto por PlaceBuff) queda a la vista en el panel
+            // "Editar buff seleccionado" en vez de perderse sin que se note nada.
+            if (!targetSlot.PlaceBuff(libraryEntry.Id)) _viewModel.SelectBuffSlot(targetSlot);
         }
         else if (e.Data.GetDataPresent(typeof(BuffSlotViewModel)) && e.Data.GetData(typeof(BuffSlotViewModel)) is BuffSlotViewModel sourceSlot
                  && !ReferenceEquals(sourceSlot, targetSlot))

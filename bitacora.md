@@ -5637,3 +5637,121 @@ tanda (esta tanda no toco HomeViewModel/RefreshAsync).
 Los 18 hallazgos (H3-01 a H3-18) estan cerrados: 17 con arreglo real, test, arnes y commit
 (Tandas 1-3), y H3-07 flagueado explicitamente al usuario como decision de contenido pendiente
 (ver arriba) - pedido cumplido en su totalidad ("aplica toda la ronda de fable sin descansar").
+
+## Cuarta auditoria (Fable) - version final, 7 criterios de practicidad
+
+Pedido explicito del usuario: una auditoria FINAL, dedicando el tiempo que hiciera falta,
+ceñida SOLO a 7 criterios reales (no una auditoria generica): (1) maxima practicidad, (2) todo
+al alcance de la mano - nada escondido tras clics/paneles/scroll innecesario, (3) todo visible
+"de golpe", (4) armonia real en cualquier tamaño de ventana, (5) muy interactivo/reactivo -
+feedback vivo, (6) muy simetrico y limpio, visual Y de codigo, (7) estetica moderna pero
+minimalista. 13 hallazgos nuevos (H4-01 a H4-13), ninguno repetido de las 3 rondas anteriores
+(la propia auditoria leyo bitacora.md entera antes de empezar). Informe completo publicado
+como Artifact por el propio Fable, en español (la tercera auditoria se habia colado en ingles,
+corregido explicitamente esta vez).
+
+### Tanda 1 (H4-01, H4-03, H4-09, H4-12, las 4 menudencias de H4-13)
+
+**H4-01 (Alta), "el buscador de la Libreria colapsa a un cuadradito de ~30px vacio"**: los 3
+buscadores gemelos (Libreria/Libreria de buffs/Investigacion) llevaban `MaxWidth="360"
+HorizontalAlignment="Left"` - Left fuerza a WPF a medir al CONTENIDO en vez de estirar al
+DockPanel (comportamiento por omision), asi que vacios colapsaban a ~30px y crecian letra a
+letra al escribir - el control mas usado de la app (buscar entre ~8.200 objetos) casi invisible.
+Arreglado quitando Left (el DockPanel ya estira por omision, MaxWidth solo pone un techo).
+Añadido de paso un marcador de posicion real ("Buscar...", `Grid` con `TextBlock` superpuesto +
+nuevo `EmptyToVisibleConverter`) para reconocerlos de un vistazo sin esperar a escribir.
+
+**H4-03, "la tarjeta Libreria de Inicio aterriza con la Libreria plegada"**: `GoToTab
+("Libreria")` cambiaba de pestaña pero nunca ponia `IsLibraryCollapsed=false` - Ctrl+F si lo
+hacia, dos caminos al mismo sitio con resultado distinto. Arreglado en el propio `GoToTab` (el
+mismo comando que usa Ctrl+F, evita que puedan volver a divergir).
+
+**H4-09, "el parrafo de Inicio queda descentrado"**: mismo defecto real ya corregido en
+Desbloqueos/Version (D-a) - `MaxWidth` sin `HorizontalAlignment="Left"` deja el TextBlock en
+Stretch, que WPF centra cuando el contenido (acotado por MaxWidth) es mas estrecho que el
+contenedor. Añadido `HorizontalAlignment="Left"`.
+
+**H4-12, "el banner de error aparece en seco, el de exito entra animado"**: copiado el mismo
+`Storyboard`/`ScaleTransform` real del banner verde de guardado al banner rojo de error (el
+aviso que MAS conviene que no aparezca de golpe).
+
+**H4-13 (menudencias)**: banner de eleccion de buffs ahora dice "Elige (o arrastra)" igual que
+su gemelo de objetos; buscador de NPCs gana tooltip (unico de los 4 sin uno); Investigacion
+gana el mismo panel `BgSecondaryBrush` que envuelve arbol+resultados en sus 2 gemelas (antes
+iba "desnudo"); y Ctrl+F pasa a ser CONTEXTUAL (`GoToContextualLibraryCommand` +
+`IsBuffsInnerTabActive` nuevos) - si la pestaña interna activa ya es Buffs, salta a SU
+Libreria, no a la de objetos - la cabecera de la Libreria de buffs gana el tooltip real que le
+faltaba, ahora que es cierto para las dos.
+
+**Bug real del propio arnes descubierto verificando esta tanda (no de produccion)**:
+`TerrasavrNative.App.Tests/Program.cs` NUNCA carga `App.xaml` (construye una `Application` en
+blanco a proposito, ver el comentario real de ese fichero) - replica a mano cada
+`StaticResource` que registra `App.xaml`. El nuevo `EmptyToVisibleConverter` se registro en
+`App.xaml` pero se olvido en esa replica manual - la app REAL nunca lo habria notado (si carga
+App.xaml de verdad), pero el arnes crasheaba con `XamlParseException` al abrir Objetos. Arreglado
+añadiendo el registro que faltaba - y sirve de ejemplo vivo de la misma clase de riesgo que
+H4-10 señala en general (codigo duplicado que puede divergir con el tiempo).
+
+12 pruebas deterministas nuevas (`CuartaAuditoriaTanda1Tests.cs`, 4 - H4-03/H4-13 contextual).
+`dotnet test` 274/274 en verde, arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION tras el arreglo
+del registro que faltaba.
+
+### Tanda 2 (H4-02, H4-04, H4-05, H4-06, H4-11)
+
+**H4-11, "el selector de version usa otro lenguaje visual"**: pintaba `Background`/`FontWeight`
+a mano en un `Style` inline en vez de la misma pildora (`Tag="Accent"` sobre el `Button` base)
+que usa el resto de selectores de la app - mismo error historico que `PrefixMetaButton` ya
+documenta (pintar a mano no anima ni tiene degradado/elevacion). Nuevo `VersionOptionButton` en
+`Theme.xaml`, mismo mecanismo real (`IsCurrent` -> `Tag`).
+
+**H4-04, "arrastrar un buff duplicado se rechaza en silencio total"**: a los slots de Buffs les
+faltaba el `DragOver` real que Objetos ya tiene (cursor de prohibido del sistema MIENTRAS se
+arrastra, antes de soltar) - solo hacia falta comprobar el origen "Libreria de buffs" (un
+`SwapWith` entre dos slots nunca puede crear un duplicado). Nuevo
+`BuffSlotViewModel.WouldRejectPlacingBuff` (version sin efecto de la comprobacion real que ya
+usa `PlaceBuff`) + `OnBuffSlotDragOver` en el code-behind. Red extra: si se rechaza al soltar,
+el slot destino se selecciona para que el aviso real (`RejectionMessage`) quede a la vista en
+el panel Editar en vez de perderse sin que se note nada.
+
+**H4-05, "Vaciar contenedor destruye hasta 50 slots de un clic, sin vuelta atras"**: la unica
+accion realmente destructiva de la app, visualmente identica a sus vecinas inofensivas
+(Ordenar/Mover todo). Un dialogo modal seria friccion para el 99% de usos legitimos - en su
+lugar, `ContainerViewModel.ClearAll` guarda una instantanea real (slot ORIGINAL de cada objeto,
+no solo la lista - Deshacer restaura posiciones exactas) y ofrece `UndoClearCommand` durante 6s
+(mismo vehiculo ya usado por la confirmacion de guardado - un banner temporal, `DispatcherTimer`
+real). Editado UNA vez en `ContainerCompactTemplate` (plantilla COMPARTIDA por los 4
+contenedores reales) en vez de en las 4 cabeceras copiadas - no repite la duplicacion que H4-10
+señala en esas mismas cabeceras.
+
+**H4-06, "la rejilla de Buffs no tiene contador ni operaciones en bloque"**: `BuffContainerViewModel`
+era una clase plana sin `INotifyPropertyChanged` en absoluto - ganó el mismo `DisplayName` con
+recuento vivo (`ContainerViewModel.DisplayName`, A-c) y el mismo `ClearAll`/`UndoClear` reales
+de arriba (con `BuffSlotViewModel.RestoreExact`, nuevo - restaura id+duracion EXACTOS, a
+diferencia de `PlaceBuff`, que fija una duracion razonable para una colocacion NUEVA). Las dos
+clases se mantienen SEPARADAS a proposito (decision de diseño ya documentada en el propio
+fichero: generalizar `ContainerViewModel` seria riesgo real por cero beneficio) - mismo
+comportamiento portado, no fusion de clases.
+
+**H4-02, "Almacenes seleccionada y luego oculta en Amplio deja un contenido huerfano"**: la
+pestaña interna Equipamiento/Inventario/Almacenes nunca tenia `SelectedIndex` enlazado - al
+crecer a Amplio (`IsStorageExpanded=true`, oculta "Almacenes" para dejar sitio a la vista lado
+a lado de A-4) con esa pestaña activa, WPF se quedaba apuntando a un `TabItem` ya `Collapsed`.
+Nuevo `MainViewModel.ObjetosSubTabIndex` enlazado + `OnSizeClassChanged` mueve la seleccion a
+Inventario (1) solo si Almacenes (2) era la activa - nunca toca otra seleccion real del
+usuario, y nunca actua al ENCOGER (Almacenes vuelve a estar disponible sola).
+
+13 pruebas deterministas nuevas (`BuffContainerCounterAndUndoTests.cs`,
+`BuffDragOverRejectionTests.cs`, `StorageTabOrphanTests.cs`, `UndoClearContainerTests.cs`).
+`dotnet test` 287/287 en verde (136 Core + 151 ViewModels), arnes UIA completo sin
+NO-FOUND/FALLO/EXCEPTION. Nota aparte (observada, NO investigada a fondo - fuera del alcance de
+esta auditoria de practicidad, y no provocada por ningun cambio de esta tanda -
+`HomeViewModel.cs`/`RefreshAsync` no se tocaron): `HomeRefreshAsyncTests.
+RefreshAsyncCommand_EsAsincronoYIsScanningVuelveAFalseAlTerminar` volvio a fallar en una corrida
+COMPLETA bajo carga (segunda vez que se observa, con SINTOMAS DISTINTOS cada vez - antes un
+`Assert.True` por tiempos, esta vez `InvalidOperationException: Collection was modified` real
+dentro de `HomeViewModel.UpdateCurrentPath` al iterar `Characters` mientras algo mas lo muta) -
+siempre en verde aislado. Sugiere una condicion de carrera real en `RefreshAsync`/
+`UpdateCurrentPath` que solo se manifiesta bajo la presion de xunit corriendo en paralelo, no
+un simple flake de tiempos - merece una mirada propia en otra sesion, documentado aqui en vez
+de perseguirlo a ciegas dentro de esta ronda (regla real del proyecto: "si algo falla dos veces
+seguidas, parar y escribirlo").

@@ -455,6 +455,22 @@
              ScrollViewer via RelativeSource AncestorType (recorrido real del arbol visual - un
              ElementName aqui seria fragil, ver SlotGridPanel.cs). -->
         <DataTemplate x:Key="ContainerCompactTemplate" DataType="{x:Type vm:ContainerViewModel}">
+            <DockPanel>
+                <!-- H4-05 (cuarta auditoria de Opus, Fable): "Vaciar contenedor" no tenia
+                     confirmacion NI vuelta atras - banner temporal real (ContainerViewModel.
+                     CanUndoClear/UndoClearCommand), visible unos segundos tras vaciar. Editado
+                     UNA sola vez aqui (plantilla compartida por los 4 contenedores reales) en
+                     vez de en cada cabecera copiada - no repite la duplicacion que H4-10 ya
+                     señala en esas 4 cabeceras. -->
+                <Border DockPanel.Dock="Top" Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
+                        Visibility="{Binding CanUndoClear, Converter={StaticResource BoolToVis}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Deshacer" Command="{Binding UndoClearCommand}"
+                                Tag="Accent" Padding="8,3" FontSize="10.5" />
+                        <TextBlock Text="{Binding LastClearedCount, StringFormat='Vaciados {0} objeto(s).'}"
+                                   Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource SlotCompactTemplate}">
                     <ItemsControl.ItemsPanel>
@@ -466,7 +482,7 @@
                                  ReferenceWidth se queda en su default 0 = desactivado,
                                  comportamiento identico a como estaba. Solo tiene efecto real
                                  dentro de la fila fusionada de Equipamiento. -->
-                            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="{Binding MinCell}" MaxCell="{Binding MaxCell}" Gap="4"
+            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="{Binding MinCell}" MaxCell="{Binding MaxCell}" Gap="4"
                                                      ReferenceColumns="10"
                                                      ReferenceWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=controls:SlotRowHost}}"
                                                      AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
@@ -474,6 +490,7 @@
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>
             </ScrollViewer>
+            </DockPanel>
         </DataTemplate>
 
         <!-- Un objeto/arma/accesorio recomendado dentro de una build, ya con icono real -->
@@ -660,9 +677,13 @@
              compacta de un slot de buff - calco de SlotCompactTemplate, sin Count/estrella de
              prefijo (un buff no tiene cantidad ni prefijo). -->
         <DataTemplate x:Key="BuffSlotCompactTemplate" DataType="{x:Type vm:BuffSlotViewModel}">
+            <!-- H4-04 (cuarta auditoria de Opus, Fable): faltaba el DragOver real que su gemelo
+                 de objetos ya tiene (OnItemSlotDragOver) - arrastrar un buff YA colocado en otro
+                 slot se rechazaba en silencio total al soltar, sin ningun aviso mientras se
+                 arrastraba. -->
             <Border AllowDrop="True" ToolTipService.IsEnabled="{Binding IsNotEmpty}"
                     PreviewMouseLeftButtonDown="OnBuffSlotMouseDown" MouseMove="OnBuffSlotMouseMove"
-                    Drop="OnBuffSlotDrop">
+                    DragOver="OnBuffSlotDragOver" Drop="OnBuffSlotDrop">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding ChooseFromLibraryCommand}" />
                 </Border.InputBindings>
@@ -744,17 +765,30 @@
              ContainerCompactTemplate, misma SlotGridPanel/ReferenceColumns=10 (mismo tamaño de
              icono que el resto de rejillas de la app). -->
         <DataTemplate x:Key="BuffContainerCompactTemplate" DataType="{x:Type vm:BuffContainerViewModel}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource BuffSlotCompactTemplate}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="40" MaxCell="90" Gap="4"
-                                                     ReferenceColumns="10"
-                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-            </ScrollViewer>
+            <DockPanel>
+                <!-- H4-05/H4-06 (cuarta auditoria de Opus, Fable): mismo banner real de Deshacer
+                     ya cerrado en ContainerCompactTemplate, ver ahi el porque. -->
+                <Border DockPanel.Dock="Top" Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6"
+                        Visibility="{Binding CanUndoClear, Converter={StaticResource BoolToVis}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Deshacer" Command="{Binding UndoClearCommand}"
+                                Tag="Accent" Padding="8,3" FontSize="10.5" />
+                        <TextBlock Text="{Binding LastClearedCount, StringFormat='Vaciados {0} buff(s).'}"
+                                   Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource BuffSlotCompactTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="40" MaxCell="90" Gap="4"
+                                                         ReferenceColumns="10"
+                                                         AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
         </DataTemplate>
 
         <!-- Panel "Editar buff seleccionado" - calco reducido de ItemEditTemplate. -->
@@ -1105,7 +1139,12 @@
                             <TextBlock Text="{Binding About.Tagline}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
                         </StackPanel>
                     </StackPanel>
-                    <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,10,0,24" MaxWidth="700">
+                    <!-- H4-09 (cuarta auditoria de Opus, Fable): MaxWidth sin HorizontalAlignment
+                         explicito deja el TextBlock en Stretch por omision - un hijo Stretch mas
+                         estrecho que su contenedor por el propio MaxWidth queda CENTRADO en vez
+                         de pegado a la izquierda (mismo defecto real ya corregido en Desbloqueos
+                         y en la pestaña Versión, D-a - aqui se habia quedado sin aplicar). -->
+                    <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,10,0,24" MaxWidth="700" HorizontalAlignment="Left">
                         <Run Text="Editor de personajes de Terraria - vanilla y Calamity Mod (tModLoader) a la vez, con el mismo archivo. Edición nativa: sin Electron, sin Chromium embebido, arranque instantáneo. Carga un " />
                         <Run Text=".plr" FontStyle="Italic" />
                         <Run Text=" (con su " />
@@ -1304,7 +1343,13 @@
                                      pestañas externas, "Equipamiento" consolida los 12 sub-contenedores
                                      con su propio selector (equivalente real de app.TabEquips/Sb, ver
                                      bitacora.md "Fase D"). -->
-                                <TabControl Grid.Column="0" Style="{StaticResource InnerTabControl}" Margin="0,0,10,0">
+                                <!-- H4-02 (cuarta auditoria de Opus, Fable): "Almacenes seleccionada y luego
+                                     oculta en Amplio deja un contenido huérfano sin pestaña activa" - esta
+                                     pestaña interna (Equipamiento=0/Inventario=1/Almacenes=2) no tenia
+                                     SelectedIndex enlazado - MainViewModel.OnSizeClassChanged mueve la
+                                     seleccion a Inventario si Almacenes (ahora oculta) era la activa. -->
+                                <TabControl Grid.Column="0" Style="{StaticResource InnerTabControl}" Margin="0,0,10,0"
+                                            SelectedIndex="{Binding ObjetosSubTabIndex}">
                                     <TabItem Header="Equipamiento">
                                         <!-- Fusion con Monturas/Monedas como laterales (pregunta a Opus
                                              sobre el diseño, quinta pasada: "yo juntaría la página de
@@ -1669,7 +1714,7 @@
                                     <!-- T-H/F1: Ctrl+F ya salta aqui Y despliega esta Libreria (OnWindowKeyDown) -
                                          no se anunciaba en ningun sitio. -->
                                     <Button DockPanel.Dock="Top" Command="{Binding ToggleLibraryCollapsedCommand}"
-                                            Style="{StaticResource BarButton}" ToolTip="Ctrl+F salta aqui y enfoca el buscador"
+                                            Style="{StaticResource BarButton}" ToolTip="Ctrl+F salta aqui y enfoca el buscador (salvo si Buffs es la pestaña activa)"
                                             HorizontalContentAlignment="Stretch" Padding="8,5" Margin="0,0,0,4">
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
@@ -1718,11 +1763,25 @@
                                         </Border>
 
                                         <DockPanel Grid.Column="1">
-                                            <TextBox x:Name="LibrarySearchBox" DockPanel.Dock="Top" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                     Padding="7,5" Background="{StaticResource BgElevatedBrush}"
-                                                     Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4"
-                                                     ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id, .texto = busca en la descripción" />
+                                            <!-- H4-01 (cuarta auditoria de Opus, Fable): MaxWidth CON
+                                                 HorizontalAlignment="Left" mide al contenido (colapsaba a
+                                                 ~30px vacio, crecia letra a letra al escribir) - quitado
+                                                 Left, el DockPanel ya estira este hijo a lo ancho por
+                                                 omision (igual que el TextBlock de resumen de debajo),
+                                                 MaxWidth solo pone un techo en ventanas grandes. Marcador
+                                                 de posicion real (Grid con TextBlock superpuesto,
+                                                 IsHitTestVisible=False) para que se reconozca como
+                                                 buscador de un vistazo, sin esperar a escribir. -->
+                                            <Grid DockPanel.Dock="Top" MaxWidth="360" Margin="0,0,0,4">
+                                                <TextBox x:Name="LibrarySearchBox" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                         Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                                         Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                         FontSize="12"
+                                                         ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id, .texto = busca en la descripción" />
+                                                <TextBlock Text="Buscar..." FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
+                                                           Visibility="{Binding Library.SearchText, Converter={StaticResource EmptyToVisible}}" />
+                                            </Grid>
                                             <!-- L-b (segunda auditoria de Opus, Fable): "el aviso de 'solo validos
                                                  para el slot seleccionado' es un texto mas, facil de pasar por
                                                  alto - y ni siquiera dice CUAL slot". Pildora real y separada, con
@@ -1807,7 +1866,17 @@
 
                                 <Border Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                         Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,0,10,0">
-                                    <ContentControl Content="{Binding Buffs.Container}" ContentTemplate="{StaticResource BuffContainerCompactTemplate}" />
+                                    <DockPanel>
+                                        <!-- H4-06 (cuarta auditoria de Opus, Fable): "la rejilla de Buffs no
+                                             tiene contador ni operaciones en bloque, su gemela de objetos si" -
+                                             misma cabecera real (DisplayName con recuento vivo + Vaciar todos). -->
+                                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                            <Button DockPanel.Dock="Right" Content="Vaciar todos" Command="{Binding Buffs.Container.ClearAllCommand}"
+                                                    ToolTip="Vacía todos los slots de Buffs" Tag="Ghost" Padding="6,3" FontSize="10.5" />
+                                            <TextBlock Text="{Binding Buffs.Container.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                        </DockPanel>
+                                        <ContentControl Content="{Binding Buffs.Container}" ContentTemplate="{StaticResource BuffContainerCompactTemplate}" />
+                                    </DockPanel>
                                 </Border>
 
                                 <Border Grid.Column="1" Style="{StaticResource SidePanelCard}">
@@ -1820,8 +1889,11 @@
                                  resultados en rejilla a la derecha). -->
                             <Border Grid.Row="1" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8">
                                 <DockPanel>
+                                    <!-- H4-13 (cuarta auditoria de Opus, Fable): faltaba el tooltip real que su
+                                         gemela de objetos SI anuncia - ahora tambien cierto aqui (Ctrl+F es
+                                         contextual, ver GoToContextualLibraryCommand). -->
                                     <Button DockPanel.Dock="Top" Command="{Binding ToggleBuffLibraryCollapsedCommand}"
-                                            Style="{StaticResource BarButton}"
+                                            Style="{StaticResource BarButton}" ToolTip="Ctrl+F salta aqui y enfoca el buscador (si Buffs es la pestaña activa)"
                                             HorizontalContentAlignment="Stretch" Padding="8,5" Margin="0,0,0,4">
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
@@ -1845,7 +1917,10 @@
                                         <DockPanel>
                                             <Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding BuffLibrary.CancelPickCommand}"
                                                     Tag="Ghost" Foreground="{StaticResource BgPrimaryBrush}" Padding="6,2" ToolTip="Esc" />
-                                            <TextBlock Text="Elige un buff para colocarlo en el slot seleccionado..."
+                                            <!-- H4-13 (cuarta auditoria de Opus, Fable): faltaba "(o arrastra)" -
+                                                 arrastrar buffs desde esta Libreria funciona desde la quinta
+                                                 pasada, pero el aviso no lo mencionaba (su gemelo de objetos si). -->
+                                            <TextBlock Text="Elige (o arrastra) un buff para colocarlo en el slot seleccionado..."
                                                        Foreground="{StaticResource BgPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" FontSize="11.5" />
                                         </DockPanel>
                                     </Border>
@@ -1870,11 +1945,17 @@
                                         </Border>
 
                                         <DockPanel Grid.Column="1">
-                                            <TextBox DockPanel.Dock="Top" Text="{Binding BuffLibrary.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                     Padding="7,5" Background="{StaticResource BgElevatedBrush}"
-                                                     Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                     MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4"
-                                                     ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id, .texto = busca en la descripción" />
+                                            <!-- H4-01: mismo arreglo real que la Libreria de objetos, ver ahi el porque. -->
+                                            <Grid DockPanel.Dock="Top" MaxWidth="360" Margin="0,0,0,4">
+                                                <TextBox x:Name="BuffLibrarySearchBox" Text="{Binding BuffLibrary.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                         Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                                         Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                         FontSize="12"
+                                                         ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id, .texto = busca en la descripción" />
+                                                <TextBlock Text="Buscar..." FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
+                                                           Visibility="{Binding BuffLibrary.SearchText, Converter={StaticResource EmptyToVisible}}" />
+                                            </Grid>
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding BuffLibrary.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
                                             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                                 <ItemsControl ItemsSource="{Binding BuffLibrary.Results}" ItemTemplate="{StaticResource BuffLibraryCardTemplate}">
@@ -1910,6 +1991,11 @@
                             </Border>
                             <Button DockPanel.Dock="Top" Content="Investigar todo" Tag="Accent"
                                     Command="{Binding ResearchAllCommand}" HorizontalAlignment="Left" Margin="0,0,0,10" />
+                            <!-- H4-13 (cuarta auditoria de Opus, Fable): el mismo bloque real
+                                 "arbol+resultados" va envuelto en BgSecondaryBrush en Libreria y
+                                 Libreria de buffs, pero aqui iba desnudo sobre el fondo primario -
+                                 mismo componente, dos tratamientos distintos sin motivo real. -->
+                            <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="8">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="210" />
@@ -1933,11 +2019,17 @@
                                     <!-- R-e (segunda auditoria de Opus, Fable): "sin buscador -
                                          Libreria y Libreria de buffs si lo tienen... asimetria
                                          pura". Misma gramatica real (LibrarySearchGrammar, L-a). -->
-                                    <TextBox DockPanel.Dock="Top" Text="{Binding Research.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                             Padding="7,5" Background="{StaticResource BgElevatedBrush}"
-                                             Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                             MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4"
-                                             ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id (busca solo entre lo ya investigado)" />
+                                    <!-- H4-01: mismo arreglo real que la Libreria de objetos, ver ahi el porque. -->
+                                    <Grid DockPanel.Dock="Top" MaxWidth="360" Margin="0,0,0,4">
+                                        <TextBox Text="{Binding Research.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                                 Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                 FontSize="12"
+                                                 ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id (busca solo entre lo ya investigado)" />
+                                        <TextBlock Text="Buscar..." FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                   Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
+                                                   Visibility="{Binding Research.SearchText, Converter={StaticResource EmptyToVisible}}" />
+                                    </Grid>
                                     <TextBlock DockPanel.Dock="Top" Text="{Binding Research.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding Research.Results}">
@@ -1975,6 +2067,7 @@
                                     </ScrollViewer>
                                 </DockPanel>
                             </Grid>
+                            </Border>
                         </DockPanel>
                     </TabItem>
                     <TabItem Header="Apariencia">
@@ -2369,21 +2462,13 @@
                                                             <!-- V-a (segunda auditoria de Opus, Fable): mismo patron real ya usado en la
                                                                  rejilla de prefijos (D-6, IsCurrent) - antes ningun boton de version
                                                                  indicaba cual era la YA puesta, habia que leer el numero en crudo de al
-                                                                 lado y hacer la cuenta a mano. -->
-                                                            <Button Content="{Binding Label}" Margin="0,0,6,6" Padding="8,4"
+                                                                 lado y hacer la cuenta a mano.
+                                                                 H4-11 (cuarta auditoria de Opus, Fable): "otro lenguaje visual que el
+                                                                 resto de selectores" - pintaba Background/FontWeight a mano en vez de
+                                                                 usar la misma pildora con Tag="Accent" que el resto de la app. -->
+                                                            <Button Content="{Binding Label}" Style="{StaticResource VersionOptionButton}"
                                                                     Command="{Binding DataContext.VersionEditor.SetVersionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                    CommandParameter="{Binding Number}">
-                                                                <Button.Style>
-                                                                    <Style TargetType="Button">
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                                                <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                                                                <Setter Property="FontWeight" Value="SemiBold" />
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </Button.Style>
-                                                            </Button>
+                                                                    CommandParameter="{Binding Number}" />
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
@@ -2639,10 +2724,15 @@
 
                     <DockPanel Grid.Column="1">
                         <TextBlock DockPanel.Dock="Top" Text="NPCs de pueblo" Style="{StaticResource SectionText}" Margin="0,0,0,8" />
+                        <!-- H4-13 (cuarta auditoria de Opus, Fable): unico buscador de los 4 sin
+                             tooltip - correcto que no use la gramatica de LibrarySearchGrammar
+                             (filtra una lista corta por nombre), pero quien viene de los otros 3
+                             no lo sabe sin probarlo. -->
                         <TextBox DockPanel.Dock="Top" Text="{Binding Exploration.NpcSearchText, UpdateSourceTrigger=PropertyChanged}"
                                  Padding="7,5" Background="{StaticResource BgElevatedBrush}"
                                  Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                 FontSize="12" Margin="0,0,0,10" />
+                                 FontSize="12" Margin="0,0,0,10"
+                                 ToolTip="Filtra por nombre - no admite la gramática de los otros buscadores (#id, comas, etc.)" />
 
                         <!-- X-f (segunda auditoria de Opus, Fable): "'NPCs que faltan' deberia
                              empezar colapsado" - un mundo real recien empezado puede tener 13+
@@ -2773,11 +2863,37 @@
              fallido) - los exitos efimeros siguen siendo solo el banner verde de arriba, StatusMessage
              se queda para el detalle informativo dentro de Personaje. Se cierra sola en el siguiente
              exito real, o a mano con el boton "✕". -->
+        <!-- H4-12 (cuarta auditoria de Opus, Fable): este banner aparecia en seco (un salto de
+             Collapsed a Visible sin transicion) mientras su gemelo verde de arriba entra con una
+             animacion real - justo el aviso que MAS conviene que no aparezca "de golpe", al
+             reves de como estaba. Mismo Storyboard/RenderTransform real que el banner verde,
+             solo cambia el disparador (GlobalErrorMessage no vacio en vez de un bool). -->
         <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" MaxWidth="520"
                 Background="{StaticResource CalamityBrush}" CornerRadius="10" Padding="18,10"
                 Effect="{StaticResource CardShadow}"
                 Visibility="{Binding GlobalErrorMessage, Converter={StaticResource EmptyToCollapsed}}"
-                Panel.ZIndex="99">
+                RenderTransformOrigin="0.5,0.5" Panel.ZIndex="99">
+            <Border.RenderTransform>
+                <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
+            </Border.RenderTransform>
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Opacity" Value="0" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding GlobalErrorMessage, Converter={StaticResource EmptyToCollapsed}}" Value="Visible">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" />
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.18" />
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.18" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="&#9888;" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
                 <TextBlock Text="{Binding GlobalErrorMessage}" FontSize="13.5" Foreground="White" VerticalAlignment="Center"

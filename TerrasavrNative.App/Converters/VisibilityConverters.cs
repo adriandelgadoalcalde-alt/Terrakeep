@@ -63,6 +63,18 @@ public sealed class EmptyToCollapsedConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+// H4-01 (cuarta auditoria de Opus, Fable): inverso de EmptyToCollapsedConverter - para el
+// marcador de posicion ("Buscar...") superpuesto de los 3 buscadores reales (Libreria/Libreria
+// de buffs/Investigacion), visible SOLO mientras el cuadro esta vacio.
+public sealed class EmptyToVisibleConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        string.IsNullOrWhiteSpace(value as string) ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 public sealed class CountToVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>

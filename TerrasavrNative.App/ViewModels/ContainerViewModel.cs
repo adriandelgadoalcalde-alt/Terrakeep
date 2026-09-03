@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.Core.Model;
@@ -30,6 +31,7 @@ public sealed partial class ContainerViewModel : ObservableObject
         Slots = slots;
         foreach (var slot in slots)
             slot.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ItemSlotViewModel.IsEmpty)) OnPropertyChanged(nameof(DisplayName)); };
+        _undoClearTimer.Tick += OnUndoClearTimerTick;
     }
 
     // Nº de columnas reales de la cuadricula compacta (SlotGridPanel, ver
@@ -64,14 +66,57 @@ public sealed partial class ContainerViewModel : ObservableObject
     // columna, no el bloque protagonista de la pantalla.
     public double MaxCell { get; init; } = 90;
 
+    // H4-05 (cuarta auditoria de Opus, Fable): "Vaciar contenedor" destruye hasta 50 slots de un
+    // clic, visualmente identico a sus vecinos inofensivos (Ordenar/Mover todo), sin
+    // confirmacion NI vuelta atras - la unica accion de la app donde un desliz real cuesta
+    // trabajo irrecuperable. Un dialogo modal seria friccion para el 99% de usos legitimos
+    // (vaciar antes de reorganizar) - mejor "Deshacer" real durante unos segundos, mismo
+    // vehiculo (banner temporal) que ya usa la confirmacion de guardado
+    // (MainViewModel.SaveConfirmationVisible). El snapshot guarda el SLOT ORIGINAL de cada
+    // objeto (no solo la lista) para que Deshacer restaure posiciones exactas, no un
+    // reempaquetado nuevo.
+    private (int SlotIndex, GameItem Item)[]? _clearedSnapshot;
+    private readonly DispatcherTimer _undoClearTimer = new() { Interval = TimeSpan.FromSeconds(6) };
+
+    [ObservableProperty] private bool _canUndoClear;
+    [ObservableProperty] private int _lastClearedCount;
+
     // A-d (segunda auditoria de Opus, Fable): "operaciones en bloque - ordenar, vaciar
     // contenedor, mover todo al banco" - ninguna de las 3 existia, solo el "Vaciar slot"
     // individual de siempre.
     [RelayCommand]
     private void ClearAll()
     {
+        var snapshot = Slots.Select((s, i) => (SlotIndex: i, s.Item))
+            .Where(t => !t.Item.IsEmpty).ToArray();
+        if (snapshot.Length == 0) return;
+
         foreach (var slot in Slots)
             if (!slot.IsEmpty) slot.ClearCommand.Execute(null);
+
+        _clearedSnapshot = snapshot;
+        LastClearedCount = snapshot.Length;
+        CanUndoClear = true;
+        _undoClearTimer.Stop();
+        _undoClearTimer.Start();
+    }
+
+    [RelayCommand]
+    private void UndoClear()
+    {
+        if (_clearedSnapshot == null) return;
+        foreach (var (slotIndex, item) in _clearedSnapshot)
+            if (slotIndex < Slots.Count) Slots[slotIndex].UpdateFrom(item);
+        _clearedSnapshot = null;
+        CanUndoClear = false;
+        _undoClearTimer.Stop();
+    }
+
+    private void OnUndoClearTimerTick(object? sender, EventArgs e)
+    {
+        _undoClearTimer.Stop();
+        _clearedSnapshot = null;
+        CanUndoClear = false;
     }
 
     // Player.inventory[0..9] real (Terraria.UI.ItemSorting.SortInventory decompilado -

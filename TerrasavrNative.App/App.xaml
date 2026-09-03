@@ -12,6 +12,7 @@
             <conv:NullToVisibilityConverter x:Key="NullToVis" />
             <conv:NullToCollapsedConverter x:Key="NullToCollapsed" />
             <conv:EmptyToCollapsedConverter x:Key="EmptyToCollapsed" />
+            <conv:EmptyToVisibleConverter x:Key="EmptyToVisible" />
             <conv:CountToVisibilityConverter x:Key="CountToVis" />
             <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
             <conv:BoolToGridLengthConverter x:Key="BoolToGridLength" />

@@ -1038,6 +1038,25 @@
         </Style.Triggers>
     </Style>
 
+    <!-- H4-11 (cuarta auditoria de Opus, Fable): "el selector de versión usa otro lenguaje
+         visual que el resto de selectores" - los botones de VersionOption pintaban Background/
+         FontWeight a mano en un Style inline en MainWindow.xaml (el mismo error historico que
+         PrefixMetaButton ya documenta arriba: pintar a mano no anima ni tiene degradado/
+         elevacion). Mismo mecanismo real que PrefixMetaButton - solo cambia el nombre de la
+         propiedad de origen (IsCurrent en vez de IsSelected, VersionOption no comparte tipo con
+         PrefixMetaButtonViewModel). -->
+    <Style x:Key="VersionOptionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Padding" Value="9,4" />
+        <Setter Property="Margin" Value="0,0,5,5" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                <Setter Property="Tag" Value="Accent" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- Tarjeta de navegacion clicable (pagina de Inicio) - anima de verdad al pasar el raton
          (antes solo cambiaba el color al instante): sube 3px, la sombra crece, el borde se
          tiñe del color de acento QUE SE LE PASE (Tag) - permite reproducir la variedad de
