@@ -35,7 +35,12 @@ public sealed class CharacterFileService
     public VanillaPrefixCatalog VanillaPrefixCatalog { get; }
     public BuildsCatalog VanillaBuilds { get; }
     public BuildsCatalog CalamityBuilds { get; }
-    public WhatsNewCatalog WhatsNew { get; }
+    // Pedido explicito del usuario (2-sep-2026): "dos pestañas, una con las novedades de
+    // Terraria vanilla y otra de tModLoader y Calamity Mod" - dos ficheros REALES separados en
+    // vez de uno mezclado (whats_new.json, ya retirado), cada uno con su propio ritmo de
+    // version.
+    public WhatsNewCatalog WhatsNewVanilla { get; }
+    public WhatsNewCatalog WhatsNewCalamity { get; }
     public ChangelogCatalog Changelog { get; }
     public MapColorCatalog MapColors { get; }
     public TileNameCatalog TileNames { get; }
@@ -75,7 +80,8 @@ public sealed class CharacterFileService
         VanillaPrefixCatalog = VanillaPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "prefixes.json"));
         VanillaBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds.json"));
         CalamityBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds_calamity.json"));
-        WhatsNew = WhatsNewCatalog.LoadFromFile(Path.Combine(assetsDir, "whats_new.json"));
+        WhatsNewVanilla = WhatsNewCatalog.LoadFromFile(Path.Combine(assetsDir, "whats_new_vanilla.json"));
+        WhatsNewCalamity = WhatsNewCatalog.LoadFromFile(Path.Combine(assetsDir, "whats_new_calamity.json"));
         Changelog = ChangelogCatalog.LoadFromFile(Path.Combine(assetsDir, "changelog.json"));
         MapColors = MapColorCatalog.LoadFromFile(Path.Combine(assetsDir, "map_colors.json"));
         TileNames = TileNameCatalog.LoadFromFile(Path.Combine(assetsDir, "tile_names.json"));

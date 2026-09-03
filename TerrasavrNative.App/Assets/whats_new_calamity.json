@@ -1,0 +1,106 @@
+[
+	{
+		"version": "2.2.4 \"Maintenance's Harbinger\"",
+		"date_es": "9 de agosto de 2026",
+		"date_en": "August 9, 2026",
+		"note_es": "Parche de un solo arreglo, publicado el mismo día que 2.2.3.",
+		"note_en": "Single-fix patch, released the same day as 2.2.3.",
+		"items": [],
+		"changes": [],
+		"bugfixes": [
+			{ "es": "Corregida una condición de carrera real en el combate contra Providence, la Diosa Profanada, donde demasiados proyectiles causaban un segundo cuelgue por referencia nula.", "en": "Fixed a race condition during Providence, the Profaned Goddess' fight where too many projectiles caused a second null reference crash." }
+		]
+	},
+	{
+		"version": "2.2.3 \"Final Fix\"",
+		"date_es": "9 de agosto de 2026",
+		"date_en": "August 9, 2026",
+		"note_es": "Parche de un solo arreglo.",
+		"note_en": "Single-fix patch.",
+		"items": [],
+		"changes": [],
+		"bugfixes": [
+			{ "es": "Corregida una excepción real de referencia nula al dibujar las estrellas del capullo de Providence en servidores multijugador.", "en": "Fixed a null reference exception from Providence drawing cocoon stars on multiplayer servers." }
+		]
+	},
+	{
+		"version": "2.2.2 \"Horrible Hogfix Macho\"",
+		"date_es": "8 de agosto de 2026",
+		"date_en": "August 8, 2026",
+		"note_es": "Objetos nuevos, sistema de atajos de teclado para accesorios con habilidad activa, y más de 60 correcciones reales.",
+		"note_en": "New items, hotkey system for accessories with active abilities, and 60+ real bug fixes.",
+		"items": [
+			{ "key": "ThePact", "en": "The Pact", "es": "El pacto" },
+			{ "key": "TiredTail", "en": "Tired Tail", "es": "Cola cansada" }
+		],
+		"changes": [
+			{ "es": "Nuevo sistema genérico de atajo de teclado con hasta 7 accesorios con habilidad activa a la vez (antes cada uno usaba su propio control único).", "en": "New generic ability hotkey system supporting up to 7 accessories with active abilities at once (before, each one used its own unique control)." },
+			{ "es": "El Cerebro de Cthulhu entra en su segunda fase al 70% de vida en vez de al 50%.", "en": "Brain of Cthulhu now enters its second phase at 70% health instead of 50%." },
+			{ "es": "Reequilibrio extenso de armas en todas las clases de daño, con subidas y bajadas de daño.", "en": "Extensive weapon rebalancing across all weapon classes, with both buffs and nerfs." },
+			{ "es": "El Cráter de Azufre ahora genera un Pilón de Cráteres roto de verdad, que se puede minar y reemplazar.", "en": "Brimstone Crag now generates a broken Crags Pylon which can be mined and replaced." },
+			{ "es": "Reelaboración general de recetas de crafteo para que sean más consistentes - la mayoría de objetos basados en minerales necesitan cantidades ajustadas.", "en": "Comprehensive overhaul of crafting recipes for consistency, with most ore-based items requiring adjusted quantities." },
+			{ "es": "Nueva opción de configuración real para desactivar sonidos potencialmente molestos.", "en": "New configuration option for disabling potentially triggering audio." },
+			{ "es": "Quitados el Bastón de cieno carmesí y su buff asociado; varias opciones de configuración y atajos de teclado se consolidaron en el nuevo sistema.", "en": "Crimslime Staff and related buff removed; multiple configuration options eliminated, several game control hotkeys consolidated into the new system." }
+		],
+		"bugfixes": [
+			{ "es": "Corregidos más de 60 problemas reales, incluidos desincronizaciones de la IA de ciertos enemigos, textos de información incorrectos en numerosos objetos, fallos visuales en el modo de gravedad invertida, y problemas reales de fotogramas de inmunidad/escalado de daño.", "en": "Resolved 60+ issues including desyncing problems with specific enemy AI, incorrect tooltip information across numerous items, visual glitches in reverse gravity mode, and immunity frame/damage scaling issues." }
+		]
+	},
+	{
+		"version": "2.2.1 \"Horrible Hogfix\"",
+		"date_es": "13 de junio de 2026",
+		"date_en": "June 13, 2026",
+		"note_es": "Reequilibrio real de jefes/armas y 11 correcciones, dos días después de 2.2.0.",
+		"note_en": "Real boss/weapon rebalancing and 11 fixes, two days after 2.2.0.",
+		"items": [],
+		"changes": [
+			{ "es": "El Devorador de Mundos ahora recibe un 45% de daño real del Granada de limón en vez de un 60%.", "en": "Eater of Worlds now takes 45% damage from Lemon 'nade instead of 60%." },
+			{ "es": "Daño de la Ráfaga de tormenta de polvo en botella subido de 85 a 110.", "en": "Duststorm in a Bottle damage buffed from 85 to 110." },
+			{ "es": "Daño de la Caída del eclipse bajado de 1000 a 700.", "en": "Eclipse's Fall damage nerfed from 1000 to 700." },
+			{ "es": "Daño del Matador de elefantes subido de 120 a 135.", "en": "Elephant Killer damage buffed from 120 to 135." },
+			{ "es": "Daño del Viejo segador bajado de 1520 a 1420, y su modificador de golpe furtivo de 65% a 50%.", "en": "The Old Reaper damage nerfed from 1520 to 1420, stealth strike modifier from 65% to 50%." },
+			{ "es": "Daño de la Singularidad sellada bajado de 260 a 220, con menos penalización por golpes consecutivos.", "en": "Sealed Singularity damage nerfed from 260 to 220, with reduced consecutive hit penalty." },
+			{ "es": "Daño de la Lanza de paleolítico bajado de 90 a 70, los fragmentos de fósil por lanzamiento se reducen a 2.", "en": "Spear of Paleolith damage nerfed from 90 to 70, fossil shards reduced to 2 per throw." },
+			{ "es": "Daño por segundo de la Llamasombra contra enemigos bajado de 30 a 20.", "en": "Shadowflame damage per second against enemies nerfed from 30 to 20." },
+			{ "es": "El Cerdo dorado ya puede aparecer en el Analizador de formas de vida.", "en": "Gold Piggy can now appear on the Lifeform Analyzer." },
+			{ "es": "El Cerdo del pueblo ahora es vulnerable a los debuffs de frío, calor y enfermedad.", "en": "Town Piggy is now vulnerable to cold, heat, and sickness debuffs." },
+			{ "es": "La Comida de calidad ya no se transforma en Ambrosía al brillar con Shimmer.", "en": "Quality Slop no longer shimmers into Ambrosia." }
+		],
+		"bugfixes": [
+			{ "es": "Corregido el texto del debuff Criofobia, que no mencionaba Congelación.", "en": "Fixed Cryophobia debuff tooltip missing Frostbite." },
+			{ "es": "Corregidas actualizaciones extra de proyectiles de enemigos en Modo Muerte que no se sincronizaban en multijugador.", "en": "Fixed Death Mode enemy projectile extra updates not syncing in multiplayer." },
+			{ "es": "Corregidos problemas reales de lag con la Corona de plumas y la Corona de piedra lunar.", "en": "Fixed Feather Crown and Moonstone Crown lag issues." },
+			{ "es": "Corregido un bucle real de reducción de defensa infinita del Cubo congelado con la Reliquia de resiliencia.", "en": "Fixed Frozen Cube infinite defense reduction loop with Relic of Resilience." },
+			{ "es": "Corregido que el Elefante del Cubo congelado se quedara atascado en enemigos.", "en": "Fixed Frozen Cube Elumphant getting stuck on enemies." },
+			{ "es": "Corregido un lag severo real de El monumento.", "en": "Fixed The Monument severe lag issues." },
+			{ "es": "Corregidos píxeles sueltos reales en el sprite de la Jaula de cerdo.", "en": "Fixed Piggy Cage stray pixels in item sprite." },
+			{ "es": "Corregido que Quagmire hiciera daño excesivo con el Guante de yoyo.", "en": "Fixed Quagmire dealing excessive damage with Yoyo Glove." },
+			{ "es": "Corregida una discrepancia real en el cálculo de daño de Llamasombra.", "en": "Fixed Shadowflame damage calculation discrepancy." },
+			{ "es": "Corregido que el Taburete de resorte se pudiera usar mientras se está en una Cuerda.", "en": "Fixed Spring Stool usable while on Rope." },
+			{ "es": "Corregido un sigilo infinito real causado por bonificaciones genéricas de velocidad de ataque.", "en": "Fixed infinite stealth caused by generic attack speed boosts." }
+		]
+	},
+	{
+		"version": "2.2.0 \"Hog Wild\"",
+		"date_es": "11 de junio de 2026",
+		"date_en": "June 11, 2026",
+		"note_es": "Última actualización real de contenido de Calamity Mod - tras esta versión, el desarrollo del mod cesó. Objetos/NPCs nuevos alrededor del Vendedor sombrío, reequilibrio de 24 jefes y de las clases de daño.",
+		"note_en": "Final real content update for Calamity Mod - development ceased after this version. New items/NPCs around the Shady Salesman, rebalancing of 24 bosses and damage classes.",
+		"items": [
+			{ "key": "LemonNade", "en": "Lemon 'nade", "es": "Granada de limón" },
+			{ "key": "ElephantKiller", "en": "Elephant Killer", "es": "Matador de elefantes" }
+		],
+		"changes": [
+			{ "es": "Nuevos NPCs reales: Vendedor sombrío, Cerdo dorado, Cerdo horrible, Cerdo Divino, Cerdo del pueblo.", "en": "New real NPCs: Shady Salesman, Gold Piggy, Horrible Hog, Divine Swine, Town Piggy." },
+			{ "es": "Todos los jefes ahora son inmunes a los debuffs de ralentización; reequilibrio real de daño y vida en 24 jefes, incluidos el Cerebro de Cthulhu, Criógeno, Devorador de Dioses y la Suprema Bruja Calamitas.", "en": "All bosses now immune to slowing debuffs; damage and health rebalancing across 24 bosses including Brain of Cthulhu, Cryogen, Devourer of Gods, and Supreme Witch, Calamitas." },
+			{ "es": "Más de 50 enemigos recuperan el daño real por contacto; varios ahora infligen el nuevo debuff Enfriado por viento.", "en": "50+ enemies restored contact damage; several now inflict the new Wind Chilled debuff." },
+			{ "es": "Nerfeo real y significativo de fuentes de regeneración de vida, mecánicas de robo de vida y bonificaciones de defensa en armaduras y accesorios.", "en": "Significant nerfs to life regeneration sources, lifesteal mechanics, and defense boosts across armor and accessories." },
+			{ "es": "Reequilibrio extenso de la clase Mago: subida real del coste de maná de muchas armas mágicas, con varios ajustes de daño.", "en": "Extensive mage class rebalancing: extensive mana cost increases for magic weapons, with many damage adjustments." },
+			{ "es": "Añadida la exención real de resistencia a perforación en varias armas; numerosos ajustes de daño y tiempo de uso en todas las clases.", "en": "Pierce resist exemptions added; numerous damage and use time adjustments across all weapon classes." },
+			{ "es": "Nueva rareza real \"Nivel 18\".", "en": "Added Rarity Level: 18 rarity." },
+			{ "es": "Nuevos prefijos reales \"Amistoso\" y \"Horrible\".", "en": "Added Friendly and Horrible prefixes." },
+			{ "es": "Nueva opción de configuración real para quitar imágenes potencialmente perturbadoras.", "en": "New configuration option: Remove Potentially Disturbing Imagery." }
+		],
+		"bugfixes": []
+	}
+]

@@ -5912,6 +5912,59 @@ basto, WPF nunca restaura una ventana Maximized a Normal solo por asignarle un t
 `dotnet test` 306/306 en verde (138 Core + 168 ViewModels), arnes UIA completo sin
 NO-FOUND/FALLO/EXCEPTION tras el arreglo.
 
+### H3-07 (tercera auditoria) - cerrado de verdad, con investigacion real que corrige una suposicion anterior
+
+Pedido explicito del usuario: decidir H3-07 (Novedades con contenido "de ejemplo/demo
+presentado como real", flagueado como decision de CONTENIDO desde la tercera auditoria y NUNCA
+verificado contra ninguna fuente real hasta ahora). El propio usuario aporto un dato real que
+desmonto la suposicion de partida: la version 1.4.5.8 SI es una version real de Terraria
+vanilla, no ficticia como se habia asumido sin comprobar (ver tambien el comentario desactualizado
+que arrastraba `WhatsNewIconTests.cs`, corregido de paso).
+
+**Investigacion real (WebSearch/WebFetch contra las wikis OFICIALES, terraria.wiki.gg y
+calamitymod.wiki.gg - nunca fuentes de baja fiabilidad como "changelog.gg" o repos de GitHub
+con nombres tipo "Cheat Menu Executor", descartadas a proposito por ser señales claras de
+contenido no fiable/spam)**: confirmado que TODO el contenido de `whats_new.json` (las 2
+versiones de Terraria vanilla, 1.4.5.7/1.4.5.8, incluido el "crossover" con Palworld -
+"Melocotón del vínculo"/"Chillet confiable" SI son objetos reales de esa actualizacion real) es
+autentico, palabra por palabra contra la fuente oficial - la fecha "agosto de 2026" coincidia
+con la fecha real de esta sesion, no era una version futura inventada. El fallo real no era el
+contenido en si (que ya era honesto), sino que (1) nunca se habia verificado contra una fuente
+real antes de asumir que lo era o no, y (2) le faltaba el registro real de tModLoader/Calamity
+Mod - el usuario pidio explicitamente separarlo en 2 pestañas. Alcance acotado por el propio
+usuario via pregunta directa (AskUserQuestion): solo las versiones RECIENTES (no el historial
+completo de 15 años de Terraria), confirmado con las 5 ultimas versiones reales de Calamity Mod
+(2.2.0 "Hog Wild" - la ultima actualizacion real de CONTENIDO, tras la cual el desarrollo del
+mod ceso - hasta 2.2.4 "Maintenance's Harbinger", el parche mas reciente).
+
+**Cambios reales**:
+- `whats_new.json` (mezclaba las 2 cosas) retirado, sustituido por `whats_new_vanilla.json`
+  (mismo contenido ya verificado, sin cambios) y `whats_new_calamity.json` (nuevo, las 5
+  versiones reales de Calamity Mod investigadas arriba).
+- `WhatsNewEntry`/`WhatsNewCatalog` (Core) ganan `Bugfixes` - el propio campo "bugfixes" YA
+  venia en el JSON desde siempre pero `System.Text.Json` lo ignoraba en silencio (nunca hubo
+  esa propiedad en el modelo real) - los arreglos reales de cada version nunca se mostraban.
+- `WhatsNewItemViewModel.ForCalamity`/`WhatsNewEntryViewModel.ForCalamity` (nuevos, gemelos
+  reales de `ForVanilla`) resuelven el sprite real contra `CalamityCatalog.ByModAndInternal`
+  ("CalamityMod", el unico mod real del catalogo) en vez de `VanillaItemCatalog` - "lo que no
+  se encuentra no se inventa" sigue aplicando igual: varios NPCs nuevos reales (Cerdo horrible,
+  Cerdo Divino, Vendedor sombrío...) no tienen icono todavia porque el catalogo local de
+  Calamity (extraido de una version anterior del .tmod) todavia no los conoce - honesto, no un
+  bug.
+- `WhatsNewViewModel.VanillaEntries`/`CalamityEntries` (antes una unica `Entries` mezclada) -
+  la pestaña "Novedades" pasa a tener un `TabControl` interno real con 2 sub-pestañas
+  ("Terraria"/"tModLoader / Calamity Mod"), mismo patron `InnerTabControl` ya usado en el resto
+  de la app.
+- Bloque real de "Correcciones" (bugfixes) añadido a la plantilla compartida de entrada, mismo
+  tratamiento visual que "Cambios".
+
+3 pruebas actualizadas (`WhatsNewIconTests.cs`, comentario corregido + nuevo constructor de 4
+argumentos), 2 pruebas de humo nuevas/actualizadas contra los ficheros reales
+(`BuildsAndWhatsNewRealFileTests.cs`).
+
+`dotnet test` 307/307 en verde (139 Core + 168 ViewModels), arnes UIA completo sin
+NO-FOUND/FALLO/EXCEPTION.
+
 ### Cuarta auditoria (Fable) - cierre real
 
 Los 13 hallazgos (H4-01 a H4-13) estan cerrados por completo, incluidos los 2 puntos que la
@@ -5919,4 +5972,6 @@ Tanda 3 habia dejado fuera a proposito (H4-07 punto 3 y la version completa de H
 retomados a peticion explicita del usuario en una Tanda 4, siguiendo la sugerencia literal del
 propio informe de Fable en los dos casos (citada de nuevo antes de implementar cada uno, no de
 memoria). Pedido cumplido en su totalidad. Una Tanda 5 adicional (arriba) añadio soporte
-vanilla real a los dos lanzadores, pedido tras el cierre.
+vanilla real a los dos lanzadores, pedido tras el cierre. H3-07 (tercera auditoria, la unica
+decision de contenido que quedaba pendiente de las 4 rondas) tambien cerrado de verdad (arriba),
+con investigacion real que corrigio una suposicion nunca verificada de la tercera auditoria.

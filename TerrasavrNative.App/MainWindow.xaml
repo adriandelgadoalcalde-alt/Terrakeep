@@ -605,6 +605,22 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
+                    <!-- Pedido explicito del usuario (2-sep-2026): "bugfixes" ya venia en el
+                         propio JSON pero System.Text.Json lo ignoraba en silencio - ahora se
+                         muestra igual que Changes, con su propia cabecera. -->
+                    <TextBlock Text="Correcciones" Style="{StaticResource SectionText}" Margin="0,10,0,4"
+                               Visibility="{Binding Bugfixes.Count, Converter={StaticResource CountToVis}}" />
+                    <ItemsControl ItemsSource="{Binding Bugfixes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type data:WhatsNewChange}">
+                                <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,2">
+                                    <Run Text="- " Foreground="{StaticResource AccentBrush}" />
+                                    <Run Text="{Binding DisplayText, Mode=OneWay}" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
                     <TextBlock Text="Objetos nuevos" Style="{StaticResource SectionText}" Margin="0,10,0,4"
                                Visibility="{Binding Items.Count, Converter={StaticResource CountToVis}}" />
                     <ItemsControl ItemsSource="{Binding Items}">
@@ -2582,19 +2598,35 @@
         </TabItem>
 
         <!-- ===================== NOVEDADES ===================== -->
+        <!-- Pedido explicito del usuario (2-sep-2026): "dos pestañas, una con las novedades de
+             Terraria vanilla y otra de tModLoader y Calamity Mod" - antes una unica lista
+             mezclando las dos cosas bajo la etiqueta generica "JUEGO". -->
         <TabItem Header="Novedades">
-            <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
-                <StackPanel MaxWidth="760" HorizontalAlignment="Left">
-                    <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,14">
-                        <Run Text="Esto es el registro de cambios del " />
-                        <Run Text="JUEGO" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                        <Run Text=" (Terraria y Calamity Mod) - objetos nuevos, arreglos, etc. Para ver qué ha cambiado en el propio Terrakeep, ve a " />
-                        <Run Text="«¡Sobre esta versión!»" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                        <Run Text="." />
-                    </TextBlock>
-                    <ItemsControl ItemsSource="{Binding WhatsNew.Entries}" />
-                </StackPanel>
-            </ScrollViewer>
+            <DockPanel Margin="14">
+                <TextBlock DockPanel.Dock="Top" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10">
+                    <Run Text="Registro de cambios real del " />
+                    <Run Text="JUEGO" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                    <Run Text=" - objetos nuevos, arreglos, etc. Para ver qué ha cambiado en el propio Terrakeep, ve a " />
+                    <Run Text="«¡Sobre esta versión!»" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                    <Run Text="." />
+                </TextBlock>
+                <TabControl Style="{StaticResource InnerTabControl}">
+                    <TabItem Header="Terraria">
+                        <ScrollViewer Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
+                            <StackPanel MaxWidth="760" HorizontalAlignment="Left">
+                                <ItemsControl ItemsSource="{Binding WhatsNew.VanillaEntries}" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="tModLoader / Calamity Mod">
+                        <ScrollViewer Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
+                            <StackPanel MaxWidth="760" HorizontalAlignment="Left">
+                                <ItemsControl ItemsSource="{Binding WhatsNew.CalamityEntries}" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                </TabControl>
+            </DockPanel>
         </TabItem>
 
         <!-- ===================== EXPLORACION ===================== -->

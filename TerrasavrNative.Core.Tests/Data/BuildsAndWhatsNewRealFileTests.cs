@@ -42,7 +42,10 @@ public class BuildsAndWhatsNewRealFileTests
     [Fact]
     public void RealWhatsNewJson_LoadsEntriesWithItemsAndChanges()
     {
-        string path = Path.Combine(AppAssetsDir, "whats_new.json");
+        // Pedido explicito del usuario (2-sep-2026): "dos pestañas, Terraria vanilla y
+        // tModLoader/Calamity Mod" - whats_new.json (mezclaba las dos cosas) se retiro, esta
+        // version vanilla real conserva el mismo contenido, solo cambia el fichero.
+        string path = Path.Combine(AppAssetsDir, "whats_new_vanilla.json");
         if (!File.Exists(path)) return;
 
         var catalog = WhatsNewCatalog.LoadFromFile(path);
@@ -59,5 +62,26 @@ public class BuildsAndWhatsNewRealFileTests
         var v1458 = catalog.Entries.FirstOrDefault(e => e.Version == "1.4.5.8");
         Assert.NotNull(v1458);
         Assert.NotEmpty(v1458!.Changes);
+        Assert.NotEmpty(v1458.Bugfixes); // pedido explicito del usuario: bugfixes ya no se ignora
+    }
+
+    // Pedido explicito del usuario (2-sep-2026): "dos pestañas, Terraria vanilla y tModLoader/
+    // Calamity Mod" - gemelo real del test de arriba, contra el registro real de Calamity Mod
+    // (fuente: calamitymod.wiki.gg, versiones 2.2.0-2.2.4).
+    [Fact]
+    public void RealWhatsNewCalamityJson_LoadsEntriesWithBugfixes()
+    {
+        string path = Path.Combine(AppAssetsDir, "whats_new_calamity.json");
+        if (!File.Exists(path)) return;
+
+        var catalog = WhatsNewCatalog.LoadFromFile(path);
+
+        Assert.Equal(5, catalog.Entries.Count); // 2.2.0 a 2.2.4
+        var v224 = catalog.Entries.FirstOrDefault(e => e.Version.StartsWith("2.2.4"));
+        Assert.NotNull(v224);
+        Assert.NotEmpty(v224!.Bugfixes);
+        var v220 = catalog.Entries.FirstOrDefault(e => e.Version.StartsWith("2.2.0"));
+        Assert.NotNull(v220);
+        Assert.NotEmpty(v220!.Items); // "Hog Wild" trajo objetos nuevos reales
     }
 }

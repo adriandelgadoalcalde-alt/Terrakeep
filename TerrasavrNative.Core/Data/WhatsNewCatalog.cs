@@ -31,6 +31,10 @@ public sealed class WhatsNewEntry
     [JsonPropertyName("note_en")] public string? NoteEn { get; init; }
     [JsonPropertyName("items")] public List<WhatsNewItem> Items { get; init; } = [];
     [JsonPropertyName("changes")] public List<WhatsNewChange> Changes { get; init; } = [];
+    // Pedido explicito del usuario (2-sep-2026): "bugfixes" ya venia en el propio JSON pero
+    // System.Text.Json lo ignoraba en silencio (nunca hubo esta propiedad aqui) - los arreglos
+    // reales de cada version no se mostraban nunca.
+    [JsonPropertyName("bugfixes")] public List<WhatsNewChange> Bugfixes { get; init; } = [];
 
     public string DisplayDate => DateEs ?? DateEn ?? string.Empty;
     public string DisplayNote => NoteEs ?? NoteEn ?? string.Empty;
