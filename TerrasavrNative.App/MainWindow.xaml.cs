@@ -26,8 +26,9 @@ public partial class MainWindow : Window
         // Auditoria de Opus, Bloque 4 (T-2): valor inicial real (Width ya refleja lo que
         // Apply() acaba de restaurar, fiable incluso antes de que el layout corra) - despues,
         // SizeChanged mantiene SizeClass vivo con el ancho real ya descontado el chrome.
-        _viewModel.UpdateSizeClass(Width);
-        SizeChanged += (_, e) => _viewModel.UpdateSizeClass(e.NewSize.Width);
+        // H5-08 (quinta auditoria de Opus): tambien la altura real, ver WindowHeightClass.cs.
+        _viewModel.UpdateSizeClass(Width, Height);
+        SizeChanged += (_, e) => _viewModel.UpdateSizeClass(e.NewSize.Width, e.NewSize.Height);
     }
 
     // Auditoria de Opus, N-2: "se pueden editar 40 slots, cambiar de pestaña, cerrar la app y

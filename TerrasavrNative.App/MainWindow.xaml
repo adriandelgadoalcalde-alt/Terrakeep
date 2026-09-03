@@ -1406,7 +1406,7 @@
                                 <RowDefinition Height="3*" MinHeight="216" />
                                 <RowDefinition Height="{Binding IsLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
                                                MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
-                                               MaxHeight="460" />
+                                               MaxHeight="{Binding LibraryRowMaxHeight}" />
                             </Grid.RowDefinitions>
 
                             <!-- Contenedores a la izquierda + panel "Editar" a la derecha (equivalente real
@@ -1937,7 +1937,7 @@
                                      IsBuffLibraryVisible. -->
                                 <RowDefinition Height="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
                                                MinHeight="{Binding IsBuffLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
-                                               MaxHeight="460" />
+                                               MaxHeight="{Binding LibraryRowMaxHeight}" />
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0" Margin="0,0,0,8">

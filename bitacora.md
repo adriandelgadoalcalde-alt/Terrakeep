@@ -6065,3 +6065,60 @@ NO-FOUND/FALLO/EXCEPTION. **Confirmado con datos reales, no solo sinteticos**: l
 en el doll (antes solo colores base) - los otros personajes de la captura no llevan armadura
 equipada de verdad en su guardado real, por eso se siguen viendo sin ella (correcto, fiel al
 guardado, no un fallo).
+
+### Quinta auditoria (Opus), Tanda A - H5-06 y H5-08 (3/4-sep-2026)
+
+Pedido explicito del usuario tras recibir el informe completo (14 hallazgos H5-01..H5-15,
+publicado como Artifact - aviso de seguridad del propio sistema en la notificacion de la tarea,
+"Blocked by classifier", comunicado de inmediato; el contenido en si, leido linea a linea, es
+legitimo): "si haz la auditoria". Se sigue el orden real que el propio informe sugiere (Tanda A
+"cimientos" primero, no cambia layout, habilita al resto).
+
+**H5-06 ("Favorito" de punta a punta)** - ya comiteado (`eb9be7e`): `GameItem.Favorited` viajaba
+real de punta a punta en el `.plr` pero la capa App nunca lo tocaba - sin marca visual, sin
+control, y `PlaceItem` lo borraba en silencio al reemplazar el objeto de un slot favorito.
+Cerrado el circuito completo (marca en la tarjeta y en Editar, interruptor en el menu
+contextual, `PlaceItem` lo conserva, `Sort`/`ClearAll`/`MoveAllTo` lo saltan - `Sort` y
+`MoveAllTo` con cita real del juego decompilado, `ClearAll` por consistencia propia
+documentada como tal). 8 pruebas nuevas (`FavoritedTests.cs`).
+
+**H5-08 (sistema adaptativo real - ancho Y alto)**: `UpdateSizeClass` solo miraba el ancho;
+`WindowHeightClass` (nuevo, `WindowSizeClass.cs`) añade el eje vertical real, independiente del
+horizontal - `AltoMinHeight=900` citado del propio informe de la auditoria ("un portátil de
+1440×900... el tamaño más común de uso real"). Sobrecarga de compatibilidad
+(`UpdateSizeClass(double)` sigue existiendo, delega a la de 2 argumentos con altura por debajo
+del umbral) para no tocar los 16 sitios reales que ya llamaban a la version de un argumento en
+los tests existentes - cero riesgo de regresion ahi, confirmado compilando sin tocarlos.
+
+Aplicado a las 2 "constantes ciegas" que el propio informe señala: `LibraryRowMaxHeight` (nueva
+propiedad derivada, 460 en `Bajo`/640 en `Alto`) sustituye el `MaxHeight="460"` fijo de la fila
+de Libreria en Objetos y en Buffs; `IsLibraryVisible`/`IsBuffLibraryVisible` se revelan solas
+tambien con `HeightClass.Alto`, no solo `SizeClass.Amplio` - el motivo real (Libreria y
+contenedores viven en filas apiladas, no columnas, asi que si hay sitio depende de la ALTURA).
+
+**Fuera de esta pasada, a proposito**: darle a `Normal` un comportamiento de ancho propio (2
+paneles a la vez donde hoy hay 1 - la otra mitad de H5-08) no se toco. El informe ofrecia 2
+opciones concretas (Equipamiento Armadura+Vanidad juntas, o Inventario+Almacen a 5 columnas) y
+ninguna es un cambio contenido - la primera exige que el selector de "Vista:" sepa mostrar 2
+paneles a la vez y elegir solo el 3º (interaccion nueva, no solo layout), la segunda exige que
+`ContainerViewModel.Columns` se pueda ver con un valor distinto segun el contexto visual sin
+tocar la instancia real del ViewModel. Ninguna se pudo verificar con confianza sin poder
+interactuar con la app en vivo en esta sesion - se deja pendiente, documentado aqui, no fingido
+como cerrado.
+
+**Bug real encontrado y arreglado en el propio arnes (no en produccion)**: al verificar H5-08
+con el arnes completo, `N3-CTRL-S`/`V-c` empezaron a fallar de forma intermitente (~1 de cada 4
+pasadas). Investigado a fondo antes de tocar nada a ciegas: `PressCtrlPlus` inyecta la tecla a
+nivel de SO real (`keybd_event`), que entrega contra el foreground window REAL de Windows, no
+contra "window" por binding - el ultimo `SetForegroundWindow` explicito quedaba muy atras (justo
+antes del test de Ctrl+F), y entre medias corren de sobra capturas `RenderTargetBitmap` y
+redimensionados como para que el foco real del SO derive. Arreglado reafirmando
+`SetForegroundWindow(hwnd)` justo antes de la inyeccion de Ctrl+S (mismo patron ya usado en el
+propio arnes para el test de foco por teclado, T-H) - confirmado en verde 4/4 pasadas reales
+tras el arreglo (antes: fallo reproducido, luego 1 de 4).
+
+Nueva bateria `HeightClassTests.cs` (5 pruebas: sobrecarga de compatibilidad se queda en Bajo,
+umbral de 900 real en ambos sentidos, ancho y alto como ejes independientes -
+Compacto+Alto a la vez -, y el auto-revelado real de la Libreria por altura). `dotnet test`
+326/326 en verde (139 Core + 187 ViewModels), arnes UIA completo 4/4 pasadas sin
+NO-FOUND/FALLO/EXCEPTION.

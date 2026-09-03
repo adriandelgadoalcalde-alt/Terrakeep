@@ -1367,6 +1367,15 @@ internal static class Program
             vm.IsDirty = true; // fuerza un estado "con cambios" real para que Guardar tenga sentido
             vm.SaveConfirmationVisible = false;
             DoEvents();
+            // Bug real de este arnes encontrado verificando H5-08 (quinta auditoria de Opus,
+            // no del codigo de produccion): PressCtrlPlus inyecta la tecla a nivel de SO
+            // (keybd_event) contra el foreground window REAL, no contra "window" por binding -
+            // el ultimo SetForegroundWindow explicito quedaba muy atras (linea ~1181, antes de
+            // Ctrl+F), y entre medias corren capturas RenderTargetBitmap/redimensionados de
+            // sobra para que el foco real del SO derive - visto flaquear 1/4 sin esto (Ctrl+S
+            // inyectado a ningun sitio real, SaveConfirmationVisible se quedaba en False).
+            // Mismo patron ya usado en la linea ~1745 para el test de foco por teclado.
+            SetForegroundWindow(hwnd);
             PressCtrlPlus(0x53); // VK_S
             DoEvents();
             DoEvents();

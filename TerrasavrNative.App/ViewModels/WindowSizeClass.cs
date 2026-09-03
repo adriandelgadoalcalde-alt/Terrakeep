@@ -21,3 +21,19 @@ public enum WindowSizeClass
     // Sitio real para 3 paneles a la vez (o 2 + el panel Editar realmente comodo) sin apretar.
     Amplio,
 }
+
+// H5-08 (quinta auditoria de Opus): "UpdateSizeClass(double actualWidth) solo recibe el ancho -
+// la altura, que es la dimension que de verdad aprieta a las rejillas de slots, no participa en
+// ninguna decision de layout". Segunda dimension real, independiente de WindowSizeClass (una
+// ventana puede ser Amplia y baja, o Compacta y alta - los dos ejes no estan correlados).
+// Umbral real AltoMinHeight=900 (MainViewModel.cs) citado del propio informe de la auditoria:
+// "un portátil de 1440×900 ... probablemente el tamaño más común de uso real" - por encima del
+// MinHeight=700 obligado de la ventana, con margen suficiente para notarse.
+public enum WindowHeightClass
+{
+    // Altura minima o cercana (incluye el MinHeight=700 obligado).
+    Bajo,
+    // Sitio real de sobra en vertical - la Libreria puede desplegarse sola sin apretar los
+    // contenedores de encima, igual que Amplio ya hace por ancho.
+    Alto,
+}

@@ -217,11 +217,23 @@ public partial class MainViewModel : ObservableObject
     private const double NormalMinWidth = 1300;
     private const double AmplioMinWidth = 1500;
 
-    public void UpdateSizeClass(double actualWidth)
+    // H5-08 (quinta auditoria de Opus): segunda dimension real, ver WindowHeightClass.cs -
+    // AltoMinHeight=900 citado del propio informe ("un portátil de 1440×900... el tamaño más
+    // común de uso real"), con margen real sobre el MinHeight=700 obligado de la ventana.
+    [ObservableProperty] private WindowHeightClass _heightClass = WindowHeightClass.Bajo;
+    private const double AltoMinHeight = 900;
+
+    // Sobrecarga de compatibilidad (16 sitios reales en los tests ya llamaban a la version de
+    // un solo argumento) - altura por debajo de AltoMinHeight, mismo comportamiento de siempre
+    // para quien no le importe el eje vertical.
+    public void UpdateSizeClass(double actualWidth) => UpdateSizeClass(actualWidth, AltoMinHeight - 1);
+
+    public void UpdateSizeClass(double actualWidth, double actualHeight)
     {
         SizeClass = actualWidth >= AmplioMinWidth ? WindowSizeClass.Amplio
             : actualWidth >= NormalMinWidth ? WindowSizeClass.Normal
             : WindowSizeClass.Compacto;
+        HeightClass = actualHeight >= AltoMinHeight ? WindowHeightClass.Alto : WindowHeightClass.Bajo;
     }
 
     // Auditoria de Opus, E-2: umbral real medido con el arnes (ver bitacora.md) - a partir de
@@ -272,6 +284,13 @@ public partial class MainViewModel : ObservableObject
     // repartir mas columnas, no rehacer el layout.
     public double AppearanceContentMaxWidth => SizeClass == WindowSizeClass.Amplio ? 1000 : 640;
 
+    // H5-08 (quinta auditoria de Opus): "el MaxHeight=460 fijo de la fila de Libreria en
+    // Objetos y en Buffs" era una de las 2 constantes ciegas señaladas - con sitio vertical
+    // real (Alto), la fila puede crecer mas sin apretar la cuadricula de encima (Height="3*"
+    // ya le da proporcionalmente mas a los contenedores, este techo solo evitaba que la
+    // Libreria se llevara un trozo desproporcionado en ventanas muy altas y estrechas).
+    public double LibraryRowMaxHeight => HeightClass == WindowHeightClass.Alto ? 640 : 460;
+
     partial void OnSizeClassChanged(WindowSizeClass value)
     {
         OnPropertyChanged(nameof(IsEquipmentExpanded));
@@ -286,6 +305,19 @@ public partial class MainViewModel : ObservableObject
         // real, IsStorageExpanded=true), mover la seleccion a "Inventario" (1) - el mismo
         // StorageGroup ya esta a la vista ahi, lado a lado con el Inventario (A-4).
         if (value == WindowSizeClass.Amplio && ObjetosSubTabIndex == 2) ObjetosSubTabIndex = 1;
+    }
+
+    // H5-08: la segunda mitad de la misma constante ciega - "el auto-revelado de la Libreria
+    // (hoy solo por ancho, aunque el problema que resuelve es de alto)". Libreria y la
+    // cuadricula de contenedores viven en filas apiladas (RowDefinitions, no columnas) - si hay
+    // sitio o no de verdad depende de la ALTURA disponible, no del ancho; SizeClass.Amplio se
+    // usaba solo como sustituto aproximado de "ventana grande". Ver IsLibraryVisible/
+    // IsBuffLibraryVisible mas abajo.
+    partial void OnHeightClassChanged(WindowHeightClass value)
+    {
+        OnPropertyChanged(nameof(LibraryRowMaxHeight));
+        OnPropertyChanged(nameof(IsLibraryVisible));
+        OnPropertyChanged(nameof(IsBuffLibraryVisible));
     }
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
@@ -327,8 +359,11 @@ public partial class MainViewModel : ObservableObject
     // ("preferencia + revelado temporal", ver el comentario de arriba) - IsLibraryCollapsed
     // sigue siendo SOLO la preferencia del boton, nunca se pisa: al encoger la ventana por
     // debajo de Amplio, la Libreria vuelve sola a lo que el boton diga.
-    public bool IsLibraryVisible => !IsLibraryCollapsed || Library.IsPicking || SizeClass == WindowSizeClass.Amplio;
-    public bool IsBuffLibraryVisible => !IsBuffLibraryCollapsed || BuffLibrary.IsPicking || SizeClass == WindowSizeClass.Amplio;
+    // H5-08: se revela sola tambien con HeightClass.Alto, no solo con SizeClass.Amplio - una
+    // ventana alta pero no ancha (Compacto/Normal) ya tiene el sitio VERTICAL real que este
+    // auto-revelado necesita, ver el comentario de OnHeightClassChanged arriba.
+    public bool IsLibraryVisible => !IsLibraryCollapsed || Library.IsPicking || SizeClass == WindowSizeClass.Amplio || HeightClass == WindowHeightClass.Alto;
+    public bool IsBuffLibraryVisible => !IsBuffLibraryCollapsed || BuffLibrary.IsPicking || SizeClass == WindowSizeClass.Amplio || HeightClass == WindowHeightClass.Alto;
     partial void OnIsLibraryCollapsedChanged(bool value) => OnPropertyChanged(nameof(IsLibraryVisible));
     partial void OnIsBuffLibraryCollapsedChanged(bool value) => OnPropertyChanged(nameof(IsBuffLibraryVisible));
     public ResearchViewModel Research { get; }
