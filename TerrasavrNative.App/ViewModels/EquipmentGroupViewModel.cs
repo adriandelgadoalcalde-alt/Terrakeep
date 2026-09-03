@@ -70,7 +70,13 @@ public partial class EquipmentGroupViewModel : ObservableObject
 
     public IReadOnlyList<ContainerViewModel> AllContainers { get; }
 
-    // Atajo para AutoEquip (siempre coloca en el equipo puesto, loadout 0).
+    // Atajo directo al equipo puesto del loadout 0 (Puesto/principal). Bd-b (segunda auditoria
+    // de Opus, Fable): AutoEquip usaba ESTE atajo, ignorando el loadout que el usuario tenia
+    // seleccionado de verdad ("sorpresa silenciosa si estas mirando el Loadout 2") - ahora usa
+    // CurrentItems (ver abajo), que SI seguia al loadout seleccionado. Sin otro consumidor real
+    // en produccion tras ese arreglo (verificado, ni el XAML ni ningun ViewModel lo referencian
+    // ya) - se deja tal cual porque los tests headless ya lo usan para fijar el loadout 0 de
+    // forma explicita, no porque haga falta en la app real.
     public ContainerViewModel EquippedItems => _byKey[(0, EquipmentKind.Items)];
 
     public ObservableCollection<EquipmentOptionViewModel> LoadoutOptions { get; } = [];

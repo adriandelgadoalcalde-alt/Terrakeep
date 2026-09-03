@@ -510,7 +510,7 @@
                             Command="{Binding DataContext.AutoEquipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding Source}"
                             IsEnabled="{Binding DataContext.IsCharacterLoaded, RelativeSource={RelativeSource AncestorType=Window}}"
-                            ToolTip="Coloca esta armadura/accesorios/armas en el personaje cargado" />
+                            ToolTip="Reemplaza SIN CONFIRMACION la armadura y los accesorios puestos en el loadout seleccionado (las armas se colocan en el primer hueco libre del inventario, sin sobrescribir nada) - no lo guardes si no estabas seguro" />
                     <TextBlock Text="{Binding ClassName}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
                 </DockPanel>
                 <TextBlock Text="Armadura" Style="{StaticResource CaptionText}" Margin="0,4,0,2" />

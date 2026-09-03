@@ -4641,3 +4641,27 @@ foco SI se pinta, solo era sutil a resolucion completa de ventana (proporcionado
 `dotnet test` 169/169 en verde, arnes visual con una comprobacion permanente nueva
 (`T-H-FOCO: foco real + adorner de FocusVisualStyle adjunto=True`) + captura real, sin ningun
 otro NO-FOUND/FALLO/EXCEPTION.
+
+### Bd-a + Bd-b (segunda auditoria, Fable) - Ola 3 continua
+
+**Bd-a, "Auto-equipar" es destructivo, de un click, sin confirmacion ni deshacer**: "el boton
+dice 'Auto-equipar', no 'Reemplazar mi equipo actual' - la promesa real no llega al usuario".
+F1 (tooltip explicito): el tooltip ya existente ("Coloca esta armadura/accesorios/armas...") no
+avisaba de que SOBRESCRIBE lo ya puesto - reescrito para decirlo sin rodeos (que SI reemplaza
+sin confirmar, que las armas SI respetan hueco libre sin sobrescribir, y que no conviene
+guardarlo si no se esta seguro). F2 (deshacer) y F3 (selector de loadout de destino como UI
+nueva) quedan fuera de esta ola (T-H/F4, Wave 4).
+
+**Bd-b, "Auto-equipar" siempre iba al loadout 0, ignorando el seleccionado**: "sorpresa
+silenciosa si estas mirando el Loadout 2". `AutoEquipService.Apply` usaba
+`equipmentGroup.EquippedItems` (atajo hardcodeado al loadout 0) en vez de
+`equipmentGroup.CurrentItems` (el loadout REALMENTE seleccionado,
+`EquipmentGroupViewModel.SelectedLoadout`) - un solo cambio real. De paso, revisado y corregido
+un comentario propio que se habia escrito con una justificacion NO verificada ("lo usa el doll
+de Apariencia") - comprobado que Apariencia no renderiza armadura en absoluto y que
+`EquippedItems` ya no tiene ningun consumidor real en produccion tras este arreglo (solo en
+tests) - corregido para no dejar una razon inventada en el codigo.
+
+1 prueba determinista nueva: Loadout 1 seleccionado, Auto-equipar coloca AHI (el Loadout 0
+se queda vacio de verdad). `dotnet test` 170/170 en verde, arnes visual completo sin
+NO-FOUND/FALLO/EXCEPTION.

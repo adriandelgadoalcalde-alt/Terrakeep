@@ -23,7 +23,13 @@ public static class AutoEquipService
     public static Result Apply(BuildClassGear gear, EquipmentGroupViewModel equipmentGroup,
         ContainerViewModel inventoryContainer, CharacterFileService service)
     {
-        var armorSlots = equipmentGroup.EquippedItems.Slots;
+        // Bd-b (segunda auditoria de Opus, Fable): "Siempre va al loadout 0, ignorando el
+        // seleccionado - sorpresa silenciosa si estas mirando el Loadout 2". Antes usaba
+        // EquippedItems, un atajo hardcodeado al loadout 0; CurrentItems es el mismo tipo de
+        // contenedor pero del loadout REALMENTE seleccionado
+        // (EquipmentGroupViewModel.SelectedLoadout) - el que Auto-equipar debe usar de verdad,
+        // coherente con lo que el usuario esta viendo en pantalla ahora mismo.
+        var armorSlots = equipmentGroup.CurrentItems.Slots;
         var inventorySlots = inventoryContainer.Slots;
         int placed = 0, skipped = 0;
 
