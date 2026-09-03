@@ -1418,6 +1418,56 @@ internal static class Program
             Console.WriteLine("N3-EXCEPTION: " + ex);
         }
 
+        // H5-09 (quinta auditoria de Opus): Desbloqueos/Version/Novedades(x2)/Acerca de tenian
+        // ancho fijo a mano - verificacion real de que DetailContentMaxWidth/DetailCardColumns
+        // responden de verdad al SizeClass (no solo que la propiedad C# calcule bien, que ya
+        // cubren los tests unitarios de MainViewModel - aqui lo que importa es que el XAML nuevo
+        // (WrapPanel de familias en Desbloqueos, WrapPanel de grupos en Version, UniformGrid de
+        // tarjetas en Novedades/Acerca de) renderiza sin excepcion y usa de verdad el ancho de
+        // sobra en Amplio frente a Compacto.
+        try
+        {
+            void CaptureDetailTab(int selectedTabIndex, int? personajeInnerTabIndex, string tabName, string fileName)
+            {
+                vm.SelectedTabIndex = selectedTabIndex;
+                if (personajeInnerTabIndex is { } inner) vm.PersonajeInnerTabIndex = inner;
+                DoEvents();
+                var tabItem = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
+                    new PropertyCondition(AutomationElement.NameProperty, tabName)));
+                if (tabItem != null && tabItem.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selPat))
+                    ((SelectionItemPattern)selPat).Select();
+                else
+                    Console.WriteLine($"  AVISO H5-09: TabItem '{tabName}' no encontrado");
+                DoEvents();
+                DoEvents();
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(window);
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                using var fs = File.Create(Path.Combine(AppContext.BaseDirectory, fileName));
+                enc.Save(fs);
+                Console.WriteLine($"  Captura {tabName} -> {fileName}");
+            }
+
+            window.Width = 1550; window.Height = 900; DoEvents(); DoEvents(); DoEvents();
+            Console.WriteLine($"H5-09-AMPLIO: SizeClass={vm.SizeClass} DetailContentMaxWidth={vm.DetailContentMaxWidth} DetailCardColumns={vm.DetailCardColumns} (esperado Amplio/1200/2)");
+            CaptureDetailTab(1, 5, "Desbloqueos", "h5-09-desbloqueos-amplio.png");
+            CaptureDetailTab(1, 6, "Versión", "h5-09-version-amplio.png");
+            CaptureDetailTab(3, null, "Terraria", "h5-09-novedades-amplio.png");
+            CaptureDetailTab(5, null, "Acerca de", "h5-09-acerca-de-amplio.png");
+
+            window.Width = 1180; window.Height = 860; DoEvents(); DoEvents(); DoEvents();
+            Console.WriteLine($"H5-09-COMPACTO: SizeClass={vm.SizeClass} DetailContentMaxWidth={vm.DetailContentMaxWidth} DetailCardColumns={vm.DetailCardColumns} (esperado Compacto o Normal/760/1)");
+            CaptureDetailTab(1, 5, "Desbloqueos", "h5-09-desbloqueos-compacto.png");
+            CaptureDetailTab(5, null, "Acerca de", "h5-09-acerca-de-compacto.png");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("H5-09-EXCEPTION: " + ex);
+        }
+
         // Verificacion real de X-7/T-13 (auditoria de Opus, Bloque 3): un mundo real y grande
         // de esta maquina (11MB, medido antes de tocar nada: 1.4s sincrono, freeze real y
         // perceptible). Sin un app.Run() real (este arnes pumpea manualmente con DoEvents), la

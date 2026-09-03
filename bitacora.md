@@ -6481,3 +6481,66 @@ Fuera de esta pasada, documentado: no se añadio ningun test unitario dedicado a
 `HealthFraction`/`MoneyText`/`LastSavedText` en si (formulas triviales de una linea, ya
 ejercitadas de forma indirecta) - si en el futuro estos calculos ganan complejidad real (ej.
 redondeos especiales, plurales en el texto de tiempo), añadir tests dedicados en ese momento.
+
+## H5-09 - Cuatro pantallas con ancho fijo (Tanda C, quinta auditoria de Opus)
+
+Hallazgo real: "Desbloqueos (440), Version (500) y las 2 sub-pestañas de Novedades + Acerca de
+(760/720) se quedaron fuera de I-c/H4-07 - en un monitor 2560 maximizado, Desbloqueos usa el
+17% del ancho: 13 casillas en columna unica, ~2000px negros al lado". Viola P4 (armonia en
+cualquier tamaño) y P6 (simetria) - Inicio y Apariencia ya respiran, estas 4 no.
+
+**`MainViewModel`**: UNA sola propiedad compartida (pedido explicito del informe: "sustituir
+los 4 numeros por una propiedad... en vez de repetirlo 4 veces mas"), no 4 propiedades
+independientes - `DetailContentMaxWidth` (760 normal, 1200 Amplio) y `DetailCardColumns` (1
+normal, 2 Amplio, para las listas de tarjetas de Novedades/Acerca de). Las 4 pantallas son "de
+detalle", mas ligeras que Inicio/Apariencia, y cada una ya tenia su propio mecanismo interno
+(familias de Desbloqueos, grupos de Version, tarjetas de Novedades/Changelog) para repartir el
+ancho de sobra sin necesitar un numero por pantalla.
+
+**Desbloqueos**: las 4 familias YA agrupadas por D-b (segunda auditoria) pasaban de subtitulos
+sueltos en una columna unica a 4 tarjetas reales (`Border`) dentro de un `WrapPanel` - con
+sitio real entran las 4 a la vez en Amplio, 2 en Compacto/Normal (nunca 1, siguen cabiendo 2
+tarjetas de 280px incluso a 1080px de ancho minimo).
+
+**Version**: los 4 grupos reales (`VersionEditor.Groups` - 1.1.x/1.2.x/1.3.x/1.4.x) ya vivian en
+un `ItemsControl`, bastaba con darle `ItemsPanel=WrapPanel` (antes StackPanel implicito) para
+que se repartan lado a lado en vez de apilarse - cero cambios en `VersionEditorViewModel.cs`.
+
+**Novedades (x2 sub-pestañas) y Acerca de**: las listas de tarjetas de version
+(`WhatsNewEntryViewModel`, `ChangelogEntry`) pasan de tira vertical unica a `UniformGrid
+Columns="{Binding DetailCardColumns}"` (2 en Amplio - "autentico reparto en columnas, no solo
+mas ancho cada tarjeta", pedido explicito del informe). Los 2 `DataTemplate` de tarjeta ganan
+margen derecho real (`Margin="0,0,10,14"`, antes solo inferior) para que el hueco entre
+columnas no las deje pegadas. El texto corrido (creditos, intro) de Acerca de NO crece con el
+contenedor - `MaxWidth="680"` propio en esos `TextBlock`, tal y como pedia el informe
+explicitamente ("el tope de linea se mantiene por legibilidad").
+
+**Bug real encontrado y arreglado en el propio cambio** (no preexistente, introducido y
+corregido en esta misma pasada, detectado por el arnes UIA antes de comitear nada): las
+etiquetas largas de los `CheckBox` de Desbloqueos ("Alcance de mesa de trabajo aumentado (Pan
+del Artesano)") se veian cortadas en seco contra el borde redondeado de su tarjeta nueva de
+280px. Investigado con las capturas reales del propio arnes (`h5-09-desbloqueos-amplio.png`):
+2 causas reales combinadas, no una -
+1. `Border` con `CornerRadius` recorta silenciosamente cualquier hijo que se salga de su ancho
+   (mismo mecanismo real que usa WPF para redondear las esquinas, sin necesidad de
+   `ClipToBounds="True"` explicito).
+2. `CheckBox.Content` como string plano NO hace word-wrap nunca (a diferencia de
+   `TextBlock.Text`, `ContentPresenter` no tiene wrapping propio) - y el primer intento de
+   arreglo (sustituir `Content="..."` por un `<TextBlock TextWrapping="Wrap">` hijo) TAMPOCO
+   bastaba por si solo: la plantilla real de `CheckBox` (`Styles/Theme.xaml`) mete el
+   `ContentPresenter` dentro de un `StackPanel Orientation="Horizontal"` - un `StackPanel`
+   horizontal SIEMPRE mide a sus hijos con ancho infinito en la direccion de apilado, asi que
+   `TextWrapping="Wrap"` nunca tenia ningun limite real contra el que envolver.
+   Arreglado con un `MaxWidth="210"` explicito en cada uno de los 13 `TextBlock` nuevos (el
+   limite real que faltaba, ancho de la tarjeta menos padding/casilla/margen) - visto y
+   confirmado con una segunda tanda de capturas tras el arreglo, texto legible completo, sin
+   recorte, en Amplio y en Compacto. No se toco el `Style` compartido de `CheckBox` (arriesgado
+   a media tarea, afecta a toda la app) - la correccion queda contenida a este bloque nuevo.
+
+**Verificacion real**: `dotnet build` en verde (App y arnes). `dotnet test`: 358/358 sin
+cambios (nada de logica de dominio nueva, todo layout/XAML). Arnes de UI Automation ampliado
+con un bloque nuevo (`H5-09-AMPLIO`/`H5-09-COMPACTO`) que redimensiona a 1550x900 y 1180x860,
+navega a las 4 pantallas reales y confirma `SizeClass`/`DetailContentMaxWidth`/
+`DetailCardColumns` en los 2 extremos, con captura real de cada una (8 capturas nuevas,
+`h5-09-*.png`) - inspeccionadas a mano, confirmado el reparto en columnas real y el arreglo del
+corte de texto. **2/2 pasadas limpias**, sin NO-FOUND/FALLO/EXCEPTION.

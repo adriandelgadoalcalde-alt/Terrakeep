@@ -413,6 +413,20 @@ public partial class MainViewModel : ObservableObject
     // Libreria se llevara un trozo desproporcionado en ventanas muy altas y estrechas).
     public double LibraryRowMaxHeight => HeightClass == WindowHeightClass.Alto ? 640 : 460;
 
+    // H5-09 (quinta auditoria de Opus): "cuatro pantallas siguen con ancho fijo mientras Inicio y
+    // Apariencia si respiran" (Desbloqueos 440, Version 500, las 2 sub-pestañas de Novedades 760,
+    // Acerca de 720). UNA sola propiedad compartida (no 4 numeros sueltos ni 4 propiedades
+    // nuevas) - las 4 son pantallas "de detalle", mas ligeras que Inicio/Apariencia pero con el
+    // mismo problema real; no hace falta un numero distinto por pantalla, cada una ya tiene su
+    // propio WrapPanel/UniformGrid interno para repartir el ancho de sobra (familias de
+    // Desbloqueos, grupos de Version, tarjetas de Novedades/Acerca de - ver MainWindow.xaml).
+    public double DetailContentMaxWidth => SizeClass == WindowSizeClass.Amplio ? 1200 : 760;
+
+    // H5-09: numero real de columnas para las listas de tarjetas de version (Novedades x2,
+    // Changelog de Acerca de) - 2 en Amplio (autentico reparto en columnas, no solo mas ancho
+    // cada tarjeta), 1 en Compacto/Normal (la tira unica de siempre, ya legible a ese ancho).
+    public int DetailCardColumns => SizeClass == WindowSizeClass.Amplio ? 2 : 1;
+
     partial void OnSizeClassChanged(WindowSizeClass value)
     {
         OnPropertyChanged(nameof(IsEquipmentExpanded));
@@ -420,6 +434,8 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsStorageExpanded));
         OnPropertyChanged(nameof(InicioContentMaxWidth));
         OnPropertyChanged(nameof(AppearanceContentMaxWidth));
+        OnPropertyChanged(nameof(DetailContentMaxWidth));
+        OnPropertyChanged(nameof(DetailCardColumns));
         // H4-07: la Libreria/Libreria de buffs se revelan solas en Amplio (ver el comentario
         // real de IsLibraryVisible/IsBuffLibraryVisible arriba).
         OnPropertyChanged(nameof(IsLibraryVisible));
