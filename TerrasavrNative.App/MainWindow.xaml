@@ -1974,7 +1974,8 @@
         <TabItem Header="Exploracion">
             <DockPanel Margin="14">
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
-                    <Button Content="Cargar mundo (.wld)..." Tag="Accent" Click="OnLoadWorldClick" />
+                    <Button Content="Cargar mundo (.wld)..." Tag="Accent" Click="OnLoadWorldClick"
+                            IsEnabled="{Binding Exploration.IsNotLoading}" />
                     <TextBlock Text="{Binding Exploration.WorldTitle, StringFormat='Mundo: {0}'}"
                                Style="{StaticResource SectionText}" VerticalAlignment="Center" Margin="20,0,0,0"
                                Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
@@ -1997,6 +1998,7 @@
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,0">
+                        <Grid>
                         <DockPanel>
                             <Border DockPanel.Dock="Bottom" Background="{StaticResource BgElevatedBrush}"
                                     CornerRadius="0,0,8,8" Padding="10,6"
@@ -2078,6 +2080,21 @@
                                 </Canvas>
                             </Grid>
                         </DockPanel>
+
+                        <!-- Auditoria de Opus, X-7/T-13: leer+pintar un mundo real (~1.4s
+                             medidos en uno de 11MB de esta maquina) es el unico freeze real
+                             medido de toda la ronda (personaje ~8ms, "Investigar todo" ~3ms,
+                             ninguno de los dos perceptible) - se hizo async (Task.Run,
+                             ExplorationViewModel.LoadFromPathAsync) y este overlay avisa de
+                             verdad mientras dura, en vez de que la ventana parezca colgada. -->
+                        <Border Background="#B0000000" CornerRadius="8"
+                                Visibility="{Binding Exploration.IsLoading, Converter={StaticResource BoolToVis}}">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <ProgressBar IsIndeterminate="True" Width="160" Height="6" Foreground="{StaticResource AccentBrush}" />
+                                <TextBlock Text="Leyendo y pintando el mapa..." Style="{StaticResource CaptionText}" Margin="0,10,0,0" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        </Grid>
                     </Border>
 
                     <DockPanel Grid.Column="1">

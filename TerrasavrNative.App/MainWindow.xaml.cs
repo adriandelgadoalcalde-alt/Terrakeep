@@ -102,7 +102,10 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnLoadWorldClick(object sender, RoutedEventArgs e)
+    // Auditoria de Opus, X-7/T-13: leer+pintar un mundo real (~1.4s medidos en uno de 11MB de
+    // esta maquina) congelaba el hilo de UI entero sin ningun aviso - async void es el patron
+    // real de WPF para un manejador de evento async (no se puede await desde un evento).
+    private async void OnLoadWorldClick(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
         {
@@ -113,7 +116,7 @@ public partial class MainWindow : Window
 
         if (dialog.ShowDialog(this) == true)
         {
-            _viewModel.Exploration.LoadFromPath(dialog.FileName);
+            await _viewModel.Exploration.LoadFromPathAsync(dialog.FileName);
         }
     }
 

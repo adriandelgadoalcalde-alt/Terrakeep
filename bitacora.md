@@ -3829,3 +3829,51 @@ Verificado con el ciclo completo real: `PlaceItem` en un slot de Inventario ->
 sus vecinos.
 
 `dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### Bloque 3 (parte 4, cierre del bloque) - X-7/T-13: carga de mundo asincrona con progreso real
+
+**Medido de verdad antes de tocar nada** (no de memoria): cargar un mundo `.wld` real y grande
+de esta maquina (roca_negra.wld, 11MB, 8400x2400 tiles) tardaba ~1.4s SINCRONO, congelando el
+hilo de UI entero sin ningun aviso (ni spinner, ni "cargando...", la ventana parecia colgada).
+Cargar un personaje real (~8-9ms) e "Investigar todo" (~3ms, todo en memoria) NO mostraron
+ningun freeze real medible - por eso **solo** el mundo se toco, no los otros dos items del
+audit original (resolver un problema que no existe de verdad habria sido ruido, no una mejora).
+
+**Arreglo real**: `ExplorationViewModel.LoadFromPathAsync` (antes `LoadFromPath` sincrono) manda
+los dos pasos caros (`WldReader.Read` + `WorldRenderer.Render`) juntos a un hilo de fondo via
+`Task.Run` - seguro crear+pintar+`Freeze()` un `WriteableBitmap` fuera del hilo de UI (patron
+real de WPF, `Freeze()` lo hace inmutable y compartible entre hilos DESPUES). El resto (listas
+de NPCs, `ObservableCollection`) se queda en el hilo de UI de siempre tras el `await`, sin
+marshalling manual. Nuevo `IsLoading`/`IsNotLoading` - overlay real sobre el mapa (`ProgressBar`
+indeterminado + texto) mientras dura, y el boton "Cargar mundo..." se deshabilita para evitar
+una segunda carga simultanea. `MainWindow.xaml.cs.OnLoadWorldClick` pasa a `async void`
+(patron real de WPF para un manejador de evento async).
+
+**Bug real encontrado y arreglado ANTES de llegar a produccion** (via la propia verificacion, no
+en caliente): el arnes de pruebas no llama nunca a `Application.Run()` (pumpea a mano con
+`DoEvents`), asi que no tenia instalado el `DispatcherSynchronizationContext` que
+`Application.Run()` SI instala en la app real (via `StartupUri` de `App.xaml`) - sin el,
+`await Task.Run(...)` reanudaba en un hilo de la pool en vez del hilo de UI, y la primera
+mutacion de una `ObservableCollection` tras el await lanzaba
+`InvalidOperationException` real ("Este tipo de CollectionView no admite cambios... de un
+subproceso distinto del subproceso Dispatcher"). Confirmado que es un artefacto SOLO del arnes
+(no de la app real) instalando a mano el mismo `DispatcherSynchronizationContext` que
+`Application.Run()` instala de serie - con el, la carga async termina limpia y con los datos
+reales correctos. El arnes tambien tuvo que cambiar de "bloquear con
+`.GetAwaiter().GetResult()`" (deadlock real: la continuacion de `Task.Run` necesitaria bombear
+el mismo hilo que esta bloqueado esperandola) a un bucle real "pumpea con `DoEvents()` hasta que
+la tarea termine".
+
+Verificado por partida doble: (1) `LoadFromPathAsync` devuelve el control en ~1-2ms (la llamada
+NO bloquea, prueba real de que la UI sigue viva mientras el mundo se lee/pinta en segundo
+plano) con `IsLoading=True` inmediato; (2) tras ~1.5-1.7s reales en segundo plano,
+`IsLoading=False`/`IsNotLoading=True` y los datos reales completos y correctos
+(`StatusMessage` con el titulo/tiles/NPCs reales del mundo). Captura real
+(`mundo-cargando.png`) confirma el overlay con la barra de progreso y el boton "Cargar mundo"
+deshabilitado mientras carga.
+
+`dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
+
+**Bloque 3 completo** (T-12, N-3, T-14, X-7/T-13) - las 4 partes de "Reactividad" del plan de
+Opus quedan cerradas y comiteadas. Sigue el Bloque 4 (Armonia a cualquier tamaño - "el bloque
+grande").

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -46,6 +47,16 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private string _npcSearchText = string.Empty;
     [ObservableProperty] private double _zoom = 1.0;
     [ObservableProperty] private string _hoverInfo = string.Empty;
+    // Auditoria de Opus, Bloque 3 (X-7/T-13): medido de verdad antes de tocar nada (no de
+    // memoria) - un mundo .wld real y grande de esta maquina (11MB, 8400x2400 tiles) tarda
+    // ~1.4s en leerse+pintarse, congelando el hilo de UI entero sin ningun aviso mientras tanto
+    // (ni spinner, ni "cargando...", la app parece colgada). Cargar un personaje (~8ms) o
+    // "Investigar todo" (~3ms, en memoria) NO mostraron ningun freeze real medible - por eso
+    // solo el mundo se hace async aqui, no los otros dos (no resolver un problema que no existe
+    // de verdad).
+    [ObservableProperty] private bool _isLoading;
+    public bool IsNotLoading => !IsLoading;
+    partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(IsNotLoading));
 
     public ObservableCollection<WorldNpcRowViewModel> Npcs { get; } = [];
     public ObservableCollection<MissingNpcRowViewModel> MissingNpcs { get; } = [];
@@ -100,16 +111,27 @@ public partial class ExplorationViewModel : ObservableObject
         _ => "Agua",
     };
 
-    public void LoadFromPath(string wldPath)
+    // Auditoria de Opus, X-7/T-13: leer (RLE de hasta miles de tiles de ancho/alto) y pintar
+    // (WriteableBitmap 1 pixel por tile) el mundo son los dos pasos reales caros (~1.4s medidos
+    // en un mundo real de 11MB) - se mandan juntos a un hilo de fondo via Task.Run. Seguro
+    // crear+pintar+Freeze() un WriteableBitmap fuera del hilo de UI (patron real de WPF, el
+    // Freeze() final lo hace inmutable y compartible entre hilos) - el resto (listas de NPCs,
+    // ObservableCollection) es barato de verdad (no midio nada perceptible) y se queda en el
+    // hilo de UI de siempre, sin necesidad de marshalling manual.
+    public async Task LoadFromPathAsync(string wldPath)
     {
+        IsLoading = true;
         try
         {
-            StatusMessage = "Leyendo mundo...";
-            var world = WldReader.Read(File.ReadAllBytes(wldPath));
+            StatusMessage = "Leyendo y pintando el mapa...";
+            var (world, image) = await Task.Run(() =>
+            {
+                var w = WldReader.Read(File.ReadAllBytes(wldPath));
+                var img = WorldRenderer.Render(w, _mapColors);
+                return (w, img);
+            });
             _world = world;
-
-            StatusMessage = "Pintando mapa...";
-            WorldImage = WorldRenderer.Render(world, _mapColors);
+            WorldImage = image;
 
             _allNpcs = world.Npcs
                 .OrderBy(n => _npcNames.GetName(n.Id))
@@ -136,6 +158,10 @@ public partial class ExplorationViewModel : ObservableObject
             _world = null;
             IsWorldLoaded = false;
             StatusMessage = $"Error al leer el mundo: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
