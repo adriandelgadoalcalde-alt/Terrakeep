@@ -29,6 +29,12 @@ public sealed class CalamityCatalogEntryData
     [JsonPropertyName("displayName_fallback")] public string? DisplayNameFallback { get; init; }
     [JsonPropertyName("icon")] public string? Icon { get; init; }
     [JsonPropertyName("stats")] public CalamityItemStats? Stats { get; init; }
+    // H3-11 (tercera auditoria de Opus, Fable): "Head"/"Body"/"Legs" real - la parte del cuerpo
+    // que ocupa esta pieza de armadura, extraida del atributo real `[AutoloadEquip(new
+    // EquipType[] { EquipType.X })]` de cada clase (tModLoader moderno, ver
+    // scripts/extraer-slot-armadura-calamity.js) - null para lo que no es una pieza de
+    // armadura de cuerpo real (accesorios, armas, el resto de categorias).
+    [JsonPropertyName("equipSlot")] public string? EquipSlot { get; init; }
     // Bono de set completo real (pedido explicito del usuario tras el arreglo de defensa: "la
     // bonificacion por el set no [aparece]") - texto real resuelto del sistema de plantillas de
     // localizacion de tModLoader/Calamity (referencias {$Clave@N} anidadas, ver
@@ -51,6 +57,7 @@ public sealed class CalamityCatalogEntry(CalamityCatalogEntryData data, int synt
     public string? Icon => data.Icon;
     public CalamityItemStats? Stats => data.Stats;
     public string? SetBonus => data.SetBonus;
+    public string? EquipSlot => data.EquipSlot;
 }
 
 public sealed class CalamityCatalog

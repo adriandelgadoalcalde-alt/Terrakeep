@@ -30,16 +30,54 @@ public sealed class ContainerBulkOpsTests
     {
         var vm = NewLoadedViewModel();
         var inv = vm.InventoryContainer!;
-        inv.Slots[0].PlaceItem(500);
-        inv.Slots[3].PlaceItem(100);
-        inv.Slots[7].PlaceItem(300);
+        // H3-09 (tercera auditoria de Opus, Fable): "Ordenar" ya no toca la barra rapida
+        // (slots 0-9) - se colocan a partir del slot 10 para seguir probando el empaquetado.
+        inv.Slots[10].PlaceItem(500);
+        inv.Slots[13].PlaceItem(100);
+        inv.Slots[17].PlaceItem(300);
 
         inv.SortCommand.Execute(null);
 
-        Assert.Equal(100, inv.Slots[0].ItemId);
-        Assert.Equal(300, inv.Slots[1].ItemId);
-        Assert.Equal(500, inv.Slots[2].ItemId);
-        Assert.True(inv.Slots[3].IsEmpty);
+        Assert.Equal(100, inv.Slots[10].ItemId);
+        Assert.Equal(300, inv.Slots[11].ItemId);
+        Assert.Equal(500, inv.Slots[12].ItemId);
+        Assert.True(inv.Slots[13].IsEmpty);
+    }
+
+    [Fact]
+    public void OrdenarNuncaTocaLaBarraRapida()
+    {
+        // H3-09 (tercera auditoria de Opus, Fable): Terraria.UI.ItemSorting.SortInventory real
+        // (decompilado) excluye EXPLICITAMENTE los slots 0-9 de cualquier ordenado real - un
+        // objeto puesto a proposito en una tecla concreta no debe moverse nunca al pulsar
+        // Ordenar.
+        var vm = NewLoadedViewModel();
+        var inv = vm.InventoryContainer!;
+        inv.Slots[0].PlaceItem(500);
+        inv.Slots[3].PlaceItem(100);
+        inv.Slots[20].PlaceItem(300); // fuera de la barra rapida, si se reordena
+
+        inv.SortCommand.Execute(null);
+
+        Assert.Equal(500, inv.Slots[0].ItemId); // intacto
+        Assert.Equal(100, inv.Slots[3].ItemId); // intacto
+        Assert.Equal(300, inv.Slots[10].ItemId); // el resto SI se empaqueta, desde el slot 10
+    }
+
+    [Fact]
+    public void OrdenarOtrosContenedoresSinBarraRapida_SigueEmpaquetandoDesdeElPrincipio()
+    {
+        // Ningun otro contenedor (Banco/Caja fuerte/Fragua/Boveda) tiene barra rapida real -
+        // "Ordenar" ahi sigue empaquetando desde el slot 0, como siempre.
+        var vm = NewLoadedViewModel();
+        var bank = vm.StorageGroup!.Current;
+        bank.Slots[2].PlaceItem(300);
+        bank.Slots[5].PlaceItem(100);
+
+        bank.SortCommand.Execute(null);
+
+        Assert.Equal(100, bank.Slots[0].ItemId);
+        Assert.Equal(300, bank.Slots[1].ItemId);
     }
 
     [Fact]

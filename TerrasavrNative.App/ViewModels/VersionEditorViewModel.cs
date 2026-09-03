@@ -36,6 +36,15 @@ public partial class VersionEditorViewModel : ObservableObject
 
     [ObservableProperty] private int _rawVersion;
 
+    // H3-14 (tercera auditoria de Opus, Fable): "279 se muestra crudo, nunca '1.4.4.0+'" - el
+    // numero crudo (RawVersion, el campo fdRaw real) es correcto MOSTRARLO tal cual, es un
+    // campo de edicion deliberadamente numerico - lo que faltaba era el resumen legible que la
+    // propia Terrasavr real SI muestra al lado (lbVersion[1], ver TabVersion.findBestMatch/
+    // getBestText en script.beautified.js:5161-5173): la version CONOCIDA mas alta que sea
+    // <= la real, con un "+" si la real es estrictamente mayor (ej. 279 -> "1.4.4.0" es
+    // conocida<=279 y 279>269, resultado real "1.4.4.0+").
+    [ObservableProperty] private string _bestMatchLabel = string.Empty;
+
     // V-c (segunda auditoria de Opus, Fable): "bajar de version no advierte de lo que se pierde
     // - el aviso generico no dice que secciones dejaran de guardarse, los datos reales del
     // personaje ya estan a mano para decirlo con numeros". Se recalcula con cada cambio real de
@@ -63,16 +72,41 @@ public partial class VersionEditorViewModel : ObservableObject
 
     partial void OnRawVersionChanged(int value)
     {
+        // H3-14: IsCurrent ya no exige coincidencia EXACTA (con eso, cualquier version real
+        // "y pico" como 279 no resaltaba NINGUN boton) - resalta el mismo MEJOR AJUSTE real que
+        // findBestMatch (la version conocida mas alta <= la real), identico al style(4) real de
+        // TabVersion.syncVersion en la version JS.
+        var best = FindBestMatch(value);
+        BestMatchLabel = GetBestText(value, best);
         // V-a: se sincroniza SIEMPRE (tambien mientras _suppressWriteback esta activo durante
         // LoadFrom) - IsCurrent es un reflejo visual puro, no una escritura real al personaje.
         foreach (var group in Groups)
             foreach (var option in group.Options)
-                option.IsCurrent = option.Number == value;
+                option.IsCurrent = ReferenceEquals(option, best);
         DowngradeWarning = BuildDowngradeWarning(value);
 
         if (_suppressWriteback || _character == null) return;
         _character.Version = value;
     }
+
+    // Calco real de TabVersion.findBestMatch (script.beautified.js:5161-5167): recorre las
+    // opciones conocidas de mayor a menor numero y devuelve la PRIMERA (la mas alta) cuyo
+    // numero sea <= la version real - si ninguna lo es (una version mas vieja que la 1.1.2
+    // conocida), cae a la primera opcion conocida de todas (la 1.1.2), igual que el original.
+    private VersionOption FindBestMatch(int version)
+    {
+        for (int gi = Groups.Count - 1; gi >= 0; gi--)
+        {
+            var options = Groups[gi].Options;
+            for (int oi = options.Count - 1; oi >= 0; oi--)
+                if (version >= options[oi].Number) return options[oi];
+        }
+        return Groups[0].Options[0];
+    }
+
+    // Calco real de TabVersion.getBestText (script.beautified.js:5169-5173).
+    private static string GetBestText(int version, VersionOption best) =>
+        version > best.Number ? best.Label + "+" : best.Label;
 
     // Umbrales reales de PlrBodySerializer (los mismos que ya leen/escriben estos campos) -
     // solo los 3 con impacto real mas facil de ver y contar con exactitud contra el personaje

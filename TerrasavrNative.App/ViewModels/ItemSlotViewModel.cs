@@ -154,12 +154,32 @@ public partial class ItemSlotViewModel : ObservableObject
         if (itemId >= CalamityIds.ItemIdBase)
         {
             if ((AcceptedKind & ArmorAccessoryKinds) == 0) return true; // sin dato real, "desconocido = permitir"
-            string? category = _service.CalamityCatalog.BySyntheticId(itemId)?.Category;
+            var entry = _service.CalamityCatalog.BySyntheticId(itemId);
+            string? category = entry?.Category;
             if (category == null) return true; // id sintetico sin entrada real - no rechazar a ciegas
             if (category.StartsWith("Accessories", StringComparison.Ordinal))
                 return (AcceptedKind & SlotKind.Accessory) != 0;
             if (category.StartsWith("Armor", StringComparison.Ordinal))
-                return (AcceptedKind & (SlotKind.ArmorHead | SlotKind.ArmorBody | SlotKind.ArmorLegs)) != 0;
+            {
+                // H3-11 (tercera auditoria de Opus, Fable): "una pieza de armadura de Calamity
+                // se acepta en CUALQUIERA de los 3 slots" - antes solo se comprobaba "es
+                // armadura", nunca DE QUE PARTE (cabeza/cuerpo/piernas). EquipSlot es el dato
+                // real (extraido del atributo AutoloadEquip real de cada clase - ver
+                // CalamityCatalogEntry.EquipSlot) - null para lo que catalog.json marca como
+                // "Armor/..." pero no es de verdad una pieza de cuerpo (ej.
+                // WulfrumFusionCannon, un arma de invocacion mal encajada en esa categoria) -
+                // "desconocido = permitir", mismo criterio ya establecido en el resto de este
+                // metodo.
+                var wantedKind = entry!.EquipSlot switch
+                {
+                    "Head" => SlotKind.ArmorHead,
+                    "Body" => SlotKind.ArmorBody,
+                    "Legs" => SlotKind.ArmorLegs,
+                    _ => (SlotKind?)null,
+                };
+                if (wantedKind == null) return (AcceptedKind & (SlotKind.ArmorHead | SlotKind.ArmorBody | SlotKind.ArmorLegs)) != 0;
+                return (AcceptedKind & wantedKind) != 0;
+            }
             return false; // arma/pocion/material real de Calamity - nunca es armadura ni accesorio
         }
         return (_service.VanillaSlotKinds.GetKind(itemId) & AcceptedKind) != 0;

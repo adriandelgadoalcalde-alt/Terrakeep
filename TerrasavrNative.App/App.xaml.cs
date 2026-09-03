@@ -58,8 +58,9 @@ public partial class App : Application
     // Extraido como metodo propio (en vez de dejarlo inline en OnStartup) para poder
     // verificarlo de verdad desde el arnes de pruebas - OnStartup nunca se ejecuta ahi (el
     // arnes crea un System.Windows.Application a pelo, sin pasar por App.xaml.cs). Publico
-    // porque no hay InternalsVisibleTo configurado hacia el arnes (proyecto de scratchpad,
-    // fuera del repo).
+    // porque no hay InternalsVisibleTo configurado hacia el arnes (TerrasavrNative.App.Tests -
+    // H3-16, tercera auditoria de Opus, Fable: proyecto real y permanente del propio repo desde
+    // T-21, ya no vive en el scratchpad de la sesion).
     public static bool ShouldForceSoftwareRendering() =>
         GetSystemMetrics(SM_REMOTESESSION) != 0 ||
         Environment.GetEnvironmentVariable("TERRAKEEP_FORCE_SOFTWARE_RENDER") == "1";

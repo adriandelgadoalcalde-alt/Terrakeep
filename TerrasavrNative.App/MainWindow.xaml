@@ -1270,7 +1270,18 @@
                                      desplegada, "2*" con suelo 200. MaxHeight se queda fijo,
                                      sin depender de la visibilidad (un techo generoso no
                                      molesta estando colapsada, Auto ya no crece de mas por si
-                                     solo). -->
+                                     solo).
+                                     H3-18 (tercera auditoria de Opus, Fable, nota - no es un
+                                     arreglo de codigo): el MinHeight=216 de arriba se penso para
+                                     "5 filas de Inventario a 40px + huecos", pero cabeceras
+                                     añadidas DESPUES de esa medicion (contador real "Inventario
+                                     (N/50)", A-c) le restan alto real disponible - a 1080x700
+                                     (el minimo real de la ventana) con la Libreria desplegada,
+                                     la 5ª fila del Inventario ya NO cabe entera sin desplazar
+                                     (el ScrollViewer de seguridad de mas abajo ya lo cubre, sigue
+                                     siendo accesible). Documentado aqui a proposito para que no
+                                     se redescubra como una regresion nueva la proxima vez que se
+                                     mida - es una limitacion conocida y aceptada, no un bug. -->
                                 <RowDefinition Height="3*" MinHeight="216" />
                                 <RowDefinition Height="{Binding IsLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
                                                MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
@@ -2333,9 +2344,16 @@
                                     <TextBlock Foreground="White" TextWrapping="Wrap" FontSize="12" Text="{Binding VersionEditor.DowngradeWarning}" />
                                 </Border>
                                 <TextBlock Text="Número de versión en crudo" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
-                                <TextBox Text="{Binding VersionEditor.RawVersion, UpdateSourceTrigger=PropertyChanged}"
-                                         Width="90" Padding="6,4" HorizontalAlignment="Left" Margin="0,0,0,16"
-                                         Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                    <TextBox Text="{Binding VersionEditor.RawVersion, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="90" Padding="6,4" HorizontalAlignment="Left"
+                                             Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                    <!-- H3-14 (tercera auditoria de Opus, Fable): "279 se muestra crudo,
+                                         nunca '1.4.4.0+'" - resumen legible real (mismo calco de
+                                         TabVersion.getBestText que VersionEditorViewModel.BestMatchLabel). -->
+                                    <TextBlock Text="{Binding VersionEditor.BestMatchLabel}" Style="{StaticResource CaptionText}"
+                                               VerticalAlignment="Center" Margin="10,0,0,0" />
+                                </StackPanel>
 
                                 <ItemsControl ItemsSource="{Binding VersionEditor.Groups}">
                                     <ItemsControl.ItemTemplate>

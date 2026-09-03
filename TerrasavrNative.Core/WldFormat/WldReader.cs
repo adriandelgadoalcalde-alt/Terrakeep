@@ -202,8 +202,18 @@ public static class WldReader
         {
             liquidAmount = reader.ReadByte();
             liquidType = (byte)liquidHeader;
+            // H3-10 (tercera auditoria de Opus, Fable): el campo de 2 bits real solo tenia
+            // hueco para 3 valores (1=agua, 2=lava, 3=miel - confirmado contra TEdit,
+            // World.FileV2.cs) desde antes de que el Shimmer existiera (1.4.4) - el juego real
+            // reutiliza ese MISMO codigo 3 (miel) como base y usa el bit suelto de header3
+            // (0x80) solo como "en realidad es Shimmer". Sobreescribir aqui a `liquidType = 3`
+            // (el mismo codigo que miel) colapsaba las dos en un unico valor indistinguible
+            // para el resto del puerto (WorldRenderer/ExplorationViewModel) - la miel real
+            // salia pintada del color/nombre de Shimmer y viceversa, segun cual pisara al otro.
+            // 4 es un codigo SINTETICO propio de este puerto (nunca se escribe a disco, solo
+            // vive en memoria) para poder distinguirlos de verdad rio abajo.
             if (header.Version >= 269 && (header3 & 0x80) != 0)
-                liquidType = 3; // Shimmer
+                liquidType = 4; // Shimmer (sintetico - en disco comparte el codigo 3 con miel)
         }
 
         if (header3 > 1 && header.Version >= 222 && (header3 & 0x40) != 0)

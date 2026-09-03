@@ -513,6 +513,13 @@ public partial class MainViewModel : ObservableObject
         {
             SyncEditsBackToMerged();
             _service.Save(_loaded);
+            // H3-15 (tercera auditoria de Opus, Fable): "la insignia de Calamity no se enciende
+            // justo despues del guardado que crea el .tplr por primera vez" - HasCalamityData
+            // solo se recalculaba en LoadFromPath. _service.Save YA deja loaded.TplrPath puesto
+            // de verdad (CharacterFileService.Save, linea ~160) en cuanto crea el .tplr de un
+            // personaje que antes no tenia ninguno (ej. el primer objeto de Calamity colocado
+            // en un personaje 100% vanilla) - solo faltaba volver a leerlo aqui.
+            HasCalamityData = _loaded.TplrPath != null;
             StatusMessage = $"Guardado: {Path.GetFileName(_loaded.PlrPath)}" +
                 (_loaded.TplrPath != null ? $" + {Path.GetFileName(_loaded.TplrPath)}" : "");
             IsDirty = false;
@@ -734,7 +741,11 @@ public partial class MainViewModel : ObservableObject
             return;
         }
         MarkDirty();
-        StatusMessage = $"Movido{(moved == 1 ? "" : "s")} {moved} objeto(s) al almacén seleccionado - pulsa Guardar para conservarlo.";
+        // H3-17 (tercera auditoria de Opus, Fable): el verbo YA concordaba con el numero real
+        // ("Movido"/"Movidos") pero el sustantivo se quedaba en el placeholder literal
+        // "objeto(s)" sin concordar nunca de verdad (singular real leia "Movido 1 objeto(s)").
+        bool plural = moved != 1;
+        StatusMessage = $"Movido{(plural ? "s" : "")} {moved} objeto{(plural ? "s" : "")} al almacén seleccionado - pulsa Guardar para conservarlo.";
     }
 
     // Los primeros 10 slots reales de "inventory" son la barra rapida (Player.inventory[0..9]

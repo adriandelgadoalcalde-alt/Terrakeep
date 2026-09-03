@@ -74,6 +74,12 @@ public sealed partial class ContainerViewModel : ObservableObject
             if (!slot.IsEmpty) slot.ClearCommand.Execute(null);
     }
 
+    // Player.inventory[0..9] real (Terraria.UI.ItemSorting.SortInventory decompilado -
+    // `Sort(Main.player[...].inventory, 0, 1, 2, ..., 9, 50, ...)` excluye EXPLICITAMENTE la
+    // barra rapida de cualquier ordenado real, ademas de los slots de moneda/municion 50-58,
+    // que en este puerto ya viven en contenedores propios aparte, no en "inventory").
+    private const int HotbarSlotCount = 10;
+
     // "Ordenar": por Id ascendente, empaquetando los objetos hacia el principio del
     // contenedor y dejando los huecos vacios al final.
     //
@@ -85,12 +91,19 @@ public sealed partial class ContainerViewModel : ObservableObject
     // extraccion nuevo, bastante mayor que este boton, mismo motivo real por el que L-f (limite
     // de "Cantidad" por maxStack real) quedo aparcado en vez de fingido. Id ascendente es un
     // criterio propio, honesto y documentado - no una imitacion a medias del real.
+    //
+    // H3-09 (tercera auditoria de Opus, Fable): "Ordenar" reordenaba TAMBIEN los primeros 10
+    // slots de Inventario (la barra rapida) - el juego real NUNCA lo hace (ver el comentario de
+    // HotbarSlotCount arriba), asi que un objeto que el jugador tenia deliberadamente en una
+    // tecla concreta (1-0) podia acabar en otra tras pulsar Ordenar. Solo aplica a "inventory" -
+    // ningun otro contenedor (Banco/Caja fuerte/Fragua/Boveda) tiene barra rapida real.
     [RelayCommand]
     private void Sort()
     {
-        var items = Slots.Where(s => !s.IsEmpty).Select(s => s.Item).OrderBy(i => i.Id).ToList();
-        for (int i = 0; i < Slots.Count; i++)
-            Slots[i].UpdateFrom(i < items.Count ? items[i] : GameItem.Empty);
+        int fixedPrefix = Key == "inventory" ? Math.Min(HotbarSlotCount, Slots.Count) : 0;
+        var items = Slots.Skip(fixedPrefix).Where(s => !s.IsEmpty).Select(s => s.Item).OrderBy(i => i.Id).ToList();
+        for (int i = fixedPrefix; i < Slots.Count; i++)
+            Slots[i].UpdateFrom(i - fixedPrefix < items.Count ? items[i - fixedPrefix] : GameItem.Empty);
     }
 
     // "Mover todo al banco": usado desde Inventario hacia el Almacen seleccionado (StorageGroup.

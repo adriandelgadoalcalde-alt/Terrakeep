@@ -141,8 +141,9 @@ public partial class ExplorationViewModel : ObservableObject
         // Bug real corregido (2-sep-2026, reportado: "pone que esta vacio" sobre agua/lava
         // real): un tile de liquido puro (charco/lago/lava) tiene IsActive=false (no hay
         // bloque solido) pero LiquidAmount>0 - antes esto caia siempre en "(vacio)" sin mirar
-        // el liquido. Los codigos reales (1=Agua/2=Lava/3=Miel-o-Shimmer) son los mismos que
-        // ya corrige WorldRenderer.LiquidColor, confirmados contra TEdit real.
+        // el liquido. Los codigos reales (1=Agua/2=Lava/3=Miel/4=Shimmer, este ultimo
+        // sintetico - ver WldReader.cs) son los mismos que ya corrige WorldRenderer.
+        // LiquidColor, confirmados contra TEdit real.
         string tileText = tile.IsActive
             ? _tileNames.TileVariantName(tile.Type, tile.U, tile.V)
             : tile.LiquidAmount > 0
@@ -154,10 +155,18 @@ public partial class ExplorationViewModel : ObservableObject
             : $"({tileX}, {tileY}) - {tileText} / pared: {wallText}";
     }
 
+    // H3-10 (tercera auditoria de Opus, Fable): miel y Shimmer compartian el codigo 3 (mostraba
+    // siempre "Miel" aunque fuera Shimmer de verdad) - "Centelleo" es el nombre real que usa la
+    // propia localizacion es-ES oficial del juego para el LIQUIDO (Terraria.Localization.
+    // Content.es-ES.Items.json, ShimmerCloak: "...Mantén Abajo para entrar en fase mientras
+    // estás sumergido en el centelleo" - la traduccion oficial de "Shimmer" varia por objeto
+    // (eter/fulgor/centelleo), pero esta es la unica que se refiere de verdad al liquido en el
+    // que uno se sumerge, no a un objeto solido).
     private static string LiquidName(byte liquidType) => liquidType switch
     {
         2 => "Lava",
         3 => "Miel",
+        4 => "Centelleo",
         _ => "Agua",
     };
 

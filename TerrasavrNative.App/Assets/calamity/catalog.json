@@ -3754,7 +3754,8 @@
     "stats": {
       "defense": 1
     },
-    "setBonus": "+105 de sigilo máximo\n(tecla configurada) para invocar una tormenta ancestral en la posición del cursor\nLa tormenta ancestral cuesta 60 de maná y se beneficia tanto de las bonificaciones de invocación como de las pícaras\nLos golpes furtivos pícaros marcan a los enemigos, haciendo que los súbditos generen devoradores teledirigidos al golpearlos\nUsar armas de invocación ya no reinicia tu sigilo\nLos súbditos ya no hacen menos daño al llevar armas pícaras"
+    "setBonus": "+105 de sigilo máximo\n(tecla configurada) para invocar una tormenta ancestral en la posición del cursor\nLa tormenta ancestral cuesta 60 de maná y se beneficia tanto de las bonificaciones de invocación como de las pícaras\nLos golpes furtivos pícaros marcan a los enemigos, haciendo que los súbditos generen devoradores teledirigidos al golpearlos\nUsar armas de invocación ya no reinicia tu sigilo\nLos súbditos ya no hacen menos daño al llevar armas pícaras",
+    "equipSlot": "Head"
   },
   {
     "internal": "AerospecBreastplate",
@@ -3765,7 +3766,8 @@
     "icon": "AerospecBreastplate.png",
     "stats": {
       "defense": 7
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "AerospecHeadMagic",
@@ -3777,7 +3779,8 @@
     "stats": {
       "defense": 3
     },
-    "setBonus": "Reduce el coste de maná un 8%\nAumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico mágico\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída"
+    "setBonus": "Reduce el coste de maná un 8%\nAumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico mágico\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
+    "equipSlot": "Head"
   },
   {
     "internal": "AerospecHeadMelee",
@@ -3789,7 +3792,8 @@
     "stats": {
       "defense": 7
     },
-    "setBonus": "Aumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico cuerpo a cuerpo\nLos enemigos tienen más probabilidad de fijarse en ti\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída"
+    "setBonus": "Aumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico cuerpo a cuerpo\nLos enemigos tienen más probabilidad de fijarse en ti\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
+    "equipSlot": "Head"
   },
   {
     "internal": "AerospecHeadRanged",
@@ -3801,7 +3805,8 @@
     "stats": {
       "defense": 5
     },
-    "setBonus": "Aumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico a distancia\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída"
+    "setBonus": "Aumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico a distancia\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
+    "equipSlot": "Head"
   },
   {
     "internal": "AerospecHeadRogue",
@@ -3813,7 +3818,8 @@
     "stats": {
       "defense": 4
     },
-    "setBonus": "+80 de sigilo máximo\nAumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico pícaro\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída"
+    "setBonus": "+80 de sigilo máximo\nAumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico pícaro\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
+    "equipSlot": "Head"
   },
   {
     "internal": "AerospecHeadSummon",
@@ -3825,7 +3831,8 @@
     "stats": {
       "defense": 2
     },
-    "setBonus": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 11% el daño de invocación\nInvoca una valquiria que te protege\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída"
+    "setBonus": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 11% el daño de invocación\nInvoca una valquiria que te protege\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
+    "equipSlot": "Head"
   },
   {
     "internal": "AerospecLeggings",
@@ -3836,7 +3843,8 @@
     "icon": "AerospecLeggings.png",
     "stats": {
       "defense": 6
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "AstralBreastplate",
@@ -3847,7 +3855,8 @@
     "icon": "AstralBreastplate.png",
     "stats": {
       "defense": 25
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "AstralHelm",
@@ -3859,7 +3868,8 @@
     "stats": {
       "defense": 17
     },
-    "setBonus": "Aumenta en 3 el máximo de súbditos que puedes tener\nAumenta un 10% el daño y la probabilidad de ataque crítico\nCada vez que asestas un golpe crítico a un enemigo cae una lluvia de estrellas\nEste efecto tiene 1 segundo de reutilización antes de poder activarse de nuevo"
+    "setBonus": "Aumenta en 3 el máximo de súbditos que puedes tener\nAumenta un 10% el daño y la probabilidad de ataque crítico\nCada vez que asestas un golpe crítico a un enemigo cae una lluvia de estrellas\nEste efecto tiene 1 segundo de reutilización antes de poder activarse de nuevo",
+    "equipSlot": "Head"
   },
   {
     "internal": "AstralLeggings",
@@ -3870,7 +3880,8 @@
     "icon": "AstralLeggings.png",
     "stats": {
       "defense": 21
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "AuricTeslaBodyArmor",
@@ -3881,7 +3892,8 @@
     "icon": "AuricTeslaBodyArmor.png",
     "stats": {
       "defense": 44
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "AuricTeslaCuisses",
@@ -3892,7 +3904,8 @@
     "icon": "AuricTeslaCuisses.png",
     "stats": {
       "defense": 42
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "AuricTeslaHeadMagic",
@@ -3904,7 +3917,8 @@
     "stats": {
       "defense": 24
     },
-    "setBonus": "Efectos combinados de las armaduras Tarragon, Bloodflare y Silva de Magia\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas"
+    "setBonus": "Efectos combinados de las armaduras Tarragon, Bloodflare y Silva de Magia\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
+    "equipSlot": "Head"
   },
   {
     "internal": "AuricTeslaHeadMelee",
@@ -3916,7 +3930,8 @@
     "stats": {
       "defense": 54
     },
-    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nEfectos combinados de las armaduras Tarragon, Bloodflare y God Slayer de Cuerpo a cuerpo\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas"
+    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nEfectos combinados de las armaduras Tarragon, Bloodflare y God Slayer de Cuerpo a cuerpo\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
+    "equipSlot": "Head"
   },
   {
     "internal": "AuricTeslaHeadRanged",
@@ -3928,7 +3943,8 @@
     "stats": {
       "defense": 39
     },
-    "setBonus": "Efectos combinados de las armaduras Tarragon, Bloodflare y God Slayer a Distancia\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas"
+    "setBonus": "Efectos combinados de las armaduras Tarragon, Bloodflare y God Slayer a Distancia\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
+    "equipSlot": "Head"
   },
   {
     "internal": "AuricTeslaHeadRogue",
@@ -3940,7 +3956,8 @@
     "stats": {
       "defense": 34
     },
-    "setBonus": "+130 de sigilo máximo\nEfectos combinados de las armaduras Tarragon, Bloodflare y God Slayer Pícaras\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas"
+    "setBonus": "+130 de sigilo máximo\nEfectos combinados de las armaduras Tarragon, Bloodflare y God Slayer Pícaras\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
+    "equipSlot": "Head"
   },
   {
     "internal": "AuricTeslaHeadSummon",
@@ -3952,7 +3969,8 @@
     "stats": {
       "defense": 18
     },
-    "setBonus": "Aumenta en 4 el máximo de súbditos que puedes tener\nAumenta un 55% el daño de invocación\nEfectos combinados de las armaduras Tarragon, Bloodflare y Silva de Invocación\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas"
+    "setBonus": "Aumenta en 4 el máximo de súbditos que puedes tener\nAumenta un 55% el daño de invocación\nEfectos combinados de las armaduras Tarragon, Bloodflare y Silva de Invocación\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
+    "equipSlot": "Head"
   },
   {
     "internal": "BloodflareBodyArmor",
@@ -3963,7 +3981,8 @@
     "icon": "BloodflareBodyArmor.png",
     "stats": {
       "defense": 36
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "BloodflareCuisses",
@@ -3974,7 +3993,8 @@
     "icon": "BloodflareCuisses.png",
     "stats": {
       "defense": 28
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "BloodflareHeadMagic",
@@ -3986,7 +4006,8 @@
     "stats": {
       "defense": 18
     },
-    "setBonus": "Las armas mágicas disparan proyectiles fantasmales cada 1,67 segundos\nLos críticos mágicos provocan explosiones de sangre cada 2 segundos\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización"
+    "setBonus": "Las armas mágicas disparan proyectiles fantasmales cada 1,67 segundos\nLos críticos mágicos provocan explosiones de sangre cada 2 segundos\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "BloodflareHeadMelee",
@@ -3998,7 +4019,8 @@
     "stats": {
       "defense": 44
     },
-    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nTras golpear a un enemigo 15 veces con un ataque cuerpo a cuerpo real entras en frenesí sangriento durante 5 segundos\nDurante ese tiempo ganas un 25% más de daño y probabilidad de crítico cuerpo a cuerpo, y un 50% menos de daño por contacto\nEste efecto tiene 30 segundos de reutilización\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización"
+    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nTras golpear a un enemigo 15 veces con un ataque cuerpo a cuerpo real entras en frenesí sangriento durante 5 segundos\nDurante ese tiempo ganas un 25% más de daño y probabilidad de crítico cuerpo a cuerpo, y un 50% menos de daño por contacto\nEste efecto tiene 30 segundos de reutilización\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "BloodflareHeadRanged",
@@ -4010,7 +4032,8 @@
     "stats": {
       "defense": 30
     },
-    "setBonus": "(tecla configurada) para liberar las almas perdidas de Polterghast y destruir a tus enemigos\nEste efecto tiene 30 segundos de reutilización\nLas armas a distancia disparan orbes de sangre explosivos cada 2,5 segundos\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización"
+    "setBonus": "(tecla configurada) para liberar las almas perdidas de Polterghast y destruir a tus enemigos\nEste efecto tiene 30 segundos de reutilización\nLas armas a distancia disparan orbes de sangre explosivos cada 2,5 segundos\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "BloodflareHeadRogue",
@@ -4022,7 +4045,8 @@
     "stats": {
       "defense": 26
     },
-    "setBonus": "+120 de sigilo máximo\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización"
+    "setBonus": "+120 de sigilo máximo\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "BloodflareHeadSummon",
@@ -4034,7 +4058,8 @@
     "stats": {
       "defense": 12
     },
-    "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 30% el daño de invocación\nInvoca minas de Polterghast que orbitan a tu alrededor\nOtorga 20 de defensa cuando estás por debajo del 50% de vida\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización"
+    "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 30% el daño de invocación\nInvoca minas de Polterghast que orbitan a tu alrededor\nOtorga 20 de defensa cuando estás por debajo del 50% de vida\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "BrimflameBoots",
@@ -4045,7 +4070,8 @@
     "icon": "BrimflameBoots.png",
     "stats": {
       "defense": 13
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "BrimflameCowl",
@@ -4057,7 +4083,8 @@
     "stats": {
       "defense": 12
     },
-    "setBonus": "Aumenta un 8% el daño mágico y la probabilidad de ataque crítico\nFrenesí Brimflame - (tecla configurada) para, durante 10 segundos, aumentar un 40% el daño de los ataques mágicos\nSin embargo, esto provoca pérdida rápida de vida y anula la regeneración de maná y las pociones de maná\nEste efecto se puede desactivar y tiene 30 segundos de reutilización"
+    "setBonus": "Aumenta un 8% el daño mágico y la probabilidad de ataque crítico\nFrenesí Brimflame - (tecla configurada) para, durante 10 segundos, aumentar un 40% el daño de los ataques mágicos\nSin embargo, esto provoca pérdida rápida de vida y anula la regeneración de maná y las pociones de maná\nEste efecto se puede desactivar y tiene 30 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "BrimflameRobes",
@@ -4068,7 +4095,8 @@
     "icon": "BrimflameRobes.png",
     "stats": {
       "defense": 16
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "DaedalusBreastplate",
@@ -4079,7 +4107,8 @@
     "icon": "DaedalusBreastplate.png",
     "stats": {
       "defense": 19
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "DaedalusHeadMagic",
@@ -4091,7 +4120,8 @@
     "stats": {
       "defense": 8
     },
-    "setBonus": "Tienes un 10% de probabilidad de recuperar el 50% del daño recibido"
+    "setBonus": "Tienes un 10% de probabilidad de recuperar el 50% del daño recibido",
+    "equipSlot": "Head"
   },
   {
     "internal": "DaedalusHeadMelee",
@@ -4103,7 +4133,8 @@
     "stats": {
       "defense": 22
     },
-    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nReflejas los proyectiles de vuelta a los enemigos, anulando su daño\nLos proyectiles que causen menos del 5% de tu vida máxima en daño no se reflejarán\nEl reflejo tiene una reutilización de entre 20 y 90 segundos según el daño del proyectil reflejado\nEsta reutilización se comparte con el resto de esquivas y reflejos"
+    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nReflejas los proyectiles de vuelta a los enemigos, anulando su daño\nLos proyectiles que causen menos del 5% de tu vida máxima en daño no se reflejarán\nEl reflejo tiene una reutilización de entre 20 y 90 segundos según el daño del proyectil reflejado\nEsta reutilización se comparte con el resto de esquivas y reflejos",
+    "equipSlot": "Head"
   },
   {
     "internal": "DaedalusHeadRanged",
@@ -4115,7 +4146,8 @@
     "stats": {
       "defense": 14
     },
-    "setBonus": "Al recibir un golpe, emites una explosión de fragmentos de cristal"
+    "setBonus": "Al recibir un golpe, emites una explosión de fragmentos de cristal",
+    "equipSlot": "Head"
   },
   {
     "internal": "DaedalusHeadRogue",
@@ -4127,7 +4159,8 @@
     "stats": {
       "defense": 10
     },
-    "setBonus": "+105 de sigilo máximo\nLos proyectiles pícaros lanzan fragmentos de cristal mientras viajan"
+    "setBonus": "+105 de sigilo máximo\nLos proyectiles pícaros lanzan fragmentos de cristal mientras viajan",
+    "equipSlot": "Head"
   },
   {
     "internal": "DaedalusHeadSummon",
@@ -4139,7 +4172,8 @@
     "stats": {
       "defense": 3
     },
-    "setBonus": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 10% el daño de invocación\nUn cristal de Daedalus flota sobre ti para protegerte"
+    "setBonus": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 10% el daño de invocación\nUn cristal de Daedalus flota sobre ti para protegerte",
+    "equipSlot": "Head"
   },
   {
     "internal": "DaedalusLeggings",
@@ -4150,7 +4184,8 @@
     "icon": "DaedalusLeggings.png",
     "stats": {
       "defense": 15
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "DemonshadeBreastplate",
@@ -4161,7 +4196,8 @@
     "icon": "DemonshadeBreastplate.png",
     "stats": {
       "defense": 50
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "DemonshadeGreaves",
@@ -4172,7 +4208,8 @@
     "icon": "DemonshadeGreaves.png",
     "stats": {
       "defense": 50
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "DemonshadeHelm",
@@ -4184,7 +4221,8 @@
     "stats": {
       "defense": 50
     },
-    "setBonus": "Aumenta en 8 el máximo de súbditos que puedes tener\nAumenta un 100% el daño de invocación\nAl recibir un golpe se disparan rayos de sombra y guadañas demoníacas\n(tecla configurada) para enfurecer a los enemigos cercanos con un hechizo de magia oscura durante 10 segundos\nEsto hace que reciban 1,5 veces el daño total, pero te infligirán 1,25 veces más daño a ti"
+    "setBonus": "Aumenta en 8 el máximo de súbditos que puedes tener\nAumenta un 100% el daño de invocación\nAl recibir un golpe se disparan rayos de sombra y guadañas demoníacas\n(tecla configurada) para enfurecer a los enemigos cercanos con un hechizo de magia oscura durante 10 segundos\nEsto hace que reciban 1,5 veces el daño total, pero te infligirán 1,25 veces más daño a ti",
+    "equipSlot": "Head"
   },
   {
     "internal": "DesertProwlerHat",
@@ -4196,7 +4234,8 @@
     "stats": {
       "defense": 2
     },
-    "setBonus": "+50 de sigilo máximo\nBomba de humo de arena - (tecla configurada) para envolverte en una pequeña nube de arena\nMientras la nube de arena está activa ganas movilidad pero pierdes mucha defensa\nUsar un arma pícara disipa al instante la nube de arena, pero garantiza un supercrítico del 200% de daño\nEl supercrítico solo se aplica si el golpe resultante no supera los 200 de daño\nAsestar el golpe de gracia a un enemigo con este disparo acorta la reutilización de la habilidad a 2 segundos"
+    "setBonus": "+50 de sigilo máximo\nBomba de humo de arena - (tecla configurada) para envolverte en una pequeña nube de arena\nMientras la nube de arena está activa ganas movilidad pero pierdes mucha defensa\nUsar un arma pícara disipa al instante la nube de arena, pero garantiza un supercrítico del 200% de daño\nEl supercrítico solo se aplica si el golpe resultante no supera los 200 de daño\nAsestar el golpe de gracia a un enemigo con este disparo acorta la reutilización de la habilidad a 2 segundos",
+    "equipSlot": "Head"
   },
   {
     "internal": "DesertProwlerPants",
@@ -4207,7 +4246,8 @@
     "icon": "DesertProwlerPants.png",
     "stats": {
       "defense": 3
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "DesertProwlerShirt",
@@ -4218,7 +4258,8 @@
     "icon": "DesertProwlerShirt.png",
     "stats": {
       "defense": 4
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "EmpyreanCloak",
@@ -4229,7 +4270,8 @@
     "icon": "EmpyreanCloak.png",
     "stats": {
       "defense": 24
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "EmpyreanCuisses",
@@ -4240,7 +4282,8 @@
     "icon": "EmpyreanCuisses.png",
     "stats": {
       "defense": 20
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "EmpyreanMask",
@@ -4252,7 +4295,8 @@
     "stats": {
       "defense": 16
     },
-    "setBonus": "+115 de sigilo máximo\nLos proyectiles pícaros tienen efectos especiales al golpear enemigos\nQuedas imbuido de Ira Empírea cuando te dañan o mientras estás por debajo del 50% de vida"
+    "setBonus": "+115 de sigilo máximo\nLos proyectiles pícaros tienen efectos especiales al golpear enemigos\nQuedas imbuido de Ira Empírea cuando te dañan o mientras estás por debajo del 50% de vida",
+    "equipSlot": "Head"
   },
   {
     "internal": "FathomSwarmerBoots",
@@ -4263,7 +4307,8 @@
     "icon": "FathomSwarmerBoots.png",
     "stats": {
       "defense": 13
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "FathomSwarmerBreastplate",
@@ -4274,7 +4319,8 @@
     "icon": "FathomSwarmerBreastplate.png",
     "stats": {
       "defense": 20
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "FathomSwarmerVisage",
@@ -4286,7 +4332,8 @@
     "stats": {
       "defense": 8
     },
-    "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 10% el daño de invocación\nOtorga la capacidad de trepar paredes\nAumenta un 20% el daño de invocación, +10 de defensa y +2,5 de regeneración de vida por segundo mientras estás bajo el agua\nProporciona una luz moderada y reduce moderadamente la pérdida de aire en el abismo"
+    "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 10% el daño de invocación\nOtorga la capacidad de trepar paredes\nAumenta un 20% el daño de invocación, +10 de defensa y +2,5 de regeneración de vida por segundo mientras estás bajo el agua\nProporciona una luz moderada y reduce moderadamente la pérdida de aire en el abismo",
+    "equipSlot": "Head"
   },
   {
     "internal": "FearmongerGreathelm",
@@ -4298,7 +4345,8 @@
     "stats": {
       "defense": 35
     },
-    "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nLos súbditos ya no hacen menos daño al llevar armas que no sean de invocación\nInmunidad a todas las formas de frío y fuego salvo las más fuertes\nLos ataques de los súbditos otorgan +2,5 de regeneración de vida por segundo y la aceleran muchísimo"
+    "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nLos súbditos ya no hacen menos daño al llevar armas que no sean de invocación\nInmunidad a todas las formas de frío y fuego salvo las más fuertes\nLos ataques de los súbditos otorgan +2,5 de regeneración de vida por segundo y la aceleran muchísimo",
+    "equipSlot": "Head"
   },
   {
     "internal": "FearmongerGreaves",
@@ -4309,7 +4357,8 @@
     "icon": "FearmongerGreaves.png",
     "stats": {
       "defense": 42
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "FearmongerPlateMail",
@@ -4320,7 +4369,8 @@
     "icon": "FearmongerPlateMail.png",
     "stats": {
       "defense": 48
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "GemTechBodyArmor",
@@ -4331,7 +4381,8 @@
     "icon": "GemTechBodyArmor.png",
     "stats": {
       "defense": 31
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "GemTechHeadgear",
@@ -4343,7 +4394,8 @@
     "stats": {
       "defense": 14
     },
-    "setBonus": "Gemas de poder - Seis fragmentos de gema orbitan a tu alrededor sin usar energía; uno por cada clase, más una gema base"
+    "setBonus": "Gemas de poder - Seis fragmentos de gema orbitan a tu alrededor sin usar energía; uno por cada clase, más una gema base",
+    "equipSlot": "Head"
   },
   {
     "internal": "GemTechSchynbaulds",
@@ -4354,7 +4406,8 @@
     "icon": "GemTechSchynbaulds.png",
     "stats": {
       "defense": 24
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "GodSlayerChestplate",
@@ -4365,7 +4418,8 @@
     "icon": "GodSlayerChestplate.png",
     "stats": {
       "defense": 40
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "GodSlayerHeadMelee",
@@ -4377,7 +4431,8 @@
     "stats": {
       "defense": 50
     },
-    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nLibera un enjambre de dardos verdugos de dioses al recibir más de 80 de daño de un solo golpe\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización"
+    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nLibera un enjambre de dardos verdugos de dioses al recibir más de 80 de daño de un solo golpe\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "GodSlayerHeadRanged",
@@ -4389,7 +4444,8 @@
     "stats": {
       "defense": 35
     },
-    "setBonus": "Las armas a distancia disparan un proyectil de metralla verdugo de dioses cada 2,5 segundos\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización"
+    "setBonus": "Las armas a distancia disparan un proyectil de metralla verdugo de dioses cada 2,5 segundos\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "GodSlayerHeadRogue",
@@ -4401,7 +4457,8 @@
     "stats": {
       "defense": 30
     },
-    "setBonus": "+120 de sigilo máximo\nAumenta un 10% el daño, la probabilidad de crítico y la velocidad pícaros estando a vida completa\nMayor duración de la invencibilidad al recibir más de 80 de daño de un solo golpe\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización"
+    "setBonus": "+120 de sigilo máximo\nAumenta un 10% el daño, la probabilidad de crítico y la velocidad pícaros estando a vida completa\nMayor duración de la invencibilidad al recibir más de 80 de daño de un solo golpe\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "GodSlayerLeggings",
@@ -4412,7 +4469,8 @@
     "icon": "GodSlayerLeggings.png",
     "stats": {
       "defense": 30
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "HydrothermicArmor",
@@ -4423,7 +4481,8 @@
     "icon": "HydrothermicArmor.png",
     "stats": {
       "defense": 20
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "HydrothermicHeadMagic",
@@ -4435,7 +4494,8 @@
     "stats": {
       "defense": 9
     },
-    "setBonus": "Los ataques mágicos invocan orbes de fulgor que dañan y curan al golpear\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe"
+    "setBonus": "Los ataques mágicos invocan orbes de fulgor que dañan y curan al golpear\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
+    "equipSlot": "Head"
   },
   {
     "internal": "HydrothermicHeadMelee",
@@ -4447,7 +4507,8 @@
     "stats": {
       "defense": 33
     },
-    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nLos ataques y proyectiles cuerpo a cuerpo hacen brotar llamas caóticas al golpear enemigos\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe"
+    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nLos ataques y proyectiles cuerpo a cuerpo hacen brotar llamas caóticas al golpear enemigos\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
+    "equipSlot": "Head"
   },
   {
     "internal": "HydrothermicHeadRanged",
@@ -4459,7 +4520,8 @@
     "stats": {
       "defense": 15
     },
-    "setBonus": "Disparas un fulgor caótico teledirigido cada 0,33 segundos al usar armas a distancia\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe"
+    "setBonus": "Disparas un fulgor caótico teledirigido cada 0,33 segundos al usar armas a distancia\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
+    "equipSlot": "Head"
   },
   {
     "internal": "HydrothermicHeadRogue",
@@ -4471,7 +4533,8 @@
     "stats": {
       "defense": 12
     },
-    "setBonus": "+110 de sigilo máximo\nLas armas pícaras liberan una ráfaga de llamas caóticas teledirigidas alrededor del jugador cada 2 segundos\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe"
+    "setBonus": "+110 de sigilo máximo\nLas armas pícaras liberan una ráfaga de llamas caóticas teledirigidas alrededor del jugador cada 2 segundos\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
+    "equipSlot": "Head"
   },
   {
     "internal": "HydrothermicHeadSummon",
@@ -4483,7 +4546,8 @@
     "stats": {
       "defense": 6
     },
-    "setBonus": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 25% el daño de invocación\nInvoca un respiradero hidrotérmico que te protege\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe"
+    "setBonus": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 25% el daño de invocación\nInvoca un respiradero hidrotérmico que te protege\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
+    "equipSlot": "Head"
   },
   {
     "internal": "HydrothermicSubligar",
@@ -4494,7 +4558,8 @@
     "icon": "HydrothermicSubligar.png",
     "stats": {
       "defense": 14
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "LunicCorpsBoots",
@@ -4505,7 +4570,8 @@
     "icon": "LunicCorpsBoots.png",
     "stats": {
       "defense": 18
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "LunicCorpsHelmet",
@@ -4517,7 +4583,8 @@
     "stats": {
       "defense": 14
     },
-    "setBonus": "Aumenta un 20% la velocidad de salto\nEscudo MJOLNIR - Proyecta un escudo de burbuja que absorbe hasta 50 de daño\nEl escudo empieza a recargarse 5 segundos después de recibir un golpe\nRecargarse del todo desde cero tarda 2 segundos\nRecibir otro golpe mientras se recarga reinicia el temporizador de carga\n«Termina la pelea»"
+    "setBonus": "Aumenta un 20% la velocidad de salto\nEscudo MJOLNIR - Proyecta un escudo de burbuja que absorbe hasta 50 de daño\nEl escudo empieza a recargarse 5 segundos después de recibir un golpe\nRecargarse del todo desde cero tarda 2 segundos\nRecibir otro golpe mientras se recarga reinicia el temporizador de carga\n«Termina la pelea»",
+    "equipSlot": "Head"
   },
   {
     "internal": "LunicCorpsVest",
@@ -4528,7 +4595,8 @@
     "icon": "LunicCorpsVest.png",
     "stats": {
       "defense": 24
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "MarniteArchitectHeadgear",
@@ -4540,7 +4608,8 @@
     "stats": {
       "defense": 4
     },
-    "setBonus": "Elevador Marnite - Puedes invocar un elevador bajo tus pies para llegar más alto\nEl elevador se invoca al pulsar la tecla de montura sin ninguna montura equipada\nPulsa ARRIBA y ABAJO para cambiar la altura del elevador, hasta 10 bloques por encima del suelo"
+    "setBonus": "Elevador Marnite - Puedes invocar un elevador bajo tus pies para llegar más alto\nEl elevador se invoca al pulsar la tecla de montura sin ninguna montura equipada\nPulsa ARRIBA y ABAJO para cambiar la altura del elevador, hasta 10 bloques por encima del suelo",
+    "equipSlot": "Head"
   },
   {
     "internal": "MarniteArchitectToga",
@@ -4551,7 +4620,8 @@
     "icon": "MarniteArchitectToga.png",
     "stats": {
       "defense": 5
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "MolluskShelleggings",
@@ -4562,7 +4632,8 @@
     "icon": "MolluskShelleggings.png",
     "stats": {
       "defense": 12
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "MolluskShellmet",
@@ -4574,7 +4645,8 @@
     "stats": {
       "defense": 15
     },
-    "setBonus": "Aumenta un 10% la reducción de daño\nDos moluscos te ayudan en combate, infligiendo el efecto Aplausos de Molusco"
+    "setBonus": "Aumenta un 10% la reducción de daño\nDos moluscos te ayudan en combate, infligiendo el efecto Aplausos de Molusco",
+    "equipSlot": "Head"
   },
   {
     "internal": "MolluskShellplate",
@@ -4585,7 +4657,8 @@
     "icon": "MolluskShellplate.png",
     "stats": {
       "defense": 18
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "OmegaBlueChestplate",
@@ -4596,7 +4669,8 @@
     "icon": "OmegaBlueChestplate.png",
     "stats": {
       "defense": 20
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "OmegaBlueHelmet",
@@ -4608,7 +4682,8 @@
     "stats": {
       "defense": 15
     },
-    "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nLos tentáculos de corto alcance te curan absorbiendo vida enemiga\nLocura Abisal - (tecla configurada) para entrar en modo berserker durante 5 segundos\nMientras está activo, los tentáculos atacan con más alcance y agresividad, y siempre asestan crítico\nEsto también otorga un 10% más de daño y probabilidad de crítico\nEste efecto tiene 25 segundos de reutilización"
+    "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nLos tentáculos de corto alcance te curan absorbiendo vida enemiga\nLocura Abisal - (tecla configurada) para entrar en modo berserker durante 5 segundos\nMientras está activo, los tentáculos atacan con más alcance y agresividad, y siempre asestan crítico\nEsto también otorga un 10% más de daño y probabilidad de crítico\nEste efecto tiene 25 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "OmegaBlueTentacles",
@@ -4619,7 +4694,8 @@
     "icon": "OmegaBlueTentacles.png",
     "stats": {
       "defense": 15
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "PlagueReaperMask",
@@ -4631,7 +4707,8 @@
     "stats": {
       "defense": 11
     },
-    "setBonus": "Aumenta un 5% el tiempo de vuelo\nLos enemigos afectados por la Plaga reciben 1,1 veces más daño de proyectiles a distancia\nApagón de la Plaga - (tecla configurada) para potenciar enormemente tu daño pero cegarte por completo\nAumenta un 60% el daño a distancia y un 20% la probabilidad de crítico a distancia mientras estás cegado\nEste efecto dura 5 segundos y tiene 25 segundos de reutilización"
+    "setBonus": "Aumenta un 5% el tiempo de vuelo\nLos enemigos afectados por la Plaga reciben 1,1 veces más daño de proyectiles a distancia\nApagón de la Plaga - (tecla configurada) para potenciar enormemente tu daño pero cegarte por completo\nAumenta un 60% el daño a distancia y un 20% la probabilidad de crítico a distancia mientras estás cegado\nEste efecto dura 5 segundos y tiene 25 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "PlagueReaperStriders",
@@ -4642,7 +4719,8 @@
     "icon": "PlagueReaperStriders.png",
     "stats": {
       "defense": 14
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "PlagueReaperVest",
@@ -4653,7 +4731,8 @@
     "icon": "PlagueReaperVest.png",
     "stats": {
       "defense": 19
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "PlaguebringerCarapace",
@@ -4664,7 +4743,8 @@
     "icon": "PlaguebringerCarapace.png",
     "stats": {
       "defense": 13
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "PlaguebringerPistons",
@@ -4675,7 +4755,8 @@
     "icon": "PlaguebringerPistons.png",
     "stats": {
       "defense": 10
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "PlaguebringerVisor",
@@ -4687,7 +4768,8 @@
     "stats": {
       "defense": 9
     },
-    "setBonus": "Otorga un embiste de la plaga que atraviesa enemigos sin recibir daño\nInvoca un mini portador de la plaga que acosa a tus enemigos con pequeñas abejas\nLas abejas aliadas infligen el efecto Plaga"
+    "setBonus": "Otorga un embiste de la plaga que atraviesa enemigos sin recibir daño\nInvoca un mini portador de la plaga que acosa a tus enemigos con pequeñas abejas\nLas abejas aliadas infligen el efecto Plaga",
+    "equipSlot": "Head"
   },
   {
     "internal": "PrismaticGreaves",
@@ -4698,7 +4780,8 @@
     "icon": "PrismaticGreaves.png",
     "stats": {
       "defense": 21
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "PrismaticHelmet",
@@ -4710,7 +4793,8 @@
     "stats": {
       "defense": 18
     },
-    "setBonus": "Aumenta la regeneración de maná\nRáfaga Prismática - (tecla configurada) para lanzar una ráfaga de láseres al cursor durante 5 segundos\nTiene 30 segundos de reutilización"
+    "setBonus": "Aumenta la regeneración de maná\nRáfaga Prismática - (tecla configurada) para lanzar una ráfaga de láseres al cursor durante 5 segundos\nTiene 30 segundos de reutilización",
+    "equipSlot": "Head"
   },
   {
     "internal": "PrismaticRegalia",
@@ -4721,7 +4805,8 @@
     "icon": "PrismaticRegalia.png",
     "stats": {
       "defense": 33
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "ReaverCuisses",
@@ -4732,7 +4817,8 @@
     "icon": "ReaverCuisses.png",
     "stats": {
       "defense": 18
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "ReaverHeadExplore",
@@ -4744,7 +4830,8 @@
     "stats": {
       "defense": 6
     },
-    "setBonus": "Emite luz y muestra la ubicación de tesoros y minerales\nLos enemigos tienen menos probabilidad de fijarse en ti y otorga respiración bajo el agua\nMejora enormemente la visibilidad en el abismo\nAumenta en 7 el alcance de colocación de bloques y herramientas\nAumenta el alcance de recogida de objetos"
+    "setBonus": "Emite luz y muestra la ubicación de tesoros y minerales\nLos enemigos tienen menos probabilidad de fijarse en ti y otorga respiración bajo el agua\nMejora enormemente la visibilidad en el abismo\nAumenta en 7 el alcance de colocación de bloques y herramientas\nAumenta el alcance de recogida de objetos",
+    "equipSlot": "Head"
   },
   {
     "internal": "ReaverHeadMobility",
@@ -4756,7 +4843,8 @@
     "stats": {
       "defense": 13
     },
-    "setBonus": "Otorga inmunidad al daño por caída y permite saltar sin parar\nAumenta un 10% el tiempo de vuelo y la velocidad horizontal de las alas\nLos ganchos se retraen y tiran de ti un 50% más rápido\nReduce un 33,3% la reutilización de los dashes"
+    "setBonus": "Otorga inmunidad al daño por caída y permite saltar sin parar\nAumenta un 10% el tiempo de vuelo y la velocidad horizontal de las alas\nLos ganchos se retraen y tiran de ti un 50% más rápido\nReduce un 33,3% la reutilización de los dashes",
+    "equipSlot": "Head"
   },
   {
     "internal": "ReaverHeadTank",
@@ -4768,7 +4856,8 @@
     "stats": {
       "defense": 28
     },
-    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nReduce un 50% la regeneración de vida perdida por debuffs de daño continuo\nReduce un 30% la velocidad de movimiento y el tiempo de vuelo\nOtorga Furia de Reaver durante 5 segundos al recibir daño"
+    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nReduce un 50% la regeneración de vida perdida por debuffs de daño continuo\nReduce un 30% la velocidad de movimiento y el tiempo de vuelo\nOtorga Furia de Reaver durante 5 segundos al recibir daño",
+    "equipSlot": "Head"
   },
   {
     "internal": "ReaverScaleMail",
@@ -4779,7 +4868,8 @@
     "icon": "ReaverScaleMail.png",
     "stats": {
       "defense": 24
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "SilvaArmor",
@@ -4790,7 +4880,8 @@
     "icon": "SilvaArmor.png",
     "stats": {
       "defense": 38
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "SilvaHeadMagic",
@@ -4802,7 +4893,8 @@
     "stats": {
       "defense": 24
     },
-    "setBonus": "Los proyectiles mágicos que no atraviesan a veces desatan potentes explosiones de energía natural\n+3 de regeneración de vida por segundo\nAumenta un 5% la velocidad y aceleración máximas al correr\nRecibir daño mortal te revive y te vuelve invulnerable a todo daño durante 5 segundos\nEste efecto tiene 5 minutos de reutilización, que no avanza mientras hay jefes o eventos activos"
+    "setBonus": "Los proyectiles mágicos que no atraviesan a veces desatan potentes explosiones de energía natural\n+3 de regeneración de vida por segundo\nAumenta un 5% la velocidad y aceleración máximas al correr\nRecibir daño mortal te revive y te vuelve invulnerable a todo daño durante 5 segundos\nEste efecto tiene 5 minutos de reutilización, que no avanza mientras hay jefes o eventos activos",
+    "equipSlot": "Head"
   },
   {
     "internal": "SilvaHeadSummon",
@@ -4814,7 +4906,8 @@
     "stats": {
       "defense": 18
     },
-    "setBonus": "Aumenta en 3 el máximo de súbditos que puedes tener\nAumenta un 40% el daño de invocación\nInvoca un prisma de hoja ancestral que golpea a tus enemigos con energía vital\n+3 de regeneración de vida por segundo\nAumenta un 5% la velocidad y aceleración máximas al correr\nRecibir daño mortal te revive y te vuelve invulnerable a todo daño durante 5 segundos\nEste efecto tiene 5 minutos de reutilización, que no avanza mientras hay jefes o eventos activos"
+    "setBonus": "Aumenta en 3 el máximo de súbditos que puedes tener\nAumenta un 40% el daño de invocación\nInvoca un prisma de hoja ancestral que golpea a tus enemigos con energía vital\n+3 de regeneración de vida por segundo\nAumenta un 5% la velocidad y aceleración máximas al correr\nRecibir daño mortal te revive y te vuelve invulnerable a todo daño durante 5 segundos\nEste efecto tiene 5 minutos de reutilización, que no avanza mientras hay jefes o eventos activos",
+    "equipSlot": "Head"
   },
   {
     "internal": "SilvaLeggings",
@@ -4825,7 +4918,8 @@
     "icon": "SilvaLeggings.png",
     "stats": {
       "defense": 28
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "SnowRuffianChestplate",
@@ -4836,7 +4930,8 @@
     "icon": "SnowRuffianChestplate.png",
     "stats": {
       "defense": 4
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "SnowRuffianGreaves",
@@ -4847,7 +4942,8 @@
     "icon": "SnowRuffianGreaves.png",
     "stats": {
       "defense": 3
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "SnowRuffianMask",
@@ -4859,7 +4955,8 @@
     "stats": {
       "defense": 2
     },
-    "setBonus": "Puedes planear para anular el daño por caída\nLos críticos a distancia infligen Quemadura Helada durante 2 segundos"
+    "setBonus": "Puedes planear para anular el daño por caída\nLos críticos a distancia infligen Quemadura Helada durante 2 segundos",
+    "equipSlot": "Head"
   },
   {
     "internal": "StatigelArmor",
@@ -4870,7 +4967,8 @@
     "icon": "StatigelArmor.png",
     "stats": {
       "defense": 10
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "StatigelGreaves",
@@ -4881,7 +4979,8 @@
     "icon": "StatigelGreaves.png",
     "stats": {
       "defense": 8
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "StatigelHeadMagic",
@@ -4893,7 +4992,8 @@
     "stats": {
       "defense": 5
     },
-    "setBonus": "Otorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto"
+    "setBonus": "Otorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
+    "equipSlot": "Head"
   },
   {
     "internal": "StatigelHeadMelee",
@@ -4905,7 +5005,8 @@
     "stats": {
       "defense": 9
     },
-    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto"
+    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
+    "equipSlot": "Head"
   },
   {
     "internal": "StatigelHeadRanged",
@@ -4917,7 +5018,8 @@
     "stats": {
       "defense": 7
     },
-    "setBonus": "Otorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto"
+    "setBonus": "Otorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
+    "equipSlot": "Head"
   },
   {
     "internal": "StatigelHeadRogue",
@@ -4929,7 +5031,8 @@
     "stats": {
       "defense": 6
     },
-    "setBonus": "+90 de sigilo máximo\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto"
+    "setBonus": "+90 de sigilo máximo\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
+    "equipSlot": "Head"
   },
   {
     "internal": "StatigelHeadSummon",
@@ -4941,7 +5044,8 @@
     "stats": {
       "defense": 4
     },
-    "setBonus": "Aumenta un 15% el daño de invocación\nInvoca a un mini paladín que lucha por ti, su tipo depende del mal del mundo que tengas\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto"
+    "setBonus": "Aumenta un 15% el daño de invocación\nInvoca a un mini paladín que lucha por ti, su tipo depende del mal del mundo que tengas\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
+    "equipSlot": "Head"
   },
   {
     "internal": "SulphurousBreastplate",
@@ -4952,7 +5056,8 @@
     "icon": "SulphurousBreastplate.png",
     "stats": {
       "defense": 6
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "SulphurousHelmet",
@@ -4964,7 +5069,8 @@
     "stats": {
       "defense": 5
     },
-    "setBonus": "+65 de sigilo máximo\nAtacar y ser atacado por enemigos inflige Envenenado durante 1 segundo\nOtorga un salto adicional que invoca una burbuja sulfurosa\nReduce la gravedad de las aguas sulfúricas"
+    "setBonus": "+65 de sigilo máximo\nAtacar y ser atacado por enemigos inflige Envenenado durante 1 segundo\nOtorga un salto adicional que invoca una burbuja sulfurosa\nReduce la gravedad de las aguas sulfúricas",
+    "equipSlot": "Head"
   },
   {
     "internal": "SulphurousLeggings",
@@ -4975,7 +5081,8 @@
     "icon": "SulphurousLeggings.png",
     "stats": {
       "defense": 5
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "TarragonBreastplate",
@@ -4986,7 +5093,8 @@
     "icon": "TarragonBreastplate.png",
     "stats": {
       "defense": 36
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "TarragonHeadMagic",
@@ -4998,7 +5106,8 @@
     "stats": {
       "defense": 16
     },
-    "setBonus": "Cada 5º golpe crítico disparas una tormenta de hojas\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir"
+    "setBonus": "Cada 5º golpe crítico disparas una tormenta de hojas\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
+    "equipSlot": "Head"
   },
   {
     "internal": "TarragonHeadMelee",
@@ -5010,7 +5119,8 @@
     "stats": {
       "defense": 40
     },
-    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nRecibir daño te otorga Regeneración de Vida Tarra, que da +1,5 de regeneración de vida por segundo\n(tecla configurada) para envolverte en energía vital que reduce muchísimo el daño de contacto enemigo durante 10 segundos\nTiene 30 segundos de reutilización\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir"
+    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nRecibir daño te otorga Regeneración de Vida Tarra, que da +1,5 de regeneración de vida por segundo\n(tecla configurada) para envolverte en energía vital que reduce muchísimo el daño de contacto enemigo durante 10 segundos\nTiene 30 segundos de reutilización\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
+    "equipSlot": "Head"
   },
   {
     "internal": "TarragonHeadRanged",
@@ -5022,7 +5132,8 @@
     "stats": {
       "defense": 28
     },
-    "setBonus": "Los proyectiles a distancia generan energía vital y hojas teledirigidas al golpear enemigos\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir"
+    "setBonus": "Los proyectiles a distancia generan energía vital y hojas teledirigidas al golpear enemigos\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
+    "equipSlot": "Head"
   },
   {
     "internal": "TarragonHeadRogue",
@@ -5034,7 +5145,8 @@
     "stats": {
       "defense": 24
     },
-    "setBonus": "+115 de sigilo máximo\nCada 50 golpes críticos pícaros ganas 2,5 segundos de inmunidad al daño\nEste efecto tiene 25 segundos de reutilización\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir"
+    "setBonus": "+115 de sigilo máximo\nCada 50 golpes críticos pícaros ganas 2,5 segundos de inmunidad al daño\nEste efecto tiene 25 segundos de reutilización\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
+    "equipSlot": "Head"
   },
   {
     "internal": "TarragonHeadSummon",
@@ -5046,7 +5158,8 @@
     "stats": {
       "defense": 10
     },
-    "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 30% el daño de invocación\nInvoca un aura de vida a tu alrededor que daña a los enemigos cercanos\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir"
+    "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 30% el daño de invocación\nInvoca un aura de vida a tu alrededor que daña a los enemigos cercanos\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
+    "equipSlot": "Head"
   },
   {
     "internal": "TarragonLeggings",
@@ -5057,7 +5170,8 @@
     "icon": "TarragonLeggings.png",
     "stats": {
       "defense": 24
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "TitanHeartBoots",
@@ -5068,7 +5182,8 @@
     "icon": "TitanHeartBoots.png",
     "stats": {
       "defense": 10
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "TitanHeartMantle",
@@ -5079,7 +5194,8 @@
     "icon": "TitanHeartMantle.png",
     "stats": {
       "defense": 14
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "TitanHeartMask",
@@ -5091,7 +5207,8 @@
     "stats": {
       "defense": 8
     },
-    "setBonus": "+100 de sigilo máximo\nLos golpes furtivos causan el doble de retroceso y provocan una explosión astral\nOtorga inmunidad al retroceso"
+    "setBonus": "+100 de sigilo máximo\nLos golpes furtivos causan el doble de retroceso y provocan una explosión astral\nOtorga inmunidad al retroceso",
+    "equipSlot": "Head"
   },
   {
     "internal": "UmbraphileBoots",
@@ -5102,7 +5219,8 @@
     "icon": "UmbraphileBoots.png",
     "stats": {
       "defense": 14
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "UmbraphileHood",
@@ -5114,7 +5232,8 @@
     "stats": {
       "defense": 10
     },
-    "setBonus": "+110 de sigilo máximo\nLas armas pícaras tienen probabilidad de crear explosiones al golpear\nLos golpes furtivos siempre crean una explosión"
+    "setBonus": "+110 de sigilo máximo\nLas armas pícaras tienen probabilidad de crear explosiones al golpear\nLos golpes furtivos siempre crean una explosión",
+    "equipSlot": "Head"
   },
   {
     "internal": "UmbraphileRegalia",
@@ -5125,7 +5244,8 @@
     "icon": "UmbraphileRegalia.png",
     "stats": {
       "defense": 18
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "AcesApronOfAffection",
@@ -5133,7 +5253,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Delantal de afecto de Ace",
     "displayName_fallback": "Aces Apron Of Affection",
-    "icon": "AcesApronOfAffection.png"
+    "icon": "AcesApronOfAffection.png",
+    "equipSlot": "Body"
   },
   {
     "internal": "AnahitaMask",
@@ -5141,7 +5262,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Anahita",
     "displayName_fallback": "Anahita Mask",
-    "icon": "AnahitaMask.png"
+    "icon": "AnahitaMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "AncientGodSlayerChestplate",
@@ -5149,7 +5271,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Coraza de cazadioses antiguo",
     "displayName_fallback": "Ancient God Slayer Chestplate",
-    "icon": "AncientGodSlayerChestplate.png"
+    "icon": "AncientGodSlayerChestplate.png",
+    "equipSlot": "Body"
   },
   {
     "internal": "AncientGodSlayerHelm",
@@ -5157,7 +5280,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Yelmo de cazadioses antiguo",
     "displayName_fallback": "Ancient God Slayer Helm",
-    "icon": "AncientGodSlayerHelm.png"
+    "icon": "AncientGodSlayerHelm.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "AncientGodSlayerLeggings",
@@ -5165,7 +5289,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Grebas de cazadioses antiguo",
     "displayName_fallback": "Ancient God Slayer Leggings",
-    "icon": "AncientGodSlayerLeggings.png"
+    "icon": "AncientGodSlayerLeggings.png",
+    "equipSlot": "Legs"
   },
   {
     "internal": "ApolloMask",
@@ -5173,7 +5298,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Apolo",
     "displayName_fallback": "Apollo Mask",
-    "icon": "ApolloMask.png"
+    "icon": "ApolloMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "AquaticScourgeMask",
@@ -5181,7 +5307,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Azote Acuático",
     "displayName_fallback": "Aquatic Scourge Mask",
-    "icon": "AquaticScourgeMask.png"
+    "icon": "AquaticScourgeMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "AresMask",
@@ -5189,7 +5316,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Ares",
     "displayName_fallback": "Ares Mask",
-    "icon": "AresMask.png"
+    "icon": "AresMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "ArtemisMask",
@@ -5197,7 +5325,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Artemis",
     "displayName_fallback": "Artemis Mask",
-    "icon": "ArtemisMask.png"
+    "icon": "ArtemisMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "AshenHorns",
@@ -5205,7 +5334,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Cuernos de ceniza",
     "displayName_fallback": "Ashen Horns",
-    "icon": "AshenHorns.png"
+    "icon": "AshenHorns.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "AstrumAureusMask",
@@ -5213,7 +5343,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Astrum Aureus",
     "displayName_fallback": "Astrum Aureus Mask",
-    "icon": "AstrumAureusMask.png"
+    "icon": "AstrumAureusMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "AstrumDeusMask",
@@ -5221,7 +5352,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Astrum Deus",
     "displayName_fallback": "Astrum Deus Mask",
-    "icon": "AstrumDeusMask.png"
+    "icon": "AstrumDeusMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "BrimstoneElementalMask",
@@ -5229,7 +5361,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Elemental de azufre",
     "displayName_fallback": "Brimstone Elemental Mask",
-    "icon": "BrimstoneElementalMask.png"
+    "icon": "BrimstoneElementalMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "BumblefuckMask",
@@ -5237,7 +5370,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Dragón de la locura",
     "displayName_fallback": "Bumblefuck Mask",
-    "icon": "BumblefuckMask.png"
+    "icon": "BumblefuckMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "CalamitasCloneMask",
@@ -5245,7 +5379,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara del Clon de Calamitas",
     "displayName_fallback": "Calamitas Clone Mask",
-    "icon": "CalamitasCloneMask.png"
+    "icon": "CalamitasCloneMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "CeaselessVoidMask",
@@ -5253,7 +5388,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Vacío Incesante",
     "displayName_fallback": "Ceaseless Void Mask",
-    "icon": "CeaselessVoidMask.png"
+    "icon": "CeaselessVoidMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "CrabulonMask",
@@ -5261,7 +5397,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Crabulón",
     "displayName_fallback": "Crabulon Mask",
-    "icon": "CrabulonMask.png"
+    "icon": "CrabulonMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "CryogenMask",
@@ -5269,7 +5406,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Criógeno",
     "displayName_fallback": "Cryogen Mask",
-    "icon": "CryogenMask.png"
+    "icon": "CryogenMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "DesertScourgeMask",
@@ -5277,7 +5415,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Azote del Desierto",
     "displayName_fallback": "Desert Scourge Mask",
-    "icon": "DesertScourgeMask.png"
+    "icon": "DesertScourgeMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "DevourerofGodsMask",
@@ -5285,7 +5424,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Devorador de Dioses",
     "displayName_fallback": "Devourerof Gods Mask",
-    "icon": "DevourerofGodsMask.png"
+    "icon": "DevourerofGodsMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "DraedonMask",
@@ -5293,7 +5433,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Draedon",
     "displayName_fallback": "Draedon Mask",
-    "icon": "DraedonMask.png"
+    "icon": "DraedonMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "GodSlayerHornedHelm",
@@ -5301,7 +5442,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Yelmo con cuernos de cazadioses",
     "displayName_fallback": "God Slayer Horned Helm",
-    "icon": "GodSlayerHornedHelm.png"
+    "icon": "GodSlayerHornedHelm.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "GodSlayerVisage",
@@ -5309,7 +5451,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Visor de cazadioses",
     "displayName_fallback": "God Slayer Visage",
-    "icon": "GodSlayerVisage.png"
+    "icon": "GodSlayerVisage.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "HiveMindMask",
@@ -5317,7 +5460,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Mente de la Colmena",
     "displayName_fallback": "Hive Mind Mask",
-    "icon": "HiveMindMask.png"
+    "icon": "HiveMindMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "HoodOfCalamity",
@@ -5325,7 +5469,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Capucha de la calamidad",
     "displayName_fallback": "Hood Of Calamity",
-    "icon": "HoodOfCalamity.png"
+    "icon": "HoodOfCalamity.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "LeviathanMask",
@@ -5333,7 +5478,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Leviatán",
     "displayName_fallback": "Leviathan Mask",
-    "icon": "LeviathanMask.png"
+    "icon": "LeviathanMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "LucisBoots",
@@ -5341,7 +5487,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Botas de Luci",
     "displayName_fallback": "Lucis Boots",
-    "icon": "LucisBoots.png"
+    "icon": "LucisBoots.png",
+    "equipSlot": "Legs"
   },
   {
     "internal": "LucisHairstyle",
@@ -5349,7 +5496,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Peinado de Luci",
     "displayName_fallback": "Lucis Hairstyle",
-    "icon": "LucisHairstyle.png"
+    "icon": "LucisHairstyle.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "LucisMilitaryUniform",
@@ -5357,7 +5505,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Uniforme militar de Luci",
     "displayName_fallback": "Lucis Military Uniform",
-    "icon": "LucisMilitaryUniform.png"
+    "icon": "LucisMilitaryUniform.png",
+    "equipSlot": "Body"
   },
   {
     "internal": "OldDukeMask",
@@ -5365,7 +5514,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara del Viejo Duque",
     "displayName_fallback": "Old Duke Mask",
-    "icon": "OldDukeMask.png"
+    "icon": "OldDukeMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "OldHunterHat",
@@ -5373,7 +5523,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Sombrero de cazador antiguo",
     "displayName_fallback": "Old Hunter Hat",
-    "icon": "OldHunterHat.png"
+    "icon": "OldHunterHat.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "OldHunterPants",
@@ -5381,7 +5532,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Pantalones de cazador antiguo",
     "displayName_fallback": "Old Hunter Pants",
-    "icon": "OldHunterPants.png"
+    "icon": "OldHunterPants.png",
+    "equipSlot": "Legs"
   },
   {
     "internal": "OldHunterShirt",
@@ -5389,7 +5541,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Camisa de cazador antiguo",
     "displayName_fallback": "Old Hunter Shirt",
-    "icon": "OldHunterShirt.png"
+    "icon": "OldHunterShirt.png",
+    "equipSlot": "Body"
   },
   {
     "internal": "PerforatorMask",
@@ -5397,7 +5550,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Perforador",
     "displayName_fallback": "Perforator Mask",
-    "icon": "PerforatorMask.png"
+    "icon": "PerforatorMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "PlaguebringerGoliathMask",
@@ -5405,7 +5559,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Goliat portapeste",
     "displayName_fallback": "Plaguebringer Goliath Mask",
-    "icon": "PlaguebringerGoliathMask.png"
+    "icon": "PlaguebringerGoliathMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "PolterghastMask",
@@ -5413,7 +5568,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Polterghast",
     "displayName_fallback": "Polterghast Mask",
-    "icon": "PolterghastMask.png"
+    "icon": "PolterghastMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "ProfanedGuardianMask",
@@ -5421,7 +5577,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Guardián profano",
     "displayName_fallback": "Profaned Guardian Mask",
-    "icon": "ProfanedGuardianMask.png"
+    "icon": "ProfanedGuardianMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "ProvidenceMask",
@@ -5429,7 +5586,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Providencia",
     "displayName_fallback": "Providence Mask",
-    "icon": "ProvidenceMask.png"
+    "icon": "ProvidenceMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "RavagerMask",
@@ -5437,7 +5595,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Demoledor",
     "displayName_fallback": "Ravager Mask",
-    "icon": "RavagerMask.png"
+    "icon": "RavagerMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "RobesOfCalamity",
@@ -5445,7 +5604,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Túnica de la calamidad",
     "displayName_fallback": "Robes Of Calamity",
-    "icon": "RobesOfCalamity.png"
+    "icon": "RobesOfCalamity.png",
+    "equipSlot": "Body"
   },
   {
     "internal": "SCalBoots",
@@ -5453,7 +5613,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Botas calamitosas",
     "displayName_fallback": "S Cal Boots",
-    "icon": "SCalBoots.png"
+    "icon": "SCalBoots.png",
+    "equipSlot": "Legs"
   },
   {
     "internal": "SCalMask",
@@ -5461,7 +5622,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Capucha calamitosa",
     "displayName_fallback": "S Cal Mask",
-    "icon": "SCalMask.png"
+    "icon": "SCalMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "SCalRobes",
@@ -5469,7 +5631,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Túnica calamitosa",
     "displayName_fallback": "S Cal Robes",
-    "icon": "SCalRobes.png"
+    "icon": "SCalRobes.png",
+    "equipSlot": "Body"
   },
   {
     "internal": "SignusMask",
@@ -5477,7 +5640,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Signus",
     "displayName_fallback": "Signus Mask",
-    "icon": "SignusMask.png"
+    "icon": "SignusMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "SilvaHelm",
@@ -5485,7 +5649,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Yelmo de Silva",
     "displayName_fallback": "Silva Helm",
-    "icon": "SilvaHelm.png"
+    "icon": "SilvaHelm.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "SilvaHornedHelm",
@@ -5493,7 +5658,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Yelmo con cuernos de Silva",
     "displayName_fallback": "Silva Horned Helm",
-    "icon": "SilvaHornedHelm.png"
+    "icon": "SilvaHornedHelm.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "SilvaMask",
@@ -5501,7 +5667,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Silva",
     "displayName_fallback": "Silva Mask",
-    "icon": "SilvaMask.png"
+    "icon": "SilvaMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "SlimeGodMask",
@@ -5509,7 +5676,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara del Dios Slime",
     "displayName_fallback": "Slime God Mask",
-    "icon": "SlimeGodMask.png"
+    "icon": "SlimeGodMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "SlimeGodMask2",
@@ -5517,7 +5685,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara del Dios Slime",
     "displayName_fallback": "Slime God Mask2",
-    "icon": "SlimeGodMask2.png"
+    "icon": "SlimeGodMask2.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "StormWeaverMask",
@@ -5525,7 +5694,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Tejedor de Tormentas",
     "displayName_fallback": "Storm Weaver Mask",
-    "icon": "StormWeaverMask.png"
+    "icon": "StormWeaverMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "ThanatosMask",
@@ -5533,7 +5703,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Tánatos",
     "displayName_fallback": "Thanatos Mask",
-    "icon": "ThanatosMask.png"
+    "icon": "ThanatosMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "TheCommandersCap",
@@ -5541,7 +5712,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Gorra del comandante",
     "displayName_fallback": "The Commanders Cap",
-    "icon": "TheCommandersCap.png"
+    "icon": "TheCommandersCap.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "TheFormalFootwear",
@@ -5549,7 +5721,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Calzado formal",
     "displayName_fallback": "The Formal Footwear",
-    "icon": "TheFormalFootwear.png"
+    "icon": "TheFormalFootwear.png",
+    "equipSlot": "Legs"
   },
   {
     "internal": "TheGrandGarment",
@@ -5557,7 +5730,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Gran vestimenta",
     "displayName_fallback": "The Grand Garment",
-    "icon": "TheGrandGarment.png"
+    "icon": "TheGrandGarment.png",
+    "equipSlot": "Body"
   },
   {
     "internal": "YharonMask",
@@ -5565,7 +5739,8 @@
     "category": "Armor/Vanity",
     "displayName_es": "Máscara de Yharon",
     "displayName_fallback": "Yharon Mask",
-    "icon": "YharonMask.png"
+    "icon": "YharonMask.png",
+    "equipSlot": "Head"
   },
   {
     "internal": "VictideBreastplate",
@@ -5576,7 +5751,8 @@
     "icon": "VictideBreastplate.png",
     "stats": {
       "defense": 5
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "VictideGreaves",
@@ -5587,7 +5763,8 @@
     "icon": "VictideGreaves.png",
     "stats": {
       "defense": 4
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "VictideHeadMagic",
@@ -5599,7 +5776,8 @@
     "stats": {
       "defense": 2
     },
-    "setBonus": "+1,5 de regeneración de vida por segundo y 10% más de daño mágico mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo"
+    "setBonus": "+1,5 de regeneración de vida por segundo y 10% más de daño mágico mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
+    "equipSlot": "Head"
   },
   {
     "internal": "VictideHeadMelee",
@@ -5611,7 +5789,8 @@
     "stats": {
       "defense": 4
     },
-    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\n+1,5 de regeneración de vida por segundo y 10% más de daño cuerpo a cuerpo mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo"
+    "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\n+1,5 de regeneración de vida por segundo y 10% más de daño cuerpo a cuerpo mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
+    "equipSlot": "Head"
   },
   {
     "internal": "VictideHeadRanged",
@@ -5623,7 +5802,8 @@
     "stats": {
       "defense": 3
     },
-    "setBonus": "+1,5 de regeneración de vida por segundo y 10% más de daño a distancia mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo"
+    "setBonus": "+1,5 de regeneración de vida por segundo y 10% más de daño a distancia mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
+    "equipSlot": "Head"
   },
   {
     "internal": "VictideHeadRogue",
@@ -5635,7 +5815,8 @@
     "stats": {
       "defense": 3
     },
-    "setBonus": "+60 de sigilo máximo\n+1,5 de regeneración de vida por segundo y 10% más de daño pícaro mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo"
+    "setBonus": "+60 de sigilo máximo\n+1,5 de regeneración de vida por segundo y 10% más de daño pícaro mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
+    "equipSlot": "Head"
   },
   {
     "internal": "VictideHeadSummon",
@@ -5647,7 +5828,8 @@
     "stats": {
       "defense": 1
     },
-    "setBonus": "+1 súbdito máximo\nInvoca un caracol marino que te protege\n+1,5 de regeneración de vida por segundo y 10% más de daño de invocación mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo"
+    "setBonus": "+1 súbdito máximo\nInvoca un caracol marino que te protege\n+1,5 de regeneración de vida por segundo y 10% más de daño de invocación mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
+    "equipSlot": "Head"
   },
   {
     "internal": "WulfrumFusionCannon",
@@ -5675,7 +5857,8 @@
     "stats": {
       "defense": 1
     },
-    "setBonus": "Bastión Wulfrum - (tecla configurada) para equipar una armadura motorizada, cuesta 1 chatarra metálica Wulfrum\nMientras está activa, solo puedes usar el cañón de fusión integrado, pero tus estadísticas defensivas aumentan\nLa armadura dura hasta 30 segundos, pero cada golpe recibido le resta 2 segundos de duración\nMantén pulsado Mayús para ver las estadísticas del cañón de fusión"
+    "setBonus": "Bastión Wulfrum - (tecla configurada) para equipar una armadura motorizada, cuesta 1 chatarra metálica Wulfrum\nMientras está activa, solo puedes usar el cañón de fusión integrado, pero tus estadísticas defensivas aumentan\nLa armadura dura hasta 30 segundos, pero cada golpe recibido le resta 2 segundos de duración\nMantén pulsado Mayús para ver las estadísticas del cañón de fusión",
+    "equipSlot": "Head"
   },
   {
     "internal": "WulfrumJacket",
@@ -5686,7 +5869,8 @@
     "icon": "WulfrumJacket.png",
     "stats": {
       "defense": 2
-    }
+    },
+    "equipSlot": "Body"
   },
   {
     "internal": "WulfrumOveralls",
@@ -5697,7 +5881,8 @@
     "icon": "WulfrumOveralls.png",
     "stats": {
       "defense": 1
-    }
+    },
+    "equipSlot": "Legs"
   },
   {
     "internal": "AndroombaItem",

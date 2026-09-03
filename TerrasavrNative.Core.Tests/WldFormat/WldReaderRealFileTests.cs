@@ -95,4 +95,33 @@ public class WldReaderRealFileTests(ITestOutputHelper output)
         Assert.InRange(h.SpawnY, 0, h.TilesHigh);
         Assert.True(h.SpawnY < h.RockLevel, $"El spawn ({h.SpawnY}) deberia estar por encima de la roca ({h.RockLevel})");
     }
+
+    // H3-10 (tercera auditoria de Opus, Fable): miel (codigo real en disco 3) y Shimmer
+    // (codigo sintetico propio 4, solo en memoria - ver el comentario real en WldReader.cs)
+    // compartian antes el mismo codigo 3 - esta prueba confirma contra mundos REALES que 4
+    // nunca aparece si la version del mundo es anterior a 269 (Shimmer ni existia) y que,
+    // cuando aparece, es un codigo real DISTINTO de 3 (nunca los mezcla).
+    [Theory]
+    [MemberData(nameof(RealWldFiles))]
+    public void Read_RealWorld_ShimmerYMielSonCodigosDistintos(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        var world = WldReader.Read(File.ReadAllBytes(path));
+        int honeyCount = 0, shimmerCount = 0;
+        for (int x = 0; x < world.Tiles.GetLength(0); x++)
+        {
+            for (int y = 0; y < world.Tiles.GetLength(1); y++)
+            {
+                byte lt = world.Tiles[x, y].LiquidType;
+                Assert.InRange(lt, (byte)0, (byte)4); // nunca un codigo desconocido
+                if (lt == 3) honeyCount++;
+                if (lt == 4) shimmerCount++;
+            }
+        }
+        output.WriteLine($"{Path.GetFileName(path)}: version={world.Header.Version}, miel(3)={honeyCount}, Shimmer(4)={shimmerCount}");
+
+        if (world.Header.Version < 269)
+            Assert.Equal(0, shimmerCount); // Shimmer no existia todavia en esa version
+    }
 }

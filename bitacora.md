@@ -5538,3 +5538,102 @@ dentro del mismo slot ya seleccionado).
 
 `dotnet test` 255/255 en verde (134 Core + 121 ViewModels) al cierre de Tanda 2 completa
 (H3-06, H3-08, H3-05, H3-12, H3-13).
+
+### Tanda 3 (H3-09, H3-10, H3-11, H3-14, H3-15, H3-16, H3-17, H3-18)
+
+**H3-09, "Ordenar reordena tambien la barra rapida"**: `ContainerViewModel.Sort()` empaquetaba
+TODO el contenedor de Inventario, incluidos los primeros 10 slots (la barra rapida real,
+`Player.inventory[0..9]`) - `Terraria.UI.ItemSorting.SortInventory` real (decompilado,
+`Sort(..., 0, 1, ..., 9, 50, ...)`) los EXCLUYE explicitamente de cualquier ordenado, ademas de
+los slots de moneda/municion 50-58 (que en este puerto ya viven en contenedores propios aparte).
+Arreglado: `Sort()` deja fijos los primeros `HotbarSlotCount` slots SOLO cuando `Key ==
+"inventory"` - ningun otro contenedor (Banco/Caja fuerte/Fragua/Boveda) tiene barra rapida real.
+Prueba existente (`OrdenarEmpaquetaPorIdAscendenteYDejaVaciosAlFinal`) corregida para colocar
+sus objetos de prueba fuera de la barra rapida (antes usaba slots 0/3/7, dentro de ella) + 2
+pruebas deterministas nuevas.
+
+**H3-10, "Miel se pinta del color de Shimmer y viceversa"**: el campo de liquido de 2 bits real
+en disco (`(header1 & 0x18) >> 3`) solo tenia hueco para 3 valores (1=agua/2=lava/3=miel,
+confirmado contra TEdit real) desde ANTES de que Shimmer existiera (1.4.4) - el juego real
+reutiliza el mismo codigo 3 (miel) como base para Shimmer, con el bit suelto `header3 & 0x80`
+como "en realidad es Shimmer" (confirmado identico en TEdit, `World.FileV2.cs`).
+`WldReader.cs` sobreescribia a `liquidType = 3` (el MISMO codigo que miel) en vez de a un
+codigo distinto - honestamente indistinguibles para el resto del puerto. Arreglado:
+`liquidType = 4` (codigo sintetico propio, nunca en disco) para Shimmer. `WorldRenderer.
+LiquidColor` y `ExplorationViewModel.LiquidName` actualizados con el 4º caso - de paso,
+corregido un comentario que decia que `map_colors.json` "no trae" los colores de liquido: SI
+los trae (`global.Water/Lava/Honey/Shimmer`, misma fuente real de TEdit ya usada para
+tiles/paredes/fondo) - se aprovecharon esos 4 colores reales en vez de las aproximaciones a
+mano de antes. "Centelleo" (nombre real de Shimmer como LIQUIDO, no como objeto - sacado de la
+localizacion es-ES oficial de `ShimmerCloak`: "...sumergido en el centelleo"). Prueba real
+contra mundos del propio disco: `El_Musgo_de_Accidentes.wld` tiene 1416 tiles de miel y 696 de
+Shimmer reales - antes de este arreglo, los 2112 se habrian colapsado en un unico codigo
+indistinguible. 3 pruebas nuevas (`WldReaderRealFileTests.cs`).
+
+**H3-11, "una pieza de armadura de Calamity encaja en CUALQUIERA de los 3 slots"**:
+`ItemSlotViewModel.AcceptsItem` solo comprobaba "es armadura" (`category.StartsWith("Armor")`),
+nunca DE QUE PARTE del cuerpo. Nuevo `scripts/extraer-slot-armadura-calamity.js`: tModLoader
+moderno (1.4.4+) ya no usa los campos numericos antiguos `headSlot`/`bodySlot`/`legSlot` de
+`Item.cs` - usa el atributo real `[AutoloadEquip(new EquipType[] { EquipType.X })]` sobre la
+clase (confirmado a mano: `AerospecBreastplate.cs`=Body, `EmpyreanMask.cs`=Head,
+`EmpyreanCuisses.cs`=Legs). 185/186 armaduras reales con slot encontrado (la 186ª,
+`WulfrumFusionCannon`, resulto ser un arma de invocacion mal encajada en la categoria "Armor" -
+sin `AutoloadEquip`, se queda sin `equipSlot`, "desconocido = permitir" como el resto de este
+metodo). Nuevo campo `CalamityCatalogEntry.EquipSlot`, usado en `AcceptsItem` para exigir el
+slot real cuando se conoce. 4 pruebas deterministas nuevas (`CalamityArmorSlotTests.cs`).
+
+**H3-14, "279 se muestra crudo, nunca 1.4.4.0+"**: `VersionEditorViewModel` solo tenia el
+campo crudo editable (`RawVersion`, correcto que sea numerico) y `IsCurrent` por coincidencia
+EXACTA (asi que una version real "y pico" como 279 no resaltaba NINGUN boton). Calco real de
+`TabVersion.findBestMatch`/`getBestText` (script.beautified.js:5161-5173, ya no de memoria -
+leido de nuevo): la version conocida mas alta <= la real, con un "+" si la real es
+estrictamente mayor. Nuevo `BestMatchLabel` (ej. "1.4.4.0+" para 279) mostrado junto al campo
+crudo en el XAML; `IsCurrent` ahora resalta ese MISMO mejor ajuste, no solo una coincidencia
+exacta (identico al `style(4)` real de `syncVersion`). 4 pruebas deterministas nuevas
+(`VersionBestMatchTests.cs`).
+
+**H3-15, "la insignia de Calamity no se enciende justo tras el guardado que crea el .tplr"**:
+`HasCalamityData` solo se recalculaba en `LoadFromPath` - `MainViewModel.Save()` nunca la
+releia aunque `CharacterFileService.Save` YA deja `loaded.TplrPath` puesto de verdad en cuanto
+crea el `.tplr` de un personaje que antes era 100% vanilla. Añadida la misma lectura dentro del
+`try` de `Save()`, justo despues de `_service.Save(_loaded)`. 1 prueba determinista nueva
+(`CalamityBadgeAfterSaveTests.cs`).
+
+**H3-16 (nota, sin cambio de comportamiento)**: comentario desactualizado en `App.xaml.cs`
+sobre el arnes de UI Automation ("proyecto de scratchpad, fuera del repo") - ya no es cierto
+desde T-21 (`TerrasavrNative.App.Tests`, proyecto real y permanente del propio repo). Corregido.
+
+**H3-17, "Movido 1 objeto(s)" no concuerda de verdad**: en el mensaje de "Mover todo al
+almacen", el VERBO ya se conjugaba (`Movido`/`Movidos`) pero el SUSTANTIVO se quedaba en el
+placeholder literal `objeto(s)` sin concordar nunca - una mezcla real dentro de la misma frase
+("Movido 1 objeto(s)"). Corregido a concordancia real en los dos ("Movido 1 objeto" / "Movidos
+2 objetos"). El resto de "(s)" del proyecto (Resultados, Investigacion, Auto-equipar...) se
+deja igual a proposito - son invariantes autoconsistentes, sin ningun otro verbo conjugado en
+la misma frase que choque con ellos, no tienen el mismo problema real. 2 pruebas deterministas
+nuevas (`MoverAlAlmacenConcordanciaTests.cs`).
+
+**H3-18 (nota, documentacion - sin cambio de comportamiento)**: el `MinHeight="216"` real de la
+fila de Inventario (pensado para "5 filas a 40px + huecos") ya no cubre la 5ª fila entera a
+1080x700 con la Libreria desplegada - cabeceras añadidas DESPUES de esa medicion (el contador
+"Inventario (N/50)", A-c) le restan alto real disponible. Sigue siendo accesible (el
+ScrollViewer de seguridad ya cubre este caso), documentado en el propio XAML para que no se
+redescubra como una regresion nueva.
+
+**H3-07 NO se toca** (Novedades/Changelog con contenido de ejemplo/demo presentado como real) -
+la propia auditoria lo marca como decision de CONTENIDO, no de codigo - queda para que el
+usuario decida (reemplazar `whats_new.json` por contenido real, marcar la pestaña como
+ejemplo, o quitarla).
+
+`dotnet test` 270/270 en verde (136 Core + 134 ViewModels), arnes UIA completo sin
+NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`, `ultimo-error.log existe: False`. Nota
+aparte (no es un fallo real, no se repitio dos veces seguidas): `HomeRefreshAsyncTests.
+RefreshAsyncCommand_EsAsincronoYIsScanningVuelveAFalseAlTerminar` fallo UNA vez en una corrida
+completa bajo carga (probablemente sensible a tiempos, xunit corre en paralelo) - en verde de
+nuevo aislado y en la siguiente corrida completa, no relacionado con ningun cambio de esta
+tanda (esta tanda no toco HomeViewModel/RefreshAsync).
+
+### Tercera auditoria (Fable) - cierre
+
+Los 18 hallazgos (H3-01 a H3-18) estan cerrados: 17 con arreglo real, test, arnes y commit
+(Tandas 1-3), y H3-07 flagueado explicitamente al usuario como decision de contenido pendiente
+(ver arriba) - pedido cumplido en su totalidad ("aplica toda la ronda de fable sin descansar").
