@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using TerrasavrNative.Core.Calamity;
 using TerrasavrNative.Core.Data;
 using TerrasavrNative.Core.Model;
@@ -132,35 +133,55 @@ public sealed class CharacterFileService
     {
         var newTplrRoot = _sync.MaskAndSyncAll(loaded.Character, loaded.MergedContainers, loaded.TplrRoot);
 
-        // Copia de seguridad real antes de sobrescribir (Bloque 0 de la auditoria de Opus,
-        // T-23: "nada tiene deshacer... el programa deberia aplicarse el mismo criterio de
-        // 'usar siempre una copia' que ya exige la propia bitacora al probar"). Copia de un
-        // solo nivel (nombre.plr.bak / nombre.tplr.bak, se sobrescribe cada guardado) - protege
-        // el caso real (deshacer el ULTIMO guardado si algo salio mal) sin acumular ficheros sin
-        // limite. Solo si el fichero YA existe - el primer guardado de un personaje nuevo no
-        // tiene nada que respaldar.
-        BackupIfExists(loaded.PlrPath);
-        File.WriteAllBytes(loaded.PlrPath, PlrFile.Write(loaded.Character));
+        // T-C (segunda auditoria de Opus, Fable): WriteAllBytes directo sobre el fichero real
+        // deja una ventana real donde un corte de luz/cierre forzado a mitad de escritura
+        // corrompe el .plr entero (0 bytes o a medias) - WriteAtomic escribe siempre a un .tmp
+        // aparte primero y solo AL FINAL lo intercambia por el real de un solo paso atomico del
+        // sistema de ficheros (File.Replace), que de paso ya genera el .bak (Bloque 0, T-23) en
+        // la MISMA operacion atomica en vez de una copia previa por separado (ventana de carrera
+        // real, aunque muy improbable en una app de un solo usuario).
+        WriteAtomic(loaded.PlrPath, PlrFile.Write(loaded.Character));
 
+        // T-C: antes se escribia SIEMPRE un .tplr, incluso para un personaje 100% vanilla que
+        // nunca tuvo ni tendra un objeto/buff de Calamity - ensuciaba la carpeta real de
+        // Documentos del usuario con un fichero que Terraria/tModLoader ni pide ni usa. Ahora
+        // solo si YA existia uno (se respeta, no se hace desaparecer un .tplr real de otra
+        // sesion) o si el personaje tiene contenido real de Calamity (objeto en algun
+        // contenedor, o un buff con id sintetico >= CalamityIds.BuffIdBase).
         string tplrPath = loaded.TplrPath ?? Path.ChangeExtension(loaded.PlrPath, ".tplr");
-        BackupIfExists(tplrPath);
-        File.WriteAllBytes(tplrPath, TplrFile.Write(loaded.TplrRootName, newTplrRoot));
-
-        loaded.TplrRoot = newTplrRoot;
-        loaded.TplrPath = tplrPath;
+        bool yaTeniaTplr = loaded.TplrPath != null || File.Exists(tplrPath);
+        bool tieneContenidoRealDeCalamity =
+            loaded.MergedContainers.Values.Any(items => items.Any(i => i.IsCalamity))
+            || loaded.Character.Buffs.Any(b => b.Id >= CalamityIds.BuffIdBase);
+        if (yaTeniaTplr || tieneContenidoRealDeCalamity)
+        {
+            WriteAtomic(tplrPath, TplrFile.Write(loaded.TplrRootName, newTplrRoot));
+            loaded.TplrRoot = newTplrRoot;
+            loaded.TplrPath = tplrPath;
+        }
     }
 
-    private static void BackupIfExists(string path)
+    private static void WriteAtomic(string path, byte[] bytes)
     {
-        if (!File.Exists(path)) return;
+        string tmpPath = path + ".tmp";
+        File.WriteAllBytes(tmpPath, bytes);
+        if (!File.Exists(path))
+        {
+            File.Move(tmpPath, path);
+            return;
+        }
         try
         {
-            File.Copy(path, path + ".bak", overwrite: true);
+            // Un solo paso atomico real: escribe el fichero final Y el .bak (Bloque 0, T-23:
+            // "deshacer el ULTIMO guardado si algo salio mal") a la vez - nunca hay un instante
+            // con el fichero real a medio escribir.
+            File.Replace(tmpPath, path, path + ".bak", ignoreMetadataErrors: true);
         }
         catch (IOException)
         {
-            // Copia de seguridad best-effort real: si el .bak esta bloqueado (ej. antivirus)
-            // no debe impedir el guardado real del personaje, que es lo que de verdad importa.
+            // Respaldo best-effort real (ej. .bak bloqueado por el antivirus): el guardado del
+            // personaje en si no debe fallar por eso, que es lo que de verdad importa.
+            File.Replace(tmpPath, path, null, ignoreMetadataErrors: true);
         }
     }
 }

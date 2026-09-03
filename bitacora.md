@@ -4391,3 +4391,37 @@ nada, confirmar si carga el nuevo, y sin cambios sin guardar el hook ni se consu
 si no hay nada real que perder).
 
 `dotnet test` 148/148 en verde (145 + 3), arnes visual completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### T-C (segunda auditoria, Fable) - cierra la Ola 1
+
+**Escritura no atomica**: `CharacterFileService.Save` hacia `File.WriteAllBytes` directo sobre
+el fichero real - un corte de luz o cierre forzado a mitad de escritura deja un `.plr`
+corrupto (0 bytes o a medias). Arreglado con `WriteAtomic` real: escribe siempre a un `.tmp`
+aparte primero y solo AL FINAL lo intercambia por el real con `File.Replace` (un solo paso
+atomico del sistema de ficheros) - que de paso genera el `.bak` (ver mas abajo) en la MISMA
+operacion en vez de una copia previa por separado. Si el `.bak` esta bloqueado (antivirus),
+best-effort real: reintenta el `Replace` sin backup, el guardado del personaje en si no debe
+fallar por eso.
+
+**`.tplr` se creaba SIEMPRE**: incluso para un personaje 100% vanilla que nunca tuvo ni tendra
+un objeto/buff de Calamity - ensuciaba la carpeta real de Documentos del usuario con un
+fichero que ni Terraria ni tModLoader piden. Ahora solo se escribe si YA existia uno (no se
+hace desaparecer un `.tplr` real de otra sesion) o si el personaje tiene contenido real de
+Calamity (objeto en algun contenedor, o un buff con id sintetico >= `CalamityIds.BuffIdBase`).
+
+**El `.bak` real (ya existia desde el Bloque 0) no tenia ninguna forma de usarse desde la UI**:
+nuevo `MainViewModel.UndoLastSaveCommand` + boton real "Deshacer último guardado" en la barra
+superior (misma barra de Cargar/Guardar, visible en cualquier pestaña) - restaura el `.plr`/
+`.tplr` desde su `.bak` y recarga, mismo mecanismo real que "Cargar personaje...".
+
+4 pruebas deterministas nuevas (`SaveAtomicoTests.cs`): personaje vainilla no crea `.tplr`,
+personaje con un buff real de Calamity si lo crea, guardar dos veces deja el `.bak` con el
+contenido ANTERIOR (verificado leyendolo de vuelta) sin ningun `.tmp` suelto, y Deshacer
+ultimo guardado restaura de verdad un slot de equipo a como estaba antes de guardar.
+
+`dotnet test` 152/152 en verde (148 + 4), arnes visual completo sin NO-FOUND/FALLO/EXCEPTION -
+confirmado ademas que un personaje 100% vainilla ya no genera ningun `.tplr` al guardar (antes
+"Guardado: uia-harness-test.plr + uia-harness-test.tplr", ahora solo "...plr").
+
+**Cierra la Ola 1 entera** (T-A, T-B, T-C mas los 7 defectos criticos B-1 a B-7) de la segunda
+auditoria de Opus (Fable). Sigue la Ola 2.

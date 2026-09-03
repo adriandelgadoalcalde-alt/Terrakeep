@@ -938,6 +938,11 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="Cargar personaje (.plr)..." Tag="Accent" Click="OnLoadClick" />
+                    <!-- T-C (segunda auditoria de Opus, Fable): el .bak real que Guardar ya deja
+                         (CharacterFileService.WriteAtomic) ahora tiene una forma real de usarse
+                         desde la propia UI, sin ir a buscarlo a mano al Explorador de archivos. -->
+                    <Button Content="Deshacer último guardado" Margin="10,0,0,0" Command="{Binding UndoLastSaveCommand}"
+                            ToolTip="Restaura el personaje tal y como estaba ANTES del ultimo 'Guardar' real (usa la copia .bak)" />
                     <Button Content="Guardar" Tag="Orange" Margin="10,0,0,0" Command="{Binding SaveCommand}" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center"

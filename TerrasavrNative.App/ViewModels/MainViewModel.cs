@@ -378,6 +378,7 @@ public partial class MainViewModel : ObservableObject
         {
             _suppressDirty = false;
             IsDirty = false;
+            UndoLastSaveCommand.NotifyCanExecuteChanged(); // el personaje cargado (y su .bak) ha cambiado
         }
     }
 
@@ -400,7 +401,40 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = $"Error al guardar: {ex.Message}";
         }
+        finally
+        {
+            UndoLastSaveCommand.NotifyCanExecuteChanged(); // Save() acaba de crear/renovar el .bak real
+        }
     }
+
+    // T-C (segunda auditoria de Opus, Fable): "el .bak existe de verdad desde el Bloque 0 pero
+    // no hay ninguna forma real de usarlo desde la UI - un usuario que se de cuenta tarde de que
+    // ha guardado algo que no queria no tiene mas remedio que ir a buscarlo a mano en el
+    // Explorador de archivos". Restaura el/los .bak reales que CharacterFileService.Save ya deja
+    // (WriteAtomic) y recarga - mismo mecanismo real que "Cargar personaje...", no uno nuevo.
+    [RelayCommand(CanExecute = nameof(CanUndoLastSave))]
+    private void UndoLastSave()
+    {
+        if (_loaded == null) return;
+        string plrPath = _loaded.PlrPath;
+        string plrBak = plrPath + ".bak";
+        if (!File.Exists(plrBak)) return;
+        try
+        {
+            File.Copy(plrBak, plrPath, overwrite: true);
+            string tplrPath = _loaded.TplrPath ?? Path.ChangeExtension(plrPath, ".tplr");
+            string tplrBak = tplrPath + ".bak";
+            if (File.Exists(tplrBak)) File.Copy(tplrBak, tplrPath, overwrite: true);
+            LoadFromPath(plrPath);
+            StatusMessage = $"Deshecho el ultimo guardado de '{CharacterName}'.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error al deshacer el ultimo guardado: {ex.Message}";
+        }
+    }
+
+    private bool CanUndoLastSave() => _loaded != null && File.Exists(_loaded.PlrPath + ".bak");
 
     private void RebuildContainers()
     {
