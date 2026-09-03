@@ -1,5 +1,3 @@
-using System.Collections.ObjectModel;
-using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -13,31 +11,27 @@ namespace TerrasavrNative.App.ViewModels;
 // BuffSlotViewModel pide "elegir buff" (ChooseFromLibraryCommand), MainViewModel pone ese slot
 // en PickTarget y cambia a esta pestaña - al pulsar una tarjeta aqui con PickTarget puesto, el
 // buff se coloca en ese slot.
-public partial class BuffLibraryViewModel : ObservableObject
+//
+// H5-15 (quinta auditoria de Opus): arbol de categorias, busqueda con debounce y el par
+// SelectCategory/ClearCategory ya no viven aqui - ver CatalogBrowserViewModel.
+public partial class BuffLibraryViewModel : CatalogBrowserViewModel<BuffCatalogEntryViewModel>
 {
-    private const int MaxResults = 300;
     // H3-06 (tercera auditoria de Opus, Fable): "el tope+debounce medido de verdad en L-c
     // (LibraryViewModel) solo se aplico a esa unica superficie - Investigacion (ya arreglado
     // arriba) y esta Libreria de buffs no tenian NINGUN debounce (reflowaba en cada tecla)".
     // El tope de 300 se deja igual que siempre (universo de buffs mucho mas pequeño que el de
     // objetos, no hay medicion propia que justifique bajarlo a 100) - solo faltaba el mismo
-    // intervalo ya medido (180ms).
-    private readonly DispatcherTimer _searchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
+    // intervalo ya medido (180ms, ver CatalogBrowserViewModel).
+    private const int MaxResults = 300;
 
     private readonly List<BuffCatalogEntryViewModel> _all;
     private readonly Dictionary<int, BuffCatalogEntryViewModel> _byId;
 
-    [ObservableProperty] private string _searchText = string.Empty;
-    [ObservableProperty] private string _resultsSummary = string.Empty;
     [ObservableProperty] private BuffSlotViewModel? _pickTarget;
-    [ObservableProperty] private CategoryNodeViewModel? _selectedCategory;
 
     public bool IsPicking => PickTarget != null;
 
     public event Action? BuffPlaced;
-
-    public ObservableCollection<BuffCatalogEntryViewModel> Results { get; } = [];
-    public ObservableCollection<CategoryNodeViewModel> RootCategories { get; } = [];
 
     public BuffLibraryViewModel(CharacterFileService service)
     {
@@ -65,51 +59,10 @@ public partial class BuffLibraryViewModel : ObservableObject
         // real en CategoryNodeViewModel.SelectCommand.
         CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
 
-        _searchDebounceTimer.Tick += (_, _) =>
-        {
-            _searchDebounceTimer.Stop();
-            ApplyFilter();
-        };
-
         ApplyFilter();
     }
 
-    // H3-06: mismo debounce real ya en produccion en LibraryViewModel/ResearchViewModel - solo
-    // la busqueda por TEXTO se difiere (elegir/quitar carpeta sigue aplicando al instante).
-    partial void OnSearchTextChanged(string value)
-    {
-        _searchDebounceTimer.Stop();
-        _searchDebounceTimer.Start();
-    }
-
-    [RelayCommand]
-    private void SelectCategory(CategoryNodeViewModel node)
-    {
-        // Mismo bug real corregido en LibraryViewModel.SelectCategory - ver ahi el porque.
-        node.IsExpanded = !node.IsExpanded;
-
-        if (SelectedCategory != null) SelectedCategory.IsSelected = false;
-        if (SelectedCategory == node)
-        {
-            SelectedCategory = null;
-        }
-        else
-        {
-            SelectedCategory = node;
-            node.IsSelected = true;
-        }
-        ApplyFilter();
-    }
-
-    [RelayCommand]
-    private void ClearCategory()
-    {
-        if (SelectedCategory != null) SelectedCategory.IsSelected = false;
-        SelectedCategory = null;
-        ApplyFilter();
-    }
-
-    private void ApplyFilter()
+    protected override void ApplyFilter()
     {
         Results.Clear();
 

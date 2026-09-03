@@ -1,5 +1,3 @@
-using System.Collections.ObjectModel;
-using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -19,7 +17,11 @@ namespace TerrasavrNative.App.ViewModels;
 // (boton en un slot vacio o "cambiar objeto" en uno lleno), MainViewModel pone ese slot en
 // PickTarget y cambia la pestaña activa a esta - al pulsar una tarjeta aqui con PickTarget
 // puesto, el objeto se coloca en ese slot y se dispara ItemPlaced para volver a Personaje.
-public partial class LibraryViewModel : ObservableObject
+//
+// H5-15 (quinta auditoria de Opus): arbol de categorias, busqueda con debounce y el par
+// SelectCategory/ClearCategory ya no viven aqui - ver CatalogBrowserViewModel, base real
+// compartida con BuffLibraryViewModel/ResearchViewModel.
+public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewModel>
 {
     // L-c (segunda auditoria de Opus, Fable): "el tope de 300 no tiene ninguna medicion real
     // detras, solo el motivo generico de que WrapPanel no virtualiza". Medido de verdad con el
@@ -30,22 +32,10 @@ public partial class LibraryViewModel : ObservableObject
     // verdad manteniendo un numero de resultados util antes de pedir afinar la busqueda.
     private const int MaxResults = 100;
 
-    // L-c: la busqueda ya reflowaba en CADA pulsacion de tecla (UpdateSourceTrigger=
-    // PropertyChanged) - con un termino amplio de varios caracteres, cada pulsacion
-    // intermedia pagaba el coste real de reflow entero, no solo la ultima. Mismo patron ya
-    // establecido en el proyecto (MainViewModel._saveConfirmationTimer, Stop()+Start() en
-    // cada disparo) - solo la busqueda por TEXTO se debounça (elegir una carpeta o cambiar
-    // PickTarget siguen aplicando el filtro al instante, son un unico clic discreto, no
-    // tecleo continuo).
-    private readonly DispatcherTimer _searchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
-
     private readonly List<LibraryItemViewModel> _all;
     private readonly Dictionary<int, LibraryItemViewModel> _byId;
 
-    [ObservableProperty] private string _searchText = string.Empty;
-    [ObservableProperty] private string _resultsSummary = string.Empty;
     [ObservableProperty] private ItemSlotViewModel? _pickTarget;
-    [ObservableProperty] private CategoryNodeViewModel? _selectedCategory;
 
     // L-b (segunda auditoria de Opus, Fable): "el aviso de 'solo validos para el slot
     // seleccionado' es un texto mas dentro de ResultsSummary, facil de pasar por alto - y ni
@@ -57,9 +47,6 @@ public partial class LibraryViewModel : ObservableObject
     public bool IsPicking => PickTarget != null;
 
     public event Action? ItemPlaced;
-
-    public ObservableCollection<LibraryItemViewModel> Results { get; } = [];
-    public ObservableCollection<CategoryNodeViewModel> RootCategories { get; } = [];
 
     public LibraryViewModel(CharacterFileService service)
     {
@@ -94,58 +81,10 @@ public partial class LibraryViewModel : ObservableObject
         // real en CategoryNodeViewModel.SelectCommand.
         CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
 
-        _searchDebounceTimer.Tick += (_, _) =>
-        {
-            _searchDebounceTimer.Stop();
-            ApplyFilter();
-        };
-
         ApplyFilter();
     }
 
-    // L-c: reinicia el temporizador en cada pulsacion en vez de filtrar al instante - solo la
-    // ULTIMA pulsacion de una racha de tecleo paga el coste real de reflow, 180ms despues de
-    // que el usuario se detiene (imperceptible como demora, pero evita repetir el reflow entero
-    // en cada caracter mientras todavia esta escribiendo).
-    partial void OnSearchTextChanged(string value)
-    {
-        _searchDebounceTimer.Stop();
-        _searchDebounceTimer.Start();
-    }
-
-    [RelayCommand]
-    private void SelectCategory(CategoryNodeViewModel node)
-    {
-        // Bug real encontrado y corregido 2-sep-2026: IsExpanded no se tocaba nunca aqui, asi
-        // que ninguna carpeta por debajo de la raiz era alcanzable de verdad desde la UI (el
-        // ItemsControl de Children solo se muestra cuando IsExpanded es true) - critico ahora
-        // que el arbol vanilla real tiene hasta 4 niveles de profundidad. Pulsar una carpeta
-        // la selecciona/deselecciona (para "ver todo lo de aqui") Y alterna su despliegue,
-        // independientemente de si tiene hijos o no.
-        node.IsExpanded = !node.IsExpanded;
-
-        if (SelectedCategory != null) SelectedCategory.IsSelected = false;
-        if (SelectedCategory == node)
-        {
-            SelectedCategory = null; // pulsar la misma carpeta otra vez la deselecciona
-        }
-        else
-        {
-            SelectedCategory = node;
-            node.IsSelected = true;
-        }
-        ApplyFilter();
-    }
-
-    [RelayCommand]
-    private void ClearCategory()
-    {
-        if (SelectedCategory != null) SelectedCategory.IsSelected = false;
-        SelectedCategory = null;
-        ApplyFilter();
-    }
-
-    private void ApplyFilter()
+    protected override void ApplyFilter()
     {
         Results.Clear();
 

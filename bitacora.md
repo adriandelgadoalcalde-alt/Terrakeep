@@ -6122,3 +6122,56 @@ umbral de 900 real en ambos sentidos, ancho y alto como ejes independientes -
 Compacto+Alto a la vez -, y el auto-revelado real de la Libreria por altura). `dotnet test`
 326/326 en verde (139 Core + 187 ViewModels), arnes UIA completo 4/4 pasadas sin
 NO-FOUND/FALLO/EXCEPTION.
+
+### Quinta auditoria (Opus), Tanda A parte 3 (cierre) - H5-15 (4-sep-2026)
+
+**H5-15 (H4-10 nunca se implemento - 3 navegadores de catalogo casi identicos)**: nuevo
+`CatalogBrowserViewModel<TEntry>` (`App/ViewModels/CatalogBrowserViewModel.cs`), base real
+compartida por `LibraryViewModel`/`BuffLibraryViewModel`/`ResearchViewModel` - arbol de
+categorias (`RootCategories`), busqueda con debounce real de 180ms (`SearchText`,
+`SearchDebounceTimer`), y el par `SelectCategory`/`ClearCategory` (con el arreglo real de
+`IsExpanded` que hasta ahora habia que replicar a mano en cada una de las 3, documentado en el
+propio informe con cita textual de los comentarios que probaban el coste: "Mismo bug real
+corregido en LibraryViewModel.SelectCategory" repetido 2 veces, "el debounce medido de verdad en
+L-c solo se aplico a esa unica superficie" repetido 2 veces mas). `ApplyFilter` se queda
+abstracto a proposito, y el tope de resultados NO sube a la base (cada hija mantiene su propio
+`MaxResults` - 100 para Objetos/Investigacion, 300 para Buffs, diferencia real ya medida y
+deliberada, no un descuido a unificar).
+
+Cada hija se queda con SOLO lo que de verdad le es propio: `LibraryViewModel`/
+`BuffLibraryViewModel` conservan intacto su mecanismo de "elegir" (`PickTarget`/`IsPicking`/
+`PlaceInTarget`/`CancelPick` - duplicacion menor real que sigue ahi, aceptada, ver mas abajo);
+`ResearchViewModel` conserva `ShowRootCategoryCards`/`IsJourneyMode`/`_researchedCounts`/
+`LoadFrom`/`Reset`, su propia logica de investigacion, sin tocar.
+
+**Fuera de esta pasada, a proposito, documentado**: los otros dos frentes de H5-15 (3 bloques
+de XAML gemelos del navegador de catalogo, y las 4 cabeceras de contenedor copiadas en
+Inventario/Almacenes) no se tocaron - unificarlos exige un `DataTemplate` parametrizado por la
+plantilla de resultado real (objeto/buff/fila de investigacion, cada uno con su propia forma) y
+verificacion visual en vivo que esta sesion no puede hacer con confianza solo con el arnes UIA.
+Se prioriza la parte de mayor riesgo real (la logica de ViewModel que ya causo 3 arreglos
+repetidos del MISMO bug) sobre la de mayor riesgo de regresion visual sin poder verlo en
+pantalla. Tambien queda aceptada la duplicacion menor de `PickTarget`/`IsPicking`/
+`PlaceInTarget`/`CancelPick` entre Libreria de objetos y de buffs (4 miembros, sin historial de
+bug repetido detras, a diferencia del arbol/busqueda) - no se fuerza una segunda capa de
+herencia genérica solo por simetria.
+
+Compilo limpio a la primera (0 errores) - señal real de que la duplicacion ERA
+mecanicamente identica, no solo parecida. `dotnet test` 326/326 en verde, sin tocar NINGUN test
+existente (los 3 ViewModels siguen exponiendo los mismos `SelectCategoryCommand`/
+`ClearCategoryCommand`/`Results`/`RootCategories`/`SearchText`/`ResultsSummary`/
+`SelectedCategory` de siempre, ahora heredados). Arnes UIA: 6 pasadas reales en total durante
+esta verificacion, 5/6 completamente limpias - la 6ª fallo en `T-H/F2` (adorner de foco por
+teclado, ver segunda auditoria), un test SIN relacion con nada tocado aqui (Guardar/foco, no
+Libreria/Investigacion/Buffs) que ya no volvio a fallar en las 3 pasadas siguientes - fragilidad
+ya conocida de UI Automation con temporizacion real, documentada aqui en vez de perseguida sin
+una causa raiz concreta que arreglar (a diferencia del bug real de `SetForegroundWindow`
+encontrado en H5-08, ese si con causa y arreglo verificados).
+
+**Cierra la Tanda A completa** (H5-06, H5-08, H5-15) - las 3 cimentaciones del informe, ninguna
+cambia layout visible, las 3 verificadas con `dotnet test` + arnes UIA real. Pendientes: Tanda B
+(H5-01 Deshacer, H5-04 copias rotativas, H5-03 guardar/cargar conjuntos, H5-02 Investigacion
+editable), Tanda C (H5-10 cabecera con constantes vitales, H5-09 anchos fijos, H5-11 lanzador de
+mundos permanente) y Tanda D (H5-12/13/14/05/07) - todavia sin empezar, alcance grande cada una
+(el propio informe las describe como "lo que de verdad separa 'editor correcto' de 'programa
+completo'"), decision de continuar o no pendiente del usuario.

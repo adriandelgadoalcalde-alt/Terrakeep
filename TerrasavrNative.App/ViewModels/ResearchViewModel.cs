@@ -1,5 +1,3 @@
-using System.Collections.ObjectModel;
-using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -13,16 +11,18 @@ namespace TerrasavrNative.App.ViewModels;
 // "quiero que calques exactamente la estructura de carpetas... para esta librera Y
 // investigacion") para navegar por carpetas en vez de un unico listado - mismos nombres y
 // sprites de siempre (ResearchRowViewModel no cambia), solo cambia COMO se navega.
-public sealed partial class ResearchViewModel : ObservableObject
+//
+// H5-15 (quinta auditoria de Opus): arbol de categorias, busqueda con debounce y el par
+// SelectCategory/ClearCategory ya no viven aqui - ver CatalogBrowserViewModel.
+public sealed partial class ResearchViewModel : CatalogBrowserViewModel<ResearchRowViewModel>
 {
     // H3-06 (tercera auditoria de Opus, Fable): "el tope+debounce medido de verdad en L-c
     // (LibraryViewModel) solo se aplico a esa unica superficie - Investigacion no tenia NINGUN
     // tope (tras 'Investigar todo', elegir una carpeta grande pintaba miles de filas de golpe)
-    // NI debounce (reflowaba en cada tecla)". Mismo numero y mismo intervalo YA medidos en
-    // produccion (100 resultados, 180ms) - no se remide aqui porque es el MISMO WrapPanel sin
-    // virtualizar con el MISMO coste real por tarjeta, no una superficie distinta.
+    // NI debounce (reflowaba en cada tecla)". Mismo numero YA medido en produccion (100
+    // resultados) - no se remide aqui porque es el MISMO WrapPanel sin virtualizar con el MISMO
+    // coste real por tarjeta, no una superficie distinta.
     private const int MaxResults = 100;
-    private readonly DispatcherTimer _searchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
 
     private readonly CharacterFileService _service;
     private Dictionary<int, int> _researchedCounts = new();
@@ -33,22 +33,8 @@ public sealed partial class ResearchViewModel : ObservableObject
     // desincronizarse si algun catalogo cambia de tamaño.
     private readonly int _totalKnownObjects;
 
-    [ObservableProperty] private CategoryNodeViewModel? _selectedCategory;
-    [ObservableProperty] private string _resultsSummary = "Sin personaje cargado.";
     // H4-07 punto 3 (cuarta auditoria de Opus, Fable): ver el comentario real en ApplyFilter.
     [ObservableProperty] private bool _showRootCategoryCards;
-
-    // R-e (segunda auditoria de Opus, Fable): "sin buscador - Libreria y Libreria de buffs si lo
-    // tienen, con la misma estructura de arbol. Asimetria pura". Misma gramatica real
-    // (LibrarySearchGrammar, L-a) que las otras dos.
-    [ObservableProperty] private string _searchText = string.Empty;
-    // H3-06: mismo debounce real ya en produccion en LibraryViewModel - solo la busqueda por
-    // TEXTO se difiere (elegir/quitar carpeta sigue aplicando al instante, un clic discreto).
-    partial void OnSearchTextChanged(string value)
-    {
-        _searchDebounceTimer.Stop();
-        _searchDebounceTimer.Start();
-    }
 
     // R-g (segunda auditoria de Opus, Fable): "ninguna advertencia si el personaje no es Modo
     // Viaje - el dato (Appearance.Difficulty) ya esta a mano". La Investigacion (desbloquear
@@ -57,23 +43,16 @@ public sealed partial class ResearchViewModel : ObservableObject
     // avisar).
     [ObservableProperty] private bool _isJourneyMode;
 
-    public ObservableCollection<CategoryNodeViewModel> RootCategories { get; } = [];
-    public ObservableCollection<ResearchRowViewModel> Results { get; } = [];
-
     public ResearchViewModel(CharacterFileService service)
     {
         _service = service;
+        ResultsSummary = "Sin personaje cargado.";
         foreach (var node in LibraryCategoryTreeBuilder.Build(service))
             RootCategories.Add(node);
         // Auditoria de Opus, T-18: cada nodo lleva su propio comando real - ver el comentario
         // real en CategoryNodeViewModel.SelectCommand.
         CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
         _totalKnownObjects = service.VanillaCatalog.AllInternalNames().Count() + service.CalamityCatalog.Entries.Count;
-        _searchDebounceTimer.Tick += (_, _) =>
-        {
-            _searchDebounceTimer.Stop();
-            ApplyFilter();
-        };
     }
 
     public void LoadFrom(PlrCharacter character)
@@ -118,33 +97,6 @@ public sealed partial class ResearchViewModel : ObservableObject
         return _service.CalamityCatalog.ByModAndInternal(mod, internalName)?.SyntheticId;
     }
 
-    [RelayCommand]
-    private void SelectCategory(CategoryNodeViewModel node)
-    {
-        // Mismo bug real corregido en LibraryViewModel.SelectCategory - ver ahi el porque.
-        node.IsExpanded = !node.IsExpanded;
-
-        if (SelectedCategory != null) SelectedCategory.IsSelected = false;
-        if (SelectedCategory == node)
-        {
-            SelectedCategory = null;
-        }
-        else
-        {
-            SelectedCategory = node;
-            node.IsSelected = true;
-        }
-        ApplyFilter();
-    }
-
-    [RelayCommand]
-    private void ClearCategory()
-    {
-        if (SelectedCategory != null) SelectedCategory.IsSelected = false;
-        SelectedCategory = null;
-        ApplyFilter();
-    }
-
     private (string DisplayName, string? IconPath, bool IsCalamity, int? RequiredCount) ResolveDisplay(int id)
     {
         var calEntry = _service.CalamityCatalog.BySyntheticId(id);
@@ -156,7 +108,7 @@ public sealed partial class ResearchViewModel : ObservableObject
         return (_service.VanillaCatalog.GetName(id), VanillaIconResolver.GetIconPath(id), false, _service.VanillaResearchCounts.Get(id));
     }
 
-    private void ApplyFilter()
+    protected override void ApplyFilter()
     {
         Results.Clear();
         bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
