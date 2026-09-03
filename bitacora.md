@@ -4136,3 +4136,27 @@ seleccionada, `Results.Count=17` correcto) via el arnes - Libreria de objetos us
 codigo exacto (`LibraryCategoryTreeBuilder.Build` + `AssignSelectCommand`, sin ninguna
 diferencia estructural) ya confirmado dos veces por los otros dos consumidores.
 `dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### Bloque 6 (parte 4) - T-21: arnes de pruebas convertido en proyecto permanente
+
+**Antes**: el arnes de UI Automation vivia SOLO en el scratchpad efimero de cada sesion - cada
+continuacion real de este proyecto lo reconstruia desde cero (cientos de lineas re-escritas,
+decenas de bugs ya resueltos antes -las 3 pestañas fusionadas, el rediseño de Libreria revertido,
+etc.- vueltos a pisar sin querer por no tener memoria real de lo ya aprendido sobre el propio
+arnes).
+
+**Ahora**: `TerrasavrNative.App.Tests` (nuevo, real, comiteado) - proyecto de consola WPF
+identico en naturaleza al arnes de siempre (NO xunit a proposito: gran parte de lo que verifica
+es visual - capturas reales que hace falta mirar, no solo un booleano pasa/falla - un runner
+headless nunca podria juzgar eso), pero ahora vive en el propio repo
+(`TerrasavrNative.slnx`) - `dotnet run --project TerrasavrNative.App.Tests` desde la raiz, sin
+depender de ninguna ruta de scratchpad. `bin/`/`obj/` siguen ignorados por git (solo
+`Program.cs` + el `.csproj` se comitean) - las capturas de cada ejecucion real NO se comitean
+(son build output, se regeneran). `CLAUDE.md` actualizado: la "verdad del entorno" de "usar un
+proyecto de consola temporal en el scratchpad" pasa a documentar este proyecto real, con la
+instruccion explicita de AÑADIR aqui cualquier verificacion nueva en vez de crear otro aparte.
+
+Verificado migrando el arnes completo (1181 lineas, TODAS las verificaciones de esta sesion
+entera - Bloques 0 a 6) tal cual, sin reescribir nada: compila limpio como parte de la solucion
+completa (4 proyectos) y se ejecuta desde su nueva ubicacion real con el mismo resultado exacto
+de siempre - 0 NO-FOUND/FALLO/EXCEPTION, "DONE" al final.

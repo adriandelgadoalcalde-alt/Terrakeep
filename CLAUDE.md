@@ -107,12 +107,19 @@ sesión:
   de preferencia: (1) `dotnet build`/`dotnet test`; (2) UI Automation real
   vía PowerShell (`System.Windows.Automation`,
   `AutomationElement.FindFirst`/`InvokePattern`/`SelectionItemPattern`) -
-  fiable para navegación/interacción sin coordenadas de píxel; (3) un
-  proyecto de consola temporal en el scratchpad con `ProjectReference`
-  directo a `TerrasavrNative.App.csproj` que instancia `MainViewModel` (o,
-  para probar la ventana renderizada de verdad, `MainWindow`) sin pasar por
-  ningún diálogo de archivo. Usar SIEMPRE una COPIA de personaje/mundo real
-  al probar guardado, nunca el fichero real del usuario.
+  fiable para navegación/interacción sin coordenadas de píxel; (3)
+  **`TerrasavrNative.App.Tests`** (auditoria de Opus, Bloque 6, T-21) - ya NO
+  es un proyecto de consola temporal del scratchpad de cada sesión (así vivía
+  antes, reconstruido desde cero cada vez que se perdía la sesión - cientos
+  de líneas re-escritas, bugs ya resueltos vueltos a pisar sin querer): es un
+  proyecto real y permanente del propio repo, en `TerrasavrNative.slnx` -
+  `dotnet run --project TerrasavrNative.App.Tests` desde la raíz monta una
+  `MainWindow` real, coloca datos reales, interactúa vía UI Automation real
+  y deja capturas + líneas "esperado X, obtenido Y" en stdout. Al añadir una
+  verificación nueva, AÑADIRLA AHÍ (no crear otro proyecto aparte) - así se
+  seguirá acumulando sesión a sesión en vez de perderse. Usar SIEMPRE una
+  COPIA de personaje/mundo real al probar guardado, nunca el fichero real
+  del usuario.
 - **`Setter.TargetName` no puede apuntar a un `Brush`** (error de
   compilación MC4111) - solo a un `FrameworkElement`/
   `FrameworkContentElement`. Para animar el color de un pincel con nombre,

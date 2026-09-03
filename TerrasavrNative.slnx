@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="TerrasavrNative.App/TerrasavrNative.App.csproj" />
+  <Project Path="TerrasavrNative.App.Tests/TerrasavrNative.App.Tests.csproj" />
   <Project Path="TerrasavrNative.Core.Tests/TerrasavrNative.Core.Tests.csproj" />
   <Project Path="TerrasavrNative.Core/TerrasavrNative.Core.csproj" />
 </Solution>
