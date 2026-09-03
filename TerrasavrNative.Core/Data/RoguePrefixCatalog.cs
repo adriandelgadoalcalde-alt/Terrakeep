@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,10 +13,16 @@ public sealed class RoguePrefixEntryData
     [JsonPropertyName("internal")] public required string Internal { get; init; }
     [JsonPropertyName("es")] public string? Es { get; init; }
     [JsonPropertyName("en")] public string? En { get; init; }
-    // Solo presentes en prefijos de arma:
+    // Solo presentes en prefijos de arma (H3-05, tercera auditoria de Opus, Fable: campos
+    // reales que ya traia el propio JSON - critBonus/sizeMult/knockbackMult/stealthDmgMult -
+    // pero que este modelo nunca leia, se perdian en silencio al deserializar):
     [JsonPropertyName("damageMult")] public double? DamageMult { get; init; }
     [JsonPropertyName("useTimeMult")] public double? UseTimeMult { get; init; }
     [JsonPropertyName("shootSpeedMult")] public double? ShootSpeedMult { get; init; }
+    [JsonPropertyName("critBonus")] public double? CritBonus { get; init; }
+    [JsonPropertyName("sizeMult")] public double? SizeMult { get; init; }
+    [JsonPropertyName("knockbackMult")] public double? KnockbackMult { get; init; }
+    [JsonPropertyName("stealthDmgMult")] public double? StealthDmgMult { get; init; }
     // Solo presente en prefijos de accesorio:
     [JsonPropertyName("effect")] public string? Effect { get; init; }
 }
@@ -55,6 +62,43 @@ public sealed class RoguePrefixCatalog
 
     public RoguePrefixEntryData? ById(int id) => _byId.TryGetValue(id, out var e) ? e : null;
     public RoguePrefixEntryData? ByInternal(string internalName) => _byInternal.TryGetValue(internalName, out var e) ? e : null;
+
+    // H3-05 (tercera auditoria de Opus, Fable): "Prefijo #10000" opaco, sin ningun numero real
+    // - mismo criterio ya aplicado a los prefijos vanilla (D-6/PrefixEffectCatalog.Describe) y
+    // a la defensa de accesorio (H3-08), nunca un nombre suelto sin lo que hace de verdad.
+    public static string? DescribeWeaponEffect(RoguePrefixEntryData e)
+    {
+        var parts = new List<string>();
+        void Mult(double? value, string label)
+        {
+            if (value is not double v || v == 1.0) return;
+            double pct = Math.Round((v - 1.0) * 100.0);
+            parts.Add($"{FormatSigned(pct)}% {label}");
+        }
+        void Flat(double? value, string label)
+        {
+            if (value is not double v || v == 0.0) return;
+            parts.Add($"{FormatSigned(v)}{label}");
+        }
+
+        Mult(e.DamageMult, "de daño");
+        Mult(e.UseTimeMult, "de tiempo de uso");
+        Mult(e.ShootSpeedMult, "de velocidad de disparo");
+        Mult(e.SizeMult, "de tamaño");
+        Mult(e.KnockbackMult, "de retroceso");
+        Mult(e.StealthDmgMult, "de daño con sigilo");
+        Flat(e.CritBonus, "% de probabilidad de golpe crítico");
+
+        return parts.Count > 0 ? string.Join(", ", parts) : null;
+    }
+
+    private static string FormatSigned(double value)
+    {
+        string text = Math.Abs(value % 1.0) < 0.001
+            ? ((int)value).ToString(CultureInfo.InvariantCulture)
+            : value.ToString("0.#", CultureInfo.InvariantCulture);
+        return value >= 0 ? $"+{text}" : text;
+    }
 
     public static RoguePrefixCatalog LoadFromFile(string path)
     {

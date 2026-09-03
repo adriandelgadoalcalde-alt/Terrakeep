@@ -1,3 +1,5 @@
+using TerrasavrNative.Core.Calamity;
+
 namespace TerrasavrNative.Core.Data;
 
 // Un grupo de prefijos dentro de una meta (ej. "Cuerpo a cuerpo +" dentro de "Positivos") -
@@ -33,7 +35,15 @@ public static class PrefixGroupCatalog
         ]),
         new("Positivos", "Positive",
         [
-            new("Accesorio", "Accessory", PrefixCategory.Accessory, [62, 63, 67, 69, 70, 73, 74, 77, 78, 66]),
+            // H3-05 (tercera auditoria de Opus, Fable): +10017..10020 - los 4 ModPrefix reales
+            // de accesorio de Calamity (Dauntless/Friendly/Invigorating/Silent, decompilados:
+            // Category=PrefixCategory.Accessory, CanRoll universal - ninguno restringido a
+            // objetos de Calamity) se unen de verdad al MISMO pool vanilla de "Accesorio" por
+            // categoria (mismo mecanismo real de ModPrefix de tModLoader) - aplican a
+            // CUALQUIER accesorio, vanilla o de Calamity. "Friendly" en concreto tiene
+            // RollChance=0 en el propio juego (nunca sale al azar) - este picker manual es la
+            // UNICA forma real de ponerlo, antes ni eso.
+            new("Accesorio", "Accessory", PrefixCategory.Accessory, [62, 63, 67, 69, 70, 73, 74, 77, 78, 66, 10017, 10018, 10019, 10020]),
             new("Accesorio +", "Accessory+", PrefixCategory.Accessory, [64, 65, 68, 71, 72, 75, 76, 79, 80]),
             new("Universal +", "Universal+", PrefixCategory.AnyWeapon, [36, 37, 38, 53, 54, 55, 57, 59, 61]),
             new("Común +", "Common+", PrefixCategory.Melee | PrefixCategory.Ranged | PrefixCategory.Magic, [42, 43, 44, 45, 46, 51]),
@@ -41,6 +51,14 @@ public static class PrefixGroupCatalog
             new("A distancia +", "Ranged+", PrefixCategory.Ranged, [16, 17, 18, 19, 20, 21, 25, 58, 82]),
             new("Magia +", "Magic+", PrefixCategory.Magic, [26, 27, 28, 32, 33, 34, 35, 82, 83]),
             new("Invocación +", "Summon+", PrefixCategory.Summon, [85, 86, 87, 88, 95, 96, 97, 89, 90, 91]),
+            // H3-05: los 17 ModPrefix reales de arma Picaro (RoguePrefixCatalog.Weapon,
+            // RogueWeaponPrefix/HorribleWeaponPrefix decompilados) - antes SIN NINGUN grupo
+            // real que los mostrara (solo AnyWeapon generico), pese a ser el equivalente
+            // directo y propio de Picaro a "Cuerpo a cuerpo +"/"A distancia +"/"Magia +". No se
+            // separan en +/- (a diferencia de esos 3) porque Calamity no los diseña como pares
+            // simetricos por estadistica - son 17 variantes propias, mezcla real de pros/
+            // contras cada una (ver RoguePrefixCatalog.DescribeWeaponEffect).
+            new("Pícaro", "Rogue", PrefixCategory.Rogue, [10000, 10001, 10002, 10003, 10004, 10005, 10006, 10007, 10008, 10009, 10010, 10011, 10012, 10013, 10014, 10015, 10016]),
         ]),
         new("Negativos", "Negative",
         [
@@ -71,6 +89,11 @@ public static class PrefixGroupCatalog
     {
         if (isCalamityItem) return group.PrefixIds;
         var legal = rules.LegalPrefixes(itemId);
-        return group.PrefixIds.Where(legal.Contains);
+        // H3-05: los ids sinteticos de Calamity (>= PrefixIdBase, ej. los 4 de accesorio real
+        // dentro de "Accesorio") nunca estan en PrefixRulesCatalog (tabla solo vanilla,
+        // Item.GetRollablePrefixes real) - no filtrarlos por legalidad vanilla, son un pool
+        // real APARTE que tModLoader une al vanilla por categoria (ver el comentario real en
+        // el grupo "Accesorio" de arriba), no un objeto vanilla desconocido.
+        return group.PrefixIds.Where(id => id >= CalamityIds.PrefixIdBase || legal.Contains(id));
     }
 }

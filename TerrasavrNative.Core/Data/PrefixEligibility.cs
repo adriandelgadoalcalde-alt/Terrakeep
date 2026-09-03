@@ -28,8 +28,12 @@ public static class PrefixEligibility
             else if (damageType.Contains("Melee", StringComparison.OrdinalIgnoreCase) || category.Contains("Melee", StringComparison.OrdinalIgnoreCase)) cat |= PrefixCategory.Melee;
             else if (damageType.Contains("Ranged", StringComparison.OrdinalIgnoreCase) || category.Contains("Ranged", StringComparison.OrdinalIgnoreCase)) cat |= PrefixCategory.Ranged;
             else if (damageType.Contains("Magic", StringComparison.OrdinalIgnoreCase) || category.Contains("Magic", StringComparison.OrdinalIgnoreCase)) cat |= PrefixCategory.Magic;
-            // Rogue (DraedonsArsenal incluido) y cualquier otro tipo de daño real de Calamity
-            // sin equivalente vanilla se quedan solo en AnyWeapon - documentado, no inventado.
+            // H3-05 (tercera auditoria de Opus, Fable): Rogue SI tiene equivalente real propio
+            // (RogueWeaponPrefix, los 17 ModPrefix de RoguePrefixCatalog) - antes se quedaba
+            // solo en AnyWeapon (grupos "Universal +/-"), sin ningun grupo real que enseñara
+            // los 17 propios. Cualquier otro tipo de daño real de Calamity sin equivalente
+            // vanilla NI propio (DraedonsArsenal incluido) sigue solo en AnyWeapon.
+            else if (damageType.Contains("Rogue", StringComparison.OrdinalIgnoreCase)) cat |= PrefixCategory.Rogue;
             return cat;
         }
 

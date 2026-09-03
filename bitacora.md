@@ -5479,3 +5479,62 @@ no tienen datos en este catalogo, mismo criterio de "desconocido = 0" del resto 
 `vanilla_stats.json`/`vanilla_prefix_effects.json`, no inventado). `dotnet test` 248/248 en
 verde (134 Core + 114 ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION,
 `T-E-TILDES: 0 fallo(s)`, `ultimo-error.log existe: False`.
+
+**H3-05, "los 21 ModPrefix reales de Calamity no tienen ningun camino manual"**: antes de este
+arreglo, los 17 ModPrefix reales de ARMA Picaro (Vicious/Flawless/Horrible/...,
+`RoguePrefixCatalog.Weapon`, decompilados en `CalamityMod/Prefixes/*.cs`) y los 4 de ACCESORIO
+(Dauntless/Friendly/Invigorating/Silent) solo se podian conseguir via "mejor prefijo"
+automatico (`PrefixSuggester`) - el picker manual del panel Editar nunca los enseñaba (un arma
+Picaro solo veia los grupos genericos "Universal +/-", ningun accesorio veia ninguno de los 4).
+Verificado contra el propio codigo decompilado: los 4 de accesorio declaran
+`Category => PrefixCategory.Accessory` real (la MISMA categoria vanilla que Warding/Menacing) y
+`CanRoll` universal (`Dauntless.cs`/`Invigorating.cs`, sin excepcion; `RogueAccessoryPrefix.cs`
+para Silent) - se aplican de verdad a CUALQUIER accesorio, vanilla o de Calamity (mismo
+mecanismo real de ModPrefix de tModLoader, que une su pool al vanilla por categoria), no solo a
+Calamity. "Friendly" en concreto tiene RollChance=0 en el juego real (nunca sale al reforjar al
+azar) - este picker es la UNICA forma real de conseguirlo, ni eso habia antes.
+
+Arreglo: nueva categoria `PrefixCategory.Rogue` (solo se activa para armas de Calamity con
+`damageType` real conteniendo "Rogue"); nuevo grupo "Pícaro" (17 ids) en la meta "Positivos";
+los 4 ids de accesorio añadidos al grupo "Accesorio" ya existente (aplica a CUALQUIER accesorio
+por el `Requires=PrefixCategory.Accessory` que ya tenia, vanilla incluido - los ids sinteticos
+de Calamity ya no se filtran por la tabla `PrefixRulesCatalog` solo-vanilla, que nunca los
+conocia). `RoguePrefixEntryData` ganó los campos reales que el propio JSON ya traia pero el
+modelo nunca leia (`critBonus`/`sizeMult`/`knockbackMult`/`stealthDmgMult`) + un
+`DescribeWeaponEffect` real (mismo criterio D-6/H3-08: numeros reales, nunca un nombre opaco).
+
+Bug real DESCUBIERTO escribiendo la prueba de "aplicar un prefijo Picaro real" (no en
+produccion todavia, pillado antes de dar nada por cerrado): `ItemEditViewModel.RebuildGroups`
+reconstruye `Groups` entero en cada `Refresh()` (incluido tras Aplicar), y comparaba "el grupo
+ya seleccionado" por REFERENCIA del *wrapper* (`PrefixGroupButtonViewModel`, siempre una
+instancia NUEVA) en vez del dato real (`PrefixGroup`, la MISMA instancia siempre, viene sin
+copiar del catalogo estatico) - cualquier Aplicar devolvia el picker en silencio al primer
+grupo de la meta ("Accesorio"), perdiendo la seleccion real del usuario. Corregido a comparar
+por el dato real (`ReferenceEquals(g.Group, previousGroup)`).
+
+3 pruebas deterministas nuevas (`RoguePrefixPickerTests.cs`, contra Aerial Tracker real del
+catalogo de Calamity - indice 1905, categoria real "Weapons/DraedonsArsenal", damageType real
+"RogueDamageClass.Instance" - y el Escudo de obsidiana vanilla ya usado en H3-08).
+
+**H3-12, "la duracion de un buff escrita a mano puede desbordar a negativo"**: sin techo,
+escribir un numero de segundos lo bastante grande (`Buff.Time = segundos*60`) desbordaba el
+`int` en silencio (ej. 40.000.000s * 60 = 2.400.000.000 > `int.MaxValue`=2.147.483.647, se
+volvia negativo) - un guardado real habria escrito basura en el `.plr`. Acotado ANTES de
+multiplicar, al mismo techo GLOBAL real que ya usa el boton "Máxima"
+(`BuffDurationPresets.MaxTicksForVersion`, `S.getMaxTime()` real - 1.999.999.980 ticks si
+version>=269, 1.080.000 si no). 3 pruebas deterministas nuevas
+(`BuffDurationOverflowTests.cs`).
+
+**H3-13, "Minima/Media/Maxima no se refrescan al sustituir el buff de un slot ya ocupado y
+seleccionado"**: gemelo real de B-6 (ya cerrado en `EquipmentGroupViewModel`) -
+`BuffEditViewModel.OnSlotPropertyChanged` solo vigilaba `IsEmpty`, que no cambia de valor
+cuando un buff sustituye a OTRO dentro del MISMO slot ya ocupado (`PlaceBuff`/`SwapWith` sobre
+un slot no vacio) - los presets se quedaban calculados para el buff viejo. Añadido
+`DisplayName` al filtro (cambia siempre que el buff realmente cambia de identidad - Terraria no
+permite dos slots con el mismo id a la vez, Bu-b - y nunca por escribir la duracion a mano,
+`Refresh()` de `BuffSlotViewModel` solo se llama desde `PlaceBuff`/`SwapWith`/`Clear`). 1 prueba
+determinista nueva (`BuffEditPresetRefreshTests.cs`, Obsidian Skin 6min -> Regeneration 8min
+dentro del mismo slot ya seleccionado).
+
+`dotnet test` 255/255 en verde (134 Core + 121 ViewModels) al cierre de Tanda 2 completa
+(H3-06, H3-08, H3-05, H3-12, H3-13).

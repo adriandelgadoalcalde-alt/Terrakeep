@@ -16,6 +16,10 @@ public enum PrefixCategory
     AnyWeapon = 8,
     Accessory = 16,
     Summon = 32, // solo Calamity, ver PrefixEligibility.For
+    // H3-05 (tercera auditoria de Opus, Fable): solo Calamity (arma con damageType Rogue real,
+    // RogueDamageClass) - los 17 ModPrefix reales de arma de RoguePrefixCatalog no tenian
+    // NINGUN camino manual para elegirlos (solo "mejor prefijo" automatico, PrefixSuggester).
+    Rogue = 64,
 }
 
 // Elegibilidad REAL de prefijo por objeto vanilla, extraida del codigo decompilado de

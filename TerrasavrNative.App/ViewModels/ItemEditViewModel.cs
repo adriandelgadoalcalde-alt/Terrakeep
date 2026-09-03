@@ -3,6 +3,7 @@ using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
+using TerrasavrNative.Core.Calamity;
 using TerrasavrNative.Core.Data;
 using TerrasavrNative.Core.Model;
 
@@ -140,8 +141,21 @@ public partial class ItemEditViewModel : ObservableObject
         RebuildPrefixes();
     }
 
+    // H3-05 (tercera auditoria de Opus, Fable): descubierto escribiendo la prueba real de
+    // aplicar un prefijo Picaro - `Groups` se reconstruye ENTERO (Clear + new
+    // PrefixGroupButtonViewModel) en cada `Refresh()` (dispara con cualquier cambio del slot,
+    // incluido aplicar un prefijo desde el propio picker), y comparaba el grupo "que ya estaba
+    // seleccionado" por REFERENCIA del wrapper - un wrapper siempre NUEVO nunca es el mismo
+    // objeto que el anterior, asi que cualquier Aplicar (o cualquier otro cambio del slot)
+    // devolvia el picker en silencio al primer grupo de la meta ("Accesorio"), perdiendo la
+    // seleccion real del usuario (ej. elegir "Pícaro", aplicar "Vicioso" - el picker saltaba a
+    // "Accesorio" antes de que RebuildPrefixes terminara, el prefijo recien aplicado ni
+    // siquiera se veia marcado como actual). `PrefixGroup` (el dato real, no el wrapper) SI es
+    // la misma instancia siempre (viene sin copiar de `PrefixGroupCatalog.Metas`) - comparar
+    // por ahi conserva la seleccion real entre reconstrucciones.
     private void RebuildGroups()
     {
+        var previousGroup = SelectedGroup?.Group;
         Groups.Clear();
         var slot = Slot;
         if (slot == null || SelectedMeta == null) { Prefixes.Clear(); return; }
@@ -149,9 +163,10 @@ public partial class ItemEditViewModel : ObservableObject
         foreach (var g in PrefixGroupCatalog.GroupsFor(SelectedMeta.Meta, _currentCategories, slot.IsCalamity, slot.Item.Id, _service.PrefixRules))
             Groups.Add(new PrefixGroupButtonViewModel(g));
 
-        var firstGroup = Groups.FirstOrDefault();
-        if (ReferenceEquals(firstGroup, SelectedGroup)) RebuildPrefixes();
-        else SelectedGroup = firstGroup;
+        var keptGroup = previousGroup != null ? Groups.FirstOrDefault(g => ReferenceEquals(g.Group, previousGroup)) : null;
+        var targetGroup = keptGroup ?? Groups.FirstOrDefault();
+        if (ReferenceEquals(targetGroup, SelectedGroup)) RebuildPrefixes();
+        else SelectedGroup = targetGroup;
     }
 
     private void RebuildPrefixes()
@@ -163,6 +178,24 @@ public partial class ItemEditViewModel : ObservableObject
 
         foreach (int id in PrefixGroupCatalog.PrefixIdsFor(group.Group, slot.IsCalamity, slot.Item.Id, _service.PrefixRules))
         {
+            // H3-05 (tercera auditoria de Opus, Fable): id >= PrefixIdBase (10000) es un
+            // prefijo REAL sintetico de Calamity (RoguePrefixCatalog, 21 ModPrefix reales -
+            // ver el grupo "Pícaro" y los 4 añadidos a "Accesorio") - se resuelve/representa
+            // distinto de un PrefixID vanilla plano (byte, campo `prefix` del NBT).
+            if (id >= CalamityIds.PrefixIdBase)
+            {
+                var rogueEntry = _service.RoguePrefixCatalog.ById(id);
+                string rogueName = rogueEntry?.Es ?? rogueEntry?.En ?? $"Prefijo #{id}";
+                bool rogueIsCurrent = slot.Item.Prefix.IsCalamity && slot.Item.Prefix.SyntheticId == id;
+                // Accesorio (10017-10020): texto real ya formateado en el propio catalogo.
+                // Arma (10000-10016): numeros reales de verdad (DescribeWeaponEffect), mismo
+                // criterio D-6/H3-08 de nunca dejar un nombre opaco sin lo que hace.
+                string? rogueEffect = rogueEntry == null ? null
+                    : rogueEntry.Effect ?? RoguePrefixCatalog.DescribeWeaponEffect(rogueEntry);
+                Prefixes.Add(new PrefixCatalogEntryViewModel(rogueName, ItemPrefix.CalamitySynthetic(id), isCalamity: true, rogueIsCurrent, rogueEffect));
+                continue;
+            }
+
             var entry = _service.VanillaPrefixCatalog.ById(id);
             string name = entry?.Es ?? entry?.En ?? $"Prefijo #{id}";
             // PrefixID.Count real == 85 (ver Fase 2/bitacora): 85-97 no son vanilla, son los

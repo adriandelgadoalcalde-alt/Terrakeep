@@ -52,12 +52,23 @@ public partial class BuffEditViewModel : ObservableObject
         Refresh();
     }
 
+    // H3-13 (tercera auditoria de Opus, Fable): gemelo de B-6 (ya cerrado en
+    // EquipmentGroupViewModel) - filtrar solo por IsEmpty no detecta un buff que SUSTITUYE a
+    // otro en un slot YA ocupado y YA seleccionado aqui (SwapWith entre dos slots ocupados,
+    // IsEmpty se queda en false en los dos extremos, nunca cambia de valor, nunca dispara
+    // PropertyChanged) - los 3 presets Minima/Media/Maxima se quedaban calculados para el buff
+    // VIEJO. DisplayName SI cambia siempre que el buff realmente cambia (incluido ocupado ->
+    // otro buff distinto, Terraria no permite dos slots con el mismo id a la vez - Bu-b), y
+    // NUNCA por escribir la duracion a mano (Refresh() de BuffSlotViewModel, quien fija
+    // DisplayName, solo se llama desde PlaceBuff/SwapWith/Clear, no desde
+    // OnDurationSecondsChanged) - no repite el trabajo de sobra que el comentario de abajo ya
+    // evitaba.
     private void OnSlotPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         // Solo recalcular los presets si cambio DE OBJETO (Id) - recalcular en cada tecla de
         // DurationSeconds seria trabajo de sobra y ademas machacaria el propio valor que el
         // usuario esta escribiendo.
-        if (e.PropertyName is nameof(BuffSlotViewModel.IsEmpty)) Refresh();
+        if (e.PropertyName is nameof(BuffSlotViewModel.IsEmpty) or nameof(BuffSlotViewModel.DisplayName)) Refresh();
     }
 
     private void Refresh()

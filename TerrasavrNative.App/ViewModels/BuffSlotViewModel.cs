@@ -166,10 +166,17 @@ public partial class BuffSlotViewModel : ObservableObject
     [RelayCommand]
     private void ChooseFromLibrary() => _requestPick?.Invoke(this);
 
+    // H3-12 (tercera auditoria de Opus, Fable): sin techo real, escribir un numero de segundos
+    // lo bastante grande a mano desbordaba el int de Buff.Time al multiplicar por 60 (ej.
+    // 40000000s * 60 = 2400000000, > int.MaxValue=2147483647, se volvia NEGATIVO en silencio -
+    // ningun aviso, un guardado real habria escrito basura). Mismo techo GLOBAL real que ya usa
+    // el boton "Maxima" (S.getMaxTime(), BuffDurationPresets.MaxTicksForVersion) - en segundos
+    // para poder acotar ANTES de multiplicar, no despues.
     partial void OnDurationSecondsChanged(int value)
     {
         if (_suppressDurationWriteback || IsEmpty) return;
-        int clamped = Math.Max(0, value);
+        int maxSeconds = BuffDurationPresets.MaxTicksForVersion(_characterVersion) / 60;
+        int clamped = Math.Clamp(value, 0, maxSeconds);
         Buff.Time = clamped * 60;
         if (clamped != value)
         {

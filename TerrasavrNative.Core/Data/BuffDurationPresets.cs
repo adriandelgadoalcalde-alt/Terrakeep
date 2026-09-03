@@ -32,9 +32,18 @@ public static class BuffDurationPresets
 
         int mediaTicks = info?.Tiers is { Length: >= 2 } tiers ? tiers[1] : minTicks * 2;
 
-        int realMax = characterVersion >= 269 ? MaxTicksModern : MaxTicksLegacy;
+        int realMax = MaxTicksForVersion(characterVersion);
         int maxTicks = info?.Tiers is { Length: 3 } fullTiers ? fullTiers[2] : realMax;
 
         return new BuffDurationPreset(minTicks, mediaTicks, maxTicks, isRealMin, info?.SourceItemId);
     }
+
+    // H3-12 (tercera auditoria de Opus, Fable): el techo GLOBAL real (S.getMaxTime(), no el
+    // "Maxima" de un buff concreto - algunos como Suerte usan un Tiers[2] mas pequeño) -
+    // expuesto aparte para que la escritura MANUAL de segundos (BuffSlotViewModel.
+    // OnDurationSecondsChanged) pueda acotar antes de multiplicar por 60 y desbordar el int de
+    // Buff.Time (escribir un numero de segundos lo bastante grande volvia el resultado
+    // NEGATIVO en silencio, sin ningun aviso).
+    public static int MaxTicksForVersion(int characterVersion) =>
+        characterVersion >= 269 ? MaxTicksModern : MaxTicksLegacy;
 }
