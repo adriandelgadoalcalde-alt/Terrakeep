@@ -101,8 +101,14 @@ public partial class BuffLibraryViewModel : ObservableObject
             ? SelectedCategory.ItemIdsOrdered.Select(id => _byId.GetValueOrDefault(id)).OfType<BuffCatalogEntryViewModel>()
             : _all;
 
+        // L-a (segunda auditoria de Opus, Fable): misma gramatica real de busqueda de
+        // Terrasavr que LibraryViewModel, recuperada de a0f5027 - ver LibrarySearchGrammar.
         if (hasSearch)
-            matches = matches.Where(i => i.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+        {
+            string query = SearchText;
+            matches = matches.Where(i => LibrarySearchGrammar.Matches(
+                query, i.Id, i.DisplayName.ToLowerInvariant(), i.Description?.ToLowerInvariant()));
+        }
 
         if (!hasSearch && SelectedCategory == null)
         {

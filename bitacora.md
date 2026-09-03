@@ -4484,3 +4484,25 @@ divergir.
 2 pruebas deterministas nuevas (V-a: `IsCurrent` se mueve de boton y escribe al personaje;
 X-b: `ZoomIn`/`ZoomOut` usan el paso compartido). `dotnet test` 155/155 en verde, arnes visual
 completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### L-a (segunda auditoria, Fable) - Ola 2 continua
+
+**Gramatica de busqueda real de Terrasavr perdida en la Libreria/Libreria de buffs**:
+`LibrarySearchGrammar.cs` (commit `a0f5027`, octava pasada) se habia revertido sin querer
+en `c38c960` junto al rediseño de navegacion que si se rechazo entonces - esta pieza en
+concreto no tocaba navegacion (solo la busqueda de texto), asi que era segura de recuperar tal
+cual. Recuperada del historial real (`git show a0f5027:...`, no reescrita de memoria) y
+reaplicada a `LibraryViewModel.ApplyFilter`/`BuffLibraryViewModel.ApplyFilter` (antes:
+`Contains` simple sobre el nombre) + tooltip real explicando la sintaxis en ambos cuadros de
+busqueda.
+
+Reglas reales (calco de `app.TabLibrary.search`): coma = OR entre terminos, espacio = AND
+dentro de un termino, un termino de menos de 2 caracteres se ignora del todo (quirk real, un
+"5" suelto no busca ni por id ni por nombre), `#123` = id exacto, `#100-200` = rango de id
+(ambos extremos incluidos), `.texto` busca en el tooltip/descripcion en vez del nombre.
+
+7 pruebas deterministas nuevas sobre `LibrarySearchGrammar.Matches` directamente (una por
+regla real de la gramatica). `dotnet test` 162/162 en verde, arnes visual completo sin
+NO-FOUND/FALLO/EXCEPTION.
+
+**Cierra la Ola 2 salvo T-E** (barrido de tildes, el mas grande - se aborda aparte).

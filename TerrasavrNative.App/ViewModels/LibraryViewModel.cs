@@ -141,8 +141,17 @@ public partial class LibraryViewModel : ObservableObject
         if (hasSlotRestriction)
             matches = matches.Where(i => target!.AcceptsItem(i.Id));
 
+        // L-a (segunda auditoria de Opus, Fable): gramatica de busqueda real de Terrasavr,
+        // recuperada de a0f5027 (revertida sin querer junto al rediseño de navegacion rechazado
+        // en c38c960 - esta parte no tocaba navegacion, era segura de recuperar). Coma=OR,
+        // espacio=AND, "#id"/"#a-b" por id, ".texto" en el tooltip real (StatsTooltip) en vez
+        // del nombre. Ver LibrarySearchGrammar.
         if (hasSearch)
-            matches = matches.Where(i => i.DisplayName.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+        {
+            string query = SearchText;
+            matches = matches.Where(i => LibrarySearchGrammar.Matches(
+                query, i.Id, i.DisplayName.ToLowerInvariant(), i.StatsTooltip?.ToLowerInvariant()));
+        }
 
         if (!hasSearch && SelectedCategory == null && !hasSlotRestriction)
         {
