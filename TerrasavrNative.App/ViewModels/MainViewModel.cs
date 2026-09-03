@@ -19,6 +19,16 @@ public partial class MainViewModel : ObservableObject
     private readonly CharacterFileService _service = new();
     private LoadedCharacter? _loaded;
 
+    // Auditoria de Opus, T-B (segunda auditoria, Fable): "elegir OTRO personaje en Inicio con
+    // cambios sin guardar los tira sin avisar - mismo agujero real que OnWindowClosing ya
+    // tapaba solo al CERRAR la ventana, no al cargar otro personaje por encima". Gancho de
+    // dialogo real en vez de MessageBox aqui mismo - MainViewModel es headless de verdad (los
+    // tests de TerrasavrNative.App.ViewModels.Tests lo instancian sin ninguna Window), asi que
+    // el dialogo Si/No/Cancelar (mismo texto/logica real ya en MainWindow.OnWindowClosing) vive
+    // en la View, que rellena este hueco en su constructor. Sin View enganchada (tests, arnes
+    // de consola) se deja pasar siempre - comportamiento identico al de antes de este arreglo.
+    public Func<bool>? ConfirmDiscardChanges { get; set; }
+
     // Confirmacion visual real de guardado (pedido explicito 2-sep-2026: "debe ser mas visual
     // que se allá confirmado el guardado no solamente un mensajito abajo a la izquierda") -
     // se activa un momento tras un Save() con exito y se apaga sola; StatusMessage se queda
@@ -200,6 +210,7 @@ public partial class MainViewModel : ObservableObject
         // buscar la pestaña a mano (P1).
         Home.CharacterChosen += path =>
         {
+            if (IsDirty && ConfirmDiscardChanges?.Invoke() == false) return;
             LoadFromPath(path);
             SelectedTabIndex = (int)AppTab.Personaje;
             PersonajeInnerTabIndex = (int)PersonajeInnerTab.Objetos;

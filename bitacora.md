@@ -4371,3 +4371,23 @@ habria vuelto a fallar en ~20 ejecuciones mas).
 veces seguidas sin NO-FOUND/FALLO/EXCEPTION - quedan cerrados los 7 defectos criticos (B-1 a
 B-7) de la segunda auditoria de Opus (Fable). Sigue T-A ya cerrado; quedan T-B/T-C (Ola 1) y el
 resto de olas/hallazgos por seccion.
+
+### T-B (segunda auditoria, Fable) - Ola 1
+
+**"Elegir OTRO personaje en Inicio con cambios sin guardar los tira sin avisar"**: `OnWindowClosing`
+ya protegia el cierre de la ventana con un dialogo real Si/No/Cancelar, pero cargar otro
+personaje POR ENCIMA (desde el lanzador de Inicio, o desde "Cargar personaje...") llamaba a
+`LoadFromPath` directo, sin preguntar nada - mismo agujero real, sitio distinto.
+
+Arreglado extrayendo `MainWindow.ConfirmDiscardChanges(string accion)` (mismo dialogo/logica
+real de siempre, ahora reutilizable) y añadiendo un gancho `MainViewModel.ConfirmDiscardChanges`
+(`Func<bool>?`) que `MainWindow` rellena en su constructor - MainViewModel sigue siendo headless
+de verdad (los tests no necesitan ninguna `Window`/`MessageBox`; sin View enganchada se deja
+pasar siempre, como antes). Los 3 puntos de entrada reales que pueden tirar el personaje actual
+(Inicio, "Cargar personaje...", Ctrl+O que reutiliza el mismo dialogo) quedan cubiertos.
+
+3 pruebas deterministas nuevas (`ConfirmDiscardChangesTests.cs`): cancelar no carga ni pierde
+nada, confirmar si carga el nuevo, y sin cambios sin guardar el hook ni se consulta (no molesta
+si no hay nada real que perder).
+
+`dotnet test` 148/148 en verde (145 + 3), arnes visual completo sin NO-FOUND/FALLO/EXCEPTION.

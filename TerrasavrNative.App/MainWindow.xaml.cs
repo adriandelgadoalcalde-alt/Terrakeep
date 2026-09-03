@@ -16,6 +16,10 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = _viewModel;
         _viewModel.Exploration.NavigateToTileRequested += OnNavigateToTile;
+        // Auditoria de Opus, T-B (segunda auditoria, Fable): mismo dialogo real de
+        // "cambios sin guardar" que OnWindowClosing, ahora tambien antes de cargar OTRO
+        // personaje por encima desde Inicio.
+        _viewModel.ConfirmDiscardChanges = () => ConfirmDiscardChanges("cargar otro personaje");
         // Auditoria de Opus, Bloque 4 (T-3): restaura el tamaño/posicion real de la ultima
         // sesion - antes de Show(), Width/Height/Left/Top ya se pueden fijar sin parpadeo.
         Services.WindowPlacementService.Apply(this);
@@ -35,19 +39,30 @@ public partial class MainWindow : Window
         // el cierre por cambios sin guardar (Cancelar) - el tamaño de ventana no es un dato del
         // personaje, no hay nada que perder al recordarlo de todos modos.
         Services.WindowPlacementService.Save(this);
-        if (!_viewModel.IsDirty) return;
+        if (!ConfirmDiscardChanges("cerrar")) e.Cancel = true;
+    }
+
+    // Auditoria de Opus, N-2 (extraido para T-B, segunda auditoria de Fable): dialogo real
+    // Si/No/Cancelar, reutilizado ahora por OnWindowClosing Y por cualquier accion que vaya a
+    // DESCARTAR el personaje actual (cargar otro por dialogo o desde Inicio) - antes solo
+    // cerrar la ventana estaba protegido, cargar otro encima perdia cambios en silencio.
+    // Devuelve true si es seguro continuar (no habia nada que perder, se guardo, o el usuario
+    // elige descartar a proposito con "No") - false solo si el usuario cancela la accion.
+    private bool ConfirmDiscardChanges(string action)
+    {
+        if (!_viewModel.IsDirty) return true;
         var result = MessageBox.Show(
-            $"'{_viewModel.CharacterName}' tiene cambios sin guardar.\n\n¿Guardar antes de cerrar?",
+            $"'{_viewModel.CharacterName}' tiene cambios sin guardar.\n\n¿Guardar antes de {action}?",
             "Cambios sin guardar", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
         switch (result)
         {
             case MessageBoxResult.Yes:
                 _viewModel.SaveCommand.Execute(null);
-                if (_viewModel.IsDirty) e.Cancel = true; // el guardado fallo de verdad - no cerrar en silencio
-                break;
+                return !_viewModel.IsDirty; // el guardado fallo de verdad - no continuar en silencio
             case MessageBoxResult.Cancel:
-                e.Cancel = true;
-                break;
+                return false;
+            default: // No: descartar a proposito
+                return true;
         }
     }
 
@@ -110,6 +125,7 @@ public partial class MainWindow : Window
 
         if (dialog.ShowDialog(this) == true)
         {
+            if (!ConfirmDiscardChanges("cargar otro personaje")) return;
             _viewModel.LoadFromPath(dialog.FileName);
         }
     }
