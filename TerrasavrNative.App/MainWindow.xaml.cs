@@ -187,6 +187,39 @@ public partial class MainWindow : Window
         _ = Dispatcher.BeginInvoke(new Action(FitWorldMapToWindow), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
+    // H5-04 (quinta auditoria de Opus): el submenu "Historial de guardados" de la tarjeta de
+    // Inicio se puebla AQUI, bajo demanda al abrirse (nunca al escanear Inicio - seria I/O de
+    // sobra para personajes que el usuario nunca llega a mirar). El ContextMenu es un popup
+    // aparte del arbol visual de la ventana (mismo motivo real que el resto de MenuItem de esta
+    // tarjeta ya viajan HomeViewModel/la entrada via PlacementTarget.Tag/.DataContext en vez de
+    // heredar el DataContext normal) - aqui el "submenu" en si (el MenuItem padre) SI es
+    // logicamente hijo directo del propio ContextMenu, asi que Parent llega derecho a el.
+    private void OnBackupHistorySubmenuOpened(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem submenu) return;
+        if (submenu.Parent is not ContextMenu contextMenu) return;
+        if (contextMenu.PlacementTarget is not FrameworkElement placementTarget) return;
+        if (placementTarget.DataContext is not CharacterListEntryViewModel entry) return;
+        if (placementTarget.Tag is not HomeViewModel home) return;
+
+        submenu.Items.Clear();
+        var backups = home.ListBackupPoints(entry);
+        if (backups.Count == 0)
+        {
+            submenu.Items.Add(new MenuItem { Header = "Sin copias de seguridad todavía", IsEnabled = false });
+            return;
+        }
+        foreach (var backup in backups)
+        {
+            var item = new MenuItem { Header = $"{backup.TimestampLocal:dd/MM/yyyy HH:mm:ss} · {FormatBackupSize(backup.SizeBytes)}" };
+            item.Click += (_, _) => home.RestoreBackupPointCommand.Execute((entry, backup));
+            submenu.Items.Add(item);
+        }
+    }
+
+    private static string FormatBackupSize(long bytes) =>
+        bytes >= 1024 * 1024 ? $"{bytes / (1024.0 * 1024.0):0.0} MB" : $"{bytes / 1024.0:0.0} KB";
+
     // X-a: boton real "Ajustar a la ventana" - antes solo existia "Restablecer" (vuelve al
     // 100%, que para un mundo grande deja ver una fraccion minima del ancho). El calculo
     // necesita el tamaño real del viewport del ScrollViewer, que la ViewModel no conoce - vive

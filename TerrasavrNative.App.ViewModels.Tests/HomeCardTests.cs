@@ -12,7 +12,8 @@ namespace TerrasavrNative.App.ViewModels.Tests;
 // carpeta real escaneada.
 public sealed class HomeCardTests
 {
-    private static readonly EquipmentAppearanceResolver EquipAppearance = new CharacterFileService().EquipmentAppearance;
+    private static readonly CharacterFileService Service = new();
+    private static readonly EquipmentAppearanceResolver EquipAppearance = Service.EquipmentAppearance;
 
     private static PlrCharacter NuevoPersonaje(string nombre) => new()
     {
@@ -25,7 +26,7 @@ public sealed class HomeCardTests
     [Fact]
     public void UpdateCurrentPath_MarcaIsCurrentSoloEnLaTarjetaQueCoincide()
     {
-        var home = new HomeViewModel(EquipAppearance);
+        var home = new HomeViewModel(EquipAppearance, Service.BackupHistory);
         var a = new CharacterListEntryViewModel(@"C:\a.plr", NuevoPersonaje("A"), false, DateTime.UtcNow, EquipAppearance);
         var b = new CharacterListEntryViewModel(@"C:\b.plr", NuevoPersonaje("B"), false, DateTime.UtcNow, EquipAppearance);
         home.Characters.Add(a);
@@ -55,7 +56,7 @@ public sealed class HomeCardTests
     [Fact]
     public void Duplicate_CreaUnaCopiaRealEnLaMismaCarpeta_SinTocarElOriginal()
     {
-        var home = new HomeViewModel(EquipAppearance);
+        var home = new HomeViewModel(EquipAppearance, Service.BackupHistory);
         string dir = Path.Combine(Path.GetTempPath(), $"home-dup-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         string path = Path.Combine(dir, "MiPersonaje.plr");
@@ -76,7 +77,7 @@ public sealed class HomeCardTests
     [Fact]
     public void RestoreBackup_RestauraDesdeElBakReal()
     {
-        var home = new HomeViewModel(EquipAppearance);
+        var home = new HomeViewModel(EquipAppearance, Service.BackupHistory);
         string dir = Path.Combine(Path.GetTempPath(), $"home-restore-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         string path = Path.Combine(dir, "X.plr");
@@ -93,7 +94,7 @@ public sealed class HomeCardTests
     [Fact]
     public void RestoreBackup_SinBakReal_DejaUnMensajeSinTocarNada()
     {
-        var home = new HomeViewModel(EquipAppearance);
+        var home = new HomeViewModel(EquipAppearance, Service.BackupHistory);
         string dir = Path.Combine(Path.GetTempPath(), $"home-nobak-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         string path = Path.Combine(dir, "Y.plr");

@@ -465,7 +465,7 @@ public partial class MainViewModel : ObservableObject
         // exactamente igual que el dialogo de "Cargar personaje..." de siempre, y salta
         // directo a Personaje - de nada sirve un lanzador de un click si despues hay que ir a
         // buscar la pestaña a mano (P1).
-        Home = new HomeViewModel(_service.EquipmentAppearance);
+        Home = new HomeViewModel(_service.EquipmentAppearance, _service.BackupHistory);
         Home.CharacterChosen += path =>
         {
             if (IsDirty && ConfirmDiscardChanges?.Invoke() == false) return;
@@ -691,6 +691,11 @@ public partial class MainViewModel : ObservableObject
         {
             SyncEditsBackToMerged();
             _service.Save(_loaded);
+            // H5-04: copia rotativa real de ESTE guardado - independiente del .bak de un solo
+            // nivel (WriteAtomic ya lo genera, no se toca). Un fallo copiando el historial
+            // rotativo (disco lleno, permisos...) no debe impedir que el guardado real, ya
+            // confirmado, se de por bueno - se intenta, pero no se relanza si falla.
+            try { _service.BackupHistory.SaveBackup(_loaded); } catch { /* el guardado real ya tuvo exito, esto es solo la red extra */ }
             // H3-15 (tercera auditoria de Opus, Fable): "la insignia de Calamity no se enciende
             // justo despues del guardado que crea el .tplr por primera vez" - HasCalamityData
             // solo se recalculaba en LoadFromPath. _service.Save YA deja loaded.TplrPath puesto

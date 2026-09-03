@@ -6244,3 +6244,55 @@ entero, cargar OTRO personaje limpia el historial, "Mover todo al almacén" como
 entrada real que cubre los 2 slots movidos a la vez, y `SwapWith` (arrastrar y soltar) como 2
 entradas reales (una por slot). 335/335 en verde (139 Core + 196 ViewModels), arnes UIA 2/2
 pasadas limpias sin NO-FOUND/FALLO/EXCEPTION.
+
+### Quinta auditoria (Opus), Tanda B parte 2 - H5-04, copias de seguridad rotativas (4-sep-2026)
+
+**Lo que pasaba de verdad**: `CharacterFileService.WriteAtomic` (T-C) genera un `.bak` real en
+cada guardado, atomico y correcto, pero se SOBRESCRIBE cada vez - un unico punto de retorno (el
+guardado inmediatamente anterior). El escenario que mas duele en un editor de partidas: guardas,
+sigues tocando, guardas otra vez, y el error estaba DOS guardados atras - en ese momento no
+queda nada.
+
+**`BackupHistoryService`** (nuevo, `App/Services`): copias con fecha real
+(`%LOCALAPPDATA%\Terrakeep\Backups\{personaje}\{yyyyMMdd-HHmmss}.plr`+`.tplr`), MISMA carpeta
+base ya real de `WindowPlacementService` - no ensucia `Documents\My Games\Terraria` (mismo
+criterio ya establecido en T-C para el `.tplr`). El `.bak` de un solo nivel se queda TAL CUAL
+(es lo que hace atomico el propio guardado, no se toca). Tope fijo de 20 copias por personaje
+con purga real por antigüedad - "N configurable" de verdad (pantalla de Ajustes) se deja para
+H5-07, todavia sin empezar. `MainViewModel.Save()` llama a `BackupHistory.SaveBackup` justo
+despues de un guardado real con exito, dentro de un `try/catch` que NUNCA relanza (un fallo
+copiando el historial rotativo - disco lleno, permisos - no debe invalidar un guardado real ya
+confirmado, es solo la red extra).
+
+**"Historial de guardados"** (pedido explicito del informe: "un panel... con fecha, tamaño y un
+boton por punto, para restaurar cualquiera, no solo el ultimo"): submenu real nuevo en el menu
+contextual de la tarjeta de Inicio, junto a "Restaurar copia de seguridad" (I-b) que ya vivia
+ahi. Poblado BAJO DEMANDA al abrirse (`OnBackupHistorySubmenuOpened`, code-behind) - nunca al
+escanear Inicio, seria I/O de sobra para personajes que el usuario nunca llega a abrir. Mismo
+patron real ya establecido para esta tarjeta (`PlacementTarget.Tag`/`.DataContext` porque un
+`ContextMenu` es un popup aparte del arbol visual) - el MenuItem "padre" del submenu SI es hijo
+logico directo del propio `ContextMenu`, asi que `Parent` llega derecho a el sin ese truco.
+`HomeViewModel.RestoreBackupPointCommand` (tupla `(CharacterListEntryViewModel, BackupEntry)`)
+reutiliza el mismo aviso real a `MainViewModel` que "Restaurar copia de seguridad" ya tenia
+(H3-04 - si el personaje restaurado es el cargado ahora mismo, el editor no se queda mostrando
+el estado antiguo en memoria).
+
+**Fuera de esta pasada, a proposito**: el texto "Último guardado: hace 4 min" en la cabecera
+global (parte del mismo hallazgo en el informe) se deja para H5-10 (Tanda C, "la cabecera global
+esta hueca por dentro") - esa pantalla es la que de verdad va a montar la franja de constantes
+vitales, hacerlo aqui habria dividido el mismo trabajo de XAML en dos sitios.
+
+**Bug real encontrado y arreglado en el propio arnes** (no en produccion): el test I-b
+(segunda auditoria) asumia que TODO `MenuItem` del menu contextual debia tener `Command`/
+`CommandParameter` propios - cierto hasta ahora, pero "Historial de guardados" es un
+CONTENEDOR de submenu real (`HasItems=true`), no invoca nada por si mismo. Arreglado excluyendo
+los contenedores de submenu del chequeo (`!mi.HasItems`). Se añadio ademas una verificacion real
+nueva (`H5-04-HISTORIAL`) que abre el submenu de verdad (`IsSubmenuOpen=true`, dispara
+`OnBackupHistorySubmenuOpened` por el mismo camino real que un clic) y confirma que deja de
+estar en el placeholder "(cargando...)".
+
+4 pruebas nuevas (`BackupHistoryServiceTests.cs`): una copia real recuperable por
+`ListBackups`, lista vacia sin ninguna copia todavia, `Restore` copia la version elegida encima
+del fichero real (verificado leyendo el `.plr` restaurado de verdad, no solo comparando bytes),
+y el orden mas-reciente-primero. 339/339 en verde (139 Core + 200 ViewModels), arnes UIA 2/2
+pasadas limpias sin NO-FOUND/FALLO/EXCEPTION.

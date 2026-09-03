@@ -1051,7 +1051,17 @@
                                   CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                         <MenuItem Header="Restaurar copia de seguridad"
                                   Command="{Binding PlacementTarget.Tag.RestoreBackupCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  ToolTip="Restaura el ULTIMO guardado real (el .bak que deja cada Guardar) - para elegir un punto anterior, ver 'Historial de guardados'" />
+                        <!-- H5-04 (quinta auditoria de Opus): "un panel 'Historial de guardados'...
+                             con fecha, tamaño y un boton por punto - para restaurar cualquiera,
+                             no solo el ultimo". Submenu real, poblado bajo demanda al abrirlo
+                             (OnBackupHistorySubmenuOpened) - un item "placeholder" es
+                             obligatorio para que WPF dibuje la flecha de despliegue y dispare
+                             SubmenuOpened; se sustituye entero por la lista real. -->
+                        <MenuItem Header="Historial de guardados" SubmenuOpened="OnBackupHistorySubmenuOpened">
+                            <MenuItem Header="(cargando...)" IsEnabled="False" />
+                        </MenuItem>
                     </ContextMenu>
                 </Border.ContextMenu>
                 <Border.Style>

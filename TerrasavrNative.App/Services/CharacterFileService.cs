@@ -63,6 +63,9 @@ public sealed class CharacterFileService
     // Doll de cuerpo completo fiel al guardado (pedido explicito, 3-sep-2026) - ver
     // EquipmentAppearanceResolver.
     public EquipmentAppearanceResolver EquipmentAppearance { get; }
+    // H5-04 (quinta auditoria de Opus): copias de seguridad rotativas con fecha, ver
+    // BackupHistoryService.
+    public BackupHistoryService BackupHistory { get; }
 
     // Los 6 catalogos que ItemStatsFormatter.Format necesita, agrupados en un unico record -
     // pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada: la firma ya iba por 5
@@ -107,6 +110,7 @@ public sealed class CharacterFileService
         TooltipCatalogs = new ItemTooltipCatalogs(VanillaStats, CalamityCatalog, VanillaCategories, VanillaItemTooltips, VanillaArmorSets, PrefixEffects);
         VanillaArmorSlots = VanillaArmorSlotCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_armor_slots.json"));
         EquipmentAppearance = new EquipmentAppearanceResolver(VanillaArmorSlots, CalamityCatalog);
+        BackupHistory = new BackupHistoryService();
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
         var codec = new CalamityItemCodec(CalamityCatalog, translator);

@@ -45,10 +45,13 @@ public partial class HomeViewModel : ObservableObject
 
     // Doll fiel al guardado (pedido explicito, 3-sep-2026) - ver EquipmentAppearanceResolver.
     private readonly EquipmentAppearanceResolver _equipmentAppearance;
+    // H5-04 (quinta auditoria de Opus): copias de seguridad rotativas, ver BackupHistoryService.
+    private readonly BackupHistoryService _backupHistory;
 
-    public HomeViewModel(EquipmentAppearanceResolver equipmentAppearance)
+    public HomeViewModel(EquipmentAppearanceResolver equipmentAppearance, BackupHistoryService backupHistory)
     {
         _equipmentAppearance = equipmentAppearance;
+        _backupHistory = backupHistory;
 
         // Fire-and-forget deliberado: el constructor no puede ser async, y no hay nada
         // real que esperar aqui todavia (el arranque de MainWindow sigue su curso normal -
@@ -214,6 +217,34 @@ public partial class HomeViewModel : ObservableObject
         catch (Exception ex)
         {
             ScanMessage = $"Error al restaurar la copia: {ex.Message}";
+        }
+    }
+
+    // H5-04 (quinta auditoria de Opus): "un panel 'Historial de guardados'... con fecha, tamaño
+    // y un boton por punto - para restaurar cualquiera, no solo el ultimo". Se consulta bajo
+    // demanda (al abrir el submenu real, ver MainWindow.xaml.cs) - no al escanear Inicio, seria
+    // I/O de sobra para personajes que el usuario nunca llega a abrir el menu contextual.
+    public IReadOnlyList<BackupEntry> ListBackupPoints(CharacterListEntryViewModel entry) =>
+        _backupHistory.ListBackups(entry.FilePath);
+
+    [RelayCommand]
+    private void RestoreBackupPoint((CharacterListEntryViewModel Entry, BackupEntry Backup) args)
+    {
+        var (entry, backup) = args;
+        try
+        {
+            _backupHistory.Restore(entry.FilePath, null, backup);
+            _ = RefreshAsync(); // T-G: mismo criterio real que el constructor, fire-and-forget
+
+            // H3-04: mismo aviso real a MainViewModel que RestoreBackup de arriba - si el
+            // personaje restaurado es el que esta cargado ahora mismo, el editor no debe seguir
+            // mostrando el estado antiguo en memoria.
+            if (_currentPath != null && string.Equals(_currentPath, entry.FilePath, StringComparison.OrdinalIgnoreCase))
+                CharacterChosen?.Invoke(entry.FilePath);
+        }
+        catch (Exception ex)
+        {
+            ScanMessage = $"Error al restaurar la copia del {backup.TimestampLocal:dd/MM/yyyy HH:mm:ss}: {ex.Message}";
         }
     }
 }
