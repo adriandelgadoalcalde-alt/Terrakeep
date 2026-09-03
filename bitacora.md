@@ -4110,3 +4110,29 @@ ni despues del cambio - añadida ahora al tocar este codigo) colocado con datos 
 (mismo `Source` que ya usa el boton real "Auto-equipar" del XAML) - cabeza cambio de verdad de
 "Tocado de piñonita" a "Casco fundido", 11 objetos colocados, sin excepciones.
 `dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### Bloque 6 (parte 3) - T-18: plantilla de árbol compartida (Libreria/Investigacion/Buffs)
+
+**Antes**: `CategoryNodeTemplate`/`ResearchCategoryNodeTemplate`/`BuffCategoryNodeTemplate` en
+`MainWindow.xaml` eran 3 copias IDENTICAS del mismo arbol recursivo (mismo `DataType`, mismo
+`StackPanel`/`Button`/`Style`/`Trigger`, mismo `ItemsControl` recursivo) - la UNICA diferencia
+real entre las 3 era a que `SelectCategoryCommand` apuntaba el boton (`Library`/`Research`/
+`BuffLibrary`, enrutado con `RelativeSource AncestorType=Window` + una ruta de propiedades
+distinta cada vez).
+
+**Ahora**: `CategoryNodeViewModel.SelectCommand` (nuevo, `ICommand?`) - cada nodo lleva SU
+PROPIO comando real, asignado una vez por el ViewModel dueño justo tras construir su arbol
+(`CategoryNodeViewModel.AssignSelectCommand`, recursivo, un unico metodo compartido en vez de
+repetir el recorrido 3 veces) - `LibraryViewModel`/`ResearchViewModel`/`BuffLibraryViewModel`
+cada uno con su PROPIA instancia de arbol (`LibraryCategoryTreeBuilder`/`BuffLibraryTreeBuilder`
+llamados por separado, sin compartir nodos entre ViewModels - nunca hay riesgo de que el arbol
+de uno pise el comando del otro). Una UNICA plantilla real (`CategoryNodeTemplate`,
+`Command="{Binding SelectCommand}"`) sirve a los 3 arboles - cualquier arreglo futuro al arbol
+se aplica una vez, no 3.
+
+Verificado sin cambio de comportamiento en los 3 consumidores reales: Investigacion (categoria
+"Materiales" seleccionada, umbral real `100/100` de R-1) y Buffs (categoria "Utilidad"
+seleccionada, `Results.Count=17` correcto) via el arnes - Libreria de objetos usa el MISMO
+codigo exacto (`LibraryCategoryTreeBuilder.Build` + `AssignSelectCommand`, sin ninguna
+diferencia estructural) ya confirmado dos veces por los otros dos consumidores.
+`dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.

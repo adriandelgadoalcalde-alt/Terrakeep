@@ -53,6 +53,9 @@ public partial class BuffLibraryViewModel : ObservableObject
 
         foreach (var node in BuffLibraryTreeBuilder.Build(service))
             RootCategories.Add(node);
+        // Auditoria de Opus, T-18: cada nodo lleva su propio comando real - ver el comentario
+        // real en CategoryNodeViewModel.SelectCommand.
+        CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
 
         ApplyFilter();
     }

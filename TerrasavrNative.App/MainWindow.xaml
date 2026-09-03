@@ -198,9 +198,16 @@
              por StaticResource, patron real de WPF para arboles sin usar TreeView). Un clic
              selecciona/deselecciona la carpeta como filtro Y despliega/pliega sus subcarpetas
              a la vez (LibraryViewModel.SelectCategoryCommand). -->
+        <!-- Auditoria de Opus, Bloque 6 (T-18): antes 3 copias identicas de esta plantilla
+             (Libreria/Investigacion/Buffs), solo distintas en A QUE SelectCategoryCommand
+             apuntaba cada boton - cada nodo lleva ahora su propio comando real
+             (CategoryNodeViewModel.SelectCommand, asignado una vez por cada ViewModel dueño
+             justo tras construir su arbol), asi que una UNICA plantilla real sirve a los 3
+             arboles (Libreria, Investigacion y Buffs, cada uno con su propia instancia de
+             arbol e igual de correcto). -->
         <DataTemplate x:Key="CategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
             <StackPanel>
-                <Button Command="{Binding DataContext.Library.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                <Button Command="{Binding SelectCommand}"
                         CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
                         Cursor="Hand">
                     <Button.Style>
@@ -240,89 +247,6 @@
                 </Button>
                 <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
                               ItemTemplate="{DynamicResource CategoryNodeTemplate}"
-                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" />
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- Mismo arbol que CategoryNodeTemplate de arriba, pero apuntando al
-             SelectCategoryCommand de Research en vez de Library - las dos pestañas comparten
-             el mismo arbol REAL de carpetas (LibraryCategoryTreeBuilder) pero cada una tiene
-             su propia seleccion/resultados independientes. -->
-        <DataTemplate x:Key="ResearchCategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
-            <StackPanel>
-                <Button Command="{Binding DataContext.Research.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
-                        Cursor="Hand">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-                                </Trigger>
-                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
-                               VerticalAlignment="Center"
-                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                        <!-- Bug real encontrado 2-sep-2026 ("hay nombres cortados"): un
-                             StackPanel Horizontal le da ancho infinito a este TextBlock al
-                             medir, asi que TextWrapping no bastaba solo - hacia falta un
-                             MaxWidth real para que el texto tuviera un limite del que
-                             envolver, en vez de desbordar en silencio fuera de la columna. -->
-                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
-                                   MaxWidth="165" TextWrapping="Wrap" />
-                    </StackPanel>
-                </Button>
-                <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
-                              ItemTemplate="{DynamicResource ResearchCategoryNodeTemplate}"
-                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" />
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- Mismo arbol otra vez, apuntando al SelectCategoryCommand de BuffLibrary (Fase 2 del
-             rework de Buffs, pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada) - arbol
-             REAL distinto (BuffLibraryTreeBuilder, calcado de app.BuffSide de Terrasavr real),
-             mismo patron visual que Libreria/Investigacion. -->
-        <DataTemplate x:Key="BuffCategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
-            <StackPanel>
-                <Button Command="{Binding DataContext.BuffLibrary.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
-                        Cursor="Hand">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-                                </Trigger>
-                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
-                               VerticalAlignment="Center"
-                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                        <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
-                                   MaxWidth="165" TextWrapping="Wrap" />
-                    </StackPanel>
-                </Button>
-                <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
-                              ItemTemplate="{DynamicResource BuffCategoryNodeTemplate}"
                               Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
         </DataTemplate>
@@ -1688,7 +1612,7 @@
                                                         Command="{Binding BuffLibrary.ClearCategoryCommand}" />
                                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                                                     <ItemsControl ItemsSource="{Binding BuffLibrary.RootCategories}"
-                                                                  ItemTemplate="{StaticResource BuffCategoryNodeTemplate}" />
+                                                                  ItemTemplate="{StaticResource CategoryNodeTemplate}" />
                                                 </ScrollViewer>
                                             </DockPanel>
                                         </Border>
@@ -1739,7 +1663,7 @@
                                                 Command="{Binding Research.ClearCategoryCommand}" />
                                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                                             <ItemsControl ItemsSource="{Binding Research.RootCategories}"
-                                                          ItemTemplate="{StaticResource ResearchCategoryNodeTemplate}" />
+                                                          ItemTemplate="{StaticResource CategoryNodeTemplate}" />
                                         </ScrollViewer>
                                     </DockPanel>
                                 </Border>

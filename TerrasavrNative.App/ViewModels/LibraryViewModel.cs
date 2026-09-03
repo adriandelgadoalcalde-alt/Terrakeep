@@ -66,6 +66,9 @@ public partial class LibraryViewModel : ObservableObject
         // orden y organizacion de terrasav para esta librera Y investigacion").
         foreach (var node in LibraryCategoryTreeBuilder.Build(service))
             RootCategories.Add(node);
+        // Auditoria de Opus, T-18: cada nodo lleva su propio comando real - ver el comentario
+        // real en CategoryNodeViewModel.SelectCommand.
+        CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
 
         ApplyFilter();
     }

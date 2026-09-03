@@ -28,6 +28,9 @@ public sealed partial class ResearchViewModel : ObservableObject
         _service = service;
         foreach (var node in LibraryCategoryTreeBuilder.Build(service))
             RootCategories.Add(node);
+        // Auditoria de Opus, T-18: cada nodo lleva su propio comando real - ver el comentario
+        // real en CategoryNodeViewModel.SelectCommand.
+        CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
     }
 
     public void LoadFrom(PlrCharacter character)

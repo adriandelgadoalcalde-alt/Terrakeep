@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace TerrasavrNative.App.ViewModels;
@@ -39,4 +40,27 @@ public sealed partial class CategoryNodeViewModel(string name, string fullPath) 
     [ObservableProperty] private string? _iconPath;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private bool _isExpanded;
+
+    // Auditoria de Opus, Bloque 6 (T-18): "CategoryNodeTemplate"/"ResearchCategoryNodeTemplate"/
+    // "BuffCategoryNodeTemplate" en MainWindow.xaml eran 3 copias identicas del mismo arbol,
+    // solo distintas en A QUE SelectCategoryCommand apuntaba cada boton (Library/Research/
+    // BuffLibrary - 3 ViewModels distintos, cada uno con su propia instancia de arbol, ver
+    // LibraryCategoryTreeBuilder.Build llamado por separado desde cada constructor). En vez de
+    // enrutar el Command con RelativeSource+ruta al ViewModel dueño (lo que exigia una plantilla
+    // por dueño), el propio nodo lleva SU comando real - cada ViewModel lo asigna una vez, justo
+    // tras construir su arbol (ver AssignSelectCommand), y la UNICA plantilla real
+    // (CategoryNodeTemplate) hace simplemente Command="{Binding SelectCommand}".
+    public ICommand? SelectCommand { get; set; }
+
+    // Asigna el mismo comando real a un nodo Y a todos sus descendientes (recursivo, un arbol
+    // real puede tener hasta 4 niveles de profundidad - ver VanillaLibraryTreeCatalog). Llamado
+    // una vez por cada ViewModel dueño de un arbol, justo despues de construirlo.
+    public static void AssignSelectCommand(IEnumerable<CategoryNodeViewModel> nodes, ICommand command)
+    {
+        foreach (var node in nodes)
+        {
+            node.SelectCommand = command;
+            AssignSelectCommand(node.Children, command);
+        }
+    }
 }
