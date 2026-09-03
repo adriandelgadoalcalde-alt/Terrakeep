@@ -514,6 +514,9 @@ public partial class MainViewModel : ObservableObject
         Appearance.PropertyChanged += (_, _) => MarkDirty();
         Servers.Changed += MarkDirty; // B-5 (segunda auditoria de Opus): evento real, ver ServersViewModel.Changed
         Flags.PropertyChanged += (_, _) => MarkDirty();
+        // H5-02 (quinta auditoria de Opus): Investigacion ahora es editable de verdad - evento
+        // dedicado (no PropertyChanged entero, que tambien dispara solo con navegar/buscar).
+        Research.ResearchChanged += MarkDirty;
         VersionEditor.PropertyChanged += (_, _) =>
         {
             MarkDirty();
@@ -690,6 +693,10 @@ public partial class MainViewModel : ObservableObject
         try
         {
             SyncEditsBackToMerged();
+            // H5-02 (quinta auditoria de Opus): la Investigacion ahora se edita de verdad -
+            // mismo criterio real que SyncEditsBackToMerged para objetos, el estado en memoria
+            // (Research._researchedCounts) se vuelca al PlrCharacter justo antes de guardar.
+            Research.SyncBackTo(_loaded.Character);
             _service.Save(_loaded);
             // H5-04: copia rotativa real de ESTE guardado - independiente del .bak de un solo
             // nivel (WriteAtomic ya lo genera, no se toca). Un fallo copiando el historial

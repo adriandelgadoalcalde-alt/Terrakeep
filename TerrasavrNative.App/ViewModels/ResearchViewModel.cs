@@ -10,10 +10,16 @@ namespace TerrasavrNative.App.ViewModels;
 // mismo arbol real de carpetas que la Libreria (LibraryCategoryTreeBuilder - mismo pedido:
 // "quiero que calques exactamente la estructura de carpetas... para esta librera Y
 // investigacion") para navegar por carpetas en vez de un unico listado - mismos nombres y
-// sprites de siempre (ResearchRowViewModel no cambia), solo cambia COMO se navega.
+// sprites de siempre, solo cambia COMO se navega.
 //
 // H5-15 (quinta auditoria de Opus): arbol de categorias, busqueda con debounce y el par
 // SelectCategory/ClearCategory ya no viven aqui - ver CatalogBrowserViewModel.
+//
+// H5-02 (quinta auditoria de Opus): "Investigacion es de solo lectura salvo un boton de todo o
+// nada... el Terrasavr original SI tiene una rejilla editable con Remove All/Unlock All". Cierra
+// la Fase 2 que R-a/R-b (segunda auditoria) dejo aparcada por escrito (bitacora.md:4705).
+// ApplyFilter ahora muestra TODO el contenido real de la carpeta elegida (investigado o no),
+// con clic para alternar y un campo de conteo editable para parciales - ver ResearchRowViewModel.
 public sealed partial class ResearchViewModel : CatalogBrowserViewModel<ResearchRowViewModel>
 {
     // H3-06 (tercera auditoria de Opus, Fable): "el tope+debounce medido de verdad en L-c
@@ -26,12 +32,22 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
 
     private readonly CharacterFileService _service;
     private Dictionary<int, int> _researchedCounts = new();
+    // Universo completo real (vanilla + Calamity) - mismo recorrido real que
+    // ResearchAllService.Apply, calculado una vez (no cambia entre personajes, es el catalogo).
+    private readonly List<int> _allKnownIds;
 
     // R-f (segunda auditoria de Opus, Fable): "sin progreso global - el denominador (5.402
     // objetos reales) ya se conoce y no se muestra". Real y dinamico (mismo universo que
     // ResearchAllService.Apply ya recorre - vanilla + Calamity), no un numero fijo que pueda
     // desincronizarse si algun catalogo cambia de tamaño.
     private readonly int _totalKnownObjects;
+
+    // H5-02: "la barra de progreso global pasa de frase a barra real" - 0..1, para un
+    // ProgressBar real en el XAML. GlobalProgressSummary es el texto N/Total SIEMPRE global
+    // (a diferencia de ResultsSummary, que cambia de significado segun la carpeta/busqueda
+    // activa - el tooltip de la barra necesita el total real, no lo que se este mirando ahora).
+    [ObservableProperty] private double _progressFraction;
+    [ObservableProperty] private string _globalProgressSummary = string.Empty;
 
     // H4-07 punto 3 (cuarta auditoria de Opus, Fable): ver el comentario real en ApplyFilter.
     [ObservableProperty] private bool _showRootCategoryCards;
@@ -52,7 +68,18 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
         // Auditoria de Opus, T-18: cada nodo lleva su propio comando real - ver el comentario
         // real en CategoryNodeViewModel.SelectCommand.
         CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
-        _totalKnownObjects = service.VanillaCatalog.AllInternalNames().Count() + service.CalamityCatalog.Entries.Count;
+
+        // Mismo recorrido real que ResearchAllService.Apply (vanilla con id real resoluble +
+        // TODOS los objetos de Calamity) - calculado una vez, reutilizado para el total Y para
+        // la busqueda global sin carpeta (antes solo buscaba en lo YA investigado).
+        _allKnownIds = [];
+        foreach (var pid in service.VanillaCatalog.AllInternalNames())
+        {
+            int? id = service.VanillaCatalog.GetIdByKey(pid);
+            if (id.HasValue) _allKnownIds.Add(id.Value);
+        }
+        foreach (var entry in service.CalamityCatalog.Entries) _allKnownIds.Add(entry.SyntheticId);
+        _totalKnownObjects = _allKnownIds.Count;
     }
 
     public void LoadFrom(PlrCharacter character)
@@ -61,6 +88,30 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
         _researchedCounts = ResolveResearchedCounts(character);
         IsJourneyMode = character.Difficulty == 3;
         ApplyFilter();
+    }
+
+    // H5-02: vuelca el estado real en memoria de vuelta al personaje - mismo criterio real que
+    // MainViewModel.SyncEditsBackToMerged para objetos, llamado desde MainViewModel.Save()
+    // justo antes de guardar. Un id que ya no resuelve a ningun Pid real (catalogo cambiado
+    // entre sesiones) se descarta en silencio - "lo que no se encuentra no se inventa".
+    public void SyncBackTo(PlrCharacter character)
+    {
+        character.Research.Clear();
+        foreach (var (id, count) in _researchedCounts)
+        {
+            string? pid = ResolvePid(id);
+            if (pid != null) character.Research.Add(new PlrResearchEntry { Pid = pid, Count = count });
+        }
+    }
+
+    private string? ResolvePid(int id)
+    {
+        if (id >= Core.Calamity.CalamityIds.ItemIdBase)
+        {
+            var entry = _service.CalamityCatalog.BySyntheticId(id);
+            return entry != null ? $"{entry.Mod}/{entry.Internal}" : null;
+        }
+        return _service.VanillaCatalog.GetKeyById(id);
     }
 
     // Sin personaje cargado (o al recargar uno nuevo) - misma limpieza de seleccion que
@@ -73,6 +124,7 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
         ResultsSummary = "Sin personaje cargado.";
         IsJourneyMode = false;
         ShowRootCategoryCards = false;
+        ProgressFraction = 0;
     }
 
     // Misma resolucion de Pid real que ya usaba MainViewModel.RebuildResearch: un Pid con "/"
@@ -108,18 +160,19 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
         return (_service.VanillaCatalog.GetName(id), VanillaIconResolver.GetIconPath(id), false, _service.VanillaResearchCounts.Get(id));
     }
 
+    // El conteo real que representa "investigado del todo" para este id - mismo criterio real
+    // ya usado en ResearchAllService.Apply (umbral real vanilla, o el placeholder de Calamity
+    // sin tabla real extraida).
+    private int FullResearchCount(int id) => _service.VanillaResearchCounts.Get(id) ?? ResearchAllService.PlaceholderCount;
+
     protected override void ApplyFilter()
     {
         Results.Clear();
         bool hasSearch = !string.IsNullOrWhiteSpace(SearchText);
 
-        // R-e: sin carpeta elegida pero CON busqueda, se busca en TODO lo ya investigado (mismo
-        // criterio real que Libreria: la busqueda no exige elegir carpeta primero). Sin carpeta
-        // Y sin busqueda, no hay ningun conjunto real que mostrar todavia - Fase 1 no cambia eso
-        // (mostrar tambien lo NO investigado es R-a, Fase 2, layout distinto).
         if (SelectedCategory == null && !hasSearch)
         {
-            ResultsSummary = $"{_researchedCounts.Count}/{_totalKnownObjects} objeto(s) investigado(s) en total - elige una carpeta o escribe para buscar.";
+            RefreshSummaryAndProgress();
             // H4-07 punto 3 (cuarta auditoria de Opus, Fable): "el resumen de Investigacion sin
             // carpeta podria enseñar las carpetas raiz como tarjetas grandes en el area vacia,
             // en vez de solo una frase" - el area de resultados se quedaba en blanco salvo por
@@ -131,20 +184,21 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
         }
         ShowRootCategoryCards = false;
 
-        // Mismo bug real corregido en LibraryViewModel.ApplyFilter - ver ahi el porque:
-        // ItemIdsOrdered respeta el orden curado real de Terrasavr, un HashSet (ItemIdSet) o
-        // un OrderBy(id) numerico no. Sin carpeta (busqueda global), el orden real de Terrasavr
-        // no aplica - se recorre en el orden en que ya estan investigados.
-        IEnumerable<int> candidates = SelectedCategory != null
-            ? SelectedCategory.ItemIdsOrdered.Where(_researchedCounts.ContainsKey)
-            : _researchedCounts.Keys;
+        // H5-02: la carpeta elegida muestra TODO su contenido real (investigado o no) - antes
+        // solo lo que ya estaba en _researchedCounts. Mismo bug real ya corregido en
+        // LibraryViewModel.ApplyFilter: ItemIdsOrdered respeta el orden curado real de
+        // Terrasavr, un HashSet/OrderBy(id) numerico no.
+        IEnumerable<int> candidates = SelectedCategory != null ? SelectedCategory.ItemIdsOrdered : _allKnownIds;
 
         var matches = new List<ResearchRowViewModel>();
         foreach (int id in candidates)
         {
             var (displayName, iconPath, isCalamity, requiredCount) = ResolveDisplay(id);
             if (hasSearch && !LibrarySearchGrammar.Matches(SearchText, id, displayName.ToLowerInvariant(), null)) continue;
-            matches.Add(new ResearchRowViewModel(displayName, _researchedCounts[id], requiredCount, isCalamity, iconPath));
+            int count = _researchedCounts.GetValueOrDefault(id);
+            var row = new ResearchRowViewModel(id, displayName, count, requiredCount, isCalamity, iconPath);
+            row.CountChangedByUser += OnRowCountChangedByUser;
+            matches.Add(row);
         }
         // H3-06: mismo tope real ya medido en LibraryViewModel (100 - WrapPanel sin
         // virtualizar, 300 tarjetas = 802ms de congelacion real) - una carpeta grande (ej.
@@ -153,7 +207,79 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
 
         string categoryLabel = SelectedCategory != null ? $" en \"{SelectedCategory.Name}\"" : string.Empty;
         ResultsSummary = matches.Count > MaxResults
-            ? $"Mostrando {MaxResults} de {matches.Count} objeto(s) investigado(s){categoryLabel} - afina la busqueda."
-            : $"{matches.Count} objeto(s) investigado(s){categoryLabel}.";
+            ? $"Mostrando {MaxResults} de {matches.Count} objeto(s){categoryLabel} - afina la busqueda."
+            : $"{matches.Count} objeto(s){categoryLabel}.";
+        RefreshProgressOnly();
+    }
+
+    // H5-02: clic en una fila (alterna) o el campo de conteo editable (parcial a mano) - ambos
+    // caminos reales pasan por Count, ver ResearchRowViewModel.OnCountChanged. Actualiza el
+    // estado real SIN reconstruir Results entero (100 filas de sobra por cada tecla del campo
+    // de conteo seria un reflow real innecesario).
+    private void OnRowCountChangedByUser(ResearchRowViewModel row, int newCount)
+    {
+        if (newCount <= 0) _researchedCounts.Remove(row.Id);
+        else _researchedCounts[row.Id] = newCount;
+        RefreshSummaryAndProgress();
+        // H5-01 (nota real de alcance, ya documentada en bitacora.md): la investigacion no
+        // participa todavia del UndoStack general (dato de forma distinta a un slot de objeto) -
+        // esto SI marca el personaje como editado. Evento DEDICADO (no PropertyChanged generico
+        // de todo el ViewModel, que tambien dispara con solo navegar/buscar - marcar dirty por
+        // abrir una carpeta seria un falso positivo real) - mismo patron ya establecido
+        // (ServersViewModel.Changed/BuffsViewModel.SlotChanged), MainViewModel.MarkDirty se
+        // suscribe una vez en el constructor.
+        ResearchChanged?.Invoke();
+    }
+
+    public event Action? ResearchChanged;
+
+    [RelayCommand]
+    private void ToggleRow(ResearchRowViewModel row)
+    {
+        row.Count = row.IsResearched ? 0 : FullResearchCount(row.Id);
+    }
+
+    // H5-02: "dos acciones por carpeta - Investigar esta carpeta/Quitar - junto a las dos
+    // globales". Investigar SOLO sube lo que falta (nunca baja un conteo parcial real ya mas
+    // alto que el umbral, mismo criterio ya establecido en ResearchAllService.Apply).
+    [RelayCommand]
+    private void ResearchFolder()
+    {
+        if (SelectedCategory == null) return;
+        foreach (int id in SelectedCategory.ItemIdsOrdered)
+        {
+            int full = FullResearchCount(id);
+            if (_researchedCounts.GetValueOrDefault(id) < full) _researchedCounts[id] = full;
+        }
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void ClearFolder()
+    {
+        if (SelectedCategory == null) return;
+        foreach (int id in SelectedCategory.ItemIdsOrdered) _researchedCounts.Remove(id);
+        ApplyFilter();
+    }
+
+    // H5-02: "Quitar toda la investigacion" - el equivalente real del "Remove All" del
+    // Terrasavr original (app.TabResearch), que hoy no existia en absoluto.
+    [RelayCommand]
+    private void ClearAllResearch()
+    {
+        _researchedCounts.Clear();
+        ApplyFilter();
+    }
+
+    private void RefreshSummaryAndProgress()
+    {
+        ResultsSummary = $"{_researchedCounts.Count}/{_totalKnownObjects} objeto(s) investigado(s) en total - elige una carpeta o escribe para buscar.";
+        RefreshProgressOnly();
+    }
+
+    private void RefreshProgressOnly()
+    {
+        ProgressFraction = _totalKnownObjects > 0 ? _researchedCounts.Count / (double)_totalKnownObjects : 0;
+        GlobalProgressSummary = $"{_researchedCounts.Count}/{_totalKnownObjects} objeto(s) investigado(s) en total.";
     }
 }

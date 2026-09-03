@@ -2116,8 +2116,24 @@
                                 <TextBlock Foreground="White" TextWrapping="Wrap" FontSize="12"
                                            Text="Este personaje no esta en Modo Viaje - la Investigación solo desbloquea recetas de verdad en una partida de ese modo." />
                             </Border>
-                            <Button DockPanel.Dock="Top" Content="Investigar todo" Tag="Accent"
-                                    Command="{Binding ResearchAllCommand}" HorizontalAlignment="Left" Margin="0,0,0,10" />
+                            <!-- H5-02 (quinta auditoria de Opus): "Quitar toda la investigacion" -
+                                 el equivalente real del "Remove All" del Terrasavr original
+                                 (app.TabResearch), que hoy no existia en absoluto - junto al ya
+                                 real "Investigar todo" ("Unlock All"), los 2 al mismo nivel, mismo
+                                 criterio real de la app original. Barra de progreso real (R-f
+                                 ya calculaba N/Total como frase, ahora tambien como barra). -->
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                                    <Button Content="Investigar todo" Tag="Accent" Command="{Binding ResearchAllCommand}" />
+                                    <Button Content="Quitar toda la investigación" Tag="Ghost" Margin="8,0,0,0"
+                                            Command="{Binding Research.ClearAllResearchCommand}"
+                                            ToolTip="Quita TODA la investigación real del personaje - equivalente real de 'Remove All' del Terrasavr original" />
+                                </StackPanel>
+                                <ProgressBar DockPanel.Dock="Top" Margin="0,6,0,0" Height="6" Minimum="0" Maximum="1"
+                                             Value="{Binding Research.ProgressFraction, Mode=OneWay}"
+                                             Foreground="{StaticResource AccentBrush}"
+                                             ToolTip="{Binding Research.GlobalProgressSummary}" />
+                            </DockPanel>
                             <!-- H4-13 (cuarta auditoria de Opus, Fable): el mismo bloque real
                                  "arbol+resultados" va envuelto en BgSecondaryBrush en Libreria y
                                  Libreria de buffs, pero aqui iba desnudo sobre el fondo primario -
@@ -2157,7 +2173,20 @@
                                                    Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
                                                    Visibility="{Binding Research.SearchText, Converter={StaticResource EmptyToVisible}}" />
                                     </Grid>
-                                    <TextBlock DockPanel.Dock="Top" Text="{Binding Research.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                        <!-- H5-02: "dos acciones por carpeta - Investigar esta
+                                             carpeta/Quitar - junto a las dos globales" - solo
+                                             tienen sentido real con una carpeta elegida. -->
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
+                                                    Visibility="{Binding Research.SelectedCategory, Converter={StaticResource NullToVis}}">
+                                            <Button Content="Investigar esta carpeta" Tag="Ghost" Padding="6,2" FontSize="10.5"
+                                                    Command="{Binding Research.ResearchFolderCommand}" Margin="0,0,6,0" />
+                                            <Button Content="Quitar" Tag="Ghost" Padding="6,2" FontSize="10.5"
+                                                    Command="{Binding Research.ClearFolderCommand}"
+                                                    ToolTip="Quita la investigación real de TODO lo que hay en esta carpeta" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Research.ResultsSummary}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                    </DockPanel>
                                     <!-- H4-07 punto 3 (cuarta auditoria de Opus, Fable): sin
                                          carpeta ni busqueda, el area de resultados se quedaba en
                                          blanco salvo por la frase de arriba - tarjetas grandes
@@ -2204,18 +2233,53 @@
                                                                         <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
                                                                         <Setter Property="BorderThickness" Value="1" />
                                                                     </DataTrigger>
+                                                                    <!-- H5-02 (quinta auditoria de Opus): sin investigar se atenua (resaltar
+                                                                         en vez de ocultar - mismo criterio real ya validado en X-c para los
+                                                                         NPCs del mapa) - nunca desaparece, sigue ahi para investigarlo. -->
+                                                                    <DataTrigger Binding="{Binding IsResearched}" Value="False">
+                                                                        <Setter Property="Opacity" Value="0.45" />
+                                                                    </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </Border.Style>
                                                         <StackPanel Orientation="Horizontal">
+                                                            <!-- H5-02: clic real alterna investigado/no investigado - el conteo
+                                                                 completo real por id (ResearchViewModel.FullResearchCount) o 0. -->
+                                                            <Button Command="{Binding DataContext.Research.ToggleRowCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Width="20" Height="20" Padding="0" FontSize="11" Margin="0,0,5,0"
+                                                                    ToolTip="Clic para marcar/desmarcar como investigado">
+                                                                <Button.Style>
+                                                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                                        <Setter Property="Tag" Value="Ghost" />
+                                                                        <Setter Property="Content" Value="○" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsResearched}" Value="True">
+                                                                                <Setter Property="Content" Value="✓" />
+                                                                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Button.Style>
+                                                            </Button>
                                                             <Image Source="{Binding IconPath}" Width="20" Height="20" Stretch="Uniform" Margin="0,0,6,0"
                                                                    Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                                                             <StackPanel VerticalAlignment="Center">
                                                                 <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" />
-                                                                <!-- Auditoria de Opus, R-1: "x/N" real (VanillaResearchCountCatalog, extraido
-                                                                     del TSV real de sacrificios de tModLoader) en vez de solo el conteo guardado
-                                                                     a secas - ver ResearchRowViewModel.CountLabel. -->
-                                                                <TextBlock Text="{Binding CountLabel}" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                                    <!-- H5-02: campo de conteo REAL editable - antes de solo lectura -
+                                                                         acepta parciales a mano (investigacion real del juego). -->
+                                                                    <TextBox Text="{Binding Count, UpdateSourceTrigger=PropertyChanged}"
+                                                                             Width="38" FontSize="9.5" Padding="2,0"
+                                                                             Background="{StaticResource BgPrimaryBrush}"
+                                                                             Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                                             ToolTip="Conteo real de investigación - editable a mano, 0 = sin investigar" />
+                                                                    <!-- Auditoria de Opus, R-1: "x/N" real (VanillaResearchCountCatalog,
+                                                                         extraido del TSV real de sacrificios de tModLoader) - ver
+                                                                         ResearchRowViewModel.CountLabel. -->
+                                                                    <TextBlock Text="{Binding CountLabel}" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}"
+                                                                               Margin="4,0,0,0" VerticalAlignment="Center" />
+                                                                </StackPanel>
                                                             </StackPanel>
                                                         </StackPanel>
                                                     </Border>

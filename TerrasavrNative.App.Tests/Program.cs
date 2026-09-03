@@ -1162,7 +1162,15 @@ internal static class Program
             // omision), buscador real (mismo cuadro/estilo que Libreria) y progreso "N/Total".
             vm.Research.ClearCategoryCommand.Execute(null); // sin esto, la busqueda de abajo queda acotada a 'Materiales' (la carpeta que aun seguia elegida)
             vm.Research.SearchText = "#20000000"; // CalamityIds.ItemIdBase - primer id sintetico real de objeto de Calamity
-            DoEvents();
+            // H5-02 (quinta auditoria de Opus): bug real de este arnes encontrado verificando
+            // H5-02 (no de produccion) - SearchText dispara un DispatcherTimer real de 180ms
+            // (CatalogBrowserViewModel), y un unico DoEvents() no espera tiempo real ninguno,
+            // solo vacia lo que ya este listo AHORA. Resultado real: Results seguia con el
+            // estado ANTERIOR (vacio) en el momento de comprobarlo - flakiness pura de
+            // temporizacion, no un bug de ApplyFilter. Mismo remedio real ya probado en L-c
+            // (LibraryViewModel) - WaitForDispatcher bombea Y cede la CPU de verdad hasta que
+            // el tiempo pedido transcurre, dejando que el Tick real llegue a disparar.
+            WaitForDispatcher(300);
             var calamityRow = vm.Research.Results.FirstOrDefault(r => r.IsCalamity);
             Console.WriteLine($"R-d: fila de Calamity (#20000000) tras Investigar todo -> CountLabel={calamityRow?.CountLabel} (esperado 'Investigado', nunca '9999')");
             if (calamityRow != null && calamityRow.CountLabel.Contains("9999")) Console.WriteLine("FALLO: R-d (segunda auditoria) - el 9999 crudo sigue visible en un chip de Calamity");
@@ -1171,7 +1179,7 @@ internal static class Program
             DoEvents();
             Console.WriteLine($"R-f: ResultsSummary sin carpeta ni busqueda -> \"{vm.Research.ResultsSummary}\" (esperado formato real N/Total)");
             vm.Research.SearchText = "#4"; // Iron Broadsword, id real vanilla 4
-            DoEvents();
+            WaitForDispatcher(300); // mismo arreglo real de arriba (R-d) - esta pasaba por lo mismo, R-e incluido
             Console.WriteLine($"R-e: busqueda '#4' sin carpeta elegida -> {vm.Research.Results.Count} resultado(s) (esperado 1)");
             vm.SelectedTabIndex = 1; // Personaje (AppTab.Personaje) - el test de AutoEquip de arriba dejo Builds seleccionado
             vm.PersonajeInnerTabIndex = 2; // Investigacion

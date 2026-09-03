@@ -6347,3 +6347,76 @@ desinstalado no se inventa, prefijo Rogue por nombre interno) + 4 pruebas en App
 toca lo que ya hay puesto, "Cargar" es una sola entrada real de deshacer que revierte los 2
 slots a la vez, un fichero ajeno no rompe nada y avisa por `StatusMessage`). 349/349 en verde
 (145 Core + 204 ViewModels), arnes UIA 2/2 pasadas limpias sin NO-FOUND/FALLO/EXCEPTION.
+
+### Quinta auditoria (Opus), Tanda B parte 4 (cierre) - H5-02, Investigacion editable (4-sep-2026)
+
+**Lo que pasaba de verdad**: `ResearchViewModel.ApplyFilter` solo recorria
+`_researchedCounts.Keys` - la pestaña UNICAMENTE podia mostrar lo que ya estaba investigado, sin
+forma real de investigar un objeto suelto, un conteo parcial, una carpeta entera, ni QUITAR
+investigacion. El Terrasavr original si tiene esto real (`app.TabResearch`,
+`script.beautified.js:4637`, rejilla editable con "Remove All"/"Unlock All"). No era un
+descuido: la segunda ronda lo aparco por escrito ("mostrar tambien lo NO investigado es R-a/R-b,
+Fase 2... fuera de esta ronda", `bitacora.md:4705`) y nunca se retomo - el unico punto de las 4
+rondas anteriores que seguia vivo como "Fase 2 pendiente".
+
+**`ApplyFilter` reescrito**: la carpeta elegida muestra TODO su contenido real
+(`SelectedCategory.ItemIdsOrdered` completo, no filtrado por `_researchedCounts.ContainsKey`),
+investigado o no - la busqueda GLOBAL sin carpeta ahora tambien busca en TODO el catalogo real
+(`_allKnownIds`, el mismo recorrido real de `ResearchAllService.Apply`), no solo en lo ya
+investigado como antes.
+
+**`ResearchRowViewModel` reescrito** (`ObservableObject` real, antes inmutable): `Count` es
+editable de verdad - clic en la fila (`ToggleRowCommand`) alterna investigado/no investigado
+(al conteo completo real o a 0), y un campo de texto real acepta un parcial a mano. El
+constructor asigna el CAMPO directamente (nunca la propiedad) para que solo las ediciones REALES
+del usuario disparen `CountChangedByUser` - construir la fila con su estado inicial no es una
+edicion.
+
+**Escritura real de vuelta al personaje**: `ResearchViewModel.SyncBackTo(PlrCharacter)` (nuevo)
+- mismo criterio real que `MainViewModel.SyncEditsBackToMerged` para objetos, llamado desde
+`Save()` justo antes de guardar. Necesito el REVERSO de `VanillaItemCatalog.GetIdByKey` (no
+existia) - `GetKeyById` nuevo, construido una vez desde el diccionario ya cargado. Un evento
+DEDICADO (`ResearchChanged`, no `PropertyChanged` generico de todo el ViewModel - eso tambien
+dispara solo con navegar/buscar, marcar dirty por abrir una carpeta habria sido un falso
+positivo real) - mismo patron real ya establecido (`ServersViewModel.Changed`/
+`BuffsViewModel.SlotChanged`).
+
+**2 acciones por carpeta** ("Investigar esta carpeta"/"Quitar", visibles solo con una carpeta
+elegida) **+ 1 global nueva** ("Quitar toda la investigación" - el equivalente real del
+"Remove All" del Terrasavr original, que hoy no existia en absoluto) **+ barra de progreso
+real** (antes solo frase) - `GlobalProgressSummary` separado de `ResultsSummary` a proposito
+(el tooltip de la barra necesita el TOTAL global siempre, `ResultsSummary` cambia de
+significado segun la carpeta/busqueda activa). "Investigar esta carpeta" solo SUBE lo que
+falta, nunca baja un parcial real ya mas alto que el umbral (mismo criterio ya establecido en
+`ResearchAllService.Apply`).
+
+**Fuera de esta pasada, a proposito**: la Investigacion sigue sin participar del `UndoStack`
+general de H5-01 (dato de forma distinta a un slot de objeto - el mismo `UndoEntry` generico lo
+cubriria sin problema, pero un snapshot-diff especifico no es reutilizable de
+`RunAsUndoableBatch` tal cual) - marca dirty de verdad, pero no es deshacible con Ctrl+Z
+todavia, ya documentado como hueco real desde H5-01.
+
+**Bug real encontrado y arreglado en el propio arnes** (no en produccion): verificando H5-02,
+`R-d` empezo a fallar (`CountLabel` vacio en vez de "✔ Investigado"). Investigado a fondo:
+`SearchText` dispara un `DispatcherTimer` real de 180ms (`CatalogBrowserViewModel`), y el
+propio test solo hacia un `DoEvents()` (vacia lo que ya este listo AHORA, no espera tiempo real
+ninguno) - `Results` seguia con el estado ANTERIOR en el momento de comprobarlo, flakiness pura
+de temporizacion. Arreglado con el mismo remedio real ya probado en L-c (`WaitForDispatcher`,
+bombea Y cede la CPU de verdad hasta que el tiempo pedido transcurre). De propina, el MISMO
+arreglo aplicado a `R-e` (que tenia identico problema, arrastrado desde el principio de esta
+sesion) lo dejo en verde por primera vez.
+
+9 pruebas nuevas (`ResearchEditableTests.cs`, contra el catalogo real): una carpeta elegida
+muestra TODO su contenido aunque nada este investigado, alternar una fila sin investigar la
+marca con su conteo completo real, alternar una ya investigada la vacia, editar el conteo a
+mano acepta un parcial real, `ResearchChanged` dispara SOLO con ediciones reales (nunca con
+solo navegar), `SyncBackTo` vuelca el estado real y se lee identico al recargar el mismo
+personaje, "Quitar toda la investigación" vacia todo de verdad, "Investigar esta carpeta" no
+baja un parcial ya mas alto, y "Quitar" por carpeta. 358/358 en verde (145 Core + 213
+ViewModels), arnes UIA 2/2 pasadas limpias sin NO-FOUND/FALLO/EXCEPTION.
+
+**Cierra la Tanda B completa** (H5-01 Deshacer, H5-04 copias rotativas, H5-03 guardar/cargar
+conjuntos, H5-02 Investigacion editable) - el bloque que el propio informe describe como "lo
+que de verdad separa 'editor correcto' de 'programa completo'". Pendiente: Tanda C (H5-10
+cabecera con constantes vitales, H5-09 anchos fijos, H5-11 lanzador de mundos permanente) y
+Tanda D (H5-12/13/14/05/07) - todavia sin empezar.

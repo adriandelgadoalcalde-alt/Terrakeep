@@ -13,13 +13,25 @@ public sealed class VanillaItemCatalog
     private readonly Dictionary<int, string> _namesById;
     private readonly Dictionary<string, string> _namesByKey;
     private readonly Dictionary<string, int> _idsByKey;
+    private readonly Dictionary<int, string> _keysById;
 
     private VanillaItemCatalog(Dictionary<int, string> namesById, Dictionary<string, string> namesByKey, Dictionary<string, int> idsByKey)
     {
         _namesById = namesById;
         _namesByKey = namesByKey;
         _idsByKey = idsByKey;
+        // H5-02 (quinta auditoria de Opus): reverso real de GetIdByKey - hace falta para poder
+        // ESCRIBIR una entrada de investigacion nueva (PlrResearchEntry.Pid) a partir de un id
+        // ya resuelto, no solo leerla. El primero que gane en caso de alias reales (mismo id,
+        // mas de una clave) es una resolucion valida igual - el Pid solo tiene que apuntar de
+        // vuelta al MISMO objeto real, no a una clave concreta entre varias.
+        _keysById = new Dictionary<int, string>();
+        foreach (var (key, id) in idsByKey) _keysById.TryAdd(id, key);
     }
+
+    // Nombre interno real por id (ej. 4 -> "IronBroadsword") - reverso de GetIdByKey, ver el
+    // comentario del campo _keysById.
+    public string? GetKeyById(int itemId) => _keysById.TryGetValue(itemId, out var key) ? key : null;
 
     public string GetName(int itemId) =>
         _namesById.TryGetValue(itemId, out var name) ? name : $"Item #{itemId}";
