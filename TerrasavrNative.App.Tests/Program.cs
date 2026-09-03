@@ -1747,6 +1747,48 @@ internal static class Program
             encSpawn.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbSpawn));
             using (var fsSpawn = File.Create(Path.Combine(AppContext.BaseDirectory, "spawn-points-sd.png"))) encSpawn.Save(fsSpawn);
 
+            // S-c (segunda auditoria de Opus, Fable): "sin enlace al mapa de Exploracion desde
+            // Spawn Points" - "Ver en el mapa" real: añade un Spawn Point real, lo pulsa (el
+            // comando real, mismo camino que el boton) y confirma que salta a Exploracion Y
+            // desplaza el mapa real de verdad (el mundo roca_negra.wld sigue cargado de antes).
+            vm.Servers.AddEntryCommand.Execute(null);
+            var filaMapa = vm.Servers.Entries[^1];
+            filaMapa.Name = "S-c prueba real";
+            filaMapa.SpawnX = 100;
+            filaMapa.SpawnY = 50;
+            (int X, int Y)? tileRecibido = null;
+            void OnNavReq(int x, int y) => tileRecibido = (x, y);
+            vm.Exploration.NavigateToTileRequested += OnNavReq;
+            vm.ViewSpawnOnMapCommand.Execute(filaMapa);
+            vm.Exploration.NavigateToTileRequested -= OnNavReq;
+            DoEvents(); DoEvents();
+            Console.WriteLine($"S-C-MAPA: tras 'Ver en el mapa' -> SelectedTabIndex={vm.SelectedTabIndex} (esperado 4, Exploracion), tile pedido={tileRecibido} (esperado (100, 50)), IsWorldLoaded={vm.Exploration.IsWorldLoaded}");
+            if (tileRecibido != (100, 50)) Console.WriteLine("FALLO: S-c (segunda auditoria) - 'Ver en el mapa' no pidio navegar a las coordenadas reales del Spawn Point");
+            if (vm.SelectedTabIndex != 4) Console.WriteLine("FALLO: S-c (segunda auditoria) - 'Ver en el mapa' no salto a Exploracion");
+            var rtbSpawnMap = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbSpawnMap.Render(window);
+            var encSpawnMap = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encSpawnMap.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbSpawnMap));
+            using (var fsSpawnMap = File.Create(Path.Combine(AppContext.BaseDirectory, "spawn-ver-en-el-mapa.png"))) encSpawnMap.Save(fsSpawnMap);
+            Console.WriteLine("Captura tras 'Ver en el mapa' -> spawn-ver-en-el-mapa.png");
+
+            // S-b (segunda auditoria de Opus, Fable): captura real de la tabla YA poblada (con
+            // la fila de prueba todavia puesta) - cabecera unica real + boton "Ver en el mapa"
+            // por fila, antes de quitarla.
+            vm.SelectedTabIndex = 1; // Personaje
+            vm.PersonajeInnerTabIndex = 4; // Spawn Points
+            DoEvents(); DoEvents();
+            var rtbSpawnTabla = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbSpawnTabla.Render(window);
+            var encSpawnTabla = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encSpawnTabla.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbSpawnTabla));
+            using (var fsSpawnTabla = File.Create(Path.Combine(AppContext.BaseDirectory, "spawn-points-tabla-poblada.png"))) encSpawnTabla.Save(fsSpawnTabla);
+            Console.WriteLine("Captura tabla de Spawn Points poblada -> spawn-points-tabla-poblada.png");
+
+            vm.Servers.RemoveEntryCommand.Execute(filaMapa); // deja el personaje real como estaba
+
             vm.PersonajeInnerTabIndex = 5; // Desbloqueos
             DoEvents(); DoEvents();
             var rtbFlags = new System.Windows.Media.Imaging.RenderTargetBitmap(

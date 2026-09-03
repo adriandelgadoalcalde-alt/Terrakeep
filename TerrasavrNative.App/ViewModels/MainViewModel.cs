@@ -164,6 +164,27 @@ public partial class MainViewModel : ObservableObject
             if (entry.SpawnX != 0 || entry.SpawnY != 0)
                 yield return (entry.Name, entry.SpawnX, entry.SpawnY);
     }
+
+    // S-c (segunda auditoria de Opus, Fable): "sin enlace al mapa de Exploracion desde Spawn
+    // Points" - "Ver en el mapa" real por fila, salta a Exploracion y centra el mapa en esas
+    // coordenadas exactas (mismo mecanismo real ya usado por los NPCs, ver
+    // ExplorationViewModel.NavigateToTile). Si todavia no hay ningun mundo cargado, avisa en
+    // vez de saltar a un mapa en blanco sin explicar nada.
+    [RelayCommand]
+    private void ViewSpawnOnMap(ServerEntryRowViewModel? row)
+    {
+        if (row == null) return;
+        SelectedTabIndex = (int)AppTab.Exploracion;
+        if (!Exploration.IsWorldLoaded)
+        {
+            // Exploration.StatusMessage (no el StatusMessage global) - es el que se ve de
+            // verdad en la pestaña a la que se acaba de saltar, ver el TextBlock real en
+            // MainWindow.xaml bajo el mapa.
+            Exploration.StatusMessage = "Carga un mundo (.wld) para ver este punto en el mapa.";
+            return;
+        }
+        Exploration.NavigateToTile(row.SpawnX, row.SpawnY);
+    }
     [ObservableProperty] private int _personajeInnerTabIndex;
     [ObservableProperty] private bool _saveConfirmationVisible;
 

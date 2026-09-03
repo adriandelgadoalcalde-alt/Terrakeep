@@ -5315,3 +5315,28 @@ se ignora sin tocar nada). Verificado con captura real (`apariencia-colores-hex.
 permanente): los 7 swatches muestran su campo hex real (`#000000` en este personaje sintetico)
 bajo los sliders. `dotnet test` 224/224 en verde (134 Core + 90 ViewModels), arnes UIA completo
 sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### S-b/S-c (segunda auditoria, Fable) - cabecera unica real + enlace real al mapa
+
+**S-b, "anchos fijos de 494px repetidos por fila + cabecera repetida en cada fila"**: cada
+tarjeta de Spawn Points volvia a escribir "Nombre"/"Spawn X"/"Spawn Y"/"Id" como si fuera la
+primera. `Grid.IsSharedSizeScope="True"` en el ancestro comun real (header + `ItemsControl`) +
+`SharedSizeGroup` por columna - una UNICA fila de cabecera real, con las columnas de cada
+tarjeta sincronizadas contra ella (no solo el mismo numero fijo repetido a mano). La cabecera
+se oculta sola cuando no hay ningun Spawn Point (`CountToVis` sobre `Servers.Entries.Count`).
+
+**S-c, "sin enlace al mapa de Exploracion desde Spawn Points"**: boton real "Ver en el mapa"
+por fila - `ExplorationViewModel.NavigateToTile` (extraido de `GoToNpc`, mismo mecanismo real
+que ya centraba el mapa en un NPC) + `MainViewModel.ViewSpawnOnMapCommand` (el unico sitio real
+que conoce ambas pestañas a la vez): salta a Exploracion y centra el mapa en las coordenadas
+exactas de ese Spawn Point. Si todavia no hay ningun mundo `.wld` cargado, avisa en
+`Exploration.StatusMessage` (el que se ve de verdad en la pestaña a la que se acaba de saltar)
+en vez de saltar a un mapa en blanco sin explicar nada.
+
+2 pruebas deterministas nuevas (`ViewSpawnOnMapTests.cs`: sin mundo cargado salta a Exploracion
+y avisa; con mundo cargado pide navegar a las coordenadas reales del Spawn Point). Verificado
+con el arnes UIA usando el mundo real `roca_negra.wld` ya cargado: `S-C-MAPA: tras 'Ver en el
+mapa' -> SelectedTabIndex=4, tile pedido=(100, 50), IsWorldLoaded=True` - mas una captura real
+(`spawn-points-tabla-poblada.png`, nueva, permanente) confirmando la cabecera unica alineada y
+el boton "Ver en el mapa" junto a cada fila real. `dotnet test` 226/226 en verde (134 Core + 92
+ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.

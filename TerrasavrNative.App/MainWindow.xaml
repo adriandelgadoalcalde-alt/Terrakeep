@@ -2170,50 +2170,78 @@
                         </Grid>
                     </TabItem>
                     <TabItem Header="Spawn Points">
-                        <DockPanel Margin="0,10,0,0">
+                        <!-- S-b (segunda auditoria de Opus, Fable): "anchos fijos de 494px
+                             repetidos por fila + cabecera repetida en cada fila" - cada tarjeta
+                             volvia a escribir "Nombre"/"Spawn X"/"Spawn Y"/"Id" como si fuera la
+                             primera vez. Grid.IsSharedSizeScope aqui (en el ancestro comun real
+                             de la cabecera Y de cada fila del ItemsControl) + SharedSizeGroup
+                             por columna - una UNICA fila de cabecera de verdad, con las columnas
+                             de cada tarjeta sincronizadas contra ella (no solo repitiendo el
+                             mismo numero fijo a mano). -->
+                        <DockPanel Margin="0,10,0,0" Grid.IsSharedSizeScope="True">
                             <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                                 <TextBlock Text="Puntos de aparición guardados por mundo. &quot;Id&quot; es un identificador interno del mundo, no un texto legible - no suele hacer falta tocarlo."
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,8" />
                                 <Button Content="Añadir spawn point" Tag="Accent" Command="{Binding Servers.AddEntryCommand}" HorizontalAlignment="Left" />
                             </StackPanel>
+                            <Grid DockPanel.Dock="Top" Margin="12,0,12,6"
+                                  Visibility="{Binding Servers.Entries.Count, Converter={StaticResource CountToVis}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220" SharedSizeGroup="SpawnName" />
+                                    <ColumnDefinition Width="80" SharedSizeGroup="SpawnX" />
+                                    <ColumnDefinition Width="80" SharedSizeGroup="SpawnY" />
+                                    <ColumnDefinition Width="70" SharedSizeGroup="SpawnId" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="SpawnMap" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="SpawnRemove" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Nombre" Style="{StaticResource CaptionText}" Margin="0,0,14,0" />
+                                <TextBlock Grid.Column="1" Text="Spawn X" Style="{StaticResource CaptionText}" Margin="0,0,14,0" />
+                                <TextBlock Grid.Column="2" Text="Spawn Y" Style="{StaticResource CaptionText}" Margin="0,0,14,0" />
+                                <!-- S-d (segunda auditoria de Opus, Fable): "'Id' ocupa el mismo protagonismo
+                                     que los campos utiles, pese a decir 'no suele hacer falta tocarlo'" - tono
+                                     secundario real (TextSecondaryBrush) tambien en la cabecera. -->
+                                <TextBlock Grid.Column="3" Text="Id" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
+                                           ToolTip="Identificador interno del mundo, no un texto legible - no suele hacer falta tocarlo" />
+                            </Grid>
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <ItemsControl ItemsSource="{Binding Servers.Entries}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:ServerEntryRowViewModel}">
                                             <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Margin="0,0,0,8" Padding="12,8">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <StackPanel Width="220" Margin="0,0,14,0">
-                                                        <TextBlock Text="Nombre" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                                                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"
-                                                                 Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
-                                                    </StackPanel>
-                                                    <StackPanel Width="80" Margin="0,0,14,0">
-                                                        <TextBlock Text="Spawn X" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                                                        <TextBox Text="{Binding SpawnX, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"
-                                                                 Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
-                                                    </StackPanel>
-                                                    <StackPanel Width="80" Margin="0,0,14,0">
-                                                        <TextBlock Text="Spawn Y" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                                                        <TextBox Text="{Binding SpawnY, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"
-                                                                 Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
-                                                    </StackPanel>
-                                                    <!-- S-d (segunda auditoria de Opus, Fable): "'Id' ocupa el mismo protagonismo que
-                                                         los campos utiles, pese a decir 'no suele hacer falta tocarlo'" - mas
-                                                         estrecho y en un tono secundario real (TextSecondaryBrush, mismo tono que su
-                                                         propia etiqueta), en vez de competir en igualdad con Nombre/Spawn X/Y. -->
-                                                    <StackPanel Width="70" Margin="0,0,14,0" ToolTip="Identificador interno del mundo, no un texto legible - no suele hacer falta tocarlo">
-                                                        <TextBlock Text="Id" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                                                        <TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" FontSize="11"
-                                                                 Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextSecondaryBrush}" BorderThickness="0" />
-                                                    </StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="220" SharedSizeGroup="SpawnName" />
+                                                        <ColumnDefinition Width="80" SharedSizeGroup="SpawnX" />
+                                                        <ColumnDefinition Width="80" SharedSizeGroup="SpawnY" />
+                                                        <ColumnDefinition Width="70" SharedSizeGroup="SpawnId" />
+                                                        <ColumnDefinition Width="Auto" SharedSizeGroup="SpawnMap" />
+                                                        <ColumnDefinition Width="Auto" SharedSizeGroup="SpawnRemove" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Grid.Column="0" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,14,0"
+                                                             Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                                    <TextBox Grid.Column="1" Text="{Binding SpawnX, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,14,0"
+                                                             Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                                    <TextBox Grid.Column="2" Text="{Binding SpawnY, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,14,0"
+                                                             Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                                    <TextBox Grid.Column="3" Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,14,0" FontSize="11"
+                                                             Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextSecondaryBrush}" BorderThickness="0"
+                                                             ToolTip="Identificador interno del mundo, no un texto legible - no suele hacer falta tocarlo" />
+                                                    <!-- S-c (segunda auditoria de Opus, Fable): "sin enlace al mapa de
+                                                         Exploracion" - salta a Exploracion y centra el mapa en estas
+                                                         coordenadas exactas (mismo mecanismo real ya usado por los NPCs). -->
+                                                    <Button Grid.Column="4" Content="Ver en el mapa" FontSize="10.5" Padding="6,4" Margin="0,0,10,0"
+                                                            VerticalAlignment="Center" Tag="Ghost"
+                                                            ToolTip="Ir a Exploración y centrar el mapa en este punto de aparición"
+                                                            Command="{Binding DataContext.ViewSpawnOnMapCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}" />
                                                     <!-- T-F (segunda auditoria de Opus, Fable): CircleCloseButton (gira 90° y se tiñe
                                                          de rojo al pasar el raton, gesto real de Terrasavr) existia en Theme.xaml sin
                                                          que ningun boton "quitar" real lo usara todavia - este es el candidato real. -->
-                                                    <Button Content="✕" Style="{StaticResource CircleCloseButton}" VerticalAlignment="Bottom" Margin="0,0,0,4"
+                                                    <Button Grid.Column="5" Content="✕" Style="{StaticResource CircleCloseButton}" VerticalAlignment="Center"
                                                             ToolTip="Quitar este punto de aparición"
                                                             Command="{Binding DataContext.Servers.RemoveEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                             CommandParameter="{Binding}" />
-                                                </StackPanel>
+                                                </Grid>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

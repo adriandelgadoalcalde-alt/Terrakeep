@@ -110,7 +110,13 @@ public partial class ExplorationViewModel : ObservableObject
     public event Action<int, int>? NavigateToTileRequested;
 
     [RelayCommand]
-    private void GoToNpc(WorldNpcRowViewModel npc) => NavigateToTileRequested?.Invoke(npc.TileX, npc.TileY);
+    private void GoToNpc(WorldNpcRowViewModel npc) => NavigateToTile(npc.TileX, npc.TileY);
+
+    // S-c (segunda auditoria de Opus, Fable): "sin enlace al mapa de Exploracion desde Spawn
+    // Points" - punto de entrada publico real para que MainViewModel (el unico sitio que
+    // conoce ambas pestañas a la vez) pueda centrar el mapa en un Spawn Point real sin
+    // depender de un comando pensado solo para NPCs.
+    public void NavigateToTile(int x, int y) => NavigateToTileRequested?.Invoke(x, y);
 
     public ExplorationViewModel(CharacterFileService service)
     {
