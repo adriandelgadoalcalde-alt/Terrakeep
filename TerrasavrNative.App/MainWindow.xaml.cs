@@ -39,6 +39,44 @@ public partial class MainWindow : Window
         }
     }
 
+    // Auditoria de Opus, Bloque 3 (N-3): atajos de teclado reales de cualquier editor de
+    // escritorio - Ctrl+S guardar, Ctrl+O cargar, Ctrl+F saltar a la Libreria y enfocar la
+    // busqueda, Esc cancela una seleccion de objeto/buff en curso. Nivel Window (no requieren
+    // que el foco este en ningun control concreto) - Ctrl+combinacion nunca choca con escribir
+    // texto normal en un TextBox.
+    private void OnWindowKeyDown(object sender, KeyEventArgs e)
+    {
+        bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+        if (ctrl && e.Key == Key.S)
+        {
+            if (_viewModel.SaveCommand.CanExecute(null)) _viewModel.SaveCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (ctrl && e.Key == Key.O)
+        {
+            OnLoadClick(this, new RoutedEventArgs());
+            e.Handled = true;
+        }
+        else if (ctrl && e.Key == Key.F)
+        {
+            _viewModel.GoToTabCommand.Execute("Libreria");
+            _viewModel.IsLibraryCollapsed = false;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                LibrarySearchBox.Focus();
+                LibrarySearchBox.SelectAll();
+            }), System.Windows.Threading.DispatcherPriority.Background);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            if (_viewModel.Library.IsPicking) _viewModel.Library.CancelPickCommand.Execute(null);
+            else if (_viewModel.BuffLibrary.IsPicking) _viewModel.BuffLibrary.CancelPickCommand.Execute(null);
+            else return; // nada real que cancelar - no consumir la tecla (ej. cerrar un ComboBox abierto)
+            e.Handled = true;
+        }
+    }
+
     // Auditoria de Opus, T-17: campos que ejecutan una accion real al cambiar (Indice/Prefijo,
     // ver MainWindow.xaml) ya no usan UpdateSourceTrigger=PropertyChanged - confirman al perder
     // el foco (comportamiento real por defecto de WPF). Este manejador fuerza el mismo commit

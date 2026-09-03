@@ -9,7 +9,7 @@
         xmlns:controls="clr-namespace:TerrasavrNative.App.Controls"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}" Height="860" Width="1180" MinWidth="1080" MinHeight="700"
-        Background="{StaticResource BgPrimaryBrush}" Closing="OnWindowClosing">
+        Background="{StaticResource BgPrimaryBrush}" Closing="OnWindowClosing" KeyDown="OnWindowKeyDown">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
@@ -1402,7 +1402,7 @@
                                         </Border>
 
                                         <DockPanel Grid.Column="1">
-                                            <TextBox DockPanel.Dock="Top" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox x:Name="LibrarySearchBox" DockPanel.Dock="Top" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
                                                      Padding="7,5" Background="{StaticResource BgElevatedBrush}"
                                                      Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
                                                      MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4" />

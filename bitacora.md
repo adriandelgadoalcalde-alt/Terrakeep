@@ -3778,3 +3778,29 @@ Verificado con `ShouldForceSoftwareRendering()` extraido a metodo propio y llama
 desde el arnes (el `OnStartup` real de `App.xaml.cs` no se ejecuta ahi, el arnes crea un
 `Application` a pelo): en esta maquina, sin RDP, da `False`; con la variable de entorno puesta,
 da `True`. `dotnet build`/`dotnet test` en verde (134/134).
+
+### Bloque 3 (parte 2) - N-3: atajos de teclado reales
+
+**Antes**: ni Guardar, ni Cargar, ni buscar en la Libreria, ni cancelar una seleccion de objeto
+en curso tenian atajo de teclado - todo exigia raton, sin excepcion, contra P5 de la auditoria
+(interactivo y reactivo de verdad).
+
+**Ahora**: `MainWindow.xaml.cs` (`OnWindowKeyDown`, nivel Window, no requiere foco en ningun
+control concreto) - Ctrl+S guarda (mismo `SaveCommand` de siempre), Ctrl+O abre el dialogo de
+carga (reutiliza literalmente `OnLoadClick`, el mismo metodo que ya usa el boton), Ctrl+F salta
+a Objetos > Libreria, la despliega si estaba plegada y enfoca+selecciona el cuadro de busqueda
+real, Esc cancela una seleccion de objeto/buff en curso (`Library.CancelPickCommand`/
+`BuffLibrary.CancelPickCommand`) si hay una activa - si no hay nada que cancelar, no consume la
+tecla (para no romper, ej., cerrar un ComboBox abierto con Esc).
+
+Verificado con pulsaciones REALES a nivel de Windows (`keybd_event` via P/Invoke, nuevo en el
+arnes) - `Keyboard.Modifiers` lee el estado real del teclado, no algo que se pueda fingir con
+un `RoutedEventArgs` sintetico, asi que la unica verificacion real posible es inyectar la
+pulsacion de verdad con la ventana en primer plano: Ctrl+F confirmado con
+`SelectedTabIndex=1`+`IsLibraryCollapsed=False`+foco real en `LibrarySearchBox`; Esc confirmado
+pasando `Library.IsPicking` de `True` a `False`; Ctrl+S confirmado con
+`SaveConfirmationVisible=True` tras la pulsacion. Ctrl+O no se probo por inyeccion (abriria un
+dialogo modal real, mismo riesgo de cuelgue ya documentado para `MessageBox` en N-2) - reutiliza
+literalmente el mismo `OnLoadClick` que ya se prueba a diario con el boton, sin riesgo nuevo.
+
+`dotnet build`/`dotnet test` en verde (134/134).
