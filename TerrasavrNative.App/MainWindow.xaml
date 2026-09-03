@@ -2363,7 +2363,12 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="220" />
+                        <!-- X-f (segunda auditoria de Opus, Fable): "columna de NPCs 220px fija" -
+                             Auto+MinWidth/MaxWidth (mismo criterio ya establecido en el resto de la
+                             app, ver ContainerViewModel/AddContainer) en vez de un numero fijo que
+                             nunca respira con la ventana - el mapa ("*") se sigue llevando siempre
+                             todo el sobrante real. -->
+                        <ColumnDefinition Width="Auto" MinWidth="220" MaxWidth="300" />
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,0">
@@ -2487,8 +2492,13 @@
                                  Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
                                  FontSize="12" Margin="0,0,0,10" />
 
+                        <!-- X-f (segunda auditoria de Opus, Fable): "'NPCs que faltan' deberia
+                             empezar colapsado" - un mundo real recien empezado puede tener 13+
+                             NPCs sin conseguir (ver captura real del arnes) que antes se comian
+                             toda la columna de golpe, tapando la lista de NPCs YA en el mundo (la
+                             que de verdad importa para navegar el mapa) nada mas cargar. -->
                         <Expander DockPanel.Dock="Bottom" Header="NPCs que faltan" Foreground="{StaticResource TextPrimaryBrush}"
-                                  Margin="0,10,0,0" IsExpanded="True"
+                                  Margin="0,10,0,0" IsExpanded="False"
                                   Visibility="{Binding Exploration.MissingNpcs.Count, Converter={StaticResource CountToVis}}">
                             <ItemsControl ItemsSource="{Binding Exploration.MissingNpcs}" Margin="0,6,0,0">
                                 <ItemsControl.ItemTemplate>

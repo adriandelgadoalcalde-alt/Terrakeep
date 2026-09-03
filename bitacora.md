@@ -5063,3 +5063,23 @@ coincidencia marcada=True, hay no-coincidencias atenuadas=True`. `dotnet test` 2
 (sin cambios, X-c no tiene fixture de mundo disponible para una prueba determinista - cubierto
 por el arnes real en su lugar), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES:
 0 fallo(s)`.
+
+### X-f (segunda auditoria, Fable) - columna de NPCs no fija + "NPCs que faltan" colapsado
+
+**"Columna de NPCs 220px fija"**: `<ColumnDefinition Width="220" />` a secas junto al mapa
+(`Width="*"`) - un numero fijo que nunca respira con la ventana, a diferencia del resto de la
+app (criterio ya establecido: Auto+MinWidth/MaxWidth, "el centro se lleva todo el sobrante").
+Cambiado a `Width="Auto" MinWidth="220" MaxWidth="300"` - el mapa sigue llevandose siempre el
+resto real.
+
+**"'NPCs que faltan' deberia empezar colapsado"**: `IsExpanded="True"` a secas - un mundo real
+recien empezado puede tener 13+ NPCs sin conseguir (verificado con `roca_negra.wld`: 13 de 14)
+que se comian de golpe toda la columna nada mas cargar, tapando la lista de NPCs YA en el mundo
+(la que de verdad hace falta para navegar el mapa, con el boton "ir a su posicion"). `IsExpanded
+="False"` explicito.
+
+Cambio puramente visual (sin logica nueva), verificado con captura real
+(`mundo-buscador-npc.png`, reutilizada de X-c, mundo real `roca_negra.wld`): "NPCs que faltan"
+sale ahora colapsado por defecto (solo la cabecera, flecha hacia la derecha) dejando toda la
+columna para la lista real de NPCs del mundo. `dotnet test` 208/208 en verde (sin cambios),
+arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
