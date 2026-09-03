@@ -1018,6 +1018,28 @@ internal static class Program
             encBuilds.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbBuilds));
             using (var fs = File.Create(Path.Combine(AppContext.BaseDirectory, "builds-referencia.png"))) encBuilds.Save(fs);
             Console.WriteLine("Captura Builds -> builds-referencia.png");
+
+            // Bd-d (segunda auditoria de Opus, Fable): "marcar lo que ya se posee" - coloca el
+            // primer objeto real de una build vanilla en el Inventario, refresca (mismo camino
+            // real que usa el usuario: entrar en Builds) y confirma con captura que la insignia
+            // verde aparece EXACTAMENTE en esa fila y en ninguna otra de la misma clase.
+            var filaParaPoseer = vm.Builds.VanillaStages[0].Classes[0].Armor[0];
+            vm.InventoryContainer!.Slots.First(s => s.IsEmpty).PlaceItem(filaParaPoseer.ItemId);
+            vm.SelectedTabIndex = 1; // Personaje, para forzar un cambio real de pestaña
+            DoEvents();
+            vm.SelectedTabIndex = 2; // Builds - dispara OnSelectedTabIndexChanged -> RefreshOwnership
+            DoEvents();
+            bool poseidoOk = filaParaPoseer.IsOwned;
+            bool otrasNoPoseidas = vm.Builds.VanillaStages[0].Classes[0].Armor.Skip(1).All(r => !r.IsOwned)
+                && vm.Builds.VanillaStages[0].Classes[0].Weapons.All(r => !r.IsOwned);
+            Console.WriteLine($"BD-D-POSEIDO: fila marcada={poseidoOk} (esperado True), resto sin marcar={otrasNoPoseidas} (esperado True)");
+            var rtbOwned = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbOwned.Render(window);
+            var encOwned = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encOwned.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbOwned));
+            using (var fs = File.Create(Path.Combine(AppContext.BaseDirectory, "builds-poseido.png"))) encOwned.Save(fs);
+            Console.WriteLine("Captura Builds poseido -> builds-poseido.png");
         }
         catch (Exception ex)
         {

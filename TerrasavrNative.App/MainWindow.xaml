@@ -469,35 +469,48 @@
 
         <!-- Un objeto/arma/accesorio recomendado dentro de una build, ya con icono real -->
         <DataTemplate DataType="{x:Type vm:BuildItemRowViewModel}">
-            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Margin="0,0,6,6" Padding="8,5"
-                    ToolTip="{Binding StatsTooltip}">
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="BorderThickness" Value="0" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
-                                <Setter Property="BorderThickness" Value="1" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <StackPanel Orientation="Horizontal">
-                    <Image Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform" Margin="0,0,7,0"
-                           RenderOptions.BitmapScalingMode="NearestNeighbor"
-                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                    <StackPanel>
-                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}" />
-                        <TextBlock Text="{Binding PrefixText}" Style="{StaticResource CaptionText}"
-                                   Visibility="{Binding PrefixText, Converter={StaticResource NullToVis}}" />
+            <Grid Margin="0,0,6,6">
+                <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Padding="8,5"
+                        ToolTip="{Binding StatsTooltip}">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCalamity}" Value="True">
+                                    <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
+                                    <Setter Property="BorderThickness" Value="1" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform" Margin="0,0,7,0"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor"
+                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                        <StackPanel>
+                            <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}" />
+                            <TextBlock Text="{Binding PrefixText}" Style="{StaticResource CaptionText}"
+                                       Visibility="{Binding PrefixText, Converter={StaticResource NullToVis}}" />
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
-            </Border>
+                </Border>
+                <!-- Bd-d (segunda auditoria de Opus, Fable): "marcar lo que ya se posee" - misma
+                     mancha de color verde real que ya usa "equipado" en Objetos
+                     (EquippedGreenBrush), aqui como insignia en la esquina en vez de fondo
+                     entero (el fondo ya lo usa el borde rojo de Calamity). -->
+                <Border Width="14" Height="14" CornerRadius="7" Background="{StaticResource EquippedGreenBrush}"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-4,-4,0"
+                        Visibility="{Binding IsOwned, Converter={StaticResource BoolToVis}}"
+                        ToolTip="Ya tienes este objeto (en algún contenedor del personaje cargado)">
+                    <TextBlock Text="✓" FontSize="9" FontWeight="Bold" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,0,0" />
+                </Border>
+            </Grid>
         </DataTemplate>
 
         <!-- Una clase dentro de una etapa (melee/ranged/mage/summoner/rogue) -->
         <DataTemplate x:Key="BuildClassTemplate" DataType="{x:Type vm:BuildClassGearViewModel}">
-            <StackPanel Margin="0,0,24,16" MinWidth="220">
+            <StackPanel Margin="0,0,24,16" MinWidth="220" Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
                 <DockPanel Margin="0,0,0,6">
                     <!-- Bug real encontrado 2-sep-2026 ("el boton apenas se diferencia con el
                          fondo"): Background/Foreground puestos a mano aqui NO HACEN NADA - la
@@ -524,7 +537,7 @@
 
         <!-- Una etapa completa (Pre-Hardmode/Hardmode temprano/Endgame) -->
         <DataTemplate DataType="{x:Type vm:BuildStageViewModel}">
-            <StackPanel Margin="0,0,0,28">
+            <StackPanel Margin="0,0,0,28" Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
                 <TextBlock Text="{Binding Label}" Style="{StaticResource TitleText}" Margin="0,0,0,10" />
                 <ItemsControl ItemsSource="{Binding Classes}" ItemTemplate="{StaticResource BuildClassTemplate}">
                     <ItemsControl.ItemsPanel>
@@ -2265,7 +2278,22 @@
 
         <!-- ===================== BUILDS ===================== -->
         <TabItem Header="Builds">
-            <TabControl Style="{StaticResource InnerTabControl}" Margin="14">
+            <DockPanel Margin="14">
+                <!-- Bd-d (segunda auditoria de Opus, Fable): "buscador/filtro por clase" - antes
+                     una unica lista plana de TODAS las clases de TODAS las etapas de golpe. -->
+                <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Builds.ClassFilterOptions}" Margin="0,0,0,10">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:BuildClassFilterOptionViewModel}">
+                            <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
+                                    Command="{Binding DataContext.Builds.SelectClassFilterCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TabControl Style="{StaticResource InnerTabControl}">
                 <TabItem Header="Vanilla">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding Builds.VanillaStages}" Margin="4,10,0,0" />
@@ -2276,7 +2304,8 @@
                         <ItemsControl ItemsSource="{Binding Builds.CalamityStages}" Margin="4,10,0,0" />
                     </ScrollViewer>
                 </TabItem>
-            </TabControl>
+                </TabControl>
+            </DockPanel>
         </TabItem>
 
         <!-- ===================== NOVEDADES ===================== -->

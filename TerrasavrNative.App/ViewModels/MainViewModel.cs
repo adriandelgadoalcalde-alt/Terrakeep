@@ -136,6 +136,14 @@ public partial class MainViewModel : ObservableObject
         && !string.Equals(Path.GetFileNameWithoutExtension(_loaded.PlrPath), CharacterName, StringComparison.Ordinal);
     partial void OnIsDirtyChanged(bool value) => OnPropertyChanged(nameof(WindowTitle));
     [ObservableProperty] private int _selectedTabIndex;
+    // Bd-d (segunda auditoria de Opus, Fable): recalcula "lo que ya se posee" al ENTRAR en la
+    // pestaña Builds - momento real en que el dato importa, sin recalcular en cada tecla de una
+    // edicion en Objetos (ver el comentario completo en BuildsViewModel.RefreshOwnership).
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        if (value == (int)AppTab.Builds && EquipmentGroup != null)
+            Builds.RefreshOwnership([.. Containers, .. EquipmentGroup.AllContainers]);
+    }
     [ObservableProperty] private int _personajeInnerTabIndex;
     [ObservableProperty] private bool _saveConfirmationVisible;
 
@@ -508,7 +516,7 @@ public partial class MainViewModel : ObservableObject
         CoinsContainer = null;
         AmmoContainer = null;
         Research.Reset();
-        if (_loaded == null) return;
+        if (_loaded == null) { Builds.RefreshOwnership([]); return; }
 
         // Contenedores con fusion real de Calamity (mismos 7 que CalamityCharacterSync cubre).
         // Se siguen guardando TODOS en Containers (SyncEditsBackToMerged/AutoEquip los buscan
@@ -572,6 +580,10 @@ public partial class MainViewModel : ObservableObject
                 HookSlotEditing(s);
 
         Research.LoadFrom(_loaded.Character);
+        // Bd-d: foto fija de "lo que ya se posee" para la pestaña Builds, recalculada tambien
+        // al entrar en ella (ver OnSelectedTabIndexChanged) - aqui cubre el caso real de cargar
+        // un personaje distinto mientras Builds ya esta a la vista.
+        Builds.RefreshOwnership([.. Containers, .. EquipmentGroup.AllContainers]);
     }
 
     // "Investigar todo" - regla de negocio real extraida a ResearchAllService (auditoria de

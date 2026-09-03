@@ -4977,3 +4977,37 @@ cuenta como "sin hueco" y NO como "sin resolver"). `dotnet test` 203/203 en verd
 69 ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)` -
 cambio puramente de texto/logica (sin elemento visual nuevo), verificacion suficiente con las
 2 pruebas deterministas que fijan el mensaje exacto.
+
+### Bd-d (segunda auditoria, Fable) - filtro por clase + marcar lo ya poseido en Builds
+
+**"Buscador/filtro por clase"**: la pestaña Builds era una unica lista plana de TODAS las
+clases (melee/ranged/mage/summoner, +rogue en Calamity) de TODAS las etapas a la vez. Pildoras
+reales "Todas/Cuerpo a cuerpo/A distancia/Magia/Invocación/Pícaro" (union de las clases reales
+de ambos catalogos - "rogue" no existe en vanilla, filtrar a "Pícaro" ahi simplemente no deja
+nada visible, comportamiento correcto, no un bug) arriba del selector Vanilla/Calamity Mod ya
+existente. `BuildClassGearViewModel`/`BuildStageViewModel` ganan `IsVisible` (una etapa entera
+se oculta si ninguna de sus clases pasa el filtro, para no dejar un titulo "flotando" sobre un
+WrapPanel vacio).
+
+**"Marcar lo que ya se posee"**: ningun indicio de si un objeto de un build ya estaba en el
+personaje cargado. `BuildItemRowViewModel` ahora guarda el id real (vanilla o sintetico de
+Calamity, 0 si el pid no se resolvio) y una `IsOwned` calculada por
+`BuildsViewModel.RefreshOwnership` contra CUALQUIER contenedor real del personaje (Inventario/
+Almacenes/Equipamiento de los 4 loadouts), no solo "puesto". Insignia verde (misma
+`EquippedGreenBrush` que ya usa "equipado" en Objetos) en la esquina de la tarjeta.
+
+**Limitacion real, documentada igual que V-c**: es una foto fija, no reactiva a cada tecla de
+una edicion en Objetos - se recalcula al cargar personaje y al ENTRAR en la pestaña Builds
+(`OnSelectedTabIndexChanged`), que es cuando de verdad hace falta el dato actualizado; nadie
+mira Builds mientras edita Objetos a la vez, y recalcular cientos de filas por cada pulsacion
+seria trabajo sin necesidad real.
+
+3 pruebas deterministas nuevas (`BuildsFilterOwnershipTests.cs`: filtrar a una clase ausente en
+vanilla oculta sus etapas enteras pero deja Calamity visible; "Todas" restaura todo; colocar un
+objeto real en el Inventario marca SOLO esa fila como poseida). Verificado tambien con 2
+capturas reales nuevas en el arnes UIA (`builds-referencia.png`: pildoras de filtro renderizando
+bien; `builds-poseido.png`, nueva, permanente: coloca "Casco fundido" real en el Inventario,
+entra en Builds y confirma que la insignia verde sale EXACTAMENTE en esa fila y en ninguna
+otra - `BD-D-POSEIDO: fila marcada=True, resto sin marcar=True`). `dotnet test` 206/206 en
+verde (134 Core + 72 ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES:
+0 fallo(s)`.

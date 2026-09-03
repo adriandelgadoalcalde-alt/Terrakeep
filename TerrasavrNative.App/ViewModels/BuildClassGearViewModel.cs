@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using TerrasavrNative.Core.Data;
 
 namespace TerrasavrNative.App.ViewModels;
@@ -6,16 +7,23 @@ namespace TerrasavrNative.App.ViewModels;
 // nombres). Source conserva el BuildClassGear (Core) original tal cual, para que el boton
 // "Auto-equipar" siga pudiendolo pasar directamente a MainViewModel.AutoEquipCommand sin
 // tener que reconstruirlo desde las filas ya resueltas.
-public sealed class BuildClassGearViewModel(
+public sealed partial class BuildClassGearViewModel(
     string className,
     List<BuildItemRowViewModel> armor,
     List<BuildItemRowViewModel> weapons,
     List<BuildItemRowViewModel> accessories,
-    BuildClassGear source)
+    BuildClassGear source) : ObservableObject
 {
     public string ClassName { get; } = className;
     public List<BuildItemRowViewModel> Armor { get; } = armor;
     public List<BuildItemRowViewModel> Weapons { get; } = weapons;
     public List<BuildItemRowViewModel> Accessories { get; } = accessories;
     public BuildClassGear Source { get; } = source;
+
+    // Bd-d (segunda auditoria de Opus, Fable): "buscador/filtro por clase" - la pestaña Builds
+    // era una unica lista plana de TODAS las clases de TODAS las etapas, sin forma de ver solo
+    // "melee" por ejemplo. Ver BuildsViewModel.SetClassFilter.
+    [ObservableProperty] private bool _isVisible = true;
+
+    public IEnumerable<BuildItemRowViewModel> AllRows => Armor.Concat(Weapons).Concat(Accessories);
 }
