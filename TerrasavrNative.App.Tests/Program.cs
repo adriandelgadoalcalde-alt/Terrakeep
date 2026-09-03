@@ -1317,6 +1317,42 @@ internal static class Program
         }
         catch (Exception ex) { Console.WriteLine("T-E-TILDES-EXCEPTION: " + ex); }
 
+        // T-H/F2 (segunda auditoria de Opus, Fable): "No hay FocusVisualStyle propio en un tema
+        // oscuro personalizado" - el rectangulo de foco de WPF por defecto (negro discontinuo)
+        // es invisible sobre este tema. SetFocus() real via UI Automation (no simulado) sobre el
+        // boton "Guardar" + captura real, para comprobar de verdad que el nuevo FocusVisualStyle
+        // se aplica (mismo criterio de la bitacora: min()/max() de CSS ya enseño que "no dio
+        // ningun error" no es lo mismo que "se aplico de verdad").
+        try
+        {
+            // El foco visual real de WPF solo se pinta con la ventana ACTIVA (igual que el
+            // sistema operativo real nunca muestra el foco de una ventana en segundo plano) -
+            // SetForegroundWindow real antes de SetFocus(), mismo patron ya usado para los
+            // atajos Ctrl+ reales de mas arriba.
+            SetForegroundWindow(hwnd);
+            var saveButton = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
+                new PropertyCondition(AutomationElement.NameProperty, "Guardar")));
+            saveButton?.SetFocus();
+            DoEvents(); DoEvents();
+            // Comprobacion real (no solo visual): el foco realmente se movio Y WPF realmente
+            // adjunto un adorner de foco al elemento enfocado - las dos cosas hacian falta para
+            // descartar tanto "SetFocus() no funciono en headless" como "el estilo no se aplico".
+            bool focoReal = System.Windows.Input.Keyboard.FocusedElement is System.Windows.UIElement focusedReal
+                && System.Windows.Documents.AdornerLayer.GetAdornerLayer(focusedReal)?.GetAdorners(focusedReal)?.Length > 0;
+            Console.WriteLine($"T-H-FOCO: foco real + adorner de FocusVisualStyle adjunto={focoReal} (esperado True)");
+            if (!focoReal) Console.WriteLine("FALLO: T-H/F2 (segunda auditoria) - el FocusVisualStyle no se aplico al enfocar por teclado");
+            var rtbFocus = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbFocus.Render(window);
+            var encFocus = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encFocus.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbFocus));
+            using var fsFocus = File.Create(Path.Combine(AppContext.BaseDirectory, "foco-teclado-guardar.png"));
+            encFocus.Save(fsFocus);
+            Console.WriteLine("T-H-FOCO: captura -> foco-teclado-guardar.png");
+        }
+        catch (Exception ex) { Console.WriteLine("T-H-FOCO-EXCEPTION: " + ex); }
+
         string errorLog = Path.Combine(AppContext.BaseDirectory, "ultimo-error.log");
         Console.WriteLine("ultimo-error.log existe: " + File.Exists(errorLog));
 

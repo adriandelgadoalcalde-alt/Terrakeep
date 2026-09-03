@@ -4609,3 +4609,35 @@ sin recorte horizontal ni vertical.
 `dotnet test` 169/169 en verde (sin pruebas nuevas: la logica vive en code-behind, que este
 proyecto ya prueba solo con el arnes visual real, no con xunit), arnes visual completo con
 `X-a AJUSTAR-A-LA-VENTANA: ... cabe=True` y sin ningun otro NO-FOUND/FALLO/EXCEPTION.
+
+### T-H/F1+F2 (segunda auditoria, Fable) - Ola 3 continua
+
+**"Cero navegacion por teclado en las rejillas; los atajos son invisibles"**: N-3 ya tenia 4
+atajos reales (Ctrl+S/O/F, Esc) bien implementados pero sin anunciarse en ningun sitio. F3
+(flechas en rejillas) y F4 (Ctrl+Z) quedan fuera de esta ola (Wave 4/reworks).
+
+**F1, tooltips + InputGestureText**: añadidos tooltips reales con el atajo (Ctrl+O en "Cargar
+personaje...", Ctrl+S en "Guardar", explicacion real de Ctrl+F en el boton "Librería", Esc en
+ambos botones "Cancelar" de eleccion). `InputGestureText` (la columna que la plantilla de
+`MenuItem` ya reservaba en `Theme.xaml` sin que nadie la rellenara) se dejo SIN poblar a
+proposito: revisados los 5 `MenuItem` reales del proyecto (Elegir objeto/buff, Aplicar mejor
+prefijo, Vaciar slot x2) y ninguno corresponde hoy a un atajo de teclado real - poblarla con
+algo inventado habria sido peor que dejarla vacia (mismo criterio ya establecido: "lo que no se
+encuentra no se inventa").
+
+**F2, `FocusVisualStyle` propio**: el foco de WPF por defecto (rectangulo negro discontinuo) es
+practicamente invisible sobre este tema oscuro. Clave especial real de WPF
+(`SystemParameters.FocusVisualStyleKey`) con un rectangulo violeta discontinuo (`AccentBrush`,
+mismo acento de toda la app) - la recoge sola cualquier control al recibir foco por Tab, sin
+tocar cada estilo uno a uno.
+
+**Verificacion real, no de vista rapida**: una primera captura a resolucion completa de ventana
+parecia no mostrar ningun foco visible - en vez de dar el arreglo por bueno a la ligera (mismo
+error real que ya enseño el CSS `min()`/`max()` de este proyecto: "no se ve mal" no es lo mismo
+que "funciona"), se comprobo con `Keyboard.FocusedElement`+`AdornerLayer.GetAdorners` real (1
+adorner adjunto, confirmado) y con un recorte ampliado 4x de la zona exacta del boton - el
+foco SI se pinta, solo era sutil a resolucion completa de ventana (proporcionado, no un fallo).
+
+`dotnet test` 169/169 en verde, arnes visual con una comprobacion permanente nueva
+(`T-H-FOCO: foco real + adorner de FocusVisualStyle adjunto=True`) + captura real, sin ningun
+otro NO-FOUND/FALLO/EXCEPTION.

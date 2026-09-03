@@ -92,6 +92,22 @@
     <DropShadowEffect x:Key="CardShadowHover" Color="Black" Direction="270" ShadowDepth="5" BlurRadius="18" Opacity="0.42" />
     <DropShadowEffect x:Key="AccentGlow" Color="{StaticResource AccentColor}" ShadowDepth="0" BlurRadius="16" Opacity="0.55" />
 
+    <!-- T-H/F2 (segunda auditoria de Opus, Fable): "No hay FocusVisualStyle propio en un tema
+         oscuro personalizado" - el rectangulo de foco de WPF por defecto es negro discontinuo,
+         practicamente invisible sobre este tema (fondos ya oscuros de por si). Clave especial
+         real de WPF (SystemParameters.FocusVisualStyleKey) - la recoge SOLA cualquier control
+         que reciba el foco por teclado (Tab), sin tener que aplicarla control a control. -->
+    <Style x:Key="{x:Static SystemParameters.FocusVisualStyleKey}">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="-2" StrokeThickness="2" Stroke="{StaticResource AccentBrush}"
+                               StrokeDashArray="1 2" SnapsToDevicePixels="True" RadiusX="3" RadiusY="3" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Tipografia. Auditoria de Opus, Bloque 5 (T-6/T-7/T-8): escala real, documentada aqui a
          proposito - los 4 pasos con nombre son la fuente de verdad (24/14/12.5/11), y deben
          preferirse siempre a un FontSize suelto nuevo en MainWindow.xaml. Las variantes locales
