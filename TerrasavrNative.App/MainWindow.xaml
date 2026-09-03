@@ -1478,7 +1478,14 @@
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0"
                                                 Visibility="{Binding IsStorageExpanded, Converter={StaticResource InverseBoolToVis}}">
-                                            <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                            <!-- A-c (segunda auditoria de Opus, Fable): "Inventario (47/50) seria
+                                                 igual de util y no existe en ningun sitio" - la vista Amplia (mas
+                                                 abajo) ya tenia esta cabecera, la normal/compacta no tenia
+                                                 ninguna. -->
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Top" Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,6" />
+                                                <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                            </DockPanel>
                                         </Border>
 
                                         <!-- Auditoria de Opus, A-4: Inventario + el Almacen seleccionado lado

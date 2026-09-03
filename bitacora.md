@@ -4900,3 +4900,27 @@ vivo de ediciones sin guardar. Documentado explicitamente en el propio codigo y 
 real puesto tras Auto-equipar + un Guardar real de por medio) bajado a la version 98 muestra el
 aviso naranja real y especifico junto al generico rojo. `dotnet test` 195/195 en verde, arnes
 visual completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### A-c (segunda auditoria, Fable) - "los contadores solo estan en Almacenes"
+
+**"Los contadores de A-1 solo estan en Almacenes - 'Inventario (47/50)' seria igual de util y
+no existe en ningun sitio"**: `ContainerViewModel.DisplayName` pasa de un texto fijo a
+`"{nombre} ({ocupados}/{total})"`, calculado en vivo (suscripcion por slot a `IsEmpty`) - mismo
+mecanismo real que ya usaba `EquipmentOptionViewModel.DisplayLabel` (A-1), aplicado ahora de
+forma universal a CUALQUIER contenedor, no solo a los 4 de Almacenes con pildora propia. Cero
+sitios que tocar en el binding de XAML existente (sigue siendo `{Binding ....DisplayName}` en
+todos), asi que aplica solo por herencia a Banco/Caja fuerte/Fragua/Boveda/Coins/Ammo/grupos de
+Equipamiento sin ningun cambio adicional.
+
+**Hueco real encontrado al verificar con captura, no al escribir el codigo**: la pestaña
+compacta "Inventario" (la vista por defecto, distinta de la vista lado-a-lado de Amplio que
+A-4 ya dejaba con `DisplayName`) no tenia NINGUN `TextBlock` de cabecera - el arreglo de arriba
+no se veia ahi por mucho que `DisplayName` ya llevara el recuento real. `MainWindow.xaml`: el
+`ContentControl` de esa vista se envolvio en un `DockPanel` con un `TextBlock` de cabecera
+igual al que ya usaba Amplio.
+
+2 pruebas deterministas nuevas (`ContainerCountTests.cs`: recuento inicial correcto, recuento
+en vivo al colocar y vaciar). Verificado con captura real (`resize-inv-minimo.png`): la pestaña
+compacta de Inventario muestra ahora "Inventario (12/50)" tras cargar un personaje real.
+`dotnet test` 197/197 en verde (134 Core + 63 ViewModels), arnes UIA completo sin NO-FOUND/
+FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.

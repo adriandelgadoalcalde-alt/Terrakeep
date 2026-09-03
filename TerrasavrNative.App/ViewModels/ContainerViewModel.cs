@@ -1,13 +1,33 @@
 using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace TerrasavrNative.App.ViewModels;
 
 // Un grupo de slots con nombre para mostrar (una pestaña/seccion: Inventario, Banco...).
-public sealed class ContainerViewModel(string key, string displayName, ObservableCollection<ItemSlotViewModel> slots)
+public sealed class ContainerViewModel : ObservableObject
 {
-    public string Key { get; } = key;
-    public string DisplayName { get; } = displayName;
-    public ObservableCollection<ItemSlotViewModel> Slots { get; } = slots;
+    private readonly string _baseName;
+
+    public string Key { get; }
+    public ObservableCollection<ItemSlotViewModel> Slots { get; }
+
+    // A-c (segunda auditoria de Opus, Fable): "los contadores de A-1 solo estan en Almacenes -
+    // 'Inventario (47/50)' seria igual de util y no existe en ningun sitio". Mismo mecanismo
+    // real ya usado en EquipmentOptionViewModel.DisplayLabel (A-1), aplicado aqui de forma
+    // universal a CUALQUIER contenedor (no solo los 4 de Almacenes con pildora) - la misma
+    // pregunta real ("cuanto llevo puesto de verdad?") aplica igual a Inventario, Banco, Caja
+    // fuerte, Fragua... DisplayName sigue siendo el mismo binding de siempre en el XAML (cero
+    // sitios que tocar) - solo que ahora incluye el recuento real y en vivo.
+    public string DisplayName => $"{_baseName} ({Slots.Count(s => !s.IsEmpty)}/{Slots.Count})";
+
+    public ContainerViewModel(string key, string displayName, ObservableCollection<ItemSlotViewModel> slots)
+    {
+        Key = key;
+        _baseName = displayName;
+        Slots = slots;
+        foreach (var slot in slots)
+            slot.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ItemSlotViewModel.IsEmpty)) OnPropertyChanged(nameof(DisplayName)); };
+    }
 
     // Nº de columnas reales de la cuadricula compacta (SlotGridPanel, ver
     // TerrasavrNative.App/Controls/SlotGridPanel.cs) - 10 por defecto (la propia rejilla de
