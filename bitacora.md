@@ -4070,3 +4070,22 @@ tarjetas, 2-5 acentos pequeños, 10 paneles destacados, 99 pildoras/circulos).
 
 **Bloque 5 completo** (T-4/T-5/T-10/T-6-7-8) - las 4 partes de "Limpieza visual" del plan de
 Opus quedan cerradas. Sigue el Bloque 6 (Limpieza de codigo, sin cambio visible).
+
+### Bloque 6 (parte 1) - N-5: enum AppTab en vez de const int sueltos
+
+**Antes**: 8 `private const int ...TabIndex = N;` sueltos - ya tenian nombre real (no eran
+literales sin explicar en medio del codigo), pero seguian siendo un `int` cualquiera: nada
+impedia asignar `SelectedTabIndex = 99` sin que el compilador se quejara, ni el IDE ofrecia
+autocompletado real de que valores son validos ahi.
+
+**Ahora**: `private enum AppTab { Inicio=0, Personaje=1, Builds=2, Novedades=3, Exploracion=4,
+AcercaDe=5 }` + `private enum PersonajeInnerTab { Objetos=0, Buffs=1 }` (valores explicitos,
+mismo orden real que las pestañas del XAML - si algun dia se reordena el XAML, un valor
+explicito no se desincroniza en silencio). El binding de WPF sigue siendo a un `int`
+(`TabControl.SelectedIndex` no admite otra cosa) - el cast `(int)AppTab.X` vive solo en el
+punto de asignacion, nunca se filtra al resto del codigo.
+
+Sin cambio de comportamiento (mismos valores ordinales de siempre) - verificado con
+`dotnet build`/`dotnet test` en verde (134/134) y el arnes completo (navegacion real entre
+las 6 pestañas externas y las 2 internas de Personaje ya se ejercita en decenas de puntos del
+arnes) sin ningun NO-FOUND/FALLO/EXCEPTION.

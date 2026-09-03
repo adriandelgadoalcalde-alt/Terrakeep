@@ -25,25 +25,23 @@ public partial class MainViewModel : ObservableObject
     // para errores, que no deben ser tan efimeros. Ver el banner real en MainWindow.xaml.
     private readonly DispatcherTimer _saveConfirmationTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
 
-    // Indice de la pestaña externa (Inicio=0, Personaje=1, ...) - el resto solo lo usa la
-    // pagina de Inicio para sus tarjetas de navegacion (GoToTabCommand).
-    private const int InicioTabIndex = 0;
-    private const int PersonajeTabIndex = 1;
-    private const int BuildsTabIndex = 2;
-    private const int NovedadesTabIndex = 3;
-    private const int ExploracionTabIndex = 4;
-    private const int AcercaDeTabIndex = 5;
+    // Auditoria de Opus, Bloque 6 (N-5): antes 8 "const int...TabIndex" sueltos - ya tenian
+    // nombre real (no eran literales sin explicar en medio del codigo), pero seguian siendo un
+    // int cualquiera: nada impedia asignar `SelectedTabIndex = 99` sin que el compilador se
+    // quejara, ni el IDE ofrecia autocompletado de "que valores son validos aqui". Un enum real
+    // (mismo orden real que las pestañas del XAML, valor explicito para que reordenar el XAML
+    // algun dia no desincronice esto en silencio) - el binding de WPF sigue siendo a un int
+    // (`SelectedTabIndex`/`PersonajeInnerTabIndex`, TabControl.SelectedIndex no admite otra
+    // cosa), el cast a `(int)AppTab.X` vive SOLO en el punto de asignacion.
+    private enum AppTab { Inicio = 0, Personaje = 1, Builds = 2, Novedades = 3, Exploracion = 4, AcercaDe = 5 }
 
-    // Indice de la pestaña INTERNA dentro de Personaje (Objetos=0, ...) - la Libreria vive
-    // ahora DENTRO de la propia pestaña Objetos, siempre visible debajo del inventario
-    // (pedido explicito 1-sep-2026, "la libreria deberia estar tambien dentro de personaje...
-    // como es terrasav" - y ademas necesario para que arrastrar una tarjeta hasta un slot sea
-    // posible: si Libreria fuera una pestaña aparte, nunca se verian los dos a la vez).
-    private const int ObjetosInnerTabIndex = 0;
-    // Buffs=1 en el mismo TabControl interno (Objetos/Buffs/Investigacion, ver MainWindow.xaml)
-    // - usado por RequestPickForBuffSlot para saltar a la pestaña correcta al "Elegir..." un
-    // buff, mismo criterio que ObjetosInnerTabIndex para objetos.
-    private const int BuffsInnerTabIndex = 1;
+    // Indice de la pestaña INTERNA dentro de Personaje - la Libreria vive ahora DENTRO de la
+    // propia pestaña Objetos, siempre visible debajo del inventario (pedido explicito
+    // 1-sep-2026, "la libreria deberia estar tambien dentro de personaje... como es terrasav" -
+    // y ademas necesario para que arrastrar una tarjeta hasta un slot sea posible: si Libreria
+    // fuera una pestaña aparte, nunca se verian los dos a la vez). Buffs - usado por
+    // RequestPickForBuffSlot para saltar a la pestaña correcta al "Elegir..." un buff.
+    private enum PersonajeInnerTab { Objetos = 0, Buffs = 1 }
 
     [ObservableProperty] private string _statusMessage = "Sin personaje cargado.";
     [ObservableProperty] private string? _characterName;
@@ -188,8 +186,8 @@ public partial class MainViewModel : ObservableObject
         Home.CharacterChosen += path =>
         {
             LoadFromPath(path);
-            SelectedTabIndex = PersonajeTabIndex;
-            PersonajeInnerTabIndex = ObjetosInnerTabIndex;
+            SelectedTabIndex = (int)AppTab.Personaje;
+            PersonajeInnerTabIndex = (int)PersonajeInnerTab.Objetos;
         };
         Builds = new BuildsViewModel(_service.VanillaBuilds, _service.CalamityBuilds, _service);
         WhatsNew = new WhatsNewViewModel(_service.WhatsNew);
@@ -200,15 +198,15 @@ public partial class MainViewModel : ObservableObject
         Appearance = new AppearanceViewModel(_service);
         Library.ItemPlaced += () =>
         {
-            SelectedTabIndex = PersonajeTabIndex;
-            PersonajeInnerTabIndex = ObjetosInnerTabIndex;
+            SelectedTabIndex = (int)AppTab.Personaje;
+            PersonajeInnerTabIndex = (int)PersonajeInnerTab.Objetos;
         };
         BuffEdit = new BuffEditViewModel(_service);
         BuffLibrary = new BuffLibraryViewModel(_service);
         BuffLibrary.BuffPlaced += () =>
         {
-            SelectedTabIndex = PersonajeTabIndex;
-            PersonajeInnerTabIndex = BuffsInnerTabIndex;
+            SelectedTabIndex = (int)AppTab.Personaje;
+            PersonajeInnerTabIndex = (int)PersonajeInnerTab.Buffs;
         };
         Buffs = new BuffsViewModel(_service, RequestPickForBuffSlot);
         // Buffs es una unica instancia persistente que reconstruye sus slots en cada
@@ -250,24 +248,24 @@ public partial class MainViewModel : ObservableObject
     }
 
     // Usado por las tarjetas de la pagina de Inicio para saltar directamente a una seccion.
-    // "Libreria" ya no es una pestaña propia (ver el comentario de ObjetosInnerTabIndex) - vive
+    // "Libreria" ya no es una pestaña propia (ver el comentario de PersonajeInnerTab) - vive
     // dentro de Objetos, asi que la tarjeta de Inicio salta ahi igual que "Personaje".
     [RelayCommand]
     private void GoToTab(string tab)
     {
         if (tab is "Personaje" or "Libreria")
         {
-            SelectedTabIndex = PersonajeTabIndex;
-            PersonajeInnerTabIndex = ObjetosInnerTabIndex;
+            SelectedTabIndex = (int)AppTab.Personaje;
+            PersonajeInnerTabIndex = (int)PersonajeInnerTab.Objetos;
             return;
         }
         SelectedTabIndex = tab switch
         {
-            "Builds" => BuildsTabIndex,
-            "Novedades" => NovedadesTabIndex,
-            "Exploracion" => ExploracionTabIndex,
-            "AcercaDe" => AcercaDeTabIndex,
-            _ => InicioTabIndex,
+            "Builds" => (int)AppTab.Builds,
+            "Novedades" => (int)AppTab.Novedades,
+            "Exploracion" => (int)AppTab.Exploracion,
+            "AcercaDe" => (int)AppTab.AcercaDe,
+            _ => (int)AppTab.Inicio,
         };
     }
 
@@ -275,8 +273,8 @@ public partial class MainViewModel : ObservableObject
     {
         Library.PickTarget = slot;
         SelectSlot(slot); // el panel Editar sigue al slot que se esta rellenando desde la Libreria
-        SelectedTabIndex = PersonajeTabIndex;
-        PersonajeInnerTabIndex = ObjetosInnerTabIndex;
+        SelectedTabIndex = (int)AppTab.Personaje;
+        PersonajeInnerTabIndex = (int)PersonajeInnerTab.Objetos;
         IsLibraryCollapsed = false; // "Elegir..." siempre debe revelar la Libreria, este por defecto plegada o no
     }
 
@@ -289,8 +287,8 @@ public partial class MainViewModel : ObservableObject
     {
         BuffLibrary.PickTarget = slot;
         SelectBuffSlot(slot);
-        SelectedTabIndex = PersonajeTabIndex;
-        PersonajeInnerTabIndex = BuffsInnerTabIndex;
+        SelectedTabIndex = (int)AppTab.Personaje;
+        PersonajeInnerTabIndex = (int)PersonajeInnerTab.Buffs;
         IsBuffLibraryCollapsed = false;
     }
 
@@ -521,7 +519,7 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = skipped > 0
             ? $"Auto-equipar: {placed} objeto(s) colocado(s), {skipped} sin resolver o sin hueco libre - pulsa Guardar para conservarlo."
             : $"Auto-equipar: {placed} objeto(s) colocado(s) - pulsa Guardar para conservarlo.";
-        SelectedTabIndex = PersonajeTabIndex;
+        SelectedTabIndex = (int)AppTab.Personaje;
     }
 
     // Los primeros 10 slots reales de "inventory" son la barra rapida (Player.inventory[0..9]
