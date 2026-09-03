@@ -601,8 +601,15 @@ public partial class MainViewModel : ObservableObject
         if (_loaded == null || gear == null || EquipmentGroup == null) return;
 
         var result = AutoEquipService.Apply(gear, EquipmentGroup, Containers.First(c => c.Key == "inventory"), _service);
-        StatusMessage = result.Skipped > 0
-            ? $"Auto-equipar: {result.Placed} objeto(s) colocado(s), {result.Skipped} sin resolver o sin hueco libre - pulsa Guardar para conservarlo."
+        // Bd-c (segunda auditoria de Opus, Fable): "sin resolver" y "sin hueco libre" son
+        // causas reales distintas (una no tiene arreglo por parte del usuario, la otra si -
+        // vaciar hueco en el Inventario) - se cuentan y se dicen aparte en vez de fundirse en
+        // un unico "sin resolver o sin hueco libre".
+        var partes = new List<string>();
+        if (result.Unresolved > 0) partes.Add($"{result.Unresolved} sin resolver");
+        if (result.NoSlot > 0) partes.Add($"{result.NoSlot} sin hueco libre en el Inventario");
+        StatusMessage = partes.Count > 0
+            ? $"Auto-equipar: {result.Placed} objeto(s) colocado(s), {string.Join(", ", partes)} - pulsa Guardar para conservarlo."
             : $"Auto-equipar: {result.Placed} objeto(s) colocado(s) - pulsa Guardar para conservarlo.";
         SelectedTabIndex = (int)AppTab.Personaje;
     }

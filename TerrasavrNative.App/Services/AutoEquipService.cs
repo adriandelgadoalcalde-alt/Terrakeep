@@ -10,7 +10,17 @@ namespace TerrasavrNative.App.Services;
 // negocio en si.
 public static class AutoEquipService
 {
-    public readonly record struct Result(int Placed, int Skipped);
+    // Bd-c (segunda auditoria de Opus, Fable): "sin resolver" (el pid del build no se
+    // encuentra en el catalogo - un dato realmente distinto, el objeto no existe/no se pudo
+    // identificar) y "sin hueco libre" (el objeto SI existe, pero el inventario esta lleno)
+    // eran el mismo contador "Skipped" - dos causas reales con arreglos distintos (el primero
+    // no tiene arreglo real por parte del usuario; el segundo se resuelve vaciando hueco) se
+    // veian identicas en el mensaje final. Skipped se queda como suma de los dos, solo para no
+    // romper el contrato existente de quien ya lo usaba.
+    public readonly record struct Result(int Placed, int Unresolved, int NoSlot)
+    {
+        public int Skipped => Unresolved + NoSlot;
+    }
 
     // Arma+armadura+accesorios de una clase/etapa concreta se colocan directamente en el
     // personaje cargado. Armadura -> los 3 primeros slots del equipo puesto (cabeza/cuerpo/
@@ -31,12 +41,12 @@ public static class AutoEquipService
         // coherente con lo que el usuario esta viendo en pantalla ahora mismo.
         var armorSlots = equipmentGroup.CurrentItems.Slots;
         var inventorySlots = inventoryContainer.Slots;
-        int placed = 0, skipped = 0;
+        int placed = 0, unresolved = 0, noSlot = 0;
 
         void PlaceInSlot(ItemSlotViewModel slot, BuildItemRef itemRef)
         {
             var resolved = BuildItemResolver.Resolve(itemRef, service.VanillaCatalog, service.CalamityCatalog, service.VanillaPrefixCatalog);
-            if (resolved == null) { skipped++; return; }
+            if (resolved == null) { unresolved++; return; }
             slot.UpdateFrom(resolved);
             placed++;
         }
@@ -50,10 +60,10 @@ public static class AutoEquipService
         foreach (var weapon in gear.Weapons)
         {
             var emptySlot = inventorySlots.FirstOrDefault(s => s.IsEmpty);
-            if (emptySlot == null) { skipped++; continue; }
+            if (emptySlot == null) { noSlot++; continue; }
             PlaceInSlot(emptySlot, weapon);
         }
 
-        return new Result(placed, skipped);
+        return new Result(placed, unresolved, noSlot);
     }
 }

@@ -4958,3 +4958,22 @@ muestra los 3 botones con el mismo brillo (activos), Almacenes muestra "Ordenar"
 contenedor" junto a las pildoras de Banco/Caja fuerte/Fragua/Boveda con sus recuentos reales.
 `dotnet test` 201/201 en verde (134 Core + 67 ViewModels), arnes UIA completo sin NO-FOUND/
 FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### Bd-c (segunda auditoria, Fable) - "sin resolver" y "sin hueco libre" separados
+
+**"Auto-equipar - un unico contador 'Skipped' funde 'sin resolver' (el pid del build no existe
+en el catalogo) con 'sin hueco libre' (el inventario esta lleno)"**: dos causas reales
+distintas - la primera no tiene arreglo posible por parte del usuario (el objeto no se pudo
+identificar), la segunda si (vaciar hueco en el Inventario) - se veian identicas en el mensaje
+final ("2 sin resolver o sin hueco libre"). `AutoEquipService.Result` pasa de `(Placed,
+Skipped)` a `(Placed, Unresolved, NoSlot)` (con `Skipped` conservado como propiedad calculada
+`Unresolved + NoSlot`, para no romper el contrato de quien ya lo usaba). `MainViewModel.
+AutoEquip` arma el mensaje final con las dos partes solo cuando aplican ("3 sin resolver, 1 sin
+hueco libre en el Inventario").
+
+2 pruebas deterministas nuevas (`AutoEquipCountersTests.cs`: un arma con pid inexistente cuenta
+como "sin resolver" y NO como "sin hueco"; un inventario lleno con un arma real y resoluble
+cuenta como "sin hueco" y NO como "sin resolver"). `dotnet test` 203/203 en verde (134 Core +
+69 ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)` -
+cambio puramente de texto/logica (sin elemento visual nuevo), verificacion suficiente con las
+2 pruebas deterministas que fijan el mensaje exacto.
