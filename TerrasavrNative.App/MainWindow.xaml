@@ -18,6 +18,14 @@
              TabControl de contenedores y "acompañar" a Inventario/Banco/Caja fuerte/Fragua/
              Boveda/Loadouts por igual (pedido explicito 1-sep-2026). -->
         <DataTemplate x:Key="ItemEditTemplate" DataType="{x:Type vm:ItemEditViewModel}">
+            <!-- L-d (segunda auditoria de Opus, Fable): "sin ScrollViewer de seguridad - un
+                 objeto con muchos prefijos legales (varios Metas/Groups reales a la vez, ej.
+                 un arma Picaro real de Calamity) puede desbordar la altura real del panel en
+                 una ventana baja, y el contenido de mas arriba (Índice/Cantidad/Prefijo a mano)
+                 quedaria inalcanzable - DockPanel no recorta ni scrollea solo (mismo aviso real
+                 ya documentado en el proyecto para Panel). Mismo criterio ya establecido en el
+                 resto de la app ("ScrollViewer de seguridad" - MountsContainer, Almacenes...). -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Text="Editar" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
 
@@ -192,6 +200,7 @@
                     </ScrollViewer>
                 </StackPanel>
             </DockPanel>
+            </ScrollViewer>
         </DataTemplate>
 
         <!-- Nodo del arbol de categorias de la Libreria (recursivo - se referencia a si mismo

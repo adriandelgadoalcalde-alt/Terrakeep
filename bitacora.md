@@ -5190,3 +5190,29 @@ Mascota real y confirma la pildora "Solo objetos válidos para: Mascota" visible
 buscador) - `L-B-PILDORA: SlotRoleLabel real=Mascota, Library.SlotRestrictionLabel=Mascota`.
 `dotnet test` 216/216 en verde (134 Core + 82 ViewModels), arnes UIA completo sin NO-FOUND/
 FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### L-d (segunda auditoria, Fable) - ScrollViewer de seguridad real en el panel Editar
+
+**"Sin ScrollViewer alrededor de todo el panel Editar si desborda"**: `ItemEditTemplate` era
+un `DockPanel` a secas (DockPanel no recorta ni scrollea solo, mismo aviso real ya documentado
+en el proyecto para `Panel`) - un objeto con muchos prefijos legales a la vez podia desbordar
+la altura real disponible en una ventana baja, dejando el contenido de mas arriba (Índice/
+Cantidad/nombre del objeto) inalcanzable sin ningun aviso.
+
+**Medido de verdad antes de dar el hueco por cerrado (mismo criterio que T-G/X-7)**: peor caso
+real acotado (meta "Positivos" - 8 grupos reales, ver `PrefixGroupCatalog` - + grupo "Cuerpo a
+cuerpo +", 10 prefijos reales, sobre un arma real) en la altura MINIMA real documentada de la
+app (700px) - el hueco era real de verdad, no hipotetico: `ExtentHeight=440px` contra
+`ViewportHeight=268px`, **172px de contenido real que antes habrian quedado cortados sin forma
+de llegar a ellos**. `ScrollViewer VerticalScrollBarVisibility="Auto"` envolviendo el
+`DockPanel` entero (mismo idioma real ya usado en el resto de la app - "ScrollViewer de
+seguridad") - cuando el contenido cabe (caso normal), cero cambio visual; cuando no cabe, scroll
+real.
+
+Cambio puramente de layout (sin logica nueva) - verificado con el arnes UIA (nuevo bloque
+permanente): `ScrollViewer` real encontrado, `ScrollableHeight=172px`, desplazado hasta el
+final SIN excepcion (`VerticalOffset=172px`, exacto), captura real
+(`editar-scroll-700px.png`) confirmando la barra de scroll visible y los 10 prefijos reales de
+"Cuerpo a cuerpo +" (Grande/Enorme/Peligroso/Salvaje/Afilado/Puntiagudo/Voluminoso/Pesado/
+Ligero/Legendario) alcanzables desplazando. `dotnet test` 216/216 en verde (sin cambios),
+arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.

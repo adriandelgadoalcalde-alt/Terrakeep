@@ -1188,6 +1188,75 @@ internal static class Program
             }
             else Console.WriteLine("L-B-PILDORA: sin slot de Mascota real para probar - omitido");
 
+            // L-d (segunda auditoria de Opus, Fable): "sin ScrollViewer de seguridad en el
+            // panel Editar - un objeto con muchos prefijos legales podria desbordar la altura
+            // real en una ventana baja". Peor caso real acotado: meta "Positivos" (8 grupos
+            // reales, ver PrefixGroupCatalog) + grupo "Cuerpo a cuerpo +" (10 prefijos reales)
+            // sobre un arma real, en la altura MINIMA real documentada de la app (700px) -
+            // confirma que el ScrollViewer nuevo SI tiene margen real de scroll (prueba de que
+            // el contenido de verdad se acerca/supera el alto disponible) y que se puede
+            // desplazar hasta el final sin excepciones.
+            try
+            {
+                window.Height = 700;
+                vm.SelectedTabIndex = 1; // Personaje
+                vm.PersonajeInnerTabIndex = 0; // Objetos
+                var slotParaPrefijos = vm.InventoryContainer?.Slots.FirstOrDefault(s => s.IsEmpty);
+                if (slotParaPrefijos != null)
+                {
+                    slotParaPrefijos.PlaceItem(4); // Iron Broadsword, arma real (Melee)
+                    vm.SelectSlot(slotParaPrefijos);
+                    DoEvents();
+                    var positivos = vm.ItemEdit.Metas.FirstOrDefault(m => m.Label.Contains("Positivos", StringComparison.OrdinalIgnoreCase));
+                    if (positivos != null)
+                    {
+                        vm.ItemEdit.SelectMetaCommand.Execute(positivos);
+                        DoEvents();
+                        var meleePlus = vm.ItemEdit.Groups.FirstOrDefault(g => g.Label.Contains("Cuerpo a cuerpo", StringComparison.OrdinalIgnoreCase));
+                        if (meleePlus != null) vm.ItemEdit.SelectGroupCommand.Execute(meleePlus);
+                        DoEvents(); DoEvents();
+
+                        ScrollViewer? FindEditorScroll(DependencyObject d)
+                        {
+                            if (d is ScrollViewer sv && FindDescendantText(sv, "Editar")) return sv;
+                            int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(d);
+                            for (int i = 0; i < n; i++)
+                            {
+                                var found = FindEditorScroll(System.Windows.Media.VisualTreeHelper.GetChild(d, i));
+                                if (found != null) return found;
+                            }
+                            return null;
+                        }
+                        bool FindDescendantText(DependencyObject d, string text)
+                        {
+                            if (d is TextBlock tb && tb.Text == text) return true;
+                            int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(d);
+                            for (int i = 0; i < n; i++)
+                                if (FindDescendantText(System.Windows.Media.VisualTreeHelper.GetChild(d, i), text)) return true;
+                            return false;
+                        }
+                        var editorScroll = FindEditorScroll(window);
+                        Console.WriteLine($"L-D-SCROLL: ScrollViewer real encontrado={editorScroll != null}, ScrollableHeight={editorScroll?.ScrollableHeight:0.#}px, ExtentHeight={editorScroll?.ExtentHeight:0.#}px, ViewportHeight={editorScroll?.ViewportHeight:0.#}px (Metas/Prefijos reales con grupo Cuerpo a cuerpo+ seleccionado, ventana a 700px de alto)");
+                        if (editorScroll != null && editorScroll.ScrollableHeight > 0)
+                        {
+                            editorScroll.ScrollToEnd();
+                            DoEvents(); DoEvents();
+                            Console.WriteLine($"L-D-SCROLL: desplazado hasta el final sin excepcion, VerticalOffset={editorScroll.VerticalOffset:0.#}px (esperado ~= ScrollableHeight)");
+                        }
+                        var rtbEdit = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtbEdit.Render(window);
+                        var encEdit = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encEdit.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbEdit));
+                        using (var fsEdit = File.Create(Path.Combine(AppContext.BaseDirectory, "editar-scroll-700px.png"))) encEdit.Save(fsEdit);
+                        Console.WriteLine("Captura panel Editar a 700px -> editar-scroll-700px.png");
+                    }
+                    else Console.WriteLine("L-D-SCROLL: meta 'Positivos' no encontrada - omitido");
+                }
+                else Console.WriteLine("L-D-SCROLL: sin slot de Inventario vacio real para probar - omitido");
+            }
+            catch (Exception ex) { Console.WriteLine("L-D-SCROLL-EXCEPTION: " + ex); }
+
             // Ctrl+S: confirma que dispara el mismo guardado real (banner de confirmacion) que
             // ya prueba GUARDAR-DESDE-BUILDS, esta vez por teclado.
             vm.IsDirty = true; // fuerza un estado "con cambios" real para que Guardar tenga sentido
