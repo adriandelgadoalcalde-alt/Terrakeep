@@ -30,6 +30,13 @@ public partial class LibraryViewModel : ObservableObject
     [ObservableProperty] private ItemSlotViewModel? _pickTarget;
     [ObservableProperty] private CategoryNodeViewModel? _selectedCategory;
 
+    // L-b (segunda auditoria de Opus, Fable): "el aviso de 'solo validos para el slot
+    // seleccionado' es un texto mas dentro de ResultsSummary, facil de pasar por alto - y ni
+    // siquiera dice CUAL slot". PickTarget (el mismo ItemSlotViewModel que abrio el selector,
+    // ver RequestPickForSlot en MainViewModel) ya conoce su propio rol real (SlotRoleLabel -
+    // "Cabeza"/"Accesorio 3"/"Tinte"...) - una pildora real y separada, no un sufijo de frase.
+    [ObservableProperty] private string? _slotRestrictionLabel;
+
     public bool IsPicking => PickTarget != null;
 
     public event Action? ItemPlaced;
@@ -126,6 +133,9 @@ public partial class LibraryViewModel : ObservableObject
         // completo sin restriccion (~8200 objetos).
         var target = PickTarget;
         bool hasSlotRestriction = target != null && target.AcceptedKind != TerrasavrNative.Core.Model.SlotKind.None;
+        // L-b: rol real del slot ("Cabeza"/"Accesorio 3"/"Tinte"...) para la pildora - null
+        // cuando no hay restriccion, oculta la pildora en el XAML (NullToCollapsed).
+        SlotRestrictionLabel = hasSlotRestriction ? target!.SlotRoleLabel ?? "este slot" : null;
 
         // Bug real reportado 2-sep-2026 (KeyNotFoundException, id 5462, al elegir "Armas"):
         // el arbol real de la Libreria (extraido de Terrasavr) referencia algun id que no
@@ -162,11 +172,12 @@ public partial class LibraryViewModel : ObservableObject
         var list = matches.ToList();
         foreach (var item in list.Take(MaxResults)) Results.Add(item);
 
+        // L-b: la restriccion de slot ya la dice la pildora aparte (mas visible, con el rol
+        // real del slot) - ResultsSummary ya no repite un "válidos para este slot" generico.
         string categoryLabel = SelectedCategory != null ? $" en \"{SelectedCategory.Name}\"" : string.Empty;
-        string restrictionLabel = hasSlotRestriction ? " válidos para este slot" : string.Empty;
         ResultsSummary = list.Count > MaxResults
-            ? $"Mostrando {MaxResults} de {list.Count} resultados{restrictionLabel}{categoryLabel} - afina la busqueda."
-            : $"{list.Count} resultado(s){restrictionLabel}{categoryLabel}.";
+            ? $"Mostrando {MaxResults} de {list.Count} resultados{categoryLabel} - afina la busqueda."
+            : $"{list.Count} resultado(s){categoryLabel}.";
     }
 
     partial void OnPickTargetChanged(ItemSlotViewModel? value)

@@ -1161,6 +1161,33 @@ internal static class Program
             }
             else Console.WriteLine("N3-ESC: sin slot de Inventario real para probar - omitido");
 
+            // L-b (segunda auditoria de Opus, Fable): "el aviso de 'solo validos para el slot
+            // seleccionado' es un texto mas, ni siquiera dice CUAL slot" - abre el selector para
+            // un slot REALMENTE restringido (Mascota, ver MainViewModel.AddContainer
+            // miscEquipKinds) y confirma la pildora real con el rol real del slot.
+            var slotRestringido = vm.MountsContainer?.Slots.FirstOrDefault();
+            if (slotRestringido != null)
+            {
+                vm.SelectedTabIndex = 1; // Personaje
+                vm.PersonajeInnerTabIndex = 0; // Objetos
+                DoEvents();
+                slotRestringido.ChooseFromLibraryCommand.Execute(null);
+                DoEvents();
+                Console.WriteLine($"L-B-PILDORA: SlotRoleLabel real={slotRestringido.SlotRoleLabel}, Library.SlotRestrictionLabel={vm.Library.SlotRestrictionLabel} (esperado que coincidan, no null)");
+                if (vm.Library.SlotRestrictionLabel != slotRestringido.SlotRoleLabel)
+                    Console.WriteLine("FALLO: L-b (segunda auditoria) - la pildora no muestra el rol real del slot restringido");
+                var rtbPill = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbPill.Render(window);
+                var encPill = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encPill.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbPill));
+                using (var fsPill = File.Create(Path.Combine(AppContext.BaseDirectory, "libreria-pildora-slot.png"))) encPill.Save(fsPill);
+                Console.WriteLine("Captura pildora de restriccion de slot -> libreria-pildora-slot.png");
+                vm.Library.CancelPickCommand.Execute(null);
+                DoEvents();
+            }
+            else Console.WriteLine("L-B-PILDORA: sin slot de Mascota real para probar - omitido");
+
             // Ctrl+S: confirma que dispara el mismo guardado real (banner de confirmacion) que
             // ya prueba GUARDAR-DESDE-BUILDS, esta vez por teclado.
             vm.IsDirty = true; // fuerza un estado "con cambios" real para que Guardar tenga sentido

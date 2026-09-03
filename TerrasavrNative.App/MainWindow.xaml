@@ -1703,6 +1703,16 @@
                                                      Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
                                                      MaxWidth="360" HorizontalAlignment="Left" FontSize="12" Margin="0,0,0,4"
                                                      ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id, .texto = busca en la descripción" />
+                                            <!-- L-b (segunda auditoria de Opus, Fable): "el aviso de 'solo validos
+                                                 para el slot seleccionado' es un texto mas, facil de pasar por
+                                                 alto - y ni siquiera dice CUAL slot". Pildora real y separada, con
+                                                 el rol real del slot (Cabeza/Accesorio 3/Tinte...). -->
+                                            <Border DockPanel.Dock="Top" Background="{StaticResource AccentMutedBrush}" CornerRadius="99"
+                                                    Padding="10,4" Margin="0,0,0,6" HorizontalAlignment="Left"
+                                                    Visibility="{Binding Library.SlotRestrictionLabel, Converter={StaticResource NullToVis}}">
+                                                <TextBlock Text="{Binding Library.SlotRestrictionLabel, StringFormat='Solo objetos válidos para: {0}'}"
+                                                           Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
+                                            </Border>
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding Library.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
                                             <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada: "la libreria
                                                  sigue sin tener las rejillas como en inventario... no debe tener scroll a

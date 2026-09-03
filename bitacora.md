@@ -5162,3 +5162,31 @@ de que el arranque ya no espera al escaneo), capturas reales de Inicio/Libreria/
 sin cambios visuales de regresion. `dotnet test` 212/212 en verde (134 Core + 78 ViewModels,
 4 ejecuciones consecutivas sin fallos intermitentes), arnes UIA completo sin NO-FOUND/FALLO/
 EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### L-b (segunda auditoria, Fable) - pildora real de "solo validos para el slot seleccionado"
+
+**"El aviso de restriccion de slot es un texto mas dentro de ResultsSummary, facil de pasar
+por alto - y ni siquiera dice CUAL slot"**: antes `" válidos para este slot"` era un sufijo
+generico pegado a la frase de resultados. `LibraryViewModel.SlotRestrictionLabel` (nuevo) usa
+el rol real del slot que abrio el selector (`PickTarget.SlotRoleLabel`, ya existia y ya resuelve
+a "Cabeza"/"Accesorio 3"/"Tinte"/"Mascota"...) - pildora real y separada, con su propio color de
+acento, en vez de un sufijo de frase. `ResultsSummary` ya no repite el aviso generico.
+
+**Bug real encontrado al verificar con captura, no al escribir el codigo**: la pildora no
+salia en absoluto en la primera captura pese a que `Library.SlotRestrictionLabel` SI tenia el
+valor correcto ("Mascota", confirmado por consola) - usaba `Converter={StaticResource
+NullToCollapsed}`, que en este proyecto NO significa "oculta si es null" (nombre enganoso a
+proposito documentado en `VisibilityConverters.cs`: es el INVERSO de `NullToVisibilityConverter`,
+pensado para placeholders de "sin datos" - null->Visible). El conversor correcto para "visible
+cuando SI hay valor" es `NullToVis`. Mismo tipo de error de conversor ya atrapado antes en esta
+sesion (H-3, `NullToCollapsed` vs `EmptyToCollapsed`) - confirma que merece la pena revisar
+siempre con una captura real antes de dar un binding por bueno en este proyecto.
+
+4 pruebas deterministas nuevas (`LibrarySlotRestrictionLabelTests.cs`: sin PickTarget no hay
+etiqueta; PickTarget sin restriccion (Inventario) no hay etiqueta; PickTarget restringido
+(Casco) muestra "Cabeza"; cancelar la eleccion limpia la etiqueta). Verificado con captura real
+del arnes UIA (`libreria-pildora-slot.png`, nueva, permanente: abre el selector para el slot de
+Mascota real y confirma la pildora "Solo objetos válidos para: Mascota" visible bajo el
+buscador) - `L-B-PILDORA: SlotRoleLabel real=Mascota, Library.SlotRestrictionLabel=Mascota`.
+`dotnet test` 216/216 en verde (134 Core + 82 ViewModels), arnes UIA completo sin NO-FOUND/
+FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
