@@ -426,11 +426,11 @@ public partial class MainViewModel : ObservableObject
             string tplrBak = tplrPath + ".bak";
             if (File.Exists(tplrBak)) File.Copy(tplrBak, tplrPath, overwrite: true);
             LoadFromPath(plrPath);
-            StatusMessage = $"Deshecho el ultimo guardado de '{CharacterName}'.";
+            StatusMessage = $"Deshecho el último guardado de '{CharacterName}'.";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error al deshacer el ultimo guardado: {ex.Message}";
+            StatusMessage = $"Error al deshacer el último guardado: {ex.Message}";
         }
     }
 
@@ -528,7 +528,7 @@ public partial class MainViewModel : ObservableObject
         // preguntaba nada (IsDirty==false) - perdida silenciosa de todo el trabajo. Mismo
         // escenario que N-2 (Bloque 0) existia para cerrar.
         MarkDirty();
-        StatusMessage = $"Investigacion completa aplicada ({_loaded.Character.Research.Count} objetos) - pulsa Guardar para conservarlo.";
+        StatusMessage = $"Investigación completa aplicada ({_loaded.Character.Research.Count} objetos) - pulsa Guardar para conservarlo.";
     }
 
     // Auto-equipar desde el panel Builds - regla de negocio real extraida a

@@ -1233,6 +1233,51 @@ internal static class Program
         }
         catch (Exception ex) { Console.WriteLine("T24-SLOTGRID-EXCEPTION: " + ex); }
 
+        // T-E (segunda auditoria de Opus, Fable): "barrido de tildes" - guarda real para que la
+        // inconsistencia real que motivo esta ola (algunos textos de cara al usuario con tildes
+        // reales, otros sin ellas por descuido, ej. "Investigacion"/"Exploracion" como cabecera
+        // de pestaña) no vuelva a colarse sin que nadie se entere. Recorre TODO el arbol visual
+        // ya realizado a estas alturas (se ha pasado por casi todas las pestañas reales) y
+        // comprueba el Name/HelpText (ToolTip real) de cada elemento contra una lista real de
+        // palabras que casi siempre llevan tilde en español de España y que ya aparecieron sin
+        // ella en este mismo proyecto - por palabra completa, no subcadena (evita falsos
+        // positivos tipo "mascara" dentro de otra palabra). Best-effort: contenido virtualizado
+        // que nunca llego a realizarse (ej. una fila de un ItemsControl con scroll fuera de
+        // vista) no se comprueba aqui - mismo limite real que el resto de comprobaciones de
+        // este arnes basadas en UI Automation.
+        try
+        {
+            string[] palabrasConTildeReal =
+            [
+                "version", "codigo", "indice", "numero", "pagina", "maximo", "minimo", "tecnico",
+                "practica", "especifico", "linea", "ultimo", "ultima", "automatico", "automatica",
+                "estadisticas", "categoria", "caracter", "util", "facil", "dificil", "rapido",
+                "posicion", "opcion", "edicion", "seleccion", "informacion", "configuracion",
+                "descripcion", "duracion", "colocacion", "proteccion", "distribucion", "accion",
+                "investigacion", "exploracion", "libreria", "generacion", "region", "cancion",
+                "genero", "aparicion", "puntuacion", "mineria", "credito", "creditos",
+            ];
+            var todos = root.FindAll(TreeScope.Descendants, System.Windows.Automation.Condition.TrueCondition);
+            int fallosTilde = 0;
+            foreach (AutomationElement el in todos)
+            {
+                foreach (string texto in new[] { el.Current.Name, el.Current.HelpText })
+                {
+                    if (string.IsNullOrEmpty(texto)) continue;
+                    foreach (string mala in palabrasConTildeReal)
+                    {
+                        if (System.Text.RegularExpressions.Regex.IsMatch(texto, $@"(?<![a-záéíóúñ]){mala}(?![a-záéíóúñ])", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                        {
+                            Console.WriteLine($"FALLO: T-E (segunda auditoria) - '{mala}' sin tilde real en \"{texto}\" ({el.Current.ControlType.ProgrammaticName})");
+                            fallosTilde++;
+                        }
+                    }
+                }
+            }
+            Console.WriteLine($"T-E-TILDES: {fallosTilde} fallo(s) (esperado 0)");
+        }
+        catch (Exception ex) { Console.WriteLine("T-E-TILDES-EXCEPTION: " + ex); }
+
         string errorLog = Path.Combine(AppContext.BaseDirectory, "ultimo-error.log");
         Console.WriteLine("ultimo-error.log existe: " + File.Exists(errorLog));
 

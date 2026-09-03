@@ -4506,3 +4506,33 @@ regla real de la gramatica). `dotnet test` 162/162 en verde, arnes visual comple
 NO-FOUND/FALLO/EXCEPTION.
 
 **Cierra la Ola 2 salvo T-E** (barrido de tildes, el mas grande - se aborda aparte).
+
+### T-E (segunda auditoria, Fable) - cierra la Ola 2 entera
+
+**Barrido real de tildes**: recorrida a mano `MainWindow.xaml` (todos los `Content=`/`Text=`/
+`Header=`/`ToolTip=` de cara al usuario, extraidos y revisados uno a uno, no adivinados) mas
+`StatusMessage`/mensajes de error reales en `MainViewModel.cs`. Encontrados y corregidos ~20
+textos reales sin su tilde correcta pese a que el resto del texto de la app SI la lleva bien
+(la mezcla es justo lo que motivo este hallazgo): cabeceras de pestaña completas
+("Investigacion", "Exploracion" - Header real, dejando intacta la clave interna
+`CommandParameter`/`AppTab` que por convenio comparte el mismo texto sin tilde, eso NO es un
+bug), tarjetas de Inicio ("Libreria", "Que mas puedes hacer", "Exploracion"), textos largos de
+Estadisticas/Apariencia/Desbloqueos/Version/Exploracion/mundo, y 3 mensajes reales que yo mismo
+habia escrito sin tilde en los bloques T-C/B-4 de esta misma ronda ("el ultimo guardado",
+"Investigacion completa", "punto de aparicion").
+
+**Guarda real para que no vuelva a pasar** (la otra mitad de T-E, "harness blacklist check"):
+nuevo bloque en el arnes visual (`TerrasavrNative.App.Tests/Program.cs`) que recorre TODO el
+arbol de UI Automation ya realizado a esas alturas y comprueba el `Name`/`HelpText` (ToolTip
+real) de cada elemento contra una lista real de ~30 palabras que casi siempre llevan tilde en
+español de España, por palabra completa (evita falsos positivos tipo "mascara" dentro de otra
+palabra). Verificado que el chequeo detecta de verdad un fallo real: se reintrodujo a proposito
+`Header="Version"` (sin tilde), se confirmo que el arnes lo marcaba con `FALLO: T-E` (2
+ocurrencias, TabItem + su Text interno), y se revirtio - no es una comprobacion de adorno que
+nunca dispara.
+
+`dotnet build`/`dotnet test` 162/162 en verde, arnes visual completo con `T-E-TILDES: 0
+fallo(s)` y sin ningun otro NO-FOUND/FALLO/EXCEPTION.
+
+**Cierra la Ola 2 entera** (T-A a T-I mas A-a/D-a/N-c/V-a/X-b/L-a) de la segunda auditoria de
+Opus (Fable). Sigue la Ola 3.
