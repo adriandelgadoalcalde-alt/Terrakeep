@@ -3565,3 +3565,51 @@ personaje de prueba real escrito a disco): cargar dejaba `IsDirty=False`; coloca
 (id 10) lo subía a `True` y el título ganaba el punto ●; guardar lo volvía a `False` y creaba de
 verdad `isdirty-test.plr.bak`; una segunda edición + guardado repetían el ciclo correctamente.
 `dotnet build` limpio, `dotnet test` 134/134.
+
+### Bloque 1 - Bugs reales encontrados en la auditoría
+
+**E-1, el borde rojo de Calamity nunca se veía en Equipamiento**: `SlotCompactTemplate` tenía 3
+triggers compitiendo por el MISMO canal (`BorderBrush`) - Calamity, Equipado, Seleccionado - y
+en WPF gana el último declarado. Como `EquipmentGroupViewModel` construye TODOS sus slots con
+`isEquipped:true`, un objeto de Calamity equipado se pintaba SIEMPRE verde, nunca rojo - se
+perdía la señal central de la app. Arreglo real (no un reordenar triggers, un canal por señal,
+como propuso la propia auditoría en T-4): el borde ahora significa SOLO "seleccionado"; "equipado"
+pasa a una mancha de fondo verde suave (`Opacity=0.16`, nunca tapa nada); "es de Calamity" pasa a
+un punto real de 6px en la esquina superior derecha, siempre visible. Los 3 estados se leen a la
+vez ahora - verificado con una captura real (accesorio de Calamity `20000000` equipado: icono +
+mancha verde + punto rojo, los 3 a la vez, sin que ninguno tape a otro).
+
+**B-1, la rejilla de Buffs con `Height="380"` fijo** - el mismo anti-patrón "Auto con un hijo
+fijo" ya diagnosticado y arreglado en Objetos en la séptima pasada, pero que se había quedado sin
+aplicar en Buffs. Misma receta ya validada: la fila pasa a `3* MinHeight=216`, sin altura fija en
+el Border. Verificado con captura real en ventana mínima: sin solape, todo cabe.
+
+**L-6, hover perdido en tarjetas de Calamity de la Librería**: `LibraryCardTemplate` ponía
+`BorderBrush` en acento AL PASAR EL RATÓN, declarado antes del `DataTrigger` de Calamity - sobre
+una tarjeta de Calamity el hover nunca se veía (gana el rojo). El hover ya se lee de sobra solo
+con el fondo (mismo criterio que `BuffLibraryCardTemplate`, que nunca tuvo este bug) - se quitó
+el `BorderBrush` del trigger de hover.
+
+**L-7, `x:Name="LibraryResultsScroll"` muerto** - sin ningún uso real en el code-behind, limpieza
+de un segundo.
+
+**T-17, los campos "Índice"/"Prefijo" ejecutaban una acción real en cada pulsación** -
+`UpdateSourceTrigger=PropertyChanged` + `OnItemIdChanged`/`OnPrefixIdChanged` llamando a
+`PlaceItem`/`SetPrefix` de inmediato significaba que escribir "100" colocaba de verdad los
+objetos 1 y 10 antes de llegar al 100. Arreglo: quitado el `UpdateSourceTrigger` explícito (el
+`TextBox` usa su valor real por defecto, `LostFocus`) + un manejador nuevo `OnCommitTextOnEnter`
+en el code-behind que fuerza el mismo commit real al pulsar Intro, sin obligar a hacer clic
+fuera. "Cantidad" se queda con actualización en vivo a propósito (no ejecuta ninguna acción, solo
+recorta un valor).
+
+**Hallazgo real durante la propia verificación, no anticipado por la auditoría**: el nuevo diálogo
+de confirmación al cerrar (Bloque 0, N-2) es un `MessageBox.Show` MODAL real - cualquier cierre
+programático de la ventana con `IsDirty=true` y nadie delante para pulsarlo se queda COLGADO para
+siempre (confirmado con el propio arnés: 5+ minutos sin avanzar, sin ninguna salida, incluso
+después de matar el proceso - el búfer de consola redirigido nunca llega a volcarse porque el
+hilo de UI nunca vuelve). El arnés de UI Automation (código de prueba, no un usuario real) ahora
+limpia `vm.IsDirty = false` antes de `window.Close()` - queda documentado aquí por si se
+automatiza alguna otra cosa que cierre la ventana sin un usuario real delante.
+
+Pase de regresión completo del arnés (todos los bloques de esta sesión) sin ningún FALLO ni
+EXCEPTION. `dotnet build` limpio, `dotnet test` 134/134.

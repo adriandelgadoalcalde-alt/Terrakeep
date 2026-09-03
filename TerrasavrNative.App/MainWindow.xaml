@@ -49,7 +49,16 @@
                     </DockPanel>
 
                     <TextBlock Text="Índice (id)" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                    <TextBox Text="{Binding Slot.ItemId, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,8"
+                    <!-- Auditoria de Opus (octava pasada, T-17) - BUG REAL encontrado y
+                         arreglado: con PropertyChanged, escribir "100" pasaba de verdad por
+                         Id=1 y Id=10 antes de llegar a 100 - CADA digito colocaba un objeto
+                         real (OnItemIdChanged llama a PlaceItem de inmediato), asi que escribir
+                         un id de 3 cifras colocaba 2 objetos equivocados antes del correcto.
+                         Sin UpdateSourceTrigger explicito, el TextBox usa su valor real por
+                         defecto (LostFocus) - confirma al salir del campo; OnCommitTextOnEnter
+                         (code-behind) fuerza el mismo commit real al pulsar Intro, sin tener
+                         que hacer clic fuera. -->
+                    <TextBox Text="{Binding Slot.ItemId}" Padding="6,4" Margin="0,0,0,8" KeyDown="OnCommitTextOnEnter"
                              Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                     <!-- Restriccion de slot (consulta a Opus, sexta pasada): el unico camino
                          de los tres (Libreria filtrada/arrastrar y soltar/Indice a mano) donde
@@ -66,7 +75,9 @@
 
                     <TextBlock Text="Prefijo (id)" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBox Text="{Binding Slot.PrefixId, UpdateSourceTrigger=PropertyChanged}" Width="50" Padding="6,4"
+                        <!-- Mismo arreglo real que "Índice" de arriba (T-17) - PrefixId tambien
+                             ejecuta una accion inmediata (SetPrefix) en cada cambio. -->
+                        <TextBox Text="{Binding Slot.PrefixId}" Width="50" Padding="6,4" KeyDown="OnCommitTextOnEnter"
                                  Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                         <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada): el
                              Background="Transparent" puesto a mano aqui era letra muerta - la
@@ -348,18 +359,20 @@
                                  fondo del panel (los triggers del estilo derivado se evalúan
                                  DESPUÉS que los del base) - quitado a propósito, la opacidad ya
                                  no debe tocar el fondo del slot vacío. -->
-                            <DataTrigger Binding="{Binding IsCalamity}" Value="True">
-                                <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
-                                <Setter Property="BorderThickness" Value="2" />
-                            </DataTrigger>
-                            <MultiDataTrigger>
-                                <MultiDataTrigger.Conditions>
-                                    <Condition Binding="{Binding IsEquipped}" Value="True" />
-                                    <Condition Binding="{Binding IsEmpty}" Value="False" />
-                                </MultiDataTrigger.Conditions>
-                                <Setter Property="BorderBrush" Value="{StaticResource EquippedGreenBrush}" />
-                                <Setter Property="BorderThickness" Value="2" />
-                            </MultiDataTrigger>
+                            <!-- Auditoria de Opus (octava pasada, T-4/E-1) - BUG REAL encontrado
+                                 y arreglado: aqui vivian TAMBIEN los triggers de "es de
+                                 Calamity" (borde rojo) y "esta equipado" (borde verde), y en
+                                 WPF el ULTIMO trigger activo declarado gana - un objeto de
+                                 Calamity equipado (el caso real mas comun, EquipmentGroupViewModel
+                                 construye SIEMPRE isEquipped:true) se pintaba SIEMPRE verde,
+                                 nunca rojo. Se perdia la señal central "esto es de Calamity" en
+                                 la propia pantalla de Equipamiento. Arreglo real (no un parche
+                                 de orden): el borde pasa a significar UNA sola cosa
+                                 (seleccionado, unico trigger que queda aqui) - "equipado" se
+                                 mueve al FONDO (mancha verde suave, ver el Border de relleno de
+                                 mas abajo) y "Calamity" a un punto real en la esquina (ver el
+                                 Ellipse de mas abajo) - los 3 estados se leen SIEMPRE a la vez,
+                                 ninguno tapa a otro. -->
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                 <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                                 <Setter Property="BorderThickness" Value="2" />
@@ -369,6 +382,25 @@
                     </Style>
                 </Border.Style>
                 <Grid>
+                    <!-- Canal real de "equipado" (antes competia por el borde con Calamity/
+                         seleccionado, ver el comentario de arriba) - mancha de fondo suave,
+                         nunca tapa nada, se lee a la vez que el resto. -->
+                    <Border Background="{StaticResource EquippedGreenBrush}" Opacity="0.16" CornerRadius="4">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsEquipped}" Value="True" />
+                                            <Condition Binding="{Binding IsEmpty}" Value="False" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
                     <!-- Icono fantasma real (extraido del propio juego, ver
                          SlotGhostIconResolver.cs/scripts/extraer-iconos-fantasma-slot.js) -
                          solo visible con el slot vacio, igual que en Terraria real
@@ -380,6 +412,12 @@
                     <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <!-- Canal real de "es de Calamity" - punto en la esquina, siempre visible,
+                         nunca tapado por el borde de seleccion ni por la mancha de equipado. -->
+                    <Ellipse Width="8" Height="8" Fill="{StaticResource CalamityBrush}"
+                             HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0"
+                             Visibility="{Binding IsCalamity, Converter={StaticResource BoolToVis}}"
+                             ToolTip="Objeto de Calamity" />
                     <TextBlock Text="{Binding Count}" FontSize="9.5" Foreground="{StaticResource TextPrimaryBrush}"
                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,1"
                                Visibility="{Binding ShowCount, Converter={StaticResource BoolToVis}}">
@@ -737,9 +775,16 @@
                     <Style TargetType="Border">
                         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
                         <Style.Triggers>
+                            <!-- Auditoria de Opus (octava pasada, L-6) - BUG REAL encontrado y
+                                 arreglado: el hover ponia TAMBIEN el borde en acento, declarado
+                                 ANTES que el DataTrigger de Calamity - sobre una tarjeta de
+                                 Calamity, el borde de hover nunca se veia (gana el rojo,
+                                 declarado despues). El hover ya se lee de sobra solo con el
+                                 fondo (mismo criterio que BuffLibraryCardTemplate, que nunca
+                                 tuvo este bug); el borde queda libre para significar solo
+                                 "es de Calamity", visible siempre. -->
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                             </Trigger>
                             <DataTrigger Binding="{Binding IsCalamity}" Value="True">
                                 <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
@@ -1230,7 +1275,9 @@
                                                  con 44 el scroll aparecia por solo 2px de diferencia real (4*44+12=188
                                                  contra 186 disponibles). Sin AvailableHeight el panel mediria con alto
                                                  infinito y SIEMPRE elegiria MaxCell + SIEMPRE scrollearia. -->
-                                            <ScrollViewer x:Name="LibraryResultsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                            <!-- Auditoria de Opus, L-7: x:Name muerto, sin ningun uso real en el
+                                                 codigo-behind - limpieza real, no cambio de comportamiento. -->
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                                 <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
@@ -1258,7 +1305,18 @@
                              boton "Añadir buff..." desaparece, sustituido por esta Libreria. -->
                         <Grid Margin="0,10,0,0">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
+                                <!-- Auditoria de Opus (octava pasada, B-1) - BUG REAL de layout
+                                     encontrado y arreglado: esta fila era "Auto" con el Border de
+                                     abajo forzando Height="380" - exactamente el mismo
+                                     anti-patron ya diagnosticado y arreglado en Objetos en la
+                                     septima pasada ("un Auto con un hijo fijo cobra siempre
+                                     primero, sea cual sea el alto real disponible"), pero se
+                                     quedo sin aplicar aqui. En ventana grande la rejilla de
+                                     buffs no crecia nunca (380px fijo, desaprovechando el
+                                     espacio); en ventana minima 380+150 cabia por apenas ~30px
+                                     de margen real. Mismo arreglo ya validado: "*" con
+                                     MinHeight, sin altura fija en el Border. -->
+                                <RowDefinition Height="3*" MinHeight="216" />
                                 <!-- Mismo arreglo real que la Libreria de Objetos (consulta a
                                      Opus, septima pasada) - "*" con MinHeight/MaxHeight en vez
                                      de "Auto" con un hijo de 238px fijo, para que ceda alto de
@@ -1274,7 +1332,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <Border Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                        Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,0,10,0" Height="380">
+                                        Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,0,10,0">
                                     <ContentControl Content="{Binding Buffs.Container}" ContentTemplate="{StaticResource BuffContainerCompactTemplate}" />
                                 </Border>
 

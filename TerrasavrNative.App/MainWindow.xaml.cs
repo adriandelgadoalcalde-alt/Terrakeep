@@ -39,6 +39,16 @@ public partial class MainWindow : Window
         }
     }
 
+    // Auditoria de Opus, T-17: campos que ejecutan una accion real al cambiar (Indice/Prefijo,
+    // ver MainWindow.xaml) ya no usan UpdateSourceTrigger=PropertyChanged - confirman al perder
+    // el foco (comportamiento real por defecto de WPF). Este manejador fuerza el mismo commit
+    // real al pulsar Intro, sin obligar a hacer clic fuera del campo primero.
+    private void OnCommitTextOnEnter(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || sender is not TextBox textBox) return;
+        textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+    }
+
     private void OnLoadClick(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
