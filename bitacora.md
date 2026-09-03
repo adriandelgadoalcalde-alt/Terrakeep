@@ -3981,3 +3981,33 @@ preview se quedo pixel a pixel en el mismo sitio. `dotnet build`/`dotnet test` e
 
 **Bloque 4 (parcial)**: T-3/T-2/E-2/A-4/P-1 cerrados y comiteados. Queda T-1 (eliminar los
 Width/Height fijos que sigan quedando por el resto del XAML) para cerrar el bloque del todo.
+
+### Bloque 4 (parte 5, cierre del bloque) - T-1: auditoria de Width/Height fijos restantes
+
+**No se necesito ningun cambio de codigo** - auditoria real, no un vistazo superficial: 118
+valores fijos de Width/Height en `MainWindow.xaml` (80 Width + 38 Height), revisados por
+categoria real:
+- Iconos/miniaturas/dolls (16 a 72px, la inmensa mayoria) - deben quedarse fijos, un icono no
+  tiene que crecer con la ventana.
+- `MaxWidth`/`MaxHeight` (240, 220, 200, 165, 700, 720, 880...) - YA es el patron adaptativo
+  correcto (tope real que sigue permitiendo encoger), no una violacion de P4.
+- Paneles laterales fijos deliberados (Editar=300px, arbol de carpetas de Libreria/Libreria de
+  buffs/Investigacion=210px cada uno) - un patron de UI real y reconocido (barra lateral de
+  ancho fijo + contenido "*"), NO el mismo problema que las columnas centrales ya arregladas en
+  rondas anteriores (Equipamiento, Buffs) - ensanchar estos paneles con la ventana desperdiciaria
+  espacio en vez de aprovecharlo (campos de formulario/nombres de carpeta no necesitan mas
+  ancho).
+- Campos de formulario fijos (Spawn Points/Servers, 80-220px) - un campo numerico no debe
+  estirarse para "llenar hueco", es UX peor, no mejor.
+- Un `Height="380"` encontrado por grep resulto ser texto DENTRO de un comentario
+  (documentando el propio arreglo de B-1 ya hecho en el Bloque 1), no codigo activo - falso
+  positivo, confirmado leyendo el contexto real.
+
+Cero casos reales del anti-patron que si se encontro y arreglo en rondas anteriores (fila/
+columna "Auto" con un hijo de tamaño fijo, que colapsa el resto del espacio disponible -
+Objetos>Libreria, Buffs B-1, Equipamiento tercera pasada) - todos esos ya estan resueltos.
+Confirmado tambien visualmente con las capturas reales ya existentes a MinWidth/MinHeight
+(1080x700, `resize-equip-minimo.png` etc.) - sin recortes ni solapes en ningun panel.
+
+**Bloque 4 completo** (T-3/T-2/E-2/A-4/P-1/T-1) - las 6 partes de "Armonia a cualquier tamaño"
+del plan de Opus quedan cerradas. Sigue el Bloque 5 (Limpieza visual).
