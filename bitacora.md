@@ -5289,3 +5289,29 @@ debounce=228` - mas una captura real (`apariencia-selector-peinado.png`, nueva, 
 confirmando visualmente el peinado real (pelo rojo, color actualizado) en las 228 miniaturas y
 ningun selector superpuesto. `dotnet test` 220/220 en verde (134 Core + 86 ViewModels), arnes
 UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### Ap-c (segunda auditoria, Fable) - valor hexadecimal real para los 7 colores
+
+**"Sin valor hexadecimal ni paleta para los colores"**: los 7 colores del personaje (Pelo/
+Piel/Ojos/Camisa/Camiseta interior/Pantalones/Zapatos) solo tenian 3 sliders R/G/B en crudo,
+sin ningun numero visible ni forma de pegar un color conocido de un vistazo (ej. "#FF0000").
+`ColorSwatchViewModel.Hex` (nuevo, `#RRGGBB`) sincronizado en los DOS sentidos: mover un slider
+actualiza el hex mostrado (`UpdatePreview`), y escribir un hex de 6 digitos valido (con o sin
+"#") actualiza los 3 canales Y el `byte[]` real del personaje (`OnHexChanged`) - un valor a
+medio escribir se ignora en silencio en vez de aplicar algo incorrecto a media escritura.
+Campo de texto nuevo bajo los 3 sliders de cada swatch, sin `UpdateSourceTrigger=
+PropertyChanged` a proposito (mismo criterio real ya establecido en el proyecto para "Índice
+(id)", T-17 - confirma al salir del campo, no letra a letra).
+
+**Sin paleta**: investigado y descartado con motivo real, no omitido sin mirar - a diferencia
+de los tintes de pelo (una lista curada real de 12 objetos del juego), los colores de
+Pelo/Piel/Ojos/ropa son libres en Terraria real (cualquier RGB, sin restriccion ni lista
+oficial) - inventar una paleta fija no representaria nada real del juego. El campo hex es el
+equivalente real y util a "pegar un color conocido" para este caso.
+
+4 pruebas deterministas nuevas (`ColorSwatchHexTests.cs`: cambiar R/G/B actualiza el hex real;
+escribir un hex valido (con y sin "#") actualiza R/G/B Y el array real; un hex a medio escribir
+se ignora sin tocar nada). Verificado con captura real (`apariencia-colores-hex.png`, nueva,
+permanente): los 7 swatches muestran su campo hex real (`#000000` en este personaje sintetico)
+bajo los sliders. `dotnet test` 224/224 en verde (134 Core + 90 ViewModels), arnes UIA completo
+sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.

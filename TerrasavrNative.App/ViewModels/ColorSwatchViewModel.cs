@@ -19,6 +19,15 @@ public partial class ColorSwatchViewModel : ObservableObject
     [ObservableProperty] private int _g;
     [ObservableProperty] private int _b;
     [ObservableProperty] private Brush _preview = Brushes.Black;
+    // Ap-c (segunda auditoria de Opus, Fable): "sin valor hexadecimal ni paleta para los
+    // colores" - antes solo 3 sliders R/G/B en crudo, sin ningun numero visible ni forma de
+    // pegar/escribir un color conocido de un vistazo ("#FF0000"). Se actualiza en los DOS
+    // sentidos: al mover un slider (UpdatePreview) y al escribir un hex valido a mano
+    // (OnHexChanged). No hay tabla de paleta real de Terraria/Calamity que copiar (los colores
+    // de personaje son libres, no una lista curada como los tintes) - un campo hex editable es
+    // el equivalente real y util a "pegar un color conocido", sin inventar una paleta fija que
+    // no representaria nada del juego real.
+    [ObservableProperty] private string _hex = "#000000";
 
     public ColorSwatchViewModel(string label, byte[] target)
     {
@@ -53,6 +62,30 @@ public partial class ColorSwatchViewModel : ObservableObject
         UpdatePreview();
     }
 
-    private void UpdatePreview() =>
-        Preview = new SolidColorBrush(Color.FromRgb((byte)Math.Clamp(R, 0, 255), (byte)Math.Clamp(G, 0, 255), (byte)Math.Clamp(B, 0, 255)));
+    private void UpdatePreview()
+    {
+        byte r = (byte)Math.Clamp(R, 0, 255), g = (byte)Math.Clamp(G, 0, 255), b = (byte)Math.Clamp(B, 0, 255);
+        Preview = new SolidColorBrush(Color.FromRgb(r, g, b));
+        _suppressWriteback = true; // el propio Hex se actualiza aqui - no reinterpretarlo como una escritura nueva del usuario
+        Hex = $"#{r:X2}{g:X2}{b:X2}";
+        _suppressWriteback = false;
+    }
+
+    // Ap-c: solo aplica con un hex real de 6 digitos (con o sin "#") - un valor a medio
+    // escribir (el usuario todavia tecleando) se ignora en silencio en vez de aplicar algo
+    // incorrecto; LostFocus (sin UpdateSourceTrigger=PropertyChanged, mismo criterio real ya
+    // usado en "Índice (id)", T-17) da tiempo real a terminar de escribir antes de confirmar.
+    partial void OnHexChanged(string value)
+    {
+        if (_suppressWriteback) return;
+        string cleaned = value.TrimStart('#');
+        if (cleaned.Length != 6 || !int.TryParse(cleaned, System.Globalization.NumberStyles.HexNumber, null, out int rgb)) return;
+
+        _suppressWriteback = true;
+        R = (rgb >> 16) & 0xFF;
+        G = (rgb >> 8) & 0xFF;
+        B = rgb & 0xFF;
+        _suppressWriteback = false;
+        WriteBack();
+    }
 }

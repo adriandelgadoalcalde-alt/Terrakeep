@@ -1283,6 +1283,19 @@ internal static class Program
             try
             {
                 vm.PersonajeInnerTabIndex = 3; // Apariencia
+                DoEvents();
+
+                // Ap-c (segunda auditoria de Opus, Fable): "sin valor hexadecimal ni paleta
+                // para los colores" - captura real de los 7 swatches con su campo hex nuevo,
+                // ANTES de abrir el selector de peinado (que tapa esta zona).
+                var rtbSwatches = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbSwatches.Render(window);
+                var encSwatches = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encSwatches.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbSwatches));
+                using (var fsSwatches = File.Create(Path.Combine(AppContext.BaseDirectory, "apariencia-colores-hex.png"))) encSwatches.Save(fsSwatches);
+                Console.WriteLine("Captura colores con campo hex -> apariencia-colores-hex.png");
+
                 var swHairOpen = System.Diagnostics.Stopwatch.StartNew();
                 vm.Appearance.OpenHairPickerCommand.Execute(null); // primera apertura real - regenera las 228 miniaturas
                 swHairOpen.Stop();

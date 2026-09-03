@@ -2104,6 +2104,16 @@
                                                     <Slider Minimum="0" Maximum="255" Value="{Binding R}" Foreground="#E05555" Margin="0,2" />
                                                     <Slider Minimum="0" Maximum="255" Value="{Binding G}" Foreground="#55C065" Margin="0,2" />
                                                     <Slider Minimum="0" Maximum="255" Value="{Binding B}" Foreground="#5580E0" Margin="0,2" />
+                                                    <!-- Ap-c (segunda auditoria de Opus, Fable): "sin valor hexadecimal ni
+                                                         paleta para los colores" - antes solo los 3 sliders en crudo, sin
+                                                         ningun numero visible ni forma de pegar un color conocido de un
+                                                         vistazo. Sin UpdateSourceTrigger=PropertyChanged a proposito (mismo
+                                                         criterio real que "Índice (id)", T-17) - confirma al salir del
+                                                         campo, no aplica un hex a medio escribir letra a letra. -->
+                                                    <TextBox Text="{Binding Hex}" Padding="6,4" Margin="0,6,0,0"
+                                                             Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}"
+                                                             BorderThickness="0" FontFamily="Consolas" HorizontalContentAlignment="Center"
+                                                             ToolTip="Código hexadecimal del color (ej. #FF0000) - escribe uno y pulsa fuera del campo para aplicarlo" />
                                                 </StackPanel>
                                             </Border>
                                         </DataTemplate>
