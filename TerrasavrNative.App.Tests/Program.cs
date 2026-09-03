@@ -1218,6 +1218,38 @@ internal static class Program
                     using var fsFit = File.Create(Path.Combine(AppContext.BaseDirectory, "mundo-ajustado-a-la-ventana.png"));
                     encFit.Save(fsFit);
                 }
+
+                // T-D (segunda auditoria de Opus, Fable): "la barra de desplazamiento horizontal
+                // esta rota - Width=10 fijo, sin trigger para el caso horizontal". Restablecer a
+                // 100% real fuerza que WorldMapScroll (el unico uso real de esta barra) necesite
+                // SI o SI scroll horizontal con un mundo de 8400 tiles - se busca la ScrollBar
+                // horizontal real en su plantilla y se comprueba que su alto renderizado es
+                // razonable (~10px), no el "muñon mal orientado" real que describe el hallazgo.
+                vm.Exploration.ZoomResetCommand.Execute(null);
+                worldScroll.UpdateLayout();
+                DoEvents(); DoEvents();
+                System.Windows.Controls.Primitives.ScrollBar? barraHorizontal = null;
+                void BuscarBarraHorizontal(System.Windows.DependencyObject d)
+                {
+                    if (barraHorizontal != null) return;
+                    if (d is System.Windows.Controls.Primitives.ScrollBar sb && sb.Orientation == System.Windows.Controls.Orientation.Horizontal) { barraHorizontal = sb; return; }
+                    int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(d);
+                    for (int i = 0; i < n && barraHorizontal == null; i++)
+                        BuscarBarraHorizontal(System.Windows.Media.VisualTreeHelper.GetChild(d, i));
+                }
+                BuscarBarraHorizontal(worldScroll);
+                Console.WriteLine($"T-D: ScrollBar horizontal real encontrada={barraHorizontal != null}, ActualHeight={barraHorizontal?.ActualHeight:0.#}px, ActualWidth={barraHorizontal?.ActualWidth:0.#}px (esperado alto ~10px, ancho >> 10px - antes salia como un hilo vertical de 10px de ANCHO)");
+                if (barraHorizontal == null || barraHorizontal.ActualHeight < 5 || barraHorizontal.ActualHeight > 20 || barraHorizontal.ActualWidth < 20)
+                    Console.WriteLine("FALLO: T-D (segunda auditoria) - la barra horizontal no tiene un tamaño real razonable");
+                {
+                    var rtbScroll = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbScroll.Render(window);
+                    var encScroll = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encScroll.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbScroll));
+                    using var fsScroll = File.Create(Path.Combine(AppContext.BaseDirectory, "mundo-barra-horizontal.png"));
+                    encScroll.Save(fsScroll);
+                }
             }
             else Console.WriteLine("X7-ASYNC: fichero no encontrado, omitido");
         }

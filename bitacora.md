@@ -4741,3 +4741,24 @@ entera dos veces mas), arnes visual completo sin NO-FOUND/FALLO/EXCEPTION.
 de la segunda auditoria de Opus (Fable). Sigue la Ola 4 (reworks, requiere aprobacion explicita
 antes de tocar nada - terreno de un rediseño ya rechazado una vez) y el resto de hallazgos
 sueltos por seccion no agrupados en ninguna ola.
+
+### T-D / X-e (segunda auditoria, Fable) - primer hallazgo suelto fuera de las olas
+
+**"La barra de desplazamiento horizontal esta rota"**: `Theme.xaml`, el `ControlTemplate` de
+`ScrollBar` fijaba `Width="10"` siempre (correcto en vertical, un hilo inservible en
+horizontal) y `Track.IsDirectionReversed="True"` fijo (correcto en vertical -arriba=0-, invierte
+izquierda/derecha en horizontal) - sin ningun trigger real para el caso horizontal. El unico uso
+real (`WorldMapScroll`) salia como un muñon mal orientado, enmascarado porque el pan por
+arrastre ya funciona y nadie usa la barra en si. Arreglado con un `Trigger`
+`Orientation=Horizontal` real: intercambia `Width`/`Height` (10px de ALTO, no de ancho) y
+desactiva `IsDirectionReversed` - el `Track` en si ya se reorienta solo (mecanismo real de WPF,
+sin tocar nada ahi).
+
+Verificado restableciendo el zoom real a 100% (fuerza scroll horizontal real con el mundo de
+8400 tiles), encontrando la `ScrollBar` horizontal de verdad en su plantilla
+(`ActualHeight=17px, ActualWidth=770px` - antes habria sido justo al reves) y con una captura
+real revisada a mano (barra horizontal real y proporcional visible al pie del mapa).
+
+`dotnet test` 179/179 en verde (sin pruebas xunit nuevas: es un `ControlTemplate` de WPF, ya
+probado por el propio arnes visual), arnes visual con `T-D:` en verde y sin ningun otro
+NO-FOUND/FALLO/EXCEPTION.
