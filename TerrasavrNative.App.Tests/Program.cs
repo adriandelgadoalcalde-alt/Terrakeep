@@ -158,10 +158,14 @@ internal static class Program
         vm.SelectedTabIndex = 2; // Builds
         DoEvents();
         DoEvents();
-        var headerName = root.FindFirst(TreeScope.Descendants, new AndCondition(
-            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text),
-            new PropertyCondition(AutomationElement.NameProperty, "UIA-Test")));
-        Console.WriteLine($"CABECERA-GLOBAL (en Builds): nombre real encontrado={headerName != null} (esperado True)");
+        // H-1 (segunda auditoria de Opus, Fable): el nombre paso de TextBlock (ControlType.Text,
+        // buscable por Name) a un TextBox real editable (ControlType.Edit, el texto vive en
+        // ValuePattern.Current.Value, no en Name) - se busca por su valor real en vez de su Name.
+        var cajasDeEdicion = root.FindAll(TreeScope.Descendants,
+            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
+        bool headerNameEncontrado = cajasDeEdicion.Cast<AutomationElement>().Any(el =>
+            el.TryGetCurrentPattern(ValuePattern.Pattern, out var pat) && ((ValuePattern)pat).Current.Value == "UIA-Test");
+        Console.WriteLine($"CABECERA-GLOBAL (en Builds): nombre real encontrado={headerNameEncontrado} (esperado True)");
         {
             var rtbHeader = new System.Windows.Media.Imaging.RenderTargetBitmap(
                 (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);

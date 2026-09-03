@@ -35,6 +35,17 @@ public partial class MainViewModel : ObservableObject
     // para errores, que no deben ser tan efimeros. Ver el banner real en MainWindow.xaml.
     private readonly DispatcherTimer _saveConfirmationTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
 
+    // H-3 (segunda auditoria de Opus, Fable): "Guardar ya funciona desde cualquier pestaña
+    // (N-1) pero un error de guardado va a un TextBlock que 5 de 6 pestañas no ven" -
+    // StatusMessage sigue viviendo SOLO dentro de Personaje (correcto para el detalle
+    // informativo de la ultima operacion), pero un ERROR real (cargar/guardar/deshacer fallido)
+    // ahora TAMBIEN sube a este canal global, visible en cualquier pestaña via un banner real en
+    // MainWindow.xaml - mismo nivel que el banner de "Guardado" (N-1), nunca los exitos
+    // efimeros, solo lo que de verdad requiere que el usuario se entere este donde este.
+    [ObservableProperty] private string? _globalErrorMessage;
+
+    [RelayCommand] private void DismissGlobalError() => GlobalErrorMessage = null;
+
     // Auditoria de Opus, Bloque 6 (N-5): antes 8 "const int...TabIndex" sueltos - ya tenian
     // nombre real (no eran literales sin explicar en medio del codigo), pero seguian siendo un
     // int cualquiera: nada impedia asignar `SelectedTabIndex = 99` sin que el compilador se
@@ -94,7 +105,35 @@ public partial class MainViewModel : ObservableObject
         ? "Terrakeep"
         : $"Terrakeep - {CharacterName}{(IsDirty ? " ●" : "")}";
 
-    partial void OnCharacterNameChanged(string? value) => OnPropertyChanged(nameof(WindowTitle));
+    partial void OnCharacterNameChanged(string? value)
+    {
+        OnPropertyChanged(nameof(WindowTitle));
+        OnPropertyChanged(nameof(NameFileMismatch));
+        // H-1 (segunda auditoria de Opus, Fable): "PlrCharacter.Name se lee y se escribe sin
+        // problema... y muestra el nombre como texto muerto" - el TextBox real de la cabecera
+        // (MainWindow.xaml) ahora escribe aqui de verdad. MarkDirty ya respeta _suppressDirty
+        // durante la propia carga (mismo guardia real de N-2), asi que cargar un personaje no se
+        // marca a si mismo como "cambio sin guardar" solo por rellenar este campo.
+        if (_loaded != null && value != null) _loaded.Character.Name = value;
+        MarkDirty();
+    }
+
+    // H-2 (segunda auditoria de Opus, Fable): "Sin rastro de la version ni del archivo abierto -
+    // hay que ir a la pestaña Version (tercer nivel) para saberlo, y no hay forma de distinguir
+    // dos personajes con el mismo nombre en carpetas distintas". Una linea real bajo el nombre,
+    // en la cabecera global (visible en cualquier pestaña) con el archivo + la version resuelta
+    // a su etiqueta real (ej. "1.4.4.0") cuando se conoce, o el numero crudo si no.
+    public string? FileVersionLine => _loaded == null ? null
+        : $"{Path.GetFileName(_loaded.PlrPath)} · versión {
+            VersionEditor.Groups.SelectMany(g => g.Options).FirstOrDefault(o => o.Number == VersionEditor.RawVersion)?.Label
+            ?? VersionEditor.RawVersion.ToString()}";
+
+    // H-1/F2 (segunda auditoria de Opus, Fable): "Aviso discreto si el nombre del archivo no
+    // coincide" - un personaje renombrado a mano en el juego, o un .plr copiado/renombrado por
+    // fuera, puede tener un nombre real distinto del nombre del fichero (ej. "Personaje (2).plr"
+    // con nombre real "Personaje") - confusion real al distinguir dos ventanas del Explorador.
+    public bool NameFileMismatch => _loaded != null && CharacterName != null
+        && !string.Equals(Path.GetFileNameWithoutExtension(_loaded.PlrPath), CharacterName, StringComparison.Ordinal);
     partial void OnIsDirtyChanged(bool value) => OnPropertyChanged(nameof(WindowTitle));
     [ObservableProperty] private int _selectedTabIndex;
     [ObservableProperty] private int _personajeInnerTabIndex;
@@ -256,7 +295,11 @@ public partial class MainViewModel : ObservableObject
         Appearance.PropertyChanged += (_, _) => MarkDirty();
         Servers.Changed += MarkDirty; // B-5 (segunda auditoria de Opus): evento real, ver ServersViewModel.Changed
         Flags.PropertyChanged += (_, _) => MarkDirty();
-        VersionEditor.PropertyChanged += (_, _) => MarkDirty();
+        VersionEditor.PropertyChanged += (_, _) =>
+        {
+            MarkDirty();
+            OnPropertyChanged(nameof(FileVersionLine)); // H-2: cambiar la version en la pestaña Version debe reflejarse tambien en la cabecera
+        };
         _saveConfirmationTimer.Tick += (_, _) =>
         {
             SaveConfirmationVisible = false;
@@ -361,6 +404,7 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = HasCalamityData
                 ? $"Cargado '{_loaded.Character.Name}' - {calamityCount} objeto(s) de Calamity detectado(s)."
                 : $"Cargado '{_loaded.Character.Name}' - personaje 100% vanilla (sin .tplr).";
+            GlobalErrorMessage = null; // H-3: una carga con exito limpia cualquier error global anterior
         }
         catch (Exception ex)
         {
@@ -373,12 +417,14 @@ public partial class MainViewModel : ObservableObject
             _loaded = null;
             IsCharacterLoaded = false;
             StatusMessage = $"Error al cargar: {ex.Message}";
+            GlobalErrorMessage = StatusMessage; // H-3: visible en cualquier pestaña, no solo Personaje
         }
         finally
         {
             _suppressDirty = false;
             IsDirty = false;
             UndoLastSaveCommand.NotifyCanExecuteChanged(); // el personaje cargado (y su .bak) ha cambiado
+            OnPropertyChanged(nameof(FileVersionLine)); // H-2: archivo/version cambian con cada carga (o desaparecen si fallo)
         }
     }
 
@@ -396,10 +442,12 @@ public partial class MainViewModel : ObservableObject
             SaveConfirmationVisible = true;
             _saveConfirmationTimer.Stop();
             _saveConfirmationTimer.Start();
+            GlobalErrorMessage = null; // H-3: un guardado con exito limpia cualquier error global anterior
         }
         catch (Exception ex)
         {
             StatusMessage = $"Error al guardar: {ex.Message}";
+            GlobalErrorMessage = StatusMessage; // H-3: visible en cualquier pestaña, no solo Personaje
         }
         finally
         {
@@ -425,12 +473,17 @@ public partial class MainViewModel : ObservableObject
             string tplrPath = _loaded.TplrPath ?? Path.ChangeExtension(plrPath, ".tplr");
             string tplrBak = tplrPath + ".bak";
             if (File.Exists(tplrBak)) File.Copy(tplrBak, tplrPath, overwrite: true);
+            string nombreAntesDeRecargar = CharacterName ?? plrPath;
             LoadFromPath(plrPath);
-            StatusMessage = $"Deshecho el último guardado de '{CharacterName}'.";
+            // LoadFromPath NUNCA relanza (traga sus propias excepciones, T-22) - si la recarga
+            // en si fallo, ya dejo su propio StatusMessage/GlobalErrorMessage de error reales;
+            // pisarlo aqui con un mensaje de exito falso seria peor que no decir nada.
+            if (IsCharacterLoaded) StatusMessage = $"Deshecho el último guardado de '{nombreAntesDeRecargar}'.";
         }
         catch (Exception ex)
         {
             StatusMessage = $"Error al deshacer el último guardado: {ex.Message}";
+            GlobalErrorMessage = StatusMessage; // H-3: visible en cualquier pestaña, no solo Personaje
         }
     }
 

@@ -4536,3 +4536,51 @@ fallo(s)` y sin ningun otro NO-FOUND/FALLO/EXCEPTION.
 
 **Cierra la Ola 2 entera** (T-A a T-I mas A-a/D-a/N-c/V-a/X-b/L-a) de la segunda auditoria de
 Opus (Fable). Sigue la Ola 3.
+
+### H-1 + H-2 + H-3 (segunda auditoria, Fable) - Ola 3, empieza
+
+**H-1, el nombre del personaje no se podia editar en ninguna parte**: `CharacterName` se leia/
+escribia sin problema a nivel de datos pero se mostraba como texto muerto. La `TextBlock` de la
+cabecera global pasa a un `TextBox` real con el estilo "filled" ya usado en el resto de la app
+(`BgElevatedBrush`, sin borde) + `OnCommitTextOnEnter` (ya existia, T-17 resolvio el gotcha real
+de Intro vs `UpdateSourceTrigger=PropertyChanged`). `OnCharacterNameChanged` ahora escribe de
+verdad a `_loaded.Character.Name` y marca sucio (respeta `_suppressDirty` durante la carga, no
+se marca a si mismo). F2: aviso discreto (icono ⚠ con tooltip) si el nombre del archivo no
+coincide con el nombre real del personaje (`NameFileMismatch`).
+
+**H-2, sin rastro de la version ni del archivo abierto**: nueva linea real bajo el nombre en la
+cabecera global (`FileVersionLine`) con el nombre del fichero + la version resuelta a su
+etiqueta real (ej. "1.4.4.0") cuando se conoce, o el numero crudo si no - se actualiza en vivo
+al cambiar de version desde la propia pestaña Version.
+
+**H-3, `StatusMessage` se quedaba atras dentro de Personaje**: un error de guardado/carga solo
+lo veian 1 de 6 pestañas. Nuevo canal global (`GlobalErrorMessage` + banner real en rojo,
+mismo nivel que el banner verde de "Guardado" de N-1, con boton "✕" para cerrarlo a mano) -
+solo errores reales (cargar/guardar/deshacer fallido), nunca los exitos efimeros. `StatusMessage`
+se queda para el detalle informativo dentro de Personaje, sin cambios.
+
+**Bug real encontrado de paso, no planeado**: revisando `UndoLastSave` para engancharlo a
+`GlobalErrorMessage`, se vio que si la recarga interna (`LoadFromPath`, que NUNCA relanza,
+T-22) fallaba de verdad, el codigo seguia sin comprobarlo y pisaba el error real con un
+`StatusMessage` de EXITO falso ("Deshecho el último guardado..."). Arreglado: solo se muestra el
+mensaje de exito si `IsCharacterLoaded` sigue en `True` tras la recarga.
+
+**Bug real encontrado y corregido en la propia implementacion**: el primer intento de visibilidad
+del banner de error uso `NullToCollapsed` (semantica real: visible CUANDO ES null, para
+placeholders tipo "sin personaje cargado") en vez de `EmptyToCollapsed` (visible cuando NO esta
+vacio) - el banner salia SIEMPRE visible y vacio. Detectado con una captura real (no descartado
+a la ligera), corregido, y vuelto a verificar visualmente con un disparo temporal real
+(`GlobalErrorMessage` forzado a un texto de prueba, captura, `DismissGlobalErrorCommand`,
+revertido) antes de dar el arreglo por bueno.
+
+7 pruebas deterministas nuevas (`CabeceraGlobalTests.cs`): nombre editable con round-trip real
+via Save+recarga, `FileVersionLine` con version conocida Y desconocida, `NameFileMismatch` en
+ambos sentidos, error global en carga Y en guardado forzados de verdad (directorio borrado antes
+de Save), y `DismissGlobalError`. Arnes visual (`Program.cs`) actualizado: la busqueda del
+nombre en la cabecera paso de `ControlType.Text`+`Name` a `ControlType.Edit`+`ValuePattern` (el
+control cambio de tipo real, UI Automation expone el texto de un cuadro editable distinto que el
+de un texto fijo).
+
+`dotnet test` 169/169 en verde, arnes visual completo sin NO-FOUND/FALLO/EXCEPTION, capturas
+reales revisadas a mano (cabecera con nombre editable + aviso de discrepancia + linea de
+archivo/version, y banner de error con texto real).

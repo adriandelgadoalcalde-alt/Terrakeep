@@ -949,18 +949,40 @@
                             Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}">
                     <Image Source="{Binding Appearance.PreviewImage}" Width="28" Height="39.2" Stretch="Uniform"
                            RenderOptions.BitmapScalingMode="NearestNeighbor" />
-                    <TextBlock Text="{Binding CharacterName}" Style="{StaticResource SectionText}"
-                               VerticalAlignment="Center" Margin="10,0,0,0" />
-                    <TextBlock Text="●" FontSize="16" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="6,0,0,0"
-                               ToolTip="Hay cambios sin guardar"
-                               Visibility="{Binding IsDirty, Converter={StaticResource BoolToVis}}" />
-                    <Border Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Appearance.DifficultyLabel}" Style="{StaticResource CaptionText}" FontSize="11" />
-                    </Border>
-                    <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center"
-                            Visibility="{Binding HasCalamityData, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Calamity" FontSize="11" Foreground="White" FontWeight="SemiBold" />
-                    </Border>
+                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <!-- H-1 (segunda auditoria de Opus, Fable): "PlrCharacter.Name se lee y
+                                 se escribe sin problema... y muestra el nombre como texto muerto" -
+                                 TextBox real con el estilo "filled" ya usado en el resto de la app
+                                 (BgElevatedBrush, sin borde) + OnCommitTextOnEnter (ya existe, T-17
+                                 resolvio el gotcha de UpdateSourceTrigger=PropertyChanged vs Intro). -->
+                            <TextBox Text="{Binding CharacterName, UpdateSourceTrigger=PropertyChanged}" KeyDown="OnCommitTextOnEnter"
+                                     FontFamily="{StaticResource AppFont}" FontSize="14" FontWeight="SemiBold"
+                                     Foreground="{StaticResource TextPrimaryBrush}" Background="{StaticResource BgElevatedBrush}"
+                                     BorderThickness="0" Padding="4,2" MinWidth="80" VerticalAlignment="Center" />
+                            <TextBlock Text="●" FontSize="16" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="6,0,0,0"
+                                       ToolTip="Hay cambios sin guardar"
+                                       Visibility="{Binding IsDirty, Converter={StaticResource BoolToVis}}" />
+                            <!-- H-1/F2: "Aviso discreto si el nombre del archivo no coincide" - un
+                                 .plr renombrado/copiado por fuera puede tener un nombre real
+                                 distinto del nombre del fichero, confusion real al distinguir dos
+                                 ventanas del Explorador. -->
+                            <TextBlock Text="⚠" FontSize="13" Foreground="{StaticResource OrangeBrush}" VerticalAlignment="Center" Margin="6,0,0,0"
+                                       ToolTip="El nombre del personaje no coincide con el nombre del archivo"
+                                       Visibility="{Binding NameFileMismatch, Converter={StaticResource BoolToVis}}" />
+                            <Border Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Appearance.DifficultyLabel}" Style="{StaticResource CaptionText}" FontSize="11" />
+                            </Border>
+                            <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" Padding="6,2" Margin="6,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding HasCalamityData, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Calamity" FontSize="11" Foreground="White" FontWeight="SemiBold" />
+                            </Border>
+                        </StackPanel>
+                        <!-- H-2: "Sin rastro de la version ni del archivo abierto - hay que ir a la
+                             pestaña Version (tercer nivel)... no hay forma de distinguir dos
+                             personajes con el mismo nombre en carpetas distintas". -->
+                        <TextBlock Text="{Binding FileVersionLine}" Style="{StaticResource CaptionText}" FontSize="11" Margin="4,2,0,0" />
+                    </StackPanel>
                 </StackPanel>
                 <TextBlock Text="Sin personaje cargado" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
                            Visibility="{Binding IsCharacterLoaded, Converter={StaticResource InverseBoolToVis}}" />
@@ -2347,6 +2369,27 @@
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="&#10003;" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
                 <TextBlock Text="Guardado" FontSize="13.5" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <!-- H-3 (segunda auditoria de Opus, Fable): "Guardar ya funciona desde cualquier pestaña
+             (N-1) pero un error de guardado va a un TextBlock que 5 de 6 pestañas no ven" -
+             mismo nivel real que el banner de "Guardado" de arriba (hermano del TabControl raiz),
+             visible sea cual sea la pestaña activa. Solo errores reales (cargar/guardar/deshacer
+             fallido) - los exitos efimeros siguen siendo solo el banner verde de arriba, StatusMessage
+             se queda para el detalle informativo dentro de Personaje. Se cierra sola en el siguiente
+             exito real, o a mano con el boton "✕". -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" MaxWidth="520"
+                Background="{StaticResource CalamityBrush}" CornerRadius="10" Padding="18,10"
+                Effect="{StaticResource CardShadow}"
+                Visibility="{Binding GlobalErrorMessage, Converter={StaticResource EmptyToCollapsed}}"
+                Panel.ZIndex="99">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#9888;" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding GlobalErrorMessage}" FontSize="13.5" Foreground="White" VerticalAlignment="Center"
+                           TextWrapping="Wrap" MaxWidth="400" />
+                <Button Content="✕" Style="{StaticResource CircleCloseButton}" Foreground="White" Margin="10,0,0,0"
+                        Command="{Binding DismissGlobalErrorCommand}" ToolTip="Cerrar este aviso" />
             </StackPanel>
         </Border>
         </Grid>
