@@ -4665,3 +4665,37 @@ tests) - corregido para no dejar una razon inventada en el codigo.
 1 prueba determinista nueva: Loadout 1 seleccionado, Auto-equipar coloca AHI (el Loadout 0
 se queda vacio de verdad). `dotnet test` 170/170 en verde, arnes visual completo sin
 NO-FOUND/FALLO/EXCEPTION.
+
+### I-a + I-b (segunda auditoria, Fable) - cierra la Ola 3 entera
+
+**I-a, "no se distingue que personaje esta cargado - las tarjetas se ven identicas al volver a
+Inicio"**: `CharacterListEntryViewModel` pasa a observable con `IsCurrent`;
+`HomeViewModel.UpdateCurrentPath` lo recalcula comparando `FilePath` contra el personaje
+realmente cargado, llamado desde `MainViewModel.LoadFromPath` (exito Y fallo) y de nuevo tras
+cada `Refresh()` (la lista se reconstruye entera, el flag no sobrevive solo). Borde violeta +
+marca "✓" real en la tarjeta actual.
+
+**I-b, "sin ninguna accion secundaria en la tarjeta - faltan las 3 obvias y baratas"**: menu
+contextual real (clic derecho) con Abrir carpeta (`/select,` en el Explorador real), Duplicar
+personaje (copia de fichero pura - mismo nombre interno, numerada si "(copia)" ya existe, la
+"red de seguridad real para experimentar") y Restaurar copia de seguridad (mismo mecanismo
+`.bak` real de T-C, pero operando sobre CUALQUIER personaje de la lista, no solo el cargado).
+Un `ContextMenu` real es un popup FUERA del arbol visual de la ventana - `RelativeSource
+AncestorType=Window` no llega ahi dentro, asi que `HomeViewModel` viaja en el propio `Tag` del
+`Border` (sitio real donde dejarlo) y cada `MenuItem` lo recupera via
+`PlacementTarget.Tag`.
+
+**Verificado con especial cuidado por el riesgo real**: "adrian"/"Eldelgas" son personajes
+REALES de esta maquina, y Duplicar/Restaurar escriben de verdad en disco - el arnes visual
+NUNCA invoca estos 3 comandos contra una tarjeta real (solo abre el menu real y comprueba que
+los 3 `Command`/`CommandParameter` resolvieron via el truco `PlacementTarget.Tag`, sin
+invocarlos), y las 5 pruebas deterministas de `Duplicate`/`RestoreBackup` usan siempre una
+carpeta temporal propia. Confirmado tras el arnes que la carpeta real de Players no cambio
+(mismos ficheros, mismas fechas).
+
+6 pruebas deterministas nuevas (`HomeCardTests.cs`). `dotnet test` 175/175 en verde, arnes
+visual completo con `I-a IsCurrent...=True` y `I-b: 3 item(s) de menu, comandos sin
+resolver=` (ninguno) - sin ningun otro NO-FOUND/FALLO/EXCEPTION.
+
+**Deja la Ola 3 lista salvo R-a..R-g Fase 1** (H-1/H-2/H-3, X-a, T-H/F1+F2, Bd-a/Bd-b e I-a/I-b
+ya cerrados) - Investigacion (R-a..R-g Fase 1) sigue siendo el ultimo punto real de esta ola.

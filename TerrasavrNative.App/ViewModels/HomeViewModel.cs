@@ -23,11 +23,25 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty] private bool _isScanning;
     [ObservableProperty] private string? _scanMessage;
 
+    // I-a: ruta real del personaje cargado ahora mismo en MainViewModel (null si ninguno) -
+    // MainViewModel.LoadFromPath la actualiza en su finally, tanto en exito como en fallo.
+    private string? _currentPath;
+
     public event Action<string>? CharacterChosen;
 
     public HomeViewModel()
     {
         Refresh();
+    }
+
+    // I-a (segunda auditoria de Opus, Fable): "No se distingue que personaje esta cargado - las
+    // tarjetas se ven identicas al volver a Inicio". Se llama tanto al cargar/cambiar de
+    // personaje como tras Refresh() (la lista se reconstruye entera, IsCurrent no sobrevive).
+    public void UpdateCurrentPath(string? path)
+    {
+        _currentPath = path;
+        foreach (var entry in Characters)
+            entry.IsCurrent = string.Equals(entry.FilePath, path, StringComparison.OrdinalIgnoreCase);
     }
 
     [RelayCommand]
@@ -56,6 +70,7 @@ public partial class HomeViewModel : ObservableObject
             ScanMessage = Characters.Count == 0
                 ? $"Ningun personaje encontrado en {dir}"
                 : null;
+            UpdateCurrentPath(_currentPath); // la lista es nueva de cero, IsCurrent hay que recalcularlo
         }
         finally
         {
@@ -65,4 +80,73 @@ public partial class HomeViewModel : ObservableObject
 
     [RelayCommand]
     private void Open(CharacterListEntryViewModel entry) => CharacterChosen?.Invoke(entry.FilePath);
+
+    // I-b (segunda auditoria de Opus, Fable): "Sin ninguna accion secundaria en la tarjeta -
+    // faltan las 3 obvias y baratas: abrir carpeta, duplicar personaje, restaurar copia de
+    // seguridad". Menu contextual real en la tarjeta (ver MainWindow.xaml).
+    [RelayCommand]
+    private void OpenFolder(CharacterListEntryViewModel entry)
+    {
+        try
+        {
+            // /select, resalta el fichero real en el Explorador en vez de solo abrir la carpeta
+            // a ciegas - mismo gesto real que "Mostrar en carpeta" de cualquier otra app.
+            System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{entry.FilePath}\"");
+        }
+        catch (Exception ex)
+        {
+            ScanMessage = $"Error al abrir la carpeta: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void Duplicate(CharacterListEntryViewModel entry)
+    {
+        try
+        {
+            // "la red de seguridad real para experimentar" - copia de fichero pura (mismo
+            // nombre interno del personaje, solo cambia el archivo) para poder tocar la copia
+            // sin arriesgar el original. Numerado si "(copia)" ya existe, nunca sobrescribe.
+            string dir = Path.GetDirectoryName(entry.FilePath)!;
+            string baseName = Path.GetFileNameWithoutExtension(entry.FilePath);
+            string newPath = Path.Combine(dir, $"{baseName} (copia).plr");
+            for (int n = 2; File.Exists(newPath); n++)
+                newPath = Path.Combine(dir, $"{baseName} (copia {n}).plr");
+
+            File.Copy(entry.FilePath, newPath);
+            string tplrSrc = Path.ChangeExtension(entry.FilePath, ".tplr");
+            if (File.Exists(tplrSrc)) File.Copy(tplrSrc, Path.ChangeExtension(newPath, ".tplr"));
+            Refresh();
+        }
+        catch (Exception ex)
+        {
+            ScanMessage = $"Error al duplicar: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void RestoreBackup(CharacterListEntryViewModel entry)
+    {
+        try
+        {
+            // Mismo .bak real que T-C ya deja (CharacterFileService.WriteAtomic) - esto es el
+            // mismo mecanismo de "Deshacer ultimo guardado" de la cabecera, pero operando sobre
+            // CUALQUIER personaje de la lista, este cargado ahora mismo o no.
+            string plrBak = entry.FilePath + ".bak";
+            if (!File.Exists(plrBak))
+            {
+                ScanMessage = $"'{entry.Name}' no tiene ninguna copia de seguridad real que restaurar.";
+                return;
+            }
+            File.Copy(plrBak, entry.FilePath, overwrite: true);
+            string tplrPath = Path.ChangeExtension(entry.FilePath, ".tplr");
+            string tplrBak = tplrPath + ".bak";
+            if (File.Exists(tplrBak)) File.Copy(tplrBak, tplrPath, overwrite: true);
+            Refresh();
+        }
+        catch (Exception ex)
+        {
+            ScanMessage = $"Error al restaurar la copia: {ex.Message}";
+        }
+    }
 }

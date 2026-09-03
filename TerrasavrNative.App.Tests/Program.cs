@@ -137,6 +137,63 @@ internal static class Program
             DoEvents();
             DoEvents();
             Console.WriteLine($"HOME-OPEN: click en '{first.Name}' -> SelectedTabIndex={vm.SelectedTabIndex} (esperado 1), CharacterName={vm.CharacterName}, IsCharacterLoaded={vm.IsCharacterLoaded}");
+
+            // I-a (segunda auditoria de Opus, Fable): "No se distingue que personaje esta
+            // cargado" - tras abrirlo, su propia tarjeta debe marcarse IsCurrent=True.
+            Console.WriteLine($"I-a IsCurrent tras abrir '{first.Name}'={first.IsCurrent} (esperado True)");
+            if (!first.IsCurrent) Console.WriteLine("FALLO: I-a (segunda auditoria) - la tarjeta abierta no quedo marcada como actual");
+
+            // I-b (segunda auditoria de Opus, Fable): "Sin ninguna accion secundaria en la
+            // tarjeta". Verificacion CUIDADOSA - solo se COMPRUEBA que el menu contextual real
+            // resuelve sus 3 comandos (Command != null, via el truco PlacementTarget.Tag de
+            // MainWindow.xaml), NUNCA se invoca ninguno: "adrian"/"Eldelgas" son personajes
+            // REALES de esta maquina, y Duplicar/Restaurar escriben de verdad en disco - probar
+            // eso de verdad tocaria datos reales del usuario, algo que este arnes no debe hacer
+            // jamas (regla real del proyecto).
+            try
+            {
+                vm.SelectedTabIndex = 0; // Inicio - la tarjeta solo existe en su arbol visual
+                DoEvents(); DoEvents();
+                System.Windows.FrameworkElement? tarjetaBorder = null;
+                void BuscarTarjeta(System.Windows.DependencyObject d)
+                {
+                    if (tarjetaBorder != null) return;
+                    if (d is System.Windows.Controls.Border b && ReferenceEquals(b.DataContext, first)) { tarjetaBorder = b; return; }
+                    int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(d);
+                    for (int i = 0; i < n && tarjetaBorder == null; i++)
+                        BuscarTarjeta(System.Windows.Media.VisualTreeHelper.GetChild(d, i));
+                }
+                BuscarTarjeta(window);
+                var menu = tarjetaBorder?.ContextMenu;
+                if (menu == null) { Console.WriteLine("I-b: tarjeta o ContextMenu NO-FOUND"); }
+                else
+                {
+                    menu.PlacementTarget = tarjetaBorder;
+                    menu.IsOpen = true; // abre de verdad (activa PlacementTarget) SIN invocar ningun item
+                    DoEvents(); DoEvents();
+                    {
+                        // Nota real: un ContextMenu real es un popup en su propio HWND -
+                        // RenderTargetBitmap.Render(window) NO lo captura (solo pinta la ventana
+                        // principal), asi que esta captura confirma I-a (borde+check de
+                        // "actual") de verdad, no el menu en si - I-b ya se comprueba abajo por
+                        // codigo (Command/CommandParameter resueltos), no por captura.
+                        var rtbMenu = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtbMenu.Render(window);
+                        var encMenu = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encMenu.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbMenu));
+                        using var fsMenu = File.Create(Path.Combine(AppContext.BaseDirectory, "inicio-tarjeta-actual.png"));
+                        encMenu.Save(fsMenu);
+                    }
+                    var comandosNulos = menu.Items.OfType<System.Windows.Controls.MenuItem>()
+                        .Where(mi => mi.Command == null || mi.CommandParameter == null)
+                        .Select(mi => (string)mi.Header).ToList();
+                    Console.WriteLine($"I-b: {menu.Items.Count} item(s) de menu, comandos sin resolver={string.Join(",", comandosNulos)} (esperado ninguno)");
+                    if (comandosNulos.Count > 0) Console.WriteLine("FALLO: I-b (segunda auditoria) - el truco PlacementTarget.Tag no resolvio Command/CommandParameter en algun item");
+                    menu.IsOpen = false;
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("I-b-EXCEPTION: " + ex); }
         }
 
         try

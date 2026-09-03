@@ -1,4 +1,5 @@
 using System.Windows.Media.Imaging;
+using CommunityToolkit.Mvvm.ComponentModel;
 using TerrasavrNative.App.Services;
 using TerrasavrNative.Core.PlrFormat;
 
@@ -11,7 +12,7 @@ namespace TerrasavrNative.App.ViewModels;
 // criterio que CharacterFileService.Load, ".tplr con el mismo nombre al lado") y fecha real de
 // ultima modificacion - mas el doll de cuerpo completo ya real de PlayerPreviewRenderer, sin
 // inventar ningun dato que el .plr no tenga de verdad.
-public sealed class CharacterListEntryViewModel
+public sealed partial class CharacterListEntryViewModel : ObservableObject
 {
     public string FilePath { get; }
     public string Name { get; }
@@ -19,6 +20,11 @@ public sealed class CharacterListEntryViewModel
     public bool IsCalamity { get; }
     public string LastModifiedText { get; }
     public WriteableBitmap Preview { get; }
+
+    // I-a (segunda auditoria de Opus, Fable): "No se distingue que personaje esta cargado - las
+    // tarjetas se ven identicas al volver a Inicio". HomeViewModel.UpdateCurrentPath la fija
+    // comparando FilePath contra el personaje realmente cargado en MainViewModel.
+    [ObservableProperty] private bool _isCurrent;
 
     public CharacterListEntryViewModel(string plrPath, PlrCharacter character, bool isCalamity, DateTime lastModifiedUtc)
     {
