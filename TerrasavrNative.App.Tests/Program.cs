@@ -1508,6 +1508,28 @@ internal static class Program
                 if (task.IsFaulted) throw task.Exception!;
                 Console.WriteLine($"X7-ASYNC: '{worldPath}' ({new FileInfo(worldPath).Length / 1024 / 1024}MB) -> {sw.ElapsedMilliseconds}ms totales, IsLoading={vm.Exploration.IsLoading} (esperado False), IsNotLoading={vm.Exploration.IsNotLoading} (esperado True), StatusMessage={vm.Exploration.StatusMessage}");
 
+                // H5-11 (quinta auditoria de Opus): "el lanzador de mundos desaparece para
+                // siempre en cuanto cargas uno" - con un mundo YA cargado (justo aqui), la tira
+                // permanente de pildoras debe seguir en el arbol visual real (antes vivia SOLO
+                // dentro del overlay de IsEmpty, que en este punto es False) y el mundo cargado
+                // debe marcarse IsCurrent=true en su propia entrada de Worlds.
+                DoEvents();
+                var loadedEntry = vm.Exploration.Worlds.FirstOrDefault(w => string.Equals(w.FilePath, worldPath, StringComparison.OrdinalIgnoreCase));
+                Console.WriteLine($"H5-11-PILDORA: Worlds.Count={vm.Exploration.Worlds.Count} (esperado >=1), entrada del mundo cargado encontrada={loadedEntry != null} IsCurrent={loadedEntry?.IsCurrent} (esperado True)");
+                if (loadedEntry != null && !loadedEntry.IsCurrent) Console.WriteLine("FALLO: H5-11 - el mundo recien cargado no quedo marcado IsCurrent en su propia pildora");
+                var pillText = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text),
+                    new PropertyCondition(AutomationElement.NameProperty, "Tus mundos")));
+                Console.WriteLine($"H5-11-TIRA-PERMANENTE: etiqueta 'Tus mundos' presente en el arbol visual CON un mundo ya cargado={pillText != null} (esperado True - antes vivia solo en el overlay de estado vacio, invisible en este punto)");
+                if (pillText == null) Console.WriteLine("FALLO: H5-11 - la tira permanente de mundos no esta en el arbol visual tras cargar un mundo");
+                var rtbPill = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbPill.Render(window);
+                var encPill = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encPill.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbPill));
+                using (var fsPill = File.Create(Path.Combine(AppContext.BaseDirectory, "h5-11-tira-mundos-con-mundo-cargado.png"))) encPill.Save(fsPill);
+                Console.WriteLine("Captura tira de mundos con mundo cargado -> h5-11-tira-mundos-con-mundo-cargado.png");
+
                 // X-a (segunda auditoria de Opus, Fable): "Restablecer" vuelve al 100%, para un
                 // mundo grande deja ver solo una fraccion minima del ancho real. Boton real
                 // "Ajustar a la ventana" via UI Automation - se comprueba que el mundo ESCALADO

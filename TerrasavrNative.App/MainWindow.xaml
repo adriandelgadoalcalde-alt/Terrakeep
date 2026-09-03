@@ -1116,32 +1116,46 @@
             </Border>
         </DataTemplate>
 
-        <!-- H4-08 (cuarta auditoria de Opus, Fable): gemela de CharacterCardTemplate de arriba,
-             para el lanzador de mundos - sin doll de vista previa real (un mundo no tiene
-             ningun equivalente igual de barato, ver el comentario real en
-             WorldListEntryViewModel) ni menu contextual (fuera del alcance real de este
-             hallazgo, solo pedia "escaneo asincrono con tarjetas"). Click en code-behind (no
-             Command) porque, igual que "Cargar mundo (.wld)..." de siempre, hace falta ajustar
-             el zoom a la ventana justo despues de cargar - un paso que solo el code-behind
-             puede dar (conoce el ScrollViewer real del mapa). -->
-        <DataTemplate x:Key="WorldCardTemplate" DataType="{x:Type vm:WorldListEntryViewModel}">
-            <Border Padding="12" CornerRadius="8" Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
-                    BorderBrush="{StaticResource BorderBrush0}" Width="220" Margin="0,0,14,14" Cursor="Hand"
-                    Effect="{StaticResource CardShadow}" MouseLeftButtonUp="OnWorldCardClick">
+        <!-- H5-11 (quinta auditoria de Opus): "el lanzador de mundos desaparece para siempre en
+             cuanto cargas uno... para pasar al siguiente hay que volver al dialogo de
+             Explorador". Pildora compacta (reemplaza a la antigua WorldCardTemplate, una
+             tarjeta grande que solo vivia dentro del estado vacio) para vivir de forma
+             PERMANENTE en la barra superior de Exploracion (no solo en el estado vacio) - mismo
+             IsCurrent/borde de acento real que ya usa Inicio (I-a) para marcar el personaje
+             cargado, y el mismo menu contextual real ("Abrir carpeta", ausente hasta ahora por
+             alcance - el informe lo pide explicitamente ahora que la lista es permanente). -->
+        <DataTemplate x:Key="WorldPillTemplate" DataType="{x:Type vm:WorldListEntryViewModel}">
+            <Border Padding="8,5" CornerRadius="6" Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
+                    Margin="0,0,8,0" Cursor="Hand" MouseLeftButtonUp="OnWorldCardClick"
+                    ToolTip="{Binding LastModifiedText, StringFormat='Ultima modificacion: {0}'}"
+                    Tag="{Binding DataContext.Exploration, RelativeSource={RelativeSource AncestorType=Window}}">
+                <Border.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Abrir carpeta"
+                                  Command="{Binding PlacementTarget.Tag.OpenFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    </ContextMenu>
+                </Border.ContextMenu>
                 <Border.Style>
                     <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-                                <Setter Property="Effect" Value="{StaticResource CardShadowHover}" />
                             </Trigger>
+                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <StackPanel HorizontalAlignment="Left">
-                    <TextBlock Text="{Binding Title}" Style="{StaticResource SectionText}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding SizeLabel}" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,4,0,0" />
-                    <TextBlock Text="{Binding LastModifiedText}" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,4,0,0" />
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#10003;" Foreground="{StaticResource AccentBrush}" FontWeight="Bold" Margin="0,0,5,0"
+                               VerticalAlignment="Center" ToolTip="Este es el mundo cargado ahora mismo"
+                               Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVis}}" />
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource CaptionText}" FontSize="11.5" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" MaxWidth="160" />
                 </StackPanel>
             </Border>
         </DataTemplate>
@@ -2947,6 +2961,27 @@
                         <Button Content="Ajustar a la ventana" Click="OnFitToWindowClick" Padding="8,2" Margin="8,0,0,0" />
                     </StackPanel>
                 </StackPanel>
+
+                <!-- H5-11 (quinta auditoria de Opus): "el lanzador de mundos desaparece para
+                     siempre en cuanto cargas uno" - tira PERMANENTE de pildoras (visible con
+                     mundo cargado o no, a diferencia del overlay grande de mas abajo, que solo
+                     vive en el estado vacio) para poder pasar de un mundo a otro sin volver al
+                     dialogo de Explorador cada vez. -->
+                <DockPanel DockPanel.Dock="Top" Margin="0,10,0,0"
+                           Visibility="{Binding Exploration.Worlds.Count, Converter={StaticResource CountToVis}}">
+                    <TextBlock DockPanel.Dock="Left" Text="Tus mundos" Style="{StaticResource CaptionText}"
+                               VerticalAlignment="Center" Margin="0,0,10,0" />
+                    <Button DockPanel.Dock="Left" Content="Actualizar" FontSize="11" Padding="8,2" Margin="0,0,10,0"
+                            Command="{Binding Exploration.RefreshWorldsCommand}" />
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Exploration.Worlds}" ItemTemplate="{StaticResource WorldPillTemplate}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+
                 <TextBlock DockPanel.Dock="Bottom" Text="{Binding Exploration.StatusMessage}"
                            Style="{StaticResource CaptionText}" Margin="0,10,0,0" TextWrapping="Wrap" />
 
@@ -3106,7 +3141,13 @@
                              "Sin mundo cargado." en el tamaño de letra mas pequeño de la app, en
                              la esquina inferior izquierda. Mismo patron real que el overlay de
                              IsLoading de arriba (centrado en el propio lienzo) mas el mismo
-                             escaneo asincrono/tarjetas ya probado en HomeViewModel. -->
+                             escaneo asincrono/tarjetas ya probado en HomeViewModel.
+                             H5-11 (quinta auditoria de Opus): el listado real de "Tus mundos" (antes
+                             SOLO vivia aqui dentro, atado a IsEmpty) se mudo a la tira permanente de
+                             pildoras de la barra superior (siempre visible, con mundo cargado o no) -
+                             este overlay se queda solo con el aviso "Sin mundo cargado" y el boton de
+                             carga directa, tal y como el informe pide explicitamente para el primer
+                             arranque. -->
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="640"
                                     Visibility="{Binding Exploration.IsEmpty, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="Sin mundo cargado" Style="{StaticResource TitleText}" FontSize="18"
@@ -3116,21 +3157,6 @@
                                         Visibility="{Binding Exploration.IsScanningWorlds, Converter={StaticResource BoolToVis}}">
                                 <ProgressBar IsIndeterminate="True" Width="120" Height="4" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
                                 <TextBlock Text="Buscando mundos..." Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center" />
-                            </StackPanel>
-
-                            <StackPanel Visibility="{Binding Exploration.Worlds.Count, Converter={StaticResource CountToVis}}" Margin="0,0,0,14">
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                                    <TextBlock Text="Tus mundos" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
-                                    <Button Content="Actualizar" FontSize="11" Padding="8,2" Margin="12,0,0,0"
-                                            Command="{Binding Exploration.RefreshWorldsCommand}" />
-                                </StackPanel>
-                                <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                    <ItemsControl ItemsSource="{Binding Exploration.Worlds}" ItemTemplate="{StaticResource WorldCardTemplate}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                    </ItemsControl>
-                                </ScrollViewer>
                             </StackPanel>
 
                             <TextBlock Text="Carga un mundo .wld para ver su mapa completo" Style="{StaticResource CaptionText}"

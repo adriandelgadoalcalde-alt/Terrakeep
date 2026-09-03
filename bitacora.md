@@ -6544,3 +6544,67 @@ navega a las 4 pantallas reales y confirma `SizeClass`/`DetailContentMaxWidth`/
 `DetailCardColumns` en los 2 extremos, con captura real de cada una (8 capturas nuevas,
 `h5-09-*.png`) - inspeccionadas a mano, confirmado el reparto en columnas real y el arreglo del
 corte de texto. **2/2 pasadas limpias**, sin NO-FOUND/FALLO/EXCEPTION.
+
+## H5-11 - El lanzador de mundos desaparece al cargar uno (Tanda C, quinta auditoria de Opus)
+
+Hallazgo real: "H4-08 construyo un lanzador de mundos completo, pero todo el bloque cuelga de
+`Exploration.IsEmpty` (`!IsWorldLoaded && !IsLoading`) - cargas un mundo y la lista entera
+desaparece para siempre; para pasar al siguiente hay que volver al dialogo del Explorador, la
+friccion exacta que H4-08 vino a eliminar. Su gemelo de Inicio no hace esto: la lista de
+personajes sigue ahi siempre, con el cargado resaltado (I-a)". Viola P2 (al alcance de la mano)
+y P6 (simetria con Inicio).
+
+**`WorldListEntryViewModel`**: pasa de `sealed class` a `sealed partial class : ObservableObject`
+con `[ObservableProperty] private bool _isCurrent` - gemelo exacto de
+`CharacterListEntryViewModel.IsCurrent` (I-a, segunda auditoria).
+
+**`ExplorationViewModel`**: nuevo `UpdateCurrentWorldPath(string? path)` (gemelo real de
+`HomeViewModel.UpdateCurrentPath`) - se llama tras cargar un mundo con exito
+(`LoadFromPathAsync`, con la ruta real) y tras cada `RefreshWorldsAsync` (la lista se
+reconstruye entera, `IsCurrent` no sobrevive - mismo motivo real que en `HomeViewModel`). Un
+fallo real de carga llama a `UpdateCurrentWorldPath(null)` - ninguna pildora debe quedar
+marcada como "cargada" si la carga fallo. Nuevo `[RelayCommand] OpenFolder(WorldListEntryViewModel)`
+(gemelo real de `HomeViewModel.OpenFolder`, `explorer.exe /select,`) - pedido explicito del
+informe ("ya que la lista es permanente, la tarjeta de mundo gana el menu contextual que su
+gemela de personaje ya tiene, hoy ausente por alcance").
+
+**`MainWindow.xaml`**: nueva `WorldPillTemplate` (reemplaza a la antigua `WorldCardTemplate`,
+ahora sin ningun uso - eliminada) - pildora compacta (no la tarjeta grande original, pensada
+solo para el estado vacio) con el mismo borde de acento real (`DataTrigger IsCurrent`) que ya
+usa `CharacterCardTemplate`, mismo menu contextual real ("Abrir carpeta") via
+`Tag="{Binding DataContext.Exploration, ...}"` + `PlacementTarget.Tag.OpenFolderCommand` (mismo
+patron ya establecido para el de Inicio). Tira nueva PERMANENTE (`DockPanel.Dock="Top"`, justo
+debajo de la barra de Cargar mundo/zoom, "junto al zoom" tal y como sugeria el informe),
+visible con `Exploration.Worlds.Count>0` SIEMPRE (con mundo cargado o no) - a diferencia del
+overlay grande de `IsEmpty`, que se queda EXCLUSIVAMENTE para el primer arranque (el listado de
+"Tus mundos" que antes vivia solo ahi dentro se elimino de ese bloque, ahora solo queda el
+aviso "Sin mundo cargado" + boton de carga directa, tal y como el informe pedia
+explicitamente).
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: 358/358 (nada de logica nueva
+cubierta por xunit - `IsCurrent`/`UpdateCurrentWorldPath` son el mismo patron ya usado y
+probado indirectamente via `HomeViewModel`, sin async ni I/O propios). Arnes de UI Automation
+ampliado con un bloque nuevo (`H5-11-PILDORA`/`H5-11-TIRA-PERMANENTE`) justo despues de cargar
+el mundo real `roca_negra.wld` (11MB) - confirma que la entrada real de `Worlds` queda
+`IsCurrent=true`, y que la etiqueta "Tus mundos" SIGUE presente en el arbol visual real con el
+mundo YA cargado (antes, en este mismo punto, `IsEmpty` ya era `False` y el bloque entero
+habria desaparecido) - con una captura real (`h5-11-tira-mundos-con-mundo-cargado.png`)
+mostrando la tira de 5 mundos reales con "roca negra" resaltada en acento junto al mapa ya
+pintado. **2/2 pasadas limpias**, sin NO-FOUND/FALLO/EXCEPTION.
+
+**Fallo intermitente observado durante la verificacion, investigado y descartado como ajeno a
+este hallazgo** (regla real del proyecto: "si algo falla dos veces seguidas, parar y
+documentarlo"): en 2 de las 5 pasadas completas del arnes lanzadas durante esta pasada,
+`LIBRERIA busqueda 'Sword'` (L-c, segunda auditoria) devolvio `Results.Count=0` en vez de 3 -
+investigado antes de seguir insistiendo: (1) esa prueba corre en la linea ~732 del arnes, MUY
+por delante de cualquier codigo nuevo de H5-11 (que empieza en la linea ~1481) - en el momento
+en que falla, ningun camino de H5-11 se ha ejecutado todavia; (2) las otras 3 pasadas de esta
+misma sesion (incluida la primera y la ultima) dieron `Results.Count=3` limpio, sin ningun
+cambio de codigo entre medias - patron real intermitente (pasa/falla/falla/pasa), no una
+regresion determinista causada por este cambio. Ya existe el mismo remedio real documentado
+para esta clase de problema (`WaitForDispatcher`, ver el hallazgo de H5-02 mas arriba) - el
+margen actual (300ms de espera real contra un debounce de 180ms) parece insuficiente bajo carga
+de maquina puntual (muchos ciclos seguidos de build+relanzamiento en esta sesion). Fuera de esta
+pasada, documentado: si este fallo intermitente vuelve a aparecer en una sesion futura, subir el
+margen de esa espera concreta (`WaitForDispatcher(300)` -> un numero mayor) en vez de
+re-investigar desde cero.

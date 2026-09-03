@@ -141,6 +141,11 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private bool _isScanningWorlds;
     [ObservableProperty] private string? _scanMessage;
 
+    // H5-11 (quinta auditoria de Opus): "el lanzador de mundos desaparece para siempre en
+    // cuanto cargas uno... su gemelo de Inicio no hace esto, sigue ahi siempre, con el cargado
+    // resaltado". Mismo campo/patron real que HomeViewModel._currentPath.
+    private string? _currentWorldPath;
+
     public ExplorationViewModel(CharacterFileService service)
     {
         _npcNames = service.NpcNames;
@@ -150,6 +155,16 @@ public partial class ExplorationViewModel : ObservableObject
         // puede ser async, y no hay nada que esperar aqui (Worlds se rellena un instante
         // despues, IsScanningWorlds refleja el hueco mientras tanto).
         _ = RefreshWorldsAsync();
+    }
+
+    // H5-11: gemelo real de HomeViewModel.UpdateCurrentPath - se llama tras cargar un mundo con
+    // exito (o fallar, IsWorldLoaded queda False y ninguna pildora se marca) y tras cada
+    // Refresh() (la lista se reconstruye entera, IsCurrent no sobrevive).
+    private void UpdateCurrentWorldPath(string? path)
+    {
+        _currentWorldPath = path;
+        foreach (var entry in Worlds)
+            entry.IsCurrent = string.Equals(entry.FilePath, path, StringComparison.OrdinalIgnoreCase);
     }
 
     [RelayCommand]
@@ -170,10 +185,27 @@ public partial class ExplorationViewModel : ObservableObject
                     ? "No se encontro ninguna carpeta real de mundos de Terraria (vanilla ni tModLoader)."
                     : $"Ningun mundo encontrado en {string.Join(" ni en ", dirs)}"
                 : null;
+            UpdateCurrentWorldPath(_currentWorldPath); // la lista es nueva de cero, IsCurrent hay que recalcularlo
         }
         finally
         {
             IsScanningWorlds = false;
+        }
+    }
+
+    // H5-11: "ya que la lista es permanente, la tarjeta de mundo gana el menu contextual que su
+    // gemela de personaje ya tiene ('Abrir carpeta'), hoy ausente por alcance" - mismo gesto
+    // real que HomeViewModel.OpenFolder.
+    [RelayCommand]
+    private void OpenFolder(WorldListEntryViewModel entry)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{entry.FilePath}\"");
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error al abrir la carpeta: {ex.Message}";
         }
     }
 
@@ -288,12 +320,14 @@ public partial class ExplorationViewModel : ObservableObject
             IsWorldLoaded = true;
             StatusMessage = $"'{world.Header.Title}' - {world.Header.TilesWide}x{world.Header.TilesHigh} tiles, " +
                 $"{_allNpcs.Count} NPC(s) de pueblo, {MissingNpcs.Count} todavia sin conseguir.";
+            UpdateCurrentWorldPath(wldPath);
         }
         catch (Exception ex)
         {
             _world = null;
             IsWorldLoaded = false;
             StatusMessage = $"Error al leer el mundo: {ex.Message}";
+            UpdateCurrentWorldPath(null); // un fallo real no debe dejar ninguna pildora marcada como "cargada"
         }
         finally
         {
