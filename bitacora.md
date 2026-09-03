@@ -3754,3 +3754,27 @@ fila real de la carpeta "Materiales" muestra `CountLabel=100/100` (real y cohere
 
 **Bloque 2 completo** (D-6, D-3, A-1, E-3, E-4, I-1, N-1, R-1) - las 3 partes de "Practicidad
 de golpe" del plan de Opus quedan cerradas y comiteadas. Sigue el Bloque 3 (Reactividad).
+
+### Bloque 3 (parte 1) - T-12: renderizado por software solo donde de verdad hace falta
+
+**Antes**: `App.xaml.cs` forzaba `RenderMode.SoftwareOnly` SIEMPRE, en cualquier sesion local
+normal - arreglo real de un bug real (2-sep-2026, "Terrakeep sale en blanco en remoto"), pero
+sin ninguna condicion: penalizaba con un renderizado mas lento (CPU en vez de GPU/DirectX) el
+99% del tiempo real de uso (local), que es justo lo contrario de P5 (reactivo de verdad).
+
+**Ahora**: `App.ShouldForceSoftwareRendering()` (nuevo, publico para poder verificarlo aparte)
+detecta una sesion REAL de Escritorio Remoto/Terminal Services via
+`GetSystemMetrics(SM_REMOTESESSION)` (señal real y documentada de Win32, no adivinada) y solo
+ahi fuerza software, automatico, cero intervencion. **Limite honesto, documentado en el propio
+codigo**: Chrome Remote Desktop y herramientas similares (AnyDesk, compartir pantalla de Zoom/
+Discord/OBS) NO son una sesion RDP real - capturan el escritorio local por otra via, y no
+existe ninguna API universal de Windows para detectar "esta ventana esta siendo capturada por
+una herramienta externa cualquiera ahora mismo" - cualquier deteccion para ese caso seria
+adivinar, no algo real. Como escape real para ese caso exacto (el que de hecho disparo el bug
+original), variable de entorno `TERRAKEEP_FORCE_SOFTWARE_RENDER=1` fuerza software sin
+recompilar.
+
+Verificado con `ShouldForceSoftwareRendering()` extraido a metodo propio y llamado directo
+desde el arnes (el `OnStartup` real de `App.xaml.cs` no se ejecuta ahi, el arnes crea un
+`Application` a pelo): en esta maquina, sin RDP, da `False`; con la variable de entorno puesta,
+da `True`. `dotnet build`/`dotnet test` en verde (134/134).
