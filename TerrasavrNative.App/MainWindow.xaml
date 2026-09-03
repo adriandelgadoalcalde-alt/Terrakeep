@@ -1730,17 +1730,31 @@
                         </DockPanel>
                     </TabItem>
                     <TabItem Header="Apariencia">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
-                            <StackPanel MaxWidth="640" HorizontalAlignment="Left">
-                                <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego) - sin armadura/vestuario equipado, item en mano ni animacion, solo la pose de reposo. No aplica el efecto visual del tinte de pelo (shader especial que este preview no reproduce), solo su color de pelo base."
-                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                        <!-- Auditoria de Opus, Bloque 4 (P-1): "el preview se desplaza fuera de
+                             vista justo cuando mas falta hace verlo - al mover un slider de
+                             color" - antes todo (preview incluido) vivia en un unico
+                             ScrollViewer/StackPanel vertical. Ahora 2 columnas reales: el
+                             preview se queda FIJO a la izquierda (nunca se desplaza), todo lo
+                             editable (genero/peinado/tinte/colores/estadisticas) vive en su
+                             propio ScrollViewer independiente a la derecha - el resultado de
+                             cualquier ajuste se ve siempre, sin tener que volver a subir. -->
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
 
-                                <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="8" Padding="16"
-                                        HorizontalAlignment="Left" Margin="0,0,0,18">
+                            <StackPanel Grid.Column="0" VerticalAlignment="Top" Margin="0,0,20,0">
+                                <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,10">
                                     <Image Source="{Binding Appearance.PreviewImage}" Width="240" Height="336"
                                            RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="Uniform" />
                                 </Border>
+                                <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego) - sin armadura/vestuario equipado, item en mano ni animacion, solo la pose de reposo. No aplica el efecto visual del tinte de pelo (shader especial que este preview no reproduce), solo su color de pelo base."
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Width="240" />
+                            </StackPanel>
 
+                            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                            <StackPanel MaxWidth="640" HorizontalAlignment="Left">
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
                                     <StackPanel Margin="0,0,24,0">
                                         <TextBlock Text="Genero" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
@@ -1905,7 +1919,8 @@
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>
-                        </ScrollViewer>
+                            </ScrollViewer>
+                        </Grid>
                     </TabItem>
                     <TabItem Header="Spawn Points">
                         <DockPanel Margin="0,10,0,0">

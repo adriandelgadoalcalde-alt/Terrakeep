@@ -3959,3 +3959,25 @@ visual de Inventario (`A4-1350: presente=False`); (2) a 1500px, SI coexiste de v
 `SwapWith` (el mismo metodo real que ya dispara el gesto de arrastrar) - `Inventario[0]` se
 vacio y `Banco[0]` recibio el objeto real correctamente. `dotnet build`/`dotnet test` en verde
 (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### Bloque 4 (parte 4) - P-1: Apariencia en 2 columnas con preview fijo
+
+**Antes**: un unico `ScrollViewer`/`StackPanel` vertical con TODO (preview incluido) - ajustar
+un color o revisar Estadisticas (al final del todo) hacia que el preview de cuerpo completo se
+desplazara fuera de vista justo cuando mas util seria verlo en vivo mientras se toca un slider.
+
+**Ahora**: `Grid` de 2 columnas real - preview + descripcion en la columna izquierda (fuera de
+cualquier `ScrollViewer`, nunca se mueve), Genero/Peinado/Tinte/colores/Estadisticas en su
+propio `ScrollViewer` independiente a la derecha. El resultado de cualquier ajuste se ve
+siempre, sin volver a subir.
+
+Verificado con medicion real de pantalla (no solo "vive fuera del StackPanel que scrollea" en
+el codigo): posicion real en pixeles (`BoundingRectangle`) del preview antes y despues de
+desplazar la columna derecha hasta el final via `ScrollPattern` real - IDENTICA
+(`196;249;240;336` en ambos casos). Dos capturas reales confirman que el contenido de la
+derecha SI se movio de verdad (de "Genero/Peinado..." a "Estadisticas" visible) mientras el
+preview se quedo pixel a pixel en el mismo sitio. `dotnet build`/`dotnet test` en verde
+(134/134).
+
+**Bloque 4 (parcial)**: T-3/T-2/E-2/A-4/P-1 cerrados y comiteados. Queda T-1 (eliminar los
+Width/Height fijos que sigan quedando por el resto del XAML) para cerrar el bloque del todo.
