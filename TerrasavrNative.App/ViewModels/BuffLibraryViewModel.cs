@@ -131,7 +131,10 @@ public partial class BuffLibraryViewModel : ObservableObject
     private void PlaceInTarget(BuffCatalogEntryViewModel entry)
     {
         if (PickTarget == null) return;
-        PickTarget.PlaceBuff(entry.Id);
+        // Bu-b (segunda auditoria de Opus, Fable): si PlaceBuff rechaza (buff duplicado real),
+        // el picker se queda abierto - el aviso real (Slot.RejectionMessage) ya se ve en el
+        // panel Editar, cerrar el picker aqui ademas seria fingir que se coloco algo.
+        if (!PickTarget.PlaceBuff(entry.Id)) return;
         PickTarget = null;
         BuffPlaced?.Invoke();
     }

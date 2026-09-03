@@ -46,8 +46,12 @@ public partial class FlagsViewModel : ObservableObject
         GummyWorm = character.ExtraUsingFlags[5];
         Ambrosia = character.ExtraUsingFlags[6];
         FinishedDD2Event = character.FinishedDD2Event;
+        // D-c (segunda auditoria de Opus, Fable): BUG REAL - las dos escribian/leian el MISMO
+        // bit 0, "marcar una no reflejaba la otra aunque el dato ya coincide". Confirmado contra
+        // el codigo real decompilado (Player.cs, BitsByte real que empaqueta el guardado):
+        // bit[0]=unlockedSuperCart, bit[1]=enabledSuperCart - dos flags reales distintos.
         UnlockedSuperMinecart = (character.SuperCartByte & 1) != 0;
-        UsingSuperMinecart = (character.SuperCartByte & 1) != 0;
+        UsingSuperMinecart = (character.SuperCartByte & 2) != 0;
         _suppressWriteback = false;
 
         _character = character;
@@ -74,6 +78,6 @@ public partial class FlagsViewModel : ObservableObject
     partial void OnUsingSuperMinecartChanged(bool value)
     {
         if (_suppressWriteback || _character == null) return;
-        _character.SuperCartByte = (byte)((_character.SuperCartByte & ~1) | (value ? 1 : 0));
+        _character.SuperCartByte = (byte)((_character.SuperCartByte & ~2) | (value ? 2 : 0));
     }
 }

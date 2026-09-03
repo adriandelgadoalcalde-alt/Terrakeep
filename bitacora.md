@@ -4762,3 +4762,73 @@ real revisada a mano (barra horizontal real y proporcional visible al pie del ma
 `dotnet test` 179/179 en verde (sin pruebas xunit nuevas: es un `ControlTemplate` de WPF, ya
 probado por el propio arnes visual), arnes visual con `T-D:` en verde y sin ningun otro
 NO-FOUND/FALLO/EXCEPTION.
+
+### Bug real de concurrencia encontrado investigando la inestabilidad de "dotnet test" (no de la auditoria - hallazgo propio)
+
+**Root-cause real, por fin, de la inestabilidad ya documentada dos veces antes** ("carrera de
+compilacion en paralelo" en T-I/T-F y R-d..R-g) - esta vez con 28/52 pruebas fallando de golpe
+en una sola ejecucion, con errores dispersos y sin relacion aparente entre si (valores
+inesperados, `NullReferenceException`...), siempre resueltos al reintentar. Investigado de
+verdad esta vez en vez de anotarlo otra vez como "flaky": `PlayerPreviewRenderer.Cache` era un
+`Dictionary<string, byte[]>` normal, compartido (`static`) y relleno bajo demanda con un patron
+real `TryGetValue` + asignacion SIN ningun `lock`. xunit ejecuta clases de test EN PARALELO por
+omision, y practicamente todas construyen un `MainViewModel` real (que llama a
+`PlayerPreviewRenderer.Render` al cargar Apariencia) - con suficientes pruebas ya acumuladas
+esta sesion, la probabilidad real de que dos hilos golpearan el diccionario a la vez dejo de
+ser insignificante. Un `Dictionary` no es seguro para lectura+escritura concurrente - puede
+corromper su estado interno bajo carga real, exactamente el patron disperso observado.
+
+Arreglado con `ConcurrentDictionary<string, byte[]>` + `GetOrAdd` (atomico, el tipo real
+pensado para esto) en vez de reinventar el locking a mano. Revisado el resto del proyecto
+(`Core`+`App/Services`) buscando el mismo patron real - ningun otro cache estatico mutable sin
+proteger, solo tablas de consulta `static readonly` fijas (construidas una vez, nunca
+modificadas despues, seguras de leer en paralelo).
+
+**Verificado de verdad, no solo "parece que ya no falla"**: 5 ejecuciones seguidas de
+`TerrasavrNative.App.ViewModels.Tests` en solitario, las 5 en 52/52 verde (antes, la misma
+ejecucion habia fallado 28/52 una vez de cada pocas). Las dos entradas anteriores de esta
+bitacora que decian "pinta a carrera de compilacion en paralelo" eran, casi con toda
+seguridad, este mismo bug real - se deja constancia aqui por si alguien relee aquellas y se
+pregunta si siguen sin explicar del todo (ya no).
+
+### E-b + Bu-a + Bu-b + D-c + Ap-e + Ap-f (segunda auditoria, Fable) - lote de hallazgos sueltos
+
+**E-b, en modo Amplio se pierde la simetria de las 3 columnas**: la etiqueta de cada columna
+usaba el `DisplayName` largo pensado para el panel Editar ("Equipo puesto - armadura/
+accesorios" x3) - ya existian etiquetas cortas reales en `KindOptions[0/1/2].Label`
+("Armadura"/"Vanidad"/"Tintes"), solo habia que reutilizarlas (binding indexado real de WPF).
+
+**Bu-a, los slots de buff no tenian flash de edicion**: T-14 se porto a objetos y no a buffs,
+pese a que los comentarios ya declaraban a los dos paneles como gemelos. Calco literal de
+`ItemSlotViewModel.JustEdited`/`TriggerEditFlash` en `BuffSlotViewModel`, mismo Border/Opacity/
+Storyboard real en `BuffSlotCompactTemplate`, disparado desde el mismo sitio real donde
+`BuffsViewModel` ya escuchaba cambios por slot (con el mismo guardia anti-reentrada real que
+`IsSelected`/`JustEdited` ya necesitaban en objetos).
+
+**Bu-b, se podian poner buffs duplicados**: `PlaceBuff` no comprobaba si el buff ya estaba en
+otro slot - Terraria no tiene dos instancias del mismo buff activas a la vez. Delegado real
+(`Func<int, BuffSlotViewModel, bool>`, no la coleccion entera - los slots hermanos se estan
+construyendo a la vez) inyectado desde `BuffsViewModel.LoadFrom`; `PlaceBuff` ahora devuelve
+`bool` y dejsa un `RejectionMessage` real (mismo patron ya usado en `ItemSlotViewModel`) - el
+picker de la Libreria de buffs se queda abierto si se rechaza, en vez de fingir que se coloco.
+
+**D-c, BUG REAL de verdad (no solo cosmetico) - las 2 casillas de carrito potenciado escribian
+el MISMO bit**: `UnlockedSuperMinecart` y `UsingSuperMinecart` leian/escribian ambas el bit 0
+de `SuperCartByte`. Confirmado contra el codigo real decompilado (`Player.cs`,
+`newPlayer.unlockedSuperCart = bitsByte3[0]; newPlayer.enabledSuperCart = bitsByte3[1];`) - son
+dos flags reales y distintos, bit 0 y bit 1. Corregido a leer/escribir cada uno su bit real.
+
+**Ap-e, `IsMale` no cambia nada en el preview, y no se decia**: confirmado en
+`PlayerPreviewRenderer.Render` (`_ = isMale;`, sin usar - la unica variante de piel completa
+disponible se usa para ambos generos). Añadida una frase honesta mas al texto que ya enumeraba
+otras limitaciones reales del preview.
+
+**Ap-f, sin validacion Vida actual <= maxima**: se podia poner `HealthNow=500`/`HealthMax=100`
+sin que nada lo impidiera - el juego real lo recorta. Recortado en `AppearanceViewModel`
+(`HealthNow` nunca supera `HealthMax`; bajar `HealthMax` arrastra `HealthNow` hacia abajo si
+hace falta) - el guardia solo aplica FUERA de la carga (`_suppressWriteback`), igual que el
+resto de propiedades de esta clase. Mismo arreglo aplicado a Mana (mismo par exacto de campos,
+no lo menciona el hallazgo original pero es el mismo bug).
+
+10 pruebas deterministas nuevas (`HallazgosSueltosTests.cs`). `dotnet test` 186/186 en verde,
+arnes visual completo sin NO-FOUND/FALLO/EXCEPTION.

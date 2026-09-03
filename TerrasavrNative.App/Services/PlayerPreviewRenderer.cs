@@ -45,7 +45,15 @@ public static class PlayerPreviewRenderer
 
     public readonly record struct PlayerColors(Tint Hair, Tint Skin, Tint Eyes, Tint Shirt, Tint Under, Tint Pants, Tint Shoes);
 
-    private static readonly Dictionary<string, byte[]> Cache = [];
+    // Bug real de concurrencia encontrado investigando fallos de test intermitentes y dispersos
+    // (valores inesperados y excepciones sin relacion aparente, distintos cada vez, siempre
+    // resueltos al reintentar) - xunit ejecuta clases de test EN PARALELO por omision, y
+    // practicamente todas construyen un MainViewModel real (que llama a Render() al cargar
+    // Apariencia). Un Dictionary normal no es seguro para lectura+escritura concurrente desde
+    // varios hilos a la vez - el patron real de abajo (TryGetValue + asignacion, sin lock) podia
+    // corromper su estado interno bajo carga real. ConcurrentDictionary es el tipo real pensado
+    // para esto (GetOrAdd atomico).
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> Cache = new();
 
     public static WriteableBitmap Render(int hairStyle, bool isMale, PlayerColors colors)
     {
@@ -104,13 +112,7 @@ public static class PlayerPreviewRenderer
         return LoadCached(path);
     }
 
-    private static byte[] LoadCached(string path)
-    {
-        if (Cache.TryGetValue(path, out var cached)) return cached;
-        var pixels = LoadPngPixels(path);
-        Cache[path] = pixels;
-        return pixels;
-    }
+    private static byte[] LoadCached(string path) => Cache.GetOrAdd(path, LoadPngPixels);
 
     private static byte[] LoadPngPixels(string path)
     {

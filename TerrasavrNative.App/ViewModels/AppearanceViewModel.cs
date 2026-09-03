@@ -215,10 +215,39 @@ public partial class AppearanceViewModel : ObservableObject
         _character.Difficulty = (byte)Math.Clamp(value, 0, 3);
     }
 
-    partial void OnHealthNowChanged(int value) { if (!_suppressWriteback && _character != null) _character.HealthNow = value; }
-    partial void OnHealthMaxChanged(int value) { if (!_suppressWriteback && _character != null) _character.HealthMax = value; }
-    partial void OnManaNowChanged(int value) { if (!_suppressWriteback && _character != null) _character.ManaNow = value; }
-    partial void OnManaMaxChanged(int value) { if (!_suppressWriteback && _character != null) _character.ManaMax = value; }
+    // Ap-f (segunda auditoria de Opus, Fable): "se puede poner HealthNow=500/HealthMax=100; el
+    // juego lo recorta, Terrakeep no". El recorte/arrastre SOLO se aplica fuera de la carga
+    // (_suppressWriteback) - durante LoadFrom, HealthNow se asigna ANTES que HealthMax (arriba),
+    // recortar contra un HealthMax todavia sin poner (0 o el del personaje anterior)
+    // corromperia el dato real que se esta cargando; mismo motivo real por el que el resto de
+    // OnXxxChanged de aqui ya usan este mismo guardia. Mismo bug real y mismo arreglo en Mana
+    // (el hallazgo original no lo menciona, pero es el mismo par exacto de campos).
+    partial void OnHealthNowChanged(int value)
+    {
+        if (_suppressWriteback || _character == null) return;
+        int clamped = Math.Clamp(value, 0, HealthMax);
+        if (clamped != value) { HealthNow = clamped; return; } // reentra, se estabiliza al segundo paso
+        _character.HealthNow = value;
+    }
+    partial void OnHealthMaxChanged(int value)
+    {
+        if (_suppressWriteback || _character == null) return;
+        if (HealthNow > value) HealthNow = value; // arrastra el actual hacia abajo si el maximo baja por debajo
+        _character.HealthMax = value;
+    }
+    partial void OnManaNowChanged(int value)
+    {
+        if (_suppressWriteback || _character == null) return;
+        int clamped = Math.Clamp(value, 0, ManaMax);
+        if (clamped != value) { ManaNow = clamped; return; }
+        _character.ManaNow = value;
+    }
+    partial void OnManaMaxChanged(int value)
+    {
+        if (_suppressWriteback || _character == null) return;
+        if (ManaNow > value) ManaNow = value;
+        _character.ManaMax = value;
+    }
     partial void OnFishingQuestsCompletedChanged(int value) { if (!_suppressWriteback && _character != null) _character.FishingQuestsCompleted = value; }
     partial void OnGolferScoreChanged(int value) { if (!_suppressWriteback && _character != null) _character.GolferScore = value; }
 

@@ -21,6 +21,12 @@ public partial class BuffSlotViewModel : ObservableObject
     private readonly VanillaBuffDurationCatalog _durations;
     private readonly int _characterVersion;
     private readonly Action<BuffSlotViewModel>? _requestPick;
+    // Bu-b (segunda auditoria de Opus, Fable): "se pueden poner buffs duplicados - PlaceBuff no
+    // comprueba si el buff ya esta en otro slot, Terraria no tiene dos instancias del mismo
+    // buff". No hay referencia directa a los slots hermanos (se construyen todos a la vez en
+    // BuffsViewModel.LoadFrom) - se les pasa un delegado real en vez de la coleccion entera, la
+    // misma coleccion que se sigue rellenando mientras este slot se construye.
+    private readonly Func<int, BuffSlotViewModel, bool>? _isPlacedElsewhere;
     private bool _suppressDurationWriteback;
 
     public PlrBuff Buff { get; }
@@ -34,12 +40,36 @@ public partial class BuffSlotViewModel : ObservableObject
     [ObservableProperty] private int _durationSeconds;
     [ObservableProperty] private bool _isSelected;
 
+    // Mismo patron real ya usado en ItemSlotViewModel.RejectionMessage - un aviso real, no
+    // modal, que se limpia solo en la siguiente colocacion con exito.
+    [ObservableProperty] private string? _rejectionMessage;
+
+    // Bu-a (segunda auditoria de Opus, Fable): "T-14 se porto a objetos y no a buffs, aunque
+    // los comentarios declaran a los dos paneles como gemelos". Calco literal real de
+    // ItemSlotViewModel.JustEdited/TriggerEditFlash - ver ahi el porque del False->True
+    // explicito (re-disparar el flash en la MISMA edicion en <450ms) y de Task.Delay en vez de
+    // un DispatcherTimer por instancia.
+    [ObservableProperty] private bool _justEdited;
+
+    public void TriggerEditFlash()
+    {
+        JustEdited = false;
+        JustEdited = true;
+        _ = ResetEditFlashAsync();
+    }
+
+    private async System.Threading.Tasks.Task ResetEditFlashAsync()
+    {
+        await System.Threading.Tasks.Task.Delay(450);
+        JustEdited = false;
+    }
+
     public bool IsNotEmpty => !IsEmpty;
     partial void OnIsEmptyChanged(bool value) => OnPropertyChanged(nameof(IsNotEmpty));
 
     public BuffSlotViewModel(int slotIndex, PlrBuff buff, VanillaBuffCatalog vanillaCatalog,
         CalamityBuffCatalog calamityCatalog, VanillaBuffDurationCatalog durations, int characterVersion,
-        Action<BuffSlotViewModel>? requestPick = null)
+        Action<BuffSlotViewModel>? requestPick = null, Func<int, BuffSlotViewModel, bool>? isPlacedElsewhere = null)
     {
         SlotIndex = slotIndex;
         Buff = buff;
@@ -48,6 +78,7 @@ public partial class BuffSlotViewModel : ObservableObject
         _durations = durations;
         _characterVersion = characterVersion;
         _requestPick = requestPick;
+        _isPlacedElsewhere = isPlacedElsewhere;
         Refresh();
     }
 
@@ -88,13 +119,29 @@ public partial class BuffSlotViewModel : ObservableObject
     // el mismo criterio "mejor prefijo automatico" que ya usa ItemSlotViewModel.PlaceItem con
     // objetos: un valor real y razonable de entrada, editable despues a mano o con los 3
     // botones Minima/Media/Maxima del panel Editar).
-    public void PlaceBuff(int buffId)
+    //
+    // Bu-b (segunda auditoria de Opus, Fable): Terraria no tiene dos instancias del mismo buff
+    // activas a la vez - rechaza la colocacion (sin tocar el slot) si ese buff YA esta en otro
+    // slot, mismo criterio real de "avisar, no fingir" que RejectionMessage ya usa en
+    // ItemSlotViewModel.
+    public bool PlaceBuff(int buffId)
     {
+        if (_isPlacedElsewhere?.Invoke(buffId, this) == true)
+        {
+            bool esDeCalamity = buffId >= CalamityIds.BuffIdBase;
+            string nombre = esDeCalamity
+                ? _calamityCatalog.BySyntheticId(buffId)?.DisplayName ?? $"Calamity #{buffId}"
+                : _vanillaCatalog.GetDisplayName(buffId);
+            RejectionMessage = $"'{nombre}' ya esta puesto en otro slot - Terraria no permite dos instancias del mismo buff.";
+            return false;
+        }
+        RejectionMessage = null;
         Buff.Id = buffId;
         Buff.Time = buffId < CalamityIds.BuffIdBase
             ? BuffDurationPresets.GetPresets(buffId, _characterVersion, _durations).MinTicks
             : 600 * 60; // Calamity: sin tabla de duraciones real todavia, 10 min razonable
         Refresh();
+        return true;
     }
 
     public void SwapWith(BuffSlotViewModel other)

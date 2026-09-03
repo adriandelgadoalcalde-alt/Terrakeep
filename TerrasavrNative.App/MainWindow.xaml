@@ -677,6 +677,27 @@
                              HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0"
                              Visibility="{Binding IsCalamity, Converter={StaticResource BoolToVis}}"
                              ToolTip="Buff de Calamity" />
+                    <!-- Bu-a (segunda auditoria de Opus, Fable): "T-14 se porto a objetos y no a
+                         buffs, aunque los comentarios declaran a los dos paneles como gemelos" -
+                         calco literal del flash real de SlotCompactTemplate (T-14), mismo canal
+                         independiente (Opacity propio, IsHitTestVisible=False). -->
+                    <Border Background="{StaticResource AccentBrush}" CornerRadius="4" Opacity="0" IsHitTestVisible="False">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding JustEdited}" Value="True">
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="0.45" Duration="0:0:0.22" AutoReverse="True" />
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
                 </Grid>
             </Border>
         </DataTemplate>
@@ -734,6 +755,12 @@
                         <TextBlock Text="{Binding Slot.DisplayName}" Style="{StaticResource BodyText}" TextWrapping="Wrap"
                                    MaxWidth="200" VerticalAlignment="Center" />
                     </DockPanel>
+
+                    <!-- Bu-b (segunda auditoria de Opus, Fable): mismo patron real ya usado en
+                         ItemEditTemplate - RejectionMessage, sin nada modal. -->
+                    <TextBlock Text="{Binding Slot.RejectionMessage}" Style="{StaticResource CaptionText}"
+                               Foreground="{StaticResource CalamityBrush}" TextWrapping="Wrap" Margin="0,-4,0,8"
+                               Visibility="{Binding Slot.RejectionMessage, Converter={StaticResource NullToVis}}" />
 
                     <TextBlock Text="{Binding Slot.Description}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                                Margin="0,0,0,10" Visibility="{Binding Slot.Description, Converter={StaticResource NullToVis}}" />
@@ -1389,16 +1416,22 @@
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
+                                                    <!-- E-b (segunda auditoria de Opus, Fable): "la etiqueta de
+                                                         cada columna usa el DisplayName largo pensado para el
+                                                         panel Editar, repitiendo 'Equipo puesto -' tres veces -
+                                                         ya existen literalmente en KindOptions, solo hay que
+                                                         reutilizarlos" - EquipmentKind.Items=0/Social=1/Dyes=2,
+                                                         mismo orden real que KindOptions ya declara. -->
                                                     <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                                        <TextBlock Text="{Binding EquipmentGroup.CurrentItems.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                        <TextBlock Text="{Binding EquipmentGroup.KindOptions[0].Label}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
                                                         <ContentControl Content="{Binding EquipmentGroup.CurrentItems}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="1" Margin="0,0,8,0">
-                                                        <TextBlock Text="{Binding EquipmentGroup.CurrentSocial.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                        <TextBlock Text="{Binding EquipmentGroup.KindOptions[1].Label}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
                                                         <ContentControl Content="{Binding EquipmentGroup.CurrentSocial}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="2">
-                                                        <TextBlock Text="{Binding EquipmentGroup.CurrentDyes.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                        <TextBlock Text="{Binding EquipmentGroup.KindOptions[2].Label}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
                                                         <ContentControl Content="{Binding EquipmentGroup.CurrentDyes}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                     </StackPanel>
                                                 </Grid>
@@ -1839,7 +1872,7 @@
                                     <Image Source="{Binding Appearance.PreviewImage}" Width="240" Height="336"
                                            RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="Uniform" />
                                 </Border>
-                                <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego) - sin armadura/vestuario equipado, item en mano ni animación, solo la pose de reposo. No aplica el efecto visual del tinte de pelo (shader especial que este preview no reproduce), solo su color de pelo base."
+                                <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego) - sin armadura/vestuario equipado, item en mano ni animación, solo la pose de reposo. No aplica el efecto visual del tinte de pelo (shader especial que este preview no reproduce), solo su color de pelo base. Tampoco refleja Chico/Chica (se guarda de verdad en el personaje, pero este preview usa el mismo sprite base para los dos)."
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Width="240" />
                             </StackPanel>
 
