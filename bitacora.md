@@ -4924,3 +4924,37 @@ en vivo al colocar y vaciar). Verificado con captura real (`resize-inv-minimo.pn
 compacta de Inventario muestra ahora "Inventario (12/50)" tras cargar un personaje real.
 `dotnet test` 197/197 en verde (134 Core + 63 ViewModels), arnes UIA completo sin NO-FOUND/
 FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### A-d (segunda auditoria, Fable) - operaciones en bloque: ordenar, vaciar, mover al banco
+
+**"Operaciones en bloque - ordenar, vaciar contenedor, mover todo al banco"**: solo existia
+"Vaciar slot" individual. 3 comandos reales nuevos en `ContainerViewModel` (`ClearAllCommand`,
+`SortCommand`, `MoveAllTo`) + uno en `MainViewModel` (`MoveInventoryToStorageCommand`, hacia el
+Almacen que este seleccionado en la pestaña Almacenes, no fijo a "Banco" - generaliza a los 4
+sin inventar 4 botones distintos). Botones "Ordenar"/"Vaciar contenedor" en las 4 cabeceras
+reales de Inventario/Almacenes (compacto y Amplio); "Mover todo al almacén" solo en Inventario.
+
+**Investigacion real antes de "Ordenar" (no adivinado)**: se miro el algoritmo REAL de Terraria
+(`Terraria.UI.ItemSorting` decompilado) antes de escribir nada - son ~30 "capas" reales por tipo
+de daño/herramienta/consumible, cada una con su propio set de prioridad por id
+(`SortingPriorityWeaponsRanged`, etc.), datos que este catalogo no extrae hoy (melee/ranged/
+magic/summon, createTile...). Replicarlo es un trabajo de extraccion nuevo y mucho mayor que
+este boton - mismo motivo real por el que L-f (limite de "Cantidad" por maxStack) quedo
+aparcado en vez de fingido. "Ordenar" usa en su lugar un criterio propio, simple y documentado
+como tal (Id ascendente, empaquetado al principio) - no una imitacion a medias del real.
+
+**Bug real encontrado al verificar con captura, no al escribir el codigo**: el boton "Mover
+todo al almacén" salia con aspecto deshabilitado (mas tenue que "Ordenar"/"Vaciar contenedor")
+pese a haber un personaje cargado - `OnIsCharacterLoadedChanged` llamaba a
+`NotifyCanExecuteChanged()` de los 3 comandos de siempre (Guardar/Investigar todo/Auto-equipar)
+pero se olvido de añadir el nuevo ahi. Sin ese aviso, WPF no vuelve a preguntar `CanExecute`
+hasta el primer requery automatico (foco/raton) - un usuario real podria pulsarlo mientras
+parece gris. Arreglado añadiendolo a la misma lista.
+
+"Mover todo al banco": lo que no cabe en el destino se queda donde estaba, nunca se pierde en
+silencio (cubierto por una prueba determinista explicita con el banco casi lleno). 4 pruebas
+deterministas nuevas (`ContainerBulkOpsTests.cs`). Verificado con capturas reales: Inventario
+muestra los 3 botones con el mismo brillo (activos), Almacenes muestra "Ordenar"/"Vaciar
+contenedor" junto a las pildoras de Banco/Caja fuerte/Fragua/Boveda con sus recuentos reales.
+`dotnet test` 201/201 en verde (134 Core + 67 ViewModels), arnes UIA completo sin NO-FOUND/
+FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.

@@ -607,6 +607,25 @@ public partial class MainViewModel : ObservableObject
         SelectedTabIndex = (int)AppTab.Personaje;
     }
 
+    // A-d (segunda auditoria de Opus, Fable): "mover todo al banco" - mueve el Inventario
+    // entero al Almacen que este seleccionado ahora mismo (StorageGroup.Current, el mismo
+    // selector de pildoras de Banco/Caja fuerte/Fragua/Boveda ya existente) en vez de fijarlo
+    // solo a "Banco" - generaliza igual de bien a los 4 almacenes sin inventar un cuarto boton
+    // por cada uno.
+    [RelayCommand(CanExecute = nameof(IsCharacterLoaded))]
+    private void MoveInventoryToStorage()
+    {
+        if (InventoryContainer == null || StorageGroup == null) return;
+        int moved = InventoryContainer.MoveAllTo(StorageGroup.Current);
+        if (moved == 0)
+        {
+            StatusMessage = "Nada que mover: el inventario está vacío o el almacén seleccionado no tiene hueco libre.";
+            return;
+        }
+        MarkDirty();
+        StatusMessage = $"Movido{(moved == 1 ? "" : "s")} {moved} objeto(s) al almacén seleccionado - pulsa Guardar para conservarlo.";
+    }
+
     // Los primeros 10 slots reales de "inventory" son la barra rapida (Player.inventory[0..9]
     // en el propio Terraria - confirmado en Player.cs decompilado, "Hotbar1".."Hotbar0" son 10
     // triggers reales) - contorno verde de "equipado" tambien ahi, igual que en Equipamiento
@@ -680,5 +699,9 @@ public partial class MainViewModel : ObservableObject
         SaveCommand.NotifyCanExecuteChanged();
         ResearchAllCommand.NotifyCanExecuteChanged();
         AutoEquipCommand.NotifyCanExecuteChanged();
+        // A-d: se olvido aqui al añadirlo - sin este aviso el boton "Mover todo al almacén" se
+        // quedaba con aspecto deshabilitado hasta el primer requery automatico de WPF (foco/
+        // raton), encontrado al verificar con captura real, no al escribir el codigo.
+        MoveInventoryToStorageCommand.NotifyCanExecuteChanged();
     }
 }

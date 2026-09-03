@@ -1483,7 +1483,21 @@
                                                  abajo) ya tenia esta cabecera, la normal/compacta no tenia
                                                  ninguna. -->
                                             <DockPanel>
-                                                <TextBlock DockPanel.Dock="Top" Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,6" />
+                                                <!-- A-d (segunda auditoria de Opus, Fable): "operaciones en bloque -
+                                                     ordenar, vaciar contenedor, mover todo al banco" - ver los 3
+                                                     comandos reales en ContainerViewModel/MainViewModel. -->
+                                                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                        <Button Content="Mover todo al almacén" Command="{Binding MoveInventoryToStorageCommand}"
+                                                                ToolTip="Mueve todo el Inventario al almacén seleccionado en la pestaña Almacenes (Banco/Caja fuerte/Fragua/Bóveda) - lo que no quepa se queda donde está"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="Ordenar" Command="{Binding InventoryContainer.SortCommand}"
+                                                                ToolTip="Ordena los objetos por Id, empaquetados al principio" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="Vaciar contenedor" Command="{Binding InventoryContainer.ClearAllCommand}"
+                                                                ToolTip="Vacía todos los slots del Inventario" Tag="Ghost" Padding="6,3" FontSize="10.5" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                </DockPanel>
                                                 <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                             </DockPanel>
                                         </Border>
@@ -1500,7 +1514,18 @@
                                             <Border Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                     Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,4,0">
                                                 <DockPanel>
-                                                    <TextBlock DockPanel.Dock="Top" Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,6" />
+                                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                            <Button Content="Mover todo al almacén" Command="{Binding MoveInventoryToStorageCommand}"
+                                                                    ToolTip="Mueve todo el Inventario al almacén seleccionado a la derecha - lo que no quepa se queda donde está"
+                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                            <Button Content="Ordenar" Command="{Binding InventoryContainer.SortCommand}"
+                                                                    ToolTip="Ordena los objetos por Id, empaquetados al principio" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                            <Button Content="Vaciar contenedor" Command="{Binding InventoryContainer.ClearAllCommand}"
+                                                                    ToolTip="Vacía todos los slots del Inventario" Tag="Ghost" Padding="6,3" FontSize="10.5" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                    </DockPanel>
                                                     <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                 </DockPanel>
                                             </Border>
@@ -1508,18 +1533,26 @@
                                                     Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="4,6,0,0"
                                                     DataContext="{Binding StorageGroup}">
                                                 <DockPanel>
-                                                    <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Options}" Margin="0,0,0,6">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
-                                                                <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
-                                                                        Command="{Binding DataContext.StorageGroup.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                        CommandParameter="{Binding}" />
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
+                                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                            <Button Content="Ordenar" Command="{Binding Current.SortCommand}"
+                                                                    ToolTip="Ordena los objetos por Id, empaquetados al principio" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                            <Button Content="Vaciar contenedor" Command="{Binding Current.ClearAllCommand}"
+                                                                    ToolTip="Vacía todos los slots de este almacén" Tag="Ghost" Padding="6,3" FontSize="10.5" />
+                                                        </StackPanel>
+                                                        <ItemsControl ItemsSource="{Binding Options}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
+                                                                    <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
+                                                                            Command="{Binding DataContext.StorageGroup.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}" />
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </DockPanel>
                                                     <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                 </DockPanel>
                                             </Border>
@@ -1535,21 +1568,29 @@
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
                                             <DockPanel DataContext="{Binding StorageGroup}">
-                                                <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Options}" Margin="0,0,0,6">
-                                                    <ItemsControl.ItemsPanel>
-                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                                    </ItemsControl.ItemsPanel>
-                                                    <ItemsControl.ItemTemplate>
-                                                        <!-- Auditoria de Opus, A-1: "para saber si el Banco esta lleno hay
-                                                             que pulsar su pildora y contar" - DisplayLabel ya trae el
-                                                             recuento real en vivo ("Banco (38/40)"). -->
-                                                        <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
-                                                            <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
-                                                                    Command="{Binding DataContext.StorageGroup.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                    CommandParameter="{Binding}" />
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
+                                                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                        <Button Content="Ordenar" Command="{Binding Current.SortCommand}"
+                                                                ToolTip="Ordena los objetos por Id, empaquetados al principio" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="Vaciar contenedor" Command="{Binding Current.ClearAllCommand}"
+                                                                ToolTip="Vacía todos los slots de este almacén" Tag="Ghost" Padding="6,3" FontSize="10.5" />
+                                                    </StackPanel>
+                                                    <ItemsControl ItemsSource="{Binding Options}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <!-- Auditoria de Opus, A-1: "para saber si el Banco esta lleno hay
+                                                                 que pulsar su pildora y contar" - DisplayLabel ya trae el
+                                                                 recuento real en vivo ("Banco (38/40)"). -->
+                                                            <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
+                                                                <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
+                                                                        Command="{Binding DataContext.StorageGroup.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                        CommandParameter="{Binding}" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </DockPanel>
                                                 <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                             </DockPanel>
                                         </Border>

@@ -1,10 +1,13 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using TerrasavrNative.Core.Model;
 
 namespace TerrasavrNative.App.ViewModels;
 
 // Un grupo de slots con nombre para mostrar (una pestaña/seccion: Inventario, Banco...).
-public sealed class ContainerViewModel : ObservableObject
+public sealed partial class ContainerViewModel : ObservableObject
 {
     private readonly string _baseName;
 
@@ -60,4 +63,55 @@ public sealed class ContainerViewModel : ObservableObject
     // ventana, solo que con un techo bajo, coherente con ser un lateral compacto de una sola
     // columna, no el bloque protagonista de la pantalla.
     public double MaxCell { get; init; } = 90;
+
+    // A-d (segunda auditoria de Opus, Fable): "operaciones en bloque - ordenar, vaciar
+    // contenedor, mover todo al banco" - ninguna de las 3 existia, solo el "Vaciar slot"
+    // individual de siempre.
+    [RelayCommand]
+    private void ClearAll()
+    {
+        foreach (var slot in Slots)
+            if (!slot.IsEmpty) slot.ClearCommand.Execute(null);
+    }
+
+    // "Ordenar": por Id ascendente, empaquetando los objetos hacia el principio del
+    // contenedor y dejando los huecos vacios al final.
+    //
+    // Decision real, no improvisada: el algoritmo REAL de Terraria (Terraria.UI.ItemSorting,
+    // decompilado) no es "un solo criterio" - son ~30 capas por tipo de daño/herramienta/
+    // consumible, cada una con su propio set de prioridad por id (SortingPriorityWeaponsRanged,
+    // SortingPriorityToolsMisc...). Replicarlo exigiria datos que este catalogo no extrae hoy
+    // (melee/ranged/magic/summon, createTile, sets de prioridad por id) - un trabajo de
+    // extraccion nuevo, bastante mayor que este boton, mismo motivo real por el que L-f (limite
+    // de "Cantidad" por maxStack real) quedo aparcado en vez de fingido. Id ascendente es un
+    // criterio propio, honesto y documentado - no una imitacion a medias del real.
+    [RelayCommand]
+    private void Sort()
+    {
+        var items = Slots.Where(s => !s.IsEmpty).Select(s => s.Item).OrderBy(i => i.Id).ToList();
+        for (int i = 0; i < Slots.Count; i++)
+            Slots[i].UpdateFrom(i < items.Count ? items[i] : GameItem.Empty);
+    }
+
+    // "Mover todo al banco": usado desde Inventario hacia el Almacen seleccionado (StorageGroup.
+    // Current) - generico para cualquier par origen/destino, respeta AcceptedKind del destino
+    // (irrelevante hoy entre Inventario/Almacenes, ninguno de los dos restringe tipo, pero es el
+    // mismo criterio real que ya usa PlaceItem, no uno nuevo). Lo que no cupo se queda donde
+    // estaba - nunca se pierde nada en silencio.
+    public int MoveAllTo(ContainerViewModel destination)
+    {
+        var freeSlots = destination.Slots.Where(s => s.IsEmpty).ToList();
+        int moved = 0, di = 0;
+        foreach (var slot in Slots)
+        {
+            if (slot.IsEmpty) continue;
+            while (di < freeSlots.Count && !freeSlots[di].AcceptsItem(slot.ItemId)) di++;
+            if (di >= freeSlots.Count) break;
+            freeSlots[di].UpdateFrom(slot.Item);
+            slot.UpdateFrom(GameItem.Empty);
+            di++;
+            moved++;
+        }
+        return moved;
+    }
 }
