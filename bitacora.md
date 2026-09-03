@@ -4218,3 +4218,43 @@ documentado aqui, sin tocar, en vez de forzar un barrido a ciegas.
 plan de Opus quedan cerradas. **LOS 7 BLOQUES DEL PLAN DE OPUS ESTAN COMPLETOS.** Sigue el paso
 final pedido explicito por el usuario: lanzar una auditoria nueva de Opus, EXACTAMENTE la misma
 que la original, para comparar el antes/despues.
+
+## Segunda auditoría de Opus (comparación) - 2026-09-03
+
+Pedido explícito del usuario tras terminar los 7 bloques: relanzar la MISMA auditoría (mismo
+alcance, mismos 7 principios P1-P7) para comparar el antes/después con ojos frescos, sin dar
+nada por bueno solo por estar en esta bitácora como "hecho y verificado".
+
+**Resultado: 7 defectos reales de severidad alta, vivos ahora mismo.**
+
+- **B-1/B-2** (críticos, REGRESIÓN): el arreglo real de la fila de la Librería (altura fija que
+  no cede al plegar) y de "Elegir objeto..." dejando la Librería desplegada para siempre, YA
+  estaban arreglados en el commit `83fd33c` ("Octava pasada, Fase 1") - el `git revert
+  --no-commit 1331ac6..HEAD` de `c38c960` se llevó por delante esa Fase 1 entera, aunque el
+  rechazo real del usuario era solo sobre la NAVEGACIÓN (Fases 2/3/5/7), no sobre estos dos
+  bugs de layout, que estaban medidos y verificados aparte.
+- **B-3/B-4** (críticos): "Investigar todo" salta en silencio cualquier objeto ya
+  parcialmente investigado (se queda en su conteo antiguo, sigue bloqueado en el juego real
+  pese al mensaje "Investigación completa") y no marca `IsDirty` (mutación directa del modelo,
+  sin pasar por ningún ViewModel observable) - riesgo real de pérdida silenciosa del trabajo.
+- **B-5** (crítico): los Spawn Points tampoco marcan `IsDirty` (mismo agujero de N-2,
+  `ServersViewModel` sin ninguna `[ObservableProperty]` real).
+- **B-6** (alto): la defensa total y el bono de set de Equipamiento (E-4) NO se recalculan al
+  SUSTITUIR una pieza ya puesta por otra (solo escuchan `IsEmpty`, que no cambia en ese caso) -
+  el caso normal de comparar armaduras muestra un número congelado y falso.
+- **B-7** (alto): la comprobación del alto de la fila de la Librería en el arnés (T-21) busca
+  un `MaxHeight=460` que ya no existe (residuo del revert, el valor real es 238) - nunca
+  encuentra nada, imprime `-1px` sin contar como FALLO, y ERA la única comprobación capaz de
+  detectar B-1 - estuvo rota mientras la bitácora certificaba "sin ningún FALLO" siete veces.
+
+Además, hallazgo transversal serio: **`dotnet test` (134/134, citado 11 veces en esta bitácora)
+no ejecuta ni una sola línea de la capa App** - los 6 bugs de arriba viven en ViewModels puros,
+sin dependencia de WPF, que nunca pasaron por ningún test real (T-21 decidió "sin xunit" para
+la parte visual, y sin querer eso dejó también sin cubrir la parte de logica pura).
+
+Informe completo (7 defectos + hallazgos transversales T-A a T-I + las 14 secciones de la app +
+veredicto bloque a bloque con "✓ bien resuelto / ▲ a medias / ✕ regresión" + orden de ataque
+recomendado en 4 tandas) publicado como artifact y entregado al usuario. Pendiente de decisión
+del usuario: qué tanda(s) atacar y en qué orden - el propio informe ya distingue "sin cambiar la
+forma de nada" (tanda 1, bajo riesgo) de "reworks, solo con aprobación explícita" (tanda 4,
+terreno donde ya se pisó una vez con el rediseño de Librería rechazado).
