@@ -2158,6 +2158,14 @@
                                     <TextBlock Foreground="White" TextWrapping="Wrap" FontSize="12"
                                                Text="Cuidado: cambiar la versión cambia qué campos lee/escribe el guardado. Un valor que no encaje con el contenido real del personaje puede producir un archivo que ni esta app ni el juego sepan releer bien." />
                                 </Border>
+                                <!-- V-c (segunda auditoria de Opus, Fable): "bajar de version no
+                                     advierte de lo que se pierde - el aviso generico no dice que
+                                     secciones dejaran de guardarse, los datos reales del personaje
+                                     ya estan a mano para decirlo con numeros". -->
+                                <Border Background="{StaticResource OrangeBrush}" CornerRadius="6" Padding="10,8" Margin="0,0,0,14"
+                                        Visibility="{Binding VersionEditor.DowngradeWarning, Converter={StaticResource NullToVis}}">
+                                    <TextBlock Foreground="White" TextWrapping="Wrap" FontSize="12" Text="{Binding VersionEditor.DowngradeWarning}" />
+                                </Border>
                                 <TextBlock Text="Número de versión en crudo" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
                                 <TextBox Text="{Binding VersionEditor.RawVersion, UpdateSourceTrigger=PropertyChanged}"
                                          Width="90" Padding="6,4" HorizontalAlignment="Left" Margin="0,0,0,16"

@@ -4877,3 +4877,26 @@ pasada.
 pestañas que el arnes no visitaba todavia (Spawn Points, Desbloqueos) - la agrupacion de
 Desbloqueos se ve limpia y clara. `dotnet test` 191/191 en verde, arnes visual completo sin
 NO-FOUND/FALLO/EXCEPTION.
+
+### V-c (segunda auditoria, Fable) - lote 4 de hallazgos sueltos
+
+**"Bajar de versión no advierte de lo que se pierde"**: el aviso rojo generico ya existente no
+decia QUE secciones concretas dejarian de guardarse. Nuevo `VersionEditorViewModel.
+DowngradeWarning` real (banner naranja aparte, visible solo cuando aplica) contra los 3
+umbrales reales de `PlrBodySerializer` con impacto mas facil de contar con exactitud: equipo
+puesto (145), Bóveda del Vacío (200, con el numero real de objetos) y Loadouts 1/2/3 (269, con
+el numero real de objetos sumados entre Items/Vanidad/Tintes).
+
+**Limitacion real encontrada Y documentada al verificar (no fingida)**: los 3 primeros tests
+fallaron al escribir la prueba colocando el equipo VIA LA UI tras cargar - `_character.
+EquipmentItems`/`Loadouts` (los campos crudos que el aviso lee) solo se sincronizan de vuelta
+desde `MergedContainers` dentro de `CharacterFileService.Save`/`MaskAndSyncAll`, nunca al
+colocar un objeto en si. El aviso cubre el caso real mas comun (un personaje que YA trae
+contenido real al cargarlo, y se le baja la version sin darse cuenta) - no una prediccion en
+vivo de ediciones sin guardar. Documentado explicitamente en el propio codigo y en las pruebas
+(reescritas para embeber los datos directamente en el .plr sintetico, el escenario real).
+
+4 pruebas deterministas nuevas. Verificado tambien con una captura real: UIA-Test (con equipo
+real puesto tras Auto-equipar + un Guardar real de por medio) bajado a la version 98 muestra el
+aviso naranja real y especifico junto al generico rojo. `dotnet test` 195/195 en verde, arnes
+visual completo sin NO-FOUND/FALLO/EXCEPTION.

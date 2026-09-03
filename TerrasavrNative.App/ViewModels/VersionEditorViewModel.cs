@@ -36,6 +36,14 @@ public partial class VersionEditorViewModel : ObservableObject
 
     [ObservableProperty] private int _rawVersion;
 
+    // V-c (segunda auditoria de Opus, Fable): "bajar de version no advierte de lo que se pierde
+    // - el aviso generico no dice que secciones dejaran de guardarse, los datos reales del
+    // personaje ya estan a mano para decirlo con numeros". Se recalcula con cada cambio real de
+    // version, contra el contenido REAL ya cargado (los umbrales reales de PlrBodySerializer,
+    // no una lista inventada) - null si no hay nada real que se fuera a perder con el valor
+    // actual.
+    [ObservableProperty] private string? _downgradeWarning;
+
     public IReadOnlyList<VersionGroup> Groups { get; } =
     [
         new("1.1.x", [new("1.1.2", 39)]),
@@ -60,9 +68,44 @@ public partial class VersionEditorViewModel : ObservableObject
         foreach (var group in Groups)
             foreach (var option in group.Options)
                 option.IsCurrent = option.Number == value;
+        DowngradeWarning = BuildDowngradeWarning(value);
 
         if (_suppressWriteback || _character == null) return;
         _character.Version = value;
+    }
+
+    // Umbrales reales de PlrBodySerializer (los mismos que ya leen/escriben estos campos) -
+    // solo los 3 con impacto real mas facil de ver y contar con exactitud contra el personaje
+    // ya cargado: equipo puesto (145), Boveda del Vacio (200) y Loadouts 1-3 (269).
+    //
+    // Limitacion real conocida: _character.EquipmentItems/Loadouts reflejan lo YA CARGADO desde
+    // disco - una edicion hecha en la UI DESPUES de cargar (ej. poner un casco nuevo) no se
+    // vuelca ahi hasta un Guardar real (CharacterFileService.Save/MaskAndSyncAll es el unico
+    // sitio que sincroniza MergedContainers de vuelta a estos campos crudos). Cubre el caso real
+    // mas comun (un personaje que YA trae contenido y se le baja la version sin darse cuenta),
+    // no una prediccion en vivo de ediciones sin guardar todavia.
+    private string? BuildDowngradeWarning(int value)
+    {
+        if (_character == null) return null;
+        var perdidas = new List<string>();
+
+        if (value < 145 && _character.EquipmentItems.Any(s => !s.IsEmpty))
+            perdidas.Add("el equipo puesto (armadura/vanidad/accesorios)");
+
+        if (value < 200)
+        {
+            int voidCount = _character.VoidItems.Count(s => !s.IsEmpty);
+            if (voidCount > 0) perdidas.Add($"{voidCount} objeto(s) de la Bóveda del Vacío");
+        }
+
+        if (value < 269)
+        {
+            int loadoutCount = _character.Loadouts.Sum(l => l.Items.Count(s => !s.IsEmpty) + l.Social.Count(s => !s.IsEmpty) + l.Dyes.Count(s => !s.IsEmpty));
+            if (loadoutCount > 0) perdidas.Add($"{loadoutCount} objeto(s) de los Loadouts 1/2/3");
+        }
+
+        return perdidas.Count == 0 ? null
+            : $"Al guardar con esta versión dejarán de escribirse: {string.Join(", ", perdidas)}.";
     }
 
     [RelayCommand]

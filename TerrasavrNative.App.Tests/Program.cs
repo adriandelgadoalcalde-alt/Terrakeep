@@ -1499,6 +1499,28 @@ internal static class Program
         }
         catch (Exception ex) { Console.WriteLine("S-d-D-b-EXCEPTION: " + ex); }
 
+        // Verificacion visual real de V-c (segunda auditoria de Opus, Fable): UIA-Test ya trae
+        // equipo real puesto (T20-AUTOEQUIP, mas arriba) - bajar de version por debajo del
+        // umbral real 145 debe mostrar el aviso naranja real con el conteo.
+        try
+        {
+            vm.PersonajeInnerTabIndex = 6; // Version
+            DoEvents(); DoEvents();
+            vm.VersionEditor.SetVersionCommand.Execute(98);
+            DoEvents(); DoEvents();
+            Console.WriteLine($"V-c: DowngradeWarning tras bajar a 98 -> \"{vm.VersionEditor.DowngradeWarning}\" (esperado real, no null)");
+            if (vm.VersionEditor.DowngradeWarning == null) Console.WriteLine("FALLO: V-c (segunda auditoria) - no aviso pese a tener equipo real puesto");
+            var rtbVersion = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbVersion.Render(window);
+            var encVersion = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encVersion.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbVersion));
+            using (var fsVersion = File.Create(Path.Combine(AppContext.BaseDirectory, "version-aviso-vc.png"))) encVersion.Save(fsVersion);
+            vm.VersionEditor.SetVersionCommand.Execute(279); // deja la version real de vuelta para el resto del flujo (Guardar, etc.)
+            DoEvents();
+        }
+        catch (Exception ex) { Console.WriteLine("V-c-EXCEPTION: " + ex); }
+
         string errorLog = Path.Combine(AppContext.BaseDirectory, "ultimo-error.log");
         Console.WriteLine("ultimo-error.log existe: " + File.Exists(errorLog));
 
