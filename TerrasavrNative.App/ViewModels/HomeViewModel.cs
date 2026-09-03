@@ -43,8 +43,13 @@ public partial class HomeViewModel : ObservableObject
 
     public event Action<string>? CharacterChosen;
 
-    public HomeViewModel()
+    // Doll fiel al guardado (pedido explicito, 3-sep-2026) - ver EquipmentAppearanceResolver.
+    private readonly EquipmentAppearanceResolver _equipmentAppearance;
+
+    public HomeViewModel(EquipmentAppearanceResolver equipmentAppearance)
     {
+        _equipmentAppearance = equipmentAppearance;
+
         // Fire-and-forget deliberado: el constructor no puede ser async, y no hay nada
         // real que esperar aqui todavia (el arranque de MainWindow sigue su curso normal -
         // Characters simplemente se rellena un instante despues, IsScanning ahora SI tiene
@@ -77,7 +82,7 @@ public partial class HomeViewModel : ObservableObject
             // cuentan, no solo los de tModLoader - GetAllPlayersDirectories ya filtra a las que
             // existen de verdad (0, 1 o las 2), nunca cae a "Documentos entero".
             var dirs = CharacterFileService.GetAllPlayersDirectories();
-            var scanned = await Task.Run(() => ScanCharacters(dirs));
+            var scanned = await Task.Run(() => ScanCharacters(dirs, _equipmentAppearance));
             foreach (var entry in scanned) Characters.Add(entry);
             ScanMessage = Characters.Count == 0
                 ? dirs.Count == 0
@@ -95,7 +100,7 @@ public partial class HomeViewModel : ObservableObject
     // Todo el trabajo real de disco (enumerar + leer + descifrar cada .plr) - se ejecuta en un
     // hilo de fondo via Task.Run (RefreshAsync de arriba), nunca toca ninguna ObservableCollection
     // directamente (serian modificaciones desde fuera del hilo de UI).
-    private static List<CharacterListEntryViewModel> ScanCharacters(IEnumerable<string> dirs)
+    private static List<CharacterListEntryViewModel> ScanCharacters(IEnumerable<string> dirs, EquipmentAppearanceResolver equipmentAppearance)
     {
         var result = new List<CharacterListEntryViewModel>();
         // Orden real GLOBAL por fecha (no por carpeta primero) - un personaje vanilla reciente
@@ -108,7 +113,7 @@ public partial class HomeViewModel : ObservableObject
             {
                 var character = PlrFile.Read(File.ReadAllBytes(path));
                 bool isCalamity = File.Exists(Path.ChangeExtension(path, ".tplr"));
-                result.Add(new CharacterListEntryViewModel(path, character, isCalamity, File.GetLastWriteTimeUtc(path)));
+                result.Add(new CharacterListEntryViewModel(path, character, isCalamity, File.GetLastWriteTimeUtc(path), equipmentAppearance));
             }
             catch (Exception)
             {

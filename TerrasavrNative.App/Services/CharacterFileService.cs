@@ -59,6 +59,10 @@ public sealed class CharacterFileService
     public PrefixEffectCatalog PrefixEffects { get; }
     public VanillaBuffDurationCatalog VanillaBuffDurations { get; }
     public VanillaResearchCountCatalog VanillaResearchCounts { get; }
+    public VanillaArmorSlotCatalog VanillaArmorSlots { get; }
+    // Doll de cuerpo completo fiel al guardado (pedido explicito, 3-sep-2026) - ver
+    // EquipmentAppearanceResolver.
+    public EquipmentAppearanceResolver EquipmentAppearance { get; }
 
     // Los 6 catalogos que ItemStatsFormatter.Format necesita, agrupados en un unico record -
     // pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada: la firma ya iba por 5
@@ -101,6 +105,8 @@ public sealed class CharacterFileService
         VanillaBuffDurations = VanillaBuffDurationCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_buff_durations.json"));
         VanillaResearchCounts = VanillaResearchCountCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_research_counts.json"));
         TooltipCatalogs = new ItemTooltipCatalogs(VanillaStats, CalamityCatalog, VanillaCategories, VanillaItemTooltips, VanillaArmorSets, PrefixEffects);
+        VanillaArmorSlots = VanillaArmorSlotCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_armor_slots.json"));
+        EquipmentAppearance = new EquipmentAppearanceResolver(VanillaArmorSlots, CalamityCatalog);
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
         var codec = new CalamityItemCodec(CalamityCatalog, translator);

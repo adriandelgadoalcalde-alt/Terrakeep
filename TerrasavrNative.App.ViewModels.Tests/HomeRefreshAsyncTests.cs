@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using TerrasavrNative.App.Services;
 using TerrasavrNative.App.ViewModels;
 
 namespace TerrasavrNative.App.ViewModels.Tests;
@@ -13,7 +14,7 @@ public sealed class HomeRefreshAsyncTests
     [Fact]
     public async Task RefreshAsyncCommand_EsAsincronoYIsScanningVuelveAFalseAlTerminar()
     {
-        var home = new HomeViewModel();
+        var home = new HomeViewModel(new CharacterFileService().EquipmentAppearance);
         // El constructor ya lanzo su propio escaneo (fire-and-forget) - se espera a que
         // termine antes de arrancar uno nuevo, mismo camino real (RefreshCommand).
         if (home.RefreshCommand.ExecutionTask is { } enCurso) await enCurso;

@@ -10,7 +10,8 @@ namespace TerrasavrNative.App.ViewModels;
 // el Explorador de archivos a mano. Una fila real por cada .plr encontrado, con lo mismo que
 // ya se ve al elegirlo a ciegas en el dialogo: nombre, dificultad, insignia de Calamity (mismo
 // criterio que CharacterFileService.Load, ".tplr con el mismo nombre al lado") y fecha real de
-// ultima modificacion - mas el doll de cuerpo completo ya real de PlayerPreviewRenderer, sin
+// ultima modificacion - mas el doll de cuerpo completo ya real de PlayerPreviewRenderer
+// (colores base + armadura/vanidad real puesta, ver EquipmentAppearanceResolver), sin
 // inventar ningun dato que el .plr no tenga de verdad.
 public sealed partial class CharacterListEntryViewModel : ObservableObject
 {
@@ -26,7 +27,7 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     // comparando FilePath contra el personaje realmente cargado en MainViewModel.
     [ObservableProperty] private bool _isCurrent;
 
-    public CharacterListEntryViewModel(string plrPath, PlrCharacter character, bool isCalamity, DateTime lastModifiedUtc)
+    public CharacterListEntryViewModel(string plrPath, PlrCharacter character, bool isCalamity, DateTime lastModifiedUtc, EquipmentAppearanceResolver equipmentAppearance)
     {
         FilePath = plrPath;
         Name = character.Name;
@@ -44,6 +45,10 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         var colors = new PlayerPreviewRenderer.PlayerColors(
             T(character.HairColor), T(character.SkinColor), T(character.EyeColor),
             T(character.ShirtColor), T(character.UnderColor), T(character.PantsColor), T(character.ShoesColor));
-        Preview = PlayerPreviewRenderer.Render(character.HairStyle, character.Gender == 1, colors);
+        // Doll fiel al guardado (pedido explicito del usuario, 3-sep-2026): la armadura/
+        // vanidad REAL puesta en loadouts[0] (el mirror de "lo que lleva puesto de verdad"),
+        // no solo los 7 colores base.
+        var armor = equipmentAppearance.Resolve(character.PrimaryLoadout);
+        Preview = PlayerPreviewRenderer.Render(character.HairStyle, character.Gender == 1, colors, armor);
     }
 }

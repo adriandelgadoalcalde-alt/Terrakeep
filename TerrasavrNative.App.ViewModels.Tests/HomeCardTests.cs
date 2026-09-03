@@ -1,4 +1,5 @@
 using System.IO;
+using TerrasavrNative.App.Services;
 using TerrasavrNative.App.ViewModels;
 using TerrasavrNative.Core.PlrFormat;
 
@@ -11,6 +12,8 @@ namespace TerrasavrNative.App.ViewModels.Tests;
 // carpeta real escaneada.
 public sealed class HomeCardTests
 {
+    private static readonly EquipmentAppearanceResolver EquipAppearance = new CharacterFileService().EquipmentAppearance;
+
     private static PlrCharacter NuevoPersonaje(string nombre) => new()
     {
         Name = nombre,
@@ -22,9 +25,9 @@ public sealed class HomeCardTests
     [Fact]
     public void UpdateCurrentPath_MarcaIsCurrentSoloEnLaTarjetaQueCoincide()
     {
-        var home = new HomeViewModel();
-        var a = new CharacterListEntryViewModel(@"C:\a.plr", NuevoPersonaje("A"), false, DateTime.UtcNow);
-        var b = new CharacterListEntryViewModel(@"C:\b.plr", NuevoPersonaje("B"), false, DateTime.UtcNow);
+        var home = new HomeViewModel(EquipAppearance);
+        var a = new CharacterListEntryViewModel(@"C:\a.plr", NuevoPersonaje("A"), false, DateTime.UtcNow, EquipAppearance);
+        var b = new CharacterListEntryViewModel(@"C:\b.plr", NuevoPersonaje("B"), false, DateTime.UtcNow, EquipAppearance);
         home.Characters.Add(a);
         home.Characters.Add(b);
 
@@ -40,7 +43,7 @@ public sealed class HomeCardTests
         var vm = new MainViewModel();
         string path = Path.Combine(Path.GetTempPath(), $"home-current-{Guid.NewGuid():N}.plr");
         File.WriteAllBytes(path, PlrFile.Write(NuevoPersonaje("Test")));
-        var entry = new CharacterListEntryViewModel(path, PlrFile.Read(File.ReadAllBytes(path)), false, DateTime.UtcNow);
+        var entry = new CharacterListEntryViewModel(path, PlrFile.Read(File.ReadAllBytes(path)), false, DateTime.UtcNow, EquipAppearance);
         vm.Home.Characters.Add(entry);
 
         vm.LoadFromPath(path);
@@ -52,13 +55,13 @@ public sealed class HomeCardTests
     [Fact]
     public void Duplicate_CreaUnaCopiaRealEnLaMismaCarpeta_SinTocarElOriginal()
     {
-        var home = new HomeViewModel();
+        var home = new HomeViewModel(EquipAppearance);
         string dir = Path.Combine(Path.GetTempPath(), $"home-dup-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         string path = Path.Combine(dir, "MiPersonaje.plr");
         var character = NuevoPersonaje("MiPersonaje");
         File.WriteAllBytes(path, PlrFile.Write(character));
-        var entry = new CharacterListEntryViewModel(path, character, isCalamity: false, DateTime.UtcNow);
+        var entry = new CharacterListEntryViewModel(path, character, isCalamity: false, DateTime.UtcNow, EquipAppearance);
 
         home.DuplicateCommand.Execute(entry);
 
@@ -73,13 +76,13 @@ public sealed class HomeCardTests
     [Fact]
     public void RestoreBackup_RestauraDesdeElBakReal()
     {
-        var home = new HomeViewModel();
+        var home = new HomeViewModel(EquipAppearance);
         string dir = Path.Combine(Path.GetTempPath(), $"home-restore-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         string path = Path.Combine(dir, "X.plr");
         File.WriteAllBytes(path, PlrFile.Write(NuevoPersonaje("Nuevo")));
         File.WriteAllBytes(path + ".bak", PlrFile.Write(NuevoPersonaje("Viejo")));
-        var entry = new CharacterListEntryViewModel(path, PlrFile.Read(File.ReadAllBytes(path)), false, DateTime.UtcNow);
+        var entry = new CharacterListEntryViewModel(path, PlrFile.Read(File.ReadAllBytes(path)), false, DateTime.UtcNow, EquipAppearance);
 
         home.RestoreBackupCommand.Execute(entry);
 
@@ -90,13 +93,13 @@ public sealed class HomeCardTests
     [Fact]
     public void RestoreBackup_SinBakReal_DejaUnMensajeSinTocarNada()
     {
-        var home = new HomeViewModel();
+        var home = new HomeViewModel(EquipAppearance);
         string dir = Path.Combine(Path.GetTempPath(), $"home-nobak-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         string path = Path.Combine(dir, "Y.plr");
         var character = NuevoPersonaje("Solo");
         File.WriteAllBytes(path, PlrFile.Write(character));
-        var entry = new CharacterListEntryViewModel(path, character, false, DateTime.UtcNow);
+        var entry = new CharacterListEntryViewModel(path, character, false, DateTime.UtcNow, EquipAppearance);
 
         home.RestoreBackupCommand.Execute(entry);
 

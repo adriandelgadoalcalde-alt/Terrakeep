@@ -5975,3 +5975,93 @@ memoria). Pedido cumplido en su totalidad. Una Tanda 5 adicional (arriba) añadi
 vanilla real a los dos lanzadores, pedido tras el cierre. H3-07 (tercera auditoria, la unica
 decision de contenido que quedaba pendiente de las 4 rondas) tambien cerrado de verdad (arriba),
 con investigacion real que corrigio una suposicion nunca verificada de la tercera auditoria.
+
+### Quinta auditoria (Opus) + doll de Inicio fiel a la vanidad real (3-sep-2026)
+
+Pedido explicito del usuario: "activa opusplan y que haga una ultima auditoria... que se ciña
+en hacer todo esto que son los puntos mas importantes para mi" (los mismos 7 criterios de
+practicidad ya usados en la cuarta ronda) + un hallazgo funcional concreto ya diagnosticado por
+el propio usuario: "los personajes de inicio no se visualizan como realmente son en el
+juego... que muestre el personaje con la vanidad que tiene cada uno pero fiel al guardado".
+
+**Auditoria**: lanzada con Opus (no Fable, pedido explicito - "fable no capta mucho la cosa"),
+con todo el contexto real del proyecto (PROYECTO-TERRASAVR.md, CLAUDE.md, bitacora.md completa
+para no repetir nada ya cerrado, la app Electron original como referencia de comportamiento,
+tModLoader/CalamityMod decompilados). Volvio con un aviso de seguridad del propio sistema
+("Blocked by classifier") en la notificacion de la tarea - comunicado de inmediato al usuario
+sin decidir por mi cuenta que no importaba. El contenido del informe en si (14 hallazgos
+H5-01..H5-15, todo basado en lectura real de codigo del proyecto) se veia legitimo al leerlo
+directamente, pero el enlace del Artifact no le cargaba al usuario - se le paso el HTML
+publicado directo como fichero adjunto en vez de depender del enlace. Pendiente: el usuario
+decidira si se implementan los hallazgos H5-* en una sesion futura, no se ha tocado nada de eso
+todavia.
+
+**Doll de Inicio fiel al guardado**:
+`PlayerPreviewRenderer` solo pintaba los 7 colores base (pelo/piel/ojos/ropa) - nunca la
+armadura/vanidad real puesta, alcance ya documentado como deliberado ("un proyecto en si
+mismo"). Investigado a fondo antes de tocar nada:
+
+- **Formato real confirmado** (`Terraria.Initializers.AssetInitializer.cs`,
+  `Terraria.GameContent.TextureAssets.cs` decompilados): `Content/Images/Armor_Head_N.xnb`,
+  `Armor_Legs_N.xnb` (tiras verticales 40 de ancho, mismo frame de reposo ya usado para el
+  cuerpo base) y `Content/Images/Armor/Armor_N.xnb` (el COMPUESTO torso+brazo ya renderizado -
+  no existen `Armor_Body_N`/`Female_Body_N` sueltos en la instalacion real, solo el compuesto,
+  y encaja sin huecos con la decision ya tomada de usar solo la piel StarterMale). Verificado
+  extrayendo una muestra real y componiendola sobre el doll antes de escribir nada de C# (una
+  figura de Terraria con armadura de cobre reconocible, no una tira descolocada).
+- **`scripts/extraer-slots-armadura-vanilla.py`** (nuevo): valores LITERALES de
+  headSlot/bodySlot/legSlot de `Item.cs` (1.4.5.8), reutilizando el escaner de bloques ya
+  depurado (`split_by_case`) de `extraer-categorias-vanilla.py`/`extraer-slot-kind-vanilla.py`
+  (que solo guardaban SI existia el campo, no el valor). 548 objetos con algun slot real (head
+  236, body 170, legs 144), spot-check contra el trio de Casco/Chaqueta/Grebas de cobre ya
+  conocido en `vanilla_armor_sets.json` (ids 89/80/76, los 3 con indice de sprite 1, coincide
+  exacto). Salida: `Assets/vanilla_armor_slots.json`.
+- **`scripts/extraer-sprites-armadura-vanilla.js`** (nuevo): extrae de la instalacion vanilla
+  real de Steam (mismo criterio ya usado para el cuerpo/pelo base, `xnb-to-png.js`/
+  `lzx-decoder.js` del proyecto hermano) los 236+170+144 sprites unicos referenciados,
+  recortados al frame de reposo 40x56. Cobertura real: 231/236 head, 143/144 legs, 169/170 body
+  (~98-99%) - el resto son hojas mas pequeñas que el lienzo estandar, descartadas sin inventar
+  nada ("lo que no encaja no se dibuja"). ~670KB en total, en
+  `Assets/player/armor_{head,body,legs}/{id}.png`.
+- **Calamity - sorpresa real, cero extraccion nueva necesaria**: los sprites de equipo
+  (`{Internal}_Head.png`/`_Body.png`/`_Legs.png`) YA estaban extraidos del .tmod junto al resto
+  de iconos (misma convencion real de tModLoader moderno: el equipo de una pieza vive al lado
+  de su icono, mismo nombre + sufijo), y `CalamityCatalogEntry.EquipSlot` (H3-11, tercera
+  auditoria) ya sabe que parte del cuerpo es cada pieza. Verificado por barrido completo: las
+  185 entradas reales con `EquipSlot` conocido tienen su fichero real presente, 0 huecos.
+- **`EquipmentAppearanceResolver`** (nuevo, `App/Services`): dado un `PlrLoadout`, aplica la
+  regla real del juego (`Player.cs`: si el slot de VANIDAD tiene algo puesto, ese es el que se
+  ve; si no, el funcional - `loadout.Social[i]`/`loadout.Items[i]`, indices 0/1/2 = cabeza/
+  cuerpo/piernas) y resuelve la ruta real del sprite (vanilla via `vanilla_armor_slots.json`,
+  Calamity via `CalamityCatalogEntry.Internal`+`EquipSlot`, distinguidos por
+  `id >= CalamityIds.ItemIdBase`, mismo patron ya usado en `ItemSlotViewModel`). Comprueba
+  `File.Exists` antes de devolver la ruta (los ~1-2% de huecos reales de arriba no deben
+  intentar cargar un fichero inexistente). ALCANCE DELIBERADO documentado en el propio
+  fichero: no respeta los 3 bytes de "ocultar equipo" del panel de vanidad real
+  (HideVisual1/HideVisual2/HideMisc) - el bit exacto de cada slot dentro de esos bytes no se
+  investigo a fondo, no compensaba el riesgo de esconder/mostrar la pieza equivocada por una
+  lectura erronea. Hueco real, ya conocido, no oculto.
+- **`PlayerPreviewRenderer.Render`** gana un parametro opcional `EquippedArmor` (rutas ya
+  resueltas, con valor por defecto - los call sites existentes sin armadura no cambian) -
+  compone la capa de piernas/cuerpo/cabeza en el mismo punto real donde el juego las dibuja
+  (piernas tras zapatos, cuerpo tras camisa, cabeza tras el pelo).
+- Cableado en `CharacterFileService` (nuevo `VanillaArmorSlots`/`EquipmentAppearance`),
+  `HomeViewModel`/`CharacterListEntryViewModel` (constructor gana el resolver real). El propio
+  `AppearanceViewModel` (doll de la pestaña Apariencia) se queda fuera de esta ronda a
+  proposito - haria falta que esa pestaña conozca el equipo puesto en vivo, cambio mas grande,
+  no pedido explicitamente (el usuario solo menciono "los personajes de inicio").
+
+6 pruebas nuevas (`EquipmentAppearanceResolverTests.cs`): objeto vanilla funcional resuelve un
+sprite real que existe en disco, vanidad tapa a lo funcional (verificado con 2 ids reales
+distintos del mismo set), slot vacio no resuelve nada, objeto Calamity real (pedido al propio
+catalogo, no hardcodeado) resuelve su sprite real ya extraido, un objeto del slot equivocado no
+se cuela en otro hueco, y una prueba de extremo a extremo real (pixel a pixel) que confirma que
+`PlayerPreviewRenderer.Render` con armadura da una imagen distinta a sin ella - pillaria en seco
+un futuro refactor que dejara de leer el parametro.
+
+`dotnet test` 313/313 en verde (139 Core + 174 ViewModels), arnes UIA completo sin
+NO-FOUND/FALLO/EXCEPTION. **Confirmado con datos reales, no solo sinteticos**: la captura real
+`inicio-lanzador.png` del arnes muestra al personaje real "Terrariano" con su armadura puesta
+en el doll (antes solo colores base) - los otros personajes de la captura no llevan armadura
+equipada de verdad en su guardado real, por eso se siguen viendo sin ella (correcto, fiel al
+guardado, no un fallo).

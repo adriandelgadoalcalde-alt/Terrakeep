@@ -23,14 +23,20 @@ namespace TerrasavrNative.App.Services;
 // campos ya en PlrCharacter: HairColor/SkinColor/EyeColor/ShirtColor/UnderColor/PantsColor/
 // ShoesColor (EyeWhites siempre blanco, sin campo propio).
 //
-// ALCANCE DELIBERADO: sin armadura/vestuario equipado real, item en mano, accesorios, alas,
-// animacion (solo el frame de reposo) - necesitarian el catalogo de sprites de armadura
-// entero y el motor de animacion real, un proyecto en si mismo. Tampoco se dibuja el brazo
-// delantero como capa aparte (ArmSkin/ArmShirt): esas hojas solo tienen frames de brazo en
-// pose de balanceo (sujetando algo), ninguna con el brazo simplemente caido a un lado en la
-// celda de reposo (confirmado inspeccionando la rejilla completa) - el propio silueta de
-// TorsoSkin ya incluye un brazo pegado al cuerpo, asi que el resultado sigue siendo una figura
-// completa y coherente sin esa capa extra.
+// Armadura/vanidad REAL puesta (cabeza/cuerpo/piernas, pedido explicito del usuario,
+// 3-sep-2026: "que muestre el personaje con la vanidad que tiene cada uno pero fiel al
+// guardado") - ver EquipmentAppearanceResolver para la regla de "vanidad tapa a lo
+// funcional" y de donde salen los ficheros reales (vanilla: Assets/player/armor_{head,body,
+// legs}/, extraidos de la instalacion de Steam con scripts/extraer-sprites-armadura-
+// vanilla.js; Calamity: Assets/calamity/icons/{Internal}_{Head,Body,Legs}.png, ya
+// extraidos del .tmod real). ALCANCE DELIBERADO restante: sin accesorios (alas, mochilas,
+// capas...), item en mano, ni animacion (solo el frame de reposo, igual que el resto del
+// doll) - la inmensa mayoria de accesorios no tienen capa visual propia sobre el cuerpo.
+// Tampoco se dibuja el brazo delantero como capa aparte (ArmSkin/ArmShirt): esas hojas solo
+// tienen frames de brazo en pose de balanceo (sujetando algo), ninguna con el brazo
+// simplemente caido a un lado en la celda de reposo (confirmado inspeccionando la rejilla
+// completa) - el propio silueta de TorsoSkin ya incluye un brazo pegado al cuerpo, asi que
+// el resultado sigue siendo una figura completa y coherente sin esa capa extra.
 //
 // Solo se usa la variante de piel "0" (StarterMale, la unica con las 15 piezas base completas
 // en la instalacion real) para AMBOS generos - la piel en si no cambia de forma entre
@@ -45,6 +51,10 @@ public static class PlayerPreviewRenderer
 
     public readonly record struct PlayerColors(Tint Hair, Tint Skin, Tint Eyes, Tint Shirt, Tint Under, Tint Pants, Tint Shoes);
 
+    // Rutas absolutas reales (o null si ese slot no lleva nada puesto/reconocible) - ver
+    // EquipmentAppearanceResolver, que es quien decide estas rutas.
+    public readonly record struct EquippedArmor(string? HeadFile, string? BodyFile, string? LegsFile);
+
     // Bug real de concurrencia encontrado investigando fallos de test intermitentes y dispersos
     // (valores inesperados y excepciones sin relacion aparente, distintos cada vez, siempre
     // resueltos al reintentar) - xunit ejecuta clases de test EN PARALELO por omision, y
@@ -55,7 +65,7 @@ public static class PlayerPreviewRenderer
     // para esto (GetOrAdd atomico).
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> Cache = new();
 
-    public static WriteableBitmap Render(int hairStyle, bool isMale, PlayerColors colors)
+    public static WriteableBitmap Render(int hairStyle, bool isMale, PlayerColors colors, EquippedArmor armor = default)
     {
         // isMale sin uso todavia: la unica variante de piel completa disponible (0/
         // StarterMale) se usa para ambos generos, ver el comentario de la clase.
@@ -66,11 +76,14 @@ public static class PlayerPreviewRenderer
         Composite(canvas, LoadBody("legskin"), colors.Skin);
         Composite(canvas, LoadBody("pants"), colors.Pants);
         Composite(canvas, LoadBody("shoes"), colors.Shoes);
+        if (armor.LegsFile is { } legsFile) Composite(canvas, LoadCached(legsFile), null);
         Composite(canvas, LoadBody("torsoskin"), colors.Skin);
         Composite(canvas, LoadBody("undershirt"), colors.Under);
         Composite(canvas, LoadBody("shirt"), colors.Shirt);
+        if (armor.BodyFile is { } bodyFile) Composite(canvas, LoadCached(bodyFile), null);
         Composite(canvas, LoadBody("head"), colors.Skin);
         Composite(canvas, LoadHair(hairStyle), colors.Hair);
+        if (armor.HeadFile is { } headFile) Composite(canvas, LoadCached(headFile), null);
         Composite(canvas, LoadBody("eyewhites"), null); // ya blanco en el sprite real
         Composite(canvas, LoadBody("eyes"), colors.Eyes);
 

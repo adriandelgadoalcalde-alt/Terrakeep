@@ -1,4 +1,5 @@
 using System.IO;
+using TerrasavrNative.App.Services;
 using TerrasavrNative.App.ViewModels;
 using TerrasavrNative.Core.PlrFormat;
 
@@ -10,6 +11,9 @@ namespace TerrasavrNative.App.ViewModels.Tests;
 // decision (con o sin cambios sin guardar), sin ninguna Window ni MessageBox real de por medio.
 public sealed class ConfirmDiscardChangesTests
 {
+    private static readonly EquipmentAppearanceResolver EquipAppearance = new CharacterFileService().EquipmentAppearance;
+
+
     private static (MainViewModel Vm, string Path) WriteAndLoad(string name)
     {
         var character = new PlrCharacter
@@ -27,7 +31,7 @@ public sealed class ConfirmDiscardChangesTests
     private static CharacterListEntryViewModel EntryFor(string path)
     {
         var character = PlrFile.Read(File.ReadAllBytes(path));
-        return new CharacterListEntryViewModel(path, character, isCalamity: false, DateTime.UtcNow);
+        return new CharacterListEntryViewModel(path, character, isCalamity: false, DateTime.UtcNow, EquipAppearance);
     }
 
     [Fact]

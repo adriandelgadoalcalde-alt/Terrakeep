@@ -346,7 +346,7 @@ public partial class MainViewModel : ObservableObject
     public BuffLibraryViewModel BuffLibrary { get; }
     public BuffEditViewModel BuffEdit { get; }
     public ItemEditViewModel ItemEdit { get; }
-    public HomeViewModel Home { get; } = new();
+    public HomeViewModel Home { get; }
 
     public MainViewModel()
     {
@@ -354,6 +354,7 @@ public partial class MainViewModel : ObservableObject
         // exactamente igual que el dialogo de "Cargar personaje..." de siempre, y salta
         // directo a Personaje - de nada sirve un lanzador de un click si despues hay que ir a
         // buscar la pestaña a mano (P1).
+        Home = new HomeViewModel(_service.EquipmentAppearance);
         Home.CharacterChosen += path =>
         {
             if (IsDirty && ConfirmDiscardChanges?.Invoke() == false) return;
