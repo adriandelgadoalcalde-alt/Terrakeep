@@ -1276,6 +1276,52 @@ internal static class Program
             }
             catch (Exception ex) { Console.WriteLine("L-D-SCROLL-EXCEPTION: " + ex); }
 
+            // Ap-a/Ap-b (segunda auditoria de Opus, Fable): "los selectores de peinado/tinte
+            // abiertos a la vez empujan el contenido" + "228 miniaturas de peinado se
+            // regeneran en cada tick del color - medir antes de tocar nada" (mismo criterio
+            // que X-7/L-c).
+            try
+            {
+                vm.PersonajeInnerTabIndex = 3; // Apariencia
+                var swHairOpen = System.Diagnostics.Stopwatch.StartNew();
+                vm.Appearance.OpenHairPickerCommand.Execute(null); // primera apertura real - regenera las 228 miniaturas
+                swHairOpen.Stop();
+                Console.WriteLine($"AP-B-MEDIDA: primera apertura real (228 miniaturas) tardo {swHairOpen.ElapsedMilliseconds}ms, HairOptions.Count={vm.Appearance.HairOptions.Count} (esperado 228)");
+
+                // Ap-a: abrir el selector de tinte debe cerrar el de peinado, y viceversa.
+                vm.Appearance.OpenHairDyePickerCommand.Execute(null);
+                DoEvents();
+                Console.WriteLine($"AP-A-EXCLUSION: tras abrir tinte -> IsHairDyePickerOpen={vm.Appearance.IsHairDyePickerOpen} (esperado True), IsHairPickerOpen={vm.Appearance.IsHairPickerOpen} (esperado False)");
+                if (vm.Appearance.IsHairPickerOpen) Console.WriteLine("FALLO: Ap-a (segunda auditoria) - abrir el selector de tinte no cerro el de peinado");
+                vm.Appearance.OpenHairPickerCommand.Execute(null);
+                DoEvents();
+                if (vm.Appearance.IsHairDyePickerOpen) Console.WriteLine("FALLO: Ap-a (segunda auditoria) - abrir el selector de peinado no cerro el de tinte");
+
+                // Ap-b: cambiar el color de pelo con el selector YA ABIERTO no debe dejar las
+                // miniaturas en blanco para siempre - deben refrescarse de verdad tras esperar
+                // el debounce real (180ms), sin regenerar en cada tick individual.
+                var hairSwatch = vm.Appearance.Swatches.FirstOrDefault(s => s.Label.Contains("elo", StringComparison.OrdinalIgnoreCase));
+                if (hairSwatch != null)
+                {
+                    hairSwatch.R = hairSwatch.R == 200 ? 199 : 200; // dispara PropertyChanged real
+                    DoEvents();
+                    bool vaciasJustoTrasElCambio = vm.Appearance.HairOptions.Count == 0;
+                    WaitForDispatcher(300);
+                    Console.WriteLine($"AP-B-REFRESH: tras cambiar color con el selector abierto -> vacias justo despues={vaciasJustoTrasElCambio}, HairOptions.Count tras esperar el debounce={vm.Appearance.HairOptions.Count} (esperado 228, nunca 0 permanente)");
+                    if (vm.Appearance.HairOptions.Count != 228) Console.WriteLine("FALLO: Ap-b (segunda auditoria) - las miniaturas de peinado no se refrescaron tras cambiar el color con el selector abierto");
+                }
+                else Console.WriteLine("AP-B-REFRESH: swatch de color de pelo real no encontrado - omitido");
+
+                var rtbHair = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbHair.Render(window);
+                var encHair = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encHair.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbHair));
+                using (var fsHair = File.Create(Path.Combine(AppContext.BaseDirectory, "apariencia-selector-peinado.png"))) encHair.Save(fsHair);
+                Console.WriteLine("Captura selector de peinado -> apariencia-selector-peinado.png");
+            }
+            catch (Exception ex) { Console.WriteLine("AP-A-AP-B-EXCEPTION: " + ex); }
+
             // Ctrl+S: confirma que dispara el mismo guardado real (banner de confirmacion) que
             // ya prueba GUARDAR-DESDE-BUILDS, esta vez por teclado.
             vm.IsDirty = true; // fuerza un estado "con cambios" real para que Guardar tenga sentido

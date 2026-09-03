@@ -5254,3 +5254,38 @@ debounce real (Results sin cambiar justo tras teclear)=True, Results.Count tras 
 tiempo total con espera=353ms` - estable en 3 ejecuciones. `dotnet test` 217/217 en verde (134
 Core + 83 ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0
 fallo(s)`.
+
+### Ap-a/Ap-b (segunda auditoria, Fable) - selectores excluyentes + miniaturas de peinado
+
+**Ap-a, "los selectores de peinado/tinte abiertos a la vez empujan el contenido"**: ninguno de
+los dos (`IsHairPickerOpen`/`IsHairDyePickerOpen`) cerraba al otro. Cada `Open*PickerCommand`
+cierra ahora el otro selector antes de abrirse. Ademas, `LoadFrom` (cargar OTRO personaje)
+cierra los dos - un selector que quedara abierto del personaje anterior podia mostrar opciones
+de un personaje distinto ya descartado.
+
+**Ap-b, "228 miniaturas de peinado se regeneran en cada tick del color - medir antes de tocar
+nada"**: medido de verdad con el arnes UIA (mismo criterio que X-7/L-c) - **228 miniaturas
+reales -> 80-113ms** (Debug, primera pasada), nada despreciable: regenerarlas en CADA tick de
+un arrastre de slider de color (que puede disparar docenas de eventos por segundo) habria
+congelado la UI de verdad. Investigando el codigo real (no el resumen previo) se encontro que
+el codigo YA EXISTENTE no regeneraba en cada tick - solo VACIABA la coleccion
+(`HairOptions.Clear()`), un bug real distinto y peor: si el selector estaba abierto mientras se
+tocaba el color, la rejilla se quedaba en BLANCO para siempre hasta cerrar y reabrir a mano.
+`_hairOptionsStale` (marca barata, sin coste real, para cuando el selector esta cerrado) +
+`_hairOptionsDebounceTimer` (mismo patron ya establecido - `LibraryViewModel.
+_searchDebounceTimer`/`MainViewModel._saveConfirmationTimer`, 180ms): con el selector cerrado,
+cambiar el color no cuesta nada real; con el selector ABIERTO, se regeneran de verdad pero solo
+UNA vez, 180ms despues del ultimo cambio - la rejilla nunca se queda en blanco (se ve la ultima
+version real hasta que la nueva esta lista).
+
+3 pruebas deterministas nuevas (`AppearancePickerTests.cs`: abrir tinte cierra peinado y
+viceversa; cambiar color con el selector cerrado no regenera nada hasta abrirlo). El
+refresco en vivo con el selector abierto (necesita un `Dispatcher` real - mismo motivo por el
+que el debounce de L-c tampoco tiene test unitario) se verifica en el arnes UIA: `AP-B-MEDIDA:
+primera apertura real (228 miniaturas) tardo 82ms`, `AP-A-EXCLUSION: tras abrir tinte ->
+IsHairDyePickerOpen=True, IsHairPickerOpen=False`, `AP-B-REFRESH: tras cambiar color con el
+selector abierto -> vacias justo despues=False, HairOptions.Count tras esperar el
+debounce=228` - mas una captura real (`apariencia-selector-peinado.png`, nueva, permanente)
+confirmando visualmente el peinado real (pelo rojo, color actualizado) en las 228 miniaturas y
+ningun selector superpuesto. `dotnet test` 220/220 en verde (134 Core + 86 ViewModels), arnes
+UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.

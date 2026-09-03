@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -30,6 +31,11 @@ public partial class AppearanceViewModel : ObservableObject
     {
         _service = service;
         BuildHairDyeOptions();
+        _hairOptionsDebounceTimer.Tick += (_, _) =>
+        {
+            _hairOptionsDebounceTimer.Stop();
+            if (IsHairPickerOpen) RebuildHairOptions();
+        };
     }
     // Convencion vanilla estandar (Player.Male en Terraria): true = chico. La version binaria
     // invertida documentada en el proyecto es de formatos MUY antiguos (version<145), fuera
@@ -51,18 +57,41 @@ public partial class AppearanceViewModel : ObservableObject
     // id a mano) - las 228 miniaturas se generan bajo demanda al abrir el selector (no en
     // LoadFrom, para no pagar 228 renders en cada carga de personaje si nunca se abre) con el
     // color de pelo actual en ese momento.
+    //
+    // Ap-b (segunda auditoria de Opus, Fable): "228 miniaturas se regeneran en cada tick del
+    // color - medir antes de tocar nada" (mismo criterio que X-7/L-c). Medido de verdad con el
+    // arnes UIA: 228 miniaturas reales -> 113ms (Debug, primera pasada) - nada despreciable,
+    // regenerarlas en CADA tick de un arrastre de slider (que puede disparar docenas de
+    // eventos por segundo) congelaria la UI de verdad. _hairOptionsStale (marca barata, sin
+    // coste real) + _hairOptionsDebounceTimer (mismo patron ya establecido en el proyecto -
+    // LibraryViewModel._searchDebounceTimer/MainViewModel._saveConfirmationTimer): el color
+    // puede cambiar con el selector cerrado sin coste real (solo se marca obsoleto, sin limpiar
+    // ni regenerar nada todavia); si el selector esta ABIERTO cuando cambia el color, se
+    // regeneran de verdad pero solo UNA vez, 180ms despues del ultimo cambio.
     [ObservableProperty] private bool _isHairPickerOpen;
     public ObservableCollection<HairOptionViewModel> HairOptions { get; } = [];
+    private bool _hairOptionsStale = true;
+    private readonly DispatcherTimer _hairOptionsDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
+
+    private void RebuildHairOptions()
+    {
+        if (Swatches.Count <= HairIdx) return;
+        HairOptions.Clear();
+        var hairColor = new PlayerPreviewRenderer.Tint((byte)Swatches[HairIdx].R, (byte)Swatches[HairIdx].G, (byte)Swatches[HairIdx].B);
+        for (int id = 1; id <= PlayerPreviewRenderer.HairStyleCount; id++)
+            HairOptions.Add(new HairOptionViewModel(id, PlayerPreviewRenderer.RenderHairThumbnail(id, hairColor)));
+        _hairOptionsStale = false;
+    }
 
     [RelayCommand]
     private void OpenHairPicker()
     {
-        if (HairOptions.Count == 0 && Swatches.Count > HairIdx)
-        {
-            var hairColor = new PlayerPreviewRenderer.Tint((byte)Swatches[HairIdx].R, (byte)Swatches[HairIdx].G, (byte)Swatches[HairIdx].B);
-            for (int id = 1; id <= PlayerPreviewRenderer.HairStyleCount; id++)
-                HairOptions.Add(new HairOptionViewModel(id, PlayerPreviewRenderer.RenderHairThumbnail(id, hairColor)));
-        }
+        if (_hairOptionsStale) RebuildHairOptions();
+        // Ap-a (segunda auditoria de Opus, Fable): "los selectores de peinado/tinte abiertos a
+        // la vez empujan el contenido" - ninguno de los dos cerraba al otro, asi que se podian
+        // abrir los dos juntos (ambos paneles son inline, no popups reales - ver el resto del
+        // proyecto sobre por que se evitan Popups) y el layout se estiraba de mas.
+        IsHairDyePickerOpen = false;
         IsHairPickerOpen = true;
     }
 
@@ -97,7 +126,12 @@ public partial class AppearanceViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenHairDyePicker() => IsHairDyePickerOpen = true;
+    private void OpenHairDyePicker()
+    {
+        // Ap-a: mismo criterio que OpenHairPicker de arriba, en el otro sentido.
+        IsHairPickerOpen = false;
+        IsHairDyePickerOpen = true;
+    }
 
     [RelayCommand]
     private void SelectHairDye(int index)
@@ -170,7 +204,19 @@ public partial class AppearanceViewModel : ObservableObject
         {
             var swatch = Swatches[i];
             swatch.PropertyChanged += (_, _) => RefreshPreview();
-            if (i == HairIdx) swatch.PropertyChanged += (_, _) => HairOptions.Clear(); // color de pelo cambio, las miniaturas quedan obsoletas
+            // Ap-b: color de pelo cambio, las miniaturas quedan obsoletas - marca barata
+            // (_hairOptionsStale) en vez de limpiar/regenerar aqui mismo; si el selector esta
+            // abierto AHORA, ademas reinicia el debounce real (180ms) para refrescarlas de
+            // verdad sin regenerar en cada tick individual del slider.
+            if (i == HairIdx) swatch.PropertyChanged += (_, _) =>
+            {
+                _hairOptionsStale = true;
+                if (IsHairPickerOpen)
+                {
+                    _hairOptionsDebounceTimer.Stop();
+                    _hairOptionsDebounceTimer.Start();
+                }
+            };
             // Segunda auditoria de Opus (Fable), B-5/nota - MainViewModel marca "sin guardar"
             // suscribiendose a Appearance.PropertyChanged a secas; un cambio de color solo
             // llegaba ahi POR CASUALIDAD (RefreshPreview reasigna PreviewImage, que si es
@@ -181,6 +227,11 @@ public partial class AppearanceViewModel : ObservableObject
             swatch.PropertyChanged += (_, _) => OnPropertyChanged(nameof(Swatches));
         }
         HairOptions.Clear();
+        _hairOptionsStale = true;
+        // Ap-a: un personaje nuevo cierra cualquier selector que hubiera quedado abierto del
+        // anterior (evita mostrar opciones/miniaturas de un personaje distinto ya descartado).
+        IsHairPickerOpen = false;
+        IsHairDyePickerOpen = false;
 
         _character = character;
         RefreshPreview();
