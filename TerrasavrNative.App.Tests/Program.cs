@@ -1272,6 +1272,34 @@ internal static class Program
                     using var fsScroll = File.Create(Path.Combine(AppContext.BaseDirectory, "mundo-barra-horizontal.png"));
                     encScroll.Save(fsScroll);
                 }
+
+                // X-c (segunda auditoria de Opus, Fable): "el buscador de NPCs oculta marcadores
+                // del mapa" - antes filtrar el buscador VACIABA Npcs (la coleccion real que
+                // dibuja los marcadores). Con un mundo real: buscar por el nombre de UN NPC no
+                // debe reducir Npcs.Count (el mapa sigue completo), solo NpcSearchResults (la
+                // lista lateral) y el IsMatch de cada fila (resaltar, no ocultar).
+                int totalAntesDeBuscar = vm.Exploration.Npcs.Count;
+                if (totalAntesDeBuscar > 0)
+                {
+                    string nombreBuscado = vm.Exploration.Npcs[0].Name;
+                    vm.Exploration.NpcSearchText = nombreBuscado;
+                    DoEvents();
+                    bool mapaCompleto = vm.Exploration.Npcs.Count == totalAntesDeBuscar;
+                    bool ladoFiltrado = vm.Exploration.NpcSearchResults.Count <= totalAntesDeBuscar;
+                    bool coincidenciaMarcada = vm.Exploration.Npcs[0].IsMatch;
+                    bool hayNoCoincidenciasAtenuadas = vm.Exploration.Npcs.Any(n => !n.IsMatch);
+                    Console.WriteLine($"X-C-BUSCADOR-NPC: buscando '{nombreBuscado}' -> mapa sigue completo={mapaCompleto} (esperado True, {vm.Exploration.Npcs.Count}/{totalAntesDeBuscar}), lista lateral filtrada={ladoFiltrado} ({vm.Exploration.NpcSearchResults.Count}), coincidencia marcada={coincidenciaMarcada} (esperado True), hay no-coincidencias atenuadas={hayNoCoincidenciasAtenuadas}");
+                    if (!mapaCompleto) Console.WriteLine("FALLO: X-c (segunda auditoria) - el buscador de NPCs sigue vaciando los marcadores del mapa");
+                    var rtbNpcSearch = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbNpcSearch.Render(window);
+                    var encNpcSearch = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encNpcSearch.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbNpcSearch));
+                    using (var fsNpc = File.Create(Path.Combine(AppContext.BaseDirectory, "mundo-buscador-npc.png"))) encNpcSearch.Save(fsNpc);
+                    vm.Exploration.NpcSearchText = string.Empty; // deja el estado limpio para pasos siguientes
+                    DoEvents();
+                }
+                else Console.WriteLine("X-C-BUSCADOR-NPC: mundo real sin NPCs, omitido");
             }
             else Console.WriteLine("X7-ASYNC: fichero no encontrado, omitido");
         }

@@ -5039,3 +5039,27 @@ un paso fijo de 248px, alineadas de verdad. Bd-f: 2 pruebas deterministas nuevas
 (`AutoEquipCalamityWarningTests.cs`: un build de Calamity sin `.tplr` avisa; un build vanilla
 nunca avisa aunque tampoco haya `.tplr`). `dotnet test` 208/208 en verde (134 Core + 74
 ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### X-c (segunda auditoria, Fable) - el buscador de NPCs ya no oculta marcadores del mapa
+
+**"El buscador de NPCs oculta marcadores del mapa"**: `ExplorationViewModel.Npcs` era la MISMA
+coleccion que rellenaba tanto la lista lateral de texto como los marcadores del mapa - filtrar
+por "Enfermera" vaciaba `Npcs` a solo esa entrada, asi que TODOS los demas NPCs desaparecian del
+mapa entero, no solo de la lista. `Npcs` se queda ahora siempre completa (nunca se filtra) - una
+`NpcSearchResults` nueva y separada alimenta la lista lateral, y cada `WorldNpcRowViewModel`
+gana `IsMatch` (true por defecto) para RESALTAR en el mapa en vez de ocultar: sin busqueda
+activa no cambia nada visualmente; con busqueda activa, los marcadores que no coinciden se
+atenuan (`Opacity=0.25`, `ZIndex` mas bajo) pero siguen ahi, dando su posicion real.
+
+Cambio de logica de coleccion (no facil de fijar con un mundo `.wld` sintetico - el formato
+binario real de mundos es solo-lectura en este proyecto, sin ningun `WldWriter`, y construir un
+fixture minimo a mano seria un trabajo de extraccion nuevo desproporcionado para este hallazgo)
+- verificado en su lugar con el mundo real ya usado por X-a/T-D (`roca_negra.wld`, 14 NPCs de
+pueblo reales) en el arnes UIA permanente: buscar por el nombre de un NPC real dejo el mapa
+con los 14 NPCs intactos (`Npcs.Count` sin cambiar) mientras la lista lateral se filtro a 1
+resultado y el resto quedo marcado `IsMatch=False` (atenuado) - `X-C-BUSCADOR-NPC: buscando
+'Comerciante de tintes' -> mapa sigue completo=True (14/14), lista lateral filtrada=True (1),
+coincidencia marcada=True, hay no-coincidencias atenuadas=True`. `dotnet test` 208/208 en verde
+(sin cambios, X-c no tiene fixture de mundo disponible para una prueba determinista - cubierto
+por el arnes real en su lugar), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES:
+0 fallo(s)`.

@@ -10,7 +10,7 @@ using TerrasavrNative.Core.WldFormat;
 
 namespace TerrasavrNative.App.ViewModels;
 
-public sealed class WorldNpcRowViewModel(int id, string name, int x, int y, bool homeless)
+public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int y, bool homeless) : ObservableObject
 {
     public int Id { get; } = id;
     public string Name { get; } = name;
@@ -18,6 +18,15 @@ public sealed class WorldNpcRowViewModel(int id, string name, int x, int y, bool
     public int TileY { get; } = y;
     public string Position { get; } = homeless ? $"({x}, {y}) - sin casa" : $"({x}, {y})";
     public string? IconPath { get; } = NpcIconResolver.GetIconPath(id);
+
+    // X-c (segunda auditoria de Opus, Fable): "el buscador de NPCs oculta marcadores del mapa" -
+    // antes filtrar el buscador VACIABA la unica coleccion Npcs, que es la MISMA que dibuja los
+    // marcadores del mapa (ver el ItemsControl del mapa en MainWindow.xaml) - buscar "Enfermera"
+    // hacia desaparecer del mapa entero a todos los demas NPCs, no solo de la lista lateral.
+    // Npcs se queda siempre completa (ver ExplorationViewModel.ApplyNpcFilter); esto marca cada
+    // NPC como coincide/no-coincide para RESALTAR en el mapa en vez de ocultar - true por
+    // defecto (sin busqueda activa, todos coinciden).
+    [ObservableProperty] private bool _isMatch = true;
 }
 
 // Un NPC del roster que el jugador todavia no tiene en este mundo - solo nombre+icono, sin
@@ -58,7 +67,11 @@ public partial class ExplorationViewModel : ObservableObject
     public bool IsNotLoading => !IsLoading;
     partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(IsNotLoading));
 
+    // Siempre TODOS los NPCs del mundo - lo que dibuja los marcadores del mapa (nunca se
+    // filtra, ver X-c arriba).
     public ObservableCollection<WorldNpcRowViewModel> Npcs { get; } = [];
+    // X-c: solo los que coinciden con el buscador - lo que muestra la lista lateral de texto.
+    public ObservableCollection<WorldNpcRowViewModel> NpcSearchResults { get; } = [];
     public ObservableCollection<MissingNpcRowViewModel> MissingNpcs { get; } = [];
 
     // El code-behind (unico sitio que conoce el ScrollViewer real del mapa) se suscribe a esto
@@ -137,6 +150,8 @@ public partial class ExplorationViewModel : ObservableObject
                 .OrderBy(n => _npcNames.GetName(n.Id))
                 .Select(n => new WorldNpcRowViewModel(n.Id, _npcNames.GetName(n.Id), n.TileX, n.TileY, n.Homeless))
                 .ToList();
+            Npcs.Clear();
+            foreach (var npc in _allNpcs) Npcs.Add(npc);
             NpcSearchText = string.Empty;
             Zoom = 1.0;
             HoverInfo = string.Empty;
@@ -193,12 +208,16 @@ public partial class ExplorationViewModel : ObservableObject
     [RelayCommand] private void ZoomOut() => Zoom /= ZoomStep;
     [RelayCommand] private void ZoomReset() => Zoom = 1.0;
 
+    // X-c: Npcs (el mapa) NUNCA se toca aqui - solo se marca IsMatch por NPC (resaltar, no
+    // ocultar) y se reconstruye NpcSearchResults (la lista lateral) con solo los que coinciden.
     private void ApplyNpcFilter()
     {
-        Npcs.Clear();
-        var matches = string.IsNullOrWhiteSpace(NpcSearchText)
-            ? _allNpcs
-            : _allNpcs.Where(n => n.Name.Contains(NpcSearchText, StringComparison.OrdinalIgnoreCase));
-        foreach (var npc in matches) Npcs.Add(npc);
+        bool sinBusqueda = string.IsNullOrWhiteSpace(NpcSearchText);
+        NpcSearchResults.Clear();
+        foreach (var npc in _allNpcs)
+        {
+            npc.IsMatch = sinBusqueda || npc.Name.Contains(NpcSearchText, StringComparison.OrdinalIgnoreCase);
+            if (npc.IsMatch) NpcSearchResults.Add(npc);
+        }
     }
 }

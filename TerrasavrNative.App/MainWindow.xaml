@@ -2404,6 +2404,20 @@
                                                 <Style TargetType="ContentPresenter">
                                                     <Setter Property="Canvas.Left" Value="{Binding TileX}" />
                                                     <Setter Property="Canvas.Top" Value="{Binding TileY}" />
+                                                    <!-- X-c (segunda auditoria de Opus, Fable): "el buscador de NPCs
+                                                         oculta marcadores del mapa" - Npcs ya no se filtra (arriba,
+                                                         siempre completo), esto RESALTA los que coinciden en vez de
+                                                         ocultar los que no (atenuados, no invisibles - siguen dando su
+                                                         posicion real). Sin busqueda activa, IsMatch=true para todos,
+                                                         cero cambio visual respecto a como estaba. -->
+                                                    <Setter Property="Opacity" Value="1" />
+                                                    <Setter Property="Panel.ZIndex" Value="1" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsMatch}" Value="False">
+                                                            <Setter Property="Opacity" Value="0.25" />
+                                                            <Setter Property="Panel.ZIndex" Value="0" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
                                                 </Style>
                                             </ItemsControl.ItemContainerStyle>
                                             <ItemsControl.ItemTemplate>
@@ -2491,7 +2505,9 @@
                         </Expander>
 
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding Exploration.Npcs}">
+                            <!-- X-c: la lista lateral de TEXTO si se filtra de verdad (NpcSearchResults) -
+                                 Npcs (el mapa, arriba) se queda siempre completo. -->
+                            <ItemsControl ItemsSource="{Binding Exploration.NpcSearchResults}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
                                         <Button Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,5"
