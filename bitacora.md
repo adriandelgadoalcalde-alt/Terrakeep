@@ -5216,3 +5216,41 @@ final SIN excepcion (`VerticalOffset=172px`, exacto), captura real
 "Cuerpo a cuerpo +" (Grande/Enorme/Peligroso/Salvaje/Afilado/Puntiagudo/Voluminoso/Pesado/
 Ligero/Legendario) alcanzables desplazando. `dotnet test` 216/216 en verde (sin cambios),
 arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### L-c (segunda auditoria, Fable) - tope de 300 resultados medido de verdad + debounce real
+
+**"El tope de 300 no tiene ninguna medicion real detras, solo el motivo generico de que
+WrapPanel no virtualiza"**: medido de verdad con el arnes UIA (busqueda amplia real "ar" sobre
+el catalogo completo, ~8469 objetos, Debug primera pasada) - **100 objetos -> 158ms, 150 ->
+271ms, 300 -> 802ms**. NO escala lineal (el WrapPanel sin virtualizar empeora peor que
+proporcional al crecer) - 300 era un freeze real y perceptible, no una cifra sin coste. Bajado
+a **100**, el punto real donde el reflow deja de notarse manteniendo un numero util de
+resultados antes de pedir afinar la busqueda.
+
+**Hallazgo adicional real al medir (no buscado a proposito)**: el buscador reflowaba en CADA
+pulsacion de tecla (`UpdateSourceTrigger=PropertyChanged`) - con un termino de varios
+caracteres, cada pulsacion intermedia pagaba el coste entero de reflow, no solo la ultima.
+`LibraryViewModel._searchDebounceTimer` (`DispatcherTimer`, mismo patron real ya usado en
+`MainViewModel._saveConfirmationTimer` - `Stop()`+`Start()` en cada disparo) - solo la busqueda
+por TEXTO se debounça (180ms tras la ultima pulsacion); elegir una carpeta o cambiar el slot a
+rellenar (`PickTarget`) siguen aplicando el filtro al instante, son un clic discreto, no tecleo
+continuo.
+
+**Bug real del propio arnes encontrado y arreglado al verificar (no del codigo de produccion)**:
+un bucle `DoEvents()` sin ninguna pausa real puede dejar la cola de mensajes SIEMPRE ocupada
+con trabajo propio, y un `DispatcherTimer` real usa un temporizador de Windows aparte
+(`WM_TIMER`, prioridad baja) que necesita que la cola quede libre un instante de verdad para
+entregarse - confirmado con un log temporal que demostro que el Tick fallaba de forma
+intermitente sin una pausa real entre vueltas. `WaitForDispatcher(ms)` (nuevo, permanente)
+añade un `Thread.Sleep(1)` real por vuelta - estable en 3 ejecuciones consecutivas tras el
+arreglo.
+
+1 prueba determinista nueva (`LibraryMaxResultsTests.cs`: selecciona la categoria real mas
+grande del arbol via `SelectCategoryCommand`, sincrono, sin pasar por el debounce - confirma
+`Results.Count == 100`). El debounce en si (necesita un `Dispatcher` real corriendo, no
+disponible en xunit sin plomeria nueva - mismo motivo real por el que `ExplorationViewModel`
+tampoco tiene test unitario para su parte async) se verifica en el arnes UIA: `L-C-TOPE:
+debounce real (Results sin cambiar justo tras teclear)=True, Results.Count tras esperar=100,
+tiempo total con espera=353ms` - estable en 3 ejecuciones. `dotnet test` 217/217 en verde (134
+Core + 83 ViewModels), arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0
+fallo(s)`.

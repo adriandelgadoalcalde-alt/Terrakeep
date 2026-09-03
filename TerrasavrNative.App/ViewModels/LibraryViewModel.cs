@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -20,7 +21,23 @@ namespace TerrasavrNative.App.ViewModels;
 // puesto, el objeto se coloca en ese slot y se dispara ItemPlaced para volver a Personaje.
 public partial class LibraryViewModel : ObservableObject
 {
-    private const int MaxResults = 300;
+    // L-c (segunda auditoria de Opus, Fable): "el tope de 300 no tiene ninguna medicion real
+    // detras, solo el motivo generico de que WrapPanel no virtualiza". Medido de verdad con el
+    // arnes UIA (busqueda amplia real, "ar", sobre el catalogo completo ~8469 objetos, Debug
+    // primera pasada): 100 objetos -> 158ms, 150 -> 271ms, 300 -> 802ms real - NO escala lineal
+    // (WrapPanel sin virtualizar empeora peor que proporcional al crecer), 300 era un freeze
+    // real y perceptible tecleando. 100 es el punto real donde el reflow deja de notarse de
+    // verdad manteniendo un numero de resultados util antes de pedir afinar la busqueda.
+    private const int MaxResults = 100;
+
+    // L-c: la busqueda ya reflowaba en CADA pulsacion de tecla (UpdateSourceTrigger=
+    // PropertyChanged) - con un termino amplio de varios caracteres, cada pulsacion
+    // intermedia pagaba el coste real de reflow entero, no solo la ultima. Mismo patron ya
+    // establecido en el proyecto (MainViewModel._saveConfirmationTimer, Stop()+Start() en
+    // cada disparo) - solo la busqueda por TEXTO se debounça (elegir una carpeta o cambiar
+    // PickTarget siguen aplicando el filtro al instante, son un unico clic discreto, no
+    // tecleo continuo).
+    private readonly DispatcherTimer _searchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
 
     private readonly List<LibraryItemViewModel> _all;
     private readonly Dictionary<int, LibraryItemViewModel> _byId;
@@ -77,10 +94,24 @@ public partial class LibraryViewModel : ObservableObject
         // real en CategoryNodeViewModel.SelectCommand.
         CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
 
+        _searchDebounceTimer.Tick += (_, _) =>
+        {
+            _searchDebounceTimer.Stop();
+            ApplyFilter();
+        };
+
         ApplyFilter();
     }
 
-    partial void OnSearchTextChanged(string value) => ApplyFilter();
+    // L-c: reinicia el temporizador en cada pulsacion en vez de filtrar al instante - solo la
+    // ULTIMA pulsacion de una racha de tecleo paga el coste real de reflow, 180ms despues de
+    // que el usuario se detiene (imperceptible como demora, pero evita repetir el reflow entero
+    // en cada caracter mientras todavia esta escribiendo).
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchDebounceTimer.Stop();
+        _searchDebounceTimer.Start();
+    }
 
     [RelayCommand]
     private void SelectCategory(CategoryNodeViewModel node)

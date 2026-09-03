@@ -675,11 +675,30 @@ internal static class Program
         {
             vm.IsLibraryCollapsed = false; // desplegada por defecto ahora - hace falta para que las tarjetas se rendericen
             vm.Library.SearchText = "Sword";
-            DoEvents();
-            DoEvents();
+            WaitForDispatcher(300); // L-c: espera real al debounce (180ms) antes de mirar Results
             int libraryCards = root.FindAll(TreeScope.Descendants,
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button)).Count;
             Console.WriteLine($"LIBRERIA busqueda 'Sword': Results.Count={vm.Library.Results.Count} (tarjetas renderizadas sin excepcion)");
+
+            // L-c (segunda auditoria de Opus, Fable): "el tope de 300 resultados no tiene
+            // ninguna medicion real detras, solo el motivo generico de que WrapPanel no
+            // virtualiza". Medido de verdad (busqueda amplia real "ar" sobre ~8469 objetos):
+            // 100->158ms, 150->271ms, 300->802ms - NO lineal, 300 era un freeze real
+            // tecleando. Bajado a 100 + debounce real (180ms tras la ultima pulsacion, evita
+            // repetir el reflow entero en cada caracter de una racha de tecleo) - se
+            // comprueba primero que el debounce SI difiere el reflow real (Results no cambia
+            // de inmediato) y despues que aplica de verdad tras esperar.
+            int resultsAntesDeEsperar = vm.Library.Results.Count;
+            vm.Library.SearchText = "ar"; // 2+ caracteres reales (LibrarySearchGrammar ignora terminos de 1 solo caracter)
+            DoEvents();
+            bool siguDebounceando = vm.Library.Results.Count == resultsAntesDeEsperar;
+            var swLibReflow = System.Diagnostics.Stopwatch.StartNew();
+            WaitForDispatcher(300);
+            swLibReflow.Stop();
+            Console.WriteLine($"L-C-TOPE: debounce real (Results sin cambiar justo tras teclear)={siguDebounceando} (esperado True), Results.Count tras esperar={vm.Library.Results.Count} (esperado 100, el tope real), tiempo total con espera={swLibReflow.ElapsedMilliseconds}ms");
+            if (!siguDebounceando) Console.WriteLine("FALLO: L-c (segunda auditoria) - la busqueda de Libreria ya no diferencia el reflow (debounce roto)");
+            vm.Library.SearchText = "Sword"; // deja el estado limpio para los pasos siguientes
+            WaitForDispatcher(300);
         }
         catch (Exception ex)
         {
@@ -1735,6 +1754,30 @@ internal static class Program
         var frame = new DispatcherFrame();
         Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() => frame.Continue = false));
         Dispatcher.PushFrame(frame);
+    }
+
+    // L-c (segunda auditoria de Opus, Fable): DoEvents por si sola NO espera tiempo real, solo
+    // vacia lo que ya este listo AHORA MISMO - un DispatcherTimer real (LibraryViewModel.
+    // _searchDebounceTimer) no dispara hasta que pasa tiempo de reloj de verdad. Bombea el
+    // Dispatcher en bucle hasta que el tiempo pedido transcurre de verdad, para probar el
+    // camino async/temporizado real (no solo lo sincrono).
+    //
+    // Bug real de este mismo arnes encontrado al verificar (no del codigo de produccion): un
+    // bucle DoEvents() sin ninguna pausa real reencola trabajo propio en cada vuelta y puede
+    // dejar la cola de mensajes SIEMPRE ocupada - un DispatcherTimer real usa un temporizador
+    // de Windows aparte (WM_TIMER, prioridad baja) que necesita que la cola quede libre un
+    // instante de verdad para entregarse. Un Thread.Sleep(1) real entre vueltas (cede la CPU
+    // de verdad al hilo/SO) fue lo que lo arreglo - confirmado antes con un log temporal
+    // (DEBUG-TICK) que demostro que el Tick SI llegaba a disparar con esa pausa real de por
+    // medio, y no siempre sin ella.
+    private static void WaitForDispatcher(int ms)
+    {
+        long until = Environment.TickCount64 + ms;
+        while (Environment.TickCount64 < until)
+        {
+            DoEvents();
+            System.Threading.Thread.Sleep(1);
+        }
     }
 
     // Verificacion real de N-3 (auditoria de Opus, Bloque 3, atajos de teclado): Keyboard.Modifiers
