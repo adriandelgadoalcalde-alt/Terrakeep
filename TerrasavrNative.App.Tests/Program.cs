@@ -19,9 +19,11 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using TerrasavrNative.App;
+using TerrasavrNative.App.Controls;
 using TerrasavrNative.App.Converters;
 using TerrasavrNative.App.ViewModels;
 using TerrasavrNative.Core.Model;
@@ -1126,6 +1128,65 @@ internal static class Program
             else Console.WriteLine("T20-AUTOEQUIP: sin gear/EquipmentGroup real - omitido");
         }
         catch (Exception ex) { Console.WriteLine("T20-AUTOEQUIP-EXCEPTION: " + ex); }
+
+        // Verificacion real de T-24 (auditoria de Opus, Bloque 6): 3 casos deterministas
+        // (matematica pura, sin depender de ninguna ventana ni layout ya corrido) para los 3
+        // modos reales de SlotGridPanel.MeasureOverride - ver el resumen real en el propio
+        // SlotGridPanel.cs. Panel.Measure() funciona standalone (sin arbol visual real, sin
+        // Window) porque MeasureOverride es matematica pura sobre InternalChildren/las
+        // DependencyProperty del propio panel.
+        try
+        {
+            static SlotGridPanel BuildGrid(int childCount, int columns, double minCell, double maxCell, double gap,
+                int referenceColumns = 0, double referenceWidth = 0, double availableHeight = 0)
+            {
+                var grid = new SlotGridPanel
+                {
+                    Columns = columns, MinCell = minCell, MaxCell = maxCell, Gap = gap,
+                    ReferenceColumns = referenceColumns, ReferenceWidth = referenceWidth, AvailableHeight = availableHeight,
+                };
+                for (int i = 0; i < childCount; i++) grid.Children.Add(new Border());
+                return grid;
+            }
+
+            // Caso 1 (modo BASICO, suelo real MinCell): 10 columnas, 10 hijos (1 fila), un ancho
+            // disponible tan estrecho (300px) que la celda "natural" (26.4px) cae por debajo del
+            // suelo real - debe congelarse en MinCell=40, no seguir encogiendo (el ancho real
+            // pedido por la rejilla, 436px, supera el disponible - eso es EXACTAMENTE lo que
+            // activa el scroll horizontal real cuando esto vive dentro de un ScrollViewer, ver
+            // MainWindow.xaml). Hallazgo real de paso, verificado aqui mismo (no de memoria):
+            // FrameworkElement.Measure() recorta el ANCHO devuelto al availableSize de entrada
+            // (300, no los 436 reales que MeasureOverride calculo) - comportamiento real y
+            // documentado de WPF (protege contra un Panel mal comportado que pida mas sitio del
+            // que se le ofrecio), NO un bug de SlotGridPanel: el ALTO (sin restriccion real
+            // aqui, Infinity de entrada) SI llega intacto y es la prueba real de que la celda de
+            // verdad elegida fue 40 (rows=1 * cell=40 = 40), confirmando el suelo real por una
+            // via que el recorte de WPF no toca.
+            var grid1 = BuildGrid(childCount: 10, columns: 10, minCell: 40, maxCell: 90, gap: 4);
+            grid1.Measure(new Size(300, double.PositiveInfinity));
+            var size1 = grid1.DesiredSize;
+            Console.WriteLine($"T24-SLOTGRID caso1 (suelo MinCell): DesiredSize={size1} (esperado alto=40 real -1*MinCell-; ancho=300, recortado por WPF al availableSize de entrada, no 436 - ver comentario real)");
+
+            // Caso 2 (modo BASICO, techo real MaxCell): mismos parametros, ancho disponible
+            // enorme (2000px) - la celda "natural" (196.4px) supera el techo real, debe
+            // congelarse en MaxCell=90, no seguir creciendo (para que Monedas/Municion, si
+            // vivieran aqui, no se inflen a tarjetas gigantes).
+            var grid2 = BuildGrid(childCount: 10, columns: 10, minCell: 40, maxCell: 90, gap: 4);
+            grid2.Measure(new Size(2000, double.PositiveInfinity));
+            var size2 = grid2.DesiredSize;
+            Console.WriteLine($"T24-SLOTGRID caso2 (techo MaxCell): DesiredSize={size2} (esperado 936x90 - 10*90+4*9=936, 1*90=90)");
+
+            // Caso 3 (modo ReferenceColumns+ReferenceWidth): 5 columnas, ancho PROPIO enorme
+            // (2000px, dejaria crecer la celda sin limite real por si solo) pero referenciado
+            // contra una fila hermana de 10 columnas en solo 400px de ancho (cellFromReference=
+            // (400-4*9)/10=36.4) - la celda debe quedarse en 36.4, LA MISMA que tendria esa fila
+            // hermana, demostrando que el limite cruzado (no el propio ancho) es el que manda.
+            var grid3 = BuildGrid(childCount: 5, columns: 5, minCell: 30, maxCell: 90, gap: 4, referenceColumns: 10, referenceWidth: 400);
+            grid3.Measure(new Size(2000, double.PositiveInfinity));
+            var size3 = grid3.DesiredSize;
+            Console.WriteLine($"T24-SLOTGRID caso3 (ReferenceWidth cruzado): DesiredSize={size3} (esperado 198x36.4 - 5*36.4+4*4=198, 36.4)");
+        }
+        catch (Exception ex) { Console.WriteLine("T24-SLOTGRID-EXCEPTION: " + ex); }
 
         string errorLog = Path.Combine(AppContext.BaseDirectory, "ultimo-error.log");
         Console.WriteLine("ultimo-error.log existe: " + File.Exists(errorLog));

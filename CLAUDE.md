@@ -153,6 +153,18 @@ sesión:
   `TerrasavrNative.App.App`) y añadir a mano solo los recursos que hagan
   falta (`Theme.xaml` + los conversores de `App.xaml.Resources`) - así solo
   existe la ventana creada explícitamente.
+- **`FrameworkElement.Measure(availableSize)` recorta el ANCHO/ALTO que devuelve al
+  `availableSize` de entrada** en esa dimension si esta ES FINITA - aunque el `MeasureOverride`
+  real del propio elemento haya calculado (y usado de verdad para medir a sus hijos) un tamaño
+  mayor. Confirmado real probando `SlotGridPanel` con `MinCell` forzando una rejilla mas ancha
+  que el `availableSize` ofrecido: `DesiredSize.Width` sale igual al `availableSize.Width` de
+  entrada, NO al ancho real que `MeasureOverride` calculo - la dimension que SÍ entra como
+  `Infinity` (sin restriccion real) no se recorta, y es la via fiable para verificar el tamaño
+  real elegido por un Panel a medida en un test fuera de una ventana real. No es un bug del
+  Panel: protege contra un Panel mal comportado que pida mas sitio del que se le ofrecio - el
+  scroll real (cuando el Panel vive dentro de un `ScrollViewer`, como todo uso real de
+  `SlotGridPanel`) sigue funcionando bien, `ArrangeOverride` usa sus propios campos internos
+  (`_cell`/`_cols`), no el `DesiredSize` ya recortado.
 - `Path.GetTempPath()` desde un proceso lanzado en segundo plano vía Git
   Bash puede no resolver al mismo directorio que ve una sesión de
   PowerShell aparte - para un log de diagnóstico de un arnés, usar siempre

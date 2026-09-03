@@ -4160,3 +4160,34 @@ Verificado migrando el arnes completo (1181 lineas, TODAS las verificaciones de 
 entera - Bloques 0 a 6) tal cual, sin reescribir nada: compila limpio como parte de la solucion
 completa (4 proyectos) y se ejecuta desde su nueva ubicacion real con el mismo resultado exacto
 de siempre - 0 NO-FOUND/FALLO/EXCEPTION, "DONE" al final.
+
+### Bloque 6 (parte 5) - T-24: SlotGridPanel documentado + 3 casos deterministas reales
+
+**Documentacion**: `SlotGridPanel.cs` ya tenia el detalle real de CADA modo bien explicado
+(comentario propio de cada `DependencyProperty`, con su motivacion y el bug real que arreglo) -
+se añade un resumen real a golpe de vista (los 3 modos nombrados: BASICO/ReferenceColumns solo/
+ReferenceColumns+ReferenceWidth) justo encima de la clase, a modo de mapa.
+
+**3 casos deterministas reales** (matematica pura, sin ventana ni layout real - `Panel.Measure()`
+funciona standalone) en `TerrasavrNative.App.Tests`: suelo `MinCell` (celda no encoge de mas),
+techo `MaxCell` (celda no crece de mas), y `ReferenceColumns`+`ReferenceWidth` cruzado (la celda
+se ata al tamaño de una fila HERMANA mas estrecha, no al propio ancho disponible - la prueba
+real de que el arreglo de la quinta pasada, Equipamiento fusionado con 3 columnas, sigue
+funcionando).
+
+**Hallazgo real de paso, verificado en el momento (no de memoria)**: `FrameworkElement.
+Measure()` recorta el ancho/alto devuelto al `availableSize` de ENTRADA en cualquier dimension
+FINITA, aunque `MeasureOverride` haya calculado (y usado de verdad para medir a los hijos) un
+tamaño mayor - confirmado con el caso del suelo `MinCell` (rejilla que pide 436px reales en
+300px disponibles, `DesiredSize.Width` sale en 300, no 436) - comportamiento real y documentado
+de WPF, no un bug de `SlotGridPanel` (protege contra un Panel mal comportado; el scroll real
+sigue funcionando porque `ArrangeOverride` usa sus propios campos internos, no el `DesiredSize`
+ya recortado). Documentado en `CLAUDE.md` ("Verdades del entorno WPF") para no volver a
+descubrirlo a ciegas - la dimension que SI llega como `Infinity` es la via fiable para verificar
+el tamaño real elegido por un Panel a medida fuera de una ventana real.
+
+`dotnet build`/`dotnet test` en verde (134/134), los 3 casos de `SlotGridPanel` correctos y
+verificados a mano contra la formula real documentada en el propio archivo.
+
+**Bloque 6 (parcial)**: N-5/T-20/T-18/T-21/T-24 cerrados y comiteados. Queda T-19 (separar
+`MainWindow.xaml`/su diccionario de recursos en ficheros por dominio) para cerrar el bloque.

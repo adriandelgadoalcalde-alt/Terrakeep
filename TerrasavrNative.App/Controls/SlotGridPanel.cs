@@ -16,6 +16,22 @@ namespace TerrasavrNative.App.Controls;
 //
 // cols = min(Columns, n); rows = ceil(n/cols); cell = clamp(min(anchoDisponible/cols,
 // altoDisponible/rows), MinCell, MaxCell).
+//
+// Auditoria de Opus, Bloque 6 (T-24): resumen real de los 3 modos, a golpe de vista (el
+// detalle de CADA UNO, con su motivacion real y el bug que arreglo, ya vive en el comentario de
+// su propia DependencyProperty mas abajo - esto es solo el mapa):
+//  1. BASICO (ReferenceColumns=0, el caso de siempre) - la celda se calcula SOLO contra el
+//     propio ancho/alto disponibles de este panel, sin mirar a nadie mas.
+//  2. ReferenceColumns>0, ReferenceWidth=0 - la celda nunca puede superar la que tendria un
+//     panel de ReferenceColumns columnas usando el ANCHO PROPIO de este panel (para hermanos
+//     que ya comparten la misma columna de Grid - incluso con menos columnas reales, no se
+//     inflan mas que "10 columnas cabrian aqui").
+//  3. ReferenceColumns>0 Y ReferenceWidth>0 - igual que el 2, pero contra un ancho de
+//     referencia EXTERNO explicito (para hermanos en columnas de Grid DISTINTAS - ej. una fila
+//     fusionada con 3 SlotGridPanel en 3 columnas mas estrechas cada uno, que deben verse todos
+//     al mismo tamaño de icono que si compartieran la fila entera).
+// Verificado con 3 casos reales deterministas (matematica pura, sin necesitar una ventana real)
+// en TerrasavrNative.App.Tests - ver "T24-SLOTGRID" ahi.
 public sealed class SlotGridPanel : Panel
 {
     public static readonly DependencyProperty ColumnsProperty = DependencyProperty.Register(
