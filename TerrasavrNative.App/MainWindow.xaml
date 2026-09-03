@@ -418,6 +418,31 @@
                             </Style>
                         </Border.Style>
                     </Border>
+                    <!-- Auditoria de Opus, Bloque 3 (T-14): "el usuario no tiene ninguna
+                         confirmacion visual de que su edicion se aplico" - flash real de un
+                         instante, IsHitTestVisible=False (nunca roba el clic/arrastre real del
+                         slot) y en su propio canal independiente (Opacity de este Border
+                         suyo, no comparte trigger con seleccionado/equipado/Calamity - mismo
+                         criterio anti-conflicto del comentario de arriba, T-4/E-1). Disparado
+                         SOLO en una edicion real de usuario, ver ItemSlotViewModel.JustEdited/
+                         MainViewModel.HookSlotEditing. -->
+                    <Border Background="{StaticResource AccentBrush}" CornerRadius="4" Opacity="0" IsHitTestVisible="False">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding JustEdited}" Value="True">
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="0.45" Duration="0:0:0.22" AutoReverse="True" />
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
                     <!-- Icono fantasma real (extraido del propio juego, ver
                          SlotGhostIconResolver.cs/scripts/extraer-iconos-fantasma-slot.js) -
                          solo visible con el slot vacio, igual que en Terraria real

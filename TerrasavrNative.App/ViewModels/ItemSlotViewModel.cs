@@ -88,6 +88,12 @@ public partial class ItemSlotViewModel : ObservableObject
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private int _itemId;
     [ObservableProperty] private int _prefixId;
+    // Auditoria de Opus, Bloque 3 (T-14): "el usuario no tiene ninguna confirmacion visual de
+    // que su edicion se aplico" - flash real de un instante en el propio slot, mismo lenguaje
+    // visual que el banner de "Guardado" (DataTrigger.EnterActions, dispara solo al pasar de
+    // False a True) pero por slot, no global. Disparado por MainViewModel SOLO en una edicion
+    // real de usuario (nunca durante la carga de un personaje) - ver TriggerEditFlash().
+    [ObservableProperty] private bool _justEdited;
 
     public bool IsNotEmpty => !IsEmpty;
     // El tooltip normal solo tiene sentido con el slot lleno (ver comentario mas abajo en
@@ -270,6 +276,27 @@ public partial class ItemSlotViewModel : ObservableObject
 
     [RelayCommand]
     private void ChooseFromLibrary() => _requestPick?.Invoke(this);
+
+    // Auditoria de Opus, Bloque 3 (T-14). El reset a False tras un instante (para poder
+    // re-disparar el flash en la SIGUIENTE edicion, un DataTrigger de WPF solo entra en accion
+    // al pasar de False a True) via Task.Delay - sin DispatcherTimer por instancia (un timer
+    // real por cada uno de los cientos de slots reales seria un desperdicio real, esto solo usa
+    // el pool de hilos un instante y solo cuando hay una edicion de verdad). El False->True
+    // explicito de las dos primeras lineas (en vez de solo "=true") es real, no cosmetico: si
+    // el usuario edita el MISMO slot dos veces en menos de 450ms, True->True seria un no-op
+    // para WPF (no se re-entra el trigger) y el segundo flash no se veria.
+    public void TriggerEditFlash()
+    {
+        JustEdited = false;
+        JustEdited = true;
+        _ = ResetEditFlashAsync();
+    }
+
+    private async System.Threading.Tasks.Task ResetEditFlashAsync()
+    {
+        await System.Threading.Tasks.Task.Delay(450);
+        JustEdited = false;
+    }
 
     partial void OnCountChanged(int value)
     {

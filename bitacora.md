@@ -3804,3 +3804,28 @@ dialogo modal real, mismo riesgo de cuelgue ya documentado para `MessageBox` en 
 literalmente el mismo `OnLoadClick` que ya se prueba a diario con el boton, sin riesgo nuevo.
 
 `dotnet build`/`dotnet test` en verde (134/134).
+
+### Bloque 3 (parte 3) - T-14: flash real de confirmacion al editar un slot
+
+**Antes**: colocar un objeto, cambiar su prefijo o vaciar un slot actualizaba el icono en
+silencio - ninguna señal de que la edicion se aplico de verdad, mas alla del propio cambio de
+icono (facil de pasar por alto en una rejilla con muchos slots).
+
+**Ahora**: `ItemSlotViewModel.JustEdited` (nuevo) + `TriggerEditFlash()` - un Border propio
+dentro de `SlotCompactTemplate` (canal independiente, Opacity con su propio
+`DataTrigger.EnterActions`, mismo criterio anti-conflicto ya aplicado en E-1/T-4: nunca
+comparte trigger con seleccionado/equipado/Calamity) hace un pulso real (0 -> 0.45 -> 0 opacidad,
+220ms cada tramo, AutoReverse) al entrar en `True`. Disparado desde un unico sitio real,
+`MainViewModel.HookSlotEditing` (antes duplicado en `RebuildContainers`/`AddContainer` solo
+para `MarkDirty()`, ahora unificado) - SOLO cuando es una edicion de verdad de usuario, nunca
+durante la carga silenciosa de un personaje (mismo guardia `_suppressDirty` ya real de N-2).
+Reset a `False` tras 450ms via `Task.Delay` (sin `DispatcherTimer` por instancia - un timer real
+por cada uno de los cientos de slots seria un desperdicio real) para poder re-disparar el flash
+en la siguiente edicion del mismo slot.
+
+Verificado con el ciclo completo real: `PlaceItem` en un slot de Inventario ->
+`JustEdited=True` inmediato, `False` tras 600ms de espera real - y captura real
+(`flash-edicion.png`) con el pulso visible a mitad de animacion en el slot editado, distinto de
+sus vecinos.
+
+`dotnet build`/`dotnet test` en verde (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.

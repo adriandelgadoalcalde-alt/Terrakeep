@@ -63,6 +63,22 @@ public partial class MainViewModel : ObservableObject
         if (!_suppressDirty) IsDirty = true;
     }
 
+    // Auditoria de Opus, Bloque 3 (T-14): unico sitio real donde se decide "esto es una edicion
+    // de verdad de un slot" - antes esta suscripcion vivia duplicada en RebuildContainers y
+    // AddContainer solo para MarkDirty(); ahora tambien dispara el flash visual del propio
+    // slot, y SOLO cuando de verdad es un usuario editando (no durante la carga silenciosa de
+    // un personaje, mismo guardia _suppressDirty ya real de N-2 - JustEdited se excluye igual
+    // que IsSelected, si no, el propio flash re-entraria el manejador sin fin).
+    private void HookSlotEditing(ItemSlotViewModel slot)
+    {
+        slot.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited)) return;
+            MarkDirty();
+            if (!_suppressDirty) slot.TriggerEditFlash();
+        };
+    }
+
     // Titulo real de ventana con el nombre del personaje y el punto "sin guardar" (N-2) - antes
     // era la constante fija "Terrakeep" siempre, sin importar que hubiera cargado ni si habia
     // cambios pendientes.
@@ -372,7 +388,7 @@ public partial class MainViewModel : ObservableObject
         // que se enganchan aqui, el unico sitio real donde MainViewModel ve la instancia nueva.
         foreach (var c in EquipmentGroup.AllContainers)
             foreach (var s in c.Slots)
-                s.PropertyChanged += (_, e) => { if (e.PropertyName != nameof(ItemSlotViewModel.IsSelected)) MarkDirty(); };
+                HookSlotEditing(s);
 
         Research.LoadFrom(_loaded.Character);
     }
@@ -484,9 +500,7 @@ public partial class MainViewModel : ObservableObject
             var kind = slotKinds != null && i < slotKinds.Length ? slotKinds[i] : SlotKind.None;
             var ghost = ghostIcons != null && i < ghostIcons.Length ? ghostIcons[i] : null;
             var slot = new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped, kind, ghost);
-            // Auditoria de Opus, N-2 (IsDirty real) - IsSelected es puro estado de UI (que slot
-            // tiene el foco del panel Editar), nunca una edicion real del personaje.
-            slot.PropertyChanged += (_, e) => { if (e.PropertyName != nameof(ItemSlotViewModel.IsSelected)) MarkDirty(); };
+            HookSlotEditing(slot);
             slots.Add(slot);
         }
         var container = new ContainerViewModel(key, displayName, slots) { Columns = columns, MinCell = minCell, MaxCell = maxCell };
