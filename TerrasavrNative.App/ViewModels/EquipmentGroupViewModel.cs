@@ -127,11 +127,25 @@ public partial class EquipmentGroupViewModel : ObservableObject
         // Auditoria de Opus, E-4: suscripcion real a cada slot de Armadura/Accesorios (de
         // TODOS los loadouts, no solo el seleccionado - cambiar de Puesto/1/2/3 tambien debe
         // reflejar la defensa/bono real de ESE loadout) para recalcular en vivo (P5).
+        // Segunda auditoria de Opus (Fable), B-6 - BUG REAL encontrado y arreglado: solo se
+        // escuchaba IsEmpty, que NO cambia al SUSTITUIR una pieza ya puesta por otra (el caso
+        // normal absoluto: arrastrar desde la Libreria sobre un slot ya ocupado, o
+        // "Auto-equipar" sobre un personaje ya vestido) - UpdateFrom hace IsEmpty=item.IsEmpty,
+        // que pasa de false a false, y [ObservableProperty] no emite nada en ese caso. "Defensa
+        // total" y el bono de set se quedaban congelados en el valor de la pieza ANTERIOR,
+        // mintiendo justo en el momento en que el usuario esta comparando armaduras. Mismo
+        // criterio de exclusion ya establecido en MainViewModel.HookSlotEditing (todo cambio
+        // real salvo IsSelected/JustEdited, que son puro estado de UI) en vez de perseguir
+        // propiedad por propiedad.
         foreach (var ((loadout, kind), container) in _byKey)
         {
             if (kind != EquipmentKind.Items) continue;
             foreach (var slot in container.Slots)
-                slot.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ItemSlotViewModel.IsEmpty)) RecomputeDefenseAndBonus(); };
+                slot.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited)) return;
+                    RecomputeDefenseAndBonus();
+                };
         }
         RecomputeDefenseAndBonus();
     }
@@ -163,7 +177,29 @@ public partial class EquipmentGroupViewModel : ObservableObject
         int headId = !items[0].IsEmpty && !items[0].IsCalamity ? items[0].Item.Id : -1;
         int bodyId = !items[1].IsEmpty && !items[1].IsCalamity ? items[1].Item.Id : -1;
         int legsId = !items[2].IsEmpty && !items[2].IsCalamity ? items[2].Item.Id : -1;
-        ActiveSetBonusText = _service.VanillaArmorSets.BonusForEquipped(headId, bodyId, legsId)?.Text;
+        ActiveSetBonusText = _service.VanillaArmorSets.BonusForEquipped(headId, bodyId, legsId)?.Text
+            ?? ActiveCalamitySetBonusText(items[0], items[1], items[2]);
+    }
+
+    // Segunda auditoria de Opus (Fable), B-6/F3: el bono de set de Calamity YA se extrae por
+    // pieza (CalamityCatalogEntry.SetBonus, commit a936124) y ya se muestra en el tooltip de
+    // CADA pieza suelta ("Con el set completo: ...") - pero "Defensa total"/"Bono activo" solo
+    // entendia sets vanilla, dejando el bono de Calamity mudo aunque el caso mas frecuente en
+    // este editor sea justo una armadura de Calamity. Real, no inventado: las 3 piezas
+    // (cabeza/cuerpo/piernas) de Calamity llevan el MISMO texto de `SetBonus` cuando forman un
+    // set real (extraido por set, no por pieza suelta) - si las 3 estan puestas, son de
+    // Calamity y comparten exactamente ese texto, el set esta activo de verdad.
+    private string? ActiveCalamitySetBonusText(ItemSlotViewModel head, ItemSlotViewModel body, ItemSlotViewModel legs)
+    {
+        if (head.IsEmpty || body.IsEmpty || legs.IsEmpty) return null;
+        if (!head.IsCalamity || !body.IsCalamity || !legs.IsCalamity) return null;
+
+        string? headBonus = _service.CalamityCatalog.BySyntheticId(head.Item.Id)?.SetBonus;
+        string? bodyBonus = _service.CalamityCatalog.BySyntheticId(body.Item.Id)?.SetBonus;
+        string? legsBonus = _service.CalamityCatalog.BySyntheticId(legs.Item.Id)?.SetBonus;
+        if (string.IsNullOrEmpty(headBonus) || headBonus != bodyBonus || headBonus != legsBonus) return null;
+
+        return headBonus;
     }
 
     // Indices reales dentro de los 10 slots de Items/Social (Player.armor[0..9] real):

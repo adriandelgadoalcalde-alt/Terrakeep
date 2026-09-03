@@ -4333,3 +4333,41 @@ misma matriz que Fable recomendo como via real para cerrar esta categoria de bug
 Verificado: `dotnet test` ahora ejecuta 143 pruebas reales (134 de Core + 9 nuevas de App,
 todas en verde) en vez de 134 - las 9 nuevas habrian cazado B-3/B-4/B-5 de haber existido antes.
 Arnes visual completo tambien en verde, sin NO-FOUND/FALLO/EXCEPTION.
+
+### B-6 + hallazgo real durante su verificacion: contaminacion acumulada del arnes (segunda auditoria, Fable)
+
+**B-6, la defensa/bonus de set no se recalculaba al SUSTITUIR un slot ya ocupado**:
+`EquipmentGroupViewModel` solo escuchaba `IsEmpty` de cada slot para disparar
+`RecomputeDefenseAndBonus()` - poner un objeto en un slot VACIO cambia `IsEmpty` (dispara), pero
+sustituir un casco YA puesto por otro (`PlaceItem` sobre un slot ocupado) no cambia `IsEmpty`
+(sigue siendo `false` antes y despues), asi que la defensa total se quedaba pillada en el valor
+de la PRIMERA pieza puesta. Arreglado ampliando el filtro a "cualquier cambio real, salvo
+`IsSelected`/`JustEdited`" (mismo criterio ya usado en `ItemEditViewModel`/`BuffEditViewModel`).
+De paso, `ActiveSetBonusText` solo miraba el catalogo de sets VANILLA - se añade deteccion real
+de sets de Calamity (`ActiveCalamitySetBonusText`): las 3 piezas comparten el mismo texto real
+de `CalamityCatalogEntry.SetBonus`, mismo mecanismo que usa el propio catalogo (no hay un
+"catalogo de sets" aparte para Calamity, a diferencia de vanilla). 2 pruebas deterministas
+nuevas en `EquipmentDefenseTests.cs` (sustituir casco Iron->Molten, defensa 2->8; vaciar casco,
+defensa a 0) - ambas habrian fallado antes del arreglo.
+
+**Hallazgo real, no planeado, al verificar B-6 con el arnes visual completo**: aparecieron 3
+NO-FOUND nuevos (boton "Colocar", "Minima", "Maxima" de Buffs) que NO tenian nada que ver con
+B-6. Investigado a fondo (no descartado a la ligera, regla real de la bitacora): la ruta de
+`%TEMP%\uia-harness-test.plr`/`.tplr` que usa el arnes es FIJA entre ejecuciones, y el `.tplr`
+companero NUNCA se borraba antes de escribir el personaje sintetico "fresco". Con un diagnostico
+temporal en `CalamityCharacterSync.MergeBuffs` se confirmo la causa real: al cargar, `MergeBuffs`
+fusiona (correctamente, es su trabajo real - el `.tplr` es la fuente de verdad de buffs con mods
+instalados) los buffs YA guardados en el `.tplr` de la ejecucion ANTERIOR; el arnes coloca 2
+buffs de prueba mas y los vuelve a guardar todos via `Save()` al final - una bola de nieve
+real que, tras ~22 ejecuciones repetidas de esta sesion tan larga, dejo los 44 slots llenos
+(alternando "Piel de obsidiana" real x1 con un buff sintetico de Calamity), asi que el arnes ya
+no encontraba ningun slot vacio donde probar "Elegir...". No es un bug de produccion (un
+personaje real no se recarga sobre si mismo sin fin) - es higiene de arnes: `Program.cs` ahora
+borra `.plr`/`.tplr`/`.bak` sinteticos antes de escribir el personaje fresco de cada ejecucion.
+Confirmado con 2 ejecuciones consecutivas ya en verde (antes, la primera limpia y la segunda
+habria vuelto a fallar en ~20 ejecuciones mas).
+
+`dotnet build`/`dotnet test` en verde (145/145: 134 Core + 11 App), arnes visual completo dos
+veces seguidas sin NO-FOUND/FALLO/EXCEPTION - quedan cerrados los 7 defectos criticos (B-1 a
+B-7) de la segunda auditoria de Opus (Fable). Sigue T-A ya cerrado; quedan T-B/T-C (Ola 1) y el
+resto de olas/hallazgos por seccion.

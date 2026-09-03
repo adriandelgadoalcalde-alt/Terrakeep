@@ -95,6 +95,20 @@ internal static class Program
             ],
         };
         string tempPlr = Path.Combine(Path.GetTempPath(), "uia-harness-test.plr");
+        // Bug real encontrado verificando B-6 (segunda auditoria, Fable): esta ruta de temp es
+        // FIJA entre ejecuciones. El .tplr companero (Path.ChangeExtension) NO se borraba aqui,
+        // asi que CalamityCharacterSync.MergeBuffs (real, produccion) fusionaba en cada
+        // ejecucion los buffs YA guardados por la ejecucion ANTERIOR (comportamiento correcto
+        // para un personaje real: el .tplr es la fuente real de verdad de buffs con mods
+        // instalados) - y como esta prueba coloca 2 buffs nuevos y los vuelve a guardar cada
+        // vez, era una bola de nieve: tras ~22 ejecuciones en esta sesion los 44 slots acabaron
+        // llenos, disparando fallos NO-FOUND en botones que dependen de encontrar un slot vacio.
+        // No es un bug de produccion (un personaje real no se auto-recarga sobre si mismo sin
+        // fin) - es higiene de arnes: borrar el .plr/.tplr/.bak sinteticos antes de escribir uno
+        // nuevo para que cada ejecucion arranque de verdad en limpio.
+        string tempTplr = Path.ChangeExtension(tempPlr, ".tplr");
+        foreach (string stale in new[] { tempPlr, tempTplr, tempPlr + ".bak", tempTplr + ".bak" })
+            if (File.Exists(stale)) File.Delete(stale);
         File.WriteAllBytes(tempPlr, PlrFile.Write(character));
 
         var vm = (MainViewModel)window.DataContext;
