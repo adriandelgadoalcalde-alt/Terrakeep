@@ -4855,3 +4855,25 @@ con una clave vanilla real conocida (IronBroadsword, id 4) en una prueba aparte.
 
 4 pruebas deterministas nuevas (2 en `HallazgosSueltosTests.cs`, 2 en `WhatsNewIconTests.cs`
 nuevo). `dotnet test` 190/190 en verde, arnes visual completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### S-d + I-c + D-b (segunda auditoria, Fable) - lote 3 de hallazgos sueltos
+
+**S-d, "Id" ocupaba el mismo protagonismo que los campos utiles**: pese a que el texto real ya
+dice "no suele hacer falta tocarlo" - mas estrecho (70px, no 100), tono secundario real
+(`TextSecondaryBrush`, mismo tono que su propia etiqueta) y tooltip con la explicacion completa.
+
+**I-c, anchos fijos en Inicio (puro `WrapPanel`)**: en una ventana de 1920px se usaban solo
+880px, dejando ~1000px negros. Nuevo `MainViewModel.InicioContentMaxWidth` (880 en Compacto/
+Normal, 1400 en Amplio - mismo `SizeClass` real compartido, sin umbral propio) + `MinHeight` en
+vez de `Height` fijo en las 5 tarjetas de navegacion (F2 - un titulo/descripcion mas largo hace
+crecer la tarjeta en vez de recortarse).
+
+**D-b, 13 casillas planas sin agrupar en Desbloqueos**: 4 subtitulos reales por familia (Modo
+de dificultad, Antorchas de bioma, Consumibles permanentes, Eventos y otros) - agrupacion real
+por lo que cada flag realmente es, no generica. F2 (columnas en Amplio) queda fuera de esta
+pasada.
+
+1 prueba determinista nueva (`LoteTresTests.cs`). Verificado con capturas reales de las dos
+pestañas que el arnes no visitaba todavia (Spawn Points, Desbloqueos) - la agrupacion de
+Desbloqueos se ve limpia y clara. `dotnet test` 191/191 en verde, arnes visual completo sin
+NO-FOUND/FALLO/EXCEPTION.

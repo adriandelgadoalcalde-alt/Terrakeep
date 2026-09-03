@@ -183,10 +183,17 @@ public partial class MainViewModel : ObservableObject
     // un unico breakpoint real, no uno por pantalla).
     public bool IsStorageExpanded => SizeClass == WindowSizeClass.Amplio;
 
+    // I-c (segunda auditoria de Opus, Fable): "anchos fijos en una pantalla que es puro
+    // WrapPanel - en una ventana de 1920px, Inicio usa 880px y deja 1.000px negros". Mismo
+    // SizeClass real compartido en vez de un umbral propio - en Amplio, sitio de sobra para que
+    // el WrapPanel de tarjetas reparta una fila mas ancha en vez de quedarse angosto.
+    public double InicioContentMaxWidth => SizeClass == WindowSizeClass.Amplio ? 1400 : 880;
+
     partial void OnSizeClassChanged(WindowSizeClass value)
     {
         OnPropertyChanged(nameof(IsEquipmentExpanded));
         OnPropertyChanged(nameof(IsStorageExpanded));
+        OnPropertyChanged(nameof(InicioContentMaxWidth));
     }
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];

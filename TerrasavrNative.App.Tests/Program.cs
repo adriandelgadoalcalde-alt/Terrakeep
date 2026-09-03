@@ -1473,6 +1473,32 @@ internal static class Program
         }
         catch (Exception ex) { Console.WriteLine("T-H-FOCO-EXCEPTION: " + ex); }
 
+        // Verificacion visual real de S-d/D-b (segunda auditoria de Opus, Fable): capturas de
+        // Spawn Points y Desbloqueos, pestañas que este arnes no visitaba todavia.
+        try
+        {
+            vm.SelectedTabIndex = 1; // Personaje
+            vm.PersonajeInnerTabIndex = 4; // Spawn Points
+            DoEvents(); DoEvents();
+            var rtbSpawn = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbSpawn.Render(window);
+            var encSpawn = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encSpawn.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbSpawn));
+            using (var fsSpawn = File.Create(Path.Combine(AppContext.BaseDirectory, "spawn-points-sd.png"))) encSpawn.Save(fsSpawn);
+
+            vm.PersonajeInnerTabIndex = 5; // Desbloqueos
+            DoEvents(); DoEvents();
+            var rtbFlags = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbFlags.Render(window);
+            var encFlags = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encFlags.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbFlags));
+            using (var fsFlags = File.Create(Path.Combine(AppContext.BaseDirectory, "desbloqueos-db.png"))) encFlags.Save(fsFlags);
+            Console.WriteLine("S-d/D-b: capturas -> spawn-points-sd.png, desbloqueos-db.png");
+        }
+        catch (Exception ex) { Console.WriteLine("S-d-D-b-EXCEPTION: " + ex); }
+
         string errorLog = Path.Combine(AppContext.BaseDirectory, "ultimo-error.log");
         Console.WriteLine("ultimo-error.log existe: " + File.Exists(errorLog));
 
