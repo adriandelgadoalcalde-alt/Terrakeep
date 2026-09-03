@@ -5379,3 +5379,16 @@ permanentes): las 13 casillas marcadas con su borde de acento correcto (bug del 
 arreglado, visible en la propia captura), y los 3 avisos naranjas reales visibles bajo sus
 grupos con version=100. `dotnet test` 239/239 en verde (134 Core + 105 ViewModels), arnes UIA
 completo sin NO-FOUND/FALLO/EXCEPTION/DISPATCHER-EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### I-d (segunda auditoria, Fable) - cerrado como parte real de T-G, no aparte
+
+**Nota de cierre, no un cambio de codigo nuevo**: I-d quedo anotado explicitamente en el propio
+plan de esta ronda como "se resuelve junto con T-G" - sin el texto verbatim original a mano
+tras la compactacion de contexto (no inventado, documentado con honestidad en vez de fingir
+certeza), la lectura mas defendible es que I-d pedia un indicador de carga real en Inicio
+mientras escanea los personajes reales del disco - exactamente lo que T-G ya entrego de verdad
+(`HomeViewModel.IsScanning`, antes sin ningun binding real, ahora con un spinner+texto reales
+visibles mientras `RefreshAsync` corre en segundo plano - ver la seccion de T-G mas arriba,
+verificado con `T-G-ASYNC: IsScanning justo tras new MainWindow()=True`). No se repite trabajo
+ya hecho y verificado ahi. Si esta lectura resulta no ser la intencion real original, queda
+documentado aqui para poder corregirlo con la pista correcta en cuanto aparezca.
