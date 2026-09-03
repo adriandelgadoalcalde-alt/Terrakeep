@@ -85,6 +85,75 @@ public partial class MainViewModel : ObservableObject
         if (!_suppressDirty) IsDirty = true;
     }
 
+    // H5-01 (quinta auditoria de Opus): "casi toda edicion del personaje es irreversible" -
+    // pila real de deshacer/rehacer (UndoStack, App/Services) compartida por CUALQUIER slot de
+    // objeto (Inventario/Almacenes/Equipamiento/Monturas/Tintes/Monedas/Municion) - ver el
+    // callback onItemChanged en AddContainer/EquipmentGroupViewModel, cableado UNA vez aqui.
+    public UndoStack UndoStack { get; } = new();
+    // Suprime que Undo()/Redo() se graben a si mismos como una edicion nueva - mismo criterio
+    // real que _suppressDirty (guardia explicito, no "no hacer nada especial y confiar").
+    private bool _suppressUndoRecording;
+
+    [RelayCommand(CanExecute = nameof(CanUndoEdit))]
+    private void UndoEdit()
+    {
+        _suppressUndoRecording = true;
+        try { UndoStack.UndoLast(); }
+        finally { _suppressUndoRecording = false; }
+    }
+    private bool CanUndoEdit() => UndoStack.CanUndo;
+
+    [RelayCommand(CanExecute = nameof(CanRedoEdit))]
+    private void RedoEdit()
+    {
+        _suppressUndoRecording = true;
+        try { UndoStack.RedoLast(); }
+        finally { _suppressUndoRecording = false; }
+    }
+    private bool CanRedoEdit() => UndoStack.CanRedo;
+
+    // Unico sitio real que decide si un cambio de slot merece una entrada nueva en el
+    // historial - antes/despues ya llegan clonados de verdad (ItemSlotViewModel.EmitItemChanged
+    // solo dispara si el contenido cambio de verdad).
+    private void OnSlotItemChanged(ItemSlotViewModel slot, GameItem before, GameItem after)
+    {
+        if (_suppressDirty || _suppressUndoRecording) return;
+        UndoStack.Push(new UndoEntry
+        {
+            Label = $"{slot.ContainerName} · slot {slot.SlotIndex + 1}",
+            Undo = () => slot.UpdateFrom(before.Clone()),
+            Redo = () => slot.UpdateFrom(after.Clone()),
+        });
+    }
+
+    // Envuelve una operacion en bloque real (Auto-equipar, Mover todo al almacen...) en UNA
+    // sola entrada del historial - pedido explicito del informe: "Las operaciones en bloque se
+    // registran como una SOLA entrada con su instantanea completa". Compara antes/despues de
+    // TODOS los slots de los contenedores indicados (no solo los que la propia operacion diga
+    // que toco - una diferencia real detectada vale mas que confiar en que cada operacion
+    // reporte bien lo suyo) y solo empuja algo si de verdad cambio algun slot.
+    private void RunAsUndoableBatch(string label, IEnumerable<ContainerViewModel> containers, Action body)
+    {
+        var slots = containers.SelectMany(c => c.Slots).ToList();
+        var before = slots.Select(s => s.Item.Clone()).ToList();
+
+        _suppressUndoRecording = true;
+        try { body(); }
+        finally { _suppressUndoRecording = false; }
+
+        var changes = new List<(ItemSlotViewModel Slot, GameItem Before, GameItem After)>();
+        for (int i = 0; i < slots.Count; i++)
+            if (!before[i].ContentEquals(slots[i].Item)) changes.Add((slots[i], before[i], slots[i].Item.Clone()));
+        if (changes.Count == 0) return;
+
+        UndoStack.Push(new UndoEntry
+        {
+            Label = label,
+            Undo = () => { foreach (var c in changes) c.Slot.UpdateFrom(c.Before.Clone()); },
+            Redo = () => { foreach (var c in changes) c.Slot.UpdateFrom(c.After.Clone()); },
+        });
+    }
+
     // Auditoria de Opus, Bloque 3 (T-14): unico sitio real donde se decide "esto es una edicion
     // de verdad de un slot" - antes esta suscripcion vivia duplicada en RebuildContainers y
     // AddContainer solo para MarkDirty(); ahora tambien dispara el flash visual del propio
@@ -385,6 +454,13 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
+        // H5-01: CanUndoEdit/CanRedoEdit dependen de UndoStack.CanUndo/CanRedo - UndoStack ya
+        // notifica ese cambio en cada Push/UndoLast/RedoLast/Clear, solo hace falta reenviarlo.
+        UndoStack.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(Services.UndoStack.CanUndo)) UndoEditCommand.NotifyCanExecuteChanged();
+            if (e.PropertyName == nameof(Services.UndoStack.CanRedo)) RedoEditCommand.NotifyCanExecuteChanged();
+        };
         // Auditoria de Opus, I-1: elegir un personaje real en el lanzador de Inicio carga
         // exactamente igual que el dialogo de "Cargar personaje..." de siempre, y salta
         // directo a Personaje - de nada sirve un lanzador de un click si despues hay que ir a
@@ -561,6 +637,8 @@ public partial class MainViewModel : ObservableObject
             BuffLibrary.PickTarget = null;
             ItemEdit.Slot = null;
             BuffEdit.Slot = null;
+            // H5-01: el historial de un personaje no tiene sentido real sobre otro.
+            UndoStack.Clear();
             _loaded = _service.Load(plrPath);
             RebuildContainers();
             Appearance.LoadFrom(_loaded.Character);
@@ -759,7 +837,7 @@ public partial class MainViewModel : ObservableObject
         // selector, ver EquipmentGroupViewModel (antes eran 12 pestañas planas mas aqui
         // mismo, 21 pestañas en total - pedido explicito 2-sep-2026 tras el amontonamiento
         // real al reducir la ventana: "¿es necesario que haya tantos botones?").
-        EquipmentGroup = new EquipmentGroupViewModel(_service, RequestPickForSlot, _loaded.MergedContainers, _loaded.Character.Loadouts.Length);
+        EquipmentGroup = new EquipmentGroupViewModel(_service, RequestPickForSlot, _loaded.MergedContainers, _loaded.Character.Loadouts.Length, OnSlotItemChanged);
         // EquipmentGroup se RECREA entera cada carga (a diferencia de Buffs, que reutiliza la
         // misma instancia) - los slots de sus contenedores nunca pasan por AddContainer, asi
         // que se enganchan aqui, el unico sitio real donde MainViewModel ve la instancia nueva.
@@ -800,7 +878,13 @@ public partial class MainViewModel : ObservableObject
     {
         if (_loaded == null || gear == null || EquipmentGroup == null) return;
 
-        var result = AutoEquipService.Apply(gear, EquipmentGroup, Containers.First(c => c.Key == "inventory"), _service);
+        // H5-01 (quinta auditoria de Opus): Auto-equipar podia "reemplazar SIN CONFIRMACION la
+        // armadura y los accesorios puestos" (tooltip real, ya existente) sin ninguna vuelta
+        // atras real - ahora es UNA sola entrada de deshacer, cubriendo Inventario Y el
+        // Equipamiento entero (AutoEquipService.Apply toca ambos).
+        AutoEquipService.Result result = default;
+        RunAsUndoableBatch("Auto-equipar", EquipmentGroup.AllContainers.Append(Containers.First(c => c.Key == "inventory")),
+            () => result = AutoEquipService.Apply(gear, EquipmentGroup, Containers.First(c => c.Key == "inventory"), _service));
         // Bd-c (segunda auditoria de Opus, Fable): "sin resolver" y "sin hueco libre" son
         // causas reales distintas (una no tiene arreglo por parte del usuario, la otra si -
         // vaciar hueco en el Inventario) - se cuentan y se dicen aparte en vez de fundirse en
@@ -834,7 +918,11 @@ public partial class MainViewModel : ObservableObject
     private void MoveInventoryToStorage()
     {
         if (InventoryContainer == null || StorageGroup == null) return;
-        int moved = InventoryContainer.MoveAllTo(StorageGroup.Current);
+        // H5-01: una sola entrada de deshacer para todo el traslado (toca 2 contenedores a la
+        // vez - origen y destino - por eso ninguno de los dos por separado bastaria).
+        int moved = 0;
+        var destino = StorageGroup.Current;
+        RunAsUndoableBatch("Mover todo al almacén", [InventoryContainer, destino], () => moved = InventoryContainer.MoveAllTo(destino));
         if (moved == 0)
         {
             StatusMessage = "Nada que mover: el inventario está vacío o el almacén seleccionado no tiene hueco libre.";
@@ -873,7 +961,7 @@ public partial class MainViewModel : ObservableObject
             bool isEquipped = key == "inventory" && i < HotbarSlotCount;
             var kind = slotKinds != null && i < slotKinds.Length ? slotKinds[i] : SlotKind.None;
             var ghost = ghostIcons != null && i < ghostIcons.Length ? ghostIcons[i] : null;
-            var slot = new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped, kind, ghost);
+            var slot = new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped, kind, ghost, onItemChanged: OnSlotItemChanged);
             HookSlotEditing(slot);
             slots.Add(slot);
         }

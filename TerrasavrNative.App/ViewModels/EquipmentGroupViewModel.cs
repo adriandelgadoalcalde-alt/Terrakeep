@@ -112,19 +112,20 @@ public partial class EquipmentGroupViewModel : ObservableObject
     public ContainerViewModel CurrentDyes => _byKey[(SelectedLoadout, EquipmentKind.Dyes)];
 
     public EquipmentGroupViewModel(CharacterFileService service, Action<ItemSlotViewModel> requestPickForSlot,
-        Dictionary<string, GameItem[]> mergedContainers, int realLoadoutCount)
+        Dictionary<string, GameItem[]> mergedContainers, int realLoadoutCount,
+        Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null)
     {
         _service = service;
-        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Items, "Equipo puesto - armadura/accesorios", mergedContainers["loadout0Items"]);
-        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Social, "Equipo puesto - vanidad", mergedContainers["loadout0Social"]);
-        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Dyes, "Equipo puesto - tintes", mergedContainers["loadout0Dyes"]);
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Items, "Equipo puesto - armadura/accesorios", mergedContainers["loadout0Items"], onItemChanged);
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Social, "Equipo puesto - vanidad", mergedContainers["loadout0Social"], onItemChanged);
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Dyes, "Equipo puesto - tintes", mergedContainers["loadout0Dyes"], onItemChanged);
         LoadoutOptions.Add(new EquipmentOptionViewModel("Puesto", 0) { IsSelected = true });
 
         for (int i = 1; i <= realLoadoutCount; i++)
         {
-            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Items, $"Loadout {i} - armadura/accesorios", mergedContainers[$"loadout{i}Items"]);
-            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Social, $"Loadout {i} - vanidad", mergedContainers[$"loadout{i}Social"]);
-            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Dyes, $"Loadout {i} - tintes", mergedContainers[$"loadout{i}Dyes"]);
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Items, $"Loadout {i} - armadura/accesorios", mergedContainers[$"loadout{i}Items"], onItemChanged);
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Social, $"Loadout {i} - vanidad", mergedContainers[$"loadout{i}Social"], onItemChanged);
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Dyes, $"Loadout {i} - tintes", mergedContainers[$"loadout{i}Dyes"], onItemChanged);
             LoadoutOptions.Add(new EquipmentOptionViewModel(i.ToString(), i));
         }
 
@@ -240,7 +241,8 @@ public partial class EquipmentGroupViewModel : ObservableObject
          SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory];
 
     private void AddSlotSet(CharacterFileService service, Action<ItemSlotViewModel> requestPickForSlot,
-        int loadout, EquipmentKind kind, string displayName, GameItem[] items)
+        int loadout, EquipmentKind kind, string displayName, GameItem[] items,
+        Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null)
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
         for (int i = 0; i < items.Length; i++)
@@ -265,7 +267,7 @@ public partial class EquipmentGroupViewModel : ObservableObject
             bool isExpert = kind == EquipmentKind.Items && i == 8;
             bool isMaster = kind == EquipmentKind.Items && i == 9;
             slots.Add(new ItemSlotViewModel(service, i, displayName, items[i], requestPickForSlot, isEquipped: true,
-                acceptedKind: slotKind, ghostIcon: ghost, isExpertAccessorySlot: isExpert, isMasterAccessorySlot: isMaster));
+                acceptedKind: slotKind, ghostIcon: ghost, isExpertAccessorySlot: isExpert, isMasterAccessorySlot: isMaster, onItemChanged: onItemChanged));
         }
         string key = kind switch
         {

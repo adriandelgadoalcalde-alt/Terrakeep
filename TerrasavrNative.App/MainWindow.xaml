@@ -1154,6 +1154,15 @@
                          descubre no mejora la practicidad" - los 4 atajos reales (OnWindowKeyDown)
                          ya existian, solo faltaba decirlo donde el usuario los va a usar. -->
                     <Button Content="Cargar personaje (.plr)..." Tag="Accent" Click="OnLoadClick" ToolTip="Ctrl+O" />
+                    <!-- H5-01 (quinta auditoria de Opus): "casi toda edicion del personaje es
+                         irreversible" - historial real de deshacer/rehacer (UndoStack), no solo
+                         a nivel de fichero como "Deshacer último guardado" de al lado. El
+                         tooltip lleva el rotulo real de la SIGUIENTE entrada (que se va a
+                         deshacer/rehacer si se pulsa), no solo "hay algo" - P5, feedback vivo. -->
+                    <Button Content="↶" FontSize="15" Padding="8,3" Margin="10,0,0,0" Command="{Binding UndoEditCommand}"
+                            ToolTip="{Binding UndoStack.NextUndoLabel, StringFormat='Deshacer: {0} (Ctrl+Z)', TargetNullValue='Deshacer (Ctrl+Z)'}" />
+                    <Button Content="↷" FontSize="15" Padding="8,3" Margin="4,0,0,0" Command="{Binding RedoEditCommand}"
+                            ToolTip="{Binding UndoStack.NextRedoLabel, StringFormat='Rehacer: {0} (Ctrl+Y)', TargetNullValue='Rehacer (Ctrl+Y)'}" />
                     <!-- T-C (segunda auditoria de Opus, Fable): el .bak real que Guardar ya deja
                          (CharacterFileService.WriteAtomic) ahora tiene una forma real de usarse
                          desde la propia UI, sin ir a buscarlo a mano al Explorador de archivos. -->

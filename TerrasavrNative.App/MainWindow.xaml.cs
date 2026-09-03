@@ -85,6 +85,23 @@ public partial class MainWindow : Window
             OnLoadClick(this, new RoutedEventArgs());
             e.Handled = true;
         }
+        else if (ctrl && e.Key == Key.Z)
+        {
+            // H5-01 (quinta auditoria de Opus): Ctrl+Z real para el historial de deshacer de
+            // objetos - se cede el paso al deshacer NATIVO de un TextBox si el foco esta dentro
+            // de uno (Cantidad/Índice/Prefijo a mano/nombre del personaje...), mismo criterio
+            // que cualquier editor de escritorio real: el usuario esta deshaciendo SU tecleo,
+            // no una edicion de slot.
+            if (Keyboard.FocusedElement is TextBox) return;
+            if (_viewModel.UndoEditCommand.CanExecute(null)) _viewModel.UndoEditCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (ctrl && e.Key == Key.Y)
+        {
+            if (Keyboard.FocusedElement is TextBox) return;
+            if (_viewModel.RedoEditCommand.CanExecute(null)) _viewModel.RedoEditCommand.Execute(null);
+            e.Handled = true;
+        }
         else if (ctrl && e.Key == Key.F)
         {
             // H4-03/H4-13 (cuarta auditoria de Opus, Fable): el desplegado real ya lo hace

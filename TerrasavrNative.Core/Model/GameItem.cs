@@ -21,4 +21,15 @@ public sealed class GameItem
     public bool IsCalamity => Id >= Calamity.CalamityIds.ItemIdBase;
 
     public static GameItem Empty => new() { Id = 0, Count = 0 };
+
+    // H5-01 (quinta auditoria de Opus): base real del historial de deshacer/rehacer - una
+    // instantanea "antes" tiene que ser independiente de la instancia que se sigue mutando en
+    // vivo (Count/Prefix/Favorited se escriben directamente sobre el mismo GameItem en varios
+    // sitios de ItemSlotViewModel, sin pasar por UpdateFrom). GlobalData se comparte por
+    // REFERENCIA a proposito (nunca lo muta ninguno de los caminos que llaman a Clone - solo
+    // llega ya resuelto desde la carga real del personaje).
+    public GameItem Clone() => new() { Id = Id, Count = Count, Prefix = Prefix, Favorited = Favorited, GlobalData = GlobalData };
+
+    public bool ContentEquals(GameItem? other) =>
+        other is not null && Id == other.Id && Count == other.Count && Prefix.Equals(other.Prefix) && Favorited == other.Favorited;
 }

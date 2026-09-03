@@ -6169,9 +6169,78 @@ una causa raiz concreta que arreglar (a diferencia del bug real de `SetForegroun
 encontrado en H5-08, ese si con causa y arreglo verificados).
 
 **Cierra la Tanda A completa** (H5-06, H5-08, H5-15) - las 3 cimentaciones del informe, ninguna
-cambia layout visible, las 3 verificadas con `dotnet test` + arnes UIA real. Pendientes: Tanda B
-(H5-01 Deshacer, H5-04 copias rotativas, H5-03 guardar/cargar conjuntos, H5-02 Investigacion
-editable), Tanda C (H5-10 cabecera con constantes vitales, H5-09 anchos fijos, H5-11 lanzador de
-mundos permanente) y Tanda D (H5-12/13/14/05/07) - todavia sin empezar, alcance grande cada una
-(el propio informe las describe como "lo que de verdad separa 'editor correcto' de 'programa
-completo'"), decision de continuar o no pendiente del usuario.
+cambia layout visible, las 3 verificadas con `dotnet test` + arnes UIA real.
+
+### Quinta auditoria (Opus), Tanda B parte 1 - H5-01, Deshacer/Rehacer real (4-sep-2026)
+
+Pedido explicito del usuario: "complétalo todo seguido sin parar". H5-01 primero, tal y como
+sugiere el propio informe ("los otros tres [H5-04/03/02] se apoyan en su historial").
+
+**Lo que pasaba de verdad**: Terrakeep tenia dos "deshacer", ninguno un deshacer de edicion
+real - `UndoLastSave` opera sobre FICHEROS (recarga el `.bak`), `ContainerViewModel.UndoClear`
+era una unica instantanea de 6 segundos solo para "Vaciar contenedor". Colocar un objeto,
+cambiar cantidad/prefijo/favorito, Auto-equipar (su propio tooltip real ya admitia "Reemplaza
+SIN CONFIRMACION... no lo guardes si no estabas seguro") - todo irreversible salvo cerrar sin
+guardar.
+
+**Diseño real, no una imitacion**: `UndoStack`/`UndoEntry` (nuevo, `App/Services`) - pila real de
+comandos por CLOSURES (`Action Undo`/`Action Redo` + `Label`), sin que esta clase sepa nada del
+dominio (objetos/buffs/investigacion serian todos igual de validos ahi si algun dia se
+extiende). `GameItem` gana `Clone()`/`ContentEquals()` (Core) - instantaneas propias, nunca la
+referencia viva (`Item` sigue mutandose en sitio en Count/Prefix/Favorited, guardar la
+referencia cruda habria corrompido una entrada ya empujada en cuanto alguien volviera a tocar
+ese mismo objeto).
+
+`ItemSlotViewModel` gana un unico canal nuevo real: `_onItemChanged` (delegado opcional al
+constructor, mismo patron ya establecido con `_requestPick`) - se dispara desde los 4 puntos
+reales donde el contenido de un slot cambia de verdad (`UpdateFrom` - cubre `PlaceItem`/`Clear`/
+`SwapWith`, `OnCountChanged`, `SetPrefix`, `ToggleFavorite`), siempre con antes/despues ya
+clonados, siempre comparando contenido antes de disparar (nunca en bucle consigo mismo).
+`ItemSlotViewModel` NO conoce el `UndoStack` - `MainViewModel.OnSlotItemChanged` es quien
+decide empujar una entrada real (con el mismo guardia `_suppressDirty` ya existente para no
+grabar nada durante la carga de un personaje, mas un `_suppressUndoRecording` nuevo para que
+Deshacer/Rehacer no se graben a si mismos).
+
+**Operaciones en bloque como UNA sola entrada** (pedido explicito del informe): nuevo
+`MainViewModel.RunAsUndoableBatch(label, containers, body)` - snapshot de TODOS los slots
+implicados antes de `body()` (con `_suppressUndoRecording=true` mientras corre, para no grabar
+entradas sueltas por cada slot que `body()` toque), diff real despues, y una unica entrada
+combinada si de verdad cambio algo. Aplicado a **Auto-equipar** (cubre Inventario Y
+Equipamiento a la vez - `AutoEquipService.Apply` toca ambos) y **Mover todo al almacén** (cubre
+origen Y destino a la vez). `UndoStack.Clear()` en `LoadFromPath` - el historial de un
+personaje no tiene sentido real sobre otro.
+
+**Fuera de esta pasada, a proposito, documentado**:
+- **Ordenar/Vaciar contenedor** (`ContainerViewModel.Sort`/`ClearAll`, comandos propios,
+  vinculados directo en XAML) - NO se envolvieron en `RunAsUndoableBatch` (exigiria darle a
+  `ContainerViewModel` una referencia cruzada al `UndoStack`, o redirigir los 8 bindings de
+  XAML reales a comandos nuevos en `MainViewModel`). Siguen siendo deshacibles de verdad -
+  cada slot que cambian dispara su propio `_onItemChanged` igual que cualquier otra edicion,
+  simplemente como VARIAS entradas sueltas en vez de una combinada (Ctrl+Z varias veces en vez
+  de una). Cobertura real, solo menos pulida que lo pedido literalmente. El viejo
+  `ContainerViewModel.CanUndoClear`/`UndoClearCommand`/banner de 6s de "Vaciar contenedor" se
+  deja TAL CUAL, sin fusionar con el UndoStack nuevo - redundante pero inofensivo (un atajo
+  rapido para el caso mas comun, el Ctrl+Z general sigue cubriendo lo mismo por detras).
+- **Investigar todo** y **Marcar todos** (Desbloqueos) - tocan datos de forma completamente
+  distinta (`PlrCharacter.Research`, banderas booleanas de Desbloqueos), no slots de objeto -
+  el mismo `UndoEntry` generico los cubriria sin problema (closures, sin acoplarse al dominio),
+  pero exigiria su propio snapshot-diff especifico por tipo de dato, no reutilizable de
+  `RunAsUndoableBatch` tal cual. Hueco real, disclosed, no fingido como cerrado.
+- **Panel "Historial de cambios"** completo (lista desplegable) - se implemento la version mas
+  contenida: 2 botones reales en la cabecera global (↶/↷, Ctrl+Z/Ctrl+Y) con tooltip que dice
+  el ROTULO real de la siguiente entrada (`UndoStack.NextUndoLabel`/`NextRedoLabel`, P5 -
+  "feedback vivo", no solo "hay algo que deshacer"). Una lista completa navegable
+  (`UndoStack.Entries` ya esta expuesta, lista para ese panel si se pide despues) no se montó
+  en el XAML esta pasada.
+- **Ctrl+Z real**: se cede el paso al deshacer NATIVO de un `TextBox` si el foco esta dentro de
+  uno (Cantidad/Índice/nombre del personaje...) - mismo criterio de cualquier editor de
+  escritorio real, el usuario esta deshaciendo SU tecleo, no una edicion de slot.
+
+9 pruebas nuevas (`UndoStackTests.cs`), con un `MainViewModel` real y un personaje real cargado
+(no un `UndoStack` aislado) - colocar+deshacer, deshacer+rehacer, una edicion nueva trunca la
+cola de rehacer, deshacer en orden inverso real sobre 2 slots distintos, cantidad/prefijo/
+favorito como entradas independientes que se deshacen una a una, `Clear` restaura el objeto
+entero, cargar OTRO personaje limpia el historial, "Mover todo al almacén" como una sola
+entrada real que cubre los 2 slots movidos a la vez, y `SwapWith` (arrastrar y soltar) como 2
+entradas reales (una por slot). 335/335 en verde (139 Core + 196 ViewModels), arnes UIA 2/2
+pasadas limpias sin NO-FOUND/FALLO/EXCEPTION.

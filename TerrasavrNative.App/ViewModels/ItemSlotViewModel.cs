@@ -14,6 +14,13 @@ public partial class ItemSlotViewModel : ObservableObject
 {
     private readonly CharacterFileService _service;
     private readonly Action<ItemSlotViewModel>? _requestPick;
+    // H5-01 (quinta auditoria de Opus): unico punto real donde ItemSlotViewModel avisa "mi
+    // contenido cambio de verdad" (antes, despues) - quien construye el slot decide que hacer
+    // con eso (MainViewModel.HookSlotEditing empuja al UndoStack real, con el mismo guardia
+    // _suppressDirty ya existente para no grabar nada durante la carga de un personaje). Esta
+    // clase no conoce el UndoStack ni ningun otro consumidor - mismo criterio ya establecido con
+    // _requestPick.
+    private readonly Action<ItemSlotViewModel, GameItem, GameItem>? _onItemChanged;
     private bool _suppressCountWriteback;
     private bool _suppressIdWriteback;
     private bool _suppressPrefixIdWriteback;
@@ -123,7 +130,8 @@ public partial class ItemSlotViewModel : ObservableObject
     public bool ShowCount => !IsEmpty && Count > 1;
 
     public ItemSlotViewModel(CharacterFileService service, int slotIndex, string containerName, GameItem item, Action<ItemSlotViewModel>? requestPick = null, bool isEquipped = false,
-        SlotKind acceptedKind = SlotKind.None, string? ghostIcon = null, bool isExpertAccessorySlot = false, bool isMasterAccessorySlot = false)
+        SlotKind acceptedKind = SlotKind.None, string? ghostIcon = null, bool isExpertAccessorySlot = false, bool isMasterAccessorySlot = false,
+        Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null)
     {
         _service = service;
         SlotIndex = slotIndex;
@@ -134,6 +142,7 @@ public partial class ItemSlotViewModel : ObservableObject
         GhostIconPath = SlotGhostIconResolver.GetIconPath(ghostIcon);
         IsExpertAccessorySlot = isExpertAccessorySlot;
         IsMasterAccessorySlot = isMasterAccessorySlot;
+        _onItemChanged = onItemChanged;
         UpdateFrom(item);
     }
 
@@ -208,6 +217,13 @@ public partial class ItemSlotViewModel : ObservableObject
 
     public void UpdateFrom(GameItem item)
     {
+        // H5-01: instantaneas propias (Clone), nunca la referencia viva - Item sigue mutandose
+        // en sitio en otros caminos (Count/Prefix/Favorited), asi que guardar la referencia
+        // cruda corromperia una entrada de deshacer ya empujada al UndoStack en cuanto alguien
+        // volviera a tocar este mismo objeto mas tarde.
+        var before = Item.Clone();
+        var after = item.Clone();
+
         RejectionMessage = null;
         Item = item;
         IsEmpty = item.IsEmpty;
@@ -240,6 +256,7 @@ public partial class ItemSlotViewModel : ObservableObject
             StatsTooltip = null;
             RarityBrush = null;
             OnPropertyChanged(nameof(ShowCount));
+            EmitItemChanged(before, after);
             return;
         }
 
@@ -267,6 +284,15 @@ public partial class ItemSlotViewModel : ObservableObject
         var suggestion = PrefixSuggester.Suggest(item, _service.CalamityCatalog, _service.BestPrefixes, _service.RoguePrefixCatalog);
         HasBestPrefixSuggestion = suggestion.HasValue && !suggestion.Value.Equals(item.Prefix);
         OnPropertyChanged(nameof(ShowCount));
+        EmitItemChanged(before, after);
+    }
+
+    // H5-01: unico sitio real que decide si el cambio merece avisar - nunca si son iguales de
+    // contenido (evita "editar" en bucle infinito el mismo Deshacer/Rehacer, y una carga real de
+    // personaje que reasigna el mismo objeto no genera ruido).
+    private void EmitItemChanged(GameItem before, GameItem after)
+    {
+        if (!before.ContentEquals(after)) _onItemChanged?.Invoke(this, before, after);
     }
 
     // Coloca un objeto nuevo del catalogo (id real vanilla, o sintetico de Calamity) en este
@@ -299,8 +325,10 @@ public partial class ItemSlotViewModel : ObservableObject
     private void ToggleFavorite()
     {
         if (Item.IsEmpty) return;
+        var before = Item.Clone();
         Item.Favorited = !Item.Favorited;
         IsFavorited = Item.Favorited;
+        EmitItemChanged(before, Item.Clone());
     }
 
     // Arrastrar y soltar un slot sobre otro (pedido explicito 1-sep-2026: "se puede arrastar
@@ -346,6 +374,7 @@ public partial class ItemSlotViewModel : ObservableObject
     partial void OnCountChanged(int value)
     {
         if (_suppressCountWriteback || Item.IsEmpty) return;
+        var before = Item.Clone();
         // Un objeto real siempre tiene al menos 1 unidad - 0 significaria vaciar el slot,
         // para eso ya esta el boton "Vaciar" explicito.
         int clamped = Math.Clamp(value, 1, 9999);
@@ -357,6 +386,7 @@ public partial class ItemSlotViewModel : ObservableObject
             _suppressCountWriteback = false;
         }
         OnPropertyChanged(nameof(ShowCount));
+        EmitItemChanged(before, Item.Clone());
     }
 
     private void RefreshPrefixDisplay()
@@ -396,10 +426,12 @@ public partial class ItemSlotViewModel : ObservableObject
     // para ApplyBestPrefix de arriba.
     public void SetPrefix(ItemPrefix prefix)
     {
+        var before = Item.Clone();
         Item.Prefix = prefix;
         RefreshPrefixDisplay();
         var suggestion = PrefixSuggester.Suggest(Item, _service.CalamityCatalog, _service.BestPrefixes, _service.RoguePrefixCatalog);
         HasBestPrefixSuggestion = suggestion.HasValue && !suggestion.Value.Equals(Item.Prefix);
+        EmitItemChanged(before, Item.Clone());
     }
 
     // Campo "Indice" editable (equivalente real de fdIndex en TabEdit) - escribir un id
