@@ -98,6 +98,17 @@ public sealed class CharacterFileService
         _sync = new CalamityCharacterSync(codec, CalamityBuffCatalog);
     }
 
+    // Auditoria de Opus, I-1: unica fuente real de "donde vive normalmente un .plr" - antes
+    // vivia duplicada y privada dentro de MainWindow.xaml.cs (solo para el dialogo de
+    // Explorador de archivos), ahora la reutiliza tambien HomeViewModel para listar los
+    // personajes reales de un plumazo en Inicio.
+    public static string GetDefaultPlayersDirectory()
+    {
+        string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string candidate = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Players");
+        return Directory.Exists(candidate) ? candidate : documents;
+    }
+
     public LoadedCharacter Load(string plrPath)
     {
         var character = PlrFile.Read(File.ReadAllBytes(plrPath));

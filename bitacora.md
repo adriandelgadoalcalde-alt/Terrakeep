@@ -3648,3 +3648,46 @@ total: 51" + un bono de set real y completo mostrado sin que el usuario tuviera 
 
 Pase de regresión completo del arnés sin ningún FALLO. `dotnet build` limpio, `dotnet test`
 134/134.
+
+### Bloque 2 (parte 2) - I-1: Inicio como lanzador real de personajes
+
+**Antes**: "Inicio" era una pagina de bienvenida estatica - ni un solo personaje real a la
+vista, el unico camino real era el boton "Empezar" -> pestaña Personaje -> Explorador de
+archivos a mano, incluso para el caso normal (contradice P1/P2 de la auditoria: "todo tiene
+que estar a mano, todo de golpe sin que nada se esconda").
+
+**Ahora**: `HomeViewModel` (nuevo) escanea, al construirse, la carpeta real de
+`CharacterFileService.GetDefaultPlayersDirectory()` (antes vivia duplicada y privada solo
+dentro de `MainWindow.xaml.cs` para el dialogo - ahora es un unico metodo estatico
+compartido) - cada `.plr` encontrado se lee de verdad (`PlrFile.Read`) para una tarjeta real:
+nombre, dificultad (Softcore/Mediumcore/Hardcore/Journey), insignia "Calamity" si tiene un
+`.tplr` real al lado (mismo criterio que `CharacterFileService.Load`), fecha real de ultima
+modificacion, y el doll de cuerpo completo YA real de `PlayerPreviewRenderer` (mismos 7 colores
++ HairStyle + Gender que ya guarda el propio .plr, sin inventar ningun dato). Un click en la
+tarjeta carga ese personaje y salta directo a Personaje > Objetos - de nada sirve un lanzador de
+un click si despues hay que ir a buscar la pestaña a mano. Un .plr ajeno/corrupto no tumba el
+listado de los demas (se omite en silencio, mismo criterio que la Libreria con ids sin
+catalogar). Boton "Actualizar" (por si se guarda algo nuevo desde fuera) y "Cargar desde otra
+carpeta..." (el dialogo de siempre, para el caso fuera de la carpeta por defecto) - la carpeta
+vacia/no detectada sigue cayendo al boton "Empezar" de siempre.
+
+Verificado con datos 100% reales de esta maquina, no sinteticos: 2 de los 3 `.plr` de
+`Documents\My Games\Terraria\tModLoader\Players` se leyeron bien (adrian: Journey/Calamity;
+Eldelgas: Mediumcore/Calamity, ambas fechas reales) - el tercero (`prueba.plr`) fallo a
+proposito con "Unable to read beyond the end of the stream" (fichero de prueba truncado de una
+sesion anterior, confirmado leyendolo aparte) y se omitio en silencio tal y como debia, sin
+tumbar el listado. Captura real (`inicio-lanzador.png`) confirma las 2 tarjetas con doll real,
+insignias y fechas correctas; clic real via UI Automation en la tarjeta de "adrian" confirmo
+`SelectedTabIndex=1` (Personaje) y `CharacterName="adrian"` tras el click.
+
+**Regresion real encontrada y arreglada de paso** (arnes de pruebas, no la app): la verificacion
+de la pildora "Fragua del Defensor" (Almacenes) buscaba el boton por nombre EXACTO - desde A-1
+(parte 1 de este mismo bloque) el Content real del boton es el `DisplayLabel` con contador
+("Fragua del Defensor (0/40)"), asi que la busqueda por nombre exacto dejo de encontrarlo
+silenciosamente (NO-FOUND, no una excepcion - por eso el grep de FALLO/EXCEPTION del cierre de
+la parte 1 no lo detecto). No era un bug de la app real (A-1 seguia funcionando, ya verificado
+visualmente entonces) - se corrigio el arnes para buscar por `StartsWith` en vez de nombre
+exacto, mismo criterio real que debe seguir valiendo cuando el contador cambie de numero.
+
+`dotnet build`/`dotnet test` en verde (134/134), pase completo del arnes sin ningun NO-FOUND/
+FALLO/EXCEPTION tras el arreglo.

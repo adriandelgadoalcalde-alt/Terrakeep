@@ -55,20 +55,13 @@ public partial class MainWindow : Window
         {
             Title = "Cargar personaje de Terraria",
             Filter = "Personaje de Terraria (*.plr)|*.plr|Todos los archivos (*.*)|*.*",
-            InitialDirectory = GetDefaultPlayersDirectory(),
+            InitialDirectory = Services.CharacterFileService.GetDefaultPlayersDirectory(),
         };
 
         if (dialog.ShowDialog(this) == true)
         {
             _viewModel.LoadFromPath(dialog.FileName);
         }
-    }
-
-    private static string GetDefaultPlayersDirectory()
-    {
-        string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        string candidate = Path.Combine(documents, "My Games", "Terraria", "tModLoader", "Players");
-        return Directory.Exists(candidate) ? candidate : documents;
     }
 
     private void OnLoadWorldClick(object sender, RoutedEventArgs e)

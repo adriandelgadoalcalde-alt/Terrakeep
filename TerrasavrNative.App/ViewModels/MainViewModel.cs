@@ -111,9 +111,20 @@ public partial class MainViewModel : ObservableObject
     public BuffLibraryViewModel BuffLibrary { get; }
     public BuffEditViewModel BuffEdit { get; }
     public ItemEditViewModel ItemEdit { get; }
+    public HomeViewModel Home { get; } = new();
 
     public MainViewModel()
     {
+        // Auditoria de Opus, I-1: elegir un personaje real en el lanzador de Inicio carga
+        // exactamente igual que el dialogo de "Cargar personaje..." de siempre, y salta
+        // directo a Personaje - de nada sirve un lanzador de un click si despues hay que ir a
+        // buscar la pestaña a mano (P1).
+        Home.CharacterChosen += path =>
+        {
+            LoadFromPath(path);
+            SelectedTabIndex = PersonajeTabIndex;
+            PersonajeInnerTabIndex = ObjetosInnerTabIndex;
+        };
         Builds = new BuildsViewModel(_service.VanillaBuilds, _service.CalamityBuilds, _service);
         WhatsNew = new WhatsNewViewModel(_service.WhatsNew);
         Changelog = new ChangelogViewModel(_service.Changelog);

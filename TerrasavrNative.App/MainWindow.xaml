@@ -866,6 +866,53 @@
                 </Grid>
             </Border>
         </DataTemplate>
+
+        <!-- Auditoria de Opus, I-1: tarjeta real de un personaje encontrado de un plumazo en el
+             lanzador de Inicio - doll de cuerpo completo real (PlayerPreviewRenderer, mismos
+             datos que ya guarda el propio .plr), dificultad, insignia de Calamity si tiene
+             .tplr al lado, y fecha real de ultima modificacion - un click carga y salta a
+             Personaje (MainViewModel, Home.CharacterChosen). -->
+        <DataTemplate x:Key="CharacterCardTemplate" DataType="{x:Type vm:CharacterListEntryViewModel}">
+            <Border Padding="12" CornerRadius="8" Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
+                    Width="240" Margin="0,0,14,14" Cursor="Hand"
+                    Effect="{StaticResource CardShadow}">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding DataContext.Home.OpenCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                </Border.InputBindings>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                <Setter Property="Effect" Value="{StaticResource CardShadowHover}" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Column="0" Source="{Binding Preview}" Width="52" Height="72.8" Stretch="Uniform"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top" />
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextTrimming="CharacterEllipsis" />
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <Border Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="5,1">
+                                <TextBlock Text="{Binding DifficultyLabel}" Style="{StaticResource CaptionText}" FontSize="10" />
+                            </Border>
+                            <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" Padding="5,1" Margin="5,0,0,0"
+                                    Visibility="{Binding IsCalamity, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Calamity" FontSize="10" Foreground="White" FontWeight="SemiBold" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="{Binding LastModifiedText}" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
     </Window.Resources>
 
     <TabControl Style="{StaticResource NavTabControl}" SelectedIndex="{Binding SelectedTabIndex}">
@@ -890,14 +937,36 @@
                         <Run Text=" para distinguirlos." />
                     </TextBlock>
 
+                    <!-- Auditoria de Opus, I-1: "Inicio" era una pagina de bienvenida estatica -
+                         ni un solo personaje real a la vista, obligaba a abrir el Explorador de
+                         archivos incluso para el caso normal (P1/P2). Lanzador real: si hay
+                         .plr en la carpeta real de tModLoader, aparecen aqui de un plumazo, con
+                         su doll/dificultad/insignia/fecha reales - un click carga y salta a
+                         Personaje. Si no hay ninguno (carpeta vacia o instalacion sin
+                         detectar), se cae al boton manual de siempre. -->
+                    <StackPanel Visibility="{Binding Home.Characters.Count, Converter={StaticResource CountToVis}}" Margin="0,0,0,26">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <TextBlock Text="Tus personajes" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                            <Button Content="Actualizar" FontSize="11" Padding="8,2" Margin="12,0,0,0"
+                                    Command="{Binding Home.RefreshCommand}" />
+                            <Button Content="Cargar desde otra carpeta..." FontSize="11" Padding="8,2" Margin="8,0,0,0"
+                                    Click="OnLoadClick" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding Home.Characters}" ItemTemplate="{StaticResource CharacterCardTemplate}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </StackPanel>
+
                     <Button Style="{StaticResource NavCardButton}" HorizontalAlignment="Left" Margin="0,0,0,26"
-                            Command="{Binding GoToTabCommand}" CommandParameter="Personaje">
+                            Visibility="{Binding Home.ScanMessage, Converter={StaticResource EmptyToCollapsed}}"
+                            Click="OnLoadClick">
                         <StackPanel Orientation="Horizontal">
                             <Border Width="4" Background="{StaticResource AccentBrush}" CornerRadius="2" Margin="0,0,16,0" />
                             <StackPanel>
                                 <TextBlock Text="Empezar: cargar un personaje" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" />
-                                <TextBlock Text="Abre un archivo .plr real y edita todo su contenido, incluido Calamity si el .tplr esta al lado."
-                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="520" Margin="0,3,0,0" />
+                                <TextBlock Text="{Binding Home.ScanMessage}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="520" Margin="0,3,0,0" />
                             </StackPanel>
                         </StackPanel>
                     </Button>
