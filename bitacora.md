@@ -3929,3 +3929,33 @@ consumidor real) lo mida y corrija si hiciera falta, mismo criterio.
 Verificado con capturas reales a 1450px (SizeClass=Normal, pildoras) y 1550px
 (SizeClass=Amplio, las 3 vistas lado a lado sin recortes). `dotnet build`/`dotnet test` en verde
 (134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.
+
+### Bloque 4 (parte 3) - A-4: Inventario + Almacen lado a lado, arrastre cruzado real
+
+**Antes**: Inventario y Almacenes vivian en pestañas separadas del mismo `TabControl` interno -
+nunca coexistian en el arbol visual, asi que arrastrar un objeto de uno al otro era literalmente
+imposible (el drop-target del contenedor ausente ni siquiera existe mientras esa pestaña no esta
+activa), aunque el propio intercambio (`ItemSlotViewModel.SwapWith`,
+`MainWindow.xaml.cs.OnItemSlotDrop`) ya era generico de por si, sin distinguir de que
+contenedor viene cada slot.
+
+**Ahora**: con sitio real (`MainViewModel.IsStorageExpanded`), la pestaña "Inventario" muestra
+Inventario + el Almacen seleccionado LADO A LADO (mismo `ContainerCompactTemplate` de siempre) -
+arrastrar de verdad entre los dos funciona en cuanto ambos coexisten en el arbol visual, sin
+tocar el codigo de intercambio (ya generico). Por debajo del umbral, comportamiento de siempre
+(pestañas separadas).
+
+**Umbral reutilizado, no inventado (T-2 cumpliendo su proposito real)**: se probo primero con el
+umbral intermedio "Normal" (1300) pero recortaba de verdad la ultima columna de cada rejilla de
+10 (confirmado con captura real a 1350px) - dos rejillas de 10 columnas necesitan mas sitio del
+que ese umbral daba. Se reutiliza `AmplioMinWidth=1500` (EL MISMO umbral real que ya usa E-2
+para sus 3 vistas) en su lugar, confirmado limpio con capturas reales a 1500/1650px - dos
+consumidores reales independientes necesitando el mismo numero es la mejor confirmacion posible
+de que el breakpoint compartido de T-2 esta bien puesto, no una coincidencia forzada.
+
+Verificado por partida triple: (1) a 1350px, la pildora real de Almacenes NO existe en el arbol
+visual de Inventario (`A4-1350: presente=False`); (2) a 1500px, SI coexiste de verdad
+(`A4-EXPANDIDO: presente=True`); (3) intercambio cruzado real Inventario<->Banco via
+`SwapWith` (el mismo metodo real que ya dispara el gesto de arrastrar) - `Inventario[0]` se
+vacio y `Banco[0]` recibio el objeto real correctamente. `dotnet build`/`dotnet test` en verde
+(134/134), arnes completo sin NO-FOUND/FALLO/EXCEPTION.

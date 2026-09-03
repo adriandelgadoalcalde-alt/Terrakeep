@@ -1366,10 +1366,50 @@
                                          (MainViewModel.Containers) - riesgo cero para guardar/cargar,
                                          ver StorageGroupViewModel.cs. -->
                                     <TabItem Header="Inventario">
+                                        <Grid>
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0"
+                                                Visibility="{Binding IsStorageExpanded, Converter={StaticResource InverseBoolToVis}}">
                                             <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                         </Border>
+
+                                        <!-- Auditoria de Opus, A-4: Inventario + el Almacen seleccionado lado
+                                             a lado, con sitio real - arrastrar de un lado al otro ya
+                                             funciona solo (ver el comentario real en MainViewModel.
+                                             IsStorageExpanded), esto solo pone a ambos a la vista de golpe. -->
+                                        <Grid Visibility="{Binding IsStorageExpanded, Converter={StaticResource BoolToVis}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                                    Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,4,0">
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Top" Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,6" />
+                                                    <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                </DockPanel>
+                                            </Border>
+                                            <Border Grid.Column="1" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
+                                                    Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="4,6,0,0"
+                                                    DataContext="{Binding StorageGroup}">
+                                                <DockPanel>
+                                                    <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Options}" Margin="0,0,0,6">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
+                                                                <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
+                                                                        Command="{Binding DataContext.StorageGroup.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                        CommandParameter="{Binding}" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                </DockPanel>
+                                            </Border>
+                                        </Grid>
+                                        </Grid>
                                     </TabItem>
                                     <TabItem Header="Almacenes">
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"

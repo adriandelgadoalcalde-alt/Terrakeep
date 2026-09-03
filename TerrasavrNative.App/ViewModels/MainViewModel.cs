@@ -93,11 +93,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _saveConfirmationVisible;
 
     // Auditoria de Opus, Bloque 4 (T-2): breakpoint real y compartido, ver WindowSizeClass.cs.
-    // AmplioMinWidth=1500 medido de verdad con el arnes de UI Automation contra E-2 (las 3
-    // vistas de Equipamiento lado a lado): 1650px se ve limpio de sobra, 1450px recorta la 3ª
-    // columna (Tintes) - 1500 es el real primer punto seguro entre ambos, no un numero redondo
-    // adivinado. NormalMinWidth=1300 se deja como umbral intermedio razonable (sitio para 2
-    // paneles) hasta que algun consumidor real (A-4) lo mida y, si hace falta, lo corrija igual.
+    // AmplioMinWidth=1500 medido de verdad con el arnes de UI Automation, confirmado por DOS
+    // consumidores reales independientes que necesitaron el mismo umbral: E-2 (las 3 vistas de
+    // Equipamiento lado a lado - limpio a 1650px, recorta la 3ª columna a 1450px) y A-4
+    // (Inventario+Almacen lado a lado, dos rejillas de 10 columnas - limpio a 1500px/1650px,
+    // recorta la ultima columna a 1350px). NormalMinWidth=1300 se deja como umbral intermedio
+    // real (Compacto/Amplio con margen entre medias) - sin consumidor propio todavia, pero
+    // SizeClass en si ya es un valor correcto y usable en cuanto alguna pantalla nueva lo
+    // necesite.
     [ObservableProperty] private WindowSizeClass _sizeClass = WindowSizeClass.Normal;
     private const double NormalMinWidth = 1300;
     private const double AmplioMinWidth = 1500;
@@ -114,7 +117,30 @@ public partial class MainViewModel : ObservableObject
     // vez, sin apretar ninguna. Por debajo, se queda el selector de pildoras de siempre (un
     // panel a la vez).
     public bool IsEquipmentExpanded => SizeClass == WindowSizeClass.Amplio;
-    partial void OnSizeClassChanged(WindowSizeClass value) => OnPropertyChanged(nameof(IsEquipmentExpanded));
+
+    // Auditoria de Opus, A-4: "Inventario y Almacenes viven en pestañas separadas - nunca se
+    // pueden ver a la vez, y por eso arrastrar un objeto del uno al otro es literalmente
+    // imposible" (el drop-target del otro contenedor ni siquiera existe en el arbol visual
+    // mientras esa pestaña no esta activa). Con sitio real, la pestaña "Inventario" pasa a
+    // mostrar Inventario + el Almacen seleccionado lado a lado - el intercambio entre slots YA
+    // es generico de por si (ItemSlotViewModel.SwapWith, MainWindow.xaml.cs OnItemSlotDrop no
+    // distingue de que contenedor viene cada slot), asi que arrastrar de verdad entre los dos
+    // funciona en cuanto ambos coexisten en el arbol visual, sin tocar ese codigo.
+    //
+    // Umbral medido de verdad (no el intermedio "Normal" original, que resulto demasiado
+    // agresivo para esto): dos rejillas REALES de 10 columnas cada una necesitan mas sitio del
+    // que "Normal" (1300) da - a 1350px la columna 10 de cada rejilla queda recortada contra el
+    // borde (confirmado con captura real). A 1500px (= AmplioMinWidth, el mismo umbral real que
+    // ya mide E-2 para sus 3 vistas) ambas rejillas se ven limpias y completas - se reutiliza
+    // el mismo umbral compartido en vez de inventar uno propio (ese es justo el punto de T-2:
+    // un unico breakpoint real, no uno por pantalla).
+    public bool IsStorageExpanded => SizeClass == WindowSizeClass.Amplio;
+
+    partial void OnSizeClassChanged(WindowSizeClass value)
+    {
+        OnPropertyChanged(nameof(IsEquipmentExpanded));
+        OnPropertyChanged(nameof(IsStorageExpanded));
+    }
 
     public ObservableCollection<ContainerViewModel> Containers { get; } = [];
     [ObservableProperty] private EquipmentGroupViewModel? _equipmentGroup;
