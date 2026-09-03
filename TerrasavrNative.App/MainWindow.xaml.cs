@@ -16,6 +16,9 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = _viewModel;
         _viewModel.Exploration.NavigateToTileRequested += OnNavigateToTile;
+        // Auditoria de Opus, Bloque 4 (T-3): restaura el tamaño/posicion real de la ultima
+        // sesion - antes de Show(), Width/Height/Left/Top ya se pueden fijar sin parpadeo.
+        Services.WindowPlacementService.Apply(this);
     }
 
     // Auditoria de Opus, N-2: "se pueden editar 40 slots, cambiar de pestaña, cerrar la app y
@@ -23,6 +26,10 @@ public partial class MainWindow : Window
     // perder (IsDirty) - Si/No/Cancelar, igual que cualquier app de escritorio real.
     private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        // Auditoria de Opus, Bloque 4 (T-3): se guarda SIEMPRE, incluso si despues se cancela
+        // el cierre por cambios sin guardar (Cancelar) - el tamaño de ventana no es un dato del
+        // personaje, no hay nada que perder al recordarlo de todos modos.
+        Services.WindowPlacementService.Save(this);
         if (!_viewModel.IsDirty) return;
         var result = MessageBox.Show(
             $"'{_viewModel.CharacterName}' tiene cambios sin guardar.\n\n¿Guardar antes de cerrar?",

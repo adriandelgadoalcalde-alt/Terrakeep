@@ -3877,3 +3877,28 @@ deshabilitado mientras carga.
 **Bloque 3 completo** (T-12, N-3, T-14, X-7/T-13) - las 4 partes de "Reactividad" del plan de
 Opus quedan cerradas y comiteadas. Sigue el Bloque 4 (Armonia a cualquier tamaño - "el bloque
 grande").
+
+### Bloque 4 (parte 1) - T-3: recordar tamaño/posicion de ventana entre sesiones
+
+**Antes**: cada arranque volvia siempre al tamaño de fabrica (1180x860), aunque el usuario ya
+hubiera ajustado la ventana a su gusto la ultima vez - contra P4 (armonia real a cualquier
+tamaño deberia incluir RECORDAR el tamaño que el usuario ya eligio, no solo adaptarse bien a
+cualquiera).
+
+**Ahora**: `WindowPlacementService` (nuevo) - un unico JSON pequeño y real en
+`%LocalAppData%\Terrakeep\window.json` (config de la app, no dato de personaje/mundo - no pinta
+nada en `Documents\My Games\Terraria`). Se aplica en el constructor de `MainWindow`, antes de
+`Show()` (sin parpadeo); se guarda en `OnWindowClosing`, SIEMPRE, incluso si despues el cierre
+se cancela por cambios sin guardar (el tamaño de ventana no es un dato del personaje, no hay
+nada que perder). Guarda siempre el tamaño RESTAURADO (`RestoreBounds` si esta maximizada) para
+que desmaximizar despues no deje al usuario con el tamaño entero de la pantalla. Restauracion
+con clamp real contra `SystemParameters.VirtualScreen*` de TODOS los monitores conectados AHORA
+(un monitor desconectado desde la ultima sesion no deja la ventana inalcanzable) y nunca por
+debajo de `MinWidth`/`MinHeight`; fichero ausente/corrupto cae al tamaño de fabrica sin reventar
+el arranque.
+
+Verificado con dos lanzamientos reales SEPARADOS del proceso (no solo en memoria): 1ª ejecucion
+sin `window.json` previo -> tamaño de fabrica, se redimensiona a 1234x789 en (40,55) y se
+cierra -> `window.json` guardado con esos valores EXACTOS; 2ª ejecucion (proceso nuevo) ->
+restaura esos mismos valores EXACTOS antes de `Show()`. `dotnet build`/`dotnet test` en verde
+(134/134).
