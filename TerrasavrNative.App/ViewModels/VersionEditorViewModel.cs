@@ -4,7 +4,18 @@ using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels;
 
-public sealed record VersionOption(string Label, int Number);
+// V-a (segunda auditoria de Opus, Fable): antes un record inmutable, sin forma real de marcar
+// cual es la version YA puesta - mismo hueco real que D-6 ya cerro para los prefijos
+// (PrefixCatalogEntryViewModel.IsCurrent). IsCurrent aqui SI puede cambiar en vivo (a
+// diferencia del prefijo, la lista de versiones reales nunca cambia, asi que no hace falta
+// reconstruirla entera - VersionEditorViewModel simplemente actualiza el flag en el sitio cada
+// vez que RawVersion cambia).
+public sealed partial class VersionOption(string label, int number) : ObservableObject
+{
+    public string Label { get; } = label;
+    public int Number { get; } = number;
+    [ObservableProperty] private bool _isCurrent;
+}
 public sealed record VersionGroup(string Label, IReadOnlyList<VersionOption> Options);
 
 // Pestaña "Versión" (app.TabVersion/ya en la version JS real) - fuerza que version de Terraria
@@ -44,6 +55,12 @@ public partial class VersionEditorViewModel : ObservableObject
 
     partial void OnRawVersionChanged(int value)
     {
+        // V-a: se sincroniza SIEMPRE (tambien mientras _suppressWriteback esta activo durante
+        // LoadFrom) - IsCurrent es un reflejo visual puro, no una escritura real al personaje.
+        foreach (var group in Groups)
+            foreach (var option in group.Options)
+                option.IsCurrent = option.Number == value;
+
         if (_suppressWriteback || _character == null) return;
         _character.Version = value;
     }

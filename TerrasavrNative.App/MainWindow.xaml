@@ -1063,8 +1063,13 @@
                         </Button>
                         <Button Style="{StaticResource NavCardButton}" Width="270" Height="108" Margin="0,0,14,14"
                                 Tag="Orange" Command="{Binding GoToTabCommand}" CommandParameter="AcercaDe">
+                            <!-- N-c (segunda auditoria de Opus, Fable): esta tarjeta decia "¡Sobre esta
+                                 versión!" pero llevaba a una pestaña con la cabecera "Acerca de" - dos
+                                 nombres distintos para el MISMO destino. Se unifica con el nombre real de
+                                 la pestaña (la cabecera es la fuente de verdad); "¡Sobre esta versión!"
+                                 sigue vivo dentro, como titulo real de la subseccion del changelog. -->
                             <StackPanel>
-                                <TextBlock Text="¡Sobre esta versión!" Style="{StaticResource SectionText}" />
+                                <TextBlock Text="Acerca de" Style="{StaticResource SectionText}" />
                                 <TextBlock Text="Que ha cambiado en el propio Terrakeep, version instalada y creditos."
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
                             </StackPanel>
@@ -1410,7 +1415,12 @@
                                         </Grid>
                                         </Grid>
                                     </TabItem>
-                                    <TabItem Header="Almacenes">
+                                    <!-- A-a (segunda auditoria de Opus, Fable): con la ventana Amplia, la pestaña
+                                         "Inventario" YA muestra el Almacen seleccionado al lado (A-4, arriba) - esta
+                                         pestaña quedaba como un segundo camino redundante al MISMO StorageGroup,
+                                         visible y clicable a la vez que su duplicado. Se oculta (no se borra: en
+                                         Compacto/Normal sigue siendo el unico camino real). -->
+                                    <TabItem Header="Almacenes" Visibility="{Binding IsStorageExpanded, Converter={StaticResource InverseBoolToVis}}">
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
                                             <DockPanel DataContext="{Binding StorageGroup}">
@@ -1975,7 +1985,12 @@
                     </TabItem>
                     <TabItem Header="Desbloqueos">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
-                            <StackPanel MaxWidth="440">
+                            <!-- D-a (segunda auditoria de Opus, Fable): las demas pestañas internas de
+                                 Personaje (Inicio, Apariencia...) fijan HorizontalAlignment="Left" junto a
+                                 su MaxWidth - sin el, Stretch (el valor por defecto) centra el StackPanel
+                                 entero en vez de pegarlo al borde izquierdo real, unica de estas dos que
+                                 se veia descentrada frente al resto. -->
+                            <StackPanel MaxWidth="440" HorizontalAlignment="Left">
                                 <TextBlock Text="Desbloqueos y activaciones permanentes del personaje."
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10" />
                                 <CheckBox Content="Accesorio extra (modo experto/maestro)" IsChecked="{Binding Flags.ExtraAccessory}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
@@ -1996,7 +2011,9 @@
                     </TabItem>
                     <TabItem Header="Version">
                         <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
-                            <StackPanel MaxWidth="500">
+                            <!-- D-a (segunda auditoria de Opus, Fable): mismo arreglo que Desbloqueos,
+                                 arriba - HorizontalAlignment="Left" real, no centrado por omision. -->
+                            <StackPanel MaxWidth="500" HorizontalAlignment="Left">
                                 <Border Background="{StaticResource CalamityBrush}" CornerRadius="6" Padding="10,8" Margin="0,0,0,14">
                                     <TextBlock Foreground="White" TextWrapping="Wrap" FontSize="12"
                                                Text="Cuidado: cambiar la version cambia que campos lee/escribe el guardado. Un valor que no encaje con el contenido real del personaje puede producir un archivo que ni esta app ni el juego sepan releer bien." />
@@ -2017,9 +2034,24 @@
                                                     </ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate DataType="{x:Type vm:VersionOption}">
+                                                            <!-- V-a (segunda auditoria de Opus, Fable): mismo patron real ya usado en la
+                                                                 rejilla de prefijos (D-6, IsCurrent) - antes ningun boton de version
+                                                                 indicaba cual era la YA puesta, habia que leer el numero en crudo de al
+                                                                 lado y hacer la cuenta a mano. -->
                                                             <Button Content="{Binding Label}" Margin="0,0,6,6" Padding="8,4"
                                                                     Command="{Binding DataContext.VersionEditor.SetVersionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                    CommandParameter="{Binding Number}" />
+                                                                    CommandParameter="{Binding Number}">
+                                                                <Button.Style>
+                                                                    <Style TargetType="Button">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                                                <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Button.Style>
+                                                            </Button>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>

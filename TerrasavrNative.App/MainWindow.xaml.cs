@@ -174,7 +174,10 @@ public partial class MainWindow : Window
         double worldX = (WorldMapScroll.HorizontalOffset + mousePos.X) / oldZoom;
         double worldY = (WorldMapScroll.VerticalOffset + mousePos.Y) / oldZoom;
 
-        _viewModel.Exploration.Zoom = oldZoom * (e.Delta > 0 ? 1.15 : 1 / 1.15);
+        // X-b (segunda auditoria de Opus, Fable): mismo paso real que los botones ZoomIn/ZoomOut
+        // (ExplorationViewModel.ZoomStep) - antes la rueda usaba x1.15, un paso distinto solo por
+        // costumbre, no por ningun motivo real.
+        _viewModel.Exploration.Zoom = oldZoom * (e.Delta > 0 ? ExplorationViewModel.ZoomStep : 1 / ExplorationViewModel.ZoomStep);
         double newZoom = _viewModel.Exploration.Zoom;
 
         WorldMapScroll.UpdateLayout();

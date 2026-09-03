@@ -175,8 +175,14 @@ public partial class ExplorationViewModel : ObservableObject
         if (clamped != value) Zoom = clamped; // reentra, se estabiliza al segundo paso
     }
 
-    [RelayCommand] private void ZoomIn() => Zoom *= 1.25;
-    [RelayCommand] private void ZoomOut() => Zoom /= 1.25;
+    // X-b (segunda auditoria de Opus, Fable): antes la rueda del raton daba pasos de x1.15 (ver
+    // MainWindow.xaml.cs, OnWorldMapPreviewMouseWheel) mientras estos botones daban x1.25 - dos
+    // velocidades de zoom distintas para la MISMA accion segun el metodo de entrada usado.
+    // Constante real unica (ambos sitios la referencian ahora) para que no vuelvan a divergir.
+    public const double ZoomStep = 1.25;
+
+    [RelayCommand] private void ZoomIn() => Zoom *= ZoomStep;
+    [RelayCommand] private void ZoomOut() => Zoom /= ZoomStep;
     [RelayCommand] private void ZoomReset() => Zoom = 1.0;
 
     private void ApplyNpcFilter()

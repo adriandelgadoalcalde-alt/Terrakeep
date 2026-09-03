@@ -4453,3 +4453,34 @@ solucion entera relanzada dos veces mas, salieron 100% en verde - pinta a carrer
 compilacion en paralelo entre proyectos que comparten `TerrasavrNative.App`, no un fallo real
 de los tests. Registrado por si se repite (regla real: "si falla dos veces seguidas, parar") -
 de momento solo fallo una vez de tres, no se ha insistido mas.
+
+### A-a + D-a + N-c + V-a + X-b (segunda auditoria, Fable) - Ola 2 continua
+
+**A-a**: con la ventana Amplia, la pestaña "Inventario" ya muestra el Almacen seleccionado al
+lado (A-4, ronda anterior) - la pestaña "Almacenes" seguia ahi, un segundo camino redundante al
+MISMO `StorageGroup`. Se oculta con `IsStorageExpanded` (no se borra: en Compacto/Normal sigue
+siendo el unico camino real).
+
+**D-a**: `Desbloqueos`/`Version` eran las dos unicas pestañas internas de Personaje sin
+`HorizontalAlignment="Left"` junto a su `MaxWidth` - sin el, `Stretch` (por omision) las
+centraba en vez de pegarlas al borde izquierdo real como el resto. Añadido a ambas.
+
+**N-c**: la tarjeta de Inicio decia "¡Sobre esta versión!" pero llevaba a una pestaña con la
+cabecera "Acerca de" - dos nombres para el mismo destino. Unificado con el nombre real de la
+pestaña (fuente de verdad); "¡Sobre esta versión!" sigue vivo dentro, como titulo real de la
+subseccion del changelog (no era el mismo texto por casualidad, es el titulo real de esa parte).
+
+**V-a**: los botones de version no marcaban cual era la YA puesta - mismo patron real ya usado
+en la rejilla de prefijos (D-6, `IsCurrent`). `VersionOption` paso de `record` inmutable a una
+clase observable con `IsCurrent` que `VersionEditorViewModel` sincroniza en cada cambio real de
+version (tambien durante `LoadFrom`, fuera del guardia `_suppressWriteback` - es un reflejo
+visual, no una escritura al personaje).
+
+**X-b**: la rueda del raton daba pasos de zoom de x1.15 mientras los botones ZoomIn/ZoomOut
+daban x1.25 - dos velocidades para la misma accion. Constante real unica compartida
+(`ExplorationViewModel.ZoomStep`), referenciada desde ambos sitios para que no vuelvan a
+divergir.
+
+2 pruebas deterministas nuevas (V-a: `IsCurrent` se mueve de boton y escribe al personaje;
+X-b: `ZoomIn`/`ZoomOut` usan el paso compartido). `dotnet test` 155/155 en verde, arnes visual
+completo sin NO-FOUND/FALLO/EXCEPTION.
