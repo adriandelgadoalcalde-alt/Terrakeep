@@ -1300,6 +1300,32 @@ internal static class Program
                     DoEvents();
                 }
                 else Console.WriteLine("X-C-BUSCADOR-NPC: mundo real sin NPCs, omitido");
+
+                // X-g (segunda auditoria de Opus, Fable): "el mapa no sabe nada del personaje
+                // real" - añade un Spawn Point real (Servers, la unica fuente real de
+                // coordenadas de aparicion del .plr) dentro de los limites reales de este mundo,
+                // navega fuera y vuelve a Exploracion (dispara OnSelectedTabIndexChanged ->
+                // SetCharacterSpawns) y confirma que aparece en CharacterSpawns.
+                vm.Servers.AddEntryCommand.Execute(null);
+                var spawnRow = vm.Servers.Entries[^1];
+                spawnRow.Name = "X-g prueba real";
+                spawnRow.SpawnX = 4200;
+                spawnRow.SpawnY = 300;
+                vm.SelectedTabIndex = 1; // Personaje
+                DoEvents();
+                vm.SelectedTabIndex = 4; // Exploracion - dispara el refresco real
+                DoEvents(); DoEvents();
+                bool xgEncontrado = vm.Exploration.CharacterSpawns.Any(s => s.Label == "X-g prueba real" && s.TileX == 4200 && s.TileY == 300);
+                Console.WriteLine($"X-G-SPAWN-PERSONAJE: Spawn Point real añadido -> aparece en el mapa={xgEncontrado} (esperado True), CharacterSpawns.Count={vm.Exploration.CharacterSpawns.Count}");
+                if (!xgEncontrado) Console.WriteLine("FALLO: X-g (segunda auditoria) - el Spawn Point real del personaje no llego al mapa");
+                var rtbSpawn = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbSpawn.Render(window);
+                var encSpawn = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encSpawn.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbSpawn));
+                using (var fsSpawn = File.Create(Path.Combine(AppContext.BaseDirectory, "mundo-spawn-personaje.png"))) encSpawn.Save(fsSpawn);
+                Console.WriteLine("Captura mapa con spawn del personaje -> mundo-spawn-personaje.png");
+                vm.Servers.RemoveEntryCommand.Execute(spawnRow); // deja el personaje real como estaba
             }
             else Console.WriteLine("X7-ASYNC: fichero no encontrado, omitido");
         }

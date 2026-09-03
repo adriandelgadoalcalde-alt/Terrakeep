@@ -29,6 +29,19 @@ public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int
     [ObservableProperty] private bool _isMatch = true;
 }
 
+// X-g (segunda auditoria de Opus, Fable): "el mapa no sabe nada del personaje real" - antes
+// Exploracion era un visor totalmente independiente del personaje cargado (cualquier .wld,
+// sin relacion con nada de Personaje). Un punto de aparicion REAL del personaje ya cargado,
+// de los guardados en la pestaña Spawn Points (PlrServerEntry.SpawnX/Y - el .plr no guarda
+// ninguna "aparicion principal" propia aparte de estos, ver el comentario en MainViewModel.
+// BuildCharacterSpawns) - coordenadas de tile real, mismo espacio que TileX/TileY de los NPCs.
+public sealed class CharacterSpawnRowViewModel(string label, int x, int y)
+{
+    public string Label { get; } = label;
+    public int TileX { get; } = x;
+    public int TileY { get; } = y;
+}
+
 // Un NPC del roster que el jugador todavia no tiene en este mundo - solo nombre+icono, sin
 // posicion (no esta en el mundo).
 public sealed class MissingNpcRowViewModel(int id, string name)
@@ -73,6 +86,24 @@ public partial class ExplorationViewModel : ObservableObject
     // X-c: solo los que coinciden con el buscador - lo que muestra la lista lateral de texto.
     public ObservableCollection<WorldNpcRowViewModel> NpcSearchResults { get; } = [];
     public ObservableCollection<MissingNpcRowViewModel> MissingNpcs { get; } = [];
+    // X-g: puntos de aparicion reales del personaje cargado (principal + Spawn Points
+    // guardados) - independiente de si hay mundo cargado o no (se rellena/limpia igual, los
+    // marcadores solo se ven cuando ADEMAS hay un mundo real a la vista).
+    public ObservableCollection<CharacterSpawnRowViewModel> CharacterSpawns { get; } = [];
+
+    // Llamado por MainViewModel al cargar personaje (tras Servers.LoadFrom, que es quien de
+    // verdad rellena los Spawn Points reales) y al entrar en esta pestaña (mismo criterio ya
+    // establecido en Bd-d/BuildsViewModel.RefreshOwnership: foto fija recalculada cuando de
+    // verdad hace falta, no en cada tecla de una edicion en Spawn Points). Limitacion real
+    // conocida: estas coordenadas no se validan contra NINGUN mundo en concreto (un spawn
+    // guardado para un mundo distinto al cargado aqui se vera en un sitio sin sentido) - mismo
+    // criterio ya aceptado para "Spawn Points" en si, que tampoco sabe a que mundo pertenece
+    // cada uno.
+    public void SetCharacterSpawns(IEnumerable<(string Label, int X, int Y)> spawns)
+    {
+        CharacterSpawns.Clear();
+        foreach (var (label, x, y) in spawns) CharacterSpawns.Add(new CharacterSpawnRowViewModel(label, x, y));
+    }
 
     // El code-behind (unico sitio que conoce el ScrollViewer real del mapa) se suscribe a esto
     // para centrar la vista - la ViewModel no puede tocar controles de UI directamente.

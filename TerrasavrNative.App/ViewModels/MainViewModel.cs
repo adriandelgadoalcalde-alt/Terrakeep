@@ -143,6 +143,26 @@ public partial class MainViewModel : ObservableObject
     {
         if (value == (int)AppTab.Builds && EquipmentGroup != null)
             Builds.RefreshOwnership([.. Containers, .. EquipmentGroup.AllContainers]);
+        // X-g (segunda auditoria de Opus, Fable): "el mapa no sabe nada del personaje real" -
+        // mismo criterio que Bd-d de arriba, recalculado al ENTRAR en Exploracion (por si se
+        // edito algo en Spawn Points desde la ultima vez).
+        if (value == (int)AppTab.Exploracion)
+            Exploration.SetCharacterSpawns(BuildCharacterSpawns());
+    }
+
+    // X-g: puntos de aparicion reales del personaje cargado - cada Spawn Point guardado
+    // (Servers.Entries, PlrServerEntry.SpawnX/Y) que tenga coordenadas reales puestas (0,0 =
+    // todavia sin fijar, no se muestra un marcador de adorno en la esquina para un spawn point
+    // recien añadido y vacio). El .plr NO guarda ninguna "aparicion principal" propia - la
+    // ultima cama real donde durmio el personaje es un dato del MUNDO (.wld), no del
+    // personaje, confirmado en PlrCharacter.cs (sin ningun campo Spawn fuera de
+    // PlrServerEntry) - Spawn Points es la unica fuente real de coordenadas de aparicion aqui.
+    private IEnumerable<(string Label, int X, int Y)> BuildCharacterSpawns()
+    {
+        if (_loaded == null) yield break;
+        foreach (var entry in Servers.Entries)
+            if (entry.SpawnX != 0 || entry.SpawnY != 0)
+                yield return (entry.Name, entry.SpawnX, entry.SpawnY);
     }
     [ObservableProperty] private int _personajeInnerTabIndex;
     [ObservableProperty] private bool _saveConfirmationVisible;
@@ -441,6 +461,10 @@ public partial class MainViewModel : ObservableObject
             UndoLastSaveCommand.NotifyCanExecuteChanged(); // el personaje cargado (y su .bak) ha cambiado
             OnPropertyChanged(nameof(FileVersionLine)); // H-2: archivo/version cambian con cada carga (o desaparecen si fallo)
             Home.UpdateCurrentPath(_loaded?.PlrPath); // I-a: la tarjeta real de Inicio debe reflejar cual esta cargado ahora
+            // X-g: cubre cargar un personaje distinto mientras Exploracion ya esta a la vista -
+            // en el finally (no en RebuildContainers) porque Servers.LoadFrom (arriba) tiene que
+            // haber corrido ya para leer sus Spawn Points reales, no los del personaje anterior.
+            Exploration.SetCharacterSpawns(BuildCharacterSpawns());
         }
     }
 

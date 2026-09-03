@@ -2342,6 +2342,16 @@
                     <TextBlock Text="{Binding Exploration.WorldTitle, StringFormat='Mundo: {0}'}"
                                Style="{StaticResource SectionText}" VerticalAlignment="Center" Margin="20,0,0,0"
                                Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
+                    <!-- X-h (segunda auditoria de Opus, Fable): "no dice que es solo lectura" -
+                         antes solo un comentario de codigo (ExplorationViewModel), invisible para
+                         el usuario real - nada en pantalla avisaba de que este visor no puede
+                         colocar/quitar bloques (a diferencia de Objetos/Apariencia/etc., donde
+                         cada cambio SI se guarda). -->
+                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="99" Padding="9,3" Margin="10,0,0,0"
+                            VerticalAlignment="Center" ToolTip="Este visor solo lee el mundo (mismo mundo que carga el propio Terraria) - no coloca ni quita bloques, no se puede editar ni guardar desde aqui"
+                            Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="Solo lectura" Style="{StaticResource CaptionText}" />
+                    </Border>
                     <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center"
                                 Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
                         <Button Content="&#8722;" Command="{Binding Exploration.ZoomOutCommand}" Padding="10,2" />
@@ -2445,6 +2455,34 @@
                                                                  Fill="Magenta" Stroke="White" StrokeThickness="1.5"
                                                                  Visibility="{Binding IconPath, Converter={StaticResource NullToCollapsed}}" />
                                                     </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <!-- X-g (segunda auditoria de Opus, Fable): "el mapa no sabe nada
+                                             del personaje real" - antes Exploracion era un visor totalmente
+                                             independiente de Personaje. Marcador real (estrella violeta,
+                                             color del acento de la app - distinto a proposito del magenta de
+                                             "NPC sin icono") en la aparicion principal y cada Spawn Point
+                                             real guardado. -->
+                                        <ItemsControl ItemsSource="{Binding Exploration.CharacterSpawns}" IsHitTestVisible="True">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><Canvas IsItemsHost="True" /></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemContainerStyle>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Canvas.Left" Value="{Binding TileX}" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding TileY}" />
+                                                    <Setter Property="Panel.ZIndex" Value="2" />
+                                                </Style>
+                                            </ItemsControl.ItemContainerStyle>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:CharacterSpawnRowViewModel}">
+                                                    <TextBlock Text="&#9733;" FontSize="18" Foreground="{StaticResource AccentBrush}"
+                                                               Margin="-9,-18,0,0" ToolTip="{Binding Label}" Cursor="Hand">
+                                                        <TextBlock.Effect>
+                                                            <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
+                                                        </TextBlock.Effect>
+                                                    </TextBlock>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>

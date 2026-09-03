@@ -5083,3 +5083,34 @@ Cambio puramente visual (sin logica nueva), verificado con captura real
 sale ahora colapsado por defecto (solo la cabecera, flecha hacia la derecha) dejando toda la
 columna para la lista real de NPCs del mundo. `dotnet test` 208/208 en verde (sin cambios),
 arnes UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### X-g/X-h (segunda auditoria, Fable) - el mapa conoce al personaje real + aviso de solo lectura
+
+**X-g, "el mapa no sabe nada del personaje real"**: Exploracion era un visor totalmente
+independiente de Personaje - cualquier `.wld`, sin relacion con nada cargado. Investigacion
+real antes de tocar nada: `PlrCharacter.cs` NO tiene ningun campo de "aparicion principal"
+propio - la unica fuente real de coordenadas de aparicion en el `.plr` es `PlrServerEntry.
+SpawnX/Y` (la pestaña "Spawn Points", `Servers`), la ultima cama real donde durmio el
+personaje es un dato del MUNDO (`.wld`), no del personaje. `ExplorationViewModel.
+CharacterSpawns` (nuevo) + `SetCharacterSpawns()` reciben los Spawn Points reales del
+personaje cargado (omitiendo los recien añadidos sin coordenadas, 0/0) - marcador real
+(estrella violeta, `AccentBrush`, distinta del magenta de "NPC sin icono") en el mapa. Se
+recalcula al cargar personaje (tras `Servers.LoadFrom`, el paso real que los rellena) y al
+ENTRAR en Exploracion (mismo criterio ya aceptado en Bd-d/X-g hermanos). Limitacion real
+documentada: estas coordenadas no se validan contra NINGUN mundo en concreto (un spawn
+guardado para otro mundo se ve en un sitio sin sentido aqui) - mismo criterio ya aceptado para
+Spawn Points en si.
+
+**X-h, "no dice que es solo lectura"**: el aviso real ("Solo lectura, no coloca/quita tiles")
+solo existia como comentario de codigo en `ExplorationViewModel`, invisible para el usuario.
+Pildora "Solo lectura" junto al titulo del mundo, con tooltip explicando por que (mismo mundo
+que carga Terraria, sin editar ni guardar desde aqui).
+
+1 prueba determinista nueva (`ExplorationCharacterSpawnsTests.cs`: cargar un personaje con 2
+Spawn Points, uno real y otro vacio (0,0), deja solo el real en `CharacterSpawns`). Verificado
+tambien con el mundo real `roca_negra.wld` en el arnes UIA permanente: un Spawn Point real
+añadido en vivo (Servers) aparece en `CharacterSpawns` tras navegar a Exploracion -
+`X-G-SPAWN-PERSONAJE: Spawn Point real añadido -> aparece en el mapa=True, CharacterSpawns.
+Count=1` - y la pildora "Solo lectura" se ve junto al titulo en la captura real
+(`mundo-spawn-personaje.png`). `dotnet test` 209/209 en verde (134 Core + 75 ViewModels), arnes
+UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
