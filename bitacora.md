@@ -6608,3 +6608,77 @@ de maquina puntual (muchos ciclos seguidos de build+relanzamiento en esta sesion
 pasada, documentado: si este fallo intermitente vuelve a aparecer en una sesion futura, subir el
 margen de esa espera concreta (`WaitForDispatcher(300)` -> un numero mayor) en vez de
 re-investigar desde cero.
+
+**Cierra la Tanda C completa** (H5-10 constantes vitales, H5-09 ancho compartido, H5-11
+lanzador de mundos permanente). Empieza la Tanda D: H5-12, H5-13, H5-14, H5-05, H5-07.
+
+## H5-12 - Clic en una tarjeta de la Libreria no hacia nada (Tanda D, quinta auditoria de Opus)
+
+Hallazgo real: "`LibraryCardTemplate` solo engancha `PreviewMouseLeftButtonDown` para anotar el
+punto de inicio de un posible arrastre - en el estado normal (un slot ya seleccionado porque
+cualquier clic en un slot llama a `SelectSlot`, y la Libreria desplegada sola en `Amplio` por
+H4-07), pulsar un objeto de la Libreria no produce ningun efecto ni señal. Ni coloca, ni avisa,
+ni previsualiza. La unica via real es arrastrar, gesto mas caro que nada anuncia. Boton muerto
+en el control mas usado de la app, en su estado por defecto". Viola P1 (practicidad) y P5
+(reactividad).
+
+**Clic simple** (`MainWindow.xaml.cs`, nuevo `OnLibraryCardClick`, `MouseLeftButtonUp`): coloca
+en el slot YA seleccionado en el panel Editar compartido (`ItemEdit.Slot`) - si lo rechaza,
+`PlaceItem` ya deja su propio `RejectionMessage` real (visible en ese mismo panel, nada nuevo
+que construir); si no hay ningun slot seleccionado, no hace nada (el tooltip de la tarjeta ya
+avisa de esto, ver mas abajo).
+
+**Doble clic**: nuevo `MainViewModel.PlaceInFirstFreeInventorySlot(int itemId)` - coloca en el
+primer hueco REAL vacio del Inventario (`InventoryContainer.Slots.FirstOrDefault(s =>
+s.IsEmpty)`), sin necesitar ninguna seleccion previa; si el inventario esta lleno, avisa por
+`StatusMessage` (mismo patron real ya usado en "Mover todo al almacén" para el caso analogo
+"nada que mover") en vez de fallar en silencio.
+
+**Boton "Colocar" existente**: se mantiene tal cual, intacto - sigue siendo el unico camino para
+el flujo explicito "Elegir..." (`Library.PickTarget`/`IsPicking`), un concepto distinto (elegir
+oficial para UN slot concreto marcado a proposito) del nuevo clic directo sobre el slot ya
+seleccionado en Editar.
+
+**Gotcha real resuelto antes de comitear, no documentado en el informe original**: implementar
+el doble clic de forma ingenua (comprobar `e.ClickCount>=2` en el propio `MouseLeftButtonUp`)
+habria colocado el objeto DOS VECES en cada doble clic real - WPF entrega el PRIMER clic de un
+futuro doble clic como un `MouseUp` normal con `ClickCount=1` ANTES de que exista ningun
+`ClickCount=2` (no los agrupa de antemano), asi que el camino de clic simple ya se dispara con
+el primer clic, y el camino de doble clic se dispara ademas con el segundo - dos colocaciones
+reales por un solo gesto de usuario. Arreglado con un `DispatcherTimer` real armado en cada
+clic simple (cancelado si un segundo clic real llega antes de que expire) - el tiempo de espera
+usa `GetDoubleClickTime()` (P/Invoke real a `user32.dll`, la misma API que usa el propio
+Explorador de Windows para decidir si dos clics cuentan como uno doble; `SystemParameters` de
+WPF, a diferencia de `System.Windows.Forms.SystemInformation`, no expone este valor - no valia
+la pena arrastrar una referencia a WinForms solo por un numero, P/Invoke directo en su lugar,
+mismo patron real ya usado en `App.xaml.cs` para `GetSystemMetrics`).
+
+**Guardia real contra arrastrar+soltar tambien disparando el clic**: `_dragStartLibrary` (ya
+existente para el arrastre) se usa como señal de "este gesto ya se resolvio como un arrastre
+real" - `OnLibraryCardMouseMove` lo vacia justo antes de `DoDragDrop`, asi que
+`OnLibraryCardClick` puede distinguir "el usuario solto tras arrastrar" (no hacer nada, el
+`Drop` real ya coloco el objeto) de "el usuario solo hizo clic" (el camino nuevo de arriba) con
+una sola comprobacion.
+
+**Tooltip de la tarjeta** (pedido explicito del informe: "si no hay ninguno seleccionado, la
+tarjeta lo dice al pasar el ratón"): 2 lineas mutuamente excluyentes nuevas
+(`ItemEdit.Slot` no nulo/nulo, mismos `NullToVis`/`NullToCollapsed` ya en el proyecto) - con
+seleccion explica los 2 gestos reales (clic/doble clic); sin seleccion, avisa en naranja de que
+hace falta elegir un hueco primero (o usar doble clic directamente).
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: 358/358 (nada de logica de
+dominio nueva cubierta por xunit - la disambiguacion de gestos vive en code-behind, ver mas
+abajo). Arnes de UI Automation ampliado (`H5-12-SELECCION`/`H5-12-CLIC-SIMPLE`/
+`H5-12-DOBLE-CLIC`) verificando a nivel de ViewModel las 2 llamadas reales que cada gesto
+dispara: seleccionar un slot vacio y colocar en el (camino real del clic simple), y
+`PlaceInFirstFreeInventorySlot` colocando de verdad en el primer hueco libre real (no en
+cualquier otro, verificado por `SlotIndex` exacto). **2/2 pasadas limpias**, sin
+NO-FOUND/FALLO/EXCEPTION.
+
+Fuera de esta pasada, documentado a proposito (no fingida cobertura): la disambiguacion de
+gestos EN SI (arrastre vs. clic vs. doble clic, `OnLibraryCardClick`/`OnLibraryClickTimerTick`)
+exige eventos de raton reales enrutados por WPF sobre un elemento arbitrario - sin precedente
+en este arnes (que solo simula `InvokePattern`/`Command.Execute` o teclado real via
+`keybd_event`, nunca un clic de raton real). Verificado en su lugar por revision de codigo
+cuidadosa (el guardia `_dragStartLibrary`, el temporizador real con cancelacion) + las 2
+llamadas reales que cada camino dispara, probadas de forma aislada arriba.

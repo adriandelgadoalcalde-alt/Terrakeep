@@ -932,8 +932,12 @@
              BuffLibraryCardTemplate. Arrastre igual que siempre (OnLibraryCardMouseDown/Move,
              no dependen de la forma de la tarjeta). -->
         <DataTemplate x:Key="LibraryCardTemplate" DataType="{x:Type vm:LibraryItemViewModel}">
+            <!-- H5-12 (quinta auditoria de Opus): "un clic en una tarjeta de la Libreria no hace
+                 absolutamente nada... la unica via real es arrastrar". MouseLeftButtonUp real
+                 (OnLibraryCardClick, MainWindow.xaml.cs) - clic simple coloca en el slot
+                 seleccionado en Editar, doble clic al primer hueco libre del Inventario. -->
             <Border Padding="0" CornerRadius="6" Background="{StaticResource BgElevatedBrush}" BorderThickness="1" Cursor="Hand"
-                    PreviewMouseLeftButtonDown="OnLibraryCardMouseDown" MouseMove="OnLibraryCardMouseMove">
+                    PreviewMouseLeftButtonDown="OnLibraryCardMouseDown" MouseMove="OnLibraryCardMouseMove" MouseLeftButtonUp="OnLibraryCardClick">
                 <Border.ToolTip>
                     <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <StackPanel MaxWidth="240">
@@ -941,6 +945,14 @@
                                        Foreground="{Binding RarityBrush, TargetNullValue={StaticResource TextPrimaryBrush}}" />
                             <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                                        Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
+                            <!-- H5-12: "si no hay ninguno seleccionado, la tarjeta lo dice al pasar
+                                 el raton" - pedido explicito del informe. -->
+                            <TextBlock Text="Clic: coloca en el hueco seleccionado en Editar. Doble clic: al primer hueco libre del Inventario."
+                                       Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0"
+                                       Visibility="{Binding DataContext.ItemEdit.Slot, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVis}}" />
+                            <TextBlock Text="Ningun hueco seleccionado - elige uno primero (clic en cualquier slot) para poder colocar con un clic, o doble clic aqui mismo para ir directo al primer hueco libre del Inventario."
+                                       Style="{StaticResource CaptionText}" Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,5,0,0"
+                                       Visibility="{Binding DataContext.ItemEdit.Slot, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToCollapsed}}" />
                         </StackPanel>
                     </ToolTip>
                 </Border.ToolTip>

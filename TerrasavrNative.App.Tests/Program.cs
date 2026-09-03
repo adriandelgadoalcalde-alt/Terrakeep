@@ -756,6 +756,46 @@ internal static class Program
             Console.WriteLine("LIBRERIA-EXCEPTION: " + ex);
         }
 
+        // H5-12 (quinta auditoria de Opus): "un clic en una tarjeta de la Libreria no hace
+        // absolutamente nada". El gesto de raton en si (arrastre vs clic vs doble clic,
+        // OnLibraryCardClick/OnLibraryClickTimerTick en MainWindow.xaml.cs) exige eventos de
+        // raton reales enrutados por WPF - sin precedente en este arnes (que solo simula
+        // Invoke/Command o teclado real via keybd_event, nunca clics de raton reales sobre un
+        // elemento arbitrario) y fuera de alcance real montar eso solo para esto, documentado
+        // aqui a proposito en vez de fingir cobertura. Lo que SI se verifica de verdad, a nivel
+        // de ViewModel (exactamente las 2 llamadas reales que ese gesto dispara): que colocar en
+        // el slot ya seleccionado en Editar (ItemEdit.Slot, camino del clic simple) funciona, y
+        // que MainViewModel.PlaceInFirstFreeInventorySlot (camino del doble clic, nuevo) coloca
+        // de verdad en el primer hueco libre real, no en cualquiera.
+        try
+        {
+            if (vm.InventoryContainer != null)
+            {
+                var slotParaClicSimple = vm.InventoryContainer.Slots.LastOrDefault(s => s.IsEmpty);
+                if (slotParaClicSimple != null)
+                {
+                    vm.SelectSlot(slotParaClicSimple);
+                    Console.WriteLine($"H5-12-SELECCION: ItemEdit.Slot tras SelectSlot=={ReferenceEquals(vm.ItemEdit.Slot, slotParaClicSimple)} (esperado True)");
+                    vm.ItemEdit.Slot!.PlaceItem(2); // id real cualquiera - lo que importa es que ACEPTE y quede puesto, no el nombre concreto
+                    Console.WriteLine($"H5-12-CLIC-SIMPLE: slot antes vacio, DisplayName tras PlaceItem={slotParaClicSimple.DisplayName} (esperado no vacio - mismo camino real que dispara el clic simple de la tarjeta)");
+                    if (slotParaClicSimple.IsEmpty) Console.WriteLine("FALLO: H5-12 - colocar en el slot seleccionado (camino real del clic simple) no dejo el objeto puesto");
+                }
+                else Console.WriteLine("H5-12-CLIC-SIMPLE: sin slot de Inventario vacio real para probar - omitido");
+
+                int primerVacioAntesId = vm.InventoryContainer.Slots.FirstOrDefault(s => s.IsEmpty)?.SlotIndex ?? -1;
+                vm.PlaceInFirstFreeInventorySlot(4); // id real cualquiera
+                var primerVacioSlot = vm.InventoryContainer.Slots.FirstOrDefault(s => s.SlotIndex == primerVacioAntesId);
+                Console.WriteLine($"H5-12-DOBLE-CLIC: primer hueco libre real antes=Index {primerVacioAntesId}, tras PlaceInFirstFreeInventorySlot su DisplayName={primerVacioSlot?.DisplayName} (esperado no vacio, justo ESE hueco - no cualquier otro)");
+                if (primerVacioAntesId < 0 || primerVacioSlot == null || primerVacioSlot.IsEmpty)
+                    Console.WriteLine("FALLO: H5-12 - PlaceInFirstFreeInventorySlot no coloco en el primer hueco libre real");
+            }
+            else Console.WriteLine("H5-12: sin InventoryContainer real - omitido");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("H5-12-EXCEPTION: " + ex);
+        }
+
         // Toggle biblioteca (plegar/desplegar) para confirmar que el binding real funciona.
         // Segunda auditoria de Opus (Fable), B-7 - BUG REAL en esta misma comprobacion: el
         // MaxHeight buscado (460) no coincidia con el real del XAML de entonces (238, residuo

@@ -1033,6 +1033,21 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = $"Movido{(plural ? "s" : "")} {moved} objeto{(plural ? "s" : "")} al almacén seleccionado - pulsa Guardar para conservarlo.";
     }
 
+    // H5-12 (quinta auditoria de Opus): "un clic en una tarjeta de la Libreria no hace
+    // absolutamente nada... la unica via real es arrastrar, gesto mas caro que nada anuncia".
+    // Doble clic real (MainWindow.xaml.cs, OnLibraryCardClick) - gesto rapido sin necesitar
+    // seleccionar ningun slot antes, a diferencia del clic simple (coloca en ItemEdit.Slot).
+    public void PlaceInFirstFreeInventorySlot(int itemId)
+    {
+        var target = InventoryContainer?.Slots.FirstOrDefault(s => s.IsEmpty);
+        if (target == null)
+        {
+            StatusMessage = "El inventario esta lleno - no hay ningun hueco libre donde colocarlo con doble clic.";
+            return;
+        }
+        target.PlaceItem(itemId);
+    }
+
     // H5-03 (quinta auditoria de Opus): "no existe guardar/cargar conjuntos de objetos, que en
     // el Terrasavr original SI es una funcion de primera clase" (app.io.IoSave/IoLoad reales -
     // ver ItemSetFile). El dialogo de fichero real vive en la View (MainWindow.xaml.cs, mismo

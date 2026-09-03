@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -9,6 +10,14 @@ namespace TerrasavrNative.App;
 
 public partial class MainWindow : Window
 {
+    // H5-12 (quinta auditoria de Opus): tiempo real de doble clic del propio sistema operativo
+    // - SystemParameters (WPF) no expone este valor (solo existe en WinForms,
+    // System.Windows.Forms.SystemInformation, una dependencia que no tiene sentido arrastrar
+    // aqui solo por un numero). GetDoubleClickTime (user32.dll) es la API Win32 real y
+    // documentada que usa el propio Explorador para decidir si dos clics cuentan como uno doble.
+    [DllImport("user32.dll")]
+    private static extern uint GetDoubleClickTime();
+
     private readonly MainViewModel _viewModel = new();
 
     public MainWindow()
@@ -413,6 +422,56 @@ public partial class MainWindow : Window
 
         if (sender is FrameworkElement { DataContext: LibraryItemViewModel item } element)
             DragDrop.DoDragDrop(element, new DataObject(typeof(LibraryItemViewModel), item), DragDropEffects.Copy);
+    }
+
+    // H5-12 (quinta auditoria de Opus): "un clic en una tarjeta de la Libreria no hace
+    // absolutamente nada... la unica via real es arrastrar, gesto mas caro que nada anuncia".
+    // Clic simple: coloca en el slot seleccionado ahora mismo en el panel Editar (ItemEdit.Slot)
+    // - si lo rechaza, PlaceItem ya deja su propio RejectionMessage real, visible en ese mismo
+    // panel. Doble clic: al primer hueco libre del Inventario, sin necesitar ninguna seleccion
+    // previa. _dragStartLibrary es null aqui cuando el gesto YA se resolvio como un arrastre real
+    // (OnLibraryCardMouseMove lo vacia justo antes de DoDragDrop) - sin esta guarda, soltar tras
+    // arrastrar colocaria el objeto DOS veces (una via el Drop real, otra via este clic).
+    private void OnLibraryCardClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_dragStartLibrary is null) return; // ya se resolvio como un arrastre real, no un clic
+        _dragStartLibrary = null;
+        if (sender is not FrameworkElement { DataContext: LibraryItemViewModel item }) return;
+
+        if (e.ClickCount >= 2)
+        {
+            _libraryClickTimer?.Stop();
+            _pendingLibraryClickItem = null;
+            _viewModel.PlaceInFirstFreeInventorySlot(item.Id);
+            return;
+        }
+
+        // El primer clic de un futuro doble clic YA llega aqui con ClickCount=1 (WPF no junta
+        // los dos hasta el segundo) - sin esperar el tiempo real del sistema, colocaria en el
+        // slot seleccionado Y, un instante despues, el doble clic colocaria TAMBIEN en el primer
+        // hueco libre: dos colocaciones reales por un solo gesto. DispatcherTimer con el tiempo
+        // real de doble clic del propio sistema operativo (SystemParameters.DoubleClickTime,
+        // nunca un numero inventado) - se cancela si un segundo clic llega a tiempo.
+        _pendingLibraryClickItem = item;
+        _libraryClickTimer ??= new System.Windows.Threading.DispatcherTimer();
+        _libraryClickTimer.Stop();
+        _libraryClickTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(GetDoubleClickTime(), 1));
+        _libraryClickTimer.Tick -= OnLibraryClickTimerTick;
+        _libraryClickTimer.Tick += OnLibraryClickTimerTick;
+        _libraryClickTimer.Start();
+    }
+
+    private System.Windows.Threading.DispatcherTimer? _libraryClickTimer;
+    private LibraryItemViewModel? _pendingLibraryClickItem;
+
+    private void OnLibraryClickTimerTick(object? sender, EventArgs e)
+    {
+        _libraryClickTimer!.Stop();
+        if (_pendingLibraryClickItem is not { } item) return;
+        _pendingLibraryClickItem = null;
+        var target = _viewModel.ItemEdit.Slot;
+        if (target == null) return; // el tooltip de la tarjeta ya avisa de que hace falta elegir un hueco antes
+        target.PlaceItem(item.Id);
     }
 
     // Un clic en cualquier slot (incluidos los botones ★/✕/Cambiar de dentro, ya que este
