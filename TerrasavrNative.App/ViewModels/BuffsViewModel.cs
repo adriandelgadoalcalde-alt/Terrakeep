@@ -19,6 +19,13 @@ public partial class BuffsViewModel : ObservableObject
 
     [ObservableProperty] private BuffContainerViewModel? _container;
 
+    // Auditoria de Opus, N-2 (IsDirty real): BuffsViewModel es una instancia PERSISTENTE que
+    // reconstruye sus slots en cada LoadFrom() (a diferencia de los contenedores de objetos,
+    // que MainViewModel crea el mismo directamente) - MainViewModel se suscribe UNA vez en su
+    // constructor y este evento reenvia el cambio de cualquier slot, cargado el personaje que
+    // sea, sin tener que resuscribirse en cada LoadFrom.
+    public event Action? SlotChanged;
+
     public BuffsViewModel(CharacterFileService service, Action<BuffSlotViewModel> requestPick)
     {
         _service = service;
@@ -31,8 +38,12 @@ public partial class BuffsViewModel : ObservableObject
         // de app.BuffSide/script.beautified.js - 4 filas exactas de 11, no 10x4+4 suelto).
         var slots = new ObservableCollection<BuffSlotViewModel>();
         for (int i = 0; i < character.Buffs.Count; i++)
-            slots.Add(new BuffSlotViewModel(i, character.Buffs[i], _service.VanillaBuffs, _service.CalamityBuffCatalog,
-                _service.VanillaBuffDurations, character.Version, _requestPick));
+        {
+            var slot = new BuffSlotViewModel(i, character.Buffs[i], _service.VanillaBuffs, _service.CalamityBuffCatalog,
+                _service.VanillaBuffDurations, character.Version, _requestPick);
+            slot.PropertyChanged += (_, e) => { if (e.PropertyName != nameof(BuffSlotViewModel.IsSelected)) SlotChanged?.Invoke(); };
+            slots.Add(slot);
+        }
         Container = new BuffContainerViewModel("Buffs", slots, 11);
     }
 

@@ -8,8 +8,8 @@
         xmlns:data="clr-namespace:TerrasavrNative.Core.Data;assembly=TerrasavrNative.Core"
         xmlns:controls="clr-namespace:TerrasavrNative.App.Controls"
         mc:Ignorable="d"
-        Title="Terrakeep" Height="860" Width="1180" MinWidth="1080" MinHeight="700"
-        Background="{StaticResource BgPrimaryBrush}">
+        Title="{Binding WindowTitle}" Height="860" Width="1180" MinWidth="1080" MinHeight="700"
+        Background="{StaticResource BgPrimaryBrush}" Closing="OnWindowClosing">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
 

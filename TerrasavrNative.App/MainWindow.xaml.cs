@@ -18,6 +18,27 @@ public partial class MainWindow : Window
         _viewModel.Exploration.NavigateToTileRequested += OnNavigateToTile;
     }
 
+    // Auditoria de Opus, N-2: "se pueden editar 40 slots, cambiar de pestaña, cerrar la app y
+    // perderlo todo sin un solo aviso". Confirmacion real solo cuando de verdad hay algo que
+    // perder (IsDirty) - Si/No/Cancelar, igual que cualquier app de escritorio real.
+    private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (!_viewModel.IsDirty) return;
+        var result = MessageBox.Show(
+            $"'{_viewModel.CharacterName}' tiene cambios sin guardar.\n\n¿Guardar antes de cerrar?",
+            "Cambios sin guardar", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+        switch (result)
+        {
+            case MessageBoxResult.Yes:
+                _viewModel.SaveCommand.Execute(null);
+                if (_viewModel.IsDirty) e.Cancel = true; // el guardado fallo de verdad - no cerrar en silencio
+                break;
+            case MessageBoxResult.Cancel:
+                e.Cancel = true;
+                break;
+        }
+    }
+
     private void OnLoadClick(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog

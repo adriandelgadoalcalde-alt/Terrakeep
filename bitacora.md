@@ -3528,3 +3528,40 @@ tooltip individual (honesto: nunca mostrar un dato erróneo por mostrar algo).
 de cuerpo a cuerpo real y completo; `AerospecBreastplate` (compartida) → sin bono, correcto;
 `StatigelHeadMagic`/`ForbiddenCirclet` → bono real correcto. `dotnet build` limpio, `dotnet
 test` 134/134.
+
+## Ejecución completa del plan de la auditoría de Opus (pedido explícito: "haz todo el plan de opus sin parar")
+
+Tras la auditoría exhaustiva (16 secciones, ~100 hallazgos, plan en 7 bloques, publicada como
+artefacto), el usuario pidió ejecutar el plan entero seguido, sin pausas entre fases, y al
+terminar volver a pedirle a Opus la misma auditoría completa otra vez (para medir qué cambió).
+Se sigue el orden real de bloques que Opus propuso.
+
+### Bloque 0 - Seguridad
+
+**T-23, copia de seguridad automática al guardar**: `CharacterFileService.Save` copia
+`nombre.plr`/`nombre.tplr` a `.bak` (sobrescribiendo el anterior) justo ANTES de escribir la
+versión nueva - un solo nivel de deshacer real, sin acumular ficheros sin límite. Best-effort
+real (si el `.bak` está bloqueado por otro proceso, no bloquea el guardado real, que es lo que
+de verdad importa).
+
+**N-2, `IsDirty` real + confirmación al cerrar**: `MainViewModel` se suscribe a `PropertyChanged`
+de cada `ItemSlotViewModel`/`BuffSlotViewModel` real (en `AddContainer`, en `EquipmentGroup.
+AllContainers` tras reconstruirlo, y vía un evento nuevo `BuffsViewModel.SlotChanged` para los
+slots de buffs, que se reconstruyen dentro de una instancia persistente) más `Appearance`/
+`Servers`/`Flags`/`VersionEditor` (instancias persistentes, suscripción única en el constructor)
+- cualquier cambio real marca `IsDirty=true`, excluyendo `IsSelected` (puro estado de UI). Un
+`_suppressDirty` real evita que el propio proceso de CARGAR se marque a sí mismo como cambio sin
+guardar. `WindowTitle` ahora es real ("Terrakeep - {nombre} ●" con cambios pendientes, antes
+constante fija). `MainWindow.xaml.cs` gana `OnWindowClosing` con diálogo Sí/No/Cancelar
+(idéntico a cualquier app de escritorio real) solo cuando `IsDirty` es cierto.
+
+**T-22, `LoadFromPath` ya no deja estado a medias**: si el fallo ocurre DESPUÉS de
+`_service.Load()` (ej. dentro de `RebuildContainers`), `_loaded` se pone a `null` en el `catch`
+- cierra el hueco real de que `Guardar`/`AutoEquip`/`Investigar todo` actuaran sobre un personaje
+a medio cargar (los 3 comandos ya comprobaban `_loaded==null`).
+
+**Verificación real** (proyecto standalone en el scratchpad, `MainViewModel` real sin ventana,
+personaje de prueba real escrito a disco): cargar dejaba `IsDirty=False`; colocar un objeto real
+(id 10) lo subía a `True` y el título ganaba el punto ●; guardar lo volvía a `False` y creaba de
+verdad `isdirty-test.plr.bak`; una segunda edición + guardado repetían el ciclo correctamente.
+`dotnet build` limpio, `dotnet test` 134/134.

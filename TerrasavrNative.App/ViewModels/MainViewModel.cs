@@ -49,6 +49,29 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string? _characterName;
     [ObservableProperty] private bool _isCharacterLoaded;
     [ObservableProperty] private bool _hasCalamityData;
+    // Bloque 0 de la auditoria de Opus (N-2): "se pueden editar 40 slots, cambiar de pestaña,
+    // cerrar la app y perderlo todo sin un solo aviso". Se marca sola al detectar CUALQUIER
+    // cambio real en un slot/Apariencia/Spawn Points/Desbloqueos/Version tras cargar - ver el
+    // enganche real en el constructor, RebuildContainers y AddContainer. _suppressDirty evita
+    // que el propio proceso de CARGAR (que tambien dispara PropertyChanged al rellenar campos)
+    // se marque a si mismo como "cambio sin guardar".
+    [ObservableProperty] private bool _isDirty;
+    private bool _suppressDirty = true;
+
+    private void MarkDirty()
+    {
+        if (!_suppressDirty) IsDirty = true;
+    }
+
+    // Titulo real de ventana con el nombre del personaje y el punto "sin guardar" (N-2) - antes
+    // era la constante fija "Terrakeep" siempre, sin importar que hubiera cargado ni si habia
+    // cambios pendientes.
+    public string WindowTitle => CharacterName == null
+        ? "Terrakeep"
+        : $"Terrakeep - {CharacterName}{(IsDirty ? " ●" : "")}";
+
+    partial void OnCharacterNameChanged(string? value) => OnPropertyChanged(nameof(WindowTitle));
+    partial void OnIsDirtyChanged(bool value) => OnPropertyChanged(nameof(WindowTitle));
     [ObservableProperty] private int _selectedTabIndex;
     [ObservableProperty] private int _personajeInnerTabIndex;
     [ObservableProperty] private bool _saveConfirmationVisible;
@@ -111,7 +134,18 @@ public partial class MainViewModel : ObservableObject
             PersonajeInnerTabIndex = BuffsInnerTabIndex;
         };
         Buffs = new BuffsViewModel(_service, RequestPickForBuffSlot);
+        // Buffs es una unica instancia persistente que reconstruye sus slots en cada
+        // LoadFrom() real (a diferencia de los contenedores de objetos, que MainViewModel crea
+        // el mismo directamente en AddContainer) - SlotChanged reenvia el cambio de cualquier
+        // slot de buff, cargado el personaje que sea, sin tener que resuscribirse cada vez.
+        Buffs.SlotChanged += MarkDirty;
         ItemEdit = new ItemEditViewModel(_service);
+        // Apariencia/Spawn Points/Desbloqueos/Version son tambien instancias persistentes -
+        // cualquier propiedad que cambien tras cargar un personaje es una edicion real.
+        Appearance.PropertyChanged += (_, _) => MarkDirty();
+        Servers.PropertyChanged += (_, _) => MarkDirty();
+        Flags.PropertyChanged += (_, _) => MarkDirty();
+        VersionEditor.PropertyChanged += (_, _) => MarkDirty();
         _saveConfirmationTimer.Tick += (_, _) =>
         {
             SaveConfirmationVisible = false;
@@ -188,6 +222,11 @@ public partial class MainViewModel : ObservableObject
 
     public void LoadFromPath(string plrPath)
     {
+        // Auditoria de Opus, N-2: mientras se carga, cada LoadFrom() de abajo dispara sus
+        // propios PropertyChanged reales (rellenar campos) - eso NO es una edicion del
+        // usuario, asi que se suprime aqui y se reactiva solo cuando la carga entera termino
+        // bien (o se corta del todo si fallo, ver el catch).
+        _suppressDirty = true;
         try
         {
             Library.PickTarget = null;
@@ -212,8 +251,20 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            // Auditoria de Opus, T-22: "LoadFromPath traga excepciones y sigue... queda en un
+            // estado a medias". Si el fallo ocurrio DESPUES de _service.Load (ej. en
+            // RebuildContainers o en algun LoadFrom), _loaded ya apunta al personaje nuevo
+            // pero los ViewModels solo se rellenaron a medias - Guardar/AutoEquip/Investigar
+            // todo actuarian sobre ese estado inconsistente. _loaded=null cierra el hueco real
+            // (los 3 comandos ya comprueban _loaded==null antes de hacer nada).
+            _loaded = null;
             IsCharacterLoaded = false;
             StatusMessage = $"Error al cargar: {ex.Message}";
+        }
+        finally
+        {
+            _suppressDirty = false;
+            IsDirty = false;
         }
     }
 
@@ -227,6 +278,7 @@ public partial class MainViewModel : ObservableObject
             _service.Save(_loaded);
             StatusMessage = $"Guardado: {Path.GetFileName(_loaded.PlrPath)}" +
                 (_loaded.TplrPath != null ? $" + {Path.GetFileName(_loaded.TplrPath)}" : "");
+            IsDirty = false;
             SaveConfirmationVisible = true;
             _saveConfirmationTimer.Stop();
             _saveConfirmationTimer.Start();
@@ -304,6 +356,12 @@ public partial class MainViewModel : ObservableObject
         // mismo, 21 pestañas en total - pedido explicito 2-sep-2026 tras el amontonamiento
         // real al reducir la ventana: "¿es necesario que haya tantos botones?").
         EquipmentGroup = new EquipmentGroupViewModel(_service, RequestPickForSlot, _loaded.MergedContainers, _loaded.Character.Loadouts.Length);
+        // EquipmentGroup se RECREA entera cada carga (a diferencia de Buffs, que reutiliza la
+        // misma instancia) - los slots de sus contenedores nunca pasan por AddContainer, asi
+        // que se enganchan aqui, el unico sitio real donde MainViewModel ve la instancia nueva.
+        foreach (var c in EquipmentGroup.AllContainers)
+            foreach (var s in c.Slots)
+                s.PropertyChanged += (_, e) => { if (e.PropertyName != nameof(ItemSlotViewModel.IsSelected)) MarkDirty(); };
 
         Research.LoadFrom(_loaded.Character);
     }
@@ -405,7 +463,11 @@ public partial class MainViewModel : ObservableObject
             bool isEquipped = key == "inventory" && i < HotbarSlotCount;
             var kind = slotKinds != null && i < slotKinds.Length ? slotKinds[i] : SlotKind.None;
             var ghost = ghostIcons != null && i < ghostIcons.Length ? ghostIcons[i] : null;
-            slots.Add(new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped, kind, ghost));
+            var slot = new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped, kind, ghost);
+            // Auditoria de Opus, N-2 (IsDirty real) - IsSelected es puro estado de UI (que slot
+            // tiene el foco del panel Editar), nunca una edicion real del personaje.
+            slot.PropertyChanged += (_, e) => { if (e.PropertyName != nameof(ItemSlotViewModel.IsSelected)) MarkDirty(); };
+            slots.Add(slot);
         }
         var container = new ContainerViewModel(key, displayName, slots) { Columns = columns, MinCell = minCell, MaxCell = maxCell };
         Containers.Add(container);

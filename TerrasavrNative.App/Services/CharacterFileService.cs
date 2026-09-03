@@ -118,12 +118,36 @@ public sealed class CharacterFileService
     public void Save(LoadedCharacter loaded)
     {
         var newTplrRoot = _sync.MaskAndSyncAll(loaded.Character, loaded.MergedContainers, loaded.TplrRoot);
+
+        // Copia de seguridad real antes de sobrescribir (Bloque 0 de la auditoria de Opus,
+        // T-23: "nada tiene deshacer... el programa deberia aplicarse el mismo criterio de
+        // 'usar siempre una copia' que ya exige la propia bitacora al probar"). Copia de un
+        // solo nivel (nombre.plr.bak / nombre.tplr.bak, se sobrescribe cada guardado) - protege
+        // el caso real (deshacer el ULTIMO guardado si algo salio mal) sin acumular ficheros sin
+        // limite. Solo si el fichero YA existe - el primer guardado de un personaje nuevo no
+        // tiene nada que respaldar.
+        BackupIfExists(loaded.PlrPath);
         File.WriteAllBytes(loaded.PlrPath, PlrFile.Write(loaded.Character));
 
         string tplrPath = loaded.TplrPath ?? Path.ChangeExtension(loaded.PlrPath, ".tplr");
+        BackupIfExists(tplrPath);
         File.WriteAllBytes(tplrPath, TplrFile.Write(loaded.TplrRootName, newTplrRoot));
 
         loaded.TplrRoot = newTplrRoot;
         loaded.TplrPath = tplrPath;
+    }
+
+    private static void BackupIfExists(string path)
+    {
+        if (!File.Exists(path)) return;
+        try
+        {
+            File.Copy(path, path + ".bak", overwrite: true);
+        }
+        catch (IOException)
+        {
+            // Copia de seguridad best-effort real: si el .bak esta bloqueado (ej. antivirus)
+            // no debe impedir el guardado real del personaje, que es lo que de verdad importa.
+        }
     }
 }
