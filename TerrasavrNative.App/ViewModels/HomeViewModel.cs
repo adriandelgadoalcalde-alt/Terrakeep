@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -16,6 +17,19 @@ namespace TerrasavrNative.App.ViewModels;
 // Solo lee lo minimo real de cada .plr (PlrFile.Read completo, son ficheros pequeños - sin
 // tocar el .tplr, que solo hace falta para editar de verdad) - un error real leyendo un fichero
 // concreto (corrupto, formato ajeno) no debe tumbar el listado entero de los demas.
+//
+// T-G (segunda auditoria de Opus, Fable): "arranque sincrono - HomeViewModel.Refresh() async,
+// con IsScanning (ya existia como propiedad, pero SIN NINGUN binding real en el XAML - un
+// interruptor que nunca encendia nada)". Medido de verdad antes de tocar nada (mismo criterio
+// que X-7): ~97ms reales en esta maquina con solo 3 personajes (Debug, primera pasada -
+// mayoria coste de JIT en frio de PlrFile.Read/AES/NBT, no I/O puro) - constructor de
+// HomeViewModel corre COMO PARTE del constructor de MainViewModel, que a su vez corre ANTES de
+// que MainWindow.InitializeComponent() pueda arrancar (field initializers de C#, orden real) -
+// asi que esto retrasaba la ventana entera, no solo el listado de Inicio. Async de verdad
+// (Task.Run para el escaneo real de disco - mismo patron ya usado y probado en
+// ExplorationViewModel.LoadFromPathAsync) deja que la ventana aparezca sin esperar, y con
+// muchos mas personajes reales (o una carpeta de Documentos sincronizada por OneDrive, I/O
+// real mucho mas lento que esta maquina) la diferencia seria mucho mayor todavia.
 public partial class HomeViewModel : ObservableObject
 {
     public ObservableCollection<CharacterListEntryViewModel> Characters { get; } = [];
@@ -31,7 +45,11 @@ public partial class HomeViewModel : ObservableObject
 
     public HomeViewModel()
     {
-        Refresh();
+        // Fire-and-forget deliberado: el constructor no puede ser async, y no hay nada
+        // real que esperar aqui todavia (el arranque de MainWindow sigue su curso normal -
+        // Characters simplemente se rellena un instante despues, IsScanning ahora SI tiene
+        // un spinner real que lo refleja mientras tanto, ver MainWindow.xaml).
+        _ = RefreshAsync();
     }
 
     // I-a (segunda auditoria de Opus, Fable): "No se distingue que personaje esta cargado - las
@@ -44,29 +62,19 @@ public partial class HomeViewModel : ObservableObject
             entry.IsCurrent = string.Equals(entry.FilePath, path, StringComparison.OrdinalIgnoreCase);
     }
 
+    // El nombre real real de la carpeta escaneada solo hace falta para el mensaje "Ningun
+    // personaje encontrado en..." - se calcula en el hilo de UI (barato, una sola llamada a
+    // Environment.GetFolderPath) para poder mostrarlo aunque el escaneo en si falle.
     [RelayCommand]
-    private void Refresh()
+    private async Task RefreshAsync()
     {
         Characters.Clear();
         IsScanning = true;
         try
         {
             string dir = CharacterFileService.GetDefaultPlayersDirectory();
-            var plrFiles = Directory.Exists(dir) ? Directory.GetFiles(dir, "*.plr") : [];
-            foreach (string path in plrFiles.OrderByDescending(File.GetLastWriteTimeUtc))
-            {
-                try
-                {
-                    var character = PlrFile.Read(File.ReadAllBytes(path));
-                    bool isCalamity = File.Exists(Path.ChangeExtension(path, ".tplr"));
-                    Characters.Add(new CharacterListEntryViewModel(path, character, isCalamity, File.GetLastWriteTimeUtc(path)));
-                }
-                catch (Exception)
-                {
-                    // Un .plr ajeno/corrupto no debe tumbar el listado de los demas - se omite
-                    // en silencio, igual que ya hace la Libreria con ids sin catalogar.
-                }
-            }
+            var scanned = await Task.Run(() => ScanCharacters(dir));
+            foreach (var entry in scanned) Characters.Add(entry);
             ScanMessage = Characters.Count == 0
                 ? $"Ningun personaje encontrado en {dir}"
                 : null;
@@ -76,6 +84,30 @@ public partial class HomeViewModel : ObservableObject
         {
             IsScanning = false;
         }
+    }
+
+    // Todo el trabajo real de disco (enumerar + leer + descifrar cada .plr) - se ejecuta en un
+    // hilo de fondo via Task.Run (RefreshAsync de arriba), nunca toca ninguna ObservableCollection
+    // directamente (serian modificaciones desde fuera del hilo de UI).
+    private static List<CharacterListEntryViewModel> ScanCharacters(string dir)
+    {
+        var result = new List<CharacterListEntryViewModel>();
+        var plrFiles = Directory.Exists(dir) ? Directory.GetFiles(dir, "*.plr") : [];
+        foreach (string path in plrFiles.OrderByDescending(File.GetLastWriteTimeUtc))
+        {
+            try
+            {
+                var character = PlrFile.Read(File.ReadAllBytes(path));
+                bool isCalamity = File.Exists(Path.ChangeExtension(path, ".tplr"));
+                result.Add(new CharacterListEntryViewModel(path, character, isCalamity, File.GetLastWriteTimeUtc(path)));
+            }
+            catch (Exception)
+            {
+                // Un .plr ajeno/corrupto no debe tumbar el listado de los demas - se omite
+                // en silencio, igual que ya hace la Libreria con ids sin catalogar.
+            }
+        }
+        return result;
     }
 
     [RelayCommand]
@@ -116,7 +148,7 @@ public partial class HomeViewModel : ObservableObject
             File.Copy(entry.FilePath, newPath);
             string tplrSrc = Path.ChangeExtension(entry.FilePath, ".tplr");
             if (File.Exists(tplrSrc)) File.Copy(tplrSrc, Path.ChangeExtension(newPath, ".tplr"));
-            Refresh();
+            _ = RefreshAsync(); // T-G: mismo criterio real que el constructor, fire-and-forget
         }
         catch (Exception ex)
         {
@@ -142,7 +174,7 @@ public partial class HomeViewModel : ObservableObject
             string tplrPath = Path.ChangeExtension(entry.FilePath, ".tplr");
             string tplrBak = tplrPath + ".bak";
             if (File.Exists(tplrBak)) File.Copy(tplrBak, tplrPath, overwrite: true);
-            Refresh();
+            _ = RefreshAsync(); // T-G: mismo criterio real que el constructor, fire-and-forget
         }
         catch (Exception ex)
         {

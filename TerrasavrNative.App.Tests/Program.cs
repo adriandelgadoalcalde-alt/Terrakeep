@@ -70,7 +70,17 @@ internal static class Program
             e.Handled = true;
         };
 
+        var swStartup = System.Diagnostics.Stopwatch.StartNew();
         var window = new MainWindow();
+        swStartup.Stop();
+        Console.WriteLine($"T-G-ARRANQUE: new MainWindow() (CharacterFileService + MainViewModel + XAML) tardo {swStartup.ElapsedMilliseconds}ms");
+        // T-G: HomeViewModel.RefreshAsync se lanza en el propio constructor (fire-and-forget,
+        // Task.Run) - justo AL SALIR de new MainWindow(), antes de cualquier DoEvents() real,
+        // el escaneo de disco todavia no ha podido completarse (esta corriendo en un hilo de
+        // fondo) - IsScanning debe seguir en True aqui mismo, prueba real de que el arranque de
+        // la ventana ya no espera a que termine.
+        bool scanningJustoAlSalir = ((MainViewModel)window.DataContext).Home.IsScanning;
+        Console.WriteLine($"T-G-ASYNC: IsScanning justo tras new MainWindow() (antes de cualquier DoEvents)={scanningJustoAlSalir} (esperado True - el escaneo real corre en segundo plano, no bloquea la construccion de la ventana)");
         app.MainWindow = window;
         window.Show();
         DoEvents();

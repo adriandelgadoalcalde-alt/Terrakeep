@@ -23,7 +23,13 @@ public sealed partial class CategoryNodeViewModel(string name, string fullPath) 
     // el arbol real de Terrasavr - ej. una espada de hierro cae en "Materials/Iron & Lead" Y
     // en "Categories/Weapons/Melee damage"). Solo para pertenencia rapida (Contains) - para
     // MOSTRAR los objetos usar ItemIdsOrdered, que respeta el orden curado real.
-    public HashSet<int> ItemIdSet { get; set; } = [];
+    // T-G (segunda auditoria de Opus, Fable): IReadOnlySet/IReadOnlyList (antes HashSet/List
+    // concretos) - LibraryCategoryTreeBuilder ahora CACHEA y COMPARTE por referencia estas
+    // colecciones entre el arbol de Libreria y el de Investigacion (evita recalcular/reordenar
+    // el catalogo completo dos veces en cada arranque) - el tipo de solo lectura documenta y
+    // hace cumplir en compilacion que ningun consumidor puede mutar en el sitio una lista que
+    // otro arbol tambien esta usando.
+    public IReadOnlySet<int> ItemIdSet { get; set; } = new HashSet<int>();
 
     // Bug real encontrado y corregido 2-sep-2026 (pedido explicito del usuario: "reordenar
     // todos los ítems... para que coincidan 100 por 100 de como lo tenemos en terrasav"):
@@ -34,7 +40,7 @@ public sealed partial class CategoryNodeViewModel(string name, string fullPath) 
     // propio JSON extraido (que a su vez preserva el orden real de Hc.deploy); para una
     // carpeta intermedia, sus hijos concatenados en orden real, sin duplicados (por si un
     // mismo objeto cae en mas de un hijo a la vez).
-    public List<int> ItemIdsOrdered { get; set; } = [];
+    public IReadOnlyList<int> ItemIdsOrdered { get; set; } = [];
 
     [ObservableProperty] private int _itemCount;
     [ObservableProperty] private string? _iconPath;

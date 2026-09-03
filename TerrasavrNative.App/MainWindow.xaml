@@ -1113,6 +1113,17 @@
                          su doll/dificultad/insignia/fecha reales - un click carga y salta a
                          Personaje. Si no hay ninguno (carpeta vacia o instalacion sin
                          detectar), se cae al boton manual de siempre. -->
+                    <!-- T-G (segunda auditoria de Opus, Fable): "IsScanning ya existia pero sin
+                         ningun binding real - un interruptor que nunca encendia nada". Ahora que
+                         el escaneo real es async (ver HomeViewModel.RefreshAsync), este hueco
+                         SI hace falta - mientras dura, Characters.Count sigue en 0 Y ScanMessage
+                         sigue vacio (nada del bloque de abajo ni del de "Empezar" seria visible
+                         todavia sin esto, una pantalla en blanco real durante el escaneo). -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,26" Visibility="{Binding Home.IsScanning, Converter={StaticResource BoolToVis}}">
+                        <ProgressBar IsIndeterminate="True" Width="120" Height="4" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="Buscando personajes..." Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+
                     <StackPanel Visibility="{Binding Home.Characters.Count, Converter={StaticResource CountToVis}}" Margin="0,0,0,26">
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                             <TextBlock Text="Tus personajes" Style="{StaticResource SectionText}" VerticalAlignment="Center" />

@@ -5114,3 +5114,51 @@ añadido en vivo (Servers) aparece en `CharacterSpawns` tras navegar a Exploraci
 Count=1` - y la pildora "Solo lectura" se ve junto al titulo en la captura real
 (`mundo-spawn-personaje.png`). `dotnet test` 209/209 en verde (134 Core + 75 ViewModels), arnes
 UIA completo sin NO-FOUND/FALLO/EXCEPTION, `T-E-TILDES: 0 fallo(s)`.
+
+### T-G (segunda auditoria, Fable) - arranque sincrono
+
+**Medido de verdad antes de tocar nada (mismo criterio que X-7)**: instrumentacion temporal con
+`Stopwatch` real (`new MainWindow()`, `CharacterFileService()`, `MainViewModel()`,
+`HomeViewModel.Refresh()`) via el arnes UIA - a diferencia de X-7 (Cargar personaje ~8ms,
+Investigar todo ~3ms, "no resolver un problema que no existe"), aqui SI habia un problema real:
+**448ms** de bloqueo sincrono real en `new MainWindow()` (Debug, primera pasada) antes de que la
+ventana pudiera aparecer, con 3 causas reales identificadas y cerradas:
+
+**1. `HomeViewModel.Refresh()` (~97ms medidos, 3 personajes reales)**: corria DENTRO del
+constructor de `MainViewModel`, que a su vez corre ANTES de `MainWindow.InitializeComponent()`
+(field initializers de C#, orden real) - retrasaba la ventana ENTERA, no solo el listado de
+Inicio. Reescrito a `RefreshAsync()` real (mismo patron ya probado en `ExplorationViewModel.
+LoadFromPathAsync`, Task.Run para el escaneo de disco) - la ventana ya no espera. `IsScanning`
+YA EXISTIA como propiedad pero sin ningun binding real en el XAML ("un interruptor que nunca
+encendia nada") - ahora tiene un spinner real visible mientras dura, y se añadio un bloque
+nuevo para el hueco real que la asincronia abre (Characters.Count==0 Y ScanMessage vacio a la
+vez durante el escaneo - antes de este cambio eso no podia pasar nunca).
+
+**2. Libreria e Investigacion construian el arbol de categorias completo (~8469 objetos,
+agrupar/paginar/ordenar) DOS VECES por separado** (`LibraryCategoryTreeBuilder.Build`, llamado
+independientemente por cada ViewModel) - el propio comentario historico de `CategoryNodeViewModel`
+(T-18) ya documentaba el problema sin cerrarlo. La parte cara ahora se calcula UNA sola vez
+(`CategoryTreeNodeData`, datos puros sin `ObservableObject`, cacheados con `lock` real para
+seguridad de verdad bajo xunit en paralelo - mismo motivo real que la cache de
+`PlayerPreviewRenderer`) y se comparte por REFERENCIA; cada consumidor sigue recibiendo su
+PROPIO arbol de `CategoryNodeViewModel` (envoltorio barato) - Libreria e Investigacion
+mantienen `IsSelected`/`SelectCommand` totalmente independientes, verificado con test real.
+`CategoryNodeViewModel.ItemIdsOrdered`/`ItemIdSet` pasan de `List<int>`/`HashSet<int>` a
+`IReadOnlyList<int>`/`IReadOnlySet<int>` (documentan Y hacen cumplir en compilacion que nadie
+puede mutar en el sitio una lista que otro arbol tambien esta usando).
+
+**Resultado real medido**: `new MainWindow()` de 448ms -> **357ms** (~20% real, no una cifra
+redonda inventada - 4 ejecuciones del arnes consistentes en el rango 354-361ms). No es un "todo
+resuelto" - queda margen real (StatsTooltip de LibraryViewModel sigue formateando ~8469 strings
+por adelantado aunque solo 1 se vaya a mirar nunca a la vez, candidato real para una pasada
+futura si hace falta apretar mas) pero es una mejora real y verificada, no un numero de
+marketing.
+
+3 pruebas deterministas nuevas (`LibraryCategoryTreeSharingTests.cs`: mismos datos por
+referencia + nodos independientes de verdad; `HomeRefreshAsyncTests.cs`: RefreshCommand es
+async de verdad, IsScanning vuelve a False al terminar). Verificado con el arnes UIA: `T-G-
+ASYNC: IsScanning justo tras new MainWindow() (antes de cualquier DoEvents)=True` (prueba real
+de que el arranque ya no espera al escaneo), capturas reales de Inicio/Libreria/Investigacion
+sin cambios visuales de regresion. `dotnet test` 212/212 en verde (134 Core + 78 ViewModels,
+4 ejecuciones consecutivas sin fallos intermitentes), arnes UIA completo sin NO-FOUND/FALLO/
+EXCEPTION, `T-E-TILDES: 0 fallo(s)`.

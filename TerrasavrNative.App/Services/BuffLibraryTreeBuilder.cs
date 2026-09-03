@@ -50,7 +50,7 @@ public static class BuffLibraryTreeBuilder
         {
             IconPath = VanillaBuffIconResolver.GetIconPath(ids[0]),
             ItemIdsOrdered = ids.ToList(),
-            ItemIdSet = [.. ids],
+            ItemIdSet = new HashSet<int>(ids),
         };
         node.ItemCount = node.ItemIdSet.Count;
         return node;
@@ -73,7 +73,7 @@ public static class BuffLibraryTreeBuilder
             {
                 IconPath = VanillaBuffIconResolver.GetIconPath(pageIds[0]),
                 ItemIdsOrdered = pageIds,
-                ItemIdSet = [.. pageIds],
+                ItemIdSet = new HashSet<int>(pageIds),
             };
             page.ItemCount = page.ItemIdSet.Count;
             root.Children.Add(page);
@@ -109,7 +109,7 @@ public static class BuffLibraryTreeBuilder
             if (ids.Count <= LeafPageSize)
             {
                 node.ItemIdsOrdered = ids.ToList();
-                node.ItemIdSet = [.. ids];
+                node.ItemIdSet = new HashSet<int>(ids);
                 node.ItemCount = node.ItemIdSet.Count;
                 return node;
             }
@@ -121,7 +121,7 @@ public static class BuffLibraryTreeBuilder
                 {
                     IconPath = IconOf(chunk[0]),
                     ItemIdsOrdered = chunk,
-                    ItemIdSet = [.. chunk],
+                    ItemIdSet = new HashSet<int>(chunk),
                 };
                 page.ItemCount = page.ItemIdSet.Count;
                 node.Children.Add(page);

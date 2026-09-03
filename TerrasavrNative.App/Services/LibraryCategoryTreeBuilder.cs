@@ -3,15 +3,20 @@ using TerrasavrNative.Core.Data;
 
 namespace TerrasavrNative.App.Services;
 
-// Arbol de carpetas REAL de Terrasavr (vanilla, Hc.deploy real - ver VanillaLibraryTreeCatalog/
-// scripts/extraer-arbol-libreria-vanilla.js) + una unica carpeta madre "Calamity (mod)" (puerto
-// fiel de calamityBuildLibraryNode, overrides.js real) - compartido entre la Libreria y la
-// pestaña Investigacion (pedido explicito 2-sep-2026: "quiero que calques exactamente la
-// estructura de carpetas orden y organizacion de terrasav para esta librera Y investigacion").
-// Los nombres se traducen con las etiquetas reales de Terrasavr (LibraryLabelCatalog, namespace
-// "lib.item" real) y el orden de los objetos dentro de cada carpeta respeta el orden curado
-// real (ItemIdsOrdered - ver CategoryNodeViewModel para el porque, un HashSet no vale para
-// esto).
+// T-G (segunda auditoria de Opus, Fable): "arranque sincrono - compartir una unica instancia
+// del arbol de Libreria entre Libreria e Investigacion" - medido de verdad antes de tocar nada
+// (mismo criterio que X-7): LibraryViewModel Y ResearchViewModel llamaban cada uno a Build()
+// por separado, recorriendo/agrupando/paginando el mismo catalogo real de ~8469 objetos DOS
+// VECES en cada arranque (~134ms medidos para el conjunto de sub-viewmodels de MainViewModel,
+// con este doble trabajo real dentro). La parte cara (agrupar Calamity por categoria, paginar
+// hojas >40, construir el arbol vanilla real) se calcula UNA SOLA VEZ aqui (cacheada en
+// _cachedData - valido durante toda la vida del proceso, los catalogos de CharacterFileService
+// son inmutables tras cargarse) como datos puros sin estado (CategoryTreeNodeData, sin
+// ObservableObject ni comandos); Build() se queda con el mismo contrato de siempre (devuelve un
+// arbol de CategoryNodeViewModel FRESCO e independiente en cada llamada - Libreria e
+// Investigacion necesitan su propio IsSelected/SelectCommand por nodo, no pueden compartir las
+// instancias de ViewModel en si) pero ahora solo hace el envoltorio barato (copiar referencias
+// ya calculadas), no la reconstruccion entera.
 public static class LibraryCategoryTreeBuilder
 {
     // Mismo tope real que usa el propio Terrasavr (b()/c() en Hc.deploy real) para paginar una
@@ -19,37 +24,63 @@ public static class LibraryCategoryTreeBuilder
     // paginadas del extractor, a diferencia de las vanilla).
     private const int LeafPageSize = 40;
 
+    // Bug real de concurrencia evitado a proposito (mismo motivo real que la cache de
+    // PlayerPreviewRenderer.Cache, ver bitacora.md "carrera de compilacion en paralelo"): xunit
+    // corre clases de test en PARALELO por defecto, y muchas construyen su propio MainViewModel
+    // (-> CharacterFileService -> Library/ResearchViewModel -> Build()) a la vez - un simple
+    // `??=` sin lock podria arrancar BuildData() dos veces a la vez o publicar un _cachedData a
+    // medio construir. El lock solo protege el check-y-set (barato); envolver TODO el metodo
+    // desharia la ganancia real de compartir el trabajo.
+    private static readonly object _cacheLock = new();
+    private static List<CategoryTreeNodeData>? _cachedData;
+
     public static List<CategoryNodeViewModel> Build(CharacterFileService service)
     {
-        var roots = new List<CategoryNodeViewModel>();
+        List<CategoryTreeNodeData> data;
+        lock (_cacheLock)
+            data = _cachedData ??= BuildData(service);
+        return data.Select(ToViewModel).ToList();
+    }
+
+    private static CategoryNodeViewModel ToViewModel(CategoryTreeNodeData data)
+    {
+        var vm = new CategoryNodeViewModel(data.Name, data.FullPath)
+        {
+            IconPath = data.IconPath,
+            ItemIdsOrdered = data.ItemIdsOrdered, // misma lista inmutable de referencia, nunca se muta despues de construida
+            ItemIdSet = data.ItemIdSet,
+            ItemCount = data.ItemIdSet.Count,
+        };
+        foreach (var child in data.Children)
+            vm.Children.Add(ToViewModel(child));
+        return vm;
+    }
+
+    private static List<CategoryTreeNodeData> BuildData(CharacterFileService service)
+    {
+        var roots = new List<CategoryTreeNodeData>();
         foreach (var root in service.VanillaLibraryTree.RootNodes)
             roots.Add(BuildVanillaNode(root, string.Empty, service.LibraryLabels));
         roots.Add(BuildCalamityRoot(service));
         return roots;
     }
 
-    private static CategoryNodeViewModel BuildVanillaNode(VanillaLibraryNode node, string parentPath, LibraryLabelCatalog labels)
+    private static CategoryTreeNodeData BuildVanillaNode(VanillaLibraryNode node, string parentPath, LibraryLabelCatalog labels)
     {
         // FullPath se construye siempre a partir del nombre INGLES real (clave estable) -
         // Name (lo que se muestra) usa la traduccion real de Terrasavr.
         string fullPath = parentPath.Length == 0 ? node.Name : $"{parentPath}/{node.Name}";
-        var vm = new CategoryNodeViewModel(labels.Translate(node.Name), fullPath)
-        {
-            IconPath = node.Icon != 0 ? VanillaIconResolver.GetIconPath(node.Icon) : null,
-        };
+        string? iconPath = node.Icon != 0 ? VanillaIconResolver.GetIconPath(node.Icon) : null;
 
         if (node.IsLeaf)
         {
-            vm.ItemIdsOrdered = node.ItemIds.ToList();
-            vm.ItemIdSet = new HashSet<int>(vm.ItemIdsOrdered);
-            vm.ItemCount = vm.ItemIdSet.Count;
-            return vm;
+            var ids = node.ItemIds.ToList();
+            return new CategoryTreeNodeData(labels.Translate(node.Name), fullPath, iconPath, ids, new HashSet<int>(ids), []);
         }
 
-        foreach (var child in node.Children)
-            vm.Children.Add(BuildVanillaNode(child, fullPath, labels));
-        ApplyOrderedUnion(vm);
-        return vm;
+        var children = node.Children.Select(child => BuildVanillaNode(child, fullPath, labels)).ToList();
+        var (ordered, set) = OrderedUnion(children);
+        return new CategoryTreeNodeData(labels.Translate(node.Name), fullPath, iconPath, ordered, set, children);
     }
 
     // Puerto real de calamityBuildLibraryNode (Terrasavr-Calamity-Beta\resources\app\
@@ -61,7 +92,7 @@ public static class LibraryCategoryTreeBuilder
     // Electron original (LIBRARY_FOLDER_CAP) - era un parche a una limitacion real del motor
     // Haxe/OpenFL antiguo (lista de lineas fija sin scroll), que no existe en este arbol real
     // de WPF.
-    private static CategoryNodeViewModel BuildCalamityRoot(CharacterFileService service)
+    private static CategoryTreeNodeData BuildCalamityRoot(CharacterFileService service)
     {
         var labels = service.LibraryLabels;
         var byCategory = service.CalamityCatalog.Entries
@@ -74,34 +105,24 @@ public static class LibraryCategoryTreeBuilder
                 ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + icon
                 : null;
 
-        CategoryNodeViewModel BuildCategoryNode(string cat)
+        CategoryTreeNodeData BuildCategoryNode(string cat)
         {
             var ids = byCategory[cat];
             string label = $"{CalamityCategoryLabel(cat)} ({ids.Count})";
-            var node = new CategoryNodeViewModel(label, "Calamity/" + cat) { IconPath = IconOf(ids[0]) };
 
             if (ids.Count <= LeafPageSize)
-            {
-                node.ItemIdsOrdered = ids.ToList();
-                node.ItemIdSet = new HashSet<int>(ids);
-                node.ItemCount = node.ItemIdSet.Count;
-                return node;
-            }
+                return new CategoryTreeNodeData(label, "Calamity/" + cat, IconOf(ids[0]), ids, new HashSet<int>(ids), []);
 
+            var pages = new List<CategoryTreeNodeData>();
             for (int i = 0; i < ids.Count; i += LeafPageSize)
             {
                 var chunk = ids.Skip(i).Take(LeafPageSize).ToList();
-                var page = new CategoryNodeViewModel(labels.Translate($"Page {i / LeafPageSize + 1}"), $"{node.FullPath}/Page{i / LeafPageSize + 1}")
-                {
-                    IconPath = IconOf(chunk[0]),
-                    ItemIdsOrdered = chunk,
-                    ItemIdSet = new HashSet<int>(chunk),
-                };
-                page.ItemCount = page.ItemIdSet.Count;
-                node.Children.Add(page);
+                pages.Add(new CategoryTreeNodeData(
+                    labels.Translate($"Page {i / LeafPageSize + 1}"), $"Calamity/{cat}/Page{i / LeafPageSize + 1}",
+                    IconOf(chunk[0]), chunk, new HashSet<int>(chunk), []));
             }
-            ApplyOrderedUnion(node);
-            return node;
+            var (ordered, set) = OrderedUnion(pages);
+            return new CategoryTreeNodeData(label, "Calamity/" + cat, IconOf(ids[0]), ordered, set, pages);
         }
 
         var groupOrder = new List<string>();
@@ -114,47 +135,40 @@ public static class LibraryCategoryTreeBuilder
         }
         groupOrder.Sort(StringComparer.Ordinal);
 
-        var root = new CategoryNodeViewModel("Calamity (mod)", "Calamity");
         var rootIconEntry = service.CalamityCatalog.ByModAndInternal("CalamityMod", "Calamity");
-        root.IconPath = rootIconEntry != null ? IconOf(rootIconEntry.SyntheticId) : null;
+        string? rootIcon = rootIconEntry != null ? IconOf(rootIconEntry.SyntheticId) : null;
 
+        var topNodes = new List<CategoryTreeNodeData>();
         foreach (var top in groupOrder)
         {
             var members = groups[top];
-            CategoryNodeViewModel node;
             if (members.Count == 1)
             {
-                node = BuildCategoryNode(members[0]);
+                topNodes.Add(BuildCategoryNode(members[0]));
             }
             else
             {
                 var childNodes = members.Select(BuildCategoryNode).ToList();
                 int totalIds = members.Sum(m => byCategory[m].Count);
-                node = new CategoryNodeViewModel($"{CalamityCategoryLabel(top)} ({totalIds})", "Calamity/" + top) { IconPath = childNodes[0].IconPath };
-                foreach (var child in childNodes) node.Children.Add(child);
-                ApplyOrderedUnion(node);
+                var (ordered, set) = OrderedUnion(childNodes);
+                topNodes.Add(new CategoryTreeNodeData($"{CalamityCategoryLabel(top)} ({totalIds})", "Calamity/" + top, childNodes[0].IconPath, ordered, set, childNodes));
             }
-            root.Children.Add(node);
         }
-        ApplyOrderedUnion(root);
-        return root;
+        var (rootOrdered, rootSet) = OrderedUnion(topNodes);
+        return new CategoryTreeNodeData("Calamity (mod)", "Calamity", rootIcon, rootOrdered, rootSet, topNodes);
     }
 
-    // Rellena ItemIdsOrdered/ItemIdSet/ItemCount de una carpeta intermedia a partir de sus
-    // hijos YA construidos, concatenados en su propio orden real, sin duplicar un id que caiga
-    // en mas de un hijo a la vez (pertenencia multiple real - ver CategoryNodeViewModel).
-    private static void ApplyOrderedUnion(CategoryNodeViewModel node)
+    // Union ordenada real de los hijos YA construidos, concatenados en su propio orden real,
+    // sin duplicar un id que caiga en mas de un hijo a la vez (pertenencia multiple real - ver
+    // CategoryNodeViewModel).
+    private static (List<int> Ordered, HashSet<int> Set) OrderedUnion(IReadOnlyList<CategoryTreeNodeData> children)
     {
         var seen = new HashSet<int>();
         var ordered = new List<int>();
-        foreach (var child in node.Children)
-        {
+        foreach (var child in children)
             foreach (int id in child.ItemIdsOrdered)
                 if (seen.Add(id)) ordered.Add(id);
-        }
-        node.ItemIdsOrdered = ordered;
-        node.ItemIdSet = seen;
-        node.ItemCount = seen.Count;
+        return (ordered, seen);
     }
 
     // Portado de CALAMITY_CATEGORY_LABELS (overrides.js real) y ampliado a mano (2-sep-2026,
@@ -275,3 +289,11 @@ public static class LibraryCategoryTreeBuilder
         return string.Join(" - ", segments);
     }
 }
+
+// Nodo de datos puro (sin ObservableObject, sin comandos, sin estado de seleccion) - lo que de
+// verdad es caro de calcular (agrupar/paginar/ordenar el catalogo completo), cacheado UNA vez
+// y compartido entre todos los arboles de CategoryNodeViewModel que se piden despues.
+public sealed record CategoryTreeNodeData(
+    string Name, string FullPath, string? IconPath,
+    IReadOnlyList<int> ItemIdsOrdered, IReadOnlySet<int> ItemIdSet,
+    IReadOnlyList<CategoryTreeNodeData> Children);
