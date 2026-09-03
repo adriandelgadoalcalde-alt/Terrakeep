@@ -220,6 +220,42 @@ public partial class MainWindow : Window
     private static string FormatBackupSize(long bytes) =>
         bytes >= 1024 * 1024 ? $"{bytes / (1024.0 * 1024.0):0.0} MB" : $"{bytes / 1024.0:0.0} KB";
 
+    // H5-03 (quinta auditoria de Opus): "guardar/cargar conjuntos de objetos" - el dialogo real
+    // de fichero vive aqui (MainViewModel es headless de verdad, mismo criterio ya establecido
+    // en OnLoadClick/OnLoadWorldClick). Alcance de esta pasada: Inventario y Almacenes (el
+    // almacen SELECCIONADO ahora mismo, Current) - Equipamiento/loadouts quedan fuera,
+    // documentado en bitacora.md.
+    private void OnSaveInventorySetClick(object sender, RoutedEventArgs e) => SaveItemSetDialog(_viewModel.InventoryContainer);
+    private void OnLoadInventorySetClick(object sender, RoutedEventArgs e) => LoadItemSetDialog(_viewModel.InventoryContainer, append: false);
+    private void OnAppendInventorySetClick(object sender, RoutedEventArgs e) => LoadItemSetDialog(_viewModel.InventoryContainer, append: true);
+
+    private void OnSaveStorageSetClick(object sender, RoutedEventArgs e) => SaveItemSetDialog(_viewModel.StorageGroup?.Current);
+    private void OnLoadStorageSetClick(object sender, RoutedEventArgs e) => LoadItemSetDialog(_viewModel.StorageGroup?.Current, append: false);
+    private void OnAppendStorageSetClick(object sender, RoutedEventArgs e) => LoadItemSetDialog(_viewModel.StorageGroup?.Current, append: true);
+
+    private void SaveItemSetDialog(ContainerViewModel? container)
+    {
+        if (container == null) return;
+        var dialog = new SaveFileDialog
+        {
+            Title = "Guardar conjunto de objetos",
+            Filter = "Conjunto de objetos de Terrakeep (*.json)|*.json",
+            FileName = container.Key + ".json",
+        };
+        if (dialog.ShowDialog(this) == true) _viewModel.SaveItemSet(container, dialog.FileName);
+    }
+
+    private void LoadItemSetDialog(ContainerViewModel? container, bool append)
+    {
+        if (container == null) return;
+        var dialog = new OpenFileDialog
+        {
+            Title = append ? "Añadir conjunto de objetos" : "Cargar conjunto de objetos (reemplaza)",
+            Filter = "Conjunto de objetos de Terrakeep (*.json)|*.json|Todos los archivos (*.*)|*.*",
+        };
+        if (dialog.ShowDialog(this) == true) _viewModel.LoadItemSet(container, dialog.FileName, append);
+    }
+
     // X-a: boton real "Ajustar a la ventana" - antes solo existia "Restablecer" (vuelve al
     // 100%, que para un mundo grande deja ver una fraccion minima del ancho). El calculo
     // necesita el tamaño real del viewport del ScrollViewer, que la ViewModel no conoce - vive

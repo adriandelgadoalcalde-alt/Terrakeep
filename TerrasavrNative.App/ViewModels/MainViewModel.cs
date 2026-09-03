@@ -941,6 +941,69 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = $"Movido{(plural ? "s" : "")} {moved} objeto{(plural ? "s" : "")} al almacén seleccionado - pulsa Guardar para conservarlo.";
     }
 
+    // H5-03 (quinta auditoria de Opus): "no existe guardar/cargar conjuntos de objetos, que en
+    // el Terrasavr original SI es una funcion de primera clase" (app.io.IoSave/IoLoad reales -
+    // ver ItemSetFile). El dialogo de fichero real vive en la View (MainWindow.xaml.cs, mismo
+    // criterio ya establecido: MainViewModel es headless de verdad) - aqui solo la logica real
+    // sobre una ruta ya elegida.
+    public void SaveItemSet(ContainerViewModel container, string path)
+    {
+        try
+        {
+            var file = ItemSetFile.FromItems(container.Slots.Select(s => s.Item), _service.CalamityCatalog, _service.RoguePrefixCatalog);
+            File.WriteAllBytes(path, file.Write());
+            StatusMessage = $"Conjunto de {container.DisplayName} guardado: {Path.GetFileName(path)}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error al guardar el conjunto: {ex.Message}";
+            GlobalErrorMessage = StatusMessage;
+        }
+    }
+
+    // append=false ("Cargar"): reemplaza el contenedor entero, slot a slot, igual que el
+    // original real (Ga.onBinaryData: "if (!this.append) ... d.clear()" antes de rellenar).
+    // append=true ("Añadir"): solo rellena huecos libres, sin tocar lo que ya hay puesto -
+    // mismo criterio real que ContainerViewModel.MoveAllTo. Una sola entrada de deshacer para
+    // todo el conjunto (H5-01), pedido explicito del informe ("cargar un conjunto es una
+    // entrada mas del historial, deshacible").
+    public void LoadItemSet(ContainerViewModel container, string path, bool append)
+    {
+        try
+        {
+            var file = ItemSetFile.Read(File.ReadAllBytes(path));
+            var items = file.ToItems(_service.CalamityCatalog, _service.RoguePrefixCatalog);
+
+            RunAsUndoableBatch(append ? "Añadir conjunto" : "Cargar conjunto", [container], () =>
+            {
+                if (append)
+                {
+                    int di = 0;
+                    foreach (var item in items)
+                    {
+                        if (item.IsEmpty) continue;
+                        while (di < container.Slots.Count && !container.Slots[di].IsEmpty) di++;
+                        if (di >= container.Slots.Count) break;
+                        container.Slots[di].UpdateFrom(item);
+                        di++;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < container.Slots.Count; i++)
+                        container.Slots[i].UpdateFrom(i < items.Count ? items[i] : GameItem.Empty);
+                }
+            });
+
+            StatusMessage = $"Conjunto {(append ? "añadido a" : "cargado en")} {container.DisplayName}: {Path.GetFileName(path)} - pulsa Guardar para conservarlo.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error al cargar el conjunto: {ex.Message}";
+            GlobalErrorMessage = StatusMessage;
+        }
+    }
+
     // Los primeros 10 slots reales de "inventory" son la barra rapida (Player.inventory[0..9]
     // en el propio Terraria - confirmado en Player.cs decompilado, "Hotbar1".."Hotbar0" son 10
     // triggers reales) - contorno verde de "equipado" tambien ahi, igual que en Equipamiento

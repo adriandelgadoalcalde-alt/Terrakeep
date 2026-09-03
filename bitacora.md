@@ -6296,3 +6296,54 @@ estar en el placeholder "(cargando...)".
 del fichero real (verificado leyendo el `.plr` restaurado de verdad, no solo comparando bytes),
 y el orden mas-reciente-primero. 339/339 en verde (139 Core + 200 ViewModels), arnes UIA 2/2
 pasadas limpias sin NO-FOUND/FALLO/EXCEPTION.
+
+### Quinta auditoria (Opus), Tanda B parte 3 - H5-03, guardar/cargar conjuntos de objetos (4-sep-2026)
+
+**Investigacion real primero** (nunca a ciegas): `app.io.IoSave`/`IoLoad` reales
+(`reference/terrasavr-real/script.beautified.js:5804-5880`, `ob.procItem:5864`) - confirmado
+`resourceType` real `"TerrasavrItems"` (no "TerrakeepItems", eso lo escribia solo el propio
+informe de la auditoria como propuesta) y forma real por slot `{id, count?, prefix,
+isFavorited?}`, `null` para un slot vacio (nunca un id=0 inventado). El engine original ademas
+soporta un formato binario legado (`"/terrasavr/i"` + registros por slot) - no replicado (motor
+Flash/Haxe muy anterior, sin valor real de interoperar con el .json actual).
+
+**`ItemSetFile`/`ItemSetSlotData`** (nuevo, `Core/Data`) - mismo esqueleto real
+(`resourceType`/`resourceVersion`/id-count-prefix-favorito por slot), `resourceType` real
+**"TerrakeepItems"** a proposito (formato NUEVO, no bytes-a-bytes con el original - el motor
+real nunca tuvo Calamity). Extension real pedida explicitamente por el informe: un objeto de
+Calamity se serializa por `mod`+`internal` (nunca el id sintetico de este puerto, que no
+sobreviviria a una regeneracion del catalogo) - resuelto con `CalamityCatalog.ByModAndInternal`
+ya existente. Un prefijo Rogue de Calamity (`ItemPrefix.IsCalamity`) se serializa igual por
+nombre interno (`RoguePrefixCatalog.ByInternal`) - el propio motor original nunca tuvo esto,
+pero es la misma idea real portable. "Lo que no se encuentra no se inventa": un objeto/mod ya
+desinstalado, o un `resourceType` ajeno, no rompen nada - slot vacio o excepcion clara,
+respectivamente, nunca un objeto inventado.
+
+**`MainViewModel.SaveItemSet`/`LoadItemSet`** - el dialogo real de fichero vive en la View
+(`MainWindow.xaml.cs`, mismo criterio ya establecido: MainViewModel es headless de verdad).
+`LoadItemSet(append)` reutiliza `RunAsUndoableBatch` (H5-01) - pedido explicito del informe
+("cargar un conjunto es una entrada mas del historial, deshacible"). `append=false` ("Cargar")
+reemplaza el contenedor entero slot a slot, igual que el original real (`Ga.onBinaryData`:
+`if (!this.append) ... d.clear()` antes de rellenar); `append=true` ("Añadir") solo rellena
+huecos libres, mismo criterio real que `ContainerViewModel.MoveAllTo`.
+
+**3 botones reales** ("Guardar conjunto...", "Cargar...", "Añadir...") en las cabeceras de
+Inventario (pestaña compacta) y Almacenes (pestaña independiente, operando sobre el almacen
+`Current` seleccionado - igual que "Ordenar"/"Vaciar contenedor" ya hacen ahi al lado).
+
+**Fuera de esta pasada, a proposito, documentado**: las otras 2 cabeceras reales con estos
+mismos botones (la vista Amplia side-by-side de Inventario+Almacen) y **Equipamiento/loadouts**
+por completo (el informe tambien mencionaba "mover un loadout de un personaje a otro", pero
+Equipamiento no tenia ya ningun boton de accion en bloque del que colgar estos 3, a diferencia
+de Inventario/Almacenes que ya tenian Ordenar/Vaciar - habria sido UI nueva de cero, no una
+extension de un patron real ya en produccion). Cubre el caso mas comun citado explicitamente
+("mover un inventario... de un personaje a otro").
+
+6 pruebas nuevas en Core (`ItemSetFileTests.cs`: round-trip vanilla con prefijo+favorito,
+round-trip Calamity por mod/internal - confirmado en el propio JSON que el id sintetico NUNCA
+aparece crudo -, slot vacio como null, `resourceType` ajeno rechazado, objeto Calamity
+desinstalado no se inventa, prefijo Rogue por nombre interno) + 4 pruebas en App
+(`ItemSetCommandsTests.cs`: guardar+cargar entre DOS personajes reales distintos, "Añadir" no
+toca lo que ya hay puesto, "Cargar" es una sola entrada real de deshacer que revierte los 2
+slots a la vez, un fichero ajeno no rompe nada y avisa por `StatusMessage`). 349/349 en verde
+(145 Core + 204 ViewModels), arnes UIA 2/2 pasadas limpias sin NO-FOUND/FALLO/EXCEPTION.

@@ -1687,6 +1687,20 @@
                                                      comandos reales en ContainerViewModel/MainViewModel. -->
                                                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                        <!-- H5-03 (quinta auditoria de Opus): "guardar/cargar conjuntos de
+                                                             objetos, funcion de primera clase en el Terrasavr original" -
+                                                             el dialogo real de fichero vive en la View (MainViewModel es
+                                                             headless), ver OnSaveInventorySetClick/OnLoadInventorySetClick/
+                                                             OnAppendInventorySetClick. -->
+                                                        <Button Content="Guardar conjunto..." Click="OnSaveInventorySetClick"
+                                                                ToolTip="Guarda TODO el Inventario en un fichero .json real, para llevarlo a otro personaje"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="Cargar..." Click="OnLoadInventorySetClick"
+                                                                ToolTip="Reemplaza TODO el Inventario por un conjunto .json guardado antes"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="Añadir..." Click="OnAppendInventorySetClick"
+                                                                ToolTip="Rellena solo los huecos libres del Inventario con un conjunto .json guardado antes"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
                                                         <Button Content="Mover todo al almacén" Command="{Binding MoveInventoryToStorageCommand}"
                                                                 ToolTip="Mueve todo el Inventario al almacén seleccionado en la pestaña Almacenes (Banco/Caja fuerte/Fragua/Bóveda) - lo que no quepa se queda donde está"
                                                                 Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
@@ -1769,6 +1783,18 @@
                                             <DockPanel DataContext="{Binding StorageGroup}">
                                                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                        <!-- H5-03: mismos 3 botones reales que Inventario, operando sobre
+                                                             el almacen SELECCIONADO ahora mismo (Current) - igual que
+                                                             Ordenar/Vaciar contenedor ya hacen aqui al lado. -->
+                                                        <Button Content="Guardar conjunto..." Click="OnSaveStorageSetClick"
+                                                                ToolTip="Guarda TODO este almacén en un fichero .json real, para llevarlo a otro personaje"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="Cargar..." Click="OnLoadStorageSetClick"
+                                                                ToolTip="Reemplaza TODO este almacén por un conjunto .json guardado antes"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                        <Button Content="Añadir..." Click="OnAppendStorageSetClick"
+                                                                ToolTip="Rellena solo los huecos libres de este almacén con un conjunto .json guardado antes"
+                                                                Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
                                                         <Button Content="Ordenar" Command="{Binding Current.SortCommand}"
                                                                 ToolTip="Ordena los objetos por Id, empaquetados al principio" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
                                                         <Button Content="Vaciar contenedor" Command="{Binding Current.ClearAllCommand}"
