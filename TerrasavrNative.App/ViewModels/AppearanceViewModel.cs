@@ -273,8 +273,15 @@ public partial class AppearanceViewModel : ObservableObject
     // corromperia el dato real que se esta cargando; mismo motivo real por el que el resto de
     // OnXxxChanged de aqui ya usan este mismo guardia. Mismo bug real y mismo arreglo en Mana
     // (el hallazgo original no lo menciona, pero es el mismo par exacto de campos).
+    // H5-10 (quinta auditoria de Opus): HealthFraction/HealthLabel/ManaFraction/ManaLabel para
+    // la franja de constantes vitales de la cabecera - avisar SIEMPRE, incluso durante LoadFrom
+    // (_suppressWriteback=true), a diferencia de la escritura hacia PlrCharacter de abajo: son
+    // solo lectura derivada, no hay nada que corromper, y si no avisan aqui la cabecera se queda
+    // con la barra del personaje anterior tras cargar uno nuevo.
     partial void OnHealthNowChanged(int value)
     {
+        OnPropertyChanged(nameof(HealthFraction));
+        OnPropertyChanged(nameof(HealthLabel));
         if (_suppressWriteback || _character == null) return;
         int clamped = Math.Clamp(value, 0, HealthMax);
         if (clamped != value) { HealthNow = clamped; return; } // reentra, se estabiliza al segundo paso
@@ -282,12 +289,16 @@ public partial class AppearanceViewModel : ObservableObject
     }
     partial void OnHealthMaxChanged(int value)
     {
+        OnPropertyChanged(nameof(HealthFraction));
+        OnPropertyChanged(nameof(HealthLabel));
         if (_suppressWriteback || _character == null) return;
         if (HealthNow > value) HealthNow = value; // arrastra el actual hacia abajo si el maximo baja por debajo
         _character.HealthMax = value;
     }
     partial void OnManaNowChanged(int value)
     {
+        OnPropertyChanged(nameof(ManaFraction));
+        OnPropertyChanged(nameof(ManaLabel));
         if (_suppressWriteback || _character == null) return;
         int clamped = Math.Clamp(value, 0, ManaMax);
         if (clamped != value) { ManaNow = clamped; return; }
@@ -295,10 +306,18 @@ public partial class AppearanceViewModel : ObservableObject
     }
     partial void OnManaMaxChanged(int value)
     {
+        OnPropertyChanged(nameof(ManaFraction));
+        OnPropertyChanged(nameof(ManaLabel));
         if (_suppressWriteback || _character == null) return;
         if (ManaNow > value) ManaNow = value;
         _character.ManaMax = value;
     }
+
+    /// <summary>Fraccion 0..1 real de vida actual/maxima - 0 si HealthMax es 0 (personaje sin cargar).</summary>
+    public double HealthFraction => HealthMax > 0 ? Math.Clamp(HealthNow / (double)HealthMax, 0.0, 1.0) : 0.0;
+    public string HealthLabel => $"{HealthNow}/{HealthMax}";
+    public double ManaFraction => ManaMax > 0 ? Math.Clamp(ManaNow / (double)ManaMax, 0.0, 1.0) : 0.0;
+    public string ManaLabel => $"{ManaNow}/{ManaMax}";
     partial void OnFishingQuestsCompletedChanged(int value) { if (!_suppressWriteback && _character != null) _character.FishingQuestsCompleted = value; }
     partial void OnGolferScoreChanged(int value) { if (!_suppressWriteback && _character != null) _character.GolferScore = value; }
 

@@ -7,11 +7,15 @@
         xmlns:vm="clr-namespace:TerrasavrNative.App.ViewModels"
         xmlns:data="clr-namespace:TerrasavrNative.Core.Data;assembly=TerrasavrNative.Core"
         xmlns:controls="clr-namespace:TerrasavrNative.App.Controls"
+        xmlns:conv="clr-namespace:TerrasavrNative.App.Converters"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}" Height="860" Width="1180" MinWidth="1080" MinHeight="700"
         Background="{StaticResource BgPrimaryBrush}" Closing="OnWindowClosing" KeyDown="OnWindowKeyDown">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <!-- H5-10 (quinta auditoria de Opus): fraccion 0..1 real a ancho en pixeles, para las
+             barras de vida/mana de la cabecera. -->
+        <conv:FractionToWidthConverter x:Key="FractionToWidth" />
 
         <!-- Panel "Editar" compartido - equivalente real de app.TabEdit: sigue al slot
              SELECCIONADO (ItemEditViewModel.Slot), no a uno fijo, para poder vivir fuera del
@@ -1157,8 +1161,19 @@
              HasCalamityData) y el punto de "sin guardar" ya real de WindowTitle/IsDirty. -->
         <Border Grid.Row="0" Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource BorderBrush0}"
                 BorderThickness="0,0,0,1" Padding="16,8">
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+            <!-- H5-10 (quinta auditoria de Opus): "la cabecera global, lo unico visible en las 6
+                 pestañas, esta hueca por dentro - todo el centro vacio". Grid de 3 columnas en vez
+                 del DockPanel real anterior (identidad+botones nada mas) - la columna central
+                 ahora es una franja real de constantes vitales, el dato que mas se consulta y que
+                 hoy exige 3 saltos de pestaña (Apariencia para vida/mana, Equipamiento para
+                 defensa, hacer la cuenta a mano para el dinero). -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- T-H/F1 (segunda auditoria de Opus, Fable): "N-3 esta bien hecho pero no se
                          anuncia en ningun sitio (sin ToolTip en la cabecera)... un atajo que nadie
                          descubre no mejora la practicidad" - los 4 atajos reales (OnWindowKeyDown)
@@ -1180,7 +1195,7 @@
                             ToolTip="Restaura el personaje tal y como estaba ANTES del último 'Guardar' real (usa la copia .bak)" />
                     <Button Content="Guardar" Tag="Orange" Margin="10,0,0,0" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
                             Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}">
                     <Image Source="{Binding Appearance.PreviewImage}" Width="28" Height="39.2" Stretch="Uniform"
                            RenderOptions.BitmapScalingMode="NearestNeighbor" />
@@ -1219,9 +1234,54 @@
                         <TextBlock Text="{Binding FileVersionLine}" Style="{StaticResource CaptionText}" FontSize="11" Margin="4,2,0,0" />
                     </StackPanel>
                 </StackPanel>
-                <TextBlock Text="Sin personaje cargado" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
+                <TextBlock Grid.Column="0" Text="Sin personaje cargado" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
                            Visibility="{Binding IsCharacterLoaded, Converter={StaticResource InverseBoolToVis}}" />
-            </DockPanel>
+
+                <!-- H5-10: franja real de constantes vitales - vida/mana SIEMPRE visibles (lo
+                     mas consultado), defensa/dinero/horas+ultimo guardado solo con sitio real
+                     (IsVitalsStripExpanded, mismo mecanismo de SizeClass de H5-08). Todos los
+                     datos YA se calculaban en algun sitio (Apariencia/Equipamiento/Monedas) -
+                     nada nuevo que extraer, solo un sitio real donde verlo de un vistazo. -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}">
+                    <!-- Vida -->
+                    <TextBlock Text="♥" FontSize="13" Foreground="{StaticResource CalamityBrush}" VerticalAlignment="Center" />
+                    <Grid Width="70" Height="10" Margin="4,0,14,0" ToolTip="Vida">
+                        <Border Background="{StaticResource BgPrimaryBrush}" CornerRadius="3" />
+                        <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" HorizontalAlignment="Left"
+                                Width="{Binding Appearance.HealthFraction, Converter={StaticResource FractionToWidth}, ConverterParameter=70}" />
+                        <TextBlock Text="{Binding Appearance.HealthLabel}" FontSize="8.5" Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <!-- Maná -->
+                    <TextBlock Text="✦" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                    <Grid Width="70" Height="10" Margin="4,0,14,0" ToolTip="Maná">
+                        <Border Background="{StaticResource BgPrimaryBrush}" CornerRadius="3" />
+                        <Border Background="{StaticResource AccentBrush}" CornerRadius="3" HorizontalAlignment="Left"
+                                Width="{Binding Appearance.ManaFraction, Converter={StaticResource FractionToWidth}, ConverterParameter=70}" />
+                        <TextBlock Text="{Binding Appearance.ManaLabel}" FontSize="8.5" Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsVitalsStripExpanded, Converter={StaticResource BoolToVis}}">
+                        <!-- Defensa (del loadout que se este mirando ahora en Equipamiento -
+                             mismo dato real ya en pantalla ahi, EquipmentGroupViewModel). -->
+                        <TextBlock Text="🛡" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding EquipmentGroup.TotalDefense}" Style="{StaticResource CaptionText}" Margin="3,0,14,0" VerticalAlignment="Center"
+                                   ToolTip="{Binding EquipmentGroup.ActiveSetBonusText, TargetNullValue='Defensa total (loadout que se está viendo en Equipamiento)'}" />
+                        <!-- Dinero total -->
+                        <TextBlock Text="{Binding MoneyText}" Style="{StaticResource CaptionText}" Margin="0,0,14,0" VerticalAlignment="Center"
+                                   ToolTip="Dinero total (plata/oro/platino convertidos)" />
+                        <!-- Horas jugadas + Último guardado -->
+                        <TextBlock Style="{StaticResource CaptionText}" VerticalAlignment="Center" ToolTip="Horas jugadas reales (Apariencia)">
+                            <Run Text="{Binding Appearance.PlayHours, StringFormat='{}{0:0}h'}" />
+                        </TextBlock>
+                        <TextBlock Text="{Binding LastSavedText}" Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Visibility="{Binding LastSavedText, Converter={StaticResource NullToVis}}" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
         </Border>
 
         <Grid Grid.Row="1">

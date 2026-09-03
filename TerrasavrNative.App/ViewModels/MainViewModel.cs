@@ -35,6 +35,53 @@ public partial class MainViewModel : ObservableObject
     // para errores, que no deben ser tan efimeros. Ver el banner real en MainWindow.xaml.
     private readonly DispatcherTimer _saveConfirmationTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
 
+    // H5-10 (quinta auditoria de Opus): "cuándo se guardó por última vez - en ninguna parte".
+    // Se refresca solo (DispatcherTimer real, cada 30s) para que "hace X min" no se quede
+    // congelado - mismo criterio de refresco periodico ya visto en el proyecto (banner de
+    // guardado, debounce de busqueda), aqui a una cadencia mucho mas baja (un texto relativo no
+    // necesita precision al segundo).
+    private readonly DispatcherTimer _lastSavedRefreshTimer = new() { Interval = TimeSpan.FromSeconds(30) };
+    private DateTime? _lastSavedLocal;
+    [ObservableProperty] private string? _lastSavedText;
+
+    // H5-10: "Dinero total, convertido y formateado a partir de los cuatro slots de monedas -
+    // hoy hay que hacer la cuenta a mano". Conversion real del juego: 100 cobre = 1 plata,
+    // 100 plata = 1 oro, 100 oro = 1 platino (IDs reales 71/72/73/74, ya confirmados en
+    // Item.IsACoin - vanilla_item_names.json: "Moneda de cobre/plata/oro/platino").
+    private static readonly Dictionary<int, long> CoinValueInCopper = new() { [71] = 1, [72] = 100, [73] = 10000, [74] = 1000000 };
+
+    [ObservableProperty] private string _moneyText = "0";
+
+    private void RefreshMoneyText()
+    {
+        if (CoinsContainer == null) { MoneyText = "0"; return; }
+        long totalCopper = 0;
+        foreach (var slot in CoinsContainer.Slots)
+            if (!slot.IsEmpty && CoinValueInCopper.TryGetValue(slot.ItemId, out long value)) totalCopper += (long)slot.Count * value;
+
+        long platinum = totalCopper / 1000000; totalCopper %= 1000000;
+        long gold = totalCopper / 10000; totalCopper %= 10000;
+        long silver = totalCopper / 100; totalCopper %= 100;
+        long copper = totalCopper;
+
+        var parts = new List<string>();
+        if (platinum > 0) parts.Add($"{platinum}p");
+        if (gold > 0) parts.Add($"{gold}o");
+        if (silver > 0) parts.Add($"{silver}s");
+        if (copper > 0 || parts.Count == 0) parts.Add($"{copper}c");
+        MoneyText = string.Join(" ", parts);
+    }
+
+    private void RefreshLastSavedText()
+    {
+        if (_lastSavedLocal is not { } saved) { LastSavedText = null; return; }
+        var elapsed = DateTime.Now - saved;
+        LastSavedText = elapsed.TotalMinutes < 1 ? "Guardado hace un momento"
+            : elapsed.TotalHours < 1 ? $"Guardado hace {(int)elapsed.TotalMinutes} min"
+            : elapsed.TotalDays < 1 ? $"Guardado hace {(int)elapsed.TotalHours} h"
+            : $"Guardado el {saved:dd/MM/yyyy HH:mm}";
+    }
+
     // H-3 (segunda auditoria de Opus, Fable): "Guardar ya funciona desde cualquier pestaña
     // (N-1) pero un error de guardado va a un TextBlock que 5 de 6 pestañas no ven" -
     // StatusMessage sigue viviendo SOLO dentro de Personaje (correcto para el detalle
@@ -311,6 +358,12 @@ public partial class MainViewModel : ObservableObject
     // panel a la vez).
     public bool IsEquipmentExpanded => SizeClass == WindowSizeClass.Amplio;
 
+    // H5-10 (quinta auditoria de Opus): "la franja se pliega por prioridad al encoger (vida/
+    // maná primero, el resto después) - el mismo mecanismo de clase de tamaño de H5-08, no una
+    // regla nueva". Vida/Maná (lo mas consultado) se quedan siempre visibles; Defensa/Dinero/
+    // Horas+Último guardado solo con sitio real (Normal o Amplio).
+    public bool IsVitalsStripExpanded => SizeClass != WindowSizeClass.Compacto;
+
     // Auditoria de Opus, A-4: "Inventario y Almacenes viven en pestañas separadas - nunca se
     // pueden ver a la vez, y por eso arrastrar un objeto del uno al otro es literalmente
     // imposible" (el drop-target del otro contenedor ni siquiera existe en el arbol visual
@@ -363,6 +416,7 @@ public partial class MainViewModel : ObservableObject
     partial void OnSizeClassChanged(WindowSizeClass value)
     {
         OnPropertyChanged(nameof(IsEquipmentExpanded));
+        OnPropertyChanged(nameof(IsVitalsStripExpanded));
         OnPropertyChanged(nameof(IsStorageExpanded));
         OnPropertyChanged(nameof(InicioContentMaxWidth));
         OnPropertyChanged(nameof(AppearanceContentMaxWidth));
@@ -527,6 +581,8 @@ public partial class MainViewModel : ObservableObject
             SaveConfirmationVisible = false;
             _saveConfirmationTimer.Stop();
         };
+        _lastSavedRefreshTimer.Tick += (_, _) => RefreshLastSavedText();
+        _lastSavedRefreshTimer.Start();
     }
 
     // Selecciona un slot para el panel "Editar" compartido (equivalente real de app.TabEdit)
@@ -642,6 +698,10 @@ public partial class MainViewModel : ObservableObject
             BuffEdit.Slot = null;
             // H5-01: el historial de un personaje no tiene sentido real sobre otro.
             UndoStack.Clear();
+            // H5-10: "Ultimo guardado" es real de ESTA sesion - cargar un personaje no cuenta
+            // como guardarlo, aunque el fichero en si tenga una fecha de modificacion antigua.
+            _lastSavedLocal = null;
+            RefreshLastSavedText();
             _loaded = _service.Load(plrPath);
             RebuildContainers();
             Appearance.LoadFrom(_loaded.Character);
@@ -716,6 +776,8 @@ public partial class MainViewModel : ObservableObject
             SaveConfirmationVisible = true;
             _saveConfirmationTimer.Stop();
             _saveConfirmationTimer.Start();
+            _lastSavedLocal = DateTime.Now;
+            RefreshLastSavedText();
             GlobalErrorMessage = null; // H-3: un guardado con exito limpia cualquier error global anterior
         }
         catch (Exception ex)
@@ -794,7 +856,7 @@ public partial class MainViewModel : ObservableObject
         CoinsContainer = null;
         AmmoContainer = null;
         Research.Reset();
-        if (_loaded == null) { Builds.RefreshOwnership([]); return; }
+        if (_loaded == null) { Builds.RefreshOwnership([]); MoneyText = "0"; return; }
 
         // Contenedores con fusion real de Calamity (mismos 7 que CalamityCharacterSync cubre).
         // Se siguen guardando TODOS en Containers (SyncEditsBackToMerged/AutoEquip los buscan
@@ -839,6 +901,13 @@ public partial class MainViewModel : ObservableObject
         // ItemSlot.cs real - no se inventa ninguno).
         CoinsContainer = AddContainer("coins", "Monedas", _loaded.Character.Coins.ToGameItems(),
             slotKinds: [SlotKind.Coin, SlotKind.Coin, SlotKind.Coin, SlotKind.Coin]);
+        // H5-10 (quinta auditoria de Opus): "Dinero total - hoy hay que hacer la cuenta a
+        // mano". Por ID real (71/72/73/74 = cobre/plata/oro/platino, IsACoin real ya
+        // establecido), no por posicion en el array - un slot vacio o con el objeto
+        // equivocado no rompe nada, simplemente no suma.
+        foreach (var slot in CoinsContainer.Slots)
+            slot.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(ItemSlotViewModel.ItemId) or nameof(ItemSlotViewModel.Count)) RefreshMoneyText(); };
+        RefreshMoneyText();
         AmmoContainer = AddContainer("ammo", "Municion", _loaded.Character.Ammo.ToGameItems(),
             slotKinds: [SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo]);
 

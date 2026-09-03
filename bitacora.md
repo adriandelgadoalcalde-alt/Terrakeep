@@ -6420,3 +6420,64 @@ conjuntos, H5-02 Investigacion editable) - el bloque que el propio informe descr
 que de verdad separa 'editor correcto' de 'programa completo'". Pendiente: Tanda C (H5-10
 cabecera con constantes vitales, H5-09 anchos fijos, H5-11 lanzador de mundos permanente) y
 Tanda D (H5-12/13/14/05/07) - todavia sin empezar.
+
+## H5-10 - Cabecera con constantes vitales (Tanda C, quinta auditoria de Opus)
+
+Hallazgo real: "la cabecera global, lo unico visible en las 6 pestañas, esta hueca por dentro -
+todo el centro vacio, solo identidad a la izquierda y botones a la derecha". Vida/mana/defensa/
+dinero son justo los datos que mas se consultan y que hoy exigen saltar de pestaña (Apariencia
+para vida/mana, Equipamiento para defensa, sumar monedas a mano) - viola P1 (maxima
+practicidad) y P3 (todo visible de golpe).
+
+**Cambio real**: la `Border` de cabecera (`MainWindow.xaml`, antes un `DockPanel` con solo
+identidad+botones) pasa a un `Grid` de 3 columnas (Auto/\*/Auto) - columna 0 identidad
+(igual que antes), columna 2 botones (igual que antes), **columna 1 nueva**: franja de
+constantes vitales, centrada, visible solo con `IsCharacterLoaded`.
+
+- **Vida/Mana**: barra real de dos `Border` superpuestos (fondo + relleno con ancho
+  proporcional), no solo texto - `AppearanceViewModel` gana 4 propiedades computadas
+  (`HealthFraction`, `HealthLabel`, `ManaFraction`, `ManaLabel`), derivadas de
+  `HealthNow`/`HealthMax`/`ManaNow`/`ManaMax` ya existentes (nada nuevo que leer del
+  personaje). Nuevo `FractionToWidthConverter` (`Converters/VisibilityConverters.cs`, mismo
+  patron real que `BoolToDoubleConverter` ya en el fichero: `parameter` es el ancho maximo en
+  px del contenedor real) - registrado como recurso local de `MainWindow.xaml` (clave
+  `FractionToWidth`), NO en `App.xaml`, precisamente para que el arnes de UI Automation
+  (`TerrasavrNative.App.Tests/Program.cs`, que instancia una `Window` real y replica a mano
+  solo los recursos de `App.xaml.Resources`) no necesite ningun registro extra - un `MainWindow`
+  real ya carga sus propios `Window.Resources` de XAML sin ayuda.
+  - **Gotcha real evitado**: los 4 metodos parciales `OnHealthNowChanged`/`OnHealthMaxChanged`/
+    `OnManaNowChanged`/`OnManaMaxChanged` ya existentes tienen una guarda temprana
+    `if (_suppressWriteback || _character == null) return;` (Ap-f, para no escribir hacia
+    `PlrCharacter` durante `LoadFrom`). Si los 2 `OnPropertyChanged` nuevos de
+    `HealthFraction`/`HealthLabel` (y las de Mana) se hubieran puesto DESPUES de esa guarda, la
+    cabecera se habria quedado mostrando la barra del personaje ANTERIOR tras cargar uno nuevo
+    (la propiedad de solo lectura no tiene nada que corromper escribiendo durante la carga, a
+    diferencia de la escritura hacia `_character` - por eso van ANTES de la guarda, no despues).
+- **Defensa**: reutiliza `EquipmentGroup.TotalDefense`/`ActiveSetBonusText` ya existentes (del
+  loadout que se este viendo ahora mismo en Equipamiento).
+- **Dinero**: nuevo `MainViewModel.MoneyText` - conversion real por ID de objeto (71=cobre,
+  72=plata, 73=oro, 74=platino, NO por posicion en el array de `CoinsContainer`, que podria
+  tener huecos), recalculado via suscripcion a `ItemId`/`Count` de los slots de `CoinsContainer`.
+- **Horas jugadas**: reutiliza `Appearance.PlayHours` ya existente.
+- **Ultimo guardado**: nuevo `MainViewModel.LastSavedText`, solo de sesion (no se guarda en
+  disco) - `DateTime` capturado tras un `Save()` con exito, refrescado cada 30s por un
+  `DispatcherTimer` propio ("hace un momento" / "hace N min" / "hace N h" / fecha completa),
+  puesto a `null` al cargar un personaje nuevo (no tiene sentido arrastrar el guardado del
+  personaje anterior).
+- **Colapso por tamaño**: Defensa/Dinero/Horas+Ultimo guardado (el bloque secundario, no
+  Vida/Mana que se quedan SIEMPRE visibles) se ocultan bajo `IsVitalsStripExpanded`, mismo
+  mecanismo real de `SizeClass` ya usado por H5-08/`IsEquipmentExpanded` - en una ventana
+  Compacta la franja se reduce a solo vida/mana en vez de desbordar.
+
+**Verificacion real**: `dotnet build` en verde (0 advertencias/errores) tanto para
+`TerrasavrNative.App` como para el arnes `TerrasavrNative.App.Tests`. `dotnet test` completo:
+358/358 (145 Core + 213 ViewModels), sin tests nuevos dedicados (no hay logica de dominio
+nueva que testear con xunit - todo es binding/calculo derivado ya cubierto indirectamente por
+los tests existentes de `AppearanceViewModel`/`MainViewModel` sobre los campos base). Arnes de
+UI Automation: **2/2 pasadas limpias**, sin NO-FOUND/FALLO/EXCEPTION, `ultimo-error.log`
+inexistente en ambas.
+
+Fuera de esta pasada, documentado: no se añadio ningun test unitario dedicado a
+`HealthFraction`/`MoneyText`/`LastSavedText` en si (formulas triviales de una linea, ya
+ejercitadas de forma indirecta) - si en el futuro estos calculos ganan complejidad real (ej.
+redondeos especiales, plurales en el texto de tiempo), añadir tests dedicados en ese momento.

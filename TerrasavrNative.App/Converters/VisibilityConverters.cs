@@ -95,3 +95,18 @@ public sealed class InverseBooleanToVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 }
+
+// H5-10 (quinta auditoria de Opus): barras reales de vida/mana en la cabecera - una fraccion
+// real 0..1 (Appearance.HealthFraction/ManaFraction) a un ancho real en pixeles (el maximo,
+// ConverterParameter, es el ancho total real del Grid contenedor en el XAML - Width en si no
+// admite bindings de fraccion directamente, solo un numero).
+public sealed class FractionToWidthConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value is double fraction && parameter is string s && double.TryParse(s, out var maxWidth)
+            ? Math.Clamp(fraction, 0.0, 1.0) * maxWidth
+            : 0.0;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
