@@ -63,6 +63,25 @@
                              tarjeta rica conserva el suyo ademas, por comodidad). -->
                         <Button DockPanel.Dock="Right" Content="Vaciar slot" Command="{Binding Slot.ClearCommand}"
                                 ToolTip="Vaciar este slot" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" />
+                        <!-- H5-06 (quinta auditoria de Opus): mismo interruptor que el menu
+                             contextual del slot, aqui tambien - el Content cambia de verdad
+                             (★ lleno/vacio) para que el propio boton diga su estado sin tener
+                             que leer un tooltip. -->
+                        <Button DockPanel.Dock="Right" Command="{Binding Slot.ToggleFavoriteCommand}"
+                                ToolTip="Marcar/desmarcar como favorito" Tag="Ghost" Padding="6,3" Margin="0,0,6,0"
+                                FontSize="12" VerticalAlignment="Center">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                    <Setter Property="Content" Value="&#9734;" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Slot.IsFavorited}" Value="True">
+                                            <Setter Property="Content" Value="&#9733;" />
+                                            <Setter Property="Foreground" Value="{StaticResource MasterGoldBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
                         <Image Source="{Binding Slot.IconPath}" Width="32" Height="32" Stretch="Uniform" Margin="0,0,8,0"
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                VerticalAlignment="Center"
@@ -317,6 +336,13 @@
                         <MenuItem Header="Elegir objeto..." Command="{Binding ChooseFromLibraryCommand}" />
                         <MenuItem Header="Aplicar mejor prefijo" Command="{Binding ApplyBestPrefixCommand}"
                                   Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
+                        <!-- H5-06 (quinta auditoria de Opus): el dato ya viajaba de punta a
+                             punta (PlrBodySerializer) sin ningun camino para tocarlo desde la
+                             App - IsCheckable refleja el estado real, IsEnabled=IsNotEmpty
+                             porque un slot vacio no tiene nada que favoritar. -->
+                        <MenuItem Header="Favorito" Command="{Binding ToggleFavoriteCommand}"
+                                  IsCheckable="True" IsChecked="{Binding IsFavorited, Mode=OneWay}"
+                                  IsEnabled="{Binding IsNotEmpty}" />
                         <MenuItem Header="Vaciar slot" Command="{Binding ClearCommand}" IsEnabled="{Binding IsNotEmpty}" />
                     </ContextMenu>
                 </Border.ContextMenu>
@@ -424,6 +450,16 @@
                     <TextBlock Text="&#9733;" FontSize="9" Foreground="{StaticResource AccentBrush}"
                                HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,0,0,0"
                                Visibility="{Binding HasBestPrefixSuggestion, Converter={StaticResource BoolToVis}}" />
+                    <!-- H5-06 (quinta auditoria de Opus): "Favorito" se guardaba/leia de punta
+                         a punta pero no se veia en ningun sitio - esquina inferior izquierda,
+                         el UNICO canal todavia libre (superior-derecha=Calamity, inferior-
+                         derecha=Cantidad, superior-izquierda=sugerencia de prefijo, borde=
+                         seleccionado, fondo=equipado - mismo criterio anti-conflicto de T-4/E-1,
+                         cada señal en su propio sitio, ninguna tapa a otra). -->
+                    <TextBlock Text="&#9733;" FontSize="9" Foreground="{StaticResource MasterGoldBrush}"
+                               HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="1,0,0,1"
+                               ToolTip="Favorito"
+                               Visibility="{Binding IsFavorited, Converter={StaticResource BoolToVis}}" />
                     <!-- 6º/7º hueco de accesorio real (consulta a Opus, sexta pasada): una
                          franja vertical en el borde interior izquierdo en vez del contorno (el
                          contorno ya carga 3 significados mutuamente excluyentes - Calamity/

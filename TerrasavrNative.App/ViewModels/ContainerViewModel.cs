@@ -84,15 +84,20 @@ public sealed partial class ContainerViewModel : ObservableObject
     // A-d (segunda auditoria de Opus, Fable): "operaciones en bloque - ordenar, vaciar
     // contenedor, mover todo al banco" - ninguna de las 3 existia, solo el "Vaciar slot"
     // individual de siempre.
+    //
+    // H5-06 (quinta auditoria de Opus): los favoritos se saltan, igual que Sort/MoveAllTo -
+    // decision de diseño propia (a diferencia de esos dos, Terraria no tiene un "vaciar todo"
+    // real del que citar el comportamiento; el criterio es el mismo por consistencia, no una
+    // replica de un mecanismo del juego).
     [RelayCommand]
     private void ClearAll()
     {
         var snapshot = Slots.Select((s, i) => (SlotIndex: i, s.Item))
-            .Where(t => !t.Item.IsEmpty).ToArray();
+            .Where(t => !t.Item.IsEmpty && !t.Item.Favorited).ToArray();
         if (snapshot.Length == 0) return;
 
         foreach (var slot in Slots)
-            if (!slot.IsEmpty) slot.ClearCommand.Execute(null);
+            if (!slot.IsEmpty && !slot.Item.Favorited) slot.ClearCommand.Execute(null);
 
         _clearedSnapshot = snapshot;
         LastClearedCount = snapshot.Length;
@@ -142,13 +147,21 @@ public sealed partial class ContainerViewModel : ObservableObject
     // HotbarSlotCount arriba), asi que un objeto que el jugador tenia deliberadamente en una
     // tecla concreta (1-0) podia acabar en otra tras pulsar Ordenar. Solo aplica a "inventory" -
     // ningun otro contenedor (Banco/Caja fuerte/Fragua/Boveda) tiene barra rapida real.
+    //
+    // H5-06 (quinta auditoria de Opus): el juego real EXCLUYE TAMBIEN los favoritos de
+    // cualquier ordenado (Terraria.UI.ItemSorting.cs:1070 decompilado, "&& !item.favorited") -
+    // un objeto marcado para que nunca se mueva no debe reordenarse solo porque "Ordenar" lo
+    // alcanza. Se queda exactamente en su slot; solo los NO favoritos (fuera de la barra
+    // rapida) se recolocan entre los huecos que quedan.
     [RelayCommand]
     private void Sort()
     {
         int fixedPrefix = Key == "inventory" ? Math.Min(HotbarSlotCount, Slots.Count) : 0;
-        var items = Slots.Skip(fixedPrefix).Where(s => !s.IsEmpty).Select(s => s.Item).OrderBy(i => i.Id).ToList();
-        for (int i = fixedPrefix; i < Slots.Count; i++)
-            Slots[i].UpdateFrom(i - fixedPrefix < items.Count ? items[i - fixedPrefix] : GameItem.Empty);
+        var eligible = Enumerable.Range(fixedPrefix, Slots.Count - fixedPrefix)
+            .Where(i => !Slots[i].Item.Favorited).ToList();
+        var items = eligible.Where(i => !Slots[i].IsEmpty).Select(i => Slots[i].Item).OrderBy(i => i.Id).ToList();
+        for (int k = 0; k < eligible.Count; k++)
+            Slots[eligible[k]].UpdateFrom(k < items.Count ? items[k] : GameItem.Empty);
     }
 
     // "Mover todo al banco": usado desde Inventario hacia el Almacen seleccionado (StorageGroup.
@@ -156,13 +169,17 @@ public sealed partial class ContainerViewModel : ObservableObject
     // (irrelevante hoy entre Inventario/Almacenes, ninguno de los dos restringe tipo, pero es el
     // mismo criterio real que ya usa PlaceItem, no uno nuevo). Lo que no cupo se queda donde
     // estaba - nunca se pierde nada en silencio.
+    //
+    // H5-06 (quinta auditoria de Opus): los favoritos se saltan, mismo criterio real que el
+    // juego (Player.cs decompilado, ~21632-21675 - el movimiento en bloque real a la Boveda del
+    // Vacio ya excluye "!item.favorited" antes de mover nada).
     public int MoveAllTo(ContainerViewModel destination)
     {
         var freeSlots = destination.Slots.Where(s => s.IsEmpty).ToList();
         int moved = 0, di = 0;
         foreach (var slot in Slots)
         {
-            if (slot.IsEmpty) continue;
+            if (slot.IsEmpty || slot.Item.Favorited) continue;
             while (di < freeSlots.Count && !freeSlots[di].AcceptsItem(slot.ItemId)) di++;
             if (di >= freeSlots.Count) break;
             freeSlots[di].UpdateFrom(slot.Item);

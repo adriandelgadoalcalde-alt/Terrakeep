@@ -86,6 +86,10 @@ public partial class ItemSlotViewModel : ObservableObject
     // (rarezas propias, no investigadas esta pasada) o rareza sin color real conocido.
     [ObservableProperty] private System.Windows.Media.Brush? _rarityBrush;
     [ObservableProperty] private bool _isSelected;
+    // H5-06 (quinta auditoria de Opus): GameItem.Favorited se guardaba/leia de punta a punta
+    // (PlrBodySerializer) pero la capa App nunca lo mencionaba - ni marca, ni control, ni
+    // filtro. Espejo real de Item.Favorited, igual que el resto de propiedades de esta clase.
+    [ObservableProperty] private bool _isFavorited;
     // L-e (segunda auditoria de Opus, Fable): "el mensaje de rechazo no se limpia nunca -
     // escribir un id invalido deja el aviso rojo colgado indefinidamente, incluso cambiando de
     // slot y volviendo". Se limpia al cambiar de seleccion (en cualquiera de los dos sentidos -
@@ -208,6 +212,7 @@ public partial class ItemSlotViewModel : ObservableObject
         Item = item;
         IsEmpty = item.IsEmpty;
         IsCalamity = item.IsCalamity;
+        IsFavorited = item.Favorited;
 
         _suppressCountWriteback = true;
         Count = item.Count;
@@ -278,10 +283,24 @@ public partial class ItemSlotViewModel : ObservableObject
             RejectionMessage = BuildRejectionMessage();
             return;
         }
-        var item = new GameItem { Id = id, Count = 1 };
+        // H5-06 (quinta auditoria de Opus): reemplazar el objeto de un slot que YA era
+        // favorito borraba la marca en silencio (bug real - un new GameItem siempre nace con
+        // Favorited=false). El objeto nuevo hereda el favorito del slot, no el de "objeto
+        // recien creado".
+        var item = new GameItem { Id = id, Count = 1, Favorited = IsFavorited };
         var suggestion = PrefixSuggester.Suggest(item, _service.CalamityCatalog, _service.BestPrefixes, _service.RoguePrefixCatalog);
         if (suggestion.HasValue) item.Prefix = suggestion.Value;
         UpdateFrom(item);
+    }
+
+    // H5-06: interruptor real de favorito - el dato ya viajaba de punta a punta
+    // (PlrBodySerializer), solo faltaba un camino en la App para tocarlo.
+    [RelayCommand]
+    private void ToggleFavorite()
+    {
+        if (Item.IsEmpty) return;
+        Item.Favorited = !Item.Favorited;
+        IsFavorited = Item.Favorited;
     }
 
     // Arrastrar y soltar un slot sobre otro (pedido explicito 1-sep-2026: "se puede arrastar
