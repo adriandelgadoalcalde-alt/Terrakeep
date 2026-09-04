@@ -794,6 +794,43 @@ internal static class Program
             Console.WriteLine("LIBRERIA-EXCEPTION: " + ex);
         }
 
+        // Sexta auditoria de Opus, H6-11 ("los objetos animados -Alma de vuelo/Alma de luz,
+        // etc.- salen como una tira de fotogramas entera, no un unico icono"): busca de verdad
+        // los dos ejemplos REALES citados por el usuario en la Libreria real, renderiza sus
+        // tarjetas sin excepcion y confirma por codigo (decodificando el PNG real en disco, no
+        // solo mirando una captura) que el fichero resuelto es un unico fotograma pequeño, no
+        // la tira entera.
+        try
+        {
+            vm.Library.SearchText = "Alma de";
+            WaitForDispatcher(300);
+            Console.WriteLine($"H6-11-LIBRERIA: busqueda 'Alma de' -> Results.Count={vm.Library.Results.Count} (esperado >= 2, Alma de luz + Alma de vuelo)");
+
+            foreach (int idConocido in new[] { 520, 575 }) // SoulofLight, SoulofFlight
+            {
+                var pathReal = TerrasavrNative.App.Services.VanillaIconResolver.GetIconPath(idConocido);
+                if (pathReal == null) { Console.WriteLine($"H6-11-LIBRERIA: id={idConocido} sin icono real - FALLO"); continue; }
+                string rutaAbsoluta = Path.Combine(AppContext.BaseDirectory, pathReal.Replace("pack://siteoforigin:,,,/", "").Replace('/', Path.DirectorySeparatorChar));
+                using var streamIcon = File.OpenRead(rutaAbsoluta);
+                var decoderIcon = new System.Windows.Media.Imaging.PngBitmapDecoder(streamIcon, System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                int wIcon = decoderIcon.Frames[0].PixelWidth, hIcon = decoderIcon.Frames[0].PixelHeight;
+                Console.WriteLine($"H6-11-LIBRERIA: id={idConocido} icono real={wIcon}x{hIcon} (esperado alto=28, NO 112 -antes 4 fotogramas apilados-)");
+                if (hIcon != 28) Console.WriteLine($"FALLO: H6-11 - id={idConocido} sigue pareciendo una tira de fotogramas ({wIcon}x{hIcon})");
+            }
+
+            var rtbAnimados = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbAnimados.Render(window);
+            var encAnimados = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encAnimados.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbAnimados));
+            using (var fsAnimados = File.Create(Path.Combine(AppContext.BaseDirectory, "h6-11-libreria-objetos-animados.png"))) encAnimados.Save(fsAnimados);
+            Console.WriteLine("Captura tarjetas de objetos animados reales -> h6-11-libreria-objetos-animados.png");
+
+            vm.Library.SearchText = "Sword"; // deja el estado limpio para el resto del arnes
+            WaitForDispatcher(300);
+        }
+        catch (Exception ex) { Console.WriteLine("H6-11-LIBRERIA-EXCEPTION: " + ex); }
+
         // H5-12 (quinta auditoria de Opus): "un clic en una tarjeta de la Libreria no hace
         // absolutamente nada". El gesto de raton en si (arrastre vs clic vs doble clic,
         // OnLibraryCardClick/OnLibraryClickTimerTick en MainWindow.xaml.cs) exige eventos de

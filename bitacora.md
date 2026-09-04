@@ -7242,3 +7242,64 @@ uno todavia). Extraer tambien los 13 sprites de CUERPO nuevos para la lista late
 (`Assets/npc_icons/`) - la lista lateral no era el foco de la queja original (el mapa si), se
 queda mostrando texto sin icono para esos 13 (mismo comportamiento ya documentado de
 `NpcIconResolver`, no una regresion).
+
+### H6-11 - Iconos vanilla reales, de raiz (Tanda C, sexta auditoria de Opus)
+
+**Hallazgo real**: pedido explicito del usuario, con dos ejemplos concretos ("Alma de vuelo/
+Alma de luz, etc. salen como una tira de fotogramas entera, no un unico icono - auditar TODOS
+los objetos vanilla"). `VanillaIconResolver` extraia sus 5454 iconos de un atlas `items.png`
+(32 columnas, celdas de 40x40) heredado de Terrasavr-Calamity-Beta - esa geometria de celda fija
+no bastaba para los objetos REALMENTE animados de Terraria, cuyo sprite real es una tira
+VERTICAL de 3 a 9 fotogramas del mismo alto, bastante mas alta que ancha.
+
+**Investigacion real, no de memoria**: `Terraria.Main.InitializeItemAnimations()` decompilado
+real (`Terraria/Main.cs`) es la fuente DEFINITIVA y completa de que objetos son animados de
+verdad, sin excepcion: 15 `RegisterItemAnimation(id, new DrawAnimationVertical(ticks,
+frameCount))` explicitos (incluye `520`=Alma de luz y `575`=Alma de vuelo, los dos ejemplos
+EXACTOS citados por el usuario, confirmando que la investigacion apuntaba al sitio correcto) +
+un bucle real sobre TODOS los `Terraria.ID.ItemID.Sets.IsFood` (86 ids reales, 3 fotogramas
+cada uno - la comida tambien "respira"/brilla en el inventario real) + el Orbe de Adivinacion
+(`5644`, clase de animacion distinta - `DrawAnimationScryingOrb` - pero el mismo recorte real:
+`texture.Frame(1, FrameCount, 0, frameY)`, una tira vertical de `FrameCount` fotogramas, frame
+0 = el de arriba del todo). **102 objetos animados reales en total**, ni uno mas ni uno menos.
+
+**El fix real fue mas alla del bug reportado**: en vez de parchear solo esos 102 recortes
+dentro del atlas viejo, se cambio la fuente entera - `Images/Item_{id}.xnb` real (instalacion
+de Steam, un fichero POR OBJETO, mismo criterio ya usado con exito esta misma ronda para
+jugador/armadura/NPCs) sustituye por completo al atlas. Esto ademas resolvio un problema mas
+grande que no estaba en la queja original pero se descubrio investigando: el atlas viejo solo
+cubria 5454 de los **6134** `Item_{id}.xnb` reales que existen de verdad en la instalacion -
+**680 objetos sin NINGUN icono**, no solo mal recortados (`PalladiumDrill`/1189, el unico hueco
+que el propio comentario del resolver documentaba, era literalmente UNO de esos 680).
+
+**Cambios reales**: `scripts/extraer-iconos-vanilla.js` (nuevo, sustituye la extraccion vieja
+por atlas) recorre `id=0..6195`, decodifica `Item_{id}.xnb` si existe, y si el id esta en la
+lista real de 102 animados (tabla `EXPLICIT_ANIMATED` + `FOOD_IDS`, ambas portadas tal cual del
+codigo fuente real, mas el caso especial `5644`) recorta la franja superior
+(`alto_total/frameCount`, division EXACTA confirmada en los 102 casos reales, 0 alturas
+impares) - el resto se usa completo, sin recorte. `VanillaIconResolver.cs` reescrito con el
+comentario real actualizado (ya no atlas, ya no "1 hueco de 5455").
+
+**Verificacion real**: extractor real: `6134 extraidos (102 animados recortados a 1 fotograma
+real), 62 sin Item_{id}.xnb real, 0 con altura no divisible exacta`. `dotnet build` en verde.
+`dotnet test`: **446/446** (173 Core sin cambio - la logica vive en un script Node, no en C# -,
++5 tests nuevos en ViewModels: `VanillaIconResolverH6Tests.cs` - Alma de luz/Alma de vuelo
+decodificados de verdad desde el PNG real en disco (22x28, NO 22x112 - antes 4 fotogramas
+apilados), un objeto de comida real recortado, `PalladiumDrill`/1189 (el hueco antiguo
+documentado) YA resuelve icono real, un objeto NO animado conocido (Pico de hierro) sigue
+resolviendo su sprite COMPLETO de 32x32 sin recortar de mas). Arnes de UI Automation ampliado
+con un bloque nuevo (`H6-11-LIBRERIA`) que busca "Alma de" en la Libreria real (24 resultados
+reales, tarjetas renderizadas sin excepcion), decodifica los dos PNG reales resueltos
+(520/575, 22x28 los dos, confirmado por codigo) y deja una captura real
+(`h6-11-libreria-objetos-animados.png`) - confirmada a mano: 24 tarjetas, cada una con un
+icono limpio y proporcionado, ninguna tira ni recorte roto. **2/2 pasadas limpias**, sin
+NO-FOUND/FALLO/EXCEPTION.
+
+**Fuera de esta pasada, documentado**: los 5454 iconos que YA eran correctos con el atlas viejo
+no se compararon pixel a pixel contra los 6134 nuevos de la fuente real (una diferencia de
+recorte/paleta minima en algun id suelto es posible, pero improbable - la fuente real por
+objeto es estrictamente mas fiable que un atlas de terceros, y los 446 tests + el arnes
+completo siguen en verde sin ningun otro efecto secundario visible). El comentario historico de
+`ContainerViewModel.cs` sobre "midiendo los 5454 iconos vanilla" (justificacion de `MinCell=40`)
+no se reverifico contra el nuevo dataset - 102 outliers corregidos entre miles no deberian
+mover una mediana de forma perceptible, pero es una afirmacion sin remedir, no una certeza.
