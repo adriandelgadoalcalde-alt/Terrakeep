@@ -46,6 +46,13 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
 
     public bool IsPicking => PickTarget != null;
 
+    // H5-13 (quinta auditoria de Opus): igual que la base, salvo que un slot restringido como
+    // destino (PickTarget con AcceptedKind real, ej. "Tinte"/"Gancho") ya reduce el catalogo a
+    // un conjunto pequeño y util de ver de inmediato (ver hasSlotRestriction en ApplyFilter) -
+    // mostrar las carpetas raiz genericas ahi seria un paso atras, no un atajo.
+    public override bool ShowRootCategoryCards => base.ShowRootCategoryCards &&
+        !(PickTarget != null && PickTarget.AcceptedKind != TerrasavrNative.Core.Model.SlotKind.None);
+
     public event Action? ItemPlaced;
 
     public LibraryViewModel(CharacterFileService service)
@@ -133,7 +140,7 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
                 query, i.Id, i.DisplayName.ToLowerInvariant(), i.StatsTooltip?.ToLowerInvariant()));
         }
 
-        if (!hasSearch && SelectedCategory == null && !hasSlotRestriction)
+        if (ShowRootCategoryCards)
         {
             ResultsSummary = $"{_all.Count} objetos en total (vanilla + Calamity) - escribe para buscar o elige una carpeta.";
             return;
@@ -153,6 +160,7 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
     partial void OnPickTargetChanged(ItemSlotViewModel? value)
     {
         OnPropertyChanged(nameof(IsPicking));
+        OnPropertyChanged(nameof(ShowRootCategoryCards)); // H5-13: la restriccion de slot (o su ausencia) cambia esta condicion
         // Capa principal de prevencion de la restriccion de slot (consulta a Opus, sexta
         // pasada: "cero chrome nuevo, cero popups... el problema deja de existir en el 90% de
         // los casos, el usuario nunca ve un objeto invalido que poder elegir") - al abrir el

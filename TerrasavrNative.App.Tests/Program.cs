@@ -796,6 +796,71 @@ internal static class Program
             Console.WriteLine("H5-12-EXCEPTION: " + ex);
         }
 
+        // H5-13 (quinta auditoria de Opus): "el estado vacio de la Libreria y de la Libreria de
+        // buffs es un rectangulo en blanco" - verificacion real de que las tarjetas de carpeta
+        // raiz aparecen de verdad (renderizadas, no solo ShowRootCategoryCards=true a nivel de
+        // ViewModel - eso ya lo cubren LibraryRootCategoryCardsTests.cs/
+        // BuffLibraryRootCategoryCardsTests.cs con xunit) con captura real de las 2 superficies.
+        try
+        {
+            vm.SelectedTabIndex = 1; // Personaje
+            vm.PersonajeInnerTabIndex = 0; // Objetos
+            vm.Library.ClearCategoryCommand.Execute(null);
+            vm.Library.SearchText = string.Empty;
+            WaitForDispatcher(300); // deja asentar el debounce real de Results/ResultsSummary, no solo ShowRootCategoryCards (instantaneo)
+            Console.WriteLine($"H5-13-LIBRERIA: ShowRootCategoryCards={vm.Library.ShowRootCategoryCards} (esperado True)");
+            // NavCardButton tiene Content compuesto (Image+2 TextBlock) - el Name de
+            // automatizacion real del propio Button no resuelve al texto plano, se busca el
+            // TextBlock real del nombre de la carpeta en su lugar (mismo criterio ya usado para
+            // "Tus mundos" en H5-11).
+            int tarjetasLibreria = root.FindAll(TreeScope.Descendants, new AndCondition(
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text),
+                new PropertyCondition(AutomationElement.NameProperty, vm.Library.RootCategories.First().Name))).Count;
+            Console.WriteLine($"H5-13-LIBRERIA: tarjeta real de la primera carpeta raiz ('{vm.Library.RootCategories.First().Name}') encontrada en el arbol visual={tarjetasLibreria > 0} (esperado True)");
+            if (tarjetasLibreria == 0) Console.WriteLine("FALLO: H5-13 - las tarjetas de carpeta raiz de la Libreria no se renderizan de verdad");
+            var rtbLibCards = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbLibCards.Render(window);
+            var encLibCards = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encLibCards.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbLibCards));
+            using (var fsLibCards = File.Create(Path.Combine(AppContext.BaseDirectory, "h5-13-libreria-tarjetas.png"))) encLibCards.Save(fsLibCards);
+            Console.WriteLine("Captura tarjetas de carpeta raiz de la Libreria -> h5-13-libreria-tarjetas.png");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("H5-13-LIBRERIA-EXCEPTION: " + ex);
+        }
+
+        try
+        {
+            var buffsTab = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
+                new PropertyCondition(AutomationElement.NameProperty, "Buffs")));
+            if (buffsTab != null && buffsTab.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var buffsSelPat))
+                ((SelectionItemPattern)buffsSelPat).Select();
+            vm.IsBuffLibraryCollapsed = false;
+            vm.BuffLibrary.ClearCategoryCommand.Execute(null);
+            vm.BuffLibrary.SearchText = string.Empty;
+            WaitForDispatcher(300);
+            Console.WriteLine($"H5-13-BUFFS: ShowRootCategoryCards={vm.BuffLibrary.ShowRootCategoryCards} (esperado True)");
+            int tarjetasBuffs = root.FindAll(TreeScope.Descendants, new AndCondition(
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text),
+                new PropertyCondition(AutomationElement.NameProperty, vm.BuffLibrary.RootCategories.First().Name))).Count;
+            Console.WriteLine($"H5-13-BUFFS: tarjeta real de la primera carpeta raiz ('{vm.BuffLibrary.RootCategories.First().Name}') encontrada en el arbol visual={tarjetasBuffs > 0} (esperado True)");
+            if (tarjetasBuffs == 0) Console.WriteLine("FALLO: H5-13 - las tarjetas de carpeta raiz de la Libreria de buffs no se renderizan de verdad");
+            var rtbBuffCards = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbBuffCards.Render(window);
+            var encBuffCards = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encBuffCards.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbBuffCards));
+            using (var fsBuffCards = File.Create(Path.Combine(AppContext.BaseDirectory, "h5-13-buffs-tarjetas.png"))) encBuffCards.Save(fsBuffCards);
+            Console.WriteLine("Captura tarjetas de carpeta raiz de la Libreria de buffs -> h5-13-buffs-tarjetas.png");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("H5-13-BUFFS-EXCEPTION: " + ex);
+        }
+
         // Toggle biblioteca (plegar/desplegar) para confirmar que el binding real funciona.
         // Segunda auditoria de Opus (Fable), B-7 - BUG REAL en esta misma comprobacion: el
         // MaxHeight buscado (460) no coincidia con el real del XAML de entonces (238, residuo

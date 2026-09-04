@@ -2019,9 +2019,42 @@
                                                  con 44 el scroll aparecia por solo 2px de diferencia real (4*44+12=188
                                                  contra 186 disponibles). Sin AvailableHeight el panel mediria con alto
                                                  infinito y SIEMPRE elegiria MaxCell + SIEMPRE scrollearia. -->
+                                            <!-- H5-13 (quinta auditoria de Opus): "el estado vacio de la Libreria...
+                                                 es un rectangulo en blanco - sin busqueda/carpeta/restriccion de
+                                                 slot, la mitad derecha del panel es superficie muerta". Mismo
+                                                 mecanismo real ya en produccion en Investigacion (H4-07 punto 3,
+                                                 ShowRootCategoryCards - subido a la base compartida por H5-15) -
+                                                 tarjetas grandes (NavCardButton) a las carpetas RAIZ reales, un
+                                                 atajo mas grande al mismo arbol de la izquierda. -->
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                          Visibility="{Binding Library.ShowRootCategoryCards, Converter={StaticResource BoolToVis}}">
+                                                <ItemsControl ItemsSource="{Binding Library.RootCategories}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:CategoryNodeViewModel}">
+                                                            <Button Style="{StaticResource NavCardButton}" Width="200" MinHeight="90" Margin="0,0,12,12"
+                                                                    Command="{Binding SelectCommand}" CommandParameter="{Binding}">
+                                                                <StackPanel>
+                                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                                        <Image Source="{Binding IconPath}" Width="22" Height="22" Stretch="Uniform" Margin="0,0,8,0"
+                                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                                        <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextWrapping="Wrap"
+                                                                                   VerticalAlignment="Center" />
+                                                                    </StackPanel>
+                                                                    <TextBlock Text="{Binding ItemCount, StringFormat='{}{0} objeto(s)'}"
+                                                                               Style="{StaticResource CaptionText}" />
+                                                                </StackPanel>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
                                             <!-- Auditoria de Opus, L-7: x:Name muerto, sin ningun uso real en el
                                                  codigo-behind - limpieza real, no cambio de comportamiento. -->
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                                          Visibility="{Binding Library.ShowRootCategoryCards, Converter={StaticResource InverseBoolToVis}}">
                                                 <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
@@ -2172,7 +2205,35 @@
                                                            Visibility="{Binding BuffLibrary.SearchText, Converter={StaticResource EmptyToVisible}}" />
                                             </Grid>
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding BuffLibrary.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                            <!-- H5-13 (quinta auditoria de Opus): mismo mecanismo real que la
+                                                 Libreria de objetos de arriba, ver ahi el comentario completo. -->
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                                          Visibility="{Binding BuffLibrary.ShowRootCategoryCards, Converter={StaticResource BoolToVis}}">
+                                                <ItemsControl ItemsSource="{Binding BuffLibrary.RootCategories}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:CategoryNodeViewModel}">
+                                                            <Button Style="{StaticResource NavCardButton}" Width="200" MinHeight="90" Margin="0,0,12,12"
+                                                                    Command="{Binding SelectCommand}" CommandParameter="{Binding}">
+                                                                <StackPanel>
+                                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                                        <Image Source="{Binding IconPath}" Width="22" Height="22" Stretch="Uniform" Margin="0,0,8,0"
+                                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                                        <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextWrapping="Wrap"
+                                                                                   VerticalAlignment="Center" />
+                                                                    </StackPanel>
+                                                                    <TextBlock Text="{Binding ItemCount, StringFormat='{}{0} buff(s)'}"
+                                                                               Style="{StaticResource CaptionText}" />
+                                                                </StackPanel>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                                          Visibility="{Binding BuffLibrary.ShowRootCategoryCards, Converter={StaticResource InverseBoolToVis}}">
                                                 <ItemsControl ItemsSource="{Binding BuffLibrary.Results}" ItemTemplate="{StaticResource BuffLibraryCardTemplate}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
@@ -2297,7 +2358,12 @@
                                                                 <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextWrapping="Wrap"
                                                                            VerticalAlignment="Center" />
                                                             </StackPanel>
-                                                            <TextBlock Text="{Binding ItemIdsOrdered.Count, StringFormat='{}{0} objeto(s)'}"
+                                                            <!-- H5-13 (quinta auditoria de Opus): ItemCount ya viene poblado
+                                                                 real por LibraryCategoryTreeBuilder para todo nodo (Libreria e
+                                                                 Investigacion comparten el mismo arbol cacheado) - un unico
+                                                                 campo canonico en vez de 2 formas distintas de leer el mismo
+                                                                 numero (esta usaba ItemIdsOrdered.Count a mano). -->
+                                                            <TextBlock Text="{Binding ItemCount, StringFormat='{}{0} objeto(s)'}"
                                                                        Style="{StaticResource CaptionText}" />
                                                         </StackPanel>
                                                     </Button>

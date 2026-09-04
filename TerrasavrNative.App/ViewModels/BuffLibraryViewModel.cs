@@ -83,7 +83,7 @@ public partial class BuffLibraryViewModel : CatalogBrowserViewModel<BuffCatalogE
                 query, i.Id, i.DisplayName.ToLowerInvariant(), i.Description?.ToLowerInvariant()));
         }
 
-        if (!hasSearch && SelectedCategory == null)
+        if (ShowRootCategoryCards)
         {
             ResultsSummary = $"{_all.Count} buffs en total (vanilla + Calamity) - escribe para buscar o elige una carpeta.";
             return;

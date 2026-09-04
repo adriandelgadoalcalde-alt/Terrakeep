@@ -49,9 +49,6 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
     [ObservableProperty] private double _progressFraction;
     [ObservableProperty] private string _globalProgressSummary = string.Empty;
 
-    // H4-07 punto 3 (cuarta auditoria de Opus, Fable): ver el comentario real en ApplyFilter.
-    [ObservableProperty] private bool _showRootCategoryCards;
-
     // R-g (segunda auditoria de Opus, Fable): "ninguna advertencia si el personaje no es Modo
     // Viaje - el dato (Appearance.Difficulty) ya esta a mano". La Investigacion (desbloquear
     // recetas) solo tiene efecto real en el juego en Modo Viaje - investigar sin estarlo no
@@ -123,7 +120,6 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
         Results.Clear();
         ResultsSummary = "Sin personaje cargado.";
         IsJourneyMode = false;
-        ShowRootCategoryCards = false;
         ProgressFraction = 0;
     }
 
@@ -179,10 +175,11 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
             // ResultsSummary (una sola linea de texto) mientras a la izquierda ya esta el arbol
             // completo esperando un clic - las tarjetas son solo un atajo mas grande al MISMO
             // arbol, RootCategories ya trae su propio SelectCommand real.
-            ShowRootCategoryCards = true;
+            // H5-13 (quinta auditoria de Opus): ShowRootCategoryCards subio a la base compartida
+            // (CatalogBrowserViewModel) - ya se computa sola a partir de SelectedCategory/
+            // SearchText, no hace falta alternarla aqui a mano.
             return;
         }
-        ShowRootCategoryCards = false;
 
         // H5-02: la carpeta elegida muestra TODO su contenido real (investigado o no) - antes
         // solo lo que ya estaba en _researchedCounts. Mismo bug real ya corregido en

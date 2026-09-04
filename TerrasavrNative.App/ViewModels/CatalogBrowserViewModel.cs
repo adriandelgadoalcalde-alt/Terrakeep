@@ -28,6 +28,19 @@ public abstract partial class CatalogBrowserViewModel<TEntry> : ObservableObject
     public ObservableCollection<TEntry> Results { get; } = [];
     public ObservableCollection<CategoryNodeViewModel> RootCategories { get; } = [];
 
+    // H5-13 (quinta auditoria de Opus): "el estado vacio de la Libreria y de la Libreria de
+    // buffs es un rectangulo en blanco - sin busqueda/carpeta/restriccion de slot, ApplyFilter
+    // sale antes de rellenar nada". H4-07 punto 3 ya resolvio esto SOLO en Investigacion
+    // (ResearchViewModel tenia su propio campo suelto, alternado a mano dentro de ApplyFilter) -
+    // subido aqui, a la base compartida por H5-15, para las 3 superficies a la vez en vez de
+    // repetirlo 2 veces mas. Computada de verdad (nunca se desincroniza sola) en vez de un campo
+    // que cada ApplyFilter tiene que acordarse de alternar el mismo en sus dos salidas.
+    // Virtual: LibraryViewModel (unica de las 3 con "restriccion de slot" real, ver
+    // hasSlotRestriction en su ApplyFilter) necesita una condicion extra - con un slot
+    // restringido como destino, el catalogo reducido YA es util de ver de inmediato, mostrar
+    // las carpetas raiz genericas en su lugar seria un paso atras, no una mejora.
+    public virtual bool ShowRootCategoryCards => SelectedCategory == null && string.IsNullOrWhiteSpace(SearchText);
+
     protected CatalogBrowserViewModel()
     {
         SearchDebounceTimer.Tick += (_, _) =>
@@ -42,9 +55,15 @@ public abstract partial class CatalogBrowserViewModel<TEntry> : ObservableObject
     // como demora pero evita repetir el reflow entero en cada tecla de una racha de tecleo.
     partial void OnSearchTextChanged(string value)
     {
+        OnPropertyChanged(nameof(ShowRootCategoryCards)); // instantaneo, no espera al debounce de abajo
         SearchDebounceTimer.Stop();
         SearchDebounceTimer.Start();
     }
+
+    // H5-13: cualquier cambio real de SelectedCategory (incluida una asignacion directa, ej.
+    // ResearchViewModel.Reset limpiando la seleccion al descargar el personaje - no solo los 2
+    // comandos de abajo) mantiene ShowRootCategoryCards sincronizada de verdad.
+    partial void OnSelectedCategoryChanged(CategoryNodeViewModel? value) => OnPropertyChanged(nameof(ShowRootCategoryCards));
 
     // Bug real corregido 2-sep-2026 (LibraryViewModel), replicado a mano otras 2 veces antes de
     // esta base: IsExpanded no se tocaba nunca aqui, asi que ninguna carpeta por debajo de la

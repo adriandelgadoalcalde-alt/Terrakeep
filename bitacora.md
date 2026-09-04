@@ -6682,3 +6682,62 @@ en este arnes (que solo simula `InvokePattern`/`Command.Execute` o teclado real 
 `keybd_event`, nunca un clic de raton real). Verificado en su lugar por revision de codigo
 cuidadosa (el guardia `_dragStartLibrary`, el temporizador real con cancelacion) + las 2
 llamadas reales que cada camino dispara, probadas de forma aislada arriba.
+
+## H5-13 - Estado vacio de la Libreria/Libreria de buffs (Tanda D, quinta auditoria de Opus)
+
+Hallazgo real: "sin busqueda/carpeta/restriccion de slot, `LibraryViewModel.ApplyFilter` sale
+antes de rellenar nada - escribe una frase en `ResultsSummary` y deja `Results` vacio. El XAML
+sigue pintando el `SlotGridPanel` con cero hijos: la mitad derecha del panel es superficie
+muerta. `BuffLibraryViewModel` hace exactamente lo mismo. Es el estado en el que arranca la
+Libreria SIEMPRE. La cuarta ronda ya diagnostico y arreglo esto SOLO en Investigacion (H4-07
+punto 3); sus 2 gemelas quedaron fuera". Viola P3 (todo visible de golpe) y P6 (simetria).
+
+**`ShowRootCategoryCards` subida a `CatalogBrowserViewModel<TEntry>`** (base compartida real por
+H5-15) - computada de verdad (`SelectedCategory == null && string.IsNullOrWhiteSpace(SearchText)`,
+`virtual` para que `LibraryViewModel` pueda añadir su propia condicion extra, ver mas abajo) en
+vez del campo suelto que `ResearchViewModel` alternaba a mano dentro de `ApplyFilter` (H4-07) -
+un unico sitio real en vez de que cada `ApplyFilter` tuviera que acordarse de alternarla en sus
+2 salidas. Se notifica al instante en `OnSearchTextChanged` (no espera al debounce de 180ms de
+`Results` - las tarjetas desaparecen en cuanto se escribe la primera letra, no 180ms despues) y
+en `OnSelectedCategoryChanged` (cubre TAMBIEN una asignacion directa como
+`ResearchViewModel.Reset()`, no solo los 2 comandos `SelectCategory`/`ClearCategory`).
+`ResearchViewModel` pierde su campo `_showRootCategoryCards` propio y las 2 asignaciones
+manuales - ahora hereda el comportamiento sin tocar nada mas.
+
+**`LibraryViewModel` - override real, no generico**: unica de las 3 con "restriccion de slot"
+(`PickTarget` con `AcceptedKind != SlotKind.None`, ej. elegir un Tinte o un Gancho) - con esa
+restriccion activa, el catalogo YA se reduce a un conjunto pequeño y util de ver de inmediato
+(~20 ganchos, ~100 tintes); mostrar las carpetas raiz genericas ahi seria un paso atras, no una
+mejora. `override bool ShowRootCategoryCards => base.ShowRootCategoryCards && !hasSlotRestriction`,
+notificada tambien en `OnPickTargetChanged`. El propio `ApplyFilter` se simplifico para
+reutilizar esta misma propiedad en su condicion de salida temprana (antes recalculaba la misma
+logica dos veces, una en la propiedad y otra en el metodo).
+
+**XAML** (`Objetos > Equipamiento/Inventario/Almacenes` y `Buffs`): mismo patron real ya en
+produccion en Investigacion - `ScrollViewer` con `WrapPanel` de `NavCardButton` (200x90) sobre
+`RootCategories`, visible con `ShowRootCategoryCards`; el `ScrollViewer`/`SlotGridPanel` real de
+resultados, visible con `InverseBoolToVis` de la misma propiedad. Cada nodo ya trae su propio
+`SelectCommand` real (T-18) - cero comandos nuevos que enrutar.
+
+**`CategoryNodeViewModel.ItemCount`**: investigado a fondo contra la afirmacion literal del
+informe ("campo real declarado que nadie rellena") - **resulto ser inexacta**: tanto
+`LibraryCategoryTreeBuilder` (Libreria + Investigacion, arbol compartido) como
+`BuffLibraryTreeBuilder` YA populan `ItemCount` en TODO nodo, de forma consistente, desde antes
+de esta pasada. Lo unico real que faltaba: la propia tarjeta de Investigacion (unica que ya
+existia) leia `ItemIdsOrdered.Count` a mano en vez del campo ya calculado - 2 formas distintas
+de leer el mismo numero. Corregido a `ItemCount` en las 3 tarjetas nuevas/existente, un unico
+campo canonico. Documentado aqui en vez de "arreglar" algo que ya funcionaba, siguiendo la regla
+del proyecto de verificar contra el codigo real antes de dar por buena una afirmacion externa.
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: **369/369** (145 Core + 224
+ViewModels, +11 tests nuevos: `LibraryRootCategoryCardsTests.cs` (6, incluida la condicion extra
+real de restriccion de slot - CON y SIN restriccion, usando un slot real de `EquipmentGroup`
+para "con" y de `InventoryContainer` para "sin", ya que TODO slot de `EquipmentGroup` tiene
+restriccion real, ninguno cae nunca a `SlotKind.None`) y `BuffLibraryRootCategoryCardsTests.cs`
+(5, incluida una comprobacion real de que `ItemCount` esta poblado de verdad, no 0). Arnes de UI
+Automation ampliado (`H5-13-LIBRERIA`/`H5-13-BUFFS`) con captura real de las 2 superficies -
+confirmado a ojo que las tarjetas rinden con su `ItemCount` real visible ("Materiales - 1586
+objeto(s)", "Utilidad (17) - 17 buff(s)"). **2/2 pasadas limpias**, sin
+NO-FOUND/FALLO/EXCEPTION (el mismo flake intermitente ajeno de `LIBRERIA busqueda 'Sword'` ya
+documentado en H5-11 volvio a aparecer en 1 de las 4 pasadas lanzadas aqui - mismo patron real,
+nada nuevo que investigar).
