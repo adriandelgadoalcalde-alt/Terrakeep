@@ -1291,7 +1291,16 @@
                         ToolTip="Buscar en el mapa"
                         Command="{Binding DataContext.Exploration.SearchInventoryRowCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                         CommandParameter="{Binding}">
-                    <StackPanel Orientation="Horizontal">
+                    <!-- P-7 (auditoria Opus vs TEdit): "TEdit muestra el id siempre en gris a la
+                         derecha - Terrakeep ya permite buscar y filtrar por id pero no enseña
+                         ninguno, el usuario no puede saber que numero escribir". DockPanel en vez
+                         del StackPanel Horizontal de siempre - mismo motivo real ya documentado en
+                         R-06 (CategoryNodeTemplate): un StackPanel Horizontal mide a sus hijos con
+                         ancho INFINITO sin importar su propio ancho disponible, asi que el id a la
+                         derecha no quedaria garantizado visible con un nombre largo. DockPanel.
+                         Dock="Right" reserva su hueco de verdad; el nombre (ultimo hijo, sin Dock)
+                         se lleva el resto y SI se recorta con TextTrimming, ahora garantizado. -->
+                    <DockPanel LastChildFill="True">
                         <!-- Encargo del usuario 4-sep-2026 ("quiero todos los sprites de todos los objetos del
                              mundo en el buscador de exploracion... un cofre dorado de agua etc") - caja de tamaño
                              FIJO (26x26) con dos capas excluyentes, para que todas las filas alineen su texto en la
@@ -1304,7 +1313,7 @@
                                  no hay sprite: tiles/paredes de mods, ids mas nuevos que el catalogo, NetId de
                                  objeto modeado. Nunca se pierde informacion, solo mejora cuando se puede.
                              Ver ESPEC-sprites-botones-badges.md#A.10. -->
-                        <Grid Width="26" Height="26" Margin="0,0,7,0" VerticalAlignment="Center">
+                        <Grid DockPanel.Dock="Left" Width="26" Height="26" Margin="0,0,7,0" VerticalAlignment="Center">
                             <Image Source="{Binding IconPath}" Stretch="Uniform" StretchDirection="DownOnly"
                                    RenderOptions.BitmapScalingMode="NearestNeighbor"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -1318,11 +1327,13 @@
                                 </Border.Background>
                             </Border>
                         </Grid>
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding Id, StringFormat='[{0}]'}" Style="{StaticResource CaptionText}"
+                                   VerticalAlignment="Center" Margin="6,0,0,0" />
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding CountLabel}" Style="{StaticResource CaptionText}" />
                         </StackPanel>
-                    </StackPanel>
+                    </DockPanel>
                 </Button>
             </Grid>
         </DataTemplate>
@@ -1454,11 +1465,35 @@
                                  se escribe sin problema... y muestra el nombre como texto muerto" -
                                  TextBox real con el estilo "filled" ya usado en el resto de la app
                                  (BgElevatedBrush, sin borde) + OnCommitTextOnEnter (ya existe, T-17
-                                 resolvio el gotcha de UpdateSourceTrigger=PropertyChanged vs Intro). -->
+                                 resolvio el gotcha de UpdateSourceTrigger=PropertyChanged vs Intro).
+                                 B-07 (auditoria Opus vs TEdit): "hoy no hay ni cursor de texto
+                                 anunciado, ni borde al pasar el raton, ni ningun indicio - se puede
+                                 modificar el nombre real por accidente al hacer clic para enfocar
+                                 la ventana". Borde real que aparece al pasar el raton o al tener el
+                                 foco (BorderThickness=0 en reposo, para no cambiar el aspecto
+                                 "filled" ya establecido cuando no se esta usando) + ToolTip que
+                                 anuncia la accion. -->
                             <TextBox Text="{Binding CharacterName, UpdateSourceTrigger=PropertyChanged}" KeyDown="OnCommitTextOnEnter"
                                      FontFamily="{StaticResource AppFont}" FontSize="14" FontWeight="SemiBold"
                                      Foreground="{StaticResource TextPrimaryBrush}" Background="{StaticResource BgElevatedBrush}"
-                                     BorderThickness="0" Padding="4,2" MinWidth="80" VerticalAlignment="Center" />
+                                     Padding="4,2" MinWidth="80" VerticalAlignment="Center"
+                                     ToolTip="Haz clic para renombrar el personaje">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox">
+                                        <Setter Property="BorderThickness" Value="0" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="BorderThickness" Value="1" />
+                                            </Trigger>
+                                            <Trigger Property="IsFocused" Value="True">
+                                                <Setter Property="BorderThickness" Value="1" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
                             <TextBlock Text="●" FontSize="16" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="6,0,0,0"
                                        ToolTip="Hay cambios sin guardar"
                                        Visibility="{Binding IsDirty, Converter={StaticResource BoolToVis}}" />
@@ -3474,19 +3509,22 @@
                                 ToolTip="Alejar (-)" />
                         <Button Content="+" Command="{Binding Exploration.ZoomInCommand}" Padding="10,2" Margin="4,0,0,0"
                                 ToolTip="Acercar (+)" />
-                        <Button Content="Restablecer" Command="{Binding Exploration.ZoomResetCommand}" Padding="8,2" Margin="8,0,0,0"
+                        <!-- P-5 (auditoria Opus vs TEdit): escala de espaciado unica del proyecto
+                             (4/6/10/14/20) - 4 entre hermanos directos (−/+, ya lo eran), 10
+                             entre controles relacionados (antes 8, sin motivo real). -->
+                        <Button Content="Restablecer" Command="{Binding Exploration.ZoomResetCommand}" Padding="8,2" Margin="10,0,0,0"
                                 ToolTip="Volver al 100% (1 pixel = 1 tile) (1)" />
                         <!-- X-a (segunda auditoria de Opus, Fable): "Restablecer" vuelve al 100%,
                              que para un mundo de 8400x2400 significa ver el 12% del ancho - "la
                              accion mas obviamente ausente de la pantalla". El calculo real (necesita
                              el tamaño real del viewport del ScrollViewer, que la ViewModel no
                              conoce) vive en el code-behind, igual que el resto de gestos del mapa. -->
-                        <Button Content="Ajustar a la ventana" Click="OnFitToWindowClick" Padding="8,2" Margin="8,0,0,0"
+                        <Button Content="Ajustar a la ventana" Click="OnFitToWindowClick" Padding="8,2" Margin="10,0,0,0"
                                 ToolTip="(0)" />
                         <!-- F-12 (auditoria Opus vs TEdit, E-13): "genera un WriteableBitmap
                              completo del mundo y lo congela - un PngBitmapEncoder son ~8 lineas.
                              No existe." -->
-                        <Button Content="Exportar a PNG..." Click="OnExportMapClick" Padding="8,2" Margin="8,0,0,0"
+                        <Button Content="Exportar a PNG..." Click="OnExportMapClick" Padding="8,2" Margin="10,0,0,0"
                                 ToolTip="Guarda el mapa como imagen PNG - incluye las marcas de mineral si hay alguna activa" />
                     </StackPanel>
                 </WrapPanel>
@@ -4085,19 +4123,28 @@
                             </TextBox.ToolTip>
                         </TextBox>
 
+                        <!-- P-2 (auditoria Opus vs TEdit): "los tres bloques de la barra lateral
+                             estan todos sobre el mismo fondo, sin ninguna separacion" - linea de
+                             1px entre el cuadro de busqueda y el contenido de la categoria. -->
+                        <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource BorderBrush0}" Margin="0,8,0,0" />
+
                         <!-- Bloque de resultados COMPARTIDO (distancia al spawn, resumen, ‹/›,
                              lista) - identico al que ya habia, solo oculto en NPCs (que muestra su
-                             propia lista, NpcSearchResults, mas abajo). -->
-                        <StackPanel DockPanel.Dock="Bottom">
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
+                             propia lista, NpcSearchResults, mas abajo).
+                             P-2: Border con BgPrimaryBrush (un escalon POR DEBAJO del fondo de
+                             panel) en vez de StackPanel a secas - "lo que ha salido" se lee de un
+                             vistazo, frente a "lo que estoy pidiendo" (cuadro+pildoras de arriba). -->
+                        <Border DockPanel.Dock="Bottom" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" Padding="10" Margin="0,8,0,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Exploration.SelectedCategory}" Value="Npcs">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </StackPanel.Style>
+                            </Border.Style>
+                            <StackPanel>
                             <!-- F-4 (auditoria Opus vs TEdit, E-02): el barrido del mundo (hasta
                                  20M de tiles) no avisaba de que estaba en marcha ni dejaba
                                  cancelarlo, pese a que _worldSearchCts ya existia entero por
@@ -4203,7 +4250,8 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
-                        </StackPanel>
+                            </StackPanel>
+                        </Border>
 
                         <!-- Relleno: contenido especifico de cada categoria, superpuesto y con
                              visibilidad exclusiva por SelectedCategory (DataTrigger de cadena -
@@ -4346,14 +4394,18 @@
                                 </UniformGrid>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                                     <StackPanel>
-                                        <TextBlock Text="Minerales" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
-                                                   Margin="0,0,0,4" Visibility="{Binding Exploration.OreMetals.Count, Converter={StaticResource CountToVis}}" />
+                                        <!-- P-2 (auditoria Opus vs TEdit): "las cabeceras de grupo
+                                             de Minerales pesan lo mismo que las cifras que
+                                             agrupan" - SemiBold + margen superior real (jerarquia
+                                             por peso, no por color nuevo). -->
+                                        <TextBlock Text="Minerales" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="SemiBold"
+                                                   Margin="0,10,0,4" Visibility="{Binding Exploration.OreMetals.Count, Converter={StaticResource CountToVis}}" />
                                         <ItemsControl ItemsSource="{Binding Exploration.OreMetals}" ItemTemplate="{StaticResource InventoryRowTemplate}" Margin="0,0,0,8" />
-                                        <TextBlock Text="Gemas" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
-                                                   Margin="0,0,0,4" Visibility="{Binding Exploration.OreGems.Count, Converter={StaticResource CountToVis}}" />
+                                        <TextBlock Text="Gemas" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="SemiBold"
+                                                   Margin="0,10,0,4" Visibility="{Binding Exploration.OreGems.Count, Converter={StaticResource CountToVis}}" />
                                         <ItemsControl ItemsSource="{Binding Exploration.OreGems}" ItemTemplate="{StaticResource InventoryRowTemplate}" Margin="0,0,0,8" />
-                                        <TextBlock Text="Otros objetivos" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
-                                                   Margin="0,0,0,4" Visibility="{Binding Exploration.OreTargets.Count, Converter={StaticResource CountToVis}}" />
+                                        <TextBlock Text="Otros objetivos" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="SemiBold"
+                                                   Margin="0,10,0,4" Visibility="{Binding Exploration.OreTargets.Count, Converter={StaticResource CountToVis}}" />
                                         <ItemsControl ItemsSource="{Binding Exploration.OreTargets}" ItemTemplate="{StaticResource InventoryRowTemplate}" />
                                     </StackPanel>
                                 </ScrollViewer>

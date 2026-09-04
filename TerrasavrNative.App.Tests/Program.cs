@@ -2733,6 +2733,17 @@ internal static class Program
                     Console.WriteLine($"CATEGORIAS-OBJETOS: Inventory.Count={vm.Exploration.Inventory.Count} (esperado >=1, tiles realmente presentes en este mundo)");
                     if (vm.Exploration.Inventory.Count == 0) Console.WriteLine("FALLO: Punto 4 - la categoria Objetos no genero ningun inventario de tiles");
 
+                    // P-7 (auditoria de Opus vs TEdit): el id real ([N]) debe verse de verdad en
+                    // el arbol visual de al menos una fila del inventario, no solo estar en el
+                    // ViewModel - y sin haber recortado nada (AR-02, ya comprobado arriba).
+                    if (vm.Exploration.Inventory.Count > 0)
+                    {
+                        int primerId = vm.Exploration.Inventory[0].Id;
+                        var idVisible = Descendientes<TextBlock>(window).FirstOrDefault(t => t.Text == $"[{primerId}]" && t.IsVisible);
+                        Console.WriteLine($"P-7: id real del primer objeto ({primerId}) visible en el arbol visual={idVisible != null} (esperado True)");
+                        if (idVisible == null) Console.WriteLine("FALLO: P-7 - el id de la fila de inventario no aparece visible");
+                    }
+
                     var rtbCategorias = new System.Windows.Media.Imaging.RenderTargetBitmap(
                         (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
                     rtbCategorias.Render(window);
