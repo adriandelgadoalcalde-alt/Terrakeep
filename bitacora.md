@@ -7965,3 +7965,93 @@ Con esto se cierran los tres huecos explicitamente nombrados como pendientes en 
 advisor. Quedan sin tocar, a proposito y ya documentados como decisiones deliberadas (no huecos):
 el arbol de dos niveles por variante de UV en Objetos, y el modo "avanzado" tipo TEdit con
 pestañas (redundante con las 4 categorias reales ya implementadas).
+
+## Sprites reales en Exploracion, botones rediseñados e insignias de Inicio (4-sep-2026)
+
+Encargo directo del usuario, tres partes, plan escrito por Opus (`ESPEC-sprites-botones-
+badges.md`, ~700 lineas) y ejecutado de un tiron sin pararse a preguntar (pedido explicito):
+"faltan todos los sprites en exploracion... un cofre dorado de agua etc solo salen cuadrados
+de colores" + "cambia los botones ovalados por algo que vaya con la estetica... pero que se
+diferencien de los principales" + "los personajes que tienen mod solo marcan calamity...
+quiero una etiqueta de tmodloader y otra de vanilla".
+
+**Parte A (sprites reales)**: la formula de recorte que yo mismo habia propuesto al encargar
+el informe (un rectangulo `w*textureGrid+(w-1)*frameGap`) **estaba mal** - Opus la descarto
+con datos reales (volcado de pixeles de `Tiles_21.xnb`: el hueco de 2px entre celdas es
+transparente puro, no *edge bleed*) y confirmo contra el codigo decompilado real
+(`TileDrawing.cs:1951`) que el juego compone CELDA A CELDA. Formula corregida y verificada:
+recorte por celdas de `textureGrid` px, sin el hueco, usando `tiles.json`/`walls.json` REALES
+de TEdit (ya presentes en `Terrasavr-Calamity-Beta/resources/app/xnb-lzx-tool-refs/`, no
+comiteados en ningun repo - los PNG resultantes SI se comitean, el script es una herramienta
+de regeneracion de un solo uso). Nuevos `scripts/extraer-iconos-tiles.js` (749 iconos base +
+129 variantes de cofre/comoda, solo para los 3 tipos contenedores reales `21`/`88`/`467`) y
+`scripts/extraer-iconos-paredes.js` (366 de 367, recorte 32x32 en el pixel `(36,36)` = celda
+`(1,1)` del estilo "rodeada por los 4 lados", deducido de `Framing.cs`/`WallDrawing.cs` reales
+- las paredes no tienen variantes con nombre, `walls.json` no trae geometria en absoluto).
+Cifras EXACTAS de la ejecucion real coincidieron con lo prometido por el informe al caracter
+(878 tiles + 366 paredes, 5 descartados por salir transparentes: las 4 gotas + el gotero de
+centelleo). `TileIconResolver`/`WallIconResolver` (mismo patron de 20 lineas que
+`VanillaIconResolver`), `WorldInventoryRowViewModel` gana `IconPath`, `InventoryRowTemplate`
+pinta el sprite real con fallback al cuadradito de color de siempre. Corregido de paso un
+error que el propio encargo original habia sugerido (usar la rama `IsCalamity` en "Cofres por
+lo que contienen"): un NetId de un `.wld` real NUNCA es un id sintetico de esta app (esos
+empiezan en 20 millones), asi que esa rama seria codigo muerto - dejado documentado en el
+punto de llamada para que la proxima pasada no la "arregle" por error.
+
+**Parte B (botones)**: `CategoryPill`/`CategoryChip` (pildora completa, `CornerRadius="99"`,
+sin relacion visual con ningun otro boton de la app) renombrados a
+`CategorySelector`/`ViewSelector` con la MISMA forma `CornerRadius="8"` del boton base real
+(el propio `Theme.xaml` ya documentaba que el usuario corrigio a mano un intento anterior de
+convertir todos los botones en pildoras, porque le cambiaba la forma al boton de referencia
+"Auto-equipar") - contorno en reposo, relleno `AccentMutedBrush` solo al marcar, nunca la
+elevacion de 2px que el tema reserva a las acciones. 14 sustituciones mecanicas, ni un
+binding/GroupName/comando tocado.
+
+**Parte C (insignias de Inicio)**: bug real confirmado por Opus en
+`HomeViewModel.cs:164`: `bool isCalamity = File.Exists(...".tplr")` - solo comprobaba que
+existiera el `.tplr`, no que hubiera Calamity dentro, asi que CUALQUIER mod (o un `.tplr`
+huerfano de una partida vieja) encendia la insignia roja "Calamity". Nueva
+`TplrProbe`/`TplrModSummary` (Core) detecta el contenido real de Calamity escaneando el NBT
+crudo del `.tplr` (mismo criterio EXACTO que `CharacterFileService.Save` ya usaba para decidir
+si escribir el `.tplr`, pero sin cargar el personaje entero) - **2,53ms medidos** para los 6
+`.plr` reales de esta maquina, dentro del `Task.Run` que el escaneo de Inicio ya usa. Hallazgo
+real de Opus: la clave `usedMods` (que SI trae la lista real de mods, `PlayerIO.cs:67`) NO
+sirve para decidir la insignia - un `.tplr` escrito por el propio Terrakeep no la lleva y aun
+asi puede tener contenido real de Calamity (caso real, `prueba.tplr` de esta maquina). Tres
+insignias reales ahora: Vanilla (sin `.tplr`), tModLoader (con `.tplr`, el hecho principal),
+Calamity (contenido real dentro, ADEMAS de la anterior, nunca en su lugar).
+
+**Verificacion real**: `dotnet build`/`dotnet test` en verde en cada paso, Core pasa de
+**339 a 349 tests** (+10 nuevos: 8 de `TplrProbeTests` incluido el caso "tModLoader sin
+Calamity" que NO existe en ningun `.tplr` real de esta maquina, 2 de smoke test de los
+878+366 assets extraidos) y 307 de ViewModels sin cambios de comportamiento. Arnes de UI
+Automation ampliado con
+`ICONOS-INVENTARIO`/`ICONOS-MINERALES`/`ICONOS-PAREDES`/`ICONOS-LIQUIDOS` (Parte A),
+`SELECTORES-EXCLUSION`/`SELECTORES-MULTI` (Parte B, clic real via UI Automation
+`SelectionItemPattern`/`TogglePattern`, no solo el ViewModel) e `INSIGNIAS-INICIO`/
+`INSIGNIAS-TMOD-SIN-CALAMITY` (Parte C, con un personaje SINTETICO fabricado en una carpeta
+temporal - nunca cerca de un personaje real - para probar el caso que no existe en disco).
+**0 FALLO en la pasada completa real**: 20/20 filas de Cofres con sprite real, 21/21 de
+Minerales, 75/75 de Paredes (mundo `roca negra`, 8400x2400), 0/3 de Liquidos (decision
+deliberada), exclusion mutua y multiseleccion intactas tras el rediseño, 2 vanilla + 3
+tModLoader (todos con Calamity real) entre los 5 personajes reales de esta maquina + el
+sintetico dando exactamente `False/True/False`. Capturas reales inspeccionadas a mano
+(`exploracion-cofres-con-sprites.png`: "Cofre de oro" se ve como un cofre de oro de verdad,
+no un cuadrado naranja; `exploracion-selectores-npcs.png`: los chips ya no son ovalos, la
+forma coincide con "Cargar mundo" pero se distinguen por estar sin rellenar en reposo).
+
+Hallazgo de entorno, NO una regresion de este cambio (documentado por si reaparece): la
+pantalla real de esta sesion mide 576x1197 (`[System.Windows.Forms.Screen]::AllScreens`,
+un entorno remoto/RDP con una resolucion muy inusual) - varias pruebas de redimensionado
+YA EXISTENTES (E2-UMBRAL, A4-1350/1500) pidieron 1180-1550px de ancho y obtuvieron 1080
+fijo, cuando en una pasada anterior de esta misma sesion (antes de este cambio) esas mismas
+pruebas si obtenian el ancho pedido. Ningun cambio de esta sesion toco `MinWidth`/`MaxWidth`/
+`SizeClass` ni ningun otro codigo de redimensionado - es coherente con la resolucion real
+medida (576px), no con nada tocado aqui. 0 `FALLO` real en la pasada pese a esto (esos
+mensajes solo imprimen su resultado, no estaban marcados como fallo esperado-vs-real en el
+arnes existente).
+
+Commits: `595625c6` (1244 assets + 2 scripts), `0c1f87b9` (Parte C completa), `87f9e4d2`
+(Partes A y B juntas, comparten `MainWindow.xaml`/`Program.cs` - separarlas habria exigido un
+`git add -p` fragil sobre XAML entrelazado, mas riesgo que beneficio dado que las dos se
+verificaron juntas en la misma pasada limpia del arnes).
