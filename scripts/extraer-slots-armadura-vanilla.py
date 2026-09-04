@@ -12,8 +12,11 @@ aqui hace falta el VALOR real asignado, no solo el bit. Reutiliza el mismo escan
 bloques (split_by_case) ya depurado en extraer-categorias-vanilla.py/
 extraer-slot-kind-vanilla.py - NO reinventarlo.
 
-Fuente real: Downloads\\tModLoader-Decompiled\\tModLoader\\Terraria\\Item.cs (1.4.5.8,
-la version correcta de este proyecto). Confirmado a mano (Terraria.Initializers.
+Fuente real: Downloads\\tModLoader-Decompiled\\tModLoader\\Terraria\\Item.cs. Version REAL
+de esta carpeta: 1.4.4.9 (confirmado independientemente en la sexta auditoria de Opus,
+Main.cs decompilado real: "assemblyVersionNumber = 1.4.4.9" - el comentario anterior aqui
+decia 1.4.5.8 por error; esa es la version real de la OTRA carpeta decompilada,
+TerrariaVanilla, no de esta). Confirmado a mano (Terraria.Initializers.
 AssetInitializer.cs, decompilado real): TextureAssets.ArmorHead[n] se carga de
 "Images/Armor_Head_" + n, TextureAssets.ArmorLeg[n] de "Images/Armor_Legs_" + n,
 TextureAssets.ArmorBodyComposite[n] de "Images/Armor/Armor_" + n (el compuesto

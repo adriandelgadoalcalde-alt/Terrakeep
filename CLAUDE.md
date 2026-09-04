@@ -25,14 +25,20 @@ el código real aquí. Nunca inventar un valor ni "sonar razonable" sin
 comprobarlo:
 
 - `C:\Users\adrian\Downloads\tModLoader-Decompiled\TerrariaVanilla\` -
-  Terraria vanilla decompilado (`Item.cs` con los bloques `SetDefaults#`
+  Terraria vanilla decompilado, **versión real 1.4.5.8** (confirmado en
+  `Main.cs`: `assemblyVersionNumber = "1.4.5.8"` - sexta auditoría de
+  Opus, 4-sep-2026; un comentario de un script viejo decía lo contrario
+  por error, ya corregido). `Item.cs` con los bloques `SetDefaults#`
   reales, `ID\ItemID.cs`, `GameContent\Prefixes\PrefixLegacy.cs`,
   `Initializers\DyeInitializer.cs`...). Localización real en
   `Terraria.Localization.Content.{idioma}.{categoria}.json` - `Items`
   (nombres) y `Game` (con `BuffDescription` dentro, NO hay un
   `Buffs.json` aparte).
 - `C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\` -
-  tModLoader en sí.
+  tModLoader en sí, **versión real 1.4.4.9** (confirmado en `Main.cs`:
+  `assemblyVersionNumber = "1.4.4.9"` - las dos carpetas van con
+  versiones de Terraria DISTINTAS a propósito, no es un error: no
+  asumir que comparten numeración de assets/ids sin comprobarlo).
 - `C:\Users\adrian\Downloads\tModLoader-Decompiled\CalamityMod\` -
   Calamity Mod decompilado real (8101 archivos `.cs`, versión 2.2.2,
   confirmado real - una sesión anterior afirmó por error que "no había
