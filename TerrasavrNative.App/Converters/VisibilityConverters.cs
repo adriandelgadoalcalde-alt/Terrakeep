@@ -110,3 +110,31 @@ public sealed class FractionToWidthConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 }
+
+// Punto 4 (advisor Opus, selector de categoria de Exploracion en fila de pildoras - ver
+// ESPEC-ui-exploracion.md#9.1): enlaza un RadioButton.IsChecked de DOBLE VIA a un valor de enum
+// (o de int, ej. ChestViewMode/ObjectsViewMode - los "modos de vista" 0/1/2 de Cofres/Objetos)
+// usando el GroupName real de WPF para la exclusividad mutua - mas simple que una propiedad bool
+// independiente por opcion o un Command en cada una. ConverterParameter es el valor como texto
+// (ej. "Npcs" o "1"). Cuando WPF desmarca una opcion del grupo al marcar otra, ConvertBack
+// recibe value=false - Binding.DoNothing (no false) para no pisar el valor real que SI se acaba
+// de marcar en la misma pasada. targetType.IsEnum decide si se usa Enum.Parse o Convert.
+// ChangeType - un enum con Enum.Parse en un int lanzaria (int no es un tipo enum).
+public sealed class EnumEqualsConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value?.ToString() == parameter as string;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is not true || parameter is not string s) return Binding.DoNothing;
+        try
+        {
+            return targetType.IsEnum ? Enum.Parse(targetType, s) : System.Convert.ChangeType(s, targetType, culture);
+        }
+        catch
+        {
+            return Binding.DoNothing;
+        }
+    }
+}

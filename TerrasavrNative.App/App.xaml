@@ -17,6 +17,7 @@
             <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
             <conv:BoolToGridLengthConverter x:Key="BoolToGridLength" />
             <conv:BoolToDoubleConverter x:Key="BoolToDouble" />
+            <conv:EnumEqualsConverter x:Key="EnumEquals" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

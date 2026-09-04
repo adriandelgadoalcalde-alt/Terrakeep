@@ -2,8 +2,10 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using TerrasavrNative.Core.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -52,14 +54,54 @@ public sealed partial class WorldSearchHitRowViewModel(WorldSearchHit hit) : Obs
     [ObservableProperty] private bool _isCurrent;
 }
 
-public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int y, bool homeless, int? headIndex) : ObservableObject
+// Punto 4 (advisor Opus, "una nueva barra lateral... buscar npcs buscador de cofres buscador o
+// marcador de minerales buscador de objetos" - ver ESPEC-ui-exploracion.md#9.1). La categoria
+// "manda": cada una muestra de entrada un inventario real de lo que el mundo cargado tiene, no
+// solo filtra un catalogo generico. "Todo" es el buscador de texto libre ya existente,
+// sin cambios de comportamiento.
+public enum WorldSearchCategory { All, Npcs, Chests, Ores, Objects }
+
+// Fila de inventario generica - reutilizada por Cofres (las dos vistas), Minerales y Objetos
+// (las tres vistas). NPCs sigue con su propio WorldNpcRowViewModel (ya existente, con icono real
+// y estado de mapa) - un inventario generico no le aporta nada que no tenga ya.
+public sealed partial class WorldInventoryRowViewModel(int id, short u, short v, string name, int count, int? veinCount, Color swatchColor) : ObservableObject
+{
+    public int Id { get; } = id;
+    public short U { get; } = u;
+    public short V { get; } = v;
+    public string Name { get; } = name;
+    public int Count { get; } = count;
+    public int? VeinCount { get; } = veinCount;
+    public Color SwatchColor { get; } = swatchColor;
+    // ESPEC-ui-exploracion.md#9.3-D: "86.200 tiles · 6.738 vetas" para Minerales; para el resto
+    // (Cofres/Objetos), solo el recuento a secas.
+    public string CountLabel { get; } = veinCount.HasValue
+        ? $"{count:N0} tiles · {veinCount.Value:N0} veta{(veinCount.Value == 1 ? "" : "s")}"
+        : $"{count:N0}";
+    [ObservableProperty] private bool _isChecked;
+    // Filtro por nombre O id (mismo criterio que TileWallPickerViewModel.FilterItem de TEdit,
+    // ESPEC-ui-exploracion.md#1.3) - atenua/oculta en vez de quitar de la coleccion, mismo
+    // patron ya establecido por WorldNpcRowViewModel.IsMatch.
+    [ObservableProperty] private bool _isMatch = true;
+}
+
+public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int y, bool homeless, int? headIndex, bool isUnderground, int depthTiles) : ObservableObject
 {
     public int Id { get; } = id;
     public string Name { get; } = name;
     public int TileX { get; } = x;
     public int TileY { get; } = y;
+    public bool Homeless { get; } = homeless;
     public string Position { get; } = homeless ? $"({x}, {y}) - sin casa" : $"({x}, {y})";
     public string? IconPath { get; } = NpcIconResolver.GetIconPath(id);
+    // Punto 4 (advisor Opus, "npcs escondidos en el subsuelo que puedas encontrarlos facilmente" -
+    // ver ESPEC-ui-exploracion.md#12): TileY > GroundLevel real del mundo (WldHeader.GroundLevel,
+    // ya leido y ya usado para el fondo por zona, ZoneFor). DepthTiles solo tiene sentido si
+    // IsUnderground - la profundidad EN TILES bajo el nivel del suelo, mas legible que una
+    // coordenada Y suelta.
+    public bool IsUnderground { get; } = isUnderground;
+    public int DepthTiles { get; } = depthTiles;
+    public string? DepthLabel { get; } = isUnderground ? $"Bajo tierra (profundidad {depthTiles})" : null;
     // H6-08/H6-09/H6-10 (sexta auditoria de Opus, "el mapa debe mostrar solo cabezas de NPC,
     // no puntos rosas ni el cuerpo entero") - icono real de cabeza (NpcHeadProfile ya resolvio
     // el indice real: normal/shimmer/variacion segun toque), usado por el marcador del MAPA
@@ -187,6 +229,253 @@ public partial class ExplorationViewModel : ObservableObject
     private readonly DispatcherTimer _worldSearchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private CancellationTokenSource? _worldSearchCts;
     private int _worldSearchGeneration;
+
+    // Punto 4 (advisor Opus, "una nueva barra lateral... que ya no solo salgan los npc, eso se
+    // traslada dentro de una rama madre" - ver ESPEC-ui-exploracion.md#9). La categoria activa;
+    // NPCs sigue usando Npcs/NpcSearchResults (ya existente); Cofres/Minerales/Objetos usan
+    // Inventory (u OreMetals/OreGems/OreTargets para Minerales, que necesita 3 grupos).
+    [ObservableProperty] private WorldSearchCategory _selectedCategory = WorldSearchCategory.All;
+    partial void OnSelectedCategoryChanged(WorldSearchCategory value)
+    {
+        // Cambiar de categoria es empezar de cero - mismo criterio que cargar otro mundo ya
+        // limpia el buscador (LoadFromPathAsync). WorldSearchText/NpcSearchText disparan su
+        // propio OnXxxChanged si de verdad cambian (CommunityToolkit no reemite si el valor es
+        // el mismo, ej. las dos ya estaban vacias).
+        WorldSearchText = string.Empty;
+        NpcSearchText = string.Empty;
+        RebuildInventory();
+    }
+
+    public ObservableCollection<WorldInventoryRowViewModel> Inventory { get; } = [];
+    // Minerales necesita 3 grupos con cabecera (Minerales/Gemas/Otros objetivos,
+    // ESPEC-ui-exploracion.md#11.1) - 3 colecciones separadas en vez de un mecanismo de
+    // agrupado WPF generico, mismo criterio ya usado en el proyecto (Npcs/NpcSearchResults/
+    // MissingNpcs son 3 colecciones separadas, no una con un flag de tipo).
+    public ObservableCollection<WorldInventoryRowViewModel> OreMetals { get; } = [];
+    public ObservableCollection<WorldInventoryRowViewModel> OreGems { get; } = [];
+    public ObservableCollection<WorldInventoryRowViewModel> OreTargets { get; } = [];
+
+    // ESPEC-ui-exploracion.md#9.3-C: "Por tipo de cofre" (0, por defecto) / "Por lo que
+    // contienen" (1). #9.3-E: "Tiles" (0, por defecto) / "Paredes" (1) / "Liquidos" (2).
+    [ObservableProperty] private int _chestViewMode;
+    partial void OnChestViewModeChanged(int value) => RebuildChestInventory();
+    [ObservableProperty] private int _objectsViewMode;
+    partial void OnObjectsViewModeChanged(int value) => RebuildObjectsInventory();
+
+    // Contadores reales para las pildoras de categoria (ESPEC-ui-exploracion.md#9.1: "NPCs (18)",
+    // "Cofres (560)"...) - Minerales/Objetos cuentan TIPOS distintos presentes, no instancias
+    // (asi es como el propio espec los midio y los describe: "260 tipos de tile", "16 minerales
+    // presentes"). NpcsPillCount no hace falta un campo propio, Npcs.Count ya es el real.
+    public int ChestsPillCount => _world?.Chests.Count ?? 0;
+    public int OresPillCount => _presence == null ? 0 : OreTileCatalog.All.Count(_presence.HasTile);
+    public int ObjectsPillCount => _presence?.TileCounts.Count ?? 0;
+
+    private static Color ToWpfColor(RgbaColor c) => Color.FromArgb(c.A, c.R, c.G, c.B);
+
+    // Unico punto de entrada real - despacha segun SelectedCategory. "Todo"/"NPCs" no usan
+    // Inventory (el buscador de texto libre y la lista de NPCs ya existentes, respectivamente).
+    private void RebuildInventory()
+    {
+        Inventory.Clear();
+        OreMetals.Clear();
+        OreGems.Clear();
+        OreTargets.Clear();
+        if (_world == null || _presence == null) return;
+
+        switch (SelectedCategory)
+        {
+            case WorldSearchCategory.Chests: RebuildChestInventory(); break;
+            case WorldSearchCategory.Ores: RebuildOreInventory(); break;
+            case WorldSearchCategory.Objects: RebuildObjectsInventory(); break;
+        }
+    }
+
+    // ESPEC-ui-exploracion.md#9.3-C: por defecto, las variantes de cofre REALMENTE presentes
+    // (ChestKindCounts, la casilla real en chest.X/Y - ya calculado por WorldPresenceIndex, no
+    // hace falta volver a recorrer nada); en el otro modo, los objetos REALMENTE encontrados
+    // dentro de algun cofre (ChestItemCounts).
+    private void RebuildChestInventory()
+    {
+        Inventory.Clear();
+        if (_world == null || _presence == null) return;
+        if (ChestViewMode == 0)
+        {
+            foreach (var ((type, u, v), count) in _presence.ChestKindCounts.OrderByDescending(kv => kv.Value))
+                Inventory.Add(new WorldInventoryRowViewModel(type, u, v, _tileNames.TileVariantName(type, u, v), count, null, ToWpfColor(_mapColors.TileColor(type))));
+        }
+        else
+        {
+            foreach (var (netId, count) in _presence.ChestItemCounts.OrderByDescending(kv => kv.Value))
+                Inventory.Add(new WorldInventoryRowViewModel(netId, 0, 0, _itemNames.GetName(netId), count, null, Colors.Transparent));
+        }
+        ApplyInventoryFilter();
+    }
+
+    // ESPEC-ui-exploracion.md#11: tres grupos (Minerales/Gemas/Otros objetivos), solo los
+    // presentes (_presence.HasTile). El recuento de VETAS usa CountVeinsByType con TODOS los
+    // presentes JUNTOS en una unica llamada (un unico barrido de la rejilla) - llamarlo una vez
+    // por mineral es correcto pero MUY caro (hallazgo real medido esta sesion: ~5s en un mundo
+    // Grande real llamando a Find uno a uno, 255ms con la llamada combinada).
+    private void RebuildOreInventory()
+    {
+        OreMetals.Clear();
+        OreGems.Clear();
+        OreTargets.Clear();
+        if (_world == null || _presence == null) return;
+
+        var presentes = OreTileCatalog.All.Where(_presence.HasTile).ToHashSet();
+        var vetasPorTipo = presentes.Count > 0
+            ? OreVeinFinder.CountVeinsByType(_world, presentes)
+            : new Dictionary<int, int>();
+
+        void Fill(ObservableCollection<WorldInventoryRowViewModel> target, IReadOnlyList<int> ids)
+        {
+            foreach (int id in ids)
+            {
+                if (!_presence.HasTile(id)) continue;
+                int count = _presence.TileCounts[id];
+                int veinCount = vetasPorTipo.GetValueOrDefault(id);
+                target.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.TileName(id), count, veinCount, ToWpfColor(_mapColors.TileColor(id))));
+            }
+        }
+        Fill(OreMetals, OreTileCatalog.Metals);
+        Fill(OreGems, OreTileCatalog.Gems);
+        Fill(OreTargets, OreTileCatalog.Targets);
+        ApplyInventoryFilter();
+    }
+
+    // ESPEC-ui-exploracion.md#9.3-E: Tiles/Paredes/Liquidos, ordenados por recuento descendente
+    // (igual que WorldAnalysis.cs de TEdit). ALCANCE DELIBERADO, no un descuido: no se porta el
+    // arbol de dos niveles (tile + sus variantes de UV) que propone el espec - Cofres/"Por tipo
+    // de cofre" ya cubre el caso real donde mas importa distinguir variantes (que cofre es cada
+    // uno), y un arbol expandible generico para las demas 130 familias de sprite es una pieza de
+    // UI de WPF bastante mas arriesgada sin poder iterarla visualmente varias veces primero.
+    private void RebuildObjectsInventory()
+    {
+        Inventory.Clear();
+        if (_world == null || _presence == null) return;
+        switch (ObjectsViewMode)
+        {
+            case 0:
+                foreach (var (id, count) in _presence.TileCounts.OrderByDescending(kv => kv.Value))
+                    Inventory.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.TileName(id), count, null, ToWpfColor(_mapColors.TileColor(id))));
+                break;
+            case 1:
+                foreach (var (id, count) in _presence.WallCounts.OrderByDescending(kv => kv.Value))
+                    Inventory.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.WallName(id), count, null, ToWpfColor(_mapColors.WallColor(id))));
+                break;
+            case 2:
+                foreach (var (code, count) in _presence.LiquidCounts.OrderByDescending(kv => kv.Value))
+                    Inventory.Add(new WorldInventoryRowViewModel(code, 0, 0, WorldSearch.LiquidName(code), count, null, Colors.Transparent));
+                break;
+        }
+        ApplyInventoryFilter();
+    }
+
+    // Filtro por nombre O id (gemelo exacto de TileWallPickerViewModel.FilterItem de TEdit,
+    // ESPEC-ui-exploracion.md#1.3) - inmediato, sin debounce ni Task.Run: el inventario de una
+    // categoria es corto de verdad (260 filas como mucho, medido), no hace falta lo mismo que
+    // el barrido real de "Todo".
+    private void ApplyInventoryFilter()
+    {
+        bool sinBusqueda = string.IsNullOrWhiteSpace(WorldSearchText);
+        void Filtrar(IEnumerable<WorldInventoryRowViewModel> filas)
+        {
+            foreach (var row in filas)
+                row.IsMatch = sinBusqueda || row.Name.Contains(WorldSearchText, StringComparison.OrdinalIgnoreCase)
+                    || row.Id.ToString().Contains(WorldSearchText, StringComparison.Ordinal);
+        }
+        Filtrar(Inventory);
+        Filtrar(OreMetals);
+        Filtrar(OreGems);
+        Filtrar(OreTargets);
+    }
+
+    // Clic simple sobre una fila de inventario - busca SOLO esa (el caso comun no debe costar
+    // dos gestos, ESPEC-ui-exploracion.md#9.3-C). Cofres/Objetos usan TileTypes a secas salvo
+    // cuando la fila representa una VARIANTE real (U/V != 0 o el propio Type no es generico -
+    // en la practica, cualquier fila de "Cofres/Por tipo" con U/V reales usa SpriteVariants
+    // para no traer TODOS los cofres del mismo Type).
+    [RelayCommand]
+    private void SearchInventoryRow(WorldInventoryRowViewModel row) => _ = RunWorldSearchAsyncWithQuery(BuildSingleRowQuery(row));
+
+    [RelayCommand]
+    private void SearchCheckedInventory()
+    {
+        var marcadas = Inventory.Where(r => r.IsChecked).ToList();
+        if (marcadas.Count == 0) return;
+        WorldSearchQuery query = SelectedCategory switch
+        {
+            WorldSearchCategory.Chests when ChestViewMode == 0 =>
+                new WorldSearchQuery { SpriteVariants = marcadas.Select(r => (r.Id, r.U, r.V)).ToHashSet() },
+            WorldSearchCategory.Chests => new WorldSearchQuery { ChestItemIds = marcadas.Select(r => r.Id).ToHashSet() },
+            WorldSearchCategory.Objects when ObjectsViewMode == 0 => new WorldSearchQuery { TileTypes = marcadas.Select(r => r.Id).ToHashSet() },
+            WorldSearchCategory.Objects when ObjectsViewMode == 1 => new WorldSearchQuery { WallIds = marcadas.Select(r => r.Id).ToHashSet() },
+            WorldSearchCategory.Objects => new WorldSearchQuery { LiquidTypes = marcadas.Select(r => (byte)r.Id).ToHashSet() },
+            _ => new WorldSearchQuery(),
+        };
+        _ = RunWorldSearchAsyncWithQuery(query);
+    }
+
+    private WorldSearchQuery BuildSingleRowQuery(WorldInventoryRowViewModel row) => SelectedCategory switch
+    {
+        WorldSearchCategory.Chests when ChestViewMode == 0 => new WorldSearchQuery { SpriteVariants = new HashSet<(int, short, short)> { (row.Id, row.U, row.V) } },
+        WorldSearchCategory.Chests => new WorldSearchQuery { ChestItemIds = new HashSet<int> { row.Id } },
+        WorldSearchCategory.Objects when ObjectsViewMode == 0 => new WorldSearchQuery { TileTypes = new HashSet<int> { row.Id } },
+        WorldSearchCategory.Objects when ObjectsViewMode == 1 => new WorldSearchQuery { WallIds = new HashSet<int> { row.Id } },
+        WorldSearchCategory.Objects => new WorldSearchQuery { LiquidTypes = new HashSet<byte> { (byte)row.Id } },
+        _ => new WorldSearchQuery(),
+    };
+
+    // Punto 4 (Minerales - ESPEC-ui-exploracion.md#11.3/11.4): "Marcar en el mapa" activa la
+    // capa de resaltado (sin tope, TODAS las posiciones - mismo reparto real que hace TEdit,
+    // resaltado sin tope + lista topada) y rellena WorldSearchResults con las VETAS (no los
+    // tiles sueltos, serian decenas de miles). El tope de la LISTA sigue siendo 1000
+    // (WorldSearchQuery.DisplayLimit); el resumen dice la verdad completa (ver
+    // RunWorldSearchAsyncWithQuery).
+    [RelayCommand]
+    private async Task MarkOresOnMap()
+    {
+        if (_world == null) return;
+        var marcados = OreMetals.Concat(OreGems).Concat(OreTargets).Where(r => r.IsChecked).Select(r => r.Id).ToHashSet();
+        if (marcados.Count == 0) return;
+
+        var world = _world;
+        var cts = new CancellationTokenSource();
+        _worldSearchCts?.Cancel();
+        _worldSearchCts = cts;
+        int myGeneration = ++_worldSearchGeneration;
+        try
+        {
+            var (highlight, vetas, totalVetas) = await Task.Run(() =>
+            {
+                var img = WorldHighlightRenderer.Render(world, marcados, Colors.Orange, cts.Token);
+                var v = OreVeinFinder.Find(world, marcados, limit: 1000, out int total, cts.Token);
+                return (img, v, total);
+            }, cts.Token);
+            if (myGeneration != _worldSearchGeneration) return;
+
+            WorldHighlight = highlight;
+            _lastWorldSearchRows = vetas.Select(vein => new WorldSearchHitRowViewModel(
+                new WorldSearchHit(vein.CenterX, vein.CenterY, $"{_tileNames.TileName(vein.Type)} ({vein.TileCount:N0} tiles)", WorldSearchKind.OreVein))).ToList();
+            _worldSearchCurrentIndex = -1;
+            ApplyWorldSearchOrder();
+            WorldSearchSummary = totalVetas > vetas.Count
+                ? $"{vetas.Count:N0} de {totalVetas:N0} veta(s) (limitado a 1000 en la lista - el mapa las marca TODAS)"
+                : $"{totalVetas:N0} veta(s)";
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    [RelayCommand]
+    private void ClearOreMarks()
+    {
+        WorldHighlight = null;
+        WorldSearchResults.Clear();
+        _lastWorldSearchRows = [];
+        _worldSearchCurrentIndex = -1;
+        WorldSearchSummary = string.Empty;
+    }
 
     [RelayCommand]
     private void GoToWorldSearchHit(WorldSearchHitRowViewModel hit)
@@ -473,12 +762,23 @@ public partial class ExplorationViewModel : ObservableObject
 
             _allNpcs = world.Npcs
                 .OrderBy(n => _npcNames.GetName(n.Id))
-                .Select(n => new WorldNpcRowViewModel(n.Id, _npcNames.GetName(n.Id), n.TileX, n.TileY, n.Homeless,
-                    NpcHeadProfile.GetHeadIndex(n.Id, n.VariationIndex, world.ShimmeredNpcTypes.Contains(n.Id))))
+                .Select(n =>
+                {
+                    // Punto 4 (advisor Opus): "bajo tierra" = TileY > GroundLevel real de este
+                    // mundo (WldHeader.GroundLevel, ver ESPEC-ui-exploracion.md#12).
+                    bool underground = n.TileY > world.Header.GroundLevel;
+                    int depth = underground ? n.TileY - (int)world.Header.GroundLevel : 0;
+                    return new WorldNpcRowViewModel(n.Id, _npcNames.GetName(n.Id), n.TileX, n.TileY, n.Homeless,
+                        NpcHeadProfile.GetHeadIndex(n.Id, n.VariationIndex, world.ShimmeredNpcTypes.Contains(n.Id)),
+                        underground, depth);
+                })
                 .ToList();
             Npcs.Clear();
             foreach (var npc in _allNpcs) Npcs.Add(npc);
             NpcSearchText = string.Empty;
+            NpcFilterWithHome = false;
+            NpcFilterHomeless = false;
+            NpcFilterUnderground = false;
             Zoom = 1.0;
             HoverInfo = string.Empty;
             ApplyNpcFilter();
@@ -489,6 +789,10 @@ public partial class ExplorationViewModel : ObservableObject
             WorldSearchSummary = string.Empty;
             _lastWorldSearchRows = [];
             _worldSearchCurrentIndex = -1;
+            SelectedCategory = WorldSearchCategory.All;
+            ChestViewMode = 0;
+            ObjectsViewMode = 0;
+            RebuildInventory();
 
             var foundIds = world.Npcs.Select(n => n.Id).ToHashSet();
             MissingNpcs.Clear();
@@ -500,6 +804,9 @@ public partial class ExplorationViewModel : ObservableObject
             IsWorldLoaded = true;
             StatusMessage = $"'{world.Header.Title}' - {world.Header.TilesWide}x{world.Header.TilesHigh} tiles, " +
                 $"{_allNpcs.Count} NPC(s) de pueblo, {MissingNpcs.Count} todavia sin conseguir.";
+            OnPropertyChanged(nameof(ChestsPillCount));
+            OnPropertyChanged(nameof(OresPillCount));
+            OnPropertyChanged(nameof(ObjectsPillCount));
             UpdateCurrentWorldPath(wldPath);
         }
         catch (Exception ex)
@@ -518,6 +825,17 @@ public partial class ExplorationViewModel : ObservableObject
     }
 
     partial void OnNpcSearchTextChanged(string value) => ApplyNpcFilter();
+
+    // Punto 4 (advisor Opus, "npcs escondidos en el subsuelo que puedas encontrarlos facilmente" -
+    // ver ESPEC-ui-exploracion.md#9.3-B/#12): tres chips multiseleccion, combinados con OR entre
+    // ellos y AND con el texto - "ningun chip pulsado" equivale a "todos", igual que el buscador
+    // de texto vacio.
+    [ObservableProperty] private bool _npcFilterWithHome;
+    [ObservableProperty] private bool _npcFilterHomeless;
+    [ObservableProperty] private bool _npcFilterUnderground;
+    partial void OnNpcFilterWithHomeChanged(bool value) => ApplyNpcFilter();
+    partial void OnNpcFilterHomelessChanged(bool value) => ApplyNpcFilter();
+    partial void OnNpcFilterUndergroundChanged(bool value) => ApplyNpcFilter();
 
     // Bug real encontrado verificando X-a (segunda auditoria de Opus, Fable) con un mundo REAL
     // de 8400x2400 tiles ("Grande", el tamaño maximo real de Terraria): "Ajustar a la ventana"
@@ -547,22 +865,51 @@ public partial class ExplorationViewModel : ObservableObject
 
     // X-c: Npcs (el mapa) NUNCA se toca aqui - solo se marca IsMatch por NPC (resaltar, no
     // ocultar) y se reconstruye NpcSearchResults (la lista lateral) con solo los que coinciden.
+    // Punto 4: + los tres chips de 9.3-B, y ordenacion por profundidad descendente (el mas
+    // escondido primero) cuando el chip "Bajo tierra" esta activo - la busqueda literal de "se
+    // me perdio un NPC bajo tierra" del encargo.
     private void ApplyNpcFilter()
     {
         bool sinBusqueda = string.IsNullOrWhiteSpace(NpcSearchText);
-        NpcSearchResults.Clear();
+        bool sinChips = !NpcFilterWithHome && !NpcFilterHomeless && !NpcFilterUnderground;
+
+        var coincidencias = new List<WorldNpcRowViewModel>();
         foreach (var npc in _allNpcs)
         {
-            npc.IsMatch = sinBusqueda || npc.Name.Contains(NpcSearchText, StringComparison.OrdinalIgnoreCase);
-            if (npc.IsMatch) NpcSearchResults.Add(npc);
+            bool matchesChips = sinChips
+                || (NpcFilterWithHome && !npc.Homeless)
+                || (NpcFilterHomeless && npc.Homeless)
+                || (NpcFilterUnderground && npc.IsUnderground);
+            bool matchesText = sinBusqueda || npc.Name.Contains(NpcSearchText, StringComparison.OrdinalIgnoreCase);
+            npc.IsMatch = matchesChips && matchesText;
+            if (npc.IsMatch) coincidencias.Add(npc);
         }
+        if (NpcFilterUnderground) coincidencias = coincidencias.OrderByDescending(n => n.DepthTiles).ToList();
+
+        NpcSearchResults.Clear();
+        foreach (var npc in coincidencias) NpcSearchResults.Add(npc);
     }
 
-    // Punto 4: reinicia el debounce en cada tecla - el barrido real (RunWorldSearchAsync) no se
-    // lanza aqui directamente, solo cuando el usuario para de escribir (ver el Tick del
-    // constructor).
+    // Punto 4 (advisor Opus, ESPEC-ui-exploracion.md#9.2/#14.3 punto 8): el MISMO cuadro de
+    // texto cambia de comportamiento segun la categoria activa. En "NPCs" se limita a
+    // sincronizar NpcSearchText (que ya dispara ApplyNpcFilter via su propio OnXxxChanged - el
+    // mecanismo de NPCs no cambia, solo gana un cuadro de texto compartido). En Cofres/
+    // Minerales/Objetos filtra el inventario YA EN MEMORIA, inmediato, sin debounce ni Task.Run
+    // (es una lista de 260 filas como mucho). Solo en "Todo" se conserva el debounce de 250ms +
+    // el barrido real de RunWorldSearchAsync (comportamiento identico al que ya habia).
     partial void OnWorldSearchTextChanged(string value)
     {
+        if (SelectedCategory == WorldSearchCategory.Npcs)
+        {
+            NpcSearchText = value;
+            return;
+        }
+        if (SelectedCategory != WorldSearchCategory.All)
+        {
+            ApplyInventoryFilter();
+            return;
+        }
+
         _worldSearchDebounceTimer.Stop();
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -658,16 +1005,26 @@ public partial class ExplorationViewModel : ObservableObject
     // descarta en vez de pisar un resultado mas nuevo con uno obsoleto que llega tarde.
     private async Task RunWorldSearchAsync()
     {
+        string text = WorldSearchText;
+        if (_world == null || string.IsNullOrWhiteSpace(text)) return;
+        await RunWorldSearchAsyncWithQuery(BuildWorldSearchQuery(text));
+    }
+
+    // Punto 4 (advisor Opus): nucleo compartido real entre el buscador de texto libre ("Todo")
+    // y el clic sobre una fila de inventario (Cofres/Objetos, SearchInventoryRow/
+    // SearchCheckedInventory) - las dos rutas terminan aqui, con la MISMA cancelacion por
+    // generacion y el mismo formato de resumen, para que un resultado nunca dependa de por
+    // donde se pidio.
+    private async Task RunWorldSearchAsyncWithQuery(WorldSearchQuery query)
+    {
         _worldSearchCts?.Cancel();
         var cts = new CancellationTokenSource();
         _worldSearchCts = cts;
         int myGeneration = ++_worldSearchGeneration;
 
         var world = _world;
-        string text = WorldSearchText;
-        if (world == null || string.IsNullOrWhiteSpace(text)) return;
+        if (world == null) return;
 
-        var query = BuildWorldSearchQuery(text);
         if (query.IsEmpty)
         {
             if (myGeneration == _worldSearchGeneration)

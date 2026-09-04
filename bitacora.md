@@ -7826,3 +7826,72 @@ no rompe nada de lo ya construido. Sin FALLO/EXCEPTION.
 Sigue en marcha la parte grande del rediseño (barra lateral con categorias NPCs/Cofres/
 Minerales/Objetos, ESPEC-ui-exploracion.md#9) - se ira comiteando por fases, mismo criterio que
 el resto de esta ronda.
+
+## Rediseño completo de la barra lateral de Exploración: 4 categorías reales (4-sep-2026)
+
+Cierre de `ESPEC-ui-exploracion.md` (advisor Opus) - pedido explicito del usuario tras ver el
+buscador general funcionando: "dale caña a la pestaña exploracion me gusta el plan". La lista de
+NPCs deja de vivir suelta - ahora es una categoria mas dentro de una fila de pildoras real
+("Todo · NPCs (N) · Cofres (N) · Minerales (N) · Objetos (N)", contador real de cada una), junto
+a tres categorias nuevas: Cofres (por tipo real o por lo que contienen), Minerales (inventario en
+3 grupos + marcado en el mapa) y Objetos (Tiles/Paredes/Liquidos, ordenados por recuento real).
+
+**Cambios reales**:
+- `ExplorationViewModel`: `WorldSearchCategory` (enum), `WorldInventoryRowViewModel` (fila
+  generica reutilizada por Cofres/Minerales/Objetos), `RebuildInventory`/`RebuildChestInventory`/
+  `RebuildOreInventory`/`RebuildObjectsInventory`/`ApplyInventoryFilter` (filtro por nombre O id,
+  gemelo de `TileWallPickerViewModel.FilterItem` de TEdit), `SearchInventoryRow`/
+  `SearchCheckedInventory` (clic simple busca solo esa fila; "Buscar seleccionados" combina
+  varias), `MarkOresOnMap`/`ClearOreMarks`. `WorldNpcRowViewModel` gana `IsUnderground`/
+  `DepthTiles`/`DepthLabel` (`TileY > GroundLevel` real) y `ApplyNpcFilter` gana los 3 chips
+  ("Con casa"/"Sin casa"/"Bajo tierra", OR entre ellos y AND con el texto, mas ordenacion por
+  profundidad cuando el chip subsuelo esta activo).
+- `RunWorldSearchAsync` se parte en dos: `RunWorldSearchAsyncWithQuery(WorldSearchQuery)` es el
+  nucleo real compartido entre el buscador de texto libre y el clic sobre una fila de inventario -
+  antes solo servia al primero.
+- `WorldSearch.cs` (Core): `SpriteVariants` (buscar "Cofre de oro" exacto, no "cualquier cofre",
+  por `(Type,U,V)`) y el kind `OreVein`.
+- `WorldHighlightRenderer.cs` (nuevo, App/Services): capa de resaltado como segundo
+  `WriteableBitmap` transparente (halo de 1 tile a media opacidad + nucleo a opacidad completa,
+  para que se vea a zoom bajo) - dibujada como una segunda `<Image>` dentro del MISMO `Grid`
+  escalado del mapa, hereda zoom/desplazamiento gratis sin tocar `MainWindow.xaml.cs`.
+- `EnumEqualsConverter` (nuevo): enlaza `RadioButton.IsChecked` de doble via a un enum O a un int
+  (`ChestViewMode`/`ObjectsViewMode`) usando el `GroupName` real de WPF para la exclusion mutua -
+  el proyecto no tenia un `EnumToBooleanConverter` generico.
+- `MainWindow.xaml`: columna lateral 220-300px -> 260-380px (TEdit diseña este mismo panel a
+  400px); reescritura completa del panel (fila de pildoras, cuadro de texto compartido con
+  semantica distinta por categoria, bloque de resultados comun, y 4 bloques de categoria
+  superpuestos con visibilidad exclusiva via `DataTrigger` de cadena sobre el enum, sin falta
+  ningun converter para eso - WPF convierte el texto al valor del enum con su `TypeConverter`
+  nativo). `InventoryRowTemplate` nuevo (checkbox + `Button` real -NUNCA `Border+MouseBinding`,
+  el mismo gotcha de captura de raton de WPF ya documentado en el arreglo de "¿Donde lo tengo?"-
+  con muestra de color 14x14 + nombre + recuento).
+
+**Bug real encontrado y arreglado, atrapado por el propio arnes (UI Automation, no a ciegas de
+una captura)**: `Content="{Binding ..., StringFormat='NPCs ({0})'}"` como ATRIBUTO del
+`RadioButton` perdia el `StringFormat` en tiempo de ejecucion - el `Name` REAL de automatizacion
+salia "14", no "NPCs (14)" (confirmado imprimiendo el `Name` real de los 5 `RadioButton`, no
+adivinando de una captura pequeña). Arreglo real: un `TextBlock` hijo con el mismo `StringFormat`
+- el patron que YA usa el resto de este fichero para cualquier texto formateado, nunca
+`Content="{Binding...}"` como atributo.
+
+**Verificacion real**: `dotnet build`/`dotnet test` en verde, **612/612** (sin tests nuevos de
+xunit para el rediseño de UI en si - depende de bindings/converters/RadioButton reales, que
+necesitan un Dispatcher real con mensajes en marcha, solo el arnes puede probarlo de verdad).
+Arnes de UI Automation ampliado (bloque `CATEGORIAS-*`) con el mundo real ya cargado: las 5
+pildoras muestran su texto REAL con contador (`NPCs (14)`, `Cofres (505)`, `Minerales (21)`,
+`Objetos (176)`); el chip "Bajo tierra" filtra `NpcSearchResults` de verdad (0 NPCs bajo tierra
+en este mundo concreto, cifra coincidente exacta); Cofres genera un inventario real de 20 filas y
+un clic en "Cofre de oro" encuentra 202 resultados reales; Minerales censa 21
+minerales/gemas/objetivos presentes (8+7+6), marcar "Mineral de cobre" activa la capa de
+resaltado Y lista 1000 de 4735 vetas reales; Objetos genera 176 filas de tiles reales. **2/2
+pasadas limpias**, sin NO-FOUND/FALLO/EXCEPTION, capturas reales (`mundo-minerales-marcados.png`,
+`mundo-categoria-objetos.png`) inspeccionadas a mano - el mapa muestra los puntos teal reales de
+las vetas marcadas, el inventario de Objetos sale ordenado por recuento real descendente con
+muestra de color por tile.
+
+Con esto quedan cerradas las 3 partes de `ESPEC-ui-exploracion.md` (Parte I auditoria, Parte II
+diseño, implementacion completa). Alcance deliberado, documentado, no un descuido: sin el arbol
+de dos niveles por variante de UV en Objetos (Cofres/Por tipo ya cubre el caso real donde mas
+importa distinguir variantes), sin tile entities (formato polimorfico no verificado a fondo por
+ningun advisor todavia).

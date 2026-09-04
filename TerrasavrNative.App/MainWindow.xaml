@@ -1213,6 +1213,39 @@
                 </StackPanel>
             </Border>
         </DataTemplate>
+
+        <!-- Punto 4 (advisor Opus, "una nueva barra lateral" - ver ESPEC-ui-exploracion.md#14.4
+             punto 4): fila de inventario generica, compartida por Cofres/Minerales/Objetos.
+             CheckBox (multiseleccion, "Buscar seleccionados") + Button real (RowClickButton -
+             NUNCA Border+MouseBinding, ver el arreglo real de "¿Donde lo tengo?" en bitacora.md,
+             el mismo gotcha de captura de raton de WPF) que busca SOLO esa fila con un clic. -->
+        <DataTemplate x:Key="InventoryRowTemplate" DataType="{x:Type vm:WorldInventoryRowViewModel}">
+            <Grid Margin="0,0,0,4" Visibility="{Binding IsMatch, Converter={StaticResource BoolToVis}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <CheckBox Grid.Column="0" IsChecked="{Binding IsChecked}" VerticalAlignment="Center" Margin="0,0,6,0"
+                          ToolTip="Marcar para 'Buscar seleccionados'" />
+                <Button Grid.Column="1" Style="{StaticResource RowClickButton}" HorizontalContentAlignment="Stretch"
+                        ToolTip="Buscar en el mapa"
+                        Command="{Binding DataContext.Exploration.SearchInventoryRowCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="14" Height="14" CornerRadius="2" Margin="0,0,7,0" VerticalAlignment="Center"
+                                BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1">
+                            <Border.Background>
+                                <SolidColorBrush Color="{Binding SwatchColor}" />
+                            </Border.Background>
+                        </Border>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding CountLabel}" Style="{StaticResource CaptionText}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </DataTemplate>
     </Window.Resources>
 
     <Grid>
@@ -3230,7 +3263,10 @@
                              app, ver ContainerViewModel/AddContainer) en vez de un numero fijo que
                              nunca respira con la ventana - el mapa ("*") se sigue llevando siempre
                              todo el sobrante real. -->
-                        <ColumnDefinition Width="Auto" MinWidth="220" MaxWidth="300" />
+                        <!-- Punto 4 (advisor Opus, ESPEC-ui-exploracion.md#8-D4): la columna crece de
+                             220-300 a 260-380 - inventario + resultados no cabian en el ancho anterior
+                             (TEdit diseña este mismo panel a 400px, FindSidebarView.xaml:12). -->
+                        <ColumnDefinition Width="Auto" MinWidth="260" MaxWidth="380" />
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,0">
@@ -3261,6 +3297,13 @@
                                             <ScaleTransform ScaleX="{Binding Exploration.Zoom}" ScaleY="{Binding Exploration.Zoom}" />
                                         </Grid.LayoutTransform>
                                         <Image x:Name="WorldMapImage" Source="{Binding Exploration.WorldImage}" Stretch="None"
+                                               RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                               HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False" />
+                                        <!-- Punto 4 (Minerales, "Marcar en el mapa" - ver ESPEC-ui-exploracion.md#11.3):
+                                             capa de resaltado, una SEGUNDA Image dentro del MISMO Grid escalado -
+                                             hereda zoom/desplazamiento gratis, sin tocar MainWindow.xaml.cs. Null =
+                                             sin marcar nada (WorldHighlightRenderer nunca se llama). -->
+                                        <Image Source="{Binding Exploration.WorldHighlight}" Stretch="None"
                                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                                HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False" />
                                         <ItemsControl ItemsSource="{Binding Exploration.Npcs}" IsHitTestVisible="True">
@@ -3453,87 +3496,218 @@
                     </Border>
 
                     <DockPanel Grid.Column="1">
-                        <!-- Punto 4 (feedback del usuario, "el mundo... podria tener un buscador de
-                             todo tipo de objetos... no es un editor pero si un buscador"): Fase 1 de
-                             ESPEC-buscador-mundo-tedit.md - busca tiles/paredes/liquidos/NPCs (Fase 2,
-                             cofres/letreros, necesita leer secciones del .wld que hoy no se leen, ver
-                             el espec). Reutiliza la MISMA gramatica ya conocida de la Libreria
-                             (LibrarySearchGrammar: comas=OR, espacios=AND, #123/#100-200 por id) en vez
-                             de inventar una sintaxis nueva solo para esto. Expander plegado por
-                             defecto - es una funcion nueva, no debe robarle sitio permanente a la
-                             lista de NPCs de pueblo que ya vivia aqui. -->
-                        <Expander DockPanel.Dock="Top" Header="Buscar en el mundo" Foreground="{StaticResource TextPrimaryBrush}"
-                                  Margin="0,0,0,10" IsExpanded="False"
-                                  IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True">
-                            <Expander.ToolTip>
-                                <TextBlock Text="Busca tiles, paredes, líquidos, NPCs, objetos dentro de cofres y texto de letreros. Comas = OR, espacios = AND, #123 o #100-200 por id." TextWrapping="Wrap" MaxWidth="260" />
-                            </Expander.ToolTip>
-                            <StackPanel Margin="0,8,0,0">
-                                <TextBox Text="{Binding Exploration.WorldSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                         Padding="7,5" Background="{StaticResource BgElevatedBrush}"
-                                         Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                         FontSize="12" Margin="0,0,0,6" />
-                                <!-- Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3 punto 5): "distancia al
-                                     spawn", apagada por defecto - mismo criterio real que la casilla
-                                     CalculateDistance de TEdit ("Default false" literal en su codigo). -->
-                                <CheckBox Content="Ordenar por distancia al spawn" IsChecked="{Binding Exploration.ShowSpawnDistance}"
-                                          Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,6"
-                                          Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}" />
-                                <Grid Margin="0,0,0,6"
-                                      Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="{Binding Exploration.WorldSearchSummary}" Style="{StaticResource CaptionText}"
-                                               TextWrapping="Wrap" VerticalAlignment="Center"
-                                               Visibility="{Binding Exploration.WorldSearchSummary, Converter={StaticResource EmptyToCollapsed}}" />
-                                    <!-- Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3 punto 4): navegacion
-                                         circular anterior/siguiente - mismo gesto real que
-                                         NavigateNext/NavigatePrevious de TEdit (pan, sin zoom, ver el
-                                         comentario real de MoveWorldSearchResult). -->
-                                    <Button Grid.Column="1" Content="&#8249;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
-                                            ToolTip="Resultado anterior" Command="{Binding Exploration.PreviousWorldSearchResultCommand}" />
-                                    <Button Grid.Column="2" Content="&#8250;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
-                                            ToolTip="Resultado siguiente" Command="{Binding Exploration.NextWorldSearchResultCommand}" />
-                                </Grid>
-                                <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto"
-                                              Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}">
-                                    <ItemsControl ItemsSource="{Binding Exploration.WorldSearchResults}">
+                        <!-- Punto 4 (advisor Opus, "una nueva barra lateral... que ya no solo salgan
+                             los npc, eso se traslada dentro de una rama madre donde salgan varios
+                             botones" - ver ESPEC-ui-exploracion.md#9). Rediseño completo: la lista de
+                             NPCs deja de vivir suelta, pasa a ser una categoria mas (D3: fila de
+                             pildoras en vez de TabControl/Expander - TEdit se permite 4 pestañas
+                             porque diseña este panel a 400px, aqui son 260-380). -->
+                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <TextBlock Text="Buscar en el mundo" Style="{StaticResource SectionText}" />
+                            <TextBlock Text="Solo lo que existe en este mundo" Style="{StaticResource CaptionText}"
+                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"
+                                       Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
+                        </StackPanel>
+
+                        <!-- 9.1: selector de categoria - RadioButton real (GroupName real de WPF),
+                             IsChecked de doble via con EnumEquals (el proyecto no tiene un
+                             EnumToBooleanConverter generico y 5 propiedades bool serian mas
+                             verboso). Cada pildora lleva su contador real. -->
+                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <!-- Bug real encontrado con el arnes (UI Automation, no a ciegas de una
+                                 captura): Content="{Binding ..., StringFormat=...}" como ATRIBUTO
+                                 del RadioButton perdia el StringFormat en runtime (el Name real de
+                                 automatizacion salia "14", no "NPCs (14)") - un TextBlock hijo con
+                                 el mismo StringFormat, el patron YA establecido en el resto de este
+                                 fichero para cualquier texto formateado, si funciona. -->
+                            <RadioButton Style="{StaticResource CategoryPill}" GroupName="ExploracionCategoria"
+                                         IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="Carga un mundo primero"
+                                         IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=All}">
+                                <TextBlock Text="Todo" />
+                            </RadioButton>
+                            <RadioButton Style="{StaticResource CategoryPill}" GroupName="ExploracionCategoria"
+                                         IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="Carga un mundo primero"
+                                         IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Npcs}">
+                                <TextBlock Text="{Binding Exploration.Npcs.Count, StringFormat='NPCs ({0})'}" />
+                            </RadioButton>
+                            <RadioButton Style="{StaticResource CategoryPill}" GroupName="ExploracionCategoria"
+                                         IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="Carga un mundo primero"
+                                         IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Chests}">
+                                <TextBlock Text="{Binding Exploration.ChestsPillCount, StringFormat='Cofres ({0})'}" />
+                            </RadioButton>
+                            <RadioButton Style="{StaticResource CategoryPill}" GroupName="ExploracionCategoria"
+                                         IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="Carga un mundo primero"
+                                         IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Ores}">
+                                <TextBlock Text="{Binding Exploration.OresPillCount, StringFormat='Minerales ({0})'}" />
+                            </RadioButton>
+                            <RadioButton Style="{StaticResource CategoryPill}" GroupName="ExploracionCategoria"
+                                         IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="Carga un mundo primero"
+                                         IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Objects}">
+                                <TextBlock Text="{Binding Exploration.ObjectsPillCount, StringFormat='Objetos ({0})'}" />
+                            </RadioButton>
+                        </WrapPanel>
+
+                        <!-- 9.2: cuadro de busqueda comun - UN SOLO TextBox, cambia de semantica
+                             segun la categoria (ver el comentario real de
+                             ExplorationViewModel.OnWorldSearchTextChanged): en "Todo" lanza el
+                             barrido real (con debounce); en las demas filtra el inventario en
+                             memoria, inmediato. -->
+                        <TextBox DockPanel.Dock="Top" Text="{Binding Exploration.WorldSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                 Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                 FontSize="12" Margin="0,0,0,4"
+                                 IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True">
+                            <TextBox.ToolTip>
+                                <TextBlock Text="En 'Todo': comas = OR, espacios = AND, #123 o #100-200 por id (busca en el mundo entero). En las demas categorias: filtra la lista de abajo por nombre o id." TextWrapping="Wrap" MaxWidth="260" />
+                            </TextBox.ToolTip>
+                        </TextBox>
+
+                        <!-- Bloque de resultados COMPARTIDO (distancia al spawn, resumen, ‹/›,
+                             lista) - identico al que ya habia, solo oculto en NPCs (que muestra su
+                             propia lista, NpcSearchResults, mas abajo). -->
+                        <StackPanel DockPanel.Dock="Bottom">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Exploration.SelectedCategory}" Value="Npcs">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <CheckBox Content="Ordenar por distancia al spawn" IsChecked="{Binding Exploration.ShowSpawnDistance}"
+                                      Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,8,0,6"
+                                      Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}" />
+                            <Grid Margin="0,0,0,6"
+                                  Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Exploration.WorldSearchSummary}" Style="{StaticResource CaptionText}"
+                                           TextWrapping="Wrap" VerticalAlignment="Center"
+                                           Visibility="{Binding Exploration.WorldSearchSummary, Converter={StaticResource EmptyToCollapsed}}" />
+                                <!-- Navegacion circular anterior/siguiente - mismo gesto real que
+                                     NavigateNext/NavigatePrevious de TEdit (pan, sin zoom). -->
+                                <Button Grid.Column="1" Content="&#8249;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
+                                        ToolTip="Resultado anterior" Command="{Binding Exploration.PreviousWorldSearchResultCommand}" />
+                                <Button Grid.Column="2" Content="&#8250;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
+                                        ToolTip="Resultado siguiente" Command="{Binding Exploration.NextWorldSearchResultCommand}" />
+                            </Grid>
+                            <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto"
+                                          Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}">
+                                <ItemsControl ItemsSource="{Binding Exploration.WorldSearchResults}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:WorldSearchHitRowViewModel}">
+                                            <Button Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,5"
+                                                    HorizontalContentAlignment="Stretch" Cursor="Hand"
+                                                    ToolTip="Ir a su posición en el mapa"
+                                                    Command="{Binding DataContext.Exploration.GoToWorldSearchHitCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}">
+                                                <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Padding="8,5" BorderThickness="1.5">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="BorderBrush" Value="Transparent" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                                    <Setter Property="BorderBrush" Value="{StaticResource TealBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
+                                                            <Border Background="{StaticResource TealBrush}" CornerRadius="99" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding KindLabel}" FontSize="9.5" Foreground="White" />
+                                                            </Border>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
+                                                        <TextBlock Text="{Binding DistanceLabel}" Style="{StaticResource CaptionText}"
+                                                                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="10.5"
+                                                                   Visibility="{Binding DistanceLabel, Converter={StaticResource NullToVis}}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+
+                        <!-- Relleno: contenido especifico de cada categoria, superpuesto y con
+                             visibilidad exclusiva por SelectedCategory (DataTrigger de cadena -
+                             WPF convierte el texto al valor del enum solo con el TypeConverter
+                             nativo, sin falta ningun converter). -->
+                        <Grid>
+                            <!-- NPCs: chips + lista propia (ya existente) + "NPCs que faltan". -->
+                            <DockPanel>
+                                <DockPanel.Style>
+                                    <Style TargetType="DockPanel">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Exploration.SelectedCategory}" Value="Npcs">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DockPanel.Style>
+
+                                <!-- Punto 4 (advisor Opus, "npcs escondidos en el subsuelo que puedas
+                                     encontrarlos facilmente" - ver ESPEC-ui-exploracion.md#12): tres
+                                     chips multiseleccion, OR entre ellos y AND con el texto. -->
+                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                                    <ToggleButton Style="{StaticResource CategoryChip}" Content="Con casa" IsChecked="{Binding Exploration.NpcFilterWithHome}" />
+                                    <ToggleButton Style="{StaticResource CategoryChip}" Content="Sin casa" IsChecked="{Binding Exploration.NpcFilterHomeless}" />
+                                    <ToggleButton Style="{StaticResource CategoryChip}" Content="Bajo tierra" IsChecked="{Binding Exploration.NpcFilterUnderground}"
+                                                  ToolTip="Ordena ademas por profundidad - el mas escondido primero" />
+                                </WrapPanel>
+
+                                <!-- X-f: "NPCs que faltan" empieza colapsado - vive dentro de esta
+                                     categoria, ya no en la columna entera. -->
+                                <Expander DockPanel.Dock="Bottom" Header="NPCs que faltan" Foreground="{StaticResource TextPrimaryBrush}"
+                                          Margin="0,10,0,0" IsExpanded="False"
+                                          Visibility="{Binding Exploration.MissingNpcs.Count, Converter={StaticResource CountToVis}}">
+                                    <ItemsControl ItemsSource="{Binding Exploration.MissingNpcs}" Margin="0,6,0,0">
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="{x:Type vm:WorldSearchHitRowViewModel}">
+                                            <DataTemplate DataType="{x:Type vm:MissingNpcRowViewModel}">
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                                    <Image Source="{Binding IconPath}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,5,0"
+                                                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource CaptionText}"
+                                                               Foreground="{StaticResource CalamityBrush}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Expander>
+
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <!-- X-c: la lista lateral de TEXTO si se filtra de verdad (NpcSearchResults) -
+                                         Npcs (el mapa, arriba) se queda siempre completo. -->
+                                    <ItemsControl ItemsSource="{Binding Exploration.NpcSearchResults}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
                                                 <Button Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,5"
                                                         HorizontalContentAlignment="Stretch" Cursor="Hand"
                                                         ToolTip="Ir a su posición en el mapa"
-                                                        Command="{Binding DataContext.Exploration.GoToWorldSearchHitCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        Command="{Binding DataContext.Exploration.GoToNpcCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                         CommandParameter="{Binding}">
-                                                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Padding="8,5" BorderThickness="1.5">
-                                                        <Border.Style>
-                                                            <Style TargetType="Border">
-                                                                <Setter Property="BorderBrush" Value="Transparent" />
-                                                                <Style.Triggers>
-                                                                    <!-- Fase 3: la fila del resultado "actual" se resalta igual que
-                                                                         su marcador gemelo en el mapa (mismo objeto, dos sitios). -->
-                                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                                        <Setter Property="BorderBrush" Value="{StaticResource TealBrush}" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Border.Style>
-                                                        <StackPanel>
-                                                            <StackPanel Orientation="Horizontal">
+                                                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Padding="8,5">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
+                                                                   Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                            <StackPanel>
                                                                 <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
-                                                                <Border Background="{StaticResource TealBrush}" CornerRadius="99" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
-                                                                    <TextBlock Text="{Binding KindLabel}" FontSize="9.5" Foreground="White" />
-                                                                </Border>
+                                                                <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
+                                                                <!-- Punto 4: profundidad real escrita, solo si esta bajo tierra -
+                                                                     "(3200, 1450)" no le dice nada a nadie, "412 tiles bajo el
+                                                                     suelo" si. -->
+                                                                <TextBlock Text="{Binding DepthLabel}" Style="{StaticResource CaptionText}"
+                                                                           Foreground="{StaticResource TealBrush}" FontSize="10.5"
+                                                                           Visibility="{Binding DepthLabel, Converter={StaticResource NullToVis}}" />
                                                             </StackPanel>
-                                                            <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
-                                                            <!-- Fase 3: solo con "Ordenar por distancia al spawn" activo -
-                                                                 ApplyWorldSearchOrder es quien la calcula/limpia. -->
-                                                            <TextBlock Text="{Binding DistanceLabel}" Style="{StaticResource CaptionText}"
-                                                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="10.5"
-                                                                       Visibility="{Binding DistanceLabel, Converter={StaticResource NullToVis}}" />
                                                         </StackPanel>
                                                     </Border>
                                                 </Button>
@@ -3541,81 +3715,104 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </ScrollViewer>
-                            </StackPanel>
-                        </Expander>
+                            </DockPanel>
 
-                        <TextBlock DockPanel.Dock="Top" Text="NPCs de pueblo" Style="{StaticResource SectionText}" Margin="0,0,0,8" />
-                        <!-- H4-13 (cuarta auditoria de Opus, Fable): unico buscador de los 4 sin
-                             tooltip - correcto que no use la gramatica de LibrarySearchGrammar
-                             (filtra una lista corta por nombre), pero quien viene de los otros 3
-                             no lo sabe sin probarlo. -->
-                        <!-- H4-08: deshabilitado mientras no hay mundo (con tooltip real de por
-                             que) - sin esto sugeria una funcion que todavia no aplica a nada. -->
-                        <TextBox DockPanel.Dock="Top" Text="{Binding Exploration.NpcSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 Padding="7,5" Background="{StaticResource BgElevatedBrush}"
-                                 Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                 FontSize="12" Margin="0,0,0,10"
-                                 IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox">
-                                    <Setter Property="ToolTip" Value="Filtra por nombre - no admite la gramática de los otros buscadores (#id, comas, etc.)" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Exploration.IsWorldLoaded}" Value="False">
-                                            <Setter Property="ToolTip" Value="Carga un mundo primero para poder buscar sus NPCs" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBox.Style>
-                        </TextBox>
+                            <!-- Cofres: dos vistas alternadas (9.3-C) - precedente real de este
+                                 gesto: los ToggleButton "Terraria"/"Mods" de TabbedPickerControl.xaml
+                                 de TEdit. -->
+                            <DockPanel>
+                                <DockPanel.Style>
+                                    <Style TargetType="DockPanel">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Exploration.SelectedCategory}" Value="Chests">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DockPanel.Style>
+                                <!-- RadioButton real (no ToggleButton) - GroupName da la exclusion
+                                     mutua nativa de WPF, mismo criterio que las pildoras de
+                                     categoria de arriba (EnumEqualsConverter tambien sirve para
+                                     int, ver su comentario real). -->
+                                <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
+                                    <RadioButton Style="{StaticResource CategoryChip}" GroupName="CofresVista" Content="Por tipo de cofre" Margin="0,0,3,0"
+                                                 IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}" />
+                                    <RadioButton Style="{StaticResource CategoryChip}" GroupName="CofresVista" Content="Por lo que contienen" Margin="3,0,0,0"
+                                                 IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}" />
+                                </UniformGrid>
+                                <Button DockPanel.Dock="Top" Content="Buscar seleccionados" Tag="Ghost" Margin="0,0,0,8" HorizontalAlignment="Left"
+                                        Command="{Binding Exploration.SearchCheckedInventoryCommand}" />
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding Exploration.Inventory}" ItemTemplate="{StaticResource InventoryRowTemplate}" />
+                                </ScrollViewer>
+                            </DockPanel>
 
-                        <!-- X-f (segunda auditoria de Opus, Fable): "'NPCs que faltan' deberia
-                             empezar colapsado" - un mundo real recien empezado puede tener 13+
-                             NPCs sin conseguir (ver captura real del arnes) que antes se comian
-                             toda la columna de golpe, tapando la lista de NPCs YA en el mundo (la
-                             que de verdad importa para navegar el mapa) nada mas cargar. -->
-                        <Expander DockPanel.Dock="Bottom" Header="NPCs que faltan" Foreground="{StaticResource TextPrimaryBrush}"
-                                  Margin="0,10,0,0" IsExpanded="False"
-                                  Visibility="{Binding Exploration.MissingNpcs.Count, Converter={StaticResource CountToVis}}">
-                            <ItemsControl ItemsSource="{Binding Exploration.MissingNpcs}" Margin="0,6,0,0">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type vm:MissingNpcRowViewModel}">
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
-                                            <Image Source="{Binding IconPath}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,5,0"
-                                                   Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                            <TextBlock Text="{Binding Name}" Style="{StaticResource CaptionText}"
-                                                       Foreground="{StaticResource CalamityBrush}" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </Expander>
+                            <!-- Minerales: inventario en 3 grupos con cabecera + marcado en el mapa
+                                 (9.3-D/11). -->
+                            <DockPanel>
+                                <DockPanel.Style>
+                                    <Style TargetType="DockPanel">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Exploration.SelectedCategory}" Value="Ores">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DockPanel.Style>
+                                <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
+                                    <Button Tag="Accent" Content="Marcar en el mapa" Margin="0,0,3,0"
+                                            ToolTip="Resalta TODAS las posiciones en el mapa (sin tope) y lista las vetas (agrupadas, hasta 1000)"
+                                            Command="{Binding Exploration.MarkOresOnMapCommand}" />
+                                    <Button Tag="Ghost" Content="Quitar marcas" Margin="3,0,0,0"
+                                            Command="{Binding Exploration.ClearOreMarksCommand}" />
+                                </UniformGrid>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel>
+                                        <TextBlock Text="Minerales" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Margin="0,0,0,4" Visibility="{Binding Exploration.OreMetals.Count, Converter={StaticResource CountToVis}}" />
+                                        <ItemsControl ItemsSource="{Binding Exploration.OreMetals}" ItemTemplate="{StaticResource InventoryRowTemplate}" Margin="0,0,0,8" />
+                                        <TextBlock Text="Gemas" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Margin="0,0,0,4" Visibility="{Binding Exploration.OreGems.Count, Converter={StaticResource CountToVis}}" />
+                                        <ItemsControl ItemsSource="{Binding Exploration.OreGems}" ItemTemplate="{StaticResource InventoryRowTemplate}" Margin="0,0,0,8" />
+                                        <TextBlock Text="Otros objetivos" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Margin="0,0,0,4" Visibility="{Binding Exploration.OreTargets.Count, Converter={StaticResource CountToVis}}" />
+                                        <ItemsControl ItemsSource="{Binding Exploration.OreTargets}" ItemTemplate="{StaticResource InventoryRowTemplate}" />
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </DockPanel>
 
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <!-- X-c: la lista lateral de TEXTO si se filtra de verdad (NpcSearchResults) -
-                                 Npcs (el mapa, arriba) se queda siempre completo. -->
-                            <ItemsControl ItemsSource="{Binding Exploration.NpcSearchResults}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
-                                        <Button Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,5"
-                                                HorizontalContentAlignment="Stretch" Cursor="Hand"
-                                                ToolTip="Ir a su posición en el mapa"
-                                                Command="{Binding DataContext.Exploration.GoToNpcCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding}">
-                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Padding="8,5">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
-                                                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
-                                                        <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
-                                                    </StackPanel>
-                                                </StackPanel>
-                                            </Border>
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                            <!-- Objetos: Tiles/Paredes/Liquidos (9.3-E). ALCANCE DELIBERADO: sin el
+                                 arbol de dos niveles por variante de UV que propone el espec -
+                                 "Cofres/Por tipo de cofre" ya cubre el caso real donde mas importa
+                                 distinguir variantes. -->
+                            <DockPanel>
+                                <DockPanel.Style>
+                                    <Style TargetType="DockPanel">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Exploration.SelectedCategory}" Value="Objects">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DockPanel.Style>
+                                <UniformGrid DockPanel.Dock="Top" Columns="3" Margin="0,0,0,4">
+                                    <RadioButton Style="{StaticResource CategoryChip}" GroupName="ObjetosVista" Content="Tiles" Margin="0,0,3,0"
+                                                 IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}" />
+                                    <RadioButton Style="{StaticResource CategoryChip}" GroupName="ObjetosVista" Content="Paredes" Margin="3,0,3,0"
+                                                 IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}" />
+                                    <RadioButton Style="{StaticResource CategoryChip}" GroupName="ObjetosVista" Content="Líquidos" Margin="3,0,0,0"
+                                                 IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}" />
+                                </UniformGrid>
+                                <Button DockPanel.Dock="Top" Content="Buscar seleccionados" Tag="Ghost" Margin="0,4,0,8" HorizontalAlignment="Left"
+                                        Command="{Binding Exploration.SearchCheckedInventoryCommand}" />
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl ItemsSource="{Binding Exploration.Inventory}" ItemTemplate="{StaticResource InventoryRowTemplate}" />
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Grid>
                     </DockPanel>
                 </Grid>
             </DockPanel>

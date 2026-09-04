@@ -70,6 +70,10 @@ internal static class Program
         app.Resources["InverseBoolToVis"] = new InverseBooleanToVisibilityConverter();
         app.Resources["BoolToGridLength"] = new BoolToGridLengthConverter();
         app.Resources["BoolToDouble"] = new BoolToDoubleConverter();
+        // Punto 4 (advisor Opus, selector de categoria de Exploracion - ver
+        // ESPEC-ui-exploracion.md#9.1): mismo motivo real que el resto de converters de arriba -
+        // se olvido la primera vez que se probo esta tanda, mismo bug real ya documentado.
+        app.Resources["EnumEquals"] = new EnumEqualsConverter();
         app.DispatcherUnhandledException += (_, e) =>
         {
             Console.WriteLine("DISPATCHER-EXCEPTION: " + e.Exception);
@@ -2261,6 +2265,105 @@ internal static class Program
                     WaitForDispatcher(100);
                 }
                 catch (Exception ex) { Console.WriteLine("BUSCADOR-MUNDO-FASE2-EXCEPTION: " + ex); }
+
+                // Punto 4 (advisor Opus, "una nueva barra lateral... rama madre... buscar npcs
+                // buscador de cofres buscador o marcador de minerales buscador de objetos" - ver
+                // ESPEC-ui-exploracion.md#9). Verificacion real del rediseño completo de la barra
+                // lateral: las 5 pildoras de categoria (texto REAL leido via UI Automation, no
+                // adivinado de una captura - el Content de un RadioButton se convierte en su
+                // Name real de automatizacion), y cada categoria nueva con datos reales.
+                try
+                {
+                    var todasLasPildoras = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.RadioButton))
+                        .Cast<AutomationElement>().Select(e => e.Current.Name).ToList();
+                    Console.WriteLine($"CATEGORIAS-PILDORAS-DEBUG: TODOS los RadioButton reales del arbol = [{string.Join(" | ", todasLasPildoras)}]");
+                    var pildoras = todasLasPildoras.Where(n => n.StartsWith("Todo") || n.StartsWith("NPCs") || n.StartsWith("Cofres") || n.StartsWith("Minerales") || n.StartsWith("Objetos")).ToList();
+                    Console.WriteLine($"CATEGORIAS-PILDORAS: texto real de las 5 pildoras = [{string.Join(" | ", pildoras)}] (esperado 'Todo', 'NPCs (N)', 'Cofres (N)', 'Minerales (N)', 'Objetos (N)')");
+                    // "Todo" no lleva contador a proposito (busca en todo, no cuenta un tipo) -
+                    // solo las otras 4 tienen que llevar "(N)" real.
+                    if (pildoras.Count != 5 || pildoras.Where(p => p != "Todo").Any(p => !p.Contains('(')))
+                        Console.WriteLine("FALLO: Punto 4 - el texto real de alguna pildora de categoria (salvo 'Todo') no lleva su contador");
+
+                    // NPCs: chip "Bajo tierra" - ya se sabe (H6-08 mas abajo) cuantos NPCs reales
+                    // tiene este mundo; si alguno esta bajo tierra, el chip debe reducir de verdad
+                    // la lista y ordenarla por profundidad.
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Npcs;
+                    DoEvents();
+                    int npcsAntesDelChip = vm.Exploration.NpcSearchResults.Count;
+                    vm.Exploration.NpcFilterUnderground = true;
+                    DoEvents();
+                    int npcsBajoTierra = vm.Exploration.Npcs.Count(n => n.IsUnderground);
+                    bool cuentaCoincide = vm.Exploration.NpcSearchResults.Count == npcsBajoTierra;
+                    Console.WriteLine($"CATEGORIAS-NPCS-SUBSUELO: NPCs reales bajo tierra={npcsBajoTierra} (de {npcsAntesDelChip} totales), tras activar el chip NpcSearchResults.Count={vm.Exploration.NpcSearchResults.Count} (esperado igual)");
+                    if (!cuentaCoincide) Console.WriteLine("FALLO: Punto 4 - el chip 'Bajo tierra' no filtra de verdad NpcSearchResults");
+                    vm.Exploration.NpcFilterUnderground = false;
+
+                    // Cofres: el inventario real (ChestKindCounts, por defecto "por tipo de
+                    // cofre") tiene que tener contenido real, y un clic en la primera fila tiene
+                    // que buscar de verdad (SearchInventoryRowCommand -> WorldSearchResults).
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                    DoEvents();
+                    int cofresInventario = vm.Exploration.Inventory.Count;
+                    if (cofresInventario > 0)
+                    {
+                        var primeraFila = vm.Exploration.Inventory[0];
+                        vm.Exploration.SearchInventoryRowCommand.Execute(primeraFila);
+                        WaitForDispatcher(1000);
+                        Console.WriteLine($"CATEGORIAS-COFRES: Inventory.Count={cofresInventario} (esperado >=1), clic en '{primeraFila.Name}' -> WorldSearchResults.Count={vm.Exploration.WorldSearchResults.Count} (esperado >=1)");
+                        if (vm.Exploration.WorldSearchResults.Count == 0) Console.WriteLine("FALLO: Punto 4 - clic en una fila de inventario de Cofres no encontro nada");
+                    }
+                    else Console.WriteLine("FALLO: Punto 4 - la categoria Cofres no genero ningun inventario con un mundo real que SI tiene cofres");
+
+                    // Minerales: los 3 grupos reales + "Marcar en el mapa" (capa de resaltado sin
+                    // tope + lista de VETAS agrupadas).
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Ores;
+                    DoEvents();
+                    int mineralesPresentes = vm.Exploration.OreMetals.Count + vm.Exploration.OreGems.Count + vm.Exploration.OreTargets.Count;
+                    Console.WriteLine($"CATEGORIAS-MINERALES: presentes en este mundo real = {mineralesPresentes} (metales={vm.Exploration.OreMetals.Count}, gemas={vm.Exploration.OreGems.Count}, otros={vm.Exploration.OreTargets.Count})");
+                    if (mineralesPresentes > 0)
+                    {
+                        var primerMineral = vm.Exploration.OreMetals.FirstOrDefault() ?? vm.Exploration.OreGems.FirstOrDefault() ?? vm.Exploration.OreTargets.First();
+                        primerMineral.IsChecked = true;
+                        // Sin app.Run() real este arnes no puede await-ear sin deadlockear (ver
+                        // el comentario real de X-7/T-13 mas abajo) - fire-and-forget + pumpear
+                        // con WaitForDispatcher hasta que termine, mismo patron ya establecido.
+                        vm.Exploration.MarkOresOnMapCommand.Execute(null);
+                        WaitForDispatcher(2000);
+                        bool hayResaltado = vm.Exploration.WorldHighlight != null;
+                        Console.WriteLine($"CATEGORIAS-MINERALES-MARCAR: '{primerMineral.Name}' ({primerMineral.CountLabel}) -> WorldHighlight != null={hayResaltado} (esperado True), WorldSearchResults.Count={vm.Exploration.WorldSearchResults.Count} (vetas, esperado >=1), resumen='{vm.Exploration.WorldSearchSummary}'");
+                        if (!hayResaltado || vm.Exploration.WorldSearchResults.Count == 0) Console.WriteLine("FALLO: Punto 4 - 'Marcar en el mapa' no genero ni la capa de resaltado ni la lista de vetas");
+
+                        var rtbMinerales = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtbMinerales.Render(window);
+                        var encMinerales = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encMinerales.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbMinerales));
+                        using (var fsMinerales = File.Create(Path.Combine(AppContext.BaseDirectory, "mundo-minerales-marcados.png"))) encMinerales.Save(fsMinerales);
+                        Console.WriteLine("Captura minerales marcados en el mapa -> mundo-minerales-marcados.png");
+
+                        vm.Exploration.ClearOreMarksCommand.Execute(null);
+                        primerMineral.IsChecked = false;
+                    }
+                    else Console.WriteLine("CATEGORIAS-MINERALES: este mundo real no tiene ningun mineral/gema/objetivo de la tabla real, omitido el marcado");
+
+                    // Objetos: inventario real de tiles (vista por defecto).
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Objects;
+                    DoEvents();
+                    Console.WriteLine($"CATEGORIAS-OBJETOS: Inventory.Count={vm.Exploration.Inventory.Count} (esperado >=1, tiles realmente presentes en este mundo)");
+                    if (vm.Exploration.Inventory.Count == 0) Console.WriteLine("FALLO: Punto 4 - la categoria Objetos no genero ningun inventario de tiles");
+
+                    var rtbCategorias = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbCategorias.Render(window);
+                    var encCategorias = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encCategorias.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbCategorias));
+                    using (var fsCategorias = File.Create(Path.Combine(AppContext.BaseDirectory, "mundo-categoria-objetos.png"))) encCategorias.Save(fsCategorias);
+                    Console.WriteLine("Captura categoria Objetos -> mundo-categoria-objetos.png");
+
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.All; // deja el estado limpio para pasos siguientes
+                    DoEvents();
+                }
+                catch (Exception ex) { Console.WriteLine("CATEGORIAS-EXPLORACION-EXCEPTION: " + ex); }
 
                 // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
                 // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de
