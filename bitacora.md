@@ -6884,3 +6884,96 @@ funciona) ni algo que valga la pena rodear solo por la captura. Igual que H5-12/
 disambiguacion real del CLIC en un resultado (`Border`+`InputBindings`, sin precedente de raton
 simulado en este arnes) se verifica a nivel de comando real en vez de un clic de raton
 simulado.
+
+## H5-07 - Sesion/Ajustes reales (Tanda D, quinta auditoria de Opus) - CIERRA LA QUINTA AUDITORIA COMPLETA
+
+Hallazgo real: "lo unico persistido entre sesiones es tamaño/posicion de ventana - cada
+arranque vuelve a Inicio sin personaje... `CharacterFileService.GetAllPlayersDirectories`
+tiene las 2 rutas escritas a fuego - quien tenga Terraria en otro disco/Documentos
+redirigidos/instalacion portable ve el lanzador vacio sin forma de arreglarlo desde la app... no
+existe ninguna pantalla de Ajustes (busqueda 'Ajustes/Settings/Opciones': cero resultados)".
+Viola P1 (practicidad) y P2 (al alcance de la mano). Ultimo hallazgo de la quinta auditoria -
+con este se cierran las 4 Tandas completas (A/B/C/D, 15/15 hallazgos).
+
+**`SettingsService`/`SessionService`** (nuevos, `App/Services`): mismo vehiculo real ya
+establecido (`%LOCALAPPDATA%\Terrakeep\*.json`, mismo patron exacto que
+`WindowPlacementService` - `Load()`/`Save()` estaticos, try/catch best-effort, fichero
+ausente/corrupto nunca revienta el arranque). `settings.json`: carpetas adicionales de
+personajes/mundos + cupo de copias de seguridad. `session.json`: ultimo personaje (ruta+nombre+
+fecha real de modificacion, para detectar cambios por fuera) + pestaña/sub-pestaña/plegado/
+loadout/almacen.
+
+**`CharacterFileService.ExtraPlayerFolders`/`ExtraWorldFolders`** (nuevos, estaticos):
+`GetAllPlayersDirectories`/`GetAllWorldsDirectories` las concatenan a las 2 detectadas de
+siempre - deduplicadas por ruta completa normalizada, filtradas a las que existen de verdad
+(una carpeta borrada despues de configurarla se omite en silencio, no rompe el escaneo).
+
+**`BackupHistoryService.MaxBackupsPerCharacter`**: paso de `const 20` fijo (documentado en H5-04
+como "queda fuera de esta pasada") a propiedad real configurable.
+
+**`SettingsViewModel`** (nuevo): `ExtraCharacterFolders`/`ExtraWorldFolders`
+(`ObservableCollection<string>`) + `BackupHistoryCap` (recortado a >=1, mismo criterio real ya
+usado en `HealthNow`/`HealthMax`). Persiste de inmediato en cada cambio real del usuario
+(Add/Remove/cambio de cupo). El dialogo real de "elegir carpeta" vive en la View
+(`MainWindow.xaml.cs`, `OpenFolderDialog` de `Microsoft.Win32` - .NET 8+, mismo criterio real ya
+establecido en H5-03 con `SaveItemSet`/`LoadItemSet`).
+
+**Bug real de contaminacion de tests, encontrado y arreglado ANTES de comitear nada** (no
+documentado en el hallazgo original, descubierto verificando esta misma pasada): el primer
+diseño llamaba `SessionService.Load()`/`SettingsService.Save()` directamente desde el
+constructor de `MainViewModel`/`SettingsViewModel` - un simple `dotnet test` real en esta
+maquina escribio de verdad un `session.json` sintetico en el `%LOCALAPPDATA%\Terrakeep\` REAL
+de este equipo (confirmado, visto y borrado a mano) porque DECENAS de tests de este proyecto
+construyen `new MainViewModel()` directamente. Arreglado de raiz: `MainViewModel.RestoreSession()`/
+`SettingsViewModel.LoadFromDisk()` son metodos PUBLICOS que NUNCA corren en el constructor -
+solo `MainWindow.xaml.cs` (la View) los llama, una vez, real, mismo criterio ya establecido por
+`WindowPlacementService.Apply()`/`ConfirmDiscardChanges`. La escritura (`SaveSession()`) tampoco
+se llama directo desde `LoadFromPath` (llamado tambien por decenas de tests) - nuevo evento
+`MainViewModel.CharacterLoaded`, con `MainWindow.xaml.cs` como UNICO suscriptor real.
+`SettingsViewModel._suppressPersist` arranca en `true` (modo "solo memoria") hasta que
+`LoadFromDisk()` lo desactiva.
+
+**Segundo bug real, encontrado con el propio arnes**: aplicar las carpetas adicionales de
+Ajustes ANTES del primer escaneo real de Inicio/Exploracion (necesario, si no las carpetas
+recien configuradas no aparecerian hasta el SIGUIENTE reinicio) exigia relanzar
+`RefreshCommand`/`RefreshWorldsCommand` desde `MainWindow` justo despues de `LoadFromDisk()` -
+pero el propio constructor de `HomeViewModel`/`ExplorationViewModel` YA dispara su propio
+escaneo automatico (fire-and-forget) al construirse. Las 2 vueltas quedaban en marcha A LA VEZ
+(ninguna cancela a la otra) y ambas AÑADIAN a la misma lista - visto de verdad en el arnes:
+"10 personaje(s) encontrado(s)", cada uno duplicado exacto. Arreglado con un contador de
+generacion real (`_scanGeneration`) en ambos ViewModels - solo la vuelta MAS RECIENTE aplica su
+resultado, una vuelta vieja que termina tarde se descarta en silencio.
+
+**"Continuar con Nombre"** (Inicio, la accion mas destacada de la pantalla): `HomeViewModel.
+SetLastSession`/`ContinueCommand` - sin fichero real (borrado/movido desde la ultima sesion), no
+ofrece nada; con `LastCharacterModifiedUtc` guardado distinto al real de ahora, aviso explicito
+en la propia tarjeta ("Este archivo cambio desde la ultima vez..."), nunca carga automatica
+silenciosa - un clic explicito del usuario es quien de verdad dispara `CharacterChosen`.
+
+**"Ajustes"** (dentro de "Acerca de", la pestaña con menos densidad, pedido explicito del
+informe): 2 listas reales de carpetas adicionales (con boton ✕ real por fila) + campo de cupo de
+copias de seguridad.
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: **405/405** (145 Core + 260
+ViewModels, +25 tests nuevos: `SettingsViewModelTests.cs` (9, Add/Remove/dedup/recorte de cupo,
+todo headless-safe gracias a `_suppressPersist`), `SessionRestoreTests.cs` (6, staleness real,
+sin sesion/sin fichero, `ContinueCommand` real), `CharacterFileServiceDirectoriesTests.cs` (+4,
+concatenacion/omision de inexistente/deduplicacion reales, con limpieza `try/finally` de los
+campos estaticos), `BackupHistoryServiceTests.cs` (+1, `Purge()` real con un cupo bajo real).
+Arnes de UI Automation ampliado con verificacion real de integracion de extremo a extremo (no
+solo repetir lo que xunit ya cubre): una carpeta adicional real añadida desde Ajustes hace que
+`Home` encuentre de verdad un personaje sintetico que antes no veia (con limpieza real al
+terminar); la seccion "Ajustes" real se renderiza dentro de "Acerca de" (con captura real); el
+cupo de copias cambia de verdad; `session.json` real queda en disco tras `CharacterLoaded`, con
+la ruta correcta del personaje real cargado; y una `MainViewModel` NUEVA (simulando el proximo
+arranque real) ofrece "Continuar con..." el personaje correcto via `RestoreSession()` sin
+cargarlo sola. **2/2 pasadas limpias**, sin NO-FOUND/FALLO/EXCEPTION (arreglado en el camino un
+3er bug real del propio arnes: mi bloque de Ajustes dejaba la navegacion en "Acerca de" sin
+restaurarla, rompiendo B-7 - la fila real de la Libreria solo se realiza en el arbol visual
+cuando "Objetos" es la pestaña activa de verdad, un `TabControl` real no mantiene el contenido
+de una pestaña inactiva. Restaurado a Personaje > Objetos al final del bloque).
+
+**Cierra la quinta auditoria de Opus por completo**: Tanda A (H5-06/08/15), Tanda B (H5-01/04/
+03/02), Tanda C (H5-10/09/11), Tanda D (H5-12/13/14/05/07) - los 15 hallazgos del informe,
+implementados, probados (405 tests unitarios + N pasadas limpias del arnes UIA por cada uno) y
+comiteados uno a uno.

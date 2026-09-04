@@ -48,6 +48,36 @@ public partial class HomeViewModel : ObservableObject
     // H5-04 (quinta auditoria de Opus): copias de seguridad rotativas, ver BackupHistoryService.
     private readonly BackupHistoryService _backupHistory;
 
+    // H5-07 (quinta auditoria de Opus): "session.json recuerda el ULTIMO personaje real - Inicio
+    // ofrece 'Continuar con Nombre' como accion destacada... nunca carga automatica silenciosa".
+    private string? _lastSessionPath;
+    [ObservableProperty] private string? _lastSessionCharacterName;
+    // null = sin aviso real; non-null = el fichero cambio por fuera desde la ultima sesion real
+    // (LastCharacterModifiedUtc guardado no coincide con la fecha real de ahora mismo) - se
+    // sigue pudiendo continuar, pero avisado, nunca en silencio.
+    [ObservableProperty] private string? _lastSessionStalenessWarning;
+
+    public void SetLastSession(TerrakeepSession session)
+    {
+        _lastSessionPath = session.LastCharacterPath;
+        if (_lastSessionPath == null || !File.Exists(_lastSessionPath))
+        {
+            LastSessionCharacterName = null;
+            return;
+        }
+        LastSessionCharacterName = session.LastCharacterName ?? Path.GetFileNameWithoutExtension(_lastSessionPath);
+        var modificadoReal = File.GetLastWriteTimeUtc(_lastSessionPath);
+        LastSessionStalenessWarning = session.LastCharacterModifiedUtc.HasValue && modificadoReal != session.LastCharacterModifiedUtc.Value
+            ? "Este archivo cambió desde la última vez (¿lo editaste con Terraria o por fuera?) - revisa que sigue siendo el que quieres."
+            : null;
+    }
+
+    [RelayCommand]
+    private void Continue()
+    {
+        if (_lastSessionPath != null) CharacterChosen?.Invoke(_lastSessionPath);
+    }
+
     public HomeViewModel(EquipmentAppearanceResolver equipmentAppearance, BackupHistoryService backupHistory)
     {
         _equipmentAppearance = equipmentAppearance;
@@ -70,12 +100,24 @@ public partial class HomeViewModel : ObservableObject
             entry.IsCurrent = string.Equals(entry.FilePath, path, StringComparison.OrdinalIgnoreCase);
     }
 
+    // H5-07 (quinta auditoria de Opus): bug real encontrado y arreglado verificando esta misma
+    // pasada (visto en el propio arnes UIA: "10 personaje(s) encontrado(s)", cada uno duplicado)
+    // - MainWindow.xaml.cs ahora relanza este mismo escaneo tras aplicar las carpetas
+    // adicionales de Ajustes (LoadFromDisk), justo encima del escaneo AUTOMATICO que este mismo
+    // constructor ya dispara (fire-and-forget) - dos vueltas reales de RefreshAsync en marcha a
+    // la vez, cada una AÑADIENDO a Characters en vez de que la segunda sustituya a la primera.
+    // Contador de generacion real: solo la vuelta MAS RECIENTE aplica su resultado - una vuelta
+    // vieja que termina tarde se descarta en silencio en vez de pisar (o duplicar sobre) lo que
+    // ya haya puesto una vuelta mas nueva.
+    private int _scanGeneration;
+
     // El nombre real real de la carpeta escaneada solo hace falta para el mensaje "Ningun
     // personaje encontrado en..." - se calcula en el hilo de UI (barato, una sola llamada a
     // Environment.GetFolderPath) para poder mostrarlo aunque el escaneo en si falle.
     [RelayCommand]
     private async Task RefreshAsync()
     {
+        int myGeneration = ++_scanGeneration;
         Characters.Clear();
         IsScanning = true;
         try
@@ -86,6 +128,7 @@ public partial class HomeViewModel : ObservableObject
             // existen de verdad (0, 1 o las 2), nunca cae a "Documentos entero".
             var dirs = CharacterFileService.GetAllPlayersDirectories();
             var scanned = await Task.Run(() => ScanCharacters(dirs, _equipmentAppearance));
+            if (myGeneration != _scanGeneration) return; // una vuelta MAS NUEVA ya esta en marcha - esta es obsoleta
             foreach (var entry in scanned) Characters.Add(entry);
             ScanMessage = Characters.Count == 0
                 ? dirs.Count == 0
@@ -96,7 +139,10 @@ public partial class HomeViewModel : ObservableObject
         }
         finally
         {
-            IsScanning = false;
+            // Solo la vuelta MAS RECIENTE apaga el indicador - si una vuelta vieja termina
+            // tarde (ej. I/O lento) mientras una mas nueva sigue en marcha, no debe fingir que
+            // el escaneo real ya acabo.
+            if (myGeneration == _scanGeneration) IsScanning = false;
         }
     }
 

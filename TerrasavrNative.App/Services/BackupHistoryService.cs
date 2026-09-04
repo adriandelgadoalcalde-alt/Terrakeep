@@ -17,10 +17,11 @@ public sealed record BackupEntry(string PlrPath, string? TplrPath, DateTime Time
 
 public sealed class BackupHistoryService
 {
-    // N configurable de verdad (pantalla de Ajustes real, H5-07) queda fuera de esta pasada -
-    // 20 es un techo fijo razonable mientras tanto (suficiente para varias sesiones de trabajo
-    // real sin crecer sin limite).
-    private const int MaxBackupsPerCharacter = 20;
+    // H5-07 (quinta auditoria de Opus): "N configurable de verdad (pantalla de Ajustes)" - ya
+    // no es un techo fijo, MainViewModel lo fija desde SettingsService.Load() al arrancar y de
+    // nuevo cada vez que el usuario lo cambia en Ajustes. 20 se queda como valor de fabrica real
+    // (el mismo que H5-04 ya midio como "razonable" antes de que esto fuera configurable).
+    public int MaxBackupsPerCharacter { get; set; } = 20;
 
     private static readonly string BackupsRoot = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "Backups");
@@ -64,7 +65,7 @@ public sealed class BackupHistoryService
         else if (File.Exists(tplrTarget)) File.Delete(tplrTarget);
     }
 
-    private static void Purge(string charDir)
+    private void Purge(string charDir)
     {
         var files = Directory.GetFiles(charDir, "*.plr").OrderByDescending(File.GetLastWriteTimeUtc).ToList();
         foreach (string old in files.Skip(MaxBackupsPerCharacter))

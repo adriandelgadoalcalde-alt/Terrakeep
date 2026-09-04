@@ -1447,6 +1447,30 @@
                          SI hace falta - mientras dura, Characters.Count sigue en 0 Y ScanMessage
                          sigue vacio (nada del bloque de abajo ni del de "Empezar" seria visible
                          todavia sin esto, una pantalla en blanco real durante el escaneo). -->
+                    <!-- H5-07 (quinta auditoria de Opus): "Inicio ofrece 'Continuar con Nombre'
+                         como accion destacada (con aviso de fichero cambiado por fuera si la
+                         fecha no cuadra, nunca carga automatica silenciosa)". La accion MAS
+                         destacada de la pantalla, antes que cualquier otra cosa - un clic real,
+                         explicito, del usuario (Home.ContinueCommand -> CharacterChosen, mismo
+                         camino real que elegir una tarjeta). -->
+                    <Border Background="{StaticResource AccentGradientBrush}" CornerRadius="10" Padding="18,14" Margin="0,0,0,20"
+                            Effect="{StaticResource CardShadow}" Cursor="Hand"
+                            Visibility="{Binding Home.LastSessionCharacterName, Converter={StaticResource NullToVis}}">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding Home.ContinueCommand}" />
+                        </Border.InputBindings>
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="▶" FontSize="16" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                <TextBlock Style="{StaticResource SectionText}" Foreground="White" VerticalAlignment="Center">
+                                    <Run Text="Continuar con " /><Run Text="{Binding Home.LastSessionCharacterName, Mode=OneWay}" FontWeight="Bold" />
+                                </TextBlock>
+                            </StackPanel>
+                            <TextBlock Text="{Binding Home.LastSessionStalenessWarning}" Foreground="White" FontSize="11" TextWrapping="Wrap" Margin="26,6,0,0"
+                                       Visibility="{Binding Home.LastSessionStalenessWarning, Converter={StaticResource NullToVis}}" />
+                        </StackPanel>
+                    </Border>
+
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,26" Visibility="{Binding Home.IsScanning, Converter={StaticResource BoolToVis}}">
                         <ProgressBar IsIndeterminate="True" Width="120" Height="4" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
                         <TextBlock Text="Buscando personajes..." Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center" />
@@ -3435,6 +3459,62 @@
                     </StackPanel>
                     <TextBlock Text="{Binding About.CreditsText}" Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,24"
                                MaxWidth="680" HorizontalAlignment="Left" />
+
+                    <!-- H5-07 (quinta auditoria de Opus): "no existe ninguna pantalla de
+                         Ajustes... quien tenga Terraria en otro disco/Documentos redirigidos/
+                         instalacion portable ve el lanzador vacio sin forma de arreglarlo desde
+                         la app". Sitio real: dentro de "Acerca de" (la pestaña con menos
+                         densidad, pedido explicito del informe). -->
+                    <TextBlock Text="Ajustes" Style="{StaticResource TitleText}" FontSize="20" Margin="0,0,0,4" />
+                    <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,14">
+                        <Run Text="Carpetas adicionales (ademas de las que Terrakeep ya detecta solo en " />
+                        <Run Text="Documents\My Games\Terraria\..." FontStyle="Italic" />
+                        <Run Text=") y cuantas copias de seguridad conservar por personaje." />
+                    </TextBlock>
+
+                    <TextBlock Text="Carpetas adicionales de personajes" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                    <ItemsControl ItemsSource="{Binding Settings.ExtraCharacterFolders}" MaxWidth="680" HorizontalAlignment="Left">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="✕" Style="{StaticResource CircleCloseButton}"
+                                                ToolTip="Quitar esta carpeta"
+                                                Command="{Binding DataContext.Settings.RemoveCharacterFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}" />
+                                        <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="Añadir carpeta de personajes..." Tag="Ghost" Padding="8,4" Margin="0,0,0,18" HorizontalAlignment="Left"
+                            Click="OnAddCharacterFolderClick" />
+
+                    <TextBlock Text="Carpetas adicionales de mundos" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                    <ItemsControl ItemsSource="{Binding Settings.ExtraWorldFolders}" MaxWidth="680" HorizontalAlignment="Left">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Padding="8,5" Margin="0,0,0,6">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="✕" Style="{StaticResource CircleCloseButton}"
+                                                ToolTip="Quitar esta carpeta"
+                                                Command="{Binding DataContext.Settings.RemoveWorldFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}" />
+                                        <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="Añadir carpeta de mundos..." Tag="Ghost" Padding="8,4" Margin="0,0,0,18" HorizontalAlignment="Left"
+                            Click="OnAddWorldFolderClick" />
+
+                    <TextBlock Text="Copias de seguridad a conservar por personaje" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                    <TextBox Text="{Binding Settings.BackupHistoryCap, UpdateSourceTrigger=PropertyChanged}" Width="80" Padding="6,4"
+                             HorizontalAlignment="Left" Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}"
+                             BorderThickness="0" Margin="0,0,0,24"
+                             ToolTip="Cuantas copias rotativas conservar por personaje (H5-04, 'Historial de guardados') - las mas antiguas por encima de este numero se purgan solas" />
 
                     <TextBlock Text="¡Sobre esta versión!" Style="{StaticResource TitleText}" FontSize="20" Margin="0,0,0,4" />
                     <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,14" MaxWidth="680" HorizontalAlignment="Left">

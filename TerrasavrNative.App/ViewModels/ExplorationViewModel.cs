@@ -167,9 +167,16 @@ public partial class ExplorationViewModel : ObservableObject
             entry.IsCurrent = string.Equals(entry.FilePath, path, StringComparison.OrdinalIgnoreCase);
     }
 
+    // H5-07 (quinta auditoria de Opus): mismo bug real y mismo arreglo que
+    // HomeViewModel._scanGeneration - MainWindow.xaml.cs relanza este escaneo tras aplicar las
+    // carpetas adicionales de Ajustes, encima del escaneo automatico que ya dispara este mismo
+    // constructor.
+    private int _scanGeneration;
+
     [RelayCommand]
     private async Task RefreshWorldsAsync()
     {
+        int myGeneration = ++_scanGeneration;
         Worlds.Clear();
         IsScanningWorlds = true;
         try
@@ -179,6 +186,7 @@ public partial class ExplorationViewModel : ObservableObject
             // real que HomeViewModel.RefreshAsync con los personajes.
             var dirs = CharacterFileService.GetAllWorldsDirectories();
             var scanned = await Task.Run(() => ScanWorlds(dirs));
+            if (myGeneration != _scanGeneration) return; // una vuelta MAS NUEVA ya esta en marcha - esta es obsoleta
             foreach (var entry in scanned) Worlds.Add(entry);
             ScanMessage = Worlds.Count == 0
                 ? dirs.Count == 0
@@ -189,7 +197,7 @@ public partial class ExplorationViewModel : ObservableObject
         }
         finally
         {
-            IsScanningWorlds = false;
+            if (myGeneration == _scanGeneration) IsScanningWorlds = false;
         }
     }
 

@@ -149,6 +149,17 @@ public sealed class CharacterFileService
     // fallback a Documentos aqui (a diferencia de los metodos de arriba, pensados para UN unico
     // dialogo con UNA sola carpeta inicial) - un lanzador que escanea varias carpetas debe
     // omitir las que no existen en silencio, nunca "escanear Documentos entero" por error.
+    // H5-07 (quinta auditoria de Opus): "quien tenga Terraria en otro disco/Documentos
+    // redirigidos/instalacion portable ve el lanzador vacio sin forma de arreglarlo desde la
+    // app". Carpetas adicionales reales elegidas a mano en Ajustes (SettingsViewModel) -
+    // static porque GetAllPlayersDirectories/GetAllWorldsDirectories ya son estaticos y los
+    // llaman varios ViewModels sin ninguna instancia real de CharacterFileService a mano
+    // (mismo motivo por el que WindowPlacementService tambien es una clase estatica) - fijado
+    // una vez al arrancar (App.xaml.cs, SettingsService.Load) y de nuevo cada vez que el
+    // usuario edita la lista en Ajustes.
+    public static IReadOnlyList<string> ExtraPlayerFolders { get; set; } = [];
+    public static IReadOnlyList<string> ExtraWorldFolders { get; set; } = [];
+
     public static IReadOnlyList<string> GetAllPlayersDirectories()
     {
         string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -157,6 +168,7 @@ public sealed class CharacterFileService
         var dirs = new List<string>();
         if (Directory.Exists(tModLoader)) dirs.Add(tModLoader);
         if (Directory.Exists(vanilla)) dirs.Add(vanilla);
+        AppendExtraFolders(dirs, ExtraPlayerFolders);
         return dirs;
     }
 
@@ -169,7 +181,22 @@ public sealed class CharacterFileService
         var dirs = new List<string>();
         if (Directory.Exists(tModLoader)) dirs.Add(tModLoader);
         if (Directory.Exists(vanilla)) dirs.Add(vanilla);
+        AppendExtraFolders(dirs, ExtraWorldFolders);
         return dirs;
+    }
+
+    // Una carpeta adicional que ya coincide con una de las 2 detectadas (o repetida a mano dos
+    // veces en Ajustes) no debe escanearse dos veces - comparacion real por ruta completa
+    // normalizada (may no distinguir mayusculas/minusculas, Windows real), no solo texto crudo.
+    private static void AppendExtraFolders(List<string> dirs, IReadOnlyList<string> extra)
+    {
+        foreach (string folder in extra)
+        {
+            if (!Directory.Exists(folder)) continue;
+            string full = Path.GetFullPath(folder);
+            if (dirs.Any(d => string.Equals(Path.GetFullPath(d), full, StringComparison.OrdinalIgnoreCase))) continue;
+            dirs.Add(folder);
+        }
     }
 
     public LoadedCharacter Load(string plrPath)

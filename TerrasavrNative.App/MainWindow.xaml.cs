@@ -25,6 +25,23 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel;
+        // H5-07 (quinta auditoria de Opus): "carpetas adicionales" y "ultimo personaje/pestaña"
+        // real de la sesion anterior - deliberadamente NO dentro de MainViewModel() (ver el
+        // comentario real de RestoreSession/SettingsViewModel.LoadFromDisk: un fichero real en
+        // disco leido en el constructor contaminaria las decenas de tests que construyen un
+        // MainViewModel headless). Se llama aqui, desde la View, igual que
+        // WindowPlacementService.Apply() de mas abajo - ANTES de que el usuario vea nada.
+        // Home/Exploration ya escanearon una vez en su propio constructor (dentro de
+        // MainViewModel(), arriba) sin las carpetas adicionales todavia aplicadas - se
+        // reescanean aqui, ahora que si lo estan, para que la primera pantalla real ya las
+        // incluya.
+        _viewModel.Settings.LoadFromDisk();
+        _viewModel.Home.RefreshCommand.Execute(null);
+        _viewModel.Exploration.RefreshWorldsCommand.Execute(null);
+        _viewModel.RestoreSession();
+        // H5-07: unico suscriptor real de CharacterLoaded - ver el comentario real del evento
+        // en MainViewModel.cs (por que NO es una llamada directa dentro de LoadFromPath).
+        _viewModel.CharacterLoaded += _viewModel.SaveSession;
         _viewModel.Exploration.NavigateToTileRequested += OnNavigateToTile;
         // Auditoria de Opus, T-B (segunda auditoria, Fable): mismo dialogo real de
         // "cambios sin guardar" que OnWindowClosing, ahora tambien antes de cargar OTRO
@@ -50,6 +67,10 @@ public partial class MainWindow : Window
         // el cierre por cambios sin guardar (Cancelar) - el tamaño de ventana no es un dato del
         // personaje, no hay nada que perder al recordarlo de todos modos.
         Services.WindowPlacementService.Save(this);
+        // H5-07 (quinta auditoria de Opus): mismo criterio - la posicion de navegacion (pestaña/
+        // sub-pestaña/loadout/almacen) tampoco es un dato del personaje, se recuerda SIEMPRE al
+        // cerrar (independientemente de si el cierre se cancela despues por cambios sin guardar).
+        _viewModel.SaveSession();
         if (!ConfirmDiscardChanges("cerrar")) e.Cancel = true;
     }
 
@@ -166,6 +187,21 @@ public partial class MainWindow : Window
             WhereIsItSearchBox.Focus();
             WhereIsItSearchBox.SelectAll();
         }), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    // H5-07 (quinta auditoria de Opus): dialogo real de "elegir carpeta" - vive aqui (View),
+    // no en SettingsViewModel (mismo criterio real ya establecido en H5-03 con SaveItemSet/
+    // LoadItemSet - MainViewModel/sus sub-ViewModels se quedan headless de verdad).
+    private void OnAddCharacterFolderClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog { Title = "Elige una carpeta adicional con personajes (.plr)" };
+        if (dialog.ShowDialog(this) == true) _viewModel.Settings.AddCharacterFolder(dialog.FolderName);
+    }
+
+    private void OnAddWorldFolderClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog { Title = "Elige una carpeta adicional con mundos (.wld)" };
+        if (dialog.ShowDialog(this) == true) _viewModel.Settings.AddWorldFolder(dialog.FolderName);
     }
 
     private void OnLoadClick(object sender, RoutedEventArgs e)

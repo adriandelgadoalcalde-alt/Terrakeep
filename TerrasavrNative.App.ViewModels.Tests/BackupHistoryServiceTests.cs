@@ -86,4 +86,27 @@ public sealed class BackupHistoryServiceTests
 
         File.Delete(path);
     }
+
+    // H5-07 (quinta auditoria de Opus): "N configurable de verdad" - MaxBackupsPerCharacter
+    // paso de const fijo a propiedad real; confirma que Purge() SI respeta un valor bajo real
+    // (no solo que compila con el tipo cambiado).
+    [Fact]
+    public void MaxBackupsPerCharacter_ConfigurableAUnValorBajo_PurgaLasMasAntiguasDeVerdad()
+    {
+        var service = new BackupHistoryService { MaxBackupsPerCharacter = 2 };
+        string path = NuevaRutaTemporal();
+        File.WriteAllBytes(path, PlrFile.Write(NuevoPersonaje("Test")));
+        var loaded = new LoadedCharacter(path, null, "Player", NuevoPersonaje("Test"), null, new Dictionary<string, TerrasavrNative.Core.Model.GameItem[]>());
+
+        service.SaveBackup(loaded);
+        Thread.Sleep(1100);
+        service.SaveBackup(loaded);
+        Thread.Sleep(1100);
+        service.SaveBackup(loaded); // 3ª copia real, con el cupo en 2 - la mas antigua debe desaparecer
+
+        var backups = service.ListBackups(path);
+        Assert.Equal(2, backups.Count);
+
+        File.Delete(path);
+    }
 }

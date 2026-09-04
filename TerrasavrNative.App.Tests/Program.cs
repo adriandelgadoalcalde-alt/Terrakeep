@@ -919,6 +919,120 @@ internal static class Program
             Console.WriteLine("H5-05-EXCEPTION: " + ex);
         }
 
+        // H5-07 (quinta auditoria de Opus): "carpetas adicionales de personajes/mundos... N
+        // configurable de copias de seguridad... session.json recuerda el ultimo personaje
+        // real". La logica en si (Add/Remove/deduplicacion/recorte/staleness) ya la cubren
+        // SettingsViewModelTests.cs/SessionRestoreTests.cs a nivel de dominio - aqui lo que
+        // hace falta verificar de verdad es la INTEGRACION real: una carpeta adicional real
+        // AÑADIDA desde Ajustes hace que Home/Exploracion encuentren de verdad un personaje/
+        // mundo que antes no veian, y que SaveSession() (disparado real por MainWindow via
+        // CharacterLoaded) deja un session.json real y legible en disco.
+        try
+        {
+            string extraDir = Path.Combine(Path.GetTempPath(), $"h5-07-extra-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(extraDir);
+            string extraPlr = Path.Combine(extraDir, "PersonajeDeCarpetaExtra.plr");
+            File.WriteAllBytes(extraPlr, PlrFile.Write(new PlrCharacter
+            {
+                Name = "DeCarpetaExtra",
+                Version = 279,
+                PrimaryLoadout = PlrLoadout.CreateEmpty(isPrimary: true),
+                Loadouts = [PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false)],
+            }));
+
+            int antesDeAñadir = vm.Home.Characters.Count(c => c.FilePath == extraPlr);
+            vm.Settings.AddCharacterFolder(extraDir);
+            vm.Home.RefreshCommand.Execute(null);
+            while (vm.Home.IsScanning) DoEvents();
+            DoEvents();
+            bool encontradoTrasAñadir = vm.Home.Characters.Any(c => c.FilePath == extraPlr);
+            Console.WriteLine($"H5-07-CARPETA-EXTRA: personaje real de la carpeta adicional encontrado antes={antesDeAñadir > 0} (esperado False), despues de Settings.AddCharacterFolder={encontradoTrasAñadir} (esperado True)");
+            if (!encontradoTrasAñadir) Console.WriteLine("FALLO: H5-07 - una carpeta adicional real en Ajustes no hizo que Home encontrara el personaje real que hay dentro");
+
+            // Limpieza real: quita la carpeta de Ajustes (persiste settings.json sin ella) y
+            // vuelve a escanear antes de dejar la maquina de este usuario con una carpeta
+            // temporal sintetica permanentemente en su configuracion real.
+            vm.Settings.RemoveCharacterFolderCommand.Execute(extraDir);
+            vm.Home.RefreshCommand.Execute(null);
+            while (vm.Home.IsScanning) DoEvents();
+            Directory.Delete(extraDir, recursive: true);
+            Console.WriteLine($"H5-07-CARPETA-EXTRA-LIMPIEZA: ExtraCharacterFolders tras quitarla={vm.Settings.ExtraCharacterFolders.Count} (esperado 0)");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("H5-07-CARPETA-EXTRA-EXCEPTION: " + ex);
+        }
+
+        try
+        {
+            vm.SelectedTabIndex = 5; // Acerca de
+            DoEvents(); DoEvents();
+            var ajustesHeader = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text),
+                new PropertyCondition(AutomationElement.NameProperty, "Ajustes")));
+            Console.WriteLine($"H5-07-AJUSTES-UI: encabezado real 'Ajustes' encontrado en 'Acerca de'={ajustesHeader != null} (esperado True)");
+            if (ajustesHeader == null) Console.WriteLine("FALLO: H5-07 - la seccion real de Ajustes no aparece en Acerca de");
+
+            // Cupo real de copias de seguridad - cambio real desde la UI, confirma que llega de
+            // verdad a BackupHistoryService.MaxBackupsPerCharacter (no solo al ViewModel).
+            int cupoAntes = vm.Settings.BackupHistoryCap;
+            vm.Settings.BackupHistoryCap = 5;
+            Console.WriteLine($"H5-07-CUPO: BackupHistoryCap real cambiado de {cupoAntes} a {vm.Settings.BackupHistoryCap} (esperado 5)");
+            vm.Settings.BackupHistoryCap = cupoAntes; // deja la maquina real de este usuario tal y como estaba
+
+            var rtbAjustes = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbAjustes.Render(window);
+            var encAjustes = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encAjustes.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbAjustes));
+            using (var fsAjustes = File.Create(Path.Combine(AppContext.BaseDirectory, "h5-07-ajustes.png"))) encAjustes.Save(fsAjustes);
+            Console.WriteLine("Captura pantalla de Ajustes -> h5-07-ajustes.png");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("H5-07-AJUSTES-UI-EXCEPTION: " + ex);
+        }
+        finally
+        {
+            // Deja la navegacion real donde estaba antes de este bloque (Personaje > Objetos,
+            // igual que la dejo H5-05 justo encima) - varias comprobaciones MAS ABAJO en este
+            // mismo arnes (ej. B-7, "Grid real de la fila de Libreria") dan por hecho que esa
+            // es la pestaña activa y buscan en el arbol visual TAL CUAL esta ahora mismo, sin
+            // navegar ellas mismas primero. Bug real del propio arnes, encontrado y arreglado en
+            // esta misma pasada: sin este restablecimiento, B-7 daba NO-FOUND en 1 de 2
+            // ejecuciones (la pestaña quedaba en "Acerca de", el Grid de la Libreria vive dentro
+            // de Objetos y un TabControl real no realiza el contenido de una pestaña inactiva).
+            vm.SelectedTabIndex = 1; // Personaje
+            vm.PersonajeInnerTabIndex = 0; // Objetos
+            DoEvents();
+        }
+
+        try
+        {
+            // A estas alturas ya se cargo un personaje real (H5-05, mas arriba) - CharacterLoaded
+            // ya debio dispararse una vez, y MainWindow.xaml.cs ya debio escribir un session.json
+            // REAL (el mismo fichero que usaria la proxima sesion real de este usuario).
+            string sessionPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "session.json");
+            bool existeReal = File.Exists(sessionPath);
+            string contenido = existeReal ? File.ReadAllText(sessionPath) : "";
+            bool contieneRutaReal = existeReal && contenido.Contains("uia-harness-test.plr");
+            Console.WriteLine($"H5-07-SESION-REAL: session.json real existe={existeReal} (esperado True), contiene la ruta del personaje real cargado={contieneRutaReal} (esperado True)");
+            if (!existeReal || !contieneRutaReal) Console.WriteLine("FALLO: H5-07 - CharacterLoaded no dejo un session.json real y legible con el personaje correcto");
+
+            // "Continuar con Nombre" real: una MainViewModel NUEVA (simulando el proximo
+            // arranque real de la app) debe ofrecer continuar con ESTE MISMO personaje, sin
+            // cargarlo sola - RestoreSession() es quien lee el session.json real de arriba.
+            var vm2 = new MainViewModel();
+            vm2.RestoreSession();
+            Console.WriteLine($"H5-07-CONTINUAR: LastSessionCharacterName real tras RestoreSession()='{vm2.Home.LastSessionCharacterName}' (esperado 'UIA-Test'), IsCharacterLoaded=={vm2.IsCharacterLoaded} (esperado False - nunca carga sola)");
+            if (vm2.Home.LastSessionCharacterName != "UIA-Test") Console.WriteLine("FALLO: H5-07 - 'Continuar con...' no ofrecio el personaje real de la sesion anterior");
+            if (vm2.IsCharacterLoaded) Console.WriteLine("FALLO: H5-07 - RestoreSession() cargo el personaje solo, en silencio (deberia dejarlo a decision explicita del usuario)");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("H5-07-SESION-REAL-EXCEPTION: " + ex);
+        }
+
         // Toggle biblioteca (plegar/desplegar) para confirmar que el binding real funciona.
         // Segunda auditoria de Opus (Fable), B-7 - BUG REAL en esta misma comprobacion: el
         // MaxHeight buscado (460) no coincidia con el real del XAML de entonces (238, residuo

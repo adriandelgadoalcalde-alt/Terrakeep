@@ -29,6 +29,11 @@ public partial class MainViewModel : ObservableObject
     // de consola) se deja pasar siempre - comportamiento identico al de antes de este arreglo.
     public Func<bool>? ConfirmDiscardChanges { get; set; }
 
+    // H5-07 (quinta auditoria de Opus): mismo motivo real que ConfirmDiscardChanges de arriba -
+    // sin ninguna View enganchada (tests headless), no debe pasar nada real (nunca escribir en
+    // disco). MainWindow.xaml.cs es el unico suscriptor real (llama SaveSession()).
+    public event Action? CharacterLoaded;
+
     // Confirmacion visual real de guardado (pedido explicito 2-sep-2026: "debe ser mas visual
     // que se allá confirmado el guardado no solamente un mensajito abajo a la izquierda") -
     // se activa un momento tras un Save() con exito y se apaga sola; StatusMessage se queda
@@ -521,6 +526,9 @@ public partial class MainViewModel : ObservableObject
     public BuffEditViewModel BuffEdit { get; }
     public ItemEditViewModel ItemEdit { get; }
     public HomeViewModel Home { get; }
+    // H5-07 (quinta auditoria de Opus): carpetas adicionales de personajes/mundos + N
+    // configurable de copias de seguridad - "Ajustes" real, ver SettingsViewModel.
+    public SettingsViewModel Settings { get; }
 
     public MainViewModel()
     {
@@ -535,6 +543,11 @@ public partial class MainViewModel : ObservableObject
         // exactamente igual que el dialogo de "Cargar personaje..." de siempre, y salta
         // directo a Personaje - de nada sirve un lanzador de un click si despues hay que ir a
         // buscar la pestaña a mano (P1).
+        // H5-07 (quinta auditoria de Opus): antes de construir Home (que ya escanea personajes
+        // reales en su propio constructor) - las carpetas adicionales de Ajustes deben estar
+        // aplicadas a CharacterFileService.ExtraPlayerFolders ANTES de ese primer escaneo real,
+        // no despues.
+        Settings = new SettingsViewModel(_service.BackupHistory);
         Home = new HomeViewModel(_service.EquipmentAppearance, _service.BackupHistory);
         Home.CharacterChosen += path =>
         {
@@ -604,6 +617,57 @@ public partial class MainViewModel : ObservableObject
             _whereIsItDebounceTimer.Stop();
             ApplyWhereIsItFilter();
         };
+    }
+
+    private int _pendingSessionLoadout;
+    private int _pendingSessionStorageIndex;
+
+    // H5-07 (quinta auditoria de Opus): "session.json: ultimo personaje/pestaña/sub-pestaña,
+    // preferencias de plegado, loadout y almacen seleccionados - Inicio ofrece 'Continuar con
+    // Nombre' como accion destacada". Restaura la navegacion real (nunca carga el personaje
+    // solo - Home.SetLastSession deja esa decision explicita al usuario, ver el comentario real
+    // ahi). El loadout/almacen guardados se aplican mas tarde, en LoadFromPath, en cuanto
+    // EquipmentGroup/StorageGroup existen de verdad.
+    //
+    // Publico y NUNCA llamado desde el constructor a proposito - mismo motivo real por el que
+    // WindowPlacementService.Apply() solo lo llama MainWindow (la View), nunca MainViewModel: un
+    // fichero real en disco (session.json) leido en CADA "new MainViewModel()" contaminaria el
+    // arranque de los DECENAS de tests reales que construyen un MainViewModel headless en este
+    // proyecto (SelectedTabIndex/IsLibraryCollapsed dejarian de ser deterministas entre
+    // ejecuciones). MainWindow.xaml.cs lo llama una vez, real, al construir la ventana.
+    public void RestoreSession()
+    {
+        var session = SessionService.Load();
+        SelectedTabIndex = session.SelectedTabIndex;
+        PersonajeInnerTabIndex = session.PersonajeInnerTabIndex;
+        ObjetosSubTabIndex = session.ObjetosSubTabIndex;
+        IsLibraryCollapsed = session.IsLibraryCollapsed;
+        IsBuffLibraryCollapsed = session.IsBuffLibraryCollapsed;
+        _pendingSessionLoadout = session.SelectedLoadout;
+        _pendingSessionStorageIndex = session.SelectedStorageIndex;
+        Home.SetLastSession(session);
+    }
+
+    // H5-07: captura TODO el estado real de sesion de un plumazo - llamado tras cada carga con
+    // exito (recordar el personaje de inmediato, no solo al cerrar) y al cerrar la ventana
+    // (para capturar tambien la posicion final real de navegacion, mismo criterio ya
+    // establecido por WindowPlacementService.Save).
+    public void SaveSession()
+    {
+        var session = new TerrakeepSession
+        {
+            LastCharacterPath = _loaded?.PlrPath,
+            LastCharacterName = _loaded?.Character.Name,
+            LastCharacterModifiedUtc = _loaded != null && File.Exists(_loaded.PlrPath) ? File.GetLastWriteTimeUtc(_loaded.PlrPath) : null,
+            SelectedTabIndex = SelectedTabIndex,
+            PersonajeInnerTabIndex = PersonajeInnerTabIndex,
+            ObjetosSubTabIndex = ObjetosSubTabIndex,
+            IsLibraryCollapsed = IsLibraryCollapsed,
+            IsBuffLibraryCollapsed = IsBuffLibraryCollapsed,
+            SelectedLoadout = EquipmentGroup?.SelectedLoadout ?? _pendingSessionLoadout,
+            SelectedStorageIndex = StorageGroup?.SelectedIndex ?? _pendingSessionStorageIndex,
+        };
+        SessionService.Save(session);
     }
 
     // Selecciona un slot para el panel "Editar" compartido (equivalente real de app.TabEdit)
@@ -861,6 +925,16 @@ public partial class MainViewModel : ObservableObject
                 ? $"Cargado '{_loaded.Character.Name}' - {calamityCount} objeto(s) de Calamity detectado(s)."
                 : $"Cargado '{_loaded.Character.Name}' - personaje 100% vanilla (sin .tplr).";
             GlobalErrorMessage = null; // H-3: una carga con exito limpia cualquier error global anterior
+            // H5-07: el ULTIMO personaje se recuerda de inmediato, no solo al cerrar la app - si
+            // la app se cierra en seco (corte de luz, Administrador de tareas), la proxima
+            // sesion sigue sabiendo cual era. Evento, NO una llamada directa a SaveSession() -
+            // LoadFromPath lo llaman decenas de tests headless directamente sobre un
+            // "new MainViewModel()" sin ninguna MainWindow real detras; escribir un fichero real
+            // en el disco del usuario en cada uno de esos tests seria un efecto secundario real
+            // e indeseado (paso por aqui de verdad: un session.json con datos sinteticos de test
+            // aparecio en %LOCALAPPDATA%\Terrakeep\ real de esta maquina la primera vez que esto
+            // se probo, antes de este arreglo). MainWindow.xaml.cs es el UNICO suscriptor real.
+            CharacterLoaded?.Invoke();
         }
         catch (Exception ex)
         {
@@ -882,6 +956,17 @@ public partial class MainViewModel : ObservableObject
             UndoLastSaveCommand.NotifyCanExecuteChanged(); // el personaje cargado (y su .bak) ha cambiado
             OnPropertyChanged(nameof(FileVersionLine)); // H-2: archivo/version cambian con cada carga (o desaparecen si fallo)
             Home.UpdateCurrentPath(_loaded?.PlrPath); // I-a: la tarjeta real de Inicio debe reflejar cual esta cargado ahora
+            // H5-07: loadout/almacen recordados de la sesion anterior - EquipmentGroup/
+            // StorageGroup solo existen tras RebuildContainers (arriba), asi que hasta aqui no
+            // se podian aplicar. Solo tiene sentido real con un personaje SI cargado (si fallo,
+            // ambos son null).
+            if (EquipmentGroup != null)
+            {
+                var loadoutOpt = EquipmentGroup.LoadoutOptions.FirstOrDefault(o => o.Value == _pendingSessionLoadout);
+                if (loadoutOpt != null) EquipmentGroup.SelectLoadoutCommand.Execute(loadoutOpt);
+            }
+            if (StorageGroup != null && _pendingSessionStorageIndex >= 0 && _pendingSessionStorageIndex < StorageGroup.Options.Count)
+                StorageGroup.SelectCommand.Execute(StorageGroup.Options[_pendingSessionStorageIndex]);
             // X-g: cubre cargar un personaje distinto mientras Exploracion ya esta a la vista -
             // en el finally (no en RebuildContainers) porque Servers.LoadFrom (arriba) tiene que
             // haber corrido ya para leer sus Spawn Points reales, no los del personaje anterior.
