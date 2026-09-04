@@ -7363,3 +7363,37 @@ muestra el loadout 0 ("Puesto"), coherente con "lo que llevas puesto de verdad a
 mismo criterio ya usado por Inicio); no respeta los 3 bytes de "ocultar equipo" del panel de
 vanidad real (mismo hueco ya documentado en `EquipmentAppearanceResolver.cs`, heredado tal
 cual, no nuevo de esta pasada).
+
+## Cierra la sexta auditoria de Opus - 11 de 12 hallazgos, autonoma, de noche (4-sep-2026)
+
+Sesion nocturna sin el usuario delante (pedido explicito: "elevar esto a Opus... y cuando el
+te de el plan lo ejecutas directamente", el usuario se iba a dormir). El agente Opus devolvio
+12 hallazgos (H6-01 a H6-12) leyendo TODO el codigo decompilado real disponible - **11 de los
+12 quedan implementados, probados, verificados con el arnes real y comiteados esta misma
+noche**, cada uno con su propia entrada arriba: H6-01/02/03/04/05 (el doll sin brazos - la base
+de todo lo demas), H6-12 (buff/debuff de Calamity), H6-08/09/10 (cabezas reales de NPC en el
+mapa), H6-11 (iconos vanilla reales de raiz, 680 objetos que no tenian icono en absoluto),
+H6-06 (el doll de Apariencia ya lleva puesto el equipo real, en vivo). Mas dos correcciones de
+documentacion encontradas investigando (la version real de las dos carpetas decompiladas
+estaba al reves en un comentario viejo).
+
+**Queda pendiente, a proposito**: H6-07 (pelo bajo el casco/pelo largo detras del cuerpo) - el
+propio informe de Opus ya lo marco como fidelidad menor/opcional, y las notas reales de
+`PlayerPreviewRenderer.cs` (H6-01) ya documentaban este mismo hueco como alcance deliberado
+desde el principio ("Pelo bajo casco... y pelo largo detras del cuerpo... tampoco se replican -
+H6-07, fuera de esta pasada"). No se investigo mas a fondo esta noche - el resto de hallazgos,
+todos con impacto real directo en las 6 quejas originales del usuario, tenian prioridad clara.
+
+**Cifras reales de cierre**: 450/450 tests unitarios en verde (173 Core + 277 ViewModels, subio
+de 405 al empezar la noche), arnes de UI Automation con bloques nuevos por cada hallazgo (2/2
+pasadas limpias cada uno, alguna con una falla puntual de temporizacion ajena confirmada como
+inestabilidad, nunca una regresion real), 6 commits reales esta noche (uno por hallazgo/grupo +
+uno de documentacion). `dotnet build`/`dotnet test` verificados en verde justo antes de escribir
+esta entrada de cierre.
+
+**Restos sin comitear, documentados a proposito**: `TerrasavrNative.App/Assets/player/
+body1/`, `body2/`, `body3/` (de un intento abortado de extraer 5 variantes de cuerpo en vez de
+2, de la propia sesion de H6-01) - `rm -rf`/`Remove-Item -Recurse -Force` reales denegados por
+el sistema de permisos en esta sesion desatendida (sin nadie delante para aprobar un borrado
+destructivo sin supervision). Quedan como restos inofensivos en disco, nunca `git add`eados -
+si en algun momento hace falta limpiarlos de verdad, hacerlo a mano o con el usuario delante.
