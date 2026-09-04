@@ -2161,6 +2161,46 @@ internal static class Program
                         vm.Exploration.GoToWorldSearchHitCommand.Execute(primerHit);
                         DoEvents(); DoEvents();
                         Console.WriteLine($"BUSCADOR-MUNDO-NAVEGAR: clic real en '{primerHit.Name}' ({primerHit.Position}) sin excepcion");
+
+                        // Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3 punto 4): navegacion circular
+                        // real. Clic ya dejo IsCurrent=true en primerHit (indice 0) - Siguiente
+                        // real tiene que moverse al indice 1 (o dar la vuelta si solo hay 1).
+                        bool primerHitEraActual = primerHit.IsCurrent;
+                        vm.Exploration.NextWorldSearchResultCommand.Execute(null);
+                        DoEvents();
+                        var actualTrasSiguiente = vm.Exploration.WorldSearchResults.Where(r => r.IsCurrent).ToList();
+                        Console.WriteLine($"BUSCADOR-MUNDO-SIGUIENTE: primerHit era actual={primerHitEraActual} (esperado True), tras Siguiente hay exactamente 1 actual={actualTrasSiguiente.Count == 1} (esperado True), sigue siendo el primero={ReferenceEquals(actualTrasSiguiente.FirstOrDefault(), primerHit)} (esperado False si hay >1 resultado)");
+                        if (!primerHitEraActual || actualTrasSiguiente.Count != 1) Console.WriteLine("FALLO: Fase 3 - Siguiente no deja exactamente un resultado marcado como actual");
+
+                        vm.Exploration.PreviousWorldSearchResultCommand.Execute(null);
+                        DoEvents();
+                        bool volvioAlPrimero = primerHit.IsCurrent;
+                        Console.WriteLine($"BUSCADOR-MUNDO-ANTERIOR: tras Anterior, primerHit vuelve a ser actual={volvioAlPrimero} (esperado True - Siguiente+Anterior es la identidad)");
+                        if (!volvioAlPrimero) Console.WriteLine("FALLO: Fase 3 - Siguiente seguido de Anterior no vuelve al resultado original");
+
+                        // Fase 3 punto 5: distancia al spawn - apagada por defecto (DistanceLabel
+                        // null), al activarla se rellena en TODAS las filas y el orden pasa a ser
+                        // no decreciente por distancia real. El resultado "actual" (primerHit) se
+                        // tiene que conservar aunque cambie de indice al reordenar.
+                        bool sinDistanciaAntes = vm.Exploration.WorldSearchResults.All(r => r.DistanceLabel == null);
+                        vm.Exploration.ShowSpawnDistance = true;
+                        DoEvents();
+                        bool todasConDistancia = vm.Exploration.WorldSearchResults.All(r => r.DistanceLabel != null);
+                        var cabeceraReal = TerrasavrNative.Core.WldFormat.WldReader.ReadHeader(File.ReadAllBytes(worldPath));
+                        bool ordenNoDecreciente = true;
+                        double? distanciaPrevia = null;
+                        foreach (var fila in vm.Exploration.WorldSearchResults)
+                        {
+                            double d = Math.Sqrt(Math.Pow(fila.TileX - cabeceraReal.SpawnX, 2) + Math.Pow(fila.TileY - cabeceraReal.SpawnY, 2));
+                            if (distanciaPrevia is double previa && d < previa - 0.5) { ordenNoDecreciente = false; break; }
+                            distanciaPrevia = d;
+                        }
+                        bool sigueSiendoElActual = primerHit.IsCurrent;
+                        Console.WriteLine($"BUSCADOR-MUNDO-DISTANCIA: sin activar todas null={sinDistanciaAntes} (esperado True), activada todas con DistanceLabel={todasConDistancia} (esperado True), orden no decreciente por distancia={ordenNoDecreciente} (esperado True), el 'actual' se conserva tras reordenar={sigueSiendoElActual} (esperado True)");
+                        if (!sinDistanciaAntes || !todasConDistancia || !ordenNoDecreciente || !sigueSiendoElActual)
+                            Console.WriteLine("FALLO: Fase 3 - 'Ordenar por distancia al spawn' no calcula/ordena/conserva el actual correctamente");
+                        vm.Exploration.ShowSpawnDistance = false;
+                        DoEvents();
                     }
 
                     var rtbBuscadorMundo = new System.Windows.Media.Imaging.RenderTargetBitmap(

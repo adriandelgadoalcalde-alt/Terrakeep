@@ -7744,3 +7744,60 @@ Con esto quedan cerradas las Fases 1 y 2 de `ESPEC-buscador-mundo-tedit.md`. Pen
 documentado como alcance deliberado: Fase 3 (picker avanzado con pestañas tipo TEdit, distancia
 al spawn) y tile entities (maniquies/marcos de item/percheros - formato polimorfico no
 verificado a fondo por el advisor).
+
+## Buscador de mundo, Fase 3: navegacion anterior/siguiente y distancia al spawn (4-sep-2026)
+
+Cierre de `ESPEC-buscador-mundo-tedit.md` (advisor Opus) - pedido explicito del usuario tras ver
+la Fase 1+2 ya funcionando: "dale caña a la pestaña exploracion me gusta el plan". De los 6
+puntos reales de la seccion 5.3 del espec, ya estaban hechos el cuadro de texto (1), la lista de
+resultados (3) y los marcadores en el mapa (6); esta pasada añade los dos que faltaban de verdad
+(4 y 5) - el "modo avanzado" con pestañas tipo TEdit (punto 2) se deja fuera a proposito: el
+propio espec ya señalaba que un cuadro de texto libre con la gramatica real (comas/espacios/
+#id) es "mucho mas natural" para un localizador que el selector de casillas de TEdit (pensado
+para un editor donde ya sabes el id), y esa funcion ya esta cubierta desde la Fase 1.
+
+**Cambios reales**:
+- `WorldSearchHitRowViewModel` pasa a `ObservableObject` (antes una clase de solo lectura): gana
+  `IsCurrent` (el resultado activo de Anterior/Siguiente) y `DistanceLabel` (null = distancia al
+  spawn apagada).
+- `ExplorationViewModel`: `NextWorldSearchResultCommand`/`PreviousWorldSearchResultCommand` -
+  navegacion circular real con modulo (mismo criterio que `NavigateNext`/`NavigatePrevious` de
+  TEdit); `ShowSpawnDistance` (apagada por defecto, "Default false" es el comentario literal de
+  TEdit) - al activarla, calcula la distancia real a `Header.SpawnX/SpawnY` para cada fila y
+  reordena la lista, conservando cual era el resultado "actual" aunque cambie de indice al
+  reordenar. `_lastWorldSearchRows` guarda el orden real del barrido para poder reordenar por
+  distancia sin repetir la busqueda entera. `NavigateToTile` ya solo desplazaba el mapa sin
+  tocar el zoom, asi que el "pan, sin zoom" por defecto real de TEdit ya coincidia sin necesitar
+  ningun flag nuevo.
+- `MainWindow.xaml`: casilla "Ordenar por distancia al spawn", botones ‹/› (Anterior/Siguiente),
+  distancia bajo la posicion de cada fila cuando esta activa, y el marcador "actual" se resalta
+  mas grande en el mapa (mismo objeto que la fila resaltada en la lista, dos plantillas
+  distintas) - gemelo visual sencillo del `ShowCrosshair`/`GoToCurrentResult` real de TEdit, sin
+  necesitar una cruz aparte.
+
+**Decision deliberada, no un descuido**: NO se añadio virtualizacion real (`VirtualizingStack
+Panel`) a la lista de resultados - con el tope real de 1000 filas (`DisplayLimit`) y filas
+ligeras (2-3 `TextBlock`), el coste no medido no justificaba el riesgo real de virtualizacion
+anidada dentro de un `ScrollViewer` (conocida por ser fragil en WPF) sin poder iterar
+visualmente varias veces - mismo criterio ya establecido en el proyecto de "no resolver un
+problema que no existe de verdad" (ver el comentario real de X-7/T-13 sobre por que solo el
+mundo se hizo async).
+
+**Verificacion real**: `dotnet build`/`dotnet test` en verde, **591/591** (sin tests nuevos de
+xunit - `DispatcherTimer`/el debounce real no se pueden probar de verdad sin un Dispatcher con
+mensajes en marcha, que xunit no monta; mismo motivo real por el que el debounce de peinado de
+Apariencia tampoco tiene prueba de xunit, solo de arnes). Arnes de UI Automation ampliado
+(bloques `BUSCADOR-MUNDO-SIGUIENTE`/`-ANTERIOR`/`-DISTANCIA`) con el mundo real ya cargado:
+Siguiente deja EXACTAMENTE un resultado marcado como actual (y no el mismo que antes, con más de
+un resultado real); Siguiente seguido de Anterior es la identidad real (vuelve al mismo
+resultado); activar "distancia al spawn" rellena TODAS las filas y deja el orden real no
+decreciente por distancia real al `SpawnX/SpawnY` verdadero del mundo (calculado de forma
+independiente, sin confiar en el propio codigo bajo prueba); el resultado "actual" se conserva
+tras el reordenado. **2/2 pasadas limpias**, sin NO-FOUND/FALLO/EXCEPTION, captura real
+(`mundo-buscador-general.png`) inspeccionada a mano - el marcador "actual" se ve mas grande y
+con borde blanco en el mapa, tal y como se diseño.
+
+Con esto quedan cerradas las Fases 1, 2 y 3 de `ESPEC-buscador-mundo-tedit.md`. Sigue pendiente,
+documentado y deliberadamente fuera de alcance: tile entities (maniquies/marcos de item/
+percheros - formato polimorfico no verificado a fondo por el advisor) y el "modo avanzado" con
+pestañas tipo TEdit (superfluo mientras el texto libre siga cubriendo el mismo caso de uso).

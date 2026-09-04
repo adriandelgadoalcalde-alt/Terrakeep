@@ -18,7 +18,12 @@ namespace TerrasavrNative.App.ViewModels;
 // hermana real de WhereIsItResultViewModel (que hace lo mismo para el inventario del
 // personaje) - icono deliberadamente ausente en esta primera pasada (tiles/paredes no tienen
 // un catalogo de sprites propio como los objetos, a diferencia de WhereIsIt).
-public sealed class WorldSearchHitRowViewModel(WorldSearchHit hit)
+// Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3): ObservableObject para poder resaltar el
+// resultado "actual" (navegacion anterior/siguiente circular, mismo mecanismo real que
+// GoToCurrentResult/ShowCrosshair de TEdit) y mostrar la distancia al spawn bajo demanda
+// (CalculateDistance real de TEdit, casilla apagada por defecto) sin tener que rehacer la
+// busqueda entera cada vez.
+public sealed partial class WorldSearchHitRowViewModel(WorldSearchHit hit) : ObservableObject
 {
     public int TileX { get; } = hit.X;
     public int TileY { get; } = hit.Y;
@@ -36,6 +41,15 @@ public sealed class WorldSearchHitRowViewModel(WorldSearchHit hit)
         WorldSearchKind.Sign => "Letrero",
         _ => "",
     };
+
+    // Fase 3: null = "distancia al spawn" apagada (no se muestra) - ExplorationViewModel.
+    // ApplyWorldSearchOrder es quien la calcula/limpia, nunca este constructor (el spawn real
+    // solo se conoce con el mundo cargado, no al crear la fila).
+    [ObservableProperty] private string? _distanceLabel;
+
+    // Fase 3: el resultado activo de la navegacion anterior/siguiente - resalta la fila en la
+    // lista Y el marcador en el mapa (mismo objeto, dos plantillas distintas).
+    [ObservableProperty] private bool _isCurrent;
 }
 
 public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int y, bool homeless, int? headIndex) : ObservableObject
@@ -152,12 +166,80 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private string _worldSearchSummary = string.Empty;
     public ObservableCollection<WorldSearchHitRowViewModel> WorldSearchResults { get; } = [];
 
+    // Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3 puntos 4/5): navegacion circular anterior/
+    // siguiente (misma logica real que NavigateNext/NavigatePrevious de TEdit, con modulo) y
+    // distancia opcional al spawn (CalculateDistance real, apagada por defecto -
+    // "Default false" es el comentario literal de TEdit). _lastWorldSearchRows guarda el orden
+    // REAL del barrido (WorldSearch.Run) para poder reordenar por distancia sin repetir la
+    // busqueda - ApplyWorldSearchOrder es el unico sitio que toca WorldSearchResults.
+    [ObservableProperty] private bool _showSpawnDistance;
+    partial void OnShowSpawnDistanceChanged(bool value) => ApplyWorldSearchOrder();
+    private List<WorldSearchHitRowViewModel> _lastWorldSearchRows = [];
+    private int _worldSearchCurrentIndex = -1;
+
     private readonly DispatcherTimer _worldSearchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private CancellationTokenSource? _worldSearchCts;
     private int _worldSearchGeneration;
 
     [RelayCommand]
-    private void GoToWorldSearchHit(WorldSearchHitRowViewModel hit) => NavigateToTile(hit.TileX, hit.TileY);
+    private void GoToWorldSearchHit(WorldSearchHitRowViewModel hit)
+    {
+        _worldSearchCurrentIndex = WorldSearchResults.IndexOf(hit);
+        UpdateCurrentWorldSearchHighlight();
+        NavigateToTile(hit.TileX, hit.TileY);
+    }
+
+    [RelayCommand]
+    private void NextWorldSearchResult() => MoveWorldSearchResult(+1);
+    [RelayCommand]
+    private void PreviousWorldSearchResult() => MoveWorldSearchResult(-1);
+
+    // Circular con modulo (mismo criterio real que NavigateNext/NavigatePrevious de TEdit) -
+    // desde "sin nada seleccionado" (-1), Siguiente va al primero y Anterior al ultimo.
+    private void MoveWorldSearchResult(int delta)
+    {
+        if (WorldSearchResults.Count == 0) return;
+        _worldSearchCurrentIndex = ((_worldSearchCurrentIndex + delta) % WorldSearchResults.Count + WorldSearchResults.Count) % WorldSearchResults.Count;
+        UpdateCurrentWorldSearchHighlight();
+        var row = WorldSearchResults[_worldSearchCurrentIndex];
+        // TEdit: "Default false - just pan, don't zoom" - NavigateToTile ya solo desplaza el
+        // ScrollViewer (ver MainWindow.xaml.cs, OnNavigateToTile), nunca toca Zoom, asi que el
+        // comportamiento por defecto real ya coincide sin necesidad de ningun flag extra.
+        NavigateToTile(row.TileX, row.TileY);
+    }
+
+    private void UpdateCurrentWorldSearchHighlight()
+    {
+        for (int i = 0; i < WorldSearchResults.Count; i++) WorldSearchResults[i].IsCurrent = i == _worldSearchCurrentIndex;
+    }
+
+    // Reordena (o no) WorldSearchResults a partir de _lastWorldSearchRows segun
+    // ShowSpawnDistance - nunca vuelve a recorrer el mundo. Conserva el resultado "actual" a
+    // traves del reordenado (si estaba resaltado antes de activar la distancia, lo sigue
+    // estando despues, aunque haya cambiado de indice).
+    private void ApplyWorldSearchOrder()
+    {
+        var currentRow = _worldSearchCurrentIndex >= 0 && _worldSearchCurrentIndex < WorldSearchResults.Count
+            ? WorldSearchResults[_worldSearchCurrentIndex] : null;
+
+        IEnumerable<WorldSearchHitRowViewModel> ordered = _lastWorldSearchRows;
+        if (ShowSpawnDistance && _world != null)
+        {
+            int sx = _world.Header.SpawnX, sy = _world.Header.SpawnY;
+            double Dist(WorldSearchHitRowViewModel r) => Math.Sqrt(Math.Pow(r.TileX - sx, 2) + Math.Pow(r.TileY - sy, 2));
+            foreach (var row in _lastWorldSearchRows) row.DistanceLabel = $"{Math.Round(Dist(row))} tiles del spawn";
+            ordered = _lastWorldSearchRows.OrderBy(Dist);
+        }
+        else
+        {
+            foreach (var row in _lastWorldSearchRows) row.DistanceLabel = null;
+        }
+
+        WorldSearchResults.Clear();
+        foreach (var row in ordered) WorldSearchResults.Add(row);
+        _worldSearchCurrentIndex = currentRow != null ? WorldSearchResults.IndexOf(currentRow) : -1;
+        UpdateCurrentWorldSearchHighlight();
+    }
 
     // Llamado por MainViewModel al cargar personaje (tras Servers.LoadFrom, que es quien de
     // verdad rellena los Spawn Points reales) y al entrar en esta pestaña (mismo criterio ya
@@ -389,6 +471,8 @@ public partial class ExplorationViewModel : ObservableObject
             WorldSearchText = string.Empty;
             WorldSearchResults.Clear();
             WorldSearchSummary = string.Empty;
+            _lastWorldSearchRows = [];
+            _worldSearchCurrentIndex = -1;
 
             var foundIds = world.Npcs.Select(n => n.Id).ToHashSet();
             MissingNpcs.Clear();
@@ -467,6 +551,8 @@ public partial class ExplorationViewModel : ObservableObject
             // Vaciar el cuadro limpia al instante, sin esperar el debounce - mismo criterio que
             // vaciar cualquier otro buscador de la app.
             _worldSearchCts?.Cancel();
+            _lastWorldSearchRows = [];
+            _worldSearchCurrentIndex = -1;
             WorldSearchResults.Clear();
             WorldSearchSummary = string.Empty;
             return;
@@ -545,6 +631,8 @@ public partial class ExplorationViewModel : ObservableObject
         {
             if (myGeneration == _worldSearchGeneration)
             {
+                _lastWorldSearchRows = [];
+                _worldSearchCurrentIndex = -1;
                 WorldSearchResults.Clear();
                 WorldSearchSummary = "Sin resultados.";
             }
@@ -556,8 +644,9 @@ public partial class ExplorationViewModel : ObservableObject
             var result = await Task.Run(() => WorldSearch.Run(world, query, _tileNames, _npcNames, _itemNames, cts.Token), cts.Token);
             if (myGeneration != _worldSearchGeneration) return; // una busqueda MAS NUEVA ya esta en marcha - esta es obsoleta
 
-            WorldSearchResults.Clear();
-            foreach (var hit in result.Hits) WorldSearchResults.Add(new WorldSearchHitRowViewModel(hit));
+            _lastWorldSearchRows = result.Hits.Select(h => new WorldSearchHitRowViewModel(h)).ToList();
+            _worldSearchCurrentIndex = -1;
+            ApplyWorldSearchOrder(); // aplica el orden real (por distancia si ShowSpawnDistance esta activo) y vuelca WorldSearchResults
             WorldSearchSummary = result.TotalCount == 0
                 ? "Sin resultados."
                 : result.TotalCount > result.Hits.Count

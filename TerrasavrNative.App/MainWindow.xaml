@@ -3360,10 +3360,28 @@
                                                 </Style>
                                             </ItemsControl.ItemContainerStyle>
                                             <ItemsControl.ItemTemplate>
+                                                <!-- Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3 punto 4): el resultado
+                                                     "actual" de Anterior/Siguiente se resalta mas grande - gemelo
+                                                     visual real de ShowCrosshair/GoToCurrentResult de TEdit, sin
+                                                     necesitar una cruz aparte (aqui basta con distinguir el marcador). -->
                                                 <DataTemplate DataType="{x:Type vm:WorldSearchHitRowViewModel}">
                                                     <Ellipse Width="9" Height="9" Margin="-4.5,-4.5,0,0"
                                                              Fill="{StaticResource TealBrush}" Stroke="White" StrokeThickness="1.2"
-                                                             ToolTip="{Binding Name}" Cursor="Hand" />
+                                                             ToolTip="{Binding Name}" Cursor="Hand">
+                                                        <Ellipse.Style>
+                                                            <Style TargetType="Ellipse">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                                        <Setter Property="Width" Value="15" />
+                                                                        <Setter Property="Height" Value="15" />
+                                                                        <Setter Property="Margin" Value="-7.5,-7.5,0,0" />
+                                                                        <Setter Property="StrokeThickness" Value="2" />
+                                                                        <Setter Property="Panel.ZIndex" Value="1" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Ellipse.Style>
+                                                    </Ellipse>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -3455,9 +3473,31 @@
                                          Padding="7,5" Background="{StaticResource BgElevatedBrush}"
                                          Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
                                          FontSize="12" Margin="0,0,0,6" />
-                                <TextBlock Text="{Binding Exploration.WorldSearchSummary}" Style="{StaticResource CaptionText}"
-                                           Margin="0,0,0,6" TextWrapping="Wrap"
-                                           Visibility="{Binding Exploration.WorldSearchSummary, Converter={StaticResource EmptyToCollapsed}}" />
+                                <!-- Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3 punto 5): "distancia al
+                                     spawn", apagada por defecto - mismo criterio real que la casilla
+                                     CalculateDistance de TEdit ("Default false" literal en su codigo). -->
+                                <CheckBox Content="Ordenar por distancia al spawn" IsChecked="{Binding Exploration.ShowSpawnDistance}"
+                                          Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,6"
+                                          Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}" />
+                                <Grid Margin="0,0,0,6"
+                                      Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Exploration.WorldSearchSummary}" Style="{StaticResource CaptionText}"
+                                               TextWrapping="Wrap" VerticalAlignment="Center"
+                                               Visibility="{Binding Exploration.WorldSearchSummary, Converter={StaticResource EmptyToCollapsed}}" />
+                                    <!-- Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3 punto 4): navegacion
+                                         circular anterior/siguiente - mismo gesto real que
+                                         NavigateNext/NavigatePrevious de TEdit (pan, sin zoom, ver el
+                                         comentario real de MoveWorldSearchResult). -->
+                                    <Button Grid.Column="1" Content="&#8249;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
+                                            ToolTip="Resultado anterior" Command="{Binding Exploration.PreviousWorldSearchResultCommand}" />
+                                    <Button Grid.Column="2" Content="&#8250;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
+                                            ToolTip="Resultado siguiente" Command="{Binding Exploration.NextWorldSearchResultCommand}" />
+                                </Grid>
                                 <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto"
                                               Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}">
                                     <ItemsControl ItemsSource="{Binding Exploration.WorldSearchResults}">
@@ -3468,7 +3508,19 @@
                                                         ToolTip="Ir a su posición en el mapa"
                                                         Command="{Binding DataContext.Exploration.GoToWorldSearchHitCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                         CommandParameter="{Binding}">
-                                                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Padding="8,5">
+                                                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Padding="8,5" BorderThickness="1.5">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="BorderBrush" Value="Transparent" />
+                                                                <Style.Triggers>
+                                                                    <!-- Fase 3: la fila del resultado "actual" se resalta igual que
+                                                                         su marcador gemelo en el mapa (mismo objeto, dos sitios). -->
+                                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                                        <Setter Property="BorderBrush" Value="{StaticResource TealBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
                                                         <StackPanel>
                                                             <StackPanel Orientation="Horizontal">
                                                                 <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
@@ -3477,6 +3529,11 @@
                                                                 </Border>
                                                             </StackPanel>
                                                             <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
+                                                            <!-- Fase 3: solo con "Ordenar por distancia al spawn" activo -
+                                                                 ApplyWorldSearchOrder es quien la calcula/limpia. -->
+                                                            <TextBlock Text="{Binding DistanceLabel}" Style="{StaticResource CaptionText}"
+                                                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="10.5"
+                                                                       Visibility="{Binding DistanceLabel, Converter={StaticResource NullToVis}}" />
                                                         </StackPanel>
                                                     </Border>
                                                 </Button>
