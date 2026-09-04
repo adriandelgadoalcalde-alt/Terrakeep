@@ -36,6 +36,10 @@ public partial class BuffSlotViewModel : ObservableObject
     [ObservableProperty] private string? _description;
     [ObservableProperty] private string? _iconPath;
     [ObservableProperty] private bool _isCalamity;
+    // H6-12 (sexta auditoria de Opus, "no hay forma de distinguir buff de debuff"): real, de
+    // CalamityBuffEntry.IsDebuff. Siempre false para buffs vanilla en esta pasada (fuera de
+    // alcance, el usuario lo pidio especificamente para Calamity).
+    [ObservableProperty] private bool _isDebuff;
     [ObservableProperty] private bool _isEmpty = true;
     [ObservableProperty] private int _durationSeconds;
     [ObservableProperty] private bool _isSelected;
@@ -99,6 +103,7 @@ public partial class BuffSlotViewModel : ObservableObject
             Description = null;
             IconPath = null;
             IsCalamity = false;
+            IsDebuff = false;
             return;
         }
 
@@ -109,12 +114,14 @@ public partial class BuffSlotViewModel : ObservableObject
             DisplayName = entry?.DisplayName ?? $"Calamity #{Buff.Id}";
             IconPath = entry?.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/buff_icons/" + entry.Icon : null;
             Description = entry?.Description;
+            IsDebuff = entry?.IsDebuff ?? false;
         }
         else
         {
             DisplayName = _vanillaCatalog.GetDisplayName(Buff.Id);
             IconPath = VanillaBuffIconResolver.GetIconPath(Buff.Id);
             Description = _vanillaCatalog.GetDescription(Buff.Id);
+            IsDebuff = false; // vanilla fuera de alcance de H6-12, ver el comentario del campo
         }
     }
 

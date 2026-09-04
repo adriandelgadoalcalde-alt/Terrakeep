@@ -78,7 +78,7 @@ public sealed class CharacterFileService
     {
         string assetsDir = Path.Combine(AppContext.BaseDirectory, "Assets");
         CalamityCatalog = CalamityCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "catalog.json"));
-        CalamityBuffCatalog = CalamityBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "buffs.json"), Path.Combine(assetsDir, "calamity_buff_descriptions.json"));
+        CalamityBuffCatalog = CalamityBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "buffs.json"), Path.Combine(assetsDir, "calamity_buff_descriptions.json"), Path.Combine(assetsDir, "calamity", "buff_debuffs.json"));
         RoguePrefixCatalog = RoguePrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "rogue_prefixes.json"));
         VanillaCatalog = VanillaItemCatalog.LoadFromFile(
             Path.Combine(assetsDir, "vanilla_item_names.json"),

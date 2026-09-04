@@ -1240,6 +1240,37 @@ internal static class Program
             }
             else Console.WriteLine("T4-BUFF-CALAMITY: sin slot de Buffs vacio real - omitido");
 
+            // Sexta auditoria de Opus, H6-12 ("los buffs de Calamity no distinguen buff de
+            // debuff"): coloca un DEBUFF real de Calamity (Main.debuff[base.Type]=true en su
+            // propio ModBuff, ver scripts/extraer-debuffs-calamity.js) en otro slot vacio y
+            // confirma el punto morado real (IsDebuff) - a diferencia del bloque T4 de arriba,
+            // que usa el PRIMER buff del catalogo sin saber si es debuff o no.
+            try
+            {
+                var serviceFieldH612 = typeof(MainViewModel).GetField("_service", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var svcH612 = (TerrasavrNative.App.Services.CharacterFileService)serviceFieldH612!.GetValue(vm)!;
+                var debuffEntry = svcH612.CalamityBuffCatalog.Entries.First(e => e.IsDebuff);
+                var otherEmptySlot = vm.Buffs.Container?.Slots.FirstOrDefault(s => s.IsEmpty);
+                if (otherEmptySlot != null)
+                {
+                    otherEmptySlot.PlaceBuff(debuffEntry.SyntheticId);
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"H6-12-DEBUFF: DisplayName={otherEmptySlot.DisplayName} IsCalamity={otherEmptySlot.IsCalamity} (esperado True) IsDebuff={otherEmptySlot.IsDebuff} (esperado True)");
+                    if (!otherEmptySlot.IsDebuff) Console.WriteLine("FALLO: H6-12 - un debuff real de Calamity no quedo marcado IsDebuff=true");
+                    var rtbDebuff = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbDebuff.Render(window);
+                    var encDebuff = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encDebuff.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbDebuff));
+                    using var fsDebuff = File.Create(Path.Combine(AppContext.BaseDirectory, "h6-12-buff-debuff.png"));
+                    encDebuff.Save(fsDebuff);
+                    Console.WriteLine("Captura punto de debuff real -> h6-12-buff-debuff.png");
+                    otherEmptySlot.ClearCommand.Execute(null); // deja el slot como estaba para el resto del arnes
+                }
+                else Console.WriteLine("H6-12-DEBUFF: sin slot de Buffs vacio real - omitido");
+            }
+            catch (Exception ex) { Console.WriteLine("H6-12-DEBUFF-EXCEPTION: " + ex); }
+
             // Verificacion real de T-5 (auditoria de Opus, Bloque 5): la leyenda solo vive en
             // el hueco real de "sin seleccion" - se deselecciona a proposito para verla.
             if (emptyBuffSlot != null) emptyBuffSlot.IsSelected = false;

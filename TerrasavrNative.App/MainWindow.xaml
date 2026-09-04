@@ -766,6 +766,11 @@
                     <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <StackPanel MaxWidth="240">
                             <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                            <!-- H6-12 (sexta auditoria de Opus): rotulo real "Debuff" en el tooltip,
+                                 no solo el punto morado del icono - visible tambien para quien no
+                                 recuerde el significado del color. -->
+                            <TextBlock Text="Debuff (efecto negativo)" Foreground="{StaticResource DebuffBrush}" FontWeight="Bold"
+                                       Visibility="{Binding IsDebuff, Converter={StaticResource BoolToVis}}" />
                             <TextBlock Text="{Binding Description}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                                        Visibility="{Binding Description, Converter={StaticResource NullToVis}}" />
                         </StackPanel>
@@ -811,6 +816,14 @@
                              HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0"
                              Visibility="{Binding IsCalamity, Converter={StaticResource BoolToVis}}"
                              ToolTip="Buff de Calamity" />
+                    <!-- H6-12 (sexta auditoria de Opus, "no hay forma de distinguir buff de
+                         debuff"): esquina OPUESTA al punto de Calamity de arriba (un buff de
+                         Calamity puede ser debuff a la vez - los dos puntos deben poder verse
+                         juntos sin pisarse). -->
+                    <Ellipse Width="8" Height="8" Fill="{StaticResource DebuffBrush}"
+                             HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="2,0,0,2"
+                             Visibility="{Binding IsDebuff, Converter={StaticResource BoolToVis}}"
+                             ToolTip="Debuff (efecto negativo)" />
                     <!-- Bu-a (segunda auditoria de Opus, Fable): "T-14 se porto a objetos y no a
                          buffs, aunque los comentarios declaran a los dos paneles como gemelos" -
                          calco literal del flash real de SlotCompactTemplate (T-14), mismo canal
@@ -1023,6 +1036,10 @@
                     <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <StackPanel MaxWidth="240">
                             <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                            <!-- H6-12 (sexta auditoria de Opus): mismo rotulo real que
+                                 BuffSlotCompactTemplate. -->
+                            <TextBlock Text="Debuff (efecto negativo)" Foreground="{StaticResource DebuffBrush}" FontWeight="Bold"
+                                       Visibility="{Binding IsDebuff, Converter={StaticResource BoolToVis}}" />
                             <TextBlock Text="{Binding Description}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                                        Visibility="{Binding Description, Converter={StaticResource NullToVis}}" />
                         </StackPanel>
@@ -1046,6 +1063,14 @@
                     <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                    <!-- H6-12: mismo punto morado que la rejilla de Buffs (BuffSlotCompactTemplate)
+                         - el borde ya esta ocupado por "es de Calamity" aqui, asi que "es debuff"
+                         necesita su propia señal. Esquina SUPERIOR-izquierda (no inferior): el
+                         boton "Colocar" real ocupa todo el borde inferior cuando esta visible. -->
+                    <Ellipse Width="8" Height="8" Fill="{StaticResource DebuffBrush}"
+                             HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2,2,0,0"
+                             Visibility="{Binding IsDebuff, Converter={StaticResource BoolToVis}}"
+                             ToolTip="Debuff (efecto negativo)" />
                     <!-- Auditoria de Opus, T-10: suelo real de legibilidad - 8px era mas pequeño
                          que cualquier otro texto real de la app (el resto usa 9px o mas para
                          palabras reales), aqui subido a 9. -->

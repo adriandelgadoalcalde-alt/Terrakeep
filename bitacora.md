@@ -7109,3 +7109,65 @@ Tanda D); el doll de la pestaña Apariencia en si todavia no muestra la armadura
 (eso ya lo hace la tarjeta de "Inicio" desde la ronda anterior - unificarlo es H6-06, Tanda D).
 Siguiente: Tanda C (H6-11 iconos vanilla animados, H6-12 buff/debuff de Calamity, H6-08/09/10
 cabezas de NPC en el mapa), despues Tanda D.
+
+### H6-12 - Distinguir buff de debuff en Calamity (Tanda C, sexta auditoria de Opus)
+
+**Hallazgo real**: pedido explicito del usuario ("los buffs de calamity no se distinguen si son
+buenos o malos, tienen que aparecer con algun marcador visual") - `BuffSlotViewModel`/
+`BuffCatalogEntryViewModel` no llevaban ningun dato de si un buff de Calamity es en realidad un
+DEBUFF (efecto negativo), asi que la Libreria de buffs y la rejilla de "Buffs" del personaje
+mostraban un veneno o una maldicion exactamente igual que un buff positivo.
+
+**Fuente real, no una lista a mano**: cada `ModBuff` real de Calamity marca
+`Main.debuff[base.Type] = true;` (o `= false;` explicito) dentro de su PROPIO
+`SetStaticDefaults()` - confirmado leyendo varios reales (`CalamityMod/Buffs/StatDebuffs/
+Malnourished.cs`, `CalamityMod/Buffs/DamageOverTime/Bane.cs`, y buffs positivos que lo ponen a
+`false` a proposito, `CalamityMod/Buffs/Potions/Zen.cs`). Los buffs que heredan de una base
+compartida sin `SetStaticDefaults` propio (`BaseSummonBuff` y sus ~90 subclases de invocacion)
+nunca tocan `Main.debuff` - por defecto ese array real de Terraria es TODO-false, asi que "sin
+mencion" es de verdad "no es debuff", no una omision. **Ni la categoria ("DamageOverTime"/
+"StatDebuffs" del propio `buffs.json`) ni el nombre sirven de heuristica fiable** - las 39
+entradas de "DamageOverTime" SI son todas debuffs, pero "StatDebuffs"/"StatBuffs" mezclan
+positivos y negativos de verdad, comprobado leyendo varios casos reales de cada categoria.
+
+`scripts/extraer-debuffs-calamity.js` (nuevo) escanea los 312 ficheros .cs reales de
+`CalamityMod/Buffs/**` con una regex sobre `Main\.debuff\[base\.Type\]\s*=\s*(true|false);` y
+escribe `Assets/calamity/buff_debuffs.json` (solo los `internal` que SI son debuffs) - **108
+debuffs reales de 312 buffs**, de los cuales **105 caen dentro del catalogo real ya usado por
+la app** (`buffs.json`, 305 entradas - las 3 que faltan son buffs internos/no listados en el
+catalogo). Verificacion cruzada del propio script: las 305 entradas de `buffs.json` casan 1:1
+con un fichero de clase real (0 sin encontrar) - el campo `internal` SI es el nombre de clase
+real, no una coincidencia parcial.
+
+**Cambios reales**: `CalamityBuffEntry.IsDebuff` (nuevo, `CalamityBuffCatalog.LoadFromStream`
+gana un tercer stream, `buff_debuffs.json`); `BuffSlotViewModel.IsDebuff`/
+`BuffCatalogEntryViewModel.IsDebuff` lo propagan (vanilla se deja siempre en `false` - el
+usuario lo pidio especificamente para Calamity, extraer el equivalente vanilla real de
+`Main.debuff[]` exigiria localizar donde vanilla lo inicializa, que en el snapshot decompilado
+de este equipo no vive en un fichero dedicado tipo `BuffID.cs` - fuera de esta pasada,
+documentado). Punto MORADO nuevo (`DebuffColor`/`DebuffBrush`, `#9b59b6`, deliberadamente
+distinto de `CalamityColor` para que "es de Calamity" y "es negativo" no se confundan cuando
+las dos son ciertas a la vez) en la esquina LIBRE de cada tarjeta - esquina inferior-izquierda
+en la rejilla de Buffs (el punto rojo de Calamity ya ocupa la superior-derecha), superior-
+izquierda en la tarjeta de la Libreria (el borde ya esta ocupado por "es de Calamity" ahi, y el
+boton "Colocar" real ocupa todo el borde inferior). Rotulo real "Debuff (efecto negativo)"
+tambien en el tooltip de los dos sitios, no solo el punto de color.
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: **428/428** (160 Core, +5 tests
+nuevos: `CalamityBuffCatalogTests.cs` - fixture sintetica + prueba de humo real contra
+`buff_debuffs.json` real, spot-check "Malnourished"=debuff real/"AbandonedSlimeBuff"=buff real,
+recuento en rango 90-130 con margen real para no romper si Calamity actualiza el mod; 268
+ViewModels, +3 tests nuevos: `BuffSlotDebuffTests.cs` - colocar un debuff real de Calamity marca
+`IsDebuff=true`, un buff positivo lo deja en `false`, un slot vacio nunca es debuff). Arnes de
+UI Automation ampliado con un bloque nuevo (`H6-12-DEBUFF`) que coloca un debuff real
+("Aflicción del Absorbedor") en un slot vacio real y confirma `IsCalamity=True IsDebuff=True`
+mas una captura real (`h6-12-buff-debuff.png`) - confirmada a mano: el punto morado se ve real
+en la esquina del icono, junto al punto rojo de Calamity de otro slot sin pisarse. **2/2
+pasadas limpias**, sin NO-FOUND/FALLO/EXCEPTION (una unica falla observada en la primera pasada
+de `dotnet test` completo, `ExplorationWorldLauncherTests` - confirmada como inestable bajo
+carga, no una regresion real: verde en solitario y verde de nuevo en la siguiente pasada
+completa, sin tocar ningun codigo relacionado con Exploracion/mundos en esta seccion).
+
+**Fuera de esta pasada, documentado**: equivalente vanilla de `IsDebuff` (el usuario lo pidio
+especificamente para Calamity); ordenar/filtrar la Libreria de buffs por buff/debuff (solo se
+pidio distinguir visualmente, no filtrar).

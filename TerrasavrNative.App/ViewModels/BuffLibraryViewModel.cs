@@ -48,7 +48,7 @@ public partial class BuffLibraryViewModel : CatalogBrowserViewModel<BuffCatalogE
         foreach (var entry in service.CalamityBuffCatalog.Entries)
         {
             string? iconPath = entry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/buff_icons/" + entry.Icon : null;
-            var item = new BuffCatalogEntryViewModel(entry.DisplayName, entry.SyntheticId, true, iconPath, entry.Description);
+            var item = new BuffCatalogEntryViewModel(entry.DisplayName, entry.SyntheticId, true, iconPath, entry.Description, entry.IsDebuff);
             _all.Add(item);
             _byId[entry.SyntheticId] = item;
         }

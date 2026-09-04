@@ -44,6 +44,12 @@
          (solo aparece como contorno de panel, nunca dentro de un slot) para que ambas señales
          no se confundan. El 6º hueco (Experto) reutiliza PinkColor, ya existente. -->
     <Color x:Key="MasterGoldColor">#ffd24a</Color>
+    <!-- H6-12 (sexta auditoria de Opus, "los buffs de Calamity no distinguen buff de debuff"):
+         morado veneno/maldicion, deliberadamente distinto de CalamityColor (ya reservado para
+         "esto es de Calamity", con o sin relacion a que sea bueno o malo) - un buff de Calamity
+         puede llevar los dos puntos a la vez (mod + negativo), asi que tienen que ser colores
+         que no se confundan entre si. -->
+    <Color x:Key="DebuffColor">#9b59b6</Color>
 
     <SolidColorBrush x:Key="BgPrimaryBrush" Color="{StaticResource BgPrimaryColor}" />
     <SolidColorBrush x:Key="BgSecondaryBrush" Color="{StaticResource BgSecondaryColor}" />
@@ -59,6 +65,7 @@
     <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource AccentPressedColor}" />
     <SolidColorBrush x:Key="AccentMutedBrush" Color="{StaticResource AccentMutedColor}" />
     <SolidColorBrush x:Key="CalamityBrush" Color="{StaticResource CalamityColor}" />
+    <SolidColorBrush x:Key="DebuffBrush" Color="{StaticResource DebuffColor}" />
     <SolidColorBrush x:Key="TealBrush" Color="{StaticResource TealColor}" />
     <SolidColorBrush x:Key="PinkBrush" Color="{StaticResource PinkColor}" />
     <SolidColorBrush x:Key="OrangeBrush" Color="{StaticResource OrangeColor}" />
