@@ -6803,3 +6803,84 @@ aplica tal cual a este arnes - sigue sin poder ALCANZAR un slot por `AutomationE
 `Border` no tiene peer propio), pero SI gana la capacidad de operar sobre un slot conocido por
 teclado real una vez localizado por `VisualTreeHelper` (demostrado arriba) - una via de
 verificacion nueva y real, aunque no exactamente la que el informe imaginaba.
+
+## H5-05 - Buscador "¿Dónde lo tengo?" (Tanda D, quinta auditoria de Opus)
+
+Hallazgo real: "un personaje real ocupa ~354 slots (50 inventario, 4×40 almacenes, 12×10
+equipo por loadout, 10 mascota/montura/tinte, 4 monedas, 4 municion), repartidos en 3 niveles
+de pestañas. Los 4 buscadores existentes (Libreria, Libreria de buffs, Investigacion, NPCs)
+buscan en catalogos o en el mundo - ninguno busca en el propio personaje. '¿Donde tengo el Ala
+de murcielago?' solo se responde a ojo." Viola P1 (practicidad), P2 (al alcance) y P3 (todo
+visible de golpe).
+
+**Dato ya resuelto, sin recalcular nada nuevo**: `BuildsViewModel.RefreshOwnership` (Bd-d) ya
+recorre exactamente los 2 origenes reales de todo slot del personaje - nuevo
+`MainViewModel.AllOwnedSlotsWithContainers()` recorre los MISMOS 2 origenes
+(`Containers` + `EquipmentGroup.AllContainers`), emparejando cada `ItemSlotViewModel` no vacio
+con su `ContainerViewModel` real (para la navegacion, ver mas abajo).
+
+**`MainViewModel`**: `IsWhereIsItOpen`/`WhereIsItSearchText`/`WhereIsItSummary`/
+`WhereIsItResults` nuevos, mismo debounce real de 180ms ya establecido (`DispatcherTimer`,
+`LibrarySearchGrammar.Matches` - la MISMA gramatica real de la Libreria: coma=OR, espacio=AND,
+`#id`, `#a-b`, pedido explicito del informe "reutilizando la gramatica ya existente").
+`ApplyWhereIsItFilter` publica a proposito (mismo motivo real que `ResearchEditableTests.cs` ya
+establecio con `SelectCategoryCommand` - sortea el debounce sin depender de un Dispatcher real
+en un test xunit plano).
+
+**`ItemSlotViewModel.IsSearchMatch`** (nuevo, `true` por defecto): mismo patron real ya
+validado por X-c para los NPCs del mapa - resaltar los coincidentes, ATENUAR (Opacity 0.35, no
+`Visibility`) los que no, nunca ocultarlos del todo. Canal propio en el `Style.Triggers` de
+`SlotCompactTemplate` (no compite con seleccionado/equipado/Calamity, mismo criterio real de
+T-4/E-1).
+
+**"¿Duplicados?" y "¿cuantos entre todos los almacenes?"** (pedido explicito del informe,
+"aprovechar para responder tambien"): el resumen real agrupa las coincidencias por id de
+objeto - un objeto repetido en mas de un slot a la vez se cuenta y se anuncia en la misma frase
+("N resultado(s) - M de ellos repartidos en K objeto(s) duplicado(s)."), verificado con datos
+REALES del propio arnes (13 resultados de "hierro", 6 duplicados reales entre la fixture del
+principio de la sesion).
+
+**Navegacion real** (`NavigateToWhereIsItResultCommand`): un clic en un resultado salta a
+Personaje/Objetos, elige la sub-pestaña, el almacen (`StorageGroup.SelectCommand`, mapeo real
+`bank`/`bank2`/`bank3`/`bank4` -> indice 0-3) o el loadout+vista de Equipamiento
+(`EquipmentGroup.SelectLoadoutCommand`/`SelectKindCommand`, parseado del `ContainerViewModel.Key`
+real "loadoutNKind") segun corresponda, selecciona el slot en el panel Editar y dispara el
+mismo flash real de T-14 - pedido explicito del informe ("un clic navega, selecciona el slot y
+dispara el flash de T-14"). `WhereIsItResultViewModel.ContainerKey` viaja SOLO para esto (nunca
+se muestra - `ContainerName`, ya real y legible en `ItemSlotViewModel`, es lo que se ve).
+
+**Cabecera global** (`MainWindow.xaml`): boton real "🔍 ¿Dónde lo tengo?" junto a "Cargar
+personaje" (visible en CUALQUIER pestaña, como Guardar - pedido explicito), `Popup` real
+(`StaysOpen="False"`, se cierra solo con un clic fuera, sin manejador nuevo) anclado al boton -
+primer uso real de `Popup` en el proyecto (los selectores de peinado/tinte usan un Border
+superpuesto a proposito por un motivo real distinto, cursor en movimiento constante - un
+`Popup` estatico anclado a un boton no tiene ese problema).
+
+**Reset real al cargar otro personaje**: `WhereIsItResults`/`WhereIsItSearchText`/
+`WhereIsItSummary`/`IsWhereIsItOpen` se limpian en `RebuildContainers` (mismo sitio real que
+`Research.Reset()`) - un resultado apuntando a un `ItemSlotViewModel` ya descartado no tiene
+ningun sitio real al que navegar.
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: **385/385** (145 Core + 240
+ViewModels, +10 tests nuevos `WhereIsItTests.cs` - busqueda por id en Inventario/Almacen/
+Equipamiento de un loadout real, `IsSearchMatch` real con y sin busqueda, duplicados reales,
+sin resultados, navegacion real a un almacen NO seleccionado y a un loadout+vista NO
+seleccionados, y limpieza real al cargar otro personaje). Arnes de UI Automation ampliado
+(`H5-05-BOTON`/`H5-05-ABRIR`/`H5-05-BUSQUEDA`/`H5-05-NAVEGAR`) con verificacion real de extremo
+a extremo: clic real (`InvokePattern`, el boton SI es invocable a diferencia de las tarjetas de
+H5-12) sobre el boton de la cabecera **desde la pestaña Exploración** (a proposito, demuestra
+que es visible en cualquier pestaña) abre el panel real, busqueda real por texto con debounce
+real encuentra el objeto real ya colocado por la fixture (con duplicados reales detectados), y
+`NavigateToWhereIsItResultCommand` navega/selecciona/cierra de verdad. **2/2 pasadas limpias**,
+sin NO-FOUND/FALLO/EXCEPTION.
+
+Fuera de esta pasada, documentado: la captura de pantalla del propio panel
+(`h5-05-donde-lo-tengo.png`) NO muestra el contenido real del `Popup` - limitacion real y
+conocida de WPF (un `Popup` abierto renderiza en su propia ventana de Windows aparte, un HWND
+independiente del `Window` principal; `RenderTargetBitmap.Render(window)` solo captura el
+arbol visual del `Window`, nunca el contenido de un Popup ya desacoplado a su propio HWND) - no
+es un defecto de la funcion en si (todas las comprobaciones reales, no visuales, confirman que
+funciona) ni algo que valga la pena rodear solo por la captura. Igual que H5-12/H5-14, la
+disambiguacion real del CLIC en un resultado (`Border`+`InputBindings`, sin precedente de raton
+simulado en este arnes) se verifica a nivel de comando real en vez de un clic de raton
+simulado.

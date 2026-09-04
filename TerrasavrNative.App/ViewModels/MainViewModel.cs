@@ -599,6 +599,11 @@ public partial class MainViewModel : ObservableObject
         };
         _lastSavedRefreshTimer.Tick += (_, _) => RefreshLastSavedText();
         _lastSavedRefreshTimer.Start();
+        _whereIsItDebounceTimer.Tick += (_, _) =>
+        {
+            _whereIsItDebounceTimer.Stop();
+            ApplyWhereIsItFilter();
+        };
     }
 
     // Selecciona un slot para el panel "Editar" compartido (equivalente real de app.TabEdit)
@@ -618,6 +623,128 @@ public partial class MainViewModel : ObservableObject
         if (BuffEdit.Slot != null) BuffEdit.Slot.IsSelected = false;
         slot.IsSelected = true;
         BuffEdit.Slot = slot;
+    }
+
+    // H5-05 (quinta auditoria de Opus): "no se puede buscar entre los ~350 slots que el
+    // personaje ya tiene - ¿Donde tengo el Ala de murcielago? solo se responde a ojo". El dato
+    // ya esta resuelto (Bd-d, BuildsViewModel.RefreshOwnership recorre exactamente estos mismos
+    // contenedores) - aqui solo faltaba ENSEÑARLO donde de verdad hace falta.
+    [ObservableProperty] private bool _isWhereIsItOpen;
+    [ObservableProperty] private string _whereIsItSearchText = string.Empty;
+    [ObservableProperty] private string _whereIsItSummary = string.Empty;
+    public ObservableCollection<WhereIsItResultViewModel> WhereIsItResults { get; } = [];
+    private readonly DispatcherTimer _whereIsItDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
+
+    partial void OnWhereIsItSearchTextChanged(string value)
+    {
+        _whereIsItDebounceTimer.Stop();
+        _whereIsItDebounceTimer.Start();
+    }
+
+    [RelayCommand]
+    private void ToggleWhereIsIt() => IsWhereIsItOpen = !IsWhereIsItOpen;
+
+    // Recorre TODOS los slots reales del personaje (mismos 2 origenes que Bd-d ya agrega:
+    // Containers - Inventario/Banco/Caja fuerte/Fragua/Boveda/Monedas/Municion - y
+    // EquipmentGroup.AllContainers - Armadura/Vanidad/Tintes de los 4 loadouts) - el
+    // ContainerViewModel real de cada uno viaja junto al slot solo para la navegacion
+    // (WhereIsItResultViewModel.ContainerKey), nunca para mostrar (ContainerName, el texto
+    // legible real que el slot ya lleva, es lo que se ve).
+    private IEnumerable<(ItemSlotViewModel Slot, ContainerViewModel Container)> AllOwnedSlotsWithContainers()
+    {
+        foreach (var c in Containers)
+            foreach (var s in c.Slots)
+                if (!s.IsEmpty) yield return (s, c);
+        if (EquipmentGroup != null)
+            foreach (var c in EquipmentGroup.AllContainers)
+                foreach (var s in c.Slots)
+                    if (!s.IsEmpty) yield return (s, c);
+    }
+
+    // Publica a proposito (no solo llamada desde el Tick del debounce) - mismo criterio real ya
+    // establecido en el proyecto para poder probar el filtro sin depender de un Dispatcher real
+    // corriendo (ver ResearchEditableTests.cs, que sortea el mismo problema con
+    // SelectCategoryCommand en vez de esperar el debounce de busqueda por texto).
+    public void ApplyWhereIsItFilter()
+    {
+        WhereIsItResults.Clear();
+        var todos = AllOwnedSlotsWithContainers().ToList();
+
+        if (string.IsNullOrWhiteSpace(WhereIsItSearchText))
+        {
+            // Sin busqueda activa, todos "coinciden" (mismo criterio real de X-c/IsSearchMatch
+            // por defecto) - nada atenuado en ningun sitio de la app.
+            foreach (var (slot, _) in todos) slot.IsSearchMatch = true;
+            WhereIsItSummary = string.Empty;
+            return;
+        }
+
+        string query = WhereIsItSearchText;
+        var coincidencias = todos.Where(p => LibrarySearchGrammar.Matches(
+            query, p.Slot.Item.Id, p.Slot.DisplayName.ToLowerInvariant(), null)).ToList();
+
+        var idsCoincidentes = coincidencias.Select(p => p.Slot).ToHashSet();
+        foreach (var (slot, _) in todos) slot.IsSearchMatch = idsCoincidentes.Contains(slot);
+
+        // L-c: mismo tope real ya medido para la Libreria - una busqueda amplia sobre el
+        // personaje entero (ej. una letra suelta) no debe pintar cientos de filas de golpe.
+        const int maxResults = 40;
+        foreach (var (slot, container) in coincidencias.Take(maxResults))
+            WhereIsItResults.Add(new WhereIsItResultViewModel(slot, container.Key));
+
+        // H5-05: "aprovechar para responder tambien ¿duplicados? y ¿cuantos entre todos los
+        // almacenes?" - duplicados reales = mismo id de objeto en mas de un slot a la vez.
+        var duplicados = coincidencias.GroupBy(p => p.Slot.Item.Id).Where(g => g.Count() > 1).ToList();
+        string extra = duplicados.Count > 0
+            ? $" - {duplicados.Sum(g => g.Count())} de ellos repartidos en {duplicados.Count} objeto(s) duplicado(s)"
+            : string.Empty;
+        WhereIsItSummary = coincidencias.Count == 0
+            ? "Sin resultados en tu personaje."
+            : coincidencias.Count > maxResults
+                ? $"Mostrando {maxResults} de {coincidencias.Count} resultado(s){extra} - afina la búsqueda."
+                : $"{coincidencias.Count} resultado(s){extra}.";
+    }
+
+    // Salta a la pestaña/sub-pestaña/loadout/almacen real donde vive el slot elegido, lo
+    // selecciona en el panel Editar y dispara el mismo flash real de "acabo de editarse" (T-14) -
+    // aunque no se haya editado nada, es la misma señal visual de "aqui esta" que ya conoce
+    // el usuario del resto de la app.
+    [RelayCommand]
+    private void NavigateToWhereIsItResult(WhereIsItResultViewModel? result)
+    {
+        if (result == null) return;
+        SelectedTabIndex = (int)AppTab.Personaje;
+        PersonajeInnerTabIndex = (int)PersonajeInnerTab.Objetos;
+
+        string key = result.ContainerKey;
+        if (key is "bank" or "bank2" or "bank3" or "bank4")
+        {
+            ObjetosSubTabIndex = IsStorageExpanded ? 1 : 2; // H4-02: en Amplio, Almacenes vive junto a Inventario, no como pestaña propia
+            int indice = key switch { "bank" => 0, "bank2" => 1, "bank3" => 2, _ => 3 };
+            if (StorageGroup != null) StorageGroup.SelectCommand.Execute(StorageGroup.Options[indice]);
+        }
+        else if (key.StartsWith("loadout", StringComparison.Ordinal))
+        {
+            ObjetosSubTabIndex = 0; // Equipamiento
+            if (EquipmentGroup != null)
+            {
+                int loadout = key["loadout".Length] - '0';
+                string kindPart = key[("loadout".Length + 1)..];
+                int kindValue = kindPart switch { "Items" => (int)EquipmentKind.Items, "Social" => (int)EquipmentKind.Social, "Dyes" => (int)EquipmentKind.Dyes, _ => (int)EquipmentKind.Items };
+                var loadoutOpt = EquipmentGroup.LoadoutOptions.FirstOrDefault(o => o.Value == loadout);
+                if (loadoutOpt != null) EquipmentGroup.SelectLoadoutCommand.Execute(loadoutOpt);
+                var kindOpt = EquipmentGroup.KindOptions.FirstOrDefault(o => o.Value == kindValue);
+                if (kindOpt != null) EquipmentGroup.SelectKindCommand.Execute(kindOpt);
+            }
+        }
+        else
+        {
+            ObjetosSubTabIndex = 1; // Inventario (tambien Monedas/Municion, que viven dentro de ese mismo panel)
+        }
+
+        SelectSlot(result.Slot);
+        result.Slot.TriggerEditFlash();
+        IsWhereIsItOpen = false;
     }
 
     // Usado por las tarjetas de la pagina de Inicio para saltar directamente a una seccion.
@@ -872,6 +999,13 @@ public partial class MainViewModel : ObservableObject
         CoinsContainer = null;
         AmmoContainer = null;
         Research.Reset();
+        // H5-05: la lista de slots reales es NUEVA de cero (personaje distinto, o ninguno) - un
+        // resultado de la busqueda anterior apuntando a un ItemSlotViewModel ya descartado no
+        // tiene ningun sitio real al que navegar.
+        WhereIsItResults.Clear();
+        WhereIsItSearchText = string.Empty;
+        WhereIsItSummary = string.Empty;
+        IsWhereIsItOpen = false;
         if (_loaded == null) { Builds.RefreshOwnership([]); MoneyText = "0"; return; }
 
         // Contenedores con fusion real de Calamity (mismos 7 que CalamityCharacterSync cubre).

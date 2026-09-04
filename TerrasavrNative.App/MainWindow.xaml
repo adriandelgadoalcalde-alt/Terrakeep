@@ -384,6 +384,15 @@
                                 <Setter Property="BorderThickness" Value="2" />
                                 <Setter Property="Effect" Value="{StaticResource AccentGlow}" />
                             </DataTrigger>
+                            <!-- H5-05 (quinta auditoria de Opus): "¿Dónde lo tengo?" - mismo
+                                 patron real ya validado por X-c para los NPCs del mapa (resaltar
+                                 los que coinciden en vez de ocultar los que no, opacidad real,
+                                 nunca Visibility). Canal propio (Opacity del Border entero, no
+                                 compite con seleccionado/equipado/Calamity - mismo criterio real
+                                 de T-4/E-1 de arriba). -->
+                            <DataTrigger Binding="{Binding IsSearchMatch}" Value="False">
+                                <Setter Property="Opacity" Value="0.35" />
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
@@ -1215,6 +1224,15 @@
                          descubre no mejora la practicidad" - los 4 atajos reales (OnWindowKeyDown)
                          ya existian, solo faltaba decirlo donde el usuario los va a usar. -->
                     <Button Content="Cargar personaje (.plr)..." Tag="Accent" Click="OnLoadClick" ToolTip="Ctrl+O" />
+                    <!-- H5-05 (quinta auditoria de Opus): "no se puede buscar entre los ~350
+                         slots que el personaje ya tiene - ¿Donde tengo el Ala de murcielago?
+                         solo se responde a ojo". Boton real en la cabecera global (visible en
+                         CUALQUIER pestaña, como Guardar) - x:Name para que el Popup de abajo
+                         pueda anclarse a el. -->
+                    <Button x:Name="WhereIsItButton" Content="🔍 ¿Dónde lo tengo?" Margin="10,0,0,0"
+                            Command="{Binding ToggleWhereIsItCommand}"
+                            ToolTip="Busca un objeto por nombre o #id entre TODOS los slots reales de tu personaje (Inventario, Almacenes, Equipamiento de los 4 loadouts...)"
+                            Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}" />
                     <!-- H5-01 (quinta auditoria de Opus): "casi toda edicion del personaje es
                          irreversible" - historial real de deshacer/rehacer (UndoStack), no solo
                          a nivel de fichero como "Deshacer último guardado" de al lado. El
@@ -1317,6 +1335,68 @@
                                    Visibility="{Binding LastSavedText, Converter={StaticResource NullToVis}}" />
                     </StackPanel>
                 </StackPanel>
+
+                <!-- H5-05 (quinta auditoria de Opus): "¿Dónde lo tengo?" - panel real anclado al
+                     boton de la cabecera, visible en CUALQUIER pestaña. StaysOpen=False lo
+                     cierra solo con un clic fuera (mismo gesto real que cualquier menu/combo de
+                     Windows) - no hace falta ningun manejador nuevo para cerrarlo a mano. -->
+                <Popup IsOpen="{Binding IsWhereIsItOpen}" PlacementTarget="{Binding ElementName=WhereIsItButton}"
+                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+                       Opened="OnWhereIsItPopupOpened">
+                    <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource AccentBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="14" Width="400" Effect="{StaticResource CardShadow}">
+                        <StackPanel>
+                            <TextBlock Text="¿Dónde lo tengo?" Style="{StaticResource SectionText}" Margin="0,0,0,8" />
+                            <TextBox x:Name="WhereIsItSearchBox" Text="{Binding WhereIsItSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                     Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" FontSize="12"
+                                     ToolTip="Coma = varias búsquedas a la vez, espacio = todas las palabras a la vez, #123 = por id, #100-200 = por rango de id" />
+                            <TextBlock Text="{Binding WhereIsItSummary}" Style="{StaticResource CaptionText}" Margin="0,8,0,0" TextWrapping="Wrap"
+                                       Visibility="{Binding WhereIsItSummary, Converter={StaticResource EmptyToCollapsed}}" />
+                            <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0"
+                                          Visibility="{Binding WhereIsItResults.Count, Converter={StaticResource CountToVis}}">
+                                <ItemsControl ItemsSource="{Binding WhereIsItResults}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:WhereIsItResultViewModel}">
+                                            <!-- Un clic navega, selecciona el slot real y dispara el
+                                                 flash de T-14 - pedido explicito del informe. -->
+                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Margin="0,0,0,6" Padding="8,6"
+                                                    Cursor="Hand">
+                                                <Border.InputBindings>
+                                                    <MouseBinding MouseAction="LeftClick"
+                                                                  Command="{Binding DataContext.NavigateToWhereIsItResultCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                  CommandParameter="{Binding}" />
+                                                </Border.InputBindings>
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Image Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform" Margin="0,0,8,0"
+                                                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}" />
+                                                        <TextBlock Style="{StaticResource CaptionText}">
+                                                            <Run Text="{Binding ContainerName, Mode=OneWay}" />
+                                                            <Run Text=" - slot " />
+                                                            <Run Text="{Binding SlotNumber, Mode=OneWay}" />
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Border>
+                </Popup>
             </Grid>
         </Border>
 

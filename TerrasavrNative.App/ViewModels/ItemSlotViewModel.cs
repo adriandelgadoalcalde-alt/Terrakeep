@@ -112,6 +112,13 @@ public partial class ItemSlotViewModel : ObservableObject
     // real de usuario (nunca durante la carga de un personaje) - ver TriggerEditFlash().
     [ObservableProperty] private bool _justEdited;
 
+    // H5-05 (quinta auditoria de Opus): "¿Dónde lo tengo?" - mismo patron real ya validado por
+    // X-c para los NPCs del mapa (resaltar los que coinciden en vez de ocultar los que no,
+    // nunca desaparecen del todo). true por defecto (sin busqueda activa, todos coinciden) -
+    // MainViewModel.ApplyWhereIsItFilter lo recalcula sobre TODOS los slots reales del
+    // personaje en cada busqueda.
+    [ObservableProperty] private bool _isSearchMatch = true;
+
     public bool IsNotEmpty => !IsEmpty;
     // El tooltip normal solo tiene sentido con el slot lleno (ver comentario mas abajo en
     // MainWindow.xaml), pero el 6º/7º hueco de accesorio quiere explicarse TAMBIEN vacio -

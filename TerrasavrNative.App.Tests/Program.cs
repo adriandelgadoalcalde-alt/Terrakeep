@@ -861,6 +861,64 @@ internal static class Program
             Console.WriteLine("H5-13-BUFFS-EXCEPTION: " + ex);
         }
 
+        // H5-05 (quinta auditoria de Opus): "no se puede buscar entre los ~350 slots que el
+        // personaje ya tiene". Verificacion real de extremo a extremo: clic real (InvokePattern
+        // via UI Automation, el boton SI es invocable a diferencia de las tarjetas de la
+        // Libreria de H5-12) sobre el boton de la cabecera abre el Popup real, se escribe una
+        // busqueda real y se espera el debounce real (180ms) antes de mirar Results - la
+        // navegacion en si (clic en un resultado, Border+InputBindings, mismo caso sin
+        // precedente de raton simulado que H5-12) se verifica a nivel de comando real, no de
+        // ViewModel sintetico (el personaje/servicio son los mismos reales de todo el arnes).
+        try
+        {
+            vm.SelectedTabIndex = 4; // Exploracion - a proposito, para demostrar que el boton es visible en CUALQUIER pestaña (pedido explicito del informe)
+            DoEvents();
+            var whereIsItButton = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
+                new PropertyCondition(AutomationElement.NameProperty, "🔍 ¿Dónde lo tengo?")));
+            Console.WriteLine($"H5-05-BOTON: boton real encontrado en 'Exploración'={whereIsItButton != null} (esperado True - visible en cualquier pestaña)");
+            if (whereIsItButton != null && whereIsItButton.TryGetCurrentPattern(InvokePattern.Pattern, out var whereIsItInvokePat))
+            {
+                ((InvokePattern)whereIsItInvokePat).Invoke();
+                DoEvents(); DoEvents();
+                Console.WriteLine($"H5-05-ABRIR: IsWhereIsItOpen tras el clic real={vm.IsWhereIsItOpen} (esperado True)");
+                if (!vm.IsWhereIsItOpen) Console.WriteLine("FALLO: H5-05 - el clic real sobre el boton de la cabecera no abrio el panel");
+            }
+            else Console.WriteLine("FALLO: H5-05 - boton real 'Dónde lo tengo' NO-FOUND en la cabecera");
+
+            // Objeto real ya colocado por la fixture del principio (linea ~324: id 1 = Pico de
+            // hierro, slot 0 de Inventario) - busqueda real por texto, con el debounce real.
+            vm.WhereIsItSearchText = "hierro";
+            WaitForDispatcher(300);
+            Console.WriteLine($"H5-05-BUSQUEDA: WhereIsItResults.Count={vm.WhereIsItResults.Count} (esperado >=1), resumen='{vm.WhereIsItSummary}'");
+            if (vm.WhereIsItResults.Count == 0) Console.WriteLine("FALLO: H5-05 - la busqueda real por texto no encontro el objeto real ya colocado por la fixture");
+            var rtbWhereIsIt = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbWhereIsIt.Render(window);
+            var encWhereIsIt = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encWhereIsIt.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbWhereIsIt));
+            using (var fsWhereIsIt = File.Create(Path.Combine(AppContext.BaseDirectory, "h5-05-donde-lo-tengo.png"))) encWhereIsIt.Save(fsWhereIsIt);
+            Console.WriteLine("Captura panel Dónde lo tengo -> h5-05-donde-lo-tengo.png");
+
+            // Navegacion real (el gesto de clic en si, Border+InputBindings, no tiene precedente
+            // de raton simulado en este arnes - mismo criterio ya documentado en H5-12).
+            if (vm.WhereIsItResults.Count > 0)
+            {
+                var resultado = vm.WhereIsItResults[0];
+                var slotDestino = resultado.Slot;
+                vm.NavigateToWhereIsItResultCommand.Execute(resultado);
+                DoEvents(); DoEvents();
+                bool navegoBien = vm.SelectedTabIndex == 1 /* AppTab.Personaje, privado - mismo criterio real ya usado en este arnes */
+                    && ReferenceEquals(vm.ItemEdit.Slot, slotDestino) && !vm.IsWhereIsItOpen;
+                Console.WriteLine($"H5-05-NAVEGAR: SelectedTabIndex={vm.SelectedTabIndex} (esperado Personaje), ItemEdit.Slot es el real={ReferenceEquals(vm.ItemEdit.Slot, slotDestino)} (esperado True), IsWhereIsItOpen={vm.IsWhereIsItOpen} (esperado False)");
+                if (!navegoBien) Console.WriteLine("FALLO: H5-05 - NavigateToWhereIsItResultCommand no navego/selecciono/cerro correctamente");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("H5-05-EXCEPTION: " + ex);
+        }
+
         // Toggle biblioteca (plegar/desplegar) para confirmar que el binding real funciona.
         // Segunda auditoria de Opus (Fable), B-7 - BUG REAL en esta misma comprobacion: el
         // MaxHeight buscado (460) no coincidia con el real del XAML de entonces (238, residuo

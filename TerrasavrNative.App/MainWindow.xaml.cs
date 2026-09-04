@@ -156,6 +156,18 @@ public partial class MainWindow : Window
         textBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
     }
 
+    // H5-05 (quinta auditoria de Opus): mismo gesto real ya usado por Ctrl+F (LibrarySearchBox) -
+    // abrir el panel de "¿Dónde lo tengo?" deja el cursor listo para teclear de inmediato, sin
+    // exigir un clic extra en el propio cuadro.
+    private void OnWhereIsItPopupOpened(object sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            WhereIsItSearchBox.Focus();
+            WhereIsItSearchBox.SelectAll();
+        }), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
     private void OnLoadClick(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
