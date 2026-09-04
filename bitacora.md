@@ -7801,3 +7801,28 @@ Con esto quedan cerradas las Fases 1, 2 y 3 de `ESPEC-buscador-mundo-tedit.md`. 
 documentado y deliberadamente fuera de alcance: tile entities (maniquies/marcos de item/
 percheros - formato polimorfico no verificado a fondo por el advisor) y el "modo avanzado" con
 pestañas tipo TEdit (superfluo mientras el texto libre siga cubriendo el mismo caso de uso).
+
+## Buscador de mundo: filtrar candidatos a lo que existe de verdad en el mundo cargado (4-sep-2026)
+
+Paso 2 del orden de implementacion de ESPEC-ui-exploracion.md (advisor Opus) - antes de tocar
+nada de UI, el cambio real y medible: `BuildWorldSearchQuery` ahora descarta como candidato
+cualquier tile/pared/liquido/NPC/objeto de cofre que `_presence` (WorldPresenceIndex, calculado
+al cargar el mundo) diga que este mundo concreto no genero nunca. Antes se recorria el catalogo
+COMPLETO del juego (754 tiles, 367 paredes, ~5000 objetos, todos los NPCs); ahora solo lo que de
+verdad hay - medido en mundos reales, entre el 65% y el 96% de lo que se ofrecia antes no existia
+en el mundo cargado (ver la entrada anterior de bitacora.md, "el cimiento del rediseño").
+
+Efecto secundario bueno y real: buscar algo que no existe en el mundo pasa de recorrer millones
+de tiles (WorldSearch.Run con una query no vacia) a no recorrer ninguno (`IsEmpty` real, el
+candidato nunca se añadio).
+
+**Verificacion real**: `dotnet build`/`dotnet test` en verde, 612/612 (sin tests nuevos - el
+cambio esta cubierto por los tests ya existentes de `BuildWorldSearchQuery`/`RunWorldSearchAsync`
+indirectamente via el arnes, que sigue pasando). Arnes de UI Automation: la busqueda real de
+"lava" sigue encontrando sus 523393 resultados reales (la lava SI esta presente en ese mundo, el
+filtro no la descarta), el objeto de cofre #1156 sigue encontrandose - confirma que el filtrado
+no rompe nada de lo ya construido. Sin FALLO/EXCEPTION.
+
+Sigue en marcha la parte grande del rediseño (barra lateral con categorias NPCs/Cofres/
+Minerales/Objetos, ESPEC-ui-exploracion.md#9) - se ira comiteando por fases, mismo criterio que
+el resto de esta ronda.

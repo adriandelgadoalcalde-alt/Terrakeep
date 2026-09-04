@@ -587,31 +587,54 @@ public partial class ExplorationViewModel : ObservableObject
 
     private WorldSearchQuery BuildWorldSearchQuery(string text)
     {
+        // Punto 4 (advisor Opus, "que entre todas las opciones solo puedan salir los objetos que
+        // tiene ese mundo" - ver ESPEC-ui-exploracion.md#10.4): un tile/pared/NPC/objeto de cofre
+        // que este mundo NUNCA genero no es candidato, aunque el catalogo completo del juego lo
+        // conozca. Medido en mundos reales (ESPEC-ui-exploracion.md#6): entre el 65% y el 96% de
+        // lo que se ofrecia antes de este cambio no existia en el mundo cargado. Sin mundo
+        // cargado (_presence == null, no deberia pasar de verdad porque el cuadro esta
+        // deshabilitado, pero por si acaso) se cae al catalogo completo en vez de no ofrecer nada.
         var tileTypes = new HashSet<int>();
         foreach (var (id, name) in _tileNames.AllTiles)
+        {
+            if (_presence != null && !_presence.HasTile(id)) continue;
             if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) tileTypes.Add(id);
+        }
 
         var wallIds = new HashSet<int>();
         foreach (var (id, name) in _tileNames.AllWalls)
+        {
+            if (_presence != null && !_presence.HasWall(id)) continue;
             if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) wallIds.Add(id);
+        }
 
         var npcIds = new HashSet<int>();
         foreach (var (id, name) in _npcNames.All)
+        {
+            if (_presence != null && !_presence.HasNpc(id)) continue;
             if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) npcIds.Add(id);
+        }
 
         var liquidTypes = new HashSet<byte>();
         foreach (var (id, name) in LiquidCandidates)
+        {
+            if (_presence != null && !_presence.HasLiquid((byte)id)) continue;
             if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) liquidTypes.Add((byte)id);
+        }
 
         // Fase 2 (ESPEC-buscador-mundo-tedit.md#5.2): objetos reales dentro de cofres, mismo
         // criterio de candidatos que tiles/paredes/NPCs (recorrer el catalogo entero, casar con
-        // la gramatica real). Los NetId de Calamity reales que un .wld pueda guardar no estan
-        // en VanillaItemCatalog - simplemente no se ofrecen como candidato, el objeto seguira
-        // apareciendo en la lista si se busca por su cofre de otra forma (id/#) o no aparecera,
+        // la gramatica real, ahora filtrado a lo realmente presente). Los NetId de Calamity
+        // reales que un .wld pueda guardar no estan en VanillaItemCatalog - simplemente no se
+        // ofrecen como candidato por NOMBRE (pero SI aparecen en el inventario real de la
+        // categoria Cofres, que sale de _presence, no del catalogo - ver RebuildInventory),
         // nunca se inventa una coincidencia.
         var chestItemIds = new HashSet<int>();
         foreach (var (id, name) in _itemNames.AllEntries())
+        {
+            if (_presence != null && !_presence.HasChestItem(id)) continue;
             if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) chestItemIds.Add(id);
+        }
 
         // Fase 2: los letreros son texto libre, sin catalogo de ids - se reutiliza la MISMA
         // gramatica (comas=OR, espacios=AND) tratando el texto de cada letrero como si fuera el
