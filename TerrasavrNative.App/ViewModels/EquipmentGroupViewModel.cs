@@ -78,6 +78,11 @@ public partial class EquipmentGroupViewModel : ObservableObject
     // ya) - se deja tal cual porque los tests headless ya lo usan para fijar el loadout 0 de
     // forma explicita, no porque haga falta en la app real.
     public ContainerViewModel EquippedItems => _byKey[(0, EquipmentKind.Items)];
+    // H6-06 (sexta auditoria de Opus): gemelo real de EquippedItems para el slot de VANIDAD del
+    // loadout 0 - MainViewModel.RefreshAppearanceEquipment lo necesita para resolver la
+    // armadura/vanidad real puesta del doll de Apariencia, independientemente de que loadout
+    // este mirando el usuario en la pantalla (SelectedLoadout).
+    public ContainerViewModel EquippedSocial => _byKey[(0, EquipmentKind.Social)];
 
     public ObservableCollection<EquipmentOptionViewModel> LoadoutOptions { get; } = [];
     public ObservableCollection<EquipmentOptionViewModel> KindOptions { get; } =

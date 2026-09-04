@@ -23,6 +23,14 @@ public partial class AppearanceViewModel : ObservableObject
 
     [ObservableProperty] private WriteableBitmap? _previewImage;
 
+    // H6-06 (sexta auditoria de Opus, Tanda D - "unificar el doll de Apariencia con el de
+    // Inicio, que YA muestra la armadura/vanidad real puesta"): true por defecto (mismo
+    // criterio que la tarjeta de Inicio, fiel al guardado real) - "Ver sin equipo" lo apaga
+    // para ver solo piel/pelo/colores base, util para comparar tintes sin la ropa puesta de
+    // por medio.
+    [ObservableProperty] private bool _showEquipment = true;
+    partial void OnShowEquipmentChanged(bool value) => RefreshPreview();
+
     [ObservableProperty] private int _hairStyle;
     [ObservableProperty] private int _hairDye;
     [ObservableProperty] private string _hairDyeDisplayName = "Ninguno";
@@ -341,12 +349,29 @@ public partial class AppearanceViewModel : ObservableObject
     // Indices en Swatches, mismo orden en que se anaden arriba en LoadFrom.
     private const int HairIdx = 0, SkinIdx = 1, EyesIdx = 2, ShirtIdx = 3, UnderIdx = 4, PantsIdx = 5, ShoesIdx = 6;
 
+    // H6-06: la armadura/vanidad REAL puesta en este momento - PrimaryLoadout NO sirve aqui
+    // (solo se sincroniza con lo que el usuario edita en Equipamiento al GUARDAR, ver
+    // CharacterFileService.Save/CalamityCharacterSync; durante la sesion en curso vive en
+    // EquipmentGroupViewModel/MergedContainers, que AppearanceViewModel no conoce). MainViewModel
+    // es quien SI conoce a los dos (Appearance y EquipmentGroup) y empuja el valor real aqui -
+    // ver UpdateEquippedArmor.
+    private PlayerPreviewRenderer.EquippedArmor _liveArmor;
+
+    public void UpdateEquippedArmor(PlayerPreviewRenderer.EquippedArmor armor)
+    {
+        _liveArmor = armor;
+        RefreshPreview();
+    }
+
     private void RefreshPreview()
     {
         if (Swatches.Count < 7) return;
         PlayerPreviewRenderer.Tint T(int i) => new((byte)Swatches[i].R, (byte)Swatches[i].G, (byte)Swatches[i].B);
 
         var colors = new PlayerPreviewRenderer.PlayerColors(T(HairIdx), T(SkinIdx), T(EyesIdx), T(ShirtIdx), T(UnderIdx), T(PantsIdx), T(ShoesIdx));
-        PreviewImage = PlayerPreviewRenderer.Render(HairStyle, IsMale, colors);
+        // H6-06: "Ver sin equipo" pasa EquippedArmor por defecto (todo null, sin overlay),
+        // nunca inventa nada.
+        var armor = ShowEquipment ? _liveArmor : default;
+        PreviewImage = PlayerPreviewRenderer.Render(HairStyle, IsMale, colors, armor);
     }
 }

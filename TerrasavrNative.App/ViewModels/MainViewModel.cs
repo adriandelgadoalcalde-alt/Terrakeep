@@ -169,6 +169,13 @@ public partial class MainViewModel : ObservableObject
     // solo dispara si el contenido cambio de verdad).
     private void OnSlotItemChanged(ItemSlotViewModel slot, GameItem before, GameItem after)
     {
+        // H6-06 (sexta auditoria de Opus): el doll de Apariencia refleja el equipo puesto EN
+        // VIVO - cualquier cambio real de slot puede haber tocado la armadura/vanidad puesta
+        // (RefreshAppearanceEquipment relee EquipmentGroup entero, barato). Fuera del "if" de
+        // abajo a proposito: esto tiene que disparar tambien durante Deshacer/Rehacer (que SI
+        // pasan por aqui con _suppressUndoRecording=true), no solo en la edicion original.
+        RefreshAppearanceEquipment();
+
         if (_suppressDirty || _suppressUndoRecording) return;
         UndoStack.Push(new UndoEntry
         {
@@ -176,6 +183,35 @@ public partial class MainViewModel : ObservableObject
             Undo = () => slot.UpdateFrom(before.Clone()),
             Redo = () => slot.UpdateFrom(after.Clone()),
         });
+    }
+
+    // H6-06 (sexta auditoria de Opus): resuelve la armadura/vanidad real EN VIVO del loadout 0
+    // ("Puesto") - PrimaryLoadout (el campo que usa CharacterListEntryViewModel para el doll de
+    // Inicio) solo se sincroniza con lo editado en Equipamiento al GUARDAR
+    // (CharacterFileService.Save/CalamityCharacterSync); durante la sesion en curso, la fuente
+    // de verdad real es EquipmentGroup (EquippedItems/CurrentSocial en GameItem, no PlrLoadout
+    // todavia). EquipmentAppearanceResolver.Resolve pide un PlrLoadout - se construye uno
+    // sintetico de un solo uso con los 3 slots de armadura reales (cabeza/cuerpo/piernas,
+    // Items+Social), sin tocar el modelo real del personaje.
+    private void RefreshAppearanceEquipment()
+    {
+        if (EquipmentGroup == null) { Appearance.UpdateEquippedArmor(default); return; }
+
+        PlrItemSlot[] ItemsRow(ContainerViewModel container)
+        {
+            var slots = new PlrItemSlot[3];
+            for (int i = 0; i < 3; i++)
+                slots[i] = container.Slots[i].ItemId == 0 ? PlrItemSlot.Empty : new PlrItemSlot(container.Slots[i].ItemId, 1, 0, false);
+            return slots;
+        }
+
+        var loadout0 = new PlrLoadout
+        {
+            Items = ItemsRow(EquipmentGroup.EquippedItems),
+            Social = ItemsRow(EquipmentGroup.EquippedSocial),
+            // Dyes se deja en su default (Resolve() nunca lo lee - solo cabeza/cuerpo/piernas).
+        };
+        Appearance.UpdateEquippedArmor(_service.EquipmentAppearance.Resolve(loadout0));
     }
 
     // Envuelve una operacion en bloque real (Auto-equipar, Mover todo al almacen...) en UNA
@@ -912,6 +948,7 @@ public partial class MainViewModel : ObservableObject
             _loaded = _service.Load(plrPath);
             RebuildContainers();
             Appearance.LoadFrom(_loaded.Character);
+            RefreshAppearanceEquipment(); // H6-06: pinta el equipo puesto real desde el primer render, no solo tras la primera edicion
             Servers.LoadFrom(_loaded.Character);
             Flags.LoadFrom(_loaded.Character);
             VersionEditor.LoadFrom(_loaded.Character);

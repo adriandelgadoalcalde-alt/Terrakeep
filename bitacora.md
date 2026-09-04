@@ -7303,3 +7303,63 @@ completo siguen en verde sin ningun otro efecto secundario visible). El comentar
 `ContainerViewModel.cs` sobre "midiendo los 5454 iconos vanilla" (justificacion de `MinCell=40`)
 no se reverifico contra el nuevo dataset - 102 outliers corregidos entre miles no deberian
 mover una mediana de forma perceptible, pero es una afirmacion sin remedir, no una certeza.
+
+### H6-06 - El doll de Apariencia ya muestra el equipo puesto EN VIVO (Tanda D, sexta auditoria de Opus)
+
+**Hallazgo real**: el doll de la pestaña Apariencia era el UNICO sitio del proyecto que
+todavia dibujaba al personaje sin su armadura/vanidad real puesta - la tarjeta de "Inicio" ya
+lo hacia desde la ronda anterior (`CharacterListEntryViewModel`/`EquipmentAppearanceResolver`).
+"Unificar" los dos sitios se dejo pendiente en H6-01 a proposito.
+
+**Bug real encontrado ANTES de comitear nada** (no en el hallazgo original, descubierto
+verificando con el propio arnes): el primer intento hizo que `AppearanceViewModel.RefreshPreview`
+resolviera la armadura directamente de `character.PrimaryLoadout` (el mismo campo que YA usa
+`CharacterListEntryViewModel`) - pero un test real (`dotnet test`) que equipaba un casco y
+esperaba ver el preview cambiar **fallaba de verdad, sin ningun cambio de pixeles**.
+Investigado: `PrimaryLoadout` es fiel al `.plr` real **solo justo al cargar o al GUARDAR**
+(`CharacterFileService.Save`/`CalamityCharacterSync` es quien lo sincroniza) - durante la
+sesion en curso, lo que el usuario edita en la pestaña Equipamiento vive en
+`EquipmentGroupViewModel`/`MergedContainers` (`GameItem[]`, la representacion "fusionada"
+vanilla+Calamity), no en `PrimaryLoadout` todavia. `CharacterListEntryViewModel` nunca tropieza
+con esto porque SOLO lee personajes recien cargados del disco (la tarjeta de "Inicio"), nunca
+una sesion en curso con ediciones sin guardar - el mismo campo real, en dos contextos
+distintos, con una diferencia de sincronizacion real que no era obvia hasta intentarlo con un
+test real.
+
+**Arreglo real**: `AppearanceViewModel` ya no lee `PrimaryLoadout` directamente - gana
+`UpdateEquippedArmor(EquippedArmor)` (empujado desde fuera) y un campo `_liveArmor` cacheado.
+`MainViewModel.RefreshAppearanceEquipment()` (nuevo) construye un `PlrLoadout` SINTETICO de un
+solo uso a partir de los 3 slots reales de armadura (cabeza/cuerpo/piernas, Items+Social) del
+loadout 0 ("Puesto") **EN VIVO** desde `EquipmentGroup.EquippedItems`/`EquipmentGroup.
+EquippedSocial` (esta ultima, nueva - gemela real de `EquippedItems`, ya existente, para el
+slot de Vanidad) - sin tocar el modelo real del personaje, solo para alimentar
+`EquipmentAppearanceResolver.Resolve` con datos frescos. Se llama: (1) tras `Appearance.
+LoadFrom` en `LoadFromPath` (pinta el equipo real desde el primer render); (2) dentro de
+`OnSlotItemChanged` (el mismo hook real que ya alimenta Deshacer/Rehacer) - CUALQUIER cambio de
+slot dispara un refresco, no solo en Equipamiento (barato, y `EquipmentGroup==null` antes de
+cargar personaje ya esta cubierto).
+
+**Toggle real**: `AppearanceViewModel.ShowEquipment` (true por defecto, mismo criterio que
+Inicio) - checkbox real "Mostrar equipo puesto" bajo el doll, `MainWindow.xaml`.
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: **450/450** (173 Core sin
+cambio, 277 ViewModels, +4 tests nuevos: `AppearanceEquipmentPreviewTests.cs` -
+`ShowEquipment` empieza en `true`; equipar un casco real (`EquipmentGroup.EquippedItems.
+Slots[0].PlaceItem`, el mismo camino real que el propio `EquipmentDefenseTests.cs` ya
+verificado) cambia los pixeles del preview EN VIVO sin recargar el personaje; apagar
+`ShowEquipment` quita el casco del preview; reactivarlo lo vuelve a poner IDENTICO pixel a
+pixel). Arnes de UI Automation ampliado con un bloque nuevo (`H6-06-DOLL`), justo despues de
+T20-AUTOEQUIP (que YA equipa piezas reales) - confirma `ShowEquipment=True` por defecto, que
+apagar el toggle SI cambia los pixeles reales del preview, y deja dos capturas reales
+(`h6-06-doll-con-equipo.png`/`h6-06-doll-sin-equipo.png`) - confirmadas a mano: con el toggle
+activado el doll lleva puesto un casco real (oscuro, tapando la cabeza); desactivado, vuelve al
+pelo/piel base sin nada encima. **2/2 pasadas limpias** (de hecho 3/3 - una pasada intermedia
+tuvo un FALLO real pero en un bloque totalmente ajeno, `L-c`/debounce de la Libreria, que volvio
+a salir verde en la siguiente pasada sin tocar nada de esa zona - inestabilidad de temporizacion
+bajo carga del propio equipo en esta sesion larga, no una regresion de H6-06).
+
+**Fuera de esta pasada, documentado**: el toggle no distingue entre loadouts 1/2/3 - siempre
+muestra el loadout 0 ("Puesto"), coherente con "lo que llevas puesto de verdad ahora mismo" (el
+mismo criterio ya usado por Inicio); no respeta los 3 bytes de "ocultar equipo" del panel de
+vanidad real (mismo hueco ya documentado en `EquipmentAppearanceResolver.cs`, heredado tal
+cual, no nuevo de esta pasada).

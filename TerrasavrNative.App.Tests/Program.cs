@@ -2151,6 +2151,55 @@ internal static class Program
         }
         catch (Exception ex) { Console.WriteLine("T20-AUTOEQUIP-EXCEPTION: " + ex); }
 
+        // Sexta auditoria de Opus, H6-06 (Tanda D - "unificar el doll de Apariencia con el de
+        // Inicio, que YA muestra la armadura/vanidad real puesta"): el equipo real ya puesto
+        // por T20-AUTOEQUIP arriba mismo tiene que verse en el doll de Apariencia SIN recargar
+        // el personaje - confirma que aparece solo, que el toggle "Mostrar equipo puesto" lo
+        // quita/pone de verdad, y deja una captura real.
+        try
+        {
+            vm.SelectedTabIndex = 1; // Personaje
+            vm.PersonajeInnerTabIndex = 3; // Apariencia
+            DoEvents(); DoEvents();
+
+            var conEquipo = vm.Appearance.PreviewImage;
+            byte[] PixelesDe(System.Windows.Media.Imaging.WriteableBitmap bmp)
+            {
+                var px = new byte[bmp.PixelHeight * bmp.PixelWidth * 4];
+                bmp.CopyPixels(px, bmp.PixelWidth * 4, 0);
+                return px;
+            }
+            Console.WriteLine($"H6-06-DOLL: ShowEquipment por defecto={vm.Appearance.ShowEquipment} (esperado True)");
+
+            var rtbConEquipo = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbConEquipo.Render(window);
+            var encConEquipo = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encConEquipo.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbConEquipo));
+            using (var fsCon = File.Create(Path.Combine(AppContext.BaseDirectory, "h6-06-doll-con-equipo.png"))) encConEquipo.Save(fsCon);
+
+            vm.Appearance.ShowEquipment = false;
+            DoEvents(); DoEvents();
+            bool cambioAlApagar = conEquipo != null && vm.Appearance.PreviewImage != null &&
+                !PixelesDe(conEquipo).SequenceEqual(PixelesDe(vm.Appearance.PreviewImage));
+            Console.WriteLine($"H6-06-DOLL: apagar 'Mostrar equipo puesto' cambia el preview={cambioAlApagar} (esperado True)");
+            if (!cambioAlApagar) Console.WriteLine("FALLO: H6-06 - el toggle 'Mostrar equipo puesto' no quita de verdad la armadura del preview");
+
+            var rtbSinEquipo = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbSinEquipo.Render(window);
+            var encSinEquipo = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encSinEquipo.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbSinEquipo));
+            using (var fsSin = File.Create(Path.Combine(AppContext.BaseDirectory, "h6-06-doll-sin-equipo.png"))) encSinEquipo.Save(fsSin);
+            Console.WriteLine("Capturas doll con/sin equipo -> h6-06-doll-con-equipo.png, h6-06-doll-sin-equipo.png");
+
+            vm.Appearance.ShowEquipment = true; // deja el estado real por defecto para el resto del arnes
+            vm.SelectedTabIndex = 1;
+            vm.PersonajeInnerTabIndex = 0;
+            DoEvents();
+        }
+        catch (Exception ex) { Console.WriteLine("H6-06-DOLL-EXCEPTION: " + ex); }
+
         // Verificacion real de T-24 (auditoria de Opus, Bloque 6): 3 casos deterministas
         // (matematica pura, sin depender de ninguna ventana ni layout ya corrido) para los 3
         // modos reales de SlotGridPanel.MeasureOverride - ver el resumen real en el propio

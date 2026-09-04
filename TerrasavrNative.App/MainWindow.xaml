@@ -2606,7 +2606,14 @@
                                     <Image Source="{Binding Appearance.PreviewImage}" Width="240" Height="336"
                                            RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="Uniform" />
                                 </Border>
-                                <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego, brazos y torso incluidos) - sin armadura/vestuario equipado, item en mano ni animación, solo la pose de reposo. No aplica el efecto visual del tinte de pelo (shader especial que este preview no reproduce), solo su color de pelo base."
+                                <!-- H6-06 (sexta auditoria de Opus, Tanda D - "unificar con el doll de
+                                     Inicio, que YA muestra la armadura/vanidad real puesta"): fiel al
+                                     guardado real (PrimaryLoadout) por defecto, igual que Inicio - este
+                                     toggle apaga el overlay para ver solo piel/pelo/colores base. -->
+                                <CheckBox IsChecked="{Binding Appearance.ShowEquipment}" Margin="0,0,0,8">
+                                    <TextBlock Text="Mostrar equipo puesto" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </CheckBox>
+                                <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego, brazos y torso incluidos, armadura/vanidad real puesta) - sin item en mano ni animación, solo la pose de reposo. No aplica el efecto visual del tinte de pelo (shader especial que este preview no reproduce), solo su color de pelo base."
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Width="240" />
                             </StackPanel>
 
