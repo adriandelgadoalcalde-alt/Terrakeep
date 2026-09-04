@@ -1,5 +1,6 @@
 using System.Linq;
 using TerrasavrNative.App.Services;
+using TerrasavrNative.Core.Model;
 using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels.Tests;
@@ -41,7 +42,7 @@ public sealed class PlayerPreviewRendererH6Tests
         // personaje en reposo y compone practicamente vacia. Un lienzo con "vida" real (mucho
         // mas que solo cabeza+piernas) es la señal observable de que los brazos/torso realmente
         // se estan componiendo.
-        var bmp = PlayerPreviewRenderer.Render(1, isMale: true, Colors);
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
         int opacos = ContarPixelesOpacos(Pixels(bmp));
 
         // 40x56 = 2240 pixeles totales; medido de verdad con el arreglo real: 908 opacos. El
@@ -57,9 +58,9 @@ public sealed class PlayerPreviewRendererH6Tests
         // La camiseta interior (Undershirt) es una de las piezas compuestas que antes del
         // arreglo H6-01 se recortaba mal - confirma que el tintado real SI llega hasta el
         // lienzo final, no solo que la funcion no lance.
-        var conUnderOscuro = PlayerPreviewRenderer.Render(1, isMale: true, Colors);
+        var conUnderOscuro = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
         var otros = Colors with { Under = new(255, 0, 255) };
-        var conUnderClaro = PlayerPreviewRenderer.Render(1, isMale: true, otros);
+        var conUnderClaro = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, otros);
 
         Assert.NotEqual(Pixels(conUnderOscuro), Pixels(conUnderClaro));
     }
@@ -70,8 +71,8 @@ public sealed class PlayerPreviewRendererH6Tests
         // H6-03: TorsoFrame/FrontShoulderFrame/BackShoulderFrame cambian de celda real segun el
         // genero (fila 0-1 varon, fila 2-3 mujer) - los brazos NO cambian (misma celda en los
         // dos generos), pero torso/hombros si, asi que el resultado final debe diferir.
-        var varon = PlayerPreviewRenderer.Render(1, isMale: true, Colors);
-        var mujer = PlayerPreviewRenderer.Render(1, isMale: false, Colors);
+        var varon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var mujer = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.FemaleStarter, Colors);
 
         Assert.NotEqual(Pixels(varon), Pixels(mujer));
     }
@@ -82,8 +83,8 @@ public sealed class PlayerPreviewRendererH6Tests
         // H6-04: HairStyle es 0-based tal cual (Player.hair real) - confirma que dos ids
         // vecinos cargan dos ficheros REALES distintos (no los dos caen por error en el mismo
         // fallback "hair/0.png").
-        var pelo5 = PlayerPreviewRenderer.Render(5, isMale: true, Colors);
-        var pelo6 = PlayerPreviewRenderer.Render(6, isMale: true, Colors);
+        var pelo5 = PlayerPreviewRenderer.Render(5, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var pelo6 = PlayerPreviewRenderer.Render(6, skinVariant: PlayerVariantSets.MaleStarter, Colors);
 
         Assert.NotEqual(Pixels(pelo5), Pixels(pelo6));
     }
@@ -102,8 +103,8 @@ public sealed class PlayerPreviewRendererH6Tests
         var armor = Service.EquipmentAppearance.Resolve(loadout);
         Assert.NotNull(armor.BodyFile); // spot-check de que el fixture realmente ejercita el slot Body
 
-        var sinArmadura = PlayerPreviewRenderer.Render(1, isMale: true, Colors);
-        var conArmaduraCalamity = PlayerPreviewRenderer.Render(1, isMale: true, Colors, armor);
+        var sinArmadura = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conArmaduraCalamity = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor);
 
         Assert.NotEqual(Pixels(sinArmadura), Pixels(conArmaduraCalamity));
     }

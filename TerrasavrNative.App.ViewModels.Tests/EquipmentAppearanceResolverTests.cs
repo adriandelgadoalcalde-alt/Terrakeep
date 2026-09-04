@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using TerrasavrNative.App.Services;
+using TerrasavrNative.Core.Model;
 using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels.Tests;
@@ -104,9 +105,9 @@ public sealed class EquipmentAppearanceResolverTests
             new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
             new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
 
-        var sinArmadura = PlayerPreviewRenderer.Render(1, isMale: true, colors);
+        var sinArmadura = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors);
         var armor = Service.EquipmentAppearance.Resolve(LoadoutConCabeza(CascoCobre));
-        var conArmadura = PlayerPreviewRenderer.Render(1, isMale: true, colors, armor);
+        var conArmadura = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, armor);
 
         var pixelesSin = new byte[sinArmadura.PixelHeight * sinArmadura.PixelWidth * 4];
         sinArmadura.CopyPixels(pixelesSin, sinArmadura.PixelWidth * 4, 0);

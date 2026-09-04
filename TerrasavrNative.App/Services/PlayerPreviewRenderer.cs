@@ -11,16 +11,28 @@ namespace TerrasavrNative.App.Services;
 // scripts/extraer-sprites-jugador.js (cuerpo+pelo) y scripts/extraer-sprites-armadura-
 // vanilla.js (armadura/vanidad puesta).
 //
-// H6-01 (Opus, sexta pasada - "les faltan los brazos a todos los personajes, ¿de que sirve un
-// editor de apariencia si no refleja como esta construido de verdad el personaje?"): reescrito
-// de raiz. La version anterior recortaba SIEMPRE la celda (0,0) de 40x56 de cada hoja - correcto
-// para las tiras verticales (Head/EyeWhites/Eyes/LegSkin/Pants/Shoes/pelo), pero CERO-relleno
-// para las 8 hojas compuestas (TorsoSkin/Undershirt/Hands/Shirt/ArmSkin/ArmUndershirt/ArmHand/
-// ArmShirt, rejillas 9x4 de 360x224) - el brazo/mano/camiseta interior real NO viven en la
-// celda (0,0) de esas hojas. Confirmado leyendo Terraria/DataStructures/PlayerDrawSet.cs +
-// PlayerDrawLayers.cs decompilados reales (CreateCompositeFrameRect/UpdateCompositeArm/
-// DrawPlayer_12_Skin_Composite/_12_SkinComposite_BackArmShirt/_17_TorsoComposite/
-// _28_ArmOverItemComposite) - las celdas reales del frame de reposo son:
+// H6-01-b (advisor Opus, "la vanidad no se dibuja bien en el cuerpo delgado" - caso real
+// "Eldelgas", bodySlot 93/"Vestido de la Muerte", skinVariant 8/MaleDress). Reescrito de raiz
+// siguiendo ESPEC-dibujado-sprites.md (ingenieria inversa citada linea a linea contra
+// Terraria/Player.cs, Terraria/DataStructures/PlayerDrawSet.cs y
+// Terraria/DataStructures/PlayerDrawLayers.cs decompilados reales, version 1.4.5.8 = la misma
+// que la instalacion de Steam). Los cinco fallos reales que corrige esta reescritura:
+//   1. Con armadura/vanidad de CUERPO puesta, el juego real NO dibuja la ropa base
+//      (camiseta/camisa/mangas) - antes se dibujaba siempre, encima de la vanidad.
+//   2. hidesTopSkin/hidesBottomSkin (PlayerBodyDrawTables): algunos bodySlot/legSlot reales
+//      (ej. 93) ocultan la piel del torso y/o de las piernas - antes se dibujaba siempre.
+//   3. SetMatch (PlayerBodyDrawTables.SetMatchBodyToLegs/SetMatchLegsToLegs/SetMatchHead):
+//      un bodySlot puede FORZAR el legSlot real puesto por otro (ej. body=93 -> legs=165,
+//      la falda del vestido) - antes no se aplicaba nunca, se dibujaban las perneras/
+//      pantalones equivocados.
+//   4. Las variantes de cuerpo 1/2/3/5/6/7/8/9 (no solo 0/4) tienen ropa base real propia en
+//      disco (scripts/extraer-sprites-jugador.js) - antes se usaba siempre body0/body4.
+//   5. Orden brazo/hombro delantero invertido, y orden casco/pelo invertido en el caso
+//      "fullHair" - ver PlayerDrawLayers.cs real citado en ESPEC-dibujado-sprites.md#7.3/#7.5.
+//
+// Celdas reales del frame de reposo (col, row) dentro de una hoja compuesta 9x4 - confirmado,
+// SIN cambios respecto a la version anterior (ESPEC-dibujado-sprites.md#7.4: todos los offsets
+// reales netean a cero para el frame de reposo):
 //
 //   TorsoFrame            (0,0) varon / (0,2) mujer
 //   FrontShoulderFrame     (0,1) varon / (0,3) mujer
@@ -28,61 +40,44 @@ namespace TerrasavrNative.App.Services;
 //   FrontArmFrame          (2,0) - IGUAL en los dos generos
 //   BackArmFrame           (2,2) - IGUAL en los dos generos
 //
-// (el "+2 filas" para mujer es literal en PlayerDrawLayers.cs: "if (!drawPlayer.Male) pt.Y += 2"
-// - solo afecta a Torso/Hombros, nunca a los brazos). El orden real de capas (mismos metodos
-// DrawPlayer_* de arriba, en su orden real de llamada) es: 1) LegSkin+TorsoSkin: 2) brazo
-// TRASERO (ArmSkin/Hands/ArmUndershirt/ArmShirt en BackArmFrame); 3) Pantalones/Zapatos;
-// 4) Undershirt+Shirt en BackShoulderFrame, despues otra vez en TorsoFrame; 5) Cabeza/Ojos/
-// Pelo; 6) brazo DELANTERO (ArmSkin/ArmUndershirt/ArmShirt/Shirt en FrontShoulderFrame, despues
-// otra vez en FrontArmFrame). Todas las celdas se superponen en el MISMO origen (0,0) del
-// lienzo final - Main.OffsetsPlayerHeadgear[0]=(0,2) con "y -= 2" en PlayerDrawLayers.cs deja
-// el offset neto en (0,0) para el frame de reposo, confirmado componiendo y viendo una figura
-// de Terraria completa y reconocible (brazos, manos, mangas incluidos).
-//
-// H6-03: dos variantes de CUERPO reales (0=MaleStarter, 4=FemaleStarter - las UNICAS con hoja
-// propia para las 10 piezas de ropa/piel en la instalacion real; las variantes 1/2/3/5-11 solo
-// sustituyen un subconjunto y heredan el resto de 0/4, alcance deliberado no cubierto en esta
-// pasada, documentado en extraer-sprites-jugador.js) - isMale elige entre body0/body4. Head/
-// EyeWhites/Eyes son compartidas por TODAS las variantes (solo existe Player_0_{0,1,2}.xnb en
-// la instalacion real) y se cargan siempre de body0.
+// H6-02/H6-01-b: `skinVariant` (0-11, Player.skinVariant real) sustituye a `isMale` como
+// entrada - la carpeta de sprites usa PlayerVariantSets.BodyFolder (herencia real de
+// PlayerDataInitializer.cs), pero las CELDAS (torso/hombros) siguen dependiendo solo de
+// PlayerVariantSets.IsMale(skinVariant), exactamente como en el codigo real
+// ("if (!drawPlayer.Male) pt.Y += 2" - nunca mira skinVariant directamente).
 //
 // H6-04: el id de pelo real es 0-based en el juego (Player.hair, 0..227) - Assets/player/hair/
-// {id}.png viene de Player_Hair_{id+1}.xnb (confirmado: AssetInitializer.cs real hace
-// "Images/Player_Hair_" + (num4+1)). HairStyle del .plr se usa tal cual, sin desfase.
+// {id}.png viene de Player_Hair_{id+1}.xnb. HairStyle del .plr se usa tal cual, sin desfase.
 //
-// H6-05 (consecuencia real de este mismo arreglo): la armadura/vanidad de Calamity Mod usa la
-// MISMA convencion de hoja compuesta 360x224 para el slot Body (confirmado: los .png de
-// Assets/calamity/icons/*_Body.png miden 360x224) - antes de este cambio, LoadPngPixels asumia
-// SIEMPRE 40x56 y una pieza de Calamity en el slot Body hacia explotar CopyPixels
-// (ArgumentOutOfRangeException real, verificado antes de este cambio) - HomeViewModel.
-// ScanCharacters la tragaba en un catch mudo, asi que un personaje con equipo de Calamity
-// puesto desaparecia del listado de Inicio en silencio. Con LoadArmorCell (comparte el mismo
-// mecanismo que TorsoSkin/etc) esto se resuelve solo, sin caso especial para Calamity.
+// H6-05: la armadura/vanidad de Calamity Mod usa la MISMA convencion de hoja compuesta 360x224
+// para el slot Body (LoadArmorCell). Calamity no comparte la numeracion de bodySlot/legSlot
+// vanilla (registra sus propios equip slots por mod) - EquipmentAppearanceResolver deja
+// BodySlot/LegsSlot a null para sus piezas, y aqui eso se traduce automaticamente en "sin
+// SetMatch, sin hidesTopSkin/hidesBottomSkin, sin GetMatchingBodyExtension" (todas esas tablas
+// devuelven su valor neutro con id=0) - el comportamiento fiel-por-defecto que pide
+// ESPEC-dibujado-sprites.md#7.7 punto 8, sin caso especial en el codigo.
 //
 // Tintado = multiplicacion RGB pura, mapeo de color confirmado 1:1 contra los 7 campos ya en
 // PlrCharacter: HairColor/SkinColor/EyeColor/ShirtColor/UnderColor/PantsColor/ShoesColor
-// (EyeWhites siempre blanco, sin campo propio).
+// (EyeWhites siempre blanco, sin campo propio). La armadura real NUNCA se tinta con los colores
+// del personaje (ESPEC-dibujado-sprites.md#4.8) - de ahi el "null" en todos los LoadArmorCell.
 //
-// H6-07 (Opus, sexta pasada - "pelo bajo el casco/pelo largo detras del cuerpo"): pelo real
-// segun el casco puesto, portado de Terraria.Player.GetHairSettings()/PlayerDrawLayers.cs
-// decompilados reales (ver HairDrawProfile, tabla real completa):
-// - Sin casco, o casco en la lista real "fullHair": pelo NORMAL (Player_Hair) encima del casco.
-// - Casco en la lista real "hatHair": pelo ALTERNATIVO real (Player_HairAlt, fichero DISTINTO
-//   en la instalacion real - ni un recorte ni una aproximacion, el juego usa un sprite propio).
-// - Cualquier otro casco (el caso mas comun, cascos completos): SIN pelo - el propio juego real
-//   nunca dibuja pelo delantero en ese caso (GetHairSettings nunca marca fullHair/hatHair para
-//   esos ids), no una omision de este puerto.
-// - Peinados "largos" reales (HairDrawProfile.IsBackHairDraw, formula EXACTA de Player.cs): se
-//   dibujan DOS veces - una capa TRASERA completa (aqui: la primerisima capa del lienzo, antes
-//   de piernas/torso, para que el cuerpo la tape por delante de forma natural) y una capa
-//   DELANTERA recortada a los 26px superiores reales (PlayerDrawSet.cs: "int height = 26;
-//   hairFrontFrame.Height = height;" cuando backHairDraw) - el resto se entiende "detras" del
-//   cuerpo. Solo aplica a objetos VANILLA (headSlot real); Calamity no comparte esa numeracion,
-//   se oculta el pelo por defecto (el comportamiento mas comun real de un casco completo).
+// H6-07 (pelo bajo el casco): sin cambios de fondo respecto a la pasada anterior, salvo el
+// orden fullHair (ver mas abajo) - portado de Terraria.Player.GetHairSettings()/
+// PlayerDrawLayers.cs reales (HairDrawProfile, tabla completa):
+// - Sin casco, o casco "fullHair": pelo NORMAL. El orden real es CASCO primero, PELO despues
+//   (PlayerDrawLayers.cs:2143-2161) - invertido respecto a lo que hacia el renderer antes de
+//   esta pasada.
+// - Casco "hatHair": pelo ALTERNATIVO (Player_HairAlt) PRIMERO, casco despues - esto ya
+//   coincidia y no cambia.
+// - Cualquier otro casco (el caso mas comun): sin pelo delantero, fiel al juego real.
+// - Peinados "largos" (HairDrawProfile.IsBackHairDraw): capa TRASERA completa (la primerisima
+//   del lienzo) + capa DELANTERA recortada a los 26px superiores reales. Solo objetos VANILLA
+//   (headSlot real); Calamity oculta el pelo por defecto.
 //
 // ALCANCE DELIBERADO restante, documentado y no oculto: sin accesorios (alas, mochilas,
-// capas...), item en mano, ni animacion (solo el frame de reposo) - la inmensa mayoria de
-// accesorios no tienen capa visual propia sobre el cuerpo.
+// capas...), item en mano, monturas, ni animacion (solo el frame de reposo) - ver
+// ESPEC-dibujado-sprites.md#9 para el listado completo de huecos reales conocidos.
 public static class PlayerPreviewRenderer
 {
     private const int Width = 40, Height = 56;
@@ -94,12 +89,13 @@ public static class PlayerPreviewRenderer
     public readonly record struct PlayerColors(Tint Hair, Tint Skin, Tint Eyes, Tint Shirt, Tint Under, Tint Pants, Tint Shoes);
 
     // Rutas absolutas reales (o null si ese slot no lleva nada puesto/reconocible) - ver
-    // EquipmentAppearanceResolver, que es quien decide estas rutas. BodyFile es ahora una hoja
-    // compuesta 360x224 (antes 40x56 ya recortada) - HeadFile/LegsFile siguen siendo 40x56
-    // (tiras verticales, sin cambios). HeadSlot (H6-07) es el indice REAL de headSlot
-    // (Terraria.Player.head, misma tabla que ArmorHead[]/armor_head/{slot}.png) - null si no
-    // hay casco puesto o si es un objeto de Calamity (numeracion distinta, no compartida).
-    public readonly record struct EquippedArmor(string? HeadFile, string? BodyFile, string? LegsFile, int? HeadSlot = null);
+    // EquipmentAppearanceResolver, que es quien decide estas rutas. BodyFile es una hoja
+    // compuesta 360x224, HeadFile/LegsFile son tiras verticales 40x56 (frame0).
+    // HeadSlot/BodySlot/LegsSlot (H6-07/H6-01-b) son los indices REALES de esos slots
+    // (Terraria.Player.head/body/legs, misma tabla que armor_{head,body,legs}/{slot}.png) -
+    // null si el slot esta vacio o es un objeto de Calamity (numeracion propia, no compartida).
+    public readonly record struct EquippedArmor(string? HeadFile, string? BodyFile, string? LegsFile,
+        int? HeadSlot = null, int? BodySlot = null, int? LegsSlot = null);
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> Cache = new();
 
@@ -114,22 +110,54 @@ public static class PlayerPreviewRenderer
     private static readonly (int Col, int Row) FrontArm = (2, 0);
     private static readonly (int Col, int Row) BackArm = (2, 2);
 
-    public static WriteableBitmap Render(int hairStyle, bool isMale, PlayerColors colors, EquippedArmor armor = default)
+    public static WriteableBitmap Render(int hairStyle, byte skinVariant, PlayerColors colors, EquippedArmor armor = default)
     {
-        string variant = isMale ? "body0" : "body4";
-        var torsoCell = isMale ? TorsoMale : TorsoFemale;
-        var frontShoulderCell = isMale ? FrontShoulderMale : FrontShoulderFemale;
-        var backShoulderCell = isMale ? BackShoulderMale : BackShoulderFemale;
+        bool male = PlayerVariantSets.IsMale(skinVariant);
+        string variant = PlayerVariantSets.BodyFolder(skinVariant);
+        var torsoCell = male ? TorsoMale : TorsoFemale;
+        var frontShoulderCell = male ? FrontShoulderMale : FrontShoulderFemale;
+        var backShoulderCell = male ? BackShoulderMale : BackShoulderFemale;
 
         var canvas = new byte[Height * Width * 4];
 
+        // ESPEC-dibujado-sprites.md#7.2: cadena real de SetMatch (Player.cs:36053-36092), tres
+        // llamadas encadenadas que pueden sustituir legs/head. `bodyId`/`legsId` en 0 quiere
+        // decir "sin bodySlot/legSlot vanilla conocido" (slot vacio o pieza de Calamity) - las
+        // tres tablas de PlayerBodyDrawTables devuelven su valor neutro para 0, asi que no hace
+        // falta ningun caso especial para Calamity aqui.
+        int bodyId = armor.BodySlot ?? 0;
+        int legsId = armor.LegsSlot ?? 0;
+        int originalLegsId = legsId;
+        bool wearsRobe = false;
+        if (PlayerBodyDrawTables.SetMatchBodyToLegs(bodyId, male, legsId) is { } bodyToLegs)
+        {
+            legsId = bodyToLegs.Legs;
+            wearsRobe = bodyToLegs.SetsWearsRobe;
+        }
+        if (PlayerBodyDrawTables.SetMatchLegsToLegs(legsId, male) is int legsToLegs) legsId = legsToLegs;
+
+        int headId = armor.HeadSlot ?? 0;
+        int? headIdAfterSetMatch = PlayerBodyDrawTables.SetMatchHead(headId, male);
+
+        // ESPEC-dibujado-sprites.md#7.7 punto 8: sin bodySlot/legSlot vanilla conocido (pieza
+        // de Calamity), hasBody se sigue considerando true si hay una hoja real que dibujar -
+        // el comportamiento fiel-por-defecto para Calamity ("hasBody=true, sin banderas").
+        bool hasBody = bodyId > 0 || armor.BodyFile != null;
+        bool hidesTopSkin = PlayerBodyDrawTables.HidesTopSkin(bodyId);
+        bool hidesBottomSkin = PlayerBodyDrawTables.HidesBottomSkin(bodyId, legsId);
+        bool missingArm = PlayerBodyDrawTables.MissingArm(bodyId);
+        bool missingHand = PlayerBodyDrawTables.MissingHand(bodyId);
+        // GetMatchingBodyExtension usa el bodyId ORIGINAL (Player.cs: SetMatch nunca reescribe
+        // "body", solo "legs"/"head" - drawPlayer.body es el mismo valor en toda la cadena).
+        int? bodyExtension = PlayerBodyDrawTables.GetMatchingBodyExtension(bodyId, male);
+
         // H6-07: resuelve de verdad el comportamiento real del pelo bajo el casco puesto - ver
         // el comentario de la clase para la cita real de GetHairSettings()/PlayerDrawLayers.cs.
-        bool hideHair = false, hatHair = false;
-        if (armor.HeadSlot is int headSlot)
+        bool hideHair = false, hatHair = false, fullHair = false;
+        if (armor.HeadSlot is int realHeadSlot)
         {
-            bool fullHair = HairDrawProfile.IsFullHair(headSlot);
-            hatHair = HairDrawProfile.IsHatHair(headSlot);
+            fullHair = HairDrawProfile.IsFullHair(realHeadSlot);
+            hatHair = HairDrawProfile.IsHatHair(realHeadSlot);
             hideHair = !fullHair && !hatHair;
         }
         else if (armor.HeadFile != null)
@@ -141,45 +169,99 @@ public static class PlayerPreviewRenderer
         }
         bool backHairDraw = HairDrawProfile.IsBackHairDraw(hairStyle);
 
+        // ESPEC-dibujado-sprites.md#7.2 punto 3: si SetMatch sustituyo el headSlot (unico caso
+        // real: 201 -> 202 en femenino), hay que dibujar el sprite REAL sustituido, no el del
+        // objeto puesto - la ruta ya resuelta por EquipmentAppearanceResolver corresponde al
+        // headSlot SIN sustituir.
+        string? headFileToUse = armor.HeadFile;
+        if (headIdAfterSetMatch is int newHeadId && newHeadId != headId)
+        {
+            string altPath = VanillaPath("armor_head", newHeadId);
+            if (File.Exists(altPath)) headFileToUse = altPath;
+        }
+
         // DrawPlayer_01_BackHair real: la capa TRASERA de un peinado largo se dibuja la
         // PRIMERISIMA de todas (antes incluso de piernas/torso), para que el resto del cuerpo
         // la tape por delante de forma natural al componer encima.
         if (!hideHair && backHairDraw)
             Composite(canvas, hatHair ? LoadHairAlt(hairStyle) : LoadHair(hairStyle), colors.Hair);
 
-        // 1) DrawPlayer_12_Skin_Composite: piernas + torso (piel).
-        Composite(canvas, LoadFrame0(variant, "legskin"), colors.Skin);
-        Composite(canvas, LoadBodyCell(variant, "torsoskin", torsoCell), colors.Skin);
-        if (armor.BodyFile is { } bodyTorso) Composite(canvas, LoadArmorCell(bodyTorso, torsoCell), null);
+        // Paso 2-3 [12_Skin_Composite]: piel del torso y de las piernas, cada una solo si el
+        // bodySlot/legSlot real puesto no la oculta (hidesTopSkin/hidesBottomSkin).
+        if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "torsoskin", torsoCell), colors.Skin);
+        if (!hidesBottomSkin) Composite(canvas, LoadFrame0(variant, "legskin"), colors.Skin);
 
-        // 2) DrawPlayer_12_SkinComposite_BackArmShirt: brazo TRASERO completo (piel, mano,
-        // camiseta interior, camisa).
-        Composite(canvas, LoadBodyCell(variant, "armskin", BackArm), colors.Skin);
-        Composite(canvas, LoadBodyCell(variant, "hands", BackArm), colors.Skin);
-        Composite(canvas, LoadBodyCell(variant, "armundershirt", BackArm), colors.Under);
-        Composite(canvas, LoadBodyCell(variant, "armshirt", BackArm), colors.Shirt);
-        if (armor.BodyFile is { } bodyBackArm) Composite(canvas, LoadArmorCell(bodyBackArm, BackArm), null);
+        // Paso 4 [12_SkinComposite_BackArmShirt]: brazo TRASERO.
+        if (hasBody)
+        {
+            if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", BackArm), colors.Skin);
+            if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "hands", BackArm), colors.Skin);
+            if (armor.BodyFile is { } bodyBackShoulderArmor) Composite(canvas, LoadArmorCell(bodyBackShoulderArmor, backShoulderCell), null);
+            if (armor.BodyFile is { } bodyBackArmArmor) Composite(canvas, LoadArmorCell(bodyBackArmArmor, BackArm), null);
+        }
+        else
+        {
+            if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", BackArm), colors.Skin);
+            if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "hands", BackArm), colors.Skin);
+            Composite(canvas, LoadBodyCell(variant, "armundershirt", BackArm), colors.Under);
+            Composite(canvas, LoadBodyCell(variant, "armshirt", BackArm), colors.Shirt);
+        }
 
-        // 3) Piernas/zapatos.
-        Composite(canvas, LoadFrame0(variant, "pants"), colors.Pants);
-        if (armor.LegsFile is { } legsFile) Composite(canvas, LoadFrame0Absolute(legsFile), null);
-        Composite(canvas, LoadFrame0(variant, "shoes"), colors.Shoes);
+        // Paso 5 [13_Leggings/14_Shoes]: perneras. El orden zapatos/perneras que invierte
+        // wearsRobe no tiene efecto visual en el doll (el slot de zapatos, `shoeSlot`, esta
+        // fuera de alcance - ESPEC-dibujado-sprites.md#8 punto 6), asi que solo se dibuja el
+        // grupo de perneras: la pieza de armadura/vanidad si SetMatch la puso o el jugador la
+        // llevaba, o pantalones+zapatos base si no hay ninguna.
+        bool legsChangedBySetMatch = legsId != originalLegsId;
+        string? legsFileToUse = legsChangedBySetMatch ? VanillaPathIfExists("armor_legs", legsId) : armor.LegsFile;
+        if (legsId > 0 && legsFileToUse != null)
+        {
+            Composite(canvas, LoadFrame0Absolute(legsFileToUse), null);
+        }
+        else
+        {
+            Composite(canvas, LoadFrame0(variant, "pants"), colors.Pants);
+            Composite(canvas, LoadFrame0(variant, "shoes"), colors.Shoes);
+        }
 
-        // 4) DrawPlayer_17_TorsoComposite: camiseta interior + camisa en el hombro trasero, y
-        // otra vez en el torso.
-        Composite(canvas, LoadBodyCell(variant, "undershirt", backShoulderCell), colors.Under);
-        Composite(canvas, LoadBodyCell(variant, "shirt", backShoulderCell), colors.Shirt);
-        if (armor.BodyFile is { } bodyBackShoulder) Composite(canvas, LoadArmorCell(bodyBackShoulder, backShoulderCell), null);
-        Composite(canvas, LoadBodyCell(variant, "undershirt", torsoCell), colors.Under);
-        Composite(canvas, LoadBodyCell(variant, "shirt", torsoCell), colors.Shirt);
+        // Paso 6 [15_SkinLongCoat]: el faldon del vestido/abrigo (pieza 14) - solo variantes
+        // 3/7/8, y solo sin armadura/vanidad de cuerpo puesta.
+        if (!hasBody && skinVariant is 3 or 7 or 8)
+            Composite(canvas, LoadFrame0(variant, "extra"), colors.Shirt);
 
-        // 5) Cabeza/ojos/pelo (head/eyewhites/eyes: compartidas por todas las variantes,
-        // siempre de body0 - ver el comentario de la clase).
+        // Paso 7 [16_ArmorLongCoat]: el faldon largo de la ARMADURA (GetMatchingBodyExtension),
+        // capa aparte de las perneras del paso 5 - se dibuja SIEMPRE que aplique, encima.
+        if (bodyExtension is int extId)
+        {
+            string? extPath = VanillaPathIfExists("armor_legs", extId);
+            if (extPath != null) Composite(canvas, LoadFrame0Absolute(extPath), null);
+        }
+
+        // Paso 8 [17_TorsoComposite]: con armadura/vanidad de cuerpo puesta, el juego real NO
+        // dibuja la ropa base (bug #1 del caso "Eldelgas") - solo la armadura, en el torso.
+        if (hasBody)
+        {
+            if (armor.BodyFile is { } bodyTorso) Composite(canvas, LoadArmorCell(bodyTorso, torsoCell), null);
+        }
+        else
+        {
+            Composite(canvas, LoadBodyCell(variant, "undershirt", backShoulderCell), colors.Under);
+            Composite(canvas, LoadBodyCell(variant, "shirt", backShoulderCell), colors.Shirt);
+            Composite(canvas, LoadBodyCell(variant, "undershirt", torsoCell), colors.Under);
+            Composite(canvas, LoadBodyCell(variant, "shirt", torsoCell), colors.Shirt);
+        }
+
+        // Paso 9 [21_Head]: cabeza/ojos/pelo/casco. Orden real: casco ANTES que el pelo cuando
+        // el casco es "fullHair" (:2143-2161, invertido respecto a la version anterior de este
+        // renderer); en cualquier otro caso (hatHair o sin casco) el pelo va primero, como ya
+        // hacia el renderer antes de esta pasada.
         Composite(canvas, LoadFrame0("body0", "head"), colors.Skin);
         Composite(canvas, LoadFrame0("body0", "eyewhites"), null); // ya blanco en el sprite real
         Composite(canvas, LoadFrame0("body0", "eyes"), colors.Eyes);
-        if (!hideHair)
+
+        void DrawHair()
         {
+            if (hideHair) return;
             byte[] hairPixels = hatHair ? LoadHairAlt(hairStyle) : LoadHair(hairStyle);
             // PlayerDrawSet.cs real: "hairFrontFrame.Height = 26" cuando backHairDraw - solo
             // el flequillo/parte superior real se ve por delante, el resto queda "detras" (ya
@@ -187,22 +269,38 @@ public static class PlayerPreviewRenderer
             if (backHairDraw) CompositeTopRows(canvas, hairPixels, colors.Hair, 26);
             else Composite(canvas, hairPixels, colors.Hair);
         }
-        if (armor.HeadFile is { } headFile) Composite(canvas, LoadFrame0Absolute(headFile), null);
+        void DrawHelmet()
+        {
+            if (headFileToUse is { } headFile) Composite(canvas, LoadFrame0Absolute(headFile), null);
+        }
 
-        // 6) DrawPlayer_28_ArmOverItemComposite: brazo DELANTERO completo, dibujado ENCIMA de
-        // todo lo anterior (piel, camiseta interior, camisa - dos veces, hombro y despues
-        // brazo).
-        Composite(canvas, LoadBodyCell(variant, "armskin", frontShoulderCell), colors.Skin);
-        Composite(canvas, LoadBodyCell(variant, "armundershirt", frontShoulderCell), colors.Under);
-        Composite(canvas, LoadBodyCell(variant, "armshirt", frontShoulderCell), colors.Shirt);
-        Composite(canvas, LoadBodyCell(variant, "shirt", frontShoulderCell), colors.Shirt);
-        if (armor.BodyFile is { } bodyFrontShoulder) Composite(canvas, LoadArmorCell(bodyFrontShoulder, frontShoulderCell), null);
+        if (fullHair) { DrawHelmet(); DrawHair(); }
+        else { DrawHair(); DrawHelmet(); }
 
-        Composite(canvas, LoadBodyCell(variant, "armskin", FrontArm), colors.Skin);
-        Composite(canvas, LoadBodyCell(variant, "armundershirt", FrontArm), colors.Under);
-        Composite(canvas, LoadBodyCell(variant, "armshirt", FrontArm), colors.Shirt);
-        Composite(canvas, LoadBodyCell(variant, "shirt", FrontArm), colors.Shirt);
-        if (armor.BodyFile is { } bodyFrontArm) Composite(canvas, LoadArmorCell(bodyFrontArm, FrontArm), null);
+        // Paso 10 [28_ArmOverItemComposite]: brazo DELANTERO, encima de todo lo anterior.
+        // Orden real: BRAZO primero, HOMBRO despues (PlayerDrawSet.cs: compShoulderOverFrontArm
+        // = true, el bucle real dibuja primero i==num3/brazo y luego i==num2/hombro) - invertido
+        // respecto a la version anterior de este renderer.
+        if (hasBody)
+        {
+            if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", FrontArm), colors.Skin);
+            // 10b usa la pieza 9 (ArmHand), NO la 5 (Hands) - PlayerDrawLayers.cs:3735.
+            if (missingHand && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armhand", FrontArm), colors.Skin);
+            if (armor.BodyFile is { } bodyFrontArmArmor) Composite(canvas, LoadArmorCell(bodyFrontArmArmor, FrontArm), null);
+            if (armor.BodyFile is { } bodyFrontShoulderArmor) Composite(canvas, LoadArmorCell(bodyFrontShoulderArmor, frontShoulderCell), null);
+        }
+        else
+        {
+            if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", FrontArm), colors.Skin);
+            Composite(canvas, LoadBodyCell(variant, "armundershirt", FrontArm), colors.Under);
+            Composite(canvas, LoadBodyCell(variant, "armshirt", FrontArm), colors.Shirt);
+            Composite(canvas, LoadBodyCell(variant, "shirt", FrontArm), colors.Shirt);
+
+            if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", frontShoulderCell), colors.Skin);
+            Composite(canvas, LoadBodyCell(variant, "armundershirt", frontShoulderCell), colors.Under);
+            Composite(canvas, LoadBodyCell(variant, "armshirt", frontShoulderCell), colors.Shirt);
+            Composite(canvas, LoadBodyCell(variant, "shirt", frontShoulderCell), colors.Shirt);
+        }
 
         var bitmap = new WriteableBitmap(Width, Height, 96, 96, PixelFormats.Bgra32, null);
         bitmap.WritePixels(new Int32Rect(0, 0, Width, Height), canvas, Width * 4, 0);
@@ -225,6 +323,15 @@ public static class PlayerPreviewRenderer
 
     // H6-04: 228 estilos reales, 0-based (Player.hair real) - ver el comentario de la clase.
     public static int HairStyleCount => HairStyleMax - HairStyleMin + 1;
+
+    private static string VanillaPath(string dir, int id) =>
+        Path.Combine(AppContext.BaseDirectory, "Assets", "player", dir, id + ".png");
+
+    private static string? VanillaPathIfExists(string dir, int id)
+    {
+        string path = VanillaPath(dir, id);
+        return File.Exists(path) ? path : null;
+    }
 
     private static byte[] LoadFrame0(string variant, string name) =>
         LoadFrame0Absolute(Path.Combine(AppContext.BaseDirectory, "Assets", "player", variant, name + ".png"));

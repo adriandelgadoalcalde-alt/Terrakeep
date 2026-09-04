@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using TerrasavrNative.App.Services;
+using TerrasavrNative.Core.Model;
 using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels.Tests;
@@ -61,9 +62,9 @@ public sealed class PlayerPreviewRendererHairH607Tests
         // Gafas de proteccion (fullHair real) - el pelo se compone igual con o sin las gafas
         // puestas (ambos con pelo visible), a diferencia de un casco completo real (siguiente
         // prueba), que SI cambia el resultado al ocultar el pelo.
-        var sinNada = PlayerPreviewRenderer.Render(1, isMale: true, Colors);
+        var sinNada = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
         var armor = Service.EquipmentAppearance.Resolve(LoadoutConCabeza(GafasDeProteccion));
-        var conGafas = PlayerPreviewRenderer.Render(1, isMale: true, Colors, armor);
+        var conGafas = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor);
 
         // No deberian ser identicos (las gafas en si se dibujan), pero el pelo debe seguir
         // presente en los dos - se comprueba indirectamente: ocultar el pelo (siguiente prueba,
@@ -82,8 +83,8 @@ public sealed class PlayerPreviewRendererHairH607Tests
         var conHeadSlotReal = new PlayerPreviewRenderer.EquippedArmor(null, null, null, HeadSlot: 2);
         var sinHeadSlot = new PlayerPreviewRenderer.EquippedArmor(null, null, null, HeadSlot: null);
 
-        var ocultoPorCasco = PlayerPreviewRenderer.Render(1, isMale: true, Colors, conHeadSlotReal);
-        var peloNormal = PlayerPreviewRenderer.Render(1, isMale: true, Colors, sinHeadSlot);
+        var ocultoPorCasco = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, conHeadSlotReal);
+        var peloNormal = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, sinHeadSlot);
 
         Assert.NotEqual(Pixels(ocultoPorCasco), Pixels(peloNormal));
     }
@@ -96,8 +97,8 @@ public sealed class PlayerPreviewRendererHairH607Tests
         var conHatHair = new PlayerPreviewRenderer.EquippedArmor(null, null, null, HeadSlot: 13);
         var sinCasco = new PlayerPreviewRenderer.EquippedArmor(null, null, null, HeadSlot: null);
 
-        var conAlt = PlayerPreviewRenderer.Render(1, isMale: true, Colors, conHatHair);
-        var normal = PlayerPreviewRenderer.Render(1, isMale: true, Colors, sinCasco);
+        var conAlt = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, conHatHair);
+        var normal = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, sinCasco);
 
         Assert.NotEqual(Pixels(conAlt), Pixels(normal));
     }
@@ -108,8 +109,8 @@ public sealed class PlayerPreviewRendererHairH607Tests
         // HairStyle=51 es backHairDraw=true real (ver HairDrawProfileTests.cs) - sin casco
         // puesto, un peinado largo debe verse distinto de uno corto (HairStyle=1, no
         // backHairDraw) por la capa trasera adicional, incluso con el mismo color de pelo.
-        var corto = PlayerPreviewRenderer.Render(1, isMale: true, Colors);
-        var largo = PlayerPreviewRenderer.Render(51, isMale: true, Colors);
+        var corto = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var largo = PlayerPreviewRenderer.Render(51, skinVariant: PlayerVariantSets.MaleStarter, Colors);
 
         Assert.NotEqual(Pixels(corto), Pixels(largo));
     }

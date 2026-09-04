@@ -49,7 +49,9 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         // vanidad REAL puesta en loadouts[0] (el mirror de "lo que lleva puesto de verdad"),
         // no solo los 7 colores base.
         var armor = equipmentAppearance.Resolve(character.PrimaryLoadout);
-        // H6-02 (Opus, sexta pasada): Gender es el skinVariant real (0-11), no un booleano.
-        Preview = PlayerPreviewRenderer.Render(character.HairStyle, TerrasavrNative.Core.Model.PlayerVariantSets.IsMale(character.Gender), colors, armor);
+        // H6-02/H6-01-b: Gender ES el skinVariant real (0-11, no un booleano) - se pasa entero
+        // para que el doll de Inicio use la carpeta de sprites/reglas SetMatch reales de la
+        // variante puesta (caso "Eldelgas": Gender=8/MaleDress), no solo Chico/Chica.
+        Preview = PlayerPreviewRenderer.Render(character.HairStyle, character.Gender, colors, armor);
     }
 }

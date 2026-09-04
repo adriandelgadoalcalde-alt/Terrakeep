@@ -19,6 +19,24 @@
 // (ver PlayerPreviewRenderer.cs, LoadArmorCell) - se guarda la hoja 360x224 ENTERA, mismo
 // criterio ya aplicado al cuerpo base (extraer-sprites-jugador.js).
 //
+// H6-01-b (advisor Opus, "la vanidad no se dibuja bien en el cuerpo delgado" - ver
+// ESPEC-dibujado-sprites.md#7.6): ademas de los ids que salen de vanilla_armor_slots.json (los
+// que llevan un ITEM real puesto en ese slot), SetMatch(Player.cs:37458-37694) y
+// GetMatchingBodyExtension(PlayerDrawLayers.cs:1850-1926) pueden sustituir el legSlot/headSlot
+// por un id SINTETICO que ningun item usa directamente (ej. bodySlot 93 fuerza legs=165) - sin
+// esos ficheros el renderer no puede dibujar la piernas/coat reales cuando SetMatch actua.
+// Comprobado por el advisor que los tres grupos de Armor_Legs_{n}.xnb SI existen en la
+// instalacion real (no hay que inventar nada, solo ampliar que ids se recorren) y que
+// Armor_Head_202.xnb (el unico headSlot sintetico) tambien existe.
+const LEGS_SINTETICOS_SET_MATCH_BODY = [88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 99, 100, 101, 102,
+  115, 116, 118, 119, 121, 123, 131, 136, 165, 166, 168, 169, 187, 189, 196, 199, 204,
+  214, 215, 216, 229, 244];
+const LEGS_SINTETICOS_SET_MATCH_LEGS = [117, 120, 135, 137, 147, 155, 157, 179, 183, 192, 194, 198,
+  202, 207, 220, 233, 248, 250];
+const LEGS_SINTETICOS_BODY_EXTENSION = [149, 150, 151, 160, 161, 162, 163, 164, 169, 170, 171,
+  172, 173, 174, 175, 176, 177, 178, 181, 182, 186, 195, 200, 201, 206, 221, 223, 238, 239];
+const HEAD_SINTETICOS_SET_MATCH = [202];
+
 // Uso: node scripts/extraer-sprites-armadura-vanilla.js
 // Salida: TerrasavrNative.App/Assets/player/armor_{head,legs}/{id}.png (40x56, sin cambios) y
 //         TerrasavrNative.App/Assets/player/armor_body/{id}.png (360x224, hoja entera)
@@ -77,7 +95,11 @@ for (const entry of Object.values(slots)) {
   if (entry.l !== undefined) legIds.add(entry.l);
 }
 
-console.log(`ids unicos referenciados: head=${headIds.size} body=${bodyIds.size} legs=${legIds.size}`);
+const antesHead = headIds.size, antesLegs = legIds.size;
+for (const id of HEAD_SINTETICOS_SET_MATCH) headIds.add(id);
+for (const id of [...LEGS_SINTETICOS_SET_MATCH_BODY, ...LEGS_SINTETICOS_SET_MATCH_LEGS, ...LEGS_SINTETICOS_BODY_EXTENSION]) legIds.add(id);
+
+console.log(`ids unicos referenciados: head=${headIds.size} (${headIds.size - antesHead} sinteticos de SetMatch) body=${bodyIds.size} legs=${legIds.size} (${legIds.size - antesLegs} sinteticos de SetMatch/GetMatchingBodyExtension)`);
 
 extraerGrupo('Head', headIds, (id) => path.join(STEAM_IMAGES, `Armor_Head_${id}.xnb`), path.join(OUT_ROOT, 'armor_head'), 'frame0');
 extraerGrupo('Legs', legIds, (id) => path.join(STEAM_IMAGES, `Armor_Legs_${id}.xnb`), path.join(OUT_ROOT, 'armor_legs'), 'frame0');

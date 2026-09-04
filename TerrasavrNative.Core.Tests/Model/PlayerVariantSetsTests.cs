@@ -33,4 +33,26 @@ public class PlayerVariantSetsTests
         Assert.True(PlayerVariantSets.IsMale(PlayerVariantSets.MaleStarter));
         Assert.False(PlayerVariantSets.IsMale(PlayerVariantSets.FemaleStarter));
     }
+
+    // H6-01-b (advisor Opus): las 10 variantes reales 0-9 usan su propia carpeta extraida por
+    // scripts/extraer-sprites-jugador.js (con herencia real resuelta en extraccion); 10/11
+    // (DisplayDoll, el maniqui del guardarropa) caen a la Starter de su genero, fuera de
+    // alcance deliberado.
+    [Theory]
+    [InlineData(0, "body0")]
+    [InlineData(1, "body1")]
+    [InlineData(2, "body2")]
+    [InlineData(3, "body3")]
+    [InlineData(4, "body4")]
+    [InlineData(5, "body5")]
+    [InlineData(6, "body6")]
+    [InlineData(7, "body7")]
+    [InlineData(8, "body8")] // el caso real "Eldelgas" (MaleDress)
+    [InlineData(9, "body9")]
+    [InlineData(10, "body0")] // MaleDisplayDoll, fuera de alcance -> Starter varon
+    [InlineData(11, "body4")] // FemaleDisplayDoll, fuera de alcance -> Starter mujer
+    public void BodyFolder_DevuelveLaCarpetaRealConHerenciaResueltaEnExtraccion(byte skinVariant, string esperado)
+    {
+        Assert.Equal(esperado, PlayerVariantSets.BodyFolder(skinVariant));
+    }
 }

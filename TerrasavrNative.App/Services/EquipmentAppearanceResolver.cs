@@ -41,14 +41,21 @@ public sealed class EquipmentAppearanceResolver
     public PlayerPreviewRenderer.EquippedArmor Resolve(PlrLoadout loadout)
     {
         var headSlot = Visible(loadout, 0);
+        var bodySlot = Visible(loadout, 1);
+        var legsSlot = Visible(loadout, 2);
         return new(
             ResolveHead(headSlot),
-            ResolveBody(Visible(loadout, 1)),
-            ResolveLegs(Visible(loadout, 2)),
+            ResolveBody(bodySlot),
+            ResolveLegs(legsSlot),
             // H6-07: el indice REAL de headSlot (Terraria.Player.head, la misma tabla que
             // ArmorHead[]/armor_head/{slot}.png) - solo se conoce para objetos VANILLA (ver
             // ResolveVanillaPath); Calamity no comparte esta numeracion, null a proposito.
-            ResolveHeadSlot(headSlot));
+            ResolveHeadSlot(headSlot),
+            // H6-01-b (advisor Opus): idem para bodySlot/legSlot - hacen falta como ID (no solo
+            // como ruta) para poder aplicar SetMatch/hidesTopSkin/hidesBottomSkin/
+            // GetMatchingBodyExtension en PlayerPreviewRenderer (ver PlayerBodyDrawTables).
+            ResolveBodySlot(bodySlot),
+            ResolveLegsSlot(legsSlot));
     }
 
     private static PlrItemSlot Visible(PlrLoadout loadout, int index) =>
@@ -62,6 +69,21 @@ public sealed class EquipmentAppearanceResolver
     {
         if (slot.IsEmpty || slot.Id >= CalamityIds.ItemIdBase) return null;
         return _vanillaSlots.ById(slot.Id)?.Head;
+    }
+
+    // Calamity no comparte la numeracion de bodySlot/legSlot vanilla (registra sus propios
+    // equip slots por mod) - null a proposito, ESPEC-dibujado-sprites.md#7.7 punto 8: el
+    // camino fiel-por-defecto para una pieza de Calamity es "hasBody=true, sin SetMatch".
+    private int? ResolveBodySlot(PlrItemSlot slot)
+    {
+        if (slot.IsEmpty || slot.Id >= CalamityIds.ItemIdBase) return null;
+        return _vanillaSlots.ById(slot.Id)?.Body;
+    }
+
+    private int? ResolveLegsSlot(PlrItemSlot slot)
+    {
+        if (slot.IsEmpty || slot.Id >= CalamityIds.ItemIdBase) return null;
+        return _vanillaSlots.ById(slot.Id)?.Legs;
     }
 
     private string? Resolve(PlrItemSlot slot, string calamitySuffix, Func<VanillaArmorSlotEntry, int?> vanillaPick, string vanillaDir)

@@ -372,6 +372,13 @@ public partial class AppearanceViewModel : ObservableObject
         // H6-06: "Ver sin equipo" pasa EquippedArmor por defecto (todo null, sin overlay),
         // nunca inventa nada.
         var armor = ShowEquipment ? _liveArmor : default;
-        PreviewImage = PlayerPreviewRenderer.Render(HairStyle, IsMale, colors, armor);
+        // H6-01-b (advisor Opus): el doll necesita el skinVariant REAL (0-11, puede ser una
+        // variante alternativa como el 8/MaleDress del caso "Eldelgas") para elegir la carpeta
+        // de sprites correcta - IsMale por si sola solo distingue Chico/Chica, no la variante.
+        // _character.Gender es la fuente real (PlrCharacter, ver LoadFrom); el fallback a
+        // Starter solo puede darse antes de que LoadFrom termine de asignar _character.
+        byte skinVariant = _character?.Gender
+            ?? (IsMale ? TerrasavrNative.Core.Model.PlayerVariantSets.MaleStarter : TerrasavrNative.Core.Model.PlayerVariantSets.FemaleStarter);
+        PreviewImage = PlayerPreviewRenderer.Render(HairStyle, skinVariant, colors, armor);
     }
 }

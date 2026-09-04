@@ -25,4 +25,16 @@ public static class PlayerVariantSets
     // el selector (OnIsMaleChanged solo dispara con un cambio real de valor).
     public const byte MaleStarter = 0;
     public const byte FemaleStarter = 4;
+
+    // H6-01-b (advisor Opus): carpeta real de sprites de cuerpo para cada skinVariant real
+    // (0-9, extraidas por scripts/extraer-sprites-jugador.js con la herencia real de
+    // PlayerDataInitializer.cs - ver ESPEC-dibujado-sprites.md#4.1). Las variantes 10/11
+    // (MaleDisplayDoll/FemaleDisplayDoll, el maniqui del guardarropa) quedan fuera de alcance
+    // - caen a la Starter de su genero, mismo criterio que ya usaba el codigo antes de esta
+    // pasada para TODAS las variantes.
+    public static string BodyFolder(byte skinVariant) => skinVariant switch
+    {
+        >= 0 and <= 9 => "body" + skinVariant,
+        _ => IsMale(skinVariant) ? "body0" : "body4",
+    };
 }

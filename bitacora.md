@@ -7555,3 +7555,72 @@ precedente en este arnes) y ejercita `SaveBuffSet`/`LoadBuffSet` de verdad con u
 temporal real, mismo camino real que esos botones llaman - guardar 2 buffs reales (uno vanilla,
 uno de Calamity), vaciar, cargar, confirmar que los ids coinciden exactos, mas una captura real
 de los 3 botones en la cabecera. **2/2 pasadas limpias**, sin NO-FOUND/FALLO/EXCEPTION.
+
+## La vanidad no se dibujaba bien en el cuerpo delgado - caso real "Eldelgas" (4-sep-2026)
+
+Pedido explicito del usuario, con metodologia propia de 5 pasos (Acotar/Analizar/Especificar/
+Reimplementar/Verificar) y advisor previo obligatorio: "la vanidad no se dibuja bien en el
+cuerpo delgado... quiero la funcion real de Terraria, no una aproximacion". Se consulto a un
+subagente Opus con el encargo de pararse tras el paso 3 (Especificar) y enseñar la
+especificacion antes de tocar codigo - entrego `ESPEC-dibujado-sprites.md` (848 lineas, cada
+afirmacion citada linea a linea contra `Player.cs`/`PlayerDrawSet.cs`/`PlayerDrawLayers.cs`
+decompilados reales, version 1.4.5.8 = la misma que la instalacion de Steam), que revise y
+verifique yo mismo re-leyendo el decompilado real antes de implementar nada (SetMatch completo,
+GetMatchingBodyExtension, hidesTopSkin/hidesBottomSkin, missingHand).
+
+**El bug real**: el personaje real "Eldelgas.plr" tiene `Gender`/`skinVariant`=8 (MaleDress) con
+la vanidad de cuerpo real 1820 "Vestido de la Muerte" (`bodySlot`=93) puesta. El renderer
+anterior solo conocia dos carpetas de sprites (body0/body4, por `isMale`), nunca aplicaba
+`SetMatch` (el juego real fuerza `legs`=165 - la falda del vestido - cuando `body`=93), nunca
+respetaba `hidesTopSkin`/`hidesBottomSkin` (93 oculta la piel del torso Y de las piernas), y
+dibujaba la ropa base SIEMPRE, incluso con armadura/vanidad de cuerpo puesta (tapando la
+vanidad por encima).
+
+**Cambios reales**:
+- `scripts/extraer-sprites-jugador.js` reescrito: ahora extrae las 10 variantes reales de
+  cuerpo (0-9, antes solo 0/4) con la tabla real de herencia de
+  `PlayerDataInitializer.cs` (1/2/3/8 heredan de 0, 5/6/7/9 heredan de 4, 3/7/8 tienen ademas
+  el faldon "Extra"/14) + la pieza 9 (ArmHand) que faltaba. Hallazgo real no documentado en
+  ningun sitio previo: 5 hojas reales (`Player_1_13`, `Player_2_8`, `Player_3_8`, `Player_5_13`,
+  `Player_8_8`) son tiras 40x1120 en vez de la rejilla 360x224 que tienen sus hermanas - un dato
+  real inconsistente de la propia instalacion, no un fallo de extraccion; el script ahora
+  detecta la forma real decodificada y hereda de la variante base cuando no encaja, en vez de
+  usarla a ciegas.
+- `scripts/extraer-sprites-armadura-vanilla.js` ampliado: ademas de los ids que usa algun item
+  real, extrae los ~83 ids sinteticos que solo produce `SetMatch`/`GetMatchingBodyExtension`
+  (nunca un item los tiene puestos directamente) + `armor_head/202` (el unico headSlot
+  sintetico). Los 83 existian todos en la instalacion real, 0 faltantes.
+- `TerrasavrNative.Core/Model/PlayerBodyDrawTables.cs` (nuevo): transcripcion literal de
+  `SetMatch` (las 3 llamadas encadenadas reales), `hidesTopSkin`/`hidesBottomSkin`,
+  `missingArm`/`missingHand` (71 ids reales) y `GetMatchingBodyExtension` - releido yo mismo
+  linea a linea del decompilado al escribir el fichero, no copiado del espec de memoria.
+- `PlayerVariantSets.BodyFolder(skinVariant)` (nuevo): resuelve la carpeta real de sprites para
+  las 10 variantes reales (10/11 DisplayDoll caen a la Starter de su genero, fuera de alcance).
+- `EquipmentAppearanceResolver.Resolve` ahora expone tambien `BodySlot`/`LegsSlot` (el ID, no
+  solo la ruta) - hacen falta para poder evaluar las tablas de arriba.
+- `PlayerPreviewRenderer.Render` reescrito de raiz: firma nueva
+  (`byte skinVariant` en vez de `bool isMale`), aplica la cadena real de `SetMatch`, respeta
+  `hidesTopSkin`/`hidesBottomSkin`, NO dibuja la ropa base cuando hay armadura/vanidad de
+  cuerpo puesta, dibuja `GetMatchingBodyExtension` como capa aparte, usa la pieza 9 (ArmHand,
+  no la 5) para el hueco de mano del brazo delantero, e invierte dos ordenes que estaban al
+  reves respecto al juego real (brazo-antes-que-hombro delantero; casco-antes-que-pelo en el
+  caso `fullHair`). Calamity (sin `bodySlot`/`legSlot` vanilla conocido) cae automaticamente al
+  comportamiento fiel-por-defecto (`hasBody=true`, sin `SetMatch`) sin ningun caso especial en
+  el codigo, solo por como se resuelven los ids en 0.
+- `AppearanceViewModel`/`CharacterListEntryViewModel` actualizados para pasar el `Gender` real
+  (byte) en vez de derivar solo `IsMale` - comprobado ademas que `OnIsMaleChanged` YA estaba
+  blindado contra degradar una variante alternativa real al cargar (`_suppressWriteback`),
+  riesgo que el espec marcaba como "comprobar antes de implementar" y que resulto no ser un
+  bug real.
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: **576/576** (269 Core, +67 tests
+nuevos: `PlayerBodyDrawTablesTests.cs` - cada tabla contrastada contra casos reales citados
+(incluido el caso 93->165/wearsRobe de Eldelgas, el caso 166 que NO marca wearsRobe, el caso 81
+condicionado a `legs` vacios); `PlayerVariantSetsTests.cs` ampliado con `BodyFolder` para las 12
+variantes; 307 ViewModels, +6 tests nuevos: `PlayerPreviewRendererSetMatchTests.cs` - el caso
+real Eldelgas (bodySlot=93, skinVariant=8) renderiza sin excepcion, difiere de sin armadura,
+difiere de una armadura sin entrada en SetMatch (prueba diferencial real de que SetMatch se
+esta aplicando), la ropa base no se dibuja con armadura puesta (bug #1 real), y las variantes
+0/8 renderizan sin excepcion con los assets ampliados). Arnes de UI Automation: **2/2 pasadas
+limpias**, sin NO-FOUND/FALLO/EXCEPTION (`ultimo-error.log` no existe en ninguna de las dos),
+capturas del doll (`h6-06-doll-con-equipo.png`) inspeccionadas a mano, sin corrupcion visible.
