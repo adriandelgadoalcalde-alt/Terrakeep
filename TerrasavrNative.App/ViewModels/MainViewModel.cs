@@ -800,7 +800,10 @@ public partial class MainViewModel : ObservableObject
         _whereIsItDebounceTimer.Start();
     }
 
-    [RelayCommand]
+    // F-16 (auditoria de Opus vs TEdit, B-04): antes el boton se OCULTABA del todo sin personaje
+    // (Visibility en XAML) - ahora se DESHABILITA via CanExecute, mismo patron ya establecido
+    // para Guardar/etc. (IsCharacterLoaded), asi la barra no cambia de forma al cargar.
+    [RelayCommand(CanExecute = nameof(IsCharacterLoaded))]
     private void ToggleWhereIsIt() => IsWhereIsItOpen = !IsWhereIsItOpen;
 
     // Recorre TODOS los slots reales del personaje (mismos 2 origenes que Bd-d ya agrega:
@@ -1585,5 +1588,6 @@ public partial class MainViewModel : ObservableObject
         // quedaba con aspecto deshabilitado hasta el primer requery automatico de WPF (foco/
         // raton), encontrado al verificar con captura real, no al escribir el codigo.
         MoveInventoryToStorageCommand.NotifyCanExecuteChanged();
+        ToggleWhereIsItCommand.NotifyCanExecuteChanged();
     }
 }

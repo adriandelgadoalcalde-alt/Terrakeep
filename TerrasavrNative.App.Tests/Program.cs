@@ -2526,6 +2526,21 @@ internal static class Program
 
                     vm.Exploration.SelectedCategory = WorldSearchCategory.All; // deja el estado limpio para pasos siguientes
                     DoEvents();
+
+                    // A8-01 (auditoria de Opus vs TEdit, E-01): "Sin resultados." se calculaba
+                    // pero el TextBlock que lo muestra vivia dentro de un Grid cuya visibilidad
+                    // dependia de WorldSearchResults.Count>0 - justo la condicion falsa. Buscar
+                    // algo que este mundo no tiene debe dejar un TextBlock VISIBLE de verdad en
+                    // el arbol visual (IsVisible ya tiene en cuenta la visibilidad de TODOS los
+                    // ancestros, no solo la propia), no solo la propiedad de la ViewModel.
+                    vm.Exploration.WorldSearchText = "zzzznoexisteenningunmundo";
+                    WaitForDispatcher(1000); // debounce real (250ms) + el barrido en segundo plano
+                    Console.WriteLine($"A8-01: WorldSearchResults.Count={vm.Exploration.WorldSearchResults.Count} (esperado 0), WorldSearchSummary='{vm.Exploration.WorldSearchSummary}' (esperado 'Sin resultados.')");
+                    bool sinResultadosVisible = Descendientes<TextBlock>(window)
+                        .Any(t => t.Text == vm.Exploration.WorldSearchSummary && t.Text == "Sin resultados." && t.IsVisible);
+                    if (!sinResultadosVisible) Console.WriteLine("FALLO: A8-01 - 'Sin resultados.' no aparece VISIBLE en el arbol visual tras una busqueda sin coincidencias");
+                    vm.Exploration.WorldSearchText = string.Empty; // deja el estado limpio para pasos siguientes
+                    WaitForDispatcher(300);
                 }
                 catch (Exception ex) { Console.WriteLine("CATEGORIAS-EXPLORACION-EXCEPTION: " + ex); }
 

@@ -1366,10 +1366,25 @@
                          solo se responde a ojo". Boton real en la cabecera global (visible en
                          CUALQUIER pestaña, como Guardar) - x:Name para que el Popup de abajo
                          pueda anclarse a el. -->
+                    <!-- F-16 (auditoria de Opus vs TEdit, B-04): antes se OCULTABA del todo sin
+                         personaje (Visibility), un tercer comportamiento distinto al resto de la
+                         fila (siempre visible / deshabilitado / oculto) - ahora se DESHABILITA via
+                         CanExecute (mismo patron que Guardar/etc.), con ToolTipService.
+                         ShowOnDisabled para que el motivo se vea igual que en las 5 pildoras de
+                         Exploracion, y la barra no cambia de forma al cargar un personaje. -->
                     <Button x:Name="WhereIsItButton" Content="🔍 ¿Dónde lo tengo?" Margin="10,0,0,0"
-                            Command="{Binding ToggleWhereIsItCommand}"
-                            ToolTip="Busca un objeto por nombre o #id entre TODOS los slots reales de tu personaje (Inventario, Almacenes, Equipamiento de los 4 loadouts...)"
-                            Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}" />
+                            Command="{Binding ToggleWhereIsItCommand}" ToolTipService.ShowOnDisabled="True">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="ToolTip" Value="Busca un objeto por nombre o #id entre TODOS los slots reales de tu personaje (Inventario, Almacenes, Equipamiento de los 4 loadouts...) (Ctrl+Shift+F)" />
+                                <Style.Triggers>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="ToolTip" Value="Carga un personaje primero" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <!-- H5-01 (quinta auditoria de Opus): "casi toda edicion del personaje es
                          irreversible" - historial real de deshacer/rehacer (UndoStack), no solo
                          a nivel de fichero como "Deshacer último guardado" de al lado. El
@@ -3374,11 +3389,16 @@
                     </Border>
                     <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center"
                                 Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
-                        <Button Content="&#8722;" Command="{Binding Exploration.ZoomOutCommand}" Padding="10,2" />
+                        <!-- P-8 (auditoria Opus vs TEdit): "−"/"+" eran los unicos botones sin
+                             tooltip de la fila; "Restablecer" no decia a que restablecia. -->
+                        <Button Content="&#8722;" Command="{Binding Exploration.ZoomOutCommand}" Padding="10,2"
+                                ToolTip="Alejar" />
                         <TextBlock Text="{Binding Exploration.Zoom, StringFormat={}{0:P0}}" Style="{StaticResource CaptionText}"
                                    VerticalAlignment="Center" Width="50" TextAlignment="Center" />
-                        <Button Content="+" Command="{Binding Exploration.ZoomInCommand}" Padding="10,2" Margin="4,0,0,0" />
-                        <Button Content="Restablecer" Command="{Binding Exploration.ZoomResetCommand}" Padding="8,2" Margin="8,0,0,0" />
+                        <Button Content="+" Command="{Binding Exploration.ZoomInCommand}" Padding="10,2" Margin="4,0,0,0"
+                                ToolTip="Acercar" />
+                        <Button Content="Restablecer" Command="{Binding Exploration.ZoomResetCommand}" Padding="8,2" Margin="8,0,0,0"
+                                ToolTip="Volver al 100% (1 pixel = 1 tile)" />
                         <!-- X-a (segunda auditoria de Opus, Fable): "Restablecer" vuelve al 100%,
                              que para un mundo de 8400x2400 significa ver el 12% del ancho - "la
                              accion mas obviamente ausente de la pantalla". El calculo real (necesita
@@ -3617,13 +3637,16 @@
                              ninguno de los dos perceptible) - se hizo async (Task.Run,
                              ExplorationViewModel.LoadFromPathAsync) y este overlay avisa de
                              verdad mientras dura, en vez de que la ventana parezca colgada. -->
+                        <!-- P-8 (auditoria Opus vs TEdit): el tinte oscuro solo tiene sentido si hay
+                             un mapa anterior real debajo que tapar (recarga de otro mundo) - con el
+                             lienzo ya vacio (primera carga) oscurecerlo no aporta nada. -->
                         <Border Background="#B0000000" CornerRadius="8"
-                                Visibility="{Binding Exploration.IsLoading, Converter={StaticResource BoolToVis}}">
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <ProgressBar IsIndeterminate="True" Width="160" Height="6" Foreground="{StaticResource AccentBrush}" />
-                                <TextBlock Text="Leyendo y pintando el mapa..." Style="{StaticResource CaptionText}" Margin="0,10,0,0" HorizontalAlignment="Center" />
-                            </StackPanel>
-                        </Border>
+                                Visibility="{Binding Exploration.IsLoadingOverExistingWorld, Converter={StaticResource BoolToVis}}" />
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Visibility="{Binding Exploration.IsLoading, Converter={StaticResource BoolToVis}}">
+                            <ProgressBar IsIndeterminate="True" Width="160" Height="6" Foreground="{StaticResource AccentBrush}" />
+                            <TextBlock Text="Leyendo y pintando el mapa..." Style="{StaticResource CaptionText}" Margin="0,10,0,0" HorizontalAlignment="Center" />
+                        </StackPanel>
 
                         <!-- H4-08 (cuarta auditoria de Opus, Fable): "la version buena - un
                              lanzador de mundos calcado del de personajes de Inicio" - antes solo
@@ -3740,6 +3763,24 @@
                             <CheckBox Content="Ordenar por distancia al spawn" IsChecked="{Binding Exploration.ShowSpawnDistance}"
                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,8,0,6"
                                       Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}" />
+                            <!-- F-3 (auditoria Opus vs TEdit, E-12): apagada por defecto, igual que
+                                 TEdit (AutoZoomOnNavigate, "Default false"). -->
+                            <CheckBox Content="Acercar al ir a un resultado" IsChecked="{Binding Exploration.AutoZoomOnNavigate}"
+                                      ToolTip="Al saltar a un resultado, ademas de centrarlo aplica un zoom de trabajo (no solo desplazar)"
+                                      Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,6"
+                                      Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}" />
+                            <!-- F-1 (auditoria Opus vs TEdit, E-01): antes este TextBlock vivia
+                                 DENTRO del Grid de abajo, cuya visibilidad depende de
+                                 WorldSearchResults.Count>0 - justo la condicion falsa cuando la
+                                 busqueda no encuentra nada, asi que "Sin resultados." (que la
+                                 ViewModel SI calcula, WorldSearchSummary) nunca llegaba a
+                                 mostrarse. Ahora vive fuera, con su propia visibilidad
+                                 (EmptyToCollapsed) sin condicion de recuento - las flechas ‹/›
+                                 siguen ligadas al recuento a proposito, navegar sin resultados no
+                                 tiene sentido. -->
+                            <TextBlock Text="{Binding Exploration.WorldSearchSummary}" Style="{StaticResource CaptionText}"
+                                       TextWrapping="Wrap" Margin="0,0,0,6"
+                                       Visibility="{Binding Exploration.WorldSearchSummary, Converter={StaticResource EmptyToCollapsed}}" />
                             <Grid Margin="0,0,0,6"
                                   Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}">
                                 <Grid.ColumnDefinitions>
@@ -3747,9 +3788,6 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Exploration.WorldSearchSummary}" Style="{StaticResource CaptionText}"
-                                           TextWrapping="Wrap" VerticalAlignment="Center"
-                                           Visibility="{Binding Exploration.WorldSearchSummary, Converter={StaticResource EmptyToCollapsed}}" />
                                 <!-- Navegacion circular anterior/siguiente - mismo gesto real que
                                      NavigateNext/NavigatePrevious de TEdit (pan, sin zoom). -->
                                 <Button Grid.Column="1" Content="&#8249;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
@@ -3781,7 +3819,7 @@
                                                     <StackPanel>
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
-                                                            <Border Background="{StaticResource TealBrush}" CornerRadius="99" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                            <Border Background="{Binding KindColor}" CornerRadius="99" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
                                                                 <TextBlock Text="{Binding KindLabel}" FontSize="9.5" Foreground="White" />
                                                             </Border>
                                                         </StackPanel>
@@ -3837,8 +3875,11 @@
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
                                                     <Image Source="{Binding IconPath}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,5,0"
                                                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                    <!-- P-8 (auditoria Opus vs TEdit): CalamityBrush (rojo) significa "Calamity/peligro"
+                                                         en el resto del tema - para "todavia no lo tienes" (nada peligroso) encaja mejor
+                                                         el mismo tono neutro que ya usa la propia pildora de recuento de arriba. -->
                                                     <TextBlock Text="{Binding Name}" Style="{StaticResource CaptionText}"
-                                                               Foreground="{StaticResource CalamityBrush}" />
+                                                               Foreground="{StaticResource TextSecondaryBrush}" />
                                                 </StackPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

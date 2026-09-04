@@ -106,7 +106,17 @@ public partial class MainWindow : Window
     private void OnWindowKeyDown(object sender, KeyEventArgs e)
     {
         bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
-        if (ctrl && e.Key == Key.S)
+        bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+        if (ctrl && shift && e.Key == Key.F)
+        {
+            // F-16 (auditoria de Opus vs TEdit, B-04): antes la unica forma de abrir "¿Donde lo
+            // tengo?" era el boton. OnWhereIsItPopupOpened ya hace foco+seleccion al abrirse -
+            // basta con ejecutar el comando. Va ANTES de la rama ctrl+F (Libreria) porque los dos
+            // comparten Key.F y el primer if que hace match es el que gana.
+            if (_viewModel.ToggleWhereIsItCommand.CanExecute(null)) _viewModel.ToggleWhereIsItCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (ctrl && e.Key == Key.S)
         {
             if (_viewModel.SaveCommand.CanExecute(null)) _viewModel.SaveCommand.Execute(null);
             e.Handled = true;
@@ -151,7 +161,11 @@ public partial class MainWindow : Window
         }
         else if (e.Key == Key.Escape)
         {
-            if (_viewModel.Library.IsPicking) _viewModel.Library.CancelPickCommand.Execute(null);
+            // F-17 (auditoria de Opus vs TEdit, B-05): comprobado que StaysOpen="False" por si
+            // solo NO cierra un Popup de WPF con Escape (hace falta codigo propio) - antes de
+            // esto no habia ningun manejador que cerrara WhereIsItPopup con esta tecla.
+            if (_viewModel.IsWhereIsItOpen) _viewModel.IsWhereIsItOpen = false;
+            else if (_viewModel.Library.IsPicking) _viewModel.Library.CancelPickCommand.Execute(null);
             else if (_viewModel.BuffLibrary.IsPicking) _viewModel.BuffLibrary.CancelPickCommand.Execute(null);
             else return; // nada real que cancelar - no consumir la tecla (ej. cerrar un ComboBox abierto)
             e.Handled = true;
@@ -486,6 +500,17 @@ public partial class MainWindow : Window
     // estan en espacio post-zoom, igual que en el arrastre.
     private void OnNavigateToTile(int tileX, int tileY)
     {
+        // F-3 (auditoria de Opus vs TEdit, E-12): con la casilla "Acercar al ir a un resultado"
+        // marcada, fija un zoom de trabajo ANTES de centrar - mismo patron real que el zoom con
+        // rueda (UpdateLayout() antes de pedir offsets nuevos, para que el ScrollViewer conozca
+        // el extent post-LayoutTransform). TEdit fija _zoom=8 en su escala
+        // (WorldRenderXna.xaml.cs:8178); el equivalente razonable aqui, dentro del MaxZoom=6.0
+        // ya existente, es 4.0.
+        if (_viewModel.Exploration.AutoZoomOnNavigate)
+        {
+            _viewModel.Exploration.Zoom = 4.0;
+            WorldMapScroll.UpdateLayout();
+        }
         double zoom = _viewModel.Exploration.Zoom;
         WorldMapScroll.ScrollToHorizontalOffset(tileX * zoom - WorldMapScroll.ViewportWidth / 2);
         WorldMapScroll.ScrollToVerticalOffset(tileY * zoom - WorldMapScroll.ViewportHeight / 2);

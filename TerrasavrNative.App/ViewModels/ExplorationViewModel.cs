@@ -44,8 +44,25 @@ public sealed partial class WorldSearchHitRowViewModel(WorldSearchHit hit) : Obs
         // coordenada que ChestItem (la del contenedor, no la del objeto).
         WorldSearchKind.TileEntityItem => "En objeto",
         WorldSearchKind.Sign => "Letrero",
+        WorldSearchKind.OreVein => "Veta",
         _ => "",
     };
+
+    // P-8 (auditoria de Opus vs TEdit): "la pildora KindLabel de cada resultado es siempre
+    // TealBrush - un color por familia permite escanear la lista sin leer". Sin inventar
+    // colores nuevos: los 7 solidos ya reales de Theme.xaml, reutilizando el mismo criterio que
+    // ya usa el resto de la app donde aplica (PinkBrush para NPC, igual que su marcador magenta
+    // del mapa; MasterGoldBrush para lo que sale de un contenedor, igual que el tesoro).
+    public Brush KindColor { get; } = (Brush)System.Windows.Application.Current.Resources[hit.Kind switch
+    {
+        WorldSearchKind.Wall => "OrangeBrush",
+        WorldSearchKind.Liquid => "AccentBrush",
+        WorldSearchKind.Npc => "PinkBrush",
+        WorldSearchKind.ChestItem or WorldSearchKind.TileEntityItem => "MasterGoldBrush",
+        WorldSearchKind.Sign => "EquippedGreenBrush",
+        WorldSearchKind.OreVein => "CalamityBrush",
+        _ => "TealBrush", // Tile y cualquier valor de reserva
+    }];
 
     // Fase 3: null = "distancia al spawn" apagada (no se muestra) - ExplorationViewModel.
     // ApplyWorldSearchOrder es quien la calcula/limpia, nunca este constructor (el spawn real
@@ -194,7 +211,15 @@ public partial class ExplorationViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsNotLoading));
         OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(IsLoadingOverExistingWorld));
     }
+
+    // P-8 (auditoria de Opus vs TEdit): "el overlay de carga tapa el mapa con #B0000000 opaco;
+    // con lienzo vacio no aporta nada". IsWorldLoaded NO se resetea al empezar una carga (solo
+    // al terminar, ver LoadFromPathAsync) - asi que durante la RECARGA de un mundo distinto
+    // sigue valiendo True (hay un mapa anterior real que oscurecer), y durante la PRIMERA carga
+    // vale False (el lienzo ya esta vacio, oscurecerlo no tiene efecto util).
+    public bool IsLoadingOverExistingWorld => IsLoading && IsWorldLoaded;
 
     // H4-08 (cuarta auditoria de Opus, Fable): "el estado vacio de Exploracion es un lienzo
     // negro sin guia" - el unico aviso real ("Sin mundo cargado.") vivia en StatusMessage, en
@@ -202,7 +227,11 @@ public partial class ExplorationViewModel : ObservableObject
     // centrado en el propio lienzo (mismo patron ya usado por el overlay de IsLoading, ver
     // MainWindow.xaml) - nunca durante la carga, para no parpadear entre los dos avisos.
     public bool IsEmpty => !IsWorldLoaded && !IsLoading;
-    partial void OnIsWorldLoadedChanged(bool value) => OnPropertyChanged(nameof(IsEmpty));
+    partial void OnIsWorldLoadedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(IsLoadingOverExistingWorld));
+    }
 
     // Siempre TODOS los NPCs del mundo - lo que dibuja los marcadores del mapa (nunca se
     // filtra, ver X-c arriba).
@@ -235,6 +264,13 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private bool _showSpawnDistance;
     partial void OnShowSpawnDistanceChanged(bool value) => ApplyWorldSearchOrder();
     private List<WorldSearchHitRowViewModel> _lastWorldSearchRows = [];
+
+    // F-3 (auditoria de Opus vs TEdit, E-12): "ir a un resultado nunca ajusta el zoom, y no hay
+    // opcion de que lo haga". El valor por defecto False (solo desplazar, sin zoom) ya era
+    // correcto - citaba el mismo "Default false - just pan, don't zoom" de TEdit,
+    // FindSidebarViewModel.cs:61 - lo que faltaba era la CASILLA para que el usuario decida.
+    // El code-behind (OnNavigateToTile, MainWindow.xaml.cs) es quien lee esta propiedad.
+    [ObservableProperty] private bool _autoZoomOnNavigate;
     private int _worldSearchCurrentIndex = -1;
 
     private readonly DispatcherTimer _worldSearchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
