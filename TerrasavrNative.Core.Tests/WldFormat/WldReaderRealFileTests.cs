@@ -220,4 +220,38 @@ public class WldReaderRealFileTests(ITestOutputHelper output)
         if (encontrados.Count == 0) return; // ninguno de los dos mundos reales esta en este PC - nada que comprobar
         Assert.Contains(encontrados, c => c > 0);
     }
+
+    // Punto 4 (advisor Opus, "que solo puedan salir los objetos que tiene ese mundo" - ver
+    // ESPEC-ui-exploracion.md#6/#10): prueba de humo real de WorldPresenceIndex.Build contra un
+    // .wld real - confirma la cifra clave que justifica todo el diseño (el mundo real solo
+    // contiene una FRACCION del catalogo completo del juego, nunca todo ni nada).
+    [Theory]
+    [MemberData(nameof(RealWldFiles))]
+    public void PresenceIndex_RealWorld_EsUnaFraccionRealDelCatalogoCompleto(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        var world = WldReader.Read(File.ReadAllBytes(path));
+        var idx = WorldPresenceIndex.Build(world);
+        output.WriteLine($"{Path.GetFileName(path)}: tiles={idx.TileCounts.Count}, paredes={idx.WallCounts.Count}, " +
+            $"variantes de sprite={idx.SpriteVariantCounts.Count}, npcs={idx.NpcCounts.Count}, netId en cofres={idx.ChestItemCounts.Count}, letreros={idx.SignCount}");
+
+        // Un mundo real SIEMPRE es una fraccion real del catalogo (nunca 0 - el mundo tiene
+        // tierra/piedra como minimo -, nunca el catalogo entero - 754 tiles reales, ningun mundo
+        // real los genera todos).
+        Assert.InRange(idx.TileCounts.Count, 1, 753);
+        Assert.True(idx.TileCounts.Values.All(c => c > 0), "un recuento real nunca puede ser 0 o negativo");
+        Assert.Equal(world.Signs.Count, idx.SignCount);
+
+        // Todo id que el indice dice presente tiene que existir de verdad en la rejilla real -
+        // ida y vuelta contra el propio mundo, no solo contra si mismo.
+        foreach (var (type, count) in idx.TileCounts.Take(5))
+        {
+            int contadoAMano = 0;
+            for (int x = 0; x < world.Header.TilesWide && contadoAMano < count; x++)
+                for (int y = 0; y < world.Header.TilesHigh && contadoAMano < count; y++)
+                    if (world.Tiles[x, y].Type == type) contadoAMano++;
+            Assert.True(contadoAMano >= 1, $"el tipo {type} que el indice dice presente ({count} veces) no aparece ni una vez en la rejilla real");
+        }
+    }
 }

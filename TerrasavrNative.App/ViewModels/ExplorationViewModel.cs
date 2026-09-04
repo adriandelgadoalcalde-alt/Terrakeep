@@ -113,8 +113,15 @@ public partial class ExplorationViewModel : ObservableObject
     private readonly VanillaItemCatalog _itemNames;
     private List<WorldNpcRowViewModel> _allNpcs = [];
     private WldWorld? _world;
+    // Punto 4 (advisor Opus, "que solo puedan salir los objetos que tiene ese mundo" - ver
+    // ESPEC-ui-exploracion.md#10.3): censo real del mundo cargado, calculado una vez en el mismo
+    // Task.Run que ya lee+pinta (LoadFromPathAsync). Null sin mundo cargado, igual que _world.
+    private WorldPresenceIndex? _presence;
 
     [ObservableProperty] private BitmapSource? _worldImage;
+    // Punto 4 (Minerales - ESPEC-ui-exploracion.md#11.3): capa de resaltado de mineral, una
+    // segunda Image dentro del mismo Grid escalado que WorldMapImage - null = sin marcar nada.
+    [ObservableProperty] private BitmapSource? _worldHighlight;
     [ObservableProperty] private string _statusMessage = "Sin mundo cargado.";
     [ObservableProperty] private string? _worldTitle;
     [ObservableProperty] private bool _isWorldLoaded;
@@ -446,14 +453,23 @@ public partial class ExplorationViewModel : ObservableObject
         try
         {
             StatusMessage = "Leyendo y pintando el mapa...";
-            var (world, image) = await Task.Run(() =>
+            // Punto 4 (advisor Opus, "que solo puedan salir los objetos que tiene ese mundo" -
+            // ver ESPEC-ui-exploracion.md#10.3): el censo real del mundo se calcula AQUI, dentro
+            // del mismo Task.Run que ya lee+pinta - el mundo ya esta caliente en cache justo en
+            // este punto, el overlay de "Leyendo y pintando..." ya esta en pantalla (sin hueco
+            // nuevo que tapar), y el sobrecoste medido es de decenas de milisegundos frente a los
+            // ~1.4s que ya cuesta este paso completo.
+            var (world, image, presence) = await Task.Run(() =>
             {
                 var w = WldReader.Read(File.ReadAllBytes(wldPath));
                 var img = WorldRenderer.Render(w, _mapColors);
-                return (w, img);
+                var idx = WorldPresenceIndex.Build(w);
+                return (w, img, idx);
             });
             _world = world;
+            _presence = presence;
             WorldImage = image;
+            WorldHighlight = null; // un mundo nuevo invalida cualquier resaltado de mineral anterior
 
             _allNpcs = world.Npcs
                 .OrderBy(n => _npcNames.GetName(n.Id))
@@ -489,6 +505,8 @@ public partial class ExplorationViewModel : ObservableObject
         catch (Exception ex)
         {
             _world = null;
+            _presence = null;
+            WorldHighlight = null;
             IsWorldLoaded = false;
             StatusMessage = $"Error al leer el mundo: {ex.Message}";
             UpdateCurrentWorldPath(null); // un fallo real no debe dejar ninguna pildora marcada como "cargada"

@@ -88,6 +88,42 @@ public class WorldSearchTests
     }
 
     [Fact]
+    public void Run_SpriteVariantExacta_SoloCasaEsaVarianteNoElTipoEntero()
+    {
+        var tiles = new WldTile[2, 1];
+        tiles[0, 0] = new WldTile(21, 0, 0, 0, 36, 0); // "cofre de oro" real (u=36)
+        tiles[1, 0] = new WldTile(21, 0, 0, 0, 0, 0);  // "cofre de madera" real (u=0), mismo tipo
+
+        var world = MakeWorld(tiles);
+        var tileNames = MakeTileNames((21, "Cofre"));
+
+        var result = Run(world, new WorldSearchQuery { SpriteVariants = new HashSet<(int, short, short)> { (21, 36, 0) } }, tileNames);
+
+        var hit = Assert.Single(result.Hits);
+        Assert.Equal(0, hit.X); // solo el de oro, NO el de madera aunque comparta Type
+        Assert.Equal(WorldSearchKind.Tile, hit.Kind);
+    }
+
+    [Fact]
+    public void Run_TileTypesYSpriteVariants_NuncaDuplicanLaMismaCasilla()
+    {
+        var tiles = new WldTile[1, 1];
+        tiles[0, 0] = new WldTile(21, 0, 0, 0, 36, 0);
+
+        var world = MakeWorld(tiles);
+        // El mismo tile casa por las DOS condiciones a la vez (tipo 21 Y la variante exacta) -
+        // tiene que dar una unica fila, no dos.
+        var result = Run(world, new WorldSearchQuery
+        {
+            TileTypes = new HashSet<int> { 21 },
+            SpriteVariants = new HashSet<(int, short, short)> { (21, 36, 0) },
+        }, MakeTileNames((21, "Cofre")));
+
+        Assert.Single(result.Hits);
+        Assert.Equal(1, result.TotalCount);
+    }
+
+    [Fact]
     public void Run_TileInactivo_NuncaCuentaAunqueElTipoCoincidaPorCasualidad()
     {
         // WldTile.Empty tiene Type=-1 (IsActive=false) - un tile vacio no debe colarse nunca en

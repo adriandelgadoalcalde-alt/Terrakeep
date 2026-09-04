@@ -23,7 +23,11 @@ namespace TerrasavrNative.Core.WldFormat;
 // mas y ser exacto que fusionar con un umbral inventado.
 public readonly record struct WorldSearchHit(int X, int Y, string Name, WorldSearchKind Kind);
 
-public enum WorldSearchKind { Tile, Wall, Liquid, Npc, ChestItem, Sign }
+// OreVein va AL FINAL a proposito (el orden se refleja en KindLabel de la App - ver
+// ESPEC-ui-exploracion.md#14.2) - Fase 3/Minerales (advisor Opus): las vetas encontradas por
+// OreVeinFinder se vuelcan como WorldSearchHit normales para heredar gratis la navegacion
+// circular/distancia al spawn/marcador que ya tiene cualquier resultado.
+public enum WorldSearchKind { Tile, Wall, Liquid, Npc, ChestItem, Sign, OreVein }
 
 public sealed class WorldSearchQuery
 {
@@ -35,6 +39,12 @@ public sealed class WorldSearchQuery
     // Calamity que un .wld real pueda guardar no se conocen de antemano, tModLoader los asigna
     // en tiempo de carga del mod; ver el comentario de ItemNames en Run).
     public IReadOnlySet<int> ChestItemIds { get; init; } = new HashSet<int>();
+    // Fase 3 (ESPEC-ui-exploracion.md#14.2): variante EXACTA de un tile enmarcado (Type,U,V) -
+    // permite buscar "Cofre de oro" (21,36,0) y no "cualquier cofre" (TileTypes={21}). Conjunto
+    // aparte de TileTypes (no un Dictionary<..,bool>, un Set alcanza: la presencia ya es la
+    // señal) - un tile puede casar por TileTypes O por SpriteVariants, nunca produce dos filas
+    // por la misma casilla (ver Run).
+    public IReadOnlySet<(int Type, short U, short V)> SpriteVariants { get; init; } = new HashSet<(int, short, short)>();
     // Fase 2: los letreros son texto libre, no un catalogo de ids - en vez de acoplar Core a la
     // gramatica de busqueda de la App (LibrarySearchGrammar vive en TerrasavrNative.App, Core
     // no puede depender de App), quien construye la query decide COMO casa el texto (un
@@ -44,7 +54,7 @@ public sealed class WorldSearchQuery
     public int DisplayLimit { get; init; } = 1000;
 
     public bool IsEmpty => TileTypes.Count == 0 && WallIds.Count == 0 && LiquidTypes.Count == 0
-        && NpcIds.Count == 0 && ChestItemIds.Count == 0 && SignTextPredicate == null;
+        && NpcIds.Count == 0 && ChestItemIds.Count == 0 && SpriteVariants.Count == 0 && SignTextPredicate == null;
 }
 
 public readonly record struct WorldSearchResult(IReadOnlyList<WorldSearchHit> Hits, int TotalCount);
@@ -83,7 +93,7 @@ public static class WorldSearch
         var hits = new List<WorldSearchHit>();
         int total = 0;
 
-        bool wantsTileScan = query.TileTypes.Count > 0 || query.WallIds.Count > 0 || query.LiquidTypes.Count > 0;
+        bool wantsTileScan = query.TileTypes.Count > 0 || query.WallIds.Count > 0 || query.LiquidTypes.Count > 0 || query.SpriteVariants.Count > 0;
         if (wantsTileScan)
         {
             int w = world.Header.TilesWide, h = world.Header.TilesHigh;
@@ -93,7 +103,10 @@ public static class WorldSearch
                 for (int y = 0; y < h; y++)
                 {
                     var tile = world.Tiles[x, y];
-                    if (tile.IsActive && query.TileTypes.Contains(tile.Type))
+                    // Un tile casa por TileTypes (cualquier variante) O por SpriteVariants (una
+                    // variante exacta) - una unica fila por casilla aunque las dos condiciones
+                    // sean ciertas a la vez.
+                    if (tile.IsActive && (query.TileTypes.Contains(tile.Type) || query.SpriteVariants.Contains((tile.Type, tile.U, tile.V))))
                         Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(x, y, tileNames.TileVariantName(tile.Type, tile.U, tile.V), WorldSearchKind.Tile));
                     if (tile.Wall != 0 && query.WallIds.Contains(tile.Wall))
                         Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(x, y, tileNames.WallName(tile.Wall), WorldSearchKind.Wall));
