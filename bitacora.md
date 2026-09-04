@@ -8055,3 +8055,63 @@ Commits: `595625c6` (1244 assets + 2 scripts), `0c1f87b9` (Parte C completa), `8
 (Partes A y B juntas, comparten `MainWindow.xaml`/`Program.cs` - separarlas habria exigido un
 `git add -p` fragil sobre XAML entrelazado, mas riesgo que beneficio dado que las dos se
 verificaron juntas en la misma pasada limpia del arnes).
+
+---
+
+## 4-sep-2026 - Auditoria de redimensionado (advisor Opus, SOLO informe, sin tocar codigo)
+
+Encargo: auditar TODA la app pantalla por pantalla al redimensionar la ventana, del minimo al
+maximo, y planificar la correccion de todo lo que desaparezca o se recorte. **Solo plan, cero
+implementacion** - ningun fichero de produccion tocado. Informe:
+`ESPEC-auditoria-redimensionado.md`.
+
+**Obstaculo real resuelto (autonomia tecnica) - cierra el "hallazgo de entorno" de la entrada
+anterior con la causa exacta**: el clamp a 1080px NO era una rareza inexplicable ni una
+regresion. Cadena completa medida: sesion RDP (`query session` -> `rdp-tcp#0`) + adaptador
+remoto a 1440x2992 fisicos + escalado al **250%** (`CompositionTarget.TransformToDevice`
+M11=M22=2,5) => escritorio logico de **576x1197 DIP**. Windows topa cualquier ventana en
+`MINMAXINFO.ptMaxTrackSize` = `SM_CXMAXTRACK`=1476 fisicos (= 590 DIP), pero WPF rellena
+`ptMinTrackSize` desde `Window.MinWidth`=1080 DIP (= 2700 fisicos); como el minimo se aplica
+DESPUES del maximo, el ancho real queda clavado en 2700 fisicos = **1080 DIP exactos, se pida
+lo que se pida**. Eso explica por que el tope caia justo en `MinWidth` y no en el ancho de
+pantalla. La ALTURA si obedecia (2150 fisicos < `SM_CYMAXTRACK`=3028), por eso `HeightClass`
+si se habia podido probar y `SizeClass` no.
+
+**Remedio real**: hook de `WM_GETMINMAXINFO` (0x0024) via `HwndSource.AddHook` desde el arnes
+(nunca desde produccion) subiendo `ptMaxTrackSize`/`ptMaxSize` a 32000. Verificado: 1180 ->
+1180, 1550 -> 1550, 3000 -> 3000 reales. **Consecuencia que hay que arreglar en el arnes
+permanente**: sin ese hook, `E2-UMBRAL`, `A4-1350`, `A4-EXPANDIDO` y `H5-09-AMPLIO` de
+`TerrasavrNative.App.Tests/Program.cs` llevan midiendo 1080px en esta maquina y dando
+resultados falsos sin avisar. El informe (seccion 6.0) trae el codigo exacto a añadir + una
+guarda `RESIZE-IMPOSIBLE` para que no pueda volver a pasar en silencio.
+
+**Metodo**: 20 pantallas x 14 tamaños (1080x700 a 3840x2160, cruzando los 3 umbrales por ambos
+lados) = 288 combinaciones, con redimensionado REAL de la ventana del SO. Deteccion objetiva
+por `VisualTreeHelper.GetClip` sobre el elemento recortado (experimento controlado previo: el
+recorte lo hace el recorte de layout de WPF, **no** el `CornerRadius` del `Border` como decia
+el comentario de `MainWindow.xaml:3006-3015` - se recorta igual sin `CornerRadius`), mas UI
+Automation real para lo que el arbol visual no puede ver (controles que dejan de existir).
+
+**3 hallazgos de severidad maxima** (algo desaparece del todo), los tres invisibles hasta hoy
+porque el arnes nunca pudo ensanchar la ventana: (1) "Guardar conjunto/Cargar/Añadir" de
+Inventario Y de Almacen **desaparecen a partir de 1500px** (la rama Amplio de A-4 se escribio
+como copia a mano de la cabecera y se dejo 3 botones fuera); (2) la barra lateral de
+Exploracion se recorta 66px **a cualquier tamaño, incluido 4K** (el `MaxWidth=380` esta en la
+`ColumnDefinition` `Auto`, que mide con ancho infinito, asi que el `WrapPanel` de las 5
+pildoras nunca envuelve y la 5ª, "Objetos", pierde 60 de 97px); (3) los nombres de objeto de
+Builds se cortan hasta el 100% (mismo bug de "StackPanel Horizontal mide con ancho infinito"
+que `CategoryNodeTemplate:271-275` ya documenta y arregla, sin aplicar aqui).
+
+**Dato duro sobre el sistema de breakpoints**: `NormalMinWidth=1300` esta mal medido por 20px
+para su unico consumidor real. Bisección de 10 en 10px: a 1299 la franja vital esta completa;
+a 1300 se despliega y **se recorta 16px** hasta 1320. Cruzar ese umbral EMPEORA la cabecera en
+todas las pantallas. Y por debajo de 1170px ni la franja compacta cabe: la cabecera global no
+entra en el `MinWidth=1080` que la propia ventana declara.
+
+**Dos falsos positivos propios del arnes, encontrados y eliminados** (documentados en el
+informe §1.5 para que no se repitan al portarlo): reasignar el marco de recorte heredado
+dentro del bucle de hermanos (contaminaba a todos los siguientes, ~2.700 falsos "pierde el
+100%"), y calcular el solape con `Rect.Intersect` a secas en vez de por eje (un elemento
+desplazado fuera de vista en Y falseaba perdida total en X).
+
+Sin commit de codigo: no hay cambio de codigo. Solo el informe nuevo.
