@@ -27,8 +27,8 @@ public sealed class HomeCardTests
     public void UpdateCurrentPath_MarcaIsCurrentSoloEnLaTarjetaQueCoincide()
     {
         var home = new HomeViewModel(EquipAppearance, Service.BackupHistory);
-        var a = new CharacterListEntryViewModel(@"C:\a.plr", NuevoPersonaje("A"), false, DateTime.UtcNow, EquipAppearance);
-        var b = new CharacterListEntryViewModel(@"C:\b.plr", NuevoPersonaje("B"), false, DateTime.UtcNow, EquipAppearance);
+        var a = new CharacterListEntryViewModel(@"C:\a.plr", NuevoPersonaje("A"), false, null, DateTime.UtcNow, EquipAppearance);
+        var b = new CharacterListEntryViewModel(@"C:\b.plr", NuevoPersonaje("B"), false, null, DateTime.UtcNow, EquipAppearance);
         home.Characters.Add(a);
         home.Characters.Add(b);
 
@@ -44,7 +44,7 @@ public sealed class HomeCardTests
         var vm = new MainViewModel();
         string path = Path.Combine(Path.GetTempPath(), $"home-current-{Guid.NewGuid():N}.plr");
         File.WriteAllBytes(path, PlrFile.Write(NuevoPersonaje("Test")));
-        var entry = new CharacterListEntryViewModel(path, PlrFile.Read(File.ReadAllBytes(path)), false, DateTime.UtcNow, EquipAppearance);
+        var entry = new CharacterListEntryViewModel(path, PlrFile.Read(File.ReadAllBytes(path)), false, null, DateTime.UtcNow, EquipAppearance);
         vm.Home.Characters.Add(entry);
 
         vm.LoadFromPath(path);
@@ -62,7 +62,7 @@ public sealed class HomeCardTests
         string path = Path.Combine(dir, "MiPersonaje.plr");
         var character = NuevoPersonaje("MiPersonaje");
         File.WriteAllBytes(path, PlrFile.Write(character));
-        var entry = new CharacterListEntryViewModel(path, character, isCalamity: false, DateTime.UtcNow, EquipAppearance);
+        var entry = new CharacterListEntryViewModel(path, character, isTModLoader: false, tplr: null, DateTime.UtcNow, EquipAppearance);
 
         home.DuplicateCommand.Execute(entry);
 
@@ -83,7 +83,7 @@ public sealed class HomeCardTests
         string path = Path.Combine(dir, "X.plr");
         File.WriteAllBytes(path, PlrFile.Write(NuevoPersonaje("Nuevo")));
         File.WriteAllBytes(path + ".bak", PlrFile.Write(NuevoPersonaje("Viejo")));
-        var entry = new CharacterListEntryViewModel(path, PlrFile.Read(File.ReadAllBytes(path)), false, DateTime.UtcNow, EquipAppearance);
+        var entry = new CharacterListEntryViewModel(path, PlrFile.Read(File.ReadAllBytes(path)), false, null, DateTime.UtcNow, EquipAppearance);
 
         home.RestoreBackupCommand.Execute(entry);
 
@@ -100,7 +100,7 @@ public sealed class HomeCardTests
         string path = Path.Combine(dir, "Y.plr");
         var character = NuevoPersonaje("Solo");
         File.WriteAllBytes(path, PlrFile.Write(character));
-        var entry = new CharacterListEntryViewModel(path, character, false, DateTime.UtcNow, EquipAppearance);
+        var entry = new CharacterListEntryViewModel(path, character, false, null, DateTime.UtcNow, EquipAppearance);
 
         home.RestoreBackupCommand.Execute(entry);
 

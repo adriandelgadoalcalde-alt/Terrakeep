@@ -146,7 +146,7 @@ public sealed class Tanda1FableTests
         vm.SaveCommand.Execute(null); // deja un .bak real SIN el Dirt Block
         Assert.False(vm.InventoryContainer!.Slots[0].IsEmpty); // el editor tiene el objeto en memoria
 
-        var entry = new CharacterListEntryViewModel(path, PlrFile.Read(File.ReadAllBytes(path)), false, DateTime.UtcNow, EquipAppearance);
+        var entry = new CharacterListEntryViewModel(path, PlrFile.Read(File.ReadAllBytes(path)), false, null, DateTime.UtcNow, EquipAppearance);
         vm.Home.RestoreBackupCommand.Execute(entry);
 
         // H3-04: no basta con que el FICHERO se restaure - el editor (mismo personaje cargado)
@@ -173,7 +173,7 @@ public sealed class Tanda1FableTests
         loadedOtro.Character.Name = "OtroEditado";
         svc.Save(loadedOtro); // deja un .bak real de "Otro" para ese OTRO personaje
 
-        var entryOtro = new CharacterListEntryViewModel(pathOtro, PlrFile.Read(File.ReadAllBytes(pathOtro)), false, DateTime.UtcNow, svc.EquipmentAppearance);
+        var entryOtro = new CharacterListEntryViewModel(pathOtro, PlrFile.Read(File.ReadAllBytes(pathOtro)), false, null, DateTime.UtcNow, svc.EquipmentAppearance);
         vm.Home.RestoreBackupCommand.Execute(entryOtro);
 
         // No es el personaje cargado - el editor (con su edicion sin guardar) no debe tocarse.

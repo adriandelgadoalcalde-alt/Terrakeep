@@ -31,7 +31,7 @@ public sealed class ConfirmDiscardChangesTests
     private static CharacterListEntryViewModel EntryFor(string path)
     {
         var character = PlrFile.Read(File.ReadAllBytes(path));
-        return new CharacterListEntryViewModel(path, character, isCalamity: false, DateTime.UtcNow, EquipAppearance);
+        return new CharacterListEntryViewModel(path, character, isTModLoader: false, tplr: null, DateTime.UtcNow, EquipAppearance);
     }
 
     [Fact]

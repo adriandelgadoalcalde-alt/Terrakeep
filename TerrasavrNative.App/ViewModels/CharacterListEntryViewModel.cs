@@ -1,6 +1,7 @@
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using TerrasavrNative.App.Services;
+using TerrasavrNative.Core.Calamity;
 using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels;
@@ -18,7 +19,22 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     public string FilePath { get; }
     public string Name { get; }
     public string DifficultyLabel { get; }
+    // Encargo del usuario 4-sep-2026 - tres hechos DISTINTOS donde antes habia uno solo mal
+    // nombrado (ver ESPEC-sprites-botones-badges.md#C):
+    //   IsTModLoader = existe un .tplr hermano. El hecho PRINCIPAL ("verdaderamente de tmodloader").
+    //   IsCalamity   = ademas hay un objeto o un buff de Calamity REAL dentro de ese .tplr (mismo
+    //                  criterio exacto que CharacterFileService.Save, resuelto sobre el NBT crudo).
+    //                  NO sustituye a IsTModLoader: un personaje puede llevar las dos insignias.
+    //   IsVanilla    = no hay .tplr. El usuario lo pidio explicitamente ("al igual que cuando un
+    //                  personaje es vanilla que tenga dicha etiqueta").
+    public bool IsTModLoader { get; }
     public bool IsCalamity { get; }
+    public bool IsVanilla => !IsTModLoader;
+    // Regalo de la clave usedMods real del .tplr (la escribe tModLoader en cada guardado,
+    // PlayerIO.cs:67) - la lista de mods que estaban cargados la ultima vez. Null si el .tplr no
+    // la trae (los que escribe el propio Terrakeep no la tienen) para que el ToolTip no aparezca
+    // vacio.
+    public string? UsedModsTooltip { get; }
     public string LastModifiedText { get; }
     public WriteableBitmap Preview { get; }
 
@@ -27,7 +43,8 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     // comparando FilePath contra el personaje realmente cargado en MainViewModel.
     [ObservableProperty] private bool _isCurrent;
 
-    public CharacterListEntryViewModel(string plrPath, PlrCharacter character, bool isCalamity, DateTime lastModifiedUtc, EquipmentAppearanceResolver equipmentAppearance)
+    public CharacterListEntryViewModel(string plrPath, PlrCharacter character, bool isTModLoader,
+        TplrModSummary? tplr, DateTime lastModifiedUtc, EquipmentAppearanceResolver equipmentAppearance)
     {
         FilePath = plrPath;
         Name = character.Name;
@@ -38,7 +55,11 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
             3 => "Journey",
             _ => "Softcore",
         };
-        IsCalamity = isCalamity;
+        IsTModLoader = isTModLoader;
+        IsCalamity = tplr?.HasCalamityContent == true;
+        UsedModsTooltip = tplr is { UsedMods.Count: > 0 }
+            ? "Mods usados la última vez: " + string.Join(", ", tplr.UsedMods)
+            : null;
         LastModifiedText = lastModifiedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
 
         PlayerPreviewRenderer.Tint T(byte[] c) => new(c[0], c[1], c[2]);

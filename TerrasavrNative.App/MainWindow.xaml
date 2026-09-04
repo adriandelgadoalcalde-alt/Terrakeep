@@ -1159,7 +1159,37 @@
                             <Border Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="5,1">
                                 <TextBlock Text="{Binding DifficultyLabel}" Style="{StaticResource CaptionText}" FontSize="10" />
                             </Border>
+
+                            <!-- Encargo del usuario 4-sep-2026: hasta hoy solo habia UNA insignia, roja, que decia
+                                 "Calamity" y en realidad solo significaba "tiene un .tplr al lado" (=cualquier mod).
+                                 Ahora son tres hechos separados, en orden de importancia de izquierda a derecha:
+                                 tModLoader (lo principal) -> Calamity (lo especifico, ADEMAS de la anterior, no en su
+                                 lugar) -> Vanilla (la ausencia de las dos). Ver ESPEC-sprites-botones-badges.md#C. -->
+
+                            <!-- "Vanilla": la mas callada de las tres a proposito (es la AUSENCIA de mods, no un rasgo
+                                 que reclame atencion). Solo contorno, mismo lenguaje visual que los selectores nuevos de
+                                 Exploracion - sin inventar ningun color nuevo del tema. -->
+                            <Border Background="Transparent" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1"
+                                    CornerRadius="3" Padding="5,1" Margin="5,0,0,0"
+                                    ToolTip="Sin ningún mod: este personaje no tiene un archivo .tplr al lado"
+                                    Visibility="{Binding IsVanilla, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Vanilla" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                            </Border>
+
+                            <!-- "tModLoader": la pareja AccentMuted/AccentHover, que en este tema ya significa "de la
+                                 familia del acento pero secundario" (Tag="AccentSoft", PrefixGroupButton). Va ANTES que
+                                 la de Calamity porque es el hecho principal, y su ToolTip lleva la lista real de mods
+                                 (usedMods del propio .tplr) cuando el fichero la trae. -->
+                            <Border Background="{StaticResource AccentMutedBrush}" CornerRadius="3" Padding="5,1" Margin="5,0,0,0"
+                                    ToolTip="{Binding UsedModsTooltip, TargetNullValue='Personaje de tModLoader: tiene un archivo .tplr con datos de mods'}"
+                                    Visibility="{Binding IsTModLoader, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="tModLoader" FontSize="10" Foreground="{StaticResource AccentHoverBrush}" FontWeight="SemiBold" />
+                            </Border>
+
+                            <!-- "Calamity": el rojo de siempre (CalamityBrush), pero ahora solo cuando hay contenido
+                                 REAL de Calamity dentro del .tplr, no por el mero hecho de que el .tplr exista. -->
                             <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" Padding="5,1" Margin="5,0,0,0"
+                                    ToolTip="Tiene objetos o buffs de Calamity guardados de verdad"
                                     Visibility="{Binding IsCalamity, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="Calamity" FontSize="10" Foreground="White" FontWeight="SemiBold" />
                             </Border>

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
+using TerrasavrNative.Core.Calamity;
 using TerrasavrNative.Core.PlrFormat;
 
 namespace TerrasavrNative.App.ViewModels;
@@ -161,8 +162,19 @@ public partial class HomeViewModel : ObservableObject
             try
             {
                 var character = PlrFile.Read(File.ReadAllBytes(path));
-                bool isCalamity = File.Exists(Path.ChangeExtension(path, ".tplr"));
-                result.Add(new CharacterListEntryViewModel(path, character, isCalamity, File.GetLastWriteTimeUtc(path), equipmentAppearance));
+                // Encargo del usuario 4-sep-2026: el hecho PRINCIPAL es "este personaje es de
+                // tModLoader" (tiene un .tplr hermano), no "es de Calamity" - la variable de
+                // antes se llamaba isCalamity pero comprobaba exactamente esto, asi que
+                // CUALQUIER mod (o un .tplr huerfano de una partida vieja) encendia una insignia
+                // roja que decia "Calamity". Ver ESPEC-sprites-botones-badges.md#C.1.
+                string tplrPath = Path.ChangeExtension(path, ".tplr");
+                bool esTModLoader = File.Exists(tplrPath);
+                // Coste real medido en la carpeta real de este usuario: 2,53 ms para los 6
+                // personajes juntos, incluido un .tplr de 183 KB crudos con 2709 entradas de
+                // research - y corre dentro del Task.Run que este escaneo ya usa, no en el hilo
+                // de UI. No hay nada que optimizar aqui.
+                var tplr = esTModLoader ? TplrProbe.TryRead(tplrPath) : null;
+                result.Add(new CharacterListEntryViewModel(path, character, esTModLoader, tplr, File.GetLastWriteTimeUtc(path), equipmentAppearance));
             }
             catch (Exception)
             {
