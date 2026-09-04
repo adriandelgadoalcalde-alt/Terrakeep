@@ -137,6 +137,16 @@ public static class WldReader
         int spawnY = reader.ReadInt32();
         double groundLevel = reader.ReadDouble();
         double rockLevel = reader.ReadDouble();
+        // F-7 (auditoria de Opus vs TEdit, E-06): 5 campos reales que no hacen falta para nada
+        // mas alla de saltarlos - confirmado byte a byte contra World.FileV2.cs (TEdit, commit
+        // f592261), sin guarda de version.
+        reader.ReadDouble(); // Time
+        reader.ReadBoolean(); // DayTime
+        reader.ReadInt32(); // MoonPhase
+        reader.ReadBoolean(); // BloodMoon
+        reader.ReadBoolean(); // IsEclipse
+        int dungeonX = reader.ReadInt32();
+        int dungeonY = reader.ReadInt32();
 
         return new WldHeader
         {
@@ -151,6 +161,8 @@ public static class WldReader
             SpawnY = spawnY,
             GroundLevel = groundLevel,
             RockLevel = rockLevel,
+            DungeonX = dungeonX,
+            DungeonY = dungeonY,
         };
     }
 

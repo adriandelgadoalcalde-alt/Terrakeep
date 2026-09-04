@@ -23,6 +23,14 @@ public sealed class WldHeader
     public required int SpawnY { get; init; }
     public required double GroundLevel { get; init; }
     public required double RockLevel { get; init; }
+    // F-7 (auditoria de Opus vs TEdit, E-06): "DungeonX/Y ni siquiera se leen... en el formato
+    // real la mazmorra esta solo cinco campos mas alla de RockLevel". Confirmado leyendo el
+    // lector real de TEdit (World.FileV2.cs, commit f592261): Time(double)/DayTime(bool)/
+    // MoonPhase(int)/BloodMoon(bool)/IsEclipse(bool) - sin guarda de version, igual que
+    // GroundLevel/RockLevel de arriba - antes de DungeonX/Y. Los 5 campos intermedios se leen y
+    // se descartan (misma politica ya documentada arriba: lo que no se necesita, no se parsea).
+    public required int DungeonX { get; init; }
+    public required int DungeonY { get; init; }
 
     public int TilesSectionOffset => Pointers[1];
     // Punto 4 (advisor Opus), Fase 2: confirmado directamente contra World.FileV2.cs de TEdit

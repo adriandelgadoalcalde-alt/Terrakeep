@@ -139,6 +139,17 @@ public class WldTileEntityReaderTests
         w.Write(0); // spawnY
         w.Write(50.0); // groundLevel
         w.Write(100.0); // rockLevel
+        // F-7 (auditoria de Opus vs TEdit, E-06): ReadHeader ahora sigue leyendo 5 campos mas
+        // (Time/DayTime/MoonPhase/BloodMoon/IsEclipse, sin guarda de version) antes de
+        // DungeonX/Y - la cabecera sintetica de este test tiene que dar los mismos bytes que el
+        // lector real espera, o EndOfStreamException.
+        w.Write(0.0); // Time
+        w.Write(false); // DayTime
+        w.Write(0); // MoonPhase
+        w.Write(false); // BloodMoon
+        w.Write(false); // IsEclipse
+        w.Write(0); // dungeonX
+        w.Write(0); // dungeonY
 
         w.Flush();
         return (int)(w.BaseStream.Position - start);

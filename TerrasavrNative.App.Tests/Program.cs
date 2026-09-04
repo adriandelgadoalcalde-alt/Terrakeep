@@ -2373,6 +2373,20 @@ internal static class Program
                 try
                 {
                     var worldIndependiente = TerrasavrNative.Core.WldFormat.WldReader.Read(File.ReadAllBytes(worldPath));
+
+                    // F-7 (auditoria de Opus vs TEdit, E-06): prueba de NO REGRESION del formato -
+                    // ReadHeader ahora lee 5 campos mas antes de DungeonX/Y (Time/DayTime/
+                    // MoonPhase/BloodMoon/IsEclipse); si el offset estuviera mal, los campos
+                    // POSTERIORES (TilesWide/High/SpawnX/Y/GroundLevel/RockLevel se leen ANTES asi
+                    // que no aplica, pero DungeonX/Y si dependen de haber contado bien esos 5) o
+                    // los propios DungeonX/Y saldrian con basura (valores absurdos, fuera del
+                    // mundo) en vez de una coordenada real.
+                    var hdrReal = worldIndependiente.Header;
+                    bool dungeonPlausible = hdrReal.DungeonX > 0 && hdrReal.DungeonX < hdrReal.TilesWide
+                        && hdrReal.DungeonY > 0 && hdrReal.DungeonY < hdrReal.TilesHigh;
+                    Console.WriteLine($"F-7: mundo real {hdrReal.TilesWide}x{hdrReal.TilesHigh}, Spawn=({hdrReal.SpawnX},{hdrReal.SpawnY}), Dungeon=({hdrReal.DungeonX},{hdrReal.DungeonY}) (esperado dentro del mundo, no (0,0) ni basura)");
+                    if (!dungeonPlausible) Console.WriteLine("FALLO: F-7 - DungeonX/Y salio fuera de rango o en (0,0) - posible desalineacion del lector");
+
                     var chestConObjeto = worldIndependiente.Chests.FirstOrDefault(c => c.Items.Count > 0);
                     if (chestConObjeto != null)
                     {
@@ -2420,6 +2434,36 @@ internal static class Program
                             Console.WriteLine("FALLO: A8-05-CAPA - HoverLayerText no es ninguna de las 5 capas reales de la formula GPS");
                     }
                     else Console.WriteLine("A8-05: este mundo real no tiene ningun tile activo sumergido en liquido, omitido");
+
+                    // F-7: el marcador real del spawn del mundo (casa naranja) debe existir y
+                    // estar visible en el arbol visual, con la posicion real de Header.SpawnX/Y.
+                    DoEvents();
+                    var marcadorSpawnMundo = Descendientes<TextBlock>(window).FirstOrDefault(t => t.Text == "⌂");
+                    Console.WriteLine($"F-7-MARCADOR: marcador de spawn del mundo encontrado={marcadorSpawnMundo != null}, visible={marcadorSpawnMundo?.IsVisible} (esperado True)");
+                    if (marcadorSpawnMundo == null || !marcadorSpawnMundo.IsVisible) Console.WriteLine("FALLO: F-7 - el marcador de spawn del mundo no aparece en el mapa");
+
+                    // F-12 (auditoria de Opus vs TEdit, E-13): exportar de verdad a un fichero
+                    // temporal y comprobar que el PNG resultante tiene las dimensiones reales del
+                    // mundo (TilesWide x TilesHigh, 1 pixel = 1 tile).
+                    string pngTemporal = Path.Combine(Path.GetTempPath(), $"terrakeep-export-test-{Guid.NewGuid():N}.png");
+                    try
+                    {
+                        vm.Exploration.ExportMapToPng(pngTemporal);
+                        bool existe = File.Exists(pngTemporal);
+                        int anchoPng = 0, altoPng = 0;
+                        if (existe)
+                        {
+                            var bytesPng = File.ReadAllBytes(pngTemporal);
+                            using var msPng = new MemoryStream(bytesPng);
+                            var decoder = new System.Windows.Media.Imaging.PngBitmapDecoder(msPng, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                            anchoPng = decoder.Frames[0].PixelWidth;
+                            altoPng = decoder.Frames[0].PixelHeight;
+                        }
+                        Console.WriteLine($"F-12: PNG exportado existe={existe}, {anchoPng}x{altoPng} (esperado {hdrReal.TilesWide}x{hdrReal.TilesHigh})");
+                        if (!existe || anchoPng != hdrReal.TilesWide || altoPng != hdrReal.TilesHigh)
+                            Console.WriteLine("FALLO: F-12 - el PNG exportado no existe o no tiene las dimensiones reales del mundo");
+                    }
+                    finally { if (File.Exists(pngTemporal)) File.Delete(pngTemporal); }
 
                     // P-1 (auditoria de Opus vs TEdit): la franja de estado del mapa ya NO debe
                     // cambiar de alto al entrar/salir el raton (antes: Visibility=EmptyToCollapsed

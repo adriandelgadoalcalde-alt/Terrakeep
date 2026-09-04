@@ -198,6 +198,14 @@ public partial class ExplorationViewModel : ObservableObject
     // superior consciente de la pestaña - dato que ya se calculaba (StatusMessage) pero no
     // vivia en una propiedad propia reutilizable.
     [ObservableProperty] private string _worldSizeText = "—";
+    // F-7 (auditoria de Opus vs TEdit, E-06): "el punto de aparicion del mundo... su unico uso
+    // en toda la aplicacion es calcular la distancia. No hay ningun marcador de spawn en el
+    // mapa" - y la mazmorra "ni siquiera se leen" (ya corregido en WldReader/WldHeader, ver sus
+    // comentarios). Coordenadas de tile real, mismo espacio que TileX/TileY de NPCs/Spawns.
+    [ObservableProperty] private int _worldSpawnX;
+    [ObservableProperty] private int _worldSpawnY;
+    [ObservableProperty] private int _worldDungeonX;
+    [ObservableProperty] private int _worldDungeonY;
     [ObservableProperty] private bool _isWorldLoaded;
     [ObservableProperty] private string _npcSearchText = string.Empty;
     [ObservableProperty] private double _zoom = 1.0;
@@ -591,6 +599,35 @@ public partial class ExplorationViewModel : ObservableObject
         WorldSearchSummary = string.Empty;
     }
 
+    // F-12 (auditoria de Opus vs TEdit, E-13): "Terrakeep genera un WriteableBitmap completo
+    // del mundo y lo congela - un PngBitmapEncoder sobre el son ~8 lineas. No existe." El
+    // dialogo real vive en el code-behind (mismo criterio ya establecido, SaveItemSetDialog);
+    // aqui solo la composicion+codificacion. Si hay resaltado de mineral activo (WorldHighlight,
+    // "Marcar en el mapa") se mezcla ENCIMA del mapa base - exportar justo lo que se esta viendo,
+    // no solo el mapa desnudo.
+    public void ExportMapToPng(string path)
+    {
+        var mapa = WorldImage;
+        if (mapa == null) return;
+        BitmapSource final = mapa;
+        if (WorldHighlight is { } resaltado)
+        {
+            var visual = new DrawingVisual();
+            using (var dc = visual.RenderOpen())
+            {
+                dc.DrawImage(mapa, new System.Windows.Rect(0, 0, mapa.PixelWidth, mapa.PixelHeight));
+                dc.DrawImage(resaltado, new System.Windows.Rect(0, 0, mapa.PixelWidth, mapa.PixelHeight));
+            }
+            var compuesto = new RenderTargetBitmap(mapa.PixelWidth, mapa.PixelHeight, mapa.DpiX, mapa.DpiY, PixelFormats.Pbgra32);
+            compuesto.Render(visual);
+            final = compuesto;
+        }
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(final));
+        using var stream = File.Create(path);
+        encoder.Save(stream);
+    }
+
     [RelayCommand]
     private void GoToWorldSearchHit(WorldSearchHitRowViewModel hit)
     {
@@ -952,6 +989,10 @@ public partial class ExplorationViewModel : ObservableObject
 
             WorldTitle = world.Header.Title;
             WorldSizeText = $"{world.Header.TilesWide}×{world.Header.TilesHigh}";
+            WorldSpawnX = world.Header.SpawnX;
+            WorldSpawnY = world.Header.SpawnY;
+            WorldDungeonX = world.Header.DungeonX;
+            WorldDungeonY = world.Header.DungeonY;
             IsWorldLoaded = true;
             StatusMessage = $"'{world.Header.Title}' - {world.Header.TilesWide}x{world.Header.TilesHigh} tiles, " +
                 $"{_allNpcs.Count} NPC(s) de pueblo, {MissingNpcs.Count} todavia sin conseguir.";

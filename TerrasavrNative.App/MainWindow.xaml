@@ -10,7 +10,8 @@
         xmlns:conv="clr-namespace:TerrasavrNative.App.Converters"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}" Height="860" Width="1180" MinWidth="1080" MinHeight="700"
-        Background="{StaticResource BgPrimaryBrush}" Closing="OnWindowClosing" KeyDown="OnWindowKeyDown">
+        Background="{StaticResource BgPrimaryBrush}" Closing="OnWindowClosing" KeyDown="OnWindowKeyDown"
+        AllowDrop="True" Drop="OnWindowDrop">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <!-- H5-10 (quinta auditoria de Opus): fraccion 0..1 real a ancho en pixeles, para las
@@ -3465,18 +3466,28 @@
                         <!-- P-1 (auditoria Opus vs TEdit): el indicador de porcentaje se mudo a la
                              franja de estado fija bajo el mapa (mas cerca de donde se mira al
                              hacer zoom) - los botones de aqui se quedan, solo se fue el numero. -->
+                        <!-- F-9 (auditoria Opus vs TEdit, E-09): atajos anunciados en el ToolTip del
+                             boton equivalente - "es la mitad del valor" (cita literal del informe),
+                             mismo criterio ya usado por T-H/F1 en la barra superior. Solo activos
+                             con Exploracion en pantalla y el foco fuera de un TextBox. -->
                         <Button Content="&#8722;" Command="{Binding Exploration.ZoomOutCommand}" Padding="10,2"
-                                ToolTip="Alejar" />
+                                ToolTip="Alejar (-)" />
                         <Button Content="+" Command="{Binding Exploration.ZoomInCommand}" Padding="10,2" Margin="4,0,0,0"
-                                ToolTip="Acercar" />
+                                ToolTip="Acercar (+)" />
                         <Button Content="Restablecer" Command="{Binding Exploration.ZoomResetCommand}" Padding="8,2" Margin="8,0,0,0"
-                                ToolTip="Volver al 100% (1 pixel = 1 tile)" />
+                                ToolTip="Volver al 100% (1 pixel = 1 tile) (1)" />
                         <!-- X-a (segunda auditoria de Opus, Fable): "Restablecer" vuelve al 100%,
                              que para un mundo de 8400x2400 significa ver el 12% del ancho - "la
                              accion mas obviamente ausente de la pantalla". El calculo real (necesita
                              el tamaño real del viewport del ScrollViewer, que la ViewModel no
                              conoce) vive en el code-behind, igual que el resto de gestos del mapa. -->
-                        <Button Content="Ajustar a la ventana" Click="OnFitToWindowClick" Padding="8,2" Margin="8,0,0,0" />
+                        <Button Content="Ajustar a la ventana" Click="OnFitToWindowClick" Padding="8,2" Margin="8,0,0,0"
+                                ToolTip="(0)" />
+                        <!-- F-12 (auditoria Opus vs TEdit, E-13): "genera un WriteableBitmap
+                             completo del mundo y lo congela - un PngBitmapEncoder son ~8 lineas.
+                             No existe." -->
+                        <Button Content="Exportar a PNG..." Click="OnExportMapClick" Padding="8,2" Margin="8,0,0,0"
+                                ToolTip="Guarda el mapa como imagen PNG - incluye las marcas de mineral si hay alguna activa" />
                     </StackPanel>
                 </WrapPanel>
 
@@ -3695,6 +3706,42 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
+                                        <!-- F-7 (auditoria de Opus vs TEdit, E-06): spawn del MUNDO
+                                             (Header.SpawnX/Y - antes solo se usaba para calcular
+                                             distancia, ningun marcador en el mapa) y mazmorra
+                                             (DungeonX/Y, antes ni siquiera se leian - ver
+                                             WldReader.cs). Tabla de forma+color de P-3: casa
+                                             naranja para el spawn del mundo (distinto a proposito
+                                             de la estrella violeta = spawn del PERSONAJE, arriba),
+                                             rombo hueco rojo para la mazmorra. Mismo tratamiento de
+                                             tamaño constante (RenderTransform inverso al Zoom) que
+                                             el resto de marcadores. -->
+                                        <TextBlock Text="&#8962;" FontSize="18" Foreground="{StaticResource OrangeBrush}"
+                                                   Canvas.Left="{Binding Exploration.WorldSpawnX}" Canvas.Top="{Binding Exploration.WorldSpawnY}"
+                                                   Margin="-9,-9,0,0" ToolTip="Aparición del mundo" Cursor="Hand"
+                                                   Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
+                                                   Panel.ZIndex="2" RenderTransformOrigin="0.5,0.5">
+                                            <TextBlock.RenderTransform>
+                                                <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
+                                                                ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
+                                            </TextBlock.RenderTransform>
+                                            <TextBlock.Effect>
+                                                <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
+                                            </TextBlock.Effect>
+                                        </TextBlock>
+                                        <TextBlock Text="&#9671;" FontSize="18" Foreground="{StaticResource CalamityBrush}"
+                                                   Canvas.Left="{Binding Exploration.WorldDungeonX}" Canvas.Top="{Binding Exploration.WorldDungeonY}"
+                                                   Margin="-9,-9,0,0" ToolTip="Mazmorra" Cursor="Hand"
+                                                   Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
+                                                   Panel.ZIndex="2" RenderTransformOrigin="0.5,0.5">
+                                            <TextBlock.RenderTransform>
+                                                <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
+                                                                ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
+                                            </TextBlock.RenderTransform>
+                                            <TextBlock.Effect>
+                                                <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
+                                            </TextBlock.Effect>
+                                        </TextBlock>
                                         <!-- Punto 4 (feedback del usuario, "buscador de todo tipo de
                                              objetos del mundo") - Fase 1 de ESPEC-buscador-mundo-tedit.md
                                              (advisor Opus): capa de marcadores WPF por encima del mapa en
@@ -3908,7 +3955,7 @@
                              ExplorationViewModel.OnWorldSearchTextChanged): en "Todo" lanza el
                              barrido real (con debounce); en las demas filtra el inventario en
                              memoria, inmediato. -->
-                        <TextBox DockPanel.Dock="Top" Text="{Binding Exploration.WorldSearchText, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBox x:Name="WorldSearchBox" DockPanel.Dock="Top" Text="{Binding Exploration.WorldSearchText, UpdateSourceTrigger=PropertyChanged}"
                                  Padding="7,5" Background="{StaticResource BgElevatedBrush}"
                                  Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
                                  FontSize="12" Margin="0,0,0,4"
@@ -3989,9 +4036,9 @@
                                 <!-- Navegacion circular anterior/siguiente - mismo gesto real que
                                      NavigateNext/NavigatePrevious de TEdit (pan, sin zoom). -->
                                 <Button Grid.Column="1" Content="&#8249;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
-                                        ToolTip="Resultado anterior" Command="{Binding Exploration.PreviousWorldSearchResultCommand}" />
+                                        ToolTip="Resultado anterior (Shift+F3)" Command="{Binding Exploration.PreviousWorldSearchResultCommand}" />
                                 <Button Grid.Column="2" Content="&#8250;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
-                                        ToolTip="Resultado siguiente" Command="{Binding Exploration.NextWorldSearchResultCommand}" />
+                                        ToolTip="Resultado siguiente (F3)" Command="{Binding Exploration.NextWorldSearchResultCommand}" />
                             </Grid>
                             <ListBox MaxHeight="240" ItemContainerStyle="{StaticResource VirtualRowContainer}"
                                      Background="Transparent" BorderThickness="0" Focusable="False"

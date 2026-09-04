@@ -29,6 +29,8 @@ public class WorldSearchTests
             SpawnY = 0,
             GroundLevel = 100,
             RockLevel = 200,
+            DungeonX = 0,
+            DungeonY = 0,
         },
         Tiles = tiles,
         Npcs = npcs ?? [],

@@ -107,7 +107,20 @@ public partial class MainWindow : Window
     {
         bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
         bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
-        if (ctrl && shift && e.Key == Key.F)
+        bool alt = (Keyboard.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt;
+        // F-9 (auditoria de Opus vs TEdit, E-09): "Ctrl+Shift+F -> foco en el cuadro de busqueda
+        // del mundo" del informe original CHOCA de verdad con F-16 (Ctrl+Shift+F ya es "Buscar en
+        // el personaje", implementado en el bloque 1 de este mismo plan) - encontrado al
+        // implementar, no al leer el informe. Ctrl+Alt+F en su lugar, unico libre de los ya
+        // usados (Ctrl+F=Libreria, Ctrl+Shift+F=personaje).
+        if (ctrl && alt && e.Key == Key.F)
+        {
+            _viewModel.SelectedTabIndex = 4; // AppTab.Exploracion
+            Dispatcher.BeginInvoke(new Action(() => { WorldSearchBox.Focus(); WorldSearchBox.SelectAll(); }),
+                System.Windows.Threading.DispatcherPriority.Background);
+            e.Handled = true;
+        }
+        else if (ctrl && shift && e.Key == Key.F)
         {
             // F-16 (auditoria de Opus vs TEdit, B-04): antes la unica forma de abrir "¿Donde lo
             // tengo?" era el boton. OnWhereIsItPopupOpened ya hace foco+seleccion al abrirse -
@@ -179,6 +192,51 @@ public partial class MainWindow : Window
             _viewModel.SelectedTabIndex = e.Key - Key.D1;
             e.Handled = true;
         }
+        // F-9 (auditoria de Opus vs TEdit, E-09): atajos del mapa - SOLO con Exploracion activa
+        // (AppTab.Exploracion=4) y el foco FUERA de un TextBox (el propio cuadro de busqueda del
+        // mundo vive en esta pestaña; sin esta guarda, teclear "10" ahi tambien haria zoom).
+        else if (!ctrl && _viewModel.SelectedTabIndex == 4 && Keyboard.FocusedElement is not TextBox)
+        {
+            var exploracion = _viewModel.Exploration;
+            if (e.Key is Key.OemPlus or Key.Add)
+            {
+                if (exploracion.ZoomInCommand.CanExecute(null)) exploracion.ZoomInCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key is Key.OemMinus or Key.Subtract)
+            {
+                if (exploracion.ZoomOutCommand.CanExecute(null)) exploracion.ZoomOutCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.D0)
+            {
+                OnFitToWindowClick(this, new RoutedEventArgs());
+                e.Handled = true;
+            }
+            else if (e.Key == Key.D1)
+            {
+                if (exploracion.ZoomResetCommand.CanExecute(null)) exploracion.ZoomResetCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.F3)
+            {
+                var comandoResultado = shift ? exploracion.PreviousWorldSearchResultCommand : exploracion.NextWorldSearchResultCommand;
+                if (comandoResultado.CanExecute(null)) comandoResultado.Execute(null);
+                e.Handled = true;
+            }
+            else if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
+            {
+                const double paso = 60;
+                switch (e.Key)
+                {
+                    case Key.Left: WorldMapScroll.ScrollToHorizontalOffset(WorldMapScroll.HorizontalOffset - paso); break;
+                    case Key.Right: WorldMapScroll.ScrollToHorizontalOffset(WorldMapScroll.HorizontalOffset + paso); break;
+                    case Key.Up: WorldMapScroll.ScrollToVerticalOffset(WorldMapScroll.VerticalOffset - paso); break;
+                    case Key.Down: WorldMapScroll.ScrollToVerticalOffset(WorldMapScroll.VerticalOffset + paso); break;
+                }
+                e.Handled = true;
+            }
+        }
     }
 
     // Auditoria de Opus, T-17: campos que ejecutan una accion real al cambiar (Indice/Prefijo,
@@ -216,6 +274,30 @@ public partial class MainWindow : Window
     {
         var dialog = new OpenFolderDialog { Title = "Elige una carpeta adicional con mundos (.wld)" };
         if (dialog.ShowDialog(this) == true) _viewModel.Settings.AddWorldFolder(dialog.FolderName);
+    }
+
+    // F-13 (auditoria de Opus vs TEdit, E-14): "AllowDrop aparece exactamente dos veces... las
+    // dos son slots de objeto y de buff. La ventana no acepta ficheros." Filtrar por
+    // DataFormats.FileDrop basta para no interferir con los dos AllowDrop internos (usan un
+    // formato de datos propio para mover objetos entre slots, nunca FileDrop) - no hace falta
+    // marcar e.Handled en ellos ni aqui.
+    private async void OnWindowDrop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] { Length: > 0 } files) return;
+        string path = files[0];
+        string ext = Path.GetExtension(path).ToLowerInvariant();
+        if (ext == ".wld")
+        {
+            await _viewModel.Exploration.LoadFromPathAsync(path);
+            _viewModel.SelectedTabIndex = 4; // AppTab.Exploracion, privado - mismo criterio ya usado en el arnes
+            _ = Dispatcher.BeginInvoke(new Action(FitWorldMapToWindow), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+        else if (ext == ".plr")
+        {
+            if (!ConfirmDiscardChanges("cargar otro personaje")) return;
+            _viewModel.LoadFromPath(path);
+        }
     }
 
     private void OnLoadClick(object sender, RoutedEventArgs e)
@@ -256,6 +338,20 @@ public partial class MainWindow : Window
             // necesidad real que UpdateLayout() ya resuelve en el zoom de la rueda, de abajo.
             _ = Dispatcher.BeginInvoke(new Action(FitWorldMapToWindow), System.Windows.Threading.DispatcherPriority.Loaded);
         }
+    }
+
+    // F-12 (auditoria de Opus vs TEdit, E-13): dialogo real en la View (mismo criterio que
+    // SaveItemSetDialog) - la composicion+codificacion vive en ExportMapToPng.
+    private void OnExportMapClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.Exploration.WorldImage == null) return;
+        var dialog = new SaveFileDialog
+        {
+            Title = "Exportar mapa a PNG",
+            Filter = "Imagen PNG (*.png)|*.png",
+            FileName = $"{_viewModel.Exploration.WorldTitle}-mapa.png",
+        };
+        if (dialog.ShowDialog(this) == true) _viewModel.Exploration.ExportMapToPng(dialog.FileName);
     }
 
     // H4-08 (cuarta auditoria de Opus, Fable): gemelo real de OnLoadWorldClick - una tarjeta del

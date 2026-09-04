@@ -18,6 +18,8 @@ public class WldHeaderZoneForTests
         SpawnY = 0,
         GroundLevel = groundLevel,
         RockLevel = rockLevel,
+        DungeonX = 0,
+        DungeonY = 0,
     };
 
     [Fact]
