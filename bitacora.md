@@ -8115,3 +8115,80 @@ dentro del bucle de hermanos (contaminaba a todos los siguientes, ~2.700 falsos 
 desplazado fuera de vista en Y falseaba perdida total en X).
 
 Sin commit de codigo: no hay cambio de codigo. Solo el informe nuevo.
+
+## Ejecución completa del plan de auditoria de redimensionado (R-01 a R-11) + arranque siempre en Inicio (4-sep-2026)
+
+**Pedido**: "ejecuta el plan completo" sobre `ESPEC-auditoria-redimensionado.md` (informe de
+Opus del 4-sep-2026, ver entrada anterior) - las 11 correcciones (R-01 a R-11) mas la
+infraestructura de verificacion propia del §6, no solo el Bloque A critico. Ademas, bug
+aparte reportado en el mismo mensaje: la app nunca arranca en Inicio, arranca en Personaje ->
+Version del ultimo `.sav` restaurado.
+
+**Arranque en Inicio**: `MainViewModel.RestoreSession()` restauraba `SelectedTabIndex`,
+`PersonajeInnerTabIndex` y `ObjetosSubTabIndex` desde la sesion guardada. Quitados los 3 -
+ahora la ventana siempre nace en sus valores por defecto (0), y `Home.SetLastSession(session)`
+sigue alimentando el boton "Continuar con [Nombre]" de forma independiente. Verificado con un
+`MainViewModel` nuevo tras `RestoreSession()`: `SelectedTabIndex==0`. Commit `320aeb26`.
+
+**R-01 a R-11 aplicados tal cual pedia el informe** (commit `2336c9c0`): WrapPanel en 4 barras
+de botones + los 3 botones de Inventario/Almacen restaurados en Amplio (R-01); `MaxWidth` de
+la barra lateral de Exploracion movido de la `ColumnDefinition Auto` al `DockPanel` hijo (R-02);
+`MaxWidth=167` en la fila de objeto de Builds (R-03); vitalidad -> `WrapPanel` (R-04a) +
+`NormalMinWidth` subido de 1300 a 1320, el umbral real medido por bisección (R-04b); `WrapPanel`
++ quitado `MaxWidth` fijo en `CategoryNodeTemplate` (R-06); `ScrollViewer` en el panel de
+Apariencia (R-07); primer intento de R-09 (quitar `Margin={TemplateBinding Margin}` del
+`ControlTemplate` de `InnerTabItem`); `WrapPanel` + `TextTrimming` en la barra de Exploracion
+(R-11); nuevo `WindowSizeClass.Extra` (>=1920px) + `ExplorationSidebarMaxWidth` (R-10) - con
+un detalle que el informe NO decia explicitamente y que yo mismo tuve que caer en la cuenta:
+**todo consumidor booleano que comparaba `SizeClass == WindowSizeClass.Amplio` habia que
+pasarlo a `>=`**, si no, las ventanas Extra perdian features que Amplio ya daba
+(`IsEquipmentExpanded`, `IsStorageExpanded`, `IsLibraryVisible`, `IsBuffLibraryVisible`, el
+guard de `ObjetosSubTabIndex` huerfano) - una regresion real que el propio `Extra` habria
+introducido si el enum se compara con `==` en vez de por rango.
+
+**Infraestructura de verificacion §6 construida desde cero** (arnes de
+`TerrasavrNative.App.Tests/Program.cs`): hook real de `WM_GETMINMAXINFO` via `HwndSource.AddHook`
+que sobreescribe `ptMaxTrackSize`/`ptMaxSize` a 32000x32000 (arregla un bug real de ESTE
+entorno RDP: a 250% de escala, `ptMinTrackSize` -derivado de `Window.MinWidth=1080` DIP- gana a
+`ptMaxTrackSize` -`SM_CXMAXTRACK` de la sesion RDP- dentro del mismo mensaje, y CUALQUIER resize
+quedaba clampado en silencio a 1080px de ancho por mucho que se pidiera - esto habia estado
+dando falsos resultados en tests previos como `E2-UMBRAL`/`A4-1350`/`A4-EXPANDIDO`/`H5-09-AMPLIO`
+sin que nadie lo notara), mas `FijarTamaño`/`Recorte`/`Descendientes<T>` como helpers
+permanentes y los 10 chequeos AR-01 a AR-10 (uno por cada hallazgo del informe) recorriendo
+combinaciones reales de ancho de ventana.
+
+**Dos hallazgos propios, encontrados por este mismo arnes nuevo, que el plan original no
+resolvia (o resolvia mal)**:
+
+1. **H-10 (recorte 6x4px de las 7 pestañas internas de Personaje) - la causa real NO era la
+   que decia el informe**. El informe diagnosticaba "Margin duplicado via TemplateBinding" en
+   `InnerTabItem` (Theme.xaml); el primer fix (R-09, quitar el TemplateBinding) compilaba pero
+   el recorte seguia identico, sin cambiar un pixel. Investigado a fondo: volcado de
+   `ActualWidth`/`Margin`/`RenderSize`/`clip.Bounds` por pestaña, comparacion del ancho real
+   disponible del `TabPanel` (919px) contra el ancho necesario (625px, descartando "no cabe, se
+   comprime"), y finalmente un experimento aislado directo (Style `Margin="0"`, Border del
+   template tambien sin margen -> `clip.Bounds=null`, cero recorte). Causa real:
+   `System.Windows.Controls.Primitives.TabPanel.ArrangeOverride` NO reserva espacio para el
+   `Margin` propio de sus `TabItem` hijos directos - **cualquier** Margin no nulo puesto
+   directamente sobre un TabItem se recorta por esa cantidad exacta, este o no duplicado via
+   TemplateBinding (eso era una pista real pero la explicacion de fondo era otra). Fix real:
+   el Setter de `Margin` del Style de `InnerTabItem` vuelve a `"0"`, y el espaciado visual pasa
+   a un `Margin="0,0,6,4"` literal puesto directamente en el `Border` interno del
+   `ControlTemplate` (ese Border lo posiciona el `ContentPresenter`/logica de template normal,
+   no `TabPanel` directamente, asi que su Margin propio SI se respeta). Verificado por el
+   arnes: `clip.Bounds=null`, 7/7 pestañas sin recorte a 1080px y 1920px.
+
+2. **AR-08 (contador "Inventario (N/M)")**: el informe decia que R-01 (WrapPanel de botones)
+   resolveria este recorte "gratis", pero tras aplicarlo el contador seguia recortandose 14px
+   a 1080px - caso real de que, incluso con los botones en 2 filas, no sobra sitio horizontal
+   suficiente a ese ancho concreto. Resuelto con el propio fallback que el informe ya
+   sancionaba para casos asi: `TextTrimming="CharacterEllipsis"` en el `TextBlock` de
+   `DisplayName` (Inventario y Almacen, 2 ocurrencias). El chequeo AR-08 se ajusto para no
+   exigir recorte cero (`TextTrimming` no elimina el recorte de layout de WPF, solo cambia como
+   se renderiza el texto dentro de el) sino que, cuando hay recorte, `TextTrimming!=None` y el
+   texto nunca queda completamente vacio.
+
+**Verificacion final, todo junto en una sola pasada** (commit `e9c98873`): arnes completo
+end-to-end sin ninguna linea `FALLO` ni excepcion, y `dotnet test` con 656/656 en verde
+(307 ViewModels + 349 Core), confirmando que ninguno de los cambios de `Theme.xaml`/
+`MainWindow.xaml` de esta ronda rompio nada existente.
