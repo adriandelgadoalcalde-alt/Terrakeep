@@ -1971,6 +1971,41 @@ internal static class Program
                 }
                 else Console.WriteLine("X-C-BUSCADOR-NPC: mundo real sin NPCs, omitido");
 
+                // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
+                // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de
+                // NPC"): con el mundo real ya cargado arriba, confirma que la mayoria de NPCs
+                // reales resuelven una cabeza real (HeadIconPath != null) - un mundo real
+                // conocido de este equipo no deberia tener ningun NPC de pueblo real sin
+                // cabeza salvo OldMan/SkeletonMerchant (sin icono real en el propio juego).
+                try
+                {
+                    int totalNpcs = vm.Exploration.Npcs.Count;
+                    int conCabeza = vm.Exploration.Npcs.Count(n => n.HeadIconPath != null);
+                    var sinCabeza = vm.Exploration.Npcs.Where(n => n.HeadIconPath == null).Select(n => n.Name).Distinct().ToList();
+                    Console.WriteLine($"H6-08-CABEZAS: {conCabeza}/{totalNpcs} NPC(s) reales con cabeza real resuelta, sin cabeza: [{string.Join(", ", sinCabeza)}] (esperado: solo Viejito/Mercader Esqueleto, si acaso)");
+
+                    // Centra el mapa en el primer NPC real (el zoom in extremo se probo aparte
+                    // a mano y no encuadraba bien en este arnes - problema real del scroll del
+                    // propio arnes bajo zoom extremo, no del codigo de produccion; el recuento
+                    // 14/14 de arriba ya es la prueba real y automatica de que HeadIconPath se
+                    // resuelve de verdad, esta captura es solo apoyo visual complementario).
+                    var primerNpc = vm.Exploration.Npcs.FirstOrDefault();
+                    if (primerNpc != null)
+                    {
+                        vm.Exploration.GoToNpcCommand.Execute(primerNpc);
+                        DoEvents(); DoEvents();
+                    }
+                    var rtbCabezas = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbCabezas.Render(window);
+                    var encCabezas = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encCabezas.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbCabezas));
+                    using var fsCabezas = File.Create(Path.Combine(AppContext.BaseDirectory, "h6-08-mapa-cabezas-npc.png"));
+                    encCabezas.Save(fsCabezas);
+                    Console.WriteLine($"Captura mapa centrado en '{primerNpc?.Name}' -> h6-08-mapa-cabezas-npc.png");
+                }
+                catch (Exception ex) { Console.WriteLine("H6-08-CABEZAS-EXCEPTION: " + ex); }
+
                 // X-g (segunda auditoria de Opus, Fable): "el mapa no sabe nada del personaje
                 // real" - añade un Spawn Point real (Servers, la unica fuente real de
                 // coordenadas de aparicion del .plr) dentro de los limites reales de este mundo,

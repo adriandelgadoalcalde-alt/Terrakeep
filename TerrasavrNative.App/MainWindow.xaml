@@ -3273,24 +3273,27 @@
                                                 </Style>
                                             </ItemsControl.ItemContainerStyle>
                                             <ItemsControl.ItemTemplate>
-                                                <!-- Sprite real del NPC (pedido explicito 2-sep-2026: "los npc deben
-                                                     salir con sus sprites no puntos rosas que no distingues nada") -
-                                                     Assets/npc_icons/{id}.png ya existia en el proyecto (copiado de
-                                                     Terrasavr-Calamity-Beta), solo faltaba usarlo aqui. Ancla abajo-
-                                                     centro (como un personaje de pie sobre su tile), no centrado como
-                                                     el punto de antes. Si algun dia aparece un NPC sin icono real
-                                                     (IconPath null - solo pasa con los que no son de pueblo/
-                                                     reclutables), cae al punto magenta de siempre en vez de no
-                                                     mostrar nada. -->
+                                                <!-- H6-08/H6-09/H6-10 (sexta auditoria de Opus, "el mapa muestra puntos
+                                                     rosas que el usuario cree que son mascotas -en realidad son NPCs,
+                                                     concretamente las mascotas de pueblo reales 637/638/656- deberia
+                                                     verse solo cabezas de NPC"): CABEZA real (Images/NPC_Head_{indice}
+                                                     real, el mismo asset e indice reales que usa el propio mapa del
+                                                     juego - ver NpcHeadProfile.cs, portado de TownNPCProfiles.cs
+                                                     decompilado), no el cuerpo entero de pie (IconPath, que se queda
+                                                     para la lista lateral). Ancla CENTRADA (una cabeza no tiene "pies"
+                                                     con los que anclar abajo, a diferencia del sprite de cuerpo
+                                                     anterior). Si el juego real tampoco tiene cabeza para ese NPC
+                                                     (OldMan/SkeletonMerchant, HeadIconPath null) cae al punto magenta
+                                                     de siempre. -->
                                                 <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
                                                     <Grid ToolTip="{Binding Name}" Cursor="Hand">
-                                                        <Image Source="{Binding IconPath}" Width="16" Stretch="Uniform"
+                                                        <Image Source="{Binding HeadIconPath}" Width="16" Stretch="Uniform"
                                                                RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                                               Margin="-8,-22,0,0"
-                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                               Margin="-8,-8,0,0"
+                                                               Visibility="{Binding HeadIconPath, Converter={StaticResource NullToVis}}" />
                                                         <Ellipse Width="11" Height="11" Margin="-5.5,-5.5,0,0"
                                                                  Fill="Magenta" Stroke="White" StrokeThickness="1.5"
-                                                                 Visibility="{Binding IconPath, Converter={StaticResource NullToCollapsed}}" />
+                                                                 Visibility="{Binding HeadIconPath, Converter={StaticResource NullToCollapsed}}" />
                                                     </Grid>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>

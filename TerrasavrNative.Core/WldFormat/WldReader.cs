@@ -18,9 +18,9 @@ public static class WldReader
         var tiles = ReadTiles(reader, header);
 
         stream.Position = header.NpcsSectionOffset;
-        var npcs = ReadNpcs(reader, header.Version);
+        var (npcs, shimmeredTypes) = ReadNpcs(reader, header.Version);
 
-        return new WldWorld { Header = header, Tiles = tiles, Npcs = npcs };
+        return new WldWorld { Header = header, Tiles = tiles, Npcs = npcs, ShimmeredNpcTypes = shimmeredTypes };
     }
 
     // H4-08 (cuarta auditoria de Opus, Fable): lectura BARATA para el lanzador de mundos de
@@ -246,14 +246,18 @@ public static class WldReader
         return (new WldTile(type, wall, liquidType, liquidAmount, u, v), rle);
     }
 
-    private static List<WldNpc> ReadNpcs(BinaryReader reader, uint version)
+    private static (List<WldNpc> Npcs, HashSet<int> ShimmeredTypes) ReadNpcs(BinaryReader reader, uint version)
     {
         var npcs = new List<WldNpc>();
+        // H6-08/H6-09 (sexta auditoria de Opus): real, WorldFile.LoadNPCs - un tipo de NPC
+        // "shimmerizado" es un estado GLOBAL de este mundo (no por instancia), usado por
+        // NpcHeadProfile para elegir la cabeza normal o la version "shimmer" real.
+        var shimmeredTypes = new HashSet<int>();
 
         if (version >= 268)
         {
             int shimmerCount = reader.ReadInt32();
-            for (int i = 0; i < shimmerCount; i++) reader.ReadInt32(); // ids, sin uso aqui
+            for (int i = 0; i < shimmerCount; i++) shimmeredTypes.Add(reader.ReadInt32());
         }
 
         while (reader.ReadBoolean())
@@ -266,19 +270,20 @@ public static class WldReader
             int homeTileX = reader.ReadInt32();
             int homeTileY = reader.ReadInt32();
 
+            int variationIndex = 0;
             if (version >= 213)
             {
                 byte bb = reader.ReadByte();
-                if ((bb & 1) != 0) reader.ReadInt32(); // variacion de NPC de pueblo, sin uso aqui
+                if ((bb & 1) != 0) variationIndex = reader.ReadInt32();
             }
             if (version >= 315) reader.ReadBoolean(); // homelessDespawn, sin uso aqui
 
             int tileX = homeless ? (int)Math.Round(x / 16.0) : homeTileX;
             int tileY = homeless ? (int)Math.Round(y / 16.0) : homeTileY;
 
-            npcs.Add(new WldNpc { Id = id, GivenName = givenName, TileX = tileX, TileY = tileY, Homeless = homeless });
+            npcs.Add(new WldNpc { Id = id, GivenName = givenName, TileX = tileX, TileY = tileY, Homeless = homeless, VariationIndex = variationIndex });
         }
 
-        return npcs;
+        return (npcs, shimmeredTypes);
     }
 }

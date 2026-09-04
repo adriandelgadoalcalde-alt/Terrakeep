@@ -143,4 +143,29 @@ public class WldReaderRealFileTests(ITestOutputHelper output)
         Assert.Equal(fullHeader.TilesHigh, cheapHeader.TilesHigh);
         Assert.Equal(fullHeader.Version, cheapHeader.Version);
     }
+
+    // H6-08/H6-09 (sexta auditoria de Opus): townNpcVariationIndex real (Gato/Perro/Conejo de
+    // pueblo, 0-5) y el set global de tipos "shimmerizados" (WorldFile.LoadNPCs real) ahora se
+    // leen de verdad en vez de descartarse - contra un mundo real, sin asumir ningun valor
+    // concreto (puede que este mundo en particular no tenga ninguna mascota de pueblo todavia),
+    // solo que la lectura no rompe y los valores caen en un rango sano.
+    [Theory]
+    [MemberData(nameof(RealWldFiles))]
+    public void Read_RealWorld_VariationIndexYShimmerSonSanos(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        var world = WldReader.Read(File.ReadAllBytes(path));
+        output.WriteLine($"{Path.GetFileName(path)}: ShimmeredNpcTypes=[{string.Join(",", world.ShimmeredNpcTypes)}]");
+
+        foreach (var npc in world.Npcs)
+        {
+            // Rango generoso a proposito (el campo real es 0-5 para Gato/Perro/Conejo de
+            // pueblo y 0 para el resto, pero esta prueba solo quiere pillar una lectura
+            // realmente rota - offset mal puesto, leyendo basura - no imponer la regla exacta
+            // del juego).
+            Assert.InRange(npc.VariationIndex, 0, 1000);
+            output.WriteLine($"  {npc.GivenName} (tipo {npc.Id}): variationIndex={npc.VariationIndex}");
+        }
+    }
 }

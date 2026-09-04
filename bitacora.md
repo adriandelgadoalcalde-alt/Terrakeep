@@ -7171,3 +7171,74 @@ completa, sin tocar ningun codigo relacionado con Exploracion/mundos en esta sec
 **Fuera de esta pasada, documentado**: equivalente vanilla de `IsDebuff` (el usuario lo pidio
 especificamente para Calamity); ordenar/filtrar la Libreria de buffs por buff/debuff (solo se
 pidio distinguir visualmente, no filtrar).
+
+### H6-08/H6-09/H6-10 - Cabezas reales de NPC en el mapa (Tanda C, sexta auditoria de Opus)
+
+**Hallazgo real**: pedido explicito del usuario ("el mapa del mundo muestra 4 puntos rosas que
+creo que eran mascotas") - `NpcIconResolver` solo cubria los 27 NPCs del roster ORIGINAL
+(`VanillaTownNpcRoster.cs`), y el marcador del mapa usaba el sprite de CUERPO entero de pie
+(`Assets/npc_icons/{id}.png`, 40x54), no una cabeza como el mapa real del juego. El informe de
+Opus señalo ademas que faltaba el NPC 441 (Recaudador de Impuestos) en el roster.
+
+**Investigacion real, NO de memoria**: leyendo `Terraria/NPC.cs` decompilado completo (cada
+`else if (type == N) { townNPC = true; ...}` real, incluidas condiciones OR de una sola linea
+como `type == 637 || type == 638` o el bloque de 7 slimes en una sola linea) se confirmaron
+**39 NPCs reales con `townNPC=true`**, no 27 - las 12 diferencias son exactamente los NPCs
+1.4.4/1.4.4.9 que el roster original (mas viejo) nunca llego a incluir: `TravelingMerchant`
+(368), `TaxCollector` (441, el hallazgo explicito del informe) y **las "mascotas de pueblo"
+1.4.4 - TownCat/TownDog/TownBunny/TownSlime×8 (637/638/656/670/678-684) - justo el tipo de NPC
+que el usuario confundia con una mascota de verdad**, y con razon: no tenian NINGUN icono real
+hasta ahora. `VanillaTownNpcRoster.Ids` pasa de 27 a **40** (39 + SkeletonMerchant/453, que NO
+pone `townNPC=true` pero ya estaba en el roster original y SI tiene perfil real).
+
+El indice de icono de CABEZA real (`Images/NPC_Head_{indice}.xnb`, confirmado via
+`AssetInitializer.cs`: `TextureAssets.NpcHead[i] = LoadAsset(...)`) **no es 1:1 con el tipo de
+NPC** - la tabla real (`Terraria.GameContent.TownNPCProfiles.cs` decompilado, su diccionario
+`_townNPCProfiles`, 40 entradas - EXACTAMENTE las 40 del roster) tiene 3 formas reales:
+1. La mayoria: un indice FIJO normal + otro fijo "shimmerizado" (`LegacyWithSimpleShimmer`
+   real) - "shimmerizado" es un estado GLOBAL por TIPO de ese mundo concreto (confirmado en
+   `WorldFile.LoadNPCs` real: `NPC.ShimmeredTownNPCs[tipo]=true`, un array que se lee ANTES de
+   la lista de NPCs, no por instancia).
+2. Gato/Perro/Conejo de pueblo (637/638/656): indice VARIABLE segun `npc.townNpcVariationIndex`
+   real (0-5, confirmado que SI se guarda por instancia en el propio `.wld` -
+   `WorldFile.LoadNPCs`: `if (bitsByte[0]) townNpcVariationIndex = reader.ReadInt32();`) sobre
+   un array real de 6 cabezas cada uno (`CatHeadIDs`/`DogHeadIDs`/`BunnyHeadIDs` reales).
+3. Los 8 Slimes de pueblo: indice fijo cada uno (cada color es su PROPIO tipo de NPC, no una
+   variacion del mismo tipo).
+4. OldMan (37) y SkeletonMerchant (453): `-1/-1` reales - el propio juego NO les da icono de
+   cabeza en el mapa (documentado tal cual, `HeadNormal=null`, no un icono inventado).
+
+**Cambios reales**: `scripts/extraer-cabezas-npc.js` (nuevo) extrae los **81** `NPC_Head_
+{0..80}.xnb` reales de la instalacion de Steam -> `Assets/npc_heads/{indice}.png` (81/0
+ausentes). `TerrasavrNative.Core/Data/NpcHeadProfile.cs` (nuevo) porta la tabla real de
+`TownNPCProfiles.cs` tal cual, `GetHeadIndex(npcType, variationIndex, isShimmered)`.
+`WldNpc.VariationIndex`/`WldWorld.ShimmeredNpcTypes` (nuevos - el lector YA leia estos bytes
+pero los descartaba, "sin uso aqui"; ahora se usan de verdad). `WorldNpcRowViewModel.
+HeadIconPath` (nuevo, resuelto en `ExplorationViewModel.LoadFromPathAsync` via
+`NpcHeadProfile.GetHeadIndex`) - `IconPath` (cuerpo, lista lateral) se queda intacto.
+`MainWindow.xaml`: el marcador del MAPA pasa de `IconPath` (cuerpo, ancla abajo-centro) a
+`HeadIconPath` (cabeza, ancla centrada - una cabeza no tiene "pies").
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: **441/441** (173 Core, +11 tests
+nuevos: `VanillaTownNpcRosterTests.cs` +2 -incluye el hallazgo real 441 y las 11 mascotas de
+pueblo-, `NpcHeadProfileTests.cs` 7 casos reales -Merchant normal/shimmer, OldMan/
+SkeletonMerchant null, TownCat con variationIndex real 0/1/5 y envoltura defensiva fuera de
+rango, TownSlimeBlue fijo, TaxCollector el hallazgo explicito-, `WldReaderRealFileTests.cs` +1
+contra 2 mundos reales de este equipo; 268 ViewModels sin cambio, la logica de NPCs vive en
+Core). Arnes de UI Automation ampliado con un bloque nuevo (`H6-08-CABEZAS`) contra un mundo
+real ("roca negra", 14 NPCs de pueblo reales) - **14/14 con cabeza real resuelta, 0 sin
+cabeza** - mas una captura real centrada en el primer NPC (`h6-08-mapa-cabezas-npc.png`)
+confirmada a mano: un grupo de cabezas pequeñas y distintas sobre el tejado de la casa, ya no
+un bloque uniforme de puntos rosas. **2/2 pasadas limpias**, sin NO-FOUND/FALLO/EXCEPTION (un
+intento previo con zoom real al 600%+centrado no encuadraba bien en ESTE arnes en concreto -
+problema real del scroll del propio arnes bajo zoom extremo, no del codigo de produccion -
+revertido a solo centrar sin forzar el zoom, documentado en el propio comentario del bloque).
+
+**Fuera de esta pasada, documentado**: el "shimmer" real de este mundo de prueba resulto vacio
+(`ShimmeredNpcTypes` sin entradas en los 2 mundos reales usados) - el camino esta implementado
+y cubierto por `NpcHeadProfileTests.cs` con datos sinteticos, pero no se pudo confirmar contra
+un NPC realmente shimmerizado de este equipo (ninguno de los mundos reales disponibles tiene
+uno todavia). Extraer tambien los 13 sprites de CUERPO nuevos para la lista lateral
+(`Assets/npc_icons/`) - la lista lateral no era el foco de la queja original (el mapa si), se
+queda mostrando texto sin icono para esos 13 (mismo comportamiento ya documentado de
+`NpcIconResolver`, no una regresion).

@@ -10,7 +10,7 @@ using TerrasavrNative.Core.WldFormat;
 
 namespace TerrasavrNative.App.ViewModels;
 
-public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int y, bool homeless) : ObservableObject
+public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int y, bool homeless, int? headIndex) : ObservableObject
 {
     public int Id { get; } = id;
     public string Name { get; } = name;
@@ -18,6 +18,11 @@ public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int
     public int TileY { get; } = y;
     public string Position { get; } = homeless ? $"({x}, {y}) - sin casa" : $"({x}, {y})";
     public string? IconPath { get; } = NpcIconResolver.GetIconPath(id);
+    // H6-08/H6-09/H6-10 (sexta auditoria de Opus, "el mapa debe mostrar solo cabezas de NPC,
+    // no puntos rosas ni el cuerpo entero") - icono real de cabeza (NpcHeadProfile ya resolvio
+    // el indice real: normal/shimmer/variacion segun toque), usado por el marcador del MAPA
+    // (MainWindow.xaml); IconPath de arriba se queda para la lista lateral, sin cambios.
+    public string? HeadIconPath { get; } = headIndex.HasValue ? NpcHeadIconResolver.GetIconPath(headIndex.Value) : null;
 
     // X-c (segunda auditoria de Opus, Fable): "el buscador de NPCs oculta marcadores del mapa" -
     // antes filtrar el buscador VACIABA la unica coleccion Npcs, que es la MISMA que dibuja los
@@ -309,7 +314,8 @@ public partial class ExplorationViewModel : ObservableObject
 
             _allNpcs = world.Npcs
                 .OrderBy(n => _npcNames.GetName(n.Id))
-                .Select(n => new WorldNpcRowViewModel(n.Id, _npcNames.GetName(n.Id), n.TileX, n.TileY, n.Homeless))
+                .Select(n => new WorldNpcRowViewModel(n.Id, _npcNames.GetName(n.Id), n.TileX, n.TileY, n.Homeless,
+                    NpcHeadProfile.GetHeadIndex(n.Id, n.VariationIndex, world.ShimmeredNpcTypes.Contains(n.Id))))
                 .ToList();
             Npcs.Clear();
             foreach (var npc in _allNpcs) Npcs.Add(npc);
