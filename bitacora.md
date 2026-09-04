@@ -7624,3 +7624,62 @@ esta aplicando), la ropa base no se dibuja con armadura puesta (bug #1 real), y 
 0/8 renderizan sin excepcion con los assets ampliados). Arnes de UI Automation: **2/2 pasadas
 limpias**, sin NO-FOUND/FALLO/EXCEPTION (`ultimo-error.log` no existe en ninguna de las dos),
 capturas del doll (`h6-06-doll-con-equipo.png`) inspeccionadas a mano, sin corrupcion visible.
+
+## Buscador general de objetos del mundo en Exploracion (4-sep-2026)
+
+Pedido explicito del usuario: "el mundo ya que estamos podria tener un buscador de todo tipo de
+objetos del mundo no es un editor pero si un buscador cuando se lo digas a opus dile que te
+haga ingenieria inversa tambien a tedit en su buscador para que asi nosotros implementemos".
+Advisor Opus entrego `ESPEC-buscador-mundo-tedit.md` (528 lineas): ingenieria inversa real del
+buscador de TEdit (`FindSidebarViewModel.cs` - 4 pestañas, Cofres/Tiles/Paredes/Sprites, bucle
+de fuerza bruta x->y sobre toda la rejilla, sin buscar NPCs/biomas/letreros/coordenada) y una
+propuesta de diseño en 3 fases para Terrakeep. Se implemento la Fase 1 (buscar sobre lo que ya
+se lee en memoria - tiles/paredes/liquidos/NPCs, cero cambios en `WldReader`); Fase 2 (cofres/
+letreros/tile entities, necesita leer secciones del .wld que hoy no se leen) queda para mas
+adelante, documentada como alcance deliberado.
+
+**Cambios reales**:
+- `TerrasavrNative.Core/WldFormat/WorldSearch.cs` (nuevo): `WorldSearchQuery`/`WorldSearchHit`/
+  `WorldSearch.Run` - un unico bucle x->y sobre `WldWorld.Tiles` (mismo orden que el RLE real,
+  aprovecha la cache), mas un recorrido aparte de `WldWorld.Npcs`. Cancelable
+  (`CancellationToken`, pensado para `Task.Run` - un mundo Grande son ~20 millones de tiles) y
+  con limite de resultados MOSTRADOS (`DisplayLimit`, 1000 por defecto) que no afecta al
+  recuento TOTAL real (`TotalCount`) - mismo patron real que `FindResultAccumulator` de TEdit.
+  Alcance deliberado y documentado en el propio fichero: NO deduplica sprites multi-tile (un
+  cofre 2x2 sale 4 veces) - deduplicar de verdad necesita `frameSize`/`textureGrid` real por
+  tile (Data/tiles.json de TEdit, opcion 3 de la seccion 5.4 del espec), que este proyecto no
+  importa todavia; se prefirio mostrar de mas y exacto antes que fusionar con un umbral de
+  proximidad inventado (opcion 2 del espec, descartada a proposito).
+- `TileNameCatalog.AllTiles`/`AllWalls` y `NpcNameCatalog.All` (nuevos): enumeracion real de
+  todo el catalogo - antes solo habia lookup por id suelto, pensado para el tooltip del mapa,
+  no para resolver un texto de busqueda libre contra un conjunto de ids.
+- `ExplorationViewModel`: `WorldSearchText`/`WorldSearchResults`/`WorldSearchSummary` +
+  `GoToWorldSearchHitCommand`. Reutiliza **`LibrarySearchGrammar` tal cual** (la misma gramatica
+  ya conocida de la Libreria de objetos/buffs: comas=OR, espacios=AND, `#123`/`#100-200` por
+  id) contra los 3 catalogos de nombres + una tabla fija de los 4 liquidos reales del juego, en
+  vez de inventar una sintaxis de busqueda nueva solo para esto. Debounce de 250ms (mismo
+  patron ya establecido, `AppearanceViewModel._hairOptionsDebounceTimer`) + cancelacion real
+  por generacion (una busqueda mas nueva descarta la anterior en vez de que una vuelta lenta
+  pise un resultado mas reciente) - el barrido en si corre en `Task.Run`, nunca en el hilo de
+  UI.
+- `MainWindow.xaml`: panel "Buscar en el mundo" (`Expander`, plegado por defecto - funcion
+  nueva, no debe robarle sitio permanente a "NPCs de pueblo" que ya vivia ahi) con cuadro de
+  texto, resumen y lista de resultados navegable (clic -> `NavigateToTile`, mismo camino real
+  que ya usan NPCs/Spawn Points). Marcadores reales en el mapa: una capa `ItemsControl`+`Canvas`
+  mas (mismo mecanismo YA usado por los marcadores de NPC/Spawn Points, posicionados por
+  `TileX`/`TileY`) con un punto teal - decision deliberada de ESPEC-buscador-mundo-tedit.md#5.3
+  punto 6: una capa de WPF encima del mapa en vez de oscurecerlo entero como hace TEdit (que
+  exigiria rehacer el pipeline de render del `WriteableBitmap` congelado).
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: **583/583** (276 Core, +7 tests
+nuevos: `WorldSearchTests.cs` - tiles/paredes/liquidos/NPCs encontrados con su posicion y
+nombre reales, un tile INACTIVO nunca cuenta aunque su tipo coincida por casualidad, el nombre
+de un NPC es el de TIPO no el propio que el jugador le puso, el limite de visualizacion se
+respeta pero el total real no, una query vacia no recorre la rejilla (medido, <500ms sobre
+2000x2000), cancelacion real lanza `OperationCanceledException`; 307 ViewModels sin cambios,
+la logica de la ViewModel se verifico con el mundo real del arnes). Arnes de UI Automation:
+bloque nuevo `BUSCADOR-MUNDO` con un mundo real cargado (`roca_negra.wld`, 8400x2400 tiles) -
+buscar "lava" encontro **523 387 resultados reales** (limitados a 1000 mostrados, resumen
+correcto), clic real en el primer resultado navego sin excepcion. **2/2 pasadas limpias**, sin
+NO-FOUND/FALLO/EXCEPTION, captura real (`mundo-buscador-general.png`) inspeccionada a mano -
+marcadores teal visibles en el borde del mapa donde esta la lava.

@@ -2138,6 +2138,44 @@ internal static class Program
                 }
                 else Console.WriteLine("X-C-BUSCADOR-NPC: mundo real sin NPCs, omitido");
 
+                // Punto 4 (feedback del usuario, "el mundo... podria tener un buscador de todo
+                // tipo de objetos... no es un editor pero si un buscador") - Fase 1 de
+                // ESPEC-buscador-mundo-tedit.md (advisor Opus). Con el mundo real ya cargado
+                // arriba: buscar "lava" (liquido real, presente en cualquier mundo real de
+                // Terraria con Infierno generado) debe dar al menos un resultado real, poblar
+                // WorldSearchResults (que ADEMAS dibuja los marcadores del mapa, mismo
+                // mecanismo Canvas que los NPCs) y un resumen no vacio. Clic real en el primer
+                // resultado (GoToWorldSearchHitCommand) no debe lanzar excepcion.
+                try
+                {
+                    vm.Exploration.WorldSearchText = "lava";
+                    WaitForDispatcher(2000); // debounce real (250ms) + el barrido en segundo plano
+                    int hits = vm.Exploration.WorldSearchResults.Count;
+                    bool tieneResumen = !string.IsNullOrEmpty(vm.Exploration.WorldSearchSummary);
+                    Console.WriteLine($"BUSCADOR-MUNDO: 'lava' -> WorldSearchResults.Count={hits} (esperado >=1), resumen='{vm.Exploration.WorldSearchSummary}' (esperado no vacio)");
+                    if (hits == 0 || !tieneResumen) Console.WriteLine("FALLO: Punto 4 - la busqueda de 'lava' en un mundo real no encontro nada o no dejo resumen");
+
+                    if (hits > 0)
+                    {
+                        var primerHit = vm.Exploration.WorldSearchResults[0];
+                        vm.Exploration.GoToWorldSearchHitCommand.Execute(primerHit);
+                        DoEvents(); DoEvents();
+                        Console.WriteLine($"BUSCADOR-MUNDO-NAVEGAR: clic real en '{primerHit.Name}' ({primerHit.Position}) sin excepcion");
+                    }
+
+                    var rtbBuscadorMundo = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbBuscadorMundo.Render(window);
+                    var encBuscadorMundo = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encBuscadorMundo.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbBuscadorMundo));
+                    using (var fsBuscadorMundo = File.Create(Path.Combine(AppContext.BaseDirectory, "mundo-buscador-general.png"))) encBuscadorMundo.Save(fsBuscadorMundo);
+                    Console.WriteLine("Captura buscador general del mundo -> mundo-buscador-general.png");
+
+                    vm.Exploration.WorldSearchText = string.Empty; // deja el estado limpio para pasos siguientes
+                    WaitForDispatcher(100);
+                }
+                catch (Exception ex) { Console.WriteLine("BUSCADOR-MUNDO-EXCEPTION: " + ex); }
+
                 // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
                 // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de
                 // NPC"): con el mundo real ya cargado arriba, confirma que la mayoria de NPCs

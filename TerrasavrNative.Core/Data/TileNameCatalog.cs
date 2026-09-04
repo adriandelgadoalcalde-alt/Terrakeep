@@ -23,6 +23,13 @@ public sealed class TileNameCatalog
     public string TileName(int type) => _tiles.TryGetValue(type, out var n) ? n : $"Tile #{type}";
     public string WallName(int wallId) => wallId == 0 ? string.Empty : _walls.TryGetValue(wallId, out var n) ? n : $"Pared #{wallId}";
 
+    // Punto 4 (advisor Opus, buscador de objetos del mundo, ver ESPEC-buscador-mundo-tedit.md):
+    // hace falta enumerar TODOS los tiles/paredes con nombre conocido para poder resolver un
+    // texto de busqueda libre a un conjunto de ids reales - antes solo habia lookup por id
+    // suelto (TileName/WallName), pensado para el tooltip del mapa, no para un buscador.
+    public IEnumerable<(int Id, string Name)> AllTiles => _tiles.Select(kv => (kv.Key, kv.Value));
+    public IEnumerable<(int Id, string Name)> AllWalls => _walls.Select(kv => (kv.Key, kv.Value));
+
     // Nombre de variante exacta si el tile tiene frames registrados y el u/v coincide con
     // alguno; si no hay frames para este tile, o el u/v no coincide con ninguno conocido, cae
     // al nombre base (TileName) - nunca se inventa una variante.

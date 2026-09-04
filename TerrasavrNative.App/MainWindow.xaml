@@ -3341,6 +3341,32 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
+                                        <!-- Punto 4 (feedback del usuario, "buscador de todo tipo de
+                                             objetos del mundo") - Fase 1 de ESPEC-buscador-mundo-tedit.md
+                                             (advisor Opus): capa de marcadores WPF por encima del mapa en
+                                             vez de oscurecerlo entero (seccion 5.3 punto 6 del espec,
+                                             decision deliberada frente al overlay por shader de TEdit) -
+                                             mismo mecanismo Canvas+TileX/TileY ya usado por NPCs/Spawns
+                                             arriba. -->
+                                        <ItemsControl ItemsSource="{Binding Exploration.WorldSearchResults}" IsHitTestVisible="True">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><Canvas IsItemsHost="True" /></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemContainerStyle>
+                                                <Style TargetType="ContentPresenter">
+                                                    <Setter Property="Canvas.Left" Value="{Binding TileX}" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding TileY}" />
+                                                    <Setter Property="Panel.ZIndex" Value="3" />
+                                                </Style>
+                                            </ItemsControl.ItemContainerStyle>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:WorldSearchHitRowViewModel}">
+                                                    <Ellipse Width="9" Height="9" Margin="-4.5,-4.5,0,0"
+                                                             Fill="{StaticResource TealBrush}" Stroke="White" StrokeThickness="1.2"
+                                                             ToolTip="{Binding Name}" Cursor="Hand" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </Grid>
                                 </ScrollViewer>
 
@@ -3409,6 +3435,58 @@
                     </Border>
 
                     <DockPanel Grid.Column="1">
+                        <!-- Punto 4 (feedback del usuario, "el mundo... podria tener un buscador de
+                             todo tipo de objetos... no es un editor pero si un buscador"): Fase 1 de
+                             ESPEC-buscador-mundo-tedit.md - busca tiles/paredes/liquidos/NPCs (Fase 2,
+                             cofres/letreros, necesita leer secciones del .wld que hoy no se leen, ver
+                             el espec). Reutiliza la MISMA gramatica ya conocida de la Libreria
+                             (LibrarySearchGrammar: comas=OR, espacios=AND, #123/#100-200 por id) en vez
+                             de inventar una sintaxis nueva solo para esto. Expander plegado por
+                             defecto - es una funcion nueva, no debe robarle sitio permanente a la
+                             lista de NPCs de pueblo que ya vivia aqui. -->
+                        <Expander DockPanel.Dock="Top" Header="Buscar en el mundo" Foreground="{StaticResource TextPrimaryBrush}"
+                                  Margin="0,0,0,10" IsExpanded="False"
+                                  IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True">
+                            <Expander.ToolTip>
+                                <TextBlock Text="Busca tiles, paredes, líquidos y NPCs por nombre o #id. Comas = OR, espacios = AND, #123 o #100-200 por id. (Cofres y letreros: todavía no.)" TextWrapping="Wrap" MaxWidth="260" />
+                            </Expander.ToolTip>
+                            <StackPanel Margin="0,8,0,0">
+                                <TextBox Text="{Binding Exploration.WorldSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                         Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                         FontSize="12" Margin="0,0,0,6" />
+                                <TextBlock Text="{Binding Exploration.WorldSearchSummary}" Style="{StaticResource CaptionText}"
+                                           Margin="0,0,0,6" TextWrapping="Wrap"
+                                           Visibility="{Binding Exploration.WorldSearchSummary, Converter={StaticResource EmptyToCollapsed}}" />
+                                <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto"
+                                              Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}">
+                                    <ItemsControl ItemsSource="{Binding Exploration.WorldSearchResults}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:WorldSearchHitRowViewModel}">
+                                                <Button Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,5"
+                                                        HorizontalContentAlignment="Stretch" Cursor="Hand"
+                                                        ToolTip="Ir a su posición en el mapa"
+                                                        Command="{Binding DataContext.Exploration.GoToWorldSearchHitCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}">
+                                                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Padding="8,5">
+                                                        <StackPanel>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
+                                                                <Border Background="{StaticResource TealBrush}" CornerRadius="99" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                                    <TextBlock Text="{Binding KindLabel}" FontSize="9.5" Foreground="White" />
+                                                                </Border>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </Expander>
+
                         <TextBlock DockPanel.Dock="Top" Text="NPCs de pueblo" Style="{StaticResource SectionText}" Margin="0,0,0,8" />
                         <!-- H4-13 (cuarta auditoria de Opus, Fable): unico buscador de los 4 sin
                              tooltip - correcto que no use la gramatica de LibrarySearchGrammar

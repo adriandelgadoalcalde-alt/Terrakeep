@@ -20,6 +20,12 @@ public sealed class NpcNameCatalog
 
     public string GetName(int npcId) => _byId.TryGetValue(npcId, out var e) ? e.DisplayName : $"NPC #{npcId}";
 
+    // Punto 4 (advisor Opus, buscador de objetos del mundo): enumeracion real para resolver un
+    // texto de busqueda libre contra el nombre de tipo de NPC (no el nombre propio que el
+    // jugador le puso, ese vive en WldNpc.GivenName) - mismo motivo que AllTiles/AllWalls de
+    // TileNameCatalog.
+    public IEnumerable<(int Id, string Name)> All => _byId.Select(kv => (kv.Key, kv.Value.DisplayName));
+
     public static NpcNameCatalog LoadFromFile(string path)
     {
         using var stream = File.OpenRead(path);

@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
@@ -9,6 +11,28 @@ using TerrasavrNative.Core.Data;
 using TerrasavrNative.Core.WldFormat;
 
 namespace TerrasavrNative.App.ViewModels;
+
+// Punto 4 del feedback del usuario ("el mundo... podria tener un buscador de todo tipo de
+// objetos, no es un editor pero si un buscador... que Opus haga ingenieria inversa a tedit en
+// su buscador"). Fase 1 de ESPEC-buscador-mundo-tedit.md (advisor Opus): una fila de resultado,
+// hermana real de WhereIsItResultViewModel (que hace lo mismo para el inventario del
+// personaje) - icono deliberadamente ausente en esta primera pasada (tiles/paredes no tienen
+// un catalogo de sprites propio como los objetos, a diferencia de WhereIsIt).
+public sealed class WorldSearchHitRowViewModel(WorldSearchHit hit)
+{
+    public int TileX { get; } = hit.X;
+    public int TileY { get; } = hit.Y;
+    public string Name { get; } = hit.Name;
+    public string Position { get; } = $"({hit.X}, {hit.Y})";
+    public string KindLabel { get; } = hit.Kind switch
+    {
+        WorldSearchKind.Tile => "Tile",
+        WorldSearchKind.Wall => "Pared",
+        WorldSearchKind.Liquid => "Liquido",
+        WorldSearchKind.Npc => "NPC",
+        _ => "",
+    };
+}
 
 public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int y, bool homeless, int? headIndex) : ObservableObject
 {
@@ -108,6 +132,22 @@ public partial class ExplorationViewModel : ObservableObject
     // marcadores solo se ven cuando ADEMAS hay un mundo real a la vista).
     public ObservableCollection<CharacterSpawnRowViewModel> CharacterSpawns { get; } = [];
 
+    // Punto 4: buscador real de "todo tipo de objetos del mundo" (tiles/paredes/liquidos/NPCs -
+    // Fase 1 de ESPEC-buscador-mundo-tedit.md, cofres/letreros quedan para una Fase 2 que
+    // todavia no lee esas secciones del .wld). Reutiliza LibrarySearchGrammar (comas=OR,
+    // espacios=AND, "#123"/"#100-200" por id) - la misma gramatica real que ya usa la Libreria
+    // de objetos/buffs, para que el usuario no tenga que aprender una sintaxis nueva.
+    [ObservableProperty] private string _worldSearchText = string.Empty;
+    [ObservableProperty] private string _worldSearchSummary = string.Empty;
+    public ObservableCollection<WorldSearchHitRowViewModel> WorldSearchResults { get; } = [];
+
+    private readonly DispatcherTimer _worldSearchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+    private CancellationTokenSource? _worldSearchCts;
+    private int _worldSearchGeneration;
+
+    [RelayCommand]
+    private void GoToWorldSearchHit(WorldSearchHitRowViewModel hit) => NavigateToTile(hit.TileX, hit.TileY);
+
     // Llamado por MainViewModel al cargar personaje (tras Servers.LoadFrom, que es quien de
     // verdad rellena los Spawn Points reales) y al entrar en esta pestaña (mismo criterio ya
     // establecido en Bd-d/BuildsViewModel.RefreshOwnership: foto fija recalculada cuando de
@@ -160,6 +200,15 @@ public partial class ExplorationViewModel : ObservableObject
         // puede ser async, y no hay nada que esperar aqui (Worlds se rellena un instante
         // despues, IsScanningWorlds refleja el hueco mientras tanto).
         _ = RefreshWorldsAsync();
+
+        // Mismo patron real ya establecido en el proyecto (AppearanceViewModel.
+        // _hairOptionsDebounceTimer): un mundo grande son millones de tiles - no se relanza el
+        // barrido en cada tecla, se espera a que el usuario pare de escribir 250ms.
+        _worldSearchDebounceTimer.Tick += (_, _) =>
+        {
+            _worldSearchDebounceTimer.Stop();
+            _ = RunWorldSearchAsync();
+        };
     }
 
     // H5-11: gemelo real de HomeViewModel.UpdateCurrentPath - se llama tras cargar un mundo con
@@ -323,6 +372,11 @@ public partial class ExplorationViewModel : ObservableObject
             Zoom = 1.0;
             HoverInfo = string.Empty;
             ApplyNpcFilter();
+            // Punto 4: un mundo nuevo invalida cualquier resultado de busqueda anterior (era de
+            // OTRO mundo) - mismo criterio que el reinicio de NpcSearchText de arriba.
+            WorldSearchText = string.Empty;
+            WorldSearchResults.Clear();
+            WorldSearchSummary = string.Empty;
 
             var foundIds = world.Npcs.Select(n => n.Id).ToHashSet();
             MissingNpcs.Clear();
@@ -387,6 +441,98 @@ public partial class ExplorationViewModel : ObservableObject
         {
             npc.IsMatch = sinBusqueda || npc.Name.Contains(NpcSearchText, StringComparison.OrdinalIgnoreCase);
             if (npc.IsMatch) NpcSearchResults.Add(npc);
+        }
+    }
+
+    // Punto 4: reinicia el debounce en cada tecla - el barrido real (RunWorldSearchAsync) no se
+    // lanza aqui directamente, solo cuando el usuario para de escribir (ver el Tick del
+    // constructor).
+    partial void OnWorldSearchTextChanged(string value)
+    {
+        _worldSearchDebounceTimer.Stop();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            // Vaciar el cuadro limpia al instante, sin esperar el debounce - mismo criterio que
+            // vaciar cualquier otro buscador de la app.
+            _worldSearchCts?.Cancel();
+            WorldSearchResults.Clear();
+            WorldSearchSummary = string.Empty;
+            return;
+        }
+        _worldSearchDebounceTimer.Start();
+    }
+
+    // Resuelve el texto libre a un WorldSearchQuery real usando LibrarySearchGrammar (la misma
+    // gramatica ya usada por la Libreria de objetos/buffs - comas=OR, espacios=AND, "#123"/
+    // "#100-200" por id) contra los tres catalogos de nombres que ya tiene esta ViewModel, mas
+    // los 4 liquidos reales del juego (sin catalogo propio, tabla fija).
+    private static readonly (int Id, string Name)[] LiquidCandidates =
+        [(1, "Agua"), (2, "Lava"), (3, "Miel"), (4, "Centelleo")];
+
+    private WorldSearchQuery BuildWorldSearchQuery(string text)
+    {
+        var tileTypes = new HashSet<int>();
+        foreach (var (id, name) in _tileNames.AllTiles)
+            if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) tileTypes.Add(id);
+
+        var wallIds = new HashSet<int>();
+        foreach (var (id, name) in _tileNames.AllWalls)
+            if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) wallIds.Add(id);
+
+        var npcIds = new HashSet<int>();
+        foreach (var (id, name) in _npcNames.All)
+            if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) npcIds.Add(id);
+
+        var liquidTypes = new HashSet<byte>();
+        foreach (var (id, name) in LiquidCandidates)
+            if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) liquidTypes.Add((byte)id);
+
+        return new WorldSearchQuery { TileTypes = tileTypes, WallIds = wallIds, NpcIds = npcIds, LiquidTypes = liquidTypes };
+    }
+
+    // El barrido real (WorldSearch.Run) puede recorrer millones de tiles en un mundo Grande -
+    // se manda a un hilo de fondo (mismo criterio ya establecido por LoadFromPathAsync) y es
+    // cancelable: si el usuario teclea otra vez antes de que termine, la vuelta vieja se
+    // descarta en vez de pisar un resultado mas nuevo con uno obsoleto que llega tarde.
+    private async Task RunWorldSearchAsync()
+    {
+        _worldSearchCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _worldSearchCts = cts;
+        int myGeneration = ++_worldSearchGeneration;
+
+        var world = _world;
+        string text = WorldSearchText;
+        if (world == null || string.IsNullOrWhiteSpace(text)) return;
+
+        var query = BuildWorldSearchQuery(text);
+        if (query.IsEmpty)
+        {
+            if (myGeneration == _worldSearchGeneration)
+            {
+                WorldSearchResults.Clear();
+                WorldSearchSummary = "Sin resultados.";
+            }
+            return;
+        }
+
+        try
+        {
+            var result = await Task.Run(() => WorldSearch.Run(world, query, _tileNames, _npcNames, cts.Token), cts.Token);
+            if (myGeneration != _worldSearchGeneration) return; // una busqueda MAS NUEVA ya esta en marcha - esta es obsoleta
+
+            WorldSearchResults.Clear();
+            foreach (var hit in result.Hits) WorldSearchResults.Add(new WorldSearchHitRowViewModel(hit));
+            WorldSearchSummary = result.TotalCount == 0
+                ? "Sin resultados."
+                : result.TotalCount > result.Hits.Count
+                    ? $"{result.Hits.Count} de {result.TotalCount} resultado(s) (limitado a {query.DisplayLimit})"
+                    : $"{result.TotalCount} resultado(s)";
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelada por una busqueda mas nueva (ver arriba) - no es un error real, no toca
+            // WorldSearchResults/Summary (los deja a los de la vuelta que SI vaya a terminar).
         }
     }
 }
