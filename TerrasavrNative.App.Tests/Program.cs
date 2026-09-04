@@ -2212,11 +2212,54 @@ internal static class Program
                 try
                 {
                     vm.Exploration.WorldSearchText = "lava";
-                    WaitForDispatcher(2000); // debounce real (250ms) + el barrido en segundo plano
+                    // A8-02 (auditoria de Opus vs TEdit, E-02): IsSearching debe activarse DURANTE
+                    // el barrido real (no solo existir como propiedad) y apagarse al terminar.
+                    // Paso el debounce (250ms) primero, para que el barrido en segundo plano ya
+                    // este en marcha de verdad antes de mirar.
+                    WaitForDispatcher(280);
+                    bool buscandoAMitad = vm.Exploration.IsSearching;
+                    WaitForDispatcher(1720); // resto hasta completar (mismo total de 2000ms ya medido)
+                    bool buscandoTrasCompletar = vm.Exploration.IsSearching;
+                    Console.WriteLine($"A8-02: IsSearching a mitad del barrido={buscandoAMitad} (esperado True), tras completar={buscandoTrasCompletar} (esperado False)");
+                    if (!buscandoAMitad) Console.WriteLine("FALLO: A8-02 - IsSearching no se activo durante el barrido real del mundo");
+                    if (buscandoTrasCompletar) Console.WriteLine("FALLO: A8-02 - IsSearching se quedo colgado en True tras completar la busqueda");
+
                     int hits = vm.Exploration.WorldSearchResults.Count;
                     bool tieneResumen = !string.IsNullOrEmpty(vm.Exploration.WorldSearchSummary);
                     Console.WriteLine($"BUSCADOR-MUNDO: 'lava' -> WorldSearchResults.Count={hits} (esperado >=1), resumen='{vm.Exploration.WorldSearchSummary}' (esperado no vacio)");
                     if (hits == 0 || !tieneResumen) Console.WriteLine("FALLO: Punto 4 - la busqueda de 'lava' en un mundo real no encontro nada o no dejo resumen");
+
+                    // A8-02b: Cancelar de verdad a mitad de un barrido nuevo - la infraestructura
+                    // (_worldSearchCts) ya existia, F-4 solo expuso el boton/comando.
+                    vm.Exploration.WorldSearchText = "agua";
+                    WaitForDispatcher(280);
+                    bool buscandoAntesDeCancelar = vm.Exploration.IsSearching;
+                    vm.Exploration.CancelWorldSearchCommand.Execute(null);
+                    WaitForDispatcher(200);
+                    bool buscandoTrasCancelar = vm.Exploration.IsSearching;
+                    Console.WriteLine($"A8-02b: IsSearching antes de cancelar={buscandoAntesDeCancelar} (esperado True), tras Cancelar={buscandoTrasCancelar} (esperado False)");
+                    if (buscandoTrasCancelar) Console.WriteLine("FALLO: A8-02b - CancelWorldSearchCommand no apago IsSearching");
+                    vm.Exploration.WorldSearchText = "lava"; // deja el estado conocido para lo que sigue
+                    WaitForDispatcher(2000);
+                    hits = vm.Exploration.WorldSearchResults.Count;
+
+                    // A8-04 (auditoria de Opus vs TEdit, E-04): con el tope real de 1000
+                    // resultados alcanzado ("lava" en este mundo da exactamente 1000, medido), un
+                    // ListBox de verdad virtualizado NO debe haber realizado un contenedor por
+                    // cada item - un ItemsControl desnudo (el bug original) los realiza TODOS de
+                    // golpe. ContainerFromIndex devuelve null para cualquier indice fuera del
+                    // rango realizado/reciclado.
+                    DoEvents();
+                    var resultsListBox = Descendientes<ListBox>(window).FirstOrDefault(lb => ReferenceEquals(lb.ItemsSource, vm.Exploration.WorldSearchResults));
+                    if (resultsListBox != null)
+                    {
+                        int realizados = 0;
+                        for (int i = 0; i < resultsListBox.Items.Count; i++)
+                            if (resultsListBox.ItemContainerGenerator.ContainerFromIndex(i) != null) realizados++;
+                        Console.WriteLine($"A8-04: lista de resultados ({resultsListBox.Items.Count} items) -> {realizados} contenedores realizados (esperado <100)");
+                        if (realizados >= 100) Console.WriteLine("FALLO: A8-04 - la lista de resultados no esta virtualizada de verdad (demasiados contenedores realizados)");
+                    }
+                    else Console.WriteLine("A8-04: no se encontro el ListBox de resultados en el arbol visual - omitido");
 
                     if (hits > 0)
                     {

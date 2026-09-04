@@ -1116,6 +1116,13 @@ public partial class ExplorationViewModel : ObservableObject
             return;
         }
 
+        // F-4 (auditoria de Opus vs TEdit, E-02): el barrido puede recorrer millones de tiles
+        // (mundo Grande real, 8400x2400 = 20,2M) sin ningun aviso de que esta en marcha. IsSearching
+        // solo se activa AQUI (no si query.IsEmpty, que ya ha vuelto arriba sin ningun hueco
+        // asincrono real que avisar) y se apaga en el finally CON la guarda de generacion, igual
+        // que ya hace RefreshWorldsAsync - una vuelta obsoleta que termine tarde no debe apagar
+        // el indicador de la vuelta viva.
+        IsSearching = true;
         try
         {
             var result = await Task.Run(() => WorldSearch.Run(world, query, _tileNames, _npcNames, _itemNames, cts.Token), cts.Token);
@@ -1135,5 +1142,16 @@ public partial class ExplorationViewModel : ObservableObject
             // Cancelada por una busqueda mas nueva (ver arriba) - no es un error real, no toca
             // WorldSearchResults/Summary (los deja a los de la vuelta que SI vaya a terminar).
         }
+        finally
+        {
+            if (myGeneration == _worldSearchGeneration) IsSearching = false;
+        }
     }
+
+    [ObservableProperty] private bool _isSearching;
+
+    // F-4: boton Cancelar, visible solo con IsSearching. La infraestructura de cancelacion ya
+    // existia entera (_worldSearchCts) desde el buscador original - solo faltaba exponerla.
+    [RelayCommand]
+    private void CancelWorldSearch() => _worldSearchCts?.Cancel();
 }

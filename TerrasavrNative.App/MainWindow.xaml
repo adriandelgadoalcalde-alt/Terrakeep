@@ -1325,6 +1325,29 @@
                 </Button>
             </Grid>
         </DataTemplate>
+
+        <!-- F-5 (auditoria de Opus vs TEdit, E-04): las listas largas (hasta 1000 resultados,
+             hasta 260 filas de inventario) eran un ItemsControl desnudo dentro de un
+             ScrollViewer externo - WPF realiza TODOS sus contenedores de golpe en el primer
+             layout, y ademas un ScrollViewer externo DESACTIVA la virtualizacion del panel
+             interno aunque lo tuviera (mismo aviso literal que TEdit deja en su equivalente,
+             TileWallPickerControl.xaml:55, "no external ScrollViewer - ListBox handles its
+             own"). Estilo de contenedor sin ninguna decoracion propia (sin fondo/borde de
+             seleccion): la fila YA trae su propio Border/Button, este contenedor solo debe
+             desaparecer visualmente - Focusable=False porque el Boton interno de cada fila ya
+             es el objetivo real del foco y del clic. -->
+        <Style x:Key="VirtualRowContainer" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <ContentPresenter />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -3760,6 +3783,21 @@
                                     </Style.Triggers>
                                 </Style>
                             </StackPanel.Style>
+                            <!-- F-4 (auditoria Opus vs TEdit, E-02): el barrido del mundo (hasta
+                                 20M de tiles) no avisaba de que estaba en marcha ni dejaba
+                                 cancelarlo, pese a que _worldSearchCts ya existia entero por
+                                 dentro. Mismo lenguaje visual que el overlay de carga del mapa
+                                 (ProgressBar indeterminada + AccentBrush). -->
+                            <Grid Visibility="{Binding Exploration.IsSearching, Converter={StaticResource BoolToVis}}" Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ProgressBar Grid.Column="0" IsIndeterminate="True" Height="3" VerticalAlignment="Center"
+                                             Foreground="{StaticResource AccentBrush}" />
+                                <Button Grid.Column="1" Content="Cancelar" Tag="Ghost" Padding="8,2" Margin="8,0,0,0" FontSize="11"
+                                        Command="{Binding Exploration.CancelWorldSearchCommand}" />
+                            </Grid>
                             <CheckBox Content="Ordenar por distancia al spawn" IsChecked="{Binding Exploration.ShowSpawnDistance}"
                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,8,0,6"
                                       Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}" />
@@ -3795,10 +3833,15 @@
                                 <Button Grid.Column="2" Content="&#8250;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
                                         ToolTip="Resultado siguiente" Command="{Binding Exploration.NextWorldSearchResultCommand}" />
                             </Grid>
-                            <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto"
-                                          Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}">
-                                <ItemsControl ItemsSource="{Binding Exploration.WorldSearchResults}">
-                                    <ItemsControl.ItemTemplate>
+                            <ListBox MaxHeight="240" ItemContainerStyle="{StaticResource VirtualRowContainer}"
+                                     Background="Transparent" BorderThickness="0" Focusable="False"
+                                     ScrollViewer.CanContentScroll="True"
+                                     VirtualizingPanel.IsVirtualizing="True"
+                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                     VirtualizingPanel.ScrollUnit="Pixel"
+                                     Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}"
+                                     ItemsSource="{Binding Exploration.WorldSearchResults}">
+                                    <ListBox.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:WorldSearchHitRowViewModel}">
                                             <Button Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,5"
                                                     HorizontalContentAlignment="Stretch" Cursor="Hand"
@@ -3831,9 +3874,8 @@
                                                 </Border>
                                             </Button>
                                         </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
                         </StackPanel>
 
                         <!-- Relleno: contenido especifico de cada categoria, superpuesto y con
@@ -3946,9 +3988,13 @@
                                 </UniformGrid>
                                 <Button DockPanel.Dock="Top" Content="Buscar seleccionados" Tag="Ghost" Margin="0,0,0,8" HorizontalAlignment="Left"
                                         Command="{Binding Exploration.SearchCheckedInventoryCommand}" />
-                                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                    <ItemsControl ItemsSource="{Binding Exploration.Inventory}" ItemTemplate="{StaticResource InventoryRowTemplate}" />
-                                </ScrollViewer>
+                                <ListBox ItemsSource="{Binding Exploration.Inventory}" ItemTemplate="{StaticResource InventoryRowTemplate}"
+                                         ItemContainerStyle="{StaticResource VirtualRowContainer}"
+                                         Background="Transparent" BorderThickness="0" Focusable="False"
+                                         ScrollViewer.CanContentScroll="True"
+                                         VirtualizingPanel.IsVirtualizing="True"
+                                         VirtualizingPanel.VirtualizationMode="Recycling"
+                                         VirtualizingPanel.ScrollUnit="Pixel" />
                             </DockPanel>
 
                             <!-- Minerales: inventario en 3 grupos con cabecera + marcado en el mapa
@@ -4011,9 +4057,13 @@
                                 </UniformGrid>
                                 <Button DockPanel.Dock="Top" Content="Buscar seleccionados" Tag="Ghost" Margin="0,4,0,8" HorizontalAlignment="Left"
                                         Command="{Binding Exploration.SearchCheckedInventoryCommand}" />
-                                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                    <ItemsControl ItemsSource="{Binding Exploration.Inventory}" ItemTemplate="{StaticResource InventoryRowTemplate}" />
-                                </ScrollViewer>
+                                <ListBox ItemsSource="{Binding Exploration.Inventory}" ItemTemplate="{StaticResource InventoryRowTemplate}"
+                                         ItemContainerStyle="{StaticResource VirtualRowContainer}"
+                                         Background="Transparent" BorderThickness="0" Focusable="False"
+                                         ScrollViewer.CanContentScroll="True"
+                                         VirtualizingPanel.IsVirtualizing="True"
+                                         VirtualizingPanel.VirtualizationMode="Recycling"
+                                         VirtualizingPanel.ScrollUnit="Pixel" />
                             </DockPanel>
                         </Grid>
                     </DockPanel>
