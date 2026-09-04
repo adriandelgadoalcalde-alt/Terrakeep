@@ -1365,7 +1365,7 @@
                      boton de la cabecera, visible en CUALQUIER pestaña. StaysOpen=False lo
                      cierra solo con un clic fuera (mismo gesto real que cualquier menu/combo de
                      Windows) - no hace falta ningun manejador nuevo para cerrarlo a mano. -->
-                <Popup IsOpen="{Binding IsWhereIsItOpen}" PlacementTarget="{Binding ElementName=WhereIsItButton}"
+                <Popup x:Name="WhereIsItPopup" IsOpen="{Binding IsWhereIsItOpen}" PlacementTarget="{Binding ElementName=WhereIsItButton}"
                        Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
                        Opened="OnWhereIsItPopupOpened">
                     <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource AccentBrush}"
@@ -1384,23 +1384,14 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:WhereIsItResultViewModel}">
                                             <!-- Un clic navega, selecciona el slot real y dispara el
-                                                 flash de T-14 - pedido explicito del informe. -->
-                                            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Margin="0,0,0,6" Padding="8,6"
-                                                    Cursor="Hand">
-                                                <Border.InputBindings>
-                                                    <MouseBinding MouseAction="LeftClick"
-                                                                  Command="{Binding DataContext.NavigateToWhereIsItResultCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                  CommandParameter="{Binding}" />
-                                                </Border.InputBindings>
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Style.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
-                                                            </Trigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
+                                                 flash de T-14 - pedido explicito del informe. Button
+                                                 real (no Border+MouseBinding, ver RowClickButton en
+                                                 Theme.xaml para el porque real - un clic real dentro
+                                                 de este Popup StaysOpen=False dejaba la interfaz
+                                                 bloqueada). -->
+                                            <Button Style="{StaticResource RowClickButton}"
+                                                    Command="{Binding DataContext.NavigateToWhereIsItResultCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}">
                                                 <StackPanel Orientation="Horizontal">
                                                     <Image Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform" Margin="0,0,8,0"
                                                            RenderOptions.BitmapScalingMode="NearestNeighbor"
@@ -1414,7 +1405,7 @@
                                                         </TextBlock>
                                                     </StackPanel>
                                                 </StackPanel>
-                                            </Border>
+                                            </Button>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

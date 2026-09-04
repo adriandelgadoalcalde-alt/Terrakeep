@@ -994,6 +994,85 @@ internal static class Program
             Console.WriteLine("H5-05-EXCEPTION: " + ex);
         }
 
+        // Pedido explicito del usuario (4-sep-2026): "el boton dónde lo encuentro deja la
+        // interfaz bloqueada" - la fila de resultado real usaba Border+MouseBinding dentro de
+        // un Popup StaysOpen=False (gotcha real de WPF, ver el comentario real de
+        // RowClickButton en Theme.xaml) - arreglado a un Button real. Esta es la PRIMERA
+        // verificacion real de este arnes con un clic de RATON de verdad (mouse_event/
+        // SetCursorPos, no InvokePattern ni Command.Execute) - la unica forma real de
+        // reproducir el bug real (la captura/el foco de Windows solo entran en juego con un
+        // gesto de raton real).
+        try
+        {
+            vm.SelectedTabIndex = 1; // Personaje - vuelve a un estado conocido tras H5-05
+            DoEvents();
+            var whereIsItButtonReal = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
+                new PropertyCondition(AutomationElement.NameProperty, "🔍 ¿Dónde lo tengo?")));
+            if (whereIsItButtonReal != null && whereIsItButtonReal.TryGetCurrentPattern(InvokePattern.Pattern, out var reabrirPat))
+                ((InvokePattern)reabrirPat).Invoke();
+            DoEvents(); DoEvents();
+            vm.WhereIsItSearchText = "hierro";
+            WaitForDispatcher(300);
+            Console.WriteLine($"UI-BLOQUEADA-PREP: IsWhereIsItOpen={vm.IsWhereIsItOpen} (esperado True), Results.Count={vm.WhereIsItResults.Count} (esperado >=1)");
+
+            var popupField = typeof(MainWindow).GetField("WhereIsItPopup", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+            var popup = popupField?.GetValue(window) as System.Windows.Controls.Primitives.Popup;
+            System.Windows.FrameworkElement? filaResultado = null;
+            void BuscarFilaResultado(System.Windows.DependencyObject d)
+            {
+                if (filaResultado != null) return;
+                if (d is System.Windows.FrameworkElement fe && fe.DataContext is WhereIsItResultViewModel) { filaResultado = fe; return; }
+                int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(d);
+                for (int i = 0; i < n && filaResultado == null; i++)
+                    BuscarFilaResultado(System.Windows.Media.VisualTreeHelper.GetChild(d, i));
+            }
+            if (popup?.Child != null) BuscarFilaResultado(popup.Child);
+            Console.WriteLine($"UI-BLOQUEADA-PREP: fila real de resultado encontrada en el arbol visual del Popup={filaResultado != null} (esperado True)");
+
+            if (filaResultado != null)
+            {
+                var puntoSuperior = filaResultado.PointToScreen(new System.Windows.Point(filaResultado.ActualWidth / 2, filaResultado.ActualHeight / 2));
+                SetForegroundWindow(hwnd);
+                DoEvents();
+                RealClickAt((int)puntoSuperior.X, (int)puntoSuperior.Y);
+                WaitForDispatcher(200);
+
+                bool popupSeCerroDeVerdad = !vm.IsWhereIsItOpen;
+                bool sinCapturaColgada = System.Windows.Input.Mouse.Captured == null;
+                Console.WriteLine($"UI-BLOQUEADA: tras el clic REAL de raton -> IsWhereIsItOpen={vm.IsWhereIsItOpen} (esperado False), Mouse.Captured={System.Windows.Input.Mouse.Captured} (esperado null)");
+                if (!popupSeCerroDeVerdad) Console.WriteLine("FALLO: UI-BLOQUEADA - el Popup no se cerro tras el clic real de raton");
+                if (!sinCapturaColgada) Console.WriteLine("FALLO: UI-BLOQUEADA - Mouse.Captured se quedo colgado tras cerrar el Popup con un clic real");
+
+                // La prueba real de verdad: ¿la interfaz SIGUE respondiendo a otro clic real
+                // despues de este? Clic real sobre la pestaña "Inicio" (indice 0) y confirma
+                // que el cambio de pestaña SI ocurre - si la interfaz estuviera bloqueada de
+                // verdad, este segundo clic real no haria nada.
+                var pestañaInicio = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
+                    new PropertyCondition(AutomationElement.NameProperty, "Inicio")));
+                if (pestañaInicio != null)
+                {
+                    var puntoInicio = pestañaInicio.Current.BoundingRectangle;
+                    RealClickAt((int)puntoInicio.X + (int)(puntoInicio.Width / 2), (int)puntoInicio.Y + (int)(puntoInicio.Height / 2));
+                    WaitForDispatcher(200);
+                    bool siguoRespondiendo = vm.SelectedTabIndex == 0;
+                    Console.WriteLine($"UI-BLOQUEADA: segundo clic real (pestaña Inicio) -> SelectedTabIndex={vm.SelectedTabIndex} (esperado 0 - la interfaz SIGUE respondiendo)");
+                    if (!siguoRespondiendo) Console.WriteLine("FALLO: UI-BLOQUEADA - la interfaz dejo de responder a clics reales tras cerrar el Popup");
+                }
+                else Console.WriteLine("UI-BLOQUEADA: pestaña 'Inicio' real NO-FOUND para el segundo clic - omitido");
+
+                var rtbUiBloqueada = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbUiBloqueada.Render(window);
+                var encUiBloqueada = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encUiBloqueada.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbUiBloqueada));
+                using (var fsUiBloqueada = File.Create(Path.Combine(AppContext.BaseDirectory, "ui-desbloqueada-tras-clic-real.png"))) encUiBloqueada.Save(fsUiBloqueada);
+                Console.WriteLine("Captura tras el clic real y la interfaz respondiendo -> ui-desbloqueada-tras-clic-real.png");
+            }
+        }
+        catch (Exception ex) { Console.WriteLine("UI-BLOQUEADA-EXCEPTION: " + ex); }
+
         // H5-07 (quinta auditoria de Opus): "carpetas adicionales de personajes/mundos... N
         // configurable de copias de seguridad... session.json recuerda el ultimo personaje
         // real". La logica en si (Add/Remove/deduplicacion/recorte/staleness) ya la cubren
@@ -2703,6 +2782,23 @@ internal static class Program
     // pulsaciones reales a nivel de SO (keybd_event), con la ventana real en primer plano.
     [DllImport("user32.dll")] private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
+    // Pedido explicito del usuario (4-sep-2026, "el boton dónde lo encuentro deja la interfaz
+    // bloqueada"): el gesto de RATON real (no InvokePattern/Command.Execute, que nunca pasan
+    // por la captura/el foco reales de Windows) - unico precedente real de raton simulado en
+    // este arnes, necesario para reproducir de verdad el bug real (Border+MouseBinding dentro
+    // de un Popup StaysOpen=False, ver el comentario real de RowClickButton en Theme.xaml).
+    [DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
+    private const uint MOUSEEVENTF_LEFTDOWN = 0x0002, MOUSEEVENTF_LEFTUP = 0x0004;
+
+    private static void RealClickAt(int screenX, int screenY)
+    {
+        SetCursorPos(screenX, screenY);
+        System.Threading.Thread.Sleep(30); // el SO real necesita un instante para registrar la posicion antes del down/up
+        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+        System.Threading.Thread.Sleep(30);
+        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+    }
     private const uint KEYEVENTF_KEYUP = 0x0002;
     private const byte VK_CONTROL = 0x11;
 

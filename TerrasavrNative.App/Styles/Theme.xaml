@@ -1160,6 +1160,41 @@
         </Setter>
     </Style>
 
+    <!-- Bug real de UI (pedido explicito del usuario, no reproducido nunca por el arnes -
+         "Border + MouseBinding LeftClick" no tiene precedente de raton simulado, solo se
+         invocaba el Command a mano): una fila clicable dentro de un Popup StaysOpen="False"
+         (el panel "¿Donde lo tengo?") usando MouseBinding en vez de un Button real dejaba la
+         interfaz bloqueada tras el clic real - MouseBinding no captura/libera el raton como un
+         Button real (OnMouseLeftButtonDown/Up), y si el propio clic hace que el Popup se
+         cierre (nuestro caso: el Command ejecutado cierra IsWhereIsItOpen) mientras el Popup
+         desmonta su arbol visual a mitad del enrutado del evento de raton, la captura/el foco
+         se quedan colgados de un elemento que ya no existe - gotcha real y conocido de WPF con
+         Popup+StaysOpen=False+contenido clicable sin un Button real de por medio. Un Button
+         real SI hace ese ciclo de captura/liberacion correctamente. Misma apariencia visual que
+         el Border de antes (fondo/CornerRadius/hover), solo cambia el mecanismo de clic. -->
+    <Style x:Key="RowClickButton" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="Margin" Value="0,0,0,6" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                            Padding="{TemplateBinding Padding}" Margin="{TemplateBinding Margin}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Boton circular pequeño (cerrar/quitar/vaciar) - gira 90 grados y se tiñe de rojo al
          pasar el raton, gesto real de Terrasavr (.tsx-close-btn:hover { background: #ff4d4d;
          transform: rotate(90deg) }) que antes no existia en absoluto (los botones "X" solo

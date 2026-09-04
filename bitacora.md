@@ -7458,3 +7458,39 @@ confirmo que no.
 **Cierra la sexta auditoria de Opus al 100%** (12 de 12 hallazgos) - la sesion entera resumida
 arriba sigue siendo valida, solo cambia el recuento final de hallazgos (12/12, no 11/12) y de
 tests (480/480, no 450/450).
+
+## "¿Dónde lo tengo?" dejaba la interfaz bloqueada tras señalar (4-sep-2026)
+
+Pedido explicito del usuario, marcado por el mismo como "bug de interfaz, no ingenieria
+inversa" - sin advisor, arreglo directo.
+
+**Hallazgo real**: la fila de resultado del panel "¿Dónde lo tengo?" usaba `Border` +
+`MouseBinding MouseAction="LeftClick"` dentro de un `Popup StaysOpen="False"` - un
+`MouseBinding` NO captura/libera el raton como un `Button` real (`OnMouseLeftButtonDown/Up`
+reales de WPF), y como el propio clic ejecuta el Command que cierra el Popup
+(`IsWhereIsItOpen=false`) MIENTRAS el Popup desmonta su arbol visual a mitad del enrutado del
+evento de raton, la captura/el foco de Windows se quedaban colgados de un elemento que ya no
+existe - gotcha real y conocido de WPF (Popup+StaysOpen=False+contenido clicable sin un Button
+real de por medio). El arnes de UI Automation NUNCA lo detecto porque solo invocaba el Command
+a mano (`Command.Execute`/`InvokePattern`), que no pasa por la captura/el foco reales de
+Windows - documentado ya en el propio comentario del bloque H5-05 ("sin precedente de raton
+simulado en este arnes").
+
+**Arreglo real**: `RowClickButton` (nuevo estilo, `Theme.xaml`) - un `Button` real con la
+MISMA apariencia visual (fondo/CornerRadius/hover) que el `Border` de antes, sustituye al
+`Border`+`MouseBinding` en la fila de resultado (`MainWindow.xaml`). Un `Button` real gestiona
+captura/foco correctamente incluso si su propio clic hace que el `Popup` contenedor se cierre a
+mitad de gesto.
+
+**Verificacion real, con un clic de RATON DE VERDAD** (primer precedente real de este tipo en
+todo el arnes - `mouse_event`/`SetCursorPos` reales, no `InvokePattern`/`Command.Execute`, la
+UNICA forma real de reproducir un bug de captura/foco de Windows): localiza la fila real del
+resultado dentro del `Popup` (via reflexion sobre el campo `WhereIsItPopup`, recien nombrado, +
+`VisualTreeHelper` - mismo patron real ya establecido para tarjetas/menus de este arnes),
+calcula su posicion real en pantalla (`PointToScreen`) y hace clic ahi de verdad. Tras el clic:
+`IsWhereIsItOpen=False` y `Mouse.Captured=null` (esperado, confirmado). La prueba real de
+verdad: un SEGUNDO clic real, esta vez sobre la pestaña "Inicio", confirma que
+`SelectedTabIndex` SI cambia - si la interfaz estuviera bloqueada de verdad, este segundo clic
+no haria nada. `dotnet build`/`dotnet test` en verde (480/480, sin tests nuevos - es un arreglo
+de XAML puro, la logica de `NavigateToWhereIsItResult` no cambio). **2/2 pasadas limpias**, sin
+NO-FOUND/FALLO/EXCEPTION, captura real confirmando que Inicio responde normal tras el clic.
