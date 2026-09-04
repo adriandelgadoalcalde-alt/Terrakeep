@@ -314,7 +314,16 @@ public partial class MainViewModel : ObservableObject
         // edito algo en Spawn Points desde la ultima vez).
         if (value == (int)AppTab.Exploracion)
             Exploration.SetCharacterSpawns(BuildCharacterSpawns());
+        OnPropertyChanged(nameof(IsExplorationTabActive));
+        OnPropertyChanged(nameof(ShowVitalsStrip));
     }
+
+    // F-15 (auditoria de Opus vs TEdit, cierra B-01/B-06): la columna central de la barra
+    // superior era SIEMPRE la franja de vitales del personaje (o quedaba vacia sin personaje),
+    // aunque se estuviera mirando un mundo en Exploracion - "ni un solo dato del mundo cargado,
+    // que es lo que el usuario esta mirando". Ahora tiene DOS contenidos excluyentes.
+    public bool IsExplorationTabActive => SelectedTabIndex == (int)AppTab.Exploracion;
+    public bool ShowVitalsStrip => IsCharacterLoaded && !IsExplorationTabActive;
 
     // X-g: puntos de aparicion reales del personaje cargado - cada Spawn Point guardado
     // (Servers.Entries, PlrServerEntry.SpawnX/Y) que tenga coordenadas reales puestas (0,0 =
@@ -1589,5 +1598,6 @@ public partial class MainViewModel : ObservableObject
         // raton), encontrado al verificar con captura real, no al escribir el codigo.
         MoveInventoryToStorageCommand.NotifyCanExecuteChanged();
         ToggleWhereIsItCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(ShowVitalsStrip));
     }
 }

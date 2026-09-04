@@ -1011,7 +1011,7 @@ internal static class Program
             DoEvents();
             var whereIsItButton = root.FindFirst(TreeScope.Descendants, new AndCondition(
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
-                new PropertyCondition(AutomationElement.NameProperty, "🔍 ¿Dónde lo tengo?")));
+                new PropertyCondition(AutomationElement.NameProperty, "Buscar en el personaje")));
             Console.WriteLine($"H5-05-BOTON: boton real encontrado en 'Exploración'={whereIsItButton != null} (esperado True - visible en cualquier pestaña)");
             if (whereIsItButton != null && whereIsItButton.TryGetCurrentPattern(InvokePattern.Pattern, out var whereIsItInvokePat))
             {
@@ -1049,6 +1049,21 @@ internal static class Program
                 Console.WriteLine($"H5-05-NAVEGAR: SelectedTabIndex={vm.SelectedTabIndex} (esperado Personaje), ItemEdit.Slot es el real={ReferenceEquals(vm.ItemEdit.Slot, slotDestino)} (esperado True), IsWhereIsItOpen={vm.IsWhereIsItOpen} (esperado False)");
                 if (!navegoBien) Console.WriteLine("FALLO: H5-05 - NavigateToWhereIsItResultCommand no navego/selecciono/cerro correctamente");
             }
+
+            // A8-06 (auditoria de Opus vs TEdit, P-4): los 6 controles de la barra superior
+            // deben tener el mismo alto real - antes ↶/↷ llevaban Padding="8,3" (10px menos que
+            // el resto). vm.SelectedTabIndex ya es Personaje aqui (H5-05-NAVEGAR de arriba), con
+            // personaje cargado, asi que los 6 son visibles/habilitados de verdad.
+            DoEvents();
+            string[] rotulosBarra = ["Cargar personaje (.plr)...", "Buscar en el personaje", "↶", "↷", "Deshacer último guardado", "Guardar"];
+            var alturasBarra = rotulosBarra
+                .Select(r => Descendientes<Button>(window).FirstOrDefault(b => (b.Content as string) == r))
+                .Where(b => b != null)
+                .Select(b => b!.ActualHeight)
+                .ToList();
+            Console.WriteLine($"A8-06: {alturasBarra.Count}/6 botones de la barra superior encontrados, alturas=[{string.Join(", ", alturasBarra.Select(a => a.ToString("0.0")))}] (esperado todas iguales)");
+            if (alturasBarra.Count != 6 || alturasBarra.Max() - alturasBarra.Min() > 0.5)
+                Console.WriteLine("FALLO: A8-06 - los 6 botones de la barra superior NO tienen el mismo alto real");
         }
         catch (Exception ex)
         {
@@ -1069,7 +1084,7 @@ internal static class Program
             DoEvents();
             var whereIsItButtonReal = root.FindFirst(TreeScope.Descendants, new AndCondition(
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
-                new PropertyCondition(AutomationElement.NameProperty, "🔍 ¿Dónde lo tengo?")));
+                new PropertyCondition(AutomationElement.NameProperty, "Buscar en el personaje")));
             if (whereIsItButtonReal != null && whereIsItButtonReal.TryGetCurrentPattern(InvokePattern.Pattern, out var reabrirPat))
                 ((InvokePattern)reabrirPat).Invoke();
             DoEvents(); DoEvents();
@@ -2585,6 +2600,16 @@ internal static class Program
                         primerMineral.IsChecked = false;
                     }
                     else Console.WriteLine("CATEGORIAS-MINERALES: este mundo real no tiene ningun mineral/gema/objetivo de la tabla real, omitido el marcado");
+
+                    // F-15 (auditoria de Opus vs TEdit, cierra B-01/B-06): en Exploracion, con un
+                    // mundo real cargado, la columna central de la barra superior debe mostrar el
+                    // TITULO REAL del mundo (no la franja de vitales del personaje).
+                    vm.SelectedTabIndex = 4; // Exploracion
+                    DoEvents();
+                    var tituloMundoEnBarra = Descendientes<TextBlock>(window).FirstOrDefault(t => t.Text == vm.Exploration.WorldTitle && t.IsVisible);
+                    Console.WriteLine($"F-15: IsExplorationTabActive={vm.IsExplorationTabActive} (esperado True), ShowVitalsStrip={vm.ShowVitalsStrip} (esperado False), titulo real del mundo ('{vm.Exploration.WorldTitle}') visible en la barra superior={tituloMundoEnBarra != null}");
+                    if (!vm.IsExplorationTabActive || vm.ShowVitalsStrip || tituloMundoEnBarra == null)
+                        Console.WriteLine("FALLO: F-15 - la barra superior no muestra el titulo real del mundo en la pestaña Exploracion");
 
                     // Objetos: inventario real de tiles (vista por defecto).
                     vm.Exploration.SelectedCategory = WorldSearchCategory.Objects;

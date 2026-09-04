@@ -194,6 +194,10 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private BitmapSource? _worldHighlight;
     [ObservableProperty] private string _statusMessage = "Sin mundo cargado.";
     [ObservableProperty] private string? _worldTitle;
+    // F-15 (auditoria de Opus vs TEdit): tamaño real del mundo, para la franja de la barra
+    // superior consciente de la pestaña - dato que ya se calculaba (StatusMessage) pero no
+    // vivia en una propiedad propia reutilizable.
+    [ObservableProperty] private string _worldSizeText = "—";
     [ObservableProperty] private bool _isWorldLoaded;
     [ObservableProperty] private string _npcSearchText = string.Empty;
     [ObservableProperty] private double _zoom = 1.0;
@@ -947,6 +951,7 @@ public partial class ExplorationViewModel : ObservableObject
                     MissingNpcs.Add(new MissingNpcRowViewModel(id, _npcNames.GetName(id)));
 
             WorldTitle = world.Header.Title;
+            WorldSizeText = $"{world.Header.TilesWide}×{world.Header.TilesHigh}";
             IsWorldLoaded = true;
             StatusMessage = $"'{world.Header.Title}' - {world.Header.TilesWide}x{world.Header.TilesHigh} tiles, " +
                 $"{_allNpcs.Count} NPC(s) de pueblo, {MissingNpcs.Count} todavia sin conseguir.";
@@ -960,6 +965,7 @@ public partial class ExplorationViewModel : ObservableObject
             _world = null;
             _presence = null;
             WorldHighlight = null;
+            WorldSizeText = "—";
             IsWorldLoaded = false;
             StatusMessage = $"Error al leer el mundo: {ex.Message}";
             UpdateCurrentWorldPath(null); // un fallo real no debe dejar ninguna pildora marcada como "cargada"

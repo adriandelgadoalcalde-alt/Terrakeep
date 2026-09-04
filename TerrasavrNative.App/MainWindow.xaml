@@ -1383,7 +1383,15 @@
                          anuncia en ningun sitio (sin ToolTip en la cabecera)... un atajo que nadie
                          descubre no mejora la practicidad" - los 4 atajos reales (OnWindowKeyDown)
                          ya existian, solo faltaba decirlo donde el usuario los va a usar. -->
-                    <Button Content="Cargar personaje (.plr)..." Tag="Accent" Click="OnLoadClick" ToolTip="Ctrl+O" />
+                    <!-- P-4 (auditoria de Opus vs TEdit, cierra B-02/B-03): 4 grupos reales
+                         (archivo-entrada / busqueda / historial / archivo-salida), separados por
+                         una linea de 1px - mismo recurso que el <Separator/> de TEdit entre
+                         grupos de menu, trasladado a una barra horizontal. "Cargar personaje"
+                         baja de Accent a boton normal en cuanto hay personaje cargado
+                         (FalseToTag) - ya no compite con "Guardar", el otro relleno de la fila. -->
+                    <Button Content="Cargar personaje (.plr)..." Tag="{Binding IsCharacterLoaded, Converter={x:Static conv:FalseToTagConverter.Instance}, ConverterParameter=Accent}"
+                            Click="OnLoadClick" ToolTip="Ctrl+O" />
+                    <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4" />
                     <!-- H5-05 (quinta auditoria de Opus): "no se puede buscar entre los ~350
                          slots que el personaje ya tiene - ¿Donde tengo el Ala de murcielago?
                          solo se responde a ojo". Boton real en la cabecera global (visible en
@@ -1394,8 +1402,14 @@
                          fila (siempre visible / deshabilitado / oculto) - ahora se DESHABILITA via
                          CanExecute (mismo patron que Guardar/etc.), con ToolTipService.
                          ShowOnDisabled para que el motivo se vea igual que en las 5 pildoras de
-                         Exploracion, y la barra no cambia de forma al cargar un personaje. -->
-                    <Button x:Name="WhereIsItButton" Content="🔍 ¿Dónde lo tengo?" Margin="10,0,0,0"
+                         Exploracion, y la barra no cambia de forma al cargar un personaje.
+                         P-4 (auditoria Opus vs TEdit, cierra B-03): el emoji 🔍 era el UNICO de
+                         toda la fila (no obedece Foreground ni el estado deshabilitado, depende de
+                         la fuente de emoji instalada) - texto puro, como sus vecinos. Renombrado
+                         "Buscar en el personaje": "¿Dónde lo tengo?" no decia DONDE busca, y desde
+                         que existe tambien el buscador de mundo (Exploracion) la ambiguedad es
+                         real. -->
+                    <Button x:Name="WhereIsItButton" Content="Buscar en el personaje"
                             Command="{Binding ToggleWhereIsItCommand}" ToolTipService.ShowOnDisabled="True">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
@@ -1408,21 +1422,26 @@
                             </Style>
                         </Button.Style>
                     </Button>
+                    <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4" />
                     <!-- H5-01 (quinta auditoria de Opus): "casi toda edicion del personaje es
                          irreversible" - historial real de deshacer/rehacer (UndoStack), no solo
                          a nivel de fichero como "Deshacer último guardado" de al lado. El
                          tooltip lleva el rotulo real de la SIGUIENTE entrada (que se va a
-                         deshacer/rehacer si se pulsa), no solo "hay algo" - P5, feedback vivo. -->
-                    <Button Content="↶" FontSize="15" Padding="8,3" Margin="10,0,0,0" Command="{Binding UndoEditCommand}"
+                         deshacer/rehacer si se pulsa), no solo "hay algo" - P5, feedback vivo.
+                         P-4 (auditoria Opus vs TEdit, cierra B-03): Padding="8,8" en vez de "8,3" -
+                         mismo alto vertical (8) que el estilo base (14,8), solo mas estrechos en
+                         horizontal; antes quedaban 10px mas bajos que sus vecinos. -->
+                    <Button Content="↶" FontSize="15" Padding="8,8" Command="{Binding UndoEditCommand}"
                             ToolTip="{Binding UndoStack.NextUndoLabel, StringFormat='Deshacer: {0} (Ctrl+Z)', TargetNullValue='Deshacer (Ctrl+Z)'}" />
-                    <Button Content="↷" FontSize="15" Padding="8,3" Margin="4,0,0,0" Command="{Binding RedoEditCommand}"
+                    <Button Content="↷" FontSize="15" Padding="8,8" Margin="4,0,0,0" Command="{Binding RedoEditCommand}"
                             ToolTip="{Binding UndoStack.NextRedoLabel, StringFormat='Rehacer: {0} (Ctrl+Y)', TargetNullValue='Rehacer (Ctrl+Y)'}" />
                     <!-- T-C (segunda auditoria de Opus, Fable): el .bak real que Guardar ya deja
                          (CharacterFileService.WriteAtomic) ahora tiene una forma real de usarse
                          desde la propia UI, sin ir a buscarlo a mano al Explorador de archivos. -->
                     <Button Content="Deshacer último guardado" Margin="10,0,0,0" Command="{Binding UndoLastSaveCommand}"
                             ToolTip="Restaura el personaje tal y como estaba ANTES del último 'Guardar' real (usa la copia .bak)" />
-                    <Button Content="Guardar" Tag="Orange" Margin="10,0,0,0" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
+                    <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4" />
+                    <Button Content="Guardar" Tag="Orange" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
                 </StackPanel>
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
                             Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}">
@@ -1477,8 +1496,11 @@
                      las dos columnas Auto de los lados, y perdia el icono de vida ENTERO (9px) sin
                      avisar. Con WrapPanel, si no cabe pasa a una segunda linea (la fila del Grid es
                      Height="Auto", crece sola) - nunca se pierde nada, a ningun ancho. -->
+                <!-- F-15 (auditoria de Opus vs TEdit, cierra B-01/B-06): ShowVitalsStrip ya
+                     excluye la pestaña Exploracion (antes solo IsCharacterLoaded - la franja de
+                     vitales podia seguir ahi aunque el usuario estuviera mirando un mundo). -->
                 <WrapPanel Grid.Column="1" VerticalAlignment="Center"
-                            Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}">
+                            Visibility="{Binding ShowVitalsStrip, Converter={StaticResource BoolToVis}}">
                     <!-- Vida -->
                     <TextBlock Text="♥" FontSize="13" Foreground="{StaticResource CalamityBrush}" VerticalAlignment="Center" />
                     <Grid Width="70" Height="10" Margin="4,0,14,0" ToolTip="Vida">
@@ -1515,6 +1537,32 @@
                                    Foreground="{StaticResource TextSecondaryBrush}"
                                    Visibility="{Binding LastSavedText, Converter={StaticResource NullToVis}}" />
                     </StackPanel>
+                </WrapPanel>
+
+                <!-- F-15 (auditoria de Opus vs TEdit, cierra B-01/B-06): contenido EXCLUSIVO con
+                     el WrapPanel de arriba - en Exploracion, con un mundo real cargado, la
+                     columna central pasa a mostrar el mundo en vez de quedar hueca. Mismos
+                     campos que ya calcula F-6/P-1 para la franja de estado del mapa (asi la
+                     info sigue disponible incluso con la barra lateral plegada en el futuro,
+                     F-10). -->
+                <WrapPanel Grid.Column="1" VerticalAlignment="Center"
+                            Visibility="{Binding IsExplorationTabActive, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding Exploration.WorldTitle}" Style="{StaticResource BodyText}" VerticalAlignment="Center"
+                                   MaxWidth="200" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Exploration.WorldSizeText}" Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   ToolTip="Tamaño del mundo, en tiles" />
+                        <TextBlock Text="{Binding Exploration.Zoom, StringFormat='Zoom {0:P0}'}" Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Exploration.HoverCoordText}" Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Exploration.HoverLayerText}" FontSize="11" FontWeight="SemiBold" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock.Foreground>
+                                <SolidColorBrush Color="{Binding Exploration.HoverLayerColor}" />
+                            </TextBlock.Foreground>
+                        </TextBlock>
+                    </StackPanel>
+                    <TextBlock Text="Sin mundo cargado" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
+                               Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource InverseBoolToVis}}" />
                 </WrapPanel>
 
                 <!-- H5-05 (quinta auditoria de Opus): "¿Dónde lo tengo?" - panel real anclado al

@@ -146,6 +146,26 @@ public sealed class EnumEqualsConverter : IValueConverter
 // coordenadas de tile se conserva gratis) con un ScaleTransform inverso al zoom del mapa,
 // puesto DIRECTAMENTE en cada marcador - se des-escala a si mismo dentro del subarbol ya
 // escalado. 1/0 (Zoom nunca deberia llegar a 0, MinZoom=0.02) se protege igualmente.
+// P-4 (auditoria de Opus vs TEdit): "Cargar personaje" y "Guardar" son los dos rellenos de la
+// barra superior y compiten visualmente - Cargar es una accion de arranque, Guardar es la
+// consecuencia de todo el trabajo. Baja a boton normal (Tag=null) en cuanto hay personaje
+// cargado, y solo mantiene el acento (ConverterParameter, ej. "Accent") mientras no lo hay.
+public sealed class FalseToTagConverter : IValueConverter
+{
+    // Mismo bug real de WPF ya encontrado con InverseValueConverter (ver su comentario): un
+    // StaticResource usado como Binding.Converter puede fallar en tiempo de ejecucion (aqui,
+    // literalmente al arrancar la ventana - ni siquiera hacia falta un DataTemplate virtualizado
+    // de por medio) pese a compilar sin error. x:Static con una instancia estatica se resuelve
+    // en tiempo de compilacion y no depende de este mecanismo.
+    public static readonly FalseToTagConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value is false ? parameter as string : null;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 public sealed class InverseValueConverter : IValueConverter
 {
     // Bug real encontrado al verificar (no en teoria): un StaticResource usado como
