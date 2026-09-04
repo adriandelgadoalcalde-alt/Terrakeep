@@ -6,13 +6,14 @@ using Xunit;
 
 namespace TerrasavrNative.Core.Tests.WldFormat;
 
-// Punto 4 (advisor Opus, buscador de objetos del mundo, Fase 1 de
-// ESPEC-buscador-mundo-tedit.md). Mundo sintetico pequeño (5x5) en vez de un .wld real -
-// WorldSearch.Run es una funcion pura sobre WldWorld, no hace falta decodificar ningun
-// fichero real para probar el barrido/limite/cancelacion.
+// Punto 4 (advisor Opus, buscador de objetos del mundo, ver ESPEC-buscador-mundo-tedit.md,
+// Fase 1 + Fase 2). Mundo sintetico pequeño (5x5) en vez de un .wld real - WorldSearch.Run es
+// una funcion pura sobre WldWorld, no hace falta decodificar ningun fichero real para probar
+// el barrido/limite/cancelacion.
 public class WorldSearchTests
 {
-    private static WldWorld MakeWorld(WldTile[,] tiles, IReadOnlyList<WldNpc>? npcs = null) => new()
+    private static WldWorld MakeWorld(WldTile[,] tiles, IReadOnlyList<WldNpc>? npcs = null,
+        IReadOnlyList<WldChest>? chests = null, IReadOnlyList<WldSign>? signs = null) => new()
     {
         Header = new WldHeader
         {
@@ -30,6 +31,8 @@ public class WorldSearchTests
         },
         Tiles = tiles,
         Npcs = npcs ?? [],
+        Chests = chests ?? [],
+        Signs = signs ?? [],
         ShimmeredNpcTypes = new HashSet<int>(),
     };
 
@@ -47,6 +50,21 @@ public class WorldSearchTests
         return NpcNameCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
     }
 
+    private static VanillaItemCatalog MakeItemNames(params (int Id, string Name)[] items)
+    {
+        var byId = items.ToDictionary(i => i.Id.ToString(), i => i.Name);
+        var byKey = items.ToDictionary(i => "K" + i.Id, i => i.Name);
+        var idsByKey = items.ToDictionary(i => "K" + i.Id, i => i.Id);
+        return VanillaItemCatalog.LoadFromStreams(
+            new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(byId))),
+            new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(byKey))),
+            new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(idsByKey))));
+    }
+
+    private static WorldSearchResult Run(WldWorld world, WorldSearchQuery query, TileNameCatalog? tileNames = null,
+        NpcNameCatalog? npcNames = null, VanillaItemCatalog? itemNames = null, CancellationToken ct = default) =>
+        WorldSearch.Run(world, query, tileNames ?? MakeTileNames(), npcNames ?? MakeNpcNames(), itemNames ?? MakeItemNames(), ct);
+
     [Fact]
     public void Run_EncuentraTilesReales_ConSuPosicionYNombre()
     {
@@ -58,9 +76,8 @@ public class WorldSearchTests
 
         var world = MakeWorld(tiles);
         var tileNames = MakeTileNames((2, "Piedra"));
-        var npcNames = MakeNpcNames();
 
-        var result = WorldSearch.Run(world, new WorldSearchQuery { TileTypes = new HashSet<int> { 2 } }, tileNames, npcNames);
+        var result = Run(world, new WorldSearchQuery { TileTypes = new HashSet<int> { 2 } }, tileNames);
 
         var hit = Assert.Single(result.Hits);
         Assert.Equal(1, hit.X);
@@ -79,7 +96,7 @@ public class WorldSearchTests
         for (int x = 0; x < 2; x++) for (int y = 0; y < 2; y++) tiles[x, y] = WldTile.Empty;
 
         var world = MakeWorld(tiles);
-        var result = WorldSearch.Run(world, new WorldSearchQuery { TileTypes = new HashSet<int> { -1 } }, MakeTileNames(), MakeNpcNames());
+        var result = Run(world, new WorldSearchQuery { TileTypes = new HashSet<int> { -1 } });
 
         Assert.Empty(result.Hits);
         Assert.Equal(0, result.TotalCount);
@@ -92,17 +109,15 @@ public class WorldSearchTests
         tiles[0, 0] = new WldTile(-1, 5, 2, 200, 0, 0); // sin tile activo, pared 5, lava (2) al 200
 
         var world = MakeWorld(tiles);
-        var tileNames = MakeTileNames();
-        // AllWalls no se usa aqui directamente, pero WallName necesita el nombre para el hit.
         var conParedNombrada = TileNameCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(
             JsonSerializer.Serialize(new { tiles = new { }, walls = new Dictionary<string, object> { ["5"] = new { name = "Piedra (pared)" } } }))));
 
-        var resultPared = WorldSearch.Run(world, new WorldSearchQuery { WallIds = new HashSet<int> { 5 } }, conParedNombrada, MakeNpcNames());
+        var resultPared = Run(world, new WorldSearchQuery { WallIds = new HashSet<int> { 5 } }, conParedNombrada);
         var hitPared = Assert.Single(resultPared.Hits);
         Assert.Equal(WorldSearchKind.Wall, hitPared.Kind);
         Assert.Equal("Piedra (pared)", hitPared.Name);
 
-        var resultLiquido = WorldSearch.Run(world, new WorldSearchQuery { LiquidTypes = new HashSet<byte> { 2 } }, tileNames, MakeNpcNames());
+        var resultLiquido = Run(world, new WorldSearchQuery { LiquidTypes = new HashSet<byte> { 2 } });
         var hitLiquido = Assert.Single(resultLiquido.Hits);
         Assert.Equal(WorldSearchKind.Liquid, hitLiquido.Kind);
         Assert.Equal("Lava", hitLiquido.Name);
@@ -117,7 +132,7 @@ public class WorldSearchTests
         var world = MakeWorld(tiles, npcs);
         var npcNames = MakeNpcNames((17, "El Guia"));
 
-        var result = WorldSearch.Run(world, new WorldSearchQuery { NpcIds = new HashSet<int> { 17 } }, MakeTileNames(), npcNames);
+        var result = Run(world, new WorldSearchQuery { NpcIds = new HashSet<int> { 17 } }, npcNames: npcNames);
 
         var hit = Assert.Single(result.Hits);
         Assert.Equal(40, hit.X);
@@ -135,7 +150,7 @@ public class WorldSearchTests
                 tiles[x, y] = new WldTile(1, 0, 0, 0, 0, 0);
 
         var world = MakeWorld(tiles);
-        var result = WorldSearch.Run(world, new WorldSearchQuery { TileTypes = new HashSet<int> { 1 }, DisplayLimit = 5 }, MakeTileNames((1, "Tierra")), MakeNpcNames());
+        var result = Run(world, new WorldSearchQuery { TileTypes = new HashSet<int> { 1 }, DisplayLimit = 5 }, MakeTileNames((1, "Tierra")));
 
         Assert.Equal(5, result.Hits.Count);
         Assert.Equal(100, result.TotalCount);
@@ -149,7 +164,7 @@ public class WorldSearchTests
         var world = MakeWorld(tiles);
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var result = WorldSearch.Run(world, new WorldSearchQuery(), MakeTileNames(), MakeNpcNames());
+        var result = Run(world, new WorldSearchQuery());
         sw.Stop();
 
         Assert.Empty(result.Hits);
@@ -167,6 +182,95 @@ public class WorldSearchTests
         cts.Cancel();
 
         Assert.Throws<OperationCanceledException>(() =>
-            WorldSearch.Run(world, new WorldSearchQuery { TileTypes = new HashSet<int> { 1 } }, MakeTileNames((1, "Tierra")), MakeNpcNames(), cts.Token));
+            Run(world, new WorldSearchQuery { TileTypes = new HashSet<int> { 1 } }, MakeTileNames((1, "Tierra")), ct: cts.Token));
+    }
+
+    // ---- Fase 2: cofres y letreros ----
+
+    [Fact]
+    public void Run_ObjetoEnCofre_DevuelveLaPosicionDelCofreNoDelObjeto()
+    {
+        var tiles = new WldTile[1, 1];
+        tiles[0, 0] = WldTile.Empty;
+        var chests = new List<WldChest>
+        {
+            new() { X = 30, Y = 40, Name = "", Items = [new WldChestItem(NetId: 4, Stack: 1, Prefix: 0)] },
+        };
+        var world = MakeWorld(tiles, chests: chests);
+        var itemNames = MakeItemNames((4, "Espada larga de hierro"));
+
+        var result = Run(world, new WorldSearchQuery { ChestItemIds = new HashSet<int> { 4 } }, itemNames: itemNames);
+
+        var hit = Assert.Single(result.Hits);
+        Assert.Equal(30, hit.X);
+        Assert.Equal(40, hit.Y);
+        Assert.Equal("Espada larga de hierro", hit.Name);
+        Assert.Equal(WorldSearchKind.ChestItem, hit.Kind);
+    }
+
+    [Fact]
+    public void Run_CofreConDosObjetosQueCasan_DaUnaFilaPorObjeto()
+    {
+        var tiles = new WldTile[1, 1];
+        tiles[0, 0] = WldTile.Empty;
+        var chests = new List<WldChest>
+        {
+            new() { X = 5, Y = 5, Name = "", Items = [new WldChestItem(4, 1, 0), new WldChestItem(8, 5, 0)] },
+        };
+        var world = MakeWorld(tiles, chests: chests);
+
+        var result = Run(world, new WorldSearchQuery { ChestItemIds = new HashSet<int> { 4, 8 } });
+
+        Assert.Equal(2, result.Hits.Count);
+        Assert.All(result.Hits, h => Assert.Equal((5, 5), (h.X, h.Y)));
+    }
+
+    [Fact]
+    public void Run_ObjetoDeCofreDesconocido_CaeEnElFallbackRealDelCatalogo()
+    {
+        // Un NetId de Calamity (o cualquier mod) real que el .wld guarde no se puede resolver
+        // via VanillaItemCatalog - tiene que caer en el "Item #N" de fallback, nunca en un
+        // nombre inventado.
+        var tiles = new WldTile[1, 1];
+        tiles[0, 0] = WldTile.Empty;
+        var chests = new List<WldChest> { new() { X = 1, Y = 1, Name = "", Items = [new WldChestItem(99999, 1, 0)] } };
+        var world = MakeWorld(tiles, chests: chests);
+
+        var result = Run(world, new WorldSearchQuery { ChestItemIds = new HashSet<int> { 99999 } });
+
+        Assert.Equal("Item #99999", Assert.Single(result.Hits).Name);
+    }
+
+    [Fact]
+    public void Run_Letrero_UsaElPredicadoRealYRecortaElTextoLargo()
+    {
+        var tiles = new WldTile[1, 1];
+        tiles[0, 0] = WldTile.Empty;
+        string textoLargo = new string('a', 80);
+        var signs = new List<WldSign>
+        {
+            new() { X = 7, Y = 8, Text = "La contraseña es 1234" },
+            new() { X = 9, Y = 9, Text = "Otro letrero sin relacion" },
+            new() { X = 1, Y = 1, Text = textoLargo },
+        };
+        var world = MakeWorld(tiles, signs: signs);
+
+        var result = Run(world, new WorldSearchQuery { SignTextPredicate = t => t.Contains("contraseña", StringComparison.OrdinalIgnoreCase) });
+        var hit = Assert.Single(result.Hits);
+        Assert.Equal(7, hit.X);
+        Assert.Equal("La contraseña es 1234", hit.Name);
+        Assert.Equal(WorldSearchKind.Sign, hit.Kind);
+
+        var resultLargo = Run(world, new WorldSearchQuery { SignTextPredicate = t => t.Length > 50 });
+        var hitLargo = Assert.Single(resultLargo.Hits);
+        Assert.True(hitLargo.Name.Length <= 61); // 60 + el caracter de recorte real "…"
+        Assert.EndsWith("…", hitLargo.Name);
+    }
+
+    [Fact]
+    public void Run_QueryVaciaConSoloUnPredicadoDeLetreroNulo_NoEsVacia()
+    {
+        Assert.False(new WorldSearchQuery { SignTextPredicate = _ => true }.IsEmpty);
+        Assert.True(new WorldSearchQuery().IsEmpty);
     }
 }

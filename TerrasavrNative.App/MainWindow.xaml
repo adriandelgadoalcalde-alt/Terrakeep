@@ -3448,7 +3448,7 @@
                                   Margin="0,0,0,10" IsExpanded="False"
                                   IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True">
                             <Expander.ToolTip>
-                                <TextBlock Text="Busca tiles, paredes, líquidos y NPCs por nombre o #id. Comas = OR, espacios = AND, #123 o #100-200 por id. (Cofres y letreros: todavía no.)" TextWrapping="Wrap" MaxWidth="260" />
+                                <TextBlock Text="Busca tiles, paredes, líquidos, NPCs, objetos dentro de cofres y texto de letreros. Comas = OR, espacios = AND, #123 o #100-200 por id." TextWrapping="Wrap" MaxWidth="260" />
                             </Expander.ToolTip>
                             <StackPanel Margin="0,8,0,0">
                                 <TextBox Text="{Binding Exploration.WorldSearchText, UpdateSourceTrigger=PropertyChanged}"

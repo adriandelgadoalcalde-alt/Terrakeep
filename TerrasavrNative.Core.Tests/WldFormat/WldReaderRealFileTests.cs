@@ -168,4 +168,56 @@ public class WldReaderRealFileTests(ITestOutputHelper output)
             output.WriteLine($"  {npc.GivenName} (tipo {npc.Id}): variationIndex={npc.VariationIndex}");
         }
     }
+
+    // Punto 4 (advisor Opus, buscador de objetos del mundo), Fase 2 de
+    // ESPEC-buscador-mundo-tedit.md: prueba de humo real de ReadChests/ReadSigns contra un .wld
+    // REAL de este PC - el complemento real de haber verificado el formato byte a byte contra
+    // World.FileV2.cs de TEdit (comentario de WldChest.cs/WldSign.cs). Si el offset de
+    // ChestsSectionOffset/SignsSectionOffset o el `maxItems` por version estuvieran mal, esto se
+    // manifiesta de forma inconfundible (EndOfStreamException/datos basura), igual que ya
+    // documenta la cabecera de este fichero para los tiles.
+    [Theory]
+    [MemberData(nameof(RealWldFiles))]
+    public void Read_RealWorld_CofresYLetrerosSonSanos(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        var world = WldReader.Read(File.ReadAllBytes(path));
+        output.WriteLine($"{Path.GetFileName(path)}: cofres={world.Chests.Count}, letreros={world.Signs.Count}");
+
+        foreach (var chest in world.Chests)
+        {
+            Assert.InRange(chest.X, 0, world.Header.TilesWide);
+            Assert.InRange(chest.Y, 0, world.Header.TilesHigh);
+            foreach (var item in chest.Items)
+            {
+                Assert.True(item.Stack > 0, "un slot vacio (stack<=0) nunca deberia haberse guardado como WldChestItem");
+                Assert.True(item.NetId != 0, "un objeto real siempre tiene NetId != 0");
+            }
+        }
+
+        // TileType.cs real de TEdit: Sign=55, GraveMarker=85, AnnouncementBox=425, TatteredSign=573.
+        var signTileTypes = new HashSet<int> { 55, 85, 425, 573 };
+        foreach (var sign in world.Signs)
+        {
+            Assert.InRange(sign.X, 0, world.Header.TilesWide - 1);
+            Assert.InRange(sign.Y, 0, world.Header.TilesHigh - 1);
+            var tile = world.Tiles[sign.X, sign.Y];
+            Assert.True(tile.IsActive, $"letrero en ({sign.X},{sign.Y}) sobre un tile inactivo - el filtro real de TEdit (IsActive && IsSign()) no deberia haberlo dejado pasar");
+            Assert.Contains(tile.Type, signTileTypes);
+        }
+    }
+
+    // Un mundo real jugado tiene cofres de verdad (los del propio spawn, mínimo) - si esta
+    // prueba diera 0 en TODOS los mundos reales de este PC seria señal de que el offset esta
+    // mal (aterriza en una seccion equivocada y "totalChests" sale 0 por casualidad de los
+    // bytes que encuentra ahi), no de que el mundo no tenga ninguno.
+    [Fact]
+    public void Read_AlMenosUnMundoReal_TieneCofresDeVerdad()
+    {
+        var encontrados = RealWldFiles().Select(a => (string)a[0]).Where(File.Exists)
+            .Select(p => WldReader.Read(File.ReadAllBytes(p)).Chests.Count).ToList();
+        if (encontrados.Count == 0) return; // ninguno de los dos mundos reales esta en este PC - nada que comprobar
+        Assert.Contains(encontrados, c => c > 0);
+    }
 }

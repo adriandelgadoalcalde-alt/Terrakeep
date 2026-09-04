@@ -25,6 +25,11 @@ public sealed class WldHeader
     public required double RockLevel { get; init; }
 
     public int TilesSectionOffset => Pointers[1];
+    // Punto 4 (advisor Opus), Fase 2: confirmado directamente contra World.FileV2.cs de TEdit
+    // (LoadWorld real) - Pointers[N] es donde EMPIEZA la seccion N (= donde termina la anterior),
+    // mismo criterio ya usado por TilesSectionOffset/NpcsSectionOffset.
+    public int ChestsSectionOffset => Pointers[2];
+    public int SignsSectionOffset => Pointers[3];
     public int NpcsSectionOffset => Pointers[4];
 
     // Zona por profundidad (fila de tile, no pixel) - mismo criterio que el visor JS real

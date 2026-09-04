@@ -3,23 +3,27 @@ using TerrasavrNative.Core.Data;
 namespace TerrasavrNative.Core.WldFormat;
 
 // Punto 4 del feedback del usuario ("el mundo... podria tener un buscador de todo tipo de
-// objetos, no es un editor pero si un buscador") - Fase 1 de ESPEC-buscador-mundo-tedit.md
-// (advisor Opus, ingenieria inversa del buscador real de TEdit): busca sobre lo que
-// ExplorationViewModel YA lee en memoria (tiles, paredes, liquidos, NPCs) - cero cambios en
-// WldReader/WldWorld. Cofres/letreros/tile entities quedan para una Fase 2 (formato .wld no
-// leido todavia).
+// objetos, no es un editor pero si un buscador") - ESPEC-buscador-mundo-tedit.md (advisor
+// Opus, ingenieria inversa del buscador real de TEdit).
 //
-// Alcance deliberado de esta Fase 1 (documentado, no un descuido): NO deduplica sprites
-// multi-tile (un cofre 2x2 sale como 4 coincidencias, una por tile) - deduplicar de verdad
-// necesita el frameSize/textureGrid real de cada tile (Data/tiles.json de TEdit), que este
-// proyecto no importa todavia (ESPEC-buscador-mundo-tedit.md#5.4, opcion 3, para una Fase 2).
-// Una fusion aproximada por proximidad es la opcion 2 del mismo documento, pero se descarta a
-// proposito por ahora: fusionaria tambien coincidencias REALES y distintas de un mismo tipo de
-// bloque comun (ej. dos "Bloque de tierra" sueltos a menos de 3 tiles) - preferible mostrar de
+// Fase 1: busca sobre lo que ExplorationViewModel ya leia en memoria (tiles, paredes,
+// liquidos, NPCs).
+// Fase 2 (esta pasada): + cofres (por objeto real dentro, WldChest/WldChestItem) y letreros
+// (por texto libre, WldSign) - ahora que WldReader lee esas dos secciones. Tile entities
+// (maniquies/marcos de item/percheros) siguen fuera a proposito - el advisor no leyo
+// TileEntity.Load campo a campo (formato polimorfico por tipo, variantes reales entre
+// versiones), y WldReader.Read tampoco intenta leerlas (salta directo por puntero a NPCs).
+//
+// Alcance deliberado, documentado y no un descuido: NO deduplica sprites multi-tile (un cofre
+// 2x2 sale como 4 coincidencias, una por tile) - deduplicar de verdad necesita el
+// frameSize/textureGrid real de cada tile (Data/tiles.json de TEdit), que este proyecto no
+// importa todavia (ESPEC-buscador-mundo-tedit.md#5.4, opcion 3). Una fusion aproximada por
+// proximidad (opcion 2 del mismo documento) se descarta a proposito: fusionaria tambien
+// coincidencias REALES y distintas de un mismo tipo de bloque comun - preferible mostrar de
 // mas y ser exacto que fusionar con un umbral inventado.
 public readonly record struct WorldSearchHit(int X, int Y, string Name, WorldSearchKind Kind);
 
-public enum WorldSearchKind { Tile, Wall, Liquid, Npc }
+public enum WorldSearchKind { Tile, Wall, Liquid, Npc, ChestItem, Sign }
 
 public sealed class WorldSearchQuery
 {
@@ -27,9 +31,20 @@ public sealed class WorldSearchQuery
     public IReadOnlySet<int> WallIds { get; init; } = new HashSet<int>();
     public IReadOnlySet<byte> LiquidTypes { get; init; } = new HashSet<byte>();
     public IReadOnlySet<int> NpcIds { get; init; } = new HashSet<int>();
+    // Fase 2: NetId real del objeto (mismo id que VanillaItemCatalog/ItemID.cs - los NetId de
+    // Calamity que un .wld real pueda guardar no se conocen de antemano, tModLoader los asigna
+    // en tiempo de carga del mod; ver el comentario de ItemNames en Run).
+    public IReadOnlySet<int> ChestItemIds { get; init; } = new HashSet<int>();
+    // Fase 2: los letreros son texto libre, no un catalogo de ids - en vez de acoplar Core a la
+    // gramatica de busqueda de la App (LibrarySearchGrammar vive en TerrasavrNative.App, Core
+    // no puede depender de App), quien construye la query decide COMO casa el texto (un
+    // Contains simple, la gramatica real de comas/espacios/#id, lo que haga falta) y aqui solo
+    // se invoca el predicado por cada letrero real.
+    public Func<string, bool>? SignTextPredicate { get; init; }
     public int DisplayLimit { get; init; } = 1000;
 
-    public bool IsEmpty => TileTypes.Count == 0 && WallIds.Count == 0 && LiquidTypes.Count == 0 && NpcIds.Count == 0;
+    public bool IsEmpty => TileTypes.Count == 0 && WallIds.Count == 0 && LiquidTypes.Count == 0
+        && NpcIds.Count == 0 && ChestItemIds.Count == 0 && SignTextPredicate == null;
 }
 
 public readonly record struct WorldSearchResult(IReadOnlyList<WorldSearchHit> Hits, int TotalCount);
@@ -48,10 +63,22 @@ public static class WorldSearch
         _ => "Agua",
     };
 
+    // Un letrero real puede ser largo/multilinea - recorta para la fila de resultado, no para
+    // el texto real (eso lo sigue teniendo WldSign.Text si algun dia hace falta mostrarlo
+    // entero, ej. en un tooltip).
+    private static string TruncateSignText(string text)
+    {
+        string oneLine = text.Replace('\n', ' ').Replace('\r', ' ').Trim();
+        return oneLine.Length > 60 ? oneLine[..60] + "…" : oneLine;
+    }
+
     // Bucle x->y (mismo orden que el RLE del .wld, ver WldReader) sobre TODA la rejilla -
     // mismo patron real que TEdit (FindSidebarViewModel.SearchMap), pensado para correr fuera
     // del hilo de UI (Task.Run, ver ExplorationViewModel) y ser cancelable a media pasada.
-    public static WorldSearchResult Run(WldWorld world, WorldSearchQuery query, TileNameCatalog tileNames, NpcNameCatalog npcNames, CancellationToken ct = default)
+    // itemNames resuelve el nombre real de un objeto encontrado en un cofre (VanillaItemCatalog
+    // - un NetId de Calamity real no reconocido cae en su propio "Item #N" de fallback, nunca
+    // se inventa un nombre).
+    public static WorldSearchResult Run(WldWorld world, WorldSearchQuery query, TileNameCatalog tileNames, NpcNameCatalog npcNames, VanillaItemCatalog itemNames, CancellationToken ct = default)
     {
         var hits = new List<WorldSearchHit>();
         int total = 0;
@@ -83,6 +110,30 @@ public static class WorldSearch
                 ct.ThrowIfCancellationRequested();
                 if (query.NpcIds.Contains(npc.Id))
                     Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(npc.TileX, npc.TileY, npcNames.GetName(npc.Id), WorldSearchKind.Npc));
+            }
+        }
+
+        // Fase 2: la coordenada del resultado es la del CONTENEDOR, no la del objeto dentro -
+        // mismo criterio real que TEdit (SearchContainers, ESPEC-buscador-mundo-tedit.md#1.2).
+        // Un cofre con mas de un objeto que casa da mas de una fila, misma posicion las dos.
+        if (query.ChestItemIds.Count > 0)
+        {
+            foreach (var chest in world.Chests)
+            {
+                ct.ThrowIfCancellationRequested();
+                foreach (var item in chest.Items)
+                    if (query.ChestItemIds.Contains(item.NetId))
+                        Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(chest.X, chest.Y, itemNames.GetName(item.NetId), WorldSearchKind.ChestItem));
+            }
+        }
+
+        if (query.SignTextPredicate != null)
+        {
+            foreach (var sign in world.Signs)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (query.SignTextPredicate(sign.Text))
+                    Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(sign.X, sign.Y, TruncateSignText(sign.Text), WorldSearchKind.Sign));
             }
         }
 

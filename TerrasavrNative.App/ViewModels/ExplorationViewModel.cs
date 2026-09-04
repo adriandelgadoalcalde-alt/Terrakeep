@@ -30,6 +30,10 @@ public sealed class WorldSearchHitRowViewModel(WorldSearchHit hit)
         WorldSearchKind.Wall => "Pared",
         WorldSearchKind.Liquid => "Liquido",
         WorldSearchKind.Npc => "NPC",
+        // Fase 2 (ESPEC-buscador-mundo-tedit.md#5.2): la coordenada de un objeto de cofre es la
+        // del COFRE, no la del objeto - mismo criterio real que TEdit (SearchContainers).
+        WorldSearchKind.ChestItem => "En cofre",
+        WorldSearchKind.Sign => "Letrero",
         _ => "",
     };
 }
@@ -88,6 +92,11 @@ public partial class ExplorationViewModel : ObservableObject
     private readonly NpcNameCatalog _npcNames;
     private readonly MapColorCatalog _mapColors;
     private readonly TileNameCatalog _tileNames;
+    // Fase 2 (ESPEC-buscador-mundo-tedit.md#5.2): nombres reales de objeto para resolver que
+    // hay dentro de un cofre encontrado - un NetId de Calamity real (que tModLoader asigna en
+    // tiempo de carga del mod, no coincide con el synthetic id que usa el resto de este puerto
+    // para .plr) cae en su propio "Item #N" de fallback, nunca se inventa.
+    private readonly VanillaItemCatalog _itemNames;
     private List<WorldNpcRowViewModel> _allNpcs = [];
     private WldWorld? _world;
 
@@ -132,11 +141,13 @@ public partial class ExplorationViewModel : ObservableObject
     // marcadores solo se ven cuando ADEMAS hay un mundo real a la vista).
     public ObservableCollection<CharacterSpawnRowViewModel> CharacterSpawns { get; } = [];
 
-    // Punto 4: buscador real de "todo tipo de objetos del mundo" (tiles/paredes/liquidos/NPCs -
-    // Fase 1 de ESPEC-buscador-mundo-tedit.md, cofres/letreros quedan para una Fase 2 que
-    // todavia no lee esas secciones del .wld). Reutiliza LibrarySearchGrammar (comas=OR,
-    // espacios=AND, "#123"/"#100-200" por id) - la misma gramatica real que ya usa la Libreria
-    // de objetos/buffs, para que el usuario no tenga que aprender una sintaxis nueva.
+    // Punto 4: buscador real de "todo tipo de objetos del mundo" - tiles/paredes/liquidos/NPCs
+    // (Fase 1) + objetos dentro de cofres y texto de letreros (Fase 2, ESPEC-buscador-mundo-
+    // tedit.md - ahora que WldReader lee esas dos secciones del .wld). Tile entities
+    // (maniquies/marcos de item/percheros) siguen fuera a proposito, ver el comentario de
+    // WldReader.Read. Reutiliza LibrarySearchGrammar (comas=OR, espacios=AND, "#123"/
+    // "#100-200" por id) - la misma gramatica real que ya usa la Libreria de objetos/buffs,
+    // para que el usuario no tenga que aprender una sintaxis nueva.
     [ObservableProperty] private string _worldSearchText = string.Empty;
     [ObservableProperty] private string _worldSearchSummary = string.Empty;
     public ObservableCollection<WorldSearchHitRowViewModel> WorldSearchResults { get; } = [];
@@ -196,6 +207,7 @@ public partial class ExplorationViewModel : ObservableObject
         _npcNames = service.NpcNames;
         _mapColors = service.MapColors;
         _tileNames = service.TileNames;
+        _itemNames = service.VanillaCatalog;
         // Fire-and-forget deliberado, mismo criterio real que HomeViewModel - el constructor no
         // puede ser async, y no hay nada que esperar aqui (Worlds se rellena un instante
         // despues, IsScanningWorlds refleja el hueco mientras tanto).
@@ -487,7 +499,30 @@ public partial class ExplorationViewModel : ObservableObject
         foreach (var (id, name) in LiquidCandidates)
             if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) liquidTypes.Add((byte)id);
 
-        return new WorldSearchQuery { TileTypes = tileTypes, WallIds = wallIds, NpcIds = npcIds, LiquidTypes = liquidTypes };
+        // Fase 2 (ESPEC-buscador-mundo-tedit.md#5.2): objetos reales dentro de cofres, mismo
+        // criterio de candidatos que tiles/paredes/NPCs (recorrer el catalogo entero, casar con
+        // la gramatica real). Los NetId de Calamity reales que un .wld pueda guardar no estan
+        // en VanillaItemCatalog - simplemente no se ofrecen como candidato, el objeto seguira
+        // apareciendo en la lista si se busca por su cofre de otra forma (id/#) o no aparecera,
+        // nunca se inventa una coincidencia.
+        var chestItemIds = new HashSet<int>();
+        foreach (var (id, name) in _itemNames.AllEntries())
+            if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) chestItemIds.Add(id);
+
+        // Fase 2: los letreros son texto libre, sin catalogo de ids - se reutiliza la MISMA
+        // gramatica (comas=OR, espacios=AND) tratando el texto de cada letrero como si fuera el
+        // nombre de una unica entrada (id=0, sin sentido para un letrero, se ignora).
+        bool SignPredicate(string signText) => LibrarySearchGrammar.Matches(text, 0, signText.ToLowerInvariant(), null);
+
+        return new WorldSearchQuery
+        {
+            TileTypes = tileTypes,
+            WallIds = wallIds,
+            NpcIds = npcIds,
+            LiquidTypes = liquidTypes,
+            ChestItemIds = chestItemIds,
+            SignTextPredicate = SignPredicate,
+        };
     }
 
     // El barrido real (WorldSearch.Run) puede recorrer millones de tiles en un mundo Grande -
@@ -518,7 +553,7 @@ public partial class ExplorationViewModel : ObservableObject
 
         try
         {
-            var result = await Task.Run(() => WorldSearch.Run(world, query, _tileNames, _npcNames, cts.Token), cts.Token);
+            var result = await Task.Run(() => WorldSearch.Run(world, query, _tileNames, _npcNames, _itemNames, cts.Token), cts.Token);
             if (myGeneration != _worldSearchGeneration) return; // una busqueda MAS NUEVA ya esta en marcha - esta es obsoleta
 
             WorldSearchResults.Clear();

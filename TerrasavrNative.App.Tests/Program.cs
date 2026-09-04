@@ -2176,6 +2176,52 @@ internal static class Program
                 }
                 catch (Exception ex) { Console.WriteLine("BUSCADOR-MUNDO-EXCEPTION: " + ex); }
 
+                // Punto 4, Fase 2 (advisor Opus): cofres y letreros - lectura INDEPENDIENTE del
+                // mismo .wld real (WldReader.Read a secas, sin pasar por la ViewModel) para
+                // conocer un NetId/texto real de verdad presente en ESTE mundo concreto, en vez
+                // de asumir a ciegas que un nombre cualquiera esta en el - la prueba real es que
+                // el buscador (via la ViewModel) encuentra EXACTAMENTE lo que la lectura
+                // independiente dice que hay.
+                try
+                {
+                    var worldIndependiente = TerrasavrNative.Core.WldFormat.WldReader.Read(File.ReadAllBytes(worldPath));
+                    var chestConObjeto = worldIndependiente.Chests.FirstOrDefault(c => c.Items.Count > 0);
+                    if (chestConObjeto != null)
+                    {
+                        int netId = chestConObjeto.Items[0].NetId;
+                        vm.Exploration.WorldSearchText = "#" + netId;
+                        WaitForDispatcher(1500);
+                        bool encontrado = vm.Exploration.WorldSearchResults.Any(h => h.TileX == chestConObjeto.X && h.TileY == chestConObjeto.Y);
+                        Console.WriteLine($"BUSCADOR-MUNDO-COFRE: '#{netId}' -> cofre real en ({chestConObjeto.X},{chestConObjeto.Y}) encontrado={encontrado} (esperado True, {vm.Exploration.WorldSearchResults.Count} resultado(s))");
+                        if (!encontrado) Console.WriteLine("FALLO: Punto 4 Fase 2 - un objeto real de cofre no aparecio en el buscador");
+                    }
+                    else Console.WriteLine("BUSCADOR-MUNDO-COFRE: este mundo real no tiene ningun cofre con objetos, omitido");
+
+                    var letreroReal = worldIndependiente.Signs.FirstOrDefault(s => !string.IsNullOrWhiteSpace(s.Text));
+                    if (letreroReal != null)
+                    {
+                        string fragmento = letreroReal.Text.Trim().Split(' ', '\n', '\r').FirstOrDefault(w => w.Length >= 3) ?? letreroReal.Text.Trim();
+                        vm.Exploration.WorldSearchText = fragmento;
+                        WaitForDispatcher(1500);
+                        bool encontrado = vm.Exploration.WorldSearchResults.Any(h => h.TileX == letreroReal.X && h.TileY == letreroReal.Y);
+                        Console.WriteLine($"BUSCADOR-MUNDO-LETRERO: '{fragmento}' -> letrero real en ({letreroReal.X},{letreroReal.Y}) encontrado={encontrado} (esperado True, {vm.Exploration.WorldSearchResults.Count} resultado(s))");
+                        if (!encontrado) Console.WriteLine("FALLO: Punto 4 Fase 2 - un letrero real no aparecio en el buscador");
+                    }
+                    else Console.WriteLine("BUSCADOR-MUNDO-LETRERO: este mundo real no tiene ningun letrero con texto, omitido");
+
+                    var rtbBuscadorFase2 = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbBuscadorFase2.Render(window);
+                    var encBuscadorFase2 = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encBuscadorFase2.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbBuscadorFase2));
+                    using (var fsBuscadorFase2 = File.Create(Path.Combine(AppContext.BaseDirectory, "mundo-buscador-cofre-letrero.png"))) encBuscadorFase2.Save(fsBuscadorFase2);
+                    Console.WriteLine("Captura buscador de cofre/letrero -> mundo-buscador-cofre-letrero.png");
+
+                    vm.Exploration.WorldSearchText = string.Empty;
+                    WaitForDispatcher(100);
+                }
+                catch (Exception ex) { Console.WriteLine("BUSCADOR-MUNDO-FASE2-EXCEPTION: " + ex); }
+
                 // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
                 // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de
                 // NPC"): con el mundo real ya cargado arriba, confirma que la mayoria de NPCs

@@ -7,7 +7,19 @@ namespace TerrasavrNative.Core.WldFormat;
 // parseWorldNpcs, a su vez verificado contra TEdit/WorldFile.cs real). Todo little-endian.
 public static class WldReader
 {
-    public static WldWorld Read(byte[] fileBytes)
+    // Punto 4 (advisor Opus, buscador de objetos del mundo), Fase 2 de
+    // ESPEC-buscador-mundo-tedit.md: readContainers=true (por defecto) tambien lee cofres y
+    // letreros - secciones baratas de verdad (unos pocos cientos de cofres/letreros en un
+    // mundo real, nada comparable al coste de decodificar la rejilla de tiles entera) usando
+    // los mismos punteros ya presentes en la cabecera (ChestsSectionOffset/SignsSectionOffset),
+    // asi que no hace falta un flag para abaratar el lanzador de mundos (que ya usa ReadHeader
+    // a secas, sin llamar aqui). Tile entities (maniquies/marcos de item/percheros) quedan
+    // deliberadamente FUERA de esta Fase 2 - el advisor no leyo TileEntity.Load campo a campo
+    // (formato polimorfico por tipo, con variantes reales entre versiones) y el propio espec
+    // recomienda no arriesgar corromper la carga del mundo por una seccion que este proyecto no
+    // necesita tocar para nada mas: al saltar directamente por puntero (nunca se lee
+    // secuencialmente mas alla de Signs) no hace falta ni siquiera saber su formato.
+    public static WldWorld Read(byte[] fileBytes, bool readContainers = true)
     {
         using var stream = new MemoryStream(fileBytes);
         using var reader = new BinaryReader(stream);
@@ -17,10 +29,21 @@ public static class WldReader
         stream.Position = header.TilesSectionOffset;
         var tiles = ReadTiles(reader, header);
 
+        List<WldChest> chests = [];
+        List<WldSign> signs = [];
+        if (readContainers)
+        {
+            stream.Position = header.ChestsSectionOffset;
+            chests = ReadChests(reader, header.Version);
+
+            stream.Position = header.SignsSectionOffset;
+            signs = ReadSigns(reader, tiles, header);
+        }
+
         stream.Position = header.NpcsSectionOffset;
         var (npcs, shimmeredTypes) = ReadNpcs(reader, header.Version);
 
-        return new WldWorld { Header = header, Tiles = tiles, Npcs = npcs, ShimmeredNpcTypes = shimmeredTypes };
+        return new WldWorld { Header = header, Tiles = tiles, Npcs = npcs, Chests = chests, Signs = signs, ShimmeredNpcTypes = shimmeredTypes };
     }
 
     // H4-08 (cuarta auditoria de Opus, Fable): lectura BARATA para el lanzador de mundos de
@@ -285,5 +308,69 @@ public static class WldReader
         }
 
         return (npcs, shimmeredTypes);
+    }
+
+    // Punto 4 (advisor Opus), Fase 2: formato real confirmado directamente contra
+    // World.FileV2.cs:1770-1806 de TEdit (LoadChestData) - version < 294 usa un tamaño GLOBAL
+    // (Int16, una sola vez); version >= 294 usa un tamaño PROPIO por cofre (Int32, los cofres
+    // pueden tener capacidades distintas). Un slot con stackSize <= 0 esta vacio - se omite en
+    // vez de guardar un WldChestItem inventado (mismo criterio "lo que no se encuentra no se
+    // inventa" del resto del proyecto).
+    private static List<WldChest> ReadChests(BinaryReader reader, uint version)
+    {
+        var chests = new List<WldChest>();
+        int totalChests = reader.ReadInt16();
+
+        int globalMaxItems = 40;
+        if (version < 294) globalMaxItems = reader.ReadInt16();
+
+        for (int i = 0; i < totalChests; i++)
+        {
+            int x = reader.ReadInt32();
+            int y = reader.ReadInt32();
+            string name = reader.ReadString();
+            int maxItems = version >= 294 ? reader.ReadInt32() : globalMaxItems;
+
+            var items = new List<WldChestItem>();
+            for (int slot = 0; slot < maxItems; slot++)
+            {
+                short stackSize = reader.ReadInt16();
+                if (stackSize <= 0) continue;
+                int netId = reader.ReadInt32();
+                byte prefix = reader.ReadByte();
+                items.Add(new WldChestItem(netId, stackSize, prefix));
+            }
+
+            chests.Add(new WldChest { X = x, Y = y, Name = name, Items = items });
+        }
+
+        return chests;
+    }
+
+    // Punto 4 (advisor Opus), Fase 2: formato real confirmado directamente contra
+    // World.FileV2.cs:1828-1839 de TEdit (LoadSignData - el texto va PRIMERO, antes de x/y) +
+    // TileType.cs (TileTypes.IsSign: Sign=55, GraveMarker=85, AnnouncementBox=425,
+    // TatteredSign=573) - mismo filtro real que aplica TEdit al cargar (descarta letreros
+    // "fantasma" cuya casilla ya no es un letrero de verdad, ej. tras borrar el bloque sin que
+    // el .wld limpiara la entrada).
+    private static readonly HashSet<int> SignTileTypes = [55, 85, 425, 573];
+
+    private static List<WldSign> ReadSigns(BinaryReader reader, WldTile[,] tiles, WldHeader header)
+    {
+        var signs = new List<WldSign>();
+        int totalSigns = reader.ReadInt16();
+        for (int i = 0; i < totalSigns; i++)
+        {
+            string text = reader.ReadString();
+            int x = reader.ReadInt32();
+            int y = reader.ReadInt32();
+
+            if (x < 0 || y < 0 || x >= header.TilesWide || y >= header.TilesHigh) continue;
+            var tile = tiles[x, y];
+            if (!tile.IsActive || !SignTileTypes.Contains(tile.Type)) continue;
+
+            signs.Add(new WldSign { X = x, Y = y, Text = text });
+        }
+        return signs;
     }
 }

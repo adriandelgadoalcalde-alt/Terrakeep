@@ -7683,3 +7683,64 @@ buscar "lava" encontro **523 387 resultados reales** (limitados a 1000 mostrados
 correcto), clic real en el primer resultado navego sin excepcion. **2/2 pasadas limpias**, sin
 NO-FOUND/FALLO/EXCEPTION, captura real (`mundo-buscador-general.png`) inspeccionada a mano -
 marcadores teal visibles en el borde del mapa donde esta la lava.
+
+## Buscador de mundo, Fase 2: cofres y letreros (4-sep-2026)
+
+Continuacion directa del punto anterior ("buscador general de objetos del mundo") - pedido
+explicito del usuario de rematar lo pendiente. `ESPEC-buscador-mundo-tedit.md` ya dejaba
+documentado el formato real de estas dos secciones (seccion 2.2), pero antes de implementar se
+descargo y releyo el propio `World.FileV2.cs`/`TileType.cs` de TEdit (github.com/TEdit/
+Terraria-Map-Editor, rama `main`) linea a linea para no arrastrar ningun error de transcripcion
+del espec - confirmado 1:1: cofres usan un tamaño GLOBAL (Int16) en version < 294 y uno PROPIO
+por cofre (Int32) en version >= 294; letreros guardan el TEXTO antes que las coordenadas; y el
+filtro real de letreros "fantasma" usa 4 tipos de tile exactos (Sign=55/GraveMarker=85/
+AnnouncementBox=425/TatteredSign=573).
+
+**Cambios reales**:
+- `WldChest.cs`/`WldSign.cs` (nuevos, Core): modelos minimalistas, mismo estilo que `WldNpc`.
+- `WldHeader.ChestsSectionOffset`/`SignsSectionOffset` (`Pointers[2]`/`Pointers[3]`).
+- `WldReader.ReadChests`/`ReadSigns` (nuevos): formato real citado arriba; los letreros se
+  filtran contra la rejilla de tiles YA leida (mismo criterio real que TEdit: solo cuenta si la
+  casilla real sigue siendo una de las 4 de verdad). `WldReader.Read` gana un parametro
+  `readContainers = true` - cofres/letreros son baratos de leer (unos pocos cientos, nada
+  comparable a decodificar la rejilla de tiles entera), asi que se leen siempre por defecto sin
+  encarecer el lanzador de mundos (que sigue usando `ReadHeader` a secas, sin tocar esta ruta).
+  Tile entities (maniquies/marcos de item/percheros) se quedan fuera a proposito: el advisor no
+  leyo `TileEntity.Load` campo a campo (formato polimorfico por tipo, variantes reales entre
+  versiones) y, al saltar siempre por puntero, ni falta hace conocer su formato para no
+  romper nada.
+- `WorldSearch.cs`: + `ChestItemIds`/`SignTextPredicate` en `WorldSearchQuery`, + 2 kinds
+  (`ChestItem`/`Sign`). Los objetos de cofre casan por `NetId` real (mismo id que
+  `VanillaItemCatalog`/`ItemID.cs`) y la fila usa la posicion del CONTENEDOR, no la del objeto -
+  mismo criterio real que `SearchContainers` de TEdit. Los letreros usan un `Func<string,bool>`
+  en vez de acoplar Core a la gramatica de busqueda de la App (que vive en
+  `TerrasavrNative.App`, direccion de dependencia prohibida) - quien construye la query decide
+  COMO casa el texto.
+- `ExplorationViewModel.BuildWorldSearchQuery`: + candidatos de `VanillaItemCatalog.AllEntries()`
+  para cofres (mismo patron que tiles/paredes/NPCs) y un predicado de letrero que reutiliza
+  **la misma `LibrarySearchGrammar`** tratando el texto de cada letrero como si fuera el nombre
+  de una entrada de catalogo (id=0, sin sentido para un letrero, se ignora) - ni un letrero ni
+  un cofre necesitan una sintaxis de busqueda distinta a la de tiles/NPCs.
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: **591/591** (284 Core, +8 tests
+nuevos en `WorldSearchTests.cs` - objeto de cofre devuelve la posicion del CONTENEDOR, un cofre
+con 2 objetos que casan da 2 filas, un NetId desconocido cae en el "Item #N" real de fallback
+(nunca inventado), un letrero casa por el predicado real y el texto largo se recorta a 60
+caracteres reales; +3 tests nuevos en `WldReaderRealFileTests.cs` contra **mundos .wld REALES
+de este PC** - `adriandres.wld` (320 cofres, 43 letreros reales) y `El_Musgo_de_Accidentes.wld`
+(185 cofres, 3 letreros reales), coordenadas dentro del mundo, ningun slot vacio guardado como
+objeto, todo letrero real cae sobre una casilla que de verdad es una de las 4 reales; 307
+ViewModels sin cambios, la ViewModel se verifico con datos reales del arnes). Arnes de UI
+Automation: bloque `BUSCADOR-MUNDO-COFRE`/`BUSCADOR-MUNDO-LETRERO` - lectura INDEPENDIENTE del
+mismo .wld real (sin pasar por la ViewModel) para conocer un NetId real presente de verdad en
+ESE mundo concreto, luego confirma que el buscador (via la ViewModel) encuentra exactamente esa
+misma posicion: **objeto real #1156 encontrado en el cofre real de (331,1349)**. Ese mundo
+concreto (`roca_negra.wld`) no tiene ningun letrero con texto - omitido con aviso explicito, sin
+falsear un resultado (la lectura/busqueda de letreros ya quedo probada contra los otros dos
+mundos reales que si los tienen, arriba). **2/2 pasadas limpias**, sin NO-FOUND/FALLO/
+EXCEPTION, captura real (`mundo-buscador-cofre-letrero.png`).
+
+Con esto quedan cerradas las Fases 1 y 2 de `ESPEC-buscador-mundo-tedit.md`. Pendiente,
+documentado como alcance deliberado: Fase 3 (picker avanzado con pestañas tipo TEdit, distancia
+al spawn) y tile entities (maniquies/marcos de item/percheros - formato polimorfico no
+verificado a fondo por el advisor).
