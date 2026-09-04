@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
 using TerrasavrNative.App.ViewModels;
+using TerrasavrNative.Core.Model;
 
 namespace TerrasavrNative.App;
 
@@ -132,6 +133,15 @@ public partial class MainWindow : Window
             if (_viewModel.Library.IsPicking) _viewModel.Library.CancelPickCommand.Execute(null);
             else if (_viewModel.BuffLibrary.IsPicking) _viewModel.BuffLibrary.CancelPickCommand.Execute(null);
             else return; // nada real que cancelar - no consumir la tecla (ej. cerrar un ComboBox abierto)
+            e.Handled = true;
+        }
+        // H5-14 (quinta auditoria de Opus): "Ctrl+1...6 para las 6 pestañas raiz, numero
+        // anunciado en el propio rotulo" (mismo criterio T-H/F1) - salto directo sin pasar por
+        // el raton, ningun conflicto real con un TextBox (Ctrl+numero no es un gesto de tecleo
+        // normal, a diferencia de Ctrl+Z/Y que SI colisionan con el deshacer nativo de un campo).
+        else if (ctrl && e.Key is >= Key.D1 and <= Key.D6)
+        {
+            _viewModel.SelectedTabIndex = e.Key - Key.D1;
             e.Handled = true;
         }
     }
@@ -543,6 +553,46 @@ public partial class MainWindow : Window
         }
     }
 
+    // H5-14 (quinta auditoria de Opus): "los ~350 slots no son alcanzables sin raton... Supr
+    // vacia, Intro abre 'Elegir...', F alterna favorito (H5-06), Ctrl+C/Ctrl+V copian/pegan un
+    // objeto entero". Un unico "portapapeles" real de sesion (nunca persistido, se pierde al
+    // cerrar la app - no tiene sentido real que sobreviva, a diferencia del portapapeles real
+    // del SO) - GameItem.Clone() (H5-01) evita que copiar y luego seguir editando el slot
+    // origen mute tambien lo ya copiado.
+    private GameItem? _itemClipboard;
+
+    private void OnItemSlotKeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: ItemSlotViewModel slot }) return;
+        bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+
+        if (e.Key == Key.Delete)
+        {
+            if (slot.IsNotEmpty) slot.ClearCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Enter)
+        {
+            slot.ChooseFromLibraryCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.F && !ctrl)
+        {
+            if (slot.IsNotEmpty) slot.ToggleFavoriteCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (ctrl && e.Key == Key.C)
+        {
+            _itemClipboard = slot.Item.Clone();
+            e.Handled = true;
+        }
+        else if (ctrl && e.Key == Key.V)
+        {
+            if (_itemClipboard is { } clip) slot.PasteItem(clip);
+            e.Handled = true;
+        }
+    }
+
     // Gemelos de los 3 de arriba, para la rejilla de Buffs (pregunta a Opus sobre el diseño
     // 2-sep-2026, cuarta pasada) - mismo patron exacto, solo cambia el tipo (BuffSlotViewModel
     // en vez de ItemSlotViewModel). Arrastrar un buff sobre otro los intercambia entero
@@ -620,6 +670,38 @@ public partial class MainWindow : Window
                  && !ReferenceEquals(sourceSlot, targetSlot))
         {
             sourceSlot.SwapWith(targetSlot);
+        }
+    }
+
+    // H5-14: gemelo real de OnItemSlotKeyDown - sin "F" de favorito (un buff no tiene ese
+    // concepto) ni Supr condicionado a IsNotEmpty (Clear() de un buff ya vacio es un no-op
+    // barato, no hace falta guardarlo).
+    private (int id, int time)? _buffClipboard;
+
+    private void OnBuffSlotKeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: BuffSlotViewModel slot }) return;
+        bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+
+        if (e.Key == Key.Delete)
+        {
+            slot.ClearCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Enter)
+        {
+            slot.ChooseFromLibraryCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (ctrl && e.Key == Key.C)
+        {
+            _buffClipboard = (slot.Buff.Id, slot.Buff.Time);
+            e.Handled = true;
+        }
+        else if (ctrl && e.Key == Key.V)
+        {
+            if (_buffClipboard is { } clip) slot.PasteBuff(clip.id, clip.time);
+            e.Handled = true;
         }
     }
 }

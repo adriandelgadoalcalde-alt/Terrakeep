@@ -161,6 +161,29 @@ public partial class BuffSlotViewModel : ObservableObject
         other.Refresh();
     }
 
+    // H5-14 (quinta auditoria de Opus): gemelo real de ItemSlotViewModel.PasteItem - Ctrl+C/
+    // Ctrl+V pega la duracion EXACTA copiada (a diferencia de PlaceBuff, que fija una duracion
+    // razonable para una colocacion nueva). SI respeta la regla real de "sin dos instancias del
+    // mismo buff a la vez" (a diferencia de RestoreExact, pensado solo para Deshacer, donde esa
+    // comprobacion no aplica) - un copia/pega deliberado del usuario no debe saltarsela.
+    public bool PasteBuff(int buffId, int time)
+    {
+        if (buffId > 0 && _isPlacedElsewhere?.Invoke(buffId, this) == true)
+        {
+            bool esDeCalamity = buffId >= CalamityIds.BuffIdBase;
+            string nombre = esDeCalamity
+                ? _calamityCatalog.BySyntheticId(buffId)?.DisplayName ?? $"Calamity #{buffId}"
+                : _vanillaCatalog.GetDisplayName(buffId);
+            RejectionMessage = $"'{nombre}' ya esta puesto en otro slot - Terraria no permite dos instancias del mismo buff.";
+            return false;
+        }
+        RejectionMessage = null;
+        Buff.Id = buffId;
+        Buff.Time = time;
+        Refresh();
+        return true;
+    }
+
     // H4-06 (cuarta auditoria de Opus, Fable): usado por BuffContainerViewModel.UndoClear -
     // restaura un buff EXACTO (id+duracion) tal cual estaba antes de un "Vaciar todos" en
     // bloque. A diferencia de PlaceBuff (que fija una duracion RAZONABLE para una colocacion

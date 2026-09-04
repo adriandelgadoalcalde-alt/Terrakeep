@@ -290,9 +290,14 @@
              con el glow de acento). Sin Width/Height explicitos - los da SlotGridPanel al
              hacer Arrange. -->
         <DataTemplate x:Key="SlotCompactTemplate" DataType="{x:Type vm:ItemSlotViewModel}">
-            <Border AllowDrop="True" ToolTipService.IsEnabled="{Binding ShowTooltip}"
+            <!-- H5-14 (quinta auditoria de Opus): "ningun slot se puede alcanzar con tabulador
+                 ni flechas - un Border no es enfocable en WPF". Focusable real (el
+                 FocusVisualStyle del tema, T-H/F2, lo pinta gratis en cuanto lo recibe) +
+                 KeyDown propio (Supr vacia, Intro abre "Elegir...", F alterna favorito, Ctrl+C/
+                 Ctrl+V copian/pegan el objeto entero - ver OnItemSlotKeyDown). -->
+            <Border AllowDrop="True" Focusable="True" ToolTipService.IsEnabled="{Binding ShowTooltip}"
                     PreviewMouseLeftButtonDown="OnItemSlotMouseDown" MouseMove="OnItemSlotMouseMove"
-                    DragOver="OnItemSlotDragOver" Drop="OnItemSlotDrop">
+                    DragOver="OnItemSlotDragOver" Drop="OnItemSlotDrop" KeyDown="OnItemSlotKeyDown">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding ChooseFromLibraryCommand}" />
                 </Border.InputBindings>
@@ -739,9 +744,12 @@
                  de objetos ya tiene (OnItemSlotDragOver) - arrastrar un buff YA colocado en otro
                  slot se rechazaba en silencio total al soltar, sin ningun aviso mientras se
                  arrastraba. -->
-            <Border AllowDrop="True" ToolTipService.IsEnabled="{Binding IsNotEmpty}"
+            <!-- H5-14 (quinta auditoria de Opus): mismo mecanismo real que SlotCompactTemplate -
+                 Focusable + KeyDown (Supr/Intro/Ctrl+C/Ctrl+V - sin "F" de favorito, un buff no
+                 tiene ese concepto). -->
+            <Border AllowDrop="True" Focusable="True" ToolTipService.IsEnabled="{Binding IsNotEmpty}"
                     PreviewMouseLeftButtonDown="OnBuffSlotMouseDown" MouseMove="OnBuffSlotMouseMove"
-                    DragOver="OnBuffSlotDragOver" Drop="OnBuffSlotDrop">
+                    DragOver="OnBuffSlotDragOver" Drop="OnBuffSlotDrop" KeyDown="OnBuffSlotKeyDown">
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftDoubleClick" Command="{Binding ChooseFromLibraryCommand}" />
                 </Border.InputBindings>
@@ -1315,7 +1323,10 @@
         <Grid Grid.Row="1">
         <TabControl Style="{StaticResource NavTabControl}" SelectedIndex="{Binding SelectedTabIndex}">
         <!-- ===================== INICIO ===================== -->
-        <TabItem Header="Inicio">
+        <!-- H5-14 (quinta auditoria de Opus): "Ctrl+1...6 para las 6 pestañas raiz, numero
+             anunciado en el propio rotulo" - mismo criterio T-H/F1 (tooltip real, no un atajo
+             que nadie descubre). -->
+        <TabItem Header="Inicio" ToolTip="Ctrl+1">
             <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="14">
                 <!-- I-c (segunda auditoria de Opus, Fable): MaxWidth dependiente de SizeClass -
                      en una ventana Amplia el WrapPanel de tarjetas de abajo tiene sitio real
@@ -1448,7 +1459,7 @@
         </TabItem>
 
         <!-- ===================== PERSONAJE ===================== -->
-        <TabItem Header="Personaje">
+        <TabItem Header="Personaje" ToolTip="Ctrl+2">
             <Grid>
             <DockPanel Margin="14">
                 <!-- Auditoria de Opus, N-1: Cargar/Guardar/nombre de personaje ya viven en la
@@ -2931,7 +2942,7 @@
         </TabItem>
 
         <!-- ===================== BUILDS ===================== -->
-        <TabItem Header="Builds">
+        <TabItem Header="Builds" ToolTip="Ctrl+3">
             <DockPanel Margin="14">
                 <!-- Bd-d (segunda auditoria de Opus, Fable): "buscador/filtro por clase" - antes
                      una unica lista plana de TODAS las clases de TODAS las etapas de golpe. -->
@@ -2966,7 +2977,7 @@
         <!-- Pedido explicito del usuario (2-sep-2026): "dos pestañas, una con las novedades de
              Terraria vanilla y otra de tModLoader y Calamity Mod" - antes una unica lista
              mezclando las dos cosas bajo la etiqueta generica "JUEGO". -->
-        <TabItem Header="Novedades">
+        <TabItem Header="Novedades" ToolTip="Ctrl+4">
             <DockPanel Margin="14">
                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10">
                     <Run Text="Registro de cambios real del " />
@@ -3006,7 +3017,7 @@
         </TabItem>
 
         <!-- ===================== EXPLORACION ===================== -->
-        <TabItem Header="Exploración">
+        <TabItem Header="Exploración" ToolTip="Ctrl+5">
             <DockPanel Margin="14">
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
                     <Button Content="Cargar mundo (.wld)..." Tag="Accent" Click="OnLoadWorldClick"
@@ -3329,7 +3340,7 @@
              que el Changelog reparta en columnas reales con sitio (DetailCardColumns) - pero el
              texto corrido (creditos, intro) NO crece con el contenedor, MaxWidth propio de 680
              para mantener el tope de linea real por legibilidad (pedido explicito del informe). -->
-        <TabItem Header="Acerca de">
+        <TabItem Header="Acerca de" ToolTip="Ctrl+6">
             <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
                 <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,20">

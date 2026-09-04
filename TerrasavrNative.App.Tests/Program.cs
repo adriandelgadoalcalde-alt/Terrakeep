@@ -1978,6 +1978,118 @@ internal static class Program
         }
         catch (Exception ex) { Console.WriteLine("T-H-FOCO-EXCEPTION: " + ex); }
 
+        // H5-14 (quinta auditoria de Opus): "ningun slot se puede alcanzar con tabulador ni
+        // flechas... Supr vacia, Intro abre 'Elegir...', Ctrl+C/Ctrl+V copian/pegan, Ctrl+1..6
+        // saltan de pestaña". A diferencia del clic/doble clic de H5-12 (sin precedente de raton
+        // simulado en este arnes), el foco y la inyeccion de teclado real SI tienen precedente
+        // real y probado aqui mismo (T-H-FOCO/N3-CTRL-S) - verificacion real de extremo a
+        // extremo, no solo a nivel de ViewModel. Un Border sin AutomationPeer propio (WPF no le
+        // da uno por defecto) no aparece en el arbol de UI Automation - Keyboard.Focus() directo
+        // sobre la instancia real (hallada recorriendo el arbol visual, mismo patron ya usado en
+        // este arnes - ver WalkVisual/FindEditorScroll) en vez de AutomationElement.SetFocus().
+        try
+        {
+            static System.Windows.FrameworkElement? FindBorderForSlot(System.Windows.DependencyObject d, object slotViewModel)
+            {
+                if (d is System.Windows.FrameworkElement { } fe && ReferenceEquals(fe.DataContext, slotViewModel) && fe is System.Windows.Controls.Border)
+                    return fe;
+                int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(d);
+                for (int i = 0; i < n; i++)
+                {
+                    var found = FindBorderForSlot(System.Windows.Media.VisualTreeHelper.GetChild(d, i), slotViewModel);
+                    if (found != null) return found;
+                }
+                return null;
+            }
+
+            vm.SelectedTabIndex = 1; // Personaje
+            vm.PersonajeInnerTabIndex = 0; // Objetos
+            DoEvents(); DoEvents(); // deja que el TabControl realice el contenido de "Objetos" antes de buscar la sub-pestaña "Inventario" dentro
+            var invTabForKeys = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
+                new PropertyCondition(AutomationElement.NameProperty, "Inventario")));
+            if (invTabForKeys != null && invTabForKeys.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var invSelPatForKeys))
+                ((SelectionItemPattern)invSelPatForKeys).Select();
+            DoEvents(); DoEvents();
+
+            var slotOrigen = vm.InventoryContainer!.Slots[20]; // vacio (0-11 ocupados por la fixture, 12/49 por H5-12)
+            var slotVecino = vm.InventoryContainer.Slots[21];
+            var slotParaCopiar = vm.InventoryContainer.Slots[22];
+            slotOrigen.PlaceItem(4); // Espada larga de hierro, id real cualquiera - lo que importa es tener algo que vaciar
+            slotParaCopiar.PlaceItem(3);
+            slotParaCopiar.Count = 7;
+            slotParaCopiar.ToggleFavoriteCommand.Execute(null);
+
+            SetForegroundWindow(hwnd);
+            var borderOrigen = FindBorderForSlot(window, slotOrigen);
+            Console.WriteLine($"H5-14-FOCO: Border real del slot 20 encontrado en el arbol visual={borderOrigen != null} (esperado True)");
+            if (borderOrigen != null)
+            {
+                System.Windows.Input.Keyboard.Focus(borderOrigen);
+                DoEvents(); DoEvents();
+                bool focoReal = ReferenceEquals(System.Windows.Input.Keyboard.FocusedElement, borderOrigen);
+                Console.WriteLine($"H5-14-FOCO: Keyboard.FocusedElement es el Border real del slot 20={focoReal} (esperado True)");
+
+                // Flecha derecha: KeyboardNavigation.DirectionalNavigation="Contained" del
+                // SlotGridPanel (Theme.xaml) debe mover el foco al slot vecino real (21), no
+                // fuera de la rejilla.
+                PressKey(0x27); // VK_RIGHT
+                DoEvents(); DoEvents();
+                bool focoMovioAlVecino = System.Windows.Input.Keyboard.FocusedElement is System.Windows.FrameworkElement feDerecha
+                    && ReferenceEquals(feDerecha.DataContext, slotVecino);
+                Console.WriteLine($"H5-14-FLECHA: tras VK_RIGHT, foco real en el slot vecino (21)={focoMovioAlVecino} (esperado True)");
+                if (!focoMovioAlVecino) Console.WriteLine("FALLO: H5-14 - la flecha derecha no movio el foco real al slot vecino dentro de la rejilla");
+
+                // Supr real sobre el slot 20 (vuelve a enfocarlo primero).
+                System.Windows.Input.Keyboard.Focus(borderOrigen);
+                DoEvents();
+                PressKey(0x2E); // VK_DELETE
+                DoEvents(); DoEvents();
+                Console.WriteLine($"H5-14-SUPR: slot 20 vacio tras VK_DELETE={slotOrigen.IsEmpty} (esperado True)");
+                if (!slotOrigen.IsEmpty) Console.WriteLine("FALLO: H5-14 - Supr real sobre el slot enfocado no lo vacio");
+
+                // Ctrl+C real sobre el slot 22 (favorito, cantidad 7, prefijo real), Ctrl+V real
+                // sobre el slot 20 (ahora vacio) - debe reproducir el objeto ENTERO copiado.
+                var borderParaCopiar = FindBorderForSlot(window, slotParaCopiar);
+                if (borderParaCopiar != null)
+                {
+                    System.Windows.Input.Keyboard.Focus(borderParaCopiar);
+                    DoEvents();
+                    PressCtrlPlus(0x43); // VK_C
+                    DoEvents();
+                    System.Windows.Input.Keyboard.Focus(borderOrigen);
+                    DoEvents();
+                    PressCtrlPlus(0x56); // VK_V
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"H5-14-COPIA-PEGA: slot 20 tras Ctrl+C(22)+Ctrl+V(20) -> DisplayName={slotOrigen.DisplayName}, Count={slotOrigen.Count} (esperado 7), IsFavorited={slotOrigen.IsFavorited} (esperado True)");
+                    if (slotOrigen.Count != 7 || !slotOrigen.IsFavorited) Console.WriteLine("FALLO: H5-14 - Ctrl+C/Ctrl+V real no reprodujo el objeto entero copiado (cantidad/favorito)");
+                }
+                else Console.WriteLine("H5-14-COPIA-PEGA: Border real del slot 22 no encontrado - omitido");
+
+                // Intro real: abre "Elegir..." (ChooseFromLibraryCommand -> Library.PickTarget).
+                System.Windows.Input.Keyboard.Focus(borderOrigen);
+                DoEvents();
+                vm.Library.CancelPickCommand.Execute(null);
+                PressKey(0x0D); // VK_RETURN
+                DoEvents(); DoEvents();
+                Console.WriteLine($"H5-14-INTRO: Library.PickTarget tras VK_RETURN=={ReferenceEquals(vm.Library.PickTarget, slotOrigen)} (esperado True)");
+                if (!ReferenceEquals(vm.Library.PickTarget, slotOrigen)) Console.WriteLine("FALLO: H5-14 - Intro real sobre el slot enfocado no abrio 'Elegir...'");
+                vm.Library.CancelPickCommand.Execute(null);
+            }
+
+            // Ctrl+1..6 real: salto directo entre las 6 pestañas raiz.
+            SetForegroundWindow(hwnd);
+            PressCtrlPlus(0x33); // VK_3 -> Builds (indice 2)
+            DoEvents(); DoEvents();
+            Console.WriteLine($"H5-14-CTRL3: SelectedTabIndex tras Ctrl+3={vm.SelectedTabIndex} (esperado 2, Builds)");
+            if (vm.SelectedTabIndex != 2) Console.WriteLine("FALLO: H5-14 - Ctrl+3 real no salto a Builds");
+            PressCtrlPlus(0x31); // VK_1 -> Inicio (indice 0)
+            DoEvents(); DoEvents();
+            Console.WriteLine($"H5-14-CTRL1: SelectedTabIndex tras Ctrl+1={vm.SelectedTabIndex} (esperado 0, Inicio)");
+            if (vm.SelectedTabIndex != 0) Console.WriteLine("FALLO: H5-14 - Ctrl+1 real no volvio a Inicio");
+        }
+        catch (Exception ex) { Console.WriteLine("H5-14-FOCO-EXCEPTION: " + ex); }
+
         // Verificacion visual real de S-d/D-b (segunda auditoria de Opus, Fable): capturas de
         // Spawn Points y Desbloqueos, pestañas que este arnes no visitaba todavia.
         try

@@ -6741,3 +6741,65 @@ objeto(s)", "Utilidad (17) - 17 buff(s)"). **2/2 pasadas limpias**, sin
 NO-FOUND/FALLO/EXCEPTION (el mismo flake intermitente ajeno de `LIBRERIA busqueda 'Sword'` ya
 documentado en H5-11 volvio a aparecer en 1 de las 4 pasadas lanzadas aqui - mismo patron real,
 nada nuevo que investigar).
+
+## H5-14 - Navegacion por teclado en slots (Tanda D, quinta auditoria de Opus)
+
+Hallazgo real: "`SlotCompactTemplate`/`BuffSlotCompactTemplate` son `Border` - un `Border` no es
+enfocable en WPF, ningun slot se puede alcanzar con tabulador ni flechas. Especialmente visible
+porque el tema SI tiene un `FocusVisualStyle` propio (T-H/F2) - existe y casi nada lo usa.
+`OnWindowKeyDown` maneja solo 4 teclas: Ctrl+S/O/F/Esc. No hay salto entre pestañas, ni borrar
+slot, ni copiar/pegar objeto." Viola P1 (practicidad) y P5 (reactividad) - ~350 slots reales
+inalcanzables sin raton.
+
+**`Focusable="True"`** en `SlotCompactTemplate`/`BuffSlotCompactTemplate` - el `FocusVisualStyle`
+del tema (T-H/F2, ya escrito, nunca antes usado en slots) lo pinta gratis en cuanto un slot
+recibe el foco.
+
+**`KeyboardNavigation.DirectionalNavigation="Contained"`** - Style implicito nuevo en
+`Theme.xaml` sobre `controls:SlotGridPanel` (se aplica solo a TODA rejilla real de la app -
+Equipamiento/Inventario/Almacenes/Libreria/Libreria de buffs - sin tocar cada sitio donde se
+usa) para que las flechas recorran la rejilla como en el propio juego, sin escapar a la rejilla
+vecina.
+
+**Teclas sobre el slot enfocado** (`OnItemSlotKeyDown`/`OnBuffSlotKeyDown`, `MainWindow.xaml.cs`):
+Supr vacia (`ClearCommand`), Intro abre "Elegir..." (`ChooseFromLibraryCommand`), F alterna
+favorito (H5-06, solo objetos - un buff no tiene ese concepto), Ctrl+C/Ctrl+V copian/pegan el
+objeto/buff ENTERO. Portapapeles real de sesion (`_itemClipboard`/`_buffClipboard`, nunca
+persistido) en el propio code-behind.
+
+**`ItemSlotViewModel.PasteItem(GameItem)`/`BuffSlotViewModel.PasteBuff(id, time)`** (nuevos,
+Core): a diferencia de `PlaceItem`/`PlaceBuff` (pensados para colocar algo NUEVO - cantidad 1,
+prefijo recien sugerido, duracion razonable), pegar reproduce EXACTAMENTE lo copiado
+(`GameItem.Clone()`, H5-01) - misma restriccion real de slot que `PlaceItem`
+(`AcceptsItem`/`RejectionMessage`) y la misma regla real de "sin dos instancias del mismo buff"
+que `PlaceBuff` (a diferencia de `RestoreExact`, que la salta a proposito solo para Deshacer).
+
+**Ctrl+1...6** (`OnWindowKeyDown`): salto directo a las 6 pestañas raiz, sin pasar por el raton -
+sin conflicto real con un `TextBox` (Ctrl+numero no es un gesto de tecleo normal, a diferencia
+de Ctrl+Z/Y que SI colisionan con el deshacer nativo de un campo). Numero anunciado en el propio
+rotulo (`ToolTip="Ctrl+N"` en cada `TabItem` raiz, mismo criterio real T-H/F1).
+
+**Verificacion real, de extremo a extremo, no solo a nivel de ViewModel**: a diferencia de
+H5-12 (arrastre/clic/doble clic, sin precedente de raton simulado en este arnes), el foco y la
+inyeccion de teclado real YA tienen precedente probado en este mismo arnes (T-H-FOCO/N3-CTRL-S)
+- se aprovecho a fondo. Gotcha real: un `Border` sin `AutomationPeer` propio (WPF no le da uno
+por defecto) NO aparece en el arbol de UI Automation - `Keyboard.Focus()` directo sobre la
+instancia real (hallada recorriendo el arbol visual con `VisualTreeHelper`, mismo patron ya
+usado en el arnes) en vez de `AutomationElement.SetFocus()`. Con eso, verificado con teclado
+real (`keybd_event`, ventana real en primer plano): foco real tras `Keyboard.Focus()`, flecha
+derecha mueve el foco real al slot vecino DENTRO de la rejilla, Supr real vacia el slot
+enfocado, Ctrl+C real sobre un slot (favorito, cantidad 7, prefijo real) + Ctrl+V real sobre
+otro reproduce el objeto entero exacto, Intro real abre "Elegir..." (`Library.PickTarget`), y
+Ctrl+3/Ctrl+1 reales saltan entre pestañas raiz. `dotnet test`: **375/375** (145 Core + 230
+ViewModels, +6 tests nuevos `SlotKeyboardActionsTests.cs` cubriendo `PasteItem`/`PasteBuff` a
+nivel de dominio - copia exacta, rechazo por restriccion de slot real, origen vacio vacia el
+destino, rechazo por buff duplicado). **2/2 pasadas limpias** del arnes de UI Automation, sin
+NO-FOUND/FALLO/EXCEPTION (el mismo flake intermitente ajeno de `LIBRERIA busqueda 'Sword'`
+volvio a aparecer 1 de las 2 veces, ya documentado en H5-11/H5-13 - nada nuevo).
+
+Fuera de esta pasada, documentado a proposito: "beneficio lateral" que el propio informe
+menciona ("el arnes de UI Automation gana acceso directo a slots, hoy solo por coordenadas") no
+aplica tal cual a este arnes - sigue sin poder ALCANZAR un slot por `AutomationElement` (el
+`Border` no tiene peer propio), pero SI gana la capacidad de operar sobre un slot conocido por
+teclado real una vez localizado por `VisualTreeHelper` (demostrado arriba) - una via de
+verificacion nueva y real, aunque no exactamente la que el informe imaginaba.

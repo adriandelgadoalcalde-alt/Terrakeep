@@ -319,6 +319,24 @@ public partial class ItemSlotViewModel : ObservableObject
         UpdateFrom(item);
     }
 
+    // H5-14 (quinta auditoria de Opus): "Ctrl+C/Ctrl+V copian/pegan un objeto entero (prefijo,
+    // cantidad, favorito), reutilizando la logica que SwapWith ya tiene resuelta" - a diferencia
+    // de PlaceItem (que siempre nace con cantidad 1 y prefijo recien SUGERIDO, pensado para
+    // colocar algo nuevo desde la Libreria), pegar debe reproducir EXACTAMENTE lo copiado.
+    // Misma restriccion real de slot que PlaceItem/el Drop de la Libreria - un copia/pega no
+    // debe poder saltarsela (MainWindow.xaml.cs es quien guarda el "portapapeles" real, un
+    // GameItem clonado en el momento de copiar).
+    public bool PasteItem(GameItem source)
+    {
+        if (!AcceptsItem(source.Id))
+        {
+            RejectionMessage = BuildRejectionMessage();
+            return false;
+        }
+        UpdateFrom(source.Clone());
+        return true;
+    }
+
     // H5-06: interruptor real de favorito - el dato ya viajaba de punta a punta
     // (PlrBodySerializer), solo faltaba un camino en la App para tocarlo.
     [RelayCommand]

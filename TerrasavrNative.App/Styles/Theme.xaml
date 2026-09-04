@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:TerrasavrNative.App.Controls">
 
     <!-- Paleta REAL de Terrasavr (2-sep-2026, segunda pasada estetica pedida explicitamente
          tras comprobar que la primera no captaba bien el espiritu del original) - no inventada
@@ -106,6 +107,16 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!-- H5-14 (quinta auditoria de Opus): "ningun slot se puede alcanzar con tabulador ni
+         flechas... las flechas deberian recorrer la rejilla como en el juego". Estilo implicito
+         (sin x:Key, se aplica solo a TODO SlotGridPanel real de la app - Equipamiento/
+         Inventario/Almacenes/Libreria/Libreria de buffs, sin tener que tocar cada sitio donde se
+         usa) - Contained mantiene la navegacion por flechas DENTRO de esta rejilla concreta, no
+         se escapa a la rejilla vecina ni al resto de la ventana. -->
+    <Style TargetType="controls:SlotGridPanel">
+        <Setter Property="KeyboardNavigation.DirectionalNavigation" Value="Contained" />
     </Style>
 
     <!-- Tipografia. Auditoria de Opus, Bloque 5 (T-6/T-7/T-8): escala real, documentada aqui a
