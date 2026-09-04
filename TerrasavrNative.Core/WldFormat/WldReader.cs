@@ -8,17 +8,15 @@ namespace TerrasavrNative.Core.WldFormat;
 public static class WldReader
 {
     // Punto 4 (advisor Opus, buscador de objetos del mundo), Fase 2 de
-    // ESPEC-buscador-mundo-tedit.md: readContainers=true (por defecto) tambien lee cofres y
-    // letreros - secciones baratas de verdad (unos pocos cientos de cofres/letreros en un
-    // mundo real, nada comparable al coste de decodificar la rejilla de tiles entera) usando
-    // los mismos punteros ya presentes en la cabecera (ChestsSectionOffset/SignsSectionOffset),
-    // asi que no hace falta un flag para abaratar el lanzador de mundos (que ya usa ReadHeader
-    // a secas, sin llamar aqui). Tile entities (maniquies/marcos de item/percheros) quedan
-    // deliberadamente FUERA de esta Fase 2 - el advisor no leyo TileEntity.Load campo a campo
-    // (formato polimorfico por tipo, con variantes reales entre versiones) y el propio espec
-    // recomienda no arriesgar corromper la carga del mundo por una seccion que este proyecto no
-    // necesita tocar para nada mas: al saltar directamente por puntero (nunca se lee
-    // secuencialmente mas alla de Signs) no hace falta ni siquiera saber su formato.
+    // ESPEC-buscador-mundo-tedit.md: readContainers=true (por defecto) tambien lee cofres,
+    // letreros y tile entities - secciones baratas de verdad (unos pocos cientos/miles de
+    // elementos en un mundo real, nada comparable al coste de decodificar la rejilla de tiles
+    // entera) usando los mismos punteros ya presentes en la cabecera, asi que no hace falta un
+    // flag para abaratar el lanzador de mundos (que ya usa ReadHeader a secas, sin llamar aqui).
+    // Tile entities (maniquies/marcos de item/percheros/bandejas/frascos/anclas) estuvieron
+    // deliberadamente fuera de la Fase 2 original (el advisor no leyo TileEntity.Load campo a
+    // campo) - Fase 2b: formato ya verificado byte a byte contra TileEntity.cs real de TEdit,
+    // ver ReadTileEntities.
     public static WldWorld Read(byte[] fileBytes, bool readContainers = true)
     {
         using var stream = new MemoryStream(fileBytes);
@@ -31,6 +29,7 @@ public static class WldReader
 
         List<WldChest> chests = [];
         List<WldSign> signs = [];
+        List<WldTileEntity> tileEntities = [];
         if (readContainers)
         {
             stream.Position = header.ChestsSectionOffset;
@@ -38,12 +37,18 @@ public static class WldReader
 
             stream.Position = header.SignsSectionOffset;
             signs = ReadSigns(reader, tiles, header);
+
+            if (header.TileEntitiesSectionOffset is int teOffset)
+            {
+                stream.Position = teOffset;
+                tileEntities = ReadTileEntities(reader, header.Version);
+            }
         }
 
         stream.Position = header.NpcsSectionOffset;
         var (npcs, shimmeredTypes) = ReadNpcs(reader, header.Version);
 
-        return new WldWorld { Header = header, Tiles = tiles, Npcs = npcs, Chests = chests, Signs = signs, ShimmeredNpcTypes = shimmeredTypes };
+        return new WldWorld { Header = header, Tiles = tiles, Npcs = npcs, Chests = chests, Signs = signs, TileEntities = tileEntities, ShimmeredNpcTypes = shimmeredTypes };
     }
 
     // H4-08 (cuarta auditoria de Opus, Fable): lectura BARATA para el lanzador de mundos de
@@ -372,5 +377,152 @@ public static class WldReader
             signs.Add(new WldSign { X = x, Y = y, Text = text });
         }
         return signs;
+    }
+
+    // Fase 2b (diferida de la Fase 2 original): formato real confirmado directamente contra
+    // TileEntity.cs de TEdit (github.com/TEdit/Terraria-Map-Editor, main, descargado y leido
+    // campo a campo esta misma sesion) - World.FileV2.cs:1953-1964 (LoadTileEntityData: Int32
+    // numEntities, luego por cada una `new TileEntity(); entity.Load(r, version)`) +
+    // TileEntity.cs:377-419 (Load: Type/Id/PosX/PosY comunes, luego un switch polimorfico por
+    // Type que decide cuantos bytes mas leer) + los 3 sub-lectores reales (LoadStack:428,
+    // LoadHatRack:435, LoadDisplayDoll:502).
+    //
+    // Version<116: esta seccion no existe en absoluto en el archivo (TileEntitiesSectionOffset
+    // seria null de todas formas, WldHeader.Pointers no llegaria a tener indice 5). 116<=
+    // version<122: World.FileV2.cs usa el formato LEGADO "Dummies" (World.FileV2.cs:1966-1975,
+    // LoadDummies - Int32 count + pares Int16,Int16 SIN contenido de objetos real, solo
+    // coordenadas de dummy) en vez de TileEntity.Load: se devuelve vacio sin decodificarlo, ni
+    // falta hace saber su formato exacto (ningun mundo real de esta maquina esta en ese rango,
+    // y no aporta nada buscable aunque lo estuviera).
+    private static List<WldTileEntity> ReadTileEntities(BinaryReader reader, uint version)
+    {
+        if (version < 122) return [];
+
+        int numEntities = reader.ReadInt32();
+        var result = new List<WldTileEntity>(numEntities);
+        for (int i = 0; i < numEntities; i++)
+        {
+            byte type = reader.ReadByte();
+            reader.ReadInt32();       // Id interno de TEdit (correlativo de edicion), sin uso aqui
+            short x = reader.ReadInt16();
+            short y = reader.ReadInt16();
+
+            var items = new List<WldTileEntityItem>();
+            switch (type)
+            {
+                case (byte)WldTileEntityKind.TrainingDummy:
+                    reader.ReadInt16(); // Npc (tipo de NPC del dummy, no un objeto - nada que buscar aqui)
+                    break;
+                case (byte)WldTileEntityKind.ItemFrame:
+                case (byte)WldTileEntityKind.WeaponRack:
+                case (byte)WldTileEntityKind.FoodPlatter:
+                case (byte)WldTileEntityKind.DeadCellsDisplayJar:
+                    ReadStackInto(reader, items);
+                    break;
+                case (byte)WldTileEntityKind.LogicSensor:
+                    reader.ReadByte();    // LogicCheck
+                    reader.ReadBoolean(); // On
+                    break;
+                case (byte)WldTileEntityKind.DisplayDoll:
+                    ReadDisplayDollItems(reader, version, items);
+                    break;
+                case (byte)WldTileEntityKind.HatRack:
+                    ReadHatRackItems(reader, items);
+                    break;
+                case (byte)WldTileEntityKind.TeleportationPylon:
+                    break; // sin datos propios
+                case (byte)WldTileEntityKind.CritterAnchor:
+                case (byte)WldTileEntityKind.KiteAnchor:
+                    short netId = reader.ReadInt16(); // aka NetId del item (criatura o cometa), sin stack/prefijo real
+                    if (netId > 0) items.Add(new WldTileEntityItem(netId, 1, 0));
+                    break;
+                default:
+                    // Tipo desconocido (version del juego mas nueva que este catalogo) - no hay
+                    // forma segura de saber cuantos bytes mas ocupa sin la tabla de arriba.
+                    // Mismo criterio del proyecto ("lo que no se reconoce no se inventa"): se
+                    // corta la lectura de ESTA seccion sin arriesgar desincronizar el resto del
+                    // archivo (las demas secciones ya se leen por puntero absoluto de todas
+                    // formas, esto no las afecta).
+                    return result;
+            }
+
+            result.Add(new WldTileEntity { Kind = (WldTileEntityKind)type, X = x, Y = y, Items = items });
+        }
+        return result;
+    }
+
+    // TileEntity.LoadStack real: NetId(Int16) + Prefix(byte) + StackSize(Int16), SIEMPRE
+    // presente cuando el slot esta marcado (el bit de presencia ya se comprobo antes de llamar
+    // aqui, salvo en el caso simple de un unico slot fijo tipo ItemFrame/WeaponRack/... donde
+    // no hay bit de presencia - el slot esta siempre, vacio o no). Solo se añade a la lista si
+    // es un objeto real (mismo criterio que TileEntityItem.IsValid de TEdit: Id>0 && Stack>0).
+    private static void ReadStackInto(BinaryReader reader, List<WldTileEntityItem> items)
+    {
+        short netId = reader.ReadInt16();
+        byte prefix = reader.ReadByte();
+        short stack = reader.ReadInt16();
+        if (netId > 0 && stack > 0) items.Add(new WldTileEntityItem(netId, stack, prefix));
+    }
+
+    // TileEntity.LoadHatRack real (linea 435): 1 byte de presencia (bits 0-1 = 2 slots de
+    // objeto, bits 2-3 = 2 slots de tinte), cada slot presente lee un LoadStack completo.
+    private static void ReadHatRackItems(BinaryReader reader, List<WldTileEntityItem> items)
+    {
+        byte slots = reader.ReadByte();
+        for (int i = 0; i < 2; i++)
+            if ((slots & (1 << i)) != 0) ReadStackInto(reader, items);
+        for (int i = 0; i < 2; i++)
+            if ((slots & (1 << (i + 2))) != 0) ReadStackInto(reader, items);
+    }
+
+    // TileEntity.LoadDisplayDoll real (linea 502) - el mas largo de los 11, transcrito 1:1
+    // (incluido el parche real de la version 311, donde el juego escribia el 9º slot de objeto
+    // FUERA de orden por un bug ya corregido pero que sigue presente en archivos guardados con
+    // esa version exacta):
+    //   1) itemSlots(byte) + dyeSlots(byte) - presencia de los primeros 8 slots de cada tipo.
+    //   2) Pose(byte), solo version>=307.
+    //   3) extraSlots(byte), solo version>=308 - bit0=Misc[0], bit1=9º objeto, bit2=9º tinte.
+    //   4) CASO ESPECIAL version==311: el bit1 de extraSlots (9º objeto) se guarda aparte y se
+    //      PONE A CERO antes de los bucles normales - ese slot, si estaba marcado, se lee al
+    //      final del todo en vez de en su sitio natural dentro del bucle de objetos.
+    //   5) maxSlots = 9 si version>=308, si no 8.
+    //   6) Bucle de objetos (i=0..maxSlots-1): slot i<8 -> bit i de itemSlots; slot 8 -> bit1 de
+    //      extraSlots (ya sera 0 en el caso especial de la version 311, ver 4).
+    //   7) Bucle de tintes (i=0..maxSlots-1): slot i<8 -> bit i de dyeSlots; slot 8 -> bit2 de
+    //      extraSlots.
+    //   8) Misc[0]: bit0 de extraSlots.
+    //   9) Si el caso especial de la version 311 aplico: un LoadStack final para el 9º objeto.
+    private static void ReadDisplayDollItems(BinaryReader reader, uint version, List<WldTileEntityItem> items)
+    {
+        byte itemSlots = reader.ReadByte();
+        byte dyeSlots = reader.ReadByte();
+
+        if (version >= 307) reader.ReadByte(); // Pose
+
+        byte extraSlots = 0;
+        if (version >= 308) extraSlots = reader.ReadByte();
+
+        bool v311NinthItemDeferred = false;
+        if (version == 311)
+        {
+            v311NinthItemDeferred = (extraSlots & 0b0000_0010) != 0;
+            extraSlots = (byte)(extraSlots & ~0b0000_0010);
+        }
+
+        int maxSlots = version >= 308 ? 9 : 8;
+
+        for (int i = 0; i < maxSlots; i++)
+        {
+            bool hasItem = i < 8 ? (itemSlots & (1 << i)) != 0 : (extraSlots & 0b0000_0010) != 0;
+            if (hasItem) ReadStackInto(reader, items);
+        }
+        for (int i = 0; i < maxSlots; i++)
+        {
+            bool hasDye = i < 8 ? (dyeSlots & (1 << i)) != 0 : (extraSlots & 0b0000_0100) != 0;
+            if (hasDye) ReadStackInto(reader, items);
+        }
+        if ((extraSlots & 0b0000_0001) != 0) ReadStackInto(reader, items); // Misc[0]
+
+        if (v311NinthItemDeferred) ReadStackInto(reader, items);
     }
 }

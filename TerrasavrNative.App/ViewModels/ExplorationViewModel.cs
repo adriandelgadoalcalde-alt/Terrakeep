@@ -40,6 +40,9 @@ public sealed partial class WorldSearchHitRowViewModel(WorldSearchHit hit) : Obs
         // Fase 2 (ESPEC-buscador-mundo-tedit.md#5.2): la coordenada de un objeto de cofre es la
         // del COFRE, no la del objeto - mismo criterio real que TEdit (SearchContainers).
         WorldSearchKind.ChestItem => "En cofre",
+        // Fase 2b: marco de objeto/perchero/maniqui/bandeja/frasco/ancla - mismo criterio de
+        // coordenada que ChestItem (la del contenedor, no la del objeto).
+        WorldSearchKind.TileEntityItem => "En objeto",
         WorldSearchKind.Sign => "Letrero",
         _ => "",
     };
@@ -305,7 +308,16 @@ public partial class ExplorationViewModel : ObservableObject
         }
         else
         {
-            foreach (var (netId, count) in _presence.ChestItemCounts.OrderByDescending(kv => kv.Value))
+            // Fase 2b: "Por lo que contienen" ya no es solo cofres - une el contenido real de
+            // cofres CON el de tile entities (marco de objeto/perchero/maniqui/bandeja/frasco/
+            // ancla), mismo NetId cuenta las dos fuentes juntas. La busqueda por fila
+            // (BuildSingleRowQuery, ya usa ChestItemIds) casa contra ambas sin cambios, ver el
+            // comentario real de WorldSearch.Run.
+            var combinados = new Dictionary<int, int>(_presence.ChestItemCounts);
+            foreach (var (netId, count) in _presence.TileEntityItemCounts)
+                combinados[netId] = combinados.GetValueOrDefault(netId) + count;
+
+            foreach (var (netId, count) in combinados.OrderByDescending(kv => kv.Value))
                 Inventory.Add(new WorldInventoryRowViewModel(netId, 0, 0, _itemNames.GetName(netId), count, null, Colors.Transparent));
         }
         ApplyInventoryFilter();

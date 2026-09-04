@@ -17,6 +17,8 @@ public class WldReaderRealFileTests(ITestOutputHelper output)
         if (!Directory.Exists(WorldsDir)) yield break;
         yield return [Path.Combine(WorldsDir, "El_Musgo_de_Accidentes.wld")];
         yield return [Path.Combine(WorldsDir, "adriandres.wld")];
+        yield return [Path.Combine(WorldsDir, "roca_negra.wld")];
+        yield return [Path.Combine(WorldsDir, "Afueras_de_Larvas_de_gusano.wld")];
     }
 
     [Theory]
@@ -253,5 +255,54 @@ public class WldReaderRealFileTests(ITestOutputHelper output)
                     if (world.Tiles[x, y].Type == type) contadoAMano++;
             Assert.True(contadoAMano >= 1, $"el tipo {type} que el indice dice presente ({count} veces) no aparece ni una vez en la rejilla real");
         }
+    }
+
+    // Fase 2b (diferida de la Fase 2 original - ver el comentario de WldReader.Read): prueba de
+    // humo real de ReadTileEntities contra un .wld real - si el offset (Pointers[5]) o el
+    // formato polimorfico por tipo estuvieran mal, esto se manifiesta igual que las demas
+    // pruebas de humo de este fichero (EndOfStreamException/coordenadas absurdas), no hace falta
+    // conocer de antemano cuantas tile entities tiene el mundo.
+    [Theory]
+    [MemberData(nameof(RealWldFiles))]
+    public void Read_RealWorld_TileEntitiesSonSanas(string path)
+    {
+        if (!File.Exists(path)) return;
+
+        var world = WldReader.Read(File.ReadAllBytes(path));
+        var porTipo = world.TileEntities.GroupBy(e => e.Kind).ToDictionary(g => g.Key, g => g.Count());
+        output.WriteLine($"{Path.GetFileName(path)}: tile entities={world.TileEntities.Count} ({string.Join(", ", porTipo.Select(kv => $"{kv.Key}={kv.Value}"))})");
+
+        foreach (var entity in world.TileEntities)
+        {
+            Assert.InRange(entity.X, 0, world.Header.TilesWide);
+            Assert.InRange(entity.Y, 0, world.Header.TilesHigh);
+            foreach (var item in entity.Items)
+            {
+                Assert.True(item.NetId > 0, "un objeto real dentro de una tile entity siempre tiene NetId > 0 (ya filtrado en ReadTileEntities)");
+                Assert.True(item.Stack > 0, "un slot vacio (stack<=0) nunca deberia haberse guardado como WldTileEntityItem");
+            }
+        }
+
+        // Confirmacion cruzada real: si el offset estuviera mal, la lectura de NPCs (seccion
+        // siguiente, alcanzada por un puntero DISTINTO e independiente) seguiria saliendo sana -
+        // pero si en cambio ReadTileEntities desincronizara el propio stream compartido de forma
+        // que arrastrara basura a un campo con rango acotado (Kind, un enum de 11 valores reales),
+        // Enum.IsDefined lo pillaria aqui.
+        foreach (var entity in world.TileEntities)
+            Assert.True(Enum.IsDefined(entity.Kind), $"Kind={entity.Kind} no es uno de los 11 tipos reales - señal de lectura desincronizada");
+    }
+
+    // Igual que Read_AlMenosUnMundoReal_TieneCofresDeVerdad: un mundo jugado de verdad casi
+    // siempre tiene al menos un marco de objeto o un dummy de entrenamiento colocado - si esta
+    // prueba diera 0 en TODOS los mundos reales de este PC seria señal de un offset mal puesto,
+    // no de que no exista ninguno. No es un Assert.True incondicional (un mundo recien creado sin
+    // tocar podria legitimamente no tener ninguno) - solo avisa por consola si pasa.
+    [Fact]
+    public void Read_AlgunMundoReal_TieneTileEntitiesDeVerdad()
+    {
+        var encontrados = RealWldFiles().Select(a => (string)a[0]).Where(File.Exists)
+            .Select(p => WldReader.Read(File.ReadAllBytes(p)).TileEntities.Count).ToList();
+        if (encontrados.Count == 0) return;
+        output.WriteLine($"tile entities por mundo real: [{string.Join(",", encontrados)}]");
     }
 }

@@ -34,12 +34,18 @@ public sealed class WorldPresenceIndex
     // lo que permite listar "Cofre de oro: 48" sin volver a recorrer nada.
     public required IReadOnlyDictionary<(int Type, short U, short V), int> ChestKindCounts { get; init; }
     public required int SignCount { get; init; }
+    // Fase 2b: NetId -> numero de veces que ese objeto aparece expuesto/colgado en alguna tile
+    // entity real del mundo (marco de objeto, perchero, maniqui, bandeja, frasco, ancla) - vive
+    // aparte de ChestItemCounts (un marco de objeto no es un cofre) pero ambas se pueden unir en
+    // la App para un unico "buscar este objeto en cualquier contenedor del mundo".
+    public required IReadOnlyDictionary<int, int> TileEntityItemCounts { get; init; }
 
     public bool HasTile(int type) => TileCounts.ContainsKey(type);
     public bool HasWall(int id) => WallCounts.ContainsKey(id);
     public bool HasLiquid(byte code) => LiquidCounts.ContainsKey(code);
     public bool HasNpc(int id) => NpcCounts.ContainsKey(id);
     public bool HasChestItem(int netId) => ChestItemCounts.ContainsKey(netId);
+    public bool HasTileEntityItem(int netId) => TileEntityItemCounts.ContainsKey(netId);
 
     // Una sola pasada x->y (mismo orden que el RLE del .wld, ver WldReader/WorldSearch.Run) mas
     // tres bucles cortos sobre Npcs/Chests. Pensado para correr dentro del mismo Task.Run que ya
@@ -98,6 +104,11 @@ public sealed class WorldPresenceIndex
             }
         }
 
+        var tileEntityItemCounts = new Dictionary<int, int>();
+        foreach (var entity in world.TileEntities)
+            foreach (var item in entity.Items)
+                tileEntityItemCounts[item.NetId] = tileEntityItemCounts.GetValueOrDefault(item.NetId) + 1;
+
         return new WorldPresenceIndex
         {
             TileCounts = tileCounts,
@@ -108,6 +119,7 @@ public sealed class WorldPresenceIndex
             ChestItemCounts = chestItemCounts,
             ChestKindCounts = chestKindCounts,
             SignCount = world.Signs.Count,
+            TileEntityItemCounts = tileEntityItemCounts,
         };
     }
 }

@@ -26,6 +26,7 @@ public class OreVeinFinderTests
         Npcs = [],
         Chests = [],
         Signs = [],
+        TileEntities = [],
         ShimmeredNpcTypes = new HashSet<int>(),
     };
 

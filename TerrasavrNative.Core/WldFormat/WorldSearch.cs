@@ -27,7 +27,10 @@ public readonly record struct WorldSearchHit(int X, int Y, string Name, WorldSea
 // ESPEC-ui-exploracion.md#14.2) - Fase 3/Minerales (advisor Opus): las vetas encontradas por
 // OreVeinFinder se vuelcan como WorldSearchHit normales para heredar gratis la navegacion
 // circular/distancia al spawn/marcador que ya tiene cualquier resultado.
-public enum WorldSearchKind { Tile, Wall, Liquid, Npc, ChestItem, Sign, OreVein }
+// TileEntityItem va justo despues de ChestItem a proposito (mismo criterio de origen: un
+// objeto real encontrado DENTRO de un contenedor del mundo, solo que este no es un cofre -
+// marco de objeto/perchero/maniqui/bandeja/frasco/ancla, Fase 2b).
+public enum WorldSearchKind { Tile, Wall, Liquid, Npc, ChestItem, TileEntityItem, Sign, OreVein }
 
 public sealed class WorldSearchQuery
 {
@@ -37,7 +40,11 @@ public sealed class WorldSearchQuery
     public IReadOnlySet<int> NpcIds { get; init; } = new HashSet<int>();
     // Fase 2: NetId real del objeto (mismo id que VanillaItemCatalog/ItemID.cs - los NetId de
     // Calamity que un .wld real pueda guardar no se conocen de antemano, tModLoader los asigna
-    // en tiempo de carga del mod; ver el comentario de ItemNames en Run).
+    // en tiempo de carga del mod; ver el comentario de ItemNames en Run). Fase 2b: el mismo
+    // conjunto de ids casa TANTO contra el contenido real de los cofres COMO contra el de las
+    // tile entities (marcos/percheros/maniquies/...) - un unico "busca este objeto en cualquier
+    // contenedor del mundo", cada coincidencia sale con el Kind real que le corresponde
+    // (ChestItem o TileEntityItem) para poder distinguirlas en la lista de resultados.
     public IReadOnlySet<int> ChestItemIds { get; init; } = new HashSet<int>();
     // Fase 3 (ESPEC-ui-exploracion.md#14.2): variante EXACTA de un tile enmarcado (Type,U,V) -
     // permite buscar "Cofre de oro" (21,36,0) y no "cualquier cofre" (TileTypes={21}). Conjunto
@@ -137,6 +144,21 @@ public static class WorldSearch
                 foreach (var item in chest.Items)
                     if (query.ChestItemIds.Contains(item.NetId))
                         Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(chest.X, chest.Y, itemNames.GetName(item.NetId), WorldSearchKind.ChestItem));
+            }
+        }
+
+        // Fase 2b: mismo conjunto de ids que arriba, pero contra el contenido real de las tile
+        // entities (marco de objeto/perchero/maniqui/bandeja/frasco/ancla) - la coordenada del
+        // resultado es la de la propia tile entity (su esquina real en el .wld), mismo criterio
+        // que los cofres.
+        if (query.ChestItemIds.Count > 0)
+        {
+            foreach (var entity in world.TileEntities)
+            {
+                ct.ThrowIfCancellationRequested();
+                foreach (var item in entity.Items)
+                    if (query.ChestItemIds.Contains(item.NetId))
+                        Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(entity.X, entity.Y, itemNames.GetName(item.NetId), WorldSearchKind.TileEntityItem));
             }
         }
 

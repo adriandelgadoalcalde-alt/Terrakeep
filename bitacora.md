@@ -7895,3 +7895,73 @@ diseño, implementacion completa). Alcance deliberado, documentado, no un descui
 de dos niveles por variante de UV en Objetos (Cofres/Por tipo ya cubre el caso real donde mas
 importa distinguir variantes), sin tile entities (formato polimorfico no verificado a fondo por
 ningun advisor todavia).
+
+## Buscador de mundo, Fase 2b: tile entities (maniquies/marcos/percheros/bandejas/frascos/anclas) (4-sep-2026)
+
+Ultimo hueco real y bien delimitado que quedaba explicito en los tres informes del advisor
+(`ESPEC-buscador-mundo-tedit.md` lo dejo fuera de su Fase 2 original, `ESPEC-ui-exploracion.md`
+lo nombraba directamente: "formato polimorfico no verificado a fondo por ningun advisor
+todavia"). El propio advisor nunca llego a leer `TileEntity.Load` campo a campo - esta vez si,
+misma disciplina de siempre en este proyecto para el formato `.wld` (descargar el .cs REAL de
+TEdit vía `curl`, leerlo linea a linea, nunca transcribir de memoria ni del espec):
+
+- Descargado `TileEntity.cs` (743 lineas, `raw.githubusercontent.com/TEdit/Terraria-Map-Editor/
+  main/src/TEdit.Terraria/TileEntity.cs`) y `TileEntityType.cs` (el enum de los 11 tipos reales,
+  valores byte 0-10). `Load(BinaryReader, uint version)` en la linea 377: `Type`/`Id`/`PosX`/
+  `PosY` comunes, luego un switch polimorfico por `Type` - la mayoria delega en `LoadStack`
+  (linea 428, un objeto simple: NetId Int16 + Prefix byte + StackSize Int16), y dos tipos tienen
+  formato propio: `LoadHatRack` (linea 435, 1 byte de presencia de 4 bits para 2 slots de objeto
+  + 2 de tinte) y `LoadDisplayDoll` (linea 502, el mas largo con diferencia: hasta 9 slots de
+  objeto + 9 de tinte + 1 misceláneo segun la version del mundo, MAS un parche real de la
+  version 311 - un bug del propio juego donde el 9º slot de objeto se lee FUERA de su sitio
+  natural, al final del registro entero, en vez de dentro del bucle normal).
+- Puntero real de la seccion: confirmado contra `World.FileV2.cs` (lineas 1452-1474 del LOAD
+  real, no del SAVE que usa una numeracion de indices distinta) que `Pointers[5]` es donde
+  empieza Tile Entities (justo despues de NPCs=`Pointers[4]`, mismo criterio ya usado por
+  Tiles/Chests/Signs/Npcs). Gating real: version<116 la seccion ni existe, 116<=version<122 usa
+  un formato LEGADO "Dummies" (pares Int16,Int16 sin contenido de objeto real) que se salta
+  entero sin decodificar (no aporta nada buscable aunque se decodificara).
+- Nuevo `WldTileEntity.cs` (Core): `WldTileEntityKind` (enum byte, mismos 11 valores reales),
+  `WldTileEntityItem` (NetId/Stack/Prefix, igual criterio que `WldChestItem`), `WldTileEntity`
+  (Kind/X/Y/Items - todos los slots con contenido real aplanados en una unica lista, igual que
+  `WldChest.Items` no distingue por slot). `WldReader.ReadTileEntities` + 3 sub-lectores
+  (`ReadStackInto`/`ReadHatRackItems`/`ReadDisplayDollItems`) transcritos 1:1 del `.cs` real,
+  incluido el parche de la version 311 documentado campo a campo en el comentario del codigo.
+  CritterAnchor/KiteAnchor (una criatura/cometa atada, sin stack/prefijo real en el archivo) se
+  guardan como un objeto sintetico Stack=1/Prefix=0 para poder buscarlos igual que cualquier
+  otro. Tipo desconocido (version del juego mas nueva que este catalogo) corta la lectura de
+  esta seccion sin arriesgar nada (las demas secciones ya se leen por puntero independiente).
+- `WorldPresenceIndex` gana `TileEntityItemCounts`/`HasTileEntityItem` (mismo patron que
+  `ChestItemCounts`). `WorldSearch` gana el kind `WorldSearchKind.TileEntityItem` - el MISMO
+  conjunto `ChestItemIds` de la query ahora casa tanto contra cofres como contra tile entities
+  (un unico "busca este objeto en cualquier contenedor del mundo"), cada coincidencia sale
+  etiquetada con su Kind real. En la UI, "Cofres > Por lo que contienen" ahora UNE
+  `ChestItemCounts` + `TileEntityItemCounts` por NetId antes de listar - sin pildora ni XAML
+  nuevos, reutiliza el mismo `InventoryRowTemplate`/flujo de busqueda ya verificado.
+
+**Verificacion real**: `dotnet build`/`dotnet test` en verde, **646/646** (321+16 nuevos de Core,
+307 de ViewModels - los 16 nuevos en `WldTileEntityReaderTests.cs` ejercitan cada rama exacta del
+switch con un `.wld` SINTETICO construido a mano y leido por el `WldReader.Read` PUBLICO, sin
+`InternalsVisibleTo` - mismo criterio ya establecido en el proyecto, ver el comentario de
+`App.xaml.cs.ShouldForceSoftwareRendering`: incluye el caso especial de la version 311 con
+valores reconocibles distintos en cada campo para que un desorden de lectura de verdad produzca
+un NetId equivocado en vez de pasar por casualidad, y el mapeo exacto de bits de HatRack).
+
+Contra los 4 `.wld` reales de esta maquina (ampliado `WldReaderRealFileTests.RealWldFiles()` a
+los 4, antes solo 2 - mas cobertura real para TODAS las pruebas de ese fichero, no solo esta):
+los 4 dan `TileEntities.Count=0`. Aplicada la leccion de "verificar aislando la variable" antes
+de dar esto por bueno (un 0 en TODOS podria ser un offset mal puesto, no falta de datos reales):
+diagnostico aparte con un proyecto de consola temporal referenciando `TerrasavrNative.Core`
+confirmo que `Pointers[6]-Pointers[5]` (el tamaño REAL de la seccion, con el puntero de Pressure
+Plates real de cada archivo) es exactamente 4 bytes en los 4 mundos - solo posible si el offset
+calculado es exacto (un desfase de un solo byte haria que esa resta "por casualidad" diera 4 en
+los 4 mundos independientes, astronomicamente improbable). Confirmado: es un hecho real de estos
+4 mundos concretos (ninguno tiene un marco de objeto/maniqui/perchero colocado todavia), no un
+bug de lectura. Arnes de UI Automation completo relanzado sin cambios (no se toco ningun XAML/
+converter, solo la union de dos diccionarios en el ViewModel) - **DONE**, mismos resultados
+exactos que antes en `CATEGORIAS-COFRES` y el resto de bloques, sin regresion.
+
+Con esto se cierran los tres huecos explicitamente nombrados como pendientes en los informes del
+advisor. Quedan sin tocar, a proposito y ya documentados como decisiones deliberadas (no huecos):
+el arbol de dos niveles por variante de UV en Objetos, y el modo "avanzado" tipo TEdit con
+pestañas (redundante con las 4 categorias reales ya implementadas).

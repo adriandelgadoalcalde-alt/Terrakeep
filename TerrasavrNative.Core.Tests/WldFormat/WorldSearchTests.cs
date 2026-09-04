@@ -13,7 +13,8 @@ namespace TerrasavrNative.Core.Tests.WldFormat;
 public class WorldSearchTests
 {
     private static WldWorld MakeWorld(WldTile[,] tiles, IReadOnlyList<WldNpc>? npcs = null,
-        IReadOnlyList<WldChest>? chests = null, IReadOnlyList<WldSign>? signs = null) => new()
+        IReadOnlyList<WldChest>? chests = null, IReadOnlyList<WldSign>? signs = null,
+        IReadOnlyList<WldTileEntity>? tileEntities = null) => new()
     {
         Header = new WldHeader
         {
@@ -33,6 +34,7 @@ public class WorldSearchTests
         Npcs = npcs ?? [],
         Chests = chests ?? [],
         Signs = signs ?? [],
+        TileEntities = tileEntities ?? [],
         ShimmeredNpcTypes = new HashSet<int>(),
     };
 

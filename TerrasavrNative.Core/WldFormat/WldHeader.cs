@@ -31,6 +31,12 @@ public sealed class WldHeader
     public int ChestsSectionOffset => Pointers[2];
     public int SignsSectionOffset => Pointers[3];
     public int NpcsSectionOffset => Pointers[4];
+    // Confirmado contra World.FileV2.cs de TEdit (LoadWorld real, lineas 1452-1474): tras NPCs
+    // (fin de seccion = sectionPointers[5]) viene Tile Entities, mismo criterio "Pointers[N] es
+    // donde EMPIEZA la seccion N" ya usado arriba. -1 si el mundo es tan antiguo que ni siquiera
+    // tiene este puntero (pointerCount<=5) - version<116, nunca visto en un mundo real de esta
+    // maquina pero mejor no indexar fuera de rango si aparece uno.
+    public int? TileEntitiesSectionOffset => Pointers.Length > 5 ? Pointers[5] : null;
 
     // Zona por profundidad (fila de tile, no pixel) - mismo criterio que el visor JS real
     // (zoneFor en overrides.js): Espacio por encima de y=80, Infierno en las ultimas 192 filas,
