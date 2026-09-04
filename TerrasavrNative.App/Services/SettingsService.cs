@@ -15,6 +15,12 @@ public sealed class TerrakeepSettings
     public List<string> ExtraCharacterFolders { get; set; } = [];
     public List<string> ExtraWorldFolders { get; set; } = [];
     public int BackupHistoryCap { get; set; } = 20;
+    // F-10 (auditoria de Opus vs TEdit, E-10): ancho real de la barra lateral de Exploracion,
+    // recordado entre sesiones (mismo criterio que el resto de esta clase). 0 = plegada.
+    public double ExplorationSidebarWidth { get; set; } = 320;
+    // F-8 (auditoria de Opus vs TEdit, E-05): "en una ventana a MinWidth=1080 un minimapa fijo
+    // se come sitio real" - plegable, recordado entre sesiones.
+    public bool IsMinimapVisible { get; set; } = true;
 }
 
 public static class SettingsService

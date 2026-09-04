@@ -23,6 +23,12 @@ public sealed class WldHeader
     public required int SpawnY { get; init; }
     public required double GroundLevel { get; init; }
     public required double RockLevel { get; init; }
+    // F-14 (auditoria de Opus vs TEdit, E-16): "semilla, modo de juego... estan a un puñado de
+    // Read* de distancia, y hoy Terrakeep no enseña ninguno" - coste 0, ya se leian y se
+    // descartaban (ver el comentario real de WldReader.cs sobre la codificacion exacta por
+    // version). GameMode: 0=Clasico, 1=Experto, 2=Maestro, 3=Viaje (segun la version real).
+    public required string Seed { get; init; }
+    public required int GameMode { get; init; }
     // F-7 (auditoria de Opus vs TEdit, E-06): "DungeonX/Y ni siquiera se leen... en el formato
     // real la mazmorra esta solo cinco campos mas alla de RockLevel". Confirmado leyendo el
     // lector real de TEdit (World.FileV2.cs, commit f592261): Time(double)/DayTime(bool)/

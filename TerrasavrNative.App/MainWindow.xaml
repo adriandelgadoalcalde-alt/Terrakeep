@@ -3531,7 +3531,17 @@
                              las 5 pildoras de categoria nunca envolvia de verdad (pedia 408px en una
                              sola fila) y WPF recortaba la diferencia sin reorganizar nada - "Objetos"
                              perdia 60 de 97px, A CUALQUIER tamaño de ventana, incluido 4K. -->
-                        <ColumnDefinition Width="Auto" MinWidth="260" />
+                        <!-- F-10 (auditoria de Opus vs TEdit, E-10): sustituye por completo el
+                             mecanismo Auto+MaxWidth de arriba (R-02/H-02) por un GridSplitter real
+                             - la columna ahora es un GridLength LITERAL (Settings.
+                             ExplorationSidebarWidth, TwoWay), que se mide con un ancho REAL desde
+                             el principio, asi que el bug de "Auto mide con ancho infinito" queda
+                             eliminado de raiz (no solo evitado). MinWidth=0 para que plegar a 0
+                             sea alcanzable; el suelo real de 260 al expandir lo aplica
+                             OnExplorationSidebarWidthChanged en el propio ViewModel. -->
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="{Binding Settings.ExplorationSidebarWidth, Mode=TwoWay, Converter={x:Static conv:DoubleToGridLengthConverter.Instance}}"
+                                          MinWidth="0" MaxWidth="520" />
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,0">
@@ -3598,6 +3608,7 @@
                                               PreviewMouseMove="OnWorldMapMouseMove"
                                               PreviewMouseLeftButtonUp="OnWorldMapMouseUp"
                                               MouseLeave="OnWorldMapMouseLeave"
+                                              ScrollChanged="OnWorldMapScrollChanged"
                                               Cursor="Hand">
                                     <Grid HorizontalAlignment="Left" VerticalAlignment="Top">
                                         <Grid.LayoutTransform>
@@ -3866,6 +3877,39 @@
                             <TextBlock Text="Leyendo y pintando el mapa..." Style="{StaticResource CaptionText}" Margin="0,10,0,0" HorizontalAlignment="Center" />
                         </StackPanel>
 
+                        <!-- F-8 (auditoria de Opus vs TEdit, E-05): "la unica referencia espacial
+                             cuando estas ampliado son las dos barras del ScrollViewer - no hay
+                             ninguna vista en miniatura". Reutiliza el bitmap del mundo YA
+                             congelado (WorldRenderer.cs) - un segundo Image con el mismo Source,
+                             sin renderizar nada de nuevo. El rectangulo de viewport y el clic
+                             para navegar viven en el code-behind (UpdateMinimapViewport/
+                             OnMinimapClick, MainWindow.xaml.cs) - necesitan la geometria real
+                             del ScrollViewer, que la ViewModel no conoce. Plegable (persistido,
+                             Settings.IsMinimapVisible): en MinWidth=1080 un minimapa fijo se come
+                             sitio real. -->
+                        <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10"
+                                Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource BorderBrush0}"
+                                BorderThickness="1" CornerRadius="6" Padding="3" Effect="{StaticResource CardShadow}"
+                                Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <DockPanel LastChildFill="False" Margin="2,0,2,2">
+                                    <TextBlock DockPanel.Dock="Left" Text="Mapa" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                    <Button DockPanel.Dock="Right" Content="&#8964;" Tag="Ghost" Padding="4,0" FontSize="10"
+                                            Click="OnToggleMinimapClick"
+                                            ToolTip="Plegar/desplegar el minimapa" />
+                                </DockPanel>
+                                <Grid Visibility="{Binding Settings.IsMinimapVisible, Converter={StaticResource BoolToVis}}">
+                                    <Image x:Name="MinimapImage" Source="{Binding Exploration.WorldImage}" Stretch="Uniform"
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                           Width="220" Height="63" MouseLeftButtonDown="OnMinimapClick" Cursor="Hand"
+                                           SizeChanged="OnMinimapSizeChanged" />
+                                    <Canvas IsHitTestVisible="False">
+                                        <Rectangle x:Name="MinimapViewportRect" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Fill="Transparent" />
+                                    </Canvas>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
                         <!-- H4-08 (cuarta auditoria de Opus, Fable): "la version buena - un
                              lanzador de mundos calcado del de personajes de Inicio" - antes solo
                              "Sin mundo cargado." en el tamaño de letra mas pequeño de la app, en
@@ -3898,19 +3942,95 @@
                         </Grid>
                     </Border>
 
-                    <DockPanel Grid.Column="1" MaxWidth="{Binding ExplorationSidebarMaxWidth}">
+                    <!-- F-10: 5px de agarre real pero 1px de linea visible en reposo, 3px de
+                         acento al pasar el raton o arrastrar - mismo lenguaje real que TEdit
+                         (MainWindow.xaml:451-477, "VS Code style: subtle until hovered/dragged"),
+                         reimplementado con los pinceles del propio tema (nada nuevo). -->
+                    <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                                  Background="Transparent" ShowsPreview="False">
+                        <GridSplitter.Style>
+                            <Style TargetType="GridSplitter">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Settings.ExplorationSidebarWidth}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </GridSplitter.Style>
+                        <GridSplitter.Template>
+                            <ControlTemplate TargetType="GridSplitter">
+                                <Border Background="Transparent">
+                                    <Border x:Name="Linea" Width="1" HorizontalAlignment="Center" Background="{StaticResource BorderBrush0}" />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Linea" Property="Width" Value="3" />
+                                        <Setter TargetName="Linea" Property="Background" Value="{StaticResource AccentBrush}" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </GridSplitter.Template>
+                    </GridSplitter>
+
+                    <DockPanel Grid.Column="2">
                         <!-- Punto 4 (advisor Opus, "una nueva barra lateral... que ya no solo salgan
                              los npc, eso se traslada dentro de una rama madre donde salgan varios
                              botones" - ver ESPEC-ui-exploracion.md#9). Rediseño completo: la lista de
                              NPCs deja de vivir suelta, pasa a ser una categoria mas (D3: fila de
                              pildoras en vez de TabControl/Expander - TEdit se permite 4 pestañas
                              porque diseña este panel a 400px, aqui son 260-380). -->
-                        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                            <TextBlock Text="Buscar en el mundo" Style="{StaticResource SectionText}" />
-                            <TextBlock Text="Solo lo que existe en este mundo" Style="{StaticResource CaptionText}"
-                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"
-                                       Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
-                        </StackPanel>
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Buscar en el mundo" Style="{StaticResource SectionText}" />
+                                <TextBlock Text="Solo lo que existe en este mundo" Style="{StaticResource CaptionText}"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"
+                                           Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
+                            </StackPanel>
+                            <!-- F-10: plegado real - alterna entre el ancho guardado y 0 (logica
+                                 en el code-behind, OnToggleExplorationSidebarClick, para poder
+                                 recordar el ancho de antes de plegar sin perderlo). -->
+                            <Button Grid.Column="1" Content="&#8250;" Tag="Ghost" Padding="6,2" VerticalAlignment="Top"
+                                    Click="OnToggleExplorationSidebarClick"
+                                    ToolTip="Plegar la barra lateral (deja el mapa a pantalla completa)" />
+                        </Grid>
+
+                        <!-- F-14 (auditoria de Opus vs TEdit, E-16/E-17): "Este mundo" - Expander
+                             bajo la cabecera (no una 6ª pildora, para no tocar el WrapPanel de 5
+                             que R-02 ya dejo bien medido). Empieza colapsado, mismo criterio que
+                             "NPCs que faltan" (X-f). Todo el contenido ya estaba calculado
+                             (WldHeader/WorldPresenceIndex) - esto es solo un sitio real donde
+                             verlo de un vistazo, cero recorridos nuevos. -->
+                        <Expander DockPanel.Dock="Top" Header="Este mundo" Foreground="{StaticResource TextPrimaryBrush}"
+                                  Margin="0,0,0,8" IsExpanded="False"
+                                  Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
+                            <StackPanel Margin="0,6,0,0">
+                                <TextBlock Style="{StaticResource CaptionText}">
+                                    <Run Text="Semilla: " /><Run Text="{Binding Exploration.WorldSeedText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </TextBlock>
+                                <TextBlock Style="{StaticResource CaptionText}" Margin="0,2,0,0">
+                                    <Run Text="Modo: " /><Run Text="{Binding Exploration.WorldGameModeText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                    <Run Text=" · Version " /><Run Text="{Binding Exploration.WorldVersionText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </TextBlock>
+                                <Border Height="1" Background="{StaticResource BorderBrush0}" Margin="0,8" />
+                                <TextBlock Style="{StaticResource CaptionText}">
+                                    <Run Text="Aire: " /><Run Text="{Binding Exploration.WorldAirPercentText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                    <Run Text=" · Tipos de tile: " /><Run Text="{Binding Exploration.ObjectsPillCount, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                    <Run Text=" · Paredes: " /><Run Text="{Binding Exploration.WallTypesPresentCount, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </TextBlock>
+                                <TextBlock Style="{StaticResource CaptionText}" Margin="0,2,0,0">
+                                    <Run Text="Cofres: " /><Run Text="{Binding Exploration.ChestsPillCount, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                    <Run Text=" · Letreros: " /><Run Text="{Binding Exploration.SignCount, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                    <Run Text=" · NPCs: " /><Run Text="{Binding Exploration.Npcs.Count, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </TextBlock>
+                                <Button Content="Guardar informe (.txt)..." Tag="Ghost" Margin="0,8,0,0" HorizontalAlignment="Left" Padding="8,3"
+                                        Click="OnSaveWorldReportClick" />
+                            </StackPanel>
+                        </Expander>
 
                         <!-- 9.1: selector de categoria - RadioButton real (GroupName real de WPF),
                              IsChecked de doble via con EnumEquals (el proyecto no tiene un

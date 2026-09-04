@@ -2655,6 +2655,78 @@ internal static class Program
                     if (!vm.IsExplorationTabActive || vm.ShowVitalsStrip || tituloMundoEnBarra == null)
                         Console.WriteLine("FALLO: F-15 - la barra superior no muestra el titulo real del mundo en la pestaña Exploracion");
 
+                    // F-10 (auditoria de Opus vs TEdit, E-10): plegar/desplegar la barra lateral
+                    // debe cambiar el ancho REAL de la columna (no solo la propiedad de la
+                    // ViewModel) - se localiza el DockPanel real subiendo desde un TextBlock
+                    // conocido de dentro de esa columna.
+                    var buscarEnElMundo = Descendientes<TextBlock>(window).FirstOrDefault(t => t.Text == "Buscar en el mundo");
+                    DependencyObject? ancestroSidebar = buscarEnElMundo;
+                    System.Windows.Controls.DockPanel? sidebarDockPanel = null;
+                    while (ancestroSidebar != null)
+                    {
+                        ancestroSidebar = System.Windows.Media.VisualTreeHelper.GetParent(ancestroSidebar);
+                        if (ancestroSidebar is System.Windows.Controls.DockPanel dpSidebar) { sidebarDockPanel = dpSidebar; break; }
+                    }
+                    if (sidebarDockPanel != null)
+                    {
+                        double anchoExpandido = sidebarDockPanel.ActualWidth;
+                        vm.Settings.ExplorationSidebarWidth = 0;
+                        DoEvents(); DoEvents();
+                        double anchoPlegado = sidebarDockPanel.ActualWidth;
+                        vm.Settings.ExplorationSidebarWidth = 320;
+                        DoEvents(); DoEvents();
+                        double anchoRestaurado = sidebarDockPanel.ActualWidth;
+                        Console.WriteLine($"F-10: ancho expandido={anchoExpandido:0}px, plegado={anchoPlegado:0}px (esperado ~0), restaurado={anchoRestaurado:0}px (esperado >200)");
+                        if (anchoPlegado > 2 || anchoRestaurado < 200) Console.WriteLine("FALLO: F-10 - el plegado/despliegue de la barra lateral no cambia el ancho real de la columna");
+                    }
+                    else Console.WriteLine("F-10: no se encontro la barra lateral en el arbol visual - omitido");
+
+                    // F-8 (auditoria de Opus vs TEdit, E-05): el minimapa real muestra el bitmap
+                    // del mundo YA congelado, y su rectangulo de viewport esta visible.
+                    var minimapImg = Descendientes<System.Windows.Controls.Image>(window).FirstOrDefault(i => i.Name == "MinimapImage");
+                    Console.WriteLine($"F-8: MinimapImage encontrado={minimapImg != null}, con el bitmap real del mundo={minimapImg?.Source != null} (esperado True)");
+                    if (minimapImg == null || minimapImg.Source == null) Console.WriteLine("FALLO: F-8 - el minimapa no muestra el bitmap real del mundo");
+                    var minimapRect = Descendientes<System.Windows.Shapes.Rectangle>(window).FirstOrDefault(r => r.Name == "MinimapViewportRect");
+                    Console.WriteLine($"F-8: MinimapViewportRect encontrado={minimapRect != null}, visible={minimapRect?.IsVisible} (esperado True)");
+                    if (minimapRect == null || !minimapRect.IsVisible) Console.WriteLine("FALLO: F-8 - el rectangulo de viewport del minimapa no aparece");
+
+                    // F-14 (auditoria de Opus vs TEdit, E-16/E-17): el informe generado debe
+                    // contener la semilla REAL del mundo (no un valor inventado) y el censo.
+                    string informeMundo = vm.Exploration.BuildWorldReportText();
+                    string semillaReal = vm.Exploration.WorldSeedText;
+                    bool informeValido = informeMundo.Contains(semillaReal) && informeMundo.Contains("Aire:") && informeMundo.Length > 50;
+                    Console.WriteLine($"F-14: informe generado ({informeMundo.Length} caracteres), contiene la semilla real ('{semillaReal}')={informeMundo.Contains(semillaReal)}, contiene 'Aire:'={informeMundo.Contains("Aire:")}");
+                    if (!informeValido) Console.WriteLine("FALLO: F-14 - el informe del mundo no contiene los datos reales esperados");
+
+                    // F-11 (auditoria de Opus vs TEdit, E-11): guardar la vista, cambiar zoom/
+                    // scroll, RECARGAR el mismo mundo de disco y confirmar que la vista guardada
+                    // se restaura de verdad (no solo que el fichero se escriba).
+                    var mapScroll = Descendientes<System.Windows.Controls.ScrollViewer>(window).FirstOrDefault(sv => sv.Name == "WorldMapScroll");
+                    if (mapScroll != null)
+                    {
+                        vm.Exploration.Zoom = 2.5;
+                        DoEvents();
+                        mapScroll.UpdateLayout();
+                        mapScroll.ScrollToHorizontalOffset(500);
+                        mapScroll.ScrollToVerticalOffset(300);
+                        DoEvents(); DoEvents();
+                        vm.Exploration.SaveCurrentViewState(mapScroll.HorizontalOffset, mapScroll.VerticalOffset);
+                        double zoomGuardado = vm.Exploration.Zoom;
+                        double offsetHGuardado = mapScroll.HorizontalOffset;
+                        double offsetVGuardado = mapScroll.VerticalOffset;
+
+                        var taskRecarga = vm.Exploration.LoadFromPathAsync(worldPath);
+                        while (!taskRecarga.IsCompleted) DoEvents();
+                        DoEvents();
+
+                        bool zoomRestaurado = Math.Abs(vm.Exploration.Zoom - zoomGuardado) < 0.001;
+                        bool tienePendiente = vm.Exploration.TryConsumePendingViewRestore(out double offsetHRestaurado, out double offsetVRestaurado);
+                        Console.WriteLine($"F-11: zoom guardado={zoomGuardado}, tras recargar={vm.Exploration.Zoom} (esperado igual); vista pendiente encontrada={tienePendiente}, offset=({offsetHRestaurado:0},{offsetVRestaurado:0}) (esperado ~({offsetHGuardado:0},{offsetVGuardado:0}))");
+                        if (!zoomRestaurado || !tienePendiente || Math.Abs(offsetHRestaurado - offsetHGuardado) > 1 || Math.Abs(offsetVRestaurado - offsetVGuardado) > 1)
+                            Console.WriteLine("FALLO: F-11 - la vista guardada no se restauro correctamente al recargar el mismo mundo");
+                    }
+                    else Console.WriteLine("F-11: no se encontro WorldMapScroll en el arbol visual - omitido");
+
                     // Objetos: inventario real de tiles (vista por defecto).
                     vm.Exploration.SelectedCategory = WorldSearchCategory.Objects;
                     DoEvents();

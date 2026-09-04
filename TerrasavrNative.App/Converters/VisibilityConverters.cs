@@ -166,6 +166,20 @@ public sealed class FalseToTagConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+// F-10 (auditoria de Opus vs TEdit, E-10): ColumnDefinition.Width es GridLength, no double -
+// bidireccional de verdad (ConvertBack real) para que arrastrar el GridSplitter escriba el
+// ancho nuevo de vuelta en la propiedad persistida (Settings.ExplorationSidebarWidth).
+public sealed class DoubleToGridLengthConverter : IValueConverter
+{
+    public static readonly DoubleToGridLengthConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        new GridLength(value is double d ? d : 0);
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is GridLength g ? g.Value : 0.0;
+}
+
 public sealed class InverseValueConverter : IValueConverter
 {
     // Bug real encontrado al verificar (no en teoria): un StaticResource usado como

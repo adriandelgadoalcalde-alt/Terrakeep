@@ -20,6 +20,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     public ObservableCollection<string> ExtraWorldFolders { get; } = [];
 
     [ObservableProperty] private int _backupHistoryCap = 20;
+    // F-10 (auditoria de Opus vs TEdit, E-10): 0 = plegada (boton "›" de MainWindow.xaml).
+    [ObservableProperty] private double _explorationSidebarWidth = 320;
+    // F-8 (auditoria de Opus vs TEdit, E-05): plegado del minimapa.
+    [ObservableProperty] private bool _isMinimapVisible = true;
 
     // Arranca en modo "solo memoria" - Persist() (mas abajo) no toca disco hasta que
     // LoadFromDisk() lo activa explicitamente. Un test que construye "new MainViewModel()"
@@ -46,6 +50,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         ExtraWorldFolders.Clear();
         foreach (string folder in _settings.ExtraWorldFolders) ExtraWorldFolders.Add(folder);
         BackupHistoryCap = _settings.BackupHistoryCap; // _suppressPersist sigue en true aqui - no reescribe el fichero que se acaba de leer de el
+        ExplorationSidebarWidth = _settings.ExplorationSidebarWidth;
+        IsMinimapVisible = _settings.IsMinimapVisible;
         ApplyToServices();
         _suppressPersist = false; // a partir de aqui, cualquier cambio real del usuario SI se persiste
     }
@@ -67,8 +73,22 @@ public sealed partial class SettingsViewModel : ObservableObject
         _settings.ExtraCharacterFolders = ExtraCharacterFolders.ToList();
         _settings.ExtraWorldFolders = ExtraWorldFolders.ToList();
         _settings.BackupHistoryCap = BackupHistoryCap;
+        _settings.ExplorationSidebarWidth = ExplorationSidebarWidth;
+        _settings.IsMinimapVisible = IsMinimapVisible;
         SettingsService.Save(_settings);
         ApplyToServices();
+    }
+
+    partial void OnIsMinimapVisibleChanged(bool value) => Persist();
+
+    // F-10: 0 (plegada) es un valor real y valido - cualquier otro por debajo de 260 (arrastre
+    // real del GridSplitter, MinWidth=0 en el XAML para que 0 sea alcanzable) se recorta al
+    // minimo real en vez de quedarse en una zona intermedia ambigua.
+    partial void OnExplorationSidebarWidthChanged(double value)
+    {
+        if (value != 0 && value < 260) { ExplorationSidebarWidth = 260; return; }
+        if (value > 520) { ExplorationSidebarWidth = 520; return; }
+        Persist();
     }
 
     // El dialogo real de "elegir carpeta" vive en la View (MainWindow.xaml.cs, mismo criterio

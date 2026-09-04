@@ -1,5 +1,6 @@
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -43,6 +44,14 @@ public partial class MainWindow : Window
         // en MainViewModel.cs (por que NO es una llamada directa dentro de LoadFromPath).
         _viewModel.CharacterLoaded += _viewModel.SaveSession;
         _viewModel.Exploration.NavigateToTileRequested += OnNavigateToTile;
+        // F-8 (auditoria de Opus vs TEdit, E-05): el rectangulo de viewport del minimapa
+        // necesita recalcularse cada vez que el mapa se desplaza (ScrollChanged) O cambia de
+        // zoom/mundo (Zoom/WorldImage - no pasan por ScrollChanged por si solos).
+        _viewModel.Exploration.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(ExplorationViewModel.Zoom) or nameof(ExplorationViewModel.WorldImage))
+                UpdateMinimapViewport();
+        };
         // Auditoria de Opus, T-B (segunda auditoria, Fable): mismo dialogo real de
         // "cambios sin guardar" que OnWindowClosing, ahora tambien antes de cargar OTRO
         // personaje por encima desde Inicio.
@@ -71,6 +80,11 @@ public partial class MainWindow : Window
         // sub-pestaña/loadout/almacen) tampoco es un dato del personaje, se recuerda SIEMPRE al
         // cerrar (independientemente de si el cierre se cancela despues por cambios sin guardar).
         _viewModel.SaveSession();
+        // F-11 (auditoria de Opus vs TEdit, E-11): igual que arriba, se recuerda SIEMPRE al
+        // cerrar - la vista del mapa no es un dato del personaje/mundo en si, no hay nada que
+        // perder al guardarla de todos modos.
+        if (_viewModel.Exploration.IsWorldLoaded)
+            _viewModel.Exploration.SaveCurrentViewState(WorldMapScroll.HorizontalOffset, WorldMapScroll.VerticalOffset);
         if (!ConfirmDiscardChanges("cerrar")) e.Cancel = true;
     }
 
@@ -289,9 +303,8 @@ public partial class MainWindow : Window
         string ext = Path.GetExtension(path).ToLowerInvariant();
         if (ext == ".wld")
         {
-            await _viewModel.Exploration.LoadFromPathAsync(path);
+            await LoadWorldAndRestoreView(path);
             _viewModel.SelectedTabIndex = 4; // AppTab.Exploracion, privado - mismo criterio ya usado en el arnes
-            _ = Dispatcher.BeginInvoke(new Action(FitWorldMapToWindow), System.Windows.Threading.DispatcherPriority.Loaded);
         }
         else if (ext == ".plr")
         {
@@ -328,16 +341,40 @@ public partial class MainWindow : Window
             InitialDirectory = Services.CharacterFileService.GetDefaultWorldsDirectory(),
         };
 
-        if (dialog.ShowDialog(this) == true)
+        if (dialog.ShowDialog(this) == true) await LoadWorldAndRestoreView(dialog.FileName);
+    }
+
+    // F-10 (auditoria de Opus vs TEdit, E-10): alterna entre el ancho guardado y 0 - el ancho
+    // "de antes de plegar" se recuerda aqui en memoria (no persistido aparte, no hace falta:
+    // solo importa dentro de la MISMA sesion, entre un plegado y el siguiente despliegue).
+    private double _lastExpandedSidebarWidth = 320;
+    private void OnToggleExplorationSidebarClick(object sender, RoutedEventArgs e)
+    {
+        var settings = _viewModel.Settings;
+        if (settings.ExplorationSidebarWidth > 0)
         {
-            await _viewModel.Exploration.LoadFromPathAsync(dialog.FileName);
-            // X-a (segunda auditoria de Opus, Fable): se ajusta solo la primera vez que se ve el
-            // mundo, sin que el usuario tenga que ir a buscar el boton. DispatcherPriority.Loaded
-            // (no Background) para que el ScrollViewer ya haya completado un layout real con el
-            // nuevo WorldImage/extent antes de leer su ViewportWidth/Height - justo la misma
-            // necesidad real que UpdateLayout() ya resuelve en el zoom de la rueda, de abajo.
-            _ = Dispatcher.BeginInvoke(new Action(FitWorldMapToWindow), System.Windows.Threading.DispatcherPriority.Loaded);
+            _lastExpandedSidebarWidth = settings.ExplorationSidebarWidth;
+            settings.ExplorationSidebarWidth = 0;
         }
+        else
+        {
+            settings.ExplorationSidebarWidth = _lastExpandedSidebarWidth;
+        }
+    }
+
+    // F-14 (auditoria de Opus vs TEdit, E-16/E-17): dialogo real en la View (mismo criterio que
+    // SaveItemSetDialog/ExportMapToPng) - BuildWorldReportText solo compone el texto.
+    private void OnSaveWorldReportClick(object sender, RoutedEventArgs e)
+    {
+        string texto = _viewModel.Exploration.BuildWorldReportText();
+        if (string.IsNullOrEmpty(texto)) return;
+        var dialog = new SaveFileDialog
+        {
+            Title = "Guardar informe del mundo",
+            Filter = "Texto (*.txt)|*.txt",
+            FileName = $"{_viewModel.Exploration.WorldTitle}-informe.txt",
+        };
+        if (dialog.ShowDialog(this) == true) File.WriteAllText(dialog.FileName, texto);
     }
 
     // F-12 (auditoria de Opus vs TEdit, E-13): dialogo real en la View (mismo criterio que
@@ -360,8 +397,7 @@ public partial class MainWindow : Window
     private async void OnWorldCardClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is not FrameworkElement { DataContext: WorldListEntryViewModel entry }) return;
-        await _viewModel.Exploration.LoadFromPathAsync(entry.FilePath);
-        _ = Dispatcher.BeginInvoke(new Action(FitWorldMapToWindow), System.Windows.Threading.DispatcherPriority.Loaded);
+        await LoadWorldAndRestoreView(entry.FilePath);
     }
 
     // H5-04 (quinta auditoria de Opus): el submenu "Historial de guardados" de la tarjeta de
@@ -473,6 +509,40 @@ public partial class MainWindow : Window
     {
         WorldMapScroll.UpdateLayout();
         FitWorldMapToWindow();
+    }
+
+    // F-11 (auditoria de Opus vs TEdit, E-11): unico punto real de carga de un mundo (los 3
+    // sitios que antes hacian await LoadFromPathAsync + FitWorldMapToWindow por su cuenta -
+    // OnLoadWorldClick/OnWorldCardClick/OnWindowDrop - pasan a llamar aqui) para no triplicar la
+    // logica de guardar-la-vista-anterior/restaurar-o-ajustar. Guarda la vista del mundo SALIENTE
+    // (si habia uno) antes de cargar el nuevo, y tras cargar: si el mundo entrante tiene una vista
+    // guardada la restaura (Zoom ya lo puso LoadFromPathAsync; aqui solo el offset del
+    // ScrollViewer, que la ViewModel no puede tocar), si no, "Ajustar a la ventana" de siempre.
+    private async Task LoadWorldAndRestoreView(string path)
+    {
+        if (_viewModel.Exploration.IsWorldLoaded)
+            _viewModel.Exploration.SaveCurrentViewState(WorldMapScroll.HorizontalOffset, WorldMapScroll.VerticalOffset);
+
+        await _viewModel.Exploration.LoadFromPathAsync(path);
+
+        _ = Dispatcher.BeginInvoke(new Action(() =>
+        {
+            // DispatcherPriority.Loaded (no Background): el ScrollViewer necesita haber
+            // completado un layout real con el WorldImage/extent nuevo (post-Zoom, ya restaurado
+            // por LoadFromPathAsync si habia vista guardada) antes de poder pedirle su
+            // ViewportWidth/Height o fijar un offset real - misma necesidad ya resuelta por
+            // UpdateLayout() en el zoom de la rueda, mas abajo.
+            if (_viewModel.Exploration.TryConsumePendingViewRestore(out double offsetH, out double offsetV))
+            {
+                WorldMapScroll.UpdateLayout();
+                WorldMapScroll.ScrollToHorizontalOffset(offsetH);
+                WorldMapScroll.ScrollToVerticalOffset(offsetV);
+            }
+            else
+            {
+                FitWorldMapToWindow();
+            }
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private void FitWorldMapToWindow()
@@ -610,6 +680,67 @@ public partial class MainWindow : Window
         double zoom = _viewModel.Exploration.Zoom;
         WorldMapScroll.ScrollToHorizontalOffset(tileX * zoom - WorldMapScroll.ViewportWidth / 2);
         WorldMapScroll.ScrollToVerticalOffset(tileY * zoom - WorldMapScroll.ViewportHeight / 2);
+        UpdateMinimapViewport();
+    }
+
+    // F-8 (auditoria de Opus vs TEdit, E-05): minimapa real - reutiliza el bitmap del mundo YA
+    // congelado (WorldRenderer.cs), sin pintar nada de nuevo.
+    private void OnWorldMapScrollChanged(object sender, ScrollChangedEventArgs e) => UpdateMinimapViewport();
+    private void OnMinimapSizeChanged(object sender, SizeChangedEventArgs e) => UpdateMinimapViewport();
+
+    private void OnToggleMinimapClick(object sender, RoutedEventArgs e) =>
+        _viewModel.Settings.IsMinimapVisible = !_viewModel.Settings.IsMinimapVisible;
+
+    // Con Stretch="Uniform", la imagen real dentro de MinimapImage no ocupa toda su caja
+    // (220x63) salvo que el mundo tenga exactamente esa proporcion - hay que calcular la escala
+    // real Y el hueco (letterbox) para que el rectangulo de viewport caiga donde de verdad esta
+    // pintado el mundo, no donde estaria si Stretch="Fill".
+    private void UpdateMinimapViewport()
+    {
+        var img = _viewModel.Exploration.WorldImage;
+        if (img == null || MinimapImage.ActualWidth <= 0 || MinimapImage.ActualHeight <= 0
+            || !_viewModel.Settings.IsMinimapVisible)
+        {
+            MinimapViewportRect.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        double escala = Math.Min(MinimapImage.ActualWidth / img.PixelWidth, MinimapImage.ActualHeight / img.PixelHeight);
+        double huecoX = (MinimapImage.ActualWidth - img.PixelWidth * escala) / 2;
+        double huecoY = (MinimapImage.ActualHeight - img.PixelHeight * escala) / 2;
+
+        double zoom = _viewModel.Exploration.Zoom;
+        if (zoom <= 0 || WorldMapScroll.ViewportWidth <= 0)
+        {
+            MinimapViewportRect.Visibility = Visibility.Collapsed;
+            return;
+        }
+        double vpX = WorldMapScroll.HorizontalOffset / zoom;
+        double vpY = WorldMapScroll.VerticalOffset / zoom;
+        double vpW = WorldMapScroll.ViewportWidth / zoom;
+        double vpH = WorldMapScroll.ViewportHeight / zoom;
+
+        Canvas.SetLeft(MinimapViewportRect, huecoX + vpX * escala);
+        Canvas.SetTop(MinimapViewportRect, huecoY + vpY * escala);
+        MinimapViewportRect.Width = Math.Max(1, vpW * escala);
+        MinimapViewportRect.Height = Math.Max(1, vpH * escala);
+        MinimapViewportRect.Visibility = Visibility.Visible;
+    }
+
+    // Clic en el minimapa -> navega, misma conversion clic->tile que TEdit
+    // (MainWindow.xaml.cs:946-957: posicion del clic / Resolution -> coordenada de mundo), aqui
+    // con la escala real ya calculada arriba en vez de un "Resolution" fijo por muestreo.
+    private void OnMinimapClick(object sender, MouseButtonEventArgs e)
+    {
+        var img = _viewModel.Exploration.WorldImage;
+        if (img == null || MinimapImage.ActualWidth <= 0) return;
+        double escala = Math.Min(MinimapImage.ActualWidth / img.PixelWidth, MinimapImage.ActualHeight / img.PixelHeight);
+        double huecoX = (MinimapImage.ActualWidth - img.PixelWidth * escala) / 2;
+        double huecoY = (MinimapImage.ActualHeight - img.PixelHeight * escala) / 2;
+        var clic = e.GetPosition(MinimapImage);
+        int tileX = (int)((clic.X - huecoX) / escala);
+        int tileY = (int)((clic.Y - huecoY) / escala);
+        OnNavigateToTile(tileX, tileY);
     }
 
     // Arrastrar y soltar (pedido explicito 1-sep-2026: "se puede arrastar para poder ir

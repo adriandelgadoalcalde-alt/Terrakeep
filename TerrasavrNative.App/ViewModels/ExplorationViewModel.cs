@@ -198,6 +198,13 @@ public partial class ExplorationViewModel : ObservableObject
     // superior consciente de la pestaña - dato que ya se calculaba (StatusMessage) pero no
     // vivia en una propiedad propia reutilizable.
     [ObservableProperty] private string _worldSizeText = "—";
+    // F-14 (auditoria de Opus vs TEdit, E-16/E-17): panel "Este mundo" - coste 0 (WldHeader ya
+    // los leia y los descartaba, ver el comentario real de WldReader.cs). Alcance acotado a
+    // proposito a lo que el propio informe recomienda para una primera pasada (semilla+modo,
+    // sin banderas de jefes/modo dificil - eso exige avanzar mucho mas el lector, mas riesgo).
+    [ObservableProperty] private string _worldSeedText = "—";
+    [ObservableProperty] private string _worldGameModeText = "—";
+    [ObservableProperty] private string _worldVersionText = "—";
     // F-7 (auditoria de Opus vs TEdit, E-06): "el punto de aparicion del mundo... su unico uso
     // en toda la aplicacion es calcular la distancia. No hay ningun marcador de spawn en el
     // mapa" - y la mazmorra "ni siquiera se leen" (ya corregido en WldReader/WldHeader, ver sus
@@ -359,6 +366,51 @@ public partial class ExplorationViewModel : ObservableObject
     public int ChestsPillCount => _world?.Chests.Count ?? 0;
     public int OresPillCount => _presence == null ? 0 : OreTileCatalog.All.Count(_presence.HasTile);
     public int ObjectsPillCount => _presence?.TileCounts.Count ?? 0;
+
+    // F-14 (auditoria de Opus vs TEdit, E-17): "el censo del mundo existe por dentro
+    // (WorldPresenceIndex) pero no hay ningun sitio donde verlo de un vistazo" - panel "Este
+    // mundo", todo ya calculado, cero recorridos nuevos.
+    public int WallTypesPresentCount => _presence?.WallCounts.Count ?? 0;
+    public int SignCount => _presence?.SignCount ?? 0;
+    public string WorldAirPercentText
+    {
+        get
+        {
+            if (_presence == null || _world == null) return "—";
+            long total = (long)_world.Header.TilesWide * _world.Header.TilesHigh;
+            if (total == 0) return "—";
+            long activos = _presence.TileCounts.Values.Sum(v => (long)v);
+            double airePct = 1.0 - (double)activos / total;
+            return airePct.ToString("P1");
+        }
+    }
+
+    // F-14: informe de texto plano (mismo espiritu que AnalyzeWorldSaveCommand de TEdit) - el
+    // dialogo real de guardado vive en el code-behind (mismo criterio que ExportMapToPng).
+    public string BuildWorldReportText()
+    {
+        if (_world == null || _presence == null) return string.Empty;
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"{WorldTitle}");
+        sb.AppendLine($"Semilla: {WorldSeedText}");
+        sb.AppendLine($"Modo de juego: {WorldGameModeText}");
+        sb.AppendLine($"Tamaño: {WorldSizeText} tiles");
+        sb.AppendLine($"Version de formato: {WorldVersionText}");
+        sb.AppendLine();
+        sb.AppendLine("=== Censo ===");
+        sb.AppendLine($"Aire: {WorldAirPercentText}");
+        sb.AppendLine($"Tipos de tile distintos: {ObjectsPillCount}");
+        sb.AppendLine($"Tipos de pared distintos: {WallTypesPresentCount}");
+        sb.AppendLine($"Cofres: {ChestsPillCount}");
+        sb.AppendLine($"Letreros: {_presence.SignCount}");
+        sb.AppendLine($"NPCs de pueblo: {_allNpcs.Count}");
+        sb.AppendLine();
+        sb.AppendLine("=== Top 10 tiles (por recuento) ===");
+        long totalTiles = (long)_world.Header.TilesWide * _world.Header.TilesHigh;
+        foreach (var (type, count) in _presence.TileCounts.OrderByDescending(kv => kv.Value).Take(10))
+            sb.AppendLine($"{_tileNames.TileName(type)} [{type}]: {count:N0} ({(double)count / totalTiles:P2})");
+        return sb.ToString();
+    }
 
     private static Color ToWpfColor(RgbaColor c) => Color.FromArgb(c.A, c.R, c.G, c.B);
 
@@ -731,6 +783,36 @@ public partial class ExplorationViewModel : ObservableObject
     // resaltado". Mismo campo/patron real que HomeViewModel._currentPath.
     private string? _currentWorldPath;
 
+    // F-11 (auditoria de Opus vs TEdit, E-11): offset de scroll pendiente de restaurar tras
+    // cargar un mundo - null = sin vista guardada (el code-behind hace "Ajustar a la ventana"
+    // en su lugar). El ScrollViewer no vive aqui, asi que el code-behind consume esto con
+    // TryConsumePendingViewRestore justo despues de LoadFromPathAsync.
+    private double? _pendingRestoreOffsetH;
+    private double? _pendingRestoreOffsetV;
+
+    public bool TryConsumePendingViewRestore(out double offsetH, out double offsetV)
+    {
+        if (_pendingRestoreOffsetH is double h && _pendingRestoreOffsetV is double v)
+        {
+            offsetH = h; offsetV = v;
+            _pendingRestoreOffsetH = null;
+            _pendingRestoreOffsetV = null;
+            return true;
+        }
+        offsetH = offsetV = 0;
+        return false;
+    }
+
+    // F-11: llamado desde el code-behind (unico sitio que conoce los offsets reales del
+    // ScrollViewer) antes de cargar OTRO mundo y al cerrar la ventana.
+    public void SaveCurrentViewState(double offsetH, double offsetV)
+    {
+        if (_currentWorldPath == null) return;
+        var estados = WorldViewStateService.Load();
+        estados[_currentWorldPath] = new WorldViewState(Zoom, offsetH, offsetV);
+        WorldViewStateService.Save(estados);
+    }
+
     public ExplorationViewModel(CharacterFileService service)
     {
         _npcNames = service.NpcNames;
@@ -966,7 +1048,24 @@ public partial class ExplorationViewModel : ObservableObject
             NpcFilterWithHome = false;
             NpcFilterHomeless = false;
             NpcFilterUnderground = false;
-            Zoom = 1.0;
+            // F-11 (auditoria de Opus vs TEdit, E-11): si hay una vista guardada de ESTE mundo
+            // (misma ruta), se restaura Zoom aqui (el offset de scroll lo aplica el code-behind,
+            // via TryConsumePendingViewRestore, porque el ScrollViewer no vive en la ViewModel).
+            // Sin vista guardada: Zoom=1.0 de siempre, y el code-behind hace "Ajustar a la
+            // ventana" en su lugar - la regla de sentido comun que el propio TEdit NO tiene: el
+            // 100% en un mundo Grande enseña solo el 12% del ancho.
+            if (WorldViewStateService.Load().TryGetValue(wldPath, out var vistaGuardada))
+            {
+                Zoom = vistaGuardada.Zoom;
+                _pendingRestoreOffsetH = vistaGuardada.OffsetH;
+                _pendingRestoreOffsetV = vistaGuardada.OffsetV;
+            }
+            else
+            {
+                Zoom = 1.0;
+                _pendingRestoreOffsetH = null;
+                _pendingRestoreOffsetV = null;
+            }
             HoverInfo = string.Empty;
             ApplyNpcFilter();
             // Punto 4: un mundo nuevo invalida cualquier resultado de busqueda anterior (era de
@@ -989,6 +1088,15 @@ public partial class ExplorationViewModel : ObservableObject
 
             WorldTitle = world.Header.Title;
             WorldSizeText = $"{world.Header.TilesWide}×{world.Header.TilesHigh}";
+            WorldSeedText = world.Header.Seed;
+            WorldGameModeText = world.Header.GameMode switch
+            {
+                1 => "Experto",
+                2 => "Maestro",
+                3 => "Viaje",
+                _ => "Clásico",
+            };
+            WorldVersionText = world.Header.Version.ToString();
             WorldSpawnX = world.Header.SpawnX;
             WorldSpawnY = world.Header.SpawnY;
             WorldDungeonX = world.Header.DungeonX;
@@ -999,6 +1107,9 @@ public partial class ExplorationViewModel : ObservableObject
             OnPropertyChanged(nameof(ChestsPillCount));
             OnPropertyChanged(nameof(OresPillCount));
             OnPropertyChanged(nameof(ObjectsPillCount));
+            OnPropertyChanged(nameof(WallTypesPresentCount));
+            OnPropertyChanged(nameof(SignCount));
+            OnPropertyChanged(nameof(WorldAirPercentText));
             UpdateCurrentWorldPath(wldPath);
         }
         catch (Exception ex)

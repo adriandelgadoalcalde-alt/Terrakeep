@@ -519,13 +519,6 @@ public partial class MainViewModel : ObservableObject
         _ => 1,
     };
 
-    // Auditoria de redimensionado, R-10 ("consumidor adicional a considerar", parte opcional
-    // pero recomendada): el MaxWidth real de la barra lateral de Exploracion (ESPEC-ui-
-    // exploracion.md#8-D4, 260-380) no necesita seguir topando en 380 cuando sobra sitio de
-    // verdad - con R-02 ya puesto (el WrapPanel de categorias envuelve solo, nunca se pierde
-    // nada), esto es aprovechamiento, no una correccion de un defecto medido.
-    public double ExplorationSidebarMaxWidth => SizeClass == WindowSizeClass.Extra ? 460 : 380;
-
     partial void OnSizeClassChanged(WindowSizeClass value)
     {
         OnPropertyChanged(nameof(IsEquipmentExpanded));
@@ -535,7 +528,11 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(AppearanceContentMaxWidth));
         OnPropertyChanged(nameof(DetailContentMaxWidth));
         OnPropertyChanged(nameof(DetailCardColumns));
-        OnPropertyChanged(nameof(ExplorationSidebarMaxWidth));
+        // F-10 (auditoria de Opus vs TEdit, E-10): ExplorationSidebarMaxWidth (R-10 de la
+        // auditoria de redimensionado) queda ELIMINADO, no solo desactivado - la columna ya no
+        // es Auto+MaxWidth-por-SizeClass, es un GridLength literal con GridSplitter real
+        // (Settings.ExplorationSidebarWidth), asi que el mecanismo que este notify alimentaba
+        // ya no existe.
         // H4-07: la Libreria/Libreria de buffs se revelan solas en Amplio (ver el comentario
         // real de IsLibraryVisible/IsBuffLibraryVisible arriba).
         OnPropertyChanged(nameof(IsLibraryVisible));

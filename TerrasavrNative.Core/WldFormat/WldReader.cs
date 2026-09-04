@@ -92,8 +92,11 @@ public static class WldReader
         // ver el comentario de WldHeader sobre por que se corta aqui a proposito.
         string title = reader.ReadString();
 
-        if (version == 179) reader.ReadInt32(); // Seed numerico
-        else reader.ReadString();                // Seed como texto
+        // F-14 (auditoria de Opus vs TEdit, E-16): "la semilla... esta a un puñado de Read* de
+        // distancia, y hoy Terrakeep no enseña ninguno" - se leia y se descartaba. Se captura
+        // como texto en los dos casos (un seed numerico real de Terraria se muestra igual como
+        // texto, ej. "-1234567").
+        string seed = version == 179 ? reader.ReadInt32().ToString() : reader.ReadString();
 
         reader.ReadBytes(8); // WorldGenVersion
 
@@ -106,9 +109,16 @@ public static class WldReader
         int tilesHigh = reader.ReadInt32();
         int tilesWide = reader.ReadInt32();
 
+        // F-14 (auditoria de Opus vs TEdit, E-16): "el modo de juego (Clasico/Experto/Maestro/
+        // Viaje)... ya se lee" - se leia y se descartaba. Codificacion real por version,
+        // confirmada byte a byte contra World.FileV2.cs de TEdit (commit f592261): >=209 es un
+        // int real (0..3); ==208 un bool (Maestro=2/Clasico=0, el modo Maestro llego antes que
+        // el int generico); 112..207 un bool distinto (Experto=1/Clasico=0); antes de 112 no
+        // existia el concepto, 0 fijo.
+        int gameMode;
         if (version >= 209)
         {
-            reader.ReadInt32(); // GameMode
+            gameMode = reader.ReadInt32();
             if (version >= 222) reader.ReadBoolean();
             if (version >= 227) reader.ReadBoolean();
             if (version >= 238) reader.ReadBoolean();
@@ -119,9 +129,17 @@ public static class WldReader
             if (version >= 267) reader.ReadBoolean(); // ZenithWorld
             if (version >= 302) reader.ReadBoolean();
         }
-        else if (version == 208 || version >= 112)
+        else if (version == 208)
         {
-            reader.ReadBoolean();
+            gameMode = reader.ReadBoolean() ? 2 : 0;
+        }
+        else if (version >= 112)
+        {
+            gameMode = reader.ReadBoolean() ? 1 : 0;
+        }
+        else
+        {
+            gameMode = 0;
         }
 
         if (version >= 141) reader.ReadBytes(8); // CreationTime
@@ -161,6 +179,8 @@ public static class WldReader
             SpawnY = spawnY,
             GroundLevel = groundLevel,
             RockLevel = rockLevel,
+            Seed = seed,
+            GameMode = gameMode,
             DungeonX = dungeonX,
             DungeonY = dungeonY,
         };

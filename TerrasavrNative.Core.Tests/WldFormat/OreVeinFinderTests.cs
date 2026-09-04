@@ -21,6 +21,8 @@ public class OreVeinFinderTests
             SpawnY = 0,
             GroundLevel = 100,
             RockLevel = 200,
+            Seed = "semilla-sintetica",
+            GameMode = 0,
             DungeonX = 0,
             DungeonY = 0,
         },
