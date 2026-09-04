@@ -2200,6 +2200,69 @@ internal static class Program
         }
         catch (Exception ex) { Console.WriteLine("H6-06-DOLL-EXCEPTION: " + ex); }
 
+        // Sexta auditoria de Opus, H6-07 (Tanda D - "pelo bajo el casco/pelo largo detras del
+        // cuerpo"): con un peinado LARGO real puesto (backHairDraw=true), coloca 3 objetos
+        // REALES de cabeza uno tras otro (Cubo vacio=hatHair real, Casco de hierro=oculta pelo
+        // real, vacio=pelo normal) y confirma que el preview cambia cada vez - capturas reales
+        // de los 3 estados.
+        try
+        {
+            vm.SelectedTabIndex = 1; // Personaje
+            vm.PersonajeInnerTabIndex = 3; // Apariencia
+            int hairStyleAntes = vm.Appearance.HairStyle;
+            vm.Appearance.HairStyle = 51; // backHairDraw=true real, ver HairDrawProfileTests.cs
+            DoEvents(); DoEvents();
+
+            byte[] PixelesDeH607(System.Windows.Media.Imaging.WriteableBitmap bmp)
+            {
+                var px = new byte[bmp.PixelHeight * bmp.PixelWidth * 4];
+                bmp.CopyPixels(px, bmp.PixelWidth * 4, 0);
+                return px;
+            }
+            void CapturarH607(string nombre)
+            {
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(window);
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                using var fs = File.Create(Path.Combine(AppContext.BaseDirectory, nombre));
+                enc.Save(fs);
+            }
+
+            var headSlotEquip = vm.EquipmentGroup?.EquippedItems.Slots[0];
+            if (headSlotEquip != null)
+            {
+                var peloLargoSinCasco = vm.Appearance.PreviewImage;
+                CapturarH607("h6-07-pelo-largo-sin-casco.png");
+
+                headSlotEquip.PlaceItem(205); // Cubo vacio - hatHair real
+                DoEvents(); DoEvents();
+                var conCubo = vm.Appearance.PreviewImage;
+                CapturarH607("h6-07-pelo-cubo-hathair.png");
+                bool cuboCambio = peloLargoSinCasco != null && conCubo != null && !PixelesDeH607(peloLargoSinCasco).SequenceEqual(PixelesDeH607(conCubo));
+                Console.WriteLine($"H6-07-PELO: Cubo vacio (hatHair real) cambia el preview={cuboCambio} (esperado True)");
+                if (!cuboCambio) Console.WriteLine("FALLO: H6-07 - el sprite hatHair (Cubo vacio) no cambio el preview de verdad");
+
+                headSlotEquip.PlaceItem(90); // Casco de hierro - oculta pelo real
+                DoEvents(); DoEvents();
+                var conCasco = vm.Appearance.PreviewImage;
+                CapturarH607("h6-07-pelo-oculto-casco-hierro.png");
+                bool cascoCambio = conCubo != null && conCasco != null && !PixelesDeH607(conCubo).SequenceEqual(PixelesDeH607(conCasco));
+                Console.WriteLine($"H6-07-PELO: Casco de hierro (oculta pelo real) cambia el preview={cascoCambio} (esperado True)");
+                if (!cascoCambio) Console.WriteLine("FALLO: H6-07 - el casco completo no oculto el pelo de verdad");
+
+                headSlotEquip.ClearCommand.Execute(null); // deja el slot como estaba para el resto del arnes
+            }
+            else Console.WriteLine("H6-07-PELO: sin EquipmentGroup real - omitido");
+
+            vm.Appearance.HairStyle = hairStyleAntes;
+            vm.SelectedTabIndex = 1;
+            vm.PersonajeInnerTabIndex = 0;
+            DoEvents();
+        }
+        catch (Exception ex) { Console.WriteLine("H6-07-PELO-EXCEPTION: " + ex); }
+
         // Verificacion real de T-24 (auditoria de Opus, Bloque 6): 3 casos deterministas
         // (matematica pura, sin depender de ninguna ventana ni layout ya corrido) para los 3
         // modos reales de SlotGridPanel.MeasureOverride - ver el resumen real en el propio

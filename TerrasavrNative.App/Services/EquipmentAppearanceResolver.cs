@@ -38,10 +38,18 @@ public sealed class EquipmentAppearanceResolver
         _calamity = calamity;
     }
 
-    public PlayerPreviewRenderer.EquippedArmor Resolve(PlrLoadout loadout) => new(
-        ResolveHead(Visible(loadout, 0)),
-        ResolveBody(Visible(loadout, 1)),
-        ResolveLegs(Visible(loadout, 2)));
+    public PlayerPreviewRenderer.EquippedArmor Resolve(PlrLoadout loadout)
+    {
+        var headSlot = Visible(loadout, 0);
+        return new(
+            ResolveHead(headSlot),
+            ResolveBody(Visible(loadout, 1)),
+            ResolveLegs(Visible(loadout, 2)),
+            // H6-07: el indice REAL de headSlot (Terraria.Player.head, la misma tabla que
+            // ArmorHead[]/armor_head/{slot}.png) - solo se conoce para objetos VANILLA (ver
+            // ResolveVanillaPath); Calamity no comparte esta numeracion, null a proposito.
+            ResolveHeadSlot(headSlot));
+    }
 
     private static PlrItemSlot Visible(PlrLoadout loadout, int index) =>
         loadout.Social[index].IsEmpty ? loadout.Items[index] : loadout.Social[index];
@@ -49,6 +57,12 @@ public sealed class EquipmentAppearanceResolver
     private string? ResolveHead(PlrItemSlot slot) => Resolve(slot, "Head", e => e.Head, "armor_head");
     private string? ResolveBody(PlrItemSlot slot) => Resolve(slot, "Body", e => e.Body, "armor_body");
     private string? ResolveLegs(PlrItemSlot slot) => Resolve(slot, "Legs", e => e.Legs, "armor_legs");
+
+    private int? ResolveHeadSlot(PlrItemSlot slot)
+    {
+        if (slot.IsEmpty || slot.Id >= CalamityIds.ItemIdBase) return null;
+        return _vanillaSlots.ById(slot.Id)?.Head;
+    }
 
     private string? Resolve(PlrItemSlot slot, string calamitySuffix, Func<VanillaArmorSlotEntry, int?> vanillaPick, string vanillaDir)
     {

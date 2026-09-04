@@ -125,3 +125,21 @@ for (let id = 0; id < 228; id++) {
   hairOk++;
 }
 console.log(`Pelo: ${hairOk} estilos extraidos (id 0-based, Player_Hair_{id+1}.xnb), ${hairFaltan} ausentes`);
+
+// H6-07 (sexta auditoria de Opus): "pelo bajo el casco" - Player_HairAlt_{id+1}.xnb real
+// (AssetInitializer.cs: "Images/Player_HairAlt_" + (id+1)), el sprite que el juego real
+// dibuja en vez del normal cuando el casco puesto esta en la lista real "hatHair" (ver
+// TerrasavrNative.Core/Model/HairDrawProfile.cs, portado de Player.GetHairSettings real).
+// Mismo esquema 0-based +1 en el nombre de fichero que el pelo normal.
+const hairAltDir = path.join(OUT_ROOT, 'hairalt');
+fs.mkdirSync(hairAltDir, { recursive: true });
+let hairAltOk = 0, hairAltFaltan = 0;
+for (let id = 0; id < 228; id++) {
+  const xnbPath = path.join(STEAM_IMAGES, `Player_HairAlt_${id + 1}.xnb`);
+  if (!fs.existsSync(xnbPath)) { hairAltFaltan++; continue; }
+  const png = cropFrame0(xnbPath);
+  if (!png) { hairAltFaltan++; continue; }
+  fs.writeFileSync(path.join(hairAltDir, id + '.png'), PNG.sync.write(png));
+  hairAltOk++;
+}
+console.log(`Pelo (hatHair/casco): ${hairAltOk} estilos extraidos (id 0-based, Player_HairAlt_{id+1}.xnb), ${hairAltFaltan} ausentes`);

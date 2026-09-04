@@ -7397,3 +7397,64 @@ body1/`, `body2/`, `body3/` (de un intento abortado de extraer 5 variantes de cu
 el sistema de permisos en esta sesion desatendida (sin nadie delante para aprobar un borrado
 destructivo sin supervision). Quedan como restos inofensivos en disco, nunca `git add`eados -
 si en algun momento hace falta limpiarlos de verdad, hacerlo a mano o con el usuario delante.
+
+### H6-07 - Pelo bajo el casco/pelo largo detras del cuerpo (Tanda D, cierra la sexta auditoria de Opus al completo)
+
+Pedido explicito del usuario tras el resumen de cierre de la noche ("acaba lo que quede
+pendiente de opus") - se retoma el UNICO hallazgo que se habia dejado a proposito (fidelidad
+menor/opcional segun el propio informe de Opus).
+
+**Investigacion real, no de memoria**: `Terraria.Player.GetHairSettings()` decompilado real
+(`Terraria/Player.cs`) es la fuente DEFINITIVA - por cada headSlot puesto (el mismo indice real
+que `EquipmentAppearanceResolver` ya usa para `armor_head/{slot}.png`), el juego marca
+`fullHair` (40 headSlots reales, el pelo se ve completo por debajo del casco), `hatHair` (63
+headSlots reales, el juego usa un sprite DISTINTO - `Player_HairAlt_{id+1}.xnb` real, no un
+recorte del normal) o NINGUNO de los dos (el caso mas comun, cascos completos - el pelo
+simplemente no se dibuja, confirmado en `PlayerDrawLayers.cs`: el bloque de pelo delantero solo
+se ejecuta si `fullHair` o `hatHair` son ciertos). Ademas, `backHairDraw` (formula real EXACTA
+sobre el id de peinado, tambien en `GetHairSettings`) hace que los peinados "largos" se dibujen
+DOS veces: una capa trasera completa (`DrawPlayer_01_BackHair`, la PRIMERISIMA capa real del
+dibujado, antes incluso de piernas/torso) y una capa delantera recortada a los 26px superiores
+reales (`PlayerDrawSet.cs`: `hairFrontFrame.Height = 26`).
+
+**Spot-checks reales usados para verificar la tabla** (no solo confiar en la transcripcion):
+Gafas de proteccion (id 37, headSlot=10) = `fullHair` real; Cubo vacio (id 205, headSlot=13) =
+`hatHair` real - los dos encontrados cruzando `vanilla_armor_slots.json` real contra las listas
+recien portadas, y verificados por nombre contra `vanilla_item_names.json` (tiene sentido real:
+unas gafas no tapan el pelo, un cubo puesto de sombrero deja ver mechones asomando).
+
+**Cambios reales**: `TerrasavrNative.Core/Model/HairDrawProfile.cs` (nuevo) - las dos listas
+reales completas (40 + 63 headSlots) mas la formula exacta de `backHairDraw`, portadas
+literalmente. `EquipmentAppearanceResolver.Resolve` ahora tambien devuelve `HeadSlot` (el
+indice real, solo para objetos vanilla - Calamity no comparte esa numeracion, se documenta como
+hueco). `PlayerPreviewRenderer.EquippedArmor` gana el campo `HeadSlot`; `Render()` resuelve
+hideHair/hatHair de verdad y compone la capa trasera (si backHairDraw) ANTES que nada mas en el
+lienzo, mas la capa delantera (normal o `LoadHairAlt`, recortada a 26 filas si backHairDraw) en
+su sitio de siempre. `scripts/extraer-sprites-jugador.js` ampliado: 228 `Player_HairAlt_
+{id+1}.xnb` reales extraidos a `Assets/player/hairalt/{id}.png` (228/0 ausentes, mismo esquema
+0-based que el pelo normal).
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: **480/480** (197 Core, +24 tests
+nuevos: `HairDrawProfileTests.cs` - las dos listas reales via los 2 spot-checks cruzados,
+verificacion cruzada de que NINGUN headSlot cae en las dos listas a la vez -real, un unico
+switch en el juego-, y 14 casos de frontera reales de la formula `backHairDraw` -50/51/55/56/
+63/64/94/115/116 mas los 5 ids sueltos reales-; 283 ViewModels, +5 tests nuevos:
+`PlayerPreviewRendererHairH607Tests.cs` - `HeadSlot` real expuesto por `Resolve`, null para
+Calamity/slot vacio, fullHair sigue mostrando pelo, un casco completo real SI lo oculta,
+`hatHair` real produce pixeles distintos del pelo normal, un peinado largo real cambia el
+resultado por la capa trasera). Arnes de UI Automation ampliado con un bloque nuevo
+(`H6-07-PELO`) - con un peinado largo real (`HairStyle=51`, `backHairDraw=true` real) coloca 3
+objetos reales de cabeza en secuencia (Cubo vacio, Casco de hierro) y confirma que el preview
+cambia cada vez, mas 3 capturas reales - confirmadas a mano: con el cubo puesto se ven mechones
+de pelo real asomando por los lados (`hatHair`); con el casco de hierro puesto el pelo
+desaparece por completo de la cabeza (`hideHair`). **2/2 pasadas limpias**, sin
+NO-FOUND/FALLO/EXCEPTION.
+
+**Bloqueo real resuelto antes de poder compilar**: un proceso `TerrasavrNative.App.exe` seguia
+abierto de una revision manual anterior del usuario, bloqueando el DLL de `TerrasavrNative.Core`
+- se pregunto explicitamente antes de cerrarlo (por si tenia algo sin guardar), el usuario
+confirmo que no.
+
+**Cierra la sexta auditoria de Opus al 100%** (12 de 12 hallazgos) - la sesion entera resumida
+arriba sigue siendo valida, solo cambia el recuento final de hallazgos (12/12, no 11/12) y de
+tests (480/480, no 450/450).

@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using TerrasavrNative.Core.Model;
 
 namespace TerrasavrNative.App.Services;
 
@@ -62,11 +63,26 @@ namespace TerrasavrNative.App.Services;
 // PlrCharacter: HairColor/SkinColor/EyeColor/ShirtColor/UnderColor/PantsColor/ShoesColor
 // (EyeWhites siempre blanco, sin campo propio).
 //
+// H6-07 (Opus, sexta pasada - "pelo bajo el casco/pelo largo detras del cuerpo"): pelo real
+// segun el casco puesto, portado de Terraria.Player.GetHairSettings()/PlayerDrawLayers.cs
+// decompilados reales (ver HairDrawProfile, tabla real completa):
+// - Sin casco, o casco en la lista real "fullHair": pelo NORMAL (Player_Hair) encima del casco.
+// - Casco en la lista real "hatHair": pelo ALTERNATIVO real (Player_HairAlt, fichero DISTINTO
+//   en la instalacion real - ni un recorte ni una aproximacion, el juego usa un sprite propio).
+// - Cualquier otro casco (el caso mas comun, cascos completos): SIN pelo - el propio juego real
+//   nunca dibuja pelo delantero en ese caso (GetHairSettings nunca marca fullHair/hatHair para
+//   esos ids), no una omision de este puerto.
+// - Peinados "largos" reales (HairDrawProfile.IsBackHairDraw, formula EXACTA de Player.cs): se
+//   dibujan DOS veces - una capa TRASERA completa (aqui: la primerisima capa del lienzo, antes
+//   de piernas/torso, para que el cuerpo la tape por delante de forma natural) y una capa
+//   DELANTERA recortada a los 26px superiores reales (PlayerDrawSet.cs: "int height = 26;
+//   hairFrontFrame.Height = height;" cuando backHairDraw) - el resto se entiende "detras" del
+//   cuerpo. Solo aplica a objetos VANILLA (headSlot real); Calamity no comparte esa numeracion,
+//   se oculta el pelo por defecto (el comportamiento mas comun real de un casco completo).
+//
 // ALCANCE DELIBERADO restante, documentado y no oculto: sin accesorios (alas, mochilas,
 // capas...), item en mano, ni animacion (solo el frame de reposo) - la inmensa mayoria de
-// accesorios no tienen capa visual propia sobre el cuerpo. Pelo bajo casco (Player.
-// GetHairSettings real, "hideHair"/"hatHair" segun el casco puesto) y pelo largo detras del
-// cuerpo (backHairDraw) tampoco se replican - H6-07, fuera de esta pasada, documentado.
+// accesorios no tienen capa visual propia sobre el cuerpo.
 public static class PlayerPreviewRenderer
 {
     private const int Width = 40, Height = 56;
@@ -80,8 +96,10 @@ public static class PlayerPreviewRenderer
     // Rutas absolutas reales (o null si ese slot no lleva nada puesto/reconocible) - ver
     // EquipmentAppearanceResolver, que es quien decide estas rutas. BodyFile es ahora una hoja
     // compuesta 360x224 (antes 40x56 ya recortada) - HeadFile/LegsFile siguen siendo 40x56
-    // (tiras verticales, sin cambios).
-    public readonly record struct EquippedArmor(string? HeadFile, string? BodyFile, string? LegsFile);
+    // (tiras verticales, sin cambios). HeadSlot (H6-07) es el indice REAL de headSlot
+    // (Terraria.Player.head, misma tabla que ArmorHead[]/armor_head/{slot}.png) - null si no
+    // hay casco puesto o si es un objeto de Calamity (numeracion distinta, no compartida).
+    public readonly record struct EquippedArmor(string? HeadFile, string? BodyFile, string? LegsFile, int? HeadSlot = null);
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> Cache = new();
 
@@ -104,6 +122,30 @@ public static class PlayerPreviewRenderer
         var backShoulderCell = isMale ? BackShoulderMale : BackShoulderFemale;
 
         var canvas = new byte[Height * Width * 4];
+
+        // H6-07: resuelve de verdad el comportamiento real del pelo bajo el casco puesto - ver
+        // el comentario de la clase para la cita real de GetHairSettings()/PlayerDrawLayers.cs.
+        bool hideHair = false, hatHair = false;
+        if (armor.HeadSlot is int headSlot)
+        {
+            bool fullHair = HairDrawProfile.IsFullHair(headSlot);
+            hatHair = HairDrawProfile.IsHatHair(headSlot);
+            hideHair = !fullHair && !hatHair;
+        }
+        else if (armor.HeadFile != null)
+        {
+            // Casco puesto pero sin headSlot real resuelto (objeto de Calamity, numeracion
+            // propia sin tabla real conocida) - se oculta el pelo por defecto, el
+            // comportamiento MAS COMUN real de un casco completo vanilla.
+            hideHair = true;
+        }
+        bool backHairDraw = HairDrawProfile.IsBackHairDraw(hairStyle);
+
+        // DrawPlayer_01_BackHair real: la capa TRASERA de un peinado largo se dibuja la
+        // PRIMERISIMA de todas (antes incluso de piernas/torso), para que el resto del cuerpo
+        // la tape por delante de forma natural al componer encima.
+        if (!hideHair && backHairDraw)
+            Composite(canvas, hatHair ? LoadHairAlt(hairStyle) : LoadHair(hairStyle), colors.Hair);
 
         // 1) DrawPlayer_12_Skin_Composite: piernas + torso (piel).
         Composite(canvas, LoadFrame0(variant, "legskin"), colors.Skin);
@@ -136,7 +178,15 @@ public static class PlayerPreviewRenderer
         Composite(canvas, LoadFrame0("body0", "head"), colors.Skin);
         Composite(canvas, LoadFrame0("body0", "eyewhites"), null); // ya blanco en el sprite real
         Composite(canvas, LoadFrame0("body0", "eyes"), colors.Eyes);
-        Composite(canvas, LoadHair(hairStyle), colors.Hair);
+        if (!hideHair)
+        {
+            byte[] hairPixels = hatHair ? LoadHairAlt(hairStyle) : LoadHair(hairStyle);
+            // PlayerDrawSet.cs real: "hairFrontFrame.Height = 26" cuando backHairDraw - solo
+            // el flequillo/parte superior real se ve por delante, el resto queda "detras" (ya
+            // pintado en la capa trasera de arriba).
+            if (backHairDraw) CompositeTopRows(canvas, hairPixels, colors.Hair, 26);
+            else Composite(canvas, hairPixels, colors.Hair);
+        }
         if (armor.HeadFile is { } headFile) Composite(canvas, LoadFrame0Absolute(headFile), null);
 
         // 6) DrawPlayer_28_ArmOverItemComposite: brazo DELANTERO completo, dibujado ENCIMA de
@@ -203,6 +253,16 @@ public static class PlayerPreviewRenderer
         return LoadCached(path);
     }
 
+    // H6-07: gemelo real de LoadHair para Player_HairAlt_{id+1}.xnb (el sprite real que el
+    // juego dibuja cuando el casco puesto esta en la lista real "hatHair").
+    private static byte[] LoadHairAlt(int hairStyle)
+    {
+        int id = Math.Clamp(hairStyle, HairStyleMin, HairStyleMax);
+        string path = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "hairalt", id + ".png");
+        if (!File.Exists(path)) path = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "hairalt", "0.png");
+        return LoadCached(path);
+    }
+
     private static byte[] LoadCached(string path) => Cache.GetOrAdd(path, LoadPngPixels40x56);
 
     // El prefijo "sheet:" es SOLO para no colisionar en la MISMA Cache con LoadCached (una hoja
@@ -250,6 +310,36 @@ public static class PlayerPreviewRenderer
             Array.Copy(sheet, srcOffset, outPixels, dstOffset, Width * 4);
         }
         return outPixels;
+    }
+
+    // H6-07: gemelo real de Composite, pero solo compone las primeras "maxRows" filas del
+    // origen (PlayerDrawSet.cs real: "hairFrontFrame.Height = 26" para un peinado largo bajo
+    // un casco - solo el flequillo/parte superior se ve por delante).
+    private static void CompositeTopRows(byte[] dst, byte[] src, Tint? tint, int maxRows)
+    {
+        int rows = Math.Min(maxRows, Height);
+        for (int y = 0; y < rows; y++)
+        {
+            int rowStart = y * Width * 4;
+            for (int i = rowStart; i < rowStart + Width * 4; i += 4)
+            {
+                byte b = src[i], g = src[i + 1], r = src[i + 2], a = src[i + 3];
+                if (a == 0) continue;
+
+                if (tint is { } t)
+                {
+                    r = (byte)(r * t.R / 255);
+                    g = (byte)(g * t.G / 255);
+                    b = (byte)(b * t.B / 255);
+                }
+
+                float alpha = a / 255f;
+                dst[i + 0] = (byte)(b * alpha + dst[i + 0] * (1 - alpha));
+                dst[i + 1] = (byte)(g * alpha + dst[i + 1] * (1 - alpha));
+                dst[i + 2] = (byte)(r * alpha + dst[i + 2] * (1 - alpha));
+                dst[i + 3] = (byte)(a + dst[i + 3] * (1 - alpha));
+            }
+        }
     }
 
     // Todas las piezas (ya sean tiras 40x56 o celdas recortadas de una hoja) miden 40x56 al
