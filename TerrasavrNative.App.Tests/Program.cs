@@ -2382,6 +2382,47 @@ internal static class Program
                     }
                     else Console.WriteLine("BUSCADOR-MUNDO-LETRERO: este mundo real no tiene ningun letrero con texto, omitido");
 
+                    // A8-05 (auditoria de Opus vs TEdit, E-08): un bloque bajo el agua/lava/miel
+                    // debe nombrar los DOS (antes solo se nombraba el liquido si NO habia bloque
+                    // activo). Busqueda directa sobre el mundo independiente (sin pasar por la UI)
+                    // de un tile real que cumpla la condicion, en vez de un escaneo a ciegas.
+                    (int X, int Y)? tileSumergido = null;
+                    var hdr = worldIndependiente.Header;
+                    for (int y = (int)hdr.GroundLevel; y < hdr.TilesHigh - 200 && tileSumergido == null; y += 3)
+                        for (int x = 0; x < hdr.TilesWide; x += 5)
+                        {
+                            var t = worldIndependiente.Tiles[x, y];
+                            if (t.IsActive && t.LiquidAmount > 0) { tileSumergido = (x, y); break; }
+                        }
+                    if (tileSumergido is { } pos)
+                    {
+                        vm.Exploration.UpdateHover(pos.X, pos.Y);
+                        Console.WriteLine($"A8-05: tile sumergido real en ({pos.X},{pos.Y}) -> HoverTileText='{vm.Exploration.HoverTileText}' (esperado != '—'), HoverLiquidText='{vm.Exploration.HoverLiquidText}' (esperado != '—')");
+                        if (vm.Exploration.HoverTileText == "—" || vm.Exploration.HoverLiquidText == "—")
+                            Console.WriteLine("FALLO: A8-05 - un tile activo con liquido no nombra los dos a la vez");
+                        Console.WriteLine($"A8-05-CAPA: HoverLayerText='{vm.Exploration.HoverLayerText}' (esperado uno real: Espacio/Superficie/Subterraneo/Cavernas/Infierno), HoverDepthText='{vm.Exploration.HoverDepthText}'");
+                        if (vm.Exploration.HoverLayerText is not ("Espacio" or "Superficie" or "Subterráneo" or "Cavernas" or "Infierno"))
+                            Console.WriteLine("FALLO: A8-05-CAPA - HoverLayerText no es ninguna de las 5 capas reales de la formula GPS");
+                    }
+                    else Console.WriteLine("A8-05: este mundo real no tiene ningun tile activo sumergido en liquido, omitido");
+
+                    // P-1 (auditoria de Opus vs TEdit): la franja de estado del mapa ya NO debe
+                    // cambiar de alto al entrar/salir el raton (antes: Visibility=EmptyToCollapsed
+                    // sobre la caja entera, salto de layout constante).
+                    var mapStatusBar = Descendientes<Border>(window).FirstOrDefault(b => b.Name == "MapStatusBar");
+                    if (mapStatusBar != null)
+                    {
+                        vm.Exploration.UpdateHover(-1, -1); // fuera de rango = "sin hover"
+                        DoEvents();
+                        double altoSinHover = mapStatusBar.ActualHeight;
+                        if (tileSumergido is { } p2) vm.Exploration.UpdateHover(p2.X, p2.Y);
+                        DoEvents();
+                        double altoConHover = mapStatusBar.ActualHeight;
+                        Console.WriteLine($"P-1-ALTURA: franja de estado sin hover={altoSinHover:0.0}px, con hover={altoConHover:0.0}px (esperado igual)");
+                        if (Math.Abs(altoSinHover - altoConHover) > 0.5) Console.WriteLine("FALLO: P-1 - la franja de estado del mapa cambia de alto al entrar/salir el raton");
+                    }
+                    else Console.WriteLine("P-1-ALTURA: no se encontro 'MapStatusBar' en el arbol visual - omitido");
+
                     var rtbBuscadorFase2 = new System.Windows.Media.Imaging.RenderTargetBitmap(
                         (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
                     rtbBuscadorFase2.Render(window);
@@ -2600,15 +2641,28 @@ internal static class Program
                     // A8-01 (auditoria de Opus vs TEdit, E-01): "Sin resultados." se calculaba
                     // pero el TextBlock que lo muestra vivia dentro de un Grid cuya visibilidad
                     // dependia de WorldSearchResults.Count>0 - justo la condicion falsa. Buscar
-                    // algo que este mundo no tiene debe dejar un TextBlock VISIBLE de verdad en
-                    // el arbol visual (IsVisible ya tiene en cuenta la visibilidad de TODOS los
+                    // algo que este mundo no tiene debe dejar feedback VISIBLE de verdad en el
+                    // arbol visual (IsVisible ya tiene en cuenta la visibilidad de TODOS los
                     // ancestros, no solo la propia), no solo la propiedad de la ViewModel.
+                    // P-6 (misma auditoria): el mensaje ya no es el CaptionText plano de 11px -
+                    // el bloque 4 lo sustituyo por un panel con cuerpo (BodyText + sugerencia,
+                    // ShowZeroResultsState), asi que la comprobacion verifica ESE panel real, no
+                    // el texto literal "Sin resultados." (que ahora vive solo en WorldSearchSummary,
+                    // consumido por P-6, no mostrado a secas).
                     vm.Exploration.WorldSearchText = "zzzznoexisteenningunmundo";
                     WaitForDispatcher(1000); // debounce real (250ms) + el barrido en segundo plano
-                    Console.WriteLine($"A8-01: WorldSearchResults.Count={vm.Exploration.WorldSearchResults.Count} (esperado 0), WorldSearchSummary='{vm.Exploration.WorldSearchSummary}' (esperado 'Sin resultados.')");
-                    bool sinResultadosVisible = Descendientes<TextBlock>(window)
-                        .Any(t => t.Text == vm.Exploration.WorldSearchSummary && t.Text == "Sin resultados." && t.IsVisible);
-                    if (!sinResultadosVisible) Console.WriteLine("FALLO: A8-01 - 'Sin resultados.' no aparece VISIBLE en el arbol visual tras una busqueda sin coincidencias");
+                    Console.WriteLine($"A8-01: WorldSearchResults.Count={vm.Exploration.WorldSearchResults.Count} (esperado 0), WorldSearchSummary='{vm.Exploration.WorldSearchSummary}' (esperado 'Sin resultados.'), ShowZeroResultsState={vm.Exploration.ShowZeroResultsState} (esperado True)");
+                    var zeroResultsPanel = Descendientes<System.Windows.Controls.StackPanel>(window).FirstOrDefault(sp => sp.Name == "ZeroResultsPanel");
+                    // Bug real encontrado al verificar: TextBlock.Text devuelve "" cuando el
+                    // contenido se puso via Runs anidados en XAML (no via el atributo Text) - hay
+                    // que leer Inlines directamente, no el getter .Text, para ese TextBlock.
+                    string textoPanel = zeroResultsPanel != null
+                        ? string.Concat(Descendientes<TextBlock>(zeroResultsPanel)
+                            .SelectMany(t => t.Inlines.OfType<System.Windows.Documents.Run>().Select(r => r.Text)))
+                        : "";
+                    Console.WriteLine($"A8-01: ZeroResultsPanel encontrado={zeroResultsPanel != null}, IsVisible={zeroResultsPanel?.IsVisible} (esperado True), texto='{textoPanel}'");
+                    if (zeroResultsPanel == null || !zeroResultsPanel.IsVisible || !textoPanel.Contains("Nada que coincida"))
+                        Console.WriteLine("FALLO: A8-01 - el panel de 'sin resultados' (P-6) no aparece VISIBLE en el arbol visual tras una busqueda sin coincidencias");
                     vm.Exploration.WorldSearchText = string.Empty; // deja el estado limpio para pasos siguientes
                     WaitForDispatcher(300);
                 }

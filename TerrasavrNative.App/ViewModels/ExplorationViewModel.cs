@@ -198,6 +198,19 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private string _npcSearchText = string.Empty;
     [ObservableProperty] private double _zoom = 1.0;
     [ObservableProperty] private string _hoverInfo = string.Empty;
+
+    // F-6 (auditoria de Opus vs TEdit, E-07): campos separados para la franja de estado fija de
+    // P-1 (MainWindow.xaml) - HoverInfo (arriba) NO se toca, sigue siendo la cadena unica del
+    // tooltip flotante que sigue al cursor (pedido explicito del usuario, 1-sep-2026). "—" por
+    // defecto (nunca vacio) para que la franja no cambie de alto al entrar/salir del mapa -
+    // mismo motivo real que P-1 documenta.
+    [ObservableProperty] private string _hoverCoordText = "—";
+    [ObservableProperty] private string _hoverLayerText = "—";
+    [ObservableProperty] private Color _hoverLayerColor = Colors.Transparent;
+    [ObservableProperty] private string _hoverDepthText = "—";
+    [ObservableProperty] private string _hoverTileText = "—";
+    [ObservableProperty] private string _hoverWallText = "—";
+    [ObservableProperty] private string _hoverLiquidText = "—";
     // Auditoria de Opus, Bloque 3 (X-7/T-13): medido de verdad antes de tocar nada (no de
     // memoria) - un mundo .wld real y grande de esta maquina (11MB, 8400x2400 tiles) tarda
     // ~1.4s en leerse+pintarse, congelando el hilo de UI entero sin ningun aviso mientras tanto
@@ -253,6 +266,22 @@ public partial class ExplorationViewModel : ObservableObject
     // para que el usuario no tenga que aprender una sintaxis nueva.
     [ObservableProperty] private string _worldSearchText = string.Empty;
     [ObservableProperty] private string _worldSearchSummary = string.Empty;
+    partial void OnWorldSearchSummaryChanged(string value)
+    {
+        OnPropertyChanged(nameof(ShowZeroResultsState));
+        OnPropertyChanged(nameof(ShowCompactSummary));
+    }
+
+    // P-6 (auditoria de Opus vs TEdit, cierra E-01 estetico): estado "sin resultados" con
+    // cuerpo, no solo el texto de 11px de WorldSearchSummary. Acotado a "Todo" (la unica
+    // categoria con busqueda de verdad asincrona - las otras 4 filtran en memoria via IsMatch,
+    // sin equivalente a WorldSearchSummary; extenderlo alli exigiria plumbing nuevo que no
+    // aporta lo mismo, fuera de alcance de esta pasada).
+    public bool ShowZeroResultsState => SelectedCategory == WorldSearchCategory.All && WorldSearchSummary == "Sin resultados.";
+    // El resumen compacto de siempre (F-1) se sigue mostrando para CUALQUIER resultado no vacio
+    // (incluida la limitacion de 1000) - solo se sustituye por el panel de P-6 en el caso
+    // concreto de 0 resultados.
+    public bool ShowCompactSummary => !string.IsNullOrEmpty(WorldSearchSummary) && !ShowZeroResultsState;
     public ObservableCollection<WorldSearchHitRowViewModel> WorldSearchResults { get; } = [];
 
     // Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3 puntos 4/5): navegacion circular anterior/
@@ -291,6 +320,8 @@ public partial class ExplorationViewModel : ObservableObject
         WorldSearchText = string.Empty;
         NpcSearchText = string.Empty;
         RebuildInventory();
+        OnPropertyChanged(nameof(ShowZeroResultsState));
+        OnPropertyChanged(nameof(ShowCompactSummary));
     }
 
     public ObservableCollection<WorldInventoryRowViewModel> Inventory { get; } = [];
@@ -772,6 +803,8 @@ public partial class ExplorationViewModel : ObservableObject
         if (_world == null || tileX < 0 || tileY < 0 || tileX >= _world.Header.TilesWide || tileY >= _world.Header.TilesHigh)
         {
             HoverInfo = string.Empty;
+            HoverCoordText = HoverLayerText = HoverDepthText = HoverTileText = HoverWallText = HoverLiquidText = "—";
+            HoverLayerColor = Colors.Transparent;
             return;
         }
 
@@ -791,6 +824,40 @@ public partial class ExplorationViewModel : ObservableObject
         HoverInfo = string.IsNullOrEmpty(wallText)
             ? $"({tileX}, {tileY}) - {tileText}"
             : $"({tileX}, {tileY}) - {tileText} / pared: {wallText}";
+
+        // F-6 (auditoria de Opus vs TEdit, E-07/E-08): campos reales para la franja de estado
+        // fija de P-1 - id entre corchetes (como TEdit) y liquido SIEMPRE nombrado con su
+        // cantidad (antes de este arreglo, E-08: un bloque bajo el agua/lava/miel no lo
+        // mencionaba porque IsActive==true saltaba directo a la rama de tile, el mismo bug ya
+        // corregido en su forma simetrica el 2-sep-2026 - ver el comentario justo arriba).
+        HoverCoordText = $"({tileX}, {tileY})";
+        HoverTileText = tile.IsActive ? $"{_tileNames.TileVariantName(tile.Type, tile.U, tile.V)} [{tile.Type}]" : "—";
+        HoverWallText = string.IsNullOrEmpty(wallText) ? "—" : $"{wallText} [{tile.Wall}]";
+        HoverLiquidText = tile.LiquidAmount > 0 ? $"{LiquidName(tile.LiquidType)} ({tile.LiquidAmount}/255)" : "—";
+
+        // Formula GPS real del propio juego (TEdit UI/MouseTile.cs:115-153, comentario literal
+        // "Updates depth display text using Terraria's in-game GPS formulas") - DELIBERADAMENTE
+        // NO se reutiliza WldHeader.ZoneFor (usa umbrales distintos, pensados para el fondo del
+        // mapa, no para el HUD de profundidad que el jugador ve en el juego real).
+        double groundLevel = _world.Header.GroundLevel;
+        double pies = tileY * 2 - groundLevel * 2;
+        double spaceCheck = (tileY - (65 + 10 * Math.Pow(_world.Header.TilesWide / 4200.0, 2))) / (groundLevel / 5.0);
+        string zonaColor;
+        if (tileY > _world.Header.TilesHigh - 204) { HoverLayerText = "Infierno"; zonaColor = "Hell"; }
+        else if (tileY > _world.Header.RockLevel) { HoverLayerText = "Cavernas"; zonaColor = "Rock"; }
+        else if (pies > 0) { HoverLayerText = "Subterráneo"; zonaColor = "Earth"; }
+        else if (spaceCheck < 1.0) { HoverLayerText = "Espacio"; zonaColor = "Space"; }
+        else { HoverLayerText = "Superficie"; zonaColor = "Sky"; }
+        var c = _mapColors.Global(zonaColor);
+        HoverLayerColor = Color.FromArgb(c.A, c.R, c.G, c.B);
+
+        int tilesRespectoSuelo = (int)Math.Round(tileY - groundLevel);
+        HoverDepthText = tilesRespectoSuelo switch
+        {
+            > 0 => $"{tilesRespectoSuelo:N0} tiles bajo el suelo",
+            < 0 => $"{-tilesRespectoSuelo:N0} tiles sobre el suelo",
+            _ => "En el nivel del suelo",
+        };
     }
 
     // H3-10 (tercera auditoria de Opus, Fable): miel y Shimmer compartian el codigo 3 (mostraba

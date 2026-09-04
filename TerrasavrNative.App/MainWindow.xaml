@@ -3414,10 +3414,11 @@
                                 Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
                         <!-- P-8 (auditoria Opus vs TEdit): "−"/"+" eran los unicos botones sin
                              tooltip de la fila; "Restablecer" no decia a que restablecia. -->
+                        <!-- P-1 (auditoria Opus vs TEdit): el indicador de porcentaje se mudo a la
+                             franja de estado fija bajo el mapa (mas cerca de donde se mira al
+                             hacer zoom) - los botones de aqui se quedan, solo se fue el numero. -->
                         <Button Content="&#8722;" Command="{Binding Exploration.ZoomOutCommand}" Padding="10,2"
                                 ToolTip="Alejar" />
-                        <TextBlock Text="{Binding Exploration.Zoom, StringFormat={}{0:P0}}" Style="{StaticResource CaptionText}"
-                                   VerticalAlignment="Center" Width="50" TextAlignment="Center" />
                         <Button Content="+" Command="{Binding Exploration.ZoomInCommand}" Padding="10,2" Margin="4,0,0,0"
                                 ToolTip="Acercar" />
                         <Button Content="Restablecer" Command="{Binding Exploration.ZoomResetCommand}" Padding="8,2" Margin="8,0,0,0"
@@ -3477,10 +3478,52 @@
                     <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,0">
                         <Grid>
                         <DockPanel>
-                            <Border DockPanel.Dock="Bottom" Background="{StaticResource BgElevatedBrush}"
-                                    CornerRadius="0,0,8,8" Padding="10,6"
-                                    Visibility="{Binding Exploration.HoverInfo, Converter={StaticResource EmptyToCollapsed}}">
-                                <TextBlock Text="{Binding Exploration.HoverInfo}" Style="{StaticResource CaptionText}" />
+                            <!-- P-1 (auditoria de Opus vs TEdit, cierra E-01 estetico): antes esta
+                                 caja aparecia/desaparecia con el hover (Visibility=EmptyToCollapsed)
+                                 y el mapa CAMBIABA DE ALTO al entrar/salir el raton (estaba en
+                                 DockPanel.Dock=Bottom del mismo DockPanel que el mapa) - salto de
+                                 layout constante. Ahora: altura FIJA (Height=26), SIEMPRE presente,
+                                 con campos separados (F-6 los calcula: HoverCoordText/LayerText/
+                                 DepthText/TileText/WallText/LiquidText, "—" cuando no hay hover, la
+                                 franja nunca cambia de tamaño). El Viewbox DownOnly es el mismo
+                                 recurso real de TEdit (MainWindow.xaml:276, Viewbox
+                                 StretchDirection=DownOnly en su barra de estado) - en vez de
+                                 recortar campos en una ventana estrecha, el texto se encoge
+                                 tipograficamente entero. El tooltip flotante que sigue al cursor
+                                 (mas abajo) NO se toca, sigue usando HoverInfo tal cual. -->
+                            <Border x:Name="MapStatusBar" DockPanel.Dock="Bottom" Background="{StaticResource BgElevatedBrush}"
+                                    CornerRadius="0,0,8,8" Height="26" Padding="10,0">
+                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Stretch">
+                                    <DockPanel LastChildFill="False">
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                                            <TextBlock Text="Zoom " Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Exploration.Zoom, StringFormat={}{0:P0}}" Style="{StaticResource BodyText}"
+                                                       FontSize="11" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Exploration.HoverCoordText}" Style="{StaticResource BodyText}" FontSize="11" VerticalAlignment="Center" />
+                                            <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="10,5" />
+                                            <!-- Color real de la zona (map_colors.json, MapColorCatalog.Global -
+                                                 el mismo que ya pinta el fondo del mapa, WorldRenderer.cs:39) -
+                                                 color CON SIGNIFICADO, no decorativo. -->
+                                            <TextBlock Text="{Binding Exploration.HoverLayerText}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center">
+                                                <TextBlock.Foreground>
+                                                    <SolidColorBrush Color="{Binding Exploration.HoverLayerColor}" />
+                                                </TextBlock.Foreground>
+                                            </TextBlock>
+                                            <TextBlock Text=" · " Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Exploration.HoverDepthText}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                            <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="10,5" />
+                                            <TextBlock Text="{Binding Exploration.HoverTileText}" Style="{StaticResource BodyText}" FontSize="11" VerticalAlignment="Center"
+                                                       MaxWidth="180" TextTrimming="CharacterEllipsis" />
+                                            <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="10,5" />
+                                            <TextBlock Text="{Binding Exploration.HoverWallText}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
+                                                       MaxWidth="150" TextTrimming="CharacterEllipsis" />
+                                            <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="10,5" />
+                                            <TextBlock Text="{Binding Exploration.HoverLiquidText}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Viewbox>
                             </Border>
                             <!-- Arrastrar para desplazar (pan) + rueda para zoom, sin necesitar Ctrl - los
                                  gestores reales viven en el code-behind (MainWindow.xaml.cs) porque
@@ -3875,7 +3918,19 @@
                                  tiene sentido. -->
                             <TextBlock Text="{Binding Exploration.WorldSearchSummary}" Style="{StaticResource CaptionText}"
                                        TextWrapping="Wrap" Margin="0,0,0,6"
-                                       Visibility="{Binding Exploration.WorldSearchSummary, Converter={StaticResource EmptyToCollapsed}}" />
+                                       Visibility="{Binding Exploration.ShowCompactSummary, Converter={StaticResource BoolToVis}}" />
+                            <!-- P-6 (auditoria Opus vs TEdit, cierra E-01 estetico): 0 resultados
+                                 en "Todo" ya no es solo el CaptionText de 11px de arriba - mismo
+                                 patron visual que el estado vacio de "sin mundo cargado"
+                                 (:3665-3681 aprox., BodyText + sugerencia en CaptionText). -->
+                            <StackPanel x:Name="ZeroResultsPanel" HorizontalAlignment="Center" Margin="0,4,0,10"
+                                        Visibility="{Binding Exploration.ShowZeroResultsState, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" TextAlignment="Center">
+                                    <Run Text="Nada que coincida con «" /><Run Text="{Binding Exploration.WorldSearchText, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="» en este mundo" />
+                                </TextBlock>
+                                <TextBlock Text="Prueba con menos palabras, o con el id: #123" Style="{StaticResource CaptionText}"
+                                           TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0" />
+                            </StackPanel>
                             <Grid Margin="0,0,0,6"
                                   Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}">
                                 <Grid.ColumnDefinitions>
