@@ -2250,8 +2250,25 @@
                                              tiene contador ni operaciones en bloque, su gemela de objetos si" -
                                              misma cabecera real (DisplayName con recuento vivo + Vaciar todos). -->
                                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                            <Button DockPanel.Dock="Right" Content="Vaciar todos" Command="{Binding Buffs.Container.ClearAllCommand}"
-                                                    ToolTip="Vacía todos los slots de Buffs" Tag="Ghost" Padding="6,3" FontSize="10.5" />
+                                            <!-- Pedido explicito del usuario (4-sep-2026): "la pestaña de buff
+                                                 no tiene nada de guardar json ni tampoco cargar para guardar
+                                                 combinaciones de buff" - gemelo real de los botones de
+                                                 Guardar/Cargar/Añadir conjunto de objetos (H5-03), mismo
+                                                 formato JSON, ver OnSaveBuffSetClick/OnLoadBuffSetClick/
+                                                 OnAppendBuffSetClick. -->
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                <Button Content="Guardar conjunto..." Click="OnSaveBuffSetClick"
+                                                        ToolTip="Guarda TODOS los buffs en un fichero .json real, para llevarlos a otro personaje"
+                                                        Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                <Button Content="Cargar..." Click="OnLoadBuffSetClick"
+                                                        ToolTip="Reemplaza TODOS los buffs por un conjunto .json guardado antes"
+                                                        Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                <Button Content="Añadir..." Click="OnAppendBuffSetClick"
+                                                        ToolTip="Rellena solo los huecos libres de Buffs con un conjunto .json guardado antes (sin duplicar buffs ya activos)"
+                                                        Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                <Button Content="Vaciar todos" Command="{Binding Buffs.Container.ClearAllCommand}"
+                                                        ToolTip="Vacía todos los slots de Buffs" Tag="Ghost" Padding="6,3" FontSize="10.5" />
+                                            </StackPanel>
                                             <TextBlock Text="{Binding Buffs.Container.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
                                         </DockPanel>
                                         <ContentControl Content="{Binding Buffs.Container}" ContentTemplate="{StaticResource BuffContainerCompactTemplate}" />

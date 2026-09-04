@@ -1387,6 +1387,57 @@ internal static class Program
             }
             catch (Exception ex) { Console.WriteLine("H6-12-DEBUFF-EXCEPTION: " + ex); }
 
+            // Pedido explicito del usuario (4-sep-2026): "la pestaña de buff no tiene nada de
+            // guardar json ni tampoco cargar para guardar combinaciones de buff" - confirma que
+            // los 3 botones reales existen en el arbol visual (sin invocarlos: Click dispara un
+            // SaveFileDialog/OpenFileDialog real de Windows, que colgaria este arnes sin nadie
+            // delante para pulsar Cancelar) y ejercita SaveBuffSet/LoadBuffSet de verdad, mismo
+            // camino real que esos botones llaman, con un fichero temporal real - mismo criterio
+            // ya establecido para Guardar/Cargar conjunto de OBJETOS (H5-03), que tampoco tiene
+            // precedente en este arnes por el mismo motivo real.
+            try
+            {
+                bool botonGuardarExiste = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
+                    new PropertyCondition(AutomationElement.NameProperty, "Guardar conjunto..."))) != null;
+                Console.WriteLine($"BUFFSET-BOTONES: boton real 'Guardar conjunto...' encontrado en Buffs={botonGuardarExiste} (esperado True)");
+                if (!botonGuardarExiste) Console.WriteLine("FALLO: BUFFSET-BOTONES - el boton real 'Guardar conjunto...' de Buffs no esta en el arbol visual");
+
+                var containerBuffs = vm.Buffs.Container;
+                if (containerBuffs != null)
+                {
+                    containerBuffs.Slots[0].PlaceBuff(1); // Obsidian Skin, id real vanilla
+                    var idsAntes = containerBuffs.Slots.Select(s => s.Buff.Id).ToArray();
+                    string rutaBuffSet = Path.Combine(Path.GetTempPath(), "uia-harness-buffset.json");
+                    if (File.Exists(rutaBuffSet)) File.Delete(rutaBuffSet);
+
+                    vm.SaveBuffSet(containerBuffs, rutaBuffSet);
+                    Console.WriteLine($"BUFFSET-GUARDAR: fichero real creado={File.Exists(rutaBuffSet)} (esperado True), StatusMessage='{vm.StatusMessage}'");
+
+                    containerBuffs.ClearAllCommand.Execute(null);
+                    DoEvents();
+                    vm.LoadBuffSet(containerBuffs, rutaBuffSet, append: false);
+                    DoEvents(); DoEvents();
+                    var idsDespues = containerBuffs.Slots.Select(s => s.Buff.Id).ToArray();
+                    bool cargoBien = idsAntes.SequenceEqual(idsDespues);
+                    Console.WriteLine($"BUFFSET-CARGAR: el conjunto real cargado coincide con el guardado={cargoBien} (esperado True), StatusMessage='{vm.StatusMessage}'");
+                    if (!cargoBien) Console.WriteLine("FALLO: BUFFSET-CARGAR - el conjunto cargado no coincide con el guardado");
+
+                    var rtbBuffSet = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbBuffSet.Render(window);
+                    var encBuffSet = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encBuffSet.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbBuffSet));
+                    using (var fsBuffSet = File.Create(Path.Combine(AppContext.BaseDirectory, "buffset-botones-guardar-cargar.png"))) encBuffSet.Save(fsBuffSet);
+                    Console.WriteLine("Captura botones Guardar/Cargar/Añadir de Buffs -> buffset-botones-guardar-cargar.png");
+
+                    containerBuffs.ClearAllCommand.Execute(null); // deja el personaje real como estaba
+                    File.Delete(rutaBuffSet);
+                }
+                else Console.WriteLine("BUFFSET: sin Buffs.Container real - omitido");
+            }
+            catch (Exception ex) { Console.WriteLine("BUFFSET-EXCEPTION: " + ex); }
+
             // Verificacion real de T-5 (auditoria de Opus, Bloque 5): la leyenda solo vive en
             // el hueco real de "sin seleccion" - se deselecciona a proposito para verla.
             if (emptyBuffSlot != null) emptyBuffSlot.IsSelected = false;

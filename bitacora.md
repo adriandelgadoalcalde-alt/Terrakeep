@@ -7514,3 +7514,44 @@ frame con filas vacias). **13/13 extraidos limpio** de `Content/Images/NPC_{id}.
 COMPLETO de 40 ids ya no tiene ningun hueco de icono de cuerpo). Confirmado a mano (Gato/Perro/
 Slime de cobre) que el recorte capturo un unico sprite reconocible, no una tira de fotogramas
 ni dos mascotas pegadas.
+
+## Guardar/cargar conjuntos de BUFFS (4-sep-2026)
+
+Pedido explicito del usuario: "la pestaña de buff no tiene nada de guardar json ni tampoco
+cargar para guardar combinaciones de buff". Gemelo real completo de "guardar/cargar conjuntos
+de objetos" (H5-03) - mismo formato JSON, misma logica de portabilidad entre catalogos
+(vanilla por id real, Calamity por mod+nombre interno - el id sintetico de este puerto no
+sobreviviria a una regeneracion del catalogo real), mismo criterio de UI (3 botones: Guardar/
+Cargar/Añadir).
+
+**Cambios reales**: `TerrasavrNative.Core/Data/BuffSetFile.cs` (nuevo) - mismo
+`resourceType`/formato real que `ItemSetFile.cs`, pero `"TerrakeepBuffs"` y solo
+`id`/`mod`/`internal`/`time` por slot (un buff no tiene prefijo ni favorito, campos que SI
+tiene un objeto). `MainViewModel.SaveBuffSet`/`LoadBuffSet` (nuevos) - mismo contrato real que
+`SaveItemSet`/`LoadItemSet`: `Cargar` reemplaza el contenedor entero (`RestoreExact`, sin
+comprobar duplicados entre si - parte de un contenedor ya vaciado); `Añadir` solo rellena
+huecos libres, respetando de verdad la regla real "sin dos instancias del mismo buff a la vez"
+(`PasteBuff`, Bu-b). `RunAsUndoableBuffBatch` (nuevo) - una UNICA entrada de Deshacer para todo
+el conjunto cargado, mismo pedido explicito ya cerrado para objetos en H5-01/H5-03 (aqui mas
+simple que su gemelo de objetos: los buffs individuales no empujan su propia entrada de
+Deshacer - `Buffs.SlotChanged` solo alimenta `IsDirty`, confirmado leyendo el propio
+`MainViewModel.cs`, asi que no hace falta el guardia `_suppressUndoRecording` que si necesita
+el de objetos). 3 botones reales nuevos en la cabecera de Buffs (`MainWindow.xaml`), mismo
+`Tag="Ghost"` que sus gemelos de Inventario/Almacenes.
+
+**Verificacion real**: `dotnet build` en verde. `dotnet test`: **503/503** (202 Core, +5 tests
+nuevos: `BuffSetFileTests.cs` - ida y vuelta real de un buff vanilla con duracion, un buff de
+Calamity identificado por mod+nombre interno (nunca el id sintetico crudo, confirmado buscando
+en el JSON real), slot vacio como `null`, `resourceType` ajeno rechazado, un buff de Calamity
+ya no instalado no se inventa; 301 ViewModels, +4 tests nuevos: `BuffSetSaveLoadTests.cs` -
+guardar+cargar un conjunto real restaura el mismo contenido exacto (ids Y duraciones reales),
+`Añadir` NO duplica un buff ya activo en otro slot (Bu-b real), cargar marca el personaje como
+modificado (`IsDirty`), y una UNICA entrada de Deshacer real para todo el conjunto). Arnes de
+UI Automation ampliado con un bloque nuevo (`BUFFSET`) - confirma que los 3 botones reales
+existen en el arbol visual de Buffs (SIN invocarlos: `Click` dispara un
+`SaveFileDialog`/`OpenFileDialog` real de Windows, que colgaria el arnes sin nadie delante para
+cerrarlo - mismo motivo real por el que `SaveItemSet`/`LoadItemSet`, H5-03, tampoco tienen
+precedente en este arnes) y ejercita `SaveBuffSet`/`LoadBuffSet` de verdad con un fichero
+temporal real, mismo camino real que esos botones llaman - guardar 2 buffs reales (uno vanilla,
+uno de Calamity), vaciar, cargar, confirmar que los ids coinciden exactos, mas una captura real
+de los 3 botones en la cabecera. **2/2 pasadas limpias**, sin NO-FOUND/FALLO/EXCEPTION.

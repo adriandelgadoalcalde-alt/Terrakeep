@@ -323,6 +323,38 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) _viewModel.LoadItemSet(container, dialog.FileName, append);
     }
 
+    // Pedido explicito del usuario (4-sep-2026): "la pestaña de buff no tiene nada de guardar
+    // json ni tampoco cargar para guardar combinaciones de buff" - gemelo real de
+    // OnSave/LoadInventorySetClick de arriba, mismo criterio (dialogo real en la View).
+    private void OnSaveBuffSetClick(object sender, RoutedEventArgs e) => SaveBuffSetDialog();
+    private void OnLoadBuffSetClick(object sender, RoutedEventArgs e) => LoadBuffSetDialog(append: false);
+    private void OnAppendBuffSetClick(object sender, RoutedEventArgs e) => LoadBuffSetDialog(append: true);
+
+    private void SaveBuffSetDialog()
+    {
+        var container = _viewModel.Buffs.Container;
+        if (container == null) return;
+        var dialog = new SaveFileDialog
+        {
+            Title = "Guardar conjunto de buffs",
+            Filter = "Conjunto de buffs de Terrakeep (*.json)|*.json",
+            FileName = "buffs.json",
+        };
+        if (dialog.ShowDialog(this) == true) _viewModel.SaveBuffSet(container, dialog.FileName);
+    }
+
+    private void LoadBuffSetDialog(bool append)
+    {
+        var container = _viewModel.Buffs.Container;
+        if (container == null) return;
+        var dialog = new OpenFileDialog
+        {
+            Title = append ? "Añadir conjunto de buffs" : "Cargar conjunto de buffs (reemplaza)",
+            Filter = "Conjunto de buffs de Terrakeep (*.json)|*.json|Todos los archivos (*.*)|*.*",
+        };
+        if (dialog.ShowDialog(this) == true) _viewModel.LoadBuffSet(container, dialog.FileName, append);
+    }
+
     // X-a: boton real "Ajustar a la ventana" - antes solo existia "Restablecer" (vuelve al
     // 100%, que para un mundo grande deja ver una fraccion minima del ancho). El calculo
     // necesita el tamaño real del viewport del ScrollViewer, que la ViewModel no conoce - vive

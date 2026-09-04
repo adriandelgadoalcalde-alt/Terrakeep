@@ -1367,6 +1367,88 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    // Pedido explicito del usuario (4-sep-2026): "la pestaña de buff no tiene nada de guardar
+    // json ni tampoco cargar para guardar combinaciones de buff" - gemelo real de
+    // SaveItemSet/LoadItemSet (H5-03) para BuffContainerViewModel/PlrBuff en vez de
+    // ContainerViewModel/GameItem, mismo formato/criterio real (BuffSetFile, portabilidad
+    // vanilla por id / Calamity por mod+nombre interno).
+    public void SaveBuffSet(BuffContainerViewModel container, string path)
+    {
+        try
+        {
+            var file = BuffSetFile.FromBuffs(container.Slots.Select(s => (s.Buff.Id, s.Buff.Time)), _service.CalamityBuffCatalog);
+            File.WriteAllBytes(path, file.Write());
+            StatusMessage = $"Conjunto de {container.DisplayName} guardado: {Path.GetFileName(path)}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error al guardar el conjunto de buffs: {ex.Message}";
+            GlobalErrorMessage = StatusMessage;
+        }
+    }
+
+    // append=false ("Cargar"): reemplaza el contenedor entero, slot a slot (RestoreExact, sin
+    // comprobar duplicados entre si - un reemplazo total parte de un contenedor ya vaciado de
+    // verdad). append=true ("Añadir"): solo rellena huecos libres, SIN colocar un buff que ya
+    // este activo en otro slot (Bu-b real, Terraria no permite dos instancias del mismo buff -
+    // PasteBuff ya hace esa comprobacion real).
+    public void LoadBuffSet(BuffContainerViewModel container, string path, bool append)
+    {
+        try
+        {
+            var file = BuffSetFile.Read(File.ReadAllBytes(path));
+            var buffs = file.ToBuffs(_service.CalamityBuffCatalog);
+
+            RunAsUndoableBuffBatch(append ? "Añadir conjunto de buffs" : "Cargar conjunto de buffs", container, () =>
+            {
+                if (append)
+                {
+                    int di = 0;
+                    foreach (var (id, time) in buffs)
+                    {
+                        if (id == 0) continue;
+                        while (di < container.Slots.Count && !container.Slots[di].IsEmpty) di++;
+                        if (di >= container.Slots.Count) break;
+                        container.Slots[di].PasteBuff(id, time); // respeta "sin duplicados" real
+                        di++;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < container.Slots.Count; i++)
+                    {
+                        var (id, time) = i < buffs.Count ? buffs[i] : (0, 0);
+                        container.Slots[i].RestoreExact(id, time);
+                    }
+                }
+            });
+
+            StatusMessage = $"Conjunto de buffs {(append ? "añadido a" : "cargado en")} {container.DisplayName}: {Path.GetFileName(path)} - pulsa Guardar para conservarlo.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error al cargar el conjunto de buffs: {ex.Message}";
+            GlobalErrorMessage = StatusMessage;
+        }
+    }
+
+    // Gemelo real de RunAsUndoableBatch (objetos) para buffs - una unica entrada de Deshacer
+    // para todo el conjunto (mismo pedido explicito ya cerrado en H5-03/H5-01).
+    private void RunAsUndoableBuffBatch(string label, BuffContainerViewModel container, Action action)
+    {
+        var before = container.Slots.Select(s => (s.Buff.Id, s.Buff.Time)).ToArray();
+        action();
+        var after = container.Slots.Select(s => (s.Buff.Id, s.Buff.Time)).ToArray();
+        var slots = container.Slots;
+
+        UndoStack.Push(new UndoEntry
+        {
+            Label = label,
+            Undo = () => { for (int i = 0; i < slots.Count; i++) slots[i].RestoreExact(before[i].Item1, before[i].Item2); },
+            Redo = () => { for (int i = 0; i < slots.Count; i++) slots[i].RestoreExact(after[i].Item1, after[i].Item2); },
+        });
+    }
+
     // Los primeros 10 slots reales de "inventory" son la barra rapida (Player.inventory[0..9]
     // en el propio Terraria - confirmado en Player.cs decompilado, "Hotbar1".."Hotbar0" son 10
     // triggers reales) - contorno verde de "equipado" tambien ahi, igual que en Equipamiento
