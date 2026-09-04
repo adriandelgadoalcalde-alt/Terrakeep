@@ -76,32 +76,12 @@ public static class WorldRenderer
         return bitmap;
     }
 
-    // Colores de liquido - map_colors.json SI trae estos de verdad, bajo "global" junto a las 5
-    // zonas de fondo (Water/Lava/Honey/Shimmer, la misma fuente real de TEdit ya usada para
-    // tiles/paredes/fondo) - se corrige aqui el comentario anterior, que decia lo contrario.
-    //
-    // Bug real corregido (2-sep-2026, reportado: "no distingue el agua o la lava... todo en
-    // rojo"): los codigos 1/2/3 estaban asignados al REVES. Confirmado contra la fuente real
-    // de TEdit (World.FileV2.cs, escritor real): Agua -> header1 |= 0b0000_1000 (codigo 1),
-    // Lava -> header1 |= 0b0001_0000 (codigo 2), Miel -> header1 |= 0b0001_1000 (codigo 3) -
-    // exactamente lo que ya decodifica bien WldReader.cs (liquidHeader = (header1 & 0x18) >>
-    // 3), pero este switch asumia 1=lava en vez de 1=agua, asi que TODA el agua real (la
-    // mayoria del liquido de cualquier mapa tipico) salia pintada del color de la lava.
-    //
-    // H3-10 (tercera auditoria de Opus, Fable): miel y Shimmer compartian el MISMO codigo 3
-    // (ver el comentario real en WldReader.cs sobre por que en disco es asi) y por tanto el
-    // MISMO color aqui (el de Shimmer, lila) - la miel real salia pintada de lila. WldReader ya
-    // separa Shimmer a un codigo sintetico propio (4, nunca en disco) - aqui solo hacia falta
-    // dejar de aproximar a mano y usar los 4 colores reales ya extraidos de TEdit.
+    // El switch de codigo de liquido -> nombre de zona vive ahora en MapColorCatalog.LiquidColor
+    // (fuente unica, tambien usada por ExplorationViewModel para el swatch de la pestaña
+    // Liquidos del buscador) - aqui solo se convierte a la tupla que usa el resto de Blend().
     private static (byte R, byte G, byte B, byte A) LiquidColor(byte liquidType, MapColorCatalog colors)
     {
-        var c = colors.Global(liquidType switch
-        {
-            2 => "Lava",
-            3 => "Honey",
-            4 => "Shimmer",
-            _ => "Water", // codigo 1, y cualquier valor de reserva
-        });
+        var c = colors.LiquidColor(liquidType);
         return (c.R, c.G, c.B, c.A);
     }
 

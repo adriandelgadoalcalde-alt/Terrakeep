@@ -402,8 +402,14 @@ public partial class ExplorationViewModel : ObservableObject
                     // mascara (LiquidMask.fxc), no hay sprite recortable - el color de la paleta
                     // real del mapa es mejor que un icono inventado. Ver
                     // ESPEC-sprites-botones-badges.md#A.11.
+                    //
+                    // Bug real corregido (reportado: "pestaña Liquidos no tiene sus sprites"): el
+                    // swatch de respaldo (SwatchColor, ver el comentario de la clase mas abajo)
+                    // se pasaba en Colors.Transparent en vez del color real - la fila no mostraba
+                    // NADA, ni sprite ni color. Ahora usa MapColorCatalog.LiquidColor(code), el
+                    // mismo color real que ya pinta el mapa.
                     Inventory.Add(new WorldInventoryRowViewModel(code, 0, 0, WorldSearch.LiquidName(code), count, null,
-                        null, Colors.Transparent));
+                        null, ToWpfColor(_mapColors.LiquidColor(code))));
                 break;
         }
         ApplyInventoryFilter();

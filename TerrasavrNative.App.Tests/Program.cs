@@ -2513,6 +2513,15 @@ internal static class Program
                     int liquidosConIcono = vm.Exploration.Inventory.Count(r => r.IconPath != null);
                     Console.WriteLine($"ICONOS-LIQUIDOS: {liquidosConIcono}/{vm.Exploration.Inventory.Count} filas con sprite real (esperado 0 - decision deliberada, sin sprite recortable)");
                     if (liquidosConIcono != 0) Console.WriteLine("FALLO: Parte A - algun liquido salio con IconPath (deberia ser siempre null)");
+
+                    // Bug real corregido (reportado: "pestaña Liquidos no tiene sus sprites" - sin
+                    // IconPath NI SwatchColor, la fila no mostraba nada en absoluto). El swatch de
+                    // respaldo ahora usa el color real de MapColorCatalog.LiquidColor, nunca
+                    // transparente si hay al menos un liquido presente en el mundo.
+                    int liquidosSwatchTransparente = vm.Exploration.Inventory.Count(r => r.SwatchColor.A == 0);
+                    Console.WriteLine($"SWATCH-LIQUIDOS: {liquidosSwatchTransparente}/{vm.Exploration.Inventory.Count} filas con SwatchColor transparente (esperado 0)");
+                    if (vm.Exploration.Inventory.Count > 0 && liquidosSwatchTransparente > 0)
+                        Console.WriteLine("FALLO: la pestaña Liquidos tiene filas sin sprite NI color de respaldo (no se ve nada)");
                     vm.Exploration.ObjectsViewMode = 0;
 
                     vm.Exploration.SelectedCategory = WorldSearchCategory.All; // deja el estado limpio para pasos siguientes
