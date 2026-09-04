@@ -67,7 +67,14 @@ public enum WorldSearchCategory { All, Npcs, Chests, Ores, Objects }
 // Fila de inventario generica - reutilizada por Cofres (las dos vistas), Minerales y Objetos
 // (las tres vistas). NPCs sigue con su propio WorldNpcRowViewModel (ya existente, con icono real
 // y estado de mapa) - un inventario generico no le aporta nada que no tenga ya.
-public sealed partial class WorldInventoryRowViewModel(int id, short u, short v, string name, int count, int? veinCount, Color swatchColor) : ObservableObject
+//
+// Encargo del usuario 4-sep-2026 ("faltan todos los sprites... solo salen cuadrados de colores"):
+// IconPath es el sprite REAL de lo que representa la fila, resuelto por QUIEN construye la fila
+// (cada vista sabe que significa su Id/U/V - ver ESPEC-sprites-botones-badges.md#A.1; meter esa
+// decision aqui dentro obligaria a esta clase a saber de que vista viene, que es justo lo que la
+// hace reutilizable). SwatchColor NO desaparece: es el respaldo real de la plantilla cuando
+// IconPath es null (tiles de mods, liquidos, NetId sin icono extraido).
+public sealed partial class WorldInventoryRowViewModel(int id, short u, short v, string name, int count, int? veinCount, string? iconPath, Color swatchColor) : ObservableObject
 {
     public int Id { get; } = id;
     public short U { get; } = u;
@@ -75,6 +82,7 @@ public sealed partial class WorldInventoryRowViewModel(int id, short u, short v,
     public string Name { get; } = name;
     public int Count { get; } = count;
     public int? VeinCount { get; } = veinCount;
+    public string? IconPath { get; } = iconPath;
     public Color SwatchColor { get; } = swatchColor;
     // ESPEC-ui-exploracion.md#9.3-D: "86.200 tiles · 6.738 vetas" para Minerales; para el resto
     // (Cofres/Objetos), solo el recuento a secas.
@@ -304,7 +312,8 @@ public partial class ExplorationViewModel : ObservableObject
         if (ChestViewMode == 0)
         {
             foreach (var ((type, u, v), count) in _presence.ChestKindCounts.OrderByDescending(kv => kv.Value))
-                Inventory.Add(new WorldInventoryRowViewModel(type, u, v, _tileNames.TileVariantName(type, u, v), count, null, ToWpfColor(_mapColors.TileColor(type))));
+                Inventory.Add(new WorldInventoryRowViewModel(type, u, v, _tileNames.TileVariantName(type, u, v), count, null,
+                    TileIconResolver.GetIconPath(type, u, v), ToWpfColor(_mapColors.TileColor(type))));
         }
         else
         {
@@ -318,7 +327,15 @@ public partial class ExplorationViewModel : ObservableObject
                 combinados[netId] = combinados.GetValueOrDefault(netId) + count;
 
             foreach (var (netId, count) in combinados.OrderByDescending(kv => kv.Value))
-                Inventory.Add(new WorldInventoryRowViewModel(netId, 0, 0, _itemNames.GetName(netId), count, null, Colors.Transparent));
+                // El Id es un NetId REAL de objeto del .wld, NO un id sintetico de esta app -
+                // GameItem.IsCalamity (Id >= 20.000.000) nunca es cierto aqui, asi que NO hay
+                // rama de Calamity que valga: un objeto modeado dentro de un cofre trae el id de
+                // runtime que tModLoader le asigno, que no se puede traducir (mismo motivo por el
+                // que _itemNames.GetName ya cae en "Item #N", ver el comentario de arriba).
+                // VanillaIconResolver devuelve null para todos ellos -> cuadradito de color,
+                // igual que hoy. Ver ESPEC-sprites-botones-badges.md#A.2.
+                Inventory.Add(new WorldInventoryRowViewModel(netId, 0, 0, _itemNames.GetName(netId), count, null,
+                    VanillaIconResolver.GetIconPath(netId), Colors.Transparent));
         }
         ApplyInventoryFilter();
     }
@@ -347,7 +364,8 @@ public partial class ExplorationViewModel : ObservableObject
                 if (!_presence.HasTile(id)) continue;
                 int count = _presence.TileCounts[id];
                 int veinCount = vetasPorTipo.GetValueOrDefault(id);
-                target.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.TileName(id), count, veinCount, ToWpfColor(_mapColors.TileColor(id))));
+                target.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.TileName(id), count, veinCount,
+                    TileIconResolver.GetIconPath(id), ToWpfColor(_mapColors.TileColor(id))));
             }
         }
         Fill(OreMetals, OreTileCatalog.Metals);
@@ -370,15 +388,22 @@ public partial class ExplorationViewModel : ObservableObject
         {
             case 0:
                 foreach (var (id, count) in _presence.TileCounts.OrderByDescending(kv => kv.Value))
-                    Inventory.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.TileName(id), count, null, ToWpfColor(_mapColors.TileColor(id))));
+                    Inventory.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.TileName(id), count, null,
+                        TileIconResolver.GetIconPath(id), ToWpfColor(_mapColors.TileColor(id))));
                 break;
             case 1:
                 foreach (var (id, count) in _presence.WallCounts.OrderByDescending(kv => kv.Value))
-                    Inventory.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.WallName(id), count, null, ToWpfColor(_mapColors.WallColor(id))));
+                    Inventory.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.WallName(id), count, null,
+                        WallIconResolver.GetIconPath(id), ToWpfColor(_mapColors.WallColor(id))));
                 break;
             case 2:
                 foreach (var (code, count) in _presence.LiquidCounts.OrderByDescending(kv => kv.Value))
-                    Inventory.Add(new WorldInventoryRowViewModel(code, 0, 0, WorldSearch.LiquidName(code), count, null, Colors.Transparent));
+                    // Sin icono a proposito: el juego dibuja los liquidos con un shader sobre una
+                    // mascara (LiquidMask.fxc), no hay sprite recortable - el color de la paleta
+                    // real del mapa es mejor que un icono inventado. Ver
+                    // ESPEC-sprites-botones-badges.md#A.11.
+                    Inventory.Add(new WorldInventoryRowViewModel(code, 0, 0, WorldSearch.LiquidName(code), count, null,
+                        null, Colors.Transparent));
                 break;
         }
         ApplyInventoryFilter();

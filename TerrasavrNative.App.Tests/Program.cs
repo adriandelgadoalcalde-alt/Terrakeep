@@ -25,8 +25,11 @@ using System.Windows.Threading;
 using TerrasavrNative.App;
 using TerrasavrNative.App.Controls;
 using TerrasavrNative.App.Converters;
+using TerrasavrNative.App.Services;
 using TerrasavrNative.App.ViewModels;
+using TerrasavrNative.Core.Calamity;
 using TerrasavrNative.Core.Model;
+using TerrasavrNative.Core.Nbt;
 using TerrasavrNative.Core.PlrFormat;
 
 internal static class Program
@@ -160,7 +163,58 @@ internal static class Program
         // ya existen ahi.
         Console.WriteLine($"HOME-SCAN: {vm.Home.Characters.Count} personaje(s) encontrado(s) en la carpeta real");
         foreach (var entry in vm.Home.Characters)
-            Console.WriteLine($"  - {entry.Name} | {entry.DifficultyLabel} | Calamity={entry.IsCalamity} | {entry.LastModifiedText}");
+            Console.WriteLine($"  - {entry.Name} | {entry.DifficultyLabel} | Vanilla={entry.IsVanilla} tModLoader={entry.IsTModLoader} Calamity={entry.IsCalamity} | mods='{entry.UsedModsTooltip}' | {entry.LastModifiedText}");
+
+        // Encargo del usuario 4-sep-2026 ("los personajes que tienen mod solo marcan calamity...
+        // que sean personajes verdaderamente de tmodloader... al igual que cuando un personaje
+        // es vanilla que tenga dicha etiqueta") - ver ESPEC-sprites-botones-badges.md#D.3.
+        // IsVanilla/IsTModLoader son excluyentes por construccion (IsVanilla => !IsTModLoader) -
+        // si alguna vez coinciden, algo real se rompio en el calculo, no solo en la UI.
+        foreach (var entry in vm.Home.Characters)
+        {
+            if (entry.IsVanilla == entry.IsTModLoader)
+                Console.WriteLine($"FALLO: INSIGNIAS-INICIO - '{entry.Name}' tiene IsVanilla={entry.IsVanilla} e IsTModLoader={entry.IsTModLoader} (deberian ser opuestos siempre)");
+        }
+
+        // Caso real que NO existe en ningun .tplr de esta maquina (los que hay tienen los 4
+        // contenido real de Calamity, ver ESPEC-sprites-botones-badges.md#C.3) - se fabrica a
+        // mano en una carpeta temporal (NUNCA cerca de un personaje real, mismo criterio que
+        // HomeCardTests.cs) un .tplr con solo entradas mod="Terraria" y un usedMods de ejemplo.
+        // Sin este caso, la parte C no esta verificada de verdad - solo se comprueba que sigue
+        // funcionando lo que ya funcionaba (Calamity=True en los personajes reales).
+        try
+        {
+            string dirSintetico = Path.Combine(Path.GetTempPath(), $"insignias-tmod-sin-calamity-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(dirSintetico);
+            string plrPath = Path.Combine(dirSintetico, "Sintetico.plr");
+            var personajeSintetico = new PlrCharacter
+            {
+                Name = "Sintetico",
+                Version = 279,
+                PrimaryLoadout = PlrLoadout.CreateEmpty(isPrimary: true),
+                Loadouts = [PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false)],
+            };
+            File.WriteAllBytes(plrPath, PlrFile.Write(personajeSintetico));
+            string tplrPathSintetico = Path.ChangeExtension(plrPath, ".tplr");
+            var rootSintetico = NbtCompound.Of(
+                ("inventory", new NbtList(NbtTagType.Compound, [
+                    NbtCompound.Of(("mod", new NbtString("Terraria")), ("name", new NbtString("IronBroadsword")), ("slot", new NbtShort(0)))
+                ])),
+                ("usedMods", new NbtList(NbtTagType.String, [new NbtString("HEROsMod")]))
+            );
+            File.WriteAllBytes(tplrPathSintetico, TplrFile.Write("Player", rootSintetico));
+
+            var serviceSintetico = new CharacterFileService();
+            var tplrSintetico = TplrProbe.TryRead(tplrPathSintetico);
+            var entrySintetica = new CharacterListEntryViewModel(plrPath, personajeSintetico, isTModLoader: true, tplrSintetico,
+                DateTime.UtcNow, serviceSintetico.EquipmentAppearance);
+            Console.WriteLine($"INSIGNIAS-TMOD-SIN-CALAMITY: Vanilla={entrySintetica.IsVanilla} tModLoader={entrySintetica.IsTModLoader} Calamity={entrySintetica.IsCalamity} tooltip='{entrySintetica.UsedModsTooltip}' (esperado False/True/False)");
+            if (entrySintetica.IsVanilla || !entrySintetica.IsTModLoader || entrySintetica.IsCalamity)
+                Console.WriteLine("FALLO: INSIGNIAS-TMOD-SIN-CALAMITY - el personaje sintetico (solo mod Terraria) no dio Vanilla=False/tModLoader=True/Calamity=False");
+
+            Directory.Delete(dirSintetico, recursive: true);
+        }
+        catch (Exception ex) { Console.WriteLine("INSIGNIAS-TMOD-SIN-CALAMITY-EXCEPTION: " + ex); }
         {
             var rtbHome = new System.Windows.Media.Imaging.RenderTargetBitmap(
                 (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
@@ -2284,6 +2338,29 @@ internal static class Program
                     if (pildoras.Count != 5 || pildoras.Where(p => p != "Todo").Any(p => !p.Contains('(')))
                         Console.WriteLine("FALLO: Punto 4 - el texto real de alguna pildora de categoria (salvo 'Todo') no lleva su contador");
 
+                    // Encargo del usuario 4-sep-2026 (Parte B, ver ESPEC-sprites-botones-badges.md#D.3):
+                    // tras renombrar CategoryPill/CategoryChip a CategorySelector/ViewSelector, el
+                    // GroupName real de WPF sigue dando la exclusion mutua nativa - clic real (via
+                    // UI Automation, no asignando la propiedad) en cada una de las 5 y comprobar que
+                    // SelectedCategory cambia Y que solo una queda IsSelected.
+                    var pildoraElementos = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.RadioButton))
+                        .Cast<AutomationElement>().Where(e => pildoras.Contains(e.Current.Name)).ToList();
+                    bool exclusionOk = true;
+                    foreach (var el in pildoraElementos)
+                    {
+                        if (!el.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selPatObj)) { exclusionOk = false; continue; }
+                        var selPat = (SelectionItemPattern)selPatObj;
+                        selPat.Select();
+                        DoEvents();
+                        int seleccionadas = pildoraElementos.Count(e2 =>
+                            e2.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var p2) && ((SelectionItemPattern)p2).Current.IsSelected);
+                        if (seleccionadas != 1 || !selPat.Current.IsSelected) exclusionOk = false;
+                    }
+                    Console.WriteLine($"SELECTORES-EXCLUSION: tras marcar cada una de las 5 por turnos, siempre queda exactamente 1 IsSelected={exclusionOk} (esperado True - el GroupName real sigue vivo tras el cambio de plantilla)");
+                    if (!exclusionOk) Console.WriteLine("FALLO: Parte B - los selectores de categoria perdieron la exclusion mutua tras el rediseño");
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                    DoEvents();
+
                     // NPCs: chip "Bajo tierra" - ya se sabe (H6-08 mas abajo) cuantos NPCs reales
                     // tiene este mundo; si alguno esta bajo tierra, el chip debe reducir de verdad
                     // la lista y ordenarla por profundidad.
@@ -2298,6 +2375,31 @@ internal static class Program
                     if (!cuentaCoincide) Console.WriteLine("FALLO: Punto 4 - el chip 'Bajo tierra' no filtra de verdad NpcSearchResults");
                     vm.Exploration.NpcFilterUnderground = false;
 
+                    // Parte B (ver ESPEC-sprites-botones-badges.md#D.3): los 3 chips de NPCs
+                    // (ToggleButton, ViewSelector) siguen siendo multiseleccion INDEPENDIENTE tras
+                    // el rediseño - marcar dos a la vez y comprobar que ninguno desmarca al otro,
+                    // via el TogglePattern real (no solo el ViewModel).
+                    vm.Exploration.NpcFilterWithHome = true;
+                    vm.Exploration.NpcFilterHomeless = true;
+                    DoEvents();
+                    var chipsNpcs = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button))
+                        .Cast<AutomationElement>().Where(e => e.Current.Name is "Con casa" or "Sin casa" or "Bajo tierra").ToList();
+                    var chipConCasa = chipsNpcs.FirstOrDefault(e => e.Current.Name == "Con casa");
+                    var chipSinCasa = chipsNpcs.FirstOrDefault(e => e.Current.Name == "Sin casa");
+                    bool multiOk = vm.Exploration.NpcFilterWithHome && vm.Exploration.NpcFilterHomeless;
+                    Console.WriteLine($"SELECTORES-MULTI: 'Con casa'+'Sin casa' marcados a la vez (ViewModel)={multiOk}, encontrados en el arbol visual={chipConCasa != null}/{chipSinCasa != null} (esperado True en los 4)");
+                    if (!multiOk) Console.WriteLine("FALLO: Parte B - los chips de NPCs dejaron de ser independientes tras el rediseño");
+                    vm.Exploration.NpcFilterWithHome = false;
+                    vm.Exploration.NpcFilterHomeless = false;
+
+                    var rtbSelectoresNpcs = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbSelectoresNpcs.Render(window);
+                    var encSelectoresNpcs = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encSelectoresNpcs.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbSelectoresNpcs));
+                    using (var fsSelNpcs = File.Create(Path.Combine(AppContext.BaseDirectory, "exploracion-selectores-npcs.png"))) encSelectoresNpcs.Save(fsSelNpcs);
+                    Console.WriteLine("Captura selectores de NPCs (rediseñados) -> exploracion-selectores-npcs.png");
+
                     // Cofres: el inventario real (ChestKindCounts, por defecto "por tipo de
                     // cofre") tiene que tener contenido real, y un clic en la primera fila tiene
                     // que buscar de verdad (SearchInventoryRowCommand -> WorldSearchResults).
@@ -2311,6 +2413,22 @@ internal static class Program
                         WaitForDispatcher(1000);
                         Console.WriteLine($"CATEGORIAS-COFRES: Inventory.Count={cofresInventario} (esperado >=1), clic en '{primeraFila.Name}' -> WorldSearchResults.Count={vm.Exploration.WorldSearchResults.Count} (esperado >=1)");
                         if (vm.Exploration.WorldSearchResults.Count == 0) Console.WriteLine("FALLO: Punto 4 - clic en una fila de inventario de Cofres no encontro nada");
+
+                        // Encargo del usuario 4-sep-2026 (Parte A, ver ESPEC-sprites-botones-badges.md#D.3):
+                        // los 3 tipos de tile contenedor reales (21/88/467) tienen icono extraido -
+                        // en la vista por defecto ("Por tipo de cofre") TODAS las filas de un mundo
+                        // vanilla real deberian tener IconPath != null.
+                        int conIcono = vm.Exploration.Inventory.Count(r => r.IconPath != null);
+                        Console.WriteLine($"ICONOS-INVENTARIO: {conIcono}/{vm.Exploration.Inventory.Count} filas de Cofres con sprite real (esperado TODAS en un mundo vanilla real)");
+                        if (conIcono != vm.Exploration.Inventory.Count) Console.WriteLine("FALLO: Parte A - alguna fila de Cofres/Por tipo salio sin sprite real");
+
+                        var rtbCofresSprites = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtbCofresSprites.Render(window);
+                        var encCofresSprites = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encCofresSprites.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbCofresSprites));
+                        using (var fsCofresSprites = File.Create(Path.Combine(AppContext.BaseDirectory, "exploracion-cofres-con-sprites.png"))) encCofresSprites.Save(fsCofresSprites);
+                        Console.WriteLine("Captura Cofres con sprites reales -> exploracion-cofres-con-sprites.png");
                     }
                     else Console.WriteLine("FALLO: Punto 4 - la categoria Cofres no genero ningun inventario con un mundo real que SI tiene cofres");
 
@@ -2322,6 +2440,12 @@ internal static class Program
                     Console.WriteLine($"CATEGORIAS-MINERALES: presentes en este mundo real = {mineralesPresentes} (metales={vm.Exploration.OreMetals.Count}, gemas={vm.Exploration.OreGems.Count}, otros={vm.Exploration.OreTargets.Count})");
                     if (mineralesPresentes > 0)
                     {
+                        // Parte A: todo mineral/gema/objetivo real del catalogo tiene su tile
+                        // base extraido (749 de 754 tipos reales) - esperado 100% con sprite.
+                        int mineralesConIcono = vm.Exploration.OreMetals.Concat(vm.Exploration.OreGems).Concat(vm.Exploration.OreTargets).Count(r => r.IconPath != null);
+                        Console.WriteLine($"ICONOS-MINERALES: {mineralesConIcono}/{mineralesPresentes} filas con sprite real (esperado TODAS)");
+                        if (mineralesConIcono != mineralesPresentes) Console.WriteLine("FALLO: Parte A - algun mineral/gema/objetivo real salio sin sprite");
+
                         var primerMineral = vm.Exploration.OreMetals.FirstOrDefault() ?? vm.Exploration.OreGems.FirstOrDefault() ?? vm.Exploration.OreTargets.First();
                         primerMineral.IsChecked = true;
                         // Sin app.Run() real este arnes no puede await-ear sin deadlockear (ver
@@ -2359,6 +2483,32 @@ internal static class Program
                     encCategorias.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbCategorias));
                     using (var fsCategorias = File.Create(Path.Combine(AppContext.BaseDirectory, "mundo-categoria-objetos.png"))) encCategorias.Save(fsCategorias);
                     Console.WriteLine("Captura categoria Objetos -> mundo-categoria-objetos.png");
+
+                    // Parte B: captura de los selectores "Tiles/Paredes/Liquidos" rediseñados,
+                    // para juzgar a ojo si se parecen a "Cargar personaje" y se distinguen de el.
+                    var rtbSelectoresObjetos = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbSelectoresObjetos.Render(window);
+                    var encSelectoresObjetos = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encSelectoresObjetos.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbSelectoresObjetos));
+                    using (var fsSelObjetos = File.Create(Path.Combine(AppContext.BaseDirectory, "exploracion-selectores-objetos.png"))) encSelectoresObjetos.Save(fsSelObjetos);
+                    Console.WriteLine("Captura selectores de Objetos (rediseñados) -> exploracion-selectores-objetos.png");
+
+                    // Parte A: Paredes (esperado alto pero NO 100% - la pared 367 y las de mod no
+                    // tienen icono, mismo hueco real que ya tienen sin nombre - ver
+                    // ESPEC-sprites-botones-badges.md#A.3.6) y Liquidos (esperado 0%, decision
+                    // deliberada, ver #A.11).
+                    vm.Exploration.ObjectsViewMode = 1;
+                    DoEvents();
+                    int paredesConIcono = vm.Exploration.Inventory.Count(r => r.IconPath != null);
+                    Console.WriteLine($"ICONOS-PAREDES: {paredesConIcono}/{vm.Exploration.Inventory.Count} filas con sprite real (esperado alto pero NO necesariamente el 100%)");
+
+                    vm.Exploration.ObjectsViewMode = 2;
+                    DoEvents();
+                    int liquidosConIcono = vm.Exploration.Inventory.Count(r => r.IconPath != null);
+                    Console.WriteLine($"ICONOS-LIQUIDOS: {liquidosConIcono}/{vm.Exploration.Inventory.Count} filas con sprite real (esperado 0 - decision deliberada, sin sprite recortable)");
+                    if (liquidosConIcono != 0) Console.WriteLine("FALLO: Parte A - algun liquido salio con IconPath (deberia ser siempre null)");
+                    vm.Exploration.ObjectsViewMode = 0;
 
                     vm.Exploration.SelectedCategory = WorldSearchCategory.All; // deja el estado limpio para pasos siguientes
                     DoEvents();

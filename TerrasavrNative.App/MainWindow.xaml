@@ -1262,13 +1262,33 @@
                         Command="{Binding DataContext.Exploration.SearchInventoryRowCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                         CommandParameter="{Binding}">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="14" Height="14" CornerRadius="2" Margin="0,0,7,0" VerticalAlignment="Center"
-                                BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1">
-                            <Border.Background>
-                                <SolidColorBrush Color="{Binding SwatchColor}" />
-                            </Border.Background>
-                        </Border>
-                        <StackPanel>
+                        <!-- Encargo del usuario 4-sep-2026 ("quiero todos los sprites de todos los objetos del
+                             mundo en el buscador de exploracion... un cofre dorado de agua etc") - caja de tamaño
+                             FIJO (26x26) con dos capas excluyentes, para que todas las filas alineen su texto en la
+                             misma columna aunque los sprites reales midan de 16x16 a 96x64:
+                               - Sprite real, si lo hay (TileIconResolver/WallIconResolver/VanillaIconResolver).
+                                 StretchDirection="DownOnly" es a proposito: un sprite de 16x16 se pinta a 1:1
+                                 (nitido, sin el escalado x1.625 irregular que da un NearestNeighbor a 26px) y solo
+                                 los grandes de verdad se encogen para caber.
+                               - El cuadradito de color de siempre (paleta real del MAPA, TEdit) como respaldo cuando
+                                 no hay sprite: tiles/paredes de mods, ids mas nuevos que el catalogo, NetId de
+                                 objeto modeado. Nunca se pierde informacion, solo mejora cuando se puede.
+                             Ver ESPEC-sprites-botones-badges.md#A.10. -->
+                        <Grid Width="26" Height="26" Margin="0,0,7,0" VerticalAlignment="Center">
+                            <Image Source="{Binding IconPath}" Stretch="Uniform" StretchDirection="DownOnly"
+                                   RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                            <Border Width="14" Height="14" CornerRadius="2"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1"
+                                    Visibility="{Binding IconPath, Converter={StaticResource NullToCollapsed}}">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding SwatchColor}" />
+                                </Border.Background>
+                            </Border>
+                        </Grid>
+                        <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding CountLabel}" Style="{StaticResource CaptionText}" />
                         </StackPanel>
@@ -3550,27 +3570,27 @@
                                  automatizacion salia "14", no "NPCs (14)") - un TextBlock hijo con
                                  el mismo StringFormat, el patron YA establecido en el resto de este
                                  fichero para cualquier texto formateado, si funciona. -->
-                            <RadioButton Style="{StaticResource CategoryPill}" GroupName="ExploracionCategoria"
+                            <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionCategoria"
                                          IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="Carga un mundo primero"
                                          IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=All}">
                                 <TextBlock Text="Todo" />
                             </RadioButton>
-                            <RadioButton Style="{StaticResource CategoryPill}" GroupName="ExploracionCategoria"
+                            <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionCategoria"
                                          IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="Carga un mundo primero"
                                          IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Npcs}">
                                 <TextBlock Text="{Binding Exploration.Npcs.Count, StringFormat='NPCs ({0})'}" />
                             </RadioButton>
-                            <RadioButton Style="{StaticResource CategoryPill}" GroupName="ExploracionCategoria"
+                            <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionCategoria"
                                          IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="Carga un mundo primero"
                                          IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Chests}">
                                 <TextBlock Text="{Binding Exploration.ChestsPillCount, StringFormat='Cofres ({0})'}" />
                             </RadioButton>
-                            <RadioButton Style="{StaticResource CategoryPill}" GroupName="ExploracionCategoria"
+                            <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionCategoria"
                                          IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="Carga un mundo primero"
                                          IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Ores}">
                                 <TextBlock Text="{Binding Exploration.OresPillCount, StringFormat='Minerales ({0})'}" />
                             </RadioButton>
-                            <RadioButton Style="{StaticResource CategoryPill}" GroupName="ExploracionCategoria"
+                            <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionCategoria"
                                          IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="Carga un mundo primero"
                                          IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Objects}">
                                 <TextBlock Text="{Binding Exploration.ObjectsPillCount, StringFormat='Objetos ({0})'}" />
@@ -3688,9 +3708,9 @@
                                      encontrarlos facilmente" - ver ESPEC-ui-exploracion.md#12): tres
                                      chips multiseleccion, OR entre ellos y AND con el texto. -->
                                 <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                                    <ToggleButton Style="{StaticResource CategoryChip}" Content="Con casa" IsChecked="{Binding Exploration.NpcFilterWithHome}" />
-                                    <ToggleButton Style="{StaticResource CategoryChip}" Content="Sin casa" IsChecked="{Binding Exploration.NpcFilterHomeless}" />
-                                    <ToggleButton Style="{StaticResource CategoryChip}" Content="Bajo tierra" IsChecked="{Binding Exploration.NpcFilterUnderground}"
+                                    <ToggleButton Style="{StaticResource ViewSelector}" Content="Con casa" IsChecked="{Binding Exploration.NpcFilterWithHome}" />
+                                    <ToggleButton Style="{StaticResource ViewSelector}" Content="Sin casa" IsChecked="{Binding Exploration.NpcFilterHomeless}" />
+                                    <ToggleButton Style="{StaticResource ViewSelector}" Content="Bajo tierra" IsChecked="{Binding Exploration.NpcFilterUnderground}"
                                                   ToolTip="Ordena ademas por profundidad - el mas escondido primero" />
                                 </WrapPanel>
 
@@ -3766,9 +3786,9 @@
                                      categoria de arriba (EnumEqualsConverter tambien sirve para
                                      int, ver su comentario real). -->
                                 <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
-                                    <RadioButton Style="{StaticResource CategoryChip}" GroupName="CofresVista" Content="Por tipo de cofre" Margin="0,0,3,0"
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Content="Por tipo de cofre" Margin="0,0,3,0"
                                                  IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}" />
-                                    <RadioButton Style="{StaticResource CategoryChip}" GroupName="CofresVista" Content="Por lo que contienen" Margin="3,0,0,0"
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Content="Por lo que contienen" Margin="3,0,0,0"
                                                  IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}" />
                                 </UniformGrid>
                                 <Button DockPanel.Dock="Top" Content="Buscar seleccionados" Tag="Ghost" Margin="0,0,0,8" HorizontalAlignment="Left"
@@ -3829,11 +3849,11 @@
                                     </Style>
                                 </DockPanel.Style>
                                 <UniformGrid DockPanel.Dock="Top" Columns="3" Margin="0,0,0,4">
-                                    <RadioButton Style="{StaticResource CategoryChip}" GroupName="ObjetosVista" Content="Tiles" Margin="0,0,3,0"
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="ObjetosVista" Content="Tiles" Margin="0,0,3,0"
                                                  IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}" />
-                                    <RadioButton Style="{StaticResource CategoryChip}" GroupName="ObjetosVista" Content="Paredes" Margin="3,0,3,0"
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="ObjetosVista" Content="Paredes" Margin="3,0,3,0"
                                                  IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}" />
-                                    <RadioButton Style="{StaticResource CategoryChip}" GroupName="ObjetosVista" Content="Líquidos" Margin="3,0,0,0"
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="ObjetosVista" Content="Líquidos" Margin="3,0,0,0"
                                                  IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}" />
                                 </UniformGrid>
                                 <Button DockPanel.Dock="Top" Content="Buscar seleccionados" Tag="Ghost" Margin="0,4,0,8" HorizontalAlignment="Left"

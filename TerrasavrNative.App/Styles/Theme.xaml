@@ -1240,41 +1240,83 @@
         </Setter>
     </Style>
 
-    <!-- Punto 4 (advisor Opus, selector de categoria de Exploracion en fila de pildoras - ver
-         ESPEC-ui-exploracion.md#9.1): RadioButton real (GroupName real de WPF para la
-         exclusividad mutua, ver EnumEqualsConverter) con pinta de pildora - fondo
-         BgElevatedBrush normal, AccentBrush + texto blanco cuando IsChecked. -->
-    <Style x:Key="CategoryPill" TargetType="RadioButton">
-        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+    <!-- Encargo del usuario 4-sep-2026: "quiero que cambies todos los botones de exploracion
+         esos ovalados por algo que realmente vaya con la estetica como el boton de cargar
+         personaje o el de cargar mundo pero que se diferencien un poco de botones principales
+         claro" - ver ESPEC-sprites-botones-badges.md#B.
+         Antes eran CategoryPill/CategoryChip, dos plantillas con CornerRadius="99" (pildora
+         completa) que no se parecian a NINGUN otro boton de la app. La forma correcta es la
+         MISMA que el estilo base de Button (CornerRadius="8"): el propio Theme.xaml ya documenta
+         (ver el comentario de la plantilla de Button) que el usuario corrigio a mano un intento
+         anterior de convertir todos los botones en pildoras, porque eso le cambiaba la forma al
+         propio "Auto-equipar", que era el boton de referencia que queria replicar.
+         Lo que los DIFERENCIA de un boton de accion es que no van rellenos: contorno en reposo,
+         relleno de acento suave (AccentMutedBrush, la misma pareja que Tag="AccentSoft" ya usa
+         para "de la familia del acento pero secundario") solo cuando estan marcados. Y NUNCA
+         llevan la elevacion de 2px, que este tema reserva a las acciones principales.
+         El BorderThickness es 1 en los CUATRO estados y solo cambia de color: subirlo a 2 al
+         marcar movería el texto y haria "saltar" la fila entera del WrapPanel. -->
+    <Style x:Key="CategorySelector" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
         <Setter Property="FontSize" Value="12" />
-        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="Padding" Value="11,5" />
         <Setter Property="Margin" Value="0,0,6,6" />
+        <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="99"
+                    <Border x:Name="Bd" CornerRadius="8" BorderThickness="1"
+                            BorderBrush="{StaticResource BorderStrongBrush}"
                             Padding="{TemplateBinding Padding}">
+                        <!-- SolidColorBrush propio de la instancia, igual que la plantilla de
+                             Button: animar un StaticResource compartido sangraria a todos. -->
+                        <Border.Background>
+                            <SolidColorBrush x:Name="BdBrush" Color="{StaticResource BgSecondaryColor}" />
+                        </Border.Background>
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentBrush}" />
-                            <Setter Property="Foreground" Value="White" />
-                        </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                        To="{StaticResource BgHoverColor}" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                        To="{StaticResource BgSecondaryColor}" Duration="0:0:0.15" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <!-- IsChecked va DESPUES de IsMouseOver a proposito: al fijar
+                             Bd.Background se sustituye el pincel entero (incluido el animado),
+                             mismo mecanismo real que ya usa Tag="Accent" en la plantilla de
+                             Button. Al desmarcar se recupera solo el pincel animado. -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsMouseOver" Value="True" />
                                 <Condition Property="IsChecked" Value="True" />
                             </MultiTrigger.Conditions>
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHoverBrush}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentHoverBrush}" />
                         </MultiTrigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.5" />
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
+                            <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -1282,30 +1324,67 @@
         </Setter>
     </Style>
 
-    <!-- Gemelo de CategoryPill pero ToggleButton (multiseleccion independiente, no exclusiva) -
-         chips de filtro de NPCs ("Con casa"/"Sin casa"/"Bajo tierra") y conmutadores de vista
-         de Cofres/Objetos ("Por tipo"/"Por contenido", "Tiles"/"Paredes"/"Liquidos"). -->
-    <Style x:Key="CategoryChip" TargetType="ToggleButton">
-        <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+    <!-- Sub-nivel del anterior: MISMA paleta y MISMA plantilla, solo mas compacto (asi la
+         jerarquia se lee por tamaño, sin meter un tercer color). TargetType="ToggleButton" a
+         proposito, no RadioButton: se aplica igual a los ToggleButton de multiseleccion (los 3
+         chips de NPCs) y a los RadioButton de vista (Cofres, Objetos), porque RadioButton deriva
+         de ToggleButton y WPF acepta un Style cuyo TargetType sea una clase base - ya estaba asi
+         en produccion con el CategoryChip anterior, no es un accidente. -->
+    <Style x:Key="ViewSelector" TargetType="ToggleButton">
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-        <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+        <Setter Property="FontSize" Value="11" />
         <Setter Property="Padding" Value="9,4" />
         <Setter Property="Margin" Value="0,0,6,0" />
+        <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="99"
+                    <Border x:Name="Bd" CornerRadius="8" BorderThickness="1"
+                            BorderBrush="{StaticResource BorderStrongBrush}"
                             Padding="{TemplateBinding Padding}">
+                        <Border.Background>
+                            <SolidColorBrush x:Name="BdBrush" Color="{StaticResource BgSecondaryColor}" />
+                        </Border.Background>
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource TealBrush}" />
-                            <Setter Property="Foreground" Value="White" />
-                        </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                        To="{StaticResource BgHoverColor}" Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                        To="{StaticResource BgSecondaryColor}" Duration="0:0:0.15" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="IsChecked" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentHoverBrush}" />
+                        </MultiTrigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
+                            <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
