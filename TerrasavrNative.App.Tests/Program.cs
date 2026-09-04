@@ -2261,6 +2261,33 @@ internal static class Program
                     }
                     else Console.WriteLine("A8-04: no se encontro el ListBox de resultados en el arbol visual - omitido");
 
+                    // A8-03 (auditoria de Opus vs TEdit, E-03): el marcador debe medir lo MISMO en
+                    // pantalla (coordenadas de ventana, no de tile) a cualquier zoom - antes
+                    // escalaba con el Grid contenedor (a 0.05 una elipse de 9px quedaba en <1px).
+                    // TransformToAncestor(window) acumula TODA la cadena de transformaciones reales
+                    // entre el marcador y la ventana (el ScaleTransform del mapa Y el
+                    // RenderTransform inverso nuevo), asi que mide lo que de verdad se ve en
+                    // pantalla, no ActualWidth (que es tamaño de LAYOUT, ajeno al RenderTransform).
+                    var marco = Descendientes<System.Windows.Shapes.Rectangle>(window).FirstOrDefault(r => r.Name == "Marco");
+                    if (marco != null)
+                    {
+                        var anchosPorZoom = new List<(double zoom, double anchoReal)>();
+                        foreach (double z in new[] { 0.05, 1.0, 6.0 })
+                        {
+                            vm.Exploration.Zoom = z;
+                            DoEvents(); DoEvents();
+                            var bounds = marco.TransformToAncestor(window).TransformBounds(new Rect(0, 0, marco.ActualWidth, marco.ActualHeight));
+                            anchosPorZoom.Add((z, bounds.Width));
+                        }
+                        string resumenZoom = string.Join(", ", anchosPorZoom.Select(t => $"zoom={t.zoom}->{t.anchoReal:0.0}px"));
+                        Console.WriteLine($"A8-03: ancho real en ventana del marcador por zoom: {resumenZoom} (esperado el mismo, +-1px)");
+                        double minAncho = anchosPorZoom.Min(t => t.anchoReal), maxAncho = anchosPorZoom.Max(t => t.anchoReal);
+                        if (maxAncho - minAncho > 1.0) Console.WriteLine("FALLO: A8-03 - el marcador de resultado NO mide lo mismo en pantalla a distintos niveles de zoom");
+                    }
+                    else Console.WriteLine("A8-03: no se encontro ningun marcador 'Marco' en el arbol visual - omitido");
+                    vm.Exploration.Zoom = 1.0; // deja el estado conocido para lo que sigue
+                    DoEvents();
+
                     if (hits > 0)
                     {
                         var primerHit = vm.Exploration.WorldSearchResults[0];

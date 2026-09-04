@@ -3549,7 +3549,14 @@
                                                      (OldMan/SkeletonMerchant, HeadIconPath null) cae al punto magenta
                                                      de siempre. -->
                                                 <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
-                                                    <Grid ToolTip="{Binding Name}" Cursor="Hand">
+                                                    <!-- F-2 (auditoria de Opus vs TEdit, E-03/P-3): mismo tratamiento de
+                                                         tamaño constante que el marcador de resultado - ver el
+                                                         comentario completo mas abajo, en WorldSearchHitRowViewModel. -->
+                                                    <Grid ToolTip="{Binding Name}" Cursor="Hand" RenderTransformOrigin="0.5,0.5">
+                                                        <Grid.RenderTransform>
+                                                            <ScaleTransform ScaleX="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}"
+                                                                            ScaleY="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}" />
+                                                        </Grid.RenderTransform>
                                                         <Image Source="{Binding HeadIconPath}" Width="16" Stretch="Uniform"
                                                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                                                Margin="-8,-8,0,0"
@@ -3580,8 +3587,16 @@
                                             </ItemsControl.ItemContainerStyle>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate DataType="{x:Type vm:CharacterSpawnRowViewModel}">
+                                                    <!-- F-2 (auditoria de Opus vs TEdit, E-03/P-3): mismo tratamiento de
+                                                         tamaño constante que el marcador de resultado (ver comentario
+                                                         completo mas abajo, WorldSearchHitRowViewModel). -->
                                                     <TextBlock Text="&#9733;" FontSize="18" Foreground="{StaticResource AccentBrush}"
-                                                               Margin="-9,-18,0,0" ToolTip="{Binding Label}" Cursor="Hand">
+                                                               Margin="-9,-18,0,0" ToolTip="{Binding Label}" Cursor="Hand"
+                                                               RenderTransformOrigin="0.5,0.5">
+                                                        <TextBlock.RenderTransform>
+                                                            <ScaleTransform ScaleX="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}"
+                                                                            ScaleY="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}" />
+                                                        </TextBlock.RenderTransform>
                                                         <TextBlock.Effect>
                                                             <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
                                                         </TextBlock.Effect>
@@ -3608,28 +3623,70 @@
                                                 </Style>
                                             </ItemsControl.ItemContainerStyle>
                                             <ItemsControl.ItemTemplate>
-                                                <!-- Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3 punto 4): el resultado
-                                                     "actual" de Anterior/Siguiente se resalta mas grande - gemelo
-                                                     visual real de ShowCrosshair/GoToCurrentResult de TEdit, sin
-                                                     necesitar una cruz aparte (aqui basta con distinguir el marcador). -->
+                                                <!-- F-2 + P-3 (auditoria de Opus vs TEdit, E-03): antes una elipse
+                                                     RELLENA que escalaba con el Zoom del Grid contenedor (a "Ajustar a
+                                                     la ventana" en un mundo Grande, ~0,09 de zoom, quedaba en menos de
+                                                     1px). Ahora: (1) marco HUECO (Rectangle con Stroke, sin Fill - dejа
+                                                     ver que hay debajo, mismo espiritu que la reticula de 4 barras de
+                                                     TEdit, WorldRenderXna.xaml.cs:6919-6922), (2) tamaño CONSTANTE en
+                                                     pantalla via un RenderTransform inverso al Zoom del mapa (no
+                                                     afecta al layout, Canvas.Left/Top en coordenadas de tile se
+                                                     conserva gratis) - 10px normal, 24px el resultado activo, igual
+                                                     que el rango real 24-48px de TEdit, (3) pulso de un solo ciclo al
+                                                     convertirse en el resultado activo (EnterActions de la
+                                                     DataTrigger, mismo mecanismo Storyboard/DoubleAnimation ya usado
+                                                     en Theme.xaml:280-310/373-398).
+                                                     Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3 punto 4): el resultado
+                                                     "actual" de Anterior/Siguiente sigue siendo el mas grande - gemelo
+                                                     visual real de ShowCrosshair/GoToCurrentResult de TEdit. -->
                                                 <DataTemplate DataType="{x:Type vm:WorldSearchHitRowViewModel}">
-                                                    <Ellipse Width="9" Height="9" Margin="-4.5,-4.5,0,0"
-                                                             Fill="{StaticResource TealBrush}" Stroke="White" StrokeThickness="1.2"
-                                                             ToolTip="{Binding Name}" Cursor="Hand">
-                                                        <Ellipse.Style>
-                                                            <Style TargetType="Ellipse">
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                                        <Setter Property="Width" Value="15" />
-                                                                        <Setter Property="Height" Value="15" />
-                                                                        <Setter Property="Margin" Value="-7.5,-7.5,0,0" />
-                                                                        <Setter Property="StrokeThickness" Value="2" />
-                                                                        <Setter Property="Panel.ZIndex" Value="1" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Ellipse.Style>
-                                                    </Ellipse>
+                                                    <Grid ToolTip="{Binding Name}" Cursor="Hand">
+                                                        <Grid.RenderTransform>
+                                                            <ScaleTransform ScaleX="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}"
+                                                                            ScaleY="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}" />
+                                                        </Grid.RenderTransform>
+                                                        <Grid.RenderTransformOrigin>0.5,0.5</Grid.RenderTransformOrigin>
+                                                        <!-- Anillo de pulso: invisible en reposo (Opacity=0), un solo ciclo
+                                                             de Storyboard al llegar a ser el resultado activo. -->
+                                                        <Rectangle x:Name="PulseRing" Width="10" Height="10" Margin="-5,-5,0,0"
+                                                                   Stroke="{StaticResource TealBrush}" StrokeThickness="1.5" Fill="Transparent"
+                                                                   Opacity="0" RenderTransformOrigin="0.5,0.5">
+                                                            <Rectangle.RenderTransform>
+                                                                <ScaleTransform x:Name="PulseScale" ScaleX="1" ScaleY="1" />
+                                                            </Rectangle.RenderTransform>
+                                                        </Rectangle>
+                                                        <Rectangle x:Name="Marco" Width="10" Height="10" Margin="-5,-5,0,0"
+                                                                   Stroke="{StaticResource TealBrush}" StrokeThickness="1.5" Fill="Transparent" />
+                                                    </Grid>
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                            <Setter TargetName="Marco" Property="Width" Value="24" />
+                                                            <Setter TargetName="Marco" Property="Height" Value="24" />
+                                                            <Setter TargetName="Marco" Property="Margin" Value="-12,-12,0,0" />
+                                                            <Setter TargetName="Marco" Property="StrokeThickness" Value="2.5" />
+                                                            <Setter TargetName="Marco" Property="Panel.ZIndex" Value="1" />
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetName="PulseScale" Storyboard.TargetProperty="ScaleX"
+                                                                                         From="1" To="1.6" Duration="0:0:0.4">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <QuadraticEase EasingMode="EaseOut" />
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                        <DoubleAnimation Storyboard.TargetName="PulseScale" Storyboard.TargetProperty="ScaleY"
+                                                                                         From="1" To="1.6" Duration="0:0:0.4">
+                                                                            <DoubleAnimation.EasingFunction>
+                                                                                <QuadraticEase EasingMode="EaseOut" />
+                                                                            </DoubleAnimation.EasingFunction>
+                                                                        </DoubleAnimation>
+                                                                        <DoubleAnimation Storyboard.TargetName="PulseRing" Storyboard.TargetProperty="Opacity"
+                                                                                         From="1" To="0" Duration="0:0:0.4" />
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>

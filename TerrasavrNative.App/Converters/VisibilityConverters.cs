@@ -138,3 +138,31 @@ public sealed class EnumEqualsConverter : IValueConverter
         }
     }
 }
+
+// F-2 (auditoria de Opus vs TEdit, E-03): "los marcadores de resultado escalan con el zoom
+// porque viven dentro del Grid con el ScaleTransform, que se aplica a TODO el subarbol - a
+// 'Ajustar a la ventana' en un mundo Grande una elipse de 9px queda en menos de 1px". Opcion
+// (a) del informe: un RenderTransform (no afecta al layout, asi que Canvas.Left/Top en
+// coordenadas de tile se conserva gratis) con un ScaleTransform inverso al zoom del mapa,
+// puesto DIRECTAMENTE en cada marcador - se des-escala a si mismo dentro del subarbol ya
+// escalado. 1/0 (Zoom nunca deberia llegar a 0, MinZoom=0.02) se protege igualmente.
+public sealed class InverseValueConverter : IValueConverter
+{
+    // Bug real encontrado al verificar (no en teoria): un StaticResource usado como
+    // Binding.Converter (una propiedad CLR de Binding, no una DependencyProperty) DENTRO de un
+    // DataTemplate de un ItemsControl fuertemente virtualizado (Npcs/CharacterSpawns/
+    // WorldSearchResults, contenedores creados/reciclados en caliente) fallaba en tiempo de
+    // ejecucion con XamlParseException "No se puede encontrar el recurso" pese a que el mismo
+    // StaticResource resolvia bien en cualquier otra propiedad de la misma plantilla - patron
+    // conocido de WPF con la carga "optimizada" de contenido de plantilla y MarkupExtensions
+    // anidadas. Fix real: instancia estatica referenciada por x:Static, que se resuelve en
+    // tiempo de compilacion y no depende del ambito de recursos del contenedor en el momento de
+    // la realizacion.
+    public static readonly InverseValueConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value is double d && d != 0 ? 1.0 / d : 1.0;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
