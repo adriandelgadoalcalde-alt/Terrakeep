@@ -2581,7 +2581,7 @@
                                     <Image Source="{Binding Appearance.PreviewImage}" Width="240" Height="336"
                                            RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="Uniform" />
                                 </Border>
-                                <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego) - sin armadura/vestuario equipado, item en mano ni animación, solo la pose de reposo. No aplica el efecto visual del tinte de pelo (shader especial que este preview no reproduce), solo su color de pelo base. Tampoco refleja Chico/Chica (se guarda de verdad en el personaje, pero este preview usa el mismo sprite base para los dos)."
+                                <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego, brazos y torso incluidos) - sin armadura/vestuario equipado, item en mano ni animación, solo la pose de reposo. No aplica el efecto visual del tinte de pelo (shader especial que este preview no reproduce), solo su color de pelo base."
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Width="240" />
                             </StackPanel>
 
@@ -2673,10 +2673,14 @@
                                                 </ItemsControl.ItemsPanel>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate DataType="{x:Type vm:HairOptionViewModel}">
+                                                        <!-- H6-04 (Opus, sexta pasada): Id es el valor REAL 0-based que se guarda
+                                                             (CommandParameter, sin cambios) - el tooltip muestra DisplayNumber
+                                                             (Id+1), el mismo numero que el propio juego enseña en su creador de
+                                                             personajes real. -->
                                                         <Button Command="{Binding DataContext.Appearance.SelectHairCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                 CommandParameter="{Binding Id}" Margin="2" Padding="4"
                                                                 Background="{StaticResource BgElevatedBrush}" BorderThickness="0"
-                                                                ToolTip="{Binding Id}">
+                                                                ToolTip="{Binding DisplayNumber}">
                                                             <Image Source="{Binding Thumbnail}" Width="30" Height="42"
                                                                    RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="Uniform" />
                                                         </Button>

@@ -78,7 +78,9 @@ public partial class AppearanceViewModel : ObservableObject
         if (Swatches.Count <= HairIdx) return;
         HairOptions.Clear();
         var hairColor = new PlayerPreviewRenderer.Tint((byte)Swatches[HairIdx].R, (byte)Swatches[HairIdx].G, (byte)Swatches[HairIdx].B);
-        for (int id = 1; id <= PlayerPreviewRenderer.HairStyleCount; id++)
+        // H6-04 (Opus, sexta pasada): HairStyle real es 0-based (Player.hair, ver
+        // PlayerPreviewRenderer) - el bucle YA NO empieza en 1.
+        for (int id = 0; id < PlayerPreviewRenderer.HairStyleCount; id++)
             HairOptions.Add(new HairOptionViewModel(id, PlayerPreviewRenderer.RenderHairThumbnail(id, hairColor)));
         _hairOptionsStale = false;
     }
@@ -188,7 +190,9 @@ public partial class AppearanceViewModel : ObservableObject
         _suppressWriteback = true;
         HairStyle = character.HairStyle;
         HairDye = character.HairDye;
-        IsMale = character.Gender == 1;
+        // H6-02 (Opus, sexta pasada): Gender es el skinVariant real del juego (0-11), no un
+        // booleano - ver TerrasavrNative.Core.Model.PlayerVariantSets.
+        IsMale = TerrasavrNative.Core.Model.PlayerVariantSets.IsMale(character.Gender);
         Difficulty = character.Difficulty;
         HealthNow = character.HealthNow;
         HealthMax = character.HealthMax;
@@ -251,12 +255,17 @@ public partial class AppearanceViewModel : ObservableObject
         _character.HairDye = (byte)Math.Clamp(value, 0, 255);
     }
 
+    // H6-02 (Opus, sexta pasada): un cambio REAL de genero (el usuario toca el selector, no una
+    // carga silenciosa) colapsa a la variante "Starter" real de ese genero - el selector de la
+    // app es deliberadamente binario, sin las 10 variantes de vestuario alternativo (ver
+    // PlayerVariantSets). Si el .plr ya traia una variante alternativa del MISMO genero, se
+    // conserva intacta (este metodo solo dispara con un cambio real de valor).
     partial void OnIsMaleChanged(bool value)
     {
         OnPropertyChanged(nameof(IsFemale));
         RefreshPreview();
         if (_suppressWriteback || _character == null) return;
-        _character.Gender = (byte)(value ? 1 : 0);
+        _character.Gender = value ? TerrasavrNative.Core.Model.PlayerVariantSets.MaleStarter : TerrasavrNative.Core.Model.PlayerVariantSets.FemaleStarter;
     }
 
     partial void OnDifficultyChanged(int value)

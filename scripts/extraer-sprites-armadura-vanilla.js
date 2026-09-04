@@ -11,12 +11,17 @@
 //
 // Confirmado por muestra real antes de escribir este script (ver bitacora.md): las tres
 // hojas usan la MISMA convencion ya establecida para el cuerpo base - Head/Legs son tiras
-// verticales de 40 de ancho, Body es una rejilla 9x4 de 360x224 (exactamente el mismo tamano
-// que TorsoSkin) - el frame de reposo/celda(0,0) es siempre el recorte 40x56 de la esquina
-// superior-izquierda, sin ninguna cuenta de offset extra.
+// verticales de 40 de ancho (frame0 = celda(0,0), sin cambios), Body es una rejilla 9x4 de
+// 360x224 (exactamente el mismo tamano que TorsoSkin).
+//
+// H6-01 (Opus, sexta pasada - "faltan los brazos"): Body YA NO se recorta a la celda (0,0) -
+// esa celda es solo el TORSO, el brazo/hombro real vive en otras celdas de la misma hoja
+// (ver PlayerPreviewRenderer.cs, LoadArmorCell) - se guarda la hoja 360x224 ENTERA, mismo
+// criterio ya aplicado al cuerpo base (extraer-sprites-jugador.js).
 //
 // Uso: node scripts/extraer-sprites-armadura-vanilla.js
-// Salida: TerrasavrNative.App/Assets/player/armor_{head,body,legs}/{id}.png
+// Salida: TerrasavrNative.App/Assets/player/armor_{head,legs}/{id}.png (40x56, sin cambios) y
+//         TerrasavrNative.App/Assets/player/armor_body/{id}.png (360x224, hoja entera)
 
 'use strict';
 const fs = require('fs');
@@ -42,14 +47,19 @@ function cropFrame0(xnbPath) {
   return out;
 }
 
-function extraerGrupo(nombre, ids, xnbPathFn, outDir) {
+function fullSheet(xnbPath) {
+  const { png } = xnbToPng(xnbPath);
+  return png;
+}
+
+function extraerGrupo(nombre, ids, xnbPathFn, outDir, modo) {
   fs.mkdirSync(outDir, { recursive: true });
   let ok = 0, faltan = 0, pequenos = 0;
   const faltantes = [];
   for (const id of ids) {
     const xnbPath = xnbPathFn(id);
     if (!fs.existsSync(xnbPath)) { faltan++; faltantes.push(id); continue; }
-    const png = cropFrame0(xnbPath);
+    const png = modo === 'hoja' ? fullSheet(xnbPath) : cropFrame0(xnbPath);
     if (!png) { pequenos++; continue; }
     fs.writeFileSync(path.join(outDir, id + '.png'), PNG.sync.write(png));
     ok++;
@@ -69,6 +79,6 @@ for (const entry of Object.values(slots)) {
 
 console.log(`ids unicos referenciados: head=${headIds.size} body=${bodyIds.size} legs=${legIds.size}`);
 
-extraerGrupo('Head', headIds, (id) => path.join(STEAM_IMAGES, `Armor_Head_${id}.xnb`), path.join(OUT_ROOT, 'armor_head'));
-extraerGrupo('Legs', legIds, (id) => path.join(STEAM_IMAGES, `Armor_Legs_${id}.xnb`), path.join(OUT_ROOT, 'armor_legs'));
-extraerGrupo('Body', bodyIds, (id) => path.join(STEAM_IMAGES, 'Armor', `Armor_${id}.xnb`), path.join(OUT_ROOT, 'armor_body'));
+extraerGrupo('Head', headIds, (id) => path.join(STEAM_IMAGES, `Armor_Head_${id}.xnb`), path.join(OUT_ROOT, 'armor_head'), 'frame0');
+extraerGrupo('Legs', legIds, (id) => path.join(STEAM_IMAGES, `Armor_Legs_${id}.xnb`), path.join(OUT_ROOT, 'armor_legs'), 'frame0');
+extraerGrupo('Body', bodyIds, (id) => path.join(STEAM_IMAGES, 'Armor', `Armor_${id}.xnb`), path.join(OUT_ROOT, 'armor_body'), 'hoja');

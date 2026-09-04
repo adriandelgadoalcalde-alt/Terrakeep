@@ -255,6 +255,44 @@ internal static class Program
                 }
             }
             catch (Exception ex) { Console.WriteLine("I-b-EXCEPTION: " + ex); }
+
+            // Sexta auditoria de Opus (H6-01/H6-02/H6-03/H6-04/H6-05): "les faltan los brazos a
+            // todos los personajes" - verificacion real de extremo a extremo con un personaje
+            // REAL de esta maquina (el mismo 'first' ya abierto arriba, "adrian"/"Eldelgas" -
+            // exactamente el tipo de personaje de las capturas originales del usuario), no uno
+            // sintetico sin armadura. Confirma visualmente (captura) y por codigo (recuento de
+            // pixeles opacos, mismo criterio que PlayerPreviewRendererH6Tests) que el doll
+            // compone brazos/torso reales, no solo cabeza+piernas.
+            try
+            {
+                vm.SelectedTabIndex = 1; // Personaje
+                vm.PersonajeInnerTabIndex = 3; // Apariencia
+                DoEvents(); DoEvents();
+
+                var previewH6 = vm.Appearance.PreviewImage;
+                int opacosH6 = 0;
+                if (previewH6 != null)
+                {
+                    var pixelesH6 = new byte[previewH6.PixelHeight * previewH6.PixelWidth * 4];
+                    previewH6.CopyPixels(pixelesH6, previewH6.PixelWidth * 4, 0);
+                    for (int i = 3; i < pixelesH6.Length; i += 4) if (pixelesH6[i] != 0) opacosH6++;
+                }
+                Console.WriteLine($"H6-01-DOLL: personaje real '{vm.CharacterName}', IsMale={vm.Appearance.IsMale}, HairStyle={vm.Appearance.HairStyle}, pixeles opacos={opacosH6}/2240 (esperado > 700)");
+                if (previewH6 == null) Console.WriteLine("FALLO: H6-01 - Appearance.PreviewImage es null tras cargar un personaje real");
+                else if (opacosH6 <= 700) Console.WriteLine("FALLO: H6-01 - muy pocos pixeles opacos, los brazos/torso no se estan componiendo de verdad");
+
+                var rtbH6 = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbH6.Render(window);
+                var encH6 = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encH6.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbH6));
+                using (var fsH6 = File.Create(Path.Combine(AppContext.BaseDirectory, "h6-doll-personaje-real.png"))) encH6.Save(fsH6);
+                Console.WriteLine("Captura doll con brazos, personaje real -> h6-doll-personaje-real.png");
+
+                vm.SelectedTabIndex = 0; // deja la navegacion como estaba para el resto del arnes
+                DoEvents();
+            }
+            catch (Exception ex) { Console.WriteLine("H6-01-EXCEPTION: " + ex); }
         }
 
         try

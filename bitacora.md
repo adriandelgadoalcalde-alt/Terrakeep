@@ -6977,3 +6977,135 @@ de una pestaña inactiva. Restaurado a Personaje > Objetos al final del bloque).
 03/02), Tanda C (H5-10/09/11), Tanda D (H5-12/13/14/05/07) - los 15 hallazgos del informe,
 implementados, probados (405 tests unitarios + N pasadas limpias del arnes UIA por cada uno) y
 comiteados uno a uno.
+
+## Sexta auditoria de Opus - contexto (4-sep-2026)
+
+Pedido explicito del usuario la noche del 3-sep-2026 (con 6 quejas concretas, dos capturas
+reales de "Eldelgas" adjuntas), a atender SIN volver a preguntar porque el usuario se iba a
+dormir: (1) el selector de personaje de "Inicio" no era fiel al selector real de Terraria; (2)
+"a los personajes les faltan los brazos - ¿de que sirve un editor de apariencia si no refleja
+como esta construido de verdad el personaje?"; (3) el mapa del mundo muestra 4 puntos rosas que
+el usuario cree que son mascotas (son NPCs) - deberian verse solo cabezas de NPC; (4) objetos
+vanilla animados (Alma de vuelo/Alma de luz...) se ven como una tira de fotogramas entera en vez
+de un unico icono; (5) los buffs de Calamity no distinguen buff de debuff; (6) instruccion
+explicita de elevar todo esto a un agente Opus, que dedicara el tiempo que hiciera falta leyendo
+TODAS las fuentes decompiladas/compiladas disponibles, que produjera un plan, y que ese plan se
+EJECUTARA directamente sin volver a preguntar. El agente Opus devolvio un informe de 12
+hallazgos (H6-01 a H6-12); esta seccion documenta la Tanda A (la base de renderizado, de la que
+dependen H6-02/03/04/05).
+
+### Tanda A (H6-01/H6-02/H6-03/H6-04/H6-05) - el doll sin brazos, genero mal leido, un unico
+### body real, pelo desfasado, armadura Body de Calamity que hacia desaparecer personajes
+
+**Hallazgo real (H6-01, la causa raiz)**: `PlayerPreviewRenderer.Render` (el que dibuja tanto el
+preview grande de Apariencia como la miniatura de cada tarjeta de "Inicio") recortaba SIEMPRE la
+celda (0,0) de 40x56 de cada hoja de sprite del jugador - correcto para las 7 piezas que son
+tiras VERTICALES (Head/EyeWhites/Eyes/LegSkin/Pants/Shoes/pelo), pero cero-relleno real para las
+8 piezas que son rejillas COMPUESTAS 9x4 de 360x224 (TorsoSkin/Undershirt/Hands/Shirt/ArmSkin/
+ArmUndershirt/ArmHand/ArmShirt) - el brazo/mano/manga real de esas piezas NO vive en la celda
+(0,0). Confirmado leyendo `Terraria/DataStructures/PlayerDrawSet.cs` +
+`Terraria/GameContent/PlayerDrawLayers.cs` decompilados reales (metodos
+`CreateCompositeFrameRect`/`UpdateCompositeArm`/`DrawPlayer_12_Skin_Composite`/
+`DrawPlayer_12_SkinComposite_BackArmShirt`/`DrawPlayer_17_TorsoComposite`/
+`DrawPlayer_28_ArmOverItemComposite`) - las celdas reales del frame de reposo son Torso (0,0)
+varon/(0,2) mujer, FrontShoulder (0,1)/(0,3), BackShoulder (1,1)/(1,3), FrontArm (2,0) IGUAL en
+los dos generos, BackArm (2,2) IGUAL en los dos generos - y el orden real de capas es: 1)
+LegSkin+TorsoSkin; 2) brazo TRASERO completo; 3) Pantalones/Zapatos; 4) Undershirt+Shirt en
+BackShoulder y otra vez en Torso; 5) Cabeza/Ojos/Pelo; 6) brazo DELANTERO completo, ENCIMA de
+todo. `PlayerPreviewRenderer.cs` reescrito de raiz con este mapa real de celdas y este orden
+real de capas (`LoadBodyCell`/`SliceCell` nuevos, cachean la hoja completa 360x224 y recortan la
+celda real pedida).
+
+**H6-02 (Gender no era un booleano)**: `PlrCharacter.Gender` es en realidad `Player.skinVariant`
+real (0-11: MaleStarter=0, MaleSticker=1, MaleGangster=2, MaleCoat=3, FemaleStarter=4,
+FemaleSticker=5, FemaleGangster=6, FemaleCoat=7, MaleDress=8, FemaleDress=9,
+MaleDisplayDoll=10, FemaleDisplayDoll=11 - confirmado en `Terraria.ID.PlayerVariantID.cs`
+decompilado real). La app trataba `Gender==1` como "es chico" - un varon normal
+(`skinVariant=0`, el caso mas comun con diferencia, ej. "Eldelgas") se leia y mostraba como
+"Chica", y marcar "Chico" a mano escribia literalmente 1 (MaleSticker), corrompiendo el byte
+real del `.plr` del usuario. Nuevo `TerrasavrNative.Core.Model.PlayerVariantSets.IsMale(byte)`
+(set real `{0,1,2,3,8,10}`, `PlayerVariantID.Sets.Male` real) sustituye la comparacion directa
+en `AppearanceViewModel`/`CharacterListEntryViewModel`. El selector de la app sigue siendo
+binario (Chico/Chica) a proposito - las 10 variantes de vestuario alternativo no tienen
+selector visual propio, fuera de esta pasada; cambiar de genero a mano colapsa a la variante
+"Starter" real de ese genero (0/4), sin tocar una variante alternativa que el `.plr` ya trajera
+cargada del mismo genero.
+
+**H6-03 (una unica variante de cuerpo real)**: en la instalacion real de Steam solo existen las
+10 piezas completas para las variantes 0 (MaleStarter) y 4 (FemaleStarter) -
+`Player_1/2/3_{0,1,2,3,5,7,10}.xnb` NO existen en disco (confirmado con `ls` real), las
+variantes 1/2/3/5-11 solo sustituyen un subconjunto y heredan el resto - fuera de esta pasada,
+documentado. `head`/`eyewhites`/`eyes` son compartidas por TODAS las variantes (solo
+`Player_0_{0,1,2}.xnb` existen) y se cargan siempre de `body0`.
+
+**H6-04 (pelo desfasado en 1)**: el id real de `Player.hair` es 0-based (0..227), pero el
+fichero en disco es `Player_Hair_{id+1}.xnb` (confirmado en `AssetInitializer.cs` real:
+`"Images/Player_Hair_" + (num4 + 1)`, y en `UICharacterCreation.cs`: `switch (player.hair + 1)`
+para el numero que el propio juego muestra). `scripts/extraer-sprites-jugador.js` reescrito
+para extraer con el nombre de fichero real 0-based (`hair/{id}.png`, 228 ficheros
+`0.png`..`227.png`); el bucle de `AppearanceViewModel.RebuildHairOptions` ya no empieza en 1;
+`HairOptionViewModel.DisplayNumber` (`Id+1`) es SOLO para el tooltip visible (el mismo numero
+que enseña el propio juego), el valor guardado real sigue siendo `Id` (0-based) sin desfase.
+
+**H6-05 (consecuencia real de H6-01, no buscada aparte)**: la armadura/vanidad de Calamity Mod
+en el slot Body usa la MISMA convencion de hoja compuesta 360x224 (confirmado: los
+`Assets/calamity/icons/*_Body.png` miden 360x224 de verdad) - antes de este arreglo,
+`LoadPngPixels` asumia SIEMPRE 40x56 y una pieza de Calamity puesta en el slot Body hacia
+explotar `CopyPixels` con `ArgumentOutOfRangeException` real; `HomeViewModel.ScanCharacters` lo
+tragaba en un catch mudo, asi que un personaje con equipo de Calamity puesto desaparecia del
+listado de "Inicio" en silencio, sin ningun error visible. Con `LoadArmorCell` (mismo mecanismo
+real que `LoadBodyCell`) esto se resuelve solo, sin ningun caso especial para Calamity.
+
+**Reextraccion real de assets** (`scripts/extraer-sprites-jugador.js` reescrito,
+`scripts/extraer-sprites-armadura-vanilla.js` con el grupo Body cambiado de `cropFrame0` a
+`fullSheet` - ambos contra la instalacion real de Steam en este equipo): 23 piezas de cuerpo
+(`body0/`+`body4/`, hojas 360x224 o tiras 40x56 segun corresponda), 228 estilos de pelo
+0-based, 169 piezas de armadura vanilla del slot Body reextraidas a 360x224 (antes recortadas a
+40x56 de fabrica). Ficheros viejos borrados con `git rm` (la carpeta `body/` antigua, el
+`hair/228.png` huerfano del desfase 1-based) - las carpetas `body1/`, `body2/`, `body3/` de un
+intento abortado de extraer las 5 variantes (bloqueado por permisos: `rm -rf`/
+`Remove-Item -Recurse -Force` reales denegados en esta sesion desatendida, sin nadie delante
+para aprobar un borrado destructivo) se dejan como restos inofensivos en disco, sin comitear -
+documentado aqui en vez de forzar el borrado.
+
+**Bug real encontrado y arreglado ANTES de comitear nada** (atrapado por `dotnet test` real, NO
+por inspeccion): tras la reescritura, 59/260 tests de `TerrasavrNative.App.ViewModels.Tests`
+fallaban con excepciones dispares (NullReferenceException, Assert.True/Equal fallidos) - la
+causa real, aislada con un test de diagnostico desechable (creado y borrado en esta misma
+pasada): `LoadSheetCached` hacia `Cache.GetOrAdd("sheet:" + path, LoadPngPixelsSheet)` -
+`ConcurrentDictionary.GetOrAdd` invoca al factory con la CLAVE, no con la variable local
+`path`, asi que `LoadPngPixelsSheet` recibia literalmente el string `"sheet:C:\...\
+torsoskin.png"` como ruta real. `PngBitmapDecoder` intentaba resolverlo como un `Uri`, leia
+"sheet" como si fuera el ESQUEMA de un URI (invalido), y lanzaba `NotSupportedException: "The
+URI prefix is not recognized"` dentro de `WebRequest.Create` - excepcion que `MainViewModel.
+LoadFromPath` traga por diseño (T-22), asi que decenas de tests que cargan un personaje
+sintetico y esperan `IsCharacterLoaded=true` fallaban en cadena sin ningun rastro visible del
+error real. Arreglado con un cierre real sobre `path`: `Cache.GetOrAdd("sheet:" + path, _ =>
+LoadPngPixelsSheet(path))`. De paso, `PngBitmapDecoder` se cambio de `new Uri(path)` a
+`File.OpenRead(path)` (Stream) en las dos funciones de carga - mismo patron ya establecido en
+el resto del proyecto para leer PNG reales desde disco, evita depender de
+`System.Net.WebRequest` para resolver un simple fichero local.
+
+**Verificacion real**: `dotnet build` en verde (0/0). `dotnet test`: **423/423** (158 Core,
++13 tests nuevos: `PlayerVariantSetsTests.cs`, 12 casos reales de las 12 variantes de
+`PlayerVariantID` mas el par Starter/Starter; 265 ViewModels, +5 tests nuevos:
+`PlayerPreviewRendererH6Tests.cs` - recuento real de pixeles opacos tras renderizar (908/2240,
+umbral 700, antes el bug de H6-01 dejaba piezas del brazo sin componer de verdad), tintado real
+de `UnderColor` cambia los pixeles de salida, varon/mujer producen lienzos distintos (celdas de
+torso/hombro reales), dos peinados vecinos cargan ficheros reales distintos, una pieza REAL de
+Calamity en el slot Body renderiza sin excepcion y cambia el resultado). Arnes de UI Automation
+ampliado con un bloque nuevo (`H6-01-DOLL`) que carga un personaje REAL de esta maquina
+("Eldelgas", el mismo de las capturas originales del usuario, no uno sintetico) y verifica el
+mismo recuento de pixeles opacos (948/2240 real) mas una captura real
+(`h6-doll-personaje-real.png`) - confirmada a mano: el doll ahora muestra brazos, manos y mangas
+reales, un personaje reconocible, no solo cabeza+piernas. **2/2 pasadas limpias**, sin
+NO-FOUND/FALLO/EXCEPTION. De paso se corrigio un texto de la propia UI que habia quedado
+obsoleto por este mismo arreglo (`MainWindow.xaml`, pie del preview de Apariencia: ya no dice
+"tampoco refleja Chico/Chica", porque ahora SI lo refleja).
+
+**Fuera de esta pasada, documentado**: sin accesorios (alas, mochilas, capas...), item en mano,
+ni animacion (solo el frame de reposo); pelo bajo casco/pelo largo detras del cuerpo (H6-07,
+Tanda D); el doll de la pestaña Apariencia en si todavia no muestra la armadura/vanidad puesta
+(eso ya lo hace la tarjeta de "Inicio" desde la ronda anterior - unificarlo es H6-06, Tanda D).
+Siguiente: Tanda C (H6-11 iconos vanilla animados, H6-12 buff/debuff de Calamity, H6-08/09/10
+cabezas de NPC en el mapa), despues Tanda D.
