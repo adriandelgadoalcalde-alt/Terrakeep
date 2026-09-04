@@ -32,7 +32,7 @@ public sealed class StorageTabOrphanTests
     public void CrecerAAmplioConAlmacenesActiva_MueveLaSeleccionAInventario()
     {
         var vm = NewLoadedViewModel();
-        vm.UpdateSizeClass(1300); // Normal - "Almacenes" (2) sigue visible aqui
+        vm.UpdateSizeClass(1300); // Compacto tras R-04b (umbral subido a 1320) - "Almacenes" (2) sigue visible igual, IsStorageExpanded depende solo de Amplio
         vm.ObjetosSubTabIndex = 2; // Almacenes
 
         vm.UpdateSizeClass(1600); // Amplio real - "Almacenes" pasa a oculta
@@ -60,7 +60,7 @@ public sealed class StorageTabOrphanTests
         vm.UpdateSizeClass(1600);
         vm.ObjetosSubTabIndex = 1; // Inventario
 
-        vm.UpdateSizeClass(1300); // Normal - "Almacenes" vuelve a estar disponible
+        vm.UpdateSizeClass(1300); // Compacto tras R-04b - "Almacenes" vuelve a estar disponible igual
 
         Assert.Equal(1, vm.ObjetosSubTabIndex);
     }

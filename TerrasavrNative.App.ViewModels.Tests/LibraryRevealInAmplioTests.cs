@@ -32,7 +32,7 @@ public sealed class LibraryRevealInAmplioTests
     public void CrecerAAmplioConLaLibreriaPlegadaPorPreferencia_LaRevelaSolaSinTocarElBoton()
     {
         var vm = NewLoadedViewModel();
-        vm.UpdateSizeClass(1300); // Normal - plegada por defecto
+        vm.UpdateSizeClass(1300); // Compacto tras R-04b (umbral subido a 1320) - plegada por defecto
         Assert.True(vm.IsLibraryCollapsed);
         Assert.False(vm.IsLibraryVisible);
 
@@ -49,7 +49,7 @@ public sealed class LibraryRevealInAmplioTests
         vm.UpdateSizeClass(1600); // Amplio - visible por el tamaño, no por preferencia
         Assert.True(vm.IsLibraryVisible);
 
-        vm.UpdateSizeClass(1300); // Normal otra vez
+        vm.UpdateSizeClass(1300); // Compacto tras R-04b - otra vez por debajo de Amplio
 
         Assert.False(vm.IsLibraryVisible); // vuelve a plegada, tal cual el boton la dejo
     }
@@ -62,7 +62,7 @@ public sealed class LibraryRevealInAmplioTests
         vm.ToggleLibraryCollapsedCommand.Execute(null); // el usuario la despliega A MANO (preferencia real)
         Assert.False(vm.IsLibraryCollapsed);
 
-        vm.UpdateSizeClass(1300); // Normal - por debajo de Amplio
+        vm.UpdateSizeClass(1300); // Compacto tras R-04b - por debajo de Amplio
 
         Assert.True(vm.IsLibraryVisible); // sigue visible: fue el USUARIO quien la desplego
     }

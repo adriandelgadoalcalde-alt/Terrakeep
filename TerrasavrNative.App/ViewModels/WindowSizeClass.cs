@@ -20,6 +20,14 @@ public enum WindowSizeClass
     Normal,
     // Sitio real para 3 paneles a la vez (o 2 + el panel Editar realmente comodo) sin apretar.
     Amplio,
+    // Auditoria de redimensionado, R-10/H-09: a 1920px+ (pantalla completa mas comun hoy en
+    // dia) los topes de Amplio dejaban entre el 28% y el 39% del ancho real sin usar - medido
+    // contra el contenido real de cada consumidor (WrapPanel de tarjetas de Inicio, swatches de
+    // Apariencia, tarjetas de Desbloqueos/changelog), no elegido a ojo. DEBE tratarse como "al
+    // menos tan expandido como Amplio" en cualquier consumidor booleano existente (comparar con
+    // >=, nunca con ==) - Extra es un superconjunto de espacio de Amplio, nunca deberia
+    // desactivar algo que Amplio ya activaba.
+    Extra,
 }
 
 // H5-08 (quinta auditoria de Opus): "UpdateSizeClass(double actualWidth) solo recibe el ancho -

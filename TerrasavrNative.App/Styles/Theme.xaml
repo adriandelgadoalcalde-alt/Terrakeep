@@ -935,7 +935,12 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
-                    <Border x:Name="Bd" Margin="{TemplateBinding Margin}" Padding="{TemplateBinding Padding}"
+                    <!-- Auditoria de redimensionado, R-09/H-10: el Margin="0,0,6,4" del Setter de
+                         arriba ya lo aplica el panel padre al arreglar este TabItem - repetirlo
+                         aqui con TemplateBinding lo contaba DOS VECES, asi que el contenido no
+                         cabia en su propio hueco y WPF recortaba 6x4px reales de cada pastilla, en
+                         las 14 pestañas internas de la app. -->
+                    <Border x:Name="Bd" Padding="{TemplateBinding Padding}"
                             CornerRadius="8" BorderThickness="1" BorderBrush="Transparent" Background="Transparent">
                         <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>

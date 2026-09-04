@@ -239,8 +239,14 @@
              arbol e igual de correcto). -->
         <DataTemplate x:Key="CategoryNodeTemplate" DataType="{x:Type vm:CategoryNodeViewModel}">
             <StackPanel>
+                <!-- Auditoria de redimensionado, R-06/H-06: HorizontalAlignment="Stretch" para que
+                     el Button ocupe todo el ancho real disponible de la columna (herencia hasta
+                     el DockPanel de dentro, ver mas abajo) - sin esto el DockPanel interior mide
+                     su propio ancho natural y el TextBlock nunca sabe cuanto sitio tiene de
+                     verdad. -->
                 <Button Command="{Binding SelectCommand}"
-                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" Padding="4,3" Margin="0,0,0,1"
+                        CommandParameter="{Binding}" HorizontalContentAlignment="Left" HorizontalAlignment="Stretch"
+                        Padding="4,3" Margin="0,0,0,1"
                         Cursor="Hand">
                     <Button.Style>
                         <Style TargetType="Button">
@@ -258,8 +264,19 @@
                             </Style.Triggers>
                         </Style>
                     </Button.Style>
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
+                    <!-- Auditoria de redimensionado, R-06/H-06: DockPanel en vez de StackPanel
+                         Horizontal. El MaxWidth="165" de abajo (arreglo real de 2-sep-2026, "hay
+                         nombres cortados") solo funcionaba para el PRIMER nivel del arbol - cada
+                         nivel de profundidad añade su propio Margin="16,0,0,0" (ver el
+                         ItemsControl recursivo mas abajo), asi que a partir del 2º nivel 165 ya
+                         no cabia en el hueco real (columna fija de 210px menos sangria menos
+                         icono) y el nombre se recortaba, hasta el 100% en el 3er nivel. Un
+                         DockPanel SI da al ultimo hijo el ancho restante REAL (a diferencia de un
+                         StackPanel horizontal, que mide con infinito), asi que TextWrapping
+                         funciona solo, a cualquier profundidad y cualquier ancho de columna - sin
+                         ninguna constante que mantener. -->
+                    <DockPanel>
+                        <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="16" Height="16" Margin="0,0,6,0" Stretch="Uniform"
                                VerticalAlignment="Center"
                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                         <!-- Sin sufijo de recuento aparte (pedido explicito 2-sep-2026, "calca
@@ -268,14 +285,9 @@
                              ej. "Melee damage (316)") - añadir otro aqui duplicaria el numero.
                              Las carpetas con lista literal de ids (ej. "Copper & Tin") tampoco
                              llevan recuento en el Terrasavr real, asi que no se inventa uno. -->
-                        <!-- Bug real encontrado 2-sep-2026 ("hay nombres cortados"): un
-                             StackPanel Horizontal le da ancho infinito a este TextBlock al
-                             medir, asi que TextWrapping no bastaba solo - hacia falta un
-                             MaxWidth real para que el texto tuviera un limite del que
-                             envolver, en vez de desbordar en silencio fuera de la columna. -->
                         <TextBlock Text="{Binding Name}" FontSize="11.5" VerticalAlignment="Center"
-                                   MaxWidth="165" TextWrapping="Wrap" />
-                    </StackPanel>
+                                   TextWrapping="Wrap" />
+                    </DockPanel>
                 </Button>
                 <ItemsControl ItemsSource="{Binding Children}" Margin="16,0,0,0"
                               ItemTemplate="{DynamicResource CategoryNodeTemplate}"
@@ -567,11 +579,22 @@
                         <Image Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform" Margin="0,0,7,0"
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                        <StackPanel>
+                        <StackPanel MaxWidth="167">
                             <!-- Bd-e (segunda auditoria de Opus, Fable): "columnas irregulares" -
                                  con la columna ahora de ancho fijo (ver BuildClassTemplate), el
                                  texto necesita poder partirse en dos lineas en vez de desbordar
-                                 el ancho de la tarjeta con un nombre largo. -->
+                                 el ancho de la tarjeta con un nombre largo.
+                                 Auditoria de redimensionado, R-03/H-03: el TextWrapping de arriba
+                                 NUNCA actuaba de verdad - un StackPanel Horizontal (padre, linea
+                                 566) mide a sus hijos con ancho INFINITO, asi que el TextBlock
+                                 pedia su ancho natural completo y la tarjeta (BuildClassTemplate,
+                                 Width=220) se limitaba a recortar la diferencia en silencio.
+                                 MISMO bug exacto que CategoryNodeTemplate ya documenta mas abajo
+                                 (buscar "TextWrapping no bastaba solo"), sin aplicar aqui hasta
+                                 ahora. 167 = 220 (tarjeta) - 6 (Margin de la fila, linea 552) - 16
+                                 (Padding del Border, 553) - 24 (icono, 567) - 7 (su margen) -
+                                 medido exacto contra el recorte real, ver
+                                 ESPEC-auditoria-redimensionado.md#4.3. -->
                             <TextBlock Text="{Binding DisplayName}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
                             <TextBlock Text="{Binding PrefixText}" Style="{StaticResource CaptionText}"
                                        Visibility="{Binding PrefixText, Converter={StaticResource NullToVis}}" />
@@ -1155,7 +1178,13 @@
                                        Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVis}}" />
                             <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextTrimming="CharacterEllipsis" />
                         </DockPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <!-- Auditoria de redimensionado, R-05/H-05: con 3 insignias nuevas
+                             (tModLoader/Calamity/Vanilla, 4-sep-2026) mas la de dificultad, la
+                             fila entera desbordaba el Width=240 de la tarjeta (linea de arriba) y
+                             el StackPanel horizontal recortaba la ultima en silencio - hasta 39 de
+                             40px, medido. WrapPanel deja que pase a una segunda linea cuando hace
+                             falta, sin perder ninguna. -->
+                        <WrapPanel Margin="0,4,0,0">
                             <Border Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="5,1">
                                 <TextBlock Text="{Binding DifficultyLabel}" Style="{StaticResource CaptionText}" FontSize="10" />
                             </Border>
@@ -1193,7 +1222,7 @@
                                     Visibility="{Binding IsCalamity, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="Calamity" FontSize="10" Foreground="White" FontWeight="SemiBold" />
                             </Border>
-                        </StackPanel>
+                        </WrapPanel>
                         <TextBlock Text="{Binding LastModifiedText}" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,4,0,0" />
                     </StackPanel>
                 </Grid>
@@ -1403,8 +1432,14 @@
                      mas consultado), defensa/dinero/horas+ultimo guardado solo con sitio real
                      (IsVitalsStripExpanded, mismo mecanismo de SizeClass de H5-08). Todos los
                      datos YA se calculaban en algun sitio (Apariencia/Equipamiento/Monedas) -
-                     nada nuevo que extraer, solo un sitio real donde verlo de un vistazo. -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
+                     nada nuevo que extraer, solo un sitio real donde verlo de un vistazo.
+                     Auditoria de redimensionado, R-04a/H-04a: WrapPanel en vez de StackPanel
+                     Horizontal, sin HorizontalAlignment="Center" - a MinWidth=1080 la tira
+                     compacta (Vida+Mana, 196px) ya no cabia en los ~192px reales que le dejaban
+                     las dos columnas Auto de los lados, y perdia el icono de vida ENTERO (9px) sin
+                     avisar. Con WrapPanel, si no cabe pasa a una segunda linea (la fila del Grid es
+                     Height="Auto", crece sola) - nunca se pierde nada, a ningun ancho. -->
+                <WrapPanel Grid.Column="1" VerticalAlignment="Center"
                             Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}">
                     <!-- Vida -->
                     <TextBlock Text="♥" FontSize="13" Foreground="{StaticResource CalamityBrush}" VerticalAlignment="Center" />
@@ -1442,7 +1477,7 @@
                                    Foreground="{StaticResource TextSecondaryBrush}"
                                    Visibility="{Binding LastSavedText, Converter={StaticResource NullToVis}}" />
                     </StackPanel>
-                </StackPanel>
+                </WrapPanel>
 
                 <!-- H5-05 (quinta auditoria de Opus): "¿Dónde lo tengo?" - panel real anclado al
                      boton de la cabecera, visible en CUALQUIER pestaña. StaysOpen=False lo
@@ -1988,7 +2023,13 @@
                                                      ordenar, vaciar contenedor, mover todo al banco" - ver los 3
                                                      comandos reales en ContainerViewModel/MainViewModel. -->
                                                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                    <!-- Auditoria de redimensionado, R-01/H-08: WrapPanel en vez de
+                                                         StackPanel - a 1080px de ancho, 6 botones en una sola fila
+                                                         recortaban el titulo "Inventario (N/M)" que viene detras
+                                                         (DockPanel corta el ultimo hijo cuando no le queda sitio). Con
+                                                         WrapPanel los botones pasan a 2 filas si hace falta, el titulo
+                                                         nunca se pierde. -->
+                                                    <WrapPanel DockPanel.Dock="Right">
                                                         <!-- H5-03 (quinta auditoria de Opus): "guardar/cargar conjuntos de
                                                              objetos, funcion de primera clase en el Terrasavr original" -
                                                              el dialogo real de fichero vive en la View (MainViewModel es
@@ -2010,7 +2051,7 @@
                                                                 ToolTip="Ordena los objetos por Id, empaquetados al principio" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
                                                         <Button Content="Vaciar contenedor" Command="{Binding InventoryContainer.ClearAllCommand}"
                                                                 ToolTip="Vacía todos los slots del Inventario" Tag="Ghost" Padding="6,3" FontSize="10.5" />
-                                                    </StackPanel>
+                                                    </WrapPanel>
                                                     <TextBlock Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
                                                 </DockPanel>
                                                 <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
@@ -2030,7 +2071,23 @@
                                                     Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,4,0">
                                                 <DockPanel>
                                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                        <!-- Auditoria de redimensionado, R-01/H-01 (el hallazgo mas grave del
+                                                             informe): esta copia a mano de la cabecera de arriba se dejo
+                                                             fuera "Guardar conjunto...", "Cargar..." y "Añadir..." - a partir
+                                                             de 1500px de ancho (IsStorageExpanded=True) NO HABIA FORMA de
+                                                             guardar/cargar un conjunto de objetos del Inventario, ni un aviso
+                                                             en pantalla de por que. Restaurados aqui, WrapPanel para que
+                                                             quepan en la mitad del ancho sin recortar nada. -->
+                                                        <WrapPanel DockPanel.Dock="Right">
+                                                            <Button Content="Guardar conjunto..." Click="OnSaveInventorySetClick"
+                                                                    ToolTip="Guarda TODO el Inventario en un fichero .json real, para llevarlo a otro personaje"
+                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                            <Button Content="Cargar..." Click="OnLoadInventorySetClick"
+                                                                    ToolTip="Reemplaza TODO el Inventario por un conjunto .json guardado antes"
+                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                            <Button Content="Añadir..." Click="OnAppendInventorySetClick"
+                                                                    ToolTip="Rellena solo los huecos libres del Inventario con un conjunto .json guardado antes"
+                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
                                                             <Button Content="Mover todo al almacén" Command="{Binding MoveInventoryToStorageCommand}"
                                                                     ToolTip="Mueve todo el Inventario al almacén seleccionado a la derecha - lo que no quepa se queda donde está"
                                                                     Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
@@ -2038,7 +2095,7 @@
                                                                     ToolTip="Ordena los objetos por Id, empaquetados al principio" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
                                                             <Button Content="Vaciar contenedor" Command="{Binding InventoryContainer.ClearAllCommand}"
                                                                     ToolTip="Vacía todos los slots del Inventario" Tag="Ghost" Padding="6,3" FontSize="10.5" />
-                                                        </StackPanel>
+                                                        </WrapPanel>
                                                         <TextBlock Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
                                                     </DockPanel>
                                                     <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
@@ -2049,12 +2106,30 @@
                                                     DataContext="{Binding StorageGroup}">
                                                 <DockPanel>
                                                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                        <!-- Auditoria de redimensionado, R-01/H-01: mismo hallazgo que la
+                                                             mitad Inventario de al lado - esta copia se dejo fuera los 3
+                                                             botones de conjunto del almacen (H5-03), y ademas la pestaña
+                                                             "Almacenes" que SI los tenia se oculta entera en Amplio
+                                                             (linea de arriba, IsStorageExpanded). Restaurados con los
+                                                             MISMOS handlers reales que ya usa esa pestaña
+                                                             (OnSaveStorageSetClick/OnLoadStorageSetClick/
+                                                             OnAppendStorageSetClick, que leen el DataContext=StorageGroup
+                                                             heredado del Border de arriba - identico aqui). -->
+                                                        <WrapPanel DockPanel.Dock="Right">
+                                                            <Button Content="Guardar conjunto..." Click="OnSaveStorageSetClick"
+                                                                    ToolTip="Guarda TODO este almacén en un fichero .json real, para llevarlo a otro personaje"
+                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                            <Button Content="Cargar..." Click="OnLoadStorageSetClick"
+                                                                    ToolTip="Reemplaza TODO este almacén por un conjunto .json guardado antes"
+                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
+                                                            <Button Content="Añadir..." Click="OnAppendStorageSetClick"
+                                                                    ToolTip="Rellena solo los huecos libres de este almacén con un conjunto .json guardado antes"
+                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
                                                             <Button Content="Ordenar" Command="{Binding Current.SortCommand}"
                                                                     ToolTip="Ordena los objetos por Id, empaquetados al principio" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
                                                             <Button Content="Vaciar contenedor" Command="{Binding Current.ClearAllCommand}"
                                                                     ToolTip="Vacía todos los slots de este almacén" Tag="Ghost" Padding="6,3" FontSize="10.5" />
-                                                        </StackPanel>
+                                                        </WrapPanel>
                                                         <ItemsControl ItemsSource="{Binding Options}">
                                                             <ItemsControl.ItemsPanel>
                                                                 <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -2084,7 +2159,10 @@
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
                                             <DockPanel DataContext="{Binding StorageGroup}">
                                                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                    <!-- Auditoria de redimensionado, R-01: WrapPanel por el mismo motivo
+                                                         que la cabecera de Inventario (H-08) - 5 botones en una fila no
+                                                         debe poder recortar la fila de pildoras de almacen que va detras. -->
+                                                    <WrapPanel DockPanel.Dock="Right">
                                                         <!-- H5-03: mismos 3 botones reales que Inventario, operando sobre
                                                              el almacen SELECCIONADO ahora mismo (Current) - igual que
                                                              Ordenar/Vaciar contenedor ya hacen aqui al lado. -->
@@ -2101,7 +2179,7 @@
                                                                 ToolTip="Ordena los objetos por Id, empaquetados al principio" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
                                                         <Button Content="Vaciar contenedor" Command="{Binding Current.ClearAllCommand}"
                                                                 ToolTip="Vacía todos los slots de este almacén" Tag="Ghost" Padding="6,3" FontSize="10.5" />
-                                                    </StackPanel>
+                                                    </WrapPanel>
                                                     <ItemsControl ItemsSource="{Binding Options}">
                                                         <ItemsControl.ItemsPanel>
                                                             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -2692,7 +2770,13 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="0" VerticalAlignment="Top" Margin="0,0,20,0">
+                            <!-- Auditoria de redimensionado, R-07/H-07: la columna 1 de al lado ya
+                                 tiene su ScrollViewer de seguridad (justo debajo) - esta no lo
+                                 tenia, asi que en ventanas bajas (~700px de alto) la ultima linea
+                                 del parrafo se recortaba SIN forma de alcanzarla (ni scroll ni
+                                 nada). Mismo patron que el resto de la app. -->
+                            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                            <StackPanel VerticalAlignment="Top" Margin="0,0,20,0">
                                 <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,10">
                                     <Image Source="{Binding Appearance.PreviewImage}" Width="240" Height="336"
                                            RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="Uniform" />
@@ -2707,6 +2791,7 @@
                                 <TextBlock Text="Preview real de cuerpo completo (sprites reales del juego, brazos y torso incluidos, armadura/vanidad real puesta) - sin item en mano ni animación, solo la pose de reposo. No aplica el efecto visual del tinte de pelo (shader especial que este preview no reproduce), solo su color de pelo base."
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Width="240" />
                             </StackPanel>
+                            </ScrollViewer>
 
                             <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
                             <!-- H4-07 (cuarta auditoria de Opus, Fable): mismo patron real que
@@ -3250,11 +3335,18 @@
         <!-- ===================== EXPLORACION ===================== -->
         <TabItem Header="Exploración" ToolTip="Ctrl+5">
             <DockPanel Margin="14">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+                <!-- Auditoria de redimensionado, R-11/§4.11: endurecimiento SIN defecto medido -
+                     un StackPanel horizontal nunca envuelve ni recorta, empuja fuera de la
+                     ventana en silencio si no cabe. Con el nombre de mundo mas largo real de esta
+                     maquina sobraban ~100px a 1080px, pero el margen es pequeño y depende de un
+                     dato del usuario (Terraria permite nombres bastante mas largos). WrapPanel +
+                     tope al titulo lo hacen imposible en vez de solo improbable. -->
+                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                     <Button Content="Cargar mundo (.wld)..." Tag="Accent" Click="OnLoadWorldClick"
                             IsEnabled="{Binding Exploration.IsNotLoading}" />
                     <TextBlock Text="{Binding Exploration.WorldTitle, StringFormat='Mundo: {0}'}"
                                Style="{StaticResource SectionText}" VerticalAlignment="Center" Margin="20,0,0,0"
+                               MaxWidth="320" TextTrimming="CharacterEllipsis"
                                Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
                     <!-- X-h (segunda auditoria de Opus, Fable): "no dice que es solo lectura" -
                          antes solo un comentario de codigo (ExplorationViewModel), invisible para
@@ -3280,7 +3372,7 @@
                              conoce) vive en el code-behind, igual que el resto de gestos del mapa. -->
                         <Button Content="Ajustar a la ventana" Click="OnFitToWindowClick" Padding="8,2" Margin="8,0,0,0" />
                     </StackPanel>
-                </StackPanel>
+                </WrapPanel>
 
                 <!-- H5-11 (quinta auditoria de Opus): "el lanzador de mundos desaparece para
                      siempre en cuanto cargas uno" - tira PERMANENTE de pildoras (visible con
@@ -3315,8 +3407,14 @@
                              todo el sobrante real. -->
                         <!-- Punto 4 (advisor Opus, ESPEC-ui-exploracion.md#8-D4): la columna crece de
                              220-300 a 260-380 - inventario + resultados no cabian en el ancho anterior
-                             (TEdit diseña este mismo panel a 400px, FindSidebarView.xaml:12). -->
-                        <ColumnDefinition Width="Auto" MinWidth="260" MaxWidth="380" />
+                             (TEdit diseña este mismo panel a 400px, FindSidebarView.xaml:12).
+                             Auditoria de redimensionado, R-02/H-02: el MaxWidth se movio de aqui al
+                             DockPanel de abajo - una ColumnDefinition Width="Auto" mide su contenido
+                             con ancho INFINITO antes de aplicar el MaxWidth, asi que el WrapPanel de
+                             las 5 pildoras de categoria nunca envolvia de verdad (pedia 408px en una
+                             sola fila) y WPF recortaba la diferencia sin reorganizar nada - "Objetos"
+                             perdia 60 de 97px, A CUALQUIER tamaño de ventana, incluido 4K. -->
+                        <ColumnDefinition Width="Auto" MinWidth="260" />
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,0">
@@ -3545,7 +3643,7 @@
                         </Grid>
                     </Border>
 
-                    <DockPanel Grid.Column="1">
+                    <DockPanel Grid.Column="1" MaxWidth="{Binding ExplorationSidebarMaxWidth}">
                         <!-- Punto 4 (advisor Opus, "una nueva barra lateral... que ya no solo salgan
                              los npc, eso se traslada dentro de una rama madre donde salgan varios
                              botones" - ver ESPEC-ui-exploracion.md#9). Rediseño completo: la lista de

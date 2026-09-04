@@ -366,13 +366,21 @@ public partial class MainViewModel : ObservableObject
     // consumidores reales independientes que necesitaron el mismo umbral: E-2 (las 3 vistas de
     // Equipamiento lado a lado - limpio a 1650px, recorta la 3ª columna a 1450px) y A-4
     // (Inventario+Almacen lado a lado, dos rejillas de 10 columnas - limpio a 1500px/1650px,
-    // recorta la ultima columna a 1350px). NormalMinWidth=1300 se deja como umbral intermedio
-    // real (Compacto/Amplio con margen entre medias) - sin consumidor propio todavia, pero
-    // SizeClass en si ya es un valor correcto y usable en cuanto alguna pantalla nueva lo
-    // necesite.
+    // recorta la ultima columna a 1350px).
+    // NormalMinWidth=1320 (auditoria de redimensionado, R-04b/H-04b - subido desde 1300, que
+    // llego a documentarse aqui mismo como "sin consumidor propio todavia"): YA tiene un
+    // consumidor real, IsVitalsStripExpanded (H5-10, mas abajo), y para ese consumidor 1300
+    // estaba mal medido por 20px - biseccion real de 10 en 10px: a 1299 la franja vital
+    // (Vida+Mana) esta completa, a 1300 se despliega a Defensa+Dinero+Horas+Guardado (pasa de
+    // 196 a 350px) y se recorta 16px hasta los 1320, el primer ancho en que cabe entera.
+    // Cruzar ese umbral empeoraba la cabecera en TODAS las pantallas.
     [ObservableProperty] private WindowSizeClass _sizeClass = WindowSizeClass.Normal;
-    private const double NormalMinWidth = 1300;
+    private const double NormalMinWidth = 1320;
     private const double AmplioMinWidth = 1500;
+    // Auditoria de redimensionado, R-10/H-09: ver el comentario real de WindowSizeClass.Extra -
+    // 1920 es el primer ancho donde los topes de Amplio (1400/1000/1200) dejan mas de un cuarto
+    // del viewport real vacio (medido: 28-39% a 1920px).
+    private const double ExtraMinWidth = 1920;
 
     // H5-08 (quinta auditoria de Opus): segunda dimension real, ver WindowHeightClass.cs -
     // AltoMinHeight=900 citado del propio informe ("un portátil de 1440×900... el tamaño más
@@ -387,7 +395,8 @@ public partial class MainViewModel : ObservableObject
 
     public void UpdateSizeClass(double actualWidth, double actualHeight)
     {
-        SizeClass = actualWidth >= AmplioMinWidth ? WindowSizeClass.Amplio
+        SizeClass = actualWidth >= ExtraMinWidth ? WindowSizeClass.Extra
+            : actualWidth >= AmplioMinWidth ? WindowSizeClass.Amplio
             : actualWidth >= NormalMinWidth ? WindowSizeClass.Normal
             : WindowSizeClass.Compacto;
         HeightClass = actualHeight >= AltoMinHeight ? WindowHeightClass.Alto : WindowHeightClass.Bajo;
@@ -397,7 +406,9 @@ public partial class MainViewModel : ObservableObject
     // aqui hay sitio de sobra para las 3 vistas de Equipamiento (Armadura/Vanidad/Tintes) a la
     // vez, sin apretar ninguna. Por debajo, se queda el selector de pildoras de siempre (un
     // panel a la vez).
-    public bool IsEquipmentExpanded => SizeClass == WindowSizeClass.Amplio;
+    // Auditoria de redimensionado, R-10: >= en vez de == - Extra es un superconjunto de espacio
+    // de Amplio (ver WindowSizeClass.Extra), nunca debe DESACTIVAR algo que Amplio ya activaba.
+    public bool IsEquipmentExpanded => SizeClass >= WindowSizeClass.Amplio;
 
     // H5-10 (quinta auditoria de Opus): "la franja se pliega por prioridad al encoger (vida/
     // maná primero, el resto después) - el mismo mecanismo de clase de tamaño de H5-08, no una
@@ -421,7 +432,8 @@ public partial class MainViewModel : ObservableObject
     // ya mide E-2 para sus 3 vistas) ambas rejillas se ven limpias y completas - se reutiliza
     // el mismo umbral compartido en vez de inventar uno propio (ese es justo el punto de T-2:
     // un unico breakpoint real, no uno por pantalla).
-    public bool IsStorageExpanded => SizeClass == WindowSizeClass.Amplio;
+    // Auditoria de redimensionado, R-10: >= por el mismo motivo que IsEquipmentExpanded arriba.
+    public bool IsStorageExpanded => SizeClass >= WindowSizeClass.Amplio;
 
     // H4-02 (cuarta auditoria de Opus, Fable): "Almacenes seleccionada y luego oculta en Amplio
     // deja un contenido huerfano sin pestaña activa" - la pestaña interna Equipamiento(0)/
@@ -438,14 +450,28 @@ public partial class MainViewModel : ObservableObject
     // WrapPanel - en una ventana de 1920px, Inicio usa 880px y deja 1.000px negros". Mismo
     // SizeClass real compartido en vez de un umbral propio - en Amplio, sitio de sobra para que
     // el WrapPanel de tarjetas reparta una fila mas ancha en vez de quedarse angosto.
-    public double InicioContentMaxWidth => SizeClass == WindowSizeClass.Amplio ? 1400 : 880;
+    // Auditoria de redimensionado, R-10: 1900 en Extra - 6 tarjetas de 270+14 en una sola fila
+    // (WrapPanel real) = 1704px, mas el margen real de la fila.
+    public double InicioContentMaxWidth => SizeClass switch
+    {
+        WindowSizeClass.Extra => 1900,
+        WindowSizeClass.Amplio => 1400,
+        _ => 880,
+    };
 
     // H4-07 (cuarta auditoria de Opus, Fable): mismo patron real que InicioContentMaxWidth de
     // arriba (I-c) - Apariencia se quedaba en 640px fijos siempre (pensado para caber en la
     // ventana minima), dejando ~70% del ancho en negro en Amplio. Las tarjetas de color
     // (Swatches) ya viven en un WrapPanel real - solo hacia falta dejarle mas ancho real para
     // repartir mas columnas, no rehacer el layout.
-    public double AppearanceContentMaxWidth => SizeClass == WindowSizeClass.Amplio ? 1000 : 640;
+    // Auditoria de redimensionado, R-10: 1400 en Extra - 8 muestras de color de 150+10 en fila
+    // real = 1280px.
+    public double AppearanceContentMaxWidth => SizeClass switch
+    {
+        WindowSizeClass.Extra => 1400,
+        WindowSizeClass.Amplio => 1000,
+        _ => 640,
+    };
 
     // H5-08 (quinta auditoria de Opus): "el MaxHeight=460 fijo de la fila de Libreria en
     // Objetos y en Buffs" era una de las 2 constantes ciegas señaladas - con sitio vertical
@@ -461,12 +487,35 @@ public partial class MainViewModel : ObservableObject
     // mismo problema real; no hace falta un numero distinto por pantalla, cada una ya tiene su
     // propio WrapPanel/UniformGrid interno para repartir el ancho de sobra (familias de
     // Desbloqueos, grupos de Version, tarjetas de Novedades/Acerca de - ver MainWindow.xaml).
-    public double DetailContentMaxWidth => SizeClass == WindowSizeClass.Amplio ? 1200 : 760;
+    // Auditoria de redimensionado, R-10: 1700 en Extra - 6 tarjetas reales de Desbloqueos de
+    // 280+10 = 1740px.
+    public double DetailContentMaxWidth => SizeClass switch
+    {
+        WindowSizeClass.Extra => 1700,
+        WindowSizeClass.Amplio => 1200,
+        _ => 760,
+    };
 
     // H5-09: numero real de columnas para las listas de tarjetas de version (Novedades x2,
     // Changelog de Acerca de) - 2 en Amplio (autentico reparto en columnas, no solo mas ancho
     // cada tarjeta), 1 en Compacto/Normal (la tira unica de siempre, ya legible a ese ancho).
-    public int DetailCardColumns => SizeClass == WindowSizeClass.Amplio ? 2 : 1;
+    // Auditoria de redimensionado, R-10: 3 en Extra - tarjetas de changelog de ~560px, legibles
+    // a ese ancho. Un 5º escalon no se propone: a partir de cierto punto dejar aire es la
+    // decision correcta (misma razon por la que el texto corrido de Acerca de se topa en 680,
+    // ver mas abajo).
+    public int DetailCardColumns => SizeClass switch
+    {
+        WindowSizeClass.Extra => 3,
+        WindowSizeClass.Amplio => 2,
+        _ => 1,
+    };
+
+    // Auditoria de redimensionado, R-10 ("consumidor adicional a considerar", parte opcional
+    // pero recomendada): el MaxWidth real de la barra lateral de Exploracion (ESPEC-ui-
+    // exploracion.md#8-D4, 260-380) no necesita seguir topando en 380 cuando sobra sitio de
+    // verdad - con R-02 ya puesto (el WrapPanel de categorias envuelve solo, nunca se pierde
+    // nada), esto es aprovechamiento, no una correccion de un defecto medido.
+    public double ExplorationSidebarMaxWidth => SizeClass == WindowSizeClass.Extra ? 460 : 380;
 
     partial void OnSizeClassChanged(WindowSizeClass value)
     {
@@ -477,6 +526,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(AppearanceContentMaxWidth));
         OnPropertyChanged(nameof(DetailContentMaxWidth));
         OnPropertyChanged(nameof(DetailCardColumns));
+        OnPropertyChanged(nameof(ExplorationSidebarMaxWidth));
         // H4-07: la Libreria/Libreria de buffs se revelan solas en Amplio (ver el comentario
         // real de IsLibraryVisible/IsBuffLibraryVisible arriba).
         OnPropertyChanged(nameof(IsLibraryVisible));
@@ -484,7 +534,10 @@ public partial class MainViewModel : ObservableObject
         // H4-02: si "Almacenes" (indice 2) era la pestaña activa justo cuando se oculta (Amplio
         // real, IsStorageExpanded=true), mover la seleccion a "Inventario" (1) - el mismo
         // StorageGroup ya esta a la vista ahi, lado a lado con el Inventario (A-4).
-        if (value == WindowSizeClass.Amplio && ObjetosSubTabIndex == 2) ObjetosSubTabIndex = 1;
+        // Auditoria de redimensionado, R-10: >= por si el salto de tamaño va DIRECTO de Normal a
+        // Extra sin pasar por un evento intermedio en Amplio (poco probable arrastrando el borde
+        // a mano, pero real si algo fija el ancho de un salto, ej. un test).
+        if (value >= WindowSizeClass.Amplio && ObjetosSubTabIndex == 2) ObjetosSubTabIndex = 1;
     }
 
     // H5-08: la segunda mitad de la misma constante ciega - "el auto-revelado de la Libreria
@@ -542,8 +595,9 @@ public partial class MainViewModel : ObservableObject
     // H5-08: se revela sola tambien con HeightClass.Alto, no solo con SizeClass.Amplio - una
     // ventana alta pero no ancha (Compacto/Normal) ya tiene el sitio VERTICAL real que este
     // auto-revelado necesita, ver el comentario de OnHeightClassChanged arriba.
-    public bool IsLibraryVisible => !IsLibraryCollapsed || Library.IsPicking || SizeClass == WindowSizeClass.Amplio || HeightClass == WindowHeightClass.Alto;
-    public bool IsBuffLibraryVisible => !IsBuffLibraryCollapsed || BuffLibrary.IsPicking || SizeClass == WindowSizeClass.Amplio || HeightClass == WindowHeightClass.Alto;
+    // Auditoria de redimensionado, R-10: >= en vez de == - mismo motivo que IsEquipmentExpanded.
+    public bool IsLibraryVisible => !IsLibraryCollapsed || Library.IsPicking || SizeClass >= WindowSizeClass.Amplio || HeightClass == WindowHeightClass.Alto;
+    public bool IsBuffLibraryVisible => !IsBuffLibraryCollapsed || BuffLibrary.IsPicking || SizeClass >= WindowSizeClass.Amplio || HeightClass == WindowHeightClass.Alto;
     partial void OnIsLibraryCollapsedChanged(bool value) => OnPropertyChanged(nameof(IsLibraryVisible));
     partial void OnIsBuffLibraryCollapsedChanged(bool value) => OnPropertyChanged(nameof(IsBuffLibraryVisible));
     public ResearchViewModel Research { get; }
