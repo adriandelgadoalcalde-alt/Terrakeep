@@ -97,6 +97,11 @@ internal static class Program
         app.MainWindow = window;
         window.Show();
         DoEvents();
+        // Auditoria de redimensionado, §1.1-1.2: hook de WM_GETMINMAXINFO instalado lo antes
+        // posible (justo tras Show(), antes del primer redimensionado real de este arnes) para
+        // que TODO el resto del arnes pueda pedir el ancho que quiera sin toparse con el clamp
+        // real de esta sesion RDP - ver el comentario completo de InstalarHookMaxTrackSize.
+        InstalarHookMaxTrackSize(window);
         // Verificacion real de T-3: si la sesion ANTERIOR guardo window.json, el constructor de
         // MainWindow (WindowPlacementService.Apply) ya deberia haber restaurado ese tamaño real
         // ANTES de Show() - se comprueba aqui, lo antes posible.
@@ -118,9 +123,7 @@ internal static class Program
         // area real en pantalla se queda siendo la maximizada hasta que WindowState se cambia
         // a mano.
         window.WindowState = System.Windows.WindowState.Normal;
-        window.Width = 1180;
-        window.Height = 860;
-        DoEvents(); DoEvents();
+        FijarTamaño(window, 1180, 860);
         Console.WriteLine($"ARNES-TAMAÑO-BASE: Width={window.Width} Height={window.Height} (fijado aqui para que el resto del arnes no dependa del tamaño heredado de window.json)");
 
         var hwnd = new WindowInteropHelper(window).Handle;
@@ -1528,11 +1531,7 @@ internal static class Program
         // tamaños de ventana, incluido el MinWidth/MinHeight declarado (1000x620) y por debajo.
         void CaptureAt(double w, double h, string tabName, string fileName)
         {
-            window.Width = w;
-            window.Height = h;
-            DoEvents();
-            DoEvents();
-            DoEvents();
+            FijarTamaño(window, w, h);
             Console.WriteLine($"  Ventana pedida {w}x{h} -> real ActualWidth={window.ActualWidth:0.#} ActualHeight={window.ActualHeight:0.#}");
 
             // "Equipamiento"/"Inventario"/"Almacenes" viven DENTRO de "Personaje" > "Objetos" -
@@ -1643,8 +1642,7 @@ internal static class Program
 
             // Octava pasada: comprobar que el Height="380" fijo de Buffs (causa nº1 real del
             // solape segun Opus) ya no lo hace, a la resolucion minima real.
-            window.Width = 1080; window.Height = 700;
-            DoEvents(); DoEvents();
+            FijarTamaño(window, 1080, 700);
             var buffsTabForShot = root.FindFirst(TreeScope.Descendants, new AndCondition(
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
                 new PropertyCondition(AutomationElement.NameProperty, "Buffs")));
@@ -1661,8 +1659,7 @@ internal static class Program
 
             // Referencia visual real pedida por el usuario ("me gustaria algo mas moderno
             // como... segunda captura" - los botones "melee"/"Auto-equipar" de Builds).
-            window.Width = 1180;
-            window.Height = 860;
+            FijarTamaño(window, 1180, 860);
             var buildsTab = root.FindFirst(TreeScope.Descendants, new AndCondition(
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
                 new PropertyCondition(AutomationElement.NameProperty, "Builds")));
@@ -2030,14 +2027,14 @@ internal static class Program
                 Console.WriteLine($"  Captura {tabName} -> {fileName}");
             }
 
-            window.Width = 1550; window.Height = 900; DoEvents(); DoEvents(); DoEvents();
+            FijarTamaño(window, 1550, 900);
             Console.WriteLine($"H5-09-AMPLIO: SizeClass={vm.SizeClass} DetailContentMaxWidth={vm.DetailContentMaxWidth} DetailCardColumns={vm.DetailCardColumns} (esperado Amplio/1200/2)");
             CaptureDetailTab(1, 5, "Desbloqueos", "h5-09-desbloqueos-amplio.png");
             CaptureDetailTab(1, 6, "Versión", "h5-09-version-amplio.png");
             CaptureDetailTab(3, null, "Terraria", "h5-09-novedades-amplio.png");
             CaptureDetailTab(5, null, "Acerca de", "h5-09-acerca-de-amplio.png");
 
-            window.Width = 1180; window.Height = 860; DoEvents(); DoEvents(); DoEvents();
+            FijarTamaño(window, 1180, 860);
             Console.WriteLine($"H5-09-COMPACTO: SizeClass={vm.SizeClass} DetailContentMaxWidth={vm.DetailContentMaxWidth} DetailCardColumns={vm.DetailCardColumns} (esperado Compacto o Normal/760/1)");
             CaptureDetailTab(1, 5, "Desbloqueos", "h5-09-desbloqueos-compacto.png");
             CaptureDetailTab(5, null, "Acerca de", "h5-09-acerca-de-compacto.png");
@@ -2523,6 +2520,36 @@ internal static class Program
                 }
                 catch (Exception ex) { Console.WriteLine("CATEGORIAS-EXPLORACION-EXCEPTION: " + ex); }
 
+                // Auditoria de redimensionado, AR-02 (H-02): la barra lateral de Exploracion NO
+                // se recorta a NINGUN tamaño real, incluido 4K - antes de esta auditoria se
+                // recortaba SIEMPRE (el MaxWidth vivia en el sitio equivocado, ver R-02). El
+                // mundo real cargado arriba (roca negra) sigue disponible en este punto.
+                try
+                {
+                    foreach (double w in new double[] { 1080, 1500, 1920, 2560 })
+                    {
+                        FijarTamaño(window, w, 900);
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        DoEvents(); DoEvents();
+                        foreach (var cat in Enum.GetValues<WorldSearchCategory>())
+                        {
+                            vm.Exploration.SelectedCategory = cat;
+                            DoEvents(); DoEvents();
+                            var pildoraObjetos = Descendientes<System.Windows.Controls.RadioButton>(window)
+                                .FirstOrDefault(rb => (rb.Content as string ?? "").StartsWith("Objetos") ||
+                                    Descendientes<TextBlock>(rb).Any(t => (t.Text ?? "").StartsWith("Objetos")));
+                            if (pildoraObjetos == null) continue;
+                            var (rx, ry) = Recorte(pildoraObjetos);
+                            Console.WriteLine($"AR-02: a {w}px, categoria {cat}, pildora 'Objetos' recorte=({rx:0},{ry:0}) (esperado 0,0)");
+                            if (rx > 0 || ry > 0) Console.WriteLine($"FALLO: AR-02 - la barra lateral de Exploracion recorta {rx:0}x{ry:0}px a {w}px, categoria {cat} (H-02)");
+                        }
+                    }
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                    FijarTamaño(window, 1180, 860);
+                    DoEvents();
+                }
+                catch (Exception ex) { Console.WriteLine("AR-02-EXCEPTION: " + ex); }
+
                 // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
                 // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de
                 // NPC"): con el mundo real ya cargado arriba, confirma que la mayoria de NPCs
@@ -2596,9 +2623,7 @@ internal static class Program
         {
             vm.SelectedTabIndex = 1; // Personaje
             vm.PersonajeInnerTabIndex = 3; // Apariencia
-            window.Width = 1180; window.Height = 700;
-            DoEvents();
-            DoEvents();
+            FijarTamaño(window, 1180, 700);
 
             // FindFirst encontraria antes la miniatura pequeña de la cabecera global (N-1,
             // 28x39, el mismo Appearance.PreviewImage a otro tamaño) que el preview grande real
@@ -3154,6 +3179,192 @@ internal static class Program
         }
         catch (Exception ex) { Console.WriteLine("V-c-EXCEPTION: " + ex); }
 
+        // Auditoria de redimensionado (ESPEC-auditoria-redimensionado.md §6.1): una comprobacion
+        // real por hallazgo, con el mismo personaje real (UIA-Test, equipo puesto por
+        // T20-AUTOEQUIP) que ya esta cargado en este punto. Recorte() = VisualTreeHelper.
+        // GetClip sobre el elemento recortado - ver el comentario real de esa funcion, mas
+        // arriba en este fichero.
+        try
+        {
+            // AR-01 (H-01, el hallazgo mas grave): los 6 botones de conjunto siguen existiendo a
+            // los dos lados del umbral de Amplio, en Inventario Y en Almacenes.
+            vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 1;
+            foreach (double w in new double[] { 1450, 1500, 1920 })
+            {
+                FijarTamaño(window, w, 900);
+                DoEvents(); DoEvents();
+                var nombresBotones = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button))
+                    .Cast<AutomationElement>().Select(b => b.Current.Name).ToList();
+                foreach (string b in new[] { "Guardar conjunto...", "Cargar...", "Añadir..." })
+                {
+                    int veces = nombresBotones.Count(n => n == b);
+                    Console.WriteLine($"AR-01: a {w}px, '{b}' presente x{veces} (esperado >=1 siempre, >=2 en Amplio - Inventario Y Almacen)");
+                    if (veces == 0) Console.WriteLine($"FALLO: AR-01 - '{b}' desaparecio a {w}px (H-01)");
+                }
+            }
+
+            // AR-08 (H-08): el contador "Inventario (N/M)" a 1080px (el caso mas apretado). R-01
+            // (WrapPanel en la barra de botones) reduce mucho el aprieto pero NO lo elimina del
+            // todo (medido: de ~660px de una fila sin envolver a un residual real de 14px a
+            // 1080px - a ese ancho concreto sigue sin caber TODO a la vez). Parche previsto de
+            // forma explicita en el propio informe para este residual: TextTrimming, para que
+            // sea un recorte HONESTO con puntos suspensivos en vez de un corte seco silencioso -
+            // por eso aqui NO se exige recorte=(0,0) (seria pedir mas de lo que R-01+el parche
+            // prometen), se exige que el texto siga siendo LEGIBLE (nunca vacio del todo) y que
+            // WPF confirme que esta usando el mecanismo real de recorte con puntos suspensivos,
+            // no un clip duro silencioso.
+            vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 1;
+            FijarTamaño(window, 1080, 700);
+            DoEvents(); DoEvents();
+            var tbContador = Descendientes<TextBlock>(window).FirstOrDefault(t => (t.Text ?? "").StartsWith("Inventario ("));
+            if (tbContador != null)
+            {
+                var (rx, ry) = Recorte(tbContador);
+                Console.WriteLine($"AR-08: a 1080px, '{tbContador.Text}' recorte de layout=({rx:0},{ry:0}), TextTrimming={tbContador.TextTrimming} (esperado: si hay recorte de layout, TextTrimming!=None y el texto sigue sin estar vacio)");
+                if ((rx > 0 || ry > 0) && tbContador.TextTrimming == System.Windows.TextTrimming.None)
+                    Console.WriteLine("FALLO: AR-08 - el contador de Inventario se recorta a 1080px SIN TextTrimming (corte seco, no honesto) (H-08)");
+                if (string.IsNullOrWhiteSpace(tbContador.Text))
+                    Console.WriteLine("FALLO: AR-08 - el contador de Inventario quedo completamente vacio a 1080px (H-08)");
+            }
+
+            // AR-03 (H-03): el nombre real mas largo del catalogo de Builds (Calamity Mod) no se
+            // recorta, ni a la ventana minima ni a 4K.
+            vm.SelectedTabIndex = 2; // Builds
+            DoEvents(); DoEvents();
+            var calamityModTab = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
+                new PropertyCondition(AutomationElement.NameProperty, "Calamity Mod")));
+            if (calamityModTab != null && calamityModTab.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var calamityModPat))
+                ((SelectionItemPattern)calamityModPat).Select();
+            DoEvents(); DoEvents();
+            foreach (double w in new double[] { 1080, 1500, 3840 })
+            {
+                FijarTamaño(window, w, 900);
+                DoEvents(); DoEvents();
+                var tbLargo = Descendientes<TextBlock>(window).FirstOrDefault(t => (t.Text ?? "").Contains("Semblante de Filo de Cable Tesla"));
+                if (tbLargo == null) { Console.WriteLine($"AR-03: a {w}px, nombre largo real no encontrado en el arbol visual (¿cambio el catalogo de builds_calamity.json?)"); continue; }
+                var (rx, ry) = Recorte(tbLargo);
+                Console.WriteLine($"AR-03: a {w}px, '{tbLargo.Text}' recorte=({rx:0},{ry:0}) (esperado 0,0)");
+                if (rx > 0 || ry > 0) Console.WriteLine($"FALLO: AR-03 - nombre de Builds recortado {rx:0}x{ry:0}px a {w}px (H-03)");
+            }
+
+            // AR-04 (H-04): barrido del umbral de la franja vital de la cabecera - tras R-04 no
+            // deberia haber recorte a NINGUN ancho de la lista, incluido el MinWidth=1080 real.
+            vm.SelectedTabIndex = 0; // Inicio, la cabecera es visible en las 6 pestañas
+            foreach (double w in new double[] { 1080, 1170, 1299, 1300, 1320, 1500 })
+            {
+                FijarTamaño(window, w, 860);
+                DoEvents(); DoEvents();
+                var tira = Descendientes<System.Windows.Controls.WrapPanel>(window)
+                    .FirstOrDefault(wp => Descendientes<TextBlock>(wp).Any(t => t.Text == "♥"));
+                if (tira == null) { Console.WriteLine($"AR-04: a {w}px, franja vital no encontrada en el arbol visual"); continue; }
+                var (rx, ry) = Recorte(tira);
+                Console.WriteLine($"AR-04: a {w}px SizeClass={vm.SizeClass} expandida={vm.IsVitalsStripExpanded} recorte=({rx:0},{ry:0}) (esperado 0,0 SIEMPRE tras R-04)");
+                if (rx > 0 || ry > 0) Console.WriteLine($"FALLO: AR-04 - franja vital recortada {rx:0}x{ry:0}px a {w}px (H-04)");
+            }
+
+            // AR-05 (H-05): insignia "Calamity" de una tarjeta de Inicio, sin recorte a 1080 y a 1920.
+            vm.SelectedTabIndex = 0; // Inicio
+            foreach (double w in new double[] { 1080, 1920 })
+            {
+                FijarTamaño(window, w, 900);
+                DoEvents(); DoEvents();
+                var tbCalamity = Descendientes<TextBlock>(window).FirstOrDefault(t => t.Text == "Calamity" && t.Foreground == System.Windows.Media.Brushes.White);
+                if (tbCalamity == null) { Console.WriteLine($"AR-05: a {w}px, ninguna tarjeta de Inicio con insignia Calamity real (¿ningun personaje con Calamity en esta carpeta?)"); continue; }
+                var (rx, ry) = Recorte(tbCalamity);
+                Console.WriteLine($"AR-05: a {w}px, insignia 'Calamity' de Inicio recorte=({rx:0},{ry:0}) (esperado 0,0)");
+                if (rx > 0 || ry > 0) Console.WriteLine($"FALLO: AR-05 - insignia Calamity de Inicio recortada {rx:0}x{ry:0}px a {w}px (H-05)");
+            }
+
+            // AR-06 (H-06): un nodo de 2º nivel del arbol de categorias, en las 3 pantallas que
+            // comparten CategoryNodeTemplate (Libreria, Libreria de buffs, Investigacion).
+            (int tab, int inner, string label)[] arbolesConSegundoNivel =
+            [
+                (1, 0, "Libreria (Objetos)"),
+                (1, 1, "Libreria de buffs"),
+                (1, 2, "Investigacion"),
+            ];
+            foreach (var (tab, inner, label) in arbolesConSegundoNivel)
+            {
+                vm.SelectedTabIndex = tab; vm.PersonajeInnerTabIndex = inner;
+                foreach (double w in new double[] { 1080, 1920 })
+                {
+                    FijarTamaño(window, w, 900);
+                    DoEvents(); DoEvents();
+                    var tbNodo = Descendientes<TextBlock>(window).FirstOrDefault(t => (t.Text ?? "").StartsWith("Pociones (regenera"));
+                    if (tbNodo == null) continue; // carpeta no visible en este arbol/tamaño concreto - no todos la tienen
+                    var (rx, ry) = Recorte(tbNodo);
+                    Console.WriteLine($"AR-06: {label} a {w}px, '{tbNodo.Text}' recorte=({rx:0},{ry:0}) (esperado 0,0)");
+                    if (rx > 0 || ry > 0) Console.WriteLine($"FALLO: AR-06 - nodo de 2º nivel recortado {rx:0}x{ry:0}px en {label} a {w}px (H-06)");
+                }
+            }
+
+            // AR-07 (H-07): a 1080x700 (el caso mas apretado en vertical), la columna del preview
+            // de Apariencia tiene su ScrollViewer de seguridad y el parrafo no se recorta.
+            vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 3; // Apariencia
+            FijarTamaño(window, 1080, 700);
+            DoEvents(); DoEvents();
+            var tbPreview = Descendientes<TextBlock>(window).FirstOrDefault(t => (t.Text ?? "").StartsWith("Preview real de cuerpo completo"));
+            if (tbPreview != null)
+            {
+                var (rx, ry) = Recorte(tbPreview);
+                bool tieneScrollAncestro = false;
+                for (var d = (DependencyObject)tbPreview; d != null; d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+                    if (d is System.Windows.Controls.ScrollViewer) { tieneScrollAncestro = true; break; }
+                Console.WriteLine($"AR-07: a 1080x700, parrafo del preview recorte=({rx:0},{ry:0}) (esperado 0,0), tiene ScrollViewer ancestro={tieneScrollAncestro} (esperado True)");
+                if ((rx > 0 || ry > 0) && !tieneScrollAncestro) Console.WriteLine("FALLO: AR-07 - el parrafo del preview se recorta Y no tiene forma de alcanzarlo (H-07)");
+            }
+
+            // AR-09 (H-09): aprovechamiento de ancho en Inicio - informativo con umbral, no una
+            // perdida de contenido (a diferencia del resto de AR-*).
+            vm.SelectedTabIndex = 0; // Inicio
+            foreach (double w in new double[] { 1500, 1920, 2560, 3840 })
+            {
+                FijarTamaño(window, w, 1080);
+                DoEvents(); DoEvents();
+                var svInicio = Descendientes<System.Windows.Controls.ScrollViewer>(window).FirstOrDefault();
+                var contenidoInicio = svInicio?.Content as FrameworkElement;
+                if (svInicio == null || contenidoInicio == null || svInicio.ViewportWidth <= 0) continue;
+                double desperdicio = 1 - Math.Min(1, contenidoInicio.ActualWidth / svInicio.ViewportWidth);
+                int tope = w >= 3000 ? 55 : w >= 2400 ? 35 : 15;
+                Console.WriteLine($"AR-09: a {w}px Inicio usa {contenidoInicio.ActualWidth:0} de {svInicio.ViewportWidth:0} -> {100 * desperdicio:0}% sin usar (esperado <{tope}% tras R-10)");
+                if (100 * desperdicio >= tope) Console.WriteLine($"FALLO: AR-09 - Inicio desaprovecha mas de lo esperado a {w}px ({100 * desperdicio:0}% >= {tope}%, H-09)");
+            }
+
+            // AR-10 (H-10): ninguna pestaña interna de Personaje se recorta. Hallazgo real
+            // durante esta misma verificacion, DISTINTO del diagnostico original de R-09 ("el
+            // TemplateBinding duplica el Margin"): aislado con un experimento directo (Margin=0
+            // en el Setter de InnerTabItem -> clip.Bounds=null; CUALQUIER Margin no nulo en el
+            // TabItem, doble o simple -> clip = exactamente ese Margin) que TabPanel.
+            // ArrangeOverride no reserva hueco real para el Margin de sus TabItem hijos - el
+            // Margin tiene que vivir en el Border INTERIOR de la plantilla, nunca en el TabItem
+            // en si. Corregido asi en Theme.xaml; probado a dos anchos (1080 y 1920) para
+            // descartar que fuera en realidad "no caben todas y TabPanel comprime" (mismo
+            // sintoma visual, causa distinta - se descarto midiendo que TabPanel tenia de sobra:
+            // 919px reales para solo 625px de contenido a 1080px).
+            vm.SelectedTabIndex = 1; // Personaje
+            foreach (double w in new double[] { 1080, 1920 })
+            {
+                FijarTamaño(window, w, 700);
+                DoEvents(); DoEvents();
+                var pestañasInternas = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem))
+                    .Cast<AutomationElement>().Where(t => t.Current.Name is "Objetos" or "Buffs" or "Investigación" or "Apariencia" or "Spawn Points" or "Desbloqueos" or "Versión").ToList();
+                var tabItemsWpf = Descendientes<System.Windows.Controls.TabItem>(window).Where(ti => pestañasInternas.Any(p => p.Current.Name == (ti.Header as string))).ToList();
+                int recortadas = 0;
+                foreach (var ti in tabItemsWpf)
+                {
+                    var (rx, ry) = Recorte(ti);
+                    if (rx > 0 || ry > 0) { recortadas++; Console.WriteLine($"FALLO: AR-10 - pestaña interna '{ti.Header}' recortada {rx:0}x{ry:0}px a {w}px (H-10)"); }
+                }
+                Console.WriteLine($"AR-10: a {w}px, {tabItemsWpf.Count - recortadas}/{tabItemsWpf.Count} pestañas internas sin recorte (esperado {tabItemsWpf.Count}/{tabItemsWpf.Count} tras R-09)");
+            }
+
+            FijarTamaño(window, 1180, 860);
+            vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 0;
+            DoEvents();
+        }
+        catch (Exception ex) { Console.WriteLine("AUDITORIA-REDIMENSIONADO-EXCEPTION: " + ex); }
+
         string errorLog = Path.Combine(AppContext.BaseDirectory, "ultimo-error.log");
         Console.WriteLine("ultimo-error.log existe: " + File.Exists(errorLog));
 
@@ -3168,9 +3379,7 @@ internal static class Program
         // OnWindowClosing -> WindowPlacementService.Save real).
         window.Left = 40;
         window.Top = 55;
-        window.Width = 1234;
-        window.Height = 789;
-        DoEvents();
+        FijarTamaño(window, 1234, 789);
 
         vm.IsDirty = false;
         window.Close();
@@ -3209,6 +3418,98 @@ internal static class Program
         {
             DoEvents();
             System.Threading.Thread.Sleep(1);
+        }
+    }
+
+    // Auditoria de redimensionado (ESPEC-auditoria-redimensionado.md §1.1-1.2): en una sesion
+    // RDP con escalado alto, el escritorio logico puede ser MAS ESTRECHO que el MinWidth=1080
+    // de la ventana (medido en esta maquina: pantalla 576x1197 DIP = 1440x2992 fisicos al
+    // 250%). Windows limita cualquier ventana a MINMAXINFO.ptMaxTrackSize (por omision,
+    // SM_CXMAXTRACK x SM_CYMAXTRACK - 1476x3028 fisicos aqui), pero WPF rellena
+    // ptMinTrackSize desde Window.MinWidth (1080 DIP = 2700 fisicos) - como el minimo se
+    // aplica DESPUES del maximo dentro del mismo mensaje WM_GETMINMAXINFO, TODA peticion de
+    // window.Width queda clavada en 1080 exactos, sin excepcion ni aviso. Sin este hook,
+    // cualquier comprobacion de umbral de SizeClass en esta maquina mide 1080px pase lo que
+    // pase - exactamente lo que llevaban haciendo en silencio E2-UMBRAL/A4-1350/A4-EXPANDIDO/
+    // H5-09-AMPLIO antes de esta auditoria. El hook vive SOLO en este arnes (nunca en
+    // produccion) y sube el techo a un numero que ningun monitor real va a alcanzar.
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct POINT { public int x; public int y; }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct MINMAXINFO
+    {
+        public POINT ptReserved;
+        public POINT ptMaxSize;
+        public POINT ptMaxPosition;
+        public POINT ptMinTrackSize;
+        public POINT ptMaxTrackSize;
+    }
+
+    private const int WM_GETMINMAXINFO = 0x0024;
+
+    private static void InstalarHookMaxTrackSize(Window w)
+    {
+        var hwndSource = (HwndSource)PresentationSource.FromVisual(w)!;
+        hwndSource.AddHook((IntPtr h, int msg, IntPtr wp, IntPtr lp, ref bool handled) =>
+        {
+            if (msg == WM_GETMINMAXINFO)
+            {
+                var mmi = Marshal.PtrToStructure<MINMAXINFO>(lp);
+                mmi.ptMaxTrackSize.x = 32000; mmi.ptMaxTrackSize.y = 32000;
+                mmi.ptMaxSize.x = 32000; mmi.ptMaxSize.y = 32000;
+                Marshal.StructureToPtr(mmi, lp, true);
+            }
+            return IntPtr.Zero;
+        });
+    }
+
+    // Sustituye a los `window.Width = ...; window.Height = ...;` sueltos del resto de este
+    // fichero. Grita si el redimensionado real no funciono (RESIZE-IMPOSIBLE), en vez de dejar
+    // que las comprobaciones de despues midan un tamaño distinto al pedido sin decirlo - ver el
+    // comentario de InstalarHookMaxTrackSize de arriba, esto es justo lo que fallaba en
+    // silencio antes de esta auditoria.
+    private static void FijarTamaño(Window w, double ancho, double alto)
+    {
+        w.Width = ancho; w.Height = alto;
+        DoEvents(); DoEvents(); DoEvents();
+        // El objetivo real no es el ancho/alto PEDIDO a secas, es el pedido YA recortado por el
+        // suelo real que la propia ventana declara (Window.MinWidth/MinHeight, MainWindow.xaml)
+        // - varias llamadas de este arnes piden a proposito menos que el minimo (ej.
+        // "resize-equip-forzado-pequeno.png", CaptureAt(700,400,...)) para comprobar justo que
+        // WPF respeta ese suelo. Solo hay RESIZE-IMPOSIBLE de verdad si el resultado no coincide
+        // ni con lo pedido NI con el suelo real - eso es el clamp real del entorno (§1.1), no un
+        // suelo declarado a proposito.
+        double anchoEsperado = Math.Max(ancho, w.MinWidth);
+        double altoEsperado = Math.Max(alto, w.MinHeight);
+        if (Math.Abs(w.ActualWidth - anchoEsperado) > 1 || Math.Abs(w.ActualHeight - altoEsperado) > 1)
+            Console.WriteLine($"FALLO: RESIZE-IMPOSIBLE - pedido {ancho}x{alto} (esperado real {anchoEsperado:0}x{altoEsperado:0} " +
+                              $"tras el MinWidth/MinHeight declarado), obtenido {w.ActualWidth:0}x{w.ActualHeight:0}. " +
+                              $"TODA comprobacion de umbral que venga despues es INVALIDA en esta maquina.");
+    }
+
+    // Devuelve los pixeles que WPF esta recortando AHORA MISMO de este elemento (0,0 = ninguno).
+    // VisualTreeHelper.GetClip sobre el propio elemento recortado es el detector real - ver
+    // ESPEC-auditoria-redimensionado.md §1.4 (experimento controlado: el recorte NO lo hace el
+    // CornerRadius de un Border contenedor, lo hace el recorte de layout de WPF cuando un hijo
+    // no cabe en el hueco que se le arregla, y se lee EN EL HIJO recortado, no en el padre).
+    private static (double x, double y) Recorte(FrameworkElement fe)
+    {
+        var c = System.Windows.Media.VisualTreeHelper.GetClip(fe);
+        if (c == null) return (0, 0);
+        return (Math.Max(0, fe.ActualWidth - c.Bounds.Width), Math.Max(0, fe.ActualHeight - c.Bounds.Height));
+    }
+
+    // Recorrido real del arbol visual (no logico) - mismo patron ya usado por RESIZE-DIAG mas
+    // arriba en este fichero, generalizado con un tipo T para reutilizarlo en AR-02..AR-10.
+    private static IEnumerable<T> Descendientes<T>(DependencyObject raiz) where T : DependencyObject
+    {
+        int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(raiz);
+        for (int i = 0; i < n; i++)
+        {
+            var hijo = System.Windows.Media.VisualTreeHelper.GetChild(raiz, i);
+            if (hijo is T t) yield return t;
+            foreach (var nieto in Descendientes<T>(hijo)) yield return nieto;
         }
     }
 

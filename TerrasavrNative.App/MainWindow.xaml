@@ -2052,7 +2052,14 @@
                                                         <Button Content="Vaciar contenedor" Command="{Binding InventoryContainer.ClearAllCommand}"
                                                                 ToolTip="Vacía todos los slots del Inventario" Tag="Ghost" Padding="6,3" FontSize="10.5" />
                                                     </WrapPanel>
-                                                    <TextBlock Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                    <!-- Auditoria de redimensionado, AR-08/H-08: el WrapPanel de R-01 ya reduce
+                                                         mucho el recorte (de ~660px de una fila sin envolver a un residual real
+                                                         de 14px a 1080px, medido - el hueco restante entre los 6 botones ya en 2
+                                                         filas y este titulo sigue siendo mas estrecho de lo que hace falta a ese
+                                                         ancho concreto). TextTrimming honesto en vez de un corte seco silencioso -
+                                                         parche previsto explicitamente en el propio informe para este residual. -->
+                                                    <TextBlock Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" />
                                                 </DockPanel>
                                                 <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                             </DockPanel>
@@ -2096,7 +2103,14 @@
                                                             <Button Content="Vaciar contenedor" Command="{Binding InventoryContainer.ClearAllCommand}"
                                                                     ToolTip="Vacía todos los slots del Inventario" Tag="Ghost" Padding="6,3" FontSize="10.5" />
                                                         </WrapPanel>
-                                                        <TextBlock Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                        <!-- Auditoria de redimensionado, AR-08/H-08: el WrapPanel de R-01 ya reduce
+                                                         mucho el recorte (de ~660px de una fila sin envolver a un residual real
+                                                         de 14px a 1080px, medido - el hueco restante entre los 6 botones ya en 2
+                                                         filas y este titulo sigue siendo mas estrecho de lo que hace falta a ese
+                                                         ancho concreto). TextTrimming honesto en vez de un corte seco silencioso -
+                                                         parche previsto explicitamente en el propio informe para este residual. -->
+                                                    <TextBlock Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" />
                                                     </DockPanel>
                                                     <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                 </DockPanel>

@@ -931,16 +931,23 @@
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
         <Setter Property="FontSize" Value="12.5" />
         <Setter Property="Padding" Value="12,7" />
-        <Setter Property="Margin" Value="0,0,6,4" />
+        <!-- Auditoria de redimensionado, R-09/H-10: hallazgo real distinto al diagnostico
+             original (que atribuia esto a "TemplateBinding duplica el Margin del Setter").
+             Aislado con un experimento directo (Margin=0 en el Setter -> clip.Bounds=null,
+             CUALQUIER Margin no nulo en el TabItem -> clip = exactamente ese Margin, sea o no
+             doble): TabPanel.ArrangeOverride no reserva hueco para el Margin real de sus HIJOS
+             directos (los TabItem) - le da a cada uno un rect que ya excluye lo que su margen
+             va a restar despues, asi que el Arrange normal de WPF (finalRect - margin) siempre
+             recorta exactamente el margen, sea uno o dos. La correccion real: SIN Margin en el
+             TabItem (Setter de aqui, siempre en 0 - TabPanel no puede recortar lo que no
+             tiene), el hueco visual entre pastillas se consigue con un Margin real DENTRO de la
+             plantilla (en el Border de abajo) - ese SI se arregla con normalidad (lo mide/resta
+             el propio ContentPresenter/Border, ajeno a la rareza de TabPanel). -->
+        <Setter Property="Margin" Value="0" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
-                    <!-- Auditoria de redimensionado, R-09/H-10: el Margin="0,0,6,4" del Setter de
-                         arriba ya lo aplica el panel padre al arreglar este TabItem - repetirlo
-                         aqui con TemplateBinding lo contaba DOS VECES, asi que el contenido no
-                         cabia en su propio hueco y WPF recortaba 6x4px reales de cada pastilla, en
-                         las 14 pestañas internas de la app. -->
-                    <Border x:Name="Bd" Padding="{TemplateBinding Padding}"
+                    <Border x:Name="Bd" Margin="0,0,6,4" Padding="{TemplateBinding Padding}"
                             CornerRadius="8" BorderThickness="1" BorderBrush="Transparent" Background="Transparent">
                         <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
