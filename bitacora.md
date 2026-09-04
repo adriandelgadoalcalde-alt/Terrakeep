@@ -8229,3 +8229,45 @@ puede reaparecer cuando algo externo (aqui, un `taskkill` a otra ventana) roba e
 antes de que el arnes necesite `SetForegroundWindow` para sus clics/teclas reales. No se toca
 codigo para esto - queda anotado para la proxima vez que aparezca: si el arnes falla asi tras
 matar un proceso externo, sospechar del foco antes que de un cambio de codigo real.
+
+## Ejecución del plan de auditoría Opus vs TEdit (bloques 1-5 de 7) (4-sep-2026)
+
+**Pedido**: "haz el plan completo" sobre `ESPEC-auditoria-exploracion-tedit.md` (22
+correcciones: 4 Bloque A/defectos, 7 Bloque B/capacidad ausente, 7 Bloque C, 6 Bloque D).
+Ejecutado en el orden que el propio informe sugiere en su §10, un bloque por commit, con
+`dotnet build`/`dotnet test`/arnés completo verificados en cada uno.
+
+**Bloques 1-5 completos (14 de 22 correcciones)**: F-1/F-3/F-16/F-17/P-8 (`7e2bd2a5`),
+F-4/F-5 (`552c0241`), F-2/P-3 (`26120ef3`), F-6/P-1/P-6 (`ee3375a`), P-4/F-15 (`3bd4e75a`).
+Quedan Bloque C (F-9/F-7/F-13/F-12/F-10/F-8/F-11/F-14) y Bloque D
+(P-2/P-5/P-7/B-07).
+
+**Hallazgo real de WPF, encontrado dos veces independientes (no en teoría, al verificar)**:
+un `{StaticResource X}` usado como valor de `Binding.Converter` (una propiedad CLR de
+`Binding`, no una `DependencyProperty`) puede fallar en tiempo de ejecución con
+`XamlParseException: "No se puede encontrar el recurso"`, **pese a compilar sin error y
+pese a que otros `StaticResource` en el mismo fichero/plantilla resuelven bien**. Ocurrió
+primero dentro de un `DataTemplate` fuertemente virtualizado (marcadores del mapa, bloque
+3, `InverseValueConverter`) - al principio pareció un problema de virtualización/carga
+diferida de plantilla. Ocurrió una SEGUNDA vez en un `Button` suelto del cuerpo principal
+de la ventana, sin ningún `DataTemplate` de por medio, literalmente al arrancar
+`InitializeComponent()` (bloque 5, `FalseToTagConverter`) - descarta la virtualización como
+causa real: el problema es el patrón `StaticResource` dentro de `Binding.Converter=` **en
+sí mismo**, en este entorno WPF/.NET concreto, no un caso especial de plantillas
+virtualizadas.
+
+**Fix real, aplicado las dos veces**: instancia estática pública en el propio converter
+(`public static readonly XConverter Instance = new();`) referenciada con
+`{x:Static conv:XConverter.Instance}` en vez de `{StaticResource ...}` - se resuelve en
+tiempo de COMPILACIÓN, no depende del mecanismo de resolución de recursos en tiempo de
+ejecución que falla. **Regla para el resto del plan y para cualquier converter nuevo de
+aquí en adelante**: si un converter se va a usar dentro de `Binding.Converter=`, exponer
+siempre una instancia estática y usar `x:Static` desde el principio, sin esperar a que
+falle en el arnés para descubrirlo.
+
+Ambos casos se detectaron con el arnés completo (`dotnet run --project
+TerrasavrNative.App.Tests`), no de memoria - el primero por `DISPATCHER-EXCEPTION` repetida
+en el log; el segundo porque el proceso entero moría con `Unhandled exception` antes de
+imprimir ninguna línea de chequeo. `dotnet test` (307+349 tests) no los habría detectado -
+ninguno de los dos toca lógica de dominio, son puramente de composición XAML/tiempo de
+ejecución de WPF.
