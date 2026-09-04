@@ -674,9 +674,14 @@ public partial class MainViewModel : ObservableObject
     public void RestoreSession()
     {
         var session = SessionService.Load();
-        SelectedTabIndex = session.SelectedTabIndex;
-        PersonajeInnerTabIndex = session.PersonajeInnerTabIndex;
-        ObjetosSubTabIndex = session.ObjetosSubTabIndex;
+        // Pedido explicito del usuario (4-sep-2026): "cuando inicias el programa nunca inicia
+        // en el inicio, inicia en la pestaña de versiones del sav de personaje" - restaurar
+        // SelectedTabIndex/PersonajeInnerTabIndex del session.json anterior secuestraba la
+        // pantalla de arranque (casi siempre Personaje/Version, la ultima pestaña tocada antes
+        // de cerrar). La app SIEMPRE arranca en Inicio ahora (valor por defecto de
+        // SelectedTabIndex/PersonajeInnerTabIndex/ObjetosSubTabIndex, nunca tocados aqui) -
+        // Home.SetLastSession(session) sigue dejando listo el boton real "Continuar con
+        // [Nombre]" para volver a la ultima posicion de un clic, sin imponerla.
         IsLibraryCollapsed = session.IsLibraryCollapsed;
         IsBuffLibraryCollapsed = session.IsBuffLibraryCollapsed;
         _pendingSessionLoadout = session.SelectedLoadout;

@@ -1239,6 +1239,14 @@ internal static class Program
             Console.WriteLine($"H5-07-CONTINUAR: LastSessionCharacterName real tras RestoreSession()='{vm2.Home.LastSessionCharacterName}' (esperado 'UIA-Test'), IsCharacterLoaded=={vm2.IsCharacterLoaded} (esperado False - nunca carga sola)");
             if (vm2.Home.LastSessionCharacterName != "UIA-Test") Console.WriteLine("FALLO: H5-07 - 'Continuar con...' no ofrecio el personaje real de la sesion anterior");
             if (vm2.IsCharacterLoaded) Console.WriteLine("FALLO: H5-07 - RestoreSession() cargo el personaje solo, en silencio (deberia dejarlo a decision explicita del usuario)");
+
+            // Pedido explicito del usuario (4-sep-2026): "cuando inicias el programa nunca
+            // inicia en el inicio, inicia en la pestaña de versiones del sav de personaje" - la
+            // navegacion real de esta MISMA pasada del arnes (personaje cargado, pestañas
+            // tocadas) ya quedo escrita en el session.json REAL que se acaba de leer arriba, asi
+            // que si RestoreSession() todavia secuestrara SelectedTabIndex esta prueba lo pillaria.
+            Console.WriteLine($"ARRANQUE-SIEMPRE-INICIO: vm2.SelectedTabIndex tras RestoreSession()={vm2.SelectedTabIndex} (esperado 0, Inicio - NUNCA la ultima pestaña/sub-pestaña tocada)");
+            if (vm2.SelectedTabIndex != 0) Console.WriteLine("FALLO: la app no arranca siempre en Inicio pese al pedido explicito del usuario");
         }
         catch (Exception ex)
         {
