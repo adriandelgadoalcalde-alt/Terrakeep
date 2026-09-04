@@ -8271,3 +8271,39 @@ en el log; el segundo porque el proceso entero moría con `Unhandled exception` 
 imprimir ninguna línea de chequeo. `dotnet test` (307+349 tests) no los habría detectado -
 ninguno de los dos toca lógica de dominio, son puramente de composición XAML/tiempo de
 ejecución de WPF.
+
+## Cierre del plan de auditoría Opus vs TEdit: bloques 6-8, 22/22 correcciones (4-5-sep-2026)
+
+Continuación de la entrada anterior (bloques 1-5). Bloques 6, 7 y 8 completos:
+
+- **Bloque 6** (`1343e838`): F-9 (atajos del mapa - conflicto real encontrado con F-16 al
+  implementar, Ctrl+Alt+F en vez del Ctrl+Shift+F que proponía el informe), F-7 (spawn del mundo
+  + mazmorra - `WldReader` amplía 7 campos reales verificados byte a byte contra TEdit real,
+  commit `f592261`), F-13 (arrastrar y soltar), F-12 (exportar PNG).
+- **Bloque 7** (`4175ceb8`, Bloque C completo): F-10 (GridSplitter real sustituyendo el
+  mecanismo Auto+MaxWidth de R-02/H-02 - vuelto a pasar AR-02 en los 14 tamaños, riesgo
+  explícito del informe), F-8 (minimapa reutilizando el bitmap ya congelado), F-11 (recordar
+  zoom+scroll por mundo, escritura atómica real como TEdit - verificado con un ciclo completo de
+  guardar/recargar), F-14 (panel "Este mundo": semilla+modo de juego+censo, acotado a coste 0
+  como el propio informe recomienda).
+- **Bloque 8** (`2b63af5a`, Bloque D, último): P-2/P-5/P-7/B-07, pulido estético suelto.
+
+**Cierra las 22 correcciones completas de `ESPEC-auditoria-exploracion-tedit.md`** (4 Bloque A +
+7 Bloque B + 7 Bloque C + 4 Bloque D), pedido explícito del usuario ("haz el plan completo"),
+en 8 commits verificados por bloque (build+test+arnés completo en cada uno), siguiendo el orden
+de ejecución que el propio informe sugiere en su §10.
+
+**Hallazgos reales propios de esta ejecución, no anticipados por el informe** (más allá del ya
+registrado en la entrada anterior sobre `StaticResource` como `Binding.Converter`):
+
+- **F-9**: la propuesta original del informe (`Ctrl+Shift+F` para el foco del buscador de
+  mundo) chocaba con `F-16` (ya asignado a "Buscar en el personaje" en el bloque 1 de este mismo
+  plan) - se encontró al implementar, no al leer el informe. Resuelto con `Ctrl+Alt+F`.
+- **F-14**: la codificación real de `GameMode` por versión de `.wld` no es uniforme (int real
+  desde v209; un bool con significado distinto para v208 -Maestro- que para v112-207 -Experto-;
+  0 fijo antes de v112) - verificada byte a byte contra `World.FileV2.cs` de TEdit antes de
+  tocar el lector, no asumida de la prosa del informe.
+
+**dotnet test 656/656 en verde en todo momento. Arnés completo sin ningún `FALLO` nuevo en
+ningún bloque** - los que aparecen en cada pasada son siempre los mismos, ya documentados
+(foreground lock de Windows en esta sesión RDP), confirmados ajenos a estos cambios.
