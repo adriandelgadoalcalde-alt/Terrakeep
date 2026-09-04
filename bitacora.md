@@ -7494,3 +7494,23 @@ verdad: un SEGUNDO clic real, esta vez sobre la pestaña "Inicio", confirma que
 no haria nada. `dotnet build`/`dotnet test` en verde (480/480, sin tests nuevos - es un arreglo
 de XAML puro, la logica de `NavigateToWhereIsItResult` no cambio). **2/2 pasadas limpias**, sin
 NO-FOUND/FALLO/EXCEPTION, captura real confirmando que Inicio responde normal tras el clic.
+
+## Sprites de cuerpo de las mascotas de pueblo para Exploracion (4-sep-2026)
+
+Pedido explicito del usuario, cierra un hueco ya documentado en H6-08 ("Extraer tambien los 13
+sprites de CUERPO nuevos para la lista lateral - no era el foco de la queja original"). Los 13
+ids nuevos del roster (TravelingMerchant/TaxCollector/Gato/Perro/Conejo/Slimes x8) ya tenian
+cabeza real (`npc_heads/`, para el mapa) pero no cuerpo real (`npc_icons/`, para la lista
+lateral de Exploracion) - `NpcIconResolver` caia a texto sin icono para esos 13.
+
+`scripts/extraer-sprites-npcs-mascotas.js` (nuevo) - mismo algoritmo real ya usado con exito
+para los 27 originales (`Terrasavr-Calamity-Beta/resources/app/extraer-sprites-npcs.js`): el
+primer frame de un NPC no tiene una altura fija, se recorta dinamicamente hasta la primera fila
+totalmente transparente por debajo de la cabecera (las hojas de animacion real separan cada
+frame con filas vacias). **13/13 extraidos limpio** de `Content/Images/NPC_{id}.xnb` reales.
+
+**Verificacion real**: `dotnet build`/`dotnet test` en verde (**494/494**, +14 tests nuevos:
+`NpcIconResolverMascotasTests.cs` - los 13 ids nuevos resuelven icono real, y el roster
+COMPLETO de 40 ids ya no tiene ningun hueco de icono de cuerpo). Confirmado a mano (Gato/Perro/
+Slime de cobre) que el recorte capturo un unico sprite reconocible, no una tira de fotogramas
+ni dos mascotas pegadas.
