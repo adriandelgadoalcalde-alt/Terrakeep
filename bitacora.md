@@ -8192,3 +8192,40 @@ resolvia (o resolvia mal)**:
 end-to-end sin ninguna linea `FALLO` ni excepcion, y `dotnet test` con 656/656 en verde
 (307 ViewModels + 349 Core), confirmando que ninguno de los cambios de `Theme.xaml`/
 `MainWindow.xaml` de esta ronda rompio nada existente.
+
+## Swatch invisible de Liquidos en el buscador de Exploracion (4-sep-2026)
+
+**Reportado**: "pestaña líquidos en el buscador en exploración no tiene sus sprites".
+
+**Causa real**: `RebuildObjectsInventory()` (`ExplorationViewModel.cs`, caso `ObjectsViewMode==2`)
+pasaba `Colors.Transparent` como `SwatchColor` para cada fila de liquido. La decision de no
+tener `IconPath` es correcta y deliberada (los liquidos se pintan con un shader sobre mascara,
+`LiquidMask.fxc`, no hay sprite recortable - `ESPEC-sprites-botones-badges.md#A.11`), pero el
+swatch de RESPALDO que deberia verse cuando no hay sprite (`MainWindow.xaml`: `Border` 14x14
+con `SolidColorBrush Color="{Binding SwatchColor}"`, visible solo cuando `IconPath==null`)
+tambien estaba en transparente - la fila no mostraba absolutamente nada.
+
+**Fix**: `MapColorCatalog` gana un metodo real `LiquidColor(byte)` (el mismo switch de
+codigo->zona que ya tenia `WorldRenderer.LiquidColor`, ahora unico punto de verdad -
+`WorldRenderer` delega en el en vez de duplicarlo). `ExplorationViewModel` usa ese color real
+como `SwatchColor` en vez de `Colors.Transparent`.
+
+**Verificado con datos reales**: nuevo chequeo `SWATCH-LIQUIDOS` en el arnes de UI Automation,
+contra el mundo de prueba real (3 tipos de liquido presentes) - antes del fix las 3 filas
+tendrian `SwatchColor.A==0`; con el fix, 0/3. `dotnet test` 656/656 en verde. Commit `25d66087`.
+
+**Hallazgo de entorno colateral, NO relacionado con este fix** (aislado con la disciplina de
+"verificar aislando la variable" antes de asumir una regresion propia): al relanzar el arnes
+completo tras este cambio salieron 8 `FALLO` nuevos (Popup "¿Dónde lo tengo?" no se cierra con
+clic real, navegacion de teclado H5-14 en la rejilla de slots, aviso V-c de equipo) que NO
+tenian nada que ver con Liquidos/Exploracion. Sospecha: acababa de matar con `taskkill` un
+proceso `Terrakeep.exe` (PID 37468, otra instancia con "Eldelgas" cargado) que bloqueaba el
+build, y eso pudo alterar el foco de la ventana de Windows justo antes de correr el arnes.
+Confirmado de verdad (no solo sospechado) haciendo `git stash` del fix y relanzando el arnes
+sobre el codigo SIN TOCAR: los mismos 8 `FALLO`, identicos, aparecen igual - por tanto NO es una
+regresion de este cambio, es el bug de entorno YA documentado mas arriba en esta bitacora
+("foreground lock de Windows: SetForegroundWindow...", en la seccion de H5-14/Ctrl+S) que
+puede reaparecer cuando algo externo (aqui, un `taskkill` a otra ventana) roba el foco justo
+antes de que el arnes necesite `SetForegroundWindow` para sus clics/teclas reales. No se toca
+codigo para esto - queda anotado para la proxima vez que aparezca: si el arnes falla asi tras
+matar un proceso externo, sospechar del foco antes que de un cambio de codigo real.
