@@ -199,9 +199,18 @@ SLOT_RE = {
 # slot_by_kind["head"][slotIndex] = itemId (inversion real, 1:1 verificada por Opus)
 slot_by_kind: dict[str, dict[int, int]] = {"head": {}, "body": {}, "legs": {}}
 
+# Hallazgo real (feedback directo del usuario, verificado al corregir extraer-estadisticas-
+# vanilla.py el mismo dia): delimitar "hasta la siguiente coincidencia" (o EOF para la ultima)
+# es incorrecto - SetDefaults5 (la ultima) arrastraba ~12.500 lineas de metodos NO
+# relacionados hasta el final real del fichero, cualquiera con un switch sobre una variable
+# local tambien llamada "type" contaminaba resultados. Delimitar cada metodo por su propia
+# llave de cierre (find_matching_brace, ya definida arriba) lo elimina de raiz.
 method_starts = [m.start() for m in re.finditer(r"public void SetDefaults\d\(int type\)", item_text)]
-method_starts.append(len(item_text))
-bodies = [item_text[method_starts[i]:method_starts[i + 1]] for i in range(len(method_starts) - 1)]
+bodies = []
+for pos in method_starts:
+    brace_open = item_text.index("{", pos)
+    brace_close = find_matching_brace(item_text, brace_open)
+    bodies.append(item_text[pos:brace_close + 1])
 
 for body in bodies:
     for item_id, block in find_case_blocks(body):
