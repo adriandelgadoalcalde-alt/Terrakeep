@@ -594,7 +594,7 @@ public static class PlrBodySerializer
             int address = reader.ReadInt32();
             string name = reader.ReadSharpString();
             if (IsBlankServerEntry(spawnX, spawnY, address)) continue;
-            servers.Add(new PlrServerEntry { SpawnX = spawnX, SpawnY = spawnY, Address = address, Name = name });
+            servers.Add(new PlrServerEntry { SpawnX = spawnX, SpawnY = spawnY, WorldId = address, Name = name });
         }
         return servers;
     }
@@ -603,10 +603,10 @@ public static class PlrBodySerializer
     {
         foreach (var s in servers)
         {
-            if (IsBlankServerEntry(s.SpawnX, s.SpawnY, s.Address)) continue;
+            if (IsBlankServerEntry(s.SpawnX, s.SpawnY, s.WorldId)) continue;
             writer.Write(s.SpawnX);
             writer.Write(s.SpawnY);
-            writer.Write(s.Address);
+            writer.Write(s.WorldId);
             writer.WriteSharpString(s.Name);
         }
         writer.Write(-1);

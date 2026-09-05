@@ -48,7 +48,7 @@ public partial class ServersViewModel : ObservableObject
     private void AddEntry()
     {
         if (_character == null) return;
-        var entry = new PlrServerEntry { SpawnX = 0, SpawnY = 0, Address = 0, Name = "Nuevo spawn point" };
+        var entry = new PlrServerEntry { SpawnX = 0, SpawnY = 0, WorldId = 0, Name = "Nuevo spawn point" };
         _character.Servers.Add(entry);
         AddRow(entry);
         if (!_suppressChanged) Changed?.Invoke();

@@ -332,12 +332,28 @@ public partial class MainViewModel : ObservableObject
     // ultima cama real donde durmio el personaje es un dato del MUNDO (.wld), no del
     // personaje, confirmado en PlrCharacter.cs (sin ningun campo Spawn fuera de
     // PlrServerEntry) - Spawn Points es la unica fuente real de coordenadas de aparicion aqui.
+    // C-05 (informe de pulido final, cierra E4): antes cualquier Spawn Point guardado se
+    // mostraba en CUALQUIER mundo cargado - "las estrellas de aparicion salen en mundos donde
+    // no tienen sentido". Regla real del propio juego (Player.FindSpawn/RemoveSpawn/AddSpawn,
+    // las tres identicas): un Spawn Point pertenece a ESTE mundo solo si coinciden id Y nombre
+    // (spI[i]==Main.worldID && spN[i]==Main.worldName) - un .wld copiado y renombrado a mano
+    // conserva el WorldId, y el juego real lo trataria como un mundo distinto, asi que exigir
+    // solo el id no basta. Sin mundo cargado no se filtra (los marcadores no se ven de todos
+    // modos sin mapa). La etiqueta ya NO es entry.Name (que es el nombre del MUNDO, no una
+    // descripcion del marcador - "no lo especifica en ningun lado" era literal) sino un texto
+    // real que dice que es y de quien, sabiendo YA que pertenece al mundo que se esta mirando.
     private IEnumerable<(string Label, int X, int Y)> BuildCharacterSpawns()
     {
         if (_loaded == null) yield break;
+        int? worldId = Exploration.LoadedWorldId;
+        string? worldName = Exploration.WorldTitle;
+        string nombrePersonaje = CharacterName ?? _loaded.Character.Name;
         foreach (var entry in Servers.Entries)
-            if (entry.SpawnX != 0 || entry.SpawnY != 0)
-                yield return (entry.Name, entry.SpawnX, entry.SpawnY);
+        {
+            if (entry.SpawnX == 0 && entry.SpawnY == 0) continue;
+            if (!entry.Entry.BelongsToWorld(worldId, worldName)) continue;
+            yield return ($"Punto de aparición de {nombrePersonaje} en este mundo ({entry.SpawnX}, {entry.SpawnY})", entry.SpawnX, entry.SpawnY);
+        }
     }
 
     // S-c (segunda auditoria de Opus, Fable): "sin enlace al mapa de Exploracion desde Spawn
@@ -653,7 +669,7 @@ public partial class MainViewModel : ObservableObject
             PersonajeInnerTabIndex = (int)PersonajeInnerTab.Objetos;
         };
         Builds = new BuildsViewModel(_service.VanillaBuilds, _service.CalamityBuilds, _service);
-        WhatsNew = new WhatsNewViewModel(_service.WhatsNewVanilla, _service.WhatsNewCalamity, _service.VanillaCatalog, _service.CalamityCatalog);
+        WhatsNew = new WhatsNewViewModel(_service.WhatsNewVanilla, _service.WhatsNewCalamity, _service.VanillaCatalog, _service.CalamityCatalog, _service.TooltipCatalogs);
         Changelog = new ChangelogViewModel(_service.Changelog);
         Exploration = new ExplorationViewModel(_service);
         Library = new LibraryViewModel(_service);
@@ -1372,6 +1388,21 @@ public partial class MainViewModel : ObservableObject
             return;
         }
         target.PlaceItem(itemId);
+    }
+
+    // C-11 (informe de pulido final, cierra L4): gemelo real de PlaceInFirstFreeInventorySlot,
+    // para el doble clic de la Libreria de buffs (OnBuffLibraryCardClick, MainWindow.xaml.cs) -
+    // "pasa lo mismo con la pestaña buff" (un clic ahi no hacia nada, unica via real era
+    // arrastrar).
+    public void PlaceInFirstFreeBuffSlot(int buffId)
+    {
+        var target = Buffs.Container?.Slots.FirstOrDefault(s => s.IsEmpty);
+        if (target == null)
+        {
+            StatusMessage = "No hay ningun hueco de buff libre donde colocarlo con doble clic.";
+            return;
+        }
+        target.PlaceBuff(buffId);
     }
 
     // H5-03 (quinta auditoria de Opus): "no existe guardar/cargar conjuntos de objetos, que en

@@ -200,6 +200,11 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private BitmapSource? _worldHighlight;
     [ObservableProperty] private string _statusMessage = "Sin mundo cargado.";
     [ObservableProperty] private string? _worldTitle;
+    // C-05 (informe de pulido final, cierra E4): WorldId real del mundo cargado (WldHeader.
+    // WorldId) - MainViewModel.BuildCharacterSpawns lo cruza con PlrServerEntry.WorldId para
+    // saber si un Spawn Point guardado pertenece de verdad a ESTE mundo (regla real del propio
+    // juego, Player.FindSpawn: id Y nombre tienen que coincidir). Null sin mundo cargado.
+    public int? LoadedWorldId => _world?.Header.WorldId;
     // F-15 (auditoria de Opus vs TEdit): tamaño real del mundo, para la franja de la barra
     // superior consciente de la pestaña - dato que ya se calculaba (StatusMessage) pero no
     // vivia en una propiedad propia reutilizable.

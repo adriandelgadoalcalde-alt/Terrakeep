@@ -711,6 +711,22 @@
                                  sprites; aqui no, y el resolvedor de iconos ya esta a mano". -->
                             <DataTemplate DataType="{x:Type vm:WhatsNewItemViewModel}">
                                 <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="4" Margin="0,0,6,6" Padding="7,3">
+                                    <!-- C-17 (informe de pulido final, cierra la otra mitad de N1):
+                                         "como en calamity mod y tmodloader" - misma plantilla real
+                                         que la tarjeta de la Libreria (StatsTooltip resuelto con la
+                                         MISMA llamada exacta, ItemStatsFormatter.Format), sin las
+                                         lineas de clic/doble clic (aqui no aplican, esto no coloca
+                                         nada en ningun slot). Sin StatsTooltip, WPF no muestra
+                                         ningun ToolTip (valor null) - ni sprite ni nombre repetido. -->
+                                    <Border.ToolTip>
+                                        <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                            <StackPanel MaxWidth="240">
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                                           Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </Border.ToolTip>
                                     <StackPanel Orientation="Horizontal">
                                         <Image Source="{Binding IconPath}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,5,0"
                                                RenderOptions.BitmapScalingMode="NearestNeighbor"
@@ -1007,6 +1023,12 @@
                             <TextBlock Text="Ningun hueco seleccionado - elige uno primero (clic en cualquier slot) para poder colocar con un clic, o doble clic aqui mismo para ir directo al primer hueco libre del Inventario."
                                        Style="{StaticResource CaptionText}" Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,5,0,0"
                                        Visibility="{Binding DataContext.ItemEdit.Slot, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToCollapsed}}" />
+                            <!-- C-11 (informe de pulido final, cierra L4): "arrastrar es el UNICO
+                                 gesto que existia hasta H5-12, y no lo anuncia nada" - tercera linea
+                                 real, siempre visible (el arrastre funciona haya o no hueco elegido
+                                 en Editar), cierra la queja tal como el usuario la vivio. -->
+                            <TextBlock Text="O arrastra la tarjeta hasta cualquier hueco."
+                                       Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
                         </StackPanel>
                     </ToolTip>
                 </Border.ToolTip>
@@ -1054,8 +1076,12 @@
              catalogo no tiene ninguno de los dos) y con el boton "Colocar" solo cuando hay un
              slot esperando (BuffLibrary.IsPicking). -->
         <DataTemplate x:Key="BuffLibraryCardTemplate" DataType="{x:Type vm:BuffCatalogEntryViewModel}">
+            <!-- C-11 (informe de pulido final, cierra L4): "pasa lo mismo con la pestaña buff" -
+                 un clic aqui no hacia NADA, unica via real era arrastrar (igual que H5-12 en su
+                 dia para la Libreria de objetos) - mismo gemelo real: MouseLeftButtonUp con clic
+                 simple/doble clic (OnBuffLibraryCardClick, MainWindow.xaml.cs). -->
             <Border Padding="0" CornerRadius="6" Background="{StaticResource BgElevatedBrush}" BorderThickness="1" Cursor="Hand"
-                    PreviewMouseLeftButtonDown="OnBuffLibraryCardMouseDown" MouseMove="OnBuffLibraryCardMouseMove">
+                    PreviewMouseLeftButtonDown="OnBuffLibraryCardMouseDown" MouseMove="OnBuffLibraryCardMouseMove" MouseLeftButtonUp="OnBuffLibraryCardClick">
                 <Border.ToolTip>
                     <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                         <StackPanel MaxWidth="240">
@@ -1066,6 +1092,14 @@
                                        Visibility="{Binding IsDebuff, Converter={StaticResource BoolToVis}}" />
                             <TextBlock Text="{Binding Description}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                                        Visibility="{Binding Description, Converter={StaticResource NullToVis}}" />
+                            <TextBlock Text="Clic: coloca en el hueco seleccionado en Buffs. Doble clic: al primer hueco libre."
+                                       Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0"
+                                       Visibility="{Binding DataContext.BuffEdit.Slot, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVis}}" />
+                            <TextBlock Text="Ningun hueco seleccionado - elige uno primero (clic en cualquier slot de Buffs) para poder colocar con un clic, o doble clic aqui mismo para ir directo al primer hueco libre."
+                                       Style="{StaticResource CaptionText}" Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,5,0,0"
+                                       Visibility="{Binding DataContext.BuffEdit.Slot, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToCollapsed}}" />
+                            <TextBlock Text="O arrastra la tarjeta hasta cualquier hueco."
+                                       Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
                         </StackPanel>
                     </ToolTip>
                 </Border.ToolTip>
@@ -1116,6 +1150,15 @@
                     Width="240" Margin="0,0,14,14" Cursor="Hand"
                     Effect="{StaticResource CardShadow}"
                     Tag="{Binding DataContext.Home, RelativeSource={RelativeSource AncestorType=Window}}">
+                <!-- C-13 (informe de pulido final, cierra H2): mismo "levanta al pasar" real de
+                     NavCardButton (Theme.xaml, TranslateTransform Y 0->-3 en 150ms) - a
+                     proposito SIN el ColorAnimation del borde a acento que si tiene NavCardButton,
+                     porque aqui el borde YA significa "personaje cargado" (IsCurrent, mas abajo) -
+                     animarlo tambien al pasar el raton reproduciria el bug real L-6 (color de
+                     estado y color de hover peleando por el mismo Setter). -->
+                <Border.RenderTransform>
+                    <TranslateTransform Y="0" />
+                </Border.RenderTransform>
                 <Border.InputBindings>
                     <MouseBinding MouseAction="LeftClick" Command="{Binding DataContext.Home.OpenCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
                 </Border.InputBindings>
@@ -1155,6 +1198,28 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
                                 <Setter Property="Effect" Value="{StaticResource CardShadowHover}" />
+                                <!-- Sin Storyboard.TargetName a proposito - MC4011 real ya
+                                     encontrado en este mismo proyecto (Theme.xaml, comentario de
+                                     NavCardButton): TargetName solo vale dentro de
+                                     ControlTemplate.Triggers, este es un Style.Triggers normal
+                                     sobre el propio Border. Sin TargetName, el Storyboard anima el
+                                     elemento con el propio Style (este Border) - la ruta con tipo
+                                     calificado llega hasta el TranslateTransform inline de
+                                     RenderTransform sin necesidad de nombrarlo. -->
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="-3" Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                             <!-- I-a: "No se distingue que personaje esta cargado - las tarjetas se
                                  ven identicas al volver a Inicio". -->
@@ -3195,7 +3260,7 @@
                                                              Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                                     <TextBox Grid.Column="2" Text="{Binding SpawnY, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,14,0"
                                                              Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
-                                                    <TextBox Grid.Column="3" Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,14,0" FontSize="11"
+                                                    <TextBox Grid.Column="3" Text="{Binding WorldId, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,14,0" FontSize="11"
                                                              Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextSecondaryBrush}" BorderThickness="0"
                                                              ToolTip="Identificador interno del mundo, no un texto legible - no suele hacer falta tocarlo" />
                                                     <!-- S-c (segunda auditoria de Opus, Fable): "sin enlace al mapa de

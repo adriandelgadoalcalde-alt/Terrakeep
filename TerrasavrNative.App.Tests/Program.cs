@@ -2945,18 +2945,42 @@ internal static class Program
                 // coordenadas de aparicion del .plr) dentro de los limites reales de este mundo,
                 // navega fuera y vuelve a Exploracion (dispara OnSelectedTabIndexChanged ->
                 // SetCharacterSpawns) y confirma que aparece en CharacterSpawns.
+                //
+                // C-05 (informe de pulido final, cierra E4): ahora un Spawn Point solo aparece si
+                // WorldId Y Name coinciden de verdad con el mundo cargado (regla real del propio
+                // juego, Player.FindSpawn) - WorldId=0/Name arbitrario (el valor por defecto de
+                // "Añadir spawn point") ya NO basta, hay que fijarlos al mundo real cargado para
+                // que este spawn de prueba siga representando el caso "pertenece a este mundo".
                 vm.Servers.AddEntryCommand.Execute(null);
                 var spawnRow = vm.Servers.Entries[^1];
-                spawnRow.Name = "X-g prueba real";
+                spawnRow.WorldId = vm.Exploration.LoadedWorldId ?? 0;
+                spawnRow.Name = vm.Exploration.WorldTitle ?? "";
                 spawnRow.SpawnX = 4200;
                 spawnRow.SpawnY = 300;
                 vm.SelectedTabIndex = 1; // Personaje
                 DoEvents();
                 vm.SelectedTabIndex = 4; // Exploracion - dispara el refresco real
                 DoEvents(); DoEvents();
-                bool xgEncontrado = vm.Exploration.CharacterSpawns.Any(s => s.Label == "X-g prueba real" && s.TileX == 4200 && s.TileY == 300);
-                Console.WriteLine($"X-G-SPAWN-PERSONAJE: Spawn Point real añadido -> aparece en el mapa={xgEncontrado} (esperado True), CharacterSpawns.Count={vm.Exploration.CharacterSpawns.Count}");
+                bool xgEncontrado = vm.Exploration.CharacterSpawns.Any(s => s.TileX == 4200 && s.TileY == 300 && s.Label.Contains("(4200, 300)"));
+                Console.WriteLine($"X-G-SPAWN-PERSONAJE: Spawn Point real añadido (WorldId/Name del mundo cargado) -> aparece en el mapa={xgEncontrado} (esperado True), CharacterSpawns.Count={vm.Exploration.CharacterSpawns.Count}");
                 if (!xgEncontrado) Console.WriteLine("FALLO: X-g (segunda auditoria) - el Spawn Point real del personaje no llego al mapa");
+
+                // A9-08-SPAWNMUNDO (informe de pulido final, C-05): el mismo Spawn Point, pero
+                // con el WorldId de OTRO mundo, NO debe aparecer - antes cualquier Spawn Point
+                // guardado se mostraba en CUALQUIER mundo cargado.
+                spawnRow.WorldId = (vm.Exploration.LoadedWorldId ?? 0) + 999;
+                vm.SelectedTabIndex = 1; // Personaje - y de vuelta, para forzar el refresco real (SetCharacterSpawns solo se recalcula al ENTRAR en Exploracion)
+                DoEvents();
+                vm.SelectedTabIndex = 4; // Exploracion
+                DoEvents(); DoEvents();
+                bool xgDeOtroMundo = vm.Exploration.CharacterSpawns.Any(s => s.TileX == 4200 && s.TileY == 300);
+                Console.WriteLine($"A9-08-SPAWNMUNDO: mismo Spawn Point con WorldId de otro mundo -> sigue en el mapa={xgDeOtroMundo} (esperado False)");
+                if (xgDeOtroMundo) Console.WriteLine("FALLO: C-05 - un Spawn Point de OTRO mundo aparece en el mapa del mundo cargado");
+                spawnRow.WorldId = vm.Exploration.LoadedWorldId ?? 0; // deja el spawn de prueba coherente para la captura de abajo
+                vm.SelectedTabIndex = 1;
+                DoEvents();
+                vm.SelectedTabIndex = 4;
+                DoEvents(); DoEvents();
                 var rtbSpawn = new System.Windows.Media.Imaging.RenderTargetBitmap(
                     (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
                 rtbSpawn.Render(window);

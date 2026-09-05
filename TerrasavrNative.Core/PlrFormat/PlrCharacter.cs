@@ -16,8 +16,22 @@ public sealed class PlrServerEntry
 {
     public required int SpawnX { get; set; }
     public required int SpawnY { get; set; }
-    public required int Address { get; set; }
+    // C-05 (informe de pulido final): renombrado de "Address" a "WorldId" - es el campo real
+    // spI del juego (WldHeader.WorldId del mundo al que pertenece este Spawn Point), nunca una
+    // direccion de red. Solo el nombre en C# cambia, lectura/escritura intactas - antes el
+    // usuario podia editar el id de un mundo real creyendo que editaba una IP.
+    public required int WorldId { get; set; }
     public required string Name { get; set; }
+
+    // C-05 (informe de pulido final, cierra E4): regla real del propio juego (Player.FindSpawn/
+    // RemoveSpawn/AddSpawn, las tres identicas: spI[i]==Main.worldID && spN[i]==Main.worldName)
+    // - antes cualquier Spawn Point guardado se mostraba en CUALQUIER mundo cargado. Exigir las
+    // DOS condiciones (no solo el id) porque es lo que hace el juego: un .wld copiado y
+    // renombrado a mano conserva el WorldId, y el juego real lo trataria como un mundo distinto.
+    // Sin mundo cargado (loadedWorldId null) no se filtra - los marcadores no se ven de todos
+    // modos sin mapa, y complicarlo no aporta nada.
+    public bool BelongsToWorld(int? loadedWorldId, string? loadedWorldName) =>
+        loadedWorldId is not int id || (WorldId == id && Name == loadedWorldName);
 }
 
 // Modelo completo del cuerpo de un .plr YA DESCIFRADO (ver PlrCrypto para AES/PKCS7). Layout

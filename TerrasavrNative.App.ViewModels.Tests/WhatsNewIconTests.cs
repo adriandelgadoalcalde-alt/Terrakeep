@@ -26,7 +26,7 @@ public sealed class WhatsNewIconTests
             [{"version":"test","items":[{"key":"IronBroadsword","es":"Espada larga de hierro"}],"changes":[]}]
             """;
         var catalog = WhatsNewCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
-        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog);
+        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.TooltipCatalogs);
 
         var item = vm.VanillaEntries[0].Items[0];
 
@@ -41,10 +41,46 @@ public sealed class WhatsNewIconTests
             [{"version":"test","items":[{"key":"EstoNoExisteEnNingunCatalogoReal","es":"Objeto ficticio"}],"changes":[]}]
             """;
         var catalog = WhatsNewCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
-        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog);
+        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.TooltipCatalogs);
 
         var item = vm.VanillaEntries[0].Items[0];
 
         Assert.Null(item.IconPath); // "lo que no se encuentra no se inventa"
+    }
+
+    // C-17 (informe de pulido final, cierra la otra mitad de N1): "como en calamity mod y
+    // tmodloader" - StatsTooltip usa la MISMA llamada exacta que LibraryViewModel
+    // (ItemStatsFormatter.Format(isCalamity, id, catalogs)), asi que tiene que dar el MISMO
+    // texto real que ve la Libreria para ese mismo id.
+    [Fact]
+    public void StatsTooltip_MismoTextoRealQueLaTarjetaDeLaLibreriaParaElMismoId()
+    {
+        const string json = """
+            [{"version":"test","items":[{"key":"IronBroadsword","es":"Espada larga de hierro"}],"changes":[]}]
+            """;
+        var catalog = WhatsNewCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
+        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.TooltipCatalogs);
+
+        int ironBroadswordId = Service.VanillaCatalog.GetIdByKey("IronBroadsword")!.Value;
+        string? esperado = ItemStatsFormatter.Format(false, ironBroadswordId, Service.TooltipCatalogs);
+
+        var item = vm.VanillaEntries[0].Items[0];
+
+        Assert.False(string.IsNullOrEmpty(esperado));
+        Assert.Equal(esperado, item.StatsTooltip);
+    }
+
+    [Fact]
+    public void StatsTooltip_ClaveDesconocida_EsNull()
+    {
+        const string json = """
+            [{"version":"test","items":[{"key":"EstoNoExisteEnNingunCatalogoReal","es":"Objeto ficticio"}],"changes":[]}]
+            """;
+        var catalog = WhatsNewCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
+        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.TooltipCatalogs);
+
+        var item = vm.VanillaEntries[0].Items[0];
+
+        Assert.Null(item.StatsTooltip);
     }
 }

@@ -18,7 +18,7 @@ public sealed class ViewSpawnOnMapTests
             Version = 279,
             PrimaryLoadout = PlrLoadout.CreateEmpty(isPrimary: true),
             Loadouts = [PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false)],
-            Servers = [new PlrServerEntry { Name = "Base", SpawnX = 4200, SpawnY = 300, Address = 0 }],
+            Servers = [new PlrServerEntry { Name = "Base", SpawnX = 4200, SpawnY = 300, WorldId = 0 }],
         };
         string path = Path.Combine(Path.GetTempPath(), $"view-spawn-map-{Guid.NewGuid():N}.plr");
         File.WriteAllBytes(path, PlrFile.Write(character));

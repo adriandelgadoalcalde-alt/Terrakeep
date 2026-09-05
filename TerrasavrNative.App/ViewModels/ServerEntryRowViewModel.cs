@@ -17,7 +17,10 @@ public partial class ServerEntryRowViewModel : ObservableObject
     [ObservableProperty] private string _name;
     [ObservableProperty] private int _spawnX;
     [ObservableProperty] private int _spawnY;
-    [ObservableProperty] private int _address;
+    // C-05 (informe de pulido final): renombrado de "Address" a "WorldId" - PlrServerEntry.
+    // WorldId ya no se llama "Address" (nunca fue una direccion de red, es el WorldId real del
+    // mundo al que pertenece este Spawn Point).
+    [ObservableProperty] private int _worldId;
 
     public ServerEntryRowViewModel(PlrServerEntry entry)
     {
@@ -26,12 +29,12 @@ public partial class ServerEntryRowViewModel : ObservableObject
         _name = entry.Name;
         SpawnX = entry.SpawnX;
         SpawnY = entry.SpawnY;
-        Address = entry.Address;
+        WorldId = entry.WorldId;
         _suppressWriteback = false;
     }
 
     partial void OnNameChanged(string value) { if (!_suppressWriteback) Entry.Name = value; }
     partial void OnSpawnXChanged(int value) { if (!_suppressWriteback) Entry.SpawnX = value; }
     partial void OnSpawnYChanged(int value) { if (!_suppressWriteback) Entry.SpawnY = value; }
-    partial void OnAddressChanged(int value) { if (!_suppressWriteback) Entry.Address = value; }
+    partial void OnWorldIdChanged(int value) { if (!_suppressWriteback) Entry.WorldId = value; }
 }

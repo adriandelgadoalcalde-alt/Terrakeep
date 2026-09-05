@@ -25,9 +25,9 @@ public sealed class WhatsNewEntryViewModel
         Items = items;
     }
 
-    public static WhatsNewEntryViewModel ForVanilla(WhatsNewEntry entry, VanillaItemCatalog vanillaCatalog) =>
-        new(entry, entry.Items.Select(i => WhatsNewItemViewModel.ForVanilla(i, vanillaCatalog)).ToList());
+    public static WhatsNewEntryViewModel ForVanilla(WhatsNewEntry entry, VanillaItemCatalog vanillaCatalog, ItemTooltipCatalogs catalogs) =>
+        new(entry, entry.Items.Select(i => WhatsNewItemViewModel.ForVanilla(i, vanillaCatalog, catalogs)).ToList());
 
-    public static WhatsNewEntryViewModel ForCalamity(WhatsNewEntry entry, CalamityCatalog calamityCatalog) =>
-        new(entry, entry.Items.Select(i => WhatsNewItemViewModel.ForCalamity(i, calamityCatalog)).ToList());
+    public static WhatsNewEntryViewModel ForCalamity(WhatsNewEntry entry, CalamityCatalog calamityCatalog, ItemTooltipCatalogs catalogs) =>
+        new(entry, entry.Items.Select(i => WhatsNewItemViewModel.ForCalamity(i, calamityCatalog, catalogs)).ToList());
 }

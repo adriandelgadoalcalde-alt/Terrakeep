@@ -13,17 +13,26 @@ public sealed class WhatsNewItemViewModel
 {
     public string DisplayName { get; }
     public string? IconPath { get; }
+    // C-17 (informe de pulido final, cierra la otra mitad de N1): misma llamada EXACTA que
+    // LibraryViewModel (Format(isCalamity, id, catalogs)) - "como en calamity mod y tmodloader"
+    // (sprite, nombre con color de rareza, daño/DPS, defensa, critico, tooltip real), sin
+    // escribir ni un texto nuevo. Null si el nombre interno no se reconoce (mismo criterio que
+    // IconPath) o si el objeto no tiene ninguna estadistica/tooltip real conocido.
+    public string? StatsTooltip { get; }
 
-    private WhatsNewItemViewModel(string displayName, string? iconPath)
+    private WhatsNewItemViewModel(string displayName, string? iconPath, string? statsTooltip)
     {
         DisplayName = displayName;
         IconPath = iconPath;
+        StatsTooltip = statsTooltip;
     }
 
-    public static WhatsNewItemViewModel ForVanilla(WhatsNewItem item, VanillaItemCatalog vanillaCatalog) =>
-        new(item.DisplayName, item.Key != null && vanillaCatalog.GetIdByKey(item.Key) is int id
-            ? VanillaIconResolver.GetIconPath(id)
-            : null);
+    public static WhatsNewItemViewModel ForVanilla(WhatsNewItem item, VanillaItemCatalog vanillaCatalog, ItemTooltipCatalogs catalogs)
+    {
+        int? id = item.Key != null ? vanillaCatalog.GetIdByKey(item.Key) : null;
+        return new(item.DisplayName, id is int i ? VanillaIconResolver.GetIconPath(i) : null,
+            id is int i2 ? ItemStatsFormatter.Format(false, i2, catalogs) : null);
+    }
 
     // Pedido explicito del usuario (2-sep-2026): gemelo real de arriba, para la pestaña de
     // tModLoader/Calamity Mod - WhatsNewItem.Key es el nombre interno REAL de la clase
@@ -35,8 +44,11 @@ public sealed class WhatsNewItemViewModel
     // ej. Horrible Hog/Divine Swine/Shady Salesman) todavia no estan en el catalogo local
     // (extraido de una version anterior del .tmod) - IconPath se queda null en ese caso, "lo
     // que no se encuentra no se inventa", mismo criterio real que la version vanilla de arriba.
-    public static WhatsNewItemViewModel ForCalamity(WhatsNewItem item, CalamityCatalog calamityCatalog) =>
-        new(item.DisplayName, item.Key != null && calamityCatalog.ByModAndInternal("CalamityMod", item.Key) is { } entry
-            ? entry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null
-            : null);
+    public static WhatsNewItemViewModel ForCalamity(WhatsNewItem item, CalamityCatalog calamityCatalog, ItemTooltipCatalogs catalogs)
+    {
+        var entry = item.Key != null ? calamityCatalog.ByModAndInternal("CalamityMod", item.Key) : null;
+        string? iconPath = entry?.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
+        string? statsTooltip = entry != null ? ItemStatsFormatter.Format(true, entry.SyntheticId, catalogs) : null;
+        return new(item.DisplayName, iconPath, statsTooltip);
+    }
 }

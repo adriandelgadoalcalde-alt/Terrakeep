@@ -3,7 +3,9 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 using Microsoft.Win32;
 using TerrasavrNative.App.ViewModels;
 using TerrasavrNative.Core.Model;
@@ -776,8 +778,79 @@ public partial class MainWindow : Window
             Math.Abs(pos.Y - start.Y) < SystemParameters.MinimumVerticalDragDistance) return;
         _dragStartLibrary = null;
 
+        // C-11 (informe de pulido final, cierra L4): OnItemSlotDragOver/Drop devuelven Move para
+        // el destino aceptado (linea 880) - si aqui solo se permite Copy, ese Move queda FUERA
+        // del conjunto de efectos permitidos por el ORIGEN del arrastre, lo que en algunos temas/
+        // configuraciones de Windows hace que el cursor muestre "prohibido" durante todo el
+        // arrastre pese a que Drop SI funciona. Copy|Move cubre los dos (arrastrar SIEMPRE coloca
+        // una copia real del catalogo, nunca "mueve" nada de la Libreria - Move es solo lo que el
+        // slot destino declara aceptar).
         if (sender is FrameworkElement { DataContext: LibraryItemViewModel item } element)
-            DragDrop.DoDragDrop(element, new DataObject(typeof(LibraryItemViewModel), item), DragDropEffects.Copy);
+            StartCardDrag(element, new DataObject(typeof(LibraryItemViewModel), item));
+    }
+
+    // C-11 (informe de pulido final, cierra L4): "WPF arrastra sin ninguna vista previa, asi
+    // que el usuario no ve que este llevando nada" - adorno real (VisualBrush de la propia
+    // tarjeta, semitransparente) que sigue al cursor durante el arrastre, en vez de solo confiar
+    // en el cursor del sistema (que ya anuncia aceptado/rechazado via OnItemSlotDragOver, pero
+    // nunca QUE se esta arrastrando). Compartido por las dos tarjetas reales que inician
+    // arrastre (Libreria de objetos y Libreria de buffs) - los slots ya muestran su propio
+    // contenido real en pantalla, la confusion original era especifica de las tarjetas.
+    private void StartCardDrag(FrameworkElement element, DataObject data)
+    {
+        // AdornerLayer.GetAdornerLayer/DragAdorner anclados al PROPIO elemento arrastrado (no a
+        // la ventana) - es el patron real de WPF: el layer que encuentra ya cubre toda la
+        // ventana (el AdornerDecorator implicito del template por defecto de Window), y usar el
+        // mismo elemento como AdornedElement mantiene Mouse.GetPosition en el MISMO espacio de
+        // coordenadas que UpdatePosition, sin tener que reproyectar nada a mano.
+        var layer = AdornerLayer.GetAdornerLayer(element);
+        if (layer == null) { DragDrop.DoDragDrop(element, data, DragDropEffects.Copy | DragDropEffects.Move); return; }
+
+        var adorner = new DragAdorner(element, element);
+        layer.Add(adorner);
+        void OnFeedback(object? s, GiveFeedbackEventArgs e)
+        {
+            var pos = Mouse.GetPosition(element);
+            adorner.UpdatePosition(pos.X + 12, pos.Y + 12);
+        }
+        element.GiveFeedback += OnFeedback;
+        try
+        {
+            DragDrop.DoDragDrop(element, data, DragDropEffects.Copy | DragDropEffects.Move);
+        }
+        finally
+        {
+            element.GiveFeedback -= OnFeedback;
+            layer.Remove(adorner);
+        }
+    }
+
+    // VisualBrush de la tarjeta original, dibujado en la posicion real del cursor - IsHitTestVisible
+    // en False para no interferir con el propio Drop (el adorno vive en una capa aparte, por
+    // encima de todo el arbol visual de la ventana, pero nunca debe recibir eventos de raton).
+    private sealed class DragAdorner : Adorner
+    {
+        private readonly VisualBrush _brush;
+        private readonly double _width, _height;
+        private double _left, _top;
+
+        public DragAdorner(UIElement adornedElement, FrameworkElement dragged) : base(adornedElement)
+        {
+            _brush = new VisualBrush(dragged) { Opacity = 0.75, Stretch = Stretch.Uniform };
+            _width = dragged.ActualWidth;
+            _height = dragged.ActualHeight;
+            IsHitTestVisible = false;
+        }
+
+        public void UpdatePosition(double left, double top)
+        {
+            _left = left;
+            _top = top;
+            InvalidateVisual();
+        }
+
+        protected override void OnRender(DrawingContext drawingContext) =>
+            drawingContext.DrawRectangle(_brush, null, new Rect(_left, _top, _width, _height));
     }
 
     // H5-12 (quinta auditoria de Opus): "un clic en una tarjeta de la Libreria no hace
@@ -828,6 +901,47 @@ public partial class MainWindow : Window
         var target = _viewModel.ItemEdit.Slot;
         if (target == null) return; // el tooltip de la tarjeta ya avisa de que hace falta elegir un hueco antes
         target.PlaceItem(item.Id);
+    }
+
+    // C-11 (informe de pulido final, cierra L4): gemelo real de OnLibraryCardClick/
+    // OnLibraryClickTimerTick para la Libreria de buffs - "pasa lo mismo con la pestaña buff"
+    // (un clic ahi no hacia nada, unica via real era arrastrar). _dragStartBuffLibrary es null
+    // aqui cuando el gesto YA se resolvio como un arrastre real (mismo criterio de guarda que
+    // OnLibraryCardClick).
+    private void OnBuffLibraryCardClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_dragStartBuffLibrary is null) return;
+        _dragStartBuffLibrary = null;
+        if (sender is not FrameworkElement { DataContext: BuffCatalogEntryViewModel entry }) return;
+
+        if (e.ClickCount >= 2)
+        {
+            _buffLibraryClickTimer?.Stop();
+            _pendingBuffLibraryClickItem = null;
+            _viewModel.PlaceInFirstFreeBuffSlot(entry.Id);
+            return;
+        }
+
+        _pendingBuffLibraryClickItem = entry;
+        _buffLibraryClickTimer ??= new System.Windows.Threading.DispatcherTimer();
+        _buffLibraryClickTimer.Stop();
+        _buffLibraryClickTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(GetDoubleClickTime(), 1));
+        _buffLibraryClickTimer.Tick -= OnBuffLibraryClickTimerTick;
+        _buffLibraryClickTimer.Tick += OnBuffLibraryClickTimerTick;
+        _buffLibraryClickTimer.Start();
+    }
+
+    private System.Windows.Threading.DispatcherTimer? _buffLibraryClickTimer;
+    private BuffCatalogEntryViewModel? _pendingBuffLibraryClickItem;
+
+    private void OnBuffLibraryClickTimerTick(object? sender, EventArgs e)
+    {
+        _buffLibraryClickTimer!.Stop();
+        if (_pendingBuffLibraryClickItem is not { } entry) return;
+        _pendingBuffLibraryClickItem = null;
+        var target = _viewModel.BuffEdit.Slot;
+        if (target == null) return; // el tooltip de la tarjeta ya avisa de que hace falta elegir un hueco antes
+        target.PlaceBuff(entry.Id);
     }
 
     // Un clic en cualquier slot (incluidos los botones ★/✕/Cambiar de dentro, ya que este
@@ -981,8 +1095,9 @@ public partial class MainWindow : Window
             Math.Abs(pos.Y - start.Y) < SystemParameters.MinimumVerticalDragDistance) return;
         _dragStartBuffLibrary = null;
 
+        // C-11: mismo criterio y mismo adorno real que OnLibraryCardMouseMove.
         if (sender is FrameworkElement { DataContext: BuffCatalogEntryViewModel entry } element)
-            DragDrop.DoDragDrop(element, new DataObject(typeof(BuffCatalogEntryViewModel), entry), DragDropEffects.Copy);
+            StartCardDrag(element, new DataObject(typeof(BuffCatalogEntryViewModel), entry));
     }
 
     // H4-04 (cuarta auditoria de Opus, Fable): gemelo real de OnItemSlotDragOver - solo hace
