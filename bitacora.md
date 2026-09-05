@@ -9117,3 +9117,55 @@ ejecutable anonimo de Inno Setup) - ahora dice Terrakeep / IncrediBad / 2.1.0 / 
 5. **No hay `LICENSE`** en el repo - decision del propio usuario, no se ha creado ninguno.
 
 No hubo ningun obstaculo que fallara dos veces seguidas en esta auditoria.
+
+---
+
+## 6-sep-2026 - Core pasa a doble destino net10.0 + net8.0 (WS0 de TerrakeepMod)
+
+Cambio de una sola linea util en `TerrasavrNative.Core.csproj`: `<TargetFramework>net10.0</
+TargetFramework>` pasa a `<TargetFrameworks>net10.0;net8.0</TargetFrameworks>`.
+
+**Por que.** Ha arrancado un proyecto hermano nuevo, **TerrakeepMod**: un mod real de tModLoader
+que replicara las funcionalidades de Terrakeep editando EN VIVO el personaje/mundo ya cargado en
+la partida. Su primer workstream (WS0, cimientos) necesita reutilizar los catalogos de datos de
+Core desde dentro del juego, y ahi esta el bloqueo real: **tModLoader corre sobre .NET 8**
+(comprobado en el fichero real `C:\Program Files (x86)\Steam\steamapps\common\tModLoader\
+tMLMod.targets`: `TargetFramework=net8.0`, `LangVersion=12.0`, y su propio runtime en
+`dotnet\shared\Microsoft.NETCore.App\8.0.0`), y un DLL compilado para net10 sencillamente no
+carga ahi.
+
+**Lo que NO hizo falta tocar.** Ni una linea de C#. Core no tiene ninguna dependencia externa (0
+`PackageReference` / 0 `ProjectReference`) y no usa ninguna sintaxis posterior a C# 12, asi que
+compila tal cual para los dos destinos. Se dejo a proposito **sin** `LangVersion` explicito: asi
+cada destino usa el suyo (C# 14 en net10.0, C# 12 en net8.0) y cualquier feature moderna que se
+cuele aqui en el futuro rompera la build de net8.0 en el acto, en vez de romper el mod en
+silencio mucho despues.
+
+**Verificacion real:**
+- `dotnet build TerrasavrNative.slnx` -> correcta, 0 advertencias, 0 errores; genera los DOS
+  DLL (`bin\Debug\net10.0\` y `bin\Debug\net8.0\`).
+- El DLL net8 es net8 de verdad: al intentar cargarlo con reflexion desde PowerShell (que corre
+  en .NET Framework) pide `System.Runtime, Version=8.0.0.0`.
+- `dotnet test TerrasavrNative.Core.Tests` -> **368 / 368**, 0 fallos (mismo numero que antes del
+  cambio; el csproj de tests declara solo `net10.0`, asi que corre contra ese destino).
+- `dotnet test TerrasavrNative.App.ViewModels.Tests` -> **329 / 329**, 0 fallos.
+- La app de escritorio sigue resolviendo el destino net10.0 al referenciar el proyecto (se ve en
+  la salida de la build: `Terrakeep.dll` se enlaza sin cambios).
+
+**Lo que NO se pudo verificar, y por que (importante, no darlo por bueno):** el arnes de UI
+Automation (`dotnet run --project TerrasavrNative.App.Tests`) **no se pudo completar**, pero no
+por este cambio: la estacion de trabajo de Windows estaba **BLOQUEADA** durante toda la sesion
+(`LogonUI` en ejecucion, confirmado). Con la sesion bloqueada no hay input real posible ni
+capturas de pantalla del escritorio:
+- `Graphics.CopyFromScreen` falla con "Controlador no valido".
+- El arnes llego a la linea 62 de su salida y ahi se colgo indefinidamente dentro de
+  `UIAutomationClient!System.Windows.Automation.SelectionItemPattern.Select()` (pila real
+  obtenida con `dotnet-stack report`), con la CPU congelada.
+- Sus 2 unicas lineas `FALLO` son las dos de la prueba `UI-BLOQUEADA`, que es justamente la que
+  hace **clics REALES de raton**: "el Popup no se cerro tras el clic real de raton" y "la
+  interfaz dejo de responder a clics reales". Todo lo demas que llego a ejecutar (unas 60
+  comprobaciones, varias de ellas sobre datos servidos por Core) paso sin FALLO.
+
+Queda por tanto **pendiente de re-ejecutar el arnes completo con la sesion desbloqueada** para
+cerrar del todo la verificacion visual. El riesgo real del cambio es bajo y acotado (es aditivo:
+añade un destino, no modifica el que consume la app), pero conviene no darlo por cerrado.

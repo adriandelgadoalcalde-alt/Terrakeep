@@ -1,7 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- WS0 de TerrakeepMod (5-sep-2026): Core se compila para DOS destinos a la vez.
+       - net10.0 es el de siempre, el que consume la app de escritorio (TerrasavrNative.App,
+         net10.0-windows) y sus tests. No cambia nada para ellos: al referenciar el proyecto,
+         NuGet/MSBuild elige automaticamente el activo net10.0 por ser el compatible mas alto.
+       - net8.0 existe SOLO para poder reutilizar este mismo codigo dentro de un mod de
+         tModLoader. tModLoader corre sobre .NET 8 (comprobado en el fichero real
+         "C:\Program Files (x86)\Steam\steamapps\common\tModLoader\tMLMod.targets":
+         TargetFramework=net8.0, LangVersion=12.0, y su runtime propio en dotnet\shared\
+         Microsoft.NETCore.App\8.0.0) y un DLL compilado para net10 sencillamente NO carga ahi.
+       Core no tiene ninguna dependencia externa (0 PackageReference/ProjectReference), asi que
+       el unico riesgo real del doble destino es la sintaxis de C#: net8.0 usa C# 12 por defecto
+       y net10.0 usa C# 14. Se deja el valor por defecto de cada destino a proposito (sin forzar
+       LangVersion) para que cualquier feature de C# 13/14 que se cuele aqui en el futuro rompa
+       la build de net8.0 de inmediato, en vez de romper el mod en silencio mas adelante. -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
