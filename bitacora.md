@@ -8360,5 +8360,42 @@ a disparar `OnIsCheckedChanged` si el valor no cambia de verdad. Corregido forza
 `false -> true` en el propio test, no en el codigo de produccion (aislamiento de la variable,
 mismo criterio que memoria `verificar-aislando-la-variable`).
 
-Pendientes bloques 3-9 (C-10a/b/c, C-14+C-12, C-09, C-05/C-11/C-13/C-17, C-15, C-16/C-18, C-06) -
-seguir el orden del informe, un commit verificado por bloque.
+**Bloque 3/9 (C-10a, C-10b, C-10c) - cerrado, commits `d88adb04` y `24e1bf19`:**
+
+La correccion mas grande del plan (bono de set de armadura, "esfuerzo medio-alto" segun el
+propio informe). Dos mitades, cada una con su modelo de datos roto de raiz:
+
+- **C-10a (vanilla)**: `scripts/extraer-sets-armadura.py` solo llegaba a 43/63 claves reales de
+  `ArmorSetBonus.*` (Player.cs). 3 bugs de parser reales: (1) un `if` "guardia" sin bono propio
+  con un if/else-if POR CASCO dentro (Cobalto/Mithril/Adamantita) se saltaba entero sin bajar a
+  los hijos; (2) un `switch(type){...}` ANIDADO dentro de un `default:` de una de las 5
+  `SetDefaultsN` de `Item.cs` era invisible a un parser de un solo nivel (headSlot 157-171 y
+  superiores); (3) Wizard/MagicHat son sets reales de 2 piezas (Player.cs nunca menciona
+  `legs`) - el extractor los descartaba por falta de un legs inexistente. Los tres arreglados
+  con un parser recursivo real - **63/63 exacto**, verificado con diff de conjuntos
+  (`A9-05-SETVANILLA`), 0 regresiones en las 177 entradas que ya funcionaban.
+- **C-10b (Calamity)**: nuevo `CalamityArmorSetCatalog`, catalogo POR SET (no por pieza),
+  derivado enteramente de `catalog.json` ya existente (Category/EquipSlot/SetBonus) - sin
+  fichero nuevo. Reescribe `ActiveCalamitySetBonusText`, que antes comparaba tres `SetBonus`
+  por igualdad de texto - imposible de cumplir de raiz (cuerpo/piernas de Calamity NUNCA tienen
+  su propio `SetBonus`, 0/131 reales) - "codigo verificado una vez y nunca funciono".
+- **C-10c**: `ItemStatsFormatter` enumera el bono completo (con el nombre real de cada casco)
+  al mirar el cuerpo o las piernas de un set de Calamity - antes se quedaban mudas del todo.
+
+**Bug real encontrado y arreglado verificando C-10b con datos reales** (no en el codigo
+tocado por este bloque, en `PlayerPreviewRenderer.cs`): equipar CUALQUIER casco o grebas de
+Calamity reventaba el preview de Apariencia entero con `ArgumentOutOfRangeException`. Causa
+real: `LoadPngPixels40x56` asumia que el fichero YA media exactamente 40x56 en vez de recortar
+el primer fotograma de una tira de animacion vertical (el contrato real que su propio
+comentario de clase ya documentaba) - los sprites vanilla funcionaban porque su extraccion
+original SI los pre-recorta a un unico fotograma, los de Calamity no (`AerospecHeadMelee_
+Head.png` mide 40x1120 de verdad, 20 fotogramas). Arreglado con `CroppedBitmap` - no cambia
+nada para los vanilla (recorte no-op, ya miden 40x56). Esto es un bug real de cara al usuario
+(cualquier armadura de Calamity con casco/grebas puestos rompia el doll), no parte de las 19
+correcciones del informe, pero bloqueaba verificar C-10b con equipo real - arreglado en el
+mismo commit por necesidad, documentado aparte para que quede claro que no era del plan.
+
+Verificado: `dotnet test` 670/670 (12 tests nuevos entre C-10a/b/c), arnes completo (0 `FALLO`).
+
+Pendientes bloques 4-9 (C-14+C-12, C-09, C-05/C-11/C-13/C-17, C-15, C-16/C-18, C-06) - seguir el
+orden del informe, un commit verificado por bloque.
