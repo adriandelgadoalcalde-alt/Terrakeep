@@ -53,7 +53,13 @@ public static class SessionService
             if (dir != null) Directory.CreateDirectory(dir);
             File.WriteAllText(FilePath, JsonSerializer.Serialize(session));
         }
-        catch (IOException)
+        // Auditoria final de Opus (5-sep-2026): se capturaba solo IOException, pero
+        // UnauthorizedAccessException NO deriva de ella - una carpeta de AppData sin permiso
+        // de escritura (politica de empresa, antivirus, perfil restringido) escapaba de este
+        // "best-effort" y salia como error real al usuario, justo lo contrario de lo que dice
+        // el comentario. Mismo criterio que la LECTURA de este mismo servicio, que ya captura
+        // Exception a secas.
+        catch (Exception)
         {
         }
     }

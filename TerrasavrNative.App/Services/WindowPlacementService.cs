@@ -130,7 +130,13 @@ public static class WindowPlacementService
             if (dir != null) Directory.CreateDirectory(dir);
             File.WriteAllText(FilePath, JsonSerializer.Serialize(info));
         }
-        catch (IOException)
+        // Auditoria final de Opus (5-sep-2026): se capturaba solo IOException, pero
+        // UnauthorizedAccessException NO deriva de ella - una carpeta de AppData sin permiso
+        // de escritura (politica de empresa, antivirus, perfil restringido) escapaba de este
+        // "best-effort" y salia como error real al usuario, justo lo contrario de lo que dice
+        // el comentario. Mismo criterio que la LECTURA de este mismo servicio, que ya captura
+        // Exception a secas.
+        catch (Exception)
         {
             // Best-effort real, mismo criterio que Save() de abajo.
         }

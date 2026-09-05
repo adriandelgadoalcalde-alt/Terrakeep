@@ -45,7 +45,13 @@ public static class WorldViewStateService
             File.WriteAllText(tmpPath, JsonSerializer.Serialize(states));
             File.Move(tmpPath, FilePath, overwrite: true);
         }
-        catch (IOException)
+        // Auditoria final de Opus (5-sep-2026): se capturaba solo IOException, pero
+        // UnauthorizedAccessException NO deriva de ella - una carpeta de AppData sin permiso
+        // de escritura (politica de empresa, antivirus, perfil restringido) escapaba de este
+        // "best-effort" y salia como error real al usuario, justo lo contrario de lo que dice
+        // el comentario. Mismo criterio que la LECTURA de este mismo servicio, que ya captura
+        // Exception a secas.
+        catch (Exception)
         {
             // Best-effort real, mismo criterio que SettingsService.Save - un fallo guardando la
             // vista nunca debe impedir seguir usando la app.
