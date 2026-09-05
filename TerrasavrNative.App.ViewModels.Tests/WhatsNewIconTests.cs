@@ -26,7 +26,7 @@ public sealed class WhatsNewIconTests
             [{"version":"test","items":[{"key":"IronBroadsword","es":"Espada larga de hierro"}],"changes":[]}]
             """;
         var catalog = WhatsNewCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
-        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.TooltipCatalogs);
+        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.WhatsNewItemIds, Service.TooltipCatalogs);
 
         var item = vm.VanillaEntries[0].Items[0];
 
@@ -41,7 +41,7 @@ public sealed class WhatsNewIconTests
             [{"version":"test","items":[{"key":"EstoNoExisteEnNingunCatalogoReal","es":"Objeto ficticio"}],"changes":[]}]
             """;
         var catalog = WhatsNewCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
-        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.TooltipCatalogs);
+        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.WhatsNewItemIds, Service.TooltipCatalogs);
 
         var item = vm.VanillaEntries[0].Items[0];
 
@@ -59,7 +59,7 @@ public sealed class WhatsNewIconTests
             [{"version":"test","items":[{"key":"IronBroadsword","es":"Espada larga de hierro"}],"changes":[]}]
             """;
         var catalog = WhatsNewCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
-        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.TooltipCatalogs);
+        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.WhatsNewItemIds, Service.TooltipCatalogs);
 
         int ironBroadswordId = Service.VanillaCatalog.GetIdByKey("IronBroadsword")!.Value;
         string? esperado = ItemStatsFormatter.Format(false, ironBroadswordId, Service.TooltipCatalogs);
@@ -77,10 +77,32 @@ public sealed class WhatsNewIconTests
             [{"version":"test","items":[{"key":"EstoNoExisteEnNingunCatalogoReal","es":"Objeto ficticio"}],"changes":[]}]
             """;
         var catalog = WhatsNewCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
-        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.TooltipCatalogs);
+        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.WhatsNewItemIds, Service.TooltipCatalogs);
 
         var item = vm.VanillaEntries[0].Items[0];
 
         Assert.Null(item.StatsTooltip);
+    }
+
+    // C-16 (informe de pulido final, cierra media N1): "Objetos nuevos" de 1.4.5.7 salian sin
+    // sprite - vanilla_item_ids_by_key.json para en 5455, y este objeto real (ArcSurge=6173,
+    // verificado a mano contra ItemID.cs) queda por encima. whats_new_item_ids.json (catalogo
+    // separado, extraer-ids-novedades-vanilla.py) cierra ese hueco - SOLO aqui, nunca en la
+    // Libreria/Investigacion/buscador real del personaje.
+    [Fact]
+    public void UnaClaveInternaDe1_4_5_ResuelveUnIconoRealViaElCatalogoSeparado()
+    {
+        const string json = """
+            [{"version":"test","items":[{"key":"ArcSurge","es":"Sobrecarga de arco"}],"changes":[]}]
+            """;
+        var catalog = WhatsNewCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
+        var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.WhatsNewItemIds, Service.TooltipCatalogs);
+
+        Assert.Null(Service.VanillaCatalog.GetIdByKey("ArcSurge")); // confirma que el catalogo REAL no lo conoce (por eso hace falta el respaldo)
+        Assert.Equal(6173, Service.WhatsNewItemIds.GetIdByKey("ArcSurge"));
+
+        var item = vm.VanillaEntries[0].Items[0];
+
+        Assert.NotNull(item.IconPath);
     }
 }

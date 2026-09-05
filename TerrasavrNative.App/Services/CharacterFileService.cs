@@ -40,6 +40,7 @@ public sealed class CharacterFileService
     // vez de uno mezclado (whats_new.json, ya retirado), cada uno con su propio ritmo de
     // version.
     public WhatsNewCatalog WhatsNewVanilla { get; }
+    public WhatsNewItemIdCatalog WhatsNewItemIds { get; }
     public WhatsNewCatalog WhatsNewCalamity { get; }
     public ChangelogCatalog Changelog { get; }
     public MapColorCatalog MapColors { get; }
@@ -89,6 +90,9 @@ public sealed class CharacterFileService
         VanillaBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds.json"));
         CalamityBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds_calamity.json"));
         WhatsNewVanilla = WhatsNewCatalog.LoadFromFile(Path.Combine(assetsDir, "whats_new_vanilla.json"));
+        // C-16 (informe de pulido final): catalogo separado y de solo lectura, solo para
+        // resolver sprites en la pestaña Novedades - ver el comentario real de la clase.
+        WhatsNewItemIds = WhatsNewItemIdCatalog.LoadFromFile(Path.Combine(assetsDir, "whats_new_item_ids.json"));
         WhatsNewCalamity = WhatsNewCatalog.LoadFromFile(Path.Combine(assetsDir, "whats_new_calamity.json"));
         Changelog = ChangelogCatalog.LoadFromFile(Path.Combine(assetsDir, "changelog.json"));
         MapColors = MapColorCatalog.LoadFromFile(Path.Combine(assetsDir, "map_colors.json"));

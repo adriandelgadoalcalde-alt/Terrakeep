@@ -15,9 +15,9 @@ public sealed class WhatsNewViewModel
     public IReadOnlyList<WhatsNewEntryViewModel> CalamityEntries { get; }
 
     public WhatsNewViewModel(WhatsNewCatalog vanillaCatalog, WhatsNewCatalog calamityCatalog,
-        VanillaItemCatalog vanillaItemCatalog, CalamityCatalog calamityItemCatalog, ItemTooltipCatalogs catalogs)
+        VanillaItemCatalog vanillaItemCatalog, CalamityCatalog calamityItemCatalog, WhatsNewItemIdCatalog whatsNewIds, ItemTooltipCatalogs catalogs)
     {
-        VanillaEntries = vanillaCatalog.Entries.Select(e => WhatsNewEntryViewModel.ForVanilla(e, vanillaItemCatalog, catalogs)).ToList();
+        VanillaEntries = vanillaCatalog.Entries.Select(e => WhatsNewEntryViewModel.ForVanilla(e, vanillaItemCatalog, whatsNewIds, catalogs)).ToList();
         CalamityEntries = calamityCatalog.Entries.Select(e => WhatsNewEntryViewModel.ForCalamity(e, calamityItemCatalog, catalogs)).ToList();
     }
 }

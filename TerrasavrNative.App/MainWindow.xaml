@@ -1354,8 +1354,14 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
+                <!-- C-19 (informe de pulido final, detalle menor): esta plantilla es compartida
+                     por Cofres/Minerales/Objetos, pero "Buscar seleccionados" solo existe de
+                     verdad en Cofres y Objetos - en Minerales el tick dispara "Marcar en el
+                     mapa" (C-04), sin ningun boton "Buscar seleccionados" real ahi. Texto neutro,
+                     cierto en las 3 categorias, en vez de citar un boton que en una de ellas no
+                     existe. -->
                 <CheckBox Grid.Column="0" IsChecked="{Binding IsChecked}" VerticalAlignment="Center" Margin="0,0,6,0"
-                          ToolTip="Marcar para 'Buscar seleccionados'" />
+                          ToolTip="Marcar para una acción en bloque (ver los botones de arriba)" />
                 <Button Grid.Column="1" Style="{StaticResource RowClickButton}" HorizontalContentAlignment="Stretch"
                         ToolTip="Buscar en el mapa"
                         Command="{Binding DataContext.Exploration.SearchInventoryRowCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -4589,6 +4595,13 @@
                             </TextBlock>
                         </StackPanel>
                     </StackPanel>
+                    <!-- C-18 (informe de pulido final, cierra N2): bloque propio de autoria, no
+                         una frase enterrada en CreditsText - justo debajo del nombre/version, y
+                         antes de las atribuciones a terceros (que dicen cosas distintas y no
+                         deben mezclarse). -->
+                    <TextBlock Text="Autoría" Style="{StaticResource TitleText}" FontSize="18" Margin="0,0,0,4" />
+                    <TextBlock Text="{Binding About.AuthorText}" Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,20"
+                               MaxWidth="680" HorizontalAlignment="Left" />
                     <TextBlock Text="{Binding About.CreditsText}" Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,24"
                                MaxWidth="680" HorizontalAlignment="Left" />
 

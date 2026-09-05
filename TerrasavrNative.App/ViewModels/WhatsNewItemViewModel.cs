@@ -27,9 +27,14 @@ public sealed class WhatsNewItemViewModel
         StatsTooltip = statsTooltip;
     }
 
-    public static WhatsNewItemViewModel ForVanilla(WhatsNewItem item, VanillaItemCatalog vanillaCatalog, ItemTooltipCatalogs catalogs)
+    // C-16 (informe de pulido final, cierra media N1): whatsNewIds es el catalogo SEPARADO de
+    // solo lectura para objetos 1.4.5+ (por encima del maximo real de vanillaCatalog) - se
+    // consulta SOLO como respaldo, nunca en primer lugar (un objeto YA conocido por el catalogo
+    // real sigue resolviendose igual que siempre). Ver WhatsNewItemIdCatalog: nunca se usa fuera
+    // de aqui, en particular nunca para colocar nada en un slot real del personaje.
+    public static WhatsNewItemViewModel ForVanilla(WhatsNewItem item, VanillaItemCatalog vanillaCatalog, WhatsNewItemIdCatalog whatsNewIds, ItemTooltipCatalogs catalogs)
     {
-        int? id = item.Key != null ? vanillaCatalog.GetIdByKey(item.Key) : null;
+        int? id = item.Key != null ? vanillaCatalog.GetIdByKey(item.Key) ?? whatsNewIds.GetIdByKey(item.Key) : null;
         return new(item.DisplayName, id is int i ? VanillaIconResolver.GetIconPath(i) : null,
             id is int i2 ? ItemStatsFormatter.Format(false, i2, catalogs) : null);
     }

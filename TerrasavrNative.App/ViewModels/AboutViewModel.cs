@@ -11,6 +11,14 @@ public sealed class AboutViewModel
     public string Tagline => "Editor de personajes de Terraria, nativo y sin Electron - vanilla y Calamity Mod.";
     public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
 
+    // C-18 (informe de pulido final, cierra N2): bloque PROPIO, no una frase enterrada en
+    // CreditsText - pedido explicito del usuario, credito personal como autor. El nombre va
+    // LITERAL: "IncrediBad", con I y B mayusculas y el resto en minusculas - no se "corrige" a
+    // Incredibad ni a INCREDIBAD en ningun sitio, ni aqui, ni en el XAML, ni en el .csproj
+    // (<Authors>), ni en ningun comentario.
+    public string AuthorName => "IncrediBad";
+    public string AuthorText => "Terrakeep está diseñado y desarrollado por IncrediBad.";
+
     public string CreditsText =>
         "Terrakeep es una reescritura nativa (C#/.NET, WPF) de un editor de personajes de " +
         "Terraria - sin Chromium ni Electron. El formato de archivo (.plr/.tplr, NBT, cifrado) " +

@@ -1,5 +1,82 @@
 [
   {
+    "version": "2.0.0",
+    "date": "5 de septiembre de 2026",
+    "summary": "Pulido final pre-lanzamiento tras una auditoría exhaustiva de Exploración/Librería/Inicio/barra superior/Apariencia: bonos de set arreglados de raíz (no solo los datos), Deshacer/Rehacer en Apariencia, búsqueda sin tildes y varias correcciones reales de usabilidad.",
+    "added": [
+      "Deshacer/Rehacer real en Apariencia (peinado, tinte, género, dificultad, vida/maná/horas y los 7 colores) - la única pestaña de edición que se había quedado sin historial.",
+      "Marcado masivo en el mapa (resaltado sin tope + lista agrupada por vetas/zonas) generalizado de Minerales a toda la categoría Objetos (tiles, paredes y líquidos).",
+      "Autoría: bloque propio en \"Acerca de\" con el autor real del proyecto.",
+      "Arrastre de tarjetas anunciado de verdad: tercera línea en el tooltip, adorno visual que sigue al cursor, y clic en la Librería de buffs ya coloca (antes no hacía nada)."
+    ],
+    "fixed": [
+      "Bono de set completo de Calamity Mod: la comprobación de \"las 3 piezas puestas\" era matemáticamente imposible de cumplir de raíz (comparaba un dato que el cuerpo/piernas nunca tienen) - reescrito con un catálogo real por SET, no por pieza suelta.",
+      "El extractor de bonos de set vanilla solo llegaba a 43 de las 63 claves reales del juego (Cobalto/Mithril/Adamantita/Titanio y los sets de 2 piezas salían mal o no salían).",
+      "Los marcadores de aparición del mundo y de la mazmorra no se veían en su posición real en el mapa.",
+      "El minimapa podía desbordar sus límites reales al hacer zoom.",
+      "Los Spawn Points guardados aparecían en CUALQUIER mundo cargado, no solo en el suyo real.",
+      "Pulsar el nombre de un mineral en el buscador de Exploración no hacía nada (única categoría donde un clic no llevaba a ningún resultado).",
+      "La búsqueda en Librería/Investigación/buscador del personaje/Exploración no encontraba nombres con tildes al buscar sin ellas (o al revés).",
+      "La pestaña Líquidos del buscador de Exploración salía sin ningún sprite ni color.",
+      "Los nodos \"Índice\" y \"Calamity (mod)\" de la Librería de buffs eran los únicos sin icono."
+    ]
+  },
+  {
+    "version": "1.6.0",
+    "date": "4 de septiembre de 2026",
+    "summary": "Rediseño completo de la Librería y la pestaña Buffs con el árbol real de categorías de Terrasavr, más una pasada de consistencia visual en las 9 pestañas de contenedores.",
+    "added": [
+      "Árbol de categorías real de Terrasavr para la Librería de objetos (vanilla + carpeta madre \"Calamity (mod)\"), reutilizado también por Investigación.",
+      "Rework completo de Buffs: rejilla de 44 slots reales, panel Editar con duraciones reales, y Librería de buffs propia con el mismo árbol real de Terrasavr.",
+      "Tooltips completos de equipo (prefijo/accesorio/bono de set) e iconos consistentes en toda la app.",
+      "Rediseño de las 9 pestañas de contenedor (Inventario/Banco/Caja fuerte/Fragua/Bóveda/Mascotas/Loadouts) con un único formato de tarjeta de slot."
+    ],
+    "fixed": [
+      "Varias carpetas del árbol vanilla (Wings/Mounts) salían con 0 objetos.",
+      "Los contenedores necesitaban scroll horizontal en vez de ajustarse a la ventana."
+    ]
+  },
+  {
+    "version": "1.5.0",
+    "date": "3 de septiembre de 2026",
+    "summary": "Auditoría exhaustiva de redimensionado (14 tamaños de ventana) y comparación a fondo contra TEdit para la pestaña Exploración y la barra superior.",
+    "added": [
+      "GridSplitter real entre el mapa y la barra lateral de Exploración.",
+      "Panel \"Este mundo\" con semilla, modo de juego y censo real del mundo cargado.",
+      "Atajos de teclado del mapa (buscar, exportar a PNG, spawn/mazmorra) y arrastrar objetos directamente sobre el mapa."
+    ],
+    "fixed": [
+      "Decenas de recortes de texto y desbordamientos reales a distintos anchos de ventana, encontrados con una matriz sistemática de 14 tamaños en vez de solo comprobar a ojo.",
+      "La barra superior no era consciente de qué pestaña se estaba mirando (mostraba siempre lo mismo, aunque no viniera a cuento)."
+    ]
+  },
+  {
+    "version": "1.4.0",
+    "date": "2 de septiembre de 2026",
+    "summary": "Rediseño completo del Explorador de Mundo: buscador general de todo lo que contiene un mundo, con categorías reales y solo lo que ese mundo tiene de verdad.",
+    "added": [
+      "Buscador general del mundo por fases: tiles/paredes/NPCs, cofres y letreros, con navegación anterior/siguiente y distancia al spawn.",
+      "Barra lateral de Exploración reorganizada por categorías reales (NPCs/Cofres/Minerales/Objetos), filtradas a lo que el mundo cargado tiene de verdad (antes se ofrecía el catálogo completo del juego, tuviera sentido o no en ese mundo).",
+      "1244 sprites reales de tiles/paredes extraídos para el buscador, y las insignias tModLoader/Calamity/Vanilla separadas en la tarjeta de personaje."
+    ],
+    "fixed": []
+  },
+  {
+    "version": "1.3.0",
+    "date": "1 de septiembre de 2026",
+    "summary": "Quinta y sexta auditorías de Opus: el doll de Apariencia ya lleva el equipo puesto de verdad, navegación completa por teclado, y decenas de sprites/iconos reales de raíz.",
+    "added": [
+      "El doll de Apariencia refleja en vivo la armadura/vanidad puesta, con brazos y sprites reales del cuerpo.",
+      "Buscador \"¿Dónde lo tengo?\" entre TODOS los slots del personaje a la vez.",
+      "Navegación completa por teclado en los ~350 slots de la app (flechas, Supr, Ctrl+C/V, Intro).",
+      "Cabezas reales de NPC en los marcadores del mapa, e iconos vanilla extraídos de raíz (un fichero real por objeto, no un atlas recortado a mano)."
+    ],
+    "fixed": [
+      "El pelo no se ocultaba bajo cascos que deberían taparlo, ni pasaba por detrás del cuerpo con peinados largos.",
+      "\"¿Dónde lo tengo?\" podía dejar la interfaz bloqueada tras señalar un resultado."
+    ]
+  },
+  {
     "version": "1.2.0",
     "date": "1 de septiembre de 2026",
     "summary": "Rework estructural tras comparar con capturas reales de Terrasavr: panel \"Editar\" compartido, prefijos reales por tipo de objeto, tinte de pelo visual, tooltips en Builds, cursor y tooltip flotante en el mapa.",
