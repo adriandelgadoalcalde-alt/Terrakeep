@@ -952,6 +952,16 @@ public partial class MainViewModel : ObservableObject
 
         SelectSlot(result.Slot);
         result.Slot.TriggerEditFlash();
+        // Hallazgo real (feedback directo del usuario): cerrar el popup con IsWhereIsItOpen=false
+        // NUNCA vaciaba WhereIsItSearchText - el atenuado real de ApplyWhereIsItFilter
+        // (IsSearchMatch=false en TODOS los slots que no coincidieron, Opacity 0.35 via
+        // MainWindow.xaml:406) se quedaba aplicado en el resto de la app, sin ningun cuadro de
+        // busqueda visible que explique por que ("la animacion se queda hasta que borras lo que
+        // has buscado" - literal, el propio texto de busqueda era la unica llave que lo apagaba).
+        // Vaciar el texto aqui y refiltrar al instante (sin esperar el debounce de 180ms del
+        // Tick) quita el atenuado justo al navegar, como cualquier busqueda ya cerrada deberia.
+        WhereIsItSearchText = string.Empty;
+        ApplyWhereIsItFilter();
         IsWhereIsItOpen = false;
     }
 

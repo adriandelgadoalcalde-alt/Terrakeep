@@ -31,6 +31,7 @@ using TerrasavrNative.Core.Calamity;
 using TerrasavrNative.Core.Model;
 using TerrasavrNative.Core.Nbt;
 using TerrasavrNative.Core.PlrFormat;
+using TerrasavrNative.Core.WldFormat;
 
 internal static class Program
 {
@@ -2160,6 +2161,39 @@ internal static class Program
                 sw.Stop();
                 if (task.IsFaulted) throw task.Exception!;
                 Console.WriteLine($"X7-ASYNC: '{worldPath}' ({new FileInfo(worldPath).Length / 1024 / 1024}MB) -> {sw.ElapsedMilliseconds}ms totales, IsLoading={vm.Exploration.IsLoading} (esperado False), IsNotLoading={vm.Exploration.IsNotLoading} (esperado True), StatusMessage={vm.Exploration.StatusMessage}");
+
+                // A9-11-DIFICULTAD (pedido explicito del usuario, 5-sep-2026): unica prueba de
+                // ESCRITURA real de todo el arnes - WorldFileService.SaveGameMode toca un
+                // archivo .wld de verdad (backup .bak + File.Replace atomico). NUNCA sobre
+                // roca_negra.wld (el mundo real que el resto del arnes sigue usando despues de
+                // este bloque) - siempre sobre una COPIA en el scratchpad, borrada al final pase
+                // lo que pase (try/finally), para no dejar restos ni afectar a otra ejecucion.
+                string copiaDificultad = Path.Combine(Path.GetTempPath(), $"terrakeep-test-dificultad-{Guid.NewGuid():N}.wld");
+                try
+                {
+                    File.Copy(worldPath, copiaDificultad);
+                    byte[] bytesOriginales = File.ReadAllBytes(copiaDificultad);
+                    var mundoParaGuardar = WldReader.Read(bytesOriginales, readContainers: false);
+                    int modoOriginal = mundoParaGuardar.Header.GameMode;
+                    int modoNuevo = modoOriginal == 2 ? 0 : 2; // alterna a un valor real distinto, cualquiera que sea el de partida
+
+                    var mundoActualizado = WorldFileService.SaveGameMode(mundoParaGuardar, copiaDificultad, modoNuevo);
+                    bool bakExiste = File.Exists(copiaDificultad + ".bak");
+                    bool bakEsElOriginal = bakExiste && File.ReadAllBytes(copiaDificultad + ".bak").SequenceEqual(bytesOriginales);
+                    var releido = WldReader.ReadHeader(File.ReadAllBytes(copiaDificultad));
+                    byte[] bytesTrasGuardar = File.ReadAllBytes(copiaDificultad);
+                    int bytesDistintos = Enumerable.Range(0, bytesOriginales.Length).Count(i => bytesOriginales[i] != bytesTrasGuardar[i]);
+
+                    Console.WriteLine($"A9-11-DIFICULTAD: modo {modoOriginal}->{modoNuevo} sobre copia real de '{Path.GetFileName(worldPath)}' -> mundoActualizado.Header.GameMode={mundoActualizado.Header.GameMode} (esperado {modoNuevo}), releido de disco={releido.GameMode} (esperado {modoNuevo}), .bak existe={bakExiste} (esperado True) y coincide byte a byte con el original={bakEsElOriginal} (esperado True), bytes distintos entre original y guardado={bytesDistintos} (esperado <=4, solo el Int32 de GameMode)");
+                    if (mundoActualizado.Header.GameMode != modoNuevo || releido.GameMode != modoNuevo || !bakExiste || !bakEsElOriginal || bytesDistintos > 4)
+                        Console.WriteLine("FALLO: A9-11-DIFICULTAD - la escritura real de dificultad no hizo lo que se esperaba (build/backup/round-trip)");
+                }
+                finally
+                {
+                    File.Delete(copiaDificultad);
+                    File.Delete(copiaDificultad + ".bak");
+                    File.Delete(copiaDificultad + ".tmp");
+                }
 
                 // H5-11 (quinta auditoria de Opus): "el lanzador de mundos desaparece para
                 // siempre en cuanto cargas uno" - con un mundo YA cargado (justo aqui), la tira

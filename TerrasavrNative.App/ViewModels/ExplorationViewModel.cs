@@ -251,6 +251,56 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private string _worldSeedText = "—";
     [ObservableProperty] private string _worldGameModeText = "—";
     [ObservableProperty] private string _worldVersionText = "—";
+    // Pedido explicito del usuario (5-sep-2026): poder cambiar la dificultad del mundo, las 4
+    // posibilidades reales de Terraria - unica excepcion real de todo el visor a "Solo lectura"
+    // (ver WldWriter.PatchGameMode/WorldFileService.SaveGameMode). WorldGameMode es la seleccion
+    // EN MEMORIA (el chip que se ve marcado, cambia libremente sin tocar el disco);
+    // _savedWorldGameMode es el ultimo valor confirmado en el ARCHIVO real - solo cuando
+    // difieren tiene sentido "Guardar" (CanSaveWorldGameMode).
+    [ObservableProperty] private int _worldGameMode;
+    private int _savedWorldGameMode;
+    [ObservableProperty] private string? _worldGameModeSaveStatus;
+
+    partial void OnWorldGameModeChanged(int value) => SaveWorldGameModeCommand.NotifyCanExecuteChanged();
+
+    private static string GameModeLabel(int gameMode) => gameMode switch
+    {
+        1 => "Experto",
+        2 => "Maestro",
+        3 => "Viaje",
+        _ => "Clásico",
+    };
+
+    private bool CanSaveWorldGameMode() => IsWorldLoaded && _currentWorldPath != null && WorldGameMode != _savedWorldGameMode;
+
+    [RelayCommand(CanExecute = nameof(CanSaveWorldGameMode))]
+    private async Task SaveWorldGameModeAsync()
+    {
+        if (_world == null || _currentWorldPath == null) return;
+        int nuevoModo = WorldGameMode;
+        var mundoActual = _world;
+        string ruta = _currentWorldPath;
+        WorldGameModeSaveStatus = "Guardando...";
+        try
+        {
+            var mundoActualizado = await Task.Run(() => WorldFileService.SaveGameMode(mundoActual, ruta, nuevoModo));
+            _world = mundoActualizado;
+            _savedWorldGameMode = nuevoModo;
+            WorldGameModeText = GameModeLabel(nuevoModo);
+            WorldGameModeSaveStatus = $"Guardado en el archivo - copia de seguridad en {Path.GetFileName(ruta)}.bak";
+        }
+        catch (Exception ex)
+        {
+            // Nunca silencioso - un fallo aqui toca el archivo de mundo real del usuario, tiene
+            // que verse con toda claridad, no solo en StatusMessage (que otra accion cualquiera
+            // puede pisar en el instante siguiente).
+            WorldGameModeSaveStatus = $"No se pudo guardar: {ex.Message}";
+        }
+        finally
+        {
+            SaveWorldGameModeCommand.NotifyCanExecuteChanged();
+        }
+    }
     // F-7 (auditoria de Opus vs TEdit, E-06): "el punto de aparicion del mundo... su unico uso
     // en toda la aplicacion es calcular la distancia. No hay ningun marcador de spawn en el
     // mapa" - y la mazmorra "ni siquiera se leen" (ya corregido en WldReader/WldHeader, ver sus
@@ -694,8 +744,46 @@ public partial class ExplorationViewModel : ObservableObject
     // cuando la fila representa una VARIANTE real (U/V != 0 o el propio Type no es generico -
     // en la practica, cualquier fila de "Cofres/Por tipo" con U/V reales usa SpriteVariants
     // para no traer TODOS los cofres del mismo Type).
+    // Hallazgo real (feedback directo del usuario, la misma captura que ya mostraba "Mineral de
+    // hierro (1, 844)/(1, 845)/(1, 846)..." en fila): pulsar el NOMBRE de una fila de Minerales/
+    // Objetos (Tiles/Paredes/Liquidos) sin marcar ningun tick seguia yendo por
+    // RunWorldSearchAsyncWithQuery -> WorldSearch.Run, el mismo barrido x->y con tope de 1000
+    // (WorldSearchQuery.DisplayLimit) que el propio informe ya diagnostico como causa real de E6
+    // ("cubre solo el borde izquierdo del mundo, no es ningun filtro de sprite") - C-04 solo lo
+    // corrigio para "Marcar en el mapa" (ApplyTileHighlightAsync), nunca para el clic simple. Un
+    // mineral comun agota los 1000 resultados dentro de las primeras columnas del mundo, asi que
+    // la lista entera (y cualquier fila que se pulse despues para navegar) cae siempre cerca de
+    // x=0 - el "monton de cuadraditos al final del mundo a la izquierda" que describe el clic en
+    // la primera veta. Los tres helpers de abajo ya agrupan por veta con OreVeinFinder (limite
+    // real de posiciones, no de tiles sueltos) para "Marcar en el mapa" - reutilizados aqui SIN
+    // pintar el resaltado (paint:false, no hace falta regenerar el bitmap de 80,6MB para consultar
+    // una sola fila) resuelve el sesgo en la RAIZ para cualquier consumidor, no solo el boton.
     [RelayCommand]
-    private void SearchInventoryRow(WorldInventoryRowViewModel row) => _ = RunWorldSearchAsyncWithQuery(BuildSingleRowQuery(row));
+    private void SearchInventoryRow(WorldInventoryRowViewModel row)
+    {
+        switch (SelectedCategory)
+        {
+            case WorldSearchCategory.Ores:
+                _ = ApplyTileHighlightAsync(new HashSet<int> { row.Id }, "veta", paint: false);
+                break;
+            case WorldSearchCategory.Objects when ObjectsViewMode == 0:
+                _ = ApplyTileHighlightAsync(new HashSet<int> { row.Id }, "grupo", paint: false);
+                break;
+            case WorldSearchCategory.Objects when ObjectsViewMode == 1:
+                _ = ApplyWallHighlightAsync(new HashSet<int> { row.Id }, paint: false);
+                break;
+            case WorldSearchCategory.Objects:
+                _ = ApplyLiquidHighlightAsync(new HashSet<byte> { (byte)row.Id }, paint: false);
+                break;
+            // Cofres: SpriteVariants/ChestItemIds no son un "tipo de tile" que OreVeinFinder sepa
+            // agrupar (una variante de sprite concreta, o "que hay dentro" - ni siquiera es un
+            // barrido de tiles en el segundo caso) - mismo camino de siempre, sin el sesgo real de
+            // arriba: un mundo real tiene cientos de cofres, muy por debajo del tope de 1000.
+            default:
+                _ = RunWorldSearchAsyncWithQuery(BuildSingleRowQuery(row));
+                break;
+        }
+    }
 
     // C-03 (informe de pulido final, cierra E5): la fuente de filas incluye tambien los 3 grupos
     // de Minerales (union de las 4 colecciones), y el switch gana la rama Ores - antes Minerales
@@ -705,31 +793,35 @@ public partial class ExplorationViewModel : ObservableObject
     {
         var marcadas = Inventory.Concat(OreMetals).Concat(OreGems).Concat(OreTargets).Where(r => r.IsChecked).ToList();
         if (marcadas.Count == 0) return;
-        WorldSearchQuery query = SelectedCategory switch
+        switch (SelectedCategory)
         {
-            WorldSearchCategory.Chests when ChestViewMode == 0 =>
-                new WorldSearchQuery { SpriteVariants = marcadas.Select(r => (r.Id, r.U, r.V)).ToHashSet() },
-            WorldSearchCategory.Chests => new WorldSearchQuery { ChestItemIds = marcadas.Select(r => r.Id).ToHashSet() },
-            WorldSearchCategory.Ores => new WorldSearchQuery { TileTypes = marcadas.Select(r => r.Id).ToHashSet() },
-            WorldSearchCategory.Objects when ObjectsViewMode == 0 => new WorldSearchQuery { TileTypes = marcadas.Select(r => r.Id).ToHashSet() },
-            WorldSearchCategory.Objects when ObjectsViewMode == 1 => new WorldSearchQuery { WallIds = marcadas.Select(r => r.Id).ToHashSet() },
-            WorldSearchCategory.Objects => new WorldSearchQuery { LiquidTypes = marcadas.Select(r => (byte)r.Id).ToHashSet() },
-            _ => new WorldSearchQuery(),
-        };
-        _ = RunWorldSearchAsyncWithQuery(query);
+            case WorldSearchCategory.Chests when ChestViewMode == 0:
+                _ = RunWorldSearchAsyncWithQuery(new WorldSearchQuery { SpriteVariants = marcadas.Select(r => (r.Id, r.U, r.V)).ToHashSet() });
+                break;
+            case WorldSearchCategory.Chests:
+                _ = RunWorldSearchAsyncWithQuery(new WorldSearchQuery { ChestItemIds = marcadas.Select(r => r.Id).ToHashSet() });
+                break;
+            // Mismo motivo que SearchInventoryRow de arriba: agrupado por veta/grupo real, sin
+            // pintar el resaltado (paint:false) - "Buscar seleccionados" es una lista, no un mapa.
+            case WorldSearchCategory.Ores:
+                _ = ApplyTileHighlightAsync(marcadas.Select(r => r.Id).ToHashSet(), "veta", paint: false);
+                break;
+            case WorldSearchCategory.Objects when ObjectsViewMode == 0:
+                _ = ApplyTileHighlightAsync(marcadas.Select(r => r.Id).ToHashSet(), "grupo", paint: false);
+                break;
+            case WorldSearchCategory.Objects when ObjectsViewMode == 1:
+                _ = ApplyWallHighlightAsync(marcadas.Select(r => r.Id).ToHashSet(), paint: false);
+                break;
+            case WorldSearchCategory.Objects:
+                _ = ApplyLiquidHighlightAsync(marcadas.Select(r => (byte)r.Id).ToHashSet(), paint: false);
+                break;
+        }
     }
 
     private WorldSearchQuery BuildSingleRowQuery(WorldInventoryRowViewModel row) => SelectedCategory switch
     {
         WorldSearchCategory.Chests when ChestViewMode == 0 => new WorldSearchQuery { SpriteVariants = new HashSet<(int, short, short)> { (row.Id, row.U, row.V) } },
         WorldSearchCategory.Chests => new WorldSearchQuery { ChestItemIds = new HashSet<int> { row.Id } },
-        // C-03: los minerales SON tiles (OreTileCatalog) - misma rama real que Objetos > Tiles.
-        // Antes pulsar el nombre de un mineral no hacia nada (unico sitio de la barra lateral
-        // donde un clic no llevaba a ningun resultado).
-        WorldSearchCategory.Ores => new WorldSearchQuery { TileTypes = new HashSet<int> { row.Id } },
-        WorldSearchCategory.Objects when ObjectsViewMode == 0 => new WorldSearchQuery { TileTypes = new HashSet<int> { row.Id } },
-        WorldSearchCategory.Objects when ObjectsViewMode == 1 => new WorldSearchQuery { WallIds = new HashSet<int> { row.Id } },
-        WorldSearchCategory.Objects => new WorldSearchQuery { LiquidTypes = new HashSet<byte> { (byte)row.Id } },
         _ => new WorldSearchQuery(),
     };
 
@@ -782,7 +874,13 @@ public partial class ExplorationViewModel : ObservableObject
         _highlightDebounceTimer.Start();
     }
 
-    private async Task ApplyTileHighlightAsync(IReadOnlySet<int> tileIds, string unitLabel)
+    // Hallazgo real (feedback directo del usuario): "paint" separa las dos mitades que antes
+    // siempre iban juntas - el agrupado por veta (OreVeinFinder, barato) de la capa de resaltado
+    // (WorldHighlightRenderer, 80,6MB por repintado en un mundo Grande). SearchInventoryRow/
+    // SearchCheckedInventory de arriba solo quieren la lista agrupada (paint:false, nunca tocan
+    // WorldHighlight ni cuentan como "Marcar en el mapa" - ni pintan ni avisan de legibilidad,
+    // eso solo tiene sentido cuando de verdad se va a pintar el mapa entero).
+    private async Task ApplyTileHighlightAsync(IReadOnlySet<int> tileIds, string unitLabel, bool paint = true)
     {
         if (_world == null) return;
         if (tileIds.Count == 0) { ClearOreMarks(); return; }
@@ -795,22 +893,26 @@ public partial class ExplorationViewModel : ObservableObject
         {
             var (highlight, vetas, total) = await Task.Run(() =>
             {
-                var img = WorldHighlightRenderer.Render(world, tileIds, Colors.Orange, cts.Token);
+                var img = paint ? WorldHighlightRenderer.Render(world, tileIds, Colors.Orange, cts.Token) : null;
                 var v = OreVeinFinder.Find(world, tileIds, limit: 1000, out int t, cts.Token);
                 return (img, v, t);
             }, cts.Token);
             if (myGeneration != _worldSearchGeneration) return;
             var rows = vetas.Select(vein => new WorldSearchHitRowViewModel(
                 new WorldSearchHit(vein.CenterX, vein.CenterY, $"{_tileNames.TileName(vein.Type)} ({vein.TileCount:N0} tiles)", WorldSearchKind.OreVein))).ToList();
-            long cubiertos = tileIds.Sum(id => (long)(_presence?.TileCounts.GetValueOrDefault(id) ?? 0));
-            ApplyHighlightResult(highlight, rows, vetas.Count, total, unitLabel, LegibilityWarning(cubiertos));
+            if (paint)
+            {
+                long cubiertos = tileIds.Sum(id => (long)(_presence?.TileCounts.GetValueOrDefault(id) ?? 0));
+                ApplyHighlightResult(highlight!, rows, vetas.Count, total, unitLabel, LegibilityWarning(cubiertos));
+            }
+            else ApplyGroupedSearchResult(rows, vetas.Count, total, unitLabel);
         }
         catch (OperationCanceledException) { }
     }
 
     // C-04: gemela de ApplyTileHighlightAsync, agrupando por Wall (WorldHighlightRenderer.
     // RenderWalls + OreVeinFinder.FindWalls) - generalizacion a "Objetos > Paredes".
-    private async Task ApplyWallHighlightAsync(IReadOnlySet<int> wallIds)
+    private async Task ApplyWallHighlightAsync(IReadOnlySet<int> wallIds, bool paint = true)
     {
         if (_world == null) return;
         if (wallIds.Count == 0) { ClearOreMarks(); return; }
@@ -823,22 +925,26 @@ public partial class ExplorationViewModel : ObservableObject
         {
             var (highlight, grupos, total) = await Task.Run(() =>
             {
-                var img = WorldHighlightRenderer.RenderWalls(world, wallIds, Colors.Orange, cts.Token);
+                var img = paint ? WorldHighlightRenderer.RenderWalls(world, wallIds, Colors.Orange, cts.Token) : null;
                 var v = OreVeinFinder.FindWalls(world, wallIds, limit: 1000, out int t, cts.Token);
                 return (img, v, t);
             }, cts.Token);
             if (myGeneration != _worldSearchGeneration) return;
             var rows = grupos.Select(g => new WorldSearchHitRowViewModel(
                 new WorldSearchHit(g.CenterX, g.CenterY, $"{_tileNames.WallName(g.Type)} ({g.TileCount:N0} tiles)", WorldSearchKind.OreVein))).ToList();
-            long cubiertos = wallIds.Sum(id => (long)(_presence?.WallCounts.GetValueOrDefault(id) ?? 0));
-            ApplyHighlightResult(highlight, rows, grupos.Count, total, "grupo", LegibilityWarning(cubiertos));
+            if (paint)
+            {
+                long cubiertos = wallIds.Sum(id => (long)(_presence?.WallCounts.GetValueOrDefault(id) ?? 0));
+                ApplyHighlightResult(highlight!, rows, grupos.Count, total, "grupo", LegibilityWarning(cubiertos));
+            }
+            else ApplyGroupedSearchResult(rows, grupos.Count, total, "grupo");
         }
         catch (OperationCanceledException) { }
     }
 
     // C-04: gemela de ApplyTileHighlightAsync, agrupando por LiquidType (WorldHighlightRenderer.
     // RenderLiquids + OreVeinFinder.FindLiquids) - generalizacion a "Objetos > Liquidos".
-    private async Task ApplyLiquidHighlightAsync(IReadOnlySet<byte> liquidTypes)
+    private async Task ApplyLiquidHighlightAsync(IReadOnlySet<byte> liquidTypes, bool paint = true)
     {
         if (_world == null) return;
         if (liquidTypes.Count == 0) { ClearOreMarks(); return; }
@@ -851,25 +957,37 @@ public partial class ExplorationViewModel : ObservableObject
         {
             var (highlight, grupos, total) = await Task.Run(() =>
             {
-                var img = WorldHighlightRenderer.RenderLiquids(world, liquidTypes, Colors.Orange, cts.Token);
+                var img = paint ? WorldHighlightRenderer.RenderLiquids(world, liquidTypes, Colors.Orange, cts.Token) : null;
                 var v = OreVeinFinder.FindLiquids(world, liquidTypes, limit: 1000, out int t, cts.Token);
                 return (img, v, t);
             }, cts.Token);
             if (myGeneration != _worldSearchGeneration) return;
             var rows = grupos.Select(g => new WorldSearchHitRowViewModel(
                 new WorldSearchHit(g.CenterX, g.CenterY, $"{WorldSearch.LiquidName((byte)g.Type)} ({g.TileCount:N0} tiles)", WorldSearchKind.OreVein))).ToList();
-            long cubiertos = liquidTypes.Sum(id => (long)(_presence?.LiquidCounts.GetValueOrDefault(id) ?? 0));
-            ApplyHighlightResult(highlight, rows, grupos.Count, total, "grupo", LegibilityWarning(cubiertos));
+            if (paint)
+            {
+                long cubiertos = liquidTypes.Sum(id => (long)(_presence?.LiquidCounts.GetValueOrDefault(id) ?? 0));
+                ApplyHighlightResult(highlight!, rows, grupos.Count, total, "grupo", LegibilityWarning(cubiertos));
+            }
+            else ApplyGroupedSearchResult(rows, grupos.Count, total, "grupo");
         }
         catch (OperationCanceledException) { }
+    }
+
+    private void ApplyGroupedSearchResult(List<WorldSearchHitRowViewModel> rows, int shown, int total, string unitLabel)
+    {
+        _lastWorldSearchRows = rows;
+        _worldSearchCurrentIndex = -1;
+        ApplyWorldSearchOrder();
+        WorldSearchSummary = total > shown
+            ? $"{shown:N0} de {total:N0} {unitLabel}(s) (limitado a 1000)"
+            : $"{total:N0} {unitLabel}(s)";
     }
 
     private void ApplyHighlightResult(WriteableBitmap highlight, List<WorldSearchHitRowViewModel> rows, int shown, int total, string unitLabel, string? warning)
     {
         WorldHighlight = highlight;
-        _lastWorldSearchRows = rows;
-        _worldSearchCurrentIndex = -1;
-        ApplyWorldSearchOrder();
+        ApplyGroupedSearchResult(rows, shown, total, unitLabel);
         string resumen = total > shown
             ? $"{shown:N0} de {total:N0} {unitLabel}(s) (limitado a 1000 en la lista - el mapa las marca TODAS)"
             : $"{total:N0} {unitLabel}(s)";
@@ -1337,13 +1455,10 @@ public partial class ExplorationViewModel : ObservableObject
             WorldTitle = world.Header.Title;
             WorldSizeText = $"{world.Header.TilesWide}×{world.Header.TilesHigh}";
             WorldSeedText = world.Header.Seed;
-            WorldGameModeText = world.Header.GameMode switch
-            {
-                1 => "Experto",
-                2 => "Maestro",
-                3 => "Viaje",
-                _ => "Clásico",
-            };
+            WorldGameModeText = GameModeLabel(world.Header.GameMode);
+            _savedWorldGameMode = world.Header.GameMode;
+            WorldGameMode = world.Header.GameMode;
+            WorldGameModeSaveStatus = null;
             WorldVersionText = world.Header.Version.ToString();
             WorldSpawnX = world.Header.SpawnX;
             WorldSpawnY = world.Header.SpawnY;
@@ -1359,6 +1474,10 @@ public partial class ExplorationViewModel : ObservableObject
             OnPropertyChanged(nameof(SignCount));
             OnPropertyChanged(nameof(WorldAirPercentText));
             UpdateCurrentWorldPath(wldPath);
+            // IsWorldLoaded (de la que depende CanSaveWorldGameMode) cambia DESPUES de fijar
+            // WorldGameMode arriba - reevaluar aqui explicitamente en vez de fiarse de que algun
+            // evento de UI ambiental fuerce un requery de WPF.
+            SaveWorldGameModeCommand.NotifyCanExecuteChanged();
         }
         catch (Exception ex)
         {
@@ -1367,8 +1486,10 @@ public partial class ExplorationViewModel : ObservableObject
             WorldHighlight = null;
             WorldSizeText = "—";
             IsWorldLoaded = false;
+            WorldGameModeSaveStatus = null;
             StatusMessage = $"Error al leer el mundo: {ex.Message}";
             UpdateCurrentWorldPath(null); // un fallo real no debe dejar ninguna pildora marcada como "cargada"
+            SaveWorldGameModeCommand.NotifyCanExecuteChanged();
         }
         finally
         {

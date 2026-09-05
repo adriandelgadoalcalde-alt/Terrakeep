@@ -3644,9 +3644,9 @@
                          colocar/quitar bloques (a diferencia de Objetos/Apariencia/etc., donde
                          cada cambio SI se guarda). -->
                     <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="99" Padding="9,3" Margin="10,0,0,0"
-                            VerticalAlignment="Center" ToolTip="Este visor solo lee el mundo (mismo mundo que carga el propio Terraria) - no coloca ni quita bloques, no se puede editar ni guardar desde aqui"
+                            VerticalAlignment="Center" ToolTip="Este visor solo lee el mundo (mismo mundo que carga el propio Terraria) - no coloca ni quita bloques. Única excepción real, pedida explícitamente: la dificultad del mundo, editable en 'Este mundo' con copia de seguridad automática"
                             Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Solo lectura" Style="{StaticResource CaptionText}" />
+                        <TextBlock Text="Solo lectura*" Style="{StaticResource CaptionText}" />
                     </Border>
                     <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center"
                                 Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
@@ -4224,9 +4224,34 @@
                                     <Run Text="Semilla: " /><Run Text="{Binding Exploration.WorldSeedText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </TextBlock>
                                 <TextBlock Style="{StaticResource CaptionText}" Margin="0,2,0,0">
-                                    <Run Text="Modo: " /><Run Text="{Binding Exploration.WorldGameModeText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
-                                    <Run Text=" · Version " /><Run Text="{Binding Exploration.WorldVersionText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                    <Run Text="Version " /><Run Text="{Binding Exploration.WorldVersionText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </TextBlock>
+                                <!-- Hallazgo real (feedback directo del usuario, 5-sep-2026): unica
+                                     excepcion real a "Solo lectura" en toda la app - la dificultad
+                                     del mundo, las 4 posibilidades reales de Terraria (ver tambien
+                                     el tooltip actualizado de la insignia "Solo lectura" de arriba).
+                                     Mismo patron de chips (RadioButton+EnumEquals) ya usado abajo
+                                     para ChestViewMode/ObjectsViewMode - tocar un chip NUNCA
+                                     escribe nada por si solo, solo cambia la seleccion en memoria;
+                                     el boton "Guardar" (solo activo si de verdad cambio algo) es
+                                     el UNICO punto que toca el archivo real. -->
+                                <TextBlock Text="Dificultad" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,4" />
+                                <UniformGrid Columns="4">
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Content="Clásico" Padding="2,4" Margin="0,0,3,0"
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}" />
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Content="Experto" Padding="2,4" Margin="3,0,3,0"
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}" />
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Content="Maestro" Padding="2,4" Margin="3,0,3,0"
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}" />
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Content="Viaje" Padding="2,4" Margin="3,0,0,0"
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=3}" />
+                                </UniformGrid>
+                                <Button Content="Guardar dificultad en el archivo" Margin="0,6,0,0" HorizontalAlignment="Stretch"
+                                        Command="{Binding Exploration.SaveWorldGameModeCommand}"
+                                        ToolTip="Escribe el nuevo modo directamente en el archivo .wld del mundo (crea antes una copia de seguridad .bak automática) - la única acción de escritura real de todo el visor de Exploración" />
+                                <TextBlock Text="{Binding Exploration.WorldGameModeSaveStatus}" Style="{StaticResource CaptionText}"
+                                           TextWrapping="Wrap" Margin="0,4,0,0"
+                                           Visibility="{Binding Exploration.WorldGameModeSaveStatus, Converter={StaticResource NullToCollapsed}}" />
                                 <Border Height="1" Background="{StaticResource BorderBrush0}" Margin="0,8" />
                                 <TextBlock Style="{StaticResource CaptionText}">
                                     <Run Text="Aire: " /><Run Text="{Binding Exploration.WorldAirPercentText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
@@ -4372,12 +4397,22 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
+                                <!-- Hallazgo real (feedback directo del usuario): esta lista de
+                                     resultados (coordenadas de cada mena/objeto/NPC encontrado) no
+                                     tenia ninguna forma de contraerse/cerrarse salvo lanzar una
+                                     busqueda nueva - panel COMPARTIDO por las 5 categorias (Todo/
+                                     NPCs/Cofres/Minerales/Objetos), un unico boton aqui las cierra
+                                     todas. ClearOreMarksCommand ya limpiaba resaltado+lista+resumen
+                                     de por si (nombre historico de "Minerales", logica generica). -->
+                                <Button Grid.Column="1" Content="&#10005; Cerrar" Tag="Ghost" Padding="8,2" Margin="0,0,4,0"
+                                        ToolTip="Cerrar esta lista de resultados" Command="{Binding Exploration.ClearOreMarksCommand}" />
                                 <!-- Navegacion circular anterior/siguiente - mismo gesto real que
                                      NavigateNext/NavigatePrevious de TEdit (pan, sin zoom). -->
-                                <Button Grid.Column="1" Content="&#8249;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
+                                <Button Grid.Column="2" Content="&#8249;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
                                         ToolTip="Resultado anterior (Shift+F3)" Command="{Binding Exploration.PreviousWorldSearchResultCommand}" />
-                                <Button Grid.Column="2" Content="&#8250;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
+                                <Button Grid.Column="3" Content="&#8250;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
                                         ToolTip="Resultado siguiente (F3)" Command="{Binding Exploration.NextWorldSearchResultCommand}" />
                             </Grid>
                             <ListBox MaxHeight="240" ItemContainerStyle="{StaticResource VirtualRowContainer}"

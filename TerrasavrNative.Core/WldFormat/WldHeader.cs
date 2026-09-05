@@ -64,4 +64,19 @@ public sealed class WldHeader
         if (worldY > GroundLevel) return "Earth";
         return "Sky";
     }
+
+    // Pedido explicito del usuario (5-sep-2026): editar la dificultad del mundo (WldWriter.
+    // PatchGameMode ya la escribe en el ARCHIVO real) - tras un guardado con exito, el WldWorld
+    // en memoria tiene que reflejar el nuevo valor sin releer el mundo entero (releer un mundo
+    // Grande cuesta ~1.4s reales y reiniciaria zoom/busqueda/filtros de Exploracion sin
+    // necesidad, el unico campo que cambio de verdad es este). Todas las demas propiedades son
+    // `init`-only a proposito (WldHeader/WldWorld son inmutables salvo por este unico camino
+    // explicito) - copiadas tal cual, nunca recalculadas.
+    public WldHeader WithGameMode(int newGameMode) => new()
+    {
+        Version = Version, Pointers = Pointers, TileFrameImportant = TileFrameImportant, Title = Title,
+        WorldId = WorldId, TilesHigh = TilesHigh, TilesWide = TilesWide, SpawnX = SpawnX, SpawnY = SpawnY,
+        GroundLevel = GroundLevel, RockLevel = RockLevel, Seed = Seed, GameMode = newGameMode,
+        DungeonX = DungeonX, DungeonY = DungeonY,
+    };
 }

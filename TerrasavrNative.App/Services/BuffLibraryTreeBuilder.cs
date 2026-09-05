@@ -137,7 +137,15 @@ public static class BuffLibraryTreeBuilder
             return node;
         }
 
-        var root = new CategoryNodeViewModel("Calamity (mod)", "Calamity");
+        // Hallazgo real (feedback directo tras dar por cerrado C-08): la bitacora del bloque 1
+        // afirmaba que "Calamity (mod)" ya llevaba IconPath "mismo criterio que el resto" pero
+        // el codigo real nunca se lo asigno - solo "Indice" lo recibio de verdad. Mismo criterio
+        // YA establecido en LibraryCategoryTreeBuilder.BuildCalamityRoot para el arbol de
+        // OBJETOS: ningun buff puede representar "el mod entero", se usa el icono del objeto
+        // real CalamityMod/Calamity (el trofeo del mod).
+        var rootIconEntry = service.CalamityCatalog.ByModAndInternal("CalamityMod", "Calamity");
+        string? rootIcon = rootIconEntry?.Icon is { } rootIconFile ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + rootIconFile : null;
+        var root = new CategoryNodeViewModel("Calamity (mod)", "Calamity") { IconPath = rootIcon };
         foreach (var cat in cats)
             root.Children.Add(BuildCategoryNode(cat));
         ApplyOrderedUnion(root);

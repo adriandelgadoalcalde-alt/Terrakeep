@@ -190,7 +190,10 @@ public static class WldReader
     // cada byte (confirmado con una traza manual del algoritmo real del lector JS - coincide
     // exactamente con el orden de bits que ya usa System.Collections.BitArray al construirse
     // desde un byte[], asi que se reutiliza en vez de reimplementarlo a mano).
-    private static bool[] ReadBitArray(BinaryReader reader)
+    // internal (no private): WldWriter.PatchGameMode necesita replicar EXACTAMENTE esta misma
+    // lectura para calcular el offset real de GameMode - reutilizada, nunca duplicada, para que
+    // los dos caminos no puedan divergir con el tiempo.
+    internal static bool[] ReadBitArray(BinaryReader reader)
     {
         short length = reader.ReadInt16();
         int byteCount = (length + 7) / 8;
