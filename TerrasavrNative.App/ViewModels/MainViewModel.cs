@@ -385,7 +385,7 @@ public partial class MainViewModel : ObservableObject
             // Exploration.StatusMessage (no el StatusMessage global) - es el que se ve de
             // verdad en la pestaña a la que se acaba de saltar, ver el TextBlock real en
             // MainWindow.xaml bajo el mapa.
-            Exploration.StatusMessage = "Carga un mundo (.wld) para ver este punto en el mapa.";
+            Exploration.StatusMessage = LocalizationService.Instance["status_load_world_first"];
             return;
         }
         Exploration.NavigateToTile(row.SpawnX, row.SpawnY);
@@ -1083,8 +1083,8 @@ public partial class MainViewModel : ObservableObject
             IsCharacterLoaded = true;
             int calamityCount = _loaded.MergedContainers.Values.Sum(items => items.Count(i => i.IsCalamity));
             StatusMessage = HasCalamityData
-                ? $"Cargado '{_loaded.Character.Name}' - {calamityCount} objeto(s) de Calamity detectado(s)."
-                : $"Cargado '{_loaded.Character.Name}' - personaje 100% vanilla (sin .tplr).";
+                ? LocalizationService.Instance.Format("status_loaded_with_calamity", _loaded.Character.Name, calamityCount)
+                : LocalizationService.Instance.Format("status_loaded_vanilla_only", _loaded.Character.Name);
             GlobalErrorMessage = null; // H-3: una carga con exito limpia cualquier error global anterior
             // H5-07: el ULTIMO personaje se recuerda de inmediato, no solo al cerrar la app - si
             // la app se cierra en seco (corte de luz, Administrador de tareas), la proxima
@@ -1107,7 +1107,7 @@ public partial class MainViewModel : ObservableObject
             // (los 3 comandos ya comprueban _loaded==null antes de hacer nada).
             _loaded = null;
             IsCharacterLoaded = false;
-            StatusMessage = $"Error al cargar: {ex.Message}";
+            StatusMessage = LocalizationService.Instance.Format("error_loading", ex.Message);
             GlobalErrorMessage = StatusMessage; // H-3: visible en cualquier pestaña, no solo Personaje
         }
         finally
@@ -1159,7 +1159,7 @@ public partial class MainViewModel : ObservableObject
             // personaje que antes no tenia ninguno (ej. el primer objeto de Calamity colocado
             // en un personaje 100% vanilla) - solo faltaba volver a leerlo aqui.
             HasCalamityData = _loaded.TplrPath != null;
-            StatusMessage = $"Guardado: {Path.GetFileName(_loaded.PlrPath)}" +
+            StatusMessage = LocalizationService.Instance.Format("status_saved", Path.GetFileName(_loaded.PlrPath)) +
                 (_loaded.TplrPath != null ? $" + {Path.GetFileName(_loaded.TplrPath)}" : "");
             IsDirty = false;
             SaveConfirmationVisible = true;
@@ -1171,7 +1171,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error al guardar: {ex.Message}";
+            StatusMessage = LocalizationService.Instance.Format("error_saving", ex.Message);
             GlobalErrorMessage = StatusMessage; // H-3: visible en cualquier pestaña, no solo Personaje
         }
         finally
@@ -1223,11 +1223,11 @@ public partial class MainViewModel : ObservableObject
             // LoadFromPath NUNCA relanza (traga sus propias excepciones, T-22) - si la recarga
             // en si fallo, ya dejo su propio StatusMessage/GlobalErrorMessage de error reales;
             // pisarlo aqui con un mensaje de exito falso seria peor que no decir nada.
-            if (IsCharacterLoaded) StatusMessage = $"Deshecho el último guardado de '{nombreAntesDeRecargar}'.";
+            if (IsCharacterLoaded) StatusMessage = LocalizationService.Instance.Format("status_undo_last_save", nombreAntesDeRecargar);
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error al deshacer el último guardado: {ex.Message}";
+            StatusMessage = LocalizationService.Instance.Format("error_undo_last_save", ex.Message);
             GlobalErrorMessage = StatusMessage; // H-3: visible en cualquier pestaña, no solo Personaje
         }
     }
@@ -1344,7 +1344,7 @@ public partial class MainViewModel : ObservableObject
         // preguntaba nada (IsDirty==false) - perdida silenciosa de todo el trabajo. Mismo
         // escenario que N-2 (Bloque 0) existia para cerrar.
         MarkDirty();
-        StatusMessage = $"Investigación completa aplicada ({_loaded.Character.Research.Count} objetos) - pulsa Guardar para conservarlo.";
+        StatusMessage = LocalizationService.Instance.Format("status_research_all_applied", _loaded.Character.Research.Count);
     }
 
     // Auto-equipar desde el panel Builds - regla de negocio real extraida a
@@ -1360,7 +1360,7 @@ public partial class MainViewModel : ObservableObject
         // atras real - ahora es UNA sola entrada de deshacer, cubriendo Inventario Y el
         // Equipamiento entero (AutoEquipService.Apply toca ambos).
         AutoEquipService.Result result = default;
-        RunAsUndoableBatch("Auto-equipar", EquipmentGroup.AllContainers.Append(Containers.First(c => c.Key == "inventory")),
+        RunAsUndoableBatch(LocalizationService.Instance["action_auto_equip"], EquipmentGroup.AllContainers.Append(Containers.First(c => c.Key == "inventory")),
             () => result = AutoEquipService.Apply(gear, EquipmentGroup, Containers.First(c => c.Key == "inventory"), _service));
         // Bd-c (segunda auditoria de Opus, Fable): "sin resolver" y "sin hueco libre" son
         // causas reales distintas (una no tiene arreglo por parte del usuario, la otra si -
@@ -1399,10 +1399,10 @@ public partial class MainViewModel : ObservableObject
         // vez - origen y destino - por eso ninguno de los dos por separado bastaria).
         int moved = 0;
         var destino = StorageGroup.Current;
-        RunAsUndoableBatch("Mover todo al almacén", [InventoryContainer, destino], () => moved = InventoryContainer.MoveAllTo(destino));
+        RunAsUndoableBatch(LocalizationService.Instance["action_move_all_to_storage"], [InventoryContainer, destino], () => moved = InventoryContainer.MoveAllTo(destino));
         if (moved == 0)
         {
-            StatusMessage = "Nada que mover: el inventario está vacío o el almacén seleccionado no tiene hueco libre.";
+            StatusMessage = LocalizationService.Instance["status_nothing_to_move"];
             return;
         }
         MarkDirty();
@@ -1410,7 +1410,7 @@ public partial class MainViewModel : ObservableObject
         // ("Movido"/"Movidos") pero el sustantivo se quedaba en el placeholder literal
         // "objeto(s)" sin concordar nunca de verdad (singular real leia "Movido 1 objeto(s)").
         bool plural = moved != 1;
-        StatusMessage = $"Movido{(plural ? "s" : "")} {moved} objeto{(plural ? "s" : "")} al almacén seleccionado - pulsa Guardar para conservarlo.";
+        StatusMessage = LocalizationService.Instance.Format(plural ? "status_moved_plural" : "status_moved_singular", moved);
     }
 
     // H5-12 (quinta auditoria de Opus): "un clic en una tarjeta de la Libreria no hace
@@ -1422,7 +1422,7 @@ public partial class MainViewModel : ObservableObject
         var target = InventoryContainer?.Slots.FirstOrDefault(s => s.IsEmpty);
         if (target == null)
         {
-            StatusMessage = "El inventario esta lleno - no hay ningun hueco libre donde colocarlo con doble clic.";
+            StatusMessage = LocalizationService.Instance["status_inventory_full"];
             return;
         }
         target.PlaceItem(itemId);
@@ -1437,7 +1437,7 @@ public partial class MainViewModel : ObservableObject
         var target = Buffs.Container?.Slots.FirstOrDefault(s => s.IsEmpty);
         if (target == null)
         {
-            StatusMessage = "No hay ningun hueco de buff libre donde colocarlo con doble clic.";
+            StatusMessage = LocalizationService.Instance["status_no_free_buff_slot"];
             return;
         }
         target.PlaceBuff(buffId);
@@ -1454,11 +1454,11 @@ public partial class MainViewModel : ObservableObject
         {
             var file = ItemSetFile.FromItems(container.Slots.Select(s => s.Item), _service.CalamityCatalog, _service.RoguePrefixCatalog);
             File.WriteAllBytes(path, file.Write());
-            StatusMessage = $"Conjunto de {container.DisplayName} guardado: {Path.GetFileName(path)}";
+            StatusMessage = LocalizationService.Instance.Format("status_set_saved", container.DisplayName, Path.GetFileName(path));
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error al guardar el conjunto: {ex.Message}";
+            StatusMessage = LocalizationService.Instance.Format("error_saving_set", ex.Message);
             GlobalErrorMessage = StatusMessage;
         }
     }
@@ -1476,7 +1476,7 @@ public partial class MainViewModel : ObservableObject
             var file = ItemSetFile.Read(File.ReadAllBytes(path));
             var items = file.ToItems(_service.CalamityCatalog, _service.RoguePrefixCatalog);
 
-            RunAsUndoableBatch(append ? "Añadir conjunto" : "Cargar conjunto", [container], () =>
+            RunAsUndoableBatch(LocalizationService.Instance[append ? "action_add_set" : "action_load_set"], [container], () =>
             {
                 if (append)
                 {
@@ -1497,11 +1497,11 @@ public partial class MainViewModel : ObservableObject
                 }
             });
 
-            StatusMessage = $"Conjunto {(append ? "añadido a" : "cargado en")} {container.DisplayName}: {Path.GetFileName(path)} - pulsa Guardar para conservarlo.";
+            StatusMessage = LocalizationService.Instance.Format(append ? "status_set_added_to" : "status_set_loaded_into", container.DisplayName, Path.GetFileName(path));
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error al cargar el conjunto: {ex.Message}";
+            StatusMessage = LocalizationService.Instance.Format("error_loading_set", ex.Message);
             GlobalErrorMessage = StatusMessage;
         }
     }
@@ -1517,11 +1517,11 @@ public partial class MainViewModel : ObservableObject
         {
             var file = BuffSetFile.FromBuffs(container.Slots.Select(s => (s.Buff.Id, s.Buff.Time)), _service.CalamityBuffCatalog);
             File.WriteAllBytes(path, file.Write());
-            StatusMessage = $"Conjunto de {container.DisplayName} guardado: {Path.GetFileName(path)}";
+            StatusMessage = LocalizationService.Instance.Format("status_set_saved", container.DisplayName, Path.GetFileName(path));
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error al guardar el conjunto de buffs: {ex.Message}";
+            StatusMessage = LocalizationService.Instance.Format("error_saving_buff_set", ex.Message);
             GlobalErrorMessage = StatusMessage;
         }
     }
@@ -1538,7 +1538,7 @@ public partial class MainViewModel : ObservableObject
             var file = BuffSetFile.Read(File.ReadAllBytes(path));
             var buffs = file.ToBuffs(_service.CalamityBuffCatalog);
 
-            RunAsUndoableBuffBatch(append ? "Añadir conjunto de buffs" : "Cargar conjunto de buffs", container, () =>
+            RunAsUndoableBuffBatch(LocalizationService.Instance[append ? "action_add_buff_set" : "action_load_buff_set"], container, () =>
             {
                 if (append)
                 {
@@ -1562,11 +1562,11 @@ public partial class MainViewModel : ObservableObject
                 }
             });
 
-            StatusMessage = $"Conjunto de buffs {(append ? "añadido a" : "cargado en")} {container.DisplayName}: {Path.GetFileName(path)} - pulsa Guardar para conservarlo.";
+            StatusMessage = LocalizationService.Instance.Format(append ? "status_buff_set_added_to" : "status_buff_set_loaded_into", container.DisplayName, Path.GetFileName(path));
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error al cargar el conjunto de buffs: {ex.Message}";
+            StatusMessage = LocalizationService.Instance.Format("error_loading_buff_set", ex.Message);
             GlobalErrorMessage = StatusMessage;
         }
     }

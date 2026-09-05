@@ -37,17 +37,17 @@ public sealed partial class WorldSearchHitRowViewModel(WorldSearchHit hit) : Obs
     public string KindLabel { get; } = hit.Kind switch
     {
         WorldSearchKind.Tile => "Tile",
-        WorldSearchKind.Wall => "Pared",
-        WorldSearchKind.Liquid => "Liquido",
+        WorldSearchKind.Wall => LocalizationService.Instance["kind_wall"],
+        WorldSearchKind.Liquid => LocalizationService.Instance["kind_liquid"],
         WorldSearchKind.Npc => "NPC",
         // Fase 2 (ESPEC-buscador-mundo-tedit.md#5.2): la coordenada de un objeto de cofre es la
         // del COFRE, no la del objeto - mismo criterio real que TEdit (SearchContainers).
-        WorldSearchKind.ChestItem => "En cofre",
+        WorldSearchKind.ChestItem => LocalizationService.Instance["kind_in_chest"],
         // Fase 2b: marco de objeto/perchero/maniqui/bandeja/frasco/ancla - mismo criterio de
         // coordenada que ChestItem (la del contenedor, no la del objeto).
-        WorldSearchKind.TileEntityItem => "En objeto",
-        WorldSearchKind.Sign => "Letrero",
-        WorldSearchKind.OreVein => "Veta",
+        WorldSearchKind.TileEntityItem => LocalizationService.Instance["kind_in_object"],
+        WorldSearchKind.Sign => LocalizationService.Instance["kind_sign"],
+        WorldSearchKind.OreVein => LocalizationService.Instance["unit_vein_capitalized"],
         _ => "",
     };
 
@@ -144,7 +144,7 @@ public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int
     // coordenada Y suelta.
     public bool IsUnderground { get; } = isUnderground;
     public int DepthTiles { get; } = depthTiles;
-    public string? DepthLabel { get; } = isUnderground ? $"Bajo tierra (profundidad {depthTiles})" : null;
+    public string? DepthLabel { get; } = isUnderground ? LocalizationService.Instance.Format("npc_depth_label", depthTiles) : null;
     // H6-08/H6-09/H6-10 (sexta auditoria de Opus, "el mapa debe mostrar solo cabezas de NPC,
     // no puntos rosas ni el cuerpo entero") - icono real de cabeza (NpcHeadProfile ya resolvio
     // el indice real: normal/shimmer/variacion segun toque), usado por el marcador del MAPA
@@ -245,7 +245,7 @@ public partial class ExplorationViewModel : ObservableObject
     // Punto 4 (Minerales - ESPEC-ui-exploracion.md#11.3): capa de resaltado de mineral, una
     // segunda Image dentro del mismo Grid escalado que WorldMapImage - null = sin marcar nada.
     [ObservableProperty] private BitmapSource? _worldHighlight;
-    [ObservableProperty] private string _statusMessage = "Sin mundo cargado.";
+    [ObservableProperty] private string _statusMessage = LocalizationService.Instance["status_no_world_loaded_dot"];
     [ObservableProperty] private string? _worldTitle;
     // C-05 (informe de pulido final, cierra E4): WorldId real del mundo cargado (WldHeader.
     // WorldId) - MainViewModel.BuildCharacterSpawns lo cruza con PlrServerEntry.WorldId para
@@ -277,10 +277,10 @@ public partial class ExplorationViewModel : ObservableObject
 
     private static string GameModeLabel(int gameMode) => gameMode switch
     {
-        1 => "Experto",
-        2 => "Maestro",
-        3 => "Viaje",
-        _ => "Clásico",
+        1 => LocalizationService.Instance["explore_gamemode_expert"],
+        2 => LocalizationService.Instance["explore_gamemode_master"],
+        3 => LocalizationService.Instance["explore_gamemode_journey"],
+        _ => LocalizationService.Instance["explore_gamemode_classic"],
     };
 
     private bool CanSaveWorldGameMode() => IsWorldLoaded && _currentWorldPath != null && WorldGameMode != _savedWorldGameMode;
@@ -292,21 +292,21 @@ public partial class ExplorationViewModel : ObservableObject
         int nuevoModo = WorldGameMode;
         var mundoActual = _world;
         string ruta = _currentWorldPath;
-        WorldGameModeSaveStatus = "Guardando...";
+        WorldGameModeSaveStatus = LocalizationService.Instance["status_saving"];
         try
         {
             var mundoActualizado = await Task.Run(() => WorldFileService.SaveGameMode(mundoActual, ruta, nuevoModo));
             _world = mundoActualizado;
             _savedWorldGameMode = nuevoModo;
             WorldGameModeText = GameModeLabel(nuevoModo);
-            WorldGameModeSaveStatus = $"Guardado en el archivo - copia de seguridad en {Path.GetFileName(ruta)}.bak";
+            WorldGameModeSaveStatus = LocalizationService.Instance.Format("status_saved_backup", Path.GetFileName(ruta));
         }
         catch (Exception ex)
         {
             // Nunca silencioso - un fallo aqui toca el archivo de mundo real del usuario, tiene
             // que verse con toda claridad, no solo en StatusMessage (que otra accion cualquiera
             // puede pisar en el instante siguiente).
-            WorldGameModeSaveStatus = $"No se pudo guardar: {ex.Message}";
+            WorldGameModeSaveStatus = LocalizationService.Instance.Format("status_save_failed", ex.Message);
         }
         finally
         {
@@ -404,7 +404,7 @@ public partial class ExplorationViewModel : ObservableObject
     // categoria con busqueda de verdad asincrona - las otras 4 filtran en memoria via IsMatch,
     // sin equivalente a WorldSearchSummary; extenderlo alli exigiria plumbing nuevo que no
     // aporta lo mismo, fuera de alcance de esta pasada).
-    public bool ShowZeroResultsState => SelectedCategory == WorldSearchCategory.All && WorldSearchSummary == "Sin resultados.";
+    public bool ShowZeroResultsState => SelectedCategory == WorldSearchCategory.All && WorldSearchSummary == LocalizationService.Instance["status_no_results"];
     // El resumen compacto de siempre (F-1) se sigue mostrando para CUALQUIER resultado no vacio
     // (incluida la limitacion de 1000) - solo se sustituye por el panel de P-6 en el caso
     // concreto de 0 resultados.
@@ -502,22 +502,23 @@ public partial class ExplorationViewModel : ObservableObject
     public string BuildWorldReportText()
     {
         if (_world == null || _presence == null) return string.Empty;
+        var loc = LocalizationService.Instance;
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"{WorldTitle}");
-        sb.AppendLine($"Semilla: {WorldSeedText}");
-        sb.AppendLine($"Modo de juego: {WorldGameModeText}");
-        sb.AppendLine($"Tamaño: {WorldSizeText} tiles");
-        sb.AppendLine($"Version de formato: {WorldVersionText}");
+        sb.AppendLine(loc.Format("report_seed", WorldSeedText));
+        sb.AppendLine(loc.Format("report_game_mode", WorldGameModeText));
+        sb.AppendLine(loc.Format("report_size", WorldSizeText));
+        sb.AppendLine(loc.Format("report_format_version", WorldVersionText));
         sb.AppendLine();
-        sb.AppendLine("=== Censo ===");
-        sb.AppendLine($"Aire: {WorldAirPercentText}");
-        sb.AppendLine($"Tipos de tile distintos: {ObjectsPillCount}");
-        sb.AppendLine($"Tipos de pared distintos: {WallTypesPresentCount}");
-        sb.AppendLine($"Cofres: {ChestsPillCount}");
-        sb.AppendLine($"Letreros: {_presence.SignCount}");
-        sb.AppendLine($"NPCs de pueblo: {_allNpcs.Count}");
+        sb.AppendLine(loc["report_census_header"]);
+        sb.AppendLine(loc.Format("report_air", WorldAirPercentText));
+        sb.AppendLine(loc.Format("report_tile_types", ObjectsPillCount));
+        sb.AppendLine(loc.Format("report_wall_types", WallTypesPresentCount));
+        sb.AppendLine(loc.Format("report_chests", ChestsPillCount));
+        sb.AppendLine(loc.Format("report_signs", _presence.SignCount));
+        sb.AppendLine(loc.Format("report_town_npcs", _allNpcs.Count));
         sb.AppendLine();
-        sb.AppendLine("=== Top 10 tiles (por recuento) ===");
+        sb.AppendLine(loc["report_top10_header"]);
         long totalTiles = (long)_world.Header.TilesWide * _world.Header.TilesHigh;
         foreach (var (type, count) in _presence.TileCounts.OrderByDescending(kv => kv.Value).Take(10))
             sb.AppendLine($"{_tileNames.TileName(type)} [{type}]: {count:N0} ({(double)count / totalTiles:P2})");
@@ -776,10 +777,10 @@ public partial class ExplorationViewModel : ObservableObject
         switch (SelectedCategory)
         {
             case WorldSearchCategory.Ores:
-                _ = ApplyTileHighlightAsync(new HashSet<int> { row.Id }, "veta", paint: false);
+                _ = ApplyTileHighlightAsync(new HashSet<int> { row.Id }, LocalizationService.Instance["unit_vein"], paint: false);
                 break;
             case WorldSearchCategory.Objects when ObjectsViewMode == 0:
-                _ = ApplyTileHighlightAsync(new HashSet<int> { row.Id }, "grupo", paint: false);
+                _ = ApplyTileHighlightAsync(new HashSet<int> { row.Id }, LocalizationService.Instance["unit_group"], paint: false);
                 break;
             case WorldSearchCategory.Objects when ObjectsViewMode == 1:
                 _ = ApplyWallHighlightAsync(new HashSet<int> { row.Id }, paint: false);
@@ -816,10 +817,10 @@ public partial class ExplorationViewModel : ObservableObject
             // Mismo motivo que SearchInventoryRow de arriba: agrupado por veta/grupo real, sin
             // pintar el resaltado (paint:false) - "Buscar seleccionados" es una lista, no un mapa.
             case WorldSearchCategory.Ores:
-                _ = ApplyTileHighlightAsync(marcadas.Select(r => r.Id).ToHashSet(), "veta", paint: false);
+                _ = ApplyTileHighlightAsync(marcadas.Select(r => r.Id).ToHashSet(), LocalizationService.Instance["unit_vein"], paint: false);
                 break;
             case WorldSearchCategory.Objects when ObjectsViewMode == 0:
-                _ = ApplyTileHighlightAsync(marcadas.Select(r => r.Id).ToHashSet(), "grupo", paint: false);
+                _ = ApplyTileHighlightAsync(marcadas.Select(r => r.Id).ToHashSet(), LocalizationService.Instance["unit_group"], paint: false);
                 break;
             case WorldSearchCategory.Objects when ObjectsViewMode == 1:
                 _ = ApplyWallHighlightAsync(marcadas.Select(r => r.Id).ToHashSet(), paint: false);
@@ -845,7 +846,7 @@ public partial class ExplorationViewModel : ObservableObject
     // RunWorldSearchAsyncWithQuery).
     [RelayCommand]
     private async Task MarkOresOnMap() =>
-        await ApplyTileHighlightAsync(OreMetals.Concat(OreGems).Concat(OreTargets).Where(r => r.IsChecked).Select(r => r.Id).ToHashSet(), "veta");
+        await ApplyTileHighlightAsync(OreMetals.Concat(OreGems).Concat(OreTargets).Where(r => r.IsChecked).Select(r => r.Id).ToHashSet(), LocalizationService.Instance["unit_vein"]);
 
     // C-04 (informe de pulido final, cierra E6/E7): generalizacion del boton de arriba a
     // "Objetos" - misma arquitectura (resaltado sin tope + lista agrupada topada), segun cual de
@@ -857,7 +858,7 @@ public partial class ExplorationViewModel : ObservableObject
         var marcadas = Inventory.Where(r => r.IsChecked).ToList();
         switch (ObjectsViewMode)
         {
-            case 0: await ApplyTileHighlightAsync(marcadas.Select(r => r.Id).ToHashSet(), "grupo"); break;
+            case 0: await ApplyTileHighlightAsync(marcadas.Select(r => r.Id).ToHashSet(), LocalizationService.Instance["unit_group"]); break;
             case 1: await ApplyWallHighlightAsync(marcadas.Select(r => r.Id).ToHashSet()); break;
             default: await ApplyLiquidHighlightAsync(marcadas.Select(r => (byte)r.Id).ToHashSet()); break;
         }
@@ -947,9 +948,9 @@ public partial class ExplorationViewModel : ObservableObject
             if (paint)
             {
                 long cubiertos = wallIds.Sum(id => (long)(_presence?.WallCounts.GetValueOrDefault(id) ?? 0));
-                ApplyHighlightResult(highlight!, rows, grupos.Count, total, "grupo", LegibilityWarning(cubiertos));
+                ApplyHighlightResult(highlight!, rows, grupos.Count, total, LocalizationService.Instance["unit_group"], LegibilityWarning(cubiertos));
             }
-            else ApplyGroupedSearchResult(rows, grupos.Count, total, "grupo");
+            else ApplyGroupedSearchResult(rows, grupos.Count, total, LocalizationService.Instance["unit_group"]);
         }
         catch (OperationCanceledException) { }
     }
@@ -979,9 +980,9 @@ public partial class ExplorationViewModel : ObservableObject
             if (paint)
             {
                 long cubiertos = liquidTypes.Sum(id => (long)(_presence?.LiquidCounts.GetValueOrDefault(id) ?? 0));
-                ApplyHighlightResult(highlight!, rows, grupos.Count, total, "grupo", LegibilityWarning(cubiertos));
+                ApplyHighlightResult(highlight!, rows, grupos.Count, total, LocalizationService.Instance["unit_group"], LegibilityWarning(cubiertos));
             }
-            else ApplyGroupedSearchResult(rows, grupos.Count, total, "grupo");
+            else ApplyGroupedSearchResult(rows, grupos.Count, total, LocalizationService.Instance["unit_group"]);
         }
         catch (OperationCanceledException) { }
     }
@@ -992,8 +993,8 @@ public partial class ExplorationViewModel : ObservableObject
         _worldSearchCurrentIndex = -1;
         ApplyWorldSearchOrder();
         WorldSearchSummary = total > shown
-            ? $"{shown:N0} de {total:N0} {unitLabel}(s) (limitado a 1000)"
-            : $"{total:N0} {unitLabel}(s)";
+            ? LocalizationService.Instance.Format("summary_of_total_capped", shown, total, unitLabel)
+            : LocalizationService.Instance.Format("summary_total_unit", total, unitLabel);
     }
 
     private void ApplyHighlightResult(WriteableBitmap highlight, List<WorldSearchHitRowViewModel> rows, int shown, int total, string unitLabel, string? warning)
@@ -1001,8 +1002,8 @@ public partial class ExplorationViewModel : ObservableObject
         WorldHighlight = highlight;
         ApplyGroupedSearchResult(rows, shown, total, unitLabel);
         string resumen = total > shown
-            ? $"{shown:N0} de {total:N0} {unitLabel}(s) (limitado a 1000 en la lista - el mapa las marca TODAS)"
-            : $"{total:N0} {unitLabel}(s)";
+            ? LocalizationService.Instance.Format("summary_of_total_capped_map_all", shown, total, unitLabel)
+            : LocalizationService.Instance.Format("summary_total_unit", total, unitLabel);
         WorldSearchSummary = warning is null ? resumen : $"{warning} {resumen}";
     }
 
@@ -1017,7 +1018,7 @@ public partial class ExplorationViewModel : ObservableObject
         long totalTiles = (long)_world.Header.TilesWide * _world.Header.TilesHigh;
         if (totalTiles <= 0) return null;
         double frac = (double)tilesCubiertos / totalTiles;
-        return frac >= 0.4 ? $"Aviso: cubre el {frac:P0} del mapa, puede no ser legible de un vistazo." : null;
+        return frac >= 0.4 ? LocalizationService.Instance.Format("warning_covers_map_fraction", frac.ToString("P0")) : null;
     }
 
     // F-12 (auditoria de Opus vs TEdit, E-13): "Terrakeep genera un WriteableBitmap completo
@@ -1245,8 +1246,8 @@ public partial class ExplorationViewModel : ObservableObject
             foreach (var entry in scanned) Worlds.Add(entry);
             ScanMessage = Worlds.Count == 0
                 ? dirs.Count == 0
-                    ? "No se encontro ninguna carpeta real de mundos de Terraria (vanilla ni tModLoader)."
-                    : $"Ningun mundo encontrado en {string.Join(" ni en ", dirs)}"
+                    ? LocalizationService.Instance["scan_no_worlds_folder"]
+                    : LocalizationService.Instance.Format("scan_no_worlds_in", string.Join(LocalizationService.Instance["scan_nor_in"], dirs))
                 : null;
             UpdateCurrentWorldPath(_currentWorldPath); // la lista es nueva de cero, IsCurrent hay que recalcularlo
         }
@@ -1268,7 +1269,7 @@ public partial class ExplorationViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error al abrir la carpeta: {ex.Message}";
+            StatusMessage = LocalizationService.Instance.Format("error_open_folder", ex.Message);
         }
     }
 
@@ -1344,20 +1345,20 @@ public partial class ExplorationViewModel : ObservableObject
         double pies = tileY * 2 - groundLevel * 2;
         double spaceCheck = (tileY - (65 + 10 * Math.Pow(_world.Header.TilesWide / 4200.0, 2))) / (groundLevel / 5.0);
         string zonaColor;
-        if (tileY > _world.Header.TilesHigh - 204) { HoverLayerText = "Infierno"; zonaColor = "Hell"; }
-        else if (tileY > _world.Header.RockLevel) { HoverLayerText = "Cavernas"; zonaColor = "Rock"; }
-        else if (pies > 0) { HoverLayerText = "Subterráneo"; zonaColor = "Earth"; }
-        else if (spaceCheck < 1.0) { HoverLayerText = "Espacio"; zonaColor = "Space"; }
-        else { HoverLayerText = "Superficie"; zonaColor = "Sky"; }
+        if (tileY > _world.Header.TilesHigh - 204) { HoverLayerText = LocalizationService.Instance["zone_underworld"]; zonaColor = "Hell"; }
+        else if (tileY > _world.Header.RockLevel) { HoverLayerText = LocalizationService.Instance["zone_caverns"]; zonaColor = "Rock"; }
+        else if (pies > 0) { HoverLayerText = LocalizationService.Instance["zone_underground"]; zonaColor = "Earth"; }
+        else if (spaceCheck < 1.0) { HoverLayerText = LocalizationService.Instance["zone_space"]; zonaColor = "Space"; }
+        else { HoverLayerText = LocalizationService.Instance["zone_surface"]; zonaColor = "Sky"; }
         var c = _mapColors.Global(zonaColor);
         HoverLayerColor = Color.FromArgb(c.A, c.R, c.G, c.B);
 
         int tilesRespectoSuelo = (int)Math.Round(tileY - groundLevel);
         HoverDepthText = tilesRespectoSuelo switch
         {
-            > 0 => $"{tilesRespectoSuelo:N0} tiles bajo el suelo",
-            < 0 => $"{-tilesRespectoSuelo:N0} tiles sobre el suelo",
-            _ => "En el nivel del suelo",
+            > 0 => LocalizationService.Instance.Format("depth_below_ground", tilesRespectoSuelo.ToString("N0")),
+            < 0 => LocalizationService.Instance.Format("depth_above_ground", (-tilesRespectoSuelo).ToString("N0")),
+            _ => LocalizationService.Instance["depth_ground_level"],
         };
     }
 
@@ -1371,9 +1372,9 @@ public partial class ExplorationViewModel : ObservableObject
     private static string LiquidName(byte liquidType) => liquidType switch
     {
         2 => "Lava",
-        3 => "Miel",
-        4 => "Centelleo",
-        _ => "Agua",
+        3 => LocalizationService.Instance["liquid_honey"],
+        4 => LocalizationService.Instance["liquid_shimmer"],
+        _ => LocalizationService.Instance["liquid_water"],
     };
 
     // Auditoria de Opus, X-7/T-13: leer (RLE de hasta miles de tiles de ancho/alto) y pintar
@@ -1388,7 +1389,7 @@ public partial class ExplorationViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            StatusMessage = "Leyendo y pintando el mapa...";
+            StatusMessage = LocalizationService.Instance["status_reading_painting_map"];
             // Punto 4 (advisor Opus, "que solo puedan salir los objetos que tiene ese mundo" -
             // ver ESPEC-ui-exploracion.md#10.3): el censo real del mundo se calcula AQUI, dentro
             // del mismo Task.Run que ya lee+pinta - el mundo ya esta caliente en cache justo en
@@ -1477,8 +1478,8 @@ public partial class ExplorationViewModel : ObservableObject
             WorldDungeonX = world.Header.DungeonX;
             WorldDungeonY = world.Header.DungeonY;
             IsWorldLoaded = true;
-            StatusMessage = $"'{world.Header.Title}' - {world.Header.TilesWide}x{world.Header.TilesHigh} tiles, " +
-                $"{_allNpcs.Count} NPC(s) de pueblo, {MissingNpcs.Count} todavia sin conseguir.";
+            StatusMessage = LocalizationService.Instance.Format("status_world_loaded_summary",
+                world.Header.Title, world.Header.TilesWide, world.Header.TilesHigh, _allNpcs.Count, MissingNpcs.Count);
             OnPropertyChanged(nameof(ChestsPillCount));
             OnPropertyChanged(nameof(OresPillCount));
             OnPropertyChanged(nameof(ObjectsPillCount));
@@ -1499,7 +1500,7 @@ public partial class ExplorationViewModel : ObservableObject
             WorldSizeText = "—";
             IsWorldLoaded = false;
             WorldGameModeSaveStatus = null;
-            StatusMessage = $"Error al leer el mundo: {ex.Message}";
+            StatusMessage = LocalizationService.Instance.Format("error_reading_world", ex.Message);
             UpdateCurrentWorldPath(null); // un fallo real no debe dejar ninguna pildora marcada como "cargada"
             SaveWorldGameModeCommand.NotifyCanExecuteChanged();
         }
@@ -1614,8 +1615,12 @@ public partial class ExplorationViewModel : ObservableObject
     // gramatica ya usada por la Libreria de objetos/buffs - comas=OR, espacios=AND, "#123"/
     // "#100-200" por id) contra los tres catalogos de nombres que ya tiene esta ViewModel, mas
     // los 4 liquidos reales del juego (sin catalogo propio, tabla fija).
-    private static readonly (int Id, string Name)[] LiquidCandidates =
-        [(1, "Agua"), (2, "Lava"), (3, "Miel"), (4, "Centelleo")];
+    // Propiedad (no "static readonly") a proposito: un campo estatico se evaluaria UNA vez, en
+    // el primer uso real del tipo (con toda probabilidad en español, el idioma de arranque) y se
+    // quedaria congelado en ese idioma para siempre - esto se llama en vivo desde una busqueda
+    // interactiva, tiene que reflejar el idioma ACTUAL en cada pulsacion, no el de arranque.
+    private static (int Id, string Name)[] LiquidCandidates =>
+        [(1, LocalizationService.Instance["liquid_water"]), (2, "Lava"), (3, LocalizationService.Instance["liquid_honey"]), (4, LocalizationService.Instance["liquid_shimmer"])];
 
     private WorldSearchQuery BuildWorldSearchQuery(string text)
     {
@@ -1717,7 +1722,7 @@ public partial class ExplorationViewModel : ObservableObject
                 _lastWorldSearchRows = [];
                 _worldSearchCurrentIndex = -1;
                 WorldSearchResults.Clear();
-                WorldSearchSummary = "Sin resultados.";
+                WorldSearchSummary = LocalizationService.Instance["status_no_results"];
             }
             return;
         }
@@ -1738,10 +1743,10 @@ public partial class ExplorationViewModel : ObservableObject
             _worldSearchCurrentIndex = -1;
             ApplyWorldSearchOrder(); // aplica el orden real (por distancia si ShowSpawnDistance esta activo) y vuelca WorldSearchResults
             WorldSearchSummary = result.TotalCount == 0
-                ? "Sin resultados."
+                ? LocalizationService.Instance["status_no_results"]
                 : result.TotalCount > result.Hits.Count
-                    ? $"{result.Hits.Count} de {result.TotalCount} resultado(s) (limitado a {query.DisplayLimit})"
-                    : $"{result.TotalCount} resultado(s)";
+                    ? LocalizationService.Instance.Format("summary_results_capped", result.Hits.Count, result.TotalCount, query.DisplayLimit)
+                    : LocalizationService.Instance.Format("summary_results_total", result.TotalCount);
         }
         catch (OperationCanceledException)
         {

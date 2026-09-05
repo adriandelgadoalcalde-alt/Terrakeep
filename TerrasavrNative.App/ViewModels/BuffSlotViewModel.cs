@@ -151,7 +151,7 @@ public partial class BuffSlotViewModel : ObservableObject
             string nombre = esDeCalamity
                 ? _calamityCatalog.BySyntheticId(buffId)?.DisplayName ?? $"Calamity #{buffId}"
                 : _vanillaCatalog.GetDisplayName(buffId);
-            RejectionMessage = $"'{nombre}' ya esta puesto en otro slot - Terraria no permite dos instancias del mismo buff.";
+            RejectionMessage = Services.LocalizationService.Instance.Format("error_buff_duplicate", nombre);
             return false;
         }
         RejectionMessage = null;
@@ -184,7 +184,7 @@ public partial class BuffSlotViewModel : ObservableObject
             string nombre = esDeCalamity
                 ? _calamityCatalog.BySyntheticId(buffId)?.DisplayName ?? $"Calamity #{buffId}"
                 : _vanillaCatalog.GetDisplayName(buffId);
-            RejectionMessage = $"'{nombre}' ya esta puesto en otro slot - Terraria no permite dos instancias del mismo buff.";
+            RejectionMessage = Services.LocalizationService.Instance.Format("error_buff_duplicate", nombre);
             return false;
         }
         RejectionMessage = null;
