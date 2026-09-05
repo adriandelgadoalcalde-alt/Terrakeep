@@ -56,6 +56,7 @@ public sealed class CharacterFileService
     public LibraryLabelCatalog LibraryLabels { get; }
     public VanillaItemTooltipCatalog VanillaItemTooltips { get; }
     public VanillaArmorSetCatalog VanillaArmorSets { get; }
+    public CalamityArmorSetCatalog CalamityArmorSets { get; }
     public PrefixEffectCatalog PrefixEffects { get; }
     public VanillaBuffDurationCatalog VanillaBuffDurations { get; }
     public VanillaResearchCountCatalog VanillaResearchCounts { get; }
@@ -104,10 +105,13 @@ public sealed class CharacterFileService
         LibraryLabels = LibraryLabelCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_library_labels_es.json"));
         VanillaItemTooltips = VanillaItemTooltipCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_item_tooltips.json"));
         VanillaArmorSets = VanillaArmorSetCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_armor_sets.json"));
+        // C-10b (auditoria de pulido final): catalogo de SET completo de Calamity, derivado del
+        // propio CalamityCatalog (Category/EquipSlot/SetBonus ya extraidos) - sin fichero nuevo.
+        CalamityArmorSets = CalamityArmorSetCatalog.Build(CalamityCatalog);
         PrefixEffects = PrefixEffectCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_prefix_effects.json"));
         VanillaBuffDurations = VanillaBuffDurationCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_buff_durations.json"));
         VanillaResearchCounts = VanillaResearchCountCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_research_counts.json"));
-        TooltipCatalogs = new ItemTooltipCatalogs(VanillaStats, CalamityCatalog, VanillaCategories, VanillaItemTooltips, VanillaArmorSets, PrefixEffects);
+        TooltipCatalogs = new ItemTooltipCatalogs(VanillaStats, CalamityCatalog, VanillaCategories, VanillaItemTooltips, VanillaArmorSets, CalamityArmorSets, PrefixEffects);
         VanillaArmorSlots = VanillaArmorSlotCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_armor_slots.json"));
         EquipmentAppearance = new EquipmentAppearanceResolver(VanillaArmorSlots, CalamityCatalog);
         BackupHistory = new BackupHistoryService();

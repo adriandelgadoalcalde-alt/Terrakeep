@@ -206,24 +206,22 @@ public partial class EquipmentGroupViewModel : ObservableObject
     }
 
     // Segunda auditoria de Opus (Fable), B-6/F3: el bono de set de Calamity YA se extrae por
-    // pieza (CalamityCatalogEntry.SetBonus, commit a936124) y ya se muestra en el tooltip de
-    // CADA pieza suelta ("Con el set completo: ...") - pero "Defensa total"/"Bono activo" solo
-    // entendia sets vanilla, dejando el bono de Calamity mudo aunque el caso mas frecuente en
-    // este editor sea justo una armadura de Calamity. Real, no inventado: las 3 piezas
-    // (cabeza/cuerpo/piernas) de Calamity llevan el MISMO texto de `SetBonus` cuando forman un
-    // set real (extraido por set, no por pieza suelta) - si las 3 estan puestas, son de
-    // Calamity y comparten exactamente ese texto, el set esta activo de verdad.
+    // pieza y ya se muestra en el tooltip de CADA pieza suelta ("Con el set completo: ...") -
+    // pero "Defensa total"/"Bono activo" solo entendia sets vanilla, dejando el bono de Calamity
+    // mudo aunque el caso mas frecuente en este editor sea justo una armadura de Calamity.
+    //
+    // C-10b (auditoria de pulido final, cierra L3-b): la version anterior comparaba los
+    // SetBonus de las 3 piezas por igualdad de texto - "codigo verificado una vez y nunca
+    // funciono" de verdad, porque cuerpo/piernas de Calamity NUNCA tienen su propio SetBonus
+    // (0/131, el bono real solo vive en el casco). Ahora usa CalamityArmorSetCatalog.
+    // BonusForEquipped (gemelo real de VanillaArmorSetCatalog.BonusForEquipped), que conoce el
+    // set completo por Category/EquipSlot y acepta sets de 2 piezas (LegsSyntheticId null, ej.
+    // MarniteArchitect) igual que su equivalente vanilla.
     private string? ActiveCalamitySetBonusText(ItemSlotViewModel head, ItemSlotViewModel body, ItemSlotViewModel legs)
     {
-        if (head.IsEmpty || body.IsEmpty || legs.IsEmpty) return null;
-        if (!head.IsCalamity || !body.IsCalamity || !legs.IsCalamity) return null;
-
-        string? headBonus = _service.CalamityCatalog.BySyntheticId(head.Item.Id)?.SetBonus;
-        string? bodyBonus = _service.CalamityCatalog.BySyntheticId(body.Item.Id)?.SetBonus;
-        string? legsBonus = _service.CalamityCatalog.BySyntheticId(legs.Item.Id)?.SetBonus;
-        if (string.IsNullOrEmpty(headBonus) || headBonus != bodyBonus || headBonus != legsBonus) return null;
-
-        return headBonus;
+        if (head.IsEmpty || body.IsEmpty || !head.IsCalamity || !body.IsCalamity) return null;
+        int legsId = !legs.IsEmpty && legs.IsCalamity ? legs.Item.Id : -1;
+        return _service.CalamityArmorSets.BonusForEquipped(head.Item.Id, body.Item.Id, legsId);
     }
 
     // Indices reales dentro de los 10 slots de Items/Social (Player.armor[0..9] real):

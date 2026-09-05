@@ -17,6 +17,9 @@ public sealed record ItemTooltipCatalogs(
     VanillaCategoryCatalog Categories,
     VanillaItemTooltipCatalog Tooltips,
     VanillaArmorSetCatalog ArmorSets,
+    // C-10b/C-10c (auditoria de pulido final): catalogo de SET completo de Calamity - permite
+    // mostrar el bono en CUALQUIER pieza del set (antes solo el casco, unico con SetBonus real).
+    CalamityArmorSetCatalog CalamityArmorSets,
     PrefixEffectCatalog PrefixEffects);
 
 // Texto de tooltip con las estadisticas reales de un objeto (daño/defensa/etc.) - pedido
@@ -71,11 +74,38 @@ public static class ItemStatsFormatter
             }
             // Bono de set completo real (pedido explicito del usuario: "la bonificacion por el
             // set no [aparece]") - texto real ya resuelto y traducido, ver
-            // scripts/extraer-bonos-set-calamity.js y CalamityCatalogEntryData.SetBonus.
-            if (entry?.SetBonus != null) sections.Add($"Con el set completo: {entry.SetBonus}");
-            // Descripcion textual de un accesorio de Calamity SUELTO (fuera de un set): no
-            // extraida todavia (fuera de alcance de esta pasada, ver bitacora.md - el .tmod
-            // real SI la trae, hjson de Localization/en-US, solo en ingles en esta instalacion).
+            // scripts/extraer-bonos-set-calamity.js y CalamityCatalogEntryData.SetBonus. Solo
+            // los cascos tienen su PROPIO SetBonus real (el modelo de datos original de Calamity
+            // - 0/131 cuerpos/piernas lo tienen nunca).
+            if (entry?.SetBonus != null)
+            {
+                sections.Add($"Con el set completo: {entry.SetBonus}");
+            }
+            else
+            {
+                // C-10c (auditoria de pulido final, cierra L3-b): body/legs de un set real de
+                // Calamity se quedaban completamente mudos - "codigo verificado una vez y nunca
+                // funciono" (ActiveCalamitySetBonusText comparaba tres SetBonus que nunca podian
+                // coincidir). El catalogo POR SET (CalamityArmorSetCatalog, C-10b) enumera aqui
+                // el bono de CADA variante de casco real del mismo set, mirando cualquier pieza.
+                var setInfo = catalogs.CalamityArmorSets.FindSetContaining(id);
+                if (setInfo != null && setInfo.Heads.Count > 0)
+                {
+                    var bodyEntry = catalogs.Calamity.BySyntheticId(setInfo.BodySyntheticId);
+                    var legsEntry = setInfo.LegsSyntheticId is int legsId ? catalogs.Calamity.BySyntheticId(legsId) : null;
+                    string conjunto = legsEntry != null
+                        ? $"{bodyEntry?.DisplayName} y {legsEntry.DisplayName}"
+                        : bodyEntry?.DisplayName ?? "";
+                    var sb = new StringBuilder();
+                    sb.Append($"Con el set completo (con {conjunto}):");
+                    foreach (var (headId, bonusText) in setInfo.Heads)
+                    {
+                        string headName = catalogs.Calamity.BySyntheticId(headId)?.DisplayName ?? $"Item #{headId}";
+                        sb.Append($"\n· {headName}: {bonusText}");
+                    }
+                    sections.Add(sb.ToString());
+                }
+            }
         }
         else
         {

@@ -384,11 +384,24 @@ public static class PlayerPreviewRenderer
     // Stream (File.OpenRead) en vez de Uri - mismo patron ya establecido en el resto del
     // proyecto para leer PNG reales desde disco, evita depender de System.Net.WebRequest para
     // resolver un simple fichero local.
+    // Bug real encontrado y arreglado verificando C-10b (auditoria de pulido final, sets de
+    // armadura de Calamity): equipar CUALQUIER casco o grebas de Calamity reventaba el preview
+    // entero con ArgumentOutOfRangeException. Causa real: el contrato documentado de la clase
+    // (ver comentario de EquippedArmor mas abajo, "HeadFile/LegsFile son tiras verticales 40x56
+    // -frame0-") asume una tira de animacion vertical de la que solo interesa el primer
+    // fotograma - los sprites vanilla YA vienen pre-recortados a un unico fotograma en su
+    // extraccion original, pero los de Calamity (scripts/extraer-sprites-armadura-calamity.js)
+    // no: AerospecHeadMelee_Head.png mide de verdad 40x1120 (20 fotogramas apilados), no 40x56.
+    // Esta funcion asumia ciegamente que el fichero YA medía exactamente 40x56 en vez de
+    // recortar el primer fotograma de verdad - CroppedBitmap lo hace explicito, sin cambiar
+    // nada para los vanilla (ya miden 40x56, el recorte es un no-op).
     private static byte[] LoadPngPixels40x56(string path)
     {
         using var stream = File.OpenRead(path);
         var decoder = new PngBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
-        var converted = new FormatConvertedBitmap(decoder.Frames[0], PixelFormats.Bgra32, null, 0);
+        var frame = decoder.Frames[0];
+        var frame0 = new CroppedBitmap(frame, new Int32Rect(0, 0, Math.Min(Width, frame.PixelWidth), Math.Min(Height, frame.PixelHeight)));
+        var converted = new FormatConvertedBitmap(frame0, PixelFormats.Bgra32, null, 0);
         var pixels = new byte[Width * Height * 4];
         converted.CopyPixels(pixels, Width * 4, 0);
         return pixels;
