@@ -8335,5 +8335,30 @@ Verificado: `dotnet build` (0 errores), `dotnet test` (656/656), arnés completo
 reales (0 `FALLO`) - confirma explícitamente `F-7-MARCADOR: ... visible=True` y
 `F-8: MinimapViewportRect encontrado=True, visible=True`.
 
-Pendientes bloques 2-9 (C-03/C-04, C-10a/b/c, C-14+C-12, C-09, C-05/C-11/C-13/C-17, C-15,
-C-16/C-18, C-06) - seguir el orden del informe, un commit verificado por bloque.
+**Bloque 2/9 (C-03, C-04) - cerrado, commit `287a129e`:**
+- **C-03**: Minerales era la unica categoria de la barra lateral donde pulsar el nombre de una
+  fila no hacia nada - `BuildSingleRowQuery` no tenia rama `Ores` (los minerales SON tiles,
+  misma rama real que Objetos > Tiles). `SearchCheckedInventory` ahora tambien une los 3 grupos
+  de Minerales a su fuente de filas.
+- **C-04**: generalizada la arquitectura de "Marcar en el mapa" de Minerales (resaltado sin tope
+  + lista agrupada topada a 1000) a la categoria Objetos completa (Tiles/Paredes/Liquidos) -
+  `OreVeinFinder`/`WorldHighlightRenderer` generalizados con un delegado interno en vez de leer
+  `tile.Type` a pelo, agrupan/pintan tambien por `Wall` y por `LiquidType` sin duplicar el
+  flood-fill. El tick de cualquier fila pasa a "muestralo en el mapa" con debounce de 250ms
+  (mismo patron ya establecido, evita regenerar el bitmap de 80,6MB en cada tick individual);
+  aviso (sin bloquear) cuando la seleccion cubre >=40% del mapa.
+
+Verificado: `dotnet test` 663/663 (6 tests nuevos de la generalizacion), arnes completo (0
+`FALLO`) - `A9-03-MINERALCLIC` y `A9-10-MIELTODA` (checks nuevos del propio informe, §11)
+confirman con el mundo real de 8400x2400 que el resaltado marca EXACTAMENTE 515.122 tiles de
+lava, sin el tope de 1000 que antes se colaba tambien en el mapa.
+
+**Hallazgo real de esta ejecucion, no del codigo de produccion**: el primer intento del check
+`C-04-TICKSOLO` dio un falso `FALLO` - el test ponia `IsChecked = true` sobre una fila que YA
+estaba en `true` de un paso anterior, y el setter generado por `[ObservableProperty]` no vuelve
+a disparar `OnIsCheckedChanged` si el valor no cambia de verdad. Corregido forzando el ciclo
+`false -> true` en el propio test, no en el codigo de produccion (aislamiento de la variable,
+mismo criterio que memoria `verificar-aislando-la-variable`).
+
+Pendientes bloques 3-9 (C-10a/b/c, C-14+C-12, C-09, C-05/C-11/C-13/C-17, C-15, C-16/C-18, C-06) -
+seguir el orden del informe, un commit verificado por bloque.
