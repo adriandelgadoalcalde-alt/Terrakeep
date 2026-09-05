@@ -652,6 +652,12 @@ public partial class MainViewModel : ObservableObject
     public BuffEditViewModel BuffEdit { get; }
     public ItemEditViewModel ItemEdit { get; }
     public HomeViewModel Home { get; }
+    // Pedido explicito del usuario (5-sep-2026): idioma en vivo, sin reiniciar - expuesto aqui
+    // (root DataContext de casi toda la ventana) para que cualquier XAML pueda usar
+    // {Binding Loc[clave]} directamente, mismo criterio que Home/About/etc de arriba. Instance es
+    // un singleton real (LocalizationService) - PropertyChanged("Item[]") de ahi mismo refresca
+    // CUALQUIER binding indexado ya en pantalla al cambiar el idioma en Ajustes.
+    public LocalizationService Loc => LocalizationService.Instance;
     // H5-07 (quinta auditoria de Opus): carpetas adicionales de personajes/mundos + N
     // configurable de copias de seguridad - "Ajustes" real, ver SettingsViewModel.
     public SettingsViewModel Settings { get; }

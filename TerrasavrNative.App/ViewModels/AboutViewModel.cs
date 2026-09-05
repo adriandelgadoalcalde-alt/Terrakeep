@@ -8,7 +8,7 @@ namespace TerrasavrNative.App.ViewModels;
 public sealed class AboutViewModel
 {
     public string AppName => "Terrakeep";
-    public string Tagline => "Editor de personajes de Terraria, nativo y sin Electron - vanilla y Calamity Mod.";
+    public string Tagline => "Editor de personajes de Terraria, aplicación nativa de Windows - vanilla y Calamity Mod.";
     public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
 
     // C-18 (informe de pulido final, cierra N2): bloque PROPIO, no una frase enterrada en

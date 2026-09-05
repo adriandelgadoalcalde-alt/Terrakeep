@@ -21,6 +21,9 @@ public sealed class TerrakeepSettings
     // F-8 (auditoria de Opus vs TEdit, E-05): "en una ventana a MinWidth=1080 un minimapa fijo
     // se come sitio real" - plegable, recordado entre sesiones.
     public bool IsMinimapVisible { get; set; } = true;
+    // Pedido explicito del usuario (5-sep-2026): "es"/"en" - ver LocalizationService.Spanish/
+    // English (mismas constantes, no se duplican los literales aqui).
+    public string Language { get; set; } = "es";
 }
 
 public static class SettingsService

@@ -1834,14 +1834,22 @@
                          estrecho que su contenedor por el propio MaxWidth queda CENTRADO en vez
                          de pegado a la izquierda (mismo defecto real ya corregido en Desbloqueos
                          y en la pestaña Versión, D-a - aqui se habia quedado sin aplicar). -->
+                    <!-- Bloque 1 del idioma (pedido explicito del usuario, 5-sep-2026): primer
+                         texto real migrado al diccionario Loc (LocalizationService), prueba de
+                         concepto de la infraestructura antes de migrar el resto de la app en
+                         bloques posteriores. Path="[clave]" es sintaxis real de WPF para
+                         indexadores - MainViewModel.Loc expone LocalizationService.Instance, que
+                         refresca EN VIVO via PropertyChanged("Item[]") al cambiar el idioma en
+                         Ajustes, sin reiniciar. ".plr"/".tplr" NO se traducen (son la extension
+                         real del archivo, igual en cualquier idioma). -->
                     <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,10,0,24" MaxWidth="700" HorizontalAlignment="Left">
-                        <Run Text="Editor de personajes de Terraria - vanilla y Calamity Mod (tModLoader) a la vez, con el mismo archivo. Aplicación nativa de Windows, ligera y de arranque instantáneo. Carga un " />
+                        <Run Text="{Binding Loc[home_description_part1], Mode=OneWay}" />
                         <Run Text=".plr" FontStyle="Italic" />
-                        <Run Text=" (con su " />
+                        <Run Text="{Binding Loc[home_description_part2], Mode=OneWay}" />
                         <Run Text=".tplr" FontStyle="Italic" />
-                        <Run Text=" si lo tiene) y edita inventario, equipo por loadout, buffs, investigación, mascotas/monturas, apariencia y más - los objetos de Calamity se detectan y editan igual que los vanilla, marcados en " />
-                        <Run Text="rojo" Foreground="{StaticResource CalamityBrush}" FontWeight="SemiBold" />
-                        <Run Text=" para distinguirlos." />
+                        <Run Text="{Binding Loc[home_description_part3], Mode=OneWay}" />
+                        <Run Text="{Binding Loc[home_description_color], Mode=OneWay}" Foreground="{StaticResource CalamityBrush}" FontWeight="SemiBold" />
+                        <Run Text="{Binding Loc[home_description_part4], Mode=OneWay}" />
                     </TextBlock>
 
                     <!-- Auditoria de Opus, I-1: "Inicio" era una pagina de bienvenida estatica -
@@ -4808,6 +4816,20 @@
                               Checked="OnPinWindowSizeChecked" Unchecked="OnPinWindowSizeUnchecked"
                               Margin="0,0,0,24"
                               ToolTip="Guarda ahora mismo el tamaño y la posición de esta ventana - Terrakeep arrancará siempre así hasta que lo desmarques" />
+
+                    <!-- Pedido explicito del usuario (5-sep-2026): "de momento solo daremos
+                         soporte ingles y español de forma nativa" - primer bloque real de la
+                         infraestructura de idioma (LocalizationService), en vivo sin reiniciar.
+                         EnumEquals ya sirve para string (ver su propio comentario real,
+                         value?.ToString()==parameter) - mismo patron de chips ya usado arriba
+                         para ChestViewMode/ObjectsViewMode/dificultad del mundo. -->
+                    <TextBlock Text="{Binding Loc[settings_language_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                    <UniformGrid Columns="2" MaxWidth="300" HorizontalAlignment="Left" Margin="0,0,0,24">
+                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="Idioma" Content="{Binding Loc[settings_language_spanish], Mode=OneWay}" Margin="0,0,3,0"
+                                     IsChecked="{Binding Settings.Language, Converter={StaticResource EnumEquals}, ConverterParameter=es}" />
+                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="Idioma" Content="{Binding Loc[settings_language_english], Mode=OneWay}" Margin="3,0,0,0"
+                                     IsChecked="{Binding Settings.Language, Converter={StaticResource EnumEquals}, ConverterParameter=en}" />
+                    </UniformGrid>
 
                     <TextBlock Text="¡Sobre esta versión!" Style="{StaticResource TitleText}" FontSize="20" Margin="0,0,0,4" />
                     <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,14" MaxWidth="680" HorizontalAlignment="Left">

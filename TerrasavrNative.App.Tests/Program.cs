@@ -253,6 +253,52 @@ internal static class Program
             {
                 vm.SelectedTabIndex = 0; // Inicio - la tarjeta solo existe en su arbol visual
                 DoEvents(); DoEvents();
+
+                // A9-13-IDIOMA (pedido explicito del usuario, 5-sep-2026): primer bloque real de
+                // la infraestructura de idioma (LocalizationService) - prueba EN VIVO, sin
+                // reiniciar la app, sobre el MISMO TextBlock ya en pantalla (no solo que el texto
+                // inicial sea correcto, sino que cambiar el idioma en Ajustes lo reescriba solo).
+                // settings.json real de esta maquina respaldado como texto y restaurado al final
+                // (mismo criterio que A9-11-DIFICULTAD/A9-12-VENTANAFIJA) - el toggle SI persiste
+                // de verdad (LoadFromDisk ya corrio en el arranque real de este arnes).
+                try
+                {
+                    string settingsPathIdioma = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "settings.json");
+                    string? settingsBackupIdioma = File.Exists(settingsPathIdioma) ? File.ReadAllText(settingsPathIdioma) : null;
+                    try
+                    {
+                        // Hallazgo real de esta misma prueba: "Editor de personajes de Terraria"
+                        // por si sola es ambigua - AboutViewModel.Tagline (otro TextBlock real,
+                        // ANTES de este en el arbol visual) tambien empieza igual y NO esta
+                        // migrado a Loc todavia (bloques posteriores) - encontraba ESE por error,
+                        // "encontrado=True" con el resto en False. "Aplicación nativa de Windows"
+                        // solo vive en la clave real que se esta probando aqui.
+                        var descripcionInicio = Descendientes<System.Windows.Controls.TextBlock>(window)
+                            .FirstOrDefault(tb => tb.Text.Contains("Aplicación nativa de Windows"));
+                        bool esOk = descripcionInicio != null && descripcionInicio.Text.Contains("Aplicación nativa de Windows");
+                        Console.WriteLine($"A9-13-IDIOMA: Inicio en español -> TextBlock encontrado={descripcionInicio != null}, contiene 'Aplicación nativa de Windows'={esOk} (esperado True en los dos)");
+                        if (!esOk) Console.WriteLine("FALLO: A9-13-IDIOMA - el texto de Inicio en español no es el esperado (clave sin traducir o Loc roto)");
+
+                        vm.Settings.Language = "en";
+                        DoEvents(); DoEvents();
+                        bool enOk = descripcionInicio != null && descripcionInicio.Text.Contains("Native Windows app");
+                        Console.WriteLine($"A9-13-IDIOMA: tras cambiar a ingles EN VIVO (mismo TextBlock, sin reiniciar) -> contiene 'Native Windows app'={enOk} (esperado True)");
+                        if (!enOk) Console.WriteLine("FALLO: A9-13-IDIOMA - el cambio de idioma en vivo no reescribio el texto ya en pantalla");
+
+                        vm.Settings.Language = "es"; // el resto de este arnes entero asume español - imprescindible antes de seguir
+                        DoEvents(); DoEvents();
+                        bool esOtraVezOk = descripcionInicio != null && descripcionInicio.Text.Contains("Aplicación nativa de Windows");
+                        Console.WriteLine($"A9-13-IDIOMA: vuelta a español -> contiene 'Aplicación nativa de Windows'={esOtraVezOk} (esperado True)");
+                        if (!esOtraVezOk) Console.WriteLine("FALLO: A9-13-IDIOMA - volver a español no revirtio el texto, el resto del arnes quedaria en ingles");
+                    }
+                    finally
+                    {
+                        if (settingsBackupIdioma != null) File.WriteAllText(settingsPathIdioma, settingsBackupIdioma);
+                        else if (File.Exists(settingsPathIdioma)) File.Delete(settingsPathIdioma);
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("A9-13-IDIOMA-EXCEPTION: " + ex); }
+
                 System.Windows.FrameworkElement? tarjetaBorder = null;
                 void BuscarTarjeta(System.Windows.DependencyObject d)
                 {

@@ -32,6 +32,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     // LoadFromDisk) para que el CheckBox de Ajustes lo pueda mostrar - la View la actualiza
     // explicitamente tras Pin()/Unpin(), nunca se persiste desde aqui.
     [ObservableProperty] private bool _isWindowSizePinned;
+    // Pedido explicito del usuario (5-sep-2026): "de momento solo daremos soporte ingles y
+    // español de forma nativa" - "es"/"en", nunca otro valor (ver LocalizationService.
+    // SetLanguage, cualquier cosa desconocida cae a español). Cambia la app EN VIVO al tocar el
+    // chip (OnLanguageChanged siempre llama a SetLanguage, incluso durante LoadFromDisk con
+    // _suppressPersist=true - aplicar el idioma guardado al arrancar no es "persistir", es leer).
+    [ObservableProperty] private string _language = LocalizationService.Spanish;
 
     // Arranca en modo "solo memoria" - Persist() (mas abajo) no toca disco hasta que
     // LoadFromDisk() lo activa explicitamente. Un test que construye "new MainViewModel()"
@@ -61,6 +67,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         ExplorationSidebarWidth = _settings.ExplorationSidebarWidth;
         IsMinimapVisible = _settings.IsMinimapVisible;
         IsWindowSizePinned = WindowPlacementService.IsPinned();
+        Language = _settings.Language;
         ApplyToServices();
         _suppressPersist = false; // a partir de aqui, cualquier cambio real del usuario SI se persiste
     }
@@ -84,11 +91,18 @@ public sealed partial class SettingsViewModel : ObservableObject
         _settings.BackupHistoryCap = BackupHistoryCap;
         _settings.ExplorationSidebarWidth = ExplorationSidebarWidth;
         _settings.IsMinimapVisible = IsMinimapVisible;
+        _settings.Language = Language;
         SettingsService.Save(_settings);
         ApplyToServices();
     }
 
     partial void OnIsMinimapVisibleChanged(bool value) => Persist();
+
+    partial void OnLanguageChanged(string value)
+    {
+        LocalizationService.Instance.SetLanguage(value);
+        Persist();
+    }
 
     // F-10: 0 (plegada) es un valor real y valido - cualquier otro por debajo de 260 (arrastre
     // real del GridSplitter, MinWidth=0 en el XAML para que 0 sea alcanzable) se recorta al
