@@ -8975,3 +8975,145 @@ silencio, lanzado de verdad (`Terrakeep.exe`, proceso real con nombre "Terrakeep
 Administrador de tareas) y confirmada la entrada real de desinstalacion de Windows
 ("Terrakeep versión 2.1.0"). De paso se limpio un `TerrasavrNative.App.exe` suelto que habia
 quedado de la instalacion de prueba anterior (antes de este cambio) en la misma carpeta.
+
+## Auditoria final de Opus antes de publicar (5-sep-2026)
+
+Encargo del usuario: "que Opus haga una auditoria de funcionamiento MUY exhaustiva, que no se
+nos haya pasado nada por alto, que busque todos los bugs que puedan llegar a haber, que haga
+muchas pruebas de que todo este bien, y que haga un plan para que nadie le robe el producto
+cuando lo publique, y confirmar que sus creditos estan puestos." Primera version estable
+publica.
+
+**Punto de partida verificado**: `dotnet build` 0 errores/0 advertencias, `dotnet test` 697/697
+(368 Core + 329 ViewModels), arnes completo de UI Automation 494 lineas con 0 `FALLO`. Al cerrar
+la auditoria: 697/697 y arnes de 525 lineas con 0 `FALLO`, con 4 comprobaciones nuevas.
+
+### Bugs reales encontrados y corregidos
+
+**1. CRITICO, perdida de datos: el historial de copias de seguridad mezclaba personajes
+homonimos** (commit `8d23ec85`). `BackupHistoryService.DirectoryFor` identificaba al personaje
+SOLO por el nombre del fichero (`Backups\{nombre}\`), asi que dos personajes DISTINTOS llamados
+igual compartian carpeta de historial. No es un caso rebuscado: Terrakeep escanea a proposito
+las DOS carpetas reales de Terraria (vanilla y tModLoader) y tener el mismo nombre en las dos es
+lo normal - **en esta misma maquina `Eldelgas.plr` existe en las dos con tamaños distintos (3952
+vs 3744 bytes): son dos personajes diferentes**. Consecuencia real: el "Historial de guardados"
+de uno listaba tambien las copias del otro, y restaurar una de ellas sobrescribia el personaje
+con OTRO personaje distinto, sin aviso ni vuelta atras. Arreglado añadiendo a la carpeta una
+huella corta (8 hex de SHA-256) de la ruta completa normalizada, con migracion best-effort del
+historial ya existente para no hacer desaparecer copias reales del usuario.
+`WorldViewStateService` YA usaba el criterio correcto para exactamente lo mismo ("Clave: la ruta
+ABSOLUTA del .wld... dos mundos distintos con el mismo Title no colisionan") - esto era la
+excepcion incoherente, no un criterio que faltara por descubrir. Verificado con
+`A10-BACKUPS-HOMONIMOS`, comprobacion nueva y permanente del arnes, sobre copias en una carpeta
+temporal propia.
+
+**2. La localizacion no estaba completa: faltaban dos capas enteras** (commits `0f26c9c0` y
+`af12f466`, 77 claves nuevas). Los bloques 1-4 migraron el XAML y buena parte de los ViewModels,
+y se dio por cerrado ("toda la interfaz de la app"), pero quedaban sin migrar:
+
+- **Todo el code-behind** (`MainWindow.xaml.cs`, `App.xaml.cs`): los titulos y filtros de TODOS
+  los dialogos reales de fichero, el `MessageBox` de "cambios sin guardar", el aviso de error
+  inesperado y el submenu de copias. Ningun binding llega ahi.
+- **"Acerca de" entera** (`Tagline`, `AuthorText`, `CreditsText`) - la cara publica del producto
+  y la pestaña donde viven los creditos del autor, en español con la app en ingles.
+- Resumenes siempre a la vista de Libreria/Buffs/Investigacion, los 13 mensajes de rechazo de
+  slot, avisos de Inicio, "Guardado hace un momento/N min/N h", buscador del personaje, nombres
+  de grupo de equipo y almacenes, selector Armadura/Vanidad/Tintes, aviso de bajar la version.
+
+Detectado con `A10-IDIOMA-BARRIDO`, comprobacion nueva del arnes: pone la app en ingles, recorre
+las 6 pestañas raiz y las 10 sub-pestañas de Personaje y examina el texto YA RENDERIZADO
+buscando claves inexistentes (`[clave]`) y palabras españolas inequivocas. Encontro 29 casos
+reales; ahora 0 nuevos. Los 25 restantes son limites YA documentados (cadenas que si estan en el
+diccionario pero se fijan en construccion y no se reevaluan al cambiar de idioma en caliente, y
+los catalogos de CONTENIDO del juego) - se listan como `LIMITE-CONOCIDO` con lista explicita en
+el arnes, para que el barrido siga cazando cualquier cadena NUEVA que se olvide en el futuro.
+
+**3. Ortografia real del español visible** (mismo commit `0f26c9c0`). 18 cadenas del diccionario
+iban sin tildes ("Version de formato", "salta aqui", "no esta en Modo Viaje", "las demas
+categorias", "el mas escondido", "Ningun hueco", "el ULTIMO guardado", "Cuantas copias... este
+numero") conviviendo con el resto, que si las llevaba - mas las mismas faltas dentro del propio
+texto de creditos ("se investigo y verifico", "codigo", "esta compilado").
+
+**4. Faltaba la autoria en el binario** (mismo commit). El comentario de
+`AboutViewModel.AuthorName` daba por hecho que el nombre del autor vivia tambien en el `.csproj`
+(`<Authors>`), pero **no estaba**: `<Company>` iba vacio y no habia ni `<Authors>` ni
+`<Copyright>`, asi que las Propiedades de `Terrakeep.exe` en Windows no decian de quien es el
+programa - justo donde se mira cuando alguien redistribuye un binario.
+
+**5. Los guardados "best-effort" de preferencias podian fallar de verdad** (commit `6c3b4a22`).
+Los 4 servicios que escriben en AppData declaran en su comentario que un fallo al guardar "nunca
+debe impedir seguir usando la app", pero capturaban solo `IOException` y
+`UnauthorizedAccessException` NO deriva de ella (carpeta sin permiso por politica de empresa,
+antivirus, perfil restringido). La LECTURA de esos mismos servicios ya capturaba `Exception` a
+secas: solo la escritura era incoherente.
+
+**6. El instalador repartia simbolos de depuracion** (commit `464ca16c`). Comprobado sobre la
+instalacion REAL de esta maquina: `Terrakeep.pdb`, `TerrasavrNative.App.pdb` y
+`TerrasavrNative.Core.pdb` (~800 KB) acababan en el equipo del usuario final. No le sirven de
+nada a quien solo usa la app, y le dan hechos a quien quiera descompilarla los nombres reales de
+metodos y los numeros de linea. `DebugType=none` SOLO en Release en los dos csproj (Debug los
+sigue generando, que es lo que necesitan depurador y arnes) + `Excludes: "*.pdb"` en el `.iss`.
+De paso, el `.exe` del propio instalador tampoco llevaba ningun dato de autoria (salia como un
+ejecutable anonimo de Inno Setup) - ahora dice Terrakeep / IncrediBad / 2.1.0 / Copyright.
+
+### Lo que se probo a fondo y salio bien (sin cambios necesarios)
+
+- **Round-trip real de `.plr`**: 3 personajes reales (v279 y v326, uno de 102 KB con 5389
+  entradas de investigacion) leidos y reescritos salen **byte a byte identicos al original**, e
+  idempotentes en la segunda vuelta, con `Trail` (bytes de una version futura no reconocida)
+  preservado. Un `prueba.plr` corrupto de la carpeta real revienta al leerse, pero el escaneo de
+  Inicio lo omite sin tumbar la lista, que es el comportamiento correcto.
+- **`WldWriter.PatchGameMode`**: 4 mundos reales (versiones de cabecera 279 y 326, de 3 a 11,8
+  MB) x 4 modos = 16 combinaciones. En todas cambia **exactamente 1 byte**, en el offset
+  esperado, sin tocar la longitud del archivo; la relectura confirma el modo nuevo, el resto de
+  la cabecera queda identica campo a campo, y el mundo COMPLETO (cofres, NPCs, letreros, tile
+  entities) se relee con los mismos recuentos. Entradas invalidas (-1, 4, 99,
+  int.MinValue/MaxValue) rechazadas con `ArgumentOutOfRangeException`; un `.plr` como `.wld`, un
+  `.wld` truncado y uno vacio, rechazados sin corromper nada. La rama de version < 209 (bool) no
+  tiene mundos reales disponibles en esta maquina, pero SI la cubren los tests unitarios con
+  cabeceras sinteticas (v208, v150, v71).
+- **Escritura atomica**: `.plr` y `.wld` escriben siempre a `.tmp` y cierran con `File.Replace`,
+  que genera el `.bak` en la MISMA operacion atomica - un corte a mitad no puede dejar el archivo
+  real a medias. `WorldFileService` ademas RE-LEE de disco y confirma el modo antes de dar el
+  guardado por bueno.
+- **Instalador, ciclo completo real**: carpeta borrada a mano para partir de cero, instalacion
+  silenciosa (12.703 ficheros, 0 `.pdb`, 0 rastros del nombre de ejecutable antiguo), entrada
+  real de desinstalacion ("Terrakeep versión 2.1.0", editor "IncrediBad"), grupo de Menu Inicio
+  con sus dos accesos directos, arranque real de `Terrakeep.exe` (proceso vivo, cerrado limpio) y
+  desinstalacion que deja la carpeta **eliminada por completo**, sin registro ni menu,
+  conservando los datos del usuario en `%LocalAppData%\Terrakeep`. Los restos de la primera
+  pasada (un `whats_new.json` suelto) eran de la instalacion antigua via `install.ps1` del
+  1-sep, no del instalador. La maquina queda con Terrakeep 2.1.0 instalado y funcional, como
+  estaba.
+- **Ventana fijable, incluido el caso maximizada** (`A10-VENTANAFIJA-MAXIMIZADA`, nuevo): marcar
+  el tick con la ventana maximizada guarda a proposito `RestoreBounds` (el tamaño desmaximizado)
+  y `Apply()` nunca maximiza con el tick puesto - decision de diseño deliberada, ya documentada
+  en el propio servicio; se fija ahora como comportamiento esperado para que no cambie sin
+  querer. De paso se ejercita `Apply()` de verdad sobre la ventana real, que no cubria nadie.
+- **Cruce de claves de idioma en los dos sentidos**: 516 claves usadas, ninguna ausente,
+  `es`/`en` sincronizados y **sin ningun desajuste de marcadores `{0}`/`{1}` entre idiomas** (una
+  plantilla inglesa con mas marcadores que argumentos reventaria con `FormatException` en
+  ejecucion).
+- **Creditos (parte 3 del encargo)**: verificados por UI Automation navegando de verdad a
+  "Acerca de" en los dos idiomas (`A10-CREDITOS`) - el TextBlock con "IncrediBad" existe, esta
+  visible y no queda recortado, y su ancho real cambia entre idiomas (292,2 px en ingles / 309,1
+  px en español), que es la prueba de que ahora si traduce: antes medía lo mismo en los dos
+  porque estaba en español siempre.
+
+### Pendiente de DECISION DEL USUARIO (no tocado a proposito)
+
+1. **El instalador no comprueba si esta el .NET Desktop Runtime 10** y el publish es dependiente
+   del framework. En esta maquina de desarrollo esta, pero **la mayoria de quien descargue la app
+   NO lo tendra** (.NET 10 es muy reciente): instalara bien y al arrancar vera un error de
+   Windows sin explicacion. Es el mayor riesgo practico del lanzamiento. Dos salidas: comprobar
+   el runtime desde el `.iss` y ofrecer la descarga, o publicar autocontenido (~140 MB).
+2. **El historial rotativo nunca guarda el estado ORIGINAL** anterior a la primera edicion: se
+   copia DESPUES de escribir, asi que guarda el estado nuevo. El `.bak` cubre solo el ultimo
+   guardado. Cambiar el orden es un cambio de semantica visible, no se ha tocado.
+3. **Novedades y el registro de cambios solo existen en español** (son datos, no interfaz).
+4. **Publicar el repo tal cual expondria datos personales**: el nombre de usuario de Windows
+   (`adrian`) en 20+ ficheros versionados y el nombre real + email en los 260 commits, cuando la
+   app se publica como "IncrediBad".
+5. **No hay `LICENSE`** en el repo - decision del propio usuario, no se ha creado ninguno.
+
+No hubo ningun obstaculo que fallara dos veces seguidas en esta auditoria.

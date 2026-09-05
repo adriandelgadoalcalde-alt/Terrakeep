@@ -4170,6 +4170,37 @@ internal static class Program
             bool trasQuitar = WindowPlacementService.IsPinned();
             Console.WriteLine($"A9-12-VENTANAFIJA: antes={antesDeFijar} (esperado False en una maquina limpia), tras Pin()={trasFijar} (esperado True), tras Unpin()={trasQuitar} (esperado False)");
             if (!trasFijar || trasQuitar) Console.WriteLine("FALLO: A9-12-VENTANAFIJA - Pin()/Unpin() no cambiaron IsPinned() como se esperaba");
+
+            // A10-VENTANAFIJA-MAXIMIZADA (auditoria final de Opus, 5-sep-2026): el ciclo de
+            // arriba solo prueba la ventana en estado Normal. Falta el caso real que mas facil
+            // es entender mal: marcar el tick con la ventana MAXIMIZADA. Pin() guarda a
+            // proposito RestoreBounds (el tamaño DESmaximizado) y Apply() nunca maximiza si el
+            // tick esta puesto - decision de diseño deliberada y documentada en el propio
+            // servicio ("fijar un tamaño concreto y luego arrancar maximizado no tendria
+            // sentido"), no un fallo; se comprueba aqui para que quede fijada como el
+            // comportamiento esperado y no cambie sin querer. Tambien se ejercita Apply() de
+            // verdad sobre la ventana real, que hasta ahora no lo cubria nadie.
+            double anchoNormal = 1345, altoNormal = 812;
+            window.WindowState = System.Windows.WindowState.Maximized;
+            DoEvents(); DoEvents();
+            WindowPlacementService.Pin(window);
+            string json = File.ReadAllText(placementPathParaFijar);
+            var guardado = System.Text.Json.JsonSerializer.Deserialize<WindowPlacementInfo>(json)!;
+            bool guardoElRestaurado = Math.Abs(guardado.PinnedWidth - anchoNormal) < 2 && Math.Abs(guardado.PinnedHeight - altoNormal) < 2;
+            Console.WriteLine($"A10-VENTANAFIJA-MAXIMIZADA: Pin() con la ventana maximizada guarda {guardado.PinnedWidth:0}x{guardado.PinnedHeight:0} (esperado el tamaño DESmaximizado {anchoNormal:0}x{altoNormal:0}, no el de pantalla completa) -> {guardoElRestaurado}");
+            if (!guardoElRestaurado) Console.WriteLine("FALLO: A10-VENTANAFIJA-MAXIMIZADA - Pin() no guardo RestoreBounds estando maximizada");
+
+            window.WindowState = System.Windows.WindowState.Normal;
+            DoEvents(); DoEvents();
+            FijarTamaño(window, 900, 640); // tamaño distinto a proposito, para ver si Apply lo pisa
+            WindowPlacementService.Apply(window);
+            DoEvents(); DoEvents();
+            bool aplicoElFijado = Math.Abs(window.Width - anchoNormal) < 2 && Math.Abs(window.Height - altoNormal) < 2;
+            bool noMaximizo = window.WindowState == System.Windows.WindowState.Normal;
+            Console.WriteLine($"A10-VENTANAFIJA-MAXIMIZADA: Apply() con el tick puesto deja la ventana en {window.Width:0}x{window.Height:0} (esperado {anchoNormal:0}x{altoNormal:0}) -> {aplicoElFijado}, y NO maximizada -> {noMaximizo}");
+            if (!aplicoElFijado || !noMaximizo) Console.WriteLine("FALLO: A10-VENTANAFIJA-MAXIMIZADA - Apply() no restauro el tamaño fijado, o maximizo con el tick puesto");
+
+            WindowPlacementService.Unpin();
         }
         finally
         {
