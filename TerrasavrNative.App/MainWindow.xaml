@@ -1185,8 +1185,12 @@
                              el StackPanel horizontal recortaba la ultima en silencio - hasta 39 de
                              40px, medido. WrapPanel deja que pase a una segunda linea cuando hace
                              falta, sin perder ninguna. -->
+                        <!-- C-12 (auditoria de pulido final): las 4 insignias solo llevaban margen
+                             horizontal - a un ancho de tarjeta que fuerza el WrapPanel de arriba
+                             (R-05/H-05) a una segunda linea, la fila de abajo quedaba pegada a la
+                             de arriba sin ningun hueco vertical. Margen inferior en las 4. -->
                         <WrapPanel Margin="0,4,0,0">
-                            <Border Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="5,1">
+                            <Border Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="5,1" Margin="0,0,5,4">
                                 <TextBlock Text="{Binding DifficultyLabel}" Style="{StaticResource CaptionText}" FontSize="10" />
                             </Border>
 
@@ -1200,7 +1204,7 @@
                                  que reclame atencion). Solo contorno, mismo lenguaje visual que los selectores nuevos de
                                  Exploracion - sin inventar ningun color nuevo del tema. -->
                             <Border Background="Transparent" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1"
-                                    CornerRadius="3" Padding="5,1" Margin="5,0,0,0"
+                                    CornerRadius="3" Padding="5,1" Margin="0,0,5,4"
                                     ToolTip="Sin ningún mod: este personaje no tiene un archivo .tplr al lado"
                                     Visibility="{Binding IsVanilla, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="Vanilla" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
@@ -1210,7 +1214,7 @@
                                  familia del acento pero secundario" (Tag="AccentSoft", PrefixGroupButton). Va ANTES que
                                  la de Calamity porque es el hecho principal, y su ToolTip lleva la lista real de mods
                                  (usedMods del propio .tplr) cuando el fichero la trae. -->
-                            <Border Background="{StaticResource AccentMutedBrush}" CornerRadius="3" Padding="5,1" Margin="5,0,0,0"
+                            <Border Background="{StaticResource AccentMutedBrush}" CornerRadius="3" Padding="5,1" Margin="0,0,5,4"
                                     ToolTip="{Binding UsedModsTooltip, TargetNullValue='Personaje de tModLoader: tiene un archivo .tplr con datos de mods'}"
                                     Visibility="{Binding IsTModLoader, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="tModLoader" FontSize="10" Foreground="{StaticResource AccentHoverBrush}" FontWeight="SemiBold" />
@@ -1218,7 +1222,7 @@
 
                             <!-- "Calamity": el rojo de siempre (CalamityBrush), pero ahora solo cuando hay contenido
                                  REAL de Calamity dentro del .tplr, no por el mero hecho de que el .tplr exista. -->
-                            <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" Padding="5,1" Margin="5,0,0,0"
+                            <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" Padding="5,1" Margin="0,0,5,4"
                                     ToolTip="Tiene objetos o buffs de Calamity guardados de verdad"
                                     Visibility="{Binding IsCalamity, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="Calamity" FontSize="10" Foreground="White" FontWeight="SemiBold" />
@@ -1535,11 +1539,16 @@
                 <!-- F-15 (auditoria de Opus vs TEdit, cierra B-01/B-06): ShowVitalsStrip ya
                      excluye la pestaña Exploracion (antes solo IsCharacterLoaded - la franja de
                      vitales podia seguir ahi aunque el usuario estuviera mirando un mundo). -->
+                <!-- C-12 (auditoria de pulido final): igual que las insignias de tarjeta de
+                     personaje, esta tira solo llevaba margen horizontal - a un ancho de ventana
+                     que fuerza el WrapPanel (R-04a/H-04a) a una segunda linea, vida/mana y el
+                     resto quedaban pegados sin hueco vertical (captura real del usuario, barra
+                     superior). Margen inferior en cada hijo directo. -->
                 <WrapPanel Grid.Column="1" VerticalAlignment="Center"
                             Visibility="{Binding ShowVitalsStrip, Converter={StaticResource BoolToVis}}">
                     <!-- Vida -->
-                    <TextBlock Text="♥" FontSize="13" Foreground="{StaticResource CalamityBrush}" VerticalAlignment="Center" />
-                    <Grid Width="70" Height="10" Margin="4,0,14,0" ToolTip="Vida">
+                    <TextBlock Text="♥" FontSize="13" Foreground="{StaticResource CalamityBrush}" VerticalAlignment="Center" Margin="0,0,0,4" />
+                    <Grid Width="70" Height="10" Margin="4,0,14,4" ToolTip="Vida">
                         <Border Background="{StaticResource BgPrimaryBrush}" CornerRadius="3" />
                         <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" HorizontalAlignment="Left"
                                 Width="{Binding Appearance.HealthFraction, Converter={StaticResource FractionToWidth}, ConverterParameter=70}" />
@@ -1547,8 +1556,8 @@
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Grid>
                     <!-- Maná -->
-                    <TextBlock Text="✦" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
-                    <Grid Width="70" Height="10" Margin="4,0,14,0" ToolTip="Maná">
+                    <TextBlock Text="✦" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,0,4" />
+                    <Grid Width="70" Height="10" Margin="4,0,14,4" ToolTip="Maná">
                         <Border Background="{StaticResource BgPrimaryBrush}" CornerRadius="3" />
                         <Border Background="{StaticResource AccentBrush}" CornerRadius="3" HorizontalAlignment="Left"
                                 Width="{Binding Appearance.ManaFraction, Converter={StaticResource FractionToWidth}, ConverterParameter=70}" />
@@ -1556,7 +1565,7 @@
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Grid>
 
-                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsVitalsStripExpanded, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" Visibility="{Binding IsVitalsStripExpanded, Converter={StaticResource BoolToVis}}">
                         <!-- Defensa (del loadout que se este mirando ahora en Equipamiento -
                              mismo dato real ya en pantalla ahi, EquipmentGroupViewModel). -->
                         <TextBlock Text="🛡" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
@@ -3534,7 +3543,11 @@
                      mundo cargado o no, a diferencia del overlay grande de mas abajo, que solo
                      vive en el estado vacio) para poder pasar de un mundo a otro sin volver al
                      dialogo de Explorador cada vez. -->
-                <DockPanel DockPanel.Dock="Top" Margin="0,10,0,0"
+                <!-- C-07 (auditoria de pulido final, cierra E1): 20px de aire por encima (10 del
+                     WrapPanel de arriba + 10 de aqui) y 0 por debajo - el lienzo del mapa quedaba
+                     pegado a las pildoras. Escala 4/6/10/14/20 ya fijada por P-5: 4 arriba (deja
+                     14 sumando el margen inferior del WrapPanel superior) y 10 abajo. -->
+                <DockPanel DockPanel.Dock="Top" Margin="0,4,0,10"
                            Visibility="{Binding Exploration.Worlds.Count, Converter={StaticResource CountToVis}}">
                     <TextBlock DockPanel.Dock="Left" Text="Tus mundos" Style="{StaticResource CaptionText}"
                                VerticalAlignment="Center" Margin="0,0,10,0" />
@@ -3765,32 +3778,42 @@
                                              rombo hueco rojo para la mazmorra. Mismo tratamiento de
                                              tamaño constante (RenderTransform inverso al Zoom) que
                                              el resto de marcadores. -->
-                                        <TextBlock Text="&#8962;" FontSize="18" Foreground="{StaticResource OrangeBrush}"
-                                                   Canvas.Left="{Binding Exploration.WorldSpawnX}" Canvas.Top="{Binding Exploration.WorldSpawnY}"
-                                                   Margin="-9,-9,0,0" ToolTip="Aparición del mundo" Cursor="Hand"
-                                                   Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
-                                                   Panel.ZIndex="2" RenderTransformOrigin="0.5,0.5">
-                                            <TextBlock.RenderTransform>
-                                                <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
-                                                                ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
-                                            </TextBlock.RenderTransform>
-                                            <TextBlock.Effect>
-                                                <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
-                                            </TextBlock.Effect>
-                                        </TextBlock>
-                                        <TextBlock Text="&#9671;" FontSize="18" Foreground="{StaticResource CalamityBrush}"
-                                                   Canvas.Left="{Binding Exploration.WorldDungeonX}" Canvas.Top="{Binding Exploration.WorldDungeonY}"
-                                                   Margin="-9,-9,0,0" ToolTip="Mazmorra" Cursor="Hand"
-                                                   Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
-                                                   Panel.ZIndex="2" RenderTransformOrigin="0.5,0.5">
-                                            <TextBlock.RenderTransform>
-                                                <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
-                                                                ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
-                                            </TextBlock.RenderTransform>
-                                            <TextBlock.Effect>
-                                                <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
-                                            </TextBlock.Effect>
-                                        </TextBlock>
+                                        <!-- C-01 (auditoria de pulido final, cierra E4b): los dos
+                                             marcadores eran hijos DIRECTOS de este Grid (el mismo
+                                             que lleva el ScaleTransform), y Canvas.Left/Top son
+                                             propiedades adjuntas que SOLO lee un panel Canvas en su
+                                             ArrangeOverride - un Grid las ignora sin error ni aviso.
+                                             Envueltos en su propio Canvas (mismo patron que los tres
+                                             ItemsControl vecinos, cuyo ItemsPanel ya es un Canvas
+                                             real), Canvas.Left/Top empiezan a posicionar de verdad. -->
+                                        <Canvas IsHitTestVisible="True">
+                                            <TextBlock Text="&#8962;" FontSize="18" Foreground="{StaticResource OrangeBrush}"
+                                                       Canvas.Left="{Binding Exploration.WorldSpawnX}" Canvas.Top="{Binding Exploration.WorldSpawnY}"
+                                                       Margin="-9,-9,0,0" ToolTip="Aparición del mundo" Cursor="Hand"
+                                                       Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
+                                                       Panel.ZIndex="2" RenderTransformOrigin="0.5,0.5">
+                                                <TextBlock.RenderTransform>
+                                                    <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
+                                                                    ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
+                                                </TextBlock.RenderTransform>
+                                                <TextBlock.Effect>
+                                                    <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
+                                                </TextBlock.Effect>
+                                            </TextBlock>
+                                            <TextBlock Text="&#9671;" FontSize="18" Foreground="{StaticResource CalamityBrush}"
+                                                       Canvas.Left="{Binding Exploration.WorldDungeonX}" Canvas.Top="{Binding Exploration.WorldDungeonY}"
+                                                       Margin="-9,-9,0,0" ToolTip="Mazmorra" Cursor="Hand"
+                                                       Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
+                                                       Panel.ZIndex="2" RenderTransformOrigin="0.5,0.5">
+                                                <TextBlock.RenderTransform>
+                                                    <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
+                                                                    ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
+                                                </TextBlock.RenderTransform>
+                                                <TextBlock.Effect>
+                                                    <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
+                                                </TextBlock.Effect>
+                                            </TextBlock>
+                                        </Canvas>
                                         <!-- Punto 4 (feedback del usuario, "buscador de todo tipo de
                                              objetos del mundo") - Fase 1 de ESPEC-buscador-mundo-tedit.md
                                              (advisor Opus): capa de marcadores WPF por encima del mapa en
@@ -3936,7 +3959,12 @@
                                             Click="OnToggleMinimapClick"
                                             ToolTip="Plegar/desplegar el minimapa" />
                                 </DockPanel>
-                                <Grid Visibility="{Binding Settings.IsMinimapVisible, Converter={StaticResource BoolToVis}}">
+                                <!-- C-02 (auditoria de pulido final, cierra E2): cinturon de
+                                     seguridad ademas del recorte real en UpdateMinimapViewport -
+                                     ningun contenedor de esta jerarquia (Border/StackPanel/Grid)
+                                     llevaba ClipToBounds, y en WPF el valor por omision es False
+                                     para los tres por igual. -->
+                                <Grid ClipToBounds="True" Visibility="{Binding Settings.IsMinimapVisible, Converter={StaticResource BoolToVis}}">
                                     <Image x:Name="MinimapImage" Source="{Binding Exploration.WorldImage}" Stretch="Uniform"
                                            RenderOptions.BitmapScalingMode="HighQuality"
                                            Width="220" Height="63" MouseLeftButtonDown="OnMinimapClick" Cursor="Hand"

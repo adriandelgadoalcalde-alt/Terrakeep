@@ -715,10 +715,24 @@ public partial class MainWindow : Window
             MinimapViewportRect.Visibility = Visibility.Collapsed;
             return;
         }
-        double vpX = WorldMapScroll.HorizontalOffset / zoom;
-        double vpY = WorldMapScroll.VerticalOffset / zoom;
-        double vpW = WorldMapScroll.ViewportWidth / zoom;
-        double vpH = WorldMapScroll.ViewportHeight / zoom;
+        // C-02 (auditoria de pulido final, cierra E2): a zoom muy alejado (MinZoom=0.02) el
+        // viewport real en tiles de mundo (ViewportWidth/zoom) puede ser MUCHO mas grande que el
+        // propio mundo (medido: 50.000 tiles de viewport contra 8.400 de ancho real en un mundo
+        // Grande) - sin recortar, el rectangulo salia 6 veces mas ancho que la caja del minimapa
+        // y, sin ClipToBounds en ningun contenedor, se pintaba encima de toda la ventana.
+        double vpX = Math.Clamp(WorldMapScroll.HorizontalOffset / zoom, 0, img.PixelWidth);
+        double vpY = Math.Clamp(WorldMapScroll.VerticalOffset / zoom, 0, img.PixelHeight);
+        double vpW = Math.Min(WorldMapScroll.ViewportWidth / zoom, img.PixelWidth - vpX);
+        double vpH = Math.Min(WorldMapScroll.ViewportHeight / zoom, img.PixelHeight - vpY);
+
+        // Con el mundo entero ya visible (p.ej. "Ajustar a la ventana" o mas alejado), el
+        // rectangulo coincidiria con el borde exacto del minimapa y no aportaria nada - igual que
+        // cualquier minimapa real, se oculta en ese caso.
+        if (vpW >= img.PixelWidth && vpH >= img.PixelHeight)
+        {
+            MinimapViewportRect.Visibility = Visibility.Collapsed;
+            return;
+        }
 
         Canvas.SetLeft(MinimapViewportRect, huecoX + vpX * escala);
         Canvas.SetTop(MinimapViewportRect, huecoY + vpY * escala);

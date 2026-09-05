@@ -62,7 +62,14 @@ public static class BuffLibraryTreeBuilder
     private static CategoryNodeViewModel BuildIndex(VanillaBuffCatalog vanilla)
     {
         var allIds = vanilla.AllEntries().Select(e => e.Id).OrderBy(id => id).ToList();
-        var root = new CategoryNodeViewModel("Indice", "Indice");
+        // C-08 (auditoria de pulido final, cierra L1): unico nodo raiz del arbol de buffs sin
+        // IconPath - las 6 carpetas curadas y las paginas de Calamity si lo tienen, con el mismo
+        // criterio ("el primer objeto real de la categoria"). De paso, tilde y recuento como el
+        // resto de nodos raiz (unico sin ninguno de los dos).
+        var root = new CategoryNodeViewModel($"Índice ({allIds.Count})", "Indice")
+        {
+            IconPath = allIds.Count > 0 ? VanillaBuffIconResolver.GetIconPath(allIds[0]) : null,
+        };
         int max = allIds.Count == 0 ? 0 : allIds[^1];
         for (int start = 1; start <= max; start += IndexPageSize)
         {
