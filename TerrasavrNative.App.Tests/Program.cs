@@ -2669,6 +2669,57 @@ internal static class Program
                     }
                     else Console.WriteLine("FALLO: Punto 4 - la categoria Cofres no genero ningun inventario con un mundo real que SI tiene cofres");
 
+                    // C-06 (informe de pulido final, cierra E8): tercer modo "Cofre a cofre" -
+                    // una fila por cofre REAL (nunca agrupado), ordenadas por distancia al spawn.
+                    try
+                    {
+                        vm.Exploration.ChestViewMode = 2;
+                        DoEvents();
+                        int cofresReales = vm.Exploration.ChestRows.Count;
+                        Console.WriteLine($"C-06-COFREACOFRE: ChestRows.Count={cofresReales} (esperado igual al numero real de cofres del mundo)");
+                        if (cofresReales == 0) Console.WriteLine("FALLO: C-06 - 'Cofre a cofre' no genero ninguna fila con un mundo real que SI tiene cofres");
+                        else
+                        {
+                            int sx = vm.Exploration.WorldSpawnX, sy = vm.Exploration.WorldSpawnY;
+                            double Dist(ChestRowViewModel c) => Math.Sqrt(Math.Pow(c.TileX - sx, 2) + Math.Pow(c.TileY - sy, 2));
+                            bool ordenadoPorDistancia = vm.Exploration.ChestRows.Zip(vm.Exploration.ChestRows.Skip(1), (a, b) => Dist(a) <= Dist(b) + 0.001).All(ok => ok);
+                            Console.WriteLine($"C-06-ORDEN: ordenado por distancia ascendente al spawn ({sx},{sy})={ordenadoPorDistancia} (esperado True)");
+                            if (!ordenadoPorDistancia) Console.WriteLine("FALLO: C-06 - 'Cofre a cofre' no esta ordenado por distancia al spawn del mundo");
+
+                            int conIconoCofreACofre = vm.Exploration.ChestRows.Count(r => r.IconPath != null);
+                            Console.WriteLine($"C-06-ICONOS: {conIconoCofreACofre}/{cofresReales} filas con sprite real de variante (esperado TODAS en un mundo vanilla real)");
+                            if (conIconoCofreACofre != cofresReales) Console.WriteLine("FALLO: C-06 - alguna fila de 'Cofre a cofre' salio sin sprite real de variante");
+
+                            var conContenido = vm.Exploration.ChestRows.FirstOrDefault(r => r.ItemCount > 0);
+                            if (conContenido != null)
+                            {
+                                bool antesDesplegado = conContenido.IsExpanded;
+                                vm.Exploration.GoToChestCommand.Execute(conContenido);
+                                Console.WriteLine($"C-06-DESPLEGAR: cofre con {conContenido.ItemCount} objeto(s) real(es) -> IsExpanded antes={antesDesplegado}, despues={conContenido.IsExpanded} (esperado el contrario)");
+                                if (conContenido.IsExpanded == antesDesplegado) Console.WriteLine("FALLO: C-06 - pulsar la fila del cofre no despliega/repliega su contenido");
+                                bool primerObjetoConNombreReal = conContenido.Items.Count > 0 && !string.IsNullOrEmpty(conContenido.Items[0].Name);
+                                Console.WriteLine($"C-06-CONTENIDO: primer objeto real del cofre tiene nombre resuelto={primerObjetoConNombreReal} (esperado True) - '{(conContenido.Items.Count > 0 ? conContenido.Items[0].Name : "")}'");
+                                if (!primerObjetoConNombreReal) Console.WriteLine("FALLO: C-06 - el contenido desplegado del cofre no resuelve nombres reales");
+                                vm.Exploration.GoToChestCommand.Execute(conContenido); // deja el estado como estaba
+                            }
+                            else Console.WriteLine("C-06-DESPLEGAR: ningun cofre real de este mundo tiene contenido - omitido");
+
+                            // Deja un cofre desplegado de verdad para la captura visual de abajo.
+                            if (conContenido != null && !conContenido.IsExpanded) vm.Exploration.GoToChestCommand.Execute(conContenido);
+                            DoEvents();
+                            var rtbCofreACofre = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                            rtbCofreACofre.Render(window);
+                            var encCofreACofre = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                            encCofreACofre.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbCofreACofre));
+                            using (var fsCofreACofre = File.Create(Path.Combine(AppContext.BaseDirectory, "exploracion-cofre-a-cofre.png"))) encCofreACofre.Save(fsCofreACofre);
+                            Console.WriteLine("Captura Cofre a cofre (C-06) -> exploracion-cofre-a-cofre.png");
+                        }
+                        vm.Exploration.ChestViewMode = 0; // deja el estado por defecto para el resto del arnes
+                        DoEvents();
+                    }
+                    catch (Exception ex) { Console.WriteLine("C-06-EXCEPTION: " + ex); }
+
                     // Minerales: los 3 grupos reales + "Marcar en el mapa" (capa de resaltado sin
                     // tope + lista de VETAS agrupadas).
                     vm.Exploration.SelectedCategory = WorldSearchCategory.Ores;

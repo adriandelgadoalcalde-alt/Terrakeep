@@ -1413,6 +1413,64 @@
             </Grid>
         </DataTemplate>
 
+        <!-- C-06 (informe de pulido final, ESPEC-pulido-final-libreria-inicio-apariencia.md#9.6,
+             cierra E8): "Cofre a cofre" - una fila por cofre real, desplegable. Pulsar la fila
+             (sprite+nombre+coordenadas) navega a esa posicion del mapa Y despliega/repliega su
+             contenido a la vez (GoToChestCommand); pulsar un objeto de dentro no navega (ya se
+             esta mirando ese cofre). -->
+        <DataTemplate x:Key="ChestRowTemplate" DataType="{x:Type vm:ChestRowViewModel}">
+            <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Margin="0,0,0,6"
+                    Visibility="{Binding IsMatch, Converter={StaticResource BoolToVis}}">
+                <StackPanel>
+                    <Button Style="{StaticResource RowClickButton}" HorizontalContentAlignment="Stretch" Padding="8"
+                            ToolTip="Ir a esta posición del mapa y ver/ocultar su contenido"
+                            Command="{Binding DataContext.Exploration.GoToChestCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}">
+                        <DockPanel LastChildFill="True">
+                            <Grid DockPanel.Dock="Left" Width="26" Height="26" Margin="0,0,7,0" VerticalAlignment="Center">
+                                <Image Source="{Binding IconPath}" Stretch="Uniform" StretchDirection="DownOnly"
+                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                            </Grid>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount, StringFormat='{}{0} objeto(s)'}"
+                                       Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center" Margin="8,0,0,0" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding VariantName}" Style="{StaticResource BodyText}" TextTrimming="CharacterEllipsis" />
+                                <!-- WldChest.Name - el nombre propio del cofre, si el jugador se lo puso -
+                                     antes no se mostraba en NINGUN sitio de la app (C-19). -->
+                                <TextBlock Text="{Binding ChestName}" Style="{StaticResource CaptionText}" FontStyle="Italic"
+                                           TextTrimming="CharacterEllipsis"
+                                           Visibility="{Binding ChestName, Converter={StaticResource NullToVis}}" />
+                                <TextBlock Style="{StaticResource CaptionText}">
+                                    <Run Text="(" /><Run Text="{Binding TileX, Mode=OneWay}" /><Run Text=", " /><Run Text="{Binding TileY, Mode=OneWay}" /><Run Text=")" />
+                                </TextBlock>
+                            </StackPanel>
+                        </DockPanel>
+                    </Button>
+                    <ItemsControl ItemsSource="{Binding Items}" Margin="33,4,0,8"
+                                  Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:ChestContentItemViewModel}">
+                                <DockPanel Margin="0,0,0,3" LastChildFill="True">
+                                    <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="18" Height="18" Margin="0,0,6,0"
+                                           RenderOptions.BitmapScalingMode="NearestNeighbor" Stretch="Uniform" StretchDirection="DownOnly"
+                                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Stack, StringFormat='x{0}'}"
+                                               Style="{StaticResource CaptionText}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                    <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap" VerticalAlignment="Center">
+                                        <Run Text="{Binding PrefixName, Mode=OneWay}" FontStyle="Italic" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <Run Text="{Binding Name, Mode=OneWay}" />
+                                    </TextBlock>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
         <!-- F-5 (auditoria de Opus vs TEdit, E-04): las listas largas (hasta 1000 resultados,
              hasta 260 filas de inventario) eran un ItemsControl desnudo dentro de un
              ScrollViewer externo - WPF realiza TODOS sus contenedores de golpe en el primer
@@ -4470,21 +4528,62 @@
                                      mutua nativa de WPF, mismo criterio que las pildoras de
                                      categoria de arriba (EnumEqualsConverter tambien sirve para
                                      int, ver su comentario real). -->
-                                <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
+                                <!-- C-06 (informe de pulido final, cierra E8): tercer modo real,
+                                     junto a los dos ya existentes - una fila por cofre REAL del
+                                     mundo (nunca agrupado por variante ni por contenido), con su
+                                     contenido exacto desplegable. -->
+                                <UniformGrid DockPanel.Dock="Top" Columns="3" Margin="0,0,0,8">
                                     <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Content="Por tipo de cofre" Margin="0,0,3,0"
                                                  IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}" />
-                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Content="Por lo que contienen" Margin="3,0,0,0"
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Content="Por lo que contienen" Margin="3,0,3,0"
                                                  IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}" />
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Content="Cofre a cofre" Margin="3,0,0,0"
+                                                 IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}" />
                                 </UniformGrid>
-                                <Button DockPanel.Dock="Top" Content="Buscar seleccionados" Tag="Ghost" Margin="0,0,0,8" HorizontalAlignment="Left"
-                                        Command="{Binding Exploration.SearchCheckedInventoryCommand}" />
-                                <ListBox ItemsSource="{Binding Exploration.Inventory}" ItemTemplate="{StaticResource InventoryRowTemplate}"
+
+                                <!-- Modos 0/1: la lista generica de siempre. -->
+                                <DockPanel>
+                                    <DockPanel.Style>
+                                        <Style TargetType="DockPanel">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Exploration.ChestViewMode}" Value="2">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DockPanel.Style>
+                                    <Button DockPanel.Dock="Top" Content="Buscar seleccionados" Tag="Ghost" Margin="0,0,0,8" HorizontalAlignment="Left"
+                                            Command="{Binding Exploration.SearchCheckedInventoryCommand}" />
+                                    <ListBox ItemsSource="{Binding Exploration.Inventory}" ItemTemplate="{StaticResource InventoryRowTemplate}"
+                                             ItemContainerStyle="{StaticResource VirtualRowContainer}"
+                                             Background="Transparent" BorderThickness="0" Focusable="False"
+                                             ScrollViewer.CanContentScroll="True"
+                                             VirtualizingPanel.IsVirtualizing="True"
+                                             VirtualizingPanel.VirtualizationMode="Recycling"
+                                             VirtualizingPanel.ScrollUnit="Pixel" />
+                                </DockPanel>
+
+                                <!-- Modo 2 (C-06): Cofre a cofre - virtualizada, un mundo Grande
+                                     tiene del orden de cientos de cofres (mismo criterio real ya
+                                     aplicado por F-5 al resto de listas). -->
+                                <ListBox ItemsSource="{Binding Exploration.ChestRows}" ItemTemplate="{StaticResource ChestRowTemplate}"
                                          ItemContainerStyle="{StaticResource VirtualRowContainer}"
                                          Background="Transparent" BorderThickness="0" Focusable="False"
                                          ScrollViewer.CanContentScroll="True"
                                          VirtualizingPanel.IsVirtualizing="True"
                                          VirtualizingPanel.VirtualizationMode="Recycling"
-                                         VirtualizingPanel.ScrollUnit="Pixel" />
+                                         VirtualizingPanel.ScrollUnit="Pixel">
+                                    <ListBox.Style>
+                                        <Style TargetType="ListBox">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Exploration.ChestViewMode}" Value="2">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListBox.Style>
+                                </ListBox>
                             </DockPanel>
 
                             <!-- Minerales: inventario en 3 grupos con cabecera + marcado en el mapa

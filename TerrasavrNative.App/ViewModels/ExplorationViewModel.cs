@@ -173,6 +173,39 @@ public sealed class MissingNpcRowViewModel(int id, string name)
     public string? IconPath { get; } = NpcIconResolver.GetIconPath(id);
 }
 
+// C-06 (informe de pulido final, ESPEC-pulido-final-libreria-inicio-apariencia.md#9.6, cierra
+// E8): un objeto real DENTRO de un cofre concreto (Cofre a cofre, tercer modo de ChestViewMode) -
+// gemelo de "Por lo que contienen" (WorldInventoryRowViewModel) pero SIN el recuento agregado de
+// todo el mundo, con cantidad y prefijo REALES de ESTA pieza suelta.
+public sealed class ChestContentItemViewModel(int netId, string name, int stack, string? prefixName, string? iconPath)
+{
+    public int NetId { get; } = netId;
+    public string Name { get; } = name;
+    public int Stack { get; } = stack;
+    public string? PrefixName { get; } = prefixName;
+    public string? IconPath { get; } = iconPath;
+}
+
+// C-06: una fila real de la vista "Cofre a cofre" - _world.Chests, uno por cofre real del mundo
+// (no agrupado por variante ni por contenido, al contrario que los otros dos modos de
+// ChestViewMode). IsExpanded controla si Items se ve o no (desplegable real al pulsar la fila).
+public sealed partial class ChestRowViewModel(string variantName, string? chestName, int x, int y, string? iconPath, IReadOnlyList<ChestContentItemViewModel> items) : ObservableObject
+{
+    public string VariantName { get; } = variantName;
+    // WldChest.Name - el nombre propio que el jugador le puso al cofre (renombrar un cofre es
+    // una accion real del juego) - antes no se mostraba en NINGUN sitio de la app (C-19).
+    public string? ChestName { get; } = string.IsNullOrWhiteSpace(chestName) ? null : chestName;
+    public int TileX { get; } = x;
+    public int TileY { get; } = y;
+    public string? IconPath { get; } = iconPath;
+    public IReadOnlyList<ChestContentItemViewModel> Items { get; } = items;
+    public int ItemCount { get; } = items.Count;
+    [ObservableProperty] private bool _isExpanded;
+    // Mismo filtro por nombre/id ya establecido (ApplyInventoryFilter) - por variante, nombre
+    // propio del cofre o cualquier objeto real de dentro.
+    [ObservableProperty] private bool _isMatch = true;
+}
+
 // Pestaña "Exploracion" - cargar un .wld real, pintarlo entero (WorldRenderer), listar sus
 // NPCs de pueblo con su posicion (con buscador por nombre) y marcar cuales NPCs de pueblo
 // reales (VanillaTownNpcRoster) todavia no tiene el jugador en este mundo. Solo lectura, no
@@ -187,6 +220,8 @@ public partial class ExplorationViewModel : ObservableObject
     // tiempo de carga del mod, no coincide con el synthetic id que usa el resto de este puerto
     // para .plr) cae en su propio "Item #N" de fallback, nunca se inventa.
     private readonly VanillaItemCatalog _itemNames;
+    // C-06: nombre real del prefijo de cada objeto suelto dentro de un cofre ("Cofre a cofre").
+    private readonly VanillaPrefixCatalog _prefixNames;
     private List<WorldNpcRowViewModel> _allNpcs = [];
     private WldWorld? _world;
     // Punto 4 (advisor Opus, "que solo puedan salir los objetos que tiene ese mundo" - ver
@@ -355,6 +390,10 @@ public partial class ExplorationViewModel : ObservableObject
     }
 
     public ObservableCollection<WorldInventoryRowViewModel> Inventory { get; } = [];
+    // C-06 (informe de pulido final, cierra E8): tercer modo real de ChestViewMode ("Cofre a
+    // cofre") - una fila por cofre real de _world.Chests, coleccion PROPIA (no reutiliza
+    // Inventory, estructuralmente distinta: desplegable, con su propia lista de objetos dentro).
+    public ObservableCollection<ChestRowViewModel> ChestRows { get; } = [];
     // Minerales necesita 3 grupos con cabecera (Minerales/Gemas/Otros objetivos,
     // ESPEC-ui-exploracion.md#11.1) - 3 colecciones separadas en vez de un mecanismo de
     // agrupado WPF generico, mismo criterio ya usado en el proyecto (Npcs/NpcSearchResults/
@@ -450,12 +489,18 @@ public partial class ExplorationViewModel : ObservableObject
     private void RebuildChestInventory()
     {
         Inventory.Clear();
+        ChestRows.Clear();
         if (_world == null || _presence == null) return;
         if (ChestViewMode == 0)
         {
             foreach (var ((type, u, v), count) in _presence.ChestKindCounts.OrderByDescending(kv => kv.Value))
                 Inventory.Add(new WorldInventoryRowViewModel(type, u, v, _tileNames.TileVariantName(type, u, v), count, null,
                     TileIconResolver.GetIconPath(type, u, v), ToWpfColor(_mapColors.TileColor(type))));
+        }
+        else if (ChestViewMode == 2)
+        {
+            RebuildChestByChest();
+            return; // ApplyInventoryFilter de mas abajo es solo para Inventory - ChestRows tiene su propio filtro
         }
         else
         {
@@ -597,6 +642,51 @@ public partial class ExplorationViewModel : ObservableObject
         Filtrar(OreMetals);
         Filtrar(OreGems);
         Filtrar(OreTargets);
+
+        // C-06: "Cofre a cofre" - por variante, nombre propio del cofre o cualquier objeto real
+        // de dentro (mismo criterio de Fold ya establecido, reutiliza queryFolded).
+        foreach (var chest in ChestRows)
+            chest.IsMatch = sinBusqueda
+                || LibrarySearchGrammar.Fold(chest.VariantName).Contains(queryFolded, StringComparison.Ordinal)
+                || (chest.ChestName != null && LibrarySearchGrammar.Fold(chest.ChestName).Contains(queryFolded, StringComparison.Ordinal))
+                || chest.Items.Any(it => LibrarySearchGrammar.Fold(it.Name).Contains(queryFolded, StringComparison.Ordinal))
+                || $"{chest.TileX},{chest.TileY}".Contains(WorldSearchText, StringComparison.Ordinal);
+    }
+
+    // C-06 (informe de pulido final, cierra E8): una fila por cofre REAL (nunca agrupado, al
+    // contrario que los otros dos modos de ChestViewMode), ordenados por distancia al spawn del
+    // mundo - mismo calculo ya establecido para ShowSpawnDistance (ApplyWorldSearchOrder), "que
+    // cofre tengo mas cerca" es el orden util de verdad y no cuesta nada nuevo.
+    private void RebuildChestByChest()
+    {
+        if (_world == null) return;
+        int sx = _world.Header.SpawnX, sy = _world.Header.SpawnY;
+        double Dist(WldChest c) => Math.Sqrt(Math.Pow(c.X - sx, 2) + Math.Pow(c.Y - sy, 2));
+        foreach (var chest in _world.Chests.OrderBy(Dist))
+        {
+            var tile = _world.Tiles[chest.X, chest.Y];
+            string variantName = _tileNames.TileVariantName(tile.Type, tile.U, tile.V);
+            string? iconPath = TileIconResolver.GetIconPath(tile.Type, tile.U, tile.V);
+            // Casillas vacias reales de un cofre parcialmente lleno tienen NetId=0 - se
+            // descartan, mismo criterio que "Por lo que contienen" (ChestItemCounts solo cuenta
+            // objetos reales).
+            var items = chest.Items.Where(it => it.NetId != 0).Select(it =>
+            {
+                string? prefixName = it.Prefix != 0 ? _prefixNames.ById(it.Prefix)?.Es ?? _prefixNames.ById(it.Prefix)?.En : null;
+                return new ChestContentItemViewModel(it.NetId, _itemNames.GetName(it.NetId), it.Stack, prefixName, VanillaIconResolver.GetIconPath(it.NetId));
+            }).ToList();
+            ChestRows.Add(new ChestRowViewModel(variantName, chest.Name, chest.X, chest.Y, iconPath, items));
+        }
+    }
+
+    // C-06: pulsar la fila del cofre navega a su posicion (mismo NavigateToTile de siempre) Y
+    // despliega/repliega su contenido - un unico gesto hace las dos cosas, coherente con "ya
+    // estas mirando este cofre" en las dos mitades del resultado.
+    [RelayCommand]
+    private void GoToChest(ChestRowViewModel chest)
+    {
+        chest.IsExpanded = !chest.IsExpanded;
+        NavigateToTile(chest.TileX, chest.TileY);
     }
 
     // Clic simple sobre una fila de inventario - busca SOLO esa (el caso comun no debe costar
@@ -968,6 +1058,7 @@ public partial class ExplorationViewModel : ObservableObject
         _mapColors = service.MapColors;
         _tileNames = service.TileNames;
         _itemNames = service.VanillaCatalog;
+        _prefixNames = service.VanillaPrefixCatalog;
         // Fire-and-forget deliberado, mismo criterio real que HomeViewModel - el constructor no
         // puede ser async, y no hay nada que esperar aqui (Worlds se rellena un instante
         // despues, IsScanningWorlds refleja el hueco mientras tanto).
