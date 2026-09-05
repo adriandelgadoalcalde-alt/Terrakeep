@@ -8839,3 +8839,64 @@ se asumio "flaky" sin comprobar, mismo criterio ya establecido `verificar-aislan
 **Pendiente, bloques siguientes**: migrar las cadenas de los ViewModels (`StatusMessage`/
 errores/texto calculado, ~450 estimadas), catalogos de contenido del juego a ingles, arnes
 forzado a español + checks nuevos en ingles, y despues Novedades/Acerca de/instalador/rebrand.
+
+## Bloques 3 y 4 del idioma: toda la UI de la app migrada, 139 claves mas (commits `ed1890bd`, `e1268d32`)
+
+Pedido explicito del usuario: "sigue con cada bloque sin parar" - sin pausas entre bloques.
+
+**Bloque 3 (`ed1890bd`, 78 claves)**: `StatusMessage`/`GlobalErrorMessage`/`RejectionMessage`/
+`WorldSearchSummary`/`ScanMessage` con texto real, en `ExplorationViewModel.cs`,
+`MainViewModel.cs`, `BuffSlotViewModel.cs` - carga/guardado de personaje, conjuntos de objetos/
+buffs, busqueda de mundo (con su pluralizacion real "resultado(s)"/"veta(s)"), zonas del mapa al
+pasar el raton, nombres de liquidos, informe de texto plano exportable. Interpolacion
+(`$"...{var}..."`) convertida a `LocalizationService.Instance.Format(clave, args)`
+(`string.Format` de toda la vida sobre la plantilla del diccionario).
+
+Dos casos reales de "cadena congelada en el idioma de arranque" (una asignacion normal solo se
+re-ejecuta cuando el codigo que la contiene vuelve a correr, nunca sola al cambiar el idioma):
+- `LiquidCandidates` (busqueda de liquidos por texto libre) era un campo `static readonly` -
+  evaluado UNA vez, con toda probabilidad en español, congelado asi para siempre. Convertido a
+  propiedad (`=>`), se recalcula en cada busqueda real.
+- `ShowZeroResultsState` comparaba `WorldSearchSummary` contra el literal "Sin resultados." -
+  cambiado a comparar contra la misma clave Loc que la asignacion.
+
+**Bug real encontrado por el propio arnes de tests UNITARIOS** (no por build, que no detecta
+claves de diccionario ausentes): dos claves nuevas quedaron referenciadas en el codigo pero sin
+añadir a los JSON (`status_load_world_first`, `status_saved`) - `ViewSpawnOnMapTests` fallo con
+el texto de fallback entre corchetes visible ("[status_load_world_first]"). A partir de aqui,
+criterio nuevo para todo bloque futuro: script que extrae TODAS las claves `Loc[...]`/
+`LocalizationService.Instance[...]`/`.Format(...)` usadas de verdad en `.cs`/`.xaml` y las
+compara contra los dos diccionarios en los dos sentidos, antes de dar cualquier bloque por
+cerrado.
+
+**Bloque 4 (`e1268d32`, 61 claves)**: segundo barrido, mas amplio, sobre 8 ViewModels que el
+bloque 3 no habia cubierto - mensajes "selecciona un slot"/"slot vacio" (compartidos ItemEdit/
+BuffEdit), las 3 etiquetas de duracion de buff (Minima/Media/Maxima, con y sin valor real), las
+pildoras de clase de Builds, los 12 roles de slot (Cabeza/Cuerpo/Piernas/Accesorio N/Tinte/
+Montura/Gancho/Vagoneta/Mascota/Mascota de luz/Moneda/Municion), 4 mensajes de error de Inicio,
+"Auto-equipar" con su desglose real, el nombre por defecto de un Spawn Point nuevo, "Ninguno"
+del tinte de pelo, las 7 etiquetas de color del personaje, y las 12 etiquetas de Deshacer/
+Rehacer de Apariencia (C-15). Verificado con el mismo script de cruce de claves esta vez (0
+huecos en los dos sentidos) antes de tocar nada mas.
+
+**Limitacion real conocida y aceptada, documentada para no perseguirla sin necesidad**: varias
+cadenas se fijan UNA vez en el constructor o en `LoadFrom(personaje)` (pildoras de clase de
+Builds, roles de slot resueltos por instancia, opciones de tinte de pelo, `ContainerViewModel.
+DisplayName`, `WorldGameModeText`) - si el usuario cambia de idioma DESPUES de que esa parte ya
+se construyo, esas cadenas concretas se quedan en el idioma de arranque hasta la proxima
+recarga real (nuevo personaje/mundo). Arreglarlo de raiz exigiria hacer reactiva la
+construccion entera de cada ViewModel a un cambio de idioma - alcance mayor que una migracion
+de TEXTO, dejado fuera a proposito.
+
+Verificado en los dos bloques: `dotnet build` (0 errores), `dotnet test` (697/697, incluida la
+prueba que fallo antes del arreglo del bloque 3), arnes completo de UI Automation (0 `FALLO`,
+494 lineas) en cada uno.
+
+**Con esto, toda la interfaz de usuario visible de Terrakeep (XAML + mensajes de ViewModels)
+esta en el diccionario de idioma, es+en completos y sincronizados (455 claves).** Pendiente,
+bloques siguientes: catalogos de CONTENIDO del juego (nombres de tile/pared/buff/objeto - viven
+en JSON aparte, cargados por Core, no por LocalizationService - necesitan su propio camino,
+probablemente reutilizando el patron ya establecido de extraer del `.json` de localizacion real
+de tModLoader apuntando a `en-US`), revision visual en ingles (nada se desborda), y despues
+Novedades/Acerca de/instalador/rebrand - las 4 cosas restantes del encargo original del usuario
+("cuando acabes todo esto...").
