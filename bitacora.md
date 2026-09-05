@@ -8397,5 +8397,18 @@ mismo commit por necesidad, documentado aparte para que quede claro que no era d
 
 Verificado: `dotnet test` 670/670 (12 tests nuevos entre C-10a/b/c), arnes completo (0 `FALLO`).
 
-Pendientes bloques 4-9 (C-14+C-12, C-09, C-05/C-11/C-13/C-17, C-15, C-16/C-18, C-06) - seguir el
-orden del informe, un commit verificado por bloque.
+**Bloque 4/9 (C-14) - cerrado, commit `f47d96ab`:** margen de 20px (escalon real "grupos
+distintos") entre identidad<->vitales y vitales<->botones de la barra superior; margen
+vida->mana subido de 14 a 20 (razon 5:1, se leen como dos pares); `MaxWidth="220"` en el
+`TextBox` del nombre (antes solo `MinWidth`). Vuelta a pasar la matriz completa de
+redimensionado tras el cambio (obligatorio segun el propio informe) - `AR-04`/`H-04` siguen en
+verde a los 6 tamaños criticos. Nuevo check `A9-06-BARRAHUECO`: separacion horizontal real
+identidad<->vitales, estable en exactamente 20px. Hallazgo real de esta ejecucion (no del
+codigo de produccion): la primera version de este check tambien media vitales<->botones y dio
+un falso `FALLO` con valores negativos/absurdos - simplificado a solo la mitad de la medicion
+que resulto robusta, en vez de perseguir una geometria de `Grid`/`Popup` fragil de verificar
+por UI Automation; el espaciado real se confirmo aparte con una captura visual real
+(`h5-09-desbloqueos-compacto.png`).
+
+Pendientes bloques 5-9 (C-09, C-05/C-11/C-13/C-17, C-15, C-16/C-18, C-06) - seguir el orden del
+informe, un commit verificado por bloque.
