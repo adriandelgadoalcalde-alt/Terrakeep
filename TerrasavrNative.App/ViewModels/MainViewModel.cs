@@ -164,6 +164,20 @@ public partial class MainViewModel : ObservableObject
     }
     private bool CanRedoEdit() => UndoStack.CanRedo;
 
+    // C-15 (informe de pulido final, cierra A1): unico punto real donde Apariencia empuja al
+    // UndoStack compartido - chequea _suppressUndoRecording en el momento EXACTO del intento de
+    // empujar, no antes. Importante para las entradas con debounce (AppearanceViewModel.
+    // PushUndoDebounced): el push real llega hasta ~400ms DESPUES del ultimo cambio, mucho
+    // despues de que UndoEdit()/RedoEdit() ya hayan devuelto _suppressUndoRecording a false - si
+    // el chequeo se hiciera antes (ej. al empezar la rafaga) en vez de aqui, un Deshacer/Rehacer
+    // real de un campo con debounce (vida/mana/horas) se grabaria a si mismo como una entrada
+    // nueva pasado ese tiempo.
+    private void PushAppearanceUndo(UndoEntry entry)
+    {
+        if (_suppressUndoRecording) return;
+        UndoStack.Push(entry);
+    }
+
     // Unico sitio real que decide si un cambio de slot merece una entrada nueva en el
     // historial - antes/despues ya llegan clonados de verdad (ItemSlotViewModel.EmitItemChanged
     // solo dispara si el contenido cambio de verdad).
@@ -674,7 +688,15 @@ public partial class MainViewModel : ObservableObject
         Exploration = new ExplorationViewModel(_service);
         Library = new LibraryViewModel(_service);
         Research = new ResearchViewModel(_service);
-        Appearance = new AppearanceViewModel(_service);
+        // C-15 (informe de pulido final, cierra A1): Apariencia empuja al MISMO UndoStack
+        // compartido, via un callback (mismo criterio ya establecido - ExplorationViewModel/
+        // BuffsViewModel reciben un Action<T> en vez de la propia MainViewModel entera).
+        // PushAppearanceUndo es el UNICO punto que decide si de verdad se empuja (chequea
+        // _suppressUndoRecording el mismo instante del intento, nunca antes) - AppearanceViewModel
+        // no necesita su propio guardia de reentrada duplicado, el existente ya cubre cualquier
+        // Undo/Redo real (UndoEdit/RedoEdit son el UNICO sitio que llama a UndoStack.UndoLast/
+        // RedoLast, y los dos ya envuelven la llamada en _suppressUndoRecording=true/false).
+        Appearance = new AppearanceViewModel(_service, PushAppearanceUndo, () => _suppressUndoRecording);
         Library.ItemPlaced += () =>
         {
             SelectedTabIndex = (int)AppTab.Personaje;

@@ -1985,6 +1985,68 @@ internal static class Program
             }
             catch (Exception ex) { Console.WriteLine("AP-A-AP-B-EXCEPTION: " + ex); }
 
+            // C-15 (informe de pulido final, cierra A1): Deshacer/Rehacer real en Apariencia -
+            // los cambios DISCRETOS (peinado/tinte/genero/dificultad) ya se prueban en xunit
+            // (AppearanceUndoTests, sin ventana). Lo que SOLO se puede probar aqui (necesita el
+            // Dispatcher real bombeando un DispatcherTimer real) es el debounce de ~400ms de los
+            // campos continuos - vida/mana/horas (TextBox con UpdateSourceTrigger=
+            // PropertyChanged, cada caracter tecleado dispara un cambio real) y los 7 colores
+            // (Slider, arrastrar dispara docenas de eventos por segundo).
+            try
+            {
+                // HealthMax en cascada baja HealthNow si queda por encima (logica real ya
+                // existente, Ap-f) - eso dispararia SU PROPIO debounce bajo otra key y rompería
+                // el recuento esperado. HealthNow=0 primero (y se deja asentar) para que ningun
+                // valor de prueba de HealthMax de mas abajo (9/99/999) quede nunca por debajo.
+                vm.Appearance.HealthNow = 0;
+                DoEvents();
+                WaitForDispatcher(700);
+
+                int undosAntes = vm.UndoStack.Entries.Count;
+                int maxOriginal = vm.Appearance.HealthMax;
+                // Simula escribir "999" caracter a caracter (3 cambios reales en < 400ms) - sin
+                // agrupar, esto dejaria 3 entradas de un digito cada una en el historial.
+                vm.Appearance.HealthMax = 9;
+                DoEvents();
+                vm.Appearance.HealthMax = 99;
+                DoEvents();
+                vm.Appearance.HealthMax = 999;
+                DoEvents();
+                int undosJustoTrasEscribir = vm.UndoStack.Entries.Count;
+                WaitForDispatcher(700); // > 400ms del debounce real
+                int undosTrasElDebounce = vm.UndoStack.Entries.Count;
+                Console.WriteLine($"C-15-DEBOUNCE-VIDA: entradas antes={undosAntes}, justo tras escribir 3 digitos={undosJustoTrasEscribir} (esperado igual, el debounce aun no disparo), tras esperar 700ms={undosTrasElDebounce} (esperado antes+1, UNA sola entrada)");
+                if (undosJustoTrasEscribir != undosAntes || undosTrasElDebounce != undosAntes + 1)
+                    Console.WriteLine("FALLO: C-15 - el debounce de vida maxima no agrupo la rafaga en una unica entrada");
+
+                vm.UndoEditCommand.Execute(null);
+                Console.WriteLine($"C-15-DEBOUNCE-VIDA-DESHACER: HealthMax tras Deshacer={vm.Appearance.HealthMax} (esperado {maxOriginal}, el valor de ANTES de toda la rafaga)");
+                if (vm.Appearance.HealthMax != maxOriginal) Console.WriteLine("FALLO: C-15 - Deshacer la rafaga de vida maxima no vuelve al valor de antes del gesto completo");
+                vm.RedoEditCommand.Execute(null);
+                if (vm.Appearance.HealthMax != 999) Console.WriteLine("FALLO: C-15 - Rehacer la rafaga de vida maxima no vuelve al valor final del gesto");
+
+                // Mismo criterio para un color real (Slider R/G/B) - arrastrar los 3 canales
+                // cuenta como UN solo cambio de color, no tres.
+                var swatchParaUndo = vm.Appearance.Swatches[0];
+                int rOriginal = swatchParaUndo.R, gOriginal = swatchParaUndo.G, bOriginal = swatchParaUndo.B;
+                int undosAntesColor = vm.UndoStack.Entries.Count;
+                swatchParaUndo.R = (rOriginal + 10) % 256;
+                DoEvents();
+                swatchParaUndo.G = (gOriginal + 20) % 256;
+                DoEvents();
+                swatchParaUndo.B = (bOriginal + 30) % 256;
+                DoEvents();
+                WaitForDispatcher(700);
+                int undosTrasColorDebounce = vm.UndoStack.Entries.Count;
+                Console.WriteLine($"C-15-DEBOUNCE-COLOR: entradas antes={undosAntesColor}, tras arrastrar R/G/B y esperar={undosTrasColorDebounce} (esperado +1, UNA sola entrada para los 3 canales)");
+                if (undosTrasColorDebounce != undosAntesColor + 1) Console.WriteLine("FALLO: C-15 - el debounce de un color no agrupo R/G/B en una unica entrada");
+                vm.UndoEditCommand.Execute(null);
+                bool colorRestaurado = swatchParaUndo.R == rOriginal && swatchParaUndo.G == gOriginal && swatchParaUndo.B == bOriginal;
+                Console.WriteLine($"C-15-DEBOUNCE-COLOR-DESHACER: color restaurado a (R={rOriginal},G={gOriginal},B={bOriginal})={colorRestaurado} (esperado True)");
+                if (!colorRestaurado) Console.WriteLine("FALLO: C-15 - Deshacer el color no restaura los 3 canales originales");
+            }
+            catch (Exception ex) { Console.WriteLine("C-15-DEBOUNCE-EXCEPTION: " + ex); }
+
             // Ctrl+S: confirma que dispara el mismo guardado real (banner de confirmacion) que
             // ya prueba GUARDAR-DESDE-BUILDS, esta vez por teclado.
             vm.IsDirty = true; // fuerza un estado "con cambios" real para que Guardar tenga sentido

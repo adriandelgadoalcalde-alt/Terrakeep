@@ -18,6 +18,14 @@ namespace TerrasavrNative.App.ViewModels;
 public partial class AppearanceViewModel : ObservableObject
 {
     private readonly CharacterFileService _service;
+    // C-15 (informe de pulido final, cierra A1): callback real hacia el UndoStack compartido de
+    // MainViewModel (mismo criterio ya establecido - ExplorationViewModel/BuffsViewModel reciben
+    // un Action<T> en vez de la propia MainViewModel entera) y consulta de si un Deshacer/Rehacer
+    // esta en curso AHORA MISMO (MainViewModel._suppressUndoRecording real, no una copia local -
+    // ver el comentario de PushUndoDebounced sobre por que la entrada con debounce necesita
+    // consultarlo en el momento del intento de empujar, no antes).
+    private readonly Action<UndoEntry> _pushUndo;
+    private readonly Func<bool> _isUndoRedoInProgress;
     private PlrCharacter? _character;
     private bool _suppressWriteback;
 
@@ -35,9 +43,11 @@ public partial class AppearanceViewModel : ObservableObject
     [ObservableProperty] private int _hairDye;
     [ObservableProperty] private string _hairDyeDisplayName = "Ninguno";
 
-    public AppearanceViewModel(CharacterFileService service)
+    public AppearanceViewModel(CharacterFileService service, Action<UndoEntry> pushUndo, Func<bool> isUndoRedoInProgress)
     {
         _service = service;
+        _pushUndo = pushUndo;
+        _isUndoRedoInProgress = isUndoRedoInProgress;
         BuildHairDyeOptions();
         _hairOptionsDebounceTimer.Tick += (_, _) =>
         {
@@ -186,6 +196,13 @@ public partial class AppearanceViewModel : ObservableObject
     public void LoadFrom(PlrCharacter character)
     {
         _character = null; // evita que los Add() de abajo disparen escrituras a medio construir
+        // C-15: el historial de deshacer de un personaje no tiene sentido real sobre otro (mismo
+        // criterio ya establecido para UndoStack.Clear al cambiar de personaje en MainViewModel)
+        // - cualquier grupo con debounce pendiente de un personaje ANTERIOR se descarta entero,
+        // nunca se deja disparar contra el nuevo.
+        foreach (var pending in _pendingUndoGroups.Values) pending.Timer.Stop();
+        _pendingUndoGroups.Clear();
+        _swatchBaseline.Clear();
         Swatches.Clear();
         Swatches.Add(new ColorSwatchViewModel("Pelo", character.HairColor));
         Swatches.Add(new ColorSwatchViewModel("Piel", character.SkinColor));
@@ -215,7 +232,34 @@ public partial class AppearanceViewModel : ObservableObject
         for (int i = 0; i < Swatches.Count; i++)
         {
             var swatch = Swatches[i];
+            int swatchIndex = i; // captura real por valor - "i" es la variable de bucle compartida
             swatch.PropertyChanged += (_, _) => RefreshPreview();
+            // C-15 (informe de pulido final, gotcha real #2): los 7 colores NO pasan por
+            // AppearanceViewModel - los edita ColorSwatchViewModel directamente sobre el byte[]
+            // real del personaje, sin ningun "oldValue" propio que capturar (a diferencia de
+            // HairStyle/HealthMax/etc, que si tienen su overload de dos parametros generado por
+            // el propio ObservableProperty). _swatchBaseline guarda el (R,G,B) de ANTES del
+            // gesto en curso - se congela en la primera llamada de la rafaga (PushUndoDebounced
+            // ya lo hace por dentro) y se refresca solo cuando el grupo de verdad se resuelve
+            // (onFlushed), listo para el PROXIMO gesto futuro.
+            _swatchBaseline[swatchIndex] = (swatch.R, swatch.G, swatch.B);
+            swatch.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName is not (nameof(ColorSwatchViewModel.R) or nameof(ColorSwatchViewModel.G) or nameof(ColorSwatchViewModel.B))) return;
+                string key = $"swatch{swatchIndex}";
+                var before = _swatchBaseline[swatchIndex];
+                var after = (swatch.R, swatch.G, swatch.B);
+                PushUndoDebounced(key, $"Apariencia · color de {swatch.Label}", before, after,
+                    v => { swatch.R = v.R; swatch.G = v.G; swatch.B = v.B; },
+                    onFlushed: () => _swatchBaseline[swatchIndex] = after);
+                // Si PushUndoDebounced NO creo/mantuvo un grupo real (replay en curso, o
+                // _suppressWriteback/_character==null) el valor real del swatch YA cambio de
+                // todos modos - "before" tiene que reflejarlo AHORA, o la PROXIMA rafaga real
+                // partiria de un valor obsoleto (bug real encontrado escribiendo este mismo
+                // arreglo: Deshacer un color y luego editarlo de nuevo empujaba una entrada que
+                // "antes" apuntaba al valor de DOS cambios atras, no al inmediatamente anterior).
+                if (!_pendingUndoGroups.ContainsKey(key)) _swatchBaseline[swatchIndex] = after;
+            };
             // Ap-b: color de pelo cambio, las miniaturas quedan obsoletas - marca barata
             // (_hairOptionsStale) en vez de limpiar/regenerar aqui mismo; si el selector esta
             // abierto AHORA, ademas reinicia el debounce real (180ms) para refrescarlas de
@@ -255,6 +299,8 @@ public partial class AppearanceViewModel : ObservableObject
         if (_suppressWriteback || _character == null) return;
         _character.HairStyle = value;
     }
+    // C-15: cambio discreto (SelectHair, un clic en el selector visual) - sin debounce.
+    partial void OnHairStyleChanged(int oldValue, int newValue) => PushUndo("Apariencia · peinado", oldValue, newValue, v => HairStyle = v);
 
     partial void OnHairDyeChanged(int value)
     {
@@ -262,6 +308,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (_suppressWriteback || _character == null) return;
         _character.HairDye = (byte)Math.Clamp(value, 0, 255);
     }
+    partial void OnHairDyeChanged(int oldValue, int newValue) => PushUndo("Apariencia · tinte de pelo", oldValue, newValue, v => HairDye = v);
 
     // H6-02 (Opus, sexta pasada): un cambio REAL de genero (el usuario toca el selector, no una
     // carga silenciosa) colapsa a la variante "Starter" real de ese genero - el selector de la
@@ -275,6 +322,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (_suppressWriteback || _character == null) return;
         _character.Gender = value ? TerrasavrNative.Core.Model.PlayerVariantSets.MaleStarter : TerrasavrNative.Core.Model.PlayerVariantSets.FemaleStarter;
     }
+    partial void OnIsMaleChanged(bool oldValue, bool newValue) => PushUndo("Apariencia · género", oldValue, newValue, v => IsMale = v);
 
     partial void OnDifficultyChanged(int value)
     {
@@ -282,6 +330,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (_suppressWriteback || _character == null) return;
         _character.Difficulty = (byte)Math.Clamp(value, 0, 3);
     }
+    partial void OnDifficultyChanged(int oldValue, int newValue) => PushUndo("Apariencia · dificultad", oldValue, newValue, v => Difficulty = v);
 
     // Ap-f (segunda auditoria de Opus, Fable): "se puede poner HealthNow=500/HealthMax=100; el
     // juego lo recorta, Terrakeep no". El recorte/arrastre SOLO se aplica fuera de la carga
@@ -304,6 +353,9 @@ public partial class AppearanceViewModel : ObservableObject
         if (clamped != value) { HealthNow = clamped; return; } // reentra, se estabiliza al segundo paso
         _character.HealthNow = value;
     }
+    // C-15: TextBox con UpdateSourceTrigger=PropertyChanged - cada caracter tecleado dispara un
+    // cambio real, PushUndoDebounced agrupa el gesto completo en una unica entrada.
+    partial void OnHealthNowChanged(int oldValue, int newValue) => PushUndoDebounced("HealthNow", "Apariencia · vida actual", oldValue, newValue, v => HealthNow = v);
     partial void OnHealthMaxChanged(int value)
     {
         OnPropertyChanged(nameof(HealthFraction));
@@ -312,6 +364,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (HealthNow > value) HealthNow = value; // arrastra el actual hacia abajo si el maximo baja por debajo
         _character.HealthMax = value;
     }
+    partial void OnHealthMaxChanged(int oldValue, int newValue) => PushUndoDebounced("HealthMax", "Apariencia · vida máxima", oldValue, newValue, v => HealthMax = v);
     partial void OnManaNowChanged(int value)
     {
         OnPropertyChanged(nameof(ManaFraction));
@@ -321,6 +374,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (clamped != value) { ManaNow = clamped; return; }
         _character.ManaNow = value;
     }
+    partial void OnManaNowChanged(int oldValue, int newValue) => PushUndoDebounced("ManaNow", "Apariencia · maná actual", oldValue, newValue, v => ManaNow = v);
     partial void OnManaMaxChanged(int value)
     {
         OnPropertyChanged(nameof(ManaFraction));
@@ -329,6 +383,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (ManaNow > value) ManaNow = value;
         _character.ManaMax = value;
     }
+    partial void OnManaMaxChanged(int oldValue, int newValue) => PushUndoDebounced("ManaMax", "Apariencia · maná máximo", oldValue, newValue, v => ManaMax = v);
 
     /// <summary>Fraccion 0..1 real de vida actual/maxima - 0 si HealthMax es 0 (personaje sin cargar).</summary>
     public double HealthFraction => HealthMax > 0 ? Math.Clamp(HealthNow / (double)HealthMax, 0.0, 1.0) : 0.0;
@@ -336,7 +391,9 @@ public partial class AppearanceViewModel : ObservableObject
     public double ManaFraction => ManaMax > 0 ? Math.Clamp(ManaNow / (double)ManaMax, 0.0, 1.0) : 0.0;
     public string ManaLabel => $"{ManaNow}/{ManaMax}";
     partial void OnFishingQuestsCompletedChanged(int value) { if (!_suppressWriteback && _character != null) _character.FishingQuestsCompleted = value; }
+    partial void OnFishingQuestsCompletedChanged(int oldValue, int newValue) => PushUndoDebounced("FishingQuestsCompleted", "Apariencia · misiones de pesca completadas", oldValue, newValue, v => FishingQuestsCompleted = v);
     partial void OnGolferScoreChanged(int value) { if (!_suppressWriteback && _character != null) _character.GolferScore = value; }
+    partial void OnGolferScoreChanged(int oldValue, int newValue) => PushUndoDebounced("GolferScore", "Apariencia · mejor golpe de golf", oldValue, newValue, v => GolferScore = v);
 
     partial void OnPlayHoursChanged(double value)
     {
@@ -345,6 +402,7 @@ public partial class AppearanceViewModel : ObservableObject
         _character.PlayTimeLow = unchecked((uint)ticks);
         _character.PlayTimeHigh = unchecked((uint)(ticks >> 32));
     }
+    partial void OnPlayHoursChanged(double oldValue, double newValue) => PushUndoDebounced("PlayHours", "Apariencia · horas jugadas", oldValue, newValue, v => PlayHours = v);
 
     // Indices en Swatches, mismo orden en que se anaden arriba en LoadFrom.
     private const int HairIdx = 0, SkinIdx = 1, EyesIdx = 2, ShirtIdx = 3, UnderIdx = 4, PantsIdx = 5, ShoesIdx = 6;
@@ -361,6 +419,73 @@ public partial class AppearanceViewModel : ObservableObject
     {
         _liveArmor = armor;
         RefreshPreview();
+    }
+
+    // C-15 (informe de pulido final, cierra A1): "casi toda edicion del personaje es
+    // irreversible" - Apariencia era la unica pestaña real de edicion sin Deshacer/Rehacer (el
+    // patron ya existe y es agnostico del dominio, ExplorationViewModel/MainViewModel.
+    // UndoStack). Dos helpers: PushUndo para cambios discretos (un clic/seleccion - peinado,
+    // tinte, genero, dificultad...) y PushUndoDebounced para campos continuos (vida/mana/horas,
+    // editados via TextBox con UpdateSourceTrigger=PropertyChanged - CADA caracter tecleado
+    // dispara un cambio real; sin agrupar, escribir "500" a mano dejaria 3 entradas de 1 digito
+    // cada una en el historial).
+    private void PushUndo<T>(string label, T before, T after, Action<T> apply)
+    {
+        if (_suppressWriteback || _character == null || _isUndoRedoInProgress()) return;
+        if (EqualityComparer<T>.Default.Equals(before, after)) return;
+        _pushUndo(new UndoEntry { Label = label, Undo = () => apply(before), Redo = () => apply(after) });
+    }
+
+    private sealed class PendingUndoGroup
+    {
+        public required object? Before;
+        public object? After;
+        public Action? OnFlushed;
+        public required DispatcherTimer Timer;
+    }
+    private readonly Dictionary<string, PendingUndoGroup> _pendingUndoGroups = [];
+    // C-15 (gotcha real #2): "ultimo valor conocido" por indice de swatch (Swatches[i]), para
+    // poder ofrecer un "before" real a PushUndoDebounced - ver el comentario del suscriptor de
+    // PropertyChanged en LoadFrom.
+    private readonly Dictionary<int, (int R, int G, int B)> _swatchBaseline = [];
+
+    // "Criterio mío" real del informe: debounce de ~400ms que empuja UNA entrada con el valor
+    // INICIAL del gesto completo y el FINAL, no una por tecla/tick. El "before" solo se usa de
+    // la PRIMERA llamada real de la rafaga (mientras el grupo siga pendiente, las siguientes
+    // llamadas solo actualizan "after" y reinician el reloj) - "key" identifica el gesto (una
+    // propiedad simple; un color usa el mismo key para sus 3 canales, para que un arrastre que
+    // toque R y luego G cuente como UN solo cambio de color, no dos). onFlushed (opcional) deja
+    // que el llamador actualice su propio "ultimo valor conocido" una vez el grupo se resuelve
+    // de verdad (necesario para ColorSwatchViewModel, que no tiene un "oldValue" real propio -
+    // ver el comentario de LoadFrom).
+    private void PushUndoDebounced<T>(string key, string label, T before, T after, Action<T> apply, Action? onFlushed = null)
+    {
+        if (_suppressWriteback || _character == null || _isUndoRedoInProgress()) return;
+
+        if (_pendingUndoGroups.TryGetValue(key, out var pending))
+        {
+            pending.After = after;
+            pending.OnFlushed = onFlushed;
+            pending.Timer.Stop();
+            pending.Timer.Start();
+            return;
+        }
+
+        var group = new PendingUndoGroup { Before = before, After = after, OnFlushed = onFlushed, Timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) } };
+        group.Timer.Tick += (_, _) =>
+        {
+            group.Timer.Stop();
+            _pendingUndoGroups.Remove(key);
+            var finalBefore = (T)group.Before!;
+            var finalAfter = (T)group.After!;
+            group.OnFlushed?.Invoke();
+            // C-15: chequeo real EN ESTE INSTANTE, no al empezar la rafaga - un Deshacer/Rehacer
+            // real puede llegar y volver a irse mucho antes de que este timer dispare.
+            if (_isUndoRedoInProgress() || EqualityComparer<T>.Default.Equals(finalBefore, finalAfter)) return;
+            _pushUndo(new UndoEntry { Label = label, Undo = () => apply(finalBefore), Redo = () => apply(finalAfter) });
+        };
+        _pendingUndoGroups[key] = group;
+        group.Timer.Start();
     }
 
     private void RefreshPreview()
