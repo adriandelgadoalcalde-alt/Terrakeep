@@ -1,4 +1,5 @@
 using System.Reflection;
+using TerrasavrNative.App.Services;
 
 namespace TerrasavrNative.App.ViewModels;
 
@@ -8,8 +9,17 @@ namespace TerrasavrNative.App.ViewModels;
 public sealed class AboutViewModel
 {
     public string AppName => "Terrakeep";
-    public string Tagline => "Editor de personajes de Terraria, aplicación nativa de Windows - vanilla y Calamity Mod.";
     public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
+
+    // Auditoria final de Opus (5-sep-2026): estas tres cadenas eran las ultimas de la cara
+    // publica de la app que seguian en español duro - con el idioma en ingles, la pestaña
+    // "Acerca de" (y el encabezado de Inicio, que reusa Tagline) se veian enteras en español.
+    // Detectado por el barrido nuevo A10-IDIOMA-BARRIDO del arnes, no por build/test. El XAML
+    // enlaza ahora directamente a Loc[clave] (unica via real de refresco EN VIVO: AboutViewModel
+    // no es observable, un binding a About.Tagline nunca se volveria a preguntar al cambiar el
+    // idioma) - estas propiedades se quedan como la fuente unica del texto para cualquier otro
+    // consumidor.
+    public string Tagline => LocalizationService.Instance["about_tagline"];
 
     // C-18 (informe de pulido final, cierra N2): bloque PROPIO, no una frase enterrada en
     // CreditsText - pedido explicito del usuario, credito personal como autor. El nombre va
@@ -17,18 +27,7 @@ public sealed class AboutViewModel
     // Incredibad ni a INCREDIBAD en ningun sitio, ni aqui, ni en el XAML, ni en el .csproj
     // (<Authors>), ni en ningun comentario.
     public string AuthorName => "IncrediBad";
-    public string AuthorText => "Terrakeep está diseñado y desarrollado por IncrediBad.";
+    public string AuthorText => LocalizationService.Instance["about_author_text"];
 
-    public string CreditsText =>
-        "Terrakeep es una reescritura nativa (C#/.NET, WPF) de un editor de personajes de " +
-        "Terraria - sin Chromium ni Electron. El formato de archivo (.plr/.tplr, NBT, cifrado) " +
-        "se investigo y verifico de forma independiente, directamente contra el juego real y " +
-        "tModLoader, sin depender de codigo de terceros.\n\n" +
-        "Inspirado en Terrasavr, de YellowAfterlife (yal.cc) - un editor excelente al que " +
-        "este proyecto debe la idea original. Terrakeep no es una copia ni un fork de ese " +
-        "codigo (el motor de YellowAfterlife esta compilado, nunca se tuvo acceso a su fuente): " +
-        "es un programa distinto, escrito desde cero, con su propia base de codigo.\n\n" +
-        "Terraria, tModLoader y Calamity Mod son propiedad de sus respectivos autores " +
-        "(Re-Logic, el equipo de tModLoader y el equipo de CalamityMod). Terrakeep no esta " +
-        "afiliado con ninguno de ellos.";
+    public string CreditsText => LocalizationService.Instance["about_credits_text"];
 }

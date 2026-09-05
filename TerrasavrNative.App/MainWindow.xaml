@@ -1826,7 +1826,7 @@
                         <Image Source="pack://siteoforigin:,,,/Assets/branding/logo-128.png" Width="56" Height="56" />
                         <StackPanel VerticalAlignment="Center" Margin="16,0,0,0">
                             <TextBlock Text="{Binding About.AppName}" Style="{StaticResource TitleText}" FontSize="26" />
-                            <TextBlock Text="{Binding About.Tagline}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Loc[about_tagline], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
                         </StackPanel>
                     </StackPanel>
                     <!-- H4-09 (cuarta auditoria de Opus, Fable): MaxWidth sin HorizontalAlignment
@@ -4731,7 +4731,7 @@
                         <Image Source="pack://siteoforigin:,,,/Assets/branding/logo-128.png" Width="72" Height="72" />
                         <StackPanel VerticalAlignment="Center" Margin="16,0,0,0">
                             <TextBlock Text="{Binding About.AppName}" Style="{StaticResource TitleText}" FontSize="28" />
-                            <TextBlock Text="{Binding About.Tagline}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" />
+                            <TextBlock Text="{Binding Loc[about_tagline], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" />
                             <TextBlock Style="{StaticResource CaptionText}" Margin="0,4,0,0">
                                 <Run Text="{Binding Loc[about_version_label], Mode=OneWay}" /><Run Text="{Binding About.Version, Mode=OneWay}" />
                             </TextBlock>
@@ -4742,9 +4742,9 @@
                          antes de las atribuciones a terceros (que dicen cosas distintas y no
                          deben mezclarse). -->
                     <TextBlock Text="{Binding Loc[about_authorship], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="18" Margin="0,0,0,4" />
-                    <TextBlock Text="{Binding About.AuthorText}" Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,20"
+                    <TextBlock Text="{Binding Loc[about_author_text], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,20"
                                MaxWidth="680" HorizontalAlignment="Left" />
-                    <TextBlock Text="{Binding About.CreditsText}" Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,24"
+                    <TextBlock Text="{Binding Loc[about_credits_text], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,24"
                                MaxWidth="680" HorizontalAlignment="Left" />
 
                     <!-- H5-07 (quinta auditoria de Opus): "no existe ninguna pantalla de

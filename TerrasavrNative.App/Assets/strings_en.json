@@ -453,5 +453,8 @@
   "tt_world_size": "World size, in tiles",
   "where_is_it_title": "Where is it?",
   "tt_search_grammar_basic": "Comma = several searches at once, space = all words at once, #123 = by id, #100-200 = by id range",
-  "label_dash_slot": " - slot "
+  "label_dash_slot": " - slot ",
+  "about_tagline": "Terraria character editor, a native Windows app - vanilla and Calamity Mod.",
+  "about_author_text": "Terrakeep is designed and developed by IncrediBad.",
+  "about_credits_text": "Terrakeep is a native rewrite (C#/.NET, WPF) of a Terraria character editor - with no Chromium and no Electron. The file format (.plr/.tplr, NBT, encryption) was researched and verified independently, straight against the real game and tModLoader, without relying on third-party code.\n\nInspired by Terrasavr, by YellowAfterlife (yal.cc) - an excellent editor this project owes the original idea to. Terrakeep is not a copy or a fork of that code (YellowAfterlife's engine is compiled; its source was never available): it is a different program, written from scratch, with its own codebase.\n\nTerraria, tModLoader and Calamity Mod are the property of their respective authors (Re-Logic, the tModLoader team and the CalamityMod team). Terrakeep is not affiliated with any of them."
 }

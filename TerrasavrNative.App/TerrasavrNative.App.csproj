@@ -40,7 +40,16 @@
     <AssemblyTitle>Terrakeep</AssemblyTitle>
     <Product>Terrakeep</Product>
     <Description>Editor de personajes de Terraria (vanilla + Calamity Mod)</Description>
-    <Company></Company>
+    <!-- Auditoria final de Opus (5-sep-2026, antes de publicar): el comentario de
+         AboutViewModel.AuthorName ya daba por hecho que el nombre del autor vivia tambien aqui
+         (<Authors>), pero NO estaba puesto - Company iba vacio y no habia ni Authors ni
+         Copyright, asi que las Propiedades del Terrakeep.exe en Windows (pestaña Detalles) no
+         decian de quien es el programa. Es justo el sitio donde mirar cuando alguien
+         redistribuye un binario, asi que importa de verdad de cara a publicarlo. El nombre va
+         LITERAL: "IncrediBad", con I y B mayusculas (misma regla que en AboutViewModel). -->
+    <Authors>IncrediBad</Authors>
+    <Company>IncrediBad</Company>
+    <Copyright>Copyright © 2026 IncrediBad</Copyright>
     <!-- Real, sincronizada a mano con la version mas reciente de Assets/changelog.json - antes
          no se fijaba y caia al 1.0.0.0 por defecto de .NET, sin significar nada real. -->
     <Version>2.1.0</Version>
