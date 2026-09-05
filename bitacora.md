@@ -8505,4 +8505,40 @@ deja para C-06 (bloque 9), que ya lo incluye en su propio diseño real.
 
 Verificado: `dotnet test` 687/687 (1 test nuevo), arnes completo (0 `FALLO`).
 
-Pendiente bloque 9 (C-06, vista cofre a cofre) - el mas grande y ultimo del plan.
+**Bloque 9/9 (C-06) - cerrado, commit `821932c3`. ULTIMO bloque del plan.** Tercer modo real de
+la categoria Cofres en Exploracion, "Cofre a cofre" - junto a "Por tipo de cofre" y "Por lo que
+contienen", una fila por cofre REAL de `_world.Chests` (nunca agrupado): `ChestRowViewModel`
+(sprite+nombre real de variante, nombre propio del cofre si el jugador se lo puso -
+`WldChest.Name`, que hasta ahora no se mostraba en NINGUN sitio de la app, cerrando asi el ultimo
+punto suelto de C-19-, coordenadas, numero de objetos) con desplegable: pulsar la fila navega en
+el mapa Y despliega/repliega su contenido exacto a la vez (`GoToChestCommand`), cada objeto con
+icono/prefijo real/nombre/cantidad via `ChestContentItemViewModel`. Ordenado por distancia real
+al spawn del mundo - mismo calculo ya establecido en `ApplyWorldSearchOrder`/
+`ShowSpawnDistance` - "que cofre tengo mas cerca" es el orden util de verdad. Lista virtualizada
+(`VirtualRowContainer`, mismo criterio que el resto de listas largas) por si el mundo es Grande.
+
+Verificado con un mundo real de 8400x2400: 505 cofres reales (`ChestRows.Count`), ordenados
+correctamente por distancia ascendente al spawn (4196,420), 505/505 con sprite real de variante,
+desplegar/replegar cambia `IsExpanded` en ambos sentidos, contenido con nombres reales resueltos
+(ej. cofre real con 39 objetos, primero "Puerta de cristal"). `dotnet build` (0 errores),
+`dotnet test` 687/687, arnes completo de UI Automation (0 `FALLO`, comprobado dos veces: una
+funcional y otra tras anadir la captura de pantalla).
+
+**Hallazgo visual, NO es una regresion de este bloque**: en la captura
+(`exploracion-cofre-a-cofre.png`) el panel nuevo aparece visualmente apretado por el panel
+inferior compartido "WorldSearchResults" (`DockPanel.Dock="Bottom"`, visible en cualquier
+categoria no-NPC cuando `WorldSearchResults.Count > 0` de una busqueda "Todo" anterior sin
+limpiar). Comparado con `exploracion-cofres-con-sprites.png` (modo "Por tipo de cofre", tomada en
+un bloque anterior): el mismo apretamiento aparece IDENTICO alli tambien - confirma que es un
+comportamiento previo compartido por los 3 modos de Cofres, no algo que introduce C-06. Fuera de
+alcance de esta correccion, anotado aqui por si se retoma en el futuro.
+
+**Cierre del plan completo**: con este bloque se dan por aplicadas las 19 correcciones del
+informe `ESPEC-pulido-final-librería-inicio-apariencia.md` (C-01 a C-19), repartidas en 9 bloques
+de trabajo verificados uno a uno (build + test + arnes completo + commit propio + entrada de
+bitacora + commit propio de la bitacora, en cada bloque). Total de tests unitarios: de 656 a 687
+a lo largo de toda la sesion. Cero `FALLO` en el arnes completo en cada punto de verificacion.
+Dos fallos reales encontrados y corregidos como efecto secundario de verificar con rigor (no
+parte del plan original): el recorte de `PlayerPreviewRenderer.LoadPngPixels40x56` para sprites
+de equipo de Calamity sin recortar (bloque 3), y una prueba del arnes que asumia el comportamiento
+antiguo de "cualquier spawn se ve en cualquier mapa" tras el fix de C-05 (bloque 6).
