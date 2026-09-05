@@ -8765,3 +8765,77 @@ respaldados y restaurados con el mismo rigor que los cambios de disco anteriores
   "Experimental" del nombre por la version estable de Terrakeep.
 - El propio usuario menciono un encargo "super grande" aparte, a consultar mas adelante (todavia
   sin detalle).
+
+## Bloque 2 del idioma: todo MainWindow.xaml migrado, es+en (commit `4122e417`)
+
+Pedido explicito del usuario: "sigue con cada bloque sin parar" (no esperar confirmacion entre
+bloques, a diferencia del criterio anterior). Migradas las ~450 cadenas de texto originales de
+`MainWindow.xaml` (4917 lineas) a `Loc[clave]` - las 6 pestañas raiz completas (Inicio,
+Personaje con sus 9 sub-pestañas Objetos/Equipamiento/Inventario/Almacenes/Buffs/Investigacion/
+Apariencia/Spawn Points/Desbloqueos/Version, Builds, Novedades, Exploracion, Acerca de) mas la
+seccion de recursos/plantillas compartidas (tarjetas de slot, menus contextuales, tooltips,
+leyenda) - 318 claves unicas tras reutilizar texto identico entre sitios, **traducidas a ingles
+en el mismo bloque** (no se aparco para un bloque aparte - mas eficiente con el contexto real de
+cada cadena ya en la cabeza). Deliberadamente SIN tocar: nombres propios (Terraria/Calamity/
+Vanilla/tModLoader), extensiones de archivo (.plr/.tplr), glifos Unicode decorativos y atajos de
+teclado (Ctrl+N) - identicos en cualquier idioma.
+
+**Metodo real usado** (dado el volumen, 450+ cadenas): extraccion por script (Python, regex
+sobre `(Text|Content|Header|ToolTip)="literal"`, excluyendo bindings/glifos/atajos ya
+existentes) en vez de edicion manual cadena a cadena - generadas las claves+traducciones a mano
+(criterio humano real, no traduccion automatica ciega) y aplicada la sustitucion con un script
+que reemplaza `Attr="valor"` por `Attr="{Binding Loc[clave]}"` en TODAS sus apariciones a la
+vez, verificando 0 coincidencias perdidas antes de escribir. Groundeo real de la extraccion:
+0 "SIN COINCIDIR" en las 4 pasadas (Personaje 113/113, Exploracion+AcercaDe 75+22/97,
+recursos/plantillas 78/78).
+
+**Bug real del propio script, encontrado a mitad de proceso**: `lines[start:end] = [segment]`
+(reemplazar un rango de lineas por UN SOLO elemento de lista con el texto entero) colapsa la
+lista de lineas para cualquier procesamiento POSTERIOR que calculara indices sobre `len(lines)`
+- la seccion "Acerca de" salio con 0 coincidencias reales la primera vez (el rango quedo
+apuntando fuera de la lista ya colapsada). Arreglado con `segment.splitlines(keepends=True)` en
+vez de colapsar a un unico elemento - preserva la cuenta de lineas real para cualquier paso
+siguiente.
+
+**Dos bugs reales de WPF, encontrados SOLO por el arnes completo (build/test no detectan
+ninguno de los dos - confirma otra vez por que el arnes es imprescindible en este proyecto)**:
+
+1. **La app reventaba al arrancar** (`InvalidOperationException` real, capturada en el log del
+   arnes): los ~380 bindings generados por el script no llevaban `Mode=OneWay` explicito - WPF
+   intenta TwoWay/OneWayToSource por defecto en ciertas propiedades, y el indexador de
+   `LocalizationService` es de solo lectura (`this[string] => ...`, sin setter). Arreglado
+   añadiendo `Mode=OneWay` a los ~380 bindings de golpe (regex sobre `{Binding Loc[clave]}` sin
+   "Mode=" ya presente).
+2. **Bug mas sutil, encontrado DESPUES de arreglar el primero** (build/test en verde, pero el
+   propio checkpoint B-2 -segunda auditoria de Opus- dio "Boton 'Colocar' NO-FOUND" de forma
+   100% reproducible en 2 ejecuciones seguidas - nunca se acepto como "flaky" sin comprobar):
+   unos 80 bindings `Loc[...]` viven dentro de `DataTemplate`s cuyo `DataContext` real es la
+   FILA/TARJETA/SLOT individual (`ItemSlotViewModel`, `BuffCatalogEntryViewModel`,
+   `CharacterListEntryViewModel` y 17 mas), nunca `MainViewModel` - `Loc` no existe ahi, y WPF
+   NO lanza ninguna excepcion por una propiedad de binding ausente, simplemente deja el valor
+   sin fijar (el boton "existia" de verdad, con su Visibility correcta, pero su Content/Name
+   quedaba vacio - de ahi que la busqueda por nombre real via UI Automation no lo encontrara).
+   Se descarto el truco ya establecido en el proyecto para este mismo problema
+   (`PlacementTarget.Tag`, usado para los `Command` de los menus contextuales, que SI viven en
+   `MainViewModel`) por uno mas simple y robusto en general: añadir
+   `public LocalizationService Loc => LocalizationService.Instance;` DIRECTAMENTE a las 20
+   clases afectadas (`ItemEditViewModel`, `ItemSlotViewModel`, `ContainerViewModel`,
+   `BuildItemRowViewModel`, `BuildClassGearViewModel`, `BuffSlotViewModel`,
+   `BuffContainerViewModel`, `BuffEditViewModel`, `LibraryItemViewModel`,
+   `BuffCatalogEntryViewModel`, `CharacterListEntryViewModel`, `WorldListEntryViewModel`,
+   `WorldInventoryRowViewModel`, `ChestRowViewModel`, `WhereIsItResultViewModel`,
+   `ResearchRowViewModel`, `ColorSwatchViewModel`, `ServerEntryRowViewModel`,
+   `WorldSearchHitRowViewModel`, `WorldNpcRowViewModel`) - el binding se resuelve contra el
+   DataContext natural del item SIN cruzar ningun limite de popup (`ContextMenu`/`ToolTip` son
+   ventanas/HWND reales separados, desconectados del arbol visual de la `Window` para
+   `RelativeSource AncestorType=Window` - motivo real de por que el truco `PlacementTarget.Tag`
+   existe en primer lugar para los `Command`).
+
+Verificado: `dotnet build` (0 errores), `dotnet test` (697/697), arnes completo de UI Automation
+(0 `FALLO`, 494 lineas) - incluye el propio checkpoint B-2 que detecto el segundo bug real antes
+de darlo por bueno, reproducido de forma identica dos veces seguidas antes de investigar (nunca
+se asumio "flaky" sin comprobar, mismo criterio ya establecido `verificar-aislando-la-variable`).
+
+**Pendiente, bloques siguientes**: migrar las cadenas de los ViewModels (`StatusMessage`/
+errores/texto calculado, ~450 estimadas), catalogos de contenido del juego a ingles, arnes
+forzado a español + checks nuevos en ingles, y despues Novedades/Acerca de/instalador/rebrand.
