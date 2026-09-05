@@ -1,5 +1,19 @@
 [
   {
+    "version": "2.1.0",
+    "date": "5 de septiembre de 2026",
+    "summary": "Soporte nativo de idioma: toda la interfaz de la app (pestañas, botones, tooltips, mensajes de estado/error) ya está disponible en español e inglés, con cambio en vivo desde Ajustes sin reiniciar. Además, tamaño de ventana fijable y descripción de Inicio actualizada.",
+    "added": [
+      "Selector de idioma en Ajustes (Español/English) - cambia toda la app al instante, sin reiniciar.",
+      "Tick en Ajustes para fijar el tamaño y la posición actuales de la ventana como los de arranque, independiente del recuerdo automático de siempre.",
+      "Descripción de Inicio reescrita sin mencionar tecnología antigua (Electron/Chromium) ya superada por esta versión nativa."
+    ],
+    "fixed": [
+      "El párrafo introductorio de Inicio y el subtítulo de \"Acerca de\" todavía mencionaban \"sin Electron\" - ya no aplica a un puerto 100% nativo.",
+      "El icono de \"Calamity (mod)\" en la Librería de Buffs seguía sin sprite pese a haberse dado por cerrado antes."
+    ]
+  },
+  {
     "version": "2.0.0",
     "date": "5 de septiembre de 2026",
     "summary": "Pulido final pre-lanzamiento tras una auditoría exhaustiva de Exploración/Librería/Inicio/barra superior/Apariencia: bonos de set arreglados de raíz (no solo los datos), Deshacer/Rehacer en Apariencia, búsqueda sin tildes y varias correcciones reales de usabilidad.",
