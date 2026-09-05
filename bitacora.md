@@ -8475,5 +8475,34 @@ Verificado: `dotnet test` 686/686 (5 tests nuevos, `AppearanceUndoTests`), arnes
 `FALLO`) - confirma con el Dispatcher real bombeando que escribir "999" caracter a caracter y
 arrastrar los 3 canales de un color dejan UNA sola entrada cada uno.
 
-Pendientes bloques 8-9 (C-16/C-18, C-06) - seguir el orden del informe, un commit verificado por
-bloque.
+**Bloque 8/9 (C-16, C-18 + detalle de C-19) - cerrado, commit `5575c429`:** decisiones de
+"Bloque D" del informe (producto, sin especificacion explicita del usuario) resueltas con el
+propio criterio del informe.
+
+- **C-16**: "Objetos nuevos" de 1.4.5.7 en Novedades salian sin sprite (`vanilla_item_ids_by_key.
+  json` para en 5455, los 40 objetos reales de esta version -6147-6195- quedan por encima).
+  Decision explicita del informe: NO ampliar ese catalogo (alimenta Libreria/Investigacion/
+  buscador del personaje - colocar uno de esos ids en un slot real produciria un objeto invalido
+  en un guardado de tModLoader 1.4.4.9). Catalogo separado y de solo lectura,
+  `whats_new_item_ids.json` (`scripts/extraer-ids-novedades-vanilla.py`, fuente real `ItemID.cs`
+  - 740 objetos reales por encima del maximo, TODOS con sprite ya en disco), consumido
+  UNICAMENTE por `WhatsNewItemViewModel.ForVanilla` como respaldo.
+- **C-18**: bloque propio de autoria en Acerca de (`AboutViewModel.AuthorName/AuthorText`,
+  "IncrediBad" literal segun pedido explicito del usuario). Registro de cambios al dia: 5
+  entradas nuevas (1.3.0 a 2.0.0) agrupando los ~186 commits reales desde la 1.2.0 por bloque de
+  trabajo real (revisado con `git log`, no inventado), version del `.csproj` subida a 2.0.0
+  (decision de Bloque D resuelta con mi propio criterio, ya que el usuario no especifico entre
+  1.9.0/2.0.0 - dado el volumen real de trabajo, 2.0.0 parecio el hito mas honesto).
+- **Detalle de C-19, de paso**: el tooltip del tick de fila citaba "Buscar seleccionados" - un
+  boton que en Minerales no existe de verdad (ahi el tick dispara "Marcar en el mapa", C-04) -
+  texto neutro, cierto en las 3 categorias que comparten esa plantilla.
+
+**Decision consciente de NO tocar** (resto de C-19): "375 Honey Drip"/"231 Larva" sin traducir en
+`tile_names.json` - sin el pipeline real de verificacion de este proyecto (`generar-tile-names.
+js` + `lang.zip`, que no existe en Terrasavr-Native), inventar una traduccion violaria la regla
+explicita "lo que no se encuentra no se inventa". `WldChest.Name` sin mostrar en ningun sitio se
+deja para C-06 (bloque 9), que ya lo incluye en su propio diseño real.
+
+Verificado: `dotnet test` 687/687 (1 test nuevo), arnes completo (0 `FALLO`).
+
+Pendiente bloque 9 (C-06, vista cofre a cofre) - el mas grande y ultimo del plan.
