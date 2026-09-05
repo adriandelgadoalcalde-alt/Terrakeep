@@ -87,17 +87,17 @@ public partial class BuffLibraryViewModel : CatalogBrowserViewModel<BuffCatalogE
 
         if (ShowRootCategoryCards)
         {
-            ResultsSummary = $"{_all.Count} buffs en total (vanilla + Calamity) - escribe para buscar o elige una carpeta.";
+            ResultsSummary = LocalizationService.Instance.Format("buff_library_summary_all", _all.Count);
             return;
         }
 
         var list = matches.ToList();
         foreach (var item in list.Take(MaxResults)) Results.Add(item);
 
-        string categoryLabel = SelectedCategory != null ? $" en \"{SelectedCategory.Name}\"" : string.Empty;
+        string categoryLabel = SelectedCategory != null ? LocalizationService.Instance.Format("library_summary_in_category", SelectedCategory.Name) : string.Empty;
         ResultsSummary = list.Count > MaxResults
-            ? $"Mostrando {MaxResults} de {list.Count} resultados{categoryLabel} - afina la busqueda."
-            : $"{list.Count} resultado(s){categoryLabel}.";
+            ? LocalizationService.Instance.Format("library_summary_showing", MaxResults, list.Count, categoryLabel)
+            : LocalizationService.Instance.Format("library_summary_count", list.Count, categoryLabel);
     }
 
     partial void OnPickTargetChanged(BuffSlotViewModel? value) => OnPropertyChanged(nameof(IsPicking));

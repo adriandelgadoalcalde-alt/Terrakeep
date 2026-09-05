@@ -81,10 +81,10 @@ public partial class MainViewModel : ObservableObject
     {
         if (_lastSavedLocal is not { } saved) { LastSavedText = null; return; }
         var elapsed = DateTime.Now - saved;
-        LastSavedText = elapsed.TotalMinutes < 1 ? "Guardado hace un momento"
-            : elapsed.TotalHours < 1 ? $"Guardado hace {(int)elapsed.TotalMinutes} min"
-            : elapsed.TotalDays < 1 ? $"Guardado hace {(int)elapsed.TotalHours} h"
-            : $"Guardado el {saved:dd/MM/yyyy HH:mm}";
+        LastSavedText = elapsed.TotalMinutes < 1 ? LocalizationService.Instance["last_saved_moment"]
+            : elapsed.TotalHours < 1 ? LocalizationService.Instance.Format("last_saved_minutes", (int)elapsed.TotalMinutes)
+            : elapsed.TotalDays < 1 ? LocalizationService.Instance.Format("last_saved_hours", (int)elapsed.TotalHours)
+            : LocalizationService.Instance.Format("last_saved_date", saved.ToString("dd/MM/yyyy HH:mm"));
     }
 
     // H-3 (segunda auditoria de Opus, Fable): "Guardar ya funciona desde cualquier pestaña
@@ -1262,8 +1262,8 @@ public partial class MainViewModel : ObservableObject
         InventoryContainer = AddContainer("inventory", "Inventario", _loaded.MergedContainers["inventory"]);
         var bank = AddContainer("bank", "Banco", _loaded.MergedContainers["bank"]);
         var bank2 = AddContainer("bank2", "Caja fuerte", _loaded.MergedContainers["bank2"]);
-        var bank3 = AddContainer("bank3", "Fragua del Defensor", _loaded.MergedContainers["bank3"]);
-        var bank4 = AddContainer("bank4", "Boveda del Vacio", _loaded.MergedContainers["bank4"]);
+        var bank3 = AddContainer("bank3", LocalizationService.Instance["storage_forge"], _loaded.MergedContainers["bank3"]);
+        var bank4 = AddContainer("bank4", LocalizationService.Instance["storage_void"], _loaded.MergedContainers["bank4"]);
         // columns: 1 (pregunta a Opus sobre el diseño, quinta pasada: "mascotas etc mejor en
         // vertical") - laterales de la Equipamiento fusionada, una sola columna de 5 filas.
         // Orden real de los 5 slots (Player.miscEquips, confirmado por Opus contra Player.cs

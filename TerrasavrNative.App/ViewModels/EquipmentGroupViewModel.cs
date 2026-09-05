@@ -87,9 +87,9 @@ public partial class EquipmentGroupViewModel : ObservableObject
     public ObservableCollection<EquipmentOptionViewModel> LoadoutOptions { get; } = [];
     public ObservableCollection<EquipmentOptionViewModel> KindOptions { get; } =
     [
-        new EquipmentOptionViewModel("Armadura", (int)EquipmentKind.Items) { IsSelected = true },
-        new EquipmentOptionViewModel("Vanidad", (int)EquipmentKind.Social),
-        new EquipmentOptionViewModel("Tintes", (int)EquipmentKind.Dyes),
+        new EquipmentOptionViewModel(LocalizationService.Instance["equip_kind_armor"], (int)EquipmentKind.Items) { IsSelected = true },
+        new EquipmentOptionViewModel(LocalizationService.Instance["equip_kind_vanity"], (int)EquipmentKind.Social),
+        new EquipmentOptionViewModel(LocalizationService.Instance["equip_kind_dyes"], (int)EquipmentKind.Dyes),
     ];
 
     [ObservableProperty] private int _selectedLoadout;
@@ -121,16 +121,17 @@ public partial class EquipmentGroupViewModel : ObservableObject
         Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null)
     {
         _service = service;
-        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Items, "Equipo puesto - armadura/accesorios", mergedContainers["loadout0Items"], onItemChanged);
-        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Social, "Equipo puesto - vanidad", mergedContainers["loadout0Social"], onItemChanged);
-        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Dyes, "Equipo puesto - tintes", mergedContainers["loadout0Dyes"], onItemChanged);
-        LoadoutOptions.Add(new EquipmentOptionViewModel("Puesto", 0) { IsSelected = true });
+        var loc = LocalizationService.Instance;
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Items, loc["equip_worn_armor"], mergedContainers["loadout0Items"], onItemChanged);
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Social, loc["equip_worn_vanity"], mergedContainers["loadout0Social"], onItemChanged);
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Dyes, loc["equip_worn_dyes"], mergedContainers["loadout0Dyes"], onItemChanged);
+        LoadoutOptions.Add(new EquipmentOptionViewModel(loc["equip_worn_option"], 0) { IsSelected = true });
 
         for (int i = 1; i <= realLoadoutCount; i++)
         {
-            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Items, $"Loadout {i} - armadura/accesorios", mergedContainers[$"loadout{i}Items"], onItemChanged);
-            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Social, $"Loadout {i} - vanidad", mergedContainers[$"loadout{i}Social"], onItemChanged);
-            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Dyes, $"Loadout {i} - tintes", mergedContainers[$"loadout{i}Dyes"], onItemChanged);
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Items, loc.Format("equip_loadout_armor", i), mergedContainers[$"loadout{i}Items"], onItemChanged);
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Social, loc.Format("equip_loadout_vanity", i), mergedContainers[$"loadout{i}Social"], onItemChanged);
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Dyes, loc.Format("equip_loadout_dyes", i), mergedContainers[$"loadout{i}Dyes"], onItemChanged);
             LoadoutOptions.Add(new EquipmentOptionViewModel(i.ToString(), i));
         }
 

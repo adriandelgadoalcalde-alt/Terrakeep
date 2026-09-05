@@ -210,19 +210,19 @@ public partial class ItemSlotViewModel : ObservableObject
 
     private string BuildRejectionMessage() => AcceptedKind switch
     {
-        SlotKind.Ammo => "Este slot solo acepta munición.",
-        SlotKind.Coin => "Este slot solo acepta monedas.",
-        SlotKind.Dye => "Este slot solo acepta tintes.",
-        SlotKind.Hook => "Este slot solo acepta ganchos.",
-        SlotKind.Mount => "Este slot solo acepta monturas.",
-        SlotKind.Cart => "Este slot solo acepta vagonetas.",
-        SlotKind.VanityPet => "Este slot solo acepta mascotas.",
-        SlotKind.LightPet => "Este slot solo acepta mascotas de luz.",
-        SlotKind.ArmorHead => "Este slot solo acepta cascos/tocados.",
-        SlotKind.ArmorBody => "Este slot solo acepta petos/túnicas.",
-        SlotKind.ArmorLegs => "Este slot solo acepta grebas/pantalones.",
-        SlotKind.Accessory => "Este slot solo acepta accesorios.",
-        _ => "Este objeto no encaja en este slot.",
+        SlotKind.Ammo => Loc["reject_ammo"],
+        SlotKind.Coin => Loc["reject_coin"],
+        SlotKind.Dye => Loc["reject_dye"],
+        SlotKind.Hook => Loc["reject_hook"],
+        SlotKind.Mount => Loc["reject_mount"],
+        SlotKind.Cart => Loc["reject_cart"],
+        SlotKind.VanityPet => Loc["reject_vanity_pet"],
+        SlotKind.LightPet => Loc["reject_light_pet"],
+        SlotKind.ArmorHead => Loc["reject_armor_head"],
+        SlotKind.ArmorBody => Loc["reject_armor_body"],
+        SlotKind.ArmorLegs => Loc["reject_armor_legs"],
+        SlotKind.Accessory => Loc["reject_accessory"],
+        _ => Loc["reject_generic"],
     };
 
     public void UpdateFrom(GameItem item)

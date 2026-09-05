@@ -145,7 +145,7 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
 
         if (ShowRootCategoryCards)
         {
-            ResultsSummary = $"{_all.Count} objetos en total (vanilla + Calamity) - escribe para buscar o elige una carpeta.";
+            ResultsSummary = LocalizationService.Instance.Format("library_summary_all", _all.Count);
             return;
         }
 
@@ -154,10 +154,10 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
 
         // L-b: la restriccion de slot ya la dice la pildora aparte (mas visible, con el rol
         // real del slot) - ResultsSummary ya no repite un "válidos para este slot" generico.
-        string categoryLabel = SelectedCategory != null ? $" en \"{SelectedCategory.Name}\"" : string.Empty;
+        string categoryLabel = SelectedCategory != null ? LocalizationService.Instance.Format("library_summary_in_category", SelectedCategory.Name) : string.Empty;
         ResultsSummary = list.Count > MaxResults
-            ? $"Mostrando {MaxResults} de {list.Count} resultados{categoryLabel} - afina la busqueda."
-            : $"{list.Count} resultado(s){categoryLabel}.";
+            ? LocalizationService.Instance.Format("library_summary_showing", MaxResults, list.Count, categoryLabel)
+            : LocalizationService.Instance.Format("library_summary_count", list.Count, categoryLabel);
     }
 
     partial void OnPickTargetChanged(ItemSlotViewModel? value)

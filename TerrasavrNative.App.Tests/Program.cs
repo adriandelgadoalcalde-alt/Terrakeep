@@ -4038,7 +4038,33 @@ internal static class Program
                 "seleccionado", "vanidad", "tintes", "afina", "escribe para buscar", "en total",
                 "diseñado", "desarrollado", "reescritura", "propiedad de sus", "está", "esta ",
             ];
+            // Limites REALES ya conocidos y documentados (bitacora, bloques 3/4 del idioma): NO es
+            // texto sin migrar. Son cadenas que YA viven en el diccionario pero se fijan una sola
+            // vez (constructor / LoadFrom / un StatusMessage calculado antes del cambio) y no se
+            // vuelven a evaluar solas al cambiar de idioma en caliente - se ven en el idioma de
+            // arranque hasta la siguiente recarga real. Hacerlas reactivas exigiria rehacer la
+            // construccion entera de cada ViewModel, mucho mas que una migracion de texto, y esta
+            // fuera a proposito. Aparte van los CATALOGOS DE CONTENIDO del juego (nombres de
+            // objeto/tile, Novedades, registro de cambios): viven en sus propios JSON de datos y
+            // solo existen en español, camino propio tambien documentado. Se listan igualmente en
+            // la salida, pero no cuentan como FALLO: asi este barrido sigue detectando de verdad
+            // cualquier cadena NUEVA que se olvide de migrar en el futuro.
+            string[] limitesConocidos =
+            [
+                "Auto-equipar:",             // StatusMessage ya calculado antes del cambio
+                "objetos en total (vanilla", // ResultsSummary de la Libreria, ya calculado
+                "objeto(s) investigado(s)",  // idem, Investigacion
+                "Ninguno",                   // opcion de tinte de pelo, fijada al cargar
+                "Vanidad", "Tintes",         // selector Armadura/Vanidad/Tintes, fijado al construir
+                "Mundo: ",                   // Exploracion: titulo real del mundo cargado
+                "Objetos (",                 // Exploracion: recuento ya compuesto
+                "Actualización de correcciones", "Objetos nuevos añadidos", // Novedades (contenido)
+                "Guía de parkour",           // nombre real de un objeto del juego (catalogo)
+                "Soporte nativo de idioma", "Pulido final pre-lanzamiento", "Rediseño completo",
+                "Rediseño estético", "Núcleo funcional completo", // registro de cambios (contenido)
+            ];
             var sospechas = new List<string>();
+            var conocidos = new List<string>();
             var corchetes = new List<string>();
             void BarrerPantallaActual(string donde)
             {
@@ -4051,7 +4077,13 @@ internal static class Program
                     { corchetes.Add($"{donde}: {t}"); continue; }
                     string bajo = t.ToLowerInvariant();
                     foreach (string p in palabrasEspañolas)
-                        if (bajo.Contains(p)) { sospechas.Add($"{donde}: \"{(t.Length > 90 ? t[..90] + "..." : t)}\" (por '{p}')"); break; }
+                        if (bajo.Contains(p))
+                        {
+                            string linea = $"{donde}: \"{(t.Length > 90 ? t[..90] + "..." : t)}\" (por '{p}')";
+                            if (limitesConocidos.Any(t.Contains)) conocidos.Add(linea);
+                            else sospechas.Add(linea);
+                            break;
+                        }
                 }
             }
 
@@ -4092,9 +4124,10 @@ internal static class Program
             Console.WriteLine($"A10-CREDITOS(es): TextBlock con 'IncrediBad' visible={autorEs != null}, ancho={autorEs?.ActualWidth ?? -1:0.#}, alto={autorEs?.ActualHeight ?? -1:0.#}, recortado={(autorEs != null && autorEs.ActualWidth > 0 && autorEs.DesiredSize.Width > autorEs.ActualWidth + 0.5)} (esperado visible=True, recortado=False)");
             if (autorEs == null) Console.WriteLine("FALLO: A10-CREDITOS - el credito de autoria no aparece en 'Acerca de' en español");
 
-            Console.WriteLine($"A10-IDIOMA-BARRIDO: claves sin traducir a la vista (formato '[clave]')={corchetes.Count} (esperado 0), textos que siguen en español con la app en ingles={sospechas.Count} (esperado 0)");
+            Console.WriteLine($"A10-IDIOMA-BARRIDO: claves sin traducir a la vista (formato '[clave]')={corchetes.Count} (esperado 0), textos NUEVOS que siguen en español con la app en ingles={sospechas.Count} (esperado 0), casos ya conocidos y documentados={conocidos.Distinct().Count()} (informativo, no es fallo)");
             foreach (string c in corchetes.Distinct().Take(25)) Console.WriteLine("   SIN-TRADUCIR " + c);
             foreach (string s in sospechas.Distinct().Take(40)) Console.WriteLine("   EN-ESPAÑOL " + s);
+            foreach (string c in conocidos.Distinct().Take(30)) Console.WriteLine("   LIMITE-CONOCIDO " + c);
             if (corchetes.Count > 0) Console.WriteLine("FALLO: A10-IDIOMA-BARRIDO - hay claves de idioma que no existen en ningun diccionario");
             if (sospechas.Count > 0) Console.WriteLine("FALLO: A10-IDIOMA-BARRIDO - hay texto sin migrar al diccionario (se queda en español con la app en ingles)");
 

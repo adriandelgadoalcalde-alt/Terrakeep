@@ -14,6 +14,13 @@ namespace TerrasavrNative.App;
 
 public partial class MainWindow : Window
 {
+    // Auditoria final de Opus (5-sep-2026): atajo local al diccionario de idioma. Todo el texto
+    // que nace en este code-behind (titulos y filtros de los dialogos reales de fichero, los
+    // MessageBox modales, el submenu de copias de seguridad) se quedaba SIEMPRE en español,
+    // tambien con la app en ingles - los bloques 1-4 del idioma migraron el XAML y los
+    // ViewModels, pero esta capa se quedo fuera y no la alcanza ningun binding.
+    private static Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     // H5-12 (quinta auditoria de Opus): tiempo real de doble clic del propio sistema operativo
     // - SystemParameters (WPF) no expone este valor (solo existe en WinForms,
     // System.Windows.Forms.SystemInformation, una dependencia que no tiene sentido arrastrar
@@ -57,7 +64,7 @@ public partial class MainWindow : Window
         // Auditoria de Opus, T-B (segunda auditoria, Fable): mismo dialogo real de
         // "cambios sin guardar" que OnWindowClosing, ahora tambien antes de cargar OTRO
         // personaje por encima desde Inicio.
-        _viewModel.ConfirmDiscardChanges = () => ConfirmDiscardChanges("cargar otro personaje");
+        _viewModel.ConfirmDiscardChanges = () => ConfirmDiscardChanges(Loc["dlg_action_load_other"]);
         // Auditoria de Opus, Bloque 4 (T-3): restaura el tamaño/posicion real de la ultima
         // sesion - antes de Show(), Width/Height/Left/Top ya se pueden fijar sin parpadeo.
         Services.WindowPlacementService.Apply(this);
@@ -100,8 +107,8 @@ public partial class MainWindow : Window
     {
         if (!_viewModel.IsDirty) return true;
         var result = MessageBox.Show(
-            $"'{_viewModel.CharacterName}' tiene cambios sin guardar.\n\n¿Guardar antes de {action}?",
-            "Cambios sin guardar", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+            Loc.Format("dlg_unsaved_body", _viewModel.CharacterName, action),
+            Loc["dlg_unsaved_title"], MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
         switch (result)
         {
             case MessageBoxResult.Yes:
@@ -282,13 +289,13 @@ public partial class MainWindow : Window
     // LoadItemSet - MainViewModel/sus sub-ViewModels se quedan headless de verdad).
     private void OnAddCharacterFolderClick(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFolderDialog { Title = "Elige una carpeta adicional con personajes (.plr)" };
+        var dialog = new OpenFolderDialog { Title = Loc["dlg_pick_players_folder"] };
         if (dialog.ShowDialog(this) == true) _viewModel.Settings.AddCharacterFolder(dialog.FolderName);
     }
 
     private void OnAddWorldFolderClick(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFolderDialog { Title = "Elige una carpeta adicional con mundos (.wld)" };
+        var dialog = new OpenFolderDialog { Title = Loc["dlg_pick_worlds_folder"] };
         if (dialog.ShowDialog(this) == true) _viewModel.Settings.AddWorldFolder(dialog.FolderName);
     }
 
@@ -328,7 +335,7 @@ public partial class MainWindow : Window
         }
         else if (ext == ".plr")
         {
-            if (!ConfirmDiscardChanges("cargar otro personaje")) return;
+            if (!ConfirmDiscardChanges(Loc["dlg_action_load_other"])) return;
             _viewModel.LoadFromPath(path);
         }
     }
@@ -337,14 +344,14 @@ public partial class MainWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Cargar personaje de Terraria",
-            Filter = "Personaje de Terraria (*.plr)|*.plr|Todos los archivos (*.*)|*.*",
+            Title = Loc["dlg_load_character"],
+            Filter = Loc["dlg_filter_character"],
             InitialDirectory = Services.CharacterFileService.GetDefaultPlayersDirectory(),
         };
 
         if (dialog.ShowDialog(this) == true)
         {
-            if (!ConfirmDiscardChanges("cargar otro personaje")) return;
+            if (!ConfirmDiscardChanges(Loc["dlg_action_load_other"])) return;
             _viewModel.LoadFromPath(dialog.FileName);
         }
     }
@@ -356,8 +363,8 @@ public partial class MainWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Cargar mundo de Terraria",
-            Filter = "Mundo de Terraria (*.wld)|*.wld|Todos los archivos (*.*)|*.*",
+            Title = Loc["dlg_load_world"],
+            Filter = Loc["dlg_filter_world"],
             InitialDirectory = Services.CharacterFileService.GetDefaultWorldsDirectory(),
         };
 
@@ -390,8 +397,8 @@ public partial class MainWindow : Window
         if (string.IsNullOrEmpty(texto)) return;
         var dialog = new SaveFileDialog
         {
-            Title = "Guardar informe del mundo",
-            Filter = "Texto (*.txt)|*.txt",
+            Title = Loc["dlg_save_world_report"],
+            Filter = Loc["dlg_filter_text"],
             FileName = $"{_viewModel.Exploration.WorldTitle}-informe.txt",
         };
         if (dialog.ShowDialog(this) == true) File.WriteAllText(dialog.FileName, texto);
@@ -404,8 +411,8 @@ public partial class MainWindow : Window
         if (_viewModel.Exploration.WorldImage == null) return;
         var dialog = new SaveFileDialog
         {
-            Title = "Exportar mapa a PNG",
-            Filter = "Imagen PNG (*.png)|*.png",
+            Title = Loc["dlg_export_map"],
+            Filter = Loc["dlg_filter_png"],
             FileName = $"{_viewModel.Exploration.WorldTitle}-mapa.png",
         };
         if (dialog.ShowDialog(this) == true) _viewModel.Exploration.ExportMapToPng(dialog.FileName);
@@ -439,7 +446,7 @@ public partial class MainWindow : Window
         var backups = home.ListBackupPoints(entry);
         if (backups.Count == 0)
         {
-            submenu.Items.Add(new MenuItem { Header = "Sin copias de seguridad todavía", IsEnabled = false });
+            submenu.Items.Add(new MenuItem { Header = Loc["dlg_no_backups_yet"], IsEnabled = false });
             return;
         }
         foreach (var backup in backups)
@@ -483,8 +490,8 @@ public partial class MainWindow : Window
         if (container == null) return;
         var dialog = new OpenFileDialog
         {
-            Title = append ? "Añadir conjunto de objetos" : "Cargar conjunto de objetos (reemplaza)",
-            Filter = "Conjunto de objetos de Terrakeep (*.json)|*.json|Todos los archivos (*.*)|*.*",
+            Title = Loc[append ? "dlg_add_item_set" : "dlg_load_item_set"],
+            Filter = Loc["dlg_filter_item_set"],
         };
         if (dialog.ShowDialog(this) == true) _viewModel.LoadItemSet(container, dialog.FileName, append);
     }
@@ -502,8 +509,8 @@ public partial class MainWindow : Window
         if (container == null) return;
         var dialog = new SaveFileDialog
         {
-            Title = "Guardar conjunto de buffs",
-            Filter = "Conjunto de buffs de Terrakeep (*.json)|*.json",
+            Title = Loc["dlg_save_buff_set"],
+            Filter = Loc["dlg_filter_buff_set"],
             FileName = "buffs.json",
         };
         if (dialog.ShowDialog(this) == true) _viewModel.SaveBuffSet(container, dialog.FileName);
@@ -515,8 +522,8 @@ public partial class MainWindow : Window
         if (container == null) return;
         var dialog = new OpenFileDialog
         {
-            Title = append ? "Añadir conjunto de buffs" : "Cargar conjunto de buffs (reemplaza)",
-            Filter = "Conjunto de buffs de Terrakeep (*.json)|*.json|Todos los archivos (*.*)|*.*",
+            Title = Loc[append ? "dlg_add_buff_set" : "dlg_load_buff_set"],
+            Filter = Loc["dlg_filter_buff_set"],
         };
         if (dialog.ShowDialog(this) == true) _viewModel.LoadBuffSet(container, dialog.FileName, append);
     }

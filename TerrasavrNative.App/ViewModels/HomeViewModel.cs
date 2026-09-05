@@ -69,7 +69,7 @@ public partial class HomeViewModel : ObservableObject
         LastSessionCharacterName = session.LastCharacterName ?? Path.GetFileNameWithoutExtension(_lastSessionPath);
         var modificadoReal = File.GetLastWriteTimeUtc(_lastSessionPath);
         LastSessionStalenessWarning = session.LastCharacterModifiedUtc.HasValue && modificadoReal != session.LastCharacterModifiedUtc.Value
-            ? "Este archivo cambió desde la última vez (¿lo editaste con Terraria o por fuera?) - revisa que sigue siendo el que quieres."
+            ? LocalizationService.Instance["home_stale_warning"]
             : null;
     }
 
@@ -133,8 +133,8 @@ public partial class HomeViewModel : ObservableObject
             foreach (var entry in scanned) Characters.Add(entry);
             ScanMessage = Characters.Count == 0
                 ? dirs.Count == 0
-                    ? "No se encontro ninguna carpeta real de personajes de Terraria (vanilla ni tModLoader)."
-                    : $"Ningun personaje encontrado en {string.Join(" ni en ", dirs)}"
+                    ? LocalizationService.Instance["scan_no_players_folder"]
+                    : LocalizationService.Instance.Format("scan_no_players_in", string.Join(LocalizationService.Instance["scan_folder_joiner"], dirs))
                 : null;
             UpdateCurrentPath(_currentPath); // la lista es nueva de cero, IsCurrent hay que recalcularlo
         }

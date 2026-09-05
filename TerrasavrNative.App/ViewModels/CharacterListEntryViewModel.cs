@@ -61,7 +61,7 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         IsTModLoader = isTModLoader;
         IsCalamity = tplr?.HasCalamityContent == true;
         UsedModsTooltip = tplr is { UsedMods.Count: > 0 }
-            ? "Mods usados la última vez: " + string.Join(", ", tplr.UsedMods)
+            ? LocalizationService.Instance["character_used_mods"] + string.Join(", ", tplr.UsedMods)
             : null;
         LastModifiedText = lastModifiedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
 

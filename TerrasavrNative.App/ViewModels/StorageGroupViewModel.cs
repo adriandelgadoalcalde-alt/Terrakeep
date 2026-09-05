@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using TerrasavrNative.App.Services;
 
 namespace TerrasavrNative.App.ViewModels;
 
@@ -29,10 +30,11 @@ public partial class StorageGroupViewModel : ObservableObject
 
     public StorageGroupViewModel(ContainerViewModel bank, ContainerViewModel safe, ContainerViewModel forge, ContainerViewModel voidVault)
     {
-        Add(0, "Banco", bank);
-        Add(1, "Caja fuerte", safe);
-        Add(2, "Fragua del Defensor", forge);
-        Add(3, "Bóveda del Vacío", voidVault);
+        var loc = LocalizationService.Instance;
+        Add(0, loc["storage_bank"], bank);
+        Add(1, loc["storage_safe"], safe);
+        Add(2, loc["storage_forge"], forge);
+        Add(3, loc["storage_void"], voidVault);
         Options[0].IsSelected = true;
     }
 

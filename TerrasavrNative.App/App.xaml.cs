@@ -82,10 +82,8 @@ public partial class App : Application
         try { File.WriteAllText(logPath, $"{DateTime.Now}\n{ex}"); } catch { /* no bloquear el aviso por un disco no escribible */ }
 
         MessageBox.Show(
-            $"Terrakeep encontro un error inesperado y esta pantalla puede no funcionar bien.\n\n" +
-            $"{ex.GetType().Name}: {ex.Message}\n\n" +
-            $"Detalle guardado en:\n{logPath}",
-            "Error inesperado - Terrakeep",
+            Services.LocalizationService.Instance.Format("dlg_unexpected_error_body", ex.GetType().Name, ex.Message, logPath),
+            Services.LocalizationService.Instance["dlg_unexpected_error_title"],
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
     }

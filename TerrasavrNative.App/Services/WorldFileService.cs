@@ -25,7 +25,7 @@ public static class WorldFileService
 
         var reReadHeader = WldReader.ReadHeader(File.ReadAllBytes(wldPath));
         if (reReadHeader.GameMode != newGameMode)
-            throw new InvalidOperationException("El archivo se escribió pero la relectura no confirma el nuevo modo de juego - revisa el mundo antes de seguir editando.");
+            throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
 
         return world.WithHeader(world.Header.WithGameMode(newGameMode));
     }

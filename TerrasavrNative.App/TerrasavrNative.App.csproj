@@ -57,4 +57,16 @@
     <AssemblyVersion>2.1.0.0</AssemblyVersion>
   </PropertyGroup>
 
+  <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de
+       depuracion) y el instalador los copiaba tal cual al equipo del usuario final - se
+       comprobo en la instalacion real de esta maquina: Terrakeep.pdb, TerrasavrNative.App.pdb
+       y TerrasavrNative.Core.pdb, ~800 KB en total. No le sirven de nada a quien solo usa la
+       app, y le dan a cualquiera que quiera descompilar el binario los nombres reales de
+       metodos y los numeros de linea del fuente. Solo en Release: la build de Debug los sigue
+       generando, que es lo que necesitan el depurador y el arnes de pruebas. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
 </Project>

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.Core.PlrFormat;
+using TerrasavrNative.App.Services;
 
 namespace TerrasavrNative.App.ViewModels;
 
@@ -124,22 +125,22 @@ public partial class VersionEditorViewModel : ObservableObject
         var perdidas = new List<string>();
 
         if (value < 145 && _character.EquipmentItems.Any(s => !s.IsEmpty))
-            perdidas.Add("el equipo puesto (armadura/vanidad/accesorios)");
+            perdidas.Add(LocalizationService.Instance["version_worn_equipment"]);
 
         if (value < 200)
         {
             int voidCount = _character.VoidItems.Count(s => !s.IsEmpty);
-            if (voidCount > 0) perdidas.Add($"{voidCount} objeto(s) de la Bóveda del Vacío");
+            if (voidCount > 0) perdidas.Add(LocalizationService.Instance.Format("version_void_items", voidCount));
         }
 
         if (value < 269)
         {
             int loadoutCount = _character.Loadouts.Sum(l => l.Items.Count(s => !s.IsEmpty) + l.Social.Count(s => !s.IsEmpty) + l.Dyes.Count(s => !s.IsEmpty));
-            if (loadoutCount > 0) perdidas.Add($"{loadoutCount} objeto(s) de los Loadouts 1/2/3");
+            if (loadoutCount > 0) perdidas.Add(LocalizationService.Instance.Format("version_loadout_items", loadoutCount));
         }
 
         return perdidas.Count == 0 ? null
-            : $"Al guardar con esta versión dejarán de escribirse: {string.Join(", ", perdidas)}.";
+            : LocalizationService.Instance.Format("version_will_stop_writing", string.Join(", ", perdidas)) + ".";
     }
 
     [RelayCommand]

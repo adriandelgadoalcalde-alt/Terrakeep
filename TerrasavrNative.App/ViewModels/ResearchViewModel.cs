@@ -203,10 +203,10 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
         // "Calamity (mod)", miles de objetos) ya no pinta todo de golpe.
         foreach (var row in matches.Take(MaxResults)) Results.Add(row);
 
-        string categoryLabel = SelectedCategory != null ? $" en \"{SelectedCategory.Name}\"" : string.Empty;
+        string categoryLabel = SelectedCategory != null ? LocalizationService.Instance.Format("library_summary_in_category", SelectedCategory.Name) : string.Empty;
         ResultsSummary = matches.Count > MaxResults
-            ? $"Mostrando {MaxResults} de {matches.Count} objeto(s){categoryLabel} - afina la busqueda."
-            : $"{matches.Count} objeto(s){categoryLabel}.";
+            ? LocalizationService.Instance.Format("research_summary_showing", MaxResults, matches.Count, categoryLabel)
+            : LocalizationService.Instance.Format("research_summary_count", matches.Count, categoryLabel);
         RefreshProgressOnly();
     }
 
@@ -271,13 +271,13 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
 
     private void RefreshSummaryAndProgress()
     {
-        ResultsSummary = $"{_researchedCounts.Count}/{_totalKnownObjects} objeto(s) investigado(s) en total - elige una carpeta o escribe para buscar.";
+        ResultsSummary = LocalizationService.Instance.Format("research_summary_all", _researchedCounts.Count, _totalKnownObjects);
         RefreshProgressOnly();
     }
 
     private void RefreshProgressOnly()
     {
         ProgressFraction = _totalKnownObjects > 0 ? _researchedCounts.Count / (double)_totalKnownObjects : 0;
-        GlobalProgressSummary = $"{_researchedCounts.Count}/{_totalKnownObjects} objeto(s) investigado(s) en total.";
+        GlobalProgressSummary = LocalizationService.Instance.Format("research_progress_all", _researchedCounts.Count, _totalKnownObjects);
     }
 }
