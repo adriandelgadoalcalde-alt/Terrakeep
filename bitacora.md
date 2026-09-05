@@ -8410,5 +8410,17 @@ que resulto robusta, en vez de perseguir una geometria de `Grid`/`Popup` fragil 
 por UI Automation; el espaciado real se confirmo aparte con una captura visual real
 (`h5-09-desbloqueos-compacto.png`).
 
-Pendientes bloques 5-9 (C-09, C-05/C-11/C-13/C-17, C-15, C-16/C-18, C-06) - seguir el orden del
-informe, un commit verificado por bloque.
+**Bloque 5/9 (C-09) - cerrado, commit `10dc6727`:** busqueda insensible a diacriticos ("buscar
+mascara no encuentra máscara") en los 11 puntos reales de busqueda de la app. `LibrarySearchGrammar.
+Fold` (FormD + descarta NonSpacingMark + FormC + minusculas) pliega el termino dentro de `Matches`;
+el NOMBRE se pasa ya plegado - cacheado una vez en el constructor para Libreria/Buffs de objetos
+(`LibraryItemViewModel.NameFolded`/`BuffCatalogEntryViewModel.NameFolded`, evita re-plegar las 8821
+entradas del catalogo en cada pulsacion), plegado directo en el resto (ya corren con debounce, no
+por tecla). Incluye el "undecimo sitio" que el informe señalaba aparte
+(`ExplorationViewModel.ApplyInventoryFilter`, el unico que no pasaba por la gramatica). Solo el
+lado de la comparacion se pliega - lo que se ve en pantalla conserva sus tildes reales.
+
+Verificado: `dotnet test` 674/674 (5 tests nuevos), arnes completo (0 `FALLO`).
+
+Pendientes bloques 6-9 (C-05/C-11/C-13/C-17, C-15, C-16/C-18, C-06) - seguir el orden del informe,
+un commit verificado por bloque.
