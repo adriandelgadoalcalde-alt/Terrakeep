@@ -10,7 +10,11 @@
     ],
     "fixed": [
       "El párrafo introductorio de Inicio y el subtítulo de \"Acerca de\" todavía mencionaban \"sin Electron\" - ya no aplica a un puerto 100% nativo.",
-      "El icono de \"Calamity (mod)\" en la Librería de Buffs seguía sin sprite pese a haberse dado por cerrado antes."
+      "El icono de \"Calamity (mod)\" en la Librería de Buffs seguía sin sprite pese a haberse dado por cerrado antes.",
+      "Corregido un fallo crítico: el historial de copias de seguridad podía mezclar dos personajes distintos con el mismo nombre de archivo (uno vanilla y otro de tModLoader), pudiendo sobrescribir un personaje con otro al restaurar una copia.",
+      "Completada la traducción al inglés: quedaban dos capas enteras sin traducir (todo el code-behind - diálogos de guardar/abrir, avisos - y la pestaña \"Acerca de\" completa).",
+      "El instalador ya no reparte símbolos de depuración (.pdb) ni depende del .NET Desktop Runtime (build autocontenida).",
+      "Autoría añadida a las propiedades del ejecutable y del instalador (antes no decían de quién era el programa)."
     ]
   },
   {
