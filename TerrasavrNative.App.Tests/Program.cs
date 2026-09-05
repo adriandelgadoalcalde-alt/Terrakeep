@@ -3616,6 +3616,34 @@ internal static class Program
                 var (rx, ry) = Recorte(tira);
                 Console.WriteLine($"AR-04: a {w}px SizeClass={vm.SizeClass} expandida={vm.IsVitalsStripExpanded} recorte=({rx:0},{ry:0}) (esperado 0,0 SIEMPRE tras R-04)");
                 if (rx > 0 || ry > 0) Console.WriteLine($"FALLO: AR-04 - franja vital recortada {rx:0}x{ry:0}px a {w}px (H-04)");
+
+                // A9-06-BARRAHUECO (informe de pulido final, C-14, cierra H3): separacion
+                // horizontal real (TransformToAncestor) entre el borde derecho de la ultima
+                // insignia de identidad y el borde izquierdo del "corazon" de vida - antes "se
+                // juntaba con Softcore" a cualquier ancho, umbral real >= 16px (el escalon de la
+                // app es 20, se deja margen de sobra frente a redondeos de layout).
+                var corazon = Descendientes<TextBlock>(tira).FirstOrDefault(t => t.Text == "♥");
+                DependencyObject? ancestroCabecera = tira;
+                System.Windows.Controls.Grid? grid3 = null;
+                while (ancestroCabecera != null)
+                {
+                    ancestroCabecera = System.Windows.Media.VisualTreeHelper.GetParent(ancestroCabecera);
+                    if (ancestroCabecera is System.Windows.Controls.Grid g && g.ColumnDefinitions.Count == 3) { grid3 = g; break; }
+                }
+                if (corazon != null && grid3 != null)
+                {
+                    var col0 = grid3.Children.OfType<UIElement>().FirstOrDefault(c => System.Windows.Controls.Grid.GetColumn(c) == 0 && c.IsVisible);
+                    if (col0 is FrameworkElement col0Fe)
+                    {
+                        double col0Right = col0Fe.TransformToAncestor(window).Transform(new System.Windows.Point(col0Fe.ActualWidth, 0)).X;
+                        double corazonLeft = corazon.TransformToAncestor(window).Transform(new System.Windows.Point(0, 0)).X;
+                        double gapIdentidadVitales = corazonLeft - col0Right;
+
+                        Console.WriteLine($"A9-06-BARRAHUECO: a {w}px, identidad<->vitales={gapIdentidadVitales:0.0}px (esperado >= 16px)");
+                        if (gapIdentidadVitales < 16)
+                            Console.WriteLine($"FALLO: C-14 - hueco horizontal identidad<->vitales de la cabecera {gapIdentidadVitales:0.0}px < 16px a {w}px");
+                    }
+                }
             }
 
             // AR-05 (H-05): insignia "Calamity" de una tarjeta de Inicio, sin recorte a 1080 y a 1920.

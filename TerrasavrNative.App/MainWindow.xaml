@@ -1394,7 +1394,11 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- C-14 (auditoria de pulido final, cierra H3): 20px es el escalon real "grupos
+                     distintos" de la escala del proyecto - sin este margen, a cualquier ancho
+                     donde la franja central se estrecha, los botones de la derecha quedaban
+                     pegados al ultimo dato vital (dinero/horas), leyendose como el mismo grupo. -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0">
                     <!-- T-H/F1 (segunda auditoria de Opus, Fable): "N-3 esta bien hecho pero no se
                          anuncia en ningun sitio (sin ToolTip en la cabecera)... un atajo que nadie
                          descubre no mejora la practicidad" - los 4 atajos reales (OnWindowKeyDown)
@@ -1459,7 +1463,10 @@
                     <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4" />
                     <Button Content="Guardar" Tag="Orange" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
                 </StackPanel>
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
+                <!-- C-14 (auditoria de pulido final, cierra H3): mismo escalon de 20px que la
+                     columna 2 - separa la identidad del personaje de la franja de vitales, "se
+                     junta con Softcore" a cualquier ancho, incluida pantalla completa. -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0"
                             Visibility="{Binding IsCharacterLoaded, Converter={StaticResource BoolToVis}}">
                     <Image Source="{Binding Appearance.PreviewImage}" Width="28" Height="39.2" Stretch="Uniform"
                            RenderOptions.BitmapScalingMode="NearestNeighbor" />
@@ -1477,10 +1484,16 @@
                                  foco (BorderThickness=0 en reposo, para no cambiar el aspecto
                                  "filled" ya establecido cuando no se esta usando) + ToolTip que
                                  anuncia la accion. -->
+                            <!-- C-14 (auditoria de pulido final, cierra H3): tope real de ancho -
+                                 sin el, un nombre largo se seguia comiendo la columna central
+                                 entera (solo tenia MinWidth, nunca MaxWidth). TextBox no tiene
+                                 TextTrimming real (a diferencia de TextBlock) - MaxWidth por si
+                                 solo ya basta para el objetivo real (no dejar crecer la columna),
+                                 el propio TextBox se desplaza solo al escribir/enfocar. -->
                             <TextBox Text="{Binding CharacterName, UpdateSourceTrigger=PropertyChanged}" KeyDown="OnCommitTextOnEnter"
                                      FontFamily="{StaticResource AppFont}" FontSize="14" FontWeight="SemiBold"
                                      Foreground="{StaticResource TextPrimaryBrush}" Background="{StaticResource BgElevatedBrush}"
-                                     Padding="4,2" MinWidth="80" VerticalAlignment="Center"
+                                     Padding="4,2" MinWidth="80" MaxWidth="220" VerticalAlignment="Center"
                                      ToolTip="Haz clic para renombrar el personaje">
                                 <TextBox.Style>
                                     <Style TargetType="TextBox">
@@ -1548,7 +1561,10 @@
                             Visibility="{Binding ShowVitalsStrip, Converter={StaticResource BoolToVis}}">
                     <!-- Vida -->
                     <TextBlock Text="♥" FontSize="13" Foreground="{StaticResource CalamityBrush}" VerticalAlignment="Center" Margin="0,0,0,4" />
-                    <Grid Width="70" Height="10" Margin="4,0,14,4" ToolTip="Vida">
+                    <!-- C-14 (auditoria de pulido final, cierra H3): 20 en vez de 14 - razon 5:1
+                         en vez de 3,5:1 frente al hueco interno (4), para que vida/mana se lean
+                         como DOS pares, no como una tira uniforme de 4 numeros. -->
+                    <Grid Width="70" Height="10" Margin="4,0,20,4" ToolTip="Vida">
                         <Border Background="{StaticResource BgPrimaryBrush}" CornerRadius="3" />
                         <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" HorizontalAlignment="Left"
                                 Width="{Binding Appearance.HealthFraction, Converter={StaticResource FractionToWidth}, ConverterParameter=70}" />
