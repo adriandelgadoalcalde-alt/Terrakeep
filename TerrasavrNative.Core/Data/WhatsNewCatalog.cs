@@ -3,12 +3,19 @@ using System.Text.Json.Serialization;
 
 namespace TerrasavrNative.Core.Data;
 
+// Ronda de idioma del 6-sep-2026 - BUG REAL de esta clase y de las tres de abajo: el JSON YA
+// traia el texto ingles de cada linea (campo "en", desde el primer dia), pero DisplayText/
+// DisplayName/DisplayDate/DisplayNote devolvian SIEMPRE el español y eran lo unico que el XAML
+// bindeaba. Resultado: la pestaña Novedades entera se quedaba en español con la app en ingles,
+// sin que faltara ni un solo dato - solo faltaba elegir. Los "...For(language)" son los que hay
+// que usar; los "Display..." se quedan como el caso español de siempre.
 public sealed class WhatsNewChange
 {
     [JsonPropertyName("es")] public string? Es { get; init; }
     [JsonPropertyName("en")] public string? En { get; init; }
 
     public string DisplayText => Es ?? En ?? string.Empty;
+    public string TextFor(string language) => LocalizedContent.Pick(Es, En, language);
 }
 
 // Objeto nuevo listado en una version (whats_new.json, campo "items") - "key" es el nombre
@@ -20,6 +27,14 @@ public sealed class WhatsNewItem
     [JsonPropertyName("en")] public string? En { get; init; }
 
     public string DisplayName => Es ?? En ?? Key ?? "?";
+
+    // El nombre INTERNO (Key) es el ultimo recurso real cuando no hay ninguno de los dos
+    // nombres - mismo criterio de siempre, "lo que no se encuentra no se inventa".
+    public string NameFor(string language)
+    {
+        string elegido = LocalizedContent.Pick(Es, En, language);
+        return string.IsNullOrWhiteSpace(elegido) ? Key ?? "?" : elegido;
+    }
 }
 
 public sealed class WhatsNewEntry
@@ -38,6 +53,9 @@ public sealed class WhatsNewEntry
 
     public string DisplayDate => DateEs ?? DateEn ?? string.Empty;
     public string DisplayNote => NoteEs ?? NoteEn ?? string.Empty;
+
+    public string DateFor(string language) => LocalizedContent.Pick(DateEs, DateEn, language);
+    public string NoteFor(string language) => LocalizedContent.Pick(NoteEs, NoteEn, language);
 }
 
 // Panel "Novedades" - registro de novedades por version de Terraria (whats_new.json, mas

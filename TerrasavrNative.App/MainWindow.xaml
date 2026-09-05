@@ -666,19 +666,19 @@
             <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,14" Padding="16">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding Version}" Style="{StaticResource TitleText}" />
-                        <TextBlock Text="{Binding DisplayDate}" Style="{StaticResource CaptionText}"
+                        <TextBlock Text="{Binding Version, Mode=OneWay}" Style="{StaticResource TitleText}" />
+                        <TextBlock Text="{Binding DisplayDate, Mode=OneWay}" Style="{StaticResource CaptionText}"
                                    Margin="10,0,0,0" VerticalAlignment="Bottom" />
                     </StackPanel>
-                    <TextBlock Text="{Binding DisplayNote}" Style="{StaticResource CaptionText}"
+                    <TextBlock Text="{Binding DisplayNote, Mode=OneWay}" Style="{StaticResource CaptionText}"
                                Margin="0,4,0,8" TextWrapping="Wrap"
-                               Visibility="{Binding DisplayNote, Converter={StaticResource EmptyToCollapsed}}" />
+                               Visibility="{Binding DisplayNote, Mode=OneWay, Converter={StaticResource EmptyToCollapsed}}" />
                     <ItemsControl ItemsSource="{Binding Changes}">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type data:WhatsNewChange}">
+                            <DataTemplate DataType="{x:Type vm:WhatsNewChangeViewModel}">
                                 <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,2">
                                     <Run Text="- " Foreground="{StaticResource AccentBrush}" />
-                                    <Run Text="{Binding DisplayText, Mode=OneWay}" />
+                                    <Run Text="{Binding Text, Mode=OneWay}" />
                                 </TextBlock>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -691,10 +691,10 @@
                                Visibility="{Binding Bugfixes.Count, Converter={StaticResource CountToVis}}" />
                     <ItemsControl ItemsSource="{Binding Bugfixes}">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type data:WhatsNewChange}">
+                            <DataTemplate DataType="{x:Type vm:WhatsNewChangeViewModel}">
                                 <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,2">
                                     <Run Text="- " Foreground="{StaticResource AccentBrush}" />
-                                    <Run Text="{Binding DisplayText, Mode=OneWay}" />
+                                    <Run Text="{Binding Text, Mode=OneWay}" />
                                 </TextBlock>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -721,7 +721,7 @@
                                     <Border.ToolTip>
                                         <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                                             <StackPanel MaxWidth="240">
-                                                <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding DisplayName, Mode=OneWay}" FontWeight="Bold" TextWrapping="Wrap" />
                                                 <TextBlock Text="{Binding StatsTooltip}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
                                                            Visibility="{Binding StatsTooltip, Converter={StaticResource NullToVis}}" />
                                             </StackPanel>
@@ -731,7 +731,7 @@
                                         <Image Source="{Binding IconPath}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,5,0"
                                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding DisplayName, Mode=OneWay}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
@@ -744,15 +744,15 @@
         <!-- Changelog del propio EDITOR (Terrakeep, pestaña "Acerca de") - distinto de
              WhatsNewEntry, que es el changelog del juego/Calamity. H5-09: mismo margen derecho
              real que WhatsNewEntryViewModel, mismo motivo (UniformGrid de 2 columnas). -->
-        <DataTemplate DataType="{x:Type data:ChangelogEntry}">
+        <DataTemplate DataType="{x:Type vm:ChangelogEntryViewModel}">
             <Border Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,14" Padding="16">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding Version}" Style="{StaticResource TitleText}" FontSize="18" />
-                        <TextBlock Text="{Binding Date}" Style="{StaticResource CaptionText}"
+                        <TextBlock Text="{Binding Version, Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="18" />
+                        <TextBlock Text="{Binding Date, Mode=OneWay}" Style="{StaticResource CaptionText}"
                                    Margin="10,0,0,0" VerticalAlignment="Bottom" />
                     </StackPanel>
-                    <TextBlock Text="{Binding Summary}" Style="{StaticResource CaptionText}"
+                    <TextBlock Text="{Binding Summary, Mode=OneWay}" Style="{StaticResource CaptionText}"
                                Margin="0,4,0,8" TextWrapping="Wrap" />
 
                     <TextBlock Text="{Binding Loc[label_added], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="12" Margin="0,4,0,2"

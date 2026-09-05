@@ -9,9 +9,14 @@ namespace TerrasavrNative.App.ViewModels;
 // aqui contra VanillaItemCatalog (mismo mecanismo real ya usado para el Pid de Investigacion).
 // IconPath queda null (fallback real "?" del icono fantasma, ya existente) si el nombre interno
 // no se reconoce - "lo que no se encuentra no se inventa", mismo criterio de siempre.
-public sealed class WhatsNewItemViewModel
+// Ronda de idioma del 6-sep-2026: DisplayName se fijaba con WhatsNewItem.DisplayName, que
+// devuelve SIEMPRE el nombre español aunque el JSON traiga tambien el ingles - la rejilla de
+// "Objetos nuevos" (y su tooltip) se quedaba en español con la app en ingles.
+public sealed class WhatsNewItemViewModel : LocalizedContentViewModel
 {
-    public string DisplayName { get; }
+    private readonly WhatsNewItem _item;
+
+    public string DisplayName => _item.NameFor(Idioma);
     public string? IconPath { get; }
     // C-17 (informe de pulido final, cierra la otra mitad de N1): misma llamada EXACTA que
     // LibraryViewModel (Format(isCalamity, id, catalogs)) - "como en calamity mod y tmodloader"
@@ -20,12 +25,14 @@ public sealed class WhatsNewItemViewModel
     // IconPath) o si el objeto no tiene ninguna estadistica/tooltip real conocido.
     public string? StatsTooltip { get; }
 
-    private WhatsNewItemViewModel(string displayName, string? iconPath, string? statsTooltip)
+    private WhatsNewItemViewModel(WhatsNewItem item, string? iconPath, string? statsTooltip)
     {
-        DisplayName = displayName;
+        _item = item;
         IconPath = iconPath;
         StatsTooltip = statsTooltip;
     }
+
+    protected override void RefrescarTextos() => Avisar(nameof(DisplayName));
 
     // C-16 (informe de pulido final, cierra media N1): whatsNewIds es el catalogo SEPARADO de
     // solo lectura para objetos 1.4.5+ (por encima del maximo real de vanillaCatalog) - se
@@ -35,7 +42,7 @@ public sealed class WhatsNewItemViewModel
     public static WhatsNewItemViewModel ForVanilla(WhatsNewItem item, VanillaItemCatalog vanillaCatalog, WhatsNewItemIdCatalog whatsNewIds, ItemTooltipCatalogs catalogs)
     {
         int? id = item.Key != null ? vanillaCatalog.GetIdByKey(item.Key) ?? whatsNewIds.GetIdByKey(item.Key) : null;
-        return new(item.DisplayName, id is int i ? VanillaIconResolver.GetIconPath(i) : null,
+        return new(item, id is int i ? VanillaIconResolver.GetIconPath(i) : null,
             id is int i2 ? ItemStatsFormatter.Format(false, i2, catalogs) : null);
     }
 
@@ -54,6 +61,6 @@ public sealed class WhatsNewItemViewModel
         var entry = item.Key != null ? calamityCatalog.ByModAndInternal("CalamityMod", item.Key) : null;
         string? iconPath = entry?.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
         string? statsTooltip = entry != null ? ItemStatsFormatter.Format(true, entry.SyntheticId, catalogs) : null;
-        return new(item.DisplayName, iconPath, statsTooltip);
+        return new(item, iconPath, statsTooltip);
     }
 }

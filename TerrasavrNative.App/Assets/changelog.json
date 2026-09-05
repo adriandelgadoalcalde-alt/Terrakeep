@@ -2,11 +2,18 @@
   {
     "version": "2.1.0",
     "date": "5 de septiembre de 2026",
+    "date_en": "September 5, 2026",
     "summary": "Soporte nativo de idioma: toda la interfaz de la app (pestañas, botones, tooltips, mensajes de estado/error) ya está disponible en español e inglés, con cambio en vivo desde Ajustes sin reiniciar. Además, tamaño de ventana fijable y descripción de Inicio actualizada.",
+    "summary_en": "Native language support: the whole app interface (tabs, buttons, tooltips, status/error messages) is now available in Spanish and English, switchable live from Settings without restarting. Plus a pinnable window size and an updated Home description.",
     "added": [
       "Selector de idioma en Ajustes (Español/English) - cambia toda la app al instante, sin reiniciar.",
       "Tick en Ajustes para fijar el tamaño y la posición actuales de la ventana como los de arranque, independiente del recuerdo automático de siempre.",
       "Descripción de Inicio reescrita sin mencionar tecnología antigua (Electron/Chromium) ya superada por esta versión nativa."
+    ],
+    "added_en": [
+      "Language selector in Settings (Español/English) - switches the whole app instantly, no restart needed.",
+      "Checkbox in Settings to pin the current window size and position as the startup ones, independent from the usual automatic recall.",
+      "Home description rewritten without mentioning the old technology (Electron/Chromium) already left behind by this native version."
     ],
     "fixed": [
       "El párrafo introductorio de Inicio y el subtítulo de \"Acerca de\" todavía mencionaban \"sin Electron\" - ya no aplica a un puerto 100% nativo.",
@@ -15,17 +22,33 @@
       "Completada la traducción al inglés: quedaban dos capas enteras sin traducir (todo el code-behind - diálogos de guardar/abrir, avisos - y la pestaña \"Acerca de\" completa).",
       "El instalador ya no reparte símbolos de depuración (.pdb) ni depende del .NET Desktop Runtime (build autocontenida).",
       "Autoría añadida a las propiedades del ejecutable y del instalador (antes no decían de quién era el programa)."
+    ],
+    "fixed_en": [
+      "The Home intro paragraph and the \"About\" subtitle still mentioned \"no Electron\" - no longer relevant for a 100% native port.",
+      "The \"Calamity (mod)\" icon in the Buff Library was still missing its sprite despite having been marked as done before.",
+      "Fixed a critical bug: the backup history could mix up two different characters sharing the same file name (one vanilla and one from tModLoader), potentially overwriting a character with another one when restoring a backup.",
+      "English translation completed: two whole layers were still untranslated (all the code-behind - save/open dialogs, warnings - and the entire \"About\" tab).",
+      "The installer no longer ships debug symbols (.pdb) and no longer depends on the .NET Desktop Runtime (self-contained build).",
+      "Authorship added to the executable and installer properties (they previously did not say who the program belonged to)."
     ]
   },
   {
     "version": "2.0.0",
     "date": "5 de septiembre de 2026",
+    "date_en": "September 5, 2026",
     "summary": "Pulido final pre-lanzamiento tras una auditoría exhaustiva de Exploración/Librería/Inicio/barra superior/Apariencia: bonos de set arreglados de raíz (no solo los datos), Deshacer/Rehacer en Apariencia, búsqueda sin tildes y varias correcciones reales de usabilidad.",
+    "summary_en": "Final pre-release polish after an exhaustive audit of Exploration/Library/Home/top bar/Appearance: set bonuses fixed at the root (not just the data), Undo/Redo in Appearance, accent-insensitive search and several real usability fixes.",
     "added": [
       "Deshacer/Rehacer real en Apariencia (peinado, tinte, género, dificultad, vida/maná/horas y los 7 colores) - la única pestaña de edición que se había quedado sin historial.",
       "Marcado masivo en el mapa (resaltado sin tope + lista agrupada por vetas/zonas) generalizado de Minerales a toda la categoría Objetos (tiles, paredes y líquidos).",
       "Autoría: bloque propio en \"Acerca de\" con el autor real del proyecto.",
       "Arrastre de tarjetas anunciado de verdad: tercera línea en el tooltip, adorno visual que sigue al cursor, y clic en la Librería de buffs ya coloca (antes no hacía nada)."
+    ],
+    "added_en": [
+      "Real Undo/Redo in Appearance (hairstyle, dye, gender, difficulty, health/mana/hours and the 7 colors) - the only editing tab that had been left without history.",
+      "Bulk map marking (uncapped highlighting + list grouped by veins/areas) generalised from Ores to the whole Objects category (tiles, walls and liquids).",
+      "Authorship: its own block in \"About\" with the project's real author.",
+      "Card dragging properly announced: a third tooltip line, a visual adorner that follows the cursor, and clicking in the buff Library now places the buff (it previously did nothing)."
     ],
     "fixed": [
       "Bono de set completo de Calamity Mod: la comprobación de \"las 3 piezas puestas\" era matemáticamente imposible de cumplir de raíz (comparaba un dato que el cuerpo/piernas nunca tienen) - reescrito con un catálogo real por SET, no por pieza suelta.",
@@ -37,67 +60,123 @@
       "La búsqueda en Librería/Investigación/buscador del personaje/Exploración no encontraba nombres con tildes al buscar sin ellas (o al revés).",
       "La pestaña Líquidos del buscador de Exploración salía sin ningún sprite ni color.",
       "Los nodos \"Índice\" y \"Calamity (mod)\" de la Librería de buffs eran los únicos sin icono."
+    ],
+    "fixed_en": [
+      "Calamity Mod full set bonus: the \"all 3 pieces worn\" check was mathematically impossible to satisfy at the root (it compared a field that body/legs pieces never carry) - rewritten with a real catalog per SET, not per individual piece.",
+      "The vanilla set bonus extractor only reached 43 of the game's 63 real keys (Cobalt/Mythril/Adamantite/Titanium and the 2-piece sets came out wrong or not at all).",
+      "The world and dungeon spawn markers were not shown at their real position on the map.",
+      "The minimap could overflow its real bounds while zooming.",
+      "Saved Spawn Points showed up in ANY loaded world, not only in their own.",
+      "Clicking an ore name in the Exploration search did nothing (the only category where a click led to no result).",
+      "Search in Library/Research/character search/Exploration did not find accented names when typing without accents (or the other way round).",
+      "The Liquids tab of the Exploration search came out with no sprite or color at all.",
+      "The \"Index\" and \"Calamity (mod)\" nodes of the buff Library were the only ones without an icon."
     ]
   },
   {
     "version": "1.6.0",
     "date": "4 de septiembre de 2026",
+    "date_en": "September 4, 2026",
     "summary": "Rediseño completo de la Librería y la pestaña Buffs con el árbol real de categorías de Terrasavr, más una pasada de consistencia visual en las 9 pestañas de contenedores.",
+    "summary_en": "Complete redesign of the Library and the Buffs tab using Terrasavr's real category tree, plus a visual consistency pass over the 9 container tabs.",
     "added": [
       "Árbol de categorías real de Terrasavr para la Librería de objetos (vanilla + carpeta madre \"Calamity (mod)\"), reutilizado también por Investigación.",
       "Rework completo de Buffs: rejilla de 44 slots reales, panel Editar con duraciones reales, y Librería de buffs propia con el mismo árbol real de Terrasavr.",
       "Tooltips completos de equipo (prefijo/accesorio/bono de set) e iconos consistentes en toda la app.",
       "Rediseño de las 9 pestañas de contenedor (Inventario/Banco/Caja fuerte/Fragua/Bóveda/Mascotas/Loadouts) con un único formato de tarjeta de slot."
     ],
+    "added_en": [
+      "Terrasavr's real category tree for the item Library (vanilla + a \"Calamity (mod)\" parent folder), reused by Research as well.",
+      "Complete Buffs rework: a real 44-slot grid, an Edit panel with real durations, and a dedicated buff Library using the same real Terrasavr tree.",
+      "Complete gear tooltips (prefix/accessory/set bonus) and consistent icons across the whole app.",
+      "Redesign of the 9 container tabs (Inventory/Piggy Bank/Safe/Defender's Forge/Void Vault/Pets/Loadouts) with a single slot card format."
+    ],
     "fixed": [
       "Varias carpetas del árbol vanilla (Wings/Mounts) salían con 0 objetos.",
       "Los contenedores necesitaban scroll horizontal en vez de ajustarse a la ventana."
+    ],
+    "fixed_en": [
+      "Several vanilla tree folders (Wings/Mounts) came out with 0 items.",
+      "Containers needed horizontal scrolling instead of fitting the window."
     ]
   },
   {
     "version": "1.5.0",
     "date": "3 de septiembre de 2026",
+    "date_en": "September 3, 2026",
     "summary": "Auditoría exhaustiva de redimensionado (14 tamaños de ventana) y comparación a fondo contra TEdit para la pestaña Exploración y la barra superior.",
+    "summary_en": "Exhaustive resizing audit (14 window sizes) and an in-depth comparison against TEdit for the Exploration tab and the top bar.",
     "added": [
       "GridSplitter real entre el mapa y la barra lateral de Exploración.",
       "Panel \"Este mundo\" con semilla, modo de juego y censo real del mundo cargado.",
       "Atajos de teclado del mapa (buscar, exportar a PNG, spawn/mazmorra) y arrastrar objetos directamente sobre el mapa."
     ],
+    "added_en": [
+      "A real GridSplitter between the map and the Exploration sidebar.",
+      "A \"This world\" panel with the seed, game mode and real census of the loaded world.",
+      "Map keyboard shortcuts (search, export to PNG, spawn/dungeon) and dragging items directly onto the map."
+    ],
     "fixed": [
       "Decenas de recortes de texto y desbordamientos reales a distintos anchos de ventana, encontrados con una matriz sistemática de 14 tamaños en vez de solo comprobar a ojo.",
       "La barra superior no era consciente de qué pestaña se estaba mirando (mostraba siempre lo mismo, aunque no viniera a cuento)."
+    ],
+    "fixed_en": [
+      "Dozens of real text clippings and overflows at different window widths, found with a systematic 14-size matrix instead of eyeballing it.",
+      "The top bar was not aware of which tab was being viewed (it always showed the same thing, whether it made sense or not)."
     ]
   },
   {
     "version": "1.4.0",
     "date": "2 de septiembre de 2026",
+    "date_en": "September 2, 2026",
     "summary": "Rediseño completo del Explorador de Mundo: buscador general de todo lo que contiene un mundo, con categorías reales y solo lo que ese mundo tiene de verdad.",
+    "summary_en": "Complete World Explorer redesign: a general search across everything a world contains, with real categories and only what that world actually holds.",
     "added": [
       "Buscador general del mundo por fases: tiles/paredes/NPCs, cofres y letreros, con navegación anterior/siguiente y distancia al spawn.",
       "Barra lateral de Exploración reorganizada por categorías reales (NPCs/Cofres/Minerales/Objetos), filtradas a lo que el mundo cargado tiene de verdad (antes se ofrecía el catálogo completo del juego, tuviera sentido o no en ese mundo).",
       "1244 sprites reales de tiles/paredes extraídos para el buscador, y las insignias tModLoader/Calamity/Vanilla separadas en la tarjeta de personaje."
     ],
-    "fixed": []
+    "added_en": [
+      "A staged general world search: tiles/walls/NPCs, chests and signs, with previous/next navigation and distance to spawn.",
+      "The Exploration sidebar reorganised by real categories (NPCs/Chests/Ores/Objects), filtered down to what the loaded world actually holds (it previously offered the game's full catalog, whether it made sense in that world or not).",
+      "1244 real tile/wall sprites extracted for the search, and the tModLoader/Calamity/Vanilla badges split apart on the character card."
+    ],
+    "fixed": [],
+    "fixed_en": []
   },
   {
     "version": "1.3.0",
     "date": "1 de septiembre de 2026",
+    "date_en": "September 1, 2026",
     "summary": "Quinta y sexta auditorías de Opus: el doll de Apariencia ya lleva el equipo puesto de verdad, navegación completa por teclado, y decenas de sprites/iconos reales de raíz.",
+    "summary_en": "Fifth and sixth Opus audits: the Appearance doll now really wears the equipped gear, full keyboard navigation, and dozens of real sprites/icons extracted from the source.",
     "added": [
       "El doll de Apariencia refleja en vivo la armadura/vanidad puesta, con brazos y sprites reales del cuerpo.",
       "Buscador \"¿Dónde lo tengo?\" entre TODOS los slots del personaje a la vez.",
       "Navegación completa por teclado en los ~350 slots de la app (flechas, Supr, Ctrl+C/V, Intro).",
       "Cabezas reales de NPC en los marcadores del mapa, e iconos vanilla extraídos de raíz (un fichero real por objeto, no un atlas recortado a mano)."
     ],
+    "added_en": [
+      "The Appearance doll reflects the worn armor/vanity live, with real arm and body sprites.",
+      "A \"Where is it?\" search across ALL the character's slots at once.",
+      "Full keyboard navigation across the app's ~350 slots (arrows, Del, Ctrl+C/V, Enter).",
+      "Real NPC heads on the map markers, and vanilla icons extracted from the source (one real file per item, not a hand-cropped atlas)."
+    ],
     "fixed": [
       "El pelo no se ocultaba bajo cascos que deberían taparlo, ni pasaba por detrás del cuerpo con peinados largos.",
       "\"¿Dónde lo tengo?\" podía dejar la interfaz bloqueada tras señalar un resultado."
+    ],
+    "fixed_en": [
+      "Hair was not hidden under helmets that should cover it, nor drawn behind the body with long hairstyles.",
+      "\"Where is it?\" could leave the interface locked up after pointing at a result."
     ]
   },
   {
     "version": "1.2.0",
     "date": "1 de septiembre de 2026",
+    "date_en": "September 1, 2026",
     "summary": "Rework estructural tras comparar con capturas reales de Terrasavr: panel \"Editar\" compartido, prefijos reales por tipo de objeto, tinte de pelo visual, tooltips en Builds, cursor y tooltip flotante en el mapa.",
+    "summary_en": "Structural rework after comparing against real Terrasavr screenshots: a shared \"Edit\" panel, real prefixes per item type, visual hair dye, tooltips in Builds, and a cursor plus floating tooltip on the map.",
     "added": [
       "Panel \"Editar\" compartido (equivalente real de app.TabEdit) que sigue al slot seleccionado en cualquier contenedor - Inventario, Banco, Caja fuerte, Fragua, Bóveda, Mascotas, Loadouts.",
       "Selector de prefijo de 3 niveles (Biblioteca/Positivos/Negativos → grupo por tipo de objeto → prefijos reales) filtrado por la elegibilidad REAL de cada objeto, extraída del código decompilado de Terraria (PrefixLegacy.cs/ItemID.cs/Item.cs) - antes se podía poner cualquiera de los 118 prefijos a cualquier objeto.",
@@ -106,30 +185,56 @@
       "Tooltips de estadísticas reales (daño/defensa/etc.) también en el panel Builds, no solo en la Librería.",
       "Tooltip flotante que sigue al cursor sobre el visor de mundo, además del texto fijo de abajo a la izquierda."
     ],
+    "added_en": [
+      "A shared \"Edit\" panel (the real equivalent of app.TabEdit) that follows the selected slot in any container - Inventory, Piggy Bank, Safe, Defender's Forge, Void Vault, Pets, Loadouts.",
+      "A 3-level prefix picker (Library/Positive/Negative → group by item type → real prefixes) filtered by each item's REAL eligibility, extracted from Terraria's decompiled code (PrefixLegacy.cs/ItemID.cs/Item.cs) - any of the 118 prefixes could previously be applied to any item.",
+      "An \"Index\" (id) field editable by hand in the Edit panel, alongside Count and Prefix.",
+      "A visual hair dye picker (sprite + real name), extracted from the real DyeInitializer.cs - it used to be a plain numeric field.",
+      "Real stat tooltips (damage/defense/etc.) in the Builds panel too, not only in the Library.",
+      "A floating tooltip that follows the cursor over the world viewer, on top of the fixed text at the bottom left."
+    ],
     "fixed": [
       "El panel \"Añadir buff...\" salía completamente vacío hasta escribir algo en el buscador.",
       "Las ediciones de Monedas y Munición se perdían al guardar, sin ningún aviso.",
       "El cursor del visor de mundo eran 4 flechas en vez de una mano al poder arrastrar el mapa.",
       "Crash real: un color se asignaba directamente a una propiedad que esperaba un pincel (Foreground)."
+    ],
+    "fixed_en": [
+      "The \"Add buff...\" panel came out completely empty until something was typed into the search box.",
+      "Coins and Ammo edits were lost on save, without any warning.",
+      "The world viewer cursor was a 4-arrow cross instead of a hand when the map could be dragged.",
+      "Real crash: a color was assigned directly to a property expecting a brush (Foreground)."
     ]
   },
   {
     "version": "1.1.0",
     "date": "1 de septiembre de 2026",
+    "date_en": "September 1, 2026",
     "summary": "Rediseño estético a fondo inspirado en el Terrasavr real: paleta violeta, degradados y animaciones de verdad en vez de cambios de color instantáneos.",
+    "summary_en": "Thorough visual redesign inspired by the real Terrasavr: a violet palette, gradients and real animations instead of instant color changes.",
     "added": [
       "Paleta violeta (#6C63FF) con degradados en botones y tarjetas, sustituyendo la paleta ámbar/genérica anterior.",
       "Animaciones reales (Storyboard) en botones y tarjetas: levantamiento al pasar el ratón, botón de cerrar que gira 90°.",
       "Variedad de color por acción en las tarjetas de Inicio, como los botones flotantes del Terrasavr real."
     ],
+    "added_en": [
+      "A violet palette (#6C63FF) with gradients on buttons and cards, replacing the previous generic amber palette.",
+      "Real animations (Storyboard) on buttons and cards: a lift on hover, and a close button that spins 90°.",
+      "Per-action color variety on the Home cards, like the real Terrasavr's floating buttons."
+    ],
     "fixed": [
       "El zoom del visor de mundo saltaba desde la esquina superior izquierda del mapa en vez de anclarse al cursor."
+    ],
+    "fixed_en": [
+      "The world viewer's zoom jumped from the map's top-left corner instead of anchoring to the cursor."
     ]
   },
   {
     "version": "1.0.0",
     "date": "1 de septiembre de 2026",
+    "date_en": "September 1, 2026",
     "summary": "Núcleo funcional completo: lectura/escritura real de .plr/.tplr (vanilla + Calamity Mod), editor completo de personaje, explorador de mundo y librería de objetos.",
+    "summary_en": "Complete functional core: real .plr/.tplr reading/writing (vanilla + Calamity Mod), a full character editor, a world explorer and an item library.",
     "added": [
       "Motor completo de lectura/escritura de personajes .plr (cifrado AES real) y .tplr (NBT + Calamity), verificado byte a byte contra personajes reales.",
       "Fusión completa de objetos, armadura por loadout, tintes y buffs de Calamity Mod con el personaje vanilla.",
@@ -142,9 +247,25 @@
       "Editor de buffs, Investigación, Spawn Points, Desbloqueos y editor de versión objetivo - cierre completo de la auditoría Terrasavr JS vs puerto.",
       "Página de Inicio explicativa, instalador propio (install.ps1/uninstall.ps1), identidad y marca propias (Terrakeep)."
     ],
+    "added_en": [
+      "A complete engine for reading/writing .plr characters (real AES encryption) and .tplr (NBT + Calamity), verified byte by byte against real characters.",
+      "Full merging of Calamity Mod items, per-loadout armor, dyes and buffs with the vanilla character.",
+      "Real editing of inventory/gear/piggy bank/safe/forge/void vault: place, change, empty and editable count.",
+      "A Library with a real category tree (vanilla + Calamity) and a text search, with real icons extracted from items.png.",
+      "Best automatic prefix when placing an item, and a manual picker for any prefix.",
+      "A Builds panel with recommended gear per class/stage (vanilla and Calamity) and one-click auto-equip.",
+      "A real world explorer: an interactive map with dragging, wheel zoom, markers and an NPC search, plus a per-tile tooltip.",
+      "An Appearance panel with a full-body preview, a visual hairstyle picker, and the character's 7 real colors.",
+      "Editors for buffs, Research, Spawn Points, Unlocks and the target version - fully closing the Terrasavr JS vs port audit.",
+      "An explanatory Home page, a dedicated installer (install.ps1/uninstall.ps1), and an identity and brand of its own (Terrakeep)."
+    ],
     "fixed": [
       "Crash real de la pestaña Novedades (binding de solo lectura en modo TwoWay).",
       "Compatibilidad de formato .plr ampliada de Terraria 1.1.2 a 1.4.5.8."
+    ],
+    "fixed_en": [
+      "Real crash in the What's New tab (a read-only binding in TwoWay mode).",
+      ".plr format compatibility extended from Terraria 1.1.2 to 1.4.5.8."
     ]
   }
 ]
