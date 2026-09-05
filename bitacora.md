@@ -8678,3 +8678,90 @@ vanilla estaba roto.
 
 Verificado: `dotnet build` (0 errores), `dotnet test` (697/697), arnes completo de UI Automation
 (0 `FALLO`).
+
+---
+
+## Encargo grande (5-sep-2026): quitar mencion a Electron, ventana fijable, e idioma ingles/español
+
+Mensaje nuevo del usuario tras el feedback en vivo de arriba - varios encargos encadenados
+("cuando acabes todo esto..."): (1) quitar la mencion a Electron/Chromium de la descripcion de
+Inicio, (2) poder fijar el tamaño/posicion actual de la ventana como el de arranque, con un tick
+en Ajustes, (3) **el trabajo mas gordo**: soporte nativo de idioma ingles+español, (4) actualizar
+Novedades/Acerca de, (5) crear un instalador .exe, (6) quitar el "Experimental" del nombre por la
+version estable "Terrakeep". Dado el tamaño real del punto 3 (medido antes de tocar nada: ~450
+cadenas en `MainWindow.xaml` + ~450 mas en 46 ficheros de ViewModels), se pregunto al usuario
+(`AskUserQuestion`) dos decisiones antes de empezar: cambio de idioma EN VIVO vs con reinicio
+(eligio EN VIVO), y trocear en bloques verificados vs de un tiron (eligio TROCEAR, mismo criterio
+ya usado para los planes de 19/22 puntos).
+
+**Commits `0747eb0f` (texto de Inicio + ventana fijable) y `0d347f45` (bloque 1 del idioma):**
+
+- **Descripcion de Inicio**: reescrita sin mencionar Electron/Chromium, mismo tamaño aproximado
+  de texto para no romper el layout.
+- **Ventana fijable**: tick nuevo en Ajustes ("Iniciar siempre con el tamaño y la posicion
+  actuales de la ventana") - `WindowPlacementInfo` (mismo `window.json` de siempre, T-3) gana
+  campos `Pinned/PinnedLeft/Top/Width/Height`, independientes del recuerdo automatico de siempre
+  (que sigue funcionando igual con el tick desactivado). Solo la View conoce el `Window` real -
+  `Pin()/Unpin()` se llaman desde `MainWindow.xaml.cs` al marcar/desmarcar el CheckBox.
+  **Bug real encontrado escribiendo este mismo cambio**: `Save()` construia un
+  `WindowPlacementInfo` NUEVO en cada cierre normal de la app, lo que habria borrado el campo
+  `Pinned` en el primer cierre tras activar el tick, sin que el usuario tocara nada - arreglado
+  partiendo del fichero YA existente (`LoadOrDefault()`) en vez de crear uno en blanco.
+- **Bloque 1 del idioma (arquitectura)**: `LocalizationService` - diccionario clave->texto por
+  idioma (`Assets/strings_es.json`/`strings_en.json`, mismo criterio JSON+`LoadFromFile` de
+  siempre), cambio EN VIVO sin reiniciar via el indexador del propio objeto
+  (`this[string]` + `PropertyChanged("Item[]")`, convencion real de WPF para refrescar
+  CUALQUIER binding indexado ya en pantalla sin escribir un `MarkupExtension` propio). Español es
+  el idioma de referencia (siempre completo) - clave ausente en ingles cae a español, ausente en
+  los dos se ve literal entre corchetes ("lo que no se encuentra no se inventa", mismo criterio
+  ya establecido). `MainViewModel.Loc` expone el singleton para `{Binding Loc[clave]}` desde
+  cualquier XAML. Selector de idioma en Ajustes, mismo patron de chips (`RadioButton`+
+  `EnumEquals`) ya usado para `ChestViewMode`/dificultad del mundo - `EnumEquals` ya comparaba
+  por `ToString()`, sirve para `string` sin cambios. Primer texto real migrado como prueba de
+  concepto: el parrafo de Inicio.
+- **Bug real de WPF encontrado construyendo esto**: las claves con puntos
+  (`home.description.part1`) rompian el binding del indexador - comillas simples dan `MC3043`
+  (las MarkupExtension no admiten comillas en sus argumentos), y sin comillas el punto se
+  interpreta como separador de RUTA dentro del propio corchete (`Loc[home.description.part1]`
+  se leia como `Loc["home"].description.part1` - `Loc["home"]` no existe, cae al fallback
+  `"[home]"`, un `string` no tiene propiedad `.description`, la ruta entera fallaba en silencio).
+  Detectado por el propio arnes (`A9-13-IDIOMA` daba `False` en los tres pasos) - arreglado
+  usando guiones bajos en las claves (`home_description_part1`), sin ninguna ambiguedad de
+  sintaxis.
+- **Segundo hallazgo real, encontrado verificando el primero**: el propio check `A9-13-IDIOMA`
+  daba un falso "TextBlock encontrado=True" - el predicado de busqueda (`Contains("Editor de
+  personajes de Terraria")`) era ambiguo, coincidia con `AboutViewModel.Tagline` (un TextBlock
+  ANTERIOR en el arbol visual, no migrado a Loc todavia) en vez del parrafo real que se estaba
+  probando. Esto revelo un bug real de PRODUCCION de paso: `Tagline` ("Editor de personajes de
+  Terraria, nativo **y sin Electron** - vanilla y Calamity Mod.") era un SEGUNDO sitio con la
+  misma mencion que el usuario ya habia pedido quitar en su mensaje anterior, que se me habia
+  pasado por alto la primera vez - corregido tambien. `CreditsText` (solo en "Acerca de") se deja
+  tal cual a proposito, ahi SI tiene sentido como contexto historico de la reescritura nativa.
+
+Verificado: `dotnet build` (0 errores), `dotnet test` (697/697 tras el primer commit; sin cambios
+de recuento en el segundo, la infraestructura de idioma no añade tests xunit - el
+`LocalizationService` lee de `AppContext.BaseDirectory`, un path fijo no inyectable, mismo motivo
+por el que `WindowPlacementService` tampoco tiene tests xunit propios, solo arnes), arnes completo
+de UI Automation (0 `FALLO`) con dos checks nuevos de escritura/estado real de esta maquina,
+respaldados y restaurados con el mismo rigor que los cambios de disco anteriores de esta sesion:
+- `A9-12-VENTANAFIJA`: ciclo `Pin()`/`IsPinned()`/`Unpin()` real sobre `window.json`.
+- `A9-13-IDIOMA`: texto real en español, cambio a ingles EN VIVO sobre el MISMO control ya en
+  pantalla (sin reiniciar), vuelta a español - `settings.json` real respaldado y restaurado.
+
+**Pendiente, bloques siguientes (decision explicita del usuario: trocear, avisar entre bloques)**:
+- Bloque 2+: migrar el resto de `MainWindow.xaml` (~450 cadenas) a `Loc`, seccion por seccion
+  (Inicio, Personaje, Builds, Novedades, Exploracion, Acerca de/Ajustes), verificando que CADA
+  seccion se ve identica en español tras la migracion antes de seguir con la siguiente.
+- Bloque N: migrar las ~450 cadenas de los 46 ficheros de ViewModels (`StatusMessage`/errores/
+  texto calculado) a `Loc.Format(clave, args...)`.
+- Bloque N+1: traducir `strings_es.json` -> `strings_en.json` completo (la traduccion real).
+  Catalogos de CONTENIDO del juego (nombres de tile/buff/carpetas de Libreria) necesitan su
+  propio camino - probablemente reutilizar el patron ya establecido en el proyecto (extraer del
+  `.json` de localizacion real de tModLoader, apuntando a `en-US` en vez de `es-ES`) en vez de
+  traducir a mano, y Calamity YA trae `displayName_fallback` en ingles en su propio catalogo.
+- Bloque N+2: arnes completo forzado a español siempre (no reescribir miles de aserciones) +
+  comprobaciones nuevas especificas en ingles + revision visual de que nada se desborda.
+- Despues de todo el idioma: actualizar Novedades/Acerca de, crear instalador .exe, quitar
+  "Experimental" del nombre por la version estable de Terrakeep.
+- El propio usuario menciono un encargo "super grande" aparte, a consultar mas adelante (todavia
+  sin detalle).
