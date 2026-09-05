@@ -127,6 +127,84 @@ internal static class Program
         FijarTamaño(window, 1180, 860);
         Console.WriteLine($"ARNES-TAMAÑO-BASE: Width={window.Width} Height={window.Height} (fijado aqui para que el resto del arnes no dependa del tamaño heredado de window.json)");
 
+        // Generacion de capturas reales para el README/material de difusion, pedido explicito
+        // del usuario (5-sep-2026, antes de publicar). NO es una verificacion de regresion (no
+        // hay ningun "esperado X, obtenido Y" aqui) - por eso vive detras de esta variable de
+        // entorno en vez de correr en cada `dotnet run` normal, pero reutiliza el mismo
+        // bootstrap ya fiable del resto del arnes (Application en blanco + MainWindow real +
+        // RenderTargetBitmap sobre la ventana real, nunca una captura de pantalla del SO -
+        // ver CLAUDE.md, "las capturas de pantalla son poco fiables en este entorno"). Solo lee
+        // ficheros reales del usuario (personaje/mundo), nunca los guarda ni los modifica.
+        if (Environment.GetEnvironmentVariable("TERRAKEEP_SCREENSHOTS") == "1")
+        {
+            string shotDir = Path.Combine(AppContext.BaseDirectory, "screenshots");
+            Directory.CreateDirectory(shotDir);
+            void Shot(string name)
+            {
+                DoEvents();
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(window);
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                using var fs = File.Create(Path.Combine(shotDir, name + ".png"));
+                enc.Save(fs);
+                Console.WriteLine($"SCREENSHOT: {name}.png");
+            }
+
+            FijarTamaño(window, 1600, 920);
+            DoEvents();
+            Shot("01-inicio");
+
+            var vmShot = (MainViewModel)window.DataContext;
+            int waited = 0;
+            while (vmShot.Home.IsScanning && waited < 100) { DoEvents(); System.Threading.Thread.Sleep(50); waited++; }
+
+            var personajeShot = vmShot.Home.Characters.FirstOrDefault(c =>
+                c.FilePath.Contains("tModLoader", StringComparison.OrdinalIgnoreCase) &&
+                c.FilePath.Contains("Eldelgas", StringComparison.OrdinalIgnoreCase));
+            if (personajeShot != null)
+            {
+                vmShot.Home.OpenCommand.Execute(personajeShot);
+                DoEvents();
+                Shot("02-personaje");
+            }
+            else
+            {
+                Console.WriteLine("SCREENSHOT-AVISO: no se encontro 'Eldelgas' (tModLoader) para 02-personaje");
+            }
+
+            string worldPathShot = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            if (File.Exists(worldPathShot))
+            {
+                vmShot.SelectedTabIndex = 4; // Exploracion
+                DoEvents();
+                var taskShot = vmShot.Exploration.LoadFromPathAsync(worldPathShot);
+                while (!taskShot.IsCompleted) DoEvents();
+                DoEvents();
+                // Ajustar a la ventana antes de la captura - recien cargado, el mapa arranca a
+                // 250% de zoom centrado en el spawn (normalmente cielo), nada representativo.
+                var fitMethod = typeof(MainWindow).GetMethod("OnFitToWindowClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                fitMethod?.Invoke(window, [window, new RoutedEventArgs()]);
+                DoEvents();
+                Shot("03-exploracion");
+            }
+            else
+            {
+                Console.WriteLine("SCREENSHOT-AVISO: no se encontro roca_negra.wld para 03-exploracion");
+            }
+
+            vmShot.SelectedTabIndex = 5; // Acerca de (incluye Ajustes)
+            vmShot.Settings.Language = "en";
+            DoEvents();
+            Shot("04-about-settings-en");
+            vmShot.Settings.Language = "es";
+            DoEvents();
+
+            Console.WriteLine($"SCREENSHOTS-LISTAS: {shotDir}");
+            Environment.Exit(0);
+        }
+
         var hwnd = new WindowInteropHelper(window).Handle;
         var root = AutomationElement.FromHandle(hwnd);
 
