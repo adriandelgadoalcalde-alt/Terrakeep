@@ -292,6 +292,24 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) _viewModel.Settings.AddWorldFolder(dialog.FolderName);
     }
 
+    // Pedido explicito del usuario (5-sep-2026): "guardar el tamaño de ventana actual... con un
+    // tick que lo activa/desactiva". Solo la View conoce el Window real (Left/Top/Width/Height/
+    // RestoreBounds) - SettingsViewModel.IsWindowSizePinned es solo el espejo que el CheckBox
+    // muestra, actualizado aqui explicitamente tras Pin()/Unpin() en vez de via el binding
+    // normal (evita que una futura OnIsWindowSizePinnedChanged en la ViewModel intente
+    // persistir algo que no puede calcular sin el Window).
+    private void OnPinWindowSizeChecked(object sender, RoutedEventArgs e)
+    {
+        Services.WindowPlacementService.Pin(this);
+        _viewModel.Settings.IsWindowSizePinned = true;
+    }
+
+    private void OnPinWindowSizeUnchecked(object sender, RoutedEventArgs e)
+    {
+        Services.WindowPlacementService.Unpin();
+        _viewModel.Settings.IsWindowSizePinned = false;
+    }
+
     // F-13 (auditoria de Opus vs TEdit, E-14): "AllowDrop aparece exactamente dos veces... las
     // dos son slots de objeto y de buff. La ventana no acepta ficheros." Filtrar por
     // DataFormats.FileDrop basta para no interferir con los dos AllowDrop internos (usan un

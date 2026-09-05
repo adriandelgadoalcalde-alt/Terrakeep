@@ -24,6 +24,14 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private double _explorationSidebarWidth = 320;
     // F-8 (auditoria de Opus vs TEdit, E-05): plegado del minimapa.
     [ObservableProperty] private bool _isMinimapVisible = true;
+    // Pedido explicito del usuario (5-sep-2026): "guardar el tamaño de ventana actual para que
+    // siempre se inicie en esa escala", con un tick que lo activa/desactiva. Vive en
+    // window.json (WindowPlacementService), NO en settings.json de esta clase - el unico sitio
+    // que conoce el Window real es la View (MainWindow.xaml.cs, OnPinWindowSizeChecked/
+    // Unchecked), asi que esta propiedad es solo el ESPEJO de lo que hay en disco (cargado en
+    // LoadFromDisk) para que el CheckBox de Ajustes lo pueda mostrar - la View la actualiza
+    // explicitamente tras Pin()/Unpin(), nunca se persiste desde aqui.
+    [ObservableProperty] private bool _isWindowSizePinned;
 
     // Arranca en modo "solo memoria" - Persist() (mas abajo) no toca disco hasta que
     // LoadFromDisk() lo activa explicitamente. Un test que construye "new MainViewModel()"
@@ -52,6 +60,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         BackupHistoryCap = _settings.BackupHistoryCap; // _suppressPersist sigue en true aqui - no reescribe el fichero que se acaba de leer de el
         ExplorationSidebarWidth = _settings.ExplorationSidebarWidth;
         IsMinimapVisible = _settings.IsMinimapVisible;
+        IsWindowSizePinned = WindowPlacementService.IsPinned();
         ApplyToServices();
         _suppressPersist = false; // a partir de aqui, cualquier cambio real del usuario SI se persiste
     }

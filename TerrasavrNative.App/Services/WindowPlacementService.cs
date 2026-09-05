@@ -18,6 +18,16 @@ public sealed class WindowPlacementInfo
     public double Width { get; set; }
     public double Height { get; set; }
     public bool IsMaximized { get; set; }
+    // Pedido explicito del usuario (5-sep-2026): ademas de recordar SIEMPRE el ultimo tamaño
+    // (arriba, sin cambios), poder FIJAR uno concreto como el de arranque, con un tick en
+    // Ajustes que se puede activar/desactivar - independiente de que el usuario siga
+    // redimensionando la ventana libremente en la sesion (eso solo actualiza Left/Top/Width/
+    // Height de arriba, nunca los campos Pinned* mientras el tick este activo).
+    public bool Pinned { get; set; }
+    public double PinnedLeft { get; set; }
+    public double PinnedTop { get; set; }
+    public double PinnedWidth { get; set; }
+    public double PinnedHeight { get; set; }
 }
 
 public static class WindowPlacementService
@@ -38,35 +48,82 @@ public static class WindowPlacementService
             return; // fichero ausente/corrupto - se queda con el tamaño de fabrica, nunca revienta el arranque por esto
         }
 
+        // Pedido explicito del usuario: con el tick de Ajustes activo, arrancar SIEMPRE con el
+        // tamaño/posicion fijados (nunca maximizado - fijar un tamaño concreto y luego arrancar
+        // maximizado no tendria sentido), ignorando el ultimo tamaño real de esta sesion.
+        double rawWidth = info.Pinned ? info.PinnedWidth : info.Width;
+        double rawHeight = info.Pinned ? info.PinnedHeight : info.Height;
+        double rawLeft = info.Pinned ? info.PinnedLeft : info.Left;
+        double rawTop = info.Pinned ? info.PinnedTop : info.Top;
+
         // Nunca restaurar fuera de la pantalla real (un monitor desconectado desde la ultima
         // sesion dejaria la ventana inalcanzable) - clamp real contra el area virtual de
         // TODOS los monitores conectados ahora mismo, y nunca por debajo de MinWidth/MinHeight.
-        double width = Math.Max(window.MinWidth, Math.Min(info.Width, SystemParameters.VirtualScreenWidth));
-        double height = Math.Max(window.MinHeight, Math.Min(info.Height, SystemParameters.VirtualScreenHeight));
-        double left = Math.Max(SystemParameters.VirtualScreenLeft, Math.Min(info.Left, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - width));
-        double top = Math.Max(SystemParameters.VirtualScreenTop, Math.Min(info.Top, SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - height));
+        double width = Math.Max(window.MinWidth, Math.Min(rawWidth, SystemParameters.VirtualScreenWidth));
+        double height = Math.Max(window.MinHeight, Math.Min(rawHeight, SystemParameters.VirtualScreenHeight));
+        double left = Math.Max(SystemParameters.VirtualScreenLeft, Math.Min(rawLeft, SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - width));
+        double top = Math.Max(SystemParameters.VirtualScreenTop, Math.Min(rawTop, SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - height));
 
         window.Width = width;
         window.Height = height;
         window.Left = left;
         window.Top = top;
-        if (info.IsMaximized) window.WindowState = WindowState.Maximized;
+        if (info.IsMaximized && !info.Pinned) window.WindowState = WindowState.Maximized;
     }
 
-    public static void Save(Window window)
+    public static bool IsPinned()
+    {
+        try
+        {
+            if (!File.Exists(FilePath)) return false;
+            var info = JsonSerializer.Deserialize<WindowPlacementInfo>(File.ReadAllText(FilePath));
+            return info?.Pinned ?? false;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    // Llamado desde la View (unica que conoce el Window real) al marcar el tick de Ajustes -
+    // captura el tamaño/posicion ACTUALES (RestoreBounds si esta maximizada, igual que Save)
+    // como el nuevo punto fijo de arranque.
+    public static void Pin(Window window)
     {
         var bounds = window.WindowState == WindowState.Normal
             ? new Rect(window.Left, window.Top, window.Width, window.Height)
             : window.RestoreBounds;
-        var info = new WindowPlacementInfo
-        {
-            Left = bounds.Left,
-            Top = bounds.Top,
-            Width = bounds.Width,
-            Height = bounds.Height,
-            IsMaximized = window.WindowState == WindowState.Maximized,
-        };
+        var info = LoadOrDefault();
+        info.Pinned = true;
+        info.PinnedLeft = bounds.Left;
+        info.PinnedTop = bounds.Top;
+        info.PinnedWidth = bounds.Width;
+        info.PinnedHeight = bounds.Height;
+        WriteToDisk(info);
+    }
 
+    public static void Unpin()
+    {
+        var info = LoadOrDefault();
+        info.Pinned = false;
+        WriteToDisk(info);
+    }
+
+    private static WindowPlacementInfo LoadOrDefault()
+    {
+        try
+        {
+            if (!File.Exists(FilePath)) return new WindowPlacementInfo();
+            return JsonSerializer.Deserialize<WindowPlacementInfo>(File.ReadAllText(FilePath)) ?? new WindowPlacementInfo();
+        }
+        catch (Exception)
+        {
+            return new WindowPlacementInfo();
+        }
+    }
+
+    private static void WriteToDisk(WindowPlacementInfo info)
+    {
         try
         {
             string? dir = Path.GetDirectoryName(FilePath);
@@ -75,8 +132,25 @@ public static class WindowPlacementService
         }
         catch (IOException)
         {
-            // Best-effort real, igual que BackupIfExists de CharacterFileService - recordar el
-            // tamaño de ventana nunca debe impedir cerrar la app.
+            // Best-effort real, mismo criterio que Save() de abajo.
         }
+    }
+
+    public static void Save(Window window)
+    {
+        var bounds = window.WindowState == WindowState.Normal
+            ? new Rect(window.Left, window.Top, window.Width, window.Height)
+            : window.RestoreBounds;
+        // Hallazgo real de este mismo cambio: construir un WindowPlacementInfo NUEVO aqui (como
+        // hacia la version anterior) borraria los campos Pinned* en CADA cierre normal de la
+        // app, sin que el usuario tocara el tick de Ajustes para nada - hay que partir del
+        // fichero YA existente y solo actualizar Left/Top/Width/Height/IsMaximized encima.
+        var info = LoadOrDefault();
+        info.Left = bounds.Left;
+        info.Top = bounds.Top;
+        info.Width = bounds.Width;
+        info.Height = bounds.Height;
+        info.IsMaximized = window.WindowState == WindowState.Maximized;
+        WriteToDisk(info);
     }
 }

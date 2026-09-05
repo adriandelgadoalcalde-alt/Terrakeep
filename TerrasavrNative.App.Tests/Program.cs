@@ -3928,6 +3928,33 @@ internal static class Program
         // 5+ minutos sin avanzar, salida vacia incluso tras matar el proceso - el buffer de
         // consola redirigido nunca llega a volcarse porque el hilo de UI nunca vuelve). El
         // arnes es codigo de prueba, no un usuario real - se limpia el flag antes de cerrar.
+        // A9-12-VENTANAFIJA (pedido explicito del usuario, 5-sep-2026): "guardar el tamaño
+        // actual de la ventana... con un tick que lo activa/desactiva". Round-trip real de
+        // WindowPlacementService.Pin/IsPinned/Unpin sobre el window.json REAL de esta maquina -
+        // respaldado como TEXTO antes de tocar nada y restaurado byte a byte al final (try/
+        // finally), igual de estricto que A9-11-DIFICULTAD con el mundo real: si el usuario ya
+        // habia activado el tick de verdad en esta misma maquina, su preferencia real vuelve
+        // intacta, nunca se pisa con datos de prueba.
+        string placementPathParaFijar = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "window.json");
+        string? placementBackup = File.Exists(placementPathParaFijar) ? File.ReadAllText(placementPathParaFijar) : null;
+        try
+        {
+            bool antesDeFijar = WindowPlacementService.IsPinned();
+            window.Left = 321; window.Top = 65;
+            FijarTamaño(window, 1345, 812);
+            WindowPlacementService.Pin(window);
+            bool trasFijar = WindowPlacementService.IsPinned();
+            WindowPlacementService.Unpin();
+            bool trasQuitar = WindowPlacementService.IsPinned();
+            Console.WriteLine($"A9-12-VENTANAFIJA: antes={antesDeFijar} (esperado False en una maquina limpia), tras Pin()={trasFijar} (esperado True), tras Unpin()={trasQuitar} (esperado False)");
+            if (!trasFijar || trasQuitar) Console.WriteLine("FALLO: A9-12-VENTANAFIJA - Pin()/Unpin() no cambiaron IsPinned() como se esperaba");
+        }
+        finally
+        {
+            if (placementBackup != null) File.WriteAllText(placementPathParaFijar, placementBackup);
+            else if (File.Exists(placementPathParaFijar)) File.Delete(placementPathParaFijar);
+        }
+
         // Verificacion real de T-3 (auditoria de Opus, Bloque 4): tamaño/posicion reconocibles
         // y distintos de los de fabrica, antes de cerrar (Close() real dispara
         // OnWindowClosing -> WindowPlacementService.Save real).

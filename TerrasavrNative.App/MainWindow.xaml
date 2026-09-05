@@ -1835,7 +1835,7 @@
                          de pegado a la izquierda (mismo defecto real ya corregido en Desbloqueos
                          y en la pestaña Versión, D-a - aqui se habia quedado sin aplicar). -->
                     <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,10,0,24" MaxWidth="700" HorizontalAlignment="Left">
-                        <Run Text="Editor de personajes de Terraria - vanilla y Calamity Mod (tModLoader) a la vez, con el mismo archivo. Edición nativa: sin Electron, sin Chromium embebido, arranque instantáneo. Carga un " />
+                        <Run Text="Editor de personajes de Terraria - vanilla y Calamity Mod (tModLoader) a la vez, con el mismo archivo. Aplicación nativa de Windows, ligera y de arranque instantáneo. Carga un " />
                         <Run Text=".plr" FontStyle="Italic" />
                         <Run Text=" (con su " />
                         <Run Text=".tplr" FontStyle="Italic" />
@@ -4794,6 +4794,20 @@
                              HorizontalAlignment="Left" Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}"
                              BorderThickness="0" Margin="0,0,0,24"
                              ToolTip="Cuantas copias rotativas conservar por personaje (H5-04, 'Historial de guardados') - las mas antiguas por encima de este numero se purgan solas" />
+
+                    <!-- Pedido explicito del usuario (5-sep-2026): fijar el tamaño/posicion
+                         ACTUALES de la ventana como los de arranque, con un tick que se puede
+                         activar/desactivar - independiente de que la ventana YA recuerde
+                         siempre el ultimo tamaño usado (WindowPlacementService, sin tick,
+                         comportamiento de fabrica desde T-3). Checked/Unchecked en vez de un
+                         binding TwoWay normal - solo la View conoce el Window real para
+                         capturar sus bounds actuales en el instante de marcar el tick. -->
+                    <TextBlock Text="Ventana" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                    <CheckBox Content="Iniciar siempre con el tamaño y la posición actuales de la ventana"
+                              IsChecked="{Binding Settings.IsWindowSizePinned, Mode=OneWay}"
+                              Checked="OnPinWindowSizeChecked" Unchecked="OnPinWindowSizeUnchecked"
+                              Margin="0,0,0,24"
+                              ToolTip="Guarda ahora mismo el tamaño y la posición de esta ventana - Terrakeep arrancará siempre así hasta que lo desmarques" />
 
                     <TextBlock Text="¡Sobre esta versión!" Style="{StaticResource TitleText}" FontSize="20" Margin="0,0,0,4" />
                     <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,14" MaxWidth="680" HorizontalAlignment="Left">
