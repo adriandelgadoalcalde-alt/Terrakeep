@@ -10,9 +10,11 @@
 ; Como generar el instalador (dos pasos, nunca uno solo):
 ;   1. dotnet publish TerrasavrNative.App\TerrasavrNative.App.csproj -c Release
 ;        -p:PublishProfile=win-x64
-;      (mismo publish dependiente del framework que install.ps1 ya usaba - ~27MB, exige tener
-;      el .NET Desktop Runtime 10 instalado; autocontenido pesaria ~140MB, casi como la propia
-;      version Electron que se queria dejar atras).
+;      (publish AUTOCONTENIDO desde la auditoria final de Opus, 5-sep-2026, antes de publicar en
+;      publico - decision explicita del usuario: la version dependiente del framework pesaba
+;      ~27MB pero exigia el .NET Desktop Runtime 10 instalado en el PC del usuario, razonable
+;      para desarrollo pero no para el publico general, que veria la app fallar al arrancar sin
+;      ninguna explicacion. Autocontenido pesa ~140MB, sin esa dependencia).
 ;   2. "C:\Users\adrian\AppData\Local\Programs\Inno Setup 6\ISCC.exe" installer\TerrakeepSetup.iss
 ;      (ruta real de instalacion via winget en esta maquina - AppData\Local\Programs, no
 ;      Program Files).

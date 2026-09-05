@@ -6,14 +6,14 @@
 # recomendada para cualquiera que no vaya a tocar el codigo. Este script sigue aqui como
 # alternativa de linea de comandos (o para quien prefiera no instalar Inno Setup).
 #
-# Publica un build Release dependiente del framework (ver ..\TerrasavrNative.App\Properties\
-# PublishProfiles\win-x64.pubxml - se probo autocontenido primero y salio un .exe de 140MB,
-# casi tan pesado como la propia version Electron que se queria dejar atras; dependiente del
-# framework pesa ~27MB, sobre todo los iconos reales, y el unico requisito es tener instalado
-# el .NET Desktop Runtime 10 - razonable para uso propio en este PC), lo copia a
-# %LocalAppData%\Programs\Terrakeep y crea un acceso directo en el menu Inicio (y en el
-# Escritorio con -Desktop). No usa MSI/WiX ni ninguna herramienta externa - solo PowerShell +
-# el objeto COM WScript.Shell, ya integrado en Windows.
+# Publica un build Release AUTOCONTENIDO (ver ..\TerrasavrNative.App\Properties\
+# PublishProfiles\win-x64.pubxml - decision de la auditoria final de Opus, 5-sep-2026: la version
+# dependiente del framework pesaba solo ~27MB pero exigia el .NET Desktop Runtime 10 instalado,
+# razonable para esta maquina de desarrollo pero no para el publico general que se descargue
+# Terrakeep sin saber que necesita nada mas - falla al arrancar sin explicacion. Autocontenido
+# pesa ~140MB, sin esa dependencia), lo copia a %LocalAppData%\Programs\Terrakeep y crea un
+# acceso directo en el menu Inicio (y en el Escritorio con -Desktop). No usa MSI/WiX ni ninguna
+# herramienta externa - solo PowerShell + el objeto COM WScript.Shell, ya integrado en Windows.
 #
 # Uso: powershell -ExecutionPolicy Bypass -File installer\install.ps1 [-Desktop]
 
@@ -37,7 +37,7 @@ $publishDir = Join-Path $repoRoot 'TerrasavrNative.App\bin\Release\net10.0-windo
 # el build en si sale "correcto". Publicar siempre a una carpeta limpia evita el problema.
 if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
 
-Write-Host 'Publicando Terrakeep (Release, win-x64, dependiente del framework)...'
+Write-Host 'Publicando Terrakeep (Release, win-x64, autocontenido)...'
 & dotnet publish $appProject -c Release -p:PublishProfile=win-x64
 if ($LASTEXITCODE -ne 0) { throw 'dotnet publish fallo - revisa el error de arriba.' }
 
@@ -77,5 +77,5 @@ if ($Desktop) {
 
 Write-Host ''
 Write-Host "Listo. Terrakeep instalado en $installDir"
-Write-Host 'Requiere el .NET Desktop Runtime 10 (no es autocontenido, ver win-x64.pubxml).'
+Write-Host 'Build autocontenida - no requiere el .NET Desktop Runtime 10 instalado (ver win-x64.pubxml).'
 Write-Host "Para desinstalar: powershell -ExecutionPolicy Bypass -File `"$installDir\uninstall.ps1`""
