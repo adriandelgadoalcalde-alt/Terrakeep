@@ -8422,5 +8422,35 @@ lado de la comparacion se pliega - lo que se ve en pantalla conserva sus tildes 
 
 Verificado: `dotnet test` 674/674 (5 tests nuevos), arnes completo (0 `FALLO`).
 
-Pendientes bloques 6-9 (C-05/C-11/C-13/C-17, C-15, C-16/C-18, C-06) - seguir el orden del informe,
-un commit verificado por bloque.
+**Bloque 6/9 (C-05, C-11, C-13, C-17) - cerrado, commit `5a086b49`:**
+
+- **C-05 (E4)**: un Spawn Point solo aparece en el mundo al que pertenece de verdad - regla real
+  del juego (Player.FindSpawn: WorldId Y Name, no solo el id). `PlrServerEntry.BelongsToWorld`
+  (metodo puro, testeado sin cargar ningun mundo real). Etiqueta del marcador ya no es el nombre
+  del MUNDO sino "Punto de aparición de {personaje} en este mundo (x, y)". Corolario: `Address`
+  renombrado a `WorldId` en todo el pipeline (nunca fue una IP).
+- **C-11 (L4)**: `Copy|Move` en vez de solo `Copy` al arrastrar una tarjeta; tercera linea real
+  en el tooltip ("O arrastra..."); adorno de arrastre real (VisualBrush de la tarjeta siguiendo
+  al cursor); clic en la Libreria de buffs ya coloca de verdad (antes no hacia nada).
+- **C-13 (H2)**: mismo "levanta al pasar" de `NavCardButton` en las tarjetas de personaje, sin
+  el `ColorAnimation` del borde (ya significa "cargado" via `IsCurrent`).
+- **C-17 (N1)**: pildoras de "Objetos nuevos" con `ToolTip` real (misma llamada exacta que la
+  Libreria, `ItemStatsFormatter.Format`).
+
+**Hallazgo real de esta ejecucion** (no del codigo de produccion): al pasar el arnes tras C-05,
+`X-G-SPAWN-PERSONAJE` fallo - el test seguia asumiendo la conducta ANTIGUA (cualquier Spawn
+Point aparece en cualquier mundo). Corregido actualizando el test para fijar WorldId/Name al
+mundo real cargado (representa el caso "pertenece a este mundo") y añadido `A9-08-SPAWNMUNDO`
+justo al lado (mismo spawn con el WorldId de otro mundo -> ya no aparece).
+
+**Segundo hallazgo real** (WPF, no logica): `Storyboard.TargetName` en un `Style.Triggers`
+normal (no `ControlTemplate.Triggers`) da `MC4011` - ya documentado una vez en Theme.xaml
+(comentario de `NavCardButton`) y vuelto a tropezar aqui. Arreglado sin `TargetName`: sin el, el
+Storyboard anima el propio elemento con el Style, y una ruta con tipo calificado
+(`(UIElement.RenderTransform).(TranslateTransform.Y)`) llega al `RenderTransform` inline sin
+tener que nombrarlo.
+
+Verificado: `dotnet test` 681/681 (10 tests nuevos), arnes completo (0 `FALLO`).
+
+Pendientes bloques 7-9 (C-15, C-16/C-18, C-06) - seguir el orden del informe, un commit
+verificado por bloque.
