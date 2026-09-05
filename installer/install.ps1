@@ -1,5 +1,11 @@
 # Instala Terrakeep para el usuario actual.
 #
+# Pedido explicito del usuario (5-sep-2026): "un instalador .exe" - TerrakeepSetup.iss (mismo
+# directorio) empaqueta este mismo publish+copia+accesos directos en un .exe real de doble clic
+# (Inno Setup, con desinstalador nativo real en "Aplicaciones y caracteristicas") - es la via
+# recomendada para cualquiera que no vaya a tocar el codigo. Este script sigue aqui como
+# alternativa de linea de comandos (o para quien prefiera no instalar Inno Setup).
+#
 # Publica un build Release dependiente del framework (ver ..\TerrasavrNative.App\Properties\
 # PublishProfiles\win-x64.pubxml - se probo autocontenido primero y salio un .exe de 140MB,
 # casi tan pesado como la propia version Electron que se queria dejar atras; dependiente del

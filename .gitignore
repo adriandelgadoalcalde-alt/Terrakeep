@@ -3,3 +3,6 @@ obj/
 .vs/
 *.user
 *.suo
+# Instalador generado por Inno Setup (installer/TerrakeepSetup.iss) - binario de build, no
+# fuente. Se regenera con ISCC.exe, nunca se comitea (misma politica que bin/).
+installer/output/

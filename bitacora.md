@@ -8900,3 +8900,54 @@ probablemente reutilizando el patron ya establecido de extraer del `.json` de lo
 de tModLoader apuntando a `en-US`), revision visual en ingles (nada se desborda), y despues
 Novedades/Acerca de/instalador/rebrand - las 4 cosas restantes del encargo original del usuario
 ("cuando acabes todo esto...").
+
+## Instalador .exe real con Inno Setup (commit siguiente)
+
+Pedido explicito del usuario: "ya puedes crear un instalador .exe de terrakeep". Ya existia
+`installer/install.ps1`/`uninstall.ps1` (changelog 1.0.0) - hacian el trabajo real (publish +
+copia a `%LocalAppData%\Programs\Terrakeep` + accesos directos via COM) pero exigian saber
+ejecutar PowerShell, no es un .exe de doble clic real.
+
+**Obstaculo tecnico real y como se resolvio** (autonomia tecnica permanente, sin pedir permiso
+para esto en concreto): Inno Setup (herramienta gratuita y muy establecida para exactamente
+esto, sin necesidad de MSI/WiX) no estaba instalado - `winget install --id JRSoftware.InnoSetup
+-e --silent` lo dejo en `C:\Users\adrian\AppData\Local\Programs\Inno Setup 6\ISCC.exe` (instalacion
+por usuario via winget, no en `Program Files`). Nuevo `installer/TerrakeepSetup.iss`: mismo
+publish dependiente del framework que ya usaba install.ps1 (`dotnet publish ... -c Release
+-p:PublishProfile=win-x64`, ~27MB - autocontenido pesaria ~140MB, casi como la version Electron
+que se querai dejar atras), empaquetado con Inno Setup en un `.exe` de doble clic real:
+instalacion por usuario (`PrivilegesRequired=lowest`, sin pedir admin), grupo de Start Menu +
+acceso directo de Escritorio opcional, y **desinstalador nativo real** registrado en
+"Aplicaciones y caracteristicas" de Windows (Inno lo genera solo - ya no hace falta mantener
+`uninstall.ps1` a mano para esto, aunque install.ps1 se deja intacto como alternativa de linea
+de comandos). Idioma del propio instalador: español/ingles (`compiler:Languages\Spanish.isl` +
+el ingles por defecto), coherente con el resto del encargo de esta noche.
+
+**Verificado de verdad, no solo "compilo sin errores"**: instalacion silenciosa real
+(`/VERYSILENT /SUPPRESSMSGBOXES`), `TerrasavrNative.App.exe` arranca de verdad (proceso real
+con PID, cerrado limpio despues), entrada real en el registro de desinstalacion de Windows
+(`HKCU\...\Uninstall\{GUID}_is1`, "Terrakeep version 2.1.0"), desinstalacion real via
+`unins000.exe /VERYSILENT` retira los ficheros que Inno instalo.
+
+**Hallazgo real durante esta misma verificacion, corregido en el momento**: la carpeta de
+instalacion (`%LocalAppData%\Programs\Terrakeep`) YA tenia una instalacion real y en uso de
+una sesion anterior (via el `install.ps1` original, con su propio acceso directo suelto
+`Terrakeep.lnk` en la raiz del Menu Inicio, fecha real 1-sep-2026) - la primera pasada de
+prueba (instalar con Inno, desinstalar con Inno) dejo esa instalacion vieja a medias
+(`TerrasavrNative.App.exe`/dlls borrados por el desinstalador de Inno al retirar SUS propios
+ficheros, pero el acceso directo antiguo y `uninstall.ps1` sueltos se quedaron, ya apuntando a
+nada). Corregido reinstalando de verdad con el instalador nuevo (deja la maquina con la
+version 2.1.0 real y verificada instalada, no a medias) y limpiando el acceso directo viejo ya
+roto y el `uninstall.ps1` suelto (superfluo con el desinstalador nativo real ya registrado). El
+usuario se encuentra manana con Terrakeep 2.1.0 instalado y funcional, no con una instalacion
+rota por las pruebas de esta sesion - mismo criterio real de la regla de autonomia tecnica
+("pensada para funcionar sin el usuario delante").
+
+Como generar el instalador en el futuro (documentado tambien en la cabecera del propio .iss):
+`dotnet publish TerrasavrNative.App\TerrasavrNative.App.csproj -c Release -p:PublishProfile=
+win-x64` y despues `"C:\Users\adrian\AppData\Local\Programs\Inno Setup 6\ISCC.exe" installer\
+TerrakeepSetup.iss` - el `.exe` final queda en `installer\output\` (ignorado por git,
+`.gitignore`, es un binario de build regenerable, igual que `bin/`). `MyAppVersion` dentro del
+`.iss` se actualiza a mano en cada version real, sincronizado con `TerrasavrNative.App.csproj`
+`<Version>` y `changelog.json` (los tres a mano, sin ninguna herramienta que los mantenga en
+linea automaticamente - documentado para no olvidarlo en la proxima version real).
