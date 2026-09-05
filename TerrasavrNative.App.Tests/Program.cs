@@ -3965,6 +3965,149 @@ internal static class Program
         }
         catch (Exception ex) { Console.WriteLine("AUDITORIA-REDIMENSIONADO-EXCEPTION: " + ex); }
 
+        // A10-BACKUPS-HOMONIMOS (auditoria final de Opus, 5-sep-2026): BUG REAL DE PERDIDA DE
+        // DATOS que tenia BackupHistoryService - identificaba al personaje solo por el nombre del
+        // fichero, asi que dos personajes DISTINTOS llamados igual en las dos carpetas reales que
+        // Terrakeep escanea (vanilla y tModLoader) compartian historial: restaurar una copia de
+        // uno sobrescribia al otro. Se comprueba sobre COPIAS en una carpeta temporal propia,
+        // nunca sobre personajes reales del usuario, y se borra todo al terminar.
+        try
+        {
+            string tmpRaiz = Path.Combine(Path.GetTempPath(), "terrakeep-audit-homonimos-" + Guid.NewGuid().ToString("N")[..8]);
+            string dirA = Path.Combine(tmpRaiz, "tModLoader", "Players");
+            string dirB = Path.Combine(tmpRaiz, "vanilla", "Players");
+            Directory.CreateDirectory(dirA);
+            Directory.CreateDirectory(dirB);
+            try
+            {
+                // Dos ficheros con el MISMO nombre y contenido distinto - el escenario real.
+                string pjA = Path.Combine(dirA, "Homonimo.plr");
+                string pjB = Path.Combine(dirB, "Homonimo.plr");
+                File.WriteAllBytes(pjA, [1, 2, 3, 4]);
+                File.WriteAllBytes(pjB, [9, 9, 9, 9, 9, 9]);
+
+                // SaveBackup solo mira PlrPath/TplrPath - un PlrCharacter minimo real basta.
+                static LoadedCharacter Cargado(string ruta) => new(
+                    ruta, null, "Player",
+                    new PlrCharacter { Version = 279, Name = "Homonimo", PrimaryLoadout = PlrLoadout.CreateEmpty(true) },
+                    null, []);
+
+                var backups = new BackupHistoryService();
+                backups.SaveBackup(Cargado(pjA));
+                backups.SaveBackup(Cargado(pjB));
+                int deA = backups.ListBackups(pjA).Count;
+                int deB = backups.ListBackups(pjB).Count;
+                long tamañoDeA = deA > 0 ? new FileInfo(backups.ListBackups(pjA)[0].PlrPath).Length : -1;
+                long tamañoDeB = deB > 0 ? new FileInfo(backups.ListBackups(pjB)[0].PlrPath).Length : -1;
+                bool ok = deA == 1 && deB == 1 && tamañoDeA == 4 && tamañoDeB == 6;
+                Console.WriteLine($"A10-BACKUPS-HOMONIMOS: dos personajes distintos llamados igual -> copias vistas por A={deA} (esperado 1), por B={deB} (esperado 1), tamaño de la copia de A={tamañoDeA} (esperado 4), de B={tamañoDeB} (esperado 6)");
+                if (!ok) Console.WriteLine("FALLO: A10-BACKUPS-HOMONIMOS - dos personajes distintos con el mismo nombre comparten historial de copias (restaurar uno pisaria al otro)");
+            }
+            finally
+            {
+                try { Directory.Delete(tmpRaiz, recursive: true); } catch (Exception) { }
+                // Las carpetas de historial que ha creado esta prueba viven en el AppData real -
+                // se limpian tambien, no deben quedar como basura de una ejecucion de arnes.
+                try
+                {
+                    string raizBackups = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "Backups");
+                    foreach (string d in Directory.Exists(raizBackups) ? Directory.GetDirectories(raizBackups, "Homonimo-*") : [])
+                        Directory.Delete(d, recursive: true);
+                }
+                catch (Exception) { }
+            }
+        }
+        catch (Exception ex) { Console.WriteLine("A10-BACKUPS-HOMONIMOS-EXCEPTION: " + ex); }
+
+        // A10-IDIOMA-BARRIDO (auditoria final de Opus, 5-sep-2026, antes de publicar): hasta ahora
+        // A9-13-IDIOMA solo probaba UN TextBlock concreto de Inicio. Esto recorre TODAS las
+        // pestañas reales con el idioma puesto en ingles y busca los dos fallos que build/test no
+        // detectan nunca: (1) una clave que no existe en NINGUN diccionario, que se ve literal
+        // entre corchetes ("[clave_x]", criterio real de LocalizationService); (2) texto que sigue
+        // en ESPAÑOL con la app en ingles, es decir una cadena que nunca se migro al diccionario.
+        // La deteccion de (2) va por palabras funcionales españolas inequivocas (no existen en
+        // ingles) - nunca por acentos: el ingles real de la app tambien puede llevar nombres
+        // propios acentuados del propio juego.
+        try
+        {
+            string[] palabrasEspañolas =
+            [
+                "personaje", "guardar", "guardado", "conjunto", "hueco", "búsqueda", "busqueda",
+                "aparición", "aparicion", "copia de seguridad", "copias de seguridad", "mundo",
+                "objetos", "acepta", "cargar", "carpeta", "cambios", "ningún", "ningun",
+                "seleccionado", "vanidad", "tintes", "afina", "escribe para buscar", "en total",
+                "diseñado", "desarrollado", "reescritura", "propiedad de sus", "está", "esta ",
+            ];
+            var sospechas = new List<string>();
+            var corchetes = new List<string>();
+            void BarrerPantallaActual(string donde)
+            {
+                foreach (var tb in Descendientes<System.Windows.Controls.TextBlock>(window))
+                {
+                    if (!tb.IsVisible) continue;
+                    string t = tb.Text;
+                    if (string.IsNullOrWhiteSpace(t)) continue;
+                    if (System.Text.RegularExpressions.Regex.IsMatch(t, @"^\[[a-z0-9_]+\]$"))
+                    { corchetes.Add($"{donde}: {t}"); continue; }
+                    string bajo = t.ToLowerInvariant();
+                    foreach (string p in palabrasEspañolas)
+                        if (bajo.Contains(p)) { sospechas.Add($"{donde}: \"{(t.Length > 90 ? t[..90] + "..." : t)}\" (por '{p}')"); break; }
+                }
+            }
+
+            vm.Settings.Language = "en";
+            DoEvents(); DoEvents();
+            for (int tab = 0; tab <= 5; tab++)
+            {
+                vm.SelectedTabIndex = tab;
+                DoEvents(); DoEvents();
+                if (tab == 1)
+                {
+                    for (int inner = 0; inner <= 9; inner++)
+                    {
+                        try { vm.PersonajeInnerTabIndex = inner; } catch (Exception) { break; }
+                        DoEvents(); DoEvents();
+                        BarrerPantallaActual($"Personaje/sub{inner}");
+                    }
+                    vm.PersonajeInnerTabIndex = 0;
+                    DoEvents();
+                }
+                else BarrerPantallaActual($"Pestaña{tab}");
+            }
+
+            // Parte 3 del encargo: los creditos reales ("IncrediBad") tienen que verse enteros en
+            // la pestaña Acerca de, en los DOS idiomas - se comprueba el texto real ya renderizado
+            // en pantalla, no solo la propiedad del ViewModel.
+            vm.SelectedTabIndex = 5;
+            DoEvents(); DoEvents();
+            var autorEn = Descendientes<System.Windows.Controls.TextBlock>(window)
+                .FirstOrDefault(tb => tb.IsVisible && tb.Text.Contains("IncrediBad"));
+            Console.WriteLine($"A10-CREDITOS(en): TextBlock con 'IncrediBad' visible={autorEn != null}, ancho={autorEn?.ActualWidth ?? -1:0.#}, alto={autorEn?.ActualHeight ?? -1:0.#}, recortado={(autorEn != null && autorEn.ActualWidth > 0 && autorEn.DesiredSize.Width > autorEn.ActualWidth + 0.5)} (esperado visible=True, recortado=False)");
+            if (autorEn == null) Console.WriteLine("FALLO: A10-CREDITOS - el credito de autoria no aparece en 'Acerca de' con la app en ingles");
+
+            vm.Settings.Language = "es";
+            DoEvents(); DoEvents();
+            var autorEs = Descendientes<System.Windows.Controls.TextBlock>(window)
+                .FirstOrDefault(tb => tb.IsVisible && tb.Text.Contains("IncrediBad"));
+            Console.WriteLine($"A10-CREDITOS(es): TextBlock con 'IncrediBad' visible={autorEs != null}, ancho={autorEs?.ActualWidth ?? -1:0.#}, alto={autorEs?.ActualHeight ?? -1:0.#}, recortado={(autorEs != null && autorEs.ActualWidth > 0 && autorEs.DesiredSize.Width > autorEs.ActualWidth + 0.5)} (esperado visible=True, recortado=False)");
+            if (autorEs == null) Console.WriteLine("FALLO: A10-CREDITOS - el credito de autoria no aparece en 'Acerca de' en español");
+
+            Console.WriteLine($"A10-IDIOMA-BARRIDO: claves sin traducir a la vista (formato '[clave]')={corchetes.Count} (esperado 0), textos que siguen en español con la app en ingles={sospechas.Count} (esperado 0)");
+            foreach (string c in corchetes.Distinct().Take(25)) Console.WriteLine("   SIN-TRADUCIR " + c);
+            foreach (string s in sospechas.Distinct().Take(40)) Console.WriteLine("   EN-ESPAÑOL " + s);
+            if (corchetes.Count > 0) Console.WriteLine("FALLO: A10-IDIOMA-BARRIDO - hay claves de idioma que no existen en ningun diccionario");
+            if (sospechas.Count > 0) Console.WriteLine("FALLO: A10-IDIOMA-BARRIDO - hay texto sin migrar al diccionario (se queda en español con la app en ingles)");
+
+            vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0;
+            DoEvents();
+        }
+        catch (Exception ex) { Console.WriteLine("A10-IDIOMA-BARRIDO-EXCEPTION: " + ex); }
+        finally
+        {
+            vm.Settings.Language = "es"; // el resto del arnes asume español, pase lo que pase arriba
+            DoEvents();
+        }
+
         string errorLog = Path.Combine(AppContext.BaseDirectory, "ultimo-error.log");
         Console.WriteLine("ultimo-error.log existe: " + File.Exists(errorLog));
 
