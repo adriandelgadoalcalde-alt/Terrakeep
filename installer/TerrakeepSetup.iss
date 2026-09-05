@@ -24,7 +24,7 @@
 #define MyAppName "Terrakeep"
 #define MyAppVersion "2.1.0"
 #define MyAppPublisher "IncrediBad"
-#define MyAppExeName "TerrasavrNative.App.exe"
+#define MyAppExeName "Terrakeep.exe"
 #define MyPublishDir "..\TerrasavrNative.App\bin\Release\net10.0-windows\win-x64\publish"
 
 [Setup]

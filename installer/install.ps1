@@ -51,7 +51,7 @@ New-Item -ItemType Directory -Path $installDir -Force | Out-Null
 Copy-Item (Join-Path $publishDir '*') $installDir -Recurse -Force
 Copy-Item (Join-Path $PSScriptRoot 'uninstall.ps1') (Join-Path $installDir 'uninstall.ps1') -Force
 
-$exePath = Join-Path $installDir 'TerrasavrNative.App.exe'
+$exePath = Join-Path $installDir 'Terrakeep.exe'
 $shell = New-Object -ComObject WScript.Shell
 
 $startMenuDir = Join-Path $env:AppData 'Microsoft\Windows\Start Menu\Programs'

@@ -59,7 +59,7 @@ internal static class Program
         var app = new Application();
         app.Resources.MergedDictionaries.Add(new ResourceDictionary
         {
-            Source = new Uri("pack://application:,,,/TerrasavrNative.App;component/Styles/Theme.xaml")
+            Source = new Uri("pack://application:,,,/Terrakeep;component/Styles/Theme.xaml")
         });
         app.Resources["NullToVis"] = new NullToVisibilityConverter();
         app.Resources["NullToCollapsed"] = new NullToCollapsedConverter();

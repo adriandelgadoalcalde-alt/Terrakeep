@@ -27,6 +27,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- Nombre real del binario compilado (Terrakeep.exe/.dll) - independiente del nombre del
+         proyecto/namespace C# (TerrasavrNative.App, sin tocar, cambiarlo afecta a carpetas y
+         referencias de proyecto en todo el solution). Antes el .exe se llamaba
+         TerrasavrNative.App.exe pese a que Product/AssemblyTitle ya decian "Terrakeep" - visible
+         si el usuario abria la carpeta de instalacion o el Administrador de tareas (pestaña
+         Detalles, columna "Nombre de archivo"). Pedido explicito del usuario (5-sep-2026): "de
+         cara al usuario no puede ver nada... del otro nombre". -->
+    <AssemblyName>Terrakeep</AssemblyName>
     <!-- Metadatos visibles en Propiedades del .exe / Administrador de tareas de Windows -
          sin esto, .NET usa el nombre del ensamblado en crudo (TerrasavrNative.App). -->
     <AssemblyTitle>Terrakeep</AssemblyTitle>
