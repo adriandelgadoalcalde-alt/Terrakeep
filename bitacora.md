@@ -9169,3 +9169,98 @@ capturas de pantalla del escritorio:
 Queda por tanto **pendiente de re-ejecutar el arnes completo con la sesion desbloqueada** para
 cerrar del todo la verificacion visual. El riesgo real del cambio es bajo y acotado (es aditivo:
 añade un destino, no modifica el que consume la app), pero conviene no darlo por cerrado.
+
+---
+
+## 6-sep-2026 - El arbol de la Libreria (objetos y buffs) se muda a Core (WS2 de TerrakeepMod)
+
+Segundo workstream del mod: **portar a `TerrasavrNative.Core` los datos que el mod necesita**,
+para que su Libreria (WS3) pueda construirse sin arrastrar ni un tipo de WPF/MVVM.
+
+**Que se ha movido, exactamente.**
+
+1. `CategoryTreeNodeData` (el record puro del arbol) y TODO el algoritmo real que vivia en
+   `TerrasavrNative.App/Services/LibraryCategoryTreeBuilder.cs` -> **`TerrasavrNative.Core/Data/
+   LibraryTreeBuilder.cs`**. Firma final:
+   `BuildItemTree(VanillaLibraryTreeCatalog, LibraryLabelCatalog, CalamityCatalog?,
+   Func<int,string?> iconResolver)`. Cambios de contrato respecto a lo que habia:
+   - Ya no recibe `CharacterFileService` (que es de App), sino los tres catalogos de Core
+     directamente.
+   - La resolucion de icono entra **inyectada** como `Func<int,string?>` en vez de llamar a
+     `VanillaIconResolver`/cocinar URIs `pack://siteoforigin:,,,` dentro. Eso era lo unico
+     realmente WPF del algoritmo.
+   - `CalamityCatalog` es **anulable**: sin el, simplemente no se añade la carpeta "Calamity
+     (mod)" (en el juego no habra ids sinteticos - `ModContent.ItemType<T>()` da el id real).
+2. `BuffLibraryTreeBuilder` -> **`TerrasavrNative.Core/Data/BuffTreeBuilder.cs`**
+   (`BuildBuffTree(VanillaBuffCatalog, CalamityBuffCatalog?, CalamityCatalog?,
+   Func<int,string?> buffIconResolver, Func<int,string?> itemIconResolver)`). Este estaba peor:
+   construia `CategoryNodeViewModel` directamente en `BuildNamed`/`BuildIndex`/
+   `BuildCalamityRoot`, sin capa de datos pura. Ahora produce `CategoryTreeNodeData` igual que
+   el de objetos. **Las 6 listas literales de ids (puerto real de `initLibs()` de Terrasavr) no
+   se han tocado**: solo cambio el tipo de salida. Hacen falta DOS resolutores de icono porque
+   la raiz "Calamity (mod)" usa, a proposito, el icono de un OBJETO real (`CalamityMod/Calamity`)
+   y no el de ningun buff.
+3. **Se ha eliminado una duplicacion real de camino**: el bucle de agrupar-por-segmento-raiz +
+   paginar-hojas->40 estaba escrito dos veces (objetos y buffs). Ahora es uno solo,
+   `LibraryTreeBuilder.BuildGroupedRoot(...)`, parametrizado por etiqueta de categoria, etiqueta
+   de pagina e icono. El arbol de buffs sale identico porque ninguna de sus categorias lleva
+   barra: con un solo miembro por grupo, el algoritmo no crea carpeta intermedia.
+4. En `TerrasavrNative.App/Services/`, `LibraryCategoryTreeBuilder`/`BuffLibraryTreeBuilder` se
+   quedan como **envoltorios finos**: la cache estatica con lock (que sigue siendo de la app -
+   comparte el arbol entre Libreria e Investigacion), la resolucion real de icono a ruta
+   `pack://siteoforigin:,,,` y la conversion `CategoryTreeNodeData -> CategoryNodeViewModel`.
+   Su API publica (`Build(CharacterFileService)`) no ha cambiado, asi que ni `LibraryViewModel`
+   ni `ResearchViewModel` ni `BuffLibraryViewModel` se han tocado.
+
+**Verificacion de que el refactor no cambia NADA visible** (no basta con que compile y pasen los
+tests - la Libreria real tiene 672 nodos con nombre traducido, ruta, icono, recuento y orden
+curado): se volco el arbol entero (objetos + buffs, un nodo por linea con `Name|FullPath|
+IconPath|ItemCount|ItemIdsOrdered|ItemIdSet`) con el codigo NUEVO, se hizo `git stash` del
+refactor, se volvio a volcar con el codigo VIEJO y se compararon. **`diff` vacio, 0 lineas de
+diferencia sobre 672.** El test que hacia el volcado era temporal y no se ha comiteado.
+
+**Verificacion normal:**
+- `dotnet build TerrasavrNative.slnx` -> 0 advertencias, 0 errores (los dos destinos de Core,
+  net10.0 y net8.0 - o sea que lo movido tambien compila con C# 12, que es lo que usara el mod).
+- `dotnet test` -> **388/388** en Core (368 de antes + 20 nuevos, ver abajo) y **329/329** en
+  ViewModels. Antes del refactor: 368/368 y 329/329.
+- Arnes de UI Automation -> **525 lineas, 0 `FALLO`**, exactamente el mismo recuento que antes
+  del refactor. El unico diff real contra la ejecucion previa son tiempos, la posicion de la
+  ventana y estado de sesion persistido; ninguna linea de Libreria/Investigacion/Buffs cambio.
+  Esto **cierra de paso el pendiente que dejo WS0** ("re-ejecutar el arnes completo con la
+  sesion desbloqueada"): el arnes entero corre y pasa con Core a doble destino.
+
+**20 tests nuevos en `TerrasavrNative.Core.Tests/Data/`** - el arbol de la Libreria vivia en App
+y por tanto NO lo cubria ningun test de Core; al moverlo se cubre de verdad, contra los mismos
+JSON reales que carga la app (`LibraryTreeBuilderTests`, `BuffTreeBuilderTests`) y con datos
+sinteticos para el generador en vivo (`LiveItemTreeBuilderTests`).
+
+**Base para el catalogo en vivo del mod (segunda mitad de WS2), en
+`TerrasavrNative.Core/Data/LiveItemTreeBuilder.cs`.** Decision del plan: dentro del juego no se
+porta el `calamity/catalog.json` estatico, se descubre el contenido recorriendo
+`ContentSamples.ItemsByType` (asi cubre CUALQUIER mod instalado, no solo Calamity). Como Core no
+puede depender de Terraria/tModLoader (dejaria de compilar para net10.0, que es el destino de la
+app de escritorio), se parte en dos:
+- **`LiveItemInfo`** - `readonly record struct (int Id, string Name, string ModName,
+  string Category)` + `EquipSlot`/`Rarity` opcionales. DTO neutral, ni un tipo de Terraria.
+- **`LiveItemTreeBuilder.BuildTree(items, iconResolver, categoryLabel?, pageLabel?,
+  vanillaModName)`** - funcion pura que agrupa por mod (una carpeta raiz por mod, el juego base
+  primero) y, dentro, reutiliza literalmente `LibraryTreeBuilder.BuildGroupedRoot` (el mismo
+  agrupado/paginado real de la app), devolviendo el mismo `CategoryTreeNodeData`.
+- **La extraccion real desde `ContentSamples.ItemsByType` vive en el lado del MOD**, no aqui -
+  esta documentado en cabecera del propio archivo, con los campos concretos de donde saldra cada
+  cosa (`item.type`, `Lang.GetItemNameValue`, `ItemLoader.GetItem(type)?.Mod?.Name`...).
+
+**Obstaculos reales de esta tanda (ninguno fallo dos veces):**
+- La primera build tras el refactor fallo con `MSB3021` (no se puede copiar
+  `TerrasavrNative.Core.dll`): habia quedado un proceso **`Terrakeep.exe` vivo** de la ejecucion
+  del arnes de linea base, bloqueando el DLL. Se mato el proceso y la build paso.
+- Efecto colateral de ese `kill`: la siguiente ejecucion del arnes arranco **en ingles** (la
+  ejecucion cortada no llego a restaurar `Language` en `%LOCALAPPDATA%\Terrakeep\settings.json`),
+  lo que produjo 3 lineas `FALLO` de la prueba `A9-13-IDIOMA` que **no tenian nada que ver con el
+  refactor**. Con el ajuste ya restaurado a `es`, la re-ejecucion dio 525 lineas / 0 `FALLO`.
+  Leccion para la proxima: comprobar `settings.json` antes de creerse un `FALLO` de idioma, y
+  asegurarse de que no queda ningun `Terrakeep.exe` vivo antes de compilar.
+- `T-H-FOCO` (FocusVisualStyle al enfocar por teclado) es **intermitente**: fallo en una
+  ejecucion y paso en la siguiente sin tocar nada. Depende del foco real de la sesion de Windows
+  (si otra ventana lo roba, no hay adorner). No es una regresion de este refactor.
