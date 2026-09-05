@@ -30,15 +30,22 @@ public sealed class VanillaArmorSetCatalog
 
     public ArmorSetInfo? Get(int itemId) => _byItemId.TryGetValue(itemId, out var info) ? info : null;
 
-    // Chequeo en vivo real: las 3 piezas puestas coinciden EXACTAMENTE con las de un set
+    // Chequeo en vivo real: las piezas puestas coinciden EXACTAMENTE con las de un set
     // conocido - para un futuro "bonificacion activa" reactivo (EquipmentGroupViewModel), sin
     // necesidad de guardar la tabla de slots por separado en la app.
+    //
+    // C-10a (auditoria de pulido final, modo 3 - "sets de 2 piezas"): Wizard/MagicHat son sets
+    // REALES de solo cabeza+cuerpo (Player.UpdateArmorSets nunca menciona legs para ellos) -
+    // Pieces.Length puede ser 2, y entonces las piernas son irrelevantes (cualquier valor vale).
     public ArmorSetInfo? BonusForEquipped(int headItemId, int bodyItemId, int legsItemId)
     {
         if (!_byItemId.TryGetValue(headItemId, out var info)) return null;
-        return info.Pieces.Length == 3 && info.Pieces[0] == headItemId && info.Pieces[1] == bodyItemId && info.Pieces[2] == legsItemId
-            ? info
-            : null;
+        return info.Pieces.Length switch
+        {
+            3 => info.Pieces[0] == headItemId && info.Pieces[1] == bodyItemId && info.Pieces[2] == legsItemId ? info : null,
+            2 => info.Pieces[0] == headItemId && info.Pieces[1] == bodyItemId ? info : null,
+            _ => null,
+        };
     }
 
     public static VanillaArmorSetCatalog LoadFromFile(string path)
