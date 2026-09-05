@@ -28,7 +28,7 @@ public partial class ItemEditViewModel : ObservableObject
     [ObservableProperty] private PrefixMetaButtonViewModel? _selectedMeta;
     [ObservableProperty] private PrefixGroupButtonViewModel? _selectedGroup;
     [ObservableProperty] private bool _canHavePrefix;
-    [ObservableProperty] private string _noPrefixMessage = "Selecciona un slot para editarlo.";
+    [ObservableProperty] private string _noPrefixMessage = LocalizationService.Instance["select_slot_to_edit"];
     [ObservableProperty] private string _categoriesLabel = string.Empty;
     // Slot seleccionado y con un objeto real dentro - controla si se muestran los campos
     // Indice/Contar/Prefijo (no tiene sentido editarlos sobre un slot vacio o sin seleccion).
@@ -80,7 +80,7 @@ public partial class ItemEditViewModel : ObservableObject
         if (slot == null || slot.IsEmpty)
         {
             CanHavePrefix = false;
-            NoPrefixMessage = slot == null ? "Selecciona un slot para editarlo." : "Este slot está vacío.";
+            NoPrefixMessage = slot == null ? LocalizationService.Instance["select_slot_to_edit"] : LocalizationService.Instance["slot_empty"];
             CategoriesLabel = string.Empty;
             _currentCategories = PrefixCategory.None;
             Groups.Clear();
@@ -90,7 +90,7 @@ public partial class ItemEditViewModel : ObservableObject
 
         _currentCategories = PrefixEligibility.For(slot.Item, _service.PrefixRules, _service.CalamityCatalog);
         CanHavePrefix = _currentCategories != PrefixCategory.None;
-        NoPrefixMessage = CanHavePrefix ? string.Empty : "Este objeto no admite ningún prefijo.";
+        NoPrefixMessage = CanHavePrefix ? string.Empty : LocalizationService.Instance["item_no_prefix_allowed"];
         CategoriesLabel = DescribeCategories(_currentCategories);
 
         if (!CanHavePrefix)

@@ -59,7 +59,7 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
     public ResearchViewModel(CharacterFileService service)
     {
         _service = service;
-        ResultsSummary = "Sin personaje cargado.";
+        ResultsSummary = LocalizationService.Instance["status_no_character_loaded_dot"];
         foreach (var node in LibraryCategoryTreeBuilder.Build(service))
             RootCategories.Add(node);
         // Auditoria de Opus, T-18: cada nodo lleva su propio comando real - ver el comentario
@@ -118,7 +118,7 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
         if (SelectedCategory != null) { SelectedCategory.IsSelected = false; SelectedCategory = null; }
         _researchedCounts = new Dictionary<int, int>();
         Results.Clear();
-        ResultsSummary = "Sin personaje cargado.";
+        ResultsSummary = LocalizationService.Instance["status_no_character_loaded_dot"];
         IsJourneyMode = false;
         ProgressFraction = 0;
     }

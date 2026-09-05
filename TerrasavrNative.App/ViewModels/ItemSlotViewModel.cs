@@ -67,18 +67,18 @@ public partial class ItemSlotViewModel : ObservableObject
     // que anunciar.
     public string? SlotRoleLabel => AcceptedKind switch
     {
-        SlotKind.ArmorHead => "Cabeza",
-        SlotKind.ArmorBody => "Cuerpo",
-        SlotKind.ArmorLegs => "Piernas",
-        SlotKind.Accessory => $"Accesorio {SlotIndex - 2}",
-        SlotKind.Dye => "Tinte",
-        SlotKind.Mount => "Montura",
-        SlotKind.Hook => "Gancho",
-        SlotKind.Cart => "Vagoneta",
-        SlotKind.VanityPet => "Mascota",
-        SlotKind.LightPet => "Mascota de luz",
-        SlotKind.Coin => "Moneda",
-        SlotKind.Ammo => "Munición",
+        SlotKind.ArmorHead => LocalizationService.Instance["slot_role_head"],
+        SlotKind.ArmorBody => LocalizationService.Instance["slot_role_body"],
+        SlotKind.ArmorLegs => LocalizationService.Instance["slot_role_legs"],
+        SlotKind.Accessory => LocalizationService.Instance.Format("slot_role_accessory", SlotIndex - 2),
+        SlotKind.Dye => LocalizationService.Instance["char_dye_label"],
+        SlotKind.Mount => LocalizationService.Instance["slot_role_mount"],
+        SlotKind.Hook => LocalizationService.Instance["slot_role_hook"],
+        SlotKind.Cart => LocalizationService.Instance["slot_role_cart"],
+        SlotKind.VanityPet => LocalizationService.Instance["slot_role_vanity_pet"],
+        SlotKind.LightPet => LocalizationService.Instance["slot_role_light_pet"],
+        SlotKind.Coin => LocalizationService.Instance["slot_role_coin"],
+        SlotKind.Ammo => LocalizationService.Instance["slot_role_ammo"],
         _ => null,
     };
 

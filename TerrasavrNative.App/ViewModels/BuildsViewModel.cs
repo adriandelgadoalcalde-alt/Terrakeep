@@ -40,15 +40,16 @@ public sealed partial class BuildsViewModel : ObservableObject
         _allStages = [.. VanillaStages, .. CalamityStages];
         _allClasses = _allStages.SelectMany(s => s.Classes).ToList();
 
+        var loc = LocalizationService.Instance;
         Dictionary<string, string> labels = new()
         {
-            ["melee"] = "Cuerpo a cuerpo",
-            ["ranged"] = "A distancia",
-            ["mage"] = "Magia",
-            ["summoner"] = "Invocación",
-            ["rogue"] = "Pícaro",
+            ["melee"] = loc["class_melee"],
+            ["ranged"] = loc["class_ranged"],
+            ["mage"] = loc["class_mage"],
+            ["summoner"] = loc["class_summoner"],
+            ["rogue"] = loc["class_rogue"],
         };
-        var options = new List<BuildClassFilterOptionViewModel> { new(null, "Todas") };
+        var options = new List<BuildClassFilterOptionViewModel> { new(null, loc["class_all"]) };
         foreach (var key in _allClasses.Select(c => c.ClassName).Distinct().OrderBy(k => k, StringComparer.Ordinal))
             options.Add(new BuildClassFilterOptionViewModel(key, labels.GetValueOrDefault(key, key)));
         ClassFilterOptions = options;

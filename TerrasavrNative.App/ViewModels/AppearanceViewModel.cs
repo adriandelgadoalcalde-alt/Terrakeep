@@ -41,7 +41,7 @@ public partial class AppearanceViewModel : ObservableObject
 
     [ObservableProperty] private int _hairStyle;
     [ObservableProperty] private int _hairDye;
-    [ObservableProperty] private string _hairDyeDisplayName = "Ninguno";
+    [ObservableProperty] private string _hairDyeDisplayName = LocalizationService.Instance["hair_dye_none"];
 
     public AppearanceViewModel(CharacterFileService service, Action<UndoEntry> pushUndo, Func<bool> isUndoRedoInProgress)
     {
@@ -136,7 +136,7 @@ public partial class AppearanceViewModel : ObservableObject
 
     private void BuildHairDyeOptions()
     {
-        HairDyeOptions.Add(new HairDyeOptionViewModel(0, "Ninguno", null));
+        HairDyeOptions.Add(new HairDyeOptionViewModel(0, LocalizationService.Instance["hair_dye_none"], null));
         foreach (var entry in _service.HairDyes.Entries)
         {
             string name = _service.VanillaCatalog.GetName(entry.ItemId);
@@ -204,13 +204,13 @@ public partial class AppearanceViewModel : ObservableObject
         _pendingUndoGroups.Clear();
         _swatchBaseline.Clear();
         Swatches.Clear();
-        Swatches.Add(new ColorSwatchViewModel("Pelo", character.HairColor));
-        Swatches.Add(new ColorSwatchViewModel("Piel", character.SkinColor));
-        Swatches.Add(new ColorSwatchViewModel("Ojos", character.EyeColor));
-        Swatches.Add(new ColorSwatchViewModel("Camisa", character.ShirtColor));
-        Swatches.Add(new ColorSwatchViewModel("Camiseta interior", character.UnderColor));
-        Swatches.Add(new ColorSwatchViewModel("Pantalones", character.PantsColor));
-        Swatches.Add(new ColorSwatchViewModel("Zapatos", character.ShoesColor));
+        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_hair"], character.HairColor));
+        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_skin"], character.SkinColor));
+        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_eyes"], character.EyeColor));
+        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_shirt"], character.ShirtColor));
+        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_undershirt"], character.UnderColor));
+        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_pants"], character.PantsColor));
+        Swatches.Add(new ColorSwatchViewModel(LocalizationService.Instance["swatch_shoes"], character.ShoesColor));
 
         _suppressWriteback = true;
         HairStyle = character.HairStyle;
@@ -249,7 +249,7 @@ public partial class AppearanceViewModel : ObservableObject
                 string key = $"swatch{swatchIndex}";
                 var before = _swatchBaseline[swatchIndex];
                 var after = (swatch.R, swatch.G, swatch.B);
-                PushUndoDebounced(key, $"Apariencia · color de {swatch.Label}", before, after,
+                PushUndoDebounced(key, LocalizationService.Instance.Format("undo_appearance_color", swatch.Label), before, after,
                     v => { swatch.R = v.R; swatch.G = v.G; swatch.B = v.B; },
                     onFlushed: () => _swatchBaseline[swatchIndex] = after);
                 // Si PushUndoDebounced NO creo/mantuvo un grupo real (replay en curso, o
@@ -300,7 +300,7 @@ public partial class AppearanceViewModel : ObservableObject
         _character.HairStyle = value;
     }
     // C-15: cambio discreto (SelectHair, un clic en el selector visual) - sin debounce.
-    partial void OnHairStyleChanged(int oldValue, int newValue) => PushUndo("Apariencia · peinado", oldValue, newValue, v => HairStyle = v);
+    partial void OnHairStyleChanged(int oldValue, int newValue) => PushUndo(LocalizationService.Instance["undo_appearance_hairstyle"], oldValue, newValue, v => HairStyle = v);
 
     partial void OnHairDyeChanged(int value)
     {
@@ -308,7 +308,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (_suppressWriteback || _character == null) return;
         _character.HairDye = (byte)Math.Clamp(value, 0, 255);
     }
-    partial void OnHairDyeChanged(int oldValue, int newValue) => PushUndo("Apariencia · tinte de pelo", oldValue, newValue, v => HairDye = v);
+    partial void OnHairDyeChanged(int oldValue, int newValue) => PushUndo(LocalizationService.Instance["undo_appearance_hairdye"], oldValue, newValue, v => HairDye = v);
 
     // H6-02 (Opus, sexta pasada): un cambio REAL de genero (el usuario toca el selector, no una
     // carga silenciosa) colapsa a la variante "Starter" real de ese genero - el selector de la
@@ -322,7 +322,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (_suppressWriteback || _character == null) return;
         _character.Gender = value ? TerrasavrNative.Core.Model.PlayerVariantSets.MaleStarter : TerrasavrNative.Core.Model.PlayerVariantSets.FemaleStarter;
     }
-    partial void OnIsMaleChanged(bool oldValue, bool newValue) => PushUndo("Apariencia · género", oldValue, newValue, v => IsMale = v);
+    partial void OnIsMaleChanged(bool oldValue, bool newValue) => PushUndo(LocalizationService.Instance["undo_appearance_gender"], oldValue, newValue, v => IsMale = v);
 
     partial void OnDifficultyChanged(int value)
     {
@@ -330,7 +330,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (_suppressWriteback || _character == null) return;
         _character.Difficulty = (byte)Math.Clamp(value, 0, 3);
     }
-    partial void OnDifficultyChanged(int oldValue, int newValue) => PushUndo("Apariencia · dificultad", oldValue, newValue, v => Difficulty = v);
+    partial void OnDifficultyChanged(int oldValue, int newValue) => PushUndo(LocalizationService.Instance["undo_appearance_difficulty"], oldValue, newValue, v => Difficulty = v);
 
     // Ap-f (segunda auditoria de Opus, Fable): "se puede poner HealthNow=500/HealthMax=100; el
     // juego lo recorta, Terrakeep no". El recorte/arrastre SOLO se aplica fuera de la carga
@@ -355,7 +355,7 @@ public partial class AppearanceViewModel : ObservableObject
     }
     // C-15: TextBox con UpdateSourceTrigger=PropertyChanged - cada caracter tecleado dispara un
     // cambio real, PushUndoDebounced agrupa el gesto completo en una unica entrada.
-    partial void OnHealthNowChanged(int oldValue, int newValue) => PushUndoDebounced("HealthNow", "Apariencia · vida actual", oldValue, newValue, v => HealthNow = v);
+    partial void OnHealthNowChanged(int oldValue, int newValue) => PushUndoDebounced("HealthNow", LocalizationService.Instance["undo_appearance_health_now"], oldValue, newValue, v => HealthNow = v);
     partial void OnHealthMaxChanged(int value)
     {
         OnPropertyChanged(nameof(HealthFraction));
@@ -364,7 +364,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (HealthNow > value) HealthNow = value; // arrastra el actual hacia abajo si el maximo baja por debajo
         _character.HealthMax = value;
     }
-    partial void OnHealthMaxChanged(int oldValue, int newValue) => PushUndoDebounced("HealthMax", "Apariencia · vida máxima", oldValue, newValue, v => HealthMax = v);
+    partial void OnHealthMaxChanged(int oldValue, int newValue) => PushUndoDebounced("HealthMax", LocalizationService.Instance["undo_appearance_health_max"], oldValue, newValue, v => HealthMax = v);
     partial void OnManaNowChanged(int value)
     {
         OnPropertyChanged(nameof(ManaFraction));
@@ -374,7 +374,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (clamped != value) { ManaNow = clamped; return; }
         _character.ManaNow = value;
     }
-    partial void OnManaNowChanged(int oldValue, int newValue) => PushUndoDebounced("ManaNow", "Apariencia · maná actual", oldValue, newValue, v => ManaNow = v);
+    partial void OnManaNowChanged(int oldValue, int newValue) => PushUndoDebounced("ManaNow", LocalizationService.Instance["undo_appearance_mana_now"], oldValue, newValue, v => ManaNow = v);
     partial void OnManaMaxChanged(int value)
     {
         OnPropertyChanged(nameof(ManaFraction));
@@ -383,7 +383,7 @@ public partial class AppearanceViewModel : ObservableObject
         if (ManaNow > value) ManaNow = value;
         _character.ManaMax = value;
     }
-    partial void OnManaMaxChanged(int oldValue, int newValue) => PushUndoDebounced("ManaMax", "Apariencia · maná máximo", oldValue, newValue, v => ManaMax = v);
+    partial void OnManaMaxChanged(int oldValue, int newValue) => PushUndoDebounced("ManaMax", LocalizationService.Instance["undo_appearance_mana_max"], oldValue, newValue, v => ManaMax = v);
 
     /// <summary>Fraccion 0..1 real de vida actual/maxima - 0 si HealthMax es 0 (personaje sin cargar).</summary>
     public double HealthFraction => HealthMax > 0 ? Math.Clamp(HealthNow / (double)HealthMax, 0.0, 1.0) : 0.0;
@@ -391,9 +391,9 @@ public partial class AppearanceViewModel : ObservableObject
     public double ManaFraction => ManaMax > 0 ? Math.Clamp(ManaNow / (double)ManaMax, 0.0, 1.0) : 0.0;
     public string ManaLabel => $"{ManaNow}/{ManaMax}";
     partial void OnFishingQuestsCompletedChanged(int value) { if (!_suppressWriteback && _character != null) _character.FishingQuestsCompleted = value; }
-    partial void OnFishingQuestsCompletedChanged(int oldValue, int newValue) => PushUndoDebounced("FishingQuestsCompleted", "Apariencia · misiones de pesca completadas", oldValue, newValue, v => FishingQuestsCompleted = v);
+    partial void OnFishingQuestsCompletedChanged(int oldValue, int newValue) => PushUndoDebounced("FishingQuestsCompleted", LocalizationService.Instance["undo_appearance_fishing_quests"], oldValue, newValue, v => FishingQuestsCompleted = v);
     partial void OnGolferScoreChanged(int value) { if (!_suppressWriteback && _character != null) _character.GolferScore = value; }
-    partial void OnGolferScoreChanged(int oldValue, int newValue) => PushUndoDebounced("GolferScore", "Apariencia · mejor golpe de golf", oldValue, newValue, v => GolferScore = v);
+    partial void OnGolferScoreChanged(int oldValue, int newValue) => PushUndoDebounced("GolferScore", LocalizationService.Instance["undo_appearance_golf_score"], oldValue, newValue, v => GolferScore = v);
 
     partial void OnPlayHoursChanged(double value)
     {
@@ -402,7 +402,7 @@ public partial class AppearanceViewModel : ObservableObject
         _character.PlayTimeLow = unchecked((uint)ticks);
         _character.PlayTimeHigh = unchecked((uint)(ticks >> 32));
     }
-    partial void OnPlayHoursChanged(double oldValue, double newValue) => PushUndoDebounced("PlayHours", "Apariencia · horas jugadas", oldValue, newValue, v => PlayHours = v);
+    partial void OnPlayHoursChanged(double oldValue, double newValue) => PushUndoDebounced("PlayHours", LocalizationService.Instance["undo_appearance_play_hours"], oldValue, newValue, v => PlayHours = v);
 
     // Indices en Swatches, mismo orden en que se anaden arriba en LoadFrom.
     private const int HairIdx = 0, SkinIdx = 1, EyesIdx = 2, ShirtIdx = 3, UnderIdx = 4, PantsIdx = 5, ShoesIdx = 6;

@@ -119,7 +119,7 @@ public partial class MainViewModel : ObservableObject
     // para OnPersonajeInnerTabIndexChanged, aqui abajo.
     private enum PersonajeInnerTab { Objetos = 0, Buffs = 1, Investigacion = 2, Apariencia = 3, SpawnPoints = 4, Desbloqueos = 5, Version = 6 }
 
-    [ObservableProperty] private string _statusMessage = "Sin personaje cargado.";
+    [ObservableProperty] private string _statusMessage = LocalizationService.Instance["status_no_character_loaded_dot"];
     [ObservableProperty] private string? _characterName;
     [ObservableProperty] private bool _isCharacterLoaded;
     [ObservableProperty] private bool _hasCalamityData;
@@ -1367,11 +1367,11 @@ public partial class MainViewModel : ObservableObject
         // vaciar hueco en el Inventario) - se cuentan y se dicen aparte en vez de fundirse en
         // un unico "sin resolver o sin hueco libre".
         var partes = new List<string>();
-        if (result.Unresolved > 0) partes.Add($"{result.Unresolved} sin resolver");
-        if (result.NoSlot > 0) partes.Add($"{result.NoSlot} sin hueco libre en el Inventario");
+        if (result.Unresolved > 0) partes.Add(LocalizationService.Instance.Format("autoequip_unresolved", result.Unresolved));
+        if (result.NoSlot > 0) partes.Add(LocalizationService.Instance.Format("autoequip_no_slot", result.NoSlot));
         string mensaje = partes.Count > 0
-            ? $"Auto-equipar: {result.Placed} objeto(s) colocado(s), {string.Join(", ", partes)} - pulsa Guardar para conservarlo."
-            : $"Auto-equipar: {result.Placed} objeto(s) colocado(s) - pulsa Guardar para conservarlo.";
+            ? LocalizationService.Instance.Format("status_autoequip_with_issues", result.Placed, string.Join(", ", partes))
+            : LocalizationService.Instance.Format("status_autoequip_clean", result.Placed);
         // Bd-f (segunda auditoria de Opus, Fable): "avisar si el personaje no tiene .tplr" -
         // colocar equipo de Calamity Mod (pid con "/", ver BuildsViewModel.ResolveItem) en un
         // personaje sin datos de Calamity conocidos (HasCalamityData, real - TplrPath!=null) no
@@ -1381,7 +1381,7 @@ public partial class MainViewModel : ObservableObject
         // forma real de saber si el mod esta instalado, solo si este personaje ya lo uso antes).
         bool esBuildDeCalamity = gear.Armor.Concat(gear.Weapons).Concat(gear.Accessories).Any(i => i.Pid?.Contains('/') == true);
         if (esBuildDeCalamity && !HasCalamityData)
-            mensaje = "Aviso: este personaje no tiene datos de Calamity conocidos (sin .tplr) - confirma que el mod esté instalado en el juego antes de usar este equipo. " + mensaje;
+            mensaje = LocalizationService.Instance["warning_no_calamity_data"] + mensaje;
         StatusMessage = mensaje;
         SelectedTabIndex = (int)AppTab.Personaje;
     }

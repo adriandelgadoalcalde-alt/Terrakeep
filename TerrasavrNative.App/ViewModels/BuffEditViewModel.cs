@@ -23,10 +23,10 @@ public partial class BuffEditViewModel : ObservableObject
 
     [ObservableProperty] private BuffSlotViewModel? _slot;
     [ObservableProperty] private bool _hasSelection;
-    [ObservableProperty] private string _noSelectionMessage = "Selecciona un slot para editarlo.";
-    [ObservableProperty] private string _minLabel = "Mínima";
-    [ObservableProperty] private string _mediaLabel = "Media";
-    [ObservableProperty] private string _maxLabel = "Máxima";
+    [ObservableProperty] private string _noSelectionMessage = LocalizationService.Instance["select_slot_to_edit"];
+    [ObservableProperty] private string _minLabel = LocalizationService.Instance["duration_min"];
+    [ObservableProperty] private string _mediaLabel = LocalizationService.Instance["duration_media"];
+    [ObservableProperty] private string _maxLabel = LocalizationService.Instance["duration_max"];
     // Tooltip honesto (pregunta a Opus, cuarta pasada): "Mínima" es un dato REAL extraido del
     // buffTime de la pocion base salvo cuando no existe ese dato, en cuyo caso se usa la moda
     // real de los buffTime conocidos como aproximacion - la UI no debe fingir que ambos casos
@@ -77,23 +77,23 @@ public partial class BuffEditViewModel : ObservableObject
     private void Refresh()
     {
         HasSelection = Slot != null && !Slot.IsEmpty;
-        NoSelectionMessage = Slot == null ? "Selecciona un slot para editarlo." : "Este slot está vacío.";
+        NoSelectionMessage = Slot == null ? LocalizationService.Instance["select_slot_to_edit"] : LocalizationService.Instance["slot_empty"];
         if (!HasSelection)
         {
-            MinLabel = "Mínima";
-            MediaLabel = "Media";
-            MaxLabel = "Máxima";
+            MinLabel = LocalizationService.Instance["duration_min"];
+            MediaLabel = LocalizationService.Instance["duration_media"];
+            MaxLabel = LocalizationService.Instance["duration_max"];
             MinTooltip = string.Empty;
             return;
         }
 
         _preset = BuffDurationPresets.GetPresets(Slot!.Buff.Id, _characterVersion, _service.VanillaBuffDurations);
-        MinLabel = $"Mínima ({FormatDuration(_preset.MinTicks)})";
-        MediaLabel = $"Media ({FormatDuration(_preset.MediaTicks)})";
-        MaxLabel = $"Máxima ({FormatDuration(_preset.MaxTicks)})";
+        MinLabel = LocalizationService.Instance.Format("duration_min_with_value", FormatDuration(_preset.MinTicks));
+        MediaLabel = LocalizationService.Instance.Format("duration_media_with_value", FormatDuration(_preset.MediaTicks));
+        MaxLabel = LocalizationService.Instance.Format("duration_max_with_value", FormatDuration(_preset.MaxTicks));
         MinTooltip = _preset.IsRealMin
-            ? "Duración real de la poción/objeto que da este buff en el juego"
-            : "Sin dato real en el juego para este buff - valor más común de las pociones vanilla";
+            ? LocalizationService.Instance["tt_duration_real"]
+            : LocalizationService.Instance["tt_duration_estimated"];
     }
 
     [RelayCommand]

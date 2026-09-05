@@ -202,7 +202,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ScanMessage = $"Error al abrir la carpeta: {ex.Message}";
+            ScanMessage = LocalizationService.Instance.Format("error_open_folder", ex.Message);
         }
     }
 
@@ -227,7 +227,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ScanMessage = $"Error al duplicar: {ex.Message}";
+            ScanMessage = LocalizationService.Instance.Format("error_duplicating", ex.Message);
         }
     }
 
@@ -242,7 +242,7 @@ public partial class HomeViewModel : ObservableObject
             string plrBak = entry.FilePath + ".bak";
             if (!File.Exists(plrBak))
             {
-                ScanMessage = $"'{entry.Name}' no tiene ninguna copia de seguridad real que restaurar.";
+                ScanMessage = LocalizationService.Instance.Format("error_no_backup_to_restore", entry.Name);
                 return;
             }
             File.Copy(plrBak, entry.FilePath, overwrite: true);
@@ -274,7 +274,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ScanMessage = $"Error al restaurar la copia: {ex.Message}";
+            ScanMessage = LocalizationService.Instance.Format("error_restoring_backup", ex.Message);
         }
     }
 
@@ -302,7 +302,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ScanMessage = $"Error al restaurar la copia del {backup.TimestampLocal:dd/MM/yyyy HH:mm:ss}: {ex.Message}";
+            ScanMessage = LocalizationService.Instance.Format("error_restoring_backup_dated", backup.TimestampLocal.ToString("dd/MM/yyyy HH:mm:ss"), ex.Message);
         }
     }
 }
