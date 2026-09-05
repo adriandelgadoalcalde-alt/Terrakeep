@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text;
+
 namespace TerrasavrNative.App.ViewModels;
 
 // Gramatica real de busqueda de Terrasavr - calco de app.TabLibrary.search
@@ -16,11 +19,27 @@ namespace TerrasavrNative.App.ViewModels;
 // - Sin prefijo especial: busca por nombre (subcadena simple, igual que el "indexOf" real).
 public static class LibrarySearchGrammar
 {
+    // C-09 (informe de pulido final, cierra L2): "buscar mascara no encuentra máscara" - la
+    // gramatica ya normalizaba mayusculas fuera de Matches (los dos lados en minusculas antes de
+    // comparar); el mismo sitio sirve para los diacriticos. FormD descompone cada caracter
+    // acentuado en base+marca (a+´), se descarta la marca (NonSpacingMark) y se recompone en
+    // FormC - enfoque estandar, mas barato en el bucle de Matches (:36, words.All(target.
+    // Contains)) que CompareInfo.IndexOf con IgnoreNonSpace, que obligaria a reescribirlo entero.
+    // Solo pliega el lado de la COMPARACION - lo que se muestra en pantalla nunca pasa por aqui.
+    public static string Fold(string s)
+    {
+        string d = s.Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder(d.Length);
+        foreach (char c in d)
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark) sb.Append(c);
+        return sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
+    }
+
     public static bool Matches(string query, int id, string nameLq, string? textLq)
     {
         foreach (string rawTerm in query.Split(','))
         {
-            string term = rawTerm.Trim().ToLowerInvariant();
+            string term = Fold(rawTerm.Trim());
             if (term.Length < 2) continue;
 
             if (term[0] == '#')

@@ -848,8 +848,10 @@ public partial class MainViewModel : ObservableObject
         }
 
         string query = WhereIsItSearchText;
+        // C-09 (informe de pulido final, cierra L2): Fold en vez de ToLowerInvariant a secas -
+        // "mascara" tiene que encontrar "máscara" tambien aqui (Buscar en el personaje).
         var coincidencias = todos.Where(p => LibrarySearchGrammar.Matches(
-            query, p.Slot.Item.Id, p.Slot.DisplayName.ToLowerInvariant(), null)).ToList();
+            query, p.Slot.Item.Id, LibrarySearchGrammar.Fold(p.Slot.DisplayName), null)).ToList();
 
         var idsCoincidentes = coincidencias.Select(p => p.Slot).ToHashSet();
         foreach (var (slot, _) in todos) slot.IsSearchMatch = idsCoincidentes.Contains(slot);

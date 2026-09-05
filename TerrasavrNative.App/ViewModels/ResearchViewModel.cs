@@ -191,7 +191,8 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
         foreach (int id in candidates)
         {
             var (displayName, iconPath, isCalamity, requiredCount) = ResolveDisplay(id);
-            if (hasSearch && !LibrarySearchGrammar.Matches(SearchText, id, displayName.ToLowerInvariant(), null)) continue;
+            // C-09 (informe de pulido final, cierra L2): Fold en vez de ToLowerInvariant a secas.
+            if (hasSearch && !LibrarySearchGrammar.Matches(SearchText, id, LibrarySearchGrammar.Fold(displayName), null)) continue;
             int count = _researchedCounts.GetValueOrDefault(id);
             var row = new ResearchRowViewModel(id, displayName, count, requiredCount, isCalamity, iconPath);
             row.CountChangedByUser += OnRowCountChangedByUser;

@@ -11,6 +11,10 @@ public sealed class BuffCatalogEntryViewModel(string displayName, int id, bool i
     // Descripcion real (vanilla en español, Calamity en ingles - ver VanillaBuffCatalog/
     // CalamityBuffCatalog) - null si de verdad no hay ninguna.
     public string? Description { get; } = description;
+    // C-09 (informe de pulido final, cierra L2): plegado (minusculas + sin diacriticos) UNA
+    // sola vez aqui - gemelo real de LibraryItemViewModel.NameFolded/TooltipFolded.
+    public string NameFolded { get; } = LibrarySearchGrammar.Fold(displayName);
+    public string? DescriptionFolded { get; } = description is null ? null : LibrarySearchGrammar.Fold(description);
     // H6-12 (sexta auditoria de Opus): real, de CalamityBuffEntry.IsDebuff (Main.debuff[]
     // real del propio ModBuff) - siempre false para vanilla en esta pasada (fuera de alcance,
     // el usuario pidio esto especificamente para Calamity; ver bitacora.md).

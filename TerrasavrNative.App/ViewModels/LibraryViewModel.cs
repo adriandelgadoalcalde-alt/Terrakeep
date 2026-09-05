@@ -136,8 +136,11 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
         if (hasSearch)
         {
             string query = SearchText;
+            // C-09 (informe de pulido final, cierra L2): NameFolded/TooltipFolded ya vienen
+            // plegados de fabrica (LibraryItemViewModel) - ni ToLowerInvariant ni Fold aqui, en
+            // cada pulsacion, sobre las 8821 entradas reales del catalogo.
             matches = matches.Where(i => LibrarySearchGrammar.Matches(
-                query, i.Id, i.DisplayName.ToLowerInvariant(), i.StatsTooltip?.ToLowerInvariant()));
+                query, i.Id, i.NameFolded, i.TooltipFolded));
         }
 
         if (ShowRootCategoryCards)

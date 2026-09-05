@@ -79,8 +79,10 @@ public partial class BuffLibraryViewModel : CatalogBrowserViewModel<BuffCatalogE
         if (hasSearch)
         {
             string query = SearchText;
+            // C-09 (informe de pulido final, cierra L2): NameFolded/DescriptionFolded ya vienen
+            // plegados de fabrica (BuffCatalogEntryViewModel).
             matches = matches.Where(i => LibrarySearchGrammar.Matches(
-                query, i.Id, i.DisplayName.ToLowerInvariant(), i.Description?.ToLowerInvariant()));
+                query, i.Id, i.NameFolded, i.DescriptionFolded));
         }
 
         if (ShowRootCategoryCards)

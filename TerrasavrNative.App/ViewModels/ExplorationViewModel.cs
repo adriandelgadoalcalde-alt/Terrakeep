@@ -576,10 +576,16 @@ public partial class ExplorationViewModel : ObservableObject
     private void ApplyInventoryFilter()
     {
         bool sinBusqueda = string.IsNullOrWhiteSpace(WorldSearchText);
+        // C-09 (informe de pulido final, cierra L2): el "undecimo sitio" que el informe señala
+        // explicitamente - no pasa por LibrarySearchGrammar (es un filtro simple, no la gramatica
+        // completa de comas/espacios), pero tenia el mismo hueco real: "mascara" no encontraba
+        // "máscara" aqui tampoco. Fold en vez de OrdinalIgnoreCase - plegado UNA vez por
+        // WorldSearchText (constante para toda la pasada), no por fila.
+        string queryFolded = sinBusqueda ? string.Empty : LibrarySearchGrammar.Fold(WorldSearchText);
         void Filtrar(IEnumerable<WorldInventoryRowViewModel> filas)
         {
             foreach (var row in filas)
-                row.IsMatch = sinBusqueda || row.Name.Contains(WorldSearchText, StringComparison.OrdinalIgnoreCase)
+                row.IsMatch = sinBusqueda || LibrarySearchGrammar.Fold(row.Name).Contains(queryFolded, StringComparison.Ordinal)
                     || row.Id.ToString().Contains(WorldSearchText, StringComparison.Ordinal);
         }
         Filtrar(Inventory);
@@ -1395,28 +1401,28 @@ public partial class ExplorationViewModel : ObservableObject
         foreach (var (id, name) in _tileNames.AllTiles)
         {
             if (_presence != null && !_presence.HasTile(id)) continue;
-            if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) tileTypes.Add(id);
+            if (LibrarySearchGrammar.Matches(text, id, LibrarySearchGrammar.Fold(name), null)) tileTypes.Add(id);
         }
 
         var wallIds = new HashSet<int>();
         foreach (var (id, name) in _tileNames.AllWalls)
         {
             if (_presence != null && !_presence.HasWall(id)) continue;
-            if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) wallIds.Add(id);
+            if (LibrarySearchGrammar.Matches(text, id, LibrarySearchGrammar.Fold(name), null)) wallIds.Add(id);
         }
 
         var npcIds = new HashSet<int>();
         foreach (var (id, name) in _npcNames.All)
         {
             if (_presence != null && !_presence.HasNpc(id)) continue;
-            if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) npcIds.Add(id);
+            if (LibrarySearchGrammar.Matches(text, id, LibrarySearchGrammar.Fold(name), null)) npcIds.Add(id);
         }
 
         var liquidTypes = new HashSet<byte>();
         foreach (var (id, name) in LiquidCandidates)
         {
             if (_presence != null && !_presence.HasLiquid((byte)id)) continue;
-            if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) liquidTypes.Add((byte)id);
+            if (LibrarySearchGrammar.Matches(text, id, LibrarySearchGrammar.Fold(name), null)) liquidTypes.Add((byte)id);
         }
 
         // Fase 2 (ESPEC-buscador-mundo-tedit.md#5.2): objetos reales dentro de cofres, mismo
@@ -1430,13 +1436,13 @@ public partial class ExplorationViewModel : ObservableObject
         foreach (var (id, name) in _itemNames.AllEntries())
         {
             if (_presence != null && !_presence.HasChestItem(id)) continue;
-            if (LibrarySearchGrammar.Matches(text, id, name.ToLowerInvariant(), null)) chestItemIds.Add(id);
+            if (LibrarySearchGrammar.Matches(text, id, LibrarySearchGrammar.Fold(name), null)) chestItemIds.Add(id);
         }
 
         // Fase 2: los letreros son texto libre, sin catalogo de ids - se reutiliza la MISMA
         // gramatica (comas=OR, espacios=AND) tratando el texto de cada letrero como si fuera el
         // nombre de una unica entrada (id=0, sin sentido para un letrero, se ignora).
-        bool SignPredicate(string signText) => LibrarySearchGrammar.Matches(text, 0, signText.ToLowerInvariant(), null);
+        bool SignPredicate(string signText) => LibrarySearchGrammar.Matches(text, 0, LibrarySearchGrammar.Fold(signText), null);
 
         return new WorldSearchQuery
         {

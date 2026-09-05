@@ -61,4 +61,41 @@ public sealed class LibrarySearchGrammarTests
         // Quirk real de Terrasavr: un "5" suelto no cuenta como busqueda por id ni por nombre.
         Assert.False(LibrarySearchGrammar.Matches("5", 5, "objeto con un 5 en el nombre", null));
     }
+
+    // C-09 (informe de pulido final, cierra L2): "buscar mascara no encuentra máscara" -
+    // A9-07-TILDES (informe §11). El DISEÑO real (§9.9) pliega el TERMINO dentro de Matches (una
+    // sola cadena corta, coste real por tecla) y espera que quien llama pase el NOMBRE ya
+    // plegado y cacheado (LibraryItemViewModel.NameFolded/BuffCatalogEntryViewModel.NameFolded) -
+    // no al reves, porque plegar las 8821 entradas del catalogo en cada tecla seria MAS caro que
+    // el ToLowerInvariant() que sustituye. Estos tests reflejan ese contrato real.
+    [Fact]
+    public void Fold_QuitaTildesYMinusculizaSinTocarLoQueYaEstaLimpio()
+    {
+        Assert.Equal("cenit", LibrarySearchGrammar.Fold("Cénit"));
+        Assert.Equal("mascara", LibrarySearchGrammar.Fold("MÁSCARA"));
+        Assert.Equal("mascara", LibrarySearchGrammar.Fold("mascara")); // idempotente, sin tildes de por medio
+        Assert.Equal("nino", LibrarySearchGrammar.Fold("niño")); // la ñ tambien se pliega (FormD: n + combining tilde)
+    }
+
+    [Fact]
+    public void Matches_QuerySinTilde_EncuentraNombrePlegadoDeUnaPalabraConTilde()
+    {
+        // Nombre ya plegado por quien llama (el contrato real) - "cénit" -> "cenit".
+        string nombrePlegado = LibrarySearchGrammar.Fold("Cénit corrupto");
+        Assert.True(LibrarySearchGrammar.Matches("cenit", 4956, nombrePlegado, null));
+    }
+
+    [Fact]
+    public void Matches_QueryConTilde_TambienEncuentraElMismoNombre()
+    {
+        string nombrePlegado = LibrarySearchGrammar.Fold("Cénit corrupto");
+        Assert.True(LibrarySearchGrammar.Matches("cénit", 4956, nombrePlegado, null));
+    }
+
+    [Fact]
+    public void Matches_BuscarMascaraEncuentraElNombreRealConTilde()
+    {
+        string nombrePlegado = LibrarySearchGrammar.Fold("Máscara de Cordero");
+        Assert.True(LibrarySearchGrammar.Matches("mascara", 1, nombrePlegado, null));
+    }
 }
