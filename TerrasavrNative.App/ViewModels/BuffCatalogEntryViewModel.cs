@@ -4,6 +4,9 @@ namespace TerrasavrNative.App.ViewModels;
 // "Añadir buff" - mismo patron que LibraryItemViewModel para objetos.
 public sealed class BuffCatalogEntryViewModel(string displayName, int id, bool isCalamity, string? iconPath, string? description, bool isDebuff = false)
 {
+    // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     public string DisplayName { get; } = displayName;
     public int Id { get; } = id;
     public bool IsCalamity { get; } = isCalamity;

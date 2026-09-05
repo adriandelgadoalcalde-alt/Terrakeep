@@ -27,6 +27,9 @@ namespace TerrasavrNative.App.ViewModels;
 // busqueda entera cada vez.
 public sealed partial class WorldSearchHitRowViewModel(WorldSearchHit hit) : ObservableObject
 {
+    // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     public int TileX { get; } = hit.X;
     public int TileY { get; } = hit.Y;
     public string Name { get; } = hit.Name;
@@ -93,6 +96,9 @@ public enum WorldSearchCategory { All, Npcs, Chests, Ores, Objects }
 // IconPath es null (tiles de mods, liquidos, NetId sin icono extraido).
 public sealed partial class WorldInventoryRowViewModel(int id, short u, short v, string name, int count, int? veinCount, string? iconPath, Color swatchColor) : ObservableObject
 {
+    // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     public int Id { get; } = id;
     public short U { get; } = u;
     public short V { get; } = v;
@@ -121,6 +127,9 @@ public sealed partial class WorldInventoryRowViewModel(int id, short u, short v,
 
 public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int y, bool homeless, int? headIndex, bool isUnderground, int depthTiles) : ObservableObject
 {
+    // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     public int Id { get; } = id;
     public string Name { get; } = name;
     public int TileX { get; } = x;
@@ -191,6 +200,9 @@ public sealed class ChestContentItemViewModel(int netId, string name, int stack,
 // ChestViewMode). IsExpanded controla si Items se ve o no (desplegable real al pulsar la fila).
 public sealed partial class ChestRowViewModel(string variantName, string? chestName, int x, int y, string? iconPath, IReadOnlyList<ChestContentItemViewModel> items) : ObservableObject
 {
+    // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     public string VariantName { get; } = variantName;
     // WldChest.Name - el nombre propio que el jugador le puso al cofre (renombrar un cofre es
     // una accion real del juego) - antes no se mostraba en NINGUN sitio de la app (C-19).

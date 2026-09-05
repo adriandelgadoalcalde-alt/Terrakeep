@@ -10,6 +10,9 @@ namespace TerrasavrNative.App.ViewModels;
 // Un grupo de slots con nombre para mostrar (una pestaña/seccion: Inventario, Banco...).
 public sealed partial class ContainerViewModel : ObservableObject
 {
+    // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     private readonly string _baseName;
 
     public string Key { get; }

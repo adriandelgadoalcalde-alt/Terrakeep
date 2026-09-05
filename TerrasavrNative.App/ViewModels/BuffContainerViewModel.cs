@@ -16,6 +16,9 @@ namespace TerrasavrNative.App.ViewModels;
 // las dos clases - respeta la decision de diseño de arriba.
 public sealed partial class BuffContainerViewModel : ObservableObject
 {
+    // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     private readonly string _baseName;
 
     public ObservableCollection<BuffSlotViewModel> Slots { get; }

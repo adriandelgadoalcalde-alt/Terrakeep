@@ -16,6 +16,9 @@ namespace TerrasavrNative.App.ViewModels;
 // inventar ningun dato que el .plr no tenga de verdad.
 public sealed partial class CharacterListEntryViewModel : ObservableObject
 {
+    // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     public string FilePath { get; }
     public string Name { get; }
     public string DifficultyLabel { get; }

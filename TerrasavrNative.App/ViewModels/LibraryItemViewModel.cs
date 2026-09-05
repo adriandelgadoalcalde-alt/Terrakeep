@@ -8,6 +8,9 @@ namespace TerrasavrNative.App.ViewModels;
 // sin icono real (ver VanillaIconResolver), donde la UI cae a un "?" de texto.
 public sealed class LibraryItemViewModel(string displayName, bool isCalamity, string? iconPath, int id, string category, string? statsTooltip = null, (byte R, byte G, byte B)? rarityColor = null)
 {
+    // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     public string DisplayName { get; } = displayName;
     public bool IsCalamity { get; } = isCalamity;
     public string? IconPath { get; } = iconPath;

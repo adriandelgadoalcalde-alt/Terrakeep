@@ -10,6 +10,9 @@ namespace TerrasavrNative.App.ViewModels;
 // convertidor.
 public partial class ColorSwatchViewModel : ObservableObject
 {
+    // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     private readonly byte[] _target;
     private bool _suppressWriteback;
 
