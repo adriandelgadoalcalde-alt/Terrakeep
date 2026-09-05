@@ -15,6 +15,15 @@ public sealed class BuildItemRef
     [JsonPropertyName("prefixId")] public int? PrefixId { get; init; }
 
     public string DisplayName => Es ?? En ?? Pid ?? "?";
+
+    // Ronda de idioma del 6-sep-2026 - mismo bug real que en WhatsNewItem: el nombre INGLES de
+    // cada pieza ya venia en el propio builds.json (campo "en", desde el primer dia), pero
+    // DisplayName devuelve siempre el español y era lo unico que la pestaña Builds mostraba.
+    public string NameFor(string language)
+    {
+        string elegido = LocalizedContent.Pick(Es, En, language);
+        return string.IsNullOrWhiteSpace(elegido) ? Pid ?? "?" : elegido;
+    }
 }
 
 public sealed class BuildClassGear
@@ -28,8 +37,14 @@ public sealed class BuildStage
 {
     public required string Key { get; init; }
     public required string Label { get; init; }
+    // Ronda de idioma del 6-sep-2026: la etiqueta de etapa ("Pre-Hardmode (listo para el Muro de
+    // Carne)") vivia SOLO en español dentro del propio builds.json y se veia tal cual con la app
+    // en ingles - a diferencia de las piezas, que si traian su "en" desde el principio.
+    public string? LabelEn { get; init; }
     // Clave = nombre de clase (melee/ranged/mage.../rogue en Calamity) tal cual viene en el JSON.
     public Dictionary<string, BuildClassGear> Classes { get; init; } = [];
+
+    public string LabelFor(string language) => LocalizedContent.Pick(Label, LabelEn, language);
 }
 
 // Panel "Builds" - equipo de referencia por etapa/clase (builds.json vanilla,
@@ -60,7 +75,7 @@ public sealed class BuildsCatalog
             var classes = new Dictionary<string, BuildClassGear>();
             foreach (var classProp in stageProp.Value.EnumerateObject())
             {
-                if (classProp.Name == "label") continue;
+                if (classProp.Name is "label" or "label_en") continue;
                 if (classProp.Value.ValueKind != JsonValueKind.Object) continue;
 
                 var gear = new BuildClassGear
@@ -72,7 +87,15 @@ public sealed class BuildsCatalog
                 classes[classProp.Name] = gear;
             }
 
-            stages.Add(new BuildStage { Key = stageProp.Name, Label = labelEl.GetString() ?? stageProp.Name, Classes = classes });
+            string? labelEn = stageProp.Value.TryGetProperty("label_en", out var labelEnEl)
+                ? labelEnEl.GetString() : null;
+            stages.Add(new BuildStage
+            {
+                Key = stageProp.Name,
+                Label = labelEl.GetString() ?? stageProp.Name,
+                LabelEn = labelEn,
+                Classes = classes,
+            });
         }
 
         return new BuildsCatalog(stages);

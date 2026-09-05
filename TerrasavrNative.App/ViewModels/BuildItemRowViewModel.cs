@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using TerrasavrNative.Core.Data;
 
 namespace TerrasavrNative.App.ViewModels;
 
@@ -7,20 +9,38 @@ namespace TerrasavrNative.App.ViewModels;
 // StatsTooltip cierra el bug real reportado 1-sep-2026 ("no salen [tooltips de estadisticas]
 // en Builds... si lo hace en Terrasavr") - antes esta clase ni siquiera guardaba el id
 // numerico del objeto, imposible calcular nada.
-public sealed partial class BuildItemRowViewModel(string displayName, string? prefixText, string? iconPath, bool isCalamity, string? statsTooltip, int itemId) : ObservableObject
+// Ronda de idioma del 6-sep-2026: recibia el nombre YA resuelto como string, y quien lo resolvia
+// llamaba a BuildItemRef.DisplayName, que devuelve siempre el español aunque el propio
+// builds.json traiga tambien el ingles - toda la pestaña Builds se quedaba sin traducir.
+public sealed partial class BuildItemRowViewModel : ObservableObject
 {
+    private readonly BuildItemRef _source;
+
+    public BuildItemRowViewModel(BuildItemRef source, string? prefixText, string? iconPath, bool isCalamity, string? statsTooltip, int itemId)
+    {
+        _source = source;
+        PrefixText = prefixText;
+        IconPath = iconPath;
+        IsCalamity = isCalamity;
+        StatsTooltip = statsTooltip;
+        ItemId = itemId;
+        PropertyChangedEventManager.AddHandler(Services.LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
+    }
+
     // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
     public Services.LocalizationService Loc => Services.LocalizationService.Instance;
 
-    public string DisplayName { get; } = displayName;
-    public string? PrefixText { get; } = prefixText;
-    public string? IconPath { get; } = iconPath;
-    public bool IsCalamity { get; } = isCalamity;
-    public string? StatsTooltip { get; } = statsTooltip;
+    public string DisplayName => _source.NameFor(Services.LocalizationService.Instance.Language);
+    public string? PrefixText { get; }
+    public string? IconPath { get; }
+    public bool IsCalamity { get; }
+    public string? StatsTooltip { get; }
+
+    private void OnIdiomaCambiado(object? sender, PropertyChangedEventArgs e) => OnPropertyChanged(nameof(DisplayName));
     // Id real vanilla o sintetico de Calamity - 0 si el pid del build no se resolvio (mismo
     // caso real que AutoEquipService cuenta como "sin resolver", ver Bd-c). Usado solo para
     // calcular IsOwned, ver BuildsViewModel.RefreshOwnership.
-    public int ItemId { get; } = itemId;
+    public int ItemId { get; }
 
     // Bd-d (segunda auditoria de Opus, Fable): "marcar lo que ya se posee" - true si este
     // objeto (por id real) aparece en algun contenedor real del personaje cargado ahora mismo

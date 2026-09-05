@@ -534,8 +534,14 @@
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Content="{Binding Loc[action_undo], Mode=OneWay}" Command="{Binding UndoClearCommand}"
                                 Tag="Accent" Padding="8,3" FontSize="10.5" />
-                        <TextBlock Text="{Binding LastClearedCount, StringFormat='Vaciados {0} objeto(s).'}"
-                                   Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                        <TextBlock Style="{StaticResource CaptionText}" VerticalAlignment="Center">
+                            <TextBlock.Text>
+                                <MultiBinding Converter="{StaticResource LocFormat}">
+                                    <Binding Path="Loc[status_cleared_items]" Mode="OneWay" />
+                                    <Binding Path="LastClearedCount" Mode="OneWay" />
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
                     </DockPanel>
                 </Border>
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -901,8 +907,14 @@
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Content="{Binding Loc[action_undo], Mode=OneWay}" Command="{Binding UndoClearCommand}"
                                 Tag="Accent" Padding="8,3" FontSize="10.5" />
-                        <TextBlock Text="{Binding LastClearedCount, StringFormat='Vaciados {0} buff(s).'}"
-                                   Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                        <TextBlock Style="{StaticResource CaptionText}" VerticalAlignment="Center">
+                            <TextBlock.Text>
+                                <MultiBinding Converter="{StaticResource LocFormat}">
+                                    <Binding Path="Loc[status_cleared_buffs]" Mode="OneWay" />
+                                    <Binding Path="LastClearedCount" Mode="OneWay" />
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
                     </DockPanel>
                 </Border>
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -1310,8 +1322,13 @@
         <DataTemplate x:Key="WorldPillTemplate" DataType="{x:Type vm:WorldListEntryViewModel}">
             <Border Padding="8,5" CornerRadius="6" Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
                     Margin="0,0,8,0" Cursor="Hand" MouseLeftButtonUp="OnWorldCardClick"
-                    ToolTip="{Binding LastModifiedText, StringFormat='Ultima modificacion: {0}'}"
                     Tag="{Binding DataContext.Exploration, RelativeSource={RelativeSource AncestorType=Window}}">
+                <Border.ToolTip>
+                    <MultiBinding Converter="{StaticResource LocFormat}">
+                        <Binding Path="Loc[tt_world_last_modified]" Mode="OneWay" />
+                        <Binding Path="LastModifiedText" Mode="OneWay" />
+                    </MultiBinding>
+                </Border.ToolTip>
                 <Border.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="{Binding Loc[action_open_folder], Mode=OneWay}"
@@ -1433,7 +1450,7 @@
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                             </Grid>
-                            <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCount, StringFormat='{}{0} objeto(s)'}"
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCountLabel, Mode=OneWay}"
                                        Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
                                        VerticalAlignment="Center" Margin="8,0,0,0" />
                             <StackPanel VerticalAlignment="Center">
@@ -1581,9 +1598,25 @@
                          mismo alto vertical (8) que el estilo base (14,8), solo mas estrechos en
                          horizontal; antes quedaban 10px mas bajos que sus vecinos. -->
                     <Button Content="↶" FontSize="15" Padding="8,8" Command="{Binding UndoEditCommand}"
-                            ToolTip="{Binding UndoStack.NextUndoLabel, StringFormat='Deshacer: {0} (Ctrl+Z)', TargetNullValue='Deshacer (Ctrl+Z)'}" />
+                            >
+                        <Button.ToolTip>
+                            <MultiBinding Converter="{StaticResource LocFormat}" ConverterParameter="fallback">
+                                <Binding Path="Loc[tt_undo_with_label]" Mode="OneWay" />
+                                <Binding Path="Loc[tt_undo_plain]" Mode="OneWay" />
+                                <Binding Path="UndoStack.NextUndoLabel" Mode="OneWay" />
+                            </MultiBinding>
+                        </Button.ToolTip>
+                    </Button>
                     <Button Content="↷" FontSize="15" Padding="8,8" Margin="4,0,0,0" Command="{Binding RedoEditCommand}"
-                            ToolTip="{Binding UndoStack.NextRedoLabel, StringFormat='Rehacer: {0} (Ctrl+Y)', TargetNullValue='Rehacer (Ctrl+Y)'}" />
+                            >
+                        <Button.ToolTip>
+                            <MultiBinding Converter="{StaticResource LocFormat}" ConverterParameter="fallback">
+                                <Binding Path="Loc[tt_redo_with_label]" Mode="OneWay" />
+                                <Binding Path="Loc[tt_redo_plain]" Mode="OneWay" />
+                                <Binding Path="UndoStack.NextRedoLabel" Mode="OneWay" />
+                            </MultiBinding>
+                        </Button.ToolTip>
+                    </Button>
                     <!-- T-C (segunda auditoria de Opus, Fable): el .bak real que Guardar ya deja
                          (CharacterFileService.WriteAtomic) ahora tiene una forma real de usarse
                          desde la propia UI, sin ir a buscarlo a mano al Explorador de archivos. -->
@@ -1743,7 +1776,14 @@
                                    MaxWidth="200" TextTrimming="CharacterEllipsis" />
                         <TextBlock Text="{Binding Exploration.WorldSizeText}" Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center"
                                    ToolTip="{Binding Loc[tt_world_size], Mode=OneWay}" />
-                        <TextBlock Text="{Binding Exploration.Zoom, StringFormat='Zoom {0:P0}'}" Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                        <TextBlock Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock.Text>
+                                <MultiBinding Converter="{StaticResource LocFormat}">
+                                    <Binding Path="Loc[explore_zoom_pct]" Mode="OneWay" />
+                                    <Binding Path="Exploration.Zoom" Mode="OneWay" />
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
                         <TextBlock Text="{Binding Exploration.HoverCoordText}" Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding Exploration.HoverLayerText}" FontSize="11" FontWeight="SemiBold" Margin="10,0,0,0" VerticalAlignment="Center">
                             <TextBlock.Foreground>
@@ -2594,8 +2634,14 @@
                                             <Border DockPanel.Dock="Top" Background="{StaticResource AccentMutedBrush}" CornerRadius="99"
                                                     Padding="10,4" Margin="0,0,0,6" HorizontalAlignment="Left"
                                                     Visibility="{Binding Library.SlotRestrictionLabel, Converter={StaticResource NullToVis}}">
-                                                <TextBlock Text="{Binding Library.SlotRestrictionLabel, StringFormat='Solo objetos válidos para: {0}'}"
-                                                           Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
+                                                <TextBlock Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding Converter="{StaticResource LocFormat}">
+                                                            <Binding Path="Loc[library_only_valid_for]" Mode="OneWay" />
+                                                            <Binding Path="Library.SlotRestrictionLabel" Mode="OneWay" />
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
                                             </Border>
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding Library.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
                                             <!-- Pregunta a Opus sobre el diseño (2-sep-2026, quinta pasada: "la libreria
@@ -2633,7 +2679,7 @@
                                                                         <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextWrapping="Wrap"
                                                                                    VerticalAlignment="Center" />
                                                                     </StackPanel>
-                                                                    <TextBlock Text="{Binding ItemCount, StringFormat='{}{0} objeto(s)'}"
+                                                                    <TextBlock Text="{Binding ItemCountLabel, Mode=OneWay}"
                                                                                Style="{StaticResource CaptionText}" />
                                                                 </StackPanel>
                                                             </Button>
@@ -2831,7 +2877,7 @@
                                                                         <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextWrapping="Wrap"
                                                                                    VerticalAlignment="Center" />
                                                                     </StackPanel>
-                                                                    <TextBlock Text="{Binding ItemCount, StringFormat='{}{0} buff(s)'}"
+                                                                    <TextBlock Text="{Binding BuffCountLabel, Mode=OneWay}"
                                                                                Style="{StaticResource CaptionText}" />
                                                                 </StackPanel>
                                                             </Button>
@@ -2970,7 +3016,7 @@
                                                                  Investigacion comparten el mismo arbol cacheado) - un unico
                                                                  campo canonico en vez de 2 formas distintas de leer el mismo
                                                                  numero (esta usaba ItemIdsOrdered.Count a mano). -->
-                                                            <TextBlock Text="{Binding ItemCount, StringFormat='{}{0} objeto(s)'}"
+                                                            <TextBlock Text="{Binding ItemCountLabel, Mode=OneWay}"
                                                                        Style="{StaticResource CaptionText}" />
                                                         </StackPanel>
                                                     </Button>
@@ -3109,7 +3155,14 @@
                                         <TextBlock Text="{Binding Loc[appearance_hairstyle], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
                                         <Button Command="{Binding Appearance.OpenHairPickerCommand}" Padding="8,6" HorizontalContentAlignment="Left">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Appearance.HairStyle, StringFormat='Estilo #{0}'}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                                <TextBlock VerticalAlignment="Center" Margin="0,0,6,0">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding Converter="{StaticResource LocFormat}">
+                                                            <Binding Path="Loc[appearance_hair_style_n]" Mode="OneWay" />
+                                                            <Binding Path="Appearance.HairStyle" Mode="OneWay" />
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
                                                 <TextBlock Text="&#9998;" FontSize="11" VerticalAlignment="Center" Foreground="{StaticResource AccentBrush}" />
                                             </StackPanel>
                                         </Button>
@@ -3642,10 +3695,16 @@
                 <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                     <Button Content="{Binding Loc[explore_load_world], Mode=OneWay}" Tag="Accent" Click="OnLoadWorldClick"
                             IsEnabled="{Binding Exploration.IsNotLoading}" />
-                    <TextBlock Text="{Binding Exploration.WorldTitle, StringFormat='Mundo: {0}'}"
-                               Style="{StaticResource SectionText}" VerticalAlignment="Center" Margin="20,0,0,0"
+                    <TextBlock Style="{StaticResource SectionText}" VerticalAlignment="Center" Margin="20,0,0,0"
                                MaxWidth="320" TextTrimming="CharacterEllipsis"
-                               Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
+                               Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
+                        <TextBlock.Text>
+                            <MultiBinding Converter="{StaticResource LocFormat}">
+                                <Binding Path="Loc[explore_world_title]" Mode="OneWay" />
+                                <Binding Path="Exploration.WorldTitle" Mode="OneWay" />
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
                     <!-- X-h (segunda auditoria de Opus, Fable): "no dice que es solo lectura" -
                          antes solo un comentario de codigo (ExplorationViewModel), invisible para
                          el usuario real - nada en pantalla avisaba de que este visor no puede
@@ -4295,22 +4354,50 @@
                             <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionCategoria"
                                          IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_load_first], Mode=OneWay}"
                                          IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Npcs}">
-                                <TextBlock Text="{Binding Exploration.Npcs.Count, StringFormat='NPCs ({0})'}" />
+                                <TextBlock>
+                                    <TextBlock.Text>
+                                        <MultiBinding Converter="{StaticResource LocFormat}">
+                                            <Binding Path="Loc[explore_pill_npcs]" Mode="OneWay" />
+                                            <Binding Path="Exploration.Npcs.Count" Mode="OneWay" />
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
                             </RadioButton>
                             <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionCategoria"
                                          IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_load_first], Mode=OneWay}"
                                          IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Chests}">
-                                <TextBlock Text="{Binding Exploration.ChestsPillCount, StringFormat='Cofres ({0})'}" />
+                                <TextBlock>
+                                    <TextBlock.Text>
+                                        <MultiBinding Converter="{StaticResource LocFormat}">
+                                            <Binding Path="Loc[explore_pill_chests]" Mode="OneWay" />
+                                            <Binding Path="Exploration.ChestsPillCount" Mode="OneWay" />
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
                             </RadioButton>
                             <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionCategoria"
                                          IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_load_first], Mode=OneWay}"
                                          IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Ores}">
-                                <TextBlock Text="{Binding Exploration.OresPillCount, StringFormat='Minerales ({0})'}" />
+                                <TextBlock>
+                                    <TextBlock.Text>
+                                        <MultiBinding Converter="{StaticResource LocFormat}">
+                                            <Binding Path="Loc[explore_pill_ores]" Mode="OneWay" />
+                                            <Binding Path="Exploration.OresPillCount" Mode="OneWay" />
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
                             </RadioButton>
                             <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionCategoria"
                                          IsEnabled="{Binding Exploration.IsWorldLoaded}" ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_load_first], Mode=OneWay}"
                                          IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Objects}">
-                                <TextBlock Text="{Binding Exploration.ObjectsPillCount, StringFormat='Objetos ({0})'}" />
+                                <TextBlock>
+                                    <TextBlock.Text>
+                                        <MultiBinding Converter="{StaticResource LocFormat}">
+                                            <Binding Path="Loc[explore_pill_objects]" Mode="OneWay" />
+                                            <Binding Path="Exploration.ObjectsPillCount" Mode="OneWay" />
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
                             </RadioButton>
                         </WrapPanel>
 

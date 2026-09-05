@@ -18,6 +18,10 @@
             <conv:BoolToGridLengthConverter x:Key="BoolToGridLength" />
             <conv:BoolToDoubleConverter x:Key="BoolToDouble" />
             <conv:EnumEqualsConverter x:Key="EnumEquals" />
+            <!-- Ronda de idioma del 6-sep-2026: sustituto BINDEABLE de StringFormat (que es texto
+                 fijo del XAML y por eso se quedo sin traducir en 19 sitios) - ver el comentario
+                 real de la propia clase. -->
+            <conv:LocalizedFormatConverter x:Key="LocFormat" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

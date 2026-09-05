@@ -9,11 +9,39 @@ namespace TerrasavrNative.App.ViewModels;
 // tal cual viene en builds.json/builds_calamity.json (mage/melee/ranged/rogue/summoner, la
 // misma que ya se muestra sin traducir en BuildClassGearViewModel.ClassName), Label es solo
 // para el boton. null Key = "Todas".
-public sealed partial class BuildClassFilterOptionViewModel(string? key, string label) : ObservableObject
+// Ronda de idioma del 6-sep-2026: Label llegaba ya resuelto (loc["class_melee"] leido UNA sola
+// vez en el constructor de BuildsViewModel), asi que las pildoras se quedaban en el idioma de
+// arranque - "Cuerpo a cuerpo"/"A distancia"/"Invocación"/"Pícaro"/"Magia"/"Todas" en pantalla
+// con la app en ingles. Ahora se guarda la CLAVE y se resuelve al leerla, con aviso real al
+// cambiar de idioma en caliente (evento debil, mismo motivo real que LocalizedContentViewModel).
+public sealed partial class BuildClassFilterOptionViewModel : ObservableObject
 {
-    public string? Key { get; } = key;
-    public string Label { get; } = label;
+    private readonly string _labelKey;
+
+    public BuildClassFilterOptionViewModel(string? key, string labelKey)
+    {
+        Key = key;
+        _labelKey = labelKey;
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
+    }
+
+    public string? Key { get; }
+
+    // Una clase que no tenga clave de idioma propia (un catalogo futuro con una clase nueva) cae
+    // a su nombre interno tal cual, no al "[clave]" en bruto del diccionario: ahi si es un dato
+    // real que existe, no una traduccion perdida.
+    public string Label
+    {
+        get
+        {
+            string texto = LocalizationService.Instance[_labelKey];
+            return texto.StartsWith('[') && texto.EndsWith(']') ? _labelKey : texto;
+        }
+    }
     [ObservableProperty] private bool _isSelected;
+
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        => OnPropertyChanged(nameof(Label));
 }
 
 // Panel "Builds" - equipo recomendado por etapa/clase, ya resuelto a nombre+icono real (misma
@@ -40,18 +68,21 @@ public sealed partial class BuildsViewModel : ObservableObject
         _allStages = [.. VanillaStages, .. CalamityStages];
         _allClasses = _allStages.SelectMany(s => s.Classes).ToList();
 
-        var loc = LocalizationService.Instance;
-        Dictionary<string, string> labels = new()
+        // Ronda de idioma del 6-sep-2026: se guarda la CLAVE de idioma, no el texto ya resuelto
+        // (ver BuildClassFilterOptionViewModel) - antes las pildoras se quedaban congeladas en el
+        // idioma de arranque. Una clase sin clave conocida cae a su nombre interno, mismo criterio
+        // de siempre: "lo que no se encuentra no se inventa".
+        Dictionary<string, string> claves = new()
         {
-            ["melee"] = loc["class_melee"],
-            ["ranged"] = loc["class_ranged"],
-            ["mage"] = loc["class_mage"],
-            ["summoner"] = loc["class_summoner"],
-            ["rogue"] = loc["class_rogue"],
+            ["melee"] = "class_melee",
+            ["ranged"] = "class_ranged",
+            ["mage"] = "class_mage",
+            ["summoner"] = "class_summoner",
+            ["rogue"] = "class_rogue",
         };
-        var options = new List<BuildClassFilterOptionViewModel> { new(null, loc["class_all"]) };
+        var options = new List<BuildClassFilterOptionViewModel> { new(null, "class_all") };
         foreach (var key in _allClasses.Select(c => c.ClassName).Distinct().OrderBy(k => k, StringComparer.Ordinal))
-            options.Add(new BuildClassFilterOptionViewModel(key, labels.GetValueOrDefault(key, key)));
+            options.Add(new BuildClassFilterOptionViewModel(key, claves.GetValueOrDefault(key, key)));
         ClassFilterOptions = options;
         options[0].IsSelected = true;
     }
@@ -87,7 +118,7 @@ public sealed partial class BuildsViewModel : ObservableObject
     private static BuildStageViewModel ResolveStage(BuildStage stage, CharacterFileService service)
     {
         var classes = stage.Classes.Select(kv => ResolveClass(kv.Key, kv.Value, service)).ToList();
-        return new BuildStageViewModel(stage.Label, classes);
+        return new BuildStageViewModel(stage, classes);
     }
 
     private static BuildClassGearViewModel ResolveClass(string className, BuildClassGear gear, CharacterFileService service) => new(
@@ -130,6 +161,6 @@ public sealed partial class BuildsViewModel : ObservableObject
             }
         }
 
-        return new BuildItemRowViewModel(itemRef.DisplayName, itemRef.Prefix, iconPath, isCalamity, statsTooltip, itemId);
+        return new BuildItemRowViewModel(itemRef, itemRef.Prefix, iconPath, isCalamity, statsTooltip, itemId);
     }
 }

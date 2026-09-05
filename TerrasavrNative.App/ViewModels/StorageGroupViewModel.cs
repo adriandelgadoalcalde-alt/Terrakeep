@@ -30,20 +30,22 @@ public partial class StorageGroupViewModel : ObservableObject
 
     public StorageGroupViewModel(ContainerViewModel bank, ContainerViewModel safe, ContainerViewModel forge, ContainerViewModel voidVault)
     {
-        var loc = LocalizationService.Instance;
-        Add(0, loc["storage_bank"], bank);
-        Add(1, loc["storage_safe"], safe);
-        Add(2, loc["storage_forge"], forge);
-        Add(3, loc["storage_void"], voidVault);
+        // Ronda de idioma del 6-sep-2026: se pasa la CLAVE, no el texto ya resuelto - antes
+        // las 4 pildoras se quedaban en el idioma de arranque ("Bóveda del Vacío (0/40)" y
+        // "Fragua del Defensor (15/40)" salieron tal cual en el barrido con la app en ingles).
+        Add(0, "storage_bank", bank);
+        Add(1, "storage_safe", safe);
+        Add(2, "storage_forge", forge);
+        Add(3, "storage_void", voidVault);
         Options[0].IsSelected = true;
     }
 
-    private void Add(int index, string label, ContainerViewModel container)
+    private void Add(int index, string labelKey, ContainerViewModel container)
     {
         _byIndex[index] = container;
         // Auditoria de Opus, A-1: pasar el contenedor real activa el contador en vivo
         // "Banco (38/40)" en la propia pildora, ver EquipmentOptionViewModel.DisplayLabel.
-        Options.Add(new EquipmentOptionViewModel(label, index, container));
+        Options.Add(new EquipmentOptionViewModel(labelKey, index, container));
     }
 
     [RelayCommand]

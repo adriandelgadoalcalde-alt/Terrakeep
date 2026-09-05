@@ -366,7 +366,9 @@ public partial class MainViewModel : ObservableObject
         {
             if (entry.SpawnX == 0 && entry.SpawnY == 0) continue;
             if (!entry.Entry.BelongsToWorld(worldId, worldName)) continue;
-            yield return ($"Punto de aparición de {nombrePersonaje} en este mundo ({entry.SpawnX}, {entry.SpawnY})", entry.SpawnX, entry.SpawnY);
+            // Ronda de idioma del 6-sep-2026: literal a pelo - es la etiqueta real de cada
+            // marcador de spawn point sobre el mapa de Exploracion.
+            yield return (LocalizationService.Instance.Format("map_marker_spawn_point", nombrePersonaje, entry.SpawnX, entry.SpawnY), entry.SpawnX, entry.SpawnY);
         }
     }
 
@@ -909,14 +911,19 @@ public partial class MainViewModel : ObservableObject
         // H5-05: "aprovechar para responder tambien ¿duplicados? y ¿cuantos entre todos los
         // almacenes?" - duplicados reales = mismo id de objeto en mas de un slot a la vez.
         var duplicados = coincidencias.GroupBy(p => p.Slot.Item.Id).Where(g => g.Count() > 1).ToList();
+        // Ronda de idioma del 6-sep-2026: los tres literales iban a pelo aunque sus claves
+        // ("search_duplicates_extra"/"search_no_results_character"/"search_showing_results") YA
+        // existian en los dos diccionarios desde la ronda anterior - creadas y nunca enchufadas.
+        // El cuarto caso (el recuento a secas) no tenia clave: "search_results_count" es nueva.
+        var loc = LocalizationService.Instance;
         string extra = duplicados.Count > 0
-            ? $" - {duplicados.Sum(g => g.Count())} de ellos repartidos en {duplicados.Count} objeto(s) duplicado(s)"
+            ? loc.Format("search_duplicates_extra", duplicados.Sum(g => g.Count()), duplicados.Count)
             : string.Empty;
         WhereIsItSummary = coincidencias.Count == 0
-            ? "Sin resultados en tu personaje."
+            ? loc["search_no_results_character"]
             : coincidencias.Count > maxResults
-                ? $"Mostrando {maxResults} de {coincidencias.Count} resultado(s){extra} - afina la búsqueda."
-                : $"{coincidencias.Count} resultado(s){extra}.";
+                ? loc.Format("search_showing_results", maxResults, coincidencias.Count, extra)
+                : loc.Format("search_results_count", coincidencias.Count, extra);
     }
 
     // Salta a la pestaña/sub-pestaña/loadout/almacen real donde vive el slot elegido, lo
@@ -1259,9 +1266,14 @@ public partial class MainViewModel : ObservableObject
         // ahi por Key) - las referencias devueltas de mas abajo son solo para la navegacion de
         // 5 pestañas (pregunta a Opus sobre el diseño, 2-sep-2026), presentacion pura, ningun
         // dato nuevo ni fusion de colecciones.
-        InventoryContainer = AddContainer("inventory", "Inventario", _loaded.MergedContainers["inventory"]);
-        var bank = AddContainer("bank", "Banco", _loaded.MergedContainers["bank"]);
-        var bank2 = AddContainer("bank2", "Caja fuerte", _loaded.MergedContainers["bank2"]);
+        // Ronda de idioma del 6-sep-2026: Inventario/Banco/Caja fuerte iban a pelo en español
+        // mientras que Fragua y Boveda (las dos lineas de abajo) ya usaban el diccionario - las
+        // claves "storage_bank"/"storage_safe" existian desde la ronda anterior sin enchufar.
+        // Este DisplayName sale en el titulo del panel Editar, en los mensajes de "conjunto
+        // cargado en X" y en el selector de almacen.
+        InventoryContainer = AddContainer("inventory", LocalizationService.Instance["char_tab_inventory"], _loaded.MergedContainers["inventory"]);
+        var bank = AddContainer("bank", LocalizationService.Instance["storage_bank"], _loaded.MergedContainers["bank"]);
+        var bank2 = AddContainer("bank2", LocalizationService.Instance["storage_safe"], _loaded.MergedContainers["bank2"]);
         var bank3 = AddContainer("bank3", LocalizationService.Instance["storage_forge"], _loaded.MergedContainers["bank3"]);
         var bank4 = AddContainer("bank4", LocalizationService.Instance["storage_void"], _loaded.MergedContainers["bank4"]);
         // columns: 1 (pregunta a Opus sobre el diseño, quinta pasada: "mascotas etc mejor en
@@ -1282,12 +1294,12 @@ public partial class MainViewModel : ObservableObject
         // medido con el arnes: sin techo propio, esta columna UNICA crecia sin limite hacia
         // el techo universal (90) en cuanto sobraba alto, robandole sitio real a la columna
         // central "Auto"+"*" de Armadura/Accesorios - ver ContainerViewModel.MaxCell).
-        MountsContainer = AddContainer("miscEquips", "Mascota / Montura / Gancho", _loaded.MergedContainers["miscEquips"], columns: 1,
+        MountsContainer = AddContainer("miscEquips", LocalizationService.Instance["storage_misc_equips"], _loaded.MergedContainers["miscEquips"], columns: 1,
             slotKinds: miscEquipKinds, ghostIcons: miscEquipGhosts, minCell: 32, maxCell: 56);
         // Los 5 tintes van emparejados 1:1 con los 5 slots de arriba, pero un tinte SIEMPRE
         // es solo un tinte (dye>0) sea cual sea el equipo al que este emparejado - mismo
         // SlotKind.Dye y mismo ghost "dye" en los 5, a diferencia del contenedor de arriba.
-        DyesContainer = AddContainer("miscDyes", "Tintes (mascota/montura/gancho)", _loaded.MergedContainers["miscDyes"], columns: 1,
+        DyesContainer = AddContainer("miscDyes", LocalizationService.Instance["storage_misc_dyes"], _loaded.MergedContainers["miscDyes"], columns: 1,
             slotKinds: [SlotKind.Dye, SlotKind.Dye, SlotKind.Dye, SlotKind.Dye, SlotKind.Dye],
             ghostIcons: ["dye", "dye", "dye", "dye", "dye"], minCell: 32, maxCell: 56);
 
@@ -1295,7 +1307,7 @@ public partial class MainViewModel : ObservableObject
         // documentado - la app JS tampoco los sincroniza con Calamity, solo los protege). Sin
         // ghost real (el propio juego tampoco dibuja uno en estos dos contextos, ver
         // ItemSlot.cs real - no se inventa ninguno).
-        CoinsContainer = AddContainer("coins", "Monedas", _loaded.Character.Coins.ToGameItems(),
+        CoinsContainer = AddContainer("coins", LocalizationService.Instance["storage_coins"], _loaded.Character.Coins.ToGameItems(),
             slotKinds: [SlotKind.Coin, SlotKind.Coin, SlotKind.Coin, SlotKind.Coin]);
         // H5-10 (quinta auditoria de Opus): "Dinero total - hoy hay que hacer la cuenta a
         // mano". Por ID real (71/72/73/74 = cobre/plata/oro/platino, IsACoin real ya
@@ -1304,7 +1316,7 @@ public partial class MainViewModel : ObservableObject
         foreach (var slot in CoinsContainer.Slots)
             slot.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(ItemSlotViewModel.ItemId) or nameof(ItemSlotViewModel.Count)) RefreshMoneyText(); };
         RefreshMoneyText();
-        AmmoContainer = AddContainer("ammo", "Municion", _loaded.Character.Ammo.ToGameItems(),
+        AmmoContainer = AddContainer("ammo", LocalizationService.Instance["storage_ammo"], _loaded.Character.Ammo.ToGameItems(),
             slotKinds: [SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo, SlotKind.Ammo]);
 
         StorageGroup = new StorageGroupViewModel(bank, bank2, bank3, bank4);

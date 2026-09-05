@@ -13,6 +13,12 @@ namespace TerrasavrNative.App.ViewModels;
 // primer objeto real de la categoria) - nunca un icono generico inventado.
 public sealed partial class CategoryNodeViewModel(string name, string fullPath) : ObservableObject
 {
+    // Ronda de idioma del 6-sep-2026: la tarjeta y la fila de arbol de una carpeta muestran su
+    // recuento con un StringFormat ("{0} objeto(s)") que era texto español fijo del XAML. Exponer
+    // Loc aqui (mismo patron ya establecido en las demas clases que sirven de DataContext dentro
+    // de una plantilla) permite bindearlo contra el diccionario sin trucos de RelativeSource.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     public string Name { get; } = name;
     public string FullPath { get; } = fullPath;
     public ObservableCollection<CategoryNodeViewModel> Children { get; } = [];
@@ -42,7 +48,18 @@ public sealed partial class CategoryNodeViewModel(string name, string fullPath) 
     // mismo objeto cae en mas de un hijo a la vez).
     public IReadOnlyList<int> ItemIdsOrdered { get; set; } = [];
 
-    [ObservableProperty] private int _itemCount;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ItemCountLabel))]
+    [NotifyPropertyChangedFor(nameof(BuffCountLabel))]
+    private int _itemCount;
+
+    // Ronda de idioma del 6-sep-2026: el recuento de una carpeta se pintaba con un StringFormat
+    // español fijo del XAML ("{0} objeto(s)" / "{0} buff(s)"), invisible para el barrido de la
+    // ronda anterior. Se resuelve aqui contra el diccionario. Los dos arboles de objetos
+    // (Libreria e Investigacion) y el de buffs comparten esta misma clase, de ahi las dos
+    // propiedades: cada plantilla usa la suya.
+    public string ItemCountLabel => Services.LocalizationService.Instance.Format("label_item_count", ItemCount);
+    public string BuffCountLabel => Services.LocalizationService.Instance.Format("label_buff_count", ItemCount);
     [ObservableProperty] private string? _iconPath;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private bool _isExpanded;

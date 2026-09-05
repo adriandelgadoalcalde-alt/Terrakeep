@@ -478,8 +478,11 @@ public partial class MainWindow : Window
         if (container == null) return;
         var dialog = new SaveFileDialog
         {
-            Title = "Guardar conjunto de objetos",
-            Filter = "Conjunto de objetos de Terrakeep (*.json)|*.json",
+            // Ronda de idioma del 6-sep-2026: los dos literales estaban a pelo aqui aunque sus
+            // claves ("dlg_save_item_set_title" y "dlg_filter_item_set") YA existian en los dos
+            // diccionarios desde la ronda anterior - se crearon y nunca se llegaron a enchufar.
+            Title = Loc["dlg_save_item_set_title"],
+            Filter = Loc["dlg_filter_item_set"],
             FileName = container.Key + ".json",
         };
         if (dialog.ShowDialog(this) == true) _viewModel.SaveItemSet(container, dialog.FileName);

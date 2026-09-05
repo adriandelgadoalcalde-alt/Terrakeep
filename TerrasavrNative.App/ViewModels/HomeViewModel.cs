@@ -216,9 +216,14 @@ public partial class HomeViewModel : ObservableObject
             // sin arriesgar el original. Numerado si "(copia)" ya existe, nunca sobrescribe.
             string dir = Path.GetDirectoryName(entry.FilePath)!;
             string baseName = Path.GetFileNameWithoutExtension(entry.FilePath);
-            string newPath = Path.Combine(dir, $"{baseName} (copia).plr");
+            // Ronda de idioma del 6-sep-2026: el sufijo iba interpolado a pelo aqui aunque la
+            // clave "home_copy_suffix" YA existia en los dos diccionarios desde la ronda anterior
+            // (creada y nunca enchufada) - duplicar un personaje con la app en ingles creaba un
+            // "Fulano (copia).plr". "home_copy_suffix_first" es nueva: el primer duplicado no
+            // lleva numero, y ese caso no tenia clave ninguna.
+            string newPath = Path.Combine(dir, LocalizationService.Instance.Format("home_copy_suffix_first", baseName));
             for (int n = 2; File.Exists(newPath); n++)
-                newPath = Path.Combine(dir, $"{baseName} (copia {n}).plr");
+                newPath = Path.Combine(dir, LocalizationService.Instance.Format("home_copy_suffix", baseName, n));
 
             File.Copy(entry.FilePath, newPath);
             string tplrSrc = Path.ChangeExtension(entry.FilePath, ".tplr");

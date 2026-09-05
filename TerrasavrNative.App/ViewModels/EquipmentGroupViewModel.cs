@@ -9,9 +9,28 @@ namespace TerrasavrNative.App.ViewModels;
 
 // Una opcion de un selector pequeño (loadout o vista) - mismo patron que
 // PrefixMetaButtonViewModel/PrefixGroupButtonViewModel (Label + IsSelected).
+//
+// Ronda de idioma del 6-sep-2026: Label llegaba ya RESUELTO (LocalizationService.Instance[...]
+// leido una sola vez al construir el selector), asi que "Armadura"/"Vanidad"/"Tintes"/"Puesto" y
+// las 4 pildoras de Almacenes ("Banco", "Caja fuerte", "Fragua del Defensor", "Bóveda del
+// Vacío") se quedaban congeladas en el idioma de arranque - varias salian literalmente entre los
+// fallos del barrido. Ahora se guarda la CLAVE y se resuelve al leerla, avisando de verdad al
+// cambiar de idioma en caliente. Una etiqueta que NO es clave del diccionario (los loadouts se
+// llaman "1"/"2"/"3") se usa tal cual: ahi el texto ES el dato, no una traduccion perdida -
+// mismo criterio ya aplicado en BuildClassFilterOptionViewModel.
 public sealed partial class EquipmentOptionViewModel : ObservableObject
 {
-    public string Label { get; }
+    private readonly string _labelKey;
+
+    public string Label
+    {
+        get
+        {
+            string texto = LocalizationService.Instance[_labelKey];
+            return texto.StartsWith('[') && texto.EndsWith(']') ? _labelKey : texto;
+        }
+    }
+
     public int Value { get; }
 
     [ObservableProperty] private bool _isSelected;
@@ -23,14 +42,21 @@ public sealed partial class EquipmentOptionViewModel : ObservableObject
     // slot real, sin que nadie de fuera tenga que avisar.
     private readonly ContainerViewModel? _container;
 
-    public EquipmentOptionViewModel(string label, int value, ContainerViewModel? container = null)
+    public EquipmentOptionViewModel(string labelKey, int value, ContainerViewModel? container = null)
     {
-        Label = label;
+        _labelKey = labelKey;
         Value = value;
         _container = container;
         if (container != null)
             foreach (var slot in container.Slots)
                 slot.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ItemSlotViewModel.IsEmpty)) OnPropertyChanged(nameof(DisplayLabel)); };
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
+    }
+
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(Label));
+        OnPropertyChanged(nameof(DisplayLabel));
     }
 
     public string DisplayLabel => _container == null
@@ -87,9 +113,9 @@ public partial class EquipmentGroupViewModel : ObservableObject
     public ObservableCollection<EquipmentOptionViewModel> LoadoutOptions { get; } = [];
     public ObservableCollection<EquipmentOptionViewModel> KindOptions { get; } =
     [
-        new EquipmentOptionViewModel(LocalizationService.Instance["equip_kind_armor"], (int)EquipmentKind.Items) { IsSelected = true },
-        new EquipmentOptionViewModel(LocalizationService.Instance["equip_kind_vanity"], (int)EquipmentKind.Social),
-        new EquipmentOptionViewModel(LocalizationService.Instance["equip_kind_dyes"], (int)EquipmentKind.Dyes),
+        new EquipmentOptionViewModel("equip_kind_armor", (int)EquipmentKind.Items) { IsSelected = true },
+        new EquipmentOptionViewModel("equip_kind_vanity", (int)EquipmentKind.Social),
+        new EquipmentOptionViewModel("equip_kind_dyes", (int)EquipmentKind.Dyes),
     ];
 
     [ObservableProperty] private int _selectedLoadout;
@@ -125,7 +151,7 @@ public partial class EquipmentGroupViewModel : ObservableObject
         AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Items, loc["equip_worn_armor"], mergedContainers["loadout0Items"], onItemChanged);
         AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Social, loc["equip_worn_vanity"], mergedContainers["loadout0Social"], onItemChanged);
         AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Dyes, loc["equip_worn_dyes"], mergedContainers["loadout0Dyes"], onItemChanged);
-        LoadoutOptions.Add(new EquipmentOptionViewModel(loc["equip_worn_option"], 0) { IsSelected = true });
+        LoadoutOptions.Add(new EquipmentOptionViewModel("equip_worn_option", 0) { IsSelected = true });
 
         for (int i = 1; i <= realLoadoutCount; i++)
         {

@@ -236,14 +236,20 @@ public partial class ItemEditViewModel : ObservableObject
         RebuildPrefixes();
     }
 
+    // Ronda de idioma del 6-sep-2026: las 5 categorias iban a pelo en español, aunque 4 de las 5
+    // claves ("class_melee"/"class_ranged"/"class_mage"/"class_summoner") YA existian en los dos
+    // diccionarios - este texto se ve en el tooltip real de cada prefijo del panel Editar.
+    // "prefix_cat_accessory" es la unica clave nueva: aqui "Accesorio" es un TIPO de objeto, no
+    // una clase de juego, y no tiene por que traducirse igual en otro idioma.
     private static string DescribeCategories(PrefixCategory cats)
     {
+        var loc = Services.LocalizationService.Instance;
         var parts = new List<string>();
-        if (cats.HasFlag(PrefixCategory.Melee)) parts.Add("Cuerpo a cuerpo");
-        if (cats.HasFlag(PrefixCategory.Ranged)) parts.Add("A distancia");
-        if (cats.HasFlag(PrefixCategory.Magic)) parts.Add("Magia");
-        if (cats.HasFlag(PrefixCategory.Summon)) parts.Add("Invocación");
-        if (cats.HasFlag(PrefixCategory.Accessory)) parts.Add("Accesorio");
+        if (cats.HasFlag(PrefixCategory.Melee)) parts.Add(loc["class_melee"]);
+        if (cats.HasFlag(PrefixCategory.Ranged)) parts.Add(loc["class_ranged"]);
+        if (cats.HasFlag(PrefixCategory.Magic)) parts.Add(loc["class_mage"]);
+        if (cats.HasFlag(PrefixCategory.Summon)) parts.Add(loc["class_summoner"]);
+        if (cats.HasFlag(PrefixCategory.Accessory)) parts.Add(loc["prefix_cat_accessory"]);
         return string.Join(" · ", parts);
     }
 }

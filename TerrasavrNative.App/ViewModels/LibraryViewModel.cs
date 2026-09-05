@@ -112,7 +112,11 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
         bool hasSlotRestriction = target != null && target.AcceptedKind != TerrasavrNative.Core.Model.SlotKind.None;
         // L-b: rol real del slot ("Cabeza"/"Accesorio 3"/"Tinte"...) para la pildora - null
         // cuando no hay restriccion, oculta la pildora en el XAML (NullToCollapsed).
-        SlotRestrictionLabel = hasSlotRestriction ? target!.SlotRoleLabel ?? "este slot" : null;
+        // Ronda de idioma del 6-sep-2026: el respaldo "este slot" iba a pelo (se ve en la pildora
+        // real "Solo objetos validos para: ..." cuando el slot no tiene un rol con nombre propio).
+        SlotRestrictionLabel = hasSlotRestriction
+            ? target!.SlotRoleLabel ?? Services.LocalizationService.Instance["library_this_slot"]
+            : null;
 
         // Bug real reportado 2-sep-2026 (KeyNotFoundException, id 5462, al elegir "Armas"):
         // el arbol real de la Libreria (extraido de Terrasavr) referencia algun id que no

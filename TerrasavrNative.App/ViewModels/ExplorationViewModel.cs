@@ -135,7 +135,11 @@ public sealed partial class WorldNpcRowViewModel(int id, string name, int x, int
     public int TileX { get; } = x;
     public int TileY { get; } = y;
     public bool Homeless { get; } = homeless;
-    public string Position { get; } = homeless ? $"({x}, {y}) - sin casa" : $"({x}, {y})";
+    // Ronda de idioma del 6-sep-2026: "- sin casa" iba a pelo en la posicion de cada NPC de
+    // la lista de Exploracion.
+    public string Position { get; } = homeless
+        ? Services.LocalizationService.Instance.Format("npc_homeless_position", x, y)
+        : $"({x}, {y})";
     public string? IconPath { get; } = NpcIconResolver.GetIconPath(id);
     // Punto 4 (advisor Opus, "npcs escondidos en el subsuelo que puedas encontrarlos facilmente" -
     // ver ESPEC-ui-exploracion.md#12): TileY > GroundLevel real del mundo (WldHeader.GroundLevel,
@@ -1096,7 +1100,9 @@ public partial class ExplorationViewModel : ObservableObject
         {
             int sx = _world.Header.SpawnX, sy = _world.Header.SpawnY;
             double Dist(WorldSearchHitRowViewModel r) => Math.Sqrt(Math.Pow(r.TileX - sx, 2) + Math.Pow(r.TileY - sy, 2));
-            foreach (var row in _lastWorldSearchRows) row.DistanceLabel = $"{Math.Round(Dist(row))} tiles del spawn";
+            // Ronda de idioma del 6-sep-2026: "tiles del spawn" iba a pelo en cada fila de resultado.
+            foreach (var row in _lastWorldSearchRows)
+                row.DistanceLabel = Services.LocalizationService.Instance.Format("explore_tiles_from_spawn", Math.Round(Dist(row)));
             ordered = _lastWorldSearchRows.OrderBy(Dist);
         }
         else

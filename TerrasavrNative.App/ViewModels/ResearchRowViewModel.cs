@@ -55,10 +55,13 @@ public sealed partial class ResearchRowViewModel : ObservableObject
     // "Investigado" en su lugar. Cualquier OTRO conteo real de Calamity (un personaje que
     // investigo de verdad en el juego, no via este boton) SIGUE mostrando su numero real - eso
     // si es un dato real, no un numero inventado que ocultar.
+    //
+    // Ronda de idioma del 6-sep-2026: "Sin investigar" y "✔ Investigado" iban a pelo en español,
+    // en el chip de CADA fila de la pestaña Investigacion (miles de filas reales a la vista).
     public string CountLabel => !IsResearched
-        ? (RequiredCount.HasValue ? $"0/{RequiredCount}" : "Sin investigar")
+        ? (RequiredCount.HasValue ? $"0/{RequiredCount}" : Loc["research_not_researched"])
         : IsCalamity && Count == ResearchAllService.PlaceholderCount
-            ? "✔ Investigado"
+            ? Loc["research_researched_check"]
             : RequiredCount.HasValue ? $"{Count}/{RequiredCount}" : Count.ToString();
 
     // H5-02: solo dispara para ediciones REALES del usuario (clic en la fila, o el campo de
