@@ -8307,3 +8307,33 @@ registrado en la entrada anterior sobre `StaticResource` como `Binding.Converter
 **dotnet test 656/656 en verde en todo momento. Arnés completo sin ningún `FALLO` nuevo en
 ningún bloque** - los que aparecen en cada pasada son siempre los mismos, ya documentados
 (foreground lock de Windows en esta sesión RDP), confirmados ajenos a estos cambios.
+
+## Segundo informe de pulido (Librería/Inicio/Apariencia, 19 correcciones) - en ejecución
+
+Tras cerrar el informe anterior, el usuario mandó un mensaje denso con 15 bugs/pulidos nuevos
+más Novedades/Acerca de. Opus produjo `ESPEC-pulido-final-librería-inicio-apariencia.md`
+(2119 líneas, C-01..C-19, con una sección propia "Punteros del encargo equivocados" corrigiendo
+3 pistas iniciales erróneas). Pedido explícito ("pues aplica todo entonces"): ejecutar las 19,
+por bloques, en el orden que el propio informe sugiere en su §10. Commit `c214240f` = bloque 1/9.
+
+**Bloque 1/9 (C-01, C-02, C-07, C-08, C-12) - cerrado, commit `c214240f`:**
+- **C-01 (crítica)**: los marcadores de spawn del mundo y de la mazmorra eran hijos directos
+  del `Grid` de zoom, que ignora `Canvas.Left`/`Canvas.Top` en silencio (solo un `Canvas` real
+  los aplica) - nunca aparecían en su posición real. Envueltos en un `Canvas` propio.
+- **C-02**: viewport del minimapa sin recortar contra los límites del mundo -> `Math.Clamp` en
+  `UpdateMinimapViewport` + `ClipToBounds="True"` como red de seguridad en el `Grid` interior.
+- **C-07**: más aire vertical en la tira "Tus mundos" (`Margin="0,4,0,10"`).
+- **C-08**: los nodos raíz "Índice" y "Calamity (mod)" del árbol de Buffs eran los únicos de
+  las 8 raíces sin `IconPath` - mismo criterio que el resto (icono del primer elemento real).
+  "Índice" gana además tilde y recuento, a la par del resto de nodos raíz.
+- **C-12**: las insignias de la tarjeta de personaje y la franja de vitales de la barra
+  superior solo llevaban margen horizontal - al envolver a una segunda línea (mismo `WrapPanel`
+  de R-05/H-04a) la fila de abajo quedaba pegada a la de arriba sin hueco vertical, el bug real
+  que el usuario vio en su captura de la barra superior con vida/maná/Softcore solapados.
+
+Verificado: `dotnet build` (0 errores), `dotnet test` (656/656), arnés completo con datos
+reales (0 `FALLO`) - confirma explícitamente `F-7-MARCADOR: ... visible=True` y
+`F-8: MinimapViewportRect encontrado=True, visible=True`.
+
+Pendientes bloques 2-9 (C-03/C-04, C-10a/b/c, C-14+C-12, C-09, C-05/C-11/C-13/C-17, C-15,
+C-16/C-18, C-06) - seguir el orden del informe, un commit verificado por bloque.
