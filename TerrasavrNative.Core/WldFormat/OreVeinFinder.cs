@@ -35,7 +35,13 @@ public static class OreVeinFinder
     // pila de llamadas). Un UNICO barrido x->y sirve para CUALQUIER numero de tipos a la vez -
     // pasar todos los minerales presentes juntos (en vez de llamar una vez por mineral) es lo
     // que hace barato el caso real "inventario de Minerales" (ver el comentario de arriba).
-    private static List<OreVein> FindAll(WldWorld world, IReadOnlySet<int> tileTypes, CancellationToken ct)
+    //
+    // C-04 (informe de pulido final, cierra E6/E7): generalizado con un delegado `typeAt` en vez
+    // de leer `tile.Type` a pelo, para poder reutilizar EXACTAMENTE el mismo algoritmo agrupando
+    // por Wall o por LiquidType - "reutilizar OreVeinFinder para tiles y liquidos", no inventar
+    // un segundo flood-fill. `typeAt` devuelve null si la celda no casa (equivalente al viejo
+    // `!tile.IsActive || !tileTypes.Contains(tile.Type)`).
+    private static List<OreVein> FindAllCore(WldWorld world, Func<int, int, int?> typeAt, CancellationToken ct)
     {
         int w = world.Header.TilesWide, h = world.Header.TilesHigh;
         var visited = new bool[w * h];
@@ -49,10 +55,9 @@ public static class OreVeinFinder
             {
                 int startIndex = x * h + y;
                 if (visited[startIndex]) continue;
-                var tile = world.Tiles[x, y];
-                if (!tile.IsActive || !tileTypes.Contains(tile.Type)) { visited[startIndex] = true; continue; }
+                int? maybeType = typeAt(x, y);
+                if (maybeType is not int type) { visited[startIndex] = true; continue; }
 
-                int type = tile.Type;
                 long sumX = 0, sumY = 0;
                 int count = 0;
                 stack.Push((x, y));
@@ -67,7 +72,6 @@ public static class OreVeinFinder
                         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
                         int nIndex = nx * h + ny;
                         if (visited[nIndex]) continue;
-                        var nTile = world.Tiles[nx, ny];
                         // OJO: si el vecino no es del MISMO tipo que esta veta, NO se marca aqui
                         // como visitado - bug real atrapado por el propio test (Find_
                         // TiposDistintosNuncaSeFusionanAunqueEstenPegados): marcarlo visitado en
@@ -77,7 +81,7 @@ public static class OreVeinFinder
                         // Solo se marca visitado cuando de verdad se añade a una veta (mas abajo)
                         // o cuando el bucle EXTERIOR lo descarta como punto de partida (si mismo,
                         // su tipo no cambia entre pasadas).
-                        if (!nTile.IsActive || nTile.Type != type) continue;
+                        if (typeAt(nx, ny) != type) continue;
                         visited[nIndex] = true;
                         stack.Push((nx, ny));
                     }
@@ -90,13 +94,49 @@ public static class OreVeinFinder
         return allVeins;
     }
 
+    private static int? TileTypeAt(WldWorld world, IReadOnlySet<int> tileTypes, int x, int y)
+    {
+        var tile = world.Tiles[x, y];
+        return tile.IsActive && tileTypes.Contains(tile.Type) ? tile.Type : null;
+    }
+
+    private static int? WallTypeAt(WldWorld world, IReadOnlySet<int> wallIds, int x, int y)
+    {
+        var tile = world.Tiles[x, y];
+        return tile.Wall != 0 && wallIds.Contains(tile.Wall) ? tile.Wall : null;
+    }
+
+    private static int? LiquidTypeAt(WldWorld world, IReadOnlySet<byte> liquidTypes, int x, int y)
+    {
+        var tile = world.Tiles[x, y];
+        return tile.LiquidAmount > 0 && liquidTypes.Contains(tile.LiquidType) ? tile.LiquidType : null;
+    }
+
     // Devuelve las "limit" primeras vetas ordenadas por tamaño descendente (las vetas gordas
     // primero, son las que interesan) y el total real por "out" - mismo patron "cuenta todo,
     // muestra N" de WorldSearch.Add. Uso real: el usuario elige uno o varios minerales concretos
     // para buscar/marcar (WorldSearchResults ya sabe navegar/marcar cualquier WorldSearchHit).
     public static IReadOnlyList<OreVein> Find(WldWorld world, IReadOnlySet<int> tileTypes, int limit, out int totalVeins, CancellationToken ct = default)
     {
-        var allVeins = FindAll(world, tileTypes, ct);
+        var allVeins = FindAllCore(world, (x, y) => TileTypeAt(world, tileTypes, x, y), ct);
+        totalVeins = allVeins.Count;
+        return allVeins.OrderByDescending(v => v.TileCount).Take(limit).ToList();
+    }
+
+    // C-04: mismo algoritmo que Find, agrupando por Wall en vez de por Type - generalizacion a
+    // "Objetos > Paredes" del patron ya probado por Minerales.
+    public static IReadOnlyList<OreVein> FindWalls(WldWorld world, IReadOnlySet<int> wallIds, int limit, out int totalVeins, CancellationToken ct = default)
+    {
+        var allVeins = FindAllCore(world, (x, y) => WallTypeAt(world, wallIds, x, y), ct);
+        totalVeins = allVeins.Count;
+        return allVeins.OrderByDescending(v => v.TileCount).Take(limit).ToList();
+    }
+
+    // C-04: mismo algoritmo, agrupando por LiquidType (solo tiles con LiquidAmount > 0) -
+    // generalizacion a "Objetos > Liquidos".
+    public static IReadOnlyList<OreVein> FindLiquids(WldWorld world, IReadOnlySet<byte> liquidTypes, int limit, out int totalVeins, CancellationToken ct = default)
+    {
+        var allVeins = FindAllCore(world, (x, y) => LiquidTypeAt(world, liquidTypes, x, y), ct);
         totalVeins = allVeins.Count;
         return allVeins.OrderByDescending(v => v.TileCount).Take(limit).ToList();
     }
@@ -107,7 +147,7 @@ public static class OreVeinFinder
     // en un mundo real con 20+ minerales presentes (medido, ver el comentario de la clase).
     public static IReadOnlyDictionary<int, int> CountVeinsByType(WldWorld world, IReadOnlySet<int> tileTypes, CancellationToken ct = default)
     {
-        var allVeins = FindAll(world, tileTypes, ct);
+        var allVeins = FindAllCore(world, (x, y) => TileTypeAt(world, tileTypes, x, y), ct);
         var result = new Dictionary<int, int>();
         foreach (var vein in allVeins) result[vein.Type] = result.GetValueOrDefault(vein.Type) + 1;
         return result;

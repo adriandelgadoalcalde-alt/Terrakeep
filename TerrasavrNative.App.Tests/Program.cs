@@ -2641,7 +2641,36 @@ internal static class Program
                         Console.WriteLine("Captura minerales marcados en el mapa -> mundo-minerales-marcados.png");
 
                         vm.Exploration.ClearOreMarksCommand.Execute(null);
+
+                        // A9-03-MINERALCLIC (informe de pulido final, C-03, cierra E5): pulsar el
+                        // NOMBRE de un mineral tenia que hacer lo mismo que en Cofres/Objetos -
+                        // antes era el unico sitio de la barra lateral donde un clic no llevaba a
+                        // ningun resultado (BuildSingleRowQuery no tenia rama Ores).
+                        vm.Exploration.SearchInventoryRowCommand.Execute(primerMineral);
+                        WaitForDispatcher(1000);
+                        Console.WriteLine($"A9-03-MINERALCLIC: clic en '{primerMineral.Name}' -> WorldSearchResults.Count={vm.Exploration.WorldSearchResults.Count} (esperado > 0)");
+                        if (vm.Exploration.WorldSearchResults.Count == 0) Console.WriteLine("FALLO: C-03 - pulsar el nombre de un mineral no encontro nada");
+
+                        // C-04: el tick por si solo (sin pulsar "Marcar en el mapa") tiene que
+                        // disparar el resaltado con debounce (WorldInventoryRowViewModel.
+                        // CheckedChanged + _highlightDebounceTimer, 250ms). IsChecked ya estaba a
+                        // True desde arriba - forzar el CAMBIO real (False->True) o el setter
+                        // generado no vuelve a disparar OnIsCheckedChanged.
+                        vm.Exploration.ClearOreMarksCommand.Execute(null);
                         primerMineral.IsChecked = false;
+                        DoEvents();
+                        primerMineral.IsChecked = true;
+                        // 250ms de debounce + el propio render+flood-fill del mineral (mismo
+                        // orden de magnitud que CATEGORIAS-MINERALES-MARCAR arriba, que ya usa
+                        // 2000ms para el mismo mundo Grande real).
+                        WaitForDispatcher(2500);
+                        bool resaltadoPorTick = vm.Exploration.WorldHighlight != null;
+                        Console.WriteLine($"C-04-TICKSOLO: marcar el tick de '{primerMineral.Name}' sin pulsar boton -> WorldHighlight != null={resaltadoPorTick} (esperado True tras el debounce)");
+                        if (!resaltadoPorTick) Console.WriteLine("FALLO: C-04 - el tick por si solo no dispara el resaltado con debounce");
+
+                        vm.Exploration.ClearOreMarksCommand.Execute(null);
+                        primerMineral.IsChecked = false;
+                        WaitForDispatcher(500);
                     }
                     else Console.WriteLine("CATEGORIAS-MINERALES: este mundo real no tiene ningun mineral/gema/objetivo de la tabla real, omitido el marcado");
 
@@ -2785,6 +2814,32 @@ internal static class Program
                     Console.WriteLine($"SWATCH-LIQUIDOS: {liquidosSwatchTransparente}/{vm.Exploration.Inventory.Count} filas con SwatchColor transparente (esperado 0)");
                     if (vm.Exploration.Inventory.Count > 0 && liquidosSwatchTransparente > 0)
                         Console.WriteLine("FALLO: la pestaña Liquidos tiene filas sin sprite NI color de respaldo (no se ve nada)");
+
+                    // A9-10-MIELTODA (informe de pulido final, C-04, cierra E6): "una cantidad
+                    // absurda de mieles" - antes el mapa y la lista compartian el mismo tope de
+                    // facto. Generalizado el patron de Minerales (resaltado sin tope) a Objetos >
+                    // Liquidos: el numero de pixeles a opacidad completa (nucleo, sin contar el
+                    // halo de alrededor) tiene que ser EXACTAMENTE el recuento real del liquido.
+                    var primerLiquido = vm.Exploration.Inventory.FirstOrDefault();
+                    if (primerLiquido != null)
+                    {
+                        primerLiquido.IsChecked = true;
+                        vm.Exploration.MarkObjectsOnMapCommand.Execute(null);
+                        WaitForDispatcher(2000);
+                        int nucleoPixeles = 0;
+                        if (vm.Exploration.WorldHighlight is System.Windows.Media.Imaging.BitmapSource bmpLiquido)
+                        {
+                            int bw = bmpLiquido.PixelWidth, bh = bmpLiquido.PixelHeight;
+                            var buf = new byte[bh * bw * 4];
+                            bmpLiquido.CopyPixels(buf, bw * 4, 0);
+                            for (int i = 3; i < buf.Length; i += 4) if (buf[i] == 255) nucleoPixeles++;
+                        }
+                        Console.WriteLine($"A9-10-MIELTODA: '{primerLiquido.Name}' ({primerLiquido.Count:N0} tiles reales) -> pixeles a opacidad completa en la capa={nucleoPixeles:N0} (esperado exactamente igual)");
+                        if (nucleoPixeles != primerLiquido.Count) Console.WriteLine("FALLO: C-04 - el resaltado de liquidos no marca TODAS las posiciones reales");
+                        vm.Exploration.ClearOreMarksCommand.Execute(null);
+                        primerLiquido.IsChecked = false;
+                        WaitForDispatcher(500);
+                    }
                     vm.Exploration.ObjectsViewMode = 0;
 
                     vm.Exploration.SelectedCategory = WorldSearchCategory.All; // deja el estado limpio para pasos siguientes

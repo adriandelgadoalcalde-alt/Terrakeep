@@ -4464,6 +4464,18 @@
                                 </UniformGrid>
                                 <Button DockPanel.Dock="Top" Content="Buscar seleccionados" Tag="Ghost" Margin="0,4,0,8" HorizontalAlignment="Left"
                                         Command="{Binding Exploration.SearchCheckedInventoryCommand}" />
+                                <!-- C-04 (informe de pulido final, cierra E6/E7): mismo par de botones que
+                                     ya tiene Minerales (resaltado sin tope + lista agrupada topada),
+                                     generalizado aqui a Tiles/Paredes/Liquidos - el tick de cualquier
+                                     fila ya lo aplica solo con debounce, estos son "aplicar ya"/
+                                     "desmarcar todo". -->
+                                <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
+                                    <Button Tag="Accent" Content="Marcar en el mapa" Margin="0,0,3,0"
+                                            ToolTip="Resalta TODAS las posiciones en el mapa (sin tope) y lista los grupos (agrupados, hasta 1000)"
+                                            Command="{Binding Exploration.MarkObjectsOnMapCommand}" />
+                                    <Button Tag="Ghost" Content="Quitar marcas" Margin="3,0,0,0"
+                                            Command="{Binding Exploration.ClearOreMarksCommand}" />
+                                </UniformGrid>
                                 <ListBox ItemsSource="{Binding Exploration.Inventory}" ItemTemplate="{StaticResource InventoryRowTemplate}"
                                          ItemContainerStyle="{StaticResource VirtualRowContainer}"
                                          Background="Transparent" BorderThickness="0" Focusable="False"

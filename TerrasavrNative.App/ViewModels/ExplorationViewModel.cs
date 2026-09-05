@@ -106,7 +106,13 @@ public sealed partial class WorldInventoryRowViewModel(int id, short u, short v,
     public string CountLabel { get; } = veinCount.HasValue
         ? $"{count:N0} tiles · {veinCount.Value:N0} veta{(veinCount.Value == 1 ? "" : "s")}"
         : $"{count:N0}";
+    // C-04 (informe de pulido final, cierra E6/E7): el tick pasa a significar "muestralo en el
+    // mapa" - quien construye la fila (Minerales/Objetos) se suscribe para relanzar el marcado
+    // con debounce (ExplorationViewModel._highlightDebounceTimer), sin que esta fila generica
+    // necesite saber nada de mapas ni de resaltado.
+    public event Action? CheckedChanged;
     [ObservableProperty] private bool _isChecked;
+    partial void OnIsCheckedChanged(bool value) => CheckedChanged?.Invoke();
     // Filtro por nombre O id (mismo criterio que TileWallPickerViewModel.FilterItem de TEdit,
     // ESPEC-ui-exploracion.md#1.3) - atenua/oculta en vez de quitar de la coleccion, mismo
     // patron ya establecido por WorldNpcRowViewModel.IsMatch.
@@ -495,8 +501,11 @@ public partial class ExplorationViewModel : ObservableObject
                 if (!_presence.HasTile(id)) continue;
                 int count = _presence.TileCounts[id];
                 int veinCount = vetasPorTipo.GetValueOrDefault(id);
-                target.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.TileName(id), count, veinCount,
-                    TileIconResolver.GetIconPath(id), ToWpfColor(_mapColors.TileColor(id))));
+                var row = new WorldInventoryRowViewModel(id, 0, 0, _tileNames.TileName(id), count, veinCount,
+                    TileIconResolver.GetIconPath(id), ToWpfColor(_mapColors.TileColor(id)));
+                // C-04: el tick de cualquier mineral relanza el marcado en el mapa con debounce.
+                row.CheckedChanged += OnHighlightCheckToggled;
+                target.Add(row);
             }
         }
         Fill(OreMetals, OreTileCatalog.Metals);
@@ -515,20 +524,31 @@ public partial class ExplorationViewModel : ObservableObject
     {
         Inventory.Clear();
         if (_world == null || _presence == null) return;
+        // C-04: el tick de cualquier fila de Objetos (Tiles/Paredes/Liquidos) relanza el
+        // marcado en el mapa con debounce - mismo mecanismo que Minerales, generalizado aqui.
         switch (ObjectsViewMode)
         {
             case 0:
                 foreach (var (id, count) in _presence.TileCounts.OrderByDescending(kv => kv.Value))
-                    Inventory.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.TileName(id), count, null,
-                        TileIconResolver.GetIconPath(id), ToWpfColor(_mapColors.TileColor(id))));
+                {
+                    var row = new WorldInventoryRowViewModel(id, 0, 0, _tileNames.TileName(id), count, null,
+                        TileIconResolver.GetIconPath(id), ToWpfColor(_mapColors.TileColor(id)));
+                    row.CheckedChanged += OnHighlightCheckToggled;
+                    Inventory.Add(row);
+                }
                 break;
             case 1:
                 foreach (var (id, count) in _presence.WallCounts.OrderByDescending(kv => kv.Value))
-                    Inventory.Add(new WorldInventoryRowViewModel(id, 0, 0, _tileNames.WallName(id), count, null,
-                        WallIconResolver.GetIconPath(id), ToWpfColor(_mapColors.WallColor(id))));
+                {
+                    var row = new WorldInventoryRowViewModel(id, 0, 0, _tileNames.WallName(id), count, null,
+                        WallIconResolver.GetIconPath(id), ToWpfColor(_mapColors.WallColor(id)));
+                    row.CheckedChanged += OnHighlightCheckToggled;
+                    Inventory.Add(row);
+                }
                 break;
             case 2:
                 foreach (var (code, count) in _presence.LiquidCounts.OrderByDescending(kv => kv.Value))
+                {
                     // Sin icono a proposito: el juego dibuja los liquidos con un shader sobre una
                     // mascara (LiquidMask.fxc), no hay sprite recortable - el color de la paleta
                     // real del mapa es mejor que un icono inventado. Ver
@@ -539,8 +559,11 @@ public partial class ExplorationViewModel : ObservableObject
                     // se pasaba en Colors.Transparent en vez del color real - la fila no mostraba
                     // NADA, ni sprite ni color. Ahora usa MapColorCatalog.LiquidColor(code), el
                     // mismo color real que ya pinta el mapa.
-                    Inventory.Add(new WorldInventoryRowViewModel(code, 0, 0, WorldSearch.LiquidName(code), count, null,
-                        null, ToWpfColor(_mapColors.LiquidColor(code))));
+                    var row = new WorldInventoryRowViewModel(code, 0, 0, WorldSearch.LiquidName(code), count, null,
+                        null, ToWpfColor(_mapColors.LiquidColor(code)));
+                    row.CheckedChanged += OnHighlightCheckToggled;
+                    Inventory.Add(row);
+                }
                 break;
         }
         ApplyInventoryFilter();
@@ -573,16 +596,20 @@ public partial class ExplorationViewModel : ObservableObject
     [RelayCommand]
     private void SearchInventoryRow(WorldInventoryRowViewModel row) => _ = RunWorldSearchAsyncWithQuery(BuildSingleRowQuery(row));
 
+    // C-03 (informe de pulido final, cierra E5): la fuente de filas incluye tambien los 3 grupos
+    // de Minerales (union de las 4 colecciones), y el switch gana la rama Ores - antes Minerales
+    // era la unica categoria de la barra lateral donde marcar+pulsar no hacia nada de verdad.
     [RelayCommand]
     private void SearchCheckedInventory()
     {
-        var marcadas = Inventory.Where(r => r.IsChecked).ToList();
+        var marcadas = Inventory.Concat(OreMetals).Concat(OreGems).Concat(OreTargets).Where(r => r.IsChecked).ToList();
         if (marcadas.Count == 0) return;
         WorldSearchQuery query = SelectedCategory switch
         {
             WorldSearchCategory.Chests when ChestViewMode == 0 =>
                 new WorldSearchQuery { SpriteVariants = marcadas.Select(r => (r.Id, r.U, r.V)).ToHashSet() },
             WorldSearchCategory.Chests => new WorldSearchQuery { ChestItemIds = marcadas.Select(r => r.Id).ToHashSet() },
+            WorldSearchCategory.Ores => new WorldSearchQuery { TileTypes = marcadas.Select(r => r.Id).ToHashSet() },
             WorldSearchCategory.Objects when ObjectsViewMode == 0 => new WorldSearchQuery { TileTypes = marcadas.Select(r => r.Id).ToHashSet() },
             WorldSearchCategory.Objects when ObjectsViewMode == 1 => new WorldSearchQuery { WallIds = marcadas.Select(r => r.Id).ToHashSet() },
             WorldSearchCategory.Objects => new WorldSearchQuery { LiquidTypes = marcadas.Select(r => (byte)r.Id).ToHashSet() },
@@ -595,6 +622,10 @@ public partial class ExplorationViewModel : ObservableObject
     {
         WorldSearchCategory.Chests when ChestViewMode == 0 => new WorldSearchQuery { SpriteVariants = new HashSet<(int, short, short)> { (row.Id, row.U, row.V) } },
         WorldSearchCategory.Chests => new WorldSearchQuery { ChestItemIds = new HashSet<int> { row.Id } },
+        // C-03: los minerales SON tiles (OreTileCatalog) - misma rama real que Objetos > Tiles.
+        // Antes pulsar el nombre de un mineral no hacia nada (unico sitio de la barra lateral
+        // donde un clic no llevaba a ningun resultado).
+        WorldSearchCategory.Ores => new WorldSearchQuery { TileTypes = new HashSet<int> { row.Id } },
         WorldSearchCategory.Objects when ObjectsViewMode == 0 => new WorldSearchQuery { TileTypes = new HashSet<int> { row.Id } },
         WorldSearchCategory.Objects when ObjectsViewMode == 1 => new WorldSearchQuery { WallIds = new HashSet<int> { row.Id } },
         WorldSearchCategory.Objects => new WorldSearchQuery { LiquidTypes = new HashSet<byte> { (byte)row.Id } },
@@ -608,37 +639,23 @@ public partial class ExplorationViewModel : ObservableObject
     // (WorldSearchQuery.DisplayLimit); el resumen dice la verdad completa (ver
     // RunWorldSearchAsyncWithQuery).
     [RelayCommand]
-    private async Task MarkOresOnMap()
+    private async Task MarkOresOnMap() =>
+        await ApplyTileHighlightAsync(OreMetals.Concat(OreGems).Concat(OreTargets).Where(r => r.IsChecked).Select(r => r.Id).ToHashSet(), "veta");
+
+    // C-04 (informe de pulido final, cierra E6/E7): generalizacion del boton de arriba a
+    // "Objetos" - misma arquitectura (resaltado sin tope + lista agrupada topada), segun cual de
+    // las 3 vistas (Tiles/Paredes/Liquidos) este activa. "grupo" en vez de "veta" en el resumen
+    // porque aqui no siempre es mineral (una veta de agua no es una expresion natural).
+    [RelayCommand]
+    private async Task MarkObjectsOnMap()
     {
-        if (_world == null) return;
-        var marcados = OreMetals.Concat(OreGems).Concat(OreTargets).Where(r => r.IsChecked).Select(r => r.Id).ToHashSet();
-        if (marcados.Count == 0) return;
-
-        var world = _world;
-        var cts = new CancellationTokenSource();
-        _worldSearchCts?.Cancel();
-        _worldSearchCts = cts;
-        int myGeneration = ++_worldSearchGeneration;
-        try
+        var marcadas = Inventory.Where(r => r.IsChecked).ToList();
+        switch (ObjectsViewMode)
         {
-            var (highlight, vetas, totalVetas) = await Task.Run(() =>
-            {
-                var img = WorldHighlightRenderer.Render(world, marcados, Colors.Orange, cts.Token);
-                var v = OreVeinFinder.Find(world, marcados, limit: 1000, out int total, cts.Token);
-                return (img, v, total);
-            }, cts.Token);
-            if (myGeneration != _worldSearchGeneration) return;
-
-            WorldHighlight = highlight;
-            _lastWorldSearchRows = vetas.Select(vein => new WorldSearchHitRowViewModel(
-                new WorldSearchHit(vein.CenterX, vein.CenterY, $"{_tileNames.TileName(vein.Type)} ({vein.TileCount:N0} tiles)", WorldSearchKind.OreVein))).ToList();
-            _worldSearchCurrentIndex = -1;
-            ApplyWorldSearchOrder();
-            WorldSearchSummary = totalVetas > vetas.Count
-                ? $"{vetas.Count:N0} de {totalVetas:N0} veta(s) (limitado a 1000 en la lista - el mapa las marca TODAS)"
-                : $"{totalVetas:N0} veta(s)";
+            case 0: await ApplyTileHighlightAsync(marcadas.Select(r => r.Id).ToHashSet(), "grupo"); break;
+            case 1: await ApplyWallHighlightAsync(marcadas.Select(r => r.Id).ToHashSet()); break;
+            default: await ApplyLiquidHighlightAsync(marcadas.Select(r => (byte)r.Id).ToHashSet()); break;
         }
-        catch (OperationCanceledException) { }
     }
 
     [RelayCommand]
@@ -649,6 +666,127 @@ public partial class ExplorationViewModel : ObservableObject
         _lastWorldSearchRows = [];
         _worldSearchCurrentIndex = -1;
         WorldSearchSummary = string.Empty;
+    }
+
+    // C-04: el tick de CUALQUIER fila de Minerales/Objetos pasa a significar "muestralo en el
+    // mapa" y actua solo, con debounce (mismo umbral de 250ms que _worldSearchDebounceTimer) -
+    // los botones "Marcar en el mapa"/"Quitar marcas" se quedan como "aplicar ya"/"desmarcar
+    // todo". Regenerar la capa de resaltado en CADA tick individual seria carisimo (80,6 MB por
+    // repintado en un mundo Grande, WorldHighlightRenderer) si el usuario marca varias filas
+    // seguidas - el debounce agrupa la rafaga en un unico repintado.
+    private readonly DispatcherTimer _highlightDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+    private void OnHighlightCheckToggled()
+    {
+        _highlightDebounceTimer.Stop();
+        _highlightDebounceTimer.Start();
+    }
+
+    private async Task ApplyTileHighlightAsync(IReadOnlySet<int> tileIds, string unitLabel)
+    {
+        if (_world == null) return;
+        if (tileIds.Count == 0) { ClearOreMarks(); return; }
+        var world = _world;
+        var cts = new CancellationTokenSource();
+        _worldSearchCts?.Cancel();
+        _worldSearchCts = cts;
+        int myGeneration = ++_worldSearchGeneration;
+        try
+        {
+            var (highlight, vetas, total) = await Task.Run(() =>
+            {
+                var img = WorldHighlightRenderer.Render(world, tileIds, Colors.Orange, cts.Token);
+                var v = OreVeinFinder.Find(world, tileIds, limit: 1000, out int t, cts.Token);
+                return (img, v, t);
+            }, cts.Token);
+            if (myGeneration != _worldSearchGeneration) return;
+            var rows = vetas.Select(vein => new WorldSearchHitRowViewModel(
+                new WorldSearchHit(vein.CenterX, vein.CenterY, $"{_tileNames.TileName(vein.Type)} ({vein.TileCount:N0} tiles)", WorldSearchKind.OreVein))).ToList();
+            long cubiertos = tileIds.Sum(id => (long)(_presence?.TileCounts.GetValueOrDefault(id) ?? 0));
+            ApplyHighlightResult(highlight, rows, vetas.Count, total, unitLabel, LegibilityWarning(cubiertos));
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    // C-04: gemela de ApplyTileHighlightAsync, agrupando por Wall (WorldHighlightRenderer.
+    // RenderWalls + OreVeinFinder.FindWalls) - generalizacion a "Objetos > Paredes".
+    private async Task ApplyWallHighlightAsync(IReadOnlySet<int> wallIds)
+    {
+        if (_world == null) return;
+        if (wallIds.Count == 0) { ClearOreMarks(); return; }
+        var world = _world;
+        var cts = new CancellationTokenSource();
+        _worldSearchCts?.Cancel();
+        _worldSearchCts = cts;
+        int myGeneration = ++_worldSearchGeneration;
+        try
+        {
+            var (highlight, grupos, total) = await Task.Run(() =>
+            {
+                var img = WorldHighlightRenderer.RenderWalls(world, wallIds, Colors.Orange, cts.Token);
+                var v = OreVeinFinder.FindWalls(world, wallIds, limit: 1000, out int t, cts.Token);
+                return (img, v, t);
+            }, cts.Token);
+            if (myGeneration != _worldSearchGeneration) return;
+            var rows = grupos.Select(g => new WorldSearchHitRowViewModel(
+                new WorldSearchHit(g.CenterX, g.CenterY, $"{_tileNames.WallName(g.Type)} ({g.TileCount:N0} tiles)", WorldSearchKind.OreVein))).ToList();
+            long cubiertos = wallIds.Sum(id => (long)(_presence?.WallCounts.GetValueOrDefault(id) ?? 0));
+            ApplyHighlightResult(highlight, rows, grupos.Count, total, "grupo", LegibilityWarning(cubiertos));
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    // C-04: gemela de ApplyTileHighlightAsync, agrupando por LiquidType (WorldHighlightRenderer.
+    // RenderLiquids + OreVeinFinder.FindLiquids) - generalizacion a "Objetos > Liquidos".
+    private async Task ApplyLiquidHighlightAsync(IReadOnlySet<byte> liquidTypes)
+    {
+        if (_world == null) return;
+        if (liquidTypes.Count == 0) { ClearOreMarks(); return; }
+        var world = _world;
+        var cts = new CancellationTokenSource();
+        _worldSearchCts?.Cancel();
+        _worldSearchCts = cts;
+        int myGeneration = ++_worldSearchGeneration;
+        try
+        {
+            var (highlight, grupos, total) = await Task.Run(() =>
+            {
+                var img = WorldHighlightRenderer.RenderLiquids(world, liquidTypes, Colors.Orange, cts.Token);
+                var v = OreVeinFinder.FindLiquids(world, liquidTypes, limit: 1000, out int t, cts.Token);
+                return (img, v, t);
+            }, cts.Token);
+            if (myGeneration != _worldSearchGeneration) return;
+            var rows = grupos.Select(g => new WorldSearchHitRowViewModel(
+                new WorldSearchHit(g.CenterX, g.CenterY, $"{WorldSearch.LiquidName((byte)g.Type)} ({g.TileCount:N0} tiles)", WorldSearchKind.OreVein))).ToList();
+            long cubiertos = liquidTypes.Sum(id => (long)(_presence?.LiquidCounts.GetValueOrDefault(id) ?? 0));
+            ApplyHighlightResult(highlight, rows, grupos.Count, total, "grupo", LegibilityWarning(cubiertos));
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void ApplyHighlightResult(WriteableBitmap highlight, List<WorldSearchHitRowViewModel> rows, int shown, int total, string unitLabel, string? warning)
+    {
+        WorldHighlight = highlight;
+        _lastWorldSearchRows = rows;
+        _worldSearchCurrentIndex = -1;
+        ApplyWorldSearchOrder();
+        string resumen = total > shown
+            ? $"{shown:N0} de {total:N0} {unitLabel}(s) (limitado a 1000 en la lista - el mapa las marca TODAS)"
+            : $"{total:N0} {unitLabel}(s)";
+        WorldSearchSummary = warning is null ? resumen : $"{warning} {resumen}";
+    }
+
+    // C-04: "marcar Piedra o Tierra tiñe el 60% del mapa y no informa de nada" (evaluacion del
+    // usuario sobre E7) - avisar (no impedir, el propio informe pide "avisar") cuando la
+    // seleccion cubre una fraccion grande del mundo. 40% es un umbral razonado, no medido: por
+    // debajo, incluso un mineral comun como el cobre (mundo Grande real, ~68.700 de 20.160.000
+    // tiles = 0.3%) queda muy lejos de disparar el aviso.
+    private string? LegibilityWarning(long tilesCubiertos)
+    {
+        if (_world == null) return null;
+        long totalTiles = (long)_world.Header.TilesWide * _world.Header.TilesHigh;
+        if (totalTiles <= 0) return null;
+        double frac = (double)tilesCubiertos / totalTiles;
+        return frac >= 0.4 ? $"Aviso: cubre el {frac:P0} del mapa, puede no ser legible de un vistazo." : null;
     }
 
     // F-12 (auditoria de Opus vs TEdit, E-13): "Terrakeep genera un WriteableBitmap completo
@@ -831,6 +969,14 @@ public partial class ExplorationViewModel : ObservableObject
         {
             _worldSearchDebounceTimer.Stop();
             _ = RunWorldSearchAsync();
+        };
+
+        // C-04: mismo patron, para el resaltado en el mapa que dispara el tick de Minerales/
+        // Objetos (ver WorldInventoryRowViewModel.CheckedChanged).
+        _highlightDebounceTimer.Tick += (_, _) =>
+        {
+            _highlightDebounceTimer.Stop();
+            _ = SelectedCategory == WorldSearchCategory.Ores ? MarkOresOnMap() : MarkObjectsOnMap();
         };
     }
 

@@ -36,7 +36,12 @@ public static class WorldHighlightRenderer
     // nucleo real queda por encima, a opacidad completa). Sin esto, a Zoom=0.1 (el necesario
     // para ver un mundo Grande entero) una veta de 15 tiles ocupa 1.5px y es invisible; con
     // halo ocupa ~3.5px y se ve.
-    public static WriteableBitmap Render(WldWorld world, IReadOnlySet<int> tileTypes, Color color, CancellationToken ct = default)
+    //
+    // C-04 (informe de pulido final, cierra E6/E7): generalizado con un delegado `matches` en
+    // vez de leer `tile.Type` a pelo, para poder reutilizar el mismo pintado con Paredes/
+    // Liquidos sin duplicar los dos bucles - "hace falta una sobrecarga de Render que acepte
+    // tambien WallIds y LiquidTypes, no solo tileTypes".
+    private static WriteableBitmap RenderCore(WldWorld world, Func<WldTile, bool> matches, Color color, CancellationToken ct)
     {
         int width = world.Header.TilesWide, height = world.Header.TilesHigh;
         var bitmap = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
@@ -61,16 +66,14 @@ public static class WorldHighlightRenderer
             ct.ThrowIfCancellationRequested();
             for (int y = 0; y < height; y++)
             {
-                var tile = world.Tiles[x, y];
-                if (!tile.IsActive || !tileTypes.Contains(tile.Type)) continue;
+                if (!matches(world.Tiles[x, y])) continue;
                 foreach (var (dx, dy) in Neighbors8)
                 {
                     int nx = x + dx, ny = y + dy;
                     if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
                     // Un vecino que TAMBIEN casa se pintara como nucleo en el paso 2 - no hace
                     // falta gastar el halo ahi.
-                    var nTile = world.Tiles[nx, ny];
-                    if (nTile.IsActive && tileTypes.Contains(nTile.Type)) continue;
+                    if (matches(world.Tiles[nx, ny])) continue;
                     SetPixel(nx, ny, coreR, coreG, coreB, haloA);
                 }
             }
@@ -82,8 +85,7 @@ public static class WorldHighlightRenderer
             ct.ThrowIfCancellationRequested();
             for (int y = 0; y < height; y++)
             {
-                var tile = world.Tiles[x, y];
-                if (tile.IsActive && tileTypes.Contains(tile.Type))
+                if (matches(world.Tiles[x, y]))
                     SetPixel(x, y, coreR, coreG, coreB, color.A);
             }
         }
@@ -92,4 +94,15 @@ public static class WorldHighlightRenderer
         bitmap.Freeze();
         return bitmap;
     }
+
+    public static WriteableBitmap Render(WldWorld world, IReadOnlySet<int> tileTypes, Color color, CancellationToken ct = default) =>
+        RenderCore(world, t => t.IsActive && tileTypes.Contains(t.Type), color, ct);
+
+    // C-04: generalizacion a "Objetos > Paredes".
+    public static WriteableBitmap RenderWalls(WldWorld world, IReadOnlySet<int> wallIds, Color color, CancellationToken ct = default) =>
+        RenderCore(world, t => t.Wall != 0 && wallIds.Contains(t.Wall), color, ct);
+
+    // C-04: generalizacion a "Objetos > Liquidos".
+    public static WriteableBitmap RenderLiquids(WldWorld world, IReadOnlySet<byte> liquidTypes, Color color, CancellationToken ct = default) =>
+        RenderCore(world, t => t.LiquidAmount > 0 && liquidTypes.Contains(t.LiquidType), color, ct);
 }

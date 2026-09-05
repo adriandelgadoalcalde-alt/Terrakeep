@@ -35,6 +35,8 @@ public class OreVeinFinderTests
     };
 
     private static WldTile Ore(int type) => new((short)type, 0, 0, 0, 0, 0);
+    private static WldTile TileWithWall(int wall) => new(-1, (short)wall, 0, 0, 0, 0);
+    private static WldTile Liquid(byte type) => new(-1, 0, type, 255, 0, 0);
 
     [Fact]
     public void Find_DosVetasSeparadas_DevuelveDosGruposDistintos()
@@ -120,6 +122,64 @@ public class OreVeinFinderTests
 
         Assert.Equal(1, conteo[7]); // 1 veta de cobre
         Assert.Equal(1, conteo[6]); // hierro: (1,0) y (2,0) son vecinos reales, UNA sola veta de 2 tiles
+    }
+
+    // C-04 (informe de pulido final, cierra E6/E7): mismo algoritmo generalizado a Paredes -
+    // "reutilizar OreVeinFinder para tiles y liquidos" (paredes por el mismo criterio, misma
+    // rejilla). Gemela de Find_DosVetasSeparadas_DevuelveDosGruposDistintos pero con Wall.
+    [Fact]
+    public void FindWalls_DosGruposSeparados_DevuelveDosGruposDistintos()
+    {
+        var tiles = new WldTile[10, 1];
+        for (int x = 0; x < 10; x++) tiles[x, 0] = WldTile.Empty;
+        tiles[0, 0] = TileWithWall(5); tiles[1, 0] = TileWithWall(5); tiles[2, 0] = TileWithWall(5);
+        tiles[7, 0] = TileWithWall(5); tiles[8, 0] = TileWithWall(5);
+
+        var grupos = OreVeinFinder.FindWalls(MakeWorld(tiles), new HashSet<int> { 5 }, limit: 1000, out int total);
+
+        Assert.Equal(2, total);
+        Assert.Equal(3, grupos[0].TileCount);
+        Assert.Equal(2, grupos[1].TileCount);
+    }
+
+    [Fact]
+    public void FindWalls_ParedInactivaWallCero_NuncaFormaGrupo()
+    {
+        var tiles = new WldTile[1, 1];
+        tiles[0, 0] = WldTile.Empty; // Wall == 0
+
+        var grupos = OreVeinFinder.FindWalls(MakeWorld(tiles), new HashSet<int> { 0 }, limit: 1000, out int total);
+
+        Assert.Equal(0, total);
+        Assert.Empty(grupos);
+    }
+
+    // Gemela para Liquidos - agrupa por LiquidType, solo tiles con LiquidAmount > 0.
+    [Fact]
+    public void FindLiquids_DosCharcosSeparados_DevuelveDosGruposDistintos()
+    {
+        var tiles = new WldTile[10, 1];
+        for (int x = 0; x < 10; x++) tiles[x, 0] = WldTile.Empty;
+        tiles[0, 0] = Liquid(3); tiles[1, 0] = Liquid(3); tiles[2, 0] = Liquid(3); // miel: 3 tiles
+        tiles[7, 0] = Liquid(3); tiles[8, 0] = Liquid(3); // miel: 2 tiles, separada
+
+        var grupos = OreVeinFinder.FindLiquids(MakeWorld(tiles), new HashSet<byte> { 3 }, limit: 1000, out int total);
+
+        Assert.Equal(2, total);
+        Assert.Equal(3, grupos[0].TileCount);
+        Assert.Equal(2, grupos[1].TileCount);
+    }
+
+    [Fact]
+    public void FindLiquids_LiquidAmountCero_NuncaFormaGrupo()
+    {
+        var tiles = new WldTile[1, 1];
+        tiles[0, 0] = new WldTile(-1, 0, 3, 0, 0, 0); // LiquidType=miel pero LiquidAmount=0
+
+        var grupos = OreVeinFinder.FindLiquids(MakeWorld(tiles), new HashSet<byte> { 3 }, limit: 1000, out int total);
+
+        Assert.Equal(0, total);
+        Assert.Empty(grupos);
     }
 
     [Fact]
