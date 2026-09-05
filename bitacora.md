@@ -8542,3 +8542,139 @@ Dos fallos reales encontrados y corregidos como efecto secundario de verificar c
 parte del plan original): el recorte de `PlayerPreviewRenderer.LoadPngPixels40x56` para sprites
 de equipo de Calamity sin recortar (bloque 3), y una prueba del arnes que asumia el comportamiento
 antiguo de "cualquier spawn se ve en cualquier mapa" tras el fix de C-05 (bloque 6).
+
+---
+
+## Feedback en vivo tras probar el build (5-sep-2026) - 6 puntos, commits `5d404687`/`5650582e`
+
+Con el plan de 19 correcciones ya cerrado (bloque anterior), el usuario probo el build real y
+mando feedback denso de 6 puntos distintos en un unico mensaje - cada uno investigado en el
+codigo real antes de tocar nada (nunca se acepto la palabra del usuario sola como diagnostico).
+
+1. **"Buscar en el personaje" se queda con la animacion hasta borrar la busqueda**: no era una
+   animacion de verdad, era `IsSearchMatch=false` (Opacity 0.35, `MainWindow.xaml:406`)
+   atenuando TODOS los slots no coincidentes mientras `WhereIsItSearchText` no esta vacio.
+   `NavigateToWhereIsItResult` cerraba el popup (`IsWhereIsItOpen=false`) pero NUNCA vaciaba el
+   texto de busqueda - la unica llave real que apaga el atenuado (`ApplyWhereIsItFilter`, rama
+   vacia). El usuario navegaba a un resultado, el popup desaparecia, pero el resto de la app
+   quedaba atenuado sin ningun cuadro de busqueda visible que lo explicara. Arreglado vaciando
+   el texto y refiltrando al instante al navegar.
+2. **Defensa de armadura no se muestra (Solar Flare)**: ver commit `5650582e` (seccion propia
+   abajo) - bug real del extractor de estadisticas vanilla, 1470 objetos recuperados.
+3. **La lista de resultados de busqueda no se puede cerrar/contraer**: cierto, y el usuario
+   acerto su sospecha ("me imagino que va para todas las pestañas") - el panel de resultados
+   (coordenadas de cada mena/objeto/NPC) es COMPARTIDO por las 5 categorias de la barra lateral,
+   y no tenia ningun boton para cerrarlo salvo lanzar otra busqueda. `ClearOreMarksCommand` (el
+   boton "Quitar marcas" de Minerales/Objetos) YA limpiaba resaltado+lista+resumen por completo
+   pese a su nombre historico - solo hacia falta exponerlo como un boton "&#10005; Cerrar"
+   generico en el panel compartido, visible para cualquier categoria.
+4. **Bug real: clicar la primera mena sin marcar el tick marca cuadraditos al final del mundo**:
+   la MISMA causa raiz que la captura original del usuario ("Mineral de hierro (1,844)/(1,845)/
+   (1,846)..."). `SearchInventoryRow`/`SearchCheckedInventory` (clic en el NOMBRE de una fila, o
+   "Buscar seleccionados") seguian usando `RunWorldSearchAsyncWithQuery` -> `WorldSearch.Run` a
+   pelo - el barrido x->y con tope de 1000 (`WorldSearchQuery.DisplayLimit`) que el informe de
+   pulido final ya habia diagnosticado como causa real de E6 ("no es un filtro de sprite, es el
+   sesgo columna-mayor + el tope") - C-04 solo lo corrigio para el boton "Marcar en el mapa"
+   (`ApplyTileHighlightAsync`), nunca para el clic simple. Un mineral comun agota los 1000
+   resultados en las primeras columnas del mundo real, asi que la lista entera (y cualquier fila
+   que se pulse para navegar) cae siempre cerca de x=0. Arreglado generalizando
+   `ApplyTileHighlightAsync`/`ApplyWallHighlightAsync`/`ApplyLiquidHighlightAsync` con un
+   parametro `paint` (agrupar por veta via `OreVeinFinder` sin regenerar el bitmap de resaltado
+   de 80,6MB) y reutilizandolos desde `SearchInventoryRow`/`SearchCheckedInventory` para
+   Minerales y Objetos>Tiles/Paredes/Liquidos (Cofres se queda con el camino de siempre - sus
+   consultas, `SpriteVariants`/`ChestItemIds`, no son un "tipo de tile" que `OreVeinFinder` sepa
+   agrupar, y un mundo real tiene cientos de cofres, muy por debajo del tope).
+5. **Dificultad del mundo editable** (Clasico/Experto/Maestro/Viaje): pedido de FUNCION nueva, no
+   un bug - el mundo era 100% de solo lectura en toda la app (nunca se habia escrito un `.wld`).
+   Preguntado explicitamente al usuario dado el riesgo real de corromper un archivo de mundo
+   (`AskUserQuestion`) antes de construirlo - confirmo que si, con cuidado. Ver seccion propia
+   abajo.
+6. **"Calamity (mod)" en la Libreria de Buffs sigue sin sprite**: la bitacora del bloque 1 del
+   plan de pulido final (arriba) YA daba por cerrado C-08 con este texto: "los nodos raiz
+   'Indice' y 'Calamity (mod)' del arbol de Buffs eran los unicos... sin IconPath" - afirmacion
+   FALSA, comprobado leyendo el codigo real: solo "Indice" recibio de verdad su `IconPath`
+   (`BuffLibraryTreeBuilder.cs`), el nodo `Calamity (mod)` (linea de construccion del root) nunca
+   lo tuvo. Hallazgo importante sobre la sesion paralela que ejecuto ese bloque: su propio
+   resumen de bitacora no era del todo fiel al codigo que realmente escribio - lección aplicada
+   ya varias veces en este proyecto (memoria `verificar-aislando-la-variable`, "trust but
+   verify"): un resumen de commit describe lo que su autor CREE haber hecho, no necesariamente lo
+   que el diff real contiene. Arreglado con el mismo criterio ya usado en el arbol de objetos
+   (`LibraryCategoryTreeBuilder.BuildCalamityRoot`): icono del objeto real `CalamityMod/Calamity`
+   (el trofeo del mod), via `CalamityCatalog.ByModAndInternal`.
+
+**Dificultad del mundo editable - detalle tecnico** (commit `5d404687`): primer escritor real de
+`.wld` de todo el proyecto. Alcance MINIMO a proposito, pedido explicito de la propia auditoria
+de riesgo: `WldWriter.PatchGameMode` (`TerrasavrNative.Core`) parchea UNICAMENTE el campo
+`GameMode`, replicando exactamente la misma secuencia de lecturas que `WldReader.ReadHeader`
+hasta llegar a el (titulo/semilla/GUID son de longitud variable, no hay ningun offset fijo real)
+y sobrescribiendo esos bytes en una COPIA del array - nunca cambia el tamaño del archivo, nunca
+toca ninguna otra seccion. Ancho real por version (igual que la lectura): Int32 para >=209,
+`bool` de 1 byte para 208 (Maestro) o 112-207 (Experto) - version <112 lanza
+`NotSupportedException` explicito (el concepto ni existia). `WorldFileService.SaveGameMode`
+(`TerrasavrNative.App`) hace el ciclo completo: lee bytes reales -> `PatchGameMode` -> escribe
+con el MISMO patron atomico + `.bak` ya probado para personajes
+(`CharacterFileService.WriteAtomic`, `File.Replace` en un solo paso del sistema de ficheros) ->
+RELEE de disco (no de memoria) para confirmar que el round-trip completo dejo grabado justo el
+valor pedido, antes de devolver nada por bueno. UI: 4 chips reales (`RadioButton`+
+`EnumEquals`, mismo patron ya usado para `ChestViewMode`/`ObjectsViewMode`) en el panel "Este
+mundo" - tocar un chip NUNCA escribe nada por si solo (solo cambia `WorldGameMode`, la seleccion
+en memoria), solo el boton "Guardar dificultad en el archivo" (`CanExecute` solo si de verdad
+cambio algo respecto al ultimo valor confirmado en disco) toca el archivo real. Tooltip de la
+insignia "Solo lectura*" actualizado para documentar la unica excepcion real.
+
+**Verificacion del camino de escritura, la parte que mas importaba**: `WldWriterTests.cs` (10
+tests nuevos, `TerrasavrNative.Core.Tests`) cubre las 3 codificaciones por version + rango
+invalido + la prueba mas estricta de todas (`Patch_SoloCambiaLosBytesDeGameMode_
+NingunOtroByteSeToca`): compara el array de bytes COMPLETO antes/despues, byte a byte, exigiendo
+que la unica diferencia caiga dentro de la ventana real de 4 bytes de `GameMode`. El arnes de UI
+Automation suma `A9-11-DIFICULTAD`: ciclo completo real (`WorldFileService.SaveGameMode`) sobre
+una COPIA de un mundo real (`roca_negra.wld`, nunca sobre el original - confirmado con su fecha
+de modificacion sin cambios tras la prueba, ver el propio comentario del check en `Program.cs`),
+confirmando `.bak` real (byte a byte igual al original) y solo 1 byte distinto en el archivo
+final (el mundo real de prueba resulto ser de una version con `GameMode` como `bool`, no Int32 -
+la rama de 1 byte tambien quedo ejercitada con datos reales, no solo sinteticos).
+
+Verificado: `dotnet build` (0 errores), `dotnet test` (697/697, 10 tests nuevos), arnes completo
+de UI Automation (0 `FALLO`).
+
+## Extractor de estadisticas vanilla - 1470 objetos recuperan sus stats (commit `5650582e`)
+
+Investigando el punto 2 de arriba (defensa de armadura ausente, Solar Flare Helmet/Breastplate/
+Leggings, ids 2763-2765): confirmado con Item.cs real que las 3 piezas SI tienen
+`defense = 24/34/20;` explicito, pero `vanilla_stats.json` no las llevaba. Causa raiz: el MISMO
+bug de switch anidado ya encontrado y arreglado en `extraer-sets-armadura.py` (C-10a, informe de
+pulido final, bloque anterior) - Item.cs tiene un patron real `default: switch (type) { case
+2763: ... } ` dentro de una de las 5 `SetDefaultsN`, invisible a un escaner de un solo nivel
+(cualquier headSlot alto, 157-171 y superiores, caia ahi). El propio comentario de cabecera del
+script YA afirmaba tener este arreglo "con el mismo escaner de estados" - afirmacion equivocada,
+nunca se porto de verdad. Arreglado portando `find_case_blocks`/`extract_immediate_cases`
+(recursion real a cualquier profundidad, ya verificado en C-10a) - de 2576 a 4046 objetos con al
+menos una estadistica real.
+
+**Segundo bug real, encontrado verificando el primero contra la version anterior** (nunca fiarse
+de un "ahora hay mas datos" sin comparar contra lo de antes): los 5 metodos `SetDefaultsN` se
+delimitaban "hasta la siguiente coincidencia de regex" (o hasta EOF para el ultimo) en vez de por
+su propia llave de cierre real - `SetDefaults5` (la ultima) arrastraba ~12.500 lineas de metodos
+NO relacionados hasta el final real del fichero (52.251 lineas totales, `SetDefaults5` empieza en
+la 39.796). Cualquier otro metodo en ese tramo de mas con una variable local tambien llamada
+"type" contaminaba resultados reales - verificado uno a uno contra el bloque real de cada id en
+Item.cs: `Eggnog`/1912 (el antiguo le atribuia un bloque de una pocion totalmente distinta),
+`MouseCage`/2191 (el antiguo le colaba un `case 2190:\ncase 2191: break;` mal cerrado, atribuyendo
+al 2191 las stats del codigo COMPARTIDO tras el switch, pensado para otros ids), `Valor`/3317,
+`DD2ExplosiveTrapT3Popper`/3834. Arreglado delimitando cada metodo por su propia llave de cierre
+(`find_matching_brace`, sin saltar cadenas/comentarios - el metodo entero es demasiado largo para
+que una llave suelta dentro de un string de flavor text sea imposible, a diferencia del switch
+interno mucho mas corto donde si vale un contador ingenuo). Mismo bug tambien presente en
+`extraer-sets-armadura.py` (identico patron `method_starts.append(len(text))`) - corregido igual
+ahi, re-verificado: 0 diferencias en su salida completa, el criterio de aceptacion duro (63/63
+claves reales de `ArmorSetBonus.*`) se mantiene exacto.
+
+**De paso, sospecha del usuario descartada con datos reales**: las 186 piezas de armadura de
+Calamity (`calamity/catalog.json`) SI tienen `stats.defense` real para las 130 que no son
+`Armor/Vanity` (las 56 de vanidad correctamente no llevan ninguna, es el comportamiento real del
+juego) - el campo vive anidado bajo `stats`, no en la raiz (mi primer chequeo rapido con un
+`stats.get('defense')` a nivel raiz daba un falso positivo de "186 sin defensa"). Solo el lado
+vanilla estaba roto.
+
+Verificado: `dotnet build` (0 errores), `dotnet test` (697/697), arnes completo de UI Automation
+(0 `FALLO`).
