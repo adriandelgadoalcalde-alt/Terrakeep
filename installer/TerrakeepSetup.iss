@@ -45,6 +45,16 @@ SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesInstallIn64BitMode=x64compatible
+; Auditoria final de Opus (5-sep-2026): sin esto el .exe DEL PROPIO INSTALADOR no lleva ningun
+; dato de autoria en sus Propiedades de Windows (salia como un ejecutable anonimo de Inno
+; Setup) - es lo primero que mira alguien que se descarga un instalador de un sitio que no es
+; el oficial, y lo unico que distingue el instalador real de una recompilacion ajena mientras
+; no haya firma Authenticode de verdad.
+VersionInfoVersion={#MyAppVersion}
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoProductName={#MyAppName}
+VersionInfoDescription=Instalador de {#MyAppName}
+VersionInfoCopyright=Copyright (C) 2026 {#MyAppPublisher}
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -56,7 +66,11 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 ; Recursivo real, todo lo que "dotnet publish" dejo (exe + dll + Assets/*.json/*.png) - mismo
 ; contenido exacto que install.ps1 copiaba a mano con Copy-Item.
-Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Los .pdb (simbolos de depuracion) no se empaquetan nunca: no le sirven de nada a quien usa la
+; app y le dan hecho el trabajo a quien quiera descompilarla. El csproj ya no los genera en
+; Release (DebugType=none), esto es el segundo cinturon por si alguien empaqueta una carpeta de
+; publish antigua o generada con otra configuracion.
+Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

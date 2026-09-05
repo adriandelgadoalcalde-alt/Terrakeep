@@ -6,4 +6,14 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Auditoria final de Opus (5-sep-2026): mismo criterio que TerrasavrNative.App.csproj - la
+       carpeta de publish no debe llevar simbolos de depuracion al equipo del usuario final. Sin
+       esto, el .pdb de Core seguia colandose en el publish de Release aunque el de la App ya no
+       (comprobado: era el unico .pdb que quedaba). Solo en Release; Debug los sigue generando,
+       que es lo que necesitan el depurador y el arnes de pruebas. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
 </Project>
