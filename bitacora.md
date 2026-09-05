@@ -8452,5 +8452,28 @@ tener que nombrarlo.
 
 Verificado: `dotnet test` 681/681 (10 tests nuevos), arnes completo (0 `FALLO`).
 
-Pendientes bloques 7-9 (C-15, C-16/C-18, C-06) - seguir el orden del informe, un commit
-verificado por bloque.
+**Bloque 7/9 (C-15) - cerrado, commit `8299f905`:** Deshacer/Rehacer real en Apariencia (A1) -
+la unica pestaña real de edicion que se habia quedado sin el. Empuja al MISMO `UndoStack`
+compartido via callback (`MainViewModel.PushAppearanceUndo`), sin duplicar ningun guardia de
+reentrada propio. Dos helpers: `PushUndo` (inmediato, cambios discretos - peinado/tinte/genero/
+dificultad) y `PushUndoDebounced` (~400ms, campos continuos - vida/mana/horas via `TextBox` con
+`UpdateSourceTrigger=PropertyChanged`, y los 7 colores via `Slider` R/G/B).
+
+**Dos hallazgos reales encontrados escribiendo este mismo helper** (no en codigo ya existente):
+1. El chequeo de reentrada (`_suppressUndoRecording`) tiene que hacerse en el INSTANTE del
+   intento de empujar, no al empezar la rafaga - el push de una entrada con debounce llega hasta
+   400ms despues del ultimo cambio, mucho despues de que `UndoEdit()`/`RedoEdit()` ya hayan
+   devuelto la bandera a `false`. Resuelto pasando `Func<bool> isUndoRedoInProgress` consultado
+   justo antes de cada push real (tanto inmediato como al vencer el timer del debounce).
+2. Tras Deshacer un color y volver a editarlo, el "antes" de la nueva entrada apuntaba al valor
+   de DOS cambios atras en vez del inmediatamente anterior - `ColorSwatchViewModel` no tiene
+   ningun `oldValue` real propio, asi que el "ultimo valor conocido" (`_swatchBaseline`) solo se
+   actualizaba al vencer un debounce real; un Deshacer/Rehacer cambia el valor SIN pasar por ahi.
+   Resuelto refrescandolo tambien cuando `PushUndoDebounced` no crea ningun grupo (reentrada).
+
+Verificado: `dotnet test` 686/686 (5 tests nuevos, `AppearanceUndoTests`), arnes completo (0
+`FALLO`) - confirma con el Dispatcher real bombeando que escribir "999" caracter a caracter y
+arrastrar los 3 canales de un color dejan UNA sola entrada cada uno.
+
+Pendientes bloques 8-9 (C-16/C-18, C-06) - seguir el orden del informe, un commit verificado por
+bloque.
