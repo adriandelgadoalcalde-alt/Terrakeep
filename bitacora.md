@@ -8951,3 +8951,27 @@ TerrakeepSetup.iss` - el `.exe` final queda en `installer\output\` (ignorado por
 `.iss` se actualiza a mano en cada version real, sincronizado con `TerrasavrNative.App.csproj`
 `<Version>` y `changelog.json` (los tres a mano, sin ninguna herramienta que los mantenga en
 linea automaticamente - documentado para no olvidarlo en la proxima version real).
+
+## El propio .exe pasa a llamarse Terrakeep.exe (mismo commit siguiente)
+
+El usuario pregunto directamente: "de cara al usuario no puede ver nada... del otro nombre?".
+Repaso real de todo lo visible: titulo de ventana ("Terrakeep" via `WindowTitle`), accesos
+directos e instalador ya decian "Terrakeep" en todo - pero el archivo `.exe` en si, dentro de
+la carpeta de instalacion y en la pestaña Detalles del Administrador de tareas de Windows,
+seguia llamandose `TerrasavrNative.App.exe` (el `AssemblyTitle`/`Product` ya puestos a
+"Terrakeep" solo cambian los metadatos internos, no el nombre real del archivo). Corregido con
+`<AssemblyName>Terrakeep</AssemblyName>` en `TerrasavrNative.App.csproj` - cambio contenido,
+no toca namespaces C# (`TerrasavrNative.App` sigue siendo el namespace/carpeta del proyecto,
+cambiar eso si tendria mucho mas radio de impacto) ni ninguna referencia de proyecto.
+
+Un unico sitio real dependia del nombre corto del ensamblado y se rompia en silencio si no se
+tocaba: `TerrasavrNative.App.Tests/Program.cs` cargaba `Theme.xaml` con un pack URI
+`pack://application:,,,/TerrasavrNative.App;component/...` (el nombre del ensamblado va
+DENTRO del URI, no es solo un namespace) - corregido a `Terrakeep;component/...`. Verificado
+con `dotnet build`/`dotnet test` (0 errores, 697/697), el arnes completo de UI Automation (0
+FALLO en las 494 lineas de siempre, confirma que el pack URI corregido sigue cargando los
+estilos reales) y un ciclo real: republicado, reempaquetado el instalador, instalado en
+silencio, lanzado de verdad (`Terrakeep.exe`, proceso real con nombre "Terrakeep" en el
+Administrador de tareas) y confirmada la entrada real de desinstalacion de Windows
+("Terrakeep versión 2.1.0"). De paso se limpio un `TerrasavrNative.App.exe` suelto que habia
+quedado de la instalacion de prueba anterior (antes de este cambio) en la misma carpeta.
