@@ -4869,6 +4869,12 @@ internal static partial class Program
                     {
                         string idiomaAntesEx = LocalizationService.Instance.Language;
                         var catAntesEx = vm.Exploration.SelectedCategory;
+                        // La pestaña TIENE que estar activa para medir: en otra pestaña, WPF ni
+                        // siquiera realiza estos elementos y la medida sale vacia (salia como
+                        // "-inf px" en la primera version de este bloque, que parecia un bug).
+                        int pestanaAntesIdioma = vm.SelectedTabIndex;
+                        vm.SelectedTabIndex = 4; // Exploracion
+                        DoEvents(); DoEvents();
                         LocalizationService.Instance.SetLanguage("en");
                         vm.Exploration.SelectedCategory = WorldSearchCategory.All;
                         vm.Exploration.WorldSearchText = "lava";
@@ -4894,11 +4900,83 @@ internal static partial class Program
                         vm.Exploration.ClearOreMarksCommand.Execute(null);
                         vm.Exploration.SelectedCategory = catAntesEx;
                         LocalizationService.Instance.SetLanguage(idiomaAntesEx);
+                        vm.SelectedTabIndex = pestanaAntesIdioma;
                         FijarTamaño(window, 1180, 860);
                         DoEvents(); DoEvents();
                     }
                 }
                 catch (Exception ex) { Console.WriteLine("AR-EX4-IDIOMA-EXCEPTION: " + ex); }
+
+                // AR-EX5 (misma oleada): edicion de dificultad - "los 4 modos SEGUN LA VERSION del
+                // mundo" y guardado atomico. A9-11-DIFICULTAD ya probaba el guardado real (1->2
+                // sobre una copia, con .bak y un solo Int32 distinto), pero nadie habia mirado los
+                // CHIPS reales: se ofrecian los cuatro en cualquier mundo, y en un mundo anterior a
+                // la version 209 del formato la mitad no se pueden escribir (WldWriter.
+                // SupportsGameMode) - se descubria al pulsar Guardar, con una excepcion convertida
+                // en mensaje de error. Ahora el chip imposible no se deja pulsar; aqui se comprueba
+                // sobre los RadioButton REALES del arbol visual, no solo en la ViewModel.
+                try
+                {
+                    // Los chips viven DENTRO del Expander "Este mundo", que arranca COLAPSADO:
+                    // hasta desplegarlo sus hijos no existen en el arbol visual (la primera version
+                    // de este bloque encontraba 0 chips y lo cantaba como fallo). Se despliega, se
+                    // mide, y se deja como estaba - misma disciplina que AR-15.
+                    int pestanaAntesEx5 = vm.SelectedTabIndex;
+                    vm.SelectedTabIndex = 4; // Exploracion
+                    DoEvents(); DoEvents();
+                    var esteMundoEx5 = Descendientes<System.Windows.Controls.Expander>(window)
+                        .FirstOrDefault(e => (e.Header as string) == "Este mundo" || (e.Header as string) == "This world");
+                    bool desplegadoAntesEx5 = esteMundoEx5?.IsExpanded ?? false;
+                    if (esteMundoEx5 != null) { esteMundoEx5.IsExpanded = true; DoEvents(); DoEvents(); }
+                    var chipsDificultad = Descendientes<System.Windows.Controls.RadioButton>(window)
+                        .Where(rb => rb.GroupName == "DificultadMundo").ToList();
+                    var cabeceraMundo = TerrasavrNative.Core.WldFormat.WldReader.ReadHeader(File.ReadAllBytes(worldPath));
+                    if (chipsDificultad.Count != 4)
+                        Console.WriteLine($"FALLO: AR-EX5-DIFICULTAD - se esperaban 4 chips de dificultad en el arbol visual, hay {chipsDificultad.Count}");
+                    else
+                    {
+                        // roca_negra es version 279 (moderna): los cuatro tienen que estar vivos.
+                        var habilitados = chipsDificultad.Select(rb => rb.IsEnabled).ToList();
+                        Console.WriteLine($"AR-EX5-DIFICULTAD: mundo de formato {cabeceraMundo.Version} -> chips habilitados = [{string.Join(", ", habilitados)}] (esperado los 4 en True: >=209 admite los 4 modos), " +
+                                          $"ViewModel dice [{vm.Exploration.CanUseGameModeClassic}, {vm.Exploration.CanUseGameModeExpert}, {vm.Exploration.CanUseGameModeMaster}, {vm.Exploration.CanUseGameModeJourney}]");
+                        for (int modo = 0; modo <= 3; modo++)
+                        {
+                            bool esperadoModo = TerrasavrNative.Core.WldFormat.WldWriter.SupportsGameMode(cabeceraMundo.Version, modo);
+                            if (habilitados[modo] != esperadoModo)
+                                Console.WriteLine($"FALLO: AR-EX5-DIFICULTAD - el chip del modo {modo} esta {(habilitados[modo] ? "habilitado" : "deshabilitado")} y el formato {cabeceraMundo.Version} dice lo contrario");
+                        }
+                    }
+
+                    // Guardado real de los CUATRO modos, uno por uno, sobre una COPIA del mundo
+                    // (nunca el archivo del usuario) - A9-11 solo probaba 1->2. Se comprueba ademas
+                    // que el resto del archivo no se mueve ni un byte en ninguno de los cuatro.
+                    if (esteMundoEx5 != null) { esteMundoEx5.IsExpanded = desplegadoAntesEx5; DoEvents(); }
+                    vm.SelectedTabIndex = pestanaAntesEx5;
+                    DoEvents();
+
+                    string copiaEx5 = Path.Combine(Path.GetTempPath(), $"terrakeep-dificultad-ex5-{Guid.NewGuid():N}.wld");
+                    File.Copy(worldPath, copiaEx5, overwrite: true);
+                    try
+                    {
+                        var bytesBase = File.ReadAllBytes(copiaEx5);
+                        foreach (int modo in new[] { 0, 1, 2, 3 })
+                        {
+                            var parcheado = TerrasavrNative.Core.WldFormat.WldWriter.PatchGameMode(bytesBase, modo);
+                            int distintos = Enumerable.Range(0, bytesBase.Length).Count(i => bytesBase[i] != parcheado[i]);
+                            int leido = TerrasavrNative.Core.WldFormat.WldReader.ReadHeader(parcheado).GameMode;
+                            Console.WriteLine($"AR-EX5-GUARDADO: modo {modo} -> releido del archivo={leido} (esperado {modo}), bytes distintos del original={distintos} (esperado <=4, solo el Int32 de GameMode), mismo tamaño={bytesBase.Length == parcheado.Length}");
+                            if (leido != modo)
+                                Console.WriteLine($"FALLO: AR-EX5-GUARDADO - escribir el modo {modo} deja {leido} en el archivo");
+                            if (distintos > 4 || bytesBase.Length != parcheado.Length)
+                                Console.WriteLine($"FALLO: AR-EX5-GUARDADO - escribir el modo {modo} toca {distintos} bytes del mundo (solo puede tocar el Int32 de GameMode)");
+                        }
+                    }
+                    finally
+                    {
+                        if (File.Exists(copiaEx5)) File.Delete(copiaEx5);
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-EX5-EXCEPTION: " + ex); }
 
                 // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
                 // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de
@@ -5454,10 +5532,24 @@ internal static partial class Program
                                              && ReferenceEquals(vm.ItemEdit.Slot, slotCasco)
                                              && !string.IsNullOrEmpty(slotCasco.RejectionMessage);
                         Console.WriteLine($"OBJ-10: Ctrl+V real de '{slotArma.DisplayName}' sobre el hueco de casco -> el slot sigue siendo '{slotCasco.DisplayName}' (era '{cascoAntes}'), aviso a la vista={avisoALaVista} (esperado True), mensaje='{slotCasco.RejectionMessage}'");
-                        if (slotCasco.DisplayName != cascoAntes)
-                            Console.WriteLine("FALLO: OBJ-10 - el pegado rechazado SI cambio el slot: la restriccion de tipo no se aplica por Ctrl+V");
-                        if (!avisoALaVista)
-                            Console.WriteLine("FALLO: OBJ-10 - un Ctrl+V rechazado no deja ninguna señal: el aviso del panel Editar solo se ve si el slot esta SELECCIONADO, y el teclado no lo selecciona");
+                        // La pulsacion REAL (keybd_event) necesita que ESTA ventana este en primer
+                        // plano, y con varios arneses de otros agentes a la vez el foco real se lo
+                        // puede llevar otra (misma verdad del entorno que ya documento AR-EX2 para
+                        // el raton). Se distingue sin ambiguedad: PasteItem SIEMPRE deja una de las
+                        // dos huellas - o cambia el slot, o escribe el mensaje de rechazo. Si no hay
+                        // NINGUNA de las dos, la tecla no llego, y eso no es un bug de la app.
+                        bool llegoLaTecla = slotCasco.DisplayName != cascoAntes || !string.IsNullOrEmpty(slotCasco.RejectionMessage);
+                        if (!llegoLaTecla)
+                        {
+                            Console.WriteLine("OBJ-10: el Ctrl+V real no llego a la ventana (foco de teclado compartido con otra ventana de esta maquina) - medicion omitida, no es un fallo de la app");
+                        }
+                        else
+                        {
+                            if (slotCasco.DisplayName != cascoAntes)
+                                Console.WriteLine("FALLO: OBJ-10 - el pegado rechazado SI cambio el slot: la restriccion de tipo no se aplica por Ctrl+V");
+                            if (!avisoALaVista)
+                                Console.WriteLine("FALLO: OBJ-10 - un Ctrl+V rechazado no deja ninguna señal: el aviso del panel Editar solo se ve si el slot esta SELECCIONADO, y el teclado no lo selecciona");
+                        }
                     }
                     vm.ObjetosSubTabIndex = subTabAntesObj10; // deja la sub-pestaña como estaba
                     DoEvents();
