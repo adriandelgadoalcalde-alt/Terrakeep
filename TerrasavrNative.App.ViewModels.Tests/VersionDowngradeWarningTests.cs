@@ -18,6 +18,10 @@ public sealed class VersionDowngradeWarningTests
 
     private static MainViewModel LoadCharacter(PlrCharacter character)
     {
+        // Oleada del 6-sep-2026: estos textos se comparan en español y LocalizationService.
+        // Instance es un singleton global del proceso de test - otra clase de test que cambie
+        // el idioma y no lo devuelva hace fallar a esta en la suite completa (nunca aislada).
+        Services.LocalizationService.Instance.SetLanguage(Services.LocalizationService.Spanish);
         string path = Path.Combine(Path.GetTempPath(), $"version-downgrade-{Guid.NewGuid():N}.plr");
         File.WriteAllBytes(path, PlrFile.Write(character));
         var vm = new MainViewModel();

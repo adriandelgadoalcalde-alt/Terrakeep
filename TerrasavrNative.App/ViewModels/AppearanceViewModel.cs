@@ -63,8 +63,14 @@ public partial class AppearanceViewModel : ObservableObject
     }
 
     private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-        => HairDyeDisplayName = HairDyeOptions.FirstOrDefault(o => o.Index == HairDye)?.DisplayName
+    {
+        HairDyeDisplayName = HairDyeOptions.FirstOrDefault(o => o.Index == HairDye)?.DisplayName
             ?? LocalizationService.Instance.Format("hair_dye_numbered", HairDye);
+        // Oleada del 6-sep-2026: la insignia de dificultad de la cabecera global se ve desde
+        // CUALQUIER pestaña - si no avisa aqui se queda con el idioma anterior hasta el
+        // siguiente cambio real de dificultad (que puede no llegar nunca).
+        OnPropertyChanged(nameof(DifficultyLabel));
+    }
 
     // Convencion vanilla estandar (Player.Male en Terraria): true = chico. La version binaria
     // invertida documentada en el proyecto es de formatos MUY antiguos (version<145), fuera
@@ -181,12 +187,26 @@ public partial class AppearanceViewModel : ObservableObject
     // preview), asi que se quedan aqui en vez de en una pestaña aparte. Todos campos que
     // PlrCharacter ya traia leidos/escritos, solo faltaba UI (ver bitacora.md, auditoria
     // Terrasavr JS vs puerto).
-    public string[] DifficultyLabels { get; } = ["Softcore", "Mediumcore", "Hardcore", "Journey"];
+    // Oleada del 6-sep-2026 (Personaje > Apariencia): los 4 nombres iban A PELO en ingles, en
+    // los dos idiomas, y ademas con el nombre INTERNO del codigo ("Softcore") en vez del que el
+    // juego enseña de verdad. Traduccion real del propio Terraria, no inventada:
+    // Terraria.Localization.Content.es-ES.Legacy.json, seccion LegacyMenu - "26"="Clásico"
+    // (Classic), "25"="Núcleo medio" (Mediumcore), "24"="Extremo" (Hardcore); y "Viaje" de
+    // Terraria.Localization.Content.es-ES.json, clave "Creative" ("Journey" en en-US).
+    // El indice es el Player.difficulty real (0..3), no el orden de esta lista por casualidad.
+    public static string DifficultyLabelFor(int difficulty) => LocalizationService.Instance[
+        Math.Clamp(difficulty, 0, 3) switch
+        {
+            1 => "difficulty_mediumcore",
+            2 => "difficulty_hardcore",
+            3 => "difficulty_journey",
+            _ => "difficulty_classic",
+        }];
 
     // Auditoria de Opus, N-1: la cabecera global (MainWindow.xaml) necesita el texto de la
     // dificultad sin poder indexar DifficultyLabels[Difficulty] a mano en XAML - un unico sitio
     // real, reutilizado tambien por el propio selector de Apariencia si hiciera falta.
-    public string DifficultyLabel => DifficultyLabels[Math.Clamp(Difficulty, 0, 3)];
+    public string DifficultyLabel => DifficultyLabelFor(Difficulty);
 
     [ObservableProperty] private int _difficulty;
     [ObservableProperty] private int _healthNow;

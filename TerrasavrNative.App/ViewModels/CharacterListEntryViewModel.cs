@@ -34,10 +34,25 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     public bool IsCalamity { get; }
     public bool IsVanilla => !IsTModLoader;
     // Regalo de la clave usedMods real del .tplr (la escribe tModLoader en cada guardado,
-    // PlayerIO.cs:67) - la lista de mods que estaban cargados la ultima vez. Null si el .tplr no
-    // la trae (los que escribe el propio Terrakeep no la tienen) para que el ToolTip no aparezca
-    // vacio.
-    public string? UsedModsTooltip { get; }
+    // PlayerIO.cs:67) - la lista de mods que estaban cargados la ultima vez.
+    //
+    // Oleada del 6-sep-2026 (bloque INI-05 del arnes) - DOS BUGS REALES de idioma en la misma
+    // linea, los dos invisibles para el barrido A10-IDIOMA-BARRIDO porque un ToolTip no es un
+    // TextBlock de la ventana:
+    //   a) El texto se componia UNA sola vez, en el constructor, con el idioma de ese instante -
+    //      cambiar a ingles en vivo dejaba "Mods usados la última vez: ..." tal cual.
+    //   b) El caso NORMAL (un .tplr SIN lista de mods, que es justo lo que escribe el propio
+    //      Terrakeep) devolvia null, y el XAML tapaba ese null con un TargetNullValue en
+    //      español DURO - o sea, la insignia "tModLoader" enseñaba una frase en español
+    //      SIEMPRE, tambien con la app entera en ingles.
+    // Ahora nunca es null (ese caso tiene su propia clave real, tt_tmodloader_badge) y se
+    // compone al leerlo; `Loc` es el mismo singleton que refresca los bindings al cambiar de
+    // idioma, asi que un ToolTip que se vuelva a abrir sale ya en el idioma nuevo.
+    public string UsedModsTooltip => _usedMods is { Count: > 0 }
+        ? Loc["character_used_mods"] + string.Join(", ", _usedMods)
+        : Loc["tt_tmodloader_badge"];
+
+    private readonly IReadOnlyList<string>? _usedMods;
     public string LastModifiedText { get; }
     public WriteableBitmap Preview { get; }
 
@@ -51,18 +66,14 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     {
         FilePath = plrPath;
         Name = character.Name;
-        DifficultyLabel = character.Difficulty switch
-        {
-            1 => "Mediumcore",
-            2 => "Hardcore",
-            3 => "Journey",
-            _ => "Softcore",
-        };
+        // Oleada del 6-sep-2026 (Personaje > Apariencia): estos 4 nombres iban a pelo en ingles
+        // (y con el nombre INTERNO "Softcore" en vez del "Classic" real del juego) en DOS sitios
+        // distintos, la tarjeta de Inicio y el selector de Apariencia - un unico sitio real
+        // ahora, con la traduccion real del propio Terraria (ver AppearanceViewModel).
+        DifficultyLabel = AppearanceViewModel.DifficultyLabelFor(character.Difficulty);
         IsTModLoader = isTModLoader;
         IsCalamity = tplr?.HasCalamityContent == true;
-        UsedModsTooltip = tplr is { UsedMods.Count: > 0 }
-            ? LocalizationService.Instance["character_used_mods"] + string.Join(", ", tplr.UsedMods)
-            : null;
+        _usedMods = tplr?.UsedMods;
         LastModifiedText = lastModifiedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
 
         PlayerPreviewRenderer.Tint T(byte[] c) => new(c[0], c[1], c[2]);

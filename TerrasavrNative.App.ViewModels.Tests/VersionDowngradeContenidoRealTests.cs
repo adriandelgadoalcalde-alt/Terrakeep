@@ -18,6 +18,12 @@ public sealed class VersionDowngradeContenidoRealTests
 {
     private static MainViewModel Cargar(Action<PlrCharacter> preparar)
     {
+        // Estos textos se comparan en español, y LocalizationService.Instance es un SINGLETON
+        // global de todo el proceso de test - cualquier otra clase de test que cambie el idioma
+        // y no lo devuelva deja a esta mintiendo (pasa de verdad: los tests de idioma de la
+        // Libreria lo dejaban en ingles y estos empezaban a fallar en la suite completa pero no
+        // aislados). Fijarlo aqui es lo unico que este fichero puede garantizar por si mismo.
+        Services.LocalizationService.Instance.SetLanguage(Services.LocalizationService.Spanish);
         var character = new PlrCharacter
         {
             Name = "Test",

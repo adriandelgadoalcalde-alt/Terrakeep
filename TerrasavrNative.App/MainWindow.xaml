@@ -72,9 +72,17 @@
                              contextual del slot, aqui tambien - el Content cambia de verdad
                              (★ lleno/vacio) para que el propio boton diga su estado sin tener
                              que leer un tooltip. -->
+                        <!-- OBJ-05 (oleada de Objetos, 6-sep-2026): la estrella solo se ofrece donde el
+                             .plr puede guardarla de verdad - Banco/Caja fuerte/Fragua/Mascotas/Tintes de
+                             montura NO llevan byte de favorito (Player.cs:55497-55499 del juego real
+                             escribe el banco con type+stack+prefix y nada mas), y los loadouts solo desde
+                             la version 322. Antes se ofrecia en los 4 sitios: el usuario la encendia, la
+                             veia marcada, guardaba, y al recargar habia desaparecido sin ningun aviso.
+                             Ver ItemSlotViewModel.SupportsFavorite. -->
                         <Button DockPanel.Dock="Right" Command="{Binding Slot.ToggleFavoriteCommand}"
                                 ToolTip="{Binding Loc[tt_toggle_favorite], Mode=OneWay}" Tag="Ghost" Padding="6,3" Margin="0,0,6,0"
-                                FontSize="12" VerticalAlignment="Center">
+                                FontSize="12" VerticalAlignment="Center"
+                                Visibility="{Binding Slot.SupportsFavorite, Converter={StaticResource BoolToVis}}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                     <Setter Property="Content" Value="&#9734;" />
@@ -362,9 +370,13 @@
                              punta (PlrBodySerializer) sin ningun camino para tocarlo desde la
                              App - IsCheckable refleja el estado real, IsEnabled=IsNotEmpty
                              porque un slot vacio no tiene nada que favoritar. -->
+                        <!-- OBJ-05: mismo criterio que el boton del panel Editar - donde el formato real
+                             no guarda favoritos, la opcion no se ofrece (ver ItemSlotViewModel.
+                             SupportsFavorite). -->
                         <MenuItem Header="{Binding Loc[label_favorite], Mode=OneWay}" Command="{Binding ToggleFavoriteCommand}"
                                   IsCheckable="True" IsChecked="{Binding IsFavorited, Mode=OneWay}"
-                                  IsEnabled="{Binding IsNotEmpty}" />
+                                  IsEnabled="{Binding IsNotEmpty}"
+                                  Visibility="{Binding SupportsFavorite, Converter={StaticResource BoolToVis}}" />
                         <MenuItem Header="{Binding Loc[action_empty_slot], Mode=OneWay}" Command="{Binding ClearCommand}" IsEnabled="{Binding IsNotEmpty}" />
                     </ContextMenu>
                 </Border.ContextMenu>
@@ -1292,7 +1304,7 @@
                                  la de Calamity porque es el hecho principal, y su ToolTip lleva la lista real de mods
                                  (usedMods del propio .tplr) cuando el fichero la trae. -->
                             <Border Background="{StaticResource AccentMutedBrush}" CornerRadius="3" Padding="5,1" Margin="0,0,5,4"
-                                    ToolTip="{Binding UsedModsTooltip, TargetNullValue='Personaje de tModLoader: tiene un archivo .tplr con datos de mods'}"
+                                    ToolTip="{Binding UsedModsTooltip}"
                                     Visibility="{Binding IsTModLoader, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="tModLoader" FontSize="10" Foreground="{StaticResource AccentHoverBrush}" FontWeight="SemiBold" />
                             </Border>
@@ -2668,11 +2680,20 @@
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
                                                 <TextBlock.Style>
+                                                    <!-- Ronda de Libreria/Builds del 6-sep-2026: los dos rotulos eran
+                                                         texto ESPAÑOL FIJO ("▲ Plegar"/"▼ Desplegar") desde que se
+                                                         creo la cabecera plegable - con la app en ingles se quedaban
+                                                         en español para siempre. No lo cazo A10-IDIOMA-BARRIDO
+                                                         porque su heuristica busca palabras funcionales españolas
+                                                         ("la", "de", "versión"...) y estos dos rotulos son una sola
+                                                         palabra sin ninguna. Un Binding SI vale dentro de un
+                                                         Setter.Value (se evalua contra el DataContext heredado, aqui
+                                                         MainViewModel, que ya expone Loc). -->
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="▲ Plegar" />
+                                                        <Setter Property="Text" Value="{Binding Loc[library_collapse], Mode=OneWay}" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsLibraryCollapsed}" Value="True">
-                                                                <Setter Property="Text" Value="▼ Desplegar" />
+                                                                <Setter Property="Text" Value="{Binding Loc[library_expand], Mode=OneWay}" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -2903,11 +2924,12 @@
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}">
                                                 <TextBlock.Style>
+                                                    <!-- Mismo arreglo real que su gemela de objetos (ver ahi el porque). -->
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="▲ Plegar" />
+                                                        <Setter Property="Text" Value="{Binding Loc[library_collapse], Mode=OneWay}" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsBuffLibraryCollapsed}" Value="True">
-                                                                <Setter Property="Text" Value="▼ Desplegar" />
+                                                                <Setter Property="Text" Value="{Binding Loc[library_expand], Mode=OneWay}" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -3390,8 +3412,20 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
                                     <StackPanel Margin="0,0,24,0">
                                         <TextBlock Text="{Binding Loc[appearance_difficulty], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
-                                        <ComboBox ItemsSource="{Binding Appearance.DifficultyLabels}" SelectedIndex="{Binding Appearance.Difficulty}"
-                                                  Width="120" Padding="6,4" />
+                                        <!-- Oleada del 6-sep-2026: los 4 nombres venian de un string[] fijo en
+                                             ingles (y con el nombre INTERNO "Softcore" en vez del "Classic"
+                                             real del juego). Se enumeran aqui con su clave de idioma en vez
+                                             de por ItemsSource a proposito: cambiar el ItemsSource entero al
+                                             vuelo deja SelectedIndex en -1 un instante, y este ComboBox
+                                             escribe ese indice de vuelta en Appearance.Difficulty (con su
+                                             entrada de Deshacer y su escritura al personaje). Con un binding
+                                             por item, cambiar de idioma solo repinta el texto. -->
+                                        <ComboBox SelectedIndex="{Binding Appearance.Difficulty}" Width="120" Padding="6,4">
+                                            <ComboBoxItem Content="{Binding Loc[difficulty_classic], Mode=OneWay}" />
+                                            <ComboBoxItem Content="{Binding Loc[difficulty_mediumcore], Mode=OneWay}" />
+                                            <ComboBoxItem Content="{Binding Loc[difficulty_hardcore], Mode=OneWay}" />
+                                            <ComboBoxItem Content="{Binding Loc[difficulty_journey], Mode=OneWay}" />
+                                        </ComboBox>
                                     </StackPanel>
                                     <StackPanel Margin="0,0,24,0">
                                         <TextBlock Text="{Binding Loc[appearance_health], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
@@ -4595,13 +4629,35 @@
                              1px entre el cuadro de busqueda y el contenido de la categoria. -->
                         <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource BorderBrush0}" Margin="0,8,0,0" />
 
+                        <!-- AR-EX1 (bug real medido, 6-sep-2026): la mitad de abajo de esta columna
+                             (contenido de la categoria + bloque de resultados) deja de ser
+                             "Dock=Bottom + el relleno" y pasa a ser un Grid de DOS filas que se
+                             reparten el hueco. Motivo real: un DockPanel sirve a su hijo Dock
+                             ENTERO y con su DesiredSize completo ANTES de dejarle nada al relleno -
+                             el bloque de resultados pide 363px medidos (dos casillas + resumen +
+                             botones + ListBox de 240), asi que con resultados abiertos al contenido
+                             de la categoria le quedaban 100px a 1400x900, 60px a 1180x860 (el
+                             tamaño POR DEFECTO de la app) y 30px a 1080x700: ni UNA fila de
+                             Cofres/Minerales/Objetos se veia entera. Misma familia de bug que AR-15
+                             (el Expander Dock=Bottom de "NPCs que faltan") y mismo arreglo ya
+                             demostrado alli: dos filas que reparten proporcionalmente (y por tanto
+                             nunca desbordan), con suelo propio para la categoria. La fila de
+                             resultados solo pide su parte cuando de verdad hay algo que enseñar
+                             (CountToGridLength: lista vacia -> Auto, no roba un solo pixel - que es
+                             el estado con el que se midio AR-11a y no debe cambiar). -->
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" MinHeight="120" />
+                                <RowDefinition Height="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToGridLength}, ConverterParameter=1.2}" />
+                            </Grid.RowDefinitions>
+
                         <!-- Bloque de resultados COMPARTIDO (distancia al spawn, resumen, ‹/›,
                              lista) - identico al que ya habia, solo oculto en NPCs (que muestra su
                              propia lista, NpcSearchResults, mas abajo).
                              P-2: Border con BgPrimaryBrush (un escalon POR DEBAJO del fondo de
                              panel) en vez de StackPanel a secas - "lo que ha salido" se lee de un
                              vistazo, frente a "lo que estoy pidiendo" (cuadro+pildoras de arriba). -->
-                        <Border x:Name="ExplorationResultsBlock" DockPanel.Dock="Bottom" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" Padding="10" Margin="0,8,0,0">
+                        <Border x:Name="ExplorationResultsBlock" Grid.Row="1" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" Padding="10" Margin="0,8,0,0">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Style.Triggers>
@@ -4611,13 +4667,29 @@
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
-                            <StackPanel>
+                            <!-- AR-EX1: Grid de filas en vez de StackPanel. Un StackPanel mide a
+                                 sus hijos con alto INFINITO, asi que este bloque pedia siempre sus
+                                 363px enteros y, cuando recibe menos (la fila proporcional de
+                                 arriba), lo que sobraba se recortaba en seco por abajo - primero la
+                                 lista de resultados. Con filas reales, todo lo fijo (avisos,
+                                 casillas, resumen, botones) conserva su sitio y es la LISTA la que
+                                 cede alto, que ya tiene scroll propio y no pierde nada. -->
+                            <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" MinHeight="70" />
+                            </Grid.RowDefinitions>
                             <!-- F-4 (auditoria Opus vs TEdit, E-02): el barrido del mundo (hasta
                                  20M de tiles) no avisaba de que estaba en marcha ni dejaba
                                  cancelarlo, pese a que _worldSearchCts ya existia entero por
                                  dentro. Mismo lenguaje visual que el overlay de carga del mapa
                                  (ProgressBar indeterminada + AccentBrush). -->
-                            <Grid Visibility="{Binding Exploration.IsSearching, Converter={StaticResource BoolToVis}}" Margin="0,6,0,0">
+                            <Grid Grid.Row="0" Visibility="{Binding Exploration.IsSearching, Converter={StaticResource BoolToVis}}" Margin="0,6,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
@@ -4627,12 +4699,12 @@
                                 <Button Grid.Column="1" Content="{Binding Loc[action_cancel], Mode=OneWay}" Tag="Ghost" Padding="8,2" Margin="8,0,0,0" FontSize="11"
                                         Command="{Binding Exploration.CancelWorldSearchCommand}" />
                             </Grid>
-                            <CheckBox Content="{Binding Loc[explore_sort_by_spawn_distance], Mode=OneWay}" IsChecked="{Binding Exploration.ShowSpawnDistance}"
+                            <CheckBox Grid.Row="1" Content="{Binding Loc[explore_sort_by_spawn_distance], Mode=OneWay}" IsChecked="{Binding Exploration.ShowSpawnDistance}"
                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,8,0,6"
                                       Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}" />
                             <!-- F-3 (auditoria Opus vs TEdit, E-12): apagada por defecto, igual que
                                  TEdit (AutoZoomOnNavigate, "Default false"). -->
-                            <CheckBox Content="{Binding Loc[explore_zoom_on_navigate], Mode=OneWay}" IsChecked="{Binding Exploration.AutoZoomOnNavigate}"
+                            <CheckBox Grid.Row="2" Content="{Binding Loc[explore_zoom_on_navigate], Mode=OneWay}" IsChecked="{Binding Exploration.AutoZoomOnNavigate}"
                                       ToolTip="{Binding Loc[explore_zoom_on_navigate_tooltip], Mode=OneWay}"
                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,6"
                                       Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}" />
@@ -4645,14 +4717,14 @@
                                  (EmptyToCollapsed) sin condicion de recuento - las flechas ‹/›
                                  siguen ligadas al recuento a proposito, navegar sin resultados no
                                  tiene sentido. -->
-                            <TextBlock Text="{Binding Exploration.WorldSearchSummary}" Style="{StaticResource CaptionText}"
+                            <TextBlock Grid.Row="3" Text="{Binding Exploration.WorldSearchSummary}" Style="{StaticResource CaptionText}"
                                        TextWrapping="Wrap" Margin="0,0,0,6"
                                        Visibility="{Binding Exploration.ShowCompactSummary, Converter={StaticResource BoolToVis}}" />
                             <!-- P-6 (auditoria Opus vs TEdit, cierra E-01 estetico): 0 resultados
                                  en "Todo" ya no es solo el CaptionText de 11px de arriba - mismo
                                  patron visual que el estado vacio de "sin mundo cargado"
                                  (:3665-3681 aprox., BodyText + sugerencia en CaptionText). -->
-                            <StackPanel x:Name="ZeroResultsPanel" HorizontalAlignment="Center" Margin="0,4,0,10"
+                            <StackPanel Grid.Row="4" x:Name="ZeroResultsPanel" HorizontalAlignment="Center" Margin="0,4,0,10"
                                         Visibility="{Binding Exploration.ShowZeroResultsState, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" TextAlignment="Center">
                                     <Run Text="{Binding Loc[explore_no_match_prefix], Mode=OneWay}" /><Run Text="{Binding Exploration.WorldSearchText, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="{Binding Loc[explore_no_match_suffix], Mode=OneWay}" />
@@ -4660,7 +4732,7 @@
                                 <TextBlock Text="{Binding Loc[explore_no_match_hint], Mode=OneWay}" Style="{StaticResource CaptionText}"
                                            TextWrapping="Wrap" TextAlignment="Center" Margin="0,4,0,0" />
                             </StackPanel>
-                            <Grid Margin="0,0,0,6"
+                            <Grid Grid.Row="5" Margin="0,0,0,6"
                                   Visibility="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToVis}}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -4684,7 +4756,7 @@
                                 <Button Grid.Column="3" Content="&#8250;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
                                         ToolTip="{Binding Loc[explore_next_result], Mode=OneWay}" Command="{Binding Exploration.NextWorldSearchResultCommand}" />
                             </Grid>
-                            <ListBox MaxHeight="240" ItemContainerStyle="{StaticResource VirtualRowContainer}"
+                            <ListBox Grid.Row="6" MaxHeight="240" ItemContainerStyle="{StaticResource VirtualRowContainer}"
                                      Background="Transparent" BorderThickness="0" Focusable="False"
                                      ScrollViewer.CanContentScroll="True"
                                      VirtualizingPanel.IsVirtualizing="True"
@@ -4753,14 +4825,16 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
-                            </StackPanel>
+                            </Grid>
                         </Border>
 
-                        <!-- Relleno: contenido especifico de cada categoria, superpuesto y con
-                             visibilidad exclusiva por SelectedCategory (DataTrigger de cadena -
-                             WPF convierte el texto al valor del enum solo con el TypeConverter
-                             nativo, sin falta ningun converter). -->
-                        <Grid x:Name="ExplorationCategoryContent">
+                        <!-- Contenido especifico de cada categoria, superpuesto y con visibilidad
+                             exclusiva por SelectedCategory (DataTrigger de cadena - WPF convierte
+                             el texto al valor del enum solo con el TypeConverter nativo, sin falta
+                             ningun converter). AR-EX1: fila 0 del Grid de reparto (antes era el
+                             relleno del DockPanel, que cobraba lo que sobrara del bloque de
+                             resultados - o sea 30px con resultados abiertos). -->
+                        <Grid x:Name="ExplorationCategoryContent" Grid.Row="0">
                             <!-- NPCs: chips + lista propia (ya existente) + "NPCs que faltan".
                                  Bug real reportado por el usuario probando la app (6-sep-2026): "la
                                  lista de NPCs que faltan SOLO se ve completa con la ventana a
@@ -5140,6 +5214,7 @@
                                          VirtualizingPanel.ScrollUnit="Pixel" />
                             </DockPanel>
                         </Grid>
+                        </Grid>
                     </DockPanel>
                     </ScrollViewer>
                 </Grid>
@@ -5240,7 +5315,7 @@
                     <TextBlock Text="{Binding Loc[settings_window_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
                     <CheckBox Content="{Binding Loc[settings_pin_window_label], Mode=OneWay}"
                               IsChecked="{Binding Settings.IsWindowSizePinned, Mode=OneWay}"
-                              Checked="OnPinWindowSizeChecked" Unchecked="OnPinWindowSizeUnchecked"
+                              Click="OnPinWindowSizeClick"
                               Margin="0,0,0,24"
                               ToolTip="{Binding Loc[settings_pin_window_tooltip], Mode=OneWay}" />
 
