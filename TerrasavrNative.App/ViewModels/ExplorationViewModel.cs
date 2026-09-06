@@ -112,6 +112,13 @@ public sealed partial class WorldInventoryRowViewModel(int id, short u, short v,
     public string CountLabel { get; } = veinCount.HasValue
         ? $"{count:N0} tiles · {veinCount.Value:N0} veta{(veinCount.Value == 1 ? "" : "s")}"
         : $"{count:N0}";
+    // "Cofres/Por tipo de cofre" es la unica vista que puede construir una fila con Id negativo:
+    // el Id de esas filas es el TYPE del tile que respalda al cofre, y -1 significa "casilla
+    // vacia en el .wld" = cofre de un mod (ver ExplorationViewModel.ChestKindName). En el resto
+    // de vistas el Id es un id de tile/pared/liquido o un NetId, siempre >= 0. Lo usa la plantilla
+    // para dar a esa fila el tooltip que EXPLICA por que no tiene nombre propio, en vez del
+    // generico de "buscar en el mapa".
+    public bool IsModdedChest { get; } = id < 0;
     // C-04 (informe de pulido final, cierra E6/E7): el tick pasa a significar "muestralo en el
     // mapa" - quien construye la fila (Minerales/Objetos) se suscribe para relanzar el marcado
     // con debounce (ExplorationViewModel._highlightDebounceTimer), sin que esta fila generica
@@ -202,8 +209,12 @@ public sealed class ChestContentItemViewModel(int netId, string name, int stack,
 // C-06: una fila real de la vista "Cofre a cofre" - _world.Chests, uno por cofre real del mundo
 // (no agrupado por variante ni por contenido, al contrario que los otros dos modos de
 // ChestViewMode). IsExpanded controla si Items se ve o no (desplegable real al pulsar la fila).
-public sealed partial class ChestRowViewModel(string variantName, string? chestName, int x, int y, string? iconPath, IReadOnlyList<ChestContentItemViewModel> items) : ObservableObject
+public sealed partial class ChestRowViewModel(string variantName, string? chestName, int x, int y, string? iconPath, IReadOnlyList<ChestContentItemViewModel> items, bool isModdedChest = false) : ObservableObject
 {
+    // Gemelo real de WorldInventoryRowViewModel.IsModdedChest: el cofre esta sobre una casilla que
+    // el .wld guarda vacia porque su tile es de un mod (ver ExplorationViewModel.ChestKindName) -
+    // la plantilla le da el tooltip que lo explica en vez del generico.
+    public bool IsModdedChest { get; } = isModdedChest;
     // Bloque de idioma (pedido explicito del usuario, 5-sep-2026): esta clase se usa como DataContext dentro de una plantilla/menu/tooltip (ContextMenu y ToolTip son popups, no alcanzables con RelativeSource AncestorType=Window) - exponer Loc aqui directamente, igual que MainViewModel, evita esa complicacion: {Binding Loc[clave]} se resuelve contra ESTE objeto sin ningun truco de RelativeSource/PlacementTarget.
     public Services.LocalizationService Loc => Services.LocalizationService.Instance;
 
@@ -216,6 +227,14 @@ public sealed partial class ChestRowViewModel(string variantName, string? chestN
     public string? IconPath { get; } = iconPath;
     public IReadOnlyList<ChestContentItemViewModel> Items { get; } = items;
     public int ItemCount { get; } = items.Count;
+    // Bug real encontrado midiendo la fila con el arnes (AR-13a, 6-sep-2026): la plantilla de
+    // "Cofre a cofre" lleva desde C-06 un TextBlock con Text="{Binding ItemCountLabel}" y esta
+    // clase NUNCA ha tenido esa propiedad - un binding a un nombre que no existe no da ningun
+    // error visible en WPF, simplemente deja el TextBlock vacio, asi que "cuantos objetos lleva
+    // dentro" no se ha visto jamas en esa lista (el arnes lo canto porque al medir los textos
+    // reales de la fila solo aparecia uno). Misma clave de idioma que ya usa el arbol de la
+    // Libreria para lo mismo (CategoryNodeViewModel.ItemCountLabel).
+    public string ItemCountLabel { get; } = Services.LocalizationService.Instance.Format("label_item_count", items.Count);
     [ObservableProperty] private bool _isExpanded;
     // Mismo filtro por nombre/id ya establecido (ApplyInventoryFilter) - por variante, nombre
     // propio del cofre o cualquier objeto real de dentro.
@@ -574,12 +593,16 @@ public partial class ExplorationViewModel : ObservableObject
     {
         Inventory.Clear();
         ChestRows.Clear();
+        // La lista se rehace entera, asi que ninguna fila conserva IsCurrent - el marcador del
+        // mapa tiene que apagarse con ella o se quedaria señalando un cofre que ya no esta
+        // seleccionado en ninguna parte (mismo criterio que ClearOreMarks con WorldSearchResults).
+        HasCurrentChest = false;
         if (_world == null || _presence == null) return;
         if (ChestViewMode == 0)
         {
             foreach (var ((type, u, v), count) in _presence.ChestKindCounts.OrderByDescending(kv => kv.Value))
-                Inventory.Add(new WorldInventoryRowViewModel(type, u, v, _tileNames.TileVariantName(type, u, v), count, null,
-                    TileIconResolver.GetIconPath(type, u, v), ToWpfColor(_mapColors.TileColor(type))));
+                Inventory.Add(new WorldInventoryRowViewModel(type, u, v, ChestKindName(type, u, v), count, null,
+                    TileIconResolver.GetIconPath(type, u, v), ToWpfColor(_mapColors.TileColor(ChestSwatchType(type)))));
         }
         else if (ChestViewMode == 2)
         {
@@ -610,6 +633,37 @@ public partial class ExplorationViewModel : ObservableObject
         }
         ApplyInventoryFilter();
     }
+
+    // Bug real reportado por el usuario (6-sep-2026, captura de "Por tipo de cofre" sobre el mundo
+    // real "Afueras de Larvas de gusano"): entre "Cofre de oro 184" y "Cofre de agua 43" salia una
+    // fila **"Tile #-1" con 51 cofres**. -1 no es ningun id de tile: es el valor con el que este
+    // puerto marca "casilla vacia" (WldTile.Type, "-1 si el tile no esta activo").
+    //
+    // Causa real, confirmada en el codigo de tModLoader y midiendo el mundo:
+    //   - WorldPresenceIndex.Build agrupa cada cofre por el tile que hay en chest.X/Y. Para 51 de
+    //     los 560 cofres de ese mundo ese tile esta VACIO en el .wld.
+    //   - No es un fallo del lector: tModLoader escribe el .wld a proposito asi. En
+    //     tModLoader-Decompiled\tModLoader\Terraria\IO\WorldFile.cs:1425 la condicion que decide
+    //     si un tile se guarda como activo es `if (tile.active() && tile.type < TileID.Count)` -
+    //     un tile de MOD (type >= TileID.Count) se escribe como aire para que el .wld siga siendo
+    //     legible por Terraria vanilla, y su tipo real viaja aparte, en el .twld
+    //     (TileIO.IOImpl.WriteData, secciones "tileMap"/"tileData").
+    //   - Comprobado en el .twld real de ese mundo (gzip + volcado de la seccion "tileMap"): trae
+    //     ModTiles de CalamityMod y entre ellos cofres reales - AbyssTreasureChest, RustyChestTile,
+    //     AstralChestLocked, SecurityChestTile, AshenChest, VoidChest...
+    //
+    // O sea: son cofres REALES de Calamity, y su contenido (que si vive en el .wld, en la seccion
+    // de cofres) se lee entero y correcto. Lo unico que no se puede saber sin leer el .twld es
+    // QUE cofre de Calamity es cada uno. Se dice eso, con un nombre real y un tooltip que lo
+    // explica, en vez de un "Tile #-1" que no significa nada para nadie.
+    private string ChestKindName(int type, short u, short v) =>
+        type < 0 ? LocalizationService.Instance["explore_chest_modded"] : _tileNames.TileVariantName(type, u, v);
+
+    // El swatch de respaldo de una fila de cofre de mod: el color real del cofre (tile 21) en la
+    // paleta del mapa, no el del "tile -1" (que no existe en la paleta y saldria en el color de
+    // relleno por defecto). No inventa ningun sprite - IconPath sigue siendo null para esa fila,
+    // asi que se ve el cuadradito, no un cofre de madera que no es.
+    private static int ChestSwatchType(int type) => type < 0 ? 21 : type;
 
     // ESPEC-ui-exploracion.md#11: tres grupos (Minerales/Gemas/Otros objetivos), solo los
     // presentes (_presence.HasTile). El recuento de VETAS usa CountVeinsByType con TODOS los
@@ -746,10 +800,18 @@ public partial class ExplorationViewModel : ObservableObject
         if (_world == null) return;
         int sx = _world.Header.SpawnX, sy = _world.Header.SpawnY;
         double Dist(WldChest c) => Math.Sqrt(Math.Pow(c.X - sx, 2) + Math.Pow(c.Y - sy, 2));
+        int w = _world.Header.TilesWide, h = _world.Header.TilesHigh;
         foreach (var chest in _world.Chests.OrderBy(Dist))
         {
-            var tile = _world.Tiles[chest.X, chest.Y];
-            string variantName = _tileNames.TileVariantName(tile.Type, tile.U, tile.V);
+            // Mismo recorte de limites que ya hace WorldPresenceIndex.Build antes de mirar la
+            // casilla de un cofre: un chest.X/Y fuera del mundo (archivo corrupto o recortado por
+            // un redimensionado ajeno) reventaba la vista entera con IndexOutOfRange.
+            var tile = chest.X >= 0 && chest.X < w && chest.Y >= 0 && chest.Y < h
+                ? _world.Tiles[chest.X, chest.Y]
+                : WldTile.Empty;
+            // Mismo arreglo real que "Por tipo de cofre" (ver ChestKindName): los cofres de mod
+            // llegan aqui con la casilla vacia y salian como "Tile #-1".
+            string variantName = ChestKindName(tile.Type, tile.U, tile.V);
             string? iconPath = TileIconResolver.GetIconPath(tile.Type, tile.U, tile.V);
             // Casillas vacias reales de un cofre parcialmente lleno tienen NetId=0 - se
             // descartan, mismo criterio que "Por lo que contienen" (ChestItemCounts solo cuenta
@@ -759,7 +821,7 @@ public partial class ExplorationViewModel : ObservableObject
                 string? prefixName = it.Prefix != 0 ? _prefixNames.ById(it.Prefix)?.Es ?? _prefixNames.ById(it.Prefix)?.En : null;
                 return new ChestContentItemViewModel(it.NetId, _itemNames.GetName(it.NetId), it.Stack, prefixName, VanillaIconResolver.GetIconPath(it.NetId));
             }).ToList();
-            ChestRows.Add(new ChestRowViewModel(variantName, chest.Name, chest.X, chest.Y, iconPath, items));
+            ChestRows.Add(new ChestRowViewModel(variantName, chest.Name, chest.X, chest.Y, iconPath, items, tile.Type < 0));
         }
     }
 
@@ -776,10 +838,31 @@ public partial class ExplorationViewModel : ObservableObject
         // marcado aunque se repliegue (sigue siendo el ultimo al que se navego, igual que un
         // resultado de busqueda sigue resaltado tras volver a pulsarlo).
         foreach (var fila in ChestRows) fila.IsCurrent = ReferenceEquals(fila, chest);
+        // Bug real reportado por el usuario (6-sep-2026, captura): "con 'Acercar al seleccionar un
+        // cofre' marcada, al seleccionar un cofre el mapa no lo marca de forma que se distinga - he
+        // tenido que pasar el raton a mano por encima para encontrarlo". Causa real: el mapa dibuja
+        // marcadores desde UNA sola coleccion, WorldSearchResults (MainWindow.xaml:4061, el marco
+        // teal que ademas crece a 24px y hace un pulso cuando IsCurrent) - y "Cofre a cofre" es la
+        // unica vista con su propia lista (ChestRows), que no aparece en ninguna capa del mapa. El
+        // desplazamiento y el zoom SI ocurrian (NavigateToTile de aqui abajo), pero sin ninguna
+        // marca sobre el mapa no habia forma de ver a que se habia navegado.
+        //
+        // Un marcador propio para el cofre actual (una sola posicion, no las 560 filas) - mismo
+        // lenguaje visual que el resultado "actual" de la busqueda, y se apaga al cerrar/cambiar.
+        CurrentChestX = chest.TileX;
+        CurrentChestY = chest.TileY;
+        HasCurrentChest = true;
         // Punto 4 del encargo (6-sep-2026): "Cofre a cofre" tiene su PROPIA casilla de acercar,
         // independiente de la global que comparten las demas secciones.
         NavigateToTile(chest.TileX, chest.TileY, AutoZoomOnChestNavigate);
     }
+
+    // Marcador real del cofre seleccionado en "Cofre a cofre" (ver GoToChest). Coordenadas de
+    // TILE, mismo espacio que Canvas.Left/Top de las demas capas del mapa (NPCs, spawns,
+    // resultados de busqueda).
+    [ObservableProperty] private int _currentChestX;
+    [ObservableProperty] private int _currentChestY;
+    [ObservableProperty] private bool _hasCurrentChest;
 
     // Clic simple sobre una fila de inventario - busca SOLO esa (el caso comun no debe costar
     // dos gestos, ESPEC-ui-exploracion.md#9.3-C). Cofres/Objetos usan TileTypes a secas salvo
@@ -901,6 +984,11 @@ public partial class ExplorationViewModel : ObservableObject
         _lastWorldSearchRows = [];
         _worldSearchCurrentIndex = -1;
         WorldSearchSummary = string.Empty;
+        // "Cerrar" es el unico gesto real de "quita lo que hay marcado en el mapa" y este boton lo
+        // comparten las 5 categorias - tiene que llevarse tambien el marcador del cofre de
+        // "Cofre a cofre" (ver GoToChest), o quedaria un marco teal suelto que nada apaga.
+        HasCurrentChest = false;
+        foreach (var fila in ChestRows) fila.IsCurrent = false;
     }
 
     // C-04: el tick de CUALQUIER fila de Minerales/Objetos pasa a significar "muestralo en el

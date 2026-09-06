@@ -1379,10 +1379,24 @@
                      existe. -->
                 <CheckBox Grid.Column="0" IsChecked="{Binding IsChecked}" VerticalAlignment="Center" Margin="0,0,6,0"
                           ToolTip="{Binding Loc[tt_check_for_bulk_action], Mode=OneWay}" />
-                <Button Grid.Column="1" Style="{StaticResource RowClickButton}" HorizontalContentAlignment="Stretch"
-                        ToolTip="{Binding Loc[tt_search_on_map], Mode=OneWay}"
+                <Button Grid.Column="1" HorizontalContentAlignment="Stretch"
                         Command="{Binding DataContext.Exploration.SearchInventoryRowCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                         CommandParameter="{Binding}">
+                    <!-- La fila de "Cofre de un mod" (la unica con Id negativo, ver
+                         WorldInventoryRowViewModel.IsModdedChest) lleva el tooltip que EXPLICA por
+                         que no tiene nombre propio - el resto sigue con el generico de siempre.
+                         Style con BasedOn en vez de un atributo ToolTip suelto para que las dos
+                         opciones sigan siendo {Binding Loc[...]} y cambien de idioma en caliente. -->
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource RowClickButton}">
+                            <Setter Property="ToolTip" Value="{Binding Loc[tt_search_on_map], Mode=OneWay}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsModdedChest}" Value="True">
+                                    <Setter Property="ToolTip" Value="{Binding Loc[explore_chest_modded_tooltip], Mode=OneWay}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
                     <!-- P-7 (auditoria Opus vs TEdit): "TEdit muestra el id siempre en gris a la
                          derecha - Terrakeep ya permite buscar y filtrar por id pero no enseña
                          ninguno, el usuario no puede saber que numero escribir". DockPanel en vez
@@ -1419,12 +1433,32 @@
                                 </Border.Background>
                             </Border>
                         </Grid>
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding Id, StringFormat='[{0}]'}" Style="{StaticResource CaptionText}"
-                                   VerticalAlignment="Center" Margin="6,0,0,0" />
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding CountLabel}" Style="{StaticResource CaptionText}" />
+                        <!-- Bug real reportado por el usuario (6-sep-2026, captura de Cofres): "se
+                             sigue perdiendo contenido, mira todo el espacio que hay vacio para
+                             mostrar los nombres de los cofres... que se revise eso para TODAS las
+                             pestañas de Exploracion".
+                             Como estaba: nombre y recuento APILADOS a la izquierda (StackPanel
+                             vertical) y solo el id a la derecha. El recuento real ("184", "45") es
+                             de 2-4 caracteres y se comia una linea entera de ancho, mientras que
+                             desde el final del nombre hasta el id quedaba una franja vacia de mas
+                             de la mitad de la columna - y el nombre, con TextTrimming, se cortaba
+                             con puntos suspensivos aunque ese hueco estuviera ahi al lado sin usar.
+                             Ahora: recuento e id APILADOS a la DERECHA (justo el hueco que sobraba,
+                             y son los dos datos numericos, que se leen mejor alineados), y el
+                             nombre se lleva TODO el resto con TextWrapping en vez de recortarse -
+                             si de verdad no cabe, crece a una segunda linea, que es exactamente el
+                             alto que antes ocupaba el recuento. Mismo criterio en las 5 categorias.
+                             El MaxWidth del bloque derecho es la garantia real de que el nombre
+                             conserva su sitio: el CountLabel de Minerales ("86.200 tiles · 6.738
+                             vetas") es largo, y sin tope se llevaria media fila. -->
+                        <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" MaxWidth="96" Margin="8,0,0,0">
+                            <TextBlock Text="{Binding CountLabel}" Style="{StaticResource BodyText}"
+                                       TextAlignment="Right" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Id, StringFormat='[{0}]'}" Style="{StaticResource CaptionText}"
+                                       TextAlignment="Right" />
                         </StackPanel>
+                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" TextWrapping="Wrap"
+                                   VerticalAlignment="Center" />
                     </DockPanel>
                 </Button>
             </Grid>
@@ -1459,10 +1493,21 @@
                     </Style>
                 </Border.Style>
                 <StackPanel>
-                    <Button Style="{StaticResource RowClickButton}" HorizontalContentAlignment="Stretch" Padding="8"
-                            ToolTip="{Binding Loc[tt_goto_map_toggle_contents], Mode=OneWay}"
+                    <Button HorizontalContentAlignment="Stretch" Padding="8"
                             Command="{Binding DataContext.Exploration.GoToChestCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             CommandParameter="{Binding}">
+                        <!-- Mismo criterio que InventoryRowTemplate: el cofre sobre una casilla de
+                             mod lleva el tooltip que lo explica, el resto el generico. -->
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource RowClickButton}">
+                                <Setter Property="ToolTip" Value="{Binding Loc[tt_goto_map_toggle_contents], Mode=OneWay}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsModdedChest}" Value="True">
+                                        <Setter Property="ToolTip" Value="{Binding Loc[explore_chest_modded_tooltip], Mode=OneWay}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
                         <DockPanel LastChildFill="True">
                             <Grid DockPanel.Dock="Left" Width="26" Height="26" Margin="0,0,7,0" VerticalAlignment="Center">
                                 <Image Source="{Binding IconPath}" Stretch="Uniform" StretchDirection="DownOnly"
@@ -1470,19 +1515,26 @@
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                             </Grid>
-                            <TextBlock DockPanel.Dock="Right" Text="{Binding ItemCountLabel, Mode=OneWay}"
-                                       Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
-                                       VerticalAlignment="Center" Margin="8,0,0,0" />
+                            <!-- Mismo reparto que las otras 4 categorias (ver el comentario largo de
+                                 InventoryRowTemplate): datos numericos apilados a la derecha - aqui,
+                                 cuantos objetos lleva dentro y las coordenadas, que es lo que se
+                                 compara de fila a fila - y el nombre con TODO el ancho restante y
+                                 TextWrapping en vez de recortarse con puntos suspensivos. -->
+                            <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" MaxWidth="96" Margin="8,0,0,0">
+                                <TextBlock Text="{Binding ItemCountLabel, Mode=OneWay}"
+                                           Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
+                                           TextAlignment="Right" TextWrapping="Wrap" />
+                                <TextBlock Style="{StaticResource CaptionText}" TextAlignment="Right">
+                                    <Run Text="(" /><Run Text="{Binding TileX, Mode=OneWay}" /><Run Text=", " /><Run Text="{Binding TileY, Mode=OneWay}" /><Run Text=")" />
+                                </TextBlock>
+                            </StackPanel>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding VariantName}" Style="{StaticResource BodyText}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding VariantName}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
                                 <!-- WldChest.Name - el nombre propio del cofre, si el jugador se lo puso -
                                      antes no se mostraba en NINGUN sitio de la app (C-19). -->
                                 <TextBlock Text="{Binding ChestName}" Style="{StaticResource CaptionText}" FontStyle="Italic"
-                                           TextTrimming="CharacterEllipsis"
+                                           TextWrapping="Wrap"
                                            Visibility="{Binding ChestName, Converter={StaticResource NullToVis}}" />
-                                <TextBlock Style="{StaticResource CaptionText}">
-                                    <Run Text="(" /><Run Text="{Binding TileX, Mode=OneWay}" /><Run Text=", " /><Run Text="{Binding TileY, Mode=OneWay}" /><Run Text=")" />
-                                </TextBlock>
                             </StackPanel>
                         </DockPanel>
                     </Button>
@@ -4051,6 +4103,30 @@
                                                 </TextBlock.Effect>
                                             </TextBlock>
                                         </Canvas>
+                                        <!-- Bug real reportado por el usuario (6-sep-2026, captura): en
+                                             "Cofre a cofre", con la casilla de acercar marcada, al
+                                             seleccionar un cofre el mapa NO lo marcaba de forma que se
+                                             distinguiera - hubo que buscarlo a mano con el raton. Causa
+                                             real: la capa de marcadores de aqui abajo se alimenta SOLO de
+                                             WorldSearchResults, y "Cofre a cofre" es la unica vista con su
+                                             propia lista (ChestRows), que no aparecia en ninguna capa del
+                                             mapa. Un marcador para el cofre actual (uno solo, no las
+                                             cientos de filas de la lista), con el MISMO lenguaje visual que
+                                             el resultado activo de la busqueda: marco teal hueco de 24px y
+                                             tamaño constante en pantalla via ScaleTransform inverso al
+                                             Zoom, igual que sus vecinos. -->
+                                        <Canvas IsHitTestVisible="False">
+                                            <Rectangle x:Name="CurrentChestMarker" Width="24" Height="24" Margin="-12,-12,0,0"
+                                                       Stroke="{StaticResource TealBrush}" StrokeThickness="2.5" Fill="Transparent"
+                                                       Canvas.Left="{Binding Exploration.CurrentChestX}" Canvas.Top="{Binding Exploration.CurrentChestY}"
+                                                       Visibility="{Binding Exploration.HasCurrentChest, Converter={StaticResource BoolToVis}}"
+                                                       Panel.ZIndex="4" RenderTransformOrigin="0.5,0.5">
+                                                <Rectangle.RenderTransform>
+                                                    <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
+                                                                    ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
+                                                </Rectangle.RenderTransform>
+                                            </Rectangle>
+                                        </Canvas>
                                         <!-- Punto 4 (feedback del usuario, "buscador de todo tipo de
                                              objetos del mundo") - Fase 1 de ESPEC-buscador-mundo-tedit.md
                                              (advisor Opus): capa de marcadores WPF por encima del mapa en
@@ -4591,8 +4667,19 @@
                                      ItemsSource="{Binding Exploration.WorldSearchResults}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:WorldSearchHitRowViewModel}">
-                                            <Button Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,5"
-                                                    HorizontalContentAlignment="Stretch" Cursor="Hand"
+                                            <!-- Bug real medido con el arnes (AR-13a, 6-sep-2026): este Button
+                                                 declaraba HorizontalContentAlignment="Stretch" y NUNCA se le
+                                                 aplicaba - sin Style propio caia en el estilo implicito de Button
+                                                 del tema, cuyo ControlTemplate tiene
+                                                 <ContentPresenter HorizontalAlignment="Center"> FIJO
+                                                 (Styles/Theme.xaml:277), no {TemplateBinding
+                                                 HorizontalContentAlignment}. Resultado medido: la fila entera se
+                                                 quedaba CENTRADA en 182px de los 281 reales, con 49px muertos a
+                                                 cada lado - el "espacio vacio" que reporto el usuario, aqui por una
+                                                 causa distinta a la de Cofres. RowClickButton es el estilo que este
+                                                 fichero ya usa para toda fila clicable y si respeta el Stretch. -->
+                                            <Button Style="{StaticResource RowClickButton}" Background="Transparent" Padding="0" Margin="0,0,0,5"
+                                                    HorizontalContentAlignment="Stretch"
                                                     ToolTip="{Binding Loc[explore_goto_position], Mode=OneWay}"
                                                     Command="{Binding DataContext.Exploration.GoToWorldSearchHitCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}">
@@ -4607,18 +4694,33 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <StackPanel>
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
-                                                            <Border Background="{Binding KindColor}" CornerRadius="99" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
-                                                                <TextBlock Text="{Binding KindLabel}" FontSize="9.5" Foreground="White" />
-                                                            </Border>
+                                                    <!-- Mismo reparto horizontal que las otras 4 categorias (ver el
+                                                         comentario largo de InventoryRowTemplate, 6-sep-2026): antes
+                                                         eran tres lineas apiladas a la izquierda (nombre+chip /
+                                                         posicion / distancia) con toda la mitad derecha vacia, y el
+                                                         nombre encima medido dentro de un StackPanel Horizontal, que
+                                                         mide a sus hijos con ancho INFINITO - un nombre largo se salia
+                                                         de la fila y lo recortaba el Border, sin puntos suspensivos ni
+                                                         nada que avisara. Ahora: posicion y distancia a la derecha
+                                                         (los dos datos numericos, alineados y comparables de fila a
+                                                         fila), y nombre+chip a la izquierda con el resto del ancho -
+                                                         DockPanel de verdad, asi que el nombre SI se mide con el ancho
+                                                         real y envuelve en vez de desbordarse. -->
+                                                    <DockPanel LastChildFill="True">
+                                                        <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" MaxWidth="104" Margin="8,0,0,0">
+                                                            <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}"
+                                                                       TextAlignment="Right" TextWrapping="Wrap" />
+                                                            <TextBlock Text="{Binding DistanceLabel}" Style="{StaticResource CaptionText}"
+                                                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="10.5"
+                                                                       TextAlignment="Right" TextWrapping="Wrap"
+                                                                       Visibility="{Binding DistanceLabel, Converter={StaticResource NullToVis}}" />
                                                         </StackPanel>
-                                                        <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
-                                                        <TextBlock Text="{Binding DistanceLabel}" Style="{StaticResource CaptionText}"
-                                                                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="10.5"
-                                                                   Visibility="{Binding DistanceLabel, Converter={StaticResource NullToVis}}" />
-                                                    </StackPanel>
+                                                        <Border DockPanel.Dock="Right" Background="{Binding KindColor}" CornerRadius="99" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding KindLabel}" FontSize="9.5" Foreground="White" />
+                                                        </Border>
+                                                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}"
+                                                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                    </DockPanel>
                                                 </Border>
                                             </Button>
                                         </DataTemplate>
@@ -4683,26 +4785,43 @@
                                     <ItemsControl ItemsSource="{Binding Exploration.NpcSearchResults}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type vm:WorldNpcRowViewModel}">
-                                                <Button Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,5"
-                                                        HorizontalContentAlignment="Stretch" Cursor="Hand"
+                                                <!-- Mismo bug real que la fila de resultados (AR-13a): sin Style
+                                                     propio, el estilo implicito de Button centra el contenido y se
+                                                     come el Stretch declarado - medido, 32px muertos a cada lado de
+                                                     una fila de 303px. -->
+                                                <Button Style="{StaticResource RowClickButton}" Background="Transparent" Padding="0" Margin="0,0,0,5"
+                                                        HorizontalContentAlignment="Stretch"
                                                         ToolTip="{Binding Loc[explore_goto_position], Mode=OneWay}"
                                                         Command="{Binding DataContext.Exploration.GoToNpcCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                         CommandParameter="{Binding}">
                                                     <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="5" Padding="8,5">
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <Image Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
+                                                        <!-- Mismo reparto horizontal que las otras 4 categorias (ver el
+                                                             comentario largo de InventoryRowTemplate, 6-sep-2026). Esta
+                                                             era ademas la peor de las cinco: un StackPanel Horizontal
+                                                             mide a sus hijos con ancho INFINITO, asi que la columna del
+                                                             texto ni siquiera sabia cuanto sitio tenia - un nombre de NPC
+                                                             largo se salia de la fila y lo recortaba el Border en seco.
+                                                             DockPanel real: icono a la izquierda, posicion+profundidad a
+                                                             la derecha (el hueco que estaba vacio), nombre con el resto
+                                                             y envolviendo. -->
+                                                        <DockPanel LastChildFill="True">
+                                                            <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
+                                                                   VerticalAlignment="Center"
                                                                    Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                                                            <StackPanel>
-                                                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" />
-                                                                <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}" />
+                                                            <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" MaxWidth="104" Margin="8,0,0,0">
+                                                                <TextBlock Text="{Binding Position}" Style="{StaticResource CaptionText}"
+                                                                           TextAlignment="Right" TextWrapping="Wrap" />
                                                                 <!-- Punto 4: profundidad real escrita, solo si esta bajo tierra -
                                                                      "(3200, 1450)" no le dice nada a nadie, "412 tiles bajo el
                                                                      suelo" si. -->
                                                                 <TextBlock Text="{Binding DepthLabel}" Style="{StaticResource CaptionText}"
                                                                            Foreground="{StaticResource TealBrush}" FontSize="10.5"
+                                                                           TextAlignment="Right" TextWrapping="Wrap"
                                                                            Visibility="{Binding DepthLabel, Converter={StaticResource NullToVis}}" />
                                                             </StackPanel>
-                                                        </StackPanel>
+                                                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}"
+                                                                       TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                        </DockPanel>
                                                     </Border>
                                                 </Button>
                                             </DataTemplate>
@@ -4745,21 +4864,51 @@
                                      este fichero para las pildoras de categoria: un TextBlock hijo
                                      explicito, aqui con Wrap real - el chip crece a dos lineas en
                                      vez de comerse el texto. -->
+                                <!-- Tercer punto del encargo del 6-sep-2026 (el usuario, sobre la
+                                     lista de Cofres: "se han colado paradores"): eran los
+                                     APARADORES (tile 88, "Aparador de obsidiana" en el mundo real
+                                     de la captura). No es ningun fallo de clasificacion: en
+                                     Terraria un aparador es una entrada mas de la lista de cofres
+                                     del mundo - WorldGen.PlaceDresserDirect llama a
+                                     Chest.CreateChest igual que PlaceChestDirect
+                                     (TerrariaVanilla\Terraria\WorldGen.cs:58373 y :58338), y lo
+                                     mismo pasa con barriles y papeleras, que son frames del propio
+                                     tile 21. Esconderlos seria perder contenedores REALES con
+                                     objetos dentro; lo que faltaba era decir que cuenta como
+                                     "cofre" aqui, y eso cabe en el tooltip de los tres chips sin
+                                     robarle ni un pixel de alto a la columna (AR-11f mide que a
+                                     1180x860 no aparezca barra de scroll). -->
                                 <UniformGrid x:Name="ChestModeSelector" DockPanel.Dock="Top" Columns="3" Margin="0,0,0,8">
                                     <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Margin="0,0,3,0"
+                                                 ToolTip="{Binding Loc[explore_chests_kinds_tooltip], Mode=OneWay}"
                                                  IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}">
                                         <TextBlock Text="{Binding Loc[explore_chests_by_type], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
                                     </RadioButton>
                                     <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Margin="3,0,3,0"
+                                                 ToolTip="{Binding Loc[explore_chests_kinds_tooltip], Mode=OneWay}"
                                                  IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}">
                                         <TextBlock Text="{Binding Loc[explore_chests_by_contents], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
                                     </RadioButton>
                                     <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Margin="3,0,0,0"
+                                                 ToolTip="{Binding Loc[explore_chests_kinds_tooltip], Mode=OneWay}"
                                                  IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}">
                                         <TextBlock Text="{Binding Loc[explore_chests_one_by_one], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
                                     </RadioButton>
                                 </UniformGrid>
 
+                                <!-- Bug real de maquetacion encontrado midiendo la fila con el arnes
+                                     (AR-13a, 6-sep-2026, y la causa de fondo de "mira todo el
+                                     espacio que hay vacio para mostrar los nombres de los cofres"):
+                                     estos dos paneles de modo eran hermanos DIRECTOS del DockPanel
+                                     de la categoria, y un DockPanel solo estira a su ULTIMO hijo
+                                     (LastChildFill). El ultimo era el de "Cofre a cofre", asi que
+                                     el de "Por tipo"/"Por lo que contienen" se colocaba como
+                                     Dock=Left con su ancho DESEADO: 150px medidos de una columna de
+                                     298 - la mitad exacta de la barra lateral, vacia, y los nombres
+                                     de cofre apretados en la otra mitad. Un Grid contenedor (mismo
+                                     patron que ExplorationCategoryContent, que ya superpone asi las
+                                     5 categorias) estira a TODOS sus hijos, no solo al ultimo. -->
+                                <Grid>
                                 <!-- Modos 0/1: la lista generica de siempre. -->
                                 <DockPanel>
                                     <DockPanel.Style>
@@ -4817,6 +4966,7 @@
                                              VirtualizingPanel.VirtualizationMode="Recycling"
                                              VirtualizingPanel.ScrollUnit="Pixel" />
                                 </DockPanel>
+                                </Grid>
                             </DockPanel>
 
                             <!-- Minerales: inventario en 3 grupos con cabecera + marcado en el mapa

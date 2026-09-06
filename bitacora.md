@@ -9678,3 +9678,146 @@ Leccion general: **todo bloque del arnes que cambie una seleccion persistida en 
 tiene que restaurarla**, o contamina no solo el resto de SU ejecucion sino la siguiente entera.
 
 No hubo ningun obstaculo que fallara dos veces seguidas.
+
+---
+
+## 6-sep-2026 - Cofres: "Tile #-1" eran cofres de Calamity, y media columna estaba en blanco
+
+Segunda ronda sobre el panel derecho de Exploracion, con captura real del usuario (mundo
+"Afueras de Larvas de gusano", Cofres -> "Por tipo de cofre"). Cuatro quejas, cuatro causas
+DISTINTAS, todas reales y todas encontradas en codigo o midiendo, ninguna a ojo.
+
+### 1. `Tile #-1` con 51 apariciones: cofres de Calamity, no un bug del lector
+
+`-1` no es ningun id de tile: es el valor con el que este puerto marca "casilla vacia"
+(`WldTile.Type`, "-1 si el tile no esta activo"). `WorldPresenceIndex.Build` agrupa cada cofre por
+el tile que hay en `chest.X/Y`, y para 51 de los 560 cofres de ese mundo ese tile esta VACIO.
+
+**No es un fallo del lector: tModLoader escribe el `.wld` asi a proposito.**
+`tModLoader-Decompiled\tModLoader\Terraria\IO\WorldFile.cs:1425` decide si un tile se guarda como
+activo con `if (tile.active() && tile.type < TileID.Count)` - un tile de MOD (`type >=
+TileID.Count`) se escribe como aire para que el `.wld` siga siendo legible por Terraria vanilla, y
+su tipo real viaja aparte, en el `.twld` (`TileIO.IOImpl.WriteData`, secciones `tileMap`/
+`tileData`).
+
+Comprobado sobre el `.twld` real de ese mundo (gzip -> volcado de `tileMap`): trae ModTiles de
+`CalamityMod` y entre ellos cofres de verdad - `AbyssTreasureChest`, `RustyChestTile`,
+`AstralChestLocked`, `SecurityChestTile`, `AshenChest`, `VoidChest`...
+
+O sea: son cofres REALES de Calamity y su contenido (que si vive en el `.wld`, en la seccion de
+cofres) se lee entero y correcto - lo unico que no se puede saber sin leer el `.twld` es CUAL de
+ellos es cada uno. **No se puede resolver del todo sin implementar el lector del `.twld`**, asi que
+se dice lo que de verdad se sabe: `ChestKindName` (`ExplorationViewModel`) devuelve "Cofre de un
+mod" para `type < 0`, con tooltip propio que explica por que no tiene nombre propio, y el swatch de
+color del cofre (tile 21) en vez del color del "tile -1", que no existe en la paleta. Se aplica en
+los DOS sitios que resolvian ese nombre: "Por tipo de cofre" y "Cofre a cofre".
+
+### 2. `Wooden Chest` en ingles: el cruce del generador falla en 3 formas
+
+`tile_names.json` se genera cruzando el nombre INGLES que TEdit da a cada variante de sprite
+contra `ItemName` de la localizacion es-ES real del juego, **por coincidencia exacta de texto**.
+Falla exactamente en tres situaciones, y las tres caen en la familia de contenedores:
+
+| caso | ejemplo real | por que no cruza |
+|---|---|---|
+| nombre coloquial de TEdit | `21@0,0` "Wooden Chest" | el objeto real es `ItemName.Chest` = "Cofre" |
+| | `88@0,0` "Wooden Dresser" | el objeto real es `ItemName.Dresser` = "Aparador" |
+| errata en el dato de TEdit | `21@540,0` "Web Coverd Chest" | falta la 'e' de `WebCoveredChest` |
+| categoria, no objeto | tiles 21/88/467/441/468 base | "Chests"/"Dressers" no existen como `ItemName` |
+
+`scripts/parchear-nombres-contenedores-es.js` lo corrige sobre el asset real: 12 traducciones,
+cada una con su fuente citada en el propio script (`ItemName.<clave>` real, o el patron
+"X atrapado" que el propio catalogo ya aplica en la familia `Trapped X`). Es idempotente - solo
+escribe donde falta `name_es`, nunca pisa lo que venga del generador - asi que se vuelve a pasar
+tal cual si algun dia se regenera `tile_names.json`. `NombresContenedoresEsTests` fija el
+resultado contra el fichero REAL, no contra un JSON de muestra.
+
+### 3. Los "paradores" que se colaban en Cofres: son APARADORES, y estan bien ahi
+
+Palabra del usuario: "se han colado paradores". Eran los **aparadores** (tile 88, "Aparador de
+obsidiana" - 2 en su mundo, 1 en el mundo de pruebas). **No es ningun fallo de clasificacion, ni
+se cuela ningun tile entity**: en Terraria un aparador es una entrada mas de la lista de cofres
+del mundo - `WorldGen.PlaceDresserDirect` llama a `Chest.CreateChest` igual que
+`PlaceChestDirect` (`TerrariaVanilla\Terraria\WorldGen.cs:58373` y `:58338`), y lo mismo pasa con
+barriles y papeleras, que ademas son frames del propio tile 21. Se comprobo tambien que no hay
+NINGUN otro tipo colandose: los cofres de ese mundo salen de 4 tiles y solo 4 (21, 88, 467 y la
+casilla vacia de los de mod). Pilones y letreros no entran por aqui: los letreros van en su propia
+seccion (`SignCount`) y los pilones son tile entities, que solo alimentan "Por lo que contienen".
+
+Esconderlos habria sido perder contenedores REALES con objetos dentro. Lo que faltaba era decir
+que cuenta como "cofre", y eso cabe en el tooltip de los tres chips de modo
+(`explore_chests_kinds_tooltip`) sin robarle un solo pixel de alto a la columna - que es una
+restriccion real, `AR-11f` mide que a 1180x860 no aparezca barra de scroll ahi.
+
+### 4. El espacio horizontal: DOS bugs de layout distintos, los dos medidos
+
+"Se sigue perdiendo contenido, mira todo el espacio que hay vacio para mostrar los nombres de los
+cofres... que se revise eso para TODAS las pestañas de Exploracion". Habia razon, y por dos causas
+que no tienen nada que ver entre si. Las dos salieron del bloque nuevo `AR-13a`, que mide el hueco
+REAL a la derecha de cada fila (desde donde acaba el ultimo GLIFO - no donde acaba la caja del
+`TextBlock`, que se estira aunque el texto sean tres cifras - hasta el borde de la lista):
+
+- **Cofres**: los paneles de "Por tipo"/"Por lo que contienen" y el de "Cofre a cofre" eran
+  hermanos DIRECTOS del `DockPanel` de la categoria, y **un DockPanel solo estira a su ULTIMO
+  hijo** (`LastChildFill`). El ultimo era "Cofre a cofre", asi que el otro se colocaba como
+  `Dock=Left` con su ancho DESEADO: **150px medidos de una columna de 301** - la mitad exacta de la
+  barra lateral en blanco. Arreglado con un `Grid` contenedor (que estira a todos sus hijos), mismo
+  patron que `ExplorationCategoryContent` ya usa para superponer las 5 categorias.
+- **"Todo" y NPCs**: sus filas declaraban `HorizontalContentAlignment="Stretch"` y **nunca se
+  aplicaba**. Sin `Style` propio caian en el estilo implicito de `Button` del tema, cuyo
+  `ControlTemplate` tiene `<ContentPresenter HorizontalAlignment="Center">` **fijo**
+  (`Styles/Theme.xaml:277`), no un `{TemplateBinding HorizontalContentAlignment}`. Medido: la fila
+  entera centrada en 182px de 281 reales, con 49px muertos a cada lado (32 a cada lado en NPCs).
+  Arreglado poniendoles `RowClickButton`, el estilo que este fichero ya usa para toda fila
+  clicable y que si respeta el Stretch.
+
+Ademas, el mismo criterio de reparto en las **5 categorias** (era la parte pedida explicitamente):
+el dato numerico de cada fila (recuento / posicion / cuantos objetos lleva) sube a la DERECHA, que
+es justo el hueco que sobraba, y el nombre se lleva todo el resto **con `TextWrapping` en vez de
+`TextTrimming`** - si de verdad no cabe crece a una segunda linea, que es exactamente el alto que
+antes gastaba el recuento en su propia fila. El `MaxWidth` del bloque derecho es la garantia de que
+el nombre conserva su sitio: el recuento de Minerales ("86.200 tiles - 6.738 vetas") es largo y sin
+tope se llevaria media fila.
+
+### 5. Dos bugs mas que aparecieron al medir (no estaban reportados)
+
+- **El cofre seleccionado no se marcaba en el mapa.** El usuario lo describio como "no navega":
+  navegar SI navegaba (`AR-13b` mide que el mapa queda centrado en el cofre con error de 0px sobre
+  lo maximo que se puede desplazar, y el zoom en 4.0), pero **la unica capa de marcadores del mapa
+  se alimenta de `WorldSearchResults`** (`MainWindow.xaml:4061`) y "Cofre a cofre" es la unica
+  vista con su propia lista (`ChestRows`), que no aparecia en ninguna capa. Sin nada que mirar, el
+  usuario tuvo que buscar el cofre a mano con el raton. Marcador propio para el cofre actual (uno
+  solo, no las 560 filas), mismo lenguaje visual que el resultado activo de la busqueda: marco teal
+  hueco de 24px con `ScaleTransform` inverso al Zoom. Se apaga al rehacer la lista y con "Cerrar",
+  que es el gesto real de "quita las marcas" y lo comparten las 5 categorias.
+- **`ItemCountLabel` no existia.** La plantilla de "Cofre a cofre" lleva desde C-06 un `TextBlock`
+  enlazado a `{Binding ItemCountLabel}` y `ChestRowViewModel` nunca ha tenido esa propiedad. Un
+  binding a un nombre inexistente **no da ningun error visible en WPF**: deja el texto vacio. O
+  sea, "cuantos objetos lleva dentro" no se ha visto jamas en esa lista. Salio porque `AR-13a`, al
+  listar los textos REALES de la fila, encontro solo uno donde tenia que haber tres.
+
+### Numeros reales
+
+| | antes | despues |
+|---|---|---|
+| build | 0 errores / 0 avisos | 0 errores / 0 avisos |
+| tests Core | 408 | 419 (+11, `NombresContenedoresEsTests`) |
+| tests ViewModels | 343 | 350 (+7, `CofresMarcadorYRecuentoTests`) |
+| arnes de UI | 0 FALLO | 0 FALLO (con `AR-13a/b/c` nuevos) |
+| filas "Tile #-1" en el mundo real | 1 fila, 51 cofres | 0 |
+| nombres de cofre en ingles | 2 (`Wooden Chest` x45, `Web Coverd Chest` x10) | 0 |
+| hueco vacio a la derecha, "Todo" | 59px de 281 | 9px |
+| hueco vacio a la derecha, NPCs | 40px de 303 | 8px |
+| hueco vacio, Cofres "por tipo" | fila de **150px** en lista de 301 | fila de 269px, hueco 8px |
+| hueco vacio, "Cofre a cofre" | 148px (y el recuento sin pintar) | 10px, con recuento real |
+| textos recortados con sitio | - | 0 en las 6 vistas |
+| claves de idioma | 571 | 574 (+3, es y en) |
+
+Captura real nueva del arnes: `exploracion-cofres-nombres-y-maquetacion.png`.
+
+`AR-13c` corre sobre `Afueras_de_Larvas_de_gusano.wld` (el mundo real de la queja, el unico con
+cofres de mod - `roca_negra` tiene 505 y ninguno) y **deja recargado `roca_negra` al terminar**,
+que es con el que trabaja el resto del arnes: misma leccion que la ronda anterior aprendio con
+`session.json`, todo bloque que cambia estado compartido lo restaura.
+
+No hubo ningun obstaculo que fallara dos veces seguidas.

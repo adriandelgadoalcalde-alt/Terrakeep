@@ -3435,6 +3435,232 @@ internal static class Program
                 }
                 catch (Exception ex) { Console.WriteLine("AR-12-EXCEPTION: " + ex); }
 
+                // AR-13 (bugs reales reportados por el usuario probando la app, 6-sep-2026, con
+                // captura del panel "Buscar en el mundo" sobre el mundo real "Afueras de Larvas de
+                // gusano"):
+                //   (a) MAQUETACION de las 5 categorias: "se sigue perdiendo contenido, mira todo
+                //       el espacio que hay vacio para mostrar los nombres de los cofres... que se
+                //       revise eso para TODAS las pestañas de Exploracion". El recuento de cada
+                //       fila ("184", "45") vivia en una segunda linea PEGADO A LA IZQUIERDA, con
+                //       toda la anchura de la columna vacia a su derecha, mientras el nombre de al
+                //       lado se cortaba con puntos suspensivos. Se mide el hueco real que queda a
+                //       la derecha del dato numerico de la fila, y que ningun nombre se recorte.
+                //   (b) MARCADOR del cofre seleccionado: "al seleccionar un cofre el mapa no
+                //       navega/marca de forma que se distinga - he tenido que pasar el raton a
+                //       mano por encima para encontrarlo". Se comprueba el efecto REAL sobre el
+                //       ScrollViewer del mapa (a que coordenada queda centrado) y que el marcador
+                //       existe y se ve en el arbol visual, no solo que la casilla cambia de valor.
+                //   (c) NOMBRES reales de cofre ("Tile #-1", "Wooden Chest"): mas abajo, sobre un
+                //       mundo con cofres de MOD de verdad (roca_negra no tiene ninguno).
+                try
+                {
+                    var mapaScroll = Descendientes<ScrollViewer>(window).FirstOrDefault(sv => sv.Name == "WorldMapScroll");
+
+                    // (categoria, modo de cofres, coleccion de filas, como se llama su dato numerico)
+                    var casos = new (string Etiqueta, WorldSearchCategory Cat, int? ModoCofres, Func<System.Collections.IList> Filas)[]
+                    {
+                        ("Todo", WorldSearchCategory.All, null, () => vm.Exploration.WorldSearchResults),
+                        ("NPCs", WorldSearchCategory.Npcs, null, () => vm.Exploration.NpcSearchResults),
+                        ("Cofres/por tipo", WorldSearchCategory.Chests, 0, () => vm.Exploration.Inventory),
+                        ("Cofres/cofre a cofre", WorldSearchCategory.Chests, 2, () => vm.Exploration.ChestRows),
+                        ("Minerales", WorldSearchCategory.Ores, null, () => vm.Exploration.OreMetals),
+                        ("Objetos", WorldSearchCategory.Objects, null, () => vm.Exploration.Inventory),
+                    };
+                    foreach (var (etiqueta, cat, modo, filas) in casos)
+                    {
+                        vm.Exploration.SelectedCategory = cat;
+                        if (modo.HasValue) vm.Exploration.ChestViewMode = modo.Value;
+                        DoEvents(); DoEvents(); DoEvents();
+                        // "Todo" no tiene inventario propio: su lista son los resultados de una
+                        // busqueda real, asi que hay que lanzar una (con su debounce de 250ms).
+                        if (cat == WorldSearchCategory.All && vm.Exploration.WorldSearchResults.Count == 0)
+                        {
+                            vm.Exploration.WorldSearchText = "cofre";
+                            for (int i = 0; i < 600; i++)
+                            {
+                                DoEvents(); Thread.Sleep(10);
+                                if (!vm.Exploration.IsSearching && vm.Exploration.WorldSearchResults.Count > 0) break;
+                            }
+                            DoEvents(); DoEvents();
+                        }
+                        var lista = filas();
+                        if (lista.Count == 0) { Console.WriteLine($"AR-13a: {etiqueta} no tiene ninguna fila real en este mundo - omitido"); continue; }
+
+                        object primera = lista[0]!;
+                        // El contenedor real de esa fila: el Button de la plantilla, ya renderizado
+                        // y VISIBLE. IsVisible es imprescindible: los paneles de las 5 categorias
+                        // conviven en el mismo Grid con Visibility (ExplorationCategoryContent), asi
+                        // que los de las otras categorias siguen en el arbol visual con anchos
+                        // reales - y Cofres y Objetos comparten ademas la MISMA coleccion
+                        // (Inventory), asi que sin este filtro se mide la fila del panel escondido.
+                        var contenedor = Descendientes<FrameworkElement>(window)
+                            .FirstOrDefault(fe => ReferenceEquals(fe.DataContext, primera) && fe.IsVisible && fe is Button b && b.ActualWidth > 40);
+                        if (contenedor == null) { Console.WriteLine($"AR-13a: {etiqueta} - la primera fila no esta realizada en el arbol visual, omitido"); continue; }
+
+                        var textos = Descendientes<TextBlock>(contenedor)
+                            .Where(t => t.IsVisible && !string.IsNullOrWhiteSpace(t.Text) && t.ActualWidth > 0).ToList();
+                        if (textos.Count == 0) { Console.WriteLine($"AR-13a: {etiqueta} - la fila no tiene ningun texto visible, omitido"); continue; }
+
+                        // La referencia NO es el ancho de la fila sino el de la LISTA que la
+                        // contiene (el panel de items): asi el hueco medido incluye tambien el caso
+                        // de que la propia fila no llegue a estirarse a todo el ancho disponible -
+                        // que es justo lo que pasaba en Cofres, donde el panel del modo se dockeaba
+                        // a la izquierda con su ancho deseado y dejaba media columna en blanco.
+                        var host = (FrameworkElement?)AncestroPanelDeItems(contenedor) ?? contenedor;
+                        double finContenido = textos.Max(t => FinRealDelTexto(t, host));
+                        double hueco = host.ActualWidth - finContenido;
+                        int recortados = textos.Count(TextoRecortado);
+                        Console.WriteLine($"AR-13a: {etiqueta} -> lista de {host.ActualWidth:0}px (fila {contenedor.ActualWidth:0}px), contenido hasta {finContenido:0}px, hueco vacio a la derecha={hueco:0}px (esperado <=40), textos recortados={recortados} (esperado 0) [{string.Join(" · ", textos.Select(t => $"\"{t.Text}\"@{t.TranslatePoint(new Point(0, 0), host).X:0}+{t.ActualWidth:0}"))}]");
+                        if (hueco > 40)
+                        {
+                            Console.WriteLine($"FALLO: AR-13a - {etiqueta} desperdicia {hueco:0}px de ancho a la derecha de la fila");
+                            // La cadena de contenedores solo hace falta cuando algo va mal, pero
+                            // entonces es lo unico que dice DONDE se pierde el ancho: el culpable es
+                            // el primer eslabon cuyo ancho ya no llega al de la lista (asi salieron
+                            // los dos bugs reales de esta ronda - el DockPanel que solo estira a su
+                            // ultimo hijo, y el estilo implicito de Button que centra el contenido).
+                            Console.WriteLine($"AR-13a: cadena de {etiqueta}: {string.Join(" > ", Ascendencia(textos.OrderByDescending(t => FinRealDelTexto(t, host)).First(), host))}");
+                        }
+                        if (recortados > 0)
+                            Console.WriteLine($"FALLO: AR-13a - {etiqueta} recorta {recortados} texto(s) de la fila teniendo sitio: {string.Join(" | ", textos.Where(TextoRecortado).Select(t => t.Text))}");
+                    }
+
+                    // (b) marcador + desplazamiento REAL del mapa al seleccionar un cofre.
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                    vm.Exploration.ChestViewMode = 2;
+                    DoEvents(); DoEvents();
+                    if (vm.Exploration.ChestRows.Count > 0 && mapaScroll != null)
+                    {
+                        // Un cofre LEJOS del centro actual, para que el desplazamiento se note.
+                        var lejano = vm.Exploration.ChestRows.OrderByDescending(r => r.TileX).First();
+                        vm.Exploration.AutoZoomOnNavigate = false;
+                        vm.Exploration.AutoZoomOnChestNavigate = true;
+                        vm.Exploration.Zoom = 1.0;
+                        mapaScroll.ScrollToHorizontalOffset(0);
+                        mapaScroll.ScrollToVerticalOffset(0);
+                        DoEvents(); DoEvents();
+
+                        vm.Exploration.GoToChestCommand.Execute(lejano);
+                        DoEvents(); DoEvents(); DoEvents();
+
+                        double zoom = vm.Exploration.Zoom;
+                        // Lo que de verdad se puede pedir: centrar el cofre, RECORTADO a los limites
+                        // reales del ScrollViewer - un cofre pegado al borde del mundo (x=8392 de
+                        // 8400) nunca puede quedar en el centro exacto, y exigirlo seria un FALLO
+                        // falso. Se compara contra ese objetivo recortado, no contra el tile a pelo.
+                        double objetivoX = Math.Clamp(lejano.TileX * zoom - mapaScroll.ViewportWidth / 2, 0, Math.Max(0, mapaScroll.ExtentWidth - mapaScroll.ViewportWidth));
+                        double objetivoY = Math.Clamp(lejano.TileY * zoom - mapaScroll.ViewportHeight / 2, 0, Math.Max(0, mapaScroll.ExtentHeight - mapaScroll.ViewportHeight));
+                        double errorX = Math.Abs(mapaScroll.HorizontalOffset - objetivoX), errorY = Math.Abs(mapaScroll.VerticalOffset - objetivoY);
+                        bool aLaVista = Math.Abs(lejano.TileX * zoom - (mapaScroll.HorizontalOffset + mapaScroll.ViewportWidth / 2)) <= mapaScroll.ViewportWidth / 2
+                                     && Math.Abs(lejano.TileY * zoom - (mapaScroll.VerticalOffset + mapaScroll.ViewportHeight / 2)) <= mapaScroll.ViewportHeight / 2;
+                        Console.WriteLine($"AR-13b: cofre en ({lejano.TileX}, {lejano.TileY}) -> zoom={zoom} (esperado 4), offset real=({mapaScroll.HorizontalOffset:0}, {mapaScroll.VerticalOffset:0}) frente al objetivo recortado=({objetivoX:0}, {objetivoY:0}), error=({errorX:0}, {errorY:0})px (esperado <=2), cofre dentro del viewport={aLaVista} (esperado True)");
+                        if (Math.Abs(zoom - 4.0) > 0.001)
+                            Console.WriteLine("FALLO: AR-13b - seleccionar un cofre con su casilla marcada no acerca el mapa");
+                        if (errorX > 2 || errorY > 2)
+                            Console.WriteLine($"FALLO: AR-13b - el mapa no se desplaza a donde esta el cofre (error de {errorX:0}x{errorY:0}px sobre lo maximo que se puede desplazar)");
+                        if (!aLaVista)
+                            Console.WriteLine("FALLO: AR-13b - tras seleccionar el cofre, su casilla real ni siquiera queda dentro de lo que se ve del mapa");
+
+                        var marcador = Descendientes<System.Windows.Shapes.Rectangle>(window)
+                            .FirstOrDefault(r => r.Name == "CurrentChestMarker");
+                        bool visible = marcador is { IsVisible: true };
+                        double mx = marcador == null ? -1 : Canvas.GetLeft(marcador);
+                        double my = marcador == null ? -1 : Canvas.GetTop(marcador);
+                        Console.WriteLine($"AR-13b: marcador del cofre en el mapa -> existe={marcador != null}, visible={visible}, en tile=({mx:0}, {my:0}) (esperado el mismo cofre), HasCurrentChest={vm.Exploration.HasCurrentChest}");
+                        if (!visible)
+                            Console.WriteLine("FALLO: AR-13b - el cofre seleccionado no se marca en el mapa (nada que distinguir a simple vista)");
+                        else if (Math.Abs(mx - lejano.TileX) > 0.5 || Math.Abs(my - lejano.TileY) > 0.5)
+                            Console.WriteLine("FALLO: AR-13b - el marcador del cofre no cae sobre la casilla real del cofre");
+
+                        // Y se apaga con "Cerrar", que es el unico gesto real de "quita las marcas".
+                        vm.Exploration.ClearOreMarksCommand.Execute(null);
+                        DoEvents(); DoEvents();
+                        bool sigueVisible = Descendientes<System.Windows.Shapes.Rectangle>(window)
+                            .Any(r => r.Name == "CurrentChestMarker" && r.IsVisible);
+                        Console.WriteLine($"AR-13b: tras 'Cerrar' -> marcador visible={sigueVisible} (esperado False), filas marcadas={vm.Exploration.ChestRows.Count(r => r.IsCurrent)} (esperado 0)");
+                        if (sigueVisible)
+                            Console.WriteLine("FALLO: AR-13b - el marcador del cofre se queda pegado en el mapa despues de cerrar los resultados");
+                    }
+
+                    vm.Exploration.AutoZoomOnChestNavigate = false;
+                    vm.Exploration.Zoom = 1.0;
+                    vm.Exploration.ChestViewMode = 0;
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                    DoEvents();
+                }
+                catch (Exception ex) { Console.WriteLine("AR-13-EXCEPTION: " + ex); }
+
+                // AR-13c: los NOMBRES reales de las filas de cofre, sobre un mundo que SI tiene
+                // cofres de mod (roca_negra no tiene ninguno: los 505 estan sobre tiles vanilla).
+                //   - "Tile #-1" con 51 apariciones: -1 no es un id de tile, es "casilla vacia"
+                //     (WldTile.Type). tModLoader guarda los tiles de mods como aire en el .wld
+                //     (WorldFile.cs:1425, `tile.active() && tile.type < TileID.Count`) y su tipo
+                //     real en el .twld, asi que esos cofres de Calamity se quedan sin casilla que
+                //     mirar. Ahora se dicen por su nombre real ("Cofre de un mod") con un tooltip
+                //     que lo explica, en vez de un numero que no significa nada.
+                //   - "Wooden Chest"/"Web Coverd Chest"/"Wooden Dresser" en ingles: el generador de
+                //     tile_names.json cruza el nombre INGLES de TEdit contra ItemName del juego, y
+                //     esos tres no casan (TEdit los llama de otra forma, o tiene una errata).
+                //     scripts/parchear-nombres-contenedores-es.js los pone con la traduccion real.
+                // Al terminar se deja recargado el mundo de siempre: el resto del arnes cuenta con el.
+                try
+                {
+                    string mundoConMods = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld";
+                    string mundoDeSiempre = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                    if (!File.Exists(mundoConMods))
+                        Console.WriteLine("AR-13c: no se encontro Afueras_de_Larvas_de_gusano.wld (mundo real con cofres de Calamity) - omitido");
+                    else
+                    {
+                        var carga = vm.Exploration.LoadFromPathAsync(mundoConMods);
+                        while (!carga.IsCompleted) { DoEvents(); Thread.Sleep(15); }
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                        vm.Exploration.ChestViewMode = 0;
+                        DoEvents(); DoEvents();
+
+                        var nombres = vm.Exploration.Inventory.Select(f => f.Name).ToList();
+                        var sinResolver = nombres.Where(n => n.StartsWith("Tile #", StringComparison.Ordinal)).ToList();
+                        string[] enIngles = ["Wooden Chest", "Web Coverd Chest", "Wooden Dresser", "Chests", "Dressers", "Chests (Group 2)"];
+                        var quedanEnIngles = nombres.Where(n => enIngles.Contains(n)).ToList();
+                        var deMod = vm.Exploration.Inventory.FirstOrDefault(f => f.IsModdedChest);
+                        Console.WriteLine($"AR-13c: {vm.Exploration.Inventory.Count} tipos de cofre reales -> sin resolver ('Tile #N')={sinResolver.Count} (esperado 0), en ingles={quedanEnIngles.Count} (esperado 0), fila de cofre de mod='{deMod?.Name}' x{deMod?.Count}");
+                        if (sinResolver.Count > 0)
+                            Console.WriteLine($"FALLO: AR-13c - siguen saliendo tipos de cofre sin nombre real: {string.Join(", ", sinResolver)}");
+                        if (quedanEnIngles.Count > 0)
+                            Console.WriteLine($"FALLO: AR-13c - siguen saliendo nombres de cofre en ingles: {string.Join(", ", quedanEnIngles)}");
+                        if (deMod == null)
+                            Console.WriteLine("FALLO: AR-13c - este mundo tiene cofres de Calamity sobre casilla vacia y ninguna fila los reconoce como tales");
+
+                        // Y lo mismo en "Cofre a cofre", que resuelve el nombre por su cuenta.
+                        vm.Exploration.ChestViewMode = 2;
+                        DoEvents(); DoEvents();
+                        int filasSinResolver = vm.Exploration.ChestRows.Count(r => r.VariantName.StartsWith("Tile #", StringComparison.Ordinal));
+                        int filasDeMod = vm.Exploration.ChestRows.Count(r => r.IsModdedChest);
+                        Console.WriteLine($"AR-13c: 'Cofre a cofre' -> {vm.Exploration.ChestRows.Count} cofres, sin resolver={filasSinResolver} (esperado 0), reconocidos como de mod={filasDeMod}");
+                        if (filasSinResolver > 0)
+                            Console.WriteLine("FALLO: AR-13c - 'Cofre a cofre' sigue mostrando cofres como 'Tile #N'");
+
+                        var rtbCofresMod = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        vm.Exploration.ChestViewMode = 0;
+                        DoEvents(); DoEvents();
+                        rtbCofresMod.Render(window);
+                        var encCofresMod = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encCofresMod.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbCofresMod));
+                        using (var fs = File.Create(Path.Combine(AppContext.BaseDirectory, "exploracion-cofres-nombres-y-maquetacion.png"))) encCofresMod.Save(fs);
+                        Console.WriteLine("Captura de Cofres con nombres reales y el recuento a la derecha -> exploracion-cofres-nombres-y-maquetacion.png");
+
+                        // Estado como estaba: el resto del arnes trabaja sobre roca_negra.
+                        if (File.Exists(mundoDeSiempre))
+                        {
+                            var vuelta = vm.Exploration.LoadFromPathAsync(mundoDeSiempre);
+                            while (!vuelta.IsCompleted) { DoEvents(); Thread.Sleep(15); }
+                        }
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-13c-EXCEPTION: " + ex); }
+
                 // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
                 // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de
                 // NPC"): con el mundo real ya cargado arriba, confirma que la mayoria de NPCs
@@ -4834,6 +5060,62 @@ internal static class Program
     private static System.Windows.Media.Brush? BordeDeFilaDeCofre(DependencyObject raiz, object fila) =>
         Descendientes<System.Windows.Controls.Border>(raiz)
             .FirstOrDefault(b => ReferenceEquals(b.DataContext, fila) && b.BorderThickness.Left > 0)?.BorderBrush;
+
+    // AR-13a: la cadena real de contenedores (tipo, x dentro de la lista y ancho) desde un texto
+    // hasta el panel de la lista - es lo unico que dice DONDE se pierde el ancho cuando una fila
+    // no llena su columna: el culpable es el primer eslabon cuyo ancho ya no llega al de la lista.
+    private static IEnumerable<string> Ascendencia(DependencyObject elemento, FrameworkElement host)
+    {
+        var cadena = new List<string>();
+        for (var d = elemento; d != null && !ReferenceEquals(d, host); d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+            if (d is FrameworkElement fe)
+                cadena.Add($"{fe.GetType().Name}@{fe.TranslatePoint(new Point(0, 0), host).X:0}+{fe.ActualWidth:0}");
+        cadena.Reverse();
+        return cadena;
+    }
+
+    // AR-13a: el panel que hospeda las filas de la lista a la que pertenece este elemento
+    // (VirtualizingStackPanel/StackPanel con IsItemsHost). Su ancho es el sitio real que tienen
+    // las filas, que puede ser MAYOR que el de una fila concreta si esa fila no se estira.
+    private static Panel? AncestroPanelDeItems(DependencyObject elemento)
+    {
+        for (var d = System.Windows.Media.VisualTreeHelper.GetParent(elemento); d != null; d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+            if (d is Panel p && p.IsItemsHost) return p;
+        return null;
+    }
+
+    // AR-13a: el ancho REAL que ocupan los glifos de un TextBlock, medido con la misma fuente,
+    // tamaño y estilo con los que esta pintado. Hace falta porque ActualWidth NO sirve para esto:
+    // un TextBlock dentro de un StackPanel/DockPanel se estira a todo el ancho disponible aunque
+    // su texto sean tres cifras, asi que "donde acaba la caja" y "donde acaba el texto" son cosas
+    // muy distintas - y el hueco vacio que reporto el usuario esta justo entre las dos.
+    private static double AnchoNaturalDelTexto(TextBlock tb)
+    {
+        var ft = new System.Windows.Media.FormattedText(
+            tb.Text, System.Globalization.CultureInfo.CurrentCulture, tb.FlowDirection,
+            new System.Windows.Media.Typeface(tb.FontFamily, tb.FontStyle, tb.FontWeight, tb.FontStretch),
+            tb.FontSize, System.Windows.Media.Brushes.Black,
+            System.Windows.Media.VisualTreeHelper.GetDpi(tb).PixelsPerDip);
+        return ft.WidthIncludingTrailingWhitespace;
+    }
+
+    // AR-13a: coordenada X, dentro de la fila, donde acaba de verdad el ultimo glifo de este
+    // TextBlock - teniendo en cuenta si el texto esta alineado a la derecha (entonces el glifo
+    // acaba con la caja) o a la izquierda (entonces acaba a su ancho natural del origen).
+    private static double FinRealDelTexto(TextBlock tb, FrameworkElement fila)
+    {
+        double x = tb.TranslatePoint(new Point(0, 0), fila).X;
+        bool aLaDerecha = tb.TextAlignment == TextAlignment.Right;
+        double ancho = aLaDerecha ? tb.ActualWidth : Math.Min(tb.ActualWidth, AnchoNaturalDelTexto(tb));
+        return x + ancho;
+    }
+
+    // AR-13a: ¿este texto se esta cortando teniendo sitio? Solo puede pasar sin TextWrapping: con
+    // Wrap el texto pasa a la linea siguiente y no se pierde nada. Con NoWrap + TextTrimming, WPF
+    // no recorta el elemento (VisualTreeHelper.GetClip da null) sino que dibuja "…" - la unica
+    // forma de detectarlo es comparar el ancho natural del texto con el ancho real de la caja.
+    private static bool TextoRecortado(TextBlock tb) =>
+        tb.TextWrapping == TextWrapping.NoWrap && AnchoNaturalDelTexto(tb) > tb.ActualWidth + 0.5;
 
     // AR-11: ¿hay un ScrollViewer entre este elemento y el limite dado? Un elemento recortado
     // pero dentro de un ScrollViewer sigue siendo ALCANZABLE (solo hay que desplazarse); uno
