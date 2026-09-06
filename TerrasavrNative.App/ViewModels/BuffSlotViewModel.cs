@@ -156,9 +156,16 @@ public partial class BuffSlotViewModel : ObservableObject
         }
         RejectionMessage = null;
         Buff.Id = buffId;
-        Buff.Time = buffId < CalamityIds.BuffIdBase
-            ? BuffDurationPresets.GetPresets(buffId, _characterVersion, _durations).MinTicks
-            : 600 * 60; // Calamity: sin tabla de duraciones real todavia, 10 min razonable
+        // Oleada del 6-sep-2026: antes esto se bifurcaba y a un buff de Calamity le ponia
+        // 600*60 ticks (10 min) "razonables" a ojo, mientras el panel Editar le ofrecia una
+        // "Minima" de 28800 (8 min) - o sea que colocar un buff de Calamity y pulsar "Minima"
+        // BAJABA la duracion, justo al reves de lo que ese boton promete, y el 10 no salia de
+        // ninguna fuente real. GetPresets ya resuelve los dos casos por si solo: dato REAL para
+        // vanilla y, sin tabla de duraciones de Calamity todavia, el fallback documentado
+        // (28800, la moda real de los buffTime conocidos, con IsRealMin=false para que el
+        // tooltip no finja que es un dato real). Colocar = "Minima" en los dos, sin numeros
+        // magicos sueltos.
+        Buff.Time = BuffDurationPresets.GetPresets(buffId, _characterVersion, _durations).MinTicks;
         Refresh();
         return true;
     }

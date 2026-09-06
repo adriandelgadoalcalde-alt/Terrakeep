@@ -10543,3 +10543,192 @@ tenga sitio para partirse en lineas.
   solo vive en un commit ajeno; queda escrito aqui para que se sepa donde esta.
 
 No hubo ningun obstaculo que fallara dos veces seguidas sin resolverse.
+
+---
+
+## 6-sep-2026 - Personaje > Buffs / Apariencia / Investigacion / Spawn Points / Desbloqueos / Version: seis bugs reales, cinco de la misma familia
+
+Oleada grande de pruebas sobre esas seis sub-pestañas, en cuatro tamaños de ventana reales y en
+los dos idiomas. Cinco de los seis bugs encontrados son **la misma familia**: un dato derivado
+que se calcula UNA vez, al cargar el personaje, y que nadie vuelve a tocar aunque su fuente
+cambie despues desde otra pestaña. Merece quedar escrito asi, porque buscarlos por familia fue
+mucho mas productivo que ir pantalla por pantalla.
+
+### 1. La rejilla de Buffs no seguia a la version (y por debajo se perdian 22 buffs sin aviso)
+
+`PlrBodySerializer` decide cuantos buffs escribe con la version REAL en el momento de guardar:
+44 si `>=269`, 22 si `>=77`, 10 si no (lineas 173 al leer y 351 al escribir). `BuffsViewModel`
+construia la rejilla en `LoadFrom` y no volvia a mirar la version nunca mas, asi que cambiarla
+en la pestaña Version dejaba la rejilla mintiendo **en los dos sentidos**:
+
+| gesto real | lo que se veia | lo que hacia el guardado |
+|---|---|---|
+| bajar de 279 a 248 | 44 slots editables | escribia 22 - los buffs de los slots 22..43 desaparecian sin ningun aviso |
+| subir de 248 a 279 | 22 slots para siempre | podia escribir 44, pero no habia forma de usar los 22 nuevos |
+
+El techo real de duracion cuelga del mismo umbral (`BuffDurationPresets.MaxTicksForVersion` =
+`S.getMaxTime()` real: 1.999.999.980 ticks con `>=269`, 1.080.000 por debajo) y se congelaba
+igual: medido, tras bajar a 248 escribir segundos a mano seguia aceptando 33.333.333s.
+
+`BuffsViewModel.ApplyVersion` reconstruye los slots cuando el tope cambia de verdad. **No trunca
+`character.Buffs` a proposito**: el guardado ya escribe solo los primeros N, asi que los buffs de
+los slots que dejan de verse siguen en memoria y vuelven solos si el usuario se arrepiente y
+sube la version otra vez.
+
+### 2. El aviso de bajada de version nombraba lo que NO se pierde y callaba lo que si
+
+`EquipmentItems` **no es** "el equipo puesto (armadura/vanidad/accesorios)" como decia el aviso:
+son los 5 `miscEquips` reales (mascota, mascota de luz, vagoneta, montura, gancho -
+`Player.miscEquips` en el decompilado). La armadura vive en `PrimaryLoadout`, que se escribe
+SIEMPRE, sin ningun umbral de version: **bajar la version nunca la ha perdido**.
+
+O sea que el aviso nombraba algo que no se pierde y callaba lo que si se pierde de verdad:
+
+| umbral real | lo que deja de escribirse | lo decia antes? |
+|---|---|---|
+| < 269 | 22 de los 44 buffs | no |
+| < 200 | la INVESTIGACION entera | no |
+| < 200 | la puntuacion de golf | no |
+| < 200 | la Boveda del Vacio | si |
+| < 145 | los 5 miscEquips + sus tintes | si, pero con el nombre equivocado |
+| < 98 | las misiones de pesca | no |
+| < 269 | los Loadouts 1/2/3 | si |
+
+Un personaje de Modo Viaje con miles de objetos investigados los perdia todos en silencio. El
+conteo de investigacion que se muestra es el **VIVO** (`ResearchViewModel.ResearchedCount`), no
+el cargado de disco: `character.Research` solo se reescribe en `SyncBackTo`, al guardar.
+
+### 3. Las 4 dificultades salian en ingles con la app en español
+
+`DifficultyLabels` era un `string[]` fijo (`"Softcore"`, `"Mediumcore"`, `"Hardcore"`,
+`"Journey"`) sin pasar por el diccionario: en ingles tambien con la app en español, en los tres
+sitios donde se ven (selector de Apariencia, insignia de la cabecera global visible desde
+cualquier pestaña, y tarjetas de Inicio). Y el primero ni siquiera era el nombre que el juego
+enseña: "Softcore" es el nombre INTERNO del codigo, la UI de Terraria dice "Classic".
+
+Traduccion real del propio juego, no inventada:
+`Terraria.Localization.Content.es-ES.Legacy.json`, seccion `LegacyMenu` - `"26"`="Clásico"
+(en-US "Classic"), `"25"`="Núcleo medio", `"24"`="Extremo"; y `"Creative"`="Viaje" de
+`Terraria.Localization.Content.es-ES.json`.
+
+Detalle de implementacion que merece quedar: el selector pasa de `ItemsSource` a cuatro
+`ComboBoxItem` con su clave de idioma **a proposito**. Cambiar el `ItemsSource` entero al vuelo
+deja `SelectedIndex` en -1 un instante, y ese ComboBox escribe el indice de vuelta en
+`Appearance.Difficulty` (con su entrada de Deshacer y su escritura al personaje). Con un binding
+por item, cambiar de idioma solo repinta el texto.
+
+### 4. Poner el personaje en Modo Viaje no quitaba el aviso de Investigacion
+
+`IsJourneyMode` se calculaba una vez en `LoadFrom`. La dificultad se edita en Apariencia, dos
+sub-pestañas al lado: poner el personaje en Modo Viaje dejaba a Investigacion diciendo "esto solo
+tiene efecto en Modo Viaje" con el personaje YA en Modo Viaje. Misma familia que el 1.
+
+### 5. El aviso de "ese buff ya esta puesto" se borraba justo despues de ponerlo
+
+H4-04 dejo escrito el criterio correcto para el arrastre ("seleccionar el slot destino para que
+el aviso quede a la vista en el panel Editar en vez de perderse sin que se note nada"), pero el
+**ORDEN** lo anulaba: `PlaceBuff` pone `RejectionMessage` y `SelectBuffSlot` pone
+`IsSelected=true`, y `OnIsSelectedChanged` **limpia** `RejectionMessage` a proposito (L-e: un
+aviso de rechazo no debe sobrevivir a un cambio de seleccion). Seleccionar DESPUES borraba el
+aviso recien puesto - salvo por casualidad cuando el slot destino ya era el seleccionado, unico
+caso en que `IsSelected` no cambia de valor y el manejador no corre.
+
+Y con **Ctrl+V** el aviso no existia en absoluto: `PasteBuff` si aplica la regla y deja su
+mensaje, pero el panel Editar sigue al slot SELECCIONADO y el foco de teclado no lo es - el
+usuario veia que "no pasa nada" y punto. Mismo arreglo en los dos: seleccionar ANTES.
+
+### 6. Colocar un buff de Calamity no ponia su "Minima"
+
+`PlaceBuff` se bifurcaba y a un buff de Calamity le ponia `600*60` ticks (10 min) puestos a ojo,
+mientras el panel Editar le ofrecia una "Minima" de 28.800 (8 min): colocar un buff de Calamity y
+pulsar "Minima" **bajaba** la duracion, al reves de lo que ese boton promete, con un 10 que no
+salia de ninguna fuente. `GetPresets` ya resuelve los dos casos (dato real para vanilla,
+fallback documentado con `IsRealMin=false` para Calamity) - colocar = "Minima" en los dos.
+
+### Lo que se probo y estaba BIEN (queda escrito para no repetirlo)
+
+Bloques `PB-01..PB-13` nuevos y permanentes en el arnes
+(`TerrasavrNative.App.Tests/PruebasBuffsAparienciaVersion.cs`), a 1080x700 / 1180x860 /
+1400x900 / 1520x864, con las pantallas **pobladas y abiertas** - que es justo el punto ciego de
+`AR-LAY` (recorre las 7 sub-pestañas en 13 tamaños x 2 idiomas, pero siempre en su estado de
+llegada: rejilla casi vacia, selectores cerrados, sin carpeta elegida, sin avisos desplegados):
+
+- rejilla con los **44 buffs colocados**: 44/44 alcanzables en los 4 tamaños, 0 perdidos.
+- panel "Editar buff" con seleccion real (columna FIJA de 300px): 0 textos perdidos.
+- los **3 presets de los 44 buffs** contra el catalogo real: `0 < min <= media <= max <= techo`,
+  0 incoherentes. Y el techo acota la escritura manual (35.791.394s -> 33.333.333s, nunca
+  negativo, que es el bug real que H3-12 cerro).
+- rechazo de duplicados, y que el arrastre lo **anticipa** (`WouldRejectPlacingBuff`).
+- Vaciar todos + Deshacer de 6s: 44/44 restaurados con id **y duracion exactos**.
+- Apariencia: **228 miniaturas** reales de peinado generadas en ~200ms, 0 perdidas en los 4
+  tamaños; 13 tintes; abrir uno cierra el otro en los dos sentidos.
+- Investigacion: tope real de 100 tarjetas sobre una carpeta de 6.145 objetos, 0 perdidas.
+- Spawn Points: 6 filas reales, 0 perdidas (columnas fijas 220/80/80/70 + 2 botones).
+- Desbloqueos: 13 casillas con los **5 avisos de version desplegados a la vez**, 0 perdidas;
+  Marcar/Desmarcar todos alcanza las 13.
+- Round-trip real (`PB-12`) sobre una **COPIA de un personaje real** de este PC (~100KB con
+  `.tplr` de Calamity): una edicion de cada sub-pestaña, guardar, releer con Core sin pasar por
+  ninguna vista, valor por valor - incluidos los dos bits del carrito potenciado que comparten
+  byte - y despues recargar y comprobar que la UI enseña lo mismo.
+
+### Tres cosas del propio ARNES que estaban mal (y una del entorno)
+
+1. **`PressCtrlPlus` lanzaba los 4 `keybd_event` seguidos sin bombear la cola de mensajes.**
+   `keybd_event` solo ENCOLA: cuando WPF procesaba el KeyDown de la tecla, el KeyUp del Control
+   ya podia estar procesado y `Keyboard.Modifiers` no llevaba Control. Por eso las teclas
+   SUELTAS (Supr, flechas) siempre han funcionado y las combinaciones no - explica los **3 FALLO
+   fijos de H5-14** (Ctrl+C/Ctrl+V y Ctrl+1) que parecian de la app y eran del arnes. Corregido
+   con un `DoEvents()` entre pulsaciones.
+2. **Con eso no basta en esta sesion**: medido con una prueba de control real (Ctrl+1 -> Inicio),
+   el teclado sintetico **con modificadores no llega a la ventana aqui** (RDP). `PB-13` lo
+   detecta y lo dice en vez de dar un veredicto falso, y mide la misma secuencia por la via de
+   los ViewModels. Fallo dos veces seguidas por la misma causa: se paro y quedo escrito.
+3. **Falso positivo de un detector de maquetacion escrito en esta misma oleada**: un elemento que
+   esta ENTERO por debajo del scroll tiene rectangulo visible VACIO, asi que "lo que falta a lo
+   ancho" sale igual a su ancho completo, y si su contenedor no tiene scroll horizontal (casi
+   ninguno lo tiene) se marca como perdido sin serlo. Paso con la casilla "Ambrosia" de
+   Desbloqueos a 1080x700 (y=652 de un viewport de 700). El helper `MedirPerdida` hace primero el
+   gesto REAL del usuario (`BringIntoView`) y solo entonces pregunta - misma definicion honesta
+   que ya dejo escrita AR-15. **El detector D1 de `AR-LAY` tiene el mismo punto ciego** (no hace
+   `BringIntoView` antes de medir); hoy no se le nota porque no puebla las pantallas, pero
+   conviene saberlo antes de fiarse de un 0 suyo en una pantalla llena.
+4. **El arnes COMPLETO no es repetible ahora mismo**: hace decenas de `RenderTargetBitmap` de la
+   ventana entera (hasta 2560x1440) y, en esta sesion RDP con render por software forzado y
+   varios trabajos corriendo el arnes a la vez sobre el mismo repo, el proceso **muere a media
+   ejecucion**, en puntos distintos cada vez y siempre justo en una captura (dos veces seguidas:
+   linea 14 y linea 387). No es un fallo de la app - `CLAUDE.md` ya deja escrito que las capturas
+   son poco fiables en este entorno. Se añadio `PB_SOLO=1`, que corre solo estos bloques y sale,
+   misma idea que `AR_LAY_SOLO`. La ejecucion completa sigue siendo la que manda.
+
+### Infraestructura de tests: paralelismo desactivado en la assembly
+
+`[assembly: CollectionBehavior(DisableTestParallelization = true)]` en
+`TerrasavrNative.App.ViewModels.Tests`. `LocalizationService.Instance` es un singleton de proceso
+y varias clases de test lo cambian; con xunit corriendo clases en paralelo el sintoma es un test
+que pasa AISLADO y falla en la suite completa, en las dos direcciones (paso de verdad en esta
+oleada: los tests de idioma de la Libreria tumbaban a los del aviso de version, y al fijar estos
+el idioma en español se cayeron aquellos). Serializar la assembly lo cierra de raiz para todas
+las clases, presentes y futuras, sin tener que acordarse de restaurar el idioma a mano. Coste
+medido: 22s -> 49s.
+
+### Numeros reales
+
+| | antes | despues |
+|---|---|---|
+| build | 0 errores | 0 errores |
+| tests Core | 419 | 420 |
+| tests ViewModels | 359 | 421 (+62 de esta oleada y de otras en paralelo) |
+| arnes, bloques PB | - | 13 bloques, **0 FALLO** |
+| causas reales listadas en el aviso de bajada de version | 3 (una de ellas equivocada) | 7, todas contadas contra el personaje real |
+| slots de buff cuando la version cambia | siempre los de la carga | 44/22/10 reales, medidos RENDERIZADOS |
+
+### Nota de arbol compartido
+
+Esta oleada corrio con otros cinco trabajos a la vez sobre el mismo arbol. Varios commits de
+aqui arrastran cambios ajenos del mismo fichero (`MainWindow.xaml`,
+`CharacterListEntryViewModel.cs`, `Program.cs` y los tres ficheros parciales nuevos del arnes)
+porque no hay forma de comitear solo unas lineas de un fichero compartido; queda dicho en cada
+mensaje de commit. Los fallos de test ajenos que aparecieron y desaparecieron por el camino
+(`LocalizedContentTests`, `ObjetosTooltipStatsTests`, `HomeCardTests`,
+`ObjetosRoundTripPersonajeRealTests`) no los toca ninguna de estas tandas - se comprobo
+ejecutando las clases propias junto a las suyas (21/21 en verde).
