@@ -11232,3 +11232,68 @@ reclamo de acento de arriba.
   pestañas - no es contenido de estas cuatro pantallas.
 
 No hubo ningun obstaculo que fallara dos veces seguidas sin resolverse.
+
+---
+
+## 6-sep-2026 - Objetos (cuarta tanda): un Ctrl+V rechazado no hacia absolutamente nada visible
+
+Ultimo hallazgo de la oleada de **Personaje -> Objetos**, y salio repasando los caminos por los que
+un objeto puede ENTRAR en un slot, uno por uno, buscando cual de ellos se queda mudo cuando la
+restriccion de tipo lo rechaza. De los cuatro, tres ya avisaban:
+
+| camino | que ve el usuario si el slot rechaza el objeto |
+|---|---|
+| arrastrar desde la Libreria | el cursor de "prohibido" (`DragOver` pone `Effects=None`) |
+| arrastrar otro slot encima | igual, el cursor lo dice antes de soltar |
+| campo "Indice (id)" a mano | el numero se revierte y sale el aviso en el panel Editar (sexta pasada) |
+| **Ctrl+V** | **nada. Absolutamente nada.** |
+
+`PasteItem` SI escribe su `RejectionMessage` ("Este slot solo acepta cascos/tocados."), pero ese
+aviso vive en el panel "Editar", que solo muestra el slot **SELECCIONADO** - y navegar y pegar por
+teclado no selecciona nada: el foco de WPF y la seleccion del panel son cosas distintas. Copias un
+arma, la pegas sobre el hueco del casco, y no pasa nada: ni cambia el slot (correcto) ni se dice por
+que (el bug).
+
+Arreglado con el mismo criterio ya establecido dos veces en este proyecto (el campo "Indice" en la
+sexta pasada, y `H4-04` para los buffs): seleccionar el slot destino para que el aviso quede a la
+vista. Dos detalles que importan y quedan escritos:
+
+- **Se selecciona ANTES de pegar**, no despues: `OnIsSelectedChanged` limpia `RejectionMessage` al
+  cambiar de seleccion (`L-e`), asi que hacerlo despues borraria justo el aviso recien escrito -
+  exactamente el mismo error de orden que la ronda de Buffs de hoy tuvo que corregir.
+- **Solo cuando de verdad va a rechazarse.** Un pegado que funciona no tiene por que mover la
+  seleccion del usuario a otro sitio.
+
+### Medido de verdad, con el contrafactual al lado
+
+Bloque nuevo `OBJ-10` en el arnes: hace el gesto REAL (Ctrl+C con teclado real sobre un arma del
+Inventario, cambia a la sub-pestaña Equipamiento, Ctrl+V con teclado real sobre el hueco de casco) y
+mira lo que ve el usuario. Con el arreglo y sin el, mismo bloque:
+
+```
+CON:  Ctrl+V real de 'Pico de hierro' sobre el hueco de casco -> el slot no cambia,
+      aviso a la vista=True, mensaje='Este slot solo acepta cascos/tocados.'
+SIN:  ... aviso a la vista=False, mensaje=''   -> FALLO
+```
+
+Detalle del propio bloque que costo una ejecucion: los dos slots viven en sub-pestañas DISTINTAS de
+"Objetos" y **solo esta renderizada la que se ve**, asi que hay que copiar con Inventario a la vista
+y pegar con Equipamiento a la vista. La primera version buscaba los dos Border a la vez y se
+omitia entera sin medir nada. El bloque deja la sub-pestaña como estaba al terminar (misma regla que
+`session.json`/`AR-13c`).
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core 420, ViewModels 429 (el unico fallo, `HomeCardTests.RestoreBackup_*`, es de
+  otra area y sale distinto en cada ejecucion - intermitente por el paralelismo de esta oleada).
+- Arnes de UI Automation: ejecucion completa hasta `DONE`, `OBJ-01`..`OBJ-10` en verde.
+
+### Cierre de la oleada de Objetos
+
+Cuatro tandas, seis bugs reales arreglados (bindings mudos de Almacenes/Equipamiento, favorito
+perdido por los dos lados, pildoras de almacen cortadas a 1520x864, tooltip con los numeros del
+prefijo anterior, Ctrl+V mudo) y una expectativa del arnes que llevaba meses mintiendo. Dos
+hallazgos mas quedan escritos y NO tocados a proposito, con sus numeros: la cobertura del "mejor
+prefijo automatico" (145 de 571 objetos vanilla con daño) y el texto de `ItemStatsFormatter`
+codificado en español dentro de `Core`. Tras la cuarta pasada ya no salia nada nuevo en esta zona.

@@ -1094,7 +1094,25 @@ public partial class MainWindow : Window
         }
         else if (ctrl && e.Key == Key.V)
         {
-            if (_itemClipboard is { } clip) slot.PasteItem(clip);
+            if (_itemClipboard is { } clip)
+            {
+                // OBJ-10 (oleada de Objetos, 6-sep-2026): un Ctrl+V RECHAZADO por la restriccion
+                // de slot (pegar un arma copiada sobre el hueco del casco, por ejemplo) no hacia
+                // absolutamente NADA visible. PasteItem si escribe su RejectionMessage, pero ese
+                // aviso vive en el panel "Editar", que solo muestra el slot SELECCIONADO - y
+                // navegar/pegar por teclado nunca selecciona nada (el foco de WPF y la seleccion
+                // del panel son cosas distintas). Era el cuarto camino con el mismo silencio que
+                // ya se cerro para el campo "Indice" (sexta pasada) y para los buffs (H4-04).
+                //
+                // Se selecciona ANTES de pegar a proposito: ItemSlotViewModel.OnIsSelectedChanged
+                // limpia RejectionMessage al cambiar de seleccion (L-e), asi que seleccionar
+                // DESPUES borraria justo el aviso que se acaba de escribir - el mismo error de
+                // orden que la ronda de Buffs de hoy tuvo que corregir. Y solo cuando de verdad va
+                // a rechazarse: un pegado que funciona no tiene por que mover la seleccion del
+                // usuario a otro sitio.
+                if (!slot.AcceptsItem(clip.Id)) _viewModel.SelectSlot(slot);
+                slot.PasteItem(clip);
+            }
             e.Handled = true;
         }
     }

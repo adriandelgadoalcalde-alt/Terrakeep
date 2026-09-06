@@ -4722,6 +4722,184 @@ internal static partial class Program
                 }
                 catch (Exception ex) { Console.WriteLine("AR-EX3-EXCEPTION: " + ex); }
 
+                // AR-EX4 (misma oleada): lo que queda del encargo real de esta area y que ninguna
+                // prueba tocaba todavia:
+                //   (a) ARRASTRAR Y SOLTAR un .wld sobre la ventana (F-13). El gesto OLE real no se
+                //       puede sintetizar, pero el manejador si: se le entrega un DataObject de
+                //       FileDrop de verdad, que es exactamente lo que le llega del sistema. Se
+                //       prueban los tres casos que existen: un mundo bueno, un fichero de otro tipo
+                //       (no debe pasar nada) y un .wld CORRUPTO (no puede reventar la app).
+                //   (b) EXPORTAR el mapa a PNG con el resaltado encendido: F-12 solo probaba el
+                //       mapa desnudo, y la rama que COMPONE las dos capas (DrawingVisual +
+                //       RenderTargetBitmap) no la habia ejecutado nunca ninguna prueba.
+                //   (c) el reparto vertical de la columna (AR-EX1) tambien en INGLES: los textos
+                //       cambian de largo y las dos casillas del bloque de resultados pueden pasar a
+                //       dos lineas, que es justo lo que empuja a la categoria.
+                try
+                {
+                    string mundoOk = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                    var dropHandler = typeof(MainWindow).GetMethod("OnWindowDrop", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    if (dropHandler == null) Console.WriteLine("FALLO: AR-EX4-DROP - no se encontro OnWindowDrop (se renombro en MainWindow.xaml.cs?)");
+                    else if (!File.Exists(mundoOk)) Console.WriteLine("AR-EX4-DROP: no hay mundo real con el que probar - omitido");
+                    else
+                    {
+                        // El manejador es async void: se le da tiempo real bombeando el Dispatcher,
+                        // igual que hace el resto del arnes con las cargas de mundo.
+                        // DragEventArgs no tiene NINGUN constructor publico (WPF solo los crea por
+                        // dentro, desde el OLE real), asi que se construye por reflexion rellenando
+                        // cada parametro por su TIPO - sin depender de cuantos sean ni de su orden,
+                        // que es detalle interno de WPF y puede cambiar entre versiones.
+                        void Soltar(string ruta)
+                        {
+                            var datos = new DataObject(DataFormats.FileDrop, new[] { ruta });
+                            var ctor = typeof(DragEventArgs)
+                                .GetConstructors(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                                .OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+                            if (ctor == null) { Console.WriteLine("FALLO: AR-EX4-DROP - no se pudo construir un DragEventArgs real"); return; }
+                            var valores = ctor.GetParameters().Select(par =>
+                                par.ParameterType.IsInstanceOfType(datos) ? (object)datos
+                                : par.ParameterType == typeof(DragDropKeyStates) ? DragDropKeyStates.None
+                                : par.ParameterType == typeof(DragDropEffects) ? DragDropEffects.Copy
+                                : par.ParameterType.IsInstanceOfType(window) ? window
+                                : par.ParameterType == typeof(Point) ? new Point(10, 10)
+                                : par.ParameterType.IsValueType ? Activator.CreateInstance(par.ParameterType)!
+                                : null!).ToArray();
+                            var args = (DragEventArgs)ctor.Invoke(valores);
+                            args.RoutedEvent = System.Windows.DragDrop.DropEvent;
+                            dropHandler.Invoke(window, [window, args]);
+                            for (int i = 0; i < 300 && vm.Exploration.IsLoading; i++) { DoEvents(); Thread.Sleep(15); }
+                            WaitForDispatcher(300);
+                        }
+
+                        int pestanaAntes = vm.SelectedTabIndex;
+                        vm.SelectedTabIndex = 0; // Inicio: soltar un mundo tiene que traer al usuario a Exploracion
+                        DoEvents();
+                        Soltar(mundoOk);
+                        Console.WriteLine($"AR-EX4-DROP: soltar '{Path.GetFileName(mundoOk)}' -> mundo cargado={vm.Exploration.IsWorldLoaded} (esperado True), " +
+                                          $"titulo='{vm.Exploration.WorldTitle}', pestaña activa={vm.SelectedTabIndex} (esperado 4, Exploracion)");
+                        if (!vm.Exploration.IsWorldLoaded)
+                            Console.WriteLine("FALLO: AR-EX4-DROP - soltar un .wld real no cargo el mundo");
+                        if (vm.SelectedTabIndex != 4)
+                            Console.WriteLine($"FALLO: AR-EX4-DROP - soltar un .wld no lleva a la pestaña de Exploracion (quedo en {vm.SelectedTabIndex})");
+
+                        // Un fichero que no es ni .wld ni .plr: no debe hacer NADA (ni cargar, ni
+                        // cambiar de pestaña, ni dar error).
+                        string ajeno = Path.Combine(Path.GetTempPath(), $"terrakeep-ajeno-{Guid.NewGuid():N}.txt");
+                        File.WriteAllText(ajeno, "esto no es un mundo");
+                        string tituloAntes = vm.Exploration.WorldTitle ?? "";
+                        vm.SelectedTabIndex = 0;
+                        DoEvents();
+                        Soltar(ajeno);
+                        Console.WriteLine($"AR-EX4-DROP: soltar un .txt -> pestaña={vm.SelectedTabIndex} (esperado 0, sin moverse), mundo sigue siendo '{vm.Exploration.WorldTitle}' (esperado '{tituloAntes}')");
+                        if (vm.SelectedTabIndex != 0 || vm.Exploration.WorldTitle != tituloAntes)
+                            Console.WriteLine("FALLO: AR-EX4-DROP - soltar un fichero que no es un mundo cambia el estado de la app");
+                        File.Delete(ajeno);
+
+                        // Un .wld CORRUPTO (copia real truncada a la mitad): tiene que quedarse en
+                        // un mensaje de error legible, nunca reventar ni dejar medio mundo cargado.
+                        string corrupto = Path.Combine(Path.GetTempPath(), $"terrakeep-corrupto-{Guid.NewGuid():N}.wld");
+                        var bytesReales = File.ReadAllBytes(mundoOk);
+                        File.WriteAllBytes(corrupto, bytesReales.Take(bytesReales.Length / 2).ToArray());
+                        vm.SelectedTabIndex = 0;
+                        DoEvents();
+                        Soltar(corrupto);
+                        Console.WriteLine($"AR-EX4-DROP: soltar un .wld truncado a la mitad -> IsWorldLoaded={vm.Exploration.IsWorldLoaded} (esperado False), " +
+                                          $"estado='{vm.Exploration.StatusMessage}' (esperado un mensaje de error legible), filas de cofre={vm.Exploration.ChestRows.Count} (esperado 0)");
+                        if (vm.Exploration.IsWorldLoaded)
+                            Console.WriteLine("FALLO: AR-EX4-DROP - un .wld corrupto se da por cargado");
+                        if (vm.Exploration.ChestRows.Count > 0)
+                            Console.WriteLine($"FALLO: AR-EX4-DROP - tras fallar la carga quedan {vm.Exploration.ChestRows.Count} filas de cofre del mundo anterior");
+                        File.Delete(corrupto);
+
+                        // Estado como estaba: mundo bueno cargado y la pestaña donde estaba.
+                        Soltar(mundoOk);
+                        vm.SelectedTabIndex = pestanaAntes;
+                        DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-EX4-DROP-EXCEPTION: " + ex); }
+
+                try
+                {
+                    // (b) Exportar el mapa CON resaltado - la rama que compone las dos capas.
+                    if (!vm.Exploration.IsWorldLoaded) Console.WriteLine("AR-EX4-PNG: sin mundo cargado - omitido");
+                    else
+                    {
+                        var catAntesPng = vm.Exploration.SelectedCategory;
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.Ores;
+                        DoEvents();
+                        var mineral = vm.Exploration.OreMetals.FirstOrDefault();
+                        if (mineral == null) Console.WriteLine("AR-EX4-PNG: este mundo no trae ningun metal - omitido");
+                        else
+                        {
+                            mineral.IsChecked = true;
+                            WaitForDispatcher(3500);
+                            bool hayResaltado = vm.Exploration.WorldHighlight != null;
+                            string destino = Path.Combine(AppContext.BaseDirectory, "exploracion-mapa-con-resaltado.png");
+                            vm.Exploration.ExportMapToPng(destino);
+                            var pngLeido = new System.Windows.Media.Imaging.BitmapImage();
+                            pngLeido.BeginInit();
+                            pngLeido.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                            pngLeido.UriSource = new Uri(destino);
+                            pngLeido.EndInit();
+                            var mapa = vm.Exploration.WorldImage!;
+                            Console.WriteLine($"AR-EX4-PNG: exportado con resaltado activo={hayResaltado} (esperado True) -> {pngLeido.PixelWidth}x{pngLeido.PixelHeight} " +
+                                              $"(esperado {mapa.PixelWidth}x{mapa.PixelHeight}), {new FileInfo(destino).Length / 1024:N0} KB");
+                            if (!hayResaltado)
+                                Console.WriteLine("FALLO: AR-EX4-PNG - marcar un mineral no dejo capa de resaltado que exportar");
+                            if (pngLeido.PixelWidth != mapa.PixelWidth || pngLeido.PixelHeight != mapa.PixelHeight)
+                                Console.WriteLine($"FALLO: AR-EX4-PNG - el PNG compuesto no conserva el tamaño real del mundo ({pngLeido.PixelWidth}x{pngLeido.PixelHeight} en vez de {mapa.PixelWidth}x{mapa.PixelHeight})");
+                            mineral.IsChecked = false;
+                            WaitForDispatcher(600);
+                            vm.Exploration.ClearOreMarksCommand.Execute(null);
+                        }
+                        vm.Exploration.SelectedCategory = catAntesPng;
+                        DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-EX4-PNG-EXCEPTION: " + ex); }
+
+                try
+                {
+                    // (c) El reparto vertical de AR-EX1, en INGLES y en los tamaños que mas aprietan.
+                    var contenidoCatEn = window.FindName("ExplorationCategoryContent") as FrameworkElement;
+                    var bloqueResEn = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+                    if (contenidoCatEn == null || bloqueResEn == null) Console.WriteLine("FALLO: AR-EX4-IDIOMA - no se encontro el contenido de categoria / bloque de resultados");
+                    else
+                    {
+                        string idiomaAntesEx = LocalizationService.Instance.Language;
+                        var catAntesEx = vm.Exploration.SelectedCategory;
+                        LocalizationService.Instance.SetLanguage("en");
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        vm.Exploration.WorldSearchText = "lava";
+                        WaitForDispatcher(2600);
+                        int nResEn = vm.Exploration.WorldSearchResults.Count;
+                        foreach (var (wEn, hEn) in new (double, double)[] { (1400, 900), (1180, 860), (1080, 700) })
+                        {
+                            window.WindowState = WindowState.Normal;
+                            FijarTamaño(window, wEn, hEn);
+                            foreach (var catEn in new[] { WorldSearchCategory.Chests, WorldSearchCategory.Ores, WorldSearchCategory.Objects })
+                            {
+                                vm.Exploration.SelectedCategory = catEn;
+                                DoEvents(); DoEvents();
+                                var rectEn = RectVisible(contenidoCatEn, window);
+                                Console.WriteLine($"AR-EX4-IDIOMA: [en] {wEn:0}x{hEn:0}, {catEn} con {nResEn} resultado(s) -> contenido de categoria SE VE {rectEn.Height:0}px (esperado >=120), " +
+                                                  $"bloque de resultados={bloqueResEn.ActualHeight:0}px");
+                                if (rectEn.Height < 120)
+                                    Console.WriteLine($"FALLO: AR-EX4-IDIOMA - en INGLES, a {wEn:0}x{hEn:0}, a {catEn} solo le quedan {rectEn.Height:0}px (el bloque de resultados se lleva {bloqueResEn.ActualHeight:0}px)");
+                            }
+                        }
+                        vm.Exploration.WorldSearchText = string.Empty;
+                        WaitForDispatcher(300);
+                        vm.Exploration.ClearOreMarksCommand.Execute(null);
+                        vm.Exploration.SelectedCategory = catAntesEx;
+                        LocalizationService.Instance.SetLanguage(idiomaAntesEx);
+                        FijarTamaño(window, 1180, 860);
+                        DoEvents(); DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-EX4-IDIOMA-EXCEPTION: " + ex); }
+
                 // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
                 // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de
                 // NPC"): con el mundo real ya cargado arriba, confirma que la mayoria de NPCs
@@ -5226,6 +5404,65 @@ internal static partial class Program
                     if (slotOrigen.Count != 7 || !slotOrigen.IsFavorited) Console.WriteLine("FALLO: H5-14 - Ctrl+C/Ctrl+V real no reprodujo el objeto entero copiado (cantidad/favorito)");
                 }
                 else Console.WriteLine("H5-14-COPIA-PEGA: Border real del slot 22 no encontrado - omitido");
+
+                // OBJ-10 (oleada de Objetos, 6-sep-2026): el mismo Ctrl+V real, pero sobre un slot
+                // que NO puede aceptar lo copiado (el hueco de casco de Equipamiento, SlotKind.
+                // ArmorHead, con un arma en el portapapeles). Antes no pasaba absolutamente nada
+                // visible: PasteItem escribia su RejectionMessage pero ese aviso solo se ve en el
+                // panel "Editar", que muestra el slot SELECCIONADO - y el teclado nunca seleccionaba
+                // nada. Aqui se comprueba lo que de verdad ve el usuario: el slot NO cambia, y el
+                // aviso queda a la vista de verdad (slot seleccionado Y mensaje puesto).
+                try
+                {
+                    // Los dos slots viven en sub-pestañas DISTINTAS de "Objetos" (el arma en
+                    // Inventario, el hueco de casco en Equipamiento) y solo esta renderizada la
+                    // que se ve: hay que copiar con una a la vista y pegar con la otra, o
+                    // FindBorderForSlot no encuentra nada (primer intento de este bloque: se
+                    // omitio entero por eso).
+                    int subTabAntesObj10 = vm.ObjetosSubTabIndex;
+                    vm.ObjetosSubTabIndex = 1; // Inventario
+                    DoEvents(); DoEvents();
+                    var slotArma = vm.InventoryContainer?.Slots.FirstOrDefault(x => !x.IsEmpty);
+                    var borderArma = slotArma != null ? FindBorderForSlot(window, slotArma) : null;
+                    if (slotArma != null && borderArma != null)
+                    {
+                        System.Windows.Input.Keyboard.Focus(borderArma);
+                        DoEvents();
+                        PressCtrlPlus(0x43); // VK_C sobre el arma, con Inventario a la vista
+                        DoEvents();
+                    }
+                    vm.ObjetosSubTabIndex = 0; // Equipamiento
+                    DoEvents(); DoEvents();
+                    var slotCasco = vm.EquipmentGroup?.EquippedItems.Slots[0];
+                    var borderCasco = slotCasco != null ? FindBorderForSlot(window, slotCasco) : null;
+                    if (slotArma == null || slotCasco == null || borderArma == null || borderCasco == null)
+                    {
+                        Console.WriteLine("OBJ-10: no se encontraron los dos slots reales para el pegado rechazado - omitido");
+                    }
+                    else if (slotCasco.AcceptsItem(slotArma.ItemId))
+                    {
+                        Console.WriteLine($"OBJ-10: el slot de casco SI acepta '{slotArma.DisplayName}' - no sirve como caso de rechazo, omitido");
+                    }
+                    else
+                    {
+                        string cascoAntes = slotCasco.DisplayName;
+                        System.Windows.Input.Keyboard.Focus(borderCasco);
+                        DoEvents();
+                        PressCtrlPlus(0x56); // VK_V sobre el hueco de casco - debe rechazarse
+                        DoEvents(); DoEvents();
+                        bool avisoALaVista = slotCasco.IsSelected
+                                             && ReferenceEquals(vm.ItemEdit.Slot, slotCasco)
+                                             && !string.IsNullOrEmpty(slotCasco.RejectionMessage);
+                        Console.WriteLine($"OBJ-10: Ctrl+V real de '{slotArma.DisplayName}' sobre el hueco de casco -> el slot sigue siendo '{slotCasco.DisplayName}' (era '{cascoAntes}'), aviso a la vista={avisoALaVista} (esperado True), mensaje='{slotCasco.RejectionMessage}'");
+                        if (slotCasco.DisplayName != cascoAntes)
+                            Console.WriteLine("FALLO: OBJ-10 - el pegado rechazado SI cambio el slot: la restriccion de tipo no se aplica por Ctrl+V");
+                        if (!avisoALaVista)
+                            Console.WriteLine("FALLO: OBJ-10 - un Ctrl+V rechazado no deja ninguna señal: el aviso del panel Editar solo se ve si el slot esta SELECCIONADO, y el teclado no lo selecciona");
+                    }
+                    vm.ObjetosSubTabIndex = subTabAntesObj10; // deja la sub-pestaña como estaba
+                    DoEvents();
+                }
+                catch (Exception exObj10) { Console.WriteLine("OBJ-10-EXCEPTION: " + exObj10); }
 
                 // Intro real: abre "Elegir..." (ChooseFromLibraryCommand -> Library.PickTarget).
                 System.Windows.Input.Keyboard.Focus(borderOrigen);
