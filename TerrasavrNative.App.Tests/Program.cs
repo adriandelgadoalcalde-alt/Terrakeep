@@ -986,6 +986,14 @@ internal static class Program
                 if (real != contenedorEsperado)
                     Console.WriteLine($"FALLO: LOADOUT-PILDORAS - la pildora '{nombre}' edita el contenedor {real}, no el {contenedorEsperado} que guarda de verdad ese conjunto en el .plr");
             }
+
+            // Devuelve la seleccion a la pildora del conjunto puesto ANTES de seguir: T20-AUTOEQUIP
+            // (mucho mas abajo) mide EquippedItems (contenedor 0) pero Auto-equipar coloca en el
+            // loadout SELECCIONADO (Bd-b, a proposito), y H6-06 depende de que ese equipo llegue
+            // al doll de Apariencia. Dejar el arnes mirando el conjunto 3 rompia los dos.
+            var vueltaAlPuesto = vm.EquipmentGroup?.LoadoutOptions.FirstOrDefault(o => o.IsActiveLoadout);
+            if (vueltaAlPuesto != null) vm.EquipmentGroup!.SelectLoadoutCommand.Execute(vueltaAlPuesto);
+            DoEvents();
         }
         catch (Exception ex)
         {

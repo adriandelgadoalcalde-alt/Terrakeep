@@ -171,6 +171,17 @@ sesión:
   scroll real (cuando el Panel vive dentro de un `ScrollViewer`, como todo uso real de
   `SlotGridPanel`) sigue funcionando bien, `ArrangeOverride` usa sus propios campos internos
   (`_cell`/`_cols`), no el `DesiredSize` ya recortado.
+- **El arnés HEREDA la sesión de la ejecución anterior**:
+  `%LOCALAPPDATA%\Terrakeep\session.json` es global de la máquina, no del árbol
+  de trabajo, y `LoadFromPath` restaura de ahí (entre otras cosas) la píldora
+  seleccionada de Equipamiento. Un bloque del arnés que cambie una selección
+  persistida y no la restaure contamina la ejecución SIGUIENTE entera - y como
+  `Auto-equipar` coloca en el loadout seleccionado mientras `T20-AUTOEQUIP`/
+  `H6-06` miran el contenedor 0, eso se manifiesta como `FALLO` intermitentes
+  que parecen de otro sitio (6-sep-2026: estuvo a punto de darse por "ajeno"
+  con una prueba diferencial en un `git worktree` que NO aislaba nada, porque
+  el `session.json` es el mismo para los dos árboles). Todo bloque nuevo que
+  toque una selección persistida debe dejarla como estaba.
 - `Path.GetTempPath()` desde un proceso lanzado en segundo plano vía Git
   Bash puede no resolver al mismo directorio que ve una sesión de
   PowerShell aparte - para un log de diagnóstico de un arnés, usar siempre

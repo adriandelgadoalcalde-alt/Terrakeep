@@ -9653,10 +9653,28 @@ es la ruta de Calamity y no es de este workstream. Queda anotado, sin tocar.
   `[1 ●, 2, 3]`, `ActiveLoadout=0`, `SelectableSetCount=3`, y pulsando de verdad la "1 ●" y la
   "3" el contenedor editado es el 0 y el 3 respectivamente.
 
-El unico `FALLO` que deja el arnes es `A10-IDIOMA-BARRIDO` (10 textos, un bono de set de armadura
-en español), y **es ajeno**: comprobado por diferencial real montando un `git worktree` en
-`HEAD` + SOLO el parche del otro agente (sin ningun cambio de este workstream) - da los mismos 10.
-Es el limite conocido n1 de la ronda de idioma (los nombres/textos de contenido del JUEGO siguen
-solo en español), que el barrido clasifica como "nuevo" porque ahora se llega a mostrar.
+Estado final del arnes: **0 lineas `FALLO`**, confirmado en dos ejecuciones seguidas.
+
+### Verdad del entorno nueva: el arnes HEREDA la sesion de la ejecucion anterior
+
+Merece quedar escrito porque costo un rato y estuvo a punto de colar una conclusion falsa. Por el
+camino aparecieron dos `FALLO` intermitentes (`H6-06` - "el toggle 'Mostrar equipo puesto' no
+quita la armadura del preview" - y `A10-IDIOMA-BARRIDO`) que iban y venian entre ejecuciones
+identicas. La primera hipotesis (comprobada montando un `git worktree` en `HEAD` + solo el parche
+del otro agente) parecia demostrar que eran ajenos: **esa prueba diferencial NO era limpia**.
+
+La causa real: `%LOCALAPPDATA%\Terrakeep\session.json` es GLOBAL de la maquina, no del arbol de
+trabajo - el arnes arranca una `MainWindow` real y `LoadFromPath` restaura de ahi la pildora de
+Equipamiento que quedo seleccionada en la ejecucion ANTERIOR (de cualquier arbol, worktree
+incluido). Y `Auto-equipar` coloca en el loadout SELECCIONADO (Bd-b, a proposito), mientras
+`T20-AUTOEQUIP`/`H6-06` miran `EquippedItems` (contenedor 0): con una seleccion heredada distinta
+del contenedor 0, el equipo se colocaba en otro conjunto y los dos fallaban - sin que nada
+estuviera roto de verdad.
+
+El bloque `LOADOUT-PILDORAS` nuevo, que pulsa la pildora "3" para verificar el mapeo, era el que
+sembraba esa seleccion. Arreglado devolviendo la seleccion a la pildora del conjunto puesto antes
+de seguir (mismo criterio de "deja el estado como estaba" que ya aplican otros bloques del arnes).
+Leccion general: **todo bloque del arnes que cambie una seleccion persistida en `session.json`
+tiene que restaurarla**, o contamina no solo el resto de SU ejecucion sino la siguiente entera.
 
 No hubo ningun obstaculo que fallara dos veces seguidas.
