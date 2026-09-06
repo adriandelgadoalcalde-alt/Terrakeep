@@ -9813,7 +9813,11 @@ tope se llevaria media fila.
 | textos recortados con sitio | - | 0 en las 6 vistas |
 | claves de idioma | 571 | 574 (+3, es y en) |
 
-Captura real nueva del arnes: `exploracion-cofres-nombres-y-maquetacion.png`.
+Captura real nueva del arnes: `exploracion-cofres-nombres-y-maquetacion.png`. Mirandola DESPUES del
+arreglo salio un ultimo detalle: la fila "Cofre de un mod" ya tenia su nombre, pero seguia
+enseñando el id `[-1]` a la derecha - el mismo numero sin sentido que el usuario reporto, solo que
+en otro sitio de la misma fila. Escondido SOLO ahi; las demas filas lo siguen llevando a proposito
+(P-7: TEdit muestra el id siempre, y el buscador de esta app acepta buscar por id).
 
 `AR-13c` corre sobre `Afueras_de_Larvas_de_gusano.wld` (el mundo real de la queja, el unico con
 cofres de mod - `roca_negra` tiene 505 y ninguno) y **deja recargado `roca_negra` al terminar**,
