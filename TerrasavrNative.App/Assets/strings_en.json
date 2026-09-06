@@ -148,6 +148,7 @@
   "error_loading": "Error loading: {0}",
   "error_loading_buff_set": "Error loading the buff set: {0}",
   "error_loading_set": "Error loading the set: {0}",
+  "error_backup_unreadable": "The backup for '{0}' is damaged and cannot be read: nothing was restored, your character is untouched.",
   "error_no_backup_to_restore": "'{0}' has no real backup to restore.",
   "error_open_folder": "Error opening the folder: {0}",
   "error_reading_world": "Error reading the world: {0}",

@@ -39,6 +39,7 @@ internal static partial class Program
     {
         PruebasInicio(vm);
         PruebasTarjetasDeInicio(vm, window);
+        PruebasRestaurarCopia(vm, window);
         PruebasAjustes(vm, window);
         PruebasAjustesPersistidos(vm);
         PruebasSelectorDeIdioma(vm, window);
@@ -158,7 +159,7 @@ internal static partial class Program
                 vm.Home.ClearScanMessage();
                 vm.Home.RestoreBackupCommand.Execute(entrada);
                 DoEvents();
-                string? msgSinBak = vm.Home.ScanMessage;
+                string? msgSinBak = vm.Home.ActionErrorMessage;
                 bool avisaSinBak = msgSinBak != null && msgSinBak.Contains("AvisoDeFecha", StringComparison.Ordinal);
                 File.WriteAllBytes(plrAviso + ".bak", PlrDePrueba("VueltaDelBak"));
                 vm.Home.RestoreBackupCommand.Execute(entrada);
@@ -185,10 +186,10 @@ internal static partial class Program
                 vm.Home.ClearScanMessage();
                 vm.Home.RestoreBackupCommand.Execute(entrada); // ya no queda .bak: vuelve a poner el mensaje real
                 DoEvents();
-                string? msgEs = vm.Home.ScanMessage;
+                string? msgEs = vm.Home.ActionErrorMessage;
                 vm.Settings.Language = LocalizationService.English;
                 DoEvents();
-                string? msgEn = vm.Home.ScanMessage;
+                string? msgEn = vm.Home.ActionErrorMessage;
                 vm.Settings.Language = idiomaPrevio;
                 DoEvents();
                 bool mensajeTraducido = msgEs != null && msgEn != null && msgEn != msgEs;
@@ -259,6 +260,86 @@ internal static partial class Program
     // sitio y el usuario se queda donde estaba. Se invoca cada boton REAL con su peer de
     // automatizacion (el mismo camino que un clic de verdad: ejecuta el Command con SU
     // CommandParameter, no uno escrito aqui a mano) y se mira donde aterriza.
+    // ---- INI-07 / INI-08: los dos escenarios de riesgo del menu contextual de una tarjeta ----
+    // INI-07: Inicio usa UN SOLO campo (ScanMessage) para dos cosas que no se parecen en nada -
+    //   "no encontre ningun personaje" (invitacion a cargar uno a mano) y "esta accion que
+    //   acabas de pedir ha fallado". El XAML lo pinta siempre igual: un boton grande con el
+    //   titulo "Empezar: cargar un personaje" que abre el dialogo de fichero. O sea que un error
+    //   al restaurar una copia se presenta como una invitacion a empezar de cero, CON la lista de
+    //   personajes justo encima.
+    // INI-08: "Restaurar copia de seguridad" copia el .bak encima del .plr sin mirar si el .bak
+    //   se puede leer siquiera. Un .bak truncado (un guardado interrumpido, un disco lleno) se
+    //   lleva por delante el personaje BUENO, sin vuelta atras y sin aviso: el personaje
+    //   simplemente desaparece de la lista, porque el escaneo omite en silencio lo que no puede
+    //   leer.
+    private static void PruebasRestaurarCopia(MainViewModel vm, Window window)
+    {
+        string idiomaPrevio = vm.Settings.Language;
+        int tabPrevio = vm.SelectedTabIndex;
+        string dir = Path.Combine(Path.GetTempPath(), $"terrakeep-restaurar-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(dir);
+            string plr = Path.Combine(dir, "CopiaRota.plr");
+            File.WriteAllBytes(plr, PlrDePrueba("CopiaRota"));
+            vm.Settings.AddCharacterFolder(dir);
+            vm.Home.RefreshCommand.Execute(null);
+            while (vm.Home.IsScanning) DoEvents();
+            DoEvents();
+            var entrada = vm.Home.Characters.FirstOrDefault(c => string.Equals(c.FilePath, plr, StringComparison.OrdinalIgnoreCase));
+            if (entrada == null) { Console.WriteLine("FALLO: INI-07/08 - el personaje de prueba no aparece en Inicio"); return; }
+
+            // ---- INI-07 ----
+            vm.SelectedTabIndex = 0;
+            vm.Home.ClearScanMessage();
+            vm.Home.RestoreBackupCommand.Execute(entrada); // no hay .bak: error real de una accion
+            DoEvents(); DoEvents();
+            int personajesALaVista = vm.Home.Characters.Count;
+            var reclamo = Descendientes<TextBlock>(window).FirstOrDefault(t => t.IsVisible && t.Text == LocalizationService.Instance["home_start_load_character"]);
+            bool reclamoVisible = reclamo != null;
+            bool mensajeALaVista = Descendientes<TextBlock>(window).Any(t => t.IsVisible && t.Text == vm.Home.ActionErrorMessage);
+            Console.WriteLine($"INI-07-ERROR-DE-ACCION: con {personajesALaVista} personaje(s) en la lista y un error real de accion -> mensaje a la vista={mensajeALaVista} (esperado True), " +
+                              $"reclamo \"{LocalizationService.Instance["home_start_load_character"]}\" visible={reclamoVisible} (esperado False: no es una invitacion a empezar de cero, es un error)");
+            if (!mensajeALaVista) Console.WriteLine("FALLO: INI-07 - el error de la accion no llega a verse en Inicio");
+            if (reclamoVisible && personajesALaVista > 0)
+                Console.WriteLine("FALLO: INI-07 - un error de una accion se presenta como el reclamo de 'Empezar: cargar un personaje', con la lista de personajes justo encima");
+
+            // ---- INI-08 ----
+            long tamañoBueno = new FileInfo(plr).Length;
+            File.WriteAllBytes(plr + ".bak", [0x01, 0x02, 0x03]); // .bak ilegible a proposito
+            vm.Home.ClearScanMessage();
+            vm.Home.RestoreBackupCommand.Execute(entrada);
+            while (vm.Home.IsScanning) DoEvents();
+            DoEvents();
+            bool sigueLegible;
+            try { sigueLegible = PlrFile.Read(File.ReadAllBytes(plr)).Name == "CopiaRota"; }
+            catch (Exception) { sigueLegible = false; }
+            bool sigueEnLaLista = vm.Home.Characters.Any(c => string.Equals(c.FilePath, plr, StringComparison.OrdinalIgnoreCase));
+            bool aviso = !string.IsNullOrWhiteSpace(vm.Home.ActionErrorMessage);
+            Console.WriteLine($"INI-08-COPIA-CORRUPTA: .plr bueno de {tamañoBueno} bytes + un .bak ilegible de 3 -> el .plr sigue legible={sigueLegible} (esperado True), " +
+                              $"sigue en la lista de Inicio={sigueEnLaLista} (esperado True), avisa de algo=\"{vm.Home.ActionErrorMessage ?? "(nada)"}\" -> {aviso} (esperado True)");
+            if (!sigueLegible) Console.WriteLine("FALLO: INI-08 - restaurar un .bak ILEGIBLE destruye el .plr bueno (perdida de datos real, sin vuelta atras)");
+            if (!sigueEnLaLista) Console.WriteLine("FALLO: INI-08 - tras restaurar un .bak ilegible el personaje desaparece de Inicio");
+            if (!aviso) Console.WriteLine("FALLO: INI-08 - restaurar un .bak ilegible no avisa de nada");
+        }
+        catch (Exception ex) { Console.WriteLine("INI-07/08-EXCEPTION: " + ex); }
+        finally
+        {
+            try
+            {
+                vm.Settings.RemoveCharacterFolderCommand.Execute(dir);
+                vm.Home.RefreshCommand.Execute(null);
+                while (vm.Home.IsScanning) DoEvents();
+                vm.Home.ClearScanMessage();
+                vm.Settings.Language = idiomaPrevio;
+                vm.SelectedTabIndex = tabPrevio;
+                DoEvents();
+                if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+            }
+            catch (Exception ex) { Console.WriteLine("INI-07/08-LIMPIEZA-EXCEPTION: " + ex.Message); }
+        }
+    }
+
     private static void PruebasTarjetasDeInicio(MainViewModel vm, Window window)
     {
         try

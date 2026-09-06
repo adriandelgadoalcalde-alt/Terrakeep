@@ -148,6 +148,7 @@
   "error_loading": "Error al cargar: {0}",
   "error_loading_buff_set": "Error al cargar el conjunto de buffs: {0}",
   "error_loading_set": "Error al cargar el conjunto: {0}",
+  "error_backup_unreadable": "La copia de seguridad de '{0}' está dañada y no se puede leer: NO se ha restaurado nada, tu personaje sigue intacto.",
   "error_no_backup_to_restore": "'{0}' no tiene ninguna copia de seguridad real que restaurar.",
   "error_open_folder": "Error al abrir la carpeta: {0}",
   "error_reading_world": "Error al leer el mundo: {0}",

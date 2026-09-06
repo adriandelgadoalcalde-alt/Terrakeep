@@ -57,16 +57,27 @@ public partial class HomeViewModel : ObservableObject
     // congelado dentro del argumento, asi que se guardan las carpetas y se unen al leer.
     private IReadOnlyList<string>? _scanMessageFolders;
 
-    public string? ScanMessage
+    // INI-07 (misma oleada) - SEGUNDO BUG REAL en el mismo campo: aqui se metian DOS cosas que no
+    // se parecen en nada - "no encontre ningun personaje" (una invitacion a cargar uno a mano) y
+    // "la accion que acabas de pedir ha fallado". El XAML solo sabia pintar la primera: un boton
+    // grande titulado "Empezar: cargar un personaje" que abre el dialogo de fichero. Medido con 6
+    // personajes reales en la lista: al fallar "Restaurar copia de seguridad", el error salia
+    // dentro de ese reclamo, con la lista de personajes JUSTO ENCIMA - un mensaje de error
+    // disfrazado de invitacion a empezar de cero. Son dos propiedades distintas porque son dos
+    // cosas distintas; el XAML pinta cada una a su manera.
+    private bool _mensajeEsErrorDeAccion;
+
+    public string? ScanMessage => _mensajeEsErrorDeAccion ? null : Componer();
+
+    public string? ActionErrorMessage => _mensajeEsErrorDeAccion ? Componer() : null;
+
+    private string? Componer()
     {
-        get
-        {
-            if (_scanMessageKey is null) return null;
-            var loc = LocalizationService.Instance;
-            return _scanMessageFolders is null
-                ? loc.Format(_scanMessageKey, _scanMessageArgs)
-                : loc.Format(_scanMessageKey, string.Join(loc["scan_folder_joiner"], _scanMessageFolders));
-        }
+        if (_scanMessageKey is null) return null;
+        var loc = LocalizationService.Instance;
+        return _scanMessageFolders is null
+            ? loc.Format(_scanMessageKey, _scanMessageArgs)
+            : loc.Format(_scanMessageKey, string.Join(loc["scan_folder_joiner"], _scanMessageFolders));
     }
 
     private void SetScanMessage(string clave, params object?[] args)
@@ -74,7 +85,8 @@ public partial class HomeViewModel : ObservableObject
         _scanMessageKey = clave;
         _scanMessageArgs = args;
         _scanMessageFolders = null;
-        OnPropertyChanged(nameof(ScanMessage));
+        _mensajeEsErrorDeAccion = false;
+        AvisarDeLosDosMensajes();
     }
 
     private void SetScanMessageCarpetas(string clave, IReadOnlyList<string> carpetas)
@@ -82,10 +94,22 @@ public partial class HomeViewModel : ObservableObject
         _scanMessageKey = clave;
         _scanMessageArgs = [];
         _scanMessageFolders = carpetas;
-        OnPropertyChanged(nameof(ScanMessage));
+        _mensajeEsErrorDeAccion = false;
+        AvisarDeLosDosMensajes();
     }
 
-    // Unica via real de borrarlo desde fuera - no hay setter publico a proposito: aceptar un
+    // El resultado de una accion del menu contextual (abrir carpeta, duplicar, restaurar) -
+    // nunca el reclamo de "empezar de cero", que es otra cosa.
+    private void SetActionError(string clave, params object?[] args)
+    {
+        _scanMessageKey = clave;
+        _scanMessageArgs = args;
+        _scanMessageFolders = null;
+        _mensajeEsErrorDeAccion = true;
+        AvisarDeLosDosMensajes();
+    }
+
+    // Unica via real de borrarlos desde fuera - no hay setter publico a proposito: aceptar un
     // string ya resuelto es exactamente lo que reintroduciria el bug de arriba.
     public void ClearScanMessage()
     {
@@ -93,7 +117,14 @@ public partial class HomeViewModel : ObservableObject
         _scanMessageKey = null;
         _scanMessageArgs = [];
         _scanMessageFolders = null;
+        _mensajeEsErrorDeAccion = false;
+        AvisarDeLosDosMensajes();
+    }
+
+    private void AvisarDeLosDosMensajes()
+    {
         OnPropertyChanged(nameof(ScanMessage));
+        OnPropertyChanged(nameof(ActionErrorMessage));
     }
 
     // I-a: ruta real del personaje cargado ahora mismo en MainViewModel (null si ninguno) -
@@ -272,6 +303,24 @@ public partial class HomeViewModel : ObservableObject
     [RelayCommand]
     private void Open(CharacterListEntryViewModel entry) => CharacterChosen?.Invoke(entry.FilePath);
 
+    // INI-08: ¿este fichero es un .plr que la app pueda cargar de verdad? Se usa el MISMO lector
+    // real (PlrFile.Read, con su descifrado y su NBT) que usa la carga normal - una comprobacion
+    // mas floja (que exista, que ocupe algo) no distingue un fichero truncado de uno bueno, y es
+    // justo lo que hay que distinguir antes de machacar el original con el. Los .plr son
+    // pequeños (unos KB), asi que leerlo entero no cuesta nada perceptible.
+    private static bool EsUnPlrLegible(string ruta)
+    {
+        try
+        {
+            PlrFile.Read(File.ReadAllBytes(ruta));
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     // I-b (segunda auditoria de Opus, Fable): "Sin ninguna accion secundaria en la tarjeta -
     // faltan las 3 obvias y baratas: abrir carpeta, duplicar personaje, restaurar copia de
     // seguridad". Menu contextual real en la tarjeta (ver MainWindow.xaml).
@@ -286,7 +335,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            SetScanMessage("error_open_folder", ex.Message);
+            SetActionError("error_open_folder", ex.Message);
         }
     }
 
@@ -316,7 +365,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            SetScanMessage("error_duplicating", ex.Message);
+            SetActionError("error_duplicating", ex.Message);
         }
     }
 
@@ -331,7 +380,21 @@ public partial class HomeViewModel : ObservableObject
             string plrBak = entry.FilePath + ".bak";
             if (!File.Exists(plrBak))
             {
-                SetScanMessage("error_no_backup_to_restore", entry.Name);
+                SetActionError("error_no_backup_to_restore", entry.Name);
+                return;
+            }
+            // INI-08 (misma oleada) - BUG REAL DE PERDIDA DE DATOS: esto copiaba el .bak encima
+            // del .plr sin mirar si el .bak se puede leer siquiera. Reproducido con numeros: un
+            // .plr bueno de 3680 bytes + un .bak de 3 bytes ilegible -> el personaje BUENO queda
+            // destruido, desaparece de Inicio (el escaneo omite en silencio lo que no puede leer,
+            // por diseño) y no se avisa de nada. Sin vuelta atras: el .bak era la unica copia y
+            // acaba de machacar el original. Un .bak truncado no es rebuscado - lo deja cualquier
+            // guardado interrumpido (disco lleno, apagon, antivirus).
+            //
+            // Se lee ANTES de tocar nada, con el mismo lector real que usa la app para cargar.
+            if (!EsUnPlrLegible(plrBak))
+            {
+                SetActionError("error_backup_unreadable", entry.Name);
                 return;
             }
             File.Copy(plrBak, entry.FilePath, overwrite: true);
@@ -363,7 +426,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            SetScanMessage("error_restoring_backup", ex.Message);
+            SetActionError("error_restoring_backup", ex.Message);
         }
     }
 
@@ -380,6 +443,13 @@ public partial class HomeViewModel : ObservableObject
         var (entry, backup) = args;
         try
         {
+            // INI-08: misma red de seguridad que RestoreBackup - un punto del historial tambien
+            // puede estar truncado, y restaurarlo destruiria el personaje bueno igual de rapido.
+            if (!EsUnPlrLegible(backup.PlrPath))
+            {
+                SetActionError("error_backup_unreadable", entry.Name);
+                return;
+            }
             _backupHistory.Restore(entry.FilePath, null, backup);
             _ = RefreshAsync(); // T-G: mismo criterio real que el constructor, fire-and-forget
 
@@ -391,7 +461,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            SetScanMessage("error_restoring_backup_dated", backup.TimestampLocal.ToString("dd/MM/yyyy HH:mm:ss"), ex.Message);
+            SetActionError("error_restoring_backup_dated", backup.TimestampLocal.ToString("dd/MM/yyyy HH:mm:ss"), ex.Message);
         }
     }
 }
