@@ -83,9 +83,17 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
     {
         Reset();
         _researchedCounts = ResolveResearchedCounts(character);
-        IsJourneyMode = character.Difficulty == 3;
+        RefreshJourneyMode(character.Difficulty);
         ApplyFilter();
     }
+
+    // Oleada del 6-sep-2026 (Personaje > Apariencia/Investigacion) - BUG REAL: esto se calculaba
+    // UNA sola vez, en LoadFrom, y no volvia a mirar la dificultad nunca mas. La dificultad se
+    // edita en Apariencia, dos sub-pestañas al lado: poner el personaje en Modo Viaje dejaba a
+    // Investigacion diciendo que no lo era (y al reves). MainViewModel, que conoce a los dos,
+    // lo empuja en cuanto cambia - misma familia exacta que el arreglo de la rejilla de Buffs
+    // por version de esta misma oleada. El 3 es Player.difficulty real de Modo Viaje.
+    public void RefreshJourneyMode(int difficulty) => IsJourneyMode = difficulty == 3;
 
     // H5-02: vuelca el estado real en memoria de vuelta al personaje - mismo criterio real que
     // MainViewModel.SyncEditsBackToMerged para objetos, llamado desde MainViewModel.Save()

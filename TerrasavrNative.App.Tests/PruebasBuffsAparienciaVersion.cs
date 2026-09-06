@@ -282,6 +282,24 @@ internal static partial class Program
                 Console.WriteLine("FALLO: PB-09 - Investigacion se salta su propio tope de 100 resultados");
             Console.WriteLine($"PB-09-VIAJE: dificultad={vm.Appearance.Difficulty} -> IsJourneyMode={vm.Research.IsJourneyMode} (el aviso naranja se ve cuando es False)");
 
+            // El aviso tiene que seguir a la dificultad REAL en vivo: se edita en Apariencia, dos
+            // sub-pestañas al lado, y hasta esta oleada se congelaba en la de la carga. Se mide
+            // sobre el TEXTO real del aviso en el arbol visual, no solo sobre el booleano.
+            int dificultadPrevia = vm.Appearance.Difficulty;
+            string textoAviso = LocalizationService.Instance["research_not_journey_mode"];
+            bool avisoVisibleAntes = Descendientes<TextBlock>(window).Any(t => t.IsVisible && t.Text == textoAviso);
+            vm.Appearance.Difficulty = 3; // Modo Viaje, editado desde Apariencia
+            DoEvents(); DoEvents();
+            bool avisoVisibleEnViaje = Descendientes<TextBlock>(window).Any(t => t.IsVisible && t.Text == textoAviso);
+            vm.Appearance.Difficulty = 0; // Clasico
+            DoEvents(); DoEvents();
+            bool avisoVisibleEnClasico = Descendientes<TextBlock>(window).Any(t => t.IsVisible && t.Text == textoAviso);
+            vm.Appearance.Difficulty = dificultadPrevia;
+            DoEvents();
+            Console.WriteLine($"PB-09-VIAJE-VIVO: aviso a la vista con dificultad de partida={avisoVisibleAntes}, con Modo Viaje={avisoVisibleEnViaje} (esperado False), de vuelta en Clasico={avisoVisibleEnClasico} (esperado True)");
+            if (avisoVisibleEnViaje || !avisoVisibleEnClasico)
+                Console.WriteLine("FALLO: PB-09 - el aviso de Modo Viaje de Investigacion no sigue a la dificultad real editada en Apariencia");
+
             foreach (var (w, h, nombre) in tamaños)
             {
                 FijarTamaño(window, w, h);

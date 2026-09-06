@@ -753,7 +753,15 @@ public partial class MainViewModel : ObservableObject
         ItemEdit = new ItemEditViewModel(_service);
         // Apariencia/Spawn Points/Desbloqueos/Version son tambien instancias persistentes -
         // cualquier propiedad que cambien tras cargar un personaje es una edicion real.
-        Appearance.PropertyChanged += (_, _) => MarkDirty();
+        Appearance.PropertyChanged += (_, e) =>
+        {
+            MarkDirty();
+            // Oleada del 6-sep-2026 (Personaje > Apariencia/Investigacion): el aviso "investigar
+            // solo sirve en Modo Viaje" se calculaba UNA vez, al cargar, y la dificultad se edita
+            // aqui al lado - poner el personaje en Modo Viaje dejaba a Investigacion diciendo que
+            // no lo era. Ver ResearchViewModel.RefreshJourneyMode.
+            if (e.PropertyName == nameof(AppearanceViewModel.Difficulty)) Research.RefreshJourneyMode(Appearance.Difficulty);
+        };
         Servers.Changed += MarkDirty; // B-5 (segunda auditoria de Opus): evento real, ver ServersViewModel.Changed
         Flags.PropertyChanged += (_, _) => MarkDirty();
         // H5-02 (quinta auditoria de Opus): Investigacion ahora es editable de verdad - evento
