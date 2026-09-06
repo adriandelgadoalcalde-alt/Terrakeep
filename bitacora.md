@@ -11461,3 +11461,63 @@ toca aqui por dos motivos: ese numero lo midio deliberadamente otra ronda (`AR-1
 aparecia por 14px) y el sintoma es solo que aparece la barra de scroll - la red de seguridad
 haciendo su trabajo, sin perder contenido. Si vuelve a salir, el arreglo natural es bajar ese
 suelo a ~570.
+
+### Segunda tanda del mismo barrido: la cabecera global se comia la franja vital ENTERA
+
+Al llevar `AR-LAY` del `git worktree` (donde se desarrollo, sobre un HEAD de unas horas antes) al
+arbol principal ya con el trabajo de toda la oleada dentro, el barrido paso de 0 a **34 firmas** de
+golpe, todas en la cabecera y en las **6 pestañas a la vez**. No era un falso positivo ni una
+regresion de lo anterior: es un bug que la propia oleada acababa de agravar, y el barrido lo cazo el
+mismo dia en que aparecio - que es exactamente para lo que se construyo.
+
+**El mecanismo, medido**: la cabecera es un Grid de 3 columnas - identidad (`Auto`), franja vital
+(`*`), botones (`Auto`). Una columna `Auto` se queda con su `DesiredSize` ENTERO aunque no quepa (el
+Grid solo recorta a las estrella), asi que la fila de botones de la derecha - que ha ido creciendo
+boton a boton toda la semana - se llevaba el ancho que necesitara y la franja vital, que era la `*`,
+se quedaba con las sobras. A 1080x700 con personaje y mundo reales: **los botones ocupaban 722px de
+1035 y a la franja vital le quedaban 17px**, o sea que vida/mana, el tamaño del mundo, el zoom y la
+capa bajo el raton simplemente NO SE VEIAN, recortados sin ningun scroll con el que alcanzarlos.
+
+Es la misma leccion, por tercera vez el mismo dia: **quien debe ceder tiene que ir en la columna
+estrella, no en la `Auto`**.
+
+**Arreglo, en tres piezas, y las cinco alternativas que se probaron y descartaron MIDIENDO** (queda
+escrito para no repetir el camino):
+
+| intento | resultado medido |
+|---|---|
+| columnas `Auto`/`Auto`/`*` + `StackPanel` horizontal (como estaba) | la franja vital se salva, pero se cortan los BOTONES: **81 firmas**, "Cargar personaje (.plr)..." perdiendo 157,9px. Un StackPanel horizontal no tiene forma de ceder |
+| + `WrapPanel` sin `ItemHeight` | 0 firmas, pero los 6 botones dejan de tener el mismo alto (`[36 x5, 32,6]`): un WrapPanel da a cada linea la altura de SU contenido, y en la fila de abajo cae "Guardar" solo, sin ningun separador que la eleve - la regresion que `A8-06` vigila |
+| + `ItemHeight="33"` | alturas iguales y `AR-11f` en verde, pero **32 firmas**: 33px recorta los botones, que miden 36 |
+| + `ItemHeight="36"` | 0 firmas y alturas iguales, pero `AR-11f` falla por **3px justos** (600px de contenido en 597 de viewport) |
+| + `MinHeight` de la barra lateral de Exploracion de 600 a 590 | todo en verde salvo `T-H/F2` |
+| + fuera el `HorizontalAlignment="Right"` del WrapPanel | **todo en verde** |
+
+Las dos ultimas piezas merecen quedar escritas porque ninguna era evidente:
+
+- **`AR-11f` no fallaba por el WrapPanel, fallaba por su propio numero.** Su `MinHeight=600` se
+  calibro cuando el viewport de esa columna eran 626px; hoy son 597 (la cabecera ha crecido desde
+  entonces), asi que 600 hacia aparecer la barra por 3px - literalmente lo que el mensaje de fallo
+  dice cuando salta ("el MinHeight es demasiado alto"). Bajado a 590, con la medida al lado. Un
+  numero calibrado contra la cabecera hay que volver a medirlo cuando la cabecera cambia.
+- **`HorizontalAlignment="Right"` sobre el WrapPanel rompia el rectangulo de foco de teclado**
+  (`T-H/F2`: `AdornerLayer.GetAdorners` sobre el boton "Guardar" enfocado devolvia vacio, de forma
+  estable en 4 ejecuciones seguidas). Quitandolo vuelve a `True`. **Coste real que esto tiene y que
+  conviene mirar**: sin ese `Right`, en pantallas anchas los botones se alinean a la izquierda de su
+  columna en vez de pegarse al borde derecho de la ventana. Es un cambio visual, no una perdida de
+  contenido - si molesta, la via es un contenedor intermedio que haga la alineacion sin ponersela al
+  panel que recibe el foco, pero eso ya no se probo aqui.
+
+### Verificacion final (arbol principal, con toda la oleada dentro)
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core **441**, ViewModels **438**, 0 fallos.
+- Arnes de UI Automation, ejecucion COMPLETA hasta `DONE`: **1 sola linea `FALLO`**, `F-11` (la
+  vista guardada de Exploracion al recargar el mismo mundo), ajena a esta ronda e intermitente - no
+  aparece en las ejecuciones anteriores con este mismo codigo.
+- `AR-LAY`: **0 contenido perdido / 0 solapes / 0 truncados**, y 1 limite conocido (Monedas/Municion,
+  el documentado arriba).
+- `A8-06` (alturas de los 6 botones): `[36, 36, 36, 36, 36, 36]`.
+- `AR-11f` (barra lateral de Exploracion al tamaño por defecto): 597px de contenido en 597 de
+  viewport, sin barra.
+- `T-H/F2` (foco de teclado): adorner adjunto = True.

@@ -142,9 +142,11 @@ internal static partial class Program
         //    colaterales peores que el bug: se para aqui, se deja escrito, y lo decide quien lleve
         //    Equipamiento - probablemente poniendo Monedas y Municion UNO AL LADO DEL OTRO, que es
         //    justo lo que el lateral izquierdo acabo haciendo por la misma razon de alto.
+        // Ojo al formato: la FIRMA con la que se compara es "<pantalla> | <elemento>" (el tamaño
+        // va solo en el detalle, no en la firma), asi que aqui se nombra el ELEMENTO, no el tamaño.
         string[] limitesConocidos =
         [
-            "Personaje/Equipamiento 1080x700",
+            "Personaje/Equipamiento | SlotGridPanel",
         ];
     
         void Auditar(string contexto)

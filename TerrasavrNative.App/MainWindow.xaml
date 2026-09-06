@@ -1679,7 +1679,7 @@
                      ningun separador que la eleve) quedaba a 32,6px contra los 36 de la de arriba y
                      los botones dejaban de tener el mismo alto - la regresion que A8-06 vigila. 36
                      es el alto real que ya tenian los 6 en una sola fila, no un numero inventado. -->
-                <WrapPanel Grid.Column="2" ItemHeight="33" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="20,0,0,0">
+                <WrapPanel Grid.Column="2" ItemHeight="36" VerticalAlignment="Center" Margin="20,0,0,0">
                     <!-- T-H/F1 (segunda auditoria de Opus, Fable): "N-3 esta bien hecho pero no se
                          anuncia en ningun sitio (sin ToolTip en la cabecera)... un atajo que nadie
                          descubre no mejora la practicidad" - los 4 atajos reales (OnWindowKeyDown)
@@ -4611,16 +4611,23 @@
                          infinito realiza TODOS sus contenedores - justo la virtualizacion que F-5
                          monto para las listas largas (cientos de cofres). Con Height/MinHeight la
                          medida es SIEMPRE finita y la virtualizacion sigue viva.
-                         MinHeight=600 no es un numero redondo al azar: el viewport real de esta
-                         columna al tamaño por defecto del arnes (1180x860) son 626px medidos, y
+                         MinHeight=590 no es un numero redondo al azar: es el viewport real de esta
+                         columna al tamaño por defecto del arnes (1180x860), menos un margen, y
                          AR-11f comprueba de forma permanente que a ese tamaño NO aparece barra
                          (con 640 aparecia por 14px - el scroll debe ser la red de seguridad, no
-                         el modo normal de usar la columna). -->
+                         el modo normal de usar la columna).
+                         AR-LAY (6-sep-2026): baja de 600 a 590. Ese 600 se calibro cuando el
+                         viewport eran 626px; la cabecera global ha ido creciendo desde entonces
+                         (botones nuevos, y el ItemHeight=36 de su WrapPanel) y hoy ese viewport
+                         son 597px medidos, con lo que el 600 hacia aparecer la barra por 3px
+                         justos - exactamente lo que AR-11f dice cuando falla ("el MinHeight es
+                         demasiado alto"). Es un numero calibrado contra la cabecera, asi que
+                         volver a medirlo cuando la cabecera cambia forma parte del trato. -->
                     <ScrollViewer Grid.Column="2" x:Name="ExplorationSidebarScroll"
                                   VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <DockPanel x:Name="ExplorationSidebarPanel"
                                Height="{Binding ViewportHeight, ElementName=ExplorationSidebarScroll, Mode=OneWay}"
-                               MinHeight="600">
+                               MinHeight="590">
                         <!-- Punto 4 (advisor Opus, "una nueva barra lateral... que ya no solo salgan
                              los npc, eso se traslada dentro de una rama madre donde salgan varios
                              botones" - ver ESPEC-ui-exploracion.md#9). Rediseño completo: la lista de
