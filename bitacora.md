@@ -10967,3 +10967,180 @@ ViewModel como en el `GameItem` de debajo.
   ejecucion**, o sea intermitente por el trabajo en paralelo de esta misma oleada, no por nada de
   aqui.
 - Arnes de UI Automation: `OBJ-01`..`OBJ-07` en verde.
+
+---
+
+## 6-sep-2026 - Barrido sistematico de maquetacion por TAMAÑO DE VENTANA e IDIOMA (AR-LAY): 5 bugs reales que nadie habia reportado
+
+Esta semana aparecieron TRES bugs de maquetacion con la misma forma exacta - Exploracion/Cofres,
+"NPCs que faltan" y Equipamiento/accesorios - y los tres tenian en comun algo mas importante que la
+zona: **no se ven ni al tamaño minimo de la ventana ni maximizada, solo en una franja de tamaños
+INTERMEDIOS** (en el caso de los accesorios, 14px de ancho). Los tres se encontraron por casualidad
+o porque el usuario los reporto jugando, y los tres se cerraron con una comprobacion escrita a mano
+SOLO para su zona (`AR-13a`, `AR-15`, `AR-14`).
+
+Esta ronda no arregla una zona: **quita la casualidad de en medio**. Recorre la superficie ENTERA de
+la app por tamaño e idioma, midiendo con coordenadas reales.
+
+### Que se construyo: `AR-LAY`, en `TerrasavrNative.App.Tests/AuditoriaMaquetacion.cs`
+
+Fichero propio, clase PARCIAL de `Program` (ve todos sus helpers - `RectVisible`, `TextoRecortado`,
+`Descendientes`, `FijarTamaño`... - sin duplicar una linea), y en `Program.cs` solo queda la llamada.
+No es capricho: `Program.cs` son 5900 lineas que tocan a la vez todas las sesiones que trabajan en
+este repo, y ESTE MISMO DIA dos rondas en paralelo se pisaron ahi (dos bloques distintos llamados
+"AR-16", y un renombrado por numero mal alineado que dejo el proyecto sin compilar para todos). De
+ahi tambien el identificador NO numerico: `AR-LAY` no colisiona con ningun `s/16/17/`.
+
+**Superficie que recorre**: 16 pantallas reales - Inicio; Personaje x7 internas (con las 3 de
+Objetos: Equipamiento/Inventario/Almacenes); Builds x2 hojas; Novedades x2 hojas; Exploracion;
+"Acerca de"+Ajustes - **en los dos idiomas**.
+
+**Tamaños**: 13 pares fijos en cada ejecucion, elegidos para caer a los DOS lados de cada umbral
+conocido de `WindowSizeClass` (1319/1320 Normal, 1519/1520 Amplio) y en los altos reales (700 =
+`MinHeight`, 860 el de arranque, 1440 una 2K): 1080x700, 1080x1440, 1180x860, 1280x720, 1319x800,
+1320x800, 1366x768, 1440x900, 1519x864, 1520x864, 1600x900, 1920x1080, 2560x1440. Son **416
+combinaciones** y tarda ~9s. Ademas, `AR_LAY_FINO=<paso>` barre anchos de N en N px de 1080 a 2560
+(`AR_LAY_DESDE`/`AR_LAY_HASTA` para acotar, `AR_LAY_SOLO=<subcadena>` para una sola pantalla): de 8
+en 8px son **3392 combinaciones y ~394.000 elementos medidos en 37s**. Ese es el unico que caza una
+franja de pocos px, y de hecho cazo una.
+
+### Como mide (los tres detectores, cada uno modelado sobre un bug real ya conocido)
+
+- **D1 - contenido perdido**. Compara el rectangulo COMPLETO de cada texto/boton/`SlotGridPanel`
+  visible con la ZONA que de verdad se pinta (interseccion del clip de TODOS los ancestros). Si
+  falta trozo Y no hay `ScrollViewer` que pueda desplazarse EN ESE EJE, es contenido perdido - no
+  "hay que hacer scroll". Un `ScrollViewer` con el eje en `Disabled` NO cuenta como escape: es el
+  mecanismo exacto que cortaba los accesorios en AR-14.
+  - Dos piezas nuevas hicieron falta: `ZonaVisible` (el clip acumulado SIN cruzarlo con el propio
+    elemento) y medir la falta **eje a eje**. La primera version restaba anchos y daba **1560
+    falsos positivos**, todos filas de Novedades/Builds/Ajustes que solo estaban fuera del viewport
+    y necesitaban scroll VERTICAL, el que si tenian: al caer entera fuera, la interseccion es vacia
+    y restar anchos les atribuia tambien una falta horizontal inexistente. Medido por eje, se
+    desvanecen solos, sin ninguna lista de excepciones.
+- **D2 - solape entre celdas disjuntas de un `Grid`**. Dos hijos directos cuyos rangos de columna (o
+  de fila) no se tocan no pueden pisarse jamas: si sus rectangulos reales se cruzan, uno desbordo su
+  celda. Es la forma exacta del bug "los accesorios se solapan con las monedas". Lo bueno de este
+  criterio es que los hijos que SI comparten celda a proposito (overlays, capas con `RowSpan`) se
+  descartan por definicion - no hay lista de excepciones que mantener.
+- **D3 - texto truncado** con "..." (informativo, no es FALLO): `TextTrimming` real medido
+  comparando el ancho de los glifos con el de la caja.
+
+Cuando encuentra algo, el informe no dice solo "algo va mal": da la cadena de contenedores con su x
+y su ancho, **quien recorta** (todos los ancestros con clip, porque el que limita el ancho y el que
+limita el alto suelen ser distintos) y el estado real de cada `ScrollViewer` por encima
+(viewport/extent/scrollable en los dos ejes). Con eso, cada hallazgo de abajo se diagnostico en un
+solo paso.
+
+### Los bugs reales encontrados y arreglados
+
+Todos en zonas donde NO se habia encontrado ningun bug de este tipo, que era justo el encargo.
+Ninguno se veia ni al minimo ni maximizado, o no lo habia visto nadie.
+
+1. **Tarjetas de carpeta raiz - Libreria, Libreria de buffs e Investigacion (los 3 sitios).** El
+   nombre de la carpeta iba en un `StackPanel Orientation="Horizontal"`, que mide a sus hijos con
+   **ancho INFINITO**: el `TextWrapping="Wrap"` del nombre no se aplicaba NUNCA y el texto tomaba su
+   ancho natural dentro de una tarjeta de `Width="200"` fija, cortado en seco contra el borde del
+   boton y sin scroll horizontal con el que alcanzarlo. Medido a 1080x700: "Mascotas, Monturas,
+   Herramientas" pedia 221,3px de 200 y **perdia 89,3px**; "Pociones (regeneracion)" perdia 21,3; en
+   ingles "Potions (regeneration)" 9,8. Es el MISMO bug que `CategoryNodeTemplate` ya documenta y
+   arreglo en su dia (R-06/H-06) y que aqui se quedo sin aplicar. Arreglado con `DockPanel`, que si
+   da al ultimo hijo el ancho restante real.
+2. **Franja de estado de Exploracion en la cabecera.** Sus cinco datos (titulo del mundo, tamaño,
+   zoom, coordenadas, capa bajo el raton) vivian dentro de un `StackPanel Horizontal` que era el
+   UNICO hijo de un `WrapPanel` - y un `WrapPanel` solo puede envolver ENTRE hijos: ese StackPanel
+   era indivisible y, si no cabia, se salia entero. Medido a 1080x700 con el mundo real cargado: el
+   WrapPanel tenia 87px y el StackPanel 233, asi que "8400x2400", "Zoom 250%" y la capa bajo el
+   raton se perdian ENTEROS. R-04a/H-04a ya habia arreglado esto mismo en la franja vital de al
+   lado; aqui se quedo a medias. Arreglado poniendolos como hijos directos (mas el margen inferior
+   de C-12 para cuando caen a la segunda linea). Mismo cambio, preventivo, en la franja vital gemela.
+3. **El numero de vida y de mana se recortaba SIEMPRE, a cualquier tamaño.** Las dos barras eran un
+   `Grid Height="10"` y el numero de dentro va a `FontSize 8.5`, que necesita 11,3px: se comia
+   1,3px del trazo inferior de las cifras, en las 6 pestañas y en todos los tamaños. No lo veia
+   nadie porque el clip lo pone el `Grid`, no el `TextBlock` - `Recorte()`/`GetClip` sobre el texto
+   devuelve (0,0), que es exactamente el punto ciego que `AR-15` ya habia documentado. `Height="12"`.
+4. **Builds: los nombres largos de objetos de Calamity, y solo los de Calamity.** La fila usaba un
+   `MaxWidth="167"` calculado a mano (220 - 6 - 16 - 24 - 7) y a esa cuenta le falto un sumando: el
+   `BorderThickness=1` que **solo llevan los objetos de Calamity** (por su `DataTrigger`), 2px. Por
+   eso se recortaban los de Calamity y no los de vanilla: medido a 1180x860, "Baculo de Estrella
+   Quebradiza" se salia 1,4px sin escape. Arreglado con `DockPanel` y **fuera la constante**: ya no
+   queda nada que recalcular si cambian el ancho de la tarjeta, el icono, el padding o el borde.
+5. **El titulo "Inventario (N/M)" desaparecia entero en una franja de ~20px de ancho.** El hallazgo
+   estrella del barrido fino, y el que justifica el mecanismo entero: en las dos cabeceras de
+   Inventario (la normal y su copia de la vista Amplia), el `WrapPanel` de 6 botones iba
+   `DockPanel.Dock="Right"` - y un `DockPanel` sirve a su hijo `Dock` PRIMERO y con su `DesiredSize`
+   ENTERO, o sea que el WrapPanel decide cuantas filas necesita ANTES de que el titulo pida nada.
+   Eso abre una franja intermedia en la que los 6 botones caben JUSTO en una sola fila y se llevan
+   el ancho entero. **Medido px a px entre 1500 y 1620: falla en 20 anchos, y a 1545x860 el titulo
+   se queda en 0,3px visibles de los 8,8 que pide** - o sea desaparece. Ni a 1080 ni maximizado se
+   ve nada raro. Arreglado con un `Grid` de dos columnas: **titulo `Auto`, botones `*`**. El orden
+   importa y esta medido: con los botones en `Auto` el problema se movia, no se arreglaba (una
+   columna `Auto` se queda con su `DesiredSize` entero aunque no quepa - el Grid solo recorta a las
+   estrella: el Grid pedia 607px dentro de 581 y se cortaba "Vaciar contenedor"). Con el titulo en
+   `Auto` y el WrapPanel en la estrella, es el WrapPanel quien recibe el resto REAL y envuelve solo.
+   De regalo, el `AR-LAY-TRUNCADO` de "Inventario (0/50)" (el residual de 14px que `AR-08` daba por
+   inevitable a 1080px) tambien desaparecio: ya no hace falta ni el `TextTrimming`.
+
+### Resultado medido
+
+| | antes | despues |
+|---|---|---|
+| barrido corto (416 combinaciones, 2 idiomas) | 33 firmas de contenido perdido | **0** |
+| barrido fino de 8 en 8px (3392 combinaciones, 394.266 elementos) | 1 firma (franja de 20px) | **0** |
+| franja 1490-1630 px a px (141 anchos, Inventario) | 20 anchos rotos, peor 0,3px visibles | **0** |
+| solapes entre celdas disjuntas de un Grid | 0 | **0** |
+| textos truncados con "..." | 1 | **0** |
+| `dotnet build` | 0 errores / 0 avisos | 0 errores / 0 avisos |
+| `dotnet test` | Core 420 / ViewModels 408 | igual, 0 fallos |
+
+### El unico que NO se arreglo, y por que se paro
+
+**Monedas/Municion a 1080x700** (Equipamiento, el suelo exacto de la ventana): el Border tiene 101px
+utiles y su contenido pide 125,3 - la rejilla de Municion pierde 24,2 de sus 40px, media fila de
+slots cortada sin escape. Su gemelo, el lateral IZQUIERDO, resolvio esto mismo con un `ScrollViewer`
+de seguridad, pero aqui ese arreglo **no vale, y esta medido por que**:
+
+- con `ScrollViewer`: la columna es `Auto`, asi que la barra vertical la ensancha de 200 a 209,2px y
+  esos 9,2px salen de la columna CENTRAL - vuelven a cortarse 2 slots de accesorios a 1080x700 y
+  1120x760, **exactamente la regresion que `AR-14` vigila**;
+- taparlo con `MaxWidth="200"` en la columna: el Border (201px con su Margin) se sale y se corta la
+  propia barra de scroll 3,2px.
+
+Dos intentos, dos efectos colaterales peores que el bug. Se aplica la regla del proyecto: se para,
+se revierte esa zona a como estaba (queda **sin ningun cambio de esta ronda**) y se deja escrito.
+Queda como `limitesConocidos` del propio barrido - se sigue listando en la salida pero no cuenta
+como FALLO, mismo criterio que `A10-IDIOMA-BARRIDO` ya usa, para que un caso con dueño no deje el
+barrido en rojo y lo inutilice para detectar lo siguiente. La salida probable: poner Monedas y
+Municion **uno al lado del otro**, que es justo lo que el lateral izquierdo acabo haciendo por la
+misma razon de alto (ver su comentario de la septima pasada).
+
+### Como se reutiliza esto en el futuro (es una comprobacion PERMANENTE, no una ronda)
+
+- Corre solo en cada `dotnet run --project TerrasavrNative.App.Tests`: 416 combinaciones, ~9s.
+- Cuando se toque cualquier maquetacion, el barrido fino es lo que de verdad decide:
+  `AR_LAY_FINO=8` para toda la app (37s), y para acotar un caso concreto
+  `AR_LAY_FINO=1 AR_LAY_DESDE=1500 AR_LAY_HASTA=1620 AR_LAY_SOLO=Inventario`.
+- **Pantalla nueva = una linea nueva** en la lista `pantallas` de `AuditoriaMaquetacion.cs` (nombre
+  + accion que navega hasta ella): con eso queda cubierta por los tres detectores, en los dos
+  idiomas y en los 13 tamaños, sin escribir ni una comprobacion propia.
+- Umbral nuevo de `WindowSizeClass` = dos tamaños nuevos en la lista `tamaños`, uno a cada lado
+  (asi estan puestos 1319/1320 y 1519/1520).
+
+### Obstaculos reales de esta ronda (autonomia tecnica)
+
+- **Colision de identificadores en `Program.cs` con otra sesion en paralelo.** Dos bloques distintos
+  llamados "AR-16" a la vez, y un renombrado por numero (`s/16/17/`) que quedo desalineado porque el
+  fichero cambiaba de tamaño bajo los pies, dejando el proyecto sin compilar para las 6 sesiones. Se
+  reparo el bloque ajeno (unificando sus sufijos) y el propio se movio a un fichero aparte con
+  nombre NO numerico. Leccion para la proxima: en un fichero compartido por varias sesiones, bloque
+  nuevo = fichero nuevo + clase parcial, y nunca un renombrado por rango de lineas.
+- **El arnes completo es hoy poco fiable en esta maquina por contencion**: con la app real del
+  usuario abierta, otro arnes WPF corriendo y 8-14 procesos `dotnet` a la vez, muere en puntos
+  ALEATORIOS y distintos en cada ejecucion (medido: 415, 456, 515, 650, 698, 908 lineas), sin
+  excepcion visible y perdiendo entero el buffer de `Console`. No es de ningun bloque concreto. Dos
+  apoyos que si funcionaron y quedan para la proxima: (a) una traza propia con `AutoFlush` y el
+  **PID en el nombre** (dos arneses a la vez se pisaban el fichero y la `IOException` se llevaba por
+  delante el bloque entero); (b) verificar en un **`git worktree` propio** (`C:\tk-lay`, ruta CORTA
+  - el scratchpad de sesion pasa de `MAX_PATH` y `git worktree add` falla con "Filename too long"),
+  que ademas tiene su propio `obj/` y evita los `MSB3021`/`MSB3027` de compilaciones simultaneas.
+  Ahi el barrido corre limpio en 13s de punta a punta, y fue donde se midio y verifico todo lo de
+  arriba.

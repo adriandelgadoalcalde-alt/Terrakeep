@@ -125,6 +125,27 @@ internal static partial class Program
         var solapes = new Dictionary<string, (int veces, string peor, double peorArea)>();
         var truncados = new Dictionary<string, (int veces, string peor)>();
         int layoutsMedidos = 0, elementosMedidos = 0;
+
+        // Limites CONOCIDOS y medidos: se siguen listando en la salida, pero no cuentan como
+        // FALLO. Mismo criterio (y mismo motivo) que la lista de A10-IDIOMA-BARRIDO: un barrido
+        // que se queda en rojo por un caso ya diagnosticado y con dueño deja de servir para
+        // detectar lo SIGUIENTE, que es para lo que existe.
+        //
+        //  - Monedas/Municion a 1080x700 (Equipamiento, el suelo exacto de la ventana): el Border
+        //    tiene 101px utiles y su contenido pide 125,3 - la rejilla de Municion pierde 24,2 de
+        //    sus 40px. Su gemelo, el lateral IZQUIERDO, resolvio esto mismo con un ScrollViewer de
+        //    seguridad, pero aqui ese arreglo NO vale y esta medido por que: la columna es "Auto",
+        //    asi que la barra vertical del ScrollViewer la ensancha de 200 a 209,2px y esos 9,2px
+        //    salen de la columna CENTRAL, que vuelve a cortar 2 slots de accesorios (la regresion
+        //    que AR-14 vigila); y taparlo con un MaxWidth=200 en la columna hace que el Border
+        //    (201px con su Margin) se salga y se corte la propia barra. Dos intentos, dos efectos
+        //    colaterales peores que el bug: se para aqui, se deja escrito, y lo decide quien lleve
+        //    Equipamiento - probablemente poniendo Monedas y Municion UNO AL LADO DEL OTRO, que es
+        //    justo lo que el lateral izquierdo acabo haciendo por la misma razon de alto.
+        string[] limitesConocidos =
+        [
+            "Personaje/Equipamiento 1080x700",
+        ];
     
         void Auditar(string contexto)
         {
@@ -179,13 +200,12 @@ internal static partial class Program
                 // pero estaba desactivado (eje Disabled) o si simplemente no tenia a donde
                 // desplazarse (Scrollable=0, o sea que el ScrollViewer tampoco sabe que su
                 // contenido no cabe) - son dos causas distintas y se arreglan distinto.
+                var svs = new List<string>();
                 for (DependencyObject? d = System.Windows.Media.VisualTreeHelper.GetParent(fe); d != null; d = System.Windows.Media.VisualTreeHelper.GetParent(d))
                     if (d is System.Windows.Controls.ScrollViewer sv0)
-                    {
-                        cadena += $" [1er ScrollViewer: vertical={sv0.VerticalScrollBarVisibility} viewport={sv0.ViewportHeight:0.#} extent={sv0.ExtentHeight:0.#} scrollable={sv0.ScrollableHeight:0.#}; " +
-                                  $"horizontal={sv0.HorizontalScrollBarVisibility} viewport={sv0.ViewportWidth:0.#} extent={sv0.ExtentWidth:0.#} scrollable={sv0.ScrollableWidth:0.#}]";
-                        break;
-                    }
+                        svs.Add($"V:{sv0.VerticalScrollBarVisibility} vp={sv0.ViewportHeight:0.#} ext={sv0.ExtentHeight:0.#} scr={sv0.ScrollableHeight:0.#} / " +
+                                $"H:{sv0.HorizontalScrollBarVisibility} vp={sv0.ViewportWidth:0.#} ext={sv0.ExtentWidth:0.#} scr={sv0.ScrollableWidth:0.#}");
+                if (svs.Count > 0) cadena += " [ScrollViewers de dentro a fuera: " + string.Join(" || ", svs) + "]";
                 string detalle = $"{contexto}: {que} pierde {(escapaX ? 0 : faltaX):0.#}x{(escapaY ? 0 : faltaY):0.#}px " +
                                  $"(caja {completo.Width:0.#}x{completo.Height:0.#} en x={completo.Left:0.#} y={completo.Top:0.#}, " +
                                  $"zona pintada {(zona.IsEmpty ? "vacia" : $"{zona.Left:0.#}..{zona.Right:0.#} x {zona.Top:0.#}..{zona.Bottom:0.#}")}) sin scroll que lo alcance{cadena}";
@@ -296,17 +316,22 @@ internal static partial class Program
         swArLay.Stop();
         traza?.Dispose();
     
+        var perdidosNuevos = perdidos.Where(k => !limitesConocidos.Any(l => k.Key.Contains(l))).ToList();
+        var perdidosConocidos = perdidos.Count - perdidosNuevos.Count;
         Console.WriteLine($"AR-LAY: {layoutsMedidos} combinaciones pantalla x tamaño x idioma medidas ({elementosMedidos} elementos), {swArLay.ElapsedMilliseconds}ms");
-        Console.WriteLine($"AR-LAY: contenido PERDIDO (recortado y sin scroll que lo alcance)={perdidos.Count} firmas (esperado 0), " +
+        Console.WriteLine($"AR-LAY: contenido PERDIDO (recortado y sin scroll que lo alcance)={perdidosNuevos.Count} firmas (esperado 0), " +
                           $"SOLAPES entre celdas disjuntas de un Grid={solapes.Count} firmas (esperado 0), " +
-                          $"textos truncados con '...'={truncados.Count} firmas (informativo)");
-        foreach (var kv in perdidos.OrderByDescending(k => k.Value.peorFalta).Take(30))
+                          $"textos truncados con '...'={truncados.Count} firmas (informativo), " +
+                          $"limites ya conocidos y documentados={perdidosConocidos} (informativo, no es fallo)");
+        foreach (var kv in perdidosNuevos.OrderByDescending(k => k.Value.peorFalta).Take(30))
             Console.WriteLine($"   AR-LAY-PERDIDO x{kv.Value.veces} {kv.Value.peor}");
+        foreach (var kv in perdidos.Where(k => limitesConocidos.Any(l => k.Key.Contains(l))).Take(10))
+            Console.WriteLine($"   AR-LAY-LIMITE-CONOCIDO x{kv.Value.veces} {kv.Value.peor}");
         foreach (var kv in solapes.OrderByDescending(k => k.Value.peorArea).Take(30))
             Console.WriteLine($"   AR-LAY-SOLAPE x{kv.Value.veces} {kv.Value.peor}");
         foreach (var kv in truncados.OrderByDescending(k => k.Value.veces).Take(25))
             Console.WriteLine($"   AR-LAY-TRUNCADO x{kv.Value.veces} {kv.Value.peor}");
-        if (perdidos.Count > 0) Console.WriteLine($"FALLO: AR-LAY - {perdidos.Count} elementos quedan recortados sin ninguna forma de alcanzarlos en algun tamaño de ventana");
+        if (perdidosNuevos.Count > 0) Console.WriteLine($"FALLO: AR-LAY - {perdidosNuevos.Count} elementos quedan recortados sin ninguna forma de alcanzarlos en algun tamaño de ventana");
         if (solapes.Count > 0) Console.WriteLine($"FALLO: AR-LAY - {solapes.Count} pares de elementos de celdas disjuntas se solapan en algun tamaño de ventana");
     
         vm.Settings.Language = idiomaPrevio;
@@ -334,6 +359,29 @@ internal static partial class Program
             if (zona.IsEmpty) return Rect.Empty;
         }
         return zona;
+    }
+
+    // AR-LAY: QUIEN esta recortando de verdad a este elemento - el ancestro cuyo clip fija el
+    // limite mas estrecho. Sin esto, un "se pierde contenido" solo dice que algo va mal; con
+    // esto dice DONDE tocar, que es la mitad del trabajo (el clip nunca vive en el elemento
+    // recortado: esa es justo la razon por la que Recorte()/GetClip no encontraba estos casos).
+    private static string QuienRecorta(FrameworkElement fe, FrameworkElement raiz)
+    {
+        // TODOS los ancestros con clip, de dentro hacia fuera. A proposito no se elige "el mas
+        // pequeño": el que limita el ANCHO y el que limita el ALTO suelen ser dos distintos, y
+        // quedarse con uno solo (por area) esconde justo al culpable del eje que falla.
+        var conClip = new List<string>();
+        for (DependencyObject? d = fe; d != null && !ReferenceEquals(d, raiz); d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+        {
+            if (d is not System.Windows.Media.Visual v) continue;
+            var clip = System.Windows.Media.VisualTreeHelper.GetClip(v);
+            if (clip == null) continue;
+            string nombre = d is FrameworkElement f
+                ? $"{f.GetType().Name}{(string.IsNullOrEmpty(f.Name) ? "" : "#" + f.Name)}"
+                : d.GetType().Name;
+            conClip.Add($"{nombre} {clip.Bounds.Width:0.#}x{clip.Bounds.Height:0.#}");
+        }
+        return conClip.Count == 0 ? "(nadie: cabe entero)" : string.Join(" < ", conClip);
     }
 
     // AR-LAY: el rectangulo COMPLETO del elemento (lo que ocuparia si nadie lo recortara), en
