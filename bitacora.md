@@ -12177,3 +12177,59 @@ sin pagar el recorrido entero.
   tocando.
 
 ---
+
+### Evidencia real del arnés (`A11_SOLO=1`), literal de su propia salida
+
+```
+A11-VOLCADO[es] objeto 1: 'Pico de hierro'          A11-VOLCADO[en] objeto 1: 'Iron Pickaxe'
+A11-VOLCADO[es] objeto 4: 'Espada larga de hierro'  A11-VOLCADO[en] objeto 4: 'Iron Broadsword'
+A11-VOLCADO[es] objeto 8: 'Antorcha' + 'Da luz'     A11-VOLCADO[en] objeto 8: 'Torch' + 'Provides light'
+A11-VOLCADO[es] armadura 76: bono '2 defensa'       A11-VOLCADO[en] armadura 76: bono '2 defense'
+A11-VOLCADO[es] NPC 1: 'Slime azul'                 A11-VOLCADO[en] NPC 1: 'Blue Slime'
+A11-VOLCADO[es] NPC 4: 'Ojo de Cthulhu'             A11-VOLCADO[en] NPC 4: 'Eye of Cthulhu'
+A11-VOLCADO[es] NPC 22: 'Guía'                      A11-VOLCADO[en] NPC 22: 'Guide'
+A11-VOLCADO[es] tile 0: 'Bloque de tierra'          A11-VOLCADO[en] tile 0: 'Dirt Block'
+A11-VOLCADO[es] tile 1: 'Bloque de piedra'          A11-VOLCADO[en] tile 1: 'Stone Block'
+A11-VOLCADO[es] buff 1: 'Piel de obsidiana'         A11-VOLCADO[en] buff 1: 'Obsidian Skin'
+                        - 'Inmune a la lava'                                - 'Immune to lava'
+A11-VOLCADO[es] Calamity: 'Aumenta un 5% la         A11-VOLCADO[en] Calamity: '5% increased
+                velocidad de movimiento...'                          movement speed...'
+
+A11-CONTENIDO-IDIOMA: 11 de 11 textos de contenido cambian de verdad entre idiomas
+A11-EXPLORACION(en): mundo real cargado, 14 NPCs = Angler | Arms Dealer | Clothier | Demolitionist | Dryad
+A11-EXPLORACION(en): inventario del mundo = Stone Block | Dirt Block | Mud Block | Ash Block | Ice Block
+A11-LIBRERIA(en): 100 tarjetas reales = Copper Ore | Copper Shortsword | Copper Pickaxe | Copper Helmet | Tin Ore
+A11-CONTENIDO-IDIOMA: nombres de contenido del juego que siguen en español con la app en inglés = 0
+                      (esperado 0), sobre un vocabulario real de 6438 nombres traducidos
+```
+
+Y **el detector no es un cero vacío**: en su primera pasada encontró un caso real,
+`SIN-TRADUCIR-CONTENIDO Pestaña0: "Terrariano" (debería decir "Terrarian")`. Investigado, resultó
+ser el nombre de un **personaje real del usuario** que coincide por pura casualidad con el nombre
+español del yoyó "Terrarian" (objeto 3389) - o sea un dato del usuario, no contenido del juego.
+Se excluyen los nombres reales de personaje/mundo de la máquina, mismo criterio ya establecido
+con los letreros del mundo. Tras eso: **0 de 6438**.
+
+### El resto de la verificación
+
+- **`PB_SOLO`** (Buffs / Apariencia / Investigación - justo lo que más se tocó): **0 FALLO**.
+- **`AR-LAY` completo en los DOS idiomas**, las 16 pantallas: **416 combinaciones, 46.522
+  elementos, 0 contenido perdido, 0 solapes, 0 truncados**. Los nombres ingleses no rompen
+  ninguna maquetación (había motivo real para dudarlo: "Espada larga de hierro" mide bastante
+  más que "Iron Broadsword", y al revés en otros casos).
+
+### Obstáculo: el recorrido COMPLETO del arnés no se puede usar como verificación en esta sesión
+
+Se queda clavado de forma reproducible en el **primer `AutomationElement.FindFirst` que hay
+detrás del bloque `UI-BLOQUEADA`** - siempre la misma línea 251 de la salida, sin excepción ni
+traza. **Tres ejecuciones seguidas**, y dos de ellas con un **único** proceso del arnés vivo
+(comprobado con `Get-Process *Terrasavr*` antes de lanzar, y matando el residuo colgado de la
+anterior). O sea que no es solo el cuelgue de "dos arneses a la vez" que documentó unas horas
+antes la ronda de Monedas/Munición: es el límite de siempre de `SetForegroundWindow` / clic real
+de ratón en esta sesión (`T-H/F2`), que `UI-BLOQUEADA` provoca y del que el árbol de UI
+Automation ya no se recupera.
+
+Se aplica la **regla de las dos veces**: se para, se deja escrito, y la verificación se hace con
+los modos de foco, que son deterministas de verdad porque no dan ni un clic real de ratón. Por
+eso `A11_SOLO=1` no es una comodidad: `A11` vive **después** de ese punto en el `Main()`, así que
+sin modo de foco no llegaría a ejecutarse nunca.
