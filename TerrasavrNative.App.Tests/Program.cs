@@ -543,6 +543,23 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // A11_SOLO=1 (6-sep-2026, ronda de traduccion del CONTENIDO del juego): mismo modo de
+        // foco que PB_SOLO/AR14_SOLO. Hace falta por una razon medida, no por comodidad: el
+        // recorrido COMPLETO del arnes se queda clavado de forma reproducible en el primer
+        // AutomationElement.FindFirst que hay DETRAS del bloque UI-BLOQUEADA (linea ~251 de la
+        // salida) - tres ejecuciones seguidas, dos de ellas con un unico proceso del arnes vivo,
+        // o sea que no es solo el cuelgue de "dos arneses a la vez" que documento la ronda de
+        // Monedas/Municion: es el limite de siempre de SetForegroundWindow/clic real de raton en
+        // esta sesion (T-H/F2). A11 va DESPUES de ese punto en el Main, asi que sin modo de foco
+        // no se llegaria a ejecutar nunca. Este bloque no da un solo clic real: mide sobre el
+        // arbol visual y sobre los catalogos reales, o sea que es determinista de verdad.
+        if (Environment.GetEnvironmentVariable("A11_SOLO") == "1")
+        {
+            AuditoriaContenidoDelJuegoEnIdioma(window, vm);
+            Console.WriteLine("DONE (A11_SOLO)");
+            Environment.Exit(0);
+        }
+
         // Verificacion real de N-1 (auditoria de Opus, Bloque 2): la cabecera global debe verse
         // IGUAL en una pestaña que no es Personaje (aqui, Builds=indice 2) - antes el nombre/
         // dificultad/Guardar solo existian dentro de Personaje.
