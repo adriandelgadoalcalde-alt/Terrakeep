@@ -64,6 +64,9 @@ public partial class AppearanceViewModel : ObservableObject
 
     private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): los tintes de pelo se
+        // llaman por el NOMBRE REAL DEL OBJETO del juego, que ahora cambia con el idioma.
+        BuildHairDyeOptions();
         HairDyeDisplayName = HairDyeOptions.FirstOrDefault(o => o.Index == HairDye)?.DisplayName
             ?? LocalizationService.Instance.Format("hair_dye_numbered", HairDye);
         // Oleada del 6-sep-2026: la insignia de dificultad de la cabecera global se ve desde
@@ -153,6 +156,11 @@ public partial class AppearanceViewModel : ObservableObject
 
     private void BuildHairDyeOptions()
     {
+        // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): el NOMBRE DEL OBJETO de
+        // cada tinte (abajo, VanillaCatalog.GetName) es contenido del juego y ahora cambia con
+        // el idioma, asi que esta lista se rehace al cambiarlo - de ahi el Clear, que antes no
+        // hacia falta porque solo se construia una vez.
+        HairDyeOptions.Clear();
         // Ronda de idioma del 6-sep-2026: se pasa la CLAVE, no el texto ya resuelto (ver
         // HairDyeOptionViewModel) - "Ninguno" se quedaba en español con la app en ingles.
         HairDyeOptions.Add(new HairDyeOptionViewModel(0, "hair_dye_none", null));

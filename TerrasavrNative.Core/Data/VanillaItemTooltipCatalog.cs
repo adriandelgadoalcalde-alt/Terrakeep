@@ -14,15 +14,32 @@ namespace TerrasavrNative.Core.Data;
 public sealed class VanillaItemTooltipCatalog
 {
     private readonly Dictionary<int, string> _byId;
+    // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): los mismos 2789 tooltips reales
+    // contra `en-US` (misma clave ItemTooltip, mismas referencias {$CommonItemTooltip.X} ya
+    // resueltas por el mismo script). Vacio = cargado sin la parte inglesa -> siempre español.
+    private readonly Dictionary<int, string> _byIdEn = [];
 
     private VanillaItemTooltipCatalog(Dictionary<int, string> byId) => _byId = byId;
 
-    public string? Get(int itemId) => _byId.TryGetValue(itemId, out var text) ? text : null;
+    public string? Get(int itemId) => Get(itemId, LocalizedContent.CurrentLanguage);
 
-    public static VanillaItemTooltipCatalog LoadFromFile(string path)
+    public string? Get(int itemId, string language)
+    {
+        if (language == LocalizedContent.English && _byIdEn.TryGetValue(itemId, out var en)) return en;
+        return _byId.TryGetValue(itemId, out var text) ? text : null;
+    }
+
+    public static VanillaItemTooltipCatalog LoadFromFile(string path, string? enPath = null)
     {
         using var stream = File.OpenRead(path);
-        return LoadFromStream(stream);
+        var catalog = LoadFromStream(stream);
+        if (enPath is not null && File.Exists(enPath))
+        {
+            using var enStream = File.OpenRead(enPath);
+            var raw = JsonSerializer.Deserialize<Dictionary<string, string>>(enStream) ?? [];
+            foreach (var (key, value) in raw) catalog._byIdEn[int.Parse(key)] = value;
+        }
+        return catalog;
     }
 
     public static VanillaItemTooltipCatalog LoadFromStream(Stream stream)

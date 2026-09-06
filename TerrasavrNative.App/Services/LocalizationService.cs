@@ -42,6 +42,7 @@ public sealed class LocalizationService : INotifyPropertyChanged
         _es = LoadDictionary(Spanish);
         _en = LoadDictionary(English);
         _active = _es;
+        TerrasavrNative.Core.Data.LocalizedContent.CurrentLanguage = Language;
     }
 
     private static Dictionary<string, string> LoadDictionary(string language)
@@ -64,6 +65,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
         if (normalizado == Language) return;
         Language = normalizado;
         _active = Language == English ? _en : _es;
+        // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): los catalogos de contenido
+        // viven en Core y no pueden ver esta clase (Core compila tambien para net8.0/el mod), asi
+        // que el idioma activo se les empuja aqui - unico punto real de cambio de idioma de toda
+        // la app. Sin esta linea los nombres de objeto/NPC/tile/buff se quedarian en español.
+        TerrasavrNative.Core.Data.LocalizedContent.CurrentLanguage = Language;
         // "Item[]" (no una clave concreta) - convencion real de WPF para "cualquier binding
         // indexado sobre este objeto, revisalo todo otra vez", exactamente lo que hace falta
         // para refrescar CUALQUIER control ya en pantalla sin conocerlos uno a uno desde aqui.

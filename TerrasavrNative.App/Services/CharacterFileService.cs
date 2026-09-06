@@ -82,10 +82,15 @@ public sealed class CharacterFileService
         CalamityCatalog = CalamityCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "catalog.json"));
         CalamityBuffCatalog = CalamityBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "buffs.json"), Path.Combine(assetsDir, "calamity_buff_descriptions.json"), Path.Combine(assetsDir, "calamity", "buff_debuffs.json"));
         RoguePrefixCatalog = RoguePrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "rogue_prefixes.json"));
+        // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): los catalogos bilingues
+        // reciben aqui su cara inglesa. El idioma con el que responden lo lleva
+        // LocalizedContent.CurrentLanguage, que LocalizationService mantiene al dia.
         VanillaCatalog = VanillaItemCatalog.LoadFromFile(
             Path.Combine(assetsDir, "vanilla_item_names.json"),
             Path.Combine(assetsDir, "vanilla_item_names_by_key.json"),
-            Path.Combine(assetsDir, "vanilla_item_ids_by_key.json"));
+            Path.Combine(assetsDir, "vanilla_item_ids_by_key.json"),
+            Path.Combine(assetsDir, "vanilla_item_names_en.json"),
+            Path.Combine(assetsDir, "vanilla_item_names_by_key_en.json"));
         VanillaPrefixCatalog = VanillaPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "prefixes.json"));
         VanillaBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds.json"));
         CalamityBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds_calamity.json"));
@@ -98,7 +103,12 @@ public sealed class CharacterFileService
         MapColors = MapColorCatalog.LoadFromFile(Path.Combine(assetsDir, "map_colors.json"));
         TileNames = TileNameCatalog.LoadFromFile(Path.Combine(assetsDir, "tile_names.json"));
         NpcNames = NpcNameCatalog.LoadFromFile(Path.Combine(assetsDir, "npc_names.json"));
-        VanillaBuffs = VanillaBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_buff_names.json"), Path.Combine(assetsDir, "vanilla_buff_descriptions.json"), Path.Combine(assetsDir, "vanilla_buff_names_es.json"));
+        VanillaBuffs = VanillaBuffCatalog.LoadFromFile(
+            Path.Combine(assetsDir, "vanilla_buff_names.json"),
+            Path.Combine(assetsDir, "vanilla_buff_descriptions.json"),
+            Path.Combine(assetsDir, "vanilla_buff_names_es.json"),
+            Path.Combine(assetsDir, "vanilla_buff_names_en.json"),
+            Path.Combine(assetsDir, "vanilla_buff_descriptions_en.json"));
         BestPrefixes = BestPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "best_prefix.json"));
         VanillaCategories = VanillaCategoryCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_categories.json"));
         VanillaSlotKinds = VanillaSlotKindCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_slot_kind.json"));
@@ -107,7 +117,9 @@ public sealed class CharacterFileService
         HairDyes = HairDyeCatalog.LoadFromFile(Path.Combine(assetsDir, "hair_dyes.json"));
         VanillaLibraryTree = VanillaLibraryTreeCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_library_tree.json"));
         LibraryLabels = LibraryLabelCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_library_labels_es.json"));
-        VanillaItemTooltips = VanillaItemTooltipCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_item_tooltips.json"));
+        VanillaItemTooltips = VanillaItemTooltipCatalog.LoadFromFile(
+            Path.Combine(assetsDir, "vanilla_item_tooltips.json"),
+            Path.Combine(assetsDir, "vanilla_item_tooltips_en.json"));
         VanillaArmorSets = VanillaArmorSetCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_armor_sets.json"));
         // C-10b (auditoria de pulido final): catalogo de SET completo de Calamity, derivado del
         // propio CalamityCatalog (Category/EquipSlot/SetBonus ya extraidos) - sin fichero nuevo.

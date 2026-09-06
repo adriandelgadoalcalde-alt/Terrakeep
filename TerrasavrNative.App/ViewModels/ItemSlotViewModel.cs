@@ -184,8 +184,8 @@ public partial class ItemSlotViewModel : ObservableObject
             Services.LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
 
-    // Las TRES cosas del tooltip del slot que dependen del idioma. SlotRoleLabel y PrefixDisplay
-    // se descubrieron gracias a abrir el popup de verdad (OBJ-STATS-IDIOMA del arnes): el
+    // Las CUATRO cosas del slot que dependen del idioma. SlotRoleLabel y PrefixDisplay se
+    // descubrieron gracias a abrir el popup de verdad (OBJ-STATS-IDIOMA del arnes): el
     // ToolTip del XAML es UN objeto vivo, no se reconstruye al reabrirlo, asi que un binding a
     // una propiedad normal se queda con el idioma que hubiera la PRIMERA vez que se abrio - con
     // la app en ingles seguia diciendo "Cabeza" y "Prefix: Legendario".
@@ -194,6 +194,23 @@ public partial class ItemSlotViewModel : ObservableObject
         OnPropertyChanged(nameof(StatsTooltip));
         OnPropertyChanged(nameof(SlotRoleLabel));
         RefreshPrefixDisplay();
+        RefreshDisplayName();
+    }
+
+    // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): el NOMBRE del objeto ya existe
+    // en los dos idiomas (vanilla_item_names_en.json / displayName_fallback de Calamity), pero
+    // DisplayName es un valor FIJADO en UpdateFrom, no una propiedad calculada - sin esto el
+    // slot seguiria diciendo "Pico de hierro" con la app en ingles.
+    //
+    // Recalcula SOLO el nombre desde el objeto que ya hay puesto: rehacer UpdateFrom entero
+    // dispararia EmitItemChanged y marcaria el personaje como modificado sin que el usuario
+    // haya tocado nada.
+    private void RefreshDisplayName()
+    {
+        if (Item.IsEmpty) { DisplayName = string.Empty; return; }
+        DisplayName = Item.IsCalamity
+            ? _service.CalamityCatalog.BySyntheticId(Item.Id)?.DisplayName ?? $"Calamity #{Item.Id}"
+            : _service.VanillaCatalog.GetName(Item.Id);
     }
 
     // true si este objeto (vanilla o Calamity) encaja en AcceptedKind - AcceptedKind=None

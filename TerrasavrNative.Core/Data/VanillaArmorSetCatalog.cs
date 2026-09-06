@@ -19,7 +19,18 @@ public sealed class ArmorSetInfo
 {
     [JsonPropertyName("key")] public required string Key { get; init; }
     [JsonPropertyName("text")] public required string Text { get; init; }
+    // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): el mismo texto real del juego
+    // sacado de `Terraria.Localization.Content.en-US.Game.json`, clave `ArmorSetBonus` (61
+    // textos distintos, las 235 entradas cubiertas). Campo `_en` paralelo, mismo patron que
+    // changelog.json/whats_new_*.json. Null solo si de verdad no hubiera texto ingles real.
+    [JsonPropertyName("text_en")] public string? TextEn { get; init; }
     [JsonPropertyName("pieces")] public required int[] Pieces { get; init; }
+
+    // Lo que se le enseña al usuario: el texto en el idioma activo, cayendo al español (idioma
+    // de referencia) si falta el ingles - nunca vacio. Los consumidores usan esto, no Text.
+    public string DisplayText => LocalizedContent.Pick(Text, TextEn);
+
+    public string DisplayTextFor(string language) => LocalizedContent.Pick(Text, TextEn, language);
 }
 
 public sealed class VanillaArmorSetCatalog

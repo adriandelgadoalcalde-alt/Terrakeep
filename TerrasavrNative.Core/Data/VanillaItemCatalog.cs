@@ -14,12 +14,23 @@ public sealed class VanillaItemCatalog
     private readonly Dictionary<string, string> _namesByKey;
     private readonly Dictionary<string, int> _idsByKey;
     private readonly Dictionary<int, string> _keysById;
+    // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): mismo catalogo real contra
+    // Terraria.Localization.Content.en-US.Items.json (6180 nombres reales, ver
+    // scripts/extraer-nombres-objetos-en.py). Vacio = catalogo cargado sin la parte inglesa
+    // (varios tests de Core lo hacen a proposito): entonces se responde siempre en español,
+    // que es el idioma de referencia y esta completo.
+    private readonly Dictionary<int, string> _namesByIdEn;
+    private readonly Dictionary<string, string> _namesByKeyEn;
 
-    private VanillaItemCatalog(Dictionary<int, string> namesById, Dictionary<string, string> namesByKey, Dictionary<string, int> idsByKey)
+    private VanillaItemCatalog(
+        Dictionary<int, string> namesById, Dictionary<string, string> namesByKey, Dictionary<string, int> idsByKey,
+        Dictionary<int, string>? namesByIdEn = null, Dictionary<string, string>? namesByKeyEn = null)
     {
         _namesById = namesById;
         _namesByKey = namesByKey;
         _idsByKey = idsByKey;
+        _namesByIdEn = namesByIdEn ?? [];
+        _namesByKeyEn = namesByKeyEn ?? [];
         // H5-02 (quinta auditoria de Opus): reverso real de GetIdByKey - hace falta para poder
         // ESCRIBIR una entrada de investigacion nueva (PlrResearchEntry.Pid) a partir de un id
         // ya resuelto, no solo leerla. El primero que gane en caso de alias reales (mismo id,
@@ -33,14 +44,24 @@ public sealed class VanillaItemCatalog
     // comentario del campo _keysById.
     public string? GetKeyById(int itemId) => _keysById.TryGetValue(itemId, out var key) ? key : null;
 
-    public string GetName(int itemId) =>
-        _namesById.TryGetValue(itemId, out var name) ? name : $"Item #{itemId}";
+    public string GetName(int itemId) => GetName(itemId, LocalizedContent.CurrentLanguage);
+
+    public string GetName(int itemId, string language)
+    {
+        if (language == LocalizedContent.English && _namesByIdEn.TryGetValue(itemId, out var en)) return en;
+        return _namesById.TryGetValue(itemId, out var name) ? name : $"Item #{itemId}";
+    }
 
     // Por nombre interno (ej. "MoltenHelmet") - el mismo formato que usan los PID de
     // investigacion vanilla (sin "/", a diferencia de los PID de mods) y los "pid" de
     // builds.json. Ver Assets/vanilla_item_names_by_key.json.
-    public string GetNameByKey(string internalName) =>
-        _namesByKey.TryGetValue(internalName, out var name) ? name : internalName;
+    public string GetNameByKey(string internalName) => GetNameByKey(internalName, LocalizedContent.CurrentLanguage);
+
+    public string GetNameByKey(string internalName, string language)
+    {
+        if (language == LocalizedContent.English && _namesByKeyEn.TryGetValue(internalName, out var en)) return en;
+        return _namesByKey.TryGetValue(internalName, out var name) ? name : internalName;
+    }
 
     // Id real por nombre interno - usado para resolver "pid" de builds.json a un GameItem.Id
     // real (auto-equipar). Ver Assets/vanilla_item_ids_by_key.json (generado desde
@@ -50,14 +71,37 @@ public sealed class VanillaItemCatalog
 
     public IReadOnlyCollection<string> AllInternalNames() => _namesByKey.Keys;
 
-    public IEnumerable<(int Id, string Name)> AllEntries() => _namesById.Select(kv => (kv.Key, kv.Value));
+    // Enumeracion en el idioma activo - la usan el buscador de objetos y los arboles, donde un
+    // nombre en el idioma equivocado no solo se ve mal: hace que la busqueda no encuentre nada.
+    public IEnumerable<(int Id, string Name)> AllEntries() => AllEntries(LocalizedContent.CurrentLanguage);
 
-    public static VanillaItemCatalog LoadFromFile(string path, string byKeyPath, string idsByKeyPath)
+    public IEnumerable<(int Id, string Name)> AllEntries(string language) =>
+        _namesById.Select(kv => (kv.Key, GetName(kv.Key, language)));
+
+    // Las rutas inglesas son opcionales: null/fichero ausente = catalogo solo español (varios
+    // tests de Core cargan asi a proposito), nunca una excepcion de arranque.
+    public static VanillaItemCatalog LoadFromFile(string path, string byKeyPath, string idsByKeyPath,
+        string? enPath = null, string? enByKeyPath = null)
     {
         using var stream = File.OpenRead(path);
         using var keyStream = File.OpenRead(byKeyPath);
         using var idsStream = File.OpenRead(idsByKeyPath);
-        return LoadFromStreams(stream, keyStream, idsStream);
+        var catalog = LoadFromStreams(stream, keyStream, idsStream);
+        if (enPath is not null && File.Exists(enPath))
+            using (var enStream = File.OpenRead(enPath))
+                Fill(catalog._namesByIdEn, ReadStringMap(enStream), int.Parse);
+        if (enByKeyPath is not null && File.Exists(enByKeyPath))
+            using (var enKeyStream = File.OpenRead(enByKeyPath))
+                foreach (var (k, v) in ReadStringMap(enKeyStream)) catalog._namesByKeyEn[k] = v;
+        return catalog;
+    }
+
+    private static Dictionary<string, string> ReadStringMap(Stream stream) =>
+        JsonSerializer.Deserialize<Dictionary<string, string>>(stream) ?? [];
+
+    private static void Fill(Dictionary<int, string> target, Dictionary<string, string> raw, Func<string, int> parse)
+    {
+        foreach (var (key, value) in raw) target[parse(key)] = value;
     }
 
     public static VanillaItemCatalog LoadFromStreams(Stream stream, Stream byKeyStream, Stream idsByKeyStream)

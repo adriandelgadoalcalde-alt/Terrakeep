@@ -339,7 +339,9 @@ public partial class EquipmentGroupViewModel : ObservableObject
         int headId = !items[0].IsEmpty && !items[0].IsCalamity ? items[0].Item.Id : -1;
         int bodyId = !items[1].IsEmpty && !items[1].IsCalamity ? items[1].Item.Id : -1;
         int legsId = !items[2].IsEmpty && !items[2].IsCalamity ? items[2].Item.Id : -1;
-        ActiveSetBonusText = _service.VanillaArmorSets.BonusForEquipped(headId, bodyId, legsId)?.Text
+        // DisplayText, no Text: el bono en el idioma activo (ronda de traduccion del CONTENIDO
+        // del juego, 6-sep-2026); `Text` es la cara española a secas.
+        ActiveSetBonusText = _service.VanillaArmorSets.BonusForEquipped(headId, bodyId, legsId)?.DisplayText
             ?? ActiveCalamitySetBonusText(items[0], items[1], items[2]);
     }
 

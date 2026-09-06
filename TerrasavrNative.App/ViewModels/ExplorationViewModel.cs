@@ -1412,6 +1412,53 @@ public partial class ExplorationViewModel : ObservableObject
         OnPropertyChanged(nameof(ScanMessage));
         OnPropertyChanged(nameof(WorldGameModeText));
         OnPropertyChanged(nameof(WorldGameModeSaveStatus));
+        RefrescarNombresDeContenido();
+    }
+
+    // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): NPCs, tiles, paredes, minerales
+    // y objetos de cofre YA existen en los dos idiomas (npc_names.json y tile_names.json son
+    // bilingues de origen, vanilla_item_names_en.json es nuevo), pero estas listas se rellenan
+    // UNA vez al cargar el mundo con el nombre ya resuelto - sin esto se quedan congeladas en el
+    // idioma que hubiera en ese momento. Sin mundo cargado no hay nada que rehacer.
+    //
+    // El filtro de NPC y la categoria elegida se conservan: RebuildNpcRows respeta el texto de
+    // busqueda actual (a diferencia de la carga de un mundo, que lo limpia a proposito) y
+    // RebuildInventory despacha por SelectedCategory, que no se toca.
+    private void RefrescarNombresDeContenido()
+    {
+        if (_world is not { } world) return;
+        RebuildNpcRows(world, preservarFiltro: true);
+        MissingNpcs.Clear();
+        var encontrados = world.Npcs.Select(n => n.Id).ToHashSet();
+        foreach (int id in VanillaTownNpcRoster.Ids)
+            if (!encontrados.Contains(id))
+                MissingNpcs.Add(new MissingNpcRowViewModel(id, _npcNames.GetName(id)));
+        RebuildInventory();
+        // HoverTileText/HoverInfo NO se rehacen aqui a proposito: son el texto del tile que hay
+        // AHORA MISMO bajo el raton, que se reescribe entero en el siguiente movimiento. No hay
+        // ningun estado que recomponer, solo un cursor que el usuario ya esta moviendo.
+    }
+
+    // Extraido de LoadFromPathAsync para poder rehacerlo tambien al cambiar de idioma (ver
+    // RefrescarNombresDeContenido) - mismo codigo real, ni una linea de logica nueva.
+    private void RebuildNpcRows(WldWorld world, bool preservarFiltro = false)
+    {
+        _allNpcs = world.Npcs
+            .OrderBy(n => _npcNames.GetName(n.Id))
+            .Select(n =>
+            {
+                // Punto 4 (advisor Opus): "bajo tierra" = TileY > GroundLevel real de este
+                // mundo (WldHeader.GroundLevel, ver ESPEC-ui-exploracion.md#12).
+                bool underground = n.TileY > world.Header.GroundLevel;
+                int depth = underground ? n.TileY - (int)world.Header.GroundLevel : 0;
+                return new WorldNpcRowViewModel(n.Id, _npcNames.GetName(n.Id), n.TileX, n.TileY, n.Homeless,
+                    NpcHeadProfile.GetHeadIndex(n.Id, n.VariationIndex, world.ShimmeredNpcTypes.Contains(n.Id)),
+                    underground, depth);
+            })
+            .ToList();
+        if (preservarFiltro) { ApplyNpcFilter(); return; }
+        Npcs.Clear();
+        foreach (var npc in _allNpcs) Npcs.Add(npc);
     }
 
     public ExplorationViewModel(CharacterFileService service)
@@ -1638,21 +1685,7 @@ public partial class ExplorationViewModel : ObservableObject
             WorldImage = image;
             WorldHighlight = null; // un mundo nuevo invalida cualquier resaltado de mineral anterior
 
-            _allNpcs = world.Npcs
-                .OrderBy(n => _npcNames.GetName(n.Id))
-                .Select(n =>
-                {
-                    // Punto 4 (advisor Opus): "bajo tierra" = TileY > GroundLevel real de este
-                    // mundo (WldHeader.GroundLevel, ver ESPEC-ui-exploracion.md#12).
-                    bool underground = n.TileY > world.Header.GroundLevel;
-                    int depth = underground ? n.TileY - (int)world.Header.GroundLevel : 0;
-                    return new WorldNpcRowViewModel(n.Id, _npcNames.GetName(n.Id), n.TileX, n.TileY, n.Homeless,
-                        NpcHeadProfile.GetHeadIndex(n.Id, n.VariationIndex, world.ShimmeredNpcTypes.Contains(n.Id)),
-                        underground, depth);
-                })
-                .ToList();
-            Npcs.Clear();
-            foreach (var npc in _allNpcs) Npcs.Add(npc);
+            RebuildNpcRows(world);
             NpcSearchText = string.Empty;
             NpcFilterWithHome = false;
             NpcFilterHomeless = false;

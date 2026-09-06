@@ -21,7 +21,16 @@ public sealed class CalamityBuffEntry(CalamityBuffEntryData data, int syntheticI
     public int SyntheticId { get; } = syntheticId;
     public string Internal => data.Internal;
     public string Mod => data.Mod;
-    public string DisplayName => data.DisplayNameEs ?? data.DisplayNameFallback ?? data.Internal;
+    // `displayName_fallback` es el nombre real INGLES del mod (del hjson en-US del .tmod real,
+    // 305 de 305) - ronda de traduccion del CONTENIDO del juego (6-sep-2026): antes solo se
+    // usaba como ultimo recurso, ahora es la cara inglesa de verdad de este catalogo.
+    public string DisplayName => DisplayNameFor(LocalizedContent.CurrentLanguage);
+
+    public string DisplayNameFor(string language)
+    {
+        string picked = LocalizedContent.Pick(data.DisplayNameEs, data.DisplayNameFallback, language);
+        return string.IsNullOrWhiteSpace(picked) ? data.Internal : picked;
+    }
     public string? Icon => data.Icon;
     // Categoria real (calamity/buffs.json, campo "category" - Summon/StatBuffs/
     // DamageOverTime/Pets/Alcohol/StatDebuffs/Potions/Mounts/Placeables) - usada por

@@ -91,11 +91,8 @@ public static class ItemStatsFormatter
                     var bodyEntry = catalogs.Calamity.BySyntheticId(setInfo.BodySyntheticId);
                     var legsEntry = setInfo.LegsSyntheticId is int legsId ? catalogs.Calamity.BySyntheticId(legsId) : null;
                     var heads = new List<CalamitySetBonusHead>(setInfo.Heads.Count);
-                    foreach (var (headId, bonusText) in setInfo.Heads)
-                    {
-                        string headName = catalogs.Calamity.BySyntheticId(headId)?.DisplayName ?? $"#{headId}";
-                        heads.Add(new CalamitySetBonusHead(headName, bonusText));
-                    }
+                    foreach (var head in setInfo.Heads)
+                        heads.Add(new CalamitySetBonusHead(head.HeadName, head.BonusText));
                     info = info with
                     {
                         CalamitySetBonus = new CalamitySetBonusInfo(
@@ -124,8 +121,10 @@ public static class ItemStatsFormatter
             // puesto de verdad - lo consume tambien la Libreria sobre objetos sueltos, sin
             // personaje cargado), etiquetado explicitamente por la App para no fingir que ya
             // esta activo.
+            // DisplayText, no Text: el texto en el idioma activo (ronda de traduccion del
+            // CONTENIDO del juego, 6-sep-2026) - `Text` es la cara española a secas.
             var setInfo = catalogs.ArmorSets.Get(id);
-            if (setInfo != null) info = info with { SetBonusText = setInfo.Text };
+            if (setInfo != null) info = info with { SetBonusText = setInfo.DisplayText };
         }
 
         return info.IsEmpty ? null : info;

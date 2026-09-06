@@ -60,11 +60,16 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
         _all = [];
         _byId = new Dictionary<int, LibraryItemViewModel>();
 
-        foreach (var (id, name) in service.VanillaCatalog.AllEntries())
+        // Los DOS nombres reales por entrada (ronda de traduccion del CONTENIDO del juego,
+        // 6-sep-2026): la tarjeta elige al leer segun el idioma activo. Se piden por idioma
+        // EXPLICITO, no por el activo, precisamente porque este catalogo se construye una sola
+        // vez al arrancar y el idioma puede cambiar mil veces despues.
+        foreach (var (id, name) in service.VanillaCatalog.AllEntries(LocalizedContent.Spanish))
         {
+            string nameEn = service.VanillaCatalog.GetName(id, LocalizedContent.English);
             var stats = ItemStatsFormatter.Describe(false, id, service.TooltipCatalogs);
             var rarityColor = VanillaRarityColorCatalog.Get(service.VanillaStats.Get(id)?.Rare);
-            var item = new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats, rarityColor);
+            var item = new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats, rarityColor, nameEn);
             _all.Add(item);
             _byId[id] = item;
         }
@@ -73,7 +78,8 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
         {
             string? iconPath = entry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
             var stats = ItemStatsFormatter.Describe(true, entry.SyntheticId, service.TooltipCatalogs);
-            var item = new LibraryItemViewModel(entry.DisplayName, true, iconPath, entry.SyntheticId, entry.Category, stats);
+            var item = new LibraryItemViewModel(entry.DisplayNameFor(LocalizedContent.Spanish), true, iconPath, entry.SyntheticId, entry.Category, stats,
+                displayNameEn: entry.DisplayNameFor(LocalizedContent.English));
             _all.Add(item);
             _byId[entry.SyntheticId] = item;
         }

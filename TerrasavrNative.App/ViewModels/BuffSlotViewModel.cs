@@ -90,7 +90,20 @@ public partial class BuffSlotViewModel : ObservableObject
         _requestPick = requestPick;
         _isPlacedElsewhere = isPlacedElsewhere;
         Refresh();
+        // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): el nombre y la descripcion
+        // del buff ya existen en los dos idiomas (vanilla_buff_names_en.json /
+        // vanilla_buff_descriptions_en.json, y displayName_fallback para Calamity), pero aqui
+        // son valores FIJADOS en Refresh, no propiedades calculadas - sin esto un cambio de
+        // idioma en vivo dejaba los 44 slots de buff con el texto anterior. Evento DEBIL, mismo
+        // motivo real que ItemSlotViewModel: el servicio de idioma es un singleton que vive lo
+        // que la aplicacion y estos slots no.
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            Services.LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
+
+    // Refresh() es idempotente sobre el buff que ya hay puesto (no toca PlrBuff, solo recalcula
+    // lo que se muestra), asi que rehacerlo entero al cambiar de idioma es seguro.
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => Refresh();
 
     private void Refresh()
     {

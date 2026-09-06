@@ -42,6 +42,12 @@ public sealed class CalamityCatalogEntryData
     // en ingles (las partes que coinciden con CommonItemTooltip.* vienen YA en español oficial
     // de tModLoader). Mismo texto en las 2-3 piezas de un mismo set, igual que el juego real.
     [JsonPropertyName("setBonus")] public string? SetBonus { get; init; }
+    // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): el MISMO bono, resuelto por el
+    // mismo script contra la localizacion `en_US` de tModLoader en vez de la `es_ES` -> texto
+    // 100% ingles real del mod, sin nada traducido a mano (esta instalacion de Calamity solo
+    // trae en-US, o sea que en ingles la fuente es literal). 69 de 69 sets reales, ver
+    // `node scripts/extraer-bonos-set-calamity.js en` + aplicar-bonos-set-calamity.js.
+    [JsonPropertyName("setBonus_en")] public string? SetBonusEn { get; init; }
 }
 
 // Una entrada del catalogo con su id sintetico ya resuelto (ItemIdBase + indice en el array
@@ -53,10 +59,27 @@ public sealed class CalamityCatalogEntry(CalamityCatalogEntryData data, int synt
     public string Internal => data.Internal;
     public string Mod => data.Mod;
     public string Category => data.Category;
-    public string DisplayName => data.DisplayNameEs ?? data.DisplayNameFallback ?? data.Internal;
+    // `displayName_fallback` es el nombre real INGLES del mod (del hjson en-US del .tmod, 2709
+    // de 2709 entradas) - antes solo se usaba como ultimo recurso cuando faltaba el español;
+    // ahora es la cara inglesa de verdad de este catalogo.
+    public string DisplayName => DisplayNameFor(LocalizedContent.CurrentLanguage);
+
+    public string DisplayNameFor(string language)
+    {
+        string picked = LocalizedContent.Pick(data.DisplayNameEs, data.DisplayNameFallback, language);
+        return string.IsNullOrWhiteSpace(picked) ? data.Internal : picked;
+    }
+
     public string? Icon => data.Icon;
     public CalamityItemStats? Stats => data.Stats;
-    public string? SetBonus => data.SetBonus;
+    public string? SetBonus => SetBonusFor(LocalizedContent.CurrentLanguage);
+
+    public string? SetBonusFor(string language)
+    {
+        if (data.SetBonus is null && data.SetBonusEn is null) return null;
+        string picked = LocalizedContent.Pick(data.SetBonus, data.SetBonusEn, language);
+        return string.IsNullOrWhiteSpace(picked) ? null : picked;
+    }
     public string? EquipSlot => data.EquipSlot;
 }
 
