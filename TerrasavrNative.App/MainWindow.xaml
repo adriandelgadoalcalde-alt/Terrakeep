@@ -1454,8 +1454,14 @@
                         <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" MaxWidth="96" Margin="8,0,0,0">
                             <TextBlock Text="{Binding CountLabel}" Style="{StaticResource BodyText}"
                                        TextAlignment="Right" TextWrapping="Wrap" />
+                            <!-- El id se esconde en la fila de "Cofre de un mod": ahi el Id es el
+                                 type del tile, o sea -1 ("casilla vacia"), y enseñar "[-1]" seria
+                                 volver a poner delante justo el numero sin sentido que el usuario
+                                 reporto. El resto de filas lo siguen llevando (P-7: TEdit muestra
+                                 el id siempre, y el buscador acepta buscar por id). -->
                             <TextBlock Text="{Binding Id, StringFormat='[{0}]'}" Style="{StaticResource CaptionText}"
-                                       TextAlignment="Right" />
+                                       TextAlignment="Right"
+                                       Visibility="{Binding IsModdedChest, Converter={StaticResource InverseBoolToVis}}" />
                         </StackPanel>
                         <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}" TextWrapping="Wrap"
                                    VerticalAlignment="Center" />
