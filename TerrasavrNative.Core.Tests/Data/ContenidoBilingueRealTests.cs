@@ -177,10 +177,17 @@ public class ContenidoBilingueRealTests
         Assert.Equal("Traje de Buceo Abisal", traje.DisplayNameFor(Es));
         Assert.Equal("Abyssal Diving Suit", traje.DisplayNameFor(En));
 
-        // Bono de set real: en ingles es texto LITERAL del mod (esta instalacion de Calamity
-        // solo trae localizacion en-US), en español es la traduccion ya revisada del proyecto.
+        // El nombre ingles sale del `DisplayName` REAL del hjson en-US, no del
+        // `displayName_fallback` (que es el nombre interno de la clase humanizado). Este caso
+        // concreto es el que destapo la diferencia en el volcado del arnes A11: el fallback dice
+        // "Aerospec Head Melee" y el mod real dice "Aerospec Helm".
         var casco = catalogo.ByModAndInternal("CalamityMod", "AerospecHeadMelee");
         Assert.NotNull(casco);
+        Assert.Equal("Yelmo de Aerospec", casco.DisplayNameFor(Es));
+        Assert.Equal("Aerospec Helm", casco.DisplayNameFor(En));
+
+        // Bono de set real: en ingles es texto LITERAL del mod (esta instalacion de Calamity
+        // solo trae localizacion en-US), en español es la traduccion ya revisada del proyecto.
         string? bonoEs = casco.SetBonusFor(Es);
         string? bonoEn = casco.SetBonusFor(En);
         Assert.False(string.IsNullOrWhiteSpace(bonoEs));

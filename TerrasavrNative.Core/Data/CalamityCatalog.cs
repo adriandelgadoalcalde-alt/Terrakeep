@@ -26,6 +26,16 @@ public sealed class CalamityCatalogEntryData
     [JsonPropertyName("mod")] public required string Mod { get; init; }
     [JsonPropertyName("category")] public required string Category { get; init; }
     [JsonPropertyName("displayName_es")] public string? DisplayNameEs { get; init; }
+    // Nombre INGLES REAL del mod, del `DisplayName` de los .hjson en-US del .tmod
+    // (scripts/extraer-nombres-calamity-en.js, 2493 de 2709). Es distinto de
+    // `displayName_fallback`, que NO es el nombre real sino el nombre interno de la clase
+    // "humanizado" separando por mayusculas - encontrado midiendo, no suponiendo: el volcado del
+    // arnes A11 enseño "Aerospec Head Melee" donde el hjson real dice "Aerospec Helm" (474
+    // entradas mal por ese motivo). El fallback sigue existiendo como ultimo recurso REAL: para
+    // las 216 entradas sin `DisplayName` propio (banners, materiales de jefe...) el propio
+    // tModLoader genera el nombre humanizando el interno, o sea que ahi el fallback SI es lo que
+    // enseña el juego.
+    [JsonPropertyName("displayName_en")] public string? DisplayNameEn { get; init; }
     [JsonPropertyName("displayName_fallback")] public string? DisplayNameFallback { get; init; }
     [JsonPropertyName("icon")] public string? Icon { get; init; }
     [JsonPropertyName("stats")] public CalamityItemStats? Stats { get; init; }
@@ -59,14 +69,16 @@ public sealed class CalamityCatalogEntry(CalamityCatalogEntryData data, int synt
     public string Internal => data.Internal;
     public string Mod => data.Mod;
     public string Category => data.Category;
-    // `displayName_fallback` es el nombre real INGLES del mod (del hjson en-US del .tmod, 2709
-    // de 2709 entradas) - antes solo se usaba como ultimo recurso cuando faltaba el español;
-    // ahora es la cara inglesa de verdad de este catalogo.
+    // Cara inglesa: `displayName_en` (el `DisplayName` REAL del hjson en-US) y, solo si esa
+    // entrada no tiene uno propio, `displayName_fallback` - que en ese caso SI es lo que enseña
+    // el juego, porque tModLoader genera el nombre humanizando el interno. Ver el comentario de
+    // DisplayNameEn arriba.
     public string DisplayName => DisplayNameFor(LocalizedContent.CurrentLanguage);
 
     public string DisplayNameFor(string language)
     {
-        string picked = LocalizedContent.Pick(data.DisplayNameEs, data.DisplayNameFallback, language);
+        string? en = string.IsNullOrWhiteSpace(data.DisplayNameEn) ? data.DisplayNameFallback : data.DisplayNameEn;
+        string picked = LocalizedContent.Pick(data.DisplayNameEs, en, language);
         return string.IsNullOrWhiteSpace(picked) ? data.Internal : picked;
     }
 

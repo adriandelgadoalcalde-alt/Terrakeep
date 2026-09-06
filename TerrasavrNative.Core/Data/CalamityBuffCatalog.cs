@@ -10,6 +10,9 @@ public sealed class CalamityBuffEntryData
     [JsonPropertyName("mod")] public required string Mod { get; init; }
     [JsonPropertyName("category")] public string? Category { get; init; }
     [JsonPropertyName("displayName_es")] public string? DisplayNameEs { get; init; }
+    // Nombre INGLES REAL del mod (305 de 305, 76 de ellos distintos del fallback humanizado que
+    // se usaba antes) - ver el comentario de CalamityCatalogEntryData.DisplayNameEn.
+    [JsonPropertyName("displayName_en")] public string? DisplayNameEn { get; init; }
     [JsonPropertyName("displayName_fallback")] public string? DisplayNameFallback { get; init; }
     [JsonPropertyName("icon")] public string? Icon { get; init; }
 }
@@ -21,14 +24,15 @@ public sealed class CalamityBuffEntry(CalamityBuffEntryData data, int syntheticI
     public int SyntheticId { get; } = syntheticId;
     public string Internal => data.Internal;
     public string Mod => data.Mod;
-    // `displayName_fallback` es el nombre real INGLES del mod (del hjson en-US del .tmod real,
-    // 305 de 305) - ronda de traduccion del CONTENIDO del juego (6-sep-2026): antes solo se
-    // usaba como ultimo recurso, ahora es la cara inglesa de verdad de este catalogo.
+    // Cara inglesa: `displayName_en` real y, si faltara, el fallback humanizado (que es lo que
+    // el propio tModLoader genera cuando el mod no define DisplayName). Ronda de traduccion del
+    // CONTENIDO del juego, 6-sep-2026.
     public string DisplayName => DisplayNameFor(LocalizedContent.CurrentLanguage);
 
     public string DisplayNameFor(string language)
     {
-        string picked = LocalizedContent.Pick(data.DisplayNameEs, data.DisplayNameFallback, language);
+        string? en = string.IsNullOrWhiteSpace(data.DisplayNameEn) ? data.DisplayNameFallback : data.DisplayNameEn;
+        string picked = LocalizedContent.Pick(data.DisplayNameEs, en, language);
         return string.IsNullOrWhiteSpace(picked) ? data.Internal : picked;
     }
     public string? Icon => data.Icon;
