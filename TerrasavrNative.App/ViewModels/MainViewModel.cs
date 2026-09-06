@@ -759,10 +759,26 @@ public partial class MainViewModel : ObservableObject
         // H5-02 (quinta auditoria de Opus): Investigacion ahora es editable de verdad - evento
         // dedicado (no PropertyChanged entero, que tambien dispara solo con navegar/buscar).
         Research.ResearchChanged += MarkDirty;
-        VersionEditor.PropertyChanged += (_, _) =>
+        // Oleada del 6-sep-2026: el aviso de bajada de version por debajo de 200 tiene que
+        // contar la investigacion VIVA (con lo editado sin guardar), no la cargada de disco -
+        // MainViewModel es quien conoce a los dos, ver VersionEditorViewModel.LiveResearchedCount.
+        VersionEditor.LiveResearchedCount = () => Research.ResearchedCount;
+        VersionEditor.PropertyChanged += (_, e) =>
         {
             MarkDirty();
             OnPropertyChanged(nameof(FileVersionLine)); // H-2: cambiar la version en la pestaña Version debe reflejarse tambien en la cabecera
+            // Oleada del 6-sep-2026 (Personaje > Buffs/Version): la version REAL decide cuantos
+            // buffs se escriben de verdad (44/22/10, PlrBodySerializer) y cual es el techo de
+            // duracion (BuffDurationPresets.MaxTicksForVersion) - las dos cosas se quedaban
+            // congeladas en las de la carga. Se propaga a las tres superficies que dependen de
+            // ella en cuanto cambia, no solo al cargar: la rejilla, los presets del panel Editar
+            // y los avisos por version de Desbloqueos (que ademas ya se refrescaban al ENTRAR en
+            // esa pestaña, ver OnPersonajeInnerTabIndexChanged - esto no lo sustituye).
+            if (e.PropertyName != nameof(VersionEditorViewModel.RawVersion)) return;
+            int version = VersionEditor.RawVersion;
+            if (Buffs.ApplyVersion(version)) BuffEdit.Slot = null; // la rejilla se rehizo: el slot que seguia el panel Editar ya no existe
+            BuffEdit.SetCharacterVersion(version);
+            Flags.RefreshVersionWarning();
         };
         _saveConfirmationTimer.Tick += (_, _) =>
         {

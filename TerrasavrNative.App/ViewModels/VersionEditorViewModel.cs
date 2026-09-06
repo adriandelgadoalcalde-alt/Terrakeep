@@ -109,28 +109,62 @@ public partial class VersionEditorViewModel : ObservableObject
     private static string GetBestText(int version, VersionOption best) =>
         version > best.Number ? best.Label + "+" : best.Label;
 
-    // Umbrales reales de PlrBodySerializer (los mismos que ya leen/escriben estos campos) -
-    // solo los 3 con impacto real mas facil de ver y contar con exactitud contra el personaje
-    // ya cargado: equipo puesto (145), Boveda del Vacio (200) y Loadouts 1-3 (269).
+    // Oleada del 6-sep-2026 (Personaje > Version): conteo VIVO de objetos investigados, que es
+    // dato de ResearchViewModel y no del PlrCharacter crudo (character.Research solo se
+    // reescribe al guardar, ver ResearchViewModel.SyncBackTo) - MainViewModel, que si conoce a
+    // los dos, lo enchufa una vez en su constructor. Sin el, se cae al dato cargado de disco.
+    public Func<int>? LiveResearchedCount { get; set; }
+
+    // Umbrales reales de PlrBodySerializer (los mismos que ya leen/escriben estos campos), con
+    // el contenido REAL del personaje contado uno a uno - nunca una lista generica de
+    // "secciones que podrian perderse".
     //
-    // Limitacion real conocida: _character.EquipmentItems/Loadouts reflejan lo YA CARGADO desde
-    // disco - una edicion hecha en la UI DESPUES de cargar (ej. poner un casco nuevo) no se
-    // vuelca ahi hasta un Guardar real (CharacterFileService.Save/MaskAndSyncAll es el unico
-    // sitio que sincroniza MergedContainers de vuelta a estos campos crudos). Cubre el caso real
-    // mas comun (un personaje que YA trae contenido y se le baja la version sin darse cuenta),
-    // no una prediccion en vivo de ediciones sin guardar todavia.
+    // Oleada del 6-sep-2026 (Personaje > Buffs/Investigacion/Version): antes solo miraba 3
+    // cosas y una de ellas estaba MAL. `EquipmentItems` NO es "el equipo puesto (armadura/
+    // vanidad/accesorios)" - son los 5 miscEquips reales (mascota, mascota de luz, vagoneta,
+    // montura, gancho: Player.miscEquips, confirmado en el decompilado real), y la armadura
+    // vive en PrimaryLoadout, que se escribe SIEMPRE, sin ningun umbral de version: bajar la
+    // version nunca la ha perdido. O sea que el aviso nombraba algo que no se pierde y callaba
+    // lo que si: los BUFFS (44/22/10 segun version - bajar de 269 se come 22 de golpe), la
+    // INVESTIGACION entera (>=200), las misiones de pesca (>=98) y la puntuacion de golf
+    // (>=200).
+    //
+    // Limitacion real conocida (sigue en pie para los objetos): _character.EquipmentItems/
+    // VoidItems/Loadouts reflejan lo YA CARGADO desde disco - una edicion hecha en la UI
+    // DESPUES de cargar no se vuelca ahi hasta un Guardar real (CharacterFileService.Save/
+    // MaskAndSyncAll). Los BUFFS no tienen ese problema: character.Buffs es el mismo objeto
+    // vivo que edita BuffSlotViewModel, asi que se cuentan al instante.
     private string? BuildDowngradeWarning(int value)
     {
         if (_character == null) return null;
         var perdidas = new List<string>();
 
-        if (value < 145 && _character.EquipmentItems.Any(s => !s.IsEmpty))
-            perdidas.Add(LocalizationService.Instance["version_worn_equipment"]);
+        // Buffs: la cuenta exacta que hara el guardado (BuffsViewModel.SlotCountForVersion, la
+        // misma de PlrBodySerializer) - los que caen fuera de ese tope dejan de escribirse.
+        int buffLimit = BuffsViewModel.SlotCountForVersion(value);
+        int buffsFuera = 0;
+        for (int i = buffLimit; i < _character.Buffs.Count; i++)
+            if (_character.Buffs[i].Id != 0) buffsFuera++;
+        if (buffsFuera > 0) perdidas.Add(LocalizationService.Instance.Format("version_buffs_over_limit", buffsFuera, buffLimit));
+
+        if (value < 98 && _character.FishingQuestsCompleted > 0)
+            perdidas.Add(LocalizationService.Instance.Format("version_fishing_quests", _character.FishingQuestsCompleted));
+
+        if (value < 145)
+        {
+            int miscCount = _character.EquipmentItems.Count(s => !s.IsEmpty) + _character.EquipmentDyes.Count(s => !s.IsEmpty);
+            if (miscCount > 0) perdidas.Add(LocalizationService.Instance.Format("version_misc_equips", miscCount));
+        }
 
         if (value < 200)
         {
             int voidCount = _character.VoidItems.Count(s => !s.IsEmpty);
             if (voidCount > 0) perdidas.Add(LocalizationService.Instance.Format("version_void_items", voidCount));
+
+            int researchCount = LiveResearchedCount?.Invoke() ?? _character.Research.Count;
+            if (researchCount > 0) perdidas.Add(LocalizationService.Instance.Format("version_research_entries", researchCount));
+
+            if (_character.GolferScore > 0) perdidas.Add(LocalizationService.Instance.Format("version_golfer_score", _character.GolferScore));
         }
 
         if (value < 269)

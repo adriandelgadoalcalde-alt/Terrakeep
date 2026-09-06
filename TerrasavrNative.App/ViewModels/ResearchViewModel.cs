@@ -231,6 +231,12 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
 
     public event Action? ResearchChanged;
 
+    // Oleada del 6-sep-2026 (Personaje > Investigacion/Version): cuantos objetos hay
+    // investigados AHORA MISMO, incluidas las ediciones sin guardar - character.Research solo
+    // se reescribe en SyncBackTo (al guardar), asi que es el unico dato fiable para el aviso de
+    // bajada de version por debajo de 200, donde la investigacion entera deja de escribirse.
+    public int ResearchedCount => _researchedCounts.Count;
+
     [RelayCommand]
     private void ToggleRow(ResearchRowViewModel row)
     {

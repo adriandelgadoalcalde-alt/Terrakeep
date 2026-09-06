@@ -63,7 +63,12 @@ public sealed class VersionDowngradeWarningTests
     }
 
     [Fact]
-    public void BajarPorDebajoDe145ConEquipoPuestoReal_Avisa()
+    // Oleada del 6-sep-2026: EquipmentItems NO es "el equipo puesto (armadura/vanidad/
+    // accesorios)" como decia el aviso viejo - son los 5 miscEquips reales (mascota, mascota de
+    // luz, vagoneta, montura, gancho: Player.miscEquips real, confirmado en el decompilado). La
+    // armadura vive en PrimaryLoadout, que se escribe SIEMPRE, sin ningun umbral de version:
+    // bajar la version nunca la ha perdido, y el aviso nombraba algo que no se pierde.
+    public void BajarPorDebajoDe145ConMiscEquipsReales_Avisa()
     {
         var equipo = new PlrItemSlot[5];
         Array.Fill(equipo, PlrItemSlot.Empty);
@@ -80,7 +85,7 @@ public sealed class VersionDowngradeWarningTests
         vm.VersionEditor.SetVersionCommand.Execute(98); // por debajo del umbral real 145
 
         Assert.NotNull(vm.VersionEditor.DowngradeWarning);
-        Assert.Contains("equipo puesto", vm.VersionEditor.DowngradeWarning);
+        Assert.Contains("Mascota / Montura / Gancho", vm.VersionEditor.DowngradeWarning);
     }
 
     [Fact]
