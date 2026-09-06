@@ -10841,3 +10841,95 @@ tambien en la rama de fallo: sin mundo cargado no puede quedar nada del anterior
   `AR-EX2`, `AR-EX3`, y `AR-11`/`AR-13`/`AR-15` intactos), en dos ejecuciones completas seguidas.
   Los `FALLO` que quedan en la salida (`AR-14`, `AR-LAY`, `OBJ-*`, `LIB-06-IDIOMA`) son de las areas
   de los otros agentes, que trabajaban en paralelo sobre el mismo arbol.
+
+---
+
+## 6-sep-2026 - Objetos (segunda tanda): cambiar el prefijo dejaba el tooltip mintiendo con los numeros del anterior
+
+Continuacion de la oleada de **Personaje -> Objetos**. Esta tanda ataca lo unico de la zona que
+seguia sin tener NINGUNA prueba propia: el tooltip de estadisticas de un slot, que es lo mas leido
+de toda la pantalla ("ninguna de las armas armaduras o accesorios te muestran las estadisticas",
+pedido explicito del 1-sep-2026). `ItemStatsFormatter` se probaba suelto en `WhatsNewIconTests` y
+nada mas - nunca desde un `ItemSlotViewModel` real, que es lo que ve el usuario.
+
+### El bug: `SetPrefix` no recalculaba `StatsTooltip`
+
+La seccion 1 de `ItemStatsFormatter.Format` es **el efecto numerico del prefijo** ("+15% de daño,
++5 % de probabilidad de golpe critico, +15% de retroceso, -10% de tiempo de uso, +10% de tamaño").
+Ese texto se compone en `UpdateFrom`... y **cambiar el prefijo no pasa por `UpdateFrom`**.
+`SetPrefix` refrescaba el NOMBRE del prefijo (`RefreshPrefixDisplay`) y la sugerencia de "mejor
+prefijo", pero dejaba el tooltip tal cual estaba.
+
+Afectaba a los CUATRO caminos reales que tocan el prefijo sin cambiar el objeto: el picker de
+prefijos ("Aplicar"), "Quitar", el boton de mejor prefijo, y el campo numerico "Prefijo (id)".
+
+Reproducido y volcado tal cual, colocando una "Espada larga de hierro" (que nace con "Legendario"
+automatico) y quitandole el prefijo acto seguido:
+
+```
+=== CON PREFIJO ===                          === TRAS QUITARLE EL PREFIJO ===
++15% de daño, +5 % de probabilidad de        +15% de daño, +5 % de probabilidad de
+golpe crítico, +15% de retroceso,            golpe crítico, +15% de retroceso,
+-10% de tiempo de uso, +10% de tamaño        -10% de tiempo de uso, +10% de tamaño
+12 daño de cuerpo a cuerpo (~36 DPS)         12 daño de cuerpo a cuerpo (~36 DPS)
+...                                          ...
+PrefixDisplay="Legendario"                   PrefixDisplay=""   <- el prefijo YA no esta
+```
+
+El objeto ya no tiene prefijo (el panel Editar lo dice, el nombre desaparece) y el tooltip sigue
+prometiendo un +15% de daño que no existe. Es el mismo tipo de fallo que `B-6` cerro para "Defensa
+total", y duele en el mismo momento: justo cuando el usuario esta comparando prefijos uno a uno.
+
+Arreglado recalculando el tooltip dentro de `SetPrefix` (solo si el slot tiene objeto, para no
+inventar un tooltip sobre un hueco vacio).
+
+### Las 6 pruebas nuevas (`ObjetosTooltipStatsTests`)
+
+Van por el camino REAL de punta a punta - colocar el objeto en el slot del contenedor que le
+corresponde y leer `ItemSlotViewModel.StatsTooltip` -, con los numeros esperados sacados de los
+assets reales y citados uno a uno:
+
+| prueba | dato real comprobado |
+|---|---|
+| arma vanilla | "Espada larga de hierro" (id 4): 12 daño de cuerpo a cuerpo, ~36 DPS, use time 20 ("Muy Rapido"), retroceso 5.5 ("Normal") |
+| armadura vanilla | "Casco de plata" (id 91): 3 defensa + el bono del set "MetalTier2" |
+| armadura de Calamity | "Sombrero de Aerospec" (20000244): 3 defensa + su setBonus real de 4 lineas |
+| arma de Calamity | "BloodfireArrow" (20000223): 19 daño **por rango** (etiqueta derivada del DamageType real) |
+| prefijo | el efecto del prefijo entra y sale del tooltip de verdad (es la que fija el bug de arriba) |
+| slot vacio | sin objeto no hay tooltip (null), nunca uno heredado |
+
+### Hallazgo real que NO se arregla en esta ronda (queda propuesto, con numeros)
+
+**El "mejor prefijo automatico" solo cubre una cuarta parte de lo que deberia.** Medido sobre los
+assets reales de este repo:
+
+| | total real | con entrada en `calamity/best_prefix.json` |
+|---|---|---|
+| objetos vanilla con daño | 571 | **145 (25%)** |
+| accesorios vanilla | 259 | **55 (21%)** |
+
+`PrefixSuggester.Suggest` devuelve `null` cuando el objeto no esta en esa tabla, asi que en los
+otros ~630 objetos **colocar un arma no le pone ningun prefijo** y el boton de mejor prefijo no se
+ofrece - pese a que el pedido del 1-sep-2026 fue explicito ("siempre que pongas un objeto, sobre
+todo armas, el mejor prefijo se ha de poner de manera automatica"). No es un bug de codigo: es
+cobertura de datos, y el propio proyecto hermano ya lo reconoce por escrito
+(`local-site/overrides.js`: "173/~300+ vanilla weapons, per its own coverage note", con las pistas
+a mano de `builds.json` como respaldo). El arreglo honesto es ampliar el generador de esa tabla
+(aplica la formula real del juego a las stats reales de cada objeto), no inventar aqui una regla
+paralela - por eso se deja escrito con el numero medido en vez de parchearlo a ojo.
+
+Segundo hallazgo del mismo tipo, tambien anotado y no tocado: **`ItemStatsFormatter` compone TODO
+el texto en español a fuego** ("daño de cuerpo a cuerpo", "defensa", "Use time", "Retroceso",
+"Con el set completo"...), asi que con la app en ingles los tooltips de estadisticas siguen en
+español. No lo ve el barrido de idioma (los tooltips son popups que nunca llegan a abrirse) y
+migrarlo cruza la frontera `Core`/`App`: `ItemStatsFormatter` vive en `TerrasavrNative.Core`, que
+compila tambien para net8.0 y no conoce `LocalizationService` - haria falta inyectarle un
+resolvedor de textos. Trabajo de una ronda propia, no de un parche al vuelo.
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core 420, ViewModels 420 (+6 `ObjetosTooltipStatsTests`), 0 fallos propios. Los
+  fallos intermitentes de `HomeCardTests` (uno distinto en cada ejecucion, siempre de backups) son
+  de otra area y de esta misma oleada en paralelo.
+- Arnes de UI Automation: ejecucion completa hasta `DONE`, `OBJ-01`..`OBJ-07` en verde.

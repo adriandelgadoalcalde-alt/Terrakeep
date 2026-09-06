@@ -474,6 +474,19 @@ public partial class ItemSlotViewModel : ObservableObject
         var before = Item.Clone();
         Item.Prefix = prefix;
         RefreshPrefixDisplay();
+        // OBJ-09 (oleada de Objetos, 6-sep-2026) - BUG REAL: el tooltip de estadisticas EMPIEZA
+        // por el efecto numerico del prefijo ("+15% de daño, +5% de probabilidad de golpe
+        // critico, ...", seccion 1 de ItemStatsFormatter.Format) y este metodo no lo recalculaba
+        // nunca - solo UpdateFrom lo hace, y cambiar el prefijo no pasa por ahi. O sea que los
+        // CUATRO caminos reales que tocan el prefijo sin cambiar el objeto (el picker de
+        // prefijos, "Quitar", el boton de mejor prefijo, y el campo numerico "Prefijo (id)")
+        // dejaban el tooltip mintiendo con los numeros del prefijo ANTERIOR: reproducido
+        // colocando un arma (que nace con "Legendario" automatico) y quitandole el prefijo -
+        // el tooltip seguia prometiendo un +15% de daño que ya no existia. Mismo tipo de fallo
+        // que B-6 cerro para "Defensa total", y en el mismo momento en que mas duele: justo
+        // cuando el usuario esta comparando prefijos uno a uno.
+        if (!Item.IsEmpty)
+            StatsTooltip = ItemStatsFormatter.Format(Item.IsCalamity, Item.Id, _service.TooltipCatalogs, Item.Prefix);
         var suggestion = PrefixSuggester.Suggest(Item, _service.CalamityCatalog, _service.BestPrefixes, _service.RoguePrefixCatalog);
         HasBestPrefixSuggestion = suggestion.HasValue && !suggestion.Value.Equals(Item.Prefix);
         EmitItemChanged(before, Item.Clone());
