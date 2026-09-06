@@ -2367,6 +2367,111 @@ internal static partial class Program
             Console.WriteLine("OBJ-01-EXCEPTION: " + ex);
         }
 
+        // OBJ-STATS-IDIOMA (ronda de idioma del 6-sep-2026). Cierra el hallazgo que la oleada de
+        // QA de Personaje->Objetos dejo anotado sin tocar: "ItemStatsFormatter compone TODO el
+        // texto en español a fuego, asi que con la app en ingles los tooltips de estadisticas
+        // siguen en español. No lo ve el barrido de idioma (son popups)".
+        //
+        // Por eso este bloque ABRE EL POPUP DE VERDAD (ToolTip.IsOpen = true) y lee el
+        // TextBlock real que se pinta dentro, en los dos idiomas, en vez de mirar la propiedad
+        // del ViewModel - que es justo lo que no demostraba nada: el ViewModel puede estar bien
+        // y el binding del popup quedarse congelado con el primer valor que leyo. Identificador
+        // NO numerico a proposito (misma leccion que AR-LAY: dos rondas en paralelo ya se
+        // pisaron renumerando bloques en este mismo fichero).
+        try
+        {
+            var slotArma = vm.InventoryContainer?.Slots.FirstOrDefault();
+            var slotCasco = vm.EquipmentGroup?.EquippedItems.Slots.FirstOrDefault();
+            if (slotArma == null || slotCasco == null)
+            {
+                Console.WriteLine("OBJ-STATS-IDIOMA: sin personaje cargado, bloque omitido");
+            }
+            else
+            {
+                string idiomaAntes = LocalizationService.Instance.Language;
+                // El arnes trabaja sobre una COPIA de un personaje real, pero aun asi se deja
+                // todo como estaba: los bloques siguientes miran estos mismos contenedores.
+                var armaAntes = slotArma.Item.Clone();
+                var cascoAntes = slotCasco.Item.Clone();
+                try
+                {
+                    vm.ObjetosSubTabIndex = 0;
+                    DoEvents();
+                    slotArma.PlaceItem(4);        // "Espada larga de hierro": daño + DPS + velocidad + retroceso
+                    slotCasco.PlaceItem(20000244); // "Sombrero de Aerospec": defensa + bono de set de Calamity
+                    DoEvents();
+
+                    // El TextBlock del tooltip real, buscado por el popup abierto de cada slot.
+                    // El ToolTip vive declarado en el XAML (Border.ToolTip), asi que su arbol
+                    // visual solo existe mientras esta abierto - de ahi el IsOpen=true.
+                    static string LeerTooltipReal(Window w, object dataContext)
+                    {
+                        foreach (var b in Descendientes<Border>(w))
+                        {
+                            if (!ReferenceEquals(b.DataContext, dataContext) || b.ToolTip is not ToolTip tt) continue;
+                            tt.IsOpen = true;
+                            DoEvents(); DoEvents();
+                            string texto = string.Join("\n", Descendientes<TextBlock>(tt)
+                                .Where(t => !string.IsNullOrWhiteSpace(t.Text)).Select(t => t.Text));
+                            tt.IsOpen = false;
+                            DoEvents();
+                            if (texto.Length > 0) return texto;
+                        }
+                        return "";
+                    }
+
+                    var fallos = new List<string>();
+                    void Comprobar(string caso, string texto, string[] debeTener, string[] noDebeTener)
+                    {
+                        foreach (string s in debeTener)
+                            if (!texto.Contains(s, StringComparison.Ordinal)) fallos.Add($"{caso}: falta '{s}'");
+                        foreach (string s in noDebeTener)
+                            if (texto.Contains(s, StringComparison.Ordinal)) fallos.Add($"{caso}: sigue apareciendo '{s}'");
+                    }
+
+                    LocalizationService.Instance.SetLanguage("es");
+                    DoEvents();
+                    string armaEs = LeerTooltipReal(window, slotArma);
+                    string cascoEs = LeerTooltipReal(window, slotCasco);
+                    Console.WriteLine("OBJ-STATS-IDIOMA [es] arma:\n  " + armaEs.Replace("\n", "\n  "));
+                    Console.WriteLine("OBJ-STATS-IDIOMA [es] casco:\n  " + cascoEs.Replace("\n", "\n  "));
+                    Comprobar("es/arma", armaEs, ["daño de cuerpo a cuerpo", "DPS", "Use time", "Muy Rapido", "Retroceso"], []);
+                    Comprobar("es/casco", cascoEs, ["defensa", "Con el set completo:"], []);
+
+                    LocalizationService.Instance.SetLanguage("en");
+                    DoEvents();
+                    string armaEn = LeerTooltipReal(window, slotArma);
+                    string cascoEn = LeerTooltipReal(window, slotCasco);
+                    Console.WriteLine("OBJ-STATS-IDIOMA [en] arma:\n  " + armaEn.Replace("\n", "\n  "));
+                    Console.WriteLine("OBJ-STATS-IDIOMA [en] casco:\n  " + cascoEn.Replace("\n", "\n  "));
+                    // "daño"/"Retroceso"/"Muy Rapido" son EXACTAMENTE el texto fijo que iba a
+                    // fuego en Core y que con la app en ingles seguia saliendo en español.
+                    Comprobar("en/arma", armaEn, ["melee damage", "DPS", "Use time", "Very Fast", "Knockback"],
+                        ["daño", "Retroceso", "Muy Rapido"]);
+                    // El bono de set en si ("Aumenta...", texto de contenido del juego) sigue en
+                    // español a proposito, igual que los NOMBRES de objeto en toda la app - lo
+                    // que aqui se comprueba es la FRASE del editor que lo envuelve.
+                    Comprobar("en/casco", cascoEn, ["defense", "With the full set:"], ["Con el set completo"]);
+
+                    Console.WriteLine($"OBJ-STATS-IDIOMA: {fallos.Count} discrepancia(s) en el tooltip REAL abierto, 2 idiomas x 2 objetos (esperado 0)"
+                                      + (fallos.Count > 0 ? " | " + string.Join(" ; ", fallos) : ""));
+                    if (fallos.Count > 0)
+                        Console.WriteLine("FALLO: OBJ-STATS-IDIOMA - el tooltip de estadisticas no sale entero en el idioma activo");
+                }
+                finally
+                {
+                    LocalizationService.Instance.SetLanguage(idiomaAntes);
+                    slotArma.UpdateFrom(armaAntes);
+                    slotCasco.UpdateFrom(cascoAntes);
+                    DoEvents();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("OBJ-STATS-IDIOMA-EXCEPTION: " + ex);
+        }
+
         // (Bloque real eliminado del arnes: probaba el rediseño de la Libreria de la
         // octava pasada - Fases 2/3/4/5/7 -, revertido entero por feedback directo del
         // usuario. Ver bitacora.md "REVERTIDO por feedback directo".

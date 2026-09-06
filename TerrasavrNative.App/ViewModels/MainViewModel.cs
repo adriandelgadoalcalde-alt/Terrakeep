@@ -394,7 +394,9 @@ public partial class MainViewModel : ObservableObject
             // Exploration.StatusMessage (no el StatusMessage global) - es el que se ve de
             // verdad en la pestaña a la que se acaba de saltar, ver el TextBlock real en
             // MainWindow.xaml bajo el mapa.
-            Exploration.StatusMessage = LocalizationService.Instance["status_load_world_first"];
+            // Se pasa la CLAVE, nunca el texto ya resuelto: ese era el bug real de idioma que se
+            // arreglo el 6-sep-2026 en esta misma propiedad (ver ExplorationViewModel).
+            Exploration.SetStatusMessage("status_load_world_first");
             return;
         }
         Exploration.NavigateToTile(row.SpawnX, row.SpawnY);

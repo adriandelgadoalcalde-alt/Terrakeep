@@ -275,7 +275,31 @@ public partial class ExplorationViewModel : ObservableObject
     // Punto 4 (Minerales - ESPEC-ui-exploracion.md#11.3): capa de resaltado de mineral, una
     // segunda Image dentro del mismo Grid escalado que WorldMapImage - null = sin marcar nada.
     [ObservableProperty] private BitmapSource? _worldHighlight;
-    [ObservableProperty] private string _statusMessage = LocalizationService.Instance["status_no_world_loaded_dot"];
+    // Oleada del 6-sep-2026 (area Exploracion) - MISMO BUG REAL que el agente de Inicio arreglo
+    // en HomeViewModel.ScanMessage, y por el mismo motivo: esto era un [ObservableProperty] de
+    // string y todos los sitios que lo rellenan le metian el texto YA RESUELTO
+    // (LocalizationService.Format(...)). Un texto resuelto una sola vez se queda congelado en el
+    // idioma que hubiera en ese instante: con un mundo cargado, "'roca negra' - 8400x2400 tiles,
+    // 14 NPC(s) de pueblo..." seguia en español despues de cambiar a ingles en vivo, y es un texto
+    // SIEMPRE visible (la franja inferior del mapa). El barrido de idioma del arnes no lo cazaba
+    // porque compara lo que hay en pantalla ANTES y DESPUES del cambio y este texto no cambia de
+    // sitio - simplemente no se traduce.
+    //
+    // Se guarda la CLAVE del diccionario y sus argumentos reales; el texto se compone al leerlo,
+    // en el idioma activo, y un cambio de idioma dispara PropertyChanged (OnIdiomaCambiado).
+    private string _statusKey = "status_no_world_loaded_dot";
+    private object?[] _statusArgs = [];
+    public string StatusMessage => LocalizationService.Instance.Format(_statusKey, _statusArgs);
+
+    // Unica via real de escribirlo (no hay setter publico a proposito: aceptar un string ya
+    // resuelto es exactamente lo que reintroduciria el bug). Publico porque MainViewModel tambien
+    // lo usa ("carga un mundo primero" al pedir el mapa sin mundo).
+    public void SetStatusMessage(string clave, params object?[] args)
+    {
+        _statusKey = clave;
+        _statusArgs = args;
+        OnPropertyChanged(nameof(StatusMessage));
+    }
     [ObservableProperty] private string? _worldTitle;
     // C-05 (informe de pulido final, cierra E4): WorldId real del mundo cargado (WldHeader.
     // WorldId) - MainViewModel.BuildCharacterSpawns lo cruza con PlrServerEntry.WorldId para
@@ -291,7 +315,10 @@ public partial class ExplorationViewModel : ObservableObject
     // proposito a lo que el propio informe recomienda para una primera pasada (semilla+modo,
     // sin banderas de jefes/modo dificil - eso exige avanzar mucho mas el lector, mas riesgo).
     [ObservableProperty] private string _worldSeedText = "—";
-    [ObservableProperty] private string _worldGameModeText = "—";
+    // Mismo motivo que StatusMessage: "Clasico"/"Experto"/"Maestro"/"Viaje" son texto del
+    // diccionario. Se deriva del modo REALMENTE guardado en el archivo, asi que no hay nada que
+    // almacenar ya resuelto - se compone al leer, en el idioma activo.
+    public string WorldGameModeText => IsWorldLoaded ? GameModeLabel(_savedWorldGameMode) : "—";
     [ObservableProperty] private string _worldVersionText = "—";
     // Pedido explicito del usuario (5-sep-2026): poder cambiar la dificultad del mundo, las 4
     // posibilidades reales de Terraria - unica excepcion real de todo el visor a "Solo lectura"
@@ -301,7 +328,18 @@ public partial class ExplorationViewModel : ObservableObject
     // difieren tiene sentido "Guardar" (CanSaveWorldGameMode).
     [ObservableProperty] private int _worldGameMode;
     private int _savedWorldGameMode;
-    [ObservableProperty] private string? _worldGameModeSaveStatus;
+    // Mismo patron: "Guardando...", "Guardado (copia .bak de X)" y el error de guardado son
+    // texto del diccionario, y este mensaje se queda en pantalla hasta la siguiente accion.
+    private string? _saveStatusKey;
+    private object?[] _saveStatusArgs = [];
+    public string? WorldGameModeSaveStatus => _saveStatusKey is null ? null : LocalizationService.Instance.Format(_saveStatusKey, _saveStatusArgs);
+
+    private void SetSaveStatus(string? clave, params object?[] args)
+    {
+        _saveStatusKey = clave;
+        _saveStatusArgs = args;
+        OnPropertyChanged(nameof(WorldGameModeSaveStatus));
+    }
 
     partial void OnWorldGameModeChanged(int value) => SaveWorldGameModeCommand.NotifyCanExecuteChanged();
 
@@ -345,21 +383,21 @@ public partial class ExplorationViewModel : ObservableObject
         int nuevoModo = WorldGameMode;
         var mundoActual = _world;
         string ruta = _currentWorldPath;
-        WorldGameModeSaveStatus = LocalizationService.Instance["status_saving"];
+        SetSaveStatus("status_saving");
         try
         {
             var mundoActualizado = await Task.Run(() => WorldFileService.SaveGameMode(mundoActual, ruta, nuevoModo));
             _world = mundoActualizado;
             _savedWorldGameMode = nuevoModo;
-            WorldGameModeText = GameModeLabel(nuevoModo);
-            WorldGameModeSaveStatus = LocalizationService.Instance.Format("status_saved_backup", Path.GetFileName(ruta));
+            OnPropertyChanged(nameof(WorldGameModeText));
+            SetSaveStatus("status_saved_backup", Path.GetFileName(ruta));
         }
         catch (Exception ex)
         {
             // Nunca silencioso - un fallo aqui toca el archivo de mundo real del usuario, tiene
             // que verse con toda claridad, no solo en StatusMessage (que otra accion cualquiera
             // puede pisar en el instante siguiente).
-            WorldGameModeSaveStatus = LocalizationService.Instance.Format("status_save_failed", ex.Message);
+            SetSaveStatus("status_save_failed", ex.Message);
         }
         finally
         {
@@ -1301,7 +1339,31 @@ public partial class ExplorationViewModel : ObservableObject
     // HomeViewModel.ScanCharacters.
     public ObservableCollection<WorldListEntryViewModel> Worlds { get; } = [];
     [ObservableProperty] private bool _isScanningWorlds;
-    [ObservableProperty] private string? _scanMessage;
+    // Mismo bug y mismo patron que StatusMessage de arriba. Caso aparte real, identico al que
+    // documenta HomeViewModel: la lista de carpetas escaneadas se une con un separador que TAMBIEN
+    // es texto traducido (" ni en " / " nor in "), asi que unirla al guardar dejaria ese separador
+    // congelado DENTRO del argumento - se guardan las carpetas y se unen al leer.
+    private string? _scanMessageKey;
+    private IReadOnlyList<string>? _scanMessageFolders;
+
+    public string? ScanMessage
+    {
+        get
+        {
+            if (_scanMessageKey is null) return null;
+            var loc = LocalizationService.Instance;
+            return _scanMessageFolders is null
+                ? loc[_scanMessageKey]
+                : loc.Format(_scanMessageKey, string.Join(loc["scan_nor_in"], _scanMessageFolders));
+        }
+    }
+
+    private void SetScanMessage(string? clave, IReadOnlyList<string>? carpetas = null)
+    {
+        _scanMessageKey = clave;
+        _scanMessageFolders = carpetas;
+        OnPropertyChanged(nameof(ScanMessage));
+    }
 
     // H5-11 (quinta auditoria de Opus): "el lanzador de mundos desaparece para siempre en
     // cuanto cargas uno... su gemelo de Inicio no hace esto, sigue ahi siempre, con el cargado
@@ -1338,6 +1400,20 @@ public partial class ExplorationViewModel : ObservableObject
         WorldViewStateService.Save(estados);
     }
 
+    // Los cuatro textos persistentes de esta pestaña viven en el diccionario de idioma (ver el
+    // comentario de cada uno) - hay que volver a preguntarlos cuando el usuario cambia de idioma
+    // en vivo. Evento DEBIL a proposito, y el handler es un METODO DE INSTANCIA real, nunca una
+    // lambda: mismo motivo ya documentado en HomeViewModel (con una lambda el objetivo del
+    // delegate es el cierre generado, que no referencia nadie mas y el recolector puede llevarse
+    // en cualquier momento, dejando la suscripcion muerta en silencio).
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(StatusMessage));
+        OnPropertyChanged(nameof(ScanMessage));
+        OnPropertyChanged(nameof(WorldGameModeText));
+        OnPropertyChanged(nameof(WorldGameModeSaveStatus));
+    }
+
     public ExplorationViewModel(CharacterFileService service)
     {
         _npcNames = service.NpcNames;
@@ -1345,6 +1421,7 @@ public partial class ExplorationViewModel : ObservableObject
         _tileNames = service.TileNames;
         _itemNames = service.VanillaCatalog;
         _prefixNames = service.VanillaPrefixCatalog;
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
         // Fire-and-forget deliberado, mismo criterio real que HomeViewModel - el constructor no
         // puede ser async, y no hay nada que esperar aqui (Worlds se rellena un instante
         // despues, IsScanningWorlds refleja el hueco mientras tanto).
@@ -1399,11 +1476,9 @@ public partial class ExplorationViewModel : ObservableObject
             var scanned = await Task.Run(() => ScanWorlds(dirs));
             if (myGeneration != _scanGeneration) return; // una vuelta MAS NUEVA ya esta en marcha - esta es obsoleta
             foreach (var entry in scanned) Worlds.Add(entry);
-            ScanMessage = Worlds.Count == 0
-                ? dirs.Count == 0
-                    ? LocalizationService.Instance["scan_no_worlds_folder"]
-                    : LocalizationService.Instance.Format("scan_no_worlds_in", string.Join(LocalizationService.Instance["scan_nor_in"], dirs))
-                : null;
+            if (Worlds.Count > 0) SetScanMessage(null);
+            else if (dirs.Count == 0) SetScanMessage("scan_no_worlds_folder");
+            else SetScanMessage("scan_no_worlds_in", dirs);
             UpdateCurrentWorldPath(_currentWorldPath); // la lista es nueva de cero, IsCurrent hay que recalcularlo
         }
         finally
@@ -1424,7 +1499,7 @@ public partial class ExplorationViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = LocalizationService.Instance.Format("error_open_folder", ex.Message);
+            SetStatusMessage("error_open_folder", ex.Message);
         }
     }
 
@@ -1544,7 +1619,7 @@ public partial class ExplorationViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            StatusMessage = LocalizationService.Instance["status_reading_painting_map"];
+            SetStatusMessage("status_reading_painting_map");
             // Punto 4 (advisor Opus, "que solo puedan salir los objetos que tiene ese mundo" -
             // ver ESPEC-ui-exploracion.md#10.3): el censo real del mundo se calcula AQUI, dentro
             // del mismo Task.Run que ya lee+pinta - el mundo ya esta caliente en cache justo en
@@ -1632,10 +1707,10 @@ public partial class ExplorationViewModel : ObservableObject
             WorldTitle = world.Header.Title;
             WorldSizeText = $"{world.Header.TilesWide}×{world.Header.TilesHigh}";
             WorldSeedText = world.Header.Seed;
-            WorldGameModeText = GameModeLabel(world.Header.GameMode);
             _savedWorldGameMode = world.Header.GameMode;
+            OnPropertyChanged(nameof(WorldGameModeText));
             WorldGameMode = world.Header.GameMode;
-            WorldGameModeSaveStatus = null;
+            SetSaveStatus(null);
             WorldVersionText = world.Header.Version.ToString();
             NotifyGameModeAvailability(); // los modos posibles dependen de la VERSION del mundo entrante
             WorldSpawnX = world.Header.SpawnX;
@@ -1643,7 +1718,7 @@ public partial class ExplorationViewModel : ObservableObject
             WorldDungeonX = world.Header.DungeonX;
             WorldDungeonY = world.Header.DungeonY;
             IsWorldLoaded = true;
-            StatusMessage = LocalizationService.Instance.Format("status_world_loaded_summary",
+            SetStatusMessage("status_world_loaded_summary",
                 world.Header.Title, world.Header.TilesWide, world.Header.TilesHigh, _allNpcs.Count, MissingNpcs.Count);
             OnPropertyChanged(nameof(ChestsPillCount));
             OnPropertyChanged(nameof(OresPillCount));
@@ -1669,8 +1744,8 @@ public partial class ExplorationViewModel : ObservableObject
             HasCurrentChest = false;
             NotifyGameModeAvailability();
             IsWorldLoaded = false;
-            WorldGameModeSaveStatus = null;
-            StatusMessage = LocalizationService.Instance.Format("error_reading_world", ex.Message);
+            SetSaveStatus(null);
+            SetStatusMessage("error_reading_world", ex.Message);
             UpdateCurrentWorldPath(null); // un fallo real no debe dejar ninguna pildora marcada como "cargada"
             SaveWorldGameModeCommand.NotifyCanExecuteChanged();
         }
