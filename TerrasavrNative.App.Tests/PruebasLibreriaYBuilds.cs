@@ -523,6 +523,54 @@ internal static partial class Program
                 }
                 else Console.WriteLine("BUILDS-02-FILTRO: no hay clase 'rogue' en el catalogo real - omitido");
 
+                // ---------- BUILDS-05: los titulos de clase y la maquetacion de las columnas ----------
+                // El titulo de cada columna pintaba la clave interna de builds.json ("melee",
+                // "rogue"...) mientras las pildoras de filtro de la MISMA pantalla ya decian
+                // "Cuerpo a cuerpo"/"Pícaro". Se comprueba sobre el TEXTO REAL renderizado, no
+                // sobre la propiedad - y de paso se mide que las tarjetas de equipo (nombres
+                // largos reales de Calamity, columna de ancho FIJO de 220px) no se corten.
+                {
+                    var clavesInternas = new[] { "melee", "ranged", "mage", "summoner", "rogue" };
+                    foreach (var (etiqueta, w, h) in new (string?, double, double)[]
+                             { ("maximizada", 0, 0), (null, 1600, 1000), (null, 1400, 900), (null, 1180, 860), (null, 1080, 700) })
+                    {
+                        if (etiqueta == "maximizada") { window.WindowState = WindowState.Maximized; DoEvents(); DoEvents(); DoEvents(); }
+                        else { window.WindowState = WindowState.Normal; FijarTamaño(window, w, h); }
+                        DoEvents(); DoEvents();
+                        string caso = etiqueta ?? $"{w:0}x{h:0}";
+
+                        var titulos = Descendientes<TextBlock>(window)
+                            .Where(tb => tb.IsVisible && tb.DataContext is BuildClassGearViewModel).ToList();
+                        int enBruto = titulos.Count(tb => clavesInternas.Contains(tb.Text));
+                        var filasBuild = Descendientes<FrameworkElement>(window)
+                            .Where(fe => fe.DataContext is BuildItemRowViewModel && fe is Border && fe.IsVisible && fe.ActualHeight > 0).ToList();
+                        int cortadas = 0, alcanzables = 0; string peor = string.Empty; double peorFalta = 0;
+                        foreach (var fila in filasBuild)
+                        {
+                            fila.BringIntoView();
+                            DoEvents();
+                            if (VisibleEntero(fila, window)) alcanzables++;
+                            var v = RectVisible(fila, window);
+                            double falta = v.IsEmpty ? fila.ActualWidth : fila.ActualWidth - v.Width;
+                            if (falta > 1)
+                            {
+                                cortadas++;
+                                if (falta > peorFalta) { peorFalta = falta; peor = ((BuildItemRowViewModel)fila.DataContext).DisplayName; }
+                            }
+                        }
+                        Console.WriteLine($"BUILDS-05-MAQUETACION: {caso} ({window.ActualWidth:0}x{window.ActualHeight:0}) -> {titulos.Count} titulos de clase renderizados, " +
+                                          $"en BRUTO (clave interna sin traducir)={enBruto} (esperado 0), primeros=[{string.Join(", ", titulos.Take(5).Select(t => t.Text))}]; " +
+                                          $"{filasBuild.Count} tarjetas de equipo, ALCANZABLES={alcanzables} (esperado {filasBuild.Count}), " +
+                                          $"cortadas a lo ancho={cortadas} (esperado 0){(cortadas > 0 ? $", peor: '{peor}' pierde {peorFalta:0.#}px" : "")}");
+                        if (enBruto > 0) Console.WriteLine($"FALLO: BUILDS-05-MAQUETACION - a {caso}, {enBruto} titulo(s) de clase siguen enseñando la clave interna de builds.json en vez del nombre real");
+                        if (alcanzables < filasBuild.Count) Console.WriteLine($"FALLO: BUILDS-05-MAQUETACION - a {caso}, {filasBuild.Count - alcanzables} tarjeta(s) de equipo no se alcanzan ni con scroll");
+                        if (cortadas > 0) Console.WriteLine($"FALLO: BUILDS-05-MAQUETACION - a {caso}, {cortadas} tarjeta(s) de equipo se cortan a lo ancho");
+                    }
+                    window.WindowState = WindowState.Normal;
+                    FijarTamaño(window, 1180, 860);
+                    DoEvents(); DoEvents();
+                }
+
                 // Auto-equipar: UNA sola entrada de Deshacer que cubra Equipamiento E Inventario,
                 // y que al deshacerla devuelva TODOS los slots tocados a como estaban.
                 if (vm.EquipmentGroup != null && vm.InventoryContainer != null)
