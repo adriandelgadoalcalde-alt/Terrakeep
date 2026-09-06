@@ -1,4 +1,4 @@
-"""
+r"""
 Genera `Assets/calamity/best_prefix.json` - la tabla de "mejor prefijo" que usan el boton
 "Mejor prefijo" (la estrella) y el prefijo automatico al colocar un objeto.
 
