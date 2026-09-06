@@ -131,6 +131,7 @@
   "equip_kind_armor": "Armor",
   "equip_kind_dyes": "Dyes",
   "equip_kind_vanity": "Vanity",
+  "equip_loadout_active_hint": "The set the character was wearing when saved",
   "equip_loadout_armor": "Loadout {0} - armor/accessories",
   "equip_loadout_dyes": "Loadout {0} - dyes",
   "equip_loadout_vanity": "Loadout {0} - vanity",

@@ -939,13 +939,57 @@ internal static class Program
                 ((InvokePattern)vanidadPat).Invoke();
                 DoEvents();
                 DoEvents();
-                Console.WriteLine($"PILDORA Equipamiento -> Current={vm.EquipmentGroup?.Current.DisplayName} Columns={vm.EquipmentGroup?.Current.Columns} (esperado: Equipo puesto - vanidad, Columns=5)");
+                Console.WriteLine($"PILDORA Equipamiento -> Current={vm.EquipmentGroup?.Current.DisplayName} Columns={vm.EquipmentGroup?.Current.Columns} (esperado: Loadout 1 - vanidad, Columns=5)");
             }
             else Console.WriteLine("PILDORA Equipamiento: boton 'Vanidad' NO-FOUND");
         }
         catch (Exception ex)
         {
             Console.WriteLine("EQUIPAMIENTO-PILDORA-EXCEPTION: " + ex);
+        }
+
+        // 6-sep-2026, queja real del usuario: "en Terraria hay 3 conjuntos de equipo, no mas -
+        // aqui salen 4 pildoras (Puesto + Loadout 1/2/3)". El personaje del arnes es moderno
+        // (Loadouts.Length==3, CurrentLoadout=0), asi que la pantalla tiene que ofrecer
+        // exactamente 3 pildoras numeradas 1/2/3, con la 1 marcada como la que lleva puesta, y
+        // NINGUNA llamada "Puesto". Se comprueba sobre los botones REALES renderizados (UI
+        // Automation), no solo sobre LoadoutOptions.
+        try
+        {
+            var botonesLoadout = root.FindAll(TreeScope.Descendants,
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button))
+                .Cast<AutomationElement>()
+                .Select(b => b.Current.Name)
+                .Where(n => n is "Puesto" or "Worn" or "1" or "2" or "3" or "1 ●" or "2 ●" or "3 ●")
+                .ToList();
+            Console.WriteLine($"LOADOUT-PILDORAS: renderizadas [{string.Join(", ", botonesLoadout)}] | ActiveLoadout={vm.EquipmentGroup?.ActiveLoadout} SelectableSetCount={vm.EquipmentGroup?.SelectableSetCount} (esperado: 1 ●/2/3, ActiveLoadout=0, 3 conjuntos)");
+            if (botonesLoadout.Count != 3)
+                Console.WriteLine($"FALLO: LOADOUT-PILDORAS - se renderizaron {botonesLoadout.Count} pildoras de conjunto, deben ser 3 (Terraria no tiene mas de 3 loadouts)");
+            if (botonesLoadout.Any(n => n is "Puesto" or "Worn"))
+                Console.WriteLine("FALLO: LOADOUT-PILDORAS - sigue habiendo una pildora 'Puesto' aparte; en un personaje moderno el equipo puesto ES uno de los 3 conjuntos, no un cuarto");
+            if (!botonesLoadout.Contains("1 ●"))
+                Console.WriteLine("FALLO: LOADOUT-PILDORAS - ninguna pildora marca cual es el conjunto que el personaje lleva puesto (CurrentLoadout=0 -> deberia ser la '1')");
+
+            // Y que cada pildora edite de verdad el contenedor que le toca: con CurrentLoadout=0
+            // la "1" es PrimaryLoadout (contenedor 0) y la "3" es Loadouts[2] (contenedor 3).
+            foreach (var (nombre, contenedorEsperado) in new[] { ("1 ●", 0), ("3", 3) })
+            {
+                var boton = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
+                    new PropertyCondition(AutomationElement.NameProperty, nombre)));
+                if (boton == null || !boton.TryGetCurrentPattern(InvokePattern.Pattern, out var pat)) { Console.WriteLine($"FALLO: LOADOUT-PILDORAS - pildora '{nombre}' NO-FOUND"); continue; }
+                ((InvokePattern)pat).Invoke();
+                DoEvents();
+                DoEvents();
+                int real = vm.EquipmentGroup?.SelectedLoadout ?? -1;
+                Console.WriteLine($"LOADOUT-PILDORAS: '{nombre}' -> contenedor {real} (esperado {contenedorEsperado}), Current={vm.EquipmentGroup?.Current.DisplayName}");
+                if (real != contenedorEsperado)
+                    Console.WriteLine($"FALLO: LOADOUT-PILDORAS - la pildora '{nombre}' edita el contenedor {real}, no el {contenedorEsperado} que guarda de verdad ese conjunto en el .plr");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("LOADOUT-PILDORAS-EXCEPTION: " + ex);
         }
 
         // Libreria: poblar Results de verdad (busqueda real) para ejercitar la tarjeta nueva

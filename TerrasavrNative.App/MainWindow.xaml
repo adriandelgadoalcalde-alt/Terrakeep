@@ -2247,7 +2247,12 @@
                                                             </ItemsControl.ItemsPanel>
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
-                                                                    <Button Content="{Binding Label}" Style="{StaticResource PrefixMetaButton}"
+                                                                    <!-- DisplayLabel (no Label): marca con un punto el conjunto
+                                                                         que el personaje llevaba PUESTO al guardar. Antes esa
+                                                                         informacion la daba una 4ª pildora "Puesto" que no existe
+                                                                         en el juego real - ver EquipmentGroupViewModel. -->
+                                                                    <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
+                                                                            ToolTip="{Binding ToolTipText}"
                                                                             Command="{Binding DataContext.EquipmentGroup.SelectLoadoutCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                             CommandParameter="{Binding}" />
                                                                 </DataTemplate>

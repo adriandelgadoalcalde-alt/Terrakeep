@@ -42,6 +42,14 @@ public sealed partial class EquipmentOptionViewModel : ObservableObject
     // slot real, sin que nadie de fuera tenga que avisar.
     private readonly ContainerViewModel? _container;
 
+    // 6-sep-2026 (hallazgo real de loadouts, ver EquipmentGroupViewModel abajo): la pildora del
+    // conjunto que el personaje lleva PUESTO de verdad al guardar. Antes esa informacion la daba
+    // una pildora "Puesto" aparte; ahora que los 3 conjuntos se numeran 1/2/3 como en el juego,
+    // se marca con un punto y un tooltip para no perderla.
+    public bool IsActiveLoadout { get; init; }
+
+    public string? ToolTipText => IsActiveLoadout ? LocalizationService.Instance["equip_loadout_active_hint"] : null;
+
     public EquipmentOptionViewModel(string labelKey, int value, ContainerViewModel? container = null)
     {
         _labelKey = labelKey;
@@ -57,10 +65,11 @@ public sealed partial class EquipmentOptionViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(Label));
         OnPropertyChanged(nameof(DisplayLabel));
+        OnPropertyChanged(nameof(ToolTipText));
     }
 
     public string DisplayLabel => _container == null
-        ? Label
+        ? (IsActiveLoadout ? $"{Label} ●" : Label)
         : $"{Label} ({_container.Slots.Count(s => !s.IsEmpty)}/{_container.Slots.Count})";
 }
 
@@ -142,26 +151,110 @@ public partial class EquipmentGroupViewModel : ObservableObject
     public ContainerViewModel CurrentSocial => _byKey[(SelectedLoadout, EquipmentKind.Social)];
     public ContainerViewModel CurrentDyes => _byKey[(SelectedLoadout, EquipmentKind.Dyes)];
 
+    // Indice 0-based del loadout REAL del juego (0/1/2) que estaba activo al guardar el .plr -
+    // ver ContainerForLoadout y el bloque de comentario del constructor. -1 para un personaje
+    // antiguo sin loadouts (realLoadoutCount==0), donde "Puesto" es el unico conjunto que existe.
+    public int ActiveLoadout { get; }
+
+    // Cuantos conjuntos reales OFRECE la pantalla: 3 en un personaje moderno, 1 ("Puesto") en uno
+    // antiguo. No es lo mismo que el numero de contenedores internos (siempre realLoadoutCount+1).
+    public int SelectableSetCount => LoadoutOptions.Count;
+
+    // El contenedor interno (clave "loadout{n}Items/Social/Dyes") donde vive DE VERDAD el
+    // conjunto del loadout `loadout` (0-based, como CurrentLoadout del .plr): el activo esta en
+    // el contenedor 0 (PrimaryLoadout = Player.armor/dye), y cada uno de los otros dos en su
+    // propio Loadouts[loadout] (contenedor loadout+1).
+    public static int ContainerForLoadout(int loadout, int activeLoadout) => loadout == activeLoadout ? 0 : loadout + 1;
+
+    // Que PILDORA esta seleccionada (0/1/2 = conjunto 1/2/3), no que contenedor - es lo unico
+    // estable que tiene sentido recordar entre sesiones y entre personajes distintos, porque el
+    // contenedor de cada conjunto depende del CurrentLoadout de cada .plr. Se deriva de
+    // SelectedLoadout (no de IsSelected) para seguir siendo correcto si alguien fija el
+    // contenedor a mano, como hacen los tests headless.
+    public int SelectedOptionIndex
+    {
+        get
+        {
+            for (int i = 0; i < LoadoutOptions.Count; i++)
+                if (LoadoutOptions[i].Value == SelectedLoadout) return i;
+            return 0;
+        }
+    }
+
     public EquipmentGroupViewModel(CharacterFileService service, Action<ItemSlotViewModel> requestPickForSlot,
         Dictionary<string, GameItem[]> mergedContainers, int realLoadoutCount,
-        Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null)
+        Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null, int currentLoadout = 0)
     {
         _service = service;
         var loc = LocalizationService.Instance;
-        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Items, loc["equip_worn_armor"], mergedContainers["loadout0Items"], onItemChanged);
-        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Social, loc["equip_worn_vanity"], mergedContainers["loadout0Social"], onItemChanged);
-        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Dyes, loc["equip_worn_dyes"], mergedContainers["loadout0Dyes"], onItemChanged);
-        LoadoutOptions.Add(new EquipmentOptionViewModel("equip_worn_option", 0) { IsSelected = true });
 
+        // HALLAZGO REAL (6-sep-2026, queja del usuario "en Terraria hay 3 conjuntos, aqui salen 4
+        // pildoras"), confirmado en el codigo decompilado de Terraria 1.4.5.8 Y midiendo .plr
+        // reales de este PC, NO supuesto:
+        //
+        //   Player.cs:55577-55581 (Serialize) escribe el jugador EN VIVO tal cual: primero
+        //   armor[0..19]+dye[0..9] (Player.cs:55470-55479 - esto es lo que este puerto llama
+        //   PrimaryLoadout), luego CurrentLoadoutIndex, luego los 3 Loadouts[i].Serialize(). No
+        //   hay NINGUNA sincronizacion previa (InternalSavePlayerFile, Player.cs:55374, llama a
+        //   Serialize directo).
+        //   EquipmentLoadout.Swap (EquipmentLoadout.cs:63-80) INTERCAMBIA, no copia:
+        //   TrySwitchingLoadout (Player.cs:5654-5663) hace Loadouts[actual].Swap(this) y luego
+        //   Loadouts[nuevo].Swap(this). O sea: mientras un loadout esta activo su contenido vive
+        //   en armor[]/dye[] y su entrada Loadouts[activo] queda VACIA. Player.GetEffectiveArmor
+        //   (Player.cs:5684-5695) da por sentado justo eso.
+        //
+        // Consecuencia: PrimaryLoadout NO es un espejo redundante del loadout activo, es el UNICO
+        // sitio donde ese conjunto existe en el archivo. Medido en 4 .plr reales (adrian,
+        // Eldelgas x2, Terrariano, versiones 279 y 326): CurrentLoadout=0, PrimaryLoadout con 1-9
+        // objetos reales y los TRES Loadouts[] completamente a cero.
+        //
+        // Por eso la pantalla no puede limitarse a esconder "Puesto": eso esconderia justo el
+        // conjunto que el personaje lleva encima y ofreceria en su lugar un hueco vacio que el
+        // juego ni siquiera lee al cargar. Lo correcto es numerar los 3 conjuntos 1/2/3 como el
+        // juego y hacer que la pildora del activo apunte al contenedor 0 (ContainerForLoadout).
+        // Asi NADA se copia ni se reescribe: cada edicion cae directamente en el sitio real del
+        // archivo, PrimaryLoadout se sigue editando en su sitio (el doll de Inicio y el de
+        // Apariencia, que leen EquippedItems/EquippedSocial = contenedor 0, siguen exactos) y el
+        // hueco residual del loadout activo se guarda tal cual se leyo.
+        ActiveLoadout = realLoadoutCount > 0 ? Math.Clamp(currentLoadout, 0, realLoadoutCount - 1) : -1;
+
+        // El contenedor 0 solo se llama "Equipo puesto" en un personaje ANTIGUO sin loadouts; en
+        // uno moderno ES el loadout numero ActiveLoadout+1 y su nombre (el que muestra "¿Donde lo
+        // tengo?") tiene que decirlo.
+        (string armorName, string vanityName, string dyeName) = realLoadoutCount > 0
+            ? (loc.Format("equip_loadout_armor", ActiveLoadout + 1), loc.Format("equip_loadout_vanity", ActiveLoadout + 1), loc.Format("equip_loadout_dyes", ActiveLoadout + 1))
+            : (loc["equip_worn_armor"], loc["equip_worn_vanity"], loc["equip_worn_dyes"]);
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Items, armorName, mergedContainers["loadout0Items"], onItemChanged);
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Social, vanityName, mergedContainers["loadout0Social"], onItemChanged);
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Dyes, dyeName, mergedContainers["loadout0Dyes"], onItemChanged);
+
+        // Los contenedores 1..3 se siguen creando TODOS, incluido el hueco residual del loadout
+        // activo (que no tiene pildora): AllContainers alimenta SyncEditsBackToMerged al guardar,
+        // asi que dejar uno fuera seria dejar de escribir de vuelta unos bytes reales del archivo.
+        // Su nombre sigue siendo "Loadout i" porque eso es literalmente lo que es (el hueco de
+        // Loadouts[i-1]) - en un archivo sano esta vacio y no aparece en ninguna busqueda.
         for (int i = 1; i <= realLoadoutCount; i++)
         {
             AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Items, loc.Format("equip_loadout_armor", i), mergedContainers[$"loadout{i}Items"], onItemChanged);
             AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Social, loc.Format("equip_loadout_vanity", i), mergedContainers[$"loadout{i}Social"], onItemChanged);
             AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Dyes, loc.Format("equip_loadout_dyes", i), mergedContainers[$"loadout{i}Dyes"], onItemChanged);
-            LoadoutOptions.Add(new EquipmentOptionViewModel(i.ToString(), i));
         }
 
+        if (realLoadoutCount > 0)
+            for (int n = 0; n < realLoadoutCount; n++)
+                LoadoutOptions.Add(new EquipmentOptionViewModel((n + 1).ToString(), ContainerForLoadout(n, ActiveLoadout))
+                {
+                    IsSelected = n == 0,
+                    IsActiveLoadout = n == ActiveLoadout,
+                });
+        else
+            LoadoutOptions.Add(new EquipmentOptionViewModel("equip_worn_option", 0) { IsSelected = true });
+
         AllContainers = _byKey.Values.ToList();
+        // Arranca en la primera pildora REAL ("1"), que con un loadout activo distinto del 1 NO es
+        // el contenedor 0 - se asigna despues de construir _byKey porque OnSelectedLoadoutChanged
+        // ya lo consulta.
+        SelectedLoadout = LoadoutOptions[0].Value;
 
         // Auditoria de Opus, E-4: suscripcion real a cada slot de Armadura/Accesorios (de
         // TODOS los loadouts, no solo el seleccionado - cambiar de Puesto/1/2/3 tambien debe

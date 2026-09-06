@@ -199,9 +199,13 @@ public partial class MainViewModel : ObservableObject
         });
     }
 
-    // H6-06 (sexta auditoria de Opus): resuelve la armadura/vanidad real EN VIVO del loadout 0
-    // ("Puesto") - PrimaryLoadout (el campo que usa CharacterListEntryViewModel para el doll de
+    // H6-06 (sexta auditoria de Opus): resuelve la armadura/vanidad real EN VIVO del contenedor 0
+    // - PrimaryLoadout (el campo que usa CharacterListEntryViewModel para el doll de
     // Inicio) solo se sincroniza con lo editado en Equipamiento al GUARDAR
+    // 6-sep-2026: el contenedor 0 sigue siendo EXACTAMENTE el equipo puesto tras renumerar las
+    // pildoras a 1/2/3 - lo que cambio es su etiqueta, no que dato representa: PrimaryLoadout ES
+    // el conjunto activo en el archivo real (ver el comentario del constructor de
+    // EquipmentGroupViewModel), asi que este doll no necesita ningun cambio.
     // (CharacterFileService.Save/CalamityCharacterSync); durante la sesion en curso, la fuente
     // de verdad real es EquipmentGroup (EquippedItems/CurrentSocial en GameItem, no PlrLoadout
     // todavia). EquipmentAppearanceResolver.Resolve pide un PlrLoadout - se construye uno
@@ -814,7 +818,9 @@ public partial class MainViewModel : ObservableObject
             ObjetosSubTabIndex = ObjetosSubTabIndex,
             IsLibraryCollapsed = IsLibraryCollapsed,
             IsBuffLibraryCollapsed = IsBuffLibraryCollapsed,
-            SelectedLoadout = EquipmentGroup?.SelectedLoadout ?? _pendingSessionLoadout,
+            // Numero de pildora (0/1/2), no indice de contenedor - ver el comentario del bloque
+            // de restauracion en LoadFromPath y EquipmentGroupViewModel.SelectedOptionIndex.
+            SelectedLoadout = EquipmentGroup?.SelectedOptionIndex ?? _pendingSessionLoadout,
             SelectedStorageIndex = StorageGroup?.SelectedIndex ?? _pendingSessionStorageIndex,
         };
         SessionService.Save(session);
@@ -1131,11 +1137,13 @@ public partial class MainViewModel : ObservableObject
             // StorageGroup solo existen tras RebuildContainers (arriba), asi que hasta aqui no
             // se podian aplicar. Solo tiene sentido real con un personaje SI cargado (si fallo,
             // ambos son null).
-            if (EquipmentGroup != null)
-            {
-                var loadoutOpt = EquipmentGroup.LoadoutOptions.FirstOrDefault(o => o.Value == _pendingSessionLoadout);
-                if (loadoutOpt != null) EquipmentGroup.SelectLoadoutCommand.Execute(loadoutOpt);
-            }
+            // 6-sep-2026: lo recordado es el NUMERO de pildora (0/1/2 = conjunto 1/2/3), no el
+            // indice de contenedor - ese ya no es estable entre personajes, porque cual de los
+            // contenedores guarda cada conjunto depende del CurrentLoadout de CADA .plr (ver
+            // EquipmentGroupViewModel.ContainerForLoadout). Un valor viejo de sesion cae dentro
+            // del rango igualmente, no hace falta migrar nada.
+            if (EquipmentGroup != null && _pendingSessionLoadout >= 0 && _pendingSessionLoadout < EquipmentGroup.LoadoutOptions.Count)
+                EquipmentGroup.SelectLoadoutCommand.Execute(EquipmentGroup.LoadoutOptions[_pendingSessionLoadout]);
             if (StorageGroup != null && _pendingSessionStorageIndex >= 0 && _pendingSessionStorageIndex < StorageGroup.Options.Count)
                 StorageGroup.SelectCommand.Execute(StorageGroup.Options[_pendingSessionStorageIndex]);
             // X-g: cubre cargar un personaje distinto mientras Exploracion ya esta a la vista -
@@ -1324,12 +1332,15 @@ public partial class MainViewModel : ObservableObject
 
         StorageGroup = new StorageGroupViewModel(bank, bank2, bank3, bank4);
 
-        // Equipo puesto + los 3 loadouts reales seleccionables (Version>=269, si no
-        // Loadouts.Length==0) - consolidados en una unica pantalla "Equipamiento" con
-        // selector, ver EquipmentGroupViewModel (antes eran 12 pestañas planas mas aqui
-        // mismo, 21 pestañas en total - pedido explicito 2-sep-2026 tras el amontonamiento
-        // real al reducir la ventana: "¿es necesario que haya tantos botones?").
-        EquipmentGroup = new EquipmentGroupViewModel(_service, RequestPickForSlot, _loaded.MergedContainers, _loaded.Character.Loadouts.Length, OnSlotItemChanged);
+        // Los 3 conjuntos reales del juego (Version>=269, si no Loadouts.Length==0 y solo existe
+        // el equipo puesto) - consolidados en una unica pantalla "Equipamiento" con selector, ver
+        // EquipmentGroupViewModel (antes eran 12 pestañas planas mas aqui mismo, 21 pestañas en
+        // total - pedido explicito 2-sep-2026 tras el amontonamiento real al reducir la ventana:
+        // "¿es necesario que haya tantos botones?").
+        // CurrentLoadout es imprescindible aqui, no un extra: dice cual de los 3 conjuntos vive en
+        // PrimaryLoadout y cual de los Loadouts[] es el hueco vacio del swap (ver el bloque de
+        // comentario del constructor de EquipmentGroupViewModel, con archivo:linea del juego real).
+        EquipmentGroup = new EquipmentGroupViewModel(_service, RequestPickForSlot, _loaded.MergedContainers, _loaded.Character.Loadouts.Length, OnSlotItemChanged, _loaded.Character.CurrentLoadout);
         // EquipmentGroup se RECREA entera cada carga (a diferencia de Buffs, que reutiliza la
         // misma instancia) - los slots de sus contenedores nunca pasan por AddContainer, asi
         // que se enganchan aqui, el unico sitio real donde MainViewModel ve la instancia nueva.

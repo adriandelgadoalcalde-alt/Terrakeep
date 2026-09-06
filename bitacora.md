@@ -9563,3 +9563,100 @@ reales) que NO existen en un `dotnet test` normal - comprobado en las dos formas
 Trabajando en paralelo con otro agente en los mismos ficheros (`MainWindow.xaml`, `Program.cs`,
 `strings_*.json`): el commit se preparo filtrando hunks (`git apply --cached` con solo los hunks
 propios), nunca `git add` del fichero entero, para no arrastrar su trabajo sin comitear.
+
+---
+
+## 6-sep-2026 - Las 4 pildoras de Equipamiento: `PrimaryLoadout` NO era un espejo
+
+Queja real del usuario: "en Terraria real un personaje tiene 3 conjuntos de equipo totales, no
+mas - la pestaña Equipamiento enseña 4 pildoras (Puesto + Loadout 1/2/3)". Tenia razon en el
+sintoma. La causa era otra de la que parecia, y el arreglo "obvio" (esconder la pildora "Puesto")
+habria sido una regresion seria.
+
+### El hallazgo real (decompilado + medicion, no suposicion)
+
+La hipotesis de partida era que en el `.plr` guardado `Loadouts[0..2]` ya contienen los 3
+conjuntos completos y que `PrimaryLoadout` es un espejo redundante que el juego escribe "por
+compatibilidad". **Es al reves.** Codigo real de Terraria 1.4.5.8:
+
+- `TerrariaVanilla\Terraria\Player.cs:55407-55581` (`Serialize`) vuelca el jugador EN VIVO tal
+  cual: primero `armor[0..19]`+`dye[0..9]` (`:55470-55479` - esto es exactamente lo que este
+  puerto llama `PrimaryLoadout`), luego `CurrentLoadoutIndex` (`:55577`) y luego los 3
+  `Loadouts[i].Serialize()` (`:55578-55581`).
+- No hay ninguna sincronizacion previa: `InternalSavePlayerFile` (`Player.cs:55374`) llama a
+  `Serialize` directo.
+- `EquipmentLoadout.Swap` (`TerrariaVanilla\Terraria\EquipmentLoadout.cs:63-80`) **INTERCAMBIA,
+  no copia** (`Utils.Swap` slot a slot), y `TrySwitchingLoadout` (`Player.cs:5654-5663`) lo usa
+  en pareja. O sea: mientras un loadout esta activo su contenido vive en `armor[]`/`dye[]` y su
+  entrada `Loadouts[activo]` queda VACIA. `Player.GetEffectiveArmor` (`Player.cs:5684-5695`) da
+  eso por sentado: solo mira dentro de `Loadouts[]` cuando `armor[slot].IsAir`.
+- La carga hace lo mismo al reves (`Player.cs:56379-56385`): lee el indice, deserializa los 3
+  loadouts y no swapea nada - el equipo puesto sale de `armor[]`.
+
+Medido ademas en 4 `.plr` REALES de este PC (`adrian`, `Eldelgas` x2 -tModLoader y vanilla-,
+`Terrariano`; versiones 279 y 326) con un volcado propio sobre `TerrasavrNative.Core`:
+`CurrentLoadout=0` en todos, `PrimaryLoadout` con 1-9 objetos reales y los **tres** `Loadouts[]`
+a cero enteros. Exactamente lo que predice el codigo.
+
+**Conclusion**: `PrimaryLoadout` es el UNICO sitio del archivo donde existe el conjunto activo.
+Esconder la pildora "Puesto" habria escondido justo el conjunto que el personaje lleva encima y
+habria ofrecido en su lugar un hueco vacio que el juego ni siquiera lee al cargar - y cualquier
+cosa que el usuario escribiera ahi se habria perdido de vista o habria salido como "armadura
+compartida" (`GetEffectiveArmor` con `favorited`) al volver al juego.
+
+### La decision
+
+Numerar los 3 conjuntos **1/2/3 como el juego** y que la pildora del conjunto activo apunte al
+contenedor 0 (`EquipmentGroupViewModel.ContainerForLoadout(n, activo) = n==activo ? 0 : n+1`).
+Asi **no se copia ni se reescribe NADA**: cada edicion cae directamente en el sitio real del
+archivo. `PrimaryLoadout` se sigue editando en su sitio de siempre, asi que el doll de Inicio
+(`CharacterListEntryViewModel`) y el de Apariencia (`MainViewModel.RefreshAppearanceEquipment`,
+que lee `EquippedItems`/`EquippedSocial` = contenedor 0) siguen exactos sin tocar una linea de su
+logica. Los 4 contenedores internos se siguen creando todos, incluido el hueco residual del
+loadout activo (que se queda sin pildora): `AllContainers` alimenta `SyncEditsBackToMerged` al
+guardar, dejar uno fuera seria dejar de escribir de vuelta bytes reales del archivo.
+
+Personaje ANTIGUO (`Version<269`, `Loadouts.Length==0`): sigue con la unica pildora "Puesto", que
+es literalmente lo unico que tiene.
+
+La informacion que daba la pildora "Puesto" (cual llevo encima) no se pierde: la pildora del
+activo se marca con un punto y lleva tooltip (`equip_loadout_active_hint`, en los dos idiomas).
+
+Efecto colateral que hubo que arreglar: lo que se recordaba entre sesiones era el INDICE DE
+CONTENEDOR, y eso ya no es estable entre personajes (depende del `CurrentLoadout` de cada `.plr`).
+Ahora se recuerda el numero de pildora (`SelectedOptionIndex`); un valor viejo cae dentro del
+rango igualmente, sin migracion.
+
+### Lo que NO se toco, a proposito
+
+`CalamityCharacterSync.MergeLoadoutArmorDye` (`Core`, otro workstream lo esta tocando en
+paralelo) fusiona las claves PLANAS `armor`/`dye` del `.tplr` en `loadouts[CurrentLoadout]` sin el
+`+1` - con `CurrentLoadout>=1` eso cae en `Loadouts[CurrentLoadout-1]` en vez de en el mirror. Su
+propio comentario ya lo documenta como fidelidad deliberada al `overrides.js` original. A la luz
+del hallazgo de arriba, la app JS original tiene ahi un bug real (el equipo puesto de Calamity de
+un personaje guardado con el loadout 2 o 3 activo acaba en el conjunto equivocado), pero es Core,
+es la ruta de Calamity y no es de este workstream. Queda anotado, sin tocar.
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core 408, ViewModels 336 (329 + **7 nuevos**), 0 fallos.
+  `LoadoutConjuntosRealesTests.cs` cubre: 3 pildoras y no 4; el personaje antiguo conserva
+  "Puesto"; el mapeo pildora->contenedor con el loadout 1 activo (`[0,2,3]`) y con el 2 activo
+  (`[1,0,3]`, el caso que de verdad distingue el mapeo); la marca del activo; y **dos round-trip
+  reales de guardado**: editar el conjunto 2 y releer el `.plr` con `TerrasavrNative.Core`
+  directamente (sin pasar por la UI) -> `Loadouts[1]` con el cambio, `Loadouts[2]` intacto, hueco
+  del activo aun vacio, `CurrentLoadout` intacto y `PrimaryLoadout` identico id a id en
+  Items/Social/Dyes; y su gemelo, editar el conjunto ACTIVO -> escribe en `PrimaryLoadout` y NO
+  ensucia `Loadouts[CurrentLoadout]`.
+- Arnes de UI Automation (`LOADOUT-PILDORAS`, nuevo): sobre los botones REALES renderizados salen
+  `[1 ●, 2, 3]`, `ActiveLoadout=0`, `SelectableSetCount=3`, y pulsando de verdad la "1 ●" y la
+  "3" el contenedor editado es el 0 y el 3 respectivamente.
+
+El unico `FALLO` que deja el arnes es `A10-IDIOMA-BARRIDO` (10 textos, un bono de set de armadura
+en español), y **es ajeno**: comprobado por diferencial real montando un `git worktree` en
+`HEAD` + SOLO el parche del otro agente (sin ningun cambio de este workstream) - da los mismos 10.
+Es el limite conocido n1 de la ronda de idioma (los nombres/textos de contenido del JUEGO siguen
+solo en español), que el barrido clasifica como "nuevo" porque ahora se llega a mostrar.
+
+No hubo ningun obstaculo que fallara dos veces seguidas.

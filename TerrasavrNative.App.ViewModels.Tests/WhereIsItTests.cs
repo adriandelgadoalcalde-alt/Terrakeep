@@ -67,8 +67,12 @@ public sealed class WhereIsItTests
     public void BuscarUnObjetoPuesto_LoEncuentraEnElLoadoutRealQueLoTiene()
     {
         var vm = NewLoadedViewModel();
-        vm.EquipmentGroup!.SelectLoadoutCommand.Execute(vm.EquipmentGroup.LoadoutOptions.First(o => o.Value == 1));
-        var slot = vm.EquipmentGroup.CurrentSocial.Slots[0]; // Vanidad (cabeza) del Loadout 1
+        // Pildora "2" (la segunda): con CurrentLoadout=0 el conjunto 1 vive en el contenedor 0
+        // (PrimaryLoadout) y el conjunto 2 en el contenedor 2 - ya no hay ninguna pildora que
+        // apunte al contenedor 1 (es el hueco vacio del swap del loadout activo). Ver
+        // EquipmentGroupViewModel.ContainerForLoadout.
+        vm.EquipmentGroup!.SelectLoadoutCommand.Execute(vm.EquipmentGroup.LoadoutOptions[1]);
+        var slot = vm.EquipmentGroup.CurrentSocial.Slots[0]; // Vanidad (cabeza) del conjunto 2
         // UpdateFrom en vez de PlaceItem a proposito: este slot exige un cascoreal de verdad
         // (AcceptedKind=ArmorHead), y lo unico que importa aqui es que WhereIsIt sepa buscar
         // en TODOS los slots de EquipmentGroup, no volver a probar la restriccion en si (ya

@@ -131,6 +131,7 @@
   "equip_kind_armor": "Armadura",
   "equip_kind_dyes": "Tintes",
   "equip_kind_vanity": "Vanidad",
+  "equip_loadout_active_hint": "Conjunto que el personaje llevaba puesto al guardar",
   "equip_loadout_armor": "Loadout {0} - armadura/accesorios",
   "equip_loadout_dyes": "Loadout {0} - tintes",
   "equip_loadout_vanity": "Loadout {0} - vanidad",
