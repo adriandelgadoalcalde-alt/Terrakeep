@@ -11144,3 +11144,91 @@ misma razon de alto (ver su comentario de la septima pasada).
   que ademas tiene su propio `obj/` y evita los `MSB3021`/`MSB3027` de compilaciones simultaneas.
   Ahi el barrido corre limpio en 13s de punta a punta, y fue donde se midio y verifico todo lo de
   arriba.
+
+---
+
+## 6-sep-2026 - Inicio: restaurar una copia de seguridad DAÑADA destruia el personaje bueno
+
+Segunda mitad de la oleada del area "Inicio, Ajustes, Novedades, Acerca de". Los cuatro bugs de la
+primera mitad (ver la entrada anterior) salieron de mirar el IDIOMA y los EVENTOS de los controles.
+Estos dos salieron de una pregunta distinta, que conviene apuntar como metodo porque dio los dos
+hallazgos mas graves de todo el area: **para cada accion destructiva, ¿que pasa si el fichero del
+que depende esta roto?** y **¿un mensaje de error se puede confundir con otra cosa?**
+
+### 1. `Restaurar copia de seguridad` con un `.bak` ilegible - PERDIDA DE DATOS REAL
+
+`HomeViewModel.RestoreBackup` hacia `File.Copy(plrBak, entry.FilePath, overwrite: true)` **sin mirar
+si el `.bak` se podia leer siquiera**. Reproducido con numeros antes de tocar nada (bloque `INI-08`,
+nuevo):
+
+| | antes | despues |
+|---|---|---|
+| `.plr` bueno | 3680 bytes, legible | 3680 bytes, legible |
+| `.bak` ilegible | 3 bytes | 3 bytes (no se toca) |
+| tras "Restaurar copia de seguridad" | **el `.plr` bueno queda destruido** | intacto |
+| el personaje en la lista de Inicio | **desaparece** | sigue ahi |
+| aviso al usuario | **ninguno** | "La copia de seguridad de 'X' está dañada y no se puede leer: NO se ha restaurado nada, tu personaje sigue intacto." |
+
+Tres cosas hacen que esto sea especialmente malo: **(a) no hay vuelta atras** - el `.bak` era la
+unica copia y acaba de machacar el original; **(b) el personaje no da un error, DESAPARECE** - el
+escaneo de Inicio omite en silencio lo que no puede leer (comportamiento correcto y deliberado, para
+que un `.plr` ajeno no tumbe el listado entero, pero aqui convierte una perdida de datos en un
+"anda, ya no esta"); **(c) un `.bak` truncado no es un caso rebuscado** - lo deja cualquier guardado
+interrumpido: disco lleno, apagon, antivirus a media escritura.
+
+Arreglo: leer el `.bak` con el MISMO lector real que usa la carga normal (`PlrFile.Read`, con su
+descifrado y su NBT) ANTES de copiar nada. Una comprobacion mas floja - que exista, que ocupe algo -
+no distingue un fichero truncado de uno bueno, que es justo lo que hay que distinguir. Los `.plr`
+son de unos pocos KB, asi que leerlo entero no cuesta nada perceptible. Misma red en
+`RestoreBackupPoint` (el "Historial de guardados"): un punto viejo tambien puede estar truncado, y
+restaurarlo destruiria el personaje igual de rapido. Clave real nueva `error_backup_unreadable`
+(es+en) que dice explicitamente que **no se ha restaurado nada**, que es la parte que tranquiliza.
+
+### 2. Un error de una accion se presentaba como "Empezar: cargar un personaje"
+
+Inicio metia en UN SOLO campo (`ScanMessage`) dos cosas que no se parecen en nada:
+
+- "no encontre ningun personaje en estas carpetas" - una **invitacion** a cargar uno a mano;
+- "la accion que acabas de pedir ha fallado" - una **respuesta** a algo que el usuario ya ha hecho.
+
+Y el XAML solo sabia pintar la primera: un boton grande titulado "Empezar: cargar un personaje" que,
+al pulsarlo, abre el dialogo de fichero. Medido (`INI-07`) con **6 personajes reales listados justo
+encima**: al fallar "Restaurar copia de seguridad", el error aparecia dentro de ese reclamo. O sea,
+un mensaje de error disfrazado de invitacion a empezar de cero, en una pantalla que ya estaba llena
+de personajes.
+
+Arreglo: dos propiedades distintas porque son dos cosas distintas - `ScanMessage` (el reclamo) y
+`ActionErrorMessage` (el resultado fallido de una accion) - y en el XAML un aviso propio, **sin
+accion** (no hay nada que pulsar), con el color de atencion del tema para que no se confunda con el
+reclamo de acento de arriba.
+
+### Lo demas que se añadio al arnes en esta mitad (sin bug nuevo detras)
+
+- `AJU-03`: el ancho de la barra lateral de Exploracion y la visibilidad del minimapa se cambian
+  desde Exploracion pero **viven en Ajustes** (`settings.json` + `SettingsViewModel`), y su unica red
+  son los clamps de esa clase. Se fija el comportamiento por los dos lados: **0 sigue siendo valido**
+  ("plegada", no "demasiado estrecha"), 120 sube al suelo de 260, 900 baja al techo de 520 y 340 se
+  respeta tal cual; ademas se comprueba que el cambio llega de verdad al `settings.json` real (si no,
+  se perderia al cerrar). Y la mitad que nunca se probaba de extremo a extremo: una carpeta adicional
+  de **mundos** llega a `CharacterFileService`, entra en la busqueda real, no se duplica al añadirla
+  dos veces y sale al quitarla.
+- `AJU-04`: el selector de idioma pulsando los dos chips REALES (`A9-13` solo asignaba la propiedad
+  del ViewModel), comprobando ademas que un texto que YA estaba pintado se reescribe solo, en los dos
+  sentidos.
+- `ACE-02`: el registro de cambios del propio editor dentro de "Acerca de" - ninguna version sin
+  numero, sin fecha, sin resumen ni sin nada que enseñar, y ningun resumen identico con la app en
+  ingles. Su CONTENIDO no se toca aqui: eso lo cierra el usuario al publicar una version.
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core **420/420**, ViewModels **429/429**. `HomeCardTests` pasa de 5 a 6 casos con
+  `RestoreBackup_ConBakIlegible_NoTocaElPlrBueno_YAvisa`, que fija que el original queda intacto
+  **byte a byte** (no solo "legible").
+- Arnes de UI Automation: **0 lineas `FALLO`** en el area, con `INI-07`/`INI-08` ya en verde. Los
+  `FALLO` que quedan en la ejecucion completa son de otras areas en curso en este mismo arbol.
+- Lo unico que `AR-LAY` sigue marcando en Inicio / Novedades / Acerca de a 1080x700 son los textos
+  "0/999" y "0/0" de la **cabecera global** (la franja de vida/mana), que sale igual en las seis
+  pestañas - no es contenido de estas cuatro pantallas.
+
+No hubo ningun obstaculo que fallara dos veces seguidas sin resolverse.
