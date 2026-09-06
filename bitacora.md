@@ -11991,3 +11991,165 @@ Investigación y las dos Librerías ya refiltraban solas al cambiar de idioma
   bien**.
 
 Ningún obstáculo falló dos veces seguidas por la misma causa en esta ronda.
+
+## 6-sep-2026 - Monedas/Municion ya no se corta: el limite conocido de AR-LAY era un problema de ALTO, no de ancho
+
+El barrido `AR-LAY` de esta misma manana dejo un unico caso sin arreglar y anotado como
+`limitesConocidos`: **a 1080x700 la caja de Monedas/Municion se corta**. La ronda anterior probo
+dos arreglos, midio que los dos tenian un efecto colateral peor y paro (regla del proyecto). El
+usuario pidio explicitamente que esta vez se arreglara "si o si". Esta entrada cuenta como se
+arreglo y, sobre todo, **por que los intentos anteriores no podian funcionar**.
+
+### El diagnostico que faltaba: el eje
+
+Los dos intentos anteriores (un `ScrollViewer` propio para la caja; un `MaxWidth` en su columna) y
+la propuesta que se dejo escrita ("poner Monedas y Municion uno al lado del otro") atacaban todos
+el reparto **HORIZONTAL** de la fila fusionada. Medido ahora en coordenadas reales, a 1080x700:
+
+| | ancho que tiene | ancho que pide | alto que tiene | alto que pide |
+|---|---|---|---|---|
+| centro (Armadura/Accesorios) | **241px** | 216 | 115,7 | 94 |
+| Monedas/Municion | **180px utiles** (Border 192) | 180 | **103,7 utiles** (Border 115,7) | **125,3** |
+
+En ancho no falla nada: al centro le sobran 25px y entre el ultimo accesorio y la caja hay 8px
+reales de separacion (`invadeDerecha=-8px`). **Lo que falta son 21,6px de ALTO**, y ese es el
+motivo de fondo de que los tres arreglos horizontales fallaran: ninguno tocaba la dimension que
+se queda corta. La caja apila etiqueta+4 monedas+etiqueta+4 municiones = 125,3px en 103,7.
+
+### "¿Cual de los dos bloques es el que no cede?" - medido: ninguno, y por eso no era eso
+
+Durante la ronda se planteo atacarlo por elasticidad: que el `MinCell=40` de los accesorios (que
+hoy se congela ahi y no baja) dejara de ser rigido para que los dos bloques cedieran ancho a la
+par. Medido en el peor caso real (1080x700), **eso no habria devuelto ni un pixel**:
+
+```
+columnas del SlotRowHost = 140 / 241 / 200   (host 581)
+  centro:  241px para los 216 que pide   -> le SOBRAN 25px
+  monedas: 180px utiles para los 180 que pide, y con 8px reales de separacion
+           entre el ultimo accesorio y la caja (invadeDerecha = -8px)
+```
+
+Ninguno de los dos invade al otro ni se queda corto EN ANCHO. Y ademas los dos viven en COLUMNAS
+distintas del mismo `Grid`: no comparten alto, asi que hacer que los accesorios cedan ancho no le
+da ni un pixel de la dimension que si faltaba. La unica elasticidad que podia servir de algo es bajar el `MinCell` de la PROPIA caja de Monedas/
+Municion (dos rejillas apiladas: cada px de celda son 2px de alto). **Se implemento y se midio, no
+se descarto sobre el papel**: con `MinCell=32` (la excepcion mas agresiva que ya existe en el
+proyecto, la de Mascota/Montura/Tinte) el bloque sigue pidiendo 112,5px para 103,7 utiles -
+**sigue cortandose 8,8px, con los 4 slots de Municion partidos igual**. Habria que bajar a ~30, por
+debajo de todo lo medido en el proyecto, para caber con ~1px de margen que cualquier cambio de
+fuente o de idioma se lleva por delante. Se descarto por eso: no arregla el caso con ningun valor
+razonable, degrada la legibilidad justo en la ventana mas pequeña, rompe la unidad de tamaño de
+icono que `ReferenceColumns`/`ReferenceWidth` mantienen a proposito - y hay una solucion sin coste.
+
+### El arreglo: el alto vacio estaba justo encima
+
+La franja del selector Loadout/Vista (fila 0 del `SlotRowHost`, **82,2px**) se estiraba con
+`ColumnSpan="2"` por encima de la caja de Monedas/Municion sin usar ese ancho para nada (medido:
+con 241px en vez de 449 la fila 0 mide exactamente los mismos 82,2px - ya envolvia igual). O sea
+que habia 82,2px de alto libre pegados a la caja que la nadie ocupaba.
+
+Dos atributos, ningun mecanismo nuevo:
+- el selector pasa a `Grid.Column="1"` sin `ColumnSpan` (solo sobre el centro);
+- la caja de Monedas/Municion pasa a `Grid.Row="0" Grid.RowSpan="2"`.
+
+**Exactamente lo que el lateral IZQUIERDO (Mascota/Montura+Tinte) ya hacia desde la quinta pasada,
+y por el mismo motivo.** Los dos laterales quedan ahora simetricos, ocupando el alto completo de la
+fila. Monedas y Municion **siguen en la misma fila horizontal de siempre, a la derecha del equipo,
+en todos los tamaños**: no se mueven de sitio, no se apilan debajo, y el reparto horizontal no se
+toca ni un pixel (la columna sigue siendo `Auto` con `MinWidth=200` y el centro conserva su
+`MinWidth=216`).
+
+Resultado a 1080x700: la caja pasa de 115,7 a **197,9px de alto** (185,9 utiles para los 125,3 que
+pide). Cero cortes.
+
+### Lo que NO cambia (importante, porque se llego a plantear lo contrario)
+
+Monedas y Municion **siguen exactamente donde estaban**: a la derecha del equipo, en la misma fila
+horizontal, en TODOS los tamaños de ventana. No se apilan debajo, no cambian de columna, no cambian
+de tamaño de icono y el reparto horizontal de la fila no se toca ni un pixel (`Auto`+`MinWidth=200`
+a la derecha, `*`+`MinWidth=216` en el centro, igual que antes). Lo unico que cambia es que la caja
+ocupa tambien la franja vertical que tenia justo encima y que no usaba nadie.
+
+### La tercera variante, tambien medida y descartada (AR-14d)
+
+Antes de dar por buena la de arriba se implemento y midio la que se habia propuesto: **Monedas/
+Municion apilada DEBAJO del centro**, ocupando todo el ancho y con las dos rejillas una al lado de
+la otra. Arregla la caja (0 slots cortados), pero:
+
+```
+apilada debajo, 1080x700: filas del SlotRowHost = 82,2 / 38,1 / 77,6
+  -> la fila del CENTRO cae de 115,7 a 38,1px para una rejilla que necesita 84
+     (2 filas de MinCell 40 + Gap 4)
+  -> los 10 slots de Armadura/Accesorios se salen 45,9px por abajo: se ve UNA de las
+     dos filas de accesorios, la otra detras de una barra de scroll que antes no existia
+```
+
+Es la misma regresion que `AR-14` vigila, movida al eje vertical. La causa es simple: el alto total
+de la fila fusionada es fijo (197,9px a 1080x700, sin ningun `ScrollViewer` por encima que pueda
+crecer), asi que **toda fila nueva se la come al centro**. Apilar necesitaba 84 (centro) + 68
+(monedas) = 152px por debajo del selector, y solo hay 115,7.
+
+### Lo que se añadio al arnes (permanente, no de usar y tirar)
+
+- **`AuditoriaEquipamiento.cs`**: el bloque `AR-14`/`AR-14b` sale de `Program.cs` a su propio
+  fichero como clase parcial de `Program` - misma leccion que ya obligo a hacerlo con `AR-LAY` esta
+  manana (varias sesiones tocan `Program.cs` a la vez). No duplica ni un helper.
+- **`AR14_SOLO=1`**: modo de foco (como `PB_SOLO`) que corre solo esta auditoria sobre el personaje
+  ya cargado y sale. Sin el, cada iteracion sobre esta fila costaba el recorrido completo del arnes.
+  Combinable con `AR_LAY_*` para añadir el barrido generico acotado a Equipamiento.
+- **`AR14_BARRIDO_FINO=3`**: barrido en DOS dimensiones (`AR14_DESDE/HASTA/PASO` x
+  `AR14_ALTO_DESDE/HASTA/PASO`). Un barrido de anchos a un alto fijo, que es lo unico que habia,
+  **no podia encontrar este bug jamas**: el mismo ancho falla o no segun lo alta que sea la ventana.
+- **`AR-14c`**: la comprobacion que faltaba del OTRO lado de la fila - Monedas/Municion medida en
+  los dos ejes (cuanto pierde de la zona que de verdad se pinta, con escape por scroll eje a eje) y
+  ademas slot a slot. Es la que reproduce el bug y la que lo vigila desde ahora.
+- **`AR-14d`**: el criterio de `AR-14`, pero en VERTICAL. `AR-14` nacio de un corte horizontal y
+  solo miraba la X; sin esto, la variante apilada de arriba habria pasado por "correcta" (el eje
+  vertical del `ScrollViewer` esta en `Auto`, asi que D1 de `AR-LAY` lo da por alcanzable y calla).
+- Los dos bloques laterales se buscan ahora por `x:Name` (`CajaMonedasMunicion`,
+  `CajaMascotasTintes`) y no por su celda del `Grid`: buscarlo por "columna 2" habria dado la caja
+  por ausente justo en la variante que habia que vigilar, saltandose la medicion sin decir nada.
+- `AR-LAY`: la lista `limitesConocidos` se queda **vacia**. Su unica entrada era este caso.
+
+### Verificacion real
+
+| barrido | layouts | resultado |
+|---|---|---|
+| 2D 1080-2560 x 700-1440, de 40 en 40px (ida y vuelta) | **1.444** | 0 FALLO |
+| px a px 1080-1320 x altos 700/720/740/760 | **1.928** | 0 FALLO |
+| px a px 1480-1600 (umbral Amplio) x altos 700-900 | **1.210** | 0 FALLO |
+| `AR-LAY` sobre Equipamiento, fino de 4 en 4px de 1080 a 2560 | 397 combinaciones, 50.488 elementos | 0 perdidos, 0 solapes, 0 truncados |
+| **`AR-LAY` COMPLETO** - las 16 pantallas x 13 tamaños x 2 idiomas | **416 combinaciones, 46.522 elementos** | **0 perdidos, 0 solapes, 0 truncados, 0 limites conocidos** |
+
+- Antes del cambio, ese mismo 2D daba 24 FALLO reales (anchos 1080/1120/1160 x altos 700/720).
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core **441/441**, ViewModels **439/439**, 0 fallos.
+
+### El obstaculo real de la ronda: DOS arneses a la vez se cuelgan mutuamente
+
+El recorrido COMPLETO del arnes (`dotnet run` sin modo de foco) **no llego a terminar en ninguno
+de los dos intentos**: las dos veces se quedo clavado exactamente en el mismo punto - linea 251,
+justo despues del bloque `UI-BLOQUEADA`, en el primer `AutomationElement.FindFirst` que viene
+detras - con la CPU del proceso congelada (10,70 -> 10,73 en 15s) y `Responding=True`.
+
+La causa esta identificada y NO es del cambio de esta ronda: **habia dos procesos
+`TerrasavrNative.App.Tests` vivos a la vez** (23:05:23 y 23:06:05 - otra sesion trabajando sobre
+este mismo repo lanzo el suyo en paralelo), los dos colgados. `UI-BLOQUEADA` es precisamente el
+bloque que hace **clics REALES de raton por coordenadas de pantalla** tras un
+`SetForegroundWindow`: con otra ventana WPF identica (mismo titulo, mismo proceso) disputandose el
+primer plano, el clic no llega a la ventana propia - los 2 `FALLO` que deja son los dos de ese
+bloque, y el `FindFirst` siguiente se queda esperando a un arbol que no responde. Es la misma
+familia de limite que esta bitacora ya documento con `T-H/F2` ("el `SetForegroundWindow` no roba
+el foco de verdad a un proceso en segundo plano en esta sesion").
+
+Se aplica la regla de las dos veces: se para, se deja escrito, y la verificacion se hace con lo
+que SI es determinista y cubre de verdad este cambio - `AR-14`/`AR-14b`/`AR-14c`/`AR-14d` y el
+**`AR-LAY` completo** (la superficie entera de la app, no solo Equipamiento), que no dependen de
+ningun clic real de raton porque miden sobre el arbol visual con coordenadas reales. El modo de
+foco `AR14_SOLO=1` añadido en esta ronda es justo lo que lo hace posible.
+
+**Para la proxima**: antes de lanzar el recorrido completo, comprobar que no hay otro
+`TerrasavrNative.App.Tests` vivo (`Get-Process *Terrasavr*`) - si lo hay, o se espera, o se usa un
+modo de foco. Dos arneses a la vez no es "lento": es un cuelgue reproducible.
+
+---
