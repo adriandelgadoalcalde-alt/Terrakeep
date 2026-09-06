@@ -1,5 +1,30 @@
 [
   {
+    "version": "2.3.0",
+    "date": "6 de septiembre de 2026",
+    "date_en": "September 6, 2026",
+    "summary": "El contenido del propio juego (nombres de objetos, NPCs, tiles, buffs, tooltips y bonos de set, vanilla y Calamity) ya se traduce de verdad al inglés, con más de 12.000 entradas reales verificadas contra la localización oficial del juego. Y el último solape de maquetación conocido (Monedas/Munición) queda resuelto: la lista de límites conocidos de diseño se queda en cero.",
+    "summary_en": "The game's own content (item, NPC, tile and buff names, tooltips and set bonuses, both vanilla and Calamity) is now genuinely translated into English, with over 12,000 real entries checked against the game's own official localization. And the last known layout overlap (Coins/Ammo) is fixed for good: the list of known layout limitations is now empty.",
+    "added": [
+      "Traducción real al inglés de todo el contenido del juego que solo estaba en español: 6180 nombres de objeto, 2789 tooltips descriptivos, el 100% de nombres/descripciones de buff, y los 61 textos reales de bonos de set vanilla - todo extraído de la localización oficial del juego, nunca inventado.",
+      "Lo mismo para Calamity Mod: 2493 nombres de objeto, el 100% de nombres de buff y los 69 bonos de set, extraídos de la localización real en inglés del propio mod.",
+      "271 tooltips descriptivos nuevos en español (objetos añadidos en versiones recientes del juego que aún no los tenían)."
+    ],
+    "added_en": [
+      "Real English translation of all the game content that was Spanish-only: 6180 item names, 2789 descriptive tooltips, 100% of buff names/descriptions, and the 61 real vanilla set bonus texts - all pulled from the game's own official localization, never invented.",
+      "Same for Calamity Mod: 2493 item names, 100% of buff names and the 69 set bonuses, pulled from the mod's own real English localization.",
+      "271 new Spanish descriptive tooltips (items added in recent game versions that were still missing them)."
+    ],
+    "fixed": [
+      "Los nombres de objetos de Calamity mostraban su nombre interno humanizado en vez del nombre real del mod (p.ej. \"Aerospec Head Melee\" en vez de \"Aerospec Helm\") - afectaba a 550 nombres de objetos y buffs.",
+      "El último caso conocido de maquetación (los slots de Monedas/Munición) queda resuelto de verdad: no era un problema de ancho sino de alto, y ahora conviven con Equipamiento en la misma fila sin solaparse en ningún tamaño de ventana."
+    ],
+    "fixed_en": [
+      "Calamity item names showed their humanized internal name instead of the mod's real name (e.g. \"Aerospec Head Melee\" instead of \"Aerospec Helm\") - affected 550 item and buff names.",
+      "The last known layout case (the Coins/Ammo slots) is now properly fixed: it wasn't a width problem but a height one, and they now sit alongside Equipment on the same row without overlapping at any window size."
+    ]
+  },
+  {
     "version": "2.2.0",
     "date": "6 de septiembre de 2026",
     "date_en": "September 6, 2026",
