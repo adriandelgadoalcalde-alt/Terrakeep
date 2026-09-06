@@ -10382,3 +10382,164 @@ entra SOLO en el suyo, 14 comprobaciones, todas en verde.
   que se sepa donde vive de verdad ese cambio.
 
 No hubo ningun obstaculo que fallara dos veces seguidas sin resolverse.
+
+---
+
+## 6-sep-2026 - Libreria (objetos y buffs) y Builds: 36 carpetas se veian VACIAS, y cuatro textos que nunca cambiaban de idioma
+
+Oleada de pruebas a fondo de la zona **Libreria + Builds**, con la app real en los dos idiomas y a
+cinco tamaños de ventana (maximizada, 1600x1000, 1400x900, 1180x860 y el suelo real 1080x700).
+Cinco bugs reales, ninguno reportado por el usuario: los cinco salieron de medir.
+
+### El grande: 690 objetos que la Libreria conocia y no podia enseñar
+
+Sintoma real: **36 carpetas de la Libreria pintaban CERO tarjetas** aunque su propio nombre
+anunciara objetos (ej. `Categories/Placeable (3219)/Pages 61+/Page 68` -> 0 de 40), y otras 15
+enseñaban menos de los que decian.
+
+La causa no estaba en la Libreria sino en el cruce de dos datos generados en momentos distintos:
+
+- El **arbol** de carpetas (`Assets/vanilla_library_tree.json`) es un puerto literal del Terrasavr
+  real (`extraer-arbol-libreria-vanilla.js`), y ese Terrasavr va con un Terraria **mas nuevo**:
+  referencia ids de objeto **hasta el 6145**.
+- El **catalogo de nombres** (`Assets/vanilla_item_names.json`) se genero contra un `ItemID.cs` que
+  **solo llega al 5455**.
+- `LibraryViewModel.ApplyFilter` descarta **en silencio** cualquier id que el catalogo no conozca.
+  Eso se puso a proposito el 2-sep-2026 para no tumbar la app con un `KeyNotFoundException` real
+  (id 5462 al elegir "Armas") y sigue siendo lo correcto - pero el efecto visible es una pagina
+  entera sin una sola tarjeta y sin decir por que.
+
+Medido antes de tocar nada, id a id: **691 ids del arbol sin nombre** (690 por encima de 5455 mas
+el id `0`, que es relleno real del propio Terrasavr y no es ningun objeto), **402 hojas** del arbol
+vanilla de las que **51 perdian objetos y 36 se quedaban en cero**, y **14.998 objetos declarados
+-> 13.608 enseñables**.
+
+Lo que hacia falta era solo el nombre: **los iconos ya estaban al dia** (`Assets/vanilla/icons`
+llega hasta el 6195 - `extraer-iconos-vanilla.js` los saco de la instalacion real de Steam, no del
+atlas viejo). `scripts/completar-nombres-objetos-145.js` completa el catalogo cruzando dos fuentes
+REALES: `Terraria/ID/ItemID.cs` del 1.4.5.8 decompilado (`ItemID.Count = 6196` real) contra
+`Terraria.Localization.Content.es-ES.Items.json`, seccion `ItemName` - **la misma fuente con la que
+se genero el catalogo original**. Es idempotente a proposito: solo AÑADE, nunca pisa una entrada
+existente (comprobado: **0** de los 5.455 nombres previos cambia). El unico id que se queda fuera
+es `Deprecated6143`, que no tiene `ItemName` real - lo que no se encuentra no se inventa.
+
+| | antes | despues |
+|---|---|---|
+| entradas del catalogo de la Libreria | 8.164 | **8.903** |
+| hojas del arbol vanilla que pintan CERO tarjetas | **36** | **0** |
+| hojas con perdida | 51 | 1 (`Deprecated6143`) |
+| objetos declarados por las hojas -> enseñables | 14.998 -> 13.608 | 14.998 -> **14.997** |
+
+### Cuatro textos que nunca cambiaban de idioma (y por que el barrido no podia verlos)
+
+1. **La linea de resumen de la Libreria** ("8.903 objetos en total...") se quedaba congelada en el
+   idioma anterior. `ResultsSummary` (y `SlotRestrictionLabel`) son strings YA RESUELTOS dentro de
+   `ApplyFilter`, no bindings indexados - el aviso `"Item[]"` de `LocalizationService`, que refresca
+   solo lo que se lee via `{Binding Loc[clave]}`, no les llegaba nunca. En el estado de arranque
+   (sin busqueda ni carpeta) ese resumen es **literalmente el unico texto del panel derecho**, o sea
+   una frase entera a la vista en el idioma que no toca. Afectaba a las TRES superficies que
+   comparten `CatalogBrowserViewModel` (Libreria, Libreria de buffs, Investigacion) y se arregla una
+   sola vez, en la base: evento debil sobre `"Item[]"` que **refiltra entero** - refiltrar en vez de
+   solo recalcular la frase es lo correcto porque el texto incluye el nombre de la carpeta elegida,
+   que ya cambiaba de idioma por su cuenta y dejaba media frase en cada idioma.
+   **Por que `A10-IDIOMA-BARRIDO` no podia cazarlo**: ese barrido navega PULSANDO carpetas, y cada
+   pulsacion vuelve a llamar a `ApplyFilter`, que regenera el texto en el idioma activo. La version
+   rancia solo existe si NO se refiltra despues de cambiar de idioma, que es justo lo que hace el
+   usuario real.
+2. **"Plegar"/"Desplegar"** de las cabeceras de las DOS Librerias: literales españoles dentro de
+   un `Style` desde que se creo esa cabecera. Tampoco los veia el barrido: su heuristica busca
+   palabras funcionales españolas ("la", "de", "version"...) y estos rotulos son una sola palabra
+   que no lleva ninguna. Claves nuevas `library_collapse`/`library_expand` y `Binding` dentro del
+   `Setter.Value`, que si funciona ahi (se evalua contra el `DataContext` heredado, `MainViewModel`,
+   que ya expone `Loc`).
+3. **El titulo de cada columna de Builds** enseñaba `ClassName` tal cual: `melee`, `ranged`, `mage`,
+   `summoner`, `rogue` - la clave interna de `builds.json` - mientras las pildoras de filtro de
+   arriba, en la MISMA pantalla, ya decian "Cuerpo a cuerpo"/"A distancia"/"Magia"/"Invocacion"/
+   "Picaro". `ClassLabel` usa las mismas claves reales y el mismo respaldo (una clase desconocida
+   cae a su nombre interno, nunca a un `[clave]` en bruto).
+4. **Las paginas del indice de buffs** se escribian `Indice (1-33)` sin tilde mientras su carpeta
+   madre es `Indice (354)` CON tilde: la misma palabra de dos formas distintas, una mal, a dos
+   lineas de distancia en el mismo arbol. Solo cambia el nombre visible; el `FullPath`
+   (`Indice/1-33`) se deja igual a proposito, es la clave estable ya persistida.
+
+### Lo que se probo y estaba BIEN (queda escrito para no repetir el camino)
+
+Bloques nuevos y permanentes del arnes, en fichero propio `TerrasavrNative.App.Tests/
+PruebasLibreriaYBuilds.cs` (otra parte de la misma clase `Program`, ver el comentario de `partial`:
+`Program.cs` pasa de 5.700 lineas y varias rondas trabajan sobre el a la vez):
+
+- `LIB-01` **gramatica real de busqueda** sobre el ViewModel real y el catalogo completo (no como
+  funcion pura): `#4` -> 1 resultado exacto; `#4,#5` -> 2 (la coma es OR); `#1-40` -> 40, todos
+  dentro del rango y con `#1-20` como subconjunto; `espada hierro` -> 2, todos con LAS DOS palabras
+  (el espacio es AND); `.dano` -> 100, todos con la palabra en el TOOLTIP y alguno que NO la tiene
+  en el nombre (prueba de que no esta buscando por nombre); `mascara` con tilde y sin ella -> los
+  MISMOS ids; `e` (un caracter) -> 0, que es el quirk REAL de Terrasavr.
+- `LIB-02` tope real de 100 y su resumen ("Mostrando 100 de 2.376").
+- `LIB-03` **restriccion de slot**: abriendo desde un slot de Tinte, los 100 resultados son TODOS
+  validos, el arma id=4 no aparece, las tarjetas de carpeta raiz se ocultan y la pildora dice el rol
+  real - y la restriccion sigue en pie **con una busqueda por texto encima**, que es el camino real.
+- `LIB-04` coherencia del arbol: 636 nodos, 553 hojas, profundidad 4, **0** hojas de Calamity por
+  encima del tope de paginacion de 40, **0** carpetas vacias, **0** uniones padre != union ordenada
+  de sus hijos, y la ultima pagina de la categoria mas paginada renderiza exactamente sus 16
+  objetos.
+- `LIB-05` **el arbol renderizado en su columna estrecha y FIJA (210px)** con la rama de Calamity
+  desplegada (203 filas, nombres de hasta 59 caracteres): a los 5 tamaños, **203/203 alcanzables**,
+  **0 filas cortadas a lo ancho** y **0 nombres tapados**; al nombre mas largo le quedan 84,3px de
+  ancho util y lo reparte en varias lineas. Captura real:
+  `libreria-arbol-calamity-ventana-minima.png`.
+- `BUFLIB-01/02`: 8 carpetas raiz reales, las 11 paginas del indice ya escritas igual que su madre,
+  el tope de 300 sobre los 305 buffs de Calamity, y colocar un buff YA puesto en otro slot se
+  **rechaza** dejando el picker abierto y el aviso real a la vista (Bu-b, "avisar, no fingir").
+- `BUILDS-01/02/03/04`: "ya lo tienes" reconoce un objeto guardado en un **almacen** (no solo en el
+  Inventario, que era lo unico que ejercitaba `BD-D-POSEIDO`) y lo **des**marca al quitarlo; filtrar
+  por "Picaro" deja las etapas vanilla enteras ocultas (esa clase no existe en vanilla) y solo
+  clases `rogue` visibles en Calamity, y volver a "Todas" lo restaura; auto-equipar cambia 11 slots
+  reales y deja **exactamente 1** entrada de Deshacer que revierte los 11 de una vez; y un build de
+  Calamity sobre un personaje sin `.tplr` empieza por el aviso real.
+- `BUILDS-05` maquetacion de Builds a los 5 tamaños: 60 titulos de clase, 0 en bruto, y las 162
+  tarjetas de equipo alcanzables y sin cortarse a lo ancho.
+
+### Dos falsos positivos propios que casi cuelan (leccion para el proximo bloque de medida)
+
+La primera version de `LIB-05` daba **191 de 203 filas "cortadas a lo ancho" en TODOS los tamaños,
+maximizada incluida** - y era mentira. `RectVisible` devuelve `Rect.Empty` para una fila que ahora
+mismo cae fuera del `ScrollViewer`, y el bloque lo contaba como "pierde todo su ancho". El arreglo
+es el mismo gesto que ya aprendio `AR-15`: **hacer `BringIntoView` PRIMERO y preguntar despues**;
+solo se puede medir el ancho de algo que de verdad esta a la vista.
+
+El segundo era un criterio mal elegido: "el hueco util del nombre es < 40px" marcaba `Miel` (22,4px)
+como ilegible. No lo es: con `HorizontalContentAlignment="Left"` el `ContentPresenter` se arregla a
+su tamaño DESEADO, asi que un nombre corto tiene una caja corta - y eso es correcto. Lo que si
+importa (y se mide ahora) es que el rectangulo del texto se vea **entero**, y que un nombre largo
+tenga sitio para partirse en lineas.
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core **420**, ViewModels **408** (+3 `LibreriaResumenIdiomaTests`, +3
+  `BuildsNombreDeClaseTests`, +1 en `BuffTreeBuilderTests`), 0 fallos.
+- Arnes de UI Automation: **0 lineas `FALLO`** en los bloques `LIB-*`/`BUFLIB-*`/`BUILDS-*`, en dos
+  ejecuciones completas seguidas.
+
+### Obstaculos reales de esta ronda (autonomia tecnica)
+
+- `MSB3021`/`MSB3026` con `Terrakeep.exe` bloqueado por la app que el usuario tiene abierta
+  (proceso 44868). Misma solucion no invasiva ya documentada: compilar y ejecutar con
+  `-p:BaseOutputPath=<scratchpad>/out/`. **Detalle nuevo util**: con esa ruta, los tests que llegan
+  a los assets con una ruta RELATIVA (`AppContext.BaseDirectory` + cuatro niveles arriba, ej.
+  `LocalizedContentTests`) fallan 6 veces por no encontrar el fichero - **no es una regresion**.
+  `Core.Tests` no depende de `App`, asi que ese proyecto se corre siempre SIN `BaseOutputPath`.
+- Con 5 agentes trabajando en paralelo sobre el mismo arbol, el arnes se truncaba a mitad de
+  ejecucion una y otra vez (salida cortada, sin excepcion ninguna): hay **otras instancias del
+  arnes corriendo a la vez** manejando la misma sesion de escritorio (foco, raton real,
+  `session.json`) y procesos que se matan entre si para desbloquear `bin`. Lo que funciona es
+  esperar a que no haya ningun otro `TerrasavrNative.App.Tests` vivo y reintentar hasta ver `DONE`.
+- El fichero nuevo del arnes se puso **aparte** (`PruebasLibreriaYBuilds.cs`, `partial class
+  Program`) precisamente por eso: un bloque de 350 lineas dentro de `Main` habria chocado con las
+  otras rondas en cada edicion. Los helpers reales (`DoEvents`, `WaitForDispatcher`, `FijarTamaño`,
+  `RectVisible`/`VisibleEntero`, `Descendientes`) se siguen usando tal cual, sin duplicar ni uno.
+- Otro agente se llevo por delante dos cambios de esta ronda al comitear ficheros compartidos
+  (`MainWindow.xaml` y `strings_es/en.json`, en `310837fa`/`049556c5`) - el contenido esta bien,
+  solo vive en un commit ajeno; queda escrito aqui para que se sepa donde esta.
+
+No hubo ningun obstaculo que fallara dos veces seguidas sin resolverse.
