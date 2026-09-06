@@ -90,8 +90,14 @@ public static class BuffTreeBuilder
             int end = Math.Min(start + IndexPageSize - 1, max);
             var pageIds = allIds.Where(id => id >= start && id <= end).ToList();
             if (pageIds.Count == 0) continue;
+            // Ronda de Libreria/Builds del 6-sep-2026: el nombre VISIBLE de cada pagina iba sin
+            // tilde ("Indice (1-33)") mientras el de su propia carpeta madre si la lleva
+            // ("Índice (105)") - la misma palabra escrita de dos formas distintas, una de ellas
+            // mal, a dos lineas de distancia en el mismo arbol. El FullPath ("Indice/1-33") se
+            // deja EXACTAMENTE igual a proposito: es la clave estable ya persistida y usada por
+            // los tests, no es texto que el usuario lea.
             pages.Add(new CategoryTreeNodeData(
-                $"Indice ({start}-{end})", $"Indice/{start}-{end}", buffIconResolver(pageIds[0]),
+                $"Índice ({start}-{end})", $"Indice/{start}-{end}", buffIconResolver(pageIds[0]),
                 pageIds, new HashSet<int>(pageIds), [], $"Index ({start}-{end})"));
         }
         var (ordered, set) = LibraryTreeBuilder.OrderedUnion(pages);

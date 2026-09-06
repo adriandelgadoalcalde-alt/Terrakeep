@@ -90,6 +90,26 @@ public class BuffTreeBuilderTests
         Assert.Equal("Indice/1-33", indice.Children[0].FullPath);
     }
 
+    // Ronda de Libreria/Builds del 6-sep-2026 (bug real encontrado leyendo el arbol renderizado):
+    // el nombre VISIBLE de cada pagina iba sin tilde ("Indice (1-33)") mientras el de su propia
+    // carpeta madre si la lleva ("Índice (105)") - la misma palabra escrita de dos formas
+    // distintas, una de ellas mal, a dos lineas de distancia en el mismo arbol. El FullPath
+    // ("Indice/1-33", ya fijado por el test de arriba) NO cambia: es la clave estable, no texto
+    // que el usuario lea.
+    [Fact]
+    public void ArbolDeBuffsReal_LasPaginasDelIndiceSeEscribenIgualQueSuCarpetaMadre_ConTilde()
+    {
+        if (LoadBuffCatalogs() is not { } c) return;
+
+        var indice = BuffTreeBuilder.BuildBuffTree(c.Vanilla, c.CalamityBuffs, c.CalamityItems, FakeBuffIcon, FakeItemIcon)[6];
+
+        Assert.StartsWith("Índice ", indice.Name, StringComparison.Ordinal);
+        Assert.All(indice.Children, p => Assert.StartsWith("Índice (", p.Name, StringComparison.Ordinal));
+        Assert.Equal("Índice (1-33)", indice.Children[0].Name);
+        // El ingles no lleva tilde ninguna y no debe verse afectado.
+        Assert.All(indice.Children, p => Assert.StartsWith("Index (", p.NameEn!, StringComparison.Ordinal));
+    }
+
     [Fact]
     public void ArbolDeBuffsReal_LaCarpetaDeCalamityUsaElIconoDeUnOBJETO_NoDeUnBuff()
     {
