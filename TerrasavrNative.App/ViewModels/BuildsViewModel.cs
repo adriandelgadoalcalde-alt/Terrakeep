@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TerrasavrNative.App.Services;
 using TerrasavrNative.Core.Data;
@@ -131,7 +131,7 @@ public sealed partial class BuildsViewModel : ObservableObject
     private static BuildItemRowViewModel ResolveItem(BuildItemRef itemRef, CharacterFileService service)
     {
         string? iconPath = null;
-        string? statsTooltip = null;
+        ItemStatsInfo? stats = null;
         bool isCalamity = false;
         int itemId = 0;
 
@@ -146,7 +146,7 @@ public sealed partial class BuildsViewModel : ObservableObject
                 {
                     itemId = entry.SyntheticId;
                     if (entry.Icon != null) iconPath = "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon;
-                    statsTooltip = ItemStatsFormatter.Format(true, entry.SyntheticId, service.TooltipCatalogs);
+                    stats = ItemStatsFormatter.Describe(true, entry.SyntheticId, service.TooltipCatalogs);
                 }
             }
             else
@@ -156,11 +156,11 @@ public sealed partial class BuildsViewModel : ObservableObject
                 {
                     itemId = id.Value;
                     iconPath = VanillaIconResolver.GetIconPath(id.Value);
-                    statsTooltip = ItemStatsFormatter.Format(false, id.Value, service.TooltipCatalogs);
+                    stats = ItemStatsFormatter.Describe(false, id.Value, service.TooltipCatalogs);
                 }
             }
         }
 
-        return new BuildItemRowViewModel(itemRef, itemRef.Prefix, iconPath, isCalamity, statsTooltip, itemId);
+        return new BuildItemRowViewModel(itemRef, itemRef.Prefix, iconPath, isCalamity, stats, itemId);
     }
 }

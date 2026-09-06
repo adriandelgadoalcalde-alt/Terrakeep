@@ -197,7 +197,11 @@ public partial class ItemEditViewModel : ObservableObject
             if (id >= CalamityIds.PrefixIdBase)
             {
                 var rogueEntry = _service.RoguePrefixCatalog.ById(id);
-                string rogueName = rogueEntry?.Es ?? rogueEntry?.En ?? $"Prefijo #{id}";
+                // Ronda de idioma del 6-sep-2026: el campo "en" ya estaba en el catalogo y aqui
+                // se cogia siempre el español - la lista de prefijos se quedaba sin traducir, y
+                // encima decia otra cosa que el tooltip del propio slot (ver ItemSlotViewModel).
+                string rogueName = rogueEntry == null ? $"#{id}"
+                    : TerrasavrNative.Core.Data.LocalizedContent.Pick(rogueEntry.Es, rogueEntry.En, LocalizationService.Instance.Language);
                 bool rogueIsCurrent = slot.Item.Prefix.IsCalamity && slot.Item.Prefix.SyntheticId == id;
                 // Accesorio (10017-10020): texto real ya formateado en el propio catalogo.
                 // Arma (10000-10016): numeros reales de verdad (DescribeWeaponEffect), mismo
@@ -209,14 +213,18 @@ public partial class ItemEditViewModel : ObservableObject
             }
 
             var entry = _service.VanillaPrefixCatalog.ById(id);
-            string name = entry?.Es ?? entry?.En ?? $"Prefijo #{id}";
+            string name = entry == null ? $"#{id}"
+                : TerrasavrNative.Core.Data.LocalizedContent.Pick(entry.Es, entry.En, LocalizationService.Instance.Language);
             // PrefixID.Count real == 85 (ver Fase 2/bitacora): 85-97 no son vanilla, son los
             // de invocacion que añade Calamity sobre bytes libres del mismo campo prefix.
             bool isCalamityPrefix = id >= 85;
             bool isCurrent = !slot.Item.Prefix.IsCalamity && slot.Item.Prefix.VanillaId == id;
             // Auditoria de Opus, D-6: efecto real del prefijo (numeros reales, no un nombre
             // opaco) - null para los de Calamity, ver PrefixCatalogEntryViewModel.
-            string? effect = isCalamityPrefix ? null : _service.PrefixEffects.Describe(id);
+            // Ronda de idioma del 6-sep-2026: PrefixEffectCatalog devolvia la frase ya redactada
+            // en español; ahora devuelve los efectos como DATOS (Effects) y los redacta la App.
+            string? effect = isCalamityPrefix ? null
+                : Services.ItemStatsTextBuilder.BuildPrefixEffects(_service.PrefixEffects.Effects(id));
             Prefixes.Add(new PrefixCatalogEntryViewModel(name, ItemPrefix.Vanilla((byte)id), isCalamityPrefix, isCurrent, effect));
         }
     }

@@ -62,7 +62,7 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
 
         foreach (var (id, name) in service.VanillaCatalog.AllEntries())
         {
-            string? stats = ItemStatsFormatter.Format(false, id, service.TooltipCatalogs);
+            var stats = ItemStatsFormatter.Describe(false, id, service.TooltipCatalogs);
             var rarityColor = VanillaRarityColorCatalog.Get(service.VanillaStats.Get(id)?.Rare);
             var item = new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats, rarityColor);
             _all.Add(item);
@@ -72,7 +72,7 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
         foreach (var entry in service.CalamityCatalog.Entries)
         {
             string? iconPath = entry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
-            string? stats = ItemStatsFormatter.Format(true, entry.SyntheticId, service.TooltipCatalogs);
+            var stats = ItemStatsFormatter.Describe(true, entry.SyntheticId, service.TooltipCatalogs);
             var item = new LibraryItemViewModel(entry.DisplayName, true, iconPath, entry.SyntheticId, entry.Category, stats);
             _all.Add(item);
             _byId[entry.SyntheticId] = item;
@@ -88,7 +88,21 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
         // real en CategoryNodeViewModel.SelectCommand.
         CategoryNodeViewModel.AssignSelectCommand(RootCategories, SelectCategoryCommand);
 
+        // Ronda de idioma del 6-sep-2026: el tooltip de estadisticas de cada tarjeta se redacta
+        // al leerlo, asi que al cambiar de idioma basta con avisar. UNA sola suscripcion aqui que
+        // reparte a las 8821 entradas (LibraryItemViewModel.RefrescarIdioma) - una suscripcion
+        // por entrada seria un derroche. Evento DEBIL, mismo motivo real que
+        // LocalizedContentViewModel: LocalizationService.Instance es un singleton que vive lo que
+        // la aplicacion y este ViewModel no.
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            LocalizationService.Instance, OnIdiomaCambiadoRefrescarTarjetas, "Item[]");
+
         ApplyFilter();
+    }
+
+    private void OnIdiomaCambiadoRefrescarTarjetas(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        foreach (var item in _all) item.RefrescarIdioma();
     }
 
     protected override void ApplyFilter()

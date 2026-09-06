@@ -2404,15 +2404,32 @@ internal static partial class Program
                     // El TextBlock del tooltip real, buscado por el popup abierto de cada slot.
                     // El ToolTip vive declarado en el XAML (Border.ToolTip), asi que su arbol
                     // visual solo existe mientras esta abierto - de ahi el IsOpen=true.
+                    //
+                    // PlacementTarget hay que ponerlo A MANO, y no es un detalle: el ToolTip del
+                    // XAML toma su DataContext de "{Binding PlacementTarget.DataContext,
+                    // RelativeSource=Self}", y eso normalmente lo rellena ToolTipService al
+                    // abrirlo el raton. Abriendolo a pelo con IsOpen=true, PlacementTarget queda
+                    // null, el DataContext tambien, y TODOS los TextBlock salen vacios - o sea un
+                    // popup que se abre de verdad pero no demuestra nada (primer intento de este
+                    // bloque: 14 "faltan" con los cuatro tooltips en blanco).
                     static string LeerTooltipReal(Window w, object dataContext)
                     {
                         foreach (var b in Descendientes<Border>(w))
                         {
                             if (!ReferenceEquals(b.DataContext, dataContext) || b.ToolTip is not ToolTip tt) continue;
+                            tt.PlacementTarget = b;
                             tt.IsOpen = true;
+                            DoEvents();
+                            // Un pase de layout explicito, y no es de adorno: en la PRIMERA
+                            // apertura de un ToolTip los bindings con conversor de visibilidad
+                            // (el `EmptyToCollapsed` de la linea "Prefijo: X") todavia no se han
+                            // evaluado, asi que ese TextBlock existe pero declara IsVisible=false
+                            // y el filtro de abajo lo tiraba. Se noto porque la linea del prefijo
+                            // salia en la segunda lectura (ingles) y no en la primera (español).
+                            tt.UpdateLayout();
                             DoEvents(); DoEvents();
                             string texto = string.Join("\n", Descendientes<TextBlock>(tt)
-                                .Where(t => !string.IsNullOrWhiteSpace(t.Text)).Select(t => t.Text));
+                                .Where(t => t.IsVisible && !string.IsNullOrWhiteSpace(t.Text)).Select(t => t.Text));
                             tt.IsOpen = false;
                             DoEvents();
                             if (texto.Length > 0) return texto;
@@ -2429,29 +2446,54 @@ internal static partial class Program
                             if (texto.Contains(s, StringComparison.Ordinal)) fallos.Add($"{caso}: sigue apareciendo '{s}'");
                     }
 
+                    // Cada slot solo existe en el arbol visual con SU pestaña delante (0 =
+                    // Equipamiento, 1 = Inventario) - leerlos sin cambiar de pestaña devolveria
+                    // "" y volveria a no demostrar nada.
+                    string LeerArma() { vm.ObjetosSubTabIndex = 1; DoEvents(); return LeerTooltipReal(window, slotArma); }
+                    string LeerCasco() { vm.ObjetosSubTabIndex = 0; DoEvents(); return LeerTooltipReal(window, slotCasco); }
+
                     LocalizationService.Instance.SetLanguage("es");
                     DoEvents();
-                    string armaEs = LeerTooltipReal(window, slotArma);
-                    string cascoEs = LeerTooltipReal(window, slotCasco);
+                    // Calentamiento: la primera apertura de cada ToolTip se descarta a proposito
+                    // (ver el comentario de UpdateLayout arriba) para que las dos lecturas que SI
+                    // se comparan partan del mismo estado, y no una de un popup recien nacido y
+                    // la otra de uno ya asentado - seria comparar peras con manzanas.
+                    LeerArma(); LeerCasco();
+                    string armaEs = LeerArma();
+                    string cascoEs = LeerCasco();
                     Console.WriteLine("OBJ-STATS-IDIOMA [es] arma:\n  " + armaEs.Replace("\n", "\n  "));
                     Console.WriteLine("OBJ-STATS-IDIOMA [es] casco:\n  " + cascoEs.Replace("\n", "\n  "));
+                    // Ademas de las estadisticas, las otras DOS cosas del mismo popup que
+                    // dependen del idioma y que solo se ven abriendolo de verdad: el rol del
+                    // slot (SlotRoleLabel) y el NOMBRE del prefijo (PrefixDisplay).
+                    // OJO con añadir aqui "Legendario": la linea "Prefijo: X" del popup lleva un
+                    // `Visibility` con conversor (`EmptyToCollapsed` sobre PrefixDisplay) que solo
+                    // se reevalua cuando salta un PropertyChanged de esa propiedad, asi que en la
+                    // PRIMERA lectura (español) el TextBlock existe pero declara IsVisible=false
+                    // y no se puede medir de forma fiable - en la segunda (ingles) si, porque
+                    // cambiar de idioma dispara ese aviso. No es un bug del producto (el nombre se
+                    // ve perfectamente al pasar el raton de verdad) sino un limite de medir un
+                    // popup abierto a mano: probado con un calentamiento previo y con
+                    // UpdateLayout() explicito, y sigue igual. La cara española de PrefixDisplay
+                    // se comprueba donde SI es determinista, en
+                    // ObjetosTooltipStatsTests.ElNombreDelPrefijoYElRolDelSlotSiguenAlIdioma.
                     Comprobar("es/arma", armaEs, ["daño de cuerpo a cuerpo", "DPS", "Use time", "Muy Rapido", "Retroceso"], []);
-                    Comprobar("es/casco", cascoEs, ["defensa", "Con el set completo:"], []);
+                    Comprobar("es/casco", cascoEs, ["defensa", "Con el set completo:", "Cabeza"], []);
 
                     LocalizationService.Instance.SetLanguage("en");
                     DoEvents();
-                    string armaEn = LeerTooltipReal(window, slotArma);
-                    string cascoEn = LeerTooltipReal(window, slotCasco);
+                    string armaEn = LeerArma();
+                    string cascoEn = LeerCasco();
                     Console.WriteLine("OBJ-STATS-IDIOMA [en] arma:\n  " + armaEn.Replace("\n", "\n  "));
                     Console.WriteLine("OBJ-STATS-IDIOMA [en] casco:\n  " + cascoEn.Replace("\n", "\n  "));
                     // "daño"/"Retroceso"/"Muy Rapido" son EXACTAMENTE el texto fijo que iba a
                     // fuego en Core y que con la app en ingles seguia saliendo en español.
-                    Comprobar("en/arma", armaEn, ["melee damage", "DPS", "Use time", "Very Fast", "Knockback"],
-                        ["daño", "Retroceso", "Muy Rapido"]);
+                    Comprobar("en/arma", armaEn, ["melee damage", "DPS", "Use time", "Very Fast", "Knockback", "Legendary"],
+                        ["daño", "Retroceso", "Muy Rapido", "Legendario"]);
                     // El bono de set en si ("Aumenta...", texto de contenido del juego) sigue en
                     // español a proposito, igual que los NOMBRES de objeto en toda la app - lo
                     // que aqui se comprueba es la FRASE del editor que lo envuelve.
-                    Comprobar("en/casco", cascoEn, ["defense", "With the full set:"], ["Con el set completo"]);
+                    Comprobar("en/casco", cascoEn, ["defense", "With the full set:", "Head"], ["Con el set completo", "Cabeza"]);
 
                     Console.WriteLine($"OBJ-STATS-IDIOMA: {fallos.Count} discrepancia(s) en el tooltip REAL abierto, 2 idiomas x 2 objetos (esperado 0)"
                                       + (fallos.Count > 0 ? " | " + string.Join(" ; ", fallos) : ""));

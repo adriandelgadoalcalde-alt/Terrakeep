@@ -16,13 +16,16 @@ public sealed partial class BuildItemRowViewModel : ObservableObject
 {
     private readonly BuildItemRef _source;
 
-    public BuildItemRowViewModel(BuildItemRef source, string? prefixText, string? iconPath, bool isCalamity, string? statsTooltip, int itemId)
+    // Ronda de idioma del 6-sep-2026: `statsTooltip` era un string YA redactado (en español a
+    // fuego) y se quedaba congelado en ese idioma - ahora entran los DATOS (ItemStatsInfo) y la
+    // frase se redacta al leerla, ver ItemStatsInfo.cs.
+    public BuildItemRowViewModel(BuildItemRef source, string? prefixText, string? iconPath, bool isCalamity, ItemStatsInfo? stats, int itemId)
     {
         _source = source;
         PrefixText = prefixText;
         IconPath = iconPath;
         IsCalamity = isCalamity;
-        StatsTooltip = statsTooltip;
+        _stats = stats;
         ItemId = itemId;
         PropertyChangedEventManager.AddHandler(Services.LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
@@ -34,9 +37,15 @@ public sealed partial class BuildItemRowViewModel : ObservableObject
     public string? PrefixText { get; }
     public string? IconPath { get; }
     public bool IsCalamity { get; }
-    public string? StatsTooltip { get; }
 
-    private void OnIdiomaCambiado(object? sender, PropertyChangedEventArgs e) => OnPropertyChanged(nameof(DisplayName));
+    private readonly ItemStatsInfo? _stats;
+    public string? StatsTooltip => Services.ItemStatsTextBuilder.Build(_stats);
+
+    private void OnIdiomaCambiado(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(StatsTooltip));
+    }
     // Id real vanilla o sintetico de Calamity - 0 si el pid del build no se resolvio (mismo
     // caso real que AutoEquipService cuenta como "sin resolver", ver Bd-c). Usado solo para
     // calcular IsOwned, ver BuildsViewModel.RefreshOwnership.

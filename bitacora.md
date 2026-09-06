@@ -11540,6 +11540,178 @@ salida de la sesion para no tocar los de otro agente ni el `Terrakeep.exe` real 
 
 ---
 
+## 6-sep-2026 - El tooltip de estadisticas ya habla ingles: Core CALCULA, App REDACTA
+
+Cierra el hallazgo que la oleada de QA de **Personaje -> Objetos** dejo medido y sin tocar el
+mismo dia: *"`ItemStatsFormatter` compone TODO el texto en español a fuego, asi que con la app en
+ingles los tooltips de estadisticas siguen en español. No lo ve el barrido de idioma (son popups)
+y migrarlo cruza la frontera Core/App"*.
+
+### El problema real, y por que no valia el arreglo obvio
+
+`ItemStatsFormatter.Format(...)` devolvia UN `string` ya redactado, mezclando datos y palabras:
+`"12 daño de cuerpo a cuerpo (~36 DPS)"`, `"Use time 20 (3/s, Muy Rapido)"`, `"Retroceso 5.5
+(Normal)"`, `"Con el set completo: ..."`, `"+15% de daño, +5 % de probabilidad de golpe
+critico..."`. El arreglo obvio -inyectarle `LocalizationService`- es **inaceptable**:
+`TerrasavrNative.Core` se compila para `net10.0` **y para `net8.0`** porque lo reutiliza el mod de
+tModLoader (repo hermano `TerrakeepMod`), y `LocalizationService` es WPF/App.
+
+### La separacion que queda
+
+| | quien | que hace |
+|---|---|---|
+| `TerrasavrNative.Core/Data/ItemStatsInfo.cs` (nuevo) | Core | el DTO: numeros + enums, **cero palabras** |
+| `TerrasavrNative.Core/Data/ItemStatsFormatter.Describe(...)` | Core | CALCULA: daño/DPS, defensa, critico, tramo de velocidad de uso (8), tramo de retroceso (8), tipo de daño, que piezas forman el set |
+| `TerrasavrNative.App/Services/ItemStatsTextBuilder.cs` (nuevo) | App | REDACTA la frase final con `Loc[...]`/`Loc.Format(...)` |
+
+`Format(...)` ya no existe: se renombro a `Describe(...)` y cambio de tipo de retorno
+(`ItemStatsInfo?`). No se dejo envoltorio de compatibilidad a proposito - devolver un string en
+español seguiria siendo exactamente el bug -, y esta comprobado que `TerrakeepMod` no lo usa
+(grep real sobre el repo hermano: 0 referencias).
+
+Lo mismo con `PrefixEffectCatalog.Describe(prefixId)` -> **`Effects(prefixId)`**, que ahora
+devuelve `IReadOnlyList<ItemPrefixStatEffect>` (`Stat` + `Amount` ya formateado: `"+15%"`, `"+5"`,
+`"-10%"` - simbolos, nunca palabras).
+
+Los unicos `string` que siguen viajando dentro del DTO son (a) numeros ya formateados en
+`InvariantCulture` (el punto decimal de `"5.5"` y `"3.33"` es el mismo en los dos idiomas, igual
+que antes) y (b) texto que ya viene traducido del propio asset de datos - ver el limite conocido
+mas abajo.
+
+### Claves de idioma nuevas: 46 en CADA `strings_*.json` (587 -> 633, los dos ficheros simetricos)
+
+11 `prefix_effect_*` (daño / critico / retroceso / tiempo de uso / tamaño / velocidad de disparo /
+coste de maná / defensa / maná maximo / velocidad de movimiento / velocidad cuerpo a cuerpo) +
+35 `stats_*` (6 tipos de daño + DPS, defensa, critico, velocidad de uso con sus 8 tramos,
+retroceso con sus 8 tramos, maná, curacion de vida/maná, rareza, y las 4 piezas de la frase de
+bono de set). Todas en snake_case con guion bajo, nunca con puntos.
+
+El español se conservo **caracter a caracter**, incluidas sus rarezas reales: el typo
+`"Extremandamente Debil"` (es del `Terrasavr.es-ES.json` original, no nuestro) y el espacio suelto
+de `"+5 % de probabilidad de golpe crítico"` - ahi el `%` es parte de la plantilla de idioma, no
+del numero, y por eso en ingles sale bien pegado (`"+5% critical strike chance"`).
+
+### Consumidores tocados (los 6 reales)
+
+`ItemSlotViewModel` (2 llamadas: `UpdateFrom` y `SetPrefix`), `LibraryViewModel` (2),
+`BuildsViewModel` (2), `WhatsNewItemViewModel` (2), mas `ItemEditViewModel` (el efecto de cada
+boton de prefijo del panel "Editar"). Todos guardan ahora el DTO y redactan **al leer la
+propiedad**, no al colocar el objeto: asi cambiar de idioma no obliga a nadie a acordarse de
+recalcular nada.
+
+Detalle de rendimiento en la Libreria: son **8821 entradas** reales, asi que ahi NO se suscribe
+una por una al servicio de idioma - `LibraryViewModel` se suscribe **una vez** y reparte
+(`LibraryItemViewModel.RefrescarIdioma`). Y `TooltipFolded` (el indice plegado de la busqueda
+`.texto`) pasa de "plegar una vez para siempre" a "plegar una vez **por idioma**, recordando
+cual": sigue sin plegarse nada en cada pulsacion, que era la razon de ser de C-09.
+
+### Dos bugs vecinos que aparecieron al abrir el popup DE VERDAD
+
+El bloque nuevo del arnes (`OBJ-STATS-IDIOMA`) no mira la propiedad del ViewModel: **abre el
+`ToolTip` real** (`IsOpen = true`) y lee los `TextBlock` que se pintan dentro. Eso es lo que
+convierte "el popup que el barrido de idioma nunca abre" en algo comprobable - y de paso enseño
+dos textos mas del MISMO tooltip que se quedaban en español con la app en ingles:
+
+1. **`SlotRoleLabel`** ("Cabeza" en vez de "Head"). Ya usaba `Loc[...]`, pero es una propiedad
+   calculada sin `PropertyChanged`: el `ToolTip` del XAML es **un objeto vivo que no se
+   reconstruye al reabrirlo**, asi que su binding se quedaba con el idioma de la PRIMERA apertura.
+2. **`PrefixDisplay`** ("Prefix: Legendario"). `calamity/prefixes.json` trae `es` **y** `en` desde
+   el primer dia y el codigo cogia siempre `Es ?? En` - el mismo bug exacto que esta misma ronda
+   de idioma ya habia cerrado en Builds y en Novedades. Arreglado con `LocalizedContent.Pick`.
+
+Los dos se arreglaron en el mismo `OnIdiomaCambiado` del slot. Y tirando de ese hilo aparecio la
+TERCERA copia del mismo `Es ?? En`: la LISTA de prefijos del panel "Editar"
+(`ItemEditViewModel.RebuildPrefixes`, vanilla y Rogue). Se arreglo tambien - dejarla habria sido
+peor que no tocar nada, porque el boton habria dicho "Legendario" justo al lado de un tooltip que
+ya dice "Legendary". De paso, el respaldo `"Prefijo #{id}"` de los tres sitios (un id de prefijo
+que no este en ningun catalogo) pasa a `"#{id}"`: era la ultima palabra española a fuego que
+quedaba en ese camino.
+
+El nombre del prefijo en ESPAÑOL no se puede medir de forma fiable en el popup abierto a mano (su
+`TextBlock` lleva un `Visibility` con conversor que solo se reevalua tras un `PropertyChanged` de
+`PrefixDisplay`, asi que en la primera lectura declara `IsVisible=false`; en la segunda si, porque
+cambiar de idioma dispara ese aviso). No es un bug del producto - al pasar el raton de verdad se
+ve -, es un limite de la medicion: probado con calentamiento previo y con `UpdateLayout()`
+explicito, y sigue igual. Por eso la cara española se comprueba donde SI es determinista, en
+`ObjetosTooltipStatsTests.ElNombreDelPrefijoYElRolDelSlotSiguenAlIdioma` (que ademas cubre
+`SlotRoleLabel` en los dos idiomas), y el arnes solo afirma sobre la inglesa - que es la que
+demuestra el arreglo.
+
+### Trampa real del arnes, anotada para no volver a caer
+
+Abrir un `ToolTip` a mano con `IsOpen = true` **no rellena `PlacementTarget`**, y el ToolTip del
+XAML toma su `DataContext` de `{Binding PlacementTarget.DataContext, RelativeSource=Self}`: sin
+ponerlo, el popup se abre de verdad pero TODOS sus `TextBlock` salen vacios. El primer intento de
+este bloque dio "14 faltan" con los cuatro tooltips en blanco - un falso negativo que parecia un
+bug del arreglo. Hay que asignar `tt.PlacementTarget = elemento` antes de `IsOpen`. Y cada slot
+solo existe en el arbol visual con SU pestaña delante (`ObjetosSubTabIndex` 0 = Equipamiento,
+1 = Inventario).
+
+### Limite conocido que esto NO cierra (medido, no estimado)
+
+El texto de CONTENIDO del juego sigue en español en los dos idiomas: el bono de set
+(`vanilla_armor_sets.json`, **61 textos distintos**, sacados de
+`Terraria.Localization.Content.es-ES.Game.json`), el tooltip descriptivo de vanilla y el
+`setBonus` de Calamity. Es exactamente el mismo limite que ya tienen los **nombres de objeto** en
+toda la app (`VanillaItemCatalog.GetName` devuelve un solo nombre, el español), asi que no es una
+incoherencia nueva de esta ronda. Lo que SI se traduce ahora es la frase del editor que lo
+envuelve: `"Con el set completo: X"` -> `"With the full set: X"`. Cerrarlo del todo es una ronda
+de DATOS aparte (volver a pasar `extraer-sets-armadura.py` / `extraer-tooltips-vanilla.py` contra
+el `en-US.Game.json` / `en-US.Items.json` reales y añadir un campo `en`), no de codigo.
+
+### Obstaculo del entorno resuelto por el camino (autonomia tecnica)
+
+`dotnet build` fallaba con `MSB3027`/`MSB3021` (no se podia copiar `TerrasavrNative.Core.dll`):
+lo bloqueaba un `Terrakeep.exe` de `bin/Debug` **abierto desde hacia 3 horas**, o sea un resto de
+una sesion anterior, no una app en uso. Se comprobo primero que no tenia cambios sin guardar (el
+titulo real de la ventana era `"Terrakeep - adrian"`, **sin** el marcador `●` que
+`MainViewModel.WindowTitle` añade cuando `IsDirty`) y se cerro con `CloseMainWindow()`, no con
+`Kill()`. Merece la pena mirar ese marcador antes de tocar nada: es la unica forma de saber desde
+fuera si esa ventana tiene trabajo dentro.
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos, y `TerrasavrNative.Core` compilado a proposito **por
+  separado en los DOS destinos** (`-f net10.0` y `-f net8.0 --no-incremental`, 0/0 en ambos) -
+  el mod de tModLoader sigue pudiendo consumir Core.
+- `dotnet test`: Core **441/441**, ViewModels **439/439**, 0 fallos (+5 pruebas nuevas en
+  `ObjetosTooltipStatsTests`: arma, armadura vanilla, armadura de Calamity, el bono de set
+  compuesto visto desde el peto, y nombre de prefijo + rol de slot - cada una en los dos idiomas).
+- Arnes de UI Automation: ejecucion completa hasta `DONE`, `OBJ-STATS-IDIOMA` en verde con
+  **0 discrepancias** sobre el popup real abierto, y el volcado literal de los cuatro tooltips:
+
+```
+[es] arma:                                    [en] arma:
+  Espada larga de hierro                        Espada larga de hierro
+  +15% de daño, +5 % de probabilidad de         Prefix: Legendary
+  golpe crítico, +15% de retroceso, ...         +15% damage, +5% critical strike chance, ...
+  12 daño de cuerpo a cuerpo (~36 DPS)          12 melee damage (~36 DPS)
+  Use time 20 (3/s, Muy Rapido)                 Use time 20 (3/s, Very Fast)
+  Retroceso 5.5 (Normal)                        Knockback 5.5 (Normal)
+
+[es] casco:                                   [en] casco:
+  Sombrero de Aerospec                          Sombrero de Aerospec
+  Cabeza                                        Head
+  3 defensa                                     3 defense
+  Con el set completo: Reduce el coste ...      With the full set: Reduce el coste ...
+```
+
+(La ultima linea enseña el limite de arriba con todas las letras: la frase del editor se traduce,
+el texto del juego que lleva dentro no - todavia.)
+
+El unico `FALLO` que queda en la ejecucion completa es **`T-H/F2` (el `FocusVisualStyle` al
+enfocar por teclado)**, y NO es de aqui - esta ronda no toca ni una linea de foco, de estilos ni
+de XAML. La causa esta a la vista en el propio bloque: depende de que
+`SetForegroundWindow(hwnd)` funcione de verdad, porque WPF solo adjunta el adorner de foco a la
+ventana ACTIVA del sistema. Con varias sesiones corriendo su propio arnes (y sus propias ventanas)
+a la vez, esa llamada se la lleva quien sea que este delante en ese instante. Es la misma
+intermitencia del **foco de teclado compartido** que ya hizo que `OBJ-10` acusara a la app de un
+bug que no tenia (ver la entrada de esa oleada, mismo dia). Prueba diferencial que lo respalda:
+no aparecio en la primera ejecucion de esta tanda y si en las tres siguientes, sin que nada
+relacionado cambiara por el camino.
+
+---
+
 ## 6-sep-2026 — "Mejor prefijo": el generador perdido, reconstruido desde la fórmula real del juego (243 → 948 objetos vanilla)
 
 Cierra el hallazgo que la oleada de QA de **Personaje → Objetos** dejó medido y sin tocar:

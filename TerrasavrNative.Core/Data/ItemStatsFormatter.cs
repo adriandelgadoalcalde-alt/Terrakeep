@@ -1,16 +1,15 @@
 using System.Globalization;
-using System.Text;
 using TerrasavrNative.Core.Calamity;
 using TerrasavrNative.Core.Model;
 
 namespace TerrasavrNative.Core.Data;
 
-// Los 6 catalogos reales que ItemStatsFormatter.Format necesita, agrupados en un unico record
+// Los 6 catalogos reales que ItemStatsFormatter.Describe necesita, agrupados en un unico record
 // - pregunta a Opus sobre el diseño 2-sep-2026, cuarta pasada. Antes eran 5 parametros sueltos
-// en la firma (ya dificil de no equivocarse al llamar) y con los 2 catalogos nuevos de esta
+// en la firma (ya dificil de no equivocarse al llamar) y con los 2 catalogos nuevos de esa
 // pasada (tooltips descriptivos, sets de armadura) habria llegado a 7 - un solo record que
-// CharacterFileService construye una vez y expone (TooltipCatalogs), y los 5 call sites reales
-// (LibraryViewModel, BuildsViewModel, ItemSlotViewModel) lo pasan tal cual.
+// CharacterFileService construye una vez y expone (TooltipCatalogs), y los call sites reales
+// (LibraryViewModel, BuildsViewModel, ItemSlotViewModel, WhatsNewItemViewModel) lo pasan tal cual.
 public sealed record ItemTooltipCatalogs(
     VanillaItemStatsCatalog Stats,
     CalamityCatalog Calamity,
@@ -22,28 +21,29 @@ public sealed record ItemTooltipCatalogs(
     CalamityArmorSetCatalog CalamityArmorSets,
     PrefixEffectCatalog PrefixEffects);
 
-// Texto de tooltip con las estadisticas reales de un objeto (daño/defensa/etc.) - pedido
-// explicito 1-sep-2026: "ninguna de las armas armaduras o accesorios... te muestran las
-// estadisticas como en terrasav". Reescrito 2-sep-2026 tras feedback real comparando con
-// capturas de Terrasavr: el formato anterior era demasiado plano ("Daño: 8") frente al real
-// ("8 daño de cuerpo a cuerpo (~40 DPS)"). Formulas y texto en español REALES, extraidas de
-// script.js (clase de formato de tooltip real, no adivinadas) y de
-// local-site/lang/lang.zip -> Terrasavr.es-ES.json (namespace "meta.item") - ver
-// bitacora.md para el detalle de la verificacion.
+// Estadisticas reales de un objeto (daño/defensa/etc.) - pedido explicito 1-sep-2026: "ninguna
+// de las armas armaduras o accesorios... te muestran las estadisticas como en terrasav".
+// Formulas y tramos REALES, extraidos de script.js (clase de formato de tooltip real, no
+// adivinadas) y de local-site/lang/lang.zip -> Terrasavr.es-ES.json (namespace "meta.item") -
+// ver bitacora.md para el detalle de la verificacion.
 //
-// Reescrito de nuevo 2-sep-2026 (cuarta pasada, pregunta a Opus sobre el diseño): pedido
-// explicito del usuario ("las armaduras no te dicen toda la información... los accesorios
-// tampoco... no te pone el porcentaje... y una pequeña descripción de lo que hace... si
-// tienes el set completo siempre hay una bonificacion"). Bug real de raiz: FormatLines
-// devolvia null si NINGUN campo NUMERICO estaba presente - un accesorio sin daño/defensa no
-// generaba ninguna linea, aunque tuviera un efecto real descrito en el juego. Ahora compone
-// por SECCIONES independientes (efecto de prefijo / stats numericos / tooltip descriptivo /
-// bonus de set), cada una opcional, null solo si TODAS estan vacias.
+// Compone por SECCIONES independientes (efecto de prefijo / stats numericos / tooltip
+// descriptivo / bonus de set), cada una opcional; devuelve null solo si TODAS estan vacias -
+// bug real de raiz de la cuarta pasada: un accesorio sin daño/defensa no generaba ninguna linea
+// aunque tuviera un efecto real descrito en el juego.
+//
+// Ronda de idioma del 6-sep-2026 - CAMBIO DE CONTRATO: antes esto devolvia un `string` ya
+// redactado en español a fuego ("Daño:", "Con el set completo:", "Muy Rapido"...), asi que con
+// la app en ingles los tooltips seguian en español y no habia forma de arreglarlo sin meter
+// `LocalizationService` (WPF, App) dentro de Core - imposible, Core se compila TAMBIEN para
+// net8.0 para el mod de tModLoader. Ahora devuelve DATOS (`ItemStatsInfo`: numeros + enums) y es
+// `TerrasavrNative.App/Services/ItemStatsTextBuilder` quien redacta la frase final con las
+// claves de idioma. Ver el comentario largo de ItemStatsInfo.cs.
 public static class ItemStatsFormatter
 {
-    public static string? Format(bool isCalamity, int id, ItemTooltipCatalogs catalogs, ItemPrefix? prefix = null)
+    public static ItemStatsInfo? Describe(bool isCalamity, int id, ItemTooltipCatalogs catalogs, ItemPrefix? prefix = null)
     {
-        var sections = new List<string>();
+        var info = new ItemStatsInfo();
 
         // Seccion 1 - efecto real del prefijo (numeros reales extraidos de
         // Item.TryGetPrefixStatMultipliersForItem/Player.GrantPrefixBenefits, nunca texto
@@ -51,10 +51,7 @@ public static class ItemStatsFormatter
         // se investigo esta pasada). El NOMBRE del prefijo ya se muestra aparte en el tooltip
         // compuesto de MainWindow.xaml - esto es solo el efecto numerico.
         if (prefix is { IsNone: false, IsCalamity: false } p)
-        {
-            string? effect = catalogs.PrefixEffects.Describe(p.VanillaId);
-            if (effect != null) sections.Add(effect);
-        }
+            info = info with { PrefixEffects = catalogs.PrefixEffects.Effects(p.VanillaId) };
 
         if (isCalamity)
         {
@@ -68,9 +65,9 @@ public static class ItemStatsFormatter
                 // para NINGUN objeto de Calamity (0 de 186 armaduras reales, comprobado antes
                 // de tocar nada) - ver scripts/extraer-defensa-calamity.js, que la extrae de
                 // verdad de Item.defense en el SetDefaults() real de cada objeto.
-                string? numeric = FormatLines(damage: s.Damage, damageLabel: DamageLabelForCalamity(s.DamageType), defense: s.Defense,
-                    crit: s.Crit, knockBack: s.KnockBack, useTime: s.UseTime, mana: s.Mana, healLife: null, healMana: null, rare: null);
-                if (numeric != null) sections.Add(numeric);
+                info = WithNumericStats(info, damage: s.Damage, damageKind: DamageKindForCalamity(s.DamageType),
+                    defense: s.Defense, crit: s.Crit, knockBack: s.KnockBack, useTime: s.UseTime,
+                    mana: s.Mana, healLife: null, healMana: null, rare: null);
             }
             // Bono de set completo real (pedido explicito del usuario: "la bonificacion por el
             // set no [aparece]") - texto real ya resuelto y traducido, ver
@@ -79,7 +76,7 @@ public static class ItemStatsFormatter
             // - 0/131 cuerpos/piernas lo tienen nunca).
             if (entry?.SetBonus != null)
             {
-                sections.Add($"Con el set completo: {entry.SetBonus}");
+                info = info with { SetBonusText = entry.SetBonus };
             }
             else
             {
@@ -93,17 +90,17 @@ public static class ItemStatsFormatter
                 {
                     var bodyEntry = catalogs.Calamity.BySyntheticId(setInfo.BodySyntheticId);
                     var legsEntry = setInfo.LegsSyntheticId is int legsId ? catalogs.Calamity.BySyntheticId(legsId) : null;
-                    string conjunto = legsEntry != null
-                        ? $"{bodyEntry?.DisplayName} y {legsEntry.DisplayName}"
-                        : bodyEntry?.DisplayName ?? "";
-                    var sb = new StringBuilder();
-                    sb.Append($"Con el set completo (con {conjunto}):");
+                    var heads = new List<CalamitySetBonusHead>(setInfo.Heads.Count);
                     foreach (var (headId, bonusText) in setInfo.Heads)
                     {
-                        string headName = catalogs.Calamity.BySyntheticId(headId)?.DisplayName ?? $"Item #{headId}";
-                        sb.Append($"\n· {headName}: {bonusText}");
+                        string headName = catalogs.Calamity.BySyntheticId(headId)?.DisplayName ?? $"#{headId}";
+                        heads.Add(new CalamitySetBonusHead(headName, bonusText));
                     }
-                    sections.Add(sb.ToString());
+                    info = info with
+                    {
+                        CalamitySetBonus = new CalamitySetBonusInfo(
+                            bodyEntry?.DisplayName ?? string.Empty, legsEntry?.DisplayName, heads),
+                    };
                 }
             }
         }
@@ -112,72 +109,70 @@ public static class ItemStatsFormatter
             var v = catalogs.Stats.Get(id);
             if (v != null)
             {
-                string? damageLabel = v.Damage is int ? DamageLabelForVanilla(catalogs.Categories.GetCategory(id)) : null;
-                string? numeric = FormatLines(damage: v.Damage, damageLabel: damageLabel, defense: v.Defense, crit: v.Crit,
-                    knockBack: v.KnockBack, useTime: v.UseTime, mana: v.Mana, healLife: v.HealLife, healMana: v.HealMana, rare: v.Rare);
-                if (numeric != null) sections.Add(numeric);
+                var damageKind = v.Damage is int ? DamageKindForVanilla(catalogs.Categories.GetCategory(id)) : ItemDamageKind.Unknown;
+                info = WithNumericStats(info, damage: v.Damage, damageKind: damageKind, defense: v.Defense,
+                    crit: v.Crit, knockBack: v.KnockBack, useTime: v.UseTime, mana: v.Mana,
+                    healLife: v.HealLife, healMana: v.HealMana, rare: v.Rare);
             }
 
             // Seccion 3 - tooltip descriptivo real (texto ya con los porcentajes rellenados
             // por el propio juego, ej. "Aumenta un 15% el daño cuerpo a cuerpo") - antes un
             // accesorio sin stats de combate no mostraba NADA.
-            string? tooltip = catalogs.Tooltips.Get(id);
-            if (tooltip != null) sections.Add(tooltip);
+            info = info with { DescriptiveTooltip = catalogs.Tooltips.Get(id) };
 
             // Seccion 4 - bonus de set completo. Estatico por id (no comprueba el equipo
             // puesto de verdad - lo consume tambien la Libreria sobre objetos sueltos, sin
-            // personaje cargado), etiquetado explicitamente para no fingir que ya esta activo.
+            // personaje cargado), etiquetado explicitamente por la App para no fingir que ya
+            // esta activo.
             var setInfo = catalogs.ArmorSets.Get(id);
-            if (setInfo != null)
-                sections.Add($"Con el set completo: {setInfo.Text}");
+            if (setInfo != null) info = info with { SetBonusText = setInfo.Text };
         }
 
-        return sections.Count > 0 ? string.Join("\n", sections) : null;
+        return info.IsEmpty ? null : info;
     }
 
-    // Etiqueta de tipo de daño real - vanilla la decide la categoria real ya extraida
-    // (VanillaCategoryCatalog, de los mismos bloques SetDefaults# de Item.cs), Calamity la
+    // Tipo de daño real - vanilla lo decide la categoria real ya extraida
+    // (VanillaCategoryCatalog, de los mismos bloques SetDefaults# de Item.cs), Calamity lo
     // decide el DamageType real (ej. "DamageClass.MeleeNoSpeed") por subcadena en vez de
     // mostrarlo en crudo como antes.
-    private static string? DamageLabelForVanilla(string category) => category switch
+    private static ItemDamageKind DamageKindForVanilla(string category) => category switch
     {
-        "Armas/Cuerpo a cuerpo" => "daño de cuerpo a cuerpo",
-        "Armas/A distancia" => "daño por rango",
-        "Armas/Magia" => "daño magico",
-        "Armas/Invocacion" => "daño de invocacion",
-        _ => null,
+        "Armas/Cuerpo a cuerpo" => ItemDamageKind.Melee,
+        "Armas/A distancia" => ItemDamageKind.Ranged,
+        "Armas/Magia" => ItemDamageKind.Magic,
+        "Armas/Invocacion" => ItemDamageKind.Summon,
+        _ => ItemDamageKind.Unknown,
     };
 
-    private static string? DamageLabelForCalamity(string? damageType)
+    private static ItemDamageKind DamageKindForCalamity(string? damageType)
     {
-        if (string.IsNullOrEmpty(damageType)) return null;
-        if (damageType.Contains("Rogue", StringComparison.OrdinalIgnoreCase)) return "daño Picaro";
-        if (damageType.Contains("Melee", StringComparison.OrdinalIgnoreCase)) return "daño de cuerpo a cuerpo";
-        if (damageType.Contains("Ranged", StringComparison.OrdinalIgnoreCase)) return "daño por rango";
-        if (damageType.Contains("Magic", StringComparison.OrdinalIgnoreCase)) return "daño magico";
-        if (damageType.Contains("Summon", StringComparison.OrdinalIgnoreCase)) return "daño de invocacion";
-        return null;
+        if (string.IsNullOrEmpty(damageType)) return ItemDamageKind.Unknown;
+        if (damageType.Contains("Rogue", StringComparison.OrdinalIgnoreCase)) return ItemDamageKind.Rogue;
+        if (damageType.Contains("Melee", StringComparison.OrdinalIgnoreCase)) return ItemDamageKind.Melee;
+        if (damageType.Contains("Ranged", StringComparison.OrdinalIgnoreCase)) return ItemDamageKind.Ranged;
+        if (damageType.Contains("Magic", StringComparison.OrdinalIgnoreCase)) return ItemDamageKind.Magic;
+        if (damageType.Contains("Summon", StringComparison.OrdinalIgnoreCase)) return ItemDamageKind.Summon;
+        return ItemDamageKind.Unknown;
     }
 
-    private static string? FormatLines(int? damage, string? damageLabel, int? defense, int? crit, double? knockBack,
-        int? useTime, int? mana, int? healLife, int? healMana, int? rare)
+    private static ItemStatsInfo WithNumericStats(ItemStatsInfo info, int? damage, ItemDamageKind damageKind,
+        int? defense, int? crit, double? knockBack, int? useTime, int? mana, int? healLife, int? healMana, int? rare)
     {
-        var sb = new StringBuilder();
-        void Line(string text)
+        info = info with
         {
-            if (sb.Length > 0) sb.Append('\n');
-            sb.Append(text);
-        }
+            Damage = damage,
+            DamageKind = damage is int ? damageKind : ItemDamageKind.Unknown,
+            Dps = damage is int d && useTime is int dpsUseTime && dpsUseTime > 0
+                ? (int)Math.Round(60.0 * d / dpsUseTime)
+                : null,
+            Defense = defense,
+            CritChance = crit,
+            ManaCost = mana,
+            HealLife = healLife,
+            HealMana = healMana,
+            Rarity = rare,
+        };
 
-        if (damage is int d)
-        {
-            string line = damageLabel != null ? $"{d} {damageLabel}" : $"{d} de daño";
-            if (useTime is int dpsUseTime && dpsUseTime > 0)
-                line += $" (~{Math.Round(60.0 * d / dpsUseTime)} DPS)";
-            Line(line);
-        }
-        if (defense is int def) Line($"{def} defensa");
-        if (crit is int c) Line($"{c}% chance de golpe critico");
         // Velocidad de uso y retroceso solo se muestran junto al daño (objetos de combate
         // real) - todo objeto colocable/consumible tiene tambien un useTime real en
         // Item.cs (velocidad de animacion al colocar/beber), pero mostrarlo ahi como si
@@ -185,53 +180,56 @@ public static class ItemStatsFormatter
         // "Tierra"/pociones mostraban "Use time" sin venir a cuento).
         if (damage.HasValue)
         {
-            if (useTime is int ut) Line(FormatUseTime(ut));
-            if (knockBack is double kb) Line(FormatKnockback(kb));
+            if (useTime is int ut)
+            {
+                info = info with
+                {
+                    UseTime = ut,
+                    UseTimePerSecond = FormatNumber(Math.Floor(6000.0 / ut) / 100.0),
+                    UseTimeTier = TierForUseTime(ut),
+                };
+            }
+            if (knockBack is double kb)
+            {
+                info = info with
+                {
+                    Knockback = FormatNumber(kb),
+                    KnockbackTier = TierForKnockback(kb),
+                };
+            }
         }
-        if (mana is int m) Line($"Costo {m} mana");
-        if (healLife is int hl) Line($"Restaura {hl} de Vida");
-        if (healMana is int hm) Line($"Restaura {hm} de Mana");
-        if (rare is int r) Line($"Rareza {r}");
 
-        return sb.Length > 0 ? sb.ToString() : null;
+        return info;
     }
 
-    // "Use time $1 ($2/s, $3)" real - ritmo por segundo = floor(6000/useTime)/100 (real,
-    // confirmado: useTime=12 -> floor(500)/100 = 5), descriptor de 8 tramos reales (texto
-    // real de Terrasavr.es-ES.json, namespace meta.item.useTime.*).
-    private static string FormatUseTime(int useTime)
+    // Los 8 tramos reales de velocidad de uso (el ritmo por segundo = floor(6000/useTime)/100 es
+    // real y esta confirmado: useTime=12 -> floor(500)/100 = 5).
+    private static ItemUseTimeTier TierForUseTime(int useTime) => useTime switch
     {
-        double perSecond = Math.Floor(6000.0 / useTime) / 100.0;
-        string descriptor = useTime switch
-        {
-            <= 8 => "Locamente Rapido",
-            <= 20 => "Muy Rapido",
-            <= 25 => "Rapido",
-            <= 30 => "Normal",
-            <= 35 => "Lento",
-            <= 45 => "Muy Lento",
-            <= 55 => "Extremadamente Lento",
-            _ => "Locamente Lento",
-        };
-        return $"Use time {useTime} ({perSecond.ToString("0.##", CultureInfo.InvariantCulture)}/s, {descriptor})";
-    }
+        <= 8 => ItemUseTimeTier.InsanelyFast,
+        <= 20 => ItemUseTimeTier.VeryFast,
+        <= 25 => ItemUseTimeTier.Fast,
+        <= 30 => ItemUseTimeTier.Normal,
+        <= 35 => ItemUseTimeTier.Slow,
+        <= 45 => ItemUseTimeTier.VerySlow,
+        <= 55 => ItemUseTimeTier.ExtremelySlow,
+        _ => ItemUseTimeTier.InsanelySlow,
+    };
 
-    // "Retroceso $1 ($2)" real, 8 tramos reales (texto real de Terrasavr.es-ES.json,
-    // namespace meta.item.knockback.* - incluido el typo real "Extremandamente" en el tramo
-    // mas debil, no es nuestro, no se corrige).
-    private static string FormatKnockback(double knockBack)
+    // Los 8 tramos reales de retroceso.
+    private static ItemKnockbackTier TierForKnockback(double knockBack) => knockBack switch
     {
-        string descriptor = knockBack switch
-        {
-            <= 1.5 => "Extremandamente Debil",
-            <= 3 => "Muy Debil",
-            <= 4 => "Debil",
-            <= 6 => "Normal",
-            <= 7 => "Fuerte",
-            <= 9 => "Muy fuerte",
-            <= 11 => "Extremadamente Fuerte",
-            _ => "Demente",
-        };
-        return $"Retroceso {knockBack.ToString("0.##", CultureInfo.InvariantCulture)} ({descriptor})";
-    }
+        <= 1.5 => ItemKnockbackTier.ExtremelyWeak,
+        <= 3 => ItemKnockbackTier.VeryWeak,
+        <= 4 => ItemKnockbackTier.Weak,
+        <= 6 => ItemKnockbackTier.Normal,
+        <= 7 => ItemKnockbackTier.Strong,
+        <= 9 => ItemKnockbackTier.VeryStrong,
+        <= 11 => ItemKnockbackTier.ExtremelyStrong,
+        _ => ItemKnockbackTier.Insane,
+    };
+
+    // InvariantCulture a proposito, en los dos idiomas: punto decimal siempre (es lo que ya hacia
+    // el codigo anterior y lo que esperan las pruebas reales - "Retroceso 5.5", nunca "5,5").
+    private static string FormatNumber(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 }

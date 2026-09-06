@@ -50,8 +50,8 @@ public sealed class WhatsNewIconTests
 
     // C-17 (informe de pulido final, cierra la otra mitad de N1): "como en calamity mod y
     // tmodloader" - StatsTooltip usa la MISMA llamada exacta que LibraryViewModel
-    // (ItemStatsFormatter.Format(isCalamity, id, catalogs)), asi que tiene que dar el MISMO
-    // texto real que ve la Libreria para ese mismo id.
+    // (ItemStatsFormatter.Describe(isCalamity, id, catalogs) + ItemStatsTextBuilder.Build), asi
+    // que tiene que dar el MISMO texto real que ve la Libreria para ese mismo id.
     [Fact]
     public void StatsTooltip_MismoTextoRealQueLaTarjetaDeLaLibreriaParaElMismoId()
     {
@@ -62,7 +62,8 @@ public sealed class WhatsNewIconTests
         var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.WhatsNewItemIds, Service.TooltipCatalogs);
 
         int ironBroadswordId = Service.VanillaCatalog.GetIdByKey("IronBroadsword")!.Value;
-        string? esperado = ItemStatsFormatter.Format(false, ironBroadswordId, Service.TooltipCatalogs);
+        string? esperado = TerrasavrNative.App.Services.ItemStatsTextBuilder.Build(
+            ItemStatsFormatter.Describe(false, ironBroadswordId, Service.TooltipCatalogs));
 
         var item = vm.VanillaEntries[0].Items[0];
 

@@ -32,10 +32,6 @@ public sealed class PrefixEffectCatalog
 
     private PrefixEffectCatalog(Dictionary<int, RawEffect> byId) => _byId = byId;
 
-    // Texto real en español, compuesto a partir de los numeros reales (nunca una frase
-    // inventada) - mismo criterio de "+X%"/"-X%" que ya usa ItemStatsFormatter para
-    // daño/defensa/critico. Devuelve null si el prefijo no tiene ningun efecto real conocido
-    // (ej. prefijos de Calamity/mods, fuera de este catalogo vanilla-only).
     // H3-08 (tercera auditoria de Opus, Fable): "Defensa total" solo sumaba la defensa base de
     // cada pieza, ignorando los prefijos de accesorio reales (Warding/Guarding/Menacing/etc,
     // confirmados contra Player.GrantPrefixBenefits decompilado: prefijos 62/63/64/65 ->
@@ -46,41 +42,52 @@ public sealed class PrefixEffectCatalog
     public int GetDefenseBonus(int prefixId) =>
         _byId.TryGetValue(prefixId, out var e) ? (int)Math.Round(e.StatDefense ?? 0) : 0;
 
-    public string? Describe(int prefixId)
+    // Efectos reales del prefijo, YA calculados pero SIN redactar: que estadistica toca cada uno
+    // (ItemPrefixStat) y el numero con su signo y su "%" cuando toca ("+15%", "-10%", "+1"). La
+    // frase entera ("+15% de daño" / "+15% damage") la compone la App con las claves de idioma -
+    // ronda de idioma del 6-sep-2026, ver el comentario largo de ItemStatsInfo.cs. Antes esto
+    // era `Describe()`, que devolvia la frase ya en español a fuego y por eso el tooltip nunca
+    // se traducia. Lista VACIA (nunca null) si el prefijo no tiene ningun efecto real conocido
+    // - ej. prefijos de Calamity/mods, fuera de este catalogo vanilla-only.
+    public IReadOnlyList<ItemPrefixStatEffect> Effects(int prefixId)
     {
-        if (!_byId.TryGetValue(prefixId, out var e)) return null;
+        if (!_byId.TryGetValue(prefixId, out var e)) return [];
 
-        var parts = new List<string>();
-        void Mult(double? value, string label)
+        var parts = new List<ItemPrefixStatEffect>();
+        // Multiplicador relativo a 1.0 (armas): 1.15 -> "+15%".
+        void Mult(double? value, ItemPrefixStat stat)
         {
             if (value is not double v || v == 1.0) return;
             double pct = Math.Round((v - 1.0) * 100.0);
-            parts.Add($"{FormatSigned(pct)}% {label}");
+            parts.Add(new ItemPrefixStatEffect(stat, $"{FormatSigned(pct)}%"));
         }
-        void Flat(double? value, string label, bool isPercent)
+        // Bono plano (accesorios). `isPercent` decide si el propio numero lleva el "%" pegado; el
+        // critico NO lo lleva aqui a proposito, porque el "%" es parte de su plantilla de idioma
+        // (en español va separado: "+5 % de probabilidad de golpe crítico").
+        void Flat(double? value, ItemPrefixStat stat, bool isPercent)
         {
             if (value is not double v || v == 0.0) return;
             string amount = isPercent
                 ? $"{FormatSigned(Math.Round(v * 100.0))}%"
                 : FormatSigned(v);
-            parts.Add($"{amount} {label}");
+            parts.Add(new ItemPrefixStatEffect(stat, amount));
         }
 
-        Mult(e.Dmg, "de daño");
-        Flat(e.AllDamage, "de daño", isPercent: true);
-        Flat(e.Crt, "% de probabilidad de golpe crítico", isPercent: false);
-        Flat(e.AllCrit, "% de probabilidad de golpe crítico", isPercent: false);
-        Mult(e.Kb, "de retroceso");
-        Mult(e.Spd, "de tiempo de uso");
-        Mult(e.Size, "de tamaño");
-        Mult(e.Shtspd, "de velocidad de disparo");
-        Mult(e.Mcst, "de coste de maná");
-        Flat(e.StatDefense, "de defensa", isPercent: false);
-        Flat(e.StatManaMax2, "de maná máximo", isPercent: false);
-        Flat(e.MoveSpeed, "de velocidad de movimiento", isPercent: true);
-        Flat(e.MeleeSpeed, "de velocidad de ataque cuerpo a cuerpo", isPercent: true);
+        Mult(e.Dmg, ItemPrefixStat.Damage);
+        Flat(e.AllDamage, ItemPrefixStat.Damage, isPercent: true);
+        Flat(e.Crt, ItemPrefixStat.CritChance, isPercent: false);
+        Flat(e.AllCrit, ItemPrefixStat.CritChance, isPercent: false);
+        Mult(e.Kb, ItemPrefixStat.Knockback);
+        Mult(e.Spd, ItemPrefixStat.UseTime);
+        Mult(e.Size, ItemPrefixStat.Size);
+        Mult(e.Shtspd, ItemPrefixStat.ShootSpeed);
+        Mult(e.Mcst, ItemPrefixStat.ManaCost);
+        Flat(e.StatDefense, ItemPrefixStat.Defense, isPercent: false);
+        Flat(e.StatManaMax2, ItemPrefixStat.MaxMana, isPercent: false);
+        Flat(e.MoveSpeed, ItemPrefixStat.MoveSpeed, isPercent: true);
+        Flat(e.MeleeSpeed, ItemPrefixStat.MeleeSpeed, isPercent: true);
 
-        return parts.Count > 0 ? string.Join(", ", parts) : null;
+        return parts;
     }
 
     private static string FormatSigned(double value)

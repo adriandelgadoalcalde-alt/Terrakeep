@@ -23,16 +23,24 @@ public sealed class WhatsNewItemViewModel : LocalizedContentViewModel
     // (sprite, nombre con color de rareza, daño/DPS, defensa, critico, tooltip real), sin
     // escribir ni un texto nuevo. Null si el nombre interno no se reconoce (mismo criterio que
     // IconPath) o si el objeto no tiene ninguna estadistica/tooltip real conocido.
-    public string? StatsTooltip { get; }
+    // Ronda de idioma del 6-sep-2026: guarda los DATOS (ItemStatsInfo) y redacta al leer, para
+    // que cambiar de idioma en vivo tambien traduzca este tooltip - ver ItemStatsInfo.cs.
+    public string? StatsTooltip => Services.ItemStatsTextBuilder.Build(_stats);
 
-    private WhatsNewItemViewModel(WhatsNewItem item, string? iconPath, string? statsTooltip)
+    private readonly ItemStatsInfo? _stats;
+
+    private WhatsNewItemViewModel(WhatsNewItem item, string? iconPath, ItemStatsInfo? stats)
     {
         _item = item;
         IconPath = iconPath;
-        StatsTooltip = statsTooltip;
+        _stats = stats;
     }
 
-    protected override void RefrescarTextos() => Avisar(nameof(DisplayName));
+    protected override void RefrescarTextos()
+    {
+        Avisar(nameof(DisplayName));
+        Avisar(nameof(StatsTooltip));
+    }
 
     // C-16 (informe de pulido final, cierra media N1): whatsNewIds es el catalogo SEPARADO de
     // solo lectura para objetos 1.4.5+ (por encima del maximo real de vanillaCatalog) - se
@@ -43,7 +51,7 @@ public sealed class WhatsNewItemViewModel : LocalizedContentViewModel
     {
         int? id = item.Key != null ? vanillaCatalog.GetIdByKey(item.Key) ?? whatsNewIds.GetIdByKey(item.Key) : null;
         return new(item, id is int i ? VanillaIconResolver.GetIconPath(i) : null,
-            id is int i2 ? ItemStatsFormatter.Format(false, i2, catalogs) : null);
+            id is int i2 ? ItemStatsFormatter.Describe(false, i2, catalogs) : null);
     }
 
     // Pedido explicito del usuario (2-sep-2026): gemelo real de arriba, para la pestaña de
@@ -60,7 +68,7 @@ public sealed class WhatsNewItemViewModel : LocalizedContentViewModel
     {
         var entry = item.Key != null ? calamityCatalog.ByModAndInternal("CalamityMod", item.Key) : null;
         string? iconPath = entry?.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
-        string? statsTooltip = entry != null ? ItemStatsFormatter.Format(true, entry.SyntheticId, catalogs) : null;
-        return new(item, iconPath, statsTooltip);
+        var stats = entry != null ? ItemStatsFormatter.Describe(true, entry.SyntheticId, catalogs) : null;
+        return new(item, iconPath, stats);
     }
 }

@@ -103,7 +103,14 @@ public partial class ItemSlotViewModel : ObservableObject
     [ObservableProperty] private string _prefixDisplay = string.Empty;
     [ObservableProperty] private bool _hasBestPrefixSuggestion;
     [ObservableProperty] private string? _iconPath;
-    [ObservableProperty] private string? _statsTooltip;
+
+    // Ronda de idioma del 6-sep-2026: antes esto era `[ObservableProperty] private string?
+    // _statsTooltip`, un texto YA redactado (en español a fuego, ver ItemStatsFormatter) que se
+    // congelaba en el idioma que hubiera al colocar el objeto. Ahora se guardan los DATOS reales
+    // (ItemStatsInfo, sin idioma) y la frase se redacta en cada lectura con el idioma activo -
+    // asi el tooltip cambia de idioma en vivo sin que nadie tenga que acordarse de recalcularlo.
+    private ItemStatsInfo? _stats;
+    public string? StatsTooltip => ItemStatsTextBuilder.Build(_stats);
     // Auditoria de Opus, D-3: color REAL de rareza de Terraria (VanillaRarityColorCatalog) para
     // pintar el NOMBRE del objeto, en vez de "Rareza N" como texto plano - null para Calamity
     // (rarezas propias, no investigadas esta pasada) o rareza sin color real conocido.
@@ -168,6 +175,25 @@ public partial class ItemSlotViewModel : ObservableObject
         IsMasterAccessorySlot = isMasterAccessorySlot;
         _onItemChanged = onItemChanged;
         UpdateFrom(item);
+        // Ronda de idioma del 6-sep-2026: StatsTooltip se redacta al leerlo, asi que al cambiar
+        // de idioma solo hace falta avisar de que hay que volver a leerlo. Evento DEBIL, mismo
+        // motivo real que LocalizedContentViewModel: LocalizationService.Instance es un singleton
+        // que vive lo que la aplicacion y estos slots (cientos por personaje, y `dotnet test`
+        // construye cientos de MainViewModel) no.
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            Services.LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
+    }
+
+    // Las TRES cosas del tooltip del slot que dependen del idioma. SlotRoleLabel y PrefixDisplay
+    // se descubrieron gracias a abrir el popup de verdad (OBJ-STATS-IDIOMA del arnes): el
+    // ToolTip del XAML es UN objeto vivo, no se reconstruye al reabrirlo, asi que un binding a
+    // una propiedad normal se queda con el idioma que hubiera la PRIMERA vez que se abrio - con
+    // la app en ingles seguia diciendo "Cabeza" y "Prefix: Legendario".
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(StatsTooltip));
+        OnPropertyChanged(nameof(SlotRoleLabel));
+        RefreshPrefixDisplay();
     }
 
     // true si este objeto (vanilla o Calamity) encaja en AcceptedKind - AcceptedKind=None
@@ -284,7 +310,7 @@ public partial class ItemSlotViewModel : ObservableObject
             PrefixDisplay = string.Empty;
             HasBestPrefixSuggestion = false;
             IconPath = null;
-            StatsTooltip = null;
+            SetStats(null);
             RarityBrush = null;
             OnPropertyChanged(nameof(ShowCount));
             EmitItemChanged(before, after);
@@ -308,7 +334,7 @@ public partial class ItemSlotViewModel : ObservableObject
                 : null;
         }
 
-        StatsTooltip = ItemStatsFormatter.Format(item.IsCalamity, item.Id, _service.TooltipCatalogs, item.Prefix);
+        SetStats(ItemStatsFormatter.Describe(item.IsCalamity, item.Id, _service.TooltipCatalogs, item.Prefix));
 
         RefreshPrefixDisplay();
 
@@ -447,16 +473,24 @@ public partial class ItemSlotViewModel : ObservableObject
         PrefixId = Item.Prefix.IsCalamity ? 0 : Item.Prefix.VanillaId;
         _suppressPrefixIdWriteback = false;
 
+        // Ronda de idioma del 6-sep-2026: el nombre INGLES de cada prefijo ya venia en los dos
+        // catalogos (campo "en", desde el primer dia) pero aqui se cogia SIEMPRE el español -
+        // exactamente el mismo bug real que la ronda ya cerro en Builds y en Novedades. Se vio
+        // en el propio tooltip del slot al abrirlo de verdad con la app en ingles
+        // (OBJ-STATS-IDIOMA del arnes): "Prefix: Legendario".
+        string idioma = Services.LocalizationService.Instance.Language;
         var prefix = Item.Prefix;
         if (prefix.IsCalamity)
         {
             var prefixEntry = _service.RoguePrefixCatalog.ById(prefix.SyntheticId);
-            PrefixDisplay = prefixEntry?.Es ?? prefixEntry?.En ?? string.Empty;
+            PrefixDisplay = prefixEntry == null ? string.Empty
+                : TerrasavrNative.Core.Data.LocalizedContent.Pick(prefixEntry.Es, prefixEntry.En, idioma);
         }
         else if (!prefix.IsNone)
         {
             var prefixEntry = _service.VanillaPrefixCatalog.ById(prefix.VanillaId);
-            PrefixDisplay = prefixEntry?.Es ?? prefixEntry?.En ?? $"Prefijo #{prefix.VanillaId}";
+            PrefixDisplay = prefixEntry == null ? $"#{prefix.VanillaId}"
+                : TerrasavrNative.Core.Data.LocalizedContent.Pick(prefixEntry.Es, prefixEntry.En, idioma);
         }
         else
         {
@@ -483,7 +517,7 @@ public partial class ItemSlotViewModel : ObservableObject
         RefreshPrefixDisplay();
         // OBJ-09 (oleada de Objetos, 6-sep-2026) - BUG REAL: el tooltip de estadisticas EMPIEZA
         // por el efecto numerico del prefijo ("+15% de daño, +5% de probabilidad de golpe
-        // critico, ...", seccion 1 de ItemStatsFormatter.Format) y este metodo no lo recalculaba
+        // critico, ...", seccion 1 de ItemStatsFormatter.Describe) y este metodo no lo recalculaba
         // nunca - solo UpdateFrom lo hace, y cambiar el prefijo no pasa por ahi. O sea que los
         // CUATRO caminos reales que tocan el prefijo sin cambiar el objeto (el picker de
         // prefijos, "Quitar", el boton de mejor prefijo, y el campo numerico "Prefijo (id)")
@@ -493,10 +527,19 @@ public partial class ItemSlotViewModel : ObservableObject
         // que B-6 cerro para "Defensa total", y en el mismo momento en que mas duele: justo
         // cuando el usuario esta comparando prefijos uno a uno.
         if (!Item.IsEmpty)
-            StatsTooltip = ItemStatsFormatter.Format(Item.IsCalamity, Item.Id, _service.TooltipCatalogs, Item.Prefix);
+            SetStats(ItemStatsFormatter.Describe(Item.IsCalamity, Item.Id, _service.TooltipCatalogs, Item.Prefix));
         var suggestion = PrefixSuggester.Suggest(Item, _service.CalamityCatalog, _service.BestPrefixes, _service.RoguePrefixCatalog);
         HasBestPrefixSuggestion = suggestion.HasValue && !suggestion.Value.Equals(Item.Prefix);
         EmitItemChanged(before, Item.Clone());
+    }
+
+    // Unico punto que toca los datos del tooltip - avisa siempre, igual que hacia el setter
+    // generado de la propiedad de antes (el texto final depende ademas del idioma activo, asi que
+    // comparar los datos por igualdad para ahorrarse el aviso no seria seguro).
+    private void SetStats(ItemStatsInfo? stats)
+    {
+        _stats = stats;
+        OnPropertyChanged(nameof(StatsTooltip));
     }
 
     // Campo "Indice" editable (equivalente real de fdIndex en TabEdit) - escribir un id
