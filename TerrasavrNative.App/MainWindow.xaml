@@ -2377,7 +2377,7 @@
                                                      scroll en ventanas pequeñas, y NO sacrificar
                                                      legibilidad (MinCell=44) es mas importante que nunca
                                                      scrollear aqui. -->
-                                                <Border Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgPrimaryBrush}"
+                                                <Border x:Name="CajaMascotasTintes" Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgPrimaryBrush}"
                                                         CornerRadius="8" Padding="6" Margin="0,0,8,0">
                                                     <!-- Mascota/Montura y Tinte UNO AL LADO DEL OTRO, no apilados
                                                          (consulta a Opus, septima pasada, corregido con medicion
@@ -2422,11 +2422,19 @@
                                                     </ScrollViewer>
                                                 </Border>
 
-                                                <!-- Selector Loadout/Vista, ColumnSpan=2 (centro+derecha) -
+                                                <!-- Selector Loadout/Vista, SOLO sobre la columna central -
                                                      DataContext local a EquipmentGroup, sin heredarlo al
                                                      resto de la fila fusionada (los laterales necesitan
-                                                     el MainViewModel directamente). -->
-                                                <StackPanel Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="0" Margin="0,0,0,6"
+                                                     el MainViewModel directamente).
+                                                     AR-14c (6-sep-2026): antes llevaba ColumnSpan="2" y se
+                                                     estiraba tambien por encima de Monedas/Municion, que era
+                                                     justo lo que impedia a esa caja usar el alto de esta
+                                                     franja (ver el comentario de la propia caja mas abajo).
+                                                     Quitarlo no le quita nada al selector: medido a 1080x700,
+                                                     la fila 0 sigue midiendo 82,2px exactos con 241px de
+                                                     ancho en vez de 449 - ya envolvia igual, el ancho de mas
+                                                     no lo estaba usando nadie. -->
+                                                <StackPanel Grid.Column="1" Grid.Row="0" Margin="0,0,0,6"
                                                             DataContext="{Binding EquipmentGroup}">
                                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
                                                         <TextBlock Text="{Binding Loc[char_loadout_label], Mode=OneWay}" Style="{StaticResource CaptionText}"
@@ -2528,10 +2536,45 @@
                                                 <!-- Lateral derecho: Monedas + Municion, horizontal (ya lo
                                                      estaba - Columns=10 por defecto, 4 slots caben en una
                                                      unica fila corta) - pedido explicito "municion asi en
-                                                     horizontal esta bien". -->
-                                                <Border Grid.Column="2" Grid.Row="1" Background="{StaticResource BgPrimaryBrush}"
+                                                     horizontal esta bien".
+
+                                                     AR-14c (6-sep-2026, pedido explicito de arreglarlo "si o
+                                                     si" tras quedar como limite conocido de AR-LAY): esta caja
+                                                     se cortaba a 1080x700 - pedia 125,3px de ALTO y solo tenia
+                                                     103,7 utiles, o sea media fila de Municion partida y sin
+                                                     ningun scroll con el que alcanzarla. La clave que faltaba
+                                                     es que el corte es de ALTO, no de ancho: por eso los tres
+                                                     arreglos que se probaron sobre el reparto HORIZONTAL
+                                                     tuvieron todos un efecto colateral peor, medido:
+                                                       (a) ScrollViewer propio -> la barra vertical ensancha
+                                                           esta columna "Auto" de 200 a 209,2px y esos 9,2px
+                                                           salen de la CENTRAL: 2 slots de accesorios cortados
+                                                           otra vez (la regresion que AR-14 vigila);
+                                                       (b) MaxWidth=200 en la columna -> el Border (201px con
+                                                           su Margin) se sale y se corta la propia barra;
+                                                       (c) apilarla DEBAJO del centro ocupando todo el ancho
+                                                           (con Monedas y Municion uno al lado del otro) ->
+                                                           arregla esta caja pero la fila del centro cae de
+                                                           115,7 a 38,1px para una rejilla que necesita 84
+                                                           (2 filas de MinCell 40 + Gap): los 10 slots de
+                                                           Armadura/Accesorios se salen 45,9px por abajo y hay
+                                                           que scrollear para ver la segunda fila (AR-14d).
+                                                     Lo que si sobra es alto, y estaba ahi al lado sin usar: la
+                                                     franja del selector Loadout/Vista (fila 0, 82,2px) se
+                                                     estiraba por encima de esta caja con un ColumnSpan que no
+                                                     necesitaba. Con RowSpan="2" la caja ocupa las dos filas de
+                                                     su columna - exactamente lo que el lateral IZQUIERDO ya
+                                                     hacia desde la quinta pasada, y por el mismo motivo - y
+                                                     pasa de 115,7 a 197,9px de alto a 1080x700: 185,9 utiles
+                                                     para los 125,3 que pide, sin tocar ni un pixel del reparto
+                                                     horizontal (la columna sigue siendo Auto con MinWidth=200 y
+                                                     el centro conserva su MinWidth=216 intacto). Verificado en
+                                                     4.582 layouts reales entre 1080x700 y 2560x1440, incluido
+                                                     px a px en 1080-1320 y 1480-1600: 0 cortes por ninguno de
+                                                     los dos lados. -->
+                                                <Border x:Name="CajaMonedasMunicion" Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgPrimaryBrush}"
                                                         CornerRadius="8" Padding="6" Margin="8,0,0,0">
-                                                    <StackPanel>
+                                                    <StackPanel x:Name="PilaMonedasMunicion">
                                                         <TextBlock Text="{Binding CoinsContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
                                                         <ContentControl Content="{Binding CoinsContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                         <TextBlock Text="{Binding AmmoContainer.DisplayName}" Style="{StaticResource CaptionText}" Margin="0,10,0,3" />

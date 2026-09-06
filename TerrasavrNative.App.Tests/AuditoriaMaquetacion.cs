@@ -131,23 +131,14 @@ internal static partial class Program
         // que se queda en rojo por un caso ya diagnosticado y con dueño deja de servir para
         // detectar lo SIGUIENTE, que es para lo que existe.
         //
-        //  - Monedas/Municion a 1080x700 (Equipamiento, el suelo exacto de la ventana): el Border
-        //    tiene 101px utiles y su contenido pide 125,3 - la rejilla de Municion pierde 24,2 de
-        //    sus 40px. Su gemelo, el lateral IZQUIERDO, resolvio esto mismo con un ScrollViewer de
-        //    seguridad, pero aqui ese arreglo NO vale y esta medido por que: la columna es "Auto",
-        //    asi que la barra vertical del ScrollViewer la ensancha de 200 a 209,2px y esos 9,2px
-        //    salen de la columna CENTRAL, que vuelve a cortar 2 slots de accesorios (la regresion
-        //    que AR-14 vigila); y taparlo con un MaxWidth=200 en la columna hace que el Border
-        //    (201px con su Margin) se salga y se corte la propia barra. Dos intentos, dos efectos
-        //    colaterales peores que el bug: se para aqui, se deja escrito, y lo decide quien lleve
-        //    Equipamiento - probablemente poniendo Monedas y Municion UNO AL LADO DEL OTRO, que es
-        //    justo lo que el lateral izquierdo acabo haciendo por la misma razon de alto.
-        // Ojo al formato: la FIRMA con la que se compara es "<pantalla> | <elemento>" (el tamaño
-        // va solo en el detalle, no en la firma), asi que aqui se nombra el ELEMENTO, no el tamaño.
-        string[] limitesConocidos =
-        [
-            "Personaje/Equipamiento | SlotGridPanel",
-        ];
+        // ESTA LISTA ESTA VACIA A PROPOSITO desde el 6-sep-2026. Su unica entrada era
+        // "Personaje/Equipamiento | SlotGridPanel" (Monedas/Municion cortada a 1080x700), y ya
+        // NO es un limite: esta arreglada de verdad (ver AR-14c en AuditoriaEquipamiento.cs y la
+        // entrada de bitacora.md "Monedas/Municion ya no se corta"). Se deja el mecanismo, no el
+        // caso: si algun dia vuelve a hacer falta, ojo al formato - la FIRMA con la que se compara
+        // es "<pantalla> | <elemento>" (el tamaño va solo en el detalle), asi que aqui se nombra
+        // el ELEMENTO, nunca el tamaño.
+        string[] limitesConocidos = [];
     
         void Auditar(string contexto)
         {

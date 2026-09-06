@@ -527,6 +527,22 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // AR14_SOLO=1 (6-sep-2026, ronda de Monedas/Municion apiladas): mismo modo de foco que
+        // PB_SOLO de arriba, pero para la fila fusionada de Equipamiento. Cada iteracion sobre el
+        // reparto de esa fila hay que medirla en DECENAS de anchos (es un bug que solo existe en
+        // franjas estrechas de ancho, ver AR-14/AR-LAY) y el recorrido completo del arnes cuesta
+        // minutos y decenas de RenderTargetBitmap que en esta maquina lo hacen poco repetible. Se
+        // puede combinar con AR_LAY_* (AR_LAY_FINO/DESDE/HASTA/SOLO) para correr ademas el barrido
+        // generico de maquetacion acotado a Equipamiento sin pagar el resto del arnes.
+        if (Environment.GetEnvironmentVariable("AR14_SOLO") == "1")
+        {
+            AuditoriaFilaFusionadaEquipamiento(window, vm);
+            if (Environment.GetEnvironmentVariable("AR_LAY_FINO") != null || Environment.GetEnvironmentVariable("AR_LAY_SOLO") != null)
+                BarridoMaquetacionPorTamañoEIdioma(window, vm);
+            Console.WriteLine("DONE (AR14_SOLO)");
+            Environment.Exit(0);
+        }
+
         // Verificacion real de N-1 (auditoria de Opus, Bloque 2): la cabecera global debe verse
         // IGUAL en una pestaña que no es Personaje (aqui, Builds=indice 2) - antes el nombre/
         // dificultad/Guardar solo existian dentro de Personaje.
@@ -1959,234 +1975,10 @@ internal static partial class Program
             Console.WriteLine("RESIZE-EXCEPTION: " + ex);
         }
 
-        // AR-14 (6-sep-2026, queja real del usuario con captura: "los slots de accesorios se
-        // vuelven a solapar con las monedas/municion a pantalla mas pequeña"). La septima pasada
-        // ya arreglo un solape de esta misma fila fusionada (2-sep-2026, columnas "2*/5*/4*" ->
-        // Auto+MinWidth/*) pero NUNCA se dejo una comprobacion permanente que lo midiera: se
-        // verifico mirando capturas. Esto es esa comprobacion que faltaba.
-        //
-        // Se mide en COORDENADAS REALES, celda a celda: TranslatePoint ignora el recorte, asi que
-        // un slot que invade el lateral de Monedas/Municion se detecta igual aunque el
-        // ClipToBounds del SlotRowHost lo este tapando (que es exactamente lo que el usuario ve:
-        // el ultimo accesorio CORTADO justo donde empieza la caja de "Monedas"). Barrido de
-        // anchos entre el MinWidth real declarado y una ventana grande, incluidos los dos lados
-        // de cada umbral real de SizeClass (1320 Normal, 1500 Amplio, 1920 Extra).
-        try
-        {
-            static Rect RectEn(FrameworkElement fe, FrameworkElement host)
-            {
-                var p = fe.TranslatePoint(new Point(0, 0), host);
-                return new Rect(p.X, p.Y, fe.ActualWidth, fe.ActualHeight);
-            }
-
-            int kindOriginal = (int)(vm.EquipmentGroup?.SelectedKind ?? EquipmentKind.Items);
-            var tamaños = new List<(double, double)>();
-            if (Environment.GetEnvironmentVariable("AR14_BARRIDO_FINO") == "1")
-                for (double a = 1080; a <= 1920; a += 20) tamaños.Add((a, 760.0));
-            // "2" = biseccion real de 2 en 2px alrededor del umbral de SizeClass.Amplio - es como
-            // se midio el valor real de AmplioMinWidth (ver MainViewModel): el primer ancho en que
-            // las 3 vistas de Equipamiento caben de verdad sin recortarse entre ellas.
-            else if (Environment.GetEnvironmentVariable("AR14_BARRIDO_FINO") == "2")
-                for (double a = 1480; a <= 1600; a += 2) tamaños.Add((a, 860.0));
-            else
-                tamaños.AddRange(new[]
-                {
-                    // Los dos lados de cada umbral real de SizeClass (1320 Normal, 1520 Amplio,
-                    // 1920 Extra) - cruzar uno reorganiza esta fila entera, y es justo donde el
-                    // reparto puede quedarse corto.
-                    (1080.0, 700.0), (1120.0, 760.0), (1180.0, 860.0), (1240.0, 800.0), (1319.0, 860.0),
-                    (1320.0, 860.0), (1400.0, 860.0), (1500.0, 860.0), (1519.0, 860.0), (1520.0, 860.0),
-                    (1560.0, 860.0), (1600.0, 900.0), (1700.0, 900.0), (1919.0, 1000.0), (1920.0, 1000.0),
-                });
-            bool libreriaOriginal = vm.IsLibraryCollapsed;
-            vm.IsLibraryCollapsed = Environment.GetEnvironmentVariable("AR14_LIBRERIA_PLEGADA") == "1" || libreriaOriginal;
-
-            // Dos barridos, ascendente y DESCENDENTE (el orden importa de verdad: las dos columnas
-            // laterales son "Auto" y su contenido -SlotGridPanel- se mide contra ReferenceWidth =
-            // ActualWidth del propio SlotRowHost, o sea contra el resultado del layout ANTERIOR;
-            // encoger desde una ventana grande no tiene por que dar el mismo reparto que crecer
-            // hasta el mismo ancho, y el usuario reporta el bug ENCOGIENDO desde maximizada).
-            foreach (var (w, h) in tamaños.Concat(Enumerable.Reverse(tamaños)))
-            {
-                // Gesto REAL del usuario: la app se usa maximizada y se restaura a un tamaño
-                // intermedio. Es la unica forma de que el layout llegue a cada ancho DESDE una
-                // ventana grande, que es lo que hace que las columnas "Auto" laterales lleguen
-                // con un DesiredSize calculado contra un ReferenceWidth mucho mayor.
-                if (Environment.GetEnvironmentVariable("AR14_MAXIMIZAR") == "1")
-                {
-                    window.WindowState = System.Windows.WindowState.Maximized;
-                    DoEvents(); DoEvents();
-                    window.WindowState = System.Windows.WindowState.Normal;
-                    DoEvents();
-                }
-                FijarTamaño(window, w, h);
-                vm.SelectedTabIndex = 1;
-                vm.PersonajeInnerTabIndex = 0;
-                vm.ObjetosSubTabIndex = 0; // Equipamiento
-                DoEvents();
-                // Mismo estado exacto de la captura del usuario: conjunto activo + vista "Armadura"
-                // (la unica de las 3 que lleva los 7 accesorios reales).
-                var armadura = vm.EquipmentGroup?.KindOptions.FirstOrDefault(o => o.Value == (int)EquipmentKind.Items);
-                if (armadura != null) vm.EquipmentGroup!.SelectKindCommand.Execute(armadura);
-                DoEvents(); DoEvents();
-
-                var host = Descendientes<SlotRowHost>(window).FirstOrDefault();
-                if (host == null) { Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} no hay SlotRowHost en el arbol visual (la fila fusionada de Equipamiento no se esta renderizando)"); continue; }
-
-                // Los dos bloques laterales por su columna real del Grid, no por su posicion en
-                // pantalla: el izquierdo (Mascota/Montura+Tinte) es columna 0 y el de Monedas/
-                // Municion columna 2 - los dos son Border hijos DIRECTOS del SlotRowHost.
-                FrameworkElement? cajaMonedas = null, cajaMascotas = null;
-                var celdasCentro = new List<(FrameworkElement Fe, Rect R, ScrollViewer? Sv)>();
-                foreach (var hijo in host.Children.OfType<FrameworkElement>())
-                {
-                    int col = Grid.GetColumn(hijo);
-                    if (!hijo.IsVisible) continue;
-                    if (col == 2 && hijo is Border) cajaMonedas = hijo;
-                    else if (col == 0 && hijo is Border) cajaMascotas = hijo;
-                    else if (col == 1 && Grid.GetRow(hijo) == 1)
-                    {
-                        foreach (var sgp in Descendientes<SlotGridPanel>(hijo))
-                        {
-                            // El ScrollViewer que de verdad RECORTA esta rejilla (el de
-                            // ContainerCompactTemplate) - es el que decide si un slot que se sale
-                            // se ve cortado o no, y con HorizontalScrollBarVisibility="Disabled"
-                            // lo que se sale por la derecha no se puede alcanzar de ninguna forma.
-                            ScrollViewer? svPropio = null;
-                            for (var d = (DependencyObject)sgp; d != null && !ReferenceEquals(d, host); d = System.Windows.Media.VisualTreeHelper.GetParent(d))
-                                if (d is ScrollViewer s) { svPropio = s; break; }
-                            foreach (var celda in sgp.Children.OfType<FrameworkElement>())
-                                celdasCentro.Add((celda, RectEn(celda, host), svPropio));
-                        }
-                    }
-                }
-
-                if (cajaMonedas == null || celdasCentro.Count == 0)
-                {
-                    Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} no se pudo medir (Monedas={cajaMonedas != null}, celdas centro={celdasCentro.Count})");
-                    continue;
-                }
-
-                var rMonedas = RectEn(cajaMonedas, host);
-                var rMascotas = cajaMascotas != null ? RectEn(cajaMascotas, host) : Rect.Empty;
-                double derechaCentro = celdasCentro.Max(c => c.R.Right);
-                double izquierdaCentro = celdasCentro.Min(c => c.R.Left);
-                // Solape REAL por eje (no Rect.Intersect a secas - leccion ya documentada): dos
-                // bloques de la misma fila solo se solapan de verdad si se pisan en X Y en Y.
-                double invadeDerecha = derechaCentro - rMonedas.Left;
-                double invadeIzquierda = rMascotas.IsEmpty ? double.NegativeInfinity : rMascotas.Right - izquierdaCentro;
-                bool compartenFranja = celdasCentro.Any(c => c.R.Bottom > rMonedas.Top && c.R.Top < rMonedas.Bottom);
-                int celdasQueInvaden = celdasCentro.Count(c => c.R.Right > rMonedas.Left + 0.5 && c.R.Bottom > rMonedas.Top && c.R.Top < rMonedas.Bottom);
-
-                var sgpCentro = Descendientes<SlotGridPanel>(host).FirstOrDefault(p => celdasCentro.Any(c => ReferenceEquals(c.Fe, p.Children.Count > 0 ? p.Children[0] : null)));
-                double cell = sgpCentro != null && sgpCentro.Children.Count > 0 ? ((FrameworkElement)sgpCentro.Children[0]).ActualWidth : -1;
-                double anchoColCentro = host.ColumnDefinitions.Count > 1 ? host.ColumnDefinitions[1].ActualWidth : -1;
-                string columnas = string.Join("/", host.ColumnDefinitions.Select(c => $"{c.ActualWidth:0.#}"));
-
-                // Lo que el usuario ve DE VERDAD no es "un slot pintado encima de la caja de
-                // Monedas": el ScrollViewer de la rejilla recorta antes de llegar ahi, asi que un
-                // slot que se sale se ve CORTADO justo donde acaba su columna (que esta a solo 8px
-                // -el Margin del Border- del borde de la caja de Monedas, de ahi que se lea como
-                // "solapado con las monedas"). Este es el criterio real: cuanto se sale cada celda
-                // del viewport que la recorta, y cuantas celdas quedan cortadas o directamente
-                // fuera - con HorizontalScrollBarVisibility="Disabled" eso es contenido PERDIDO,
-                // no meramente desplazado.
-                double cortePeor = 0;
-                int celdasCortadas = 0, celdasFuera = 0;
-                foreach (var (celda, r, sv) in celdasCentro)
-                {
-                    if (sv == null || sv.ViewportWidth <= 0) continue;
-                    double bordeVisible = RectEn(sv, host).Left + sv.ViewportWidth;
-                    double sale = r.Right - bordeVisible;
-                    if (sale > 0.5)
-                    {
-                        celdasCortadas++;
-                        if (r.Left >= bordeVisible - 0.5) celdasFuera++;
-                        cortePeor = Math.Max(cortePeor, sale);
-                    }
-                }
-
-                Console.WriteLine($"AR-14 {w:0}x{h:0} SizeClass={vm.SizeClass} Amplio={vm.IsEquipmentExpanded} | host={host.ActualWidth:0.#} cols={columnas} celda={cell:0.#} " +
-                                  $"centro=[{izquierdaCentro:0.#}..{derechaCentro:0.#}] monedas.Left={rMonedas.Left:0.#} | invadeDerecha={invadeDerecha:0.#}px invadeIzquierda={invadeIzquierda:0.#}px " +
-                                  $"corteMax={cortePeor:0.#}px celdasCortadas={celdasCortadas} celdasFuera={celdasFuera} mismaFranja={compartenFranja}");
-
-                if (invadeDerecha > 0.5 && compartenFranja)
-                    Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} los slots de Armadura/Accesorios invaden {invadeDerecha:0.#}px el bloque de Monedas/Municion ({celdasQueInvaden} celdas reales pisadas)");
-                if (invadeIzquierda > 0.5)
-                    Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} los slots de Armadura/Accesorios invaden {invadeIzquierda:0.#}px el bloque de Mascota/Montura/Tinte");
-                if (celdasCortadas > 0)
-                    Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} {celdasCortadas} slot(s) de Armadura/Accesorios se salen hasta {cortePeor:0.#}px de su columna y quedan CORTADOS contra el bloque de Monedas/Municion ({celdasFuera} invisibles del todo, sin scroll horizontal con el que alcanzarlos)");
-
-                if (Environment.GetEnvironmentVariable("AR14_CAPTURAS") == "1")
-                {
-                    var rtbEq = new System.Windows.Media.Imaging.RenderTargetBitmap(
-                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-                    rtbEq.Render(window);
-                    var encEq = new System.Windows.Media.Imaging.PngBitmapEncoder();
-                    encEq.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbEq));
-                    using var fsEq = File.Create(Path.Combine(AppContext.BaseDirectory, $"ar14-armadura-{w:0}x{h:0}.png"));
-                    encEq.Save(fsEq);
-                }
-            }
-
-            // AR-14b: el MinWidth=216 nuevo de la columna central es una GARANTIA, y una garantia
-            // que nunca se activa no esta demostrada. Hoy no salta jamas porque las dos columnas
-            // laterales se quedan clavadas en su propio MinWidth (140/200), asi que hay que
-            // PROVOCARLO: se le pide a la lateral de Monedas/Municion mucho mas sitio del que le
-            // toca y se comprueba que quien cede es ELLA, no el centro. Sin esto seria una
-            // suposicion sobre como reparte WPF (MinWidth de una columna estrella frente a una
-            // Auto exigente), justo lo que este proyecto no da por bueno sin medir. Se restaura el
-            // MinWidth real al terminar.
-            FijarTamaño(window, 1180, 860);
-            vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 0;
-            DoEvents(); DoEvents();
-            var hostGarantia = Descendientes<SlotRowHost>(window).FirstOrDefault();
-            if (hostGarantia == null || hostGarantia.ColumnDefinitions.Count != 3)
-                Console.WriteLine("FALLO: AR-14b - SlotRowHost o sus 3 columnas NO-FOUND, la garantia de ancho minimo no se ha podido comprobar");
-            else
-            {
-                var colCentral = hostGarantia.ColumnDefinitions[1];
-                var colMonedas = hostGarantia.ColumnDefinitions[2];
-                double minMonedasReal = colMonedas.MinWidth;
-                double centroAntes = colCentral.ActualWidth;
-                colMonedas.MinWidth = 400; // el doble de lo suyo: alguien "Auto" pidiendo de mas
-                DoEvents(); DoEvents();
-                double centroApretado = colCentral.ActualWidth, monedasApretado = colMonedas.ActualWidth;
-                // Contrafactual real (leccion "verificar aislando la variable"): con el mismo
-                // lateral exigente pero SIN el MinWidth nuevo, el centro tiene que caer por debajo
-                // de 216 - si no cayera, es que el MinWidth no estaba arreglando nada y el "OK" de
-                // arriba seria un falso positivo de otro limite cualquiera.
-                double minCentralReal = colCentral.MinWidth;
-                colMonedas.MinWidth = 400;
-                colCentral.MinWidth = 0;
-                DoEvents(); DoEvents();
-                double centroSinGarantia = colCentral.ActualWidth;
-                colCentral.MinWidth = minCentralReal;
-                colMonedas.MinWidth = minMonedasReal;
-                DoEvents(); DoEvents();
-                double centroVuelta = colCentral.ActualWidth;
-                Console.WriteLine($"AR-14b GARANTIA: centro {centroAntes:0.#} -> con Monedas pidiendo 400px: centro={centroApretado:0.#} monedas={monedasApretado:0.#} -> restaurado: centro={centroVuelta:0.#} (esperado: centro nunca por debajo de 216, y vuelta al valor de partida)");
-                Console.WriteLine($"AR-14b CONTRAFACTUAL: el MISMO lateral exigente sin el MinWidth de la columna central deja el centro en {centroSinGarantia:0.#}px, o sea {216 - centroSinGarantia:0.#}px menos de los que la rejilla necesita - eso es el solape real que se reporto");
-                if (centroSinGarantia >= 215.5)
-                    Console.WriteLine($"FALLO: AR-14b - el contrafactual no reproduce nada (centro={centroSinGarantia:0.#} sin MinWidth): el 'OK' de la garantia lo estaria dando otro limite, no este arreglo");
-                if (centroApretado < 215.5)
-                    Console.WriteLine($"FALLO: AR-14b - el MinWidth de la columna central NO es una garantia real: con la lateral de Monedas pidiendo 400px el centro cayo a {centroApretado:0.#}px, por debajo de los 216 que necesita la rejilla a MinCell");
-                if (Math.Abs(centroVuelta - centroAntes) > 1)
-                    Console.WriteLine($"FALLO: AR-14b - el propio bloque no restauro el reparto ({centroAntes:0.#} -> {centroVuelta:0.#}), contamina lo que venga despues");
-            }
-
-            // Deja el estado como estaba (misma leccion que LOADOUT-PILDORAS/AR-13c): vista de
-            // Equipamiento original y tamaño base del arnes.
-            var kindVuelta = vm.EquipmentGroup?.KindOptions.FirstOrDefault(o => o.Value == kindOriginal);
-            if (kindVuelta != null) vm.EquipmentGroup!.SelectKindCommand.Execute(kindVuelta);
-            vm.IsLibraryCollapsed = libreriaOriginal;
-            FijarTamaño(window, 1180, 860);
-            DoEvents();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("AR-14-EXCEPTION: " + ex);
-        }
+        // AR-14 / AR-14b: la fila fusionada de Equipamiento medida en coordenadas reales, tamaño a
+        // tamaño. El bloque entero vive ahora en AuditoriaEquipamiento.cs (misma clase parcial, mismos
+        // helpers) - ver ahi el porque, y el modo de foco AR14_SOLO=1 para iterar solo sobre esta fila.
+        AuditoriaFilaFusionadaEquipamiento(window, vm);
 
         // OBJ-01 (oleada de pruebas de Personaje -> Objetos, 6-sep-2026). Detector real de
         // BINDINGS ROTOS en toda la zona de Objetos (Equipamiento/Inventario/Almacenes): recorre
@@ -6184,9 +5976,12 @@ internal static partial class Program
             // Lo que queda es de dos clases, las dos reales y documentadas:
             //  - un StatusMessage o un resumen YA COMPUESTO antes del cambio de idioma: son
             //    frases de un solo uso que se rehacen en la siguiente accion real del usuario.
-            //  - los CATALOGOS DE CONTENIDO del juego (nombres de objeto/NPC/tile/buff): viven
-            //    en sus propios JSON de datos y solo existen en español. Traducirlos es una
-            //    decision aparte, pendiente del usuario (ver bitacora.md, 6-sep-2026).
+            //  - (CERRADO el 6-sep-2026, ronda de traduccion del CONTENIDO del juego) los
+            //    CATALOGOS DE CONTENIDO del juego (nombres de objeto/NPC/tile/buff, tooltips,
+            //    bonos de set) YA existen y se muestran en los dos idiomas. Este barrido los
+            //    sigue descontando como ruido - no puede distinguirlos de la interfaz -, asi
+            //    que quien vigila que sigan traducidos es A11-CONTENIDO-IDIOMA, en
+            //    AuditoriaContenidoIdioma.cs.
             string[] limitesConocidos =
             [
                 "Auto-equipar:",             // StatusMessage ya calculado antes del cambio
@@ -6207,7 +6002,14 @@ internal static partial class Program
             // que usa la app y se descuentan enteros: si no, ahogan la señal (1206 lineas de
             // ruido tapaban las 23 reales de interfaz en la primera pasada de esta ronda).
             var nombresDeCatalogo = new HashSet<string>(StringComparer.Ordinal);
-            foreach (string fichero in new[] { "vanilla_item_names.json", "npc_names.json", "vanilla_buff_names_es.json", "tile_names.json", @"calamity\catalog.json", "calamity_buff_descriptions.json" })
+            // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): entran tambien los
+            // catalogos INGLESES nuevos. Sin ellos, un nombre ingles real que contenga por
+            // casualidad una palabra funcional española (" a ", " no ", "alas"...) ya no lo
+            // descontaria nadie y este barrido lo marcaria como "texto sin migrar" - un FALLO
+            // falso provocado justamente por haber traducido bien. Quien SI mira si el
+            // contenido del juego sigue en español con la app en ingles es A11-CONTENIDO-IDIOMA
+            // (AuditoriaContenidoIdioma.cs), que va por el camino contrario.
+            foreach (string fichero in new[] { "vanilla_item_names.json", "vanilla_item_names_en.json", "npc_names.json", "vanilla_buff_names_es.json", "vanilla_buff_names_en.json", "vanilla_buff_descriptions_en.json", "tile_names.json", "vanilla_item_tooltips_en.json", @"calamity\catalog.json", "calamity_buff_descriptions.json" })
             {
                 try
                 {
@@ -6401,6 +6203,12 @@ internal static partial class Program
         // la app - vive en su propio fichero (AuditoriaMaquetacion.cs, misma clase parcial): ver
         // alli el porque de no meter otro bloque mas dentro de este Main() ya enorme.
         BarridoMaquetacionPorTamañoEIdioma(window, vm);
+
+        // A11-CONTENIDO-IDIOMA (6-sep-2026): el CONTENIDO del juego (nombres de objeto/NPC/tile/
+        // buff, tooltips, bonos de set) en los dos idiomas - el punto ciego POR DISEÑO de A10,
+        // que descuenta como ruido cualquier texto que sea un nombre de catalogo. Vive en su
+        // propio fichero (AuditoriaContenidoIdioma.cs, misma clase parcial).
+        AuditoriaContenidoDelJuegoEnIdioma(window, vm);
 
         // LIB-* / BUFLIB-* / BUILDS-* (6-sep-2026): oleada de pruebas de Libreria (objetos y
         // buffs) y Builds - el cuerpo real vive en PruebasLibreriaYBuilds.cs, otra parte de esta
