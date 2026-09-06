@@ -3180,6 +3180,209 @@ internal static class Program
                 }
                 catch (Exception ex) { Console.WriteLine("AR-02-EXCEPTION: " + ex); }
 
+                // AR-11 (bug real reportado por el usuario probando la app, 6-sep-2026: "en todas
+                // las secciones de Exploracion se pierde contenido con el scroll", captura de
+                // Cofres > "Por lo que contienen" con la palabra "contienen" cortada). Tres
+                // comprobaciones PERMANENTES sobre la barra lateral entera, no sobre un caso:
+                //   (a) reparto vertical - el hueco real que le queda al contenido de cada
+                //       categoria dentro del DockPanel de la columna. Antes del arreglo, los
+                //       bloques Dock=Top/Bottom (cabecera + "Este mundo" DESPLEGADO + pildoras +
+                //       buscador + bloque de resultados) se servian PRIMERO y el relleno - la
+                //       lista real de la categoria - se quedaba con lo que sobrase, que a poca
+                //       altura de ventana es 0px: contenido perdido de verdad, sin ninguna barra
+                //       de scroll con la que alcanzarlo (un DockPanel no scrollea).
+                //   (b) recorte de los 3 chips de modo de Cofres - "Por lo que contienen" es el
+                //       texto mas largo de los tres y el UniformGrid les da un tercio exacto.
+                //   (c) ningun elemento VISIBLE de la columna puede quedar recortado sin un
+                //       ScrollViewer ancestro que permita llegar a el (mismo criterio real que
+                //       AR-07 ya aplica a la columna de preview de Inicio).
+                try
+                {
+                    var sidebar = window.FindName("ExplorationSidebarPanel") as FrameworkElement;
+                    var contenidoCat = window.FindName("ExplorationCategoryContent") as FrameworkElement;
+                    var bloqueResultados = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+                    var chipsCofres = window.FindName("ChestModeSelector") as FrameworkElement;
+                    if (sidebar == null || contenidoCat == null || bloqueResultados == null || chipsCofres == null)
+                        Console.WriteLine("FALLO: AR-11 - no se encontraron los elementos con nombre de la barra lateral de Exploracion (¿se renombraron en MainWindow.xaml?)");
+                    else
+                    {
+                        // 860 es el alto real por defecto del arnes; 700 es el caso apretado real
+                        // que AR-07 ya usa como suelo (portatil 1080x720 con barra de tareas).
+                        foreach (var (w, h) in new (double, double)[] { (1180, 860), (1080, 700) })
+                        {
+                            FijarTamaño(window, w, h);
+                            // "Este mundo" DESPLEGADO es el caso peor real y perfectamente normal
+                            // (el usuario lo abre para ver semilla/version): +200px de Dock=Top.
+                            var esteMundo = Descendientes<System.Windows.Controls.Expander>(window)
+                                .FirstOrDefault(e => (e.Header as string) == "Este mundo" || (e.Header as string) == "This world");
+                            foreach (bool desplegado in new[] { false, true })
+                            {
+                                if (esteMundo != null) esteMundo.IsExpanded = desplegado;
+                                foreach (var cat in Enum.GetValues<WorldSearchCategory>())
+                                {
+                                    vm.Exploration.SelectedCategory = cat;
+                                    if (cat == WorldSearchCategory.Chests) vm.Exploration.ChestViewMode = 2;
+                                    DoEvents(); DoEvents();
+
+                                    // (a) hueco real del contenido de la categoria.
+                                    double alto = contenidoCat.ActualHeight;
+                                    var (crx, cry) = Recorte(contenidoCat);
+                                    Console.WriteLine($"AR-11a: {w}x{h}, {cat}, 'Este mundo' desplegado={desplegado} -> alto del contenido de categoria={alto:0}px, recorte=({crx:0},{cry:0}) (esperado >=120px y sin recorte)");
+                                    if (alto < 120)
+                                        Console.WriteLine($"FALLO: AR-11a - el contenido de la categoria {cat} se queda con {alto:0}px a {w}x{h} (Este mundo desplegado={desplegado}): contenido perdido sin forma de alcanzarlo");
+                                    if (cry > 0)
+                                        Console.WriteLine($"FALLO: AR-11a - el contenido de la categoria {cat} esta recortado {cry:0}px en vertical a {w}x{h} (Este mundo desplegado={desplegado})");
+
+                                    // (c) nada visible recortado sin scroll con el que llegar.
+                                    var recortadosSinScroll = Descendientes<FrameworkElement>(sidebar)
+                                        .Where(fe => fe.IsVisible && fe is TextBlock or System.Windows.Controls.Primitives.ButtonBase)
+                                        .Where(fe => { var (rx2, ry2) = Recorte(fe); return rx2 > 1 || ry2 > 1; })
+                                        .Where(fe => !TieneScrollAncestro(fe, sidebar))
+                                        .ToList();
+                                    if (recortadosSinScroll.Count > 0)
+                                    {
+                                        string muestra = string.Join(" | ", recortadosSinScroll.Take(4).Select(fe =>
+                                        {
+                                            var (rx3, ry3) = Recorte(fe);
+                                            string txt = fe is TextBlock tb2 ? tb2.Text : (fe as System.Windows.Controls.ContentControl)?.Content as string ?? fe.GetType().Name;
+                                            return $"'{txt}' {rx3:0}x{ry3:0}px";
+                                        }));
+                                        Console.WriteLine($"FALLO: AR-11c - {recortadosSinScroll.Count} elemento(s) visible(s) recortado(s) SIN scroll ancestro a {w}x{h}, {cat} (Este mundo desplegado={desplegado}): {muestra}");
+                                    }
+                                    else Console.WriteLine($"AR-11c: {w}x{h}, {cat}, desplegado={desplegado} -> 0 elementos visibles recortados sin scroll (esperado 0)");
+                                }
+                            }
+                            if (esteMundo != null) esteMundo.IsExpanded = false;
+
+                            // (b) los 3 chips de modo de Cofres, con su texto real.
+                            vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                            DoEvents(); DoEvents();
+                            foreach (var chip in Descendientes<System.Windows.Controls.RadioButton>(chipsCofres))
+                            {
+                                var tbChip = Descendientes<TextBlock>(chip).FirstOrDefault();
+                                string etiqueta = tbChip?.Text ?? chip.Content as string ?? "?";
+                                var (bx, by) = Recorte(chip);
+                                var (tx, ty) = tbChip != null ? Recorte(tbChip) : (0, 0);
+                                Console.WriteLine($"AR-11b: a {w}px, chip de Cofres '{etiqueta}' recorte boton=({bx:0},{by:0}) texto=({tx:0},{ty:0}) (esperado 0,0 en los cuatro)");
+                                if (bx > 1 || by > 1 || tx > 1 || ty > 1)
+                                    Console.WriteLine($"FALLO: AR-11b - el chip de modo de Cofres '{etiqueta}' se recorta a {w}px (boton {bx:0}x{by:0}, texto {tx:0}x{ty:0})");
+                            }
+                        }
+                        // (f) el ScrollViewer nuevo es una RED DE SEGURIDAD, no la forma normal de
+                        // usar la columna: al tamaño por defecto y con el estado por defecto
+                        // ("Este mundo" colapsado) no debe aparecer barra ninguna - si aparece, el
+                        // MinHeight se ha pasado y la columna scrollea cuando no hacia falta.
+                        vm.Exploration.ChestViewMode = 0;
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        FijarTamaño(window, 1180, 860);
+                        DoEvents(); DoEvents();
+                        var svLateral = window.FindName("ExplorationSidebarScroll") as System.Windows.Controls.ScrollViewer;
+                        if (svLateral != null)
+                        {
+                            Console.WriteLine($"AR-11f: a 1180x860 (estado por defecto), columna: viewport={svLateral.ViewportHeight:0}px, contenido={svLateral.ExtentHeight:0}px, barra visible={svLateral.ComputedVerticalScrollBarVisibility} (esperado contenido<=viewport y Hidden)");
+                            if (svLateral.ExtentHeight > svLateral.ViewportHeight + 1)
+                                Console.WriteLine($"FALLO: AR-11f - la barra lateral de Exploracion scrollea al tamaño por defecto ({svLateral.ExtentHeight:0}px de contenido en {svLateral.ViewportHeight:0}px): el MinHeight es demasiado alto");
+                        }
+                        else Console.WriteLine("FALLO: AR-11f - no se encontro ExplorationSidebarScroll en el arbol visual");
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-11-EXCEPTION: " + ex); }
+
+                // AR-12 (bugs reales reportados por el usuario probando la app, 6-sep-2026):
+                //   (d) "en Cofre a cofre, al seleccionar un cofre no aparece el cuadradito de
+                //       resaltado que si funciona en las demas secciones". Causa real:
+                //       ChestRowViewModel no tenia IsCurrent (la plantilla de las demas categorias
+                //       lo tiene en WorldSearchHitRowViewModel) - no habia binding roto, faltaba la
+                //       propiedad Y el borde en la plantilla. Se comprueba en el ARBOL VISUAL real,
+                //       no solo en la ViewModel: el Border de la fila pulsada tiene que pintar el
+                //       teal, y el de la anterior tiene que apagarse.
+                //   (e) "que Cofre a cofre tenga su PROPIA casilla de acercar". Se comprueba la
+                //       independencia REAL en las dos direcciones (el estado de una no toca el de
+                //       la otra) y, sobre todo, el EFECTO real: con la global encendida y la de
+                //       cofres apagada, pulsar un cofre NO debe acercar; con la de cofres
+                //       encendida, si.
+                try
+                {
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                    vm.Exploration.ChestViewMode = 2;
+                    DoEvents(); DoEvents();
+                    if (vm.Exploration.ChestRows.Count < 2)
+                        Console.WriteLine($"AR-12: el mundo real de pruebas solo tiene {vm.Exploration.ChestRows.Count} cofre(s) - omitido");
+                    else
+                    {
+                        var cofreA = vm.Exploration.ChestRows[0];
+                        var cofreB = vm.Exploration.ChestRows[1];
+
+                        // (d) resaltado de seleccion, en la ViewModel y en el arbol visual.
+                        vm.Exploration.GoToChestCommand.Execute(cofreA);
+                        DoEvents(); DoEvents();
+                        int marcadosA = vm.Exploration.ChestRows.Count(r => r.IsCurrent);
+                        var brushA = BordeDeFilaDeCofre(window, cofreA);
+                        Console.WriteLine($"AR-12d: tras pulsar el 1er cofre -> IsCurrent en el={cofreA.IsCurrent} (esperado True), filas marcadas={marcadosA} (esperado 1), borde real en pantalla={brushA}");
+                        if (!cofreA.IsCurrent || marcadosA != 1)
+                            Console.WriteLine("FALLO: AR-12d - 'Cofre a cofre' no marca como actual el cofre seleccionado");
+                        if (brushA is not System.Windows.Media.SolidColorBrush scA || scA.Color.A == 0)
+                            Console.WriteLine("FALLO: AR-12d - el cofre seleccionado NO pinta el borde de resaltado en el arbol visual (el indicador sigue sin verse)");
+
+                        vm.Exploration.GoToChestCommand.Execute(cofreB);
+                        DoEvents(); DoEvents();
+                        var brushAtras = BordeDeFilaDeCofre(window, cofreA);
+                        Console.WriteLine($"AR-12d: tras pulsar el 2o cofre -> 1er cofre IsCurrent={cofreA.IsCurrent} (esperado False), 2o={cofreB.IsCurrent} (esperado True), borde del 1o={brushAtras}");
+                        if (cofreA.IsCurrent || !cofreB.IsCurrent || vm.Exploration.ChestRows.Count(r => r.IsCurrent) != 1)
+                            Console.WriteLine("FALLO: AR-12d - el resaltado de 'Cofre a cofre' no es exclusivo (deberia marcar solo el ultimo pulsado)");
+
+                        // (e) las dos casillas son de verdad independientes.
+                        vm.Exploration.AutoZoomOnNavigate = false;
+                        vm.Exploration.AutoZoomOnChestNavigate = false;
+                        vm.Exploration.AutoZoomOnChestNavigate = true;
+                        bool globalIntacta = !vm.Exploration.AutoZoomOnNavigate;
+                        vm.Exploration.AutoZoomOnChestNavigate = false;
+                        vm.Exploration.AutoZoomOnNavigate = true;
+                        bool cofresIntacta = !vm.Exploration.AutoZoomOnChestNavigate;
+                        Console.WriteLine($"AR-12e: encender la de cofres deja la global apagada={globalIntacta} (esperado True); encender la global deja la de cofres apagada={cofresIntacta} (esperado True)");
+                        if (!globalIntacta || !cofresIntacta)
+                            Console.WriteLine("FALLO: AR-12e - las dos casillas de acercar siguen atadas entre si");
+
+                        // Efecto real: global ENCENDIDA, la de cofres APAGADA -> pulsar un cofre no
+                        // debe acercar, pero saltar a un resultado de busqueda si.
+                        vm.Exploration.Zoom = 1.0;
+                        DoEvents();
+                        vm.Exploration.GoToChestCommand.Execute(cofreA);
+                        DoEvents(); DoEvents();
+                        double zoomTrasCofreSinCasilla = vm.Exploration.Zoom;
+                        Console.WriteLine($"AR-12e: global=ON, cofres=OFF -> zoom tras pulsar un cofre={zoomTrasCofreSinCasilla} (esperado 1, sin acercar)");
+                        if (Math.Abs(zoomTrasCofreSinCasilla - 1.0) > 0.001)
+                            Console.WriteLine("FALLO: AR-12e - 'Cofre a cofre' sigue obedeciendo a la casilla GLOBAL (no es independiente de verdad)");
+
+                        // Y al reves: la suya encendida -> si acerca (el zoom de trabajo real, 4.0).
+                        vm.Exploration.AutoZoomOnNavigate = false;
+                        vm.Exploration.AutoZoomOnChestNavigate = true;
+                        vm.Exploration.Zoom = 1.0;
+                        DoEvents();
+                        vm.Exploration.GoToChestCommand.Execute(cofreB);
+                        DoEvents(); DoEvents();
+                        double zoomTrasCofreConCasilla = vm.Exploration.Zoom;
+                        Console.WriteLine($"AR-12e: global=OFF, cofres=ON -> zoom tras pulsar un cofre={zoomTrasCofreConCasilla} (esperado 4, el zoom de trabajo real de F-3)");
+                        if (Math.Abs(zoomTrasCofreConCasilla - 4.0) > 0.001)
+                            Console.WriteLine("FALLO: AR-12e - la casilla propia de 'Cofre a cofre' no acerca de verdad al seleccionar un cofre");
+
+                        var rtbCofreSel = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtbCofreSel.Render(window);
+                        var encCofreSel = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encCofreSel.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbCofreSel));
+                        using (var fsCofreSel = File.Create(Path.Combine(AppContext.BaseDirectory, "exploracion-cofre-a-cofre-seleccionado.png"))) encCofreSel.Save(fsCofreSel);
+                        Console.WriteLine("Captura Cofre a cofre con resaltado y casilla propia -> exploracion-cofre-a-cofre-seleccionado.png");
+
+                        vm.Exploration.AutoZoomOnChestNavigate = false;
+                        vm.Exploration.Zoom = 1.0;
+                        vm.Exploration.ChestViewMode = 0;
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-12-EXCEPTION: " + ex); }
+
                 // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
                 // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de
                 // NPC"): con el mundo real ya cargado arriba, confirma que la mayoria de NPCs
@@ -4570,6 +4773,28 @@ internal static class Program
         var c = System.Windows.Media.VisualTreeHelper.GetClip(fe);
         if (c == null) return (0, 0);
         return (Math.Max(0, fe.ActualWidth - c.Bounds.Width), Math.Max(0, fe.ActualHeight - c.Bounds.Height));
+    }
+
+    // AR-12d: el pincel REAL del borde de la fila de "Cofre a cofre" de este cofre concreto, tal
+    // y como esta pintado ahora mismo en pantalla - el Border exterior de ChestRowTemplate es el
+    // unico descendiente Border cuyo DataContext es esa fila Y que tiene BorderThickness real.
+    // Null si la fila esta virtualizada fuera de vista (nunca lo esta para las primeras).
+    private static System.Windows.Media.Brush? BordeDeFilaDeCofre(DependencyObject raiz, object fila) =>
+        Descendientes<System.Windows.Controls.Border>(raiz)
+            .FirstOrDefault(b => ReferenceEquals(b.DataContext, fila) && b.BorderThickness.Left > 0)?.BorderBrush;
+
+    // AR-11: ¿hay un ScrollViewer entre este elemento y el limite dado? Un elemento recortado
+    // pero dentro de un ScrollViewer sigue siendo ALCANZABLE (solo hay que desplazarse); uno
+    // recortado sin ningun scroll por encima es contenido PERDIDO. Mismo criterio real que ya
+    // aplicaba AR-07 en linea, extraido aqui para poder barrer una columna entera con el.
+    private static bool TieneScrollAncestro(DependencyObject elemento, DependencyObject limite)
+    {
+        for (var d = System.Windows.Media.VisualTreeHelper.GetParent(elemento); d != null; d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+        {
+            if (d is System.Windows.Controls.ScrollViewer) return true;
+            if (ReferenceEquals(d, limite)) return false;
+        }
+        return false;
     }
 
     // Recorrido real del arbol visual (no logico) - mismo patron ya usado por RESIZE-DIAG mas

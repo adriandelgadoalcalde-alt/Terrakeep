@@ -702,7 +702,12 @@ public partial class MainWindow : Window
         // el extent post-LayoutTransform). TEdit fija _zoom=8 en su escala
         // (WorldRenderXna.xaml.cs:8178); el equivalente razonable aqui, dentro del MaxZoom=6.0
         // ya existente, es 4.0.
-        if (_viewModel.Exploration.AutoZoomOnNavigate)
+        // Punto 4 del encargo (6-sep-2026): ya no se lee la casilla global directamente - cada
+        // origen de navegacion decide con la SUYA ("Cofre a cofre" tiene la propia) y deja el
+        // resultado resuelto en NavigationWantsAutoZoom. Todo camino real hasta aqui pasa por
+        // ExplorationViewModel.NavigateToTile (incluido el clic en el minimapa), asi que este
+        // valor siempre corresponde a la navegacion que se esta atendiendo.
+        if (_viewModel.Exploration.NavigationWantsAutoZoom)
         {
             _viewModel.Exploration.Zoom = 4.0;
             WorldMapScroll.UpdateLayout();
@@ -784,7 +789,11 @@ public partial class MainWindow : Window
         var clic = e.GetPosition(MinimapImage);
         int tileX = (int)((clic.X - huecoX) / escala);
         int tileY = (int)((clic.Y - huecoY) / escala);
-        OnNavigateToTile(tileX, tileY);
+        // Via la ViewModel (no OnNavigateToTile a pelo) para que esta navegacion resuelva su
+        // NavigationWantsAutoZoom con la casilla GLOBAL - el clic en el minimapa no viene de
+        // "Cofre a cofre" ni de ninguna otra seccion con casilla propia, y asi conserva
+        // exactamente el comportamiento que tenia antes del punto 4.
+        _viewModel.Exploration.NavigateToTile(tileX, tileY);
     }
 
     // Arrastrar y soltar (pedido explicito 1-sep-2026: "se puede arrastar para poder ir

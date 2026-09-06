@@ -1436,8 +1436,28 @@
              contenido a la vez (GoToChestCommand); pulsar un objeto de dentro no navega (ya se
              esta mirando ese cofre). -->
         <DataTemplate x:Key="ChestRowTemplate" DataType="{x:Type vm:ChestRowViewModel}">
+            <!-- Bug real reportado por el usuario (6-sep-2026): "el cuadradito de resaltado que
+                 marca 'aqui esta seleccionado esto' no aparece en el modo Cofre a cofre". Este
+                 Border no tenia BorderThickness NI trigger de seleccion - el indicador teal que SI
+                 se ve en las demas categorias vive en la plantilla de WorldSearchResults (mas
+                 abajo, DataTrigger sobre IsCurrent), y esta vista usa otra clase de fila
+                 (ChestRowViewModel) que ni siquiera tenia IsCurrent. Mismo grosor (1.5) y mismo
+                 pincel (TealBrush) que alli, para que el gesto se lea igual en toda la pestaña. El
+                 BorderThickness es 1.5 en los DOS estados y solo cambia de color: subirlo al
+                 seleccionar movería la fila entera (mismo criterio ya fijado en CategorySelector). -->
             <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Margin="0,0,0,6"
+                    BorderThickness="1.5"
                     Visibility="{Binding IsMatch, Converter={StaticResource BoolToVis}}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="Transparent" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource TealBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <StackPanel>
                     <Button Style="{StaticResource RowClickButton}" HorizontalContentAlignment="Stretch" Padding="8"
                             ToolTip="{Binding Loc[tt_goto_map_toggle_contents], Mode=OneWay}"
@@ -4251,7 +4271,37 @@
                         </GridSplitter.Template>
                     </GridSplitter>
 
-                    <DockPanel Grid.Column="2">
+                    <!-- Bug real reportado por el usuario probando la app (6-sep-2026): "en todas
+                         las secciones de Exploracion se pierde contenido con el scroll". Causa real
+                         medida con el arnes (AR-11a/AR-11c): esta columna era un DockPanel PELADO,
+                         sin ninguna via de scroll. Un DockPanel sirve a sus hijos Dock=Top/Bottom
+                         PRIMERO y le deja al relleno (el contenido de la categoria: chips, botones y
+                         la lista real) solo lo que sobre - a 1080x700 con "Este mundo" desplegado
+                         eso eran 14px, y los chips "Por tipo de cofre"/"Por lo que contienen"/
+                         "Cofre a cofre", "Marcar en el mapa"/"Quitar marcas", "Buscar seleccionados"
+                         y "NPCs que faltan" quedaban recortados 14-17px SIN ninguna barra con la que
+                         llegar a ellos: contenido perdido de verdad, en las 5 categorias.
+                         El arreglo es un ScrollViewer con Height ligado al ViewportHeight del PROPIO
+                         ScrollViewer mas un MinHeight real:
+                           - Ventana con sitio: Height = viewport exacto -> reparto IDENTICO al de
+                             antes (listas estiradas, sin barra, nada cambia).
+                           - Ventana baja: gana MinHeight -> el contenido pasa a ser mas alto que el
+                             viewport y aparece la barra; nada se pierde.
+                         Height (no MinHeight a secas sobre el DockPanel) es deliberado: el
+                         ScrollViewer mide a su hijo con alto INFINITO, y un ListBox medido con
+                         infinito realiza TODOS sus contenedores - justo la virtualizacion que F-5
+                         monto para las listas largas (cientos de cofres). Con Height/MinHeight la
+                         medida es SIEMPRE finita y la virtualizacion sigue viva.
+                         MinHeight=600 no es un numero redondo al azar: el viewport real de esta
+                         columna al tamaño por defecto del arnes (1180x860) son 626px medidos, y
+                         AR-11f comprueba de forma permanente que a ese tamaño NO aparece barra
+                         (con 640 aparecia por 14px - el scroll debe ser la red de seguridad, no
+                         el modo normal de usar la columna). -->
+                    <ScrollViewer Grid.Column="2" x:Name="ExplorationSidebarScroll"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <DockPanel x:Name="ExplorationSidebarPanel"
+                               Height="{Binding ViewportHeight, ElementName=ExplorationSidebarScroll, Mode=OneWay}"
+                               MinHeight="600">
                         <!-- Punto 4 (advisor Opus, "una nueva barra lateral... que ya no solo salgan
                              los npc, eso se traslada dentro de una rama madre donde salgan varios
                              botones" - ver ESPEC-ui-exploracion.md#9). Rediseño completo: la lista de
@@ -4286,6 +4336,11 @@
                         <Expander DockPanel.Dock="Top" Header="{Binding Loc[explore_this_world], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
                                   Margin="0,0,0,8" IsExpanded="False"
                                   Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
+                            <!-- AR-11a: desplegado, este bloque pedia ~225px de golpe y se los
+                                 quitaba al contenido de la categoria (que en un DockPanel cobra el
+                                 ultimo). Con tope + scroll propio deja de poder vaciar la columna, y
+                                 lo que no cabe sigue siendo alcanzable dentro del propio Expander. -->
+                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Margin="0,6,0,0">
                                 <TextBlock Style="{StaticResource CaptionText}">
                                     <Run Text="{Binding Loc[explore_seed_label], Mode=OneWay}" /><Run Text="{Binding Exploration.WorldSeedText, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
@@ -4303,15 +4358,25 @@
                                      el boton "Guardar" (solo activo si de verdad cambio algo) es
                                      el UNICO punto que toca el archivo real. -->
                                 <TextBlock Text="{Binding Loc[appearance_difficulty], Mode=OneWay}" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,4" />
+                                <!-- AR-11b: cuartos, todavia mas estrechos que los tercios de Cofres
+                                     - mismo TextBlock hijo con Wrap por el mismo motivo real. -->
                                 <UniformGrid Columns="4">
-                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Content="{Binding Loc[explore_gamemode_classic], Mode=OneWay}" Padding="2,4" Margin="0,0,3,0"
-                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}" />
-                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Content="{Binding Loc[explore_gamemode_expert], Mode=OneWay}" Padding="2,4" Margin="3,0,3,0"
-                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}" />
-                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Content="{Binding Loc[explore_gamemode_master], Mode=OneWay}" Padding="2,4" Margin="3,0,3,0"
-                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}" />
-                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Content="{Binding Loc[explore_gamemode_journey], Mode=OneWay}" Padding="2,4" Margin="3,0,0,0"
-                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=3}" />
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="0,0,3,0"
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}">
+                                        <TextBlock Text="{Binding Loc[explore_gamemode_classic], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="3,0,3,0"
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}">
+                                        <TextBlock Text="{Binding Loc[explore_gamemode_expert], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="3,0,3,0"
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}">
+                                        <TextBlock Text="{Binding Loc[explore_gamemode_master], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="3,0,0,0"
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=3}">
+                                        <TextBlock Text="{Binding Loc[explore_gamemode_journey], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                                    </RadioButton>
                                 </UniformGrid>
                                 <Button Content="{Binding Loc[explore_save_difficulty], Mode=OneWay}" Margin="0,6,0,0" HorizontalAlignment="Stretch"
                                         Command="{Binding Exploration.SaveWorldGameModeCommand}"
@@ -4333,6 +4398,7 @@
                                 <Button Content="{Binding Loc[explore_save_report], Mode=OneWay}" Tag="Ghost" Margin="0,8,0,0" HorizontalAlignment="Left" Padding="8,3"
                                         Click="OnSaveWorldReportClick" />
                             </StackPanel>
+                            </ScrollViewer>
                         </Expander>
 
                         <!-- 9.1: selector de categoria - RadioButton real (GroupName real de WPF),
@@ -4427,7 +4493,7 @@
                              P-2: Border con BgPrimaryBrush (un escalon POR DEBAJO del fondo de
                              panel) en vez de StackPanel a secas - "lo que ha salido" se lee de un
                              vistazo, frente a "lo que estoy pidiendo" (cuadro+pildoras de arriba). -->
-                        <Border DockPanel.Dock="Bottom" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" Padding="10" Margin="0,8,0,0">
+                        <Border x:Name="ExplorationResultsBlock" DockPanel.Dock="Bottom" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" Padding="10" Margin="0,8,0,0">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <Style.Triggers>
@@ -4560,7 +4626,7 @@
                              visibilidad exclusiva por SelectedCategory (DataTrigger de cadena -
                              WPF convierte el texto al valor del enum solo con el TypeConverter
                              nativo, sin falta ningun converter). -->
-                        <Grid>
+                        <Grid x:Name="ExplorationCategoryContent">
                             <!-- NPCs: chips + lista propia (ya existente) + "NPCs que faltan". -->
                             <DockPanel>
                                 <DockPanel.Style>
@@ -4662,13 +4728,31 @@
                                      junto a los dos ya existentes - una fila por cofre REAL del
                                      mundo (nunca agrupado por variante ni por contenido), con su
                                      contenido exacto desplegable. -->
-                                <UniformGrid DockPanel.Dock="Top" Columns="3" Margin="0,0,0,8">
-                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Content="{Binding Loc[explore_chests_by_type], Mode=OneWay}" Margin="0,0,3,0"
-                                                 IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}" />
-                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Content="{Binding Loc[explore_chests_by_contents], Mode=OneWay}" Margin="3,0,3,0"
-                                                 IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}" />
-                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Content="{Binding Loc[explore_chests_one_by_one], Mode=OneWay}" Margin="3,0,0,0"
-                                                 IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}" />
+                                <!-- Bug real reportado por el usuario probando la app (6-sep-2026,
+                                     captura): "contienen" salia CORTADA. Causa real medida con el
+                                     arnes (AR-11b): Content="cadena" a secas se presenta en un
+                                     TextBlock implicito SIN TextWrapping, y el UniformGrid da a
+                                     cada chip un tercio EXACTO de la columna - "Por lo que
+                                     contienen" (el mas largo de los tres) pedia 22px mas de los
+                                     que su celda tiene a CUALQUIER ancho de ventana, incluido 4K,
+                                     porque la barra lateral no crece con la ventana (es un ancho
+                                     fijo con GridSplitter, F-10). Mismo patron ya establecido en
+                                     este fichero para las pildoras de categoria: un TextBlock hijo
+                                     explicito, aqui con Wrap real - el chip crece a dos lineas en
+                                     vez de comerse el texto. -->
+                                <UniformGrid x:Name="ChestModeSelector" DockPanel.Dock="Top" Columns="3" Margin="0,0,0,8">
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Margin="0,0,3,0"
+                                                 IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}">
+                                        <TextBlock Text="{Binding Loc[explore_chests_by_type], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Margin="3,0,3,0"
+                                                 IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}">
+                                        <TextBlock Text="{Binding Loc[explore_chests_by_contents], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="CofresVista" Margin="3,0,0,0"
+                                                 IsChecked="{Binding Exploration.ChestViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}">
+                                        <TextBlock Text="{Binding Loc[explore_chests_one_by_one], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                                    </RadioButton>
                                 </UniformGrid>
 
                                 <!-- Modos 0/1: la lista generica de siempre. -->
@@ -4696,15 +4780,9 @@
                                 <!-- Modo 2 (C-06): Cofre a cofre - virtualizada, un mundo Grande
                                      tiene del orden de cientos de cofres (mismo criterio real ya
                                      aplicado por F-5 al resto de listas). -->
-                                <ListBox ItemsSource="{Binding Exploration.ChestRows}" ItemTemplate="{StaticResource ChestRowTemplate}"
-                                         ItemContainerStyle="{StaticResource VirtualRowContainer}"
-                                         Background="Transparent" BorderThickness="0" Focusable="False"
-                                         ScrollViewer.CanContentScroll="True"
-                                         VirtualizingPanel.IsVirtualizing="True"
-                                         VirtualizingPanel.VirtualizationMode="Recycling"
-                                         VirtualizingPanel.ScrollUnit="Pixel">
-                                    <ListBox.Style>
-                                        <Style TargetType="ListBox">
+                                <DockPanel>
+                                    <DockPanel.Style>
+                                        <Style TargetType="DockPanel">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding Exploration.ChestViewMode}" Value="2">
@@ -4712,8 +4790,28 @@
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </ListBox.Style>
-                                </ListBox>
+                                    </DockPanel.Style>
+                                    <!-- Punto 4 del encargo del usuario (6-sep-2026): casilla de
+                                         acercar PROPIA de "Cofre a cofre", independiente de la
+                                         global que comparten las demas secciones (que vive en el
+                                         bloque de resultados, mas arriba, y sigue mandando alli).
+                                         Aqui, ademas, esta SIEMPRE visible: la global se oculta
+                                         cuando no hay resultados de busqueda (WorldSearchResults.
+                                         Count), condicion que en esta vista no se cumple nunca
+                                         porque su lista es otra (ChestRows) - parte real de que el
+                                         usuario no pudiera controlar el zoom de este modo. -->
+                                    <CheckBox DockPanel.Dock="Top" Content="{Binding Loc[explore_zoom_on_navigate_chest], Mode=OneWay}"
+                                              IsChecked="{Binding Exploration.AutoZoomOnChestNavigate}"
+                                              ToolTip="{Binding Loc[explore_zoom_on_navigate_chest_tooltip], Mode=OneWay}"
+                                              Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8" />
+                                    <ListBox x:Name="ChestByChestList" ItemsSource="{Binding Exploration.ChestRows}" ItemTemplate="{StaticResource ChestRowTemplate}"
+                                             ItemContainerStyle="{StaticResource VirtualRowContainer}"
+                                             Background="Transparent" BorderThickness="0" Focusable="False"
+                                             ScrollViewer.CanContentScroll="True"
+                                             VirtualizingPanel.IsVirtualizing="True"
+                                             VirtualizingPanel.VirtualizationMode="Recycling"
+                                             VirtualizingPanel.ScrollUnit="Pixel" />
+                                </DockPanel>
                             </DockPanel>
 
                             <!-- Minerales: inventario en 3 grupos con cabecera + marcado en el mapa
@@ -4770,13 +4868,24 @@
                                         </Style.Triggers>
                                     </Style>
                                 </DockPanel.Style>
+                                <!-- Mismo arreglo real que los chips de Cofres (AR-11b): TextBlock
+                                     hijo con Wrap en vez de Content="cadena", que no envuelve. Estos
+                                     tres son mas cortos en español y hoy no se cortan, pero comparten
+                                     el mismo UniformGrid de tercios y el mismo riesgo con cualquier
+                                     otro idioma - se arregla la CAUSA, no solo el caso visto. -->
                                 <UniformGrid DockPanel.Dock="Top" Columns="3" Margin="0,0,0,4">
-                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="ObjetosVista" Content="{Binding Loc[explore_tiles], Mode=OneWay}" Margin="0,0,3,0"
-                                                 IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}" />
-                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="ObjetosVista" Content="{Binding Loc[explore_walls], Mode=OneWay}" Margin="3,0,3,0"
-                                                 IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}" />
-                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="ObjetosVista" Content="{Binding Loc[explore_liquids], Mode=OneWay}" Margin="3,0,0,0"
-                                                 IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}" />
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="ObjetosVista" Margin="0,0,3,0"
+                                                 IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}">
+                                        <TextBlock Text="{Binding Loc[explore_tiles], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="ObjetosVista" Margin="3,0,3,0"
+                                                 IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}">
+                                        <TextBlock Text="{Binding Loc[explore_walls], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ViewSelector}" GroupName="ObjetosVista" Margin="3,0,0,0"
+                                                 IsChecked="{Binding Exploration.ObjectsViewMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}">
+                                        <TextBlock Text="{Binding Loc[explore_liquids], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
+                                    </RadioButton>
                                 </UniformGrid>
                                 <Button DockPanel.Dock="Top" Content="{Binding Loc[explore_search_checked], Mode=OneWay}" Tag="Ghost" Margin="0,4,0,8" HorizontalAlignment="Left"
                                         Command="{Binding Exploration.SearchCheckedInventoryCommand}" />
@@ -4802,6 +4911,7 @@
                             </DockPanel>
                         </Grid>
                     </DockPanel>
+                    </ScrollViewer>
                 </Grid>
             </DockPanel>
         </TabItem>

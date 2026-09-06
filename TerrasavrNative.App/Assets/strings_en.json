@@ -227,6 +227,8 @@
   "explore_zoom_in": "Zoom in (+)",
   "explore_zoom_label": "Zoom ",
   "explore_zoom_on_navigate": "Zoom in when jumping to a result",
+  "explore_zoom_on_navigate_chest": "Zoom in when selecting a chest",
+  "explore_zoom_on_navigate_chest_tooltip": "\"Chest by chest\" has its own checkbox: it turns on and off separately from the one used by the other sections",
   "explore_zoom_on_navigate_tooltip": "When jumping to a result, besides centering it, applies a working zoom level (not just panning)",
   "explore_zoom_out": "Zoom out (-)",
   "explore_zoom_pct": "Zoom {0:P0}",

@@ -9425,3 +9425,141 @@ comentarios, porque varios documentan el patron escribiendo literalmente `Loc[cl
    los argumentos de cada mensaje efimero.
 
 No hubo ningun obstaculo que fallara dos veces seguidas en esta ronda.
+
+---
+
+## 6-sep-2026 - Exploracion: la columna de busqueda perdia contenido, y "Cofre a cofre" no tenia ni resaltado ni casilla propia
+
+Cuatro fallos reportados por el usuario **probando la app de verdad** (captura de Exploracion >
+Cofres). Los cuatro se reprodujeron primero con el arnes, con numeros medidos, antes de tocar
+nada - y las comprobaciones que los reprodujeron se quedan dentro (`AR-11`, `AR-12`), no eran de
+usar y tirar.
+
+### 1. "En todas las secciones de Exploracion se pierde contenido con el scroll"
+
+**Causa real**: la columna entera ("Buscar en el mundo") era un `DockPanel` **pelado, sin ninguna
+via de scroll**. Un DockPanel sirve a sus hijos `Dock=Top`/`Dock=Bottom` PRIMERO (cabecera, "Este
+mundo", las 5 pildoras, el buscador, y abajo el bloque de resultados) y al relleno - el contenido
+real de la categoria - le deja **lo que sobre**. Medido con `AR-11a` a 1080x700 con "Este mundo"
+desplegado (algo perfectamente normal: se abre para ver semilla y version): el contenido de la
+categoria se quedaba con **14px** en Todo/Cofres/Minerales/Objetos y 42px en NPCs. Y `AR-11c`
+listo lo que eso recortaba, en las cinco categorias, sin ninguna barra con la que llegar a ello:
+`'Por tipo de cofre' 0x15px | 'Por lo que contienen' 22x15px | 'Cofre a cofre' 0x15px`,
+`'Marcar en el mapa' 0x17px | 'Quitar marcas' 0x17px`, `'Tiles'/'Paredes'/'Liquidos' 0x14px`,
+`'Buscar seleccionados' 0x17px`, `'NPCs que faltan' 0x17px`.
+
+**Arreglo**: `ScrollViewer` alrededor de la columna, con el DockPanel
+`Height="{Binding ViewportHeight, ElementName=ExplorationSidebarScroll}"` + `MinHeight="600"`.
+
+- Con sitio: `Height` = viewport exacto -> **reparto identico al de antes** (listas estiradas, sin
+  barra, no cambia nada de lo que ya funcionaba).
+- Sin sitio: gana el `MinHeight`, el contenido pasa a medir mas que el viewport y **aparece la
+  barra**; nada se pierde.
+
+`Height` (y no un `MinHeight` a secas sobre el DockPanel) es deliberado y es la parte que costo
+entender: **un `ScrollViewer` mide a su hijo con alto INFINITO, y un `ListBox` medido con infinito
+realiza TODOS sus contenedores** - justo la virtualizacion que F-5 monto para las listas largas
+(este mundo real tiene 505 cofres). Con `Height`/`MinHeight` la medida es SIEMPRE finita y la
+virtualizacion sigue viva.
+
+El `600` tampoco es un numero redondo al azar: el viewport real de esta columna al tamaño por
+defecto son **626px medidos**. Con 640 (primer intento) la barra aparecia por 14px cuando no hacia
+ninguna falta; `AR-11f` comprueba de forma permanente que a ese tamaño NO hay barra - el scroll es
+la red de seguridad, no el modo normal de usar la columna.
+
+Ademas, el contenido de "Este mundo" va ahora en un `ScrollViewer MaxHeight="200"` propio: era el
+bloque que de verdad vaciaba la columna (~225px de golpe), y con tope + scroll propio deja de
+poder hacerlo sin perder nada de lo suyo.
+
+Resultado medido, mismo caso que antes daba 14px: **173px** de contenido de categoria, 0
+elementos recortados sin scroll en las 5 categorias, a 1180x860 y a 1080x700, con "Este mundo"
+abierto y cerrado.
+
+### 2. "Contienen" salia cortada
+
+**Causa real** (`AR-11b`): `Content="{Binding Loc[...]}"` a secas se presenta en un `TextBlock`
+implicito **sin `TextWrapping`**, y el `UniformGrid Columns="3"` le da a cada chip un tercio
+EXACTO. "Por lo que contienen" pedia **22px mas** de los que su celda tiene - y a **cualquier**
+ancho de ventana, 4K incluido, porque esta barra lateral no crece con la ventana (es un ancho fijo
+con `GridSplitter`, F-10). No era un caso limite de ventana pequeña: llevaba roto siempre.
+
+**Arreglo**: `TextBlock` hijo explicito con `TextWrapping="Wrap" TextAlignment="Center"` - el
+patron que este mismo fichero ya usaba para las pildoras de categoria. El chip crece a dos lineas
+en vez de comerse el texto. Aplicado tambien a los tercios de Objetos (Tiles/Paredes/Liquidos) y a
+los **cuartos** de dificultad del mundo, que comparten la causa exacta y el mismo riesgo con
+cualquier otro idioma - se arregla la causa, no solo el caso visto.
+
+### 3. En "Cofre a cofre" no aparecia el resaltado de seleccion
+
+**Causa real**: no era un binding roto ni una coleccion equivocada - **la propiedad no existia**.
+Las demas categorias comparten `WorldSearchResults`, cuyas filas son `WorldSearchHitRowViewModel`
+**con `IsCurrent`**, y la plantilla de esa lista pinta un borde teal con un `DataTrigger` sobre el.
+"Cofre a cofre" es la unica vista con su propia lista (`ChestRows`) y su propia clase de fila
+(`ChestRowViewModel`), que no tenia `IsCurrent`; y su plantilla (`ChestRowTemplate`) no tenia
+siquiera `BorderThickness`, asi que no habia nada a lo que engancharse.
+
+**Arreglo**: `IsCurrent` en `ChestRowViewModel`, marcado exclusivo en `GoToChest` (gemelo real de
+`UpdateCurrentWorldSearchHighlight`), y en la plantilla el **mismo grosor (1.5) y el mismo pincel
+(`TealBrush`)** que la otra lista, para que el gesto se lea igual en toda la pestaña. Grosor
+constante en los dos estados, solo cambia el color: subirlo al seleccionar movería la fila entera
+(criterio ya fijado en `CategorySelector`). El resaltado sobrevive a replegar el cofre: sigue
+siendo el ultimo al que se navego.
+
+`AR-12d` lo comprueba en el **arbol visual real**, no solo en la ViewModel: borde `#FF00D2A6` en el
+cofre pulsado y `#00FFFFFF` (transparente) en el anterior.
+
+### 4. Casilla de acercar PROPIA para "Cofre a cofre"
+
+**Como estaba**: una sola `AutoZoomOnNavigate` global que el code-behind (`OnNavigateToTile`) leia
+para TODA navegacion. Y un detalle que agravaba lo reportado: esa casilla vive en el bloque de
+resultados y solo se ve si `WorldSearchResults.Count > 0` - condicion que en "Cofre a cofre" **no
+se cumple nunca**, porque su lista es otra. El usuario no podia ni verla desde ahi.
+
+**Arreglo**: `AutoZoomOnChestNavigate` propia + su casilla, SIEMPRE visible dentro del bloque de
+"Cofre a cofre". Las demas secciones siguen compartiendo la global **a proposito**: comparten
+tambien la misma lista de resultados y la misma casilla real en pantalla, separarlas ahi no seria
+un arreglo sino un cambio que nadie ha pedido.
+
+La pieza limpia: el code-behind ya no lee ninguna casilla, lee `NavigationWantsAutoZoom`, que
+`NavigateToTile(x, y, autoZoom)` deja resuelto - **cada origen decide con la suya**, y la decision
+vive entera en la ViewModel (testeable sin ventana). La firma del evento `NavigateToTileRequested`
+se deja como estaba (`Action<int,int>`): la consumen tambien `ViewSpawnOnMapTests` y el arnes, y
+"quien quiere zoom" no es informacion de POSICION. El clic en el minimapa pasa ahora por
+`Exploration.NavigateToTile` para conservar exactamente su comportamiento anterior (casilla
+global).
+
+`AR-12e` comprueba la independencia en los dos sentidos y, sobre todo, el **efecto real**: global
+ON + cofres OFF -> pulsar un cofre deja el zoom en 1 (no acerca); global OFF + cofres ON -> lo
+lleva a 4.0 (el zoom de trabajo de F-3).
+
+### Numeros reales
+
+| | antes | despues |
+|---|---|---|
+| build | 0 errores / 0 avisos | 0 errores / 0 avisos |
+| tests Core | 408 | 408 (sin tocar Core) |
+| tests ViewModels | 329 | 343 (+7 mios, `ChestByChestSelectionTests`) |
+| arnes de UI | 14 `FALLO` reales de AR-11 | **0 FALLO** en todo el arnes |
+| contenido de categoria a 1080x700 con "Este mundo" abierto | 14px | 173px |
+| recorte de "Por lo que contienen" | 22x0px, a todo ancho | 0x0 |
+| claves de idioma | 568 | 570 (+2, casilla propia y su tooltip) |
+
+Capturas reales del arnes: `exploracion-cofre-a-cofre-seleccionado.png` (nueva - resaltado teal,
+casilla propia marcada y los 3 chips completos a dos lineas).
+
+### Obstaculo real de esta ronda (autonomia tecnica)
+
+`dotnet build` fallaba con `MSB3021: no se puede copiar apphost.exe -> Terrakeep.exe, el archivo
+se ha bloqueado por "Terrakeep (38968)"` - el usuario tenia la app abierta probandola (con cambios
+sin guardar en el titulo), asi que matar el proceso no era una opcion. Solucion no invasiva:
+compilar y ejecutar el arnes con la salida redirigida al scratchpad de la sesion,
+`dotnet build TerrasavrNative.slnx -p:BaseOutputPath=<scratchpad>/out/`, sin tocar `bin\Debug\`.
+
+**Aviso para la proxima vez**: con `BaseOutputPath` redirigido, `dotnet test
+TerrasavrNative.Core.Tests` da **6 fallos falsos** (`LocalizedContentTests`, ficheros de datos
+reales) que NO existen en un `dotnet test` normal - comprobado en las dos formas. Si aparecen esos
+6, no es una regresion: es la redireccion. El arnes de UI, en cambio, funciona igual redirigido.
+
+Trabajando en paralelo con otro agente en los mismos ficheros (`MainWindow.xaml`, `Program.cs`,
+`strings_*.json`): el commit se preparo filtrando hunks (`git apply --cached` con solo los hunks
+propios), nunca `git add` del fichero entero, para no arrastrar su trabajo sin comitear.

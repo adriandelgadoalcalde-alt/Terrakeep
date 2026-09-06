@@ -220,6 +220,13 @@ public sealed partial class ChestRowViewModel(string variantName, string? chestN
     // Mismo filtro por nombre/id ya establecido (ApplyInventoryFilter) - por variante, nombre
     // propio del cofre o cualquier objeto real de dentro.
     [ObservableProperty] private bool _isMatch = true;
+    // Bug real reportado por el usuario (6-sep-2026): "el cuadradito de resaltado que marca 'aqui
+    // esta seleccionado esto' no aparece en Cofre a cofre". Causa real: esta clase NO tenia el
+    // IsCurrent que SI tiene WorldSearchHitRowViewModel (el resto de categorias comparten esa
+    // lista y su DataTrigger de borde teal), asi que la plantilla no tenia nada a lo que
+    // engancharse - no era un binding roto, era una propiedad que no existia. Marcado exclusivo:
+    // lo fija GoToChest, apagando el resto (mismo criterio que UpdateCurrentWorldSearchHighlight).
+    [ObservableProperty] private bool _isCurrent;
 }
 
 // Pestaña "Exploracion" - cargar un .wld real, pintarlo entero (WorldRenderer), listar sus
@@ -429,8 +436,18 @@ public partial class ExplorationViewModel : ObservableObject
     // opcion de que lo haga". El valor por defecto False (solo desplazar, sin zoom) ya era
     // correcto - citaba el mismo "Default false - just pan, don't zoom" de TEdit,
     // FindSidebarViewModel.cs:61 - lo que faltaba era la CASILLA para que el usuario decida.
-    // El code-behind (OnNavigateToTile, MainWindow.xaml.cs) es quien lee esta propiedad.
+    // El code-behind (OnNavigateToTile, MainWindow.xaml.cs) es quien lee esta propiedad - a traves
+    // de NavigationWantsAutoZoom, nunca directamente (ver el comentario de NavigateToTile).
     [ObservableProperty] private bool _autoZoomOnNavigate;
+    // Punto 4 del encargo del usuario (6-sep-2026): "que ESPECIFICAMENTE para Cofre a cofre esa
+    // opcion sea su PROPIA casilla independiente". Las demas secciones (Todo/NPCs/Minerales/
+    // Objetos) siguen compartiendo AutoZoomOnNavigate a proposito: comparten TAMBIEN la misma
+    // lista de resultados y la misma casilla real en pantalla, separarlas ahi no seria un
+    // arreglo sino un cambio de comportamiento que nadie ha pedido. "Cofre a cofre" es el caso
+    // distinto de verdad: es la unica vista con su propia lista (ChestRows) y su propio gesto
+    // (GoToChest), y su casilla vive en su propio bloque. Apagada por defecto, igual que la
+    // global (TEdit, "Default false - just pan, don't zoom").
+    [ObservableProperty] private bool _autoZoomOnChestNavigate;
     private int _worldSearchCurrentIndex = -1;
 
     private readonly DispatcherTimer _worldSearchDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
@@ -753,7 +770,15 @@ public partial class ExplorationViewModel : ObservableObject
     private void GoToChest(ChestRowViewModel chest)
     {
         chest.IsExpanded = !chest.IsExpanded;
-        NavigateToTile(chest.TileX, chest.TileY);
+        // Bug real reportado por el usuario (6-sep-2026): en "Cofre a cofre" no aparecia el
+        // indicador de "esto es lo que estas mirando" que SI tienen las demas categorias. Marcado
+        // exclusivo, gemelo real de UpdateCurrentWorldSearchHighlight - el cofre pulsado queda
+        // marcado aunque se repliegue (sigue siendo el ultimo al que se navego, igual que un
+        // resultado de busqueda sigue resaltado tras volver a pulsarlo).
+        foreach (var fila in ChestRows) fila.IsCurrent = ReferenceEquals(fila, chest);
+        // Punto 4 del encargo (6-sep-2026): "Cofre a cofre" tiene su PROPIA casilla de acercar,
+        // independiente de la global que comparten las demas secciones.
+        NavigateToTile(chest.TileX, chest.TileY, AutoZoomOnChestNavigate);
     }
 
     // Clic simple sobre una fila de inventario - busca SOLO esa (el caso comun no debe costar
@@ -1141,7 +1166,20 @@ public partial class ExplorationViewModel : ObservableObject
     // Points" - punto de entrada publico real para que MainViewModel (el unico sitio que
     // conoce ambas pestañas a la vez) pueda centrar el mapa en un Spawn Point real sin
     // depender de un comando pensado solo para NPCs.
-    public void NavigateToTile(int x, int y) => NavigateToTileRequested?.Invoke(x, y);
+    public void NavigateToTile(int x, int y) => NavigateToTile(x, y, AutoZoomOnNavigate);
+
+    // Punto 4 del encargo (6-sep-2026): cada origen de navegacion decide con SU casilla. El
+    // code-behind (OnNavigateToTile) es quien de verdad hace el zoom, pero no debe saber de que
+    // seccion venimos: lee NavigationWantsAutoZoom, que esta navegacion acaba de dejar resuelto.
+    // La firma del evento se deja como estaba (Action<int,int>) a proposito - la consumen tambien
+    // ViewSpawnOnMapTests y el arnes, y "quien quiere zoom" no es informacion de POSICION.
+    public bool NavigationWantsAutoZoom { get; private set; }
+
+    public void NavigateToTile(int x, int y, bool autoZoom)
+    {
+        NavigationWantsAutoZoom = autoZoom;
+        NavigateToTileRequested?.Invoke(x, y);
+    }
 
     // H4-08 (cuarta auditoria de Opus, Fable): "la version buena - un lanzador de mundos
     // calcado del de personajes de Inicio". Mismo patron real que HomeViewModel/I-1: escanea

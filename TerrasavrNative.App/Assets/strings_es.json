@@ -227,6 +227,8 @@
   "explore_zoom_in": "Acercar (+)",
   "explore_zoom_label": "Zoom ",
   "explore_zoom_on_navigate": "Acercar al ir a un resultado",
+  "explore_zoom_on_navigate_chest": "Acercar al seleccionar un cofre",
+  "explore_zoom_on_navigate_chest_tooltip": "Casilla propia de \"Cofre a cofre\": se enciende y se apaga por separado de la de las demás secciones",
   "explore_zoom_on_navigate_tooltip": "Al saltar a un resultado, además de centrarlo aplica un zoom de trabajo (no solo desplazar)",
   "explore_zoom_out": "Alejar (-)",
   "explore_zoom_pct": "Zoom {0:P0}",
