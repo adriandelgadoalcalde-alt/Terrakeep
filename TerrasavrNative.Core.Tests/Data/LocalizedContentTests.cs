@@ -39,9 +39,22 @@ public class LocalizedContentTests
     public void PickList_ConIngles_LaUsaEntera()
         => Assert.Equal(["one"], LocalizedContent.PickList(["uno"], ["one"], "en"));
 
+    // Oleada del 6-sep-2026 (area Novedades / Acerca de) - BUG REAL DE LA PRUEBA, no del codigo:
+    // esto subia CUATRO niveles desde AppContext.BaseDirectory, o sea daba por hecho que la
+    // salida compilada vive SIEMPRE en `<repo>\TerrasavrNative.Core.Tests\bin\Debug\net10.0\`.
+    // El propio CLAUDE.md documenta el patron contrario como solucion estandar cuando `bin\Debug`
+    // esta bloqueado (la app abierta del usuario, o varios arneses a la vez): compilar con
+    // `-p:BaseOutputPath=<otra carpeta>`. Compilando asi, estos 6 tests reventaban con
+    // DirectoryNotFoundException - 6 "fallos" que no son de la app y que tapan cualquier fallo de
+    // verdad que aparezca al lado.
+    //
+    // CallerFilePath da la ruta del PROPIO fichero fuente, que incrusta el compilador: no depende
+    // de donde se deje la salida, ni del directorio de trabajo, ni de la forma del arbol de bin.
     private static string RutaAsset(string nombre) =>
-        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-                     "TerrasavrNative.App", "Assets", nombre);
+        Path.Combine(RaizDelRepo(), "TerrasavrNative.App", "Assets", nombre);
+
+    private static string RaizDelRepo([System.Runtime.CompilerServices.CallerFilePath] string esteFichero = "") =>
+        Path.GetFullPath(Path.Combine(Path.GetDirectoryName(esteFichero)!, "..", ".."));
 
     // El fichero REAL que se reparte: cada version tiene que traer fecha, resumen y las dos
     // listas en ingles. Sin esto, "Acerca de" volveria a verse en español entero con la app en

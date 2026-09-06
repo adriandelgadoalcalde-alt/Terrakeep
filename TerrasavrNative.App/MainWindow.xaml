@@ -2569,6 +2569,19 @@
                                                              (OnSaveStorageSetClick/OnLoadStorageSetClick/
                                                              OnAppendStorageSetClick, que leen el DataContext=StorageGroup
                                                              heredado del Border de arriba - identico aqui). -->
+                                                        <!-- OBJ-07 (oleada de Objetos, 6-sep-2026): Dock="Top", no "Right". Con
+                                                             los dos bloques compartiendo la MISMA fila, a esta mitad de la
+                                                             pantalla (la mitad derecha de "Inventario" en Amplio) los 5
+                                                             botones se llevan lo que necesitan y a las 4 pildoras de almacen
+                                                             les quedaban 114px medidos - "Fragua del Defensor (15/40)" pide
+                                                             137 y se cortaba en seco (45px perdidos a 1520x864, medido), y
+                                                             "Bóveda del Vacío (0/40)" otros 25. Un WrapPanel envuelve entre
+                                                             hijos, pero NUNCA encoge un hijo que no cabe: si a la pildora no
+                                                             le dan su ancho, se corta y punto. Apilados, los dos reciben el
+                                                             ancho entero y ninguno puede cortarse. Ese recorte no existia
+                                                             antes de esta misma oleada solo porque los 5 botones estaban
+                                                             MUDOS (12px de padding cada uno, ver OBJ-01) - o sea que el
+                                                             hueco lo daba otro bug, no el reparto. -->
                                                         <WrapPanel DockPanel.Dock="Right">
                                                             <Button Content="{Binding Loc[action_save_set], Mode=OneWay}" Click="OnSaveStorageSetClick"
                                                                     ToolTip="{Binding Loc[tt_save_storage_json], Mode=OneWay}"

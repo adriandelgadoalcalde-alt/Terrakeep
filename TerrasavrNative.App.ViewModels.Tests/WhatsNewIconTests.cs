@@ -98,8 +98,18 @@ public sealed class WhatsNewIconTests
         var catalog = WhatsNewCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
         var vm = new WhatsNewViewModel(catalog, catalog, Service.VanillaCatalog, Service.CalamityCatalog, Service.WhatsNewItemIds, Service.TooltipCatalogs);
 
-        Assert.Null(Service.VanillaCatalog.GetIdByKey("ArcSurge")); // confirma que el catalogo REAL no lo conoce (por eso hace falta el respaldo)
+        // Oleada del 6-sep-2026 (area Novedades): aqui habia un
+        // `Assert.Null(Service.VanillaCatalog.GetIdByKey("ArcSurge"))` - "confirma que el
+        // catalogo REAL no lo conoce, por eso hace falta el respaldo". Dejo de ser cierto en
+        // cuanto vanilla_item_ids_by_key.json se amplio de 5455 a 6194 claves y paso a traer
+        // ArcSurge con el MISMO id (6173, comprobado): el test se caia sin que nada estuviera
+        // roto - afirmaba una AUSENCIA en un catalogo que crece, no un comportamiento. Lo que
+        // hay que fijar es (a) que los dos catalogos coinciden en el id real cuando los dos lo
+        // traen (si se desincronizan, esto salta) y (b) que la clave interna resuelve sprite por
+        // el camino real de Novedades, venga del catalogo principal o del respaldo.
         Assert.Equal(6173, Service.WhatsNewItemIds.GetIdByKey("ArcSurge"));
+        if (Service.VanillaCatalog.GetIdByKey("ArcSurge") is int idPrincipal)
+            Assert.Equal(6173, idPrincipal);
 
         var item = vm.VanillaEntries[0].Items[0];
 

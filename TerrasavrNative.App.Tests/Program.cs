@@ -33,7 +33,13 @@ using TerrasavrNative.Core.Nbt;
 using TerrasavrNative.Core.PlrFormat;
 using TerrasavrNative.Core.WldFormat;
 
-internal static class Program
+// `partial` (6-sep-2026, ronda de Libreria/Builds): esta clase pasa de 5.700 lineas y varias
+// rondas trabajan sobre ella a la vez - un bloque nuevo grande dentro de Main es una colision
+// asegurada. Los bloques nuevos van en su propio fichero (PruebasLibreriaYBuilds.cs) como otra
+// parte de ESTA MISMA clase, asi siguen usando tal cual sus helpers reales (DoEvents,
+// WaitForDispatcher, FijarTamaño, RectVisible/VisibleEntero, Descendientes) sin duplicar ni uno,
+// que es justo lo que T-21 pedia: seguir acumulando en el arnes, no montar otro aparte.
+internal static partial class Program
 {
     [STAThread]
     private static void Main()
@@ -73,6 +79,11 @@ internal static class Program
         app.Resources["CountToVis"] = new CountToVisibilityConverter();
         app.Resources["InverseBoolToVis"] = new InverseBooleanToVisibilityConverter();
         app.Resources["BoolToGridLength"] = new BoolToGridLengthConverter();
+        // AR-EX1 (6-sep-2026): mismo motivo real que todos los de arriba (H4-01) - converter
+        // nuevo del arreglo del reparto vertical de la columna de Exploracion; sin registrarlo
+        // aqui el arnes reventaria al montar la ventana aunque la app real (que si carga
+        // App.xaml) funcione.
+        app.Resources["CountToGridLength"] = new CountToGridLengthConverter();
         app.Resources["BoolToDouble"] = new BoolToDoubleConverter();
         // Punto 4 (advisor Opus, selector de categoria de Exploracion - ver
         // ESPEC-ui-exploracion.md#9.1): mismo motivo real que el resto de converters de arriba -
@@ -498,6 +509,24 @@ internal static class Program
             Console.WriteLine("LOAD-EXCEPTION: " + ex);
         }
 
+        // PB_SOLO=1 (6-sep-2026): modo de FOCO - corre solo los bloques PB-* (Personaje >
+        // Buffs/Apariencia/Investigacion/Spawn Points/Desbloqueos/Version) sobre el personaje
+        // real ya cargado, y sale. Misma idea que AR_LAY_SOLO, por un motivo real medido: el
+        // arnes completo hace decenas de RenderTargetBitmap de la ventana entera (hasta
+        // 2560x1440) y en esta sesion RDP - con render por software forzado y varios trabajos
+        // corriendo el arnes a la vez sobre el mismo repo - el proceso muere a media ejecucion,
+        // en puntos distintos cada vez y siempre justo en una captura. No es un fallo de la app
+        // (CLAUDE.md ya deja escrito que las capturas son poco fiables en este entorno): es que
+        // el recorrido entero deja de ser repetible mientras dure esa condicion. Este modo
+        // permite verificar un area sin depender de eso; la ejecucion COMPLETA sigue siendo la
+        // que manda.
+        if (Environment.GetEnvironmentVariable("PB_SOLO") == "1")
+        {
+            PruebasPersonajeBuffsAparienciaVersion(vm, window);
+            Console.WriteLine("DONE (PB_SOLO)");
+            Environment.Exit(0);
+        }
+
         // Verificacion real de N-1 (auditoria de Opus, Bloque 2): la cabecera global debe verse
         // IGUAL en una pestaña que no es Personaje (aqui, Builds=indice 2) - antes el nombre/
         // dificultad/Guardar solo existian dentro de Personaje.
@@ -696,13 +725,42 @@ internal static class Program
             // Bug real reportado 2-sep-2026 ("la armadura me deja colocarla en los huecos de
             // accesorios"): la causa real era que Calamity SIEMPRE pasaba la restriccion,
             // tambien para armadura/accesorio (donde SI hay un campo real, Category, a
-            // diferencia de ammo/mountType/etc). id sintetico 20000243 = armadura real
-            // (Armor/Aerospec), 20000000 = accesorio real (Accessories) - ver catalog.json.
-            int calamityArmorId = 20000243, calamityAccessoryId = 20000000;
-            Console.WriteLine($"Calamity armadura en slot cabeza: headSlot.AcceptsItem({calamityArmorId})={headSlot.AcceptsItem(calamityArmorId)} (esperado True)");
-            Console.WriteLine($"Calamity armadura en slot accesorio: accSlot.AcceptsItem({calamityArmorId})={accSlot.AcceptsItem(calamityArmorId)} (esperado False - este era el bug)");
-            Console.WriteLine($"Calamity accesorio en slot accesorio: accSlot.AcceptsItem({calamityAccessoryId})={accSlot.AcceptsItem(calamityAccessoryId)} (esperado True)");
-            Console.WriteLine($"Calamity accesorio en slot cabeza: headSlot.AcceptsItem({calamityAccessoryId})={headSlot.AcceptsItem(calamityAccessoryId)} (esperado False)");
+            // diferencia de ammo/mountType/etc). Ids sinteticos = 20000000 + indice real en
+            // Assets/calamity/catalog.json.
+            //
+            // OBJ-06 (oleada de Objetos, 6-sep-2026): este bloque llevaba un "esperado" MENTIROSO
+            // desde H3-11. Usaba 20000243 como "armadura de Calamity" para el slot de CABEZA y
+            // esperaba True - pero el indice 243 es `AerospecBreastplate`, equipSlot="Body", o sea
+            // un PETO: desde H3-11 (que empezo a mirar de que PARTE es cada pieza, no solo "es
+            // armadura") el slot de cabeza lo rechaza con toda la razon, y el arnes llevaba desde
+            // entonces imprimiendo "obtenido False (esperado True)" en cada ejecucion sin que
+            // fuera un bug. Una expectativa obsoleta que da un falso positivo permanente es tan
+            // dañina como no comprobar nada: lo primero que hace es enseñar a ignorar la linea.
+            //
+            // Ahora se prueba el set Aerospec REAL entero, pieza a pieza y hueco a hueco (matriz
+            // 3x3 completa: cada pieza SOLO en el suyo), que es exactamente lo que H3-11 arreglo.
+            int calamityHeadId = 20000244;   // AerospecHeadMagic - equipSlot "Head"
+            int calamityBodyId = 20000243;   // AerospecBreastplate - equipSlot "Body"
+            int calamityLegsId = 20000249;   // AerospecLeggings - equipSlot "Legs"
+            int calamityAccessoryId = 20000000; // Abaddon - category "Accessories"
+            var bodySlotCal = vm.EquipmentGroup.EquippedItems.Slots[1];
+            var legsSlotCal = vm.EquipmentGroup.EquippedItems.Slots[2];
+            foreach (var (slot, nombreSlot, aceptado) in new (ItemSlotViewModel, string, int)[]
+                     { (headSlot, "cabeza", calamityHeadId), (bodySlotCal, "cuerpo", calamityBodyId), (legsSlotCal, "piernas", calamityLegsId) })
+            {
+                foreach (var (id, nombrePieza) in new[] { (calamityHeadId, "casco"), (calamityBodyId, "peto"), (calamityLegsId, "grebas"), (calamityAccessoryId, "accesorio") })
+                {
+                    bool obtenido = slot.AcceptsItem(id);
+                    bool esperado = id == aceptado;
+                    Console.WriteLine($"OBJ-06: Calamity {nombrePieza} ({id}) en slot {nombreSlot} -> {obtenido} (esperado {esperado})");
+                    if (obtenido != esperado)
+                        Console.WriteLine($"FALLO: OBJ-06 - el slot de {nombreSlot} {(obtenido ? "ACEPTA" : "RECHAZA")} un {nombrePieza} de Calamity y no deberia (H3-11: la pieza sabe de que parte es, via CalamityCatalogEntry.EquipSlot)");
+                }
+            }
+            Console.WriteLine($"OBJ-06: Calamity accesorio ({calamityAccessoryId}) en slot accesorio -> {accSlot.AcceptsItem(calamityAccessoryId)} (esperado True)");
+            if (!accSlot.AcceptsItem(calamityAccessoryId)) Console.WriteLine("FALLO: OBJ-06 - un accesorio real de Calamity no entra en un hueco de accesorio");
+            Console.WriteLine($"OBJ-06: Calamity peto ({calamityBodyId}) en slot accesorio -> {accSlot.AcceptsItem(calamityBodyId)} (esperado False - este era el bug de 2-sep-2026)");
+            if (accSlot.AcceptsItem(calamityBodyId)) Console.WriteLine("FALLO: OBJ-06 - una pieza de armadura de Calamity vuelve a colarse en un hueco de accesorio");
 
             // Bloque 1 de la auditoria de Opus (E-1): coloca un accesorio REAL de Calamity,
             // equipado (isEquipped=true siempre en EquipmentGroupViewModel), para confirmar de
@@ -2128,6 +2186,174 @@ internal static class Program
         catch (Exception ex)
         {
             Console.WriteLine("AR-14-EXCEPTION: " + ex);
+        }
+
+        // OBJ-01 (oleada de pruebas de Personaje -> Objetos, 6-sep-2026). Detector real de
+        // BINDINGS ROTOS en toda la zona de Objetos (Equipamiento/Inventario/Almacenes): recorre
+        // el arbol visual de la sub-pestaña activa y le pregunta a WPF, expresion por expresion,
+        // si la ruta se resolvio de verdad (BindingExpressionBase.Status == PathError).
+        //
+        // Hace falta un detector asi porque un binding a una propiedad que NO EXISTE en el
+        // DataContext NO da ningun error visible en WPF: deja el Content/Text en su valor por
+        // defecto y la app sigue funcionando tan campante - un boton se queda literalmente SIN
+        // TEXTO (y por tanto casi sin ancho, o sea invisible) y nadie se entera. Es la misma
+        // familia de fallo silencioso que "ItemCountLabel no existia" (Exploracion, ronda del
+        // 6-sep) y que ninguna comprobacion de recorte o de idioma puede ver: el barrido de
+        // idioma busca texto en el idioma equivocado o claves sin traducir, no texto AUSENTE.
+        //
+        // Se limita al subarbol de la zona de Objetos a proposito (el TabControl que hospeda
+        // Equipamiento/Inventario/Almacenes, localizado subiendo desde el SlotRowHost real) - ni
+        // ruido de otras pantallas ni fallos de otra area.
+        try
+        {
+            vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 0;
+            DoEvents(); DoEvents();
+
+            TabControl? tabObjetos = null;
+            var hostEquipo = Descendientes<TerrasavrNative.App.Controls.SlotRowHost>(window).FirstOrDefault();
+            for (DependencyObject? d = hostEquipo; d != null; d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+                if (d is TabControl tc) { tabObjetos = tc; break; }
+
+            if (tabObjetos == null)
+            {
+                Console.WriteLine("FALLO: OBJ-01 - no se encontro el TabControl de Objetos (SlotRowHost fuera del arbol visual)");
+            }
+            else
+            {
+                string idiomaOriginal = LocalizationService.Instance.Language;
+                // Los 3 sub-paneles reales x 4 tamaños reales (el suelo declarado, el tamaño por
+                // defecto de la app, un intermedio y uno Amplio - donde Inventario y Almacen
+                // conviven y la mitad derecha es una COPIA A MANO de la cabecera, justo el sitio
+                // donde una etiqueta se pierde sin que nadie lo note) x los 2 idiomas.
+                foreach (string idioma in new[] { "es", "en" })
+                {
+                    LocalizationService.Instance.SetLanguage(idioma);
+                    DoEvents();
+                    foreach (var (w, h) in new[] { (1080.0, 700.0), (1180.0, 860.0), (1400.0, 900.0), (1600.0, 900.0) })
+                    {
+                        FijarTamaño(window, w, h);
+                        foreach (int sub in new[] { 0, 1, 2 })
+                        {
+                            // "Almacenes" (2) se oculta entera en Amplio a proposito (A-a): ahi su
+                            // contenido vive dentro de "Inventario", ya cubierto por sub=1.
+                            if (sub == 2 && vm.IsStorageExpanded) continue;
+                            vm.ObjetosSubTabIndex = sub;
+                            DoEvents(); DoEvents();
+                            var rotos = BindingsRotos(tabObjetos).Distinct().ToList();
+                            string etiqueta = sub switch { 0 => "Equipamiento", 1 => "Inventario", _ => "Almacenes" };
+                            Console.WriteLine($"OBJ-01: [{idioma}] {w:0}x{h:0} {etiqueta} -> {rotos.Count} binding(s) distintos con la ruta rota (esperado 0)"
+                                              + (rotos.Count > 0 ? " | " + string.Join(" ; ", rotos) : ""));
+                            if (rotos.Count > 0)
+                                Console.WriteLine($"FALLO: OBJ-01 - [{idioma}] {w:0}x{h:0} {etiqueta}: {rotos.Count} binding(s) apuntan a una propiedad que no existe en su DataContext (el control se queda mudo, sin ningun error visible)");
+                        }
+                    }
+                }
+                LocalizationService.Instance.SetLanguage(idiomaOriginal);
+                DoEvents();
+
+                // OBJ-02: la consecuencia REAL de lo de arriba, medida en pantalla y no por
+                // deduccion - un boton visible cuyo Content viene de un Binding y se quedo vacio
+                // es un boton que el usuario NO PUEDE encontrar ni pulsar. Se mide en los dos
+                // estados donde viven los botones de conjunto del ALMACEN: la pestaña "Almacenes"
+                // propia (Normal) y la mitad derecha de "Inventario" (Amplio).
+                foreach (var (w, h, sub, etiqueta) in new (double w, double h, int sub, string etiqueta)[]
+                         { (1400, 900, 2, "pestaña Almacenes"), (1600, 900, 1, "Inventario+Almacen en Amplio") })
+                {
+                    FijarTamaño(window, w, h);
+                    vm.ObjetosSubTabIndex = sub;
+                    DoEvents(); DoEvents();
+                    var mudos = Descendientes<Button>(tabObjetos)
+                        .Where(b => b.IsVisible
+                                    && System.Windows.Data.BindingOperations.GetBindingExpressionBase(b, ContentControl.ContentProperty) != null
+                                    && (b.Content == null || (b.Content is string s && string.IsNullOrWhiteSpace(s))))
+                        .ToList();
+                    Console.WriteLine($"OBJ-02: {w:0}x{h:0} {etiqueta} -> {mudos.Count} boton(es) visibles con el texto vacio (esperado 0), anchos=[{string.Join(", ", mudos.Select(b => $"{b.ActualWidth:0}px"))}]");
+                    if (mudos.Count > 0)
+                        Console.WriteLine($"FALLO: OBJ-02 - {etiqueta}: {mudos.Count} boton(es) reales sin texto - imposibles de encontrar y de pulsar");
+                }
+
+                // OBJ-03: las 3 etiquetas reales de la cabecera de Equipamiento ("Conjunto:",
+                // "Vista:", "Defensa total:"). Se comprueban aparte de OBJ-01/02 porque un
+                // TextBlock vacio NO desaparece del todo: deja el numero de defensa suelto sin
+                // decir de que es (capturado real en equipamiento-fusionado.png), un fallo mas
+                // dificil de ver de un vistazo que un boton que directamente no esta.
+                FijarTamaño(window, 1180, 860);
+                vm.ObjetosSubTabIndex = 0;
+                DoEvents(); DoEvents();
+                hostEquipo ??= Descendientes<TerrasavrNative.App.Controls.SlotRowHost>(window).FirstOrDefault();
+                // Se comparan contra el TEXTO REAL del diccionario, no contra un literal en
+                // español escrito aqui: asi la comprobacion vale igual en los dos idiomas y
+                // detecta tanto una etiqueta vacia (el bug de OBJ-01) como una que se quedara
+                // desincronizada del diccionario. El texto del TextBlock incluye tambien el
+                // valor (ej. "Defensa total: 51"), por eso es "empieza por", no igualdad.
+                var textosEquipo = Descendientes<TextBlock>(hostEquipo!).Where(t => t.IsVisible).ToList();
+                int vaciosEquipo = textosEquipo.Count(t => string.IsNullOrWhiteSpace(t.Text)
+                                                           && System.Windows.Data.BindingOperations.GetBindingExpressionBase(t, TextBlock.TextProperty) != null);
+                var faltan = new List<string>();
+                foreach (string clave in new[] { "char_loadout_label", "char_view_label", "char_total_defense" })
+                {
+                    string esperado = LocalizationService.Instance[clave].Trim();
+                    if (!textosEquipo.Any(t => t.Text.Trim().StartsWith(esperado, StringComparison.Ordinal))) faltan.Add($"{clave} ('{esperado}')");
+                }
+                Console.WriteLine($"OBJ-03: cabecera de Equipamiento -> etiquetas reales que faltan={faltan.Count} (esperado 0){(faltan.Count > 0 ? " | " + string.Join(" ; ", faltan) : "")}, TextBlocks enlazados y vacios={vaciosEquipo} (esperado 0)");
+                if (faltan.Count > 0 || vaciosEquipo > 0)
+                    Console.WriteLine("FALLO: OBJ-03 - falta alguna de las 3 etiquetas reales de la cabecera de Equipamiento (el numero de defensa se queda suelto, sin decir de que es)");
+            }
+
+            // OBJ-07: las 4 pildoras de almacen ("Banco (15/40)", "Caja fuerte (0/40)", "Fragua
+            // del Defensor (15/40)", "Bóveda del Vacío (0/40)") no pueden cortarse en NINGUN
+            // tamaño ni idioma. Se mide el ancho natural del texto contra el ancho real de la
+            // caja, que es la unica forma de detectarlo: un texto sin TextTrimming que no cabe no
+            // lleva ningun clip propio (VisualTreeHelper.GetClip da null), simplemente se dibuja
+            // cortado - el mismo mecanismo que AR-13a ya usa para el reparto horizontal.
+            //
+            // El barrido va de 20 en 20px por todo el rango real de la ventana, en los dos
+            // idiomas y en los DOS sitios donde viven esas pildoras (la pestaña "Almacenes"
+            // propia por debajo del umbral de Amplio, y la mitad derecha de "Inventario" por
+            // encima) - el caso que fallaba de verdad, 1520x864, es justo el primer ancho de
+            // Amplio, o sea el mas apretado de los dos repartos.
+            if (tabObjetos != null)
+            {
+                string idiomaAntes = LocalizationService.Instance.Language;
+                var cortadas = new List<string>();
+                int medidas = 0;
+                foreach (string idioma in new[] { "es", "en" })
+                {
+                    LocalizationService.Instance.SetLanguage(idioma);
+                    for (double w = 1080; w <= 1920; w += 20)
+                    {
+                        FijarTamaño(window, w, 864);
+                        vm.ObjetosSubTabIndex = vm.IsStorageExpanded ? 1 : 2;
+                        DoEvents(); DoEvents();
+                        // Las pildoras se identifican por su TEXTO real (el DisplayLabel vivo de
+                        // StorageGroup.Options), no por DataContext: un Button con Content string
+                        // crea un TextBlock cuyo DataContext ES el propio string, no el
+                        // EquipmentOptionViewModel - primer intento de este bloque, que medio 0
+                        // pildoras y dio un "0 cortadas" que no demostraba nada.
+                        var etiquetas = vm.StorageGroup?.Options.Select(o => o.DisplayLabel).ToHashSet() ?? [];
+                        foreach (var tb in Descendientes<TextBlock>(tabObjetos))
+                        {
+                            if (!tb.IsVisible || !etiquetas.Contains(tb.Text)) continue;
+                            medidas++;
+                            if (!TextoRecortado(tb)) continue;
+                            cortadas.Add($"[{idioma}] {w:0}x864 '{tb.Text}' caja={tb.ActualWidth:0}px necesita={AnchoNaturalDelTexto(tb):0}px");
+                        }
+                    }
+                }
+                LocalizationService.Instance.SetLanguage(idiomaAntes);
+                Console.WriteLine($"OBJ-07: {medidas} pildoras de almacen medidas (1080..1920 de 20 en 20, 2 idiomas) -> {cortadas.Count} cortadas (esperado 0)"
+                                  + (cortadas.Count > 0 ? " | " + string.Join(" ; ", cortadas.Take(6)) : ""));
+                if (cortadas.Count > 0)
+                    Console.WriteLine($"FALLO: OBJ-07 - {cortadas.Count} pildora(s) de almacen se cortan: el usuario no puede leer de que almacen es ni cuanto lleva dentro");
+            }
+
+            FijarTamaño(window, 1180, 860);
+            vm.ObjetosSubTabIndex = 0;
+            DoEvents();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("OBJ-01-EXCEPTION: " + ex);
         }
 
         // (Bloque real eliminado del arnes: probaba el rediseño de la Libreria de la
@@ -4011,6 +4237,401 @@ internal static class Program
                 }
                 catch (Exception ex) { Console.WriteLine("AR-15-EXCEPTION: " + ex); }
 
+                // AR-EX1 (oleada grande de pruebas del 6-sep-2026, area "Exploracion del mundo"):
+                // las TRES rondas anteriores sobre esta misma columna (AR-11, AR-13, AR-15) la
+                // midieron SIEMPRE con el bloque de resultados VACIO - y ese bloque
+                // (ExplorationResultsBlock) es DockPanel.Dock="Bottom", o sea que el DockPanel se
+                // lo sirve ENTERO y con su DesiredSize completo ANTES de dejarle nada al relleno
+                // (ExplorationCategoryContent). Exactamente la misma familia de bug que AR-15 ya
+                // encontro en el otro sitio (el Expander Dock=Bottom de "NPCs que faltan").
+                //
+                // El estado con resultados NO es un caso raro: es el estado NORMAL de esta pestaña
+                // en cuanto el usuario busca algo o pulsa una fila de inventario, y el bloque crece
+                // hasta ~370px (dos casillas + resumen + fila de botones + ListBox MaxHeight=240).
+                // Se mide el alto REAL que le queda al contenido de cada categoria en 5 tamaños
+                // reales, con la geometria honesta (RectVisible: recorte acumulado de TODOS los
+                // ancestros hasta la ventana, la leccion de AR-15) y contando filas que de verdad
+                // se ven enteras.
+                try
+                {
+                    var contenidoCat = window.FindName("ExplorationCategoryContent") as FrameworkElement;
+                    var bloqueRes = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+                    var svLat16 = window.FindName("ExplorationSidebarScroll") as System.Windows.Controls.ScrollViewer;
+                    if (contenidoCat == null || bloqueRes == null || svLat16 == null)
+                        Console.WriteLine("FALLO: AR-EX1 - no se encontro ExplorationCategoryContent/ExplorationResultsBlock/ExplorationSidebarScroll en el arbol visual");
+                    else
+                    {
+                        var catAntes16 = vm.Exploration.SelectedCategory;
+                        string textoAntes16 = vm.Exploration.WorldSearchText;
+                        int modoCofresAntes16 = vm.Exploration.ChestViewMode;
+                        int modoObjetosAntes16 = vm.Exploration.ObjectsViewMode;
+
+                        // Resultados reales en el bloque compartido - el mismo barrido de "lava"
+                        // que BUSCADOR-MUNDO ya usa (este mundo real agota el tope de 1000, que es
+                        // el caso PEOR y el mas comun de verdad). Se deja puesto a proposito
+                        // mientras se recorren las categorias: cambiar de categoria NO limpia
+                        // WorldSearchResults (ver OnSelectedCategoryChanged), asi que el bloque
+                        // sigue ahi - que es justo lo que ve el usuario al buscar y luego mirar
+                        // Cofres/Minerales/Objetos.
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        vm.Exploration.WorldSearchText = "lava";
+                        WaitForDispatcher(2600);
+                        int nRes16 = vm.Exploration.WorldSearchResults.Count;
+                        Console.WriteLine($"AR-EX1: bloque de resultados con {nRes16} resultado(s) reales (esperado >0 - si sale 0 este bloque no mide nada)");
+
+                        // La lista real de cada categoria, localizada por su ItemsSource (no por
+                        // x:Name: dos categorias distintas comparten la coleccion Inventory, y solo
+                        // una de las dos esta visible en cada momento).
+                        ItemsControl? ListaDeCategoria16() => vm.Exploration.SelectedCategory switch
+                        {
+                            WorldSearchCategory.Chests when vm.Exploration.ChestViewMode == 2 => window.FindName("ChestByChestList") as ItemsControl,
+                            WorldSearchCategory.Chests or WorldSearchCategory.Objects =>
+                                Descendientes<ListBox>(window).FirstOrDefault(lb => lb.IsVisible && ReferenceEquals(lb.ItemsSource, vm.Exploration.Inventory)),
+                            WorldSearchCategory.Ores =>
+                                Descendientes<ItemsControl>(window).FirstOrDefault(ic => ic.IsVisible && ReferenceEquals(ic.ItemsSource, vm.Exploration.OreMetals)),
+                            _ => null,
+                        };
+
+                        foreach (var (etiqueta16, w16, h16) in new (string?, double, double)[]
+                                 { ("maximizada", 0, 0), (null, 1600, 1000), (null, 1400, 900), (null, 1180, 860), (null, 1080, 700) })
+                        {
+                            if (etiqueta16 == "maximizada")
+                            {
+                                window.WindowState = WindowState.Maximized;
+                                DoEvents(); DoEvents(); DoEvents();
+                            }
+                            else
+                            {
+                                window.WindowState = WindowState.Normal;
+                                FijarTamaño(window, w16, h16);
+                            }
+                            DoEvents(); DoEvents();
+                            string caso16 = etiqueta16 ?? $"{w16:0}x{h16:0}";
+
+                            foreach (var (cat16, modoCofres16) in new (WorldSearchCategory, int)[]
+                                     { (WorldSearchCategory.Chests, 0), (WorldSearchCategory.Chests, 2),
+                                       (WorldSearchCategory.Ores, 0), (WorldSearchCategory.Objects, 0) })
+                            {
+                                vm.Exploration.SelectedCategory = cat16;
+                                if (cat16 == WorldSearchCategory.Chests) vm.Exploration.ChestViewMode = modoCofres16;
+                                DoEvents(); DoEvents();
+
+                                var lista16 = ListaDeCategoria16();
+                                int totalFilas16 = lista16?.Items.Count ?? 0;
+                                // Filas que de verdad se ven enteras AHORA MISMO (sin tocar nada):
+                                // solo se miran las primeras 30 (con 1000 filas virtualizadas la
+                                // pregunta util es "¿cabe algo?", no recorrerlas todas).
+                                int visiblesEnteras16 = 0;
+                                if (lista16 != null)
+                                    foreach (var item in lista16.Items.Cast<object>().Take(30))
+                                        if (lista16.ItemContainerGenerator.ContainerFromItem(item) is FrameworkElement fe16 && VisibleEntero(fe16, window))
+                                            visiblesEnteras16++;
+
+                                var rectCat16 = RectVisible(contenidoCat, window);
+                                string nombreCat16 = cat16 == WorldSearchCategory.Chests ? (modoCofres16 == 2 ? "Cofres/Cofre a cofre" : "Cofres/Por tipo") : cat16.ToString();
+                                Console.WriteLine($"AR-EX1: {caso16} ({window.ActualWidth:0}x{window.ActualHeight:0}), {nombreCat16} con {nRes16} resultado(s) abiertos -> " +
+                                                  $"contenido de categoria: pide {contenidoCat.DesiredSize.Height:0}px, mide {contenidoCat.ActualHeight:0}px, SE VE {rectCat16.Height:0}px (esperado >=120); " +
+                                                  $"bloque de resultados={bloqueRes.ActualHeight:0}px; lista de la categoria: {totalFilas16} filas, se ven enteras={visiblesEnteras16} (esperado >=1); " +
+                                                  $"columna: viewport={svLat16.ViewportHeight:0}px contenido={svLat16.ExtentHeight:0}px");
+                                if (rectCat16.Height < 120)
+                                    Console.WriteLine($"FALLO: AR-EX1 - a {caso16}, con resultados abiertos, a {nombreCat16} solo le quedan {rectCat16.Height:0}px visibles (el bloque de resultados se lleva {bloqueRes.ActualHeight:0}px)");
+                                if (totalFilas16 > 0 && visiblesEnteras16 == 0)
+                                    Console.WriteLine($"FALLO: AR-EX1 - a {caso16}, {nombreCat16} tiene {totalFilas16} filas reales y NO se ve ninguna entera con los resultados abiertos");
+                            }
+                        }
+
+                        // Estado como estaba (misma disciplina que AR-13c/AR-15: todo bloque que
+                        // toca estado compartido lo devuelve - aqui ademas el texto de busqueda,
+                        // que deja 1000 marcadores pintados sobre el mapa).
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        vm.Exploration.WorldSearchText = string.Empty;
+                        WaitForDispatcher(300);
+                        vm.Exploration.ClearOreMarksCommand.Execute(null);
+                        vm.Exploration.ChestViewMode = modoCofresAntes16;
+                        vm.Exploration.ObjectsViewMode = modoObjetosAntes16;
+                        vm.Exploration.SelectedCategory = catAntes16;
+                        vm.Exploration.WorldSearchText = textoAntes16;
+                        window.WindowState = WindowState.Normal;
+                        FijarTamaño(window, 1180, 860);
+                        DoEvents(); DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-EX1-EXCEPTION: " + ex); }
+
+                // AR-EX2 (misma oleada, area "Exploracion del mundo"): los GESTOS del mapa, que
+                // hasta ahora solo estaban probados a medias - X-a media "Ajustar a la ventana" y
+                // F-8 solo comprobaba que el minimapa EXISTE. Aqui se prueban de verdad, con la
+                // geometria real:
+                //   (a) zoom con rueda CENTRADO EN EL CURSOR: la coordenada de mundo bajo el raton
+                //       tiene que ser la MISMA antes y despues del paso de rueda (es la promesa
+                //       literal del arreglo de OnWorldMapPreviewMouseWheel del 1-sep-2026, "el
+                //       zoom no lo hace recto", que nunca tuvo comprobacion permanente). El evento
+                //       se levanta sobre el ScrollViewer real y el cursor se coloca de verdad con
+                //       SetCursorPos, porque MouseWheelEventArgs.GetPosition consulta el raton
+                //       REAL del sistema, no un punto que se pueda inventar en el evento.
+                //   (b) arrastrar para desplazar (pan): mismo camino real (los tres handlers de
+                //       raton del ScrollViewer), comprobando que el mapa se mueve EXACTAMENTE lo
+                //       que se movio el cursor, ni mas ni menos.
+                //   (c) minimapa: el rectangulo de viewport tiene que corresponder de verdad con
+                //       la fraccion visible del mundo, y un clic en el minimapa tiene que llevar
+                //       el mapa a ESA zona (conversion clic->tile real de OnMinimapClick).
+                try
+                {
+                    var mapaScrollEx = Descendientes<ScrollViewer>(window).FirstOrDefault(sv => sv.Name == "WorldMapScroll");
+                    var imgMapaEx = Descendientes<System.Windows.Controls.Image>(window).FirstOrDefault(i => i.Name == "WorldMapImage");
+                    var miniImgEx = Descendientes<System.Windows.Controls.Image>(window).FirstOrDefault(i => i.Name == "MinimapImage");
+                    var miniRectEx = Descendientes<System.Windows.Shapes.Rectangle>(window).FirstOrDefault(r => r.Name == "MinimapViewportRect");
+                    var bitmapMundo = vm.Exploration.WorldImage;
+                    if (mapaScrollEx == null || imgMapaEx == null || bitmapMundo == null)
+                        Console.WriteLine("FALLO: AR-EX2 - no se encontro WorldMapScroll/WorldMapImage o no hay mundo cargado");
+                    else
+                    {
+                        FijarTamaño(window, 1400, 900);
+                        DoEvents(); DoEvents();
+                        double zoomAntesEx = vm.Exploration.Zoom;
+
+                        // (a) Zoom con rueda centrado en el cursor. Se parte de un zoom y un
+                        // desplazamiento con margen real por los cuatro lados: si el punto elegido
+                        // estuviera pegado a un borde, el ScrollViewer clamparia el offset nuevo y
+                        // el punto se moveria por una razon legitima, no por el bug.
+                        vm.Exploration.Zoom = 1.0;
+                        mapaScrollEx.UpdateLayout();
+                        mapaScrollEx.ScrollToHorizontalOffset(2000);
+                        mapaScrollEx.ScrollToVerticalOffset(900);
+                        DoEvents(); mapaScrollEx.UpdateLayout(); DoEvents();
+
+                        var centroViewport = new Point(mapaScrollEx.ViewportWidth / 2, mapaScrollEx.ViewportHeight / 2);
+                        var centroPantalla = mapaScrollEx.PointToScreen(centroViewport);
+                        SetCursorPos((int)centroPantalla.X, (int)centroPantalla.Y);
+                        System.Threading.Thread.Sleep(40);
+                        DoEvents();
+
+                        foreach (int delta in new[] { 120, -120, -120 })
+                        {
+                            double zAntes = vm.Exploration.Zoom;
+                            var posAntes = System.Windows.Input.Mouse.GetPosition(mapaScrollEx);
+                            double mundoXAntes = (mapaScrollEx.HorizontalOffset + posAntes.X) / zAntes;
+                            double mundoYAntes = (mapaScrollEx.VerticalOffset + posAntes.Y) / zAntes;
+
+                            mapaScrollEx.RaiseEvent(new System.Windows.Input.MouseWheelEventArgs(
+                                System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, delta)
+                            { RoutedEvent = UIElement.PreviewMouseWheelEvent });
+                            DoEvents(); mapaScrollEx.UpdateLayout(); DoEvents();
+
+                            double zDespues = vm.Exploration.Zoom;
+                            var posDespues = System.Windows.Input.Mouse.GetPosition(mapaScrollEx);
+                            double mundoXDespues = (mapaScrollEx.HorizontalOffset + posDespues.X) / zDespues;
+                            double mundoYDespues = (mapaScrollEx.VerticalOffset + posDespues.Y) / zDespues;
+                            double derivaX = Math.Abs(mundoXDespues - mundoXAntes), derivaY = Math.Abs(mundoYDespues - mundoYAntes);
+                            Console.WriteLine($"AR-EX2-RUEDA: delta={delta} -> zoom {zAntes:0.###}->{zDespues:0.###} (esperado x{(delta > 0 ? "1,25" : "1/1,25")}), " +
+                                              $"tile bajo el cursor ({mundoXAntes:0.#},{mundoYAntes:0.#}) -> ({mundoXDespues:0.#},{mundoYDespues:0.#}), deriva=({derivaX:0.#},{derivaY:0.#}) tiles (esperado <=2)");
+                            double esperado = delta > 0 ? zAntes * ExplorationViewModel.ZoomStep : zAntes / ExplorationViewModel.ZoomStep;
+                            if (Math.Abs(zDespues - esperado) > 0.001)
+                                Console.WriteLine($"FALLO: AR-EX2-RUEDA - la rueda no aplico el paso real de zoom ({zDespues:0.####} en vez de {esperado:0.####})");
+                            if (derivaX > 2 || derivaY > 2)
+                                Console.WriteLine($"FALLO: AR-EX2-RUEDA - el zoom con rueda NO se centra en el cursor: el punto de mundo bajo el raton se movio ({derivaX:0.#},{derivaY:0.#}) tiles");
+                        }
+
+                        // (b) Pan real arrastrando: down + move con el boton pulsado + up, por los
+                        // mismos handlers reales del ScrollViewer.
+                        vm.Exploration.Zoom = 1.0;
+                        mapaScrollEx.UpdateLayout();
+                        mapaScrollEx.ScrollToHorizontalOffset(2000);
+                        mapaScrollEx.ScrollToVerticalOffset(900);
+                        DoEvents(); mapaScrollEx.UpdateLayout(); DoEvents();
+                        double hAntesPan = mapaScrollEx.HorizontalOffset, vAntesPan = mapaScrollEx.VerticalOffset;
+                        var inicioPan = mapaScrollEx.PointToScreen(centroViewport);
+                        SetCursorPos((int)inicioPan.X, (int)inicioPan.Y);
+                        System.Threading.Thread.Sleep(40); DoEvents();
+                        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+                        System.Threading.Thread.Sleep(40); DoEvents(); DoEvents();
+                        // El movimiento del cursor se MIDE, nunca se da por hecho que fue a donde se
+                        // le pidio: SetCursorPos trabaja en pixeles FISICOS de pantalla mientras el
+                        // ScrollViewer razona en DIP, la sesion puede tener escala de DPI, y con la
+                        // app real del usuario abierta (o con otro arnes en marcha) el raton es un
+                        // recurso COMPARTIDO. Lo que se comprueba es la relacion real que promete el
+                        // pan: el mapa se desplaza exactamente lo que se movio el cursor.
+                        var posAntesPan = System.Windows.Input.Mouse.GetPosition(mapaScrollEx);
+                        SetCursorPos((int)inicioPan.X - 120, (int)inicioPan.Y - 60);
+                        System.Threading.Thread.Sleep(90); DoEvents(); DoEvents(); DoEvents();
+                        var posDespuesPan = System.Windows.Input.Mouse.GetPosition(mapaScrollEx);
+                        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+                        System.Threading.Thread.Sleep(40); DoEvents(); DoEvents();
+                        double dhPan = mapaScrollEx.HorizontalOffset - hAntesPan, dvPan = mapaScrollEx.VerticalOffset - vAntesPan;
+                        double movXPan = posDespuesPan.X - posAntesPan.X, movYPan = posDespuesPan.Y - posAntesPan.Y;
+                        Console.WriteLine($"AR-EX2-PAN: el cursor se movio de verdad ({movXPan:0},{movYPan:0})px sobre el mapa -> el mapa se desplazo ({dhPan:0},{dvPan:0})px " +
+                                          $"(esperado ({-movXPan:0},{-movYPan:0}): arrastrar hacia la izquierda mueve la vista hacia la derecha)");
+                        if (Math.Abs(movXPan) < 5 && Math.Abs(movYPan) < 5)
+                            Console.WriteLine("AR-EX2-PAN: el cursor real no llego a moverse (raton compartido con otra ventana de esta misma maquina) - medicion omitida, no es un fallo de la app");
+                        else if (Math.Abs(dhPan + movXPan) > 4 || Math.Abs(dvPan + movYPan) > 4)
+                            Console.WriteLine($"FALLO: AR-EX2-PAN - el arrastre no desplaza el mapa lo mismo que se movio el cursor: cursor ({movXPan:0},{movYPan:0}) -> mapa ({dhPan:0},{dvPan:0})");
+                        if (System.Windows.Input.Mouse.Captured != null)
+                            Console.WriteLine($"FALLO: AR-EX2-PAN - la captura del raton se quedo colgada tras soltar ({System.Windows.Input.Mouse.Captured})");
+
+                        // (c) Minimapa: geometria del rectangulo de viewport + clic real.
+                        if (miniImgEx == null || miniRectEx == null)
+                            Console.WriteLine("FALLO: AR-EX2-MINIMAPA - no se encontro MinimapImage/MinimapViewportRect");
+                        else
+                        {
+                            double escalaMini = Math.Min(miniImgEx.ActualWidth / bitmapMundo.PixelWidth, miniImgEx.ActualHeight / bitmapMundo.PixelHeight);
+                            double anchoVisibleTiles = mapaScrollEx.ViewportWidth / vm.Exploration.Zoom;
+                            double anchoRectEsperado = anchoVisibleTiles * escalaMini;
+                            Console.WriteLine($"AR-EX2-MINIMAPA: visible={miniRectEx.IsVisible} (esperado True con el mapa al 100%), ancho del rectangulo={miniRectEx.Width:0.#}px, " +
+                                              $"esperado={anchoRectEsperado:0.#}px ({anchoVisibleTiles:0} tiles visibles x escala {escalaMini:0.#####})");
+                            if (!miniRectEx.IsVisible)
+                                Console.WriteLine("FALLO: AR-EX2-MINIMAPA - con el mapa al 100% (una fraccion pequeña del mundo a la vista) el rectangulo de viewport deberia verse");
+                            else if (Math.Abs(miniRectEx.Width - anchoRectEsperado) > 2)
+                                Console.WriteLine($"FALLO: AR-EX2-MINIMAPA - el rectangulo no corresponde con la fraccion visible real ({miniRectEx.Width:0.#}px contra {anchoRectEsperado:0.#}px)");
+
+                            // Clic sobre el 75% del ancho del mundo dentro del minimapa: el mapa
+                            // tiene que quedar centrado en ese tile (conversion clic->tile real de
+                            // OnMinimapClick, via ExplorationViewModel.NavigateToTile).
+                            //
+                            // El cursor se coloca de VERDAD con SetCursorPos (OnMinimapClick lee
+                            // e.GetPosition(MinimapImage), que consulta el raton real del sistema -
+                            // un punto inventado en el evento no serviria de nada), pero el handler
+                            // se invoca directamente en vez de con un clic real del SO: un clic real
+                            // depende de que ESTA ventana tenga el foco en ese instante, y en esta
+                            // maquina conviven la app real del usuario y hasta otro arnes - medido:
+                            // el clic real se perdia y la prueba acusaba de un bug que no existe
+                            // (el eje Y "casi acertaba" solo porque el mapa ya estaba por la mitad).
+                            double huecoXMini = (miniImgEx.ActualWidth - bitmapMundo.PixelWidth * escalaMini) / 2;
+                            double huecoYMini = (miniImgEx.ActualHeight - bitmapMundo.PixelHeight * escalaMini) / 2;
+                            int tileObjetivoX = (int)(bitmapMundo.PixelWidth * 0.75), tileObjetivoY = (int)(bitmapMundo.PixelHeight * 0.5);
+                            var puntoMini = miniImgEx.PointToScreen(new Point(huecoXMini + tileObjetivoX * escalaMini, huecoYMini + tileObjetivoY * escalaMini));
+                            SetForegroundWindow(hwnd);
+                            DoEvents();
+                            SetCursorPos((int)puntoMini.X, (int)puntoMini.Y);
+                            System.Threading.Thread.Sleep(60); DoEvents();
+                            var posEnMini = System.Windows.Input.Mouse.GetPosition(miniImgEx);
+                            int tileClicadoX = (int)((posEnMini.X - huecoXMini) / escalaMini);
+                            var handlerMini = typeof(MainWindow).GetMethod("OnMinimapClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                            handlerMini?.Invoke(window, [miniImgEx, new System.Windows.Input.MouseButtonEventArgs(
+                                System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, System.Windows.Input.MouseButton.Left)]);
+                            WaitForDispatcher(250);
+                            if (handlerMini == null)
+                                Console.WriteLine("FALLO: AR-EX2-MINIMAPA-CLIC - no se encontro OnMinimapClick (¿se renombro en MainWindow.xaml.cs?)");
+                            Console.WriteLine($"AR-EX2-MINIMAPA-CLIC: el cursor cayo de verdad sobre el tile {tileClicadoX} del minimapa (pedido {tileObjetivoX})");
+                            if (Math.Abs(tileClicadoX - tileObjetivoX) > 1 / escalaMini * 2)
+                                Console.WriteLine($"AR-EX2-MINIMAPA-CLIC: el cursor real no llego al punto pedido (raton compartido) - la medicion de abajo no es concluyente");
+                            double zoomMini = vm.Exploration.Zoom;
+                            double centroXTiles = (mapaScrollEx.HorizontalOffset + mapaScrollEx.ViewportWidth / 2) / zoomMini;
+                            double centroYTiles = (mapaScrollEx.VerticalOffset + mapaScrollEx.ViewportHeight / 2) / zoomMini;
+                            // Se compara contra el tile sobre el que cayo el cursor DE VERDAD, no
+                            // contra el que se pidio - misma honestidad que el pan de arriba.
+                            double errorMiniX = Math.Abs(centroXTiles - tileClicadoX), errorMiniY = Math.Abs(centroYTiles - tileObjetivoY);
+                            Console.WriteLine($"AR-EX2-MINIMAPA-CLIC: clic sobre el tile ({tileClicadoX},{tileObjetivoY}) del minimapa -> el mapa queda centrado en ({centroXTiles:0},{centroYTiles:0}), " +
+                                              $"error=({errorMiniX:0},{errorMiniY:0}) tiles (esperado <= la resolucion real de un pixel de minimapa, {1 / escalaMini:0} tiles)");
+                            if (errorMiniX > 1 / escalaMini + 20)
+                                Console.WriteLine($"FALLO: AR-EX2-MINIMAPA-CLIC - el clic en el minimapa no lleva el mapa a esa zona ({errorMiniX:0} tiles de error en X)");
+                        }
+
+                        vm.Exploration.Zoom = zoomAntesEx;
+                        DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-EX2-EXCEPTION: " + ex); }
+
+                // AR-EX3 (misma oleada): el HOVER real (franja de estado de P-1/F-6) tile a tile
+                // sobre el mundo real, con la formula GPS del propio juego - hasta ahora solo se
+                // media que la franja no CAMBIA DE ALTO (P-1-ALTURA), nunca lo que dice. Y el aviso
+                // de legibilidad del >=40% del mapa, que nunca se habia disparado en ninguna prueba
+                // (marcar cobre, que es lo que prueban los bloques de Minerales, cubre el 0,3%).
+                try
+                {
+                    var expl = vm.Exploration;
+                    // Los cuatro estratos reales de este mundo, sacados de su propia cabecera - no
+                    // de constantes inventadas (mismo criterio que el resto del arnes).
+                    var cabecera = TerrasavrNative.Core.WldFormat.WldReader.ReadHeader(File.ReadAllBytes(worldPath));
+                    var casos = new (string Zona, int X, int Y)[]
+                    {
+                        ("cielo/espacio", cabecera.TilesWide / 2, 5),
+                        ("superficie", cabecera.TilesWide / 2, (int)cabecera.GroundLevel - 3),
+                        ("subsuelo", cabecera.TilesWide / 2, (int)cabecera.GroundLevel + 40),
+                        ("cavernas", cabecera.TilesWide / 2, (int)cabecera.RockLevel + 100),
+                        ("inframundo", cabecera.TilesWide / 2, cabecera.TilesHigh - 100),
+                    };
+                    var zonasVistas = new List<string>();
+                    foreach (var (zona, x, y) in casos)
+                    {
+                        expl.UpdateHover(x, y);
+                        zonasVistas.Add(expl.HoverLayerText);
+                        Console.WriteLine($"AR-EX3-HOVER: ({x},{y}) [{zona}] -> capa='{expl.HoverLayerText}', profundidad='{expl.HoverDepthText}', tile='{expl.HoverTileText}', pared='{expl.HoverWallText}', liquido='{expl.HoverLiquidText}'");
+                        if (expl.HoverCoordText != $"({x}, {y})")
+                            Console.WriteLine($"FALLO: AR-EX3-HOVER - las coordenadas de la franja no son las del tile ('{expl.HoverCoordText}' en vez de '({x}, {y})')");
+                        if (string.IsNullOrWhiteSpace(expl.HoverLayerText) || expl.HoverLayerText == "—")
+                            Console.WriteLine($"FALLO: AR-EX3-HOVER - sin capa resuelta en ({x},{y}), que esta dentro del mundo");
+                        if (expl.HoverLayerColor.A == 0)
+                            Console.WriteLine($"FALLO: AR-EX3-HOVER - la capa '{expl.HoverLayerText}' no trae color real de la paleta del mapa");
+                    }
+                    // Las cinco alturas tienen que dar capas DISTINTAS entre si (si la formula GPS
+                    // estuviera mal, varias caerian en la misma).
+                    int zonasDistintas = zonasVistas.Distinct().Count();
+                    Console.WriteLine($"AR-EX3-HOVER: capas distintas resueltas en las 5 alturas={zonasDistintas} de 5 ({string.Join(" / ", zonasVistas)})");
+                    if (zonasDistintas < 5)
+                        Console.WriteLine($"FALLO: AR-EX3-HOVER - dos alturas muy separadas del mundo resuelven la MISMA capa: {string.Join(" / ", zonasVistas)}");
+
+                    // Fuera del mundo: la franja se limpia entera, nunca enseña el ultimo tile
+                    // valido como si el raton siguiera encima.
+                    expl.UpdateHover(-1, -1);
+                    bool limpio = expl.HoverCoordText == "—" && expl.HoverTileText == "—" && expl.HoverLayerText == "—" && expl.HoverInfo.Length == 0;
+                    Console.WriteLine($"AR-EX3-HOVER-FUERA: al salir del mapa la franja queda limpia={limpio} (esperado True)");
+                    if (!limpio)
+                        Console.WriteLine($"FALLO: AR-EX3-HOVER - al salir del mapa la franja conserva datos del ultimo tile (coord='{expl.HoverCoordText}', tile='{expl.HoverTileText}')");
+
+                    // Aviso de legibilidad: marcar el tile MAS abundante del mundo real (el que de
+                    // verdad tiñe medio mapa) tiene que disparar el aviso del >=40%; y "Quitar
+                    // marcas" tiene que dejarlo todo apagado.
+                    var catAntesEx3 = expl.SelectedCategory;
+                    expl.SelectedCategory = WorldSearchCategory.Objects;
+                    expl.ObjectsViewMode = 0;
+                    DoEvents();
+                    long totalTilesMundo = (long)cabecera.TilesWide * cabecera.TilesHigh;
+                    // Se marcan los tiles MAS abundantes hasta pasar del 40% de verdad - el umbral
+                    // real del aviso. Con uno solo no basta ni en un mundo Grande (la piedra, el
+                    // mas abundante de este mundo real, cubre el 18,4%), asi que hasta ahora el
+                    // aviso no lo habia ejercitado ninguna prueba: una garantia que nunca se activa
+                    // no esta demostrada (misma leccion que AR-14b).
+                    var acumuladas = new List<WorldInventoryRowViewModel>();
+                    long tilesAcumulados = 0;
+                    foreach (var fila in expl.Inventory.OrderByDescending(r => r.Count))
+                    {
+                        acumuladas.Add(fila);
+                        tilesAcumulados += fila.Count;
+                        if ((double)tilesAcumulados / totalTilesMundo >= 0.42) break;
+                    }
+                    double fraccion = (double)tilesAcumulados / totalTilesMundo;
+                    if (acumuladas.Count == 0) Console.WriteLine("AR-EX3-LEGIBILIDAD: el mundo no trae ningun tile - omitido");
+                    else
+                    {
+                        foreach (var fila in acumuladas) fila.IsChecked = true;
+                        expl.MarkObjectsOnMapCommand.Execute(null);
+                        WaitForDispatcher(4000);
+                        string resumen = expl.WorldSearchSummary;
+                        // El aviso va DELANTE del resumen (ApplyHighlightResult), asi que basta con
+                        // mirar si el texto empieza por un digito (resumen a secas) o no (aviso).
+                        bool hayAviso = resumen.Length > 0 && !char.IsDigit(resumen[0]);
+                        Console.WriteLine($"AR-EX3-LEGIBILIDAD: {acumuladas.Count} tile(s) marcados ({string.Join(" + ", acumuladas.Select(r => r.Name))}) cubren {tilesAcumulados:N0} de {totalTilesMundo:N0} ({fraccion:P1}) " +
+                                          $"-> resumen='{resumen}' (esperado que EMPIECE por el aviso de legibilidad, porque pasa del 40%)");
+                        if (fraccion >= 0.4 && !hayAviso)
+                            Console.WriteLine($"FALLO: AR-EX3-LEGIBILIDAD - la seleccion cubre el {fraccion:P0} del mapa y el resumen no avisa de nada: '{resumen}'");
+                        if (fraccion < 0.4 && hayAviso)
+                            Console.WriteLine($"FALLO: AR-EX3-LEGIBILIDAD - avisa de ilegibilidad con solo el {fraccion:P0} del mapa cubierto: '{resumen}'");
+
+                        expl.ClearOreMarksCommand.Execute(null);
+                        DoEvents();
+                        Console.WriteLine($"AR-EX3-LEGIBILIDAD: tras 'Quitar marcas' -> resaltado={(expl.WorldHighlight == null ? "apagado" : "SIGUE ENCENDIDO")}, resultados={expl.WorldSearchResults.Count} (esperado apagado y 0)");
+                        if (expl.WorldHighlight != null || expl.WorldSearchResults.Count > 0)
+                            Console.WriteLine("FALLO: AR-EX3-LEGIBILIDAD - 'Quitar marcas' no apaga el resaltado y/o la lista de resultados");
+                        foreach (var fila in acumuladas) fila.IsChecked = false;
+                        WaitForDispatcher(500);
+                        expl.ClearOreMarksCommand.Execute(null);
+                    }
+                    expl.SelectedCategory = catAntesEx3;
+                    DoEvents();
+                }
+                catch (Exception ex) { Console.WriteLine("AR-EX3-EXCEPTION: " + ex); }
+
                 // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
                 // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de
                 // NPC"): con el mundo real ya cargado arriba, confirma que la mayoria de NPCs
@@ -5210,6 +5831,29 @@ internal static class Program
             DoEvents();
         }
 
+        // AR-LAY: barrido sistematico de maquetacion por tamaño de ventana e idioma sobre TODA
+        // la app - vive en su propio fichero (AuditoriaMaquetacion.cs, misma clase parcial): ver
+        // alli el porque de no meter otro bloque mas dentro de este Main() ya enorme.
+        BarridoMaquetacionPorTamañoEIdioma(window, vm);
+
+        // LIB-* / BUFLIB-* / BUILDS-* (6-sep-2026): oleada de pruebas de Libreria (objetos y
+        // buffs) y Builds - el cuerpo real vive en PruebasLibreriaYBuilds.cs, otra parte de esta
+        // misma clase (ver el comentario de `partial` arriba).
+        PruebasLibreriaYBuilds(vm, window);
+
+        // PB-* (6-sep-2026): oleada de pruebas de Personaje > Buffs / Apariencia /
+        // Investigacion / Spawn Points / Desbloqueos / Version - el cuerpo real vive en
+        // PruebasBuffsAparienciaVersion.cs, otra parte de esta misma clase. Mide esas pantallas
+        // en su estado POBLADO Y ABIERTO (rejilla llena, selectores desplegados, carpeta
+        // elegida, avisos naranjas visibles), que es justo el punto ciego de AR-LAY.
+        PruebasPersonajeBuffsAparienciaVersion(vm, window);
+
+        // Oleada del 6-sep-2026, area "Inicio, Ajustes, Novedades, Acerca de" - el cuerpo real
+        // vive en PruebasInicioAjustes.cs, otra parte de esta misma clase (ver el comentario de
+        // `partial` arriba). Va al final a proposito: manipula carpetas adicionales, idioma y
+        // window.json, y los deja como estaban antes de seguir.
+        PruebasInicioAjustesNovedadesAcercaDe(vm, window);
+
         string errorLog = Path.Combine(AppContext.BaseDirectory, "ultimo-error.log");
         Console.WriteLine("ultimo-error.log existe: " + File.Exists(errorLog));
 
@@ -5262,12 +5906,39 @@ internal static class Program
             window.WindowState = System.Windows.WindowState.Normal;
             DoEvents(); DoEvents();
             FijarTamaño(window, 900, 640); // tamaño distinto a proposito, para ver si Apply lo pisa
+            // Diagnostico permanente (ronda del 6-sep-2026): cuando este bloque falla, lo unico
+            // que decide el resultado real de Apply() son estos tres datos - el JSON REAL que
+            // Apply va a leer (otro proceso puede haberlo reescrito por debajo: window.json es
+            // global de la maquina, misma verdad ya documentada para session.json) y el area
+            // virtual real contra la que Apply recorta. Sin ellos, un FALLO aqui no dice nada.
+            Console.WriteLine($"A10-VENTANAFIJA-DIAG: VirtualScreen={SystemParameters.VirtualScreenWidth:0}x{SystemParameters.VirtualScreenHeight:0} " +
+                              $"(izq={SystemParameters.VirtualScreenLeft:0} arr={SystemParameters.VirtualScreenTop:0}), MinWidth/MinHeight de la ventana={window.MinWidth:0}x{window.MinHeight:0}, " +
+                              $"window.json justo antes de Apply()={File.ReadAllText(placementPathParaFijar)}");
             WindowPlacementService.Apply(window);
             DoEvents(); DoEvents();
-            bool aplicoElFijado = Math.Abs(window.Width - anchoNormal) < 2 && Math.Abs(window.Height - altoNormal) < 2;
+            // Oleada del 6-sep-2026: esto comparaba contra el tamaño fijado A SECAS, y daba FALLO
+            // en cualquier maquina cuya pantalla real sea mas pequeña que ese tamaño - Apply()
+            // recorta a proposito contra el area virtual real y contra MinWidth/MinHeight ("nunca
+            // restaurar fuera de la pantalla", su propio comentario). Es la MISMA leccion que
+            // FijarTamaño ya tenia escrita: el esperado no es lo pedido, es lo pedido YA recortado
+            // por los limites reales que el propio codigo declara. Salio de verdad en una sesion
+            // remota cuyo escritorio mide 576x1197 en unidades WPF (1440x2992 fisicos al 250%),
+            // o sea mas estrecho que el MinWidth=1080 de la propia app: el bloque daba FALLO sin
+            // que nada estuviera roto. No se pierde poder de deteccion - lo que de verdad hay que
+            // demostrar es que Apply leyo los campos Pinned* y no los normales, y eso pasa a
+            // comprobarse explicitamente aqui abajo (el ultimo tamaño usado es otro numero).
+            double esperadoAncho = Math.Max(window.MinWidth, Math.Min(anchoNormal, SystemParameters.VirtualScreenWidth));
+            double esperadoAlto = Math.Max(window.MinHeight, Math.Min(altoNormal, SystemParameters.VirtualScreenHeight));
+            bool aplicoElFijado = Math.Abs(window.Width - esperadoAncho) < 2 && Math.Abs(window.Height - esperadoAlto) < 2;
             bool noMaximizo = window.WindowState == System.Windows.WindowState.Normal;
-            Console.WriteLine($"A10-VENTANAFIJA-MAXIMIZADA: Apply() con el tick puesto deja la ventana en {window.Width:0}x{window.Height:0} (esperado {anchoNormal:0}x{altoNormal:0}) -> {aplicoElFijado}, y NO maximizada -> {noMaximizo}");
+            var jsonAplicado = System.Text.Json.JsonSerializer.Deserialize<WindowPlacementInfo>(File.ReadAllText(placementPathParaFijar))!;
+            double esperadoSiIgnorase = Math.Max(window.MinHeight, Math.Min(jsonAplicado.Height, SystemParameters.VirtualScreenHeight));
+            bool usoLosCamposFijados = Math.Abs(esperadoAlto - esperadoSiIgnorase) <= 2 || Math.Abs(window.Height - esperadoAlto) < 2;
+            Console.WriteLine($"A10-VENTANAFIJA-MAXIMIZADA: Apply() con el tick puesto deja la ventana en {window.Width:0}x{window.Height:0} " +
+                              $"(esperado {esperadoAncho:0}x{esperadoAlto:0} = el fijado {anchoNormal:0}x{altoNormal:0} recortado por MinWidth/MinHeight {window.MinWidth:0}x{window.MinHeight:0} y por la pantalla real {SystemParameters.VirtualScreenWidth:0}x{SystemParameters.VirtualScreenHeight:0}) -> {aplicoElFijado}, " +
+                              $"NO maximizada -> {noMaximizo}, uso los campos Pinned* y no el ultimo tamaño usado ({jsonAplicado.Width:0}x{jsonAplicado.Height:0}) -> {usoLosCamposFijados}");
             if (!aplicoElFijado || !noMaximizo) Console.WriteLine("FALLO: A10-VENTANAFIJA-MAXIMIZADA - Apply() no restauro el tamaño fijado, o maximizo con el tick puesto");
+            if (!usoLosCamposFijados) Console.WriteLine("FALLO: A10-VENTANAFIJA-MAXIMIZADA - Apply() con el tick puesto uso el ULTIMO tamaño usado en vez del tamaño fijado");
 
             WindowPlacementService.Unpin();
         }
@@ -5502,6 +6173,7 @@ internal static class Program
         catch (InvalidOperationException) { return false; } // no cuelga de `raiz` (fila virtualizada fuera)
     }
 
+
     // AR-11: ¿hay un ScrollViewer entre este elemento y el limite dado? Un elemento recortado
     // pero dentro de un ScrollViewer sigue siendo ALCANZABLE (solo hay que desplazarse); uno
     // recortado sin ningun scroll por encima es contenido PERDIDO. Mismo criterio real que ya
@@ -5514,6 +6186,50 @@ internal static class Program
             if (ReferenceEquals(d, limite)) return false;
         }
         return false;
+    }
+
+    // OBJ-01: todos los bindings de este subarbol cuya RUTA no se resolvio de verdad, tal y como
+    // lo sabe el propio WPF (BindingExpressionBase.Status == PathError). Es el unico detector
+    // fiable de "el DataContext local no tiene esa propiedad": WPF no lanza ninguna excepcion ni
+    // pinta nada raro en ese caso - deja la propiedad destino en su valor por defecto (un
+    // Content a null, un Text a "") y sigue. GetLocalValueEnumerator es la via real para llegar a
+    // las expresiones sin tener que enumerar a mano las DependencyProperty de cada tipo: una
+    // propiedad enlazada guarda su BindingExpression COMO valor local.
+    private static List<string> BindingsRotos(DependencyObject raiz)
+    {
+        var fallos = new List<string>();
+        foreach (var fe in Descendientes<FrameworkElement>(raiz))
+        {
+            if (!fe.IsVisible) continue;
+            Revisar(fe, fe.DataContext, fallos);
+            // Los <Run>/<Span> de un TextBlock con contenido mixto son FrameworkContentElement,
+            // NO FrameworkElement: no cuelgan del arbol VISUAL y Descendientes<T> jamas los ve.
+            // Hay que mirarlos aparte o se escapa justo el caso de "Defensa total: 51", que es un
+            // Run enlazado dentro de su TextBlock - y es el sintoma mas confuso de todos, porque
+            // el numero se sigue viendo y lo unico que desaparece es la palabra que dice que es.
+            if (fe is TextBlock tb)
+                foreach (var inline in tb.Inlines)
+                    Revisar(inline, inline.DataContext, fallos);
+        }
+        return fallos;
+
+        static void Revisar(DependencyObject d, object? dataContext, List<string> fallos)
+        {
+            var e = d.GetLocalValueEnumerator();
+            while (e.MoveNext())
+            {
+                if (e.Current.Value is not System.Windows.Data.BindingExpressionBase beb) continue;
+                if (beb.Status != System.Windows.Data.BindingStatus.PathError) continue;
+                string ruta = beb switch
+                {
+                    System.Windows.Data.BindingExpression be => be.ParentBinding.Path?.Path ?? "(sin ruta)",
+                    System.Windows.Data.MultiBindingExpression mbe => string.Join("+", mbe.BindingExpressions
+                        .OfType<System.Windows.Data.BindingExpression>().Select(x => x.ParentBinding.Path?.Path ?? "?")),
+                    _ => beb.GetType().Name,
+                };
+                fallos.Add($"{d.GetType().Name}.{e.Current.Property.Name} <- {{Binding {ruta}}} sobre DataContext={dataContext?.GetType().Name ?? "null"}");
+            }
+        }
     }
 
     // Recorrido real del arbol visual (no logico) - mismo patron ya usado por RESIZE-DIAG mas

@@ -36,7 +36,65 @@ public partial class HomeViewModel : ObservableObject
     public ObservableCollection<CharacterListEntryViewModel> Characters { get; } = [];
 
     [ObservableProperty] private bool _isScanning;
-    [ObservableProperty] private string? _scanMessage;
+
+    // Oleada de pruebas del 6-sep-2026 (bloque INI-04 del arnes) - BUG REAL: esto era
+    // `[ObservableProperty] private string? _scanMessage` y todos los sitios que lo rellenan le
+    // metian el texto YA RESUELTO (`Loc.Format(...)`). Un texto resuelto una sola vez se queda
+    // congelado en el idioma que hubiera en ese instante: con la app en español, "Fulano no
+    // tiene ninguna copia de seguridad que restaurar" seguia en español despues de cambiar a
+    // ingles en vivo, y lo mismo el "Ningun personaje encontrado en..." que ve de entrada quien
+    // no tenga Terraria en la ruta habitual. El barrido de idioma (A10-IDIOMA-BARRIDO) no lo
+    // detectaba porque compara lo que hay EN PANTALLA en ese momento, y este mensaje casi nunca
+    // lo esta cuando se hace el barrido.
+    //
+    // Se guarda la CLAVE del diccionario y sus argumentos reales; el texto se compone al leerlo,
+    // en el idioma activo, y un cambio de idioma dispara PropertyChanged (ver OnIdiomaCambiado)
+    // para que lo que ya este en pantalla se reescriba solo.
+    private string? _scanMessageKey;
+    private object?[] _scanMessageArgs = [];
+    // Caso aparte real: la lista de carpetas escaneadas se une con un separador que TAMBIEN es
+    // texto traducido (" ni en " / " nor in "). Unirla al guardar dejaria ese separador
+    // congelado dentro del argumento, asi que se guardan las carpetas y se unen al leer.
+    private IReadOnlyList<string>? _scanMessageFolders;
+
+    public string? ScanMessage
+    {
+        get
+        {
+            if (_scanMessageKey is null) return null;
+            var loc = LocalizationService.Instance;
+            return _scanMessageFolders is null
+                ? loc.Format(_scanMessageKey, _scanMessageArgs)
+                : loc.Format(_scanMessageKey, string.Join(loc["scan_folder_joiner"], _scanMessageFolders));
+        }
+    }
+
+    private void SetScanMessage(string clave, params object?[] args)
+    {
+        _scanMessageKey = clave;
+        _scanMessageArgs = args;
+        _scanMessageFolders = null;
+        OnPropertyChanged(nameof(ScanMessage));
+    }
+
+    private void SetScanMessageCarpetas(string clave, IReadOnlyList<string> carpetas)
+    {
+        _scanMessageKey = clave;
+        _scanMessageArgs = [];
+        _scanMessageFolders = carpetas;
+        OnPropertyChanged(nameof(ScanMessage));
+    }
+
+    // Unica via real de borrarlo desde fuera - no hay setter publico a proposito: aceptar un
+    // string ya resuelto es exactamente lo que reintroduciria el bug de arriba.
+    public void ClearScanMessage()
+    {
+        if (_scanMessageKey is null) return;
+        _scanMessageKey = null;
+        _scanMessageArgs = [];
+        _scanMessageFolders = null;
+        OnPropertyChanged(nameof(ScanMessage));
+    }
 
     // I-a: ruta real del personaje cargado ahora mismo en MainViewModel (null si ninguno) -
     // MainViewModel.LoadFromPath la actualiza en su finally, tanto en exito como en fallo.
@@ -56,7 +114,15 @@ public partial class HomeViewModel : ObservableObject
     // null = sin aviso real; non-null = el fichero cambio por fuera desde la ultima sesion real
     // (LastCharacterModifiedUtc guardado no coincide con la fecha real de ahora mismo) - se
     // sigue pudiendo continuar, pero avisado, nunca en silencio.
-    [ObservableProperty] private string? _lastSessionStalenessWarning;
+    //
+    // Oleada del 6-sep-2026 (bloque INI-02 del arnes) - mismo BUG REAL que ScanMessage de
+    // arriba: el texto se resolvia UNA vez aqui y se quedaba en el idioma de ese instante. Se
+    // guarda el HECHO (¿cambio por fuera?) y el texto se compone al leerlo. Ademas, el camino
+    // de "el fichero ya no existe" salia por `return` sin apagar un aviso anterior, que asi se
+    // quedaba colgado apuntando a un personaje que ya no se ofrece.
+    private bool _lastSessionIsStale;
+
+    public string? LastSessionStalenessWarning => _lastSessionIsStale ? LocalizationService.Instance["home_stale_warning"] : null;
 
     public void SetLastSession(TerrakeepSession session)
     {
@@ -64,13 +130,32 @@ public partial class HomeViewModel : ObservableObject
         if (_lastSessionPath == null || !File.Exists(_lastSessionPath))
         {
             LastSessionCharacterName = null;
+            MarcarSesionCambiadaPorFuera(false);
             return;
         }
         LastSessionCharacterName = session.LastCharacterName ?? Path.GetFileNameWithoutExtension(_lastSessionPath);
         var modificadoReal = File.GetLastWriteTimeUtc(_lastSessionPath);
-        LastSessionStalenessWarning = session.LastCharacterModifiedUtc.HasValue && modificadoReal != session.LastCharacterModifiedUtc.Value
-            ? LocalizationService.Instance["home_stale_warning"]
-            : null;
+        MarcarSesionCambiadaPorFuera(session.LastCharacterModifiedUtc.HasValue && modificadoReal != session.LastCharacterModifiedUtc.Value);
+    }
+
+    private void MarcarSesionCambiadaPorFuera(bool valor)
+    {
+        if (_lastSessionIsStale == valor) return;
+        _lastSessionIsStale = valor;
+        OnPropertyChanged(nameof(LastSessionStalenessWarning));
+    }
+
+    // El texto de estas dos propiedades vive en el diccionario de idioma, no en un campo ya
+    // resuelto - hay que volver a preguntarlo cuando el usuario cambia de idioma en vivo. Evento
+    // DEBIL a proposito (mismo motivo real que LocalizedContentViewModel: LocalizationService es
+    // un singleton que vive lo que la aplicacion, y `dotnet test` construye cientos de
+    // MainViewModel); el handler es un metodo de instancia real, NUNCA una lambda - con una
+    // lambda el objetivo del delegate es el cierre generado, que no referencia nadie mas y el
+    // recolector puede llevarse en cualquier momento, dejando la suscripcion muerta en silencio.
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(ScanMessage));
+        OnPropertyChanged(nameof(LastSessionStalenessWarning));
     }
 
     [RelayCommand]
@@ -83,6 +168,7 @@ public partial class HomeViewModel : ObservableObject
     {
         _equipmentAppearance = equipmentAppearance;
         _backupHistory = backupHistory;
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
 
         // Fire-and-forget deliberado: el constructor no puede ser async, y no hay nada
         // real que esperar aqui todavia (el arranque de MainWindow sigue su curso normal -
@@ -131,11 +217,9 @@ public partial class HomeViewModel : ObservableObject
             var scanned = await Task.Run(() => ScanCharacters(dirs, _equipmentAppearance));
             if (myGeneration != _scanGeneration) return; // una vuelta MAS NUEVA ya esta en marcha - esta es obsoleta
             foreach (var entry in scanned) Characters.Add(entry);
-            ScanMessage = Characters.Count == 0
-                ? dirs.Count == 0
-                    ? LocalizationService.Instance["scan_no_players_folder"]
-                    : LocalizationService.Instance.Format("scan_no_players_in", string.Join(LocalizationService.Instance["scan_folder_joiner"], dirs))
-                : null;
+            if (Characters.Count > 0) ClearScanMessage();
+            else if (dirs.Count == 0) SetScanMessage("scan_no_players_folder");
+            else SetScanMessageCarpetas("scan_no_players_in", dirs);
             UpdateCurrentPath(_currentPath); // la lista es nueva de cero, IsCurrent hay que recalcularlo
         }
         finally
@@ -202,7 +286,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ScanMessage = LocalizationService.Instance.Format("error_open_folder", ex.Message);
+            SetScanMessage("error_open_folder", ex.Message);
         }
     }
 
@@ -232,7 +316,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ScanMessage = LocalizationService.Instance.Format("error_duplicating", ex.Message);
+            SetScanMessage("error_duplicating", ex.Message);
         }
     }
 
@@ -247,7 +331,7 @@ public partial class HomeViewModel : ObservableObject
             string plrBak = entry.FilePath + ".bak";
             if (!File.Exists(plrBak))
             {
-                ScanMessage = LocalizationService.Instance.Format("error_no_backup_to_restore", entry.Name);
+                SetScanMessage("error_no_backup_to_restore", entry.Name);
                 return;
             }
             File.Copy(plrBak, entry.FilePath, overwrite: true);
@@ -279,7 +363,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ScanMessage = LocalizationService.Instance.Format("error_restoring_backup", ex.Message);
+            SetScanMessage("error_restoring_backup", ex.Message);
         }
     }
 
@@ -307,7 +391,7 @@ public partial class HomeViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ScanMessage = LocalizationService.Instance.Format("error_restoring_backup_dated", backup.TimestampLocal.ToString("dd/MM/yyyy HH:mm:ss"), ex.Message);
+            SetScanMessage("error_restoring_backup_dated", backup.TimestampLocal.ToString("dd/MM/yyyy HH:mm:ss"), ex.Message);
         }
     }
 }

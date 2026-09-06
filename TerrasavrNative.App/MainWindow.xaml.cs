@@ -305,16 +305,25 @@ public partial class MainWindow : Window
     // muestra, actualizado aqui explicitamente tras Pin()/Unpin() en vez de via el binding
     // normal (evita que una futura OnIsWindowSizePinnedChanged en la ViewModel intente
     // persistir algo que no puede calcular sin el Window).
-    private void OnPinWindowSizeChecked(object sender, RoutedEventArgs e)
+    //
+    // Oleada del 6-sep-2026 (bloque AJU-01 del arnes) - BUG REAL: esto colgaba de Checked/
+    // Unchecked, y esos dos eventos NO significan "el usuario lo ha pulsado" - saltan tambien
+    // cuando el valor cambia por el binding. Y eso pasa en CADA arranque real de la app:
+    // SettingsViewModel.LoadFromDisk() pone IsWindowSizePinned a true al leer el fichero (ver el
+    // constructor de esta misma clase, unas lineas mas arriba), el binding OneWay marca el
+    // CheckBox, y Checked llamaba a Pin(this) - o sea, la app RE-FIJABA el tamaño ella sola con
+    // el que tuviera la ventana en ese instante, tirando el que el usuario habia fijado a
+    // proposito. Ademas ocurria ANTES de WindowPlacementService.Apply(), con la ventana todavia
+    // en el tamaño de plantilla del XAML (1180x860) y sin mostrar.
+    //
+    // `Click` de ToggleButton solo se dispara por interaccion real (raton o teclado), nunca por
+    // un cambio de propiedad - y cuando llega, IsChecked ya trae el valor nuevo.
+    private void OnPinWindowSizeClick(object sender, RoutedEventArgs e)
     {
-        Services.WindowPlacementService.Pin(this);
-        _viewModel.Settings.IsWindowSizePinned = true;
-    }
-
-    private void OnPinWindowSizeUnchecked(object sender, RoutedEventArgs e)
-    {
-        Services.WindowPlacementService.Unpin();
-        _viewModel.Settings.IsWindowSizePinned = false;
+        bool marcado = ((CheckBox)sender).IsChecked == true;
+        if (marcado) Services.WindowPlacementService.Pin(this);
+        else Services.WindowPlacementService.Unpin();
+        _viewModel.Settings.IsWindowSizePinned = marcado;
     }
 
     // F-13 (auditoria de Opus vs TEdit, E-14): "AllowDrop aparece exactamente dos veces... las
