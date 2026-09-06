@@ -10732,3 +10732,112 @@ mensaje de commit. Los fallos de test ajenos que aparecieron y desaparecieron po
 (`LocalizedContentTests`, `ObjetosTooltipStatsTests`, `HomeCardTests`,
 `ObjetosRoundTripPersonajeRealTests`) no los toca ninguna de estas tandas - se comprobo
 ejecutando las clases propias junto a las suyas (21/21 en verde).
+
+---
+
+## 6-sep-2026 - Exploracion: con resultados abiertos la categoria se quedaba en 30px (cuarta ronda, area Exploracion del mundo)
+
+Oleada grande de pruebas sobre **Exploracion del mundo**, en paralelo con otros cinco agentes en
+sus propias areas. Punto de partida: las TRES rondas anteriores sobre esta misma columna (`AR-11`
+maquetacion general, `AR-13` cofres/nombres, `AR-15` "NPCs que faltan") ya la habian dejado bien en
+lo que probaron - asi que esta ronda ataca lo que ninguna de las tres llego a mirar.
+
+### 1. El bug gordo: el bloque de resultados se comia la categoria entera
+
+Las tres rondas midieron esta columna SIEMPRE con el bloque de resultados **vacio**. Y ese bloque
+(`ExplorationResultsBlock`) es `DockPanel.Dock="Bottom"`: **un DockPanel sirve a su hijo Dock entero
+y con su `DesiredSize` completo ANTES de dejarle nada al relleno**, que es justo el contenido de la
+categoria. Misma familia de bug que `AR-15` encontro en el otro sitio de esta misma columna.
+
+Y el estado "con resultados" no es raro: es el estado NORMAL en cuanto el usuario busca algo o pulsa
+una fila de inventario. Medido con el bloque nuevo `AR-EX1` (mundo real `roca_negra.wld`, busqueda
+real de "lava" -> 1000 resultados, geometria honesta con `RectVisible`):
+
+| tamaño de ventana | antes: alto visible de la categoria | filas enteras a la vista | despues |
+|---|---|---|---|
+| maximizada | 361px | 4 | **333px, 3-4 filas** |
+| 1600x1000 | 200px | 1 | **259px, 2 filas** |
+| 1400x900 | **100px** | **0** | **214px, 1-2 filas** |
+| 1180x860 (tamaño POR DEFECTO) | **60px** | **0** | **196px, 1 fila** |
+| 1080x700 (suelo real de la ventana) | **30px** | **0** | **182px, 1 fila** |
+
+En los tres tamaños de abajo, con resultados abiertos, **no se veia ni una sola fila entera** de
+Cofres (los dos modos), Minerales ni Objetos: el bloque de resultados se llevaba 363px de una
+columna de 600.
+
+**El arreglo** (mismo patron ya demostrado por `AR-15`, no uno nuevo): la mitad de abajo de la
+columna deja de ser "Dock=Bottom + relleno" y pasa a ser un `Grid` de dos filas que se REPARTEN el
+hueco - fila 0 `*` con `MinHeight="120"` para la categoria, fila 1 con el bloque de resultados.
+Dos filas que reparten proporcionalmente nunca desbordan, sea cual sea el tamaño de la ventana.
+La fila de resultados solo pide su parte **cuando de verdad hay algo que enseñar**:
+`CountToGridLengthConverter` (nuevo, gemelo real de `BoolToGridLengthConverter` para un `Count`) la
+deja en `Auto` con la lista vacia, que es el estado con el que se midio `AR-11a` y no debia cambiar
+- comprobado: `AR-11a` sigue dando sus 403px exactos.
+
+Segunda pieza: dentro del bloque, el `StackPanel` pasa a `Grid` de filas (6 `Auto` + la lista en
+`*`). Un StackPanel mide a sus hijos con alto INFINITO, asi que al recibir menos alto lo que sobra
+se recorta en seco por abajo - primero la lista. Con filas reales, todo lo fijo (aviso de busqueda
+en marcha, las dos casillas, el resumen, los botones) conserva su sitio y es la LISTA la que cede,
+que ya tiene scroll propio y no pierde nada.
+
+### 2. Cargar otro mundo dejaba los cofres (y el marcador) del anterior
+
+Encontrado leyendo el camino de carga y confirmado con dos mundos reales (`AR-EX1b`).
+`LoadFromPathAsync` limpia con cuidado casi todo el estado del mundo saliente y termina llamando a
+`RebuildInventory()` - pero **`RebuildInventory` despacha por `SelectedCategory`, y dos lineas antes
+se acaba de dejar en "Todo"**, la unica categoria que no reconstruye ningun inventario. Resultado
+real medido: cargar `roca_negra` despues de `Afueras_de_Larvas_de_gusano` conservaba las **560 filas
+de "Cofre a cofre" del mundo anterior**, y con un cofre seleccionado su marcador teal seguia pintado
+sobre el mapa NUEVO, en la casilla (4114,645) del mundo VIEJO - que en un mundo mas pequeño ni
+siquiera existiria. Arreglado limpiando `ChestRows`/`HasCurrentChest` explicitamente en la carga (y
+tambien en la rama de fallo: sin mundo cargado no puede quedar nada del anterior).
+`ExplorationCargarOtroMundoTests` (3 pruebas nuevas) fija la regla sin depender de ningun `.wld`.
+
+### 3. Lo que se probo y estaba BIEN (queda medido, para no repetir el camino)
+
+- **Zoom con rueda centrado en el cursor** (`AR-EX2-RUEDA`, nuevo): la promesa del arreglo del
+  1-sep-2026 ("el zoom no lo hace recto") nunca habia tenido comprobacion permanente. Medido sobre
+  el ScrollViewer real, en los dos sentidos: el punto de mundo bajo el raton se mueve **0,0 tiles**
+  y el paso es exactamente `ZoomStep` (x1,25).
+- **Minimapa** (`AR-EX2-MINIMAPA`): el rectangulo de viewport corresponde **exactamente** con la
+  fraccion visible real (23,3px medidos contra 23,3px calculados, 888 tiles a escala 0,02619).
+- **Hover / formula GPS** (`AR-EX3-HOVER`, nuevo): las 5 alturas reales del mundo resuelven 5 capas
+  DISTINTAS (Espacio / Superficie / Subterraneo / Cavernas / Infierno) con su color de paleta real y
+  su profundidad; el tile trae su id entre corchetes; y al salir del mapa la franja queda limpia del
+  todo (no conserva el ultimo tile).
+- **Aviso de legibilidad del 40%** (`AR-EX3-LEGIBILIDAD`, nuevo): **nunca se habia disparado en
+  ninguna prueba** - marcar cobre (lo que probaban los bloques de Minerales) cubre el 0,3%, y ni
+  siquiera el tile mas abundante del mundo llega (la piedra es el 18,4%). Ahora se marcan los mas
+  abundantes hasta pasar del 40% de verdad (7 tiles, 42,3%) y se comprueba que el resumen EMPIEZA
+  por el aviso; con menos del 40% se comprueba que NO avisa. Misma leccion que `AR-14b`: una
+  garantia que nunca se activa no esta demostrada.
+- `AR-11a`/`AR-11c`/`AR-13a`/`AR-15` siguen dando lo mismo dato a dato tras el cambio: la
+  reestructuracion no toco nada de lo que aquellas tres rondas dejaron bien.
+
+### 4. Obstaculo real del entorno (autonomia tecnica) - dos, y los dos costaron rato
+
+- **El arnes que se corta deja su proceso VIVO.** Con 6 agentes trabajando a la vez, el siguiente
+  intento arrancaba con DOS ventanas WPF reales del arnes peleandose por el foco y por el raton
+  real, y se mataban entre si: 8 ejecuciones seguidas cortandose en puntos DISTINTOS (F-7, F-11,
+  LIB-03, ICONOS-MINERALES...) sin ninguna excepcion en la salida, que parecia un bug propio y no lo
+  era. Solucion: matar antes de cada tanda **solo** los procesos cuya ruta cae en el `out/` de esta
+  sesion (nunca los de otro agente ni el `Terrakeep.exe` real del usuario), y esperar a que no haya
+  ningun otro arnes en marcha. Con eso, ejecucion completa a la primera.
+- **El raton NO se puede mover en esta sesion.** `SetCursorPos` no tiene efecto (el cursor cae
+  siempre en el mismo punto, fuera del elemento) - probado ademas con `Mouse.Synchronize()`, que
+  tampoco lo arregla; se deja escrito y no se insiste mas (regla de los dos intentos). Por eso las
+  dos mediciones que EXIGEN mover el raton (`AR-EX2-PAN` y `AR-EX2-MINIMAPA-CLIC`) comprueban
+  primero donde cayo el cursor **de verdad** y, si no llego, se declaran **omitidas** en vez de
+  acusar de un bug inexistente - que es lo que hacian en su primera version: el clic del minimapa
+  daba "9416 tiles de error" y el eje Y "casi acertaba" solo porque el mapa ya estaba por la mitad.
+  Las dos quedan listas para medir de verdad en cuanto el raton este disponible.
+
+### Verificacion real
+
+- `dotnet build` de la solucion: **0 errores / 0 avisos**.
+- `dotnet test`: Core **420/420**, ViewModels **416 de 418** (+3 nuevos propios en verde; los 2
+  fallos son de `ObjetosTooltipStatsTests`, de otro agente y de otra area, ajenos a esta ronda).
+- Arnes de UI Automation: **0 lineas `FALLO` en los bloques de Exploracion** (`AR-EX1`, `AR-EX1b`,
+  `AR-EX2`, `AR-EX3`, y `AR-11`/`AR-13`/`AR-15` intactos), en dos ejecuciones completas seguidas.
+  Los `FALLO` que quedan en la salida (`AR-14`, `AR-LAY`, `OBJ-*`, `LIB-06-IDIOMA`) son de las areas
+  de los otros agentes, que trabajaban en paralelo sobre el mismo arbol.

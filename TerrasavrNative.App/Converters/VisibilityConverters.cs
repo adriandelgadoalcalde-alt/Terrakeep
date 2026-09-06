@@ -22,6 +22,25 @@ public sealed class BoolToGridLengthConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+// Gemelo real de BoolToGridLengthConverter para una coleccion: recuento > 0 -> GridLength en
+// estrella con el peso de ConverterParameter, vacia -> Auto. Nace del bug medido por AR-EX1
+// (6-sep-2026): el bloque de resultados de Exploracion es Dock="Bottom" y un DockPanel se lo
+// sirve ENTERO (363px medidos) antes de dejarle nada al contenido de la categoria, que se
+// quedaba en 30-100px con resultados abiertos. La fila del bloque solo debe pedir su parte
+// PROPORCIONAL cuando de verdad hay algo que enseñar; con la lista vacia vuelve a Auto y no
+// roba un solo pixel. Existe aparte de BoolToGridLengthConverter porque el dato real disponible
+// aqui es Count (ObservableCollection notifica su Count solo, no un bool derivado).
+public sealed class CountToGridLengthConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value is int count && count > 0 && parameter is string s && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var weight)
+            ? new GridLength(weight, GridUnitType.Star)
+            : GridLength.Auto;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 // Companero de BoolToGridLengthConverter: true -> el numero real de ConverterParameter, false
 // -> 0 - para que MinHeight tambien colapse de verdad (una RowDefinition en Auto con
 // MinHeight=150 seguiria reservando 150px aunque su Height ya sea Auto).

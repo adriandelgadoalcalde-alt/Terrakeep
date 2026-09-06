@@ -1589,6 +1589,15 @@ public partial class ExplorationViewModel : ObservableObject
             SelectedCategory = WorldSearchCategory.All;
             ChestViewMode = 0;
             ObjectsViewMode = 0;
+            // Bug real medido con el arnes (AR-EX1b, 6-sep-2026): RebuildInventory solo toca
+            // ChestRows/HasCurrentChest cuando la categoria activa es Cofres, y la linea de arriba
+            // acaba de dejarla en "Todo" - asi que cargar OTRO mundo desde el lanzador conservaba
+            // enteras las 505/560 filas de "Cofre a cofre" del mundo ANTERIOR y, si habia un cofre
+            // seleccionado, seguia pintando su marcador teal sobre el mapa NUEVO, en una casilla
+            // que en el mundo entrante puede no existir siquiera (mundos de distinto tamaño). Se
+            // limpian aqui explicitamente, junto al resto de estado del mundo saliente.
+            ChestRows.Clear();
+            HasCurrentChest = false;
             RebuildInventory();
 
             var foundIds = world.Npcs.Select(n => n.Id).ToHashSet();
@@ -1630,6 +1639,10 @@ public partial class ExplorationViewModel : ObservableObject
             _presence = null;
             WorldHighlight = null;
             WorldSizeText = "—";
+            // Mismo motivo que arriba, en la rama de fallo: sin mundo cargado no puede quedar ni
+            // una fila de cofres del anterior ni su marcador colgado sobre el lienzo.
+            ChestRows.Clear();
+            HasCurrentChest = false;
             IsWorldLoaded = false;
             WorldGameModeSaveStatus = null;
             StatusMessage = LocalizationService.Instance.Format("error_reading_world", ex.Message);

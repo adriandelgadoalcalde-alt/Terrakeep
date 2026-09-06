@@ -16,6 +16,7 @@
             <conv:CountToVisibilityConverter x:Key="CountToVis" />
             <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
             <conv:BoolToGridLengthConverter x:Key="BoolToGridLength" />
+            <conv:CountToGridLengthConverter x:Key="CountToGridLength" />
             <conv:BoolToDoubleConverter x:Key="BoolToDouble" />
             <conv:EnumEqualsConverter x:Key="EnumEquals" />
             <!-- Ronda de idioma del 6-sep-2026: sustituto BINDEABLE de StringFormat (que es texto

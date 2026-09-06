@@ -594,11 +594,21 @@
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform" Margin="0,0,7,0"
+                    <!-- AR-LAY (6-sep-2026): DockPanel en vez de StackPanel Horizontal, y FUERA el
+                         MaxWidth="167". Aquel 167 era una constante calculada a mano (220 - 6 - 16
+                         - 24 - 7) y se le escapo un sumando: el BorderThickness=1 que SOLO llevan
+                         los objetos de Calamity (el DataTrigger de arriba), 2px a repartir entre
+                         los dos lados. Por eso se recortaban los nombres largos de Calamity y no
+                         los de vanilla - medido a 1180x860, "Baculo de Estrella Quebradiza" se
+                         salia 1,4px de la zona pintada, sin scroll con el que alcanzarlo. Con un
+                         DockPanel el ultimo hijo recibe el ancho restante REAL y el TextWrapping
+                         actua solo: no queda ninguna constante que recalcular si algun dia cambia
+                         el ancho de la tarjeta, el icono, el padding o el borde. -->
+                    <DockPanel>
+                        <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="24" Height="24" Stretch="Uniform" Margin="0,0,7,0"
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
-                        <StackPanel MaxWidth="167">
+                        <StackPanel>
                             <!-- Bd-e (segunda auditoria de Opus, Fable): "columnas irregulares" -
                                  con la columna ahora de ancho fijo (ver BuildClassTemplate), el
                                  texto necesita poder partirse en dos lineas en vez de desbordar
@@ -618,7 +628,7 @@
                             <TextBlock Text="{Binding PrefixText}" Style="{StaticResource CaptionText}"
                                        Visibility="{Binding PrefixText, Converter={StaticResource NullToVis}}" />
                         </StackPanel>
-                    </StackPanel>
+                    </DockPanel>
                 </Border>
                 <!-- Bd-d (segunda auditoria de Opus, Fable): "marcar lo que ya se posee" - misma
                      mancha de color verde real que ya usa "equipado" en Objetos
@@ -655,7 +665,13 @@
                             CommandParameter="{Binding Source}"
                             IsEnabled="{Binding DataContext.IsCharacterLoaded, RelativeSource={RelativeSource AncestorType=Window}}"
                             ToolTip="{Binding Loc[tt_auto_equip], Mode=OneWay}" />
-                    <TextBlock Text="{Binding ClassName}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                    <!-- Ronda de Libreria/Builds del 6-sep-2026: era {Binding ClassName}, o sea la
+                         clave interna en bruto de builds.json ("melee"/"mage"/"rogue"...) a un
+                         palmo de las pildoras de filtro, que en la MISMA pantalla ya decian
+                         "Cuerpo a cuerpo"/"Magia"/"Pícaro". Ver BuildClassGearViewModel.ClassLabel.
+                         TextWrapping porque "Cuerpo a cuerpo" es bastante mas largo que "melee" y
+                         la columna es de ancho FIJO (220px, ver el StackPanel de arriba). -->
+                    <TextBlock Text="{Binding ClassLabel, Mode=OneWay}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" TextWrapping="Wrap" />
                 </DockPanel>
                 <TextBlock Text="{Binding Loc[label_armor], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,4,0,2" />
                 <ItemsControl ItemsSource="{Binding Armor}" />
@@ -1816,7 +1832,14 @@
                     <!-- C-14 (auditoria de pulido final, cierra H3): 20 en vez de 14 - razon 5:1
                          en vez de 3,5:1 frente al hueco interno (4), para que vida/mana se lean
                          como DOS pares, no como una tira uniforme de 4 numeros. -->
-                    <Grid Width="70" Height="10" Margin="4,0,20,4" ToolTip="{Binding Loc[label_health], Mode=OneWay}">
+                    <!-- AR-LAY (6-sep-2026): Height 12, no 10. El numero de dentro va a FontSize
+                         8.5, que necesita 11,3px de alto reales - con la caja a 10 el texto se
+                         recortaba 1,3px por abajo SIEMPRE, a cualquier tamaño de ventana (medido:
+                         caja 12,5x11,3 contra una zona pintada de 10px de alto), comiendose el
+                         trazo inferior de las cifras. No lo veia nadie porque el recorte lo hace
+                         el clip del Grid, no el del TextBlock: Recorte()/GetClip sobre el texto
+                         devuelve (0,0). Sube 2px la barra, que sigue leyendose igual de fina. -->
+                    <Grid Width="70" Height="12" Margin="4,0,20,4" ToolTip="{Binding Loc[label_health], Mode=OneWay}">
                         <Border Background="{StaticResource BgPrimaryBrush}" CornerRadius="3" />
                         <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" HorizontalAlignment="Left"
                                 Width="{Binding Appearance.HealthFraction, Converter={StaticResource FractionToWidth}, ConverterParameter=70}" />
@@ -1825,7 +1848,8 @@
                     </Grid>
                     <!-- Maná -->
                     <TextBlock Text="✦" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,0,4" />
-                    <Grid Width="70" Height="10" Margin="4,0,14,4" ToolTip="{Binding Loc[label_mana], Mode=OneWay}">
+                    <!-- AR-LAY: mismo caso exacto que la barra de vida de arriba. -->
+                    <Grid Width="70" Height="12" Margin="4,0,14,4" ToolTip="{Binding Loc[label_mana], Mode=OneWay}">
                         <Border Background="{StaticResource BgPrimaryBrush}" CornerRadius="3" />
                         <Border Background="{StaticResource AccentBrush}" CornerRadius="3" HorizontalAlignment="Left"
                                 Width="{Binding Appearance.ManaFraction, Converter={StaticResource FractionToWidth}, ConverterParameter=70}" />
@@ -1833,16 +1857,31 @@
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Grid>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" Visibility="{Binding IsVitalsStripExpanded, Converter={StaticResource BoolToVis}}">
-                        <!-- Defensa (del loadout que se este mirando ahora en Equipamiento -
-                             mismo dato real ya en pantalla ahi, EquipmentGroupViewModel). -->
+                    <!-- AR-LAY (6-sep-2026): mismo cambio y misma razon que el WrapPanel gemelo de
+                         Exploracion, aqui de forma preventiva: estos cinco datos vivian en un
+                         StackPanel Horizontal, o sea un unico hijo indivisible de ~230px que el
+                         WrapPanel no podia partir - si no cabia se salia entero, en vez de pasar a
+                         la segunda linea que R-04a habia previsto. Como hijos directos, cada dato
+                         cae a la linea siguiente por su cuenta. La marca de defensa y su numero SI
+                         siguen juntos (un StackPanel de dos piezas que nunca deben separarse). -->
+                    <!-- Defensa (del loadout que se este mirando ahora en Equipamiento -
+                         mismo dato real ya en pantalla ahi, EquipmentGroupViewModel). -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,14,4" VerticalAlignment="Center"
+                                Visibility="{Binding IsVitalsStripExpanded, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="🛡" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding EquipmentGroup.TotalDefense}" Style="{StaticResource CaptionText}" Margin="3,0,14,0" VerticalAlignment="Center"
+                        <TextBlock Text="{Binding EquipmentGroup.TotalDefense}" Style="{StaticResource CaptionText}" Margin="3,0,0,0" VerticalAlignment="Center"
                                    ToolTip="{Binding EquipmentGroup.ActiveSetBonusText, TargetNullValue='Defensa total (loadout que se está viendo en Equipamiento)'}" />
-                        <!-- Dinero total -->
-                        <TextBlock Text="{Binding MoneyText}" Style="{StaticResource CaptionText}" Margin="0,0,14,0" VerticalAlignment="Center"
-                                   ToolTip="{Binding Loc[tt_total_money], Mode=OneWay}" />
-                        <!-- Horas jugadas + Último guardado -->
+                    </StackPanel>
+                    <!-- Dinero total -->
+                    <TextBlock Text="{Binding MoneyText}" Style="{StaticResource CaptionText}" Margin="0,0,14,4" VerticalAlignment="Center"
+                               ToolTip="{Binding Loc[tt_total_money], Mode=OneWay}"
+                               Visibility="{Binding IsVitalsStripExpanded, Converter={StaticResource BoolToVis}}" />
+                    <!-- Horas jugadas + Último guardado: van juntos en su propio StackPanel para
+                         conservar la condicion real de antes (los dos solo con la franja
+                         expandida, y el "ultimo guardado" ademas solo si existe) - separarlos en
+                         hijos sueltos habria perdido el IsVitalsStripExpanded del segundo. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center"
+                                Visibility="{Binding IsVitalsStripExpanded, Converter={StaticResource BoolToVis}}">
                         <TextBlock Style="{StaticResource CaptionText}" VerticalAlignment="Center" ToolTip="{Binding Loc[tt_hours_played], Mode=OneWay}">
                             <Run Text="{Binding Appearance.PlayHours, StringFormat='{}{0:0}h'}" />
                         </TextBlock>
@@ -1860,27 +1899,42 @@
                      F-10). -->
                 <WrapPanel Grid.Column="1" VerticalAlignment="Center"
                             Visibility="{Binding IsExplorationTabActive, Converter={StaticResource BoolToVis}}">
-                    <StackPanel Orientation="Horizontal"
-                                Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="{Binding Exploration.WorldTitle}" Style="{StaticResource BodyText}" VerticalAlignment="Center"
-                                   MaxWidth="200" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding Exploration.WorldSizeText}" Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center"
-                                   ToolTip="{Binding Loc[tt_world_size], Mode=OneWay}" />
-                        <TextBlock Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center">
-                            <TextBlock.Text>
-                                <MultiBinding Converter="{StaticResource LocFormat}">
-                                    <Binding Path="Loc[explore_zoom_pct]" Mode="OneWay" />
-                                    <Binding Path="Exploration.Zoom" Mode="OneWay" />
-                                </MultiBinding>
-                            </TextBlock.Text>
-                        </TextBlock>
-                        <TextBlock Text="{Binding Exploration.HoverCoordText}" Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding Exploration.HoverLayerText}" FontSize="11" FontWeight="SemiBold" Margin="10,0,0,0" VerticalAlignment="Center">
-                            <TextBlock.Foreground>
-                                <SolidColorBrush Color="{Binding Exploration.HoverLayerColor}" />
-                            </TextBlock.Foreground>
-                        </TextBlock>
-                    </StackPanel>
+                    <!-- AR-LAY (6-sep-2026): los cinco datos son hijos DIRECTOS del WrapPanel, no
+                         de un StackPanel Horizontal intermedio. Un WrapPanel solo puede envolver
+                         ENTRE sus hijos: con los cinco metidos en un StackPanel horizontal, ese
+                         StackPanel era un unico hijo indivisible y, si no cabia, se salia entero y
+                         lo recortaba el clip de la cabecera - sin scroll con el que alcanzarlo.
+                         Medido a 1080x700 con el mundo real cargado: el WrapPanel tenia 87px
+                         reales y el StackPanel media 233, asi que "8400x2400", "Zoom 250%" y la
+                         capa bajo el raton se perdian enteros. Es el MISMO bug que R-04a/H-04a ya
+                         arreglo para la franja vital de al lado, que aqui se quedo a medias. Con
+                         hijos directos, lo que no cabe cae a una segunda linea (la fila del Grid
+                         es Auto y crece sola) y no se pierde nada a ningun ancho. El margen
+                         inferior de 4 en cada uno es la leccion de C-12: al envolver a dos lineas,
+                         sin el, las dos filas quedaban pegadas. -->
+                    <TextBlock Text="{Binding Exploration.WorldTitle}" Style="{StaticResource BodyText}" VerticalAlignment="Center"
+                               MaxWidth="200" TextTrimming="CharacterEllipsis" Margin="0,0,0,4"
+                               Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
+                    <TextBlock Text="{Binding Exploration.WorldSizeText}" Style="{StaticResource CaptionText}" Margin="10,0,0,4" VerticalAlignment="Center"
+                               ToolTip="{Binding Loc[tt_world_size], Mode=OneWay}"
+                               Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
+                    <TextBlock Style="{StaticResource CaptionText}" Margin="10,0,0,4" VerticalAlignment="Center"
+                               Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
+                        <TextBlock.Text>
+                            <MultiBinding Converter="{StaticResource LocFormat}">
+                                <Binding Path="Loc[explore_zoom_pct]" Mode="OneWay" />
+                                <Binding Path="Exploration.Zoom" Mode="OneWay" />
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
+                    <TextBlock Text="{Binding Exploration.HoverCoordText}" Style="{StaticResource CaptionText}" Margin="10,0,0,4" VerticalAlignment="Center"
+                               Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}" />
+                    <TextBlock Text="{Binding Exploration.HoverLayerText}" FontSize="11" FontWeight="SemiBold" Margin="10,0,0,4" VerticalAlignment="Center"
+                               Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
+                        <TextBlock.Foreground>
+                            <SolidColorBrush Color="{Binding Exploration.HoverLayerColor}" />
+                        </TextBlock.Foreground>
+                    </TextBlock>
                     <TextBlock Text="{Binding Loc[explore_no_world_loaded], Mode=OneWay}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
                                Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource InverseBoolToVis}}" />
                 </WrapPanel>
@@ -2050,6 +2104,22 @@
                             </StackPanel>
                         </StackPanel>
                     </Button>
+
+                    <!-- INI-07 (oleada de Inicio/Ajustes, 6-sep-2026): el resultado FALLIDO de una
+                         accion del menu contextual (abrir carpeta, duplicar, restaurar copia) NO
+                         es lo mismo que "no encontre ningun personaje", y hasta ahora compartian
+                         el mismo campo y el mismo boton de arriba: el error salia titulado
+                         "Empezar: cargar un personaje" y, al pulsarlo, abria el dialogo de fichero
+                         - medido con 6 personajes reales listados justo encima. Aviso propio, sin
+                         accion (no hay nada que pulsar: es una respuesta a algo que el usuario ya
+                         ha hecho), y con el color de atencion del tema para que se distinga del
+                         reclamo de acento de arriba. -->
+                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource PinkBrush}" BorderThickness="1"
+                            CornerRadius="8" Padding="14,11" Margin="0,0,0,26" HorizontalAlignment="Left"
+                            Visibility="{Binding Home.ActionErrorMessage, Converter={StaticResource NullToVis}}">
+                        <TextBlock Text="{Binding Home.ActionErrorMessage}" Style="{StaticResource BodyText}"
+                                   TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left" />
+                    </Border>
 
                     <TextBlock Text="{Binding Loc[home_more_actions], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,12" />
                     <!-- I-c/F2 (segunda auditoria de Opus, Fable): MinHeight en vez de Height fijo
@@ -2462,14 +2532,39 @@
                                                 <!-- A-d (segunda auditoria de Opus, Fable): "operaciones en bloque -
                                                      ordenar, vaciar contenedor, mover todo al banco" - ver los 3
                                                      comandos reales en ContainerViewModel/MainViewModel. -->
-                                                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                <!-- AR-LAY (6-sep-2026): Grid con MinWidth, no DockPanel. R-01/H-08 (abajo)
+                                                     cambio el StackPanel de botones por un WrapPanel para que pudiera
+                                                     partirse en dos filas, pero dejo el reparto en manos de un DockPanel
+                                                     - y un DockPanel sirve a su hijo Dock PRIMERO y con su DesiredSize
+                                                     ENTERO: el WrapPanel decide cuantas filas necesita ANTES de que el
+                                                     titulo pida nada, y solo despues le deja el resto. Eso abre una
+                                                     franja intermedia de anchos en la que los 6 botones caben JUSTO en
+                                                     una fila y se llevan la anchura entera. Medido px a px entre 1500 y
+                                                     1620: falla en 20 anchos, y a 1545x860 el titulo se queda en 0,3px
+                                                     visibles de los 8,8 que pide, o sea desaparece del todo. Es el mismo
+                                                     mecanismo (franja estrecha e invisible en el minimo y en maximizada)
+                                                     que AR-14 con los accesorios, y se arregla igual: una columna con
+                                                     MinWidth propio para el titulo y una Auto para los botones, que es
+                                                     la unica forma de que sea el WRAPPANEL quien ceda y envuelva.
+                                                     El reparto tiene que ser titulo=Auto y botones=*, NO al reves: una
+                                                     columna Auto se queda con su DesiredSize entero aunque no quepa (el
+                                                     Grid solo recorta a las estrella), asi que con los botones en Auto
+                                                     el problema se movia, no se arreglaba - medido: el Grid pedia 607px
+                                                     dentro de 581 y se cortaba "Vaciar contenedor". Con el titulo en
+                                                     Auto (su ancho natural, ~90px, nunca se recorta) y el WrapPanel en
+                                                     la estrella, el WrapPanel recibe el resto REAL y envuelve solo. -->
+                                                <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
                                                     <!-- Auditoria de redimensionado, R-01/H-08: WrapPanel en vez de
                                                          StackPanel - a 1080px de ancho, 6 botones en una sola fila
                                                          recortaban el titulo "Inventario (N/M)" que viene detras
                                                          (DockPanel corta el ultimo hijo cuando no le queda sitio). Con
                                                          WrapPanel los botones pasan a 2 filas si hace falta, el titulo
                                                          nunca se pierde. -->
-                                                    <WrapPanel DockPanel.Dock="Right">
+                                                    <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
                                                         <!-- H5-03 (quinta auditoria de Opus): "guardar/cargar conjuntos de
                                                              objetos, funcion de primera clase en el Terrasavr original" -
                                                              el dialogo real de fichero vive en la View (MainViewModel es
@@ -2498,9 +2593,9 @@
                                                          filas y este titulo sigue siendo mas estrecho de lo que hace falta a ese
                                                          ancho concreto). TextTrimming honesto en vez de un corte seco silencioso -
                                                          parche previsto explicitamente en el propio informe para este residual. -->
-                                                    <TextBlock Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </DockPanel>
+                                                    <TextBlock Grid.Column="0" Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                                                </Grid>
                                                 <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                             </DockPanel>
                                         </Border>
@@ -2517,7 +2612,19 @@
                                             <Border Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                     Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,4,0">
                                                 <DockPanel>
-                                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                    <!-- AR-LAY (6-sep-2026): Grid con titulo=Auto y botones=*, no DockPanel -
+                                                         ver el comentario completo en la cabecera gemela de arriba. ESTA es
+                                                         la copia que de verdad reprodujo el bug: a 1545x860 el titulo
+                                                         "Inventario (47/50)" se quedaba en 0,3px visibles, o sea desaparecia
+                                                         entero, y no se ve ni al ancho minimo ni maximizada - solo en una
+                                                         franja de ~20px medida px a px. Las dos cabeceras son copias a mano
+                                                         la una de la otra (R-01/H-01 ya documenta que eso costo perder tres
+                                                         botones enteros), asi que el arreglo va en las dos. -->
+                                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
                                                         <!-- Auditoria de redimensionado, R-01/H-01 (el hallazgo mas grave del
                                                              informe): esta copia a mano de la cabecera de arriba se dejo
                                                              fuera "Guardar conjunto...", "Cargar..." y "Añadir..." - a partir
@@ -2525,7 +2632,7 @@
                                                              guardar/cargar un conjunto de objetos del Inventario, ni un aviso
                                                              en pantalla de por que. Restaurados aqui, WrapPanel para que
                                                              quepan en la mitad del ancho sin recortar nada. -->
-                                                        <WrapPanel DockPanel.Dock="Right">
+                                                        <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
                                                             <Button Content="{Binding Loc[action_save_set], Mode=OneWay}" Click="OnSaveInventorySetClick"
                                                                     ToolTip="{Binding Loc[tt_save_inventory_json], Mode=OneWay}"
                                                                     Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
@@ -2549,9 +2656,9 @@
                                                          filas y este titulo sigue siendo mas estrecho de lo que hace falta a ese
                                                          ancho concreto). TextTrimming honesto en vez de un corte seco silencioso -
                                                          parche previsto explicitamente en el propio informe para este residual. -->
-                                                    <TextBlock Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    </DockPanel>
+                                                    <TextBlock Grid.Column="0" Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                                                    </Grid>
                                                     <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                                 </DockPanel>
                                             </Border>
@@ -2582,7 +2689,7 @@
                                                              antes de esta misma oleada solo porque los 5 botones estaban
                                                              MUDOS (12px de padding cada uno, ver OBJ-01) - o sea que el
                                                              hueco lo daba otro bug, no el reparto. -->
-                                                        <WrapPanel DockPanel.Dock="Right">
+                                                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
                                                             <Button Content="{Binding Loc[action_save_set], Mode=OneWay}" Click="OnSaveStorageSetClick"
                                                                     ToolTip="{Binding Loc[tt_save_storage_json], Mode=OneWay}"
                                                                     Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
@@ -2811,12 +2918,24 @@
                                                             <Button Style="{StaticResource NavCardButton}" Width="200" MinHeight="90" Margin="0,0,12,12"
                                                                     Command="{Binding SelectCommand}" CommandParameter="{Binding}">
                                                                 <StackPanel>
-                                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                                                        <Image Source="{Binding IconPath}" Width="22" Height="22" Stretch="Uniform" Margin="0,0,8,0"
+                                                                    <!-- AR-LAY (6-sep-2026): DockPanel, NO StackPanel Horizontal - el
+                                                                         MISMO bug que CategoryNodeTemplate ya documenta arriba
+                                                                         (R-06/H-06), que se quedo sin arreglar en las tarjetas de
+                                                                         carpeta raiz. Un StackPanel horizontal mide a sus hijos con
+                                                                         ancho INFINITO, asi que el TextWrapping del nombre no se
+                                                                         aplicaba NUNCA: el texto tomaba su ancho natural y se salia
+                                                                         de la tarjeta (Width=200 fija), cortado en seco contra el
+                                                                         borde del Button y sin ningun scroll horizontal con el que
+                                                                         alcanzarlo. Medido a 1080x700: "Mascotas, Monturas,
+                                                                         Herramientas" pedia 221px en una tarjeta de 200 y perdia
+                                                                         89px. Un DockPanel SI da al ultimo hijo el ancho restante
+                                                                         real, y el Wrap funciona solo a cualquier ancho. -->
+                                                                    <DockPanel Margin="0,0,0,6">
+                                                                        <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="22" Height="22" Stretch="Uniform" Margin="0,0,8,0"
                                                                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                                                                         <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextWrapping="Wrap"
                                                                                    VerticalAlignment="Center" />
-                                                                    </StackPanel>
+                                                                    </DockPanel>
                                                                     <TextBlock Text="{Binding ItemCountLabel, Mode=OneWay}"
                                                                                Style="{StaticResource CaptionText}" />
                                                                 </StackPanel>
@@ -3010,12 +3129,24 @@
                                                             <Button Style="{StaticResource NavCardButton}" Width="200" MinHeight="90" Margin="0,0,12,12"
                                                                     Command="{Binding SelectCommand}" CommandParameter="{Binding}">
                                                                 <StackPanel>
-                                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                                                        <Image Source="{Binding IconPath}" Width="22" Height="22" Stretch="Uniform" Margin="0,0,8,0"
+                                                                    <!-- AR-LAY (6-sep-2026): DockPanel, NO StackPanel Horizontal - el
+                                                                         MISMO bug que CategoryNodeTemplate ya documenta arriba
+                                                                         (R-06/H-06), que se quedo sin arreglar en las tarjetas de
+                                                                         carpeta raiz. Un StackPanel horizontal mide a sus hijos con
+                                                                         ancho INFINITO, asi que el TextWrapping del nombre no se
+                                                                         aplicaba NUNCA: el texto tomaba su ancho natural y se salia
+                                                                         de la tarjeta (Width=200 fija), cortado en seco contra el
+                                                                         borde del Button y sin ningun scroll horizontal con el que
+                                                                         alcanzarlo. Medido a 1080x700: "Mascotas, Monturas,
+                                                                         Herramientas" pedia 221px en una tarjeta de 200 y perdia
+                                                                         89px. Un DockPanel SI da al ultimo hijo el ancho restante
+                                                                         real, y el Wrap funciona solo a cualquier ancho. -->
+                                                                    <DockPanel Margin="0,0,0,6">
+                                                                        <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="22" Height="22" Stretch="Uniform" Margin="0,0,8,0"
                                                                                Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                                                                         <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextWrapping="Wrap"
                                                                                    VerticalAlignment="Center" />
-                                                                    </StackPanel>
+                                                                    </DockPanel>
                                                                     <TextBlock Text="{Binding BuffCountLabel, Mode=OneWay}"
                                                                                Style="{StaticResource CaptionText}" />
                                                                 </StackPanel>
@@ -3144,12 +3275,16 @@
                                                     <Button Style="{StaticResource NavCardButton}" Width="200" MinHeight="90" Margin="0,0,12,12"
                                                             Command="{Binding SelectCommand}" CommandParameter="{Binding}">
                                                         <StackPanel>
-                                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                                                <Image Source="{Binding IconPath}" Width="22" Height="22" Stretch="Uniform" Margin="0,0,8,0"
+                                                            <!-- AR-LAY (6-sep-2026): DockPanel, NO StackPanel Horizontal - ver el
+                                                                 comentario completo en la tarjeta equivalente de la Libreria: un
+                                                                 StackPanel horizontal mide con ancho infinito y el TextWrapping
+                                                                 del nombre no llegaba a aplicarse nunca. -->
+                                                            <DockPanel Margin="0,0,0,6">
+                                                                <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="22" Height="22" Stretch="Uniform" Margin="0,0,8,0"
                                                                        Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                                                                 <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextWrapping="Wrap"
                                                                            VerticalAlignment="Center" />
-                                                            </StackPanel>
+                                                            </DockPanel>
                                                             <!-- H5-13 (quinta auditoria de Opus): ItemCount ya viene poblado
                                                                  real por LibraryCategoryTreeBuilder para todo nodo (Libreria e
                                                                  Investigacion comparten el mismo arbol cacheado) - un unico
