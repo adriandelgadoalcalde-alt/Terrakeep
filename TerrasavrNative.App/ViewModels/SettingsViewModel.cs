@@ -117,11 +117,27 @@ public sealed partial class SettingsViewModel : ObservableObject
     // El dialogo real de "elegir carpeta" vive en la View (MainWindow.xaml.cs, mismo criterio
     // ya establecido en H5-03 con SaveItemSet/LoadItemSet - MainViewModel/esta clase se quedan
     // headless de verdad) - aqui solo la logica real sobre una ruta ya elegida.
+    // INI-09 (oleada del 6-sep-2026) - BUG REAL: cambiar la lista de carpetas se GUARDABA bien
+    // (settings.json y CharacterFileService), pero nadie relanzaba el escaneo - Inicio y
+    // Exploracion seguian enseñando exactamente lo mismo que antes hasta pulsar "Actualizar" o
+    // reiniciar la app. Y esta pantalla existe justo para el caso contrario: "quien tenga Terraria
+    // en otro disco / Documentos redirigidos / instalacion portable ve el lanzador VACIO sin forma
+    // de arreglarlo desde la app" (H5-07) - o sea, el usuario añade su carpeta precisamente porque
+    // no ve nada, y seguia sin ver nada. Medido: un personaje real dentro de la carpeta recien
+    // añadida, presente en disco, ausente del listado.
+    //
+    // Eventos en vez de llamar directamente a Home/Exploration: esta clase es headless a
+    // proposito (decenas de tests construyen un MainViewModel sin tocar disco) y no conoce a
+    // nadie. MainViewModel, que si tiene los dos, es quien los enchufa.
+    public event Action? CharacterFoldersChanged;
+    public event Action? WorldFoldersChanged;
+
     public void AddCharacterFolder(string folder)
     {
         if (string.IsNullOrWhiteSpace(folder) || ExtraCharacterFolders.Contains(folder, StringComparer.OrdinalIgnoreCase)) return;
         ExtraCharacterFolders.Add(folder);
         Persist();
+        CharacterFoldersChanged?.Invoke();
     }
 
     public void AddWorldFolder(string folder)
@@ -129,20 +145,23 @@ public sealed partial class SettingsViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(folder) || ExtraWorldFolders.Contains(folder, StringComparer.OrdinalIgnoreCase)) return;
         ExtraWorldFolders.Add(folder);
         Persist();
+        WorldFoldersChanged?.Invoke();
     }
 
     [RelayCommand]
     private void RemoveCharacterFolder(string folder)
     {
-        ExtraCharacterFolders.Remove(folder);
+        if (!ExtraCharacterFolders.Remove(folder)) return; // no estaba: nada que persistir ni que reescanear
         Persist();
+        CharacterFoldersChanged?.Invoke();
     }
 
     [RelayCommand]
     private void RemoveWorldFolder(string folder)
     {
-        ExtraWorldFolders.Remove(folder);
+        if (!ExtraWorldFolders.Remove(folder)) return;
         Persist();
+        WorldFoldersChanged?.Invoke();
     }
 
     // Mismo criterio real ya usado en varios sitios del proyecto (ej. HealthNow/HealthMax en

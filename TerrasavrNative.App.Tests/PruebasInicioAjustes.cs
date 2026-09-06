@@ -40,6 +40,7 @@ internal static partial class Program
         PruebasInicio(vm);
         PruebasTarjetasDeInicio(vm, window);
         PruebasRestaurarCopia(vm, window);
+        PruebasCarpetaSeRefleja(vm);
         PruebasAjustes(vm, window);
         PruebasAjustesPersistidos(vm);
         PruebasSelectorDeIdioma(vm, window);
@@ -338,6 +339,63 @@ internal static partial class Program
             }
             catch (Exception ex) { Console.WriteLine("INI-07/08-LIMPIEZA-EXCEPTION: " + ex.Message); }
         }
+    }
+
+    // ---- INI-09: añadir una carpeta en Ajustes tiene que REFLEJARSE, no solo guardarse ----
+    // La pantalla de Ajustes existe justo por este caso ("quien tenga Terraria en otro disco /
+    // Documentos redirigidos / instalacion portable ve el lanzador VACIO sin forma de arreglarlo
+    // desde la app"). El usuario añade su carpeta, vuelve a Inicio... y si nadie relanza el
+    // escaneo, sigue viendo exactamente lo mismo que antes. Lo mismo al QUITARLA: los personajes
+    // de una carpeta que ya no esta en la lista se quedan ofrecidos.
+    //
+    // Aqui se hace EXACTAMENTE lo que hace la interfaz real (Settings.AddCharacterFolder, que es
+    // lo unico que llama el boton "Añadir carpeta de personajes...", y el propio
+    // RemoveCharacterFolderCommand al que bindea la X de cada fila) y NO se llama a Refresh a
+    // mano - eso seria probar el arnes, no la app.
+    private static void PruebasCarpetaSeRefleja(MainViewModel vm)
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"terrakeep-refleja-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(dir);
+            string plr = Path.Combine(dir, "DeCarpetaNueva.plr");
+            File.WriteAllBytes(plr, PlrDePrueba("DeCarpetaNueva"));
+
+            vm.Settings.AddCharacterFolder(dir);
+            EsperarEscaneo(vm);
+            bool apareceSolo = vm.Home.Characters.Any(c => string.Equals(c.FilePath, plr, StringComparison.OrdinalIgnoreCase));
+            Console.WriteLine($"INI-09-CARPETA-REFLEJA: tras añadir la carpeta en Ajustes (sin pulsar 'Actualizar') el personaje aparece en Inicio={apareceSolo} (esperado True)");
+            if (!apareceSolo) Console.WriteLine("FALLO: INI-09 - añadir una carpeta en Ajustes no actualiza el listado de Inicio: el usuario la añade porque el lanzador esta vacio, y lo sigue viendo vacio");
+
+            vm.Settings.RemoveCharacterFolderCommand.Execute(dir);
+            EsperarEscaneo(vm);
+            bool desapareceSolo = !vm.Home.Characters.Any(c => string.Equals(c.FilePath, plr, StringComparison.OrdinalIgnoreCase));
+            Console.WriteLine($"INI-09-CARPETA-REFLEJA: tras quitarla, el personaje desaparece de Inicio={desapareceSolo} (esperado True)");
+            if (!desapareceSolo) Console.WriteLine("FALLO: INI-09 - quitar una carpeta en Ajustes deja sus personajes ofrecidos en Inicio");
+        }
+        catch (Exception ex) { Console.WriteLine("INI-09-EXCEPTION: " + ex); }
+        finally
+        {
+            try
+            {
+                vm.Settings.RemoveCharacterFolderCommand.Execute(dir);
+                vm.Home.RefreshCommand.Execute(null);
+                EsperarEscaneo(vm);
+                if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+            }
+            catch (Exception ex) { Console.WriteLine("INI-09-LIMPIEZA-EXCEPTION: " + ex.Message); }
+        }
+    }
+
+    // Un escaneo lanzado por OTRO (la propia app, no el arnes) puede no haber arrancado todavia
+    // cuando se pregunta: se bombea el Dispatcher un rato y se espera a que IsScanning baje. Con
+    // tope real - sin el, un escaneo que nunca arranca colgaria el arnes entero.
+    private static void EsperarEscaneo(MainViewModel vm)
+    {
+        for (int i = 0; i < 40; i++) DoEvents();
+        var reloj = System.Diagnostics.Stopwatch.StartNew();
+        while (vm.Home.IsScanning && reloj.ElapsedMilliseconds < 10000) DoEvents();
+        for (int i = 0; i < 10; i++) DoEvents();
     }
 
     private static void PruebasTarjetasDeInicio(MainViewModel vm, Window window)

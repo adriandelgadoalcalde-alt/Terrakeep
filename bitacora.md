@@ -11297,3 +11297,70 @@ prefijo anterior, Ctrl+V mudo) y una expectativa del arnes que llevaba meses min
 hallazgos mas quedan escritos y NO tocados a proposito, con sus numeros: la cobertura del "mejor
 prefijo automatico" (145 de 571 objetos vanilla con daño) y el texto de `ItemStatsFormatter`
 codificado en español dentro de `Core`. Tras la cuarta pasada ya no salia nada nuevo en esta zona.
+
+---
+
+## 6-sep-2026 - Ajustes: añadir tu carpeta no cambiaba nada, y el escaneo de fondo borraba los avisos
+
+Cierre de la oleada del area "Inicio, Ajustes, Novedades, Acerca de". Dos bugs mas, y el segundo
+es de los que hay que apuntar por COMO aparecio: no lo encontro una prueba nueva pensada para el,
+lo encontro el test unitario del bug anterior al fallar SOLO dentro de la suite completa.
+
+### 1. Añadir una carpeta en Ajustes se guardaba, pero no se veia
+
+`SettingsViewModel.AddCharacterFolder` / `AddWorldFolder` (y sus `Remove...`) guardaban bien - en
+`settings.json` y en `CharacterFileService.ExtraPlayerFolders`/`ExtraWorldFolders` - pero **nadie
+relanzaba el escaneo**. Inicio y Exploracion seguian enseñando exactamente lo mismo que antes hasta
+pulsar "Actualizar" o reiniciar la app.
+
+Y esta pantalla existe justo para el caso contrario. Palabras del informe que la pidio (H5-07):
+*"quien tenga Terraria en otro disco / Documentos redirigidos / instalacion portable ve el lanzador
+VACIO sin forma de arreglarlo desde la app"*. O sea: el usuario añade su carpeta **porque no ve
+nada**, y despues de añadirla seguia sin ver nada. Medido con `INI-09` (bloque nuevo, que hace
+exactamente lo que hace el boton real y **no** llama a "Actualizar" a mano - eso seria probar el
+arnes, no la app): personaje real dentro de la carpeta recien añadida, presente en disco, ausente
+del listado.
+
+Arreglo con dos eventos (`CharacterFoldersChanged` / `WorldFoldersChanged`) en vez de una llamada
+directa: `SettingsViewModel` es headless a proposito (decenas de tests construyen un `MainViewModel`
+sin tocar disco) y no conoce a Home ni a Exploration. `MainViewModel`, que si tiene los dos, los
+engancha. De paso, `RemoveCharacterFolder`/`RemoveWorldFolder` dejan de persistir cuando la carpeta
+no estaba en la lista: antes reescribian el fichero igualmente.
+
+### 2. El escaneo de fondo borraba el aviso que el usuario acababa de provocar
+
+Este salio solo, y por eso merece la pena contarlo. El test nuevo de INI-08
+(`RestoreBackup_ConBakIlegible_NoTocaElPlrBueno_YAvisa`) **pasaba aislado y fallaba dentro de la
+suite completa**, siempre en el mismo sitio: `Assert.NotNull(home.ActionErrorMessage)` con el
+mensaje ya puesto un instante antes.
+
+La causa no era el test: `HomeViewModel` lanza su escaneo en el constructor (fire-and-forget, T-G) y
+ese escaneo tarda lo que tarde el disco. Al terminar, si encuentra personajes, limpiaba el mensaje -
+**cualquier** mensaje, incluido un error de accion que el usuario hubiera provocado mientras tanto.
+En la suite completa el disco va mas lento y la ventana de tiempo se abre; aislado, el escaneo
+terminaba antes de que el test hiciera nada.
+
+En la app real es el mismo mecanismo: nada mas arrancar (o tras pulsar "Actualizar"), un aviso
+puede aparecer y desaparecer solo unos milisegundos despues. **Un mensaje que se borra solo es peor
+que no tener ninguno**: el usuario no llega a leerlo y se queda sin saber que su accion no se hizo.
+
+Arreglo: el escaneo manda sobre SU propio mensaje y solo sobre ese (`LimpiarMensajeDeEscaneo`); el
+aviso de una accion lo apaga la accion SIGUIENTE, que si sabe si tuvo exito - las tres acciones que
+terminan bien (duplicar, restaurar copia, restaurar un punto del historial) lo limpian
+explicitamente antes de relanzar el escaneo.
+
+Leccion general, que ya tiene precedentes en este proyecto (`session.json`, `window.json`): **un
+test que pasa aislado y falla en la suite no siempre esta mal escrito** - a veces la suite es lo
+unico que reproduce la ventana de tiempo real del usuario. Aqui el "arreglo facil" habria sido
+esperar al escaneo dentro del test, y con eso se habria tapado un bug real de la app.
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core **441/441**, ViewModels **431/431** (dos casos nuevos en
+  `SettingsViewModelTests` que fijan que los eventos se disparan, y solo cuando la lista cambia de
+  verdad).
+- Arnes de UI Automation: **0 lineas `FALLO`** en el area; `INI-09` en verde en los dos sentidos
+  (aparece al añadir, desaparece al quitar).
+
+No hubo ningun obstaculo que fallara dos veces seguidas sin resolverse.

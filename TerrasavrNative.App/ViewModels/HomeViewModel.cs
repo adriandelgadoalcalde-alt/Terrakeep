@@ -121,6 +121,14 @@ public partial class HomeViewModel : ObservableObject
         AvisarDeLosDosMensajes();
     }
 
+    // INI-10: solo el mensaje del ESCANEO. Un error de accion sigue en pie - no es del escaneo y
+    // el escaneo no tiene por que saber si esa accion se hizo o no.
+    private void LimpiarMensajeDeEscaneo()
+    {
+        if (_scanMessageKey is null || _mensajeEsErrorDeAccion) return;
+        ClearScanMessage();
+    }
+
     private void AvisarDeLosDosMensajes()
     {
         OnPropertyChanged(nameof(ScanMessage));
@@ -248,7 +256,17 @@ public partial class HomeViewModel : ObservableObject
             var scanned = await Task.Run(() => ScanCharacters(dirs, _equipmentAppearance));
             if (myGeneration != _scanGeneration) return; // una vuelta MAS NUEVA ya esta en marcha - esta es obsoleta
             foreach (var entry in scanned) Characters.Add(entry);
-            if (Characters.Count > 0) ClearScanMessage();
+            // INI-10 (misma oleada) - BUG REAL, encontrado al escribir el test de INI-08: un
+            // escaneo que termina NO puede llevarse por delante el resultado de una accion que el
+            // usuario acaba de pedir. El escaneo corre en segundo plano (T-G) y tarda lo que tarde
+            // el disco: si mientras tanto el usuario prueba "Restaurar copia de seguridad" y falla,
+            // el aviso aparecia y desaparecia solo unos milisegundos despues, cuando el escaneo de
+            // fondo llegaba aqui y lo borraba. Reproducido de verdad: el test veia
+            // ActionErrorMessage en null aunque el error se acababa de poner. Un mensaje que se
+            // borra solo es peor que ninguno - el usuario no llega a leerlo y se queda sin saber
+            // que su accion no se hizo. El escaneo manda sobre SU propio mensaje y solo sobre ese;
+            // el error de una accion lo apaga la accion siguiente, que si sabe si tuvo exito.
+            if (Characters.Count > 0) LimpiarMensajeDeEscaneo();
             else if (dirs.Count == 0) SetScanMessage("scan_no_players_folder");
             else SetScanMessageCarpetas("scan_no_players_in", dirs);
             UpdateCurrentPath(_currentPath); // la lista es nueva de cero, IsCurrent hay que recalcularlo
@@ -361,6 +379,9 @@ public partial class HomeViewModel : ObservableObject
             File.Copy(entry.FilePath, newPath);
             string tplrSrc = Path.ChangeExtension(entry.FilePath, ".tplr");
             if (File.Exists(tplrSrc)) File.Copy(tplrSrc, Path.ChangeExtension(newPath, ".tplr"));
+            // INI-10: esta accion SI tuvo exito, asi que apaga el aviso de la anterior (el
+            // escaneo ya no lo hace por su cuenta - ver el comentario de LimpiarMensajeDeEscaneo).
+            ClearScanMessage();
             _ = RefreshAsync(); // T-G: mismo criterio real que el constructor, fire-and-forget
         }
         catch (Exception ex)
@@ -412,6 +433,9 @@ public partial class HomeViewModel : ObservableObject
                 // contenido de Calamity al recargar.
                 File.Delete(tplrPath);
             }
+            // INI-10: esta accion SI tuvo exito, asi que apaga el aviso de la anterior (el
+            // escaneo ya no lo hace por su cuenta - ver el comentario de LimpiarMensajeDeEscaneo).
+            ClearScanMessage();
             _ = RefreshAsync(); // T-G: mismo criterio real que el constructor, fire-and-forget
 
             // H3-04 (tercera auditoria, Fable): "Restaurar copia de seguridad" restauraba los
@@ -451,6 +475,9 @@ public partial class HomeViewModel : ObservableObject
                 return;
             }
             _backupHistory.Restore(entry.FilePath, null, backup);
+            // INI-10: esta accion SI tuvo exito, asi que apaga el aviso de la anterior (el
+            // escaneo ya no lo hace por su cuenta - ver el comentario de LimpiarMensajeDeEscaneo).
+            ClearScanMessage();
             _ = RefreshAsync(); // T-G: mismo criterio real que el constructor, fire-and-forget
 
             // H3-04: mismo aviso real a MainViewModel que RestoreBackup de arriba - si el

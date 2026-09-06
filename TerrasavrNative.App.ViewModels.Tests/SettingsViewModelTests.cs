@@ -117,4 +117,47 @@ public sealed class SettingsViewModelTests
 
         Assert.Equal(50, settings.BackupHistoryCap);
     }
+
+    // INI-09 (oleada del 6-sep-2026) - BUG REAL ya arreglado: cambiar la lista de carpetas se
+    // guardaba bien pero nadie relanzaba el escaneo, asi que Inicio y Exploracion seguian
+    // enseñando lo mismo hasta pulsar "Actualizar" o reiniciar - y esta pantalla existe justo
+    // para quien NO ve sus personajes. MainViewModel engancha estos dos eventos a
+    // Home.Refresh/Exploration.RefreshWorlds; aqui se fija que se disparan de verdad, y solo
+    // cuando la lista cambia de verdad.
+    [Fact]
+    public void CarpetasDePersonajes_AvisanDeQueHayQueVolverAEscanear()
+    {
+        var settings = NewSettings();
+        int avisos = 0;
+        settings.CharacterFoldersChanged += () => avisos++;
+
+        settings.AddCharacterFolder(@"D:\Terraria\Players");
+        Assert.Equal(1, avisos);
+
+        settings.AddCharacterFolder(@"D:\Terraria\Players"); // repetida: no cambia nada
+        Assert.Equal(1, avisos);
+
+        settings.RemoveCharacterFolderCommand.Execute(@"D:\Terraria\Players");
+        Assert.Equal(2, avisos);
+
+        settings.RemoveCharacterFolderCommand.Execute(@"D:\NoEstaba"); // no estaba: nada que reescanear
+        Assert.Equal(2, avisos);
+    }
+
+    [Fact]
+    public void CarpetasDeMundos_AvisanDeQueHayQueVolverAEscanear()
+    {
+        var settings = NewSettings();
+        int avisos = 0;
+        settings.WorldFoldersChanged += () => avisos++;
+
+        settings.AddWorldFolder(@"D:\Terraria\Worlds");
+        Assert.Equal(1, avisos);
+
+        settings.AddWorldFolder(@"D:\Terraria\Worlds");
+        Assert.Equal(1, avisos);
+
+        settings.RemoveWorldFolderCommand.Execute(@"D:\Terraria\Worlds");
+        Assert.Equal(2, avisos);
+    }
 }

@@ -707,10 +707,18 @@ public partial class MainViewModel : ObservableObject
             SelectedTabIndex = (int)AppTab.Personaje;
             PersonajeInnerTabIndex = (int)PersonajeInnerTab.Objetos;
         };
+        // INI-09 (oleada del 6-sep-2026): cambiar las carpetas adicionales en Ajustes tiene que
+        // REFLEJARSE ya, no solo guardarse - ver el comentario real de SettingsViewModel. Se
+        // enchufa aqui, que es el unico sitio que conoce a los tres a la vez; Exploration se
+        // conecta mas abajo, en cuanto existe.
+        Settings.CharacterFoldersChanged += () => Home.RefreshCommand.Execute(null);
         Builds = new BuildsViewModel(_service.VanillaBuilds, _service.CalamityBuilds, _service);
         WhatsNew = new WhatsNewViewModel(_service.WhatsNewVanilla, _service.WhatsNewCalamity, _service.VanillaCatalog, _service.CalamityCatalog, _service.WhatsNewItemIds, _service.TooltipCatalogs);
         Changelog = new ChangelogViewModel(_service.Changelog);
         Exploration = new ExplorationViewModel(_service);
+        // INI-09: la mitad de mundos de lo mismo (ver arriba) - una carpeta adicional de mundos
+        // añadida en Ajustes tiene que aparecer YA en la lista de mundos de Exploracion.
+        Settings.WorldFoldersChanged += () => Exploration.RefreshWorldsCommand.Execute(null);
         Library = new LibraryViewModel(_service);
         Research = new ResearchViewModel(_service);
         // C-15 (informe de pulido final, cierra A1): Apariencia empuja al MISMO UndoStack
