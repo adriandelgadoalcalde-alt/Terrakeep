@@ -303,10 +303,13 @@ public partial class MainViewModel : ObservableObject
     // dos personajes con el mismo nombre en carpetas distintas". Una linea real bajo el nombre,
     // en la cabecera global (visible en cualquier pestaña) con el archivo + la version resuelta
     // a su etiqueta real (ej. "1.4.4.0") cuando se conoce, o el numero crudo si no.
+    // Ronda de idioma del 6-sep-2026: "· versión " iba a pelo en español, y esta linea se ve en
+    // la cabecera global, es decir desde CUALQUIER pestaña de la app.
     public string? FileVersionLine => _loaded == null ? null
-        : $"{Path.GetFileName(_loaded.PlrPath)} · versión {
+        : LocalizationService.Instance.Format("header_file_version_line",
+            Path.GetFileName(_loaded.PlrPath),
             VersionEditor.Groups.SelectMany(g => g.Options).FirstOrDefault(o => o.Number == VersionEditor.RawVersion)?.Label
-            ?? VersionEditor.RawVersion.ToString()}";
+            ?? VersionEditor.RawVersion.ToString());
 
     // H-1/F2 (segunda auditoria de Opus, Fable): "Aviso discreto si el nombre del archivo no
     // coincide" - un personaje renombrado a mano en el juego, o un .plr copiado/renombrado por

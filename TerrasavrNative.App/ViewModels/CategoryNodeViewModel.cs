@@ -11,16 +11,40 @@ namespace TerrasavrNative.App.ViewModels;
 // overrides.js - ver LibraryViewModel.BuildCalamityRoot). El icono representativo viene del
 // propio objeto real que el arbol de Terrasavr asigna a esa carpeta (o, para Calamity, el
 // primer objeto real de la categoria) - nunca un icono generico inventado.
-public sealed partial class CategoryNodeViewModel(string name, string fullPath) : ObservableObject
+public sealed partial class CategoryNodeViewModel : ObservableObject
 {
+    private readonly string _nameEs;
+    private readonly string? _nameEn;
+
+    // Ronda de idioma del 6-sep-2026 (queja real del usuario: la Libreria "sigue en español"):
+    // Name era un string fijo, siempre el español, para las carpetas de los TRES arboles
+    // (Libreria de objetos, Investigacion y Libreria de buffs). Ahora llegan los dos nombres ya
+    // calculados por Core y se elige aqui, avisando de verdad al cambiar de idioma en caliente
+    // (evento debil, mismo motivo real que en LocalizedContentViewModel). Una carpeta sin nombre
+    // ingles cae al español - idioma de referencia de siempre.
+    public CategoryNodeViewModel(string name, string? nameEn, string fullPath)
+    {
+        _nameEs = name;
+        _nameEn = nameEn;
+        FullPath = fullPath;
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            Services.LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
+    }
+
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        => OnPropertyChanged(nameof(Name));
+
     // Ronda de idioma del 6-sep-2026: la tarjeta y la fila de arbol de una carpeta muestran su
     // recuento con un StringFormat ("{0} objeto(s)") que era texto español fijo del XAML. Exponer
     // Loc aqui (mismo patron ya establecido en las demas clases que sirven de DataContext dentro
     // de una plantilla) permite bindearlo contra el diccionario sin trucos de RelativeSource.
     public Services.LocalizationService Loc => Services.LocalizationService.Instance;
 
-    public string Name { get; } = name;
-    public string FullPath { get; } = fullPath;
+    public string Name => Services.LocalizationService.Instance.Language == Services.LocalizationService.English
+        ? _nameEn ?? _nameEs
+        : _nameEs;
+
+    public string FullPath { get; }
     public ObservableCollection<CategoryNodeViewModel> Children { get; } = [];
 
     // Ids reales que caen bajo este nodo - el propio conjunto si es una carpeta hoja, o la

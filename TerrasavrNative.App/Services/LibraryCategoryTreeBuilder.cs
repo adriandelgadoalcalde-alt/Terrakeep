@@ -61,7 +61,10 @@ public static class LibraryCategoryTreeBuilder
 
     internal static CategoryNodeViewModel ToViewModel(CategoryTreeNodeData data)
     {
-        var vm = new CategoryNodeViewModel(data.Name, data.FullPath)
+        // Ronda de idioma del 6-sep-2026: los DOS nombres viajan al ViewModel (Core ya calcula el
+        // ingles, ver CategoryTreeNodeData.NameEn) - asi una carpeta cambia de idioma en vivo sin
+        // reconstruir el arbol entero, que es lo unico caro de verdad aqui.
+        var vm = new CategoryNodeViewModel(data.Name, data.NameEn, data.FullPath)
         {
             IconPath = data.IconPath,
             ItemIdsOrdered = data.ItemIdsOrdered, // misma lista inmutable de referencia, nunca se muta despues de construida

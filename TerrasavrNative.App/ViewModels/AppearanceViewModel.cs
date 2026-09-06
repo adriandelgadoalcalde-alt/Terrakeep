@@ -54,7 +54,18 @@ public partial class AppearanceViewModel : ObservableObject
             _hairOptionsDebounceTimer.Stop();
             if (IsHairPickerOpen) RebuildHairOptions();
         };
+        // Ronda de idioma del 6-sep-2026: HairDyeDisplayName arranca con el valor de
+        // "hair_dye_none" leido UNA sola vez, y OnHairDyeChanged solo lo recompone cuando el
+        // indice CAMBIA de verdad - con un personaje sin tinte (indice 0, el caso normal) no se
+        // disparaba nunca y se quedaba en "Ninguno" con la app en ingles.
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
+
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        => HairDyeDisplayName = HairDyeOptions.FirstOrDefault(o => o.Index == HairDye)?.DisplayName
+            ?? LocalizationService.Instance.Format("hair_dye_numbered", HairDye);
+
     // Convencion vanilla estandar (Player.Male en Terraria): true = chico. La version binaria
     // invertida documentada en el proyecto es de formatos MUY antiguos (version<145), fuera
     // del alcance de este lector (ver PlrCharacter.cs).
@@ -136,7 +147,9 @@ public partial class AppearanceViewModel : ObservableObject
 
     private void BuildHairDyeOptions()
     {
-        HairDyeOptions.Add(new HairDyeOptionViewModel(0, LocalizationService.Instance["hair_dye_none"], null));
+        // Ronda de idioma del 6-sep-2026: se pasa la CLAVE, no el texto ya resuelto (ver
+        // HairDyeOptionViewModel) - "Ninguno" se quedaba en español con la app en ingles.
+        HairDyeOptions.Add(new HairDyeOptionViewModel(0, "hair_dye_none", null));
         foreach (var entry in _service.HairDyes.Entries)
         {
             string name = _service.VanillaCatalog.GetName(entry.ItemId);
@@ -304,7 +317,10 @@ public partial class AppearanceViewModel : ObservableObject
 
     partial void OnHairDyeChanged(int value)
     {
-        HairDyeDisplayName = HairDyeOptions.FirstOrDefault(o => o.Index == value)?.DisplayName ?? $"Tinte #{value}";
+        // Ronda de idioma del 6-sep-2026: "Tinte #N" (el respaldo real de un indice de tinte
+        // desconocido) iba a pelo en español.
+        HairDyeDisplayName = HairDyeOptions.FirstOrDefault(o => o.Index == value)?.DisplayName
+            ?? LocalizationService.Instance.Format("hair_dye_numbered", value);
         if (_suppressWriteback || _character == null) return;
         _character.HairDye = (byte)Math.Clamp(value, 0, 255);
     }

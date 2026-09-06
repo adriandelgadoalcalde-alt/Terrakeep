@@ -43,8 +43,17 @@ public partial class ItemEditViewModel : ObservableObject
         _service = service;
         Metas = new ObservableCollection<PrefixMetaButtonViewModel>(
             PrefixGroupCatalog.Metas.Select(m => new PrefixMetaButtonViewModel(m)));
+        // Ronda de idioma del 6-sep-2026: los textos de este panel (NoPrefixMessage,
+        // CategoriesLabel) se fijaban al construir y solo se recalculaban al CAMBIAR de slot -
+        // "Selecciona un slot para editarlo." se quedaba en español con la app en ingles hasta
+        // que el usuario tocaba algo. Refresh() ya sabe recomponerlos todos: basta con volver a
+        // llamarlo al cambiar de idioma (evento debil, mismo motivo que en el resto de la ronda).
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
         Refresh();
     }
+
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => Refresh();
 
     partial void OnSlotChanged(ItemSlotViewModel? oldValue, ItemSlotViewModel? newValue)
     {

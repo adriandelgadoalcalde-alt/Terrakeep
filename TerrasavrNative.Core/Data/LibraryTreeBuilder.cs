@@ -10,10 +10,20 @@ namespace TerrasavrNative.Core.Data;
 // LibraryCategoryTreeBuilder.cs junto con todo el algoritmo. Se mueve entero a Core (que no
 // depende de WPF ni de nada externo y compila tambien para net8.0) para que el mod pueda
 // reutilizarlo; en App solo se queda la capa fina de envoltorio a ViewModel.
+//
+// Ronda de idioma del 6-sep-2026 (queja real del usuario: la Libreria "sigue en español"): Name
+// era el nombre YA traducido al español y el UNICO que existia, asi que las carpetas del arbol
+// (vanilla y Calamity, objetos y buffs) se veian en español pasara lo que pasara con el idioma de
+// la app. NameEn se añade al final CON VALOR POR DEFECTO a proposito: asi ninguna llamada
+// existente se rompe, y un nodo que no lo rellene cae al nombre español - mismo criterio de
+// idioma de referencia de todo el proyecto. La eleccion la hace la capa de presentacion
+// (CategoryNodeViewModel en la app de escritorio), que ademas puede reaccionar a un cambio de
+// idioma en caliente sin reconstruir el arbol entero: los dos nombres ya viajan en el nodo.
 public sealed record CategoryTreeNodeData(
     string Name, string FullPath, string? IconPath,
     IReadOnlyList<int> ItemIdsOrdered, IReadOnlySet<int> ItemIdSet,
-    IReadOnlyList<CategoryTreeNodeData> Children);
+    IReadOnlyList<CategoryTreeNodeData> Children,
+    string? NameEn = null);
 
 // Construccion PURA del arbol de carpetas de la Libreria de OBJETOS: arbol vanilla real de
 // Terrasavr (VanillaLibraryTreeCatalog, extraido y ejecutado de verdad desde el script.js real)
@@ -58,12 +68,15 @@ public static class LibraryTreeBuilder
         if (node.IsLeaf)
         {
             var ids = node.ItemIds.ToList();
-            return new CategoryTreeNodeData(labels.Translate(node.Name), fullPath, iconPath, ids, new HashSet<int>(ids), []);
+            return new CategoryTreeNodeData(labels.Translate(node.Name), fullPath, iconPath, ids, new HashSet<int>(ids), [], node.Name);
         }
 
         var children = node.Children.Select(child => BuildVanillaNode(child, fullPath, labels, iconResolver)).ToList();
         var (ordered, set) = OrderedUnion(children);
-        return new CategoryTreeNodeData(labels.Translate(node.Name), fullPath, iconPath, ordered, set, children);
+        // Ronda de idioma del 6-sep-2026: el nombre INGLES es literalmente node.Name - es la
+        // clave real con la que LibraryLabelCatalog busca la traduccion, y viene tal cual del
+        // arbol real de Terrasavr. No hay nada que traducir para el ingles: hay que NO traducir.
+        return new CategoryTreeNodeData(labels.Translate(node.Name), fullPath, iconPath, ordered, set, children, node.Name);
     }
 
     // Puerto real de calamityBuildLibraryNode (Terrasavr-Calamity-Beta\resources\app\
@@ -87,7 +100,12 @@ public static class LibraryTreeBuilder
         return BuildGroupedRoot(
             "Calamity (mod)", "Calamity", rootIcon, byCategory,
             CalamityCategoryLabel, iconResolver,
-            page => labels.Translate($"Page {page}"));
+            page => labels.Translate($"Page {page}"),
+            // Ronda de idioma del 6-sep-2026: en ingles la plantilla real de Terrasavr NO se
+            // traduce - "Page N" ya es el original, es lo que LibraryLabelCatalog usa de clave.
+            rootNameEn: "Calamity (mod)",
+            categoryLabelEn: CalamityCategoryLabelEn,
+            pageLabelEn: page => $"Page {page}");
     }
 
     // Raiz agrupada generica - el mismo algoritmo real que usa "Calamity (mod)" en el arbol de
@@ -101,6 +119,10 @@ public static class LibraryTreeBuilder
     //    segun lo que devuelva pageLabel - la Libreria de objetos traduce la plantilla real de
     //    Terrasavr, la de buffs usa la etiqueta literal en español).
     // 3. Cada carpeta lleva el icono de su primera entrada real; la raiz, el que se le pase.
+//
+    // Ronda de idioma del 6-sep-2026: los tres parametros "...En" son opcionales - quien no los
+    // pase deja NameEn a null y ese nodo cae al nombre español, mismo criterio de referencia de
+    // siempre. El recuento "(N)" va igual en los dos idiomas: solo cambia la etiqueta.
     internal static CategoryTreeNodeData BuildGroupedRoot(
         string rootName,
         string rootPath,
@@ -108,29 +130,37 @@ public static class LibraryTreeBuilder
         IReadOnlyDictionary<string, List<int>> byCategory,
         Func<string, string> categoryLabel,
         Func<int, string?> iconResolver,
-        Func<int, string> pageLabel)
+        Func<int, string> pageLabel,
+        string? rootNameEn = null,
+        Func<string, string>? categoryLabelEn = null,
+        Func<int, string>? pageLabelEn = null)
     {
         var cats = byCategory.Keys.OrderBy(c => c, StringComparer.Ordinal).ToList();
+
+        string? EtiquetaEn(string cat, int count) =>
+            categoryLabelEn == null ? null : $"{categoryLabelEn(cat)} ({count})";
 
         CategoryTreeNodeData BuildCategoryNode(string cat)
         {
             var ids = byCategory[cat];
             string label = $"{categoryLabel(cat)} ({ids.Count})";
+            string? labelEn = EtiquetaEn(cat, ids.Count);
             string path = $"{rootPath}/{cat}";
 
             if (ids.Count <= LeafPageSize)
-                return new CategoryTreeNodeData(label, path, iconResolver(ids[0]), ids, new HashSet<int>(ids), []);
+                return new CategoryTreeNodeData(label, path, iconResolver(ids[0]), ids, new HashSet<int>(ids), [], labelEn);
 
             var pages = new List<CategoryTreeNodeData>();
             for (int i = 0; i < ids.Count; i += LeafPageSize)
             {
                 var chunk = ids.Skip(i).Take(LeafPageSize).ToList();
+                int numero = i / LeafPageSize + 1;
                 pages.Add(new CategoryTreeNodeData(
-                    pageLabel(i / LeafPageSize + 1), $"{path}/Page{i / LeafPageSize + 1}",
-                    iconResolver(chunk[0]), chunk, new HashSet<int>(chunk), []));
+                    pageLabel(numero), $"{path}/Page{numero}",
+                    iconResolver(chunk[0]), chunk, new HashSet<int>(chunk), [], pageLabelEn?.Invoke(numero)));
             }
             var (pagedOrdered, pagedSet) = OrderedUnion(pages);
-            return new CategoryTreeNodeData(label, path, iconResolver(ids[0]), pagedOrdered, pagedSet, pages);
+            return new CategoryTreeNodeData(label, path, iconResolver(ids[0]), pagedOrdered, pagedSet, pages, labelEn);
         }
 
         var groupOrder = new List<string>();
@@ -156,11 +186,11 @@ public static class LibraryTreeBuilder
                 var childNodes = members.Select(BuildCategoryNode).ToList();
                 int totalIds = members.Sum(m => byCategory[m].Count);
                 var (ordered, set) = OrderedUnion(childNodes);
-                topNodes.Add(new CategoryTreeNodeData($"{categoryLabel(top)} ({totalIds})", $"{rootPath}/{top}", childNodes[0].IconPath, ordered, set, childNodes));
+                topNodes.Add(new CategoryTreeNodeData($"{categoryLabel(top)} ({totalIds})", $"{rootPath}/{top}", childNodes[0].IconPath, ordered, set, childNodes, EtiquetaEn(top, totalIds)));
             }
         }
         var (rootOrdered, rootSet) = OrderedUnion(topNodes);
-        return new CategoryTreeNodeData(rootName, rootPath, rootIcon, rootOrdered, rootSet, topNodes);
+        return new CategoryTreeNodeData(rootName, rootPath, rootIcon, rootOrdered, rootSet, topNodes, rootNameEn);
     }
 
     // Union ordenada real de los hijos YA construidos, concatenados en su propio orden real,
@@ -292,5 +322,30 @@ public static class LibraryTreeBuilder
         var segments = category.Split('/');
         if (CalamityCategoryLabelsEs.TryGetValue(segments[0], out var topLabel)) segments[0] = topLabel;
         return string.Join(" - ", segments);
+    }
+
+    // Ronda de idioma del 6-sep-2026. Version INGLESA de la de arriba. Aqui no hace falta ninguna
+    // tabla: la categoria real de calamity/catalog.json YA viene en ingles ("Weapons/Melee",
+    // "Placeables/SunkenSea"), solo hay que presentarla legible - misma forma "A - B" que la
+    // española, separando ademas el CamelCase real ("DraedonsArsenal" -> "Draedons Arsenal",
+    // "PlaceableTurrets" -> "Placeable Turrets"). Nada inventado ni traducido a mano: es el
+    // propio dato del mod.
+    public static string CalamityCategoryLabelEn(string category)
+        => string.Join(" - ", category.Split('/').Select(SepararCamelCase));
+
+    // "SunkenSea" -> "Sunken Sea". Respeta las siglas seguidas y no toca lo que ya lleva espacio.
+    public static string SepararCamelCase(string texto)
+    {
+        if (texto.Length < 2 || texto.Contains(' ')) return texto;
+        var sb = new System.Text.StringBuilder(texto.Length + 4);
+        for (int i = 0; i < texto.Length; i++)
+        {
+            char c = texto[i];
+            bool cortar = i > 0 && char.IsUpper(c)
+                && (!char.IsUpper(texto[i - 1]) || (i + 1 < texto.Length && char.IsLower(texto[i + 1])));
+            if (cortar) sb.Append(' ');
+            sb.Append(c);
+        }
+        return sb.ToString();
     }
 }

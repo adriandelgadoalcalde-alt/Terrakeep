@@ -36,8 +36,14 @@ public partial class BuffEditViewModel : ObservableObject
     public BuffEditViewModel(CharacterFileService service)
     {
         _service = service;
+        // Ronda de idioma del 6-sep-2026: gemelo real del arreglo de ItemEditViewModel - los
+        // textos de este panel se fijaban al construir y no se reevaluaban al cambiar de idioma.
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
         Refresh();
     }
+
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => Refresh();
 
     // El maximo real (S.getMaxTime()) depende de si el personaje es version>=269 - se fija al
     // cargar el personaje (MainViewModel.LoadFromPath), igual que el resto de umbrales de

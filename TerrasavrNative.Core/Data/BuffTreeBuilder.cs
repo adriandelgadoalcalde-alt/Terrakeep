@@ -44,12 +44,16 @@ public static class BuffTreeBuilder
     {
         var roots = new List<CategoryTreeNodeData>
         {
-            BuildNamed("Utilidad", Utility, buffIconResolver),
-            BuildNamed("Offensivo", Offensive, buffIconResolver),
-            BuildNamed("Defensivo", Defensive, buffIconResolver),
-            BuildNamed("Special", Special, buffIconResolver),
-            BuildNamed("Mascota", Pets, buffIconResolver),
-            BuildNamed("Negativo", Negative, buffIconResolver),
+            // Ronda de idioma del 6-sep-2026: el segundo nombre es el ingles REAL de la misma
+            // carpeta en Terrasavr (lib.buffs), no una traduccion inventada - "Special" y
+            // "Offensivo" son el mismo caso ya documentado arriba (el español de Terrasavr trae
+            // ese anglicismo tal cual, el ingles original es "Special"/"Offensive").
+            BuildNamed("Utilidad", "Utility", Utility, buffIconResolver),
+            BuildNamed("Offensivo", "Offensive", Offensive, buffIconResolver),
+            BuildNamed("Defensivo", "Defensive", Defensive, buffIconResolver),
+            BuildNamed("Special", "Special", Special, buffIconResolver),
+            BuildNamed("Mascota", "Pet", Pets, buffIconResolver),
+            BuildNamed("Negativo", "Negative", Negative, buffIconResolver),
             BuildIndex(vanillaBuffs, buffIconResolver),
         };
         if (calamityBuffs != null)
@@ -57,12 +61,14 @@ public static class BuffTreeBuilder
         return roots;
     }
 
-    private static CategoryTreeNodeData BuildNamed(string name, int[] ids, Func<int, string?> buffIconResolver)
+    private static CategoryTreeNodeData BuildNamed(string name, string nameEn, int[] ids, Func<int, string?> buffIconResolver)
     {
         var ordered = ids.ToList();
+        // FullPath sigue siendo el nombre ESPAÑOL (clave estable ya persistida en preferencias y
+        // usada por los tests) - solo cambia lo que se muestra.
         return new CategoryTreeNodeData(
             $"{name} ({ids.Length})", name, buffIconResolver(ids[0]),
-            ordered, new HashSet<int>(ordered), []);
+            ordered, new HashSet<int>(ordered), [], $"{nameEn} ({ids.Length})");
     }
 
     // "Indice" real: paginas de 33 en 33 sobre TODOS los buffs vanilla conocidos (1..N), para
@@ -86,10 +92,10 @@ public static class BuffTreeBuilder
             if (pageIds.Count == 0) continue;
             pages.Add(new CategoryTreeNodeData(
                 $"Indice ({start}-{end})", $"Indice/{start}-{end}", buffIconResolver(pageIds[0]),
-                pageIds, new HashSet<int>(pageIds), []));
+                pageIds, new HashSet<int>(pageIds), [], $"Index ({start}-{end})"));
         }
         var (ordered, set) = LibraryTreeBuilder.OrderedUnion(pages);
-        return new CategoryTreeNodeData($"Índice ({allIds.Count})", "Indice", rootIcon, ordered, set, pages);
+        return new CategoryTreeNodeData($"Índice ({allIds.Count})", "Indice", rootIcon, ordered, set, pages, $"Index ({allIds.Count})");
     }
 
     // Mismo patron real que ya usa LibraryTreeBuilder para los objetos de Calamity (agrupar por
@@ -118,7 +124,10 @@ public static class BuffTreeBuilder
         return LibraryTreeBuilder.BuildGroupedRoot(
             "Calamity (mod)", "Calamity", rootIcon, byCategory,
             CalamityBuffCategoryLabel, buffIconResolver,
-            page => $"Página {page}");
+            page => $"Página {page}",
+            rootNameEn: "Calamity (mod)",
+            categoryLabelEn: CalamityBuffCategoryLabelEn,
+            pageLabelEn: page => $"Page {page}");
     }
 
     // Sin precedente real en español que copiar aqui (a diferencia de CALAMITY_CATEGORY_LABELS
@@ -137,5 +146,15 @@ public static class BuffTreeBuilder
         "Placeables" => "Colocables",
         "Otros" => "Otros",
         _ => category,
+    };
+
+    // Ronda de idioma del 6-sep-2026: version inglesa. La categoria real de calamity/buffs.json
+    // YA viene en ingles, solo hay que separar el CamelCase - nada que traducir a mano. Unica
+    // excepcion real: "Otros" es una etiqueta NUESTRA (los 2 buffs reales sin categoria en el
+    // catalogo), no un dato del mod, y por eso si tiene traduccion propia.
+    public static string CalamityBuffCategoryLabelEn(string category) => category switch
+    {
+        "Otros" => "Other",
+        _ => LibraryTreeBuilder.SepararCamelCase(category),
     };
 }

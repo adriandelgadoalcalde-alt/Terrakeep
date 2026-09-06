@@ -78,6 +78,10 @@ internal static class Program
         // ESPEC-ui-exploracion.md#9.1): mismo motivo real que el resto de converters de arriba -
         // se olvido la primera vez que se probo esta tanda, mismo bug real ya documentado.
         app.Resources["EnumEquals"] = new EnumEqualsConverter();
+        // Ronda de idioma del 6-sep-2026: mismo motivo real que todos los de arriba - este
+        // converter sustituye a los StringFormat en español fijo del XAML, y sin registrarlo aqui
+        // el arnes reventaria al montar la ventana aunque la app real funcione.
+        app.Resources["LocFormat"] = new LocalizedFormatConverter();
         app.DispatcherUnhandledException += (_, e) =>
         {
             Console.WriteLine("DISPATCHER-EXCEPTION: " + e.Exception);
@@ -4108,6 +4112,13 @@ internal static class Program
         // propios acentuados del propio juego.
         try
         {
+            // Ronda de idioma del 6-sep-2026 (queja real del usuario: "mas de la mitad del
+            // contenido sigue en español al cambiar a ingles"): la lista de abajo se AMPLIO
+            // mucho (antes 31 entradas, casi todas sustantivos concretos de una pantalla) con
+            // palabras funcionales españolas que no existen en ingles - articulos, preposiciones
+            // y conectores. Son las que de verdad cazan una FRASE entera sin migrar, que es lo
+            // que se estaba escapando (el contenido de Novedades / registro de cambios y las
+            // carpetas de la Libreria pasaban el barrido viejo casi enteras).
             string[] palabrasEspañolas =
             [
                 "personaje", "guardar", "guardado", "conjunto", "hueco", "búsqueda", "busqueda",
@@ -4115,6 +4126,26 @@ internal static class Program
                 "objetos", "acepta", "cargar", "carpeta", "cambios", "ningún", "ningun",
                 "seleccionado", "vanidad", "tintes", "afina", "escribe para buscar", "en total",
                 "diseñado", "desarrollado", "reescritura", "propiedad de sus", "está", "esta ",
+                // palabras funcionales - una frase española real cae casi siempre en alguna
+                " de ", " del ", " la ", " el ", " los ", " las ", " un ", " una ", " para ",
+                " con ", " sin ", " que ", " por ", " como ", " pero ", " ya ", " al ",
+                " se ", " su ", " sus ", " son ", " más ", " mas ", " muy ", " cada ",
+                " todo ", " toda ", " todos ", " todas ", " cuando ", " donde ", " desde ",
+                " hasta ", " entre ", " sobre ", " ahora ", " tras ", " este ", " esta ",
+                " estos ", " estas ", " ese ", " esa ", " hay ", " ni ",
+                // OJO: " no ", " a ", " o ", " y ", " es ", " la " y " para " NO entran aqui a
+                // proposito - son tambien palabras/letras inglesas corrientes ("no new items
+                // added", "a slot", "is"), y con ellas el barrido marcaba como fallo frases que
+                // YA estaban traducidas de verdad. Una palabra solo sirve aqui si no existe en
+                // ingles.
+                // verbos/sustantivos frecuentes de la interfaz y del contenido
+                "añad", "arregl", "corregid", "corrige", "nuevo", "nueva", "nuevos", "nuevas",
+                "versión", "version de", "actualización", "actualizacion", "pestaña", "botón",
+                "boton", "ahora ", "antes ", "también", "tambien", "según", "segun",
+                "materiales", "armas", "armadura", "accesorios", "herramientas", "bloques",
+                "pociones", "muebles", "colocables", "mascotas", "monturas", "alas", "tintes",
+                "modo dificil", "modo difícil", "cuerpo a cuerpo", "a distancia", "invocación",
+                "invocacion", "pícaro", "picaro", "magia", "otro", "otros", "varios",
             ];
             // Limites REALES ya conocidos y documentados (bitacora, bloques 3/4 del idioma): NO es
             // texto sin migrar. Son cadenas que YA viven en el diccionario pero se fijan una sola
@@ -4127,42 +4158,113 @@ internal static class Program
             // solo existen en español, camino propio tambien documentado. Se listan igualmente en
             // la salida, pero no cuentan como FALLO: asi este barrido sigue detectando de verdad
             // cualquier cadena NUEVA que se olvide de migrar en el futuro.
+            //
+            // Ronda del 6-sep-2026: esta lista SE ENCOGE mucho. Casi todo lo que habia aqui ya
+            // no es un limite: Novedades y el registro de cambios se traducen de verdad ahora, y
+            // los selectores/pildoras (Vanidad/Tintes/Ninguno/"Mundo: "/"Objetos (") pasaron a
+            // guardar la clave en vez del texto ya resuelto, asi que si reaccionan en caliente.
+            // Lo que queda es de dos clases, las dos reales y documentadas:
+            //  - un StatusMessage o un resumen YA COMPUESTO antes del cambio de idioma: son
+            //    frases de un solo uso que se rehacen en la siguiente accion real del usuario.
+            //  - los CATALOGOS DE CONTENIDO del juego (nombres de objeto/NPC/tile/buff): viven
+            //    en sus propios JSON de datos y solo existen en español. Traducirlos es una
+            //    decision aparte, pendiente del usuario (ver bitacora.md, 6-sep-2026).
             string[] limitesConocidos =
             [
                 "Auto-equipar:",             // StatusMessage ya calculado antes del cambio
                 "objetos en total (vanilla", // ResultsSummary de la Libreria, ya calculado
                 "objeto(s) investigado(s)",  // idem, Investigacion
-                "Ninguno",                   // opcion de tinte de pelo, fijada al cargar
-                "Vanidad", "Tintes",         // selector Armadura/Vanidad/Tintes, fijado al construir
-                "Mundo: ",                   // Exploracion: titulo real del mundo cargado
-                "Objetos (",                 // Exploracion: recuento ya compuesto
-                "Actualización de correcciones", "Objetos nuevos añadidos", // Novedades (contenido)
-                "Guía de parkour",           // nombre real de un objeto del juego (catalogo)
-                "Soporte nativo de idioma", "Pulido final pre-lanzamiento", "Rediseño completo",
-                "Rediseño estético", "Núcleo funcional completo", // registro de cambios (contenido)
+                "NPC(s) de pueblo",          // resumen del mundo recien cargado, ya compuesto
+                "En el nivel del suelo",     // profundidad de un NPC, fijada al leer el mundo
+                "· versión",                 // cabecera: se recompone al recargar el personaje
+                // Contenido del MUNDO del propio usuario, no de la app: el Explorador lista los
+                // letreros con el texto que escribio el jugador dentro del juego ("Afueras de
+                // Larvas de gusano", "El Musgo de Accidentes" son letreros reales del mundo de
+                // pruebas de esta maquina). Traducir eso seria falsear un dato del usuario.
+                "Afueras de", "El Musgo de",
             ];
+            // Ronda del 6-sep-2026: los nombres reales de objeto/NPC/tile/buff del JUEGO son
+            // catalogo de contenido, no interfaz - y muchisimos casan con una palabra funcional
+            // española ("Bastón de la ruina", "Alas Elíseas"). Se cargan del mismo fichero real
+            // que usa la app y se descuentan enteros: si no, ahogan la señal (1206 lineas de
+            // ruido tapaban las 23 reales de interfaz en la primera pasada de esta ronda).
+            var nombresDeCatalogo = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string fichero in new[] { "vanilla_item_names.json", "npc_names.json", "vanilla_buff_names_es.json", "tile_names.json", @"calamity\catalog.json", "calamity_buff_descriptions.json" })
+            {
+                try
+                {
+                    string ruta = Path.Combine(AppContext.BaseDirectory, "Assets", fichero);
+                    if (!File.Exists(ruta)) continue;
+                    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(ruta));
+                    void Recoger(System.Text.Json.JsonElement el)
+                    {
+                        switch (el.ValueKind)
+                        {
+                            case System.Text.Json.JsonValueKind.String:
+                                if (el.GetString() is { Length: > 0 } s) nombresDeCatalogo.Add(s);
+                                break;
+                            case System.Text.Json.JsonValueKind.Object:
+                                foreach (var p in el.EnumerateObject()) Recoger(p.Value);
+                                break;
+                            case System.Text.Json.JsonValueKind.Array:
+                                foreach (var i in el.EnumerateArray()) Recoger(i);
+                                break;
+                        }
+                    }
+                    Recoger(doc.RootElement);
+                }
+                catch (Exception) { } // un catalogo ausente solo hace el barrido mas ruidoso, nunca lo tumba
+            }
+            // Y el propio diccionario INGLES: una frase inglesa real puede casar por casualidad
+            // con una palabra funcional española (" no ", " a ") - si el texto en pantalla ES
+            // literalmente una traduccion inglesa nuestra, por definicion no esta sin traducir.
+            var textosInglesesReales = new HashSet<string>(StringComparer.Ordinal);
+            try
+            {
+                string ruta = Path.Combine(AppContext.BaseDirectory, "Assets", "strings_en.json");
+                if (File.Exists(ruta))
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(ruta));
+                    foreach (var p in doc.RootElement.EnumerateObject())
+                        if (p.Value.GetString() is { Length: > 0 } s) textosInglesesReales.Add(s);
+                }
+            }
+            catch (Exception) { }
             var sospechas = new List<string>();
             var conocidos = new List<string>();
             var corchetes = new List<string>();
+            void Examinar(string donde, string? t)
+            {
+                if (string.IsNullOrWhiteSpace(t)) return;
+                if (System.Text.RegularExpressions.Regex.IsMatch(t, @"^\[[a-z0-9_]+\]$"))
+                { corchetes.Add($"{donde}: {t}"); return; }
+                // Ronda del 6-sep-2026: fuera el ruido antes de mirar palabra por palabra.
+                if (nombresDeCatalogo.Contains(t) || textosInglesesReales.Contains(t)) return;
+                // El Explorador añade el id real del tile al final ("Pared de nieve (natural)
+                // [40]") - el nombre de catalogo sigue siendo el mismo, solo hay que quitarlo.
+                if (nombresDeCatalogo.Contains(System.Text.RegularExpressions.Regex.Replace(t, @" \[\d+\]$", ""))) return;
+                // el espacio de guarda hace que " de " case tambien al principio/final del texto
+                string bajo = " " + t.ToLowerInvariant().Replace("\n", " ") + " ";
+                foreach (string p in palabrasEspañolas)
+                    if (bajo.Contains(p))
+                    {
+                        string linea = $"{donde}: \"{(t.Length > 90 ? t[..90] + "..." : t)}\" (por '{p.Trim()}')";
+                        if (limitesConocidos.Any(t.Contains)) conocidos.Add(linea);
+                        else sospechas.Add(linea);
+                        return;
+                    }
+            }
+
+            // Ronda del 6-sep-2026: ademas de los TextBlock (lo unico que miraba antes) se barre
+            // el Content de texto de cualquier ContentControl real (botones, RadioButton de
+            // pildora, cabeceras de TabItem) - ahi vivian, por ejemplo, las etiquetas de las
+            // carpetas de la Libreria y los selectores de almacen.
             void BarrerPantallaActual(string donde)
             {
                 foreach (var tb in Descendientes<System.Windows.Controls.TextBlock>(window))
-                {
-                    if (!tb.IsVisible) continue;
-                    string t = tb.Text;
-                    if (string.IsNullOrWhiteSpace(t)) continue;
-                    if (System.Text.RegularExpressions.Regex.IsMatch(t, @"^\[[a-z0-9_]+\]$"))
-                    { corchetes.Add($"{donde}: {t}"); continue; }
-                    string bajo = t.ToLowerInvariant();
-                    foreach (string p in palabrasEspañolas)
-                        if (bajo.Contains(p))
-                        {
-                            string linea = $"{donde}: \"{(t.Length > 90 ? t[..90] + "..." : t)}\" (por '{p}')";
-                            if (limitesConocidos.Any(t.Contains)) conocidos.Add(linea);
-                            else sospechas.Add(linea);
-                            break;
-                        }
-                }
+                    if (tb.IsVisible) Examinar(donde, tb.Text);
+                foreach (var cc in Descendientes<System.Windows.Controls.ContentControl>(window))
+                    if (cc.IsVisible && cc.Content is string s) Examinar(donde, s);
             }
 
             vm.Settings.Language = "en";
@@ -4183,7 +4285,65 @@ internal static class Program
                     DoEvents();
                 }
                 else BarrerPantallaActual($"Pestaña{tab}");
+                // Ronda del 6-sep-2026: las pestañas con TabControl INTERNO (Novedades: Terraria /
+                // tModLoader-Calamity) solo enseñaban su primera hoja - la segunda no la miraba
+                // nadie. Se recorren todas las hojas de cada TabControl anidado real.
+                foreach (var tc in Descendientes<System.Windows.Controls.TabControl>(window).ToList())
+                {
+                    if (!tc.IsVisible || tc.Items.Count < 2) continue;
+                    int previo = tc.SelectedIndex;
+                    for (int h = 0; h < tc.Items.Count; h++)
+                    {
+                        try { tc.SelectedIndex = h; } catch (Exception) { break; }
+                        DoEvents(); DoEvents();
+                        BarrerPantallaActual($"Pestaña{tab}/interna{h}");
+                    }
+                    try { tc.SelectedIndex = previo; } catch (Exception) { }
+                    DoEvents();
+                }
             }
+
+            // Ronda del 6-sep-2026 (queja real del usuario: "Libreria... sigue en español"): las
+            // CARPETAS del arbol nunca las veia este barrido, porque en reposo la Libreria enseña
+            // tarjetas de carpeta raiz y el arbol desplegado solo aparece al entrar en una. Se
+            // abre de verdad la primera carpeta raiz de la Libreria de objetos, la de buffs y la
+            // de Investigacion, y se expanden sus hijos.
+            void BarrerArbol(string donde, System.Collections.IEnumerable raices,
+                             Action<TerrasavrNative.App.ViewModels.CategoryNodeViewModel> seleccionar)
+            {
+                var lista = raices.Cast<TerrasavrNative.App.ViewModels.CategoryNodeViewModel>().ToList();
+                foreach (var raiz in lista) Examinar($"{donde}/raiz", raiz.Name);
+                var primera = lista.FirstOrDefault();
+                if (primera == null) return;
+                seleccionar(primera);
+                primera.IsExpanded = true;
+                foreach (var hijo in primera.Children) hijo.IsExpanded = true;
+                DoEvents(); DoEvents();
+                BarrerPantallaActual($"{donde}/abierta");
+                foreach (var hijo in primera.Children)
+                {
+                    Examinar($"{donde}/hijo", hijo.Name);
+                    foreach (var nieto in hijo.Children) Examinar($"{donde}/nieto", nieto.Name);
+                }
+            }
+
+            vm.SelectedTabIndex = 1;
+            vm.PersonajeInnerTabIndex = 0;
+            DoEvents(); DoEvents();
+            BarrerArbol("Libreria", vm.Library.RootCategories, n => vm.Library.SelectCategoryCommand.Execute(n));
+            vm.Library.ClearCategoryCommand.Execute(null);
+            DoEvents();
+            vm.PersonajeInnerTabIndex = 2;
+            DoEvents(); DoEvents();
+            BarrerArbol("Investigacion", vm.Research.RootCategories, n => vm.Research.SelectCategoryCommand.Execute(n));
+            vm.Research.ClearCategoryCommand.Execute(null);
+            DoEvents();
+            vm.PersonajeInnerTabIndex = 1;
+            DoEvents(); DoEvents();
+            BarrerArbol("LibreriaBuffs", vm.BuffLibrary.RootCategories, n => vm.BuffLibrary.SelectCategoryCommand.Execute(n));
+            vm.BuffLibrary.ClearCategoryCommand.Execute(null);
+            vm.PersonajeInnerTabIndex = 0;
+            DoEvents();
 
             // Parte 3 del encargo: los creditos reales ("IncrediBad") tienen que verse enteros en
             // la pestaña Acerca de, en los DOS idiomas - se comprueba el texto real ya renderizado
@@ -4204,8 +4364,8 @@ internal static class Program
 
             Console.WriteLine($"A10-IDIOMA-BARRIDO: claves sin traducir a la vista (formato '[clave]')={corchetes.Count} (esperado 0), textos NUEVOS que siguen en español con la app en ingles={sospechas.Count} (esperado 0), casos ya conocidos y documentados={conocidos.Distinct().Count()} (informativo, no es fallo)");
             foreach (string c in corchetes.Distinct().Take(25)) Console.WriteLine("   SIN-TRADUCIR " + c);
-            foreach (string s in sospechas.Distinct().Take(40)) Console.WriteLine("   EN-ESPAÑOL " + s);
-            foreach (string c in conocidos.Distinct().Take(30)) Console.WriteLine("   LIMITE-CONOCIDO " + c);
+            foreach (string s in sospechas.Distinct().Take(60)) Console.WriteLine("   EN-ESPAÑOL " + s);
+            foreach (string c in conocidos.Distinct().Take(40)) Console.WriteLine("   LIMITE-CONOCIDO " + c);
             if (corchetes.Count > 0) Console.WriteLine("FALLO: A10-IDIOMA-BARRIDO - hay claves de idioma que no existen en ningun diccionario");
             if (sospechas.Count > 0) Console.WriteLine("FALLO: A10-IDIOMA-BARRIDO - hay texto sin migrar al diccionario (se queda en español con la app en ingles)");
 
