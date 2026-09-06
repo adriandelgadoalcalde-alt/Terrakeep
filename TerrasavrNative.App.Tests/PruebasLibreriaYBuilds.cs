@@ -395,11 +395,26 @@ internal static partial class Program
                 Console.WriteLine($"LIB-06-IDIOMA: resumen (es)='{resumenEs}' -> (en)='{resumenEn}' (esperado que cambie de idioma SIN volver a buscar ni pulsar carpeta)");
                 if (!resumenCambia) Console.WriteLine("FALLO: LIB-06-IDIOMA - la linea de resumen de la Libreria se queda congelada en el idioma anterior");
 
-                var rotuloPlegar = Descendientes<TextBlock>(window)
-                    .FirstOrDefault(tb => tb.IsVisible && (tb.Text.Contains("Plegar") || tb.Text.Contains("Desplegar") || tb.Text.Contains("Collapse") || tb.Text.Contains("Expand")));
-                bool rotuloEnIngles = rotuloPlegar != null && (rotuloPlegar.Text.Contains("Collapse") || rotuloPlegar.Text.Contains("Expand"));
-                Console.WriteLine($"LIB-06-IDIOMA: rotulo de plegar/desplegar de la cabecera de Libreria con la app en ingles = '{rotuloPlegar?.Text ?? "(no encontrado)"}' (esperado en INGLES)");
-                if (!rotuloEnIngles) Console.WriteLine("FALLO: LIB-06-IDIOMA - el rotulo Plegar/Desplegar de la Libreria sigue en español con la app en ingles");
+                // El rotulo se busca por el COMANDO real del boton de la cabecera, no por su texto:
+                // buscarlo por texto obligaba a acertar con el idioma de antemano y, si el panel no
+                // estaba renderizado por lo que fuera, el bloque no sabia distinguir "esta en
+                // español" de "no hay ningun rotulo" (paso de verdad en una ejecucion con otros
+                // arneses tocando la misma sesion: dio "(no encontrado)" y lo conto como si el
+                // texto estuviera sin traducir). Antes de mirar se vuelve a forzar el estado que
+                // hace falta - pestaña Personaje/Objetos con la Libreria desplegada.
+                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.IsLibraryCollapsed = false;
+                DoEvents(); DoEvents();
+                var botonPlegar = Descendientes<Button>(window)
+                    .FirstOrDefault(b => b.IsVisible && ReferenceEquals(b.Command, vm.ToggleLibraryCollapsedCommand));
+                var rotuloPlegar = botonPlegar == null ? null
+                    : Descendientes<TextBlock>(botonPlegar).FirstOrDefault(tb => tb.IsVisible && tb.Text.Length > 0
+                        && !tb.Text.Equals(LocalizationService.Instance["library_title"], StringComparison.Ordinal));
+                string esperadoRotulo = LocalizationService.Instance["library_collapse"];
+                Console.WriteLine($"LIB-06-IDIOMA: rotulo de plegar/desplegar de la cabecera de Libreria con la app en ingles = '{rotuloPlegar?.Text ?? "(no encontrado)"}' (esperado '{esperadoRotulo}')");
+                if (botonPlegar == null || rotuloPlegar == null)
+                    Console.WriteLine("FALLO: LIB-06-IDIOMA - no se encontro el boton real de plegar/desplegar de la Libreria en el arbol visual");
+                else if (!rotuloPlegar.Text.Equals(esperadoRotulo, StringComparison.Ordinal))
+                    Console.WriteLine($"FALLO: LIB-06-IDIOMA - el rotulo de plegar/desplegar dice '{rotuloPlegar.Text}' y el diccionario activo dice '{esperadoRotulo}' (texto fijo sin traducir)");
                 vm.Settings.Language = "es";
                 DoEvents();
 
