@@ -57,6 +57,19 @@ public partial class ItemSlotViewModel : ObservableObject
     // de EquipmentGroupViewModel.AddSlotSet).
     public bool IsExpertAccessorySlot { get; }
     public bool IsMasterAccessorySlot { get; }
+    // OBJ-05 (oleada de pruebas de Objetos, 6-sep-2026) - BUG REAL medido con un round-trip de
+    // verdad sobre una copia de un personaje real: el byte de favorito NO existe en todos los
+    // contenedores del .plr. `PlrContainerSpec.FavFlagMinVersion` es el dato real (0 = ese
+    // contenedor nunca lo lleva; 145/269/322 = solo desde esa version) y viene confirmado contra
+    // el juego: `Player.cs:55497-55499` (Terraria 1.4.5.8 decompilado) escribe el banco con
+    // type+stack+prefix y NADA MAS. O sea que Banco/Caja fuerte/Fragua/Mascotas/Tintes de
+    // montura NO pueden guardar un favorito, y los loadouts solo desde la version 322.
+    //
+    // La app, en cambio, ofrecia la estrella en TODOS los slots por igual: el usuario la
+    // pulsaba, la veia encenderse, guardaba... y al recargar habia desaparecido, sin ningun
+    // aviso. Un cambio que se pierde en silencio es peor que uno que no se puede hacer, asi que
+    // donde el formato no lo soporta el control simplemente no se ofrece (ver MainWindow.xaml).
+    public bool SupportsFavorite { get; }
     public GameItem Item { get; private set; } = GameItem.Empty;
 
     // Auditoria de Opus, E-3: "un usuario que no conoce el juego no sabe que el slot 3 es
@@ -141,9 +154,10 @@ public partial class ItemSlotViewModel : ObservableObject
 
     public ItemSlotViewModel(CharacterFileService service, int slotIndex, string containerName, GameItem item, Action<ItemSlotViewModel>? requestPick = null, bool isEquipped = false,
         SlotKind acceptedKind = SlotKind.None, string? ghostIcon = null, bool isExpertAccessorySlot = false, bool isMasterAccessorySlot = false,
-        Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null)
+        Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null, bool supportsFavorite = true)
     {
         _service = service;
+        SupportsFavorite = supportsFavorite;
         SlotIndex = slotIndex;
         ContainerName = containerName;
         _requestPick = requestPick;
@@ -352,7 +366,10 @@ public partial class ItemSlotViewModel : ObservableObject
     [RelayCommand]
     private void ToggleFavorite()
     {
-        if (Item.IsEmpty) return;
+        // OBJ-05: red de seguridad real, no solo cosmetica - el menu contextual y el boton del
+        // panel Editar ya se esconden donde no aplica, pero un camino nuevo (un atajo, una
+        // accion en bloque) no debe poder volver a colar un favorito que el archivo va a tirar.
+        if (Item.IsEmpty || !SupportsFavorite) return;
         var before = Item.Clone();
         Item.Favorited = !Item.Favorited;
         IsFavorited = Item.Favorited;

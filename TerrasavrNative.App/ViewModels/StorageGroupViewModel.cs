@@ -20,6 +20,18 @@ namespace TerrasavrNative.App.ViewModels;
 // PRESENTACION encima, el selector decide cual de los 4 se muestra.
 public partial class StorageGroupViewModel : ObservableObject
 {
+    // OBJ-01 (oleada de pruebas de Objetos, 6-sep-2026) - BUG REAL, no una precaucion: el XAML
+    // cambia el DataContext a ESTE objeto en los dos sitios donde vive la cabecera de Almacenes
+    // (`<DockPanel DataContext="{Binding StorageGroup}">` de la pestaña propia, y el `<Border
+    // DataContext="{Binding StorageGroup}">` de la mitad derecha de Inventario en Amplio) y
+    // dentro usa `{Binding Loc[action_save_set]}` y compañia. Sin esta propiedad esos 10
+    // bindings (5 Content + 5 ToolTip) no resuelven la ruta y WPF NO avisa de nada: deja el
+    // Content en null y los 5 botones reales - "Guardar conjunto...", "Cargar...", "Añadir...",
+    // "Ordenar" y "Vaciar contenedor" - se quedan en 12px de puro padding, sin texto, en los dos
+    // idiomas y a cualquier tamaño de ventana. Mismo bloque de idioma que ya llevan
+    // ContainerViewModel/ItemSlotViewModel por el mismo motivo.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     private readonly Dictionary<int, ContainerViewModel> _byIndex = new();
 
     public ObservableCollection<EquipmentOptionViewModel> Options { get; } = [];

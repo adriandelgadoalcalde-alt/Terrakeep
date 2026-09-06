@@ -10227,3 +10227,158 @@ estadisticas de un objeto en Novedades/Libreria/slots siguen en español con la 
 marcando.
 
 No hubo ningun obstaculo que fallara dos veces seguidas sin resolverse.
+
+---
+
+## 6-sep-2026 - Objetos: la cabecera de Almacenes estaba MUDA (5 botones sin texto) y el favorito del Banco se perdia en silencio
+
+Oleada grande de pruebas sobre **Personaje -> Objetos** (Inventario, Equipamiento, Almacenes,
+Mascotas/Monturas/tintes), en 4 tamaños reales de ventana y en los dos idiomas, con datos reales.
+Cinco hallazgos, todos medidos antes de tocar nada y todos con su comprobacion permanente nueva en
+el arnes (`OBJ-01`..`OBJ-07`).
+
+### 1. Diez bindings apuntaban a una propiedad que no existe - y WPF no dice NADA
+
+El hallazgo mas grave, y llevaba desde la ronda de idioma del 6-sep sin que nadie lo viera. Esa
+ronda sustituyo los literales del XAML por `{Binding Loc[clave]}`, pero en los TRES sitios donde el
+propio XAML **cambia el DataContext local** (`DataContext="{Binding EquipmentGroup}"` en la cabecera
+de Equipamiento, `"{Binding StorageGroup}"` en la pestaña Almacenes y en la mitad derecha de
+Inventario en Amplio) ese `Loc` deja de resolverse contra `MainViewModel` y pasa a buscarse en el
+ViewModel del selector - que no lo tenia.
+
+Un binding cuya ruta no existe **no da ningun error visible en WPF**: deja la propiedad destino en
+su valor por defecto y la app sigue como si nada. El resultado real, medido:
+
+| donde | que se perdia | medido |
+|---|---|---|
+| pestaña "Almacenes" | los 5 botones ("Guardar conjunto...", "Cargar...", "Añadir...", "Ordenar", "Vaciar contenedor") | **12px de puro padding cada uno, sin texto** |
+| "Inventario" en Amplio, mitad derecha | los mismos 5 botones del almacen | idem |
+| cabecera de Equipamiento | "Loadout:", "Vista:" y **"Defensa total:"** | 3 etiquetas vacias |
+
+O sea: **no habia ninguna forma de guardar, cargar, añadir, ordenar ni vaciar un conjunto del
+Banco/Caja fuerte/Fragua/Boveda desde ningun tamaño de ventana ni idioma**, y el numero de defensa
+salia suelto en pantalla (un "51" a pelo, visible en `equipamiento-fusionado.png`) sin decir de que
+era. Es la misma familia de fallo silencioso que "ItemCountLabel no existia" (Exploracion, ronda
+anterior), y ninguna comprobacion de idioma podia verlo: el barrido de idioma busca texto en el
+idioma equivocado o claves sin traducir, **no texto AUSENTE**.
+
+Arreglo: `public Services.LocalizationService Loc => ...Instance;` en `StorageGroupViewModel` y
+`EquipmentGroupViewModel`, el mismo bloque que ya llevaban `ContainerViewModel`/`ItemSlotViewModel`
+por este motivo exacto.
+
+**`OBJ-01` es el detector permanente y es lo que de verdad cierra el agujero**: recorre el arbol
+visual de la zona de Objetos y le pregunta a WPF, expresion por expresion, si la ruta se resolvio
+(`BindingExpressionBase.Status == PathError`), en 3 sub-paneles x 4 tamaños x 2 idiomas. Mira
+tambien los `<Run>` de dentro de cada `TextBlock` (son `FrameworkContentElement`, no cuelgan del
+arbol visual y `Descendientes<T>` jamas los ve) - sin eso se escapaba justo "Defensa total:".
+`OBJ-02` mide la consecuencia en pantalla (botones visibles con el texto vacio) y `OBJ-03` las 3
+etiquetas de Equipamiento contra el diccionario real, no contra un literal en español.
+
+Antes: 10 bindings rotos + 5 botones de 12px + 3 etiquetas vacias. Despues: **0 / 0 / 0** en las 22
+combinaciones medidas. Ademas, `DataContextLocalTieneLocTests` (nuevo, 9 casos) lee el XAML REAL,
+extrae cada `DataContext="{Binding X}"` y comprueba por reflexion que ese tipo expone `Loc` - lo que
+hay que impedir que vuelva no es que un VM concreto tenga la propiedad, es que un DataContext local
+NUEVO se quede sin ella y nadie se entere hasta que un usuario reporte "no salen los botones".
+
+### 2. El favorito del Banco se veia encendido, se guardaba... y desaparecia
+
+Salio del round-trip real nuevo (`ObjetosRoundTripPersonajeRealTests`, sobre una COPIA de un
+personaje real de este PC, ~100KB con `.tplr` de Calamity al lado): se marca la estrella en el
+Banco, se guarda, se relee con `TerrasavrNative.Core` sin pasar por la UI... y el favorito no esta.
+
+**No es un bug del guardado: el byte de favorito NO EXISTE en ese contenedor.**
+`PlrContainerSpec.BankOrSafe.FavFlagMinVersion == 0`, y viene confirmado contra el juego real:
+`Player.cs:55497-55499` (Terraria 1.4.5.8 decompilado) escribe el banco con `type`+`stack`+`prefix`
+y **nada mas**. Lo mismo pasa con Caja fuerte, Fragua, Mascotas/Monturas y Tintes de montura; los
+loadouts solo lo llevan desde la version 322 del `.plr` (un personaje de version 279, como los
+reales de este PC, tampoco).
+
+El bug real es de la app, no del formato: **ofrecia la estrella en los cuatro sitios por igual**
+(boton del panel Editar, menu contextual del slot, y la tecla `F`), el usuario la encendia, la veia
+marcada y guardaba - y el cambio se perdia sin ningun aviso. Un cambio que se pierde en silencio es
+peor que uno que no se puede hacer.
+
+Arreglo (`OBJ-05`): `ItemSlotViewModel.SupportsFavorite`, calculado con el **mismo**
+`PlrContainerSpec` que usa `PlrBodySerializer` al leer y escribir (nunca una tabla nueva paralela
+que pudiera desincronizarse) mas la version real del personaje cargado. Donde el formato no lo
+soporta, el boton y la opcion del menu no se ofrecen, y `ToggleFavorite` no hace nada aunque se
+llegue por otro camino (la tecla `F` sigue existiendo) - red de seguridad real, no solo esconder el
+control.
+
+### 3. Al arreglar (1), las pildoras de almacen empezaron a cortarse
+
+Efecto secundario real de dar texto a los 5 botones, encontrado por el barrido `AR-LAY` (bloque de
+otro agente de esta misma oleada, medicion independiente): a **1520x864** - el primer ancho de
+`Amplio`, o sea el reparto mas apretado de los dos - los botones se llevaban lo suyo y a las 4
+pildoras les quedaban **114px medidos**, cuando "Fragua del Defensor (15/40)" pide 137: **45,3px
+cortados**, y "Bóveda del Vacío (0/40)" otros 25,5. Antes de esta oleada no pasaba solo porque los
+botones estaban MUDOS - o sea, el hueco lo daba otro bug.
+
+Un `WrapPanel` envuelve entre hijos pero **nunca encoge un hijo que no cabe**: si a la pildora no le
+dan su ancho, se corta y punto. Arreglado apilandolos (`DockPanel.Dock="Top"` en vez de `"Right"`):
+los dos bloques reciben el ancho entero y ninguno puede cortarse. Verificado por partida doble -
+`OBJ-07` (nuevo: 344 pildoras medidas de 1080 a 1920 de 20 en 20px, en los dos idiomas, 0 cortadas)
+y el propio `AR-LAY`, que **bajo de 69 a 52 firmas** de contenido perdido y ya no nombra ninguna de
+las dos pildoras.
+
+`OBJ-07` tuvo que aprender dos lecciones ya documentadas antes de medir de verdad: (a) un `Button`
+con `Content` string crea un `TextBlock` cuyo `DataContext` ES el string, no el
+`EquipmentOptionViewModel` - el primer intento midio **0 pildoras** y dio un "0 cortadas" que no
+demostraba nada; (b) aqui quien recorta es un ANCESTRO, asi que `TextoRecortado()` (caja contra
+texto) da false y hace falta `RectVisible` - misma leccion de `AR-11c`/`AR-15`.
+
+### 4. Una expectativa del arnes llevaba meses mintiendo
+
+`Calamity armadura en slot cabeza: AcceptsItem(20000243)=False (esperado True)` salia en CADA
+ejecucion. No era un bug: el indice 243 de `catalog.json` es `AerospecBreastplate`, `equipSlot`
+**"Body"** - un PETO. Desde `H3-11` (que empezo a mirar de que PARTE es cada pieza, no solo "es
+armadura") el slot de cabeza lo rechaza con toda la razon, y el "esperado True" se quedo obsoleto.
+Una expectativa que da un falso positivo permanente es tan dañina como no comprobar nada: lo primero
+que hace es enseñar a ignorar la linea. Sustituido por `OBJ-06`, la matriz **3x3 completa** del set
+Aerospec real (casco 244 / peto 243 / grebas 249 + un accesorio) contra los 3 huecos: cada pieza
+entra SOLO en el suyo, 14 comprobaciones, todas en verde.
+
+### 5. Lo que se comprobo y estaba bien de por si
+
+- **Round-trip real** sobre copia de personaje real: se edita un slot de cada uno de los 5
+  contenedores (Inventario[49], Banco[0], casco del conjunto puesto, Montura, Moneda de platino),
+  se guarda y se relee con Core - los 5 cambios estan donde tienen que estar y **ningun otro slot
+  de ningun otro contenedor cambia** (Inventario/Banco/Caja fuerte/Fragua/Boveda/Mascotas/Tintes/
+  Monedas/Municion + los 4 conjuntos x 3 vistas, comparados campo a campo). Unica excepcion,
+  documentada a proposito: un slot vacio en los dos lados puede cambiar su `Count` residual - los
+  "slots fantasma" que `PlrItemSlot.Read` conserva a proposito, la capa App los normaliza a
+  `GameItem.Empty`. Inocuo de verdad: el juego ignora `stack` en cuanto `type==0`.
+- Restriccion de tipo por slot (cabeza/cuerpo/piernas/accesorio/montura/mascota/gancho/vagoneta/
+  tinte/moneda/municion), vanilla Y Calamity: correcta en las 14 combinaciones de `OBJ-06` y en las
+  ya existentes.
+- Los 3 conjuntos de Equipamiento (el cambio de 4 a 3 de la ronda anterior) siguen bien:
+  `[1 ●, 2, 3]`, `ActiveLoadout=0`, y pulsar "1 ●"/"3" edita el contenedor 0/3 real.
+- `AR-14` (accesorios contra Monedas/Municion) sigue en **0 celdas cortadas** en los 17 anchos que
+  barre, tras todos estos cambios.
+- Ctrl+C/Ctrl+V, Supr, flechas y foco de teclado sobre los slots: sin cambios, en verde.
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core **420**, ViewModels **408** (+9 `DataContextLocalTieneLocTests`, +1
+  `ObjetosRoundTripPersonajeRealTests`), 0 fallos.
+- Arnes de UI Automation: ejecucion completa hasta `DONE`, con `OBJ-01`..`OBJ-07` **todos en
+  verde**. El unico `FALLO` que queda es `AR-LAY` (barrido global de otro agente de esta oleada,
+  52 firmas repartidas por Libreria/Exploracion/cabecera global/Desbloqueos - ninguna ya de
+  Objetos).
+
+### Obstaculos reales de esta ronda (autonomia tecnica)
+
+- **El arnes no cierra su proceso al terminar**: cada ejecucion deja un `TerrasavrNative.App.Tests`
+  vivo que bloquea la carpeta de salida de la SIGUIENTE compilacion (`MSB3021`/`MSB3027`), y con
+  varios agentes en paralelo se acumulan de tres en tres. Solucion usada: matar
+  `TerrasavrNative.App.Tests` antes de cada build y usar una `BaseOutputPath` distinta por
+  ejecucion.
+- Con 6 agentes escribiendo el mismo arbol a la vez, `dotnet build` es una loteria: varias veces
+  fallo por ficheros ajenos a medio escribir (`MainWindow.xaml` con una etiqueta sin cerrar,
+  `Program.cs` llamando a un metodo que aun no existia). Solucion: reintentar con espera en vez de
+  investigar un error que no es propio. Y el commit `310837fa` de otro agente se llevo por delante
+  el arreglo `OBJ-05` del XAML de esta ronda (estaba en el mismo fichero) - queda escrito aqui para
+  que se sepa donde vive de verdad ese cambio.
+
+No hubo ningun obstaculo que fallara dos veces seguidas sin resolverse.

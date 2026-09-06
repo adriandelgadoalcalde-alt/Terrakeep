@@ -91,6 +91,16 @@ public enum EquipmentKind { Items = 0, Social = 1, Dyes = 2 }
 // MergedContainers.
 public partial class EquipmentGroupViewModel : ObservableObject
 {
+    // OBJ-01 (oleada de pruebas de Objetos, 6-sep-2026) - BUG REAL, mismo mecanismo que el de
+    // StorageGroupViewModel: el selector de la cabecera de Equipamiento vive dentro de un
+    // `<StackPanel DataContext="{Binding EquipmentGroup}">` (MainWindow.xaml) y ahi dentro
+    // `{Binding Loc[char_loadout_label]}` / `Loc[char_view_label]` / `Loc[char_total_defense]`
+    // se resuelven contra ESTE objeto, no contra MainViewModel. Sin esta propiedad las tres
+    // etiquetas salian VACIAS sin ningun error visible: las pildoras "1 ● 2 3" y "Armadura/
+    // Vanidad/Tintes" sin rotulo, y - lo mas confuso - el numero de defensa suelto en pantalla
+    // (un "51" a pelo, capturado real) sin decir de que es.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     private readonly CharacterFileService _service;
     private readonly Dictionary<(int Loadout, EquipmentKind Kind), ContainerViewModel> _byKey = new();
 
@@ -181,11 +191,19 @@ public partial class EquipmentGroupViewModel : ObservableObject
         }
     }
 
+    // OBJ-05 (oleada de pruebas de Objetos, 6-sep-2026): ver ItemSlotViewModel.SupportsFavorite -
+    // los slots de loadout solo llevan byte de favorito desde la version 322 del .plr. true por
+    // defecto para no cambiar el comportamiento de los tests headless que ya construyen esta
+    // clase a mano; MainViewModel pasa siempre el valor real del personaje cargado.
+    private readonly bool _supportsFavorite;
+
     public EquipmentGroupViewModel(CharacterFileService service, Action<ItemSlotViewModel> requestPickForSlot,
         Dictionary<string, GameItem[]> mergedContainers, int realLoadoutCount,
-        Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null, int currentLoadout = 0)
+        Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null, int currentLoadout = 0,
+        bool supportsFavorite = true)
     {
         _service = service;
+        _supportsFavorite = supportsFavorite;
         var loc = LocalizationService.Instance;
 
         // HALLAZGO REAL (6-sep-2026, queja del usuario "en Terraria hay 3 conjuntos, aqui salen 4
@@ -390,7 +408,8 @@ public partial class EquipmentGroupViewModel : ObservableObject
             bool isExpert = kind == EquipmentKind.Items && i == 8;
             bool isMaster = kind == EquipmentKind.Items && i == 9;
             slots.Add(new ItemSlotViewModel(service, i, displayName, items[i], requestPickForSlot, isEquipped: true,
-                acceptedKind: slotKind, ghostIcon: ghost, isExpertAccessorySlot: isExpert, isMasterAccessorySlot: isMaster, onItemChanged: onItemChanged));
+                acceptedKind: slotKind, ghostIcon: ghost, isExpertAccessorySlot: isExpert, isMasterAccessorySlot: isMaster, onItemChanged: onItemChanged,
+                supportsFavorite: _supportsFavorite));
         }
         string key = kind switch
         {

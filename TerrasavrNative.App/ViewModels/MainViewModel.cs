@@ -1366,7 +1366,11 @@ public partial class MainViewModel : ObservableObject
         // CurrentLoadout es imprescindible aqui, no un extra: dice cual de los 3 conjuntos vive en
         // PrimaryLoadout y cual de los Loadouts[] es el hueco vacio del swap (ver el bloque de
         // comentario del constructor de EquipmentGroupViewModel, con archivo:linea del juego real).
-        EquipmentGroup = new EquipmentGroupViewModel(_service, RequestPickForSlot, _loaded.MergedContainers, _loaded.Character.Loadouts.Length, OnSlotItemChanged, _loaded.Character.CurrentLoadout);
+        EquipmentGroup = new EquipmentGroupViewModel(_service, RequestPickForSlot, _loaded.MergedContainers, _loaded.Character.Loadouts.Length, OnSlotItemChanged, _loaded.Character.CurrentLoadout,
+            // OBJ-05: los slots de loadout solo llevan byte de favorito desde la version 322
+            // (PlrContainerSpec.LoadoutSlot, confirmado 1-sep-2026 contra el constructor P real
+            // de script.js) - en un personaje anterior la estrella no se ofrece.
+            supportsFavorite: PlrContainerSpec.LoadoutSlot.IncludesFavoriteByte(_loaded.Character.Version));
         // EquipmentGroup se RECREA entera cada carga (a diferencia de Buffs, que reutiliza la
         // misma instancia) - los slots de sus contenedores nunca pasan por AddContainer, asi
         // que se enganchan aqui, el unico sitio real donde MainViewModel ve la instancia nueva.
@@ -1656,16 +1660,38 @@ public partial class MainViewModel : ObservableObject
     // iconos fantasma reales) - null = sin restriccion/sin ghost en todos los slots (el caso
     // de siempre: Inventario/Banco/Caja fuerte/Fragua/Boveda), o un array del mismo tamaño
     // que items para fijarlo por indice (miscEquips/miscDyes/coins/ammo).
+    // OBJ-05 (oleada de pruebas de Objetos, 6-sep-2026): que contenedores pueden guardar de
+    // verdad el byte de favorito en ESTE personaje (depende del contenedor Y de su version) -
+    // dato real de PlrContainerSpec, el mismo que usa PlrBodySerializer al leer y escribir, no
+    // una tabla nueva paralela que pudiera desincronizarse. Ver el comentario completo de
+    // ItemSlotViewModel.SupportsFavorite (y Player.cs:55497-55499 del juego real).
+    private bool ContainerSupportsFavorite(string key)
+    {
+        int version = _loaded?.Character.Version ?? 0;
+        return key switch
+        {
+            "inventory" => PlrContainerSpec.Inventory.IncludesFavoriteByte(version),
+            "coins" => PlrContainerSpec.Coins.IncludesFavoriteByte(version),
+            "ammo" => PlrContainerSpec.Ammo.IncludesFavoriteByte(version),
+            "bank" or "bank2" => PlrContainerSpec.BankOrSafe.IncludesFavoriteByte(version),
+            "bank3" => PlrContainerSpec.Forge.IncludesFavoriteByte(version),
+            "bank4" => PlrContainerSpec.Void.IncludesFavoriteByte(version),
+            "miscEquips" or "miscDyes" => PlrContainerSpec.Equipment.IncludesFavoriteByte(version),
+            _ => PlrContainerSpec.LoadoutSlot.IncludesFavoriteByte(version), // loadout{n}Items/Social/Dyes
+        };
+    }
+
     private ContainerViewModel AddContainer(string key, string displayName, GameItem[] items, int columns = 10,
         SlotKind[]? slotKinds = null, string?[]? ghostIcons = null, double minCell = 40, double maxCell = 90)
     {
         var slots = new ObservableCollection<ItemSlotViewModel>();
+        bool soportaFavorito = ContainerSupportsFavorite(key);
         for (int i = 0; i < items.Length; i++)
         {
             bool isEquipped = key == "inventory" && i < HotbarSlotCount;
             var kind = slotKinds != null && i < slotKinds.Length ? slotKinds[i] : SlotKind.None;
             var ghost = ghostIcons != null && i < ghostIcons.Length ? ghostIcons[i] : null;
-            var slot = new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped, kind, ghost, onItemChanged: OnSlotItemChanged);
+            var slot = new ItemSlotViewModel(_service, i, displayName, items[i], RequestPickForSlot, isEquipped, kind, ghost, onItemChanged: OnSlotItemChanged, supportsFavorite: soportaFavorito);
             HookSlotEditing(slot);
             slots.Add(slot);
         }
