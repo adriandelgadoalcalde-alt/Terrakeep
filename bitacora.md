@@ -11364,3 +11364,100 @@ esperar al escaneo dentro del test, y con eso se habria tapado un bug real de la
   (aparece al añadir, desaparece al quitar).
 
 No hubo ningun obstaculo que fallara dos veces seguidas sin resolverse.
+
+---
+
+## 6-sep-2026 - Exploracion, segunda pasada: dificultad segun version, arrastrar y soltar, e idioma congelado
+
+Continuacion de la misma oleada (area "Exploracion del mundo"), sobre lo que el encargo pedia y la
+primera pasada no habia llegado a tocar.
+
+### 1. La dificultad ofrecia los 4 modos aunque el mundo solo admitiera dos
+
+La regla real ("los 4 modos SEGUN LA VERSION del mundo") solo vivia dentro de
+`WldWriter.PatchGameMode`, y saltaba como `NotSupportedException` cuando ya era tarde: en un mundo
+anterior a la version 209 del `.wld` el campo `GameMode` es un simple **bool** y la mitad de los
+modos ni existian en el juego (v208 -> Clasico/Maestro; 112..207 -> Clasico/Experto; <112 -> no hay
+dificultad que escribir). La interfaz ofrecia los cuatro chips en cualquier mundo, asi que se podia
+elegir "Viaje" en un mundo de 2016 y descubrirlo solo al pulsar Guardar.
+
+`WldWriter.SupportsGameMode(version, modo)` expone esa MISMA regla - y `PatchGameMode` la usa, para
+que no puedan divergir nunca. Los cuatro chips se habilitan por ella, con tooltip propio en los dos
+idiomas (`explore_gamemode_unavailable`) cuando no se puede. `WldWriterSupportsGameModeTests` (7
+pruebas) fija las cuatro franjas de version y ademas ATA las dos funciones: para cada version, lo
+que `Supports` dice que no se puede es exactamente lo que `Patch` rechaza, y lo que dice que si,
+`Patch` lo escribe.
+
+`AR-EX5` lo comprueba sobre los `RadioButton` REALES del arbol visual (los mundos de esta maquina
+son formato 279: los cuatro habilitados) y de paso prueba el guardado de los **cuatro** modos, no
+solo el 1->2 que probaba `A9-11-DIFICULTAD`: cada uno se relee bien del archivo y toca **1 solo
+byte** del mundo. Detalle util para la proxima: los chips viven DENTRO del Expander "Este mundo",
+que arranca colapsado, asi que hasta desplegarlo no existen en el arbol visual - la primera version
+del bloque encontraba 0 chips y lo cantaba como fallo.
+
+### 2. Arrastrar y soltar, y exportar el mapa con resaltado (`AR-EX4`)
+
+Dos caminos reales que no probaba nadie. El gesto OLE de arrastrar no se puede sintetizar, pero el
+manejador si: se le entrega un `DataObject` de `FileDrop` de verdad, que es exactamente lo que le
+llega del sistema (`DragEventArgs` no tiene ningun constructor publico - se construye por reflexion
+rellenando cada parametro por su TIPO, sin depender de cuantos sean ni de su orden). Los tres casos
+que existen, los tres correctos:
+
+| se suelta | resultado medido |
+|---|---|
+| `roca_negra.wld` | mundo cargado y la app salta sola a Exploracion (pestaña 4) |
+| un `.txt` cualquiera | no pasa NADA: ni carga, ni cambia de pestaña, ni error |
+| un `.wld` truncado a la mitad | "Error al leer el mundo: ...", `IsWorldLoaded=False` y **0 filas de cofre** del mundo anterior colgando (la rama de fallo del arreglo de la primera pasada, verificada por el camino real) |
+
+Y exportar a PNG **con el resaltado encendido**: `F-12` solo probaba el mapa desnudo, la rama que
+COMPONE las dos capas (`DrawingVisual` + `RenderTargetBitmap`) no la habia ejecutado ninguna prueba.
+Sale un PNG de 8400x2400 real, 7,2 MB.
+
+### 3. El mismo reparto vertical, en INGLES (`AR-EX4-IDIOMA`)
+
+El arreglo de la primera pasada, medido tambien con la app en ingles a los tres tamaños que mas
+aprietan: 214px / 182px / 182px de contenido de categoria, ni un caso por debajo del suelo de 120.
+Los textos mas largos del ingles no vuelven a empujar a la categoria fuera de la columna.
+
+### 4. Los textos de la franja de estado no se traducian al vuelo (aviso del agente de Inicio)
+
+El agente de Inicio/Ajustes aviso de que `ExplorationViewModel.ScanMessage` parecia tener el mismo
+bug que el acababa de arreglar en `HomeViewModel`. Comprobado: lo tenia, **y en cuatro sitios**:
+
+- `StatusMessage` - la franja bajo el mapa, SIEMPRE visible con un mundo cargado.
+- `ScanMessage` - el aviso del lanzador de mundos (lo primero que ve quien no tenga Terraria en la
+  ruta habitual), que ademas unia las carpetas con un separador que TAMBIEN es texto traducido
+  (" ni en " / " nor in ") y quedaba congelado DENTRO del argumento.
+- `WorldGameModeText` y `WorldGameModeSaveStatus` - la dificultad del mundo y el resultado de
+  guardarla.
+
+Todos guardaban el texto YA RESUELTO, asi que se quedaban en el idioma que hubiera en ese instante.
+Mismo patron que el arreglo de Inicio: clave + argumentos, texto compuesto al leer, y suscripcion
+DEBIL a `LocalizationService` con un metodo de instancia (nunca una lambda). Sin setter publico a
+proposito - aceptar un string ya resuelto es justo lo que reintroduciria el bug -, asi que
+`MainViewModel` pasa a llamar a `SetStatusMessage(clave)`. `ExplorationIdiomaEnVivoTests` (3
+pruebas) compara contra el DICCIONARIO, nunca contra frases escritas a mano, y comprueba tambien
+que el `PropertyChanged` llega de verdad (sin el, el texto estaria bien calculado y aun asi no se
+reescribiria en pantalla - que es como se ve el bug desde fuera).
+
+Quedan a proposito fuera del arreglo los textos de hover (`HoverLayerText`/`HoverDepthText`...):
+se recomponen enteros en cada movimiento del raton sobre el mapa, no son texto persistente.
+
+### Verificacion real
+
+- `dotnet build` de la solucion: **0 errores / 0 avisos**.
+- `dotnet test`: Core **441/441**, ViewModels **438/438**.
+- Arnes de UI Automation: **0 lineas `FALLO` propias** en la ultima ejecucion completa (el unico
+  `FALLO` que queda, `T-H/F2` del foco de teclado, es de otra area y del tipo intermitente que ya
+  documenta esta bitacora: depende del foco real de la maquina, que aqui es un recurso compartido).
+
+### Nota para la proxima ronda (medido, no arreglado a proposito)
+
+`AR-11f` (que la columna de Exploracion NO scrollee al tamaño por defecto) salio en `FALLO` en UNA
+de las cinco ejecuciones, por **3px**: el viewport real de esa columna varia entre ejecuciones
+(630 / 611 / 601 / 597px medidos) porque depende del alto de la franja superior, que cambia con su
+contenido, y el `MinHeight=600` del `DockPanel` quedo fijado contra un viewport de 626px. No se
+toca aqui por dos motivos: ese numero lo midio deliberadamente otra ronda (`AR-11f`, con 640
+aparecia por 14px) y el sintoma es solo que aparece la barra de scroll - la red de seguridad
+haciendo su trabajo, sin perder contenido. Si vuelve a salir, el arreglo natural es bajar ese
+suelo a ~570.
