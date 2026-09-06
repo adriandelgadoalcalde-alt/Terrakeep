@@ -111,9 +111,12 @@ public sealed class ObjetosTooltipStatsTests
         var vm = ConPersonajeCargado();
         var slot = vm.InventoryContainer!.Slots[0];
         // Id 4 ("Espada larga de hierro") a proposito: best_prefix.json le da 81 (Legendary
-        // real). Ojo con elegir otro id al mantener esta prueba - esa tabla solo cubre 145 de
-        // los 571 objetos vanilla con daño (medido), y en los otros 426 PlaceItem no aplica
-        // ningun prefijo porque no hay ninguno que sugerir (ver la bitacora del 6-sep-2026).
+        // real). Ojo con elegir otro id al mantener esta prueba: hay objetos reales que NO
+        // pueden llevar prefijo (bloques, accesorios de vanidad, los de la lista negra
+        // ItemID.Sets.CanGetPrefixes) y ahi PlaceItem no aplica ninguno, correctamente. Desde
+        // el 6-sep-2026 la tabla la genera `scripts/generar-mejor-prefijo.py` con la formula
+        // real del juego y cubre 948 objetos vanilla - antes 243, que es el hueco que la
+        // oleada de QA de Objetos dejo medido ("145 de los 571 objetos con daño").
         slot.PlaceItem(4);
 
         // PlaceItem ya aplica el MEJOR prefijo automaticamente (pedido explicito 1-sep-2026),

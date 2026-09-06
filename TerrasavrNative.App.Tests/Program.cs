@@ -6372,6 +6372,13 @@ internal static partial class Program
         // elegida, avisos naranjas visibles), que es justo el punto ciego de AR-LAY.
         PruebasPersonajeBuffsAparienciaVersion(vm, window);
 
+        // MP-* (6-sep-2026): "Mejor prefijo" y prefijo automatico sobre objetos que ANTES no
+        // tenian cobertura en calamity/best_prefix.json - el cuerpo real vive en
+        // PruebasMejorPrefijo.cs, otra parte de esta misma clase. Va detras de los bloques de
+        // Objetos a proposito: coloca y quita armas en el hueco 0 del Inventario (y lo deja
+        // como estaba), asi que no debe correr antes que OBJ-*.
+        PruebasMejorPrefijo(vm, window);
+
         // Oleada del 6-sep-2026, area "Inicio, Ajustes, Novedades, Acerca de" - el cuerpo real
         // vive en PruebasInicioAjustes.cs, otra parte de esta misma clase (ver el comentario de
         // `partial` arriba). Va al final a proposito: manipula carpetas adicionales, idioma y

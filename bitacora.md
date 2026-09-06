@@ -11537,3 +11537,140 @@ Comprobado por diferencial real: esperando a que NO haya ningun otro arnes vivo,
 buena una tanda, comprobar que no hay otro `TerrasavrNative.App.Tests` en marcha - y matar los
 PROPIOS que hayan quedado colgados de un intento anterior, filtrando por la ruta de la carpeta de
 salida de la sesion para no tocar los de otro agente ni el `Terrakeep.exe` real del usuario.
+
+---
+
+## 6-sep-2026 — "Mejor prefijo": el generador perdido, reconstruido desde la fórmula real del juego (243 → 948 objetos vanilla)
+
+Cierra el hallazgo que la oleada de QA de **Personaje → Objetos** dejó medido y sin tocar:
+
+> "El 'mejor prefijo automático' solo cubre 145 de los 571 objetos vanilla con daño y 55 de
+> 259 accesorios. No es un bug de código: es cobertura de `best_prefix.json`, y el arreglo
+> honesto es ampliar su generador, no inventar aquí una regla paralela."
+
+### 1. De dónde salía de verdad el criterio (lo primero que había que averiguar)
+
+No hay ningún `scripts/generar-mejor-prefijo*` en este repo ni en el proyecto hermano: **el
+generador se había perdido** (se ejecutó una vez en una sesión antigua y la tabla se copió ya
+hecha, tal como dice la bitácora de la Fase 3: *"996 de Calamity, ya generado y verificado en
+Terrasavr-Calamity-Beta"*). Lo que sí quedó escrito es **qué hacía**, en el comentario largo
+sobre `calamityBestPrefixIdFor` de `local-site/overrides.js` del proyecto hermano:
+
+> "Data computed OFFLINE (not at runtime) from Terraria's own decompiled prefix logic —
+> `Item.GetRollablePrefixes()` / `TryGetPrefixStatMultipliersForItem()` … the same 'value'
+> formula the game itself uses for its own top-tier/'favorable' indicator … Vanilla coverage
+> is partial (173 of the ~300+ prefixable vanilla weapons) — **some SetDefaults assignments
+> use a form this offline extraction didn't catch (a computed expression instead of a plain
+> literal)**."
+
+O sea: es el caso **(b)**, algorítmico sobre el código real, no una tabla curada a mano. Y el
+propio comentario ya sospechaba la causa del hueco sin llegar a nombrarla.
+
+### 2. La causa raíz real del hueco (nombrada, no supuesta)
+
+`Item.SetWeaponValues(int dmg, float knockback, int bonusCritChance = 0)`. Cientos de armas
+vanilla ponen su daño y su retroceso **solo** por ese helper, nunca con un `damage = N;`
+literal — p. ej. `case 4058: DefaultToBow(17, 11f); SetWeaponValues(8, 5f);`. La extracción
+anterior solo miraba literales, así que esas armas salían con `damage = 0` y quedaban fuera.
+Otras tres formas reales de `Item.cs` provocaban lo mismo y también están resueltas ahora:
+
+- `SetDefaults3(2772); type = 3462;` — objetos que **copian entero** otro id (2777..2786,
+  3462..3466 salían sin ninguna estadística).
+- `if (Variant == ItemVariants.StrongerVariant) { damage = 42; … }` — las stats de una
+  variante opcional **pisaban** las base (caso real id 5147, `damage = 15` de verdad).
+- `switch (type)` anidado que hereda del bloque padre — los yoyos 3278..3292 ponen
+  `useAnimation = 25;` en el bloque común y solo `damage`/`knockBack` dentro; 3315..3317
+  salían sin `useAnimation`.
+
+### 3. La fórmula real que se usa ahora (escrita, no inferida)
+
+`scripts/generar-mejor-prefijo.py`, desde `tModLoader-Decompiled\TerrariaVanilla\Terraria\`
+(Terraria **1.4.5.8**, no `tModLoader\` 1.4.4.9 — es a propósito: 1.4.5.8 separó
+`PrefixesForMagic` de `PrefixesForSummons` y añadió los prefijos 85..97, los únicos que
+existen para armas de invocación; la tabla anterior ya los usaba, así que esa elección ya
+estaba tomada, aquí solo queda documentada):
+
+```
+value = dmg · (2−spd) · (2−mcst) · size · kb · shtspd
+        · (1 + crt·0.02) · (1 + arpen·0.015) · (1 + tagdmg·0.03)
+        × 1.05 / 1.10 / 1.15 / 1.20  según el grupo de prefijo de accesorio
+descartado (el prefijo NO es legal en ESE objeto) si:
+   dmg ≠1 y round(damage·dmg)==damage        │  mcst ≠1 y round(mana·mcst)==mana
+   spd ≠1 y round(useAnimation·spd)==useAnim │  kb   ≠1 y knockBack==0
+```
+
+Es literalmente `Item.TryGetPrefixStatMultipliersForItem` + `Item.BestPrefixValue()` (el
+máximo sobre `Item.GetRollablePrefixes()`, replicado 1:1 contra `PrefixLegacy.cs` y
+`ItemID.Sets.CanGetPrefixes`). **Desempate** (el juego no lo define, solo se queda con el
+máximo): accesorios → Menacing si está entre los empatados (criterio ya establecido en el
+proyecto); si no → mayor dmg, mayor crt, mayor arpen+tagdmg, menor spd, id más bajo.
+
+### 4. Verificado a mano contra la wiki oficial ANTES de generar la tabla entera
+
+| objeto | calculado | wiki (terraria.wiki.gg), cita literal |
+|---|---|---|
+| Excalibur (368) | 81 Legendary | "Its best modifier is **Legendary**." |
+| Minitiburón (98) | 60 Demonic | "best modifier is **Demonic**, as it does not have any knockback and thus cannot get modifiers that affect it" |
+| Arco de madera (39) | 60 Demonic | mismo motivo, retroceso 0 real |
+| Varita de nimbo (1244) | 60 Demonic | "**Demonic** because it cannot get modifiers that affect knockback" |
+| Báculo de cuchillas (4758) | 95 Eager | "the **Eager** modifier **is recognized in-game as its best modifier**" |
+| Pistola de monedas (905) | 17 Rapid | "**Rapid** and Hasty **are recognized in-game as its 'best' modifier** due to them increasing the item's value by the most" |
+
+Los dos últimos son la confirmación fuerte: la wiki distingue ahí entre "el mejor para jugar"
+y el que **el propio juego** considera mejor, y esta tabla implementa el segundo — que es
+justo lo que hace el botón. No es una opinión copiada de ningún sitio.
+
+### 5. Cobertura real, antes y después
+
+| | antes | ahora |
+|---|---|---|
+| vanilla | **243** | **948** |
+| Calamity | **996** | **1019** |
+
+De las 243 vanilla previas: **220 salen idénticas**, 7 cambian y 16 se retiran.
+
+- **Las 7 que cambian** pasan todas a Demonic (60): 39, 98, 99, 5282 (armas a distancia),
+  1244, 1256 (varitas) y 5147. Todas tienen `knockBack == 0` real, y el juego descarta ahí
+  Legendary/Unreal/Mythical/Godly por el cuarto filtro. El generador viejo **no aplicaba ese
+  filtro**; la wiki confirma Demonic en los tres que se comprobaron uno a uno. No es una
+  regresión: es que estaban mal.
+- **Las 16 que se retiran** son 15 accesorios de **vanidad** (Monolito de la luna sangrienta,
+  Cursor arcoíris, Bandana de Chippy…) y 1 de la lista negra `ItemID.Sets.CanGetPrefixes`
+  (Muñeco vudú del sastre). `Item.IsAPrefixableAccessory()` = `accessory && !vanity &&
+  CanGetPrefixes[type]`: en el juego real **no admiten prefijo ninguno**, así que ofrecerles
+  el botón era prometer algo que el archivo no puede guardar.
+- **Calamity: las 996 se conservan sin tocar ni una** (comprobado entrada por entrada). Solo
+  se añaden 23: las 17 alas (`Accessories/Wings`, derivan de `BaseWings`), `StatMeter` y 5
+  armas que usan `Item.CloneDefaults(<id vanilla>)`. Las 10 armas de tipo de daño híbrido o
+  sin clase (`AverageDamageClass`, `AllClassDamageClass`, `MeleeRangedHybrid`, `Typeless`) se
+  siguen dejando fuera **a propósito**: no tienen un pool real unívoco y adivinarlo sería
+  inventar. El script las lista por nombre cada vez que se ejecuta.
+
+### 6. Verificación real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core **441/441**, ViewModels **438/438**, 0 fallos.
+- Arnés `TerrasavrNative.App.Tests`, bloque **MP-\*** nuevo (fichero propio
+  `PruebasMejorPrefijo.cs`, clase parcial de `Program`, una sola línea de huella en
+  `Program.cs`): 22 comprobaciones por el camino real de la app (colocar en el hueco 0 del
+  Inventario y leer `PrefixDisplay` / `HasBestPrefixSuggestion`), **todas en verde**:
+  - MP-01: los 9 casos verificados contra la wiki, con el prefijo esperado.
+  - MP-02: los 6 objetos que **antes no tenían cobertura** (Excalibur, Semillera, Espada
+    Terra, La espada del Jinete, Terrariano, Báculo de cuchillas) ahora reciben su prefijo al
+    colocarlos, y el botón ★ queda apagado porque ya no hay nada mejor que sugerir.
+  - MP-03: quitarle el prefijo a Excalibur vuelve a ofrecer el botón, y pulsarlo lo repone.
+  - MP-04: los 3 objetos retirados (2 de vanidad + 1 de la lista negra) no reciben prefijo ni
+    ofrecen botón, que es lo correcto.
+  - MP-05: Calamity, un accesorio ya cubierto (Abaddon) sigue igual y unas alas nuevas
+    (Alas Elíseas) ya reciben Amenazante.
+  - Los dos `FALLO` que quedan en esa ejecución (`OBJ-STATS-IDIOMA`, `T-H/F2`) son de otras
+    áreas y de esta misma oleada en paralelo, no de aquí.
+- El script es **idempotente**: ejecutarlo dos veces seguidas no cambia ni un byte.
+
+### Obstáculo del entorno, para la próxima
+
+`dotnet build TerrasavrNative.App.Tests` falla con `MSB3027`/`MSB3021` ("Terrakeep.dll está
+bloqueado por TerrasavrNative.App.Tests (PID)") mientras otro agente tiene el arnés corriendo
+— nada que ver con el código. Dos salidas, las dos usadas aquí: `dotnet build … -t:CoreCompile`
+compila y valida la sintaxis sin llegar a copiar el DLL (sirve para no quedarse parado), y
+reintentar el build completo cada 45s hasta que el otro arnés termina.
