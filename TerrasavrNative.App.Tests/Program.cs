@@ -2335,8 +2335,19 @@ internal static partial class Program
                         {
                             if (!tb.IsVisible || !etiquetas.Contains(tb.Text)) continue;
                             medidas++;
-                            if (!TextoRecortado(tb)) continue;
-                            cortadas.Add($"[{idioma}] {w:0}x864 '{tb.Text}' caja={tb.ActualWidth:0}px necesita={AnchoNaturalDelTexto(tb):0}px");
+                            // Los DOS mecanismos de corte, porque son distintos y aqui manda el
+                            // segundo (leccion ya documentada en AR-11c/AR-15): (1) la caja del
+                            // propio TextBlock es mas estrecha que su texto; (2) la caja es
+                            // suficiente pero un ANCESTRO recorta - y entonces el TextBlock sigue
+                            // diciendo que mide su ancho entero y TextoRecortado() da false. El
+                            // caso real medido a 1520x864 era exactamente el (2): caja de 137px
+                            // completa, de la que solo se pintaban 91.
+                            double visible = RectVisible(tb, window).Width;
+                            double necesita = AnchoNaturalDelTexto(tb);
+                            bool cortadoPorLaCaja = TextoRecortado(tb);
+                            bool cortadoPorUnAncestro = visible + 0.5 < Math.Min(necesita, tb.ActualWidth);
+                            if (!cortadoPorLaCaja && !cortadoPorUnAncestro) continue;
+                            cortadas.Add($"[{idioma}] {w:0}x864 '{tb.Text}' caja={tb.ActualWidth:0}px visible={visible:0}px necesita={necesita:0}px");
                         }
                     }
                 }
@@ -4404,6 +4415,13 @@ internal static partial class Program
                         var centroPantalla = mapaScrollEx.PointToScreen(centroViewport);
                         SetCursorPos((int)centroPantalla.X, (int)centroPantalla.Y);
                         System.Threading.Thread.Sleep(40);
+                        // Sin Synchronize(), Mouse.GetPosition NO consulta la posicion real del
+                        // cursor: devuelve la del ultimo mensaje de raton que WPF proceso, asi que
+                        // un SetCursorPos "silencioso" (sin movimiento fisico que genere
+                        // WM_MOUSEMOVE) se queda invisible para toda la capa de entrada de WPF -
+                        // medido en esta misma tanda: el punto salia siempre el mismo, muy fuera
+                        // del elemento, y las mediciones del pan y del minimapa se omitian solas.
+                        System.Windows.Input.Mouse.Synchronize();
                         DoEvents();
 
                         foreach (int delta in new[] { 120, -120, -120 })
@@ -4451,9 +4469,12 @@ internal static partial class Program
                         // app real del usuario abierta (o con otro arnes en marcha) el raton es un
                         // recurso COMPARTIDO. Lo que se comprueba es la relacion real que promete el
                         // pan: el mapa se desplaza exactamente lo que se movio el cursor.
+                        System.Windows.Input.Mouse.Synchronize(); DoEvents();
                         var posAntesPan = System.Windows.Input.Mouse.GetPosition(mapaScrollEx);
                         SetCursorPos((int)inicioPan.X - 120, (int)inicioPan.Y - 60);
-                        System.Threading.Thread.Sleep(90); DoEvents(); DoEvents(); DoEvents();
+                        System.Threading.Thread.Sleep(90);
+                        System.Windows.Input.Mouse.Synchronize();
+                        DoEvents(); DoEvents(); DoEvents();
                         var posDespuesPan = System.Windows.Input.Mouse.GetPosition(mapaScrollEx);
                         mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
                         System.Threading.Thread.Sleep(40); DoEvents(); DoEvents();
@@ -4502,7 +4523,9 @@ internal static partial class Program
                             SetForegroundWindow(hwnd);
                             DoEvents();
                             SetCursorPos((int)puntoMini.X, (int)puntoMini.Y);
-                            System.Threading.Thread.Sleep(60); DoEvents();
+                            System.Threading.Thread.Sleep(60);
+                            System.Windows.Input.Mouse.Synchronize();
+                            DoEvents();
                             var posEnMini = System.Windows.Input.Mouse.GetPosition(miniImgEx);
                             int tileClicadoX = (int)((posEnMini.X - huecoXMini) / escalaMini);
                             var handlerMini = typeof(MainWindow).GetMethod("OnMinimapClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -4511,9 +4534,14 @@ internal static partial class Program
                             WaitForDispatcher(250);
                             if (handlerMini == null)
                                 Console.WriteLine("FALLO: AR-EX2-MINIMAPA-CLIC - no se encontro OnMinimapClick (¿se renombro en MainWindow.xaml.cs?)");
-                            Console.WriteLine($"AR-EX2-MINIMAPA-CLIC: el cursor cayo de verdad sobre el tile {tileClicadoX} del minimapa (pedido {tileObjetivoX})");
-                            if (Math.Abs(tileClicadoX - tileObjetivoX) > 1 / escalaMini * 2)
-                                Console.WriteLine($"AR-EX2-MINIMAPA-CLIC: el cursor real no llego al punto pedido (raton compartido) - la medicion de abajo no es concluyente");
+                            // La comprobacion vale para CUALQUIER punto en el que el cursor haya
+                            // caido de verdad ("el mapa acaba centrado en el tile pulsado"), no solo
+                            // para el que se pidio. Lo unico que NO se puede juzgar es un punto
+                            // fuera del mundo: ahi NavigateToTile clampa a proposito, y con el raton
+                            // compartido de esta maquina (app real del usuario + otros arneses)
+                            // SetCursorPos a veces no llega - medido, y acusaba de un bug inexistente.
+                            bool clicDentroDelMundo = tileClicadoX >= 0 && tileClicadoX < bitmapMundo.PixelWidth;
+                            Console.WriteLine($"AR-EX2-MINIMAPA-CLIC: el cursor cayo de verdad sobre el tile {tileClicadoX} del minimapa (pedido {tileObjetivoX}), dentro del mundo={clicDentroDelMundo}");
                             double zoomMini = vm.Exploration.Zoom;
                             double centroXTiles = (mapaScrollEx.HorizontalOffset + mapaScrollEx.ViewportWidth / 2) / zoomMini;
                             double centroYTiles = (mapaScrollEx.VerticalOffset + mapaScrollEx.ViewportHeight / 2) / zoomMini;
@@ -4522,7 +4550,9 @@ internal static partial class Program
                             double errorMiniX = Math.Abs(centroXTiles - tileClicadoX), errorMiniY = Math.Abs(centroYTiles - tileObjetivoY);
                             Console.WriteLine($"AR-EX2-MINIMAPA-CLIC: clic sobre el tile ({tileClicadoX},{tileObjetivoY}) del minimapa -> el mapa queda centrado en ({centroXTiles:0},{centroYTiles:0}), " +
                                               $"error=({errorMiniX:0},{errorMiniY:0}) tiles (esperado <= la resolucion real de un pixel de minimapa, {1 / escalaMini:0} tiles)");
-                            if (errorMiniX > 1 / escalaMini + 20)
+                            if (!clicDentroDelMundo)
+                                Console.WriteLine("AR-EX2-MINIMAPA-CLIC: el cursor real no llego a caer dentro del minimapa (raton compartido con otra ventana de esta misma maquina) - medicion omitida, no es un fallo de la app");
+                            else if (errorMiniX > 1 / escalaMini + 20)
                                 Console.WriteLine($"FALLO: AR-EX2-MINIMAPA-CLIC - el clic en el minimapa no lleva el mapa a esa zona ({errorMiniX:0} tiles de error en X)");
                         }
 
@@ -4531,6 +4561,66 @@ internal static partial class Program
                     }
                 }
                 catch (Exception ex) { Console.WriteLine("AR-EX2-EXCEPTION: " + ex); }
+
+                // AR-EX1b (misma oleada): bug real encontrado leyendo el camino de carga y
+                // confirmado aqui con DOS mundos reales de esta maquina. LoadFromPathAsync limpia
+                // con cuidado casi todo el estado del mundo saliente y termina llamando a
+                // RebuildInventory() - pero RebuildInventory despacha por SelectedCategory, y dos
+                // lineas antes se acaba de dejar en "Todo", la unica categoria que no reconstruye
+                // ningun inventario. Resultado: "Cofre a cofre" conservaba ENTERAS las filas del
+                // mundo ANTERIOR y, con un cofre seleccionado, su marcador teal seguia pintado
+                // sobre el mapa NUEVO. Se comprueba con el gesto real del usuario (pulsar un cofre
+                // y cargar otro mundo desde el lanzador), no solo en la ViewModel.
+                try
+                {
+                    string mundoA = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld";
+                    string mundoB = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                    if (!File.Exists(mundoA) || !File.Exists(mundoB))
+                        Console.WriteLine("AR-EX1b: hacen falta dos mundos reales distintos - omitido");
+                    else
+                    {
+                        var cargaA = vm.Exploration.LoadFromPathAsync(mundoA);
+                        while (!cargaA.IsCompleted) { DoEvents(); Thread.Sleep(15); }
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                        vm.Exploration.ChestViewMode = 2;
+                        DoEvents(); DoEvents();
+                        int cofresA = vm.Exploration.ChestRows.Count;
+                        if (cofresA == 0) Console.WriteLine("AR-EX1b: el primer mundo no tiene cofres - omitido");
+                        else
+                        {
+                            var cofreElegido = vm.Exploration.ChestRows[0];
+                            vm.Exploration.GoToChestCommand.Execute(cofreElegido);
+                            DoEvents(); DoEvents();
+                            bool marcadoAntes = vm.Exploration.HasCurrentChest;
+                            int marcadorX = vm.Exploration.CurrentChestX, marcadorY = vm.Exploration.CurrentChestY;
+
+                            var cargaB = vm.Exploration.LoadFromPathAsync(mundoB);
+                            while (!cargaB.IsCompleted) { DoEvents(); Thread.Sleep(15); }
+                            DoEvents(); DoEvents();
+
+                            Console.WriteLine($"AR-EX1b: mundo A '{Path.GetFileName(mundoA)}' con {cofresA} cofres y el ({marcadorX},{marcadorY}) seleccionado (marcador puesto={marcadoAntes}) -> " +
+                                              $"tras cargar '{Path.GetFileName(mundoB)}': ChestRows={vm.Exploration.ChestRows.Count} (esperado 0), marcador={vm.Exploration.HasCurrentChest} (esperado False), " +
+                                              $"resultados de busqueda={vm.Exploration.WorldSearchResults.Count} (esperado 0)");
+                            if (!marcadoAntes)
+                                Console.WriteLine("FALLO: AR-EX1b - pulsar un cofre no dejo marcador que comprobar (regresion de C-06/AR-12d)");
+                            if (vm.Exploration.ChestRows.Count > 0)
+                                Console.WriteLine($"FALLO: AR-EX1b - tras cargar otro mundo siguen las {vm.Exploration.ChestRows.Count} filas de cofre del mundo anterior");
+                            if (vm.Exploration.HasCurrentChest)
+                                Console.WriteLine($"FALLO: AR-EX1b - tras cargar otro mundo sigue pintado el marcador del cofre ({vm.Exploration.CurrentChestX},{vm.Exploration.CurrentChestY}) del mundo anterior");
+                        }
+                        // Estado como estaba: el resto del arnes trabaja sobre roca_negra (misma
+                        // disciplina que AR-13c).
+                        if (!string.Equals(vm.Exploration.WorldTitle, "roca negra", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var vuelta = vm.Exploration.LoadFromPathAsync(mundoB);
+                            while (!vuelta.IsCompleted) { DoEvents(); Thread.Sleep(15); }
+                        }
+                        vm.Exploration.ChestViewMode = 0;
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-EX1b-EXCEPTION: " + ex); }
 
                 // AR-EX3 (misma oleada): el HOVER real (franja de estado de P-1/F-6) tile a tile
                 // sobre el mundo real, con la formula GPS del propio juego - hasta ahora solo se
@@ -6271,12 +6361,24 @@ internal static partial class Program
     private const uint KEYEVENTF_KEYUP = 0x0002;
     private const byte VK_CONTROL = 0x11;
 
+    // Oleada del 6-sep-2026 - BUG REAL DEL PROPIO ARNES: los 4 keybd_event iban seguidos SIN
+    // bombear la cola de mensajes entre medias. keybd_event solo ENCOLA; cuando WPF llega a
+    // procesar el KeyDown de la tecla, el KeyUp del Control ya puede estar encolado o incluso
+    // procesado, asi que Keyboard.Modifiers dentro del manejador NO lleva Control y el atajo no
+    // dispara. Por eso las teclas SUELTAS (PressKey: Supr, flechas) siempre han funcionado y las
+    // combinaciones con Ctrl no: H5-14 llevaba dando 3 FALLO fijos (Ctrl+C/Ctrl+V y Ctrl+1) que
+    // parecian de la app y eran del arnes. Un DoEvents() entre pulsacion y pulsacion deja que
+    // cada mensaje se procese con el estado de modificadores correcto.
     private static void PressCtrlPlus(byte vkKey)
     {
         keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
+        DoEvents();
         keybd_event(vkKey, 0, 0, UIntPtr.Zero);
+        DoEvents();
         keybd_event(vkKey, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        DoEvents();
         keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        DoEvents();
     }
 
     private static void PressKey(byte vkKey)

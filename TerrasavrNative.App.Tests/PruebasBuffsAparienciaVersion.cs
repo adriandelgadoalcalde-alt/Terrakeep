@@ -381,6 +381,103 @@ internal static partial class Program
             Console.WriteLine($"PB-11-BLOQUE: las 13 casillas tras 'Marcar todos'={todasPuestas} (esperado True), tras 'Desmarcar todos'={todasQuitadas} (esperado True)");
             if (!todasPuestas || !todasQuitadas) Console.WriteLine("FALLO: PB-11 - 'Marcar/Desmarcar todos' no alcanza las 13 casillas reales");
 
+            // ---------------------------------------------------------------------------
+            // PB-13: Ctrl+C / Ctrl+V REALES sobre la rejilla de buffs (teclado de verdad, no
+            // llamadas al ViewModel), incluido el caso de RECHAZO por duplicado - que hasta esta
+            // oleada dejaba al usuario sin ninguna explicacion de por que "no pasa nada".
+            // ---------------------------------------------------------------------------
+            vm.PersonajeInnerTabIndex = 1; // Buffs
+            FijarTamaño(window, 1400, 900);
+            DoEvents(); DoEvents();
+            var slotsPB13 = vm.Buffs.Container!.Slots;
+            foreach (var s in slotsPB13) s.ClearCommand.Execute(null);
+            slotsPB13[0].PlaceBuff(1);          // Piel de obsidiana
+            slotsPB13[0].SetDurationTicks(4321); // duracion que no coincide con ningun preset
+            DoEvents(); DoEvents();
+
+            SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(window).Handle);
+            var bordeOrigen = BordeFocusableDe(window, slotsPB13[0]);
+            var bordeLibre = BordeFocusableDe(window, slotsPB13[3]);
+            var bordeDuplicado = BordeFocusableDe(window, slotsPB13[4]);
+
+            // Prueba de control ANTES de dar por bueno ningun resultado de teclado: Ctrl+1 es un
+            // atajo global real de la app (vuelve a Inicio) y su efecto se ve en el ViewModel. Si
+            // ni siquiera eso llega, en esta sesion el teclado sintetico con modificadores NO se
+            // entrega a la ventana (RDP, ventana sin foco real de escritorio...) y CUALQUIER
+            // conclusion sobre Ctrl+C/Ctrl+V seria falsa - se dice y se mide la misma secuencia
+            // por la via de los ViewModels, que es donde vive el arreglo de esta oleada.
+            int pestañaAntes = vm.SelectedTabIndex;
+            PressCtrlPlus(0x31); // VK_1 -> Inicio
+            DoEvents(); DoEvents();
+            bool tecladoConCtrlLlega = vm.SelectedTabIndex == 0;
+            vm.SelectedTabIndex = pestañaAntes;
+            vm.PersonajeInnerTabIndex = 1;
+            DoEvents(); DoEvents();
+            Console.WriteLine($"PB-13-TECLADO: el teclado sintetico con Ctrl llega a la ventana={tecladoConCtrlLlega} (prueba de control real con Ctrl+1)");
+
+            if (!tecladoConCtrlLlega)
+            {
+                // Misma secuencia EXACTA que ejecuta OnBuffSlotKeyDown en el caso Ctrl+V, paso a
+                // paso: seleccionar el slot y despues pegar. Es justo el orden que arregla esta
+                // oleada (seleccionar despues borraba el aviso, ver BuffAvisoRechazoVisibleTests).
+                // Caso legitimo: copiar y MOVER. Con buffs, un copiar+pegar a otro slot sin
+                // vaciar el origen es siempre un duplicado (Terraria no permite dos instancias
+                // del mismo buff) - el uso real de Ctrl+C/Ctrl+V aqui es mover conservando la
+                // duracion EXACTA, que es justo lo que PlaceBuff no haria (fija un preset).
+                var copiado = (id: slotsPB13[0].Buff.Id, time: slotsPB13[0].Buff.Time);
+                slotsPB13[0].ClearCommand.Execute(null);
+                vm.SelectBuffSlot(slotsPB13[3]);
+                bool pegado = slotsPB13[3].PasteBuff(copiado.id, copiado.time);
+                Console.WriteLine($"PB-13-PEGAR(via ViewModel): aceptado={pegado} (esperado True), id={slotsPB13[3].Buff.Id} (esperado 1), duracion={slotsPB13[3].Buff.Time} (esperado 4321 EXACTOS, no un preset)");
+                if (!pegado || slotsPB13[3].Buff.Id != 1 || slotsPB13[3].Buff.Time != 4321)
+                    Console.WriteLine("FALLO: PB-13 - pegar un buff no reprodujo id y duracion exactos");
+
+                // Y el rechazo real: el mismo buff otra vez, ahora si duplicado.
+                vm.SelectBuffSlot(slotsPB13[4]);
+                bool rechazado = !slotsPB13[4].PasteBuff(copiado.id, copiado.time);
+                Console.WriteLine($"PB-13-DUPLICADO(via ViewModel): rechazado={rechazado} (esperado True), aviso='{slotsPB13[4].RejectionMessage}' (esperado real), el panel Editar mira ese slot={ReferenceEquals(vm.BuffEdit.Slot, slotsPB13[4])} (esperado True)");
+                if (!rechazado || string.IsNullOrWhiteSpace(slotsPB13[4].RejectionMessage) || !ReferenceEquals(vm.BuffEdit.Slot, slotsPB13[4]))
+                    Console.WriteLine("FALLO: PB-13 - el rechazo por duplicado no deja el aviso a la vista en el panel Editar");
+            }
+            else if (bordeOrigen == null || bordeLibre == null || bordeDuplicado == null)
+            {
+                Console.WriteLine("PB-13: no se encontraron los Border reales de los slots de buff - omitido");
+            }
+            else
+            {
+                System.Windows.Input.Keyboard.Focus(bordeOrigen);
+                DoEvents();
+                PressCtrlPlus(0x43); // VK_C
+                DoEvents();
+                // Vaciar el origen con Supr real: con buffs, copiar y pegar en otro slot SIN
+                // vaciar es siempre un duplicado (Terraria no permite dos instancias del mismo
+                // buff) - el uso real de Ctrl+C/Ctrl+V aqui es MOVER conservando la duracion
+                // exacta, que es justo lo que una colocacion normal no haria.
+                PressKey(0x2E); // VK_DELETE
+                DoEvents();
+                System.Windows.Input.Keyboard.Focus(bordeLibre);
+                DoEvents();
+                PressCtrlPlus(0x56); // VK_V
+                DoEvents(); DoEvents();
+                Console.WriteLine($"PB-13-PEGAR: slot 3 tras Ctrl+C(0)+Supr(0)+Ctrl+V(3) -> id={slotsPB13[3].Buff.Id} (esperado 1), duracion={slotsPB13[3].Buff.Time} ticks (esperado 4321 EXACTOS, no un preset)");
+                if (slotsPB13[3].Buff.Id != 1 || slotsPB13[3].Buff.Time != 4321)
+                    Console.WriteLine("FALLO: PB-13 - Ctrl+C/Ctrl+V real no reprodujo el buff con su duracion exacta");
+
+                // Y ahora el rechazo real: pegar OTRA VEZ el mismo buff en un tercer slot, con
+                // el buff ya puesto en el slot 3.
+                System.Windows.Input.Keyboard.Focus(bordeDuplicado);
+                DoEvents();
+                PressCtrlPlus(0x56); // VK_V
+                DoEvents(); DoEvents();
+                bool vacio = slotsPB13[4].IsEmpty;
+                string? aviso13 = slotsPB13[4].RejectionMessage;
+                bool panelMirandoElSlot = ReferenceEquals(vm.BuffEdit.Slot, slotsPB13[4]);
+                Console.WriteLine($"PB-13-DUPLICADO: pegar el mismo buff en el slot 4 -> sigue vacio={vacio} (esperado True), aviso='{aviso13}' (esperado real), el panel Editar mira ese slot={panelMirandoElSlot} (esperado True)");
+                if (!vacio) Console.WriteLine("FALLO: PB-13 - Ctrl+V colo un segundo buff igual (Terraria no permite dos instancias del mismo buff)");
+                if (string.IsNullOrWhiteSpace(aviso13) || !panelMirandoElSlot)
+                    Console.WriteLine("FALLO: PB-13 - el rechazo por duplicado no deja ningun aviso a la vista al pegar con el teclado");
+            }
+
             // --- restaurar TODO lo que este bloque toco -------------------------------
             vm.VersionEditor.SetVersionCommand.Execute(versionPrevia);
             DoEvents();
@@ -421,6 +518,13 @@ internal static partial class Program
         bool escapeY = faltaY <= 0.5 || AlcanzableConScroll(fe, window, horizontal: false);
         return (!(escapeX && escapeY), faltaX, faltaY);
     }
+
+    // El Border real y enfocable de un slot de buff - el que recibe el foco de teclado y por
+    // tanto el que hace llegar Ctrl+C/Ctrl+V a OnBuffSlotKeyDown (mismo criterio que
+    // FindBorderForSlot usa para los slots de objeto).
+    private static FrameworkElement? BordeFocusableDe(DependencyObject raiz, object dataContext) =>
+        Descendientes<System.Windows.Controls.Border>(raiz)
+            .FirstOrDefault(b => ReferenceEquals(b.DataContext, dataContext) && b.Focusable);
 
     // El elemento REAL del arbol visual que representa este objeto del ViewModel (la raiz de su
     // plantilla). Null si esta virtualizado fuera de vista, que no es lo mismo que perdido.

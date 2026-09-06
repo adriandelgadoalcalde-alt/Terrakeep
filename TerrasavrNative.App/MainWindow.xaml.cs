@@ -1168,10 +1168,20 @@ public partial class MainWindow : Window
 
         if (e.Data.GetDataPresent(typeof(BuffCatalogEntryViewModel)) && e.Data.GetData(typeof(BuffCatalogEntryViewModel)) is BuffCatalogEntryViewModel libraryEntry)
         {
-            // H4-04: si se rechaza (duplicado real), seleccionar el slot destino - el aviso
-            // real (RejectionMessage, ya puesto por PlaceBuff) queda a la vista en el panel
-            // "Editar buff seleccionado" en vez de perderse sin que se note nada.
-            if (!targetSlot.PlaceBuff(libraryEntry.Id)) _viewModel.SelectBuffSlot(targetSlot);
+            // H4-04: si se rechaza (duplicado real), el aviso real (RejectionMessage, que pone
+            // PlaceBuff) tiene que quedar a la vista en el panel "Editar buff seleccionado", "en
+            // vez de perderse sin que se note nada".
+            //
+            // Oleada del 6-sep-2026 - BUG REAL: el ORDEN anulaba ese arreglo. SelectBuffSlot
+            // pone IsSelected=true y BuffSlotViewModel.OnIsSelectedChanged limpia
+            // RejectionMessage a proposito (L-e: un aviso de rechazo no debe sobrevivir a un
+            // cambio de seleccion), asi que seleccionar DESPUES de colocar borraba justo el
+            // aviso recien puesto - salvo por casualidad cuando el slot destino YA era el
+            // seleccionado, unico caso en que IsSelected no cambia de valor y el manejador no
+            // corre. Se selecciona ANTES: el aviso del rechazo sobrevive, y en caso de exito el
+            // panel Editar queda mirando el buff recien soltado, igual que ya hace "Elegir...".
+            _viewModel.SelectBuffSlot(targetSlot);
+            targetSlot.PlaceBuff(libraryEntry.Id);
         }
         else if (e.Data.GetDataPresent(typeof(BuffSlotViewModel)) && e.Data.GetData(typeof(BuffSlotViewModel)) is BuffSlotViewModel sourceSlot
                  && !ReferenceEquals(sourceSlot, targetSlot))
@@ -1207,7 +1217,16 @@ public partial class MainWindow : Window
         }
         else if (ctrl && e.Key == Key.V)
         {
-            if (_buffClipboard is { } clip) slot.PasteBuff(clip.id, clip.time);
+            // Oleada del 6-sep-2026: mismo hueco real que el arrastre (ver OnBuffSlotDrop).
+            // PasteBuff SI respeta la regla de "sin dos instancias del mismo buff" y deja su
+            // RejectionMessage, pero por teclado ese aviso no se veia en ningun sitio: el panel
+            // Editar sigue al slot SELECCIONADO, y el foco de teclado no lo es. Se selecciona
+            // ANTES de pegar (nunca despues, que borraria el aviso, L-e).
+            if (_buffClipboard is { } clip)
+            {
+                _viewModel.SelectBuffSlot(slot);
+                slot.PasteBuff(clip.id, clip.time);
+            }
             e.Handled = true;
         }
     }
