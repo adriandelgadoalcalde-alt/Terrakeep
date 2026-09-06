@@ -9264,3 +9264,164 @@ app de escritorio), se parte en dos:
 - `T-H-FOCO` (FocusVisualStyle al enfocar por teclado) es **intermitente**: fallo en una
   ejecucion y paso en la siguiente sin tocar nada. Depende del foco real de la sesion de Windows
   (si otra ventana lo roba, no hay adorner). No es una regresion de este refactor.
+
+---
+
+## 6-sep-2026 - Ronda de idioma 2: "mas de la mitad sigue en español al cambiar a ingles"
+
+Queja real del usuario despues de probar la app de verdad, con la traduccion ya dada por completa
+("455+ claves, toda la interfaz"). Nombro explicitamente **Libreria, Acerca de, "las versiones" y
+Novedades**, y dijo que habia mas cosas que no sabria enumerar. Tenia razon en todo.
+
+**Punto de partida real, medido antes de tocar nada**: build 0 errores, 380 Core + 329 ViewModels,
+arnes de 525 lineas con 0 `FALLO`, y `A10-IDIOMA-BARRIDO` diciendo **0 textos en español**. Es
+decir: el barrido de la ronda anterior daba la app por traducida, y no lo estaba. Lo primero fue
+entender por que no lo veia.
+
+### Por que el barrido anterior no encontraba nada (lo mas importante de esta ronda)
+
+Tres puntos ciegos reales, no un descuido puntual:
+
+1. **Solo miraba `TextBlock.Text` de la pantalla visible**, y solo la PRIMERA hoja de cada
+   TabControl anidado. La segunda pestaña de Novedades (tModLoader/Calamity) no la vio nunca
+   nadie, y las carpetas de la Libreria tampoco: en reposo se ven tarjetas de carpeta raiz, el
+   arbol desplegado solo aparece al entrar en una.
+2. **Su lista de palabras españolas eran 31 sustantivos concretos** de una pantalla ("personaje",
+   "guardar", "vanidad"...). Una frase entera sin migrar que no usara ninguno de esos 31
+   sustantivos pasaba limpia. Lo que de verdad caza una frase española son las palabras
+   FUNCIONALES - " de ", " del ", " para ", " con " - que no existen en ingles.
+3. **`limitesConocidos` se habia convertido en una alfombra**: 15 entradas que tapaban de golpe
+   Novedades entera, el registro de cambios entero y varios selectores, con el argumento de que
+   eran "contenido, no interfaz" o "no reactivo en caliente". Justo lo que el usuario reporto.
+
+Con los tres arreglados, el mismo barrido paso de **0 a 1693 lineas** (119 textos distintos), de
+las que 23 eran interfaz real y el resto nombres de objeto del juego. Ese ruido es la otra
+leccion: sin descontar los catalogos de contenido, 1206 lineas de nombres de objeto tapaban las 23
+que importaban.
+
+### Bug de fondo n1: el ingles YA estaba escrito y nadie lo leia
+
+`whats_new_vanilla.json` y `whats_new_calamity.json` traen el campo `"en"` de cada linea, fecha,
+nota y objeto nuevo **desde el primer dia**. Pero `WhatsNewChange.DisplayText`,
+`WhatsNewItem.DisplayName` y `WhatsNewEntry.DisplayDate`/`DisplayNote` estan escritos como
+`Es ?? En ?? ""`, es decir devuelven SIEMPRE el español, y eran lo unico que el XAML bindeaba. La
+pestaña Novedades entera se veia en español sin que faltara ni un solo dato: faltaba elegir.
+**Exactamente el mismo bug** en `BuildItemRef.DisplayName` (pestaña Builds, 3 etapas x 5 clases de
+piezas de equipo, todas con su `"en"` real sin usar).
+
+`changelog.json` si estaba en español puro: se tradujeron las 9 versiones enteras a
+`date_en`/`summary_en`/`added_en`/`fixed_en` (traduccion del contenido real existente, es un
+historial de verdad, no se resumio ni se cambio de significado). Y
+`builds.json`/`builds_calamity.json` ganaron `label_en` para el nombre de etapa ("Pre-Hardmode
+(listo para el Muro de Carne)").
+
+Regla unica de eleccion en `Core/Data/LocalizedContent`, calcada del criterio que
+`LocalizationService` ya aplicaba a la interfaz: español es el idioma de REFERENCIA, lo que no
+tiene traduccion cae a español, nunca a vacio ni a texto inventado.
+
+### Bug de fondo n2: `StringFormat` es un punto ciego estructural, no un olvido
+
+**19 sitios de `MainWindow.xaml`** llevaban texto español dentro del propio Binding:
+`StringFormat='Mundo: {0}'`, `'Vaciados {0} objeto(s).'`, `'Deshacer: {0} (Ctrl+Z)'`,
+`'NPCs ({0})'`/`'Cofres ({0})'`/`'Minerales ({0})'`/`'Objetos ({0})'`, `'{0} objeto(s)'` (x3),
+`'Estilo #{0}'`, `'Solo objetos validos para: {0}'`, `'Ultima modificacion: {0}'`, `'Zoom {0:P0}'`.
+
+No es un `Text="..."` literal ni un `Loc[clave]`: **ningun** metodo de busqueda de la ronda
+anterior podia encontrarlos. Y no se pueden arreglar cambiando el valor, porque `StringFormat` no
+es una DependencyProperty y no se puede bindear. La salida fue
+`Converters/LocalizedFormatConverter.cs`: un `MultiBinding` cuyo primer valor es la plantilla,
+bindeada a `Loc[clave]` - asi ademas se refresca sola al cambiar de idioma. Tiene un modo
+`ConverterParameter="fallback"` que sustituye al `TargetNullValue` de un Binding normal (que en un
+MultiBinding no sirve para "el argumento vino null"), para el tooltip real de Deshacer/Rehacer.
+
+### Bug de fondo n3: seis claves creadas y nunca enchufadas
+
+La ronda anterior CREO la clave en los dos diccionarios y dejo el literal español intacto al lado.
+No fallaba nada visible - por eso sobrevivio: `dlg_save_item_set_title` y `dlg_filter_item_set`
+(dialogo real de "Guardar conjunto de objetos"), `home_copy_suffix` (duplicar un personaje creaba
+"Fulano (copia).plr" con la app en ingles), y las tres de "Donde lo tengo?"
+(`search_no_results_character`/`search_showing_results`/`search_duplicates_extra`).
+
+Igual de silencioso: `Inventario`/`Banco`/`Caja fuerte`/`Monedas`/`Municion` iban literales en
+`MainViewModel.RebuildContainers` mientras Fragua y Boveda, **dos lineas mas abajo**, ya usaban el
+diccionario.
+
+### Bug de fondo n4: texto congelado en el idioma de arranque
+
+`LocalizationService.Instance["clave"]` leido UNA vez en un constructor produce un `string` fijo
+que ya no se entera de nada (el refresco por `"Item[]"` solo alcanza a los bindings `Loc[...]`).
+Afectaba a las 6 pildoras de clase de Builds, las 3 de Armadura/Vanidad/Tintes, las 4 de Almacenes
+("Boveda del Vacio (0/40)"), el "Ninguno" del tinte de pelo y los dos paneles Editar. El patron de
+arreglo, repetido en toda la ronda: **guardar la CLAVE, no el texto ya resuelto**, y suscribirse
+con `PropertyChangedEventManager` (evento **DEBIL** a proposito: el servicio de idioma es un
+singleton que vive lo que la app, y `dotnet test` construye cientos de `MainViewModel` - con `+=`
+todos ellos quedarian vivos para siempre colgando del singleton).
+
+Caso mas escurridizo de todos: `AppearanceViewModel.HairDyeDisplayName` arranca con
+`["hair_dye_none"]` y solo se recompone en `OnHairDyeChanged`. Con un personaje **sin tinte**
+(indice 0, el caso normal) esa notificacion no se dispara jamas, asi que se quedaba en "Ninguno"
+para siempre.
+
+### La Libreria: la solucion era no traducir
+
+Lo que parecia el trabajo mas grande (121 etiquetas de Calamity mas todo el arbol vanilla) fue lo
+mas barato, porque **`vanilla_library_labels_es.json` usa el nombre INGLES real como CLAVE** (es el
+nombre que viene del arbol real de Terrasavr). Para el ingles no habia nada que traducir: habia que
+NO traducir. Con Calamity igual - su categoria real ("Weapons/Melee", "Placeables/SunkenSea") ya
+viene en ingles del propio mod, solo hay que separar el CamelCase para que se lea. **Cero
+traducciones inventadas** en toda esta parte.
+
+`CategoryTreeNodeData` (Core) gana `NameEn` como parametro posicional **con valor por defecto**:
+asi ninguna llamada existente se rompe y un nodo que no lo rellene cae al español. Los dos nombres
+viajan hasta `CategoryNodeViewModel`, que elige y reacciona en caliente - cambiar de idioma no
+reconstruye el arbol, que es lo unico caro de verdad.
+
+**Coordinacion con el otro agente**: WS2 de TerrakeepMod estaba moviendo
+`LibraryCategoryTreeBuilder`/`BuffLibraryTreeBuilder` a Core en este mismo repo y a la vez. Se dejo
+esta pieza para el final a proposito; cuando llego el turno su commit `d4d4fc5e` ya estaba hecho, y
+las traducciones se añadieron en la ubicacion NUEVA (`Core/Data/LibraryTreeBuilder.cs` y
+`BuffTreeBuilder.cs`), no en la vieja. Sin conflictos ni trabajo duplicado.
+
+### Numeros reales
+
+| | antes | despues |
+|---|---|---|
+| build | 0 errores / 0 avisos | 0 errores / 0 avisos |
+| tests Core | 380 | 408 (mas 28: regla de idioma, ficheros reales, arbol bilingue) |
+| tests ViewModels | 329 | 329 |
+| arnes de UI Automation | 525 lineas, 0 FALLO | 540 lineas, 0 FALLO |
+| barrido de idioma | 0 con el barrido ciego / **119** con el barrido arreglado | **0** |
+| cruce de claves | 516 usadas, sin discrepancias | 568 claves, 0 discrepancias |
+| claves de idioma | 537 | 568 (mas 32, menos 1 duplicada) |
+
+Commits: `537bba14` (Novedades y "Acerca de"), `29eeaba0` (StringFormat, Builds y las claves sin
+enchufar), `f491df1a` (Libreria y el barrido).
+
+### Herramienta permanente nueva
+
+`scripts/cruce-claves-idioma.py` - antes esto se rehacia a mano en el scratchpad de cada sesion.
+Cruza en los dos sentidos y comprueba tambien que los marcadores `{0}`/`{1}` coinciden entre
+idiomas (una plantilla inglesa con mas marcadores que argumentos revienta con `FormatException` en
+ejecucion, cosa que ningun `dotnet build` detecta). Dos detalles que costo encontrar y estan
+documentados dentro: una clave llega al servicio de **cuatro** formas distintas (y buscar solo las
+tres regexables da decenas de "huerfanas" que si se usan, p.ej.
+`Format(plural ? "status_moved_plural" : "status_moved_singular")`), y hay que saltarse los
+comentarios, porque varios documentan el patron escribiendo literalmente `Loc[clave]`.
+
+### Lo que queda fuera a proposito (decision del usuario, no un olvido)
+
+1. **Los nombres de objeto/NPC/tile/buff del JUEGO siguen solo en español.** Son unas 31.700
+   cadenas en `vanilla_item_names.json`, `npc_names.json`, `tile_names.json` y
+   `calamity/catalog.json`. El ingles vanilla se podria sacar de
+   `Terraria.Localization.Content.en-US.Items.json` real (ya esta en el decompilado) y el de
+   Calamity de los `.hjson` `en-US` del `.tmod` instalado, pero es una ronda entera aparte y de
+   mucho mas calado que esta - no se ha tocado nada.
+2. **Los letreros del mundo** que lista el Explorador ("Afueras de Larvas de gusano", "El Musgo de
+   Accidentes" en el mundo real de pruebas) son texto que escribio el JUGADOR dentro del juego.
+   Traducirlos seria falsear un dato del usuario. Van como `LIMITE-CONOCIDO` explicito.
+3. **Un `StatusMessage` ya compuesto** ("Auto-equipar: 11 objeto(s) colocado(s)...", el resumen del
+   mundo recien cargado) no se rehace al cambiar de idioma en caliente. Son frases de un solo uso
+   que se rehacen en la siguiente accion real del usuario; hacerlas reactivas obligaria a guardar
+   los argumentos de cada mensaje efimero.
+
+No hubo ningun obstaculo que fallara dos veces seguidas en esta ronda.
