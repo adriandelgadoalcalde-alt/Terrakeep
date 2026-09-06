@@ -2224,11 +2224,32 @@
                                                  en el propio SlotRowHost como segunda red de seguridad -
                                                  nunca deberia activarse ya con esto, pero si algun caso
                                                  raro se escapa, prefiere recortar en silencio a solapar
-                                                 visiblemente encima de otro contenido. -->
+                                                 visiblemente encima de otro contenido.
+
+                                                 AR-14 (6-sep-2026, queja real del usuario: "los slots de
+                                                 accesorios se vuelven a solapar con las monedas/municion a
+                                                 pantalla mas pequeña"). Los DOS laterales tenian su MinWidth
+                                                 real desde la septima pasada; el centro, que es el unico que
+                                                 puede desbordar de verdad, se quedo SIN NINGUNO - o sea, sin
+                                                 ninguna garantia: se lleva "todo el sobrante", y lo que sobre
+                                                 puede ser cualquier cosa porque las dos laterales son "Auto"
+                                                 y crecen con su contenido. La cuenta que importa:
+                                                 SlotGridPanel congela la celda en MinCell (40) cuando el
+                                                 ancho no da para mas y devuelve igualmente
+                                                 5*40 + 4*Gap(4) = 216px - o sea que por debajo de 216px de
+                                                 columna la rejilla NO encoge, se sale, y el ScrollViewer de
+                                                 ContainerCompactTemplate (HorizontalScrollBarVisibility=
+                                                 "Disabled") la recorta en seco: el ultimo accesorio se ve
+                                                 CORTADO justo donde empieza la caja de Monedas, que es
+                                                 literalmente lo reportado. MinWidth=216 aqui convierte eso en
+                                                 imposible por construccion (WPF recorta antes las columnas
+                                                 Auto que el MinWidth de una columna estrella), sin fijar
+                                                 ningun ancho ni quitarle sitio a nadie mientras haya de
+                                                 sobra. -->
                                             <controls:SlotRowHost ClipToBounds="True">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" MinWidth="140" />
-                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" MinWidth="216" />
                                                     <ColumnDefinition Width="Auto" MinWidth="200" />
                                                 </Grid.ColumnDefinitions>
                                                 <Grid.RowDefinitions>

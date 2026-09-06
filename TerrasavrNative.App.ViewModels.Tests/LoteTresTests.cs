@@ -15,7 +15,7 @@ public sealed class LoteTresTests
         vm.UpdateSizeClass(1000); // Compacto
         double compacto = vm.InicioContentMaxWidth;
 
-        vm.UpdateSizeClass(1600); // Amplio (>= 1500, umbral real ya medido para E-2/A-4)
+        vm.UpdateSizeClass(1600); // Amplio (>= 1520, umbral real ya medido para E-2/A-4, ver AR-14)
         double amplio = vm.InicioContentMaxWidth;
 
         Assert.Equal(880, compacto);

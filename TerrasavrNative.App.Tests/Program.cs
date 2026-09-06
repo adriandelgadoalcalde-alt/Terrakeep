@@ -1799,12 +1799,13 @@ internal static class Program
             CaptureAt(1080, 700, "Almacenes", "resize-almacenes-minimo.png");
 
             // Verificacion real de A-4 (auditoria de Opus, Bloque 4): por debajo de
-            // AmplioMinWidth=1500 (umbral real, medido - ver el comentario de
-            // MainViewModel.IsStorageExpanded), la pestaña "Inventario" sigue mostrando solo
+            // AmplioMinWidth=1520 (umbral real, medido - ver el comentario de
+            // MainViewModel.IsStorageExpanded; AR-14 lo subio de 1500 a 1520 tras medir de 2 en
+            // 2px que entre 1500 y 1512 las 3 vistas de Equipamiento aun se recortan), la pestaña
+            // "Inventario" sigue mostrando solo
             // Inventario - Almacenes ni siquiera existe en el arbol visual en ese momento
             // (drag&drop cruzado imposible, tal cual hasta ahora). Se prueba justo por debajo
-            // (1350) para confirmar que el umbral real es de verdad 1500, no el "Normal"
-            // original (1300).
+            // (1350) para confirmar que el umbral real es de verdad el de Amplio, no el "Normal".
             static List<AutomationElement> BuscarPildoraBanco(AutomationElement r) =>
                 r.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button))
                     .Cast<AutomationElement>().Where(b => b.Current.Name.StartsWith("Banco")).ToList();
@@ -1812,11 +1813,13 @@ internal static class Program
             CaptureAt(1350, 860, "Inventario", "a4-todavia-compacto-1350.png");
             Console.WriteLine($"A4-1350: pildora 'Banco' presente en el arbol visual={BuscarPildoraBanco(root).Count > 0} (esperado False)");
 
-            // A partir de 1500px, Inventario Y Almacenes deben coexistir de verdad en el mismo
-            // arbol visual - prueba real (no solo el ViewModel): la pildora real de Almacenes
-            // ("Banco...") tiene que aparecer YA, sin cambiar de pestaña.
-            CaptureAt(1500, 860, "Inventario", "a4-expandido-1500.png");
-            Console.WriteLine($"A4-EXPANDIDO: pildora real de Almacenes presente en Inventario={BuscarPildoraBanco(root).Count > 0} (esperado True - coexisten de verdad, no solo el ViewModel)");
+            // A partir de 1520px (AmplioMinWidth real), Inventario Y Almacenes deben coexistir de
+            // verdad en el mismo arbol visual - prueba real (no solo el ViewModel): la pildora
+            // real de Almacenes ("Banco...") tiene que aparecer YA, sin cambiar de pestaña.
+            CaptureAt(1520, 860, "Inventario", "a4-expandido-1520.png");
+            bool a4Expandido = BuscarPildoraBanco(root).Count > 0;
+            Console.WriteLine($"A4-EXPANDIDO: pildora real de Almacenes presente en Inventario={a4Expandido} (esperado True - coexisten de verdad, no solo el ViewModel)");
+            if (!a4Expandido) Console.WriteLine("FALLO: A4-EXPANDIDO - a 1520px (AmplioMinWidth) Almacenes no coexiste con Inventario en el arbol visual real");
 
             // Prueba real de intercambio cruzado (no solo "coexisten en pantalla" - que el
             // intercambio Inventario<->Almacen funcione de verdad): SwapWith es el mismo
@@ -1922,12 +1925,20 @@ internal static class Program
             var tamaños = new List<(double, double)>();
             if (Environment.GetEnvironmentVariable("AR14_BARRIDO_FINO") == "1")
                 for (double a = 1080; a <= 1920; a += 20) tamaños.Add((a, 760.0));
+            // "2" = biseccion real de 2 en 2px alrededor del umbral de SizeClass.Amplio - es como
+            // se midio el valor real de AmplioMinWidth (ver MainViewModel): el primer ancho en que
+            // las 3 vistas de Equipamiento caben de verdad sin recortarse entre ellas.
+            else if (Environment.GetEnvironmentVariable("AR14_BARRIDO_FINO") == "2")
+                for (double a = 1480; a <= 1600; a += 2) tamaños.Add((a, 860.0));
             else
                 tamaños.AddRange(new[]
                 {
+                    // Los dos lados de cada umbral real de SizeClass (1320 Normal, 1520 Amplio,
+                    // 1920 Extra) - cruzar uno reorganiza esta fila entera, y es justo donde el
+                    // reparto puede quedarse corto.
                     (1080.0, 700.0), (1120.0, 760.0), (1180.0, 860.0), (1240.0, 800.0), (1319.0, 860.0),
-                    (1320.0, 860.0), (1400.0, 860.0), (1499.0, 860.0), (1500.0, 860.0), (1600.0, 900.0),
-                    (1700.0, 900.0), (1919.0, 1000.0), (1920.0, 1000.0),
+                    (1320.0, 860.0), (1400.0, 860.0), (1500.0, 860.0), (1519.0, 860.0), (1520.0, 860.0),
+                    (1560.0, 860.0), (1600.0, 900.0), (1700.0, 900.0), (1919.0, 1000.0), (1920.0, 1000.0),
                 });
             bool libreriaOriginal = vm.IsLibraryCollapsed;
             vm.IsLibraryCollapsed = Environment.GetEnvironmentVariable("AR14_LIBRERIA_PLEGADA") == "1" || libreriaOriginal;
@@ -1939,6 +1950,17 @@ internal static class Program
             // hasta el mismo ancho, y el usuario reporta el bug ENCOGIENDO desde maximizada).
             foreach (var (w, h) in tamaños.Concat(Enumerable.Reverse(tamaños)))
             {
+                // Gesto REAL del usuario: la app se usa maximizada y se restaura a un tamaño
+                // intermedio. Es la unica forma de que el layout llegue a cada ancho DESDE una
+                // ventana grande, que es lo que hace que las columnas "Auto" laterales lleguen
+                // con un DesiredSize calculado contra un ReferenceWidth mucho mayor.
+                if (Environment.GetEnvironmentVariable("AR14_MAXIMIZAR") == "1")
+                {
+                    window.WindowState = System.Windows.WindowState.Maximized;
+                    DoEvents(); DoEvents();
+                    window.WindowState = System.Windows.WindowState.Normal;
+                    DoEvents();
+                }
                 FijarTamaño(window, w, h);
                 vm.SelectedTabIndex = 1;
                 vm.PersonajeInnerTabIndex = 0;
@@ -1957,7 +1979,7 @@ internal static class Program
                 // pantalla: el izquierdo (Mascota/Montura+Tinte) es columna 0 y el de Monedas/
                 // Municion columna 2 - los dos son Border hijos DIRECTOS del SlotRowHost.
                 FrameworkElement? cajaMonedas = null, cajaMascotas = null;
-                var celdasCentro = new List<(FrameworkElement Fe, Rect R)>();
+                var celdasCentro = new List<(FrameworkElement Fe, Rect R, ScrollViewer? Sv)>();
                 foreach (var hijo in host.Children.OfType<FrameworkElement>())
                 {
                     int col = Grid.GetColumn(hijo);
@@ -1965,9 +1987,20 @@ internal static class Program
                     if (col == 2 && hijo is Border) cajaMonedas = hijo;
                     else if (col == 0 && hijo is Border) cajaMascotas = hijo;
                     else if (col == 1 && Grid.GetRow(hijo) == 1)
+                    {
                         foreach (var sgp in Descendientes<SlotGridPanel>(hijo))
+                        {
+                            // El ScrollViewer que de verdad RECORTA esta rejilla (el de
+                            // ContainerCompactTemplate) - es el que decide si un slot que se sale
+                            // se ve cortado o no, y con HorizontalScrollBarVisibility="Disabled"
+                            // lo que se sale por la derecha no se puede alcanzar de ninguna forma.
+                            ScrollViewer? svPropio = null;
+                            for (var d = (DependencyObject)sgp; d != null && !ReferenceEquals(d, host); d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+                                if (d is ScrollViewer s) { svPropio = s; break; }
                             foreach (var celda in sgp.Children.OfType<FrameworkElement>())
-                                celdasCentro.Add((celda, RectEn(celda, host)));
+                                celdasCentro.Add((celda, RectEn(celda, host), svPropio));
+                        }
+                    }
                 }
 
                 if (cajaMonedas == null || celdasCentro.Count == 0)
@@ -1992,13 +2025,96 @@ internal static class Program
                 double anchoColCentro = host.ColumnDefinitions.Count > 1 ? host.ColumnDefinitions[1].ActualWidth : -1;
                 string columnas = string.Join("/", host.ColumnDefinitions.Select(c => $"{c.ActualWidth:0.#}"));
 
+                // Lo que el usuario ve DE VERDAD no es "un slot pintado encima de la caja de
+                // Monedas": el ScrollViewer de la rejilla recorta antes de llegar ahi, asi que un
+                // slot que se sale se ve CORTADO justo donde acaba su columna (que esta a solo 8px
+                // -el Margin del Border- del borde de la caja de Monedas, de ahi que se lea como
+                // "solapado con las monedas"). Este es el criterio real: cuanto se sale cada celda
+                // del viewport que la recorta, y cuantas celdas quedan cortadas o directamente
+                // fuera - con HorizontalScrollBarVisibility="Disabled" eso es contenido PERDIDO,
+                // no meramente desplazado.
+                double cortePeor = 0;
+                int celdasCortadas = 0, celdasFuera = 0;
+                foreach (var (celda, r, sv) in celdasCentro)
+                {
+                    if (sv == null || sv.ViewportWidth <= 0) continue;
+                    double bordeVisible = RectEn(sv, host).Left + sv.ViewportWidth;
+                    double sale = r.Right - bordeVisible;
+                    if (sale > 0.5)
+                    {
+                        celdasCortadas++;
+                        if (r.Left >= bordeVisible - 0.5) celdasFuera++;
+                        cortePeor = Math.Max(cortePeor, sale);
+                    }
+                }
+
                 Console.WriteLine($"AR-14 {w:0}x{h:0} SizeClass={vm.SizeClass} Amplio={vm.IsEquipmentExpanded} | host={host.ActualWidth:0.#} cols={columnas} celda={cell:0.#} " +
-                                  $"centro=[{izquierdaCentro:0.#}..{derechaCentro:0.#}] monedas.Left={rMonedas.Left:0.#} | invadeDerecha={invadeDerecha:0.#}px invadeIzquierda={invadeIzquierda:0.#}px celdasInvasoras={celdasQueInvaden} mismaFranja={compartenFranja}");
+                                  $"centro=[{izquierdaCentro:0.#}..{derechaCentro:0.#}] monedas.Left={rMonedas.Left:0.#} | invadeDerecha={invadeDerecha:0.#}px invadeIzquierda={invadeIzquierda:0.#}px " +
+                                  $"corteMax={cortePeor:0.#}px celdasCortadas={celdasCortadas} celdasFuera={celdasFuera} mismaFranja={compartenFranja}");
 
                 if (invadeDerecha > 0.5 && compartenFranja)
                     Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} los slots de Armadura/Accesorios invaden {invadeDerecha:0.#}px el bloque de Monedas/Municion ({celdasQueInvaden} celdas reales pisadas)");
                 if (invadeIzquierda > 0.5)
                     Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} los slots de Armadura/Accesorios invaden {invadeIzquierda:0.#}px el bloque de Mascota/Montura/Tinte");
+                if (celdasCortadas > 0)
+                    Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} {celdasCortadas} slot(s) de Armadura/Accesorios se salen hasta {cortePeor:0.#}px de su columna y quedan CORTADOS contra el bloque de Monedas/Municion ({celdasFuera} invisibles del todo, sin scroll horizontal con el que alcanzarlos)");
+
+                if (Environment.GetEnvironmentVariable("AR14_CAPTURAS") == "1")
+                {
+                    var rtbEq = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbEq.Render(window);
+                    var encEq = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encEq.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbEq));
+                    using var fsEq = File.Create(Path.Combine(AppContext.BaseDirectory, $"ar14-armadura-{w:0}x{h:0}.png"));
+                    encEq.Save(fsEq);
+                }
+            }
+
+            // AR-14b: el MinWidth=216 nuevo de la columna central es una GARANTIA, y una garantia
+            // que nunca se activa no esta demostrada. Hoy no salta jamas porque las dos columnas
+            // laterales se quedan clavadas en su propio MinWidth (140/200), asi que hay que
+            // PROVOCARLO: se le pide a la lateral de Monedas/Municion mucho mas sitio del que le
+            // toca y se comprueba que quien cede es ELLA, no el centro. Sin esto seria una
+            // suposicion sobre como reparte WPF (MinWidth de una columna estrella frente a una
+            // Auto exigente), justo lo que este proyecto no da por bueno sin medir. Se restaura el
+            // MinWidth real al terminar.
+            FijarTamaño(window, 1180, 860);
+            vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 0;
+            DoEvents(); DoEvents();
+            var hostGarantia = Descendientes<SlotRowHost>(window).FirstOrDefault();
+            if (hostGarantia == null || hostGarantia.ColumnDefinitions.Count != 3)
+                Console.WriteLine("FALLO: AR-14b - SlotRowHost o sus 3 columnas NO-FOUND, la garantia de ancho minimo no se ha podido comprobar");
+            else
+            {
+                var colCentral = hostGarantia.ColumnDefinitions[1];
+                var colMonedas = hostGarantia.ColumnDefinitions[2];
+                double minMonedasReal = colMonedas.MinWidth;
+                double centroAntes = colCentral.ActualWidth;
+                colMonedas.MinWidth = 400; // el doble de lo suyo: alguien "Auto" pidiendo de mas
+                DoEvents(); DoEvents();
+                double centroApretado = colCentral.ActualWidth, monedasApretado = colMonedas.ActualWidth;
+                // Contrafactual real (leccion "verificar aislando la variable"): con el mismo
+                // lateral exigente pero SIN el MinWidth nuevo, el centro tiene que caer por debajo
+                // de 216 - si no cayera, es que el MinWidth no estaba arreglando nada y el "OK" de
+                // arriba seria un falso positivo de otro limite cualquiera.
+                double minCentralReal = colCentral.MinWidth;
+                colMonedas.MinWidth = 400;
+                colCentral.MinWidth = 0;
+                DoEvents(); DoEvents();
+                double centroSinGarantia = colCentral.ActualWidth;
+                colCentral.MinWidth = minCentralReal;
+                colMonedas.MinWidth = minMonedasReal;
+                DoEvents(); DoEvents();
+                double centroVuelta = colCentral.ActualWidth;
+                Console.WriteLine($"AR-14b GARANTIA: centro {centroAntes:0.#} -> con Monedas pidiendo 400px: centro={centroApretado:0.#} monedas={monedasApretado:0.#} -> restaurado: centro={centroVuelta:0.#} (esperado: centro nunca por debajo de 216, y vuelta al valor de partida)");
+                Console.WriteLine($"AR-14b CONTRAFACTUAL: el MISMO lateral exigente sin el MinWidth de la columna central deja el centro en {centroSinGarantia:0.#}px, o sea {216 - centroSinGarantia:0.#}px menos de los que la rejilla necesita - eso es el solape real que se reporto");
+                if (centroSinGarantia >= 215.5)
+                    Console.WriteLine($"FALLO: AR-14b - el contrafactual no reproduce nada (centro={centroSinGarantia:0.#} sin MinWidth): el 'OK' de la garantia lo estaria dando otro limite, no este arreglo");
+                if (centroApretado < 215.5)
+                    Console.WriteLine($"FALLO: AR-14b - el MinWidth de la columna central NO es una garantia real: con la lateral de Monedas pidiendo 400px el centro cayo a {centroApretado:0.#}px, por debajo de los 216 que necesita la rejilla a MinCell");
+                if (Math.Abs(centroVuelta - centroAntes) > 1)
+                    Console.WriteLine($"FALLO: AR-14b - el propio bloque no restauro el reparto ({centroAntes:0.#} -> {centroVuelta:0.#}), contamina lo que venga despues");
             }
 
             // Deja el estado como estaba (misma leccion que LOADOUT-PILDORAS/AR-13c): vista de

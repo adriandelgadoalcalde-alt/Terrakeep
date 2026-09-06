@@ -9941,3 +9941,127 @@ desaparecieron solos con el mismo codigo. Es la misma verdad del entorno que ya 
 de las pildoras de Equipamiento, vista desde el otro lado.
 
 No hubo ningun obstaculo que fallara dos veces seguidas.
+
+---
+
+## 6-sep-2026 - Equipamiento: los accesorios se cortaban contra Monedas/Municion (el umbral de "Amplio" estaba mal medido por 14px)
+
+Queja real del usuario, con captura: *"algo ha vuelto a pasar con la seccion de equipamiento, los
+slots de accesorios se vuelven a solapar con las monedas/municion a pantalla mas pequeña"*. En la
+captura, la fila de accesorios queda tapada por el borde izquierdo de la caja "Monedas (2/4)" y el
+ultimo accesorio (el del marcador rosa, el 6º hueco de Experto) se ve **cortado** justo ahi.
+
+La palabra "vuelve" era correcta: la septima pasada (2-sep-2026) ya arreglo un solape de ESTA misma
+fila fusionada (columnas `2*/5*/4*` -> `Auto`+`MinWidth` en los laterales y `*` en el centro). Lo
+que nunca se dejo fue una comprobacion permanente que lo midiera: aquello se dio por bueno mirando
+capturas. Este es el bloque que faltaba (`AR-14`) y lo primero que hizo fue encontrar un solape que
+seguia ahi.
+
+### No fue el cambio de "4 conjuntos a 3"
+
+Descartado midiendo, no por descarte. El commit `7dc70d61` toca **7 lineas** del XAML de esta
+pestaña y todas van en la direccion contraria: las pildoras pasan de 4 a 3 y su texto de
+"Puesto"/"Loadout 1" a "1 ●"/"2"/"3", o sea que el `StackPanel` del selector se hizo mas ESTRECHO,
+no mas ancho, y ademas vive en la fila 0 (`ColumnSpan=2`), no en la franja donde estan los slots.
+Medido: el reparto real de las 3 columnas (`140/x/200`) es identico antes y despues. Es una
+regresion **distinta**, y de hecho mas vieja: estaba desde que se fijo el umbral de `Amplio`.
+
+### El mecanismo real (medido celda a celda, no a ojo)
+
+`SlotGridPanel` calcula `cell = clamp(min(anchoDisponible/cols, alto/filas, referencia), MinCell,
+MaxCell)` y devuelve `cols*cell + Gap*(cols-1)`. La clave esta en ese `clamp`: cuando el ancho no
+da ni para `MinCell`, la celda **no sigue encogiendo** - se queda en 40 y el panel pide igualmente
+`5*40 + 4*4 = 216px`. Por debajo de 216px de hueco real, la rejilla de Armadura/Accesorios **se
+sale**, y el `ScrollViewer` de `ContainerCompactTemplate` (con
+`HorizontalScrollBarVisibility="Disabled"`) la recorta en seco. Por eso el usuario no ve un slot
+pintado ENCIMA de las monedas: lo ve **cortado** justo donde acaba su columna, que esta a 8px (el
+`Margin` del `Border`) del borde de la caja de Monedas. Se lee igual.
+
+Eso pasaba de verdad en un sitio concreto: **justo al entrar en `SizeClass.Amplio`**, donde
+Equipamiento deja de mostrar UNA vista con pildoras y pasa a mostrar las TRES (Armadura/Vanidad/
+Tintes) lado a lado dentro de la misma columna central. Cada vista recibe `(colCentro - 16) / 3` y
+necesita 216. Biseccion real de 2 en 2px con `AR14_BARRIDO_FINO=2`, sobre coordenadas de pantalla
+reales (`TranslatePoint`, que ignora el recorte, contra el `ViewportWidth` del `ScrollViewer` que
+recorta):
+
+| ancho de ventana | ancho por vista | slots cortados | cuanto se salen |
+|---|---|---|---|
+| 1498 (todavia en pildoras) | 657,8 para UNA vista | 0 | - |
+| **1500** | 213,9 | **4** | **4,7px** |
+| 1506 | 215,9 | 4 | 2,7px |
+| 1512 | 217,9 | 4 | 0,7px |
+| 1514 | 219,9 | 0 | - |
+
+`AmplioMinWidth` valia 1500. Estaba mal medido por 14px - **el mismo error exacto que ya le paso a
+`NormalMinWidth` con 1300** (ver R-04b: se fijo "a ojo de captura" y la biseccion real lo movio a
+1320). El 1500 salio de comprobar "a 1450 recorta la 3ª vista, a 1650 no", que es cierto pero no
+acota nada entre medias.
+
+### El arreglo, dos piezas
+
+1. **`AmplioMinWidth` 1500 -> 1520** (`MainViewModel`). Las 3 vistas solo aparecen cuando caben de
+   verdad; 1514 es el primer ancho limpio medido y 1520 deja margen. Sube tambien el umbral de
+   `IsStorageExpanded` (A-4), que comparte la constante a proposito: A-4 se midio "limpio a 1500 y
+   a 1650", asi que 20px mas no le quitan nada (`A4-EXPANDIDO` del arnes se movio a 1520 y ademas
+   pasa a ser un `FALLO` de verdad si no coexisten, antes solo imprimia el resultado).
+2. **`MinWidth="216"` en la columna central del `SlotRowHost`** (`MainWindow.xaml`). Esto es lo que
+   convierte el bug en imposible por construccion, no solo en este ancho. Los DOS laterales tenian
+   su `MinWidth` real desde la septima pasada; el centro - el unico que puede desbordar - se quedo
+   **sin ninguno**: se lleva "todo el sobrante", y lo que sobre depende de dos columnas `Auto` que
+   crecen con su contenido. Que hoy funcione es aritmetica afortunada (las dos laterales estan
+   clavadas en su propio minimo), no una garantia.
+
+### La garantia, demostrada - no supuesta
+
+Una garantia que nunca se activa no esta demostrada, asi que `AR-14b` la **provoca**: le pide a la
+lateral de Monedas/Municion 400px (el doble de lo suyo) y mide quien cede. Con el contrafactual al
+lado, que es lo que hace la prueba diferencial de verdad (leccion ya documentada: un "OK" puede
+venir de otro limite):
+
+```
+AR-14b GARANTIA:      centro 337,8 -> con Monedas pidiendo 400px: centro=216 monedas=400 -> restaurado: centro=337,8
+AR-14b CONTRAFACTUAL: el MISMO lateral exigente sin el MinWidth deja el centro en 137,8px, 78,2px menos de los que la rejilla necesita
+```
+
+78,2px de deficit son **casi dos slots enteros** cortados: exactamente la forma del bug reportado.
+El bloque restaura los dos `MinWidth` al terminar y comprueba que el reparto vuelve al de partida
+(misma leccion de `session.json`/`AR-13c`: todo bloque que toca estado compartido lo devuelve).
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core 419, ViewModels 359 (350 + **9 nuevos**, `EquipamientoUmbralAmplioTests` -
+  fija el umbral por los dos lados y deja escrita la cuenta de la que sale, para que falle sola si
+  alguien cambia `MinCell`/`Gap`/columnas sin volver a medir). 0 fallos.
+- Arnes de UI: **0 lineas `FALLO`**, en dos ejecuciones seguidas.
+- Barrido de solape real, coordenadas de pantalla, ida **y vuelta** en cada caso (el orden importa:
+  las laterales `Auto` se miden contra el `ReferenceWidth` del layout anterior, asi que encoger
+  desde grande no tiene por que dar lo mismo que crecer):
+
+| barrido | tamaños medidos | slots cortados |
+|---|---|---|
+| 1080..1920 de 20 en 20px | 86 | **0** |
+| 1480..1600 de 2 en 2px (el umbral) | 122 | **0** |
+| 1080..1920 con la Libreria plegada | 86 | **0** |
+| maximizar + restaurar antes de cada tamaño | 30 | **0** |
+
+Antes del arreglo, ese mismo barrido de 2 en 2px daba 4 slots cortados en los 7 anchos de 1500 a
+1512. Capturas reales revisadas ampliadas a 4x (`ar14-armadura-*.png`, tras `AR14_CAPTURAS=1`): a
+1500 ya se ve una unica vista con la celda a 90px y los marcadores rosa (6º) y oro (7º) enteros.
+
+### Lo que se midio y NO era el bug (queda escrito para no repetir el camino)
+
+Se descartaron a base de medir, no de suponer: (a) que las columnas `Auto` laterales se quedaran
+"atascadas" anchas al encoger desde maximizada - no pasa, la celda de Monedas/Municion converge
+**siempre** a `MinCell` porque su `cellFromHeight` se realimenta del `ActualHeight` del propio
+`ScrollViewer` y esa iteracion es monotona decreciente; (b) el gesto real de maximizar y restaurar,
+probado en cada paso del barrido (`AR14_MAXIMIZAR=1`); (c) la Libreria plegada, que es el caso de
+MENOS holgura vertical y por tanto celda mas grande. En los tres, el reparto sale `140/x/200`
+estable.
+
+Lo que si salio de ahi es un dato util: en 1080-1180 la rejilla central **llena su columna al
+100%** (`cellFromWidth` reparte todo el ancho sin dejar nada), asi que la separacion real hasta la
+caja de Monedas es de 8px justos, los del `Margin`. No se toco a proposito - meterle margen al
+centro le quitaria ancho util y acercaria otra vez el desborde, que es el bug de verdad.
+
+No hubo ningun obstaculo que fallara dos veces seguidas.

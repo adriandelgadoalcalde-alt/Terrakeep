@@ -424,7 +424,17 @@ public partial class MainViewModel : ObservableObject
     // Cruzar ese umbral empeoraba la cabecera en TODAS las pantallas.
     [ObservableProperty] private WindowSizeClass _sizeClass = WindowSizeClass.Normal;
     private const double NormalMinWidth = 1320;
-    private const double AmplioMinWidth = 1500;
+    // AR-14 (6-sep-2026): AmplioMinWidth sube de 1500 a 1520 - estaba mal medido por 14px,
+    // exactamente el mismo caso que NormalMinWidth con 1300. El 1500 original se fijo comprobando
+    // "a 1450 recorta la 3ª vista, a 1650 no"; midiendo de 2 en 2px con el arnes
+    // (AR14_BARRIDO_FINO=2) resulta que entre 1500 y 1512 las 3 vistas de Equipamiento SIGUEN sin
+    // caber: cada una recibe (colCentro-16)/3 px y necesita 216 (5 columnas * MinCell 40 + 4 *
+    // Gap 4), asi que 4 slots por vista quedan cortados de 0,7 a 4,7px contra la vista de al lado
+    // y, la ultima, contra el bloque de Monedas/Municion - el solape que reporto el usuario.
+    // 1514 es el primer ancho REAL sin ningun corte; 1520 deja margen y es redondo. Sube tambien
+    // el umbral de IsStorageExpanded (A-4), que comparte esta constante a proposito: A-4 se midio
+    // "limpio a 1500 y a 1650", asi que 20px mas no le quitan nada.
+    private const double AmplioMinWidth = 1520;
     // Auditoria de redimensionado, R-10/H-09: ver el comentario real de WindowSizeClass.Extra -
     // 1920 es el primer ancho donde los topes de Amplio (1400/1000/1200) dejan mas de un cuarto
     // del viewport real vacio (medido: 28-39% a 1920px).
