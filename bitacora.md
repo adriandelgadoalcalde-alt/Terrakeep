@@ -12233,3 +12233,39 @@ Se aplica la **regla de las dos veces**: se para, se deja escrito, y la verifica
 los modos de foco, que son deterministas de verdad porque no dan ni un clic real de ratón. Por
 eso `A11_SOLO=1` no es una comodidad: `A11` vive **después** de ese punto en el `Main()`, así que
 sin modo de foco no llegaría a ejecutarse nunca.
+
+### Lo que encontró el propio arnés nada más existir: 550 nombres de Calamity mal en inglés
+
+La primera vez que se pudo **leer el volcado de los dos idiomas uno al lado del otro** saltó a la
+vista:
+
+```
+A11-VOLCADO[es] Calamity AerospecHeadMelee: 'Yelmo de Aerospec'
+A11-VOLCADO[en] Calamity AerospecHeadMelee: 'Aerospec Head Melee'   <- esto no es un nombre real
+```
+
+El `.hjson` `en-US` real del mod dice `DisplayName: Aerospec Helm`. La causa:
+**`displayName_fallback` de `catalog.json`/`buffs.json` NO es el nombre inglés del mod** - es el
+nombre INTERNO de la clase "humanizado" separando por mayúsculas. Se venía usando como cara
+inglesa del catálogo simplemente porque hasta esta ronda **nunca se mostraba** (era el último
+recurso para cuando faltaba el español).
+
+`scripts/extraer-nombres-calamity-en.js` saca el `DisplayName` REAL de los 65 `.hjson` `en-US`
+del `.tmod` instalado (2915 nombres reales) y escribe `displayName_en`:
+
+| | con nombre real del mod | **distintos del fallback** |
+|---|---|---|
+| `catalog.json` | 2493 de 2709 | **474** |
+| `buffs.json` | 305 de 305 | **76** |
+
+**550 nombres** que se habrían visto mal en inglés con la app ya "traducida". Las **216 entradas
+sin `DisplayName` propio** (banners, materiales de jefe...) siguen cayendo al fallback humanizado,
+y ahí eso **no es un apaño**: es exactamente lo que enseña el juego, porque el propio tModLoader
+genera el nombre humanizando el interno cuando el mod no lo define. Excepción real, no un hueco.
+
+0 campos preexistentes tocados y orden del array intacto en los dos ficheros (comprobado con diff
+real contra `git show HEAD:`) - el orden determina el id sintético de cada objeto.
+
+Esto es justo lo que justifica haber invertido en `A11`: no lo habría cazado ninguna prueba
+unitaria escrita por quien ya daba por bueno el `displayName_fallback`. Lo cazó **mirar el texto
+real pintado en los dos idiomas a la vez**.

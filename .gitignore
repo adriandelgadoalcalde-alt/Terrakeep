@@ -6,3 +6,7 @@ obj/
 # Instalador generado por Inno Setup (installer/TerrakeepSetup.iss) - binario de build, no
 # fuente. Se regenera con ISCC.exe, nunca se comitea (misma politica que bin/).
 installer/output/
+
+# Cache de bytecode de Python, generada al importar scripts/lang_vanilla.py desde otro
+# script del mismo directorio. Artefacto de build, nunca fuente (misma politica que bin/obj).
+scripts/__pycache__/
