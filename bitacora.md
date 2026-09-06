@@ -10065,3 +10065,165 @@ caja de Monedas es de 8px justos, los del `Margin`. No se toco a proposito - met
 centro le quitaria ancho util y acercaria otra vez el desborde, que es el bug de verdad.
 
 No hubo ningun obstaculo que fallara dos veces seguidas.
+
+---
+
+## 6-sep-2026 - Inicio / Ajustes / Novedades / Acerca de: texto congelado en el idioma de arranque, y un tick que se marcaba solo
+
+Oleada grande de pruebas sobre estas cuatro pantallas (una de las seis areas que se probaron en
+paralelo ese dia, cada una en la suya). Lo que ya habia de esta zona - `HOME-SCAN`, `I-a`/`I-b`,
+`H5-04`, `H5-05`, `H5-07`, `A9-12`/`A9-13`, `A10-CREDITOS`, y el barrido de maquetacion por tamaño
+e idioma - cubre bien el camino feliz de cada pieza por separado. Los cuatro bugs de esta ronda
+salieron de mirar tres cosas que ninguno miraba, y merece la pena escribir cuales son porque las
+tres se repiten en cualquier pantalla:
+
+1. **Texto que se resuelve UNA vez y se queda congelado.** Un binding a `Loc[clave]` se refresca
+   solo (WPF reevalua cualquier binding indexado al recibir `"Item[]"`); una propiedad NORMAL que
+   por dentro leyo el diccionario una vez, no.
+2. **El ciclo REAL de una accion**, no solo que su `Command` resuelva.
+3. **Eventos de control que NO significan "el usuario lo ha hecho"** (`Checked`/`Unchecked` de un
+   CheckBox con binding).
+
+### 1. El aviso de "este archivo cambio por fuera" y los mensajes de Inicio, en español para siempre
+
+`HomeViewModel` guardaba el TEXTO ya resuelto: `ScanMessage = Loc.Format("error_no_backup_to_restore", ...)`,
+`LastSessionStalenessWarning = Loc["home_stale_warning"]`. Con la app en español, cambiar a ingles
+en vivo dejaba tal cual "'Fulano' no tiene ninguna copia de seguridad real que restaurar." y el
+aviso de la tarjeta destacada "Continuar con...". Lo mismo el "Ningun personaje encontrado en..."
+que ve de entrada quien no tenga Terraria en la ruta habitual.
+
+**Por que `A10-IDIOMA-BARRIDO` no lo cazo**: compara el texto RENDERIZADO contra una lista de
+palabras sospechosas, y estos textos casi nunca estan en pantalla cuando corre el barrido (hay que
+provocar el error primero).
+
+Arreglado guardando la CLAVE del diccionario y sus argumentos, componiendo el texto al LEERLO, y
+suscribiendose (evento DEBIL, con un metodo de instancia real - nunca una lambda, cuyo objetivo es
+el cierre generado y se lo puede llevar el recolector dejando la suscripcion muerta en silencio) a
+`LocalizationService` para avisar de las dos propiedades al cambiar el idioma. Caso aparte real: la
+lista de carpetas del mensaje "Ningun personaje encontrado en X ni en Y" se une con un separador que
+TAMBIEN es texto traducido (" ni en " / " nor in "), asi que se guardan las carpetas y se unen al
+leer, no antes. Y `SetLastSession` salia por `return` cuando el `.plr` ya no existe **sin apagar un
+aviso anterior**, que se quedaba colgado apuntando a un personaje que ya no se ofrece.
+
+### 2. La insignia "tModLoader" enseñaba una frase en español SIEMPRE
+
+Dos bugs en la misma linea, los dos invisibles para el barrido de idioma porque **un ToolTip no es
+un TextBlock de la ventana**:
+
+- El caso NORMAL - un `.tplr` SIN clave `usedMods`, que es justo lo que escribe el propio Terrakeep -
+  dejaba `UsedModsTooltip` en `null`, y el XAML tapaba ese null con
+  `TargetNullValue='Personaje de tModLoader: tiene un archivo .tplr con datos de mods'`, **texto duro
+  en español**, tambien con la app entera en ingles.
+- Cuando SI habia lista de mods, el texto se componia una sola vez en el constructor.
+
+Clave real nueva (`tt_tmodloader_badge`, es+en), propiedad calculada sobre `Loc` (el mismo singleton
+que refresca los bindings) y fuera el `TargetNullValue`.
+
+De paso, el tooltip del cupo de copias de seguridad en español enseñaba una **referencia interna de
+auditoria al usuario**: "(H5-04, 'Historial de guardados')". La version inglesa ya estaba limpia.
+
+### 3. "Iniciar siempre con el tamaño actual de la ventana" se re-fijaba SOLO en cada arranque
+
+El bug mas serio de la ronda, y el mas facil de no ver nunca. El CheckBox de Ajustes lleva
+`IsChecked="{Binding Settings.IsWindowSizePinned, Mode=OneWay}"` y colgaba de `Checked`/`Unchecked`.
+**Esos dos eventos no significan "el usuario lo ha pulsado"**: saltan tambien cuando el valor cambia
+por el binding, y eso ocurre en CADA arranque real - `SettingsViewModel.LoadFromDisk()` pone la
+propiedad a `true` al leer el fichero, dentro del constructor de `MainWindow`, **antes** de
+`WindowPlacementService.Apply()` y con la ventana todavia en el tamaño de plantilla del XAML
+(1180x860) y sin mostrar.
+
+O sea: al arrancar con el tick puesto, la app llamaba a `Pin(this)` ella sola y **tiraba el tamaño
+que el usuario habia fijado a proposito**. Medido con `AJU-01`: con `1444x902` fijado y la ventana en
+`1180x860`, antes quedaba `1180x860`; ahora sigue siendo `1444x902`.
+
+Arreglo: pasar a `Click`, que en un `ToggleButton` solo se dispara por interaccion real (raton o
+teclado) y llega con `IsChecked` ya actualizado. El gesto real del usuario (marcar y desmarcar) se
+comprueba tambien, para que el arreglo no se lleve por delante lo que si funcionaba.
+
+### 4. Seis tests de Core "fallaban" sin que nada estuviera roto
+
+`LocalizedContentTests.RutaAsset` subia CUATRO niveles desde `AppContext.BaseDirectory`, o sea daba
+por hecho que la salida compilada vive siempre en `<repo>\TerrasavrNative.Core.Tests\bin\Debug\net10.0\`.
+El propio `CLAUDE.md` documenta el patron contrario como solucion estandar cuando `bin\Debug` esta
+bloqueado (la app abierta del usuario, o varios arneses a la vez): compilar con
+`-p:BaseOutputPath=<otra carpeta>`. Compilando asi, esos 6 tests reventaban con
+`DirectoryNotFoundException` - seis "fallos" que no son de la app y que **tapan cualquier fallo de
+verdad que aparezca al lado**. Ahora la raiz del repo sale de `CallerFilePath`, que el compilador
+incrusta: no depende de donde se deje la salida.
+
+Y `WhatsNewIconTests` afirmaba `Assert.Null(VanillaCatalog.GetIdByKey("ArcSurge"))` - "confirma que
+el catalogo REAL no lo conoce, por eso hace falta el respaldo". Dejo de ser cierto en cuanto
+`vanilla_item_ids_by_key.json` crecio de 5455 a 6194 claves y paso a traer `ArcSurge` con el MISMO
+id (6173): el test afirmaba una AUSENCIA en un catalogo que crece, no un comportamiento. Ahora fija
+lo que importa - que los dos catalogos coinciden en el id cuando los dos lo traen, y que el sprite
+se resuelve por el camino real de Novedades.
+
+### El arnes: `PruebasInicioAjustes.cs`
+
+Parte nueva de la MISMA clase `Program` (`partial`), en su propio fichero para que las seis areas
+que se probaron en paralelo no se pisen editando el mismo sitio - mismo criterio que
+`PruebasLibreriaYBuilds.cs` y `PruebasBuffsAparienciaVersion.cs`.
+
+| bloque | que mide |
+|---|---|
+| `INI-01` | coherencia del listado: sin rutas duplicadas, sin ficheros que ya no existen, todos con doll, insignias que no se contradicen, orden por fecha |
+| `INI-02` | "Continuar con...": lo ofrece, avisa solo cuando la fecha real NO cuadra, el aviso cambia de idioma, y se oculta si el `.plr` ya no existe |
+| `INI-03` | menu contextual REAL: duplicar (nombre traducido en los dos idiomas, original intacto), restaurar copia con y sin `.bak`, historial vacio en un personaje nuevo |
+| `INI-04` | el mensaje de Inicio cambia de idioma en vivo |
+| `INI-05` | insignia de tModLoader y su tooltip, en los dos idiomas |
+| `INI-06` | las 5 tarjetas de "Que mas puedes hacer" llevan de verdad a donde dicen |
+| `AJU-01` | el tick de tamaño de ventana: no se dispara solo, y el clic real sigue funcionando en los dos sentidos |
+| `AJU-02` | cupo de copias escrito a mano en el `TextBox` real: 7, 0 (suelo) y "abc" (no numerico) |
+| `NOV-01` | las dos pestañas con contenido real, sprites resueltos, y traduccion real linea a linea |
+| `ACE-01` | "IncrediBad" LITERAL en los dos idiomas (y ninguna variante deformada), version a la vista, cero claves sin resolver |
+
+`INI-06` merece una nota: `MainViewModel.GoToTab` decide la pestaña con un `switch` sobre una CADENA
+que viene del `CommandParameter` del XAML, y su rama por defecto es `_ => Inicio`. Una cadena mal
+escrita no da ningun error - la tarjeta simplemente no lleva a ningun sitio. Se invoca cada boton
+real con su peer de automatizacion (el mismo camino que un clic de verdad: ejecuta el `Command` con
+SU `CommandParameter`, no uno escrito a mano en la prueba). Las 5 salen bien hoy; lo que no habia era
+nada que lo detectara si dejaran de salir.
+
+### `A10-VENTANAFIJA-MAXIMIZADA` daba FALLO sin que nada estuviera roto
+
+Comparaba contra el tamaño fijado A SECAS. `Apply()` recorta a proposito contra `MinWidth`/`MinHeight`
+y contra el area virtual real ("nunca restaurar fuera de la pantalla", su propio comentario), asi que
+el bloque daba FALLO en cualquier maquina cuya pantalla sea mas pequeña que el tamaño fijado. Salio
+de verdad: **el escritorio de esta sesion mide 576x1197 en unidades WPF** (1440x2992 fisicos al 250%,
+confirmado con `GetSystemMetrics` + `SystemInformation.VirtualScreen`), o sea mas estrecho que el
+`MinWidth=1080` de la propia app. Es la MISMA leccion que `FijarTamaño` ya tenia escrita: **el
+esperado no es lo pedido, es lo pedido YA recortado por los limites reales que el propio codigo
+declara**. Se compara ahora contra eso, y aparte se comprueba explicitamente que `Apply()` leyo los
+campos `Pinned*` y no el "ultimo tamaño usado", que es lo que de verdad hay que demostrar.
+
+Ese dato del entorno tambien explica por que el arreglo 3 importa tanto en la practica: en una
+pantalla que no da para el tamaño fijado, `Apply()` lo recorta (correcto), y el `Checked` automatico
+lo volvia a GUARDAR ya recortado - el tamaño fijado del usuario desaparecia para siempre en cuanto
+abriera la app una vez desde una pantalla pequeña.
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core **420/420**, ViewModels **401/401**, 0 fallos.
+- Arnes de UI Automation: **0 lineas `FALLO`** en el area (los que quedan en la ejecucion completa
+  son de las otras cinco areas, en curso en este mismo arbol).
+
+### Obstaculo real de esta ronda (autonomia tecnica)
+
+Con seis agentes compilando y ejecutando arneses WPF a la vez sobre el mismo arbol, `MSB3021`
+(fichero de salida bloqueado) es constante, y los arneses a veces se quedan vivos tras terminar,
+bloqueando la siguiente compilacion. Matar el proceso no basta: aparecen nuevos entre el `kill` y el
+build. Lo que si funciona, y queda escrito para la proxima: **un `BaseOutputPath` NUEVO en cada
+ejecucion** (`-p:BaseOutputPath=<scratchpad>/o$(date +%H%M%S)/`) - una ruta que no ha existido nunca
+no puede estar bloqueada por nadie. Ademas, el arnes murio a medias tres veces en puntos distintos
+(siempre tras una captura con `RenderTargetBitmap`), lo que encaja con varios arneses compitiendo por
+recursos graficos a la vez; se resolvio reintentando y comprobando que la salida termina en `DONE`.
+
+Cosas de otras areas que salieron al medir y NO se tocaron (quedan para quien lleve esa zona):
+`ExplorationViewModel.ScanMessage` tiene exactamente el mismo bug de texto congelado que tenia el de
+`HomeViewModel`; `ItemStatsFormatter` (Core) compone sus tooltips en español fijo, asi que las
+estadisticas de un objeto en Novedades/Libreria/slots siguen en español con la app en ingles; y el
+"Cuerpo a cuerpo +" de la cabecera de buffs es el unico texto que `A10-IDIOMA-BARRIDO` sigue
+marcando.
+
+No hubo ningun obstaculo que fallara dos veces seguidas sin resolverse.
