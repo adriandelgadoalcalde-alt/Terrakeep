@@ -1898,6 +1898,122 @@ internal static class Program
             Console.WriteLine("RESIZE-EXCEPTION: " + ex);
         }
 
+        // AR-14 (6-sep-2026, queja real del usuario con captura: "los slots de accesorios se
+        // vuelven a solapar con las monedas/municion a pantalla mas pequeña"). La septima pasada
+        // ya arreglo un solape de esta misma fila fusionada (2-sep-2026, columnas "2*/5*/4*" ->
+        // Auto+MinWidth/*) pero NUNCA se dejo una comprobacion permanente que lo midiera: se
+        // verifico mirando capturas. Esto es esa comprobacion que faltaba.
+        //
+        // Se mide en COORDENADAS REALES, celda a celda: TranslatePoint ignora el recorte, asi que
+        // un slot que invade el lateral de Monedas/Municion se detecta igual aunque el
+        // ClipToBounds del SlotRowHost lo este tapando (que es exactamente lo que el usuario ve:
+        // el ultimo accesorio CORTADO justo donde empieza la caja de "Monedas"). Barrido de
+        // anchos entre el MinWidth real declarado y una ventana grande, incluidos los dos lados
+        // de cada umbral real de SizeClass (1320 Normal, 1500 Amplio, 1920 Extra).
+        try
+        {
+            static Rect RectEn(FrameworkElement fe, FrameworkElement host)
+            {
+                var p = fe.TranslatePoint(new Point(0, 0), host);
+                return new Rect(p.X, p.Y, fe.ActualWidth, fe.ActualHeight);
+            }
+
+            int kindOriginal = (int)(vm.EquipmentGroup?.SelectedKind ?? EquipmentKind.Items);
+            var tamaños = new List<(double, double)>();
+            if (Environment.GetEnvironmentVariable("AR14_BARRIDO_FINO") == "1")
+                for (double a = 1080; a <= 1920; a += 20) tamaños.Add((a, 760.0));
+            else
+                tamaños.AddRange(new[]
+                {
+                    (1080.0, 700.0), (1120.0, 760.0), (1180.0, 860.0), (1240.0, 800.0), (1319.0, 860.0),
+                    (1320.0, 860.0), (1400.0, 860.0), (1499.0, 860.0), (1500.0, 860.0), (1600.0, 900.0),
+                    (1700.0, 900.0), (1919.0, 1000.0), (1920.0, 1000.0),
+                });
+            bool libreriaOriginal = vm.IsLibraryCollapsed;
+            vm.IsLibraryCollapsed = Environment.GetEnvironmentVariable("AR14_LIBRERIA_PLEGADA") == "1" || libreriaOriginal;
+
+            // Dos barridos, ascendente y DESCENDENTE (el orden importa de verdad: las dos columnas
+            // laterales son "Auto" y su contenido -SlotGridPanel- se mide contra ReferenceWidth =
+            // ActualWidth del propio SlotRowHost, o sea contra el resultado del layout ANTERIOR;
+            // encoger desde una ventana grande no tiene por que dar el mismo reparto que crecer
+            // hasta el mismo ancho, y el usuario reporta el bug ENCOGIENDO desde maximizada).
+            foreach (var (w, h) in tamaños.Concat(Enumerable.Reverse(tamaños)))
+            {
+                FijarTamaño(window, w, h);
+                vm.SelectedTabIndex = 1;
+                vm.PersonajeInnerTabIndex = 0;
+                vm.ObjetosSubTabIndex = 0; // Equipamiento
+                DoEvents();
+                // Mismo estado exacto de la captura del usuario: conjunto activo + vista "Armadura"
+                // (la unica de las 3 que lleva los 7 accesorios reales).
+                var armadura = vm.EquipmentGroup?.KindOptions.FirstOrDefault(o => o.Value == (int)EquipmentKind.Items);
+                if (armadura != null) vm.EquipmentGroup!.SelectKindCommand.Execute(armadura);
+                DoEvents(); DoEvents();
+
+                var host = Descendientes<SlotRowHost>(window).FirstOrDefault();
+                if (host == null) { Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} no hay SlotRowHost en el arbol visual (la fila fusionada de Equipamiento no se esta renderizando)"); continue; }
+
+                // Los dos bloques laterales por su columna real del Grid, no por su posicion en
+                // pantalla: el izquierdo (Mascota/Montura+Tinte) es columna 0 y el de Monedas/
+                // Municion columna 2 - los dos son Border hijos DIRECTOS del SlotRowHost.
+                FrameworkElement? cajaMonedas = null, cajaMascotas = null;
+                var celdasCentro = new List<(FrameworkElement Fe, Rect R)>();
+                foreach (var hijo in host.Children.OfType<FrameworkElement>())
+                {
+                    int col = Grid.GetColumn(hijo);
+                    if (!hijo.IsVisible) continue;
+                    if (col == 2 && hijo is Border) cajaMonedas = hijo;
+                    else if (col == 0 && hijo is Border) cajaMascotas = hijo;
+                    else if (col == 1 && Grid.GetRow(hijo) == 1)
+                        foreach (var sgp in Descendientes<SlotGridPanel>(hijo))
+                            foreach (var celda in sgp.Children.OfType<FrameworkElement>())
+                                celdasCentro.Add((celda, RectEn(celda, host)));
+                }
+
+                if (cajaMonedas == null || celdasCentro.Count == 0)
+                {
+                    Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} no se pudo medir (Monedas={cajaMonedas != null}, celdas centro={celdasCentro.Count})");
+                    continue;
+                }
+
+                var rMonedas = RectEn(cajaMonedas, host);
+                var rMascotas = cajaMascotas != null ? RectEn(cajaMascotas, host) : Rect.Empty;
+                double derechaCentro = celdasCentro.Max(c => c.R.Right);
+                double izquierdaCentro = celdasCentro.Min(c => c.R.Left);
+                // Solape REAL por eje (no Rect.Intersect a secas - leccion ya documentada): dos
+                // bloques de la misma fila solo se solapan de verdad si se pisan en X Y en Y.
+                double invadeDerecha = derechaCentro - rMonedas.Left;
+                double invadeIzquierda = rMascotas.IsEmpty ? double.NegativeInfinity : rMascotas.Right - izquierdaCentro;
+                bool compartenFranja = celdasCentro.Any(c => c.R.Bottom > rMonedas.Top && c.R.Top < rMonedas.Bottom);
+                int celdasQueInvaden = celdasCentro.Count(c => c.R.Right > rMonedas.Left + 0.5 && c.R.Bottom > rMonedas.Top && c.R.Top < rMonedas.Bottom);
+
+                var sgpCentro = Descendientes<SlotGridPanel>(host).FirstOrDefault(p => celdasCentro.Any(c => ReferenceEquals(c.Fe, p.Children.Count > 0 ? p.Children[0] : null)));
+                double cell = sgpCentro != null && sgpCentro.Children.Count > 0 ? ((FrameworkElement)sgpCentro.Children[0]).ActualWidth : -1;
+                double anchoColCentro = host.ColumnDefinitions.Count > 1 ? host.ColumnDefinitions[1].ActualWidth : -1;
+                string columnas = string.Join("/", host.ColumnDefinitions.Select(c => $"{c.ActualWidth:0.#}"));
+
+                Console.WriteLine($"AR-14 {w:0}x{h:0} SizeClass={vm.SizeClass} Amplio={vm.IsEquipmentExpanded} | host={host.ActualWidth:0.#} cols={columnas} celda={cell:0.#} " +
+                                  $"centro=[{izquierdaCentro:0.#}..{derechaCentro:0.#}] monedas.Left={rMonedas.Left:0.#} | invadeDerecha={invadeDerecha:0.#}px invadeIzquierda={invadeIzquierda:0.#}px celdasInvasoras={celdasQueInvaden} mismaFranja={compartenFranja}");
+
+                if (invadeDerecha > 0.5 && compartenFranja)
+                    Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} los slots de Armadura/Accesorios invaden {invadeDerecha:0.#}px el bloque de Monedas/Municion ({celdasQueInvaden} celdas reales pisadas)");
+                if (invadeIzquierda > 0.5)
+                    Console.WriteLine($"FALLO: AR-14 - a {w:0}x{h:0} los slots de Armadura/Accesorios invaden {invadeIzquierda:0.#}px el bloque de Mascota/Montura/Tinte");
+            }
+
+            // Deja el estado como estaba (misma leccion que LOADOUT-PILDORAS/AR-13c): vista de
+            // Equipamiento original y tamaño base del arnes.
+            var kindVuelta = vm.EquipmentGroup?.KindOptions.FirstOrDefault(o => o.Value == kindOriginal);
+            if (kindVuelta != null) vm.EquipmentGroup!.SelectKindCommand.Execute(kindVuelta);
+            vm.IsLibraryCollapsed = libreriaOriginal;
+            FijarTamaño(window, 1180, 860);
+            DoEvents();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("AR-14-EXCEPTION: " + ex);
+        }
+
         // (Bloque real eliminado del arnes: probaba el rediseño de la Libreria de la
         // octava pasada - Fases 2/3/4/5/7 -, revertido entero por feedback directo del
         // usuario. Ver bitacora.md "REVERTIDO por feedback directo".
@@ -3661,6 +3777,124 @@ internal static class Program
                 }
                 catch (Exception ex) { Console.WriteLine("AR-13c-EXCEPTION: " + ex); }
 
+                // AR-15 (bug real reportado por el usuario probando la app, 6-sep-2026): "la lista
+                // de 'NPCs que faltan' SOLO se ve completa con la ventana a pantalla completa - con
+                // la ventana a un tamaño normal (no maximizada) se corta y no se ven todos".
+                //
+                // Por que no lo cazaron AR-11a/AR-11c (los dos bloques de la ronda anterior sobre
+                // esta misma columna):
+                //   - AR-11a mide el alto que le queda al CONTENEDOR de la categoria
+                //     (ExplorationCategoryContent), no el reparto DENTRO de la categoria de NPCs.
+                //   - AR-11c solo ve un elemento recortado si el recorte de layout de WPF cae
+                //     sobre EL (VisualTreeHelper.GetClip). Cuando el corte lo hace un ANCESTRO
+                //     (aqui: el Expander/DockPanel de la categoria), las filas que quedan por
+                //     debajo del corte no llevan clip ninguno - simplemente no se pintan. Cero
+                //     recorte medible, y aun asi contenido perdido.
+                //   - Y ninguno de los dos DESPLIEGA nunca el Expander de "NPCs que faltan", que
+                //     es justo el estado en el que el usuario ve el bug.
+                //
+                // Lo que mide AR-15, con datos reales (el mundo de pruebas tiene 14 NPCs de los 40
+                // del roster vanilla, o sea ~26 filas reales que enseñar): cuantas de esas filas se
+                // ven ENTERAS ahora mismo, y cuantas son ALCANZABLES de verdad haciendo scroll
+                // (BringIntoView real sobre cada fila, que es exactamente el gesto del usuario).
+                // La geometria se mide con el recorte acumulado de TODOS los ancestros hasta la
+                // ventana (VisibleEntero/RectVisible), no con el clip del propio elemento.
+                // Tamaños: maximizada de verdad (WindowState.Maximized) + cuatro tamaños
+                // intermedios REALES no maximizados, hasta el suelo declarado de la ventana
+                // (MinWidth=1080/MinHeight=700 en MainWindow.xaml).
+                try
+                {
+                    var expFaltan = window.FindName("MissingNpcsExpander") as System.Windows.Controls.Expander;
+                    var listaFaltan = window.FindName("MissingNpcsList") as ItemsControl;
+                    var listaNpcs = window.FindName("NpcResultsList") as FrameworkElement;
+                    if (expFaltan == null || listaFaltan == null)
+                        Console.WriteLine("FALLO: AR-15 - no se encontro el Expander/lista de 'NPCs que faltan' en el arbol visual (¿se renombraron MissingNpcsExpander/MissingNpcsList en MainWindow.xaml?)");
+                    else
+                    {
+                        var categoriaAntes = vm.Exploration.SelectedCategory;
+                        bool expandidoAntes = expFaltan.IsExpanded;
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.Npcs;
+                        expFaltan.IsExpanded = true;
+                        DoEvents(); DoEvents();
+
+                        Console.WriteLine($"AR-15: pantalla real de esta maquina {SystemParameters.PrimaryScreenWidth:0}x{SystemParameters.PrimaryScreenHeight:0}, " +
+                                          $"NPCs de pueblo que faltan en el mundo de pruebas={vm.Exploration.MissingNpcs.Count} de {vm.Exploration.MissingNpcs.Count + vm.Exploration.Npcs.Count} reales del roster vanilla");
+
+                        // El ultimo caso es el PEOR real y perfectamente normal: la ventana en su
+                        // suelo declarado Y "Este mundo" tambien desplegado (+200px de Dock=Top que
+                        // se comen la columna antes de que la categoria vea un solo pixel) - mismo
+                        // criterio de caso peor que ya usa AR-11a.
+                        var esteMundoExp = Descendientes<System.Windows.Controls.Expander>(window)
+                            .FirstOrDefault(e => (e.Header as string) == "Este mundo" || (e.Header as string) == "This world");
+                        foreach (var (etiqueta, w, h, esteMundo) in new (string?, double, double, bool)[]
+                                 { ("maximizada", 0, 0, false), (null, 1600, 1000, false), (null, 1400, 900, false),
+                                   (null, 1180, 860, false), (null, 1080, 700, false), ("1080x700 + 'Este mundo' abierto", 1080, 700, true) })
+                        {
+                            if (esteMundoExp != null) esteMundoExp.IsExpanded = esteMundo;
+                            if (etiqueta == "maximizada")
+                            {
+                                window.WindowState = WindowState.Maximized;
+                                DoEvents(); DoEvents(); DoEvents();
+                            }
+                            else
+                            {
+                                window.WindowState = WindowState.Normal;
+                                FijarTamaño(window, w, h);
+                            }
+                            DoEvents(); DoEvents();
+                            string caso = etiqueta ?? $"{w:0}x{h:0}";
+
+                            var filas = vm.Exploration.MissingNpcs
+                                .Select(item => listaFaltan.ItemContainerGenerator.ContainerFromItem(item) as FrameworkElement)
+                                .Where(fe => fe != null).Select(fe => fe!).ToList();
+                            int total = vm.Exploration.MissingNpcs.Count;
+
+                            int sinScroll = filas.Count(fe => VisibleEntero(fe, window));
+                            int alcanzables = 0;
+                            foreach (var fe in filas)
+                            {
+                                fe.BringIntoView();
+                                DoEvents(); DoEvents();
+                                if (VisibleEntero(fe, window)) alcanzables++;
+                            }
+                            // Deja el scroll arriba del todo: el caso siguiente mide "sin tocar nada".
+                            if (filas.Count > 0) { filas[0].BringIntoView(); DoEvents(); DoEvents(); }
+
+                            double altoLista = listaNpcs?.ActualHeight ?? -1;
+                            Console.WriteLine($"AR-15: {caso} ({window.ActualWidth:0}x{window.ActualHeight:0}) -> 'NPCs que faltan' desplegado: {total} filas reales, " +
+                                              $"se ven enteras sin tocar nada={sinScroll}, ALCANZABLES con scroll={alcanzables} (esperado {total}), " +
+                                              $"alto del Expander={expFaltan.ActualHeight:0}px / contenido que pide={expFaltan.DesiredSize.Height:0}px, " +
+                                              $"alto de la lista de NPCs del mundo={altoLista:0}px (esperado >0: no puede quedarse sin sitio)");
+                            if (alcanzables < total)
+                                Console.WriteLine($"FALLO: AR-15 - a {caso} solo se pueden alcanzar {alcanzables} de los {total} NPCs que faltan: " +
+                                                  $"{total - alcanzables} fila(s) cortadas SIN scroll con el que llegar a ellas");
+                            if (listaNpcs != null && altoLista < 1)
+                                Console.WriteLine($"FALLO: AR-15 - a {caso}, desplegar 'NPCs que faltan' deja la lista de NPCs del mundo con {altoLista:0}px (se come la categoria entera)");
+                        }
+
+                        // Evidencia visual del caso apretado real (el que reporto el usuario).
+                        if (esteMundoExp != null) esteMundoExp.IsExpanded = false;
+                        window.WindowState = WindowState.Normal;
+                        FijarTamaño(window, 1080, 700);
+                        DoEvents(); DoEvents();
+                        var rtbFaltan = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtbFaltan.Render(window);
+                        var encFaltan = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encFaltan.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbFaltan));
+                        using (var fs = File.Create(Path.Combine(AppContext.BaseDirectory, "exploracion-npcs-que-faltan-ventana-pequena.png"))) encFaltan.Save(fs);
+                        Console.WriteLine("Captura de 'NPCs que faltan' desplegado en ventana pequeña real -> exploracion-npcs-que-faltan-ventana-pequena.png");
+
+                        // Estado como estaba (mismo criterio que el resto de bloques del arnes).
+                        if (esteMundoExp != null) esteMundoExp.IsExpanded = false;
+                        expFaltan.IsExpanded = expandidoAntes;
+                        vm.Exploration.SelectedCategory = categoriaAntes;
+                        FijarTamaño(window, 1180, 860);
+                        DoEvents(); DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-15-EXCEPTION: " + ex); }
+
                 // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
                 // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de
                 // NPC"): con el mundo real ya cargado arriba, confirma que la mayoria de NPCs
@@ -5116,6 +5350,41 @@ internal static class Program
     // forma de detectarlo es comparar el ancho natural del texto con el ancho real de la caja.
     private static bool TextoRecortado(TextBlock tb) =>
         tb.TextWrapping == TextWrapping.NoWrap && AnchoNaturalDelTexto(tb) > tb.ActualWidth + 0.5;
+
+    // AR-15: el rectangulo de este elemento que de verdad se esta VIENDO ahora mismo, en
+    // coordenadas de `raiz`, despues de aplicarle el recorte de TODOS sus ancestros. Hace falta
+    // porque Recorte() (VisualTreeHelper.GetClip sobre el propio elemento) NO detecta este caso:
+    // cuando quien recorta es un ancestro, las filas que caen por debajo del corte no llevan clip
+    // ninguno - simplemente no se pintan, y el elemento sigue diciendo que mide su alto entero.
+    // Ese es exactamente el bug de "NPCs que faltan": contenido perdido con 0px de recorte medible.
+    private static Rect RectVisible(FrameworkElement fe, FrameworkElement raiz)
+    {
+        if (!fe.IsVisible || fe.ActualHeight <= 0) return Rect.Empty;
+        var r = fe.TransformToAncestor(raiz).TransformBounds(new Rect(0, 0, fe.ActualWidth, fe.ActualHeight));
+        for (DependencyObject d = fe; d != null && !ReferenceEquals(d, raiz); d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+        {
+            if (d is not System.Windows.Media.Visual v) continue;
+            var clip = System.Windows.Media.VisualTreeHelper.GetClip(v);
+            if (clip == null) continue;
+            r.Intersect(v.TransformToAncestor(raiz).TransformBounds(clip.Bounds));
+            if (r.IsEmpty) return Rect.Empty;
+        }
+        return r;
+    }
+
+    // AR-15: ¿esta fila se ve ENTERA ahora mismo? (alto completo dentro de lo que de verdad se
+    // pinta). Combinada con un BringIntoView real antes de preguntarlo, es la definicion honesta
+    // de "el usuario puede llegar a verla": si tras desplazarse hasta ella sigue sin verse
+    // entera, esa fila es contenido perdido de verdad, no un simple "hay que hacer scroll".
+    private static bool VisibleEntero(FrameworkElement fe, FrameworkElement raiz)
+    {
+        try
+        {
+            var r = RectVisible(fe, raiz);
+            return !r.IsEmpty && r.Height >= fe.ActualHeight - 0.5;
+        }
+        catch (InvalidOperationException) { return false; } // no cuelga de `raiz` (fila virtualizada fuera)
+    }
 
     // AR-11: ¿hay un ScrollViewer entre este elemento y el limite dado? Un elemento recortado
     // pero dentro de un ScrollViewer sigue siendo ALCANZABLE (solo hay que desplazarse); uno

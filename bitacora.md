@@ -9825,3 +9825,119 @@ que es con el que trabaja el resto del arnes: misma leccion que la ronda anterio
 `session.json`, todo bloque que cambia estado compartido lo restaura.
 
 No hubo ningun obstaculo que fallara dos veces seguidas.
+
+---
+
+## 6-sep-2026 - "NPCs que faltan" solo se veia entera a pantalla completa: dos causas, ninguna era la del bug anterior
+
+Tercera ronda sobre el panel derecho de Exploracion, con un sintoma exacto del usuario: **la lista
+de "NPCs que faltan" solo se ve completa con la ventana a pantalla completa** - con la ventana a un
+tamaño normal (no maximizada) se corta y no se ven todos. Las dos rondas anteriores dejaron bien la
+columna a los tamaños que probaron; este caso se les escapo entero, y merece la pena escribir por
+que.
+
+### Reproducido primero, con numeros, antes de tocar nada
+
+Bloque nuevo y permanente `AR-15` en el arnes (no un script aparte). Mundo real de pruebas
+`roca_negra.wld`: **14 NPCs de pueblo presentes de los 40 del roster vanilla, o sea 26 filas reales
+que enseñar**. Con el Expander "NPCs que faltan" DESPLEGADO, cuantas de esas 26 se pueden ver o
+alcanzar de verdad:
+
+| tamaño de ventana | se ven enteras | ALCANZABLES con scroll | perdidas |
+|---|---|---|---|
+| maximizada (2576x1408 real) | 26 | 26 | 0 |
+| 1600x1000 | 23 | 23 | **3** |
+| 1400x900 | 18 | 18 | **8** |
+| 1180x860 (el tamaño POR DEFECTO de la app) | 16 | 16 | **10** |
+| 1080x700 (el suelo real, `MinWidth`/`MinHeight` de `MainWindow.xaml`) | 9 | 15 | **11** |
+
+Exactamente el sintoma reportado: a pantalla completa 26/26, en cuanto la ventana deja de estar
+maximizada empiezan a faltar filas, y el propio tamaño por defecto de la app ya pierde 10.
+
+Y por el camino salio un segundo bug que nadie habia reportado: en los CINCO tamaños no
+maximizados, desplegar "NPCs que faltan" dejaba la **lista de NPCs del mundo en 0px medidos** - se
+comia la categoria entera.
+
+### Por que AR-11a/AR-11c (la ronda anterior, misma columna) no lo cazaron
+
+Las tres razones son distintas y las tres importan para no volver a fiarse:
+
+1. `AR-11a` mide el alto del **contenedor** de la categoria (`ExplorationCategoryContent`), no el
+   reparto DENTRO de la categoria de NPCs. Ese contenedor seguia midiendo sus 401px/201px correctos
+   mientras el contenido de dentro se cortaba.
+2. `AR-11c` da por "recortado" solo lo que lleva un clip propio
+   (`VisualTreeHelper.GetClip` sobre el elemento). **Cuando quien recorta es un ANCESTRO, las filas
+   que caen por debajo del corte no llevan clip ninguno**: no se pintan y punto. `GetClip` sobre
+   ellas devuelve `null`, o sea "0px de recorte" - y era mentira. Helper nuevo `RectVisible`/
+   `VisibleEntero`: el rectangulo que de verdad se ve, intersectando el clip acumulado de TODOS
+   los ancestros hasta la ventana. Y "alcanzable" se mide haciendo el gesto real del usuario
+   (`BringIntoView` sobre cada fila) antes de volver a preguntar.
+3. Ninguno de los dos DESPLEGABA nunca ese Expander, que es justo el estado en el que se ve el bug.
+
+### Las dos causas reales
+
+1. **El `ItemsControl` de "NPCs que faltan" no tenia ninguna via de scroll propia.** Cuando el
+   Expander recibia menos alto del que pedia (585px para las 26 filas), las de abajo dejaban de
+   pintarse sin nada con lo que llegar a ellas. Es el mismo tipo de fallo que la ronda anterior
+   arreglo para la columna entera y para "Este mundo" - a esta lista se le quedo sin hacer.
+2. **La categoria NPCs era un `DockPanel` y el Expander iba `Dock=Bottom`.** Un DockPanel sirve a
+   sus hijos `Dock` PRIMERO y con su `DesiredSize` ENTERO, y solo deja el resto al relleno: por eso
+   la lista de NPCs del mundo se quedaba con 0px. Misma familia de bug que el `LastChildFill` de
+   Cofres de la ronda anterior, en el otro eje.
+
+### El arreglo
+
+`Grid` de tres filas en lugar del `DockPanel` (`MainWindow.xaml`, categoria NPCs):
+
+- fila 0 `Auto` - los tres chips de filtro.
+- fila 1 `*` con **`MinHeight="90"`** - la lista de NPCs del mundo, con suelo propio (3 filas
+  reales) para que no pueda volver a desaparecer.
+- fila 2 `{Binding IsExpanded, ElementName=MissingNpcsExpander, Converter=BoolToGridLength,
+  ConverterParameter=2}` - "NPCs que faltan": **`2*` mientras esta desplegado, `Auto` cuando esta
+  colapsado** (que es como arranca). `BoolToGridLengthConverter` ya existia y ya estaba registrado
+  en el arnes, no hace falta ninguno nuevo.
+
+Dos filas star **reparten siempre el hueco exacto y nunca desbordan**, sea cual sea el tamaño de la
+ventana - eso es lo que hace que el arreglo no dependa de ningun numero magico de altura. Y dentro
+del Expander, `ScrollViewer VerticalScrollBarVisibility="Auto"` alrededor del `ItemsControl`: lo
+que no cabe se alcanza, misma red de seguridad que ya tienen la columna entera y "Este mundo".
+
+### Resultado medido (mismos tamaños, mismo mundo, mismas 26 filas)
+
+| tamaño | antes: alcanzables | despues: alcanzables | lista de NPCs del mundo antes -> despues |
+|---|---|---|---|
+| maximizada | 26 | **26** (26 sin tocar nada) | 357px -> 314px |
+| 1600x1000 | 23 | **26** | 0px -> 178px |
+| 1400x900 | 18 | **26** | 0px -> 145px |
+| 1180x860 | 16 | **26** | 0px -> 131px |
+| 1080x700 | 15 | **26** | 0px -> 123px |
+| 1080x700 + "Este mundo" abierto (caso peor, añadido a AR-15) | - | **26** | - -> 90px (el suelo) |
+
+A pantalla completa **no cambia nada de lo que ya funcionaba**: las 26 siguen viendose enteras sin
+tocar el scroll.
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core **419**, ViewModels **350**, 0 fallos (sin tocar ninguno de los dos proyectos:
+  esto es layout de XAML puro).
+- Arnes de UI Automation: **0 lineas `FALLO`** en dos ejecuciones seguidas.
+- `AR-13a` (el reparto horizontal de la ronda anterior) sale **identico dato a dato** en las 6
+  vistas antes y despues - no se rompio nada de lo que aquella ronda dejo bien.
+- `AR-11a`/`AR-11f` igual que antes (373/401/173/201px de contenido de categoria; viewport 626px
+  sin barra al tamaño por defecto).
+- Captura real nueva: `exploracion-npcs-que-faltan-ventana-pequena.png` (1080x700 real, con la
+  barra de scroll propia de la lista ya visible y la lista de NPCs del mundo conservando su sitio).
+
+### Obstaculo real de esta ronda (autonomia tecnica)
+
+Otra vez `MSB3021` con `Terrakeep.exe` bloqueado por la app que el usuario tenia abierta (proceso
+34212). Misma solucion no invasiva ya documentada: compilar y ejecutar con
+`-p:BaseOutputPath=<scratchpad>/out/`, sin tocar `bin\Debug\`. Detalle util para la proxima:
+mientras la app real del usuario esta abierta, el arnes da **2 `FALLO` de `H5-07`** (`session.json`
+/ "Continuar con...") que NO son una regresion - `%LOCALAPPDATA%\Terrakeep\session.json` es global
+de la maquina y la app abierta lo esta reescribiendo por debajo. Al cerrarse la app, esos dos
+desaparecieron solos con el mismo codigo. Es la misma verdad del entorno que ya documento la ronda
+de las pildoras de Equipamiento, vista desde el otro lado.
+
+No hubo ningun obstaculo que fallara dos veces seguidas.

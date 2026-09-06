@@ -4740,10 +4740,42 @@
                              WPF convierte el texto al valor del enum solo con el TypeConverter
                              nativo, sin falta ningun converter). -->
                         <Grid x:Name="ExplorationCategoryContent">
-                            <!-- NPCs: chips + lista propia (ya existente) + "NPCs que faltan". -->
-                            <DockPanel>
-                                <DockPanel.Style>
-                                    <Style TargetType="DockPanel">
+                            <!-- NPCs: chips + lista propia (ya existente) + "NPCs que faltan".
+                                 Bug real reportado por el usuario probando la app (6-sep-2026): "la
+                                 lista de NPCs que faltan SOLO se ve completa con la ventana a
+                                 pantalla completa; con la ventana a un tamaño normal se corta y no
+                                 se ven todos". Medido con AR-15 sobre el mundo real de pruebas (26
+                                 de los 40 NPCs del roster vanilla faltan): maximizada 26/26, pero
+                                 1600x1000 23/26, 1400x900 18/26, 1180x860 (el tamaño por defecto)
+                                 16/26 y 1080x700 (el suelo real de la ventana) 15/26 - hasta 11
+                                 filas perdidas SIN ninguna barra con la que llegar a ellas.
+
+                                 Causa real, DOS piezas y ninguna es la del bug anterior de esta
+                                 misma columna:
+                                   1. El ItemsControl de "NPCs que faltan" no tenia ninguna via de
+                                      scroll propia. Cuando el Expander recibia menos alto del que
+                                      pedia, las filas de abajo simplemente dejaban de pintarse.
+                                      Ojo: AR-11c no podia verlo porque el recorte lo hacia un
+                                      ANCESTRO - una fila que cae por debajo del corte no lleva
+                                      clip propio, asi que VisualTreeHelper.GetClip sobre ella da
+                                      null y "no hay recorte" era mentira.
+                                   2. Era un DockPanel y el Expander iba Dock=Bottom: un DockPanel
+                                      sirve a sus hijos Dock PRIMERO y con su DesiredSize ENTERO -
+                                      desplegar "NPCs que faltan" se comia la categoria entera y
+                                      dejaba la lista de NPCs del mundo con 0px medidos en los
+                                      CINCO tamaños no maximizados (tambien medido por AR-15).
+                                 Grid con reparto real en su lugar: la lista del mundo se queda una
+                                 fila estrella con suelo propio y "NPCs que faltan", solo mientras
+                                 esta desplegado, otra de 2* (BoolToGridLength ya existente, el
+                                 mismo converter que usa la fila de la Libreria) - dos filas star
+                                 reparten SIEMPRE el hueco exacto, nunca desbordan, en cualquier
+                                 tamaño de ventana. Colapsado vuelve a Auto y todo queda como
+                                 estaba. Lo que no cabe se alcanza con el scroll propio de cada
+                                 lista, que es la misma red de seguridad que la ronda anterior le
+                                 puso a la columna entera y al bloque "Este mundo". -->
+                            <Grid>
+                                <Grid.Style>
+                                    <Style TargetType="Grid">
                                         <Setter Property="Visibility" Value="Collapsed" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Exploration.SelectedCategory}" Value="Npcs">
@@ -4751,12 +4783,22 @@
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </DockPanel.Style>
+                                </Grid.Style>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <!-- MinHeight real (no 0): con "Este mundo" desplegado a
+                                         1080x700 el hueco de la categoria son 201px medidos, y sin
+                                         suelo la lista del mundo se quedaria en nada. 90px son tres
+                                         filas reales de NPC, suficiente para que siga siendo una
+                                         lista y no un recorte. -->
+                                    <RowDefinition Height="*" MinHeight="90" />
+                                    <RowDefinition Height="{Binding IsExpanded, ElementName=MissingNpcsExpander, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}" />
+                                </Grid.RowDefinitions>
 
                                 <!-- Punto 4 (advisor Opus, "npcs escondidos en el subsuelo que puedas
                                      encontrarlos facilmente" - ver ESPEC-ui-exploracion.md#12): tres
                                      chips multiseleccion, OR entre ellos y AND con el texto. -->
-                                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                                <WrapPanel Grid.Row="0" Margin="0,0,0,8">
                                     <ToggleButton Style="{StaticResource ViewSelector}" Content="{Binding Loc[explore_npc_housed], Mode=OneWay}" IsChecked="{Binding Exploration.NpcFilterWithHome}" />
                                     <ToggleButton Style="{StaticResource ViewSelector}" Content="{Binding Loc[explore_npc_homeless], Mode=OneWay}" IsChecked="{Binding Exploration.NpcFilterHomeless}" />
                                     <ToggleButton Style="{StaticResource ViewSelector}" Content="{Binding Loc[explore_npc_underground], Mode=OneWay}" IsChecked="{Binding Exploration.NpcFilterUnderground}"
@@ -4765,10 +4807,15 @@
 
                                 <!-- X-f: "NPCs que faltan" empieza colapsado - vive dentro de esta
                                      categoria, ya no en la columna entera. -->
-                                <Expander DockPanel.Dock="Bottom" Header="{Binding Loc[explore_missing_npcs], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
+                                <Expander x:Name="MissingNpcsExpander" Grid.Row="2" Header="{Binding Loc[explore_missing_npcs], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
                                           Margin="0,10,0,0" IsExpanded="False"
                                           Visibility="{Binding Exploration.MissingNpcs.Count, Converter={StaticResource CountToVis}}">
-                                    <ItemsControl ItemsSource="{Binding Exploration.MissingNpcs}" Margin="0,6,0,0">
+                                    <!-- Scroll propio: es lo que faltaba de verdad (ver el
+                                         comentario largo del Grid de arriba). Sin el, en cuanto la
+                                         fila del Grid no da para las 26 filas reales, las de abajo
+                                         se dejan de pintar y no hay forma humana de llegar a ellas. -->
+                                    <ScrollViewer x:Name="MissingNpcsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsControl x:Name="MissingNpcsList" ItemsSource="{Binding Exploration.MissingNpcs}" Margin="0,6,0,0">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type vm:MissingNpcRowViewModel}">
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
@@ -4783,9 +4830,10 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
+                                    </ScrollViewer>
                                 </Expander>
 
-                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ScrollViewer x:Name="NpcResultsList" Grid.Row="1" VerticalScrollBarVisibility="Auto">
                                     <!-- X-c: la lista lateral de TEXTO si se filtra de verdad (NpcSearchResults) -
                                          Npcs (el mapa, arriba) se queda siempre completo. -->
                                     <ItemsControl ItemsSource="{Binding Exploration.NpcSearchResults}">
@@ -4834,7 +4882,7 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </ScrollViewer>
-                            </DockPanel>
+                            </Grid>
 
                             <!-- Cofres: dos vistas alternadas (9.3-C) - precedente real de este
                                  gesto: los ToggleButton "Terraria"/"Mods" de TabbedPickerControl.xaml
