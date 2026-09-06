@@ -48,7 +48,29 @@ public abstract partial class CatalogBrowserViewModel<TEntry> : ObservableObject
             SearchDebounceTimer.Stop();
             ApplyFilter();
         };
+        // Ronda de Libreria/Builds del 6-sep-2026 - BUG REAL medido: ResultsSummary (y
+        // SlotRestrictionLabel en la Libreria de objetos) son strings YA RESUELTOS dentro de
+        // ApplyFilter, no bindings indexados contra el diccionario - o sea que el aviso
+        // "Item[]" de LocalizationService, que refresca solo lo que se lee via {Binding
+        // Loc[clave]}, no les llegaba nunca. Con la app en español, cambiar a ingles dejaba la
+        // linea de resumen de las TRES superficies (Libreria, Libreria de buffs, Investigacion)
+        // congelada en español hasta que el usuario volviera a teclear o a pulsar una carpeta -
+        // y en el estado de arranque (sin busqueda ni carpeta) eso es literalmente el UNICO
+        // texto del panel derecho, asi que se quedaba una frase entera en español a la vista.
+        // El barrido A10-IDIOMA-BARRIDO no podia cazarlo: ese barrido navega pulsando carpetas,
+        // y cada pulsacion vuelve a llamar a ApplyFilter, que regenera el texto EN EL IDIOMA
+        // ACTIVO - la version rancia solo existe si NO se refiltra tras cambiar de idioma.
+        // Evento DEBIL (mismo motivo real que LocalizedContentViewModel: el servicio de idioma
+        // es un singleton que vive lo que la aplicacion, estos ViewModels no).
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            Services.LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
+
+    // Refiltrar entero (en vez de solo recalcular el resumen) es lo correcto de verdad: el texto
+    // depende tambien del nombre de la carpeta elegida, que YA cambia de idioma solo
+    // (CategoryNodeViewModel.Name), y ApplyFilter es idempotente en las 3 hijas.
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        => ApplyFilter();
 
     // Solo la busqueda por TEXTO se difiere (elegir/quitar carpeta sigue aplicando al instante,
     // un clic discreto) - medido de verdad en L-c (LibraryViewModel): 180ms es imperceptible
