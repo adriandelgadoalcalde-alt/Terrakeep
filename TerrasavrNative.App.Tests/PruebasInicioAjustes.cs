@@ -40,6 +40,8 @@ internal static partial class Program
         PruebasInicio(vm);
         PruebasTarjetasDeInicio(vm, window);
         PruebasAjustes(vm, window);
+        PruebasAjustesPersistidos(vm);
+        PruebasSelectorDeIdioma(vm, window);
         PruebasNovedades(vm);
         PruebasAcercaDe(vm, window);
     }
@@ -437,6 +439,132 @@ internal static partial class Program
         }
     }
 
+    // ---- AJU-03: los ajustes que NO tienen control propio en la pantalla de Ajustes ----
+    // El ancho de la barra lateral de Exploracion y la visibilidad del minimapa se cambian desde
+    // Exploracion (arrastrando el GridSplitter, pulsando el boton de plegar) pero VIVEN aqui:
+    // son parte de settings.json y de SettingsViewModel, y su unica red real son los clamps de
+    // esta clase. Sin ellos, un settings.json con un ancho absurdo (editado a mano, o heredado de
+    // una version anterior) deja la barra en una zona intermedia inutil, y un 0 - que SI es un
+    // valor valido, "plegada" - no debe confundirse con "demasiado estrecha".
+    //
+    // Todo esto escribe en el settings.json REAL de esta maquina, asi que se respalda como TEXTO
+    // y se restaura byte a byte al final (mismo criterio que A9-11/A9-12 con el mundo y con
+    // window.json).
+    private static void PruebasAjustesPersistidos(MainViewModel vm)
+    {
+        string ruta = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "settings.json");
+        string? backup = File.Exists(ruta) ? File.ReadAllText(ruta) : null;
+        try
+        {
+            double anchoPrevio = vm.Settings.ExplorationSidebarWidth;
+            bool minimapaPrevio = vm.Settings.IsMinimapVisible;
+
+            vm.Settings.ExplorationSidebarWidth = 0;      // plegada: valor real y valido
+            double trasCero = vm.Settings.ExplorationSidebarWidth;
+            vm.Settings.ExplorationSidebarWidth = 120;    // demasiado estrecha para ser util
+            double trasEstrecha = vm.Settings.ExplorationSidebarWidth;
+            vm.Settings.ExplorationSidebarWidth = 900;    // mas de media pantalla
+            double trasAncha = vm.Settings.ExplorationSidebarWidth;
+            vm.Settings.ExplorationSidebarWidth = 340;    // un valor normal se respeta tal cual
+            double trasNormal = vm.Settings.ExplorationSidebarWidth;
+            Console.WriteLine($"AJU-03-BARRA: 0 -> {trasCero:0} (esperado 0, plegada), 120 -> {trasEstrecha:0} (esperado 260, el suelo), 900 -> {trasAncha:0} (esperado 520, el techo), 340 -> {trasNormal:0} (esperado 340)");
+            if (trasCero != 0) Console.WriteLine("FALLO: AJU-03 - plegar la barra lateral (0) se recorta a un valor intermedio, o sea ya no se puede plegar");
+            if (trasEstrecha != 260) Console.WriteLine("FALLO: AJU-03 - un ancho por debajo del minimo real no se recorta al minimo");
+            if (trasAncha != 520) Console.WriteLine("FALLO: AJU-03 - un ancho por encima del maximo real no se recorta al maximo");
+            if (Math.Abs(trasNormal - 340) > 0.5) Console.WriteLine("FALLO: AJU-03 - un ancho normal no se respeta tal cual");
+
+            // Persistencia REAL: lo que se cambia aqui tiene que estar en el fichero, no solo en
+            // memoria - es lo unico que hace que sobreviva a cerrar la app.
+            vm.Settings.IsMinimapVisible = !minimapaPrevio;
+            var enDisco = System.Text.Json.JsonSerializer.Deserialize<TerrakeepSettings>(File.ReadAllText(ruta))!;
+            bool guardoAncho = Math.Abs(enDisco.ExplorationSidebarWidth - 340) < 0.5;
+            bool guardoMinimapa = enDisco.IsMinimapVisible == !minimapaPrevio;
+            Console.WriteLine($"AJU-03-PERSISTE: settings.json real -> ancho de la barra={enDisco.ExplorationSidebarWidth:0} (esperado 340) -> {guardoAncho}, minimapa visible={enDisco.IsMinimapVisible} (esperado {!minimapaPrevio}) -> {guardoMinimapa}");
+            if (!guardoAncho || !guardoMinimapa) Console.WriteLine("FALLO: AJU-03 - un ajuste cambiado no llega al settings.json real (se perderia al cerrar la app)");
+
+            // Carpetas adicionales de MUNDOS: la mitad que nunca se probaba de extremo a extremo
+            // (H5-07 solo cubre las de personajes). Lo que de verdad importa es que la carpeta
+            // llegue a CharacterFileService, que es quien la usa para buscar mundos.
+            string dirMundos = Path.Combine(Path.GetTempPath(), $"terrakeep-mundos-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(dirMundos);
+            try
+            {
+                vm.Settings.AddWorldFolder(dirMundos);
+                bool enServicio = CharacterFileService.ExtraWorldFolders.Contains(dirMundos, StringComparer.OrdinalIgnoreCase);
+                bool enBusqueda = CharacterFileService.GetAllWorldsDirectories().Contains(dirMundos, StringComparer.OrdinalIgnoreCase);
+                vm.Settings.AddWorldFolder(dirMundos); // repetida a proposito: no puede duplicarse
+                int vecesEnLaLista = vm.Settings.ExtraWorldFolders.Count(f => string.Equals(f, dirMundos, StringComparison.OrdinalIgnoreCase));
+                vm.Settings.RemoveWorldFolderCommand.Execute(dirMundos);
+                bool fueraTrasQuitar = !CharacterFileService.GetAllWorldsDirectories().Contains(dirMundos, StringComparer.OrdinalIgnoreCase);
+                Console.WriteLine($"AJU-03-MUNDOS: carpeta adicional -> llega a CharacterFileService={enServicio} (esperado True), entra en la busqueda real de mundos={enBusqueda} (esperado True), " +
+                                  $"veces en la lista tras añadirla dos veces={vecesEnLaLista} (esperado 1), fuera tras quitarla={fueraTrasQuitar} (esperado True)");
+                if (!enServicio || !enBusqueda) Console.WriteLine("FALLO: AJU-03 - una carpeta adicional de mundos no llega a la busqueda real de mundos");
+                if (vecesEnLaLista != 1) Console.WriteLine("FALLO: AJU-03 - añadir dos veces la misma carpeta de mundos la duplica en la lista");
+                if (!fueraTrasQuitar) Console.WriteLine("FALLO: AJU-03 - quitar una carpeta de mundos no la saca de la busqueda real");
+            }
+            finally
+            {
+                try { Directory.Delete(dirMundos, recursive: true); } catch (Exception) { }
+            }
+
+            vm.Settings.ExplorationSidebarWidth = anchoPrevio;
+            vm.Settings.IsMinimapVisible = minimapaPrevio;
+        }
+        catch (Exception ex) { Console.WriteLine("AJU-03-EXCEPTION: " + ex); }
+        finally
+        {
+            // El settings.json de este usuario vuelve tal y como estaba, byte a byte.
+            if (backup != null) File.WriteAllText(ruta, backup);
+            else if (File.Exists(ruta)) File.Delete(ruta);
+            vm.Settings.LoadFromDisk(); // y el ViewModel deja de reflejar los valores de prueba
+        }
+    }
+
+    // ---- AJU-04: el selector de idioma REAL, con los dos chips de la pantalla ----
+    // A9-13-IDIOMA cambia el idioma asignando la propiedad del ViewModel; aqui se pulsan los dos
+    // RadioButton de verdad (el camino del usuario) y se comprueba que la interfaz que ya esta
+    // en pantalla se reescribe sola, en los dos sentidos.
+    private static void PruebasSelectorDeIdioma(MainViewModel vm, Window window)
+    {
+        string idiomaPrevio = vm.Settings.Language;
+        int tabPrevio = vm.SelectedTabIndex;
+        try
+        {
+            vm.SelectedTabIndex = 5;
+            DoEvents(); DoEvents();
+            var chips = Descendientes<RadioButton>(window).Where(r => r.IsVisible && r.GroupName == "Idioma").ToList();
+            if (chips.Count != 2)
+            {
+                Console.WriteLine($"FALLO: AJU-04 - se esperaban 2 chips de idioma en Ajustes y se encontraron {chips.Count}");
+                return;
+            }
+            // El titulo de la propia seccion es texto de interfaz: sirve de testigo de que lo que
+            // YA esta pintado se reescribe (no solo lo que se vuelva a crear despues).
+            var testigo = Descendientes<TextBlock>(window).FirstOrDefault(t => t.IsVisible && t.Text == LocalizationService.Instance["settings_language_title"]);
+            foreach (var (destino, etiqueta) in new[] { (LocalizationService.English, "settings_language_english"), (LocalizationService.Spanish, "settings_language_spanish") })
+            {
+                var chip = chips.FirstOrDefault(r => r.Content as string == LocalizationService.Instance[etiqueta])
+                           ?? chips[destino == LocalizationService.English ? 1 : 0];
+                chip.IsChecked = true;
+                DoEvents(); DoEvents();
+                bool cambio = vm.Settings.Language == destino && LocalizationService.Instance.Language == destino;
+                string esperadoTitulo = LocalizationService.Instance["settings_language_title"];
+                bool testigoReescrito = testigo == null || testigo.Text == esperadoTitulo;
+                Console.WriteLine($"AJU-04-IDIOMA: pulsado el chip de '{destino}' -> Settings.Language={vm.Settings.Language}, LocalizationService={LocalizationService.Instance.Language} (esperado {destino} los dos) -> {cambio}; " +
+                                  $"el titulo YA pintado dice \"{testigo?.Text ?? "(no encontrado)"}\" (esperado \"{esperadoTitulo}\") -> {testigoReescrito}");
+                if (!cambio) Console.WriteLine($"FALLO: AJU-04 - pulsar el chip de idioma '{destino}' no cambia el idioma real de la app");
+                if (!testigoReescrito) Console.WriteLine("FALLO: AJU-04 - el texto que ya estaba en pantalla no se reescribe al cambiar de idioma con el chip");
+            }
+        }
+        catch (Exception ex) { Console.WriteLine("AJU-04-EXCEPTION: " + ex); }
+        finally
+        {
+            vm.Settings.Language = idiomaPrevio;
+            vm.SelectedTabIndex = tabPrevio;
+            DoEvents();
+        }
+    }
+
     private static void PruebasNovedades(MainViewModel vm)
     {
         // ---- NOV-01: contenido real de las dos pestañas y su traduccion ----
@@ -513,6 +641,28 @@ internal static partial class Program
                 if (!versionVisible) Console.WriteLine($"FALLO: ACE-01 - la version real de la app no se ve en 'Acerca de' con la app en {idioma}");
                 if (claves.Count > 0) Console.WriteLine($"FALLO: ACE-01 - hay claves de idioma sin resolver a la vista en 'Acerca de' ({string.Join(",", claves)})");
             }
+
+            // ---- ACE-02: el registro de cambios del propio editor, dentro de "Acerca de" ----
+            // No se toca su CONTENIDO aqui (lo escribe el usuario al cerrar una version), pero si
+            // que este completo y traducido: una entrada sin fecha/resumen, o con la lista inglesa
+            // de distinta longitud que la española, deja huecos mudos en la pestaña.
+            var registro = vm.Changelog.Entries;
+            vm.Settings.Language = LocalizationService.Spanish; DoEvents();
+            var resumenEs = registro.Select(e => e.Summary).ToList();
+            vm.Settings.Language = LocalizationService.English; DoEvents();
+            var resumenEn = registro.Select(e => e.Summary).ToList();
+            vm.Settings.Language = LocalizationService.Spanish; DoEvents();
+            int sinVersion = registro.Count(e => string.IsNullOrWhiteSpace(e.Version));
+            int sinFecha = registro.Count(e => string.IsNullOrWhiteSpace(e.Date));
+            int sinResumen = registro.Count(e => string.IsNullOrWhiteSpace(e.Summary));
+            int vacias = registro.Count(e => e.Added.Count == 0 && e.Fixed.Count == 0);
+            int resumenIgual = resumenEs.Zip(resumenEn).Count(p => p.First == p.Second);
+            Console.WriteLine($"ACE-02-REGISTRO: {registro.Count} version(es) del editor -> sin numero={sinVersion} (esperado 0), sin fecha={sinFecha} (esperado 0), sin resumen={sinResumen} (esperado 0), " +
+                              $"sin nada añadido ni arreglado={vacias} (esperado 0), resumenes identicos en los dos idiomas={resumenIgual} (esperado 0)");
+            if (registro.Count == 0) Console.WriteLine("FALLO: ACE-02 - el registro de cambios del editor esta vacio en 'Acerca de'");
+            if (sinVersion > 0 || sinFecha > 0 || sinResumen > 0) Console.WriteLine("FALLO: ACE-02 - hay versiones del registro sin numero, sin fecha o sin resumen");
+            if (vacias > 0) Console.WriteLine("FALLO: ACE-02 - hay versiones del registro sin ningun cambio ni arreglo que enseñar");
+            if (resumenIgual > 0) Console.WriteLine($"FALLO: ACE-02 - {resumenIgual} resumen(es) del registro siguen identicos con la app en ingles (sin traducir)");
 
             // El propio dato, no solo lo pintado: AboutViewModel es la fuente unica del nombre.
             Console.WriteLine($"ACE-01-DATO: About.AuthorName='{vm.About.AuthorName}' (esperado exactamente 'IncrediBad'), About.AppName='{vm.About.AppName}' (esperado 'Terrakeep'), About.Version='{vm.About.Version}'");
