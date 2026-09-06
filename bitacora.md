@@ -11862,3 +11862,132 @@ concreta (ratón sintético sin efecto, modificadores de teclado que no llegan a
 mismo límite real del entorno, otra cara del mismo problema. No hay ninguna ventana compitiendo
 por el foco (comprobado, `tasklist` sin `Terrakeep.exe` ni otra instancia del arnés). Se deja
 documentado en vez de perseguirlo más: no bloquea la publicación de esta versión.
+
+---
+
+## 6-sep-2026 - Ronda de traducción del CONTENIDO del juego: nombres, tooltips, buffs y bonos de set en inglés real
+
+El límite que arrastraban varias rondas seguidas, y que estaba escrito con todas las letras en
+esta misma bitácora: **la interfaz ya estaba entera en los dos idiomas, pero el contenido del
+propio juego no**. Con la app en inglés un objeto seguía llamándose "Pico de hierro", un NPC
+"Slime azul", un tile "Bloque de tierra", y el caso más visible de todos - el que quedó anotado
+literalmente unas horas antes - un bono de set con la frase del editor traducida envolviendo un
+texto de juego que no lo estaba:
+
+```
+[en] casco:  With the full set: Reduce el coste de maná un 8%...
+```
+
+Esto es una ronda de **datos** primero y de **cableado** después. Dos commits.
+
+### Fuentes reales usadas, catálogo por catálogo (ninguna traducción inventada)
+
+| Catálogo | Fuente real del inglés | Entradas |
+|---|---|---|
+| Nombres de objeto vanilla | `Terraria.Localization.Content.en-US.Items.json`, clave `ItemName` | **6180** de 6194 |
+| Tooltips descriptivos vanilla | mismo fichero, clave `ItemTooltip` (referencias `{$CommonItemTooltip.X}` ya resueltas) | **2789** |
+| Nombres de buff | `en-US.Game.json`, clave `BuffName` | **352** (100%) |
+| Descripciones de buff | `en-US.Game.json`, clave `BuffDescription` | **353** (100%) |
+| Bonos de set vanilla | `en-US.Game.json`, clave `ArmorSetBonus` | **235** entradas / **61** textos distintos (100%) |
+| Bonos de set de Calamity | los `.hjson` `en-US` del `.tmod` real instalado, resueltos con el mismo sistema de plantillas de tModLoader | **69** de 69, 0 placeholders sin resolver |
+| Nombres de objeto/buff de Calamity | `displayName_fallback` de `catalog.json`/`buffs.json` (ya venía del hjson `en-US`) | 2709 y 305 (100%) |
+| Nombres de NPC | `npc_names.json`, campo `en` (ya existía) | 691 (100%) |
+| Nombres de tile/pared | `tile_names.json`, campo `name` de TEdit (ya existía) | 754 tiles + 9347 variantes por sprite + 367 paredes (100%) |
+
+Los tres últimos **ya eran bilingües de origen**: lo que faltaba ahí no eran los datos, era que
+alguien los leyera. `NpcNameCatalog` devolvía `Es ?? En` y `TileNameCatalog` leía `name_es` y si
+no `name` - o sea, siempre el mismo idioma pasara lo que pasara con la interfaz.
+
+De paso, el tooltip **español** ganó **271 entradas** al regenerarlo (ids >5455, que se añadieron
+a `vanilla_item_ids_by_key.json` después de la primera generación): 0 entradas perdidas y 0
+textos preexistentes cambiados, comprobado con un diff real contra `git show HEAD:`.
+
+### Excepciones reales documentadas (nunca inventadas)
+
+- **14 objetos sin nombre real en `en-US`**: `Fake_newchest1/2`, `OgreMask`, `GoblinMask`,
+  `GoblinBomberCap`, `EtherianJavelin`, `KoboldDynamiteBackpack`, `BoringBow`, `BossBagOgre`,
+  `BossBagDarkMage`, `ColorOnlyDye`, `ManaCloakStar`, `FirstFractal`, `SleepingIcon`. Son
+  objetos internos o inobtenibles del propio juego. Se quedan en español a propósito
+  (`LocalizedContent.Pick` cae al idioma de referencia) y hay una prueba real que lo fija: el
+  inglés de First Fractal **no** puede salir vacío ni inventado, tiene que ser el español.
+- **Buffs, bonos de set (vanilla y Calamity), NPCs y tiles: 0 excepciones**, cobertura 100%.
+- Los **letreros del mundo** siguen siendo un `LIMITE-CONOCIDO` explícito: es texto que escribió
+  el jugador dentro del juego, traducirlo sería falsear un dato del usuario.
+- Los **tiles sin traducción real al español** (183 de 754) siguen viéndose en inglés en los dos
+  idiomas. No es un hueco de esta ronda: es la regla de siempre - lo que no tiene traducción
+  real no se inventa.
+
+### El cableado, y por qué un idioma activo estático
+
+`LocalizedContent.CurrentLanguage`, que `LocalizationService.SetLanguage` mantiene al día en el
+único punto real de cambio de idioma de la app. Vive en Core porque los catálogos viven ahí y no
+pueden ver la capa de escritorio (Core compila también para `net8.0`/el mod de tModLoader).
+
+La alternativa - un parámetro de idioma en cada firma - se descartó a conciencia: estos
+catálogos se consultan desde decenas de sitios reales (tarjetas de la Librería, tooltips de
+slot, árbol de Investigación, buscador del mundo, tooltip del mapa, Builds, Apariencia...) y
+**olvidarse de uno solo no da error de compilación**: da un nombre español colado en la
+interfaz inglesa, exactamente el bug que la ronda viene a cerrar. Todas las consultas tienen
+además sobrecarga con idioma explícito, que es lo que usan los tests y quien construye un
+catálogo una sola vez al arrancar.
+
+### Los sitios donde el texto estaba FIJADO (el trabajo de verdad)
+
+Traducir el dato no basta: media docena de sitios guardaban el texto ya resuelto y se quedaban
+congelados en el idioma del arranque. Cada uno arreglado en su sitio, no con un refresco global:
+
+- `ItemSlotViewModel.DisplayName` - `RefreshDisplayName()` que recalcula **solo** el nombre.
+  Rehacer `UpdateFrom` entero dispararía `EmitItemChanged` y marcaría el personaje como
+  modificado sin que el usuario haya tocado nada.
+- `BuffSlotViewModel` - no estaba suscrito al idioma **en absoluto**.
+- `LibraryItemViewModel` - `DisplayName` pasa de valor fijo a calculado sobre los dos nombres, y
+  `NameFolded` (el plegado que usa el buscador) se recuerda **por idioma**: buscar "Iron
+  Pickaxe" con la app en inglés ahora encuentra lo que la tarjeta enseña de verdad.
+- `ExplorationViewModel` - NPCs, "NPCs que faltan", minerales, tiles/paredes y objetos de cofre.
+  Se conservan el filtro de NPC y la categoría elegida.
+- `AppearanceViewModel` - los tintes de pelo se llaman por el nombre real del objeto.
+- `CalamitySetInfo.Heads` guardaba el texto **ya resuelto al construir el catálogo**: congelado
+  en el idioma del arranque para siempre. Ahora guarda la entrada real y resuelve al leer. Su
+  construcción pregunta "¿tiene bono?" por idioma explícito, porque eso es una propiedad del
+  DATO, no del idioma activo - si no, la propia FORMA del catálogo dependería de cuándo se
+  construyó.
+
+Investigación y las dos Librerías ya refiltraban solas al cambiar de idioma
+(`CatalogBrowserViewModel`), así que heredaron la traducción sin tocar nada.
+
+### Dos obstáculos reales del entorno, resueltos por el camino (autonomía técnica)
+
+1. **Los ficheros `en-US.*` de Terraria y `en_US.*` de tModLoader traen comas finales reales**
+   antes de `}`/`]`. El juego los lee con Newtonsoft, que las tolera; `json.load` de Python y
+   `JSON.parse` de Node **no**, y revientan con "Illegal trailing comma". Los `es-ES.*` no las
+   tienen, y por eso ningún script anterior se lo había encontrado nunca. Resuelto con un lector
+   tolerante que respeta cadenas y escapes (un regex a pelo se cargaría una coma que viviera
+   dentro de una cadena real del juego): `scripts/lang_vanilla.py` y `quitarComasFinales()`
+   dentro de `extraer-bonos-set-calamity.js`.
+2. **`extraer-bonos-set-calamity.js` define una función propia llamada `process()`** (la
+   resolución de `{$Key@N}`) y el hoisting de esa declaración **tapa el objeto global `process`
+   en todo el módulo** - `process.argv` sale `undefined` aunque el código esté escrito antes.
+   Hay que leer `globalThis.process.argv`. Costó un intento entender por qué `argv` no existía
+   en un script de Node perfectamente normal.
+
+### Verificación real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core **450/450** (+9), ViewModels **445/445** (+6), 0 fallos.
+- Pruebas nuevas permanentes, todas contra los ficheros REALES y con texto real del juego
+  citado: `TerrasavrNative.Core.Tests/Data/ContenidoBilingueRealTests.cs` (catálogos) y
+  `TerrasavrNative.App.ViewModels.Tests/ContenidoDelJuegoEnIdiomaTests.cs` (camino real de la
+  app: slot, tooltip, bono de set vanilla y de Calamity, buff, y la Librería enseñando **y
+  buscando** en el idioma activo).
+- Bloque nuevo del arnés **`A11-CONTENIDO-IDIOMA`** (`AuditoriaContenidoIdioma.cs`, fichero
+  propio por la misma razón que `AuditoriaMaquetacion.cs`: `Program.cs` lo tocan varias sesiones
+  a la vez). Va **al revés que `A10-IDIOMA-BARRIDO`**, que por diseño no puede ver este bug:
+  A10 descuenta como ruido cualquier texto que sea un nombre de catálogo. A11 construye el
+  vocabulario de nombres **españoles que tienen inglés real y distinto** y, con la app en
+  inglés, marca como FALLO cualquiera que aparezca pintado en pantalla.
+- A10 necesitaba además un arreglo defensivo: ahora carga también los catálogos ingleses nuevos.
+  Sin eso, un nombre inglés real que contenga por casualidad una palabra funcional española ya
+  no lo descontaría nadie y A10 daría un FALLO **falso, provocado justamente por haber traducido
+  bien**.
+
+Ningún obstáculo falló dos veces seguidas por la misma causa en esta ronda.
