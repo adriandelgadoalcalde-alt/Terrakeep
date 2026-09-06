@@ -11521,3 +11521,19 @@ Las dos ultimas piezas merecen quedar escritas porque ninguna era evidente:
 - `AR-11f` (barra lateral de Exploracion al tamaño por defecto): 597px de contenido en 597 de
   viewport, sin barra.
 - `T-H/F2` (foco de teclado): adorner adjunto = True.
+
+### Verdad del entorno nueva: el estado de VISTAS del mapa tambien es global de la maquina
+
+Cerrando esta oleada aparecio un `FALLO: F-11 - la vista guardada no se restauro correctamente al
+recargar el mismo mundo`: el bloque guarda la vista en (500,300) y al recargar le devolvian
+(2869,206). No es un bug de la app - es la MISMA leccion que ya dejo escrita la ronda de las
+pildoras de Equipamiento con `session.json`, vista en otro fichero: `WorldViewStateService` guarda
+en `%LOCALAPPDATA%`, o sea **global de la maquina**, y con otro arnes corriendo a la vez (seis
+agentes en paralelo) el otro proceso pisa la entrada del mismo mundo entre el guardado y la
+recarga de F-11.
+
+Comprobado por diferencial real: esperando a que NO haya ningun otro arnes vivo, F-11 devuelve
+(500,300) exactos y el arnes cierra sin ningun `FALLO` propio. Para la proxima: antes de dar por
+buena una tanda, comprobar que no hay otro `TerrasavrNative.App.Tests` en marcha - y matar los
+PROPIOS que hayan quedado colgados de un intento anterior, filtrando por la ruta de la carpeta de
+salida de la sesion para no tocar los de otro agente ni el `Terrakeep.exe` real del usuario.
