@@ -1642,15 +1642,44 @@
                  defensa, hacer la cuenta a mano para el dinero). -->
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <!-- AR-LAY (6-sep-2026): la franja vital pasa de "*" a "Auto", y la fila de
+                         botones de "Auto" a "*" con MinWidth. Es el mismo reparto, y por la misma
+                         razon ya medida, que la cabecera de Inventario: una columna "Auto" se
+                         queda con su DesiredSize ENTERO aunque no quepa (el Grid solo recorta a
+                         las estrella), asi que la fila de botones de la derecha - que ha ido
+                         creciendo boton a boton - se llevaba todo el ancho que necesitara y la
+                         franja vital, que era la "*", se quedaba con las sobras. Medido a 1080x700
+                         con personaje y mundo reales cargados: los botones ocupaban 722px de 1035
+                         y a la franja vital le quedaban 17, o sea que vida/mana, el tamaño del
+                         mundo, el zoom y la capa bajo el raton NO SE VEIAN - recortados sin ningun
+                         scroll con el que alcanzarlos, y en las 6 pestañas a la vez. Con este
+                         reparto la franja pide lo suyo (Auto, y ya sabe encogerse sola por
+                         SizeClass via IsVitalsStripExpanded) y son los botones los que envuelven a
+                         una segunda fila cuando no caben, que es justo para lo que el WrapPanel de
+                         abajo existe. -->
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" MinWidth="330" />
                 </Grid.ColumnDefinitions>
                 <!-- C-14 (auditoria de pulido final, cierra H3): 20px es el escalon real "grupos
                      distintos" de la escala del proyecto - sin este margen, a cualquier ancho
                      donde la franja central se estrecha, los botones de la derecha quedaban
                      pegados al ultimo dato vital (dinero/horas), leyendose como el mismo grupo. -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0">
+                <!-- AR-LAY (6-sep-2026): WrapPanel, no StackPanel Horizontal - con la columna ya en
+                     "*" (arriba), esto es lo que hace que la fila CEDA de verdad en vez de
+                     recortarse: lo que no cabe pasa a una segunda fila. Mismo arreglo exacto que
+                     R-01/H-08 hizo con los 6 botones de la cabecera de Inventario, y medido igual:
+                     dejando el StackPanel aqui, el reparto nuevo de columnas salva la franja vital
+                     pero son los BOTONES los que se cortan (81 firmas del barrido, con "Cargar
+                     personaje (.plr)..." perdiendo 157,9px), porque un StackPanel horizontal no
+                     tiene forma de ceder. Con WrapPanel no se pierde nada por ninguno de los dos
+                     lados.
+                     ItemHeight=36 es necesario y esta medido: un WrapPanel da a cada linea la
+                     altura de SU contenido, asi que la fila de abajo (donde cae "Guardar" solo, sin
+                     ningun separador que la eleve) quedaba a 32,6px contra los 36 de la de arriba y
+                     los botones dejaban de tener el mismo alto - la regresion que A8-06 vigila. 36
+                     es el alto real que ya tenian los 6 en una sola fila, no un numero inventado. -->
+                <WrapPanel Grid.Column="2" ItemHeight="33" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="20,0,0,0">
                     <!-- T-H/F1 (segunda auditoria de Opus, Fable): "N-3 esta bien hecho pero no se
                          anuncia en ningun sitio (sin ToolTip en la cabecera)... un atajo que nadie
                          descubre no mejora la practicidad" - los 4 atajos reales (OnWindowKeyDown)
@@ -1730,7 +1759,7 @@
                             ToolTip="{Binding Loc[tt_undo_last_save], Mode=OneWay}" />
                     <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4" />
                     <Button Content="{Binding Loc[action_save], Mode=OneWay}" Tag="Orange" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
-                </StackPanel>
+                </WrapPanel>
                 <!-- C-14 (auditoria de pulido final, cierra H3): mismo escalon de 20px que la
                      columna 2 - separa la identidad del personaje de la franja de vitales, "se
                      junta con Softcore" a cualquier ancho, incluida pantalla completa. -->
@@ -4652,19 +4681,27 @@
                                      - mismo TextBlock hijo con Wrap por el mismo motivo real. -->
                                 <UniformGrid Columns="4">
                                     <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="0,0,3,0"
-                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}">
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=0}"
+                                                 IsEnabled="{Binding Exploration.CanUseGameModeClassic}"
+                                                 ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_gamemode_unavailable], Mode=OneWay}">
                                         <TextBlock Text="{Binding Loc[explore_gamemode_classic], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
                                     </RadioButton>
                                     <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="3,0,3,0"
-                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}">
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=1}"
+                                                 IsEnabled="{Binding Exploration.CanUseGameModeExpert}"
+                                                 ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_gamemode_unavailable], Mode=OneWay}">
                                         <TextBlock Text="{Binding Loc[explore_gamemode_expert], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
                                     </RadioButton>
                                     <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="3,0,3,0"
-                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}">
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=2}"
+                                                 IsEnabled="{Binding Exploration.CanUseGameModeMaster}"
+                                                 ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_gamemode_unavailable], Mode=OneWay}">
                                         <TextBlock Text="{Binding Loc[explore_gamemode_master], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
                                     </RadioButton>
                                     <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadMundo" Padding="2,4" Margin="3,0,0,0"
-                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=3}">
+                                                 IsChecked="{Binding Exploration.WorldGameMode, Converter={StaticResource EnumEquals}, ConverterParameter=3}"
+                                                 IsEnabled="{Binding Exploration.CanUseGameModeJourney}"
+                                                 ToolTipService.ShowOnDisabled="True" ToolTip="{Binding Loc[explore_gamemode_unavailable], Mode=OneWay}">
                                         <TextBlock Text="{Binding Loc[explore_gamemode_journey], Mode=OneWay}" TextWrapping="Wrap" TextAlignment="Center" />
                                     </RadioButton>
                                 </UniformGrid>

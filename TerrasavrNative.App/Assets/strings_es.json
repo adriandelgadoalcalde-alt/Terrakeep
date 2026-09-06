@@ -211,6 +211,7 @@
   "explore_readonly_tooltip": "Este visor solo lee el mundo (mismo mundo que carga el propio Terraria) - no coloca ni quita bloques. Única excepción real, pedida explícitamente: la dificultad del mundo, editable en 'Este mundo' con copia de seguridad automática",
   "explore_save_difficulty": "Guardar dificultad en el archivo",
   "explore_save_difficulty_tooltip": "Escribe el nuevo modo directamente en el archivo .wld del mundo (crea antes una copia de seguridad .bak automática) - la única acción de escritura real de todo el visor de Exploración",
+  "explore_gamemode_unavailable": "Este modo no existia todavia en la version del formato de este mundo, asi que no se puede escribir en su archivo .wld",
   "explore_save_report": "Guardar informe (.txt)...",
   "explore_scanning_worlds": "Buscando mundos...",
   "explore_search_checked": "Buscar seleccionados",

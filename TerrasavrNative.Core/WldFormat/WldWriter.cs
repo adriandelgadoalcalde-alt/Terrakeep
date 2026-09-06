@@ -76,10 +76,27 @@ public static class WldWriter
             // version 208: Maestro(2)->true, Clasico(0)->false (nunca hubo Experto/Viaje en un
             // mundo de esta version). version 112..207: Experto(1)->true, Clasico(0)->false.
             bool asBool = version == 208 ? newGameMode == 2 : newGameMode == 1;
-            if ((version == 208 && newGameMode is not (0 or 2)) || (version < 208 && newGameMode is not (0 or 1)))
+            if (!SupportsGameMode(version, newGameMode))
                 throw new NotSupportedException($"Los mundos de formato {version} solo admiten Clasico/{(version == 208 ? "Maestro" : "Experto")} - el modo pedido no existia todavia en esta version de Terraria.");
             patched[gameModeOffset] = (byte)(asBool ? 1 : 0);
         }
         return patched;
+    }
+
+    // La MISMA regla que aplica PatchGameMode (que la usa, para que no puedan divergir), expuesta
+    // aparte para que la interfaz pueda decirlo ANTES en vez de dejar pulsar "Guardar" y responder
+    // con una excepcion: en un mundo anterior a la version 209 el campo GameMode es un simple bool
+    // y la mitad de los modos ni siquiera existian todavia en el juego.
+    //   >= 209 -> Int32 real: los 4 modos (0=Clasico, 1=Experto, 2=Maestro, 3=Viaje).
+    //   == 208 -> bool "maestro": solo Clasico y Maestro.
+    //   112..207 -> bool "experto": solo Clasico y Experto.
+    //   < 112 -> el concepto de dificultad no existe en el archivo.
+    public static bool SupportsGameMode(uint version, int gameMode)
+    {
+        if (gameMode is < 0 or > 3) return false;
+        if (version >= 209) return true;
+        if (version == 208) return gameMode is 0 or 2;
+        if (version >= 112) return gameMode is 0 or 1;
+        return false;
     }
 }

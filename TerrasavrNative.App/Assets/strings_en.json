@@ -211,6 +211,7 @@
   "explore_readonly_tooltip": "This viewer only reads the world (the same world Terraria itself loads) - it doesn't place or remove blocks. One real exception, explicitly requested: world difficulty, editable in 'This world' with an automatic backup",
   "explore_save_difficulty": "Save difficulty to the file",
   "explore_save_difficulty_tooltip": "Writes the new mode directly to the world's .wld file (creates an automatic .bak backup first) - the only real write action in the whole Exploration viewer",
+  "explore_gamemode_unavailable": "This mode did not exist yet in this world's file format version, so it cannot be written to its .wld file",
   "explore_save_report": "Save report (.txt)...",
   "explore_scanning_worlds": "Looking for worlds...",
   "explore_search_checked": "Search selected",

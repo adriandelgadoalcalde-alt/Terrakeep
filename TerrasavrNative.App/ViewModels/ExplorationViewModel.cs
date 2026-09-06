@@ -305,6 +305,29 @@ public partial class ExplorationViewModel : ObservableObject
 
     partial void OnWorldGameModeChanged(int value) => SaveWorldGameModeCommand.NotifyCanExecuteChanged();
 
+    // Hallazgo real de la oleada del 6-sep-2026 (area Exploracion): los CUATRO chips de dificultad
+    // se ofrecian siempre, en cualquier mundo - pero en un mundo anterior a la version 209 del
+    // formato el campo GameMode es un simple bool y la mitad de los modos NO EXISTIAN todavia en el
+    // juego (WldWriter.SupportsGameMode, la misma regla que ya aplicaba PatchGameMode). O sea que
+    // se podia elegir "Viaje" en un mundo de 2016 y descubrirlo solo al pulsar Guardar, con una
+    // excepcion convertida en mensaje de error. Ahora el chip que no puede ser sencillamente no se
+    // deja pulsar, y su tooltip dice por que.
+    //
+    // Sin mundo cargado se dejan los cuatro en true a proposito: el panel entero esta oculto en ese
+    // caso (Visibility ligada a IsWorldLoaded), no tiene sentido "deshabilitar" nada invisible.
+    public bool CanUseGameModeClassic => _world == null || WldWriter.SupportsGameMode(_world.Header.Version, 0);
+    public bool CanUseGameModeExpert => _world == null || WldWriter.SupportsGameMode(_world.Header.Version, 1);
+    public bool CanUseGameModeMaster => _world == null || WldWriter.SupportsGameMode(_world.Header.Version, 2);
+    public bool CanUseGameModeJourney => _world == null || WldWriter.SupportsGameMode(_world.Header.Version, 3);
+
+    private void NotifyGameModeAvailability()
+    {
+        OnPropertyChanged(nameof(CanUseGameModeClassic));
+        OnPropertyChanged(nameof(CanUseGameModeExpert));
+        OnPropertyChanged(nameof(CanUseGameModeMaster));
+        OnPropertyChanged(nameof(CanUseGameModeJourney));
+    }
+
     private static string GameModeLabel(int gameMode) => gameMode switch
     {
         1 => LocalizationService.Instance["explore_gamemode_expert"],
@@ -1614,6 +1637,7 @@ public partial class ExplorationViewModel : ObservableObject
             WorldGameMode = world.Header.GameMode;
             WorldGameModeSaveStatus = null;
             WorldVersionText = world.Header.Version.ToString();
+            NotifyGameModeAvailability(); // los modos posibles dependen de la VERSION del mundo entrante
             WorldSpawnX = world.Header.SpawnX;
             WorldSpawnY = world.Header.SpawnY;
             WorldDungeonX = world.Header.DungeonX;
@@ -1643,6 +1667,7 @@ public partial class ExplorationViewModel : ObservableObject
             // una fila de cofres del anterior ni su marcador colgado sobre el lienzo.
             ChestRows.Clear();
             HasCurrentChest = false;
+            NotifyGameModeAvailability();
             IsWorldLoaded = false;
             WorldGameModeSaveStatus = null;
             StatusMessage = LocalizationService.Instance.Format("error_reading_world", ex.Message);
