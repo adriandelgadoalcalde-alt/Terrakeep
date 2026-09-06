@@ -3755,7 +3755,8 @@
       "defense": 1
     },
     "setBonus": "+105 de sigilo máximo\n(tecla configurada) para invocar una tormenta ancestral en la posición del cursor\nLa tormenta ancestral cuesta 60 de maná y se beneficia tanto de las bonificaciones de invocación como de las pícaras\nLos golpes furtivos pícaros marcan a los enemigos, haciendo que los súbditos generen devoradores teledirigidos al golpearlos\nUsar armas de invocación ya no reinicia tu sigilo\nLos súbditos ya no hacen menos daño al llevar armas pícaras",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+105 maximum stealth\n(configured key) to call an ancient storm to the cursor location\nThe ancient storm costs 60 mana and benefits from both summon and rogue bonuses\nRogue stealth strikes will tag enemies, causing summons to spawn homing eaters on hit\nUsing summon weapons no longer reset your stealth\nMinions no longer deal less damage while wielding rogue weapons"
   },
   {
     "internal": "AerospecBreastplate",
@@ -3780,7 +3781,8 @@
       "defense": 3
     },
     "setBonus": "Reduce el coste de maná un 8%\nAumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico mágico\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "8% reduced mana cost\n5% increased movement speed and magic critical strike chance\nTaking over 25 damage in one hit will cause a spread of homing feathers to fall\nAllows you to fall more quickly and disables fall damage"
   },
   {
     "internal": "AerospecHeadMelee",
@@ -3793,7 +3795,8 @@
       "defense": 7
     },
     "setBonus": "Aumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico cuerpo a cuerpo\nLos enemigos tienen más probabilidad de fijarse en ti\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "5% increased movement speed and melee critical strike chance\nEnemies are more likely to target you\nTaking over 25 damage in one hit will cause a spread of homing feathers to fall\nAllows you to fall more quickly and disables fall damage"
   },
   {
     "internal": "AerospecHeadRanged",
@@ -3806,7 +3809,8 @@
       "defense": 5
     },
     "setBonus": "Aumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico a distancia\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "5% increased movement speed and ranged critical strike chance\nTaking over 25 damage in one hit will cause a spread of homing feathers to fall\nAllows you to fall more quickly and disables fall damage"
   },
   {
     "internal": "AerospecHeadRogue",
@@ -3819,7 +3823,8 @@
       "defense": 4
     },
     "setBonus": "+80 de sigilo máximo\nAumenta un 5% la velocidad de movimiento y la probabilidad de ataque crítico pícaro\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+80 maximum stealth\n5% increased movement speed and rogue critical strike chance\nTaking over 25 damage in one hit will cause a spread of homing feathers to fall\nAllows you to fall more quickly and disables fall damage"
   },
   {
     "internal": "AerospecHeadSummon",
@@ -3832,7 +3837,8 @@
       "defense": 2
     },
     "setBonus": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 11% el daño de invocación\nInvoca una valquiria que te protege\nRecibir más de 25 de daño de un solo golpe hace caer una lluvia de plumas teledirigidas\nTe permite caer más rápido y anula el daño por caída",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 1\n11% increased summon damage\nSummons a valkyrie to protect you\nTaking over 25 damage in one hit will cause a spread of homing feathers to fall\nAllows you to fall more quickly and disables fall damage"
   },
   {
     "internal": "AerospecLeggings",
@@ -3869,7 +3875,8 @@
       "defense": 17
     },
     "setBonus": "Aumenta en 3 el máximo de súbditos que puedes tener\nAumenta un 10% el daño y la probabilidad de ataque crítico\nCada vez que asestas un golpe crítico a un enemigo cae una lluvia de estrellas\nEste efecto tiene 1 segundo de reutilización antes de poder activarse de nuevo",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 3\n10% increased damage and critical strike chance\nWhenever you crit an enemy, a barrage of stars will rain down\nThis effect has a 1 second cooldown before it can trigger again"
   },
   {
     "internal": "AstralLeggings",
@@ -3918,7 +3925,8 @@
       "defense": 24
     },
     "setBonus": "Efectos combinados de las armaduras Tarragon, Bloodflare y Silva de Magia\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Magic Tarragon, Bloodflare and Silva armor effects\nHold Shift to view these set bonus details and press Shift repeatedly to cycle through them"
   },
   {
     "internal": "AuricTeslaHeadMelee",
@@ -3931,7 +3939,8 @@
       "defense": 54
     },
     "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nEfectos combinados de las armaduras Tarragon, Bloodflare y God Slayer de Cuerpo a cuerpo\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Enemies are more likely to target you\nMelee Tarragon, Bloodflare and God Slayer effects\nHold Shift to view these set bonus details and press Shift repeatedly to cycle through them"
   },
   {
     "internal": "AuricTeslaHeadRanged",
@@ -3944,7 +3953,8 @@
       "defense": 39
     },
     "setBonus": "Efectos combinados de las armaduras Tarragon, Bloodflare y God Slayer a Distancia\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Ranged Tarragon, Bloodflare and God Slayer armor effects\nHold Shift to view these set bonus details and press Shift repeatedly to cycle through them"
   },
   {
     "internal": "AuricTeslaHeadRogue",
@@ -3957,7 +3967,8 @@
       "defense": 34
     },
     "setBonus": "+130 de sigilo máximo\nEfectos combinados de las armaduras Tarragon, Bloodflare y God Slayer Pícaras\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+130 maximum stealth\nRogue Tarragon, Bloodflare and God Slayer armor effects\nHold Shift to view these set bonus details and press Shift repeatedly to cycle through them"
   },
   {
     "internal": "AuricTeslaHeadSummon",
@@ -3970,7 +3981,8 @@
       "defense": 18
     },
     "setBonus": "Aumenta en 4 el máximo de súbditos que puedes tener\nAumenta un 55% el daño de invocación\nEfectos combinados de las armaduras Tarragon, Bloodflare y Silva de Invocación\nMantén pulsado Mayús para ver el detalle de estas bonificaciones de set, y pulsa Mayús varias veces para recorrerlas",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 4\n55% increased summon damage\nSummoner Tarragon, Bloodflare and Silva armor effects\nHold Shift to view these set bonus details and press Shift repeatedly to cycle through them"
   },
   {
     "internal": "BloodflareBodyArmor",
@@ -4007,7 +4019,8 @@
       "defense": 18
     },
     "setBonus": "Las armas mágicas disparan proyectiles fantasmales cada 1,67 segundos\nLos críticos mágicos provocan explosiones de sangre cada 2 segundos\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Magic weapons fire ghostly bolts every 1.67 seconds\nMagic critical strikes cause blood explosions every 2 seconds\nEnemies below 50% life drop a heart when struck\nThis effect has a 5 second cooldown"
   },
   {
     "internal": "BloodflareHeadMelee",
@@ -4020,7 +4033,8 @@
       "defense": 44
     },
     "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nTras golpear a un enemigo 15 veces con un ataque cuerpo a cuerpo real entras en frenesí sangriento durante 5 segundos\nDurante ese tiempo ganas un 25% más de daño y probabilidad de crítico cuerpo a cuerpo, y un 50% menos de daño por contacto\nEste efecto tiene 30 segundos de reutilización\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Enemies are more likely to target you\nAfter striking an enemy 15 times with true melee you will enter a blood frenzy for 5 seconds\nDuring this you will gain 25% increased melee damage, critical strike chance, and 50% reduced contact damage\nThis effect has a 30 second cooldown\nEnemies below 50% life drop a heart when struck\nThis effect has a 5 second cooldown"
   },
   {
     "internal": "BloodflareHeadRanged",
@@ -4033,7 +4047,8 @@
       "defense": 30
     },
     "setBonus": "(tecla configurada) para liberar las almas perdidas de Polterghast y destruir a tus enemigos\nEste efecto tiene 30 segundos de reutilización\nLas armas a distancia disparan orbes de sangre explosivos cada 2,5 segundos\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "(configured key) to unleash the lost souls of polterghast to destroy your enemies\nThis effect has a 30 second cooldown\nRanged weapons fire bloodsplosion orbs every 2.5 seconds\nEnemies below 50% life drop a heart when struck\nThis effect has a 5 second cooldown"
   },
   {
     "internal": "BloodflareHeadRogue",
@@ -4046,7 +4061,8 @@
       "defense": 26
     },
     "setBonus": "+120 de sigilo máximo\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+120 maximum stealth\nEnemies below 50% life drop a heart when struck\nThis effect has a 5 second cooldown"
   },
   {
     "internal": "BloodflareHeadSummon",
@@ -4059,7 +4075,8 @@
       "defense": 12
     },
     "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 30% el daño de invocación\nInvoca minas de Polterghast que orbitan a tu alrededor\nOtorga 20 de defensa cuando estás por debajo del 50% de vida\nLos enemigos por debajo del 50% de vida sueltan un corazón al golpearlos\nEste efecto tiene 5 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 2\n30% increased summon damage\nSummons polterghast mines to circle you\nGrants 20 defense when below 50% life\nEnemies below 50% life drop a heart when struck\nThis effect has a 5 second cooldown"
   },
   {
     "internal": "BrimflameBoots",
@@ -4084,7 +4101,8 @@
       "defense": 12
     },
     "setBonus": "Aumenta un 8% el daño mágico y la probabilidad de ataque crítico\nFrenesí Brimflame - (tecla configurada) para, durante 10 segundos, aumentar un 40% el daño de los ataques mágicos\nSin embargo, esto provoca pérdida rápida de vida y anula la regeneración de maná y las pociones de maná\nEste efecto se puede desactivar y tiene 30 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "8% increased magic damage and critical strike chance\nBrimflame Frenzy - (configured key) for 10 seconds of 40% increased magic damage\nHowever, this inflicts rapid life loss and disables mana regeneration and mana potions\nThis effect can be toggled off and has a cooldown of 30 seconds"
   },
   {
     "internal": "BrimflameRobes",
@@ -4121,7 +4139,8 @@
       "defense": 8
     },
     "setBonus": "Tienes un 10% de probabilidad de recuperar el 50% del daño recibido",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "You have a 10% chance to heal back 50% of taken damage"
   },
   {
     "internal": "DaedalusHeadMelee",
@@ -4134,7 +4153,8 @@
       "defense": 22
     },
     "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nReflejas los proyectiles de vuelta a los enemigos, anulando su daño\nLos proyectiles que causen menos del 5% de tu vida máxima en daño no se reflejarán\nEl reflejo tiene una reutilización de entre 20 y 90 segundos según el daño del proyectil reflejado\nEsta reutilización se comparte con el resto de esquivas y reflejos",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Enemies are more likely to target you\nYou reflect projectiles back at enemies, negating their damage\nProjectiles that deal less than 5% of your max life in damage will not be reflected\nThe reflect has a cooldown that ranges between 20 and 90 seconds depending on the reflected projectile's damage\nThis cooldown is shared with all other dodges and reflects"
   },
   {
     "internal": "DaedalusHeadRanged",
@@ -4147,7 +4167,8 @@
       "defense": 14
     },
     "setBonus": "Al recibir un golpe, emites una explosión de fragmentos de cristal",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Getting hit causes you to emit a blast of crystal shards"
   },
   {
     "internal": "DaedalusHeadRogue",
@@ -4160,7 +4181,8 @@
       "defense": 10
     },
     "setBonus": "+105 de sigilo máximo\nLos proyectiles pícaros lanzan fragmentos de cristal mientras viajan",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+105 maximum stealth\nRogue projectiles throw out crystal shards as they travel"
   },
   {
     "internal": "DaedalusHeadSummon",
@@ -4173,7 +4195,8 @@
       "defense": 3
     },
     "setBonus": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 10% el daño de invocación\nUn cristal de Daedalus flota sobre ti para protegerte",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 1\n10% increased summon damage\nA daedalus crystal floats above you to protect you"
   },
   {
     "internal": "DaedalusLeggings",
@@ -4222,7 +4245,8 @@
       "defense": 50
     },
     "setBonus": "Aumenta en 8 el máximo de súbditos que puedes tener\nAumenta un 100% el daño de invocación\nAl recibir un golpe se disparan rayos de sombra y guadañas demoníacas\n(tecla configurada) para enfurecer a los enemigos cercanos con un hechizo de magia oscura durante 10 segundos\nEsto hace que reciban 1,5 veces el daño total, pero te infligirán 1,25 veces más daño a ti",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 8\n100% increased summon damage\nShadowbeams and demon scythes will fire down when you are hit\n(configured key) to enrage nearby enemies with a dark magic spell for 10 seconds\nThis makes them take 1.5x total damage, but they will deal 1.25x damage to you"
   },
   {
     "internal": "DesertProwlerHat",
@@ -4235,7 +4259,8 @@
       "defense": 2
     },
     "setBonus": "+50 de sigilo máximo\nBomba de humo de arena - (tecla configurada) para envolverte en una pequeña nube de arena\nMientras la nube de arena está activa ganas movilidad pero pierdes mucha defensa\nUsar un arma pícara disipa al instante la nube de arena, pero garantiza un supercrítico del 200% de daño\nEl supercrítico solo se aplica si el golpe resultante no supera los 200 de daño\nAsestar el golpe de gracia a un enemigo con este disparo acorta la reutilización de la habilidad a 2 segundos",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+50 maximum stealth\nSandsmoke Bomb - (configured key) to shroud yourself in a small cloud of sand\nWhile the sand cloud is active, gain increased mobility but heavily reduced defense\nUsing a rogue weapon instantly dispels the sand cloak, but guarantees a supercrit for 200% damage\nThe supercrit applies only as long as the resulting hit wouldn't exceed 200 damage\nLanding the killing blow on an enemy with this shot shortens the ability's cooldown to 2 seconds"
   },
   {
     "internal": "DesertProwlerPants",
@@ -4296,7 +4321,8 @@
       "defense": 16
     },
     "setBonus": "+115 de sigilo máximo\nLos proyectiles pícaros tienen efectos especiales al golpear enemigos\nQuedas imbuido de Ira Empírea cuando te dañan o mientras estás por debajo del 50% de vida",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+115 maximum stealth\nRogue projectiles have special effects on enemy hits\nImbued with [cbuffplr:CalamityMod/EmpyreanWrath] when you are damaged or while below 50% life"
   },
   {
     "internal": "FathomSwarmerBoots",
@@ -4333,7 +4359,8 @@
       "defense": 8
     },
     "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 10% el daño de invocación\nOtorga la capacidad de trepar paredes\nAumenta un 20% el daño de invocación, +10 de defensa y +2,5 de regeneración de vida por segundo mientras estás bajo el agua\nProporciona una luz moderada y reduce moderadamente la pérdida de aire en el abismo",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 2\n10% increased summon damage\nGrants the ability to climb walls\n20% increased summon damage, +10 defense and +2.5 HP/s life regen while underwater\nProvides a moderate amount of light and moderately reduces breath loss in the abyss"
   },
   {
     "internal": "FearmongerGreathelm",
@@ -4346,7 +4373,8 @@
       "defense": 35
     },
     "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nLos súbditos ya no hacen menos daño al llevar armas que no sean de invocación\nInmunidad a todas las formas de frío y fuego salvo las más fuertes\nLos ataques de los súbditos otorgan +2,5 de regeneración de vida por segundo y la aceleran muchísimo",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 2\nMinions no longer deal less damage while wielding non-summoner weapons\nImmunity to all but the strongest forms of frost and flame\nMinion attacks grant +2.5 HP/s life regen and massively accelerate life regen"
   },
   {
     "internal": "FearmongerGreaves",
@@ -4395,7 +4423,8 @@
       "defense": 14
     },
     "setBonus": "Gemas de poder - Seis fragmentos de gema orbitan a tu alrededor sin usar energía; uno por cada clase, más una gema base",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Power Gems - Six gem fragments idly orbit you; one for each class, and a base gem"
   },
   {
     "internal": "GemTechSchynbaulds",
@@ -4432,7 +4461,8 @@
       "defense": 50
     },
     "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nLibera un enjambre de dardos verdugos de dioses al recibir más de 80 de daño de un solo golpe\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Enemies are more likely to target you\nReleases a swarm of god killer darts when taking over 80 damage in one hit\nPress (configured key) to [ceffect/dog:Dimensional Drive] towards your cursor for 1.25 seconds\nEnemies you dash through take massive damage\nDuring [ceffect/dog:Dimensional Drive] you are immune to damage and most debuffs\n[ceffect/dog:Dimensional Drive] has a 45 second cooldown"
   },
   {
     "internal": "GodSlayerHeadRanged",
@@ -4445,7 +4475,8 @@
       "defense": 35
     },
     "setBonus": "Las armas a distancia disparan un proyectil de metralla verdugo de dioses cada 2,5 segundos\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Ranged weapons fire a god killer shrapnel round every 2.5 seconds\nPress (configured key) to [ceffect/dog:Dimensional Drive] towards your cursor for 1.25 seconds\nEnemies you dash through take massive damage\nDuring [ceffect/dog:Dimensional Drive] you are immune to damage and most debuffs\n[ceffect/dog:Dimensional Drive] has a 45 second cooldown"
   },
   {
     "internal": "GodSlayerHeadRogue",
@@ -4458,7 +4489,8 @@
       "defense": 30
     },
     "setBonus": "+120 de sigilo máximo\nAumenta un 10% el daño, la probabilidad de crítico y la velocidad pícaros estando a vida completa\nMayor duración de la invencibilidad al recibir más de 80 de daño de un solo golpe\nPulsa (tecla configurada) para lanzarte en un Impulso Dimensional hacia el cursor durante 1,25 segundos\nLos enemigos que atraviesas con el impulso reciben un daño enorme\nDurante el Impulso Dimensional eres inmune al daño y a la mayoría de los debuffs\nEl Impulso Dimensional tiene 45 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+120 maximum stealth\n10% increased rogue damage, critical strike chance, and velocity when at full health\nIncreased length of invincibility when taking over 80 damage in one hit\nPress (configured key) to [ceffect/dog:Dimensional Drive] towards your cursor for 1.25 seconds\nEnemies you dash through take massive damage\nDuring [ceffect/dog:Dimensional Drive] you are immune to damage and most debuffs\n[ceffect/dog:Dimensional Drive] has a 45 second cooldown"
   },
   {
     "internal": "GodSlayerLeggings",
@@ -4495,7 +4527,8 @@
       "defense": 9
     },
     "setBonus": "Los ataques mágicos invocan orbes de fulgor que dañan y curan al golpear\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Magic attacks summon damaging and healing flare orbs on hit\nInferno effect when below 50% life\nYou emit a blazing explosion when you are hit"
   },
   {
     "internal": "HydrothermicHeadMelee",
@@ -4508,7 +4541,8 @@
       "defense": 33
     },
     "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nLos ataques y proyectiles cuerpo a cuerpo hacen brotar llamas caóticas al golpear enemigos\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Enemies are more likely to target you\nMelee attacks and projectiles cause chaos flames to erupt on enemy hits\nInferno effect when below 50% life\nYou emit a blazing explosion when you are hit"
   },
   {
     "internal": "HydrothermicHeadRanged",
@@ -4521,7 +4555,8 @@
       "defense": 15
     },
     "setBonus": "Disparas un fulgor caótico teledirigido cada 0,33 segundos al usar armas a distancia\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "You fire a homing chaos flare when using ranged weapons every 0.33 seconds\nInferno effect when below 50% life\nYou emit a blazing explosion when you are hit"
   },
   {
     "internal": "HydrothermicHeadRogue",
@@ -4534,7 +4569,8 @@
       "defense": 12
     },
     "setBonus": "+110 de sigilo máximo\nLas armas pícaras liberan una ráfaga de llamas caóticas teledirigidas alrededor del jugador cada 2 segundos\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+110 maximum stealth\nRogue weapons unleash a volley of homing chaos flames around the player every 2 seconds\nInferno effect when below 50% life\nYou emit a blazing explosion when you are hit"
   },
   {
     "internal": "HydrothermicHeadSummon",
@@ -4547,7 +4583,8 @@
       "defense": 6
     },
     "setBonus": "Aumenta en 1 el máximo de súbditos que puedes tener\nAumenta un 25% el daño de invocación\nInvoca un respiradero hidrotérmico que te protege\nEfecto Infierno estando por debajo del 50% de vida\nEmites una explosión abrasadora al recibir un golpe",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 1\n25% increased summon damage\nSummons a hydrothermic vent to protect you\nInferno effect when below 50% life\nYou emit a blazing explosion when you are hit"
   },
   {
     "internal": "HydrothermicSubligar",
@@ -4584,7 +4621,8 @@
       "defense": 14
     },
     "setBonus": "Aumenta un 20% la velocidad de salto\nEscudo MJOLNIR - Proyecta un escudo de burbuja que absorbe hasta 50 de daño\nEl escudo empieza a recargarse 5 segundos después de recibir un golpe\nRecargarse del todo desde cero tarda 2 segundos\nRecibir otro golpe mientras se recarga reinicia el temporizador de carga\n«Termina la pelea»",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "20% increased jump speed\nMJOLNIR Shield - Projects a bubble shield that absorbs up to 50 damage\nThe shield starts recharging 5 seconds after being hit\nRecharging from zero to full charge takes 2 seconds\nBeing hit again while recharging restarts the charge timer\n'Finish the fight'"
   },
   {
     "internal": "LunicCorpsVest",
@@ -4609,7 +4647,8 @@
       "defense": 4
     },
     "setBonus": "Elevador Marnite - Puedes invocar un elevador bajo tus pies para llegar más alto\nEl elevador se invoca al pulsar la tecla de montura sin ninguna montura equipada\nPulsa ARRIBA y ABAJO para cambiar la altura del elevador, hasta 10 bloques por encima del suelo",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Marnite Lift - You can summon a lift under your feet to reach higher up\nThe lift gets summoned when the mount hotkey gets pressed without any mounts equipped\nPress UP and DOWN to change the lift's height, reaching up to 10 tiles above ground"
   },
   {
     "internal": "MarniteArchitectToga",
@@ -4646,7 +4685,8 @@
       "defense": 15
     },
     "setBonus": "Aumenta un 10% la reducción de daño\nDos moluscos te ayudan en combate, infligiendo el efecto Aplausos de Molusco",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "10% increased damage reduction\nTwo shellfishes aid you in combat, inflicting [cbuff:CalamityMod/ShellfishClaps]"
   },
   {
     "internal": "MolluskShellplate",
@@ -4683,7 +4723,8 @@
       "defense": 15
     },
     "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nLos tentáculos de corto alcance te curan absorbiendo vida enemiga\nLocura Abisal - (tecla configurada) para entrar en modo berserker durante 5 segundos\nMientras está activo, los tentáculos atacan con más alcance y agresividad, y siempre asestan crítico\nEsto también otorga un 10% más de daño y probabilidad de crítico\nEste efecto tiene 25 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 2\nShort-ranged tentacles heal you by sucking enemy life\nAbyssal Madness - (configured key) to go berserk for 5 seconds\nWhile active, tentacles attack with greater range and aggression, and always critically strike\nThis also grants 10% increased damage and critical strike chance\nThis effect has a 25 second cooldown"
   },
   {
     "internal": "OmegaBlueTentacles",
@@ -4708,7 +4749,8 @@
       "defense": 11
     },
     "setBonus": "Aumenta un 5% el tiempo de vuelo\nLos enemigos afectados por la Plaga reciben 1,1 veces más daño de proyectiles a distancia\nApagón de la Plaga - (tecla configurada) para potenciar enormemente tu daño pero cegarte por completo\nAumenta un 60% el daño a distancia y un 20% la probabilidad de crítico a distancia mientras estás cegado\nEste efecto dura 5 segundos y tiene 25 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "5% increased flight time\nEnemies afflicted by the Plague take 1.1x damage from ranged projectiles\nPlague Blackout - (configured key) to greatly empower your damage but completely blind yourself\n60% increased ranged damage and 20% increased ranged critical strike chance while blacked out\nThis effect lasts 5 seconds and has a cooldown of 25 seconds"
   },
   {
     "internal": "PlagueReaperStriders",
@@ -4769,7 +4811,8 @@
       "defense": 9
     },
     "setBonus": "Otorga un embiste de la plaga que atraviesa enemigos sin recibir daño\nInvoca un mini portador de la plaga que acosa a tus enemigos con pequeñas abejas\nLas abejas aliadas infligen el efecto Plaga",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Grants a plague dash which can slam through enemies without taking damage\nSummons a lil' plaguebringer which swarms your foes with little bees\nFriendly bees inflict [cbuff:CalamityMod/Plague]"
   },
   {
     "internal": "PrismaticGreaves",
@@ -4794,7 +4837,8 @@
       "defense": 18
     },
     "setBonus": "Aumenta la regeneración de maná\nRáfaga Prismática - (tecla configurada) para lanzar una ráfaga de láseres al cursor durante 5 segundos\nTiene 30 segundos de reutilización",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increased mana regeneration rate\nPrismatic Barrage - (configured key) to unleash a laser barrage at the cursor for 5 seconds\nThis has a 30 second cooldown"
   },
   {
     "internal": "PrismaticRegalia",
@@ -4831,7 +4875,8 @@
       "defense": 6
     },
     "setBonus": "Emite luz y muestra la ubicación de tesoros y minerales\nLos enemigos tienen menos probabilidad de fijarse en ti y otorga respiración bajo el agua\nMejora enormemente la visibilidad en el abismo\nAumenta en 7 el alcance de colocación de bloques y herramientas\nAumenta el alcance de recogida de objetos",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Emits light and shows the location of treasure and ore\nEnemies are less likely to target you and grants underwater breathing\nGreatly enhances visibility in the abyss\nIncreased block placement & tool range by 7\nIncreases pickup range for items"
   },
   {
     "internal": "ReaverHeadMobility",
@@ -4844,7 +4889,8 @@
       "defense": 13
     },
     "setBonus": "Otorga inmunidad al daño por caída y permite saltar sin parar\nAumenta un 10% el tiempo de vuelo y la velocidad horizontal de las alas\nLos ganchos se retraen y tiran de ti un 50% más rápido\nReduce un 33,3% la reutilización de los dashes",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Grants immunity to fall damage and allows constant jumping\n10% increased flight time and horizontal wing speed\nGrappling hooks retract and pull the player 50% faster\nReduces the cooldown of dashes by 33.3%"
   },
   {
     "internal": "ReaverHeadTank",
@@ -4857,7 +4903,8 @@
       "defense": 28
     },
     "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nReduce un 50% la regeneración de vida perdida por debuffs de daño continuo\nReduce un 30% la velocidad de movimiento y el tiempo de vuelo\nOtorga Furia de Reaver durante 5 segundos al recibir daño",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Enemies are more likely to target you\nReduces the life regen lost from damage over time debuffs by 50%\n30% decreased movement speed and flight time\nGrants [cbuffplr:CalamityMod/ReaverRage] for 5 seconds after taking damage"
   },
   {
     "internal": "ReaverScaleMail",
@@ -4894,7 +4941,8 @@
       "defense": 24
     },
     "setBonus": "Los proyectiles mágicos que no atraviesan a veces desatan potentes explosiones de energía natural\n+3 de regeneración de vida por segundo\nAumenta un 5% la velocidad y aceleración máximas al correr\nRecibir daño mortal te revive y te vuelve invulnerable a todo daño durante 5 segundos\nEste efecto tiene 5 minutos de reutilización, que no avanza mientras hay jefes o eventos activos",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Magic projectiles which cannot pierce will occasionally set off potent blasts of nature energy\n+3 HP/s life regen\n5% increased max run speed and acceleration\nTaking fatal damage will revive you and make you invulnerable to all damage for 5 seconds\nThis effect has a 5 minute cooldown, which does not decrement if any bosses or events are active"
   },
   {
     "internal": "SilvaHeadSummon",
@@ -4907,7 +4955,8 @@
       "defense": 18
     },
     "setBonus": "Aumenta en 3 el máximo de súbditos que puedes tener\nAumenta un 40% el daño de invocación\nInvoca un prisma de hoja ancestral que golpea a tus enemigos con energía vital\n+3 de regeneración de vida por segundo\nAumenta un 5% la velocidad y aceleración máximas al correr\nRecibir daño mortal te revive y te vuelve invulnerable a todo daño durante 5 segundos\nEste efecto tiene 5 minutos de reutilización, que no avanza mientras hay jefes o eventos activos",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 3\n40% increased summon damage\nSummons an ancient leaf prism to blast your enemies with life energy\n+3 HP/s life regen\n5% increased max run speed and acceleration\nTaking fatal damage will revive you and make you invulnerable to all damage for 5 seconds\nThis effect has a 5 minute cooldown, which does not decrement if any bosses or events are active"
   },
   {
     "internal": "SilvaLeggings",
@@ -4956,7 +5005,8 @@
       "defense": 2
     },
     "setBonus": "Puedes planear para anular el daño por caída\nLos críticos a distancia infligen Quemadura Helada durante 2 segundos",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "You can glide to negate fall damage\nRanged critical strikes inflict [cbuff:Frostburn] for 2 seconds"
   },
   {
     "internal": "StatigelArmor",
@@ -4993,7 +5043,8 @@
       "defense": 5
     },
     "setBonus": "Otorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Grants an extra jump and increased jump height\n12% increased jump speed"
   },
   {
     "internal": "StatigelHeadMelee",
@@ -5006,7 +5057,8 @@
       "defense": 9
     },
     "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Enemies are more likely to target you\nGrants an extra jump and increased jump height\n12% increased jump speed"
   },
   {
     "internal": "StatigelHeadRanged",
@@ -5019,7 +5071,8 @@
       "defense": 7
     },
     "setBonus": "Otorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Grants an extra jump and increased jump height\n12% increased jump speed"
   },
   {
     "internal": "StatigelHeadRogue",
@@ -5032,7 +5085,8 @@
       "defense": 6
     },
     "setBonus": "+90 de sigilo máximo\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+90 maximum stealth\nGrants an extra jump and increased jump height\n12% increased jump speed"
   },
   {
     "internal": "StatigelHeadSummon",
@@ -5045,7 +5099,8 @@
       "defense": 4
     },
     "setBonus": "Aumenta un 15% el daño de invocación\nInvoca a un mini paladín que lucha por ti, su tipo depende del mal del mundo que tengas\nOtorga un salto extra y más altura de salto\nAumenta un 12% la velocidad de salto",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "15% increased summon damage\nSummons a mini paladin to fight for you, the type depends on what world evil you have\nGrants an extra jump and increased jump height\n12% increased jump speed"
   },
   {
     "internal": "SulphurousBreastplate",
@@ -5070,7 +5125,8 @@
       "defense": 5
     },
     "setBonus": "+65 de sigilo máximo\nAtacar y ser atacado por enemigos inflige Envenenado durante 1 segundo\nOtorga un salto adicional que invoca una burbuja sulfurosa\nReduce la gravedad de las aguas sulfúricas",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+65 maximum stealth\nAttacking and being attacked by enemies inflicts [cbuff:Poisoned] for 1 second\nGrants an additional jump that summons a sulphurous bubble\nReduces the severity of the sulphuric waters"
   },
   {
     "internal": "SulphurousLeggings",
@@ -5107,7 +5163,8 @@
       "defense": 16
     },
     "setBonus": "Cada 5º golpe crítico disparas una tormenta de hojas\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "On every 5th critical strike you will fire a leaf storm\nIncreased heart pickup range\nEnemies have a chance to drop extra hearts on death"
   },
   {
     "internal": "TarragonHeadMelee",
@@ -5120,7 +5177,8 @@
       "defense": 40
     },
     "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\nRecibir daño te otorga Regeneración de Vida Tarra, que da +1,5 de regeneración de vida por segundo\n(tecla configurada) para envolverte en energía vital que reduce muchísimo el daño de contacto enemigo durante 10 segundos\nTiene 30 segundos de reutilización\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Enemies are more likely to target you\nTaking damage gives [cbuffplr:CalamityMod/TarraLifeRegen], which grants +1.5 HP/s life regen\n(configured key) to cloak yourself in life energy that heavily reduces enemy contact damage for 10 seconds\nThis has a 30 second cooldown\nIncreased heart pickup range\nEnemies have a chance to drop extra hearts on death"
   },
   {
     "internal": "TarragonHeadRanged",
@@ -5133,7 +5191,8 @@
       "defense": 28
     },
     "setBonus": "Los proyectiles a distancia generan energía vital y hojas teledirigidas al golpear enemigos\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Ranged projectiles spawn homing life energy and leaves on enemy hits\nIncreased heart pickup range\nEnemies have a chance to drop extra hearts on death"
   },
   {
     "internal": "TarragonHeadRogue",
@@ -5146,7 +5205,8 @@
       "defense": 24
     },
     "setBonus": "+115 de sigilo máximo\nCada 50 golpes críticos pícaros ganas 2,5 segundos de inmunidad al daño\nEste efecto tiene 25 segundos de reutilización\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+115 maximum stealth\nAfter every 50 rogue critical hits you will gain 2.5 seconds of damage immunity\nThis effect has a cooldown of 25 seconds\nIncreased heart pickup range\nEnemies have a chance to drop extra hearts on death"
   },
   {
     "internal": "TarragonHeadSummon",
@@ -5159,7 +5219,8 @@
       "defense": 10
     },
     "setBonus": "Aumenta en 2 el máximo de súbditos que puedes tener\nAumenta un 30% el daño de invocación\nInvoca un aura de vida a tu alrededor que daña a los enemigos cercanos\nAumenta el alcance de recogida de corazones\nLos enemigos tienen probabilidad de soltar corazones extra al morir",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Increases your max number of minions by 2\n30% increased summon damage\nSummons a life aura around you that damages nearby enemies\nIncreased heart pickup range\nEnemies have a chance to drop extra hearts on death"
   },
   {
     "internal": "TarragonLeggings",
@@ -5208,7 +5269,8 @@
       "defense": 8
     },
     "setBonus": "+100 de sigilo máximo\nLos golpes furtivos causan el doble de retroceso y provocan una explosión astral\nOtorga inmunidad al retroceso",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+100 maximum stealth\nStealth strikes deal 2x knockback and cause an astral explosion\nGrants immunity to knockback"
   },
   {
     "internal": "UmbraphileBoots",
@@ -5233,7 +5295,8 @@
       "defense": 10
     },
     "setBonus": "+110 de sigilo máximo\nLas armas pícaras tienen probabilidad de crear explosiones al golpear\nLos golpes furtivos siempre crean una explosión",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+110 maximum stealth\nRogue weapons have a chance to create explosions on hit\nStealth strikes always create an explosion"
   },
   {
     "internal": "UmbraphileRegalia",
@@ -5777,7 +5840,8 @@
       "defense": 2
     },
     "setBonus": "+1,5 de regeneración de vida por segundo y 10% más de daño mágico mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+1.5 HP/s life regen and 10% increased magic damage while submerged in liquid\nWhen using any weapon you have a 10% chance to throw a returning seashell projectile\nThis seashell does true damage and does not benefit from any damage class\nProvides increased underwater mobility and slightly reduces breath loss in the abyss"
   },
   {
     "internal": "VictideHeadMelee",
@@ -5790,7 +5854,8 @@
       "defense": 4
     },
     "setBonus": "Los enemigos tienen más probabilidad de fijarse en ti\n+1,5 de regeneración de vida por segundo y 10% más de daño cuerpo a cuerpo mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Enemies are more likely to target you\n+1.5 HP/s life regen and 10% increased melee damage while submerged in liquid\nWhen using any weapon you have a 10% chance to throw a returning seashell projectile\nThis seashell does true damage and does not benefit from any damage class\nProvides increased underwater mobility and slightly reduces breath loss in the abyss"
   },
   {
     "internal": "VictideHeadRanged",
@@ -5803,7 +5868,8 @@
       "defense": 3
     },
     "setBonus": "+1,5 de regeneración de vida por segundo y 10% más de daño a distancia mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+1.5 HP/s life regen and 10% increased ranged damage while submerged in liquid\nWhen using any weapon you have a 10% chance to throw a returning seashell projectile\nThis seashell does true damage and does not benefit from any damage class\nProvides increased underwater mobility and slightly reduces breath loss in the abyss"
   },
   {
     "internal": "VictideHeadRogue",
@@ -5816,7 +5882,8 @@
       "defense": 3
     },
     "setBonus": "+60 de sigilo máximo\n+1,5 de regeneración de vida por segundo y 10% más de daño pícaro mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+60 maximum stealth\n+1.5 HP/s life regen and 10% increased rogue damage while submerged in liquid\nWhen using any weapon you have a 10% chance to throw a returning seashell projectile\nThis seashell does true damage and does not benefit from any damage class\nProvides increased underwater mobility and slightly reduces breath loss in the abyss"
   },
   {
     "internal": "VictideHeadSummon",
@@ -5829,7 +5896,8 @@
       "defense": 1
     },
     "setBonus": "+1 súbdito máximo\nInvoca un caracol marino que te protege\n+1,5 de regeneración de vida por segundo y 10% más de daño de invocación mientras estás sumergido en líquido\nAl usar cualquier arma tienes un 10% de probabilidad de lanzar un proyectil de concha que vuelve\nEsta concha hace daño verdadero y no se beneficia de ninguna clase de daño\nOtorga más movilidad bajo el agua y reduce ligeramente la pérdida de aire en el abismo",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "+1 max minion\nSummons a sea snail to protect you\n+1.5 HP/s life regen and 10% increased summon damage while submerged in liquid\nWhen using any weapon you have a 10% chance to throw a returning seashell projectile\nThis seashell does true damage and does not benefit from any damage class\nProvides increased underwater mobility and slightly reduces breath loss in the abyss"
   },
   {
     "internal": "WulfrumFusionCannon",
@@ -5858,7 +5926,8 @@
       "defense": 1
     },
     "setBonus": "Bastión Wulfrum - (tecla configurada) para equipar una armadura motorizada, cuesta 1 chatarra metálica Wulfrum\nMientras está activa, solo puedes usar el cañón de fusión integrado, pero tus estadísticas defensivas aumentan\nLa armadura dura hasta 30 segundos, pero cada golpe recibido le resta 2 segundos de duración\nMantén pulsado Mayús para ver las estadísticas del cañón de fusión",
-    "equipSlot": "Head"
+    "equipSlot": "Head",
+    "setBonus_en": "Wulfrum Bastion - (configured key) to equip a power armor, costing one [i:CalamityMod/WulfrumMetalScrap] Wulfrum Metal Scrap\nWhile active, you can only use the integrated fusion cannon, but your defensive stats are increased\nThe armor lasts up to 30 seconds, but each hit loses 2 seconds of duration\nHold Shift to see the stats of the fusion cannon"
   },
   {
     "internal": "WulfrumJacket",

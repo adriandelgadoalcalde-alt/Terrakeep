@@ -50,9 +50,10 @@ import itertools
 import json
 import re
 
+import lang_vanilla
+
 ITEM_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria\Item.cs"
 PLAYER_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria\Player.cs"
-GAME_JSON = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\TerrariaVanilla\Terraria.Localization.Content.es-ES.Game.json"
 OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_armor_sets.json"
 
 BACKSLASH, DQUOTE, SQUOTE = chr(92), chr(34), chr(39)
@@ -378,21 +379,31 @@ for h, b, l in itertools.product(hallowed_heads, [24, 229], [23, 212]):
 
 print(f"{len(results)} claves reales de ArmorSetBonus resueltas con al menos una combinacion")
 
-# --- 3. Texto real en español ---
-with open(GAME_JSON, encoding="utf-8") as f:
-    game_json = json.load(f)
-texts: dict[str, str] = game_json["ArmorSetBonus"]
+# --- 3. Texto real en español Y en ingles ---
+# Ampliacion 6-sep-2026 (ronda de traduccion del CONTENIDO del juego): el bono de set se veia en
+# español tambien con la interfaz en ingles. Misma clave real (ArmorSetBonus.X), mismo fichero,
+# solo cambia el idioma - `text_en` sale de `en-US.Game.json`. Se lee con lang_vanilla porque los
+# `en-US.*` traen comas finales reales que json.load rechaza (ver ese modulo).
+texts: dict[str, str] = lang_vanilla.load("es-ES", "Game")["ArmorSetBonus"]
+texts_en: dict[str, str] = lang_vanilla.load("en-US", "Game")["ArmorSetBonus"]
 
-# --- 4. Componer salida: itemId (de cualquier pieza) -> {key, text, pieces} ---
+# --- 4. Componer salida: itemId (de cualquier pieza) -> {key, text, text_en, pieces} ---
 # pieces solo incluye las piezas que la clave REALMENTE exige (modo 3: 2 piezas si legs es
 # None, es decir, la condicion real de Player.cs nunca menciona legs para esta clave).
 out: dict[str, dict] = {}
 unmapped_keys = []
+sin_ingles = []
 for key, triples in results.items():
     text = texts.get(key)
     if text is None:
         unmapped_keys.append(key)
         continue
+    text_en = texts_en.get(key)
+    if text_en is None or str(text_en).strip() == "":
+        # Sin texto ingles real -> no se inventa: la entrada se queda sin `text_en` y el
+        # catalogo cae al español (idioma de referencia, ver LocalizedContent.Pick).
+        sin_ingles.append(key)
+        text_en = None
     for h, b, l in triples:
         head_id = slot_by_kind["head"].get(h) if h is not None else None
         body_id = slot_by_kind["body"].get(b) if b is not None else None
@@ -401,6 +412,8 @@ for key, triples in results.items():
             continue
         pieces = [head_id, body_id] if legs_id is None else [head_id, body_id, legs_id]
         piece = {"key": key, "text": text, "pieces": pieces}
+        if text_en is not None:
+            piece["text_en"] = text_en
         out[str(head_id)] = piece
         out[str(body_id)] = piece
         if legs_id is not None:
@@ -410,6 +423,8 @@ print(f"{len(out)} item ids reales con bonificacion de set mapeada")
 print(f"{len(results)} claves distintas resueltas (esperado 63, ArmorSetBonus.* reales de Player.cs)")
 if unmapped_keys:
     print("claves sin texto real en Game.json (revisar):", unmapped_keys)
+print(f"claves sin texto INGLES real (se quedan en español a proposito): {len(sin_ingles)}{' -> ' + ', '.join(sorted(sin_ingles)) if sin_ingles else ''}")
+print(f"entradas con text_en real: {sum(1 for v in out.values() if 'text_en' in v)} de {len(out)}")
 
 with open(OUT, "w", encoding="utf-8") as f:
     json.dump(dict(sorted(out.items(), key=lambda kv: int(kv[0]))), f, ensure_ascii=False, separators=(",", ":"))

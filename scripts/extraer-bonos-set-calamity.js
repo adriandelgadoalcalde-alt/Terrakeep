@@ -24,20 +24,45 @@
 //    ej. AerospecBreastplate.SetBonusHurtDamageThreshold) y las formulas reales de
 //    CalamityUtils.cs (ToPercent/ToStealth/FramesToSeconds/ScaleWithDifficulty), no adivinadas.
 //
-// Salida: TerrasavrNative.App/Assets/calamity/set_bonus_en.json - texto ingles/español MIXTO
-// (español real donde CommonItemTooltip lo permite, ingles donde es texto propio de Calamity)
-// por clase con UpdateArmorSet, listo para revisar antes de traducir a mano el resto y
-// escribirlo en catalog.json (paso 2, manual, ver bitacora.md).
+// Salida (modo por defecto, sin argumentos): TerrasavrNative.App/Assets/calamity/
+// set_bonus_en.json - texto ingles/español MIXTO (español real donde CommonItemTooltip lo
+// permite, ingles donde es texto propio de Calamity) por clase con UpdateArmorSet, listo para
+// revisar antes de traducir a mano el resto y escribirlo en catalog.json (paso 2, manual, ver
+// bitacora.md).
+//
+// AMPLIACION 6-sep-2026 (ronda de traduccion del CONTENIDO del juego): `node
+// extraer-bonos-set-calamity.js en` corre EXACTAMENTE la misma resolucion pero registrando
+// CommonItemTooltip/Key.* desde el `en_US` oficial de tModLoader en vez del `es_ES` -> texto
+// 100% INGLES REAL en `set_bonus_en_real.json`. Ojo al nombre: `set_bonus_en.json` (sin
+// `_real`) NO es el bono en ingles, es el volcado MIXTO para revision humana descrito arriba;
+// el nombre viene de antes de esta ronda y se respeta para no romper
+// aplicar-bonos-set-calamity.js, que lo consume como lista real de sets.
+//
+// Para Calamity el ingles es la fuente MAS fiable (esta instalacion solo trae localizacion
+// en-US real), asi que en el modo `en` no hay NADA traducido a mano: es texto literal del mod.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 
+// "en" -> texto 100% ingles real; cualquier otra cosa (o nada) -> modo mixto historico.
+// `globalThis.process`, no `process` a secas: este mismo fichero define mas abajo una funcion
+// llamada `process(clave)` (la resolucion de {$Key@N}) y el hoisting de esa declaracion TAPA el
+// objeto global dentro de todo el modulo - `process.argv` sale undefined aunque el codigo este
+// escrito antes.
+const MODO_INGLES = globalThis.process.argv[2] === 'en';
+const LOC_LANG = MODO_INGLES ? 'en_US' : 'es_ES';
+// Marcador real de "esto lo sustituye el juego por la tecla que tenga configurada el jugador":
+// no hay binding por defecto que copiar sin inventarlo, mismo criterio que "[tecla]"/"[key]"
+// de extraer-tooltips-vanilla.py.
+const TEXTO_TECLA = MODO_INGLES ? '(configured key)' : '(tecla configurada)';
+
 const CALAMITY_SRC = 'C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\CalamityMod';
 const TMOD_PATH = 'C:\\Users\\adrian\\Documents\\My Games\\Terraria\\tModLoader\\Mods\\2026.6CalamityMod.tmod';
 const TMOD_EXTRACT = 'C:\\Users\\adrian\\Downloads\\Terrasavr-Win\\Terrasavr-Calamity-Beta\\resources\\app\\tmod-extract.js';
-const VANILLA_LOC_ES = 'C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\tModLoader\\Terraria.Localization.Content.es_ES.tModLoader.json';
-const VANILLA_LOC_ES_MAIN = 'C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\tModLoader\\Terraria.Localization.Content.es_ES.Main.json';
-const OUT_PATH = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity', 'set_bonus_en.json');
+const VANILLA_LOC_ES = `C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\tModLoader\\Terraria.Localization.Content.${LOC_LANG}.tModLoader.json`;
+const VANILLA_LOC_ES_MAIN = `C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\tModLoader\\Terraria.Localization.Content.${LOC_LANG}.Main.json`;
+const OUT_PATH = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity',
+    MODO_INGLES ? 'set_bonus_en_real.json' : 'set_bonus_en.json');
 
 // ---------- 1) Parser hjson minimo (solo lo que Calamity usa de verdad: claves sin comillas,
 // objetos anidados con {}, valores de una linea, bloques '''...''' multilinea, comentarios //).
@@ -129,10 +154,40 @@ console.log(`Registro real de Calamity: ${Object.keys(registry).length} claves d
 // TANTO en ingles (para que Exists() lo encuentre igual que el juego real) COMO en español
 // real oficial (para poder usarlo directamente en la traduccion final).
 // El .json real de tModLoader lleva comentarios de linea ("// Main Menu") - JSON estricto no
-// los admite, se limpian las lineas que son SOLO un comentario antes de parsear.
-const vanillaEsRaw = fs.readFileSync(VANILLA_LOC_ES, 'utf8')
-    .split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
-const vanillaEs = JSON.parse(vanillaEsRaw);
+// los admite, se limpian las lineas que son SOLO un comentario antes de parsear. Los ficheros
+// `en_US.*` traen ADEMAS comas finales reales antes de `}`/`]` (el juego los lee con
+// Newtonsoft, que las tolera; JSON.parse no) - se quitan igual, respetando cadenas y escapes
+// (gemelo JS de scripts/lang_vanilla.py, ver el docstring de ese modulo).
+function quitarComasFinales(texto) {
+    let out = '', i = 0, enCadena = false;
+    while (i < texto.length) {
+        const c = texto[i];
+        if (enCadena) {
+            out += c;
+            if (c === '\\' && i + 1 < texto.length) { out += texto[i + 1]; i += 2; continue; }
+            if (c === '"') enCadena = false;
+            i++;
+            continue;
+        }
+        if (c === '"') { enCadena = true; out += c; i++; continue; }
+        if (c === ',') {
+            let j = i + 1;
+            while (j < texto.length && ' \t\r\n'.includes(texto[j])) j++;
+            if (j < texto.length && (texto[j] === '}' || texto[j] === ']')) { i++; continue; }
+        }
+        out += c;
+        i++;
+    }
+    return out;
+}
+
+function leerLocJson(ruta) {
+    const raw = fs.readFileSync(ruta, 'utf8')
+        .split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+    try { return JSON.parse(raw); } catch (_) { return JSON.parse(quitarComasFinales(raw)); }
+}
+
+const vanillaEs = leerLocJson(VANILLA_LOC_ES);
 const commonTooltipEs = vanillaEs.CommonItemTooltip || {};
 for (const [k, v] of Object.entries(commonTooltipEs)) {
     registry['CommonItemTooltip.' + k] = v; // se registra YA en español - ver Process() abajo.
@@ -141,9 +196,7 @@ console.log(`+ ${Object.keys(commonTooltipEs).length} claves reales CommonItemTo
 
 // Key.UP/Key.DOWN (referenciadas por CalamityUtils.GetArmorSetBonusKey, via MarniteArchitectHeadgear) -
 // mismo grupo vanilla CORE, real, oficial, esta vez en Main.json.
-const vanillaEsMainRaw = fs.readFileSync(VANILLA_LOC_ES_MAIN, 'utf8')
-    .split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
-const vanillaEsMain = JSON.parse(vanillaEsMainRaw);
+const vanillaEsMain = leerLocJson(VANILLA_LOC_ES_MAIN);
 for (const [k, v] of Object.entries(vanillaEsMain.Key || {})) registry['Key.' + k] = v;
 console.log(`+ ${Object.keys(vanillaEsMain.Key || {}).length} claves reales Key.* (español oficial de tModLoader).`);
 
@@ -400,7 +453,7 @@ function evaluarArgumento(expr, srcClaseActual, nombreClaseActual) {
     expr = expr.trim();
     const especial = esCasoNoResoluble(expr);
     if (especial === 'color') return { texto: '', especial: 'color' };
-    if (especial === 'tecla') return { texto: '(tecla configurada)', especial: 'tecla' };
+    if (especial === 'tecla') return { texto: TEXTO_TECLA, especial: 'tecla' };
 
     // Variable LOCAL real (no static) del propio metodo UpdateArmorSet, ej.
     // "int num = (int)((float)StormManaCost * player.manaCost);" (ForbiddenCirclet) o
@@ -416,7 +469,7 @@ function evaluarArgumento(expr, srcClaseActual, nombreClaseActual) {
             if (/CalamityWorld\.revenge\s*\?/.test(rhs)) return { texto: '' };
             const especialRhs = esCasoNoResoluble(rhs);
             if (especialRhs === 'color') return { texto: '', especial: 'color' };
-            if (especialRhs === 'tecla') return { texto: '(tecla configurada)', especial: 'tecla' };
+            if (especialRhs === 'tecla') return { texto: TEXTO_TECLA, especial: 'tecla' };
             // player.manaCost real: multiplicador de coste de mana, 1 en la base (sin ninguna
             // otra reduccion activa) - se usa ese valor base real, documentado aqui, no una
             // simulacion completa del jugador.
