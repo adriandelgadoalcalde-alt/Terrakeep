@@ -1,5 +1,60 @@
 [
   {
+    "version": "2.2.0",
+    "date": "6 de septiembre de 2026",
+    "date_en": "September 6, 2026",
+    "summary": "Auditoría exhaustiva de toda la aplicación (Personaje, Librería, Builds, Exploración, Inicio, Ajustes) con más de 30 correcciones reales, incluida una de pérdida de datos. La Librería gana 739 objetos que estaban invisibles, el mejor prefijo automático pasa a cubrir casi 4 veces más objetos, y los tooltips de estadísticas ya cambian de idioma de verdad.",
+    "summary_en": "Exhaustive audit of the whole app (Character, Library, Builds, Exploration, Home, Settings) with over 30 real fixes, including one data-loss bug. The Library gains 739 previously invisible items, automatic best-prefix coverage nearly quadruples, and item stat tooltips now really switch language.",
+    "added": [
+      "Cobertura del \"mejor prefijo automático\" ampliada de 243 a 948 objetos vanilla (y de 996 a 1019 de Calamity), reconstruyendo el generador real a partir de la misma fórmula que usa el propio juego.",
+      "739 objetos nuevos en la Librería (36 carpetas que aparecían completamente vacías), completando el catálogo de nombres hasta la versión real del juego.",
+      "Barrido sistemático y permanente de maquetación por tamaño de ventana e idioma, para detectar automáticamente recortes y solapes en toda la app."
+    ],
+    "added_en": [
+      "\"Automatic best prefix\" coverage expanded from 243 to 948 vanilla items (and from 996 to 1019 Calamity items), rebuilding the real generator from the same formula the game itself uses.",
+      "739 new items in the Library (36 folders that showed up completely empty), completing the name catalog up to the game's real version.",
+      "Systematic, permanent layout sweep across window sizes and languages, to automatically catch clipping and overlap issues across the whole app."
+    ],
+    "fixed": [
+      "Crítico: restaurar una copia de seguridad dañada podía destruir el personaje bueno sin ningún aviso ni vuelta atrás - ahora se comprueba que sea legible antes de tocar nada.",
+      "Los 5 botones de cabecera de cada Almacén estaban completamente mudos (sin texto, en los dos idiomas): no había forma de guardar, cargar, ordenar ni vaciar el Banco/Caja fuerte/Fragua/Bóveda.",
+      "\"Defensa total:\" y otras etiquetas de Equipamiento salían vacías, dejando el número suelto sin contexto.",
+      "Un objeto marcado como favorito sobrevivía falsamente en el Banco (ese dato no existe ahí de verdad) y se perdía en silencio al guardar.",
+      "Equipamiento mostraba 4 conjuntos de equipo donde el juego real solo tiene 3 - el conjunto activo no vivía donde parecía.",
+      "Con resultados de búsqueda abiertos en Exploración, la columna de resultados apenas mostraba nada en Cofres, Minerales y Objetos (el estado normal en cuanto se busca algo).",
+      "Cargar un mundo nuevo dejaba pegados los cofres y el marcador del mundo anterior.",
+      "Se ofrecían los 4 modos de dificultad aunque el formato del mundo solo admitiera dos, y guardar reventaba con un error.",
+      "La lista de \"NPCs que faltan\" y los accesorios de Equipamiento se recortaban en tamaños de ventana no maximizados (varios umbrales de diseño mal medidos por unos pocos píxeles).",
+      "Vida y maná se recortaban ligeramente en las 6 pestañas de Personaje, y la cabecera global tapaba esos mismos datos en varios tamaños de ventana.",
+      "Cambiar de versión de personaje no actualizaba la rejilla de Buffs, pudiendo perder buffs reales sin ningún aviso; el aviso de bajada de versión, además, mentía sobre qué se perdía de verdad.",
+      "Los tooltips de estadísticas de un objeto (daño, defensa, bono de set) seguían en español con la aplicación en inglés.",
+      "Numerosos textos se quedaban \"congelados\" en el idioma anterior al cambiar de idioma en vivo, sin recargar la app (Inicio, Exploración, Librería, dificultades del mundo).",
+      "\"Iniciar siempre con el tamaño actual de la ventana\" se desactivaba solo en cada arranque.",
+      "Añadir una carpeta extra de personajes/mundos en Ajustes no refrescaba nada hasta reiniciar la aplicación.",
+      "Cambiar el prefijo de un objeto dejaba el tooltip de estadísticas con los números del prefijo anterior.",
+      "Builds mostraba la clave interna de cada clase (melee/mage/rogue) en vez de su nombre traducido."
+    ],
+    "fixed_en": [
+      "Critical: restoring a corrupted backup could destroy the good character with no warning and no way back - now it checks the backup is readable before touching anything.",
+      "The 5 header buttons of every Storage container were completely silent (no text, in both languages): no way to save, load, sort or clear the Piggy Bank/Safe/Defender's Forge/Void Vault.",
+      "\"Total defense:\" and other Equipment labels showed up empty, leaving the number floating with no context.",
+      "An item flagged as favorite falsely survived in the Piggy Bank (that data doesn't really exist there) and silently got lost on save.",
+      "Equipment showed 4 gear sets where the real game only has 3 - the active set didn't actually live where it appeared to.",
+      "With search results open in Exploration, the results column barely showed anything under Chests, Ores and Objects (the normal state as soon as you search for something).",
+      "Loading a new world left the previous world's chests and marker stuck on top.",
+      "All 4 difficulty modes were offered even when the world's file format only supported two, and saving would crash with an error.",
+      "The \"Missing NPCs\" list and Equipment's accessory slots got clipped at non-maximized window sizes (several layout thresholds mismeasured by a few pixels).",
+      "Health and mana were slightly clipped across all 6 Character tabs, and the global header covered those same numbers at several window sizes.",
+      "Changing a character's version didn't refresh the Buffs grid, which could silently drop real buffs; the version-downgrade warning also lied about what would actually be lost.",
+      "An item's stat tooltip (damage, defense, set bonus) stayed in Spanish while the app was set to English.",
+      "Many strings stayed \"frozen\" in the previous language after switching languages live, without restarting the app (Home, Exploration, Library, world difficulty).",
+      "\"Always start with the window's current size\" turned itself off on every launch.",
+      "Adding an extra character/world folder in Settings didn't refresh anything until the app was restarted.",
+      "Changing an item's prefix left the stat tooltip showing the previous prefix's numbers.",
+      "Builds showed each class's internal key (melee/mage/rogue) instead of its translated name."
+    ]
+  },
+  {
     "version": "2.1.0",
     "date": "5 de septiembre de 2026",
     "date_en": "September 5, 2026",
