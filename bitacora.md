@@ -12125,31 +12125,55 @@ crecer), asi que **toda fila nueva se la come al centro**. Apilar necesitaba 84 
 - `dotnet build`: 0 errores / 0 avisos.
 - `dotnet test`: Core **441/441**, ViewModels **439/439**, 0 fallos.
 
-### El obstaculo real de la ronda: DOS arneses a la vez se cuelgan mutuamente
+### El obstaculo real de la ronda: el recorrido COMPLETO del arnes muere siempre en `UI-BLOQUEADA`, y es PREEXISTENTE
 
-El recorrido COMPLETO del arnes (`dotnet run` sin modo de foco) **no llego a terminar en ninguno
-de los dos intentos**: las dos veces se quedo clavado exactamente en el mismo punto - linea 251,
-justo despues del bloque `UI-BLOQUEADA`, en el primer `AutomationElement.FindFirst` que viene
-detras - con la CPU del proceso congelada (10,70 -> 10,73 en 15s) y `Responding=True`.
+El recorrido completo (`dotnet run` sin modo de foco) **no llego a terminar en ninguno de los tres
+intentos**: las tres veces se quedo clavado en el mismo sitio exacto - **linea 251**, justo despues
+del bloque `UI-BLOQUEADA`, que deja siempre los mismos 2 `FALLO`:
 
-La causa esta identificada y NO es del cambio de esta ronda: **habia dos procesos
-`TerrasavrNative.App.Tests` vivos a la vez** (23:05:23 y 23:06:05 - otra sesion trabajando sobre
-este mismo repo lanzo el suyo en paralelo), los dos colgados. `UI-BLOQUEADA` es precisamente el
-bloque que hace **clics REALES de raton por coordenadas de pantalla** tras un
-`SetForegroundWindow`: con otra ventana WPF identica (mismo titulo, mismo proceso) disputandose el
-primer plano, el clic no llega a la ventana propia - los 2 `FALLO` que deja son los dos de ese
-bloque, y el `FindFirst` siguiente se queda esperando a un arbol que no responde. Es la misma
-familia de limite que esta bitacora ya documento con `T-H/F2` ("el `SetForegroundWindow` no roba
-el foco de verdad a un proceso en segundo plano en esta sesion").
+```
+FALLO: UI-BLOQUEADA - el Popup no se cerro tras el clic real de raton
+FALLO: UI-BLOQUEADA - la interfaz dejo de responder a clics reales tras cerrar el Popup
+```
 
-Se aplica la regla de las dos veces: se para, se deja escrito, y la verificacion se hace con lo
-que SI es determinista y cubre de verdad este cambio - `AR-14`/`AR-14b`/`AR-14c`/`AR-14d` y el
-**`AR-LAY` completo** (la superficie entera de la app, no solo Equipamiento), que no dependen de
-ningun clic real de raton porque miden sobre el arbol visual con coordenadas reales. El modo de
-foco `AR14_SOLO=1` añadido en esta ronda es justo lo que lo hace posible.
+Primera hipotesis, que resulto FALSA y se deja escrita para que nadie la repita: "son dos arneses a
+la vez". Es verdad que durante los dos primeros intentos habia otro `TerrasavrNative.App.Tests`
+vivo (otra sesion sobre este mismo repo) y que ese proceso zombi llegaba a bloquear los `.dll` y a
+tumbar los `dotnet build` ajenos con `MSB3021`/`MSB3027` - eso si paso y hubo que matarlo. Pero el
+**tercer intento, con la maquina completamente libre, murio en la misma linea 251 con los mismos 2
+`FALLO`**.
 
-**Para la proxima**: antes de lanzar el recorrido completo, comprobar que no hay otro
-`TerrasavrNative.App.Tests` vivo (`Get-Process *Terrasavr*`) - si lo hay, o se espera, o se usa un
-modo de foco. Dos arneses a la vez no es "lento": es un cuelgue reproducible.
+La comprobacion que lo cierra de verdad (leccion "verificar aislando la variable"): **prueba
+diferencial en un `git worktree` limpio** (`C:\tk-eq`, ruta corta - el scratchpad pasa de
+`MAX_PATH`) sobre el commit **anterior** a esta ronda (`a2d60993`, sin ninguno de estos cambios):
+
+```
+con el arreglo:  251 lineas, 2 FALLO (UI-BLOQUEADA), muere ahi
+SIN el arreglo:  251 lineas, 2 FALLO (UI-BLOQUEADA), muere ahi   <- identico
+```
+
+O sea: es un limite PREEXISTENTE del entorno, no una regresion de esta ronda. Encaja con lo que ya
+esta escrito en `CLAUDE.md` (las capturas `RenderTargetBitmap` son poco fiables en este entorno y
+el arnes muere "siempre justo en una captura" - la siguiente linea despues del punto de muerte es
+precisamente la captura `ui-desbloqueada-tras-clic-real.png`) y con `T-H/F2` de la oleada de los 8
+agentes (el raton/teclado sintetico y `SetForegroundWindow` no llegan de verdad a la ventana en
+esta sesion). `UI-BLOQUEADA` es justo el bloque que hace **clics REALES de raton por coordenadas de
+pantalla**.
+
+Se aplica la regla de las dos veces: se para de perseguirlo, se deja escrito **con el diferencial
+hecho**, y la verificacion de esta ronda se apoya en lo que SI es determinista y cubre de verdad un
+cambio de maquetacion - `AR-14`/`AR-14b`/`AR-14c`/`AR-14d` y el **`AR-LAY` completo** (la superficie
+entera de la app, los dos idiomas), que no dependen de ningun clic real porque miden sobre el arbol
+visual con coordenadas reales. El modo de foco `AR14_SOLO=1` añadido aqui es lo que lo hace posible
+sin pagar el recorrido entero.
+
+**Dos cosas para la proxima**, las dos comprobadas hoy:
+- Antes de lanzar el recorrido completo, mirar que no haya otro `TerrasavrNative.App.Tests` vivo
+  (`Get-Process *Terrasavr*`). Un arnes zombi de otra sesion **bloquea los `.dll` y hace fallar los
+  `dotnet build` de todo el mundo** con `MSB3021`/`MSB3027`; matarlo es lo primero que hay que
+  hacer si un build "no compila" por copia de ficheros.
+- `UI-BLOQUEADA` es hoy la barrera del recorrido completo. Quien quiera pasar de ahi tendra que
+  ocuparse de ese bloque (o saltarlo con una variable de entorno propia), no de la zona que este
+  tocando.
 
 ---
