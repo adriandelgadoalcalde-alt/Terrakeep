@@ -11846,3 +11846,19 @@ bloqueado por TerrasavrNative.App.Tests (PID)") mientras otro agente tiene el ar
 — nada que ver con el código. Dos salidas, las dos usadas aquí: `dotnet build … -t:CoreCompile`
 compila y valida la sintaxis sin llegar a copiar el DLL (sirve para no quedarse parado), y
 reintentar el build completo cada 45s hasta que el otro arnés termina.
+
+## Verificación de integración final de la oleada de 8 agentes (6-sep-2026, tarde)
+
+Con los 8 agentes cerrados (6 áreas funcionales + mejor prefijo + tooltips traducidos),
+verificación completa desde cero: `dotnet build` (0 errores, los dos destinos de Core),
+`dotnet test` (Core **441/441**, ViewModels **439/439**, 0 fallos), arnés completo dos veces
+seguidas, en solitario: **924 de 925 líneas en verde**.
+
+La única línea roja, en las dos ejecuciones, es `T-H/F2` ("el FocusVisualStyle no se aplicó al
+enfocar por teclado") - **no es una regresión de esta oleada**. Depende de que
+`SetForegroundWindow` le robe de verdad el foco al sistema operativo a un proceso en segundo
+plano, algo que varios de los 8 agentes de hoy ya documentaron como poco fiable en esta sesión
+concreta (ratón sintético sin efecto, modificadores de teclado que no llegan a la ventana) -
+mismo límite real del entorno, otra cara del mismo problema. No hay ninguna ventana compitiendo
+por el foco (comprobado, `tasklist` sin `Terrakeep.exe` ni otra instancia del arnés). Se deja
+documentado en vez de perseguirlo más: no bloquea la publicación de esta versión.
