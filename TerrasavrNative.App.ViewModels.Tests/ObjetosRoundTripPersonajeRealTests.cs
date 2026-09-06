@@ -157,6 +157,40 @@ public sealed class ObjetosRoundTripPersonajeRealTests
         }
     }
 
+    [Fact]
+    public void UnFavoritoQueSeMueveAUnAlmacenPierdeLaMarcaAlInstante_NoAlRecargar()
+    {
+        string? copia = RutaCopiaDePersonajeReal(out string carpeta);
+        if (copia == null) return;
+
+        try
+        {
+            var vm = new MainViewModel();
+            vm.LoadFromPath(copia);
+
+            var origen = vm.InventoryContainer!.Slots[^1];
+            origen.PlaceItem(4); // "Espada larga de hierro" real
+            origen.ToggleFavoriteCommand.Execute(null);
+            Assert.True(origen.IsFavorited);
+
+            // OBJ-05b: arrastrar del Inventario al Banco es exactamente esto (SwapWith, ver
+            // MainWindow.xaml.cs). El Banco no puede guardar favoritos, asi que la marca tiene
+            // que caerse AHI MISMO y no al recargar el personaje - si no, el usuario sigue viendo
+            // la estrella en la esquina del slot y la pierde sin enterarse.
+            var destino = vm.StorageGroup!.Current.Slots[0];
+            Assert.False(destino.SupportsFavorite);
+            origen.SwapWith(destino);
+
+            Assert.Equal(4, destino.Item.Id);
+            Assert.False(destino.IsFavorited);
+            Assert.False(destino.Item.Favorited);
+        }
+        finally
+        {
+            try { Directory.Delete(carpeta, recursive: true); } catch (IOException) { }
+        }
+    }
+
     // Todos los slots de un contenedor tienen que salir identicos al original salvo el unico
     // indice que esta prueba edito a proposito (-1 = ninguno, el contenedor entero intacto).
     //

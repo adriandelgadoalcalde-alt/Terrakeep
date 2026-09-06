@@ -250,6 +250,13 @@ public partial class ItemSlotViewModel : ObservableObject
 
         RejectionMessage = null;
         Item = item;
+        // OBJ-05b: un objeto favorito que ENTRA en un contenedor que no guarda favoritos (arrastrar
+        // del Inventario al Banco, Ctrl+V, cargar un conjunto) traia su marca puesta - se veia la
+        // estrella en la esquina del slot y desaparecia sola al recargar, la misma perdida
+        // silenciosa que OBJ-05 cerro por el lado del boton. Se limpia aqui, en el unico sitio por
+        // el que pasan TODOS los caminos de entrada, para que lo que se ve sea siempre lo que el
+        // archivo va a guardar de verdad.
+        if (!SupportsFavorite) item.Favorited = false;
         IsEmpty = item.IsEmpty;
         IsCalamity = item.IsCalamity;
         IsFavorited = item.Favorited;

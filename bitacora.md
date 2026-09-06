@@ -10933,3 +10933,37 @@ resolvedor de textos. Trabajo de una ronda propia, no de un parche al vuelo.
   fallos intermitentes de `HomeCardTests` (uno distinto en cada ejecucion, siempre de backups) son
   de otra area y de esta misma oleada en paralelo.
 - Arnes de UI Automation: ejecucion completa hasta `DONE`, `OBJ-01`..`OBJ-07` en verde.
+
+---
+
+## 6-sep-2026 - Objetos (tercera tanda): la otra mitad del favorito perdido - arrastrar al Banco
+
+Cierre de la oleada de **Personaje -> Objetos**. `OBJ-05` cerro el favorito perdido por el lado del
+CONTROL (donde el `.plr` no guarda favoritos, la estrella ya no se ofrece). Quedaba la otra mitad,
+que salio repasando los caminos de ENTRADA de un objeto a un slot: un objeto que YA es favorito y
+entra en un contenedor que no puede guardarlo.
+
+Pasa en tres gestos reales y cotidianos: **arrastrar** del Inventario al Banco (`SwapWith`),
+**pegar** con Ctrl+V, y **cargar un conjunto** de objetos guardado. En los tres, el `GameItem`
+llegaba con `Favorited=true` intacto, el slot pintaba su estrella en la esquina... y al recargar el
+personaje habia desaparecido. Exactamente la misma perdida silenciosa, solo que por la puerta de
+atras.
+
+Arreglado en `UpdateFrom`, que es el unico punto por el que pasan TODOS los caminos de entrada
+(colocar desde la Libreria, arrastrar, pegar, cargar conjunto, deshacer/rehacer): si el contenedor
+no soporta favoritos, la marca se cae ahi mismo. Asi lo que se ve en pantalla es siempre lo que el
+archivo va a guardar de verdad - y el usuario se entera EN EL MOMENTO del gesto, no al recargar.
+
+Prueba nueva (`ObjetosRoundTripPersonajeRealTests`, sobre copia de personaje real): se marca un
+arma como favorita en el Inventario, se arrastra al Banco con el mismo `SwapWith` que usa el gesto
+real, y se comprueba que el objeto llega entero (id 4) pero **sin** la marca, tanto en el
+ViewModel como en el `GameItem` de debajo.
+
+### Verificacion real
+
+- `dotnet build`: 0 errores / 0 avisos.
+- `dotnet test`: Core **420/420**; ViewModels **428 de 429** - el unico fallo es
+  `HomeCardTests.RestoreBackup_*`, de otra area (backups de Inicio) y **distinto en cada
+  ejecucion**, o sea intermitente por el trabajo en paralelo de esta misma oleada, no por nada de
+  aqui.
+- Arnes de UI Automation: `OBJ-01`..`OBJ-07` en verde.
