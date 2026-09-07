@@ -1,8 +1,8 @@
 # Terrakeep
 
 Editor de personajes y mundos de **Terraria** - vanilla y **Calamity Mod** (tModLoader) a la
-vez, con el mismo archivo. Aplicación nativa de Windows (C#/.NET, WPF): sin Chromium, sin
-Electron, ligera y de arranque instantáneo.
+vez, con el mismo archivo. Aplicación nativa de Windows (C#/.NET, WPF), ligera y de arranque
+instantáneo.
 
 ![Inicio](docs/screenshots/01-inicio.png)
 
