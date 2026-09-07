@@ -27,7 +27,7 @@ instalacion real de Steam (solo el compuesto) - esta app ya usa unicamente la va
 piel StarterMale para ambos generos (decision ya tomada en el preview de cuerpo completo),
 asi que el compuesto encaja sin mas huecos que tapar.
 
-Salida: TerrasavrNative.App/Assets/vanilla_armor_slots.json -
+Salida: Terrakeep.App/Assets/vanilla_armor_slots.json -
 {"id": {"h":N,"b":N,"l":N}} - solo las claves realmente asignadas (headSlot/bodySlot/
 legSlot por separado, un objeto puede tener una, dos o las tres si fuera un caso raro,
 aunque en la practica cada objeto de armadura real solo asigna UNA).
@@ -36,7 +36,7 @@ import json
 import re
 
 ITEM_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria\Item.cs"
-OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_armor_slots.json"
+OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\vanilla_armor_slots.json"
 
 BACKSLASH = chr(92)
 DQUOTE = chr(34)

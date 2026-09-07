@@ -16,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 
 const BUFFS_DIR = 'C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\CalamityMod\\CalamityMod\\Buffs';
-const OUT_PATH = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity', 'buff_debuffs.json');
+const OUT_PATH = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity', 'buff_debuffs.json');
 
 function listCsFilesRecursive(dir) {
     let out = [];
@@ -51,7 +51,7 @@ console.log(`Escrito -> ${OUT_PATH}`);
 
 // Verificacion cruzada real contra el catalogo ya usado por la app: cuantas entradas de
 // buffs.json tienen de verdad un fichero de clase real con ese nombre.
-const catalogPath = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity', 'buffs.json');
+const catalogPath = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity', 'buffs.json');
 const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
 const knownClasses = new Set(files.map(f => path.basename(f, '.cs')));
 const sinFichero = catalog.filter(e => !knownClasses.has(e.internal));

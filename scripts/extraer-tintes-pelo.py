@@ -22,7 +22,7 @@ import json
 import re
 
 SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria\Initializers\DyeInitializer.cs"
-OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\hair_dyes.json"
+OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\hair_dyes.json"
 
 with open(SRC, encoding="utf-8") as f:
     text = f.read()

@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 
 const CALAMITY_SRC = 'C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\CalamityMod';
-const CATALOG_PATH = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity', 'catalog.json');
+const CATALOG_PATH = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity', 'catalog.json');
 
 // Indice real: nombre de clase (= nombre de fichero) -> ruta completa. Un solo recorrido del
 // arbol de 8101 ficheros reales en vez de buscar de uno en uno (mas rapido y mas facil de

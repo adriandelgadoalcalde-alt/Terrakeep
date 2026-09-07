@@ -54,7 +54,7 @@ import lang_vanilla
 
 ITEM_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria\Item.cs"
 PLAYER_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria\Player.cs"
-OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_armor_sets.json"
+OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\vanilla_armor_sets.json"
 
 BACKSLASH, DQUOTE, SQUOTE = chr(92), chr(34), chr(39)
 

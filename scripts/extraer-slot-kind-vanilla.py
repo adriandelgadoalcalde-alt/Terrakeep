@@ -36,9 +36,9 @@ archivo:linea, verificado aqui de nuevo antes de escribir el escaner):
   extraer-categorias-vanilla.py (has_head/has_body/has_leg/has_accessory) - vale igual para
   objetos funcionales y de vanidad (vanity=true no cambia el equip type real).
 
-Salida: TerrasavrNative.App/Assets/vanilla_slot_kind.json - {"id": bitmask}, solo ids con
+Salida: Terrakeep.App/Assets/vanilla_slot_kind.json - {"id": bitmask}, solo ids con
 bitmask != 0 (mismo criterio de "lo que no aplica no aparece" que vanilla_categories.json).
-Bits (deben coincidir 1:1 con TerrasavrNative.Core.Model.SlotKind):
+Bits (deben coincidir 1:1 con Terrakeep.Core.Model.SlotKind):
   1=Ammo 2=Coin 4=Dye 8=Hook 16=Mount 32=Cart 64=VanityPet 128=LightPet
   256=ArmorHead 512=ArmorBody 1024=ArmorLegs 2048=Accessory
 """
@@ -49,7 +49,7 @@ ITEM_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria
 PROJ_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria\Projectile.cs"
 MAIN_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria\Main.cs"
 DYE_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria\Initializers\DyeInitializer.cs"
-OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_slot_kind.json"
+OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\vanilla_slot_kind.json"
 
 BIT_AMMO, BIT_COIN, BIT_DYE, BIT_HOOK, BIT_MOUNT, BIT_CART, BIT_VANITYPET, BIT_LIGHTPET = (1, 2, 4, 8, 16, 32, 64, 128)
 BIT_ARMORHEAD, BIT_ARMORBODY, BIT_ARMORLEGS, BIT_ACCESSORY = (256, 512, 1024, 2048)

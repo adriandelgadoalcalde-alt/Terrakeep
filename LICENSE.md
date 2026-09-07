@@ -8,12 +8,12 @@ establecido cuyo formato ya se usó como referencia real en este proyecto (ver `
 ## Alcance real - qué cubre esta licencia y qué NO
 
 Esta licencia cubre **únicamente el código fuente propio de Terrakeep**: los proyectos C#/XAML
-(`TerrasavrNative.App`, `TerrasavrNative.Core` y sus proyectos de test), los scripts en
+(`Terrakeep.App`, `Terrakeep.Core` y sus proyectos de test), los scripts en
 `scripts/`, y la documentación propia del repositorio.
 
 **NO cubre, porque no es propiedad de este proyecto**:
 
-- Los sprites e imágenes de Terraria/Calamity Mod bajo `TerrasavrNative.App/Assets/vanilla/`,
+- Los sprites e imágenes de Terraria/Calamity Mod bajo `Terrakeep.App/Assets/vanilla/`,
   `Assets/npc_heads/`, `Assets/npc_icons/`, `Assets/player/` y `Assets/calamity/` (icons) -
   propiedad de Re-Logic, el equipo de tModLoader y el equipo de CalamityMod respectivamente. Ver
   el aviso ya presente en la pestaña "Acerca de" de la propia app.

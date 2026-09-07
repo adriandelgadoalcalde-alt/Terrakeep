@@ -104,7 +104,11 @@ sesión:
   el código esperado), aunque el 100% del fuente ya esté en el propio repo.
   Regenerar con:
   `ilspycmd -o reference\terrakeep-decompilado
-  TerrasavrNative.App\bin\Debug\net10.0-windows\TerrasavrNative.App.dll`
+  Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.dll`
+  (el proyecto se renombró de `TerrasavrNative.App` a `Terrakeep.App` el 7-sep-2026 - el
+  `.dll`/`.exe` generado ya se llamaba `Terrakeep` desde antes, por `AssemblyName`, así que el
+  volcado ya existente en el repo sigue llamándose `TerrasavrNative.App.decompiled.cs` como
+  reflejo de cuándo se generó, no hace falta regenerarlo solo por el renombrado)
 
 ## Verdades del entorno WPF (no volver a descubrirlas)
 - **Las capturas de pantalla son POCO FIABLES en este entorno** (confirmado
@@ -114,12 +118,13 @@ sesión:
   vía PowerShell (`System.Windows.Automation`,
   `AutomationElement.FindFirst`/`InvokePattern`/`SelectionItemPattern`) -
   fiable para navegación/interacción sin coordenadas de píxel; (3)
-  **`TerrasavrNative.App.Tests`** (auditoria de Opus, Bloque 6, T-21) - ya NO
+  **`Terrakeep.App.Tests`** (auditoria de Opus, Bloque 6, T-21; renombrado
+  desde `TerrasavrNative.App.Tests` el 7-sep-2026) - ya NO
   es un proyecto de consola temporal del scratchpad de cada sesión (así vivía
   antes, reconstruido desde cero cada vez que se perdía la sesión - cientos
   de líneas re-escritas, bugs ya resueltos vueltos a pisar sin querer): es un
-  proyecto real y permanente del propio repo, en `TerrasavrNative.slnx` -
-  `dotnet run --project TerrasavrNative.App.Tests` desde la raíz monta una
+  proyecto real y permanente del propio repo, en `Terrakeep.slnx` -
+  `dotnet run --project Terrakeep.App.Tests` desde la raíz monta una
   `MainWindow` real, coloca datos reales, interactúa vía UI Automation real
   y deja capturas + líneas "esperado X, obtenido Y" en stdout. Al añadir una
   verificación nueva, AÑADIRLA AHÍ (no crear otro proyecto aparte) - así se
@@ -147,7 +152,7 @@ sesión:
   propiedad declarada puede quedar sin aplicar en silencio (ver la lección
   de `min()`/`max()` de CSS en `Terrasavr-Calamity-Beta\CLAUDE.md`), aquí
   no hace falta desconfiar de esta propiedad en concreto.
-- **Un arnés que instancia `TerrasavrNative.App.App` (la clase real de
+- **Un arnés que instancia `Terrakeep.App.App` (la clase real de
   `App.xaml`) y llama a `Run()` crea una SEGUNDA `MainWindow` fantasma**
   (sin datos cargados) porque `App.xaml` tiene `StartupUri="MainWindow.xaml"`
   compilado - esto pasa aunque `Application.MainWindow` ya se haya asignado
@@ -156,7 +161,7 @@ sesión:
   hablando con la ventana equivocada sin ningún error visible). Para un
   arnés que necesita una `MainWindow` YA cargada con datos de verdad, usar
   un `System.Windows.Application` en blanco (nunca
-  `TerrasavrNative.App.App`) y añadir a mano solo los recursos que hagan
+  `Terrakeep.App.App`) y añadir a mano solo los recursos que hagan
   falta (`Theme.xaml` + los conversores de `App.xaml.Resources`) - así solo
   existe la ventana creada explícitamente.
 - **`FrameworkElement.Measure(availableSize)` recorta el ANCHO/ALTO que devuelve al

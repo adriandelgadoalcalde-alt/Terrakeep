@@ -23,8 +23,8 @@ import json
 import re
 
 ITEM_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\TerrariaVanilla\Terraria\ID\ItemID.cs"
-EXISTING_IDS = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_item_ids_by_key.json"
-OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\whats_new_item_ids.json"
+EXISTING_IDS = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\vanilla_item_ids_by_key.json"
+OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\whats_new_item_ids.json"
 
 with open(EXISTING_IDS, encoding="utf-8") as f:
     existing = json.load(f)

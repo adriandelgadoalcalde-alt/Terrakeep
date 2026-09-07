@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Terrakeep.App/Terrakeep.App.csproj" />
+  <Project Path="Terrakeep.App.Tests/Terrakeep.App.Tests.csproj" />
+  <Project Path="Terrakeep.App.ViewModels.Tests/Terrakeep.App.ViewModels.Tests.csproj" />
+  <Project Path="Terrakeep.Core.Tests/Terrakeep.Core.Tests.csproj" />
+  <Project Path="Terrakeep.Core/Terrakeep.Core.csproj" />
+</Solution>

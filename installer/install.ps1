@@ -6,7 +6,7 @@
 # recomendada para cualquiera que no vaya a tocar el codigo. Este script sigue aqui como
 # alternativa de linea de comandos (o para quien prefiera no instalar Inno Setup).
 #
-# Publica un build Release AUTOCONTENIDO (ver ..\TerrasavrNative.App\Properties\
+# Publica un build Release AUTOCONTENIDO (ver ..\Terrakeep.App\Properties\
 # PublishProfiles\win-x64.pubxml - decision de la auditoria final de Opus, 5-sep-2026: la version
 # dependiente del framework pesaba solo ~27MB pero exigia el .NET Desktop Runtime 10 instalado,
 # razonable para esta maquina de desarrollo pero no para el publico general que se descargue
@@ -24,10 +24,10 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$appProject = Join-Path $repoRoot 'TerrasavrNative.App\TerrasavrNative.App.csproj'
+$appProject = Join-Path $repoRoot 'Terrakeep.App\Terrakeep.App.csproj'
 $installDir = Join-Path $env:LocalAppData 'Programs\Terrakeep'
 
-$publishDir = Join-Path $repoRoot 'TerrasavrNative.App\bin\Release\net10.0-windows\win-x64\publish'
+$publishDir = Join-Path $repoRoot 'Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish'
 
 # Borrar la carpeta de publicacion ANTES de publicar es imprescindible, no cosmetico: se
 # confirmo en pruebas reales de esta misma sesion que "dotnet publish" reutilizando una

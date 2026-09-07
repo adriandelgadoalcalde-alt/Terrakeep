@@ -16,7 +16,7 @@ const { PNG } = require('pngjs');
 const { xnbToPng } = require('../../Terrasavr-Calamity-Beta/resources/app/xnb-to-png.js');
 
 const STEAM_IMAGES = 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Terraria\\Content\\Images';
-const OUT_DIR = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'npc_icons');
+const OUT_DIR = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'npc_icons');
 
 // Los 13 ids reales nuevos del roster (H6-08) - TravelingMerchant/TaxCollector mas las 11
 // "mascotas de pueblo" 1.4.4 (Gato/Perro/Conejo/Slimes x8).

@@ -3,7 +3,7 @@
 Uso (desde la raiz del repo):
     python scripts\\cruce-claves-idioma.py
 
-Que comprueba, todo contra el codigo REAL (TerrasavrNative.App, .cs y .xaml):
+Que comprueba, todo contra el codigo REAL (Terrakeep.App, .cs y .xaml):
   1. Toda clave usada existe en strings_es.json Y en strings_en.json.
   2. Toda clave del diccionario se usa de verdad en alguna parte (huerfanas).
   3. Los dos diccionarios tienen exactamente las mismas claves.
@@ -30,7 +30,7 @@ import io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-APP = os.path.join(RAIZ, "TerrasavrNative.App")
+APP = os.path.join(RAIZ, "Terrakeep.App")
 ASSETS = os.path.join(APP, "Assets")
 
 es = json.load(open(os.path.join(ASSETS, "strings_es.json"), encoding="utf-8"))

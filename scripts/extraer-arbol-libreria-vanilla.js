@@ -25,14 +25,14 @@
 // la ronda anterior) - y el arbol resultante cubre los 6146 ids reales sin ninguno huerfano.
 //
 // Uso: node scripts/extraer-arbol-libreria-vanilla.js
-// Salida: TerrasavrNative.App/Assets/vanilla_library_tree.json
+// Salida: Terrakeep.App/Assets/vanilla_library_tree.json
 
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
 const scriptPath = path.resolve(__dirname, "..", "..", "Terrasavr-Calamity-Beta", "resources", "app", "local-site", "script.js");
-const outPath = path.resolve(__dirname, "..", "TerrasavrNative.App", "Assets", "vanilla_library_tree.json");
+const outPath = path.resolve(__dirname, "..", "Terrakeep.App", "Assets", "vanilla_library_tree.json");
 
 const content = fs.readFileSync(scriptPath, "utf8");
 

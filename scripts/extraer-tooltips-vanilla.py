@@ -25,8 +25,8 @@ import re
 
 import lang_vanilla
 
-IDS = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_item_ids_by_key.json"
-OUT_DIR = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets"
+IDS = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\vanilla_item_ids_by_key.json"
+OUT_DIR = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets"
 
 # (idioma real del juego, fichero de salida, marcador de tecla en ese idioma)
 IDIOMAS = [

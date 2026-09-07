@@ -29,7 +29,7 @@
 // que extraer-descripciones-buffs-calamity.js con tmod-extract.js).
 //
 // Uso: node scripts/extraer-iconos-fantasma-slot.js
-// Salida: TerrasavrNative.App/Assets/vanilla/slot_ghosts/{nombre}.png (13 archivos)
+// Salida: Terrakeep.App/Assets/vanilla/slot_ghosts/{nombre}.png (13 archivos)
 
 'use strict';
 const fs = require('fs');
@@ -38,7 +38,7 @@ const { PNG } = require('pngjs');
 const { xnbToPng } = require('../../Terrasavr-Calamity-Beta/resources/app/xnb-to-png.js');
 
 const XNB_PATH = 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\tModLoader\\Content\\Images\\Extra_54.xnb';
-const OUT_DIR = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'vanilla', 'slot_ghosts');
+const OUT_DIR = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'vanilla', 'slot_ghosts');
 
 const CELL = 34, CROP = 32;
 const TINT = { r: 0x8a, g: 0x8f, b: 0xa3 };

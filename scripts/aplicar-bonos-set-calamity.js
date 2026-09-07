@@ -17,13 +17,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const CATALOG_PATH = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity', 'catalog.json');
-const EN_PATH = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity', 'set_bonus_en.json');
-const ES_PATH = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity', 'set_bonus_es.json');
+const CATALOG_PATH = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity', 'catalog.json');
+const EN_PATH = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity', 'set_bonus_en.json');
+const ES_PATH = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity', 'set_bonus_es.json');
 // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): texto 100% INGLES REAL del mod,
 // generado con `node extraer-bonos-set-calamity.js en`. Se aplica a `setBonus_en`, campo `_en`
 // paralelo - mismo patron que `text_en` de vanilla_armor_sets.json y que changelog.json.
-const EN_REAL_PATH = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity', 'set_bonus_en_real.json');
+const EN_REAL_PATH = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity', 'set_bonus_en_real.json');
 
 const catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
 const sets = JSON.parse(fs.readFileSync(EN_PATH, 'utf8'));

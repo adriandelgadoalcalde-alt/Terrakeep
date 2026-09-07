@@ -8,7 +8,7 @@
 ; falta mantener uninstall.ps1 a mano para esto).
 ;
 ; Como generar el instalador (dos pasos, nunca uno solo):
-;   1. dotnet publish TerrasavrNative.App\TerrasavrNative.App.csproj -c Release
+;   1. dotnet publish Terrakeep.App\Terrakeep.App.csproj -c Release
 ;        -p:PublishProfile=win-x64
 ;      (publish AUTOCONTENIDO desde la auditoria final de Opus, 5-sep-2026, antes de publicar en
 ;      publico - decision explicita del usuario: la version dependiente del framework pesaba
@@ -21,13 +21,13 @@
 ; El .exe final queda en installer\output\TerrakeepSetup-<version>.exe.
 ;
 ; MyAppVersion se actualiza a mano en cada version real (mismo criterio ya establecido para
-; TerrasavrNative.App.csproj <Version>/changelog.json - sincronizados los tres a mano, sin
+; Terrakeep.App.csproj <Version>/changelog.json - sincronizados los tres a mano, sin
 ; ninguna herramienta que los mantenga automaticamente en linea).
 #define MyAppName "Terrakeep"
 #define MyAppVersion "2.3.0"
 #define MyAppPublisher "IncrediBad"
 #define MyAppExeName "Terrakeep.exe"
-#define MyPublishDir "..\TerrasavrNative.App\bin\Release\net10.0-windows\win-x64\publish"
+#define MyPublishDir "..\Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish"
 
 [Setup]
 AppId={{8F2C1E4A-5B3D-4C6E-9A7F-1D2E3B4C5D6E}
@@ -41,7 +41,7 @@ PrivilegesRequired=lowest
 DefaultGroupName={#MyAppName}
 OutputDir=output
 OutputBaseFilename=TerrakeepSetup-{#MyAppVersion}
-SetupIconFile=..\TerrasavrNative.App\Assets\branding\app.ico
+SetupIconFile=..\Terrakeep.App\Assets\branding\app.ico
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

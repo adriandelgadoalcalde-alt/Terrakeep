@@ -28,8 +28,8 @@ import json
 import re
 
 TSV = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria.GameContent.Creative.Content.Sacrifices.tsv"
-IDS_BY_KEY = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_item_ids_by_key.json"
-OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_research_counts.json"
+IDS_BY_KEY = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\vanilla_item_ids_by_key.json"
+OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\vanilla_research_counts.json"
 
 THRESHOLDS = {
     "a": 50, "b": 25, "c": 5, "d": 1, "e": None,

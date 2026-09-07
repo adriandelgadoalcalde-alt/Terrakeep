@@ -18,7 +18,7 @@ const path = require('path');
 const { readTmod } = require('../../Terrasavr-Calamity-Beta/resources/app/tmod-extract.js');
 
 const tmodPath = path.join(os.homedir(), 'Documents', 'My Games', 'Terraria', 'tModLoader', 'Mods', '2026.6CalamityMod.tmod');
-const OUT = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity_buff_descriptions.json');
+const OUT = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity_buff_descriptions.json');
 
 const mod = readTmod(tmodPath);
 const buffsHjson = mod.files.get('Localization/en-US/Mods.CalamityMod.Buffs.hjson');

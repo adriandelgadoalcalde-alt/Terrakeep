@@ -25,7 +25,7 @@ const path = require('path');
 
 const TMOD_PATH = 'C:\\Users\\adrian\\Documents\\My Games\\Terraria\\tModLoader\\Mods\\2026.6CalamityMod.tmod';
 const TMOD_EXTRACT = 'C:\\Users\\adrian\\Downloads\\Terrasavr-Win\\Terrasavr-Calamity-Beta\\resources\\app\\tmod-extract.js';
-const ASSETS = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity');
+const ASSETS = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity');
 
 // Parser hjson minimo, gemelo del de extraer-bonos-set-calamity.js (solo lo que Calamity usa de
 // verdad: claves sin comillas, objetos anidados, valores de una linea, bloques '''...''' y

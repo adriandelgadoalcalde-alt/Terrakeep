@@ -10,7 +10,7 @@
 //     que el juego usa en el interior macizo de una zona de pared, el icono representativo obvio.
 //
 // Uso: node scripts/extraer-iconos-paredes.js
-// Salida: TerrasavrNative.App/Assets/vanilla/wall_icons/{id}.png (32x32 cada uno)
+// Salida: Terrakeep.App/Assets/vanilla/wall_icons/{id}.png (32x32 cada uno)
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -20,7 +20,7 @@ const { PNG } = require('pngjs');
 const STEAM_IMAGES = 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Terraria\\Content\\Images';
 const WALLS_JSON = path.join(__dirname, '..', '..', 'Terrasavr-Calamity-Beta', 'resources', 'app',
     'xnb-lzx-tool-refs', 'walls.json');
-const OUT_DIR = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'vanilla', 'wall_icons');
+const OUT_DIR = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'vanilla', 'wall_icons');
 
 const FRAME = 36;   // wallFrameSize real
 const DIBUJO = 32;  // lo que el juego pinta de cada celda

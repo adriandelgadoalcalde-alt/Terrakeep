@@ -1,0 +1,448 @@
+using System.Collections.ObjectModel;
+using System.Linq;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Terrakeep.App.Services;
+using Terrakeep.Core.Model;
+
+namespace Terrakeep.App.ViewModels;
+
+// Una opcion de un selector pequeño (loadout o vista) - mismo patron que
+// PrefixMetaButtonViewModel/PrefixGroupButtonViewModel (Label + IsSelected).
+//
+// Ronda de idioma del 6-sep-2026: Label llegaba ya RESUELTO (LocalizationService.Instance[...]
+// leido una sola vez al construir el selector), asi que "Armadura"/"Vanidad"/"Tintes"/"Puesto" y
+// las 4 pildoras de Almacenes ("Banco", "Caja fuerte", "Fragua del Defensor", "Bóveda del
+// Vacío") se quedaban congeladas en el idioma de arranque - varias salian literalmente entre los
+// fallos del barrido. Ahora se guarda la CLAVE y se resuelve al leerla, avisando de verdad al
+// cambiar de idioma en caliente. Una etiqueta que NO es clave del diccionario (los loadouts se
+// llaman "1"/"2"/"3") se usa tal cual: ahi el texto ES el dato, no una traduccion perdida -
+// mismo criterio ya aplicado en BuildClassFilterOptionViewModel.
+public sealed partial class EquipmentOptionViewModel : ObservableObject
+{
+    private readonly string _labelKey;
+
+    public string Label
+    {
+        get
+        {
+            string texto = LocalizationService.Instance[_labelKey];
+            return texto.StartsWith('[') && texto.EndsWith(']') ? _labelKey : texto;
+        }
+    }
+
+    public int Value { get; }
+
+    [ObservableProperty] private bool _isSelected;
+
+    // Auditoria de Opus, A-1: "para saber si el Banco esta lleno hay que pulsar su pildora y
+    // contar". container es opcional (null = pildoras de Loadout/Vista en Equipamiento, que no
+    // tienen un "recuento" real que mostrar) - cuando SI viene un contenedor (las 4 pildoras de
+    // Almacenes), DisplayLabel se recalcula sola y en vivo (P5) suscribiendose una vez a cada
+    // slot real, sin que nadie de fuera tenga que avisar.
+    private readonly ContainerViewModel? _container;
+
+    // 6-sep-2026 (hallazgo real de loadouts, ver EquipmentGroupViewModel abajo): la pildora del
+    // conjunto que el personaje lleva PUESTO de verdad al guardar. Antes esa informacion la daba
+    // una pildora "Puesto" aparte; ahora que los 3 conjuntos se numeran 1/2/3 como en el juego,
+    // se marca con un punto y un tooltip para no perderla.
+    public bool IsActiveLoadout { get; init; }
+
+    public string? ToolTipText => IsActiveLoadout ? LocalizationService.Instance["equip_loadout_active_hint"] : null;
+
+    public EquipmentOptionViewModel(string labelKey, int value, ContainerViewModel? container = null)
+    {
+        _labelKey = labelKey;
+        Value = value;
+        _container = container;
+        if (container != null)
+            foreach (var slot in container.Slots)
+                slot.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ItemSlotViewModel.IsEmpty)) OnPropertyChanged(nameof(DisplayLabel)); };
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
+    }
+
+    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(Label));
+        OnPropertyChanged(nameof(DisplayLabel));
+        OnPropertyChanged(nameof(ToolTipText));
+    }
+
+    public string DisplayLabel => _container == null
+        ? (IsActiveLoadout ? $"{Label} ●" : Label)
+        : $"{Label} ({_container.Slots.Count(s => !s.IsEmpty)}/{_container.Slots.Count})";
+}
+
+// Armadura/accesorios, Vanidad (Social) y Tintes de un mismo loadout - los 3 "kinds" reales
+// que ya usaba MainViewModel.RebuildContainers por separado.
+public enum EquipmentKind { Items = 0, Social = 1, Dyes = 2 }
+
+// Consolida los 12 sub-contenedores de equipo puesto (Puesto + Loadout 1/2/3, cada uno con
+// Armadura/Vanidad/Tintes) en una unica pantalla con selector, igual que el "Sb"/app.TabEquips
+// real de Terrasavr (3 botones "1"/"2"/"3" dentro de UNA pantalla "Equipamiento", ver
+// bitacora.md "Fase D" - investigacion de script.js real). Antes eran 12 pestañas planas mas
+// en el mismo TabControl que Inventario/Banco/... (21 pestañas totales, de ahi el amontonamiento
+// real al reducir la ventana que reporto el usuario) - ahora son solo 4+3 botones pequeños
+// dentro de una unica entrada.
+//
+// Los ContainerViewModel internos son los MISMOS objetos de siempre (mismas claves
+// "loadout0Items"/"loadout1Social"/...) - AutoEquip/SyncEditsBackToMerged en MainViewModel
+// los siguen encontrando via EquippedItems/AllContainers, no cambia su contrato con
+// MergedContainers.
+public partial class EquipmentGroupViewModel : ObservableObject
+{
+    // OBJ-01 (oleada de pruebas de Objetos, 6-sep-2026) - BUG REAL, mismo mecanismo que el de
+    // StorageGroupViewModel: el selector de la cabecera de Equipamiento vive dentro de un
+    // `<StackPanel DataContext="{Binding EquipmentGroup}">` (MainWindow.xaml) y ahi dentro
+    // `{Binding Loc[char_loadout_label]}` / `Loc[char_view_label]` / `Loc[char_total_defense]`
+    // se resuelven contra ESTE objeto, no contra MainViewModel. Sin esta propiedad las tres
+    // etiquetas salian VACIAS sin ningun error visible: las pildoras "1 ● 2 3" y "Armadura/
+    // Vanidad/Tintes" sin rotulo, y - lo mas confuso - el numero de defensa suelto en pantalla
+    // (un "51" a pelo, capturado real) sin decir de que es.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
+    private readonly CharacterFileService _service;
+    private readonly Dictionary<(int Loadout, EquipmentKind Kind), ContainerViewModel> _byKey = new();
+
+    // Auditoria de Opus, E-4: "el personaje tiene defensa real sumable... ya sabemos mostrar
+    // 'Con el set completo: ...' pero es el bono HIPOTETICO, no el que de verdad esta activo
+    // ahora mismo". Ambos se recalculan en vivo (P5) - defensa suma Armadura+Accesorios REALES
+    // del loadout seleccionado (vanilla via VanillaStats, Calamity via CalamityCatalog, ya
+    // extraida), el bono de set usa VanillaArmorSetCatalog.BonusForEquipped (ya existia, sin
+    // usar) contra las 3 piezas de cabeza/cuerpo/piernas puestas de verdad.
+    [ObservableProperty] private int _totalDefense;
+    [ObservableProperty] private string? _activeSetBonusText;
+
+    public IReadOnlyList<ContainerViewModel> AllContainers { get; }
+
+    // Atajo directo al equipo puesto del loadout 0 (Puesto/principal). Bd-b (segunda auditoria
+    // de Opus, Fable): AutoEquip usaba ESTE atajo, ignorando el loadout que el usuario tenia
+    // seleccionado de verdad ("sorpresa silenciosa si estas mirando el Loadout 2") - ahora usa
+    // CurrentItems (ver abajo), que SI seguia al loadout seleccionado. Sin otro consumidor real
+    // en produccion tras ese arreglo (verificado, ni el XAML ni ningun ViewModel lo referencian
+    // ya) - se deja tal cual porque los tests headless ya lo usan para fijar el loadout 0 de
+    // forma explicita, no porque haga falta en la app real.
+    public ContainerViewModel EquippedItems => _byKey[(0, EquipmentKind.Items)];
+    // H6-06 (sexta auditoria de Opus): gemelo real de EquippedItems para el slot de VANIDAD del
+    // loadout 0 - MainViewModel.RefreshAppearanceEquipment lo necesita para resolver la
+    // armadura/vanidad real puesta del doll de Apariencia, independientemente de que loadout
+    // este mirando el usuario en la pantalla (SelectedLoadout).
+    public ContainerViewModel EquippedSocial => _byKey[(0, EquipmentKind.Social)];
+
+    public ObservableCollection<EquipmentOptionViewModel> LoadoutOptions { get; } = [];
+    public ObservableCollection<EquipmentOptionViewModel> KindOptions { get; } =
+    [
+        new EquipmentOptionViewModel("equip_kind_armor", (int)EquipmentKind.Items) { IsSelected = true },
+        new EquipmentOptionViewModel("equip_kind_vanity", (int)EquipmentKind.Social),
+        new EquipmentOptionViewModel("equip_kind_dyes", (int)EquipmentKind.Dyes),
+    ];
+
+    [ObservableProperty] private int _selectedLoadout;
+    [ObservableProperty] private EquipmentKind _selectedKind = EquipmentKind.Items;
+
+    public ObservableCollection<ItemSlotViewModel> CurrentSlots => _byKey[(SelectedLoadout, SelectedKind)].Slots;
+
+    // Pregunta a Opus sobre el diseño (2-sep-2026, segunda consulta - "haz lo mismo para
+    // equipamientos"): Equipamiento era el unico sitio con su propio bloque Viewbox+ItemsControl
+    // a medida en el XAML en vez de reusar ContainerTabTemplate como Monturas/Monedas/Almacenes -
+    // exponer el ContainerViewModel completo (no solo sus Slots) permite que el XAML haga
+    // <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource
+    // ContainerTabTemplate}" /> y herede automaticamente el fondo de "hueco vacio", el tooltip
+    // compuesto y cualquier arreglo futuro de esa plantilla compartida, sin poder volver a
+    // divergir.
+    public ContainerViewModel Current => _byKey[(SelectedLoadout, SelectedKind)];
+
+    // Auditoria de Opus, E-2: "las 3 vistas (Armadura/Vanidad/Tintes) se podrian ver a la vez
+    // con sitio real" - los 3 contenedores del loadout ACTUAL, sin importar SelectedKind (que
+    // sigue siendo el que manda en Compacto/Normal, un unico panel + pildoras de siempre). Solo
+    // se leen cuando SizeClass.Amplio los muestra de verdad (ver MainWindow.xaml) - viven aqui
+    // en vez de calcularse en el XAML porque _byKey es privado.
+    public ContainerViewModel CurrentItems => _byKey[(SelectedLoadout, EquipmentKind.Items)];
+    public ContainerViewModel CurrentSocial => _byKey[(SelectedLoadout, EquipmentKind.Social)];
+    public ContainerViewModel CurrentDyes => _byKey[(SelectedLoadout, EquipmentKind.Dyes)];
+
+    // Indice 0-based del loadout REAL del juego (0/1/2) que estaba activo al guardar el .plr -
+    // ver ContainerForLoadout y el bloque de comentario del constructor. -1 para un personaje
+    // antiguo sin loadouts (realLoadoutCount==0), donde "Puesto" es el unico conjunto que existe.
+    public int ActiveLoadout { get; }
+
+    // Cuantos conjuntos reales OFRECE la pantalla: 3 en un personaje moderno, 1 ("Puesto") en uno
+    // antiguo. No es lo mismo que el numero de contenedores internos (siempre realLoadoutCount+1).
+    public int SelectableSetCount => LoadoutOptions.Count;
+
+    // El contenedor interno (clave "loadout{n}Items/Social/Dyes") donde vive DE VERDAD el
+    // conjunto del loadout `loadout` (0-based, como CurrentLoadout del .plr): el activo esta en
+    // el contenedor 0 (PrimaryLoadout = Player.armor/dye), y cada uno de los otros dos en su
+    // propio Loadouts[loadout] (contenedor loadout+1).
+    public static int ContainerForLoadout(int loadout, int activeLoadout) => loadout == activeLoadout ? 0 : loadout + 1;
+
+    // Que PILDORA esta seleccionada (0/1/2 = conjunto 1/2/3), no que contenedor - es lo unico
+    // estable que tiene sentido recordar entre sesiones y entre personajes distintos, porque el
+    // contenedor de cada conjunto depende del CurrentLoadout de cada .plr. Se deriva de
+    // SelectedLoadout (no de IsSelected) para seguir siendo correcto si alguien fija el
+    // contenedor a mano, como hacen los tests headless.
+    public int SelectedOptionIndex
+    {
+        get
+        {
+            for (int i = 0; i < LoadoutOptions.Count; i++)
+                if (LoadoutOptions[i].Value == SelectedLoadout) return i;
+            return 0;
+        }
+    }
+
+    // OBJ-05 (oleada de pruebas de Objetos, 6-sep-2026): ver ItemSlotViewModel.SupportsFavorite -
+    // los slots de loadout solo llevan byte de favorito desde la version 322 del .plr. true por
+    // defecto para no cambiar el comportamiento de los tests headless que ya construyen esta
+    // clase a mano; MainViewModel pasa siempre el valor real del personaje cargado.
+    private readonly bool _supportsFavorite;
+
+    public EquipmentGroupViewModel(CharacterFileService service, Action<ItemSlotViewModel> requestPickForSlot,
+        Dictionary<string, GameItem[]> mergedContainers, int realLoadoutCount,
+        Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null, int currentLoadout = 0,
+        bool supportsFavorite = true)
+    {
+        _service = service;
+        _supportsFavorite = supportsFavorite;
+        var loc = LocalizationService.Instance;
+
+        // HALLAZGO REAL (6-sep-2026, queja del usuario "en Terraria hay 3 conjuntos, aqui salen 4
+        // pildoras"), confirmado en el codigo decompilado de Terraria 1.4.5.8 Y midiendo .plr
+        // reales de este PC, NO supuesto:
+        //
+        //   Player.cs:55577-55581 (Serialize) escribe el jugador EN VIVO tal cual: primero
+        //   armor[0..19]+dye[0..9] (Player.cs:55470-55479 - esto es lo que este puerto llama
+        //   PrimaryLoadout), luego CurrentLoadoutIndex, luego los 3 Loadouts[i].Serialize(). No
+        //   hay NINGUNA sincronizacion previa (InternalSavePlayerFile, Player.cs:55374, llama a
+        //   Serialize directo).
+        //   EquipmentLoadout.Swap (EquipmentLoadout.cs:63-80) INTERCAMBIA, no copia:
+        //   TrySwitchingLoadout (Player.cs:5654-5663) hace Loadouts[actual].Swap(this) y luego
+        //   Loadouts[nuevo].Swap(this). O sea: mientras un loadout esta activo su contenido vive
+        //   en armor[]/dye[] y su entrada Loadouts[activo] queda VACIA. Player.GetEffectiveArmor
+        //   (Player.cs:5684-5695) da por sentado justo eso.
+        //
+        // Consecuencia: PrimaryLoadout NO es un espejo redundante del loadout activo, es el UNICO
+        // sitio donde ese conjunto existe en el archivo. Medido en 4 .plr reales (adrian,
+        // Eldelgas x2, Terrariano, versiones 279 y 326): CurrentLoadout=0, PrimaryLoadout con 1-9
+        // objetos reales y los TRES Loadouts[] completamente a cero.
+        //
+        // Por eso la pantalla no puede limitarse a esconder "Puesto": eso esconderia justo el
+        // conjunto que el personaje lleva encima y ofreceria en su lugar un hueco vacio que el
+        // juego ni siquiera lee al cargar. Lo correcto es numerar los 3 conjuntos 1/2/3 como el
+        // juego y hacer que la pildora del activo apunte al contenedor 0 (ContainerForLoadout).
+        // Asi NADA se copia ni se reescribe: cada edicion cae directamente en el sitio real del
+        // archivo, PrimaryLoadout se sigue editando en su sitio (el doll de Inicio y el de
+        // Apariencia, que leen EquippedItems/EquippedSocial = contenedor 0, siguen exactos) y el
+        // hueco residual del loadout activo se guarda tal cual se leyo.
+        ActiveLoadout = realLoadoutCount > 0 ? Math.Clamp(currentLoadout, 0, realLoadoutCount - 1) : -1;
+
+        // El contenedor 0 solo se llama "Equipo puesto" en un personaje ANTIGUO sin loadouts; en
+        // uno moderno ES el loadout numero ActiveLoadout+1 y su nombre (el que muestra "¿Donde lo
+        // tengo?") tiene que decirlo.
+        (string armorName, string vanityName, string dyeName) = realLoadoutCount > 0
+            ? (loc.Format("equip_loadout_armor", ActiveLoadout + 1), loc.Format("equip_loadout_vanity", ActiveLoadout + 1), loc.Format("equip_loadout_dyes", ActiveLoadout + 1))
+            : (loc["equip_worn_armor"], loc["equip_worn_vanity"], loc["equip_worn_dyes"]);
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Items, armorName, mergedContainers["loadout0Items"], onItemChanged);
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Social, vanityName, mergedContainers["loadout0Social"], onItemChanged);
+        AddSlotSet(service, requestPickForSlot, 0, EquipmentKind.Dyes, dyeName, mergedContainers["loadout0Dyes"], onItemChanged);
+
+        // Los contenedores 1..3 se siguen creando TODOS, incluido el hueco residual del loadout
+        // activo (que no tiene pildora): AllContainers alimenta SyncEditsBackToMerged al guardar,
+        // asi que dejar uno fuera seria dejar de escribir de vuelta unos bytes reales del archivo.
+        // Su nombre sigue siendo "Loadout i" porque eso es literalmente lo que es (el hueco de
+        // Loadouts[i-1]) - en un archivo sano esta vacio y no aparece en ninguna busqueda.
+        for (int i = 1; i <= realLoadoutCount; i++)
+        {
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Items, loc.Format("equip_loadout_armor", i), mergedContainers[$"loadout{i}Items"], onItemChanged);
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Social, loc.Format("equip_loadout_vanity", i), mergedContainers[$"loadout{i}Social"], onItemChanged);
+            AddSlotSet(service, requestPickForSlot, i, EquipmentKind.Dyes, loc.Format("equip_loadout_dyes", i), mergedContainers[$"loadout{i}Dyes"], onItemChanged);
+        }
+
+        if (realLoadoutCount > 0)
+            for (int n = 0; n < realLoadoutCount; n++)
+                LoadoutOptions.Add(new EquipmentOptionViewModel((n + 1).ToString(), ContainerForLoadout(n, ActiveLoadout))
+                {
+                    IsSelected = n == 0,
+                    IsActiveLoadout = n == ActiveLoadout,
+                });
+        else
+            LoadoutOptions.Add(new EquipmentOptionViewModel("equip_worn_option", 0) { IsSelected = true });
+
+        AllContainers = _byKey.Values.ToList();
+        // Arranca en la primera pildora REAL ("1"), que con un loadout activo distinto del 1 NO es
+        // el contenedor 0 - se asigna despues de construir _byKey porque OnSelectedLoadoutChanged
+        // ya lo consulta.
+        SelectedLoadout = LoadoutOptions[0].Value;
+
+        // Auditoria de Opus, E-4: suscripcion real a cada slot de Armadura/Accesorios (de
+        // TODOS los loadouts, no solo el seleccionado - cambiar de Puesto/1/2/3 tambien debe
+        // reflejar la defensa/bono real de ESE loadout) para recalcular en vivo (P5).
+        // Segunda auditoria de Opus (Fable), B-6 - BUG REAL encontrado y arreglado: solo se
+        // escuchaba IsEmpty, que NO cambia al SUSTITUIR una pieza ya puesta por otra (el caso
+        // normal absoluto: arrastrar desde la Libreria sobre un slot ya ocupado, o
+        // "Auto-equipar" sobre un personaje ya vestido) - UpdateFrom hace IsEmpty=item.IsEmpty,
+        // que pasa de false a false, y [ObservableProperty] no emite nada en ese caso. "Defensa
+        // total" y el bono de set se quedaban congelados en el valor de la pieza ANTERIOR,
+        // mintiendo justo en el momento en que el usuario esta comparando armaduras. Mismo
+        // criterio de exclusion ya establecido en MainViewModel.HookSlotEditing (todo cambio
+        // real salvo IsSelected/JustEdited, que son puro estado de UI) en vez de perseguir
+        // propiedad por propiedad.
+        foreach (var ((loadout, kind), container) in _byKey)
+        {
+            if (kind != EquipmentKind.Items) continue;
+            foreach (var slot in container.Slots)
+                // H3-03 (tercera auditoria, Fable): RejectionMessage tambien excluido, por
+                // coherencia con el mismo criterio de arriba - un intento de colocacion
+                // rechazado no cambia ninguna defensa real, recalcularla igual seria trabajo sin
+                // sentido y romperia la simetria con MainViewModel.HookSlotEditing/BuffsViewModel.
+                slot.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName is nameof(ItemSlotViewModel.IsSelected) or nameof(ItemSlotViewModel.JustEdited) or nameof(ItemSlotViewModel.RejectionMessage)) return;
+                    RecomputeDefenseAndBonus();
+                };
+        }
+        RecomputeDefenseAndBonus();
+    }
+
+    partial void OnSelectedLoadoutChanged(int value)
+    {
+        RecomputeDefenseAndBonus();
+        OnPropertyChanged(nameof(CurrentItems));
+        OnPropertyChanged(nameof(CurrentSocial));
+        OnPropertyChanged(nameof(CurrentDyes));
+    }
+
+    private void RecomputeDefenseAndBonus()
+    {
+        var items = _byKey[(SelectedLoadout, EquipmentKind.Items)].Slots;
+        int total = 0;
+        foreach (var slot in items)
+        {
+            if (slot.IsEmpty) continue;
+            total += slot.IsCalamity
+                ? _service.CalamityCatalog.BySyntheticId(slot.Item.Id)?.Stats?.Defense ?? 0
+                : _service.VanillaStats.Get(slot.Item.Id)?.Defense ?? 0;
+            // H3-08 (tercera auditoria de Opus, Fable): "Defensa total" ignoraba la defensa de
+            // los prefijos de accesorio reales (Warding/Guarding/Menacing/Hardy/Armored, +1..+4
+            // segun Player.GrantPrefixBenefits) - un personaje real de endgame con varios
+            // accesorios "Protección" llevaba defensa real que el panel nunca contaba. Solo
+            // prefijos vanilla (Calamity/Rogue no tienen datos reales en este catalogo, mismo
+            // criterio de "desconocido = 0" ya usado en el resto de la app).
+            if (!slot.Item.Prefix.IsCalamity)
+                total += _service.PrefixEffects.GetDefenseBonus(slot.Item.Prefix.VanillaId);
+        }
+        TotalDefense = total;
+
+        // BonusForEquipped real (VanillaArmorSetCatalog, ya existia sin usar) solo entiende
+        // ids vanilla - una pieza de Calamity en cabeza/cuerpo/piernas nunca forma un set
+        // vanilla real, se pasa -1 (id imposible) para que no case por error con nada.
+        int headId = !items[0].IsEmpty && !items[0].IsCalamity ? items[0].Item.Id : -1;
+        int bodyId = !items[1].IsEmpty && !items[1].IsCalamity ? items[1].Item.Id : -1;
+        int legsId = !items[2].IsEmpty && !items[2].IsCalamity ? items[2].Item.Id : -1;
+        // DisplayText, no Text: el bono en el idioma activo (ronda de traduccion del CONTENIDO
+        // del juego, 6-sep-2026); `Text` es la cara española a secas.
+        ActiveSetBonusText = _service.VanillaArmorSets.BonusForEquipped(headId, bodyId, legsId)?.DisplayText
+            ?? ActiveCalamitySetBonusText(items[0], items[1], items[2]);
+    }
+
+    // Segunda auditoria de Opus (Fable), B-6/F3: el bono de set de Calamity YA se extrae por
+    // pieza y ya se muestra en el tooltip de CADA pieza suelta ("Con el set completo: ...") -
+    // pero "Defensa total"/"Bono activo" solo entendia sets vanilla, dejando el bono de Calamity
+    // mudo aunque el caso mas frecuente en este editor sea justo una armadura de Calamity.
+    //
+    // C-10b (auditoria de pulido final, cierra L3-b): la version anterior comparaba los
+    // SetBonus de las 3 piezas por igualdad de texto - "codigo verificado una vez y nunca
+    // funciono" de verdad, porque cuerpo/piernas de Calamity NUNCA tienen su propio SetBonus
+    // (0/131, el bono real solo vive en el casco). Ahora usa CalamityArmorSetCatalog.
+    // BonusForEquipped (gemelo real de VanillaArmorSetCatalog.BonusForEquipped), que conoce el
+    // set completo por Category/EquipSlot y acepta sets de 2 piezas (LegsSyntheticId null, ej.
+    // MarniteArchitect) igual que su equivalente vanilla.
+    private string? ActiveCalamitySetBonusText(ItemSlotViewModel head, ItemSlotViewModel body, ItemSlotViewModel legs)
+    {
+        if (head.IsEmpty || body.IsEmpty || !head.IsCalamity || !body.IsCalamity) return null;
+        int legsId = !legs.IsEmpty && legs.IsCalamity ? legs.Item.Id : -1;
+        return _service.CalamityArmorSets.BonusForEquipped(head.Item.Id, body.Item.Id, legsId);
+    }
+
+    // Indices reales dentro de los 10 slots de Items/Social (Player.armor[0..9] real):
+    // 0-2 = cabeza/cuerpo/piernas, 3-9 = 7 accesorios - 8=6º (Corazón de Demonio/Experto),
+    // 9=7º (Modo Maestro). Ghost real por indice (ver ItemSlot.cs, consulta a Opus sexta
+    // pasada): armor_head/body/legs (Items) o vanity_head/body/legs (Social) para 0-2,
+    // accessory (Items) o accessory_vanity (Social) para 3-9 (los 7 comparten el mismo ghost
+    // real, el juego no distingue "accesorio normal" de "6º/7º" con un icono distinto).
+    private static readonly string[] ItemsGhostByIndex =
+        ["armor_head", "armor_body", "armor_legs", "accessory", "accessory", "accessory", "accessory", "accessory", "accessory", "accessory"];
+    private static readonly string[] SocialGhostByIndex =
+        ["vanity_head", "vanity_body", "vanity_legs", "accessory_vanity", "accessory_vanity", "accessory_vanity", "accessory_vanity", "accessory_vanity", "accessory_vanity", "accessory_vanity"];
+
+    // Restriccion real por indice (ampliacion 2-sep-2026, misma sexta pasada: "las armaduras
+    // y los accesorios, si los quiero [restringidos] arriba") - vale IGUAL para Items y
+    // Social, un objeto de vanidad tiene el MISMO campo real headSlot/bodySlot/legSlot/
+    // accessory que su version funcional (vanity=true no cambia el equip type).
+    private static readonly SlotKind[] ItemsKindByIndex =
+        [SlotKind.ArmorHead, SlotKind.ArmorBody, SlotKind.ArmorLegs,
+         SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory, SlotKind.Accessory];
+
+    private void AddSlotSet(CharacterFileService service, Action<ItemSlotViewModel> requestPickForSlot,
+        int loadout, EquipmentKind kind, string displayName, GameItem[] items,
+        Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null)
+    {
+        var slots = new ObservableCollection<ItemSlotViewModel>();
+        for (int i = 0; i < items.Length; i++)
+        {
+            string? ghost = kind switch
+            {
+                EquipmentKind.Items => i < ItemsGhostByIndex.Length ? ItemsGhostByIndex[i] : null,
+                EquipmentKind.Social => i < SocialGhostByIndex.Length ? SocialGhostByIndex[i] : null,
+                EquipmentKind.Dyes => "dye",
+                _ => null,
+            };
+            var slotKind = kind switch
+            {
+                EquipmentKind.Items or EquipmentKind.Social => i < ItemsKindByIndex.Length ? ItemsKindByIndex[i] : SlotKind.None,
+                EquipmentKind.Dyes => SlotKind.Dye,
+                _ => SlotKind.None,
+            };
+            // El 6º/7º hueco de accesorio (indices 8/9) es puramente visual y solo tiene
+            // sentido marcarlo en la rejilla real de Armadura/Accesorios (pedido explicito:
+            // "en la rejilla de armadura y accesorios") - no en Vanidad/Tintes, para no
+            // repetir la misma señal tres veces sin que el usuario la haya pedido ahi.
+            bool isExpert = kind == EquipmentKind.Items && i == 8;
+            bool isMaster = kind == EquipmentKind.Items && i == 9;
+            slots.Add(new ItemSlotViewModel(service, i, displayName, items[i], requestPickForSlot, isEquipped: true,
+                acceptedKind: slotKind, ghostIcon: ghost, isExpertAccessorySlot: isExpert, isMasterAccessorySlot: isMaster, onItemChanged: onItemChanged,
+                supportsFavorite: _supportsFavorite));
+        }
+        string key = kind switch
+        {
+            EquipmentKind.Items => $"loadout{loadout}Items",
+            EquipmentKind.Social => $"loadout{loadout}Social",
+            EquipmentKind.Dyes => $"loadout{loadout}Dyes",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+        };
+        // Columns=5: PlrLoadout.Items/Social/Dyes son siempre 10 slots reales en forma 5x2 -
+        // sin esto SlotGridPanel usaria el default de 10 columnas y organizaria una tira larga
+        // y fina de 10x1 en vez del bloque compacto real.
+        _byKey[(loadout, kind)] = new ContainerViewModel(key, displayName, slots) { Columns = 5 };
+    }
+
+    [RelayCommand]
+    private void SelectLoadout(EquipmentOptionViewModel? option)
+    {
+        if (option == null) return;
+        SelectedLoadout = option.Value;
+        foreach (var o in LoadoutOptions) o.IsSelected = o == option;
+        OnPropertyChanged(nameof(CurrentSlots));
+        OnPropertyChanged(nameof(Current));
+    }
+
+    [RelayCommand]
+    private void SelectKind(EquipmentOptionViewModel? option)
+    {
+        if (option == null) return;
+        SelectedKind = (EquipmentKind)option.Value;
+        foreach (var o in KindOptions) o.IsSelected = o == option;
+        OnPropertyChanged(nameof(CurrentSlots));
+        OnPropertyChanged(nameof(Current));
+    }
+}

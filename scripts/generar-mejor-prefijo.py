@@ -85,7 +85,7 @@ LEGACY_SRC = os.path.join(VANILLA, "GameContent", "Prefixes", "PrefixLegacy.cs")
 ITEMID_SRC = os.path.join(VANILLA, "ID", "PrefixID.cs")
 ITEMIDS_SRC = os.path.join(VANILLA, "ID", "ItemID.cs")
 CALAMITY_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\CalamityMod\CalamityMod\Items"
-ASSETS = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets"
+ASSETS = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets"
 CATALOG = os.path.join(ASSETS, "calamity", "catalog.json")
 OUT = os.path.join(ASSETS, "calamity", "best_prefix.json")
 

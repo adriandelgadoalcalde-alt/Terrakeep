@@ -38,8 +38,8 @@ from collections import OrderedDict
 
 PREFIX_LEGACY = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria\GameContent\Prefixes\PrefixLegacy.cs"
 ITEM_ID = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria\ID\ItemID.cs"
-CATEGORIES = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_categories.json"
-OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_prefix_rules.json"
+CATEGORIES = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\vanilla_categories.json"
+OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\vanilla_prefix_rules.json"
 
 
 def parse_int_array(text: str, name: str) -> list[int]:

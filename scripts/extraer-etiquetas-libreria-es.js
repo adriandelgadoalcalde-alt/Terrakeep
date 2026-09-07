@@ -10,7 +10,7 @@
 // replica esa misma logica exacta en C#).
 //
 // Uso: node scripts/extraer-etiquetas-libreria-es.js
-// Salida: TerrasavrNative.App/Assets/vanilla_library_labels_es.json
+// Salida: Terrakeep.App/Assets/vanilla_library_labels_es.json
 
 const fs = require("fs");
 const path = require("path");
@@ -18,7 +18,7 @@ const { execFileSync } = require("child_process");
 const os = require("os");
 
 const langZipPath = path.resolve(__dirname, "..", "..", "Terrasavr-Calamity-Beta", "resources", "app", "local-site", "lang", "lang.zip");
-const outPath = path.resolve(__dirname, "..", "TerrasavrNative.App", "Assets", "vanilla_library_labels_es.json");
+const outPath = path.resolve(__dirname, "..", "Terrakeep.App", "Assets", "vanilla_library_labels_es.json");
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "libreria-es-"));
 try {

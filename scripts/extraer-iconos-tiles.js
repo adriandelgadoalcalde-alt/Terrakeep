@@ -18,7 +18,7 @@
 // (necesita NODE_PATH=...Terrasavr-Calamity-Beta\resources\app\node_modules para pngjs, y que
 //  xnb-lzx-tool-refs/tiles.json exista - esa carpeta esta gitignorada en el otro repo, si falta
 //  hay que rebajar src/TEdit.Terraria/Data/tiles.json de github.com/TEdit/Terraria-Map-Editor)
-// Salida: TerrasavrNative.App/Assets/vanilla/tile_icons/{id}.png  y  {id}_{u}_{v}.png
+// Salida: Terrakeep.App/Assets/vanilla/tile_icons/{id}.png  y  {id}_{u}_{v}.png
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -28,7 +28,7 @@ const { PNG } = require('pngjs');
 const STEAM_IMAGES = 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Terraria\\Content\\Images';
 const TILES_JSON = path.join(__dirname, '..', '..', 'Terrasavr-Calamity-Beta', 'resources', 'app',
     'xnb-lzx-tool-refs', 'tiles.json');
-const OUT_DIR = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'vanilla', 'tile_icons');
+const OUT_DIR = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'vanilla', 'tile_icons');
 
 // Los 3 unicos tipos de tile que pueden ser el contenedor de un chest real del .wld
 // (TileID.Sets.BasicChest = {21,467}, TileID.Sets.BasicDresser = {88}) - son los unicos para los

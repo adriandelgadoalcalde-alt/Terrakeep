@@ -11,7 +11,7 @@ VanillaBuffCatalog.
 import json
 
 SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\TerrariaVanilla\Terraria.Localization.Content.es-ES.Game.json"
-OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_buff_descriptions.json"
+OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\vanilla_buff_descriptions.json"
 
 with open(SRC, encoding="utf-8") as f:
     game = json.load(f)

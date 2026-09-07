@@ -38,8 +38,8 @@ const LEGS_SINTETICOS_BODY_EXTENSION = [149, 150, 151, 160, 161, 162, 163, 164, 
 const HEAD_SINTETICOS_SET_MATCH = [202];
 
 // Uso: node scripts/extraer-sprites-armadura-vanilla.js
-// Salida: TerrasavrNative.App/Assets/player/armor_{head,legs}/{id}.png (40x56, sin cambios) y
-//         TerrasavrNative.App/Assets/player/armor_body/{id}.png (360x224, hoja entera)
+// Salida: Terrakeep.App/Assets/player/armor_{head,legs}/{id}.png (40x56, sin cambios) y
+//         Terrakeep.App/Assets/player/armor_body/{id}.png (360x224, hoja entera)
 
 'use strict';
 const fs = require('fs');
@@ -48,8 +48,8 @@ const { PNG } = require('pngjs');
 const { xnbToPng } = require('../../Terrasavr-Calamity-Beta/resources/app/xnb-to-png.js');
 
 const STEAM_IMAGES = 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Terraria\\Content\\Images';
-const SLOTS_JSON = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'vanilla_armor_slots.json');
-const OUT_ROOT = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'player');
+const SLOTS_JSON = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'vanilla_armor_slots.json');
+const OUT_ROOT = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'player');
 
 const W = 40, H = 56;
 

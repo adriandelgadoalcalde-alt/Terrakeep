@@ -28,7 +28,7 @@
 //
 // Uso: node scripts/extraer-iconos-vanilla.js
 // (necesita NODE_PATH=...Terrasavr-Calamity-Beta\resources\app\node_modules para pngjs)
-// Salida: TerrasavrNative.App/Assets/vanilla/icons/{id}.png
+// Salida: Terrakeep.App/Assets/vanilla/icons/{id}.png
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -36,7 +36,7 @@ const { xnbToPng } = require('../../Terrasavr-Calamity-Beta/resources/app/xnb-to
 const { PNG } = require('pngjs');
 
 const STEAM_IMAGES = 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Terraria\\Content\\Images';
-const OUT_DIR = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'vanilla', 'icons');
+const OUT_DIR = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'vanilla', 'icons');
 
 // Los 15 ids explicitos reales (Main.cs, InitializeItemAnimations) - id -> frameCount.
 const EXPLICIT_ANIMATED = {

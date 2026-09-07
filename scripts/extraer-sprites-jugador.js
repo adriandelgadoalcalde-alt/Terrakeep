@@ -42,8 +42,8 @@
 // Uso: node scripts/extraer-sprites-jugador.js
 // (necesita NODE_PATH=...Terrasavr-Calamity-Beta\resources\app\node_modules para pngjs, igual
 // que extraer-sprites-armadura-vanilla.js)
-// Salida: TerrasavrNative.App/Assets/player/body{0..9}/{pieza}.png (compuestas 360x224 o tiras
-//         40x56 segun la pieza) + TerrasavrNative.App/Assets/player/hair/{0..227}.png
+// Salida: Terrakeep.App/Assets/player/body{0..9}/{pieza}.png (compuestas 360x224 o tiras
+//         40x56 segun la pieza) + Terrakeep.App/Assets/player/hair/{0..227}.png
 
 'use strict';
 const fs = require('fs');
@@ -52,7 +52,7 @@ const { PNG } = require('pngjs');
 const { xnbToPng } = require('../../Terrasavr-Calamity-Beta/resources/app/xnb-to-png.js');
 
 const STEAM_IMAGES = 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Terraria\\Content\\Images';
-const OUT_ROOT = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'player');
+const OUT_ROOT = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'player');
 
 const W = 40, H = 56;
 const SheetWidth = 360, SheetHeight = 224;
@@ -194,7 +194,7 @@ console.log(`Pelo: ${hairOk} estilos extraidos (id 0-based, Player_Hair_{id+1}.x
 // H6-07 (sexta auditoria de Opus): "pelo bajo el casco" - Player_HairAlt_{id+1}.xnb real
 // (AssetInitializer.cs: "Images/Player_HairAlt_" + (id+1)), el sprite que el juego real
 // dibuja en vez del normal cuando el casco puesto esta en la lista real "hatHair" (ver
-// TerrasavrNative.Core/Model/HairDrawProfile.cs, portado de Player.GetHairSettings real).
+// Terrakeep.Core/Model/HairDrawProfile.cs, portado de Player.GetHairSettings real).
 // Mismo esquema 0-based +1 en el nombre de fichero que el pelo normal.
 const hairAltDir = path.join(OUT_ROOT, 'hairalt');
 fs.mkdirSync(hairAltDir, { recursive: true });

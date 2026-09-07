@@ -36,7 +36,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const ASSETS = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets');
+const ASSETS = path.join(__dirname, '..', 'Terrakeep.App', 'Assets');
 const VANILLA = 'C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\TerrariaVanilla';
 const ITEM_ID_CS = path.join(VANILLA, 'Terraria', 'ID', 'ItemID.cs');
 const LANG_ES = path.join(VANILLA, 'Terraria.Localization.Content.es-ES.Items.json');

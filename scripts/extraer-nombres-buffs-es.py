@@ -9,7 +9,7 @@ extraer-descripciones-buffs.py) - mismo nombre interno PascalCase.
 import json
 
 SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\TerrariaVanilla\Terraria.Localization.Content.es-ES.Game.json"
-OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\TerrasavrNative.App\Assets\vanilla_buff_names_es.json"
+OUT = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets\vanilla_buff_names_es.json"
 
 with open(SRC, encoding="utf-8") as f:
     game = json.load(f)

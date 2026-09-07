@@ -5,11 +5,11 @@
 // con `ls`) - el mismo asset que usa el propio mapa del juego real (TextureAssets.NpcHead[],
 // AssetInitializer.cs: "Images/NPC_Head_" + indice). El indice REAL por NPC (no 1:1 con el
 // tipo de NPC) sale de Terraria.GameContent.TownNPCProfiles.cs decompilado real - ver
-// TerrasavrNative.Core/Data/NpcHeadProfile.cs, que porta esa tabla tal cual.
+// Terrakeep.Core/Data/NpcHeadProfile.cs, que porta esa tabla tal cual.
 //
 // Uso: node scripts/extraer-cabezas-npc.js
 // (necesita NODE_PATH=...Terrasavr-Calamity-Beta\resources\app\node_modules para pngjs)
-// Salida: TerrasavrNative.App/Assets/npc_heads/{0..80}.png
+// Salida: Terrakeep.App/Assets/npc_heads/{0..80}.png
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -17,7 +17,7 @@ const { xnbToPng } = require('../../Terrasavr-Calamity-Beta/resources/app/xnb-to
 const { PNG } = require('pngjs');
 
 const STEAM_IMAGES = 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Terraria\\Content\\Images';
-const OUT_DIR = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'npc_heads');
+const OUT_DIR = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'npc_heads');
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 

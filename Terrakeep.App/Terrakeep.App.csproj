@@ -1,0 +1,74 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Terrakeep.Core\Terrakeep.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\**\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <ApplicationIcon>Assets\branding\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- Nombre real del binario compilado (Terrakeep.exe/.dll) - independiente del nombre del
+         proyecto/namespace C# (Terrakeep.App desde el 7-sep-2026, antes TerrasavrNative.App;
+         cambiar el nombre del proyecto/namespace afecta a carpetas y referencias de proyecto en
+         todo el solution, es un movimiento aparte de este AssemblyName). Antes el .exe se
+         llamaba TerrasavrNative.App.exe pese a que Product/AssemblyTitle ya decian "Terrakeep" -
+         visible si el usuario abria la carpeta de instalacion o el Administrador de tareas
+         (pestaña Detalles, columna "Nombre de archivo"). Pedido explicito del usuario
+         (5-sep-2026): "de cara al usuario no puede ver nada... del otro nombre". -->
+    <AssemblyName>Terrakeep</AssemblyName>
+    <!-- Metadatos visibles en Propiedades del .exe / Administrador de tareas de Windows -
+         sin esto, .NET usa el nombre del ensamblado en crudo (Terrakeep.App). -->
+    <AssemblyTitle>Terrakeep</AssemblyTitle>
+    <Product>Terrakeep</Product>
+    <Description>Editor de personajes de Terraria (vanilla + Calamity Mod)</Description>
+    <!-- Auditoria final de Opus (5-sep-2026, antes de publicar): el comentario de
+         AboutViewModel.AuthorName ya daba por hecho que el nombre del autor vivia tambien aqui
+         (<Authors>), pero NO estaba puesto - Company iba vacio y no habia ni Authors ni
+         Copyright, asi que las Propiedades del Terrakeep.exe en Windows (pestaña Detalles) no
+         decian de quien es el programa. Es justo el sitio donde mirar cuando alguien
+         redistribuye un binario, asi que importa de verdad de cara a publicarlo. El nombre va
+         LITERAL: "IncrediBad", con I y B mayusculas (misma regla que en AboutViewModel). -->
+    <Authors>IncrediBad</Authors>
+    <Company>IncrediBad</Company>
+    <Copyright>Copyright © 2026 IncrediBad</Copyright>
+    <!-- Real, sincronizada a mano con la version mas reciente de Assets/changelog.json - antes
+         no se fijaba y caia al 1.0.0.0 por defecto de .NET, sin significar nada real. -->
+    <Version>2.3.0</Version>
+    <FileVersion>2.3.0.0</FileVersion>
+    <AssemblyVersion>2.3.0.0</AssemblyVersion>
+  </PropertyGroup>
+
+  <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de
+       depuracion) y el instalador los copiaba tal cual al equipo del usuario final - se
+       comprobo en la instalacion real de esta maquina: Terrakeep.pdb, TerrasavrNative.App.pdb
+       y TerrasavrNative.Core.pdb (nombres de proyecto de entonces, renombrados a Terrakeep.App
+       y Terrakeep.Core el 7-sep-2026), ~800 KB en total. No le sirven de nada a quien solo usa la
+       app, y le dan a cualquiera que quiera descompilar el binario los nombres reales de
+       metodos y los numeros de linea del fuente. Solo en Release: la build de Debug los sigue
+       generando, que es lo que necesitan el depurador y el arnes de pruebas. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+</Project>

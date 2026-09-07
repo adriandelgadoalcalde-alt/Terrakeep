@@ -17,7 +17,7 @@ const fs = require('fs');
 const path = require('path');
 
 const CALAMITY_SRC = 'C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\CalamityMod';
-const CATALOG_PATH = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity', 'catalog.json');
+const CATALOG_PATH = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity', 'catalog.json');
 
 function indexarFuentes(dir, indice) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

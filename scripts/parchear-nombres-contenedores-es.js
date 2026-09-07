@@ -34,7 +34,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const RUTA = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'tile_names.json');
+const RUTA = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'tile_names.json');
 
 // tile -> { base: 'nombre base es', frames: { 'u,v': 'nombre es' } }
 const PARCHES = {

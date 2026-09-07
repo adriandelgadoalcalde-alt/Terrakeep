@@ -23,7 +23,7 @@ import os
 
 import lang_vanilla
 
-ASSETS = os.path.join(os.path.dirname(__file__), "..", "TerrasavrNative.App", "Assets")
+ASSETS = os.path.join(os.path.dirname(__file__), "..", "Terrakeep.App", "Assets")
 
 
 def leer(nombre: str):

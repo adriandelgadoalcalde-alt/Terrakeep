@@ -12269,3 +12269,83 @@ real contra `git show HEAD:`) - el orden determina el id sintético de cada obje
 Esto es justo lo que justifica haber invertido en `A11`: no lo habría cazado ninguna prueba
 unitaria escrita por quien ya daba por bueno el `displayName_fallback`. Lo cazó **mirar el texto
 real pintado en los dos idiomas a la vez**.
+
+## 7-sep-2026 - Renombrado del código fuente: `TerrasavrNative` -> `Terrakeep` en carpetas, `.csproj` y namespaces
+
+De cara al usuario "Terrakeep" ya estaba bien en todas partes (instalador, `.exe`, Propiedades
+de Windows) - lo que seguía con el nombre histórico era el CÓDIGO FUENTE: las 5 carpetas de
+proyecto, los `.csproj`, y todo `namespace`/`using` en C#. Quien abriera el repo en GitHub veía
+`TerrasavrNative.App`/`TerrasavrNative.Core` en el árbol de carpetas. Pedido explícito del
+usuario: renombrar todo eso a `Terrakeep`.
+
+**Alcance real**: 321 `.cs` con 864 apariciones de `TerrasavrNative` (fuera de `bin`/`obj`), más
+un `.slnx` (`TerrasavrNative.slnx`, no detectado en la petición inicial - no había ningún `.sln`
+clásico pero sí este formato nuevo, con las 5 rutas de proyecto dentro) que también hacía falta
+renombrar para que `dotnet build`/`dotnet test` contra la solución entera siguieran funcionando.
+
+**Mapeo**: `TerrasavrNative.Core` -> `Terrakeep.Core`, `.Core.Tests` -> `Terrakeep.Core.Tests`,
+`.App` -> `Terrakeep.App`, `.App.Tests` -> `Terrakeep.App.Tests`, `.App.ViewModels.Tests` ->
+`Terrakeep.App.ViewModels.Tests`. En cada proyecto: `git mv` de la carpeta y el `.csproj`, luego
+`sed -i 's/TerrasavrNative/Terrakeep/g'` sobre todo `.cs`/`.csproj`/`.xaml` propio (namespaces,
+`using`, `ProjectReference`, `xmlns:...="clr-namespace:..."`, `assembly=...`) - y build de ESE
+proyecto solo antes de seguir con el siguiente (Core -> App -> los tres de test), tal y como se
+pidió, para acotar cualquier fallo pronto. `<AssemblyName>Terrakeep</AssemblyName>` de
+`Terrakeep.App.csproj` (ya decía "Terrakeep" a propósito desde antes, para el `.exe` final) NO
+se tocó - es independiente del nombre de proyecto/namespace.
+
+**Un `sed` recursivo sobre `scripts/` casi corrompe un artefacto binario**: el primer intento de
+actualizar las 37 rutas `TerrasavrNative.App/Assets/...` hardcodeadas en los scripts de
+extracción (`grep -rl "TerrasavrNative" scripts/ | xargs sed -i ...`) incluyó sin querer
+`scripts/__pycache__/extraer-slots-armadura-vanilla.cpython-314.pyc` - un `.pyc` binario
+compilado que por lo visto SÍ está trackeado en git (no debería, pero no es cosa de esta sesión
+arreglarlo) y que contenía la cadena `TerrasavrNative` como bytecode. `grep -l` encuentra
+coincidencias en binarios igual que en texto, y `sed -i` lo reescribió byte a byte, dejándolo
+9814 -> 9801 bytes (corrupto de verdad, no solo distinto). Detectado por `git status` mostrando
+ese `.pyc` como `M` cuando no debería haber cambiado nada ahí - revertido con
+`git checkout -- <ruta>` antes de comitear. Lección: un find/replace de texto sobre una carpeta
+completa tiene que excluir explícitamente cualquier `__pycache__`/binario, no fiarse de que
+"total de archivos modificados" cuadre con "archivos de texto que sabía que tenía que tocar".
+
+**Historia real preservada, no reescrita** (mismo criterio que con este propio `bitacora.md`,
+nunca reescrito): dos comentarios de código narran explícitamente el nombre ANTIGUO como hecho
+histórico (`Terrakeep.Core/Data/BuffTreeBuilder.cs` - "antes vivía en `TerrasavrNative.App/
+Services/`"; `Terrakeep.App/Terrakeep.App.csproj` - "antes el `.exe` se llamaba
+`TerrasavrNative.App.exe`" y el inventario de `.pdb` de la auditoría del 5-sep). El `sed` global
+los pisó primero (habría dejado dicho, falsamente, que antes se llamaban como se llaman AHORA) -
+se revirtieron a mano esos dos puntos exactos tras el `sed`, añadiendo una nota de cuándo pasó el
+renombrado. Los ficheros `ESPEC-*.md` (specs/auditorías de sesiones anteriores, con rutas reales
+de la época) y `reference/terrakeep-decompilado/TerrasavrNative.App.decompiled.cs` (volcado
+puntual del 2-sep-2026, cuando el proyecto se llamaba así de verdad) se dejaron intactos por el
+mismo motivo - son material histórico, no instrucciones de build vivas.
+
+Sí se actualizaron las instrucciones de build vivas: `installer/install.ps1`,
+`installer/TerrakeepSetup.iss`, `Terrakeep.App/Properties/PublishProfiles/win-x64.pubxml`,
+`reference/terrakeep-decompilado/PROCEDENCIA.md` (comando de regeneración de `ilspycmd`),
+`LICENSE.md` (qué proyectos cubre) y `CLAUDE.md` (rutas del arnés, comando de `ilspycmd`, la
+clase `Terrakeep.App.App` que menciona la trampa de `StartupUri`). `README.md` no necesitó
+cambios - ya usaba `dotnet build`/`dotnet test` genéricos sin nombrar proyectos.
+
+**Verificación real, no solo "hice el find/replace"**:
+- Los 5 proyectos compilan en verde por separado y como solución completa
+  (`dotnet build Terrakeep.slnx`, 0 advertencias, 0 errores).
+- `dotnet test Terrakeep.Core.Tests`: **450/450**, igual que antes del renombrado.
+- `dotnet test Terrakeep.App.ViewModels.Tests`: **445/445**, igual que antes del renombrado.
+- `dotnet run --project Terrakeep.App.Tests` (el arnés de UI Automation completo, 1000+ líneas
+  de salida real): terminó con `EXIT CODE: 0` y `DONE`. Los únicos 3 `FALLO` que aparecieron son
+  de otra naturaleza, ya conocidos/documentados o coincidencias de datos reales - nada que un
+  renombrado de namespaces pudiera causar: `T-H/F2` (el `FocusVisualStyle` intermitente que ya
+  aparece mencionado media docena de veces en este mismo `bitacora.md`), `AR-14d` (el límite de
+  maquetación a 1080x700 ya medido y documentado en la ronda de `AR-LAY`), y
+  `A11-CONTENIDO-IDIOMA` con un único hallazgo - "Cactus" aparece igual en los dos idiomas en dos
+  slots de Personaje - mismo patrón que el caso ya documentado de "Terrariano" (un dato real del
+  personaje/mundo de prueba coincidiendo por casualidad con una traducción, no contenido del
+  juego sin traducir).
+- Publish + instalador real: `dotnet publish Terrakeep.App -c Release -p:PublishProfile=win-x64`
+  genera `Terrakeep.exe` con los `Assets` completos, y
+  `ISCC.exe installer/TerrakeepSetup.iss` compila sin error a
+  `installer/output/TerrakeepSetup-2.3.0.exe` (53,6 MB, mismo tamaño en el orden de magnitud que
+  las versiones 2.1.0/2.2.0 ya generadas antes).
+
+Commit único (renombrado mecánico coherente, sin cambios de comportamiento) con los 5 proyectos
++ `.slnx` + `installer/` + `scripts/` + `LICENSE.md`/`CLAUDE.md`/`reference/`. No se hizo
+`git push` - queda listo en local a la espera de que el usuario decida quién lo sube.

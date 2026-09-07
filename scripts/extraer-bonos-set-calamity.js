@@ -24,7 +24,7 @@
 //    ej. AerospecBreastplate.SetBonusHurtDamageThreshold) y las formulas reales de
 //    CalamityUtils.cs (ToPercent/ToStealth/FramesToSeconds/ScaleWithDifficulty), no adivinadas.
 //
-// Salida (modo por defecto, sin argumentos): TerrasavrNative.App/Assets/calamity/
+// Salida (modo por defecto, sin argumentos): Terrakeep.App/Assets/calamity/
 // set_bonus_en.json - texto ingles/español MIXTO (español real donde CommonItemTooltip lo
 // permite, ingles donde es texto propio de Calamity) por clase con UpdateArmorSet, listo para
 // revisar antes de traducir a mano el resto y escribirlo en catalog.json (paso 2, manual, ver
@@ -61,7 +61,7 @@ const TMOD_PATH = 'C:\\Users\\adrian\\Documents\\My Games\\Terraria\\tModLoader\
 const TMOD_EXTRACT = 'C:\\Users\\adrian\\Downloads\\Terrasavr-Win\\Terrasavr-Calamity-Beta\\resources\\app\\tmod-extract.js';
 const VANILLA_LOC_ES = `C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\tModLoader\\Terraria.Localization.Content.${LOC_LANG}.tModLoader.json`;
 const VANILLA_LOC_ES_MAIN = `C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\tModLoader\\Terraria.Localization.Content.${LOC_LANG}.Main.json`;
-const OUT_PATH = path.join(__dirname, '..', 'TerrasavrNative.App', 'Assets', 'calamity',
+const OUT_PATH = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity',
     MODO_INGLES ? 'set_bonus_en_real.json' : 'set_bonus_en.json');
 
 // ---------- 1) Parser hjson minimo (solo lo que Calamity usa de verdad: claves sin comillas,
