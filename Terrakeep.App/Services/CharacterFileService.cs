@@ -47,7 +47,22 @@ public sealed class CharacterFileService
     public TileNameCatalog TileNames { get; }
     public NpcNameCatalog NpcNames { get; }
     public VanillaBuffCatalog VanillaBuffs { get; }
-    public BestPrefixCatalog BestPrefixes { get; }
+    // Dos tablas reales, no una: best_prefix.json se genero contra Terraria 1.4.5.8 (la version
+    // que usa la app de escritorio para vanilla puro), pero la mayoria de guardados que se abren
+    // aqui son de tModLoader 1.4.4.9 - ahi invocacion comparte pool de prefijos con magia y los
+    // baculos aun gastan mana (1.4.5.0 lo quito), asi que la tabla 1.4.5.8 sugiere prefijos que
+    // el motor 1.4.4.9 ni siquiera conoce. Hallazgo real de TerrakeepMod (mod hermano de
+    // tModLoader), 8-sep-2026: ver bitacora. best_prefix_tml.json se genera con el mismo script
+    // (generar-mejor-prefijo.py) apuntando al arbol decompilado de tModLoader en vez de al de
+    // Terraria vainilla.
+    private readonly BestPrefixCatalog _bestPrefixesVanilla;
+    private readonly BestPrefixCatalog _bestPrefixesTModLoader;
+    // Que tabla de arriba usar ahora mismo - la decide EsPersonajeTModLoader, actualizada en cada
+    // Load() real segun la carpeta de la que vino el .plr (mismo criterio que ya usa el resto del
+    // servicio para distinguir vanilla de tModLoader: "la unica diferencia real es la carpeta",
+    // ver GetAllPlayersDirectories mas abajo).
+    public BestPrefixCatalog BestPrefixes => EsPersonajeTModLoader ? _bestPrefixesTModLoader : _bestPrefixesVanilla;
+    public bool EsPersonajeTModLoader { get; private set; }
     public VanillaCategoryCatalog VanillaCategories { get; }
     public VanillaSlotKindCatalog VanillaSlotKinds { get; }
     public VanillaItemStatsCatalog VanillaStats { get; }
@@ -109,7 +124,8 @@ public sealed class CharacterFileService
             Path.Combine(assetsDir, "vanilla_buff_names_es.json"),
             Path.Combine(assetsDir, "vanilla_buff_names_en.json"),
             Path.Combine(assetsDir, "vanilla_buff_descriptions_en.json"));
-        BestPrefixes = BestPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "best_prefix.json"));
+        _bestPrefixesVanilla = BestPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "best_prefix.json"));
+        _bestPrefixesTModLoader = BestPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "best_prefix_tml.json"));
         VanillaCategories = VanillaCategoryCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_categories.json"));
         VanillaSlotKinds = VanillaSlotKindCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_slot_kind.json"));
         VanillaStats = VanillaItemStatsCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_stats.json"));
@@ -221,6 +237,16 @@ public sealed class CharacterFileService
 
     public LoadedCharacter Load(string plrPath)
     {
+        // El .plr es identico byte a byte en los dos casos (tModLoader reutiliza el formato
+        // vanilla real) - la unica diferencia real, aqui igual que en GetAllPlayersDirectories,
+        // es la carpeta: "...\Terraria\tModLoader\Players\..." vs "...\Terraria\Players\...".
+        // Una carpeta extra añadida a mano en Ajustes que apunte dentro de una instalacion de
+        // tModLoader (portable, disco distinto) tambien la detecta bien, porque mira el propio
+        // camino completo del .plr, no una de las dos carpetas por defecto.
+        string rutaCompleta = Path.GetFullPath(plrPath);
+        EsPersonajeTModLoader = rutaCompleta.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Any(seg => string.Equals(seg, "tModLoader", StringComparison.OrdinalIgnoreCase));
+
         var character = PlrFile.Read(File.ReadAllBytes(plrPath));
 
         string tplrPath = Path.ChangeExtension(plrPath, ".tplr");

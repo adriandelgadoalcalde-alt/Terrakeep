@@ -12451,3 +12451,49 @@ tModLoader 1.4.4.9, donde un prefijo 85..97 no existe - si algún día se quiere
 la app respete la versión del guardado abierto, la tabla de 1.4.4.9 ya está generada y al día
 (`best_prefix_tml.json`). No se ha cambiado el comportamiento de la app porque eso es una decisión
 de producto, no un arreglo.
+
+---
+
+## 8-sep-2026 — El botón ★ ya respeta la versión real del guardado
+
+Pedido explícito del usuario ("aplicalo a terrakeep escritorio haber que tal"): la decisión de
+producto de arriba ya está tomada, aplicar la tabla `best_prefix_tml.json` cuando el guardado
+abierto sea de tModLoader.
+
+### Dónde vive la detección
+
+`CharacterFileService` ya distinguía vanilla de tModLoader por carpeta en varios sitios
+(`GetAllPlayersDirectories`/`GetAllWorldsDirectories`: "la unica diferencia real es la carpeta,
+el formato .plr/.wld es identico") - mismo criterio reutilizado, no uno nuevo. `Load(plrPath)`
+ahora calcula `EsPersonajeTModLoader` mirando si algún segmento de la ruta completa del `.plr` es
+literalmente `"tModLoader"` (cubre también una carpeta extra de Ajustes que apunte a una
+instalación portable en otro disco, porque mira la ruta entera, no solo las dos carpetas por
+defecto).
+
+`BestPrefixes` pasó de ser un campo fijado una vez en el constructor a una propiedad calculada:
+`EsPersonajeTModLoader ? _bestPrefixesTModLoader : _bestPrefixesVanilla`. Los cuatro sitios reales
+que lo usan (`ItemSlotViewModel`, vía `PrefixSuggester.Suggest`) no se tocaron - siguen leyendo
+`_service.BestPrefixes` tal cual, y ahora resuelve solo según el último personaje cargado.
+
+### Verificación real
+
+Arnés mínimo aparte (`ProjectReference` a `Terrakeep.App.csproj`, en el scratchpad de la sesión,
+no forma parte del repo): cargar el MISMO personaje real (`adrian.plr`) una vez desde
+`...\tModLoader\Players\` y otra desde `...\Terraria\Players\` (las dos copias existen de verdad
+en este equipo) y comprobar el mejor prefijo del objeto 3826 (uno de los báculos de invocación
+del hallazgo de hoy en `TerrakeepMod`, id real donde las dos tablas discrepan: 85 en la de
+1.4.5.8, que no existe en el pool 1.4.4.9, contra 83 real):
+
+```
+[tModLoader] EsPersonajeTModLoader=True   mejor prefijo id 3826 = 83
+[vanilla]    EsPersonajeTModLoader=False  mejor prefijo id 3826 = 85
+RESULTADO: OK
+```
+
+`dotnet build Terrakeep.App.csproj`: 0 errores, 0 advertencias.
+
+### Alcance
+
+Solo `Terrakeep.App/Services/CharacterFileService.cs` tocado. `best_prefix_tml.json` ya vivía en
+`Assets/calamity/` desde el trabajo de hoy en `TerrakeepMod` y ya lo copiaba el `.csproj` (glob
+`Assets\**\*.json`), así que no hizo falta tocar el `.csproj`.
