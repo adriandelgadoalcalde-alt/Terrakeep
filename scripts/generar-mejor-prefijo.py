@@ -1,6 +1,30 @@
 r"""
-Genera `Assets/calamity/best_prefix.json` - la tabla de "mejor prefijo" que usan el boton
-"Mejor prefijo" (la estrella) y el prefijo automatico al colocar un objeto.
+Genera las DOS tablas de "mejor prefijo" del proyecto:
+
+  `Assets/calamity/best_prefix.json`      -> app de escritorio, contra Terraria **1.4.5.8**
+  `Assets/calamity/best_prefix_tml.json`  -> TerrakeepMod,      contra tModLoader **1.4.4.9**
+                                             (se copia tal cual a TerrakeepMod/Assets/best_prefix.json)
+
+Las usan el boton "Mejor prefijo" (la estrella), el prefijo automatico al colocar un objeto y,
+en el mod, la linea "Mejor prefijo posible: X" del tooltip real del juego.
+
+POR QUE DOS TABLAS Y NO UNA (hallazgo del 8-sep-2026, a raiz de que NINGUN baculo de invocacion
+enseñaba su etiqueta en el mod): el mod corre sobre tModLoader 1.4.4.9, que a estos efectos es
+otro juego distinto de Terraria 1.4.5.8, en tres cosas que cambian el resultado de verdad:
+
+  1. Los prefijos de INVOCACION (85 Fabled..97 Scraggling) no existen en 1.4.4.9: alli
+     `PrefixID.Count` es 85 y hay un unico `PrefixesForMagicAndSummons` (tope 83 Mythical).
+     La wiki oficial lo confirma en la historia de `Modifiers`: "Added 13 new modifiers:
+     Ballistic, Eager, Fabled, ... All of them are exclusively obtainable by summon weapons,
+     **which previously shared modifiers with magic weapons**" (Desktop 1.4.5.0).
+  2. Varias decenas de objetos tienen ESTADISTICAS distintas entre las dos versiones, y eso
+     cambia que prefijos son aplicables. El caso gordo son los propios baculos de invocacion:
+     en 1.4.4.9 gastan mana y en 1.4.5.8 no ("Desktop 1.4.5.0: Removed mana cost (cost 10 mana
+     previously)", historial del Baculo optico en la wiki), asi que en 1.4.4.9 los prefijos que
+     tocan el mana SI son aplicables y Mythical gana; en 1.4.5.8 quedarian descartados.
+  3. Algun objeto cambia de POOL: `Gladius` (4463) esta en `SwordsHammersAxesPicks` en 1.4.4.9
+     (mejor real 81 Legendary) y en `SpearsMacesChainsawsDrillsPunchCannon` en 1.4.5.8 (59
+     Godly) - "1.4.5.0: Can now only have spear-type modifiers", wiki oficial.
 
 =====================================================================================
 DE DONDE SALE EL CRITERIO (no es una tabla curada a mano ni copiada de la wiki)
@@ -39,13 +63,12 @@ objeto, en este orden exacto de prioridad, contra los sets de
     IsAPrefixableAccessory() -> PrefixesForAccessories   (empate real, ver desempate)
 `IsAPrefixableAccessory()` = accessory && !vanity && ItemID.Sets.CanGetPrefixes[type].
 
-IMPORTANTE - la fuente vanilla de ESTE fichero es `TerrariaVanilla\` (Terraria **1.4.5.8**),
-no `tModLoader\` (1.4.4.9), a diferencia de casi todos los demas scripts de esta carpeta.
-Es a proposito y se nota en el resultado: 1.4.5.8 separo `PrefixesForMagic` de
-`PrefixesForSummons` y añadio los prefijos 85..97 (Fabled, Loyal, Worthy...), que son los
-unicos que existen para armas de invocacion. La tabla que ya habia en el repo antes de
-este script tambien los usaba (18 objetos vanilla con 85), asi que esa eleccion ya estaba
-tomada; aqui solo queda escrita.
+En 1.4.4.9 no existe `GetRollablePrefixes()`: el equivalente real es
+`Item.GetPrefixCategories()` + `Item.GetVanillaPrefixes(PrefixCategory)`, con los mismos sets
+salvo que `Magic` y `Summon` son un unico `MagicAndSummon` -> `PrefixesForMagicAndSummons`
+(mejor real: 83 Mythical, no 85 Fabled). Ahi tambien caen las armas de invocacion de MOD:
+`SummonDamageClass.GetPrefixInheritance(dc) => dc == DamageClass.Magic`, o sea
+`ModItem.MagicPrefix()` es true para ellas.
 
 DESEMPATE (el juego no lo define: solo se queda con el maximo numerico, y varios prefijos
 pueden dar exactamente el mismo `value`). Criterio de este generador, en orden:
@@ -72,7 +95,22 @@ codigo decompilado de Calamity (incluido `Item.CloneDefaults(<id vanilla>)`, que
 entero un objeto vanilla, y las alas, que derivan de `BaseWings`). Las armas de tipo de
 daño hibrido/sin clase (AverageDamageClass, AllClassDamageClass, MeleeRangedHybrid,
 Typeless) se dejan fuera a proposito, como ya estaban: no tienen un pool real univoco y
-adivinarlo seria inventar.
+adivinarlo seria inventar. Al generar la tabla de 1.4.4.9 si se rehacen las entradas cuyo
+prefijo no existe en ese arbol (las 103 de invocacion), con el pool real de alli.
+
+DOS VIAS REALES por las que Item.cs define las estadisticas de un objeto - las dos hacen falta,
+y saltarse cualquiera de ellas deja huecos o mete falsos positivos:
+  a) `case <id>:` dentro de `switch (type)`, con o sin helpers (`SetWeaponValues`,
+     `DefaultToStaff`...). Si el case esta dentro de un switch ANIDADO, hereda del bloque padre
+     solo lo del NIVEL SUPERIOR (`strip_nested_blocks`).
+  b) `if (type >= A && type <= B) { ... return; }` ANTES del switch, sin ningun case para esos
+     ids (`extract_if_type_stats`). Es la unica definicion de, por ejemplo, 2214..2217 (Paleta,
+     Agarre extendido, Spray de pintura, Hormigonera portatil) y 3309..3314 (los 6 contrapesos
+     de yoyo), ocho accesorios reales que si admiten prefijo. Antes del 8-sep-2026 ese bloque se
+     heredaba ENTERO como `outer` del switch siguiente, con dos efectos a la vez: esos ids se
+     quedaban fuera de la tabla, y su `accessory = true;` se le pegaba a 56 objetos del switch
+     que en el juego real no admiten prefijo ninguno (muebles dinasticos, bolsas del tesoro,
+     bloques de arenisca, ropa de vanidad de obsidiana...).
 """
 import io
 import json
@@ -80,6 +118,7 @@ import os
 import re
 
 VANILLA = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\TerrariaVanilla\Terraria"
+TMODLOADER = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria"
 ITEM_SRC = os.path.join(VANILLA, "Item.cs")
 LEGACY_SRC = os.path.join(VANILLA, "GameContent", "Prefixes", "PrefixLegacy.cs")
 ITEMID_SRC = os.path.join(VANILLA, "ID", "PrefixID.cs")
@@ -88,6 +127,7 @@ CALAMITY_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\CalamityMod\Cal
 ASSETS = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets"
 CATALOG = os.path.join(ASSETS, "calamity", "catalog.json")
 OUT = os.path.join(ASSETS, "calamity", "best_prefix.json")
+OUT_TML = os.path.join(ASSETS, "calamity", "best_prefix_tml.json")
 
 BACKSLASH, DQUOTE, SQUOTE = chr(92), chr(34), chr(39)
 
@@ -110,11 +150,53 @@ CASE_RE = re.compile(r"case\s+(\d+)\s*:")
 DEFAULT_RE = re.compile(r"default\s*:")
 
 
+def strip_nested_blocks(texto):
+    """Deja solo las sentencias del NIVEL SUPERIOR de `texto`, vaciando el cuerpo de cualquier
+    bloque `{...}` anidado.
+
+    Hace falta para heredar bien el `outer` (ver `find_case_blocks`): lo que hay dentro de un
+    `if (type >= 2214 && type <= 2217) { ... accessory = true; ... return; }` pertenece a ESOS
+    ids, no al `switch (type)` que viene detras. Sin esto, ese `accessory = true` se pegaba a
+    todos los `case` del switch siguiente y metia en la tabla decenas de objetos que en el juego
+    real NO admiten prefijo ninguno (muebles dinasticos, bolsas del tesoro, bloques de
+    arenisca...). Los ids de esos `if` se recogen aparte, en `extract_if_type_stats`."""
+    out, i, n, depth = "", 0, len(texto), 0
+    while i < n:
+        ch = texto[i]
+        if ch == "/" and i + 1 < n and texto[i + 1] == "/":
+            j = texto.find("\n", i)
+            i = (j + 1) if j != -1 else n
+            continue
+        if ch == "/" and i + 1 < n and texto[i + 1] == "*":
+            j = texto.find("*/", i + 2)
+            i = (j + 2) if j != -1 else n
+            continue
+        if ch in (DQUOTE, SQUOTE):
+            q, j = ch, i + 1
+            while j < n and texto[j] != q:
+                j += 2 if texto[j] == BACKSLASH else 1
+            if depth == 0:
+                out += texto[i:j + 1]
+            i = j + 1
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+        elif depth == 0:
+            out += ch
+        i += 1
+    return out
+
+
 def find_case_blocks(body, outer=""):
     """`outer` = texto del bloque PADRE que precede a este switch anidado. Sus asignaciones
     valen tambien para los ids del switch de dentro: es un patron real de Item.cs (los yoyos
     3278..3292 ponen `useAnimation = 25;` en el bloque comun y solo damage/knockBack en el
-    switch(type) anidado). Sin heredarlo, 3315..3317 salen sin useAnimation."""
+    switch(type) anidado). Sin heredarlo, 3315..3317 salen sin useAnimation.
+
+    Solo se hereda el NIVEL SUPERIOR de ese texto (`strip_nested_blocks`): los bloques `{...}`
+    que hay por el camino son `if (type ...)` de otros ids."""
     out, i, n = [], 0, len(body)
     while i < n:
         m = SWITCH_TYPE_RE.search(body, i)
@@ -122,7 +204,7 @@ def find_case_blocks(body, outer=""):
             break
         o = m.end() - 1
         c = find_matching_brace(body, o)
-        out.extend(extract_immediate_cases(body, o + 1, c, outer + body[i:m.start()]))
+        out.extend(extract_immediate_cases(body, o + 1, c, outer + strip_nested_blocks(body[i:m.start()])))
         i = c + 1
     return out
 
@@ -200,8 +282,15 @@ def extract_immediate_cases(body, start, end, outer=""):
 
 # ------------------------------------------------- 1. multiplicadores reales por prefijo
 def load_prefix_multipliers(item_text):
-    start = item_text.index("public bool TryGetPrefixStatMultipliersForItem")
-    body = item_text[start:item_text.index("value = 1f * dmg", start)]
+    # La firma cambia entre arboles (`public bool ...` con `out value` en 1.4.5.8, `private bool
+    # ...` sin el en 1.4.4.9) y el cuerpo termina en un sitio distinto: en 1.4.5.8 justo antes de
+    # calcular `value`, en 1.4.4.9 en el primero de los cuatro filtros de "el cambio no se
+    # notaria". El `switch` de casos que hay en medio es el mismo en las dos.
+    m = re.search(r"(?:public|private) bool TryGetPrefixStatMultipliersForItem", item_text)
+    start = m.start()
+    fin = min(p for p in (item_text.find("value = 1f * dmg", start),
+                          item_text.find("if (dmg != 1f", start)) if p != -1)
+    body = item_text[start:fin]
     field_re = re.compile(r"\b(dmg|kb|spd|size|shtspd|mcst|crt|tagdmg|arpen)\s*=\s*(-?\d+(?:\.\d+)?)f?\s*;")
     mult = {}
     for m in re.finditer(r"case\s+(\d+)\s*:(.*?)break;", body, re.S):
@@ -299,6 +388,10 @@ HELPERS = {
     "DefaultToAccessory": {"accessory": True},
     "DefaultToInfoAccessory": {"accessory": True},
     "DefaultToVoiceOverrideAccessory": {"accessory": True},
+    # `DefaultToGolfBall(proj)` tambien pone `accessory = true;` (y `maxStack = 1`). Son las 16
+    # pelotas de golf reales (3989, 4242..4255), accesorios que el motor SI deja prefijar
+    # (`Item.CanHavePrefixes()` devuelve true para ellas en el juego real, comprobado).
+    "DefaultToGolfBall": {"accessory": True},
     "SetWeaponValues": {"damage": 0, "knockBack": 1},
 }
 HELPER_CALL_RE = re.compile(r"\b(DefaultTo[A-Za-z]+|SetWeaponValues)\s*\(([^;]*)\)\s*;")
@@ -346,11 +439,105 @@ def strip_variant_blocks(block):
             i = find_matching_brace(block, o2) + 1 if o2 != -1 else j + 4
 
 
+def apply_block(entry, block):
+    """Aplica a `entry` las asignaciones reales de un bloque de codigo, EN ORDEN TEXTUAL: es
+    habitual que un helper ponga un valor y una linea posterior lo pise (o al reves) -
+    `case 4058: DefaultToBow(17, 11f); SetWeaponValues(8, 5f);`."""
+    events = []
+    for hm in HELPER_CALL_RE.finditer(block):
+        spec = HELPERS.get(hm.group(1))
+        if spec:
+            events.append((hm.start(), "helper", spec, split_args(hm.group(2))))
+    for field, pat in SIMPLE.items():
+        for sm in re.finditer(pat, block):
+            events.append((sm.start(), "set", field, float(sm.group(1))))
+    for rx in (CHAIN_RE, CHAIN2_RE):
+        for sm in rx.finditer(block):
+            events.append((sm.start(), "set", "useAnimation", float(sm.group(1))))
+    for rx, field in ((ACCESSORY_RE, "accessory"), (VANITY_RE, "vanity")):
+        for sm in rx.finditer(block):
+            events.append((sm.start(), "set", field, sm.group(1) == "true"))
+    events.sort(key=lambda x: x[0])
+    for ev in events:
+        if ev[1] == "set":
+            entry[ev[2]] = ev[3]
+            continue
+        spec, args = ev[2], ev[3]
+        for field, idx in spec.items():
+            if idx is True:
+                entry[field] = True
+                continue
+            default = None
+            if isinstance(idx, tuple):
+                idx, default = idx
+            if idx < len(args):
+                v = numeric(args[idx])
+                if v is not None:
+                    entry[field] = v
+            elif default is not None:
+                entry[field] = float(default)
+    return entry
+
+
+SETDEFAULTS_RE = re.compile(r"(?:public|private) void (SetDefaults\d|SetFoodDefaults)\(int type\)")
+IF_TYPE_RE = re.compile(r"if\s*\(\s*(type\s*[=<>!][^)]{0,200})\)\s*\{")
+IF_RANGE_RE = re.compile(r"^type\s*>=\s*(\d+)\s*&&\s*type\s*<=\s*(\d+)$")
+IF_EQ_LIST_RE = re.compile(r"^type\s*==\s*\d+(?:\s*\|\|\s*type\s*==\s*\d+)*$")
+
+
+def ids_de_condicion(cond):
+    """Los ids concretos que cumplen un `if (type ...)`, o None si la condicion no nombra un
+    conjunto CERRADO y pequeño de ids. Solo se aceptan las tres formas reales de Item.cs que
+    definen un objeto entero: `type == N`, `type == A || type == B ...` y `type >= A && type <= B`.
+    Todo lo demas (`type <= N`, `type < A || type > B`, condiciones con otras variables) se ignora
+    a proposito: son guardas de flujo, no la definicion de unos objetos concretos."""
+    cond = " ".join(cond.split())
+    m = IF_RANGE_RE.match(cond)
+    if m:
+        a, b = int(m.group(1)), int(m.group(2))
+        return list(range(a, b + 1)) if 0 < b - a < 64 else None
+    if IF_EQ_LIST_RE.match(cond):
+        return [int(x) for x in re.findall(r"\d+", cond)]
+    return None
+
+
+def extract_if_type_stats(item_text):
+    """Segunda via real por la que Item.cs define un objeto entero: `if (type >= A && type <= B)
+    { ... return; }` ANTES del `switch (type)`, sin ningun `case` para esos ids.
+
+    Sin esta pasada quedaban fuera de la tabla accesorios reales que si admiten prefijo -
+    2214..2217 (Paleta, Agarre extendido, Spray de pintura, Hormigonera portatil) y 3309..3314
+    (los seis contrapesos de yoyo) -, porque su unica definicion en todo el fichero es un bloque
+    de estos."""
+    stats = {}
+    for m in SETDEFAULTS_RE.finditer(item_text):
+        o = item_text.index("{", m.start())
+        fin = find_matching_brace(item_text, o)
+        pos = o
+        while True:
+            mi = IF_TYPE_RE.search(item_text, pos, fin)
+            if not mi:
+                break
+            abre = mi.end() - 1
+            cierra = find_matching_brace(item_text, abre)
+            ids = ids_de_condicion(mi.group(1))
+            if ids:
+                bloque = strip_variant_blocks(item_text[abre:cierra + 1])
+                for iid in ids:
+                    apply_block(stats.setdefault(iid, {}), bloque)
+            pos = mi.end()
+    return {k: v for k, v in stats.items() if k > 0 and v}
+
+
 def extract_vanilla_stats(item_text):
     redirects = {}
     stats = {}
-    starts = [m.start() for m in re.finditer(r"private void (SetDefaults\d|SetFoodDefaults)\(int type\)", item_text)]
-    for pos in starts:
+    # Capa base: los `if (type ...)` que definen objetos enteros. Si un id tiene ademas un `case`
+    # propio, el `case` manda (se aplica encima).
+    for iid, entry in extract_if_type_stats(item_text).items():
+        stats[iid] = dict(entry)
+    for m in SETDEFAULTS_RE.finditer(item_text):
+        pos = m.start()
         o = item_text.index("{", pos)
         body = item_text[pos:find_matching_brace(item_text, o) + 1]
         for iid, raw_block in find_case_blocks(body):
@@ -358,41 +545,7 @@ def extract_vanilla_stats(item_text):
                 continue
             block = strip_variant_blocks(raw_block)
             entry = stats.setdefault(iid, {})
-            # En orden TEXTUAL: es habitual que un helper ponga un valor y una linea posterior
-            # lo pise (o al reves) - `case 4058: DefaultToBow(17, 11f); SetWeaponValues(8, 5f);`.
-            events = []
-            for hm in HELPER_CALL_RE.finditer(block):
-                spec = HELPERS.get(hm.group(1))
-                if spec:
-                    events.append((hm.start(), "helper", spec, split_args(hm.group(2))))
-            for field, pat in SIMPLE.items():
-                for sm in re.finditer(pat, block):
-                    events.append((sm.start(), "set", field, float(sm.group(1))))
-            for rx in (CHAIN_RE, CHAIN2_RE):
-                for sm in rx.finditer(block):
-                    events.append((sm.start(), "set", "useAnimation", float(sm.group(1))))
-            for rx, field in ((ACCESSORY_RE, "accessory"), (VANITY_RE, "vanity")):
-                for sm in rx.finditer(block):
-                    events.append((sm.start(), "set", field, sm.group(1) == "true"))
-            events.sort(key=lambda x: x[0])
-            for ev in events:
-                if ev[1] == "set":
-                    entry[ev[2]] = ev[3]
-                    continue
-                spec, args = ev[2], ev[3]
-                for field, idx in spec.items():
-                    if idx is True:
-                        entry[field] = True
-                        continue
-                    default = None
-                    if isinstance(idx, tuple):
-                        idx, default = idx
-                    if idx < len(args):
-                        v = numeric(args[idx])
-                        if v is not None:
-                            entry[field] = v
-                    elif default is not None:
-                        entry[field] = float(default)
+            apply_block(entry, block)
             # Redireccion real: `SetDefaults3(2772); type = 3462;` - el objeto COPIA entero el
             # bloque de otro id y solo cambia lo cosmetico. Sin resolverlo, 2777..2786 y
             # 3462..3466 (variantes de armas reales) salen sin ninguna estadistica.
@@ -411,9 +564,23 @@ def extract_vanilla_stats(item_text):
     return stats
 
 
-# --------------------------------------------------------- 3. pools y sets reales (1.4.5.8)
-def load_pools_and_sets():
-    legacy = io.open(LEGACY_SRC, encoding="utf-8").read()
+# ------------------------------------------------------------------- 3. pools y sets reales
+def load_pools_and_sets(raiz=None):
+    """`raiz` = carpeta `Terraria\\` del arbol decompilado a leer. Por defecto la de Terraria
+    1.4.5.8 (`VANILLA`, la de la app de escritorio); con `TMODLOADER` da los pools y sets REALES
+    de tModLoader 1.4.4.9, que es otro juego a estos efectos:
+
+      - 1.4.5.8 tiene `PrefixesForMagic` y `PrefixesForSummons` SEPARADOS (invocacion usa
+        85 Fabled..97, prefijos que en 1.4.4.9 no existen: alli `PrefixID.Count` es 85).
+      - 1.4.4.9 tiene un unico `PrefixesForMagicAndSummons` (mismos 36 ids que
+        `PrefixesForMagic` de 1.4.5.8, tope 83 Mythical) y un unico bool set `MagicAndSummon`.
+        Que las armas de invocacion de MOD caen en ese mismo pool esta confirmado en el codigo
+        real: `SummonDamageClass.GetPrefixInheritance(dc) => dc == DamageClass.Magic`, o sea
+        `ModItem.MagicPrefix()` es true para ellas y `Item.GetPrefixCategories()` las manda a
+        `PrefixCategory.Magic`."""
+    raiz = raiz or VANILLA
+    legacy = io.open(os.path.join(raiz, "GameContent", "Prefixes", "PrefixLegacy.cs"), encoding="utf-8").read()
+    unificado = "PrefixesForMagicAndSummons" in legacy
 
     def arr(name):
         m = re.search(rf"public static int\[\] {name} = new int\[\d+\]\s*\{{(.*?)\}};", legacy, re.S)
@@ -431,8 +598,7 @@ def load_pools_and_sets():
         "swords": arr("PrefixesForSwords"),
         "spears": arr("PrefixesForSpears"),
         "gunsBows": arr("PrefixesForGunsBows"),
-        "magic": arr("PrefixesForMagic"),
-        "summons": arr("PrefixesForSummons"),
+        "magic": arr("PrefixesForMagicAndSummons" if unificado else "PrefixesForMagic"),
         "boomerangsChakrams": arr("PrefixesForBoomeransAndChakrums"),
         "terrarianYoyo": arr("PrefixesForBoomeransAndChakrums_TerrarianYoyo"),
         "accessories": arr("PrefixesForAccessories"),
@@ -441,12 +607,19 @@ def load_pools_and_sets():
         "swords": bset("SwordsHammersAxesPicks"),
         "spears": bset("SpearsMacesChainsawsDrillsPunchCannon"),
         "gunsBows": bset("GunsBows"),
-        "magic": bset("Magic"),
-        "summons": bset("Summon"),
+        "magic": bset("MagicAndSummon" if unificado else "Magic"),
         "boomerangsChakrams": bset("BoomerangsChakrams"),
         "terrarianYoyo": bset("ItemsThatCanHaveLegendary2"),
     }
-    itemid = io.open(ITEMIDS_SRC, encoding="utf-8").read()
+    if unificado:
+        # En 1.4.4.9 invocacion NO es un pool aparte: comparte el de magia. Se deja la clave
+        # para que el resto del script no tenga que saber en que version esta.
+        pools["summons"] = pools["magic"]
+        sets["summons"] = set()
+    else:
+        pools["summons"] = arr("PrefixesForSummons")
+        sets["summons"] = bset("Summon")
+    itemid = io.open(os.path.join(raiz, "ID", "ItemID.cs"), encoding="utf-8").read()
     m = re.search(r"CanGetPrefixes = Factory\.CreateBoolSet\((.*?)\);", itemid, re.S)
     raw = m.group(1)
     assert raw.strip().startswith("true,"), "se esperaba que CanGetPrefixes sea lista NEGRA"
@@ -464,11 +637,19 @@ def build_vanilla(mult, stats, pools, sets, cannot):
     for s in sets.values():
         candidates |= s
     candidates |= {i for i, e in stats.items() if e.get("accessory")}
-    skipped_vanity = skipped_blacklist = 0
+    skipped_vanity = skipped_blacklist = skipped_sin_daño = 0
     for iid in sorted(candidates):
         if iid <= 0:
             continue
         pool_key = next((k for k in POOL_ORDER if iid in sets[k]), None)
+        if pool_key is not None and not (stats.get(iid, {}).get("damage") or 0) > 0 \
+                and not stats.get(iid, {}).get("accessory"):
+            # `Item.CanHavePrefixes()` real: `if (damage <= 0) return IsAPrefixableAccessory();`.
+            # Estar en un set de arma NO basta. Unico caso vanilla en las dos versiones: la
+            # Pistola de monedas (905, `damage = 0;` literal - su daño sale de la moneda que
+            # dispara). El motor devuelve false para ella de verdad, comprobado en el juego.
+            skipped_sin_daño += 1
+            continue
         if pool_key is None:
             e = stats.get(iid, {})
             if not e.get("accessory") or e.get("vanity"):
@@ -486,8 +667,9 @@ def build_vanilla(mult, stats, pools, sets, cannot):
         if best is not None:
             out[iid] = best
     print(f"  vanilla: {len(out)} objetos con mejor prefijo real "
-          f"({skipped_vanity} accesorios de vanidad y {skipped_blacklist} de la lista negra "
-          f"CanGetPrefixes descartados: en el juego real no admiten prefijo)")
+          f"({skipped_vanity} accesorios de vanidad, {skipped_blacklist} de la lista negra "
+          f"CanGetPrefixes y {skipped_sin_daño} sin daño base descartados: en el juego real "
+          f"no admiten prefijo)")
     return out
 
 
@@ -526,8 +708,13 @@ def calamity_setdefaults_body(path):
     return src[o:find_matching_brace(src, o) + 1], src
 
 
-def build_calamity_missing(mult, pools, sets, vanilla_stats, catalog, existing):
-    """Aplica el MISMO criterio a los objetos de Calamity que aun no tenian entrada."""
+def build_calamity_missing(mult, pools, sets, vanilla_stats, catalog, existing, forzar=()):
+    """Aplica el MISMO criterio a los objetos de Calamity que aun no tenian entrada.
+
+    `forzar` = nombres que hay que resolver aunque su categoria del catalogo no sea de arma ni
+    de accesorio. Hace falta al rehacer una tabla para otro arbol: hay armas reales catalogadas
+    por su SET, no por su tipo (`WulfrumFusionCannon`, categoria `Armor/Wulfrum`, pero
+    `damageType = DamageClass.Summon`), y sin esto se perderian por el camino."""
     sources = index_calamity_sources()
     added, unresolved = {}, []
     for item in catalog:
@@ -535,7 +722,7 @@ def build_calamity_missing(mult, pools, sets, vanilla_stats, catalog, existing):
         if name in existing:
             continue
         category = item.get("category") or ""
-        if not (category.startswith("Weapons") or category.startswith("Accessories")):
+        if not (category.startswith("Weapons") or category.startswith("Accessories")) and name not in forzar:
             continue
         if "/Vanity" in category:
             continue
@@ -600,30 +787,61 @@ def build_calamity_missing(mult, pools, sets, vanilla_stats, catalog, existing):
 
 
 # --------------------------------------------------------------------------------- main
-def main():
-    item_text = io.open(ITEM_SRC, encoding="utf-8").read()
+def generar(raiz, salida, previous, catalog, etiqueta):
+    """Una tabla completa contra UN arbol decompilado concreto. `previous` es la tabla anterior:
+    de ahi salen `prefixNames` y las entradas de Calamity que se conservan tal cual."""
+    print(f"\n=== {etiqueta}  ({raiz})")
+    item_text = io.open(os.path.join(raiz, "Item.cs"), encoding="utf-8").read()
     mult = load_prefix_multipliers(item_text)
-    print(f"{len(mult)} prefijos con multiplicadores reales (Item.TryGetPrefixStatMultipliersForItem)")
+    print(f"  {len(mult)} prefijos con multiplicadores reales (Item.TryGetPrefixStatMultipliersForItem)")
     stats = extract_vanilla_stats(item_text)
-    print(f"{len(stats)} objetos vanilla con alguna estadistica real (SetDefaults1..5)")
-    pools, sets, cannot = load_pools_and_sets()
+    print(f"  {len(stats)} objetos vanilla con alguna estadistica real (SetDefaults1..5)")
+    pools, sets, cannot = load_pools_and_sets(raiz)
 
-    previous = json.load(io.open(OUT, encoding="utf-8"))
     vanilla = build_vanilla(mult, stats, pools, sets, cannot)
-    catalog = json.load(io.open(CATALOG, encoding="utf-8"))
-    calamity = dict(previous["calamity"])
-    calamity.update(build_calamity_missing(mult, pools, sets, stats, catalog, previous["calamity"]))
+
+    # Calamity: se conservan las entradas previas, MENOS las que apuntan a un prefijo que no
+    # existe en este arbol (`>= PrefixID.Count`). Esas se recalculan con el pool real de aqui,
+    # que es exactamente para lo que sirve `build_calamity_missing`: darle como "ya existentes"
+    # solo las validas hace que rehaga justo las otras, sin tocar ni una del resto.
+    tope = max(max(p) for p in pools.values())     # el PrefixID mas alto que existe en este arbol
+    conservadas = {k: v for k, v in previous["calamity"].items() if v <= tope}
+    descartadas = len(previous["calamity"]) - len(conservadas)
+    if descartadas:
+        print(f"  calamity: {descartadas} entradas apuntaban a un prefijo inexistente en este arbol, se recalculan")
+    rehacer = set(previous["calamity"]) - set(conservadas)
+    calamity = dict(conservadas)
+    calamity.update(build_calamity_missing(mult, pools, sets, stats, catalog, conservadas, rehacer))
+    perdidas = sorted(rehacer - set(calamity))
+    if perdidas:
+        print(f"  calamity: {len(perdidas)} sin resolver en este arbol, se quedan FUERA (no se inventa valor): {perdidas}")
 
     out = {
         "prefixNames": previous["prefixNames"],
         "vanilla": {str(k): v for k, v in sorted(vanilla.items())},
         "calamity": {k: calamity[k] for k in sorted(calamity)},
     }
-    with io.open(OUT, "w", encoding="utf-8") as f:
+    with io.open(salida, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"escrito {OUT}")
-    print(f"  antes: {len(previous['vanilla'])} vanilla + {len(previous['calamity'])} Calamity")
-    print(f"  ahora: {len(out['vanilla'])} vanilla + {len(out['calamity'])} Calamity")
+    print(f"  escrito {salida}")
+    print(f"    {len(out['vanilla'])} vanilla + {len(out['calamity'])} Calamity")
+    return out
+
+
+def main():
+    previous = json.load(io.open(OUT, encoding="utf-8"))
+    catalog = json.load(io.open(CATALOG, encoding="utf-8"))
+    print(f"tabla anterior: {len(previous['vanilla'])} vanilla + {len(previous['calamity'])} Calamity")
+
+    # 1) La de la app de escritorio, contra Terraria 1.4.5.8 (sin cambios de criterio).
+    generar(VANILLA, OUT, previous, catalog, "Terraria 1.4.5.8 -> best_prefix.json (app de escritorio)")
+
+    # 2) La del MOD, contra tModLoader 1.4.4.9 - que es el juego real donde corre TerrakeepMod.
+    # No es la misma tabla: alli Magia e Invocacion comparten pool (tope 83 Mythical, no existen
+    # 85..97), y ademas varias decenas de objetos tienen estadisticas distintas (los baculos de
+    # invocacion, por ejemplo, SI gastan mana en 1.4.4.9 y no en 1.4.5.8, y eso cambia que
+    # prefijos son aplicables). Se copia tal cual a TerrakeepMod/Assets/best_prefix.json.
+    generar(TMODLOADER, OUT_TML, previous, catalog, "tModLoader 1.4.4.9 -> best_prefix_tml.json (mod)")
 
 
 if __name__ == "__main__":

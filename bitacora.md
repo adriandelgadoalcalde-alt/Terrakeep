@@ -12349,3 +12349,105 @@ cambios - ya usaba `dotnet build`/`dotnet test` genéricos sin nombrar proyectos
 Commit único (renombrado mecánico coherente, sin cambios de comportamiento) con los 5 proyectos
 + `.slnx` + `installer/` + `scripts/` + `LICENSE.md`/`CLAUDE.md`/`reference/`. No se hizo
 `git push` - queda listo en local a la espera de que el usuario decida quién lo sube.
+
+---
+
+## 8-sep-2026 — "Mejor prefijo": el generador emite DOS tablas (1.4.5.8 para la app, 1.4.4.9 para el mod) y se tapan dos huecos más de extracción
+
+**El problema real** (reportado por el usuario sobre `TerrakeepMod`): *"todos los báculos del
+juego no muestran la etiqueta de mejor prefijo posible, ni uno solo"*. Confirmado y acotado antes
+de tocar nada: eran los báculos de **INVOCACIÓN** (los de magia sí iban), 38 objetos vanilla cuyo
+nombre en español empieza casi siempre por "Báculo de…" (Báculo de slime, Báculo óptico, Báculo
+pigmeo, Terraprisma, Xenobáculo, las 9 varitas/bastones/báculos de las torres del Ejército
+Antiguo…), más 103 armas de invocación de Calamity.
+
+### La causa raíz: el generador leía el árbol de una versión del juego que NO es la del mod
+
+`best_prefix.json` se generaba solo contra `TerrariaVanilla\` (Terraria **1.4.5.8**) y se copiaba
+tal cual al mod, que corre sobre tModLoader **1.4.4.9**. A estos efectos son dos juegos distintos,
+en tres cosas que cambian el resultado de verdad:
+
+1. **El pool.** 1.4.5.8 separó `PrefixesForMagic` de `PrefixesForSummons` y añadió 85 Fabled..97;
+   en 1.4.4.9 hay un único `PrefixesForMagicAndSummons` (tope 83 Mythical) y `PrefixID.Count` es
+   85. Las 149 entradas de invocación de la tabla apuntaban a un prefijo **que no existe** en el
+   juego del mod, y `CatalogoMejorPrefijo` las descartaba con su guardarraíl de rango → ninguna
+   etiqueta. Las armas de invocación de MOD caen en el mismo pool:
+   `SummonDamageClass.GetPrefixInheritance(dc) => dc == DamageClass.Magic`, o sea
+   `ModItem.MagicPrefix()` es true para ellas y `Item.GetPrefixCategories()` las manda a
+   `PrefixCategory.Magic` (decompilado real de tModLoader 1.4.4.9).
+2. **Las estadísticas.** 289 objetos vanilla tienen stats distintas entre las dos versiones. El
+   caso que decide aquí: en 1.4.4.9 los báculos de invocación **gastan maná** y en 1.4.5.8 no, así
+   que en 1.4.4.9 los prefijos que tocan el maná sí pasan el filtro `round(mana*mcst)==mana` y
+   Mythical gana. Confirmado por fuera del código, en el historial de la wiki oficial:
+   *"Desktop 1.4.5.0: Removed mana cost (cost 10 mana previously)"* (Báculo óptico).
+3. **El pool de un objeto concreto.** `Gladius` (4463) está en `SwordsHammersAxesPicks` en 1.4.4.9
+   (mejor real 81 Legendary) y en `SpearsMacesChainsawsDrillsPunchCannon` en 1.4.5.8 (59 Godly) -
+   *"1.4.5.0: Can now only have spear-type modifiers"*, wiki oficial.
+
+**Hecho**: `scripts/generar-mejor-prefijo.py` se parametriza por árbol y emite **dos** tablas:
+`Assets/calamity/best_prefix.json` (1.4.5.8, la app de escritorio, criterio intacto) y
+`Assets/calamity/best_prefix_tml.json` (1.4.4.9, que se copia tal cual a
+`TerrakeepMod/Assets/best_prefix.json`). `load_pools_and_sets(raiz)` detecta sola la versión por
+la presencia de `PrefixesForMagicAndSummons`. En la tabla de 1.4.4.9 las entradas de Calamity se
+conservan tal cual salvo las que apuntan a un prefijo inexistente allí (las 103 de invocación),
+que se rehacen con el pool real - para eso hizo falta un `forzar` en `build_calamity_missing`
+(`WulfrumFusionCannon` está catalogado como `Armor/Wulfrum`, no como arma, y se habría perdido).
+
+### Dos huecos MÁS de extracción, encontrados en la auditoría amplia (el mismo tipo de fallo que `SetWeaponValues`)
+
+- **Bloques `if (type >= A && type <= B) { … return; }`** antes del `switch (type)`: son la única
+  definición de esos objetos, no hay ningún `case` para ellos. El `outer` heredado por el switch
+  siguiente se los tragaba ENTEROS, con dos efectos a la vez: esos ids quedaban fuera de la tabla,
+  y su `accessory = true;` se le pegaba a los `case` de detrás. Resultado medido: **8 accesorios
+  reales sin entrada** (2214..2217 Paleta / Agarre extendido / Spray de pintura / Hormigonera
+  portátil, y 3309..3314, los seis contrapesos de yoyó) y **56 falsos positivos** (muebles
+  dinásticos, las 15 bolsas del tesoro, bloques y paredes de arenisca, la ropa de vanidad de
+  obsidiana, el Marco…), objetos que en el juego real no admiten prefijo ninguno y a los que la
+  app ofrecía "Amenazante". Arreglado con `strip_nested_blocks()` (heredar solo el nivel superior)
+  + `extract_if_type_stats()` (pasada nueva que sí resuelve esos bloques, con las tres formas
+  cerradas reales: `type == N`, `type == A || type == B…`, `type >= A && type <= B`; cualquier
+  otra se ignora a propósito, no se adivina).
+- **Helper `DefaultToGolfBall(proj)`**, que pone `accessory = true`: las 16 pelotas de golf
+  (3989, 4242..4255) son accesorios reales que el motor SÍ deja prefijar - lo dice
+  `Item.CanHavePrefixes()` en el juego, no una suposición.
+- **Filtro que faltaba**: `Item.CanHavePrefixes()` real es `if (damage <= 0) return
+  IsAPrefixableAccessory();`. Estar en un set de arma no basta. Único caso vanilla en las dos
+  versiones: la **Pistola de monedas** (905, `damage = 0;` literal, su daño sale de la moneda que
+  dispara); el motor devuelve `false` para ella de verdad.
+
+### Verificado contra la wiki ANTES de generar (mismo criterio que al construir el generador)
+
+Con revisiones de la wiki oficial **anteriores a 1.4.5** (vía `api.php`, `rvstart=2025-06-01`),
+que son las que describen el juego del mod:
+
+| objeto | calculado (1.4.4.9) | wiki, revisión pre-1.4.5, cita literal |
+|---|---|---|
+| Báculo de slime (1309) | 83 Mythical | *"its best possible modifier is **Mythical**"* |
+| Báculo óptico (2535) | 83 Mythical | *"Its best modifiers are **Mythical**, Furious, or Godly"* |
+| Báculo de cuchillas (4758) | 60 Demonic | *"Its best modifiers are **Demonic**, Deadly, Mystic, or Hurtful"* (retroceso 0 real) |
+| Gladius (4463) | 81 Legendary | *"1.4.5.0: Can now only have spear-type modifiers"* (antes, de espada) |
+| armas de invocación | pool de magia | *"Added 13 new modifiers… exclusively obtainable by summon weapons, **which previously shared modifiers with magic weapons**"* (1.4.5.0) |
+| Spray de pintura (2216) | admite prefijo | *"The Paint Sprayer is an **accessory** that…"* |
+
+### Cobertura real, antes y después
+
+| | antes | ahora (1.4.5.8, app) | ahora (1.4.4.9, mod) |
+|---|---|---|---|
+| vanilla | 948 | **916** | **826** |
+| Calamity | 1019 | 1019 | 1019 |
+
+En la tabla de la app: −56 falsos positivos, −1 Pistola de monedas, +8 accesorios de los bloques
+`if (type…)`, +16 pelotas de golf, 0 valores cambiados de los que ya estaban bien. La de 1.4.4.9
+tiene 826 en vez de 916 porque 89 ids de 1.4.5 no existen en 1.4.4.9 y el Cojín flatulento (215)
+allí todavía no es accesorio (lo pasó a serlo 1.4.5 con `DefaultToVoiceOverrideAccessory`); de las
+comunes, 39 cambian de valor (37 de invocación 85→83, Gladius 59→81, Báculo de cuchillas 95→60).
+
+El script sigue siendo **idempotente**: dos ejecuciones seguidas no cambian ni un byte de ninguna
+de las dos salidas (comprobado con `md5sum`).
+
+**Nota para la app de escritorio, no tocada aquí**: su tabla sigue siendo la de 1.4.5.8, que es lo
+que ya estaba decidido. Pero conviene saber que Terrakeep edita sobre todo `.plr`/`.tplr` de
+tModLoader 1.4.4.9, donde un prefijo 85..97 no existe - si algún día se quiere que el botón ★ de
+la app respete la versión del guardado abierto, la tabla de 1.4.4.9 ya está generada y al día
+(`best_prefix_tml.json`). No se ha cambiado el comportamiento de la app porque eso es una decisión
+de producto, no un arreglo.
