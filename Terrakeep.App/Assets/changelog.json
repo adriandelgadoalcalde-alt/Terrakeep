@@ -1,5 +1,26 @@
 [
   {
+    "version": "2.4.0",
+    "date": "8 de septiembre de 2026",
+    "date_en": "September 8, 2026",
+    "summary": "El botón ★ de mejor prefijo ya distingue si el guardado abierto es de Terraria vainilla o de tModLoader y usa la tabla real de cada motor, y la Librería > Categorías deja de repartir los objetos en páginas ciegas de 40 en 40: cada carpeta agrupa ahora por el tipo real del objeto (arcos, armas de fuego, espadas, picos, colocables por tipo, etc.), derivado del propio código del juego.",
+    "summary_en": "The best-prefix ★ button now tells whether the open save is vanilla Terraria or tModLoader and uses the real table for each engine, and Library > Categories no longer splits items into blind 40-item pages: every folder now groups by the item's real type (bows, guns, swords, pickaxes, placeables by kind, and so on), derived from the game's own code.",
+    "added": [
+      "El botón ★ (mejor prefijo posible) ya sabe si el personaje abierto viene de una carpeta de Terraria vainilla (1.4.5.8) o de tModLoader (1.4.4.9) y usa la tabla real de ese motor - antes podía sugerir un prefijo que el motor del guardado abierto ni siquiera tiene (p.ej. algunos prefijos de invocación).",
+      "Librería > Categorías: las cinco ramas (Armas, Equipable, Herramientas, Colocable y Paredes) se reorganizan por el tipo real del objeto en vez de por páginas numeradas sin criterio - derivado del código real del juego (munición usada, estilo de proyectil, ranura de equipo, tipo de bloque/pared), nunca a mano."
+    ],
+    "added_en": [
+      "The best-prefix ★ button now knows whether the loaded character came from a vanilla Terraria (1.4.5.8) or a tModLoader (1.4.4.9) folder, and uses that engine's real table - it used to be able to suggest a prefix the open save's engine doesn't even have (some summon-weapon prefixes, for example).",
+      "Library > Categories: all five branches (Weapons, Equipable, Tools, Placeable and Walls) are now grouped by the item's real type instead of arbitrary numbered pages - derived from the game's own code (ammo used, projectile style, equip slot, tile/wall kind), never assigned by hand."
+    ],
+    "fixed": [
+      "Los báculos de invocación no mostraban ninguna sugerencia de mejor prefijo: la tabla se había generado contra la versión de Terraria equivocada para el motor que de verdad usa la mayoría de guardados abiertos aquí (tModLoader)."
+    ],
+    "fixed_en": [
+      "Summon staves showed no best-prefix suggestion at all: the table had been generated against the wrong Terraria version for the engine that actually loads most of the saves opened here (tModLoader)."
+    ]
+  },
+  {
     "version": "2.3.0",
     "date": "6 de septiembre de 2026",
     "date_en": "September 6, 2026",

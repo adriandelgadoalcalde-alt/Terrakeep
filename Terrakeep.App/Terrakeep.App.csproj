@@ -53,9 +53,9 @@
     <Copyright>Copyright © 2026 IncrediBad</Copyright>
     <!-- Real, sincronizada a mano con la version mas reciente de Assets/changelog.json - antes
          no se fijaba y caia al 1.0.0.0 por defecto de .NET, sin significar nada real. -->
-    <Version>2.3.0</Version>
-    <FileVersion>2.3.0.0</FileVersion>
-    <AssemblyVersion>2.3.0.0</AssemblyVersion>
+    <Version>2.4.0</Version>
+    <FileVersion>2.4.0.0</FileVersion>
+    <AssemblyVersion>2.4.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de
