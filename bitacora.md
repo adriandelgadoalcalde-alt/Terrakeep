@@ -12497,3 +12497,133 @@ RESULTADO: OK
 Solo `Terrakeep.App/Services/CharacterFileService.cs` tocado. `best_prefix_tml.json` ya vivía en
 `Assets/calamity/` desde el trabajo de hoy en `TerrakeepMod` y ya lo copiaba el `.csproj` (glob
 `Assets\**\*.json`), así que no hizo falta tocar el `.csproj`.
+
+---
+
+## 8-sep-2026 — La rama "Categorías" de la Librería se organiza por el TIPO REAL del objeto (no de 40 en 40 por id)
+
+**El problema, tal cual lo reportó el usuario con captura** (probando `TerrakeepMod`, pero el árbol
+es el mismo que enseña la app de escritorio): dentro de la carpeta raíz "Categorías", cada carpeta
+hoja se partía en *"Página 1"*, *"Página 2"*… y **el icono de cada página es el primer objeto de su
+lista**, así que la página aparentaba representar un tipo de arma concreto — un arco, un pico —
+cuando dentro había de todo: *"da igual qué página cliques, después no está ordenado; dentro de
+picos te encuentras espadas"*. Luego amplió el encargo a **toda** la rama: *"dentro de 'categorias'
+también están equipable, herramientas, colocable y paredes; todo eso también debe organizarse"*.
+
+**No era un fallo**: es el comportamiento fiel del Terrasavr original — `Hc.deploy` parte cualquier
+hoja de más de 40 objetos en páginas **por orden de id**, sin ningún criterio de tipo, y el icono
+coincide con el tipo del primer objeto por pura casualidad. Lo que se pide es ir más allá de lo que
+hacía el original.
+
+### Lo nuevo: `scripts/extraer-subtipos-libreria-vanilla.py`
+
+Deriva el subtipo real de cada objeto vanilla **leyendo el código decompilado real de Terraria
+1.4.5.8**, que es la versión de la que salió el árbol curado. Nada se clasifica a mano:
+
+| Qué separa | Dato real del juego |
+|---|---|
+| arcos / armas de fuego / lanzadores / armas de dardos | `Item.useAmmo` (flecha, bala, cohete, dardo) |
+| flechas / balas / cohetes / dardos / bengalas | `Item.ammo` |
+| lanzas, mayales, bumeranes, yoyós, espadas cortas | el **`aiStyle` real del proyectil** que dispara el arma, sacado de `Projectile.SetDefaults` (19 lanza, 15/13/69 mayal, 3 bumerán, 99 yoyó, 161 espada corta, 141 lanza de justa) |
+| espadas | `PrefixLegacy.ItemSets.SwordsHammersAxesPicks` (el set con el que el propio juego reparte prefijos), menos lo que tenga poder de pico/hacha/martillo |
+| picos, taladros, motosierras, hachas, hachas-martillo, picos hacha | `Item.pick`/`axe`/`hammer` + `ItemID.Sets.IsDrill`/`IsChainsaw` |
+| cabeza / cuerpo / piernas / accesorio | `Item.headSlot`/`bodySlot`/`legSlot`/`accessory` |
+| alas, botas, globos, escudos, collares, cara, guantes, espalda, cinturones | los doce **slots visuales** reales del accesorio (`wingSlot`, `shoeSlot`, `balloonSlot`…) |
+| accesorios informativos | el helper real `Item.DefaultToInfoAccessory()` |
+| tintes de pelo | `DyeInitializer`, vía el `hair_dyes.json` ya extraído en su día |
+| bloques vs muebles | `Main.tileFrameImportant` del tile que coloca |
+| estandartes, cuadros, cofres, plataformas, antorchas, hogueras, estatuas, cajas de música, sillas, camas, puertas… | el **tile real** que coloca (`Item.createTile`) y su nombre real (`tile_names.json`, el mismo dato del Explorador del Mundo) |
+
+Tres decisiones de fondo, para no repetirlas:
+
+1. **Reutiliza el escáner de `Item.cs` de `generar-mejor-prefijo.py`** (bloques `case N:` con
+   herencia del nivel superior, switches anidados a cualquier profundidad, bloques
+   `if (type >= A && type <= B)` y la redirección `SetDefaults3(2772)`) importándolo con
+   `importlib`, en vez de copiar 200 líneas de parseo que acabarían divergiendo.
+2. **Los helpers `DefaultTo*` se resuelven solos**: se lee el CUERPO real de cada uno de los 33 y
+   se construye la tabla "qué campo fija y con qué argumento", siguiendo las llamadas encadenadas
+   (`DefaultToBanner` → `DefaultToPlaceableTile(91, estilo)` → `createTile = 91`). Escribirla a
+   mano habría sido otra lista que mantener.
+3. Hicieron falta **dos formas cerradas más** que el escáner anterior no resolvía:
+   `createTile = 262 + type - 1970;` y `headSlot = type + 146 - 2104;`. Sin ellas se quedaban sin
+   clasificar 120 colocables reales (bloques Gemspark, jaulas de bicho, bloques de fragmento y de
+   equipo) y las 12 máscaras de jefe.
+
+Lo que no tiene un campo o un set unívoco **no se fuerza**: cae en un "Otros…" con nombre honesto
+(el mayor es "Otros colocables", 442 de 3219).
+
+### Lo que cambia en el árbol (`vanilla_library_tree.json`)
+
+`extraer-arbol-libreria-vanilla.js` sigue reconstruyendo el árbol real ejecutando el `Hc.deploy`
+del `script.js` de verdad, y **después** reorganiza 13 carpetas de "Categorías" con esa tabla. El
+resto del árbol (Materials, Decorative, Items by ID…) no se toca. En la versión de la app (1.4.5.8,
+sin podar):
+
+- **Melee damage (316)** → 14 carpetas: Espadas 111, Lanzas 18, Mayales 15, Yoyós 21, Bumeranes 17,
+  Otras armas cuerpo a cuerpo 16, Otras armas con munición 1, Picos 29, Taladros 12, Picos hacha 3,
+  Hachas 24, Motosierras 13, Hachas-martillo 9, Martillos 27.
+- **Ranged damage (180)** → 13: Arcos 41, Armas de fuego 24, Lanzadores 7, Armas de dardos 4, Otras
+  armas con munición 12, Armas sin munición 5, Armas arrojadizas 27, Flechas 15, Balas 16,
+  Cohetes 12, Dardos 5, Bengalas 6, Otra munición 6.
+- **Placeable (3219)** → 38: Bloques 282, Estandartes 316, Cuadros 243, Cofres 222, Cajas de música
+  99, Jaulas de bicho 93, Estatuas 82, Plataformas 76 … y Otros colocables 442.
+- **Armor (256)** → Cabeza/Cuerpo/Piernas. **Accessories (321)** → 11 por ranura visual.
+  **Vanity (555)** → Cabeza/Cuerpo/Piernas/Accesorio. **Head/Body/Leg slot** → Armadura/Vanidad.
+  **Dyes (130)** → Tintes 118 / Tintes de pelo 12. **Tools** → Picos/Taladros/Picos hacha,
+  Hachas/Motosierras/Hachas-martillo, Martillos/Hachas-martillo.
+
+Un subgrupo de más de 40 objetos se sigue paginando **por dentro** ("Espadas (111) > Page 1..3"),
+con el mismo tope real de 40 de Terrasavr, pero ya nunca mezclando tipos - y el icono de cada
+página es siempre del tipo que toca, porque todos sus objetos lo son.
+
+### Las dos ramas revisadas que se dejan como estaban (límite real, no dejadez)
+
+- **Magic damage (76)**: no hay ningún campo ni set en el juego que separe los tipos de arma mágica
+  (báculos, libros, pistolas mágicas…); cada proyectil mágico tiene su propio `aiStyle` y agrupar
+  por él daría 40 carpetas de un objeto. Se queda paginada.
+- **Walls (292)**: todos sus objetos son paredes, o sea que el icono de la página ya es una pared y
+  no hay ninguna falsa impresión que arreglar. Los sets reales que existen
+  (`WallID.Sets.Fences` 12, `Glass` 10, `Main.wallHouse`) dejarían un "Otras paredes" de ~250.
+
+### Etiquetas
+
+`extraer-etiquetas-libreria-es.js` sigue sacando las 258 etiquetas reales del `lib.item` de
+Terrasavr y ahora **añade las 78 nuevas** que hacen falta para estas carpetas, con la misma forma
+de plantilla (`"Swords ($1)"` → `"Espadas ($1)"`) que ya usa todo el árbol. Ninguna clave anterior
+cambia (comprobado con diff contra `git show HEAD:`). El español está apoyado en los nombres REALES
+de objeto del juego (Pico de cobre, Taladro de cobalto, Motosierra de cobalto, Hacha-martillo de
+meteorito, Pico hacha, Yoyó de madera, Bumerán de madera, Arco de madera, Bala de mosquete,
+Cohete I, Dardo venenoso, Bengala, Estandarte de conejito, Caja de música, Lápida, Lingote de
+cobre, Retrete, Bañera, Candelabro, Lámpara araña de cobre, Cama, Piano, Banco de trabajo, Mesa de
+madera, Silla de madera, Puerta de madera, Plataforma de madera, Estatua de ángel…). Dos
+decisiones anotadas a propósito: **"Mayales"** para los *flails* (el juego en español no tiene un
+término único: usa "Flagelo" en dos nombres y "Maza" en otros, y "mayal" es el que usa la wiki
+española para la clase) y **"Estanterías"** en vez de "Librerías" (que es el nombre real del objeto
+*Bookcase*, pero dentro del panel "Librería" se lee fatal).
+
+### Verificación
+
+- Los **tres generadores son idempotentes**: dos pasadas seguidas dejan los tres `.json` con el
+  mismo `md5`.
+- **25 pruebas nuevas** (`LibraryTreeSubtypesTests`) contra el JSON real: 22 objetos conocidos en su
+  subtipo (Excalibur y La Cenit en Espadas, Terrarian en Yoyós, Minishark y S.D.M.G. en Armas de
+  fuego, Arco de madera en Arcos, Lanzacohetes en Lanzadores, Pico de cobre en Picos, Taladro de
+  cobalto en Taladros, Bloque de tierra en Bloques…), ninguna página suelta colgando de una carpeta
+  reorganizada, ningún objeto perdido ni duplicado (316 / 180 / 3219 exactos) y traducción real de
+  todas las carpetas nuevas.
+- `dotnet test Terrakeep.Core.Tests`: **475/475**. `Terrakeep.App.ViewModels.Tests`: **445/445**.
+- Barrido de maquetación real de la app (`AR14_SOLO=1 AR_LAY_SOLO=Personaje/Equipamiento`, que es la
+  pantalla que lleva el panel de la Librería): **26 combinaciones tamaño × idioma, 3295 elementos,
+  0 contenido perdido, 0 solapes, 0 textos truncados**.
+- En el juego real, en el repo hermano: ver su bitácora. Resumen: 89 carpetas y 8927 comprobaciones
+  objeto a objeto contra el `Item` que carga tModLoader, y de las carpetas nuevas **solo 3 objetos
+  no cumplen** — los tres, diferencias reales entre 1.4.5.8 y 1.4.4.9 (Llave-espada, que en 1.4.5
+  pasó a lanzar un proyectil de bumerán; Cojín flatulento, que allí todavía no es accesorio;
+  Sudadera del muerto, que allí es vanidad).
+
+### Un caso frontera que se deja tal cual, dicho claro
+
+El **Lanzacervezas** (3821) sale como "Otras armas con munición (1)" dentro de "Daño cuerpo a
+cuerpo". No es un error de extracción: el `metatype` curado de Terrasavr lo pone en cuerpo a cuerpo
+y el juego real dice `ranged = true` con `useAmmo = 353` (jarras de cerveza). Se respeta lo que dice
+el juego; la carpeta es de un solo objeto y su nombre es cierto.
