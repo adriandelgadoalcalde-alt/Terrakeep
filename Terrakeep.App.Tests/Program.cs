@@ -5901,13 +5901,16 @@ internal static partial class Program
                     new PlrCharacter { Version = 279, Name = "Homonimo", PrimaryLoadout = PlrLoadout.CreateEmpty(true) },
                     null, []);
 
+                // BK (13-sep-2026): el snapshot ya no son ficheros sueltos sino un contenedor
+                // .tkbak - el tamaño real del .plr fotografiado se lee de dentro (ReadPlrBytes),
+                // que es ademas lo que de verdad importa comprobar aqui.
                 var backups = new BackupHistoryService();
-                backups.SaveBackup(Cargado(pjA));
-                backups.SaveBackup(Cargado(pjB));
+                backups.SaveBackup(Cargado(pjA), BackupReason.Manual);
+                backups.SaveBackup(Cargado(pjB), BackupReason.Manual);
                 int deA = backups.ListBackups(pjA).Count;
                 int deB = backups.ListBackups(pjB).Count;
-                long tamañoDeA = deA > 0 ? new FileInfo(backups.ListBackups(pjA)[0].PlrPath).Length : -1;
-                long tamañoDeB = deB > 0 ? new FileInfo(backups.ListBackups(pjB)[0].PlrPath).Length : -1;
+                long tamañoDeA = deA > 0 ? backups.ReadPlrBytes(backups.ListBackups(pjA)[0]).LongLength : -1;
+                long tamañoDeB = deB > 0 ? backups.ReadPlrBytes(backups.ListBackups(pjB)[0]).LongLength : -1;
                 bool ok = deA == 1 && deB == 1 && tamañoDeA == 4 && tamañoDeB == 6;
                 Console.WriteLine($"A10-BACKUPS-HOMONIMOS: dos personajes distintos llamados igual -> copias vistas por A={deA} (esperado 1), por B={deB} (esperado 1), tamaño de la copia de A={tamañoDeA} (esperado 4), de B={tamañoDeB} (esperado 6)");
                 if (!ok) Console.WriteLine("FALLO: A10-BACKUPS-HOMONIMOS - dos personajes distintos con el mismo nombre comparten historial de copias (restaurar uno pisaria al otro)");

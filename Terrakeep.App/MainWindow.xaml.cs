@@ -162,6 +162,14 @@ public partial class MainWindow : Window
             OnLoadClick(this, new RoutedEventArgs());
             e.Handled = true;
         }
+        // BK (13-sep-2026): Ctrl+H abre el historial de versiones del personaje cargado. H de
+        // "historial"/"history" en los dos idiomas, y estaba libre (ver la lista real de atajos
+        // ya usados en este mismo metodo).
+        else if (ctrl && e.Key == Key.H)
+        {
+            if (_viewModel.OpenBackupHistoryCommand.CanExecute(null)) _viewModel.OpenBackupHistoryCommand.Execute(null);
+            e.Handled = true;
+        }
         else if (ctrl && e.Key == Key.Z)
         {
             // H5-01 (quinta auditoria de Opus): Ctrl+Z real para el historial de deshacer de
@@ -200,7 +208,11 @@ public partial class MainWindow : Window
             // F-17 (auditoria de Opus vs TEdit, B-05): comprobado que StaysOpen="False" por si
             // solo NO cierra un Popup de WPF con Escape (hace falta codigo propio) - antes de
             // esto no habia ningun manejador que cerrara WhereIsItPopup con esta tecla.
-            if (_viewModel.IsWhereIsItOpen) _viewModel.IsWhereIsItOpen = false;
+            // BK (13-sep-2026): el panel de historial es lo mas "modal" que hay en esta ventana
+            // (velo opaco que bloquea el editor de detras) - si esta abierto, Escape es suyo
+            // antes que de nada, que es lo que espera cualquiera.
+            if (_viewModel.BackupHistory.IsOpen) _viewModel.BackupHistory.CloseCommand.Execute(null);
+            else if (_viewModel.IsWhereIsItOpen) _viewModel.IsWhereIsItOpen = false;
             else if (_viewModel.Library.IsPicking) _viewModel.Library.CancelPickCommand.Execute(null);
             else if (_viewModel.BuffLibrary.IsPicking) _viewModel.BuffLibrary.CancelPickCommand.Execute(null);
             else return; // nada real que cancelar - no consumir la tecla (ej. cerrar un ComboBox abierto)
@@ -435,39 +447,6 @@ public partial class MainWindow : Window
         if (sender is not FrameworkElement { DataContext: WorldListEntryViewModel entry }) return;
         await LoadWorldAndRestoreView(entry.FilePath);
     }
-
-    // H5-04 (quinta auditoria de Opus): el submenu "Historial de guardados" de la tarjeta de
-    // Inicio se puebla AQUI, bajo demanda al abrirse (nunca al escanear Inicio - seria I/O de
-    // sobra para personajes que el usuario nunca llega a mirar). El ContextMenu es un popup
-    // aparte del arbol visual de la ventana (mismo motivo real que el resto de MenuItem de esta
-    // tarjeta ya viajan HomeViewModel/la entrada via PlacementTarget.Tag/.DataContext en vez de
-    // heredar el DataContext normal) - aqui el "submenu" en si (el MenuItem padre) SI es
-    // logicamente hijo directo del propio ContextMenu, asi que Parent llega derecho a el.
-    private void OnBackupHistorySubmenuOpened(object sender, RoutedEventArgs e)
-    {
-        if (sender is not MenuItem submenu) return;
-        if (submenu.Parent is not ContextMenu contextMenu) return;
-        if (contextMenu.PlacementTarget is not FrameworkElement placementTarget) return;
-        if (placementTarget.DataContext is not CharacterListEntryViewModel entry) return;
-        if (placementTarget.Tag is not HomeViewModel home) return;
-
-        submenu.Items.Clear();
-        var backups = home.ListBackupPoints(entry);
-        if (backups.Count == 0)
-        {
-            submenu.Items.Add(new MenuItem { Header = Loc["dlg_no_backups_yet"], IsEnabled = false });
-            return;
-        }
-        foreach (var backup in backups)
-        {
-            var item = new MenuItem { Header = $"{backup.TimestampLocal:dd/MM/yyyy HH:mm:ss} · {FormatBackupSize(backup.SizeBytes)}" };
-            item.Click += (_, _) => home.RestoreBackupPointCommand.Execute((entry, backup));
-            submenu.Items.Add(item);
-        }
-    }
-
-    private static string FormatBackupSize(long bytes) =>
-        bytes >= 1024 * 1024 ? $"{bytes / (1024.0 * 1024.0):0.0} MB" : $"{bytes / 1024.0:0.0} KB";
 
     // H5-03 (quinta auditoria de Opus): "guardar/cargar conjuntos de objetos" - el dialogo real
     // de fichero vive aqui (MainViewModel es headless de verdad, mismo criterio ya establecido

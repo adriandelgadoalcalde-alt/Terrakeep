@@ -455,40 +455,21 @@ public partial class HomeViewModel : ObservableObject
     }
 
     // H5-04 (quinta auditoria de Opus): "un panel 'Historial de guardados'... con fecha, tamaño
-    // y un boton por punto - para restaurar cualquiera, no solo el ultimo". Se consulta bajo
-    // demanda (al abrir el submenu real, ver MainWindow.xaml.cs) - no al escanear Inicio, seria
-    // I/O de sobra para personajes que el usuario nunca llega a abrir el menu contextual.
-    public IReadOnlyList<BackupEntry> ListBackupPoints(CharacterListEntryViewModel entry) =>
-        _backupHistory.ListBackups(entry.FilePath);
+    // y un boton por punto - para restaurar cualquiera, no solo el ultimo".
+    //
+    // BK (13-sep-2026): esto era un SUBMENU que restauraba con un solo clic, sin ninguna
+    // confirmacion, sobre una linea que solo decia fecha y tamaño. Ahora la tarjeta solo ABRE el
+    // panel real (BackupHistoryViewModel) - elegir y confirmar la version pasa a ocurrir ahi,
+    // donde cada punto se lee de verdad (resumen del personaje) y sobrescribir el fichero pide
+    // una confirmacion explicita. MainViewModel es quien conoce el panel; Inicio solo avisa.
+    public event Action<string, string>? BackupHistoryRequested;
 
     [RelayCommand]
-    private void RestoreBackupPoint((CharacterListEntryViewModel Entry, BackupEntry Backup) args)
-    {
-        var (entry, backup) = args;
-        try
-        {
-            // INI-08: misma red de seguridad que RestoreBackup - un punto del historial tambien
-            // puede estar truncado, y restaurarlo destruiria el personaje bueno igual de rapido.
-            if (!EsUnPlrLegible(backup.PlrPath))
-            {
-                SetActionError("error_backup_unreadable", entry.Name);
-                return;
-            }
-            _backupHistory.Restore(entry.FilePath, null, backup);
-            // INI-10: esta accion SI tuvo exito, asi que apaga el aviso de la anterior (el
-            // escaneo ya no lo hace por su cuenta - ver el comentario de LimpiarMensajeDeEscaneo).
-            ClearScanMessage();
-            _ = RefreshAsync(); // T-G: mismo criterio real que el constructor, fire-and-forget
+    private void ShowBackupHistory(CharacterListEntryViewModel entry) =>
+        BackupHistoryRequested?.Invoke(entry.FilePath, entry.Name);
 
-            // H3-04: mismo aviso real a MainViewModel que RestoreBackup de arriba - si el
-            // personaje restaurado es el que esta cargado ahora mismo, el editor no debe seguir
-            // mostrando el estado antiguo en memoria.
-            if (_currentPath != null && string.Equals(_currentPath, entry.FilePath, StringComparison.OrdinalIgnoreCase))
-                CharacterChosen?.Invoke(entry.FilePath);
-        }
-        catch (Exception ex)
-        {
-            SetActionError("error_restoring_backup_dated", backup.TimestampLocal.ToString("dd/MM/yyyy HH:mm:ss"), ex.Message);
-        }
-    }
+    // Sigue existiendo (el panel la usa por dentro via BackupHistoryService) - se mantiene aqui
+    // porque varias pruebas reales la usan como via de consulta sin montar el panel entero.
+    public IReadOnlyList<BackupEntry> ListBackupPoints(CharacterListEntryViewModel entry) =>
+        _backupHistory.ListBackups(entry.FilePath);
 }

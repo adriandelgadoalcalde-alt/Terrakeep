@@ -1220,15 +1220,14 @@
                                   Command="{Binding PlacementTarget.Tag.RestoreBackupCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   ToolTip="{Binding Loc[tt_restore_last_backup], Mode=OneWay}" />
-                        <!-- H5-04 (quinta auditoria de Opus): "un panel 'Historial de guardados'...
-                             con fecha, tamaño y un boton por punto - para restaurar cualquiera,
-                             no solo el ultimo". Submenu real, poblado bajo demanda al abrirlo
-                             (OnBackupHistorySubmenuOpened) - un item "placeholder" es
-                             obligatorio para que WPF dibuje la flecha de despliegue y dispare
-                             SubmenuOpened; se sustituye entero por la lista real. -->
-                        <MenuItem Header="{Binding Loc[action_save_history], Mode=OneWay}" SubmenuOpened="OnBackupHistorySubmenuOpened">
-                            <MenuItem Header="{Binding Loc[label_loading_ellipsis], Mode=OneWay}" IsEnabled="False" />
-                        </MenuItem>
+                        <!-- H5-04 / BK (13-sep-2026): antes era un SUBMENU que restauraba con un
+                             solo clic de menu, sin confirmacion y sin decir que habia dentro de
+                             cada version. Ahora abre el panel real de historial (ver el overlay
+                             "Historial de versiones" mas abajo en este mismo fichero), donde cada
+                             punto lleva su resumen legible y sobrescribir pide confirmacion. -->
+                        <MenuItem Header="{Binding Loc[action_save_history], Mode=OneWay}"
+                                  Command="{Binding PlacementTarget.Tag.ShowBackupHistoryCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                     </ContextMenu>
                 </Border.ContextMenu>
                 <Border.Style>
@@ -1757,6 +1756,12 @@
                          desde la propia UI, sin ir a buscarlo a mano al Explorador de archivos. -->
                     <Button Content="{Binding Loc[action_undo_last_save], Mode=OneWay}" Margin="10,0,0,0" Command="{Binding UndoLastSaveCommand}"
                             ToolTip="{Binding Loc[tt_undo_last_save], Mode=OneWay}" />
+                    <!-- BK (13-sep-2026): "Deshacer ultimo guardado" es UN nivel (el .bak); esto
+                         abre el historial COMPLETO de versiones del personaje cargado, sin tener
+                         que volver a Inicio a buscar su tarjeta. Ctrl+H. -->
+                    <Button x:Name="BackupHistoryButton" Content="{Binding Loc[action_save_history], Mode=OneWay}" Margin="8,0,0,0"
+                            Command="{Binding OpenBackupHistoryCommand}"
+                            ToolTip="{Binding Loc[tt_backup_history], Mode=OneWay}" />
                     <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4" />
                     <Button Content="{Binding Loc[action_save], Mode=OneWay}" Tag="Orange" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
                 </WrapPanel>
@@ -5671,6 +5676,159 @@
                         Command="{Binding DismissGlobalErrorCommand}" ToolTip="{Binding Loc[close_notice_tooltip], Mode=OneWay}" />
             </StackPanel>
         </Border>
+
+        <!-- ============ BK (13-sep-2026): PANEL REAL DE HISTORIAL DE VERSIONES ============
+             Encargo "historial de copias de seguridad con versiones reales". Sustituye al
+             submenu del menu contextual de Inicio (H5-04), que restauraba con UN clic de menu,
+             sin confirmacion, sobre una linea que solo decia "fecha · tamaño".
+
+             Es un overlay a nivel de ventana (hermano del TabControl raiz, igual que los dos
+             banners de arriba) y no una ventana aparte a proposito: se abre tanto desde la
+             cabecera global (personaje cargado) como desde la tarjeta de CUALQUIER personaje en
+             Inicio, y una ventana modal aparte obligaria a duplicar el tema/los converters y a
+             perder el sitio en el que estabas.
+
+             El velo de fondo SI intercepta el raton (a diferencia del banner verde, que es
+             IsHitTestVisible=False): mientras el panel esta abierto lo que se va a hacer es
+             sobrescribir un fichero real, no conviene poder tocar el editor por detras. -->
+        <Grid Panel.ZIndex="200" Background="#CC0B0D16"
+              Visibility="{Binding BackupHistory.IsOpen, Converter={StaticResource BoolToVis}}">
+            <Grid.InputBindings>
+                <MouseBinding MouseAction="LeftClick" Command="{Binding BackupHistory.CloseCommand}" />
+            </Grid.InputBindings>
+            <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource BorderStrongBrush}"
+                    BorderThickness="1" CornerRadius="12" Effect="{StaticResource CardShadowHover}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Width="820" MaxWidth="900" MaxHeight="640" Margin="20">
+                <!-- Un clic DENTRO del panel no debe cerrarlo (el velo de fuera si) - un
+                     MouseBinding vacio no existe, asi que se traga el evento a mano. -->
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding BackupHistory.NoopCommand}" />
+                </Border.InputBindings>
+                <Grid Margin="20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Cabecera -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <StackPanel HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding Loc[backup_panel_title], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="19" />
+                            <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left">
+                                <Run Text="{Binding BackupHistory.CharacterName, Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                                <Run Text="{Binding Loc[backup_panel_subtitle], Mode=OneWay}" />
+                            </TextBlock>
+                        </StackPanel>
+                        <Button Content="✕" Style="{StaticResource CircleCloseButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Command="{Binding BackupHistory.CloseCommand}" ToolTip="{Binding Loc[close_notice_tooltip], Mode=OneWay}" />
+                    </Grid>
+
+                    <!-- Mensaje de resultado de la ultima accion (restaurado / copia creada /
+                         error). Verde-azulado si fue bien, rojo Calamity si fallo - mismo
+                         criterio de color que los dos banners globales de arriba. -->
+                    <Border Grid.Row="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,10"
+                            Visibility="{Binding BackupHistory.StatusText, Converter={StaticResource EmptyToCollapsed}}">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{StaticResource TealGradientBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding BackupHistory.StatusIsError}" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource CalamityBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="{Binding BackupHistory.StatusText}" Foreground="White" TextWrapping="Wrap" FontSize="12.5" />
+                    </Border>
+
+                    <!-- Lista de versiones -->
+                    <Border Grid.Row="2" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" BorderThickness="1"
+                            BorderBrush="{StaticResource BorderBrush0}">
+                        <Grid>
+                            <TextBlock Text="{Binding Loc[backup_empty], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                       TextWrapping="Wrap" Margin="20" MaxWidth="520"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                                       Visibility="{Binding BackupHistory.IsEmpty, Converter={StaticResource BoolToVis}}" />
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4"
+                                          Visibility="{Binding BackupHistory.IsEmpty, Converter={StaticResource InverseBoolToVis}}">
+                                <ItemsControl x:Name="BackupPointsList" ItemsSource="{Binding BackupHistory.Points}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:BackupPointViewModel}">
+                                            <Border Margin="4,3" Padding="12,9" CornerRadius="8"
+                                                    Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
+                                                    BorderBrush="{StaticResource BorderBrush0}">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding WhenText}" Style="{StaticResource BodyText}" FontWeight="SemiBold" />
+                                                            <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                                    Background="{StaticResource AccentMutedBrush}">
+                                                                <TextBlock Text="{Binding ReasonText}" FontSize="10.5" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                            </Border>
+                                                            <TextBlock Text="{Binding SizeText}" Style="{StaticResource CaptionText}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding SummaryText}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                                    </StackPanel>
+
+                                                    <!-- Boton normal: solo PIDE la confirmacion, nunca restaura de golpe. -->
+                                                    <Button Grid.Column="1" Content="{Binding Loc[backup_restore], Mode=OneWay}" Padding="14,5"
+                                                            VerticalAlignment="Center"
+                                                            Visibility="{Binding IsConfirmingRestore, Converter={StaticResource InverseBoolToVis}}"
+                                                            Command="{Binding DataContext.BackupHistory.AskRestoreCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}" />
+
+                                                    <!-- Confirmacion EN LA PROPIA FILA: dice con todas las letras que se va a
+                                                         sobrescribir el fichero actual, y que antes se guardara una copia de el
+                                                         (asi restaurar tambien se puede deshacer). -->
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                                                Visibility="{Binding IsConfirmingRestore, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="{Binding Loc[backup_confirm_question], Mode=OneWay}" FontSize="11.5"
+                                                                   Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" MaxWidth="260"
+                                                                   TextAlignment="Right" Margin="0,0,0,5" />
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                            <Button Content="{Binding Loc[backup_confirm_cancel], Mode=OneWay}" Padding="12,5" Tag="Ghost"
+                                                                    Command="{Binding DataContext.BackupHistory.CancelRestoreCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    CommandParameter="{Binding}" />
+                                                            <Button Content="{Binding Loc[backup_confirm_yes], Mode=OneWay}" Padding="12,5" Tag="Orange" Margin="8,0,0,0"
+                                                                    Command="{Binding DataContext.BackupHistory.ConfirmRestoreCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <!-- Pie: cuota real gastada + acciones -->
+                    <Grid Grid.Row="3" Margin="0,12,0,0">
+                        <TextBlock Text="{Binding BackupHistory.FooterText}" Style="{StaticResource CaptionText}"
+                                   VerticalAlignment="Center" HorizontalAlignment="Left" TextWrapping="Wrap" MaxWidth="380" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="{Binding BackupHistory.OrphanCleanupText}" Padding="12,5" Tag="Ghost" Margin="0,0,8,0"
+                                    Visibility="{Binding BackupHistory.HasOrphans, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="{Binding Loc[backup_clean_orphans_tip], Mode=OneWay}"
+                                    Command="{Binding BackupHistory.CleanOrphansCommand}" />
+                            <Button Content="{Binding Loc[backup_open_folder], Mode=OneWay}" Padding="12,5" Tag="Ghost" Margin="0,0,8,0"
+                                    Command="{Binding BackupHistory.OpenFolderCommand}" />
+                            <Button x:Name="BackupCreateNowButton" Content="{Binding Loc[backup_create_now], Mode=OneWay}" Padding="14,5" Tag="Accent"
+                                    ToolTip="{Binding Loc[backup_create_now_tip], Mode=OneWay}"
+                                    Command="{Binding BackupHistory.CreateManualBackupCommand}" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
         </Grid>
     </Grid>
 </Window>

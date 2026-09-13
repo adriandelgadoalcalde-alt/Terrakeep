@@ -673,6 +673,8 @@ public partial class MainViewModel : ObservableObject
     public BuffEditViewModel BuffEdit { get; }
     public ItemEditViewModel ItemEdit { get; }
     public HomeViewModel Home { get; }
+    // BK (13-sep-2026): panel real de "Historial de versiones" - ver BackupHistoryViewModel.
+    public BackupHistoryViewModel BackupHistory { get; }
     // Pedido explicito del usuario (5-sep-2026): idioma en vivo, sin reiniciar - expuesto aqui
     // (root DataContext de casi toda la ventana) para que cualquier XAML pueda usar
     // {Binding Loc[clave]} directamente, mismo criterio que Home/About/etc de arriba. Instance es
@@ -709,6 +711,24 @@ public partial class MainViewModel : ObservableObject
             SelectedTabIndex = (int)AppTab.Personaje;
             PersonajeInnerTabIndex = (int)PersonajeInnerTab.Objetos;
         };
+        // BK (13-sep-2026): el panel real de historial de versiones - uno solo para toda la app,
+        // sirva para el personaje cargado ahora mismo (boton de la cabecera / Ctrl+H) o para
+        // cualquier otro de la lista de Inicio (menu contextual de su tarjeta).
+        BackupHistory = new BackupHistoryViewModel(_service.BackupHistory)
+        {
+            // Restaurar deja el fichero real distinto de lo que el editor tiene en memoria - si
+            // es el personaje cargado hay que recargarlo de verdad (mismo agujero que cerro
+            // H3-04) y, como eso descarta ediciones sin guardar, pasa por el mismo aviso real
+            // que cargar otro personaje por encima.
+            ReloadRequested = path =>
+            {
+                if (IsDirty && ConfirmDiscardChanges?.Invoke() == false) return;
+                LoadFromPath(path);
+            },
+        };
+        Home.BackupHistoryRequested += (path, nombre) =>
+            BackupHistory.Open(path, nombre, isCurrentCharacter: _loaded != null &&
+                string.Equals(_loaded.PlrPath, path, StringComparison.OrdinalIgnoreCase));
         // INI-09 (oleada del 6-sep-2026): cambiar las carpetas adicionales en Ajustes tiene que
         // REFLEJARSE ya, no solo guardarse - ver el comentario real de SettingsViewModel. Se
         // enchufa aqui, que es el unico sitio que conoce a los tres a la vez; Exploration se
@@ -1208,12 +1228,20 @@ public partial class MainViewModel : ObservableObject
             // mismo criterio real que SyncEditsBackToMerged para objetos, el estado en memoria
             // (Research._researchedCounts) se vuelca al PlrCharacter justo antes de guardar.
             Research.SyncBackTo(_loaded.Character);
+            // H5-04: copia rotativa real, independiente del .bak de un solo nivel (WriteAtomic ya
+            // lo genera, no se toca).
+            //
+            // BK-1 (13-sep-2026) - ORDEN CORREGIDO: esto estaba JUSTO DESPUES de _service.Save,
+            // o sea que fotografiaba el fichero RECIEN escrito. El estado previo a la PRIMERA
+            // escritura de la sesion no quedaba entonces en ningun sitio salvo el .bak de un solo
+            // nivel: dos guardados seguidos y el fichero con el que arrancaste ya no existia en
+            // ninguna parte. Fotografiar ANTES conserva todo lo que conservaba el orden anterior
+            // (el estado previo al guardado N ES el resultado del guardado N-1) y ademas el
+            // original; lo unico que no queda copiado es el ultimo guardado, que es exactamente
+            // el fichero real que hay en disco. Un fallo copiando el historial (disco lleno,
+            // permisos...) no debe impedir el guardado real - se intenta, pero no se relanza.
+            try { _service.BackupHistory.SaveBackup(_loaded, Services.BackupReason.BeforeSave); } catch { /* la red extra nunca bloquea el guardado real */ }
             _service.Save(_loaded);
-            // H5-04: copia rotativa real de ESTE guardado - independiente del .bak de un solo
-            // nivel (WriteAtomic ya lo genera, no se toca). Un fallo copiando el historial
-            // rotativo (disco lleno, permisos...) no debe impedir que el guardado real, ya
-            // confirmado, se de por bueno - se intenta, pero no se relanza si falla.
-            try { _service.BackupHistory.SaveBackup(_loaded); } catch { /* el guardado real ya tuvo exito, esto es solo la red extra */ }
             // H3-15 (tercera auditoria de Opus, Fable): "la insignia de Calamity no se enciende
             // justo despues del guardado que crea el .tplr por primera vez" - HasCalamityData
             // solo se recalculaba en LoadFromPath. _service.Save YA deja loaded.TplrPath puesto
@@ -1252,6 +1280,16 @@ public partial class MainViewModel : ObservableObject
     // personaje...", Ctrl+O), pero "Deshacer ultimo guardado" (un clic, siempre visible en la
     // cabecera global) se quedo fuera. Mismo gancho real que los otros 3 - ConfirmDiscardChanges
     // solo cuando de verdad hay algo que perder (IsDirty).
+    // BK (13-sep-2026): "Deshacer ultimo guardado" (arriba) es UN nivel; esto abre el historial
+    // completo del personaje cargado - la misma lista que ofrece el menu contextual de Inicio,
+    // pero sin tener que volver a Inicio a buscar su tarjeta.
+    [RelayCommand(CanExecute = nameof(IsCharacterLoaded))]
+    private void OpenBackupHistory()
+    {
+        if (_loaded == null) return;
+        BackupHistory.Open(_loaded.PlrPath, CharacterName, isCurrentCharacter: true);
+    }
+
     [RelayCommand(CanExecute = nameof(CanUndoLastSave))]
     private void UndoLastSave()
     {
@@ -1762,6 +1800,10 @@ public partial class MainViewModel : ObservableObject
         // raton), encontrado al verificar con captura real, no al escribir el codigo.
         MoveInventoryToStorageCommand.NotifyCanExecuteChanged();
         ToggleWhereIsItCommand.NotifyCanExecuteChanged();
+        // BK (13-sep-2026): mismo aviso real que los de arriba - sin el, el boton "Historial"
+        // de la cabecera se queda con aspecto deshabilitado hasta el siguiente requery
+        // automatico de WPF (exactamente el defecto A-d que ya se vivio aqui).
+        OpenBackupHistoryCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(ShowVitalsStrip));
     }
 }
