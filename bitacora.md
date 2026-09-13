@@ -12875,3 +12875,239 @@ idiomas) y `MP-01` (un objeto, Coin Gun, con un prefijo distinto del verificado 
 los dos `FALLO` que quedan tras esta ronda. Los dos son de **datos/traducción**, no de
 maquetación/solape - fuera del alcance de este encargo, y ya estaban presentes antes de empezar
 (confirmado comparando con el primer `dotnet run` de la ronda, antes de tocar nada).
+
+---
+
+## 13-sep-2026 — Lista de funciones nuevas confirmada por el usuario: tres cerradas (filtros de la
+## Librería, Comparador de personajes, Códigos de build), investigación real del resto
+
+Encargo del usuario, lista completa confirmada (orden "el que tenga más sentido según
+dependencias"): 1) comparador de dos personajes/builds, 2) filtros combinables en la Librería,
+3) editor de mundos (.wld), 4) códigos de build compartibles, 5) sugerencias de mejora de prefijo,
+6) paneles de progreso/completitud, 7) compartir/exportar (builds/presets/seeds), 8) estadísticas
+de partida, 9) vista previa de generación de mundo. Sesión larga, tres funciones **terminadas,
+verificadas de verdad y comiteadas** (commits `38ff631a`, `7314925f` y el de Códigos de build más
+abajo); el resto queda investigado con detalle real para la siguiente sesión - ver "Dónde seguir"
+al final de esta entrada.
+
+### 2) Filtros combinables en la Librería: Rareza, Tipo de daño, Ranura de equipo
+
+La búsqueda de la Librería solo filtraba por texto (nombre/tooltip/id, `LibrarySearchGrammar`).
+Popup real "Filtros" (mismo mecanismo que "¿Dónde lo tengo?" - anclado al botón junto al
+buscador, `StaysOpen="False"`), tres grupos de pastillas, **AND entre grupos, OR dentro de cada
+uno**, combinables además con el texto y la carpeta elegida:
+
+- **Rareza**: las 11 rarezas reales de vanilla + "Blanca" (12 pastillas), color real de cada una
+  (`VanillaRarityColorCatalog`). Solo vanilla a propósito - Calamity nunca tiene un `Rarity` real
+  investigado (`ItemStatsFormatter` lo deja `null` a fuego), así que se excluye del todo del
+  filtro en vez de fingir que "sin dato" es lo mismo que "rareza 0".
+- **Tipo de daño**: Cuerpo a cuerpo/A distancia/Magia/Invocación/Pícaro (5), ya calculado por
+  `ItemStatsFormatter` para las dos fuentes - SÍ funciona en Calamity (verificado con datos
+  reales del catálogo, no solo vanilla).
+- **Ranura de equipo**: los 12 `SlotKind` reales. Nuevo `ItemEquipSlotClassifier`
+  (`Terrakeep.App/Services/ItemEquipSlotClassifier.cs`) resuelve esto para vanilla
+  (`VanillaSlotKindCatalog`) y Calamity (`Category`/`EquipSlot` reales de
+  `CalamityCatalogEntry`) - mismo dato que ya usa `ItemSlotViewModel.AcceptsItem`, pero con
+  semántica de **clasificación positiva** ("esto ES un casco") en vez de "desconocido = permitir"
+  (que es correcta para *validar* un drop, pero habría dado falsos positivos en un filtro).
+
+Archivos nuevos: `LibraryFilterChipViewModel.cs` (genérico sobre `TValue`), `ItemEquipSlotClassifier.cs`.
+Tocados: `LibraryItemViewModel.cs` (+`Rarity`/`DamageKind`/`EquipSlotKind`), `LibraryViewModel.cs`
+(chips + `ApplyFilter`), `MainWindow.xaml` (popup + botón con insignia "Filtros (N)"), `Theme.xaml`
+(`LibraryFilterChipButton`), `strings_es/en.json`.
+
+**Verificación real**: 9 pruebas nuevas (`LibraryFilterTests.cs`, incluida la exclusión de
+Calamity en Rareza y que Tipo de daño/Ranura SÍ funcionan sobre Calamity de verdad, navegando a
+la carpeta raíz real "Calamity (mod)"). `AR-LAY` completo (416 pantalla×tamaño×idioma) con 0
+perdidos/0 solapes/0 truncados. Capturas reales del popup abierto en los dos idiomas al tamaño
+mínimo (1080×700) - `libreria-filtros-popup-es-minima.png`/`-en-minima.png` en
+`Terrakeep.App.Tests\bin\Debug\net10.0-windows\` - miradas a mano, sin solapes ni cortes.
+
+### 1) Comparador de dos personajes/builds
+
+Overlay de ventana (mismo mecanismo real que Historial de versiones: velo opaco, Escape/clic
+fuera lo cierra, nunca dos overlays a la vez), botón "Comparar personajes" en Inicio junto a
+Actualizar/Cargar de otra carpeta, sobre la MISMA lista ya escaneada (`Home.Characters`).
+`CompareViewModel` usa su **propio** `CharacterFileService` (nunca el del editor principal):
+`Load()` muta `EsPersonajeTModLoader` en la instancia, y comparar dos personajes seguidos con el
+servicio compartido dejaría esa bandera con el valor del último comparado - el botón "mejor
+prefijo" del editor empezaría a sugerir contra la tabla equivocada la próxima vez, sin ningún
+aviso en pantalla. Aislarlo cuesta una carga extra de catálogos (acción iniciada por el usuario,
+no una ruta caliente) y elimina el riesgo entero.
+
+Tres bloques, lado a lado, fila resaltada cuando difiere:
+- **Equipo**: 10 ranuras de `loadout0Items` (Cabeza/Cuerpo/Piernas/Accesorio 1-7, con su tinte) +
+  5 de `miscEquips`/`miscDyes` (Mascota/Mascota de luz/Vagoneta/Montura/Gancho, con su tinte).
+- **Inventario**: 50 celdas por lado en rejilla (mismo lenguaje visual que cualquier
+  `SlotGridPanel`), borde de acento en el MISMO índice de slot cuando difiere.
+- **Estadísticas**: dificultad, vida/maná máximos, ranura extra de accesorio, tiempo jugado,
+  muertes PvE/PvP, pesca, golf, dinero total (suma real de las 4 monedas).
+
+Archivos nuevos: `CompareViewModel.cs`, `CompareItemViewModel.cs`, `CompareRowViewModels.cs`.
+
+**Dos bugs reales encontrados con el propio arnés** (nunca a ojo, ver el modo de foco
+`COMPARE_SOLO=1`):
+1. El `ComboBox` de selección mostraba el nombre de TIPO en bruto
+   (`"...CharacterListEntryViewModel"`) en vez del nombre real: `DisplayMemberPath` no genera
+   `SelectionBoxItemTemplate` cuando `SelectedItem` se fija por Binding en vez de por un clic
+   real en la lista - `ItemTemplate` explícito (nombre + dificultad + fecha, hacen falta las
+   tres: dos personajes reales de esta máquina se llaman igual, "adrian | Viaje" x2) lo arregla.
+2. El aviso "hacen falta al menos 2 personajes" se quedaba clavado en pantalla PARA SIEMPRE por
+   encima de los resultados reales: `NeedsMoreCharacters` se leía una vez mientras el escaneo de
+   Home todavía corría en su `Task` de fondo (lista vacía en ese instante) y, al ser una
+   propiedad calculada sin notificación, nunca se releía. Se suscribe ahora a
+   `CollectionChanged` de la lista real - prueba de regresión dedicada
+   (`ListaQueSeRellenaDespuesDeConstruir_ActualizaNeedsMoreCharacters`) que reproduce el mismo
+   orden real (colección vacía al construir, se rellena DESPUÉS).
+
+**Verificación real**: 9 pruebas (`CompareViewModelTests.cs`). `AR-LAY` completo con 0
+perdidos/0 solapes/0 truncados. Capturas reales contra los personajes REALES de esta máquina (63
+diferencias reales entre "Terrariano" y "Eldelgas") en los dos idiomas al tamaño mínimo, más una
+del bloque Inventario completo (desplazado al final) -
+`comparador-es-minima.png`/`-completa.png`/`-en-minima.png`/`-es-inventario.png`.
+
+### 4) y 7) Códigos de build compartibles (export/import) - cierran también "compartir builds"
+
+"Exportar una build a un código de texto corto/compartible y poder importarlo en otra
+instalación" - se coordinó con el punto 7 (compartir/exportar) tal y como pedía el encargo: un
+único mecanismo real cubre los dos. Alcance real, documentado en el propio código en vez de
+fingido: las 10 ranuras de armadura/accesorios (Cabeza/Cuerpo/Piernas/Accesorio 1-7, "build" en
+el sentido real de Terraria) + sus 10 tintes - mascota/montura/vagoneta/gancho quedan fuera a
+propósito (utilidad/cosmética, no lo que la comunidad entiende por "build" al compartir un
+código).
+
+Formato nuevo en Core (`Terrakeep.Core/Model/BuildCode.cs`, reutilizable también por
+TerrakeepMod el día que haga falta - Core compila para net8.0 igual que el resto):
+- `byte version` + 10×(`int32 itemId`, `int32 prefixCode`) + 10×`int32 dyeItemId`.
+  `prefixCode`: 0=ninguno, 1-255=vanilla, ≥10000 (`CalamityIds.PrefixIdBase`)=Calamity sintético -
+  un único entero basta porque los dos rangos reales nunca se solapan.
+- Comprimido con `DeflateStream` antes de Base64 (la mayoría de personajes reales no llenan los
+  20 huecos, series largas de ceros comprimen muy bien - código real de prueba salió en
+  `TKBUILD1:AWNkGCAAAA`, 19 caracteres, para un loadout casi vacío) + 1 byte de checksum (suma
+  simple mod 256, no criptográfico - solo para cazar un código pegado a medias o editado a mano
+  antes de aplicar nada) + cabecera de texto real `TKBUILD1:` (reconocible a simple vista,
+  distingue de los export en JSON de Terrasavr-Calamity-Beta, proyecto hermano con su propio
+  formato). Base64 "URL-safe" (`-`/`_`, sin relleno `=`) - pensado para pegar en un chat/foro/URL
+  sin escapar nada.
+
+Panel real (botón "Código de build" en la cabecera global, junto a Historial de versiones -
+mismo overlay que los otros dos, nunca dos a la vez), opera sobre **el loadout que se esté
+viendo ahora** en Equipamiento (`EquipmentGroup.CurrentItems`/`CurrentDyes` - sigue a la píldora
+Loadout 1/2/3, no solo el "puesto" fijo, así también sirve para guardar/repartir builds
+alternativas guardadas). "Tu código" de solo lectura (clic = `SelectAll`, listo para Ctrl+C real)
++ botón Copiar (con manejo real de portapapeles bloqueado, nunca lanza). Importar valida con
+`ItemSlotViewModel.AcceptsItem` antes de colocar cada objeto (un objeto que no encaja de verdad
+en su ranura se cuenta como **omitido**, mismo lenguaje real que
+`AutoEquipService.Unresolved/NoSlot` - nunca se cuela a ciegas) y todo el lote entra en **una
+sola** entrada de Deshacer (`RunAsUndoableBatch`, mismo mecanismo real que Auto-equipar).
+
+**Verificación real**: 8 pruebas del formato en Core (`BuildCodeTests.cs` - round-trip vanilla y
+Calamity, detección de un solo carácter cambiado vía checksum, versión futura rechazada con
+claridad, longitud de slots incorrecta lanza en vez de truncar) + 6 de integración con el editor
+(`BuildCodeMainViewModelTests.cs` - importar coloca de verdad y deja Undo real, código inválido
+no toca nada, objeto que no encaja se omite sin colarse). Round-trip real contra un personaje
+real de esta máquina vía el modo de foco `BUILDCODE_SOLO=1`: exportar el propio código e
+importarlo de vuelta dio `"Build importada: 10 objeto(s) colocado(s)."` con `error=False` - cero
+omitidos, exactamente lo esperado al reimportar el mismo equipo. `AR-LAY` completo con 0
+perdidos/0 solapes/0 truncados. Capturas reales en los dos idiomas al tamaño mínimo
+(`buildcode-es-minima.png`/`-es-tras-importar.png`/`-en-minima.png`).
+
+### Disciplina real seguida en las tres (para no repetirla explicada cada vez)
+
+- **CharacterFileService aislado** cuando hace falta (Comparador) - el mismo servicio compartido
+  del editor principal tiene estado mutable real (`EsPersonajeTModLoader`) que NO debe
+  contaminarse por una operación de solo lectura/consulta iniciada desde otro sitio.
+  `RunAsUndoableBatch` reutilizado tal cual (Códigos de build) en vez de inventar un mecanismo de
+  Deshacer paralelo.
+- **Tres overlays de ventana, nunca dos a la vez**: Historial de versiones, Comparador y Código
+  de build se cierran unos a otros al abrirse (`Open*`/`Close*` en `MainViewModel`) y comparten
+  la prioridad de Escape en `MainWindow.xaml.cs`.
+- **Modos de foco nuevos en el arnés** (mismo patrón real que `PB_SOLO`/`AR14_SOLO`/`A11_SOLO`/
+  `BK_SOLO`, todos permanentes en `Terrakeep.App.Tests/Program.cs`): `LIBFILT_SOLO=1`,
+  `COMPARE_SOLO=1`, `BUILDCODE_SOLO=1` - cada uno deja capturas reales miradas a mano en los dos
+  idiomas al tamaño mínimo antes de dar la función por cerrada, disciplina ya establecida en
+  `CLAUDE.md` de este proyecto.
+- **Un bug real encontrado por cada función que usó captura visual real** (el `ComboBox` del
+  Comparador, el `NeedsMoreCharacters` congelado) - ninguno de los dos se habría visto revisando
+  solo el código o solo `dotnet test`; los dos aparecieron en la PRIMERA captura real de su
+  respectiva ronda. Confirma otra vez la regla ya anotada en `CLAUDE.md`: mirar la captura de
+  verdad, no fiarse solo del detector automático ni del código a ojo.
+
+### Dónde seguir - investigación real ya hecha, ninguna de estas cuatro se ha tocado todavía
+
+**5) Sugerencias de mejora de prefijo - YA ESTÁ HECHA, no hace falta construir nada nuevo.**
+`Terrakeep.Core/Calamity/PrefixSuggester.cs` ya calcula el mejor prefijo real (vanilla vía
+`BestPrefixCatalog`, Pícaro de Calamity vía `RoguePrefixCatalog.Best.Weapon`, resto de Calamity
+vía `BestPrefixCatalog.BestCalamityPrefix`) con las fórmulas reales del juego (no una heurística
+inventada - `generar-mejor-prefijo.py`, ya documentado en la entrada del 8-sep-2026). Ya está
+enchufado en `ItemSlotViewModel.cs`: estrella ★ visible en la ESQUINA de CADA slot del
+Equipamiento (línea ~493 de `ItemSlotViewModel.cs`/`HasBestPrefixSuggestion`, sin necesidad de
+seleccionar el slot) + botón "Aplicar mejor prefijo" en el panel Editar + entrada de menú
+contextual. O sea que "dado el equipo actual, sugerir qué prefijo mejoraría cada pieza" ya se ve
+de un vistazo en TODO el equipo a la vez, sin abrir nada. Si algún día se quiere ampliar: un
+resumen agregado tipo "3 piezas pueden mejorar su prefijo" sería el único hueco real que queda,
+y es trivial de construir reutilizando `PrefixSuggester` tal cual sobre
+`EquipmentGroup.AllContainers`.
+
+**6) Paneles de progreso/completitud - la mitad (objetos) YA ESTÁ, bestiario tiene un límite real
+de arquitectura, logros NO son viables.**
+- *Colección de objetos*: la pestaña Investigación (`ResearchViewModel.cs`) YA tiene una barra de
+  progreso global real (`ProgressFraction`/`GlobalProgressSummary`, universo real de ~5.400
+  objetos vanilla+Calamity) - hecho en una auditoría anterior (H5-02), no hace falta tocar nada.
+- *Bestiario*: investigado a fondo, **límite real de arquitectura, no pereza**. El progreso del
+  bestiario (`Main.BestiaryTracker`, kills por NPC) se guarda **en el `.wld` del mundo**, NO en
+  el `.plr` del personaje - confirmado leyendo `Terraria/IO/WorldFile.cs` decompilado real
+  (`SaveBestiary`/`LoadBestiary`, líneas ~1167/1838/3409-3422). Para mostrarlo haría falta (a)
+  decompilar el formato real de esa sección del `.wld` (no investigado todavía, `WldReader.cs`
+  actual no la lee) y (b) que el usuario tenga cargado un MUNDO, no solo un personaje - encaja
+  mejor como parte del punto 3 (editor de mundos) que como su propio panel. Documentar esto con
+  claridad si se retoma, no fingir un bestiario "por personaje" que el juego real no tiene.
+- *Logros*: Terraria los guarda en un fichero **compartido por cuenta de Steam**, fuera de la
+  carpeta `Players`/`Worlds` que esta app toca - no hay ningún personaje/mundo al que asociarlos
+  de verdad. Documentar la limitación honesta en vez de forzar un panel falso (mismo criterio ya
+  aplicado en el proyecto entero: "lo que no se sabe no se inventa").
+
+**8) Estadísticas de partida - datos reales YA confirmados y disponibles, falta solo la vista.**
+`PlrCharacter` (`Terrakeep.Core/PlrFormat/PlrCharacter.cs`) ya trae, reales y verificados en esta
+sesión (usados en el Comparador): `PlayTimeLow`/`PlayTimeHigh` (ticks reales, fórmula ya escrita
+en `CompareViewModel.FormatPlayTime`), `PveDeaths`, `PvpDeaths`, `GolferScore`,
+`FishingQuestsCompleted`, `BartenderQuests`, `TaxMoney`, `Coins[0..3]` (dinero real). Un panel
+"Estadísticas" independiente (o una pestaña dentro de Apariencia, que ya muestra algunos de estos
+campos sueltos - `AppearanceViewModel.cs` línea ~226 en adelante) sería mayormente reorganizar
+datos que YA se leen/escriben, no investigar nada nuevo. Recursos recolectados NO se guardan
+(el `.plr` no lleva ningún contador de eso) - documentar la ausencia, no inventar un dato.
+
+**3) Editor de mundos (.wld) - la base ya existe pero solo cubre un caso (dificultad); un editor
+de tiles real es un proyecto aparte, del tamaño de TEdit.**
+Ya existen `Terrakeep.Core/WldFormat/{WldReader,WldWriter,WldHeader,WldTile,WldChest,WldNpc,
+WldSign,WldTileEntity,WldWorld}.cs` y `Terrakeep.App/Services/{WorldFileService,WorldRenderer,
+WorldHighlightRenderer,WorldViewStateService}.cs`, más la pestaña Exploración
+(`ExplorationViewModel.cs`) que YA lee/muestra el mundo entero (tiles, colores reales vía
+`MapColorCatalog`, cofres, NPCs, carteles - ver `WldReader`/`OreVeinFinder`/`WorldSearch`).
+`WorldFileService.SaveGameMode` es la ÚNICA escritura real que existe hoy (cambia
+dificultad/modo). Antes de comprometerse a un alcance mayor, investigar en este orden (mismo
+criterio ya usado en Terrakeep/TerrakeepMod para el `.wld`, ver `CLAUDE.md`): (1) mirar
+`TEdit/src/TEdit.Terraria/World.FileV2.cs` (ya citado en `CLAUDE.md` de este proyecto) para el
+lector de tiles campo a campo REAL (RLE, headers 1-4) y decidir qué reescribir es seguro
+(spawn point, hora del día, banderas de eventos/hardmode, nombre del mundo) sin tocar el RLE de
+tiles (mucho más arriesgado - un tile mal reescrito puede corromper el mundo entero, hace falta
+verificar el round-trip byte a byte contra un `.wld` real antes de tocar nada). (2) Documentar
+con honestidad qué queda fuera (pintar tiles a mano, mover estructuras) si el alcance se recorta a
+"editor de metadatos del mundo" en vez de "editor de tiles completo".
+
+**9) Vista previa de generación de mundo - depende del punto 3, y es el más grande de los nueve
+con diferencia.** Necesitaría reimplementar (aunque sea de forma aproximada) el algoritmo REAL de
+generación de mundo de Terraria (`WorldGen.cs` decompilado, miles de líneas, con dependencias en
+cascada entre pasadas: terreno base → cuevas → biomas → estructuras → decoración) solo para poder
+"previsualizar" antes de generar de verdad - un proyecto en sí mismo, no una tarde. Ni empezado
+esta sesión. Si se retoma: investigar primero cuánta fidelidad hace falta de verdad (¿un mapa de
+biomas aproximado basta, o tiene que coincidir tile a tile con el resultado real?) antes de
+estimar el alcance - la respuesta cambia el tamaño del proyecto en un orden de magnitud.
+
+### Verificación de conjunto de toda la sesión
+
+`dotnet test Terrakeep.Core.Tests`: **483/483** (475 previas + 8 de `BuildCodeTests`).
+`dotnet test Terrakeep.App.ViewModels.Tests`: **484/484** (478 tras el Comparador + 6 de
+`BuildCodeMainViewModelTests`). Cero regresiones en ninguna pasada completa de las tres rondas.
+`dotnet build` de los tres proyectos (`Terrakeep.Core`, `Terrakeep.App`, `Terrakeep.App.Tests`):
+0 advertencias, 0 errores en cada commit.
