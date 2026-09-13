@@ -423,34 +423,34 @@ internal static partial class Program
                         using var fsMenu = File.Create(Path.Combine(AppContext.BaseDirectory, "inicio-tarjeta-actual.png"));
                         encMenu.Save(fsMenu);
                     }
-                    // H5-04 (quinta auditoria de Opus): "Historial de guardados" es un
-                    // CONTENEDOR de submenu real (HasItems=true) - no invoca nada por si
-                    // mismo, asi que no tiene ni tiene por que tener Command/CommandParameter
-                    // propios (mismo criterio que cualquier MenuItem "padre" real de WPF).
+                    // H5-04 (quinta auditoria de Opus): todos los MenuItem HOJA (sin submenu)
+                    // deben tener Command/CommandParameter resueltos via el truco
+                    // PlacementTarget.Tag - ningun MenuItem real de este menu lleva submenu hoy
+                    // (el que sí lo llevaba, "Historial de guardados", se sustituyo el
+                    // 13-sep-2026 por un MenuItem normal que abre el panel real, ver abajo).
                     var comandosNulos = menu.Items.OfType<System.Windows.Controls.MenuItem>()
                         .Where(mi => !mi.HasItems && (mi.Command == null || mi.CommandParameter == null))
                         .Select(mi => (string)mi.Header).ToList();
                     Console.WriteLine($"I-b: {menu.Items.Count} item(s) de menu, comandos sin resolver={string.Join(",", comandosNulos)} (esperado ninguno)");
                     if (comandosNulos.Count > 0) Console.WriteLine("FALLO: I-b (segunda auditoria) - el truco PlacementTarget.Tag no resolvio Command/CommandParameter en algun item");
 
-                    // H5-04 (quinta auditoria de Opus): abre de verdad el submenu real
-                    // "Historial de guardados" (dispara OnBackupHistorySubmenuOpened, el mismo
-                    // camino real que un clic del usuario) - confirma que puebla algo real (la
-                    // lista real de copias, o el aviso real de "sin copias todavia") y nunca se
-                    // queda en el placeholder "(cargando...)" ni lanza una excepcion real.
+                    // H5-04-HISTORIAL (actualizado 13-sep-2026, redisenio del historial de
+                    // versiones): "Historial de guardados" ERA un submenu que restauraba con un
+                    // solo clic, sin confirmacion (bitacora, "Interfaz: un panel de verdad, no un
+                    // submenu"). Ahora es un MenuItem normal (Loc[action_save_history]) que abre
+                    // el panel real Ctrl+H (BackupHistoryViewModel) - ese panel completo, con el
+                    // ciclo guardar/restaurar/confirmar/limpiar huerfanos, ya se verifica a fondo
+                    // en el bloque BK_SOLO=1 (PruebasHistorialVersiones.cs); aqui solo hace falta
+                    // confirmar que el MenuItem del texto REAL (no un literal español viejo, para
+                    // que valga en los dos idiomas) sigue ahi y con su comando resuelto - ya lo
+                    // cubre comandosNulos de arriba, esto es solo una confirmacion positiva
+                    // explicita para que un MenuItem ausente del todo no pase desapercibido.
+                    string tituloHistorialReal = LocalizationService.Instance["action_save_history"];
                     var historialItem = menu.Items.OfType<System.Windows.Controls.MenuItem>()
-                        .FirstOrDefault(mi => (string)mi.Header == "Historial de guardados");
-                    if (historialItem == null) Console.WriteLine("H5-04-HISTORIAL: MenuItem NO-FOUND");
-                    else
-                    {
-                        historialItem.IsSubmenuOpen = true;
-                        DoEvents(); DoEvents();
-                        var cabeceras = historialItem.Items.OfType<System.Windows.Controls.MenuItem>().Select(mi => (string)mi.Header).ToList();
-                        bool sigueEnPlaceholder = cabeceras.Count == 1 && cabeceras[0] == "(cargando...)";
-                        Console.WriteLine($"H5-04-HISTORIAL: {cabeceras.Count} item(s) reales tras abrir el submenu ({string.Join(" | ", cabeceras)}) (esperado != placeholder)");
-                        if (sigueEnPlaceholder) Console.WriteLine("FALLO: H5-04-HISTORIAL - el submenu se quedo en el placeholder, OnBackupHistorySubmenuOpened no lo repoblo");
-                        historialItem.IsSubmenuOpen = false;
-                    }
+                        .FirstOrDefault(mi => (string)mi.Header == tituloHistorialReal);
+                    Console.WriteLine($"H5-04-HISTORIAL: MenuItem '{tituloHistorialReal}' presente={historialItem != null}, comando resuelto={historialItem?.Command != null} (esperado True, True)");
+                    if (historialItem == null) Console.WriteLine("FALLO: H5-04-HISTORIAL - el MenuItem que abre el panel de historial de versiones no esta en el menu contextual de Inicio");
+                    else if (historialItem.Command == null) Console.WriteLine("FALLO: H5-04-HISTORIAL - el MenuItem existe pero su Command no se resolvio");
 
                     menu.IsOpen = false;
                 }
