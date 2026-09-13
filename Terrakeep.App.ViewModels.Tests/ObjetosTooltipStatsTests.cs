@@ -51,7 +51,7 @@ public sealed class ObjetosTooltipStatsTests
         string t = slot.StatsTooltip ?? "";
         Assert.Contains("12 daño de cuerpo a cuerpo", t);
         Assert.Contains("36 DPS", t);
-        Assert.Contains("Use time 20", t);
+        Assert.Contains("Tiempo de uso 20", t);
         Assert.Contains("Muy Rapido", t);
         // InvariantCulture en ItemStatsFormatter.FormatKnockback: punto decimal, no coma.
         Assert.Contains("Retroceso 5.5", t);
@@ -165,7 +165,7 @@ public sealed class ObjetosTooltipStatsTests
         {
             string t = slot.StatsTooltip ?? "";
             Assert.Contains("12 daño de cuerpo a cuerpo", t);
-            Assert.Contains("Use time 20 (3/s, Muy Rapido)", t);
+            Assert.Contains("Tiempo de uso 20 (3/s, Muy Rapido)", t);
             Assert.Contains("Retroceso 5.5 (Normal)", t);
             // Seccion 1: el efecto real del prefijo automatico ("Legendario", id 81).
             Assert.Contains("+15% de daño", t);

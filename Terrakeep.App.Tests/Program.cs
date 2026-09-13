@@ -2769,7 +2769,7 @@ internal static partial class Program
                     // UpdateLayout() explicito, y sigue igual. La cara española de PrefixDisplay
                     // se comprueba donde SI es determinista, en
                     // ObjetosTooltipStatsTests.ElNombreDelPrefijoYElRolDelSlotSiguenAlIdioma.
-                    Comprobar("es/arma", armaEs, ["daño de cuerpo a cuerpo", "DPS", "Use time", "Muy Rapido", "Retroceso"], []);
+                    Comprobar("es/arma", armaEs, ["daño de cuerpo a cuerpo", "DPS", "Tiempo de uso", "Muy Rapido", "Retroceso"], []);
                     Comprobar("es/casco", cascoEs, ["defensa", "Con el set completo:", "Cabeza"], []);
 
                     LocalizationService.Instance.SetLanguage("en");
@@ -6340,7 +6340,7 @@ internal static partial class Program
                 FijarTamaño(window, w, 700);
                 DoEvents(); DoEvents();
                 var pestañasInternas = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem))
-                    .Cast<AutomationElement>().Where(t => t.Current.Name is "Objetos" or "Buffs" or "Investigación" or "Apariencia" or "Spawn Points" or "Desbloqueos" or "Versión").ToList();
+                    .Cast<AutomationElement>().Where(t => t.Current.Name is "Objetos" or "Buffs" or "Investigación" or "Apariencia" or "Puntos de aparición" or "Desbloqueos" or "Versión").ToList();
                 var tabItemsWpf = Descendientes<System.Windows.Controls.TabItem>(window).Where(ti => pestañasInternas.Any(p => p.Current.Name == (ti.Header as string))).ToList();
                 int recortadas = 0;
                 foreach (var ti in tabItemsWpf)

@@ -13284,3 +13284,74 @@ alcance de este encargo, dejado sin tocar y anotado aquí para que quede constan
 - `AR-11f` (barra de scroll visible al tamaño por defecto) sigue en rojo a propósito - recalibrar
   de verdad exigiría medir cuánto ha crecido la cabecera global desde el 13-sep y decidir si
   compensarlo tiene sentido, o aceptar la barra como parte normal de la columna a partir de ahora.
+
+### 14-sep-2026 - KeepQA pieza 10 (auditoría de localización): 3 claves sin traducir en `strings_es.json`
+
+**Encargo**: la auditoría de KeepQA (`Downloads\KeepQA\src\localizacion\comprobarLocalizacion.js`)
+encontró 3 claves de `Terrakeep.App\Assets\strings_es.json` idénticas letra por letra a su
+versión en inglés, con las hermanas del mismo grupo ya traducidas.
+
+**Las 3, revisadas una a una**:
+- `stats_use_time` (línea 570): `"Use time {0} ({1}/s, {2})"` → traducida a `"Tiempo de uso {0}
+  ({1}/s, {2})"`. "Tiempo de uso" ya era el término establecido en el proyecto (`RoguePrefixCatalog.
+  cs` línea 85, varias entradas de la propia bitácora) - no una traducción nueva inventada.
+- `char_tab_spawnpoints` (línea 100): `"Spawn Points"` → `"Puntos de aparición"` (plural, mismo
+  término ya usado en `spawn_points_intro`, `explore_spawn_point` y `map_marker_spawn_point` del
+  propio archivo - de hecho `spawn_points_intro` es el subtítulo de ESTA MISMA pestaña y ya decía
+  "Puntos de aparición guardados por mundo", así que el encabezado iba desincronizado de su propio
+  subtítulo).
+- `char_loadout_label` (línea 92): `"Loadout:"` - revisado el uso real
+  (`MainWindow.xaml:2562`, `TextBlock` de la cabecera de Equipamiento, visible de verdad, NO un
+  identificador técnico) y el resto del archivo: "Loadout" se usa tal cual, sin traducir, en
+  `equip_loadout_armor/dyes/vanity`, `tt_auto_equip` y `version_loadout_items` - es un préstamo del
+  inglés ya asentado en todo el proyecto (como "Buffs" o "Spawn X"/"Spawn Y", que por el mismo
+  motivo tampoco se tocan). Traducirlo solo aquí habría roto la consistencia con el resto de la
+  app. **Dejado sin cambiar a propósito** - el "candidato más débil" de la auditoría era en
+  realidad un falso positivo.
+
+**Regresiones reales encontradas y corregidas de paso** (la traducción de `stats_use_time` y
+`char_tab_spawnpoints` rompía DOS sitios que comparaban contra el texto literal en inglés dándolo
+por hecho como si fuera el resultado en español):
+- `Terrakeep.App.ViewModels.Tests\ObjetosTooltipStatsTests.cs` líneas 54 y 168: `Assert.Contains
+  ("Use time 20", ...)` sobre el tooltip real en ESPAÑOL → `"Tiempo de uso 20"` / `"Tiempo de uso
+  20 (3/s, Muy Rapido)"`.
+- `Terrakeep.App.Tests\Program.cs` línea 2772 (comprobación del tooltip real abierto en español,
+  `OBJ-STATS-IDIOMA`): `"Use time"` → `"Tiempo de uso"`. Línea 6343 (`AR-10`, filtro de pestañas
+  internas por nombre exacto de UI Automation): `"Spawn Points"` → `"Puntos de aparición"` - sin
+  este cambio la pestaña habría desaparecido silenciosamente del barrido de recorte (0 pestañas
+  encontradas en vez de 7, no un fallo ruidoso).
+
+**Verificación real, no de memoria**:
+- `comprobarLocalizacion.js` antes y después del cambio: **0 huérfanas, 0 marcadores
+  descuadrados** en los dos casos (`RESULTADO: OK`); el aviso informativo de texto idéntico bajó
+  de 42 a 40 claves (las 2 traducidas desaparecen de la lista, `char_loadout_label` se queda,
+  como se esperaba).
+- `dotnet test Terrakeep.App.ViewModels.Tests`: **484/484** tras arreglar las 2 aserciones
+  obsoletas (antes: 2 fallos reales, justo los del texto en inglés).
+- `dotnet test Terrakeep.Core.Tests`: **539/539**, sin regresiones (no toca esta capa).
+- `dotnet run --project Terrakeep.App.Tests` completo (arnés visual real T-21, ventanas WPF de
+  verdad + UI Automation + capturas): `DONE`. Resultados relevantes a este cambio:
+  - `OBJ-STATS-IDIOMA`: **0 discrepancias** - el tooltip real abierto en español dice de verdad
+    `"Tiempo de uso 20 (3/s, Muy Rapido)"`.
+  - `AR-10`: **7/7 pestañas internas sin recorte** a 1080px y a 1920px (incluida "Puntos de
+    aparición", la más larga de las 7).
+  - `PB-10-SPAWN`: **0 filas perdidas** en la tabla de Spawn Points a 1080x700 (tamaño mínimo real
+    de la ventana), 1180x860, 1400x900 y 1520x864.
+  - Capturas reales miradas a mano: `spawn-points-tabla-poblada.png` y `spawn-points-sd.png` -
+    pestaña "Puntos de aparición" completa, sin cortes ni desbordes, con hueco de sobra junto a
+    "Desbloqueos"/"Versión".
+- El barrido completo confirmó de paso que las claves de idioma en sí no quedan huérfanas en el
+  resto de comprobaciones del arnés (`A10-IDIOMA-BARRIDO`: 0 claves sin resolver del tipo
+  `[clave]`).
+
+**5 FALLOs que ya salían en el barrido completo, sin relación con este encargo (no tocados)**:
+`AR-11f` y `AR-LAY` (Personaje/Equipamiento a 1080x700) ya estaban documentados como deuda previa
+más arriba en esta misma bitácora; `AR-EX3-LEGIBILIDAD` (aviso de cobertura de selección de tiles
+en el mapa al 42%), `A11-CONTENIDO-IDIOMA` ("Cactus" vs "Cactus Plant" en un nombre de contenido
+del juego, no de la UI) y `MP-01` (prefijo calculado de "Coin Gun" no coincide con la wiki) son
+hallazgos nuevos de esta ejecución pero de zonas completamente distintas (mapa de Exploración,
+catálogo de nombres de contenido, tabla de mejor prefijo) - anotados aquí para que quede
+constancia, pendientes de una sesión propia si se decide perseguirlos.
+
+Commit pequeño: `strings_es.json` (2 claves) + `ObjetosTooltipStatsTests.cs` (2 aserciones) +
+`Program.cs` (2 literales del arnés).
