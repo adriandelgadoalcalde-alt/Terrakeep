@@ -12878,17 +12878,19 @@ maquetación/solape - fuera del alcance de este encargo, y ya estaban presentes 
 
 ---
 
-## 13-sep-2026 — Lista de funciones nuevas confirmada por el usuario: tres cerradas (filtros de la
-## Librería, Comparador de personajes, Códigos de build), investigación real del resto
+## 13-sep-2026 — Lista de funciones nuevas confirmada por el usuario: cuatro cerradas (filtros de
+## la Librería, Comparador de personajes, Códigos de build, Estadísticas de partida) + una ya
+## resuelta de antes, investigación real del resto
 
 Encargo del usuario, lista completa confirmada (orden "el que tenga más sentido según
 dependencias"): 1) comparador de dos personajes/builds, 2) filtros combinables en la Librería,
 3) editor de mundos (.wld), 4) códigos de build compartibles, 5) sugerencias de mejora de prefijo,
 6) paneles de progreso/completitud, 7) compartir/exportar (builds/presets/seeds), 8) estadísticas
-de partida, 9) vista previa de generación de mundo. Sesión larga, tres funciones **terminadas,
-verificadas de verdad y comiteadas** (commits `38ff631a`, `7314925f` y el de Códigos de build más
-abajo); el resto queda investigado con detalle real para la siguiente sesión - ver "Dónde seguir"
-al final de esta entrada.
+de partida, 9) vista previa de generación de mundo. Sesión larga, cuatro funciones **terminadas,
+verificadas de verdad y comiteadas** (commits `38ff631a`, `7314925f`, `4d29b8ad` y `fec3d130`) +
+una (5, sugerencias de prefijo) que resultó ya estar resuelta de una sesión anterior; el resto
+queda investigado con detalle real para la siguiente sesión - ver "Dónde seguir" al final de esta
+entrada.
 
 ### 2) Filtros combinables en la Librería: Rareza, Tipo de daño, Ranura de equipo
 
@@ -13067,15 +13069,16 @@ de arquitectura, logros NO son viables.**
   de verdad. Documentar la limitación honesta en vez de forzar un panel falso (mismo criterio ya
   aplicado en el proyecto entero: "lo que no se sabe no se inventa").
 
-**8) Estadísticas de partida - datos reales YA confirmados y disponibles, falta solo la vista.**
-`PlrCharacter` (`Terrakeep.Core/PlrFormat/PlrCharacter.cs`) ya trae, reales y verificados en esta
-sesión (usados en el Comparador): `PlayTimeLow`/`PlayTimeHigh` (ticks reales, fórmula ya escrita
-en `CompareViewModel.FormatPlayTime`), `PveDeaths`, `PvpDeaths`, `GolferScore`,
-`FishingQuestsCompleted`, `BartenderQuests`, `TaxMoney`, `Coins[0..3]` (dinero real). Un panel
-"Estadísticas" independiente (o una pestaña dentro de Apariencia, que ya muestra algunos de estos
-campos sueltos - `AppearanceViewModel.cs` línea ~226 en adelante) sería mayormente reorganizar
-datos que YA se leen/escriben, no investigar nada nuevo. Recursos recolectados NO se guardan
-(el `.plr` no lleva ningún contador de eso) - documentar la ausencia, no inventar un dato.
+**8) Estadísticas de partida - CERRADA en esta misma sesión (commit `fec3d130`), ver más abajo.**
+`PveDeaths`/`PvpDeaths` ya son campos editables reales en Apariencia (mismo patrón exacto que
+Pesca/Golf/horas, ya existentes) - `AppearanceViewModel.cs`. "Recursos recolectados" documentado
+como no guardado (el `.plr` no lleva ningún contador de eso), texto real en el propio panel en
+vez de un dato inventado. `BartenderQuests`/`TaxMoney`/`Coins[0..3]` (dinero real) quedan
+identificados y confirmados como datos reales disponibles si algún día se quiere ampliar más
+(el dinero ya se usa hoy en el Comparador, `CompareViewModel.FormatMoney`), pero no se añadieron
+campos editables para ellos esta vez - el encargo explícito era "tiempo jugado, muertes,
+recursos recolectados", los tres ya están resueltos (dos editables, uno documentado como
+ausente).
 
 **3) Editor de mundos (.wld) - la base ya existe pero solo cubre un caso (dificultad); un editor
 de tiles real es un proyecto aparte, del tamaño de TEdit.**
@@ -13106,8 +13109,12 @@ estimar el alcance - la respuesta cambia el tamaño del proyecto en un orden de 
 
 ### Verificación de conjunto de toda la sesión
 
-`dotnet test Terrakeep.Core.Tests`: **483/483** (475 previas + 8 de `BuildCodeTests`).
-`dotnet test Terrakeep.App.ViewModels.Tests`: **484/484** (478 tras el Comparador + 6 de
-`BuildCodeMainViewModelTests`). Cero regresiones en ninguna pasada completa de las tres rondas.
-`dotnet build` de los tres proyectos (`Terrakeep.Core`, `Terrakeep.App`, `Terrakeep.App.Tests`):
-0 advertencias, 0 errores en cada commit.
+`dotnet test Terrakeep.Core.Tests`: **483/483** (475 previas + 8 de `BuildCodeTests`, sin cambios
+tras Estadísticas de partida - esa función no tocó Core). `dotnet test
+Terrakeep.App.ViewModels.Tests`: **484/484**, pasada completa **cuatro veces seguidas** (una tras
+cada una de las cuatro funciones), siempre 0 fallos - la de Estadísticas de partida no sumó
+pruebas nuevas (extendió `BuffsAparienciaRoundTripPersonajeRealTests` ya existente en vez de
+duplicar cobertura del mismo personaje real). Cero regresiones en ninguna pasada. `dotnet build`
+de los tres proyectos (`Terrakeep.Core`, `Terrakeep.App`, `Terrakeep.App.Tests`): 0 advertencias,
+0 errores en cada commit real (nunca "compila y ya" - cada FALLO real de XAML encontrado durante
+el desarrollo, siempre `Style` duplicado o `Visibility` en un `Run`, se corrigió antes de seguir).
