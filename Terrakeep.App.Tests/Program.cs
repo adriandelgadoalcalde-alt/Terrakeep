@@ -707,6 +707,47 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // STATS_SOLO=1 (13-sep-2026, muertes PvE/PvP nuevas en Apariencia - octavo de la lista
+        // confirmada): mismo modo de foco que los de arriba, capturas reales de la pestaña
+        // Apariencia (las nuevas filas de estadisticas) en los dos idiomas, tamaño minimo.
+        if (Environment.GetEnvironmentVariable("STATS_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 3; // Apariencia (PersonajeInnerTab, privado en MainViewModel)
+                FijarTamaño(window, 1080, 700);
+                DoEvents(); DoEvents();
+                vm.Appearance.PveDeaths = 17;
+                vm.Appearance.PvpDeaths = 9;
+                DoEvents(); DoEvents();
+
+                void CapturaStats(string idioma, string archivo)
+                {
+                    vm.Settings.Language = idioma;
+                    DoEvents(); DoEvents();
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(window);
+                    var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    string shotPath = Path.Combine(AppContext.BaseDirectory, archivo);
+                    using (var fs = File.Create(shotPath)) encoder.Save(fs);
+                    Console.WriteLine($"STATS: captura real ({idioma}, 1080x700, PveDeaths={vm.Appearance.PveDeaths} PvpDeaths={vm.Appearance.PvpDeaths}) -> {shotPath}");
+                }
+                CapturaStats("es", "stats-apariencia-es-minima.png");
+                CapturaStats("en", "stats-apariencia-en-minima.png");
+                vm.Settings.Language = "es";
+                FijarTamaño(window, 1080, 1500);
+                DoEvents(); DoEvents();
+                CapturaStats("es", "stats-apariencia-es-completa.png");
+            }
+            catch (Exception ex) { Console.WriteLine("STATS-EXCEPTION: " + ex); }
+
+            BarridoMaquetacionPorTamañoEIdioma(window, vm);
+            Console.WriteLine("DONE (STATS_SOLO)");
+            Environment.Exit(0);
+        }
+
         // COMPARE_SOLO=1 (13-sep-2026, Comparador de personajes/builds): mismo modo de foco que
         // LIBFILT_SOLO justo arriba, mismo motivo real. El panel vive en Inicio (pestaña 0) y
         // NO exige ningun personaje cargado en el editor - solo la lista real ya escaneada por

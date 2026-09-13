@@ -77,7 +77,7 @@ public sealed class BuffsAparienciaRoundTripPersonajeRealTests
             libre.DurationSeconds = 1234;
             Assert.Equal(1234 * 60, libre.Buff.Time);
 
-            // ── Apariencia: peinado, tinte, dificultad, vida/mana, pesca, golf y horas.
+            // ── Apariencia: peinado, tinte, dificultad, vida/mana, pesca, golf, muertes y horas.
             vm.Appearance.HairStyle = 42;
             vm.Appearance.HairDye = 3;
             vm.Appearance.HealthMax = 500;
@@ -86,6 +86,11 @@ public sealed class BuffsAparienciaRoundTripPersonajeRealTests
             vm.Appearance.ManaNow = 77;
             vm.Appearance.FishingQuestsCompleted = 31;
             vm.Appearance.GolferScore = 64;
+            // Estadisticas de partida (13-sep-2026, octavo de la lista confirmada): muertes
+            // reales - valores distintos entre si y de cualquier valor por defecto (0), para
+            // que un bug real de escribir uno en el sitio del otro se note de verdad.
+            vm.Appearance.PveDeaths = 17;
+            vm.Appearance.PvpDeaths = 9;
             vm.Appearance.Swatches[0].R = 200; // color de pelo, canal R
             byte dificultadPrevia = antes.Difficulty;
 
@@ -133,6 +138,8 @@ public sealed class BuffsAparienciaRoundTripPersonajeRealTests
             Assert.Equal(77, despues.ManaNow);
             Assert.Equal(31, despues.FishingQuestsCompleted);
             Assert.Equal(64, despues.GolferScore);
+            Assert.Equal(17, despues.PveDeaths);
+            Assert.Equal(9, despues.PvpDeaths);
             Assert.Equal(200, despues.HairColor[0]);
 
             // Spawn Points.
@@ -176,6 +183,8 @@ public sealed class BuffsAparienciaRoundTripPersonajeRealTests
             Assert.Equal(42, vm2.Appearance.HairStyle);
             Assert.Equal(123, vm2.Appearance.HealthNow);
             Assert.Equal(31, vm2.Appearance.FishingQuestsCompleted);
+            Assert.Equal(17, vm2.Appearance.PveDeaths);
+            Assert.Equal(9, vm2.Appearance.PvpDeaths);
             Assert.True(vm2.Flags.UnlockedSuperMinecart);
             Assert.False(vm2.Flags.UsingSuperMinecart);
             Assert.True(vm2.Flags.AegisFruit);

@@ -223,6 +223,15 @@ public partial class AppearanceViewModel : ObservableObject
     [ObservableProperty] private int _manaMax;
     [ObservableProperty] private int _fishingQuestsCompleted;
     [ObservableProperty] private int _golferScore;
+    // Estadisticas de partida (encargo del usuario, 13-sep-2026, octavo de la lista confirmada:
+    // "tiempo jugado, muertes, recursos recolectados"). Tiempo jugado ya vivia aqui (PlayHours,
+    // ver abajo); las dos muertes son campos reales de PlrCharacter que hasta hoy no tenian
+    // ningun panel que los mostrara/editara - mismo hueco real que FishingQuestsCompleted/
+    // GolferScore tenian antes de esta pestaña. "Recursos recolectados" NO se guarda en el
+    // .plr - ver ESE hueco documentado con honestidad en tt_stats_resources_not_tracked (el
+    // propio panel lo dice, no se finge un contador que el juego no lleva).
+    [ObservableProperty] private int _pveDeaths;
+    [ObservableProperty] private int _pvpDeaths;
     // Horas jugadas, editable - PlrCharacter solo guarda PlayTimeLow/PlayTimeHigh (dos UInt32
     // que juntos forman un tick count de 64 bits, 10 millones de ticks/segundo - EXACTAMENTE
     // la resolucion de System.TimeSpan.Ticks, confirmado leyendo el real
@@ -266,6 +275,8 @@ public partial class AppearanceViewModel : ObservableObject
         ManaMax = character.ManaMax;
         FishingQuestsCompleted = character.FishingQuestsCompleted;
         GolferScore = character.GolferScore;
+        PveDeaths = character.PveDeaths;
+        PvpDeaths = character.PvpDeaths;
         long totalTicks = (long)(((ulong)character.PlayTimeHigh << 32) | character.PlayTimeLow);
         PlayHours = TimeSpan.FromTicks(totalTicks).TotalHours;
         _suppressWriteback = false;
@@ -438,6 +449,10 @@ public partial class AppearanceViewModel : ObservableObject
     partial void OnFishingQuestsCompletedChanged(int oldValue, int newValue) => PushUndoDebounced("FishingQuestsCompleted", LocalizationService.Instance["undo_appearance_fishing_quests"], oldValue, newValue, v => FishingQuestsCompleted = v);
     partial void OnGolferScoreChanged(int value) { if (!_suppressWriteback && _character != null) _character.GolferScore = value; }
     partial void OnGolferScoreChanged(int oldValue, int newValue) => PushUndoDebounced("GolferScore", LocalizationService.Instance["undo_appearance_golf_score"], oldValue, newValue, v => GolferScore = v);
+    partial void OnPveDeathsChanged(int value) { if (!_suppressWriteback && _character != null) _character.PveDeaths = value; }
+    partial void OnPveDeathsChanged(int oldValue, int newValue) => PushUndoDebounced("PveDeaths", LocalizationService.Instance["undo_appearance_pve_deaths"], oldValue, newValue, v => PveDeaths = v);
+    partial void OnPvpDeathsChanged(int value) { if (!_suppressWriteback && _character != null) _character.PvpDeaths = value; }
+    partial void OnPvpDeathsChanged(int oldValue, int newValue) => PushUndoDebounced("PvpDeaths", LocalizationService.Instance["undo_appearance_pvp_deaths"], oldValue, newValue, v => PvpDeaths = v);
 
     partial void OnPlayHoursChanged(double value)
     {

@@ -3932,6 +3932,28 @@
                                                  Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
                                     </StackPanel>
                                 </StackPanel>
+                                <!-- Estadisticas de partida (13-sep-2026, octavo de la lista
+                                     confirmada: "tiempo jugado [arriba], muertes, recursos
+                                     recolectados"). Las dos muertes son campos reales de
+                                     PlrCharacter (PveDeaths/PvpDeaths), mismo hueco real que
+                                     Pesca/Golf tenian antes de existir esta pestaña. "Recursos
+                                     recolectados" NO se guarda en el .plr - se dice con
+                                     claridad en vez de fingir un contador que el juego no
+                                     lleva. -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <StackPanel Margin="0,0,24,0">
+                                        <TextBlock Text="{Binding Loc[appearance_pve_deaths], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                        <TextBox Text="{Binding Appearance.PveDeaths, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="6,4"
+                                                 Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,24,0">
+                                        <TextBlock Text="{Binding Loc[appearance_pvp_deaths], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                        <TextBox Text="{Binding Appearance.PvpDeaths, UpdateSourceTrigger=PropertyChanged}" Width="70" Padding="6,4"
+                                                 Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Loc[appearance_resources_not_tracked], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                           FontSize="10.5" TextWrapping="Wrap" MaxWidth="420" Margin="0,0,0,16" />
                             </StackPanel>
                             </ScrollViewer>
                         </Grid>
