@@ -48,7 +48,39 @@ public static class WldReader
         stream.Position = header.NpcsSectionOffset;
         var (npcs, shimmeredTypes) = ReadNpcs(reader, header.Version);
 
-        return new WldWorld { Header = header, Tiles = tiles, Npcs = npcs, Chests = chests, Signs = signs, TileEntities = tileEntities, ShimmeredNpcTypes = shimmeredTypes };
+        // Editor de mundos v1 (14-sep-2026), punto 6 de la lista confirmada por el usuario
+        // (paneles de progreso/completitud): el bestiario vive en su PROPIA seccion con puntero
+        // directo (ver WldHeader.BestiarySectionOffset) - coste despreciable (un salto directo,
+        // nunca hay que atravesar ninguna seccion intermedia), asi que se lee siempre que exista,
+        // igual que NPCs/cofres/letreros de arriba.
+        WldBestiary? bestiary = null;
+        if (header.BestiarySectionOffset is int bestiaryOffset)
+        {
+            stream.Position = bestiaryOffset;
+            bestiary = ReadBestiary(reader);
+        }
+
+        return new WldWorld { Header = header, Tiles = tiles, Npcs = npcs, Chests = chests, Signs = signs, TileEntities = tileEntities, ShimmeredNpcTypes = shimmeredTypes, Bestiary = bestiary };
+    }
+
+    // Formato real confirmado en el comentario de WldBestiary: 3 diccionarios/conjuntos
+    // secuenciales, cada uno Int32 count + esa cantidad de entradas (Kills lleva ademas un
+    // Int32 de cantidad por clave; Sighted/Chatted son solo el conjunto de claves).
+    private static WldBestiary ReadBestiary(BinaryReader reader)
+    {
+        var kills = new Dictionary<string, int>();
+        int killCount = reader.ReadInt32();
+        for (int i = 0; i < killCount; i++) kills[reader.ReadString()] = reader.ReadInt32();
+
+        var sighted = new HashSet<string>();
+        int sightedCount = reader.ReadInt32();
+        for (int i = 0; i < sightedCount; i++) sighted.Add(reader.ReadString());
+
+        var chatted = new HashSet<string>();
+        int chattedCount = reader.ReadInt32();
+        for (int i = 0; i < chattedCount; i++) chatted.Add(reader.ReadString());
+
+        return new WldBestiary { Kills = kills, Sighted = sighted, Chatted = chatted };
     }
 
     // H4-08 (cuarta auditoria de Opus, Fable): lectura BARATA para el lanzador de mundos de
@@ -155,16 +187,47 @@ public static class WldReader
         int spawnY = reader.ReadInt32();
         double groundLevel = reader.ReadDouble();
         double rockLevel = reader.ReadDouble();
-        // F-7 (auditoria de Opus vs TEdit, E-06): 5 campos reales que no hacen falta para nada
-        // mas alla de saltarlos - confirmado byte a byte contra World.FileV2.cs (TEdit, commit
-        // f592261), sin guarda de version.
-        reader.ReadDouble(); // Time
-        reader.ReadBoolean(); // DayTime
-        reader.ReadInt32(); // MoonPhase
-        reader.ReadBoolean(); // BloodMoon
-        reader.ReadBoolean(); // IsEclipse
+        // F-7 (auditoria de Opus vs TEdit, E-06), ampliado por el editor de mundos v1 (14-sep-2026):
+        // estos 5 campos ya NO se descartan, se guardan de verdad en WldHeader (ver su comentario) -
+        // confirmado byte a byte contra World.FileV2.cs (TEdit, commit f592261), sin guarda de version.
+        double time = reader.ReadDouble();
+        bool dayTime = reader.ReadBoolean();
+        int moonPhase = reader.ReadInt32();
+        bool bloodMoon = reader.ReadBoolean();
+        bool isEclipse = reader.ReadBoolean();
         int dungeonX = reader.ReadInt32();
         int dungeonY = reader.ReadInt32();
+
+        // Editor de mundos v1 (14-sep-2026): bloque de banderas de progreso, confirmado byte a
+        // byte contra World.FileV2.cs de TEdit (commit f592261, lineas 2092-2105) - de ancho
+        // FIJO (sin ningun string variable hasta aqui), ver el comentario real de WldHeader sobre
+        // por que es seguro leerlo y parchearlo. Nunca se toca ShadowOrb/Invasion/clima/etc. -
+        // fuera del alcance de esta primera version, ver bitacora.md.
+        bool isCrimson = reader.ReadBoolean();
+        bool downedBoss1 = reader.ReadBoolean();
+        bool downedBoss2 = reader.ReadBoolean();
+        bool downedBoss3 = reader.ReadBoolean();
+        bool downedQueenBee = reader.ReadBoolean();
+        bool downedMech1 = reader.ReadBoolean();
+        bool downedMech2 = reader.ReadBoolean();
+        bool downedMech3 = reader.ReadBoolean();
+        reader.ReadBoolean(); // DownedMechBossAny - derivable de los 3 anteriores, no hace falta guardarlo aparte
+        bool downedPlant = reader.ReadBoolean();
+        bool downedGolem = reader.ReadBoolean();
+        bool? downedSlimeKing = version >= 118 ? reader.ReadBoolean() : null;
+
+        reader.ReadBoolean(); // SavedGoblin
+        reader.ReadBoolean(); // SavedWizard
+        reader.ReadBoolean(); // SavedMech
+        reader.ReadBoolean(); // DownedGoblins
+        reader.ReadBoolean(); // DownedClown
+        reader.ReadBoolean(); // DownedFrost
+        reader.ReadBoolean(); // DownedPirates
+        reader.ReadBoolean(); // ShadowOrbSmashed
+        reader.ReadBoolean(); // SpawnMeteor
+        reader.ReadByte();    // ShadowOrbCount
+        reader.ReadInt32();   // AltarCount
+        bool hardMode = reader.ReadBoolean();
 
         return new WldHeader
         {
@@ -183,6 +246,23 @@ public static class WldReader
             GameMode = gameMode,
             DungeonX = dungeonX,
             DungeonY = dungeonY,
+            Time = time,
+            DayTime = dayTime,
+            MoonPhase = moonPhase,
+            BloodMoon = bloodMoon,
+            IsEclipse = isEclipse,
+            IsCrimson = isCrimson,
+            DownedBoss1EyeOfCthulhu = downedBoss1,
+            DownedBoss2EaterOfWorldsOrBrainOfCthulhu = downedBoss2,
+            DownedBoss3Skeletron = downedBoss3,
+            DownedQueenBee = downedQueenBee,
+            DownedMechBoss1TheDestroyer = downedMech1,
+            DownedMechBoss2TheTwins = downedMech2,
+            DownedMechBoss3SkeletronPrime = downedMech3,
+            DownedPlantBoss = downedPlant,
+            DownedGolemBoss = downedGolem,
+            DownedSlimeKingBoss = downedSlimeKing,
+            HardMode = hardMode,
         };
     }
 

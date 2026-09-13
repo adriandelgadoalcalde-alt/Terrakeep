@@ -85,6 +85,35 @@ public class WldWriterTests
         w.Write(dungeonX);
         w.Write(dungeonY);
 
+        // Editor de mundos v1 (14-sep-2026): ReadHeader ahora sigue leyendo el bloque de
+        // banderas de progreso (IsCrimson..HardMode, ancho fijo) - ver el comentario real de
+        // WldHeader/WldReader sobre por que es seguro. La cabecera sintetica de este fichero
+        // tiene que darle al lector exactamente los mismos bytes que espera.
+        w.Write(false); // IsCrimson
+        w.Write(false); // DownedBoss1EyeOfCthulhu
+        w.Write(false); // DownedBoss2EaterOfWorldsOrBrainOfCthulhu
+        w.Write(false); // DownedBoss3Skeletron
+        w.Write(false); // DownedQueenBee
+        w.Write(false); // DownedMechBoss1TheDestroyer
+        w.Write(false); // DownedMechBoss2TheTwins
+        w.Write(false); // DownedMechBoss3SkeletronPrime
+        w.Write(false); // DownedMechBossAny
+        w.Write(false); // DownedPlantBoss
+        w.Write(false); // DownedGolemBoss
+        if (version >= 118) w.Write(false); // DownedSlimeKingBoss
+        w.Write(false); // SavedGoblin
+        w.Write(false); // SavedWizard
+        w.Write(false); // SavedMech
+        w.Write(false); // DownedGoblins
+        w.Write(false); // DownedClown
+        w.Write(false); // DownedFrost
+        w.Write(false); // DownedPirates
+        w.Write(false); // ShadowOrbSmashed
+        w.Write(false); // SpawnMeteor
+        w.Write((byte)0); // ShadowOrbCount
+        w.Write(0); // AltarCount
+        w.Write(false); // HardMode
+
         w.Flush();
         return ms.ToArray();
     }

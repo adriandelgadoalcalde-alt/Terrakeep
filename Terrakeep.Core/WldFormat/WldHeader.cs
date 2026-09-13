@@ -38,6 +38,43 @@ public sealed class WldHeader
     public required int DungeonX { get; init; }
     public required int DungeonY { get; init; }
 
+    // Editor de mundos v1 (14-sep-2026, siguiendo la guia de bitacora.md del 13-sep-2026 -
+    // "spawn point, hora/estacion guardada, banderas de progreso del mundo"): estos campos ya
+    // se leian y se descartaban (Time/DayTime/MoonPhase/BloodMoon/IsEclipse, ver el comentario
+    // real de WldReader.ReadHeader) o ni siquiera se llegaba a ellos (el bloque de banderas de
+    // IsCrimson..HardMode, confirmado byte a byte contra World.FileV2.cs de TEdit, commit
+    // f592261, lineas 2092-2119 - TODO el tramo desde SpawnX hasta HardMode es de ancho FIJO,
+    // sin ningun string variable de por medio, asi que es seguro seguir leyendolo Y parchearlo
+    // despues por offset replicado, igual que ya hace WldWriter.PatchGameMode).
+    //
+    // Los jefes tardios (Fishron, Martianos, Culto Lunatico, Lunatico) quedan FUERA a proposito:
+    // estan despues de la lista de Anglers (string[], longitud variable) y de LoadBanners - su
+    // offset no es fijo, localizarlo exige atravesar mas secciones variables y el riesgo de
+    // desincronizar la escritura sube sin necesidad para esta primera version.
+    public required double Time { get; init; }
+    public required bool DayTime { get; init; }
+    public required int MoonPhase { get; init; }
+    public required bool BloodMoon { get; init; }
+    public required bool IsEclipse { get; init; }
+    // Bioma de mal real del mundo (Corrupcion si es false) - se ENSEÑA (parte de "que banderas
+    // tiene este mundo") pero no se deja editar: cambiar el booleano sin tocar ni un tile dejaria
+    // el dato mintiendo sobre lo que el mapa realmente muestra, algo que este proyecto evita a
+    // proposito en cualquier otro sitio (ver CLAUDE.md).
+    public required bool IsCrimson { get; init; }
+    public required bool DownedBoss1EyeOfCthulhu { get; init; }
+    public required bool DownedBoss2EaterOfWorldsOrBrainOfCthulhu { get; init; }
+    public required bool DownedBoss3Skeletron { get; init; }
+    public required bool DownedQueenBee { get; init; }
+    public required bool DownedMechBoss1TheDestroyer { get; init; }
+    public required bool DownedMechBoss2TheTwins { get; init; }
+    public required bool DownedMechBoss3SkeletronPrime { get; init; }
+    public required bool DownedPlantBoss { get; init; }
+    public required bool DownedGolemBoss { get; init; }
+    // Solo existe desde la version 118 del formato (World.FileV2.cs: `if (w.Version >= 118)`) -
+    // null en un mundo mas antiguo en vez de fingir un false que el archivo ni siquiera guarda.
+    public bool? DownedSlimeKingBoss { get; init; }
+    public required bool HardMode { get; init; }
+
     public int TilesSectionOffset => Pointers[1];
     // Punto 4 (advisor Opus), Fase 2: confirmado directamente contra World.FileV2.cs de TEdit
     // (LoadWorld real) - Pointers[N] es donde EMPIEZA la seccion N (= donde termina la anterior),
@@ -72,11 +109,58 @@ public sealed class WldHeader
     // necesidad, el unico campo que cambio de verdad es este). Todas las demas propiedades son
     // `init`-only a proposito (WldHeader/WldWorld son inmutables salvo por este unico camino
     // explicito) - copiadas tal cual, nunca recalculadas.
-    public WldHeader WithGameMode(int newGameMode) => new()
+    public WldHeader WithGameMode(int newGameMode) => CopyWith(gameMode: newGameMode);
+
+    // Editor de mundos v1 (14-sep-2026): mismos tres caminos explicitos que WithGameMode, uno
+    // por grupo de campos editable (Spawn / Tiempo-luna / Banderas de progreso) - cada uno
+    // corresponde 1:1 a su propio WldWriter.PatchXxx y su propio boton "Guardar" en la interfaz
+    // (nunca un unico "guardar todo" que mezclaria varias escrituras atomicas distintas en una).
+    public WldHeader WithSpawn(int newSpawnX, int newSpawnY) => CopyWith(spawnX: newSpawnX, spawnY: newSpawnY);
+
+    public WldHeader WithTimeAndMoon(double newTime, bool newDayTime, int newMoonPhase, bool newBloodMoon, bool newIsEclipse) =>
+        CopyWith(time: newTime, dayTime: newDayTime, moonPhase: newMoonPhase, bloodMoon: newBloodMoon, isEclipse: newIsEclipse);
+
+    public WldHeader WithBossFlags(
+        bool newDownedBoss1EyeOfCthulhu, bool newDownedBoss2EaterOfWorldsOrBrainOfCthulhu, bool newDownedBoss3Skeletron,
+        bool newDownedQueenBee, bool newDownedMechBoss1TheDestroyer, bool newDownedMechBoss2TheTwins,
+        bool newDownedMechBoss3SkeletronPrime, bool newDownedPlantBoss, bool newDownedGolemBoss,
+        bool? newDownedSlimeKingBoss, bool newHardMode) => CopyWith(
+            downedBoss1: newDownedBoss1EyeOfCthulhu, downedBoss2: newDownedBoss2EaterOfWorldsOrBrainOfCthulhu,
+            downedBoss3: newDownedBoss3Skeletron, downedQueenBee: newDownedQueenBee, downedMech1: newDownedMechBoss1TheDestroyer,
+            downedMech2: newDownedMechBoss2TheTwins, downedMech3: newDownedMechBoss3SkeletronPrime,
+            downedPlant: newDownedPlantBoss, downedGolem: newDownedGolemBoss, downedSlimeKing: newDownedSlimeKingBoss,
+            hardMode: newHardMode);
+
+    private WldHeader CopyWith(
+        int? gameMode = null, int? spawnX = null, int? spawnY = null,
+        double? time = null, bool? dayTime = null, int? moonPhase = null, bool? bloodMoon = null, bool? isEclipse = null,
+        bool? downedBoss1 = null, bool? downedBoss2 = null, bool? downedBoss3 = null, bool? downedQueenBee = null,
+        bool? downedMech1 = null, bool? downedMech2 = null, bool? downedMech3 = null, bool? downedPlant = null,
+        bool? downedGolem = null, bool? downedSlimeKing = null, bool? hardMode = null) => new()
     {
         Version = Version, Pointers = Pointers, TileFrameImportant = TileFrameImportant, Title = Title,
-        WorldId = WorldId, TilesHigh = TilesHigh, TilesWide = TilesWide, SpawnX = SpawnX, SpawnY = SpawnY,
-        GroundLevel = GroundLevel, RockLevel = RockLevel, Seed = Seed, GameMode = newGameMode,
+        WorldId = WorldId, TilesHigh = TilesHigh, TilesWide = TilesWide,
+        SpawnX = spawnX ?? SpawnX, SpawnY = spawnY ?? SpawnY,
+        GroundLevel = GroundLevel, RockLevel = RockLevel, Seed = Seed, GameMode = gameMode ?? GameMode,
         DungeonX = DungeonX, DungeonY = DungeonY,
+        Time = time ?? Time, DayTime = dayTime ?? DayTime, MoonPhase = moonPhase ?? MoonPhase,
+        BloodMoon = bloodMoon ?? BloodMoon, IsEclipse = isEclipse ?? IsEclipse, IsCrimson = IsCrimson,
+        DownedBoss1EyeOfCthulhu = downedBoss1 ?? DownedBoss1EyeOfCthulhu,
+        DownedBoss2EaterOfWorldsOrBrainOfCthulhu = downedBoss2 ?? DownedBoss2EaterOfWorldsOrBrainOfCthulhu,
+        DownedBoss3Skeletron = downedBoss3 ?? DownedBoss3Skeletron,
+        DownedQueenBee = downedQueenBee ?? DownedQueenBee,
+        DownedMechBoss1TheDestroyer = downedMech1 ?? DownedMechBoss1TheDestroyer,
+        DownedMechBoss2TheTwins = downedMech2 ?? DownedMechBoss2TheTwins,
+        DownedMechBoss3SkeletronPrime = downedMech3 ?? DownedMechBoss3SkeletronPrime,
+        DownedPlantBoss = downedPlant ?? DownedPlantBoss,
+        DownedGolemBoss = downedGolem ?? DownedGolemBoss,
+        DownedSlimeKingBoss = downedSlimeKing ?? DownedSlimeKingBoss,
+        HardMode = hardMode ?? HardMode,
     };
+
+    // Ver el comentario de WldReader.Read sobre por que este puntero (y no Pointers[9], el
+    // "sectionPointers[8]" real de World.FileV2.cs de TEdit) es el inicio real de la seccion del
+    // bestiario - confirmado ademas contra el WorldFile.cs decompilado real de tModLoader
+    // (guarda `if (w.Version >= 210 && sectionPointers.Length > 9)` antes de leerla).
+    public int? BestiarySectionOffset => Version >= 210 && Pointers.Length > 9 ? Pointers[8] : null;
 }

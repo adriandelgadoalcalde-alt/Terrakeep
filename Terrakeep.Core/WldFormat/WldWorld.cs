@@ -22,13 +22,16 @@ public sealed class WldWorld
     // por tipo en ese mundo, no por instancia) - usado por NpcHeadProfile para elegir la cabeza
     // normal o la version "shimmer" real de cada NPC.
     public required IReadOnlySet<int> ShimmeredNpcTypes { get; init; }
+    // Editor de mundos v1 (14-sep-2026): null en un mundo anterior a la version 210 (Journey's
+    // End) - esa version de verdad no guarda esta seccion, no es un fallo de lectura.
+    public WldBestiary? Bestiary { get; init; }
 
-    // Ver WldHeader.WithGameMode - reconstruye el WldWorld con la cabecera ya parcheada tras un
-    // guardado real, reutilizando Tiles/Npcs/Chests/Signs/TileEntities/ShimmeredNpcTypes tal
-    // cual (nada de eso cambia al editar solo la dificultad).
+    // Ver WldHeader.WithGameMode/WithSpawn/WithTimeAndMoon/WithBossFlags - reconstruye el
+    // WldWorld con la cabecera ya parcheada tras un guardado real, reutilizando el resto tal
+    // cual (nada de eso cambia al editar solo la cabecera).
     public WldWorld WithHeader(WldHeader newHeader) => new()
     {
         Header = newHeader, Tiles = Tiles, Npcs = Npcs, Chests = Chests, Signs = Signs,
-        TileEntities = TileEntities, ShimmeredNpcTypes = ShimmeredNpcTypes,
+        TileEntities = TileEntities, ShimmeredNpcTypes = ShimmeredNpcTypes, Bestiary = Bestiary,
     };
 }

@@ -22,6 +22,11 @@ public class WldHeaderZoneForTests
         GameMode = 0,
         DungeonX = 0,
         DungeonY = 0,
+        Time = 0, DayTime = true, MoonPhase = 0, BloodMoon = false, IsEclipse = false,
+        IsCrimson = false, DownedBoss1EyeOfCthulhu = false, DownedBoss2EaterOfWorldsOrBrainOfCthulhu = false,
+        DownedBoss3Skeletron = false, DownedQueenBee = false, DownedMechBoss1TheDestroyer = false,
+        DownedMechBoss2TheTwins = false, DownedMechBoss3SkeletronPrime = false, DownedPlantBoss = false,
+        DownedGolemBoss = false, DownedSlimeKingBoss = false, HardMode = false,
     };
 
     [Fact]

@@ -134,6 +134,17 @@ public class WldWriterSupportsGameModeTests
         w.Write(50.0); w.Write(100.0);
         w.Write(0.0); w.Write(false); w.Write(0); w.Write(false); w.Write(false);
         w.Write(10); w.Write(10);    // dungeon
+
+        // Editor de mundos v1 (14-sep-2026): bloque de banderas de progreso (IsCrimson..HardMode,
+        // ancho fijo) que ReadHeader ahora sigue leyendo - ver el comentario real en
+        // WldWriterTests.BuildHeaderBytes (misma extension, mismo motivo).
+        for (int i = 0; i < 11; i++) w.Write(false); // IsCrimson..DownedGolemBoss
+        if (version >= 118) w.Write(false); // DownedSlimeKingBoss
+        for (int i = 0; i < 9; i++) w.Write(false); // SavedGoblin..SpawnMeteor
+        w.Write((byte)0); // ShadowOrbCount
+        w.Write(0); // AltarCount
+        w.Write(false); // HardMode
+
         w.Flush();
         return ms.ToArray();
     }
