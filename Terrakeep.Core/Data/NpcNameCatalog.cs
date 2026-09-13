@@ -24,13 +24,32 @@ public sealed class NpcNameEntryData
 public sealed class NpcNameCatalog
 {
     private readonly Dictionary<int, NpcNameEntryData> _byId;
+    // Editor de mundos v1 (14-sep-2026): el bestiario del .wld guarda sus claves como texto
+    // (el "bestiary credit id" real del juego, NPC.GetBestiaryCreditId -> NPCID.Search.GetName
+    // para NPCs vanilla) - EXACTAMENTE el mismo texto que la columna "key" de npc_names.json,
+    // confirmado a mano (id 3 = "Zombie" en los dos). Indice por clave, aparte del de por id,
+    // para poder traducir esas entradas sin tener que ir a buscar primero el id.
+    private readonly Dictionary<string, NpcNameEntryData> _byKey;
 
-    private NpcNameCatalog(Dictionary<int, NpcNameEntryData> byId) => _byId = byId;
+    private NpcNameCatalog(Dictionary<int, NpcNameEntryData> byId)
+    {
+        _byId = byId;
+        _byKey = byId.Values.GroupBy(e => e.Key, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+    }
 
     public string GetName(int npcId) => GetName(npcId, LocalizedContent.CurrentLanguage);
 
     public string GetName(int npcId, string language) =>
         _byId.TryGetValue(npcId, out var e) ? e.DisplayNameFor(language) : $"NPC #{npcId}";
+
+    // NPCs modded (Calamity) no estan en npc_names.json (catalogo solo vanilla, ver el
+    // comentario real de WldBestiary) - devuelve null en vez de un "#0" inventado, para que el
+    // llamador pueda decidir mostrar la clave cruda tal cual (honestidad real: nunca fingir una
+    // traduccion que no existe).
+    public string? TryGetNameByKey(string bestiaryKey) => TryGetNameByKey(bestiaryKey, LocalizedContent.CurrentLanguage);
+
+    public string? TryGetNameByKey(string bestiaryKey, string language) =>
+        _byKey.TryGetValue(bestiaryKey, out var e) ? e.DisplayNameFor(language) : null;
 
     // Punto 4 (advisor Opus, buscador de objetos del mundo): enumeracion real para resolver un
     // texto de busqueda libre contra el nombre de tipo de NPC (no el nombre propio que el

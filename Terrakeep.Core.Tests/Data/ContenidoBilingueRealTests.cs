@@ -95,6 +95,22 @@ public class ContenidoBilingueRealTests
         Assert.Equal("Eye of Cthulhu", catalogo.GetName(4, En));
     }
 
+    // Editor de mundos v1 (14-sep-2026): el bestiario del .wld guarda sus claves como texto (el
+    // "bestiary credit id" real del juego) - confirmado a mano contra NPC.cs/ContentSamples.cs
+    // decompilados que ese texto es EXACTAMENTE la columna "key" de npc_names.json (id 3 =
+    // "Zombie" en los dos). Clave desconocida (NPC modded, fuera de este catalogo solo-vanilla)
+    // -> null, nunca una traduccion inventada.
+    [Fact]
+    public void NombreDeNpcPorClaveDeBestiario_RealEnLosDosIdiomas()
+    {
+        if (Falta("npc_names.json")) return;
+        var catalogo = NpcNameCatalog.LoadFromFile(Path.Combine(AssetsDir, "npc_names.json"));
+
+        Assert.Equal("Zombi", catalogo.TryGetNameByKey("Zombie", Es));
+        Assert.Equal("Zombie", catalogo.TryGetNameByKey("Zombie", En));
+        Assert.Null(catalogo.TryGetNameByKey("EsteNpcNoExiste", Es));
+    }
+
     [Fact]
     public void NombreDeTileYPared_RealEnLosDosIdiomas()
     {

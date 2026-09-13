@@ -30,6 +30,66 @@ public static class WorldFileService
         return world.WithHeader(world.Header.WithGameMode(newGameMode));
     }
 
+    // Editor de mundos v1 (14-sep-2026, guia real de bitacora.md 13-sep-2026): mismo patron
+    // exacto que SaveGameMode arriba (leer, parchear, escribir atomico con .bak, releer de
+    // disco para verificar el round-trip) para cada uno de los tres grupos nuevos - nunca un
+    // unico "guardar todo" que mezclaria varias escrituras atomicas distintas en una.
+    public static WldWorld SaveSpawnPoint(WldWorld world, string wldPath, int newSpawnX, int newSpawnY)
+    {
+        if (newSpawnX < 0 || newSpawnX >= world.Header.TilesWide || newSpawnY < 0 || newSpawnY >= world.Header.TilesHigh)
+            throw new ArgumentOutOfRangeException(nameof(newSpawnX), LocalizationService.Instance["world_spawn_out_of_bounds"]);
+
+        byte[] original = File.ReadAllBytes(wldPath);
+        byte[] patched = WldWriter.PatchSpawnPoint(original, newSpawnX, newSpawnY);
+        WriteAtomic(wldPath, patched);
+
+        var reReadHeader = WldReader.ReadHeader(File.ReadAllBytes(wldPath));
+        if (reReadHeader.SpawnX != newSpawnX || reReadHeader.SpawnY != newSpawnY)
+            throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
+
+        return world.WithHeader(world.Header.WithSpawn(newSpawnX, newSpawnY));
+    }
+
+    public static WldWorld SaveTimeAndMoon(WldWorld world, string wldPath, double newTime, bool newDayTime, int newMoonPhase, bool newBloodMoon, bool newIsEclipse)
+    {
+        byte[] original = File.ReadAllBytes(wldPath);
+        byte[] patched = WldWriter.PatchTimeAndMoon(original, newTime, newDayTime, newMoonPhase, newBloodMoon, newIsEclipse);
+        WriteAtomic(wldPath, patched);
+
+        var reReadHeader = WldReader.ReadHeader(File.ReadAllBytes(wldPath));
+        if (Math.Abs(reReadHeader.Time - newTime) > 0.01 || reReadHeader.DayTime != newDayTime || reReadHeader.MoonPhase != newMoonPhase
+            || reReadHeader.BloodMoon != newBloodMoon || reReadHeader.IsEclipse != newIsEclipse)
+            throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
+
+        return world.WithHeader(world.Header.WithTimeAndMoon(newTime, newDayTime, newMoonPhase, newBloodMoon, newIsEclipse));
+    }
+
+    public static WldWorld SaveBossFlags(WldWorld world, string wldPath, WldWriter.WorldFlagsPatch patch)
+    {
+        byte[] original = File.ReadAllBytes(wldPath);
+        byte[] patched = WldWriter.PatchBossFlags(original, patch);
+        WriteAtomic(wldPath, patched);
+
+        var reReadHeader = WldReader.ReadHeader(File.ReadAllBytes(wldPath));
+        var newHeader = world.Header.WithBossFlags(
+            patch.DownedBoss1EyeOfCthulhu ?? world.Header.DownedBoss1EyeOfCthulhu,
+            patch.DownedBoss2EaterOfWorldsOrBrainOfCthulhu ?? world.Header.DownedBoss2EaterOfWorldsOrBrainOfCthulhu,
+            patch.DownedBoss3Skeletron ?? world.Header.DownedBoss3Skeletron,
+            patch.DownedQueenBee ?? world.Header.DownedQueenBee,
+            patch.DownedMechBoss1TheDestroyer ?? world.Header.DownedMechBoss1TheDestroyer,
+            patch.DownedMechBoss2TheTwins ?? world.Header.DownedMechBoss2TheTwins,
+            patch.DownedMechBoss3SkeletronPrime ?? world.Header.DownedMechBoss3SkeletronPrime,
+            patch.DownedPlantBoss ?? world.Header.DownedPlantBoss,
+            patch.DownedGolemBoss ?? world.Header.DownedGolemBoss,
+            patch.DownedSlimeKingBoss ?? world.Header.DownedSlimeKingBoss,
+            patch.HardMode ?? world.Header.HardMode);
+
+        if (reReadHeader.DownedBoss1EyeOfCthulhu != newHeader.DownedBoss1EyeOfCthulhu || reReadHeader.HardMode != newHeader.HardMode)
+            throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
+
+        return world.WithHeader(newHeader);
+    }
+
     private static void WriteAtomic(string path, byte[] bytes)
     {
         string tmpPath = path + ".tmp";

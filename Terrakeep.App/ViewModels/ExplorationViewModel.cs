@@ -248,6 +248,19 @@ public sealed partial class ChestRowViewModel(string variantName, string? chestN
     [ObservableProperty] private bool _isCurrent;
 }
 
+// Editor de mundos v1 (14-sep-2026), punto 6 de bitacora.md (paneles de progreso/completitud):
+// una fila real del bestiario (WldBestiary.Kills/Sighted/Chatted, seccion propia del .wld desde
+// Journey's End). Nombre traducido via NpcNameCatalog.TryGetNameByKey cuando la clave es un NPC
+// vanilla conocido; la clave CRUDA tal cual cuando no lo es (NPC modded/Calamity, fuera del
+// catalogo solo-vanilla) - nunca una traduccion inventada, ver el comentario real de WldBestiary.
+public sealed class BestiaryRowViewModel(string bestiaryKey, string? translatedName, int kills, bool sighted, bool chatted)
+{
+    public string Name { get; } = translatedName ?? bestiaryKey;
+    public int Kills { get; } = kills;
+    public bool Sighted { get; } = sighted;
+    public bool Chatted { get; } = chatted;
+}
+
 // Pestaña "Exploracion" - cargar un .wld real, pintarlo entero (WorldRenderer), listar sus
 // NPCs de pueblo con su posicion (con buscador por nombre) y marcar cuales NPCs de pueblo
 // reales (VanillaTownNpcRoster) todavia no tiene el jugador en este mundo. Solo lectura, no
@@ -413,6 +426,202 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private int _worldDungeonX;
     [ObservableProperty] private int _worldDungeonY;
     [ObservableProperty] private bool _isWorldLoaded;
+
+    // ===================================================================================
+    // Editor de mundos v1 (14-sep-2026, guia real de bitacora.md 13-sep-2026: "spawn point,
+    // hora/estacion guardada, banderas de progreso del mundo"). Mismo patron EXACTO que
+    // WorldGameMode/SaveWorldGameModeAsync de arriba, por grupo de campos: una propiedad "en
+    // memoria" que el usuario puede tocar libremente sin escribir nada, un valor "_savedXxx" que
+    // es la ultima verdad confirmada del ARCHIVO, un boton "Guardar" que solo se activa si de
+    // verdad difieren, y su propio mensaje de estado. Tres escrituras atomicas independientes
+    // (WorldFileService.SaveSpawnPoint/SaveTimeAndMoon/SaveBossFlags) - nunca un "guardar todo".
+    // ===================================================================================
+
+    // --- Punto de aparicion ---
+    [ObservableProperty] private int _editSpawnX;
+    [ObservableProperty] private int _editSpawnY;
+    private int _savedSpawnX, _savedSpawnY;
+    private string? _spawnSaveStatusKey; private object?[] _spawnSaveStatusArgs = [];
+    public string? SpawnSaveStatus => _spawnSaveStatusKey is null ? null : LocalizationService.Instance.Format(_spawnSaveStatusKey, _spawnSaveStatusArgs);
+    private void SetSpawnSaveStatus(string? clave, params object?[] args) { _spawnSaveStatusKey = clave; _spawnSaveStatusArgs = args; OnPropertyChanged(nameof(SpawnSaveStatus)); }
+    partial void OnEditSpawnXChanged(int value) => SaveSpawnPointCommand.NotifyCanExecuteChanged();
+    partial void OnEditSpawnYChanged(int value) => SaveSpawnPointCommand.NotifyCanExecuteChanged();
+    private bool CanSaveSpawnPoint() => IsWorldLoaded && _currentWorldPath != null && (EditSpawnX != _savedSpawnX || EditSpawnY != _savedSpawnY);
+
+    [RelayCommand(CanExecute = nameof(CanSaveSpawnPoint))]
+    private async Task SaveSpawnPointAsync()
+    {
+        if (_world == null || _currentWorldPath == null) return;
+        int nuevoX = EditSpawnX, nuevoY = EditSpawnY;
+        var mundoActual = _world; string ruta = _currentWorldPath;
+        SetSpawnSaveStatus("status_saving");
+        try
+        {
+            var mundoActualizado = await Task.Run(() => WorldFileService.SaveSpawnPoint(mundoActual, ruta, nuevoX, nuevoY));
+            _world = mundoActualizado;
+            _savedSpawnX = nuevoX; _savedSpawnY = nuevoY;
+            WorldSpawnX = nuevoX; WorldSpawnY = nuevoY; // el marcador del mapa sigue al nuevo valor guardado
+            SetSpawnSaveStatus("status_saved_backup", Path.GetFileName(ruta));
+        }
+        catch (Exception ex) { SetSpawnSaveStatus("status_save_failed", ex.Message); }
+        finally { SaveSpawnPointCommand.NotifyCanExecuteChanged(); }
+    }
+
+    // --- Hora del dia, luna, luna de sangre, eclipse ---
+    // Representacion amigable para la interfaz: un reloj de 0 a 24 en vez del Time+DayTime
+    // crudos del archivo (ver la conversion real, sacada de Terraria/Main.cs decompilado:
+    // dayLength=54000/nightLength=32400, el dia real empieza a las 4:30 y la noche a las 19:30).
+    [ObservableProperty] private double _editTimeHour;
+    [ObservableProperty] private int _editMoonPhase;
+    [ObservableProperty] private bool _editBloodMoon;
+    [ObservableProperty] private bool _editIsEclipse;
+    private double _savedTime; private bool _savedDayTime; private int _savedMoonPhase; private bool _savedBloodMoon; private bool _savedIsEclipse;
+    private string? _timeSaveStatusKey; private object?[] _timeSaveStatusArgs = [];
+    public string? TimeSaveStatus => _timeSaveStatusKey is null ? null : LocalizationService.Instance.Format(_timeSaveStatusKey, _timeSaveStatusArgs);
+    private void SetTimeSaveStatus(string? clave, params object?[] args) { _timeSaveStatusKey = clave; _timeSaveStatusArgs = args; OnPropertyChanged(nameof(TimeSaveStatus)); }
+    partial void OnEditTimeHourChanged(double value) => SaveTimeAndMoonCommand.NotifyCanExecuteChanged();
+    partial void OnEditMoonPhaseChanged(int value) => SaveTimeAndMoonCommand.NotifyCanExecuteChanged();
+    partial void OnEditBloodMoonChanged(bool value) => SaveTimeAndMoonCommand.NotifyCanExecuteChanged();
+    partial void OnEditIsEclipseChanged(bool value) => SaveTimeAndMoonCommand.NotifyCanExecuteChanged();
+
+    // Main.dayLength=54000.0, Main.nightLength=32400.0 (Terraria/Main.cs real, sin guarda de
+    // version - constantes fijas del juego): el dia guardado va de 4:30 a 19:30 (15 horas
+    // reales), la noche de 19:30 a 4:30 del dia siguiente (9 horas). Confirmado tambien contra
+    // Main.cs (num3 += 54000.0 al cruzar medianoche, DelegateMethods usando "54000 - time/2").
+    public static (double Time, bool DayTime) HourToGameTime(double hour24)
+    {
+        hour24 = ((hour24 % 24) + 24) % 24;
+        if (hour24 >= 4.5 && hour24 < 19.5)
+            return ((hour24 - 4.5) / 15.0 * 54000.0, true);
+        double h = hour24 < 4.5 ? hour24 + 24 : hour24;
+        return ((h - 19.5) / 9.0 * 32400.0, false);
+    }
+
+    public static double GameTimeToHour(double time, bool dayTime)
+    {
+        if (dayTime) return 4.5 + Math.Clamp(time, 0, 54000.0) / 54000.0 * 15.0;
+        double h = 19.5 + Math.Clamp(time, 0, 32400.0) / 32400.0 * 9.0;
+        return h >= 24 ? h - 24 : h;
+    }
+
+    private bool CanSaveTimeAndMoon()
+    {
+        if (!IsWorldLoaded || _currentWorldPath == null) return false;
+        var (time, dayTime) = HourToGameTime(EditTimeHour);
+        return Math.Abs(time - _savedTime) > 0.5 || dayTime != _savedDayTime || EditMoonPhase != _savedMoonPhase
+            || EditBloodMoon != _savedBloodMoon || EditIsEclipse != _savedIsEclipse;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveTimeAndMoon))]
+    private async Task SaveTimeAndMoonAsync()
+    {
+        if (_world == null || _currentWorldPath == null) return;
+        var (nuevoTime, nuevoDayTime) = HourToGameTime(EditTimeHour);
+        int nuevaFase = EditMoonPhase; bool nuevaLunaSangre = EditBloodMoon; bool nuevoEclipse = EditIsEclipse;
+        var mundoActual = _world; string ruta = _currentWorldPath;
+        SetTimeSaveStatus("status_saving");
+        try
+        {
+            var mundoActualizado = await Task.Run(() => WorldFileService.SaveTimeAndMoon(mundoActual, ruta, nuevoTime, nuevoDayTime, nuevaFase, nuevaLunaSangre, nuevoEclipse));
+            _world = mundoActualizado;
+            _savedTime = nuevoTime; _savedDayTime = nuevoDayTime; _savedMoonPhase = nuevaFase; _savedBloodMoon = nuevaLunaSangre; _savedIsEclipse = nuevoEclipse;
+            SetTimeSaveStatus("status_saved_backup", Path.GetFileName(ruta));
+        }
+        catch (Exception ex) { SetTimeSaveStatus("status_save_failed", ex.Message); }
+        finally { SaveTimeAndMoonCommand.NotifyCanExecuteChanged(); }
+    }
+
+    // --- Banderas de progreso: jefes principales + modo dificil ---
+    [ObservableProperty] private bool _editDownedBoss1;
+    [ObservableProperty] private bool _editDownedBoss2;
+    [ObservableProperty] private bool _editDownedBoss3;
+    [ObservableProperty] private bool _editDownedQueenBee;
+    [ObservableProperty] private bool _editDownedMech1;
+    [ObservableProperty] private bool _editDownedMech2;
+    [ObservableProperty] private bool _editDownedMech3;
+    [ObservableProperty] private bool _editDownedPlant;
+    [ObservableProperty] private bool _editDownedGolem;
+    [ObservableProperty] private bool _editDownedSlimeKing;
+    [ObservableProperty] private bool _editHardMode;
+    // null = este mundo (version<118) no tiene el campo del Rey Slime en absoluto - la casilla
+    // correspondiente se oculta en vez de dejar marcar algo que no se podria guardar nunca.
+    public bool HasSlimeKingField => _world?.Header.DownedSlimeKingBoss != null;
+    private bool _savedDownedBoss1, _savedDownedBoss2, _savedDownedBoss3, _savedDownedQueenBee,
+        _savedDownedMech1, _savedDownedMech2, _savedDownedMech3, _savedDownedPlant, _savedDownedGolem,
+        _savedDownedSlimeKing, _savedHardMode;
+    private string? _flagsSaveStatusKey; private object?[] _flagsSaveStatusArgs = [];
+    public string? FlagsSaveStatus => _flagsSaveStatusKey is null ? null : LocalizationService.Instance.Format(_flagsSaveStatusKey, _flagsSaveStatusArgs);
+    private void SetFlagsSaveStatus(string? clave, params object?[] args) { _flagsSaveStatusKey = clave; _flagsSaveStatusArgs = args; OnPropertyChanged(nameof(FlagsSaveStatus)); }
+    partial void OnEditDownedBoss1Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedBoss2Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedBoss3Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedQueenBeeChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedMech1Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedMech2Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedMech3Changed(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedPlantChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedGolemChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedSlimeKingChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditHardModeChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+
+    private bool CanSaveBossFlags() => IsWorldLoaded && _currentWorldPath != null && (
+        EditDownedBoss1 != _savedDownedBoss1 || EditDownedBoss2 != _savedDownedBoss2 || EditDownedBoss3 != _savedDownedBoss3 ||
+        EditDownedQueenBee != _savedDownedQueenBee || EditDownedMech1 != _savedDownedMech1 || EditDownedMech2 != _savedDownedMech2 ||
+        EditDownedMech3 != _savedDownedMech3 || EditDownedPlant != _savedDownedPlant || EditDownedGolem != _savedDownedGolem ||
+        (HasSlimeKingField && EditDownedSlimeKing != _savedDownedSlimeKing) || EditHardMode != _savedHardMode);
+
+    [RelayCommand(CanExecute = nameof(CanSaveBossFlags))]
+    private async Task SaveBossFlagsAsync()
+    {
+        if (_world == null || _currentWorldPath == null) return;
+        // Solo se manda lo que de verdad cambio (WorldFlagsPatch es nullable-por-campo) - asi
+        // WldWriter.PatchBossFlags toca en el archivo real el menor numero de bytes posible.
+        var patch = new WldWriter.WorldFlagsPatch(
+            DownedBoss1EyeOfCthulhu: EditDownedBoss1 != _savedDownedBoss1 ? EditDownedBoss1 : null,
+            DownedBoss2EaterOfWorldsOrBrainOfCthulhu: EditDownedBoss2 != _savedDownedBoss2 ? EditDownedBoss2 : null,
+            DownedBoss3Skeletron: EditDownedBoss3 != _savedDownedBoss3 ? EditDownedBoss3 : null,
+            DownedQueenBee: EditDownedQueenBee != _savedDownedQueenBee ? EditDownedQueenBee : null,
+            DownedMechBoss1TheDestroyer: EditDownedMech1 != _savedDownedMech1 ? EditDownedMech1 : null,
+            DownedMechBoss2TheTwins: EditDownedMech2 != _savedDownedMech2 ? EditDownedMech2 : null,
+            DownedMechBoss3SkeletronPrime: EditDownedMech3 != _savedDownedMech3 ? EditDownedMech3 : null,
+            DownedPlantBoss: EditDownedPlant != _savedDownedPlant ? EditDownedPlant : null,
+            DownedGolemBoss: EditDownedGolem != _savedDownedGolem ? EditDownedGolem : null,
+            DownedSlimeKingBoss: HasSlimeKingField && EditDownedSlimeKing != _savedDownedSlimeKing ? EditDownedSlimeKing : null,
+            HardMode: EditHardMode != _savedHardMode ? EditHardMode : null);
+
+        var mundoActual = _world; string ruta = _currentWorldPath;
+        SetFlagsSaveStatus("status_saving");
+        try
+        {
+            var mundoActualizado = await Task.Run(() => WorldFileService.SaveBossFlags(mundoActual, ruta, patch));
+            _world = mundoActualizado;
+            _savedDownedBoss1 = EditDownedBoss1; _savedDownedBoss2 = EditDownedBoss2; _savedDownedBoss3 = EditDownedBoss3;
+            _savedDownedQueenBee = EditDownedQueenBee; _savedDownedMech1 = EditDownedMech1; _savedDownedMech2 = EditDownedMech2;
+            _savedDownedMech3 = EditDownedMech3; _savedDownedPlant = EditDownedPlant; _savedDownedGolem = EditDownedGolem;
+            if (HasSlimeKingField) _savedDownedSlimeKing = EditDownedSlimeKing;
+            _savedHardMode = EditHardMode;
+            SetFlagsSaveStatus("status_saved_backup", Path.GetFileName(ruta));
+        }
+        catch (Exception ex) { SetFlagsSaveStatus("status_save_failed", ex.Message); }
+        finally { SaveBossFlagsCommand.NotifyCanExecuteChanged(); }
+    }
+
+    // --- Bestiario (solo lectura - ver el limite real documentado en WldBestiary/bitacora.md) ---
+    public ObservableCollection<BestiaryRowViewModel> BestiaryRows { get; } = [];
+    public bool HasBestiary => _world?.Bestiary != null;
+    [ObservableProperty] private string _bestiarySummaryText = "—";
+
+    private void RebuildBestiaryRows()
+    {
+        BestiaryRows.Clear();
+        var bestiary = _world?.Bestiary;
+        if (bestiary == null) { BestiarySummaryText = "—"; return; }
+
+        foreach (var (key, kills) in bestiary.Kills.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase))
+            BestiaryRows.Add(new BestiaryRowViewModel(key, _npcNames.TryGetNameByKey(key), kills, bestiary.Sighted.Contains(key), bestiary.Chatted.Contains(key)));
+        BestiarySummaryText = LocalizationService.Instance.Format("explore_bestiary_summary", BestiaryRows.Count, bestiary.Kills.Values.Sum());
+    }
+
     [ObservableProperty] private string _npcSearchText = string.Empty;
     [ObservableProperty] private double _zoom = 1.0;
     [ObservableProperty] private string _hoverInfo = string.Empty;
@@ -1434,6 +1643,13 @@ public partial class ExplorationViewModel : ObservableObject
             if (!encontrados.Contains(id))
                 MissingNpcs.Add(new MissingNpcRowViewModel(id, _npcNames.GetName(id)));
         RebuildInventory();
+        // Editor de mundos v1 (14-sep-2026): mismo motivo exacto que MissingNpcs/RebuildNpcRows
+        // de arriba - BestiaryRowViewModel.Name tambien se resuelve UNA vez al construirse
+        // (NpcNameCatalog.TryGetNameByKey), asi que sin esto se quedaba congelado en el idioma
+        // que hubiera al cargar el mundo (bug real, encontrado mirando la CAPTURA de verdad del
+        // panel en ingles - "Murciélago gigante" seguia en español tras cambiar el idioma en
+        // vivo, mismo tipo de fallo que ya documenta esta funcion para NPCs/objetos).
+        RebuildBestiaryRows();
         // HoverTileText/HoverInfo NO se rehacen aqui a proposito: son el texto del tile que hay
         // AHORA MISMO bajo el raton, que se reescribe entero en el siguiente movimiento. No hay
         // ningun estado que recomponer, solo un cursor que el usuario ya esta moviendo.
@@ -1750,6 +1966,37 @@ public partial class ExplorationViewModel : ObservableObject
             WorldSpawnY = world.Header.SpawnY;
             WorldDungeonX = world.Header.DungeonX;
             WorldDungeonY = world.Header.DungeonY;
+
+            // Editor de mundos v1 (14-sep-2026): los tres grupos nuevos se inicializan con el
+            // valor REAL del archivo entrante, tanto la copia "editable" como el "_savedXxx" de
+            // referencia (para que el boton "Guardar" de cada grupo nazca desactivado - nada
+            // cambio todavia).
+            _savedSpawnX = world.Header.SpawnX; _savedSpawnY = world.Header.SpawnY;
+            EditSpawnX = world.Header.SpawnX; EditSpawnY = world.Header.SpawnY;
+            SetSpawnSaveStatus(null);
+
+            _savedTime = world.Header.Time; _savedDayTime = world.Header.DayTime;
+            _savedMoonPhase = world.Header.MoonPhase; _savedBloodMoon = world.Header.BloodMoon; _savedIsEclipse = world.Header.IsEclipse;
+            EditTimeHour = GameTimeToHour(world.Header.Time, world.Header.DayTime);
+            EditMoonPhase = world.Header.MoonPhase; EditBloodMoon = world.Header.BloodMoon; EditIsEclipse = world.Header.IsEclipse;
+            SetTimeSaveStatus(null);
+
+            _savedDownedBoss1 = world.Header.DownedBoss1EyeOfCthulhu; _savedDownedBoss2 = world.Header.DownedBoss2EaterOfWorldsOrBrainOfCthulhu;
+            _savedDownedBoss3 = world.Header.DownedBoss3Skeletron; _savedDownedQueenBee = world.Header.DownedQueenBee;
+            _savedDownedMech1 = world.Header.DownedMechBoss1TheDestroyer; _savedDownedMech2 = world.Header.DownedMechBoss2TheTwins;
+            _savedDownedMech3 = world.Header.DownedMechBoss3SkeletronPrime; _savedDownedPlant = world.Header.DownedPlantBoss;
+            _savedDownedGolem = world.Header.DownedGolemBoss; _savedDownedSlimeKing = world.Header.DownedSlimeKingBoss ?? false;
+            _savedHardMode = world.Header.HardMode;
+            EditDownedBoss1 = _savedDownedBoss1; EditDownedBoss2 = _savedDownedBoss2; EditDownedBoss3 = _savedDownedBoss3;
+            EditDownedQueenBee = _savedDownedQueenBee; EditDownedMech1 = _savedDownedMech1; EditDownedMech2 = _savedDownedMech2;
+            EditDownedMech3 = _savedDownedMech3; EditDownedPlant = _savedDownedPlant; EditDownedGolem = _savedDownedGolem;
+            EditDownedSlimeKing = _savedDownedSlimeKing; EditHardMode = _savedHardMode;
+            OnPropertyChanged(nameof(HasSlimeKingField));
+            SetFlagsSaveStatus(null);
+
+            RebuildBestiaryRows();
+            OnPropertyChanged(nameof(HasBestiary));
+
             IsWorldLoaded = true;
             SetStatusMessage("status_world_loaded_summary",
                 world.Header.Title, world.Header.TilesWide, world.Header.TilesHigh, _allNpcs.Count, MissingNpcs.Count);
@@ -1760,10 +2007,13 @@ public partial class ExplorationViewModel : ObservableObject
             OnPropertyChanged(nameof(SignCount));
             OnPropertyChanged(nameof(WorldAirPercentText));
             UpdateCurrentWorldPath(wldPath);
-            // IsWorldLoaded (de la que depende CanSaveWorldGameMode) cambia DESPUES de fijar
-            // WorldGameMode arriba - reevaluar aqui explicitamente en vez de fiarse de que algun
-            // evento de UI ambiental fuerce un requery de WPF.
+            // IsWorldLoaded (de la que dependen todos los CanSave* de arriba) cambia DESPUES de
+            // fijar los valores editables - reevaluar aqui explicitamente en vez de fiarse de
+            // que algun evento de UI ambiental fuerce un requery de WPF.
             SaveWorldGameModeCommand.NotifyCanExecuteChanged();
+            SaveSpawnPointCommand.NotifyCanExecuteChanged();
+            SaveTimeAndMoonCommand.NotifyCanExecuteChanged();
+            SaveBossFlagsCommand.NotifyCanExecuteChanged();
         }
         catch (Exception ex)
         {
@@ -1778,9 +2028,19 @@ public partial class ExplorationViewModel : ObservableObject
             NotifyGameModeAvailability();
             IsWorldLoaded = false;
             SetSaveStatus(null);
+            SetSpawnSaveStatus(null);
+            SetTimeSaveStatus(null);
+            SetFlagsSaveStatus(null);
+            BestiaryRows.Clear();
+            BestiarySummaryText = "—";
+            OnPropertyChanged(nameof(HasBestiary));
+            OnPropertyChanged(nameof(HasSlimeKingField));
             SetStatusMessage("error_reading_world", ex.Message);
             UpdateCurrentWorldPath(null); // un fallo real no debe dejar ninguna pildora marcada como "cargada"
             SaveWorldGameModeCommand.NotifyCanExecuteChanged();
+            SaveSpawnPointCommand.NotifyCanExecuteChanged();
+            SaveTimeAndMoonCommand.NotifyCanExecuteChanged();
+            SaveBossFlagsCommand.NotifyCanExecuteChanged();
         }
         finally
         {

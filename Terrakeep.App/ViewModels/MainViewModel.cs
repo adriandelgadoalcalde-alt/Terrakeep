@@ -679,6 +679,10 @@ public partial class MainViewModel : ObservableObject
     // nuevas) - ver el comentario de cabecera real en CompareViewModel (por que lleva su PROPIO
     // CharacterFileService en vez de compartir _service).
     public CompareViewModel Compare { get; }
+    // Vista previa de generacion de mundo (14-sep-2026, punto 9 de la lista confirmada del
+    // 13-sep-2026) - ver el comentario de cabecera real en WorldPreviewViewModel. Overlay
+    // independiente de todo personaje/mundo cargado, calculador puro.
+    public WorldPreviewViewModel WorldPreview { get; } = new();
     // Pedido explicito del usuario (5-sep-2026): idioma en vivo, sin reiniciar - expuesto aqui
     // (root DataContext de casi toda la ventana) para que cualquier XAML pueda usar
     // {Binding Loc[clave]} directamente, mismo criterio que Home/About/etc de arriba. Instance es
@@ -1300,11 +1304,12 @@ public partial class MainViewModel : ObservableObject
     private void OpenBackupHistory()
     {
         if (_loaded == null) return;
-        // Los tres son overlays de nivel de ventana con el mismo velo opaco - abrir uno encima
-        // de otro se veria mal y Escape solo cerraria el de arriba, dejando el otro abierto por
+        // Los overlays de nivel de ventana comparten el mismo velo opaco - abrir uno encima de
+        // otro se veria mal y Escape solo cerraria el de arriba, dejando el otro abierto por
         // detras sin que se note. Nunca dos a la vez, a proposito.
         if (Compare.IsOpen) Compare.CloseCommand.Execute(null);
         if (IsBuildCodeOpen) CloseBuildCodeCommand.Execute(null);
+        if (WorldPreview.IsOpen) WorldPreview.CloseCommand.Execute(null);
         BackupHistory.Open(_loaded.PlrPath, CharacterName, isCurrentCharacter: true);
     }
 
@@ -1314,7 +1319,19 @@ public partial class MainViewModel : ObservableObject
     {
         if (BackupHistory.IsOpen) BackupHistory.CloseCommand.Execute(null);
         if (IsBuildCodeOpen) CloseBuildCodeCommand.Execute(null);
+        if (WorldPreview.IsOpen) WorldPreview.CloseCommand.Execute(null);
         Compare.OpenCommand.Execute(null);
+    }
+
+    // Vista previa de generacion de mundo (14-sep-2026): mismo motivo real que los tres de
+    // arriba. Sin CanExecute - no exige ningun personaje/mundo cargado (calculador puro).
+    [RelayCommand]
+    private void OpenWorldPreview()
+    {
+        if (BackupHistory.IsOpen) BackupHistory.CloseCommand.Execute(null);
+        if (Compare.IsOpen) Compare.CloseCommand.Execute(null);
+        if (IsBuildCodeOpen) CloseBuildCodeCommand.Execute(null);
+        WorldPreview.OpenCommand.Execute(null);
     }
 
     [RelayCommand(CanExecute = nameof(CanUndoLastSave))]
@@ -1548,6 +1565,7 @@ public partial class MainViewModel : ObservableObject
         // de nivel de ventana con el mismo velo opaco, nunca dos a la vez.
         if (BackupHistory.IsOpen) BackupHistory.CloseCommand.Execute(null);
         if (Compare.IsOpen) Compare.CloseCommand.Execute(null);
+        if (WorldPreview.IsOpen) WorldPreview.CloseCommand.Execute(null);
         BuildCodeImportText = string.Empty;
         BuildCodeImportMessage = null;
         RegenerateBuildCode();

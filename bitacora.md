@@ -13118,3 +13118,169 @@ duplicar cobertura del mismo personaje real). Cero regresiones en ninguna pasada
 de los tres proyectos (`Terrakeep.Core`, `Terrakeep.App`, `Terrakeep.App.Tests`): 0 advertencias,
 0 errores en cada commit real (nunca "compila y ya" - cada FALLO real de XAML encontrado durante
 el desarrollo, siempre `Style` duplicado o `Visibility` en un `Run`, se corrigió antes de seguir).
+
+---
+
+## 14-sep-2026 — Las tres piezas grandes del 13-sep: editor de mundos v1 (spawn/hora-luna/jefes
+## + bestiario real), vista previa de generación de mundo (honesta, sin mapa falso), y el límite
+## de logros documentado en la interfaz
+
+Encargo del usuario: retomar las tres piezas que la ronda del 13-sep dejó investigadas pero sin
+construir (editor de mundos, vista previa de generación, paneles de progreso), con autonomía de
+diseño total ("libertad absoluta, como si fueras un arquitecto de software"). Las tres, cerradas
+y verificadas de verdad esta sesión - ninguna se dejó a medias.
+
+### 1) Editor de mundos v1: spawn, hora/luna/luna de sangre/eclipse, jefes derrotados + Modo Difícil
+
+Alcance decidido con criterio propio (la guía del 13-sep sugería exactamente esto como primera
+versión honesta): además de `GameMode` (única excepción real que ya existía desde el 5-sep), ahora
+también son editables el **punto de aparición**, la **hora del día + fase lunar + luna de
+sangre + eclipse**, y las **banderas de progreso de los jefes principales** (Ojo de Cthulhu,
+Devorador de Mundos/Cerebro de Cthulhu, Skeletron, Reina Abeja, los 3 mecánicos, Plantera, Golem,
+Rey Slime si el mundo lo soporta) + **Modo Difícil** en sí. Deliberadamente FUERA de esta primera
+versión (documentado en el propio código, `WldHeader.cs`): jefes tardíos (Fishron, Marcianos,
+Culto Lunático, Lunático - viven después de una lista de longitud variable, offset no fijo,
+más riesgo del que hace falta asumir ahora), bandera de bioma maligno (`IsCrimson`, se ENSEÑA pero
+no se deja editar - cambiarla sin tocar tiles dejaría el dato mintiendo sobre lo que el mapa
+muestra), Orbes de Sombra, invasiones, clima, NPCs rescatados.
+
+**Formato confirmado, no adivinado**: todo el tramo `SpawnX..HardMode` es de ancho FIJO (ni un
+solo string variable de por medio) - confirmado byte a byte contra `World.FileV2.cs` de TEdit
+(`xnb-lzx-tool-refs/`, ya citado en `CLAUDE.md`) y contra el `WorldFile.cs`/`Main.cs` decompilado
+REAL de tModLoader (constantes `dayLength=54000`/`nightLength=32400`, el día real empieza a las
+4:30 y la noche a las 19:30 - de ahí `ExplorationViewModel.HourToGameTime`/`GameTimeToHour`, público
+para que el arnés también los use). `Terrakeep.Core/WldFormat/WldWriter.cs` gana
+`PatchSpawnPoint`/`PatchTimeAndMoon`/`PatchBossFlags` (`WorldFlagsPatch`, nullable por campo - solo
+se escribe lo que el usuario cambió de verdad), los tres construidos sobre un único
+`ComputeHeaderOffsets` compartido (mismo criterio que `PatchGameMode` ya usaba, nunca pueden
+divergir entre sí). `WorldFileService` gana `SaveSpawnPoint`/`SaveTimeAndMoon`/`SaveBossFlags`,
+mismo patrón atómico (`.bak` + `File.Replace` + re-lectura de verificación) que `SaveGameMode`.
+
+Interfaz: dos `Expander` nuevos en la columna de Exploración ("Editar mundo" con los tres grupos,
+cada uno con su propio botón "Guardar" - nunca uno solo que mezclara tres escrituras atómicas
+distintas; "Bestiario", ver el punto 3 de más abajo), reutilizando el mismo lenguaje visual de
+chips/checkbox ya establecido en el resto de la app.
+
+### 2) Bestiario real - resuelve el "límite de arquitectura" que el 13-sep dejó pendiente de investigar
+
+La entrada del 13-sep decía "no investigado todavía, hace falta decompilar el formato de esa
+sección del `.wld`". Investigado a fondo esta sesión: el bestiario (Journey's End, versión≥210)
+vive en su **PROPIA sección con puntero directo** (`Terraria.GameContent.Bestiary.
+BestiaryUnlocksTracker`/`NPCKillsTracker` decompilados reales) - **no** hace falta atravesar
+ninguna sección intermedia (Anglers/banners/etc, que sí bloqueaban los jefes tardíos del punto 1).
+Un hallazgo real durante la investigación: comparando el `WorldFile.cs` decompilado con
+`World.FileV2.cs` de TEdit, el offset real es **`Pointers[8]`, NO `Pointers[9]`** como parecía a
+primera vista mirando solo los índices de TEdit (su `sectionPointers[9]` es el FIN de la sección,
+el inicio real es `sectionPointers[8]` - un desfase de uno que unas pruebas de humo contra 4
+mundos `.wld` reales de esta máquina confirmaron enseguida habría dado basura).
+
+La clave de cada entrada del bestiario es texto (el "bestiary credit id" real del juego,
+`NPC.GetBestiaryCreditId`) - confirmado que para NPCs vanilla es EXACTAMENTE la columna `key` de
+`npc_names.json` ya existente (id 3 = "Zombie" en los dos). `NpcNameCatalog` gana
+`TryGetNameByKey` (índice nuevo por clave, aparte del de por id). NPCs modded (Calamity) no están
+en ese catálogo (solo-vanilla) - se muestran con su clave cruda en vez de fingir una traducción
+que no existe, mismo criterio de honestidad del resto del proyecto.
+
+**Bug real encontrado mirando la CAPTURA de verdad** (no el detector automático): la primera
+captura en inglés seguía mostrando "Piraña" en vez de "Piranha" - `BestiaryRowViewModel.Name` se
+resolvía una vez al cargar el mundo y nunca se releía al cambiar de idioma en vivo (exactamente el
+mismo bug de clase que `MissingNpcs`/`RebuildNpcRows` ya tenían resuelto desde el 6-sep,
+`RefrescarNombresDeContenido` - solo faltaba enganchar `RebuildBestiaryRows` ahí también).
+Arreglado y reverificado con una captura limpia.
+
+### 3) Vista previa de generación de mundo - honesta, nunca un mapa falso
+
+Mismo criterio real que Starvekeep aplicó para DST el mismo día 13-sep (bitacora.md de
+`Downloads\Starvekeep\`, sección "Vista previa y generación de mundo nuevo" - "nunca un mapa
+falso, sí un resumen honesto de configuración"), adaptado a que Terrakeep NO genera mundos de
+verdad (a diferencia de Starvekeep, que sí arranca un servidor dedicado real): un calculador puro,
+sin tocar ningún archivo, sobre las elecciones reales de la pantalla de creación de mundo de
+Terraria (tamaño/dificultad/bioma maligno/semilla).
+
+Datos reales, nunca inventados:
+- **Tamaños exactos** (Pequeño 4200×1200, Mediano 6400×1800, Grande 8400×2400) - constantes reales
+  confirmadas contra `UIWorldCreation.cs` decompilado (`Main.maxTilesX/Y`).
+- **Las 8 semillas secretas reales** del juego (No Traps, Not the Bees, For the Worthy, Don't Dig
+  Up/Remix, Celebrationmk10, The Constant, Drunk World, Get fixed boi/Zenith) - la lógica de
+  coincidencia de texto está PORTADA 1:1 desde `UIWorldCreation.ProcessSpecialWorldSeeds`
+  decompilado real (mismas grafías aceptadas, "get fixed boi" activa las 8 a la vez incluida Drunk
+  World - `WorldGen.GenerateWorld` real: `if (seed == 5162020 || everythingWorldGen)`). Las
+  descripciones de cada una son un resumen fiel de hechos reales sacados de terraria.wiki.gg
+  (fetch real esta sesión, páginas oficiales de cada semilla) - nunca inventadas.
+
+`Terrakeep.Core/WorldGen/` nuevo: `WorldSizeCatalog`, `SpecialSeedCatalog`, `WorldCreationSummary`/
+`WorldCreationSummaryBuilder` (puro dato, sin idioma - igual que el resto del proyecto separa
+Core=lógica de App=presentación). `WorldPreviewViewModel` + overlay de ventana nuevo (mismo
+mecanismo real que Comparador/Código de build - velo opaco, Escape/clic fuera lo cierra, nunca dos
+overlays a la vez), botón "Vista previa de mundo nuevo" en la cabecera de Exploración, disponible
+SIEMPRE (sin exigir ningún mundo/personaje cargado).
+
+### 4) Logros de cuenta - límite honesto documentado en la propia interfaz
+
+Confirmado (ya lo decía la entrada del 13-sep, ahora con una nota real en pantalla): Terraria
+guarda los logros por CUENTA de Steam, en un único archivo compartido fuera de las carpetas
+`Players`/`Worlds` que esta app toca - no hay ningún personaje/mundo al que asociarlos de verdad,
+así que forzar un panel sería fingir un dato que no existe. Nota real añadida bajo la barra de
+progreso de Investigación (`research_achievements_not_available`) explicando esto con claridad en
+vez de dejar al usuario preguntándose por qué no hay logros.
+
+### Un hallazgo real de maquetación (AR-11f/AR-15/AR-EX1) - MinHeight recalibrado, con criterio
+
+Añadir dos `Expander` nuevos a la columna de Exploración (23px + 8px de margen colapsado cada uno
+= 62px reales, medidos con el arnés) rompió el presupuesto fijo de altura de esa columna
+(`ExplorationSidebarPanel`, `Height` ligado al `ViewportHeight` del propio `ScrollViewer` +
+`MinHeight` como red de seguridad - mecanismo real documentado desde el 6-sep, AR-11a/AR-11c/
+AR-11f). Primer barrido completo tras la primera versión: **9 firmas de contenido perdido de
+verdad** (`AR-15`: 0 de 26 NPCs que faltan alcanzables a 1080x700 con "Este mundo" también
+abierto; `AR-EX1`: la categoría Objetos sin una sola fila entera visible en 3 tamaños reales).
+Subir `MinHeight` de 590 a 652 (590 + los 62px reales medidos de los dos Expanders nuevos) los
+dejó los dos en verde (`0 firmas` en el barrido siguiente).
+
+Efecto secundario aceptado y documentado en el propio XAML: `AR-11f` (que la barra de scroll NO
+aparezca al tamaño por defecto del arnés) sigue en rojo - pero investigado a fondo, resultó ser
+en parte un problema YA EXISTENTE antes de esta sesión (el viewport real a 1180x860 ya había
+bajado a 557px, confirmado que la MISMA cifra aparecía en el primer barrido con `MinHeight` todavía
+en 590, sin ningún cambio mío) por el crecimiento de la cabecera global en sesiones anteriores
+(Historial de versiones/Comparador/Código de build, todos añadidos el propio 13-sep) nunca
+recalibrado después. Entre esa deuda previa y el coste real de dos secciones nuevas y legítimas,
+se priorizó la garantía que de verdad importa (nada de contenido inalcanzable, el motivo real por
+el que este mecanismo de `MinHeight` existe) sobre la estética de "nunca una barra de scroll de
+más" - decisión y motivo documentados con detalle en el propio comentario de
+`ExplorationSidebarPanel` en `MainWindow.xaml`, para que quien lo mire después no tenga que
+redescubrirlo.
+
+También confirmado, mirando el primer barrido completo (antes de tocar `MinHeight`), que
+`AR-LAY-PERDIDO` en `Personaje/Equipamiento` a 1080x700 (`SlotGridPanel` pierde 8,1px) es
+**anterior a esta sesión** (la misma firma exacta ya aparecía con el código de partida, sin ningún
+cambio mío) - probablemente el caso límite que el propio comentario de `R-04a` (13-sep) ya
+anticipaba ("solo un bono de set con texto muy largo... llegaría a pedir scroll"). Fuera del
+alcance de este encargo, dejado sin tocar y anotado aquí para que quede constancia.
+
+### Verificación real de toda la sesión
+
+- `dotnet test Terrakeep.Core.Tests`: **539/539** (509 previas + 30 nuevas: `WldReaderProgressFieldsTests`,
+  `WldWriterProgressPatchTests`, `WorldCreationSummaryTests`, más una de `NpcNameCatalog.
+  TryGetNameByKey`) - incluidas pruebas de humo reales contra 4 mundos `.wld` de esta máquina
+  (Time/MoonPhase/banderas de jefes/bestiario), y pruebas de escritura con el mismo criterio
+  estricto que ya exigía `WldWriterTests` (diff byte a byte, solo los campos pedidos cambian).
+- `dotnet test Terrakeep.App.ViewModels.Tests`: **484/484**, sin regresiones.
+- `dotnet run --project Terrakeep.App.Tests` **completo** (sin ningún modo de foco), tres veces
+  seguidas durante la ronda de ajuste de `MinHeight` (9 FALLOs de maquetación → 0 nuevos, solo los
+  4 ya explicados arriba y confirmados como no-regresión). Modos de foco nuevos permanentes:
+  `WORLDEDIT_SOLO=1` (spawn/hora-luna/banderas/bestiario, round-trip real contra una COPIA
+  desechable de `roca_negra.wld`, nunca el archivo real - `WE-01`..`WE-04` en verde, capturas
+  reales `worldedit-es/en-minima.png` miradas a mano en los dos idiomas) y `WORLDPREVIEW_SOLO=1`
+  (`WP-01`..`WP-05` en verde, capturas `worldpreview-es/en-minima.png`).
+- `dotnet build` de los cinco proyectos tocados: 0 advertencias, 0 errores en cada commit real.
+
+### Dónde seguir, si se retoma más adelante
+
+- Jefes tardíos (Fishron, Marcianos, Culto Lunático, Lunático) y demás banderas de evento
+  (Orbes de Sombra, invasiones, clima, NPCs rescatados) - offset no fijo, hace falta decidir si
+  merece la pena el riesgo de atravesar las secciones variables intermedias solo para escribirlas.
+- `IsCrimson` sigue siendo de solo lectura a propósito (ver el motivo real arriba) - si algún día
+  se quisiera editar de verdad, tendría que ir acompañado de recolorear los tiles de bioma maligno
+  del propio mundo, un proyecto bastante mayor (edición de tiles real).
+- `AR-11f` (barra de scroll visible al tamaño por defecto) sigue en rojo a propósito - recalibrar
+  de verdad exigiría medir cuánto ha crecido la cabecera global desde el 13-sep y decidir si
+  compensarlo tiene sentido, o aceptar la barra como parte normal de la columna a partir de ahora.

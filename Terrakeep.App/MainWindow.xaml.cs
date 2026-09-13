@@ -229,6 +229,8 @@ public partial class MainWindow : Window
             else if (_viewModel.Compare.IsOpen) _viewModel.Compare.CloseCommand.Execute(null);
             // Codigos de build (13-sep-2026): mismo overlay, mismo criterio.
             else if (_viewModel.IsBuildCodeOpen) _viewModel.CloseBuildCodeCommand.Execute(null);
+            // Vista previa de generacion de mundo (14-sep-2026): mismo overlay, mismo criterio.
+            else if (_viewModel.WorldPreview.IsOpen) _viewModel.WorldPreview.CloseCommand.Execute(null);
             else if (_viewModel.IsWhereIsItOpen) _viewModel.IsWhereIsItOpen = false;
             else if (_viewModel.Library.IsPicking) _viewModel.Library.CancelPickCommand.Execute(null);
             else if (_viewModel.BuffLibrary.IsPicking) _viewModel.BuffLibrary.CancelPickCommand.Execute(null);

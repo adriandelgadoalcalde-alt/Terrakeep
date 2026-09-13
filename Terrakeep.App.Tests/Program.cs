@@ -827,6 +827,222 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // WORLDEDIT_SOLO=1 (14-sep-2026, editor de mundos v1: spawn/hora-luna/banderas de
+        // progreso + bestiario, guia real de bitacora.md 13-sep-2026): mismo modo de foco que
+        // los de arriba. NUNCA sobre roca_negra.wld real (el mundo que el resto del arnes sigue
+        // usando despues) - siempre sobre una COPIA en el scratchpad, borrada al final pase lo
+        // que pase (try/finally), cargada de verdad a traves de la ViewModel (no solo
+        // WorldFileService a secas, para probar tambien el cableado real de los tres botones
+        // "Guardar" y sus CanExecute).
+        if (Environment.GetEnvironmentVariable("WORLDEDIT_SOLO") == "1")
+        {
+            string worldPathWE = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            string copiaWE = Path.Combine(Path.GetTempPath(), $"terrakeep-test-worldedit-{Guid.NewGuid():N}.wld");
+            try
+            {
+                if (!File.Exists(worldPathWE)) { Console.WriteLine("WORLDEDIT: mundo real no encontrado, nada que probar."); }
+                else
+                {
+                    File.Copy(worldPathWE, copiaWE);
+                    vm.SelectedTabIndex = 4; // Exploracion
+                    FijarTamaño(window, 1080, 700);
+                    DoEvents(); DoEvents();
+
+                    var taskWE = vm.Exploration.LoadFromPathAsync(copiaWE);
+                    while (!taskWE.IsCompleted) DoEvents();
+                    if (taskWE.IsFaulted) throw taskWE.Exception!;
+                    Console.WriteLine($"WORLDEDIT: copia cargada -> spawn=({vm.Exploration.EditSpawnX},{vm.Exploration.EditSpawnY}) horaOriginal={vm.Exploration.EditTimeHour:0.00} faseLunar={vm.Exploration.EditMoonPhase} HasSlimeKingField={vm.Exploration.HasSlimeKingField} HasBestiary={vm.Exploration.HasBestiary}");
+
+                    // --- WE-01: punto de aparicion ---
+                    int spawnXAntes = vm.Exploration.EditSpawnX, spawnYAntes = vm.Exploration.EditSpawnY;
+                    Console.WriteLine($"WE-01: SaveSpawnPointCommand.CanExecute ANTES de tocar nada -> {vm.Exploration.SaveSpawnPointCommand.CanExecute(null)} (esperado False)");
+                    if (vm.Exploration.SaveSpawnPointCommand.CanExecute(null)) Console.WriteLine("FALLO: WE-01 - el boton de guardar spawn no deberia estar activo sin cambios");
+                    vm.Exploration.EditSpawnX = spawnXAntes + 37;
+                    vm.Exploration.EditSpawnY = spawnYAntes + 11;
+                    DoEvents();
+                    Console.WriteLine($"WE-01: CanExecute tras cambiar -> {vm.Exploration.SaveSpawnPointCommand.CanExecute(null)} (esperado True)");
+                    var taskSpawn = vm.Exploration.SaveSpawnPointCommand.ExecuteAsync(null);
+                    while (!taskSpawn.IsCompleted) DoEvents();
+                    DoEvents();
+                    var releidoSpawn = WldReader.ReadHeader(File.ReadAllBytes(copiaWE));
+                    Console.WriteLine($"WE-01: tras guardar -> archivo real spawn=({releidoSpawn.SpawnX},{releidoSpawn.SpawnY}) (esperado ({spawnXAntes + 37},{spawnYAntes + 11})), .bak existe={File.Exists(copiaWE + ".bak")} (esperado True), estado='{vm.Exploration.SpawnSaveStatus}'");
+                    if (releidoSpawn.SpawnX != spawnXAntes + 37 || releidoSpawn.SpawnY != spawnYAntes + 11 || !File.Exists(copiaWE + ".bak"))
+                        Console.WriteLine("FALLO: WE-01 - el guardado real del punto de aparicion no escribio lo esperado");
+
+                    // --- WE-02: hora/luna/luna de sangre/eclipse ---
+                    Console.WriteLine($"WE-02: SaveTimeAndMoonCommand.CanExecute ANTES de tocar nada -> {vm.Exploration.SaveTimeAndMoonCommand.CanExecute(null)} (esperado False)");
+                    vm.Exploration.EditTimeHour = 12.0; // mediodia real (DayTime=true)
+                    vm.Exploration.EditMoonPhase = (vm.Exploration.EditMoonPhase + 1) % 8;
+                    vm.Exploration.EditBloodMoon = !vm.Exploration.EditBloodMoon;
+                    DoEvents();
+                    var taskTime = vm.Exploration.SaveTimeAndMoonCommand.ExecuteAsync(null);
+                    while (!taskTime.IsCompleted) DoEvents();
+                    DoEvents();
+                    var releidoTime = WldReader.ReadHeader(File.ReadAllBytes(copiaWE));
+                    double horaReleida = ExplorationViewModel.GameTimeToHour(releidoTime.Time, releidoTime.DayTime);
+                    Console.WriteLine($"WE-02: tras guardar -> archivo real hora={horaReleida:0.00} (esperado ~12.00) DayTime={releidoTime.DayTime} (esperado True) MoonPhase={releidoTime.MoonPhase} BloodMoon={releidoTime.BloodMoon}, estado='{vm.Exploration.TimeSaveStatus}'");
+                    if (Math.Abs(horaReleida - 12.0) > 0.1 || !releidoTime.DayTime) Console.WriteLine("FALLO: WE-02 - la hora guardada no corresponde a mediodia real");
+
+                    // --- WE-03: banderas de progreso (jefes + modo dificil) ---
+                    bool eocAntes = vm.Exploration.EditDownedBoss1, hardModeAntes = vm.Exploration.EditHardMode;
+                    vm.Exploration.EditDownedBoss1 = !eocAntes;
+                    vm.Exploration.EditHardMode = !hardModeAntes;
+                    DoEvents();
+                    Console.WriteLine($"WE-03: SaveBossFlagsCommand.CanExecute tras cambiar 2 banderas -> {vm.Exploration.SaveBossFlagsCommand.CanExecute(null)} (esperado True)");
+                    var taskFlags = vm.Exploration.SaveBossFlagsCommand.ExecuteAsync(null);
+                    while (!taskFlags.IsCompleted) DoEvents();
+                    DoEvents();
+                    var releidoFlags = WldReader.ReadHeader(File.ReadAllBytes(copiaWE));
+                    Console.WriteLine($"WE-03: tras guardar -> archivo real EoC={releidoFlags.DownedBoss1EyeOfCthulhu} (esperado {!eocAntes}) HardMode={releidoFlags.HardMode} (esperado {!hardModeAntes}), otro jefe no tocado QueenBee={releidoFlags.DownedQueenBee} (esperado False, no se pidio cambiar), estado='{vm.Exploration.FlagsSaveStatus}'");
+                    if (releidoFlags.DownedBoss1EyeOfCthulhu != !eocAntes || releidoFlags.HardMode != !hardModeAntes || releidoFlags.DownedQueenBee)
+                        Console.WriteLine("FALLO: WE-03 - el guardado real de banderas de progreso no hizo exactamente lo pedido");
+
+                    // --- WE-04: bestiario (solo lectura) ---
+                    Console.WriteLine($"WE-04: BestiaryRows.Count={vm.Exploration.BestiaryRows.Count} HasBestiary={vm.Exploration.HasBestiary} resumen='{vm.Exploration.BestiarySummaryText}'");
+                    if (vm.Exploration.HasBestiary && vm.Exploration.BestiaryRows.Count > 0)
+                    {
+                        var primera = vm.Exploration.BestiaryRows[0];
+                        Console.WriteLine($"WE-04: fila con mas muertes -> '{primera.Name}' x{primera.Kills} (orden descendente esperado)");
+                        if (vm.Exploration.BestiaryRows.Count > 1 && vm.Exploration.BestiaryRows[1].Kills > primera.Kills)
+                            Console.WriteLine("FALLO: WE-04 - las filas del bestiario no estan ordenadas de mas a menos muertes");
+                    }
+
+                    // Capturas reales del panel "Editar mundo" desplegado, dos idiomas, tamaño minimo.
+                    void CapturaConEditorMundo(string idioma, string archivo)
+                    {
+                        vm.Settings.Language = idioma;
+                        // El ItemsControl del bestiario regenera TODOS sus contenedores al
+                        // cambiar de idioma (ObservableCollection.Clear()+Add x75) - un par de
+                        // DoEvents() de mas para que WPF termine de verdad el layout+render de
+                        // las filas nuevas antes de capturar (visto con un caso real: la 4ª fila
+                        // seguia pintando el texto ANTERIOR en la primera captura tras el cambio,
+                        // aunque el dato en la ViewModel ya era el correcto - puro tiempo de
+                        // render, confirmado con un WriteLine de los datos reales).
+                        DoEvents(); DoEvents(); DoEvents(); DoEvents();
+                        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtb.Render(window);
+                        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                        string shotPath = Path.Combine(AppContext.BaseDirectory, archivo);
+                        using (var fs = File.Create(shotPath)) encoder.Save(fs);
+                        Console.WriteLine($"WORLDEDIT: captura real ({idioma}, 1080x700) -> {shotPath}");
+                    }
+                    // El Expander "Editar mundo" via UI Automation real (mismo mecanismo que el
+                    // resto del arnes) - expandirlo de verdad antes de capturar, no solo confiar
+                    // en que el binding puso el contenido en el arbol visual colapsado.
+                    var expanderEditar = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Group),
+                        new PropertyCondition(AutomationElement.NameProperty, LocalizationService.Instance["explore_edit_world"])));
+                    if (expanderEditar != null && expanderEditar.TryGetCurrentPattern(ExpandCollapsePattern.Pattern, out var expPat))
+                        ((ExpandCollapsePattern)expPat).Expand();
+                    else
+                        Console.WriteLine("WORLDEDIT: Expander 'Editar mundo' NO-FOUND via UI Automation");
+                    var expanderBestiario = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Group),
+                        new PropertyCondition(AutomationElement.NameProperty, LocalizationService.Instance["explore_bestiary"])));
+                    if (expanderBestiario != null && expanderBestiario.TryGetCurrentPattern(ExpandCollapsePattern.Pattern, out var expPat2))
+                        ((ExpandCollapsePattern)expPat2).Expand();
+                    else
+                        Console.WriteLine("WORLDEDIT: Expander 'Bestiario' NO-FOUND via UI Automation");
+                    DoEvents(); DoEvents();
+                    CapturaConEditorMundo("es", "worldedit-es-minima.png");
+                    CapturaConEditorMundo("en", "worldedit-en-minima.png");
+                    vm.Settings.Language = "es";
+
+                    // Mismo criterio real que BUILDCODE_SOLO/COMPARE_SOLO (cierran su propio
+                    // overlay antes del barrido compartido AR-LAY): estos dos Expanders son
+                    // estado de UI compartido con el resto del arnes (vm/window se reutilizan
+                    // para el barrido de abajo) - dejarlos expandidos aqui haria que AR-LAY
+                    // midiera un estado excepcional (3 Expanders de esta columna a la vez, un
+                    // caso de verdad posible pero fuera del "estado por defecto" que MinHeight=590
+                    // tiene calibrado, ver el comentario real de ExplorationSidebarScroll) en vez
+                    // del estado normal que el resto de la suite espera.
+                    if (expanderEditar != null && expanderEditar.TryGetCurrentPattern(ExpandCollapsePattern.Pattern, out var collPat1))
+                        ((ExpandCollapsePattern)collPat1).Collapse();
+                    if (expanderBestiario != null && expanderBestiario.TryGetCurrentPattern(ExpandCollapsePattern.Pattern, out var collPat2))
+                        ((ExpandCollapsePattern)collPat2).Collapse();
+                    DoEvents(); DoEvents();
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("WORLDEDIT-EXCEPTION: " + ex); }
+            finally
+            {
+                File.Delete(copiaWE);
+                File.Delete(copiaWE + ".bak");
+                File.Delete(copiaWE + ".tmp");
+            }
+
+            BarridoMaquetacionPorTamañoEIdioma(window, vm);
+            Console.WriteLine("DONE (WORLDEDIT_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // WORLDPREVIEW_SOLO=1 (14-sep-2026, vista previa de generacion de mundo, noveno de la
+        // lista confirmada del 13-sep-2026): mismo modo de foco que los de arriba. A diferencia
+        // de WORLDEDIT_SOLO, no toca NINGUN archivo real (calculador puro) - no hace falta
+        // ningun mundo/personaje cargado ni ninguna copia desechable.
+        if (Environment.GetEnvironmentVariable("WORLDPREVIEW_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 4; // Exploracion (el boton vive en su cabecera)
+                FijarTamaño(window, 1080, 700);
+                DoEvents(); DoEvents();
+
+                // WP-01: sin tocar nada, semilla normal -> tamaño Mediano real, sin efectos.
+                Console.WriteLine($"WP-01: por defecto -> tamaño={vm.WorldPreview.SelectedSize} dimensiones='{vm.WorldPreview.DimensionsText}' (esperado 6400×1800), HasSpecialSeed={vm.WorldPreview.HasSpecialSeed} (esperado False)");
+                if (vm.WorldPreview.DimensionsText != "6400×1800 tiles" || vm.WorldPreview.HasSpecialSeed)
+                    Console.WriteLine("FALLO: WP-01 - el estado por defecto no es el esperado (Mediano, sin semilla especial)");
+
+                vm.OpenWorldPreviewCommand.Execute(null);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"WP-02: panel abierto -> IsOpen={vm.WorldPreview.IsOpen} (esperado True)");
+                if (!vm.WorldPreview.IsOpen) Console.WriteLine("FALLO: WP-02 - OpenWorldPreviewCommand no abrio el panel");
+
+                // WP-03: tamaño Grande + semilla "for the worthy" -> dimensiones reales + UN efecto real.
+                vm.WorldPreview.SelectedSize = Terrakeep.Core.WorldGen.WorldSizeOption.Large;
+                vm.WorldPreview.SeedText = "for the worthy";
+                DoEvents(); DoEvents();
+                Console.WriteLine($"WP-03: Grande + 'for the worthy' -> dimensiones='{vm.WorldPreview.DimensionsText}' (esperado '8400×2400 tiles'), efectos={vm.WorldPreview.SpecialSeedEffectRows.Count} (esperado 1), nombre del efecto='{(vm.WorldPreview.SpecialSeedEffectRows.Count > 0 ? vm.WorldPreview.SpecialSeedEffectRows[0].Name : "?")}'");
+                if (vm.WorldPreview.DimensionsText != "8400×2400 tiles" || vm.WorldPreview.SpecialSeedEffectRows.Count != 1)
+                    Console.WriteLine("FALLO: WP-03 - el resumen no reacciono bien a tamaño+semilla reales");
+
+                // WP-04: "get fixed boi" -> las 8 banderas reales a la vez.
+                vm.WorldPreview.SeedText = "get fixed boi";
+                DoEvents(); DoEvents();
+                Console.WriteLine($"WP-04: 'get fixed boi' -> efectos={vm.WorldPreview.SpecialSeedEffectRows.Count} (esperado 8)");
+                if (vm.WorldPreview.SpecialSeedEffectRows.Count != 8) Console.WriteLine("FALLO: WP-04 - 'get fixed boi' deberia activar las 8 banderas reales a la vez");
+
+                void CapturaConVistaPrevia(string idioma, string archivo)
+                {
+                    vm.Settings.Language = idioma;
+                    DoEvents(); DoEvents(); DoEvents(); DoEvents();
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(window);
+                    var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    string shotPath = Path.Combine(AppContext.BaseDirectory, archivo);
+                    using (var fs = File.Create(shotPath)) encoder.Save(fs);
+                    Console.WriteLine($"WORLDPREVIEW: captura real ({idioma}, 1080x700) -> {shotPath}");
+                }
+                CapturaConVistaPrevia("es", "worldpreview-es-minima.png");
+                CapturaConVistaPrevia("en", "worldpreview-en-minima.png");
+                vm.Settings.Language = "es";
+
+                vm.WorldPreview.CloseCommand.Execute(null);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"WP-05: cerrado -> IsOpen={vm.WorldPreview.IsOpen} (esperado False)");
+                if (vm.WorldPreview.IsOpen) Console.WriteLine("FALLO: WP-05 - CloseCommand no cerro el panel");
+            }
+            catch (Exception ex) { Console.WriteLine("WORLDPREVIEW-EXCEPTION: " + ex); }
+
+            BarridoMaquetacionPorTamañoEIdioma(window, vm);
+            Console.WriteLine("DONE (WORLDPREVIEW_SOLO)");
+            Environment.Exit(0);
+        }
+
         // Verificacion real de N-1 (auditoria de Opus, Bloque 2): la cabecera global debe verse
         // IGUAL en una pestaña que no es Personaje (aqui, Builds=indice 2) - antes el nombre/
         // dificultad/Guardar solo existian dentro de Personaje.
