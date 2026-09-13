@@ -1841,6 +1841,12 @@
                     <Button x:Name="BackupHistoryButton" Content="{Binding Loc[action_save_history], Mode=OneWay}" Margin="8,0,0,0"
                             Command="{Binding OpenBackupHistoryCommand}"
                             ToolTip="{Binding Loc[tt_backup_history], Mode=OneWay}" />
+                    <!-- Codigos de build compartibles (13-sep-2026, cuarto de la lista confirmada):
+                         exporta el loadout que se este viendo ahora en Equipamiento a un codigo de
+                         texto corto, e importa uno pegado. -->
+                    <Button x:Name="BuildCodeButton" Content="{Binding Loc[action_build_code], Mode=OneWay}" Margin="8,0,0,0"
+                            Command="{Binding OpenBuildCodeCommand}"
+                            ToolTip="{Binding Loc[tt_build_code], Mode=OneWay}" />
                     <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4" />
                     <Button Content="{Binding Loc[action_save], Mode=OneWay}" Tag="Orange" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
                 </WrapPanel>
@@ -6299,6 +6305,83 @@
                         </ScrollViewer>
                     </Grid>
                 </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Codigos de build compartibles (13-sep-2026, cuarto de la lista confirmada):
+             "exportar una build a un codigo de texto corto/compartible y poder importarlo en
+             otra instalacion". Mismo overlay real que Historial de versiones/Comparador (velo
+             opaco, Escape/clic fuera lo cierra, nunca dos a la vez - ver Open*/Close* en
+             MainViewModel), panel mas pequeño (no hace falta "lado a lado"). -->
+        <Grid Panel.ZIndex="200" Background="#CC0B0D16"
+              Visibility="{Binding IsBuildCodeOpen, Converter={StaticResource BoolToVis}}">
+            <Grid.InputBindings>
+                <MouseBinding MouseAction="LeftClick" Command="{Binding CloseBuildCodeCommand}" />
+            </Grid.InputBindings>
+            <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource BorderStrongBrush}"
+                    BorderThickness="1" CornerRadius="12" Effect="{StaticResource CardShadowHover}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Width="620" MaxWidth="700" Margin="20">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding NoopBuildCodeCommand}" />
+                </Border.InputBindings>
+                <StackPanel Margin="20">
+                    <Grid Margin="0,0,0,10">
+                        <StackPanel HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding Loc[build_code_panel_title], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="19" />
+                            <TextBlock Text="{Binding Loc[build_code_panel_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                       TextWrapping="Wrap" MaxWidth="540" HorizontalAlignment="Left" />
+                        </StackPanel>
+                        <Button Content="✕" Style="{StaticResource CircleCloseButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Command="{Binding CloseBuildCodeCommand}" ToolTip="{Binding Loc[close_notice_tooltip], Mode=OneWay}" />
+                    </Grid>
+
+                    <TextBlock Text="{Binding Loc[build_code_your_code_label], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="13" Margin="0,6,0,6" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="BuildCodeTextBox" Grid.Column="0" Text="{Binding BuildCodeGenerated, Mode=OneWay}" IsReadOnly="True"
+                                 Padding="8,6" Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 BorderThickness="0" FontFamily="Consolas" FontSize="11.5" TextWrapping="Wrap"
+                                 GotFocus="OnBuildCodeTextBoxGotFocus" />
+                        <Button Grid.Column="1" Content="{Binding Loc[build_code_copy_button], Mode=OneWay}" Margin="8,0,0,0" Tag="Accent"
+                                VerticalAlignment="Top" Padding="12,7" Command="{Binding CopyBuildCodeCommand}" />
+                    </Grid>
+
+                    <Border Height="1" Background="{StaticResource BorderBrush0}" Margin="0,16,0,16" />
+
+                    <TextBlock Text="{Binding Loc[build_code_import_label], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="13" Margin="0,0,0,6" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" Text="{Binding BuildCodeImportText, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="8,6" Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 BorderThickness="0" FontFamily="Consolas" FontSize="11.5" TextWrapping="Wrap"
+                                 MinLines="2" MaxLines="4" AcceptsReturn="False"
+                                 ToolTip="{Binding Loc[build_code_import_placeholder], Mode=OneWay}" />
+                        <Button Grid.Column="1" Content="{Binding Loc[build_code_import_button], Mode=OneWay}" Margin="8,0,0,0" Tag="Accent"
+                                VerticalAlignment="Top" Padding="12,7" Command="{Binding ImportBuildCodeCommand}" />
+                    </Grid>
+                    <TextBlock Text="{Binding BuildCodeImportMessage}" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Visibility="{Binding BuildCodeImportMessage, Converter={StaticResource NullToVis}}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding BuildCodeImportIsError}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource PinkBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding BuildCodeImportIsError}" Value="False">
+                                        <Setter Property="Foreground" Value="{StaticResource TealBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
             </Border>
         </Grid>
         </Grid>

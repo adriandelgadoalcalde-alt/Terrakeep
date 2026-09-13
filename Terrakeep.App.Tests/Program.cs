@@ -650,6 +650,63 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // BUILDCODE_SOLO=1 (13-sep-2026, codigos de build compartibles): mismo modo de foco que
+        // los de arriba. Necesita un personaje real ya cargado (usa EquipmentGroup) - se apoya en
+        // el mismo LOAD: de un poco mas arriba en este Main().
+        if (Environment.GetEnvironmentVariable("BUILDCODE_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 0;
+                FijarTamaño(window, 1080, 700);
+                DoEvents(); DoEvents();
+
+                void CapturaConBuildCode(string idioma, string archivo)
+                {
+                    vm.Settings.Language = idioma;
+                    DoEvents(); DoEvents();
+                    vm.OpenBuildCodeCommand.Execute(null);
+                    DoEvents(); DoEvents();
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(window);
+                    var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    string shotPath = Path.Combine(AppContext.BaseDirectory, archivo);
+                    using (var fs = File.Create(shotPath)) encoder.Save(fs);
+                    Console.WriteLine($"BUILDCODE: captura real ({idioma}, 1080x700, codigo real de {vm.CharacterName}) -> {shotPath}");
+                    vm.CloseBuildCodeCommand.Execute(null);
+                }
+                CapturaConBuildCode("es", "buildcode-es-minima.png");
+
+                // Un round-trip real: pega su PROPIO codigo en el cuadro de importar y confirma
+                // que "importa" limpio (0 omitidos, ya que es el mismo equipo que ya lleva puesto).
+                vm.OpenBuildCodeCommand.Execute(null);
+                string codigoReal = vm.BuildCodeGenerated;
+                vm.BuildCodeImportText = codigoReal;
+                vm.ImportBuildCodeCommand.Execute(null);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"BUILDCODE: auto-importar el propio codigo -> error={vm.BuildCodeImportIsError} (esperado False), mensaje='{vm.BuildCodeImportMessage}'");
+                var rtb2 = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb2.Render(window);
+                var encoder2 = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encoder2.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb2));
+                string shotPath2 = Path.Combine(AppContext.BaseDirectory, "buildcode-es-tras-importar.png");
+                using (var fs = File.Create(shotPath2)) encoder2.Save(fs);
+                Console.WriteLine($"BUILDCODE: captura real tras importar -> {shotPath2}");
+                vm.CloseBuildCodeCommand.Execute(null);
+
+                CapturaConBuildCode("en", "buildcode-en-minima.png");
+                vm.Settings.Language = "es";
+            }
+            catch (Exception ex) { Console.WriteLine("BUILDCODE-EXCEPTION: " + ex); }
+
+            BarridoMaquetacionPorTamañoEIdioma(window, vm);
+            Console.WriteLine("DONE (BUILDCODE_SOLO)");
+            Environment.Exit(0);
+        }
+
         // COMPARE_SOLO=1 (13-sep-2026, Comparador de personajes/builds): mismo modo de foco que
         // LIBFILT_SOLO justo arriba, mismo motivo real. El panel vive en Inicio (pestaña 0) y
         // NO exige ningun personaje cargado en el editor - solo la lista real ya escaneada por

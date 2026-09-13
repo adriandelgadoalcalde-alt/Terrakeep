@@ -227,6 +227,8 @@ public partial class MainWindow : Window
             // versiones (velo opaco) - nunca los dos a la vez (ver OpenCompare/OpenBackupHistory
             // en MainViewModel), pero se comprueba igual por si acaso.
             else if (_viewModel.Compare.IsOpen) _viewModel.Compare.CloseCommand.Execute(null);
+            // Codigos de build (13-sep-2026): mismo overlay, mismo criterio.
+            else if (_viewModel.IsBuildCodeOpen) _viewModel.CloseBuildCodeCommand.Execute(null);
             else if (_viewModel.IsWhereIsItOpen) _viewModel.IsWhereIsItOpen = false;
             else if (_viewModel.Library.IsPicking) _viewModel.Library.CancelPickCommand.Execute(null);
             else if (_viewModel.BuffLibrary.IsPicking) _viewModel.BuffLibrary.CancelPickCommand.Execute(null);
@@ -309,6 +311,14 @@ public partial class MainWindow : Window
             WhereIsItSearchBox.Focus();
             WhereIsItSearchBox.SelectAll();
         }), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    // Codigos de build (13-sep-2026): el TextBox de "tu codigo" es de solo lectura - un clic
+    // dentro selecciona el texto entero de una vez, listo para Ctrl+C real, en vez de obligar a
+    // arrastrar el raton sobre ~160 caracteres en fuente monoespaciada.
+    private void OnBuildCodeTextBoxGotFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox textBox) textBox.SelectAll();
     }
 
     // H5-07 (quinta auditoria de Opus): dialogo real de "elegir carpeta" - vive aqui (View),

@@ -1300,10 +1300,11 @@ public partial class MainViewModel : ObservableObject
     private void OpenBackupHistory()
     {
         if (_loaded == null) return;
-        // Los dos son overlays de nivel de ventana con el mismo velo opaco - abrir el segundo
-        // encima del primero se veria mal y Escape solo cerraria el de arriba, dejando el otro
-        // abierto por detras sin que se note. Nunca a la vez, a proposito.
+        // Los tres son overlays de nivel de ventana con el mismo velo opaco - abrir uno encima
+        // de otro se veria mal y Escape solo cerraria el de arriba, dejando el otro abierto por
+        // detras sin que se note. Nunca dos a la vez, a proposito.
         if (Compare.IsOpen) Compare.CloseCommand.Execute(null);
+        if (IsBuildCodeOpen) CloseBuildCodeCommand.Execute(null);
         BackupHistory.Open(_loaded.PlrPath, CharacterName, isCurrentCharacter: true);
     }
 
@@ -1312,6 +1313,7 @@ public partial class MainViewModel : ObservableObject
     private void OpenCompare()
     {
         if (BackupHistory.IsOpen) BackupHistory.CloseCommand.Execute(null);
+        if (IsBuildCodeOpen) CloseBuildCodeCommand.Execute(null);
         Compare.OpenCommand.Execute(null);
     }
 
@@ -1521,6 +1523,113 @@ public partial class MainViewModel : ObservableObject
             mensaje = LocalizationService.Instance["warning_no_calamity_data"] + mensaje;
         StatusMessage = mensaje;
         SelectedTabIndex = (int)AppTab.Personaje;
+    }
+
+    // Codigos de build compartibles (13-sep-2026, cuarto de la lista confirmada: "exportar una
+    // build a un codigo de texto corto/compartible y poder importarlo en otra instalacion").
+    // Popup real (mismo mecanismo que "¿Donde lo tengo?"/Historial de versiones), sobre EL
+    // LOADOUT QUE SE ESTE VIENDO AHORA (EquipmentGroup.CurrentItems/CurrentDyes - sigue a la
+    // pildora Loadout 1/2/3 de Equipamiento) - exportar/importar el loadout activo, no
+    // necesariamente el "puesto" fijo, deja usar esto tambien para guardar/repartir builds
+    // alternativas. Alcance real (ver el comentario de cabecera de BuildCode.cs): las 10
+    // ranuras de armadura/accesorios + sus 10 tintes, NO mascota/montura/vagoneta/gancho -
+    // documentado ahi, no fingido aqui.
+    [ObservableProperty] private bool _isBuildCodeOpen;
+    [ObservableProperty] private string _buildCodeGenerated = string.Empty;
+    [ObservableProperty] private string _buildCodeImportText = string.Empty;
+    [ObservableProperty] private string? _buildCodeImportMessage;
+    [ObservableProperty] private bool _buildCodeImportIsError;
+
+    [RelayCommand(CanExecute = nameof(IsCharacterLoaded))]
+    private void OpenBuildCode()
+    {
+        if (EquipmentGroup == null) return;
+        // Mismo criterio real ya establecido para BackupHistory/Compare: los tres son overlays
+        // de nivel de ventana con el mismo velo opaco, nunca dos a la vez.
+        if (BackupHistory.IsOpen) BackupHistory.CloseCommand.Execute(null);
+        if (Compare.IsOpen) Compare.CloseCommand.Execute(null);
+        BuildCodeImportText = string.Empty;
+        BuildCodeImportMessage = null;
+        RegenerateBuildCode();
+        IsBuildCodeOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseBuildCode() => IsBuildCodeOpen = false;
+
+    [RelayCommand]
+    private void NoopBuildCode() { } // traga el clic DENTRO del panel (mismo patron que BackupHistory.Noop)
+
+    private void RegenerateBuildCode()
+    {
+        if (EquipmentGroup == null) { BuildCodeGenerated = string.Empty; return; }
+        var items = EquipmentGroup.CurrentItems.Slots.Select(s => new BuildCodeSlot(s.Item.Id, s.Item.Prefix)).ToList();
+        var dyes = EquipmentGroup.CurrentDyes.Slots.Select(s => s.Item.Id).ToList();
+        BuildCodeGenerated = BuildCode.Encode(items, dyes);
+    }
+
+    [RelayCommand]
+    private void CopyBuildCode()
+    {
+        if (string.IsNullOrEmpty(BuildCodeGenerated)) return;
+        try { System.Windows.Clipboard.SetText(BuildCodeGenerated); StatusMessage = LocalizationService.Instance["status_build_code_copied"]; }
+        // Otra app puede tener el portapapeles bloqueado un instante (OLE real de Windows, pasa
+        // de verdad) - el codigo sigue ahi, seleccionable a mano en su propio TextBox, asi que
+        // no hace falta reintentar ni avisar con alarma. Cualquier excepcion real del portapapeles
+        // (COMException normalmente, pero el arnes de pruebas sin sesion interactiva real puede
+        // dar otras) nunca debe tumbar la app por un boton de "copiar".
+        catch (Exception) { }
+    }
+
+    private bool CanImportBuildCode() => !string.IsNullOrWhiteSpace(BuildCodeImportText);
+
+    partial void OnBuildCodeImportTextChanged(string value) => ImportBuildCodeCommand.NotifyCanExecuteChanged();
+
+    [RelayCommand(CanExecute = nameof(CanImportBuildCode))]
+    private void ImportBuildCode()
+    {
+        if (EquipmentGroup == null) return;
+        if (!BuildCode.TryDecode(BuildCodeImportText, out var items, out var dyes, out var error))
+        {
+            BuildCodeImportIsError = true;
+            BuildCodeImportMessage = error switch
+            {
+                BuildCodeError.UnsupportedVersion => LocalizationService.Instance["build_code_error_version"],
+                BuildCodeError.Corrupt => LocalizationService.Instance["build_code_error_corrupt"],
+                _ => LocalizationService.Instance["build_code_error_format"],
+            };
+            return;
+        }
+
+        // Sanity real antes de aplicar (no "desconocido = permitir" a ciegas): un objeto que no
+        // encaja de verdad en su ranura (Cabeza/Cuerpo/Piernas/Accesorio ya restringen por
+        // AcceptedKind, ver ItemSlotViewModel.AcceptsItem) se cuenta como omitido en vez de
+        // colarse - mismo lenguaje real que AutoEquipService.Unresolved/NoSlot.
+        int placed = 0, skipped = 0;
+        RunAsUndoableBatch(LocalizationService.Instance["action_import_build_code"], [EquipmentGroup.CurrentItems, EquipmentGroup.CurrentDyes], () =>
+        {
+            var itemSlots = EquipmentGroup!.CurrentItems.Slots;
+            for (int i = 0; i < items.Count && i < itemSlots.Count; i++)
+            {
+                var slot = itemSlots[i];
+                if (items[i].ItemId != 0 && !slot.AcceptsItem(items[i].ItemId)) { skipped++; continue; }
+                slot.UpdateFrom(new GameItem { Id = items[i].ItemId, Count = items[i].ItemId == 0 ? 0 : 1, Prefix = items[i].Prefix, Favorited = slot.IsFavorited });
+                placed++;
+            }
+            var dyeSlots = EquipmentGroup.CurrentDyes.Slots;
+            for (int i = 0; i < dyes.Count && i < dyeSlots.Count; i++)
+            {
+                var slot = dyeSlots[i];
+                if (dyes[i] != 0 && !slot.AcceptsItem(dyes[i])) { skipped++; continue; }
+                slot.UpdateFrom(new GameItem { Id = dyes[i], Count = dyes[i] == 0 ? 0 : 1, Favorited = slot.IsFavorited });
+            }
+        });
+
+        BuildCodeImportIsError = false;
+        BuildCodeImportMessage = skipped > 0
+            ? LocalizationService.Instance.Format("build_code_import_with_issues", placed, skipped)
+            : LocalizationService.Instance.Format("build_code_import_clean", placed);
+        RegenerateBuildCode(); // el codigo de arriba ya refleja lo que se acaba de importar
     }
 
     // A-d (segunda auditoria de Opus, Fable): "mover todo al banco" - mueve el Inventario
