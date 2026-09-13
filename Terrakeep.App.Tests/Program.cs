@@ -650,6 +650,85 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // COMPARE_SOLO=1 (13-sep-2026, Comparador de personajes/builds): mismo modo de foco que
+        // LIBFILT_SOLO justo arriba, mismo motivo real. El panel vive en Inicio (pestaña 0) y
+        // NO exige ningun personaje cargado en el editor - solo la lista real ya escaneada por
+        // Home (Home.Characters, esta maquina tiene 5 personajes reales de verdad). Dos capturas
+        // reales (ventana + resultados desplazados) en los dos idiomas al tamaño MINIMO real de
+        // la ventana (1080x700).
+        if (Environment.GetEnvironmentVariable("COMPARE_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 0; // Inicio
+                FijarTamaño(window, 1080, 700);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"COMPARE: {vm.Home.Characters.Count} personaje(s) reales en Inicio (esperado >= 2 para poder comparar de verdad)");
+
+                void CapturaConCompare(string idioma, string archivo, double alto)
+                {
+                    vm.Settings.Language = idioma;
+                    FijarTamaño(window, 1080, alto);
+                    DoEvents(); DoEvents();
+                    vm.OpenCompareCommand.Execute(null);
+                    if (vm.Home.Characters.Count >= 2)
+                    {
+                        vm.Compare.SelectedA = vm.Home.Characters[0];
+                        vm.Compare.SelectedB = vm.Home.Characters[1];
+                    }
+                    DoEvents(); DoEvents();
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(window);
+                    var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    string shotPath = Path.Combine(AppContext.BaseDirectory, archivo);
+                    using (var fs = File.Create(shotPath)) encoder.Save(fs);
+                    Console.WriteLine($"COMPARE: captura real ({idioma}, 1080x{alto:0}, {vm.Compare.DifferenceCount} diferencia(s) reales) -> {shotPath}");
+                    vm.Compare.CloseCommand.Execute(null);
+                }
+                // Minima real (1080x700, el suelo de la ventana) Y una alta (2000) para ver de
+                // un vistazo los bloques de Equipo/Inventario enteros sin depender del scroll -
+                // el barrido AR-LAY de abajo ya cubre el resto de tamaños/solapes real.
+                CapturaConCompare("es", "comparador-es-minima.png", 700);
+                CapturaConCompare("es", "comparador-es-completa.png", 2000);
+                CapturaConCompare("en", "comparador-en-minima.png", 700);
+
+                // Tercera captura: bloque Inventario (dos rejillas de 50, la parte que mas
+                // riesgo real de desbordar tenia) - se desplaza el ScrollViewer real del panel
+                // hasta el final antes de capturar.
+                vm.Settings.Language = "es";
+                FijarTamaño(window, 1080, 2000);
+                DoEvents(); DoEvents();
+                vm.OpenCompareCommand.Execute(null);
+                if (vm.Home.Characters.Count >= 2)
+                {
+                    vm.Compare.SelectedA = vm.Home.Characters[0];
+                    vm.Compare.SelectedB = vm.Home.Characters[1];
+                }
+                DoEvents(); DoEvents();
+                if (window.FindName("CompareResultsScrollViewer") is System.Windows.Controls.ScrollViewer sv)
+                {
+                    sv.ScrollToEnd();
+                    DoEvents(); DoEvents();
+                }
+                var rtbInv = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbInv.Render(window);
+                var encInv = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encInv.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbInv));
+                string shotPathInv = Path.Combine(AppContext.BaseDirectory, "comparador-es-inventario.png");
+                using (var fs = File.Create(shotPathInv)) encInv.Save(fs);
+                Console.WriteLine($"COMPARE: captura real del bloque Inventario (desplazada al final) -> {shotPathInv}");
+                vm.Compare.CloseCommand.Execute(null);
+            }
+            catch (Exception ex) { Console.WriteLine("COMPARE-EXCEPTION: " + ex); }
+
+            BarridoMaquetacionPorTamañoEIdioma(window, vm);
+            Console.WriteLine("DONE (COMPARE_SOLO)");
+            Environment.Exit(0);
+        }
+
         // Verificacion real de N-1 (auditoria de Opus, Bloque 2): la cabecera global debe verse
         // IGUAL en una pestaña que no es Personaje (aqui, Builds=indice 2) - antes el nombre/
         // dificultad/Guardar solo existian dentro de Personaje.

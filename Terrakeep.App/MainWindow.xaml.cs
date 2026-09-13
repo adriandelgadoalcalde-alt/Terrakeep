@@ -223,6 +223,10 @@ public partial class MainWindow : Window
             // (velo opaco que bloquea el editor de detras) - si esta abierto, Escape es suyo
             // antes que de nada, que es lo que espera cualquiera.
             if (_viewModel.BackupHistory.IsOpen) _viewModel.BackupHistory.CloseCommand.Execute(null);
+            // Comparador (13-sep-2026): mismo overlay de nivel de ventana que el historial de
+            // versiones (velo opaco) - nunca los dos a la vez (ver OpenCompare/OpenBackupHistory
+            // en MainViewModel), pero se comprueba igual por si acaso.
+            else if (_viewModel.Compare.IsOpen) _viewModel.Compare.CloseCommand.Execute(null);
             else if (_viewModel.IsWhereIsItOpen) _viewModel.IsWhereIsItOpen = false;
             else if (_viewModel.Library.IsPicking) _viewModel.Library.CancelPickCommand.Execute(null);
             else if (_viewModel.BuffLibrary.IsPicking) _viewModel.BuffLibrary.CancelPickCommand.Execute(null);

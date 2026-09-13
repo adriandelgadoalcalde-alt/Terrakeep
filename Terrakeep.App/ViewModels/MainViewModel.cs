@@ -675,6 +675,10 @@ public partial class MainViewModel : ObservableObject
     public HomeViewModel Home { get; }
     // BK (13-sep-2026): panel real de "Historial de versiones" - ver BackupHistoryViewModel.
     public BackupHistoryViewModel BackupHistory { get; }
+    // Comparador de personajes/builds (13-sep-2026, primero de la lista confirmada de funciones
+    // nuevas) - ver el comentario de cabecera real en CompareViewModel (por que lleva su PROPIO
+    // CharacterFileService en vez de compartir _service).
+    public CompareViewModel Compare { get; }
     // Pedido explicito del usuario (5-sep-2026): idioma en vivo, sin reiniciar - expuesto aqui
     // (root DataContext de casi toda la ventana) para que cualquier XAML pueda usar
     // {Binding Loc[clave]} directamente, mismo criterio que Home/About/etc de arriba. Instance es
@@ -704,6 +708,12 @@ public partial class MainViewModel : ObservableObject
         // no despues.
         Settings = new SettingsViewModel(_service.BackupHistory);
         Home = new HomeViewModel(_service.EquipmentAppearance, _service.BackupHistory);
+        // La lista de personajes YA escaneada por Home (Home.Characters) se pasa por referencia -
+        // el Comparador no vuelve a escanear el disco, solo la usa para los dos selectores.
+        // Construido AQUI (antes de cualquier lambda que lo capture mas abajo) para que ninguna
+        // referencia a "Compare" dentro de esas lambdas sea una referencia hacia adelante -
+        // el propio compilador lo señala en caliente (CS8602) si se deja para despues.
+        Compare = new CompareViewModel(Home.Characters);
         Home.CharacterChosen += path =>
         {
             if (IsDirty && ConfirmDiscardChanges?.Invoke() == false) return;
@@ -727,8 +737,11 @@ public partial class MainViewModel : ObservableObject
             },
         };
         Home.BackupHistoryRequested += (path, nombre) =>
+        {
+            if (Compare.IsOpen) Compare.CloseCommand.Execute(null);
             BackupHistory.Open(path, nombre, isCurrentCharacter: _loaded != null &&
                 string.Equals(_loaded.PlrPath, path, StringComparison.OrdinalIgnoreCase));
+        };
         // INI-09 (oleada del 6-sep-2026): cambiar las carpetas adicionales en Ajustes tiene que
         // REFLEJARSE ya, no solo guardarse - ver el comentario real de SettingsViewModel. Se
         // enchufa aqui, que es el unico sitio que conoce a los tres a la vez; Exploration se
@@ -1287,7 +1300,19 @@ public partial class MainViewModel : ObservableObject
     private void OpenBackupHistory()
     {
         if (_loaded == null) return;
+        // Los dos son overlays de nivel de ventana con el mismo velo opaco - abrir el segundo
+        // encima del primero se veria mal y Escape solo cerraria el de arriba, dejando el otro
+        // abierto por detras sin que se note. Nunca a la vez, a proposito.
+        if (Compare.IsOpen) Compare.CloseCommand.Execute(null);
         BackupHistory.Open(_loaded.PlrPath, CharacterName, isCurrentCharacter: true);
+    }
+
+    // Comparador (13-sep-2026): mismo motivo real que arriba, en el sentido contrario.
+    [RelayCommand]
+    private void OpenCompare()
+    {
+        if (BackupHistory.IsOpen) BackupHistory.CloseCommand.Execute(null);
+        Compare.OpenCommand.Execute(null);
     }
 
     [RelayCommand(CanExecute = nameof(CanUndoLastSave))]
