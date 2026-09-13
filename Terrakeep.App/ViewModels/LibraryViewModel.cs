@@ -1,7 +1,10 @@
+using System.Collections.ObjectModel;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Terrakeep.App.Services;
 using Terrakeep.Core.Data;
+using Terrakeep.Core.Model;
 
 namespace Terrakeep.App.ViewModels;
 
@@ -35,6 +38,71 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
     private readonly List<LibraryItemViewModel> _all;
     private readonly Dictionary<int, LibraryItemViewModel> _byId;
 
+    // Filtros combinables (encargo del usuario, 13-sep-2026: "amplia la busqueda con filtros
+    // combinables - tipo de objeto, rareza, si es equipable en que slot"). Tres grupos, cada uno
+    // OR entre sus propias pastillas seleccionadas (elegir "Azul" y "Verde" enseña las dos
+    // rarezas) y AND entre grupos distintos (elegir una rareza Y una ranura de equipo exige
+    // ambas a la vez) - mismo lenguaje real de filtro facetado que cualquier tienda, y se
+    // combinan ademas con el texto de busqueda y la carpeta elegida, no los sustituyen.
+    // Dominio FIJO de cada grupo (no "lo que aparezca en el catalogo"): son los tramos reales
+    // del propio juego (11 rarezas + blanca, 5 tipos de daño, 12 ranuras de SlotKind), no algo
+    // que pueda variar entre pasadas - ver los comentarios de cada array mas abajo.
+    private static readonly (int Key, string LocKey)[] RarityDomain =
+    [
+        (-1, "library_filter_rarity_gray"),
+        (0, "library_filter_rarity_white"),
+        (1, "library_filter_rarity_blue"),
+        (2, "library_filter_rarity_green"),
+        (3, "library_filter_rarity_orange"),
+        (4, "library_filter_rarity_red"),
+        (5, "library_filter_rarity_pink"),
+        (6, "library_filter_rarity_purple"),
+        (7, "library_filter_rarity_lime"),
+        (8, "library_filter_rarity_yellow"),
+        (9, "library_filter_rarity_cyan"),
+        (-11, "library_filter_rarity_amber"),
+    ];
+
+    private static readonly (ItemDamageKind Kind, string LocKey)[] DamageKindDomain =
+    [
+        (ItemDamageKind.Melee, "library_filter_damage_melee"),
+        (ItemDamageKind.Ranged, "library_filter_damage_ranged"),
+        (ItemDamageKind.Magic, "library_filter_damage_magic"),
+        (ItemDamageKind.Summon, "library_filter_damage_summon"),
+        (ItemDamageKind.Rogue, "library_filter_damage_rogue"),
+    ];
+
+    // Rotulos: donde ya existe un rotulo real de una sola palabra (ItemSlotViewModel.
+    // SlotRoleLabel/char_dye_label) se reutiliza tal cual - solo "Accesorio" (sin numero, a
+    // diferencia de "Accesorio {0}" que ya usa ese slot en el personaje) es una clave nueva.
+    private static readonly (SlotKind Kind, string LocKey)[] EquipSlotDomain =
+    [
+        (SlotKind.ArmorHead, "slot_role_head"),
+        (SlotKind.ArmorBody, "slot_role_body"),
+        (SlotKind.ArmorLegs, "slot_role_legs"),
+        (SlotKind.Accessory, "library_filter_accessory"),
+        (SlotKind.Dye, "char_dye_label"),
+        (SlotKind.Ammo, "slot_role_ammo"),
+        (SlotKind.Coin, "slot_role_coin"),
+        (SlotKind.Hook, "slot_role_hook"),
+        (SlotKind.Mount, "slot_role_mount"),
+        (SlotKind.Cart, "slot_role_cart"),
+        (SlotKind.VanityPet, "slot_role_vanity_pet"),
+        (SlotKind.LightPet, "slot_role_light_pet"),
+    ];
+
+    public ObservableCollection<LibraryFilterChipViewModel<int>> RarityChips { get; } = [];
+    public ObservableCollection<LibraryFilterChipViewModel<ItemDamageKind>> DamageKindChips { get; } = [];
+    public ObservableCollection<LibraryFilterChipViewModel<SlotKind>> EquipSlotChips { get; } = [];
+
+    // Popup anclado al boton "Filtros" (mismo mecanismo real que "¿Donde lo tengo?" -
+    // WhereIsItPopup en MainWindow.xaml - StaysOpen=False, se cierra solo con un clic fuera).
+    [ObservableProperty] private bool _isFiltersOpen;
+
+    public int ActiveFilterCount =>
+        RarityChips.Count(c => c.IsSelected) + DamageKindChips.Count(c => c.IsSelected) + EquipSlotChips.Count(c => c.IsSelected);
+    public bool HasActiveFilters => ActiveFilterCount > 0;
+
     [ObservableProperty] private ItemSlotViewModel? _pickTarget;
 
     // L-b (segunda auditoria de Opus, Fable): "el aviso de 'solo validos para el slot
@@ -50,8 +118,14 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
     // destino (PickTarget con AcceptedKind real, ej. "Tinte"/"Gancho") ya reduce el catalogo a
     // un conjunto pequeño y util de ver de inmediato (ver hasSlotRestriction en ApplyFilter) -
     // mostrar las carpetas raiz genericas ahi seria un paso atras, no un atajo.
+    // Ampliado 13-sep-2026: con cualquier filtro de pastilla activo (Rareza/Tipo de daño/Ranura)
+    // el catalogo YA esta reducido a algo util de ver de inmediato, igual que con una restriccion
+    // de slot - mostrar las carpetas raiz genericas en su lugar escondería el propio filtro que
+    // el usuario acaba de marcar (bug real que se hubiera visto en la primera prueba: marcar
+    // "Azul" sin escribir nada ni elegir carpeta no cambiaba la pantalla).
     public override bool ShowRootCategoryCards => base.ShowRootCategoryCards &&
-        !(PickTarget != null && PickTarget.AcceptedKind != Terrakeep.Core.Model.SlotKind.None);
+        !(PickTarget != null && PickTarget.AcceptedKind != Terrakeep.Core.Model.SlotKind.None) &&
+        !HasActiveFilters;
 
     public event Action? ItemPlaced;
 
@@ -69,7 +143,8 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
             string nameEn = service.VanillaCatalog.GetName(id, LocalizedContent.English);
             var stats = ItemStatsFormatter.Describe(false, id, service.TooltipCatalogs);
             var rarityColor = VanillaRarityColorCatalog.Get(service.VanillaStats.Get(id)?.Rare);
-            var item = new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats, rarityColor, nameEn);
+            var equipSlotKind = ItemEquipSlotClassifier.Classify(id, false, service);
+            var item = new LibraryItemViewModel(name, false, VanillaIconResolver.GetIconPath(id), id, service.VanillaCategories.GetCategory(id), stats, rarityColor, nameEn, equipSlotKind);
             _all.Add(item);
             _byId[id] = item;
         }
@@ -78,11 +153,26 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
         {
             string? iconPath = entry.Icon != null ? "pack://siteoforigin:,,,/Assets/calamity/icons/" + entry.Icon : null;
             var stats = ItemStatsFormatter.Describe(true, entry.SyntheticId, service.TooltipCatalogs);
+            var equipSlotKind = ItemEquipSlotClassifier.Classify(entry.SyntheticId, true, service);
             var item = new LibraryItemViewModel(entry.DisplayNameFor(LocalizedContent.Spanish), true, iconPath, entry.SyntheticId, entry.Category, stats,
-                displayNameEn: entry.DisplayNameFor(LocalizedContent.English));
+                displayNameEn: entry.DisplayNameFor(LocalizedContent.English), equipSlotKind: equipSlotKind);
             _all.Add(item);
             _byId[entry.SyntheticId] = item;
         }
+
+        // Pastillas de filtro: dominio fijo (ver los arrays de arriba), color real solo en
+        // Rareza (VanillaRarityColorCatalog - null para lo que de verdad no tiene un color fijo,
+        // igual que RarityBrush de cada tarjeta).
+        foreach (var (key, locKey) in RarityDomain)
+        {
+            var rgb = VanillaRarityColorCatalog.Get(key);
+            Brush? swatch = rgb is { } c ? new SolidColorBrush(Color.FromRgb(c.R, c.G, c.B)) : null;
+            RarityChips.Add(new LibraryFilterChipViewModel<int>(key, locKey, swatch));
+        }
+        foreach (var (kind, locKey) in DamageKindDomain)
+            DamageKindChips.Add(new LibraryFilterChipViewModel<ItemDamageKind>(kind, locKey));
+        foreach (var (kind, locKey) in EquipSlotDomain)
+            EquipSlotChips.Add(new LibraryFilterChipViewModel<SlotKind>(kind, locKey));
 
         // Arbol real de Terrasavr (vanilla + carpeta madre "Calamity (mod)") - compartido con
         // la pestaña Investigacion, ver LibraryCategoryTreeBuilder (mismo pedido explicito
@@ -109,6 +199,9 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
     private void OnIdiomaCambiadoRefrescarTarjetas(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         foreach (var item in _all) item.RefrescarIdioma();
+        foreach (var chip in RarityChips) chip.RefrescarIdioma();
+        foreach (var chip in DamageKindChips) chip.RefrescarIdioma();
+        foreach (var chip in EquipSlotChips) chip.RefrescarIdioma();
     }
 
     protected override void ApplyFilter()
@@ -167,6 +260,23 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
                 query, i.Id, i.NameFolded, i.TooltipFolded));
         }
 
+        // Filtros de pastilla (13-sep-2026). Rareza es SOLO vanilla a proposito: Calamity nunca
+        // tiene un Rarity real (ver el comentario de LibraryItemViewModel.Rarity) - un objeto de
+        // Calamity con la pastilla "Blanca" marcada seria fingir un dato que no existe, asi que
+        // se excluye del todo en vez de caer en ese cajon por defecto.
+        var selectedRarities = RarityChips.Where(c => c.IsSelected).Select(c => c.Value).ToHashSet();
+        if (selectedRarities.Count > 0)
+            matches = matches.Where(i => !i.IsCalamity && selectedRarities.Contains(i.Rarity ?? 0));
+
+        var selectedDamageKinds = DamageKindChips.Where(c => c.IsSelected).Select(c => c.Value).ToHashSet();
+        if (selectedDamageKinds.Count > 0)
+            matches = matches.Where(i => selectedDamageKinds.Contains(i.DamageKind));
+
+        var selectedEquipMask = EquipSlotChips.Where(c => c.IsSelected)
+            .Aggregate(Terrakeep.Core.Model.SlotKind.None, (acc, c) => acc | c.Value);
+        if (selectedEquipMask != Terrakeep.Core.Model.SlotKind.None)
+            matches = matches.Where(i => (i.EquipSlotKind & selectedEquipMask) != 0);
+
         if (ShowRootCategoryCards)
         {
             ResultsSummary = LocalizationService.Instance.Format("library_summary_all", _all.Count);
@@ -193,6 +303,46 @@ public partial class LibraryViewModel : CatalogBrowserViewModel<LibraryItemViewM
         // los casos, el usuario nunca ve un objeto invalido que poder elegir") - al abrir el
         // selector para un slot restringido, refiltra de inmediato.
         ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void ToggleFiltersOpen() => IsFiltersOpen = !IsFiltersOpen;
+
+    // Tres comandos en vez de uno generico con cast (CommandParameter llega ya tipado desde el
+    // DataTemplate real de cada grupo en MainWindow.xaml - ver LibraryFilterChipViewModel<T>).
+    [RelayCommand]
+    private void ToggleRarityChip(LibraryFilterChipViewModel<int> chip) => ToggleChip(chip);
+
+    [RelayCommand]
+    private void ToggleDamageKindChip(LibraryFilterChipViewModel<ItemDamageKind> chip) => ToggleChip(chip);
+
+    [RelayCommand]
+    private void ToggleEquipSlotChip(LibraryFilterChipViewModel<SlotKind> chip) => ToggleChip(chip);
+
+    private void ToggleChip<T>(LibraryFilterChipViewModel<T> chip) where T : notnull
+    {
+        chip.IsSelected = !chip.IsSelected;
+        RaiseFilterCountChanged();
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void ClearFilters()
+    {
+        bool changed = false;
+        foreach (var c in RarityChips) { if (c.IsSelected) { c.IsSelected = false; changed = true; } }
+        foreach (var c in DamageKindChips) { if (c.IsSelected) { c.IsSelected = false; changed = true; } }
+        foreach (var c in EquipSlotChips) { if (c.IsSelected) { c.IsSelected = false; changed = true; } }
+        if (!changed) return;
+        RaiseFilterCountChanged();
+        ApplyFilter();
+    }
+
+    private void RaiseFilterCountChanged()
+    {
+        OnPropertyChanged(nameof(ActiveFilterCount));
+        OnPropertyChanged(nameof(HasActiveFilters));
+        OnPropertyChanged(nameof(ShowRootCategoryCards));
     }
 
     [RelayCommand]

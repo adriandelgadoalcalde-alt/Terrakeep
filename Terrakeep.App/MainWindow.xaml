@@ -2978,16 +2978,127 @@
                                                  de posicion real (Grid con TextBlock superpuesto,
                                                  IsHitTestVisible=False) para que se reconozca como
                                                  buscador de un vistazo, sin esperar a escribir. -->
-                                            <Grid DockPanel.Dock="Top" MaxWidth="360" Margin="0,0,0,4">
-                                                <TextBox x:Name="LibrarySearchBox" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                                         Padding="7,5" Background="{StaticResource BgElevatedBrush}"
-                                                         Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
-                                                         FontSize="12"
-                                                         ToolTip="{Binding Loc[tt_search_grammar_full], Mode=OneWay}" />
-                                                <TextBlock Text="{Binding Loc[action_search_ellipsis], Mode=OneWay}" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
-                                                           Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
-                                                           Visibility="{Binding Library.SearchText, Converter={StaticResource EmptyToVisible}}" />
-                                            </Grid>
+                                            <!-- Fila de busqueda + boton "Filtros" (encargo del usuario, 13-sep-2026:
+                                                 "amplia la busqueda con filtros combinables"). DockPanel en vez de
+                                                 agrandar el Grid de abajo: el boton (ancho fijo, a la derecha) y el
+                                                 buscador (el resto, MISMO MaxWidth=360 de siempre, ver H4-01) tienen
+                                                 que repartirse el ancho, no superponerse - un Grid con columnas fijas
+                                                 hubiera exigido medir el boton a mano. -->
+                                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                                                <Button x:Name="LibraryFiltersButton" DockPanel.Dock="Right" Margin="6,0,0,0" Padding="9,5" FontSize="11"
+                                                        Command="{Binding Library.ToggleFiltersOpenCommand}"
+                                                        ToolTip="{Binding Loc[library_filter_title], Mode=OneWay}">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
+                                                                    <Setter Property="Tag" Value="AccentSoft" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                    <TextBlock>
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{Binding Loc[library_filter_button], Mode=OneWay}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Library.HasActiveFilters}" Value="True">
+                                                                        <Setter Property="Text">
+                                                                            <Setter.Value>
+                                                                                <MultiBinding Converter="{StaticResource LocFormat}">
+                                                                                    <Binding Path="Loc[library_filter_button_active]" Mode="OneWay" />
+                                                                                    <Binding Path="Library.ActiveFilterCount" Mode="OneWay" />
+                                                                                </MultiBinding>
+                                                                            </Setter.Value>
+                                                                        </Setter>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Button>
+                                                <Grid MaxWidth="360">
+                                                    <TextBox x:Name="LibrarySearchBox" Text="{Binding Library.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                             Padding="7,5" Background="{StaticResource BgElevatedBrush}"
+                                                             Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0"
+                                                             FontSize="12"
+                                                             ToolTip="{Binding Loc[tt_search_grammar_full], Mode=OneWay}" />
+                                                    <TextBlock Text="{Binding Loc[action_search_ellipsis], Mode=OneWay}" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                               Foreground="{StaticResource TextSecondaryBrush}" IsHitTestVisible="False"
+                                                               Visibility="{Binding Library.SearchText, Converter={StaticResource EmptyToVisible}}" />
+                                                </Grid>
+                                            </DockPanel>
+
+                                            <!-- Popup real de filtros (mismo mecanismo que WhereIsItPopup: anclado
+                                                 al boton, StaysOpen=False lo cierra con un clic fuera). Tres grupos
+                                                 de pastillas (Rareza/Tipo de daño/Ranura de equipo) en WrapPanel -
+                                                 ver LibraryFilterChipViewModel y LibraryViewModel.ApplyFilter. -->
+                                            <Popup DockPanel.Dock="Top" x:Name="LibraryFiltersPopup" IsOpen="{Binding Library.IsFiltersOpen}"
+                                                   PlacementTarget="{Binding ElementName=LibraryFiltersButton}"
+                                                   Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                                                <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource AccentBrush}"
+                                                        BorderThickness="1" CornerRadius="8" Padding="14" Width="420" Effect="{StaticResource CardShadow}">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,0,0,8">
+                                                            <TextBlock Text="{Binding Loc[library_filter_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
+                                                            <Button DockPanel.Dock="Right" Content="{Binding Loc[library_filter_clear], Mode=OneWay}"
+                                                                    Command="{Binding Library.ClearFiltersCommand}" Tag="Ghost" Padding="6,2" FontSize="10.5"
+                                                                    Visibility="{Binding Library.HasActiveFilters, Converter={StaticResource BoolToVis}}" />
+                                                        </DockPanel>
+
+                                                        <TextBlock Text="{Binding Loc[library_filter_rarity_group], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,4,0,4" />
+                                                        <ItemsControl ItemsSource="{Binding Library.RarityChips}" Margin="0,0,0,4">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Button Style="{StaticResource LibraryFilterChipButton}"
+                                                                            Command="{Binding DataContext.Library.ToggleRarityChipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}">
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <Ellipse Width="8" Height="8" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                                                     Fill="{Binding SwatchBrush}"
+                                                                                     Visibility="{Binding SwatchBrush, Converter={StaticResource NullToVis}}" />
+                                                                            <TextBlock Text="{Binding Label}" />
+                                                                        </StackPanel>
+                                                                    </Button>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                        <TextBlock Text="{Binding Loc[library_filter_rarity_hint], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                                                   FontSize="10" TextWrapping="Wrap" Margin="0,0,0,10" />
+
+                                                        <TextBlock Text="{Binding Loc[library_filter_damage_group], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                        <ItemsControl ItemsSource="{Binding Library.DamageKindChips}" Margin="0,0,0,10">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Button Content="{Binding Label}" Style="{StaticResource LibraryFilterChipButton}"
+                                                                            Command="{Binding DataContext.Library.ToggleDamageKindChipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}" />
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+
+                                                        <TextBlock Text="{Binding Loc[library_filter_equip_group], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
+                                                        <ItemsControl ItemsSource="{Binding Library.EquipSlotChips}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Button Content="{Binding Label}" Style="{StaticResource LibraryFilterChipButton}"
+                                                                            Command="{Binding DataContext.Library.ToggleEquipSlotChipCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}" />
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Popup>
                                             <!-- L-b (segunda auditoria de Opus, Fable): "el aviso de 'solo validos
                                                  para el slot seleccionado' es un texto mas, facil de pasar por
                                                  alto - y ni siquiera dice CUAL slot". Pildora real y separada, con

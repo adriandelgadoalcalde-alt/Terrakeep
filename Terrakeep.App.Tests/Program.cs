@@ -572,6 +572,84 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // LIBFILT_SOLO=1 (13-sep-2026, filtros combinables de la Libreria - Rareza/Tipo de
+        // daño/Ranura de equipo): mismo modo de foco que PB_SOLO/AR14_SOLO/A11_SOLO/BK_SOLO, por
+        // el mismo motivo real ya documentado arriba (decenas de RenderTargetBitmap en el
+        // recorrido completo, poco repetible en esta sesion). Ademas de correr el barrido
+        // generico ya acotado a "Personaje/Equipamiento" (BarridoMaquetacionPorTamañoEIdioma con
+        // AR_LAY_SOLO), deja DOS capturas reales del popup de filtros ABIERTO y con pastillas
+        // marcadas, al tamaño MINIMO real de la ventana (1080x700, MinWidth/MinHeight) y en los
+        // dos idiomas - el propio CLAUDE.md del proyecto pide mirar la captura de verdad, no solo
+        // fiarse del detector automatico.
+        if (Environment.GetEnvironmentVariable("LIBFILT_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 0;
+                FijarTamaño(window, 1080, 700);
+                DoEvents(); DoEvents();
+
+                void CapturaConFiltros(string idioma, string archivoVentana, string archivoPopup)
+                {
+                    vm.Settings.Language = idioma;
+                    DoEvents(); DoEvents();
+
+                    // Primero la VENTANA (boton "Filtros (N)" con la insignia, resultados ya
+                    // filtrados) SIN el popup abierto - lo que se ve el 99% del tiempo.
+                    var cabeza0 = vm.Library.EquipSlotChips.First(c => c.Value == Terrakeep.Core.Model.SlotKind.ArmorHead);
+                    if (!cabeza0.IsSelected) vm.Library.ToggleEquipSlotChipCommand.Execute(cabeza0);
+                    DoEvents(); DoEvents();
+                    var rtbVentana = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbVentana.Render(window);
+                    var encVentana = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encVentana.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbVentana));
+                    string shotPathVentana = Path.Combine(AppContext.BaseDirectory, archivoVentana);
+                    using (var fs = File.Create(shotPathVentana)) encVentana.Save(fs);
+                    Console.WriteLine($"LIBFILT: captura real de la ventana ({idioma}, 1080x700, filtro 'Cabeza' activo, {vm.Library.Results.Count} resultado(s)) -> {shotPathVentana}");
+
+                    // Ahora el POPUP abierto (las tres filas de pastillas, la pista de "solo
+                    // vanilla" de Rareza, el boton "Limpiar filtros").
+                    vm.Library.IsFiltersOpen = true;
+                    DoEvents(); DoEvents();
+                    string archivo = archivoPopup;
+
+                    // El Popup vive en su propia PresentationSource (no es descendiente visual de
+                    // `window`) - RenderTargetBitmap(window) NUNCA lo captura, pase lo que pase
+                    // (comprobado en esta misma ronda: la primera captura salio con el boton "Filtros
+                    // (1)" bien pero el popup invisible). Mismo truco real de reflexion que ya usa
+                    // UI-BLOQUEADA para localizar WhereIsItPopup - popup.Child SI es un Visual real
+                    // con su propio ActualWidth/ActualHeight una vez IsOpen=true, y RenderTargetBitmap
+                    // acepta cualquier Visual, no solo los de la ventana principal.
+                    var popupField = typeof(MainWindow).GetField("LibraryFiltersPopup", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                    var popup = popupField?.GetValue(window) as System.Windows.Controls.Primitives.Popup;
+                    var visualACapturar = popup?.Child is System.Windows.FrameworkElement popupChild && popupChild.ActualWidth > 1
+                        ? (System.Windows.Media.Visual)popupChild
+                        : window;
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)((System.Windows.FrameworkElement)visualACapturar).ActualWidth,
+                        (int)((System.Windows.FrameworkElement)visualACapturar).ActualHeight,
+                        96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(visualACapturar);
+                    var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    string shotPath = Path.Combine(AppContext.BaseDirectory, archivo);
+                    using (var fs = File.Create(shotPath)) encoder.Save(fs);
+                    Console.WriteLine($"LIBFILT: captura real del popup ({idioma}, popup encontrado={popup?.Child != null}, filtro 'Cabeza' activo, {vm.Library.Results.Count} resultado(s)) -> {shotPath}");
+                    vm.Library.IsFiltersOpen = false;
+                    vm.Library.ToggleEquipSlotChipCommand.Execute(cabeza0);
+                }
+                CapturaConFiltros("es", "libreria-filtros-ventana-es-minima.png", "libreria-filtros-popup-es-minima.png");
+                CapturaConFiltros("en", "libreria-filtros-ventana-en-minima.png", "libreria-filtros-popup-en-minima.png");
+                vm.Settings.Language = "es";
+            }
+            catch (Exception ex) { Console.WriteLine("LIBFILT-EXCEPTION: " + ex); }
+
+            BarridoMaquetacionPorTamañoEIdioma(window, vm);
+            Console.WriteLine("DONE (LIBFILT_SOLO)");
+            Environment.Exit(0);
+        }
+
         // Verificacion real de N-1 (auditoria de Opus, Bloque 2): la cabecera global debe verse
         // IGUAL en una pestaña que no es Personaje (aqui, Builds=indice 2) - antes el nombre/
         // dificultad/Guardar solo existian dentro de Personaje.

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows.Media;
 using Terrakeep.App.Services;
 using Terrakeep.Core.Data;
+using Terrakeep.Core.Model;
 
 namespace Terrakeep.App.ViewModels;
 
@@ -21,7 +22,7 @@ namespace Terrakeep.App.ViewModels;
 // constructor - el nombre del OBJETO se quedaba en español aunque la interfaz estuviera en
 // ingles. Ahora entra tambien `displayNameEn` (nombre real del juego en ingles) y se elige al
 // leer, igual que ya se hacia con el tooltip.
-public sealed class LibraryItemViewModel(string displayName, bool isCalamity, string? iconPath, int id, string category, ItemStatsInfo? stats = null, (byte R, byte G, byte B)? rarityColor = null, string? displayNameEn = null)
+public sealed class LibraryItemViewModel(string displayName, bool isCalamity, string? iconPath, int id, string category, ItemStatsInfo? stats = null, (byte R, byte G, byte B)? rarityColor = null, string? displayNameEn = null, SlotKind equipSlotKind = SlotKind.None)
     : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -88,6 +89,20 @@ public sealed class LibraryItemViewModel(string displayName, bool isCalamity, st
     // verificado contra el decompilado) - null para lo que de verdad no tiene una rareza
     // coloreada real (Calamity, o rareza 0/sin dato), cae al color de texto normal.
     public Brush? RarityBrush { get; } = rarityColor is { } c ? new SolidColorBrush(Color.FromRgb(c.R, c.G, c.B)) : null;
+
+    // Bloque de filtros combinables de la Libreria (encargo del usuario, 13-sep-2026: "amplia la
+    // busqueda... tipo de objeto, rareza, si es equipable en que slot"). Los tres son DATOS REALES
+    // ya calculados por otros catalogos (nunca heuristica inventada aqui):
+    //  - Rarity: el mismo entero real que ya resuelve ItemStatsFormatter (`stats.Rarity`) -
+    //    siempre null para Calamity (rarezas propias no investigadas, ver el comentario de
+    //    ItemStatsFormatter), LibraryViewModel excluye Calamity del filtro de rareza por eso.
+    //  - DamageKind: el mismo tipo de daño real ya resuelto por ItemStatsFormatter para el
+    //    tooltip de estadisticas (vanilla por categoria real, Calamity por DamageType real).
+    //  - EquipSlotKind: ver ItemEquipSlotClassifier - "en que ranura se equipa de verdad",
+    //    resuelto por LibraryViewModel (necesita el catalogo de Calamity, que esta clase no ve).
+    public int? Rarity { get; } = stats?.Rarity;
+    public ItemDamageKind DamageKind { get; } = stats?.DamageKind ?? ItemDamageKind.Unknown;
+    public SlotKind EquipSlotKind { get; } = equipSlotKind;
 
     // Lo llama LibraryViewModel al cambiar el idioma (una unica suscripcion para las 8821
     // entradas). No recalcula nada aqui: solo avisa de que el texto hay que volver a leerlo.

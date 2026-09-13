@@ -1068,6 +1068,16 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Pastillas de filtro de la Libreria (Rareza/Tipo de daño/Ranura de equipo, 13-sep-2026) -
+         mismo mecanismo real que PrefixGroupButton (BasedOn del Button base, IsSelected->Tag en
+         vez de pintar Background/Foreground a mano) para heredar gratis el degradado/sombra/
+         animacion ya escritos ahi - la unica diferencia real es que estas pastillas ademas
+         pueden llevar un punto de color (el Ellipse de LibraryFilterChipTemplate en
+         MainWindow.xaml, no parte de este Style). -->
+    <Style x:Key="LibraryFilterChipButton" TargetType="Button" BasedOn="{StaticResource PrefixGroupButton}">
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+
     <!-- H4-11 (cuarta auditoria de Opus, Fable): "el selector de versión usa otro lenguaje
          visual que el resto de selectores" - los botones de VersionOption pintaban Background/
          FontWeight a mano en un Style inline en MainWindow.xaml (el mismo error historico que
