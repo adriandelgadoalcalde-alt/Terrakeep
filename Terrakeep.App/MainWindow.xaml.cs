@@ -46,6 +46,17 @@ public partial class MainWindow : Window
         // reescanean aqui, ahora que si lo estan, para que la primera pantalla real ya las
         // incluya.
         _viewModel.Settings.LoadFromDisk();
+        // BK-4 (13-sep-2026): el cupo de copias es POR personaje, asi que una carpeta de
+        // historial de un personaje que ya no existe no la retiraba nadie nunca - medido en esta
+        // maquina antes de arreglarlo: 2.765 carpetas y 28 MB, casi todo de rutas temporales de
+        // arneses de prueba ya desaparecidas. Se limpia al arrancar, pero SOLO lo que lleva mas
+        // de 90 dias huerfano (ver BackupHistoryService.OrphanGracePeriod: un historial recien
+        // quedado huerfano puede ser lo unico que queda de un personaje borrado sin querer).
+        // Va DESPUES de LoadFromDisk a proposito - las carpetas adicionales de Ajustes tienen que
+        // estar aplicadas antes de decidir que personaje "ya no existe" - y en segundo plano:
+        // recorre disco y no debe retrasar ni un milisegundo la aparicion de la ventana.
+        var historial = _viewModel.BackupHistory.Service;
+        Task.Run(() => { try { historial.PurgeOrphanHistories(); } catch (Exception) { /* nunca un fallo visible por una limpieza de fondo */ } });
         _viewModel.Home.RefreshCommand.Execute(null);
         _viewModel.Exploration.RefreshWorldsCommand.Execute(null);
         _viewModel.RestoreSession();

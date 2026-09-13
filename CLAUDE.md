@@ -187,6 +187,21 @@ sesión:
   con una prueba diferencial en un `git worktree` que NO aislaba nada, porque
   el `session.json` es el mismo para los dos árboles). Todo bloque nuevo que
   toque una selección persistida debe dejarla como estaba.
+- **Lo mismo vale para `settings.json`** (13-sep-2026, bloque `BK_SOLO`):
+  `MainWindow` llama a `Settings.LoadFromDisk()` en su constructor, así que el
+  arnés hereda TAMBIÉN los ajustes reales de la máquina (idioma, carpetas
+  adicionales, cupo de copias de seguridad...). Salió caro una vez: con
+  `BackupHistoryCap: 1` heredado, "3 guardados → 1 versión de historial"
+  parecía un bug del código nuevo cuando era el tope configurado haciendo su
+  trabajo. Todo bloque que mida algo que dependa de un ajuste debe FIJAR ese
+  ajuste él mismo, no confiar en lo que haya en disco (y dejarlo como estaba).
+- **Escribir en el `%LOCALAPPDATA%\Terrakeep\` real desde una prueba es un
+  efecto secundario que se acumula**: `BackupHistoryService` guardaba ahí una
+  carpeta por cada ruta de `.plr` que veía, y las pruebas usan rutas temporales
+  nuevas cada vez - 2.765 carpetas y 28 MB medidos antes de cortarlo. Cualquier
+  servicio que escriba en esa carpeta debe permitir apuntar su raíz a otro
+  sitio (`BackupHistoryService.BackupsRoot` es propiedad de instancia por eso)
+  y las pruebas deben montar la suya.
 - `Path.GetTempPath()` desde un proceso lanzado en segundo plano vía Git
   Bash puede no resolver al mismo directorio que ve una sesión de
   PowerShell aparte - para un log de diagnóstico de un arnés, usar siempre

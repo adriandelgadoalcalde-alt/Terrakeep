@@ -353,6 +353,31 @@ public sealed class BackupHistoryServiceTests : IDisposable
         Assert.Contains(BackupReason.BeforeRestore, motivos);
     }
 
+    // BK-5 - BUG REAL encontrado por el arnes contra la app en marcha, no al escribir el codigo:
+    // restaurar leia el contenedor JUSTO al escribir, y entre medias el panel crea la copia del
+    // estado actual, que dispara el cupo... y con el cupo bajo el cupo se llevaba por delante la
+    // version que se estaba restaurando ("Could not find file ...tkbak", con el archivo actual ya
+    // pisado). Se reproduce el escenario exacto con cupo 1.
+    [Fact]
+    public void RestaurarConElCupoAlMinimo_NoSeBorraASiMismoAMedioCamino()
+    {
+        var service = NuevoServicio(cupo: 1);
+        string path = NuevoPlrEnDisco("Carrera");
+        byte[] original = File.ReadAllBytes(path);
+
+        service.SaveBackup(path, null, BackupReason.BeforeSave);
+        var punto = service.ListBackups(path)[0];
+        File.WriteAllBytes(path, PlrFile.Write(NuevoPersonaje("Pisado", vida: 100)));
+
+        // El orden real del panel: leer entero -> copia de seguridad (purga) -> escribir.
+        byte[] plrBytes = service.ReadPlrBytes(punto);
+        byte[]? tplrBytes = service.ReadTplrBytes(punto);
+        service.SaveBackup(path, null, BackupReason.BeforeRestore);
+        service.RestoreBytes(path, null, plrBytes, tplrBytes);
+
+        Assert.True(original.SequenceEqual(File.ReadAllBytes(path)));
+    }
+
     // La decision de NO comprimir se apoya en una medida real (ver el comentario de cabecera de
     // BackupHistoryService): el contenedor no puede salir mas pequeño que su contenido, y esta
     // prueba lo deja clavado por si alguien cambia el CompressionLevel "por mejorarlo".

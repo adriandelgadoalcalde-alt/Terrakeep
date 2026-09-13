@@ -560,6 +560,18 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // BK_SOLO=1 (13-sep-2026, encargo del historial de versiones): mismo modo de foco que
+        // PB_SOLO/AR14_SOLO/A11_SOLO. Aqui hace ademas especial falta porque el bloque hace mas
+        // de 30 GUARDADOS REALES seguidos sobre una copia de un personaje real - encadenarlo al
+        // recorrido completo dejaria el resto del arnes trabajando sobre un personaje que este
+        // bloque ha estado renombrando a proposito.
+        if (Environment.GetEnvironmentVariable("BK_SOLO") == "1")
+        {
+            PruebasHistorialDeVersiones(window, vm);
+            Console.WriteLine("DONE (BK_SOLO)");
+            Environment.Exit(0);
+        }
+
         // Verificacion real de N-1 (auditoria de Opus, Bloque 2): la cabecera global debe verse
         // IGUAL en una pestaña que no es Personaje (aqui, Builds=indice 2) - antes el nombre/
         // dificultad/Guardar solo existian dentro de Personaje.

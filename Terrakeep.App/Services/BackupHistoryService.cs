@@ -389,14 +389,24 @@ public sealed class BackupHistoryService
     // BK: la restauracion se escribe con el mismo patron atomico del resto del proyecto (a un
     // .tmp y luego File.Replace/Move) - a mitad de una restauracion es justo cuando peor viene
     // quedarse sin fichero.
-    public void Restore(string plrPath, string? tplrPathReal, BackupEntry entry)
-    {
-        byte[] plr = ReadPlrBytes(entry);
-        byte[]? tplr = ReadTplrBytes(entry);
+    public void Restore(string plrPath, string? tplrPathReal, BackupEntry entry) =>
+        RestoreBytes(plrPath, tplrPathReal, ReadPlrBytes(entry), ReadTplrBytes(entry));
 
-        EscribirAtomico(plrPath, plr);
+    // BK-5 (13-sep-2026) - BUG REAL encontrado por el arnes BK, no al escribir el codigo: la
+    // restauracion leia el contenedor JUSTO AL ESCRIBIR, y entre medias el panel crea la copia de
+    // seguridad del estado actual (BackupReason.BeforeRestore). Esa copia nueva dispara Purge...
+    // que con el cupo bajo puede borrar precisamente la version que se estaba restaurando. Salio
+    // clavado en la primera ejecucion real contra la app, con el cupo real de esta maquina:
+    //     "No se pudo restaurar: Could not find file '...20260913-172230-744-A.tkbak'"
+    // O sea: el archivo actual ya se habia dado por perdido y la version elegida ya no existia.
+    // La regla, que vale para cualquier orden futuro: los BYTES que se van a escribir se leen
+    // ENTEROS a memoria ANTES de tocar nada mas, y a partir de ahi ya da igual lo que le pase al
+    // contenedor en disco.
+    public void RestoreBytes(string plrPath, string? tplrPathReal, byte[] plrBytes, byte[]? tplrBytes)
+    {
+        EscribirAtomico(plrPath, plrBytes);
         string tplrTarget = tplrPathReal ?? Path.ChangeExtension(plrPath, ".tplr");
-        if (tplr != null) EscribirAtomico(tplrTarget, tplr);
+        if (tplrBytes != null) EscribirAtomico(tplrTarget, tplrBytes);
         else if (File.Exists(tplrTarget)) File.Delete(tplrTarget);
     }
 

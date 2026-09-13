@@ -28,6 +28,13 @@ public sealed partial class BackupHistoryViewModel : ObservableObject
 
     private readonly BackupHistoryService _service;
 
+    // El servicio real que hay detras del panel. Expuesto a proposito para que el arnes de
+    // pruebas (Terrakeep.App.Tests) pueda apuntar BackupsRoot a una carpeta suya y verificar el
+    // ciclo COMPLETO contra la app en marcha sin escribir ni un byte en el %LOCALAPPDATA% real
+    // del usuario - antes las pruebas dejaban ahi una carpeta por cada ruta temporal que usaban
+    // (ver el comentario BK-4 de BackupHistoryService).
+    public BackupHistoryService Service => _service;
+
     public BackupHistoryViewModel(BackupHistoryService service)
     {
         _service = service;
@@ -135,6 +142,15 @@ public sealed partial class BackupHistoryViewModel : ObservableObject
     {
         Points.Clear();
         if (PlrPath == null) return;
+        // El rotulo del panel se queda obsoleto en cuanto se restaura una version con otro
+        // nombre (visto en la captura real de la primera ronda: la cabecera seguia diciendo
+        // "BK-Tres" con el fichero ya restaurado a "adrian"). Se relee del propio .plr, que es la
+        // unica fuente que nunca miente. Si no se puede leer, se deja el que hubiera.
+        try
+        {
+            if (File.Exists(PlrPath)) CharacterName = PlrFile.Read(File.ReadAllBytes(PlrPath)).Name;
+        }
+        catch (Exception) { /* un fichero ilegible no debe impedir ver el historial: es cuando mas falta hace */ }
         foreach (var entry in _service.ListBackups(PlrPath))
             Points.Add(new BackupPointViewModel(entry));
         _orphans = _service.FindOrphanHistories();
@@ -190,8 +206,14 @@ public sealed partial class BackupHistoryViewModel : ObservableObject
             // INI-08 (bug real de perdida de datos ya vivido en este proyecto): NUNCA sobrescribir
             // el fichero bueno con una copia que ni siquiera se puede leer. Se lee ANTES de tocar
             // nada, con el mismo lector real que usa la app para cargar.
-            byte[] bytes = _service.ReadPlrBytes(point.Entry);
-            PlrFile.Read(bytes);
+            //
+            // BK-5: y se lee ENTERO (el .plr Y el .tplr) a memoria antes de seguir, no solo para
+            // comprobarlo - la copia de seguridad de la linea siguiente dispara el cupo, que con
+            // un tope bajo puede borrar justo esta version mientras se restaura. Encontrado por
+            // el arnes contra la app real, ver el comentario de BackupHistoryService.RestoreBytes.
+            byte[] plrBytes = _service.ReadPlrBytes(point.Entry);
+            byte[]? tplrBytes = _service.ReadTplrBytes(point.Entry);
+            PlrFile.Read(plrBytes);
 
             // La propia restauracion se puede deshacer: antes de pisar el fichero actual se
             // fotografia lo que hay. Sin esto, elegir el punto equivocado (a dos clics de
@@ -199,7 +221,7 @@ public sealed partial class BackupHistoryViewModel : ObservableObject
             // este panel existe para resolver, reintroducido por la puerta de atras.
             _service.SaveBackup(PlrPath, null, BackupReason.BeforeRestore);
 
-            _service.Restore(PlrPath, null, point.Entry);
+            _service.RestoreBytes(PlrPath, null, plrBytes, tplrBytes);
             Reload();
             SetStatus("backup_restored", esError: false, point.Entry.TimestampLocal.ToString("dd/MM/yyyy HH:mm:ss"));
             if (IsCurrentCharacter) ReloadRequested?.Invoke(PlrPath);

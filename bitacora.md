@@ -12627,3 +12627,146 @@ El **Lanzacervezas** (3821) sale como "Otras armas con munición (1)" dentro de 
 cuerpo". No es un error de extracción: el `metatype` curado de Terrasavr lo pone en cuerpo a cuerpo
 y el juego real dice `ranged = true` con `useAmmo = 353` (jarras de cerveza). Se respeta lo que dice
 el juego; la carpeta es de un solo objeto y su nombre es cierto.
+
+## 13-sep-2026 — Historial de versiones real: la copia se hace ANTES de guardar, con metadatos y panel propio
+
+Encargo del usuario: "un sistema real de copias de seguridad versionadas — antes de cada guardado se
+conserva un snapshot del archivo anterior, con la posibilidad real de volver a cualquier punto
+guardado anterior, no solo deshacer el último cambio". Ya existía la pieza (`BackupHistoryService`,
+H5-04) pero se quedaba corta en cuatro puntos **reales**, todos comprobados contra el código y los
+ficheros de esta máquina antes de tocar nada.
+
+### Los cuatro fallos reales que tenía lo que ya había
+
+- **BK-1 — la copia se hacía DESPUÉS de escribir.** `MainViewModel.Save` llamaba a `SaveBackup`
+  justo detrás de `_service.Save`, o sea que el historial fotografiaba el fichero recién escrito.
+  El estado **anterior a la primera escritura de la sesión** no quedaba en ningún sitio salvo el
+  `.bak` de un solo nivel: dos guardados seguidos y el archivo con el que arrancaste esa tarde ya no
+  existía en ninguna parte. Ahora el snapshot se toma antes (`BackupReason.BeforeSave`). No es una
+  preferencia: el estado previo al guardado N **es** el resultado del guardado N-1, así que
+  fotografiar "antes" conserva todo lo que conservaba "después" y además el original; lo único que
+  "antes" no tiene es el último guardado, que es exactamente el fichero que hay en disco.
+- **BK-2 — sello de segundo + `File.Copy(overwrite: true)`.** Dos guardados dentro del mismo segundo
+  se pisaban en silencio. Medido en la app real: tres guardados seguidos ocurren en **30 ms**
+  (`17:24:08.694`, `.724`, `.741`) — con el formato anterior habrían sido **una** versión, no tres.
+  Sello con milisegundos y desambiguación si aun así chocaran.
+- **BK-3 — `Purge` ordenaba por `File.GetLastWriteTimeUtc`** y `File.Copy` **hereda** la fecha de
+  modificación del origen. Basta con restaurar una versión antigua (lo que deja el `.plr` real con
+  fecha antigua) para que la copia siguiente naciera "vieja" y fuera la primera en desaparecer,
+  aunque fuera la más reciente. Ahora se ordena por el sello del propio nombre, que es un dato
+  nuestro. Prueba dedicada con `File.SetLastWriteTimeUtc` a 2015 que fallaba antes del arreglo.
+- **BK-4 — no había límite GLOBAL.** El cupo era por personaje, pero cada ruta distinta estrena su
+  propia carpeta y no la retiraba nadie. **Medido en esta máquina antes de tocar nada: 2.765
+  carpetas, 3.690 ficheros, 28 MB**, casi todo de rutas temporales de los propios arneses (que
+  además escribían en el `%LOCALAPPDATA%` REAL del usuario — eso también se ha cortado de raíz,
+  `BackupsRoot` es ahora una propiedad de instancia y las pruebas montan la suya).
+
+### Formato elegido, con números reales (no por costumbre)
+
+Un contenedor **`.tkbak`** por versión, que por dentro es un ZIP normal (`System.IO.Compression`,
+sin dependencia nueva) con `player.plr`, `player.tplr` si lo hay, y `meta.json`. Un fichero por
+versión = imposible que exista media versión.
+
+Y **sin comprimir a propósito**. Medido con `gzip -9` sobre los ficheros reales de esta máquina:
+
+| fichero | original | comprimido |
+|---|---|---|
+| `adrian.plr` | 102.912 | 102.961 (**+0,05%**) |
+| `adrian.tplr` | 23.550 | 23.585 (**+0,15%**) |
+| `Eldelgas.plr` | 3.744 | 3.780 (**+1,0%**) |
+| `Eldelgas.tplr` | 1.875 | 1.912 (**+2,0%**) |
+
+Comprimir los **agranda**, en los cuatro casos. No es mala suerte: el `.plr` va cifrado entero con
+AES-128-CBC (`PlrCrypto`, no hay ni una cabecera en claro) y el `.tplr` ya es un NBT gzipeado por
+tModLoader. `CompressionLevel.NoCompression` para los dos binarios, `Optimal` solo para el
+`meta.json`. Hay una prueba que deja clavada esa decisión por si alguien la "mejora".
+
+`meta.json` guarda el resumen legible sacado **del propio `.plr` fotografiado** (nunca del estado en
+memoria, que en un `BeforeSave` ya lleva las ediciones sin guardar): nombre, versión de guardado,
+dificultad, vida, maná, tiempo jugado, muertes, objetos, si llevaba `.tplr`, tamaños y motivo. Si el
+fichero no se puede leer, la copia se guarda **igual** y se marca sin resumen — negarse a copiar por
+no poder describir sería justo el fallo que este sistema existe para evitar.
+
+### Retención: por qué por NÚMERO y no por antigüedad
+
+Un editor de partidas no se usa a diario: un personaje que no se toca desde hace tres meses sigue
+mereciendo sus puntos de retorno, así que "borrar lo que tenga más de X días" castigaría al que
+menos culpa tiene. Un tope por número da además una cota de disco predecible y fácil de explicar —
+**medido en la app real: 20 versiones del personaje más gordo de esta máquina = 2,4 MB**. 20 sigue
+siendo el valor de fábrica, configurable en Ajustes. Dentro del cupo, las copias **manuales** son
+las últimas en retirarse: son puntos que alguien marcó a propósito, no ruido de fondo.
+
+Para el límite global (BK-4): una carpeta de historial se identifica por la huella de la ruta del
+`.plr`, que es de ida y no de vuelta — pero sí se puede calcular la huella de cada `.plr` realmente
+visible ahora y considerar huérfano lo que no le corresponda a ninguno (funciona también con las
+carpetas del formato antiguo, que no llevan `meta.json`). La limpieza **automática** solo toca
+huérfanos de más de **90 días**: el caso que de verdad da miedo es "borré el `.plr` sin querer y el
+historial era lo único que quedaba", así que un historial recién huérfano no se toca jamás solo. Para
+quien quiera el espacio ya, el panel ofrece la limpieza a mano con su confirmación y el tamaño real.
+
+### Interfaz: un panel de verdad, no un submenú
+
+Lo que había era un **submenú** del menú contextual de la tarjeta de Inicio que restauraba **con un
+solo clic de menú, sin ninguna confirmación**, sobre una línea que solo decía
+`20260908-124213 · 3,7 KB`. Tres cosas mal: sobrescribir el personaje es irreversible y se disparaba
+con el gesto más fácil de dar por error de toda la interfaz; esa línea no dice nada sobre qué hay
+dentro; y 20 puntos más acciones no caben en una tira de popup.
+
+Ahora es un overlay real a nivel de ventana (Ctrl+H, botón "Historial de versiones" en la cabecera,
+y el mismo menú contextual de Inicio para cualquier personaje, esté cargado o no): fecha, insignia
+de motivo, tamaño y **resumen legible** por fila; confirmación **en la propia fila** que dice con
+todas las letras que se va a sobrescribir; y **copia automática del estado actual antes de
+restaurar** (`BackupReason.BeforeRestore`), así que restaurar también se puede deshacer. Escape
+cierra, el velo del fondo bloquea el editor de detrás.
+
+### Dos bugs REALES que solo aparecieron al probarlo contra la app en marcha
+
+Ninguno de los dos se vio escribiendo el código ni con pruebas unitarias — salieron en la **primera**
+ejecución del bloque `BK_SOLO=1` del arnés:
+
+1. **BK-5 (pérdida de datos real)**: la restauración leía el contenedor justo al escribir, y entre
+   medias el panel crea la copia del estado actual… que dispara el cupo y **puede borrar la versión
+   que se estaba restaurando**. Salió clavado con el cupo real de esta máquina:
+   `No se pudo restaurar: Could not find file '...20260913-172230-744-A.tkbak'` — con el archivo
+   actual ya dado por perdido. Arreglo: los bytes que se van a escribir (`.plr` **y** `.tplr`) se
+   leen enteros a memoria **antes** de tocar nada más (`RestoreBytes`). Prueba dedicada con cupo 1.
+2. **El arnés hereda los ajustes reales de la máquina** — misma trampa ya documentada en `CLAUDE.md`
+   para `session.json`. La primera ejecución salió con `BackupHistoryCap: 1` heredado de
+   `%LOCALAPPDATA%\Terrakeep\settings.json`, y "3 guardados → 1 versión" parecía un bug del historial
+   cuando era el tope configurado haciendo su trabajo. El bloque fija ahora su propio cupo.
+
+**AVISO para el usuario**: ese `BackupHistoryCap: 1` está en el `settings.json` real de esta máquina
+ahora mismo (Ajustes → copias de seguridad). Con 1, el historial es de un solo nivel y esta función
+queda anulada de hecho. No se ha tocado (es un ajuste suyo), pero conviene subirlo — el valor de
+fábrica es 20, y el pie del panel lo dice a las claras ("N de M versiones").
+
+### Verificación real (bloque `BK_SOLO=1`, contra la app en marcha)
+
+`dotnet run --project Terrakeep.App.Tests` con `BK_SOLO=1` — MainWindow real, copia de un `.plr` real
+de esta máquina (nunca el fichero del usuario), raíz de historial redirigida a una carpeta temporal
+propia, todo borrado al terminar. **Cero `FALLO` en la ejecución final**:
+
+- `BK-01`: 3 guardados reales seguidos → **3 versiones** en disco, con 30 ms entre ellas.
+- `BK-02`: la versión más antigua lleva dentro el personaje **previo** al primer guardado, e
+  **idéntica byte a byte** al archivo original (102.912 vs 102.912 bytes).
+- `BK-03`: pulsar "Restaurar" **pide confirmación y no toca el archivo**; tras confirmar, el archivo
+  real vuelve a ser idéntico byte a byte al original.
+- `BK-04`: restaurar dejó antes su propia copia ("Antes de restaurar").
+- `BK-05`: el editor cargado se recarga y muestra ya el personaje restaurado.
+- `BK-06`: "Crear copia ahora" añade la versión manual, con su resumen real
+  (`adrian · Viaje · Vida 100/100 · Maná 40/40 · Jugado 26min · 26 objetos · con .tplr`).
+- `BK-07`: **30 guardados reales** con el cupo en 5 → se queda clavado en **5**, y la copia manual
+  (la más antigua de todas) **sobrevive**.
+- `BK-08`/`BK-8b`: UI Automation real ve los botones del panel; 5 filas en pantalla = 5 en disco; y
+  con el historial **lleno (20)** y la ventana al **mínimo real (1080x700)** la lista desplaza de
+  verdad (871 px) y el pie sigue entero.
+- `BK-9b`: el menú contextual de Inicio abre el panel para un personaje **no cargado**.
+- `BK-10`: historial huérfano detectado (2,4 MB); la limpieza automática con los 90 días **no lo
+  toca** (es de hace un momento) y la limpieza a mano lo retira entero.
+- Capturas reales: `bk-panel-historial.png`, `bk-panel-historial-confirmacion.png`,
+  `bk-panel-historial-minimo.png` (en `Terrakeep.App.Tests\bin\Debug\net10.0-windows\`).
+
+`dotnet test`: **461/461** (`Terrakeep.App.ViewModels.Tests`, 21 de ellas del historial) y **475/475**
+(`Terrakeep.Core.Tests`). Compatibilidad hacia atrás cubierta con prueba propia: las copias del
+formato antiguo (`.plr`/`.tplr` sueltos con sello de segundo) se siguen **listando y restaurando**,
+no se convierten al vuelo ni se hacen desaparecer.
