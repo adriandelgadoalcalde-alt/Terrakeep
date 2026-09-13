@@ -12770,3 +12770,108 @@ propia, todo borrado al terminar. **Cero `FALLO` en la ejecución final**:
 (`Terrakeep.Core.Tests`). Compatibilidad hacia atrás cubierta con prueba propia: las copias del
 formato antiguo (`.plr`/`.tplr` sueltos con sello de segundo) se siguen **listando y restaurando**,
 no se convierten al vuelo ni se hacen desaparecer.
+
+---
+
+## 13-sep-2026 — Auditoría de solapes/cajas de toda la app: `AR-14d` era un bug real, no un "límite conocido"
+
+Encargo del usuario tras encontrar el mismo día tres bugs de este tipo en proyectos hermanos
+(barras invisibles en StarvekeepMod, texto solapado en TerrakeepMod, texto cortado por un
+`MinWidth` fijo en un panel de backups): repasar **todas** las pantallas de Terrakeep y Starvekeep
+con capturas reales, ventana al mínimo incluida, mirando a mano y no solo confiando en el detector
+automático.
+
+### Lo que ya estaba (no hubo que reinventarlo)
+
+`ESPEC-auditoria-redimensionado.md` (4-sep-2026) ya había hecho este trabajo a fondo una vez -
+20 pantallas x 14 tamaños, hallazgos H-01 a H-10 con causa y arreglo propuestos - y una sesión
+posterior (4-sep-2026, "Ejecución completa del plan... R-01 a R-11") los aplicó todos. Desde
+entonces el arnés permanente (`Terrakeep.App.Tests`) trae un barrido genérico real (`AR-LAY`,
+recorre TODO el árbol visual buscando recorte/solape/truncado, no una lista cerrada de controles)
+más comprobaciones dedicadas a los puntos más frágiles (`AR-14`/`b`/`c`/`d` para la fila fusionada
+de Equipamiento). Correr `dotnet run --project Terrakeep.App.Tests` completo (sin ningún modo de
+foco) sigue funcionando de punta a punta hoy (`DONE`, sin colgarse) y es la base real de esta
+ronda, no algo montado desde cero.
+
+### El hallazgo real: `AR-14d` llevaba semanas fallando y se venía dando por "ya conocido" sin serlo
+
+El primer `dotnet run` completo de hoy dio `FALLO: AR-14d - a 1080x700 5 slot(s) de
+Armadura/Accesorios se salen 32,6px POR ABAJO de su propia caja`. Una entrada de `bitacora.md` del
+9-sep-2026 (renombrado a Terrakeep) ya había visto este mismo `FALLO` y lo archivó como "el límite
+de maquetación a 1080x700 ya medido y documentado en la ronda de `AR-LAY`" - **pero la ronda que
+documentó `AR-14d` (6-sep-2026) terminó con 0 `FALLO`, incluida una verificación de 4.582 layouts
+reales.** O sea que entre el 6-sep y el 9-sep algo volvió a romperlo, y la sesión del 9-sep lo
+etiquetó como "ya sabido" sin comprobar que en realidad era nuevo. Se decidió investigarlo de
+verdad en vez de repetir la misma etiqueta.
+
+**Causa real, confirmada con un diagnóstico temporal** (añadido al arnés, verificado y quitado):
+en modo de foco `AR14_SOLO=1` (personaje recién cargado, sin ningún bono de set activo) el mismo
+tamaño **no falla** (`corteVert=0px`). En el recorrido completo sí falla, porque para entonces el
+personaje de prueba lleva puesto un conjunto de armadura con **bono de set real activo**
+(`EquipmentGroupViewModel.ActiveSetBonusText`, añadido en una auditoría posterior a la que cerró
+`AR-14d` en verde) - un `TextBlock` más en la cabecera de la fila (`Grid.Row="0"`, `Height="Auto"`
+del `SlotRowHost` de Equipamiento, `MainWindow.xaml`). Un `Auto` se lleva todo lo que pida antes de
+que la fila `"*"` de abajo (la rejilla 5x2 de Armadura/Accesorios) vea un solo píxel: con el bono
+visible la cabecera pasa de 2 a 4 líneas y la rejilla de abajo se queda sin sus ~84px reales
+(2 filas de `MinCell` 40 + `Gap` 4) - exactamente la regresión que `AR-14d` se diseñó para vigilar,
+solo que disparada por un estado de personaje real (**un conjunto con bono, no un borde raro**) que
+la ronda que cerró `AR-14d` en verde no llegó a probar.
+
+### El arreglo, mismo criterio que R-04a (dar prioridad real a lo importante, sin sacrificar nada)
+
+Dos cambios en `MainWindow.xaml`, sin tocar ningún ViewModel:
+
+1. **`RowDefinition` de la rejilla (fila 1) con `MinHeight="84"`** - el suelo real y determinista
+   de la rejilla 5x2 (2×`MinCell`40 + `Gap`4), no un número a ojo. Garantiza que la fila de slots
+   nunca reciba menos de lo que necesita, pase lo que pase con la cabecera de arriba.
+2. **La cabecera (fila 0: Loadout + Vista + Defensa total + bono de set) envuelta en un
+   `ScrollViewer` con `MaxHeight="112"`** - cubre las 4 líneas del caso normal sin scroll (Loadout
+   + Vista + Defensa + una línea de bono); solo un bono de set con texto muy largo (varias líneas
+   envueltas) llegaría a pedir scroll ahí, y es preferible que se desplace un texto informativo a
+   que desaparezca media rejilla de slots reales.
+
+**Efecto colateral encontrado y cerrado en la misma ronda**: el primer arreglo, por sí solo, dejó
+un nuevo `FALLO: AR-14c` de 1,9px en el bloque de Monedas/Munición (a la derecha). Causa: ese
+bloque vive en la misma fila fusionada con `Grid.RowSpan="2"` y su `StackPanel` interno tenía
+`VerticalAlignment` por defecto (`Stretch`), así que al crecer la fila 1 por el `MinHeight` nuevo,
+el `SlotGridPanel` de Monedas/Munición recalculaba su reparto de columnas contra un
+`AvailableHeight` mayor que el que de verdad necesitaba, y el nuevo reparto dejaba 1,9px cortados.
+Arreglado con `VerticalAlignment="Top"` en ese `StackPanel` (`PilaMonedasMunicion`): se queda en su
+alto natural (182,1px) pase lo que pase con el resto de la fila, mismo fondo, solo un poco de aire
+de más debajo en vez de un recálculo que no hacía falta.
+
+### Verificación real (no solo el mismo `AR-14d` en verde)
+
+- `dotnet run --project Terrakeep.App.Tests` completo, **tres veces seguidas**: `AR-14`, `AR-14b`,
+  `AR-14c` y `AR-14d` en verde las tres, `AR-LAY` completo (16 pantallas x 13 tamaños x 2 idiomas)
+  con **0 perdidos, 0 solapes, 0 truncados, 0 límites conocidos**.
+- Capturas reales miradas a mano (no solo el detector): `equipamiento-fusionado.png` y
+  `ar14-armadura-1080x700.png` (ambas con el bono de set real a la vista, en dos líneas, y la
+  rejilla de Armadura/Accesorios con sus 2 filas completas debajo, sin recorte); también
+  `resize-equip-minimo.png`, `bk-panel-historial-minimo.png`, `h5-07-ajustes.png` e
+  `inicio-lanzador.png` - las insignias "Calamity" de las tarjetas de Inicio (H-05, ya arreglado en
+  la ronda del 4-sep) se ven enteras, sin recortar.
+- `dotnet test`: **475/475** (`Terrakeep.Core.Tests`) y **461/461**
+  (`Terrakeep.App.ViewModels.Tests`), sin cambios respecto a antes del arreglo.
+
+### Limpieza de paso: un test obsoleto que llevaba semanas dando un falso `FALLO`
+
+El mismo recorrido completo también daba siempre `H5-04-HISTORIAL: MenuItem NO-FOUND`. Causa: el
+test buscaba un `MenuItem` con el texto literal antiguo `"Historial de guardados"`, que era un
+**submenú** (`HasItems=true`) de la interfaz vieja. La sesión de hoy mismo (ver la entrada de
+arriba, "Historial de versiones real") sustituyó ese submenú por un `MenuItem` normal que abre el
+panel `Ctrl+H` - el texto cambió (ahora sale de `Loc[action_save_history]`, y por tanto vale en los
+dos idiomas) y ya no tiene submenú que abrir. El test nunca se actualizó tras ese cambio y llevaba
+horas marcando un falso positivo. Arreglado: ahora busca el `MenuItem` por su texto **real**
+(`LocalizationService.Instance["action_save_history"]`) y solo confirma que existe y tiene su
+`Command` resuelto - la cobertura a fondo del ciclo completo del panel (guardar, restaurar,
+confirmar, límite, huérfanos) ya la da el bloque `BK_SOLO=1` de la entrada de arriba, no hacía
+falta duplicarla aquí.
+
+### Lo que NO se tocó, y por qué
+
+`A11-CONTENIDO-IDIOMA` (un objeto del catálogo, "Cactus", coincide de casualidad en los dos
+idiomas) y `MP-01` (un objeto, Coin Gun, con un prefijo distinto del verificado contra la wiki) son
+los dos `FALLO` que quedan tras esta ronda. Los dos son de **datos/traducción**, no de
+maquetación/solape - fuera del alcance de este encargo, y ya estaban presentes antes de empezar
+(confirmado comparando con el primer `dotnet run` de la ronda, antes de tocar nada).
