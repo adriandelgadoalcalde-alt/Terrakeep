@@ -290,6 +290,132 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // KEEPQA_CHAOS=1 (14-sep-2026, Fase 7 Bloque C de KeepQA V2.0 - ver
+        // KeepQA\v2\PROPUESTA-UNIFICADA.md): ejecutor de UNA secuencia de acciones ya generada por
+        // src/chaos/generadorSecuencias.js (semilla fija, reproducible) - esta pieza NO decide el
+        // orden ni genera nada por su cuenta, solo traduce cada nombre de accion de un catalogo
+        // fijo a los MISMOS adaptadores de entrada YA REALES que usa el resto de este arnes:
+        // SelectionItemPattern.Select() para cambiar de pestaña (igual que KEEPQA_SMOKE ahi
+        // arriba), PressKey/RealClickAt (definidos mas abajo en esta clase, ya usados en decenas
+        // de pruebas reales de este mismo archivo para Escape/flechas y para el unico clic de
+        // raton real del arnes) para teclado/raton a nivel de SO, y window.Close() para cerrar -
+        // cero logica de entrada nueva, solo secuenciacion + traza.
+        if (Environment.GetEnvironmentVariable("KEEPQA_CHAOS") == "1")
+        {
+            string rutaSecuencia = Environment.GetEnvironmentVariable("KEEPQA_CHAOS_SEQ") ?? "";
+            if (string.IsNullOrEmpty(rutaSecuencia) || !File.Exists(rutaSecuencia))
+            {
+                Console.WriteLine($"FALLO: KEEPQA_CHAOS - KEEPQA_CHAOS_SEQ no apunta a un archivo real ('{rutaSecuencia}')");
+                window.Close();
+                Environment.Exit(1);
+            }
+
+            string[] secuencia = System.Text.Json.JsonSerializer.Deserialize<string[]>(File.ReadAllText(rutaSecuencia)) ?? [];
+            Console.WriteLine($"CHAOS: {secuencia.Length} accion(es) a ejecutar: {string.Join(", ", secuencia)}");
+
+            AutomationElement? TabPorIndice(int indice)
+            {
+                var tabs = root.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
+                return indice >= 0 && indice < tabs.Count ? tabs[indice] : null;
+            }
+
+            var trazaChaos = new List<Dictionary<string, object>>();
+            bool cerradoChaos = false;
+            bool huboExcepcionChaos = false;
+            for (int iChaos = 0; iChaos < secuencia.Length && !cerradoChaos; iChaos++)
+            {
+                string accion = secuencia[iChaos];
+                var registro = new Dictionary<string, object> { ["indice"] = iChaos, ["accion"] = accion };
+                try
+                {
+                    switch (accion)
+                    {
+                        case "abrir_personaje":
+                            if (vm.Home.Characters.Count > 0)
+                            {
+                                vm.Home.OpenCommand.Execute(vm.Home.Characters[0]);
+                                DoEvents(); DoEvents();
+                            }
+                            else registro["aviso"] = "sin personajes reales que abrir - accion sin efecto";
+                            break;
+                        case "escape":
+                            SetForegroundWindow(hwnd);
+                            DoEvents();
+                            PressKey(0x1B); // VK_ESCAPE
+                            DoEvents();
+                            break;
+                        case "clic_rapido":
+                            {
+                                var tabActual = TabPorIndice(Math.Max(0, vm.SelectedTabIndex));
+                                if (tabActual != null)
+                                {
+                                    var rect = tabActual.Current.BoundingRectangle;
+                                    RealClickAt((int)(rect.X + rect.Width / 2), (int)(rect.Y + rect.Height / 2));
+                                    DoEvents(); DoEvents();
+                                }
+                                else registro["aviso"] = "sin pestaña visible donde clicar - accion sin efecto";
+                            }
+                            break;
+                        case "cambiar_pestana":
+                            {
+                                // Destino determinista a partir del indice de la propia secuencia
+                                // (que ya viene barajada con semilla fija por el generador) - no
+                                // hace falta un segundo RNG aqui, solo repartir 0-5 sin RNG nuevo.
+                                int destino = (iChaos * 7 + secuencia.Length) % 6;
+                                var tabDestino = TabPorIndice(destino);
+                                if (tabDestino != null && tabDestino.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selPatChaos))
+                                {
+                                    ((SelectionItemPattern)selPatChaos).Select();
+                                    DoEvents(); DoEvents();
+                                    registro["pestanaDestino"] = destino;
+                                }
+                                else registro["aviso"] = $"pestaña {destino} no encontrada o sin SelectionItemPattern";
+                            }
+                            break;
+                        case "cerrar":
+                            window.Close();
+                            DoEvents();
+                            cerradoChaos = true;
+                            break;
+                        default:
+                            registro["aviso"] = "accion desconocida en el catalogo, ignorada";
+                            break;
+                    }
+                    registro["ok"] = true;
+                }
+                catch (Exception ex)
+                {
+                    registro["ok"] = false;
+                    registro["excepcion"] = ex.ToString();
+                    huboExcepcionChaos = true;
+                    Console.WriteLine($"CHAOS-EXCEPCION en accion {iChaos} ('{accion}'): {ex}");
+                }
+                registro["ventanaVisibleTrasAccion"] = cerradoChaos ? false : window.IsVisible;
+                trazaChaos.Add(registro);
+                Console.WriteLine($"CHAOS: [{iChaos}] {accion} -> ok={registro["ok"]}");
+            }
+
+            string outDirChaos = Path.Combine(AppContext.BaseDirectory, "keepqa-evidencia");
+            Directory.CreateDirectory(outDirChaos);
+            string rutaChaosOut = Path.Combine(outDirChaos, "chaos.json");
+            File.WriteAllText(rutaChaosOut, System.Text.Json.JsonSerializer.Serialize(new
+            {
+                fecha = DateTime.Now.ToString("o"),
+                secuencia,
+                traza = trazaChaos,
+                cerrado = cerradoChaos,
+                huboExcepcion = huboExcepcionChaos,
+            }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine($"CHAOS: traza completa guardada en {rutaChaosOut}");
+
+            if (!cerradoChaos) { try { window.Close(); DoEvents(); } catch { /* la ventana ya podia estar cerrada */ } }
+            Console.WriteLine(huboExcepcionChaos
+                ? "CHAOS-VEREDICTO: HALLAZGO REAL - al menos una accion de la secuencia lanzo una excepcion no esperada"
+                : "CHAOS-VEREDICTO: SIN HALLAZGOS - la secuencia completa no revento nada");
+            Console.WriteLine("DONE (KEEPQA_CHAOS)");
+            Environment.Exit(huboExcepcionChaos ? 1 : 0);
+        }
+
         // KEEPQA_MEMORIA=1 (14-sep-2026, Fase 6 de KeepQA V2.0 - ver
         // KeepQA\v2\PROPUESTA-UNIFICADA.md, Bloque A): el "Memory testing" real de la
         // especificacion. Este arnes ya corre EN PROCESO (mismo Application/MainWindow que el
