@@ -39,6 +39,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using Terrakeep.App;
 using Terrakeep.App.ViewModels;
 
 internal static partial class Program
@@ -296,6 +297,97 @@ internal static partial class Program
                 DoEvents(); DoEvents();
                 CapturaVisual(window, (int)window.ActualWidth, (int)window.ActualHeight, $"pantalla-{pantalla}-normal1180x860-es");
 
+                // FALLO-1 (reportado por el usuario, 14-sep-2026): "la barra de vida/mana y la
+                // informacion de defensa/dinero/tiempo jugado estan desfasadas" en la cabecera.
+                // Investigacion real: el volcado de geometria de mas abajo (para
+                // verificarAlineacion.js) SOLO habia volcado TabControl/TabItem desde que existe
+                // - la franja de vitales (iconos corazon/mana + sus barras + Defensa/Dinero/
+                // Horas) JAMAS se habia volcado, para ninguna pantalla, en ninguna ronda anterior
+                // (confirmado leyendo el propio codigo de este fichero antes de este cambio: el
+                // unico volcado era `VolcarTabControl`). No es que verificarAlineacion.js la viera
+                // y la descartara por "alineacion optica" (Parte 13) ni que la agrupara mal -
+                // sencillamente nunca recibio ni un solo dato de esta zona. Se anade aqui, UNA vez
+                // (pantalla Personaje, tamaño normal 1180x860 ya fijado arriba - la franja es
+                // identica en las demas pantallas no-Exploracion, mismo WrapPanel/Grid.Column="1"
+                // de MainWindow.xaml), como elementos hermanos bajo un grupo dedicado
+                // "cabecera_franja_vitales" para que verificarAlineacion.js los compare de verdad
+                // entre si por primera vez.
+                if (pantalla == "Personaje")
+                {
+                    var tiraVitals = Descendientes<WrapPanel>(window)
+                        .FirstOrDefault(wp => Descendientes<TextBlock>(wp).Any(t => t.Text == "♥"));
+                    if (tiraVitals == null)
+                    {
+                        Console.WriteLine("KEEPQA_SOLO: FALLO - no se encuentra la franja de vitales (WrapPanel con icono corazon) para el volcado de cabecera");
+                    }
+                    else
+                    {
+                        int idxVitals = 0;
+                        foreach (var hijo in tiraVitals.Children.OfType<FrameworkElement>())
+                        {
+                            if (!hijo.IsVisible || hijo.ActualWidth < 1 || hijo.ActualHeight < 1) continue;
+                            Rect rHijo;
+                            try { rHijo = RectCompleto(hijo, window); } catch (InvalidOperationException) { continue; }
+                            string descrHijo = hijo switch
+                            {
+                                TextBlock tbHijo => $"icono_o_texto('{tbHijo.Text}')",
+                                Grid => "barra_vida_o_mana",
+                                StackPanel => "grupo_icono_valor",
+                                _ => hijo.GetType().Name,
+                            };
+                            elementos.Add(new { id = $"cabecera_vitals_{idxVitals}", tipo = descrHijo, padre_id = (string?)$"raiz_{pantalla}", x = rHijo.X, y = rHijo.Y, ancho = rHijo.Width, alto = rHijo.Height, grupo = (string?)"cabecera_franja_vitales" });
+                            idxVitals++;
+                        }
+                        Console.WriteLine($"KEEPQA_SOLO-GEOMETRIA: {idxVitals} elementos de la franja de vitales de cabecera volcados (grupo cabecera_franja_vitales) - primera vez que esta zona entra en el volcado");
+                    }
+                }
+
+                // FALLO-2 (reportado por el usuario, 14-sep-2026): "los botones Cargar personaje
+                // (.plr)..., Historial de versiones, Buscar en el personaje, Codigo de build
+                // estan demasiado juntos" - espaciado (Parte 8, Spacing Intelligence), NO
+                // contencion ni solape (eso ya lo mide AR-LAY/verificarGeometria.js todas las
+                // rondas, y siempre da 0 aqui - los botones no se solapan, el problema es el HUECO
+                // entre ellos, algo que ninguna pieza mecanica de la familia comprobaba hasta hoy).
+                // Volcado real de los botones de la barra superior (WrapPanel ancestro de
+                // BuildCodeButton, Grid.Column="2") para node src/espaciado/verificarEspaciado.js,
+                // pieza nueva construida esta misma ronda para cerrar ese hueco.
+                if (pantalla == "Personaje")
+                {
+                    static WrapPanel? EncontrarWrapPanelAncestro(DependencyObject? d)
+                    {
+                        while (d != null)
+                        {
+                            if (d is WrapPanel wp) return wp;
+                            d = System.Windows.Media.VisualTreeHelper.GetParent(d);
+                        }
+                        return null;
+                    }
+                    var barraSuperior = window.FindName("BuildCodeButton") is Button bcbToolbar ? EncontrarWrapPanelAncestro(bcbToolbar) : null;
+                    if (barraSuperior == null)
+                    {
+                        Console.WriteLine("KEEPQA_SOLO: FALLO - no se encuentra la barra superior de botones (ancestro WrapPanel de BuildCodeButton) para el volcado de espaciado");
+                    }
+                    else
+                    {
+                        int idxBarra = 0;
+                        foreach (var hijo in barraSuperior.Children.OfType<FrameworkElement>())
+                        {
+                            if (!hijo.IsVisible || hijo.ActualWidth < 1 || hijo.ActualHeight < 1) continue;
+                            Rect rHijo;
+                            try { rHijo = RectCompleto(hijo, window); } catch (InvalidOperationException) { continue; }
+                            string tipoHijo = hijo switch
+                            {
+                                Button btnHijo => $"boton('{btnHijo.Content}')",
+                                Border => "separador",
+                                _ => hijo.GetType().Name,
+                            };
+                            elementos.Add(new { id = $"toolbar_{idxBarra}", tipo = tipoHijo, padre_id = (string?)$"raiz_{pantalla}", x = rHijo.X, y = rHijo.Y, ancho = rHijo.Width, alto = rHijo.Height, grupo = (string?)"cabecera_barra_botones" });
+                            idxBarra++;
+                        }
+                        Console.WriteLine($"KEEPQA_SOLO-GEOMETRIA: {idxBarra} elementos de la barra superior de botones volcados (grupo cabecera_barra_botones) - primera vez que esta zona entra en el volcado");
+                    }
+                }
+
                 // padre_id de la raiz sintetica: apunta a un id que NO existe en el volcado a
                 // proposito (la ventana en si no tiene contenedor real que comprobar) - si se
                 // dejara en null, las 6 raices (una por pantalla) compartirian ese mismo valor
@@ -341,5 +433,176 @@ internal static partial class Program
             DoEvents();
         }
         catch (Exception ex) { Console.WriteLine("KEEPQA_SOLO-EXCEPTION: " + ex); }
+    }
+
+    // FALLO3_SOLO=1 (14-sep-2026): investigacion del Fallo 3 reportado por el usuario - "en
+    // Exploracion, con la ventana en su tamaño por defecto al abrir la app, la caja de resultados
+    // de la barra lateral es muy pequeña y, al desplegar resultados de una categoria (ej. todo el
+    // mineral de estaño por coordenadas), se come casi todo el espacio disponible, mientras queda
+    // mucho espacio sin aprovechar en el resto de la pantalla".
+    //
+    // Primera hipotesis, CONFIRMADA PARCIAL: el `ListBox` de resultados llevaba un `MaxHeight="240"`
+    // fijo sin cita de medicion real (a diferencia de casi cualquier otro numero del fichero) -
+    // quitado (no era el cuello de botella real a tamaño por defecto, pero SI lo habria sido en
+    // ventanas grandes/maximizada, donde la fila "*" que lo aloja habria calculado mas de 240px).
+    // El cuello de botella real, encontrado con esta misma funcion: a 1180x860 el bloque de
+    // resultados entero (checkboxes+resumen+botones+lista) solo recibia 205px, de los que la LISTA
+    // que de verdad se desplaza se quedaba con 70px REALES - 1-2 filas de 1000 resultados reales.
+    // Root cause real (no el `MaxHeight`): `ExplorationSidebarPanel` (el DockPanel que envuelve
+    // toda la columna) fuerza un suelo de scroll fijo (`MinHeight`) sin importar el visor real del
+    // `ScrollViewer` que lo contiene - ese suelo, calibrado en una ronda anterior (6/14-sep-2026)
+    // contra CONTENIDO DISTINTO (Expanders de "Editar mundo"/"Bestiario", nunca el bloque de
+    // resultados), se quedaba corto para este escenario. Ver el arreglo real y las cifras
+    // medidas ANTES/DESPUES en el comentario de MainWindow.xaml junto a `MinHeight="800"` (subido
+    // desde 652) y junto al `Grid` de dos filas "categoria/resultados" (documenta tambien un primer
+    // intento descartado - subir el peso 1.2 de esa fila - que una re-verificacion real de la
+    // garantia de AR-EX1 demostro que ROMPIA "Objetos" a tamaño por defecto).
+    private static void EjecutarFallo3Exploracion(Window window, MainViewModel vm)
+    {
+        try
+        {
+            string worldPath = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            if (!File.Exists(worldPath))
+            {
+                Console.WriteLine("FALLO3_SOLO: FALLO - no se encuentra roca_negra.wld, no se puede investigar con datos reales");
+                return;
+            }
+
+            vm.SelectedTabIndex = 4; // Exploracion
+            DoEvents();
+            var carga = vm.Exploration.LoadFromPathAsync(worldPath);
+            while (!carga.IsCompleted) DoEvents();
+            DoEvents();
+
+            var fitMethod = typeof(MainWindow).GetMethod("OnFitToWindowClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            fitMethod?.Invoke(window, [window, new RoutedEventArgs()]);
+            DoEvents();
+
+            double anchoOriginal = window.Width, altoOriginal = window.Height;
+            double sidebarOriginal = vm.Settings.ExplorationSidebarWidth;
+
+            var contenidoCat = window.FindName("ExplorationCategoryContent") as FrameworkElement;
+            var bloqueRes = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+            var svLat = window.FindName("ExplorationSidebarScroll") as ScrollViewer;
+            if (contenidoCat == null || bloqueRes == null || svLat == null)
+            {
+                Console.WriteLine("FALLO3_SOLO: FALLO - no se encuentra ExplorationCategoryContent/ExplorationResultsBlock/ExplorationSidebarScroll en el arbol visual");
+                return;
+            }
+
+            void MedirEn(string etiqueta, double w, double h, double anchoBarraLateral)
+            {
+                FijarTamaño(window, w, h);
+                vm.Settings.ExplorationSidebarWidth = anchoBarraLateral;
+                DoEvents(); DoEvents();
+
+                vm.Exploration.SelectedCategory = WorldSearchCategory.Ores;
+                DoEvents(); DoEvents();
+                var filaEstaño = vm.Exploration.OreMetals.OrderByDescending(r => r.Count).FirstOrDefault();
+                if (filaEstaño == null)
+                {
+                    Console.WriteLine($"FALLO3_SOLO[{etiqueta}]: FALLO - OreMetals vacio, no se puede investigar con datos reales");
+                    return;
+                }
+                filaEstaño.IsChecked = true;
+                WaitForDispatcher(1500);
+                DoEvents(); DoEvents();
+
+                // Captura real de evidencia visual (antes/despues del arreglo, misma escena: mundo
+                // real, categoria Minerales, resultados de Piedra Infernal desplegados) - para no
+                // depender solo de numeros de consola. La columna scrollea (ExtentHeight > Viewport
+                // a estos tamaños, ver el comentario real de MinHeight en MainWindow.xaml) y el
+                // bloque de resultados es la fila DE ABAJO del Grid de dos filas - hace falta bajar
+                // el scroll antes de capturar o la captura solo enseñaria la lista de tipos de
+                // mineral de arriba, nunca el bloque que este fallo investiga.
+                svLat.ScrollToBottom();
+                DoEvents(); DoEvents();
+                string outDirFallo3 = Path.Combine(AppContext.BaseDirectory, "keepqa-evidencia");
+                Directory.CreateDirectory(outDirFallo3);
+                var rtbFallo3 = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbFallo3.Render(window);
+                var encFallo3 = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encFallo3.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbFallo3));
+                string nombreCaptura3 = Path.Combine(outDirFallo3, $"fallo3-exploracion-{etiqueta}.png");
+                using (var fsFallo3 = File.Create(nombreCaptura3)) encFallo3.Save(fsFallo3);
+                Console.WriteLine($"FALLO3_SOLO[{etiqueta}]: captura real -> {nombreCaptura3}");
+
+                // Re-verificacion directa del regla real que AR-EX1 vigila (6-sep-2026): con estos
+                // MISMOS resultados abiertos (el escenario que este fallo describe), ¿las otras 3
+                // categorias reales de la barra lateral siguen mostrando al menos UNA fila entera
+                // de su propio contenido? El arreglo de este fallo (peso 1.2->1.8) le quita altura
+                // real a la categoria (178->140px medido) - esto confirma que sigue sin romper la
+                // garantia que AR-EX1 dejo puesta, no solo lo supone por estar por encima del
+                // MinHeight=120.
+                foreach (var (cat, modoCofres, nombreCat) in new (WorldSearchCategory, int, string)[]
+                         { (WorldSearchCategory.Chests, 0, "Cofres/Por tipo"), (WorldSearchCategory.Chests, 2, "Cofres/Cofre a cofre"), (WorldSearchCategory.Objects, 0, "Objetos") })
+                {
+                    vm.Exploration.SelectedCategory = cat;
+                    if (cat == WorldSearchCategory.Chests) vm.Exploration.ChestViewMode = modoCofres;
+                    DoEvents(); DoEvents();
+                    ItemsControl? lista = cat == WorldSearchCategory.Chests && modoCofres == 2
+                        ? window.FindName("ChestByChestList") as ItemsControl
+                        : Descendientes<ListBox>(window).FirstOrDefault(lb => lb.IsVisible && ReferenceEquals(lb.ItemsSource, vm.Exploration.Inventory));
+                    int totalFilas = lista?.Items.Count ?? 0;
+                    int visiblesEnteras = 0;
+                    if (lista != null)
+                        foreach (var item in lista.Items.Cast<object>().Take(30))
+                            if (lista.ItemContainerGenerator.ContainerFromItem(item) is FrameworkElement feFila && VisibleEntero(feFila, window))
+                                visiblesEnteras++;
+                    double altoPrimeraFila = -1;
+                    if (lista != null && lista.Items.Count > 0 && lista.ItemContainerGenerator.ContainerFromIndex(0) is FrameworkElement feAlto)
+                        altoPrimeraFila = feAlto.ActualHeight;
+                    Console.WriteLine($"FALLO3_SOLO[{etiqueta}] re-verificacion AR-EX1, {nombreCat}: {totalFilas} filas reales, visibles enteras={visiblesEnteras} (esperado >=1 si totalFilas>0), alto real de 1 fila={altoPrimeraFila:0}px");
+                    if (totalFilas > 0 && visiblesEnteras == 0)
+                        Console.WriteLine($"FALLO: FALLO3_SOLO - regresion real de AR-EX1 en {nombreCat} a {etiqueta} tras el arreglo del Fallo 3");
+                }
+                vm.Exploration.SelectedCategory = WorldSearchCategory.Ores;
+                DoEvents(); DoEvents();
+
+                var listaResultados = Descendientes<ListBox>(window)
+                    .FirstOrDefault(lb => lb.IsVisible && ReferenceEquals(lb.ItemsSource, vm.Exploration.WorldSearchResults));
+                double alturaListaReal = listaResultados?.ActualHeight ?? -1;
+                double alturaFilaGrid = -1;
+                if (listaResultados != null && System.Windows.Media.VisualTreeHelper.GetParent(listaResultados) is Grid gridPadre)
+                {
+                    int fila = System.Windows.Controls.Grid.GetRow(listaResultados);
+                    if (fila < gridPadre.RowDefinitions.Count) alturaFilaGrid = gridPadre.RowDefinitions[fila].ActualHeight;
+                }
+                int nResultados = vm.Exploration.WorldSearchResults.Count;
+                double anchoSidebarReal = svLat.ActualWidth;
+                double anchoMapaReal = window.ActualWidth - anchoSidebarReal;
+                double alturaCategoria = contenidoCat.ActualHeight;
+                double alturaBloqueResultados = bloqueRes.ActualHeight;
+                var panelSidebar = window.FindName("ExplorationSidebarPanel") as FrameworkElement;
+
+                Console.WriteLine($"FALLO3_SOLO[{etiqueta}] ventana={window.ActualWidth:0}x{window.ActualHeight:0} sidebarPedido={anchoBarraLateral:0} -> " +
+                                  $"sidebar REAL={anchoSidebarReal:0}px ({anchoSidebarReal / window.ActualWidth * 100:0.#}% del ancho), mapa REAL={anchoMapaReal:0}px ({anchoMapaReal / window.ActualWidth * 100:0.#}% del ancho); " +
+                                  $"{nResultados} resultados reales de '{filaEstaño.Name}'; bloque de resultados={alturaBloqueResultados:0}px, contenido de categoria={alturaCategoria:0}px; " +
+                                  $"fila del Grid para el ListBox={alturaFilaGrid:0}px, ListBox.ActualHeight={alturaListaReal:0}px (sin MaxHeight, quitado por el Fallo 3) -> " +
+                                  $"HUECO SIN APROVECHAR bajo el ListBox = {(alturaFilaGrid >= 0 ? alturaFilaGrid - alturaListaReal : -1):0}px | " +
+                                  $"ScrollViewer.ViewportHeight={svLat.ViewportHeight:0}px ExtentHeight={svLat.ExtentHeight:0}px | ExplorationSidebarPanel.ActualHeight={panelSidebar?.ActualHeight:0}px (MinHeight=800)");
+
+                filaEstaño.IsChecked = false;
+                WaitForDispatcher(500);
+                DoEvents();
+            }
+
+            // Tamaño por defecto real de la app (Width/Height de MainWindow.xaml) con el ancho de
+            // sidebar por defecto real (SettingsService.ExplorationSidebarWidth = 320).
+            MedirEn("normal1180x860-sidebar320(defecto)", 1180, 860, 320);
+            // Mismo tamaño de ventana, sidebar en su MAXIMO ya permitido hoy (520, arrastre manual
+            // del GridSplitter) - para saber si ensanchar la columna por si solo ya resuelve algo
+            // o si el cuello de botella real es el MaxHeight=240 fijo del ListBox.
+            MedirEn("normal1180x860-sidebar520(maximo-ya-permitido)", 1180, 860, 520);
+            // Tamaño minimo real de la ventana (MinWidth x MinHeight), sidebar en su minimo real.
+            MedirEn("minimo1080x700-sidebar260(minimo)", 1080, 700, 260);
+
+            FijarTamaño(window, anchoOriginal, altoOriginal);
+            vm.Settings.ExplorationSidebarWidth = sidebarOriginal;
+            vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+            DoEvents();
+        }
+        catch (Exception ex) { Console.WriteLine("FALLO3_SOLO-EXCEPTION: " + ex); }
     }
 }

@@ -1756,8 +1756,31 @@
                      altura de SU contenido, asi que la fila de abajo (donde cae "Guardar" solo, sin
                      ningun separador que la eleve) quedaba a 32,6px contra los 36 de la de arriba y
                      los botones dejaban de tener el mismo alto - la regresion que A8-06 vigila. 36
-                     es el alto real que ya tenian los 6 en una sola fila, no un numero inventado. -->
-                <WrapPanel Grid.Column="2" ItemHeight="36" VerticalAlignment="Center" Margin="20,0,0,0">
+                     es el alto real que ya tenian los 6 en una sola fila, no un numero inventado.
+                     FALLO-2 (reportado por el usuario, 14-sep-2026 - "Cargar personaje (.plr)...,
+                     Historial de versiones, Buscar en el personaje, Codigo de build estan demasiado
+                     juntos"): espaciado (Parte 8 de ESPEC-VISUAL-QA.md, Spacing Intelligence), NO
+                     contencion ni solape - `verificarGeometria.js` ya daba 0 solapes reales sobre
+                     esta barra, confirmando que el problema era el HUECO, algo que ninguna pieza
+                     mecanica de KeepQA comprobaba hasta hoy (pieza nueva de esta ronda:
+                     KeepQA/src/espaciado/verificarEspaciado.js). Volcado real de esta barra
+                     (Terrakeep.App.Tests/AuditoriaKeepQA.cs, grupo "cabecera_barra_botones") al
+                     tamaño NORMAL por defecto (1180x860): a ese ancho la barra YA envuelve a una
+                     segunda linea ("Historial de versiones"/"Codigo de build"/separador/"Guardar"
+                     caen debajo de la primera), y el salto entre esas dos lineas media EXACTAMENTE
+                     0px (la fila de abajo tocaba border a border con la de arriba) - confirmado con
+                     `verificarEspaciado.js`: hallazgo Spacing/High, "salto_de_linea" 0px, frente a
+                     una mediana real de 12px en el resto de huecos de la misma barra. Arreglo:
+                     ItemHeight sube de 36 a 44 (+8, el mismo orden de magnitud que el resto de
+                     huecos ya calibrados en esta misma barra - 8/10/12px, no un numero inventado)
+                     y CADA hijo directo gana 8px de margen inferior (ver cada Margin de abajo) -
+                     como Margin se resta del cell fijo de ItemHeight (confirmado con el propio
+                     volcado: el separador ya usaba este mismo mecanismo, Margin vertical 4+4 sobre
+                     ItemHeight=36 da su alto real de 28px), el alto VISIBLE de cada boton/separador
+                     se mantiene IDENTICO a antes (36/28px) y los 8px nuevos aparecen como hueco en
+                     blanco real al final de cada celda - exactamente entre lineas cuando envuelve,
+                     sin cambiar el tamaño de ningun boton. -->
+                <WrapPanel Grid.Column="2" ItemHeight="44" VerticalAlignment="Center" Margin="20,0,0,0">
                     <!-- T-H/F1 (segunda auditoria de Opus, Fable): "N-3 esta bien hecho pero no se
                          anuncia en ningun sitio (sin ToolTip en la cabecera)... un atajo que nadie
                          descubre no mejora la practicidad" - los 4 atajos reales (OnWindowKeyDown)
@@ -1769,8 +1792,8 @@
                          baja de Accent a boton normal en cuanto hay personaje cargado
                          (FalseToTag) - ya no compite con "Guardar", el otro relleno de la fila. -->
                     <Button Content="{Binding Loc[action_load_character], Mode=OneWay}" Tag="{Binding IsCharacterLoaded, Converter={x:Static conv:FalseToTagConverter.Instance}, ConverterParameter=Accent}"
-                            Click="OnLoadClick" ToolTip="Ctrl+O" />
-                    <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4" />
+                            Click="OnLoadClick" ToolTip="Ctrl+O" Margin="0,0,0,8" />
+                    <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4,12,12" />
                     <!-- H5-05 (quinta auditoria de Opus): "no se puede buscar entre los ~350
                          slots que el personaje ya tiene - ¿Donde tengo el Ala de murcielago?
                          solo se responde a ojo". Boton real en la cabecera global (visible en
@@ -1789,7 +1812,7 @@
                          que existe tambien el buscador de mundo (Exploracion) la ambiguedad es
                          real. -->
                     <Button x:Name="WhereIsItButton" Content="{Binding Loc[action_where_is_it], Mode=OneWay}"
-                            Command="{Binding ToggleWhereIsItCommand}" ToolTipService.ShowOnDisabled="True">
+                            Command="{Binding ToggleWhereIsItCommand}" ToolTipService.ShowOnDisabled="True" Margin="0,0,0,8">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                 <Setter Property="ToolTip" Value="Busca un objeto por nombre o #id entre TODOS los slots reales de tu personaje (Inventario, Almacenes, Equipamiento de los 4 loadouts...) (Ctrl+Shift+F)" />
@@ -1801,7 +1824,7 @@
                             </Style>
                         </Button.Style>
                     </Button>
-                    <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4" />
+                    <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4,12,12" />
                     <!-- H5-01 (quinta auditoria de Opus): "casi toda edicion del personaje es
                          irreversible" - historial real de deshacer/rehacer (UndoStack), no solo
                          a nivel de fichero como "Deshacer último guardado" de al lado. El
@@ -1810,7 +1833,7 @@
                          P-4 (auditoria Opus vs TEdit, cierra B-03): Padding="8,8" en vez de "8,3" -
                          mismo alto vertical (8) que el estilo base (14,8), solo mas estrechos en
                          horizontal; antes quedaban 10px mas bajos que sus vecinos. -->
-                    <Button Content="↶" FontSize="15" Padding="8,8" Command="{Binding UndoEditCommand}"
+                    <Button Content="↶" FontSize="15" Padding="8,8" Command="{Binding UndoEditCommand}" Margin="0,0,0,8"
                             >
                         <Button.ToolTip>
                             <MultiBinding Converter="{StaticResource LocFormat}" ConverterParameter="fallback">
@@ -1820,7 +1843,7 @@
                             </MultiBinding>
                         </Button.ToolTip>
                     </Button>
-                    <Button Content="↷" FontSize="15" Padding="8,8" Margin="4,0,0,0" Command="{Binding RedoEditCommand}"
+                    <Button Content="↷" FontSize="15" Padding="8,8" Margin="4,0,0,8" Command="{Binding RedoEditCommand}"
                             >
                         <Button.ToolTip>
                             <MultiBinding Converter="{StaticResource LocFormat}" ConverterParameter="fallback">
@@ -1833,22 +1856,22 @@
                     <!-- T-C (segunda auditoria de Opus, Fable): el .bak real que Guardar ya deja
                          (CharacterFileService.WriteAtomic) ahora tiene una forma real de usarse
                          desde la propia UI, sin ir a buscarlo a mano al Explorador de archivos. -->
-                    <Button Content="{Binding Loc[action_undo_last_save], Mode=OneWay}" Margin="10,0,0,0" Command="{Binding UndoLastSaveCommand}"
+                    <Button Content="{Binding Loc[action_undo_last_save], Mode=OneWay}" Margin="10,0,0,8" Command="{Binding UndoLastSaveCommand}"
                             ToolTip="{Binding Loc[tt_undo_last_save], Mode=OneWay}" />
                     <!-- BK (13-sep-2026): "Deshacer ultimo guardado" es UN nivel (el .bak); esto
                          abre el historial COMPLETO de versiones del personaje cargado, sin tener
                          que volver a Inicio a buscar su tarjeta. Ctrl+H. -->
-                    <Button x:Name="BackupHistoryButton" Content="{Binding Loc[action_save_history], Mode=OneWay}" Margin="8,0,0,0"
+                    <Button x:Name="BackupHistoryButton" Content="{Binding Loc[action_save_history], Mode=OneWay}" Margin="8,0,0,8"
                             Command="{Binding OpenBackupHistoryCommand}"
                             ToolTip="{Binding Loc[tt_backup_history], Mode=OneWay}" />
                     <!-- Codigos de build compartibles (13-sep-2026, cuarto de la lista confirmada):
                          exporta el loadout que se este viendo ahora en Equipamiento a un codigo de
                          texto corto, e importa uno pegado. -->
-                    <Button x:Name="BuildCodeButton" Content="{Binding Loc[action_build_code], Mode=OneWay}" Margin="8,0,0,0"
+                    <Button x:Name="BuildCodeButton" Content="{Binding Loc[action_build_code], Mode=OneWay}" Margin="8,0,0,8"
                             Command="{Binding OpenBuildCodeCommand}"
                             ToolTip="{Binding Loc[tt_build_code], Mode=OneWay}" />
-                    <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4" />
-                    <Button Content="{Binding Loc[action_save], Mode=OneWay}" Tag="Orange" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
+                    <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4,12,12" />
+                    <Button Content="{Binding Loc[action_save], Mode=OneWay}" Tag="Orange" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" Margin="0,0,0,8" />
                 </WrapPanel>
                 <!-- C-14 (auditoria de pulido final, cierra H3): mismo escalon de 20px que la
                      columna 2 - separa la identidad del personaje de la franja de vitales, "se
@@ -1957,35 +1980,68 @@
                      envolveria por su cuenta. -->
                 <WrapPanel Grid.Column="1" VerticalAlignment="Center" MaxWidth="{Binding VitalsStripMaxWidth}"
                             Visibility="{Binding ShowVitalsStrip, Converter={StaticResource BoolToVis}}">
+                    <!-- FALLO-1 (reportado por el usuario, 14-sep-2026 - "la barra de vida/mana...
+                         estan desfasadas"): icono y barra de Vida, e icono y barra de Mana, eran
+                         CUATRO hijos DIRECTOS y sueltos del WrapPanel (icono, Grid, icono, Grid) -
+                         un WrapPanel envuelve cada hijo directo a su propia linea de forma
+                         independiente (a proposito, ver R-04a/H-04a mas abajo), asi que a un ancho
+                         real (confirmado: 1180px, el tamaño NORMAL por defecto de la ventana, no
+                         un extremo) el WrapPanel partia la pareja Mana en dos: el icono "✦" se
+                         quedaba en la linea 1 (junto a Vida) y su propia barra "0/0" caia SOLA a
+                         la linea 2 (junto a Defensa/Dinero/Horas) - el icono de Mana quedaba
+                         huerfano de su barra, y la franja de Defensa/Dinero/Horas parecia
+                         "desfasada" un icono entero hacia la izquierda porque en realidad estaba
+                         alineada con la barra de Mana, no con su icono.
+                         Encontrado con evidencia real, no a ojo: primer volcado de geometria de
+                         esta zona para KeepQA (Terrakeep.App.Tests/AuditoriaKeepQA.cs, grupo
+                         "cabecera_franja_vitales" - hasta hoy esta zona JAMAS se habia volcado,
+                         KeepQA/src/alineacion/verificarAlineacion.js nunca pudo verla) mas una
+                         captura real recortada de la cabecera a 1180x860 mostrando el icono "✦"
+                         solo al final de la linea 1. `verificarAlineacion.js` contra el volcado
+                         real: grupo "cabecera_franja_vitales", eje horizontal DESALINEADO, 20.62px
+                         de desvio real en el icono/barra de Vida y el icono de Mana frente al
+                         resto (que cae en la linea 2) - confirma la orientacion "ambiguo/grid" que
+                         la pieza asigna cuando un grupo se reparte en dos lineas de verdad.
+                         Arreglo: icono+barra de Vida (y de Mana) pasan a vivir dentro de su PROPIO
+                         StackPanel horizontal, exactamente el mismo patron ya usado mas abajo para
+                         Defensa/Horas ("un StackPanel de piezas que nunca deben separarse") - ahora
+                         son una unidad atomica para el WrapPanel, no puede volver a partirlos.
+                         Mismos margenes reales de antes (dcha 20/vida, dcha 14/mana, abajo 4 en
+                         todos - C-12/C-14), solo trasladados del hijo suelto al StackPanel nuevo
+                         que los envuelve, sin cambiar ningun numero de espaciado ya calibrado. -->
                     <!-- Vida -->
-                    <TextBlock Text="♥" FontSize="13" Foreground="{StaticResource CalamityBrush}" VerticalAlignment="Center" Margin="0,0,0,4" />
-                    <!-- C-14 (auditoria de pulido final, cierra H3): 20 en vez de 14 - razon 5:1
-                         en vez de 3,5:1 frente al hueco interno (4), para que vida/mana se lean
-                         como DOS pares, no como una tira uniforme de 4 numeros. -->
-                    <!-- AR-LAY (6-sep-2026): Height 12, no 10. El numero de dentro va a FontSize
-                         8.5, que necesita 11,3px de alto reales - con la caja a 10 el texto se
-                         recortaba 1,3px por abajo SIEMPRE, a cualquier tamaño de ventana (medido:
-                         caja 12,5x11,3 contra una zona pintada de 10px de alto), comiendose el
-                         trazo inferior de las cifras. No lo veia nadie porque el recorte lo hace
-                         el clip del Grid, no el del TextBlock: Recorte()/GetClip sobre el texto
-                         devuelve (0,0). Sube 2px la barra, que sigue leyendose igual de fina. -->
-                    <Grid Width="70" Height="12" Margin="4,0,20,4" ToolTip="{Binding Loc[label_health], Mode=OneWay}">
-                        <Border Background="{StaticResource BgPrimaryBrush}" CornerRadius="3" />
-                        <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" HorizontalAlignment="Left"
-                                Width="{Binding Appearance.HealthFraction, Converter={StaticResource FractionToWidth}, ConverterParameter=70}" />
-                        <TextBlock Text="{Binding Appearance.HealthLabel}" FontSize="8.5" Foreground="{StaticResource TextPrimaryBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,20,4" VerticalAlignment="Center">
+                        <TextBlock Text="♥" FontSize="13" Foreground="{StaticResource CalamityBrush}" VerticalAlignment="Center" />
+                        <!-- C-14 (auditoria de pulido final, cierra H3): 20 en vez de 14 - razon 5:1
+                             en vez de 3,5:1 frente al hueco interno (4), para que vida/mana se lean
+                             como DOS pares, no como una tira uniforme de 4 numeros. -->
+                        <!-- AR-LAY (6-sep-2026): Height 12, no 10. El numero de dentro va a FontSize
+                             8.5, que necesita 11,3px de alto reales - con la caja a 10 el texto se
+                             recortaba 1,3px por abajo SIEMPRE, a cualquier tamaño de ventana (medido:
+                             caja 12,5x11,3 contra una zona pintada de 10px de alto), comiendose el
+                             trazo inferior de las cifras. No lo veia nadie porque el recorte lo hace
+                             el clip del Grid, no el del TextBlock: Recorte()/GetClip sobre el texto
+                             devuelve (0,0). Sube 2px la barra, que sigue leyendose igual de fina. -->
+                        <Grid Width="70" Height="12" Margin="4,0,0,0" ToolTip="{Binding Loc[label_health], Mode=OneWay}">
+                            <Border Background="{StaticResource BgPrimaryBrush}" CornerRadius="3" />
+                            <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" HorizontalAlignment="Left"
+                                    Width="{Binding Appearance.HealthFraction, Converter={StaticResource FractionToWidth}, ConverterParameter=70}" />
+                            <TextBlock Text="{Binding Appearance.HealthLabel}" FontSize="8.5" Foreground="{StaticResource TextPrimaryBrush}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
                     <!-- Maná -->
-                    <TextBlock Text="✦" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,0,4" />
-                    <!-- AR-LAY: mismo caso exacto que la barra de vida de arriba. -->
-                    <Grid Width="70" Height="12" Margin="4,0,14,4" ToolTip="{Binding Loc[label_mana], Mode=OneWay}">
-                        <Border Background="{StaticResource BgPrimaryBrush}" CornerRadius="3" />
-                        <Border Background="{StaticResource AccentBrush}" CornerRadius="3" HorizontalAlignment="Left"
-                                Width="{Binding Appearance.ManaFraction, Converter={StaticResource FractionToWidth}, ConverterParameter=70}" />
-                        <TextBlock Text="{Binding Appearance.ManaLabel}" FontSize="8.5" Foreground="{StaticResource TextPrimaryBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,14,4" VerticalAlignment="Center">
+                        <TextBlock Text="✦" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                        <!-- AR-LAY: mismo caso exacto que la barra de vida de arriba. -->
+                        <Grid Width="70" Height="12" Margin="4,0,0,0" ToolTip="{Binding Loc[label_mana], Mode=OneWay}">
+                            <Border Background="{StaticResource BgPrimaryBrush}" CornerRadius="3" />
+                            <Border Background="{StaticResource AccentBrush}" CornerRadius="3" HorizontalAlignment="Left"
+                                    Width="{Binding Appearance.ManaFraction, Converter={StaticResource FractionToWidth}, ConverterParameter=70}" />
+                            <TextBlock Text="{Binding Appearance.ManaLabel}" FontSize="8.5" Foreground="{StaticResource TextPrimaryBrush}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
 
                     <!-- AR-LAY (6-sep-2026): mismo cambio y misma razon que el WrapPanel gemelo de
                          Exploracion, aqui de forma preventiva: estos cinco datos vivian en un
@@ -5019,12 +5075,22 @@
                          al tamaño por defecto del arnes (1180x860) aunque en teoria "sobre
                          sitio" - una barra de scroll de mas es un coste menor y honesto frente a
                          contenido de verdad inalcanzable, que es lo que este mecanismo existe
-                         para impedir. -->
+                         para impedir.
+
+                         FALLO-3 (14-sep-2026, mas tarde): subido de 652 a 800 - mismo mecanismo
+                         que el parrafo de arriba, esta vez para el bloque de resultados (ver el
+                         comentario real y las cifras medidas junto al Grid de dos filas
+                         "categoria/resultados" mas abajo, "ARREGLO REAL"). Con mas suelo de scroll
+                         total, la categoria Y los resultados crecen A LA VEZ sin robarse espacio
+                         entre si - medido con el arnes (FALLO3_SOLO=1): a 1180x860 la lista de
+                         resultados pasa de 70 a 148px reales (+111%) y la categoria de 178 a 245px
+                         (de 1 a 2 filas visibles, MEJORA). Mismo coste aceptado que el parrafo de
+                         arriba: mas scroll para llegar al fondo, nunca contenido inalcanzable. -->
                     <ScrollViewer Grid.Column="2" x:Name="ExplorationSidebarScroll"
                                   VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <DockPanel x:Name="ExplorationSidebarPanel"
                                Height="{Binding ViewportHeight, ElementName=ExplorationSidebarScroll, Mode=OneWay}"
-                               MinHeight="652">
+                               MinHeight="800">
                         <!-- Punto 4 (advisor Opus, "una nueva barra lateral... que ya no solo salgan
                              los npc, eso se traslada dentro de una rama madre donde salgan varios
                              botones" - ver ESPEC-ui-exploracion.md#9). Rediseño completo: la lista de
@@ -5382,7 +5448,58 @@
                              nunca desbordan), con suelo propio para la categoria. La fila de
                              resultados solo pide su parte cuando de verdad hay algo que enseñar
                              (CountToGridLength: lista vacia -> Auto, no roba un solo pixel - que es
-                             el estado con el que se midio AR-11a y no debe cambiar). -->
+                             el estado con el que se midio AR-11a y no debe cambiar).
+
+                             FALLO-3 (reportado por el usuario, 14-sep-2026: "la caja de
+                             resultados... es muy pequeña y, al desplegar resultados de una
+                             categoria, se come casi todo el espacio disponible, mientras queda
+                             mucho espacio sin aprovechar"). Investigado con datos reales
+                             (Terrakeep.App.Tests/AuditoriaKeepQA.cs, FALLO3_SOLO=1, mundo real
+                             roca_negra.wld, categoria Minerales con 1000 resultados reales de
+                             Piedra Infernal - el tope real de resultados, el caso mas exigente):
+                             al tamaño POR DEFECTO de la app (1180x860) el bloque de resultados
+                             media 205px, de los que la LISTA que de verdad se desplaza (Grid.Row=6
+                             de mas abajo) solo se quedaba con 70px REALES - apenas 1-2 filas
+                             visibles de 1000 resultados reales.
+
+                             PRIMER INTENTO, DESCARTADO CON EVIDENCIA REAL (dejar constancia para no
+                             repetirlo): subir el peso de la fila de resultados (este RowDefinition,
+                             de 1.2 a 1.8) parecia el arreglo obvio - PERO reduce directamente lo que
+                             le queda a la categoria (de 178px a 140px reales), y una re-verificacion
+                             de la garantia real de AR-EX1 ("¿se ve al menos una fila entera de
+                             Cofres/Minerales/Objetos con resultados abiertos?", el mismo criterio
+                             que Program.cs ya vigila) confirmo una REGRESION real: Objetos pasaba de
+                             1 fila visible a 0. Subir MinHeight de esta fila en su lugar (probado
+                             hasta 220px) tampoco sirve: por como reparte espacio un Grid con filas
+                             "*", un MinHeight que supera el reparto natural por peso SE LO QUITA a
+                             la fila de resultados en vez de ganar hueco nuevo (bloque de resultados
+                             bajo de 205 a 163px) - el resultado neto era PEOR para el fallo que se
+                             queria arreglar.
+
+                             ARREGLO REAL: el hueco de verdad no estaba en la proporcion 1.2 (que ya
+                             estaba bien calibrada, tocarla es un juego de suma cero entre categoria
+                             y resultados) sino en el TOTAL disponible para repartir. Esta columna
+                             vive en un ScrollViewer cuyo contenido (`ExplorationSidebarPanel`, ver
+                             el `MinHeight` de mas arriba) fuerza un suelo de scroll fijo SIN importar
+                             el visor real - subido de 652 a 800 (mismo mecanismo ya usado el propio
+                             14-sep-2026 para los dos Expanders nuevos, +148px reales de margen).
+                             Con mas suelo total, LAS DOS filas ("*", mismo peso 1.2 sin tocar)
+                             crecen a la vez sin robarse espacio entre si: medido con el arnes,
+                             categoria sube de 178 a 245px (de 1 a 2 filas visibles - MEJORA, no solo
+                             "no rompe") y la lista de resultados sube de 70 a 148px (+111%). Ver
+                             tambien el MaxHeight del ListBox, mas abajo.
+
+                             LIMITE HONESTO encontrado en esta misma investigacion, FUERA de alcance
+                             de este fallo concreto: al tamaño MINIMO real de la ventana (1080x700),
+                             ninguna fila de categoria se ve entera CON O SIN este arreglo (confirmado
+                             que ya fallaba igual con el codigo tal cual estaba antes de tocar nada
+                             hoy - no es una regresion de esta ronda). El visor real del ScrollViewer
+                             a ese tamaño (397px) no llega a cubrir ni la cabecera fija de esta misma
+                             columna (titulo+Expander "Este mundo"+buscador+pildoras) antes de
+                             necesitar scroll - haria falta reducir esa cabecera fija o replantear el
+                             layout de la barra lateral a tamaños extremos, un cambio mayor fuera del
+                             alcance de "un arreglo pequeño y claro" de hoy. Anotado en bitacora.md de
+                             Terrakeep para una ronda futura. -->
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" MinHeight="120" />
@@ -5513,7 +5630,16 @@
                                 <Button Grid.Column="3" Content="&#8250;" Tag="Ghost" Padding="8,2" Margin="4,0,0,0"
                                         ToolTip="{Binding Loc[explore_next_result], Mode=OneWay}" Command="{Binding Exploration.NextWorldSearchResultCommand}" />
                             </Grid>
-                            <ListBox Grid.Row="6" MaxHeight="240" ItemContainerStyle="{StaticResource VirtualRowContainer}"
+                            <!-- FALLO-3: el MaxHeight="240" fijo de aqui (sin cita de medicion real,
+                                 a diferencia de casi cualquier otro numero de este fichero) recortaba
+                                 la lista por DEBAJO de lo que su propia fila "*" (MinHeight=70,
+                                 arriba) ya le habia cedido en cuanto esa fila calculaba mas de 240px
+                                 reales (ventanas grandes/maximizada) - el hueco entre el fondo de la
+                                 lista recortada y el fondo real de su fila quedaba en blanco, sin
+                                 usarse. Quitado: la fila "*" ya gobierna el tope real (nunca puede
+                                 desbordar - es la misma garantia que AR-EX1 ya dejo para el resto del
+                                 bloque), y MinHeight=70 sigue de suelo para ventanas pequeñas. -->
+                            <ListBox Grid.Row="6" ItemContainerStyle="{StaticResource VirtualRowContainer}"
                                      Background="Transparent" BorderThickness="0" Focusable="False"
                                      ScrollViewer.CanContentScroll="True"
                                      VirtualizingPanel.IsVirtualizing="True"

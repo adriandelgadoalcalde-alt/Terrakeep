@@ -13972,3 +13972,152 @@ se tocó ningún archivo de código ni de estilos).
 Ninguno de código ni de paleta. Solo esta entrada de bitácora - la investigación en sí no dejó
 ningún artefacto nuevo en el repo (se usó y se borró un script de scratch temporal para el
 histograma de píxeles, fuera del repo de Terrakeep). Sin commit de código; no aplica.
+
+---
+
+## 14-sep-2026 (ronda siguiente) - 3 fallos reales encontrados por el usuario mirando la app
+## abierta - KeepQA "deja pasar" investigado y cerrado, `verificarEspaciado.js` nuevo, 3 arreglos
+## reales en `MainWindow.xaml`
+
+### Qué se pidió
+
+El usuario revisó Terrakeep tal cual estaba abierta en su máquina (a propósito) y encontró 3
+fallos reales que el arnés de KeepQA (con todo lo construido esa misma tarde, incluida
+`verificarAlineacion.js`) dejó pasar sin detectar. Encargo: para cada uno, investigar el PORQUÉ
+real (no suponer), construir en KeepQA la pieza mecánica que faltara (documentada ahí como
+comprobación reutilizable para toda la familia), y arreglar el fallo real en Terrakeep con
+evidencia (nunca "debería funcionar").
+
+### Fallo 1 - "la barra de vida/maná y la información de defensa/dinero/tiempo jugado están
+### desfasadas"
+
+**Investigación**: confirmado ANTES de tocar nada que `verificarAlineacion.js` nunca había recibido
+ni un dato de la cabecera - el único volcado de geometría de Terrakeep (`AuditoriaKeepQA.cs`)
+cubría solo `TabControl`/`TabItem`. Añadido un volcado real de la franja de vitales (grupo
+`cabecera_franja_vitales`) y, con datos reales por primera vez, la pieza SÍ detectó un desvío real
+de 20.62px. Confirmado visualmente con una captura recortada y ampliada 4x
+(`crop-cabecera.png`): el icono de Maná ('✦') vivía como hijo SUELTO del `WrapPanel` de la
+cabecera (icono, Grid-barra, icono, Grid-barra, en vez de parejas) - a 1180x860 (tamaño POR
+DEFECTO real de la app, `Width="1180" Height="860"` en `MainWindow.xaml`, por debajo de
+`NormalMinWidth=1320` → `SizeClass=Compacto`, `VitalsStripMaxWidth=200`), el `WrapPanel` partía la
+pareja Maná entre dos líneas - el icono quedaba huérfano de su propia barra, dando la sensación de
+"desfase" que reportó el usuario.
+
+**Arreglo real** (`Terrakeep.App/MainWindow.xaml`, WrapPanel de la franja vital): icono+barra de
+Vida y de Maná pasan a vivir cada uno dentro de su propio `StackPanel` horizontal (mismo patrón ya
+usado para Defensa/Horas) - unidad atómica que el `WrapPanel` ya no puede partir entre líneas.
+Mismos márgenes reales de antes, solo trasladados del hijo suelto al `StackPanel` que los envuelve.
+
+**Verificación real**: `KEEPQA_SOLO=1` antes/después - antes, `verificarAlineacion.js` reportaba
+DESALINEADO (icono Maná en la línea 1, su barra en la línea 2, separadas 20.62px); después, 5
+elementos (2 parejas atómicas + Defensa/Dinero/Horas), la pareja Maná queda alineada de verdad
+(0px de desvío) - solo queda un residual "ambiguo/grid" esperado y documentado (2 líneas reales,
+límite conocido de `detectarOrientacion`, no un bug). `VITALS_SOLO=1` (barrido 1080-1500px, ES/EN):
+0 FALLO, sin recorte, Defensa/Dinero siempre visibles, sin solape - sin regresión.
+
+### Fallo 2 - "Cargar personaje (.plr)..., Historial de versiones, Buscar en el personaje, Código
+### de build están demasiado juntos"
+
+**Investigación**: confirmado que `verificarGeometria.js` ya daba 0 solapes reales sobre la barra
+de botones - el hueco SÍ era de cobertura de la familia (Parte 8, "Spacing Intelligence", nunca
+construida). Construida en KeepQA `src/espaciado/verificarEspaciado.js` (documentación completa,
+método de decisión de pares "relacionados" y obstáculo real encontrado y corregido validando
+contra Terrakeep, en `KeepQA/PATRONES.md`). Contra el volcado real de la barra (11 elementos,
+grupo `cabecera_barra_botones`): a 1180x860 la barra YA envuelve a una segunda línea, y el salto
+entre esas dos líneas medía EXACTAMENTE 0px (las dos filas se tocaban border a border) - hallazgo
+real `Spacing/High`, frente a una mediana real de 12px en el resto de huecos de la misma barra.
+
+**Arreglo real** (`Terrakeep.App/MainWindow.xaml`, WrapPanel `Grid.Column="2"` de la cabecera):
+`ItemHeight` sube de 36 a 44 (+8px, mismo orden de magnitud que el resto de huecos ya calibrados
+en esta barra) y cada hijo directo (7 botones + 3 separadores) gana 8px de margen inferior - el
+alto VISIBLE de cada botón/separador se mantiene idéntico (el margen se resta del cell fijo de
+`ItemHeight`), y los 8px nuevos aparecen como hueco real solo entre líneas.
+
+**Verificación real**: `KEEPQA_SOLO=1` antes/después - coordenadas crudas del volcado confirman
+que la línea 2 pasa de `y=44` (pegada a la línea 1, que termina en `y=8+36=44`) a `y=52` (8px de
+hueco real). Captura real recortada y ampliada 3x (`crop-toolbar-despues.png`) confirma
+visualmente el hueco. `node src/espaciado/verificarEspaciado.js` sobre el volcado post-arreglo: el
+"salto_de_linea" ya no aparece como hallazgo. `verificarGeometria.js`: 0 solapes/contención nuevos.
+`VITALS_SOLO=1`: sin regresión (0 FALLO).
+
+### Fallo 3 - "en Exploración, con la ventana en su tamaño por defecto, la caja de resultados de
+### la barra lateral es muy pequeña y, al desplegar resultados, se come casi todo el espacio
+### disponible, mientras queda mucho espacio sin aprovechar"
+
+**Investigación** (nuevo modo `FALLO3_SOLO=1` en `Terrakeep.App.Tests`, mismas herramientas que
+AR-EX1 - `RectVisible`/`VisibleEntero`/`Descendientes`, mundo real `roca_negra.wld`, categoría
+Minerales con 1000 resultados reales de Piedra Infernal, el caso más exigente real): a 1180x860 el
+bloque de resultados entero medía 205px, de los que la LISTA que de verdad se desplaza
+(`Grid.Row="6"`) solo se quedaba con **70px reales** - 1-2 filas de 1000 resultados. Ancho de la
+barra lateral (320px por defecto, rango real 260-520 vía `ExplorationSidebarWidth`) NO era la
+causa - medido también a su máximo ya permitido (520px) y la lista solo subía a 100px.
+
+Hipótesis inicial (el `MaxHeight="240"` fijo del `ListBox`, sin cita de medición real, a diferencia
+de casi cualquier otro número del fichero) **descartada con datos reales**: a tamaño por defecto la
+fila nunca llegaba a pedir esos 240px, así que no era el cuello de botella ahí (aunque SÍ lo sería
+en ventanas grandes - quitado de todas formas, sin coste real). Root cause real: `ExplorationSidebarPanel`
+(el `DockPanel` que envuelve toda la columna) fuerza un suelo de scroll fijo (`MinHeight=652`)
+calibrado en una ronda anterior (14-sep-2026, misma tarde) contra CONTENIDO DISTINTO (2 Expanders
+de "Editar mundo"/"Bestiario") - nunca contra el bloque de resultados, y se quedaba corto para este
+escenario.
+
+**Primer intento, descartado con evidencia real (documentado para no repetirlo)**: subir el peso
+de la fila de resultados del `Grid` interno de 1.2 a 1.8 parecía el arreglo obvio - pero
+re-ejecutar el mismo chequeo que ya vigila AR-EX1 (¿se ve al menos una fila entera de
+Cofres/Minerales/Objetos con resultados abiertos?) confirmó una REGRESIÓN real: "Objetos" pasaba
+de 1 fila visible a 0 a tamaño por defecto. Probar `MinHeight` de esa misma fila (hasta 220px)
+tampoco sirvió: por cómo reparte espacio un `Grid` con filas "*", un `MinHeight` que supera el
+reparto natural por peso SE LO QUITA a la fila de resultados en vez de ganar hueco nuevo (peor
+para el fallo que se quería arreglar).
+
+**Arreglo real**: `ExplorationSidebarPanel.MinHeight` sube de 652 a 800 (mismo mecanismo ya
+aceptado y documentado el mismo 14-sep-2026 para los 2 Expanders nuevos - "una barra de scroll de
+más es un coste menor y honesto frente a contenido inalcanzable"). Con más suelo total, categoría Y
+resultados crecen A LA VEZ sin robarse espacio entre sí (peso 1.2 sin tocar): medido con el arnés,
+categoría sube de 178 a 245px (**de 1 a 2 filas visibles - mejora real, no solo "no rompe"**) y la
+lista de resultados sube de 70 a 148px (**+111%**). A sidebar máximo (520px): lista=181px (3 filas
+de Cofres/Cofre-a-cofre visibles). Capturas reales antes/después en
+`keepqa-evidencia/fallo3-exploracion-*.png` (recortadas y con scroll bajado a propósito para
+enseñar el bloque real de resultados, que vive por debajo del pliegue con la columna forzada a
+scroll).
+
+**Límite honesto encontrado, NO arreglado esta ronda (fuera de alcance de "un arreglo pequeño y
+claro")**: al tamaño MÍNIMO real de la ventana (1080x700), ninguna fila de categoría se ve entera
+CON O SIN este arreglo - confirmado reproduciendo el mismo chequeo contra el código tal cual
+estaba ANTES de tocar nada hoy (fallaba igual, 0 filas visibles en las 3 categorías). No es una
+regresión de esta ronda. Causa aparente (no confirmada del todo): el visor real del `ScrollViewer`
+a ese tamaño (397px medidos) no llega a cubrir ni la cabecera fija de la columna (título+Expander
+"Este mundo"+buscador+píldoras de categoría) antes de necesitar scroll. Además, a sidebar mínimo
+(260px) las columnas de posición/distancia de cada fila de resultado se recortan por la derecha
+(captura real `fallo3-exploracion-minimo1080x700-sidebar260(minimo).png`) - otro hallazgo honesto,
+tampoco arreglado hoy. **Pendiente para una ronda futura**: replantear la cabecera fija de la
+columna lateral de Exploración a tamaños extremos (reducir su altura fija, o permitir que la
+columna entera colapse de otra forma) para que el contenido sea alcanzable sin depender de que el
+usuario sepa que tiene que hacer scroll.
+
+### Qué se verificó, con números reales (consolidado)
+
+- `dotnet build Terrakeep.slnx -c Debug`: 0 errores/avisos, en cada uno de los ~8 ciclos de esta
+  ronda (cada cambio de XAML se reconstruyó y remidió antes de aceptarlo).
+- `dotnet test Terrakeep.App.ViewModels.Tests`: **484/484**, sin regresión.
+- `dotnet test Terrakeep.Core.Tests`: **539/539**, sin regresión.
+- `KEEPQA_SOLO=1`, `VITALS_SOLO=1`, `FALLO3_SOLO=1` (nuevo): números reales citados arriba en cada
+  fallo, con capturas reales y volcados de geometría reales guardados en `keepqa-evidencia/`.
+- `KeepQA/npm run validar` + `node src/regresion/regresion.js`: **48/48 OK, 0 REGRESIÓN** (4 casos
+  nuevos de esta ronda incluidos - ver `KeepQA/bitacora.md` para el detalle).
+
+### Archivos tocados
+
+- `Terrakeep.App/MainWindow.xaml`: 3 arreglos reales (franja de vitales, barra de botones, sidebar
+  de Exploración), cada uno con su comentario real citando el número medido antes/después y, en el
+  Fallo 3, el intento descartado.
+- `Terrakeep.App.Tests/AuditoriaKeepQA.cs`: volcado de cabecera ampliado a las 2 zonas nuevas
+  (franja de vitales, barra de botones); función nueva `EjecutarFallo3Exploracion` con su propio
+  modo de foco.
+- `Terrakeep.App.Tests/Program.cs`: nuevo modo `FALLO3_SOLO=1`.
+- `KeepQA/src/espaciado/verificarEspaciado.js` (nuevo, ver `KeepQA/bitacora.md` para el detalle
+  completo de su construcción y validación).
+- `KeepQA/src/regresion/casos/` (4 casos nuevos, uno por arreglo real de esta ronda).
+- `KeepQA/PATRONES.md`, `KeepQA/PROTOCOLO-REVISION-VISUAL.md` (secciones nuevas/actualizadas).
+
+Commits pequeños, sin `git push`, en los dos repos (`Terrasavr-Native` y `KeepQA`).

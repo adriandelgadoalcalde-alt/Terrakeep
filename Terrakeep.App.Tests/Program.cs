@@ -801,6 +801,16 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // FALLO3_SOLO=1 (14-sep-2026): investigacion dedicada del Fallo 3 (caja de resultados de
+        // Exploracion "muy pequeña... se come casi todo el espacio disponible... queda mucho
+        // espacio sin aprovechar"). Cuerpo real en AuditoriaKeepQA.cs (misma clase parcial).
+        if (Environment.GetEnvironmentVariable("FALLO3_SOLO") == "1")
+        {
+            EjecutarFallo3Exploracion(window, vm);
+            Console.WriteLine("DONE (FALLO3_SOLO)");
+            Environment.Exit(0);
+        }
+
         // PB_SOLO=1 (6-sep-2026): modo de FOCO - corre solo los bloques PB-* (Personaje >
         // Buffs/Apariencia/Investigacion/Spawn Points/Desbloqueos/Version) sobre el personaje
         // real ya cargado, y sale. Misma idea que AR_LAY_SOLO, por un motivo real medido: el
