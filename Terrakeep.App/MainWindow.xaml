@@ -2425,8 +2425,22 @@
                                              fusionada, no el de cada columna estrecha por separado -
                                              sin esto los 3 colapsarian a MinCell=44, mas pequeños que
                                              Inventario, el problema inverso de la cuarta pasada. -->
+                                        <!-- AR-LAY (14-sep-2026): a 1080x700 [es] la cabecera Loadout/Vista/Defensa/
+                                             bono (fila 0, "Auto" - ver el RowDefinitions de SlotRowHost mas abajo)
+                                             mide 82,2px de verdad con la app en español (textos mas largos que en
+                                             ingles) y eso, sumado al suelo real de la rejilla de Armadura/Accesorios
+                                             (fila "*" MinHeight=84, ver comentario de esa fila), pide 166,2px -
+                                             8,1px mas de los 158,1px que este Border le estaba dejando de verdad a
+                                             SlotRowHost (ClipToBounds="True": ese sobrante se recortaba en
+                                             silencio, detectado por el barrido AR-LAY del arnes real, cero pixeles
+                                             a ojo). Padding vertical 10->6 y Margin superior 6->2 recuperan 12px
+                                             sin tocar el ancho (las columnas siguen midiendo igual) ni ninguno de
+                                             los MinHeight/MaxHeight ya afinados en pasadas anteriores (AR-14/AR-14c/
+                                             AR-14d) - simplemente le deja a SlotRowHost el sitio que de verdad
+                                             necesita. Verificado con el propio AR-LAY tras el cambio: 0 elementos
+                                             perdidos en las 416 combinaciones. -->
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10,6" Margin="0,2,0,0">
                                             <!-- Columnas de ancho real, no proporciones puras (consulta a
                                                  Opus, septima pasada): "2*/5*/4*" no guardaba ninguna
                                                  relacion con los anchos minimos REALES de cada bloque (52/
