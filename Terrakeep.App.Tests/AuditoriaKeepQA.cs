@@ -754,4 +754,148 @@ internal static partial class Program
         }
         catch (Exception ex) { Console.WriteLine("CAPAS_SOLO-EXCEPTION: " + ex); }
     }
+
+    // KEEPQA_FRESCO_SOLO=1 (15-sep-2026): barrido del repaso integral nocturno pedido por el
+    // coordinador - el arsenal ya cubrio 16 pantallas x 2 tamaños (minimo 1080x700, umbral
+    // 1180x860) x 2 idiomas = 64 combinaciones con 0 hallazgos adversariales (ver
+    // KEEPQA_SOLO/EjecutarKeepQaAdversarialYGeometria de arriba, entrada de bitacora.md
+    // "14-sep-2026 (ronda siguiente)") - repetir esas dos resoluciones seria duplicar trabajo ya
+    // cerrado. Este modo aporta la unica cobertura REALMENTE nueva pedida: una TERCERA resolucion
+    // de la categoria "comun" del catalogo compartido (KeepQA/src/resoluciones/catalogo.json,
+    // id "fullhd" 1920x1080 - "el tamaño de pantalla completa mas comun hoy", nunca ejercitado
+    // mecanicamente contra Terrakeep hasta ahora), sobre 4 de las 6 pantallas raiz (Inicio,
+    // Personaje/Inventario, Exploracion, AcercaDe+Ajustes - las dos primeras coinciden a proposito
+    // con los 3 nombres que ya tiene baseline real en KeepQA/baselines/terrakeep/, Exploracion por
+    // ser la pantalla con mas historial real de bugs de espacio/scroll de todo el proyecto), en
+    // los 2 idiomas. Fichero de volcado PROPIO (nunca sobrescribe volcado-geometria-tabs.json, la
+    // evidencia ya cerrada del 14-sep) y capturas con nombre compatible con
+    // gestorBaseline.js (mismo patron "pantalla-<Nombre>-<tamaño>-<idioma>" que ya usa
+    // EjecutarKeepQaAdversarialYGeometria) para poder comparar contra el baseline real donde
+    // exista, ademas de las capturas en fullhd para revision manual/OCR/contraste.
+    private static void EjecutarKeepQaFrescoTerceraResolucion(Window window, MainViewModel vm)
+    {
+        try
+        {
+            string outDir = Path.Combine(AppContext.BaseDirectory, "keepqa-evidencia");
+            Directory.CreateDirectory(outDir);
+
+            void CapturaVisual(System.Windows.Media.Visual visual, int ancho, int alto, string nombre)
+            {
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    Math.Max(1, ancho), Math.Max(1, alto), 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(visual);
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                using var fs = File.Create(Path.Combine(outDir, nombre + ".png"));
+                enc.Save(fs);
+            }
+
+            var todasPantallas = ConstruirPantallasMaquetacion(window, vm);
+            var nombresElegidos = new[] { "Inicio", "Personaje/Inventario", "Exploracion", "AcercaDe+Ajustes" };
+            var pantallas = todasPantallas.Where(p => nombresElegidos.Contains(p.nombre)).ToList();
+            if (pantallas.Count != nombresElegidos.Length)
+                Console.WriteLine($"KEEPQA_FRESCO_SOLO: AVISO - se esperaban {nombresElegidos.Length} pantallas, se encontraron {pantallas.Count}");
+
+            (double w, double h, string etiqueta)[] tamaños =
+            [
+                (1080, 700, "min1080x700"),
+                (1180, 860, "normal1180x860"),
+                (1920, 1080, "fullhd1920x1080"),
+            ];
+
+            var elementos = new List<object>();
+            int contador = 0;
+
+            void VolcarTabControl(TabControl tc, string idTc, string padreId, string grupoPrefijo)
+            {
+                Rect rTc;
+                try { rTc = RectCompleto(tc, window); } catch (InvalidOperationException) { return; }
+                elementos.Add(new { id = idTc, tipo = "panel_pestanas", padre_id = (string?)padreId, x = rTc.X, y = rTc.Y, ancho = rTc.Width, alto = rTc.Height, grupo = (string?)null, orden_z = OrdenZ(tc), capa = "panel" });
+                for (int i = 0; i < tc.Items.Count; i++)
+                {
+                    if (tc.ItemContainerGenerator.ContainerFromIndex(i) is not TabItem ti || !ti.IsVisible) continue;
+                    Rect rTi;
+                    try { rTi = RectCompleto(ti, window); } catch (InvalidOperationException) { continue; }
+                    if (rTi.Width < 1 || rTi.Height < 1) continue;
+                    elementos.Add(new { id = $"{idTc}_item{i}", tipo = "pestana", padre_id = (string?)idTc, x = rTi.X, y = rTi.Y, ancho = rTi.Width, alto = rTi.Height, grupo = (string?)$"{grupoPrefijo}_{tc.Items.Count}", orden_z = OrdenZ(ti), capa = "navegacion" });
+                }
+            }
+
+            bool cabeceraVolcada = false;
+            void VolcarCabecera(string idRaizCombo, string etiquetaTam)
+            {
+                var tiraVitals = Descendientes<WrapPanel>(window)
+                    .FirstOrDefault(wp => Descendientes<TextBlock>(wp).Any(t => t.Text == "♥"));
+                if (tiraVitals != null)
+                {
+                    int idxVitals = 0;
+                    foreach (var hijo in tiraVitals.Children.OfType<FrameworkElement>())
+                    {
+                        if (!hijo.IsVisible || hijo.ActualWidth < 1 || hijo.ActualHeight < 1) continue;
+                        Rect rHijo;
+                        try { rHijo = RectCompleto(hijo, window); } catch (InvalidOperationException) { continue; }
+                        string descrHijo = hijo switch
+                        {
+                            TextBlock tbHijo => $"icono_o_texto('{tbHijo.Text}')",
+                            Grid => "barra_vida_o_mana",
+                            StackPanel => "grupo_icono_valor",
+                            _ => hijo.GetType().Name,
+                        };
+                        elementos.Add(new { id = $"fresco_cabecera_vitals_{etiquetaTam}_{idxVitals}", tipo = descrHijo, padre_id = (string?)idRaizCombo, x = rHijo.X, y = rHijo.Y, ancho = rHijo.Width, alto = rHijo.Height, grupo = (string?)$"fresco_cabecera_franja_vitales_{etiquetaTam}", orden_z = OrdenZ(hijo), capa = "contenido" });
+                        idxVitals++;
+                    }
+                    Console.WriteLine($"KEEPQA_FRESCO_SOLO-GEOMETRIA[{etiquetaTam}]: {idxVitals} elementos de la franja de vitales de cabecera volcados");
+                }
+            }
+
+            int capturas = 0;
+            foreach (string idiomaCap in new[] { "es", "en" })
+            {
+                vm.Settings.Language = idiomaCap;
+                DoEvents(); DoEvents();
+                foreach (var (w, h, etiquetaTam) in tamaños)
+                {
+                    FijarTamaño(window, w, h);
+                    DoEvents(); DoEvents();
+                    foreach (var (nombrePantalla, ir) in pantallas)
+                    {
+                        ir();
+                        DoEvents(); DoEvents();
+                        string nombreArchivo = nombrePantalla.Replace('/', '-');
+                        CapturaVisual(window, (int)window.ActualWidth, (int)window.ActualHeight, $"fresco15sep-pantalla-{nombreArchivo}-{etiquetaTam}-{idiomaCap}");
+                        capturas++;
+
+                        string idRaizCombo = $"fresco_raiz_{nombrePantalla}_{etiquetaTam}_{idiomaCap}".Replace('/', '_');
+                        elementos.Add(new { id = idRaizCombo, tipo = "raiz_pantalla", padre_id = (string?)$"(ventana_sin_padre_{idRaizCombo})", x = 0.0, y = 0.0, ancho = window.ActualWidth, alto = window.ActualHeight, grupo = (string?)null, orden_z = 0.0, capa = "fondo" });
+
+                        var tcsVisibles = Descendientes<TabControl>(window).Where(t => t.IsVisible).ToList();
+                        var idPorTc = new Dictionary<TabControl, string>();
+                        foreach (var tc in tcsVisibles) idPorTc[tc] = $"fresco_tabcontrol_{contador++}";
+                        foreach (var tc in tcsVisibles)
+                        {
+                            string padreId = idRaizCombo;
+                            for (DependencyObject? d = System.Windows.Media.VisualTreeHelper.GetParent(tc); d != null; d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+                            {
+                                if (d is TabControl tcAncestro && idPorTc.TryGetValue(tcAncestro, out var idAnc)) { padreId = idAnc; break; }
+                            }
+                            VolcarTabControl(tc, idPorTc[tc], padreId, $"fresco_tabs_{nombreArchivo}_{etiquetaTam}_{idiomaCap}");
+                        }
+
+                        if (nombrePantalla == "Personaje/Inventario" && idiomaCap == "es" && !cabeceraVolcada)
+                        {
+                            VolcarCabecera(idRaizCombo, etiquetaTam);
+                            cabeceraVolcada = true;
+                        }
+                    }
+                }
+            }
+            vm.Settings.Language = "es";
+
+            string volcadoPath = Path.Combine(outDir, "volcado-geometria-fresco-15sep.json");
+            File.WriteAllText(volcadoPath, JsonSerializer.Serialize(elementos, new JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine($"KEEPQA_FRESCO_SOLO-GEOMETRIA: {elementos.Count} elementos volcados a {volcadoPath} ({pantallas.Count} pantallas x {tamaños.Length} tamaños x 2 idiomas = {pantallas.Count * tamaños.Length * 2} combinaciones, {capturas} capturas PNG)");
+            Console.WriteLine($"KEEPQA_FRESCO_SOLO: evidencia en {outDir}");
+        }
+        catch (Exception ex) { Console.WriteLine("KEEPQA_FRESCO_SOLO-EXCEPTION: " + ex); }
+    }
 }
