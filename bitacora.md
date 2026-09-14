@@ -13697,3 +13697,183 @@ combinaciones, sin solapes ni regresiones nuevas.
 Commit: `MainWindow.xaml` (AR-LAY) y `MainViewModel.cs` (A10-IDIOMA-BARRIDO) por separado, cada
 uno con su propio mensaje - dos temas independientes en dos ficheros distintos, sin motivo para
 mezclarlos en un commit. Sin `git push` (pedido explícito: queda en local).
+
+## 14-sep-2026 (más tarde) - Barrido FRESCO con el arsenal NUEVO de KeepQA (geometría/alineación/
+## contraste/contenido adversarial) - primera vez que Terrakeep usa estas piezas, no solo repetir
+## los bugs de anoche
+
+Encargo explícito del coordinador: aplicar el arsenal nuevo de `Downloads\KeepQA` (`src/geometria`,
+`src/alineacion` -construida hoy mismo-, `src/contraste`, `src/adversarial/catalogo.json`) contra
+Terrakeep buscando hallazgos FRESCOS, no solo confirmar que lo de anoche sigue arreglado (eso ya lo
+cubre `npm run regresion`/el arnés propio). `PATRONES.md` de KeepQA documentaba a Terrakeep como el
+ÚNICO consumidor de la familia que nunca había usado el verificador compartido de forma explícita
+("pendiente, no decidido, si migrarlo") - esta ronda lo integra por primera vez, sin sustituir nada
+del arnés propio (AR-LAY/UI Automation siguen siendo la verificación real de contención/solape/
+truncado, mucho más precisa por operar sobre el árbol visual vivo en vez de un volcado/captura).
+
+### Arnés nuevo: `Terrakeep.App.Tests/AuditoriaKeepQA.cs` + `KEEPQA_SOLO=1`
+
+Fichero propio (mismo motivo que `AuditoriaMaquetacion.cs`: `Program.cs` ya tiene miles de líneas y
+varias sesiones lo tocan a la vez - la única huella en `Program.cs` es la llamada bajo su propio
+`_SOLO`). Dos piezas:
+
+1. **Contenido adversarial (Parte 21)**: los 11 casos reales de `KeepQA/src/adversarial/
+   catalogo.json` (leídos del propio JSON en tiempo de ejecución, nunca copiados a mano) inyectados
+   en 3 campos de texto libre reales: `MainViewModel.CharacterName` (cabecera de Personaje),
+   `LibraryViewModel.SearchText` (buscador de la Librería) y `MainViewModel.WhereIsItSearchText`
+   ("¿Dónde lo tengo?"). Tras cada caso, el mismo par de detectores D1/D2 de AR-LAY (contenido
+   perdido sin escape por scroll, solape entre celdas disjuntas de un `Grid`) sobre la raíz visual
+   correcta.
+2. **Volcado de geometría real** para `node src/alineacion/verificarAlineacion.js` (Parte 13,
+   Alignment - el único hueco mecánico que ni AR-LAY ni ninguna pieza propia de Terrakeep cubría
+   hoy): las cajas reales de todos los `TabControl`/`TabItem` visibles (pestañas raíz, internas de
+   Personaje, subpestañas de Objetos, hojas anidadas de Builds/Novedades) en las 6 pantallas raíz,
+   en el contrato exacto `{id,tipo,padre_id,x,y,ancho,alto,grupo}`.
+3. Capturas reales de pantalla completa (min 1080x700 en los DOS idiomas + normal 1180x860 en
+   español) de las 6 pantallas raíz, para `node src/contraste/comprobarContraste.js` (Parte 16 -
+   NADA en Terrakeep comprobaba contraste texto/fondo antes de hoy, cobertura 100% nueva) y para la
+   revisión manual de las 8 pasadas del protocolo.
+
+**Tres fallos reales del propio arnés, encontrados y arreglados en caliente antes de que diera
+ningún dato de fiar** (honestidad real, no ocultada):
+- `WhereIsItSearchText` vive dentro de un `Popup` (`WhereIsItPopup`, `StaysOpen=False`) - sin abrir
+  `IsWhereIsItOpen=true` primero el `TextBox` nunca se renderiza.
+- Un `Popup` de WPF NO es hijo visual de la ventana (`VisualTreeHelper` no lo alcanza desde
+  `window`, tiene su propia raíz de presentación) - ni el escaneo D1/D2 ni
+  `RenderTargetBitmap.Render(window)` veían su contenido pase lo que pase dentro, incluso con el
+  popup ya abierto. Prueba real: los 3 PNG de "dondelotengo" salían BYTE A BYTE IDÉNTICOS
+  (145005 bytes los 3) mientras que los de `CharacterName` con el mismo cambio de texto SÍ daban 3
+  tamaños distintos - la firma inequívoca de que el popup nunca se estaba mirando de verdad.
+  Arreglado usando `popup.Child` (propiedad pública de `Popup`) como raíz propia de escaneo/
+  captura para ese campo.
+- El volcado de geometría daba `padre_id=null` a TODOS los `TabControl` de TODAS las pantallas -
+  como el verificador compara como "hermanos" cualquier par que comparta `padre_id` (null incluido)
+  y las 6 pantallas se visitan en SECUENCIA (nunca coexisten), salieron 45 "solapes" falsos
+  (`G-SOLAPE-01..45`, "Inicio se solapa con Personaje") que solo eran "estas pantallas ocupan la
+  misma ventana", nunca un bug real. Arreglado con una raíz sintética distinta por pantalla
+  (`raiz_<pantalla>`) y, dentro de cada pantalla, el `TabControl` ANCESTRO real más cercano como
+  `padre_id` en vez de la raíz siempre (los subtabs de Objetos SÍ están anidados de verdad dentro
+  del `TabControl` interno de Personaje).
+
+### Resultado de las piezas mecánicas, ya con el arnés corregido
+
+- **Adversarial (33 combinaciones = 11 casos x 3 campos)**: **0 hallazgos** de contenido perdido o
+  solape - ni el nombre de personaje, ni el buscador de la Librería, ni "¿Dónde lo tengo?" se
+  rompen con japonés/árabe RTL/cirílico/números extremos/texto muy largo.
+- **Geometría (66 elementos, contención/consistencia/solape)**: 0 solapes/contención reales tras
+  arreglar el arnés. 4 hallazgos de `Consistency` (anchura de pestaña desviada de la mediana del
+  grupo) - los 4 revisados a mano y descartados como diseño válido: son pestañas con contenido más
+  largo/corto de verdad (p.ej. "Puntos de aparición" vs "Buffs" en los 7 tabs internos de Personaje,
+  "Terraria" vs "tModLoader / Calamity Mod" en Novedades) - exactamente el caso que la Parte 7/26
+  del propio `ESPEC-VISUAL-QA.md` dice que NO es bug ("content-aware widths are acceptable").
+- **Alineación (`verificarAlineacion.js`, primera vez que corre contra Terrakeep)**: 2 hallazgos en
+  el grupo `tabs_Builds_2` (Vanilla/Calamity Mod, 2 pestañas), clasificado `ambiguo/grid` - **límite
+  YA documentado en la cabecera de la propia pieza y en `PATRONES.md`**: un grupo de 2 miembros sin
+  orientación dominante clara es un patrón de falso positivo conocido de la pieza, no un bug de
+  Terrakeep (confirmado mirando la captura: las 2 pestañas están perfectamente alineadas en fila,
+  una al lado de la otra).
+- **Contraste (`comprobarContraste.js`, primera vez que corre contra Terrakeep, 12 capturas
+  completas)**: filtrando el ruido ya documentado en `PATRONES.md` (tokens OCR de 1-2 caracteres),
+  quedan 2 hallazgos `Critical` que, mirados a mano contra la captura real, son **falsos positivos
+  del muestreo de color de la pieza**, no bugs reales:
+  - `"Gas"` en Personaje (135,172), texto/fondo casi idénticos según la pieza (1.01:1) - esa caja
+    cae sobre la pestaña "Personaje" SELECCIONADA del menú lateral, que en la captura real se ve
+    con texto blanco en negrita sobre fondo morado sólido (contraste alto de verdad) - la pieza
+    debió muestrear mal esa región.
+  - `"mos"`/`"cualquier"` en Inicio (cajas de 37x22px y 4x7px) - cajas demasiado pequeñas/estrechas
+    para el texto que dicen contener (4px de ancho no puede alojar "cualquier", 9 letras) - ruido de
+    OCR ya documentado en la cabecera de la pieza ("tokens mal leídos"), no palabras reales.
+
+### Un hallazgo real y nuevo, encontrado por la revisión manual (Parte 16, Sección D.8) - **DECISIÓN
+### DE DISEÑO, documentado, NO tocado**
+
+Las etiquetas pequeñas de las tarjetas de personaje en Inicio ("Viaje", "Clásico", "Núcleo medio" -
+el modo/tier del personaje, ~10px de fuente) usan `TextSecondaryBrush` (`#8a8fa3` sobre el fondo
+oscuro de la tarjeta), el mismo token de "texto secundario/atenuado" que se reutiliza en DECENAS de
+sitios de toda la app (menús, subtítulos, contadores...) - no es un color aislado de esta etiqueta.
+La pieza midió 2.09-2.67:1 en dos muestras reales (`"Viaje"`/`"Vie"`), por debajo del umbral WCAG AA
+de 4.5:1 para texto normal. **No se ha tocado**: cambiar `TextSecondaryColor` es una decisión de
+sistema de diseño con ondas por TODA la app (Parte 26/37 - "no inventar problemas", y un cambio de
+este alcance no es "pequeño y claro"), y la medida en sí es sospechosa de ruido de muestreo a un
+tamaño de fuente tan pequeño (unos pocos px de trazo por letra, el mismo tipo de imprecisión ya
+documentado en `PATRONES.md` para textos diminutos). **Recomendación para el coordinador/usuario**:
+si se quiere perseguir esto de verdad, medir con una herramienta de color por pixel exacto (no OCR)
+sobre esa zona concreta antes de decidir si `TextSecondaryColor` necesita subir de luminosidad -
+severidad Low/Medium, no bloqueante, el texto sigue siendo legible a simple vista en la captura
+real.
+
+### Un hallazgo real y nuevo, encontrado por casualidad de la propia inyección adversarial -
+### **ARREGLADO Y VERIFICADO**
+
+Con la app puesta en inglés EN VIVO (mismo patrón que ya cazó `A10-IDIOMA-BARRIDO` esta misma
+noche para `MainViewModel.LastSavedText`), las tarjetas de categoría raíz de la Librería de objetos
+("Materials"/"Decorative"/"Pets, mounts, tools"...) seguían mostrando el recuento en español:
+"1586 objeto(s)" en vez de "1586 item(s)" - confirmado con captura real
+(`pantalla-Personaje-min1080x700-en.png`, antes del arreglo). La clave `label_item_count` SÍ estaba
+bien traducida en `strings_en.json` ("{0} item(s)") - el bug no era de traducción, era el MISMO
+patrón exacto que `LastSavedText`: `CategoryNodeViewModel.OnIdiomaCambiado` (el manejador del
+evento débil de cambio de idioma en caliente, ya existente desde la ronda del 6-sep-2026 que
+arregló el nombre de las carpetas) solo llamaba `OnPropertyChanged(nameof(Name))` - nunca avisaba
+de `ItemCountLabel`/`BuffCountLabel`, así que WPF nunca releía esas dos propiedades computadas al
+cambiar de idioma, y se quedaban congeladas con el valor del idioma que tuvieran la primera vez que
+se leyeron (español, el de arranque) hasta que `ItemCount` cambiara por otro motivo.
+
+Arreglo: `CategoryNodeViewModel.OnIdiomaCambiado` (`ViewModels/CategoryNodeViewModel.cs`, ~línea
+34) avisa también de `ItemCountLabel` y `BuffCountLabel`, no solo de `Name` - tres líneas.
+
+Verificación real:
+- `dotnet build Terrakeep.slnx -c Debug`: 0 errores/avisos.
+- Captura real DESPUÉS del arreglo (`KEEPQA_SOLO=1` relanzado): "1586 item(s)", "784 item(s)",
+  "141 item(s)" en las tarjetas raíz de la Librería con la app en inglés - mirada a mano contra la
+  captura ANTES, confirma el arreglo.
+- `dotnet test Terrakeep.App.ViewModels.Tests`: **484/484** (sin regresión).
+- `dotnet test Terrakeep.Core.Tests`: **539/539** (sin regresión, código no tocado pero se corrió
+  igual para verificación de conjunto).
+
+Mismo tipo de bug, mismo día, dos clases distintas (`MainViewModel`/`CategoryNodeViewModel`) - deja
+anotado para cualquier ronda futura: CUALQUIER propiedad computada a partir del idioma actual
+(`LocalizationService.Instance...`) necesita su PROPIO `OnPropertyChanged` explícito en el manejador
+de cambio de idioma en caliente - el de otra propiedad relacionada (`Name`) no basta, WPF solo
+releo la propiedad exacta que se le avisa.
+
+### Revisión manual (Sección D, las 8 pasadas) sobre las 6 pantallas raíz + 3 capturas
+### adversariales extremas (muy_largo/árabe/japonés) - sin hallazgos nuevos más allá de los dos de
+### arriba
+
+Inicio, Personaje/Equipamiento, Builds/Vanilla, Novedades/Terraria, Exploración (sin mundo cargado)
+y Acerca de, cada una a 1080x700 (mínimo real) en los dos idiomas: composición, estructura,
+contenido, profundidad, componentes y crítica de diseño (las 16 preguntas de la Parte 25) sin
+ningún hallazgo objetivo nuevo - paneles bien contenidos, pestañas alineadas, sin solapes, texto
+legible, jerarquía clara, identidad visual (paneles oscuros, acentos morado/naranja, iconografía
+pixel-art) preservada y consistente en las 6 pantallas. La cabecera con nombre muy largo (japonés/
+árabe/"Configuración extremadamente avanzada del servidor...") recorta en seco sin `...` justo
+contra las insignias de estado - **revisado el código, no es nuevo**: es el `TextBox` real de
+`CharacterName` (`MainWindow.xaml` ~línea 1880), con un comentario "C-14" YA existente que razona
+esta misma limitación ("`TextBox` no tiene `TextTrimming` real... `MaxWidth` por sí solo ya basta
+para el objetivo real") tras 3 rondas previas (C-14/H-1/B-07) - decisión deliberada y ya
+documentada, no un hallazgo fresco de esta ronda. Igual, queda anotado por si el coordinador quiere
+retomarlo: el `ToolTip` de ese campo es un texto fijo ("haz clic para renombrar"), nunca muestra el
+nombre completo cuando está recortado - un `MultiBinding` que combine ambos sería una mejora barata
+si se decide perseguir, pero no se ha tocado (cambia una UX ya razonada 3 veces, fuera del criterio
+de "pequeño y claro" de esta ronda). Los buscadores (Librería, "¿Dónde lo tengo?") también recortan
+sin `...` con texto extremo - esto SÍ es comportamiento normal y esperado de cualquier campo de
+texto de una sola línea (el usuario ve el cursor moverse, no contenido permanentemente perdido),
+descartado sin más.
+
+### Resumen honesto
+
+- **6 pantallas raíz cubiertas** con geometría+alineación+contraste+revisión manual, en los 2
+  tamaños (mínimo/normal) y, para el contenido adversarial, en los 2 idiomas.
+- **3 hallazgos frescos reales** (no repetidos de anoche): 1 arreglado y verificado
+  (`CategoryNodeViewModel.OnIdiomaCambiado`), 1 documentado como decisión de diseño para el
+  coordinador (contraste de `TextSecondaryBrush` en etiquetas de ~10px), 1 documentado como mejora
+  opcional de bajo riesgo (tooltip de `CharacterName` truncado) - ninguno bloqueante.
+- **3 fallos del propio arnés nuevo** encontrados y arreglados en caliente antes de confiar en
+  ningún dato (popup sin abrir, `Popup` fuera del árbol visual de `window`, falso positivo de
+  solape entre pantallas por `padre_id` compartido) - documentados en el propio código
+  (`AuditoriaKeepQA.cs`) para que no se repitan si se retoma.
+- **Varios "hallazgos" mecánicos descartados tras mirar la captura real** (2 de alineación, 2 de
+  contraste, 4 de consistencia de ancho de pestaña) - todos con su razón concreta anotada arriba,
+  ninguno forzado a bug solo por venir de una pieza automática (Parte 26).
+- Commits pequeños, por tema: el arnés nuevo (`AuditoriaKeepQA.cs` + el gancho de una línea en
+  `Program.cs`) y el arreglo real (`CategoryNodeViewModel.cs`) por separado. Sin `git push`.
