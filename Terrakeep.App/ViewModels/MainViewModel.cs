@@ -474,7 +474,31 @@ public partial class MainViewModel : ObservableObject
     // maná primero, el resto después) - el mismo mecanismo de clase de tamaño de H5-08, no una
     // regla nueva". Vida/Maná (lo mas consultado) se quedan siempre visibles; Defensa/Dinero/
     // Horas+Último guardado solo con sitio real (Normal o Amplio).
+    //
+    // Bug real confirmado por el usuario (14-sep-2026): "solo se ve [Defensa/Dinero/Horas]
+    // cuando la ventana esta maximizada/grande... al reducir el tamaño esos datos desaparecen".
+    // H5-10 media Visibility=Collapsed a proposito, pero eso oculta un dato real del personaje
+    // SIN dar ninguna alternativa - justo lo que las reglas de "nunca perder contenido, envolver
+    // a otra linea" (R-04a/H-04a, AR-LAY, el MISMO WrapPanel de esta franja) ya arreglaron para
+    // vida/mana y para el resto de la app. IsVitalsStripExpanded queda SOLO para historial (ya
+    // no oculta nada) - el arreglo real es VitalsStripMaxWidth, mas abajo.
     public bool IsVitalsStripExpanded => SizeClass != WindowSizeClass.Compacto;
+
+    // El WrapPanel de la franja vital vive en una columna "Auto" del Grid de la cabecera (a
+    // proposito, ver el comentario real junto a ColumnDefinitions en MainWindow.xaml) - un Grid
+    // mide las columnas "Auto" con ancho DISPONIBLE INFINITO antes de repartir el resto (mismo
+    // gotcha real ya documentado en R-02/H-02 para el buscador de Exploracion), asi que sin un
+    // tope el WrapPanel JAMAS envolveria por su cuenta: pediria todo en una sola linea sin
+    // importar lo estrecha que este la ventana, empujando a la fila de botones (columna "*",
+    // MinWidth=330) - el solape de botones que el propio usuario describe. En Normal/Amplio/
+    // Extra no hace falta tope (PositiveInfinity, el valor por defecto de MaxWidth): el umbral
+    // NormalMinWidth=1320 YA esta calibrado para que los cinco datos quepan en una sola linea sin
+    // recorte (ver el comentario real de NormalMinWidth). Solo en Compacto hace falta forzar el
+    // envolvido: 200px es el ancho medido de verdad de "Vida+Maná" solos (documentado en R-04a/
+    // H-04a, "196px reales") con un margen pequeño - basta para que los dos iconos siempre
+    // quepan en la primera linea y todo lo demas (Defensa/Dinero/Horas) caiga a la siguiente en
+    // vez de perderse.
+    public double VitalsStripMaxWidth => SizeClass == WindowSizeClass.Compacto ? 200 : double.PositiveInfinity;
 
     // Auditoria de Opus, A-4: "Inventario y Almacenes viven en pestañas separadas - nunca se
     // pueden ver a la vez, y por eso arrastrar un objeto del uno al otro es literalmente
@@ -574,6 +598,7 @@ public partial class MainViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsEquipmentExpanded));
         OnPropertyChanged(nameof(IsVitalsStripExpanded));
+        OnPropertyChanged(nameof(VitalsStripMaxWidth));
         OnPropertyChanged(nameof(IsStorageExpanded));
         OnPropertyChanged(nameof(InicioContentMaxWidth));
         OnPropertyChanged(nameof(AppearanceContentMaxWidth));
@@ -1956,6 +1981,14 @@ public partial class MainViewModel : ObservableObject
         // de la cabecera se queda con aspecto deshabilitado hasta el siguiente requery
         // automatico de WPF (exactamente el defecto A-d que ya se vivio aqui).
         OpenBackupHistoryCommand.NotifyCanExecuteChanged();
+        // BuildCode (14-sep-2026): TERCERA vez que este mismo defecto se cuela (A-d, luego BK,
+        // ahora este) - OpenBuildCodeCommand se quedo fuera de la lista al añadirse el mismo
+        // dia, y el boton "Código de build" se veia desactivado tras cargar un personaje hasta
+        // el siguiente requery automatico de WPF (foco/raton). Confirmado por el usuario
+        // ("claro que tengo un personaje activado") y con captura real tras el arreglo.
+        // OpenCompareCommand/OpenWorldPreviewCommand NO llevan CanExecute=IsCharacterLoaded (ver
+        // sus comentarios reales, "Sin CanExecute") - no les hace falta este aviso.
+        OpenBuildCodeCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(ShowVitalsStrip));
     }
 }

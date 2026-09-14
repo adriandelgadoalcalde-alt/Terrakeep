@@ -1944,7 +1944,18 @@
                      que fuerza el WrapPanel (R-04a/H-04a) a una segunda linea, vida/mana y el
                      resto quedaban pegados sin hueco vertical (captura real del usuario, barra
                      superior). Margen inferior en cada hijo directo. -->
-                <WrapPanel Grid.Column="1" VerticalAlignment="Center"
+                <!-- Bug real confirmado por el usuario (14-sep-2026): Defensa/Dinero/Horas+
+                     Ultimo guardado se OCULTABAN del todo (Visibility=Collapsed via
+                     IsVitalsStripExpanded) por debajo de NormalMinWidth=1320 - un dato real del
+                     personaje que desaparecia sin ninguna alternativa. Ya no se ocultan (ver
+                     las tres Visibility quitadas mas abajo, comentario real en cada sitio) - en
+                     su lugar, MaxWidth ligado a VitalsStripMaxWidth fuerza que el WrapPanel
+                     ENVUELVA a una segunda linea en vez de perder contenido, mismo mecanismo ya
+                     establecido en este mismo WrapPanel para vida/mana (R-04a/H-04a) y en el
+                     gemelo de Exploracion. Sin tope aqui el Grid mediria esta columna "Auto" con
+                     ancho infinito (mismo gotcha real de R-02/H-02) y el WrapPanel nunca
+                     envolveria por su cuenta. -->
+                <WrapPanel Grid.Column="1" VerticalAlignment="Center" MaxWidth="{Binding VitalsStripMaxWidth}"
                             Visibility="{Binding ShowVitalsStrip, Converter={StaticResource BoolToVis}}">
                     <!-- Vida -->
                     <TextBlock Text="♥" FontSize="13" Foreground="{StaticResource CalamityBrush}" VerticalAlignment="Center" Margin="0,0,0,4" />
@@ -1984,23 +1995,22 @@
                          cae a la linea siguiente por su cuenta. La marca de defensa y su numero SI
                          siguen juntos (un StackPanel de dos piezas que nunca deben separarse). -->
                     <!-- Defensa (del loadout que se este mirando ahora en Equipamiento -
-                         mismo dato real ya en pantalla ahi, EquipmentGroupViewModel). -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,14,4" VerticalAlignment="Center"
-                                Visibility="{Binding IsVitalsStripExpanded, Converter={StaticResource BoolToVis}}">
+                         mismo dato real ya en pantalla ahi, EquipmentGroupViewModel). Ya NO se
+                         oculta con la ventana estrecha (14-sep-2026) - VitalsStripMaxWidth de
+                         arriba fuerza el envolvido en vez de perder el dato. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,14,4" VerticalAlignment="Center">
                         <TextBlock Text="🛡" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding EquipmentGroup.TotalDefense}" Style="{StaticResource CaptionText}" Margin="3,0,0,0" VerticalAlignment="Center"
                                    ToolTip="{Binding EquipmentGroup.ActiveSetBonusText, TargetNullValue='Defensa total (loadout que se está viendo en Equipamiento)'}" />
                     </StackPanel>
-                    <!-- Dinero total -->
+                    <!-- Dinero total - ya NO se oculta, mismo motivo que Defensa arriba. -->
                     <TextBlock Text="{Binding MoneyText}" Style="{StaticResource CaptionText}" Margin="0,0,14,4" VerticalAlignment="Center"
-                               ToolTip="{Binding Loc[tt_total_money], Mode=OneWay}"
-                               Visibility="{Binding IsVitalsStripExpanded, Converter={StaticResource BoolToVis}}" />
+                               ToolTip="{Binding Loc[tt_total_money], Mode=OneWay}" />
                     <!-- Horas jugadas + Último guardado: van juntos en su propio StackPanel para
-                         conservar la condicion real de antes (los dos solo con la franja
-                         expandida, y el "ultimo guardado" ademas solo si existe) - separarlos en
-                         hijos sueltos habria perdido el IsVitalsStripExpanded del segundo. -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center"
-                                Visibility="{Binding IsVitalsStripExpanded, Converter={StaticResource BoolToVis}}">
+                         que nunca se separen ("ultimo guardado" solo si existe, ver su propia
+                         Visibility mas abajo) - ya NO se ocultan los dos juntos con la ventana
+                         estrecha, mismo motivo que Defensa/Dinero de arriba. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource CaptionText}" VerticalAlignment="Center" ToolTip="{Binding Loc[tt_hours_played], Mode=OneWay}">
                             <Run Text="{Binding Appearance.PlayHours, StringFormat='{}{0:0}h'}" />
                         </TextBlock>
@@ -4917,6 +4927,37 @@
                         </GridSplitter.Template>
                     </GridSplitter>
 
+                    <!-- Bug real confirmado por el usuario (14-sep-2026): al plegar la barra
+                         lateral a 0 (OnToggleExplorationSidebarClick) desaparecian A LA VEZ el
+                         boton "›" que la pliega (vive DENTRO de la propia columna 2, que se
+                         colapsa con ella - ScrollViewer Grid.Column="2" mas abajo) Y el
+                         GridSplitter de arriba (su Style lo pone Collapsed en cuanto el ancho
+                         llega a 0) - no quedaba ningun sitio real desde el que volver a abrirla
+                         ("si lo quitas para poder ver mejor el mapa ya no hay nada de el por
+                         ningun lado", palabras del usuario). Esta pestaña vive en la columna 1
+                         (la del splitter): esa columna es "Auto" y solo se queda a 0px cuando
+                         NINGUNO de sus hijos es visible, asi que con el GridSplitter y esta
+                         pestaña en triggers EXACTAMENTE opuestos (uno u otro, nunca los dos a la
+                         vez) la columna 1 nunca desaparece entera y siempre hay algo real que
+                         pulsar. Reusa el MISMO manejador que el boton de plegar - ya es un
+                         alternador real (mira ExplorationSidebarWidth y decide solo), no hace
+                         falta logica nueva. -->
+                    <Button x:Name="ExpandExplorationSidebarButton" Grid.Column="1" Content="&#8249;" Tag="Ghost" Padding="4,14" VerticalAlignment="Center"
+                            Click="OnToggleExplorationSidebarClick"
+                            AutomationProperties.Name="ExpandExplorationSidebarButton"
+                            ToolTip="{Binding Loc[explore_expand_sidebar], Mode=OneWay}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Settings.ExplorationSidebarWidth}" Value="0">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
                     <!-- Bug real reportado por el usuario probando la app (6-sep-2026): "en todas
                          las secciones de Exploracion se pierde contenido con el scroll". Causa real
                          medida con el arnes (AR-11a/AR-11c): esta columna era un DockPanel PELADO,
@@ -4990,8 +5031,9 @@
                             <!-- F-10: plegado real - alterna entre el ancho guardado y 0 (logica
                                  en el code-behind, OnToggleExplorationSidebarClick, para poder
                                  recordar el ancho de antes de plegar sin perderlo). -->
-                            <Button Grid.Column="1" Content="&#8250;" Tag="Ghost" Padding="6,2" VerticalAlignment="Top"
+                            <Button x:Name="CollapseExplorationSidebarButton" Grid.Column="1" Content="&#8250;" Tag="Ghost" Padding="6,2" VerticalAlignment="Top"
                                     Click="OnToggleExplorationSidebarClick"
+                                    AutomationProperties.Name="CollapseExplorationSidebarButton"
                                     ToolTip="{Binding Loc[explore_collapse_sidebar], Mode=OneWay}" />
                         </Grid>
 
@@ -5399,9 +5441,28 @@
                                  (EmptyToCollapsed) sin condicion de recuento - las flechas ‹/›
                                  siguen ligadas al recuento a proposito, navegar sin resultados no
                                  tiene sentido. -->
-                            <TextBlock Grid.Row="3" Text="{Binding Exploration.WorldSearchSummary}" Style="{StaticResource CaptionText}"
+                            <!-- AR-EX3-LEGIBILIDAD (14-sep-2026): el aviso de "cubre el X% del mapa,
+                                 puede no ser legible" vivia en este MISMO CaptionText gris de 11px
+                                 que un resumen cualquiera ("3 de 500 resultados") - la propia
+                                 advertencia de legibilidad no se distinguia lo bastante para leerse
+                                 de un vistazo, que es justo lo que avisa que puede pasar con el
+                                 mapa. Mismo Naranja+SemiBold que cualquier otro aviso real de la
+                                 app (ver NameFileMismatch/DowngradeWarning mas arriba en este mismo
+                                 fichero), disparado por Exploration.WorldSearchSummaryIsWarning. -->
+                            <TextBlock x:Name="WorldSearchSummaryText" Grid.Row="3" Text="{Binding Exploration.WorldSearchSummary}"
                                        TextWrapping="Wrap" Margin="0,0,0,6"
-                                       Visibility="{Binding Exploration.ShowCompactSummary, Converter={StaticResource BoolToVis}}" />
+                                       Visibility="{Binding Exploration.ShowCompactSummary, Converter={StaticResource BoolToVis}}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Exploration.WorldSearchSummaryIsWarning}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource OrangeBrush}" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                             <!-- P-6 (auditoria Opus vs TEdit, cierra E-01 estetico): 0 resultados
                                  en "Todo" ya no es solo el CaptionText de 11px de arriba - mismo
                                  patron visual que el estado vacio de "sin mundo cargado"

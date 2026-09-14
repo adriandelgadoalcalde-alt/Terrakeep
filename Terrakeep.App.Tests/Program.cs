@@ -509,6 +509,287 @@ internal static partial class Program
             Console.WriteLine("LOAD-EXCEPTION: " + ex);
         }
 
+        // BUILDCODE-CANEXECUTE (14-sep-2026): TERCERA vez que este mismo defecto se cuela (A-d,
+        // luego BK, ahora OpenBuildCodeCommand) - un comando CanExecute=IsCharacterLoaded que se
+        // queda fuera de la lista de NotifyCanExecuteChanged() de OnIsCharacterLoadedChanged dejaba
+        // su boton con aspecto DESACTIVADO hasta el siguiente requery automatico de verdad de WPF
+        // (CommandManager.RequerySuggested, que solo se dispara con un evento de entrada real -
+        // foco/raton/teclado - nunca con un simple DoEvents()). Se mide el BOTON REAL
+        // (BuildCodeButton.IsEnabled), no .CanExecute(null) a pelo (eso SIEMPRE da el valor
+        // correcto, ejecuta el getter de IsCharacterLoaded en el momento - el bug vive en que la
+        // VISTA no se entera, no en el calculo) - justo AQUI, antes de que nada mas (ningun modo
+        // SOLO, ningun otro bloque) tenga ocasion de disparar un requery real por su cuenta.
+        try
+        {
+            var buildCodeButton = window.FindName("BuildCodeButton") as System.Windows.Controls.Button;
+            DoEvents(); DoEvents();
+            Console.WriteLine($"BUILDCODE-CANEXECUTE: tras cargar personaje (sin ningun evento de entrada real de por medio) -> BuildCodeButton.IsEnabled={buildCodeButton?.IsEnabled} (esperado True, IsCharacterLoaded={vm.IsCharacterLoaded})");
+            if (buildCodeButton == null) Console.WriteLine("FALLO: BUILDCODE-CANEXECUTE - no se encuentra BuildCodeButton por su x:Name");
+            else if (vm.IsCharacterLoaded && !buildCodeButton.IsEnabled)
+                Console.WriteLine("FALLO: BUILDCODE-CANEXECUTE - el boton 'Código de build' se queda con aspecto desactivado tras cargar un personaje real, pese a que IsCharacterLoaded ya es True");
+            // Captura real de la cabecera (no solo el booleano) - pedido explicito del encargo.
+            var rtbBuildCode = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+            rtbBuildCode.Render(window);
+            var encBuildCode = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            encBuildCode.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbBuildCode));
+            string shotBuildCode = Path.Combine(AppContext.BaseDirectory, "buildcode-boton-activado-tras-cargar.png");
+            using (var fs = File.Create(shotBuildCode)) encBuildCode.Save(fs);
+            Console.WriteLine($"BUILDCODE-CANEXECUTE: captura real -> {shotBuildCode}");
+        }
+        catch (Exception ex) { Console.WriteLine("BUILDCODE-CANEXECUTE-EXCEPTION: " + ex); }
+
+        // DRAG_SOLO=1 (14-sep-2026, bug real confirmado por el usuario: "arrastro un objeto o
+        // un buff desde su slot y no se ve ningun sprite siguiendo al cursor, solo el cursor
+        // por defecto de Windows - un cuadrado vacio"): deja la ventana real ABIERTA con un
+        // objeto real colocado en el hueco 0 del Inventario, en la pestaña correcta, y se queda
+        // bombeando el Dispatcher sin salir nunca - para poder arrastrar de verdad desde FUERA
+        // del proceso (pywinauto/SendInput) y mirar si el ghost (StartCardDrag/DragAdorner, el
+        // mismo mecanismo ya en produccion para las tarjetas de la Libreria) aparece de verdad
+        // al arrastrar un SLOT, que es justo lo que antes de este arreglo no llamaba a
+        // StartCardDrag. SetCursorPos ya se demostro sin efecto en esta sesion (AR-EX2-PAN/
+        // MINIMAPA-CLIC, bitacora.md) - SendInput es un mecanismo de entrada distinto, se
+        // prueba aparte en vez de darlo por igual de roto sin comprobarlo.
+        if (Environment.GetEnvironmentVariable("DRAG_SOLO") == "1")
+        {
+            vm.SelectedTabIndex = 1; // Personaje
+            vm.PersonajeInnerTabIndex = 0; // Objetos
+            vm.ObjetosSubTabIndex = 1; // Inventario (H4-02: Equipamiento=0/Inventario=1/Almacenes=2)
+            DoEvents(); DoEvents();
+            var contenedorDrag = vm.InventoryContainer;
+            if (contenedorDrag != null && contenedorDrag.Slots.Count > 0)
+            {
+                contenedorDrag.Slots[0].PlaceItem(4); // Iron Broadsword - sprite real conocido
+                DoEvents(); DoEvents();
+                Console.WriteLine($"DRAG_SOLO: hueco 0 del Inventario = '{contenedorDrag.Slots[0].DisplayName}' (esperado no vacio)");
+            }
+            else Console.WriteLine("DRAG_SOLO: FALLO preparando el hueco - no hay InventoryContainer real");
+            var bordeSlot0 = contenedorDrag?.Slots.Count > 0
+                ? Descendientes<System.Windows.Controls.Border>(window).FirstOrDefault(b => ReferenceEquals(b.DataContext, contenedorDrag.Slots[0]))
+                : null;
+            if (bordeSlot0 != null)
+            {
+                var esquina = bordeSlot0.PointToScreen(new System.Windows.Point(0, 0));
+                var centro = bordeSlot0.PointToScreen(new System.Windows.Point(bordeSlot0.ActualWidth / 2, bordeSlot0.ActualHeight / 2));
+                Console.WriteLine($"DRAG_SOLO: Border real del hueco 0 -> esquina=({esquina.X:0},{esquina.Y:0}) tamaño=({bordeSlot0.ActualWidth:0}x{bordeSlot0.ActualHeight:0}) centro EN PANTALLA=({centro.X:0},{centro.Y:0})");
+            }
+            else Console.WriteLine("DRAG_SOLO: FALLO - no se encontro el Border real del hueco 0 en el arbol visual");
+            Console.WriteLine($"DRAG_SOLO: ventana lista, hWnd={new System.Windows.Interop.WindowInteropHelper(window).Handle}. Esperando interaccion externa real - no sale nunca solo.");
+            while (true) { DoEvents(); System.Threading.Thread.Sleep(30); }
+        }
+
+        // SIDEBAR_SOLO=1 (14-sep-2026, mismo bug real del panel de Exploracion): version RAPIDA
+        // y sin necesitar ningun .wld real del F-10-REOPEN que vive mas abajo, dentro del bloque
+        // grande de Exploracion (que si exige un mundo real cargado). Los dos botones y
+        // Settings.ExplorationSidebarWidth no dependen de tener un mundo cargado - solo de
+        // seleccionar la pestaña Exploracion, asi que esto verifica lo mismo sin pagar ese coste
+        // y sin arriesgarse a que el recorrido completo muera antes de llegar (UI-BLOQUEADA).
+        if (Environment.GetEnvironmentVariable("SIDEBAR_SOLO") == "1")
+        {
+            vm.SelectedTabIndex = 4; // Exploracion
+            DoEvents(); DoEvents();
+            var collapseBtnFast = window.FindName("CollapseExplorationSidebarButton") as System.Windows.Controls.Button;
+            var expandBtnFast = window.FindName("ExpandExplorationSidebarButton") as System.Windows.Controls.Button;
+            if (collapseBtnFast == null || expandBtnFast == null)
+                Console.WriteLine("FALLO: SIDEBAR_SOLO - no se encuentran los dos botones reales de plegar/desplegar por su x:Name");
+            else
+            {
+                // El Border original nunca tuvo su PROPIA Visibility ligada al ancho (solo el
+                // GridSplitter la tiene), y su ActualWidth/hit-test no bajan de forma fiable a
+                // "0 de verdad" solo por vivir dentro de una columna a 0px (el ScrollViewer
+                // recorta por CLIP visual, no reduciendo el Arrange de sus hijos - un detalle de
+                // layout de WPF, no del bug) - intentarlo daba lecturas contradictorias con la
+                // ventana real. La prueba que de verdad importa, y que SI es inequivoca, es esta:
+                // el boton NUEVO (el que faltaba, IsVisible ligado a una DataTrigger real) tiene
+                // que ser IsVisible exactamente cuando la barra esta plegada, y un CLIC REAL
+                // sobre el (InvokePattern, nunca la propiedad a mano) tiene que devolver la barra
+                // a su ancho exacto de antes de plegar - eso es lo que demuestra que el usuario
+                // ya tiene un sitio real y funcional desde el que volver a abrirla.
+                AutomationElement? PorNombre(string nombre) =>
+                    root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, nombre));
+                void ClicReal(string nombre)
+                {
+                    var el = PorNombre(nombre);
+                    if (el != null && el.TryGetCurrentPattern(InvokePattern.Pattern, out var pat)) ((InvokePattern)pat).Invoke();
+                    else Console.WriteLine($"FALLO: SIDEBAR_SOLO - '{nombre}' no se encuentra por UI Automation o no expone InvokePattern, un clic real no podria activarlo");
+                    DoEvents(); DoEvents(); WaitForDispatcher(200);
+                }
+
+                vm.Settings.ExplorationSidebarWidth = 280;
+                DoEvents(); DoEvents();
+                Console.WriteLine($"SIDEBAR_SOLO: barra ABIERTA (280px) -> boton desplegar IsVisible={expandBtnFast.IsVisible} (esperado False - no hace falta con la barra ya abierta)");
+                if (expandBtnFast.IsVisible)
+                    Console.WriteLine("FALLO: SIDEBAR_SOLO - con la barra abierta el boton de desplegar no deberia verse");
+
+                // Clic REAL de plegar (no tocar la propiedad a mano): asi el code-behind memoriza
+                // _lastExpandedSidebarWidth=280 de verdad, igual que le pasaria a un usuario real.
+                ClicReal("CollapseExplorationSidebarButton");
+                Console.WriteLine($"SIDEBAR_SOLO: tras CLIC REAL de plegar -> Settings.ExplorationSidebarWidth={vm.Settings.ExplorationSidebarWidth:0} (esperado 0), boton desplegar IsVisible={expandBtnFast.IsVisible} (esperado True - el hueco real que el bug dejaba sin nada)");
+                if (vm.Settings.ExplorationSidebarWidth != 0 || !expandBtnFast.IsVisible)
+                    Console.WriteLine("FALLO: SIDEBAR_SOLO - tras plegar con un clic real tiene que quedar visible un sitio real desde el que volver a abrirla");
+
+                ClicReal("ExpandExplorationSidebarButton");
+                Console.WriteLine($"SIDEBAR_SOLO: tras CLIC REAL de desplegar -> Settings.ExplorationSidebarWidth={vm.Settings.ExplorationSidebarWidth:0} (esperado 280, el ancho real de antes de plegar)");
+                if (vm.Settings.ExplorationSidebarWidth != 280)
+                    Console.WriteLine("FALLO: SIDEBAR_SOLO - el clic real sobre el boton de desplegar no devuelve la barra a su ancho anterior exacto");
+            }
+            Console.WriteLine("DONE (SIDEBAR_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // EX3_SOLO=1 (14-sep-2026, arreglo real de AR-EX3-LEGIBILIDAD): mismo modo de foco que
+        // los de arriba - el bloque real vive muy abajo en el recorrido completo (detras de
+        // UI-BLOQUEADA, que muere siempre primero en esta sesion). Carga roca_negra.wld
+        // directamente (sin pagar el resto del recorrido), marca los tiles mas abundantes hasta
+        // pasar el 40% real, y esta vez ademas del booleano nuevo (WorldSearchSummaryIsWarning)
+        // mira el ESTILO REAL del TextBlock (Foreground/FontWeight) - el hallazgo original del
+        // barrido visual era justo que el aviso se veia IGUAL que un resumen cualquiera, asi que
+        // "hay aviso en el texto" no demuestra el arreglo: hace falta ver que ahora se PINTA
+        // distinto de verdad.
+        if (Environment.GetEnvironmentVariable("EX3_SOLO") == "1")
+        {
+            try
+            {
+                string worldPathEx3 = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                if (!File.Exists(worldPathEx3))
+                    Console.WriteLine("EX3_SOLO: roca_negra.wld no esta en esta maquina - omitido");
+                else
+                {
+                    vm.SelectedTabIndex = 4; // Exploracion
+                    DoEvents();
+                    var cargaEx3 = vm.Exploration.LoadFromPathAsync(worldPathEx3);
+                    while (!cargaEx3.IsCompleted) DoEvents();
+                    DoEvents(); DoEvents();
+                    var cabeceraEx3 = Terrakeep.Core.WldFormat.WldReader.ReadHeader(File.ReadAllBytes(worldPathEx3));
+                    long totalTilesEx3 = (long)cabeceraEx3.TilesWide * cabeceraEx3.TilesHigh;
+
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Objects;
+                    vm.Exploration.ObjectsViewMode = 0;
+                    DoEvents();
+                    var acumuladasEx3 = new List<WorldInventoryRowViewModel>();
+                    long tilesAcumuladosEx3 = 0;
+                    foreach (var fila in vm.Exploration.Inventory.OrderByDescending(r => r.Count))
+                    {
+                        acumuladasEx3.Add(fila);
+                        tilesAcumuladosEx3 += fila.Count;
+                        if ((double)tilesAcumuladosEx3 / totalTilesEx3 >= 0.42) break;
+                    }
+                    double fraccionEx3 = (double)tilesAcumuladosEx3 / totalTilesEx3;
+                    if (acumuladasEx3.Count == 0) Console.WriteLine("EX3_SOLO: el mundo no trae ningun tile - omitido");
+                    else
+                    {
+                        foreach (var fila in acumuladasEx3) fila.IsChecked = true;
+                        vm.Exploration.MarkObjectsOnMapCommand.Execute(null);
+                        WaitForDispatcher(4000);
+                        var textoResumen = window.FindName("WorldSearchSummaryText") as System.Windows.Controls.TextBlock;
+                        Console.WriteLine($"EX3_SOLO: {acumuladasEx3.Count} tile(s) marcados cubren {tilesAcumuladosEx3:N0} de {totalTilesEx3:N0} ({fraccionEx3:P1}) -> resumen='{vm.Exploration.WorldSearchSummary}', WorldSearchSummaryIsWarning={vm.Exploration.WorldSearchSummaryIsWarning} (esperado True, cubre mas del 40%)");
+                        if (fraccionEx3 >= 0.4 && !vm.Exploration.WorldSearchSummaryIsWarning)
+                            Console.WriteLine("FALLO: EX3_SOLO - la seleccion pasa del 40% y WorldSearchSummaryIsWarning sigue en False");
+                        if (textoResumen == null)
+                            Console.WriteLine("FALLO: EX3_SOLO - no se encuentra WorldSearchSummaryText por su x:Name");
+                        else
+                        {
+                            string colorReal = (textoResumen.Foreground as System.Windows.Media.SolidColorBrush)?.Color.ToString() ?? "(no es SolidColorBrush)";
+                            Console.WriteLine($"EX3_SOLO: estilo REAL del TextBlock -> Foreground={colorReal} (esperado #FFFFB84D, el mismo Naranja que cualquier otro aviso real de la app), FontWeight={textoResumen.FontWeight} (esperado SemiBold)");
+                            if (colorReal != "#FFFFB84D" || textoResumen.FontWeight != System.Windows.FontWeights.SemiBold)
+                                Console.WriteLine("FALLO: EX3_SOLO - el aviso de legibilidad no se pinta distinto de un resumen normal (el hallazgo original del barrido visual)");
+
+                            var rtbEx3 = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                            rtbEx3.Render(window);
+                            var encEx3 = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                            encEx3.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbEx3));
+                            string shotEx3 = Path.Combine(AppContext.BaseDirectory, "ex3-aviso-legibilidad-naranja.png");
+                            using (var fs = File.Create(shotEx3)) encEx3.Save(fs);
+                            Console.WriteLine($"EX3_SOLO: captura real -> {shotEx3}");
+                        }
+
+                        vm.Exploration.ClearOreMarksCommand.Execute(null);
+                        DoEvents();
+                        foreach (var fila in acumuladasEx3) fila.IsChecked = false;
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("EX3_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (EX3_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // VITALS_SOLO=1 (14-sep-2026, bug real confirmado por el usuario: "defensa/dinero/horas
+        // solo se ven con la ventana maximizada/grande, y ademas los botones de Guardar etc se
+        // solapan al reducir"): barrido real de anchos sobre la cabecera de Personaje, con
+        // personaje real ya cargado. Comprueba TRES cosas a la vez, en los dos idiomas:
+        //   1. Defensa/Dinero/Horas+Guardado siguen ENCONTRABLES (ya no Visibility=Collapsed).
+        //   2. La franja vital entera (Vida+Mana+Defensa+Dinero+Horas) no tiene recorte de WPF
+        //      a NINGUN ancho, incluido el minimo real 1080 (mismo detector que AR-04).
+        //   3. La franja vital (columna 1) y la fila de botones (columna 2) NO se solapan en
+        //      pantalla - el hueco que dejaba crecer sin tope la columna "Auto".
+        if (Environment.GetEnvironmentVariable("VITALS_SOLO") == "1")
+        {
+            try
+            {
+                static System.Windows.Controls.WrapPanel? FindWrapPanelAncestor(DependencyObject? d)
+                {
+                    while (d != null)
+                    {
+                        if (d is System.Windows.Controls.WrapPanel wp) return wp;
+                        d = System.Windows.Media.VisualTreeHelper.GetParent(d);
+                    }
+                    return null;
+                }
+
+                vm.SelectedTabIndex = 1; // Personaje (la cabecera es la misma en las 6 pestañas)
+                DoEvents(); DoEvents();
+                foreach (string idioma in new[] { "es", "en" })
+                {
+                    vm.Settings.Language = idioma;
+                    DoEvents(); DoEvents();
+                    foreach (double w in new double[] { 1080, 1170, 1299, 1300, 1320, 1500 })
+                    {
+                        FijarTamaño(window, w, 860);
+                        DoEvents(); DoEvents();
+                        var tira = Descendientes<System.Windows.Controls.WrapPanel>(window)
+                            .FirstOrDefault(wp => Descendientes<TextBlock>(wp).Any(t => t.Text == "♥"));
+                        var filaBotones = window.FindName("BuildCodeButton") is System.Windows.Controls.Button bcb
+                            ? FindWrapPanelAncestor(bcb) : null;
+                        if (tira == null || filaBotones == null)
+                        {
+                            Console.WriteLine($"VITALS_SOLO[{idioma}]: a {w}px, franja vital o fila de botones NO-FOUND en el arbol visual - omitido");
+                            continue;
+                        }
+                        var (rx, ry) = Recorte(tira);
+                        bool defensaVisible = Descendientes<TextBlock>(tira).Any(t => t.Text == "🛡" && t.IsVisible);
+                        bool dineroVisible = tira.DataContext is MainViewModel vmDin && !string.IsNullOrEmpty(vmDin.MoneyText)
+                            && Descendientes<TextBlock>(tira).Any(t => t.Text == vmDin.MoneyText && t.IsVisible);
+                        var rectTira = tira.TransformToAncestor(window).TransformBounds(new System.Windows.Rect(0, 0, tira.ActualWidth, tira.ActualHeight));
+                        var rectBotones = filaBotones.TransformToAncestor(window).TransformBounds(new System.Windows.Rect(0, 0, filaBotones.ActualWidth, filaBotones.ActualHeight));
+                        bool solapan = rectTira.IntersectsWith(rectBotones);
+                        Console.WriteLine($"VITALS_SOLO[{idioma}]: a {w}px SizeClass={vm.SizeClass} MaxWidth={vm.VitalsStripMaxWidth:0} -> recorte franja=({rx:0},{ry:0}) (esperado 0,0), Defensa visible={defensaVisible} (esperado True), Dinero visible={dineroVisible} (esperado True), franja={rectTira}, botones={rectBotones}, SOLAPAN={solapan} (esperado False)");
+                        if (rx > 0 || ry > 0) Console.WriteLine($"FALLO: VITALS_SOLO - franja vital recortada {rx:0}x{ry:0}px a {w}px[{idioma}]");
+                        if (!defensaVisible) Console.WriteLine($"FALLO: VITALS_SOLO - Defensa no visible a {w}px[{idioma}] (el bug real que el usuario reporto)");
+                        if (!dineroVisible) Console.WriteLine($"FALLO: VITALS_SOLO - Dinero no visible a {w}px[{idioma}] (el bug real que el usuario reporto)");
+                        if (solapan) Console.WriteLine($"FALLO: VITALS_SOLO - la franja vital y la fila de botones SE SOLAPAN a {w}px[{idioma}]");
+
+                        if (w == 1080)
+                        {
+                            var rtbVitals = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                            rtbVitals.Render(window);
+                            var encVitals = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                            encVitals.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbVitals));
+                            string shotVitals = Path.Combine(AppContext.BaseDirectory, $"vitals-1080px-{idioma}.png");
+                            using (var fs = File.Create(shotVitals)) encVitals.Save(fs);
+                            Console.WriteLine($"VITALS_SOLO[{idioma}]: captura real a 1080px -> {shotVitals}");
+                        }
+                    }
+                }
+                vm.Settings.Language = "es";
+            }
+            catch (Exception ex) { Console.WriteLine("VITALS_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (VITALS_SOLO)");
+            Environment.Exit(0);
+        }
+
         // PB_SOLO=1 (6-sep-2026): modo de FOCO - corre solo los bloques PB-* (Personaje >
         // Buffs/Apariencia/Investigacion/Spawn Points/Desbloqueos/Version) sobre el personaje
         // real ya cargado, y sale. Misma idea que AR_LAY_SOLO, por un motivo real medido: el
@@ -557,6 +838,18 @@ internal static partial class Program
         {
             AuditoriaContenidoDelJuegoEnIdioma(window, vm);
             Console.WriteLine("DONE (A11_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // MP_SOLO=1 (14-sep-2026, arreglo real de MP-01/Coin Gun): mismo modo de foco que
+        // PB_SOLO/AR14_SOLO/A11_SOLO - PruebasMejorPrefijo solo necesita el personaje real ya
+        // cargado (no un mundo), pero vive muy abajo en el recorrido completo (detras de
+        // UI-BLOQUEADA, que muere siempre primero en esta sesion) - sin este modo de foco nunca
+        // se ejecutaria de verdad aqui.
+        if (Environment.GetEnvironmentVariable("MP_SOLO") == "1")
+        {
+            PruebasMejorPrefijo(vm, window);
+            Console.WriteLine("DONE (MP_SOLO)");
             Environment.Exit(0);
         }
 
@@ -3942,6 +4235,70 @@ internal static partial class Program
                         double anchoRestaurado = sidebarDockPanel.ActualWidth;
                         Console.WriteLine($"F-10: ancho expandido={anchoExpandido:0}px, plegado={anchoPlegado:0}px (esperado ~0), restaurado={anchoRestaurado:0}px (esperado >200)");
                         if (anchoPlegado > 2 || anchoRestaurado < 200) Console.WriteLine("FALLO: F-10 - el plegado/despliegue de la barra lateral no cambia el ancho real de la columna");
+
+                        // F-10-REOPEN (14-sep-2026): bug real confirmado por el usuario - al
+                        // plegar a 0, el boton "›" (dentro de la columna que se colapsa) y el
+                        // GridSplitter (Collapsed por su propio Style) desaparecian los DOS a la
+                        // vez, sin dejar ningun sitio real desde el que volver a abrir la barra.
+                        // F-10 de arriba solo movia la propiedad de la ViewModel - nunca miraba
+                        // si de verdad quedaba algo pulsable en pantalla, que es justo el hueco
+                        // por el que se colo el bug. Aqui se comprueba lo real: que las dos
+                        // pestañas (plegar/desplegar) son visibilidades EXACTAMENTE opuestas en
+                        // los dos estados, y que un CLIC REAL (InvokePattern, no la propiedad)
+                        // sobre la de desplegar devuelve el ancho de antes de plegar.
+                        var collapseBtn = window.FindName("CollapseExplorationSidebarButton") as System.Windows.Controls.Button;
+                        var expandBtn = window.FindName("ExpandExplorationSidebarButton") as System.Windows.Controls.Button;
+                        if (collapseBtn == null || expandBtn == null)
+                            Console.WriteLine("FALLO: F-10-REOPEN - no se encuentran los dos botones reales de plegar/desplegar por su x:Name");
+                        else
+                        {
+                            // El Border original nunca tuvo su PROPIA Visibility ligada al ancho
+                            // (solo el GridSplitter la tiene), y su ActualWidth/hit-test no bajan
+                            // de forma fiable a "0 de verdad" solo por vivir dentro de una columna
+                            // a 0px (el ScrollViewer recorta por CLIP visual, no reduciendo el
+                            // Arrange de sus hijos - un detalle de layout de WPF, no del bug) -
+                            // intentarlo daba lecturas contradictorias con la ventana real. La
+                            // prueba que de verdad importa, y que SI es inequivoca: el boton NUEVO
+                            // (IsVisible ligado a una DataTrigger real) tiene que verse exactamente
+                            // cuando la barra esta plegada, Y un CLIC REAL sobre el (InvokePattern,
+                            // nunca la propiedad a mano) tiene que devolver la columna a su ancho
+                            // REAL exacto de antes de plegar (medido en pixeles, no solo en la
+                            // propiedad) - eso es lo que demuestra que el usuario ya tiene un sitio
+                            // real y funcional desde el que volver a abrirla.
+                            void ClicRealBoton(string nombre)
+                            {
+                                var el = root.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, nombre));
+                                if (el != null && el.TryGetCurrentPattern(InvokePattern.Pattern, out var pat)) ((InvokePattern)pat).Invoke();
+                                else Console.WriteLine($"FALLO: F-10-REOPEN - '{nombre}' no se encuentra por UI Automation o no expone InvokePattern, un clic real no podria activarlo");
+                                DoEvents(); DoEvents(); WaitForDispatcher(200);
+                            }
+
+                            vm.Settings.ExplorationSidebarWidth = 280;
+                            DoEvents(); DoEvents();
+                            Console.WriteLine($"F-10-REOPEN: con la barra ABIERTA (280px) -> boton desplegar IsVisible={expandBtn.IsVisible} (esperado False - no hace falta con la barra ya abierta)");
+                            if (expandBtn.IsVisible)
+                                Console.WriteLine("FALLO: F-10-REOPEN - con la barra abierta el boton de desplegar no deberia verse");
+
+                            // Clic REAL de plegar (no la propiedad a mano): asi el code-behind
+                            // memoriza _lastExpandedSidebarWidth=280 de verdad, exactamente lo que
+                            // le pasaria a un usuario real - el mismo AutomationProperties.Name
+                            // (distinto del Content "‹"/"›" visible, que coincide con el de
+                            // "resultado anterior" de la busqueda del mapa y seria ambiguo).
+                            ClicRealBoton("CollapseExplorationSidebarButton");
+                            double anchoTrasClicPlegar = sidebarDockPanel.ActualWidth;
+                            Console.WriteLine($"F-10-REOPEN: tras CLIC REAL de plegar -> Settings.ExplorationSidebarWidth={vm.Settings.ExplorationSidebarWidth:0} (esperado 0), ancho real de la columna={anchoTrasClicPlegar:0}px (esperado ~0), boton desplegar IsVisible={expandBtn.IsVisible} (esperado True - este es el que el bug real dejaba sin ningun sitio)");
+                            if (vm.Settings.ExplorationSidebarWidth != 0 || anchoTrasClicPlegar > 2 || !expandBtn.IsVisible)
+                                Console.WriteLine("FALLO: F-10-REOPEN - tras plegar con un clic real tiene que quedar visible un sitio real desde el que volver a abrirla");
+
+                            ClicRealBoton("ExpandExplorationSidebarButton");
+                            double anchoTrasClicReal = sidebarDockPanel.ActualWidth;
+                            Console.WriteLine($"F-10-REOPEN: clic REAL (InvokePattern) sobre el boton de desplegar -> Settings.ExplorationSidebarWidth={vm.Settings.ExplorationSidebarWidth:0}, ancho real de la columna={anchoTrasClicReal:0}px (esperado los dos en 280, el ancho real de antes de plegar)");
+                            if (vm.Settings.ExplorationSidebarWidth != 280 || anchoTrasClicReal < 200)
+                                Console.WriteLine("FALLO: F-10-REOPEN - el clic real sobre el boton de desplegar no devuelve la barra a su ancho anterior exacto");
+
+                            vm.Settings.ExplorationSidebarWidth = 320; // deja el estado como esperan los bloques siguientes
+                            DoEvents(); DoEvents();
+                        }
                     }
                     else Console.WriteLine("F-10: no se encontro la barra lateral en el arbol visual - omitido");
 

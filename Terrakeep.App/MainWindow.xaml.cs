@@ -845,10 +845,22 @@ public partial class MainWindow : Window
     // que el usuario no ve que este llevando nada" - adorno real (VisualBrush de la propia
     // tarjeta, semitransparente) que sigue al cursor durante el arrastre, en vez de solo confiar
     // en el cursor del sistema (que ya anuncia aceptado/rechazado via OnItemSlotDragOver, pero
-    // nunca QUE se esta arrastrando). Compartido por las dos tarjetas reales que inician
-    // arrastre (Libreria de objetos y Libreria de buffs) - los slots ya muestran su propio
-    // contenido real en pantalla, la confusion original era especifica de las tarjetas.
-    private void StartCardDrag(FrameworkElement element, DataObject data)
+    // nunca QUE se esta arrastrando).
+    //
+    // Bug real confirmado por el usuario (14-sep-2026): el comentario original de este metodo
+    // decia "compartido por las dos tarjetas reales que inician arrastre - los slots ya
+    // muestran su propio contenido real en pantalla, la confusion original era especifica de
+    // las tarjetas". Esa suposicion era FALSA en la practica: OnItemSlotMouseMove/
+    // OnBuffSlotMouseMove nunca llegaron a llamar a este metodo (llamaban a
+    // DragDrop.DoDragDrop directamente, dos lineas mas abajo de donde estaba este comentario) -
+    // asi que arrastrar un objeto o un buff desde su slot solo mostraba el cursor por defecto
+    // de Windows ("un cuadrado vacio", palabras del usuario), en TODO el programa. El hueco
+    // vacio SI se nota mientras se arrastra (el slot de origen no se oscurece ni desaparece), y
+    // el ghost hace tanta falta ahi como en las tarjetas de la Libreria. Se parametriza el
+    // efecto permitido (Copy|Move para las tarjetas, que SIEMPRE colocan una copia nueva del
+    // catalogo; solo Move para slot-a-slot, que intercambian el contenido de los dos) en vez de
+    // duplicar el metodo entero.
+    private void StartCardDrag(FrameworkElement element, DataObject data, DragDropEffects allowedEffects = DragDropEffects.Copy | DragDropEffects.Move)
     {
         // AdornerLayer.GetAdornerLayer/DragAdorner anclados al PROPIO elemento arrastrado (no a
         // la ventana) - es el patron real de WPF: el layer que encuentra ya cubre toda la
@@ -856,7 +868,7 @@ public partial class MainWindow : Window
         // mismo elemento como AdornedElement mantiene Mouse.GetPosition en el MISMO espacio de
         // coordenadas que UpdatePosition, sin tener que reproyectar nada a mano.
         var layer = AdornerLayer.GetAdornerLayer(element);
-        if (layer == null) { DragDrop.DoDragDrop(element, data, DragDropEffects.Copy | DragDropEffects.Move); return; }
+        if (layer == null) { DragDrop.DoDragDrop(element, data, allowedEffects); return; }
 
         var adorner = new DragAdorner(element, element);
         layer.Add(adorner);
@@ -868,7 +880,7 @@ public partial class MainWindow : Window
         element.GiveFeedback += OnFeedback;
         try
         {
-            DragDrop.DoDragDrop(element, data, DragDropEffects.Copy | DragDropEffects.Move);
+            DragDrop.DoDragDrop(element, data, allowedEffects);
         }
         finally
         {
@@ -1015,7 +1027,7 @@ public partial class MainWindow : Window
         _dragStartSlot = null;
 
         if (sender is FrameworkElement { DataContext: ItemSlotViewModel { IsEmpty: false } slot } element)
-            DragDrop.DoDragDrop(element, new DataObject(typeof(ItemSlotViewModel), slot), DragDropEffects.Move);
+            StartCardDrag(element, new DataObject(typeof(ItemSlotViewModel), slot), DragDropEffects.Move);
     }
 
     // Retroalimentación de la restricción de slot MIENTRAS se arrastra, antes de soltar
@@ -1145,7 +1157,7 @@ public partial class MainWindow : Window
         _dragStartBuffSlot = null;
 
         if (sender is FrameworkElement { DataContext: BuffSlotViewModel { IsEmpty: false } slot } element)
-            DragDrop.DoDragDrop(element, new DataObject(typeof(BuffSlotViewModel), slot), DragDropEffects.Move);
+            StartCardDrag(element, new DataObject(typeof(BuffSlotViewModel), slot), DragDropEffects.Move);
     }
 
     // Bug real reportado 2-sep-2026 ("los buff no se pueden arrastrar hasta la rejilla de

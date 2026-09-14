@@ -251,6 +251,7 @@
   "explore_close_results_tooltip": "Cerrar esta lista de resultados",
   "explore_collapse_sidebar": "Plegar la barra lateral (deja el mapa a pantalla completa)",
   "explore_dungeon": "Mazmorra",
+  "explore_expand_sidebar": "Mostrar la barra lateral (búsqueda, NPCs, inventario)",
   "explore_export_png": "Exportar a PNG...",
   "explore_export_png_tooltip": "Guarda el mapa como imagen PNG - incluye las marcas de mineral si hay alguna activa",
   "explore_fit_window": "Ajustar a la ventana",

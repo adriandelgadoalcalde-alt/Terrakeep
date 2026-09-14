@@ -693,6 +693,13 @@ public partial class ExplorationViewModel : ObservableObject
     // para que el usuario no tenga que aprender una sintaxis nueva.
     [ObservableProperty] private string _worldSearchText = string.Empty;
     [ObservableProperty] private string _worldSearchSummary = string.Empty;
+    // AR-EX3-LEGIBILIDAD (14-sep-2026): el aviso de "cubre el X% del mapa, puede no ser legible"
+    // se pintaba con el mismo CaptionText de 11px, gris, que CUALQUIER resumen normal ("3 de 500
+    // resultados") - la propia advertencia de legibilidad no era legible: en el barrido visual no
+    // se distinguia de una linea informativa cualquiera. Esta bandera deja que la vista lo pinte
+    // distinto (mismo Naranja+SemiBold que usa cualquier otro aviso real de la app, ver
+    // NameFileMismatch/DowngradeWarning en MainWindow.xaml) sin tocar el texto compuesto en si.
+    [ObservableProperty] private bool _worldSearchSummaryIsWarning;
     partial void OnWorldSearchSummaryChanged(string value)
     {
         OnPropertyChanged(nameof(ShowZeroResultsState));
@@ -1254,6 +1261,7 @@ public partial class ExplorationViewModel : ObservableObject
         _lastWorldSearchRows = [];
         _worldSearchCurrentIndex = -1;
         WorldSearchSummary = string.Empty;
+        WorldSearchSummaryIsWarning = false;
         // "Cerrar" es el unico gesto real de "quita lo que hay marcado en el mapa" y este boton lo
         // comparten las 5 categorias - tiene que llevarse tambien el marcador del cofre de
         // "Cofre a cofre" (ver GoToChest), o quedaria un marco teal suelto que nada apaga.
@@ -1382,6 +1390,9 @@ public partial class ExplorationViewModel : ObservableObject
         WorldSearchSummary = total > shown
             ? LocalizationService.Instance.Format("summary_of_total_capped", shown, total, unitLabel)
             : LocalizationService.Instance.Format("summary_total_unit", total, unitLabel);
+        // Este camino ("paint:false", ver comentario mas arriba) nunca avisa de legibilidad - no
+        // pinta el mapa entero, no hay nada que dejar de leer.
+        WorldSearchSummaryIsWarning = false;
     }
 
     private void ApplyHighlightResult(WriteableBitmap highlight, List<WorldSearchHitRowViewModel> rows, int shown, int total, string unitLabel, string? warning)
@@ -1392,6 +1403,7 @@ public partial class ExplorationViewModel : ObservableObject
             ? LocalizationService.Instance.Format("summary_of_total_capped_map_all", shown, total, unitLabel)
             : LocalizationService.Instance.Format("summary_total_unit", total, unitLabel);
         WorldSearchSummary = warning is null ? resumen : $"{warning} {resumen}";
+        WorldSearchSummaryIsWarning = warning is not null;
     }
 
     // C-04: "marcar Piedra o Tierra tiñe el 60% del mapa y no informa de nada" (evaluacion del
@@ -1931,6 +1943,7 @@ public partial class ExplorationViewModel : ObservableObject
             WorldSearchText = string.Empty;
             WorldSearchResults.Clear();
             WorldSearchSummary = string.Empty;
+            WorldSearchSummaryIsWarning = false;
             _lastWorldSearchRows = [];
             _worldSearchCurrentIndex = -1;
             SelectedCategory = WorldSearchCategory.All;
@@ -2144,6 +2157,7 @@ public partial class ExplorationViewModel : ObservableObject
             _worldSearchCurrentIndex = -1;
             WorldSearchResults.Clear();
             WorldSearchSummary = string.Empty;
+            WorldSearchSummaryIsWarning = false;
             return;
         }
         _worldSearchDebounceTimer.Start();
@@ -2261,6 +2275,7 @@ public partial class ExplorationViewModel : ObservableObject
                 _worldSearchCurrentIndex = -1;
                 WorldSearchResults.Clear();
                 WorldSearchSummary = LocalizationService.Instance["status_no_results"];
+                WorldSearchSummaryIsWarning = false;
             }
             return;
         }
@@ -2285,6 +2300,9 @@ public partial class ExplorationViewModel : ObservableObject
                 : result.TotalCount > result.Hits.Count
                     ? LocalizationService.Instance.Format("summary_results_capped", result.Hits.Count, result.TotalCount, query.DisplayLimit)
                     : LocalizationService.Instance.Format("summary_results_total", result.TotalCount);
+            // El buscador de texto libre ("Todo") nunca pinta el mapa ni avisa de legibilidad -
+            // solo lista filas; el aviso es exclusivo de "Marcar en el mapa" (ApplyHighlightResult).
+            WorldSearchSummaryIsWarning = false;
         }
         catch (OperationCanceledException)
         {
