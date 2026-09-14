@@ -13877,3 +13877,98 @@ descartado sin más.
   ninguno forzado a bug solo por venir de una pieza automática (Parte 26).
 - Commits pequeños, por tema: el arnés nuevo (`AuditoriaKeepQA.cs` + el gancho de una línea en
   `Program.cs`) y el arreglo real (`CategoryNodeViewModel.cs`) por separado. Sin `git push`.
+
+## 14-sep-2026 (ronda siguiente) - El "2.09-2.67:1 de `TextSecondaryBrush` en Inicio" de la ronda
+## de arriba: confirmado RUIDO DE MUESTREO, no un defecto real - **NO SE TOCA NINGÚN COLOR**
+
+Encargo del coordinador: hacer justo lo que la ronda anterior dejó recomendado ("medir con una
+herramienta de color por pixel exacto, no OCR, antes de decidir si `TextSecondaryColor` necesita
+subir de luminosidad") y, según el resultado, o bien aplicar el mismo criterio de ajuste mínimo que
+se usó en Starvekeep (hermano con el mismo hallazgo, confirmado sistémico allí) o dejarlo tal cual.
+
+### 1. Primer contraste: la matemática con los colores NOMINALES de la paleta ya decía que pasa
+
+`TextSecondaryColor` (`#8a8fa3`, rgb 138,143,163) contra los 5 fondos reales de `Theme.xaml`
+(fórmula WCAG real, no estimada):
+
+| Fondo | Ratio |
+|---|---|
+| `BgPrimaryColor` `#10121c` | 5.81:1 |
+| `BgSecondaryColor` `#171a26` | 5.39:1 |
+| `BgElevatedColor` `#1e2233` (el de las tarjetas de Inicio) | 4.91:1 |
+| `BgHoverColor` `#262b40` (solo tras `IsMouseOver`, nunca en reposo - confirmado grepeando `Theme.xaml`: las 12 veces que aparece van detrás de un `Trigger`/`MultiTrigger` de `IsMouseOver`/`IsPressed`/`IsHighlighted`) | 4.35:1 |
+| `BgPressedColor` `#2f3550` (solo tras `IsPressed`, igual de transitorio) | 3.74:1 |
+
+Coincide, número a número, con una verificación YA hecha el 13-sep-2026 (más arriba en este mismo
+fichero, "T-10, suelo de legibilidad": 4.9:1 a 5.8:1) - dos cálculos independientes, mismo
+resultado. Contra los 3 fondos donde el texto vive REALMENTE EN REPOSO (Primary/Secondary/
+Elevated), pasa AA con margen. Esto ya apuntaba a que el 2.09-2.67:1 de la pieza mecánica no podía
+ser el color declarado tal cual.
+
+### 2. Verificación pixel a pixel REAL (sin OCR, sin percentiles) sobre las dos cajas exactas que
+### reportó `comprobarContraste.js` ayer
+
+Contra `keepqa-evidencia\pantalla-Inicio-normal1180x860-es.png` (la misma captura real de ayer, sin
+recompilar ni tocar nada todavía), histograma de color EXACTO (cada pixel contado tal cual, sin
+percentiles ni estimación) en las dos regiones de las etiquetas "Viaje"/"Vie" de las tarjetas de
+personaje:
+
+- Región (460,420)-(505,435) ["Viaje"]: 46 colores distintos con 2+ apariciones, en una rampa de
+  antialiasing continua y limpia desde el fondo real `rgb(30,34,51)` (= `BgElevatedColor` EXACTO,
+  106 píxeles, el más frecuente de la región) hasta el píxel MÁS CLARO real, `rgb(133,138,158)` -
+  a 5 unidades por canal del propio `#8a8fa3` nominal (138,143,163), la diferencia esperable de
+  antialiasing en una fuente de ~10px con solo 5px de alto de caja.
+- Región (468,538)-(530,552) ["Vie"], segunda tarjeta, muestra independiente: mismo patrón, fondo
+  real `rgb(30,34,51)` (45 píxeles), pico de texto real sobre `rgb(113-115,109-119,138-140)`.
+
+Contraste real calculado con la fórmula WCAG sobre estos extremos AUTÉNTICOS (no estimados):
+
+| Comparación | Ratio |
+|---|---|
+| Pico de texto real `rgb(133,138,158)` vs. fondo real `rgb(30,34,51)` | **4.60:1** |
+| Color nominal declarado `#8a8fa3` vs. fondo real `rgb(30,34,51)` | **4.91:1** |
+
+Ambos pasan (o rozan, en el caso del pico real diluido por antialiasing) el umbral AA de 4.5:1 -
+muy lejos del 2.09-2.67:1 que reportó la pieza mecánica ayer.
+
+### 3. Por qué `comprobarContraste.js` se equivocó aquí: la caja de OCR es DEMASIADO PEQUEÑA para
+### su propio método de percentiles - la pieza ya avisa de esto en su propia cabecera
+
+Mirando el JSON crudo de ayer: para `"Viaje"` la pieza reportó `colorTexto=rgb(53,58,79)` y
+`colorFondo=rgb(118,123,143)` - **invertido y contaminado**: ninguno de los dos es el extremo real
+(el fondo real es `rgb(30,34,51)`, mucho más oscuro que lo que la pieza llamó "fondo"; el texto
+real llega hasta `rgb(133,138,158)`, mucho más claro que lo que la pieza llamó "texto"). La caja
+mide 19x5px - con solo 5px de alto, casi ningún píxel de la caja es un trazo puro de letra sin
+mezclar con el fondo (el trazo de una fuente de esta familia tiene 1-2px de grosor real), así que
+los percentiles 10/90 de la pieza caen los dos DENTRO de la rampa de mezcla, nunca en los extremos
+verdaderos - exactamente la limitación que la propia cabecera de `comprobarContraste.js` documenta
+("MIRA la captura si el resultado linda con el umbral" / la pieza fue diseñada y validada contra
+texto de tamaño normal, no contra cajas de 5px de alto). El histograma de píxeles reales de la
+sección 2 lo confirma de forma inequívoca: hay una rampa continua y suave de decenas de tonos entre
+el fondo y el texto, sin ningún salto - la caja es tan pequeña que casi todo lo que contiene es
+"borde".
+
+### Conclusión: NO se toca `TextSecondaryColor`
+
+Tres verificaciones independientes (la de ayer 13-sep, el recálculo nominal de hoy, y el histograma
+de píxeles reales de hoy) coinciden en que el texto pasa AA con margen contra los 3 fondos donde
+vive en reposo. El 2.09-2.67:1 de la pieza mecánica era ruido de muestreo real, confirmado y
+explicado (no solo descartado "porque se ve bien a ojo") - caso distinto del hallazgo gemelo de
+Starvekeep (mismo día, mismo `TextSecondaryBrush`/`TextoTenue` conceptual), que SÍ era sistémico y
+real allí, verificado con las mismas herramientas contra capturas con cajas de texto de tamaño
+normal (ver `Starvekeep\bitacora.md`, misma fecha). No cambiar un color de sistema que toca decenas
+de sitios sin una razón real habría sido el mismo tipo de "arreglo sin verificación" que las reglas
+de la casa prohíben, en la dirección contraria.
+
+### Verificación
+
+`dotnet build Terrakeep.slnx -c Debug`: 0 errores/avisos (sin cambios, se comprueba igualmente que
+compila desde la ronda anterior). `dotnet test`: `Terrakeep.Core.Tests` 539/539,
+`Terrakeep.App.ViewModels.Tests` 484/484 - mismos números que la ronda anterior, sin regresión (no
+se tocó ningún archivo de código ni de estilos).
+
+### Archivos tocados
+
+Ninguno de código ni de paleta. Solo esta entrada de bitácora - la investigación en sí no dejó
+ningún artefacto nuevo en el repo (se usó y se borró un script de scratch temporal para el
+histograma de píxeles, fuera del repo de Terrakeep). Sin commit de código; no aplica.
