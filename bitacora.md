@@ -14746,3 +14746,110 @@ regresion por el bloque nuevo.
 ### Archivos tocados
 
 - `Terrakeep.App.Tests\Program.cs` (nuevo bloque `KEEPQA_MEMORIA`).
+
+## 15-sep-2026 (KeepQA V2.0/V3) - investigada y arreglada PARCIALMENTE la fuga real que detecto KEEPQA_MEMORIA anoche
+
+Encargo real: investigar con Roslyn/code-intelligence (KeepQA V3, `KeepQA\src\code-intelligence\`)
+la causa raiz del `MEMORIA-VEREDICTO: POSIBLE FUGA` de la entrada de arriba (14-sep-2026, Fase 6
+Bloque A), y arreglarla si se confirma con confianza real - nunca un parche especulativo.
+
+**Observacion**: `KEEPQA_MEMORIA=1` mide crecimiento lineal real de ~130-150 KB por ciclo
+abriendo/cerrando el mismo personaje repetidamente (N=20 y N=40, dos corridas independientes,
+14-sep-2026).
+
+**Metodo real usado (mas alla de leer codigo a ojo)**: la herramienta Roslyn de KeepQA V3
+(`simbolos`/`metodo`/`llamadores`) solo localiza declaraciones/llamadores, no detecta patrones de
+fuga por si sola - se uso para confirmar los UNICOS DOS sitios reales donde se construye
+`ItemSlotViewModel` (`MainViewModel.AddContainer` y `EquipmentGroupViewModel.AddSlotSet`, ambos
+alcanzables solo desde `RebuildContainers`). La confirmacion real de la CAUSA no vino de leer
+codigo (se revisaron y descartaron a mano decenas de suscripciones `+=`/`PropertyChangedEventManager.
+AddHandler` en todo `Terrakeep.App/ViewModels/`, todas con el patron correcto de referencia debil
+o de vida emparejada) sino de **`dotnet-gcdump`** (instalado global, no invasivo - autonomia
+tecnica, ver la regla global): dos capturas reales del MISMO proceso en marcha
+(`KEEPQA_MEMORIA_N=2000`, capturadas con `dotnet-gcdump collect -p <pid>` en el ciclo ~74 y en el
+ciclo ~572) comparadas con `dotnet-gcdump report`.
+
+**Evidencia real (diff de las dos capturas)**:
+- Los propios `ItemSlotViewModel`/`ContainerViewModel`/`EquipmentGroupViewModel`/
+  `EquipmentOptionViewModel` NO se acumulaban (348→352, 21→22, 1→1, 10→10 - el GC los recolectaba
+  bien, confirmando que el patron de "cada carga crea slots nuevos y descarta los viejos" en si
+  mismo NO es la fuga).
+- Pero las estructuras internas de WPF que sostienen las suscripciones DEBILES (`WeakEventManager`)
+  SI se acumulaban sin freno: `MS.Utility.FrugalObjectList<WeakEventManager+Listener>` paso de
+  16.242 a 114.846 instancias vivas, `SingleItemList<...Listener>` de 15.761 a 113.369 (~195-200
+  nuevas por cada apertura de personaje - casi exactamente cuantos `ItemSlotViewModel` nuevos crea
+  cada `RebuildContainers`), y el `Listener[]` mas grande crecio de 631.816 a 3.765.656 bytes en el
+  mismo tramo (~500 ciclos).
+
+**Causa raiz confirmada**: `ItemSlotViewModel` (cientos de instancias nuevas por cada carga de
+personaje) se suscribia el SOLO, individualmente, en su propio constructor, al evento `"Item[]"`
+de `LocalizationService.Instance` via `PropertyChangedEventManager.AddHandler` - el patron de
+referencia debil "correcto" que ya usan otras 20 clases del proyecto para el cambio de idioma en
+caliente. El patron en si es valido (y por eso el propio `ItemSlotViewModel` SI se recolecta bien),
+pero `WeakEventManager` solo PURGA las entradas muertas de su lista interna cuando el evento
+`"Item[]"` se dispara DE VERDAD (cambiar de idioma) o cuando el `Dispatcher` llega a
+`SystemIdle` - ninguna de las dos cosas ocurre en un bucle de abrir/cerrar personaje que nunca
+cambia de idioma, asi que la lista de listeners de ESE manager concreto (compartido por TODOS los
+slots que se han creado alguna vez) solo crece, nunca se compacta, aunque los propios slots ya
+lleven tiempo recolectados.
+
+**Confianza**: alta para esta causa concreta (medida con bytes reales, no una suposicion) - pero
+NO es la fuga completa, ver el apartado "lo que queda sin resolver" mas abajo.
+
+**Arreglo aplicado** (minimo, sin tocar el comportamiento visible):
+- `ItemSlotViewModel.cs`: se quita la suscripcion individual del constructor. El antiguo manejador
+  privado `OnIdiomaCambiado` pasa a ser un metodo PUBLICO `RefreshLocalizedText()` (mismo cuerpo:
+  `StatsTooltip`/`SlotRoleLabel`/`RefreshPrefixDisplay`/`RefreshDisplayName`).
+- `MainViewModel.cs`: UNA sola suscripcion nueva, `OnIdiomaCambiadoSlots` (vive lo que
+  `MainViewModel`, o sea toda la app - no crece nunca), registrada junto a la ya existente
+  `OnIdiomaCambiadoLastSaved`. Recorre `Containers` + `EquipmentGroup?.AllContainers` y llama a
+  `slot.RefreshLocalizedText()` en cada slot VIVO de verdad. Mismo resultado visible para el
+  usuario (el texto de los slots se sigue refrescando al cambiar de idioma en caliente), sin que
+  la lista de listeners de WPF crezca con cada carga de personaje.
+- `BuffSlotViewModel` (mismo patron exacto) NO se toca a proposito: sus slots se REUSAN entre
+  cargas (`Buffs` no se recrea, a diferencia de `Containers`/`EquipmentGroup` - ver la nota de
+  14-sep-2026 de arriba), confirmado en el mismo gcdump (`BuffContainerViewModel` fijo en 1
+  instancia) - ese patron nunca acumulo listeners de verdad, tocarlo habria sido un cambio sin
+  ningun efecto real.
+
+**Pruebas realizadas (antes/despues, mismo metodo exacto que detecto el bug)**:
+
+| | N=20 (delta estable/ciclo) | N=20 total | N=40 (delta estable/ciclo) | N=40 total |
+|---|---|---|---|---|
+| Antes (14-sep) | ~132-235 KB | 45,48→55,82 MB (+22,75%) | ~132-146 KB | 45,48→58,73 MB (+29,14%) |
+| Despues (15-sep) | ~116 KB | 45,47→55,35 MB (+21,72%) | ~116 KB | 45,47→57,83 MB (+27,18%) |
+
+Reduccion real y reproducible del ritmo de crecimiento estable por ciclo: ~132-146 KB -> ~116 KB
+(~20% menos), igual de consistente en las dos N. El primer ciclo sigue con el mismo salto de ~7,7
+MB de siempre (JIT/warm-up real de la primera carga, no relacionado con este bug, ya documentado
+ayer) - se excluye del "estable" a proposito, igual que la entrada de ayer.
+
+**Lo que queda SIN resolver (honesto, no se fuerza a "arreglado del todo")**: un segundo gcdump
+diff POST-arreglo (mismo metodo, N=2000, capturas en ciclo ~74 y ~533) muestra que
+`SingleItemList<WeakEventManager+Listener>` SIGUE creciendo a un ritmo casi identico (~195/ciclo,
+15.369→108.942) pese a que `ItemSlotViewModel` ya no se suscribe solo - o sea, hay una SEGUNDA
+fuente real de este mismo tipo de "listener" que el arreglo de hoy no toca. La hipotesis mas
+probable (no confirmada con la misma certeza que la anterior): el propio motor de bindings de WPF
+usa `PropertyChangedEventManager` POR SU CUENTA para cada `{Binding Propiedad}` de un
+`DataTemplate` contra un origen que NO es `DependencyObject` (como son estos ViewModels) - cada
+`ItemSlotViewModel` nuevo que se pinta de verdad en pantalla (la ventana real esta con `Show()`+
+`DoEvents()` en este arnes, no es un test 100% headless) generaria asi sus propios listeners
+internos de WPF, ajenos por completo al codigo de esta app y a cualquier `PropertyChangedEventManager.
+AddHandler` propio. Investigarlo a fondo exigiria trazar el binding engine interno de WPF (fuera de
+alcance razonable de un arreglo minimo) - queda anotado aqui con la evidencia real (los 4 `.gcdump`
+y sus `.txt` de `dotnet-gcdump report`, generados en el scratchpad de la sesion, no committeados)
+para quien retome esto. Grado de impacto real: bajo para el uso normal de la app (un usuario no
+abre/cierra el mismo personaje cientos de veces sin cambiar nunca de idioma ni dejar que la app
+respire en idle), pero seguiria siendo relevante para una sesion automatizada muy larga.
+
+**Verificacion de que no hay regresion**: `dotnet build Terrakeep.slnx` (0 avisos, 0 errores) y
+`dotnet test Terrakeep.slnx` completo tras el cambio: **539/539** en `Terrakeep.Core.Tests` (12s)
++ **484/484** en `Terrakeep.App.ViewModels.Tests` (2m 48s) - mismos numeros exactos que antes del
+cambio, sin regresion.
+
+### Archivos tocados
+
+- `Terrakeep.App/ViewModels/ItemSlotViewModel.cs` (quita la suscripcion individual, expone
+  `RefreshLocalizedText()` publico).
+- `Terrakeep.App/ViewModels/MainViewModel.cs` (nuevo `OnIdiomaCambiadoSlots`, unica suscripcion
+  real que reemplaza a las cientos de individuales).

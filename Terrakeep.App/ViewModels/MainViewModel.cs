@@ -92,6 +92,27 @@ public partial class MainViewModel : ObservableObject
     // una vez con Format(), no un binding {Binding Loc[clave]} que se refresque solo).
     private void OnIdiomaCambiadoLastSaved(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => RefreshLastSavedText();
 
+    // 15-sep-2026 (investigacion de la fuga real de KEEPQA_MEMORIA, ver el comentario largo en
+    // el constructor de ItemSlotViewModel para la evidencia completa con dotnet-gcdump): ANTES
+    // cada ItemSlotViewModel se suscribia el solo, individualmente, al mismo evento "Item[]" -
+    // cientos de suscripciones DEBILES nuevas en cada carga de personaje, y la lista interna de
+    // WPF que las sostiene (WeakEventManager+Listener) solo se purga cuando el evento se dispara
+    // de verdad (cambiar de idioma) o el Dispatcher llega a SystemIdle - ninguna de las dos pasa
+    // en un bucle de abrir/cerrar personaje, asi que esa lista crecia sin fin aunque los propios
+    // slots SI se recolectaban bien. Arreglo real: UNA sola suscripcion aqui (vive lo que
+    // MainViewModel, que es toda la app) que recorre los slots VIVOS de verdad y les pide que se
+    // refresquen - mismo resultado visible para el usuario, sin la lista de listeners creciendo.
+    private void OnIdiomaCambiadoSlots(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        foreach (var container in Containers)
+            foreach (var slot in container.Slots)
+                slot.RefreshLocalizedText();
+        if (EquipmentGroup != null)
+            foreach (var container in EquipmentGroup.AllContainers)
+                foreach (var slot in container.Slots)
+                    slot.RefreshLocalizedText();
+    }
+
     // H-3 (segunda auditoria de Opus, Fable): "Guardar ya funciona desde cualquier pestaña
     // (N-1) pero un error de guardado va a un TextBlock que 5 de 6 pestañas no ven" -
     // StatusMessage sigue viviendo SOLO dentro de Personaje (correcto para el detalle
@@ -885,6 +906,10 @@ public partial class MainViewModel : ObservableObject
         // el que AppearanceViewModel usa un metodo de instancia real.
         System.ComponentModel.PropertyChangedEventManager.AddHandler(
             LocalizationService.Instance, OnIdiomaCambiadoLastSaved, "Item[]");
+        // Ver el comentario largo de OnIdiomaCambiadoSlots: esta es la UNICA suscripcion real
+        // para refrescar el idioma de los slots (antes cada ItemSlotViewModel se suscribia solo).
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            LocalizationService.Instance, OnIdiomaCambiadoSlots, "Item[]");
         _whereIsItDebounceTimer.Tick += (_, _) =>
         {
             _whereIsItDebounceTimer.Stop();

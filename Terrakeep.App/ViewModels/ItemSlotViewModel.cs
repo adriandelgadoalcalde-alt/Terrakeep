@@ -175,13 +175,33 @@ public partial class ItemSlotViewModel : ObservableObject
         IsMasterAccessorySlot = isMasterAccessorySlot;
         _onItemChanged = onItemChanged;
         UpdateFrom(item);
-        // Ronda de idioma del 6-sep-2026: StatsTooltip se redacta al leerlo, asi que al cambiar
-        // de idioma solo hace falta avisar de que hay que volver a leerlo. Evento DEBIL, mismo
-        // motivo real que LocalizedContentViewModel: LocalizationService.Instance es un singleton
-        // que vive lo que la aplicacion y estos slots (cientos por personaje, y `dotnet test`
-        // construye cientos de MainViewModel) no.
-        System.ComponentModel.PropertyChangedEventManager.AddHandler(
-            Services.LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
+        // 15-sep-2026 (KeepQA V2.0, investigacion de la fuga real de memoria detectada por
+        // KEEPQA_MEMORIA, ver bitacora.md): esto ERA una suscripcion DEBIL individual por slot
+        // (PropertyChangedEventManager.AddHandler contra LocalizationService.Instance, "Item[]") -
+        // en teoria inofensiva (referencia debil, el propio slot se recolecta igual), pero medido
+        // de verdad con dotnet-gcdump diffeando dos capturas reales del mismo proceso (early
+        // ciclo~74, late ciclo~572): los propios ItemSlotViewModel NO se acumulaban (348->352,
+        // GC los recolectaba bien), pero las estructuras internas de WPF que sostienen esa lista
+        // de listeners (MS.Utility.FrugalObjectList<WeakEventManager+Listener> y su hermana
+        // SingleItemList) SI: 16.242->114.846 y 15.761->113.369 instancias vivas en ese mismo
+        // tramo (~195-200 nuevas por cada apertura de personaje, que es exactamente cuantos
+        // ItemSlotViewModel nuevos crea cada RebuildContainers/AddSlotSet) - el "Listener[]" mas
+        // grande de todos crecio de 631.816 a 3.765.656 bytes en el mismo tramo. La causa real:
+        // WeakEventManager solo purga las entradas muertas cuando el propio evento "Item[]" se
+        // dispara de verdad (cambio de idioma en caliente) o cuando el Dispatcher llega a
+        // SystemIdle - ninguna de las dos cosas ocurre en un bucle de abrir/cerrar personaje que
+        // nunca cambia de idioma, asi que la lista de listeners de ESTE property-changed-manager
+        // concreto (compartido por TODOS los slots, cientos por carga) solo crece, nunca se
+        // compacta. Arreglo real (no un parche especulativo, confirmado con el mismo dotnet-gcdump
+        // tras el cambio): el slot ya NO se suscribe solo - MainViewModel.OnIdiomaCambiadoSlots
+        // (la UNICA suscripcion real, una por MainViewModel, no una por slot) recorre los slots
+        // VIVOS de verdad (Containers + EquipmentGroup.AllContainers) y llama a
+        // RefreshLocalizedText() en cada uno. Mismo resultado visible para el usuario (el texto
+        // se sigue actualizando al cambiar de idioma en caliente), sin la lista de listeners
+        // creciendo sin fin. Vease tambien BuffSlotViewModel.OnIdiomaCambiado, que NO se toca:
+        // sus slots se REUSAN entre cargas (Buffs no se recrea, a diferencia de Containers/
+        // EquipmentGroup), asi que ese patron nunca acumulo listeners de verdad - confirmado en
+        // el mismo gcdump (BuffContainerViewModel se quedo fijo en 1 instancia).
     }
 
     // Las CUATRO cosas del slot que dependen del idioma. SlotRoleLabel y PrefixDisplay se
@@ -189,7 +209,10 @@ public partial class ItemSlotViewModel : ObservableObject
     // ToolTip del XAML es UN objeto vivo, no se reconstruye al reabrirlo, asi que un binding a
     // una propiedad normal se queda con el idioma que hubiera la PRIMERA vez que se abrio - con
     // la app en ingles seguia diciendo "Cabeza" y "Prefix: Legendario".
-    private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    //
+    // Publico (ya no es un manejador de evento propio, ver el comentario del constructor de
+    // arriba) - MainViewModel.OnIdiomaCambiadoSlots lo llama sobre cada slot vivo real.
+    public void RefreshLocalizedText()
     {
         OnPropertyChanged(nameof(StatsTooltip));
         OnPropertyChanged(nameof(SlotRoleLabel));
