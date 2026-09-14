@@ -31,8 +31,22 @@ public sealed partial class CategoryNodeViewModel : ObservableObject
             Services.LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
 
+    // KEEPQA_SOLO (14-sep-2026, barrido fresco con contenido adversarial + captura EN/ES en
+    // caliente): esta notificacion solo avisaba de "Name" - "ItemCountLabel"/"BuffCountLabel" se
+    // quedaban con el idioma que tuvieran en el momento en que WPF los leyo por primera vez
+    // (normalmente español, el idioma de arranque), incluso despues de cambiar a ingles EN VIVO
+    // sin reiniciar - MISMO patron exacto que el bug real de MainViewModel.LastSavedText
+    // arreglado hoy mismo en A10-IDIOMA-BARRIDO (ver bitacora.md, "61 apariciones de 'Guardado
+    // hace 2 min' en español con la app en ingles"): un valor computado a partir del idioma
+    // actual necesita su PROPIO aviso de PropertyChanged al cambiar de idioma, el de "Name" no
+    // basta. Confirmado visualmente: las tarjetas raiz de la Libreria ("Materials"/"Decorative"/
+    // "Pets, mounts, tools") seguian mostrando "1586 objeto(s)" con la app entera ya en ingles.
     private void OnIdiomaCambiado(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-        => OnPropertyChanged(nameof(Name));
+    {
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(ItemCountLabel));
+        OnPropertyChanged(nameof(BuffCountLabel));
+    }
 
     // Ronda de idioma del 6-sep-2026: la tarjeta y la fila de arbol de una carpeta muestran su
     // recuento con un StringFormat ("{0} objeto(s)") que era texto español fijo del XAML. Exponer
