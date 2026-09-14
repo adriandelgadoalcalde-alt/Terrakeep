@@ -254,6 +254,42 @@ internal static partial class Program
 
         var vm = (MainViewModel)window.DataContext;
 
+        // KEEPQA_SMOKE=1 (14-sep-2026, Fase 3 de KeepQA V2.0 - ver KeepQA\v2\PROPUESTA-UNIFICADA.md):
+        // subconjunto MINIMO y aislado del arnes, pensado para terminar en <60s. El arnes completo
+        // (KEEPQA_SOLO y el resto de modos de foco) tarda MINUTOS por las decenas de
+        // RenderTargetBitmap - este modo hace SOLO lo que un smoke test real exige: lanzar, ventana
+        // visible, un clic real, cerrar, sin excepcion. Va aqui (justo tras tener `vm`, antes de
+        // fabricar ningun .plr sintetico ni escanear nada mas) para no depender de ningun archivo
+        // real ni pagar ningun coste que el smoke test no necesita.
+        if (Environment.GetEnvironmentVariable("KEEPQA_SMOKE") == "1")
+        {
+            Console.WriteLine($"SMOKE: ventana visible IsVisible={window.IsVisible} (esperado True)");
+            if (!window.IsVisible)
+                Console.WriteLine("FALLO: SMOKE - la ventana deberia estar visible tras Show()+DoEvents()");
+
+            // Un clic real (SelectionItemPattern.Select(), UI Automation real, no
+            // vm.SelectedTabIndex a mano) sobre la pestaña "Acerca de" - no depende de ningun
+            // personaje/mundo real en disco, solo de que la ventana principal este montada.
+            var tabAcercaDe = root.FindFirst(TreeScope.Descendants, new AndCondition(
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem),
+                new PropertyCondition(AutomationElement.NameProperty, vm.Loc["tab_about"])));
+            if (tabAcercaDe != null && tabAcercaDe.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var smokeSelPat))
+            {
+                ((SelectionItemPattern)smokeSelPat).Select();
+                DoEvents(); DoEvents();
+                Console.WriteLine($"SMOKE: clic real (UI Automation) en pestaña 'Acerca de' -> SelectedTabIndex={vm.SelectedTabIndex}");
+            }
+            else
+            {
+                Console.WriteLine("FALLO: SMOKE - la pestaña 'Acerca de' no se encuentra por UI Automation, un clic real no podria activarla");
+            }
+
+            window.Close();
+            DoEvents();
+            Console.WriteLine("DONE (KEEPQA_SMOKE)");
+            Environment.Exit(0);
+        }
+
         // Verificacion real de I-1 (auditoria de Opus, Bloque 2): HomeViewModel escanea SOLO
         // al construirse (constructor de MainViewModel, antes de este punto) la carpeta REAL de
         // tModLoader de esta maquina - sin sintetizar nada, se comprueban los .plr reales que

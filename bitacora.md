@@ -14651,3 +14651,47 @@ antes de que el proceso termine, usar `--archivo`+`--duracion-ms` en paralelo, n
 - `Downloads\KeepQA\src\rendimiento\medirRendimientoWPF.js` (nuevo).
 - Ninguno de codigo fuente de Terrakeep - Terrakeep.App ya tenia el manejador de excepciones y el
   extractor de capas de antes de esta ronda.
+
+---
+
+## 14-sep-2026 (KeepQA V2.0, Fase 3 - lado Terrakeep) - modo KEEPQA_SMOKE, subconjunto aislado de <60s
+
+Encargo real: `Downloads\KeepQA\v2\PROPUESTA-UNIFICADA.md`, Fase 3 ("smoke test aislado por
+proyecto, <60s cada uno, hoy todos usan el arnes completo"). El arnes completo de
+`Terrakeep.App.Tests\Program.cs` tarda minutos por las decenas de `RenderTargetBitmap` - ya habia
+precedente real de modos de foco activados por variable de entorno
+(`TERRAKEEP_SCREENSHOTS`/`KEEPQA_SOLO`/`CAPAS_SOLO`/`SIDEBAR_SOLO`/etc., ver `PATRONES.md`), asi
+que el patron correcto era sumar uno mas, no inventar un mecanismo nuevo.
+
+**`KEEPQA_SMOKE=1`** (`Program.cs`, justo despues de `var vm = (MainViewModel)window.DataContext;`,
+antes de fabricar ningun `.plr` sintetico ni escanear nada mas - para no depender de ningun archivo
+real ni pagar ningun coste que un smoke test no necesita): comprueba que la ventana esta visible
+(`window.IsVisible`), da un CLIC REAL vía UI Automation (`SelectionItemPattern.Select()`, nunca
+`vm.SelectedTabIndex` a mano) sobre la pestaña "Acerca de" (localizada por `vm.Loc["tab_about"]`,
+no depende de ningun personaje/mundo en disco), cierra la ventana y sale.
+
+**Ejecutado de verdad, con tiempo real medido**: `dotnet run --project Terrakeep.App.Tests --no-build
+-c Debug` con `KEEPQA_SMOKE=1`: **4,08s reales** (bien por debajo del limite de 60s pedido),
+`ExitCode=0`. Salida real:
+
+```
+SMOKE: ventana visible IsVisible=True (esperado True)
+SMOKE: clic real (UI Automation) en pestaña 'Acerca de' -> SelectedTabIndex=5
+DONE (KEEPQA_SMOKE)
+```
+
+`SelectedTabIndex=5` confirma que el clic real llego de verdad (la pestaña "Acerca de" es la
+sexta/ultima del `TabControl` principal) - no es solo "no lanzo excepcion", es la prueba de que
+UI Automation encontro el control real y lo activo.
+
+**Verificacion de que no hay regresion**: `dotnet build Terrakeep.App.Tests` (compilacion correcta,
+0 avisos, 0 errores) y `dotnet test Terrakeep.slnx` completo tras el cambio: **539/539** en
+`Terrakeep.Core.Tests` (11s) + **484/484** en `Terrakeep.App.ViewModels.Tests` (2m 45s) - las dos
+cifras subieron respecto a las citadas en rondas anteriores de esta bitacora (322/441), señal de
+que la familia sigue creciendo su cobertura entre sesiones; ninguna regresion por el bloque nuevo.
+`Terrakeep.App.Tests` no es xUnit (consola con `Main()`, ver el porque en la cabecera del propio
+`Program.cs`) asi que `dotnet test` no lo ejercita - se verifico aparte, a mano, como arriba.
+
+### Archivos tocados
+
+- `Terrakeep.App.Tests\Program.cs` (nuevo bloque `KEEPQA_SMOKE`).
