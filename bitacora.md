@@ -14967,3 +14967,100 @@ en `Terrakeep.App.ViewModels.Tests` (4m 39s) - mismos numeros exactos, sin regre
 `dump1-early.gcdump`/`dump2-late.gcdump` (ciclo ~150 y ~560) y sus `report1.txt`/`report2.txt`
 (`dotnet-gcdump report`), en el scratchpad de esta sesion - mismo criterio que la ronda de ayer
 (evidencia real disponible pero no forma parte del repo).
+
+## 15-sep-2026 (repaso integral nocturno) - barrido REAL con el arsenal de KeepQA buscando
+## hallazgos NUEVOS (geometria/solapes/espaciado/capas/contraste/texto): 0 bugs nuevos, 1 candidato
+## investigado y descartado (diseño intencional ya documentado), tooling nuevo comitteado
+
+Encargo real del coordinador: barrido fresco de Terrakeep con el arsenal de KeepQA
+(`Downloads\KeepQA\src\`) buscando hallazgos NUEVOS de verdad, sin duplicar lo que ya se cerro
+esta misma noche/la noche anterior. Antes de tocar nada se grepeo `bitacora.md`/`PATRONES.md`/
+`PENDIENTES-CIERRE-14SEP.md`: `KEEPQA_SOLO` (`AuditoriaKeepQA.cs`, entrada "14-sep-2026 (ronda
+siguiente)") ya habia barrido las 16 pantallas x 2 tamaños (minimo 1080x700, umbral 1180x860) x
+2 idiomas = 64 combinaciones, 928 elementos, **0 hallazgos adversariales** - repetir esas dos
+resoluciones habria sido puro trabajo duplicado.
+
+**Cobertura real nueva aportada esta ronda**: la UNICA pieza que de verdad faltaba - una tercera
+resolucion de la categoria "comun" del catalogo compartido (`KeepQA/src/resoluciones/
+catalogo.json`, id `fullhd` 1920x1080, "el tamaño de pantalla completa mas comun hoy"), nunca
+ejercitada mecanicamente contra Terrakeep hasta hoy. Nuevo modo `KEEPQA_FRESCO_SOLO=1`
+(`EjecutarKeepQaFrescoTerceraResolucion`, `Terrakeep.App.Tests/AuditoriaKeepQA.cs`, gancho de una
+linea en `Program.cs`): 4 pantallas raiz (Inicio, Personaje/Inventario, Exploracion,
+AcercaDe+Ajustes - las 2 primeras coinciden a proposito con las 3 que ya tienen baseline real en
+`KeepQA/baselines/terrakeep/`) x 3 tamaños (min1080x700/normal1180x860/fullhd1920x1080) x 2
+idiomas = **24 combinaciones reales, 267 elementos de geometria, 24 capturas PNG**, volcado propio
+(`volcado-geometria-fresco-15sep.json`, nunca sobrescribe la evidencia ya cerrada de
+`KEEPQA_SOLO`).
+
+**Los 4 verificadores mecanicos** (`verificarGeometria.js`/`verificarAlineacion.js`/
+`verificarEspaciado.js`/`verificarCapas.js`) contra el volcado fresco: espaciado y capas en
+**verde (RESULTADO: OK)**. Geometria/alineacion salieron en `REVISAR`, investigados uno a uno:
+- Los avisos de "consistencia de grupo rota" (ancho de pestañas de Objetos/cabecera de vitales
+  que se desvia de la mediana del grupo) son EXACTAMENTE los mismos numeros, elemento a elemento,
+  que ya daba `verificarGeometria.js` contra el volcado del 14-sep (`volcado-geometria-tabs.json`,
+  comprobado ejecutandolo de nuevo sobre ese fichero para comparar) - variacion esperada de ancho
+  auto-ajustado al texto real (pestañas cortas como "Buffs" vs largas como "Puntos de aparición",
+  iconos de corazon/mana mas anchos que el contador de luna) que ya existia identica anoche, no
+  algo nuevo de esta resolucion.
+- El unico candidato real nuevo: a fullhd, el grupo de 3 pestañas de "Objetos" (Equipamiento/
+  Inventario/Almacenes) pasa a tener solo 2 miembros capturados, y el verificador de alineacion
+  marca esos 2 como "DESALINEADO" (centro horizontal). Investigado con la captura real (mirar
+  antes de decidir, como pide el encargo): a 1920x1080 la pestaña "Almacenes" desaparece de
+  verdad de la barra - pero es DISEÑO INTENCIONAL, no un bug: `MainWindow.xaml` tiene esa
+  `TabItem` con `Visibility="{Binding IsStorageExpanded, Converter={StaticResource
+  InverseBoolToVis}}"` y un comentario explicito ya existente ("A-a, segunda auditoria de Opus"):
+  en ventana Amplia el panel de Inventario YA muestra el almacen seleccionado al lado (visible en
+  la propia captura: "Inventario" y "Banco/Caja fuerte/Fragua del Defensor/Bóveda del Vacío" lado
+  a lado en la misma pantalla), asi que la pestaña suelta quedaria como un segundo camino
+  redundante - se oculta a proposito. Confirmado con las capturas reales
+  `fresco15sep-pantalla-Personaje-Inventario-{normal1180x860,fullhd1920x1080}-es.png`.
+
+**Contraste** (`comprobarContraste.js --geometria`) sobre las 4 pantallas a fullhd: marco varios
+"BAJO CONTRASTE" en los items de la barra lateral (Inicio/Personaje/Builds/Novedades/Exploracion/
+Acerca de) con `texto=fondo` exacto - mirada la captura real, el texto de la barra lateral es
+perfectamente legible (gris claro sobre azul marino oscuro); descartado como artefacto de
+muestreo por percentiles del propio comprobador en fuente fina a este tamaño (mismo tipo de falso
+positivo en bruto que ya documenta `PATRONES.md`: "de 1.602 palabras marcadas 'bajo contraste' en
+bruto, solo..."), no un hallazgo nuevo real.
+
+**Revision visual manual** de las 4 pantallas a fullhd (Inicio/Personaje-Inventario/Exploracion/
+AcercaDe+Ajustes, es y en): sin recortes/solapes/overflow reales. El contenido no se estira para
+llenar los 1920px (se queda con su ancho de lectura cómodo, con hueco en blanco a la derecha) -
+consistente en las 4 pantallas, decision de diseño ya existente, no un bug de esta ronda.
+
+**Comparacion contra baseline real** (`gestorBaseline.js comparar`, las 3 pantallas con baseline
+guardado en `KeepQA/baselines/terrakeep/`) sobre las capturas frescas a normal1180x860-es:
+`REVISAR` en las 3 (9,35%/2,64%/1,00% de pixeles distintos). Investigado: explicado por completo
+por diferencias reales de ESTADO/CONTENIDO entre ejecuciones, no por maquetacion - el baseline es
+del 14-sep (version 2.x, lista de personajes mas corta) y la captura fresca de hoy tiene un
+personaje nuevo guardado esta madrugada (15/09/2026 01:11), la version visible subio a 3.0.0, y
+aparece el banner "Continuar con Terrariano" (depende de cual fue el ultimo personaje abierto en
+esta sesion, no en la del baseline) - mismo tipo de variacion de estado entre lanzamientos ya
+documentado en `KeepQA/PATRONES.md` ("comparacion cruzada... salio realmente distinta 8,04% entre
+dos lanzamientos reales del MISMO..."). Revisadas las imagenes una a una (baseline vs fresca): sin
+ningun elemento recortado, solapado ni desplazado de verdad.
+
+**Veredicto final: 0 bugs nuevos reales encontrados** en esta ronda - la cobertura nueva
+(fullhd, nunca antes barrida) no encontro ningun hallazgo genuino de Overflow/Clipping/Overlap/
+Layering/Spacing/Sizing/Alignment/Typography/Contrast que no fuera ya un falso positivo conocido
+o diseño intencional ya documentado en el propio codigo. Nada que arreglar en `Terrakeep.App`
+esta ronda.
+
+**Lo que SI se comittea**: el propio modo `KEEPQA_FRESCO_SOLO=1` como pieza nueva y real del
+arnes (no descartable: es la unica forma mecanica real de volver a comprobar fullhd sin repetir
+las 64 combinaciones ya cerradas). Verificado antes de comittear: `dotnet build Terrakeep.slnx`
+(0/0) + `dotnet test Terrakeep.slnx` completo, **539/539** `Terrakeep.Core.Tests` + **484/484**
+`Terrakeep.App.ViewModels.Tests`, sin regresion frente a la ronda anterior de esta misma noche.
+Commit `7a528e17` (Terrakeep.App.Tests/AuditoriaKeepQA.cs + Program.cs).
+
+### Archivos tocados
+
+- `Terrakeep.App.Tests/AuditoriaKeepQA.cs` (nuevo `EjecutarKeepQaFrescoTerceraResolucion`).
+- `Terrakeep.App.Tests/Program.cs` (gancho `KEEPQA_FRESCO_SOLO=1`, una linea + comentario).
+- Ningun archivo de `Terrakeep.App` (produccion) tocado - no habia ningun bug real que arreglar.
+
+### Evidencia (no committeada, en `keepqa-evidencia/` gitignorado)
+
+`volcado-geometria-fresco-15sep.json` (267 elementos) + 24 capturas PNG
+`fresco15sep-pantalla-*-{min1080x700,normal1180x860,fullhd1920x1080}-{es,en}.png`, en
+`Terrakeep.App.Tests/bin/Debug/net10.0-windows/keepqa-evidencia/`.
