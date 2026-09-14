@@ -14587,3 +14587,67 @@ lineas por linea, no solo por bulto.
   solo build output (`Terrakeep.App/bin/Release/...`, `installer/output/TerrakeepSetup-3.0.0.exe`),
   gitignorado a proposito (`installer/output/` en `.gitignore`), y la carpeta de prueba temporal
   (`%TEMP%\TerrakeepInstallTest`), borrada al terminar.
+
+## 14-sep-2026 (KeepQA V2.0, Fase 1 - lado WPF) - rendimiento real de Terrakeep.exe + vigilante.js enganchado a ultimo-error.log
+
+Encargo del coordinador: cerrar en Terrakeep los puntos 3 y 4 de la Fase 1 de KeepQA V2.0 (ver
+`Downloads\KeepQA\v2\PROPUESTA-UNIFICADA.md`) - aplicar `medirRendimiento.js` contra `Terrakeep.exe`
+real por primera vez, y enganchar `vigilante.js` contra `ultimo-error.log`. Los puntos 1
+(manejador de excepciones) y 2 (orden_z/capa) no aplican aqui: Terrakeep ya los tenia de antes
+(`App.xaml.cs`, `AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`) - ver el resto de esta ronda en
+`Starvekeep\bitacora.md`, que es donde de verdad se cerraron esos dos huecos.
+
+**Punto 3 - rendimiento real, primera vez contra `Terrakeep.exe`.** `KeepQA\src\rendimiento\
+medirRendimiento.js` (el mecanismo `Get-Process -Id <pid>` -> `WorkingSet64`/`CPU`) ya estaba
+generalizado esta misma noche a `muestraProceso.js` por otra ronda paralela de KeepQA (portado a
+DST) - no hizo falta tocar nada de ahi. Se creo `KeepQA\src\rendimiento\medirRendimientoWPF.js`
+(nuevo, mismo patron que `medirRendimientoDST.js`: lanza el `.exe`, muestrea con la funcion
+COMPARTIDA sin reimplementar nada, y lo cierra el solo al terminar la ventana de medicion - nunca
+si se engancho a un proceso que ya estaba abierto de antes, podria ser una sesion real del
+usuario). Ejecutado de verdad contra el build de publicacion real (`Terrakeep.App\bin\Release\
+net10.0-windows\win-x64\publish\Terrakeep.exe`, el que instala el usuario, no un Debug cualquiera):
+
+```
+node Downloads\KeepQA\src\rendimiento\medirRendimientoWPF.js --exe "...\publish\Terrakeep.exe" --duracion-s 15 --intervalo-s 3
+```
+
+5 muestras en 15s: RAM 237.1 -> 240.8 MB (crecimiento 3.7 MB, arranque normal, nada que ver con una
+fuga), CPU acumulada 1.6s. Proceso cerrado limpio despues (confirmado con `Get-Process` sin
+resultados). Conclusion honesta: `Get-Process` no distingue el tipo de proceso - el mismo mecanismo
+que ya media el servidor dedicado de tModLoader mide igual de bien una app WPF de escritorio, cero
+cambios de codigo necesarios, tal y como predecia `CAPACIDADES-WPF.md`.
+
+**Punto 4 - `vigilante.js` contra `ultimo-error.log` real, con una excepcion REAL, no fabricada.**
+Ya existia en disco un `ultimo-error.log` real de un crash real (`Terrakeep.App\bin\Debug\
+net10.0-windows\ultimo-error.log`, `KeyNotFoundException` en `LibraryViewModel.ApplyFilter`,
+2-sep-2026 - el mismo namespace antiguo `TerrasavrNative` de antes del cambio de marca). Se copio
+aparte, se borro el original, se arranco `vigilante.js` en modo `--archivo ... --duracion-ms 6000`
+vigilando en segundo plano, y 1.5s despues se REESCRIBIO el fichero con el mismo contenido real
+(mismo formato exacto que produce `LogAndShow`: fecha + `ex.ToString()`) simulando el crash en
+vivo. Resultado: **15 alarmas detectadas** (`System.*Exception generica` + 14 lineas de stack
+trace `.cs` reales), `Terminado`. El fichero original se restauro exacto despues (`diff` limpio) -
+no se ha dejado nada tocado en el repo.
+
+**Hallazgo real de esta ronda, con impacto para toda la familia (no solo Terrakeep) - anotado aqui
+Y en `Starvekeep\bitacora.md` porque se descubrio validando el lado de Starvekeep**: el modo
+`--vigilar-mientras "<comando>"` de `vigilante.js` vigila el LOG por sondeo cada 300ms y para ese
+sondeo en el evento `exit` del proceso hijo. Si el proceso escribe el log y termina en el MISMO
+tramo de 300ms (un crash-diagnostico que se dispara y hace `Shutdown()` casi al momento, como el
+nuevo `--forzar-crash-diagnostico` de Starvekeep), el sondeo puede no llegar a tiempo antes de que
+`exit` lo pare - **0 alarmas pese a que el log SI se escribio de verdad** (confirmado leyendo el
+fichero a mano tras la prueba). El modo `--archivo <log> --duracion-ms <n>` lanzado APARTE (nunca
+combinado con el propio comando que crashea-y-sale-rapido) no tiene este problema porque sigue
+sondeando hasta agotar su propia duracion, no hasta que el hijo muera. El modo de vigilancia de
+STDOUT (`hijo.stdout.on('data', ...)`, sin sondeo, basado en eventos) NO tiene esta limitacion -
+confirmado aparte con `dotnet run --project Terrakeep.App.Tests -c Debug` bajo `CAPAS_SOLO=1`
+vigilado en vivo (0 alarmas, limpio, consistente con que no hay ningun bug real de capas conocido)
+y con un caso positivo sintetico (`node -e "console.log('Unhandled exception: ...')"`, detectado al
+instante). **Recomendacion para cualquier proyecto de la familia**: para un log que se escribe justo
+antes de que el proceso termine, usar `--archivo`+`--duracion-ms` en paralelo, nunca
+`--vigilar-mientras` combinando ambas cosas en el mismo comando.
+
+### Archivos tocados
+
+- `Downloads\KeepQA\src\rendimiento\medirRendimientoWPF.js` (nuevo).
+- Ninguno de codigo fuente de Terrakeep - Terrakeep.App ya tenia el manejador de excepciones y el
+  extractor de capas de antes de esta ronda.
