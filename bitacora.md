@@ -14358,6 +14358,8 @@ manual de 8 capturas representativas + 2 recortes con zoom real). Sin inconsiste
 - `KeepQA/PROTOCOLO-REVISION-VISUAL.md`: Sección F.7 (validación real del extractor WPF), nota en
   la Parte 11 sobre los tres motores/tres extractores reales.
 
+Commits pequeños, sin `git push`, en los dos repos (`Terrasavr-Native` y `KeepQA`).
+
 ---
 
 ## 14-sep-2026 (cierre de la noche) - Punto 1 del checklist: indicador real de "hay más, desliza" en la columna de Exploración a tamaños extremos
@@ -14447,4 +14449,82 @@ descubribilidad, y sigue fuera de alcance de este punto concreto del checklist.
 Commit pequeño, verificado antes de seguir con el resto del checklist de cierre
 (`Downloads\KeepQA\PENDIENTES-CIERRE-14SEP.md`).
 
-Commits pequeños, sin `git push`, en los dos repos (`Terrasavr-Native` y `KeepQA`).
+---
+
+## 14-sep-2026 (cierre de la noche) - Punto 4 del checklist: version 2.4.0 -> 3.0.0
+
+Punto 4 del checklist de cierre (`Downloads\KeepQA\PENDIENTES-CIERRE-14SEP.md`): decidir con
+criterio real el numero de version antes del instalador (punto 3, depende de este) y aplicarlo.
+
+**Volumen real desde el 2.4.0** (`git log --oneline 1e1b9011..HEAD`, commit que subio a 2.4.0):
+25 commits, 13/14-sep-2026, con SEIS funciones nuevas reales (no parches):
+- Historial de versiones real (snapshot con metadatos antes de cada guardado, panel propio).
+- Comparador de personajes/builds (equipo, stats, prefijos e inventario lado a lado).
+- Codigos de build compartibles (exportar/importar equipo como texto corto).
+- Filtros combinables en la Libreria (rareza, tipo de daño, ranura de equipo).
+- Estadisticas de partida: muertes PvE/PvP reales, en Apariencia.
+- Editor de mundos v1 (spawn, hora/luna, banderas de jefes, Bestiario real, vista previa de mundo
+  nuevo) - la primera vez que la app ESCRIBE de verdad en un `.wld`, no solo lee.
+
+Mas una auditoria completa de maquetacion/idioma/capas (arsenal nuevo de KeepQA integrado) con
+mas de una decena de arreglos reales: boton "Cerrar" con entidad HTML sin decodificar, rejilla de
+Armadura/Accesorios recortada a 1080x700, contador de la Libreria y "Guardado hace X min"
+congelados en el idioma anterior al cambiar en caliente, falso positivo de Cactus/tile 80, Coin
+Gun sin prefijo real, cuatro bugs reportados en vivo (sidebar de Exploracion sin boton para
+reabrir, arrastre sin indicador visual, boton de codigo de build sin activar, franja de vitales
+que desaparecia), aviso de legibilidad del mapa que no se distinguia, la caja de resultados de
+Exploracion casi vacia a tamaño por defecto, y el propio punto 1 de este checklist (indicador de
+scroll a tamaños extremos).
+
+**Decision: salto a MAYOR (3.0.0), no solo minor**. Razonamiento real, no solo "hay mucho":
+- Precedente propio del proyecto (`changelog.json`, los 12 saltos anteriores): el unico salto
+  mayor previo, 2.0.0 (5-sep-2026), fue "pulido final pre-lanzamiento" con 4 items reales en
+  `added` (Deshacer/Rehacer en Apariencia, marcado masivo generalizado, bloque de autoria, aviso
+  de arrastre) - un volumen CLARAMENTE menor que las 6 funciones nuevas + auditoria completa de
+  esta ronda. Este proyecto no seria semver estricto de una libreria con contrato de API (no tiene
+  sentido "cambio incompatible" en una app de escritorio de un unico usuario) - el criterio real ya
+  establecido aqui es "salto de escala/hito", y por ese mismo rasero esta ronda lo es con margen.
+  Precedente hermano (Starvekeep 1.2.0->1.3.0, StarvekeepMod 0.5.0->0.6.0, ambos esta misma noche):
+  minor, pero con un volumen de trabajo real menor (2-4 funciones nuevas cada uno, sin ninguna
+  escritura nueva de formato de archivo real como el editor de mundos).
+- El Editor de mundos v1 en particular es un cambio de categoria, no un incremento: hasta ahora
+  Terrakeep SOLO leia archivos del juego (.plr characters); esta ronda añade la primera escritura
+  real de un `.wld` (spawn/hora/luna/banderas), con su propio backup automatico - la misma clase de
+  capacidad nueva que en su dia justifico la version 1.0.0 (editor de .plr) frente a lo que hubiera
+  sido "un visor".
+
+**Aplicado en tres sitios, sincronizados a mano** (mismo criterio ya documentado en el propio
+`.csproj`, sin herramienta que los mantenga en linea automaticamente):
+- `Terrakeep.App/Terrakeep.App.csproj`: `<Version>`/`<FileVersion>`/`<AssemblyVersion>` 2.4.0.0 ->
+  3.0.0.0.
+- `Terrakeep.App/Assets/changelog.json`: entrada nueva `3.0.0` (14-sep-2026) al frente de la lista,
+  bilingue ES/EN completa (summary/added/fixed), resumiendo las 6 funciones y una seleccion
+  representativa de los arreglos reales (no las 25 lineas de commit tal cual - mismo criterio ya
+  usado en el resto del fichero, curado para el usuario final, no un changelog de git).
+- `installer/TerrakeepSetup.iss`: `MyAppVersion` "2.4.0" -> "3.0.0" (el propio comentario del
+  fichero ya documenta que se sincroniza a mano en cada version real).
+- **"Acerca de" NO necesita tocarse aparte**: `AboutViewModel.Version` lee
+  `Assembly.GetExecutingAssembly().GetName().Version` en vivo (`ViewModels/AboutViewModel.cs:12`),
+  nunca un numero escrito a mano - confirmado leyendo el codigo, mismo patron ya usado por
+  Starvekeep esta misma noche.
+
+**Verificacion real**:
+- `dotnet build Terrakeep.slnx -c Debug`: 0 errores/avisos tras los tres cambios.
+- `python3 -c "json.load(...)"` sobre `changelog.json`: JSON valido, 13 entradas (antes 12), la
+  primera es `3.0.0`.
+- Busqueda real de "2.4.0" en todo el repo (`.md`/`.json`/`.xaml`/`.cs`, excluyendo `bin`/`obj`):
+  0 coincidencias fuera de las entradas historicas de `changelog.json` (que deben quedarse, son el
+  registro real de esa version pasada).
+- `ACE-01`/`ACE-02` (`Terrakeep.App.Tests/PruebasInicioAjustes.cs`, parte del barrido COMPLETO por
+  defecto de `Terrakeep.App.Tests`, sin necesitar ningun `_SOLO`): verifica que la version se ve de
+  verdad en "Acerca de", que el registro de cambios no tiene ninguna entrada sin numero/fecha/
+  resumen/contenido, y que los resumenes ES/EN de CADA version son distintos (traduccion real, no
+  copia-pega) - incluida la entrada 3.0.0 nueva. Corrida completa sin `_SOLO` (barrido de horas,
+  no solo el area tocada) para no dejar la verificacion solo en manos del build.
+
+### Archivos tocados
+
+- `Terrakeep.App/Terrakeep.App.csproj`: version 2.4.0.0 -> 3.0.0.0.
+- `Terrakeep.App/Assets/changelog.json`: entrada `3.0.0` nueva, bilingue.
+- `installer/TerrakeepSetup.iss`: `MyAppVersion` sincronizado a 3.0.0 (necesario para el punto 3
+  del checklist, el instalador, que se genera a continuacion con este numero ya correcto).

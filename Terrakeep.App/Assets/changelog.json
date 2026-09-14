@@ -1,5 +1,48 @@
 [
   {
+    "version": "3.0.0",
+    "date": "14 de septiembre de 2026",
+    "date_en": "September 14, 2026",
+    "summary": "La primera actualización con escritura real de mundos: el Editor de mundos deja tocar el punto de aparición, la hora, la fase lunar y las banderas de jefes directamente en el .wld (con copia de seguridad automática), junto a un Bestiario real de progreso y una vista previa antes de generar un mundo nuevo. Se suman el Comparador de personajes/builds, códigos de build compartibles como texto corto, un Historial de versiones con copia automática en cada guardado, filtros combinables en la Librería y muertes PvE/PvP en Estadísticas - más una auditoría completa de maquetación, idioma y capas con más de una decena de arreglos reales.",
+    "summary_en": "The first update with real world-editing: the World Editor lets you touch the spawn point, time of day, moon phase and boss flags directly in the .wld file (with an automatic backup before each write), alongside a real Bestiary progress panel and a preview before generating a new world. Also new: the Character/Build Comparator, shareable build codes as short text, a Version History with an automatic snapshot on every save, combinable Library filters, and PvE/PvP death counts in Statistics - plus a full layout, language and layering audit with over a dozen real fixes.",
+    "added": [
+      "Editor de mundos v1: edita y guarda de verdad el punto de aparición, la hora, la fase lunar, la luna de sangre/eclipse y las banderas de jefes/modo difícil directamente en el archivo .wld del mundo (con copia de seguridad .bak automática antes de cada escritura), más un Bestiario de progreso real y una vista previa del mapa antes de generar un mundo nuevo.",
+      "Comparador de personajes/builds: equipo, estadísticas, prefijos e inventario de dos guardados uno junto al otro.",
+      "Códigos de build compartibles: exporta e importa un equipo completo como un texto corto para pegar donde quieras.",
+      "Historial de versiones real: cada guardado deja una copia con sus metadatos (fecha, motivo) navegable desde su propio panel, no solo el último .bak.",
+      "Filtros combinables en la Librería por rareza, tipo de daño y ranura de equipo.",
+      "Estadísticas de partida: muertes PvE/PvP reales, en Apariencia."
+    ],
+    "added_en": [
+      "World Editor v1: really edit and save the spawn point, time of day, moon phase, blood moon/eclipse and boss/hard-mode flags directly in the world's .wld file (with an automatic .bak backup before every write), plus a real Bestiary progress panel and a map preview before generating a new world.",
+      "Character/Build Comparator: gear, stats, prefixes and inventory from two saves side by side.",
+      "Shareable build codes: export and import a full loadout as a short piece of text you can paste anywhere.",
+      "Real Version History: every save leaves a copy with its own metadata (date, reason), browsable from its own panel - not just the last .bak.",
+      "Combinable Library filters by rarity, damage type and equip slot.",
+      "Match statistics: real PvE/PvP death counts, under Appearance."
+    ],
+    "fixed": [
+      "El botón \"Cerrar\" de los resultados de Exploración mostraba literalmente \"&#10005;\" en vez del símbolo ✕ real.",
+      "La rejilla de Armadura/Accesorios se recortaba a 1080x700, tanto con la app en español como con un bono de set de Calamity activo.",
+      "El contador de carpetas de la Librería y el texto \"Guardado hace X min\" se quedaban en el idioma anterior al cambiar de idioma en caliente, sin reiniciar la app.",
+      "Cactus (tile 80) generaba un falso aviso de contenido sin traducir, y el Coin Gun se quedaba sin su mejor prefijo real.",
+      "Cuatro bugs reportados en vivo: la barra lateral de Exploración no se podía volver a abrir tras plegarla del todo, arrastrar un objeto no mostraba ningún indicador visual, el botón de código de build no se activaba tras cargar un personaje, y la franja de vitales de la cabecera desaparecía con la ventana reducida.",
+      "El aviso de \"puede no ser legible\" del mapa de Exploración no se distinguía de un resumen cualquiera.",
+      "La columna de Exploración: con la ventana en su tamaño por defecto, la caja de resultados apenas dejaba ver 1-2 filas aunque sobrara espacio en pantalla; y a tamaños extremos de ventana, ya avisa con un indicador propio cuando queda contenido por debajo del scroll.",
+      "Dos bugs reales en el nuevo Historial de versiones, encontrados por su propio arnés de pruebas antes de publicarlo."
+    ],
+    "fixed_en": [
+      "The \"Close\" button on Exploration search results literally showed \"&#10005;\" instead of the real ✕ symbol.",
+      "The Armor/Accessories grid got clipped at 1080x700, both with the app in Spanish and with a Calamity set bonus active.",
+      "The Library's folder counter and the \"Saved X min ago\" text kept showing the previous language after switching languages live, without restarting the app.",
+      "Cactus (tile 80) triggered a false \"untranslated content\" warning, and the Coin Gun had no real best-prefix suggestion.",
+      "Four bugs reported live: the Exploration sidebar couldn't be reopened after fully collapsing it, dragging an item showed no visual indicator at all, the build-code button didn't enable after loading a character, and the header's vitals strip disappeared when the window got smaller.",
+      "The \"may not be legible\" warning on the Exploration map didn't stand out from an ordinary summary.",
+      "The Exploration column: at the app's default window size, the results box barely showed 1-2 rows even with room to spare on screen; and at extreme window sizes, it now shows its own hint whenever there's more content below the scroll.",
+      "Two real bugs in the new Version History, caught by its own test harness before shipping it."
+    ]
+  },
+  {
     "version": "2.4.0",
     "date": "8 de septiembre de 2026",
     "date_en": "September 8, 2026",
