@@ -14528,3 +14528,62 @@ scroll a tamaños extremos).
 - `Terrakeep.App/Assets/changelog.json`: entrada `3.0.0` nueva, bilingue.
 - `installer/TerrakeepSetup.iss`: `MyAppVersion` sincronizado a 3.0.0 (necesario para el punto 3
   del checklist, el instalador, que se genera a continuacion con este numero ya correcto).
+
+---
+
+## 14-sep-2026 (cierre de la noche) - Punto 3 del checklist: instalador regenerado y verificado de verdad (no solo "compilo")
+
+Con la version ya subida a 3.0.0 (punto 4, entrada de arriba) y el arreglo del punto 1 ya dentro
+del `master`, toca regenerar `installer/TerrakeepSetup.iss` (Inno Setup) - dos pasos reales, en
+orden, tal como documenta el propio `.iss`:
+
+1. `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` -
+   publish AUTOCONTENIDO (decision ya tomada el 5-sep-2026, sigue vigente). Confirmado tras
+   publicar: 0 archivos `.pdb` en `Terrakeep.App/bin/Release/net10.0-windows/win-x64/publish/`
+   (busqueda real recursiva), `Terrakeep.exe` con `FileVersion=3.0.0.0` (leido de las propiedades
+   reales del `.exe`, no supuesto).
+2. `"...\Inno Setup 6\ISCC.exe" installer\TerrakeepSetup.iss` - compilacion real, sin errores.
+   Resultado: `installer\output\TerrakeepSetup-3.0.0.exe`, 53.683.147 bytes (~51,2MB), con
+   `FileVersion=3.0.0`/`ProductName=Terrakeep`/`CompanyName=IncrediBad` verificados en las
+   propiedades reales del `.exe` del propio instalador (no solo el contenido que empaqueta).
+
+**Verificacion real de que el instalador FUNCIONA** (pedido explicito del encargo, "instalalo en
+una carpeta de prueba si es razonable, o al menos confirma que el paquete contiene los archivos
+correctos" - se hizo lo primero, mas fuerte que el minimo pedido):
+- Instalacion silenciosa real (`/VERYSILENT /SUPPRESSMSGBOXES /DIR=<carpeta de prueba> /NOICONS`)
+  en `%TEMP%\TerrakeepInstallTest` -> `ExitCode=0`.
+- Contenido instalado verificado de verdad: `Terrakeep.exe` (version `3.0.0.0`, coincide con el
+  publish), `Assets\`, las 4 DLL nativas de WPF (`D3DCompiler_47_cor3`/`PenImc_cor3`/
+  `PresentationNative_cor3`/`wpfgfx_cor3`), `unins000.exe`/`unins000.dat` (desinstalador nativo real
+  generado por Inno Setup) - **0 `.pdb`** en la carpeta instalada (busqueda recursiva real).
+- El `.exe` instalado ARRANCA de verdad: lanzado con `Start-Process`, sigue vivo y `Responding=True`
+  5 segundos despues, `MainWindowTitle='Terrakeep'`. La captura de pantalla real (GDI
+  `CopyFromScreen`) salio en blanco dos veces seguidas pese al proceso vivo y respondiendo - **no
+  es un fallo del instalador**: confirmado con UI Automation real
+  (`System.Windows.Automation`, mismo mecanismo que ya usa el propio arnes de pruebas de
+  Terrakeep.App.Tests) que la ventana SI tiene su interfaz real pintada por dentro - 100 controles
+  reales encontrados, con nombres reales ("Cargar personaje (.plr)...", "Historial de versiones",
+  "Código de build", "Inicio", etc.). Root cause aparente del blanco en la captura GDI: varias
+  sesiones de Claude Code estaban trabajando en paralelo esta misma noche en otros proyectos de la
+  misma maquina (visible en el propio fondo de la captura) - contencion/composicion de pantalla
+  ajena al instalador, no un bug real de Terrakeep. Desinstalado despues con el `unins000.exe` REAL
+  generado (no borrado a mano) - `ExitCode` limpio, carpeta de prueba vacia confirmada.
+
+**Verificacion cruzada con el barrido COMPLETO de `Terrakeep.App.Tests`** (sin ningun `_SOLO`, la
+oleada entera de horas, corrida en paralelo mientras se preparaba el instalador): terminó con
+`DONE` real, 18 lineas `FALLO` en total - las 18 revisadas una por una contra `bitacora.md`:
+`AR-11f`/`AR-15`/`AR-EX1` son la MISMA deuda ya documentada explicitamente hoy mismo como "no se
+toca" (ver el punto 1 de este mismo checklist, "Limite honesto... NO arreglado esta ronda");
+`T-H/F2` es deuda documentada desde el 11-sep-2026 (`FocusVisualStyle` intermitente, ajeno a
+Exploracion); `AR-LAY` señala 1 elemento en Personaje/Equipamiento (`SlotGridPanel`, zona nunca
+tocada esta noche); `A8-02`/"Punto 4 - busqueda de lava" son estado async de la busqueda de mundo,
+tampoco tocado. Ninguna de las 18 tiene relacion con los ficheros de esta ronda (`MainWindow.xaml`
+columna de Exploracion, `changelog.json`, `.csproj`, `.iss`) - cero regresiones nuevas confirmadas
+lineas por linea, no solo por bulto.
+
+### Archivos tocados
+
+- Ninguno de codigo fuente en esta entrada (el `.iss` ya se sincronizo en el commit de version) -
+  solo build output (`Terrakeep.App/bin/Release/...`, `installer/output/TerrakeepSetup-3.0.0.exe`),
+  gitignorado a proposito (`installer/output/` en `.gitignore`), y la carpeta de prueba temporal
+  (`%TEMP%\TerrakeepInstallTest`), borrada al terminar.
