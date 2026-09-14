@@ -13616,3 +13616,84 @@ commit a medias; se agrupa en 2 commits por FICHEROS, cada uno con el desglose c
    `MainWindow.xaml`, `MainWindow.xaml.cs`, `MainViewModel.cs`, `strings_es.json`,
    `strings_en.json`, `Terrakeep.App.Tests/Program.cs` (todos los modos de foco nuevos:
    `EX3_SOLO`, `SIDEBAR_SOLO`, `DRAG_SOLO`, `VITALS_SOLO`, `BUILDCODE-CANEXECUTE`).
+
+## 14-sep-2026 - `dotnet run` completo tras confirmar "Código de build": 2 FALLOs reales nuevos
+## (`A10-IDIOMA-BARRIDO` y `AR-LAY`), NO confundir con `AR-11f` (deuda ya conocida, no se tocó)
+
+Tras el punto 6 de arriba (botón "Código de build" ya en verde de verdad), se corrió el arnés
+completo (`dotnet run --project Terrakeep.App.Tests -c Debug`, sin ningún `_SOLO`) para verificar
+que nada se había roto. Salieron **2 `FALLO` nuevos**, los dos causados por las funciones/arreglos
+de hoy (comparador de builds, vista previa de mundo, franja de vitales en dos líneas, etc. - textos
+y tamaños nuevos que el barrido no había visto todavía):
+
+### 1. `A10-IDIOMA-BARRIDO` - 61 apariciones de "Guardado hace 2 min" en español con la app en inglés
+
+No era un texto sin migrar al diccionario (`last_saved_minutes`/`last_saved_hours`/
+`last_saved_date`/`last_saved_moment` en `strings_en.json` YA estaban traducidas correctamente,
+igual que en `strings_es.json`) - era el mismo bug real que ya tuvo `HairDyeDisplayName` en
+`AppearanceViewModel` (6-sep-2026): `MainViewModel.LastSavedText` (`RefreshLastSavedText()`, cerca
+de la línea 80) se compone UNA vez con `LocalizationService.Instance.Format(...)` cuando se guarda
+o cada 30s (`_lastSavedRefreshTimer`), pero nunca se recalculaba al cambiar el idioma en caliente -
+se quedaba congelado en el idioma que hubiera en ese momento hasta el siguiente tick/guardado real,
+por eso el barrido lo veía en las 49 pantallas distintas que recorre (61 apariciones sin
+`Distinct()`).
+
+Arreglo (mismo patrón real ya usado por `AppearanceViewModel.OnIdiomaCambiado`, no uno nuevo):
+suscripción en el constructor de `MainViewModel` al evento `"Item[]"` de
+`LocalizationService.Instance` (el aviso real de "cambio de idioma en caliente") vía
+`PropertyChangedEventManager.AddHandler`, con un **método de instancia con nombre**
+(`OnIdiomaCambiadoLastSaved`), no una lambda - una lambda sin `this` capturado se recolectaría casi
+enseguida porque `PropertyChangedEventManager` guarda una referencia DÉBIL al objetivo del
+delegado (el mismo motivo real por el que `AppearanceViewModel` ya usaba un método, no una lambda).
+El handler solo llama a `RefreshLastSavedText()` otra vez.
+
+Verificado con el propio arnés: `A10-IDIOMA-BARRIDO` pasó de 61 a **0** textos nuevos sin migrar,
+sin tocar los 94 casos ya documentados como límites conocidos (StatusMessage compuestos,
+catálogos de contenido, letreros del mundo del propio usuario).
+
+### 2. `AR-LAY` - la rejilla de Armadura/Accesorios de Equipamiento se recortaba 8,1px a 1080x700 [es]
+
+Único elemento perdido de las 416 combinaciones (13 tamaños x 2 idiomas x 16 pantallas): a
+1080x700 con la app en español, la cabecera Loadout/Vista/Defensa/bono de `EquipmentGroup`
+(fila 0, `Auto`, del `SlotRowHost` en `MainWindow.xaml` ~línea 2467) medía de verdad 82,2px con
+los textos españoles (más largos que los ingleses) y, sumada al suelo real de la rejilla de
+Armadura/Accesorios (fila `"*"` con `MinHeight="84"`, 2 filas x `MinCell=40` + `Gap=4`, ver el
+comentario real de esa fila, AR-14d), pedía 166,2px en total - 8,1px más de los 158,1px que el
+`Border` naranja que envuelve a `SlotRowHost` (`Padding="10"` `Margin="0,6,0,0"`, con
+`ClipToBounds="True"` en el propio `SlotRowHost` como red de seguridad, ver AR-14 más arriba) le
+dejaba de verdad. Ese sobrante se recortaba en silencio (`ClipToBounds`) sin ningún scroll que lo
+alcanzara - exactamente el patrón `D1` que `AR-LAY` existe para cazar.
+
+No era un caso de "bono de set con texto MUY largo" (el escenario que sí se documentó al fijar
+`MaxHeight="112"` en esa cabecera el 13-sep-2026, AR-14d) - 82,2px está bien por debajo de ese
+tope de 112, así que el margen que esa pasada creyó tener nunca existió de verdad para el español.
+
+Arreglo: `Padding="10"` → `Padding="10,6"` y `Margin="0,6,0,0"` → `Margin="0,2,0,0"` en el `Border`
+naranja de la fila fusionada de Equipamiento (`MainWindow.xaml` ~línea 2429) - recupera 12px
+verticales sin tocar el ancho (las columnas y sus `MinWidth` siguen igual) ni ninguno de los
+`MinHeight`/`MaxHeight` ya afinados en pasadas anteriores (AR-14/AR-14c/AR-14d/AR-11f). Se
+descartó ensanchar `MinHeight="216"` de la fila exterior (arriesga el presupuesto de alto de TODA
+la pestaña Personaje a la ventana mínima, no solo de esta caja) y también convertir la fila 0 de
+`Auto` a `"*"` con reparto proporcional (cambia el tamaño de la cabecera en los otros 12 tamaños
+de ventana que hoy pasan bien, más riesgo para el mismo problema de 8px).
+
+Verificado con el propio arnés: `AR-LAY` pasó de 1 a **0** elementos perdidos en las 416
+combinaciones, sin solapes ni regresiones nuevas.
+
+### Verificación real de conjunto
+
+- `dotnet build Terrakeep.App -c Debug`: 0 errores / 0 avisos, tras cada uno de los dos cambios.
+- `dotnet run --project Terrakeep.App.Tests -c Debug` **completo** (sin `_SOLO`), corrido DOS veces
+  (una acotada con `AR_LAY_SOLO=Equipamiento` para iterar rápido, otra sin acotar para la
+  verificación real de conjunto): `A10-IDIOMA-BARRIDO`=0 nuevos/94 conocidos, `AR-LAY`=0
+  perdidos/0 solapes en 416 combinaciones, `BUILDCODE-CANEXECUTE` sigue en verde.
+- Comparados los prefijos de línea de la salida completa ANTES/DESPUÉS (`diff` de las etiquetas de
+  cada test, no solo el recuento de `FALLO`): mismo conjunto exacto de comprobaciones en las dos
+  corridas, sin ninguna desaparecida ni nueva aparte de las dos arregladas - la única deuda que
+  sigue en rojo es `AR-11f` (la franja lateral de Exploración, deuda YA conocida de antes, no se
+  tocó a propósito) y `T-H/F2` (el `FocusVisualStyle` al enfocar por teclado, ya fallaba también
+  antes de esta ronda - confirmado comparando con la salida previa a estos dos arreglos).
+
+Commit: `MainWindow.xaml` (AR-LAY) y `MainViewModel.cs` (A10-IDIOMA-BARRIDO) por separado, cada
+uno con su propio mensaje - dos temas independientes en dos ficheros distintos, sin motivo para
+mezclarlos en un commit. Sin `git push` (pedido explícito: queda en local).

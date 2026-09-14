@@ -87,6 +87,11 @@ public partial class MainViewModel : ObservableObject
             : LocalizationService.Instance.Format("last_saved_date", saved.ToString("dd/MM/yyyy HH:mm"));
     }
 
+    // A10-IDIOMA-BARRIDO (14-sep-2026): suscrito al "Item[]" de LocalizationService en el
+    // constructor - ver ahi el porque (LastSavedText es un ObservableProperty normal, compuesto
+    // una vez con Format(), no un binding {Binding Loc[clave]} que se refresque solo).
+    private void OnIdiomaCambiadoLastSaved(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => RefreshLastSavedText();
+
     // H-3 (segunda auditoria de Opus, Fable): "Guardar ya funciona desde cualquier pestaña
     // (N-1) pero un error de guardado va a un TextBlock que 5 de 6 pestañas no ven" -
     // StatusMessage sigue viviendo SOLO dentro de Personaje (correcto para el detalle
@@ -867,6 +872,19 @@ public partial class MainViewModel : ObservableObject
         };
         _lastSavedRefreshTimer.Tick += (_, _) => RefreshLastSavedText();
         _lastSavedRefreshTimer.Start();
+        // A10-IDIOMA-BARRIDO (14-sep-2026): LastSavedText se componia UNA vez con
+        // LocalizationService.Instance["last_saved_minutes"]/Format(...) (ver RefreshLastSavedText)
+        // y se quedaba fijo en el idioma de aquel momento - "Guardado hace 2 min" seguia en
+        // español con la app ya en ingles hasta el siguiente tick de 30s O el siguiente guardado
+        // real, lo que tardara mas en llegar. Mismo mecanismo real ya usado por
+        // AppearanceViewModel.OnIdiomaCambiado para HairDyeDisplayName: suscribirse al "Item[]"
+        // de LocalizationService (el aviso real de "cambio de idioma en caliente") y recomponer.
+        // Metodo con nombre (no una lambda) a proposito: PropertyChangedEventManager guarda una
+        // referencia DEBIL al objetivo real del delegado - una lambda sin "this" capturado se
+        // recolectaria casi enseguida y el aviso dejaria de llegar en silencio, mismo motivo por
+        // el que AppearanceViewModel usa un metodo de instancia real.
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            LocalizationService.Instance, OnIdiomaCambiadoLastSaved, "Item[]");
         _whereIsItDebounceTimer.Tick += (_, _) =>
         {
             _whereIsItDebounceTimer.Stop();
