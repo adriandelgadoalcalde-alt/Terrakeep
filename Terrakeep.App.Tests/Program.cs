@@ -290,6 +290,105 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // KEEPQA_MEMORIA=1 (14-sep-2026, Fase 6 de KeepQA V2.0 - ver
+        // KeepQA\v2\PROPUESTA-UNIFICADA.md, Bloque A): el "Memory testing" real de la
+        // especificacion. Este arnes ya corre EN PROCESO (mismo Application/MainWindow que el
+        // resto del arnes) - puede leer su propia memoria managed directamente con
+        // GC.GetTotalMemory(true), sin salir a PowerShell/Get-Process (eso ya lo cubre
+        // medirRendimientoWPF.js desde fuera, memoria NO managed incluida - WorkingSet64; esto es
+        // el complemento real, solo el heap gestionado de .NET). Ciclo real: abrir un personaje
+        // real (Home.OpenCommand, el mismo comando que dispara un clic real del usuario sobre su
+        // tarjeta) -> volver a Inicio (SelectedTabIndex=0, mismo patron ya usado en el resto de
+        // este arnes, ej. linea 383) -> forzar una coleccion completa y medir. N configurable via
+        // KEEPQA_MEMORIA_N (por defecto 25 - la propia tarea pide no disparar a 100 sin verificar
+        // antes que el ciclo basico funciona). Va aqui, justo tras KEEPQA_SMOKE y antes de que el
+        // resto del arnes empiece a fabricar/tocar datos sinteticos, por el mismo motivo que
+        // KEEPQA_SMOKE: modo aislado, no depende de nada que venga despues.
+        if (Environment.GetEnvironmentVariable("KEEPQA_MEMORIA") == "1")
+        {
+            int ciclosMemoria = int.TryParse(Environment.GetEnvironmentVariable("KEEPQA_MEMORIA_N"), out int nMemoriaEnv) && nMemoriaEnv > 0
+                ? nMemoriaEnv : 25;
+
+            var vmMemoria = (MainViewModel)window.DataContext;
+            int esperaMemoria = 0;
+            while (vmMemoria.Home.IsScanning && esperaMemoria < 100) { DoEvents(); System.Threading.Thread.Sleep(50); esperaMemoria++; }
+
+            if (vmMemoria.Home.Characters.Count == 0)
+            {
+                Console.WriteLine("FALLO: KEEPQA_MEMORIA - no hay ningun personaje real en la carpeta para abrir/cerrar (el ciclo necesita al menos uno)");
+                window.Close();
+                Environment.Exit(1);
+            }
+
+            var personajeMemoria = vmMemoria.Home.Characters[0];
+            Console.WriteLine($"MEMORIA: {ciclosMemoria} ciclos abrir/cerrar sobre '{personajeMemoria.Name}'");
+
+            var muestrasMemoria = new List<long>();
+            GC.Collect(2, GCCollectionMode.Forced, true, true);
+            GC.WaitForPendingFinalizers();
+            GC.Collect(2, GCCollectionMode.Forced, true, true);
+            long muestraInicialMemoria = GC.GetTotalMemory(true);
+            muestrasMemoria.Add(muestraInicialMemoria);
+            Console.WriteLine($"MEMORIA: muestra 0 (antes del primer ciclo) = {muestraInicialMemoria / 1024.0 / 1024.0:F2} MB");
+
+            for (int ciclo = 1; ciclo <= ciclosMemoria; ciclo++)
+            {
+                vmMemoria.Home.OpenCommand.Execute(personajeMemoria);
+                DoEvents(); DoEvents();
+                vmMemoria.SelectedTabIndex = 0;
+                DoEvents(); DoEvents();
+
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                long muestraMemoria = GC.GetTotalMemory(true);
+                muestrasMemoria.Add(muestraMemoria);
+                double deltaKbMemoria = (muestraMemoria - muestrasMemoria[^2]) / 1024.0;
+                Console.WriteLine($"MEMORIA: ciclo {ciclo}/{ciclosMemoria} -> {muestraMemoria / 1024.0 / 1024.0:F2} MB (delta {deltaKbMemoria:F1} KB)");
+            }
+
+            // Evaluacion real, honesta (pedida explicitamente): ¿hay en las ultimas 3 muestras
+            // crecimiento NO explicado (indicio de fuga) o vuelve a estabilizarse tras el
+            // GC.Collect de cada ciclo? Ninguno de los dos criterios solo basta - ruido normal
+            // del GC puede dar un crecimiento puntual sin ser una fuga real, asi que se exigen
+            // los dos a la vez: monotono creciente en las ultimas muestras Y por encima de un
+            // umbral relativo (5% sobre la muestra inicial) para no disparar por ruido.
+            int nEvalMemoria = Math.Min(3, muestrasMemoria.Count - 1);
+            var ultimasMemoria = muestrasMemoria.Skip(muestrasMemoria.Count - nEvalMemoria).ToList();
+            bool creceMonotonoMemoria = true;
+            for (int i = 1; i < ultimasMemoria.Count; i++)
+                if (ultimasMemoria[i] <= ultimasMemoria[i - 1]) creceMonotonoMemoria = false;
+            long crecimientoTotalMemoria = muestrasMemoria[^1] - muestrasMemoria[0];
+            double crecimientoPctMemoria = muestraInicialMemoria > 0 ? (crecimientoTotalMemoria * 100.0 / muestraInicialMemoria) : 0;
+            bool posibleFugaMemoria = creceMonotonoMemoria && crecimientoPctMemoria > 5.0;
+
+            Console.WriteLine($"MEMORIA-VEREDICTO: inicial={muestraInicialMemoria / 1024.0 / 1024.0:F2} MB, final={muestrasMemoria[^1] / 1024.0 / 1024.0:F2} MB, crecimiento={crecimientoTotalMemoria / 1024.0:F1} KB ({crecimientoPctMemoria:F2}%), ultimas {nEvalMemoria} muestras monotonas crecientes={creceMonotonoMemoria}");
+            Console.WriteLine(posibleFugaMemoria
+                ? "MEMORIA-VEREDICTO: POSIBLE FUGA - crecimiento sostenido (>5%) y monotono en las ultimas muestras tras GC.Collect forzado"
+                : "MEMORIA-VEREDICTO: SIN INDICIO DE FUGA - la memoria managed se estabiliza tras el GC.Collect forzado de cada ciclo");
+
+            string outDirMemoria = Path.Combine(AppContext.BaseDirectory, "keepqa-evidencia");
+            Directory.CreateDirectory(outDirMemoria);
+            string rutaMemoria = Path.Combine(outDirMemoria, "memoria-managed.json");
+            File.WriteAllText(rutaMemoria, System.Text.Json.JsonSerializer.Serialize(new
+            {
+                fecha = DateTime.Now.ToString("o"),
+                personaje = personajeMemoria.Name,
+                ciclos = ciclosMemoria,
+                muestrasBytes = muestrasMemoria,
+                crecimientoTotalBytes = crecimientoTotalMemoria,
+                crecimientoPct = crecimientoPctMemoria,
+                ultimasMonotonasCrecientes = creceMonotonoMemoria,
+                posibleFuga = posibleFugaMemoria,
+            }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine($"MEMORIA: serie completa guardada en {rutaMemoria}");
+
+            window.Close();
+            DoEvents();
+            Console.WriteLine("DONE (KEEPQA_MEMORIA)");
+            Environment.Exit(0);
+        }
+
         // Verificacion real de I-1 (auditoria de Opus, Bloque 2): HomeViewModel escanea SOLO
         // al construirse (constructor de MainViewModel, antes de este punto) la carpeta REAL de
         // tModLoader de esta maquina - sin sintetizar nada, se comprueban los .plr reales que

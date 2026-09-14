@@ -14695,3 +14695,54 @@ que la familia sigue creciendo su cobertura entre sesiones; ninguna regresion po
 ### Archivos tocados
 
 - `Terrakeep.App.Tests\Program.cs` (nuevo bloque `KEEPQA_SMOKE`).
+
+---
+
+## 14-sep-2026 (KeepQA V2.0, Fase 6, Bloque A) - modo KEEPQA_MEMORIA, "Memory testing" real con GC.GetTotalMemory
+
+Encargo real: `Downloads\KeepQA\v2\PROPUESTA-UNIFICADA.md`, Fase 6, Bloque A ("el arnes de
+Terrakeep ya corre EN PROCESO, asi que puede leer su propia memoria managed directamente sin
+salir a PowerShell"). Mismo patron exacto que `KEEPQA_SMOKE`/`CAPAS_SOLO`: variable de entorno
+nueva, bloque aislado, sale con `Environment.Exit`.
+
+**`KEEPQA_MEMORIA=1`** (`Program.cs`, justo despues del bloque `KEEPQA_SMOKE`): ciclo real de
+"abrir personaje real (`Home.OpenCommand.Execute`, el mismo comando que dispara un clic real del
+usuario sobre su tarjeta) -> volver a Inicio (`SelectedTabIndex=0`) -> `GC.Collect` forzado +
+`GC.GetTotalMemory(true)`", repetido `KEEPQA_MEMORIA_N` veces (defecto 25). Guarda la serie
+completa de bytes en `bin\Debug\net10.0-windows\keepqa-evidencia\memoria-managed.json`.
+Evaluacion honesta pedida explicitamente: crecimiento monotono en las ultimas 3 muestras Y por
+encima de un umbral relativo del 5% sobre la muestra inicial (ninguno de los dos criterios solo
+basta - ruido del GC podria disparar uno sin el otro).
+
+**Ejecutado de verdad dos veces, con series reales**:
+- N=20: inicial 45,48 MB -> final 55,82 MB (+22,75%), delta por ciclo estable ~132-235 KB tras el
+  primer ciclo (que tiene un salto de +7,74 MB, atribuible a JIT/warm-up de la primera carga real
+  de un personaje en esta sesion del arnes, no a los ciclos siguientes).
+- N=40 (repitiendo desde cero, mismo personaje "Eldelgas"): inicial 45,48 MB -> final 58,73 MB
+  (+29,14%), la MISMA tasa aproximada por ciclo (delta medio ~146 KB/ciclo, ciclos 5/10/15/20
+  coinciden con la corrida de N=20 hasta donde se solapan) - **crecimiento LINEAL confirmado, no
+  ruido**: `MEMORIA-VEREDICTO: POSIBLE FUGA` en las dos corridas (monotono creciente en las
+  ultimas 3 muestras + >5% sobre la inicial).
+
+**Interpretacion honesta (lo que pide el encargo, no solo "sale FUGA")**: hay un indicio REAL de
+fuga menor abriendo y cerrando el MISMO personaje repetidamente (no se ha investigado la causa
+raiz en esta ronda - eso es trabajo aparte, esto es el arnes que lo DETECTA) - candidatos
+plausibles sin confirmar: suscripciones a eventos no liberadas en `RebuildContainers`/`LoadFrom`
+(cada carga reconstruye ViewModels de contenedores; si el anterior sigue con un handler vivo en
+algun `PropertyChanged`/`CollectionChanged` de un componente que persiste entre cargas -
+`UndoStack`, `Settings`, la propia `MainViewModel` -, el recolector no puede liberarlo). El
+tamaño es pequeño (decenas de KB por apertura, no MB) - no es un problema practico para una
+sesion normal de uso (abrir un personaje unas pocas veces), pero SI lo seria en una sesion muy
+larga o en un bucle automatizado. Queda anotado aqui para quien retome Terrakeep, con la
+evidencia real (los dos JSON de serie, reproducibles con `KEEPQA_MEMORIA=1 KEEPQA_MEMORIA_N=40
+dotnet run --project Terrakeep.App.Tests --no-build`) - no se ha intentado arreglar en esta
+ronda (fuera de alcance de la Fase 6, que es construir el arnes, no cazar el bug que encuentra).
+
+**Verificacion de que no hay regresion**: `dotnet build Terrakeep.App.Tests` (0 avisos, 0
+errores) y `dotnet test Terrakeep.slnx` completo tras el cambio: **539/539** en
+`Terrakeep.Core.Tests` (12s) + **484/484** en `Terrakeep.App.ViewModels.Tests` (2m 56s) - sin
+regresion por el bloque nuevo.
+
+### Archivos tocados
+
+- `Terrakeep.App.Tests\Program.cs` (nuevo bloque `KEEPQA_MEMORIA`).
