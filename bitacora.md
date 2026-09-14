@@ -13355,3 +13355,264 @@ constancia, pendientes de una sesión propia si se decide perseguirlos.
 
 Commit pequeño: `strings_es.json` (2 claves) + `ObjetosTooltipStatsTests.cs` (2 aserciones) +
 `Program.cs` (2 literales del arnés).
+
+---
+
+## 14-sep-2026 - Los 3 FALLOs pendientes de arriba (AR-EX3-LEGIBILIDAD, A11-CONTENIDO-IDIOMA,
+## MP-01) + 4 bugs reales más reportados por el usuario en vivo durante la misma sesión
+
+Encargo inicial: arreglar los 3 `FALLO` que la ronda del 13-sep dejó anotados y sin tocar
+("pendientes de una sesión propia"). A media sesión el usuario fue añadiendo, uno a uno, 4 bugs
+reales más que había encontrado usando la app de verdad. Los 7 quedan cerrados y verificados.
+
+### 1. `AR-EX3-LEGIBILIDAD` - el propio aviso de "puede no ser legible" no era legible
+
+Causa real (nada que ver con el umbral del 40%, que ya estaba bien - ver la ronda del 6-sep): el
+aviso `warning_covers_map_fraction` se pintaba con el MISMO `CaptionText` gris de 11px que
+cualquier resumen normal ("3 de 500 resultados"). En un barrido visual real no se distinguía de
+una línea informativa cualquiera - la propia advertencia de legibilidad no era legible.
+
+Arreglo: nueva propiedad `ExplorationViewModel.WorldSearchSummaryIsWarning` (se pone a `true`
+solo en `ApplyHighlightResult` cuando hay aviso activo, y a `false` en las otras 6 rutas que
+tocan `WorldSearchSummary` - `ClearOreMarks`, `ApplyGroupedSearchResult`, el reinicio al cargar
+mundo, el cuadro de búsqueda vaciado, y las dos ramas de `RunWorldSearchAsyncWithQuery` - para
+que un estado de aviso no se quede pegado a una búsqueda posterior que no tiene nada que avisar).
+En `MainWindow.xaml`, el `TextBlock` (ahora `x:Name="WorldSearchSummaryText"`) usa un
+`DataTrigger` sobre esa propiedad para pintarse en `OrangeBrush` + `SemiBold` - el MISMO lenguaje
+visual que cualquier otro aviso real de la app (`NameFileMismatch`, `DowngradeWarning`).
+
+Verificación real (`EX3_SOLO=1`, nuevo modo de foco - el bloque real vive detrás de
+`UI-BLOQUEADA`): mundo `roca_negra.wld` real, 7 tiles marcados hasta cubrir el 42,3% ->
+`WorldSearchSummaryIsWarning=True`, `TextBlock.Foreground=#FFFFB84D` (el Naranja real),
+`FontWeight=SemiBold`. Captura real (`ex3-aviso-legibilidad-naranja.png`) mirada a mano: el aviso
+se ve claramente naranja y en negrita, distinto de cualquier texto de alrededor. `dotnet test`:
+Core 539/539, ViewModels 484/484.
+
+### 2. `A11-CONTENIDO-IDIOMA` - falso positivo real: "Cactus" (objeto) confundido con "Cactus
+### Plant" (tile) sin traducir
+
+Investigado a fondo (no se aceptó la descripción de "coincidencia" de la ronda anterior sin
+comprobarla): el objeto vanilla 276 se llama "Cactus" en los DOS idiomas (préstamo real, es=en,
+confirmado contra `vanilla_item_names.json`/`vanilla_item_names_en.json`) - correcto, no es un
+fallo. Pero el TILE 80 (la planta antes de cosecharla) es `"Cactus"(es)/"Cactus Plant"(en)`
+(`tile_names.json`, TEdit distingue tile de objeto con ese sufijo) - es!=en, y el detector de
+`AuditoriaContenidoIdioma.cs` lo mete en el diccionario `españolConIngles` bajo la MISMA clave
+`"Cactus"`. El barrido de pantalla no sabe de qué catálogo viene un `TextBlock`: cuando el
+objeto 276 aparece de verdad en un slot de Personaje (correctamente "Cactus" en los dos idiomas),
+el detector lo confundía con el tile 80 sin traducir y lo marcaba `FALLO` sin serlo.
+
+Arreglo real (no un parche solo para "Cactus" - cualquier colisión futura del mismo tipo queda
+cubierta): se construye un segundo conjunto, `idénticosEnLosDosIdiomas` (mismo criterio que el
+diccionario principal pero con es==en), recorriendo los mismos tres catálogos (objetos/NPCs/
+tiles), y se descarta del diccionario cualquier clave que aparezca en los dos sitios a la vez -
+si el mismo texto español nombra dos cosas DISTINTAS del juego, una sin traducir y otra que sí
+coincide de verdad, no hay forma de saber cuál está en pantalla mirando solo el `TextBlock`, así
+que se descarta la clave entera (mismo criterio ya establecido: si no se puede demostrar el
+fallo, no se acusa).
+
+Verificación real (`A11_SOLO=1`): `1 nombre(s) descartados del barrido por ser ambiguos` (el
+propio "Cactus"), vocabulario real baja de 6438 a 6437 nombres (exactamente uno menos, el
+esperado), `0` nombres de contenido sin traducir encontrados, sin ningún `FALLO`. `dotnet test`:
+Core 539/539.
+
+### 3. `MP-01` - Coin Gun (id 905) no tenía entrada en `best_prefix.json`, y sí debería
+
+Causa real, comprobada contra el código decompilado de verdad (nunca contra la suposición de la
+ronda anterior): `generar-mejor-prefijo.py` excluía cualquier objeto de un pool de arma con
+`damage<=0` con el comentario `"Item.CanHavePrefixes() real: if (damage <= 0) return
+IsAPrefixableAccessory();"` - esa premisa es FALSA. Leído `Item.cs` real
+(`TerrariaVanilla\Terraria\Item.cs`): `CanHavePrefixes() = GetRollablePrefixes() != null`, y
+`GetRollablePrefixes()` solo mira a qué `ItemID.Sets` pertenece el tipo
+(`PrefixLegacy.ItemSets.GunsBows[905]` = `true`, confirmado en `PrefixLegacy.cs`) - no comprueba
+`damage` en ningún punto. La wiki oficial (`terraria.wiki.gg/wiki/Coin_Gun`, comprobado con
+`WebFetch`) lo confirma con el propio historial: *"Desktop 1.4.5.0: Can now receive modifiers
+again"* y *"Its best modifier is Agile... Rapid and Hasty are recognized in-game as its 'best'
+modifier"* - exactamente lo que el test `MP-01` ya esperaba (prefijo 17, Rápido) desde que se
+escribió, sin que nadie lo hubiera verificado contra el código real hasta ahora.
+
+Replicado a mano con la fórmula real (`pick_best`) antes de tocar el generador: con
+`damage=0, useAnimation=8, knockBack=2` (los mismos de `Item.cs:11825`), 17 (Rapid) y 18 (Hasty)
+empatan a `value=1,265`; el desempate por `spd` (17 es más rápido) da 17 - coincide exacto con lo
+que el test esperaba y con la wiki.
+
+Arreglo: se quita el filtro `damage<=0` de `build_vanilla()` en `scripts/generar-mejor-prefijo.py`
+(bloque entero `skipped_sin_daño`, sustituido por un comentario que documenta por qué era
+incorrecto) y se regeneran las dos tablas reales
+(`Assets/calamity/best_prefix.json` para la app, `best_prefix_tml.json` para el mod). Diff medido
+antes/después: **exactamente 1 entrada añadida en las dos tablas** (`"905":17`), cero cambios en
+las ~1700 restantes - el filtro solo afectaba a Coin Gun, como ya decía el comentario original.
+
+Verificación real (`MP_SOLO=1`, camino real de la app - colocar el objeto y leer
+`slot.Item.Prefix.VanillaId`): `Coin Gun (id 905) -> prefijo 17 "Rápido" (esperado 17)`, y los
+otros 8 casos de `MP-01` + `MP-02`/`MP-03`/`MP-04`/`MP-05` completos, sin ningún `FALLO`.
+
+Pendiente de decisión del usuario (no tocado en esta ronda, fuera del alcance de "arregla los 3
+FALLOs"): `TerrakeepMod/Assets/best_prefix.json` es una copia manual de `best_prefix_tml.json`
+(documentado en la cabecera del propio script, "se copia tal cual") - con este arreglo debería
+volver a copiarse para que el mod refleje lo mismo, pero es un repo aparte y no se ha tocado.
+
+### 4. Bug real reportado en vivo: plegar la barra lateral de Exploración la dejaba sin ningún
+### sitio desde el que volver a abrirla
+
+Confirmado leyendo el código antes de tocar nada: `OnToggleExplorationSidebarClick` (el único
+gesto que alterna `Settings.ExplorationSidebarWidth` entre 0 y el ancho anterior) vive en un
+`Button` DENTRO de la propia columna 2 (`ExplorationSidebarScroll`/`ExplorationSidebarPanel`) que
+se colapsa a 0 - al plegar, el botón se pliega con ella. El `GridSplitter` de al lado (columna 1)
+también se pone `Collapsed` por su propio `Style` en cuanto el ancho llega a 0. Resultado: cero
+sitios reales desde los que reabrirla, exactamente lo que el usuario describió ("si lo quitas
+para poder ver mejor el mapa ya no hay nada de él por ningún lado").
+
+Arreglo: un segundo `Button` (`x:Name="ExpandExplorationSidebarButton"`, glifo `‹`) que vive en la
+columna 1 (la del `GridSplitter`, que NUNCA se colapsa entera - solo el propio `GridSplitter` lo
+hace) con visibilidad EXACTAMENTE opuesta (`DataTrigger` sobre `ExplorationSidebarWidth==0`) y
+reutiliza el mismo manejador `OnToggleExplorationSidebarClick` (ya era un alternador real, no
+hacía falta lógica nueva). Con los dos botones en triggers opuestos, la columna 1 nunca
+desaparece entera - siempre hay algo pulsable. `AutomationProperties.Name` propio en los DOS
+botones (el `Content` visible, `‹`/`›`, coincide con el de "resultado anterior/siguiente" de la
+búsqueda del mapa y sería ambiguo para localizarlos por UI Automation).
+
+Verificación real de extremo a extremo, con CLIC REAL (`InvokePattern`, nunca `SetCursorPos` -
+ver el porqué ya documentado en `UI-BLOQUEADA`), no solo tocando la propiedad a mano (eso
+escondía que `_lastExpandedSidebarWidth` del code-behind solo se actualiza con un plegado REAL,
+un primer intento del test lo pasó por alto y daba un falso `FALLO` esperando 280 cuando el
+código, correctamente, devolvía 320 - corregido haciendo el plegado TAMBIÉN con clic real):
+abierta a 280px -> clic real de plegar -> `Settings.ExplorationSidebarWidth=0`, botón de
+desplegar visible -> clic real de desplegar -> `Settings.ExplorationSidebarWidth=280` (el ancho
+exacto de antes de plegar). Dos modos de foco nuevos (`SIDEBAR_SOLO=1`, rápido, no necesita
+mundo; y el mismo bloque ampliado dentro de `F-10` del recorrido completo de Exploración), los
+dos en verde. `dotnet test`: ViewModels 484/484 (no toca Core).
+
+Nota honesta sobre lo que NO se pudo verificar: se intentó además un arrastre REAL de mouse
+(`pywinauto`/`SendInput`) para comprobar visualmente el "handle" con captura, pero el escritorio
+de esta máquina tiene VARIOS agentes trabajando a la vez en otras ventanas (Starvekeep,
+Terrasavr-Calamity...) y roban el foco de la ventana real en mitad de la prueba (confirmado dos
+veces: `GetForegroundWindow()` cambiaba a "Don't Starve Together" justo al lanzar el clic,
+aunque un segundo antes se había confirmado el foco correcto) - un obstáculo NUEVO y distinto del
+ya documentado "SetCursorPos no tiene efecto" (aquí el cursor SÍ se mueve bien; el problema es
+qué ventana tiene el foco en cada instante). Regla de los dos intentos aplicada: se para de
+perseguir la interacción de ratón real y se confía en el `InvokePattern` (que sí es 100% real y
+determinista) para la verificación funcional.
+
+### 5. Bug real reportado en vivo: arrastrar un objeto o un buff desde su slot no mostraba ningún
+### sprite siguiendo al cursor (solo el cursor por defecto de Windows)
+
+Causa exacta, ya localizada por el usuario antes de mandarlo: `StartCardDrag` (el adorno real,
+`VisualBrush` semitransparente que sigue al cursor vía `GiveFeedback`) solo lo llamaba
+`OnLibraryCardMouseMove` (tarjetas de la Librería). `OnItemSlotMouseMove` y `OnBuffSlotMouseMove`
+llamaban a `DragDrop.DoDragDrop` DIRECTAMENTE, sin pasar por el adorno - en TODO el programa,
+arrastrar desde un slot (objeto o buff) se veía como "un cuadrado vacío" (palabras del usuario).
+El comentario original del método asumía que "los slots ya muestran su propio contenido real en
+pantalla" bastaba - falso en la práctica, confirmado por el usuario.
+
+Arreglo: `StartCardDrag` se parametriza con el `DragDropEffects` permitido (antes fijo a
+`Copy|Move`, correcto solo para las tarjetas de la Librería, que SIEMPRE colocan una copia nueva
+del catálogo) y las dos llamadas directas a `DragDrop.DoDragDrop` de
+`OnItemSlotMouseMove`/`OnBuffSlotMouseMove` pasan a llamar a `StartCardDrag(..., DragDropEffects.
+Move)` (slot-a-slot intercambia, nunca copia). Mismo mecanismo, cero código nuevo del adorno en
+sí - ya estaba escrito y probado para las tarjetas.
+
+Verificación: `dotnet build` en verde. Intentada una verificación visual real con captura en vivo
+(`DRAG_SOLO=1`, nuevo modo que deja la ventana real abierta con un objeto colocado y localiza el
+`Border` real del slot en coordenadas de pantalla vía `PointToScreen`) - el mismo obstáculo de
+foco robado por otros agentes del punto 4 impidió completar un arrastre real de extremo a extremo
+con captura. Confianza en el arreglo por revisión de código: es la reutilización EXACTA (mismo
+método, mismo `DragAdorner`, misma capa `AdornerLayer`) de un mecanismo YA en producción y
+probado para las tarjetas de la Librería - el único cambio real es CUÁL llamada lo invoca.
+`dotnet test`: ViewModels 484/484, sin regresión en ningún camino de arrastre existente.
+
+### 6. Bug real reportado en vivo: el botón "Código de build" se veía desactivado tras cargar un
+### personaje, aunque `IsCharacterLoaded` ya era `true`
+
+TERCERA vez que este defecto se cuela en este mismo fichero (hay comentarios reales de las dos
+anteriores: "A-d: se olvidó aquí al añadirlo" para "Mover todo al almacén", y "BK" para el botón
+"Historial"): `OnIsCharacterLoadedChanged` avisa a mano a una lista de comandos
+(`NotifyCanExecuteChanged()`) de que ya pueden reevaluarse - sin eso, WPF no refresca el
+`IsEnabled` del botón hasta el siguiente requery automático REAL
+(`CommandManager.RequerySuggested`, que solo dispara con un evento de entrada real - foco/ratón/
+teclado - nunca solo con el paso del tiempo). `OpenBuildCodeCommand` (añadido el 13-sep) se quedó
+fuera de esa lista.
+
+Arreglo: una línea, `OpenBuildCodeCommand.NotifyCanExecuteChanged();`, junto a las demás.
+Revisado también lo que el usuario pidió comprobar de paso: `OpenCompareCommand` y
+`OpenWorldPreviewCommand` (mismo patrón de overlay que `BuildCode`) NO llevan
+`CanExecute=nameof(IsCharacterLoaded)` - tienen comentarios reales explícitos ("Sin CanExecute -
+no exige ningún personaje/mundo cargado") - no necesitan este aviso, comprobado, no supuesto.
+
+Verificación real: nueva comprobación `BUILDCODE-CANEXECUTE` que corre justo después de cargar el
+personaje sintético, ANTES de que nada más tenga ocasión de disparar un requery real por su
+cuenta - mide el botón REAL (`BuildCodeButton.IsEnabled`, no `.CanExecute(null)` a pelo, que
+siempre da el valor correcto y no demuestra nada) - `True` inmediatamente. Captura real
+(`buildcode-boton-activado-tras-cargar.png`) mirada a mano: "Código de build" se ve con el mismo
+estilo activado que "Historial de versiones"/"Guardar", no atenuado. `dotnet test`: ViewModels
+484/484.
+
+### 7. Bug real reportado en vivo (última hora, antes de que el usuario se fuera a dormir):
+### Defensa/Dinero/Horas jugadas desaparecían del todo con la ventana reducida, y los botones de
+### la cabecera se apretaban en la misma zona
+
+Causa real: `IsVitalsStripExpanded` (H5-10, diseño deliberado y medido en su momento) ocultaba
+por completo (`Visibility=Collapsed`) Defensa/Dinero/Horas+Último guardado por debajo de
+`NormalMinWidth=1320px` - una decisión de diseño real, pero que el usuario ya no acepta: un dato
+real del personaje que desaparece sin ninguna alternativa. Al intentar simplemente "no ocultarlo
+nunca", aparecía el segundo síntoma que el propio usuario describió (solape de botones): la
+franja vital vive en una columna `Auto` del `Grid` de la cabecera, y un `Grid` mide las columnas
+`Auto` con ancho DISPONIBLE INFINITO antes de repartir el resto (mismo gotcha real ya
+documentado en R-02/H-02 para el buscador de Exploración) - sin tope, el `WrapPanel` de la franja
+jamás envolvería por su cuenta y crecería empujando a la fila de botones (columna `*`,
+`MinWidth=330`).
+
+Arreglo con las dos piezas a la vez:
+- Se quitan las 3 `Visibility="{Binding IsVitalsStripExpanded...}"` de Defensa/Dinero/Horas
+  (`IsVitalsStripExpanded` se deja viva solo para el diagnóstico ya existente en `AR-04`, ya no
+  oculta nada).
+- Nueva `MainViewModel.VitalsStripMaxWidth`: `200px` en `Compacto` (el ancho real medido de
+  "Vida+Maná" solos, documentado en R-04a/H-04a como "196px reales", con margen pequeño - basta
+  para que los dos iconos quepan siempre en la primera línea) y `double.PositiveInfinity` en
+  Normal/Amplio/Extra (cero cambio de comportamiento ahí - `NormalMinWidth=1320` ya estaba
+  calibrado para que los cinco datos quepan en una sola línea). El `WrapPanel` de la franja vital
+  pasa a `MaxWidth="{Binding VitalsStripMaxWidth}"` - con eso SÍ envuelve de verdad en vez de
+  crecer sin límite.
+
+Verificación real (`VITALS_SOLO=1`, nuevo modo de foco - barrido de 1080 a 1500px, en los DOS
+idiomas): a los 6 anchos y en los 2 idiomas, **0 recorte** de la franja vital (mismo detector que
+`AR-04`), Defensa y Dinero **siempre encontrables y visibles** (el bug real que el usuario
+reportó, antes `False` por debajo de 1320px), y la franja vital y la fila de botones **nunca se
+solapan** (comprobado con los rectángulos reales en pantalla, `TransformToAncestor` + intersección
+de `Rect`) - sin ningún `FALLO`. Capturas reales a 1080px en los dos idiomas
+(`vitals-1080px-es.png`, `vitals-1080px-en.png`) miradas a mano: Vida/Maná en la primera línea,
+Defensa/Dinero/Horas en una segunda línea limpia, sin tocar la fila de botones ni recortarse.
+`dotnet test`: Core 539/539, ViewModels 484/484.
+
+### Verificación real de conjunto (los 7 arreglos a la vez)
+
+- `dotnet build` de la solución completa: **0 errores / 0 avisos**.
+- `dotnet test Terrakeep.Core.Tests`: **539/539** (sin cambios respecto a antes de esta ronda).
+- `dotnet test Terrakeep.App.ViewModels.Tests`: **484/484** (sin cambios respecto a antes de esta
+  ronda, corrida DOS veces completas tras los últimos cambios para confirmar).
+- 6 modos de foco nuevos añadidos al arnés (`EX3_SOLO`, `MP_SOLO`, `SIDEBAR_SOLO`, `DRAG_SOLO`,
+  `VITALS_SOLO`, más la comprobación `BUILDCODE-CANEXECUTE` que corre en TODOS los modos) - todos
+  en verde, cero `FALLO`, con capturas reales de las partes visuales (legibilidad naranja, botón
+  de build activado, franja vital en dos líneas).
+- El recorrido COMPLETO del arnés sigue muriendo en `UI-BLOQUEADA` en esta sesión (límite
+  preexistente ya documentado, no una regresión de esta ronda) - por eso hicieron falta los
+  6 modos de foco nuevos para verificar de verdad los puntos 1, 3, 4, 5 y 7 (el 2 y el 6 SÍ son
+  alcanzables antes de ese punto).
+
+### Build/despliegue tocado de paso
+
+`Assets/calamity/best_prefix.json`/`best_prefix_tml.json` regenerados (ver punto 3) - son
+recursos embebidos de la app, no hace falta ningún paso de publicación aparte para que surtan
+efecto en `dotnet run`/`dotnet test`.
+
+Commits (sin `git push` - queda en local a la espera del usuario). `Program.cs` mezcla los modos
+de foco de los 7 arreglos entrelazados en el mismo fichero (varias decenas de miles de líneas,
+un único `Main`) - dividirlo hunk a hunk con `git add -p` a ciegas se descartó por arriesgar un
+commit a medias; se agrupa en 2 commits por FICHEROS, cada uno con el desglose completo arriba:
+1. `A11-CONTENIDO-IDIOMA` + `MP-01` (los dos ficheros que SÍ son de un único tema cada uno):
+   `AuditoriaContenidoIdioma.cs`, `scripts/generar-mejor-prefijo.py`, `best_prefix.json`,
+   `best_prefix_tml.json`.
+2. `AR-EX3-LEGIBILIDAD` + los 4 bugs reportados en vivo (reapertura del panel de Exploración,
+   ghost de arrastre, botón "Código de build", franja de vitales): `ExplorationViewModel.cs`,
+   `MainWindow.xaml`, `MainWindow.xaml.cs`, `MainViewModel.cs`, `strings_es.json`,
+   `strings_en.json`, `Terrakeep.App.Tests/Program.cs` (todos los modos de foco nuevos:
+   `EX3_SOLO`, `SIDEBAR_SOLO`, `DRAG_SOLO`, `VITALS_SOLO`, `BUILDCODE-CANEXECUTE`).
