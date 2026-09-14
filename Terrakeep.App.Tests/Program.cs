@@ -804,6 +804,16 @@ internal static partial class Program
         // FALLO3_SOLO=1 (14-sep-2026): investigacion dedicada del Fallo 3 (caja de resultados de
         // Exploracion "muy pequeña... se come casi todo el espacio disponible... queda mucho
         // espacio sin aprovechar"). Cuerpo real en AuditoriaKeepQA.cs (misma clase parcial).
+        // CAPAS_SOLO=1 (14-sep-2026): extractor real de orden_z/capa para WPF (Parte 11,
+        // Layering/Depth/Occlusion) + caso sintetico deliberado que valida que
+        // KeepQA/src/capas/verificarCapas.js lo caza. Cuerpo real en AuditoriaKeepQA.cs.
+        if (Environment.GetEnvironmentVariable("CAPAS_SOLO") == "1")
+        {
+            EjecutarCapasSinteticoSolo(window, vm);
+            Console.WriteLine("DONE (CAPAS_SOLO)");
+            Environment.Exit(0);
+        }
+
         if (Environment.GetEnvironmentVariable("FALLO3_SOLO") == "1")
         {
             EjecutarFallo3Exploracion(window, vm);

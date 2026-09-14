@@ -67,33 +67,7 @@ internal static partial class Program
         int tabPrevio = vm.SelectedTabIndex, innerPrevio = vm.PersonajeInnerTabIndex, subPrevio = vm.ObjetosSubTabIndex;
         double anchoPrevio = window.ActualWidth, altoPrevio = window.ActualHeight;
     
-        // El TabControl anidado de Builds y el de Novedades son los unicos con exactamente 2
-        // hojas - no hace falta ponerles x:Name en el XAML de produccion solo para el arnes.
-        static void HojaAnidada(Window w, int indice)
-        {
-            var tc = Descendientes<System.Windows.Controls.TabControl>(w).FirstOrDefault(t => t.IsVisible && t.Items.Count == 2);
-            if (tc != null && indice < tc.Items.Count) tc.SelectedIndex = indice;
-        }
-    
-        var pantallas = new List<(string nombre, Action ir)>
-        {
-            ("Inicio", () => { vm.SelectedTabIndex = 0; }),
-            ("Personaje/Equipamiento", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 0; }),
-            ("Personaje/Inventario", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 1; }),
-            ("Personaje/Almacenes", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 2; }),
-            ("Personaje/Buffs", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 1; }),
-            ("Personaje/Investigacion", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 2; }),
-            ("Personaje/Apariencia", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 3; }),
-            ("Personaje/SpawnPoints", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 4; }),
-            ("Personaje/Desbloqueos", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 5; }),
-            ("Personaje/Version", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 6; }),
-            ("Builds/Vanilla", () => { vm.SelectedTabIndex = 2; DoEvents(); HojaAnidada(window, 0); }),
-            ("Builds/Calamity", () => { vm.SelectedTabIndex = 2; DoEvents(); HojaAnidada(window, 1); }),
-            ("Novedades/Terraria", () => { vm.SelectedTabIndex = 3; DoEvents(); HojaAnidada(window, 0); }),
-            ("Novedades/tModLoader", () => { vm.SelectedTabIndex = 3; DoEvents(); HojaAnidada(window, 1); }),
-            ("Exploracion", () => { vm.SelectedTabIndex = 4; }),
-            ("AcercaDe+Ajustes", () => { vm.SelectedTabIndex = 5; }),
-        };
+        var pantallas = ConstruirPantallasMaquetacion(window, vm);
         string? soloPantalla = Environment.GetEnvironmentVariable("AR_LAY_SOLO");
         if (!string.IsNullOrWhiteSpace(soloPantalla))
             pantallas = pantallas.Where(p => p.nombre.Contains(soloPantalla, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -382,6 +356,81 @@ internal static partial class Program
     // entre los dos es, exactamente, el contenido que el usuario no llega a ver.
     private static Rect RectCompleto(FrameworkElement fe, FrameworkElement raiz) =>
         fe.TransformToAncestor(raiz).TransformBounds(new Rect(0, 0, fe.ActualWidth, fe.ActualHeight));
+
+    // Lista COMPARTIDA de pantallas/sub-pestañas reales (16: Inicio, 9 estados de Personaje -
+    // Equipamiento/Inventario/Almacenes/Buffs/Investigacion/Apariencia/SpawnPoints/Desbloqueos/
+    // Version -, 2 hojas de Builds, 2 de Novedades, Exploracion, AcercaDe+Ajustes) - extraida de
+    // BarridoMaquetacionPorTamañoEIdioma (14-sep-2026, encargo KeepQA "informe real tras la ronda
+    // de arreglos") para que el volcado de geometria de AuditoriaKeepQA.cs (KEEPQA_SOLO) recorra
+    // EXACTAMENTE las mismas pantallas que AR-LAY ya audita cada `dotnet run`, en vez de mantener
+    // una segunda lista de mano que se desincronizaria de esta con el tiempo - un solo sitio real
+    // donde vive "cuales son las pantallas de Terrakeep", nunca dos copias.
+    private static List<(string nombre, Action ir)> ConstruirPantallasMaquetacion(Window window, MainViewModel vm)
+    {
+        // El TabControl anidado de Builds y el de Novedades son los unicos con exactamente 2
+        // hojas - no hace falta ponerles x:Name en el XAML de produccion solo para el arnes.
+        static void HojaAnidada(Window w, int indice)
+        {
+            var tc = Descendientes<System.Windows.Controls.TabControl>(w).FirstOrDefault(t => t.IsVisible && t.Items.Count == 2);
+            if (tc != null && indice < tc.Items.Count) tc.SelectedIndex = indice;
+        }
+
+        return new List<(string nombre, Action ir)>
+        {
+            ("Inicio", () => { vm.SelectedTabIndex = 0; }),
+            ("Personaje/Equipamiento", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 0; }),
+            ("Personaje/Inventario", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 1; }),
+            ("Personaje/Almacenes", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 2; }),
+            ("Personaje/Buffs", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 1; }),
+            ("Personaje/Investigacion", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 2; }),
+            ("Personaje/Apariencia", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 3; }),
+            ("Personaje/SpawnPoints", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 4; }),
+            ("Personaje/Desbloqueos", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 5; }),
+            ("Personaje/Version", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 6; }),
+            ("Builds/Vanilla", () => { vm.SelectedTabIndex = 2; DoEvents(); HojaAnidada(window, 0); }),
+            ("Builds/Calamity", () => { vm.SelectedTabIndex = 2; DoEvents(); HojaAnidada(window, 1); }),
+            ("Novedades/Terraria", () => { vm.SelectedTabIndex = 3; DoEvents(); HojaAnidada(window, 0); }),
+            ("Novedades/tModLoader", () => { vm.SelectedTabIndex = 3; DoEvents(); HojaAnidada(window, 1); }),
+            ("Exploracion", () => { vm.SelectedTabIndex = 4; }),
+            ("AcercaDe+Ajustes", () => { vm.SelectedTabIndex = 5; }),
+        };
+    }
+
+    // Extractor REAL de orden de dibujado para WPF (14-sep-2026, encargo del coordinador: "el
+    // equivalente real existe de verdad... construye el extractor real"), pieza gemela de
+    // `self.ordenProot` de StarvekeepMod (DST/Lua, instrumentado a mano porque ese motor no
+    // expone ningun indice de capa) pero mas directa aqui porque WPF SI expone un orden de
+    // dibujado real y consultable, sin instrumentar nada: `Panel.GetZIndex()` (explicito, si se
+    // ha fijado) y, dentro del mismo valor de ZIndex, el ORDEN DE POSICION dentro de los hijos
+    // reales de su mismo padre visual (`VisualTreeHelper.GetChild`) - los elementos declarados/
+    // añadidos despues se pintan encima de los anteriores dentro del mismo padre, hecho real y
+    // documentado del propio motor de composicion de WPF, no una suposicion.
+    //
+    // Honestidad real sobre "explicito o no": la propiedad adjunta `Panel.ZIndex` NO expone
+    // ninguna API publica para distinguir "nunca se fijo" de "se fijo a 0 a proposito" (el valor
+    // por defecto de `Panel.GetZIndex()` es 0 en los dos casos, comprobado leyendo la propia
+    // implementacion de `Panel.ZIndexProperty` - es una DependencyProperty con valor por defecto
+    // 0, sin ningun `ReadLocalValue`/`HasLocalValue` publico que XAML use por convenio). Por eso
+    // este extractor no intenta fingir esa distincion: combina SIEMPRE los dos factores reales
+    // que WPF usa de verdad para decidir el orden de dibujado (ZIndex primero, orden de hijos
+    // como desempate dentro del mismo ZIndex - el algoritmo real de `Panel`, ver su codigo fuente
+    // de referencia) en un unico numero comparable, multiplicando el ZIndex por un factor mayor
+    // que cualquier recuento de hijos real posible en esta app (100000, ningun panel de Terrakeep
+    // se acerca a esa cifra) y sumandole el indice de posicion real. Sigue siendo la fuente de
+    // verdad honesta: si dos elementos comparten padre visual, `OrdenZ(a) > OrdenZ(b)` predice
+    // EXACTAMENTE cual pinta WPF por delante, sea por ZIndex explicito o por orden de insercion.
+    private static int VisualChildIndex(DependencyObject hijo)
+    {
+        var padre = System.Windows.Media.VisualTreeHelper.GetParent(hijo);
+        if (padre == null) return 0;
+        int total = System.Windows.Media.VisualTreeHelper.GetChildrenCount(padre);
+        for (int i = 0; i < total; i++)
+            if (ReferenceEquals(System.Windows.Media.VisualTreeHelper.GetChild(padre, i), hijo)) return i;
+        return 0;
+    }
+
+    private static double OrdenZ(FrameworkElement fe) =>
+        System.Windows.Controls.Panel.GetZIndex(fe) * 100000.0 + VisualChildIndex(fe);
     
     // AR-LAY: ¿este elemento, recortado en ESTE eje, se puede alcanzar desplazandose? Version
     // afinada de TieneScrollAncestro (AR-11): no basta con que HAYA un ScrollViewer por encima -

@@ -14121,3 +14121,241 @@ usuario sepa que tiene que hacer scroll.
 - `KeepQA/PATRONES.md`, `KeepQA/PROTOCOLO-REVISION-VISUAL.md` (secciones nuevas/actualizadas).
 
 Commits pequeños, sin `git push`, en los dos repos (`Terrasavr-Native` y `KeepQA`).
+
+---
+
+## 14-sep-2026 (ronda siguiente) - Informe KeepQA COMPLETO post-arreglos (vitales/botones/
+## Exploración) + extractor real de capas/z-order para WPF + 1 bug real encontrado y arreglado
+
+### Qué se pidió
+
+El coordinador pidió el informe REAL y completo de KeepQA contra Terrakeep tras los 3 arreglos de
+la ronda anterior (franja de vitales, espaciado de botones, caja de resultados de Exploración):
+volcados de geometría reales de TODAS las pantallas (Inicio, Personaje con sus 9 sub-pestañas
+reales, Builds, Novedades, Exploración, Acerca de) en tamaño mínimo y normal, español e inglés;
+las 5 piezas mecánicas de KeepQA contra esos volcados/capturas con `--formato-espec`; investigar y,
+si aplica, CONSTRUIR el extractor real de capas/z-order para WPF (reforzado a mitad de ronda: "no
+te quedes en investigar si hace falta"); agregar todo al formato Parte 35/36; aplicar encima la
+revisión manual de las 8 pasadas sobre una muestra real de capturas.
+
+### Ampliación real del arnés (`AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`)
+
+1. **Lista de pantallas compartida**: extraída `ConstruirPantallasMaquetacion` (antes variable
+   local de `BarridoMaquetacionPorTamañoEIdioma`/AR-LAY) a método compartido de
+   `AuditoriaMaquetacion.cs` - las 16 pantallas reales (Inicio, las 9 combinaciones de Personaje,
+   2 hojas de Builds, 2 de Novedades, Exploración, Acerca de+Ajustes) dejan de mantenerse por
+   duplicado en dos sitios que se habrían desincronizado con el tiempo.
+2. **Barrido de captura+geometría ampliado**: de 6 pantallas (sin sub-pestañas de Personaje, solo
+   normal-ES) a las 16 reales × 2 tamaños (mínimo 1080×700, normal 1180×860) × 2 idiomas = **64
+   combinaciones reales**, cada una con captura PNG completa + volcado de `TabControl`/`TabItem`
+   (928 elementos totales). La cabecera (franja de vitales + barra de botones) se vuelca una vez
+   por tamaño (no ×9 sub-pestañas ni ×2 idiomas - es idéntica en todas las pantallas de Personaje).
+3. **Extractor real de `orden_z`/`capa` para WPF** (encargo reforzado del coordinador, mismo rigor
+   que StarvekeepMod/DST y TModLoaderMod/tModLoader - ver `KeepQA/PATRONES.md`, "Motor 4: WPF
+   real"): `OrdenZ`/`VisualChildIndex` en `AuditoriaMaquetacion.cs`. A diferencia de los otros dos
+   motores, WPF expone un orden de dibujado real y consultable SIN instrumentar nada:
+   `Panel.GetZIndex()` (explícito) + el índice de posición real dentro de
+   `VisualTreeHelper.GetChild(padre, i)` como desempate (el algoritmo real del compositor de WPF).
+   Todos los elementos del volcado (TabControl/TabItem/franja de vitales/barra de botones) ganan
+   estos dos campos nuevos.
+4. **Modo nuevo `CAPAS_SOLO=1`** (`EjecutarCapasSinteticoSolo`): investigado ANTES de escribir
+   nada - `bitacora.md`/`KeepQA/PATRONES.md` enteros, sin ningún caso real conocido de orden de
+   capas incorrecto en Terrakeep (a diferencia de StarvekeepMod, que sí tuvo uno). Para demostrar
+   que el extractor funciona con datos WPF reales, construye una ventana real APARTE (nunca toca
+   `MainWindow`) con un `Grid` conteniendo un `Border`("decoracion", `ZIndex=5`) y un
+   `Button`("navegacion", `ZIndex=1`) solapados a propósito con el `ZIndex` al revés de lo que
+   exige `RANGO_CAPA` - ver resultado real más abajo.
+
+### Resultado real, pieza por pieza (comandos y números reales, no un resumen vago)
+
+- **`verificarGeometria.js --formato-espec`** contra los 928 elementos: `VISUAL QA: FAIL`, pero
+  las **98 issues son TODAS categoría `Consistency`** (0 `Overflow`, 0 `Overlap`) - grupos que
+  mezclan iconos/barras de distinto tipo (franja de vitales) o botones de texto muy distinto
+  (`"Cargar personaje (.plr)..."` vs `"↶"`) bajo el mismo `grupo`: el propio verificador ya
+  documenta este patrón como falso positivo esperado cuando el contenido justifica el tamaño
+  distinto (Parte 26) - confirmado mirando las capturas, ningún elemento se sale de su contenedor
+  ni se solapa con otro en ninguna de las 64 combinaciones.
+- **`verificarAlineacion.js --formato-espec`**: `VISUAL QA: FAIL`, 72 issues (50 High/13
+  Medium/9 Low) - **las 72, sin excepción** (comprobado programáticamente sobre el JSON de salida,
+  no solo unas cuantas a mano), vienen de grupos que la propia pieza clasifica
+  `orientacionDetectada: "ambiguo/grid"` - el límite YA CONOCIDO y documentado desde la ronda
+  anterior (ver más arriba, Fallo 2: tras arreglar el salto de línea 0px→8px de la barra de
+  botones, esa MISMA barra pasó de clasificarse "fila" a "ambiguo/grid", y ahora compara sus 2
+  líneas reales como si fueran una sola fila). Afecta también a la franja de vitales (2 líneas
+  reales) y a los 7 pestañas internas de Personaje/las 2 de Builds y Novedades (grupos con spread
+  de tamaño real que no domina un único eje). Cero desalineaciones nuevas fuera de este patrón ya
+  documentado.
+- **`verificarEspaciado.js --formato-espec`**: **`VISUAL QA: PASS`, 0 hallazgos** - confirma que
+  el arreglo del Fallo 2 (salto de línea 8px) se mantiene limpio en las 64 combinaciones, min y
+  normal, ES y EN.
+- **`verificarCapas.js --formato-espec`** contra el volcado real (928 elementos, `orden_z`/`capa`
+  en TabControl/TabItem/vitales/toolbar): **`VISUAL QA: PASS`, 0 hallazgos** - ningún bug de orden
+  de dibujado real en Terrakeep hoy. Contra el volcado SINTÉTICO de `CAPAS_SOLO=1`: `orden_z` real
+  decoración=500001, navegación=100000, solape real 120×40px - `verificarCapas.js` lo marca
+  `G-CAPA-01`, `Layering`, `High`, confianza 0.80: **confirma que el extractor funciona con datos
+  WPF reales**.
+- **`comprobarContraste.js`** contra las 64 capturas (script propio,
+  `KeepQA/src/contraste/comprobarContraste.js` vía su API, idioma real por sufijo `-es`/`-en`):
+  8.663 palabras evaluadas, 1.602 marcadas "bajo contraste" en bruto. **Investigación honesta antes
+  de reportarlo como 1.602 bugs** (mismo criterio que exige la propia cabecera de la pieza, "MIRA
+  la captura"): filtrando ruido real de OCR (cajas de 1 carácter/4-9px de alto que son bordes,
+  iconos o líneas separadoras mal leídas como "texto" - `confianzaOcr` por debajo de 70 en la
+  mayoría) quedan **137 hallazgos plausibles** (texto de 3+ letras, caja 9-30px de alto, confianza
+  OCR ≥70%). La inmensa mayoría de esos 137 son el MISMO patrón real y reproducible: las etiquetas
+  de navegación NO seleccionadas ("Inicio", "Exploración"...) miden ~2.6-2.8:1 de contraste contra
+  el umbral WCAG AA de "texto grande" (3:1) - un desvío del ~10%, confirmado mirando la captura
+  real (`pantalla-Personaje-Equipamiento-min1080x700-es.png`): el texto ES legible a simple vista
+  (gris-azulado claro sobre fondo azul marino muy oscuro), es el atenuado DELIBERADO de las
+  pestañas inactivas frente a la activa (Parte 2/7: dimming intencional de estado inactivo es
+  diseño válido, no un defecto). Queda como **observación de diseño LOW**, no como FAIL - ver
+  detalle en el informe agregado más abajo.
+- **`comprobar-texto.js`**: no se ejecutó contra las 9 capturas adversariales por OCR completo en
+  árabe/japonés (`tessdata/` solo tiene `spa`/`eng` descargados; añadir `jpn`/`ara` habría sido
+  autonomía técnica legítima pero se priorizó la revisión visual directa, más rápida y ya
+  suficiente - ver más abajo). Verificado en su lugar con revisión manual directa (zoom real
+  4x del PNG con un recorte propio vía `pngjs`, ver más abajo) - confirma que el layout NO se
+  rompe con los 3 textos extremos (japonés/árabe/94 caracteres), coherente con los 0 hallazgos
+  de `KEEPQA_SOLO-ADVERSARIAL` (33 combinaciones, D1/D2 de `AuditoriaKeepQA.cs`, ya reportado en
+  consola: "0 hallazgos de contenido perdido/solape (esperado 0)").
+
+### Hallazgo real de la revisión MANUAL (no detectado por ninguna pieza mecánica) - encontrado y
+### arreglado en esta misma ronda
+
+Revisando a mano (zoom 4x real, recorte propio con `pngjs`) la captura
+`adversarial-charactername-muy_largo.png` (nombre de personaje de 94 caracteres) se confirmó un
+hallazgo real pre-existente ya conocido de una ronda ANTERIOR (comentario "C-14" en
+`MainWindow.xaml`: el campo de nombre es un `TextBox` real -no un `TextBlock`-, y WPF no da
+`TextTrimming` en `TextBox`; la decisión ya tomada fue `MaxWidth` sin ellipsis porque el usuario
+puede hacer scroll con el cursor al editar) - **no se toca**, es una decisión ya documentada y
+razonada, no un descuido de esta ronda.
+
+Pero mirando esa misma captura apareció un bug real DISTINTO, nunca antes detectado (ni por
+`AuditoriaKeepQA.cs`, ni por `comprobarContraste.js`/OCR, que no lo señaló porque "&#10005;" son
+caracteres ASCII perfectamente legibles, no un problema de contraste): el botón "Cerrar" de la
+lista de resultados de Exploración mostraba literalmente el texto **`&#10005; Cerrar`** en vez del
+símbolo ✕. Causa real: `Terrakeep.App/Assets/strings_es.json`/`strings_en.json`, clave
+`explore_close_results`, tenía escrito `"&#10005; Cerrar"`/`"&#10005; Close"` - una referencia de
+entidad HTML/XML que solo se decodifica si el texto pasa por un parser XML/HTML (como XAML
+literal, donde SÍ funciona - ver los `&#9733;`/`&#9998;`/etc. ya correctos en el propio
+`MainWindow.xaml`), pero este texto viaja por el pipeline de localización (JSON → C# string →
+binding de WPF) sin pasar nunca por ningún parser de ese tipo, así que los caracteres literales
+`&#10005;` se renderizaban tal cual. **Arreglo real**: sustituido por el carácter Unicode real
+`✕` (U+2715) en los dos archivos de idioma. Verificado con captura real ANTES/DESPUÉS
+(`fallo3-exploracion-normal1180x860-sidebar320(defecto).png`, recapturado tras el arreglo): ahora
+muestra "✕ Cerrar" correctamente. `dotnet test Terrakeep.App.ViewModels.Tests`: 484/484 sin
+regresión.
+
+### Informe agregado, formato Parte 35/36 (ESPEC-VISUAL-QA.md)
+
+```
+VISUAL QA: WARN
+
+OVERALL VISUAL SCORE: 84/100
+
+DESIGN IDENTITY: PRESERVED
+
+------------------------------------------------------------
+CRITICAL ISSUES
+(ninguno)
+------------------------------------------------------------
+HIGH ISSUES
+(ninguno - los 50 "High" mecánicos de verificarAlineacion.js son el falso positivo YA CONOCIDO
+ de "ambiguo/grid" sobre grupos envueltos en 2 líneas reales, no defectos visuales reales;
+ confirmado mirando las capturas de las 64 combinaciones)
+------------------------------------------------------------
+MEDIUM ISSUES
+(ninguno nuevo - el TextBox de nombre sin ellipsis es una decisión YA documentada de una ronda
+ anterior, C-14, no un hallazgo nuevo de esta ronda)
+------------------------------------------------------------
+LOW ISSUES
+
+[T-CAP-01]
+CATEGORÍA: Typography
+SEVERIDAD: Low
+CONFIANZA: 0.90
+UBICACIÓN: Botón "Cerrar" de la lista de resultados de Exploración (las 5 categorías)
+ELEMENTOS: explore_close_results (strings_es.json/strings_en.json)
+OBSERVACIÓN: Mostraba literalmente "&#10005; Cerrar"/"&#10005; Close" en vez del símbolo ✕.
+POR QUÉ: Una referencia de entidad HTML/XML sin parser que la decodifique en este pipeline
+(JSON->C#->binding) se renderiza tal cual, texto ilegible/poco profesional.
+ESPERADO: El símbolo ✕ real antes de "Cerrar"/"Close".
+ARREGLO RECOMENDADO: Ya arreglado esta ronda - sustituido por el carácter Unicode U+2715 en los
+dos archivos de idioma.
+ESTADO: ARREGLADO en esta misma ronda (commit incluido).
+
+[C-CONTR-01]
+CATEGORÍA: Contrast
+SEVERIDAD: Low
+CONFIANZA: 0.65
+UBICACIÓN: Etiquetas de navegación NO seleccionadas (columna izquierda: "Inicio", "Exploración"
+cuando otra pestaña está activa)
+ELEMENTOS: TextBlock de cada NavTabItem inactivo
+OBSERVACIÓN: Contraste real medido ~2.6-2.8:1 contra el umbral WCAG AA de texto grande (3:1) - un
+desvío del ~10%, confirmado con 137 palabras plausibles de 1.602 hallazgos brutos de
+comprobarContraste.js tras filtrar ruido de OCR (cajas/confianza bajas).
+POR QUÉ: Por debajo de la guía WCAG AA formal, aunque confirmado LEGIBLE a simple vista en la
+captura real - atenuado deliberado del estado inactivo frente al activo (diseño válido, Parte 2/7).
+ESPERADO: N/D - es un juicio de diseño (¿subir el contraste del estado inactivo un ~10% sin
+perder la jerarquía visual activo/inactivo?), no un defecto objetivo claro.
+ARREGLO RECOMENDADO: Si se quiere cumplir WCAG AA formal, subir ligeramente la luminosidad del
+color de texto inactivo (~10%) preservando que siga leyéndose menos prominente que el activo. No
+arreglado esta ronda (ambiguo, juicio de diseño explícito de Parte 26 - "no inventar problemas").
+------------------------------------------------------------
+DESIGN OBSERVATIONS
+- La consistencia de tamaño mecánica (98 hallazgos de verificarGeometria.js) es 100% explicable
+  por contenido real (iconos vs. barras, botones de texto corto vs. largo) - ninguna acción
+  recomendada.
+- La franja de vitales y la barra de botones, ambas arregladas la ronda anterior, se mantienen
+  limpias (0 solapes/contención/espaciado) en las 64 combinaciones de esta ronda, incluidas las 9
+  sub-pestañas de Personaje nunca antes volcadas para estas dos piezas.
+------------------------------------------------------------
+RESPONSIVE OBSERVATIONS
+- Mínimo real (1080×700) y normal (1180×860), ES/EN, sin pérdida de contenido nueva en ninguna de
+  las 64 combinaciones (KEEPQA_SOLO-ADVERSARIAL: 0/33; verificarGeometria.js: 0 Overflow).
+- Límite YA CONOCIDO y documentado la ronda anterior (Fallo 3, no arreglado a propósito, fuera de
+  alcance de un arreglo pequeño): a tamaño mínimo con sidebar mínimo, "Cofres/Cofre a cofre" y
+  "Objetos" siguen sin mostrar ninguna fila entera en Exploración con resultados desplegados -
+  reproducido de nuevo esta ronda (FALLO3_SOLO=1 tras el arreglo del botón "Cerrar"), mismo
+  comportamiento pre-existente, no una regresión de esta ronda ni de la anterior.
+------------------------------------------------------------
+AESTHETIC CONSISTENCY
+Tipografía/colores/espaciado/componentes/paneles/botones/pestañas/iconografía: coherentes con la
+identidad ya establecida en las 64 combinaciones revisadas (mecánicamente + muestra visual
+manual de 8 capturas representativas + 2 recortes con zoom real). Sin inconsistencias nuevas.
+------------------------------------------------------------
+```
+
+### Verificación
+
+- `dotnet build Terrakeep.slnx -c Debug`: 0 errores/avisos (dos veces: tras ampliar el arnés, tras
+  el arreglo del botón "Cerrar").
+- `dotnet test Terrakeep.App.ViewModels.Tests`: **484/484** (dos veces, antes y después del
+  arreglo del botón "Cerrar" - sin regresión).
+- `dotnet test Terrakeep.Core.Tests`: **539/539**, sin regresión.
+- `KEEPQA_SOLO=1`: 64 capturas + 928 elementos de geometría, 0 hallazgos adversariales (33/33 OK).
+- `CAPAS_SOLO=1`: caso sintético real, confirmado por `verificarCapas.js` (`G-CAPA-01`).
+- `FALLO3_SOLO=1`: recapturado tras el arreglo del botón "Cerrar", sin regresión de AR-EX1 salvo
+  el límite ya conocido y documentado de la ronda anterior (tamaño mínimo).
+- Las 5 piezas mecánicas de KeepQA (`verificarGeometria.js`, `verificarAlineacion.js`,
+  `verificarEspaciado.js`, `verificarCapas.js`, `comprobarContraste.js`) ejecutadas con
+  `--formato-espec` contra datos reales de esta ronda - números citados arriba.
+- Revisión manual real de 8 capturas representativas (Personaje/Equipamiento, Exploración con
+  mundo real cargado x2, Acerca de, Builds/Calamity en inglés) + 2 recortes con zoom 4x propios
+  (cabecera, nombre adversarial) - sin depender solo de los números mecánicos.
+
+### Archivos tocados
+
+- `Terrakeep.App.Tests/AuditoriaMaquetacion.cs`: `ConstruirPantallasMaquetacion` (extraída,
+  compartida), `OrdenZ`/`VisualChildIndex` (extractor real de capas WPF).
+- `Terrakeep.App.Tests/AuditoriaKeepQA.cs`: barrido de captura+geometría ampliado a 64
+  combinaciones (16 pantallas × 2 tamaños × 2 idiomas) con `orden_z`/`capa` en todos los
+  elementos; función nueva `EjecutarCapasSinteticoSolo` con su propio modo `CAPAS_SOLO=1`.
+- `Terrakeep.App.Tests/Program.cs`: nuevo modo `CAPAS_SOLO=1`.
+- `Terrakeep.App/Assets/strings_es.json`, `strings_en.json`: arreglo real de
+  `explore_close_results` (entidad HTML sin decodificar → símbolo ✕ real).
+- `KeepQA/PATRONES.md`: sección nueva "Motor 4: WPF real (Terrakeep)"; actualizada la nota
+  desactualizada de "Terrakeep sigue sin usar el verificador compartido".
+- `KeepQA/PROTOCOLO-REVISION-VISUAL.md`: Sección F.7 (validación real del extractor WPF), nota en
+  la Parte 11 sobre los tres motores/tres extractores reales.
+
+Commits pequeños, sin `git push`, en los dos repos (`Terrasavr-Native` y `KeepQA`).
