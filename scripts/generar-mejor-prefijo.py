@@ -637,19 +637,26 @@ def build_vanilla(mult, stats, pools, sets, cannot):
     for s in sets.values():
         candidates |= s
     candidates |= {i for i, e in stats.items() if e.get("accessory")}
-    skipped_vanity = skipped_blacklist = skipped_sin_daño = 0
+    skipped_vanity = skipped_blacklist = 0
     for iid in sorted(candidates):
         if iid <= 0:
             continue
         pool_key = next((k for k in POOL_ORDER if iid in sets[k]), None)
-        if pool_key is not None and not (stats.get(iid, {}).get("damage") or 0) > 0 \
-                and not stats.get(iid, {}).get("accessory"):
-            # `Item.CanHavePrefixes()` real: `if (damage <= 0) return IsAPrefixableAccessory();`.
-            # Estar en un set de arma NO basta. Unico caso vanilla en las dos versiones: la
-            # Pistola de monedas (905, `damage = 0;` literal - su daño sale de la moneda que
-            # dispara). El motor devuelve false para ella de verdad, comprobado en el juego.
-            skipped_sin_daño += 1
-            continue
+        # MP-01 (14-sep-2026): esta funcion tenia ademas un filtro "si pertenece a un set de
+        # arma pero su damage real es <= 0, descartar" para la Pistola de monedas (905,
+        # `damage = 0;` literal - su daño sale de la moneda que dispara, no del arma). La
+        # premisa ("Item.CanHavePrefixes() real: if (damage <= 0) return
+        # IsAPrefixableAccessory();") es FALSA - comprobado leyendo Item.cs de verdad:
+        # CanHavePrefixes() = GetRollablePrefixes() != null, y GetRollablePrefixes() solo mira
+        # a que ItemID.Sets pertenece el tipo (PrefixLegacy.ItemSets.GunsBows[type] incluye el
+        # 905 real), sin comprobar damage en ningun punto. La wiki oficial lo confirma con el
+        # propio historial del objeto: "Desktop 1.4.5.0: Can now receive modifiers again" -
+        # SI admite prefijo en esta version, y el filtro de "sin efecto" de mas abajo
+        # (pick_best/prefix_value, el `dmg != 1 y round(damage*dmg) == damage`) ya descarta por
+        # su cuenta los prefijos que suben daño (0*x sigue siendo 0), dejando solo los que de
+        # verdad cambian algo (velocidad de uso/disparo) - exactamente lo que dice la wiki:
+        # "it can only receive modifiers affecting its speed, velocity, critical strike chance,
+        # and knockback". Pertenecer al set ya basta, igual que para cualquier otra arma.
         if pool_key is None:
             e = stats.get(iid, {})
             if not e.get("accessory") or e.get("vanity"):
@@ -667,9 +674,8 @@ def build_vanilla(mult, stats, pools, sets, cannot):
         if best is not None:
             out[iid] = best
     print(f"  vanilla: {len(out)} objetos con mejor prefijo real "
-          f"({skipped_vanity} accesorios de vanidad, {skipped_blacklist} de la lista negra "
-          f"CanGetPrefixes y {skipped_sin_daño} sin daño base descartados: en el juego real "
-          f"no admiten prefijo)")
+          f"({skipped_vanity} accesorios de vanidad y {skipped_blacklist} de la lista negra "
+          f"CanGetPrefixes descartados: en el juego real no admiten prefijo)")
     return out
 
 

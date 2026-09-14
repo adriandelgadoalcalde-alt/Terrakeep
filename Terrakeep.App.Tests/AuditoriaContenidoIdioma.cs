@@ -118,6 +118,32 @@ internal static partial class Program
                 if (es != en && es.Length >= 5) españolConIngles[es] = en;
             }
 
+            // Caso real encontrado en el barrido (14-sep-2026, A11-CONTENIDO-IDIOMA): el objeto
+            // vanilla 276 se llama "Cactus" en los dos idiomas (prestamo real, es=en) - pero el
+            // TILE 80 (la planta antes de cosecharla) es "Cactus"(es)/"Cactus Plant"(en), es!=en,
+            // y entra arriba con la MISMA clave "Cactus". El barrido de pantalla no distingue de
+            // que catalogo viene un TextBlock: cuando el objeto 276 aparece de verdad en un slot
+            // de Personaje ("Cactus" en los dos idiomas, correcto), el detector lo confundia con
+            // el tile sin traducir y lo marcaba FALLO. La clave esta ambigua en el vocabulario
+            // real del propio juego (dos entradas DISTINTAS que comparten el mismo texto español)
+            // y no hay forma de saber, mirando solo el TextBlock, cual de las dos esta en pantalla
+            // - se descarta la clave entera en vez de arriesgar un falso FALLO (mismo criterio que
+            // los nombres identicos: si no se puede demostrar el fallo, no se acusa).
+            var idénticosEnLosDosIdiomas = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var (id, _) in servicio.VanillaCatalog.AllEntries("es"))
+            {
+                string es1 = servicio.VanillaCatalog.GetName(id, "es");
+                if (es1 == servicio.VanillaCatalog.GetName(id, "en")) idénticosEnLosDosIdiomas.Add(es1);
+            }
+            foreach (var (id, es2) in servicio.NpcNames.AllFor("es"))
+                if (es2 == servicio.NpcNames.GetName(id, "en")) idénticosEnLosDosIdiomas.Add(es2);
+            foreach (var (id, es3) in servicio.TileNames.AllTilesFor("es"))
+                if (es3 == servicio.TileNames.TileName(id, "en")) idénticosEnLosDosIdiomas.Add(es3);
+            int ambiguosDescartados = 0;
+            foreach (string clave in idénticosEnLosDosIdiomas)
+                if (españolConIngles.Remove(clave)) ambiguosDescartados++;
+            Console.WriteLine($"A11-CONTENIDO-IDIOMA: {ambiguosDescartados} nombre(s) descartados del barrido por ser ambiguos (el mismo texto español nombra un objeto/NPC/tile SIN traducir y otro objeto/NPC/tile distinto que SI coincide de verdad en los dos idiomas)");
+
             // Datos del USUARIO, no del juego: el nombre de sus personajes y de sus mundos.
             // Encontrado midiendo de verdad, no supuesto: este barrido marco "Terrariano" en la
             // pestaña Inicio - que es un personaje REAL de esta maquina y a la vez, por pura
