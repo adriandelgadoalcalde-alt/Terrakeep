@@ -790,6 +790,17 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // KEEPQA_SOLO=1 (14-sep-2026, barrido FRESCO con el nuevo arsenal de KeepQA - contenido
+        // adversarial y volcado de geometria para verificarAlineacion.js): mismo modo de foco que
+        // los de arriba, personaje real ya cargado. El cuerpo real vive en AuditoriaKeepQA.cs
+        // (misma clase parcial), ver alli el porque de su propio fichero.
+        if (Environment.GetEnvironmentVariable("KEEPQA_SOLO") == "1")
+        {
+            EjecutarKeepQaAdversarialYGeometria(window, vm);
+            Console.WriteLine("DONE (KEEPQA_SOLO)");
+            Environment.Exit(0);
+        }
+
         // PB_SOLO=1 (6-sep-2026): modo de FOCO - corre solo los bloques PB-* (Personaje >
         // Buffs/Apariencia/Investigacion/Spawn Points/Desbloqueos/Version) sobre el personaje
         // real ya cargado, y sale. Misma idea que AR_LAY_SOLO, por un motivo real medido: el
