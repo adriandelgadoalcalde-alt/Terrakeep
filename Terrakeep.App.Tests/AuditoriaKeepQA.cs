@@ -514,6 +514,37 @@ internal static partial class Program
                 WaitForDispatcher(1500);
                 DoEvents(); DoEvents();
 
+                // Cierre del punto 1 del checklist de cierre (14-sep-2026): el propio FALLO-3 dejo
+                // anotado, sin arreglar, que a la ventana MINIMA real (1080x700) el viewport no
+                // llega a cubrir la cabecera fija de la columna antes de necesitar scroll. El
+                // arreglo real es el indicador "ExplorationScrollHint" (ver MainWindow.xaml/
+                // MainWindow.xaml.cs) - se verifica aqui con el mismo escenario ya montado
+                // (resultados de Piedra Infernal desplegados, el caso mas exigente), ANTES de que
+                // el resto de esta funcion baje el scroll a proposito para su propia captura.
+                svLat.ScrollToTop();
+                DoEvents(); DoEvents();
+                var hintScroll = window.FindName("ExplorationScrollHint") as FrameworkElement;
+                bool quedaScrollReal = svLat.ExtentHeight - svLat.ViewportHeight > 2;
+                bool hintVisibleArriba = hintScroll?.Visibility == Visibility.Visible;
+                Console.WriteLine($"FALLO3_SOLO[{etiqueta}] indicador de scroll (arriba del todo): ExtentHeight={svLat.ExtentHeight:0}px ViewportHeight={svLat.ViewportHeight:0}px quedaScrollReal={quedaScrollReal} -> ExplorationScrollHint.Visibility={hintScroll?.Visibility}");
+                if (quedaScrollReal && !hintVisibleArriba)
+                    Console.WriteLine($"FALLO: FALLO3_SOLO - {etiqueta} tiene {svLat.ExtentHeight - svLat.ViewportHeight:0}px de scroll real pendiente y el indicador NO esta visible");
+                if (!quedaScrollReal && hintVisibleArriba)
+                    Console.WriteLine($"FALLO: FALLO3_SOLO - {etiqueta} no tiene scroll real pendiente pero el indicador SI esta visible (falso positivo)");
+                if (quedaScrollReal)
+                {
+                    string outDirHint = Path.Combine(AppContext.BaseDirectory, "keepqa-evidencia");
+                    Directory.CreateDirectory(outDirHint);
+                    var rtbHint = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbHint.Render(window);
+                    var encHint = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encHint.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbHint));
+                    string nombreCapturaHint = Path.Combine(outDirHint, $"scrollhint-{etiqueta}-arriba.png");
+                    using (var fsHint = File.Create(nombreCapturaHint)) encHint.Save(fsHint);
+                    Console.WriteLine($"FALLO3_SOLO[{etiqueta}]: captura real del indicador -> {nombreCapturaHint}");
+                }
+
                 // Captura real de evidencia visual (antes/despues del arreglo, misma escena: mundo
                 // real, categoria Minerales, resultados de Piedra Infernal desplegados) - para no
                 // depender solo de numeros de consola. La columna scrollea (ExtentHeight > Viewport
@@ -523,6 +554,10 @@ internal static partial class Program
                 // mineral de arriba, nunca el bloque que este fallo investiga.
                 svLat.ScrollToBottom();
                 DoEvents(); DoEvents();
+                bool hintVisibleAbajo = hintScroll?.Visibility == Visibility.Visible;
+                Console.WriteLine($"FALLO3_SOLO[{etiqueta}] indicador de scroll (al fondo, VerticalOffset={svLat.VerticalOffset:0}px de ScrollableHeight={svLat.ScrollableHeight:0}px): ExplorationScrollHint.Visibility={hintScroll?.Visibility}");
+                if (hintVisibleAbajo)
+                    Console.WriteLine($"FALLO: FALLO3_SOLO - {etiqueta} ya esta al fondo del scroll y el indicador sigue visible (deberia ocultarse)");
                 string outDirFallo3 = Path.Combine(AppContext.BaseDirectory, "keepqa-evidencia");
                 Directory.CreateDirectory(outDirFallo3);
                 var rtbFallo3 = new System.Windows.Media.Imaging.RenderTargetBitmap(

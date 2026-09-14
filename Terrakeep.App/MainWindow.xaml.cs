@@ -437,6 +437,26 @@ public partial class MainWindow : Window
         }
     }
 
+    // Cierre del punto 1 del checklist de cierre (14-sep-2026): a la ventana MINIMA real
+    // (1080x700) el viewport de esta columna no llega a cubrir su propia cabecera fija (titulo+
+    // 3 Expanders colapsados+pildoras+buscador) antes de necesitar scroll, y nada en pantalla
+    // avisaba de que habia que bajar - ver el comentario largo junto a MinHeight="800" en
+    // MainWindow.xaml. En vez de recortar la cabecera (arriesga los MinHeight ya calibrados,
+    // AR-11f/AR-15/AR-EX1/FALLO-3) o quitar contenido real, un indicador propio
+    // (ExplorationScrollHint) que solo se enseña mientras de verdad queda recorrido por debajo.
+    // ScrollChanged dispara con cualquier cambio real de Extent/Viewport/Offset - tamaño de
+    // ventana, ancho de sidebar (GridSplitter) o contenido nuevo (mundo cargado, categoria
+    // distinta) lo recalculan todos por igual, no hace falta escuchar cada uno por separado.
+    private void OnExplorationSidebarScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (ExplorationScrollHint == null) return;
+        // Margen de 2px: evita parpadeo por redondeo de layout cuando el contenido mide justo
+        // igual que el viewport (mismo umbral ya usado por AR-11f para el caso simetrico).
+        bool quedaScrollPendiente = e.ExtentHeight - e.ViewportHeight > 2
+                                     && e.VerticalOffset < e.ExtentHeight - e.ViewportHeight - 2;
+        ExplorationScrollHint.Visibility = quedaScrollPendiente ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     // F-14 (auditoria de Opus vs TEdit, E-16/E-17): dialogo real en la View (mismo criterio que
     // SaveItemSetDialog/ExportMapToPng) - BuildWorldReportText solo compone el texto.
     private void OnSaveWorldReportClick(object sender, RoutedEventArgs e)

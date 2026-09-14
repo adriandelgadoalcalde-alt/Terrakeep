@@ -14358,4 +14358,93 @@ manual de 8 capturas representativas + 2 recortes con zoom real). Sin inconsiste
 - `KeepQA/PROTOCOLO-REVISION-VISUAL.md`: Sección F.7 (validación real del extractor WPF), nota en
   la Parte 11 sobre los tres motores/tres extractores reales.
 
+---
+
+## 14-sep-2026 (cierre de la noche) - Punto 1 del checklist: indicador real de "hay más, desliza" en la columna de Exploración a tamaños extremos
+
+Pendiente dejado abierto por el propio Fallo-3 (ver la entrada de arriba, "LIMITE HONESTO"): a la
+ventana MINIMA real (1080x700) el viewport del `ScrollViewer` de la columna de Exploración (397px
+medidos) no llega a cubrir ni su propia cabecera fija (título+3 Expanders colapsados+píldoras+
+buscador) antes de necesitar scroll, y nada en pantalla avisaba de que había que bajar - "cabecera
+tapa contenido sin que el usuario sepa que hay que hacer scroll".
+
+**Decisión de diseño** (de las tres que proponía el encargo - reducir la cabecera fija, permitir
+que colapse, o indicación visual clara): indicación visual clara. Reducir la cabecera exigiría
+QUITAR contenido real (los 3 Expanders ya están colapsados por defecto, sin margen ahí sin perder
+información) o volver a tocar los `MinHeight` ya calibrados hoy mismo (652→800, `FALLO-3`) - alto
+riesgo de reabrir `AR-11f`/`AR-15`/`AR-EX1` por un problema que en realidad es de
+DESCUBRIBILIDAD, no de contenido inalcanzable (con scroll, todo se alcanza - lo confirma el propio
+`FALLO3_SOLO`).
+
+**Arreglo real**: `ExplorationScrollHint`, un `Border` con el texto real (`explore_scroll_hint`,
+localizado ES/EN: "Hay más contenido, desliza hacia abajo" / "More content below - scroll down")
+más una flecha ↓, que solo se muestra mientras queda scroll real pendiente en
+`ExplorationSidebarScroll`. `OnExplorationSidebarScrollChanged` (`MainWindow.xaml.cs`), enganchado
+al `ScrollChanged` real del propio `ScrollViewer`, decide con el mismo margen de 2px que ya usa
+`AR-11f` (`ExtentHeight - ViewportHeight > 2` y `VerticalOffset` no ya al fondo) - dispara con
+CUALQUIER cambio real (tamaño de ventana, ancho de sidebar vía `GridSplitter`, contenido nuevo al
+cargar mundo/cambiar categoría), no hace falta escuchar cada uno por separado.
+
+**PRIMER INTENTO, DESCARTADO CON EVIDENCIA REAL** (dejar constancia para no repetirlo): superponer
+el indicador encima del propio `ScrollViewer` (mismo `Grid.Column`, `VerticalAlignment="Bottom"`,
+`IsHitTestVisible="False"`) parecía la solución más simple - a 1080x700 quedaba sobre hueco vacío
+y se veía bien, pero la captura real a 1180x860 (tamaño POR DEFECTO de la app,
+`keepqa-evidencia/scrollhint-normal1180x860-sidebar320(defecto)-arriba.png`, primera versión)
+demostró que TAPABA contenido real ya visible - la casilla "Ordenar por distancia al spawn" quedaba
+medio oculta detrás de la píldora. Cambiaba un problema de descubribilidad por uno de contenido
+oculto, peor que el original.
+
+**Arreglo real definitivo**: el `Grid.Column="2"` que aloja la columna pasa de un único hijo
+(`ScrollViewer`) a dos filas (`Grid.RowDefinitions`, fila 0 `*` para el `ScrollViewer`, fila 1
+`Auto` para el indicador) - el indicador vive DEBAJO del `ScrollViewer`, nunca encima, así que no
+puede tapar nada por construcción: cuando está oculto (`Auto` con `Visibility="Collapsed"`) mide 0
+y no roba ni un píxel; cuando aparece resta ~24-31px reales al viewport (medido con el arnés:
+577→547px a 1180x860, 397→366px a 1080x700) y se los devuelve en cuanto se llega al fondo. Mismo
+principio ya aceptado hoy mismo para `MinHeight="800"`: un poco menos de sitio a cambio de
+honestidad visual, nunca contenido oculto.
+
+**Verificación real** (extensión de `FALLO3_SOLO` en `Terrakeep.App.Tests/AuditoriaKeepQA.cs`,
+mundo real `roca_negra.wld`, categoría Minerales con 1000 resultados de Piedra Infernal - el
+escenario más exigente ya montado por el propio Fallo-3): en los tres tamaños del barrido
+(1180x860 sidebar 320 por defecto, 1180x860 sidebar 520 máximo, 1080x700 sidebar 260 mínimo real)
+el indicador aparece exactamente cuando `ExtentHeight - ViewportHeight > 2` y desaparece al bajar
+del todo (`ScrollToBottom`, `VerticalOffset == ScrollableHeight` en los tres casos) - 0 falsos
+positivos, 0 falsos negativos, 0 `FALLO` sobre el propio indicador en las 6 comprobaciones (3
+tamaños × arriba/abajo). Capturas reales antes/después en
+`keepqa-evidencia/scrollhint-*-arriba.png` (indicador visible, sin tapar nada) y
+`keepqa-evidencia/fallo3-exploracion-*.png` (scroll al fondo, indicador oculto, resultados
+alcanzados).
+
+**Límite honesto que sigue abierto, sin relación con este punto**: el mismo barrido confirma que a
+1080x700 dos de las tres categorías (Cofres "cofre a cofre" y Objetos) siguen sin mostrar ninguna
+fila entera del bloque de resultados (`FALLO3_SOLO` marca `FALLO: regresion real de AR-EX1` en
+esas dos, igual que ya lo hacía ANTES de este cambio - confirmado comparando contra el mismo
+barrido corrido sin el indicador, mismos números `ExtentHeight`/`ViewportHeight`/pesos de fila, no
+es una regresión de este punto). Es el límite ya documentado por el propio Fallo-3 ("ninguna fila
+de categoría se ve entera CON O SIN el arreglo a 1080x700") - de presupuesto de alto total, no de
+descubribilidad, y sigue fuera de alcance de este punto concreto del checklist.
+
+**Qué se verificó, con números reales**:
+- `dotnet build Terrakeep.slnx -c Debug`: 0 errores/avisos, en los 2 ciclos de esta ronda.
+- `dotnet test Terrakeep.App.ViewModels.Tests`: **484/484**, sin regresión.
+- `dotnet test Terrakeep.Core.Tests`: **539/539**, sin regresión.
+- `FALLO3_SOLO=1`: números reales citados arriba, capturas reales en `keepqa-evidencia/`.
+- `VITALS_SOLO=1`, `KEEPQA_SOLO=1`: 0 líneas `FALLO`, sin regresión en la franja de vitales, la
+  barra de botones ni el barrido de 64 combinaciones (16 pantallas × 2 tamaños × 2 idiomas).
+- `KeepQA/npm run validar` + `npm run regresion`: **48/48 OK, 0 REGRESIÓN**.
+
+### Archivos tocados
+
+- `Terrakeep.App/MainWindow.xaml`: `Grid.Column="2"` de la columna de Exploración pasa a 2 filas
+  (`*`/`Auto`); `Border x:Name="ExplorationScrollHint"` nuevo en la fila `Auto`, con el intento
+  descartado documentado en el comentario real junto al `MinHeight="800"`.
+- `Terrakeep.App/MainWindow.xaml.cs`: `OnExplorationSidebarScrollChanged`, enganchado al
+  `ScrollChanged` real de `ExplorationSidebarScroll`.
+- `Terrakeep.App/Assets/strings_es.json`, `strings_en.json`: clave nueva `explore_scroll_hint`.
+- `Terrakeep.App.Tests/AuditoriaKeepQA.cs`: `EjecutarFallo3Exploracion`/`MedirEn` ampliada con la
+  verificación real del indicador (arriba del todo y al fondo, en los 3 tamaños del barrido).
+
+Commit pequeño, verificado antes de seguir con el resto del checklist de cierre
+(`Downloads\KeepQA\PENDIENTES-CIERRE-14SEP.md`).
+
 Commits pequeños, sin `git push`, en los dos repos (`Terrasavr-Native` y `KeepQA`).

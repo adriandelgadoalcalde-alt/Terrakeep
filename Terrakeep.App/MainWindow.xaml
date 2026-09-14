@@ -5085,9 +5085,47 @@
                          entre si - medido con el arnes (FALLO3_SOLO=1): a 1180x860 la lista de
                          resultados pasa de 70 a 148px reales (+111%) y la categoria de 178 a 245px
                          (de 1 a 2 filas visibles, MEJORA). Mismo coste aceptado que el parrafo de
-                         arriba: mas scroll para llegar al fondo, nunca contenido inalcanzable. -->
-                    <ScrollViewer Grid.Column="2" x:Name="ExplorationSidebarScroll"
-                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                         arriba: mas scroll para llegar al fondo, nunca contenido inalcanzable.
+
+                         PENDIENTE cerrado (14-sep-2026, ronda de cierre): el propio FALLO-3 dejo
+                         anotado un limite honesto SIN arreglar - al tamaño MINIMO real de la
+                         ventana (1080x700) el viewport del ScrollViewer (397px medidos) no llega a
+                         cubrir ni la cabecera fija de esta columna (titulo+3 Expanders colapsados+
+                         pildoras+buscador) antes de necesitar scroll, y nada en pantalla avisaba de
+                         que habia que bajar. Reducir la cabecera de verdad exigiria QUITAR
+                         contenido real (el Editor de mundo/Bestiario/"Este mundo" ya estan
+                         colapsados por defecto, no hay margen ahi sin perder informacion) o volver
+                         a tocar los MinHeight ya calibrados arriba (652/800) - alto riesgo de
+                         reabrir AR-11f/AR-15/AR-EX1 para un problema que en realidad es de
+                         DESCUBRIBILIDAD, no de contenido inalcanzable (con scroll, todo se alcanza,
+                         ver FALLO3_SOLO). Arreglo real: indicador visual propio (Border
+                         "ExplorationScrollHint" mas abajo) que SOLO aparece mientras queda scroll
+                         pendiente (OnExplorationSidebarScrollChanged en MainWindow.xaml.cs,
+                         recalculado en cada ScrollChanged real - tamaño de ventana, ancho de
+                         sidebar o contenido nuevo lo disparan todos por igual).
+
+                         PRIMER INTENTO, DESCARTADO CON EVIDENCIA REAL: superponer el indicador
+                         (Grid.Column="2" a secas, VerticalAlignment=Bottom, IsHitTestVisible=False)
+                         encima del propio ScrollViewer - a 1080x700 quedaba sobre hueco vacio y se
+                         veia bien, pero la captura real a 1180x860 (tamaño POR DEFECTO de la app,
+                         keepqa-evidencia\scrollhint-normal1180x860-sidebar320(defecto)-arriba.png)
+                         demostro que TAPABA contenido real ya visible ("Ordenar por distancia al
+                         spawn" quedaba medio oculto detras de la pildora) - cambiaba un problema de
+                         descubribilidad por uno de contenido oculto, peor que el original. Arreglo
+                         real: fila propia (Grid.RowDefinitions, Auto) DEBAJO del ScrollViewer, no
+                         encima - nunca puede tapar nada porque ya no comparte espacio con el
+                         contenido, solo le resta una franja fija y pequeña (~24px, medida con el
+                         arnes) al viewport cuando esta visible. Mismo principio ya aceptado en este
+                         fichero para MinHeight="800": un poco menos de sitio para el contenido a
+                         cambio de honestidad visual, nunca ocultar nada. -->
+                    <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ScrollViewer Grid.Row="0" x:Name="ExplorationSidebarScroll"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  ScrollChanged="OnExplorationSidebarScrollChanged">
                     <DockPanel x:Name="ExplorationSidebarPanel"
                                Height="{Binding ViewportHeight, ElementName=ExplorationSidebarScroll, Mode=OneWay}"
                                MinHeight="800">
@@ -6100,6 +6138,27 @@
                         </Grid>
                     </DockPanel>
                     </ScrollViewer>
+                    <!-- Indicador de scroll pendiente (cierre del punto 1, ver el comentario largo
+                         junto a MinHeight="800" mas arriba): fila PROPIA (Grid.Row="1", Auto) debajo
+                         del ScrollViewer, nunca superpuesto encima de su contenido (ver el "PRIMER
+                         INTENTO DESCARTADO" del mismo comentario - superponerlo tapaba filas reales
+                         ya visibles a tamaño por defecto). Empieza oculto (Auto -> 0px reales,
+                         ninguna franja robada de balde) - OnExplorationSidebarScrollChanged
+                         (MainWindow.xaml.cs) lo muestra/oculta segun quede recorrido real por debajo
+                         (ExtentHeight > ViewportHeight y no ya al fondo), nunca un adorno fijo. -->
+                    <Border x:Name="ExplorationScrollHint" Grid.Row="1" HorizontalAlignment="Center"
+                            Margin="0,6,0,2" Background="{StaticResource BgElevatedBrush}" CornerRadius="10"
+                            Padding="9,4" IsHitTestVisible="False" Visibility="Collapsed" Opacity="0.94">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.35" />
+                        </Border.Effect>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Loc[explore_scroll_hint], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                       Foreground="{StaticResource TextSecondaryBrush}" />
+                            <TextBlock Text="&#8595;" FontSize="11" Margin="5,0,0,0" Foreground="{StaticResource TextSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
+                    </Grid>
                 </Grid>
             </DockPanel>
         </TabItem>
