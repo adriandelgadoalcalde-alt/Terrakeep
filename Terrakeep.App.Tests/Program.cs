@@ -476,6 +476,10 @@ internal static partial class Program
                 DoEvents(); DoEvents();
                 vmMemoria.SelectedTabIndex = 0;
                 DoEvents(); DoEvents();
+                // Ver el comentario completo de PumpToContextIdle: sin esto el ciclo nunca deja
+                // que WeakEventManager purgue sus listeners muertos, y KEEPQA_MEMORIA reporta una
+                // "fuga" que no existe en el uso real de la app.
+                PumpToContextIdle();
 
                 GC.Collect(2, GCCollectionMode.Forced, true, true);
                 GC.WaitForPendingFinalizers();
@@ -7514,6 +7518,46 @@ internal static partial class Program
     {
         var frame = new DispatcherFrame();
         Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() => frame.Continue = false));
+        Dispatcher.PushFrame(frame);
+    }
+
+    // 15-sep-2026 (KeepQA V2.0/V3, segunda ronda de la fuga de KEEPQA_MEMORIA - ver bitacora.md):
+    // bombea el Dispatcher hasta ContextIdle de verdad (por debajo de Background, que es lo mas
+    // bajo a lo que llega DoEvents()) - la prioridad real a la que WeakEventManager programa su
+    // propia purga interna de listeners muertos (Dispatcher.BeginInvoke(DispatcherPriority.
+    // ContextIdle, Purge), confirmado leyendo el motor de bindings de WPF). Un DoEvents() normal
+    // NUNCA llega tan abajo, asi que esa purga nunca se dispara en este bucle.
+    //
+    // Por que hace falta aqui (y no es hacer trampa): tras el arreglo de WeakEventManager del
+    // 15-sep-2026 (commit 26c57c60), un segundo dotnet-gcdump diff seguia mostrando
+    // MS.Utility.FrugalObjectList/SingleItemList<WeakEventManager+Listener> creciendo ~198-200
+    // instancias por ciclo (29.677->111.017 entre ciclo~150 y ciclo~560, dos capturas reales del
+    // mismo proceso). Pero los CONSUMIDORES reales de esas listas - System.Windows.Data.
+    // BindingExpression (3.453->3.221), MS.Internal.Data.PropertyPathWorker/ClrBindingWorker
+    // (+524 en 410 ciclos, ruido normal) y los propios ItemSlotViewModel (352->348) - se quedaban
+    // PLANOS en el mismo diff: la fuga NO es de objetos vivos alcanzables, es SOLO la bolsa
+    // interna de entradas muertas (WeakReference ya apuntando a nada) que WeakEventManager
+    // arrastra sin compactar hasta que se cumple una de sus dos condiciones de purga (el evento
+    // se dispara de verdad, o el Dispatcher respira hasta ContextIdle). Origen real: el
+    // DataTemplate del slot (MainWindow.xaml, "SlotCompactTemplate") usa varios
+    // {Binding Loc[clave]} por instancia (tooltip/menu contextual) contra
+    // LocalizationService.Instance - un POCO compartido y permanente, no un DependencyObject -
+    // asi que el propio motor de bindings de WPF (no codigo de Terrakeep) tiene que usar
+    // PropertyChangedEventManager para escuchar su "Item[]" en cada instancia nueva.
+    //
+    // Confirmado de forma aislada (mismo criterio que "verificar-aislando-la-variable"): con
+    // ESTE pump activado, N=40 pasa de ~116 KB/ciclo estable a 0,0 KB/ciclo desde el ciclo 8 en
+    // adelante - la unica variable que cambia es si el Dispatcher llega a respirar de verdad.
+    // Un usuario real de Terrakeep SI deja que el Dispatcher llegue a ContextIdle constantemente
+    // (entre clics, mientras lee la pantalla) - este bucle sintetico de abrir/cerrar sin parar
+    // nunca lo hacia, y por eso KEEPQA_MEMORIA veia una "fuga" que en el uso real no existe.
+    // Arreglo real: hacer que el propio arnes de medicion sea representativo de verdad (respira
+    // como respiraria un usuario), no forzar ningun cambio en Terrakeep.App (no hay ningun
+    // objeto vivo que liberar ahi - ya se libera solo).
+    private static void PumpToContextIdle()
+    {
+        var frame = new DispatcherFrame();
+        Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() => frame.Continue = false));
         Dispatcher.PushFrame(frame);
     }
 

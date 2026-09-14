@@ -14853,3 +14853,117 @@ cambio, sin regresion.
   `RefreshLocalizedText()` publico).
 - `Terrakeep.App/ViewModels/MainViewModel.cs` (nuevo `OnIdiomaCambiadoSlots`, unica suscripcion
   real que reemplaza a las cientos de individuales).
+
+## 15-sep-2026 (mismo dia, ronda siguiente) - Segunda fuente de KEEPQA_MEMORIA investigada hasta
+## el final: CONFIRMADO que no es un leak real de Terrakeep, sino el propio motor de bindings de
+## WPF esperando un respiro que el arnes nunca le daba - arreglo real en el arnes, cero cambios
+## en Terrakeep.App
+
+Encargo real: seguir la pista que dejo abierta la entrada de arriba (la "segunda fuente" del
+mismo tipo de listener que el arreglo de `WeakEventManager` en `ItemSlotViewModel` no tocaba) con
+la MISMA certeza que la primera (bytes reales de `dotnet-gcdump`, nunca una suposicion), y
+arreglarla si se confirmaba real.
+
+**Paso 1 - reconfirmar el residuo con el build actual (commit `26c57c60` ya aplicado)**:
+`KEEPQA_MEMORIA_N=40` en frio, numeros identicos a los que dejo la entrada de ayer (45,46->57,82
+MB, ~116 KB/ciclo estable, monotono, `MEMORIA-VEREDICTO: POSIBLE FUGA`) - el residuo seguia ahi,
+tal cual.
+
+**Paso 2 - segundo gcdump real (mismo metodo: dos capturas del MISMO proceso en marcha,
+`dotnet-gcdump collect -p <pid>`, `KEEPQA_MEMORIA_N=2000` para tener margen, comparadas con
+`dotnet-gcdump report`)**: captura 1 en ciclo ~150 (17,4 MB de dump), captura 2 en ciclo ~560
+(36,5 MB de dump), diff real de tipos:
+
+| Tipo | Ciclo ~150 | Ciclo ~560 | Delta | Δ/ciclo |
+|---|---|---|---|---|
+| `FrugalObjectList<WeakEventManager+Listener>` | 30.300 | 112.470 | +82.170 | ~200 |
+| `SingleItemList<WeakEventManager+Listener>` | 29.677 | 111.017 | +81.340 | ~198 |
+| `SixItemList<WeakEventManager+Listener>` | 317 | 1.147 | +830 | ~2 |
+| `Terrakeep.App.ViewModels.ItemSlotViewModel` | 352 | 348 | -4 | 0 (plano) |
+| `System.Windows.Data.BindingExpression` | 3.453 | 3.221 | -232 | 0 (plano/ruido) |
+| `MS.Internal.Data.PropertyPathWorker` | 2.702 | 3.226 | +524 | ~1,3 (ruido, no proporcional) |
+| `MS.Internal.Data.ClrBindingWorker` | 2.697 | 3.221 | +524 | ~1,3 (igual que arriba, correlado) |
+
+**Lectura real de esta tabla (la clave de todo el diagnostico)**: los CONSUMIDORES de esas listas
+de listeners - los propios `ItemSlotViewModel`, los `BindingExpression`, los `PropertyPathWorker`/
+`ClrBindingWorker` que WPF crea por cada `{Binding}` de la plantilla - se quedan PLANOS, ciclo tras
+ciclo. Se liberan bien. Lo UNICO que crece sin freno es la bolsa interna de `WeakEventManager`
+(`FrugalObjectList`/`SingleItemList<Listener>`) que sostiene referencias DEBILES a esos
+consumidores - o sea, entradas que ya apuntan a nada (el objeto real murio hace tiempo) pero que
+nadie ha compactado todavia. Esto NO es un grafo de objetos vivos creciendo (eso seria un leak de
+verdad) - es basura ya muerta que WPF arrastra a proposito hasta que le conviene limpiarla.
+
+**Causa raiz real, confirmada leyendo el motor de bindings de WPF**: `MainWindow.xaml`,
+`SlotCompactTemplate` (la plantilla de CADA `ItemSlotViewModel`, instanciada de cero en cada
+`RebuildContainers`/`AddSlotSet`, ~200 veces por carga de personaje) tiene varios
+`{Binding Loc[clave]}` (lineas 416, 425, 428, 445, 446, 455, 459, 564, 583 - tooltip normal,
+`Border.ToolTip`, `Border.ContextMenu`). `Loc` devuelve siempre la MISMA instancia
+(`LocalizationService.Instance`, un POCO compartido de toda la app, no un `DependencyObject`) -
+WPF NO puede usar el atajo rapido de `DependencyProperty` para escuchar sus cambios (el indexador
+`Item[]`, que dispara cuando cambia el idioma), asi que cae al camino generico de
+`INotifyPropertyChanged` + `PropertyChangedEventManager` (weak event real, para no obligar a
+`LocalizationService` a mantener vivo cada `BindingExpression` a mano). Cada slot nuevo = varias
+`BindingExpression` nuevas = varias entradas nuevas en la lista de listeners de ESE manager
+concreto, contra la MISMA source compartida y permanente. `WeakEventManager` solo purga las
+entradas muertas de esa lista en dos momentos: cuando el evento real se dispara (cambio de idioma
+- nunca pasa en este bucle) o cuando el `Dispatcher` llega a `DispatcherPriority.ContextIdle`
+(mas abajo que `Background`) - y el `DoEvents()` del arnes (`Dispatcher.BeginInvoke(
+DispatcherPriority.Background, ...)` + `PushFrame`) NUNCA baja de `Background`, asi que esa purga
+jamas se dispara en 2000 ciclos seguidos.
+
+**Prueba real, aislando la variable (mismo criterio que la memoria
+`verificar-aislando-la-variable`)**: se añadio un pump temporal de diagnostico al bucle de
+`KEEPQA_MEMORIA` que bombea el `Dispatcher` hasta `ContextIdle` de verdad una vez por ciclo (nada
+mas cambia - mismo codigo de produccion, mismo personaje, mismo N). Resultado con
+`KEEPQA_MEMORIA_N=40`: el delta pasa de ~116 KB/ciclo constante a **0,0 KB/ciclo desde el ciclo 8
+en adelante** (45,46->53,16 MB y ahi se queda clavado, `ultimas 3 muestras monotonas
+crecientes=False`). Una unica variable cambiada (si el Dispatcher respira o no), resultado
+opuesto de raiz - confirmacion tan solida como el propio diff de bytes de arriba.
+
+**Confianza**: alta - dos metodos independientes (el diff de tipos por gcdump Y el experimento de
+aislar la variable del Dispatcher) apuntan a la misma causa exacta y dan el mismo veredicto.
+
+**Conclusion real y honesta**: esto NO es un leak de Terrakeep.App. Es el comportamiento normal y
+documentado de `WeakEventManager` (purga diferida a proposito, por rendimiento - purgar en cada
+registro seria peor) chocando con un arnes sintetico que nunca deja que el `Dispatcher` respire.
+Un usuario real de Terrakeep SI genera huecos de `ContextIdle` constantemente (entre un clic y el
+siguiente, mientras lee la pantalla, cualquier pausa real) - la purga de WPF corre sola en uso
+normal. Forzar un cambio en `Terrakeep.App`/`MainWindow.xaml` (por ejemplo, quitar los
+`{Binding Loc[clave]}` de la plantilla del slot) habria sido un parche especulativo sobre un
+sintoma que no es un bug real - exactamente lo que la regla de la casa pide no hacer.
+
+**Arreglo real aplicado (en el arnes, CERO cambios en Terrakeep.App)**: `Terrakeep.App.Tests/
+Program.cs` - el pump de diagnostico se queda para siempre como `PumpToContextIdle()` (ya no
+detras de ningun flag), llamado una vez por ciclo dentro del bucle de `KEEPQA_MEMORIA`, con un
+comentario largo explicando el porque (para que nadie lo borre pensando que es ruido). Asi
+`KEEPQA_MEMORIA` mide algo representativo del uso real (con respiro de Dispatcher incluido) en vez
+de un peor-caso sintetico que nunca ocurre de verdad.
+
+**Verificacion final (antes/despues, honesta, sin forzar el cero si no tocaba)**:
+
+| | N=20 | N=40 | N=100 |
+|---|---|---|---|
+| Antes (con el residuo, commit `26c57c60`) | ~116 KB/ciclo estable, POSIBLE FUGA | ~116 KB/ciclo estable, POSIBLE FUGA | (no medido, ya sobraba con N=40) |
+| Despues (pump integrado) | 45,47->53,17 MB, **0,0 KB/ciclo desde el ciclo 5**, SIN INDICIO DE FUGA | 45,46->53,16 MB, **0,0 KB/ciclo desde el ciclo 8**, SIN INDICIO DE FUGA | 53,15 MB clavado del ciclo ~5 al 100 (ruido de ±8 KB puntual en un par de ciclos, vuelve solo), SIN INDICIO DE FUGA |
+
+Residuo real que queda, honesto: NINGUNO relevante - el salto grande sigue siendo solo el primer
+ciclo (~7,7 MB, JIT/warm-up real ya documentado, no relacionado con este bug, excluido del
+"estable" igual que siempre) y del ciclo ~5 en adelante la memoria managed se queda fija. N=100
+confirma que no hay ningun "se estabiliza tarde" escondido - es estable desde el principio del
+tramo util.
+
+**Verificacion de que no hay regresion**: `dotnet build Terrakeep.slnx` (0 avisos, 0 errores) y
+`dotnet test Terrakeep.slnx` completo: **539/539** en `Terrakeep.Core.Tests` (12s) + **484/484**
+en `Terrakeep.App.ViewModels.Tests` (4m 39s) - mismos numeros exactos, sin regresion.
+
+### Archivos tocados
+
+- `Terrakeep.App.Tests/Program.cs` (nuevo `PumpToContextIdle()`, llamado una vez por ciclo en
+  `KEEPQA_MEMORIA`). Ningun archivo de `Terrakeep.App` tocado - no habia nada real que arreglar
+  ahi.
+
+### Evidencia (no committeada, scratchpad de la sesion)
+
+`dump1-early.gcdump`/`dump2-late.gcdump` (ciclo ~150 y ~560) y sus `report1.txt`/`report2.txt`
+(`dotnet-gcdump report`), en el scratchpad de esta sesion - mismo criterio que la ronda de ayer
+(evidencia real disponible pero no forma parte del repo).
