@@ -290,6 +290,19 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // KEEPQA_UIA_TREE=1 (14-sep-2026, KeepQA V3 Fase 2 - Seccion 8, IUIAutomationAdapter): ver
+        // AuditoriaUiaTree.cs (misma clase parcial) para el porque y el detalle completo. Mismo
+        // motivo de posicion que KEEPQA_SMOKE arriba: va justo tras tener `vm`/`root`, antes de
+        // fabricar ningun .plr sintetico, para no depender de ningun archivo real en disco.
+        if (Environment.GetEnvironmentVariable("KEEPQA_UIA_TREE") == "1")
+        {
+            EjecutarUiaTree(window, root, vm);
+            window.Close();
+            DoEvents();
+            Console.WriteLine("DONE (KEEPQA_UIA_TREE)");
+            Environment.Exit(0);
+        }
+
         // KEEPQA_CHAOS=1 (14-sep-2026, Fase 7 Bloque C de KeepQA V2.0 - ver
         // KeepQA\v2\PROPUESTA-UNIFICADA.md): ejecutor de UNA secuencia de acciones ya generada por
         // src/chaos/generadorSecuencias.js (semilla fija, reproducible) - esta pieza NO decide el
