@@ -16018,3 +16018,108 @@ modos `*_SOLO`) - reutilizable en cualquier cierre futuro, no un script de usar 
   desinstalación silenciosa real en una carpeta de prueba (gitignorado, no es parte del repo).
 - `%LOCALAPPDATA%\Terrakeep\settings.json` (`IsMinimapVisible` restaurado a `true`) y `session.json`
   (borrado) de esta máquina - no son parte del repo, es estado real de la app instalada.
+
+## 16-sep-2026 - El "cuelgue reproducible" tras AR-EX4-PNG, con depurador real: NO es un cuelgue
+
+### Encargo
+Ronda futura prometida la noche anterior: investigar con un depurador real (no adivinar) el
+hallazgo sin cerrar "el recorrido COMPLETO del arnés cuelga de forma reproducible (4 veces
+seguidas) justo después de `AR-EX4-PNG`, con CPU al 100% de un núcleo y `Responding=True`". Esta
+ronda adjunta `dotnet-dump` (`C:\Users\adrian\.dotnet\tools\dotnet-dump.exe`, ya indexado en
+`herramientas.json`) a una ejecución real y colgada, en vez de seguir adivinando.
+
+### Reproducción real
+`dotnet build Terrakeep.App.Tests` + `dotnet run --no-build --project Terrakeep.App.Tests` (sin
+ninguna variable `*_SOLO`, el recorrido completo) en segundo plano, vigilado con `Monitor` sobre el
+crecimiento del log real (nunca "esperar y ya está" a ciegas). Confirmado el mismo síntoma que
+documentó la ronda anterior: tras `AR-EX4-PNG` el proceso deja de escribir en el log durante bastante
+tiempo, con CPU subiendo de verdad (`Get-Process -Id <pid> | Select CPU,Responding` confirmó
+`Responding=True` y el CPU acumulado subiendo ~4,3s reales en 5s de reloj - un núcleo prácticamente
+al 100%, igual que describía la ronda anterior) y sin ningún error en pantalla.
+
+### El depurador real: dos volcados de verdad, NO un solo síntoma adivinado
+`dotnet-dump collect -p <pid> -o volcado.dmp` + `dotnet-dump analyze volcado.dmp -c "setthread 0"
+-c "clrstack" -c "quit"` (hilo 0 = el hilo de UI real, `MS.Win32.HwndSubclass.SubclassWndProc` en la
+base de la pila en los dos volcados) sobre el proceso colgado de verdad, en dos momentos reales
+separados por ~1 minuto:
+
+**Volcado 1** (justo tras detectarse el estancamiento): pila real completa dentro de una única
+llamada a `Program.DoEvents()` (`Program.cs:6136`, el bucle de sondeo de `AR-EX4-IDIOMA`) -
+`Dispatcher.PushFrameImpl` -> ... -> `InputManager.HitTestInvalidatedAsyncCallback` ->
+`MouseDevice.Synchronize()` -> `InputManager.ProcessStagingArea()` ->
+`MainWindow.OnWorldMapMouseMove` (`MainWindow.xaml.cs:696`) -> `MainWindow.PositionMapTooltip`
+(`MainWindow.xaml.cs:707`) -> `Border.Measure`/`TextBlock.MeasureOverride` real de WPF
+(`GetLineProperties`/`LineProperties..ctor`). Es decir: el hilo de UI estaba, en ese instante,
+procesando un `MouseMove` real sobre el mapa de Exploración que fuerza un `Measure()` explícito del
+tooltip flotante (`PositionMapTooltip`, `MainWindow.xaml.cs:704-723`) - y WPF re-sincroniza el
+puntero (`MouseDevice.Synchronize()`) automáticamente después de cada pasada de layout que invalida
+el hit-test bajo el cursor, lo que puede volver a disparar `OnWorldMapMouseMove` en cadena. Trabajo
+real de WPF (formateo de texto/glifos), no un bucle vacío ni un `while(true)` del propio código de
+Terrakeep.
+
+**Volcado 2** (~1 minuto después, MISMO proceso, MISMO hilo 0): pila COMPLETAMENTE DISTINTA, y mucho
+más adelante en `Program.Main()` - ya no en `AR-EX4-IDIOMA` (línea 6136) sino en el barrido de
+idioma por pestañas (`Program.cs:7425`, `vm.SelectedTabIndex = tab` dentro del bucle `for (int tab =
+0; tab <= 5; tab++)`), procesando un cambio real de foco de `TabItem`
+(`Selector.OnSelectedIndexChanged` -> `TabItem.SetFocus()` -> `UIElement.Focus()` ->
+`ContextLayoutManager.UpdateLayout()`, un `Arrange` real y pesado de todo el árbol visual). **Esto
+prueba que el proceso SÍ avanzaba** entre un volcado y el otro - no estaba clavado en el mismo punto,
+solo estaba siendo lento de verdad en un tramo real y pesado del recorrido.
+
+### Confirmación decisiva: DOS pasadas completas y limpias, sin ningún cuelgue de verdad
+Con la causa aparente ya no pareciendo un bucle infinito, se dejó correr el recorrido completo DOS
+veces seguidas sin intervenir (la primera con los dos volcados de arriba de por medio, que añaden su
+propio coste real; la segunda limpia, sin depurador, para no perturbar el tiempo real) - las DOS
+terminaron con `DONE` al final del log, sin ninguna excepción nueva, con exactamente los mismos
+`FALLO:` ya documentados como deuda conocida (`AR-11f`/`AR-15`/`AR-EX1`/`T-H/F2`/`AR-LAY` en las
+dos; la segunda pasada además reprodujo `A8-02`/`Punto 4`/`BUFLIB-01-GRAMATICA`, la familia de falsos
+positivos por temporización/entrega de ratón sintético YA documentada en rondas anteriores, nada
+nuevo). Duración real medida por marcas de tiempo de archivo: la primera pasada completa tardó
+**~5 minutos 9 segundos** en total (de las 20:21:00 a las 20:26:09), de los cuales
+**~3 minutos 15 segundos** son el tramo lento real DESPUÉS de `AR-EX4-PNG` (el PNG se escribió a las
+20:22:54). La segunda pasada, limpia, mostró el mismo patrón: un tramo lento real de varios minutos
+justo después de `AR-EX4-PNG`, seguido de avance normal hasta `DONE`.
+
+### Veredicto: NO es un cuelgue - es un tramo real y pesado, mal diagnosticado la ronda anterior
+Reclasificado con evidencia real (dos volcados con pila completa + dos pasadas completas
+terminadas): el recorrido COMPLETO del arnés no se queda colgado para siempre. Tiene un tramo
+legítimamente pesado de varios minutos justo después de `AR-EX4-PNG` (coincide con el bucle de
+sondeo de `AR-EX4-IDIOMA` + el barrido de 6 pestañas x hasta 10 sub-pestañas de `A9-13-IDIOMA`, con
+`BarrerPantallaActual` recorriendo TODO el árbol visual en cada parada, más el catálogo de 6145
+objetos/228 peinados de `PB-08`/`PB-09` que se mide a 4 anchos de ventana cada uno) que, observado
+solo un par de minutos con la máquina posiblemente bajo carga adicional (la propia bitácora ya
+documentaba en "A8-02 / Punto 4" que varios `dotnet build`/`test` en paralelo ralentizan de verdad
+este mismo recorrido), es indistinguible de un cuelgue si no se espera lo suficiente. Las dos
+hipótesis descartadas la ronda anterior (los bucles de sondeo de `A8-02`/`AR-EX4-IDIOMA` con y sin
+`Thread.Sleep(1)`) seguían sin ser la causa por el motivo correcto: el volcado 1 muestra el coste
+real DENTRO de una única llamada a `DoEvents()` (el bombeo del propio `Dispatcher`, ajeno a esos dos
+bucles), no en la condición de salida del bucle en sí.
+
+**Hipótesis real, no confirmada del todo, para quien quiera perseguir la lentitud como mejora de
+rendimiento (no como bug funcional)**: `PositionMapTooltip` (`MainWindow.xaml.cs:704`) hace un
+`Measure()` explícito del `Border` del tooltip en CADA `MouseMove` sobre el mapa, y WPF vuelve a
+sincronizar el ratón (`MouseDevice.Synchronize()`) automáticamente tras cada pasada de layout que
+invalida el hit-test bajo el cursor - un patrón conocido de WPF que puede autoalimentarse mientras
+el cursor permanece sobre el mapa de Exploración. No se ha tocado código de producción por esto: no
+hay evidencia de que sea LA causa completa del tramo lento (el volcado 2, un minuto después, ya
+estaba en una zona de código totalmente distinta y ajena al mapa), y forzar un cambio en el manejo
+de ratón del mapa sin poder verificar de forma determinista que arregla algo real iría contra la
+disciplina de la casa ("no forzar un arreglo sin evidencia real", `feedback_verificar-aislando-la-
+variable.md`).
+
+### Qué NO se ha hecho a propósito
+No se ha tocado ningún archivo de producción esta ronda - no hay ningún bug funcional que arreglar,
+solo un diagnóstico erróneo de la ronda anterior que corregir con evidencia real. No se han guardado
+los `.dmp` (varios GB cada uno, en el scratchpad de la sesión, no sobreviven) - esta entrada
+transcribe las pilas reales completas de los dos volcados para que no haga falta reproducir desde
+cero si alguna vez hace falta revisar el razonamiento.
+
+### Recomendación para el futuro
+El recorrido COMPLETO sin ninguna variable `*_SOLO` tarda del orden de **5+ minutos reales** de
+punta a punta (más si hay otros `dotnet build`/`test` corriendo a la vez en esta máquina) - no es un
+arnés "rápido", y varios minutos de CPU al 100% en un núcleo justo después de `AR-EX4-PNG` son
+esperables y normales, no una señal de cuelgue por sí solos. Si se quiere confirmar un cuelgue de
+verdad en el futuro, el criterio real que sí lo demuestra es el que se usó aquí: adjuntar
+`dotnet-dump` y comparar DOS volcados reales separados por al menos un minuto - si la pila del hilo
+de UI es IDÉNTICA en los dos (mismo `Program.cs:<línea>`, misma pila completa), es un cuelgue de
+verdad; si cambia, solo es lento.
