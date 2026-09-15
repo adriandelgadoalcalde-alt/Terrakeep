@@ -279,6 +279,11 @@ public partial class ExplorationViewModel : ObservableObject
     private readonly VanillaPrefixCatalog _prefixNames;
     private List<WorldNpcRowViewModel> _allNpcs = [];
     private WldWorld? _world;
+
+    // Fase B (integracion de la Guia, 15-sep-2026): GuideViewModel necesita leer las banderas
+    // reales del mundo cargado (jefes derrotados, NPCs del pueblo) - _world ya existia pero era
+    // privado de esta ViewModel. Solo lectura a proposito: la Guia nunca escribe sobre el mundo.
+    public WldWorld? CurrentWorld => _world;
     // Punto 4 (advisor Opus, "que solo puedan salir los objetos que tiene ese mundo" - ver
     // ESPEC-ui-exploracion.md#10.3): censo real del mundo cargado, calculado una vez en el mismo
     // Task.Run que ya lee+pinta (LoadFromPathAsync). Null sin mundo cargado, igual que _world.

@@ -1,0 +1,2530 @@
+{
+  "version": 1,
+  "juego": "Terraria 1.4.4.9 (tModLoader)",
+  "nota": [
+    "Arbol de progresion de Terraria VAINILLA para la Guia en tiempo real de Terrakeep.",
+    "Este archivo dice QUE hace falta y en que orden. COMO se comprueba cada requisito lo dice",
+    "el C# (Common/Guia/EvaluadorGuia.cs), que lo lee del juego en marcha.",
+    "",
+    "Ningun numero que el motor ya sepa esta escrito aqui: la vida y la defensa de un jefe se",
+    "sacan de ContentSamples + NPC.ScaleStats con el modo real de la partida, y la defensa o el",
+    "daño del jugador de sus propios campos. Lo que hay aqui son UMBRALES, y los que vienen de",
+    "una condicion real del motor llevan citada la linea del codigo decompilado de la que salen.",
+    "",
+    "Los tramos con implementado=false estan a proposito: son el mapa de lo que viene despues,",
+    "todavia sin convertir en requisitos evaluables. Se enseñan como hoja de ruta, nunca como",
+    "algo que la guia sepa medir. Ver bitacora.md para el desglose y las prioridades.",
+    "",
+    "Calamity: 25 tramos (60 pasos) anadidos el 15-sep-2026, investigados contra calamitymod.wiki.gg y verificados decompilando CalamityMod.dll v2.2.2 instalado con ilspycmd (banderas reales de CalamityMod.DownedBossSystem, clases reales de NPC/objeto). \"jefeFinalMod\"/\"jefeMod\" y \"idMod\"/\"idsMod\" resuelven un NPC/objeto de un mod por su pid (\"CalamityMod/NombreInterno\") al type real de la partida via ModContent.TryFind - ver CatalogoGuia.ResolverNpcMod/ResolverItemMod. Vanilla auditado el mismo dia contra terraria.wiki.gg (paginas Bosses y Events, dos fuentes cruzadas): sus 21 tramos ya cubren el 100% real de jefes/eventos con bandera de completado - Luna de Sangre, Eclipse Solar y Lluvia de Slimes se investigaron y se dejan fuera a proposito (confirmado en la wiki: son eventos ambientales sin ninguna bandera de \"completado\", nunca un descuido).",
+    "que añadirlo sea DATOS y no reescribir el cerebro. Ver la cabecera de CatalogoGuia.cs."
+  ],
+  "tramos": [
+    {
+      "clave": "ReySlime",
+      "orden": 5,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 50,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaElReySlime",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 50,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==50: daño 40, defensa 10, vida 2000 - el opcional mas flojo de todo el arbol, pensado para ANTES del Ojo de Cthulhu. Su propia condicion de aparicion natural (Main.AnyPlayerReadyToFightKingSlime: ConsumedLifeCrystals>2 y statDefense>8) pide incluso menos que el tramo PreOjo.",
+              "tipo": "dano_arma",
+              "valor": 12
+            },
+            {
+              "_fuente": "Player.cs, SummonItemCheck (linea ~41813): ItemID.SlimeCrown=560 invoca al Rey Slime (type 50) al usarlo. Alternativa a esperar la lluvia de slimes aleatoria.",
+              "tipo": "objeto",
+              "id": 560,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAlReySlime",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 50,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedSlimeKing"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "PreOjo",
+      "orden": 10,
+      "ambito": "vanilla",
+      "jefeFinal": 4,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "Refugio",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "tipo": "npcs_pueblo",
+              "valor": 1
+            },
+            {
+              "tipo": "objeto",
+              "id": 8,
+              "cantidad": 20,
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "Defensa",
+          "zona": "Subterraneo",
+          "capa": "subterraneo",
+          "requisitos": [
+            {
+              "_fuente": "Main.UpdateTime_StartNight: la aparicion nocturna del Ojo exige (int)statDefense > 10, o sea 11",
+              "tipo": "defensa",
+              "valor": 11
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "CristalesDeVida",
+          "zona": "Cavernas",
+          "capa": "cavernas",
+          "requisitos": [
+            {
+              "_fuente": "Main.UpdateTime_StartNight exige ConsumedLifeCrystals >= 5. OJO: es un contador guardado que solo sube al USAR un cristal (Player.ItemCheck, sItem.type==29), NO la vida maxima dividida entre 20 - subir la vida a mano con Terrakeep no lo mueve.",
+              "tipo": "cristales_vida",
+              "valor": 5
+            }
+          ]
+        },
+        {
+          "clave": "PuebloDeCuatro",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "_fuente": "Main.UpdateTime_StartNight: cuenta los NPC del pueblo vivos y exige num >= 4",
+              "tipo": "npcs_pueblo",
+              "valor": 4
+            },
+            {
+              "tipo": "npc",
+              "id": 17,
+              "recomendado": true
+            },
+            {
+              "tipo": "npc",
+              "id": 18,
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "ArmaYArena",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 4,
+          "requisitos": [
+            {
+              "_fuente": "NPC.HitModifiers: daño = max(daño - defensa*0.5, 1). Con los 12 de defensa del Ojo, cualquier arma por debajo de ~14 se queda en migajas.",
+              "tipo": "dano_arma",
+              "valor": 15
+            },
+            {
+              "tipo": "objeto",
+              "id": 94,
+              "cantidad": 50,
+              "recomendado": true
+            },
+            {
+              "tipo": "objeto_cualquiera",
+              "ids": [
+                28,
+                188
+              ],
+              "cantidad": 5,
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "InvocarElOjo",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 4,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedBoss1"
+            },
+            {
+              "_fuente": "Recipe.cs: el Vidente Sospechoso (43) son 6 Lentes (38) en un Altar Demoniaco/Carmesi (tile 26)",
+              "tipo": "objeto",
+              "id": 43,
+              "cantidad": 1,
+              "recomendado": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "EjercitoGoblin",
+      "orden": 12,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 0,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaElEjercitoGoblin",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs: el Guerrero Goblin (type==28), el mas duro de los comunes del evento, tiene 25 de daño, 8 de defensa y 110 de vida. Con daño-defensa*0.5 (minimo 1), 15 de daño deja golpes utiles contra toda la oleada.",
+              "tipo": "dano_arma",
+              "valor": 15
+            },
+            {
+              "_fuente": "Main.CanStartInvasion: usar el Estandarte de Batalla Goblin exige ConsumedLifeCrystals>=5 (200 de vida ya USADA de verdad, el mismo hito que PreOjo/CristalesDeVida) y que no haya ya otra invasion en marcha.",
+              "tipo": "cristales_vida",
+              "valor": 5,
+              "recomendado": true
+            },
+            {
+              "_fuente": "ItemID.cs: Estandarte de Batalla Goblin=361. Usado en la superficie, invoca la invasion al instante; alternativa a esperar a que aparezca sola (solo puede pasar tras derrotar a un jefe).",
+              "tipo": "objeto",
+              "id": 361,
+              "cantidad": 1,
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAlEjercitoGoblin",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedGoblins"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "LegionDeEscarcha",
+      "orden": 17,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 0,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaLaLegionDeEscarcha",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs: Mister Estocada (type==144), el mas duro de los tres tipos del evento, tiene 65 de daño, 26 de defensa y 240 de vida - con coldDamage=true, aplica frio extra ademas del golpe. Con daño-defensa*0.5 (minimo 1), 28 de daño deja golpes utiles.",
+              "tipo": "dano_arma",
+              "valor": 28
+            },
+            {
+              "_fuente": "Main.CanStartInvasion: usar la Bola de Nieve de Cristal exige el mismo ConsumedLifeCrystals>=5 que el Estandarte Goblin, y que no haya ya otra invasion en marcha.",
+              "tipo": "cristales_vida",
+              "valor": 5,
+              "recomendado": true
+            },
+            {
+              "_fuente": "ItemID.cs: Bola de Nieve de Cristal=602. Usada en cualquier sitio, invoca la legion al instante.",
+              "tipo": "objeto",
+              "id": 602,
+              "cantidad": 1,
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerALaLegionDeEscarcha",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedFrost"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Deerclops",
+      "orden": 15,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 668,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaDeerclops",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "jefe": 668,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==668: daño 20 (coldDamage=true, aplica Frostburn extra), defensa 10, vida 7000.",
+              "tipo": "dano_arma",
+              "valor": 16
+            },
+            {
+              "_fuente": "Player.cs, SummonItemCheck (linea ~41813): ItemID.DeerThing=5120 invoca a Deerclops (type 668) al usarlo. Alternativa a esperar a que aparezca solo (Main.cs: solo durante una tormenta, justo tras el atardecer, con el jugador en ZoneSnow y sin peligro cerca - NPC.AnyDanger).",
+              "tipo": "objeto",
+              "id": 5120,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerADeerclops",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "jefe": 668,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedDeerclops"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Piratas",
+      "orden": 19,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 0,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaLosPiratas",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==216: el Capitan Pirata, el mas duro de los comunes del evento, tiene 70 de daño, 30 de defensa y 3000 de vida - mucha mas defensa que el Guerrero Goblin (8) o Mister Estocada (26). OJO: el 'Flying Dutchman' que se suele citar de memoria (type==491, Pirate Ship) NO es un enemigo de combate real - tiene dontTakeDamage=true y damage=0, es solo la plataforma visual.",
+              "tipo": "dano_arma",
+              "valor": 35
+            },
+            {
+              "_fuente": "Main.CanStartInvasion(3,...): usar el Mapa Pirata exige ConsumedLifeCrystals>=5, el mismo hito que el Ejercito Goblin y la Legion de Escarcha.",
+              "tipo": "cristales_vida",
+              "valor": 5,
+              "recomendado": true
+            },
+            {
+              "_fuente": "ItemID.cs: Mapa Pirata=1315. Usado en la superficie, invoca la invasion al instante.",
+              "tipo": "objeto",
+              "id": 1315,
+              "cantidad": 1,
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerALosPiratas",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedPirates"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "MaldadDelMundo",
+      "orden": 20,
+      "ambito": "vanilla",
+      "jefeFinal": 13,
+      "jefeFinalCarmesi": 266,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaContraLaMaldad",
+          "zona": "Cavernas",
+          "capa": "cavernas",
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==13 (Devorador, cabeza de segmento): daño 22, defensa 2, vida 150 por segmento. type==266 (Cerebro): daño 30, defensa 14, vida 1250, con dontTakeDamage=true mientras vivan sus Reptadores. Con daño-defensa*0.5 (minimo 1), 20 de daño de arma deja golpes utiles contra los dos.",
+              "tipo": "dano_arma",
+              "valor": 20
+            },
+            {
+              "_fuente": "WorldGen.shadowOrbSmashed, guardado en el .wld (WorldFile.cs). Solo dice que ya se ha roto UNA, no cuantas: el contador real (shadowOrbCount) es modulo 3 y vuelve a 0 al invocar al jefe.",
+              "tipo": "bandera",
+              "bandera": "shadowOrbSmashed",
+              "recomendado": true
+            },
+            {
+              "_fuente": "ItemID.cs: WormFood=70, BloodySpine=1331. Invocan al jefe al usarlos, alternativa a romper esferas/corazones a ciegas.",
+              "tipo": "objeto_cualquiera",
+              "ids": [
+                70,
+                1331
+              ],
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerLaMaldad",
+          "zona": "Cavernas",
+          "capa": "cavernas",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedBoss2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "ReinaAbeja",
+      "orden": 25,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 222,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaLaReina",
+          "zona": "Jungla",
+          "capa": "cavernas",
+          "jefe": 222,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==222: daño 30, defensa 8, vida 3400 - mas floja de defensa que el propio Ojo de Cthulhu (12), aunque llega despues en el orden natural del juego.",
+              "tipo": "dano_arma",
+              "valor": 16
+            },
+            {
+              "_fuente": "ItemID.cs: Abeemination=1133 (se fabrica con Panal). La invoca al usarlo dentro de la colmena, alternativa a romper una larva a ciegas.",
+              "tipo": "objeto",
+              "id": 1133,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerALaReina",
+          "zona": "Jungla",
+          "capa": "cavernas",
+          "jefe": 222,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedQueenBee"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Esqueletron",
+      "orden": 30,
+      "ambito": "vanilla",
+      "jefeFinal": 35,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaEsqueletron",
+          "zona": "Mazmorra",
+          "capa": "superficie",
+          "jefe": 35,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==35: daño 32, defensa 10, vida 4400. Con daño-defensa*0.5 (minimo 1), 20 de daño de arma deja golpes utiles.",
+              "tipo": "dano_arma",
+              "valor": 20
+            },
+            {
+              "_fuente": "NPC.cs, type==37: townNPC=true, siempre presente junto a la Mazmorra. Hablarle de noche reta a luchar contra Esqueletron.",
+              "tipo": "npc",
+              "id": 37,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAEsqueletron",
+          "zona": "Mazmorra",
+          "capa": "superficie",
+          "jefe": 35,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedBoss3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "MuroDeCarne",
+      "orden": 40,
+      "ambito": "vanilla",
+      "jefeFinal": 113,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaElMuro",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefe": 113,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==113 (cuerpo): daño 50, defensa 12, vida 8000. type==114 (ojo): daño 50, defensa 0, vida 8000. Con daño-defensa*0.5 (minimo 1), 25 de daño deja golpes utiles contra los dos sin alargar una pelea con mucha mas vida que Esqueletron.",
+              "tipo": "dano_arma",
+              "valor": 25
+            },
+            {
+              "_fuente": "ItemID.ObsidianSkinPotion=288: inmuniza contra el fuego de la lava mientras dura.",
+              "tipo": "objeto",
+              "id": 288,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "_fuente": "NPC.cs, case 22 (Guia): Collision.LavaCollision(position,...) -> SpawnWOF(position). El Muñeco Vudú del Guia (ItemID.GuideVoodooDoll=267) lanzado a la lava es la forma practica de conseguirlo sin arriesgar al propio Guia a pie.",
+              "tipo": "objeto",
+              "id": 267,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAlMuro",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefe": 113,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, case 113 (muerte): WorldGen.StartHardmode() pone Main.hardMode a true. No hay marcha atras: es la unica bandera real de este cierre.",
+              "tipo": "bandera",
+              "bandera": "hardMode"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "InicioModoDificil",
+      "orden": 45,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 657,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaLaReinaSlime",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 657,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==657: daño 60, defensa 26, vida 18000.",
+              "tipo": "dano_arma",
+              "valor": 30
+            },
+            {
+              "_fuente": "ItemID.cs: Cristal de la Reina Slime=4988. Se usa de noche dentro del bioma Sagrado para invocarla.",
+              "tipo": "objeto",
+              "id": 4988,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerALaReinaSlime",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 657,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedQueenSlime"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Mecanicos",
+      "orden": 50,
+      "ambito": "vanilla",
+      "jefeFinal": 134,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaLosMecanicos",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 134,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs: Gemelos (type==125/126) defensa 10, vida 20000/23000, daño 45/50. Esqueletron Prime (type==127) defensa 24, vida 28000, daño 47. Destructor (type==134, cabeza) defensa 0 pero cuerpo/cola (135/136) defensa 30/35, vida 80000, daño 55/70. Con daño-defensa*0.5 (minimo 1), 40 de daño deja golpes utiles contra los tres.",
+              "tipo": "dano_arma",
+              "valor": 40
+            },
+            {
+              "_fuente": "ItemID.cs: Ojo Mecanico=544 (Gemelos), Gusano Mecanico=556 (Destructor), Craneo Mecanico=557 (Esqueletron Prime). Cualquiera de los tres invoca a su jefe de noche.",
+              "tipo": "objeto_cualquiera",
+              "ids": [
+                544,
+                556,
+                557
+              ],
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAUnMecanico",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 134,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs: SetEventFlagCleared enciende downedMechBossAny al morir cualquiera de los tres (case 125/126, case 127 via boss, case 134). Es la bandera real que sube el mineral de Hardmode y adelanta Plantera; no hace falta matar a los tres para seguir, aunque el mejor equipo sale de matarlos todos.",
+              "tipo": "bandera",
+              "bandera": "downedMechBossAny"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Plantera",
+      "orden": 60,
+      "ambito": "vanilla",
+      "jefeFinal": 262,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaPlantera",
+          "zona": "Jungla",
+          "capa": "cavernas",
+          "jefe": 262,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==262: daño 50, defensa 14, vida 30000. Tiene DOS fases (a partir de la mitad de la vida se enrabia, acelera y persigue mas rapido: NPC.cs, el frame de type==262 cambia con life<=lifeMax/2), asi que lo que pide de verdad no es atravesar defensa sino aguantar el ritmo entero sin que la segunda fase te pille sin salida.",
+              "tipo": "dano_arma",
+              "valor": 45
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAPlantera",
+          "zona": "Jungla",
+          "capa": "cavernas",
+          "jefe": 262,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedPlantBoss"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "TemploYGolem",
+      "orden": 70,
+      "ambito": "vanilla",
+      "jefeFinal": 245,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaElTemplo",
+          "zona": "TemploLihzahrd",
+          "capa": "cavernas",
+          "jefe": 245,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==245 (cuerpo): daño 72, defensa 26, vida 15000. La cabeza suelta (type==249, tras destruir los dos puños) sube a 32 de defensa y 80 de daño, y no recibe daño mientras vivan los puños (dontTakeDamage=true). Con daño-defensa*0.5 (minimo 1), 55 de daño deja golpes utiles contra las tres fases.",
+              "tipo": "dano_arma",
+              "valor": 55
+            },
+            {
+              "_fuente": "ItemID.cs: Celula de Poder Lihzahrd=1293. Se usa en el Altar Lihzahrd, dentro del Templo, para invocar al Golem; sale de las trampas y cofres del Templo.",
+              "tipo": "objeto",
+              "id": 1293,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAlGolem",
+          "zona": "TemploLihzahrd",
+          "capa": "cavernas",
+          "jefe": 245,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedGolemBoss"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "LocuraMarciana",
+      "orden": 71,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 0,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "PrepararLocuraMarciana",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==383 (Martian Officer): el enemigo comun mas blindado de las cuatro invasiones del arbol, 50 de defensa, 75 de daño, 300 de vida - por delante de los 30 del Capitan Pirata, los 26 de Mister Estocada y los 8 del Guerrero Goblin. Con daño-defensa*0.5 (minimo 1), 60 de daño deja golpes utiles.",
+              "tipo": "dano_arma",
+              "valor": 60
+            },
+            {
+              "_fuente": "Main.StartInvasion(int tipo=1) (NPC.cs, linea ~38938, llamada con tipo=4 en cuanto la Sonda Marciana huye con exito): exige lo MISMO que las otras tres invasiones aunque no haya objeto que lo compruebe antes - al menos un jugador con ConsumedLifeCrystals>=5, o la funcion no hace nada (invasionType se queda a 0) aunque la sonda ya haya escapado.",
+              "tipo": "cristales_vida",
+              "valor": 5,
+              "recomendado": true
+            },
+            {
+              "_fuente": "NPCID.MartianProbe=399 (NPC.cs, aiStyle==80). A diferencia de las otras tres invasiones, esta NO tiene objeto de invocacion: la dispara sola una Sonda Marciana que aparece por probabilidad (modo dificil, Golem ya derrotado, lejos del punto de aparicion del mundo) en cuanto te detecta a menos de 352px estando tu por debajo de ella y consigue huir sin que la mates. Este aviso solo dice si hay una sonda activa en el mundo AHORA MISMO - tipo \"npc_activo\", no \"npc\": la Sonda es un enemigo hostil, nunca un vecino que se muda, y el texto generico de \"npc\" (\"Que viva contigo\") mentiria aqui.",
+              "tipo": "npc_activo",
+              "id": 399,
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerALaLocuraMarciana",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedMartians"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "LunaDeCalabazas",
+      "orden": 72,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 325,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaMourningWood",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 325,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==325: Mourning Wood, el primer jefe de oleada del evento (aparece en la oleada 5), tiene 120 de daño, 34 de defensa y 14000 de vida.",
+              "tipo": "dano_arma",
+              "valor": 58
+            },
+            {
+              "_fuente": "ItemID.cs: Medallon de la Luna de Calabazas=1844. Player.cs (ItemCheck): solo se puede usar de noche y si no hay ya otro evento de oleadas (Luna Helada o Antiguo Ejercito D2) en marcha.",
+              "tipo": "objeto",
+              "id": 1844,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAMourningWood",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 325,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedHalloweenTree"
+            }
+          ]
+        },
+        {
+          "clave": "ArmaParaPumpking",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 327,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==327: Pumpking, el jefe final del evento (aparece en la oleada 9), tiene 50 de daño, 40 de defensa y 26000 de vida - mas vida que Mourning Wood pese a golpear mas flojo.",
+              "tipo": "dano_arma",
+              "valor": 63
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAPumpking",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 327,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedHalloweenKing"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "LunaHelada",
+      "orden": 73,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 344,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaEverscream",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "jefe": 344,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==344: Everscream, el primer jefe de oleada del evento (aparece en la oleada 3), tiene 110 de daño, 38 de defensa y 13000 de vida.",
+              "tipo": "dano_arma",
+              "valor": 58
+            },
+            {
+              "_fuente": "ItemID.cs: Regalo Travieso=1958. Player.cs (ItemCheck): solo se puede usar de noche y si no hay ya otro evento de oleadas (Luna de Calabazas o Antiguo Ejercito D2) en marcha.",
+              "tipo": "objeto",
+              "id": 1958,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAEverscream",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "jefe": 344,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedChristmasTree"
+            }
+          ]
+        },
+        {
+          "clave": "ArmaParaSantaNK1",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "jefe": 346,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==346: Santa-NK1 (aparece en la oleada 6) tiene 120 de daño, 56 de defensa y 18000 de vida - la defensa mas alta de los tres jefes de oleada del evento.",
+              "tipo": "dano_arma",
+              "valor": 66
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerASantaNK1",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "jefe": 346,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedChristmasSantank"
+            }
+          ]
+        },
+        {
+          "clave": "ArmaParaIceQueen",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "jefe": 345,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==345: la Reina de Hielo, jefe final del evento (aparece en la oleada 10), tiene 120 de daño, 38 de defensa y 34000 de vida (la mas alta de los tres) y coldDamage=true, aplica frio extra ademas del golpe.",
+              "tipo": "dano_arma",
+              "valor": 62
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAIceQueen",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "jefe": 345,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedChristmasIceQueen"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "EjercitoD2",
+      "orden": 74,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 551,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaElEjercitoD2",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 551,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==551 (DD2Betsy), el jefe final de cada asedio: 80 de daño, 38 de defensa y 50000 de vida.",
+              "tipo": "dano_arma",
+              "valor": 65
+            },
+            {
+              "_fuente": "ItemID.cs: Cristal de Eternia=3828. Player.cs (~linea 30670): clic derecho sobre el Soporte del Cristal de Eternia (tile 466, del objeto DD2ElderCrystalStand=3816) con el Cristal en el inventario lo consume e invoca el asedio (DD2Event.SummonCrystal), siempre que no haya ya un asedio en marcha ni sea Luna de Calabazas/Helada.",
+              "tipo": "objeto",
+              "id": 3828,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAlEjercitoD2",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 551,
+          "requisitos": [
+            {
+              "_fuente": "Player.cs (~linea 23413): downedDD2EventAnyDifficulty se pone a true al terminar el evento en CUALQUIER dificultad (no hace falta la mas dura). Es un campo de Player, no de NPC/WorldGen - el primer caso de la tabla de BanderasGuia que lee Main.LocalPlayer.",
+              "tipo": "bandera",
+              "bandera": "downedDD2EventAnyDifficulty"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "JefesOpcionalesTardios",
+      "orden": 75,
+      "ambito": "vanilla",
+      "opcional": true,
+      "jefeFinal": 370,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaFishron",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 370,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==370: daño 100, defensa 50, vida 60000 - el daño mas alto de todo el arbol hasta el propio Moon Lord.",
+              "tipo": "dano_arma",
+              "valor": 70
+            },
+            {
+              "_fuente": "ItemID.cs: Gusano Trufado=2673. Se usa pescando en el oceano para invocarlo.",
+              "tipo": "objeto",
+              "id": 2673,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAFishron",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 370,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedFishron"
+            }
+          ]
+        },
+        {
+          "clave": "ArmaParaLaEmperatriz",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 636,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==636: daño 80, defensa 50, vida 70000 - la mas alta de todos los opcionales tardios. No recibe daño (dontTakeDamage) salvo en condiciones concretas de dia/noche.",
+              "tipo": "dano_arma",
+              "valor": 75
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerALaEmperatriz",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 636,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedEmpressOfLight"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "EventosLunares",
+      "orden": 80,
+      "ambito": "vanilla",
+      "jefeFinal": 439,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaElCultista",
+          "zona": "Mazmorra",
+          "capa": "superficie",
+          "jefe": 439,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, type==439 (Cultista Lunatico): daño 50, defensa 42, vida 32000. Con daño-defensa*0.5 (minimo 1), 65 de daño deja golpes utiles.",
+              "tipo": "dano_arma",
+              "valor": 65
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAlCultista",
+          "zona": "Mazmorra",
+          "capa": "superficie",
+          "jefe": 439,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs, case 439 (muerte del jefe): SetEventFlagCleared(ref downedAncientCultist,...) y WorldGen.TriggerLunarApocalypse() en la misma linea - matarlo dispara el evento de las cuatro torres directamente, no hace falta nada mas.",
+              "tipo": "bandera",
+              "bandera": "downedAncientCultist"
+            }
+          ]
+        },
+        {
+          "clave": "PrepararLasTorres",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 493,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs: las cuatro torres (Solar=517, Vortex=422, Nebula=507, Stardust=493) comparten defensa 20 y 20000 de vida cada una, y no atacan de forma directa (daño 0): el peligro real son las oleadas de enemigos de su color que invocan sin parar mientras siga en pie, algunos con hasta 100 de daño por golpe. 75 de daño deja golpes utiles contra las torres Y contra sus oleadas.",
+              "tipo": "dano_arma",
+              "valor": 75
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerALasTorres",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 493,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs: la propiedad downedTowers exige downedTowerSolar Y downedTowerVortex Y downedTowerNebula Y downedTowerStardust juntas - las cuatro, no basta con una.",
+              "tipo": "bandera",
+              "bandera": "downedTowers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "MoonLord",
+      "orden": 90,
+      "ambito": "vanilla",
+      "jefeFinal": 398,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaMoonLord",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 398,
+          "requisitos": [
+            {
+              "_fuente": "NPC.cs: el nucleo (type==398) tiene 70 de defensa y 50000 de vida propia y NO recibe daño hasta que caen las dos manos (type==397, 40 de defensa/25000 de vida cada una) y la cabeza (type==396, 50 de defensa/45000 de vida) - mas de 145000 de vida repartida en total. Con daño-defensa*0.5 (minimo 1), 90 de daño deja golpes utiles en las tres piezas.",
+              "tipo": "dano_arma",
+              "valor": 90
+            },
+            {
+              "_fuente": "Player.statLifeMax2: 500 de vida es el maximo real del juego (10 cristales + 14 frutos de la vida), y es el listón que de verdad hace falta para aguantar sus laser y sus caidas de meteoro sin que un solo error acabe la partida.",
+              "tipo": "vida_maxima",
+              "valor": 500,
+              "recomendado": true
+            },
+            {
+              "_fuente": "ItemID.cs: Sello Celestial=3601. Se fabrica con fragmentos de las cuatro torres en un Yunque de Mithril/Orichalco y lo invoca al usarlo.",
+              "tipo": "objeto",
+              "id": 3601,
+              "cantidad": 1,
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAMoonLord",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 398,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedMoonlord"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "DesertScourge",
+      "orden": 3,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaDesertScourge",
+          "zona": "Desierto",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/DesertScourgeHead",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 14,
+              "_fuente": "NPC real: defensa 4, vida 4000-5000 (LifeMaxNERB normal/experto). Umbral holgado para el primer jefe opcional de Calamity."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/DesertMedallion",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.DesertMedallion: su UseItem invoca DesertScourgeHead directamente."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerADesertScourge",
+          "zona": "Desierto",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/DesertScourgeHead",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedDesertScourge",
+              "_fuente": "CalamityMod.dll: DesertScourgeHead.OnKill pone DownedBossSystem.downedDesertScourge=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "GiantClam",
+      "orden": 4,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "PrepararGiantClam",
+          "zona": "OceanoProfundo",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/GiantClam",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 14,
+              "_fuente": "NPC real: defensa 10 en prehardmode (CalamityMod.dll, GiantClam.SetDefaults)."
+            },
+            {
+              "tipo": "bandera",
+              "bandera": "downedDesertScourge",
+              "_fuente": "Condicion real de aparicion (SpawnInfo): sin este downed, el Giant Clam no aparece nunca.",
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAGiantClam",
+          "zona": "OceanoProfundo",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/GiantClam",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedCLAM",
+              "_fuente": "CalamityMod.dll: GiantClam.OnKill pone DownedBossSystem.downedCLAM=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Crabulon",
+      "orden": 6,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaCrabulon",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/Crabulon",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 16,
+              "_fuente": "NPC real: defensa 8, vida 3500-4400 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/DecapoditaSprout",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.DecapoditaSprout: su UseItem invoca a Crabulon directamente."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerACrabulon",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/Crabulon",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedCrabulon",
+              "_fuente": "CalamityMod.dll: Crabulon.OnKill pone DownedBossSystem.downedCrabulon=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "HiveMindOPerforator",
+      "orden": 21,
+      "ambito": "calamity",
+      "opcional": true,
+      "jefeFinalMod": "CalamityMod/HiveMind",
+      "jefeFinalModCarmesi": "CalamityMod/PerforatorHive",
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaHiveMindOPerforator",
+          "zona": "Cavernas",
+          "capa": "cavernas",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 20,
+              "_fuente": "NPC real: Hive Mind defensa 8/5000-7000 vida, Perforators defensa 4/4000-5750 vida (LifeMaxNERB, ambos)."
+            },
+            {
+              "tipo": "objeto_cualquiera",
+              "idsMod": [
+                "CalamityMod/Teratoma",
+                "CalamityMod/BloodyWormFood"
+              ],
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll: Teratoma invoca HiveMind, BloodyWormFood invoca PerforatorHive - alternativa a romper un tumor/quiste a ciegas."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAHiveMindOPerforator",
+          "zona": "Cavernas",
+          "capa": "cavernas",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedHiveMind",
+              "_fuente": "CalamityMod.dll: HiveMind.OnKill / PerforatorHive.OnKill ponen downedHiveMind o downedPerforator segun cual mueras primero.",
+              "banderaCarmesi": "downedPerforator"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "SlimeGod",
+      "orden": 31,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaSlimeGod",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/SlimeGodCore",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 20,
+              "_fuente": "NPC real: SlimeGodCore, 6 de defensa (CalamityMod.dll, SetDefaults)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/OverloadedSludge",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.OverloadedSludge: su UseItem invoca a los dos Paladines."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerASlimeGod",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/SlimeGodCore",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedSlimeGod",
+              "_fuente": "CalamityMod.dll: SlimeGodCore.OnKill pone DownedBossSystem.downedSlimeGod=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "DreadnautilusYHorribleHog",
+      "orden": 32,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "PrepararDreadnautilus",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 618,
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 20,
+              "_fuente": "Bandera real \"downedDreadnautilus\" (NPC vanilla 618 con IA sobrescrita por CalamityMod.NPCs.VanillaNPCAIOverrides.MiniBosses.DreadnautilusAI)."
+            },
+            {
+              "tipo": "bandera",
+              "bandera": "downedBoss1",
+              "_fuente": "Condicion real del Horrible Hog: activo tras derrotar al Ojo de Cthulhu.",
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerADreadnautilusYHorribleHog",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefe": 618,
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedDreadnautilus",
+              "_fuente": "CalamityGlobalNPC.cs (CalamityMod.dll): case 618 (BloodNautilus) pone DownedBossSystem.downedDreadnautilus=true al morir."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Cryogen",
+      "orden": 46,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaCryogen",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/Cryogen",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 35,
+              "_fuente": "NPC real: defensa 15, vida 25000-48000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/CryoKey",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.CryoKey: su UseItem invoca a Cryogen."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerACryogen",
+          "zona": "Nieve",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/Cryogen",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedCryogen",
+              "_fuente": "CalamityMod.dll: Cryogen.OnKill pone DownedBossSystem.downedCryogen=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "AquaticScourge",
+      "orden": 47,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaAquaticScourge",
+          "zona": "OceanoProfundo",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/AquaticScourgeHead",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 35,
+              "_fuente": "NPC real: defensa 10, vida 80000-96000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/Seafood",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.Seafood: su UseItem invoca a AquaticScourgeHead."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAAquaticScourge",
+          "zona": "OceanoProfundo",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/AquaticScourgeHead",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedAquaticScourge",
+              "_fuente": "CalamityMod.dll: AquaticScourgeHead.OnKill pone DownedBossSystem.downedAquaticScourge=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "BrimstoneElemental",
+      "orden": 48,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaBrimstoneElemental",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/BrimstoneElemental",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 38,
+              "_fuente": "NPC real: defensa 15, vida 30000-49200 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/CharredIdol",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.CharredIdol: su UseItem invoca al Brimstone Elemental."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerABrimstoneElemental",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/BrimstoneElemental",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedBrimstoneElemental",
+              "_fuente": "CalamityMod.dll: BrimstoneElemental.OnKill pone DownedBossSystem.downedBrimstoneElemental=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "LluviaAcidaCragmawMire",
+      "orden": 49,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "PrepararLluviaAcida2",
+          "zona": "OceanoProfundo",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/CragmawMire",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 40,
+              "_fuente": "NPC real: defensa 25 (CalamityMod.dll, CragmawMire.SetDefaults)."
+            },
+            {
+              "tipo": "bandera",
+              "bandera": "downedAquaticScourge",
+              "_fuente": "Umbral real de progreso de la Lluvia Acida: la fase 2 (115 puntos, donde aparece Cragmaw Mire) exige haber derrotado ya al Aquatic Scourge.",
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerACragmawMire",
+          "zona": "OceanoProfundo",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/CragmawMire",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedCragmawMire",
+              "_fuente": "CalamityMod.dll: CragmawMire.OnKill pone DownedBossSystem.downedCragmawMire=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "AstrumAureus",
+      "orden": 51,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaAstrumAureus",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/AstrumAureus",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 55,
+              "_fuente": "NPC real: defensa 40, vida 75000-120000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/AstralChunk",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.AstralChunk: su UseItem invoca a Astrum Aureus."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAAstrumAureus",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/AstrumAureus",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedAstrumAureus",
+              "_fuente": "CalamityMod.dll: AstrumAureus.OnKill pone DownedBossSystem.downedAstrumAureus=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "CalamitasClone",
+      "orden": 55,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaCalamitasClone",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/CalamitasClone",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 55,
+              "_fuente": "NPC real: defensa 25, vida 30000-46875 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/EyeofDesolation",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.EyeofDesolation: su UseItem invoca a Calamitas Clone."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerACalamitasClone",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/CalamitasClone",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedCalamitasClone",
+              "_fuente": "CalamityMod.dll: CalamitasClone.OnKill pone DownedBossSystem.downedCalamitasClone=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "GreatSandShark",
+      "orden": 62,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaGreatSandShark",
+          "zona": "Desierto",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/GreatSandShark",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 60,
+              "_fuente": "NPC real: defensa 40, vida 9200-11000 (LifeMaxNERB)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/SandstormsCore",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.SandstormsCore: su UseItem invoca a Great Sand Shark."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAGreatSandShark",
+          "zona": "Desierto",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/GreatSandShark",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedGSS",
+              "_fuente": "CalamityMod.dll: GreatSandShark.OnKill pone DownedBossSystem.downedGSS=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Ravager",
+      "orden": 68,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaRavager",
+          "zona": "TemploLihzahrd",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/RavagerBody",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 65,
+              "_fuente": "NPC real: defensa 55, vida 30000-54000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/DeathWhistle",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.DeathWhistle: su UseItem invoca a Ravager."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerARavager",
+          "zona": "TemploLihzahrd",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/RavagerBody",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedRavager",
+              "_fuente": "CalamityMod.dll: RavagerBody.OnKill pone DownedBossSystem.downedRavager=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Plaguebringer",
+      "orden": 76,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaPlaguebringer",
+          "zona": "Jungla",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/PlaguebringerGoliath",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 68,
+              "_fuente": "NPC real: defensa 50, vida 70000-105000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/Abombination",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.Abombination: su UseItem invoca a Plaguebringer Goliath."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAPlaguebringer",
+          "zona": "Jungla",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/PlaguebringerGoliath",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedPlaguebringer",
+              "_fuente": "CalamityMod.dll: PlaguebringerGoliath.OnKill pone DownedBossSystem.downedPlaguebringer=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Dragonfolly",
+      "orden": 81,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaDragonfolly",
+          "zona": "Jungla",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/Dragonfolly",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 85,
+              "_fuente": "NPC real: defensa 40, vida 150000-225000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/ExoticPheromones",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.ExoticPheromones: su UseItem invoca a Dragonfolly."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerADragonfolly",
+          "zona": "Jungla",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/Dragonfolly",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedDragonfolly",
+              "_fuente": "CalamityMod.dll: Dragonfolly.OnKill pone DownedBossSystem.downedDragonfolly=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "PrimordialWyrm",
+      "orden": 97,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaPrimordialWyrm",
+          "capa": "cualquiera",
+          "jefeMod": "CalamityMod/PrimordialWyrmHead",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 150,
+              "_fuente": "NPC real: vida 2500000-3000000 (LifeMaxNERB). Defensa base 999 sin confirmar su mecanica exacta - umbral aproximado, no derivado de la formula habitual."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAPrimordialWyrm",
+          "capa": "cualquiera",
+          "jefeMod": "CalamityMod/PrimordialWyrmHead",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedPrimordialWyrm",
+              "_fuente": "CalamityMod.dll: PrimordialWyrmHead.OnKill pone DownedBossSystem.downedPrimordialWyrm=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "LluviaAcidaTier3",
+      "orden": 99,
+      "ambito": "calamity",
+      "opcional": true,
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "PrepararLluviaAcida3",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 180,
+              "_fuente": "NPC real: Mauler y Nuclear Terror, 50 de defensa cada uno (CalamityMod.dll, SetDefaults)."
+            },
+            {
+              "tipo": "bandera",
+              "bandera": "downedPolterghast",
+              "_fuente": "Umbral real de progreso de la Lluvia Acida: la fase 3 (140 puntos, Mauler/Nuclear Terror/Old Duke) exige haber derrotado ya a Polterghast.",
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerALluviaAcida3",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedMauler",
+              "_fuente": "CalamityMod.dll: Mauler.OnKill pone DownedBossSystem.downedMauler=true (Nuclear Terror tiene su propia downedNuclearTerror igual)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "AstrumDeus",
+      "orden": 82,
+      "ambito": "calamity",
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "PrepararAstrumDeus",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/AstrumDeusHead",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 85,
+              "_fuente": "NPC real: defensa 20, vida 150000-240000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "bandera",
+              "bandera": "downedAncientCultist",
+              "_fuente": "Calamity Mod Wiki, Astrum_Deus: \"intended to be fought after the Lunatic Cultist has been defeated\".",
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAAstrumDeus",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/AstrumDeusHead",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedAstrumDeus",
+              "_fuente": "CalamityMod.dll: AstrumDeusHead.OnKill pone DownedBossSystem.downedAstrumDeus=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "ProfanedGuardiansYProvidence",
+      "orden": 91,
+      "ambito": "calamity",
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaGuardianes",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/ProfanedGuardianCommander",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 110,
+              "_fuente": "NPC real: Comandante, defensa 40, vida 80000-120000 (LifeMaxNERB)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/ProfanedShard",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.ProfanedShard: su UseItem invoca al trio de guardianes."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAGuardianes",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/ProfanedGuardianCommander",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedGuardians",
+              "_fuente": "CalamityMod.dll: ProfanedGuardianCommander.OnKill pone DownedBossSystem.downedGuardians=true."
+            }
+          ]
+        },
+        {
+          "clave": "ArmaParaProvidence",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/Providence",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 120,
+              "_fuente": "NPC real: defensa 50, vida 250000-375000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/ProfanedCore",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.ProfanedCore: su UseItem invoca a Providence."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAProvidence",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/Providence",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedProvidence",
+              "_fuente": "CalamityMod.dll: Providence.OnKill pone DownedBossSystem.downedProvidence=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "TrioPostProvidence",
+      "orden": 92,
+      "ambito": "calamity",
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaCeaselessVoid",
+          "zona": "Cavernas",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/CeaselessVoid",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 150,
+              "_fuente": "NPC real: defensa 80, vida 50000-78000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/MarkofProvidence",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.MarkofProvidence: drop de Providence, invoca a los tres jefes de este tramo."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerACeaselessVoid",
+          "zona": "Cavernas",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/CeaselessVoid",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedCeaselessVoid",
+              "_fuente": "CalamityMod.dll: CeaselessVoid.OnKill pone DownedBossSystem.downedCeaselessVoid=true."
+            }
+          ]
+        },
+        {
+          "clave": "ArmaParaStormWeaver",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/StormWeaverHead",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 200,
+              "_fuente": "NPC real: defensa 150 (CalamityMod.dll, StormWeaverHead.SetDefaults) - la mas alta del trio."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/MarkofProvidence",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "Mismo objeto que invoca a los tres jefes de este tramo."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAStormWeaver",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/StormWeaverHead",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedStormWeaver",
+              "_fuente": "CalamityMod.dll: StormWeaverHead.OnKill pone DownedBossSystem.downedStormWeaver=true."
+            }
+          ]
+        },
+        {
+          "clave": "ArmaParaSignus",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/Signus",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 150,
+              "_fuente": "NPC real: defensa 60, vida 250000-380000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/MarkofProvidence",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "Mismo objeto que invoca a los tres jefes de este tramo."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerASignus",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/Signus",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedSignus",
+              "_fuente": "CalamityMod.dll: Signus.OnKill pone DownedBossSystem.downedSignus=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Polterghast",
+      "orden": 93,
+      "ambito": "calamity",
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaPolterghast",
+          "zona": "Mazmorra",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/Polterghast",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 170,
+              "_fuente": "NPC real: defensa 90, vida 280000-420000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "bandera",
+              "bandera": "downedSignus",
+              "_fuente": "Calamity Mod Wiki, Polterghast: \"highly recommended to defeat the Storm Weaver, Ceaseless Void and Signus first\" (no obligatorio).",
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAPolterghast",
+          "zona": "Mazmorra",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/Polterghast",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedPolterghast",
+              "_fuente": "CalamityMod.dll: Polterghast.OnKill pone DownedBossSystem.downedPolterghast=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "OldDukeYDoG",
+      "orden": 94,
+      "ambito": "calamity",
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaOldDuke",
+          "zona": "OceanoProfundo",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/OldDuke",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 180,
+              "_fuente": "NPC real: defensa 90, vida 400000-600000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "bandera",
+              "bandera": "downedPolterghast",
+              "_fuente": "Calamity Mod Wiki, The Old Duke: situado textualmente entre Polterghast y Devourer of Gods.",
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAOldDuke",
+          "zona": "OceanoProfundo",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/OldDuke",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedBoomerDuke",
+              "_fuente": "CalamityMod.dll: OldDuke.OnKill pone DownedBossSystem.downedBoomerDuke=true."
+            }
+          ]
+        },
+        {
+          "clave": "ArmaParaDoG",
+          "zona": "Superficie",
+          "capa": "cualquiera",
+          "jefeMod": "CalamityMod/DevourerofGodsHead",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 190,
+              "_fuente": "NPC real: defensa 50, vida 750000-900000 (LifeMaxNERB normal/experto) - mas del doble de Polterghast."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/CosmicWorm",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.CosmicWorm: su UseItem invoca al Devourer of Gods."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerADoG",
+          "zona": "Superficie",
+          "capa": "cualquiera",
+          "jefeMod": "CalamityMod/DevourerofGodsHead",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedDoG",
+              "_fuente": "CalamityMod.dll: DevourerofGodsHead.OnKill pone DownedBossSystem.downedDoG=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "Yharon",
+      "orden": 95,
+      "ambito": "calamity",
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaYharon",
+          "zona": "Jungla",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/Yharon",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 210,
+              "_fuente": "NPC real: defensa 90, vida 1000000-1560000 (LifeMaxNERB normal/experto) - casi el doble del Devourer of Gods."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/YharonEgg",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.SummonItems.YharonEgg: su UseItem invoca a Yharon."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAYharon",
+          "zona": "Jungla",
+          "capa": "cavernas",
+          "jefeMod": "CalamityMod/Yharon",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedYharon",
+              "_fuente": "CalamityMod.dll: Yharon.OnKill pone DownedBossSystem.downedYharon=true."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "clave": "ExoMechsYSupremeCalamitas",
+      "orden": 96,
+      "ambito": "calamity",
+      "implementado": true,
+      "pasos": [
+        {
+          "clave": "ArmaParaExoMechs",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/AresBody",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 230,
+              "_fuente": "NPC real: los tres mechs, defensa 100, vida 1000000-1495000 cada uno (LifeMaxNERB)."
+            },
+            {
+              "tipo": "bandera",
+              "bandera": "downedYharon",
+              "_fuente": "Calamity Mod Wiki, Exo_Mechs: \"around the same time\" que Supreme Calamitas, tras Yharon.",
+              "recomendado": true
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerAExoMechs",
+          "zona": "Superficie",
+          "capa": "superficie",
+          "jefeMod": "CalamityMod/AresBody",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedExoMechs",
+              "_fuente": "CalamityMod.dll: AresBody/ThanatosHead/Apollo.OnKill ponen DownedBossSystem.downedExoMechs=true junto a su bandera individual."
+            }
+          ]
+        },
+        {
+          "clave": "ArmaParaSupremeCalamitas",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/SupremeCalamitas",
+          "requisitos": [
+            {
+              "tipo": "dano_arma",
+              "valor": 240,
+              "_fuente": "NPC real: defensa 100, vida 750000-1150000 (LifeMaxNERB normal/experto)."
+            },
+            {
+              "tipo": "objeto",
+              "idMod": "CalamityMod/AshesofCalamity",
+              "cantidad": 1,
+              "recomendado": true,
+              "_fuente": "CalamityMod.dll, Items.Materials.AshesofCalamity: se usa en el Altar de los Malditos para invocarla."
+            },
+            {
+              "tipo": "gancho",
+              "recomendado": true
+            }
+          ]
+        },
+        {
+          "clave": "VencerASupremeCalamitas",
+          "zona": "Infierno",
+          "capa": "infierno",
+          "jefeMod": "CalamityMod/SupremeCalamitas",
+          "requisitos": [
+            {
+              "tipo": "bandera",
+              "bandera": "downedCalamitas",
+              "_fuente": "CalamityMod.dll: SupremeCalamitas.OnKill pone DownedBossSystem.downedCalamitas=true."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

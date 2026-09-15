@@ -106,6 +106,19 @@ public sealed class CountToVisibilityConverter : IValueConverter
 // Inverso de BooleanToVisibilityConverter - true -> Collapsed, false -> Visible (para el
 // mensaje "sin seleccion"/"no admite prefijos" del panel Editar compartido, que se muestra
 // justo cuando la condicion contraria NO se cumple).
+// Gemelo inverso de CountToVisibilityConverter (igual que NullToCollapsedConverter ya es el
+// gemelo inverso de NullToVisibilityConverter) - Fase B (15-sep-2026): mensajes de "todavia no
+// hay nada aqui" (pestaña Servidor: "sin mods reales"/"sin instancias activas") que solo deben
+// verse cuando la coleccion esta VACIA, lo contrario de lo que ya resuelve CountToVis.
+public sealed class CountToCollapsedConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value is int count && count > 0 ? Visibility.Collapsed : Visibility.Visible;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 public sealed class InverseBooleanToVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
@@ -197,6 +210,22 @@ public sealed class DoubleToGridLengthConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         value is GridLength g ? g.Value : 0.0;
+}
+
+// Fase B (15-sep-2026): la pestaña Servidor pinta el estado de cada instancia (En escucha/
+// Arrancando/Fallida/Detenida) con el color real del tema - HostingInstanciaViewModel decide
+// la CLAVE del pincel (string, ej. "EquippedGreenBrush") desde C# porque ServidorKeep.Core no
+// conoce nada de WPF; este converter la resuelve al Brush real de Styles/Theme.xaml en el
+// momento de pintar, igual que cualquier StaticResource normal de la app.
+public sealed class ResourceKeyToBrushConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value is string key && System.Windows.Application.Current?.TryFindResource(key) is System.Windows.Media.Brush brush
+            ? brush
+            : System.Windows.Media.Brushes.Gray;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
 }
 
 public sealed class InverseValueConverter : IValueConverter

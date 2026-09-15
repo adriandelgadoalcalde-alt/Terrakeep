@@ -14,6 +14,7 @@
             <conv:EmptyToCollapsedConverter x:Key="EmptyToCollapsed" />
             <conv:EmptyToVisibleConverter x:Key="EmptyToVisible" />
             <conv:CountToVisibilityConverter x:Key="CountToVis" />
+            <conv:CountToCollapsedConverter x:Key="CountToCollapsed" />
             <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
             <conv:BoolToGridLengthConverter x:Key="BoolToGridLength" />
             <conv:CountToGridLengthConverter x:Key="CountToGridLength" />
@@ -23,6 +24,9 @@
                  fijo del XAML y por eso se quedo sin traducir en 19 sitios) - ver el comentario
                  real de la propia clase. -->
             <conv:LocalizedFormatConverter x:Key="LocFormat" />
+            <!-- Fase B (15-sep-2026): pestaña Servidor - color de estado de una instancia
+                 (En escucha/Arrancando/Fallida/Detenida), ver el comentario real de la clase. -->
+            <conv:ResourceKeyToBrushConverter x:Key="ResourceKeyToBrush" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

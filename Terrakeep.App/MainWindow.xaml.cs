@@ -241,7 +241,9 @@ public partial class MainWindow : Window
         // anunciado en el propio rotulo" (mismo criterio T-H/F1) - salto directo sin pasar por
         // el raton, ningun conflicto real con un TextBox (Ctrl+numero no es un gesto de tecleo
         // normal, a diferencia de Ctrl+Z/Y que SI colisionan con el deshacer nativo de un campo).
-        else if (ctrl && e.Key is >= Key.D1 and <= Key.D6)
+        // Fase B (15-sep-2026): ampliado de D6 a D8 - Guia (Ctrl+7) y el hosting de ServidorKeep
+        // (Ctrl+8), las dos pestañas nuevas al final del TabControl.
+        else if (ctrl && e.Key is >= Key.D1 and <= Key.D8)
         {
             _viewModel.SelectedTabIndex = e.Key - Key.D1;
             e.Handled = true;

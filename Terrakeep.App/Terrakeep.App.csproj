@@ -2,6 +2,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Terrakeep.Core\Terrakeep.Core.csproj" />
+    <!-- Fase B (15-sep-2026): pestaña "Servidor" - hosting real de un servidor dedicado de
+         Terraria/tModLoader desde dentro de Terrakeep, reutilizando ServidorKeep.Core TAL CUAL
+         (Job Objects, generador de serverconfig.txt, Firewall automatico, catalogo de mods) en
+         vez de reimplementar esa logica ya construida y verificada la noche del 15-sep-2026 -
+         ver Downloads\ServidorKeep\bitacora.md. Referencia de proyecto cruzada entre los dos
+         repos de la familia Keep (misma maquina, mismo TargetFramework net10.0-windows) - no es
+         un paquete NuGet porque ServidorKeep no se publica como tal, es otro producto hermano. -->
+    <ProjectReference Include="..\..\..\ServidorKeep\ServidorKeep.Core\ServidorKeep.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

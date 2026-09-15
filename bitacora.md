@@ -15626,3 +15626,209 @@ tras 4s, cerrado limpio después.
 - No se toca `Terrakeep.App.Tests/AuditoriaBarraExploracion.cs` ni `Program.cs` - `AR-EX6`/
   `EXPTOOLBAR_SOLO` ya existían de la ronda anterior y no necesitaron ningún cambio para detectar
   y verificar este arreglo.
+
+## 15-sep-2026 (ronda siguiente) - Fase B: la Guía de progresión de TerrakeepMod y el hosting de
+## ServidorKeep, integradas dentro de Terrakeep de escritorio (pestañas "Guía" y "Servidor" nuevas)
+
+Encargo del coordinador, ya autorizado explícitamente por el usuario ("y también las guías para
+escritorio en las dos apps"): integrar dentro de Terrakeep.App dos piezas grandes terminadas la
+noche anterior en otros dos proyectos - (1) la guía de progresión de TerrakeepMod (vanilla 100% +
+25 tramos de Calamity, ver bitácora de TerrakeepMod) y (2) el hosting de servidores dedicados de
+ServidorKeep (`Downloads\ServidorKeep\`, motor real con Job Objects/Firewall/mods verificado la
+noche anterior). Objetivo real citado por el usuario: que un jugador 100% vainilla, SIN
+tModLoader instalado, pueda ver la guía completa evaluada contra su personaje/mundo reales.
+
+### Decisión de mecanismo para compartir el contenido de la Guía (copia sincronizada, no referencia en vivo)
+
+Se evaluaron dos caminos: (a) Terrakeep lee en tiempo de ejecución los ficheros reales de
+`Documents\...\TerrakeepMod\` (referencia en vivo), o (b) una copia versionada dentro del propio
+repo de Terrakeep, regenerada por un script cuando la Guía cambie en el mod. Se eligió **(b)**,
+por un motivo real y no de comodidad: el público objetivo de esta pestaña es explícitamente el
+jugador que NO tiene tModLoader instalado - si Terrakeep leyera de la carpeta de Documentos del
+mod, la Guía sencillamente no existiría para ese jugador (la carpeta no existe en su máquina). La
+copia también es más robusta para el instalador público (un solo `.exe` autocontenido, sin
+depender de que el usuario tenga *otro* producto de la familia instalado).
+
+Mecanismo real, en `scripts/`:
+- `sync-guia-desde-terrakeepmod.ps1` (PowerShell, mismo criterio que el resto de scripts del
+  proyecto): copia `guia_progresion.json` TAL CUAL (ya es JSON limpio - el árbol de tramos/pasos/
+  requisitos es idéntico en las dos plataformas, el .json dice QUÉ hace falta y cada motor dice
+  CÓMO se comprueba) y llama a...
+- `hjson-guia-a-json.js` (Node, usa el paquete real `hjson` de npm - **instalado global esta
+  ronda**, `npm install -g hjson`, autonomía ya concedida - nunca un parser de hjson hecho a
+  mano): aplana la sub-clave `Guia` de los DOS `.hjson` de localización de TerrakeepMod (es-ES/
+  en-US) a un diccionario plano `"Guia.Paso.XXX.Titulo": "..."` - MISMAS claves punteadas que ya
+  usa `Idiomas.Texto(...)` en el mod, para que evaluar el mismo requisito en las dos plataformas
+  muestre el mismo texto sin re-traducir nada.
+- Destino real: `Terrakeep.App/Assets/guia/` (`guia_progresion.json` + `textos.es.json` +
+  `textos.en.json`, 553 claves cada uno) - mismo sitio y mismo mecanismo (`Content Include=
+  "Assets\**\*.json"` del `.csproj`, copiado al output) que el resto de catálogos JSON de la app
+  (`Assets/calamity/catalog.json`, etc.), NO dentro de `Terrakeep.Core` (el código que los LEE sí
+  vive en `Terrakeep.Core/Guia/`, reparto código/datos igual que `CalamityCatalog`).
+- Ejecutar el script de nuevo cada vez que la Guía cambie en TerrakeepMod - no es parte del build
+  normal (evita que compilar Terrakeep dependa de tener Node/hjson instalados).
+
+### El evaluador de Terrakeep.Core/Guia/ - MISMO árbol, evaluador DISTINTO, con honestidad real
+## sobre lo que un editor de ficheros estáticos puede y no puede saber
+
+`GuideModel.cs`/`GuideCatalog.cs`/`GuideTextCatalog.cs`/`GuideContext.cs`/`GuideFlags.cs`/
+`GuideHooks.cs`/`GuideEvaluator.cs` (todos nuevos) - espejo DELIBERADO del modelo real de
+TerrakeepMod (`Common/Guia/*.cs`: mismo vocabulario cerrado de `TipoRequisito`, mismo contrato de
+"no evaluable nunca cuenta como cumplido"), pero el evaluador es uno NUEVO, escrito desde cero
+para leer datos ya parseados por Terrakeep (`PlrCharacter`/`WldWorld`), no el motor de Terraria en
+marcha. Motivo real, no un atajo: TerrakeepMod pregunta a `Player.statDefense`/
+`Player.GetWeaponDamage`/`Main.projHook` (el motor real, con combate/clases/buffs calculados en
+vivo); Terrakeep es un editor de ficheros `.plr`/`.wld` ESTÁTICOS, sin ningún motor de juego
+detrás. Reproducir esos números a mano sería fingir una precisión que no existe.
+
+**Lo que SÍ es evaluable de verdad, con datos 100% reales ya parseados por Terrakeep**:
+- `Bandera`: los 9 jefes + Modo Difícil que `WldHeader.cs` ya parsea del `.wld` (bloque de ancho
+  FIJO documentado en ese archivo - los jefes tardíos, Fishron/Culto/Torres/Lunático/eventos,
+  viven detrás de secciones de ancho VARIABLE que Terrakeep no atraviesa todavía, limitación de
+  arquitectura ya documentada, no nueva de esta ronda) + `downedDD2EventAnyDifficulty`
+  (`PlrCharacter.FinishedDD2Event`, único campo de banderas que vive en el `.plr` en vez del
+  `.wld`). Las banderas de Calamity (`CalamityMod.DownedBossSystem`) NO son evaluables - Calamity
+  guarda su estado de jefes en datos de MOD dentro del `.wld` que Terrakeep no parsea en
+  absoluto hoy (su soporte de Calamity es solo de OBJETOS) - documentado, no forzado.
+- `NpcsPueblo`/`Npc`: `WldWorld.Npcs` (la sección NPCs del `.wld` SÍ persiste posición de los NPC
+  del pueblo reales).
+- `VidaMaxima`: `PlrCharacter.HealthMax` directo.
+- `Objeto`/`ObjetoCualquiera`: escaneo real de `MergedContainers["inventory"]` (el mismo
+  contenedor YA fusionado con Calamity que usa el resto de Terrakeep - un objeto de Calamity en
+  la mochila también cuenta).
+- `Gancho`: escaneo del inventario contra una lista real de 23 ids de gancho vainilla, confirmada
+  grepeando `ItemID.cs` decompilado (`*Hook = <id>`, excluidos a propósito `Hook=118` -material
+  de crafteo- y los 3 ganchos de caña de pescar, que no son `Main.projHook`) - sin ganchos de
+  Calamity esta ronda (exigiría decompilar `CalamityMod.dll` para confirmarlos, fuera de tiempo).
+
+**Lo que queda SIEMPRE no-evaluable, con el motivo real mostrado en la propia interfaz (nunca un
+"no evaluable" mudo)**: `CristalesVida` (el `.plr` no guarda ese contador aparte), `Defensa`
+(depende de armadura+accesorios+buffs calculados en vivo), `NpcActivo` (un enemigo hostil activo
+nunca se guarda en el `.wld`, solo los NPC del pueblo), `DanoArma` (depende de la clase y sus
+multiplicadores, calculados en vivo). Consecuencia real medida (ver verificación): con un
+personaje Calamity real cargado, el "objetivo actual" del camino principal quedó parado en un
+paso con un requisito de `Defensa` - **es el comportamiento honesto esperado**, no un bug: el
+usuario ve la línea con su motivo real ("la defensa depende de..."), nunca un falso "no estás
+listo" ni un falso verde.
+
+**Resolución de referencias de Calamity (`idMod`/`idsMod`, pids `"CalamityMod/NombreInterno"`)**:
+`GuideCatalog.ResolverReferenciasDeMod` los resuelve al id sintético real vía
+`CalamityCatalog.ByModAndInternal` (el mismo catálogo/mecanismo que ya usa el resto de Terrakeep
+para objetos de Calamity) - `jefeMod`/`jefeFinalMod` (NPCs de Calamity) NO se resuelven, Terrakeep
+no tiene ningún catálogo de NPCs de Calamity (el suyo es solo de objetos), así que "Lectura del
+jefe" (vida/daño/defensa en vivo) no está disponible para esos pasos en la app de escritorio -
+documentado en el código, no disimulado.
+
+### Detección de Calamity: mismo criterio ya usado por el resto de Terrakeep
+`GuideViewModel` recibe `() => HasCalamityData` de `MainViewModel` (el MISMO booleano real que ya
+usa el resto de la app - `TplrPath != null`, hay un `.tplr` real junto al `.plr`) - ningún
+mecanismo de detección nuevo. Los tramos `ambito=calamity` del árbol (25 de 46) solo se enseñan
+si `HasCalamityData=true`.
+
+### La pestaña "Guía" (`MainWindow.xaml`, `GuideViewModel.cs`)
+Tarjeta destacada de "objetivo actual" (degradado de acento, mismo tratamiento visual que el
+"Continuar con..." de Inicio) con Por qué/Cómo/checklist de requisitos con icono ✓/○/? y el
+motivo real bajo cualquier línea no evaluable; aviso propio si se detecta Calamity (mismo texto
+real que ya escribió el mod); árbol completo de los 46 tramos como hoja de ruta, un `Expander`
+colapsado por tramo (mismo patrón ya usado en Exploración para 46 secciones sin abrir la pantalla
+entera de golpe) con insignias Opcional/Calamity/Próximamente. `Refresh()` se llama al entrar en
+la pestaña (mismo criterio ya establecido para Builds/Exploración, `OnSelectedTabIndexChanged`) y
+tras cargar un personaje nuevo (`CharacterLoaded` event). `AppTab` ampliado a `Guia=6`/
+`Hosting=7` (añadidos al FINAL a propósito - no reordenar 0-5, `SelectedTabIndex` se persiste en
+`session.json` real de la máquina). Atajos `Ctrl+7`/`Ctrl+8` (rango `D1..D6` ampliado a `D1..D8`
+en `MainWindow.xaml.cs`). Tarjetas nuevas en Inicio.
+
+**Bug real encontrado y arreglado por el propio arnés** (no por lectura de código): tres
+`<Run Text="{Binding Guide.TextoXxx}" />` sin `Mode=OneWay` explícito reventaban la ventana entera
+con `InvalidOperationException` ("un enlace TwoWay... no puede funcionar en la propiedad de sólo
+lectura") - `Run.Text` tiene modo por defecto TwoWay (a diferencia de `TextBlock.Text`, que no lo
+tiene), algo que no se sabía de este proyecto hasta ahora. Arreglado añadiendo `Mode=OneWay`
+explícito a los tres (y, por consistencia con el resto del archivo, a los demás bindings de
+`Guide.*` que no habían reventado). Documentado aquí para no volver a pisarlo.
+
+### La pestaña "Servidor" (`HostingViewModel.cs`) - solo Terraria/tModLoader, ServidorKeep.Core reutilizado tal cual
+
+`Terrakeep.App.csproj` referencia `..\..\..\ServidorKeep\ServidorKeep.Core\ServidorKeep.Core.csproj`
+directamente (mismo `TargetFramework net10.0-windows`, proyecto hermano de la misma familia Keep,
+no un paquete NuGet) - ninguna lógica de Job Objects/Firewall/generación de `serverconfig.txt`/
+catálogo de mods se reimplementó, se USA la de `ServidorKeep.Core.Motores.MotorServidorTerraria`
+tal cual, pedido explícito del encargo ("no reinventes su lógica"). `HostingViewModel`/
+`HostingInstanciaViewModel`/`HostingModViewModel` (nuevos) envuelven `ConfiguracionServidorTerraria`/
+`InstanciaServidor`/`RegistroInstancias`/`CatalogoDeMods` reales con un formulario (nombre,
+mundo, tamaño, dificultad, jugadores, contraseña, puerto, selector de mods reales si se marca
+"Usar tModLoader") y una lista de "Servidores activos" con estado en vivo (verde=en escucha,
+ámbar=arrancando, rojo=fallida, gris=detenida - nuevo converter `ResourceKeyToBrushConverter`,
+registrado en `App.xaml` Y en el arnés `Program.cs`, mismo patrón `H4-01` ya documentado) y log/
+recursos en vivo (eventos reales `CambioDeEstado`/`LineaDeLog`/`MuestraDeRecursos` de
+`InstanciaServidor`, marshalados al hilo de UI vía `Dispatcher` solo si hay uno real detrás -
+`Application.Current?.Dispatcher`, nunca asumido, para no reventar en un arnés headless).
+
+**Alcance de esta ronda, a propósito - honesto, no un hueco de esfuerzo**: SOLO Terraria/
+tModLoader (lo que pidió el encargo, "un servidor de Terraria"). `ServidorKeep.Core` ya soporta
+Don't Starve Together con la MISMA forma simétrica (`ConfiguracionServidorDST`/
+`MotorServidorDST`) - añadirlo a esta pestaña es una extensión acotada para una ronda futura si
+Starvekeep pide lo mismo (haría falta portar también la UI del token de Klei/aviso de modo LAN),
+no un hueco de esta ronda.
+
+### Verificación real (no solo "compila")
+
+- `dotnet build Terrakeep.slnx` (los 6 proyectos, incluido el cruce con `ServidorKeep.Core`): 0
+  advertencias, 0 errores.
+- `dotnet test` completo: **539/539** `Terrakeep.Core.Tests` (11s) + **484/484**
+  `Terrakeep.App.ViewModels.Tests` (4m 53s) - MISMOS números exactos que antes de esta ronda, sin
+  regresión (ningún test existente tocado).
+- **`GUIA_SOLO=1`** (nuevo, `Terrakeep.App.Tests/PruebasGuiaYServidor.cs`): copia real de
+  `adrian.plr`+`adrian.tplr` (personaje Calamity real de esta máquina, nunca el original) y de
+  `roca_negra.wld` (mundo real, nunca el original) cargados de verdad -
+  `HasCalamityData=True` (correcto), `Tramos.Count=46` (el total real del catálogo sincronizado),
+  `MostrarAvisoCalamity=True`, **cero** tramos/pasos con texto sin traducir (clave cruda entre
+  corchetes - habría sido la señal de que `textos.es.json` no se sincronizó bien), objetivo actual
+  real calculado ("Antes del primer jefe" → "Armadura: más de 10 de defensa"), y al menos un
+  requisito evaluable de verdad con datos reales (confirma que `GuideFlags`/`WldHeader` están
+  conectados, no solo que el árbol se construyó). Captura real `guia-real.png`. **Cero FALLO.**
+- **`HOSTING_SOLO=1`** (nuevo, mismo fichero): lanza un servidor de Terraria vainilla REAL desde
+  el MISMO camino que pulsaría un usuario (`Hosting.IniciarCommand`, puerto 27977 para no chocar
+  con nada real del usuario) - PID real, llega a `EnEscucha` de verdad, **conexión TCP real
+  confirmada** a `127.0.0.1:27977`, `Detener` mata el proceso de verdad (confirmado por PID contra
+  la lista de procesos del sistema, no por `Process.HasExited` sobre un objeto ya `Dispose()`d -
+  bug real de este mismo arnés encontrado y arreglado, ver el comentario en el propio código).
+  **Cero FALLO.**
+- Bug real de arnés encontrado y arreglado aparte (no de producción): los dos converters nuevos
+  (`CountToCollapsedConverter`/`ResourceKeyToBrushConverter`) registrados en `App.xaml` pero
+  olvidados en el `Program.cs` del arnés (que construye su propio `Application` en blanco, mismo
+  motivo ya documentado en `CLAUDE.md`) - `XamlParseException` real al montar la ventana,
+  arreglado registrándolos también ahí.
+- No se corrió el recorrido COMPLETO de `Terrakeep.App.Tests` (sin ningún `_SOLO`, las decenas de
+  comprobaciones ya existentes de Personaje/Exploración/etc.) hasta el final por tiempo - se
+  lanzó en segundo plano como regresión puntual; si no terminó dentro de esta sesión, queda
+  pendiente confirmarlo en la siguiente ronda (los cambios de esta ronda en código ya existente
+  son aditivos y de bajo riesgo: un `enum` ampliado al final, un `switch`/rango de atajos con
+  casos nuevos añadidos, una propiedad de solo lectura nueva en `ExplorationViewModel` - pero
+  "bajo riesgo" no es lo mismo que "verificado").
+
+### Archivos nuevos/tocados esta ronda
+
+- `scripts/sync-guia-desde-terrakeepmod.ps1`, `scripts/hjson-guia-a-json.js` (nuevos).
+- `Terrakeep.App/Assets/guia/{guia_progresion.json,textos.es.json,textos.en.json}` (nuevos,
+  generados por el script de arriba).
+- `Terrakeep.Core/Guia/{GuideModel,GuideCatalog,GuideTextCatalog,GuideContext,GuideFlags,
+  GuideHooks,GuideEvaluator}.cs` (nuevos).
+- `Terrakeep.App/ViewModels/{GuideViewModel,HostingViewModel}.cs` (nuevos).
+- `Terrakeep.App/Converters/VisibilityConverters.cs` (`CountToCollapsedConverter`,
+  `ResourceKeyToBrushConverter` nuevos).
+- `Terrakeep.App/App.xaml` (registro de los dos converters nuevos).
+- `Terrakeep.App/MainWindow.xaml` (pestañas "Guía"/"Servidor" nuevas + 2 tarjetas de Inicio).
+- `Terrakeep.App/MainWindow.xaml.cs` (rango de atajos `Ctrl+1..6` → `Ctrl+1..8`).
+- `Terrakeep.App/ViewModels/MainViewModel.cs` (`AppTab.Guia/Hosting`, `Guide`/`Hosting`
+  propiedades, `GoToTab` con los dos casos nuevos, refresco de la Guía al entrar en su pestaña y
+  al cargar un personaje).
+- `Terrakeep.App/ViewModels/ExplorationViewModel.cs` (`CurrentWorld`, accesor público nuevo de
+  solo lectura).
+- `Terrakeep.App/Assets/strings_es.json`/`strings_en.json` (claves nuevas `tab_guide`/
+  `tab_hosting`/`guide_*`/`hosting_*`/`home_card_guide_*`/`home_card_hosting_*`).
+- `Terrakeep.App/Terrakeep.App.csproj` (`ProjectReference` a `ServidorKeep.Core`).
+- `Terrakeep.App.Tests/PruebasGuiaYServidor.cs` (nuevo, `EjecutarGuiaReal`/`EjecutarHostingReal`),
+  `Terrakeep.App.Tests/Program.cs` (ganchos `GUIA_SOLO=1`/`HOSTING_SOLO=1` + registro de los dos
+  converters nuevos en el `Application` en blanco del arnés).
+- Binario en `C:\Users\adrian\AppData\Local\Programs\Terrakeep\` sustituido tras `dotnet build -c
+  Release` (ver más abajo).

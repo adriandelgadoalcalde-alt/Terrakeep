@@ -2367,6 +2367,24 @@
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
                             </StackPanel>
                         </Button>
+                        <!-- Fase B (15-sep-2026): tarjetas de Inicio para las dos pestañas nuevas -
+                             mismo patron real que las 5 de arriba (Loc[...] + GoToTabCommand). -->
+                        <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
+                                Tag="Pink" Command="{Binding GoToTabCommand}" CommandParameter="Guia">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Loc[home_card_guide_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
+                                <TextBlock Text="{Binding Loc[home_card_guide_desc], Mode=OneWay}"
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
+                                Tag="Teal" Command="{Binding GoToTabCommand}" CommandParameter="Hosting">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Loc[home_card_hosting_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
+                                <TextBlock Text="{Binding Loc[home_card_hosting_desc], Mode=OneWay}"
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                            </StackPanel>
+                        </Button>
                     </ItemsControl>
                 </StackPanel>
             </ScrollViewer>
@@ -6306,6 +6324,272 @@
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><UniformGrid Columns="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <!-- ===================== GUIA ===================== -->
+        <!-- Fase B (integracion de la Guia, 15-sep-2026): mismo arbol/evaluador que TerrakeepMod,
+             evaluado aqui contra el personaje/mundo REALES ya cargados en Terrakeep - sin
+             necesitar tModLoader instalado (pedido explicito del usuario: "para poder jugar la
+             version mas pura vanilla... sin depender de tener el mod instalado"). Ver
+             Terrakeep.App/ViewModels/GuideViewModel.cs y Terrakeep.Core/Guia/ para la logica real
+             y el detalle honesto de que se puede/no se puede comprobar desde un editor de
+             ficheros estatico (requisitos "no evaluable" con motivo real, nunca un falso verde). -->
+        <TabItem Header="{Binding Loc[tab_guide], Mode=OneWay}" ToolTip="Ctrl+7">
+            <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+                    <TextBlock Text="{Binding Loc[tab_guide], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="26" Margin="0,4,0,4" />
+                    <TextBlock Text="{Binding Loc[guide_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,4" />
+                    <TextBlock Text="{Binding Loc[guide_desktop_notice], Mode=OneWay}" Style="{StaticResource CaptionText}" FontStyle="Italic" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,18" />
+
+                    <!-- Aviso de Calamity detectado - mismo texto real que ya usa el mod. -->
+                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource CalamityBrush}" BorderThickness="1" CornerRadius="8"
+                            Padding="14,11" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                            Visibility="{Binding Guide.MostrarAvisoCalamity, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Guide.TextoAvisoCalamityTitulo, Mode=OneWay}" Style="{StaticResource SectionText}" Foreground="{StaticResource CalamityBrush}" />
+                            <TextBlock Text="{Binding Guide.TextoAvisoCalamity, Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Sin personaje ni mundo cargados: no hay nada que evaluar todavia. -->
+                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="8" Padding="16,14" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                            Visibility="{Binding Guide.HasAnyData, Converter={StaticResource InverseBoolToVis}}">
+                        <TextBlock Text="{Binding Loc[guide_empty_state], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+                    </Border>
+
+                    <!-- Objetivo actual - la tarjeta destacada, mismo tratamiento visual que el
+                         "Continuar con..." de Inicio (degradado de acento + sombra). -->
+                    <StackPanel Margin="0,0,0,10" Visibility="{Binding Guide.ObjetivoPaso, Converter={StaticResource NullToVis}}">
+                        <TextBlock Text="{Binding Guide.TextoObjetivoActual, Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
+                        <Border Background="{StaticResource AccentGradientBrush}" CornerRadius="10" Padding="18,14" Effect="{StaticResource CardShadow}"
+                                MaxWidth="680" HorizontalAlignment="Left">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Guide.ObjetivoTramo.Nombre, Mode=OneWay}" Foreground="White" FontSize="12" Opacity="0.85" />
+                                <TextBlock Text="{Binding Guide.ObjetivoPaso.Titulo, Mode=OneWay}" Foreground="White" FontSize="20" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,8" />
+                                <TextBlock Foreground="White" Opacity="0.85" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2">
+                                    <Run Text="{Binding Guide.TextoPorQue, Mode=OneWay}" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Guide.ObjetivoPaso.Porque, Mode=OneWay}" Foreground="White" TextWrapping="Wrap" Margin="0,0,0,8" />
+                                <TextBlock Foreground="White" Opacity="0.85" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2">
+                                    <Run Text="{Binding Guide.TextoComo, Mode=OneWay}" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Guide.ObjetivoPaso.Como, Mode=OneWay}" Foreground="White" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                <TextBlock Foreground="White" Opacity="0.85" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4">
+                                    <Run Text="{Binding Guide.TextoQueTeFalta, Mode=OneWay}" />
+                                </TextBlock>
+                                <ItemsControl ItemsSource="{Binding Guide.ObjetivoPaso.Requisitos}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,2,0,4">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Icono}" Foreground="White" FontWeight="Bold" Width="18" VerticalAlignment="Top" />
+                                                    <TextBlock Text="{Binding Linea}" Foreground="White" TextWrapping="Wrap" MaxWidth="560">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Recomendado}" Value="True">
+                                                                        <Setter Property="Opacity" Value="0.7" />
+                                                                        <Setter Property="FontStyle" Value="Italic" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Motivo}" Foreground="White" Opacity="0.65" FontSize="10" FontStyle="Italic" TextWrapping="Wrap"
+                                                           MaxWidth="540" Margin="24,1,0,0" Visibility="{Binding Motivo, Converter={StaticResource EmptyToCollapsed}}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Guide.TextoSinObjetivo, Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left"
+                               Margin="0,0,0,10" Visibility="{Binding Guide.ObjetivoPaso, Converter={StaticResource NullToCollapsed}}" />
+
+                    <!-- Arbol completo, como hoja de ruta - un Expander por tramo (colapsado por
+                         defecto, mismo patron ya usado en Exploracion para no abrir la pantalla
+                         entera de golpe con 46 tramos reales). -->
+                    <TextBlock Text="{Binding Loc[guide_all_tracks_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,16,0,10" />
+                    <ItemsControl ItemsSource="{Binding Guide.Tramos}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1"
+                                        CornerRadius="8" Padding="12,8" Margin="0,0,0,8" MaxWidth="680" HorizontalAlignment="Left">
+                                    <Expander Foreground="{StaticResource TextPrimaryBrush}" IsExpanded="False">
+                                        <Expander.Header>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Icono}" FontWeight="Bold" Width="18"
+                                                           Foreground="{StaticResource EquippedGreenBrush}" />
+                                                <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="380" />
+                                                <Border Background="{StaticResource TealBrush}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
+                                                        Visibility="{Binding EsOpcional, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DataContext.Loc[guide_optional_badge], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" FontSize="9" Foreground="White" />
+                                                </Border>
+                                                <Border Background="{StaticResource CalamityBrush}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
+                                                        Visibility="{Binding EsCalamity, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DataContext.Loc[guide_calamity_badge], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" FontSize="9" Foreground="White" />
+                                                </Border>
+                                                <Border Background="{StaticResource BgHoverBrush}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
+                                                        Visibility="{Binding Implementado, Converter={StaticResource InverseBoolToVis}}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DataContext.Loc[guide_not_implemented_badge], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                </Border>
+                                            </StackPanel>
+                                        </Expander.Header>
+                                        <StackPanel Margin="26,8,0,4">
+                                            <TextBlock Text="{Binding Resumen}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                                            <ItemsControl ItemsSource="{Binding Pasos}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Margin="0,0,0,10">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Icono}" FontWeight="Bold" Width="16" Foreground="{StaticResource EquippedGreenBrush}" />
+                                                                <TextBlock Text="{Binding Titulo}" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="500" />
+                                                                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                                    <Run Text="{Binding PreparacionPct, Mode=OneWay}" /><Run Text="%" />
+                                                                </TextBlock>
+                                                            </StackPanel>
+                                                            <ItemsControl ItemsSource="{Binding Requisitos}" Margin="24,2,0,0">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,1,0,1">
+                                                                            <TextBlock Text="{Binding Icono}" Width="16" />
+                                                                            <TextBlock Text="{Binding Linea}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="480" />
+                                                                        </StackPanel>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Expander>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <!-- ===================== SERVIDOR ===================== -->
+        <!-- Fase B (15-sep-2026): hosting real de un servidor de Terraria/tModLoader, motor de
+             ServidorKeep.Core reutilizado tal cual (Job Objects, Firewall automatico, mods
+             reales) - ver Terrakeep.App/ViewModels/HostingViewModel.cs. -->
+        <TabItem Header="{Binding Loc[tab_hosting], Mode=OneWay}" ToolTip="Ctrl+8">
+            <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+                    <TextBlock Text="{Binding Loc[tab_hosting], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="26" Margin="0,4,0,4" />
+                    <TextBlock Text="{Binding Loc[hosting_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,18" />
+
+                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource PinkBrush}" BorderThickness="1" CornerRadius="8"
+                            Padding="14,11" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                            Visibility="{Binding Hosting.TerrariaDetectado, Converter={StaticResource InverseBoolToVis}}">
+                        <TextBlock Text="{Binding Loc[hosting_not_detected], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+                    </Border>
+
+                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="10" Padding="18,16" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                            Effect="{StaticResource CardShadow}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding Loc[hosting_name], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <TextBox Text="{Binding Hosting.NombreInstancia, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                                    <TextBlock Text="{Binding Loc[hosting_world_name], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <TextBox Text="{Binding Hosting.NombreMundo, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                                    <TextBlock Text="{Binding Loc[hosting_world_size], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <!-- Mismo patron real ya usado para el idioma en Ajustes -
+                                         RadioButton.IsChecked de doble via a un enum via
+                                         EnumEquals (Enum.Parse contra ConverterParameter). -->
+                                    <UniformGrid Columns="3" Margin="0,2,0,8">
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Pequeño" Margin="0,0,2,0"
+                                                     IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Pequeno}" />
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Mediano" Margin="2,0,2,0"
+                                                     IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Mediano}" />
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Grande" Margin="2,0,0,0"
+                                                     IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Grande}" />
+                                    </UniformGrid>
+                                    <TextBlock Text="{Binding Loc[hosting_difficulty], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <UniformGrid Columns="2" Margin="0,2,0,8">
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Normal" Margin="0,0,2,2"
+                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Normal}" />
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Experto" Margin="2,0,0,2"
+                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Experto}" />
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Maestro" Margin="0,2,2,0"
+                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Maestro}" />
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Creativo" Margin="2,2,0,0"
+                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Creativo}" />
+                                    </UniformGrid>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="{Binding Loc[hosting_max_players], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <TextBox Text="{Binding Hosting.MaxJugadores, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                                    <TextBlock Text="{Binding Loc[hosting_port], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <TextBox Text="{Binding Hosting.Puerto, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                                    <TextBlock Text="{Binding Loc[hosting_password], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <TextBox Text="{Binding Hosting.Password, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                                    <CheckBox Content="{Binding Loc[hosting_use_tmodloader], Mode=OneWay}" IsChecked="{Binding Hosting.UsarTModLoader}" Margin="0,10,0,0" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <StackPanel Visibility="{Binding Hosting.UsarTModLoader, Converter={StaticResource BoolToVis}}" Margin="0,4,0,8">
+                                <TextBlock Text="{Binding Loc[hosting_mods_title], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="13" Margin="0,0,0,4" />
+                                <TextBlock Text="{Binding Loc[hosting_mods_none], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                           Visibility="{Binding Hosting.ModsDisponibles.Count, Converter={StaticResource CountToCollapsed}}" />
+                                <ItemsControl ItemsSource="{Binding Hosting.ModsDisponibles}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding Nombre}" IsChecked="{Binding Seleccionado}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,1,0,1">
+                                                <CheckBox.ToolTip>
+                                                    <TextBlock Text="{Binding TamanoTexto}" />
+                                                </CheckBox.ToolTip>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding Hosting.ErrorMessage}" Foreground="{StaticResource CalamityBrush}" TextWrapping="Wrap" Margin="0,4,0,8"
+                                       Visibility="{Binding Hosting.ErrorMessage, Converter={StaticResource EmptyToCollapsed}}" />
+
+                            <Button Content="{Binding Loc[hosting_start], Mode=OneWay}" Tag="Accent" Command="{Binding Hosting.IniciarCommand}"
+                                    HorizontalAlignment="Left" Padding="16,7" IsEnabled="{Binding Hosting.TerrariaDetectado}" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="{Binding Loc[hosting_active_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
+                    <TextBlock Text="{Binding Loc[hosting_no_instances], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                               Visibility="{Binding Hosting.Instancias.Count, Converter={StaticResource CountToCollapsed}}" />
+                    <ItemsControl ItemsSource="{Binding Hosting.Instancias}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1"
+                                        CornerRadius="8" Padding="14,10" Margin="0,0,0,10" MaxWidth="680" HorizontalAlignment="Left">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="10" Height="10" Fill="{Binding EstadoColorKey, Converter={StaticResource ResourceKeyToBrush}}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                            <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding EstadoTexto}" Foreground="{Binding EstadoColorKey, Converter={StaticResource ResourceKeyToBrush}}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                            <TextBlock VerticalAlignment="Center" Margin="8,0,0,0" Style="{StaticResource CaptionText}">
+                                                <Run Text="puerto " /><Run Text="{Binding Puerto, Mode=OneWay}" />
+                                            </TextBlock>
+                                            <Button Content="{Binding DataContext.Loc[hosting_stop], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                                    Command="{Binding DetenerCommand}" Margin="16,0,0,0" Padding="10,3" HorizontalAlignment="Left" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding RecursosTexto}" Style="{StaticResource CaptionText}" Margin="18,4,0,0" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
             </ScrollViewer>

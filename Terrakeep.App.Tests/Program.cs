@@ -77,6 +77,11 @@ internal static partial class Program
         // Justo lo que paso con este converter la primera vez que se probo esta misma tanda.
         app.Resources["EmptyToVisible"] = new EmptyToVisibleConverter();
         app.Resources["CountToVis"] = new CountToVisibilityConverter();
+        // Fase B (15-sep-2026): mismo motivo real que todos los de arriba (H4-01) - dos
+        // converters nuevos de la integracion de la Guia/hosting; sin registrarlos aqui el
+        // arnes reventaria al montar la ventana aunque la app real (que si carga App.xaml) vaya bien.
+        app.Resources["CountToCollapsed"] = new CountToCollapsedConverter();
+        app.Resources["ResourceKeyToBrush"] = new ResourceKeyToBrushConverter();
         app.Resources["InverseBoolToVis"] = new InverseBooleanToVisibilityConverter();
         app.Resources["BoolToGridLength"] = new BoolToGridLengthConverter();
         // AR-EX1 (6-sep-2026): mismo motivo real que todos los de arriba (H4-01) - converter
@@ -796,6 +801,21 @@ internal static partial class Program
         {
             EjecutarKeepQaVitalesRealDineroLargo(window, vm);
             Console.WriteLine("DONE (KEEPQA_VITALS_DINERO_LARGO)");
+            Environment.Exit(0);
+        }
+
+        // GUIA_SOLO=1 / HOSTING_SOLO=1 (Fase B, 15-sep-2026): mismo hueco de ventana real que los
+        // modos de arriba - ver PruebasGuiaYServidor.cs para el cuerpo real de cada uno.
+        if (Environment.GetEnvironmentVariable("GUIA_SOLO") == "1")
+        {
+            EjecutarGuiaReal(window, vm);
+            Console.WriteLine("DONE (GUIA_SOLO)");
+            Environment.Exit(0);
+        }
+        if (Environment.GetEnvironmentVariable("HOSTING_SOLO") == "1")
+        {
+            EjecutarHostingReal(window, vm);
+            Console.WriteLine("DONE (HOSTING_SOLO)");
             Environment.Exit(0);
         }
 

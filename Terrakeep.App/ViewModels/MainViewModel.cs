@@ -132,7 +132,11 @@ public partial class MainViewModel : ObservableObject
     // algun dia no desincronice esto en silencio) - el binding de WPF sigue siendo a un int
     // (`SelectedTabIndex`/`PersonajeInnerTabIndex`, TabControl.SelectedIndex no admite otra
     // cosa), el cast a `(int)AppTab.X` vive SOLO en el punto de asignacion.
-    private enum AppTab { Inicio = 0, Personaje = 1, Builds = 2, Novedades = 3, Exploracion = 4, AcercaDe = 5 }
+    // Fase B (15-sep-2026): Guia=6/Hosting=7 añadidas al final a proposito - no reordenar los
+    // valores 0-5 (SelectedTabIndex ya se guarda/restaura en session.json real de la maquina,
+    // ver "El arnes HEREDA la sesion" en bitacora.md; cambiar un valor existente desplazaria a
+    // la pestaña equivocada a cualquiera que reabra la app con una sesion vieja en disco).
+    private enum AppTab { Inicio = 0, Personaje = 1, Builds = 2, Novedades = 3, Exploracion = 4, AcercaDe = 5, Guia = 6, Hosting = 7 }
 
     // Indice de la pestaña INTERNA dentro de Personaje - la Libreria vive ahora DENTRO de la
     // propia pestaña Objetos, siempre visible debajo del inventario (pedido explicito
@@ -361,6 +365,11 @@ public partial class MainViewModel : ObservableObject
         // edito algo en Spawn Points desde la ultima vez).
         if (value == (int)AppTab.Exploracion)
             Exploration.SetCharacterSpawns(BuildCharacterSpawns());
+        // Fase B (15-sep-2026): mismo criterio que Builds/Exploracion de arriba - la Guia se
+        // vuelve a evaluar al ENTRAR en su pestaña (por si se cargo/edito el personaje o el
+        // mundo desde la ultima vez que se miro), no en cada tecla de otra pestaña.
+        if (value == (int)AppTab.Guia)
+            Guide.Refresh();
         OnPropertyChanged(nameof(IsExplorationTabActive));
         OnPropertyChanged(nameof(ShowVitalsStrip));
     }
@@ -731,6 +740,12 @@ public partial class MainViewModel : ObservableObject
     public ChangelogViewModel Changelog { get; }
     public AboutViewModel About { get; } = new();
     public ExplorationViewModel Exploration { get; }
+    // Fase B (15-sep-2026): Guia de progresion (vanilla + Calamity si se detecta) evaluada en
+    // vivo contra el personaje/mundo cargados - ver Terrakeep.Core/Guia/. Hosting: panel de
+    // ServidorKeep.Core embebido (lanzar/gestionar un servidor dedicado real de Terraria/
+    // tModLoader desde la misma app) - ver Terrakeep.App/ViewModels/HostingViewModel.cs.
+    public GuideViewModel Guide { get; }
+    public HostingViewModel Hosting { get; }
     public LibraryViewModel Library { get; }
     public AppearanceViewModel Appearance { get; }
     public ServersViewModel Servers { get; } = new();
@@ -826,6 +841,17 @@ public partial class MainViewModel : ObservableObject
         // INI-09: la mitad de mundos de lo mismo (ver arriba) - una carpeta adicional de mundos
         // añadida en Ajustes tiene que aparecer YA en la lista de mundos de Exploracion.
         Settings.WorldFoldersChanged += () => Exploration.RefreshWorldsCommand.Execute(null);
+        // Fase B (integracion de la Guia, 15-sep-2026): construido DESPUES de Exploration a
+        // proposito - su constructor llama a Refresh() de inmediato, y Refresh() lee
+        // Exploration.CurrentWorld a traves del delegado de abajo (una referencia hacia adelante
+        // ahi dentro seria null en ese primer Refresh). CharacterLoaded/limpieza de personaje
+        // vuelven a llamar a Refresh() mas abajo en este mismo constructor.
+        Guide = new GuideViewModel(_service, () => _loaded, () => Exploration.CurrentWorld, () => HasCalamityData);
+        Hosting = new HostingViewModel();
+        // Cargar un personaje nuevo por encima es justo el momento en que la Guia mas cambia -
+        // se re-evalua ya (ademas de al entrar en la pestaña, ver OnSelectedTabIndexChanged, por
+        // si el usuario ya estaba mirandola cuando cargo otro personaje).
+        CharacterLoaded += () => Guide.Refresh();
         Library = new LibraryViewModel(_service);
         Research = new ResearchViewModel(_service);
         // C-15 (informe de pulido final, cierra A1): Apariencia empuja al MISMO UndoStack
@@ -1178,6 +1204,8 @@ public partial class MainViewModel : ObservableObject
             "Novedades" => (int)AppTab.Novedades,
             "Exploracion" => (int)AppTab.Exploracion,
             "AcercaDe" => (int)AppTab.AcercaDe,
+            "Guia" => (int)AppTab.Guia,
+            "Hosting" => (int)AppTab.Hosting,
             _ => (int)AppTab.Inicio,
         };
     }
