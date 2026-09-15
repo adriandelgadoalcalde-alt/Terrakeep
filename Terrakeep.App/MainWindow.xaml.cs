@@ -1046,6 +1046,18 @@ public partial class MainWindow : Window
             _viewModel.SelectSlot(slot);
     }
 
+    // Editor de cofres v1 (T1, 15-sep-2026): gemelo de OnItemSlotMouseDown de arriba, para la
+    // rejilla de edicion de un cofre de Exploracion - a proposito NO llama a
+    // _viewModel.SelectSlot (eso pisaria el panel "Editar" de Personaje, en otra pestaña), sino a
+    // Exploration.SelectChestSlot (su propia seleccion independiente). Sin arrastre/teclado
+    // todavia (esta rejilla es AllowDrop="False" y sin KeyDown en el XAML) - alcance minimo real,
+    // "anadir/cambiar" ya funciona entero via el campo "Indice" del panel Editar reutilizado.
+    private void OnChestItemSlotMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ItemSlotViewModel slot })
+            _viewModel.Exploration.SelectChestSlot(slot);
+    }
+
     private void OnItemSlotMouseMove(object sender, MouseEventArgs e)
     {
         if (e.LeftButton != MouseButtonState.Pressed || _dragStartSlot is not { } start) return;

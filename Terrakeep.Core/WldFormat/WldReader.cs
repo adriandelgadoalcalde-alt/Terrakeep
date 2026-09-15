@@ -436,7 +436,11 @@ public static class WldReader
     // pueden tener capacidades distintas). Un slot con stackSize <= 0 esta vacio - se omite en
     // vez de guardar un WldChestItem inventado (mismo criterio "lo que no se encuentra no se
     // inventa" del resto del proyecto).
-    private static List<WldChest> ReadChests(BinaryReader reader, uint version)
+    // internal (no private): WldWriter.WriteChestItems necesita releer los cofres reales del
+    // archivo ANTES de editar uno solo, byte a byte identico a como los ve esta funcion - misma
+    // regla ya establecida con ReadBitArray (reutilizada, nunca duplicada, para que los dos
+    // caminos no puedan divergir con el tiempo).
+    internal static List<WldChest> ReadChests(BinaryReader reader, uint version)
     {
         var chests = new List<WldChest>();
         int totalChests = reader.ReadInt16();
@@ -461,7 +465,7 @@ public static class WldReader
                 items.Add(new WldChestItem(netId, stackSize, prefix));
             }
 
-            chests.Add(new WldChest { X = x, Y = y, Name = name, Items = items });
+            chests.Add(new WldChest { X = x, Y = y, Name = name, Items = items, MaxItems = maxItems });
         }
 
         return chests;
@@ -477,14 +481,10 @@ public static class WldReader
 
     private static List<WldSign> ReadSigns(BinaryReader reader, WldTile[,] tiles, WldHeader header)
     {
+        var raw = ReadRawSigns(reader);
         var signs = new List<WldSign>();
-        int totalSigns = reader.ReadInt16();
-        for (int i = 0; i < totalSigns; i++)
+        foreach (var (text, x, y) in raw)
         {
-            string text = reader.ReadString();
-            int x = reader.ReadInt32();
-            int y = reader.ReadInt32();
-
             if (x < 0 || y < 0 || x >= header.TilesWide || y >= header.TilesHigh) continue;
             var tile = tiles[x, y];
             if (!tile.IsActive || !SignTileTypes.Contains(tile.Type)) continue;
@@ -492,6 +492,26 @@ public static class WldReader
             signs.Add(new WldSign { X = x, Y = y, Text = text });
         }
         return signs;
+    }
+
+    // internal (no private): WldWriter.WriteSignText necesita conservar TAMBIEN los letreros
+    // "fantasma" (casilla ya no es un letrero real, ver el comentario de ReadSigns/WldSign) al
+    // reescribir la seccion - de lo contrario un guardado real borraria de forma silenciosa
+    // entradas que el usuario nunca pidio tocar. Misma regla ya establecida con ReadBitArray/
+    // ReadChests: una unica lectura real, reutilizada por los dos caminos para que no puedan
+    // divergir.
+    internal static List<(string Text, int X, int Y)> ReadRawSigns(BinaryReader reader)
+    {
+        var raw = new List<(string, int, int)>();
+        int totalSigns = reader.ReadInt16();
+        for (int i = 0; i < totalSigns; i++)
+        {
+            string text = reader.ReadString();
+            int x = reader.ReadInt32();
+            int y = reader.ReadInt32();
+            raw.Add((text, x, y));
+        }
+        return raw;
     }
 
     // Fase 2b (diferida de la Fase 2 original): formato real confirmado directamente contra

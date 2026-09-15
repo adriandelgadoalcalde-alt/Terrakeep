@@ -16436,3 +16436,140 @@ fallar en ninguna de las dos pasadas de esta ronda (su historial de falsos posit
 
 Commit local únicamente de estos 4 archivos (nunca `git push`, nunca los archivos sin commitear de
 la otra sesión activa en este mismo repo).
+
+## T1: editor real de cofres/letreros del `.wld` + T3 (lee el `.twld`, cierra "Tile #-1") — 15/16-sep-2026
+
+Recomendación #4 del documento I+D independiente de Fable (`Downloads\KeepQA\v4\I+D-PROXIMOS-PASOS-
+FAMILIA-KEEP-FABLE.md`): hasta ahora el `.wld` solo se parcheaba en cabecera (`WldWriter.PatchGameMode`
+y hermanos, "nunca cambia la longitud del archivo") - los cofres/letreros se veían en Exploración pero
+no se podían editar, y no se leía el `.twld` de tModLoader (de ahí los 51 "Tile #-1" de Calamity ya
+documentados en el comentario de `ExplorationViewModel.ChestKindName`, 6-sep-2026).
+
+### Formato real confirmado (nunca adivinado)
+
+- **Cofres/letreros del `.wld`**: contra `World.FileV2.cs` de TEdit (ya usado como referencia esta
+  misma noche) - version<294 usa un `Int16` de capacidad GLOBAL compartido por todos los cofres;
+  version>=294 usa un `Int32` PROPIO por cofre (`WldChest.MaxItems`, nuevo). Los letreros llevan el
+  texto PRIMERO (String, luego Int32 X, Int32 Y) - el propio archivo puede traer letreros "fantasma"
+  (casilla que ya no es un letrero real), que `WldReader.ReadSigns` ya filtraba al leer pero que
+  `WldWriter.WriteSignText` tiene que CONSERVAR intactos al reescribir (ver `ReadRawSigns`, nuevo
+  método interno compartido por lector y escritor para que no puedan divergir).
+- **`.twld`**: confirmado contra el decompilado REAL de tModLoader (`Downloads\tModLoader-Decompiled\
+  tModLoader\Terraria\ModLoader\IO\WorldIO.cs`/`TileIO.cs`/`ModBlockEntry.cs`/`UShortTagSerializer.cs`),
+  nunca de memoria. Es gzip(NBT) exactamente igual que el `.tplr` (mismo `TplrFile.Read` reutilizado,
+  cero lector NBT nuevo). Causa real de "Tile #-1": `WorldFile.cs:1425` de tModLoader escribe un tile
+  de mod (`type >= TileID.Count`) como AIRE en el `.wld` normal (para que el archivo siga siendo
+  legible por Terraria vanilla) - su tipo real vive aparte, en `.twld` → `tiles` → `tileMap`/`tileData`
+  (un blob binario ANIDADO, escrito con `BinaryWriter` normal LITTLE-ENDIAN, al contrario que el NBT
+  que lo envuelve - detalle fácil de pasar por alto, confirmado leyendo `TileIO.IOImpl.SaveData` línea
+  a línea). Cada entrada de `tileMap` trae `value` (el mismo `ushort` crudo del tile, viaja por NBT
+  como `Short` reinterpretado bit a bit - `UShortTagSerializer.cs` real, nunca un short con signo de
+  verdad) + `mod` + `name` reales.
+
+### Qué se construyó
+
+- **`Terrakeep.Core/WldFormat/WldWriter.WriteChestItems`/`WriteSignText`** (nuevo): primer escritor
+  del proyecto que CAMBIA LA LONGITUD del archivo - reescribe la sección entera (cofres o letreros,
+  nunca las dos secciones intermedias que no se tocan) y recalcula la tabla de punteros de cabecera
+  (`ReplaceSection`, compartido por los dos caminos). Alcance deliberado: edita el contenido de un
+  cofre/letrero que YA EXISTE (mismo índice/posición que `WldReader.Read`), nunca añade ni quita
+  cofres/letreros enteros (exigiría tocar también la sección de tiles - salto de riesgo mucho mayor,
+  no pedido). Un cofre con más objetos de los que caben en su capacidad original CRECE esa capacidad
+  automáticamente (nunca pierde objetos ni lanza una excepción).
+- **`Terrakeep.Core/WldFormat/TwldReader.cs`** (nuevo, T3): lee `tileMap`/`wallMap` (barato) y,
+  solo si se piden posiciones concretas (`positionsOfInterest`), decodifica el blob denso
+  `tileData`/`wallData` en una única pasada secuencial (no hay forma de saltar a una posición sin
+  decodificar todo lo anterior) para resolver esas casillas exactas a un nombre real "Mod: Tile".
+- **`Terrakeep.App/Services/WorldFileService.SaveChestItems`/`SaveSignText`** (nuevo): mismo patrón
+  atómico ya establecido (`.tmp`+`File.Replace` con `.bak`) que `SaveGameMode`/`SaveSpawnPoint`, con
+  una verificación más exigente todavía tras releer DE DISCO: no solo el dato editado, también que el
+  NÚMERO de cofres/letreros del archivo siga siendo el mismo (señal barata y fiable de que la tabla
+  de punteros no quedó desincronizada).
+- **UI de Exploración** (`ExplorationViewModel`/`MainWindow.xaml`): "Cofre a cofre" gana un botón
+  "Editar" por fila que reutiliza TAL CUAL el editor de slots ya real de Personaje
+  (`ItemSlotViewModel`+`ItemEditViewModel`+`ItemEditTemplate` - pedido explícito del encargo: "no
+  reinventes el control"), con instancia PROPIA (`Exploration.ChestItemEdit`) para no pisar la
+  selección de Personaje en la otra pestaña. Los letreros se editan desde el buscador de mundo (único
+  sitio donde ya son alcanzables) - un panel flotante a nivel de ventana (mismo patrón que los banners
+  de guardado/error) se abre solo al pulsar un resultado `WorldSearchKind.Sign` real. T3 se integra
+  en `ChestKindName`/`RebuildChestByChest`: un cofre con tile inactivo por ser de mod ya no dice
+  siempre "Cofre de un mod" genérico, dice el nombre real si el `.twld` del mundo lo trae (resuelto
+  UNA vez al cargar el mundo, `ResolveModdedChestTileNames`, nunca bloqueante - un `.twld` ausente o
+  corrupto deja el mensaje genérico de siempre).
+- **Límite documentado, no una función a medias silenciosa**: sin picker de arrastrar-desde-la-
+  Librería en la rejilla de edición del cofre (el picker real es de Personaje,
+  `MainViewModel.RequestPickForSlot`, que además cambia de pestaña - sin un análogo honesto aquí
+  todavía) - añadir/cambiar un objeto se hace escribiendo su id real en el campo "Índice" del panel
+  Editar reutilizado, que ya lo soporta de fábrica. El NetId de un objeto de Calamity dentro de un
+  cofre sigue siendo el mismo límite YA documentado en el propio archivo (`_itemNames`/comentario de
+  `ExplorationViewModel`): un id crudo de tModLoader, no el synthetic id de este puerto - ese
+  problema es de nombrar/mostrar objetos DENTRO de un cofre, distinto del de "Tile #-1" (que es del
+  TILE del cofre, el que T3 sí cierra) y no lo pedía este encargo.
+
+### Verificación real (no solo "compila")
+
+- **Cofre editado, releído de verdad desde disco**: `WldWriterChestSignTests.
+  WriteChestItems_MundoReal_PersisteEnDiscoYElRestoSigueIntacto` copia un `.wld` real de esta máquina
+  a un temporal (nunca el original), edita el primer cofre real (Pico de cobre x1 + Frasco de vida
+  menor x20), guarda, **relee el archivo GUARDADO desde disco** y confirma: el cofre editado tiene
+  exactamente esos objetos, TODOS los demás cofres/letreros/NPCs/dimensiones siguen exactamente
+  iguales que antes, y un muestreo real de la rejilla de tiles entera no cambió ni un tile. Gemela
+  para letreros (`WriteSignText_MundoReal_...`). Las dos pasaron de verdad en esta máquina (ningún
+  "omitido" - había mundos reales con cofres/letreros disponibles).
+- **Letrero fantasma conservado**: prueba sintética (`WriteSignText_EditaElLetreroReal_
+  ConservaElFantasma`) confirma que editar UN letrero no borra en silencio los "fantasma" (casilla ya
+  no es un letrero real) que el archivo pudiera traer - se leen a mano con `BinaryReader` puro (sin
+  `InternalsVisibleTo`, mismo criterio ya establecido en el proyecto) para no depender de ningún
+  interno de producción.
+- **T3 contra el mundo real que documentó el bug**: `TwldReaderRealFileTests.
+  Read_MundoRealConCalamity_ResuelveLosCofresQueSalianComoTileMenosUno`, contra
+  `Afueras_de_Larvas_de_gusano.wld`/`.twld` reales de esta máquina - el MISMO mundo del comentario de
+  `ChestKindName`. Resultado real medido: **51 cofres con tile inactivo de 560 totales** (coincide
+  exacto con el número ya documentado en la bitácora del 6-sep), **51 de 51 resueltos** con nombre
+  real de mod (`CalamityMod: AbyssalPots`, `CalamityMod: AbyssGiantKelp1`... 230 entradas reales de
+  `tileMap` en total). Cero "omitido": el mundo real estaba disponible y se usó de verdad.
+- **`Terrakeep.exe` arranca limpio** con todo el XAML/bindings nuevos: lanzado en segundo plano con
+  stdout/stderr redirigidos (mismo criterio ya documentado en este proyecto para detectar un
+  `XamlParseException` de arranque), seguía vivo 13s después sin nada en stderr.
+- `Terrakeep.Core.Tests`: **548/548** (539 + 9 pruebas nuevas de esta ronda). `Terrakeep.App.
+  ViewModels.Tests`: **485/485** (3 constructores de `ChestRowViewModel` en tests existentes
+  actualizados al nuevo parámetro `chestIndex`, sin tocar la regla que prueban). `dotnet build` de
+  `Terrakeep.Core`/`Terrakeep.App` limpio, 0 avisos, 0 errores.
+- **`Terrakeep.App.Tests` NO es un proyecto `dotnet test`** (es `OutputType=Exe`, un arnés visual con
+  `Main()` propio que se ejecuta con `dotnet run --project Terrakeep.App.Tests`, no vía xUnit - ver
+  su propio comentario de cabecera) - compila limpio (0 errores) con las clases nuevas, pero no se
+  recorrió entero esta ronda (arnés visual, cientos de escenarios con capturas para revisar a mano,
+  fuera de alcance razonable de esta tanda - queda para una ronda dedicada si hace falta).
+
+### Archivos tocados
+
+- `Terrakeep.Core/WldFormat/WldChest.cs`: `MaxItems` nuevo (no `required`, compatibilidad con tests
+  existentes).
+- `Terrakeep.Core/WldFormat/WldReader.cs`: `ReadChests`/`ReadRawSigns` pasan a `internal` (reutilizados
+  por `WldWriter`), `ReadSigns` delega en `ReadRawSigns`.
+- `Terrakeep.Core/WldFormat/WldWriter.cs`: `WriteChestItems`/`WriteSignText`/`ReplaceSection`/
+  `SerializeChests` nuevos.
+- `Terrakeep.Core/WldFormat/WldWorld.cs`: `WithChestItems`/`WithSignText` nuevos (mismo patrón que
+  `WithHeader`).
+- `Terrakeep.Core/WldFormat/TwldReader.cs`: nuevo entero (T3).
+- `Terrakeep.Core.Tests/WldFormat/WldWriterChestSignTests.cs`/`TwldReaderRealFileTests.cs`: nuevos
+  enteros, 9 pruebas.
+- `Terrakeep.App/Services/WorldFileService.cs`: `SaveChestItems`/`SaveSignText` nuevos.
+- `Terrakeep.App/ViewModels/ExplorationViewModel.cs`: `ChestRowViewModel.ChestIndex`/`IsEditing`
+  nuevos, `WorldSearchHitRowViewModel.Kind` expuesto, editor de cofres (`ChestItemEdit`/
+  `EditingChestSlots`/`EditChestCommand`/`SaveEditingChestCommand`/`CancelEditingChestCommand`) y de
+  letreros (`SelectedSignHit`/`SignEditText`/`SaveSignTextCommand`/`CancelSignEditCommand`) nuevos,
+  T3 integrado en `ChestKindName`/`RebuildChestByChest`/`LoadFromPathAsync`.
+- `Terrakeep.App/MainWindow.xaml`: rejilla de edición + panel Editar reutilizado dentro de
+  `ChestRowTemplate`, panel flotante de edición de letreros a nivel de ventana.
+- `Terrakeep.App/MainWindow.xaml.cs`: `OnChestItemSlotMouseDown` nuevo (gemelo de
+  `OnItemSlotMouseDown`, seleccion independiente de Personaje).
+- `Terrakeep.App/Assets/strings_es.json`/`strings_en.json`: `chest_edit_open`/`chest_edit_close`/
+  `sign_edit_title` nuevas, tooltip de `explore_chest_modded_tooltip` actualizado (ya no dice "no se
+  puede saber" - ahora a veces sí se sabe, via T3).
+- `Terrakeep.App.ViewModels.Tests/ChestByChestSelectionTests.cs`/`CofresMarcadorYRecuentoTests.cs`/
+  `ExplorationCargarOtroMundoTests.cs`: 3 constructores de `ChestRowViewModel` actualizados al nuevo
+  parámetro `chestIndex` (positional, sin cambiar ninguna regla que las pruebas verifican).
+
+Commit local únicamente de estos archivos (nunca `git push`, nunca ningún archivo ajeno a esta
+ronda).

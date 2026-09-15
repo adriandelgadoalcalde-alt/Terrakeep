@@ -284,4 +284,183 @@ public static class WldWriter
         Write(o.HardMode, patch.HardMode);
         return patched;
     }
+
+    // Editor de cofres/letreros v1 (T1 del documento I+D real, "Terrakeep, editor de cofres/
+    // letreros del .wld", 15-sep-2026). A diferencia de todo lo de arriba (parchea un tramo de
+    // ANCHO FIJO, nunca cambia la longitud del archivo), el contenido de un cofre (numero real
+    // de objetos) y el texto de un letrero (string de longitud variable) SI cambian de longitud -
+    // hace falta reescribir la seccion ENTERA y corregir la tabla de punteros de cabecera, exacto
+    // mismo patron real que usa TEdit (World.FileV2.cs, SaveWorld: escribe seccion a seccion y
+    // corrige sectionPointers[] al final).
+    //
+    // Alcance deliberado: se edita el CONTENIDO de un cofre/letrero que YA EXISTE en el archivo
+    // (mismo indice que devuelve WldReader.Read, mismo orden) - nunca se añaden ni se borran
+    // cofres/letreros enteros (eso exigiria tocar tambien la seccion de tiles para colocar/quitar
+    // el tile del cofre/letrero de verdad - un salto de riesgo mucho mayor, no pedido).
+
+    // Tabla de punteros real: Int16 pointerCount + esa cantidad de Int32, en un offset FIJO desde
+    // el principio del archivo (justo tras version+firma+fileType+FileRevision+flags de favorito,
+    // TODO de ancho fijo - nunca depende de ningun string variable) - se puede parchear in-place
+    // sin tener que releer nada mas, pase lo que pase con las secciones de despues.
+    private readonly record struct PointerTable(uint Version, int[] Pointers, long PointersArrayOffset);
+
+    private static PointerTable ReadPointerTable(byte[] fileBytes)
+    {
+        using var stream = new MemoryStream(fileBytes, writable: false);
+        using var reader = new BinaryReader(stream);
+
+        uint version = reader.ReadUInt32();
+        string signature = new(reader.ReadChars(7));
+        if (signature != "relogic")
+            throw new InvalidDataException($"Firma de .wld invalida: '{signature}' (se esperaba 'relogic').");
+        byte fileType = reader.ReadByte();
+        if (fileType != 2)
+            throw new InvalidDataException($"Tipo de archivo {fileType} no es un mundo (se esperaba 2).");
+
+        reader.ReadUInt32(); // FileRevision
+        reader.ReadInt64();  // banderas de favorito
+
+        short pointerCount = reader.ReadInt16();
+        long pointersArrayOffset = stream.Position;
+        var pointers = new int[pointerCount];
+        for (int i = 0; i < pointerCount; i++) pointers[i] = reader.ReadInt32();
+        if (pointerCount < 5)
+            throw new NotSupportedException($"Mundo con formato demasiado antiguo (solo {pointerCount} punteros de seccion, hacen falta al menos 5 - cofres y letreros incluidos).");
+
+        return new PointerTable(version, pointers, pointersArrayOffset);
+    }
+
+    // Reconstruye el archivo entero sustituyendo el tramo [oldRangeStart, oldRangeEnd) por
+    // newSectionBytes, y corrige TODOS los punteros de cabecera que caian en o despues de
+    // oldRangeEnd sumandoles el delta real de longitud - unico punto que sabe recomponer un
+    // .wld tras una seccion de longitud variable, usado tanto por cofres como por letreros para
+    // que los dos caminos no puedan divergir.
+    private static byte[] ReplaceSection(byte[] fileBytes, PointerTable table, int oldRangeStart, int oldRangeEnd, byte[] newSectionBytes)
+    {
+        int delta = newSectionBytes.Length - (oldRangeEnd - oldRangeStart);
+
+        var result = new byte[fileBytes.Length + delta];
+        Buffer.BlockCopy(fileBytes, 0, result, 0, oldRangeStart);
+        Buffer.BlockCopy(newSectionBytes, 0, result, oldRangeStart, newSectionBytes.Length);
+        int tailStart = oldRangeStart + newSectionBytes.Length;
+        Buffer.BlockCopy(fileBytes, oldRangeEnd, result, tailStart, fileBytes.Length - oldRangeEnd);
+
+        for (int i = 0; i < table.Pointers.Length; i++)
+        {
+            int newPointer = table.Pointers[i] >= oldRangeEnd ? table.Pointers[i] + delta : table.Pointers[i];
+            BitConverter.GetBytes(newPointer).CopyTo(result, (int)table.PointersArrayOffset + i * 4);
+        }
+        return result;
+    }
+
+    // Formato real confirmado contra World.FileV2.cs de TEdit (LoadChestData/SaveChestData) -
+    // mismo criterio de ancho por version que WldReader.ReadChests (reutilizado, nunca
+    // reimplementado): version<294 usa un Int16 GLOBAL de capacidad compartido por TODOS los
+    // cofres; version>=294 usa un Int32 PROPIO por cofre. Los objetos se escriben empaquetados
+    // desde el slot 0 (sin huecos intermedios) - una simplificacion deliberada y segura: el
+    // juego no distingue "objeto en el slot 3, huecos 0-2 vacios" de "objeto en el slot 0", solo
+    // importa QUE objetos hay dentro, nunca en que hueco exacto cayeron originalmente.
+    private static byte[] SerializeChests(IReadOnlyList<WldChest> chests, uint version)
+    {
+        using var ms = new MemoryStream();
+        using var writer = new BinaryWriter(ms);
+        writer.Write((short)chests.Count);
+
+        if (version < 294)
+        {
+            int globalMaxItems = 40;
+            foreach (var c in chests) globalMaxItems = Math.Max(globalMaxItems, Math.Max(c.MaxItems, c.Items.Count));
+            if (globalMaxItems > short.MaxValue)
+                throw new NotSupportedException("Un mundo de formato anterior a la version 294 no admite mas de 32767 huecos por cofre (capacidad global compartida por todos los cofres).");
+            writer.Write((short)globalMaxItems);
+            foreach (var chest in chests) WriteOneChest(writer, chest, globalMaxItems, writeMaxItems: false);
+        }
+        else
+        {
+            foreach (var chest in chests)
+            {
+                int maxItems = Math.Max(chest.MaxItems, chest.Items.Count);
+                WriteOneChest(writer, chest, maxItems, writeMaxItems: true);
+            }
+        }
+        return ms.ToArray();
+    }
+
+    private static void WriteOneChest(BinaryWriter writer, WldChest chest, int maxItems, bool writeMaxItems)
+    {
+        writer.Write(chest.X);
+        writer.Write(chest.Y);
+        writer.Write(chest.Name);
+        if (writeMaxItems) writer.Write(maxItems);
+        for (int slot = 0; slot < maxItems; slot++)
+        {
+            if (slot < chest.Items.Count)
+            {
+                var item = chest.Items[slot];
+                writer.Write(item.Stack);
+                writer.Write(item.NetId);
+                writer.Write(item.Prefix);
+            }
+            else
+            {
+                writer.Write((short)0);
+            }
+        }
+    }
+
+    // Edita el contenido (objetos + cantidades + prefijos) de UN cofre real, identificado por su
+    // indice de lectura (el mismo orden que WldWorld.Chests, 0-based) - nunca añade ni quita
+    // cofres. El resto del archivo (tiles, el propio X/Y/Nombre del cofre editado, letreros,
+    // NPCs, tile entities, bestiario...) se copia byte a byte sin tocar.
+    public static byte[] WriteChestItems(byte[] fileBytes, int chestIndex, IReadOnlyList<WldChestItem> newItems)
+    {
+        var table = ReadPointerTable(fileBytes);
+
+        using var stream = new MemoryStream(fileBytes, writable: false);
+        using var reader = new BinaryReader(stream);
+        stream.Position = table.Pointers[2];
+        var chests = WldReader.ReadChests(reader, table.Version);
+
+        if (chestIndex < 0 || chestIndex >= chests.Count)
+            throw new ArgumentOutOfRangeException(nameof(chestIndex), $"El mundo tiene {chests.Count} cofres reales, no existe el indice {chestIndex}.");
+
+        var original = chests[chestIndex];
+        chests[chestIndex] = new WldChest { X = original.X, Y = original.Y, Name = original.Name, Items = newItems, MaxItems = original.MaxItems };
+
+        byte[] newChestsBytes = SerializeChests(chests, table.Version);
+        return ReplaceSection(fileBytes, table, table.Pointers[2], table.Pointers[3], newChestsBytes);
+    }
+
+    // Formato real confirmado contra World.FileV2.cs de TEdit (LoadSignData/SaveSignData): el
+    // texto va PRIMERO (String Text, Int32 X, Int32 Y), igual que WldReader.ReadRawSigns. Se
+    // reescriben TODAS las entradas, incluidas las "fantasma" (ver el comentario real de
+    // WldReader.ReadSigns/WldSign) - solo se sustituye el texto de la que coincide en (X,Y) con
+    // el letrero que el usuario edito, todo lo demas viaja identico.
+    public static byte[] WriteSignText(byte[] fileBytes, int signX, int signY, string newText)
+    {
+        var table = ReadPointerTable(fileBytes);
+
+        using var stream = new MemoryStream(fileBytes, writable: false);
+        using var reader = new BinaryReader(stream);
+        stream.Position = table.Pointers[3];
+        var rawSigns = WldReader.ReadRawSigns(reader);
+
+        int index = rawSigns.FindIndex(s => s.X == signX && s.Y == signY);
+        if (index < 0)
+            throw new ArgumentException($"No hay ningun letrero real en ({signX},{signY}) en la seccion de letreros del archivo.", nameof(signX));
+        rawSigns[index] = (newText, signX, signY);
+
+        using var outMs = new MemoryStream();
+        using var writer = new BinaryWriter(outMs);
+        writer.Write((short)rawSigns.Count);
+        foreach (var (text, x, y) in rawSigns)
+        {
+            writer.Write(text);
+            writer.Write(x);
+            writer.Write(y);
+        }
+        byte[] newSignsBytes = outMs.ToArray();
+
+        return ReplaceSection(fileBytes, table, table.Pointers[3], table.Pointers[4], newSignsBytes);
+    }
 }

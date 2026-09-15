@@ -17,4 +17,12 @@ public sealed class WldChest
     public required int Y { get; init; }
     public required string Name { get; init; }
     public required IReadOnlyList<WldChestItem> Items { get; init; }
+
+    // Editor de cofres v1 (T1 del documento I+D, 15-sep-2026): capacidad REAL de este cofre
+    // concreto (version >= 294) o el global compartido del archivo (version < 294) - lo lee
+    // WldReader.ReadChests, WldWriter.WriteChestItems lo reutiliza para saber cuantos huecos
+    // tiene de verdad sin tener que volver a adivinarlo. No `required` a proposito: los tests
+    // existentes construyen WldChest a mano para probar solo lectura/busqueda, sin este dato -
+    // 40 es la capacidad real de un cofre de madera vanilla, el valor mas comun con diferencia.
+    public int MaxItems { get; init; } = 40;
 }

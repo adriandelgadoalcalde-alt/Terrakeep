@@ -34,4 +34,32 @@ public sealed class WldWorld
         Header = newHeader, Tiles = Tiles, Npcs = Npcs, Chests = Chests, Signs = Signs,
         TileEntities = TileEntities, ShimmeredNpcTypes = ShimmeredNpcTypes, Bestiary = Bestiary,
     };
+
+    // Editor de cofres/letreros v1 (T1, 15-sep-2026): mismo patron exacto que WithHeader - tras
+    // un guardado real via WldWriter.WriteChestItems/WriteSignText, reconstruye el WldWorld en
+    // memoria con SOLO ese cofre/letrero actualizado, sin releer el mundo entero (releer un
+    // mundo Grande cuesta ~1.4s reales, ver WldWriter.WithGameMode).
+    public WldWorld WithChestItems(int chestIndex, IReadOnlyList<WldChestItem> newItems)
+    {
+        var chest = Chests[chestIndex];
+        var newChests = Chests.ToList();
+        newChests[chestIndex] = new WldChest { X = chest.X, Y = chest.Y, Name = chest.Name, Items = newItems, MaxItems = chest.MaxItems };
+        return new WldWorld
+        {
+            Header = Header, Tiles = Tiles, Npcs = Npcs, Chests = newChests, Signs = Signs,
+            TileEntities = TileEntities, ShimmeredNpcTypes = ShimmeredNpcTypes, Bestiary = Bestiary,
+        };
+    }
+
+    public WldWorld WithSignText(int signIndex, string newText)
+    {
+        var sign = Signs[signIndex];
+        var newSigns = Signs.ToList();
+        newSigns[signIndex] = new WldSign { X = sign.X, Y = sign.Y, Text = newText };
+        return new WldWorld
+        {
+            Header = Header, Tiles = Tiles, Npcs = Npcs, Chests = Chests, Signs = newSigns,
+            TileEntities = TileEntities, ShimmeredNpcTypes = ShimmeredNpcTypes, Bestiary = Bestiary,
+        };
+    }
 }

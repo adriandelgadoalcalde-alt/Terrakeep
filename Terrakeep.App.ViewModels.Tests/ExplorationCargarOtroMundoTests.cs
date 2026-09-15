@@ -22,7 +22,7 @@ namespace Terrakeep.App.ViewModels.Tests;
 public sealed class ExplorationCargarOtroMundoTests
 {
     private static ChestRowViewModel Cofre(int x, int y) =>
-        new("Cofre de oro", null, x, y, null, [], false);
+        new("Cofre de oro", null, x, y, null, [], chestIndex: 0, isModdedChest: false);
 
     [Fact]
     public async Task CargarOtroMundo_NoDejaNiUnaFilaDeCofresDelAnterior()

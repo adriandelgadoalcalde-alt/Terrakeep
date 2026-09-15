@@ -20,7 +20,7 @@ public sealed class CofresMarcadorYRecuentoTests
     private static ChestContentItemViewModel Objeto(int netId) => new(netId, $"Objeto {netId}", 1, null, null);
 
     private static ChestRowViewModel Chest(string nombre, int x, int y, int objetos = 0, bool deMod = false) =>
-        new(nombre, null, x, y, null, Enumerable.Range(1, objetos).Select(Objeto).ToList(), deMod);
+        new(nombre, null, x, y, null, Enumerable.Range(1, objetos).Select(Objeto).ToList(), chestIndex: 0, isModdedChest: deMod);
 
     private static ExplorationViewModel ConCofres(out ChestRowViewModel a, out ChestRowViewModel b)
     {

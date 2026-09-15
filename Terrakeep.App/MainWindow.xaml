@@ -1668,6 +1668,93 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+
+                    <!-- Editor de cofres v1 (T1 del documento I+D real, "Terrakeep, editor de
+                         cofres/letreros del .wld", 15-sep-2026). Boton "Editar" SIEMPRE visible
+                         (no hace falta desplegar antes el contenido de solo lectura de arriba) -
+                         reutiliza EditChestCommand/Exploration.EditingChest, exclusivo (abrir
+                         otro cofre cierra este). -->
+                    <Button HorizontalAlignment="Left" Margin="33,0,0,6" Padding="7,3" FontSize="10.5"
+                            Command="{Binding DataContext.Exploration.EditChestCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="Tag" Value="Ghost" />
+                                <Setter Property="Content" Value="{Binding Loc[chest_edit_open], Mode=OneWay}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                        <Setter Property="Content" Value="{Binding Loc[chest_edit_close], Mode=OneWay}" />
+                                        <Setter Property="Tag" Value="Accent" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <!-- Rejilla de edicion real - solo cuando ESTA fila esta en edicion
+                         (Exploration.EditingChest == este cofre, ver ChestRowViewModel.
+                         IsEditing). Reutiliza SlotCompactTemplate TAL CUAL (pedido explicito del
+                         encargo: "reutilizando el mismo editor de slots que ya existe... no
+                         reinventes el control") - mismo control real que Personaje, con su propio
+                         manejador de clic (OnChestItemSlotMouseDown, NUNCA el de Personaje: este
+                         cofre tiene su propia seleccion, independiente de ItemEdit del
+                         personaje). -->
+                    <Border Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"
+                            Background="{StaticResource BgPrimaryBrush}" CornerRadius="6" Padding="8" Margin="33,0,0,8">
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding DataContext.Exploration.EditingChestSlots, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:ItemSlotViewModel}">
+                                        <Border AllowDrop="False" Focusable="True" ToolTipService.IsEnabled="{Binding ShowTooltip}"
+                                                PreviewMouseLeftButtonDown="OnChestItemSlotMouseDown"
+                                                Style="{StaticResource ItemSlotCardCompact}" Margin="0,0,4,4">
+                                            <Border.ToolTip>
+                                                <ToolTip DataContext="{Binding Path=PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                                    <StackPanel MaxWidth="220">
+                                                        <TextBlock Text="{Binding DisplayName}" FontWeight="Bold" TextWrapping="Wrap"
+                                                                   Visibility="{Binding IsNotEmpty, Converter={StaticResource BoolToVis}}" />
+                                                        <TextBlock Text="{Binding PrefixDisplay}" Style="{StaticResource CaptionText}"
+                                                                   Visibility="{Binding PrefixDisplay, Converter={StaticResource EmptyToCollapsed}}" />
+                                                    </StackPanel>
+                                                </ToolTip>
+                                            </Border.ToolTip>
+                                            <Grid>
+                                                <Image Source="{Binding IconPath}" Stretch="Uniform" StretchDirection="DownOnly" Margin="4"
+                                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                <TextBlock Text="{Binding Count}" Style="{StaticResource CaptionText}"
+                                                           HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,1"
+                                                           Visibility="{Binding ShowCount, Converter={StaticResource BoolToVis}}" />
+                                                <Border BorderBrush="{StaticResource AccentBrush}" BorderThickness="2" CornerRadius="4"
+                                                        Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Mismo panel "Editar" REAL ya usado en Personaje (Indice/Cantidad/
+                                 Prefijo, todos editables directamente sobre el slot seleccionado -
+                                 ver ItemEditTemplate) - aqui apunta a Exploration.ChestItemEdit
+                                 (instancia propia, nunca la de Personaje). -->
+                            <ContentControl Content="{Binding DataContext.Exploration.ChestItemEdit, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            ContentTemplate="{StaticResource ItemEditTemplate}" Margin="0,6,0,0" MaxHeight="320" />
+
+                            <UniformGrid Columns="2" Margin="0,8,0,0">
+                                <Button Content="{Binding Loc[action_save], Mode=OneWay}" Tag="Accent" Margin="0,0,3,0" Padding="6,4"
+                                        Command="{Binding DataContext.Exploration.SaveEditingChestCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                <Button Content="{Binding Loc[action_cancel], Mode=OneWay}" Tag="Ghost" Margin="3,0,0,0" Padding="6,4"
+                                        Command="{Binding DataContext.Exploration.CancelEditingChestCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                            </UniformGrid>
+                            <TextBlock Text="{Binding DataContext.Exploration.ChestEditStatus, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       Style="{StaticResource CaptionText}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                       Visibility="{Binding DataContext.Exploration.ChestEditStatus, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVis}}" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Border>
         </DataTemplate>
@@ -6701,6 +6788,39 @@
                            TextWrapping="Wrap" MaxWidth="400" />
                 <Button Content="✕" Style="{StaticResource CircleCloseButton}" Foreground="White" Margin="10,0,0,0"
                         Command="{Binding DismissGlobalErrorCommand}" ToolTip="{Binding Loc[close_notice_tooltip], Mode=OneWay}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Editor de letreros v1 (T1 del documento I+D real, "Terrakeep, editor de cofres/
+             letreros del .wld", 15-sep-2026): overlay a nivel de ventana (mismo patron que los
+             dos banners de arriba), visible SOLO cuando Exploracion tiene un letrero seleccionado
+             (Exploration.SelectedSignHit, ver GoToWorldSearchHit/OpenSignEditorIfApplicable) - un
+             letrero se alcanza desde el buscador de mundo de la pestaña Exploracion, pero el
+             panel de edicion vive a este nivel (no dentro de esa pestaña) para no competir por
+             sitio con el layout ya muy ajustado del bloque de resultados (varias rondas AR-EX de
+             auditoria de espacio, ver los comentarios reales de esa seccion). -->
+        <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,20" Width="320"
+                Background="{StaticResource BgElevatedBrush}" CornerRadius="10" Padding="14"
+                Effect="{StaticResource CardShadow}" Panel.ZIndex="99"
+                Visibility="{Binding Exploration.SelectedSignHit, Converter={StaticResource NullToVis}}">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,8">
+                    <Button DockPanel.Dock="Right" Content="✕" Style="{StaticResource CircleCloseButton}"
+                            Command="{Binding Exploration.CancelSignEditCommand}"
+                            ToolTip="{Binding Loc[close_notice_tooltip], Mode=OneWay}" />
+                    <TextBlock Text="{Binding Loc[sign_edit_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
+                </DockPanel>
+                <TextBox Text="{Binding Exploration.SignEditText, UpdateSourceTrigger=PropertyChanged}"
+                         AcceptsReturn="True" TextWrapping="Wrap" MinLines="3" MaxLines="6" Padding="6,4"
+                         Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                <UniformGrid Columns="2" Margin="0,10,0,0">
+                    <Button Content="{Binding Loc[action_save], Mode=OneWay}" Tag="Accent" Margin="0,0,3,0" Padding="6,4"
+                            Command="{Binding Exploration.SaveSignTextCommand}" />
+                    <Button Content="{Binding Loc[action_cancel], Mode=OneWay}" Tag="Ghost" Margin="3,0,0,0" Padding="6,4"
+                            Command="{Binding Exploration.CancelSignEditCommand}" />
+                </UniformGrid>
+                <TextBlock Text="{Binding Exploration.SignEditStatus}" Style="{StaticResource CaptionText}" Margin="0,6,0,0" TextWrapping="Wrap"
+                           Visibility="{Binding Exploration.SignEditStatus, Converter={StaticResource NullToVis}}" />
             </StackPanel>
         </Border>
 

@@ -14,7 +14,7 @@ namespace Terrakeep.App.ViewModels.Tests;
 public sealed class ChestByChestSelectionTests
 {
     private static ChestRowViewModel Chest(string nombre, int x, int y) =>
-        new(nombre, null, x, y, null, []);
+        new(nombre, null, x, y, null, [], chestIndex: 0);
 
     private static ExplorationViewModel ConTresCofres(out ChestRowViewModel a, out ChestRowViewModel b, out ChestRowViewModel c)
     {

@@ -90,6 +90,46 @@ public static class WorldFileService
         return world.WithHeader(newHeader);
     }
 
+    // Editor de cofres/letreros v1 (T1 del documento I+D real, "Terrakeep, editor de cofres/
+    // letreros del .wld", 15-sep-2026): primer camino de escritura que NO parchea la cabecera -
+    // WldWriter.WriteChestItems/WriteSignText reescriben una seccion entera y pueden CAMBIAR LA
+    // LONGITUD del archivo. Mismo patron atomico (WriteAtomic con .bak) y misma verificacion real
+    // releyendo DE DISCO tras guardar - aqui la verificacion es mas exigente todavia: no solo el
+    // dato editado, tambien que el NUMERO de cofres/letreros del archivo siga siendo el mismo (la
+    // señal mas barata y mas fiable de que la tabla de punteros no quedo desincronizada).
+    public static WldWorld SaveChestItems(WldWorld world, string wldPath, int chestIndex, IReadOnlyList<WldChestItem> newItems)
+    {
+        byte[] original = File.ReadAllBytes(wldPath);
+        byte[] patched = WldWriter.WriteChestItems(original, chestIndex, newItems);
+        WriteAtomic(wldPath, patched);
+
+        var reReadWorld = WldReader.Read(File.ReadAllBytes(wldPath), readContainers: true);
+        if (reReadWorld.Chests.Count != world.Chests.Count)
+            throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
+        var editedChest = reReadWorld.Chests[chestIndex];
+        if (editedChest.Items.Count != newItems.Count)
+            throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
+
+        return world.WithChestItems(chestIndex, newItems);
+    }
+
+    public static WldWorld SaveSignText(WldWorld world, string wldPath, int signX, int signY, string newText)
+    {
+        byte[] original = File.ReadAllBytes(wldPath);
+        byte[] patched = WldWriter.WriteSignText(original, signX, signY, newText);
+        WriteAtomic(wldPath, patched);
+
+        var reReadWorld = WldReader.Read(File.ReadAllBytes(wldPath), readContainers: true);
+        if (reReadWorld.Signs.Count != world.Signs.Count)
+            throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
+        var editedSign = reReadWorld.Signs.FirstOrDefault(s => s.X == signX && s.Y == signY);
+        if (editedSign == null || editedSign.Text != newText)
+            throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
+
+        int signIndex = world.Signs.ToList().FindIndex(s => s.X == signX && s.Y == signY);
+        return signIndex < 0 ? world : world.WithSignText(signIndex, newText);
+    }
+
     private static void WriteAtomic(string path, byte[] bytes)
     {
         string tmpPath = path + ".tmp";

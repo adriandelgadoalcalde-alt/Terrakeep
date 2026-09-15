@@ -34,6 +34,10 @@ public sealed partial class WorldSearchHitRowViewModel(WorldSearchHit hit) : Obs
     public int TileY { get; } = hit.Y;
     public string Name { get; } = hit.Name;
     public string Position { get; } = $"({hit.X}, {hit.Y})";
+    // Editor de letreros v1 (T1 del documento I+D real, 15-sep-2026): antes solo se usaba para
+    // el switch de KindLabel/KindColor de aqui abajo - GoToWorldSearchHit necesita saber si ESTE
+    // resultado concreto es un letrero real para poder abrir su editor.
+    public WorldSearchKind Kind { get; } = hit.Kind;
     public string KindLabel { get; } = hit.Kind switch
     {
         WorldSearchKind.Tile => "Tile",
@@ -209,8 +213,14 @@ public sealed class ChestContentItemViewModel(int netId, string name, int stack,
 // C-06: una fila real de la vista "Cofre a cofre" - _world.Chests, uno por cofre real del mundo
 // (no agrupado por variante ni por contenido, al contrario que los otros dos modos de
 // ChestViewMode). IsExpanded controla si Items se ve o no (desplegable real al pulsar la fila).
-public sealed partial class ChestRowViewModel(string variantName, string? chestName, int x, int y, string? iconPath, IReadOnlyList<ChestContentItemViewModel> items, bool isModdedChest = false) : ObservableObject
+public sealed partial class ChestRowViewModel(string variantName, string? chestName, int x, int y, string? iconPath, IReadOnlyList<ChestContentItemViewModel> items, int chestIndex, bool isModdedChest = false) : ObservableObject
 {
+    // Editor de cofres v1 (T1 del documento I+D real, 15-sep-2026): indice REAL de lectura del
+    // cofre (mismo orden que WldWorld.Chests, 0-based) - ChestRows esta ordenado por DISTANCIA al
+    // spawn (ver RebuildChestByChest), asi que la posicion dentro de esta lista NUNCA coincide con
+    // el indice real. WldWriter.WriteChestItems exige ese indice real, de ahi que se guarde aqui
+    // en el momento en que se construye la fila (unico sitio que conoce los dos ordenes a la vez).
+    public int ChestIndex { get; } = chestIndex;
     // Gemelo real de WorldInventoryRowViewModel.IsModdedChest: el cofre esta sobre una casilla que
     // el .wld guarda vacia porque su tile es de un mod (ver ExplorationViewModel.ChestKindName) -
     // la plantilla le da el tooltip que lo explica en vez del generico.
@@ -246,6 +256,11 @@ public sealed partial class ChestRowViewModel(string variantName, string? chestN
     // engancharse - no era un binding roto, era una propiedad que no existia. Marcado exclusivo:
     // lo fija GoToChest, apagando el resto (mismo criterio que UpdateCurrentWorldSearchHighlight).
     [ObservableProperty] private bool _isCurrent;
+    // Editor de cofres v1 (T1, 15-sep-2026): esta fila concreta tiene su editor desplegado ahora
+    // mismo - lo fija ExplorationViewModel.EditChest (exclusivo, igual que IsCurrent de arriba),
+    // simple bool en vez de comparar por referencia contra Exploration.EditingChest en el XAML
+    // (WPF no compara igualdad de objetos en un DataTrigger sin un convertidor de por medio).
+    [ObservableProperty] private bool _isEditing;
 }
 
 // Editor de mundos v1 (14-sep-2026), punto 6 de bitacora.md (paneles de progreso/completitud):
@@ -277,6 +292,18 @@ public partial class ExplorationViewModel : ObservableObject
     private readonly VanillaItemCatalog _itemNames;
     // C-06: nombre real del prefijo de cada objeto suelto dentro de un cofre ("Cofre a cofre").
     private readonly VanillaPrefixCatalog _prefixNames;
+    // Editor de cofres/letreros v1 (T1 del documento I+D real, 15-sep-2026): CharacterFileService
+    // COMPLETO (catalogos vanilla+Calamity, prefijos, etc.) - hace falta para construir el mismo
+    // ItemSlotViewModel/ItemEditViewModel ya reales del editor de personaje, reutilizados aqui tal
+    // cual para editar el contenido de un cofre (pedido explicito: "reutilizando el mismo editor
+    // de slots que ya existe... no reinventes el control").
+    private readonly CharacterFileService _service;
+    // T3 del documento I+D real: cofre.(X,Y) -> "Mod: NombreInterno" real, resuelto UNA vez por
+    // mundo cargado (ver LoadFromPathAsync/ResolveModdedChestTileNames) leyendo el .twld hermano -
+    // solo para los cofres que hoy salen como "Tile #-1" (tile inactivo en el .wld normal porque
+    // es un tile de mod, ver el comentario real de ChestKindName). Vacio si el mundo no tiene
+    // .twld (mundo vanilla, sin mods) o si ningun cofre esta en ese caso.
+    private IReadOnlyDictionary<(int X, int Y), string> _moddedChestTileNames = new Dictionary<(int, int), string>();
     private List<WorldNpcRowViewModel> _allNpcs = [];
     private WldWorld? _world;
 
@@ -935,11 +962,55 @@ public partial class ExplorationViewModel : ObservableObject
     //     AstralChestLocked, SecurityChestTile, AshenChest, VoidChest...
     //
     // O sea: son cofres REALES de Calamity, y su contenido (que si vive en el .wld, en la seccion
-    // de cofres) se lee entero y correcto. Lo unico que no se puede saber sin leer el .twld es
-    // QUE cofre de Calamity es cada uno. Se dice eso, con un nombre real y un tooltip que lo
-    // explica, en vez de un "Tile #-1" que no significa nada para nadie.
-    private string ChestKindName(int type, short u, short v) =>
-        type < 0 ? LocalizationService.Instance["explore_chest_modded"] : _tileNames.TileVariantName(type, u, v);
+    // de cofres) se lee entero y correcto. T3 del documento I+D real (15-sep-2026, "Terrakeep,
+    // editor de cofres/letreros del .wld") cierra el "lo unico que no se puede saber": con el
+    // .twld leido (ver ResolveModdedChestTileNames/TwldReader, resuelto UNA vez al cargar el
+    // mundo), QUE cofre de Calamity es cada uno SI se sabe - "AbyssTreasureChest"/"VoidChest"/...
+    // reales, no un numero. x/y solo se pasan desde "Cofre a cofre" (RebuildChestByChest, el unico
+    // sitio con la posicion de un cofre CONCRETO) - "Por tipo de cofre" (RebuildInventory) agrupa
+    // por (type,u,v) y TODOS los cofres de mod comparten esa misma clave (-1,0,0), asi que ahi no
+    // hay una unica posicion que resolver y se queda con el mensaje generico, honesto sobre el
+    // limite real de esa vista agrupada.
+    private string ChestKindName(int type, short u, short v, int x = int.MinValue, int y = int.MinValue)
+    {
+        if (type >= 0) return _tileNames.TileVariantName(type, u, v);
+        if (x != int.MinValue && _moddedChestTileNames.TryGetValue((x, y), out string? real)) return real;
+        return LocalizationService.Instance["explore_chest_modded"];
+    }
+
+    // Lee el .twld hermano del .wld que se acaba de cargar (si existe) y resuelve, con el nombre
+    // real de mod+tile, cada cofre cuya casilla salga inactiva en el .wld normal (ver el
+    // comentario de arriba) - se llama UNA vez por carga de mundo, dentro del mismo Task.Run que
+    // ya lee+pinta (LoadFromPathAsync), nunca en cada reconstruccion de la lista. Nunca lanza: un
+    // .twld ausente, corrupto o de un formato futuro deja el mundo exactamente como se veia antes
+    // de T3 (mensaje generico), jamas rompe la carga por esto.
+    private static IReadOnlyDictionary<(int X, int Y), string> ResolveModdedChestTileNames(WldWorld world, string wldPath)
+    {
+        var empty = new Dictionary<(int, int), string>();
+        string twldPath = Path.ChangeExtension(wldPath, ".twld");
+        if (!File.Exists(twldPath)) return empty;
+
+        int w = world.Header.TilesWide, h = world.Header.TilesHigh;
+        var positions = world.Chests
+            .Where(c => c.X >= 0 && c.X < w && c.Y >= 0 && c.Y < h && !world.Tiles[c.X, c.Y].IsActive)
+            .Select(c => (c.X, c.Y))
+            .ToHashSet();
+        if (positions.Count == 0) return empty;
+
+        try
+        {
+            var content = TwldReader.Read(File.ReadAllBytes(twldPath), w, h, positions);
+            var result = new Dictionary<(int, int), string>();
+            foreach (var pos in positions)
+                if (content.DescribeTileAt(pos.X, pos.Y) is string name)
+                    result[pos] = name;
+            return result;
+        }
+        catch (Exception)
+        {
+            return empty;
+        }
+    }
 
     // El swatch de respaldo de una fila de cofre de mod: el color real del cofre (tile 21) en la
     // paleta del mapa, no el del "tile -1" (que no existe en la paleta y saldria en el color de
@@ -1081,9 +1152,12 @@ public partial class ExplorationViewModel : ObservableObject
     {
         if (_world == null) return;
         int sx = _world.Header.SpawnX, sy = _world.Header.SpawnY;
-        double Dist(WldChest c) => Math.Sqrt(Math.Pow(c.X - sx, 2) + Math.Pow(c.Y - sy, 2));
+        double Dist((WldChest Chest, int Index) c) => Math.Sqrt(Math.Pow(c.Chest.X - sx, 2) + Math.Pow(c.Chest.Y - sy, 2));
         int w = _world.Header.TilesWide, h = _world.Header.TilesHigh;
-        foreach (var chest in _world.Chests.OrderBy(Dist))
+        // Editor de cofres v1: el indice REAL de lectura (para WldWriter.WriteChestItems) es la
+        // posicion dentro de _world.Chests SIN ordenar - hay que capturarlo ANTES del OrderBy de
+        // abajo (ordenado por distancia al spawn), o se perderia.
+        foreach (var (chest, index) in _world.Chests.Select((c, i) => (c, i)).OrderBy(Dist))
         {
             // Mismo recorte de limites que ya hace WorldPresenceIndex.Build antes de mirar la
             // casilla de un cofre: un chest.X/Y fuera del mundo (archivo corrupto o recortado por
@@ -1092,8 +1166,9 @@ public partial class ExplorationViewModel : ObservableObject
                 ? _world.Tiles[chest.X, chest.Y]
                 : WldTile.Empty;
             // Mismo arreglo real que "Por tipo de cofre" (ver ChestKindName): los cofres de mod
-            // llegan aqui con la casilla vacia y salian como "Tile #-1".
-            string variantName = ChestKindName(tile.Type, tile.U, tile.V);
+            // llegan aqui con la casilla vacia y salian como "Tile #-1" - T3 ya resuelve el
+            // nombre real cuando el .twld del mundo lo trae (ver ResolveModdedChestTileNames).
+            string variantName = ChestKindName(tile.Type, tile.U, tile.V, chest.X, chest.Y);
             string? iconPath = TileIconResolver.GetIconPath(tile.Type, tile.U, tile.V);
             // Casillas vacias reales de un cofre parcialmente lleno tienen NetId=0 - se
             // descartan, mismo criterio que "Por lo que contienen" (ChestItemCounts solo cuenta
@@ -1103,7 +1178,7 @@ public partial class ExplorationViewModel : ObservableObject
                 string? prefixName = it.Prefix != 0 ? _prefixNames.ById(it.Prefix)?.Es ?? _prefixNames.ById(it.Prefix)?.En : null;
                 return new ChestContentItemViewModel(it.NetId, _itemNames.GetName(it.NetId), it.Stack, prefixName, VanillaIconResolver.GetIconPath(it.NetId));
             }).ToList();
-            ChestRows.Add(new ChestRowViewModel(variantName, chest.Name, chest.X, chest.Y, iconPath, items, tile.Type < 0));
+            ChestRows.Add(new ChestRowViewModel(variantName, chest.Name, chest.X, chest.Y, iconPath, items, index, tile.Type < 0));
         }
     }
 
@@ -1137,6 +1212,135 @@ public partial class ExplorationViewModel : ObservableObject
         // Punto 4 del encargo (6-sep-2026): "Cofre a cofre" tiene su PROPIA casilla de acercar,
         // independiente de la global que comparten las demas secciones.
         NavigateToTile(chest.TileX, chest.TileY, AutoZoomOnChestNavigate);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Editor de cofres v1 (T1 del documento I+D real, "Terrakeep, editor de cofres/letreros del
+    // .wld", recomendacion 4, 15-sep-2026). Reutiliza tal cual el editor de slots ya real de
+    // Personaje (ItemSlotViewModel + ItemEditViewModel + ItemEditTemplate) - pedido explicito del
+    // encargo: "no reinventes el control". La unica pieza nueva es COMO se llega hasta ahi (un
+    // cofre del mundo en vez de un contenedor del personaje) y COMO se guarda (WldWriter.
+    // WriteChestItems por seccion, no el .plr).
+    // ---------------------------------------------------------------------------------------
+
+    // Panel "Editar" compartido - mismo tipo real que MainViewModel.ItemEdit, instancia PROPIA
+    // (ver el constructor) para no pisar la seleccion del personaje en la otra pestaña.
+    public ItemEditViewModel ChestItemEdit { get; }
+
+    // Cofre actualmente abierto para edicion (null = ninguno). Se guarda la FILA (no solo el
+    // indice) porque la plantilla necesita poder comparar "es esta fila la que esta editando"
+    // para pintar el boton "Editar" como activo.
+    [ObservableProperty] private ChestRowViewModel? _editingChest;
+    public ObservableCollection<ItemSlotViewModel> EditingChestSlots { get; } = [];
+    // Mensaje real de "Guardado"/error tras pulsar Guardar - mismo patron EXACTO ya establecido
+    // por SetSpawnSaveStatus/SpawnSaveStatus (clave+args guardados, nunca el texto ya redactado,
+    // para que un cambio de idioma en vivo no deje el mensaje congelado - ver OnIdiomaCambiado).
+    private string? _chestEditStatusKey; private object?[] _chestEditStatusArgs = [];
+    public string? ChestEditStatus => _chestEditStatusKey is null ? null : LocalizationService.Instance.Format(_chestEditStatusKey, _chestEditStatusArgs);
+    private void SetChestEditStatus(string? clave, params object?[] args) { _chestEditStatusKey = clave; _chestEditStatusArgs = args; OnPropertyChanged(nameof(ChestEditStatus)); }
+
+    // Techo de seguridad real: un cofre corrupto/ajeno con una capacidad absurda (miles) no debe
+    // poder colgar la UI construyendo miles de ItemSlotViewModel de golpe - 200 cubre con margen
+    // de sobra cualquier cofre real de Terraria/Calamity conocido (40 el normal, un poco mas los
+    // especiales de mod).
+    private const int MaxEditableChestSlots = 200;
+
+    // Mismo patron real que ItemEditViewModel.OnSlotChanged: un unico sitio que mantiene
+    // ChestRowViewModel.IsEditing sincronizado con EditingChest, sea cual sea el camino que lo
+    // cambio (abrir/cerrar/guardar/cancelar) - nunca hay que acordarse de tocarlo a mano en cada
+    // metodo de abajo.
+    partial void OnEditingChestChanged(ChestRowViewModel? oldValue, ChestRowViewModel? newValue)
+    {
+        if (oldValue != null) oldValue.IsEditing = false;
+        if (newValue != null) newValue.IsEditing = true;
+    }
+
+    [RelayCommand]
+    private void EditChest(ChestRowViewModel? row)
+    {
+        if (row == null || _world == null) return;
+        if (ReferenceEquals(EditingChest, row))
+        {
+            // Segundo clic sobre el mismo cofre: cierra el editor (mismo gesto de "acordeon" que
+            // ya usa IsExpanded para el contenido de solo lectura).
+            EditingChest = null;
+            EditingChestSlots.Clear();
+            ChestItemEdit.Slot = null;
+            SetChestEditStatus(null);
+            return;
+        }
+
+        var chest = _world.Chests[row.ChestIndex];
+        EditingChestSlots.Clear();
+        int slotCount = Math.Clamp(Math.Max(chest.MaxItems, chest.Items.Count), 1, MaxEditableChestSlots);
+        for (int i = 0; i < slotCount; i++)
+        {
+            var item = i < chest.Items.Count
+                ? new GameItem { Id = chest.Items[i].NetId, Count = chest.Items[i].Stack, Prefix = ItemPrefix.Vanilla(chest.Items[i].Prefix) }
+                : GameItem.Empty;
+            // requestPick:null - el picker de arrastrar-desde-la-Libreria es el de Personaje
+            // (MainViewModel.RequestPickForSlot, que ademas cambia de pestaña) y no tiene un
+            // analogo honesto aqui todavia; el campo "Indice" del panel Editar (reutilizado
+            // debajo) ya permite anadir/cambiar un objeto escribiendo su id real - LIMITE
+            // documentado, no una funcion a medias silenciosa.
+            var slot = new ItemSlotViewModel(_service, i, row.ChestName ?? row.VariantName, item, requestPick: null, supportsFavorite: false);
+            EditingChestSlots.Add(slot);
+        }
+        EditingChest = row;
+        ChestItemEdit.Slot = null;
+        SetChestEditStatus(null);
+    }
+
+    // Selecciona un slot del cofre en edicion para el panel "Editar" compartido (mismo patron
+    // real que MainViewModel.SelectSlot, pero SIN tocar el estado de Personaje - dos seleccionos
+    // independientes a proposito).
+    public void SelectChestSlot(ItemSlotViewModel slot)
+    {
+        if (ChestItemEdit.Slot != null) ChestItemEdit.Slot.IsSelected = false;
+        slot.IsSelected = true;
+        ChestItemEdit.Slot = slot;
+    }
+
+    private bool CanSaveEditingChest() => EditingChest != null && _currentWorldPath != null;
+
+    [RelayCommand(CanExecute = nameof(CanSaveEditingChest))]
+    private async Task SaveEditingChestAsync()
+    {
+        if (_world == null || _currentWorldPath == null || EditingChest is not { } row) return;
+
+        var newItems = EditingChestSlots
+            .Where(s => !s.IsEmpty)
+            .Select(s => new WldChestItem(s.ItemId, (short)Math.Clamp(s.Count, 1, short.MaxValue), (byte)Math.Clamp(s.PrefixId, 0, 255)))
+            .ToList();
+
+        // Mismo patron real de mensajes ya establecido por SaveSpawnPointAsync/SetSpawnSaveStatus
+        // (claves compartidas de toda la app, "status_saving"/"status_saved_backup"/
+        // "status_save_failed" - nunca una clave nueva por funcion).
+        SetChestEditStatus("status_saving");
+        try
+        {
+            var mundoActual = _world; string ruta = _currentWorldPath; int chestIndex = row.ChestIndex;
+            var mundoActualizado = await Task.Run(() => WorldFileService.SaveChestItems(mundoActual, ruta, chestIndex, newItems));
+            _world = mundoActualizado;
+            EditingChest = null;
+            EditingChestSlots.Clear();
+            ChestItemEdit.Slot = null;
+            RebuildChestByChest(); // la fila de solo lectura tiene que reflejar el contenido nuevo
+            SetChestEditStatus("status_saved_backup", Path.GetFileName(ruta));
+        }
+        catch (Exception ex)
+        {
+            SetChestEditStatus("status_save_failed", ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private void CancelEditingChest()
+    {
+        EditingChest = null;
+        EditingChestSlots.Clear();
+        ChestItemEdit.Slot = null;
+        SetChestEditStatus(null);
     }
 
     // Marcador real del cofre seleccionado en "Cofre a cofre" (ver GoToChest). Coordenadas de
@@ -1460,7 +1664,62 @@ public partial class ExplorationViewModel : ObservableObject
         _worldSearchCurrentIndex = WorldSearchResults.IndexOf(hit);
         UpdateCurrentWorldSearchHighlight();
         NavigateToTile(hit.TileX, hit.TileY);
+        // Editor de letreros v1 (T1 del documento I+D real, 15-sep-2026): un resultado de
+        // busqueda que SI es un letrero real ademas abre su editor - mismo gesto que ya hace
+        // GoToChest para "Cofre a cofre" (navegar Y preparar la edicion en un solo clic).
+        OpenSignEditorIfApplicable(hit);
     }
+
+    // ---------------------------------------------------------------------------------------
+    // Editor de letreros v1 (T1 del documento I+D real, 15-sep-2026). El buscador de mundo
+    // (WorldSearchResults) ya encuentra letreros reales por texto (WorldSearchKind.Sign) - es
+    // el unico sitio de la app donde un letrero concreto ya es alcanzable, asi que la edicion se
+    // cuelga de ahi en vez de crear una lista nueva. WldWriter.WriteSignText solo necesita la
+    // coordenada real (X,Y), no un indice de lectura como los cofres.
+    // ---------------------------------------------------------------------------------------
+    [ObservableProperty] private WorldSearchHitRowViewModel? _selectedSignHit;
+    [ObservableProperty] private string _signEditText = string.Empty;
+    private string? _signEditStatusKey; private object?[] _signEditStatusArgs = [];
+    public string? SignEditStatus => _signEditStatusKey is null ? null : LocalizationService.Instance.Format(_signEditStatusKey, _signEditStatusArgs);
+    private void SetSignEditStatus(string? clave, params object?[] args) { _signEditStatusKey = clave; _signEditStatusArgs = args; OnPropertyChanged(nameof(SignEditStatus)); }
+
+    private void OpenSignEditorIfApplicable(WorldSearchHitRowViewModel hit)
+    {
+        if (hit.Kind != WorldSearchKind.Sign || _world == null) return;
+        var real = _world.Signs.FirstOrDefault(s => s.X == hit.TileX && s.Y == hit.TileY);
+        // WldSign es una clase (no struct) - default(WldSign) es null, comparacion segura.
+        if (real == null) return;
+        SelectedSignHit = hit;
+        SignEditText = real.Text;
+        SetSignEditStatus(null);
+    }
+
+    private bool CanSaveSignText() => SelectedSignHit != null && _currentWorldPath != null;
+
+    [RelayCommand(CanExecute = nameof(CanSaveSignText))]
+    private async Task SaveSignTextAsync()
+    {
+        if (_world == null || _currentWorldPath == null || SelectedSignHit is not { } hit) return;
+        SetSignEditStatus("status_saving");
+        try
+        {
+            var mundoActual = _world; string ruta = _currentWorldPath; int x = hit.TileX, y = hit.TileY; string texto = SignEditText;
+            var mundoActualizado = await Task.Run(() => WorldFileService.SaveSignText(mundoActual, ruta, x, y, texto));
+            _world = mundoActualizado;
+            SetSignEditStatus("status_saved_backup", Path.GetFileName(ruta));
+        }
+        catch (Exception ex) { SetSignEditStatus("status_save_failed", ex.Message); }
+    }
+
+    [RelayCommand]
+    private void CancelSignEdit()
+    {
+        SelectedSignHit = null;
+        SignEditText = string.Empty;
+        SetSignEditStatus(null);
+    }
+
+    partial void OnSignEditTextChanged(string value) => SaveSignTextCommand.NotifyCanExecuteChanged();
 
     [RelayCommand]
     private void NextWorldSearchResult() => MoveWorldSearchResult(+1);
@@ -1638,6 +1897,8 @@ public partial class ExplorationViewModel : ObservableObject
         OnPropertyChanged(nameof(ScanMessage));
         OnPropertyChanged(nameof(WorldGameModeText));
         OnPropertyChanged(nameof(WorldGameModeSaveStatus));
+        OnPropertyChanged(nameof(ChestEditStatus));
+        OnPropertyChanged(nameof(SignEditStatus));
         RefrescarNombresDeContenido();
     }
 
@@ -1696,11 +1957,16 @@ public partial class ExplorationViewModel : ObservableObject
 
     public ExplorationViewModel(CharacterFileService service)
     {
+        _service = service;
         _npcNames = service.NpcNames;
         _mapColors = service.MapColors;
         _tileNames = service.TileNames;
         _itemNames = service.VanillaCatalog;
         _prefixNames = service.VanillaPrefixCatalog;
+        // Editor de cofres v1: mismo panel "Editar" ya usado para Personaje (ItemEditViewModel es
+        // autonomo, solo depende de CharacterFileService) - instancia PROPIA de Exploracion, para
+        // no interferir con la seleccion del personaje en la otra pestaña.
+        ChestItemEdit = new ItemEditViewModel(service);
         System.ComponentModel.PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
         // Fire-and-forget deliberado, mismo criterio real que HomeViewModel - el constructor no
         // puede ser async, y no hay nada que esperar aqui (Worlds se rellena un instante
@@ -1906,16 +2172,28 @@ public partial class ExplorationViewModel : ObservableObject
             // este punto, el overlay de "Leyendo y pintando..." ya esta en pantalla (sin hueco
             // nuevo que tapar), y el sobrecoste medido es de decenas de milisegundos frente a los
             // ~1.4s que ya cuesta este paso completo.
-            var (world, image, presence) = await Task.Run(() =>
+            var (world, image, presence, moddedChestNames) = await Task.Run(() =>
             {
                 var w = WldReader.Read(File.ReadAllBytes(wldPath));
                 var img = WorldRenderer.Render(w, _mapColors);
                 var idx = WorldPresenceIndex.Build(w);
-                return (w, img, idx);
+                var modded = ResolveModdedChestTileNames(w, wldPath);
+                return (w, img, idx, modded);
             });
             _world = world;
             _presence = presence;
+            _moddedChestTileNames = moddedChestNames;
             WorldImage = image;
+            // Editor de cofres v1: un mundo nuevo (u OTRO mundo) invalida cualquier edicion de
+            // cofre/letrero a medio hacer del mundo SALIENTE - mismo criterio ya establecido para
+            // ChestRows/HasCurrentChest un poco mas abajo.
+            EditingChest = null;
+            EditingChestSlots.Clear();
+            ChestItemEdit.Slot = null;
+            SetChestEditStatus(null);
+            SelectedSignHit = null;
+            SignEditText = string.Empty;
+            SetSignEditStatus(null);
             WorldHighlight = null; // un mundo nuevo invalida cualquier resaltado de mineral anterior
 
             RebuildNpcRows(world);
