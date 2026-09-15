@@ -15798,13 +15798,31 @@ no un hueco de esta ronda.
   olvidados en el `Program.cs` del arnés (que construye su propio `Application` en blanco, mismo
   motivo ya documentado en `CLAUDE.md`) - `XamlParseException` real al montar la ventana,
   arreglado registrándolos también ahí.
-- No se corrió el recorrido COMPLETO de `Terrakeep.App.Tests` (sin ningún `_SOLO`, las decenas de
-  comprobaciones ya existentes de Personaje/Exploración/etc.) hasta el final por tiempo - se
-  lanzó en segundo plano como regresión puntual; si no terminó dentro de esta sesión, queda
-  pendiente confirmarlo en la siguiente ronda (los cambios de esta ronda en código ya existente
-  son aditivos y de bajo riesgo: un `enum` ampliado al final, un `switch`/rango de atajos con
-  casos nuevos añadidos, una propiedad de solo lectura nueva en `ExplorationViewModel` - pero
-  "bajo riesgo" no es lo mismo que "verificado").
+- **Actualización real, confirmada tras insistir el coordinador en un sondeo real** (no una
+  notificación pasiva, que no le llega a un agente): el recorrido COMPLETO de
+  `Terrakeep.App.Tests` (sin ningún `_SOLO`, las decenas de comprobaciones ya existentes de
+  Personaje/Exploración/Inicio/Ajustes/Novedades/Acerca de) SÍ se corrió hasta el final -
+  **~48 minutos reales** (el propio `AR-LAY`, el barrido de maquetación por tamaño/idioma, tardó
+  2.512.951ms él solo: 416 combinaciones pantalla×tamaño×idioma, 72.622 elementos medidos - nunca
+  se había corrido a completar en una sola sesión antes de ahora, por eso no había un tiempo de
+  referencia). **Cero excepciones. Los 21 `FALLO` reales que aparecen son TODOS deuda YA
+  documentada antes de esta ronda** (confirmado cruzando cada uno contra este mismo `bitacora.md`:
+  `AR-11f`/`AR-15`/`AR-EX1` citados explícitamente como "la MISMA deuda ya documentada... hoy
+  mismo" en la línea 14575; `T-H/F2` como deuda desde el 11-sep-2026; `A8-02`/"Punto 4" como
+  estado async de la búsqueda de mundo; `A9-13-IDIOMA` con historial propio de falsos FALLO ya
+  conocido) - **ninguno menciona Guía/Servidor/`GuideViewModel`/`HostingViewModel`** (grep
+  case-insensitive sobre el log entero: el único acierto es el NPC vainilla real llamado "Guide"
+  en un volcado de nombres, coincidencia de texto sin relación). Confirma con evidencia real (no
+  solo "compila") que las pestañas nuevas no introdujeron ninguna regresión en el resto de la
+  app, incluido el barrido de maquetación más caro que existe en este arnés.
+- Hallazgo real del propio proceso de verificación (nunca de producción): al lanzar este
+  recorrido completo en segundo plano dos veces seguidas se aprendieron dos límites reales del
+  entorno de esta sesión - `dotnet run ... | tee log | tail -N` retiene TODA la salida hasta que
+  el pipeline entero se cierra (así que un vistazo intermedio parece "0 líneas" aunque el proceso
+  esté vivo y trabajando de verdad), y `tasklist` desde Git Bash dio al menos un falso negativo
+  real comprobando si un PID seguía vivo (`Get-Process` de PowerShell sí fue fiable). Redirección
+  directa a un archivo (`> log 2>&1`, sin tubería) y sondeo real con `Get-Process`/bucles
+  `until` con pausas cortas es el camino fiable para el próximo recorrido completo largo.
 
 ### Archivos nuevos/tocados esta ronda
 
