@@ -237,6 +237,103 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // AR-EX-HSCROLL (16-sep-2026, bug real reportado por el usuario con captura propia:
+        // "la pestaña de cofres se corta y ademas sale un scroll lateral... horizontal,
+        // pasa tambien en Objetos y Minerales, keepqa no cazo esto"). Diagnostico aparte
+        // (NO forma parte del `dotnet run` normal, igual que TERRAKEEP_SCREENSHOTS de arriba)
+        // para medir con geometria real, ANTES de tocar nada mas del arnes, si de verdad hay
+        // un ScrollViewer horizontal activo dentro del bloque de resultados/categoria de
+        // Exploracion. Motivo de por que ni AR-LAY (D1) ni AR-EX1 lo cazaban ya documentado
+        // en bitacora.md: D1 solo marca FALLO si el contenido recortado NO es alcanzable con
+        // scroll (un scroll horizontal real, aunque sea indeseado, cuenta como "escape" y
+        // apaga la alarma), y AR-EX1 solo mide alto (Height/ViewportHeight/ExtentHeight), nunca
+        // ancho. Este bloque no arregla nada, solo mide.
+        if (Environment.GetEnvironmentVariable("AR_EX_HSCROLL_SOLO") == "1")
+        {
+            var vmDiag = (MainViewModel)window.DataContext;
+            vmDiag.SelectedTabIndex = 4; // Exploracion
+            DoEvents();
+            string worldPathDiag = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            if (!File.Exists(worldPathDiag))
+            {
+                Console.WriteLine($"AR-EX-HSCROLL: no se encontro {worldPathDiag} - abortando diagnostico");
+                Environment.Exit(1);
+            }
+            var cargaDiag = vmDiag.Exploration.LoadFromPathAsync(worldPathDiag);
+            while (!cargaDiag.IsCompleted) DoEvents();
+            DoEvents();
+
+            vmDiag.Exploration.SelectedCategory = WorldSearchCategory.All;
+            vmDiag.Exploration.WorldSearchText = "lava";
+            WaitForDispatcher(2600);
+            Console.WriteLine($"AR-EX-HSCROLL: {vmDiag.Exploration.WorldSearchResults.Count} resultado(s) reales en el bloque compartido (esperado >0)");
+
+            bool algunFallo = false;
+            double anchoSidebarAntes = vmDiag.Settings.ExplorationSidebarWidth;
+            // La columna de la barra lateral es un ANCHO FIJO en pixeles
+            // (Settings.ExplorationSidebarWidth, GridSplitter arrastrable, clamp real 260-520 en
+            // SettingsViewModel.OnExplorationSidebarWidthChanged) - NO una columna "*" que
+            // reaccione al tamaño de la ventana. La primera pasada de este diagnostico (dejada
+            // en el propio ancho heredado, 320 de fabrica) barrio el ANCHO DE VENTANA de 1080 a
+            // 1600 y no encontro nada: variable equivocada, la columna nunca se movio. Aqui se
+            // barre la variable real - el ancho de la propia barra, en sus dos extremos y el
+            // de fabrica - con la ventana fija a 1180x860 (tamaño por defecto real de la app).
+            FijarTamaño(window, 1180, 860);
+            foreach (double anchoSidebar in new[] { 260.0, 300.0, 320.0, 420.0, 520.0 })
+            {
+                vmDiag.Settings.ExplorationSidebarWidth = anchoSidebar;
+                DoEvents(); DoEvents();
+                foreach (var (cat, modoCofres, nombreCat) in new (WorldSearchCategory, int, string)[]
+                         { (WorldSearchCategory.Chests, 0, "Cofres/Por tipo"), (WorldSearchCategory.Chests, 2, "Cofres/Cofre a cofre"),
+                           (WorldSearchCategory.Ores, 0, "Minerales"), (WorldSearchCategory.Objects, 0, "Objetos") })
+                {
+                    vmDiag.Exploration.SelectedCategory = cat;
+                    if (cat == WorldSearchCategory.Chests) vmDiag.Exploration.ChestViewMode = modoCofres;
+                    DoEvents(); DoEvents();
+
+                    var sidebar = window.FindName("ExplorationSidebarPanel") as FrameworkElement;
+                    if (sidebar == null) { Console.WriteLine("AR-EX-HSCROLL: FALLO no se encontro ExplorationSidebarPanel"); continue; }
+
+                    // Localizacion explicita, sin ambiguedad, de la lista COMPARTIDA de resultados
+                    // (WorldSearchResults, la que el usuario describe como "la lista de resultados
+                    // debajo") por su ItemsSource real - para confirmar de verdad si esta presente
+                    // y visible en CADA categoria, Minerales incluida, en vez de fiarse solo del
+                    // barrido generico de ScrollViewers de mas abajo.
+                    var listaCompartida = Descendientes<System.Windows.Controls.ListBox>(sidebar)
+                        .FirstOrDefault(lb => ReferenceEquals(lb.ItemsSource, vmDiag.Exploration.WorldSearchResults));
+                    if (listaCompartida == null)
+                        Console.WriteLine($"AR-EX-HSCROLL: sidebar={anchoSidebar:0}px, {nombreCat} -> lista COMPARTIDA de resultados NO ENCONTRADA en el arbol visual");
+                    else
+                    {
+                        Console.WriteLine($"AR-EX-HSCROLL: sidebar={anchoSidebar:0}px, {nombreCat} -> lista COMPARTIDA: IsVisible={listaCompartida.IsVisible} " +
+                                          $"ActualWidth={listaCompartida.ActualWidth:0.#} Visibility={listaCompartida.Visibility}");
+                    }
+
+                    foreach (var sv in Descendientes<System.Windows.Controls.ScrollViewer>(sidebar))
+                    {
+                        if (sv.Name == "ExplorationSidebarScroll") continue; // ese ya se sabe Disabled/vertical, no es el sospechoso
+                        if (!sv.IsVisible) continue;
+                        bool horizontalActiva = sv.HorizontalScrollBarVisibility != System.Windows.Controls.ScrollBarVisibility.Disabled
+                                                 && sv.ScrollableWidth > 0.5;
+                        string cadena = "";
+                        try { cadena = string.Join(" / ", Ascendencia(sv, window).TakeLast(6)); } catch (Exception) { }
+                        Console.WriteLine($"AR-EX-HSCROLL: sidebar={anchoSidebar:0}px, {nombreCat} -> ScrollViewer(nombre='{sv.Name}') H={sv.HorizontalScrollBarVisibility} " +
+                                          $"computado={sv.ComputedHorizontalScrollBarVisibility} viewport={sv.ViewportWidth:0.#} extent={sv.ExtentWidth:0.#} " +
+                                          $"scrollable={sv.ScrollableWidth:0.#} <- {cadena}");
+                        if (horizontalActiva)
+                        {
+                            algunFallo = true;
+                            Console.WriteLine($"FALLO: AR-EX-HSCROLL - sidebar={anchoSidebar:0}px, {nombreCat}: ScrollViewer(nombre='{sv.Name}') tiene scroll HORIZONTAL real activo " +
+                                              $"({sv.ScrollableWidth:0.#}px de sobra, contenido {sv.ExtentWidth:0.#}px en un viewport de {sv.ViewportWidth:0.#}px) <- {cadena}");
+                        }
+                    }
+                }
+            }
+            vmDiag.Settings.ExplorationSidebarWidth = anchoSidebarAntes;
+            Console.WriteLine(algunFallo ? "AR-EX-HSCROLL: confirmado, hay scroll horizontal real" : "AR-EX-HSCROLL: sin scroll horizontal real detectado");
+            Environment.Exit(algunFallo ? 1 : 0);
+        }
+
         var hwnd = new WindowInteropHelper(window).Handle;
         var root = AutomationElement.FromHandle(hwnd);
 
@@ -5651,6 +5748,106 @@ internal static partial class Program
                     }
                 }
                 catch (Exception ex) { Console.WriteLine("AR-EX1-EXCEPTION: " + ex); }
+
+                // AR-EX-HSCROLL (16-sep-2026): hueco real de cobertura que AR-EX1 (justo arriba)
+                // dejaba pasar - bug reportado por el usuario con captura propia ("la pestaña de
+                // cofres se corta y ademas sale un scroll lateral... horizontal, pasa tambien en
+                // Objetos y Minerales, keepqa no cazo esto"). Dos motivos reales, medidos con este
+                // mismo arnes antes de escribir el chequeo (nunca a ciegas):
+                //  1) D1 (AuditoriaMaquetacion.cs, AR-LAY) NO marca FALLO por un scroll horizontal
+                //     activo: un ScrollViewer que SI puede desplazarse en ese eje cuenta como
+                //     "escape" (AlcanzableConScroll), asi que un scroll horizontal REAL pero
+                //     INDESEADO nunca levanta la alarma - D1 solo caza contenido de verdad perdido
+                //     sin ninguna via de alcanzarlo.
+                //  2) AR-EX1 (arriba) solo barre TAMAÑO DE VENTANA (1080..1600px), nunca el ANCHO
+                //     REAL de la barra lateral - y esa columna es un ancho FIJO en pixeles
+                //     (Settings.ExplorationSidebarWidth, arrastrable con el GridSplitter real,
+                //     clamp 260-520 en SettingsViewModel.OnExplorationSidebarWidthChanged), NO una
+                //     columna "*" que reaccione al tamaño de ventana - variar la ventana sin variar
+                //     ESTE ancho no mueve un solo pixel la columna, y el diagnostico de esta misma
+                //     ronda (AR_EX_HSCROLL_SOLO=1, ver el bloque al principio de Main) lo confirmo
+                //     con medidas reales: a 1080-1600px de ventana y 320px de sidebar (el de
+                //     fabrica) CERO scroll horizontal en las 4 combinaciones Cofres/Cofre a
+                //     cofre/Minerales/Objetos - pero al sidebar REAL a 260px (extremo real,
+                //     alcanzable arrastrando el GridSplitter) la lista COMPARTIDA de resultados
+                //     (WorldSearchResults) mide 279,4px de contenido en un viewport de 224px:
+                //     scroll horizontal REAL y ACTIVO (ComputedHorizontalScrollBarVisibility=
+                //     Visible), 55,4px de sobra, en Cofres/Por tipo; y 12,8px de sobra en Objetos.
+                //     Incluso al ancho de FABRICA (320px) el margen medido es de solo 4,6px
+                //     (viewport 284 vs contenido 279,4) - una fila con un nombre real un poco mas
+                //     largo (idioma EN, un mod con nombres largos) lo tumba sin tocar el
+                //     GridSplitter para nada. Cofre a cofre (222px de contenido) y Minerales (lista
+                //     propia, adaptativa) no reprodujeron el desbordamiento con el mundo/busqueda
+                //     de esta ronda (roca_negra.wld, "lava") - queda anotado como limite real de
+                //     esta verificacion, no como "arreglado", por si el contenido real del usuario
+                //     (otro mundo, otro idioma) sí lo dispara ahi tambien.
+                //
+                // Este bloque NO arregla nada (mismo criterio que el resto de AR-EX1/AR-LAY: mide
+                // y marca FALLO) - el arreglo visual es tarea de otra ronda/agente.
+                try
+                {
+                    var sidebarHs = window.FindName("ExplorationSidebarPanel") as FrameworkElement;
+                    if (sidebarHs == null)
+                        Console.WriteLine("FALLO: AR-EX-HSCROLL - no se encontro ExplorationSidebarPanel en el arbol visual");
+                    else
+                    {
+                        double anchoSidebarAntesHs = vm.Settings.ExplorationSidebarWidth;
+                        var catAntesHs = vm.Exploration.SelectedCategory;
+                        string textoAntesHs = vm.Exploration.WorldSearchText;
+                        int modoCofresAntesHs = vm.Exploration.ChestViewMode;
+
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        vm.Exploration.WorldSearchText = "lava";
+                        WaitForDispatcher(2600);
+                        int nResHs = vm.Exploration.WorldSearchResults.Count;
+                        Console.WriteLine($"AR-EX-HSCROLL: {nResHs} resultado(s) reales en el bloque compartido (esperado >0 - si sale 0 este bloque no mide nada)");
+
+                        window.WindowState = WindowState.Normal;
+                        FijarTamaño(window, 1180, 860); // tamaño de fabrica - la variable real de este chequeo es el sidebar, no la ventana
+                        foreach (double anchoSidebarHs in new[] { 260.0, 300.0, 320.0, 420.0, 520.0 })
+                        {
+                            vm.Settings.ExplorationSidebarWidth = anchoSidebarHs;
+                            DoEvents(); DoEvents();
+
+                            foreach (var (catHs, modoCofresHs, nombreCatHs) in new (WorldSearchCategory, int, string)[]
+                                     { (WorldSearchCategory.Chests, 0, "Cofres/Por tipo"), (WorldSearchCategory.Chests, 2, "Cofres/Cofre a cofre"),
+                                       (WorldSearchCategory.Ores, 0, "Minerales"), (WorldSearchCategory.Objects, 0, "Objetos") })
+                            {
+                                vm.Exploration.SelectedCategory = catHs;
+                                if (catHs == WorldSearchCategory.Chests) vm.Exploration.ChestViewMode = modoCofresHs;
+                                DoEvents(); DoEvents();
+
+                                foreach (var sv in Descendientes<System.Windows.Controls.ScrollViewer>(sidebarHs))
+                                {
+                                    // ExplorationSidebarScroll ya tiene su propio chequeo real (AR-11f,
+                                    // mas arriba) y es VERTICAL/Disabled en horizontal a proposito - no
+                                    // es el sospechoso de este bug.
+                                    if (sv.Name == "ExplorationSidebarScroll" || !sv.IsVisible) continue;
+                                    bool horizontalActivaHs = sv.HorizontalScrollBarVisibility != System.Windows.Controls.ScrollBarVisibility.Disabled
+                                                               && sv.ScrollableWidth > 0.5;
+                                    if (!horizontalActivaHs) continue;
+                                    string cadenaHs = "";
+                                    try { cadenaHs = string.Join(" / ", Ascendencia(sv, window).TakeLast(6)); } catch (Exception) { }
+                                    Console.WriteLine($"FALLO: AR-EX-HSCROLL - sidebar={anchoSidebarHs:0}px, {nombreCatHs}: ScrollViewer(nombre='{sv.Name}') tiene scroll " +
+                                                      $"HORIZONTAL real activo ({sv.ScrollableWidth:0.#}px de sobra, contenido {sv.ExtentWidth:0.#}px en un viewport de " +
+                                                      $"{sv.ViewportWidth:0.#}px) <- {cadenaHs}");
+                                }
+                            }
+                        }
+
+                        // Estado como estaba (misma disciplina que AR-EX1, justo arriba).
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        vm.Exploration.WorldSearchText = string.Empty;
+                        WaitForDispatcher(300);
+                        vm.Exploration.ClearOreMarksCommand.Execute(null);
+                        vm.Exploration.ChestViewMode = modoCofresAntesHs;
+                        vm.Exploration.SelectedCategory = catAntesHs;
+                        vm.Exploration.WorldSearchText = textoAntesHs;
+                        vm.Settings.ExplorationSidebarWidth = anchoSidebarAntesHs;
+                        DoEvents(); DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-EX-HSCROLL-EXCEPTION: " + ex); }
 
                 // AR-EX2 (misma oleada, area "Exploracion del mundo"): los GESTOS del mapa, que
                 // hasta ahora solo estaban probados a medias - X-a media "Ajustar a la ventana" y

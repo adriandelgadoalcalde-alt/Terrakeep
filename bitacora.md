@@ -16573,3 +16573,78 @@ documentados en el comentario de `ExplorationViewModel.ChestKindName`, 6-sep-202
 
 Commit local únicamente de estos archivos (nunca `git push`, nunca ningún archivo ajeno a esta
 ronda).
+
+## AR-EX-HSCROLL: scroll horizontal real en Exploracion (Cofres/Objetos) - causa confirmada + hueco de KeepQA cerrado — 16-sep-2026
+
+Encargo del coordinador (KeepQA): bug real reportado por el usuario con captura propia, pestaña
+Exploracion - "la pestaña de cofres se corta y ademas sale un scroll lateral... horizontal, pasa
+tambien en las otras pestañas de objetos minerales etc, keepqa no cazo esto". Solo diagnostico y
+cierre del hueco de cobertura - el arreglo visual queda para otro agente (ciego), mismo protocolo
+de esta noche.
+
+### Causa real, confirmada con geometria medida (nunca a ojo)
+
+La columna de la barra lateral de Exploracion es un ANCHO FIJO en pixeles
+(`Settings.ExplorationSidebarWidth`, arrastrable con el `GridSplitter` real de
+`MainWindow.xaml:5119`, clamp real 260-520 en `SettingsViewModel.OnExplorationSidebarWidthChanged`),
+NO una columna `"*"` que reaccione al tamaño de ventana. Primer intento de repro (barrer 1080-1600px
+de ANCHO DE VENTANA con el sidebar en su valor por defecto) no encontro nada - variable equivocada,
+la columna nunca se movia. Repitiendo el barrido sobre el ANCHO REAL DEL SIDEBAR (fijando la ventana
+a 1180x860, el tamaño de fabrica) con un mundo real (`roca_negra.wld`) y una busqueda real ("lava",
+1000 resultados reales, el tope) SI reproduce el bug, en la lista COMPARTIDA de resultados
+(`WorldSearchResults`, `MainWindow.xaml:5826`, el `ListBox` que se ve debajo de Cofres/Minerales/
+Objetos):
+
+- Sidebar a 260px (extremo real, alcanzable arrastrando el splitter): Cofres/Por tipo pide 279,4px
+  de contenido en un viewport de 224px -> **55,4px de scroll horizontal REAL y ACTIVO**
+  (`ComputedHorizontalScrollBarVisibility=Visible`). Objetos: 236,8px en 224px -> 12,8px de sobra.
+- Sidebar a 300px: Cofres/Por tipo sigue desbordando, 15,4px de sobra.
+- **Sidebar al ancho DE FABRICA (320px, el que trae la app recien instalada)**: el margen real es
+  de solo **4,6px** (viewport 284 vs contenido 279,4) - una fila con un nombre un poco mas largo (
+  idioma EN, un mod con nombres largos, u otro mundo real con mas variedad) lo tumba sin que el
+  usuario tenga que tocar el `GridSplitter` para nada. Coincide con la captura real del usuario.
+- "Cofre a cofre" (222px de contenido) y Minerales (su propia lista, mas adaptativa: ancho crece
+  con el sidebar en vez de quedarse fijo) NO reprodujeron el desbordamiento con el mundo/busqueda de
+  esta ronda - **LIMITE REAL, no "arreglado"**: el contenido real del usuario (otro mundo, otro
+  idioma, nombres de mod mas largos) puede dispararlo ahi tambien, tal como el reporto; no se
+  descarta, solo no se reprodujo con los datos disponibles en esta maquina.
+
+### Por que ni AR-LAY ni AR-EX1 lo cazaban (el hueco real de KeepQA)
+
+1. **D1** (`AuditoriaMaquetacion.cs`, el barrido AR-LAY que corre en cada `dotnet run`) NO marca
+   FALLO por un scroll horizontal activo por diseño: un `ScrollViewer` que SI puede desplazarse en
+   ese eje cuenta como "escape" (`AlcanzableConScroll`) - D1 solo caza contenido de verdad perdido
+   SIN ninguna via de alcanzarlo, nunca un scroll indeseado pero tecnicamente alcanzable.
+2. **AR-EX1** (`Program.cs`, el barrido dedicado de Exploracion con resultados abiertos, ya
+   existente) solo mide ALTO (`Height`/`ViewportHeight`/`ExtentHeight`) en 5 tamaños de VENTANA -
+   nunca ancho, y nunca varia el ancho real del sidebar (que como se confirma arriba, es la
+   variable que de verdad importa aqui).
+
+### Cierre real del hueco
+
+`Terrakeep.App.Tests/Program.cs`: bloque nuevo **AR-EX-HSCROLL**, cableado de forma PERMANENTE justo
+despues de AR-EX1 (mismo sitio, mismo `try/catch`, corre en CADA `dotnet run` normal, no detras de
+ninguna variable de entorno) - barre las 5 categorias reales (Cofres/Por tipo, Cofres/Cofre a cofre,
+Minerales, Objetos) x 5 anchos reales de sidebar (260/300/320/420/520, el rango real del clamp) con
+un mundo y busqueda reales ya cargados, y marca `FALLO: AR-EX-HSCROLL` si cualquier `ScrollViewer`
+de la barra lateral (excepto `ExplorationSidebarScroll`, que ya tiene su propio chequeo vertical
+real, AR-11f) tiene `HorizontalScrollBarVisibility != Disabled` Y `ScrollableWidth > 0.5px` de
+verdad - mismo criterio ya validado que usa D1/AR-LAY para el eje vertical, aplicado aqui al
+horizontal que faltaba. Tambien se dejo un diagnostico aparte, `AR_EX_HSCROLL_SOLO=1` (al principio
+de `Main()`, antes de cargar personaje - solo carga el mundo), para poder reproducir esto en
+segundos sin pagar el arnes entero en rondas futuras.
+
+**Verificado que el chequeo nuevo FALLA de verdad contra el estado actual sin arreglar** (nunca dado
+por bueno solo porque compila): ejecucion real completa del arnes (`dotnet run --project
+Terrakeep.App.Tests`, entorno real de esta maquina) con una parada temporal justo despues del bloque
+nuevo (quitada despues de confirmar) imprimio exactamente los 3 `FALLO: AR-EX-HSCROLL` esperados
+(sidebar 260px Cofres/Por tipo y Objetos, sidebar 300px Cofres/Por tipo) - el chequeo nuevo detecta
+el bug real, no un falso negativo.
+
+**No se aplico ningun arreglo visual** (fuera de alcance de este encargo, reservado a un agente
+ciego aparte) - `Terrakeep.App/MainWindow.xaml` NO se toco.
+
+Commit local unicamente de `Terrakeep.App.Tests/Program.cs` (nunca `git push`, nunca los archivos
+ajenos a esta ronda que ya estaban sin commitear de otra sesion activa en este mismo repo - guia/
+textos EN-ES, `GuideViewModel.cs`, `GuideEvaluationEngine.cs`, `MainWindow.xaml` con cambios de
+otra ronda).
