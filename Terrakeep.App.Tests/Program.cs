@@ -827,6 +827,19 @@ internal static partial class Program
             Console.WriteLine("DONE (README_SHOTS)");
             Environment.Exit(0);
         }
+        // ACTUALIZACION_SOLO=1 (X1, 16-sep-2026): verificacion visual real del aviso discreto de
+        // version nueva (ComprobadorDeActualizaciones, ver MainViewModel.Actualizaciones.cs). La
+        // llamada de RED real ya se probo aparte, contra la API real de GitHub (version antigua
+        // simulada -> HayActualizacionDisponible; version actual real -> Actualizada; sin
+        // conexion -> ErrorDeRed sin excepcion) - esto solo comprueba que el estado se VE bien:
+        // la tarjeta aparece con el mensaje y los dos botones, y que con el estado normal
+        // (HayActualizacionDisponible=false, el caso real de esta version) NO aparece nada.
+        if (Environment.GetEnvironmentVariable("ACTUALIZACION_SOLO") == "1")
+        {
+            EjecutarActualizacionReal(window, vm);
+            Console.WriteLine("DONE (ACTUALIZACION_SOLO)");
+            Environment.Exit(0);
+        }
 
         try
         {

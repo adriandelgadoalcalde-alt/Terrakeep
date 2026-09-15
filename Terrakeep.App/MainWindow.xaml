@@ -7272,5 +7272,34 @@
             </Border>
         </Grid>
         </Grid>
+
+        <!-- X1 (I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md, 16-sep-2026): aviso discreto de version
+             nueva disponible en GitHub Releases - NUNCA un popup modal, una tarjeta pequeña en
+             la esquina que se puede cerrar con un clic. Solo visible cuando la comprobacion real
+             de fondo (MainViewModel.IniciarComprobacionDeActualizacion, disparada una vez desde
+             MainWindow.xaml.cs) encuentra de verdad una version mas reciente publicada - nunca
+             se muestra "por si acaso" ni mientras se esta comprobando. Ultimo hijo del Grid raiz
+             a proposito: en WPF el orden de los hijos decide el orden de pintado, y esta tarjeta
+             tiene que quedar SIEMPRE por encima de las 6 pestañas, sea cual sea la activa. -->
+        <Border Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgElevatedBrush}"
+                BorderBrush="{StaticResource AccentBrush}" BorderThickness="1" CornerRadius="8"
+                Padding="14,10" Margin="0,0,22,22" MaxWidth="360"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Effect="{StaticResource CardShadow}"
+                Visibility="{Binding HayActualizacionDisponible, Converter={StaticResource BoolToVis}}">
+            <StackPanel>
+                <TextBlock Text="{Binding MensajeActualizacion}" Style="{StaticResource CaptionText}"
+                           TextWrapping="Wrap" Foreground="{StaticResource TextPrimaryBrush}" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                    <Button Content="{Binding Loc[update_dismiss], Mode=OneWay}"
+                            Command="{Binding DescartarActualizacionCommand}"
+                            Style="{StaticResource BarButton}" Padding="10,4" Margin="0,0,8,0" />
+                    <Button Content="{Binding Loc[update_view_release], Mode=OneWay}"
+                            Command="{Binding AbrirActualizacionCommand}"
+                            Style="{StaticResource BarButton}" Padding="10,4"
+                            Background="{StaticResource AccentBrush}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

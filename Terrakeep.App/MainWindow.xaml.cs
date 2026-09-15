@@ -60,6 +60,12 @@ public partial class MainWindow : Window
         _viewModel.Home.RefreshCommand.Execute(null);
         _viewModel.Exploration.RefreshWorldsCommand.Execute(null);
         _viewModel.RestoreSession();
+        // X1 (I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md, 16-sep-2026): mismo criterio real que
+        // RestoreSession() de arriba - una llamada de RED real jamas puede vivir en el
+        // constructor de MainViewModel (contaminaria las decenas de tests headless del
+        // proyecto). Se dispara aqui, una sola vez, en segundo plano (async void real dentro -
+        // ver MainViewModel.Actualizaciones.cs), sin retrasar ni un milisegundo esta ventana.
+        _viewModel.IniciarComprobacionDeActualizacion();
         // H5-07: unico suscriptor real de CharacterLoaded - ver el comentario real del evento
         // en MainViewModel.cs (por que NO es una llamada directa dentro de LoadFromPath).
         _viewModel.CharacterLoaded += _viewModel.SaveSession;
