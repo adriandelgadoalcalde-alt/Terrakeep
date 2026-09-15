@@ -774,6 +774,19 @@ internal static partial class Program
             catch (Exception ex) { Console.WriteLine("H6-01-EXCEPTION: " + ex); }
         }
 
+        // KEEPQA_VITALS_REAL=1 (15-sep-2026): tiene que ir AQUI, entre el HOME-OPEN de arriba
+        // (personaje real 'first' ya cargado) y el vm.LoadFromPath(tempPlr) de abajo (personaje
+        // sintetico "UIA-Test", vacio del todo) - es EXACTAMENTE la ventana real, hoy sin usar,
+        // en la que la franja de vitales de cabecera tiene datos reales no triviales. Cuerpo real
+        // en AuditoriaKeepQA.cs (EjecutarKeepQaVitalesReal) - ver el comentario largo alli del
+        // porque real de este modo.
+        if (Environment.GetEnvironmentVariable("KEEPQA_VITALS_REAL") == "1")
+        {
+            EjecutarKeepQaVitalesReal(window, vm);
+            Console.WriteLine("DONE (KEEPQA_VITALS_REAL)");
+            Environment.Exit(0);
+        }
+
         try
         {
             var swChar = System.Diagnostics.Stopwatch.StartNew();

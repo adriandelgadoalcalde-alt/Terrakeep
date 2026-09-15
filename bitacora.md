@@ -15064,3 +15064,135 @@ Commit `7a528e17` (Terrakeep.App.Tests/AuditoriaKeepQA.cs + Program.cs).
 `volcado-geometria-fresco-15sep.json` (267 elementos) + 24 capturas PNG
 `fresco15sep-pantalla-*-{min1080x700,normal1180x860,fullhd1920x1080}-{es,en}.png`, en
 `Terrakeep.App.Tests/bin/Debug/net10.0-windows/keepqa-evidencia/`.
+
+---
+
+## 15-sep-2026 (ronda siguiente) - bug real encontrado A MANO por el usuario ("Defensa queda
+## huérfana/desfasada de Dinero/Horas al cargar un personaje real") - investigado, reproducido con
+## medida exacta, y cerrado el hueco de KeepQA que lo dejaba pasar (mismo patrón "hueco de datos"
+## que el Fallo 1 del 14-sep-2026, pero en un sitio distinto del arnés)
+
+### Qué se pidió
+
+El usuario, cita textual: *"en terrakeep no cazo que la cabecera cuando cargas un personaje la
+defensa del jugador en esta escala queda huerfana desfasada de su grupo monedas tiempo de juego
+etc"*. Encargo en dos partes: (1) reproducir y diagnosticar el bug real con medida exacta, nunca a
+ojo; (2) diagnosticar por qué KeepQA no lo cazaba ya, con evidencia real del código del propio
+arnés; (3) cerrar el hueco de la HERRAMIENTA (no el bug visual todavía - eso lo hace el agente
+ciego de la fase 2, cuando confirme que la herramienta ya lo caza).
+
+### Parte 2 primero (a propósito) - por qué KeepQA no lo cazaba: el MISMO patrón de "hueco de
+### datos" del Fallo 1 (14-sep-2026), pero en un sitio nuevo
+
+Antes de tocar nada: el grupo `cabecera_franja_vitales` (`Terrakeep.App.Tests/AuditoriaKeepQA.cs`,
+`VolcarCabecera`, ya arreglado el 14-sep-2026 para el bug de Maná) SÍ etiqueta a Defensa con el
+campo `grupo` correcto - eso no era el hueco. Se investigó con `Environment.GetEnvironmentVariable`
+el ORDEN REAL de ejecución de `Terrakeep.App.Tests/Program.cs`: un personaje real (`vm.Home.
+Characters[0]`, "Eldelgas", Calamity/tModLoader real) SÍ se abre pronto ("HOME-OPEN: click en
+'Eldelgas'") - pero unas líneas más abajo, de forma INCONDICIONAL para CUALQUIER modo de foco
+(`KEEPQA_SOLO`, `KEEPQA_FRESCO_SOLO`, `VITALS_SOLO`, todos los que se comprueban más abajo en el
+fichero), `vm.LoadFromPath(tempPlr)` (línea ~780) reemplaza ese personaje real por uno SINTÉTICO
+vacío del todo ("UIA-Test", `PlrLoadout.CreateEmpty()` x4 - cero equipo, cero monedas, cero horas
+jugadas), fabricado para las pruebas de arrastre/build-code de más abajo. **Cualquier volcado de la
+franja de vitales hecho hasta hoy viajaba SIEMPRE con Vida=0/0, Maná=0/0, Defensa=0, Dinero="0c",
+Horas=0h** - confirmado ejecutando `KEEPQA_SOLO=1` de verdad y mirando la captura recortada 6x
+resultante (`crop-vitals-min1080-es.png`, scratchpad de la sesión): las 5 cajas de la franja con
+datos degenerados de un solo dígito.
+
+Con datos así de triviales, un desfase que solo se manifiesta con ANCHOS VARIABLES de verdad
+(Defensa a 2 dígitos, Dinero con 2-3 monedas distintas en el string) no tiene ninguna oportunidad
+de dispararse - exactamente el mismo patrón que ya cerró el Fallo 1 ("no era un hueco de la pieza,
+era un hueco de datos"), pero esta vez el hueco no es "la zona nunca se volcó", es "la zona se
+vuelca siempre con datos sintéticos degenerados que no pueden reproducir el bug real".
+
+### Parte 1 - el bug real, reproducido y medido con datos REALES
+
+Arreglo del hueco de la herramienta (detalle en la Parte 3 de abajo) primero para poder medir de
+verdad: nuevo modo `KEEPQA_VITALS_REAL=1`, colocado ANTES de la línea que carga "UIA-Test", así que
+usa el personaje real de verdad ("Eldelgas": Defensa=69, Dinero="59p 43o 83s", Horas=54). Volcado +
+captura en 6 anchos reales (las 4 clases de tamaño reales de `MainViewModel.cs`: Compacto
+`<1320`, Normal `1320-1519`, Amplio `1520-1919`, Extra `>=1920`):
+
+- **A 1080x700 y 1180x860 (SizeClass=Compacto, `VitalsStripMaxWidth=200`, el tamaño de ARRANQUE
+  real de la app y el tamaño real de la ventana del usuario esa noche)**: el `WrapPanel` de la
+  cabecera envuelve a **TRES líneas**, no dos. Línea 1: Vida sola. Línea 2: Maná + Defensa (icono
+  🛡 + "69", 31.34px de ancho real - más ancho que el "0" sintético de antes). Línea 3: Dinero
+  ("59p 43o 83s", **58.56px** de ancho real, frente a los 11.6px del "0c" sintético que SIEMPRE se
+  había medido hasta hoy) + Horas ("54h"). Medido con `RectCompleto` real: centro vertical de
+  Maná/Defensa = **51.33px**; centro vertical de Dinero/Horas = **71.29px** - **19.96px de desvío
+  real**, confirmado también por `node KeepQA/src/alineacion/verificarAlineacion.js` contra el
+  volcado nuevo (`DESALINEADO`, mismo número). Captura real recortada 6x
+  (`crop-vitals-real-1080-defensa-huerfana.png`, scratchpad de la sesión) confirma visualmente: el
+  escudo "🛡 69" queda pegado a la barra azul de Maná, mientras que "59p 43o 83s" y "54h" caen
+  SOLOS a una tercera línea - exactamente el "Defensa queda huérfana/desfasada de su grupo Dinero/
+  Horas" que reportó el usuario.
+- **Causa real**: `VitalsStripMaxWidth=200` (fijo, calibrado el 14-sep-2026 SOLO contra el ancho de
+  Vida+Maná+"0" sintético) es demasiado estrecho para el ancho real que puede alcanzar el string de
+  Dinero con un personaje real (hasta 4 monedas con hasta 2-3 dígitos cada una, "99p 99o 99s 99c" ⇒
+  bastante más de 58px) - a ese ancho de columna, Maná+Defensa ya llenan casi los 200px completos,
+  así que Dinero+Horas NUNCA caben en la misma línea con datos reales, solo con el placeholder de
+  un solo dígito que el arnés usaba hasta hoy.
+- **A 1320px y más (SizeClass=Normal/Amplio/Extra, `VitalsStripMaxWidth=∞`)**: los 5 elementos caben
+  en una única línea, centro vertical idéntico (50.00px exacto) en los 4 anchos probados -
+  `verificarAlineacion.js` da `ALINEADO` en los 4. El bug real es EXCLUSIVO de SizeClass=Compacto
+  (`<1320px`) - que es precisamente el tamaño de arranque real de la app (1180) y el tamaño real
+  que tenía la ventana del usuario esa noche (1084, restaurado de `window.json`).
+
+**No se toca el bug visual real esta ronda** (pedido explícito: eso lo hace el agente ciego de la
+fase 2, ahora que hay evidencia real de que KeepQA sí lo detecta).
+
+### Parte 3 - el arreglo real de la herramienta
+
+Nuevo modo `EjecutarKeepQaVitalesReal` (`Terrakeep.App.Tests/AuditoriaKeepQA.cs`), enganchado como
+`KEEPQA_VITALS_REAL=1` en `Program.cs` **entre** el `HOME-OPEN` del personaje real y el
+`vm.LoadFromPath(tempPlr)` sintético (el único hueco real de la secuencia donde existe un personaje
+real con datos no triviales) - vuelca la franja de vitales completa (mismo contrato `{id,tipo,
+padre_id,x,y,ancho,alto,grupo}` que ya usa `VolcarCabecera`) en las 6 anchuras que cubren las 4
+`SizeClass` reales, con captura PNG de cada una, y una verificación propia en consola (centro
+vertical contra la mediana del grupo) además de dejar el volcado listo para
+`verificarAlineacion.js`/`verificarEspaciado.js`. No sustituye a `VolcarCabecera` (que sigue
+sirviendo para geometría general con el personaje sintético, sin necesidad de datos realistas) -
+es un modo COMPLEMENTARIO, permanente, para cualquier ronda futura que necesite datos reales no
+triviales en la cabecera.
+
+### Verificación real de que el hueco quedó cerrado
+
+`node KeepQA/src/alineacion/verificarAlineacion.js volcado-geometria-vitals-real.json`:
+`RESULTADO: REVISAR` - marca `DESALINEADO` (19.96px de desvío) a `compacto1080x700` y
+`compacto1180x860` exactamente en los elementos `_3` (Dinero) y `_4` (Horas) frente a la mediana
+del grupo (la línea de Maná/Defensa), y `ALINEADO` limpio en los 4 anchos `>=1320`. Antes de este
+modo, el mismo comando contra CUALQUIER volcado existente daba siempre `ALINEADO`/`OK` en esa zona
+(datos sintéticos de un solo dígito, nunca lo bastante anchos para forzar la tercera línea).
+`node KeepQA/src/espaciado/verificarEspaciado.js` omite correctamente los 2 grupos de 3 líneas
+("ambiguo/grid", límite ya documentado) y da `OK` en el resto - sin falsos positivos nuevos.
+
+`KEEPQA_SOLO=1` reejecutado tras el cambio: mismo comportamiento exacto que antes (928 elementos,
+0 hallazgos adversariales) - el nuevo modo no interfiere con los existentes, todos gateados por su
+propia variable de entorno con su propio `Environment.Exit(0)`, mismo patrón ya establecido por
+`VITALS_SOLO`/`KEEPQA_MEMORIA`/etc.
+
+`dotnet build Terrakeep.slnx` (0/0) + `dotnet test Terrakeep.slnx` completo:
+**539/539** `Terrakeep.Core.Tests` (12s) + **484/484** `Terrakeep.App.ViewModels.Tests` (3m 41s) -
+mismos números exactos que la ronda anterior, sin regresión. `Terrakeep.App.Tests` (no es xUnit,
+ver la cabecera de `Program.cs`) verificado a mano como arriba (`KEEPQA_VITALS_REAL=1` y
+`KEEPQA_SOLO=1`, los dos con `ExitCode=0` y sin excepción).
+
+### Archivos tocados
+
+- `Terrakeep.App.Tests/AuditoriaKeepQA.cs` (nuevo `EjecutarKeepQaVitalesReal`).
+- `Terrakeep.App.Tests/Program.cs` (gancho `KEEPQA_VITALS_REAL=1`, entre el `HOME-OPEN` real y la
+  carga del personaje sintético).
+- Ningún archivo de `Terrakeep.App` (producción) tocado a propósito - el bug visual real
+  (`VitalsStripMaxWidth=200` demasiado estrecho para Dinero real) queda documentado aquí, pendiente
+  para el agente ciego de la fase 2.
+- `Downloads\KeepQA\PATRONES.md` (sección nueva, mismo hallazgo documentado para el resto de la
+  familia).
+
+### Evidencia (no committeada, scratchpad de la sesión + `keepqa-evidencia/` gitignorado)
+
+`volcado-geometria-vitals-real.json` (36 elementos, 6 anchos) y 6 capturas
+`vitals-real-{compacto1080x700,compacto1180x860,normal1320x860,normal1500x860,amplio1520x860,
+extra1920x1080}.png`, en `Terrakeep.App.Tests/bin/Debug/net10.0-windows/keepqa-evidencia/`.
+`crop-vitals-real-1080-defensa-huerfana.png` (recorte real 6x confirmando el bug visualmente) y
+`crop-vitals-min1080-es.png`/`crop-vitals-normal1180-es.png` (recortes del volcado sintético
+"antes", confirmando los 0/0/0c/0h degenerados), en el scratchpad de esta sesión.

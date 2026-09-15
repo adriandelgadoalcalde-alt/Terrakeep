@@ -898,4 +898,130 @@ internal static partial class Program
         }
         catch (Exception ex) { Console.WriteLine("KEEPQA_FRESCO_SOLO-EXCEPTION: " + ex); }
     }
+
+    // KEEPQA_VITALS_REAL=1 (15-sep-2026): cierra el hueco real que dejaba pasar el desfase de
+    // "Defensa" que el usuario encontro A MANO cargando un personaje de verdad - investigado a
+    // fondo antes de tocar nada (ver bitacora.md, entrada de esta misma fecha): NINGUN volcado de
+    // "cabecera_franja_vitales" (ni el de KEEPQA_SOLO ni el de KEEPQA_FRESCO_SOLO) se hace de
+    // verdad con un personaje real. Los dos llaman a Program.cs mucho despues de la linea
+    // `vm.LoadFromPath(tempPlr)` (personaje sintetico "UIA-Test", PlrLoadout.CreateEmpty x4, CERO
+    // equipo/monedas/horas jugadas) que reemplaza SIN excepcion al personaje real que si se habia
+    // abierto un poco antes ("HOME-OPEN: click en 'Eldelgas'...") - todo volcado de la franja de
+    // vitales hasta hoy viajaba con Vida=0/0, Mana=0/0, Defensa=0, Dinero="0c", Horas=0h SIEMPRE,
+    // el mismo patron ya documentado esta noche ("no era un hueco de la pieza, era un hueco de
+    // datos"). Con datos degenerados de un solo digito en las cinco cajas, un desfase real que
+    // solo se nota con anchuras VARIABLES (Defensa a 2-3 digitos, Dinero con varias monedas,
+    // Horas con 2-3 digitos) no tiene ninguna oportunidad de manifestarse: el campo `grupo` SI
+    // esta bien puesto en los 5 elementos (comprobado leyendo VolcarCabecera de arriba), el hueco
+    // real es de DATOS, no de la pieza que los etiqueta.
+    //
+    // Arreglo: un volcado PROPIO, con el PRIMER personaje real de esta maquina (mismo `first` que
+    // ya usa HOME-OPEN, "Eldelgas" - Calamity/tModLoader real, equipo puesto de verdad, el mismo
+    // tipo de personaje de las capturas originales del usuario), en TODAS las clases de tamaño
+    // reales (Compacto/Normal/Amplio/Extra - NormalMinWidth=1320, AmplioMinWidth=1520,
+    // ExtraMinWidth=1920, MainViewModel.cs) - hasta hoy el volcado real solo cubria min1080x700 y
+    // normal1180x860, las dos por debajo de NormalMinWidth (SizeClass=Compacto siempre). Se llama
+    // MUY PRONTO en Program.cs (justo tras abrir `first`, ANTES de `vm.LoadFromPath(tempPlr)`)
+    // para que el personaje sintetico nunca llegue a pisarlo.
+    private static void EjecutarKeepQaVitalesReal(Window window, MainViewModel vm)
+    {
+        try
+        {
+            string outDir = Path.Combine(AppContext.BaseDirectory, "keepqa-evidencia");
+            Directory.CreateDirectory(outDir);
+
+            void CapturaVisual(System.Windows.Media.Visual visual, int ancho, int alto, string nombre)
+            {
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    Math.Max(1, ancho), Math.Max(1, alto), 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(visual);
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                using var fs = File.Create(Path.Combine(outDir, nombre + ".png"));
+                enc.Save(fs);
+            }
+
+            if (!vm.IsCharacterLoaded)
+            {
+                Console.WriteLine("KEEPQA_VITALS_REAL: FALLO - no hay ningun personaje real cargado (llamar ANTES de vm.LoadFromPath(tempPlr))");
+                return;
+            }
+            Console.WriteLine($"KEEPQA_VITALS_REAL: personaje real '{vm.CharacterName}' - Defensa={vm.EquipmentGroup?.TotalDefense}, Dinero='{vm.MoneyText}', Horas={vm.Appearance.PlayHours:0}");
+
+            vm.SelectedTabIndex = 1; // Personaje - IsExplorationTabActive=false, ShowVitalsStrip=true
+            DoEvents(); DoEvents();
+
+            (double w, double h, string etiqueta)[] tamaños =
+            [
+                (1080, 700, "compacto1080x700"),
+                (1180, 860, "compacto1180x860"),
+                (1320, 860, "normal1320x860"),
+                (1500, 860, "normal1500x860"),
+                (1520, 860, "amplio1520x860"),
+                (1920, 1080, "extra1920x1080"),
+            ];
+
+            var elementos = new List<object>();
+            foreach (var (w, h, etiquetaTam) in tamaños)
+            {
+                FijarTamaño(window, w, h);
+                DoEvents(); DoEvents();
+
+                var tiraVitals = Descendientes<WrapPanel>(window)
+                    .FirstOrDefault(wp => Descendientes<TextBlock>(wp).Any(t => t.Text == "♥"));
+                if (tiraVitals == null)
+                {
+                    Console.WriteLine($"KEEPQA_VITALS_REAL: FALLO - no se encuentra la franja de vitales a {etiquetaTam}");
+                    continue;
+                }
+
+                string idRaiz = $"vitals_real_raiz_{etiquetaTam}";
+                elementos.Add(new { id = idRaiz, tipo = "raiz_pantalla", padre_id = (string?)$"(ventana_sin_padre_{idRaiz})", x = 0.0, y = 0.0, ancho = window.ActualWidth, alto = window.ActualHeight, grupo = (string?)null, orden_z = 0.0, capa = "fondo" });
+
+                int idx = 0;
+                var centros = new List<(string id, double centroY, double h)>();
+                foreach (var hijo in tiraVitals.Children.OfType<FrameworkElement>())
+                {
+                    if (!hijo.IsVisible || hijo.ActualWidth < 1 || hijo.ActualHeight < 1) continue;
+                    Rect rHijo;
+                    try { rHijo = RectCompleto(hijo, window); } catch (InvalidOperationException) { continue; }
+                    string descrHijo = hijo switch
+                    {
+                        TextBlock tbHijo => $"icono_o_texto('{tbHijo.Text}')",
+                        Grid => "barra_vida_o_mana",
+                        StackPanel => "grupo_icono_valor",
+                        _ => hijo.GetType().Name,
+                    };
+                    string idElem = $"vitals_real_{etiquetaTam}_{idx}";
+                    elementos.Add(new { id = idElem, tipo = descrHijo, padre_id = (string?)idRaiz, x = rHijo.X, y = rHijo.Y, ancho = rHijo.Width, alto = rHijo.Height, grupo = (string?)$"cabecera_franja_vitales_real_{etiquetaTam}", orden_z = OrdenZ(hijo), capa = "contenido" });
+                    centros.Add((idElem, rHijo.Y + rHijo.Height / 2, rHijo.Height));
+                    idx++;
+                }
+                Console.WriteLine($"KEEPQA_VITALS_REAL[{etiquetaTam}]: SizeClass={vm.SizeClass} MaxWidth={vm.VitalsStripMaxWidth:0}, {idx} elementos reales volcados (grupo cabecera_franja_vitales_real_{etiquetaTam})");
+
+                // Verificacion propia, sin esperar a node: centro vertical real de cada elemento
+                // de la franja - si dos elementos comparten linea (misma Y de partida aprox) sus
+                // centros deben coincidir; si un elemento cae en otra linea que el resto de su
+                // grupo (Defensa separado de Dinero/Horas), es el desfase real que reporto el
+                // usuario.
+                if (centros.Count > 1)
+                {
+                    double medianaCentro = centros.OrderBy(c => c.centroY).ElementAt(centros.Count / 2).centroY;
+                    foreach (var c in centros)
+                    {
+                        double desvio = Math.Abs(c.centroY - medianaCentro);
+                        if (desvio > 1.0)
+                            Console.WriteLine($"KEEPQA_VITALS_REAL[{etiquetaTam}]: AVISO - '{c.id}' (alto={c.h:0.00}) tiene centro Y={c.centroY:0.00}, desviado {desvio:0.00}px de la mediana del grupo ({medianaCentro:0.00}) - posible linea distinta o desfase real");
+                    }
+                }
+
+                CapturaVisual(window, (int)window.ActualWidth, (int)window.ActualHeight, $"vitals-real-{etiquetaTam}");
+            }
+
+            string volcadoPath = Path.Combine(outDir, "volcado-geometria-vitals-real.json");
+            File.WriteAllText(volcadoPath, JsonSerializer.Serialize(elementos, new JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine($"KEEPQA_VITALS_REAL: {elementos.Count} elementos (personaje real '{vm.CharacterName}') volcados a {volcadoPath}, {tamaños.Length} capturas PNG en {outDir}");
+        }
+        catch (Exception ex) { Console.WriteLine("KEEPQA_VITALS_REAL-EXCEPTION: " + ex); }
+    }
 }
