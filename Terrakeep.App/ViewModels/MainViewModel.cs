@@ -520,11 +520,28 @@ public partial class MainViewModel : ObservableObject
     // Extra no hace falta tope (PositiveInfinity, el valor por defecto de MaxWidth): el umbral
     // NormalMinWidth=1320 YA esta calibrado para que los cinco datos quepan en una sola linea sin
     // recorte (ver el comentario real de NormalMinWidth). Solo en Compacto hace falta forzar el
-    // envolvido: 200px es el ancho medido de verdad de "Vida+Maná" solos (documentado en R-04a/
-    // H-04a, "196px reales") con un margen pequeño - basta para que los dos iconos siempre
-    // quepan en la primera linea y todo lo demas (Defensa/Dinero/Horas) caiga a la siguiente en
-    // vez de perderse.
-    public double VitalsStripMaxWidth => SizeClass == WindowSizeClass.Compacto ? 200 : double.PositiveInfinity;
+    // envolvido: 210px, no 200px.
+    //
+    // Bug real encontrado por KeepQA con datos REALES (15-sep-2026, KEEPQA_VITALS_REAL=1, ver
+    // bitacora.md): los 200px de antes SOLO se habian calibrado contra "196px reales" de Vida+Maná
+    // medidos con datos sinteticos de un solo digito - nunca contra el ancho real de los iconos
+    // "♥"/"✦" tal cual los renderiza este Chromium/WPF real. Con un personaje real ("Eldelgas":
+    // Defensa=69, Dinero="59p 43o 83s", Horas=54) el volcado de geometria (RectCompleto real, no
+    // estimado) da Vida=82.9px+20 margen y Maná=84.61px+14 margen -> 201.51px EXACTOS, 1.51px por
+    // ENCIMA del tope de 200 - el WrapPanel partia la pareja Vida/Maná en dos lineas (justo el bug
+    // que R-04a/H-04a decian haber cerrado), y Defensa quedaba pegado a Maná en la linea 2 mientras
+    // Dinero+Horas caian solos a una linea 3, 19.96px de desvio vertical real (confirmado con
+    // `node KeepQA/src/alineacion/verificarAlineacion.js` contra el volcado: DESALINEADO) -
+    // exactamente el "Defensa desfasada de Dinero/Horas" que el usuario reporto.
+    // Arreglo minimo: subir el tope a 210px, con margen real (8.49px) sobre los 201.51px medidos
+    // esta vez - Vida+Maná son de ancho FIJO (el Grid interno de la barra es Width="70" fijo, solo
+    // varia el glifo del icono ♥/✦ en unas decimas de pixel entre maquinas/DPI), asi que este
+    // numero no depende de los datos del personaje y no hace falta recalibrarlo si cambian
+    // Defensa/Dinero/Horas. Con el tope subido, Defensa+Dinero+Horas (135.87px reales, ver arriba)
+    // caben los tres juntos en la segunda linea sin necesitar una tercera - Compacto pasa de 3
+    // lineas a 2, mas limpio y ademas alineado de verdad. Reverificado con el mismo arnes
+    // (KEEPQA_VITALS_REAL=1) tras el cambio: ALINEADO en las 6 anchuras, 0 avisos.
+    public double VitalsStripMaxWidth => SizeClass == WindowSizeClass.Compacto ? 210 : double.PositiveInfinity;
 
     // Auditoria de Opus, A-4: "Inventario y Almacenes viven en pestañas separadas - nunca se
     // pueden ver a la vez, y por eso arrastrar un objeto del uno al otro es literalmente

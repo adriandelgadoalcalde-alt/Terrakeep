@@ -15196,3 +15196,96 @@ extra1920x1080}.png`, en `Terrakeep.App.Tests/bin/Debug/net10.0-windows/keepqa-e
 `crop-vitals-real-1080-defensa-huerfana.png` (recorte real 6x confirmando el bug visualmente) y
 `crop-vitals-min1080-es.png`/`crop-vitals-normal1180-es.png` (recortes del volcado sintético
 "antes", confirmando los 0/0/0c/0h degenerados), en el scratchpad de esta sesión.
+
+## 15-sep-2026 - Arreglo real de la franja de vitales en Compacto (el "agente ciego de la fase 2")
+
+Barrido pedido explícitamente como continuación de la ronda anterior de esta misma fecha ("no te
+quedes en investigar, esta vez arréglalo si encuentras algo real") - la ronda anterior dejó
+documentado, a propósito sin tocar, el bug real de `VitalsStripMaxWidth=200` demasiado estrecho
+para datos reales (ver justo arriba, "Ningún archivo de Terrakeep.App tocado a propósito"). Este
+bloque es ese arreglo, con su propia verificación mecánica completa (no solo "vuelve a compilar").
+
+**[VITALS-01]**
+CATEGORÍA: Responsive
+SEVERIDAD: Medium
+CONFIANZA: 0.98
+UBICACIÓN: Cabecera de la pestaña Personaje, franja de vitales (`WrapPanel Grid.Column="1"` de
+`MainWindow.xaml`, línea ~1981), SOLO en `SizeClass=Compacto` (ventana <1320px de ancho - incluye
+el tamaño de ARRANQUE real de la app, 1180x860, y el tamaño real que tenía la ventana del usuario
+la noche que reportó el bug, 1084px).
+ELEMENTOS: los 5 hijos directos del WrapPanel: StackPanel Vida (icono ♥ + barra), StackPanel Maná
+(icono ✦ + barra), StackPanel Defensa (icono 🛡 + número), TextBlock Dinero (`MoneyText`),
+StackPanel Horas jugadas + Último guardado.
+OBSERVACIÓN: con un personaje real cargado ("Eldelgas": Defensa=69, Dinero="59p 43o 83s",
+Horas=54h - arnés `KEEPQA_VITALS_REAL=1`, `Terrakeep.App.Tests/AuditoriaKeepQA.cs`), el volcado de
+geometría real (`RectCompleto`, no estimado) medía Vida=82.9px+20px margen y Maná=84.61px+14px
+margen: 201.51px exactos, 1.51px por ENCIMA del `VitalsStripMaxWidth=200` vigente. El `WrapPanel`
+partía a Vida y Maná en dos líneas distintas (línea 1: Vida sola; línea 2: Maná+Defensa), y
+Dinero+Horas se quedaban sin sitio en la línea 2 y caían a una línea 3 propia -
+`node KeepQA/src/alineacion/verificarAlineacion.js` contra el volcado: grupo
+`cabecera_franja_vitales_real_compacto1080x700`, eje horizontal `DESALINEADO`, 19.96px de desvío
+real en Dinero/Horas frente a la mediana del grupo (Maná/Defensa). Captura real:
+`vitals-real-compacto1080x700.png` (antes del arreglo, adjunta en el scratchpad de la sesión
+anterior) - "🛡 69" pegado a la barra azul de Maná en la línea 2, "59p 43o 83s  54h" solos en una
+línea 3 visualmente desplazada a la izquierda.
+POR QUÉ: `VitalsStripMaxWidth=200` (`MainViewModel.cs`) se había calibrado el 14-sep-2026 SOLO
+contra "196px reales" medidos con datos sintéticos de un solo dígito (arnés `KEEPQA_SOLO`/
+`KEEPQA_FRESCO_SOLO`, que siempre pisan el personaje real con uno vacío "UIA-Test" antes de
+volcar la cabecera) - nunca contra el ancho real que renderizan los glifos ♥/✦ de este WPF/fuente
+reales. El margen de seguridad que el comentario original decía tener (200 sobre 196, "un margen
+pequeño") resultó ser NEGATIVO en la práctica (201.51 real > 200 fijado): Vida+Maná, que el propio
+diseño documentaba como "los dos iconos siempre caben en la primera línea", en realidad NUNCA
+cabían juntos con el WPF/fuente reales de esta máquina - el bug de "Defensa desfasada de Dinero/
+Horas" que el usuario reportó a mano es consecuencia directa de esa partición incorrecta de la
+línea 1, no un problema del WrapPanel en sí.
+ESPERADO: en Compacto, Vida+Maná en la línea 1 (como el diseño siempre pretendió) y
+Defensa+Dinero+Horas juntos en la línea 2, con el mismo centro vertical dentro de cada línea.
+ARREGLO RECOMENDADO (aplicado): subir `VitalsStripMaxWidth` de 200 a 210 en `MainViewModel.cs`
+(propiedad `VitalsStripMaxWidth`, ~línea 527) - 8.49px de margen real sobre los 201.51px medidos,
+frente a los 4px (insuficientes en la práctica) de antes. Vida+Maná son de ancho FIJO (el `Grid`
+interno de cada barra es `Width="70"` fijo, no depende de los valores de vida/maná del personaje;
+solo varían unas décimas de px entre el glifo ♥ y el glifo ✦), así que 210 no necesita
+recalibrarse si cambian Defensa/Dinero/Horas - preferido aumentar el espacio disponible (criterio
+fijo de la familia Keep) en vez de recortar ningún dato.
+
+**Verificación real tras el arreglo** (`dotnet build` 0/0, luego `KEEPQA_VITALS_REAL=1`
+reejecutado contra el mismo personaje real 'Eldelgas'):
+- Volcado nuevo: Vida y Maná caen en la MISMA línea (`y=53.375` ambos a 1080x700, `y=53.375`/
+  `y=40.02+... ` según ancho - centro vertical IDÉNTICO entre los dos, 0px de desvío), y
+  Defensa+Dinero+Horas caen juntos en una segunda línea (centros verticales 82.65/82.65/82.65 a
+  1080x700 - también 0px de desvío entre ellos). Compacto pasa de 3 líneas a 2.
+- `node KeepQA/src/alineacion/verificarAlineacion.js` contra el volcado nuevo: sigue marcando
+  `DESALINEADO` a `compacto1080x700`/`compacto1180x860`, pero por el límite YA documentado de la
+  pieza para grupos `ambiguo/grid` sin clustering por fila (mismo límite que ya cerró
+  `KeepQA/PATRONES.md` contra la barra de pestañas de 2 líneas de StarvekeepMod, sección de
+  "ambiguo/grid... genera ruido porque comparten un único grupo sin eje dominante") - el desvío
+  real que SÍ importa (dentro de cada línea) es 0px, verificado a mano leyendo las coordenadas del
+  volcado (arriba). No es el mismo hallazgo que antes: antes Defensa quedaba pegado a la línea
+  equivocada (partido del grupo Dinero/Horas real), ahora las dos líneas son el agrupamiento
+  correcto por diseño (barras arriba, datos compactos abajo).
+- Captura real (`vitals-real-compacto1080x700.png`/`vitals-real-compacto1180x860.png`,
+  `keepqa-evidencia/` tras el arreglo): "♥ 600/500" y "✦ 200/200" en la misma fila; "🛡 69",
+  "59p 43o 83s" y "54h" alineados en la fila de abajo. Ya no hay ningún grupo desfasado.
+- `node KeepQA/src/espaciado/verificarEspaciado.js` contra el volcado: `RESULTADO: OK` (huecos de
+  20px/14px `APROPIADO` en las 4 anchuras ≥1320 con una sola línea; los 2 conjuntos de Compacto se
+  omiten correctamente por "ambiguo/grid", mismo límite de arriba, sin falsos positivos nuevos).
+- `node KeepQA/src/geometria/verificarGeometria.js`: revisado el `REVISAR` que da contra este
+  volcado - son diferencias de ANCHO entre Vida/Maná/Defensa/Dinero/Horas frente a la mediana del
+  grupo (hasta 69% de desviación), esperable y correcto: son 5 controles de contenido y forma muy
+  distintos (una barra fija de 70px no tiene por qué medir lo mismo que un número de 2 dígitos) -
+  no es un hallazgo real, el propio contrato de la pieza compara anchos dentro de un grupo
+  asumiendo elementos homogéneos, que aquí no aplica; no se fuerza un "arreglo" falso.
+- `dotnet test Terrakeep.slnx` completo: **539/539** `Terrakeep.Core.Tests` (4s) + **484/484**
+  `Terrakeep.App.ViewModels.Tests` (4m 42s) - mismos números exactos que antes del cambio, sin
+  regresión. `Terrakeep.App.Tests` (no es xUnit) verificado a mano: `KEEPQA_VITALS_REAL=1` con
+  `ExitCode=0` y sin excepción, antes y después del cambio.
+
+### Archivos tocados esta ronda
+
+- `Terrakeep.App/ViewModels/MainViewModel.cs` (`VitalsStripMaxWidth`: 200 -> 210, comentario
+  actualizado con la medición real y la causa real).
+
+### Evidencia (no committeada, `keepqa-evidencia/` gitignorado)
+
+`volcado-geometria-vitals-real.json` y 6 capturas `vitals-real-*.png` regenerados tras el arreglo
+en `Terrakeep.App.Tests/bin/Release/net10.0-windows/keepqa-evidencia/`.
