@@ -16185,3 +16185,61 @@ instalador .iss porque no hay cambio de version, solo de arquitectura interna).
 - Repo hermano TerrakeepMod: EvaluadorGuia.cs (fachada), ModeloGuia.cs (alias globales),
   ProveedorEstadoGuiaMod.cs (nuevo), TextosGuiaMod.cs (nuevo), mas los sitios de texto ya resuelto
   - ver la bitacora de ese repo para el detalle completo.
+
+## 16-sep-2026 - Canario en AR-LAY (encargo de KeepQA/H6)
+
+`KeepQA\v4\I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md` (hallazgo H6) documenta tres incidentes reales de
+la familia donde el arnés automático dio verde sin haber comprobado nada de verdad (un regex que
+nunca casaba en ServidorKeep, un informe de Starvekeep que llegó a decir "OK" con un bug puesto a
+propósito, y los tres proyectos WPF -Terrakeep incluido- pagando el mismo tipo de riesgo con el
+contraste) y encontró que solo StarvekeepMod tenía ya un canario real que lo evita
+(`scripts/starvekeep/auditoria.lua`, `Auditoria.RevisarCanario`).
+
+**Identificado el hueco real en este proyecto**: AR-LAY (`Terrakeep.App.Tests/
+AuditoriaMaquetacion.cs`) es el detector más crítico de todo el arnés - corre en CADA
+`dotnet run`, sobre cientos de combinaciones pantalla x tamaño x idioma, nunca detrás de un flag
+opcional como `CAPAS_SOLO` - y todo el bloque está envuelto en un `catch (Exception ex) {
+Console.WriteLine("AR-LAY-EXCEPTION: " + ex); }`. Si algo revienta A MEDIA auditoría (antes de
+llegar a la línea de resumen `"AR-LAY: N combinaciones medidas"`), ni esa línea ni ningún
+`"FALLO: AR-LAY"` se imprimen NUNCA. Y el gate real de todo este arnés es "grep `FALLO:` en la
+consola" (confirmado grepeando `Program.cs`: todo modo `_SOLO` hace `Environment.Exit(0)` pase lo
+que pase) - un AR-LAY que nunca llega a imprimir nada es indistinguible de un AR-LAY que corrió
+limpio para quien solo mira si apareció `"FALLO:"`. Misma forma exacta que el regex roto de
+ServidorKeep: una condición que deja de evaluarse nunca avisa de que dejó de evaluarse.
+
+**Qué se añadió**: `ComprobarCanarioArLay()` (mismo fichero), llamado al principio del `try` de
+`BarridoMaquetacionPorTamañoEIdioma`, antes de tocar ninguna pantalla real. Ejercita el motor real
+de detección -`RectCompleto`/`ZonaVisible`/`AlcanzableConScroll` (los mismos tres que usa D1) y
+`RectVisible` (el que usa D2)- contra una ventana real, mínima, fuera de pantalla (mismo patrón ya
+probado en este repo, `EjecutarCapasSinteticoSolo` de `AuditoriaKeepQA.cs`), con un caso
+IMPOSIBLE de no detectar en cada detector y uno trivial que no tiene que detectarse: D1 con un
+`TextBlock` de 200 caracteres recortado por un `Border` de 40x30 con `ClipToBounds`, sin ningún
+`ScrollViewer` que lo alcance; D2 con dos `Border` en columnas DISJUNTAS de un `Grid`, uno de
+ellos con un margen izquierdo negativo que lo mete 60px en la columna vecina. Si el canario falla,
+imprime `"FALLO: AR-LAY-CANARIO"` (mismo prefijo `"FALLO:"` que ya vigila el resto del arnés, sin
+inventar un segundo mecanismo de gate) y `BarridoMaquetacionPorTamañoEIdioma` no continúa con el
+barrido real.
+
+**Dos vueltas reales para dar con la forma correcta de fabricar el caso D2** (documentado en el
+propio código para que nadie repita el camino): el primer intento usaba un `Button` con
+`Width=180` en una columna de `Grid` de 100px, asumiendo que WPF dejaría al botón "desbordarse"
+visualmente de su celda (el comportamiento "clásico" documentado). Comprobado de verdad con
+trazas reales que NO es así en este WPF/.NET: el `Grid` clampa el `Arrange` del hijo al ancho de
+su `ColumnDefinition` aunque su `Width` propio pida más, y además la plantilla/chrome de `Button`
+añade su propio recorte interno. Solución real: `Border` (sin plantilla) con un margen negativo,
+que desplaza el rectángulo de `Arrange` ENTERO fuera de su columna sin que ningún clamp lo evite -
+la misma clase de solape real que motivó AR-LAY en primer lugar (un elemento colocado a mano que
+invade la celda vecina).
+
+**Verificado que el canario SÍ detecta** (no solo "debería"): se rompió D1 a propósito
+(`escapaXLargo`/`escapaYLargo` forzados a `true` siempre) y D2 por separado
+(`Rect.Intersect(ra2, rb2)` sustituido por `Rect.Empty` siempre) - las dos roturas, relanzadas con
+el nuevo modo `ARLAY_CANARIO_SOLO=1` (ejecuta solo el canario, autocontenido, sin cargar
+personaje/mundo reales - útil para volver a comprobarlo en una ronda futura sin pagar el arranque
+completo), dieron `"FALLO: AR-LAY-CANARIO"` con el motivo exacto. Revertidas las dos, vuelve a
+`"AR-LAY-CANARIO: OK"` limpio.
+
+Sin bug de producción real detrás de este hueco - D1/D2 ya funcionan bien contra la app real (AR-
+LAY lleva desde el 6-sep-2026 encontrando y cerrando bugs reales de maquetación); es puramente un
+hueco preventivo del arnés, cerrado antes de que un cambio futuro lo abriera de verdad.
+`dotnet build` de `Terrakeep.App.Tests`: 0 avisos, 0 errores. Commit local (nunca push).

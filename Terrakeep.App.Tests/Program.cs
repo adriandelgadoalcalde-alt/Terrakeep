@@ -118,6 +118,18 @@ internal static partial class Program
         app.MainWindow = window;
         window.Show();
         DoEvents();
+
+        // ARLAY_CANARIO_SOLO=1 (16-sep-2026, KeepQA/H6): ejercita SOLO el canario de AR-LAY
+        // (ComprobarCanarioArLay, ver AuditoriaMaquetacion.cs) sin cargar personaje/mundo reales -
+        // el canario es autocontenido (construye su propia ventana/Grid de usar y tirar), asi que
+        // no hace falta pagar el resto del arranque para volver a comprobarlo en una ronda futura.
+        if (Environment.GetEnvironmentVariable("ARLAY_CANARIO_SOLO") == "1")
+        {
+            bool canarioOk = ComprobarCanarioArLay();
+            Console.WriteLine(canarioOk ? "ARLAY_CANARIO_SOLO: OK" : "FALLO: ARLAY_CANARIO_SOLO");
+            Environment.Exit(canarioOk ? 0 : 1);
+        }
+
         // Auditoria de redimensionado, §1.1-1.2: hook de WM_GETMINMAXINFO instalado lo antes
         // posible (justo tras Show(), antes del primer redimensionado real de este arnes) para
         // que TODO el resto del arnes pueda pedir el ancho que quiera sin toparse con el clamp

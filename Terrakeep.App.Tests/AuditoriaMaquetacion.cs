@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Terrakeep.App;
 using Terrakeep.App.Controls;
 using Terrakeep.App.ViewModels;
@@ -63,6 +64,19 @@ internal static partial class Program
     {
     try
     {
+        // CANARIO (16-sep-2026, KeepQA/v4/I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md, hallazgo H6): antes
+        // de fiarse de ninguna de las combinaciones reales de abajo, se comprueba que D1/D2 SEPAN
+        // detectar. Ver ComprobarCanarioArLay para el porqué completo - en corto: este bloque
+        // entero esta envuelto en el catch(Exception) de la linea de cierre, y el gate real de
+        // todo este arnes es "grep FALLO: en consola" (Environment.Exit(0) siempre, Program.cs) -
+        // si algo revienta A MEDIA auditoria, ni la linea de resumen ni ningun FALLO: se imprimen
+        // NUNCA, indistinguible de una pasada limpia para quien solo mira si aparecio "FALLO:".
+        if (!ComprobarCanarioArLay())
+        {
+            Console.WriteLine("FALLO: AR-LAY - el canario del propio detector no paso (ver AR-LAY-CANARIO arriba); abortando el barrido real, no seria de fiar.");
+            return;
+        }
+
         string idiomaPrevio = vm.Settings.Language;
         int tabPrevio = vm.SelectedTabIndex, innerPrevio = vm.PersonajeInnerTabIndex, subPrevio = vm.ObjetosSubTabIndex;
         double anchoPrevio = window.ActualWidth, altoPrevio = window.ActualHeight;
@@ -307,6 +321,181 @@ internal static partial class Program
         DoEvents();
     }
     catch (Exception ex) { Console.WriteLine("AR-LAY-EXCEPTION: " + ex); }
+    }
+
+    // ====================================================================================
+    // CANARIO DE AR-LAY (16-sep-2026, KeepQA/v4/I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md, hallazgo H6)
+    // ====================================================================================
+    // H6 documenta tres incidentes reales de la familia donde el arnes automatico dio verde sin
+    // haber comprobado nada de verdad (un regex que nunca casaba en ServidorKeep, un informe de
+    // Starvekeep que llego a decir "OK" con un bug puesto a proposito, y los tres proyectos WPF -
+    // Terrakeep incluido - pagando el mismo tipo de riesgo con el contraste) y solo StarvekeepMod
+    // tenia ya un canario real que lo evita (scripts/starvekeep/auditoria.lua,
+    // Auditoria.RevisarCanario: "si el detector se rompiera, todo lo demas saldria en verde sin
+    // haber comprobado nada"). AR-LAY es el detector mas critico de todo este arnes -corre en
+    // CADA `dotnet run`, sobre cientos de combinaciones pantalla x tamaño x idioma, nunca detras
+    // de un flag opcional como CAPAS_SOLO- y esta envuelto en un catch(Exception) que solo
+    // imprime "AR-LAY-EXCEPTION" y sigue: si algo revienta A MEDIA auditoria (antes de llegar a
+    // la linea "AR-LAY: N combinaciones medidas"), ni esa linea de resumen ni ningun
+    // "FALLO: AR-LAY" se imprimen NUNCA. Como el gate real de todo este arnes es "grep FALLO: en
+    // la consola" (cada modo de Program.cs hace Environment.Exit(0) pase lo que pase, confirmado
+    // grepeando el propio fichero), un AR-LAY que nunca llega a imprimir nada es indistinguible
+    // de un AR-LAY que corrio limpio para quien solo mira si aparecio "FALLO:" - exactamente la
+    // misma forma que el regex roto de ServidorKeep (una condicion que deja de evaluarse nunca
+    // avisa de que dejo de evaluarse).
+    //
+    // Este canario ejercita el motor real de deteccion (RectCompleto/ZonaVisible/
+    // AlcanzableConScroll, los mismos tres que usa D1; RectVisible, el que usa D2) contra una
+    // ventana real, minima, fuera de pantalla - mismo patron ya probado en este mismo repo
+    // (AuditoriaKeepQA.cs, EjecutarCapasSinteticoSolo: sin PresentationSource, RectCompleto/
+    // TransformToAncestor no reflejan un layout real) - con un caso IMPOSIBLE de no detectar en
+    // cada detector y uno trivial que no tiene que detectarse, exactamente el mismo criterio que
+    // Auditoria.RevisarCanario de StarvekeepMod. Se llama ANTES del barrido real; si falla,
+    // imprime "FALLO: AR-LAY-CANARIO" (mismo prefijo "FALLO:" que ya vigila el resto del arnes,
+    // sin inventar un segundo mecanismo de gate) y BarridoMaquetacionPorTamañoEIdioma no continua
+    // con el barrido real.
+    private static bool ComprobarCanarioArLay()
+    {
+        // ---- D1: un texto recortado sin escape de scroll TIENE que detectarse, uno sin recortar NO ----
+        var textoLargo = new TextBlock { Text = new string('M', 200), FontSize = 20, TextWrapping = TextWrapping.NoWrap };
+        var cajaRecortada = new Border { Width = 40, Height = 30, ClipToBounds = true, Child = textoLargo };
+        var textoTrivial = new TextBlock { Text = "Vida", FontSize = 13 };
+
+        // ---- D2: dos elementos en celdas DISJUNTAS de un Grid que se pisan de verdad TIENEN que
+        // detectarse; dos que respetan su celda NO ----
+        var gridD2 = new Grid();
+        gridD2.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+        gridD2.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+        // cajaSolapa se sale a proposito de su columna con un margen izquierdo NEGATIVO (no con
+        // un Width mayor que la columna: comprobado de verdad en esta misma ronda, con trazas
+        // reales, que un Grid en este WPF/.NET SÍ limita el Arrange de un hijo al ancho de su
+        // ColumnDefinition aunque su Width propio pida más -contra lo que la documentación
+        // "clásica" de WPF sugiere-, así que un Width mayor no reproduce un solape real aquí: el
+        // hijo queda clampado a 100px igual y el canario no detectaría nada porque no habría nada
+        // que detectar. Un margen negativo, en cambio, desplaza el rectángulo de Arrange ENTERO
+        // fuera de la columna sin que ese clamp lo evite - la misma clase de solape real que
+        // motivó AR-LAY (un elemento colocado a mano con Margin que invade la celda vecina).
+        // Border en vez de Button a propósito: la plantilla/chrome de Button añade su propio
+        // recorte interno (confirmado con trazas: con Button, RectVisible ya salía clampado a la
+        // columna incluso con margen negativo), y eso habría probado la plantilla de Button, no
+        // el detector D2 en sí.
+        var cajaSolapa = new Border { Background = Brushes.Red, Width = 90, Height = 30, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(-70, 0, 0, 0) };
+        System.Windows.Controls.Grid.SetColumn(cajaSolapa, 1);
+        var cajaVecina = new Border { Background = Brushes.Blue, Width = 90, Height = 30, HorizontalAlignment = HorizontalAlignment.Left };
+        System.Windows.Controls.Grid.SetColumn(cajaVecina, 0);
+        gridD2.Children.Add(cajaSolapa);
+        gridD2.Children.Add(cajaVecina);
+
+        var gridD2Trivial = new Grid();
+        gridD2Trivial.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+        gridD2Trivial.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+        var cajaPropia = new Border { Background = Brushes.Red, Width = 90, Height = 30, HorizontalAlignment = HorizontalAlignment.Left };
+        System.Windows.Controls.Grid.SetColumn(cajaPropia, 0);
+        var cajaVecinaOk = new Border { Background = Brushes.Blue, Width = 90, Height = 30, HorizontalAlignment = HorizontalAlignment.Left };
+        System.Windows.Controls.Grid.SetColumn(cajaVecinaOk, 1);
+        gridD2Trivial.Children.Add(cajaPropia);
+        gridD2Trivial.Children.Add(cajaVecinaOk);
+
+        var raiz = new StackPanel();
+        raiz.Children.Add(cajaRecortada);
+        raiz.Children.Add(textoTrivial);
+        raiz.Children.Add(gridD2);
+        raiz.Children.Add(gridD2Trivial);
+
+        var ventana = new Window
+        {
+            Content = raiz,
+            Width = 400,
+            Height = 300,
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            Left = -5000,
+            Top = -5000,
+            ShowInTaskbar = false,
+            Title = "Terrakeep-canario-AR-LAY",
+        };
+        ventana.Show();
+        DoEvents(); DoEvents(); DoEvents();
+
+        bool ok = true;
+
+        // --- D1, caso imposible ---
+        Rect completoLargo, zonaLargo;
+        try { completoLargo = RectCompleto(textoLargo, ventana); zonaLargo = ZonaVisible(textoLargo, ventana); }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine("FALLO: AR-LAY-CANARIO - excepcion midiendo el caso D1 imposible: " + ex.Message);
+            ventana.Close();
+            return false;
+        }
+        double faltaXLargo, faltaYLargo;
+        if (zonaLargo.IsEmpty) { faltaXLargo = completoLargo.Width; faltaYLargo = completoLargo.Height; }
+        else
+        {
+            faltaXLargo = Math.Min(completoLargo.Width, Math.Max(0, zonaLargo.Left - completoLargo.Left) + Math.Max(0, completoLargo.Right - zonaLargo.Right));
+            faltaYLargo = Math.Min(completoLargo.Height, Math.Max(0, zonaLargo.Top - completoLargo.Top) + Math.Max(0, completoLargo.Bottom - zonaLargo.Bottom));
+        }
+        bool escapaXLargo = faltaXLargo <= 1 || AlcanzableConScroll(textoLargo, ventana, horizontal: true);
+        bool escapaYLargo = faltaYLargo <= 1 || AlcanzableConScroll(textoLargo, ventana, horizontal: false);
+        if (escapaXLargo && escapaYLargo)
+        {
+            Console.WriteLine($"FALLO: AR-LAY-CANARIO - un texto de 200 caracteres recortado por un Border de 40x30 sin ScrollViewer NO se detecta como contenido perdido (faltaX={faltaXLargo:0.#} faltaY={faltaYLargo:0.#}). D1 no esta comprobando de verdad.");
+            ok = false;
+        }
+
+        // --- D1, caso trivial ---
+        Rect completoTrivial, zonaTrivial;
+        try { completoTrivial = RectCompleto(textoTrivial, ventana); zonaTrivial = ZonaVisible(textoTrivial, ventana); }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine("FALLO: AR-LAY-CANARIO - excepcion midiendo el caso D1 trivial: " + ex.Message);
+            ventana.Close();
+            return false;
+        }
+        double faltaXTrivial = zonaTrivial.IsEmpty ? completoTrivial.Width : Math.Min(completoTrivial.Width, Math.Max(0, zonaTrivial.Left - completoTrivial.Left) + Math.Max(0, completoTrivial.Right - zonaTrivial.Right));
+        double faltaYTrivial = zonaTrivial.IsEmpty ? completoTrivial.Height : Math.Min(completoTrivial.Height, Math.Max(0, zonaTrivial.Top - completoTrivial.Top) + Math.Max(0, completoTrivial.Bottom - zonaTrivial.Bottom));
+        if (faltaXTrivial > 1 || faltaYTrivial > 1)
+        {
+            Console.WriteLine($"FALLO: AR-LAY-CANARIO - un texto trivial SIN recortar se detecta como perdido (faltaX={faltaXTrivial:0.#} faltaY={faltaYTrivial:0.#}). D1 esta dando falsos positivos.");
+            ok = false;
+        }
+
+        // --- D2, caso imposible (solape real entre celdas disjuntas) ---
+        Rect ra2, rb2;
+        try { ra2 = RectVisible(cajaSolapa, ventana); rb2 = RectVisible(cajaVecina, ventana); }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine("FALLO: AR-LAY-CANARIO - excepcion midiendo el caso D2 imposible: " + ex.Message);
+            ventana.Close();
+            return false;
+        }
+        var interD2 = Rect.Intersect(ra2, rb2);
+        if (interD2.IsEmpty || interD2.Width <= 1 || interD2.Height <= 1)
+        {
+            Console.WriteLine($"FALLO: AR-LAY-CANARIO - dos elementos en columnas DISJUNTAS de un Grid (uno de ellos con un margen negativo que lo mete 60px dentro de la columna vecina) NO se detectan solapados. D2 no esta comprobando de verdad.");
+            ok = false;
+        }
+
+        // --- D2, caso trivial (cada uno respeta su celda) ---
+        Rect rc2, rd2;
+        try { rc2 = RectVisible(cajaPropia, ventana); rd2 = RectVisible(cajaVecinaOk, ventana); }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine("FALLO: AR-LAY-CANARIO - excepcion midiendo el caso D2 trivial: " + ex.Message);
+            ventana.Close();
+            return false;
+        }
+        var interD2Trivial = Rect.Intersect(rc2, rd2);
+        if (!interD2Trivial.IsEmpty && interD2Trivial.Width > 1 && interD2Trivial.Height > 1)
+        {
+            Console.WriteLine($"FALLO: AR-LAY-CANARIO - dos botones que respetan su propia columna se detectan solapados ({interD2Trivial.Width:0.#}x{interD2Trivial.Height:0.#}px). D2 esta dando falsos positivos.");
+            ok = false;
+        }
+
+        ventana.Close();
+        DoEvents();
+
+        if (ok) Console.WriteLine("AR-LAY-CANARIO: OK - D1 distingue un recorte imposible de un caso trivial, y D2 distingue un solape real de dos celdas respetadas.");
+        return ok;
     }
 
     // AR-LAY: la ZONA de la ventana que de verdad se esta pintando para este elemento - la
