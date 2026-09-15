@@ -999,19 +999,59 @@ internal static partial class Program
                 }
                 Console.WriteLine($"KEEPQA_VITALS_REAL[{etiquetaTam}]: SizeClass={vm.SizeClass} MaxWidth={vm.VitalsStripMaxWidth:0}, {idx} elementos reales volcados (grupo cabecera_franja_vitales_real_{etiquetaTam})");
 
-                // Verificacion propia, sin esperar a node: centro vertical real de cada elemento
-                // de la franja - si dos elementos comparten linea (misma Y de partida aprox) sus
-                // centros deben coincidir; si un elemento cae en otra linea que el resto de su
-                // grupo (Defensa separado de Dinero/Horas), es el desfase real que reporto el
-                // usuario.
+                // Verificacion propia, sin esperar a node: agrupa los elementos por LINEA real
+                // (clustering por centro Y) ANTES de comparar alineacion dentro de cada linea - en
+                // vez de comparar los 5 elementos contra UNA SOLA mediana global. Arreglo del
+                // FALSO POSITIVO real de esta misma pieza, encontrado por el coordinador el
+                // 15-sep-2026 y confirmado a ojo contra 'vitals-real-compacto1180x860.png': con el
+                // diseño real e intencional de 2 lineas en SizeClass=Compacto (Vida+Mana arriba,
+                // Defensa+Dinero+Horas abajo, ver bitacora.md "ARREGLO RECOMENDADO (aplicado):
+                // subir VitalsStripMaxWidth de 200 a 210"), la mediana global cae ENTRE las dos
+                // lineas, asi que los 5 elementos quedaban "desviados" de esa mediana aunque cada
+                // linea estuviera perfectamente alineada consigo misma (0px de desvio real dentro
+                // de cada una, verificado a mano contra el volcado). Mismo criterio de fondo que
+                // `detectarOrientacion` de KeepQA/src/alineacion/verificarAlineacion.js: agrupar
+                // ANTES de comparar, nunca mezclar lineas/ejes distintos en una sola mediana - la
+                // cabecera de ese fichero documenta que el clustering por fila/columna real dentro
+                // de un grupo no estaba construido todavia en ninguna pieza compartida; este es ese
+                // clustering, construido aqui porque el caso real que lo necesita (la franja de
+                // vitales en Compacto) vive en este arnes.
                 if (centros.Count > 1)
                 {
-                    double medianaCentro = centros.OrderBy(c => c.centroY).ElementAt(centros.Count / 2).centroY;
-                    foreach (var c in centros)
+                    var ordenados = centros.OrderBy(c => c.centroY).ToList();
+                    double altoMedianoGrupo = ordenados.Select(c => c.h).OrderBy(v => v).ElementAt(ordenados.Count / 2);
+                    // Umbral de corte entre lineas: un salto de centro Y mayor que "media linea de
+                    // alto" entre dos elementos consecutivos (ordenados por centro Y) es una linea
+                    // NUEVA, no la misma linea con ruido - medido contra el caso real: ~0px de salto
+                    // DENTRO de una linea (Vida/Mana o Defensa/Dinero/Horas, perfectamente
+                    // alineados) frente a ~29px de salto ENTRE lineas a 1080x700/1180x860 (bitacora.
+                    // md, 15-sep-2026) - la mitad del alto mediano separa ambos casos con margen de
+                    // sobra en los dos sentidos. Suelo de 4px para que un grupo de una sola linea con
+                    // elementos muy finos (barras de pocos px de alto) no fragmente en clusters de 1
+                    // solo por ruido de subpixel.
+                    double umbralLinea = Math.Max(4.0, altoMedianoGrupo / 2.0);
+
+                    var lineas = new List<List<(string id, double centroY, double h)>>();
+                    foreach (var c in ordenados)
                     {
-                        double desvio = Math.Abs(c.centroY - medianaCentro);
-                        if (desvio > 1.0)
-                            Console.WriteLine($"KEEPQA_VITALS_REAL[{etiquetaTam}]: AVISO - '{c.id}' (alto={c.h:0.00}) tiene centro Y={c.centroY:0.00}, desviado {desvio:0.00}px de la mediana del grupo ({medianaCentro:0.00}) - posible linea distinta o desfase real");
+                        if (lineas.Count > 0 && c.centroY - lineas[^1][^1].centroY <= umbralLinea)
+                            lineas[^1].Add(c);
+                        else
+                            lineas.Add(new List<(string id, double centroY, double h)> { c });
+                    }
+
+                    Console.WriteLine($"KEEPQA_VITALS_REAL[{etiquetaTam}]: {lineas.Count} linea(s) real(es) detectada(s) por centro Y (umbral {umbralLinea:0.00}px) - {string.Join(" | ", lineas.Select(l => $"[{string.Join(",", l.Select(m => m.id))}]"))}");
+
+                    foreach (var linea in lineas)
+                    {
+                        if (linea.Count < 2) continue; // nada con quien comparar dentro de esta linea real
+                        double medianaLinea = linea.OrderBy(c => c.centroY).ElementAt(linea.Count / 2).centroY;
+                        foreach (var c in linea)
+                        {
+                            double desvio = Math.Abs(c.centroY - medianaLinea);
+                            if (desvio > 1.0)
+                                Console.WriteLine($"KEEPQA_VITALS_REAL[{etiquetaTam}]: AVISO - '{c.id}' (alto={c.h:0.00}) tiene centro Y={c.centroY:0.00}, desviado {desvio:0.00}px de la mediana de SU LINEA real ({medianaLinea:0.00}) - posible desfase real dentro de la misma linea");
+                        }
                     }
                 }
 
@@ -1023,5 +1063,197 @@ internal static partial class Program
             Console.WriteLine($"KEEPQA_VITALS_REAL: {elementos.Count} elementos (personaje real '{vm.CharacterName}') volcados a {volcadoPath}, {tamaños.Length} capturas PNG en {outDir}");
         }
         catch (Exception ex) { Console.WriteLine("KEEPQA_VITALS_REAL-EXCEPTION: " + ex); }
+    }
+
+    // KEEPQA_VITALS_DINERO_LARGO=1 (15-sep-2026): Parte 2 del encargo del coordinador - confirmar
+    // si el arreglo de anoche (VitalsStripMaxWidth 200->210, calibrado SOLO contra el dinero corto
+    // de 'Eldelgas', "59p 43o 83s") sigue aguantando con un dinero MUCHO mas largo (5 cifras de
+    // platino, "20013p 9o" - el mismo tipo de valor que el usuario enseño en vivo con su personaje
+    // 100% vanilla 'Terrariano'). Usa el personaje real 'Terrariano.plr' (Documents\My Games\
+    // Terraria\Players, vanilla puro - NUNCA \tModLoader\Players\Terrariano.plr, un personaje
+    // DISTINTO con el mismo nombre) como base real, pero SOLO sobre una COPIA en el temp del
+    // sistema - el fichero real del usuario en Documentos NUNCA se toca ni se abre siquiera
+    // (File.Copy primero, cualquier lectura/escritura posterior va contra la copia).
+    //
+    // Los 4 slots de Coins (cobre id71/plata id72/oro id73/platino id74, mismo mapa que
+    // CoinValueInCopper de MainViewModel.cs) se sobreescriben a mano con PlrFile real
+    // (Terrakeep.Core.PlrFormat, via CharacterFileService.Load/Save - nunca un byte inventado)
+    // para forzar Platino=20013 y Oro=9, el "20013p 9o" real que enseño el usuario, sea cual sea
+    // el dinero real de partida de la copia. Esto bypassa a proposito el clamp de 9999 que
+    // ItemSlotViewModel.OnCountChanged aplica a una EDICION manual desde la UI (Math.Clamp(value,
+    // 1, 9999)) - ese clamp NUNCA se aplica al CARGAR un .plr real (ItemSlotViewModel.UpdateFrom
+    // pone _suppressCountWriteback=true antes de fijar Count), asi que es fiel a como la app trata
+    // de verdad un .plr con una pila de monedas de mas de 9999 unidades.
+    private static void EjecutarKeepQaVitalesRealDineroLargo(Window window, MainViewModel vm)
+    {
+        try
+        {
+            // Cifras de las 4 monedas configurables por variable de entorno (por defecto el caso
+            // real exacto que enseño el usuario, "20013p 9o") - permite explorar el margen real
+            // hasta romper sin recompilar por cada cifra distinta, MISMO mecanismo real
+            // (CharacterFileService.Load/Save, PlrFormat real) para cualquier valor.
+            int platino = int.TryParse(Environment.GetEnvironmentVariable("KEEPQA_DINERO_PLATINO"), out int vp) ? vp : 20013;
+            int oro = int.TryParse(Environment.GetEnvironmentVariable("KEEPQA_DINERO_ORO"), out int vo) ? vo : 9;
+            int plata = int.TryParse(Environment.GetEnvironmentVariable("KEEPQA_DINERO_PLATA"), out int vs) ? vs : 0;
+            int cobre = int.TryParse(Environment.GetEnvironmentVariable("KEEPQA_DINERO_COBRE"), out int vc) ? vc : 0;
+
+            string outDir = Path.Combine(AppContext.BaseDirectory, "keepqa-evidencia");
+            Directory.CreateDirectory(outDir);
+
+            string documentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string origenReal = Path.Combine(documentos, "My Games", "Terraria", "Players", "Terrariano.plr");
+            if (!File.Exists(origenReal))
+            {
+                Console.WriteLine($"KEEPQA_VITALS_DINERO_LARGO: FALLO - no se encuentra el personaje real '{origenReal}'");
+                return;
+            }
+
+            string copiaTemp = Path.Combine(Path.GetTempPath(), "keepqa-dinero-largo-terrariano.plr");
+            File.Copy(origenReal, copiaTemp, overwrite: true);
+            Console.WriteLine($"KEEPQA_VITALS_DINERO_LARGO: copia real de '{origenReal}' -> '{copiaTemp}' (el original NUNCA se toca)");
+
+            var service = new Terrakeep.App.Services.CharacterFileService();
+            var loaded = service.Load(copiaTemp);
+            static string DescribirCoins(Terrakeep.Core.PlrFormat.PlrItemSlot[] c) =>
+                string.Join(", ", c.Select(s => $"id={s.Id} count={s.Count}"));
+            Console.WriteLine($"KEEPQA_VITALS_DINERO_LARGO: Coins REALES de 'Terrariano' antes de tocar nada: [{DescribirCoins(loaded.Character.Coins)}] (mapa id71=cobre/72=plata/73=oro/74=platino)");
+
+            loaded.Character.Coins =
+            [
+                new Terrakeep.Core.PlrFormat.PlrItemSlot(cobre > 0 ? 71 : 0, cobre > 0 ? cobre : 0, 0, false),
+                new Terrakeep.Core.PlrFormat.PlrItemSlot(plata > 0 ? 72 : 0, plata > 0 ? plata : 0, 0, false),
+                new Terrakeep.Core.PlrFormat.PlrItemSlot(oro > 0 ? 73 : 0, oro > 0 ? oro : 0, 0, false),
+                new Terrakeep.Core.PlrFormat.PlrItemSlot(platino > 0 ? 74 : 0, platino > 0 ? platino : 0, 0, false),
+            ];
+            service.Save(loaded);
+            Console.WriteLine($"KEEPQA_VITALS_DINERO_LARGO: Coins FORZADOS en la copia -> [{DescribirCoins(loaded.Character.Coins)}], guardado real en '{copiaTemp}' via CharacterFileService.Save (PlrFile.Write real)");
+
+            vm.LoadFromPath(copiaTemp);
+            DoEvents(); DoEvents();
+            if (!vm.IsCharacterLoaded)
+            {
+                Console.WriteLine("KEEPQA_VITALS_DINERO_LARGO: FALLO - la copia modificada no cargo (IsCharacterLoaded=false)");
+                return;
+            }
+            Console.WriteLine($"KEEPQA_VITALS_DINERO_LARGO: personaje real cargado '{vm.CharacterName}' - Defensa={vm.EquipmentGroup?.TotalDefense}, Dinero='{vm.MoneyText}', Horas={vm.Appearance.PlayHours:0}");
+
+            vm.SelectedTabIndex = 1; // Personaje
+            DoEvents(); DoEvents();
+
+            (double w, double h, string etiqueta)[] tamaños =
+            [
+                (1080, 700, "compacto1080x700"),
+                (1180, 860, "compacto1180x860"),
+                (1320, 860, "normal1320x860"),
+                (1500, 860, "normal1500x860"),
+                (1520, 860, "amplio1520x860"),
+                (1920, 1080, "extra1920x1080"),
+            ];
+
+            var elementos = new List<object>();
+            bool huecoConfirmado = false;
+            foreach (var (w, h, etiquetaTam) in tamaños)
+            {
+                FijarTamaño(window, w, h);
+                DoEvents(); DoEvents();
+
+                var tiraVitals = Descendientes<WrapPanel>(window)
+                    .FirstOrDefault(wp => Descendientes<TextBlock>(wp).Any(t => t.Text == "♥"));
+                if (tiraVitals == null)
+                {
+                    Console.WriteLine($"KEEPQA_VITALS_DINERO_LARGO: FALLO - no se encuentra la franja de vitales a {etiquetaTam}");
+                    continue;
+                }
+
+                string idRaiz = $"vitals_dinero_largo_raiz_{etiquetaTam}";
+                elementos.Add(new { id = idRaiz, tipo = "raiz_pantalla", padre_id = (string?)$"(ventana_sin_padre_{idRaiz})", x = 0.0, y = 0.0, ancho = window.ActualWidth, alto = window.ActualHeight, grupo = (string?)null, orden_z = 0.0, capa = "fondo" });
+
+                int idx = 0;
+                var centros = new List<(string id, double centroY, double h, double x, double ancho)>();
+                foreach (var hijo in tiraVitals.Children.OfType<FrameworkElement>())
+                {
+                    if (!hijo.IsVisible || hijo.ActualWidth < 1 || hijo.ActualHeight < 1) continue;
+                    Rect rHijo;
+                    try { rHijo = RectCompleto(hijo, window); } catch (InvalidOperationException) { continue; }
+                    string descrHijo = hijo switch
+                    {
+                        TextBlock tbHijo => $"icono_o_texto('{tbHijo.Text}')",
+                        Grid => "barra_vida_o_mana",
+                        StackPanel => "grupo_icono_valor",
+                        _ => hijo.GetType().Name,
+                    };
+                    string idElem = $"vitals_dinero_largo_{etiquetaTam}_{idx}";
+                    elementos.Add(new { id = idElem, tipo = descrHijo, padre_id = (string?)idRaiz, x = rHijo.X, y = rHijo.Y, ancho = rHijo.Width, alto = rHijo.Height, grupo = (string?)$"cabecera_franja_vitales_dinero_largo_{etiquetaTam}", orden_z = OrdenZ(hijo), capa = "contenido" });
+                    centros.Add((idElem, rHijo.Y + rHijo.Height / 2, rHijo.Height, rHijo.X, rHijo.Width));
+                    idx++;
+                }
+                Console.WriteLine($"KEEPQA_VITALS_DINERO_LARGO[{etiquetaTam}]: SizeClass={vm.SizeClass} MaxWidth={vm.VitalsStripMaxWidth:0}, {idx} elementos reales volcados");
+
+                // Mismo clustering por linea real (centro Y) que ya arreglo el falso positivo de
+                // KEEPQA_VITALS_REAL (Parte 1 de este mismo encargo) - aqui para saber cuantas
+                // LINEAS reales forma el WrapPanel con este dinero largo: 2 lineas es el diseño
+                // correcto (Vida+Mana arriba, Defensa+Dinero+Horas abajo), 3+ lineas es el bug
+                // real reapareciendo.
+                if (centros.Count > 1)
+                {
+                    var ordenados = centros.OrderBy(c => c.centroY).ToList();
+                    double altoMedianoGrupo = ordenados.Select(c => c.h).OrderBy(v => v).ElementAt(ordenados.Count / 2);
+                    double umbralLinea = Math.Max(4.0, altoMedianoGrupo / 2.0);
+                    var lineas = new List<List<(string id, double centroY, double h, double x, double ancho)>>();
+                    foreach (var c in ordenados)
+                    {
+                        if (lineas.Count > 0 && c.centroY - lineas[^1][^1].centroY <= umbralLinea)
+                            lineas[^1].Add(c);
+                        else
+                            lineas.Add(new List<(string id, double centroY, double h, double x, double ancho)> { c });
+                    }
+                    Console.WriteLine($"KEEPQA_VITALS_DINERO_LARGO[{etiquetaTam}]: {lineas.Count} linea(s) real(es) detectada(s) - {string.Join(" | ", lineas.Select(l => $"[{string.Join(",", l.Select(m => m.id))}]"))}");
+                    if (lineas.Count > 2)
+                    {
+                        huecoConfirmado = true;
+                        Console.WriteLine($"FALLO: KEEPQA_VITALS_DINERO_LARGO - {etiquetaTam} parte la franja en {lineas.Count} lineas (se esperaban 2) - el bug real de Defensa/Dinero/Horas huerfanas reaparece con dinero largo");
+                    }
+                    foreach (var linea in lineas)
+                    {
+                        if (linea.Count < 2) continue;
+                        double medianaLinea = linea.OrderBy(c => c.centroY).ElementAt(linea.Count / 2).centroY;
+                        foreach (var c in linea)
+                        {
+                            double desvio = Math.Abs(c.centroY - medianaLinea);
+                            if (desvio > 1.0)
+                                Console.WriteLine($"KEEPQA_VITALS_DINERO_LARGO[{etiquetaTam}]: AVISO - '{c.id}' (alto={c.h:0.00}) tiene centro Y={c.centroY:0.00}, desviado {desvio:0.00}px de la mediana de SU LINEA real ({medianaLinea:0.00})");
+                        }
+                    }
+
+                    // Medida real EXACTA del ancho de la primera linea (Vida+Mana, o Vida+Mana+lo
+                    // que le quepa detras si el bug reaparte la franja) frente a VitalsStripMaxWidth
+                    // - la causa real exacta que pide documentar la Parte 2 del encargo.
+                    var linea1 = lineas[0];
+                    double anchoLinea1 = linea1.Max(c => c.x + c.ancho) - linea1.Min(c => c.x);
+                    Console.WriteLine($"KEEPQA_VITALS_DINERO_LARGO[{etiquetaTam}]: ancho real ocupado por la linea 1 ({linea1.Count} elemento(s): {string.Join(",", linea1.Select(m => m.id))}) = {anchoLinea1:0.00}px frente a VitalsStripMaxWidth={vm.VitalsStripMaxWidth:0}px");
+                }
+
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(window);
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                using var fs = File.Create(Path.Combine(outDir, $"vitals-dinero-largo-{etiquetaTam}.png"));
+                enc.Save(fs);
+            }
+
+            string volcadoPath = Path.Combine(outDir, "volcado-geometria-vitals-dinero-largo.json");
+            File.WriteAllText(volcadoPath, JsonSerializer.Serialize(elementos, new JsonSerializerOptions { WriteIndented = true }));
+            Console.WriteLine($"KEEPQA_VITALS_DINERO_LARGO: {elementos.Count} elementos volcados a {volcadoPath}, {tamaños.Length} capturas PNG en {outDir}");
+            Console.WriteLine(huecoConfirmado
+                ? "KEEPQA_VITALS_DINERO_LARGO: RESULTADO: bug real CONFIRMADO con dinero largo (3+ lineas en al menos un ancho)"
+                : "KEEPQA_VITALS_DINERO_LARGO: RESULTADO: sin bug real detectado (maximo 2 lineas en todos los anchos)");
+
+            File.Delete(copiaTemp);
+            string tplrCopiaTemp = Path.ChangeExtension(copiaTemp, ".tplr");
+            if (File.Exists(tplrCopiaTemp)) File.Delete(tplrCopiaTemp);
+            if (File.Exists(copiaTemp + ".bak")) File.Delete(copiaTemp + ".bak");
+        }
+        catch (Exception ex) { Console.WriteLine("KEEPQA_VITALS_DINERO_LARGO-EXCEPTION: " + ex); }
     }
 }

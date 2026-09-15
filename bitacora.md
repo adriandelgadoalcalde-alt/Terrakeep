@@ -15289,3 +15289,131 @@ reejecutado contra el mismo personaje real 'Eldelgas'):
 
 `volcado-geometria-vitals-real.json` y 6 capturas `vitals-real-*.png` regenerados tras el arreglo
 en `Terrakeep.App.Tests/bin/Release/net10.0-windows/keepqa-evidencia/`.
+
+## 15-sep-2026 (ronda siguiente, encargo del coordinador vía KeepQA) - falso positivo real de
+## `KEEPQA_VITALS_REAL` arreglado (Parte 1) + dinero largo confirmado que NO reproduce el bug con
+## el arreglo ya aplicado (Parte 2, contra la hipótesis)
+
+Encargo en dos partes tras un aviso del coordinador: (1) `KEEPQA_VITALS_REAL` (bloque de arriba)
+seguía dando un AVISO falso contra 'Eldelgas' con las 2 líneas ya correctas (Vida+Maná arriba,
+Defensa+Dinero+Horas abajo) porque comparaba los 5 elementos contra UNA sola mediana global de
+centro Y, sin agrupar por línea real primero. (2) el usuario enseñó en vivo una captura de
+'Terrariano' (personaje 100% vanilla, dinero de 5 cifras de platino) donde Defensa aparecía
+desconectada de Dinero/Horas - hipótesis a confirmar: que `VitalsStripMaxWidth=210` (el arreglo de
+la ronda anterior) se calibró solo contra el dinero corto de Eldelgas y no aguanta un dinero mucho
+más largo.
+
+### Parte 1 - arreglo real del falso positivo
+
+`EjecutarKeepQaVitalesReal` (`Terrakeep.App.Tests/AuditoriaKeepQA.cs`) comparaba el centro Y de los
+5 elementos de la franja contra `centros.OrderBy(...).ElementAt(count/2)` - UNA mediana única para
+los 5, sin importar en cuántas líneas reales cae el `WrapPanel`. Con el diseño de 2 líneas de
+Compacto, esa mediana global cae ENTRE las dos líneas, así que los 5 elementos salían "desviados"
+de una referencia que no representa a ninguna línea real - falso positivo puro, aunque cada línea
+estuviera perfectamente alineada consigo misma (0px de desvío real dentro de cada una).
+
+Arreglo: clustering real por línea antes de comparar (mismo criterio de fondo que
+`detectarOrientacion` de `KeepQA/src/alineacion/verificarAlineacion.js` - agrupar antes de
+comparar, nunca mezclar líneas distintas en una sola mediana). Los centros Y se ordenan, y se corta
+una línea nueva cuando el salto entre dos consecutivos supera la mitad del alto mediano del grupo
+(umbral con suelo de 4px) - medido contra el caso real: ~0px de salto dentro de una línea frente a
+~29px de salto entre líneas a 1080x700/1180x860. Dentro de cada línea con 2+ miembros, se compara
+contra la mediana LOCAL de esa línea, no la global.
+
+**Verificación real** (`dotnet build` 0/0, `KEEPQA_VITALS_REAL=1` contra 'Eldelgas' real):
+- Los 2 anchos Compacto (1080x700/1180x860) detectan **2 líneas reales** ([Vida,Maná] |
+  [Defensa,Dinero,Horas]) - **CERO AVISO** en ninguno de los dos, confirmado además a ojo contra
+  `vitals-real-compacto1180x860.png` (Vida+Maná en la fila de arriba, 🛡+Dinero+Horas alineados en
+  la de abajo, sin ningún elemento desplazado).
+- Los 4 anchos ≥1320 (Normal/Amplio/Extra) detectan **1 sola línea** con los 5 elementos, también
+  sin ningún AVISO (0px de desvío real, como ya se sabía).
+- `dotnet build Terrakeep.slnx`: 0/0. `dotnet test Terrakeep.slnx` completo: **539/539**
+  `Terrakeep.Core.Tests` (12s) + **484/484** `Terrakeep.App.ViewModels.Tests` (4m 30s) - mismos
+  números exactos, sin regresión (el cambio vive solo en `Terrakeep.App.Tests`, ningún archivo de
+  producción tocado en esta parte).
+
+### Parte 2 - dinero largo: CONFIRMADO que NO reproduce el bug con el código actual
+
+Nuevo modo `KEEPQA_VITALS_DINERO_LARGO=1` (`EjecutarKeepQaVitalesRealDineroLargo`, mismo fichero) -
+usa el personaje real **'Terrariano.plr'** (`Documents\My Games\Terraria\Players`, vanilla puro, el
+mismo personaje que enseñó el usuario en vivo), pero SOLO sobre una COPIA en el temp del sistema
+(`File.Copy` primero - el original en Documentos nunca se abre ni se toca). Curiosamente, el
+`Terrariano.plr` real de esta máquina YA tenía guardadas 3 pilas de moneda id=74 (platino) que
+suman EXACTAMENTE 9999+7515+2499 = **20013** unidades - el mismo número que citó el coordinador,
+confirmando que es el personaje real correcto. Los 4 slots de `Coins` se sobreescriben con
+`PlrFile`/`CharacterFileService.Load`+`Save` reales (nunca un byte inventado, ver el comentario
+largo de la función para el porqué del bypass del clamp de 9999 de `ItemSlotViewModel` - ese clamp
+solo aplica a una edición manual desde la UI, nunca a la carga de un `.plr` real) para forzar
+Platino=20013/Oro=9 ("20013p 9o", el valor exacto reportado) - configurable por variable de entorno
+(`KEEPQA_DINERO_PLATINO`/`_ORO`/`_PLATA`/`_COBRE`) para explorar más casos sin recompilar.
+
+**Resultado real, en las 6 anchuras (1080x700/1180x860 Compacto, 1320x860/1500x860 Normal,
+1520x860 Amplio, 1920x1080 Extra), tres configuraciones de dinero distintas:**
+
+| Dinero real | Ancho línea 1 (Vida+Maná) | Ancho línea 2 (Defensa+Dinero+Horas) | Líneas reales | ¿Bug? |
+|---|---|---|---|---|
+| `20013p 9o` (el valor EXACTO reportado) | 187.51px | 126.54px | 2 (correctas) | NO |
+| `9999999p 99o 99s 99c` (7 cifras de platino + las 3 monedas menores al máximo) | 187.51px | 185.65px | 2 (correctas) | NO |
+| `2147483647p 99o 99s 99c` (platino = `int.MaxValue`, el TECHO matemático real del campo `Count` de `PlrItemSlot` - no se puede construir un dinero más largo que este con el formato real) | 187.51px | 201.63px | 2 (correctas) | NO |
+
+En los 3 casos, en las 6 anchuras: exactamente 2 líneas reales, Vida+Maná arriba y
+Defensa+Dinero+Horas abajo, **cero AVISO** de desalineación dentro de cada línea. Confirmado a ojo
+contra `vitals-dinero-largo-compacto1080x700.png` en los 3 casos (adjuntas en el scratchpad de la
+sesión) - ni una sola vez aparece Defensa huérfana ni una 3ª línea.
+
+**Margen real medido, incluso en el caso EXTREMO (el techo matemático absoluto del formato)**:
+línea 2 ocupa 201.63px de los 210px de `VitalsStripMaxWidth` - **8.37px de margen real**, nunca
+negativo. La línea 1 (Vida+Maná) es de ancho FIJO (187.51px, no depende del dinero en absoluto,
+confirmado en los 3 casos) - Defensa NUNCA puede unirse a ella con el `VitalsStripMaxWidth=210`
+actual, porque necesitaría solo 22.49px libres y Defensa+su hueco ocupan bastante más (aunque
+Defensa tuviera 0 dígitos) - la hipótesis de que "Defensa se pasa a la línea de arriba" es
+geométricamente imposible con el ancho fijo real de Vida+Maná y el límite actual, para CUALQUIER
+ancho de Dinero.
+
+**CONCLUSIÓN, contra la hipótesis del encargo**: con el código YA aplicado anoche
+(`VitalsStripMaxWidth=210`), el bug de dinero largo **NO se reproduce** - ni con el valor exacto
+que reportó el usuario ("20013p 9o"), ni con el techo matemático absoluto del formato real
+(`int.MaxValue` de platino + las 3 monedas menores al máximo, el dinero más largo que se puede
+construir de verdad con `PlrItemSlot`). El arreglo de anoche, aunque se calibró solo contra el
+caso corto de Eldelgas, generaliza correctamente porque el cuello de botella real es el ancho FIJO
+de Vida+Maná (187.51px, constante) contra el límite de 210px - Dinero/Defensa/Horas viven en la
+SEGUNDA línea, que arranca con presupuesto completo (210px) y tiene margen de sobra incluso en el
+peor caso matemático posible.
+
+**No se descarta que la captura en vivo del usuario fuera de un build ANTERIOR al arreglo de
+anoche** (build no recompilado tras el cambio, o una sesión de la app abierta desde antes) - es la
+explicación más simple que cuadra con esta evidencia: el arreglo real (`VitalsStripMaxWidth=210`,
+ya en `MainViewModel.cs` y verificado en este mismo `dotnet build`) sí resuelve el caso de dinero
+largo de punta a punta, no solo el corto. **Pendiente si el usuario puede confirmar** si la captura
+en vivo fue tras cerrar y reabrir `Terrakeep.exe` del todo (nunca hot-reload, ver regla del
+proyecto) después del cambio de anoche.
+
+**Nada que aplicar en `Terrakeep.App` en esta ronda** (a diferencia de lo que pedía el encargo por
+si se confirmaba el hueco) - no se fuerza un "arreglo" donde la medición real no encuentra ningún
+problema.
+
+### Verificación real
+
+- `dotnet build Terrakeep.slnx`: 0/0, tres veces (antes de cada una de las 3 configuraciones de
+  dinero).
+- `dotnet test Terrakeep.slnx` completo (tras las dos partes): **539/539** `Terrakeep.Core.Tests`
+  (12s) + **484/484** `Terrakeep.App.ViewModels.Tests` (4m 30s) - mismos números exactos, sin
+  regresión.
+- Original `Terrariano.plr` de Documentos verificado intacto tras las 3 ejecuciones (mismo tamaño
+  y fecha de modificación de antes de empezar) - todas las copias/`.bak`/`.tplr` temporales se
+  borran solas al final de `EjecutarKeepQaVitalesRealDineroLargo`.
+
+### Archivos tocados esta ronda
+
+- `Terrakeep.App.Tests/AuditoriaKeepQA.cs` (clustering por línea real en
+  `EjecutarKeepQaVitalesReal`; nuevo `EjecutarKeepQaVitalesRealDineroLargo`).
+- `Terrakeep.App.Tests/Program.cs` (gancho `KEEPQA_VITALS_DINERO_LARGO=1`, junto al de
+  `KEEPQA_VITALS_REAL`).
+- Ningún archivo de `Terrakeep.App` (producción) tocado - no hay hueco real que cerrar ahí esta
+  ronda, ver la conclusión de arriba.
+
+### Evidencia (no committeada, `keepqa-evidencia/` gitignorado)
+
+`volcado-geometria-vitals-real.json` regenerado (Parte 1) + `volcado-geometria-vitals-dinero-largo.
+json` y 6 capturas `vitals-dinero-largo-*.png` por cada una de las 3 configuraciones de dinero
+(Parte 2) en `Terrakeep.App.Tests/bin_keepqaDebug/net10.0-windows/keepqa-evidencia/`.

@@ -787,6 +787,18 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // KEEPQA_VITALS_DINERO_LARGO=1 (15-sep-2026): mismo hueco de ventana que KEEPQA_VITALS_REAL
+        // de arriba, pero esta carga su PROPIO personaje (copia de 'Terrariano.plr', vanilla real,
+        // con Coins forzados a "20013p 9o") en vez de reutilizar 'first' - no depende de que
+        // 'first'/HOME-OPEN siga apuntando a ningun personaje en concreto. Cuerpo real en
+        // AuditoriaKeepQA.cs (EjecutarKeepQaVitalesRealDineroLargo).
+        if (Environment.GetEnvironmentVariable("KEEPQA_VITALS_DINERO_LARGO") == "1")
+        {
+            EjecutarKeepQaVitalesRealDineroLargo(window, vm);
+            Console.WriteLine("DONE (KEEPQA_VITALS_DINERO_LARGO)");
+            Environment.Exit(0);
+        }
+
         try
         {
             var swChar = System.Diagnostics.Stopwatch.StartNew();
