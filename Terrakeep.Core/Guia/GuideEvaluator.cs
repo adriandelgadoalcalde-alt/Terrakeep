@@ -27,10 +27,7 @@ public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatal
         switch (requisito.Tipo)
         {
             case TipoRequisitoGuia.CristalesVida:
-                NoEvaluableEnEscritorio(r, "Guia.Req.CristalesVida",
-                    "Terrakeep no guarda un contador de cristales de vida consumidos - solo el " +
-                    "propio juego en marcha lo sabe (Player.ConsumedLifeCrystals no se guarda como " +
-                    "un campo aparte legible desde el .plr con el resto de campos ya soportados).");
+                NoEvaluableEnEscritorio(r, "Guia.Req.CristalesVida", "guide_motive_life_crystals");
                 break;
 
             case TipoRequisitoGuia.VidaMaxima:
@@ -39,10 +36,7 @@ public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatal
                 break;
 
             case TipoRequisitoGuia.Defensa:
-                NoEvaluableEnEscritorio(r, "Guia.Req.Defensa",
-                    "La defensa real depende de la armadura, los accesorios y los buffs activos " +
-                    "calculados en vivo por el motor del juego (Player.statDefense) - Terrakeep no " +
-                    "simula combate, asi que no puede reproducir ese numero sin fingirlo.");
+                NoEvaluableEnEscritorio(r, "Guia.Req.Defensa", "guide_motive_defense");
                 break;
 
             case TipoRequisitoGuia.NpcsPueblo:
@@ -60,9 +54,7 @@ public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatal
                 // Marciana en ese instante) nunca se guarda en el archivo - es un dato de
                 // simulacion en curso, no de partida guardada. No hay ningun .wld del que
                 // Terrakeep pueda leer esto, con o sin mas trabajo de lector.
-                NoEvaluableEnEscritorio(r, "Guia.Req.NpcActivo",
-                    "Un enemigo hostil activo en el mundo no se guarda en el .wld (solo los NPC " +
-                    "del pueblo persisten con su posicion) - esto solo se puede saber jugando.");
+                NoEvaluableEnEscritorio(r, "Guia.Req.NpcActivo", "guide_motive_active_npc");
                 break;
 
             case TipoRequisitoGuia.Objeto:
@@ -74,10 +66,7 @@ public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatal
                 break;
 
             case TipoRequisitoGuia.DanoArma:
-                NoEvaluableEnEscritorio(r, "Guia.Req.DanoArmaSinArma",
-                    "El daño real de un arma depende de la clase del personaje y de sus " +
-                    "bonificaciones (Player.GetWeaponDamage), calculadas en vivo por el motor - " +
-                    "Terrakeep no simula esos multiplicadores.");
+                NoEvaluableEnEscritorio(r, "Guia.Req.DanoArmaSinArma", "guide_motive_weapon_damage");
                 break;
 
             case TipoRequisitoGuia.Gancho:
@@ -167,17 +156,16 @@ public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatal
         r.Pedido = 1;
         r.TextoClave = "Guia.Req.NoEvaluable";
         r.TextoArgs = [""];
-        r.MotivoNoEvaluableEnEscritorio =
-            "Carga un personaje/mundo real para que la Guia pueda comprobar esto.";
+        r.MotivoClave = "guide_motive_load_data";
     }
 
-    private static void NoEvaluableEnEscritorio(ResultadoRequisitoGuia r, string claveVacia, string motivo)
+    private static void NoEvaluableEnEscritorio(ResultadoRequisitoGuia r, string claveVacia, string motivoClave)
     {
         r.NoEvaluable = true;
         r.Pedido = 1;
         r.TextoClave = "Guia.Req.NoEvaluable";
         r.TextoArgs = [""];
-        r.MotivoNoEvaluableEnEscritorio = motivo;
+        r.MotivoClave = motivoClave;
     }
 
     private void EvaluarNpc(ResultadoRequisitoGuia r, RequisitoGuia requisito, GuideContext contexto, string clave)
@@ -248,10 +236,9 @@ public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatal
             r.Pedido = 1;
             r.TextoClave = "Guia.Req.NoEvaluable";
             r.TextoArgs = ["bandera " + requisito.Bandera];
-            r.MotivoNoEvaluableEnEscritorio = contexto.HasCalamity
-                ? "Esta bandera es de Calamity - Terrakeep todavia no lee los datos de mod del .wld."
-                : "Esta bandera vive fuera del bloque de ancho fijo que Terrakeep sabe leer del " +
-                  ".wld (ver GuideFlags.cs) - queda pendiente de una ronda futura del lector de mundos.";
+            r.MotivoClave = contexto.HasCalamity
+                ? "guide_motive_flag_calamity"
+                : "guide_motive_flag_unsupported";
             return;
         }
 

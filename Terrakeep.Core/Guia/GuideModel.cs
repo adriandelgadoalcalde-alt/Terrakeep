@@ -118,8 +118,13 @@ public sealed class ResultadoRequisitoGuia
     public string TextoClave { get; set; } = "";
     public object?[] TextoArgs { get; set; } = [];
     public bool NoEvaluable { get; set; }
-    // Motivo REAL de por que Terrakeep (a diferencia de TerrakeepMod en vivo) no puede comprobar
-    // esto desde un .plr/.wld estatico - se enseña en vez de un generico "no evaluable" mudo,
-    // mismo criterio de honestidad que el resto del proyecto.
-    public string? MotivoNoEvaluableEnEscritorio { get; set; }
+    // Clave de localizacion (NUNCA texto literal - bug real encontrado por A10-IDIOMA-BARRIDO el
+    // 15-sep-2026: la primera version de esto guardaba la frase en español directamente desde
+    // Core, así que se veía en español incluso con la app en inglés) del motivo REAL por el que
+    // Terrakeep (a diferencia de TerrakeepMod en vivo) no puede comprobar esto desde un .plr/.wld
+    // estatico - se enseña en vez de un generico "no evaluable" mudo, mismo criterio de
+    // honestidad que el resto del proyecto. Resuelta en la capa de presentacion (App) contra
+    // strings_es.json/strings_en.json via LocalizationService - Core no conoce ningun idioma,
+    // igual que TextoClave/GuideTextCatalog de arriba.
+    public string? MotivoClave { get; set; }
 }

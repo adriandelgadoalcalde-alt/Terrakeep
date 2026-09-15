@@ -818,6 +818,15 @@ internal static partial class Program
             Console.WriteLine("DONE (HOSTING_SOLO)");
             Environment.Exit(0);
         }
+        // README_SHOTS=1 (cierre de sesion, 15-sep-2026): regenera docs/screenshots/ con datos
+        // reales de esta maquina (ver PruebasCapturasReadme.cs) - las capturas del README llevaban
+        // desde el 5-sep-2026, de antes del idioma completo/Guia/Servidor de esta noche.
+        if (Environment.GetEnvironmentVariable("README_SHOTS") == "1")
+        {
+            CapturarPantallasReadme(window, vm);
+            Console.WriteLine("DONE (README_SHOTS)");
+            Environment.Exit(0);
+        }
 
         try
         {
@@ -4094,9 +4103,28 @@ internal static partial class Program
                     // el barrido real (no solo existir como propiedad) y apagarse al terminar.
                     // Paso el debounce (250ms) primero, para que el barrido en segundo plano ya
                     // este en marcha de verdad antes de mirar.
+                    //
+                    // Bug real de ESTE ARNES arreglado el 15-sep-2026 (cierre de sesion, triaje de
+                    // FALLO): la espera de "hasta completar" era un WaitForDispatcher(1720) FIJO
+                    // ("mismo total de 2000ms ya medido") - una carrera clasica contra el reloj, no
+                    // contra el estado real. Con la maquina bajo carga (otra sesion de Claude Code
+                    // en paralelo, ya documentado varias veces esta misma noche como causa real de
+                    // contienda) el barrido real de 'lava' sobre roca_negra.wld (11MB, 8400x2400
+                    // tiles) podia tardar mas de 2000ms de verdad, y la comprobacion leia
+                    // IsSearching/WorldSearchResults ANTES de que terminara - FALLO falso tanto
+                    // aqui (A8-02) como en "Punto 4" mas abajo (mismo barrido, mismos datos, leidos
+                    // demasiado pronto). Sustituido por un sondeo real del estado (mismo patron ya
+                    // usado en HOSTING_SOLO para EnEscucha), con margen generoso.
                     WaitForDispatcher(280);
                     bool buscandoAMitad = vm.Exploration.IsSearching;
-                    WaitForDispatcher(1720); // resto hasta completar (mismo total de 2000ms ya medido)
+                    // 60s de margen (no 15s): medido en esta misma sesion que 15s no bastaban con
+                    // la maquina bajo carga real (otro build/test de este mismo repo corriendo en
+                    // paralelo) - es una comprobacion de CORRECCION, no de rendimiento, mejor un
+                    // margen generoso que un falso FALLO por lentitud ajena a la app.
+                    long limiteA802 = Environment.TickCount64 + 60_000;
+                    while (vm.Exploration.IsSearching && Environment.TickCount64 < limiteA802)
+                    { DoEvents(); System.Threading.Thread.Sleep(1); } // mismo motivo real que WaitForDispatcher (ver su comentario): cede la CPU de verdad entre vueltas
+                    DoEvents();
                     bool buscandoTrasCompletar = vm.Exploration.IsSearching;
                     Console.WriteLine($"A8-02: IsSearching a mitad del barrido={buscandoAMitad} (esperado True), tras completar={buscandoTrasCompletar} (esperado False)");
                     if (!buscandoAMitad) Console.WriteLine("FALLO: A8-02 - IsSearching no se activo durante el barrido real del mundo");
@@ -4690,12 +4718,44 @@ internal static partial class Program
 
                     // F-8 (auditoria de Opus vs TEdit, E-05): el minimapa real muestra el bitmap
                     // del mundo YA congelado, y su rectangulo de viewport esta visible.
+                    //
+                    // Falso positivo real encontrado y arreglado el 15-sep-2026 (cierre de sesion,
+                    // triaje de los FALLO del recorrido completo): este bloque corre justo DESPUES
+                    // de "X-a AJUSTAR-A-LA-VENTANA" (mas arriba en este mismo Main()), que deja el
+                    // zoom al 8% a proposito - con el mundo ENTERO ya visible en el viewport,
+                    // MainWindow.xaml.cs.UpdateMinimapViewport() colapsa el rectangulo A PROPOSITO
+                    // ("igual que cualquier minimapa real... no aportaria nada", ver el comentario
+                    // real de esa funcion) - el codigo de produccion hace lo correcto, era esta
+                    // asercion la que no tenia en cuenta en que zoom quedaba el mapa por el propio
+                    // orden de los bloques anteriores. Se reestablece aqui un zoom de trabajo real
+                    // (4.0, el mismo "zoom de trabajo real de F-3" que ya usa AR-12e mas abajo) para
+                    // volver a la situacion que este bloque siempre quiso comprobar de verdad: el
+                    // mundo NO cabe entero en el viewport, asi que el rectangulo SI debe verse.
+                    //
+                    // SEGUNDA causa real, encontrada al comprobar que el arreglo de arriba por si
+                    // solo NO bastaba (seguia en FALLO tras fijar el zoom): el settings.json REAL
+                    // de esta maquina (%LOCALAPPDATA%\Terrakeep\settings.json) tenia
+                    // "IsMinimapVisible":false - UpdateMinimapViewport() colapsa el rectangulo
+                    // ANTES de mirar el zoom si este ajuste esta en false (primer early-return de
+                    // la funcion, MainWindow.xaml.cs). Este arnes carga el CharacterFileService/
+                    // SettingsViewModel reales de esta maquina (nunca uno aislado, a diferencia de
+                    // otros _SOLO que restauran window.json/settings.json a proposito) - el ajuste
+                    // llevaba en false desde una ronda de pruebas anterior que lo toco y no lo
+                    // devolvio a su valor, sin que ningun bloque de este arnes lo supiera. Se fija
+                    // aqui explicitamente a True (mismo criterio "arrange" ya usado por
+                    // Settings.Language en otros bloques de este mismo Main) para que la
+                    // comprobacion sea determinista pase lo que pase en el disco real.
+                    vm.Settings.IsMinimapVisible = true;
+                    var scrollF8 = Descendientes<ScrollViewer>(window).FirstOrDefault(sv => sv.Name == "WorldMapScroll");
+                    vm.Exploration.Zoom = 4.0;
+                    scrollF8?.UpdateLayout();
+                    DoEvents(); DoEvents();
                     var minimapImg = Descendientes<System.Windows.Controls.Image>(window).FirstOrDefault(i => i.Name == "MinimapImage");
                     Console.WriteLine($"F-8: MinimapImage encontrado={minimapImg != null}, con el bitmap real del mundo={minimapImg?.Source != null} (esperado True)");
                     if (minimapImg == null || minimapImg.Source == null) Console.WriteLine("FALLO: F-8 - el minimapa no muestra el bitmap real del mundo");
                     var minimapRect = Descendientes<System.Windows.Shapes.Rectangle>(window).FirstOrDefault(r => r.Name == "MinimapViewportRect");
-                    Console.WriteLine($"F-8: MinimapViewportRect encontrado={minimapRect != null}, visible={minimapRect?.IsVisible} (esperado True)");
-                    if (minimapRect == null || !minimapRect.IsVisible) Console.WriteLine("FALLO: F-8 - el rectangulo de viewport del minimapa no aparece");
+                    Console.WriteLine($"F-8: con zoom={vm.Exploration.Zoom} (mundo NO cabe entero) -> MinimapViewportRect encontrado={minimapRect != null}, visible={minimapRect?.IsVisible} (esperado True)");
+                    if (minimapRect == null || !minimapRect.IsVisible) Console.WriteLine("FALLO: F-8 - el rectangulo de viewport del minimapa no aparece con el mundo parcialmente visible");
 
                     // F-14 (auditoria de Opus vs TEdit, E-16/E-17): el informe generado debe
                     // contener la semilla REAL del mundo (no un valor inventado) y el censo.
@@ -5579,6 +5639,12 @@ internal static partial class Program
                         Console.WriteLine("FALLO: AR-EX2 - no se encontro WorldMapScroll/WorldMapImage o no hay mundo cargado");
                     else
                     {
+                        // Mismo motivo real que el arreglo de F-8 (mas arriba en este Main): el
+                        // settings.json REAL de esta maquina tenia "IsMinimapVisible":false
+                        // (residuo de una ronda de pruebas anterior que lo toco y no lo devolvio),
+                        // lo que colapsa el rectangulo del minimapa ANTES de mirar el zoom -
+                        // fijado aqui explicitamente para que AR-EX2-MINIMAPA sea determinista.
+                        vm.Settings.IsMinimapVisible = true;
                         FijarTamaño(window, 1400, 900);
                         DoEvents(); DoEvents();
                         double zoomAntesEx = vm.Exploration.Zoom;
@@ -6060,7 +6126,14 @@ internal static partial class Program
                         LocalizationService.Instance.SetLanguage("en");
                         vm.Exploration.SelectedCategory = WorldSearchCategory.All;
                         vm.Exploration.WorldSearchText = "lava";
-                        WaitForDispatcher(2600);
+                        // Mismo bug de fondo ya arreglado en A8-02 (mas arriba en este Main()):
+                        // WaitForDispatcher(2600) fijo es una carrera contra el reloj, no contra el
+                        // estado real - bajo carga real de la maquina el barrido puede tardar mas.
+                        // Sondeo real con margen generoso en su lugar.
+                        long limiteEx4Idioma = Environment.TickCount64 + 60_000;
+                        while (vm.Exploration.IsSearching && Environment.TickCount64 < limiteEx4Idioma)
+                        { DoEvents(); System.Threading.Thread.Sleep(1); }
+                        DoEvents();
                         int nResEn = vm.Exploration.WorldSearchResults.Count;
                         foreach (var (wEn, hEn) in new (double, double)[] { (1400, 900), (1180, 860), (1080, 700) })
                         {

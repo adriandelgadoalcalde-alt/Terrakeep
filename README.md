@@ -17,6 +17,14 @@ instantáneo.
 - **Exploración de mundos**: carga un `.wld` y navega su mapa completo con pan/zoom, busca
   minerales/tiles/paredes/líquidos, marca resultados en el mapa, revisa cofres y puntos de
   reaparición, y edita la dificultad del mundo (Clásico/Experto/Maestro/Viaje).
+- **Guía de progresión** con cobertura absoluta: el camino vanilla completo más 25 tramos de
+  Calamity Mod, evaluados en vivo contra tu personaje y mundo reales ya cargados (banderas de
+  jefes, NPCs del pueblo, vida máxima, objetos, ganchos...). Nunca un falso "listo": cualquier
+  cosa que un editor de archivos estáticos no pueda comprobar de verdad se marca como tal, con el
+  motivo explicado.
+- **Servidor propio**: hospeda tu propio servidor dedicado de Terraria o tModLoader (con
+  selector de mods reales) directamente desde la app, sin salir de Terrakeep - estado en vivo,
+  registro y uso de recursos.
 - **Español e inglés en vivo**, sin reiniciar la aplicación.
 - Deshacer/rehacer, copia de seguridad automática antes de cada guardado, y ninguna escritura
   sin confirmación explícita.
@@ -24,6 +32,10 @@ instantáneo.
 ![Personaje y Librería](docs/screenshots/02-personaje.png)
 
 ![Exploración del mundo](docs/screenshots/03-exploracion.png)
+
+![Guía de progresión](docs/screenshots/05-guia.png)
+
+![Tu propio servidor](docs/screenshots/06-servidor.png)
 
 ![Interfaz en inglés](docs/screenshots/04-about-settings-en.png)
 

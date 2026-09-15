@@ -31,9 +31,20 @@ public sealed partial class GuideRequisitoViewModel : ObservableObject
     public bool NoEvaluable => _resultado.NoEvaluable;
     public string Icono => Cumplido ? "✓" : NoEvaluable ? "?" : "○";
     public string Linea => _textos.Format(_resultado.TextoClave, LocalizationService.Instance.Language, _resultado.TextoArgs);
-    public string? Motivo => _resultado.MotivoNoEvaluableEnEscritorio;
+    // Bug real (A10-IDIOMA-BARRIDO, 15-sep-2026): la primera version exponia
+    // MotivoNoEvaluableEnEscritorio (texto literal en español fijado desde Terrakeep.Core) tal
+    // cual, sin pasar por ningun catalogo de idioma - se quedaba en español con la app en ingles
+    // en los 6 tramos con un requisito de Defensa. Ahora el resultado solo trae una CLAVE
+    // (MotivoClave) y esta propiedad la resuelve aqui, en la capa que SI conoce el idioma
+    // (LocalizationService, strings_es.json/strings_en.json - mismo diccionario que el resto de
+    // la interfaz, no el catalogo de la Guia sincronizado del mod).
+    public string? Motivo => string.IsNullOrEmpty(_resultado.MotivoClave) ? null : LocalizationService.Instance[_resultado.MotivoClave];
 
-    private void OnIdiomaCambiado(object? sender, PropertyChangedEventArgs e) => OnPropertyChanged(nameof(Linea));
+    private void OnIdiomaCambiado(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(Linea));
+        OnPropertyChanged(nameof(Motivo));
+    }
 }
 
 public sealed partial class GuidePasoViewModel : ObservableObject

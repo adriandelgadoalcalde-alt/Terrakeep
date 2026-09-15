@@ -15850,3 +15850,171 @@ no un hueco de esta ronda.
   converters nuevos en el `Application` en blanco del arnés).
 - Binario en `C:\Users\adrian\AppData\Local\Programs\Terrakeep\` sustituido tras `dotnet build -c
   Release` (ver más abajo).
+
+## 15-sep-2026 (cierre final de la sesión) - Triaje real de los 21 `FALLO`, bug real de idioma en
+## la Guía cerrado, versión 3.1.0 con changelog/instalador, capturas reales del README
+
+Encargo del coordinador, cierre de toda la sesión: (1) revisar uno a uno los 21 `FALLO` del último
+recorrido completo y cerrar los reales; (2) actualizar Acerca de/changelog y subir versión; (3)
+recompilar Release, sustituir el binario instalado y generar el instalador; (4) actualizar las
+capturas Y el texto del README.md del repo (encargo ampliado en dos mensajes del coordinador
+mientras esto ya estaba en marcha) con datos reales presentables, sin nada tipo "UIA-Test"; (5)
+commit local (nunca push).
+
+### Parte 1 - Triaje real de los 21 `FALLO` (no solo confiar en el listado antiguo)
+
+En vez de dar el listado de la noche anterior por bueno, se relanzó el recorrido completo de
+`Terrakeep.App.Tests` de cero para tener el estado REAL de hoy. Resultado real, importante:
+**la composición exacta de los `FALLO` varía de una ejecución a otra** (22 en la primera pasada,
+20 en la segunda, con solapamiento parcial) - confirma con evidencia nueva lo que `CLAUDE.md` y
+`bitacora.md` ya llevan documentando desde hace días: buena parte de este arnés depende de
+entrega REAL de ratón/teclado sintético a la ventana en esta sesión de Claude Code, algo que no es
+determinista aquí.
+
+**Cerrados de verdad (bugs reales, no del arnés):**
+
+- **[GUIA-IDIOMA] Bug real de producción, encontrado por `A10-IDIOMA-BARRIDO`**: los 6 tramos con
+  un requisito de Defensa mostraban su motivo ("La defensa real depende de la armadura...") en
+  ESPAÑOL aunque la app estuviera en inglés. Causa real: `GuideEvaluator.cs` (`Terrakeep.Core`,
+  sin acceso a `LocalizationService` porque vive en la capa que NO conoce idiomas) fijaba el texto
+  LITERAL en español directamente en `ResultadoRequisitoGuia.MotivoNoEvaluableEnEscritorio`, en
+  vez de una clave - rompía el mismo contrato que el resto de la Guía sí respeta (`TextoClave` +
+  `GuideTextCatalog`, resuelto en la capa de presentación). Arreglado: el campo pasa a llamarse
+  `MotivoClave` (`GuideModel.cs`), `GuideEvaluator.cs` fija claves (`guide_motive_defense`,
+  `guide_motive_life_crystals`, `guide_motive_active_npc`, `guide_motive_weapon_damage`,
+  `guide_motive_flag_calamity`, `guide_motive_flag_unsupported`, `guide_motive_load_data`) y
+  `GuideRequisitoViewModel.Motivo` (`Terrakeep.App`) las resuelve contra `LocalizationService`
+  (nuevas claves en `strings_es.json`/`strings_en.json`), con refresco en vivo al cambiar idioma
+  (`OnIdiomaCambiado`, mismo patrón ya usado por `Linea`). Verificado: `A10-IDIOMA-BARRIDO` pasa
+  de "6 textos NUEVOS en español con la app en inglés" a 0 en la siguiente pasada completa, y la
+  captura real `05-guia.png` (ver Parte 4) confirma el motivo en español correcto con la app en
+  español.
+- **[F-8] Falso positivo real de DOS causas distintas en el propio arnés** (`Terrakeep.App.Tests`,
+  no producción): el bloque que comprueba que el rectángulo de viewport del minimapa se vea
+  corría justo después de "Ajustar a la ventana" (zoom al 8%, mundo entero visible - el propio
+  código de producción, `MainWindow.xaml.cs.UpdateMinimapViewport()`, oculta el rectángulo A
+  PROPÓSITO en ese caso, "igual que cualquier minimapa real") sin volver a poner un zoom de
+  trabajo antes de comprobar. Segunda causa, más honesta todavía: el `settings.json` REAL de esta
+  máquina (`%LOCALAPPDATA%\Terrakeep\settings.json`) tenía `"IsMinimapVisible":false` - residuo de
+  alguna ronda de pruebas anterior que lo tocó y no lo devolvió, silenciando el minimapa en
+  CUALQUIER zoom para cualquier ejecución del arnés desde entonces (y, sin que nadie lo notara,
+  también en la app real instalada de este usuario). Arreglado en el arnés (zoom real de trabajo +
+  `vm.Settings.IsMinimapVisible = true` explícito antes de comprobar, mismo criterio en el bloque
+  gemelo `AR-EX2-MINIMAPA`) y en el `settings.json` real de esta máquina (`IsMinimapVisible`
+  devuelto a `true` a mano - no es dato de personaje/mundo, es una preferencia de la app, y todo
+  apunta a que quedó así por una ronda de pruebas, no por elección real del usuario).
+- **[A8-02 / "Punto 4"] Carrera real contra el reloj en el propio arnés**: `WaitForDispatcher(1720)`
+  (A8-02) y `WaitForDispatcher(2600)` (`AR-EX4-IDIOMA`) daban por completado el barrido real de
+  "lava" sobre `roca_negra.wld` (11MB, 8400x2400 tiles) a un tiempo FIJO, sin mirar el estado real
+  - con la máquina bajo carga (varios `dotnet build`/`test` de este mismo repo en paralelo, algo
+  que pasó de verdad varias veces esta sesión) el barrido real podía tardar más, y la comprobación
+  leía `IsSearching`/`WorldSearchResults` demasiado pronto. Sustituido en los dos sitios por un
+  sondeo real del estado (`while (vm.Exploration.IsSearching ...) DoEvents();`, con
+  `Thread.Sleep(1)` real entre vueltas, mismo motivo ya documentado en el propio `WaitForDispatcher`)
+  con margen generoso (60s) - una comprobación de CORRECCIÓN, no de rendimiento.
+
+**Confirmados como deuda YA conocida, documentación vigente (no se tocan)**: `AR-11f`/`AR-15`/
+`AR-EX1` (mismo `MinHeight`/reparto vertical de Exploración ya aceptado a propósito noches
+anteriores, mismos números exactos en las dos pasadas de hoy - 800px/503px, 21 de 26 NPCs, 51px
+visibles); `T-H/F2` (foco de teclado intermitente, deuda desde el 11-sep); `AR-LAY` (1 elemento,
+`SlotGridPanel` de Personaje/Equipamiento a 1080x700 en español, zona no tocada esta noche, mismo
+hallazgo exacto que la ronda anterior). `A9-13-IDIOMA` no volvió a fallar en ninguna pasada de hoy
+(su historial de falsos positivos, documentado más arriba en este mismo fichero, sigue siendo la
+explicación correcta de por qué aparece alguna vez).
+
+**Familia de falsos positivos por entrega de ratón/teclado sintético, confirmada de nuevo hoy con
+composición distinta cada vez** (`UI-BLOQUEADA`, `AR-EX2-PAN`, `AR-EX2-MINIMAPA`, `H5-05` en una
+sola de las dos pasadas) - mismo límite ya documentado extensamente en `CLAUDE.md` y en este
+fichero (el ratón/teclado sintético no siempre llega de verdad a la ventana en esta sesión). No se
+fuerza ningún arreglo de producción sin evidencia real de un bug - revisado el código de
+`OnWorldMapMouseDown/Move/Up` (`MainWindow.xaml.cs`) y no hay nada sospechoso, el patrón es
+correcto.
+
+**Hallazgo nuevo, sin cerrar, dejado documentado para una ronda futura con depurador**: el
+recorrido COMPLETO del arnés colgó de forma reproducible (4 veces seguidas) justo después de
+`AR-EX4-PNG`, con CPU al 100% de un núcleo (~500 CPU-segundos acumulados y subiendo) y
+`Responding=True` - no es un deadlock de mensajes de Windows, es más bien un bucle real que nunca
+cumple su condición de salida. Se probaron dos hipótesis reales (los bucles nuevos de sondeo de
+A8-02/AR-EX4-IDIOMA con y sin `Thread.Sleep(1)`) sin cambiar el resultado, así que el bucle
+responsable no es ninguno de los dos - sigue sin identificar. Aplicada la regla de las dos veces:
+se para aquí. Las capturas del README (Parte 4) y la verificación de las Partes 1-3 NO dependen de
+este recorrido completo (usan modos de foco `README_SHOTS=1`/`GUIA_SOLO=1` que salen mucho antes
+de llegar a esa zona del `Main()`), así que no bloquea el resto del cierre. Pendiente: adjuntar un
+depurador real (Visual Studio) a una ejecución colgada para ver la pila de llamadas exacta.
+
+### Parte 2 - `dotnet test`
+
+`Terrakeep.Core.Tests`: **539/539** (verificado tres veces, incluida la versión final tras el
+arreglo de `GuideModel`/`GuideEvaluator`). `Terrakeep.App.ViewModels.Tests`: **484/484**. Sin
+regresión en ningún momento de la ronda.
+
+### Parte 3 - Versión 3.1.0, changelog y Acerca de
+
+Bump de versión siguiendo el criterio YA establecido del proyecto (solo minor, patch siempre en
+0): `3.0.0` -> `3.1.0` en `Terrakeep.App.csproj` (`Version`/`FileVersion`/`AssemblyVersion`) y en
+`installer/TerrakeepSetup.iss` (`MyAppVersion`). Entrada nueva en `Assets/changelog.json`
+resumiendo lo más importante de la noche para el usuario final: la Guía con cobertura absoluta
+(vanilla + 25 tramos de Calamity) evaluada en vivo, la pestaña Servidor para hospedar su propio
+servidor dedicado sin salir de Terrakeep, y el arreglo real de la barra de zoom de Exploración
+(mismo criterio ya establecido: KeepQA/mejoras de arnés internas no se listan en el changelog de
+cara al usuario). `AboutViewModel.Version` se deriva sola de `AssemblyVersion` - verificado con
+captura real (`04-about-settings-en.png`, Parte 4) que muestra "Version 3.1.0" y la entrada nueva
+en primer lugar del changelog, en los dos idiomas, sin recortes ni solapes.
+
+### Parte 4 - Capturas y texto reales del README.md del repo
+
+Encargo ampliado por el coordinador mientras esto ya estaba en marcha: las capturas de
+`docs/screenshots/` (01/02/03/04) llevaban desde el 5-sep-2026 (versión 2.1.0) - de antes del
+idioma completo, de la Librería rediseñada dentro de Personaje, del Editor de mundos real, y muy
+de antes de la Guía/Servidor de esta noche. Nuevo modo de foco permanente `README_SHOTS=1`
+(`Terrakeep.App.Tests/PruebasCapturasReadme.cs`, enganchado en `Program.cs` junto al resto de
+modos `*_SOLO`) - reutilizable en cualquier cierre futuro, no un script de usar y tirar:
+
+- Personaje real Calamity `adrian` (copia temporal como `adrian.plr`/`adrian.tplr`, NUNCA el
+  original) + mundo real `roca_negra.wld` (copia temporal `roca_negra.wld`) - mismo criterio de
+  copia que el resto del arnés. Nombres de fichero SIN prefijo de arnés a propósito: la cabecera
+  de la app muestra el nombre de fichero tal cual (`header_file_version_line`), y
+  "readme-harness-adrian.plr" se veía feo en una primera captura de prueba - corregido.
+  Resolución 1920x1080 (SizeClass Extra, una sola línea en la franja de vitales).
+- **Bug real encontrado revisando la PRIMERA tanda de capturas, antes de darlas por buenas**: la
+  tarjeta destacada de Inicio salía como "Continuar con UIA-Test" - `session.json` real de esta
+  máquina traía el último personaje de una ronda de pruebas anterior de este mismo arnés. Corregido
+  cargando el personaje real ANTES de capturar Inicio (el evento `CharacterLoaded` real deja la
+  sesión al día) - la recaptura ya no muestra ningún nombre sintético. `PersonajeInnerTabIndex`
+  tenía el mismo problema (se había quedado en Apariencia, 3, de una sesión anterior) - fijado a
+  mano a Objetos (0) para que la captura de Personaje muestre lo más representativo (equipo +
+  Librería). Nombres del formulario de Servidor ("Terrakeep-Captura-README") cambiados a algo
+  presentable ("Mi servidor"/"Mundo compartido") antes de la captura final.
+- **06-servidor.png es un servidor REAL, no el formulario vacío**: mismo camino real que
+  `HOSTING_SOLO` (`Hosting.IniciarCommand`, puerto 27978 para no chocar con nada), esperado a
+  `EnEscucha` de verdad (confirmado en la captura: punto verde, "En escucha", CPU/RAM reales) y
+  detenido limpio al terminar (PID verificado muerto).
+- `05-guia.png` (NUEVA, README no mostraba esta pestaña en absoluto) y `06-servidor.png` (NUEVA)
+  añadidas a `docs/screenshots/`; `01-inicio.png`/`02-personaje.png`/`03-exploracion.png`/
+  `04-about-settings-en.png` regeneradas con datos reales de hoy. `README.md` actualizado: dos
+  párrafos nuevos en "Qué hace" (Guía y Servidor) y las dos imágenes nuevas insertadas junto a las
+  demás - texto y capturas ya reflejan el estado real de esta noche.
+- `session.json` real de esta máquina borrado al terminar (quedaba apuntando a un fichero temporal
+  ya eliminado) - se regenera solo con datos limpios en el próximo arranque real.
+
+### Archivos tocados esta ronda
+
+- `Terrakeep.Core/Guia/GuideModel.cs` (`MotivoNoEvaluableEnEscritorio` -> `MotivoClave`).
+- `Terrakeep.Core/Guia/GuideEvaluator.cs` (motivos como clave, no texto literal).
+- `Terrakeep.App/ViewModels/GuideViewModel.cs` (`Motivo` resuelto vía `LocalizationService`, con
+  refresco en vivo al cambiar idioma).
+- `Terrakeep.App/Assets/strings_es.json`/`strings_en.json` (7 claves nuevas `guide_motive_*`).
+- `Terrakeep.App/Assets/changelog.json` (entrada `3.1.0`).
+- `Terrakeep.App/Terrakeep.App.csproj` (versión `3.1.0`).
+- `installer/TerrakeepSetup.iss` (`MyAppVersion` `3.1.0`).
+- `Terrakeep.App.Tests/Program.cs` (arreglo F-8/AR-EX2-MINIMAPA, sondeo real en A8-02/
+  AR-EX4-IDIOMA, gancho `README_SHOTS=1`).
+- `Terrakeep.App.Tests/PruebasCapturasReadme.cs` (nuevo).
+- `README.md` (texto de "Qué hace" ampliado, 2 capturas nuevas insertadas).
+- `docs/screenshots/{01-inicio,02-personaje,03-exploracion,04-about-settings-en,05-guia,
+  06-servidor}.png` (regeneradas/nuevas).
+- Binario en `C:\Users\adrian\AppData\Local\Programs\Terrakeep\` sustituido (build Release 3.1.0).
+- `installer/output/TerrakeepSetup-3.1.0.exe` generado y verificado con una instalación/
+  desinstalación silenciosa real en una carpeta de prueba (gitignorado, no es parte del repo).
+- `%LOCALAPPDATA%\Terrakeep\settings.json` (`IsMinimapVisible` restaurado a `true`) y `session.json`
+  (borrado) de esta máquina - no son parte del repo, es estado real de la app instalada.

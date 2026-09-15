@@ -1,5 +1,26 @@
 [
   {
+    "version": "3.1.0",
+    "date": "15 de septiembre de 2026",
+    "date_en": "September 15, 2026",
+    "summary": "Nueva pestaña Guía: hoja de ruta de progresión con cobertura absoluta (vanilla al 100% + 25 tramos de Calamity Mod), evaluada en vivo contra tu propio personaje y mundo cargados. Nueva pestaña Servidor para hospedar tu propio servidor dedicado de Terraria/tModLoader sin salir de la app. Además, la barra de zoom de Exploración deja de quedarse pegada a los botones de arriba en anchos de ventana reducidos.",
+    "summary_en": "New Guide tab: a full progression roadmap (100% vanilla + 25 Calamity Mod stages), evaluated live against your own loaded character and world. New Server tab to host your own dedicated Terraria/tModLoader server without leaving the app. Also, the Exploration zoom bar no longer sits flush against the buttons above it at narrower window widths.",
+    "added": [
+      "Pestaña Guía: hoja de ruta completa de progresión (vanilla al 100% + 25 tramos de Calamity Mod), con el objetivo actual evaluado en vivo contra tu personaje y mundo cargados - banderas de jefes, NPCs del pueblo, vida máxima, objetos y ganchos reales, siempre con el motivo explícito en cualquier requisito que un editor de archivos estáticos no pueda comprobar de verdad (nunca un falso \"listo\" ni un falso \"no estás listo\").",
+      "Pestaña Servidor: hospeda tu propio servidor dedicado de Terraria o tModLoader (con selector de mods reales si lo activas) directamente desde Terrakeep, con estado en vivo, registro y uso de recursos - reutiliza el mismo motor real ya probado de ServidorKeep."
+    ],
+    "added_en": [
+      "Guide tab: a full progression roadmap (100% vanilla + 25 Calamity Mod stages), with the current objective evaluated live against your loaded character and world - real boss flags, town NPCs, max health, items and hooks, always with an explicit reason for any requirement a static file editor genuinely cannot check (never a false \"ready\" or a false \"not ready\").",
+      "Server tab: host your own dedicated Terraria or tModLoader server (with a real mod picker if enabled) directly from Terrakeep, with live status, logs and resource usage - reuses the same real, already-tested engine from ServidorKeep."
+    ],
+    "fixed": [
+      "La barra de zoom de Exploración (\"−\"/\"+\"/\"Restablecer\"/\"Ajustar a la ventana\"/\"Exportar a PNG...\") quedaba pegada sin espacio a la fila de botones de arriba cuando la ventana envolvía a un ancho reducido (aprox. 1080-1170px)."
+    ],
+    "fixed_en": [
+      "The Exploration zoom bar (\"−\"/\"+\"/\"Reset\"/\"Fit to window\"/\"Export to PNG...\") sat flush against the button row above it whenever the window wrapped at a narrower width (roughly 1080-1170px)."
+    ]
+  },
+  {
     "version": "3.0.0",
     "date": "14 de septiembre de 2026",
     "date_en": "September 14, 2026",
