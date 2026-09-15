@@ -1088,6 +1088,17 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // KEEPQA_VIEWPORT_SOLO=1 (15-sep-2026): barrido de KeepQA de contenedores con scroll REAL
+        // desplazados hasta el final (verificarBordeViewport.js, pieza nueva de esa misma noche).
+        // Cuerpo real en AuditoriaViewportScroll.cs (misma clase parcial) - ver alli el catalogo
+        // completo de los 5 paneles reales cubiertos.
+        if (Environment.GetEnvironmentVariable("KEEPQA_VIEWPORT_SOLO") == "1")
+        {
+            EjecutarKeepQaViewportScrollSolo(window, vm);
+            Console.WriteLine("DONE (KEEPQA_VIEWPORT_SOLO)");
+            Environment.Exit(0);
+        }
+
         // FALLO3_SOLO=1 (14-sep-2026): investigacion dedicada del Fallo 3 (caja de resultados de
         // Exploracion "muy pequeña... se come casi todo el espacio disponible... queda mucho
         // espacio sin aprovechar"). Cuerpo real en AuditoriaKeepQA.cs (misma clase parcial).
