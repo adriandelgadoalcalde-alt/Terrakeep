@@ -15542,3 +15542,87 @@ deje de ser 0px cuando el `WrapPanel` envuelve.
 - `bitacora.md` (esta entrada).
 - Ningún archivo de `Terrakeep.App` (producción) tocado - a propósito, ver "No aplicado a
   propósito" arriba.
+
+## 15-sep-2026 (ronda siguiente, sin pistas previas) - Bug real de la barra de zoom de
+## Exploración cerrado en el XAML: 8px de margen superior al `StackPanel` de zoom (`MainWindow.
+## xaml:4440`), verificado con `AR-EX6`/`EXPTOOLBAR_SOLO=1` antes/después - `dotnet test` sigue en
+## 539/539+484/484, binario instalado sustituido
+
+Encargo del coordinador (independiente, sin citar la ronda anterior a propósito): revisar la
+pestaña Exploración con el arnés real del proyecto a varios anchos entre 1080 y 1920px, buscar
+problemas reales de layout con geometría medida (no a ojo) y arreglar cualquiera que se confirme.
+Resultado: es exactamente el mismo bug ya diagnosticado y dejado sin tocar la ronda anterior
+("Barra de zoom de Exploración apretada a ~1180px", entrada de arriba) - se confirma aquí de
+cero con el mismo arnés (`EXPTOOLBAR_SOLO=1`, mundo real `roca_negra.wld`) y se cierra en el
+XAML.
+
+### Confirmación real (antes de tocar nada)
+
+`dotnet build Terrakeep.App.Tests/Terrakeep.App.Tests.csproj -c Debug` (0/0) +
+`EXPTOOLBAR_SOLO=1 Terrakeep.App.Tests.exe`, 7 anchos reales (1080x700 / 1170x860 / 1180x860 /
+1320x860 / 1500x860 / 1520x860 / 1920x1080), mundo real `roca_negra.wld` ya cargado:
+
+- **1080x700 y 1170x860 → FALLO**: "el bloque de zoom se solapa con 2 elemento(s) vecino(s) de la
+  misma fila" (los 2 botones "Cargar mundo (.wld)..."/"Vista previa de mundo nuevo" de la línea
+  1). Geometría real volcada: línea 1 termina en `y≈195,63-196,31px` (redondeo del volcado), el
+  `StackPanel` de zoom (`MainWindow.xaml:4440`, `Margin="20,0,0,0"`, sin margen superior) empieza
+  en `y=196,00px` exactos - solape/toque de ~0,3px, indistinguible de 0.
+- **1180/1320/1500/1520/1920 → sin FALLO** (el `WrapPanel` exterior no envuelve a estos anchos con
+  este mundo/título).
+
+Mismo patrón, mismos números que la ronda anterior - confirmado de forma independiente.
+
+### Arreglo aplicado
+
+`Terrakeep.App/MainWindow.xaml:4440`: `Margin="20,0,0,0"` → `Margin="20,8,0,0"` en el
+`StackPanel Orientation="Horizontal"` de los 5 botones de zoom. 8px, misma escala 4/6/10/14/20 ya
+usada en el resto de esta barra (P-5) y mismo valor que el caso gemelo ya catalogado
+(`KeepQA/src/regresion/casos/terrakeep-cabecera-botones-sin-espacio-salto-linea.json`, barra de
+Personaje, `MainWindow.xaml:1783`).
+
+**Diferencia real con el caso gemelo, medida y documentada en el propio XAML** (comentario nuevo
+antes de la línea 4440): el `WrapPanel` exterior de Exploración (`MainWindow.xaml:4412`) NO tiene
+`ItemHeight` fijo (a diferencia del de Personaje, `ItemHeight="44"`), así que la fila SIN envolver
+(la inmensa mayoría de anchos reales, 1180-1920px+) sigue midiendo su alto por los botones (33px,
+sin cambiar) y el margen superior nuevo solo en este `StackPanel` desplaza su centrado vertical
+~4px hacia abajo respecto a sus 4 hermanos de fila (confirmado con el propio volcado de
+`AR-EX6`: a 1180x860 el `StackPanel` pasó de `y=125` a `y=129`, el resto de hermanos sin cambiar).
+4px es la unidad mínima de la propia escala del proyecto (4/6/10/14/20) - un `ItemHeight` fijo
+habría evitado ese matiz pero agrandaría el hueco bajo la barra en TODOS los anchos, no solo el
+rango 1080-1170px que de verdad lo necesita (huella mayor que el propio bug). Aceptado a
+propósito, documentado en el XAML para que no haga falta re-descubrirlo.
+
+### Verificación real tras el arreglo
+
+`dotnet build` (0/0) + `EXPTOOLBAR_SOLO=1` de nuevo, mismos 7 anchos: **0 FALLO en los 7** -
+`fuera-de-ventana=0`, `solapes-entre-botones=0`, `solapes-con-vecinos-de-fila=0` en todos. Salto
+de línea real en el caso envuelto: `y=204,00` (línea 2) vs `y≈195,63` (fin de línea 1) a 1080x700,
+y `y=160,00` vs `y≈151,63` a 1170x860 - **~8,37px de aire real**, ya no 0.
+
+`dotnet test Terrakeep.slnx` completo: **539/539** `Terrakeep.Core.Tests` (11s) + **484/484**
+`Terrakeep.App.ViewModels.Tests` (2m 22s) - mismos números exactos que antes del cambio, sin
+regresión.
+
+### Binario instalado sustituido
+
+`dotnet build Terrakeep.App/Terrakeep.App.csproj -c Release` (0/0) y copia manual de
+`Terrakeep.exe`/`Terrakeep.dll`/`Terrakeep.Core.dll`/`Terrakeep.deps.json`/
+`Terrakeep.runtimeconfig.json`/`CommunityToolkit.Mvvm.dll`/`Assets\` a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\` (mismo patrón ya presente en esa carpeta desde
+antes de esta ronda - framework-dependiente, no el publish autocontenido de `install.ps1`/
+`TerrakeepSetup.iss`, que es el que de verdad empaqueta el instalador público). `diff -rq` de
+`Assets\` entre el build nuevo y el instalado: sin diferencias. `Terrakeep.exe` instalado
+verificado con `Get-Item ... VersionInfo.FileVersion` = `3.0.0.0`, `LastWriteTime` = la del build
+de esta ronda. Lanzado con `Start-Process` real: `Responding=True`, `MainWindowTitle=Terrakeep`
+tras 4s, cerrado limpio después.
+
+### Archivos tocados esta ronda
+
+- `Terrakeep.App/MainWindow.xaml` (el arreglo real: `Margin="20,8,0,0"` + comentario explicando
+  la causa y el matiz de los 4px, línea 4440 y alrededores).
+- `bitacora.md` (esta entrada).
+- Binario en `C:\Users\adrian\AppData\Local\Programs\Terrakeep\` sustituido (no es parte del
+  repo git).
+- No se toca `Terrakeep.App.Tests/AuditoriaBarraExploracion.cs` ni `Program.cs` - `AR-EX6`/
+  `EXPTOOLBAR_SOLO` ya existían de la ronda anterior y no necesitaron ningún cambio para detectar
+  y verificar este arreglo.

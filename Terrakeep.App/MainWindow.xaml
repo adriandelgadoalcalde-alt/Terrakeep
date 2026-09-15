@@ -4437,7 +4437,28 @@
                             Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="{Binding Loc[explore_readonly_badge], Mode=OneWay}" Style="{StaticResource CaptionText}" />
                     </Border>
-                    <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center"
+                    <!-- AR-EX6 (15-sep-2026, ronda de cierre): este WrapPanel (arriba, sin ItemHeight
+                         fijo) envuelve este StackPanel a una segunda linea con el mundo real
+                         cargado en cualquier ancho de 1080 a 1170px (roca_negra.wld, titulo corto
+                         "roca negra") - comportamiento QUERIDO de R-11, pero al ocurrir dejaba
+                         0px exactos de salto entre la linea 1 y la linea 2 (medido con el arnes,
+                         Terrakeep.App.Tests/AuditoriaBarraExploracion.cs: linea 1 termina en
+                         y=195,63/196,31px, este StackPanel empezaba en y=196,00px), la MISMA
+                         categoria de bug (0px de salto de linea) ya arreglada en la barra de
+                         Personaje (MainWindow.xaml:1783, ver KeepQA/src/regresion/casos/
+                         terrakeep-cabecera-botones-sin-espacio-salto-linea.json). Margen superior
+                         8px (escala 4/6/10/14/20 de P-5, arriba en este mismo WrapPanel) igual
+                         que alli. Diferencia real con ese caso: aqui el WrapPanel exterior NO
+                         tiene ItemHeight fijo, asi que en el caso NO envuelto (la inmensa mayoria
+                         de anchos reales, 1180-1920px+) el centrado vertical de ESTE StackPanel
+                         dentro de su fila se desplaza ~4px hacia abajo respecto a sus vecinos
+                         (fila la sigue marcando la altura de los botones, 33px, sin cambiar) -
+                         medido y aceptado: 4px es la unidad minima de la propia escala del
+                         proyecto, por debajo de cualquier umbral de solape/contencion real, y
+                         arreglar ese matiz sin tocarlo exigiria un ItemHeight fijo que agrandaria
+                         el hueco bajo la barra en TODOS los anchos (no solo el rango 1080-1170px
+                         que realmente lo necesita) - una huella mayor que el propio bug. -->
+                    <StackPanel Orientation="Horizontal" Margin="20,8,0,0" VerticalAlignment="Center"
                                 Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
                         <!-- P-8 (auditoria Opus vs TEdit): "−"/"+" eran los unicos botones sin
                              tooltip de la fila; "Restablecer" no decia a que restablecia. -->
