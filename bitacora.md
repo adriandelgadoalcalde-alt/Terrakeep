@@ -16648,3 +16648,60 @@ Commit local unicamente de `Terrakeep.App.Tests/Program.cs` (nunca `git push`, n
 ajenos a esta ronda que ya estaban sin commitear de otra sesion activa en este mismo repo - guia/
 textos EN-ES, `GuideViewModel.cs`, `GuideEvaluationEngine.cs`, `MainWindow.xaml` con cambios de
 otra ronda).
+
+## AR-EX-HSCROLL, addenda: hallazgo paralelo de Fable integrado (AuditoriaViewportScroll.cs + verificarDesbordamientoHorizontal.js) — 16-sep-2026
+
+Mensaje del coordinador a media ronda: investigacion paralela (Fable) encontro la MISMA causa de
+fondo desde otro angulo - el volcado real `volcado-viewport-scroll.json` (generado por
+`AuditoriaViewportScroll.cs`, pieza ya existente de la noche anterior) SI tenia capturado el
+`ScrollViewer` exacto responsable (`exploracion_resultados`) pero nunca volcaba
+`ViewportWidth`/`ExtentWidth` - sesgo sistematico de eje en los CUATRO extractores de la familia
+Keep (Terrakeep/Starvekeep/TerrakeepTrainer/TerrakeepMod), no solo un despiste de esta ronda.
+Herramienta ya construida por esa investigacion paralela: `Downloads\KeepQA\src\desbordamiento-
+horizontal\verificarDesbordamientoHorizontal.js` (canario 5/5 OK, documentado en PATRONES.md).
+
+**Cableado real en esta ronda** (complementa, no sustituye, el chequeo AR-EX-HSCROLL de arriba, que
+sigue siendo el que de verdad falla contra el bug):
+
+- `Terrakeep.App.Tests/AuditoriaViewportScroll.cs`, `VolcarViewport` (usada por los 5 paneles
+  reales que cubre esta pieza): anade `viewportAncho`/`extentAncho` (`sv.ViewportWidth`/
+  `sv.ExtentWidth`) al elemento volcado - contrato exacto que consume la herramienta nueva. Mismo
+  campo anadido a `editor_seguridad_exterior` (el otro `ScrollViewer` que esta pieza vuelca a mano,
+  fuera de `VolcarViewport`).
+- Escenario 5 (`exploracion_resultados`, la lista de resultados de Exploracion): ahora fija
+  `SelectedCategory=Chests`/`ChestViewMode=0` antes de medir (la categoria "Todo" por defecto NO
+  reproduce el bug - confirmado, ver mas abajo) y anade una SEGUNDA entrada al volcado,
+  `exploracion_resultados_sidebar260`, con `Settings.ExplorationSidebarWidth` forzado a 260px (el
+  extremo real del `GridSplitter`) y restaurado despues (nunca deja el `.json` de ajustes del
+  usuario tocado). A proposito SIN `ScrollToEnd()` para esta segunda entrada (a diferencia del resto
+  de la pieza): un `ListBox` virtualizado solo mide el ancho de las filas REALIZADAS, y forzar el
+  scroll al final mide otras filas - se necesita la posicion de REPOSO real, mismo criterio que
+  AR-EX-HSCROLL.
+
+**Verificacion real, honesta sobre el resultado** (nunca "parece que ya esta"): regenerado el
+volcado de verdad (`KEEPQA_VIEWPORT_SOLO=1 dotnet run --project Terrakeep.App.Tests`) y pasado por
+`node verificarDesbordamientoHorizontal.js <volcado real>` - la herramienta corre limpia contra los
+7 contenedores reales (incluidos los 2 de Exploracion, con `viewportAncho`/`extentAncho` reales
+poblados por primera vez) y confirma `RESULTADO: OK` en ESTE volcado concreto: la entrada
+`exploracion_resultados_sidebar260` midio `viewportAncho=204px`/`extentAncho=149,2px` (sin
+desbordamiento) - **no reproduce el mismo numero que AR-EX-HSCROLL** (`viewport=224px`/
+`extent=279,4px`, CON desbordamiento real, en Program.cs). Investigado el porque hasta donde da esta
+ronda: el `ViewportWidth` real depende de si la barra de scroll VERTICAL esta visible en ese momento
+exacto (~20px de diferencia, del orden del ancho de una scrollbar), y el reparto de alto entre
+categoria/resultados de esta pieza (que ejecuta despues de otros 4 escenarios que tocan la ventana)
+no coincide pixel a pixel con el barrido aislado y controlado de AR-EX-HSCROLL (ventana fijada a
+1180x860 justo antes, sin nada mas tocado). **LIMITE REAL, no ocultado**: el mecanismo de la familia
+(extractor + `verificarDesbordamientoHorizontal.js`) queda correctamente cableado y verificado
+end-to-end con datos reales, pero el GATE DE VERDAD que falla contra este bug hoy es AR-EX-HSCROLL
+(Program.cs, 3 `FALLO:` reales reproducidos con ejecucion real) - el volcado de esta pieza concreta
+no lo reproduce con la secuencia de pasos que trae hoy. Ronda futura: si se quiere que este volcado
+TAMBIEN lo cace de forma fiable, aislar el escenario 5 en su propia ventana recien fijada (igual que
+hace AR-EX-HSCROLL) en vez de heredar el estado de los 4 escenarios anteriores.
+
+**Arreglo visual NO aplicado** (el mensaje del coordinador proponia explorar arreglar el propio
+`ListBox`, p.ej. `HorizontalScrollBarVisibility="Disabled"` explicito) - se mantiene la separacion
+pedida en el encargo original: el arreglo se reserva para el agente ciego aparte, mismo protocolo de
+esta noche. `MainWindow.xaml`/`Theme.xaml` no se tocan en esta ronda.
+
+Commit local unicamente de `Terrakeep.App.Tests/AuditoriaViewportScroll.cs` (mismo criterio que el
+resto de esta ronda: nunca los archivos ajenos de la otra sesion activa en este repo).

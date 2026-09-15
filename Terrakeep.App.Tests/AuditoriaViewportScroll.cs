@@ -104,6 +104,17 @@ internal static partial class Program
                 orden_z = OrdenZ(sv),
                 capa = "panel",
                 viewportAlto = sv.ViewportHeight,
+                // 16-sep-2026 (hallazgo real de Fable, KeepQA/src/desbordamiento-horizontal): este
+                // extractor SOLO volcaba el eje vertical desde que se escribio (15-sep-2026) -
+                // sesgo de eje, no una omision puntual: verificarBordeViewport.js nacio de un bug
+                // de "ultima fila pegada al final del scroll" (vertical) y el eje X de un
+                // ScrollViewer nunca se midio en ningun extractor de la familia. Contrato real que
+                // consume verificarDesbordamientoHorizontal.js (nuevo): viewportAncho=ViewportWidth,
+                // extentAncho=ExtentWidth - con los dos presentes, esa pieza decide con la propia
+                // aritmetica del motor (extentAncho>viewportAncho => scroll lateral real), sin
+                // depender de que los hijos volcados abajo esten completos.
+                viewportAncho = sv.ViewportWidth,
+                extentAncho = sv.ExtentWidth,
             });
 
             int n = 0;
@@ -204,7 +215,7 @@ internal static partial class Program
                             DoEvents(); DoEvents();
                             Rect rSeg;
                             try { rSeg = RectCompleto(scrollSeguridad, window); } catch (InvalidOperationException) { rSeg = Rect.Empty; }
-                            elementos.Add(new { id = "editor_seguridad_exterior", tipo = "scrollviewer_editar_completo", padre_id = (string?)null, x = rSeg.X, y = rSeg.Y, ancho = rSeg.Width, alto = rSeg.Height, grupo = (string?)null, orden_z = OrdenZ(scrollSeguridad), capa = "panel", viewportAlto = scrollSeguridad.ViewportHeight });
+                            elementos.Add(new { id = "editor_seguridad_exterior", tipo = "scrollviewer_editar_completo", padre_id = (string?)null, x = rSeg.X, y = rSeg.Y, ancho = rSeg.Width, alto = rSeg.Height, grupo = (string?)null, orden_z = OrdenZ(scrollSeguridad), capa = "panel", viewportAlto = scrollSeguridad.ViewportHeight, viewportAncho = scrollSeguridad.ViewportWidth, extentAncho = scrollSeguridad.ExtentWidth });
                             Console.WriteLine($"VIEWPORT-editor_prefijos: ScrollViewer de seguridad (exterior) real, caja={rSeg}, ViewportHeight={scrollSeguridad.ViewportHeight:0.#}px ScrollableHeight={scrollSeguridad.ScrollableHeight:0.#}px VerticalOffset={scrollSeguridad.VerticalOffset:0.#}px tras ScrollToEnd (L-d: confirma si el panel Editar ENTERO desborda a 700px)");
                         }
                         else
@@ -317,6 +328,15 @@ internal static partial class Program
                 DoEvents(); DoEvents();
                 Console.WriteLine($"VIEWPORT-exploracion_resultados: busqueda 'lava' -> WorldSearchResults.Count={vm.Exploration.WorldSearchResults.Count} (esperado >=1)");
 
+                // 16-sep-2026 (mismo hallazgo real de Fable): la categoria por defecto ("Todo") NO
+                // reproduce el bug - el contenido real que desborda es el de "Cofres/Por tipo"
+                // (confirmado con AR-EX-HSCROLL, Program.cs: 55,4px de sobra a sidebar=260px en
+                // esa categoria exacta, 0px en "Todo"). Sin fijar la categoria aqui, este volcado
+                // mediria un ancho de contenido que nunca reproduce lo que el usuario vio.
+                vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                vm.Exploration.ChestViewMode = 0;
+                DoEvents(); DoEvents();
+
                 var listBoxEx = Descendientes<ListBox>(window).FirstOrDefault(lb => ReferenceEquals(lb.ItemsSource, vm.Exploration.WorldSearchResults));
                 if (listBoxEx == null)
                 {
@@ -327,7 +347,69 @@ internal static partial class Program
                     var svEx = Descendientes<ScrollViewer>(listBoxEx).FirstOrDefault();
                     VolcarViewport("exploracion_resultados", "scrollviewer_listbox", svEx, listBoxEx, "contenido");
                     Captura("viewport-exploracion-resultados");
+
+                    // 16-sep-2026 (mismo hallazgo real de Fable): el ancho de fabrica del sidebar
+                    // (320px, Settings.ExplorationSidebarWidth) SI cabe casi exacto (margen medido
+                    // de solo 4,6px - ver AR-EX-HSCROLL, Program.cs) - un volcado a ese ancho no
+                    // reproduce el bug real que vio el usuario. Segunda entrada, al ancho REAL
+                    // minimo del GridSplitter (260px, clamp real en SettingsViewModel), que SI lo
+                    // reproduce de verdad (confirmado con AR-EX-HSCROLL: 55,4px de scroll horizontal
+                    // real en Cofres/Por tipo a este mismo ancho). A PROPOSITO sin ScrollToEnd aqui
+                    // (a diferencia de VolcarViewport): un ListBox virtualizado solo mide el ANCHO
+                    // de las filas REALIZADAS, y cuales estan realizadas depende de la posicion de
+                    // scroll - AR-EX-HSCROLL midio el desbordamiento en la posicion de REPOSO (recien
+                    // cambiada de categoria, sin tocar el scroll), no al final; forzar ScrollToEnd
+                    // aqui median otras filas y dejaba de reproducir el mismo numero. Guarda y
+                    // restaura el ajuste real del usuario - este arnes nunca deja el .json de
+                    // settings tocado al salir.
+                    double anchoSidebarAntesVp = vm.Settings.ExplorationSidebarWidth;
+                    try
+                    {
+                        vm.Settings.ExplorationSidebarWidth = 260;
+                        DoEvents(); DoEvents();
+                        var svEx260 = Descendientes<ScrollViewer>(listBoxEx).FirstOrDefault();
+                        if (svEx260 == null)
+                        {
+                            Console.WriteLine("VIEWPORT-exploracion_resultados_sidebar260: ScrollViewer real no encontrado - omitido");
+                        }
+                        else
+                        {
+                            // La captura "exploracion_resultados" de arriba ya dejo este MISMO
+                            // ScrollViewer al final (ScrollToEnd, dentro de VolcarViewport) - sin
+                            // esto, la posicion de reposo real que se quiere medir aqui heredaria
+                            // ese desplazamiento y mediria las filas equivocadas.
+                            svEx260.ScrollToHome();
+                            DoEvents(); DoEvents();
+                            Rect rSvEx260;
+                            try { rSvEx260 = RectCompleto(svEx260, window); }
+                            catch (InvalidOperationException ex) { rSvEx260 = Rect.Empty; Console.WriteLine($"VIEWPORT-exploracion_resultados_sidebar260: RectCompleto fallo - {ex.Message}"); }
+                            elementos.Add(new
+                            {
+                                id = "exploracion_resultados_sidebar260",
+                                tipo = "scrollviewer_listbox",
+                                padre_id = (string?)null,
+                                x = rSvEx260.X,
+                                y = rSvEx260.Y,
+                                ancho = rSvEx260.Width,
+                                alto = rSvEx260.Height,
+                                grupo = (string?)null,
+                                orden_z = OrdenZ(svEx260),
+                                capa = "panel",
+                                viewportAlto = svEx260.ViewportHeight,
+                                viewportAncho = svEx260.ViewportWidth,
+                                extentAncho = svEx260.ExtentWidth,
+                            });
+                            Console.WriteLine($"VIEWPORT-exploracion_resultados_sidebar260: ScrollViewer real (SIN ScrollToEnd, posicion de reposo real - mismo criterio que AR-EX-HSCROLL), ViewportWidth={svEx260.ViewportWidth:0.#}px ExtentWidth={svEx260.ExtentWidth:0.#}px ScrollableWidth={svEx260.ScrollableWidth:0.#}px HorizontalScrollBarVisibility={svEx260.HorizontalScrollBarVisibility} computado={svEx260.ComputedHorizontalScrollBarVisibility}");
+                            Captura("viewport-exploracion-resultados-sidebar260");
+                        }
+                    }
+                    finally
+                    {
+                        vm.Settings.ExplorationSidebarWidth = anchoSidebarAntesVp;
+                        DoEvents(); DoEvents();
+                    }
                 }
+                vm.Exploration.SelectedCategory = WorldSearchCategory.All;
                 vm.Exploration.WorldSearchText = string.Empty;
                 DoEvents();
             }
