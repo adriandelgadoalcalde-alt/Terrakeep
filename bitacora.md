@@ -16123,3 +16123,65 @@ verdad en el futuro, el criterio real que sí lo demuestra es el que se usó aqu
 `dotnet-dump` y comparar DOS volcados reales separados por al menos un minuto - si la pila del hilo
 de UI es IDÉNTICA en los dos (mismo `Program.cs:<línea>`, misma pila completa), es un cuelgue de
 verdad; si cambia, solo es lento.
+
+
+## 16-sep-2026 - Un solo cerebro de Guia (T1): GuideEvaluator.cs deja de tener logica propia
+
+Encargo de I+D (I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md, recomendacion T1/hallazgo H3): dos evaluadores
+de Guia independientes (aqui y en TerrakeepMod/Common/Guia/EvaluadorGuia.cs) con las mismas
+funciones (Fraccion, Contar, Preparacion, PasoCompletado, el despacho de requisitos) escritas dos
+veces y sincronizadas solo con un script manual que copiaba DATOS, nunca comprobaba la LOGICA. El
+lado DST ya resolvio el mismo problema ejecutando el Lua real del mod (Starvekeep) en vez de
+reimplementarlo en C#; aqui no hay nada que interpretar, asi que la forma real es un unico motor
+compartido detras de una interfaz pequena de "fuente de estado", tal como proponia el propio
+documento.
+
+**Diseno.** Tres archivos nuevos en Terrakeep.Core/Guia/: IGuideStateProvider (la interfaz -
+capacidades Has* mas los datos/consultas que el despacho necesita), GuideEvaluationEngine (el
+despacho de requisitos + Fraccion/Contar/Preparacion/PasoCompletado, movidos aqui tal cual - antes
+vivian como metodos de GuideEvaluator) y DesktopGuideStateProvider (implementa la interfaz
+envolviendo un GuideContext estatico - la misma logica que antes eran metodos privados de
+GuideEvaluator: Inventario/CuantosLleva/NombreDeObjeto/EvaluarNpc contra World.Npcs/EvaluarGancho
+via GuideHooks/EvaluarBandera via GuideFlags, con las mismas claves de motivo NoEvaluable de
+siempre). GuideEvaluator.cs pasa a ser un adaptador de ~20 lineas con la MISMA firma publica de
+siempre (constructor + Evaluar/PasoCompletado/Preparacion) - cero cambios en GuideViewModel.cs.
+
+En TerrakeepMod: ProveedorEstadoGuiaMod.cs nuevo implementa IGuideStateProvider leyendo el juego en
+vivo (EstadoJugadorGuia/BanderasGuia/ContentSamples) - sus cuatro capacidades son siempre true
+(EstadoJugadorGuia ya se degrada sola a ceros/false sin partida activa, asi que sin partida el
+requisito sale "no cumplido" en vez de "no evaluable", exactamente como antes). El modelo de datos
+del mod (ModeloGuia.cs) pasa a ser alias de tipo GLOBALES hacia estos mismos tipos de
+Terrakeep.Core.Guia (C# 10+, soportado con el LangVersion=12.0 ya fijado alli) - asi el mod entero
+sigue escribiendo TipoRequisito/RequisitoGuia/PasoGuia/TramoGuia/ResultadoRequisito sin cambiar ni
+un using. Lo unico que si cambio en el mod: los sitios que leian texto YA RESUELTO (paso.Titulo,
+tramo.Nombre, estado.Linea...) porque Core no puede tener eso (no conoce idioma a proposito, mismo
+motivo por el que ResultadoRequisitoGuia ya traia TextoClave/TextoArgs en vez de un texto fijo) -
+ahora son metodos de extension en TerrakeepMod/Common/Guia/TextosGuiaMod.cs nuevo.
+
+**Verificacion real de los dos lados, sin atajos.**
+- Terrakeep.Core: dotnet build en verde para net10.0 Y net8.0 (Core sigue multi-target a proposito
+  para poder cargarse dentro de tModLoader). dotnet test: 539/539 en Terrakeep.Core.Tests +
+  485/485 en Terrakeep.App.ViewModels.Tests (App referenciado por el propio test project, compilo
+  sin tocar GuideViewModel.cs) - sin bajar respecto a antes del refactor.
+- Terrakeep.App: GUIA_SOLO=1 real (Terrakeep.App.Tests, personaje 'adrian' con Calamity real +
+  mundo 'roca_negra.wld' reales) -> Tramos.Count=46 (el total real sincronizado), 0 texto sin
+  resolver (ninguna clave cruda entre corchetes), MostrarAvisoCalamity=True, algun requisito
+  evaluable de verdad con personaje+mundo cargados=True - exactamente lo que ya daba antes.
+- TerrakeepMod: scriptserificar-guia.ps1 -Calamity completo (compilacion real con el Roslyn de
+  tModLoader, .tmod empaquetado, cliente real lanzado, recorrido EN VIVO de los 46 tramos) ->
+  AUTOPRUEBA GUIA COMPLETA, avisos de datos: 0, 0 comprobaciones en rojo, capturas reales de cada
+  tramo. Detalle completo en la bitacora hermana de TerrakeepMod (misma fecha).
+
+Redespliegue real de los dos ejecutables tras el cambio: scripts\compilar.ps1 en TerrakeepMod
+(.tmod real en la carpeta Mods de verdad, 632971 bytes) e installer\install.ps1 aqui (publish
+Release win-x64 autocontenido + instalado en %LocalAppData%\Programs\Terrakeep, sin tocar el
+instalador .iss porque no hay cambio de version, solo de arquitectura interna).
+
+### Archivos tocados
+
+- Terrakeep.Core/Guia/GuideEvaluator.cs: pierde toda la logica propia, pasa a adaptador.
+- Terrakeep.Core/Guia/IGuideStateProvider.cs (nuevo), GuideEvaluationEngine.cs (nuevo),
+  DesktopGuideStateProvider.cs (nuevo).
+- Repo hermano TerrakeepMod: EvaluadorGuia.cs (fachada), ModeloGuia.cs (alias globales),
+  ProveedorEstadoGuiaMod.cs (nuevo), TextosGuiaMod.cs (nuevo), mas los sitios de texto ya resuelto
+  - ver la bitacora de ese repo para el detalle completo.
