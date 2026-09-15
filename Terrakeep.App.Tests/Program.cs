@@ -1018,6 +1018,18 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // EXPTOOLBAR_SOLO=1 (15-sep-2026): version RAPIDA y aislada de AR-EX6 (ver
+        // AuditoriaBarraExploracion.cs para el cuerpo real y el porque detallado) - diagnostico
+        // de la barra de zoom de Exploracion en las 6 resoluciones reales, sin pagar el resto
+        // del recorrido completo. El chequeo PERMANENTE (sin variable de entorno) vive detras de
+        // AR-EX5 mas abajo en este mismo Main() y se ejecuta siempre.
+        if (Environment.GetEnvironmentVariable("EXPTOOLBAR_SOLO") == "1")
+        {
+            EjecutarComprobacionBarraExploracion(window, vm);
+            Console.WriteLine("DONE (EXPTOOLBAR_SOLO)");
+            Environment.Exit(0);
+        }
+
         // VITALS_SOLO=1 (14-sep-2026, bug real confirmado por el usuario: "defensa/dinero/horas
         // solo se ven con la ventana maximizada/grande, y ademas los botones de Guardar etc se
         // solapan al reducir"): barrido real de anchos sobre la cabecera de Personaje, con
@@ -6127,6 +6139,18 @@ internal static partial class Program
                     }
                 }
                 catch (Exception ex) { Console.WriteLine("AR-EX5-EXCEPTION: " + ex); }
+
+                // AR-EX6 (15-sep-2026, bug real reportado por el usuario mirando su propia
+                // pantalla a ~1180px: "los botones de la segunda fila de la barra de
+                // herramientas de Exploracion aparecen solapados/apretados", y sobre todo "keepqa
+                // tambien dejo pasar esto"): cierra el hueco real de cobertura - AR-02/AR-11/
+                // AR-EX1..5 miden la COLUMNA LATERAL de Exploracion, ninguno media la barra
+                // SUPERIOR (el StackPanel de zoom de MainWindow.xaml:4440). Cuerpo real en
+                // AuditoriaBarraExploracion.cs (misma clase parcial) - ver alli el porque
+                // detallado y la causa geometrica real confirmada. Se ejecuta SIEMPRE (sin
+                // variable de entorno), igual que el resto de AR-xx de este bloque, para que
+                // esto no pueda volver a colarse en silencio.
+                EjecutarComprobacionBarraExploracion(window, vm);
 
                 // Sexta auditoria de Opus, H6-08/H6-09/H6-10 ("el mapa muestra puntos rosas que
                 // el usuario cree que son mascotas -son NPCs- deberia verse solo cabezas de

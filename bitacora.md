@@ -15417,3 +15417,128 @@ problema.
 `volcado-geometria-vitals-real.json` regenerado (Parte 1) + `volcado-geometria-vitals-dinero-largo.
 json` y 6 capturas `vitals-dinero-largo-*.png` por cada una de las 3 configuraciones de dinero
 (Parte 2) en `Terrakeep.App.Tests/bin_keepqaDebug/net10.0-windows/keepqa-evidencia/`.
+
+## 15-sep-2026 (ronda siguiente) - Barra de zoom de Exploración "apretada" a ~1180px: causa real
+## confirmada con geometría (0px de salto de línea, NO desbordamiento horizontal) + cierre real del
+## hueco de KeepQA que la dejaba pasar (AR-EX6, chequeo PERMANENTE nuevo) - sin tocar el XAML a
+## propósito, deuda dejada para la ronda siguiente
+
+Encargo del coordinador: el usuario mandó una captura real de su pantalla con Terrakeep en
+Exploración a un ancho reducido (~1180px, similar a `compacto1180x860`) mostrando la fila de zoom
+("−"/"+"/"Restablecer"/"Ajustar a la ventana"/"Exportar a PNG...") apretada/solapada. Cita literal,
+muy en serio: **"keepqa tambien dejo pasar esto... eso es un problema critico para mi en keepqa que
+deje pasar cosas tan obvias"**. Dos fases estrictas: (1) diagnóstico con geometría real, (2) cerrar
+el hueco real de KeepQA - **sin tocar el XAML**, a propósito, para la ronda siguiente (misma
+disciplina de toda la noche: quien diagnostica y cierra el hueco de la herramienta no es quien
+aplica el arreglo visual).
+
+### Fase 1 - causa real, confirmada con números (no la que parecía a primera vista)
+
+Sospecha inicial razonable (documentada ya en el propio `MainWindow.xaml:4406-4411`, comentario de
+R-11): el `StackPanel Horizontal` de zoom (`MainWindow.xaml:4440-4472`) no envuelve internamente, así
+que a un ancho reducido podría pedir más sitio del que cabe y quedar empujado fuera de la ventana en
+silencio. **Descartada con evidencia real**: en NINGUNO de los anchos probados (1080 a 1920px) el
+StackPanel de zoom (410px de ancho fijo) pide más ancho del disponible - `fuera-de-ventana=0`
+siempre, incluso a 1080px.
+
+**Causa real, medida con un volcado completo de la fila** (`Terrakeep.App.Tests` nuevo,
+`EXPTOOLBAR_SOLO=1`, mundo real `roca_negra.wld`, título corto "roca negra"): el `WrapPanel`
+EXTERIOR (`MainWindow.xaml:4412`) sí envuelve correctamente el StackPanel de zoom a una segunda
+línea en cuanto la fila completa (2 botones + título + insignia "Solo lectura" + zoom) no cabe en
+una sola - eso es el comportamiento QUERIDO de R-11 y funciona bien. El problema real es que, en
+cuanto ese wrap ocurre, el StackPanel de zoom (`Margin="20,0,0,0"`, sin margen SUPERIOR) queda a
+**0px exactos** de la línea de arriba: medido con coordenadas reales a 1170x860, la línea 1
+(botones "Cargar mundo"/"Vista previa de mundo nuevo") termina en `y=195,63px` y el StackPanel de
+zoom empieza en `y=196,00px` - un hueco de 0,37px, indistinguible de cero visualmente. Es
+**exactamente la misma categoría de bug** (mismo número: 0px de salto de línea) ya catalogada en
+`KeepQA/src/regresion/casos/terrakeep-cabecera-botones-sin-espacio-salto-linea.json` para la barra
+de Personaje - solo que nunca medida en esta fila de Exploración.
+
+**Umbral real medido con un barrido fino adicional** (1080/1150/1160/1163/1164/1170/1180px, solo
+para el diagnóstico, no forma parte del chequeo permanente): el WrapPanel envuelve (y por tanto
+aparece el bug) a **cualquier ancho de 1080 a 1170px**, y deja de envolver **justo a partir de
+1180px** - un margen de apenas ~10-19px, el mismo tipo de umbral frágil que el propio comentario de
+R-11 ya advertía ("el margen es pequeño"). Esto explica también por qué las 6 resoluciones
+"de catálogo" (`1080/1180/1320/1500/1520/1920`) NO habrían cazado el bug si solo se prueba en
+1080 y 1180: el hueco real de 1081-1179px, justo donde cayó el caso del usuario ("parece ~1180px",
+una estimación visual, no un ancho exacto), queda sin cubrir - ver más abajo.
+
+### Fase 2 - hueco real de KeepQA cerrado
+
+Investigado por qué ninguna pieza ya existente lo cazó:
+
+- `verificarEspaciado.js` (Spacing Intelligence, 14-sep-2026, "salto_de_linea") **SÍ sabe medir
+  exactamente este tipo de bug** - es la misma pieza que ya cazó el caso gemelo de la barra de
+  Personaje - pero nunca recibió un volcado de ESTA fila. No es un hueco de lógica, es un hueco de
+  COBERTURA.
+- `verificarGeometria.js` (CONTENCIÓN/SOLAPE): tampoco recibió nunca un volcado de esta fila, y aun
+  recibiéndolo, un hueco de 0px entre hermanos que NO se solapan (solo se tocan) cae justo en el
+  límite entre sus dos comprobaciones - ninguna de las dos lo habría cazado con seguridad sin la
+  pieza de Spacing Intelligence.
+- `AR-02`/`AR-11`/`AR-EX1..5` (los chequeos ya existentes de Exploración en `Terrakeep.App.Tests`)
+  cubren la COLUMNA LATERAL (categorías/resultados/chips de Cofres) - ninguno mide la barra
+  SUPERIOR.
+
+**Cierre real**: chequeo nuevo `AR-EX6`, en fichero propio `Terrakeep.App.Tests/
+AuditoriaBarraExploracion.cs` (mismo criterio que `AuditoriaMaquetacion.cs`: no tocar el `Main()` de
+7000+ líneas de `Program.cs`, que ya colisionó una vez entre dos rondas en paralelo). Mide, en la
+fila real de Exploración con mundo cargado, las TRES formas honestas en que podría romperse:
+desbordamiento horizontal (botón más allá del borde de la ventana), solape directo entre botones
+hermanos, y solape del bloque de zoom con sus vecinos de fila (el bug real de esta ronda). Se
+engancha en DOS sitios de `Program.cs`:
+
+1. **Permanente, sin variable de entorno**, justo detrás de `AR-EX5` en el recorrido completo del
+   `Main()` - corre en cualquier `dotnet run` normal del arnés, igual que el resto de `AR-01..15`/
+   `AR-EX1..5`, para que esto no pueda volver a colarse en silencio.
+2. `EXPTOOLBAR_SOLO=1`, diagnóstico rápido aislado, mismo patrón que `VITALS_SOLO`/`SIDEBAR_SOLO`/
+   `EX3_SOLO`.
+
+**Resoluciones cubiertas - 7, no 6**: las 6 "de catálogo" (`KeepQA/src/resoluciones/catalogo.json`:
+minimo-terrakeep, arranque-terrakeep, y 3 paradas más cruzando los breakpoints Normal/Amplio, más
+FULLHD) más **una séptima parada propia de este chequeo, 1170x860** - la ZONA DE PELIGRO real medida
+en la Fase 1. Sin ella, el propio chequeo nuevo habría repetido el error que se le pedía cerrar:
+"pasa a 1080 y a 1180, luego no hay bug" - dejando sin cubrir todo el rango 1081-1179px donde cayó
+el caso real del usuario.
+
+### Verificación real de que el chequeo detecta de verdad el bug (no solo que compila)
+
+`EXPTOOLBAR_SOLO=1 Terrakeep.App.Tests.exe`, mundo real `roca_negra.wld`:
+
+- **1080x700 → FALLO** (esperado: "el bloque de zoom se solapa con 2 elemento(s) vecino(s) de la
+  misma fila").
+- **1170x860 → FALLO** (mismo mensaje - la zona de peligro real, la que ninguna resolución de
+  catálogo cubría).
+- **1180x860, 1320x860, 1500x860, 1520x860, 1920x1080 → sin FALLO** (el WrapPanel no envuelve a
+  estos anchos con este mundo/título, no hay bug que reportar).
+
+Con el XAML SIN TOCAR (a propósito, ver más abajo), el chequeo falla donde debe fallar y calla donde
+debe callar - la prueba honesta de que el hueco está cerrado de verdad, no solo "se añadió código".
+
+### No aplicado a propósito
+
+**No se toca `MainWindow.xaml`** en esta ronda - reservado a propósito para una ronda siguiente con
+un agente sin ninguna pista previa de dónde está el problema, misma disciplina ya seguida toda la
+noche en este proyecto (quien cierra el hueco de la herramienta no es quien aplica el arreglo
+visual). El arreglo real, cuando toque, es previsiblemente análogo al ya aplicado en la barra de
+Personaje (`terrakeep-cabecera-botones-sin-espacio-salto-linea.json`): dar un margen SUPERIOR real
+al `StackPanel` de zoom (`MainWindow.xaml:4440`, hoy `Margin="20,0,0,0"`) para que el salto de línea
+deje de ser 0px cuando el `WrapPanel` envuelve.
+
+### Verificación real
+
+- `dotnet build Terrakeep.App.Tests/Terrakeep.App.Tests.csproj -c Debug`: 0 advertencias, 0 errores,
+  varias veces (tras cada cambio).
+- `dotnet test Terrakeep.slnx`: **539/539** `Terrakeep.Core.Tests` (12s) + **484/484**
+  `Terrakeep.App.ViewModels.Tests` (2m 23s) - mismos números exactos, sin regresión (este chequeo
+  nuevo vive en `Terrakeep.App.Tests`, que no es un proyecto de `dotnet test`, sino un `.exe` de
+  arnés UI Automation - mismo patrón ya establecido para todo `AR-xx`).
+
+### Archivos tocados esta ronda
+
+- `Terrakeep.App.Tests/AuditoriaBarraExploracion.cs` (NUEVO - `AR-EX6` completo, causa real
+  documentada en su propia cabecera).
+- `Terrakeep.App.Tests/Program.cs` (dos líneas de enganche: llamada permanente tras `AR-EX5`, y
+  gancho `EXPTOOLBAR_SOLO=1`).
+- `bitacora.md` (esta entrada).
+- Ningún archivo de `Terrakeep.App` (producción) tocado - a propósito, ver "No aplicado a
+  propósito" arriba.
