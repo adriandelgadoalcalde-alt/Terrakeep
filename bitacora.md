@@ -16243,3 +16243,196 @@ Sin bug de producción real detrás de este hueco - D1/D2 ya funcionan bien cont
 LAY lleva desde el 6-sep-2026 encontrando y cerrando bugs reales de maquetación); es puramente un
 hueco preventivo del arnés, cerrado antes de que un cambio futuro lo abriera de verdad.
 `dotnet build` de `Terrakeep.App.Tests`: 0 avisos, 0 errores. Commit local (nunca push).
+
+## 16-sep-2026 - Segunda pasada real de los 21 `FALLO`: escépticos con la deuda ya documentada
+
+### Encargo
+El coordinador pidió repetir el triaje de los 21 `FALLO` del recorrido completo, esta vez sin
+copiar lo ya escrito - confirmar con evidencia nueva cada uno (¿de verdad es un límite del arnés
+al entregar ratón/teclado sintético, o esconde un bug real?), arreglar lo que sea de verdad un
+bug, e investigar si algún hermano de la familia (StarvekeepMod/TerrakeepMod) ya resolvió un
+problema parecido de entrega de input que se pueda portar aquí.
+
+### Punto de partida: OTRA sesión trabajando en el MISMO repo a la vez
+Antes de nada, aviso real que condicionó toda la ronda: `bitacora.md` había crecido de 16125 a
+16245 líneas SOLO mientras esta ronda estaba en marcha (commits `fbb8ca8e`/`88c5340d`/`b0009ae6`/
+`4f26a6e4` - aviso de versión X1, consolidación del cerebro de Guía T1, canario de AR-LAY), y
+`git status` mostraba cambios sin commitear en `WldChest.cs`/`WldReader.cs`/`WldWorld.cs`/
+`WldWriter.cs`/`ExplorationViewModel.cs`/`MainWindow.xaml.cs`/`WorldFileService.cs`/
+`strings_es.json`/`strings_en.json`/`MainWindow.xaml` y 3 test files - un editor de cofres/
+letreros del `.wld` en marcha, ajeno a este encargo. Mismo directorio de trabajo, dos sesiones
+reales a la vez: explica el motivo real (contención de CPU real entre varios `dotnet build`/`run`
+concurrentes, no un cuelgue de producción) de que el tercer recorrido COMPLETO de verificación de
+esta ronda se quedara sin avanzar más de 30 minutos exactamente en el mismo punto
+(`AR-EX4-PNG`, con CPU acumulada muy por debajo de lo esperado para ese tramo - 32s en 30 min,
+frente a los ~4,3s/5s reales medidos el 16-sep en máquina no compartida) hasta que se mató a mano
+- NO se repite el intento una tercera vez, siguiendo la regla de las dos veces; los otros DOS
+recorridos completos de esta misma ronda (antes y después de los arreglos, ver más abajo) SÍ
+llegaron a `DONE` limpio. **Para la próxima**: antes de lanzar un recorrido completo (5+ minutos
+reales), comprobar `Get-Process dotnet` - si hay más de un `dotnet` con CPU real acumulándose que
+no sea el propio, esperar o coordinar con quien lo esté usando.
+`Terrakeep.App/MainWindow.xaml` es un fichero compartido con esa otra ronda - el arreglo real de
+esta sesión (más abajo) se aisló con `git checkout` + reaplicado a mano sobre HEAD para comitear
+SOLO el hunk propio, sin tocar ni comitear el editor de cofres/letreros ajeno (se queda como
+estaba, sin commitear, tal y como lo dejó la otra sesión).
+
+### Cerrados de verdad (bugs reales de producción, no del arnés ni deuda de entorno)
+
+- **AR-LAY: `SlotGridPanel` de Personaje/Equipamiento pierde 18,9px a 1080x700 [es]**. Ya se había
+  "cerrado" el 14-sep (8,1px, ver más arriba en este mismo fichero) pero volvió a aparecer con un
+  déficit MAYOR. Investigado a fondo en vez de copiar el veredicto antiguo: el `AR14_SOLO=1`
+  aislado daba SIEMPRE 0 pérdidas (`SlotRowHost` con 190,1px reales), pero el recorrido COMPLETO
+  (con la Librería de la parte de abajo de la pestaña REALMENTE desplegada, `IsLibraryVisible`
+  quitándole `MinHeight=200` + `2*` al presupuesto compartido de la Grid exterior) medía
+  `SlotRowHost` en solo 147,4px - la fila `"*" MinHeight=84` de Armadura/Accesorios se quedaba
+  hambrienta y perdía 18,9px por abajo sin ningún scroll con el que alcanzarlos. Nada de
+  "entorno" ni "límite del arnés": es el mismo presupuesto de altura compartido, reproducible con
+  la app real, con la Librería desplegada mientras se equipa (uso normal, no un borde raro) a la
+  resolución mínima de la ventana. Revisado el propio `MainWindow.xaml`: el lateral IZQUIERDO
+  (Mascotas/Tintes) de esta MISMA fila fusionada ya tenía su propio `ScrollViewer` de seguridad
+  para el mismo tipo de apuro ("10 slots reales en 1 columna no siempre caben... NO sacrificar
+  legibilidad es más importante que nunca scrollear aquí") - el CENTRO (la rejilla real de
+  Armadura/Accesorios, la que de verdad se recortaba) era la única de las 3 columnas sin él.
+  Arreglo real, mismo patrón ya probado en el propio fichero: el `ContentControl` del centro pasa
+  a vivir dentro de un `ScrollViewer VerticalScrollBarVisibility="Auto"
+  HorizontalScrollBarVisibility="Disabled"` (`MainWindow.xaml`, ~línea 2719) - nunca se pierde
+  contenido de verdad, un scroll silencioso sustituye al recorte sin salida que dejaba
+  `ClipToBounds`. Verificado con el propio AR-LAY, en el recorrido COMPLETO real (Librería
+  desplegada, conjunto real equipado, 1080x700 [es]): de 1 firma perdida a **0**, 26/26
+  combinaciones de Equipamiento limpias.
+- **Bug real de idioma: el picker de prefijo (Biblioteca/Positivos/Negativos y sus grupos,
+  "Cuerpo a cuerpo +"/"A distancia +"/"Magia +"/...) se queda en español SIEMPRE**, encontrado por
+  casualidad real: la segunda pasada del recorrido completo (con el picker de prefijo real
+  abierto en ese momento por una prueba anterior, algo que la primera pasada no tenía) hizo que
+  `A10-IDIOMA-BARRIDO` pasara de 0 a 24 textos nuevos en español con la app en inglés
+  ("Cuerpo a cuerpo +" entre ellos) - la variabilidad de qué UI está abierta en cada pasada es
+  justo lo que dejó pasar este bug hasta ahora. Investigado en vez de descartarlo como ruido:
+  `PrefixGroupCatalog.cs` (`Terrakeep.Core`) YA tenía `NameEs`/`NameEn` bien poblados en cada
+  `PrefixGroup`/`PrefixMeta` de la tabla (traducción real, sin usar) - pero
+  `PrefixGroupButtonViewModel.Label`/`PrefixMetaButtonViewModel.Label` (`Terrakeep.App`) se fijaban
+  UNA sola vez en el constructor a `group.NameEs`/`meta.NameEs` a secas, ignorando `NameEn` por
+  completo y sin ningún refresco al cambiar de idioma en caliente - el mismo patrón exacto de bug
+  ya cerrado la noche anterior para los motivos de la Guía (`GuideEvaluator`/`MotivoClave`), esta
+  vez en el picker de prefijo. Arreglo real: las dos ViewModels pasan a `[ObservableProperty]
+  private string _label` calculado con `LocalizedContent.Pick(NameEs, NameEn)` (mismo mecanismo ya
+  usado por `LibraryItemViewModel.DisplayName`) y se suscriben al evento débil
+  `PropertyChangedEventManager` de `LocalizationService.Instance` (mismo patrón ya establecido en
+  `LibraryViewModel`/`AppearanceViewModel`, método con nombre, nunca una lambda) para refrescarse
+  en vivo. Verificado con un test nuevo, determinista, que NO depende de qué UI esté abierta en el
+  arnés (`ContenidoDelJuegoEnIdiomaTests.LosBotonesDelPickerDePrefijo_CambianAlCambiarDeIdiomaEnVivo`,
+  `Terrakeep.App.ViewModels.Tests`): confirma "Positivos"/"Cuerpo a cuerpo +" en español, "Positive"/
+  "Melee+" en inglés, y la vuelta a español en caliente - los tres pasos, sobre las MISMAS instancias
+  de ViewModel (no una nueva por idioma, la prueba real de que SÍ hay refresco en vivo).
+- **A8-02 - carrera real del propio arnés, en la dirección CONTRARIA a la ya arreglada el 15-sep**.
+  La ronda anterior ya había cambiado un `WaitForDispatcher` fijo por un sondeo real porque el
+  barrido de 'lava' podía tardar MÁS de lo esperado con la máquina cargada. Esta ronda encontró el
+  caso contrario, reproducido de verdad en el recorrido completo: con el barrido más RÁPIDO de lo
+  esperado (cache caliente tras `AR-EX4-PNG`, que corre justo antes), un único snapshot de
+  `IsSearching` a los 280ms fijos (250ms de debounce + margen) caía DESPUÉS de que la búsqueda ya
+  hubiera terminado, dando `IsSearching=False` en el snapshot aunque SÍ se hubiera activado de
+  verdad un instante antes (confirmado real: `WorldSearchResults.Count` llegaba a 1000 en la misma
+  pasada - la búsqueda sí corrió). Arreglado sondeando en CONTINUO desde que se fija el texto
+  (hasta 5s, mucho más que el debounce+barrido reales) en vez de un único punto fijo - capta
+  `IsSearching=True` en cualquier instante en que esté activo, sea el barrido rápido o lento,
+  cierra la carrera en los dos sentidos a la vez. Verificado: A8-02/A8-02b en verde en el
+  recorrido completo posterior, sin el falso `FALLO` de ninguna de las dos direcciones.
+
+### Investigado a fondo: la familia de entrega de ratón/teclado sintético, con el patrón real de StarvekeepMod portado aquí
+
+Se investigó (pedido explícito del encargo) si algún hermano de la familia ya había resuelto un
+problema parecido de entrega de input sintético. Encontrado y portado: `StarvekeepMod/bitacora.md`
+(~línea 5109, 14-sep-2026, calibración de DST) documenta el mismo síntoma exacto -
+`SetForegroundWindow` devolviendo `FALSE` con la ventana objetivo viva, visible y respondiendo
+("foreground lock timeout" real de Windows, un proceso normal no puede robarle el primer plano a
+otro salvo excepciones concretas) - y lo resolvió de verdad con `forzar_primer_plano()`
+(`KeepQA/src/entrada-dst/clicar_pantalla.py`): un toque de ALT (`keybd_event`) que desarma el
+bloqueo un instante + `AttachThreadInput` entre el hilo llamante y el hilo de la ventana objetivo
+(hace que `SetForegroundWindow` cuente como "el mismo" hilo que ya tiene el foco, condición que
+Windows SÍ permite) + verificación REAL con `GetForegroundWindow()` después, nunca fiándose del
+booleano de la API sola.
+
+**Portado tal cual a C#** (`Terrakeep.App.Tests/Program.cs`, `ForzarPrimerPlano(hwnd)`): mismos
+tres pasos (`keybd_event(VK_MENU)` down+up, `AttachThreadInput` real vía
+`GetWindowThreadProcessId`/`GetCurrentThreadId`, `BringWindowToTop`+`SetForegroundWindow`, detach),
+mismo criterio de verificación honesta (`GetForegroundWindow() == hwnd` después, nunca el booleano
+solo) con aviso explícito en consola si de verdad no se consigue. Sustituye los 8 sitios que antes
+llamaban a `SetForegroundWindow(hwnd)` a secas (incluidos los de `UI-BLOQUEADA`/`H5-05`/
+`T-H-FOCO`), y se añadió una llamada nueva antes del bloque `AR-EX2` completo (rueda/pan/minimapa),
+que antes NO forzaba primer plano en absoluto para el pan (solo el clic del minimapa lo hacía) -
+causa real, no solo "ratón compartido", detrás de una parte de los falsos negativos ya documentados
+de `AR-EX2-PAN` (el `mouse_event` real de un pan a nivel de SO puede irse a otra ventana si esta no
+está de verdad en primer plano).
+
+**Resultado real, medido con dos recorridos completos independientes (antes/después del arreglo,
+los dos con `DONE` limpio):**
+- **Familia de RATÓN** (`UI-BLOQUEADA`, `AR-EX2-PAN`, `AR-EX2-MINIMAPA`, `H5-05`): las dos pasadas
+  posteriores al arreglo terminaron LIMPIAS, sin ningún `FALLO` de esta familia - mejora real
+  medida, no solo teórica.
+- **Familia de TECLADO** (`T-H/F2`, `H5-14`): siguen fallando SIEMPRE, con evidencia mucho más
+  fuerte que antes de que es un límite genuino y no solo "SetForegroundWindow devuelve false":
+  `ForzarPrimerPlano` imprimió su propio aviso ("no se consiguió poner la ventana en primer plano
+  de verdad") en los 3 puntos que preceden a `T-H-FOCO`/`H5-14` en la MISMA pasada en que la
+  familia de ratón sí funcionaba con el MISMO mecanismo - es decir, incluso el truco real
+  ALT+`AttachThreadInput` que SÍ resuelve el foreground para DST (StarvekeepMod, juego real bajo
+  Steam) falla aquí de forma reproducible justo en la franja que antecede a los chequeos de
+  teclado. Cruzado con el hallazgo YA documentado de forma independiente en `TerrakeepMod/
+  bitacora.md` (línea ~329, calibración de WS7): `keybd_event` desde este mismo tipo de sesión "NO
+  llega al juego" con FNA/SDL, incluso con `SetForegroundWindow` devolviendo `true` y el foco
+  confirmado por el propio motor - la MISMA limitación de entrega de teclado sintético, en dos
+  motores de UI completamente distintos (WPF aquí, FNA/SDL allí), independiente del framework.
+  Conclusión con evidencia doble, no solo la palabra de `CLAUDE.md`: la entrega de TECLADO
+  sintético (`keybd_event`) es un límite genuino de esta sesión de Claude Code en Windows, ajeno
+  al framework de UI y no resoluble con el mismo truco que sí arregla el RATÓN - portar el patrón
+  de "inyectar el estado directamente" que usa TerrakeepMod (rellenar `Main.keyState`/
+  `PlayerInput.Triggers` a mano) no serviría aquí porque `T-H/F2`/`H5-14` existen PRECISAMENTE para
+  comprobar el camino real de foco/teclado del SO (`FocusVisualStyle`, `Keyboard.FocusedElement`)
+  que un estado inyectado a mano no ejercitaría de verdad - inyectar el estado sería cambiar QUÉ se
+  prueba, no arreglar CÓMO se prueba.
+
+### Confirmados como deuda YA conocida, re-verificados con números idénticos (no se tocan)
+
+`AR-11f`/`AR-15`/`AR-EX1` (mismo `MinHeight`/reparto vertical de la columna de Exploración,
+**exactamente los mismos números** en los DOS recorridos completos de esta ronda que en la del
+15-sep: 800px de contenido en 503px de viewport, 21/26 NPCs alcanzables a los 5 tamaños normales y
+18/26 con "Este mundo" también abierto a 1080x700, 51px visibles de categoría con resultados
+abiertos) - decisión YA razonada con números reales en rondas anteriores (subir el suelo
+arriesgaría reabrir AR-15/AR-EX1 por un problema real de presupuesto de alto, no de contenido
+inalcanzable de verdad: el scroll SIGUE ahí como red de seguridad). `A9-13-IDIOMA` no volvió a
+fallar en ninguna de las dos pasadas de esta ronda (su historial de falsos positivos por
+`settings.json` residual de una ronda de pruebas anterior sigue siendo la explicación correcta).
+
+### Verificación real de conjunto
+
+- `Terrakeep.Core.Tests`: **548/548** (incluye pruebas nuevas de otra sesión en marcha en este
+  mismo repo, ajenas a esta ronda - sin regresión de ningún test existente).
+- `Terrakeep.App.ViewModels.Tests`: **485/485** (484 + el test nuevo del picker de prefijo). El
+  único test que había fallado durante esta ronda (`LaLibreria_EnseñaLosNombresEnElIdiomaActivoY
+  LosBuscaEnEse`, con `Collection: []` en la primera aserción) se re-ejecutó en aislamiento real
+  (sin ningún otro `dotnet build`/`run` compitiendo por CPU en la máquina) y pasó limpio -
+  confirmado como el mismo tipo de flake por carga de máquina ya documentado varias veces en este
+  fichero (estaba corriendo el recorrido completo de `Terrakeep.App.Tests` en paralelo en el
+  momento del fallo), no un bug real.
+- `dotnet build` de los 3 proyectos tocados (`Terrakeep.App`, `Terrakeep.App.Tests`,
+  `Terrakeep.App.ViewModels.Tests`): 0 avisos, 0 errores en cada paso.
+- Dos recorridos COMPLETOS de `Terrakeep.App.Tests` (sin ningún `_SOLO`) llegaron a `DONE`: uno
+  ANTES de los arreglos (línea base real de los 21 `FALLO`, no solo el listado antiguo) y otro
+  DESPUÉS (confirma AR-LAY en 0, A8-02/A8-02b en verde, familia de ratón limpia, familia de
+  teclado con el mismo límite genuino con más evidencia). Un tercer intento se quedó sin avanzar
+  por la contención real con la otra sesión activa en la misma máquina (ver arriba) y se mató a
+  mano tras 30 minutos sin ningún progreso - no repetido, regla de las dos veces.
+
+### Archivos tocados esta ronda
+
+- `Terrakeep.App.Tests/Program.cs`: `ForzarPrimerPlano` (nuevo, reemplaza los 8 usos de
+  `SetForegroundWindow` a secas), sondeo continuo real de A8-02/A8-02b, llamada nueva de
+  `ForzarPrimerPlano` antes del bloque AR-EX2 (rueda/pan/minimapa).
+- `Terrakeep.App/MainWindow.xaml`: `ScrollViewer` de seguridad nuevo en el centro de la fila
+  fusionada de Equipamiento (aislado del resto de cambios sin commitear de la otra sesión activa
+  en el mismo repo - ver el aviso de arriba).
+- `Terrakeep.App/ViewModels/PrefixGroupButtonViewModel.cs`/`PrefixMetaButtonViewModel.cs`: `Label`
+  bilingüe real con refresco en vivo (antes, español fijo para siempre).
+- `Terrakeep.App.ViewModels.Tests/ContenidoDelJuegoEnIdiomaTests.cs`: test nuevo del picker de
+  prefijo en los dos idiomas.
+
+Commit local únicamente de estos 4 archivos (nunca `git push`, nunca los archivos sin commitear de
+la otra sesión activa en este mismo repo).

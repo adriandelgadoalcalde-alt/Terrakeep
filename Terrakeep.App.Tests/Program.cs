@@ -369,7 +369,7 @@ internal static partial class Program
                             else registro["aviso"] = "sin personajes reales que abrir - accion sin efecto";
                             break;
                         case "escape":
-                            SetForegroundWindow(hwnd);
+                            ForzarPrimerPlano(hwnd);
                             DoEvents();
                             PressKey(0x1B); // VK_ESCAPE
                             DoEvents();
@@ -2577,7 +2577,7 @@ internal static partial class Program
             if (filaResultado != null)
             {
                 var puntoSuperior = filaResultado.PointToScreen(new System.Windows.Point(filaResultado.ActualWidth / 2, filaResultado.ActualHeight / 2));
-                SetForegroundWindow(hwnd);
+                ForzarPrimerPlano(hwnd);
                 DoEvents();
                 RealClickAt((int)puntoSuperior.X, (int)puntoSuperior.Y);
                 WaitForDispatcher(200);
@@ -3603,7 +3603,7 @@ internal static partial class Program
         // riesgo nuevo).
         try
         {
-            SetForegroundWindow(hwnd);
+            ForzarPrimerPlano(hwnd);
             window.Activate();
             DoEvents();
 
@@ -3862,7 +3862,7 @@ internal static partial class Program
             // sobra para que el foco real del SO derive - visto flaquear 1/4 sin esto (Ctrl+S
             // inyectado a ningun sitio real, SaveConfirmationVisible se quedaba en False).
             // Mismo patron ya usado en la linea ~1745 para el test de foco por teclado.
-            SetForegroundWindow(hwnd);
+            ForzarPrimerPlano(hwnd);
             PressCtrlPlus(0x53); // VK_S
             DoEvents();
             DoEvents();
@@ -4126,8 +4126,6 @@ internal static partial class Program
                     vm.Exploration.WorldSearchText = "lava";
                     // A8-02 (auditoria de Opus vs TEdit, E-02): IsSearching debe activarse DURANTE
                     // el barrido real (no solo existir como propiedad) y apagarse al terminar.
-                    // Paso el debounce (250ms) primero, para que el barrido en segundo plano ya
-                    // este en marcha de verdad antes de mirar.
                     //
                     // Bug real de ESTE ARNES arreglado el 15-sep-2026 (cierre de sesion, triaje de
                     // FALLO): la espera de "hasta completar" era un WaitForDispatcher(1720) FIJO
@@ -4140,8 +4138,26 @@ internal static partial class Program
                     // aqui (A8-02) como en "Punto 4" mas abajo (mismo barrido, mismos datos, leidos
                     // demasiado pronto). Sustituido por un sondeo real del estado (mismo patron ya
                     // usado en HOSTING_SOLO para EnEscucha), con margen generoso.
-                    WaitForDispatcher(280);
-                    bool buscandoAMitad = vm.Exploration.IsSearching;
+                    //
+                    // Segunda causa real, encontrada el 15-sep-2026 (ronda de re-verificacion de
+                    // los 21 FALLO): un UNICO snapshot de IsSearching a los 280ms fijos (250ms de
+                    // debounce + 30ms de margen) es una carrera EN LA DIRECCION CONTRARIA - con la
+                    // maquina descargada (o con cache de disco/JIT ya caliente tras AR-EX4-PNG, que
+                    // corre justo antes) el barrido de 20,2M tiles puede terminar en pocos ms, y el
+                    // debounce+barrido entero cabe DENTRO de esos 280ms: a veces el snapshot cae
+                    // justo cuando ya ha terminado, dando "IsSearching=False" aunque SI se activo de
+                    // verdad un instante antes (confirmado real: WorldSearchResults.Count llega a
+                    // 1000 igualmente en la misma pasada, la busqueda si corrio). Arreglado sondeando
+                    // en continuo DESDE que se fija el texto (no un unico punto fijo): se capta
+                    // IsSearching=True en CUALQUIER instante en el que este activo, sea el barrido
+                    // rapido o lento - elimina la carrera en los dos sentidos a la vez.
+                    bool buscandoAMitad = false;
+                    long limiteInicioA802 = Environment.TickCount64 + 5_000; // 5s: mucho mas que el debounce de 250ms + cualquier barrido real
+                    while (Environment.TickCount64 < limiteInicioA802)
+                    {
+                        DoEvents(); System.Threading.Thread.Sleep(1);
+                        if (vm.Exploration.IsSearching) { buscandoAMitad = true; break; }
+                    }
                     // 60s de margen (no 15s): medido en esta misma sesion que 15s no bastaban con
                     // la maquina bajo carga real (otro build/test de este mismo repo corriendo en
                     // paralelo) - es una comprobacion de CORRECCION, no de rendimiento, mejor un
@@ -5672,6 +5688,15 @@ internal static partial class Program
                         vm.Settings.IsMinimapVisible = true;
                         FijarTamaño(window, 1400, 900);
                         DoEvents(); DoEvents();
+                        // 15-sep-2026 (ronda de re-verificacion de los 21 FALLO): el pan (b) y el
+                        // clic del minimapa (c) mandan mouse_event REAL a nivel de SO - si esta
+                        // ventana no esta de verdad en primer plano, el down/up puede irse a otra
+                        // ventana visible en ese mismo punto de pantalla y el arrastre no ocurre
+                        // nunca (la causa real, no solo "raton compartido", detras de una parte de
+                        // los falsos negativos ya documentados de AR-EX2-PAN). Antes solo (c) forzaba
+                        // primer plano; ahora se hace una vez aqui, para las tres comprobaciones.
+                        ForzarPrimerPlano(hwnd);
+                        DoEvents();
                         double zoomAntesEx = vm.Exploration.Zoom;
 
                         // (a) Zoom con rueda centrado en el cursor. Se parte de un zoom y un
@@ -5793,7 +5818,7 @@ internal static partial class Program
                             double huecoYMini = (miniImgEx.ActualHeight - bitmapMundo.PixelHeight * escalaMini) / 2;
                             int tileObjetivoX = (int)(bitmapMundo.PixelWidth * 0.75), tileObjetivoY = (int)(bitmapMundo.PixelHeight * 0.5);
                             var puntoMini = miniImgEx.PointToScreen(new Point(huecoXMini + tileObjetivoX * escalaMini, huecoYMini + tileObjetivoY * escalaMini));
-                            SetForegroundWindow(hwnd);
+                            ForzarPrimerPlano(hwnd);
                             DoEvents();
                             SetCursorPos((int)puntoMini.X, (int)puntoMini.Y);
                             System.Threading.Thread.Sleep(60);
@@ -6663,7 +6688,7 @@ internal static partial class Program
             // sistema operativo real nunca muestra el foco de una ventana en segundo plano) -
             // SetForegroundWindow real antes de SetFocus(), mismo patron ya usado para los
             // atajos Ctrl+ reales de mas arriba.
-            SetForegroundWindow(hwnd);
+            ForzarPrimerPlano(hwnd);
             var saveButton = root.FindFirst(TreeScope.Descendants, new AndCondition(
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
                 new PropertyCondition(AutomationElement.NameProperty, "Guardar")));
@@ -6729,7 +6754,7 @@ internal static partial class Program
             slotParaCopiar.Count = 7;
             slotParaCopiar.ToggleFavoriteCommand.Execute(null);
 
-            SetForegroundWindow(hwnd);
+            ForzarPrimerPlano(hwnd);
             var borderOrigen = FindBorderForSlot(window, slotOrigen);
             Console.WriteLine($"H5-14-FOCO: Border real del slot 20 encontrado en el arbol visual={borderOrigen != null} (esperado True)");
             if (borderOrigen != null)
@@ -6860,7 +6885,7 @@ internal static partial class Program
             }
 
             // Ctrl+1..6 real: salto directo entre las 6 pestañas raiz.
-            SetForegroundWindow(hwnd);
+            ForzarPrimerPlano(hwnd);
             PressCtrlPlus(0x33); // VK_3 -> Builds (indice 2)
             DoEvents(); DoEvents();
             Console.WriteLine($"H5-14-CTRL3: SelectedTabIndex tras Ctrl+3={vm.SelectedTabIndex} (esperado 2, Builds)");
@@ -8036,6 +8061,53 @@ internal static partial class Program
     [DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
     private const uint MOUSEEVENTF_LEFTDOWN = 0x0002, MOUSEEVENTF_LEFTUP = 0x0004;
+
+    // ForzarPrimerPlano (15-sep-2026, ronda de re-verificacion de los 21 FALLO): mismo problema
+    // real, mismo arreglo real, que StarvekeepMod ya encontro y resolvio calibrando DST el
+    // 14-sep-2026 (ver StarvekeepMod/bitacora.md linea ~5109 y KeepQA/src/entrada-dst/
+    // clicar_pantalla.py, funcion forzar_primer_plano) - Windows tiene un "foreground lock
+    // timeout" real: un proceso normal NO puede robarle el primer plano a otro salvo un puñado
+    // de excepciones concretas, y SetForegroundWindow a secas puede devolver FALSE en silencio
+    // (o, peor, devolver TRUE sin que el cambio ocurra de verdad) con la ventana objetivo viva,
+    // visible y respondiendo - exactamente la familia de falso negativo detras de UI-BLOQUEADA/
+    // AR-EX2-PAN/AR-EX2-MINIMAPA/H5-05/T-H-FOCO en este mismo arnes. El truco real que lo
+    // desbloquea (documentado por Microsoft como una de las excepciones reales a la regla): 1) un
+    // toque de ALT (keybd_event) "desarma" el bloqueo un instante, 2) AttachThreadInput entre el
+    // hilo llamante y el hilo de la ventana objetivo hace que SetForegroundWindow cuente como si
+    // fuera "el mismo" hilo que ya tiene el foco - condicion que Windows SI permite. Nunca fiarse
+    // del booleano de la API: se confirma DESPUES con GetForegroundWindow() == hwnd, igual que ya
+    // hace clicar_pantalla.py.
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr lpdwProcessId);
+    [DllImport("user32.dll")] private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+    [DllImport("user32.dll")] private static extern bool BringWindowToTop(IntPtr hWnd);
+    [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
+    private const byte VK_MENU = 0x12;
+
+    private static bool ForzarPrimerPlano(IntPtr hwndObjetivo)
+    {
+        if (GetForegroundWindow() == hwndObjetivo) return true;
+
+        keybd_event(VK_MENU, 0, 0, UIntPtr.Zero);
+        keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+
+        uint hiloActual = GetCurrentThreadId();
+        uint hiloObjetivo = GetWindowThreadProcessId(hwndObjetivo, IntPtr.Zero);
+        bool adjuntado = hiloObjetivo != 0 && hiloObjetivo != hiloActual && AttachThreadInput(hiloActual, hiloObjetivo, true);
+        try
+        {
+            BringWindowToTop(hwndObjetivo);
+            SetForegroundWindow(hwndObjetivo);
+        }
+        finally
+        {
+            if (adjuntado) AttachThreadInput(hiloActual, hiloObjetivo, false);
+        }
+        System.Threading.Thread.Sleep(150);
+        bool logrado = GetForegroundWindow() == hwndObjetivo;
+        if (!logrado) Console.WriteLine("ForzarPrimerPlano: no se consiguio poner la ventana en primer plano de verdad (GetForegroundWindow no coincide tras el truco ALT+AttachThreadInput) - posible falso negativo de entrada sintetica en las comprobaciones siguientes");
+        return logrado;
+    }
 
     private static void RealClickAt(int screenX, int screenY)
     {

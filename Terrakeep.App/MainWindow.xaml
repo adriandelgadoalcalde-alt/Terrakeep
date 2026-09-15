@@ -2715,10 +2715,30 @@
 
                                                 <!-- Centro: Equipamiento 5x2 real (Columns=5, ver
                                                      EquipmentGroupViewModel.AddSlotSet). Un unico panel a
-                                                     la vez (pildoras "Vista:" de arriba) en Compacto/Normal. -->
-                                                <ContentControl Grid.Column="1" Grid.Row="1" Content="{Binding EquipmentGroup.Current}"
-                                                                ContentTemplate="{StaticResource ContainerCompactTemplate}"
-                                                                Visibility="{Binding IsEquipmentExpanded, Converter={StaticResource InverseBoolToVis}}" />
+                                                     la vez (pildoras "Vista:" de arriba) en Compacto/Normal.
+                                                     AR-LAY (15-sep-2026, ronda de re-verificacion de los 21
+                                                     FALLO): a 1080x700 [es], con la Libreria de abajo
+                                                     DESPLEGADA (IsLibraryVisible=True le quita MinHeight=200 +
+                                                     2* al presupuesto compartido de esta pestaña, ver las
+                                                     RowDefinitions de la Grid exterior mas arriba) y un
+                                                     conjunto real equipado, la fila "*" MinHeight=84 de este
+                                                     SlotRowHost se queda hambrienta (147,4px de alto real en
+                                                     vez de los 190,1px que tiene con la Libreria plegada) y la
+                                                     rejilla de Armadura/Accesorios pierde 18,9px por abajo -
+                                                     detectado por el barrido AR-LAY real, cero pixeles a ojo,
+                                                     un escenario real y nada raro (Libreria desplegada mientras
+                                                     se equipa es justo para lo que existe el boton). El lateral
+                                                     IZQUIERDO (Mascotas/Tintes, arriba en este mismo fichero) ya
+                                                     resolvia el mismo problema de fondo con su propio
+                                                     ScrollViewer de seguridad - el centro era la unica de las 3
+                                                     columnas de esta fila fusionada sin uno. Mismo patron aqui:
+                                                     nunca perder contenido de verdad, un scroll vertical
+                                                     silencioso es preferible a un recorte sin salida. -->
+                                                <ScrollViewer Grid.Column="1" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                                              Visibility="{Binding IsEquipmentExpanded, Converter={StaticResource InverseBoolToVis}}">
+                                                    <ContentControl Content="{Binding EquipmentGroup.Current}"
+                                                                    ContentTemplate="{StaticResource ContainerCompactTemplate}" />
+                                                </ScrollViewer>
 
                                                 <!-- Auditoria de Opus, E-2: "las 3 vistas se podrian ver a la
                                                      vez con sitio real" - en SizeClass.Amplio, Armadura/

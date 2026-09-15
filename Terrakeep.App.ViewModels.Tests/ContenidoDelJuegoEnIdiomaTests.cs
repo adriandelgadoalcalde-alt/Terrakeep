@@ -180,4 +180,36 @@ public sealed class ContenidoDelJuegoEnIdiomaTests
             Assert.Contains(libreria.Results, r => r.DisplayName == "Iron Pickaxe");
         });
     }
+
+    // Bug real encontrado el 15-sep-2026 (ronda de re-verificacion de los 21 FALLO, detectado por
+    // A10-IDIOMA-BARRIDO con el picker de prefijo real abierto - solo a veces, porque el barrido
+    // completo solo lo abre en una rama concreta, de ahi que no se hubiera cazado antes): Label de
+    // PrefixMetaButtonViewModel/PrefixGroupButtonViewModel se fijaba UNA sola vez a NameEs en el
+    // constructor, ignorando NameEn (que ya existia en PrefixGroupCatalog, sin usar) y sin
+    // refrescarse nunca al cambiar de idioma en caliente - el picker de prefijo real (Biblioteca/
+    // Positivos/Negativos y sus grupos, "Cuerpo a cuerpo +"/"A distancia +"/...) se quedaba en
+    // español para siempre pasase lo que pasase con Settings.Language.
+    [Fact]
+    public void LosBotonesDelPickerDePrefijo_CambianAlCambiarDeIdiomaEnVivo()
+    {
+        ConIdioma(LocalizationService.Spanish, () =>
+        {
+            var metaPositivos = Terrakeep.Core.Data.PrefixGroupCatalog.Metas
+                .First(m => m.NameEs == "Positivos");
+            var grupoMelee = metaPositivos.Groups.First(g => g.NameEs == "Cuerpo a cuerpo +");
+
+            var metaVm = new PrefixMetaButtonViewModel(metaPositivos);
+            var grupoVm = new PrefixGroupButtonViewModel(grupoMelee);
+            Assert.Equal("Positivos", metaVm.Label);
+            Assert.Equal("Cuerpo a cuerpo +", grupoVm.Label);
+
+            LocalizationService.Instance.SetLanguage(LocalizationService.English);
+            Assert.Equal("Positive", metaVm.Label);
+            Assert.Equal("Melee+", grupoVm.Label);
+
+            LocalizationService.Instance.SetLanguage(LocalizationService.Spanish);
+            Assert.Equal("Positivos", metaVm.Label);
+            Assert.Equal("Cuerpo a cuerpo +", grupoVm.Label);
+        });
+    }
 }
