@@ -16976,3 +16976,36 @@ reinstalado en `%LocalAppData%\Programs\Terrakeep`, 02:27), `TerrakeepSetup-3.1.
 `Terrakeep-3.1.0-portable.zip` regenerados en `installer\output` (ignorado por git).
 
 Sin `git push`. Commit local solo de GuideFlags.cs, los tres JSON de Assets/guia y esta bitacora.
+
+## 16-sep-2026 (mañana) - KeepQA S2: pares antes/despues de hover/scroll/tamaño/idioma (KEEPQA_TRANSICION_SOLO) y evidencia con nombre de Hosting (S1)
+
+Encargo de cierre de `Downloads\KeepQA\AUDITORIA-SESGOS-16SEP.md`. Hasta hoy todos los volcados de
+geometria de este arnes eran de UN estado; el unico que tocaba una transicion (VIEWPORT_SOLO,
+ScrollToEnd) solo volcaba el final, sin nada con que compararlo.
+
+- `Terrakeep.App.Tests/AuditoriaTransicion.cs` (nuevo, `KEEPQA_TRANSICION_SOLO=1`): volcado
+  generico del arbol visual completo (ids por ruta, mismo esquema que Keep.Wpf/GeometriaWpf;
+  `viewportAlto/viewportAncho/extentAncho` de cada ScrollViewer con los gotchas de PART_ContentHost
+  y ScrollUnit=Item; no desciende dentro de una ScrollBar - plantilla del framework; añade la caja
+  de la PANTALLA como segunda raiz, porque un ToolTip puede salir de la ventana pero no de la
+  pantalla) y cuatro pares reales para `Downloads\KeepQA\src\transicion\verificarTransicion.js`
+  (`transicion-<tipo>.par.json` + captura `-despues.png` en keepqa-evidencia):
+  hover (ToolTip REAL de un slot de Inventario con objeto, `Placement=Bottom` sobre el slot - sin
+  eso el ToolTip se abre en la posicion REAL del raton del usuario, que en la primera pasada estaba
+  fuera de la ventana: falso "aparecido_fuera"), scroll (selector de peinado, inicio -> final),
+  tamaño (1180x860 -> 1080x700, Inventario) e idioma (es -> en).
+- Resultado real: hover OK (tooltip 239x174 dentro, nada se mueve), scroll OK (1144 elementos
+  cambian, todos dentro del ScrollViewer; nada ajeno), idioma OK (424 cambian, 0 desaparecen, 0
+  defectos inducidos). **Tamaño: 4 hallazgos Medium reales, para un agente ciego** - en cada slot
+  del Inventario con contador de pila o punto rojo de Calamity, a 1080x700 el sprite (Image
+  39,73 -> 30 px) pisa al TextBlock del contador (4,68x2,97 y 2,12x9,64 px) y al Ellipse rojo
+  (2,4x6 y 2,25x6 px); a 1180x860 no se solapan. Plantilla del slot en MainWindow.xaml (~L398,
+  Border -> Grid con Image + TextBlock + Ellipse). Par: `keepqa-evidencia\transicion-tamano.par.json`.
+- `PruebasGuiaYServidor.cs` (HOSTING_SOLO): `hosting-formulario.png` + `volcado-geometria-hosting-
+  formulario.json` al abrir la pestaña y `hosting-instancia-activa.png` + `...-instancia-activa.json`
+  con el servidor REAL en escucha (pasada real: PID lanzado, EnEscucha, TCP OK, detenido). Hosting
+  era la unica pantalla de Terrakeep sin evidencia nombrada -> cobertura **18/18**.
+- Compilacion con `-p:BaseOutputPath=bin_keepqaDebug/` (el Terrakeep.exe del usuario en bin\Debug
+  seguia abierto); la evidencia queda en `Terrakeep.App.Tests\bin_keepqaDebug\Debug\net10.0-
+  windows\keepqa-evidencia`, carpeta añadida al inventario de cobertura de KeepQA.
+- Program.cs: solo el gancho de una linea del modo nuevo, junto a HOSTING_SOLO.

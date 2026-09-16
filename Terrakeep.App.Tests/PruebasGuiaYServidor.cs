@@ -124,7 +124,21 @@ internal static partial class Program
     private static void EjecutarHostingReal(MainWindow window, MainViewModel vm)
     {
         vm.SelectedTabIndex = 7; // AppTab.Hosting
-        DoEvents();
+        DoEvents(); DoEvents();
+
+        // Evidencia CON NOMBRE de la pestaña Hosting (16-sep-2026, sesgo S1 de KeepQA -
+        // AUDITORIA-SESGOS-16SEP.md: "Hosting" era la unica pantalla de Terrakeep sin ninguna
+        // captura ni volcado con ese nombre en keepqa-evidencia, aunque este modo existia y
+        // funcionaba). Captura + volcado del arbol visual completo en el formulario vacio, y otra
+        // pareja mas abajo con la instancia real lanzada (la tarjeta de instancia, con su estado).
+        try
+        {
+            CapturaVentanaKeepQa(window, "hosting-formulario");
+            File.WriteAllText(Path.Combine(CarpetaEvidenciaKeepQa(), "volcado-geometria-hosting-formulario.json"),
+                System.Text.Json.JsonSerializer.Serialize(VolcarArbolVisual(window, "ventana")));
+            Console.WriteLine("HOSTING_SOLO: evidencia -> hosting-formulario.png + volcado-geometria-hosting-formulario.json");
+        }
+        catch (Exception ex) { Console.WriteLine("HOSTING_SOLO: evidencia del formulario fallo - " + ex.Message); }
 
         Console.WriteLine($"HOSTING_SOLO: TerrariaDetectado={vm.Hosting.TerrariaDetectado}, TModLoaderDetectado={vm.Hosting.TModLoaderDetectado}, ModsDisponibles(vainilla)={vm.Hosting.ModsDisponibles.Count} (esperado 0, UsarTModLoader empieza en false)");
         if (!vm.Hosting.TerrariaDetectado)
@@ -162,6 +176,14 @@ internal static partial class Program
         DoEvents();
 
         Console.WriteLine($"HOSTING_SOLO: estado real tras esperar -> {instancia.Nucleo.Estado} (EstadoTexto UI='{instancia.EstadoTexto}')");
+        try
+        {
+            CapturaVentanaKeepQa(window, "hosting-instancia-activa");
+            File.WriteAllText(Path.Combine(CarpetaEvidenciaKeepQa(), "volcado-geometria-hosting-instancia-activa.json"),
+                System.Text.Json.JsonSerializer.Serialize(VolcarArbolVisual(window, "ventana")));
+            Console.WriteLine("HOSTING_SOLO: evidencia -> hosting-instancia-activa.png + volcado-geometria-hosting-instancia-activa.json");
+        }
+        catch (Exception ex) { Console.WriteLine("HOSTING_SOLO: evidencia de la instancia fallo - " + ex.Message); }
         if (instancia.Nucleo.Estado == EstadoInstancia.EnEscucha)
         {
             bool escuchando = false;

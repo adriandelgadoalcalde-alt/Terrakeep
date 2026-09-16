@@ -928,6 +928,14 @@ internal static partial class Program
             Console.WriteLine("DONE (HOSTING_SOLO)");
             Environment.Exit(0);
         }
+        // KEEPQA_TRANSICION_SOLO=1 (16-sep-2026, sesgo S2 de KeepQA): pares antes/despues de
+        // hover/scroll/tamaño/idioma para verificarTransicion.js - ver AuditoriaTransicion.cs.
+        if (Environment.GetEnvironmentVariable("KEEPQA_TRANSICION_SOLO") == "1")
+        {
+            EjecutarKeepQaTransicionSolo(window, vm);
+            Console.WriteLine("DONE (KEEPQA_TRANSICION_SOLO)");
+            Environment.Exit(0);
+        }
         // README_SHOTS=1 (cierre de sesion, 15-sep-2026): regenera docs/screenshots/ con datos
         // reales de esta maquina (ver PruebasCapturasReadme.cs) - las capturas del README llevaban
         // desde el 5-sep-2026, de antes del idioma completo/Guia/Servidor de esta noche.
