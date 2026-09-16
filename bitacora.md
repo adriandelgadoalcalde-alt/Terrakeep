@@ -17071,3 +17071,36 @@ se deja constancia aqui por disciplina pero no se investiga mas en este encargo.
 arreglo.
 
 Sin `git push`. Commit local solo de `MainWindow.xaml` y esta bitacora.
+
+## 16-sep-2026 (mañana) - Dos cambios del arnés pedidos por el diagnóstico de fondo de KeepQA (padres reales y datos reales por defecto)
+
+Origen: `Downloads\KeepQA\DIAGNOSTICO-DE-FONDO-16SEP.md` (punto 3, "algo mal en cómo se ejecuta").
+Solo `Terrakeep.App.Tests` (arnés), nada de producción.
+
+1. **`AuditoriaKeepQA.cs`**: las 4 raíces de pantalla llevaban `padre_id="(ventana_sin_padre_...)"`,
+   un id inventado que no existe en el array. `verificarGeometria.js` lo reportaba como
+   `padresNoEncontrados` (24 en `volcado-geometria-fresco-15sep.json`) y salía con exit 1 desde el
+   15-sep sin que nadie lo mirase - prueba de que el código de salida de la pieza compartida no era
+   un gate. Ahora `padre_id = null` (raíz real). Verificado: `KEEPQA_FRESCO_SOLO=1` recompilado ->
+   `resumirGeometria.js`: 0 padres no encontrados (antes 24); las 24 pantallas del mismo archivo
+   salen ahora como ruido `raices_multiples` con nombre, no como señal.
+2. **`Program.cs`**: `KEEPQA_SOLO` y `KEEPQA_FRESCO_SOLO` corrían DESPUÉS de `vm.LoadFromPath(tempPlr)`,
+   es decir siempre con el personaje sintético `UIA-Test` (0/0, "0c", 0 h). Movidos al hueco del
+   personaje REAL (`first`, ya abierto por HOME-OPEN; mismo sitio que `KEEPQA_VITALS_REAL`). Si no
+   hay personaje real cargado caen al respaldo sintético y lo AVISAN; `KEEPQA_DATOS_SINTETICOS=1`
+   fuerza el comportamiento antiguo. Verificado: la salida real dice `KEEPQA_FRESCO_SOLO: con
+   personaje REAL 'Eldelgas'`, 315 elementos, 24 capturas.
+
+Hallazgos REALES que dejó el modo de juego libre de KeepQA (`src/juego-libre/`, pywinauto/UIA
+externo) para un agente ciego, con captura y geometría en `KeepQA\artifacts\juego-libre\`:
+- `exp-1de4-actual` (build ARREGLADO de esta tarde, Inventario a 1080x700): queda un solape de 4x4 px
+  entre el `Image` del sprite y un `Text` en la esquina superior izquierda del slot `DataItem#10`
+  (marcador, no el contador): el arreglo `Margin="4,7,9,12"` cubre contador y punto rojo, no ese
+  marcador. Recorte: `exp-1de4-actual\recortes\*solape_hermanos-paso4.png`.
+- Ambos builds, 1080x700: el `Text` "Librería" del botón plegable pisa 40x4 px la última fila de
+  slots del Inventario (`DataItem#20..#23`). Mirar la captura `paso-004.png` antes de tocar nada.
+- `partida-final-seed2`, paso 1, Equipamiento a 1180x860 (tamaño de arranque): `Image`×`Text`
+  solapados en `Pane#2/Pane#0/List#0/DataItem#3` (ver detalle en `informe.md`).
+- Aviso al arnés externo, no a la app: con renderizado por HARDWARE la ventana se captura BLANCA por
+  BitBlt tras pintar Personaje (la app se ve bien en el monitor; es la misma causa del "en blanco"
+  por Chrome Remote Desktop del 2-sep). `TERRAKEEP_FORCE_SOFTWARE_RENDER=1` la deja capturable.

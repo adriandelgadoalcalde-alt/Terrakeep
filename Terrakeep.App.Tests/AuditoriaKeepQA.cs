@@ -397,7 +397,7 @@ internal static partial class Program
                         // inexistente por combinacion sale como `padresNoEncontrados` (aviso de
                         // extraccion, no un hallazgo de la Parte 35).
                         string idRaizCombo = $"raiz_{nombrePantalla}_{etiquetaTam}_{idiomaCap}".Replace('/', '_');
-                        elementos.Add(new { id = idRaizCombo, tipo = "raiz_pantalla", padre_id = (string?)$"(ventana_sin_padre_{idRaizCombo})", x = 0.0, y = 0.0, ancho = window.ActualWidth, alto = window.ActualHeight, grupo = (string?)null, orden_z = 0.0, capa = "fondo" });
+                        elementos.Add(new { id = idRaizCombo, tipo = "raiz_pantalla", padre_id = (string?)null /* raíz real: null, no un id inventado - 16-sep-2026, KeepQA daba 24 padresNoEncontrados y exit 1 permanente por esto */, x = 0.0, y = 0.0, ancho = window.ActualWidth, alto = window.ActualHeight, grupo = (string?)null, orden_z = 0.0, capa = "fondo" });
 
                         // Dos pasadas: (1) asignar un id estable a cada TabControl visible de
                         // esta combinacion, (2) volcarlo con el padre_id REAL - el TabControl
@@ -866,7 +866,7 @@ internal static partial class Program
                         capturas++;
 
                         string idRaizCombo = $"fresco_raiz_{nombrePantalla}_{etiquetaTam}_{idiomaCap}".Replace('/', '_');
-                        elementos.Add(new { id = idRaizCombo, tipo = "raiz_pantalla", padre_id = (string?)$"(ventana_sin_padre_{idRaizCombo})", x = 0.0, y = 0.0, ancho = window.ActualWidth, alto = window.ActualHeight, grupo = (string?)null, orden_z = 0.0, capa = "fondo" });
+                        elementos.Add(new { id = idRaizCombo, tipo = "raiz_pantalla", padre_id = (string?)null /* raíz real: null, no un id inventado - 16-sep-2026, KeepQA daba 24 padresNoEncontrados y exit 1 permanente por esto */, x = 0.0, y = 0.0, ancho = window.ActualWidth, alto = window.ActualHeight, grupo = (string?)null, orden_z = 0.0, capa = "fondo" });
 
                         var tcsVisibles = Descendientes<TabControl>(window).Where(t => t.IsVisible).ToList();
                         var idPorTc = new Dictionary<TabControl, string>();
@@ -976,7 +976,7 @@ internal static partial class Program
                 }
 
                 string idRaiz = $"vitals_real_raiz_{etiquetaTam}";
-                elementos.Add(new { id = idRaiz, tipo = "raiz_pantalla", padre_id = (string?)$"(ventana_sin_padre_{idRaiz})", x = 0.0, y = 0.0, ancho = window.ActualWidth, alto = window.ActualHeight, grupo = (string?)null, orden_z = 0.0, capa = "fondo" });
+                elementos.Add(new { id = idRaiz, tipo = "raiz_pantalla", padre_id = (string?)null /* raíz real: null - ver nota del 16-sep-2026 arriba */, x = 0.0, y = 0.0, ancho = window.ActualWidth, alto = window.ActualHeight, grupo = (string?)null, orden_z = 0.0, capa = "fondo" });
 
                 int idx = 0;
                 var centros = new List<(string id, double centroY, double h)>();
@@ -1166,7 +1166,7 @@ internal static partial class Program
                 }
 
                 string idRaiz = $"vitals_dinero_largo_raiz_{etiquetaTam}";
-                elementos.Add(new { id = idRaiz, tipo = "raiz_pantalla", padre_id = (string?)$"(ventana_sin_padre_{idRaiz})", x = 0.0, y = 0.0, ancho = window.ActualWidth, alto = window.ActualHeight, grupo = (string?)null, orden_z = 0.0, capa = "fondo" });
+                elementos.Add(new { id = idRaiz, tipo = "raiz_pantalla", padre_id = (string?)null /* raíz real: null - ver nota del 16-sep-2026 arriba */, x = 0.0, y = 0.0, ancho = window.ActualWidth, alto = window.ActualHeight, grupo = (string?)null, orden_z = 0.0, capa = "fondo" });
 
                 int idx = 0;
                 var centros = new List<(string id, double centroY, double h, double x, double ancho)>();

@@ -959,6 +959,38 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // KEEPQA_DATOS_REALES (16-sep-2026, DIAGNOSTICO-DE-FONDO-16SEP.md punto 3): hasta hoy
+        // KEEPQA_SOLO y KEEPQA_FRESCO_SOLO se ejecutaban DESPUES de vm.LoadFromPath(tempPlr), es
+        // decir, SIEMPRE con el personaje sintetico "UIA-Test" (vida 0/0, dinero "0c", 0 horas,
+        // cero equipo). Tres bugs reales de esta semana (Mana huerfano, Defensa huerfana, Dinero
+        // largo) solo existen con datos reales y por eso el arnes no los vio. Desde hoy los dos
+        // modos corren AQUI, con el personaje real 'first' ya abierto por HOME-OPEN (mismo hueco de
+        // ventana que KEEPQA_VITALS_REAL). Si esta maquina no tuviera ningun personaje real cargado,
+        // caen al respaldo sintetico de mas abajo (mismo comportamiento de siempre) y lo dicen.
+        // KEEPQA_DATOS_SINTETICOS=1 fuerza el comportamiento antiguo a proposito.
+        bool datosSinteticosForzados = Environment.GetEnvironmentVariable("KEEPQA_DATOS_SINTETICOS") == "1";
+        if (!datosSinteticosForzados && vm.IsCharacterLoaded)
+        {
+            if (Environment.GetEnvironmentVariable("KEEPQA_SOLO") == "1")
+            {
+                Console.WriteLine($"KEEPQA_SOLO: con personaje REAL '{vm.CharacterName}' (no el sintetico UIA-Test)");
+                EjecutarKeepQaAdversarialYGeometria(window, vm);
+                Console.WriteLine("DONE (KEEPQA_SOLO)");
+                Environment.Exit(0);
+            }
+            if (Environment.GetEnvironmentVariable("KEEPQA_FRESCO_SOLO") == "1")
+            {
+                Console.WriteLine($"KEEPQA_FRESCO_SOLO: con personaje REAL '{vm.CharacterName}' (no el sintetico UIA-Test)");
+                EjecutarKeepQaFrescoTerceraResolucion(window, vm);
+                Console.WriteLine("DONE (KEEPQA_FRESCO_SOLO)");
+                Environment.Exit(0);
+            }
+        }
+        else if (!datosSinteticosForzados && (Environment.GetEnvironmentVariable("KEEPQA_SOLO") == "1" || Environment.GetEnvironmentVariable("KEEPQA_FRESCO_SOLO") == "1"))
+        {
+            Console.WriteLine("AVISO KEEPQA: no hay ningun personaje real cargado en esta maquina - el modo correra con el personaje sintetico UIA-Test (datos degenerados 0/0/0c; ver DIAGNOSTICO-DE-FONDO-16SEP.md)");
+        }
+
         try
         {
             var swChar = System.Diagnostics.Stopwatch.StartNew();
@@ -1269,19 +1301,20 @@ internal static partial class Program
         // adversarial y volcado de geometria para verificarAlineacion.js): mismo modo de foco que
         // los de arriba, personaje real ya cargado. El cuerpo real vive en AuditoriaKeepQA.cs
         // (misma clase parcial), ver alli el porque de su propio fichero.
+        // KEEPQA_SOLO / KEEPQA_FRESCO_SOLO: MOVIDOS el 16-sep-2026 al hueco de "personaje REAL"
+        // (antes de vm.LoadFromPath(tempPlr)) - ver el bloque KEEPQA_DATOS_REALES mas arriba.
+        // Aqui solo queda el respaldo con KEEPQA_DATOS_SINTETICOS=1 para reproducir el
+        // comportamiento antiguo (personaje "UIA-Test" vacio) si alguna vez hace falta comparar.
         if (Environment.GetEnvironmentVariable("KEEPQA_SOLO") == "1")
         {
             EjecutarKeepQaAdversarialYGeometria(window, vm);
-            Console.WriteLine("DONE (KEEPQA_SOLO)");
+            Console.WriteLine("DONE (KEEPQA_SOLO, datos sinteticos)");
             Environment.Exit(0);
         }
-
-        // KEEPQA_FRESCO_SOLO=1 (15-sep-2026): repaso integral nocturno - ver el comentario largo
-        // junto a EjecutarKeepQaFrescoTerceraResolucion en AuditoriaKeepQA.cs. Cuerpo real ahi.
         if (Environment.GetEnvironmentVariable("KEEPQA_FRESCO_SOLO") == "1")
         {
             EjecutarKeepQaFrescoTerceraResolucion(window, vm);
-            Console.WriteLine("DONE (KEEPQA_FRESCO_SOLO)");
+            Console.WriteLine("DONE (KEEPQA_FRESCO_SOLO, datos sinteticos)");
             Environment.Exit(0);
         }
 
