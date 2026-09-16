@@ -17104,3 +17104,8 @@ externo) para un agente ciego, con captura y geometría en `KeepQA\artifacts\jue
 - Aviso al arnés externo, no a la app: con renderizado por HARDWARE la ventana se captura BLANCA por
   BitBlt tras pintar Personaje (la app se ve bien en el monitor; es la misma causa del "en blanco"
   por Chrome Remote Desktop del 2-sep). `TERRAKEEP_FORCE_SOFTWARE_RENDER=1` la deja capturable.
+- CORRECCIÓN (misma mañana): el punto "Librería pisa 40x4 px la última fila de slots" NO es un bug
+  visual - el agente ciego de hipótesis de KeepQA (H4) demostró que esas filas están recortadas por el
+  ScrollViewer del Inventario a 700 px de alto (geometría sí, pantalla no). El oráculo de juego libre
+  ya compara la parte VISIBLE de cada hoja; queda aquí como ejemplo de por qué la geometría cruda
+  necesita el recorte de scroll antes de acusar.
