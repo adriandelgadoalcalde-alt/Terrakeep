@@ -17294,3 +17294,71 @@ defecto + informe `--completo`, con su propio canario) es `keepqa-analisis-estat
 Sin `git push`. Commit local de `Terrakeep.Core.csproj`, `Terrakeep.Core.Tests.csproj`,
 `Terrakeep.App.Tests.csproj`, `Terrakeep.App.ViewModels.Tests.csproj`, `Model/ItemPrefix.cs` y
 esta bitácora.
+
+## 16-sep-2026 (noche) - Paso 2 de la integración de KeepQA: CsCheck (property-based testing) sobre el .plr real - bug real encontrado: `IsSwitch` nunca se asigna en `PlrBodySerializer.Read`
+
+Paso 2 de 3 (ver la entrada anterior para el paso 1). Añadido `CsCheck` 4.9.0 (repo real
+`github.com/AnthonyLloyd/CsCheck`, Apache-2.0) a `Terrakeep.Core.Tests.csproj`. Antes de escribir
+nada se leyó el README real del paquete instalado (`~/.nuget/packages/cscheck/4.9.0/README.md`) y
+se inspeccionó la API pública real vía `ilspycmd` sobre el DLL (`Gen.OneOfConst`, `gen.Array[n]`,
+`gen.List[min,max]`, indexadores `Gen.Int[a,b]`/`Gen.String[Gen.Char[chars],min,max]`, `Sample`) en
+vez de adivinar por memoria - confirmó por ejemplo que `Gen.String` NO tiene una sobrecarga
+`[string, int, int]` (hubo que componer `Gen.String[Gen.Char[chars], min, max]`).
+
+Test nuevo: `Terrakeep.Core.Tests/PlrFormat/PlrFilePropertyTests.cs`, generalizando el patrón
+manual de `PlrFileRealCharacterTests.cs` (2 archivos reales de este PC) al formato `.plr` REAL
+completo (`PlrFile.Read`/`Write`, todo `PlrCharacter`) con generadores reales: los 33 saltos de
+versión REALES de `PlrBodySerializer` (±1 alrededor de cada umbral, no números al azar), ids de
+item con valores límite (negativos, `int.MinValue/MaxValue`), cadenas SharpString unicode/vacías/
+casi al límite de 255 bytes UTF-8 (español de España: acentos, eñe, ¡¿), listas vacías y al máximo.
+
+**La propiedad tuvo que corregirse una vez, en vivo**: el primer diseño comparaba
+`Write(datosCrudos)` contra `Write(Read(Write(datosCrudos)))` - CsCheck lo shrinkeó a un caso
+mínimo en segundos y "encontró" cientos de diffs falsos, todos explicados por un hecho real del
+propio formato: `PlrItemSlot.Read` hace clamp de ids `>maxId` a 0, pero `Write` NUNCA hace clamp
+(escribe el id crudo tal cual) - comparar la escritura de datos crudos contra la de datos ya
+canonicalizados no es una propiedad real. Corregido a comparar dos escrituras que arrancan AMBAS
+de un `Read()` real (`Write(canonico1)` vs `Write(Read(Write(canonico1)))`), que es la propiedad
+honesta: "un personaje que ya salió de un `Read()` real es un punto fijo estable".
+
+**Bug real encontrado con la propiedad ya corregida** (seed real:
+`apdSF28EQh21`/`49SWC-jInLI5`, minimizado por CsCheck a `Version=1`): con `IsSwitch=true`
+generado al azar, la segunda lectura lanzaba `IOException: Unable to read beyond the end of the
+stream` dentro de `ReadServers` (desincronización arrastrada desde mucho antes). Causa raíz real,
+confirmada leyendo el código: `PlrBodySerializer.Read()` **lee** `character.IsSwitch` en 4 puntos
+(`PlrBodySerializer.cs:66,124,166,187` - Guid, umbral real de `FinishedDD2Event`, Bank/Safe
+secuencial vs entrelazado, gate de `DpadBindings`) pero **nunca lo asigna** desde los bytes: el
+`new PlrCharacter{...}` que construye el objeto en `Read()` no incluye `IsSwitch`, así que
+siempre queda en su valor por defecto `false`, sea cual sea el archivo. Si algo externo escribe
+un `.plr` con `IsSwitch=true` (como hace el generador de la prueba, o como haría en teoría un
+importador real de un perfil de Switch), `Read()` lo decodifica con la rama de PC en los 4
+puntos, desincronizando el resto del stream para cualquier versión donde PC y Switch divergen.
+
+**Confirmado que es una rama muerta hoy, no solo un bug latente**: `grep -rn "\.IsSwitch\s*="` en
+TODO el repo (`Terrakeep.Core` + `Terrakeep.App`) da CERO resultados - ningún sitio pone
+`IsSwitch` a `true` nunca, y no existe ninguna función de "importar perfil de Switch" en la app
+real (`FlagsViewModel.cs:40` SÍ lee `_character.IsSwitch` para una bandera de UI, pero como
+`Read()` nunca la asigna, esa lectura también es inerte). No es un bug "puramente teórico": si
+algún día se añade un importador de Switch, esto rompe en silencio (no lanza casi nunca; solo
+lanza en combinaciones raras como la que encontró CsCheck - en el caso normal simplemente
+desincroniza bytes sin excepción, mucho peor que un crash).
+
+**Decisión sobre arreglarlo ahora vs dejarlo anotado** (norma de las dos fases del proyecto):
+NO arreglado en esta sesión, documentado aquí para un agente aparte. Razón: el fix real no es
+una línea suelta - `IsSwitch` no está codificado en los bytes del `.plr` (es señal EXTERNA al
+archivo, de qué plataforma lo escribió), así que `PlrBodySerializer.Read`/`PlrFile.Read`
+necesitarían un parámetro nuevo (`isSwitch: bool = false`) que además habría que decidir cómo
+threadear desde la UI real (¿de dónde saca `Terrakeep.App` la señal de "esto es de Switch"? hoy
+no hay ninguna). Es una decisión de producto/API, no un fix aislado como el de `ItemPrefix.cs`
+del paso 1. El test de CsCheck fija `isSwitch` a `Gen.Const(false)` (el único valor que la app
+real puede producir hoy) con un comentario largo citando este hallazgo exacto, para que la
+prueba mida el formato que SÍ se usa sin ocultar ni maquillar el hallazgo.
+
+**Verificación real**: `dotnet test Terrakeep.Core.Tests` (proyecto completo): **557/557** (antes
+556, +1 test nuevo). La prueba de CsCheck sola, ejecutada 5 veces seguidas con semillas nuevas
+cada vez (300 iteraciones cada una, 1.500 personajes sintéticos distintos en total): 5/5 en
+verde. `keepqa-analisis-estatico` sobre `Terrakeep.Core.Tests.csproj`: 0 avisos (CsCheck no
+introdujo ningún aviso de análisis estático).
+
+Sin `git push`. Commit local de `Terrakeep.Core.Tests.csproj` (paquete CsCheck) y
+`Terrakeep.Core.Tests/PlrFormat/PlrFilePropertyTests.cs` (nuevo) y esta bitácora.
