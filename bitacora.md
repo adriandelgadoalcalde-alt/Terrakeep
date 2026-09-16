@@ -16706,6 +16706,99 @@ esta noche. `MainWindow.xaml`/`Theme.xaml` no se tocan en esta ronda.
 Commit local unicamente de `Terrakeep.App.Tests/AuditoriaViewportScroll.cs` (mismo criterio que el
 resto de esta ronda: nunca los archivos ajenos de la otra sesion activa en este repo).
 
+## AR-EX-HSCROLL: arreglo visual real aplicado (el "agente ciego" de las dos rondas anteriores) — 16-sep-2026
+
+Encargo de KeepQA: revisar a fondo con el arnes real la columna lateral de Exploracion (Cofres/
+Objetos/Minerales/NPCs) a distintos anchos reales del `GridSplitter`, y si el arnes confirma un
+problema real (no una sospecha visual), arreglarlo en el XAML de verdad. Las dos rondas anteriores
+de esta misma noche (arriba, "AR-EX-HSCROLL" y su addenda) ya habian confirmado el bug con
+geometria medida y dejado el chequeo permanente escrito pero SIN aplicar ningun arreglo - ese es
+exactamente el trabajo de esta ronda.
+
+**Causa real, encontrada al re-ejecutar el diagnostico tras el primer intento de arreglo**: el
+primer arreglo (poner `ScrollViewer.HorizontalScrollBarVisibility="Disabled"` solo en el `ListBox`
+compartido de `WorldSearchResults`, `MainWindow.xaml:5826`) SI corrigio esa lista concreta pero el
+diagnostico `AR_EX_HSCROLL_SOLO=1` siguio fallando igual, con los mismos numeros exactos que antes
+(55,4px/12,8px/15,4px de sobra). Investigado con el volcado completo de `ScrollViewer`s que ya
+imprime el propio diagnostico: el ScrollViewer que de verdad desborda en cada categoria NO es el de
+la lista compartida (esa se queda constante, 204px viewport/144,8px extent, en las 4 categorias,
+porque su contenido - la busqueda "lava" - no cambia con la categoria) sino el de la lista
+ESPECIFICA de cada categoria (`Exploration.Inventory` para Cofres/Objetos, `Exploration.ChestRows`
+para Cofre a cofre) dentro de `ExplorationCategoryContent` (`:5919` en adelante) - tres `ListBox`
+distintos, cada uno con su propio contenido que SI varia por categoria (279,4px Cofres/Por tipo,
+236,8px Objetos, 222px Cofre a cofre), coincidiendo exactamente con los numeros que documento la
+ronda anterior. Los tres tenian el mismo defecto de origen: sin `HorizontalScrollBarVisibility`
+explicito, el `ListBox` usa el `Auto` por defecto de su `ControlTemplate` (confirmado empiricamente,
+no de memoria: un `ScrollViewer` PLANO sin ese atributo SI sale `Disabled` por defecto - visto en la
+lista de Minerales, que usa `ItemsControl` dentro de un `ScrollViewer` a secas y nunca desbordo -
+pero el `ListBox` trae su PROPIA plantilla de control con `Auto` explicito para las dos barras, así
+que heredar el "default" de un `ListBox` no es heredar el de un `ScrollViewer` suelto). Con `Auto`,
+el `TextBlock` del nombre (`TextWrapping="Wrap"` ya declarado en `InventoryRowTemplate`/
+`ChestRowTemplate`) se mide con ancho INFINITO y nunca envuelve - el "arreglo" que ya estaba en el
+XAML (el `Wrap`) era inutil sin esto.
+
+**Arreglo real, 4 sitios en `MainWindow.xaml`** (mismo patron que ya usan los otros 14
+`ScrollViewer` de este fichero, `ScrollViewer.HorizontalScrollBarVisibility="Disabled"` explicito):
+1. `:5826` - `ListBox` compartido `WorldSearchResults` (categoria "Todo" y bloque de resultados
+   visible en Cofres/Minerales/Objetos).
+2. `:6156`→`:6169` (tras el comentario nuevo) - Cofres, modos "Por tipo"/"Por lo que contienen"
+   (`Exploration.Inventory`).
+3. `:6192`→`:6205` - Cofres, modo "Cofre a cofre" (`Exploration.ChestRows`) - no reprodujo el
+   desbordamiento con el mundo/busqueda de esta ronda, pero es el mismo `ListBox` sin el atributo,
+   asi que un nombre de cofre mas largo (otro mundo/idioma) lo dispararia igual - arreglada la
+   causa, no solo el caso visto.
+4. `:6290`→`:6303` - Objetos (`Exploration.Inventory`, vista Tiles/Paredes/Liquidos).
+
+**NPCs, cubierto y confirmado limpio sin tocar codigo**: el encargo pedia explicitamente revisar
+tambien NPCs. `NpcResultsList` (`:6013`) y `MissingNpcsScroll` (`:5994`) son `ScrollViewer` sueltos
+(no `ListBox`), asi que su horizontal ya era `Disabled` por el default real de `ScrollViewer` -
+confirmado con el arnes, no solo razonado: `AR_EX_HSCROLL_SOLO=1` se amplio para incluir tambien la
+categoria NPCs (antes solo barria Cofres/Minerales/Objetos) y no encontro ningun desbordamiento en
+los 5 anchos de sidebar. Ampliacion permanente en `Terrakeep.App.Tests/Program.cs` (mismo cambio en
+el diagnostico aislado y en el bloque permanente AR-EX-HSCROLL que corre en cada `dotnet run`
+normal), para que la cobertura real incluya las 5 categorias, no solo 4.
+
+**Verificacion real, con datos, nunca "parece que ya esta"**:
+- `AR_EX_HSCROLL_SOLO=1 dotnet run --project Terrakeep.App.Tests` (antes de tocar las 3 listas
+  restantes): seguia fallando igual, 3 `FALLO:` identicos a la ronda anterior - confirma que el
+  primer arreglo parcial NO bastaba, sin darlo por bueno a medias.
+- Mismo diagnostico tras las 4 correcciones + la ampliacion a NPCs: `AR-EX-HSCROLL: sin scroll
+  horizontal real detectado`, exit code 0, en las 5 categorias x 5 anchos reales de sidebar
+  (260/300/320/420/520px).
+- Arnes COMPLETO (`dotnet run --project Terrakeep.App.Tests`, sin variable de entorno, ~2min13s):
+  termina en `DONE`, exit code 0. Grep de `FALLO:` sobre el log completo: 14 lineas, las 14 ya
+  catalogadas como deuda conocida y documentada explicitamente en rondas anteriores como "no se
+  tocan" (`AR-11f`/`AR-15`/`AR-EX1`, problema de presupuesto vertical a la ventana MINIMA 1080x700,
+  sin relacion con este bug) - CERO `FALLO: AR-EX-HSCROLL` (antes de este arreglo habria 3).
+- `dotnet test Terrakeep.slnx`: `Terrakeep.Core.Tests` 554/554, `Terrakeep.App.ViewModels.Tests`
+  485/485, total 1039 pruebas, 0 con error - nada roto por el cambio (esperable: solo se añade un
+  atributo de `ScrollViewer` en 4 `ListBox`, sin tocar ningun ViewModel ni logica).
+- Build Release autocontenido publicado de verdad (`installer\install.ps1`, el mismo camino que usa
+  el usuario) y reinstalado en `%LocalAppData%\Programs\Terrakeep\Terrakeep.exe` (133 481 400 bytes,
+  con `Assets\calamity\catalog.json` presente - el instalador aborta si faltase).
+
+**Nota de coordinacion real de esta ronda**: a mitad de la verificacion, otra sesion activa en este
+mismo repo (la que trabaja en "Guia") dejo el INDICE con `git add` de TODO lo pendiente, mezclando
+sus ficheros con mis 4 hunks de `MainWindow.xaml` en el mismo `git status`. Resuelto sin tocar su
+contenido: `git reset` (solo el indice, nunca el working tree) para deshacer ese staging mixto, y
+luego `git apply --cached` de un patch construido a mano con SOLO mis 4 hunks (confirmado con
+`git diff --cached` que el diff a comitear eran exactamente esos 4 hunks, y `git diff` sin cachear
+que lo que quedaba fuera era exactamente su bloque de aviso "sin personaje" en la Guia) - la misma
+disciplina de "nunca los archivos ajenos" que las dos rondas anteriores, aplicada tambien cuando el
+mezclado ocurre en el INDICE y no solo en el working tree.
+
+Compilacion usada durante el diagnostico: `-p:BaseOutputPath=bin_keepqaDebug/` (con `/`, no `\` -
+con backslash escapado desde Bash el valor le llegaba corrupto a MSBuild, `bin_keepqaDebug\2Debug`/
+`bin_keepqaDebug Debug` segun la llamada, dos carpetas de salida inconsistentes entre build y run
+que hicieron fallar `dotnet run` una vez con "no se puede encontrar el archivo especificado" - con
+`/` es estable) para no pelearse por los `.dll` bloqueados de un `testhost` de otra sesion activa
+(mismo patron ya documentado en `KeepQA/PATRONES.md`: nunca cerrar el proceso ajeno sin más
+contexto, usar una salida de build aparte).
+
+Commit local (`39b0d2ab`) de `Terrakeep.App/MainWindow.xaml` (solo mis 4 hunks) y
+`Terrakeep.App.Tests/Program.cs` (la ampliacion a NPCs) - nunca `git push`, nunca los ficheros de la
+sesion de Guia.
+
 ## 16-sep-2026 - Bug real en directo: la Guia de escritorio se quedaba pillada para siempre (no era el refactor de esta noche)
 
 ### Encargo (PRIORIDAD MAXIMA)
