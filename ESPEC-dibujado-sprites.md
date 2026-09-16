@@ -1,5 +1,7 @@
 # Especificación real del dibujado del jugador en Terraria 1.4.5.8
 
+> **Aviso de frescura (16-sep-2026)**: informe de auditoría/especificación FECHADO (4/5-sep-2026), no una lista viva de pendientes. Sus hallazgos se trataron en commits y entradas de `bitacora.md` posteriores (el propio `ESPEC-pulido-final-...` cita los commits `f31f5d7b..2b63af5a` de la ronda «Opus vs TEdit»). Antes de actuar sobre cualquier punto de este archivo, contrastarlo con `git log`/la bitácora o con `node Downloads\KeepQA\src\frescura\auditarFrescura.js <este archivo>`: el texto describe el estado del día en que se escribió. <!-- keepqa-frescura: informe fechado; auditado 2026-09-16 -->
+
 Documento de ingeniería inversa de alcance acotado sobre **cómo dibuja Terraria al jugador**
 (sprites, celdas, offsets, orden de capas y reglas de sustitución armadura/vanidad), escrito
 para corregir `TerrasavrNative.App/Services/PlayerPreviewRenderer.cs`.

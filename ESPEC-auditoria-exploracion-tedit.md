@@ -1,5 +1,7 @@
 # Auditoría exhaustiva de la pestaña Exploración y de la barra superior, contra TEdit
 
+> **Aviso de frescura (16-sep-2026)**: informe de auditoría/especificación FECHADO (4/5-sep-2026), no una lista viva de pendientes. Sus hallazgos se trataron en commits y entradas de `bitacora.md` posteriores (el propio `ESPEC-pulido-final-...` cita los commits `f31f5d7b..2b63af5a` de la ronda «Opus vs TEdit»). Antes de actuar sobre cualquier punto de este archivo, contrastarlo con `git log`/la bitácora o con `node Downloads\KeepQA\src\frescura\auditarFrescura.js <este archivo>`: el texto describe el estado del día en que se escribió. <!-- keepqa-frescura: informe fechado; auditado 2026-09-16 -->
+
 Auditoría de referencia previa a una entrega. Compara **la interfaz completa de TEdit** (el editor
 de mundos real de Terraria) contra **la pestaña Exploración** de Terrakeep y contra **la barra
 superior global** de la app, y cataloga todas las mejoras posibles — estéticas e internas.

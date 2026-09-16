@@ -1,5 +1,7 @@
 # Auditoría de redimensionado: qué se pierde de vista al cambiar el tamaño de la ventana, pantalla por pantalla
 
+> **Aviso de frescura (16-sep-2026)**: informe de auditoría/especificación FECHADO (4/5-sep-2026), no una lista viva de pendientes. Sus hallazgos se trataron en commits y entradas de `bitacora.md` posteriores (el propio `ESPEC-pulido-final-...` cita los commits `f31f5d7b..2b63af5a` de la ronda «Opus vs TEdit»). Antes de actuar sobre cualquier punto de este archivo, contrastarlo con `git log`/la bitácora o con `node Downloads\KeepQA\src\frescura\auditarFrescura.js <este archivo>`: el texto describe el estado del día en que se escribió. <!-- keepqa-frescura: informe fechado; auditado 2026-09-16 -->
+
 Repaso final de toda la aplicación antes de una entrega real. Recorre **las 20 pantallas reales**
 de Terrakeep a **14 tamaños de ventana distintos**, desde el mínimo obligado (1080x700) hasta 4K
 (3840x2160), y cataloga con medición real todo elemento que desaparezca, se recorte, deje de ser

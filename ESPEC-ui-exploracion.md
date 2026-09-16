@@ -1,5 +1,7 @@
 # La UI de Exploración: auditoría de TEdit + del estado real de Terrakeep, y diseño de la barra lateral nueva
 
+> **Aviso de frescura (16-sep-2026)**: informe de auditoría/especificación FECHADO (4/5-sep-2026), no una lista viva de pendientes. Sus hallazgos se trataron en commits y entradas de `bitacora.md` posteriores (el propio `ESPEC-pulido-final-...` cita los commits `f31f5d7b..2b63af5a` de la ronda «Opus vs TEdit»). Antes de actuar sobre cualquier punto de este archivo, contrastarlo con `git log`/la bitácora o con `node Downloads\KeepQA\src\frescura\auditarFrescura.js <este archivo>`: el texto describe el estado del día en que se escribió. <!-- keepqa-frescura: informe fechado; auditado 2026-09-16 -->
+
 Segunda ronda de ingeniería inversa sobre **TEdit** (github.com/TEdit/Terraria-Map-Editor), esta
 vez centrada en su **interfaz** — el hueco que dejó `ESPEC-buscador-mundo-tedit.md`, que cubrió
 el motor de búsqueda y el formato de fichero pero apenas tocó cómo se ve y se organiza el panel

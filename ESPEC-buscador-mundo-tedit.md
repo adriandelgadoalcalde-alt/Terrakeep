@@ -1,5 +1,7 @@
 # Buscador de objetos del mundo: ingeniería inversa del de TEdit y propuesta para Terrakeep
 
+> **Aviso de frescura (16-sep-2026)**: informe de auditoría/especificación FECHADO (4/5-sep-2026), no una lista viva de pendientes. Sus hallazgos se trataron en commits y entradas de `bitacora.md` posteriores (el propio `ESPEC-pulido-final-...` cita los commits `f31f5d7b..2b63af5a` de la ronda «Opus vs TEdit»). Antes de actuar sobre cualquier punto de este archivo, contrastarlo con `git log`/la bitácora o con `node Downloads\KeepQA\src\frescura\auditarFrescura.js <este archivo>`: el texto describe el estado del día en que se escribió. <!-- keepqa-frescura: informe fechado; auditado 2026-09-16 -->
+
 Investigación real del buscador ya existente de **TEdit** (github.com/TEdit/Terraria-Map-Editor),
 para diseñar el buscador de "¿dónde está esto en el mundo?" de la pestaña **Exploración** de
 Terrakeep. Terrakeep **no** va a ser un editor de mundos: solo localizador.
