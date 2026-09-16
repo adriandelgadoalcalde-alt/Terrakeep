@@ -553,7 +553,20 @@
                     <Image Source="{Binding GhostIconPath}" Stretch="Uniform" Margin="6" Opacity="0.35"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
-                    <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4"
+                    <!-- KeepQA KEEPQA_TRANSICION_SOLO (16-sep-2026, verificarTransicion.js sobre
+                         transicion-tamano.par.json, TR-01..TR-04): a 1180x860 el margen uniforme
+                         de 4px no tocaba ni al contador ni al punto de Calamity, pero a 1080x700
+                         (MinWidth/MinHeight reales) la celda de SlotGridPanel encoge y el sprite
+                         (Stretch=Uniform, siempre pegado al mismo margen fijo) crecia en relativo
+                         hasta pisar ambas esquinas - 4 casos reales medidos (hasta 9,64px de alto
+                         solapado). El contador/punto NO escalan con la celda (tamaño fijo en XAML,
+                         a proposito - deben seguir leyendose igual de nitidos a cualquier zoom), asi
+                         que el hueco tiene que reservarlo el icono: margen asimetrico (mas hueco
+                         arriba-derecha para el punto, abajo-derecha para el contador de 4 cifras)
+                         en vez de subir el margen uniforme entero (eso habria encogido el icono en
+                         TODOS los tamaños, no solo el minimo). Verificado: 0 hallazgos de
+                         verificarTransicion.js tras el cambio, mismo par antes/despues. -->
+                    <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4,7,9,12"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                     <!-- Canal real de "es de Calamity" - punto en la esquina, siempre visible,

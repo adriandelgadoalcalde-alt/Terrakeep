@@ -17009,3 +17009,65 @@ ScrollToEnd) solo volcaba el final, sin nada con que compararlo.
   seguia abierto); la evidencia queda en `Terrakeep.App.Tests\bin_keepqaDebug\Debug\net10.0-
   windows\keepqa-evidencia`, carpeta añadida al inventario de cobertura de KeepQA.
 - Program.cs: solo el gancho de una linea del modo nuevo, junto a HOSTING_SOLO.
+
+## 16-sep-2026 (tarde) - agente ciego cierra los 4 hallazgos TR-01..TR-04 de la pasada de arriba (solape icono/contador/Calamity a 1080x700)
+
+Segundo agente aparte (regla "investigar+herramienta, luego agente ciego arregla" de
+`feedback_dos-fases-investigar-herramienta-luego-agente-ciego-arregla.md`): la pasada de la
+mañana dejo 4 hallazgos Medium reales sin arreglar, en Personaje/Objetos/Inventario, a
+1080x700 (MinWidth/MinHeight reales de la ventana).
+
+**Confirmacion independiente con el mismo arnes real** (no capturas a ojo): recompilado
+`Terrakeep.App.Tests` (bin\Debug normal, el .exe del usuario no estaba abierto),
+`KEEPQA_TRANSICION_SOLO=1` re-ejecutado, y `node Downloads\KeepQA\src\transicion\
+verificarTransicion.js transicion-tamano.par.json --formato-espec` reproducido tal cual: 4
+hallazgos `hallazgo_inducido/solape` Medium, EXACTOS a los citados por la mañana - `TR-01`
+`ContentPresenter#10` Image×TextBlock 4.68x2.97px, `TR-02` `ContentPresenter#32` Image×TextBlock
+2.12x9.64px, `TR-03` `ContentPresenter#41` Image×Ellipse 2.4x6px, `TR-04` `ContentPresenter#46`
+Image×Ellipse 2.25x6px - los 4 "en antes no se solapaban" (regla 6, geometria sana a 1180x860,
+rota solo tras la transicion "tamano"). Nota de proceso: una primera pasada propia con un script
+de solape naive (sin tener en cuenta el recorte del `ScrollViewer` del Inventario) encontro 16-17
+"solapes" en bruto por tamaño - la mayoria eran filas 3+ recortadas fuera del viewport
+(`ScrollViewer.viewportAlto` cayo de 264.65 a 89.44px al reducir la ventana, de 5 filas visibles a
+~2) y por tanto invisibles de verdad en pantalla; el arnes real (`verificarTransicion.js`, regla 6,
+comparacion antes/despues por id estable) ya filtra eso solo, confirmado ejecutandolo de verdad en
+vez de reimplementar su logica a mano.
+
+**Causa real**: `MainWindow.xaml` ~L556, plantilla `SlotCompactTemplate` (usada por los 9
+contenedores reales, `SlotGridPanel` con celda dinamica 44-96px). El icono real (`Image
+Stretch="Uniform" Margin="4"`) escala CON la celda, pero el contador de pila (`TextBlock Count`,
+FontSize fijo 9.5, esquina inferior-derecha) y el punto de Calamity (`Ellipse` 8x8 fijo, esquina
+superior-derecha) tienen tamaño FIJO en XAML a proposito (deben leerse igual de nitidos a
+cualquier zoom de ventana) - a celda grande (1180x860) el icono no llegaba a esas esquinas, a
+celda minima (1080x700) si.
+
+**Arreglo real**: margen ASIMETRICO en el `Image` del icono en vez de subir el margen uniforme
+entero (eso habria encogido el icono en TODOS los tamaños de ventana, no solo el minimo, penalizando
+la legibilidad del 90% de los casos por un problema que solo existe en el 10% mas pequeño):
+`Margin="4"` -> `Margin="4,7,9,12"` (izquierda sin tocar, mas hueco arriba para el punto, mas hueco
+a la derecha y abajo para el contador de hasta 4 cifras). Comentario real dejado en el propio XAML
+con la cita a `verificarTransicion.js`/TR-01..04 para que el porque no se pierda.
+
+**Verificacion real, con el mismo arnes que lo detecto** (no otro nuevo): recompilado
+`Terrakeep.App.Tests`, `KEEPQA_TRANSICION_SOLO=1` re-ejecutado contra el MISMO personaje real
+(`Eldelgas`), los 4 pares `.par.json` regenerados, `verificarTransicion.js` sobre los 4 (`hover`,
+`scroll`, `tamano`, `idioma`) -> **RESULTADO: OK en los 4, 0 hallazgos** (antes 4 en `tamano`).
+Confirmacion visual adicional (no sustituye a la geometria, la complementa): recorte 5x de
+`transicion-tamano-despues.png` antes/despues del arreglo - el "149"/"19" del contador pasan de
+pegados al sprite a tener un hueco real debajo, sin que los iconos se vean visiblemente mas
+pequeños a ojo.
+
+`dotnet test`: **1041/1041** (`Terrakeep.Core.Tests` 556/556 + `Terrakeep.App.ViewModels.Tests`
+485/485), 0 regresiones. Nota real: la primera pasada de la suite completa dio 1 fallo en
+`HomeRefreshAsyncTests.RefreshAsyncCommand_EsAsincronoYIsScanningVuelveAFalseAlTerminar`
+(afirma `IsScanning=True` justo tras `Execute(null)`, sin ningun `Task.Delay`/sleep - carrera
+real contra el hilo de fondo del escaneo de personajes, nada que ver con este cambio de XAML) -
+en aislado y en una segunda pasada completa paso limpio; no toca `HomeViewModel` ni el escaneo,
+se deja constancia aqui por disciplina pero no se investiga mas en este encargo.
+
+`installer\install.ps1` re-ejecutado (publish Release win-x64 autocontenido, reinstalado en
+`%LocalAppData%\Programs\Terrakeep`) y `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe`
+(el acceso directo real del usuario) recompilado tambien - los dos binarios reales quedan con el
+arreglo.
+
+Sin `git push`. Commit local solo de `MainWindow.xaml` y esta bitacora.
