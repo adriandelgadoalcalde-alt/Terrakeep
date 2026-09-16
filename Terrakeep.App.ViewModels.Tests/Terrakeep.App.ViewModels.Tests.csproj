@@ -17,6 +17,12 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <!-- KeepQA (16-sep-2026, paso 1): analizadores de .NET de serie (ver Terrakeep.Core.csproj). -->
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

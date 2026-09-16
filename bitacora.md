@@ -17218,3 +17218,79 @@ El resto del encargo (encontrar y arreglar un bug real con las mismas herramient
 `TerrakeepMod` en paralelo: ver su propio `bitacora.md`, entrada "16-sep-2026 (tarde) - QA a
 ciegas con juego-libre/dossier de KeepQA" (overlap real de "Zoom"/"Markers" en la pestaña
 Exploración en inglés, `UI/Exploracion/PestanaMapa.cs`).
+
+## 16-sep-2026 (noche) - Paso 1 de la integración de 3 candidatos externos de KeepQA: `EnableNETAnalyzers`+`AnalysisLevel=latest` (SDK) + `Roslynator.Analyzers`
+
+Encargo del usuario: integrar los 3 candidatos con mejor relación beneficio/riesgo de una
+investigación previa sobre librerías EXTERNAS del ecosistema .NET (el límite de fondo de KeepQA:
+"solo comprueba lo que alguien pensó en comprobar"), aplicados como primer caso real sobre
+Terrakeep (el proyecto más maduro de la familia). Este es el paso 1 de 3 (los otros dos, CsCheck y
+Stryker.NET, van en entradas propias más abajo/en KeepQA).
+
+Añadido `<EnableNETAnalyzers>true</EnableNETAnalyzers>` + `<AnalysisLevel>latest</AnalysisLevel>`
+a `Terrakeep.Core.csproj` y a los 3 `.Tests.csproj`, y `Roslynator.Analyzers` 5.0.0 (última en
+NuGet, comprobado contra el índice real - no la 4.14.0 que se propuso al principio) solo a
+`Terrakeep.Core.csproj` (razón: es el código de formato/lógica pura, el que más se beneficia de
+una segunda pasada de reglas independiente; los `.Tests.csproj` se dejan con solo las reglas del
+SDK).
+
+**Resultado real, no "debería funcionar"**: con la config tal cual quedó committeada, `dotnet
+build` de toda la solución da **0 avisos** de análisis estático (confirmado con `--no-incremental`
+- sin ese flag, MSBuild puede reutilizar una compilación en caché y NO volver a correr los
+analizadores, visto en vivo: build2.log sin el flag dio 0/0 con Roslynator recién instalado,
+build3.log con el flag corrió de verdad). Esto NO significa "no hay nada que mirar": con
+`-p:AnalysisMode=AllEnabledByDefault` (fuerza TODAS las reglas de Microsoft a activarse con su
+severidad real, no solo las que trae `AnalysisLevel=latest` por defecto) aparecen **836 avisos**
+reales sobre `Terrakeep.Core` (las dos TFM, net10.0+net8.0, ya con el fix de abajo aplicado):
+CA1062×312 (validar argumentos públicos), CA1819×160 (propiedades que devuelven arrays), CA1002×116
+(`List<T>` público en vez de una interfaz), CA1305×64 (formato sin `IFormatProvider`), CA1307×36
+(comparación de string sin `StringComparison`), CA1720×32 (identificadores tipo "Id"/nombres de
+tipo), CA2227×28 (colecciones deberían ser solo lectura), CA1814×16, CA1034×12, CA1859×12,
+CA1707×8, CA1815×8, CA1028×8, CA1031×4 (catch de `Exception` genérica), CA1308×4, CA1065×4,
+CA1812×4, CA1724×4, CA5401×4.
+
+Revisado uno por uno el detalle (no solo el número), NO se suprime nada en masa ni se fuerza
+`AnalysisMode=AllEnabledByDefault` como gate:
+- **CA1062/CA1819/CA1002/CA1305/CA1307/CA1720/CA2227/CA1814/CA1034/CA1859/CA1707/CA1815/CA1028/
+  CA1308/CA1812/CA1724** (backlog real, sin tocar): son reglas de DISEÑO de API pública, no bugs.
+  `PlrCharacter` y el resto de modelos del formato son deliberadamente clases con arrays/listas
+  públicas mutables (es un mapeador 1:1 de un formato binario posicional, no una librería de
+  consumo externo) - "arreglarlas" en masa cambiaría la forma pública de medio `Terrakeep.Core`
+  sin ningún beneficio real de comportamiento. Quedan documentadas aquí, pendientes de revisión
+  humana caso a caso si algún día se decide, nunca resueltas a ciegas por un agente.
+- **CA5401** (`PlrCrypto.cs`, "el vector de inicialización no es el predeterminado"): FALSO
+  POSITIVO real, no un bug - la clave/IV fija (`"h3y_gUyZ"`) es el valor PÚBLICO real del propio
+  juego (confirmado contra `H.encrypt`/`H.__init_crypto` en `script.js`), no una elección de
+  diseño de Terrakeep. Cambiarlo rompería la compatibilidad con cualquier `.plr` real. Documentado
+  en el propio código, no tocado.
+- **CA1065** (`PlrCreativePower.PayloadType`, "una propiedad no debería lanzar excepción"):
+  revisado, no es un bug - lanza `InvalidDataException` para un `powerId` fuera del rango
+  conocido (0-14), fail-fast intencionado y consistente con el resto del lector (`PlrBodySerializer`
+  ya lanza `InvalidDataException` para una cabecera mágica inválida). Convertirlo en método
+  rompería la API de dos sitios de llamada sin ganar nada real. Dejado tal cual, documentado.
+- **CA1859×12** (3 sitios reales: `WldWriter.cs:363`, `TwldReader.cs:124`, `TplrModSummary.cs:92`,
+  cada uno ×2 por TFM): sugerencia PURA de rendimiento (cambiar un parámetro/retorno de
+  `IReadOnlyList`/`IReadOnlyDictionary` a la clase concreta), no un bug. Pendiente de revisión, no
+  tocado.
+- **CA2231** (`Model/ItemPrefix.cs:7`, "implementa los operadores de igualdad"): **bug real y
+  arreglado** - el struct ya implementaba `IEquatable<ItemPrefix>` y sobrescribía `Equals`/
+  `GetHashCode` correctamente, pero al no ser un `record struct` no generaba `operator==`/`!=`
+  solo: cualquier código que intentase `a == b` entre dos `ItemPrefix` ni siquiera compilaba.
+  Añadidos los dos operadores delegando en el `Equals` ya existente (sin tocarlo). Verificado con
+  `dotnet build`/`dotnet test` en verde después del cambio.
+
+**Verificación real**: `dotnet build Terrakeep.slnx` (con `-p:BaseOutputPath` a un temporal fuera
+del repo - el `Terrakeep.exe` del usuario estaba abierto y bloqueaba la copia a `bin\Debug` con
+MSB3027/MSB3021, resuelto así sin pedir cerrar nada) - compilación correcta, 0 avisos. `dotnet
+test Terrakeep.slnx`: **556/556** (`Terrakeep.Core.Tests`) + **485/485**
+(`Terrakeep.App.ViewModels.Tests`) tras el fix de `ItemPrefix`, sin ninguna regresión.
+(`Terrakeep.App.Tests` no es un proyecto xUnit - es el arnés visual por consola descrito en
+`CATALOGO.md`, `dotnet test` lo compila pero no lo "ejecuta" como suite.)
+
+El artefacto de KeepQA que hace esto repetible (envoltorio real sobre `dotnet build`, gate por
+defecto + informe `--completo`, con su propio canario) es `keepqa-analisis-estatico` - ver
+`bitacora.md`/`CATALOGO.md` de KeepQA para el detalle de la pieza.
+
+Sin `git push`. Commit local de `Terrakeep.Core.csproj`, `Terrakeep.Core.Tests.csproj`,
+`Terrakeep.App.Tests.csproj`, `Terrakeep.App.ViewModels.Tests.csproj`, `Model/ItemPrefix.cs` y
+esta bitácora.

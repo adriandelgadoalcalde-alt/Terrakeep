@@ -20,6 +20,24 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- KeepQA (16-sep-2026, paso 1 de la integracion de analisis estatico externo): analizadores
+       de .NET de serie (ya vienen con el SDK, sin paquete NuGet) + Roslynator.Analyzers
+       (github.com/dotnet/roslynator, Apache-2.0) como segunda pasada de reglas independiente.
+       Solo en Core a proposito - es el codigo de formato/logica pura, el que mas se beneficia de
+       un analisis limpio; los tres .Tests.csproj se dejan fuera de Roslynator (ver bitacora.md
+       del 16-sep para el porque). -->
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Roslynator.Analyzers" Version="5.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
   <!-- Auditoria final de Opus (5-sep-2026): mismo criterio que Terrakeep.App.csproj - la
        carpeta de publish no debe llevar simbolos de depuracion al equipo del usuario final. Sin
        esto, el .pdb de Core seguia colandose en el publish de Release aunque el de la App ya no

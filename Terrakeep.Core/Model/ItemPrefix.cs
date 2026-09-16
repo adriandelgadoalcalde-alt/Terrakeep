@@ -27,4 +27,11 @@ public readonly struct ItemPrefix : IEquatable<ItemPrefix>
     public bool Equals(ItemPrefix other) => _vanillaId == other._vanillaId && _syntheticId == other._syntheticId;
     public override bool Equals(object? obj) => obj is ItemPrefix p && Equals(p);
     public override int GetHashCode() => HashCode.Combine(_vanillaId, _syntheticId);
+
+    // KeepQA (16-sep-2026, paso 1 de analisis estatico): CA2231 real - IEquatable<T> ya estaba
+    // implementado pero faltaban los operadores == / !=, asi que "a == b" sobre dos ItemPrefix
+    // ni siquiera compilaba (el struct no es un record, no los genera solo). Añadido sin tocar
+    // Equals/GetHashCode, que ya eran correctos.
+    public static bool operator ==(ItemPrefix left, ItemPrefix right) => left.Equals(right);
+    public static bool operator !=(ItemPrefix left, ItemPrefix right) => !left.Equals(right);
 }
