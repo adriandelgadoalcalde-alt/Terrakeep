@@ -565,8 +565,35 @@
                          arriba-derecha para el punto, abajo-derecha para el contador de 4 cifras)
                          en vez de subir el margen uniforme entero (eso habria encogido el icono en
                          TODOS los tamaños, no solo el minimo). Verificado: 0 hallazgos de
-                         verificarTransicion.js tras el cambio, mismo par antes/despues. -->
-                    <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="4,7,9,12"
+                         verificarTransicion.js tras el cambio, mismo par antes/despues.
+
+                         SEGUNDA RONDA (16-sep-2026, tarde): el modo de "juego libre" de KeepQA
+                         (pywinauto/UIA externo, exploracion real sin guion) encontro un QUINTO
+                         solape que el arreglo de arriba no cubria - ni siquiera a MinWidth/
+                         MinHeight, sino ya al tamaño de ARRANQUE por defecto (1180x860, "no
+                         reducido") - entre el sprite y la estrella "★" de mejor prefijo sugerido
+                         (esquina SUPERIOR IZQUIERDA, ver el TextBlock de abajo con
+                         HasBestPrefixSuggestion). Motivo real: el margen de arriba solo crecio a la
+                         derecha/abajo (por el contador/punto), nunca a la izquierda/arriba - con
+                         Stretch=Uniform el icono se centra dentro de la caja YA reducida y
+                         descentrada que le deja el margen asimetrico, así que en vez de quedar
+                         alejado de la esquina superior-izquierda, quedaba mas PEGADO a ella que con
+                         el margen uniforme original de 4px. Confirmado con un arnes C# propio
+                         (KEEPQA_EQUIPINV_SOLO=1, ver Terrakeep.App.Tests/AuditoriaEquipInv.cs) +
+                         node KeepQA/src/geometria/verificarGeometria.js sobre el volcado real del
+                         personaje 'Eldelgas' a 1180x860: solape Image×TextBlock de ~3x5px en
+                         Equipamiento (ContentPresenter#3) y en Inventario (ContentPresenter#10 y
+                         #30) - la MISMA estrella superior-izquierda en los tres casos, geometria
+                         medida, no solo la captura de juego libre. Arreglo real: subir tambien
+                         Izquierda/Arriba a los mismos valores que ya tenian Derecha/Abajo (9/12,
+                         ambos ya probados sanos por el arreglo de la mañana) - la caja reservada
+                         para el icono queda simetrica (9,12,9,12) y demostrable por construccion:
+                         con Stretch=Uniform el icono jamas se sale de la caja que le deja el
+                         margen, así que si esa caja ya no invade el rectangulo de NINGUNA de las 4
+                         esquinas (Izquierda>=ancho de la estrella, Arriba>=alto de la estrella,
+                         mismo razonamiento ya validado para Derecha/Abajo con el contador/punto),
+                         el solape queda eliminado en TODO el rango de tamaños, no solo el minimo. -->
+                    <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="9,12,9,12"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                     <!-- Canal real de "es de Calamity" - punto en la esquina, siempre visible,

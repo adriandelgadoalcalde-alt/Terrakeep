@@ -17109,3 +17109,71 @@ externo) para un agente ciego, con captura y geometría en `KeepQA\artifacts\jue
   ScrollViewer del Inventario a 700 px de alto (geometría sí, pantalla no). El oráculo de juego libre
   ya compara la parte VISIBLE de cada hoja; queda aquí como ejemplo de por qué la geometría cruda
   necesita el recorte de scroll antes de acusar.
+
+## 16-sep-2026 (noche) - Cierra el hallazgo de `partida-final-seed2` (Equipamiento, tamaño de arranque): estrella de mejor prefijo vs sprite
+
+Retomando el hallazgo pendiente de arriba ("`partida-final-seed2`, paso 1, Equipamiento a
+1180x860... `Image`×`Text` solapados en `.../DataItem#3`") con el arnés real del proyecto, no
+solo con la captura de juego libre.
+
+**Arnés nuevo**: `Terrakeep.App.Tests/AuditoriaEquipInv.cs` (`KEEPQA_EQUIPINV_SOLO=1`) - reutiliza
+`VolcarArbolVisual`/`CarpetaEvidenciaKeepQa`/`CapturaVentanaKeepQa` que ya trae
+`AuditoriaTransicion.cs` (ningún cálculo de geometría reescrito), con el personaje real ya abierto
+por HOME-OPEN ('Eldelgas', el mismo de juego libre) y forzando el tamaño de ARRANQUE por defecto
+(1180x860, nunca `MinWidth`/`MinHeight` - eso ya lo cubre `KEEPQA_TRANSICION_SOLO`). Vuelca
+Equipamiento e Inventario en el contrato exacto que consume
+`Downloads\KeepQA\src\geometria\verificarGeometria.js` directamente (sin pasar por el formato
+"par" antes/despues, aquí no hay transición que comparar).
+
+**Confirmado con geometría real** (`node verificarGeometria.js geometria-equipamiento-arranque.json`
+/ `geometria-inventario-arranque.json`, 714/758 elementos): solape real Image×TextBlock en los TRES
+slots que en ese momento tenían la estrella "★" de mejor prefijo sugerido visible
+(`HasBestPrefixSuggestion`) - Equipamiento `ContentPresenter#3` (3.02x4.97px), Inventario
+`ContentPresenter#10` (4.68x2.18px) y `ContentPresenter#30` (3.19x4.97px). Los tres en la esquina
+SUPERIOR IZQUIERDA del slot, la MISMA estrella en los tres casos (coordenadas cruzadas a mano
+contra el JSON: el `TextBlock` mide 7.68x11.97px pegado al borde superior-izquierdo de la celda,
+exactamente el glyph `&#9733;` FontSize=9 Margin="1,0,0,0" de `HasBestPrefixSuggestion` en
+`MainWindow.xaml`) - no el contador ni el punto de Calamity, esos ya quedaron cubiertos por el
+arreglo TR-01..04 de esta tarde.
+
+**Causa real**: el arreglo de esta tarde (`Margin="4,7,9,12"`) solo creció el margen
+Arriba/Derecha/Abajo (para el punto de Calamity y el contador), nunca Izquierda - con
+`Stretch="Uniform"` el icono se centra dentro de la caja que le deja el margen, así que con una
+caja ya reducida y DESCENTRADA hacia la izquierda/arriba (más hueco a la derecha/abajo que a la
+izquierda/arriba), el icono terminaba más pegado a la esquina superior-izquierda que con el
+margen uniforme de 4px original - un efecto secundario real del arreglo de la tarde, no del
+código anterior a él. Por eso el hallazgo apareció ya al tamaño de ARRANQUE (1180x860), sin
+necesidad de reducir la ventana.
+
+**Arreglo real**: `Margin="4,7,9,12"` -> `Margin="9,12,9,12"` (mismo `Image` del icono,
+`MainWindow.xaml` ~L569) - subir Izquierda/Arriba a los mismos valores que ya tenían
+Derecha/Abajo. Con `Stretch=Uniform` el icono nunca se sale de la caja que le deja el margen, así
+que basta con que ningún lado de esa caja invada el rectángulo de la marca de esa esquina para
+eliminar el solape por construcción, en TODO el rango de tamaños (no solo el mínimo) - mismo
+razonamiento ya validado esta tarde para el contador/punto, aplicado ahora también a
+Izquierda/Arriba. Comentario real dejado en el propio XAML citando este hallazgo.
+
+**Verificación real, con el mismo arnés que lo detectó**: recompilado `Terrakeep.App.Tests`,
+`KEEPQA_EQUIPINV_SOLO=1` reejecutado contra el MISMO personaje real ('Eldelgas'), los dos
+volcados regenerados, `verificarGeometria.js` sobre los dos -> **0 solapes Image×TextBlock/Ellipse
+en los dos** (antes 1 en Equipamiento, 2 en Inventario; el resto de "solapes entre hermanos" que
+reporta el verificador genérico sobre el volcado completo de ventana son decoraciones ya
+conocidas - relleno de barra de vida/mana, franjas de accesorio experto/maestro superpuestas a su
+propio fondo - ajenas a este hallazgo y fuera de alcance de este encargo). Captura real
+(`equipinv-equipamiento-arranque.png`) confirma a ojo el hueco nuevo entre la estrella y el
+sprite, sin que los iconos se vean recortados ni desproporcionadamente más pequeños.
+
+`dotnet test`: **1041/1041** (`Terrakeep.Core.Tests` 556/556 + `Terrakeep.App.ViewModels.Tests`
+485/485), 0 regresiones, sin el fallo intermitente de `HomeRefreshAsyncTests` que se documentó
+esta tarde (confirmado ajeno a este cambio, no reaparece en esta pasada).
+
+`installer\install.ps1` reejecutado (publish Release win-x64 autocontenido, reinstalado en
+`%LocalAppData%\Programs\Terrakeep`) y `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe`
+(el acceso directo real de la barra de tareas del usuario) recompilado también - los dos binarios
+reales quedan con el arreglo. Nota real de proceso: al empezar este encargo `Terrakeep.exe` (PID
+del acceso directo, personaje 'Eldelgas', en primer plano) estaba abierto - se esperó sin forzar
+el cierre y en la siguiente comprobación ya se había cerrado solo, así que la recompilación de
+`bin\Debug` no necesitó pedir nada ni matar ningún proceso del usuario.
+
+Sin `git push`. Commit local de `MainWindow.xaml`, `Terrakeep.App.Tests/AuditoriaEquipInv.cs`
+(arnés nuevo), `Terrakeep.App.Tests/Program.cs` (gancho `KEEPQA_EQUIPINV_SOLO`) y esta bitácora.

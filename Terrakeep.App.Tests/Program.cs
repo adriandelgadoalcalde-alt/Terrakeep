@@ -936,6 +936,14 @@ internal static partial class Program
             Console.WriteLine("DONE (KEEPQA_TRANSICION_SOLO)");
             Environment.Exit(0);
         }
+        // KEEPQA_EQUIPINV_SOLO=1 (16-sep-2026): cierre del hallazgo de juego libre en Equipamiento
+        // a tamaño de arranque - ver AuditoriaEquipInv.cs.
+        if (Environment.GetEnvironmentVariable("KEEPQA_EQUIPINV_SOLO") == "1")
+        {
+            EjecutarKeepQaEquipInvSolo(window, vm);
+            Console.WriteLine("DONE (KEEPQA_EQUIPINV_SOLO)");
+            Environment.Exit(0);
+        }
         // README_SHOTS=1 (cierre de sesion, 15-sep-2026): regenera docs/screenshots/ con datos
         // reales de esta maquina (ver PruebasCapturasReadme.cs) - las capturas del README llevaban
         // desde el 5-sep-2026, de antes del idioma completo/Guia/Servidor de esta noche.
