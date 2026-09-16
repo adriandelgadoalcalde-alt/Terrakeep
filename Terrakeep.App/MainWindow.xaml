@@ -5823,9 +5823,24 @@
                                  usarse. Quitado: la fila "*" ya gobierna el tope real (nunca puede
                                  desbordar - es la misma garantia que AR-EX1 ya dejo para el resto del
                                  bloque), y MinHeight=70 sigue de suelo para ventanas pequeñas. -->
+                            <!-- AR-EX-HSCROLL (16-sep-2026, bug real reportado por el usuario con
+                                 captura propia: "la pestaña de cofres se corta y ademas sale un
+                                 scroll lateral... horizontal, pasa tambien en Objetos y Minerales").
+                                 Causa real confirmada con geometria medida (bitacora.md): el
+                                 ListBox NO declaraba ScrollViewer.HorizontalScrollBarVisibility, asi
+                                 que su ScrollViewer interno usa el valor por defecto (Auto) - eso le
+                                 da ancho INFINITO al TextBlock Name (TextWrapping="Wrap" de
+                                 :5887-5888) al medirlo, el texto nunca envuelve, y el ScrollViewer
+                                 interno termina con mas Extent que Viewport -> scroll horizontal
+                                 real y activo (medido: sidebar 260px, Cofres/Por tipo pedia 279,4px
+                                 en un viewport de 224px). Con Disabled, el TextBlock se mide con el
+                                 ancho REAL disponible y envuelve de verdad - mismo patron que los
+                                 otros 14 ScrollViewer de este fichero (:638, :1027, :2690, etc.), que
+                                 ya lo declaran explicito; este ListBox era el unico que lo omitia. -->
                             <ListBox Grid.Row="6" ItemContainerStyle="{StaticResource VirtualRowContainer}"
                                      Background="Transparent" BorderThickness="0" Focusable="False"
                                      ScrollViewer.CanContentScroll="True"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      VirtualizingPanel.IsVirtualizing="True"
                                      VirtualizingPanel.VirtualizationMode="Recycling"
                                      VirtualizingPanel.ScrollUnit="Pixel"
@@ -6138,10 +6153,22 @@
                                     </DockPanel.Style>
                                     <Button DockPanel.Dock="Top" Content="{Binding Loc[explore_search_checked], Mode=OneWay}" Tag="Ghost" Margin="0,0,0,8" HorizontalAlignment="Left"
                                             Command="{Binding Exploration.SearchCheckedInventoryCommand}" />
+                                    <!-- AR-EX-HSCROLL (16-sep-2026): esta lista SI reprodujo el
+                                         scroll horizontal real reportado por el usuario (medido:
+                                         sidebar 260px pedia 279,4px en un viewport de 224px, y
+                                         seguia desbordando a 300px). Causa: sin
+                                         HorizontalScrollBarVisibility explicito, el ListBox usa el
+                                         Auto por defecto de su ControlTemplate, que le da ancho
+                                         INFINITO al TextBlock del nombre al medirlo y nunca lo deja
+                                         envolver (ver InventoryRowTemplate, TextWrapping="Wrap" ya
+                                         declarado mas abajo pero inutil sin esto). Mismo arreglo ya
+                                         aplicado al ListBox compartido de resultados
+                                         (WorldSearchResults, mas arriba en este fichero). -->
                                     <ListBox ItemsSource="{Binding Exploration.Inventory}" ItemTemplate="{StaticResource InventoryRowTemplate}"
                                              ItemContainerStyle="{StaticResource VirtualRowContainer}"
                                              Background="Transparent" BorderThickness="0" Focusable="False"
                                              ScrollViewer.CanContentScroll="True"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                              VirtualizingPanel.IsVirtualizing="True"
                                              VirtualizingPanel.VirtualizationMode="Recycling"
                                              VirtualizingPanel.ScrollUnit="Pixel" />
@@ -6174,10 +6201,18 @@
                                               IsChecked="{Binding Exploration.AutoZoomOnChestNavigate}"
                                               ToolTip="{Binding Loc[explore_zoom_on_navigate_chest_tooltip], Mode=OneWay}"
                                               Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8" />
+                                    <!-- AR-EX-HSCROLL (16-sep-2026): misma causa/arreglo que la
+                                         lista "Por tipo" de arriba - no reprodujo el desbordamiento
+                                         con el mundo de prueba de esta ronda, pero es el mismo
+                                         ListBox sin HorizontalScrollBarVisibility explicito, asi que
+                                         un nombre de cofre mas largo (otro mundo, otro idioma) lo
+                                         dispararia igual - se arregla la causa, no solo el caso ya
+                                         visto (LIMITE REAL documentado en bitacora.md). -->
                                     <ListBox x:Name="ChestByChestList" ItemsSource="{Binding Exploration.ChestRows}" ItemTemplate="{StaticResource ChestRowTemplate}"
                                              ItemContainerStyle="{StaticResource VirtualRowContainer}"
                                              Background="Transparent" BorderThickness="0" Focusable="False"
                                              ScrollViewer.CanContentScroll="True"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                              VirtualizingPanel.IsVirtualizing="True"
                                              VirtualizingPanel.VirtualizationMode="Recycling"
                                              VirtualizingPanel.ScrollUnit="Pixel" />
@@ -6272,10 +6307,15 @@
                                     <Button Tag="Ghost" Content="{Binding Loc[explore_clear_marks], Mode=OneWay}" Margin="3,0,0,0"
                                             Command="{Binding Exploration.ClearOreMarksCommand}" />
                                 </UniformGrid>
+                                <!-- AR-EX-HSCROLL (16-sep-2026): esta lista SI reprodujo el
+                                     scroll horizontal real reportado por el usuario (medido: sidebar
+                                     260px pedia 236,8px en un viewport de 224px). Misma causa/
+                                     arreglo que las dos listas de Cofres de arriba. -->
                                 <ListBox ItemsSource="{Binding Exploration.Inventory}" ItemTemplate="{StaticResource InventoryRowTemplate}"
                                          ItemContainerStyle="{StaticResource VirtualRowContainer}"
                                          Background="Transparent" BorderThickness="0" Focusable="False"
                                          ScrollViewer.CanContentScroll="True"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                          VirtualizingPanel.IsVirtualizing="True"
                                          VirtualizingPanel.VirtualizationMode="Recycling"
                                          VirtualizingPanel.ScrollUnit="Pixel" />

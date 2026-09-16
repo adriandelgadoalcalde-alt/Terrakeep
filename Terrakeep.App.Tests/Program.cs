@@ -285,7 +285,8 @@ internal static partial class Program
                 DoEvents(); DoEvents();
                 foreach (var (cat, modoCofres, nombreCat) in new (WorldSearchCategory, int, string)[]
                          { (WorldSearchCategory.Chests, 0, "Cofres/Por tipo"), (WorldSearchCategory.Chests, 2, "Cofres/Cofre a cofre"),
-                           (WorldSearchCategory.Ores, 0, "Minerales"), (WorldSearchCategory.Objects, 0, "Objetos") })
+                           (WorldSearchCategory.Ores, 0, "Minerales"), (WorldSearchCategory.Objects, 0, "Objetos"),
+                           (WorldSearchCategory.Npcs, 0, "NPCs") })
                 {
                     vmDiag.Exploration.SelectedCategory = cat;
                     if (cat == WorldSearchCategory.Chests) vmDiag.Exploration.ChestViewMode = modoCofres;
@@ -5811,7 +5812,8 @@ internal static partial class Program
 
                             foreach (var (catHs, modoCofresHs, nombreCatHs) in new (WorldSearchCategory, int, string)[]
                                      { (WorldSearchCategory.Chests, 0, "Cofres/Por tipo"), (WorldSearchCategory.Chests, 2, "Cofres/Cofre a cofre"),
-                                       (WorldSearchCategory.Ores, 0, "Minerales"), (WorldSearchCategory.Objects, 0, "Objetos") })
+                                       (WorldSearchCategory.Ores, 0, "Minerales"), (WorldSearchCategory.Objects, 0, "Objetos"),
+                                       (WorldSearchCategory.Npcs, 0, "NPCs") })
                             {
                                 vm.Exploration.SelectedCategory = catHs;
                                 if (catHs == WorldSearchCategory.Chests) vm.Exploration.ChestViewMode = modoCofresHs;
