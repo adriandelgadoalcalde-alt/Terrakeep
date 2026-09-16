@@ -17177,3 +17177,44 @@ el cierre y en la siguiente comprobación ya se había cerrado solo, así que la
 
 Sin `git push`. Commit local de `MainWindow.xaml`, `Terrakeep.App.Tests/AuditoriaEquipInv.cs`
 (arnés nuevo), `Terrakeep.App.Tests/Program.cs` (gancho `KEEPQA_EQUIPINV_SOLO`) y esta bitácora.
+
+## 16-sep-2026 (tarde/noche) - agente ciego con `juego-libre`/`dossier.js` de KeepQA: sin hallazgos nuevos fuera de Equipamiento/Inventario
+
+Ronda a ciegas en paralelo a la sesión de arriba (que llevaba el hallazgo real de la ★ en
+Equipamiento/Inventario), evitando a propósito esas dos pestañas. Con las herramientas nuevas de
+`Downloads\KeepQA\src\juego-libre\juegoLibre.js` (exploración sin guión vía pywinauto/UIA sobre el
+`.exe` real, personaje de prueba `Eldelgas` copiado y borrado al final) y
+`src\hipotesis\dossier.js`/`verificarHipotesis.js`:
+
+- 3 partidas reales (`juegoLibre.js --proyecto terrakeep`, semillas 11/7/3, ~95 pasos en total,
+  ~2-3 min cada una, incluida una con `--guion "tamano:1080x700,..."` para forzar el tamaño
+  mínimo) cubriendo Inicio, Personaje (solo hover, sin tocar Equipamiento/Inventario), Builds,
+  Novedades, Exploración, Acerca de, Guía y Servidor.
+- `dossier.js` + hipótesis propias verificadas con `verificarHipotesis.js` sobre 3 pantallas
+  reales (Builds, Inicio, Guía): 8 hipótesis en Builds, ninguna confirmada como hallazgo real
+  nuevo (las 3 "confirmadas" eran ruido ya conocido: tooltip pisando su fila de origen -
+  comportamiento esperado de un tooltip -, y un botón interno mudo de `ScrollBar` de WPF -
+  accesibilidad, no visual, y universal a cualquier ScrollBar de fábrica de WPF, no específico de
+  Terrakeep).
+- Hallazgos "Medium" reales de los oráculos de `juego-libre`, todos descartados con evidencia
+  tras inspección: microdesplazamiento de 2-3px en la Librería/Builds al hacer hover (animación
+  de crecimiento de botón esperada, documentada también en TerrakeepMod), y un "sin_efecto" al
+  pulsar "Experto" en Servidor (falso positivo del oráculo geométrico: el cambio es solo de color,
+  el botón SÍ cambia de estado, confirmado visualmente en la captura).
+- Un "Critical" (`proceso_muerto`) real en la sesión de tamaño mínimo: el propio fuzzer abrió por
+  accidente el menú de Sistema nativo de Windows (clic ciego que aterrizó cerca del borde de la
+  ventana) y pulsó su "Cerrar" nativo, cerrando la app - confirmado con el volcado real
+  (`ventana/Menu#0` con `texto: "Sistema"`, `MenuItem#5` con `texto: "Cerrar"`). No es un bug de
+  Terrakeep: es el propio arnés de `juego-libre` invocando el comando de cierre del SISTEMA
+  OPERATIVO, no un botón de la app.
+
+**Sin ningún hallazgo nuevo real fuera de Equipamiento/Inventario** en ~95 pasos aleatorios + 3
+dossiers con hipótesis verificadas contra el volcado real - no se fuerza ningún hallazgo débil
+solo por informar algo. `dotnet test`: 556/556 (`Terrakeep.Core.Tests`) + 485/485
+(`Terrakeep.App.ViewModels.Tests`), sin tocar ningún archivo de este proyecto (no hay commit aquí:
+nada que comitear).
+
+El resto del encargo (encontrar y arreglar un bug real con las mismas herramientas) se cerró en
+`TerrakeepMod` en paralelo: ver su propio `bitacora.md`, entrada "16-sep-2026 (tarde) - QA a
+ciegas con juego-libre/dossier de KeepQA" (overlap real de "Zoom"/"Markers" en la pestaña
+Exploración en inglés, `UI/Exploracion/PestanaMapa.cs`).
