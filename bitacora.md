@@ -17362,3 +17362,82 @@ introdujo ningún aviso de análisis estático).
 
 Sin `git push`. Commit local de `Terrakeep.Core.Tests.csproj` (paquete CsCheck) y
 `Terrakeep.Core.Tests/PlrFormat/PlrFilePropertyTests.cs` (nuevo) y esta bitácora.
+
+## 16/17-sep-2026 (madrugada) - Paso 3 de 3: Stryker.NET (mutation testing) sobre `Terrakeep.Core` - 77.79 % de score real, hallazgo de un hueco real en los tests de umbrales de versión
+
+Paso 3, último de la integración de 3 candidatos externos (ver las dos entradas anteriores).
+Instalado `dotnet-stryker` 5.0.0 como herramienta LOCAL del repo (`dotnet new tool-manifest` +
+`dotnet tool install`, `dotnet-tools.json` nuevo en la raíz) apuntando a `Terrakeep.Core.Tests`.
+
+**Acotado a propósito, no todo `Terrakeep.Core`**: `stryker-config.json` (en
+`Terrakeep.Core.Tests/`) con `mutate` limitado a `PlrFormat/**`, `WldFormat/**` y
+`Guia/GuideEvaluationEngine.cs`+`GuideEvaluator.cs` - los parsers reales de guardado (.plr/.wld)
+más la lógica de evaluación de la Guía, el código más crítico del proyecto, no absolutamente todo.
+`mutation-level: Basic` (en vez de `Standard`, el nivel de todas las integraciones anteriores) para
+que el tiempo fuera manejable en esta misma sesión.
+
+**Obstáculo real, investigado en vivo antes de aceptar el resultado** (no forzado, no ignorado):
+la primera lectura del log ("4574 mutants created", siempre el MISMO número aunque el `mutate` del
+config o el `-m` de la CLI cambiaran - probado con 5 variantes: glob relativo con `**`, glob
+literal, ruta absoluta, y hasta un patrón de EXCLUSIÓN) hacía parecer que el filtro `mutate` no
+tenía ningún efecto - habría significado que Stryker mutaba TODO `Terrakeep.Core` sin importar la
+configuración. Investigado a fondo (5 corridas de prueba cortas, cada una interrumpida a los ~40s
+en cuanto daba su cifra, nunca dejadas correr sin control) antes de asumir nada: el número "N
+mutants created" es SIEMPRE el total de todo el proyecto instrumentado (Stryker compila el
+ensamblado entero de una vez, mutantes incluidos, por razones de rendimiento) - el filtro `mutate`
+SÍ se aplica, pero se ve en una línea posterior distinta: "X mutants got status Ignored. Reason:
+Removed by mutate filter" y "Y total mutants will be tested". Con el alcance real (Basic +
+PlrFormat/WldFormat/Guia): de 2048 mutantes creados (nivel Basic sobre todo el proyecto), 852
+ignorados por el filtro de alcance, 157 con error de compilación (patrones de C# que el mutador no
+entiende, p.ej. `TryGetValue` con variable sin asignar previa - no son bugs, son limitaciones
+conocidas del propio Stryker con ese patrón), 56 sin cobertura de ningún test, 143 ignorados por
+"bloque ya cubierto" (optimización propia de Stryker) → **840 mutantes realmente puestos a
+prueba**.
+
+**Resultado real, verificado dos veces** (primera corrida completa, concurrencia 2, sin reporter
+json/html por error de configuración en el primer intento, 50 min: Killed 657/Survived
+164/Timeout 19, score 75.45 %; segunda corrida completa, concurrencia 4, con reporters html+json,
+21 min: Killed 656/Survived 143/Timeout 41, score **77.79 %** - la variación entre las dos
+corridas está dentro de lo esperable en mutation testing por clasificación Timeout vs Survived
+sensible a la carga de la máquina, no una inconsistencia real). Informe completo (JSON+HTML) en
+`Terrakeep.Core.Tests/StrykerOutput/2026-09-17.01-13-55/reports/` (gitignored, como todo
+`StrykerOutput/`) y copiado a `Downloads\Keep\KeepQA\artifacts\stryker-terrakeep-core\` para que
+quede accesible sin tener que re-ejecutar.
+
+**% real por archivo** (de los 19 archivos con mutantes, los más relevantes):
+`PlrBodySerializer.cs` 89.4 % (354 mutantes, 30 supervivientes), `WldReader.cs` 84.6 % (249
+mutantes, 32 supervivientes, 36 timeout), `WldWriter.cs` 76.3 % (156 mutantes, 31 supervivientes),
+`WorldSearch.cs` 69.4 %, `GuideEvaluationEngine.cs` 54.2 % (el más débil: 56 mutantes, 11
+supervivientes Y 19 sin cobertura - la lógica de evaluación de la Guía tiene menos test unitario
+directo que los parsers binarios), `OreVeinFinder.cs` 88.9 %, `WldHeader.cs`/`PlrContainerSpec.cs`/
+`PlrFile.cs`/`PlrCrypto.cs`/`PlrLoadout.cs` 100 % (sin supervivientes).
+
+**Hallazgo real y concreto, no solo un porcentaje** (no arreglado en esta sesión, documentado para
+un agente aparte - alcance de "arreglar todos los supervivientes" es una tarea propia, no cabe en
+esta integración): los mutantes supervivientes de `PlrBodySerializer.cs` líneas 29-36 son
+EXACTAMENTE los umbrales de `GetMaxItemId` (`>200`, `>=190`, `>=184`... la tabla real de techo de
+id de item por versión) mutados de `>=` a `>`/`>=`-vecino y SOBREVIVIENDO - ningún test existente,
+NI el property test nuevo de CsCheck del paso 2 (que sí prueba los saltos de versión del propio
+`Read`/`Write`, pero no genera ids exactamente en la frontera de `GetMaxItemId`), comprueba el
+valor EXACTO de la frontera de cada umbral de `maxId`. Mismo patrón en `WldWriter.cs` (umbrales de
+versión del `.wld`: `>181`, `>209`, `>112`, `!=208`) y `WldReader.cs` (`>112`, `>269`, `>222`, más
+una mutación de bitwise en el cálculo de pared alta `wallHigh<<8` que sobrevive). Es un hueco de
+cobertura REAL y concreto (no genérico): un desliz de un solo id en cualquiera de esos umbrales -
+exactamente el tipo de bug que este proyecto ya ha encontrado y arreglado de verdad varias veces
+en esta misma familia de umbrales (ver la entrada "Compatibilidad completa de versiones .plr" del
+1-sep-2026) - pasaría los 557 tests actuales sin que ninguno se entere.
+
+**Verificación de que el repo quedó intacto**: Stryker deja temporalmente un ensamblado mutado en
+`Terrakeep.Core.Tests\bin\Debug\net10.0\Terrakeep.Core.dll` mientras corre (instrumentación); las
+dos corridas completas terminaron con un aviso real (`Failed to restore output assembly ... being
+used by another process`, el propio Stryker no pudo devolver el binario original al terminar por
+un lock transitorio de un subproceso que tardó en cerrarse). Confirmado que NO quedó nada roto:
+`dotnet build`/`dotnet test` normales (sin ningún flag de Stryker, en la ubicación real del repo,
+no en un temporal) después de cada corrida recompilan desde el `.cs` real y dan **557/557** limpio
+- el archivo fuente nunca se tocó, solo un binario intermedio de test que una recompilación normal
+sustituye.
+
+Sin `git push`. Commit local de `dotnet-tools.json` (manifiesto de herramienta local, nuevo) y
+`Terrakeep.Core.Tests/stryker-config.json` (nuevo) y esta bitácora. Sin cambios de código fuente en
+este paso (ninguno de los supervivientes se arregló, documentado a propósito para un agente aparte
+según la norma de las dos fases del proyecto).
