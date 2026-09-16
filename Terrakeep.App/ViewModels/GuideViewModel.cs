@@ -173,6 +173,7 @@ public sealed partial class GuideViewModel : ObservableObject
         OnPropertyChanged(nameof(TextoLoQueViene));
         OnPropertyChanged(nameof(TextoAvisoCalamityTitulo));
         OnPropertyChanged(nameof(TextoAvisoCalamity));
+        OnPropertyChanged(nameof(TextoAvisoSinPersonaje));
     }
 
     public ObservableCollection<GuideTramoViewModel> Tramos { get; } = [];
@@ -181,6 +182,17 @@ public sealed partial class GuideViewModel : ObservableObject
     [ObservableProperty] private GuidePasoViewModel? _objetivoPaso;
     [ObservableProperty] private bool _hasAnyData;
     [ObservableProperty] private bool _mostrarAvisoCalamity;
+    // Bug real reportado en directo (16-sep-2026, I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md): con un
+    // mundo cargado pero SIN personaje ("Sin personaje cargado" en la cabecera), la mayoria de
+    // requisitos (Objeto/ObjetoCualquiera/Gancho, HasInventoryData) se quedan NoEvaluable - un
+    // comportamiento ESPERADO (el .wld no guarda el inventario, hace falta el .plr) pero mal
+    // comunicado: antes de esta ronda, la unica pista era el motivo pequeño bajo cada linea, uno
+    // por uno, facil de no leer entre docenas de requisitos - exactamente el sintoma real
+    // reportado ("da igual donde toques, siempre pone lo mismo"). Ahora un aviso unico y visible
+    // lo dice una sola vez, arriba de todo.
+    [ObservableProperty] private bool _mostrarAvisoSinPersonaje;
+
+    public string TextoAvisoSinPersonaje => LocalizationService.Instance["guide_no_character_notice"];
 
     /// <summary>Se llama tras cargar/cerrar un personaje y al entrar en la pestaña - vuelve a
     /// evaluar TODO el arbol contra el estado real actual (nunca cachea nada entre pasos: mismo
@@ -202,6 +214,7 @@ public sealed partial class GuideViewModel : ObservableObject
 
         HasAnyData = loaded != null || world != null;
         MostrarAvisoCalamity = hasCalamity;
+        MostrarAvisoSinPersonaje = world != null && loaded == null;
 
         Tramos.Clear();
         GuideTramoViewModel? objetivoTramo = null;

@@ -6507,6 +6507,17 @@
                         <TextBlock Text="{Binding Loc[guide_empty_state], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
                     </Border>
 
+                    <!-- Mundo cargado, SIN personaje: bug real reportado en directo (16-sep-2026)
+                         - la mayoria de requisitos (Objeto/Gancho, necesitan el .plr) se ven "no
+                         evaluable" y antes solo se explicaba letra pequeña, uno por uno, bajo cada
+                         linea - facil de no leer entre docenas de requisitos identicos. Un aviso
+                         unico y visible lo dice una sola vez, arriba de todo. -->
+                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="1" CornerRadius="8"
+                            Padding="14,11" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                            Visibility="{Binding Guide.MostrarAvisoSinPersonaje, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding Guide.TextoAvisoSinPersonaje, Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                    </Border>
+
                     <!-- Objetivo actual - la tarjeta destacada, mismo tratamiento visual que el
                          "Continuar con..." de Inicio (degradado de acento + sombra). -->
                     <StackPanel Margin="0,0,0,10" Visibility="{Binding Guide.ObjetivoPaso, Converter={StaticResource NullToVis}}">

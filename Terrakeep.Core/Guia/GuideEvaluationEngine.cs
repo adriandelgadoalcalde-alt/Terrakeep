@@ -27,7 +27,7 @@ public static class GuideEvaluationEngine
                 break;
 
             case TipoRequisitoGuia.VidaMaxima:
-                if (!ds.HasCharacterData) { NoEvaluableSinDatos(r, "Guia.Req.VidaMaxima"); break; }
+                if (!ds.HasCharacterData) { NoEvaluableSinDatos(r, "guide_motive_load_character"); break; }
                 Contar(r, ds.VidaMaxima, requisito.Valor, "Guia.Req.VidaMaxima");
                 break;
 
@@ -37,7 +37,7 @@ public static class GuideEvaluationEngine
                 break;
 
             case TipoRequisitoGuia.NpcsPueblo:
-                if (!ds.HasWorldData) { NoEvaluableSinDatos(r, "Guia.Req.NpcsPueblo"); break; }
+                if (!ds.HasWorldData) { NoEvaluableSinDatos(r, "guide_motive_load_world"); break; }
                 Contar(r, ds.NpcsDelPueblo(), requisito.Valor, "Guia.Req.NpcsPueblo");
                 break;
 
@@ -87,24 +87,39 @@ public static class GuideEvaluationEngine
     public static List<ResultadoRequisitoGuia> Evaluar(PasoGuia paso, IGuideStateProvider ds)
         => paso.Requisitos.Select(req => Evaluar(req, ds)).ToList();
 
-    /// <summary>true si el paso se puede dar por hecho: todos sus requisitos OBLIGATORIOS estan
-    /// cumplidos. Un requisito NoEvaluable nunca cuenta como cumplido (asi que un paso con algun
-    /// requisito obligatorio que este proveedor no sepa comprobar no se marca completo solo). Un
-    /// paso sin ningun requisito obligatorio nunca se completa (seria un paso que no mide nada).</summary>
+    /// <summary>true si el paso se puede dar por hecho: todos sus requisitos OBLIGATORIOS
+    /// EVALUABLES (ver mas abajo) estan cumplidos. Un requisito NoEvaluable nunca cuenta como
+    /// cumplido - salvo que sea un LIMITE ESTRUCTURAL (<see cref="ResultadoRequisitoGuia.
+    /// EsLimiteEstructural"/>: este proveedor JAMAS podra comprobarlo, cargue lo que cargue -
+    /// p.ej. dano de arma real en Terrakeep de escritorio), que no cuenta ni a favor ni en
+    /// contra: bloquearia el paso PARA SIEMPRE sin relacion con el progreso real (bug real
+    /// encontrado el 16-sep-2026, I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md - un mundo con el Devorador
+    /// de Mundos ya derrotado seguia mostrando ese tramo como pendiente, porque su paso de
+    /// preparacion exigia un dano de arma que Terrakeep nunca puede medir). Un requisito
+    /// obligatorio "sin datos TODAVIA" (personaje/mundo no cargados ahora mismo, pero que SI se
+    /// resolveria cargandolos) sigue bloqueando de verdad - ahi la honestidad manda: no fingir
+    /// completo lo que aun no se sabe. Un paso sin ningun requisito obligatorio EVALUABLE (todos
+    /// recomendados, o todos estructuralmente imposibles) nunca se completa por si solo.</summary>
     public static bool PasoCompletado(PasoGuia paso, IGuideStateProvider ds)
     {
         bool hayObligatorio = false;
         foreach (var requisito in paso.Requisitos)
         {
             if (requisito.Recomendado) continue;
-            hayObligatorio = true;
-            if (!Evaluar(requisito, ds).Cumplido) return false;
+            hayObligatorio = true; // cuenta como "habia un obligatorio" aunque sea un limite estructural
+            var resultado = Evaluar(requisito, ds);
+            if (resultado.EsLimiteEstructural) continue; // no bloquea: este proveedor jamas lo sabra
+            if (!resultado.Cumplido) return false;
         }
         return hayObligatorio;
     }
 
     /// <summary>Medidor de preparacion de 0 a 1: un requisito obligatorio pesa el doble que uno
-    /// recomendado, y cada uno aporta su progreso PARCIAL (3 de 4 vecinos son 0,75, no un cero).</summary>
+    /// recomendado, y cada uno aporta su progreso PARCIAL (3 de 4 vecinos son 0,75, no un cero).
+    /// Los limites ESTRUCTURALES (ver <see cref="PasoCompletado"/>) quedan fuera de la media -
+    /// ni suman ni restan, igual que no bloquean la completitud - salvo que sean los UNICOS
+    /// requisitos del paso, caso en el que el paso se cuenta vacuamente al 100% (coherente con
+    /// que <see cref="PasoCompletado"/> tambien lo de por hecho en ese caso).</summary>
     public static float Preparacion(PasoGuia paso, IGuideStateProvider ds, out int cumplidos, out int totalObligatorios)
     {
         cumplidos = 0;
@@ -112,9 +127,12 @@ public static class GuideEvaluationEngine
         if (paso.Requisitos.Count == 0) return 0f;
 
         float suma = 0f, pesoTotal = 0f;
+        bool huboLimiteEstructural = false;
         foreach (var requisito in paso.Requisitos)
         {
             var resultado = Evaluar(requisito, ds);
+            if (resultado.EsLimiteEstructural) { huboLimiteEstructural = true; continue; }
+
             float peso = requisito.Recomendado ? 1f : 2f;
             pesoTotal += peso;
             suma += peso * Fraccion(resultado);
@@ -125,7 +143,8 @@ public static class GuideEvaluationEngine
                 if (resultado.Cumplido) cumplidos++;
             }
         }
-        return pesoTotal <= 0f ? 0f : suma / pesoTotal;
+        if (pesoTotal <= 0f) return huboLimiteEstructural ? 1f : 0f;
+        return suma / pesoTotal;
     }
 
     private static float Fraccion(ResultadoRequisitoGuia r)
@@ -148,31 +167,51 @@ public static class GuideEvaluationEngine
     }
 
     /// <summary>NoEvaluable "sin datos TODAVIA" (bandera/personaje/mundo/inventario conocidos por
-    /// este proveedor, pero no cargados ahora mismo). Misma clave generica de motivo en los dos
-    /// consumidores: en TerrakeepMod nunca se llega a usar (sus Has* son siempre true).</summary>
-    private static void NoEvaluableSinDatos(ResultadoRequisitoGuia r, string clave)
+    /// este proveedor, pero no cargados ahora mismo). En TerrakeepMod nunca se llega a usar (sus
+    /// Has* son siempre true). <paramref name="motivoClave"/> distingue QUE falta cargar
+    /// (personaje/mundo) en vez de la clave generica unica de antes - bug real encontrado el
+    /// 16-sep-2026 (I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md): el motivo de escritorio siempre decia
+    /// "carga un personaje/mundo" sin decir cual de los dos, y encima <paramref name="queNecesita"/>
+    /// se perdia (el parametro nunca se usaba), asi que TODAS las lineas sin datos mostraban la
+    /// MISMA frase generica letra por letra, indistinguibles entre un objeto, un NPC o un aviso
+    /// generico - exactamente el sintoma real reportado ("da igual donde toques, siempre pone lo
+    /// mismo"). Con nombre real (objeto/NPC, que SI se puede resolver desde el catalogo sin
+    /// personaje/mundo cargado) la linea distingue una entrada de otra de verdad.</summary>
+    private static void NoEvaluableSinDatos(ResultadoRequisitoGuia r, string motivoClave, string? queNecesita = null)
     {
         r.NoEvaluable = true;
         r.Pedido = 1;
-        r.TextoClave = "Guia.Req.NoEvaluable";
-        r.TextoArgs = [""];
-        r.MotivoClave = "guide_motive_load_data";
+        if (string.IsNullOrEmpty(queNecesita))
+        {
+            r.TextoClave = "Guia.Req.NoEvaluableGenerico";
+            r.TextoArgs = [];
+        }
+        else
+        {
+            r.TextoClave = "Guia.Req.NoEvaluable";
+            r.TextoArgs = [queNecesita];
+        }
+        r.MotivoClave = motivoClave;
     }
 
     /// <summary>NoEvaluable "fijo": este proveedor NUNCA puede comprobar este tipo de requisito
-    /// (p.ej. daño de arma desde un editor de ficheros estaticos), con su motivo real.</summary>
+    /// (p.ej. daño de arma desde un editor de ficheros estaticos), con su motivo real.
+    /// <see cref="ResultadoRequisitoGuia.EsLimiteEstructural"/> queda marcado para que
+    /// <see cref="PasoCompletado"/>/<see cref="Preparacion"/> no bloqueen el paso para siempre
+    /// por algo que jamas se podra saber - ver el porque completo en esos dos metodos.</summary>
     private static void NoEvaluableFijo(ResultadoRequisitoGuia r, string motivoClave)
     {
         r.NoEvaluable = true;
+        r.EsLimiteEstructural = true;
         r.Pedido = 1;
-        r.TextoClave = "Guia.Req.NoEvaluable";
-        r.TextoArgs = [""];
+        r.TextoClave = "Guia.Req.NoEvaluableGenerico";
+        r.TextoArgs = [];
         r.MotivoClave = motivoClave;
     }
 
     private static void EvaluarNpc(ResultadoRequisitoGuia r, RequisitoGuia requisito, IGuideStateProvider ds, string clave)
     {
-        if (!ds.HasWorldData) { NoEvaluableSinDatos(r, clave); return; }
+        if (!ds.HasWorldData) { NoEvaluableSinDatos(r, "guide_motive_load_world", ds.NombreDeNpc(requisito.Id)); return; }
         bool hay = ds.HayNpc(requisito.Id);
         r.Actual = hay ? 1 : 0;
         r.Pedido = 1;
@@ -183,7 +222,7 @@ public static class GuideEvaluationEngine
 
     private static void EvaluarObjeto(ResultadoRequisitoGuia r, RequisitoGuia requisito, IGuideStateProvider ds)
     {
-        if (!ds.HasInventoryData) { NoEvaluableSinDatos(r, "Guia.Req.Objeto"); return; }
+        if (!ds.HasInventoryData) { NoEvaluableSinDatos(r, "guide_motive_load_character", ds.NombreDeObjeto(requisito.Id)); return; }
 
         int lleva = ds.CuantosLleva(requisito.Id);
         r.Actual = lleva;
@@ -197,10 +236,14 @@ public static class GuideEvaluationEngine
 
     private static void EvaluarObjetoCualquiera(ResultadoRequisitoGuia r, RequisitoGuia requisito, IGuideStateProvider ds)
     {
-        if (!ds.HasInventoryData) { NoEvaluableSinDatos(r, "Guia.Req.ObjetoCualquiera"); return; }
+        var ids = requisito.Ids ?? [];
+        if (!ds.HasInventoryData)
+        {
+            NoEvaluableSinDatos(r, "guide_motive_load_character", string.Join(" / ", ids.Select(ds.NombreDeObjeto)));
+            return;
+        }
 
         int mejor = 0;
-        var ids = requisito.Ids ?? [];
         foreach (var id in ids)
         {
             int lleva = ds.CuantosLleva(id);
@@ -226,7 +269,7 @@ public static class GuideEvaluationEngine
 
     private static void EvaluarGancho(ResultadoRequisitoGuia r, IGuideStateProvider ds)
     {
-        if (!ds.HasInventoryData) { NoEvaluableSinDatos(r, "Guia.Req.GanchoNo"); return; }
+        if (!ds.HasInventoryData) { NoEvaluableSinDatos(r, "guide_motive_load_character"); return; }
 
         bool lleva = ds.LlevaGancho(out var nombre);
         r.Actual = lleva ? 1 : 0;
@@ -251,7 +294,7 @@ public static class GuideEvaluationEngine
         bool? valor = ds.ValorBandera(requisito.Bandera);
         if (valor == null)
         {
-            NoEvaluableSinDatos(r, "Guia.Bandera." + requisito.Bandera);
+            NoEvaluableSinDatos(r, "guide_motive_load_data");
             return;
         }
 

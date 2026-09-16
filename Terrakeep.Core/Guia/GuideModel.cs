@@ -127,4 +127,19 @@ public sealed class ResultadoRequisitoGuia
     // strings_es.json/strings_en.json via LocalizationService - Core no conoce ningun idioma,
     // igual que TextoClave/GuideTextCatalog de arriba.
     public string? MotivoClave { get; set; }
+
+    // Bug real reportado en directo el 16-sep-2026 (I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md, mundo con
+    // progreso real avanzado - Devorador de Mundos/Cerebro ya derrotados - donde la Guia de
+    // Terrakeep de escritorio seguia mostrando ese tramo como pendiente PARA SIEMPRE, sin
+    // importar el mundo real que se cargara). Distingue DOS motivos de NoEvaluable que antes
+    // compartian el mismo trato y no deberian: "sin datos TODAVIA" (personaje/mundo no cargados
+    // ahora mismo - se resuelve solo cargandolos, asi que SI debe seguir bloqueando que el paso
+    // se marque completo, honestidad primero) frente a "limite ESTRUCTURAL" (este proveedor
+    // JAMAS podra saberlo, cargue lo que cargue - p.ej. dano de arma real en Terrakeep de
+    // escritorio, que no simula combate; ver DesktopGuideStateProvider.HasLiveGameData, fijo a
+    // false siempre). Un requisito obligatorio del segundo tipo NUNCA podia completarse, asi que
+    // bloqueaba el paso -y por tanto el tramo entero y el "objetivo actual"- de verdad para
+    // siempre, sin relacion ninguna con el progreso real del jugador: el sintoma exacto
+    // reportado. Ver GuideEvaluationEngine.PasoCompletado/Preparacion para donde se usa.
+    public bool EsLimiteEstructural { get; set; }
 }

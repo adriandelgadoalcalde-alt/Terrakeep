@@ -16705,3 +16705,153 @@ esta noche. `MainWindow.xaml`/`Theme.xaml` no se tocan en esta ronda.
 
 Commit local unicamente de `Terrakeep.App.Tests/AuditoriaViewportScroll.cs` (mismo criterio que el
 resto de esta ronda: nunca los archivos ajenos de la otra sesion activa en este repo).
+
+## 16-sep-2026 - Bug real en directo: la Guia de escritorio se quedaba pillada para siempre (no era el refactor de esta noche)
+
+### Encargo (PRIORIDAD MAXIMA)
+El usuario reporto, jugando de verdad, dos sintomas de la pestaña Guia de Terrakeep (escritorio):
+1. "da igual donde toques de la guia que siempre pone lo mismo, esto la guia no sabe comprobarlo
+   todavia" - con un mundo real cargado (Blando Rio) y **sin personaje** cargado.
+2. Mas grave y mas preciso, con partida real avanzada: "si pones un mundo que esta a mas de la
+   mitad o ya te lo has pasado, sigue poniendo lo del Devorador de Mundos, que es incorrecto
+   cuando el jefe ya cae" - la Guia **no leia el progreso real** del mundo/personaje cargados.
+
+Sospecha inicial del coordinador: el "cerebro unico" de la Guia (T1, consolidado unas horas antes
+en GuideEvaluationEngine/IGuideStateProvider) se habia roto en el refactor.
+
+### Investigacion, con evidencia real en cada paso
+
+**El refactor de esta noche NO es la causa.** Comparado el GuideEvaluator.cs de ANTES del commit
+88c5340d (git show 88c5340d^:...) contra el motor nuevo: el despacho de requisitos y
+Fraccion/Contar/Preparacion/PasoCompletado son la MISMA logica, movida tal cual - incluido un bug
+ya presente en el codigo viejo (ver mas abajo). GuideFlags.cs (la tabla de banderas que Terrakeep
+sabe leer del .wld) no lo toco el commit del refactor en absoluto.
+
+**Sintoma 1 (sin personaje cargado): comportamiento en parte esperado, mal comunicado - y un bug
+real de fondo.** Contando los 116 pasos de guia_progresion.json: 65 requisitos son bandera, 56
+dano_arma, 52 gancho, 38 objeto. dano_arma es SIEMPRE no evaluable en escritorio
+(DesktopGuideStateProvider.HasLiveGameData fijo a false, documentado y correcto: Terrakeep no
+simula combate). Sin personaje, objeto/gancho tambien caen (necesitan el .plr). Para cualquier
+tramo de Calamity, ademas, las banderas de jefe de Calamity NO estan en la tabla de GuideFlags.cs
+(limitacion de arquitectura YA documentada: Calamity guarda su progreso en datos de MOD dentro del
+.wld que Terrakeep no parsea) - asi que un tramo de Calamity puede salir 100% no evaluable
+SIEMPRE, cargue lo que cargue. Encontrado ademas un bug real de fondo (no nuevo, ya estaba antes
+del refactor): NoEvaluableSinDatos(r, clave) recibia una clave descriptiva ("Guia.Req.Objeto", el
+NPC/objeto...) que NUNCA se usaba - TextoArgs quedaba siempre [""], asi que la linea salia LETRA
+POR LETRA IDENTICA ("Esto la guia no lo sabe comprobar todavia: ") para cualquier objeto/NPC/
+gancho sin datos - el sintoma exacto de "siempre pone lo mismo".
+
+**Sintoma 2 (mundo avanzado, sigue en el Devorador): BUG REAL, mas grave y mas preciso.**
+Auditados los 21 tramos OBLIGATORIOS del catalogo: todos y cada uno tienen un paso de
+"preparacion" (ArmaContraLaMaldad, ArmaParaEsqueletron, ArmaParaElMuro...) cuyo UNICO requisito NO
+recomendado es dano_arma - y dano_arma es SIEMPRE no evaluable en escritorio, por diseño, para
+SIEMPRE. GuideEvaluationEngine.PasoCompletado marcaba "un requisito NoEvaluable nunca cuenta como
+cumplido", asi que ese paso de preparacion jamas podia completarse - bloqueando el tramo entero
+(tramoCompletado = pasos.All(p.Completado)) y el calculo de "objetivo actual" (que avanza al
+primer paso sin completar) PARA SIEMPRE, sin relacion ninguna con si el jefe estaba de verdad
+muerto en el .wld. Confirmado con un arnes real (GUIA_SOLO=1, personaje adrian + roca_negra.wld
+reales de esta maquina, capturado en guia-real.png): ANTES de arreglarlo, la logica se habria
+quedado pillada en el primer tramo obligatorio (PreOjo); DESPUES, el objetivo real mostrado es
+"Los tres mecanicos - Derrotar a uno de los tres" - reflejando de verdad que el jugador ya paso el
+Devorador, Esqueletron y el Muro de Carne en ese mundo real.
+
+### Arreglo real, escrito para no tocar el lado del mod (verificado en vivo, sigue en 0)
+
+Distincion nueva en Terrakeep.Core.Guia: un requisito NoEvaluable puede ser "sin datos TODAVIA"
+(personaje/mundo no cargados ahora mismo - se resolveria cargandolos, asi que SIGUE bloqueando de
+verdad, honestidad primero) o "limite ESTRUCTURAL" (este proveedor JAMAS podra saberlo, cargue lo
+que cargue - NoEvaluableFijo, los 4 tipos gateados por HasLiveGameData: dano_arma/cristales_vida/
+defensa/npc_activo). Nuevo ResultadoRequisitoGuia.EsLimiteEstructural. PasoCompletado/Preparacion
+ya NO dejan que un limite estructural bloquee el paso (cuenta como "habia un obligatorio" para no
+marcar completo un paso vacio, pero no exige que se cumpla) - un paso cuyo unico obligatorio es
+asi se completa vacuamente (100%), coherente con que Terrakeep nunca podra medirlo. En
+TerrakeepMod, cero cambio de comportamiento: ProveedorEstadoGuiaMod.HasLiveGameData es siempre
+true, asi que dano_arma NUNCA pasa por NoEvaluableFijo alli - se sigue evaluando de verdad contra
+el arma real del jugador, exactamente igual que antes. Verificado con el mismo recorrido real EN
+VIVO (verificar-guia.ps1 -Calamity, ver mas abajo): 0 requisitos [?], igual que siempre.
+
+De paso, arreglado el bug de fondo del sintoma 1 (parametro clave ignorado): ahora
+NoEvaluableSinDatos recibe el motivo REAL (guide_motive_load_character/_load_world en vez del
+generico _load_data de antes) y, cuando aplica, el nombre real del objeto/NPC que falta (resoluble
+desde el catalogo sin inventario cargado) - cada linea vuelve a distinguirse de las demas. Nueva
+clave Guia.Req.NoEvaluableGenerico (sin {0} colgando) para cuando de verdad no hay nada especifico
+que nombrar (gancho generico, bandera desconocida). Banner nuevo en la propia pestaña Guia
+(Guide.MostrarAvisoSinPersonaje, guide_no_character_notice): con mundo cargado y SIN personaje, un
+aviso unico y visible (no letra pequeña bajo cada linea) explica que la mayoria de requisitos
+necesitan el .plr real.
+
+### Contenido: un error real encontrado de paso (aviso del usuario, "romper altares" tras el Devorador es incorrecto)
+
+Guia.Paso.VencerLaMaldad.Porque decia que al caer el Devorador/Cerebro "los Altares Demoniacos o
+Carmesies empiezan a soltar mineral nuevo al romperse con un mazo" - FALSO: romper altares exige
+el Martillo Sagrado, que solo se consigue derrotando al Muro de Carne (entrar en Modo Dificil) -
+ese texto ya estaba bien puesto ahi (Guia.Paso.VencerAlMuro.Porque). Corregido a los hechos reales
+(meteorito garantizado + la Driade vendiendo Polvo Vil/Viscoso y el % de corrupcion/carmesi, que
+SI pasa al derrotar al Devorador/Cerebro). Arreglado en el .hjson del MOD (la fuente real) y
+resincronizado a Terrakeep.App con scripts\sync-guia-desde-terrakeepmod.ps1 (nunca a mano en el
+destino, para no divergir del pipeline real). Revisado el resto de menciones a "Altar" en el
+catalogo: las demas (crafteo del Ojo con lentes, invocacion del Golem, Altar de los Malditos de
+Supreme Calamitas, resumen de Inicio de Modo Dificil) son correctas tal cual estaban.
+
+### Verificacion real, sin atajos
+
+- 8 pruebas nuevas en Terrakeep.Core.Tests/Guia/GuideEvaluationEngineTests.cs (nuevo, API publica
+  de GuideEvaluator, sin InternalsVisibleTo): sin personaje con mundo (objeto/gancho no evaluable
+  con nombre real y motivo de personaje; NPCs del pueblo y bandera de jefe SI evaluables solo con
+  mundo); sin mundo con personaje (motivo de mundo); y las dos pruebas DECISIVAS del sintoma 2 -
+  un paso con solo dano_arma obligatorio se completa solo, y con un mundo real donde
+  DownedBoss2EaterOfWorldsOrBrainOfCthulhu=true los DOS pasos del tramo (preparacion Y derrota)
+  salen PasoCompletado=true.
+- Terrakeep.Core.Tests: 556/556 (548 + 8 nuevas). Terrakeep.App.ViewModels.Tests: 485/485, sin
+  bajar. dotnet build de Terrakeep.Core/Terrakeep.App/Terrakeep.App.Tests limpio, 0 avisos, 0
+  errores.
+- GUIA_SOLO=1 real (personaje adrian + roca_negra.wld reales): objetivo real mostrado = "Los tres
+  mecanicos - Derrotar a uno de los tres" (0 tramos/pasos con texto sin resolver, aviso de
+  Calamity encendido) - captura real en Terrakeep.App.Tests/bin/Debug/net10.0-windows/
+  guia-real.png, revisada a mano.
+- Lado del mod, verificado EN VIVO de verdad: scripts\actualizar-core.ps1 (Core recompilado para
+  net8.0, DLL copiado) -> scripts\verificar-guia.ps1 -Calamity completo: compilo con el Roslyn
+  real de tModLoader, empaqueto el .tmod, lanzo el cliente real y recorrio los 46 tramos ->
+  AUTOPRUEBA GUIA COMPLETA, "requisitos [?] (no evaluable) vistos en todo el recorrido: 0 -> OK"
+  (invariante nuevo, ver mas abajo), ninguna comprobacion en rojo.
+- Antes de lanzar el cliente real se comprobo que no hubiera nada en primer plano que interrumpir
+  (tasklist: ni Terraria ni tModLoader corriendo; ventana en primer plano real: una pestaña de
+  Chrome) - mismo criterio que la regla de "comprobar primer plano antes de forzar foco".
+- Redespliegue real de los dos ejecutables: scripts\compilar.ps1 en TerrakeepMod (.tmod real,
+  747838 bytes) e installer\install.ps1 aqui (publish Release win-x64 autocontenido, instalado en
+  %LocalAppData%\Programs\Terrakeep). Terrakeep.exe real lanzado en segundo plano con stdout/
+  stderr redirigidos: seguia vivo y sin nada en stderr ~10s despues, cerrado limpio con taskkill.
+
+### Arnes: hueco cerrado en TerrakeepMod (hallazgo de una investigacion paralela de Fable)
+
+verificar-guia.ps1 solo ponia en rojo NO CUADRA|EXCEPCION|NO COINCIDE|NO CABE - [?] (NoEvaluable)
+se imprimia linea a linea pero nunca hacia caer el gate, y no habia invariante de que en una
+partida real (ProveedorEstadoGuiaMod, Has* siempre true) el conteo deberia ser 0. Cerrado:
+AutopruebaGuia.cs cuenta ahora _contadorNoEvaluable en los dos sitios donde se imprime
+[?]/[HECHO]/[FALTA] y lo resume en Terminar() como "... -> OK" o "... -> NO EVALUABLE: ...";
+verificar-guia.ps1 añade "NO EVALUABLE:" a su patron rojo. Verificado que SI funciona (el
+recorrido real de esta misma ronda, con el motor ya arreglado, dio 0 - ver arriba).
+
+### Archivos tocados
+
+- Terrakeep.Core/Guia/GuideEvaluationEngine.cs: EsLimiteEstructural en NoEvaluableFijo,
+  PasoCompletado/Preparacion ya no bloquean por un limite estructural, NoEvaluableSinDatos usa el
+  motivo/nombre real en vez de un parametro ignorado, callers actualizados.
+- Terrakeep.Core/Guia/GuideModel.cs: ResultadoRequisitoGuia.EsLimiteEstructural nuevo.
+- Terrakeep.Core.Tests/Guia/GuideEvaluationEngineTests.cs (nuevo): 8 pruebas.
+- Terrakeep.App/ViewModels/GuideViewModel.cs: MostrarAvisoSinPersonaje/TextoAvisoSinPersonaje
+  nuevos, calculados en Refresh().
+- Terrakeep.App/MainWindow.xaml: banner nuevo en la pestaña Guia.
+- Terrakeep.App/Assets/strings_es.json/strings_en.json: guide_motive_load_character/_load_world/
+  guide_no_character_notice nuevos.
+- Terrakeep.App/Assets/guia/textos.es.json/textos.en.json: regenerados con
+  sync-guia-desde-terrakeepmod.ps1 (traen Guia.Req.NoEvaluableGenerico nuevo y
+  VencerLaMaldad.Porque corregido, ver repo hermano).
+- Repo hermano TerrakeepMod: Common/Guia/AutopruebaGuia.cs (contador [?]),
+  scripts/verificar-guia.ps1 (patron rojo), Localization/es-ES_Mods.TerrakeepMod.hjson/
+  en-US_Mods.TerrakeepMod.hjson (NoEvaluableGenerico nuevo, VencerLaMaldad.Porque corregido),
+  lib/Terrakeep.Core.dll actualizado - ver la bitacora de ese repo para el detalle.
+
+Commit local unicamente de los archivos de arriba (nunca git push, nunca Terrakeep.App.Tests/
+Program.cs ni las carpetas bin_keepqaDebug* sueltas - ajenos a esta ronda, de otra sesion en
+marcha en el mismo repo).
