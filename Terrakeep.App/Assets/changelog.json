@@ -1,5 +1,32 @@
 [
   {
+    "version": "3.2.0",
+    "date": "16 de septiembre de 2026",
+    "date_en": "September 16, 2026",
+    "summary": "Editor real de cofres y letreros en la pestaña Exploración, con lectura del .twld para mostrar el nombre real de tiles añadidos por mods (antes salían como \"Tile #-1\"). La Guía deja de quedarse colgada en el mismo paso para siempre cuando un requisito no se puede comprobar en un editor de archivos estático - ahora distingue eso de progreso real sin evaluar, y una auditoría completa de precisión corrigió varios datos reales del contenido (condiciones de jefes, oleadas, objetos). Arreglado también un scroll horizontal real en las listas de Cofres/Objetos de Exploración, y aviso discreto si hay una versión más reciente disponible.",
+    "summary_en": "Real chest and sign editor in the Exploration tab, now reading the .twld file to show the real name of mod-added tiles (previously shown as \"Tile #-1\"). The Guide no longer gets permanently stuck on the same step when a requirement can't be checked from a static file editor - it now tells that apart from real, unevaluated progress, and a full accuracy audit fixed several real content facts (boss conditions, waves, items). Also fixed a real horizontal scrollbar in the Exploration Chests/Items lists, and a discreet notice when a newer version is available.",
+    "added": [
+      "Editor de cofres y letreros directamente en el mapa de Exploración, reutilizando el mismo editor de objetos del inventario - los cambios se guardan de verdad en el .wld.",
+      "Lectura real del .twld: los tiles añadidos por mods (Calamity incluido) muestran su nombre real en vez de \"Tile #-1\".",
+      "Aviso discreto si hay una versión más reciente publicada en GitHub."
+    ],
+    "added_en": [
+      "Chest and sign editor right on the Exploration map, reusing the same item editor from the inventory - changes are really saved to the .wld file.",
+      "Real .twld reading: mod-added tiles (Calamity included) show their real name instead of \"Tile #-1\".",
+      "A discreet notice when a newer version is published on GitHub."
+    ],
+    "fixed": [
+      "La Guía podía quedarse marcando un paso muy temprano como pendiente para siempre, aunque el jefe llevara mucho tiempo derrotado en el mundo real - un requisito que un editor de archivos estático nunca puede comprobar (el daño real del arma) se trataba como bloqueante en vez de \"sin datos\".",
+      "Auditoría de precisión completa de la Guía (vanilla + Calamity + Don't Starve Together) contra el código real del juego: corregidos varios datos erróneos, entre ellos que romper altares exige el Martillo Sagrado del Muro de Carne (no basta con matar al Devorador/Cerebro), que los tres mecánicos hacen falta juntos para Plantera, y que la Emperatriz de la Luz se enfurece de día, no de noche.",
+      "Las listas de Cofres y Objetos de Exploración mostraban un scroll horizontal real e innecesario, con el nombre de algunos elementos cortado."
+    ],
+    "fixed_en": [
+      "The Guide could keep marking a very early step as pending forever, even when the boss had been defeated in the real world for a long time - a requirement a static file editor can never check (real weapon damage) was treated as blocking instead of \"no data yet\".",
+      "Full accuracy audit of the Guide (vanilla + Calamity + Don't Starve Together) against the game's real code: fixed several wrong facts, including that breaking altars requires the Wall of Flesh's Pwnhammer (killing the Eater of Worlds/Brain of Cthulhu alone isn't enough), that all three mechanical bosses are needed together for Plantera, and that the Empress of Light is enraged during the day, not at night.",
+      "The Exploration Chests and Items lists showed a real, unnecessary horizontal scrollbar, with some item names cut off."
+    ]
+  },
+  {
     "version": "3.1.0",
     "date": "15 de septiembre de 2026",
     "date_en": "September 15, 2026",
