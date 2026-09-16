@@ -38,6 +38,11 @@ public static class GuideFlags
         { "downedMechBoss2", h => h.DownedMechBoss2TheTwins },
         { "downedMechBoss3", h => h.DownedMechBoss3SkeletronPrime },
         { "downedMechBossAny", h => h.DownedMechBoss1TheDestroyer || h.DownedMechBoss2TheTwins || h.DownedMechBoss3SkeletronPrime },
+        // Auditoria 16-sep-2026: los bulbos de Plantera exigen los TRES mecanicos (WorldGen.cs:68792
+        // del tModLoader decompilado, 'downedMechBoss1 && downedMechBoss2 && downedMechBoss3'), no
+        // "cualquiera" - misma composicion que Condition.DownedMechBossAll del juego y que
+        // BanderasGuia.cs de TerrakeepMod. Los tres campos ya se parsean del bloque de ancho fijo.
+        { "downedMechBossAll", h => h.DownedMechBoss1TheDestroyer && h.DownedMechBoss2TheTwins && h.DownedMechBoss3SkeletronPrime },
         { "downedPlantBoss", h => h.DownedPlantBoss },
         { "downedGolemBoss", h => h.DownedGolemBoss },
         { "downedSlimeKing", h => h.DownedSlimeKingBoss },

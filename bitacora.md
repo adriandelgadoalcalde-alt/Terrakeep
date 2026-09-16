@@ -16948,3 +16948,31 @@ recorrido real de esta misma ronda, con el motor ya arreglado, dio 0 - ver arrib
 Commit local unicamente de los archivos de arriba (nunca git push, nunca Terrakeep.App.Tests/
 Program.cs ni las carpetas bin_keepqaDebug* sueltas - ajenos a esta ronda, de otra sesion en
 marcha en el mismo repo).
+
+## 16-sep-2026 - Guia de escritorio: sincronizada con la auditoria de exactitud de TerrakeepMod (encargo nocturno de Fable)
+
+La Guia de Terrakeep comparte contenido con TerrakeepMod (`guia_progresion.json` mas los textos
+aplanados de los .hjson via `scripts\sync-guia-desde-terrakeepmod.ps1`), asi que la auditoria de
+esta noche (cada paso contrastado contra el tModLoader y el Calamity decompilados y la wiki -
+detalle completo en la bitacora de TerrakeepMod) llega aqui con dos piezas propias:
+
+- `Terrakeep.Core/Guia/GuideFlags.cs`: bandera compuesta nueva `downedMechBossAll`
+  (`DownedMechBoss1 && 2 && 3`), la que ahora cierra el tramo de los Mecanicos - los bulbos de
+  Plantera exigen los tres (`WorldGen.cs:68792`), no "cualquiera" como decia la guia. Los tres
+  campos ya se leian del bloque de ancho fijo del .wld, asi que es evaluable de verdad en
+  escritorio. Mismo nombre y misma composicion que `BanderasGuia.cs` del mod.
+- `Terrakeep.App/Assets/guia/guia_progresion.json`, `textos.es.json`, `textos.en.json`:
+  regenerados con el script de sincronizacion. Cambios de fondo que se ven aqui: Piratas y Legion
+  de Escarcha pasan a Modo Dificil (orden 44 y 43, requisito `hardMode`), Ceaseless Void en la
+  Mazmorra, Crabulon en el subsuelo, y unos 45 textos corregidos (altares y Pwnhammer, Golem,
+  Plantera, Emperatriz de noche, oleadas reales de las Lunas, Betsy solo en la dificultad 3, Sello
+  celestial en el Manipulador antiguo, Reina Slime sin noche, drops reales, Calamity...).
+
+Verificacion real: `dotnet test` Terrakeep.Core.Tests 556 de 556; `GUIA_SOLO=1` con copia del
+personaje `adrian` y `roca_negra.wld` reales: 46 tramos, aviso de Calamity encendido, 0 textos sin
+resolver, objetivo real "Los tres mecanicos, Derrotar a los tres" (0 de 1) - o sea, la bandera
+nueva se evalua de verdad contra el .wld. `installer\install.ps1` re-ejecutado (Terrakeep.exe
+reinstalado en `%LocalAppData%\Programs\Terrakeep`, 02:27), `TerrakeepSetup-3.1.0.exe` y
+`Terrakeep-3.1.0-portable.zip` regenerados en `installer\output` (ignorado por git).
+
+Sin `git push`. Commit local solo de GuideFlags.cs, los tres JSON de Assets/guia y esta bitacora.
