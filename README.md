@@ -15,8 +15,10 @@ instantáneo.
   por nombre y colocación directa en cualquier slot.
 - **Builds**: equipo recomendado por clase y etapa del juego (vanilla y Calamity).
 - **Exploración de mundos**: carga un `.wld` y navega su mapa completo con pan/zoom, busca
-  minerales/tiles/paredes/líquidos, marca resultados en el mapa, revisa cofres y puntos de
-  reaparición, y edita la dificultad del mundo (Clásico/Experto/Maestro/Viaje).
+  minerales/tiles/paredes/líquidos, marca resultados en el mapa, edita el contenido real de
+  cofres y el texto de letreros directamente sobre el mapa (con lectura del `.twld`, así los
+  tiles añadidos por mods como Calamity muestran su nombre real en vez de "Tile #-1"), revisa
+  puntos de reaparición, y edita la dificultad del mundo (Clásico/Experto/Maestro/Viaje).
 - **Guía de progresión** con cobertura absoluta: el camino vanilla completo más 25 tramos de
   Calamity Mod, evaluados en vivo contra tu personaje y mundo reales ya cargados (banderas de
   jefes, NPCs del pueblo, vida máxima, objetos, ganchos...). Nunca un falso "listo": cualquier
