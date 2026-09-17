@@ -24,7 +24,7 @@
 ; Terrakeep.App.csproj <Version>/changelog.json - sincronizados los tres a mano, sin
 ; ninguna herramienta que los mantenga automaticamente en linea).
 #define MyAppName "Terrakeep"
-#define MyAppVersion "3.2.1"
+#define MyAppVersion "3.2.2"
 #define MyAppPublisher "IncrediBad"
 #define MyAppExeName "Terrakeep.exe"
 #define MyPublishDir "..\Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish"

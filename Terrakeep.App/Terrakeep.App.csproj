@@ -73,9 +73,9 @@
          PUBLICADO en GitHub Releases es 3.2.0.0 (comprobado con Get-Item ... .VersionInfo.FileVersion
          tras instalarlo de verdad) - ese instalador concreto seguira con el bug hasta que se
          publique una release nueva con esto ya corregido (ver bitacora.md). -->
-    <Version>3.2.1</Version>
-    <FileVersion>3.2.1.0</FileVersion>
-    <AssemblyVersion>3.2.1.0</AssemblyVersion>
+    <Version>3.2.2</Version>
+    <FileVersion>3.2.2.0</FileVersion>
+    <AssemblyVersion>3.2.2.0</AssemblyVersion>
   </PropertyGroup>
 
   <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de
