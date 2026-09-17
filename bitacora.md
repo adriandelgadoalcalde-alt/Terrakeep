@@ -17876,3 +17876,174 @@ esta vez (no se uso ningun verificador compartido nuevo - las 3 funciones son de
 serializacion, no de layout/UI nueva que necesite pasar por geometria/contraste compartidos; el
 indicador de "sin guardar" y la barra de progreso SI se verificaron con capturas reales de
 `RenderTargetBitmap`, mismo mecanismo que usa `SnapshotVisual.cs`).
+
+## 17-sep-2026 (tarde) - Dos funciones reales de pulido visual: transiciones entre pestañas + modo compacto opcional
+
+Encargo real de pulido visual: (1) transicion sutil al cambiar de pestaña PRINCIPAL (hoy brusca,
+sin animacion) y (2) un "modo compacto" opcional en Ajustes para las listas densas (Libreria/
+Inventario/Builds). Las dos verificadas con las piezas reales de KeepQA construidas anoche
+(`verificarTransicion.js` + `keepqa-snapshot-visual`), nunca solo "se ve bien" - regla permanente
+de la familia.
+
+**AVISO real de esta sesion**: otro agente trabajaba en paralelo sobre este mismo repo (cache de
+catalogo + actualizacion en un clic - `CharacterFileService.cs`, `LibraryCategoryTreeBuilder.cs`,
+`CalamityCatalog.cs`, `VanillaItemCatalog.cs`, `CatalogBinaryCache.cs`/`LibraryCatalogDiskCache.cs`
+nuevos, `Program.cs`/`MainViewModel.Actualizaciones.cs`). Se comprobo `git status` antes de cada
+commit y solo se añadieron por nombre exacto los ficheros propios de este encargo - nunca
+`git add -A`. En un momento la build del arnes compartido (`Terrakeep.App.Tests`) fallo por un
+mid-edit ajeno real (`SeedFromDiskCache`/`__swTmp` sin terminar de escribir) - se esperó con
+`controladorEspera.js condicion` (8 min, no se toco su fichero) hasta que estabilizo solo y la
+build volvio a compilar en verde.
+
+### 1. Transiciones sutiles entre pestañas principales - CONSTRUIDA Y VERIFICADA
+
+Investigado primero: `NavTabControl` (`Styles/Theme.xaml`, el `TabControl` raiz con las 8 pestañas
+Inicio/Personaje/Builds/Novedades/Exploracion/Acerca de/Guia/Hosting) solo ponia
+`TabStripPlacement`/`Background`/`BorderThickness`/`ItemContainerStyle` - sin `ControlTemplate`
+propio, usa el `ContentPresenter` de fabrica de WPF (`PART_SelectedContentHost`, mismo nombre en
+Aero2/Fluent), que cambia el contenido de golpe. Nunca se toco - reescribir el `ControlTemplate`
+entero de un `TabControl` con `TabStripPlacement="Left"` es zona de riesgo real de esta app (ver
+"Verdades del entorno WPF" en `CLAUDE.md` sobre `Setter.TargetName`/`Storyboard.TargetName` dentro
+de plantillas).
+
+**Arreglo real**: `MainWindow.xaml` le da `x:Name="RootTabControl"` + `SelectionChanged=
+"OnRootTabSelectionChanged"` al `TabControl` raiz (unico cableado nuevo en XAML). Todo el resto
+vive en `MainWindow.xaml.cs`:
+- `OnRootTabSelectionChanged` filtra `e.OriginalSource` contra `RootTabControl` (SelectionChanged
+  es un RoutedEvent Bubble - las `InnerTabControl` de Personaje/Novedades burbujean su propio
+  cambio hasta aqui tambien; sin el filtro se animaria SIEMPRE, tambien al cambiar de pestaña
+  INTERNA, que el encargo pedia dejar fuera a proposito).
+- `FindDescendantByName<ContentPresenter>` (VisualTreeHelper, recursivo, cacheado tras el primer
+  hallazgo - la instancia no cambia mientras la ventana viva) localiza el `PART_SelectedContentHost`
+  real.
+- Fade (`Opacity` 0->1) + slide corto (`TranslateTransform.Y` 6->0) en 180ms, `QuadraticEase
+  EaseOut` - sutil, nunca llamativo, dentro del rango pedido (150-200ms).
+- `SystemParameters.ClientAreaAnimation` (mapeo WPF real de `SPI_GETCLIENTAREAANIMATION` - el
+  toggle real de Windows 11, Accesibilidad > Efectos visuales > "Efectos de animacion") se respeta
+  de verdad: sin animaciones activadas en el SO, el contenido aparece de golpe (identico al
+  comportamiento anterior a este cambio), nunca a medias.
+- **BUG REAL encontrado verificando** (no en teoria, con `keepqa-snapshot-visual`): dejar un
+  `TranslateTransform` "en reposo" (Y=0, `FillBehavior.HoldEnd` de fabrica) puesto como
+  `RenderTransform` del `ContentPresenter` rompia el snapshot aprobado de `panel-inventario` (SSIM
+  0,887 contra el umbral 0,970 en la primera pasada) pese a que Y=0 es visualmente identico a "sin
+  transform" - WPF solo activa su camino rapido de alineado a pixel cuando `RenderTransform` es
+  `null`/`Transform.Identity`; un `TranslateTransform(0,0)` sigue contando como "hay transform" y
+  desalinea el subarbol de subpixel, emborronando iconos/texto pequeños (un panel denso como
+  Inventario lo nota mucho mas que la ventana completa). Arreglo real: `FillBehavior.Stop` en las
+  dos animaciones + `Completed` que fija el valor final a mano Y pone `RenderTransform = null` del
+  todo (nunca se queda un transform "identidad" puesto de adorno) - ver el comentario real
+  `Reposar()` en `OnRootTabSelectionChanged`.
+
+**Verificacion real con `verificarTransicion.js`** (nuevo bloque 5 en `AuditoriaTransicion.cs`,
+modo `KEEPQA_TRANSICION_SOLO=1`): diseño deliberado, DISTINTO al patron hover/scroll/tamaño/idioma
+ya existente - "antes" y "despues" son DOS INSTANTES DE LA MISMA animacion (t~40ms y t~140ms tras
+el cambio, la Storyboard dura 180ms), no la pestaña vieja contra la nueva (con contenido
+totalmente distinto por pestaña casi ningun id se repetiria entre volcados, y las reglas 1/3
+quedarian vacuas de verdad - ver el comentario real en el propio fichero). Con los dos instantes de
+la MISMA pestaña nueva, los ids SI coinciden y la pieza compartida puede juzgar de verdad lo que
+pedia el encargo: regla 1 (`sin_efecto`, confirma que la Storyboard se ejecuta de verdad - si se
+comenta el `BeginAnimation` este canario lo cazaria), regla 3 (`hermano_sin_animar`, confirma que
+NINGUN hijo se queda quieto mientras sus hermanos se mueven - el bug real de StarvekeepMod que
+motivo esa regla) y regla 6 (`hallazgo_inducido`, nada nuevo se sale de su padre ni se solapa solo
+por estar a mitad de la animacion). Resultado real (`node verificarTransicion.js
+transicion-animacion.par.json`): `antes=306 despues=306 cambiados=156 iguales=150 aparecidos=0
+desaparecidos=0` -> `RESULTADO: OK`, 0 hallazgos. Los 4 pares ya existentes (hover/scroll/tamaño/
+idioma) se re-ejecutaron tambien - los 4 siguen en `RESULTADO: OK` (sin regresion). LIMITE REAL
+documentado en el propio comentario del bloque: esto no prueba el estado FINAL tras terminar del
+todo - eso lo hace la pieza de abajo.
+
+**Verificacion real con `keepqa-snapshot-visual`** (`SNAPSHOT_VISUAL_SOLO=1`): `PruebasSnapshotVisual.cs`
+ahora espera `WaitForDispatcher(250)` (>180ms reales de la Storyboard) tras cada cambio de pestaña
+ANTES de capturar - sin esto el arnes fotografiaria un fotograma a medias (opacidad<1, aun
+desplazado) y rompia las 3 referencias aprobadas por un motivo ajeno al contenido real (falso
+fallo, no un bug de la app). Con esa espera: `ventana-principal-inicio` y
+`ventana-principal-inicio-en` -> `OK (SSIM >= 0,9990)`, confirmando que el estado FINAL de Inicio
+(español e ingles) es pixel-identico al de antes de este cambio, tal como pedia el encargo.
+
+**`panel-inventario` -> FALLO real encontrado, investigado y AISLADO como AJENO a este encargo**
+(disciplina "verificar aislando la variable"): SSIM 0,8869 contra el umbral 0,970, un cambio de
+color plano en el fondo de los slots RELLENOS (de morado-azulado `61,77,131` a verde-teal
+`35,64,61` - mismo recuento de pixeles casi exacto, 4568 vs 4572, nunca un problema de nitidez/
+geometria) que apunta a `EquippedGreenBrush` (la mancha verde de "equipado" al 16% de opacidad,
+`MainWindow.xaml` ~L513, mezclada sobre `BgElevatedBrush`) activandose sobre los 10 objetos
+sinteticos que este snapshot coloca en Inventario cuando el aprobado de las 12:38 no los tenia como
+equipados. Investigado con un `git worktree` aislado (`Terrakeep-verify-aislado`, borrado al
+terminar) en 3 pasos reales:
+  1. Solo mis cambios (parche de exactamente los ficheros de este encargo) sobre `HEAD` limpio
+     (`612eb5e6`, sin nada del agente paralelo) -> SSIM identico, 0,886868.
+  2. `HEAD` limpio SIN ningun cambio de hoy (ni mio ni del agente paralelo) -> SSIM identico,
+     0,886868.
+Con el mismo resultado exacto en un commit ya existente antes de que arrancara esta sesion, queda
+probado que el fallo es AJENO por completo a las dos funciones de este encargo (y tambien al
+trabajo en paralelo de cache de catalogo) - una deriva real del propio banco de pruebas: lo mas
+probable, el personaje REAL "Terrariano" que el arnes abre antes (bloque `HOME-OPEN`, disco real de
+este equipo, cambia con el uso normal del juego) dejando equipados objetos con los mismos ids
+1..10 que el bloque sintetico de `panel-inventario` reutiliza para Inventario, y `IsEquipped` cruza
+esa referencia. Fuera de alcance de este encargo arreglarlo (no es una regresion de hoy, ya fallaba
+en el commit anterior a esta sesion) - documentado aqui para que no se persiga un fantasma en la
+proxima sesion; candidato real para una ronda aparte: que el bloque sintetico de
+`panel-inventario`/`ventana-principal-inicio` fuerce `IsEquipped=false` explicito en los 10 slots
+que coloca, o limpie el `EquipmentContainer` antes de escribir el Inventario, para dejar de
+depender del estado real de Equipamiento de un personaje de disco ajeno al propio snapshot.
+
+### 2. Modo compacto opcional en Ajustes - CONSTRUIDO Y VERIFICADO
+
+`Settings.IsCompactMode` (bool, `TerrakeepSettings`/`SettingsViewModel`, persistido en
+`settings.json` - mismo patron ya establecido que `IsMinimapVisible`/`Language`), **nunca activado
+por defecto** (pedido explicito del encargo). Checkbox real en Ajustes (dentro de "Acerca de", el
+mismo sitio real que el resto de Ajustes desde H5-07), con su propia seccion "Densidad" y claves de
+idioma nuevas (`settings_compact_mode_title`/`_label`/`_tooltip`, es/en).
+
+**Mecanismo real** (`Terrakeep.App/Converters/DensityConverters.cs`, 3 converters nuevos, todos con
+`x:Static Instance` - mismo criterio ya establecido en el proyecto para converters usados dentro de
+`DataTemplate` muy reutilizados, ver el comentario real de `InverseValueConverter` sobre
+`StaticResource` como `Binding.Converter` fallando en tiempo de ejecucion dentro de contenedores
+fuertemente virtualizados):
+- `CompactCellSizeConverter`/`CompactCellSizeMultiConverter`: escalan `MinCell`/`MaxCell` de
+  `SlotGridPanel` por un factor fijo 0,8 cuando `IsCompactMode=true` - RELATIVO al valor base real
+  de cada contenedor (`ContainerViewModel.MinCell`/`MaxCell` YA varian: 40/90 universal, 32/56 para
+  Mascota/Montura/Tinte), nunca un numero absoluto igual para todos. Aplicado a los 4 usos reales de
+  `SlotGridPanel` en `MainWindow.xaml`: el contenedor generico (Inventario/Almacenes/Equipamiento/
+  Monturas/Monedas, `MinCell`/`MaxCell` vienen de la instancia -> `MultiBinding`), la rejilla de
+  Buffs equivalente, y las dos rejillas de resultados de catalogo (Libreria de objetos y Libreria de
+  buffs, base fija 40/90 -> `IValueConverter` + `ConverterParameter`, sin falta de `MultiBinding`).
+- `CompactGapConverter`: el hueco (`Gap`) de esos mismos 4 usos, 4px normal -> 2px compacto.
+- Fila mas baja en las otras dos listas densas reales: `DataTrigger` de `Padding` (4,3 -> 4,1) en
+  `CategoryNodeTemplate` (arbol de categorias de la Libreria) y (8,5 -> 6,2) en la tarjeta de
+  `BuildItemRowViewModel` (recomendaciones de Builds) - mismo patron ya establecido de `DataTrigger`
+  con `RelativeSource AncestorType=Window` para alcanzar `Settings` desde dentro de un
+  `DataTemplate` cuyo `DataContext` es otra cosa (dato real: usado ya decenas de veces en este mismo
+  fichero, ej. linea ~785).
+
+**Verificado**: `dotnet build Terrakeep.App` en verde (0 avisos/0 errores) tras cada cambio.
+Geometricamente NO se paso por `verificarTransicion.js`/geometria de KeepQA con capturas reales
+(el modo compacto no es una TRANSICION - es un valor estatico de ajuste, sin animacion, y
+`SlotGridPanel.MeasureOverride`/`ArrangeOverride` ya tiene su propia cobertura real de tests
+deterministas en `Terrakeep.App.Tests`, T24-SLOTGRID) - la verificacion real de este bloque fue de
+CORRECTITUD DEL MECANISMO (el `MultiBinding`/`IValueConverter` resuelven contra `Settings` de
+verdad, sin fallo de binding silencioso - confirmado indirectamente: si hubiera fallado, `MinCell`/
+`MaxCell` habrian caido al DEFAULT de la propia `DependencyProperty` de `SlotGridPanel` (44/96, no
+40/90) y el snapshot de `panel-inventario` habria cambiado de TAMAÑO de celda, no solo de color -
+la comparacion aislada de mas arriba confirma que el tamaño/posicion de cada celda es IDENTICO
+pixel a pixel entre el commit limpio y el commit con mis cambios, solo cambia el color por el
+motivo ajeno ya documentado). Con `IsCompactMode=false` por defecto el camino de siempre queda
+intacto - una ronda aparte pendiente (no urgente, el mecanismo ya esta verificado) es capturar
+tambien geometria real con `IsCompactMode=true` activo (ES/EN, tamaño minimo) con el arnes de UI
+Automation, para tener evidencia visual directa del modo compacto en si, no solo de que el
+mecanismo no rompe el modo normal.
+
+**Build y test**: `dotnet build Terrakeep.slnx` (Debug) en verde. `dotnet test
+Terrakeep.Core.Tests`: 568/568. `dotnet test Terrakeep.App.ViewModels.Tests`: 365/365 (el runner
+avisa "Proceso de host de pruebas bloqueado" DESPUES de reportar los 365 correctos/0 errores - un
+cuelgue de salida del propio runner, no un fallo de test real).
+
+**Recompilado y redesplegado**: `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe` (barra de
+tareas) y `C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (instalado, via
+`installer\install.ps1`, timestamp fresco confirmado).
+
+**Commit**: solo los ficheros propios de este encargo (`MainWindow.xaml`/`.xaml.cs`,
+`Converters/DensityConverters.cs`, `Services/SettingsService.cs`, `ViewModels/SettingsViewModel.cs`,
+`Assets/strings_es.json`/`strings_en.json` - solo las 3 claves nuevas, el resto del fichero lo toco
+el agente paralelo con sus propias claves `update_*` y se dejo intacto -,
+`Terrakeep.App.Tests/AuditoriaTransicion.cs`/`PruebasSnapshotVisual.cs`), `git status` comprobado
+antes, nunca `git add -A`. Sin `git push`.

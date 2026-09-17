@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using Microsoft.Win32;
 using Terrakeep.App.ViewModels;
 using Terrakeep.Core.Model;
@@ -30,6 +31,12 @@ public partial class MainWindow : Window
     private static extern uint GetDoubleClickTime();
 
     private readonly MainViewModel _viewModel = new();
+
+    // Actualizacion en un clic (17-sep-2026): ver el comentario real de
+    // MainViewModel.CerrarAppParaActualizar - evita que OnWindowClosing vuelva a preguntar por
+    // cambios sin guardar cuando el cierre lo dispara el propio flujo de actualizacion (que ya
+    // pregunto lo mismo un momento antes, antes de lanzar el instalador).
+    private bool _cerrandoParaActualizar;
 
     public MainWindow()
     {
@@ -82,6 +89,18 @@ public partial class MainWindow : Window
         // "cambios sin guardar" que OnWindowClosing, ahora tambien antes de cargar OTRO
         // personaje por encima desde Inicio.
         _viewModel.ConfirmDiscardChanges = () => ConfirmDiscardChanges(Loc["dlg_action_load_other"]);
+        // Actualizacion en un clic (17-sep-2026): mismo dialogo real Si/No/Cancelar, con
+        // "actualizar Terrakeep" como la accion - ver MainViewModel.Actualizaciones.cs.
+        _viewModel.ConfirmDiscardChangesForUpdate = () => ConfirmDiscardChanges(Loc["dlg_action_update"]);
+        // El instalador ya esta lanzado y esperando de verdad a que este proceso termine (ver el
+        // comentario real de CerrarAppParaActualizar) - Close() normal (no Environment.Exit) para
+        // que WindowPlacementService.Save/SaveSession sigan corriendo como en cualquier cierre,
+        // pero _cerrandoParaActualizar evita que OnWindowClosing vuelva a preguntar por cambios
+        // sin guardar: ActualizarAhora() ya lo pregunto una vez (ConfirmDiscardChangesForUpdate)
+        // antes de lanzar el instalador - un segundo aviso aqui podria dejar al instalador
+        // esperando en vano a que este proceso muera (Wait-Process tiene un timeout real, ver
+        // LanzarInstaladorYRelanzar) si el usuario cancelara este segundo dialogo redundante.
+        _viewModel.CerrarAppParaActualizar = () => { _cerrandoParaActualizar = true; Close(); };
         // Auditoria de Opus, Bloque 4 (T-3): restaura el tamaño/posicion real de la ultima
         // sesion - antes de Show(), Width/Height/Left/Top ya se pueden fijar sin parpadeo.
         Services.WindowPlacementService.Apply(this);
@@ -111,7 +130,7 @@ public partial class MainWindow : Window
         // perder al guardarla de todos modos.
         if (_viewModel.Exploration.IsWorldLoaded)
             _viewModel.Exploration.SaveCurrentViewState(WorldMapScroll.HorizontalOffset, WorldMapScroll.VerticalOffset);
-        if (!ConfirmDiscardChanges("cerrar")) e.Cancel = true;
+        if (!_cerrandoParaActualizar && !ConfirmDiscardChanges("cerrar")) e.Cancel = true;
     }
 
     // Auditoria de Opus, N-2 (extraido para T-B, segunda auditoria de Fable): dialogo real
@@ -1305,5 +1324,103 @@ public partial class MainWindow : Window
             }
             e.Handled = true;
         }
+    }
+
+    // Encargo de pulido visual (17-sep-2026): "el cambio de pestaña hoy es brusco, sin ninguna
+    // animacion" - confirmado investigando primero (NavTabControl en Theme.xaml solo pone
+    // TabStripPlacement/Background/BorderThickness/ItemContainerStyle, ningun ControlTemplate
+    // propio - usa el ContentPresenter de fabrica de WPF, que cambia el contenido de golpe).
+    // En vez de reescribir el ControlTemplate entero de TabControl (chrome real de
+    // TabStripPlacement="Left" + TabPanel, riesgo de romper algo que ya funciona - ver "Verdades
+    // del entorno WPF" en CLAUDE.md sobre Setter.TargetName/Storyboard.TargetName dentro de
+    // plantillas), la transicion se aplica en code-behind directamente sobre el
+    // ContentPresenter real que YA trae la plantilla de fabrica con el nombre fijo
+    // "PART_SelectedContentHost" (documentado, mismo nombre en Aero2/Fluent) - un
+    // BeginAnimation directo sobre ese elemento no necesita ningun TargetName de Storyboard.
+    //
+    // SelectionChanged es un RoutedEvent con estrategia Bubble: las TabControl INTERNAS
+    // (Personaje/Novedades, InnerTabControl) burbujean su propio cambio hasta este handler
+    // tambien - de ahi el guard de e.OriginalSource contra la instancia real de RootTabControl
+    // (nunca animar por un cambio de pestaña interna, el encargo es solo para las principales).
+    private ContentPresenter? _rootTabContentHost;
+
+    private void OnRootTabSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!ReferenceEquals(e.OriginalSource, RootTabControl)) return;
+        // "Reducir movimiento" real de Windows (Accesibilidad > Efectos visuales > Animaciones,
+        // Configuracion > Accesibilidad > Efectos visuales en Windows 11) - SystemParameters.
+        // ClientAreaAnimation es el mapeo WPF real de SPI_GETCLIENTAREAANIMATION, la misma señal
+        // que ya respetan los ComboBox/menus nativos de Windows. Sin animacion: el contenido
+        // nuevo aparece de golpe (comportamiento identico al que ya habia antes de este cambio),
+        // nunca se deja a medio hacer (Opacity/RenderTransform quedan en su valor final).
+        var host = FindSelectedContentHost();
+        if (host == null) return;
+        // BUG REAL encontrado verificando con keepqa-snapshot-visual (17-sep-2026, no en teoria):
+        // dejar un TranslateTransform "en reposo" (Y=0, tras FillBehavior.HoldEnd por omision)
+        // puesto como RenderTransform del ContentPresenter reventaba el snapshot aprobado de
+        // "panel-inventario" (SSIM 0,887 contra el umbral 0,970 - los otros dos, ventana entera,
+        // seguian pasando de sobra, la diferencia se diluye con mas pixeles) pese a que Y=0 es
+        // visualmente identico a "sin transform". Motivo real: WPF solo activa su camino rapido
+        // de alineado a pixel (ClearType nitido, bordes sin desenfocar) cuando RenderTransform es
+        // null/Transform.Identity - un TranslateTransform con X=Y=0 sigue contando como "hay
+        // transform" para ese camino rapido y desalinea el subarbol entero del grid de subpixel,
+        // emborronando iconos/texto pequeños (justo lo que un panel denso como Inventario nota
+        // mas que la ventana completa). Arreglo real: RenderTransform vuelve a null en cuanto la
+        // animacion llega a su fin (FillBehavior.Stop + Completed pone el valor final a mano) -
+        // nunca se queda un TranslateTransform "identidad" puesto de adorno.
+        void Reposar()
+        {
+            host.BeginAnimation(UIElement.OpacityProperty, null);
+            host.Opacity = 1;
+            if (host.RenderTransform is TranslateTransform t) t.BeginAnimation(TranslateTransform.YProperty, null);
+            host.RenderTransform = null;
+        }
+        if (!SystemParameters.ClientAreaAnimation) { Reposar(); return; }
+
+        if (host.RenderTransform is not TranslateTransform slideTransform)
+        {
+            slideTransform = new TranslateTransform();
+            host.RenderTransform = slideTransform;
+        }
+        var ease = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+        var duration = TimeSpan.FromMilliseconds(180);
+        var fade = new DoubleAnimation(0, 1, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop };
+        var slide = new DoubleAnimation(6, 0, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop };
+        // FillBehavior.Stop (en vez del HoldEnd de fabrica): el Completed de abajo deja el valor
+        // final a mano Y limpia el RenderTransform (ver el comentario real de arriba) - con
+        // HoldEnd la animacion se queda "viva" reteniendo el valor y nunca se puede volver a null
+        // sin perder el 1/0 final en el mismo instante.
+        slide.Completed += (_, _) => Reposar();
+        // BeginAnimation(null) antes de relanzar: un segundo cambio de pestaña durante la
+        // animacion del primero (usuario pulsando Ctrl+1..8 rapido) no debe dejar dos animaciones
+        // compitiendo por el mismo valor - la nueva sustituye a la anterior desde su valor actual.
+        host.BeginAnimation(UIElement.OpacityProperty, null);
+        slideTransform.BeginAnimation(TranslateTransform.YProperty, null);
+        host.BeginAnimation(UIElement.OpacityProperty, fade);
+        slideTransform.BeginAnimation(TranslateTransform.YProperty, slide);
+    }
+
+    // El nombre "PART_SelectedContentHost" es el mismo ContentPresenter en cualquier tema real de
+    // WPF (Aero2/Fluent) para TabControl - se cachea tras la primera busqueda real porque es
+    // SIEMPRE la misma instancia mientras la ventana viva (el TabControl no se reconstruye al
+    // cambiar de pestaña, solo cambia que Content muestra su ContentPresenter).
+    private ContentPresenter? FindSelectedContentHost()
+    {
+        if (_rootTabContentHost != null) return _rootTabContentHost;
+        _rootTabContentHost = FindDescendantByName<ContentPresenter>(RootTabControl, "PART_SelectedContentHost");
+        return _rootTabContentHost;
+    }
+
+    private static T? FindDescendantByName<T>(DependencyObject root, string name) where T : FrameworkElement
+    {
+        int count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T match && match.Name == name) return match;
+            var found = FindDescendantByName<T>(child, name);
+            if (found != null) return found;
+        }
+        return null;
     }
 }

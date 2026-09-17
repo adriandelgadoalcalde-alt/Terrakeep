@@ -24,6 +24,12 @@ public sealed class TerrakeepSettings
     // Pedido explicito del usuario (5-sep-2026): "es"/"en" - ver LocalizationService.Spanish/
     // English (mismas constantes, no se duplican los literales aqui).
     public string Language { get; set; } = "es";
+    // Encargo de pulido visual (17-sep-2026): modo compacto opcional para las listas densas
+    // (Libreria/Inventario/Almacenes/Equipamiento/Builds) - reduce el hueco (Gap) y el tamaño
+    // de celda real de SlotGridPanel (ver CompactCellSizeConverter/CompactGapConverter) para
+    // que quepa mas contenido de golpe. NUNCA activado por defecto (pedido explicito del
+    // encargo) - false de fabrica, como el resto de esta clase.
+    public bool IsCompactMode { get; set; }
 }
 
 public static class SettingsService

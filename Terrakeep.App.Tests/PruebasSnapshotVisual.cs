@@ -58,6 +58,17 @@ internal static partial class Program
         vm.Home.LastSessionCharacterName = "UIA-Test";
 
         vm.SelectedTabIndex = 0; // Inicio - la tarjeta del personaje real ya cargado
+        // Transiciones sutiles entre pestañas (17-sep-2026, encargo de pulido visual):
+        // MainWindow.xaml.cs.OnRootTabSelectionChanged anima el contenido nuevo (fade+slide,
+        // 180ms) - un DoEvents() normal NO avanza tiempo real, asi que capturar justo despues
+        // del cambio arriesgaba fotografiar un fotograma A MEDIAS (opacidad<1, aun desplazado),
+        // rompiendo estas 3 referencias aprobadas por un motivo ajeno al contenido real. 250ms
+        // (>180ms real de la animacion, mismo margen que ya usa WaitForDispatcher(150) para el
+        // tooltip en AuditoriaTransicion.cs) deja la animacion SIEMPRE terminada antes de
+        // capturar - el pedido explicito del encargo es justo este: el estado FINAL debe seguir
+        // siendo pixel-identico al de antes del cambio, la transicion en si no se fotografia
+        // aqui (para eso esta verificarTransicion.js, ver EjecutarKeepQaTransicionSolo).
+        WaitForDispatcher(250);
         DoEvents(); DoEvents(); DoEvents();
 
         byte[] pngInicio = CapturarPng(window, window.ActualWidth, window.ActualHeight);
@@ -71,6 +82,7 @@ internal static partial class Program
         vm.SelectedTabIndex = 1;      // Personaje
         vm.PersonajeInnerTabIndex = 0; // Objetos
         vm.ObjetosSubTabIndex = 1;     // Inventario
+        WaitForDispatcher(250); // ver el comentario real de mas arriba - deja la transicion de pestaña terminada antes de capturar
         DoEvents(); DoEvents(); DoEvents();
 
         // El ContentControl real que muestra InventoryContainer (MainWindow.xaml tiene DOS -
@@ -99,6 +111,7 @@ internal static partial class Program
         string idiomaAntes = vm.Settings.Language;
         vm.SelectedTabIndex = 0; // Inicio
         vm.Settings.Language = "en";
+        WaitForDispatcher(250); // ver el comentario real de mas arriba - deja la transicion de pestaña terminada antes de capturar
         DoEvents(); DoEvents(); DoEvents();
 
         byte[] pngIngles = CapturarPng(window, window.ActualWidth, window.ActualHeight);

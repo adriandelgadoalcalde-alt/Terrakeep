@@ -38,6 +38,11 @@ public sealed partial class SettingsViewModel : ObservableObject
     // chip (OnLanguageChanged siempre llama a SetLanguage, incluso durante LoadFromDisk con
     // _suppressPersist=true - aplicar el idioma guardado al arrancar no es "persistir", es leer).
     [ObservableProperty] private string _language = LocalizationService.Spanish;
+    // Encargo de pulido visual (17-sep-2026): modo compacto opcional de las listas densas
+    // (Libreria/Inventario/Almacenes/Equipamiento/Builds) - ver CompactCellSizeConverter/
+    // CompactGapConverter (Converters/DensityConverters.cs) y los 4 usos reales de
+    // SlotGridPanel en MainWindow.xaml. Nunca activado por defecto.
+    [ObservableProperty] private bool _isCompactMode;
 
     // Arranca en modo "solo memoria" - Persist() (mas abajo) no toca disco hasta que
     // LoadFromDisk() lo activa explicitamente. Un test que construye "new MainViewModel()"
@@ -68,6 +73,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         IsMinimapVisible = _settings.IsMinimapVisible;
         IsWindowSizePinned = WindowPlacementService.IsPinned();
         Language = _settings.Language;
+        IsCompactMode = _settings.IsCompactMode;
         ApplyToServices();
         _suppressPersist = false; // a partir de aqui, cualquier cambio real del usuario SI se persiste
     }
@@ -92,11 +98,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         _settings.ExplorationSidebarWidth = ExplorationSidebarWidth;
         _settings.IsMinimapVisible = IsMinimapVisible;
         _settings.Language = Language;
+        _settings.IsCompactMode = IsCompactMode;
         SettingsService.Save(_settings);
         ApplyToServices();
     }
 
     partial void OnIsMinimapVisibleChanged(bool value) => Persist();
+
+    partial void OnIsCompactModeChanged(bool value) => Persist();
 
     partial void OnLanguageChanged(string value)
     {

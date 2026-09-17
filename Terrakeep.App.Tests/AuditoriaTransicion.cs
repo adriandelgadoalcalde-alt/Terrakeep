@@ -348,6 +348,58 @@ internal static partial class Program
         catch (Exception ex) { Console.WriteLine("TRANSICION-idioma-EXCEPTION: " + ex); }
         finally { LocalizationService.Instance.SetLanguage(idiomaAntes); DoEvents(); }
 
+        // ------------------------------------------------------------------------------------
+        // 5. ANIMACION: transicion sutil de fade+slide al cambiar de pestaña PRINCIPAL (encargo
+        // de pulido visual, 17-sep-2026) - MainWindow.xaml.cs.OnRootTabSelectionChanged anima el
+        // ContentPresenter real de RootTabControl (PART_SelectedContentHost) con un
+        // TranslateTransform+Opacity compartido por TODO el subarbol de la pestaña nueva.
+        //
+        // Diseño real del par (deliberado, no el mismo patron que hover/scroll/tamano/idioma de
+        // arriba): "antes" y "despues" son DOS INSTANTES DE LA MISMA animacion (t~40ms y
+        // t~140ms tras el cambio, la animacion dura 180ms), NO la pestaña vieja contra la nueva -
+        // con contenido totalmente distinto por pestaña, casi ningun id se repetiria entre "antes
+        // pestaña vieja" y "despues pestaña nueva" (regla 1/3 quedarian vacuas de verdad, ver el
+        // comentario real de la cabecera de verificarTransicion.js sobre ids estables). Con los
+        // DOS instantes de la MISMA pestaña nueva, los ids SI coinciden y la pieza puede juzgar
+        // lo que el encargo pide de verdad:
+        //   - regla 1 (sin_efecto): si entre t~40ms y t~140ms NO hay ningun cambio geometrico,
+        //     la animacion NO se esta ejecutando de verdad (screenshot de una Storyboard rota).
+        //   - regla 3 (hermano_sin_animar): el RenderTransform vive en UN solo nodo compartido
+        //     (el ContentPresenter), asi que TODOS los descendientes de la pestaña nueva deben
+        //     moverse EXACTAMENTE igual entre los dos instantes - si algun hermano se quedara
+        //     quieto mientras otros se mueven (el bug real de StarvekeepMod que motivo esta
+        //     regla), saldria aqui.
+        //   - regla 6 (hallazgo_inducido): nada nuevo debe salirse de su padre ni solaparse solo
+        //     por estar a mitad de la animacion.
+        // LIMITE REAL documentado (no un hueco escondido): esto NO puede probar que el estado
+        // FINAL (tras terminar del todo) es pixel-identico al de antes de este cambio - eso lo
+        // hace keepqa-snapshot-visual con Verify.ImageSharp (ver PruebasSnapshotVisual.cs, que
+        // ahora espera 250ms reales tras cada cambio de pestaña antes de capturar, para que la
+        // animacion este siempre terminada).
+        // ------------------------------------------------------------------------------------
+        try
+        {
+            int tabAntes = vm.SelectedTabIndex;
+            vm.SelectedTabIndex = tabAntes == 0 ? 1 : 0; // cualquier pestaña principal distinta a la actual dispara OnRootTabSelectionChanged de verdad
+            WaitForDispatcher(40);
+            var idsAnim = new Dictionary<FrameworkElement, string>();
+            var antesAnim = VolcarArbolVisual(window, idRaiz, idsAnim);
+            var contentHost = Descendientes<ContentPresenter>(window).FirstOrDefault(cp => cp.Name == "PART_SelectedContentHost");
+            string? objetivoAnim = contentHost != null && idsAnim.TryGetValue(contentHost, out var idHost) ? idHost : null;
+
+            WaitForDispatcher(100); // t~140ms totales desde el cambio, todavia dentro de los 180ms reales de la Storyboard
+            var despuesAnim = VolcarArbolVisual(window, idRaiz);
+            Console.WriteLine($"TRANSICION-animacion: pestaña {tabAntes}->{vm.SelectedTabIndex}, objetivo={objetivoAnim ?? "(ContentPresenter no encontrado)"}, antes={antesAnim.Count} elementos, despues={despuesAnim.Count} elementos");
+            CapturaVentanaKeepQa(window, "transicion-animacion-despues");
+            EscribirParTransicion(outDir, "animacion", objetivoAnim, esperaCambio: true, antesAnim, despuesAnim);
+
+            WaitForDispatcher(200); // deja la Storyboard terminada del todo antes de seguir con el resto del arnes
+            vm.SelectedTabIndex = tabAntes;
+            WaitForDispatcher(250);
+            DoEvents();
+        }
+        catch (Exception ex) { Console.WriteLine("TRANSICION-animacion-EXCEPTION: " + ex); }
+
         Console.WriteLine($"TRANSICION: evidencia (pares .par.json + capturas) en {outDir}");
     }
 }

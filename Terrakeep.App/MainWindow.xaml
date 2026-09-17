@@ -349,6 +349,12 @@
                                     <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
                                     <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
                                 </DataTrigger>
+                                <!-- Modo compacto (17-sep-2026): fila mas baja para el arbol de
+                                     categorias de la Libreria (Settings.IsCompactMode, nunca
+                                     activo por defecto). -->
+                                <DataTrigger Binding="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                    <Setter Property="Padding" Value="4,1" />
+                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Button.Style>
@@ -686,10 +692,28 @@
                                  ReferenceWidth se queda en su default 0 = desactivado,
                                  comportamiento identico a como estaba. Solo tiene efecto real
                                  dentro de la fila fusionada de Equipamiento. -->
-            <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="{Binding MinCell}" MaxCell="{Binding MaxCell}" Gap="4"
+            <!-- Modo compacto (17-sep-2026): Gap/MinCell/MaxCell dependen de Settings.IsCompactMode
+                 ademas del valor real de ContainerViewModel (MinCell/MaxCell YA varian por
+                 contenedor - Mascota/Montura/Tinte bajan a 32/56, ver ContainerViewModel.cs) -
+                 MultiBinding real, no un numero absoluto, para respetar esa variacion. -->
+            <controls:SlotGridPanel Columns="{Binding Columns}"
+                                                     Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
                                                      ReferenceColumns="10"
                                                      ReferenceWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=controls:SlotRowHost}}"
-                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
+                                                     AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                <controls:SlotGridPanel.MinCell>
+                    <MultiBinding Converter="{x:Static conv:CompactCellSizeMultiConverter.Instance}">
+                        <Binding Path="MinCell" />
+                        <Binding Path="DataContext.Settings.IsCompactMode" RelativeSource="{RelativeSource AncestorType=Window}" />
+                    </MultiBinding>
+                </controls:SlotGridPanel.MinCell>
+                <controls:SlotGridPanel.MaxCell>
+                    <MultiBinding Converter="{x:Static conv:CompactCellSizeMultiConverter.Instance}">
+                        <Binding Path="MaxCell" />
+                        <Binding Path="DataContext.Settings.IsCompactMode" RelativeSource="{RelativeSource AncestorType=Window}" />
+                    </MultiBinding>
+                </controls:SlotGridPanel.MaxCell>
+            </controls:SlotGridPanel>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>
@@ -709,6 +733,11 @@
                                 <DataTrigger Binding="{Binding IsCalamity}" Value="True">
                                     <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
                                     <Setter Property="BorderThickness" Value="1" />
+                                </DataTrigger>
+                                <!-- Modo compacto (17-sep-2026): fila mas baja para la lista densa
+                                     de Builds (Settings.IsCompactMode, nunca activo por defecto). -->
+                                <DataTrigger Binding="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                    <Setter Property="Padding" Value="6,2" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -1068,7 +1097,12 @@
                     <ItemsControl ItemsSource="{Binding Slots}" ItemTemplate="{StaticResource BuffSlotCompactTemplate}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <controls:SlotGridPanel Columns="{Binding Columns}" MinCell="40" MaxCell="90" Gap="4"
+                                <!-- Modo compacto (17-sep-2026): ver el comentario real del primer uso de SlotGridPanel
+                                     (ContainerCompactTemplate) mas arriba en este mismo fichero. -->
+                                <controls:SlotGridPanel Columns="{Binding Columns}"
+                                                         MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
+                                                         MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
+                                                         Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
                                                          ReferenceColumns="10"
                                                          AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
                             </ItemsPanelTemplate>
@@ -2307,7 +2341,13 @@
         </Border>
 
         <Grid Grid.Row="1">
-        <TabControl Style="{StaticResource NavTabControl}" SelectedIndex="{Binding SelectedTabIndex}">
+        <!-- Encargo de pulido visual (17-sep-2026): x:Name real para que MainWindow.xaml.cs pueda
+             localizar el ContentPresenter real de esta TabControl (PART_SelectedContentHost, ver
+             OnRootTabSelectionChanged) y darle una transicion sutil de fade+slide al cambiar de
+             pestaña principal - las pestañas INTERNAS (InnerTabControl, dentro de Personaje/
+             Novedades) se quedan fuera a proposito (encargo real: "pestañas PRINCIPALES"). -->
+        <TabControl x:Name="RootTabControl" Style="{StaticResource NavTabControl}" SelectedIndex="{Binding SelectedTabIndex}"
+                    SelectionChanged="OnRootTabSelectionChanged">
         <!-- ===================== INICIO ===================== -->
         <!-- H5-14 (quinta auditoria de Opus): "Ctrl+1...6 para las 6 pestañas raiz, numero
              anunciado en el propio rotulo" - mismo criterio T-H/F1 (tooltip real, no un atajo
@@ -3515,7 +3555,12 @@
                                                 <ItemsControl ItemsSource="{Binding Library.Results}" ItemTemplate="{StaticResource LibraryCardTemplate}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
-                                                            <controls:SlotGridPanel Columns="12" MinCell="40" MaxCell="90" Gap="4"
+                                                            <!-- Modo compacto (17-sep-2026): ver el comentario real del primer uso de
+                                                                 SlotGridPanel (ContainerCompactTemplate) mas arriba en este mismo fichero. -->
+                                                            <controls:SlotGridPanel Columns="12"
+                                                                                     MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
+                                                                                     MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
+                                                                                     Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
                                                                                      ReferenceColumns="10"
                                                                                      AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
                                                         </ItemsPanelTemplate>
@@ -3724,7 +3769,12 @@
                                                 <ItemsControl ItemsSource="{Binding BuffLibrary.Results}" ItemTemplate="{StaticResource BuffLibraryCardTemplate}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate>
-                                                            <controls:SlotGridPanel Columns="11" MinCell="40" MaxCell="90" Gap="4"
+                                                            <!-- Modo compacto (17-sep-2026): ver el comentario real del primer uso de
+                                                                 SlotGridPanel (ContainerCompactTemplate) mas arriba en este mismo fichero. -->
+                                                            <controls:SlotGridPanel Columns="11"
+                                                                                     MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
+                                                                                     MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
+                                                                                     Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
                                                                                      ReferenceColumns="10"
                                                                                      AvailableHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" />
                                                         </ItemsPanelTemplate>
@@ -6534,6 +6584,20 @@
                                      IsChecked="{Binding Settings.Language, Converter={StaticResource EnumEquals}, ConverterParameter=en}" />
                     </UniformGrid>
 
+                    <!-- Encargo de pulido visual (17-sep-2026): "Modo compacto" opcional, NUNCA
+                         activado por defecto - reduce el hueco/tamaño de celda de las listas
+                         densas reales (Libreria, Inventario, Almacenes, Equipamiento y Builds,
+                         ver los 4 usos de SlotGridPanel mas arriba en este fichero + los
+                         DataTrigger de Padding de CategoryNodeTemplate/BuildItemRowViewModel).
+                         TwoWay normal (a diferencia del tick de "fijar tamaño de ventana" de
+                         arriba, esto no necesita capturar nada del Window real en el instante del
+                         clic, solo un bool que se persiste solo via OnIsCompactModeChanged). -->
+                    <TextBlock Text="{Binding Loc[settings_compact_mode_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                    <CheckBox Content="{Binding Loc[settings_compact_mode_label], Mode=OneWay}"
+                              IsChecked="{Binding Settings.IsCompactMode, Mode=TwoWay}"
+                              Margin="0,0,0,24"
+                              ToolTip="{Binding Loc[settings_compact_mode_tooltip], Mode=OneWay}" />
+
                     <TextBlock Text="{Binding Loc[about_this_version_title], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="20" Margin="0,0,0,4" />
                     <TextBlock Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,14" MaxWidth="680" HorizontalAlignment="Left">
                         <Run Text="{Binding Loc[about_changelog_1], Mode=OneWay}" />
@@ -7554,15 +7618,48 @@
             <StackPanel>
                 <TextBlock Text="{Binding MensajeActualizacion}" Style="{StaticResource CaptionText}"
                            TextWrapping="Wrap" Foreground="{StaticResource TextPrimaryBrush}" />
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                <!-- Actualizacion en un clic (17-sep-2026): ActualizacionEstadoTexto es el ÚNICO
+                     texto de estado real (progreso "Descargando... N%"/"Instalando..." mientras
+                     ActualizandoEnCurso, o un error real como "sin instalador adjunto"/"no se
+                     pudo completar" cuando NO llego a arrancar o fallo) - visible siempre que haya
+                     contenido, independientemente de ActualizandoEnCurso, para que un error de
+                     ActualizarAhora (ver MainViewModel.Actualizaciones.cs) que ocurre ANTES de
+                     poner ActualizandoEnCurso=true (sin instalador adjunto, exe propio no
+                     localizado) no se quede escrito pero invisible. -->
+                <TextBlock Text="{Binding ActualizacionEstadoTexto}" Style="{StaticResource CaptionText}"
+                           TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,6,0,0"
+                           Visibility="{Binding ActualizacionEstadoTexto, Converter={StaticResource EmptyToCollapsed}}" />
+                <!-- Dos estados excluyentes: los 3 botones normales mientras no hay nada en
+                     marcha, o una barra de progreso real + Cancelar mientras ActualizandoEnCurso
+                     es true. Ver MainViewModel.Actualizaciones.cs (ActualizarAhora) para el flujo
+                     completo: descarga real con progreso real, verificacion de huella si GitHub
+                     la publica, instalacion silenciosa y reinicio. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0"
+                            Visibility="{Binding ActualizandoEnCurso, Converter={StaticResource InverseBoolToVis}}">
                     <Button Content="{Binding Loc[update_dismiss], Mode=OneWay}"
                             Command="{Binding DescartarActualizacionCommand}"
                             Style="{StaticResource BarButton}" Padding="10,4" Margin="0,0,8,0" />
                     <Button Content="{Binding Loc[update_view_release], Mode=OneWay}"
                             Command="{Binding AbrirActualizacionCommand}"
+                            Style="{StaticResource BarButton}" Padding="10,4" Margin="0,0,8,0" />
+                    <Button Content="{Binding Loc[update_now], Mode=OneWay}"
+                            Command="{Binding ActualizarAhoraCommand}"
                             Style="{StaticResource BarButton}" Padding="10,4"
                             Background="{StaticResource AccentBrush}" />
                 </StackPanel>
+                <Grid Margin="0,10,0,0"
+                      Visibility="{Binding ActualizandoEnCurso, Converter={StaticResource BoolToVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ProgressBar Grid.Column="0" Height="6" Minimum="0" Maximum="1" VerticalAlignment="Center"
+                                 Foreground="{StaticResource AccentBrush}"
+                                 Value="{Binding ProgresoActualizacion, Mode=OneWay}" />
+                    <Button Grid.Column="1" Content="{Binding Loc[action_cancel], Mode=OneWay}"
+                            Command="{Binding CancelarActualizacionCommand}"
+                            Style="{StaticResource BarButton}" Padding="10,4" Margin="8,0,0,0" />
+                </Grid>
             </StackPanel>
         </Border>
     </Grid>
