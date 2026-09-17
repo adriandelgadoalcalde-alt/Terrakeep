@@ -1,5 +1,18 @@
 [
   {
+    "version": "3.2.1",
+    "date": "17 de septiembre de 2026",
+    "date_en": "September 17, 2026",
+    "summary": "Ronda de calidad interna: se integraron analizadores estáticos de C#, pruebas por propiedades y pruebas de mutación contra el motor de guardado real. Arreglado un bug real de comparación de prefijos (ItemPrefix), y documentado (sin arreglar todavía) que el editor nunca lee la bandera de personajes importados de Nintendo Switch.",
+    "summary_en": "Internal quality round: integrated C# static analyzers, property-based testing and mutation testing against the real save engine. Fixed a real ItemPrefix comparison bug, and documented (not yet fixed) that the editor never reads the Nintendo Switch character flag.",
+    "fixed": [
+      "ItemPrefix no implementaba los operadores == / != pese a tener Equals/GetHashCode correctos: cualquier código que comparase dos prefijos con == ni siquiera compilaba."
+    ],
+    "fixed_en": [
+      "ItemPrefix didn't implement the == / != operators despite having a correct Equals/GetHashCode: any code comparing two prefixes with == wouldn't even compile."
+    ]
+  },
+  {
     "version": "3.2.0",
     "date": "16 de septiembre de 2026",
     "date_en": "September 16, 2026",
