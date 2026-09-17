@@ -10,3 +10,8 @@ installer/output/
 # Cache de bytecode de Python, generada al importar scripts/lang_vanilla.py desde otro
 # script del mismo directorio. Artefacto de build, nunca fuente (misma politica que bin/obj).
 scripts/__pycache__/
+
+# KeepQA (17-sep-2026): snapshots visuales (Verify.ImageSharp, SnapshotVisual.cs). Convencion
+# real de Verify: "*.received.png" es SIEMPRE efimero (el ultimo render, para comparar/aprobar a
+# mano) - nunca fuente. "*.verified.png" SI se comitea (es la referencia real aprobada).
+Terrakeep.App.Tests/snapshots-visuales/*.received.png

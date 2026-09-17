@@ -18,4 +18,20 @@
     <ProjectReference Include="..\Terrakeep.App\Terrakeep.App.csproj" />
   </ItemGroup>
 
+  <!-- KeepQA (17-sep-2026): snapshot visual real (SNAPSHOT_VISUAL_SOLO, SnapshotVisual.cs) -
+       RenderTargetBitmap de un Visual real + Verify.ImageSharp con comparacion SSIM (tolera el
+       antialiasing/subpixel real de WPF entre ejecuciones, ver SsimUmbralSnapshotVisual). Version
+       fijada a 5.0.1 (ultima estable real en NuGet el 17-sep-2026, api.nuget.org/v3-flatcontainer/
+       verify.imagesharp/index.json - la primera version con soporte SSIM, ver CHANGELOG del propio
+       paquete). NO se fija el paquete "Verify" (motor) por separado a proposito: se deja resolver
+       de forma transitiva a la version minima que declara Verify.ImageSharp 5.0.1 (31.13.5, nuspec
+       real), anterior a v33 - desde v33 el propio paquete exige declarar cada año una excepcion de
+       patrocinio (SponsorCheck, ver docs/maintenance-fee.md del repo VerifyTests/Verify) o el build
+       falla; 31.13.5 no trae esa puerta y no pierde ninguna funcion real que use este arnes (el
+       SSIM vive en Verify.ImageSharp, no en el motor). Solo dependencia de TEST, nunca de Terrakeep.
+       App - PackageReference de este proyecto (.Tests) exclusivamente. -->
+  <ItemGroup>
+    <PackageReference Include="Verify.ImageSharp" Version="5.0.1" />
+  </ItemGroup>
+
 </Project>

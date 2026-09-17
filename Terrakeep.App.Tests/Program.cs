@@ -1012,6 +1012,16 @@ internal static partial class Program
             Console.WriteLine("LOAD-EXCEPTION: " + ex);
         }
 
+        // SNAPSHOT_VISUAL_SOLO=1 (17-sep-2026, KeepQA): cuerpo real en PruebasSnapshotVisual.cs.
+        // Va AQUI, justo tras el LoadFromPath(tempPlr) de arriba y ANTES de cualquier otro modo
+        // SOLO que pueda colocar/mover objetos o cambiar de pestaña - mismo personaje sintetico
+        // determinista 'UIA-Test' recien cargado, para que el contenido real (10 objetos
+        // colocados dentro de este mismo modo) sea reproducible entre ejecuciones.
+        if (Environment.GetEnvironmentVariable("SNAPSHOT_VISUAL_SOLO") == "1")
+        {
+            EjecutarSnapshotVisualSolo(window, vm);
+        }
+
         // BUILDCODE-CANEXECUTE (14-sep-2026): TERCERA vez que este mismo defecto se cuela (A-d,
         // luego BK, ahora OpenBuildCodeCommand) - un comando CanExecute=IsCharacterLoaded que se
         // queda fuera de la lista de NotifyCanExecuteChanged() de OnIsCharacterLoadedChanged dejaba

@@ -17458,3 +17458,87 @@ reformatear esta ronda, la pieza queda en modo informe (ver bitacora.md de KeepQ
 "Gate de formato XAML con XamlStyler.Console", para el detalle completo de la investigación).
 
 Sin `git push`. Commit local de `dotnet-tools.json` (único archivo tocado en este repo).
+
+## 17-sep-2026 - Snapshot visual real (Verify.ImageSharp + RenderTargetBitmap, KeepQA)
+
+Encargo real del coordinador: construir el siguiente paso natural tras Verify (snapshots de
+objetos .NET, ronda anterior) - comparar el RENDER FINAL, píxel a píxel con tolerancia SSIM real,
+contra una referencia visual aprobada. Hueco real que ni geometría (coordenadas) ni contraste/OCR
+(texto) cubrían: un cambio de color/sprite/posición que no mueve ningún borde medible.
+
+**Dónde vive**: `Terrakeep.App.Tests` (no un proyecto xUnit nuevo) - es el único sitio del repo que
+ya levanta una `MainWindow` real con `Application` real y datos reales, y ya tenía precedente de
+`RenderTargetBitmap` (BUILDCODE-CANEXECUTE, AuditoriaViewportScroll.cs). `Verify.ImageSharp 5.0.1`
+(NuGet, última estable real el 17-sep-2026) añadido SOLO a este proyecto de test. Decisión
+deliberada: no se fija el paquete `Verify` (motor) a la última versión - se deja resolver
+transitivamente al mínimo real que declara Verify.ImageSharp 5.0.1 (`31.13.5`, confirmado en
+`project.assets.json`), anterior a v33, para no arrastrar la puerta SponsorCheck (build-time,
+exige declarar cada año una excepción de patrocinio o el build falla) sin perder ninguna función
+real (el SSIM vive en Verify.ImageSharp, no en el motor).
+
+**Piezas nuevas**: `SnapshotVisual.cs` (`CapturarPng` - RenderTargetBitmap de cualquier Visual real
+a 96 DPI, el mismo que ya usa el resto del arnés; `VerificarSnapshotVisual` - compara contra
+`snapshots-visuales/*.verified.png` construyendo un `InnerVerifier` a mano, ya que la API pública
+`Verifier.Verify(...)` solo la define cada paquete ADAPTADOR de test-framework, nunca el paquete
+`Verify` a secas) y `PruebasSnapshotVisual.cs` (modo `SNAPSHOT_VISUAL_SOLO=1`, 3 snapshots reales:
+ventana Inicio completa con personaje real cargado y 10 objetos reales colocados, el
+`ContentControl` real del panel de Inventario -no la ventana entera, demuestra que el helper
+funciona sobre cualquier Visual-, y la misma ventana Inicio en inglés en vivo).
+
+**Hallazgo real nº1 (el que más tiempo costó, ~2.5h perdidas hasta encontrarlo)**: la primera
+versión bloqueaba con `.GetAwaiter().GetResult()` sobre la Task de `VerifyStream` - interbloqueo
+real con el `DispatcherSynchronizationContext` que este arnés instala a mano (mismo motivo exacto
+ya documentado en el propio `Program.cs` junto a X7-ASYNC/`LoadFromPathAsync`: bloquear el hilo de
+UI impide que ESE MISMO hilo bombee el mensaje que reanudaría la continuación). Cada intento
+colgado se dejó correr por error más de 2 horas (CPU subiendo de verdad, no un cuelgue silencioso -
+por eso costó tanto detectarlo: parecía progreso real, no un deadlock) antes de matar el proceso y
+mirar de verdad. Arreglo real: pumpear `DoEvents()` en bucle hasta que la Task termine, nunca
+bloquear - mismo patrón ya establecido en este arnés. Tras el arreglo, una corrida completa tarda
+1-2 minutos.
+
+**Hallazgo real nº2**: `Home.LastSessionCharacterName` viene de `session.json` REAL en disco (el
+mismo archivo que usa la app real de este equipo, no algo que el arnés controle) - cuando está
+vacío, la tarjeta "Continuar con..." desaparece y todo el contenido de abajo se reflota dentro de
+la misma ventana de tamaño fijo, cambiando por completo qué tarjetas quedan visibles. Un snapshot
+de Inicio aprobado con la tarjeta visible, comparado contra una corrida sin ella, cae a SSIM real
+**0.569/0.559** - nada que ver con antialiasing, un cambio de LAYOUT real por una variable de
+sesión fuera de control del test. Arreglado fijando `vm.Home.LastSessionCharacterName = "UIA-Test"`
+antes de capturar (misma lógica que ya aplica el resto del bloque: personaje/objetos
+deterministas).
+
+**SNAPSHOT-VISUAL-ESTABILIDAD (medición real, no una cifra inventada)**: mismo snapshot repetido 3
+veces seguidas sin tocar nada, varias rondas de calibración el mismo día:
+- A 0.995 y a 0.999 (el que la documentación real de Verify.ImageSharp recomienda para "solo
+  antialiasing/subpixel"): **3/3 corridas, 9/9 comparaciones en verde** en la calibración inicial.
+- A 0.9999 (para encontrar el suelo real): "panel-inventario" (677×264px, denso en iconos
+  pequeños) falló las 3 veces con SSIM real 0.999894/0.999525/0.999525; las dos pantallas
+  completas se mantuvieron en 1.000 exacto las 3 veces.
+- En corridas posteriores del mismo día (sin ningún cambio real), "panel-inventario" volvió a
+  medir SSIM 0.992474 y 0.989402 sin motivo - un suelo de ruido MÁS ANCHO e INESTABLE de lo que la
+  primera calibración de 3 sugería, probablemente redondeo de subpíxel/layout de WPF más sensible
+  en un área pequeña con muchos bordes duros (50 celdas + 10 sprites) que en pantallas con más área
+  de color plano/texto. **LÍMITE REAL documentado, no forzado**: umbral global 0.999 para las
+  pantallas completas (estable de verdad en todas las corridas); umbral propio más bajo, 0.97, solo
+  para "panel-inventario" (vía `settings.SsimThreshold(...)`, API real de Verify.ImageSharp) - deja
+  margen real bajo el peor valor medido sin cambios (0.989402) y sigue siendo mucho más estricto
+  que un cambio real (un solo icono son ~350 de los ~3400 píxeles opacos del panel).
+
+**Experimento del punto 4 (detección real de un cambio real)**: `Margin="16,0,0,0"` ->
+`Margin="21,0,0,0"` (5px) en el `StackPanel` del título "Terrakeep" de Inicio (`MainWindow.xaml`).
+Con el cambio: `ventana-principal-inicio`/`-en` -> FALLO real, SSIM 0.980091/0.979822 (diff legible,
+muy por debajo del umbral 0.999); `panel-inventario` (pestaña distinta, no tocada) -> OK, sin
+falsos positivos cruzados. Revertido el Margin: las 3 -> OK de nuevo. `git diff` del XAML tras
+revertir: vacío, confirmado que el repo quedó intacto.
+
+**Catálogo**: `keepqa-snapshot-visual` en KeepQA (`src/snapshot-visual/keepqaSnapshotVisual.js`,
+envoltorio fino real sobre `dotnet run --project Terrakeep.App.Tests` con
+`SNAPSHOT_VISUAL_SOLO=1`) + modo `snapshotVisual` en `src/orquestador/adaptadores/terrakeep.js`.
+AVISO real documentado en ambos: una corrida completa de `Terrakeep.App.Tests` (todas las demás
+auditorías del arnés se ejecutan igual antes de llegar al modo `_SOLO`) tarda minutos incluso sin
+el bug del interbloqueo - usar timeouts amplios, `dotnet run` bufferiza stdout hasta el exit.
+
+Verificado con `dotnet build`/`dotnet run` reales en cada paso, nunca "debería funcionar". Sin
+`git push`. Commit local de: `.gitignore`, `Terrakeep.App.Tests/Program.cs`,
+`Terrakeep.App.Tests/Terrakeep.App.Tests.csproj`, `Terrakeep.App.Tests/SnapshotVisual.cs`,
+`Terrakeep.App.Tests/PruebasSnapshotVisual.cs`, `Terrakeep.App.Tests/snapshots-visuales/*.verified.*`
+(las 3 referencias reales aprobadas).
