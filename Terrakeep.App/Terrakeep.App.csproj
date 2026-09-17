@@ -61,9 +61,21 @@
     <Copyright>Copyright © 2026 IncrediBad</Copyright>
     <!-- Real, sincronizada a mano con la version mas reciente de Assets/changelog.json - antes
          no se fijaba y caia al 1.0.0.0 por defecto de .NET, sin significar nada real. -->
+    <!-- Bug real confirmado en produccion (17/18-sep-2026): esta version se bumbeo a 3.2.1 en el
+         commit 628f97f6 pero FileVersion/AssemblyVersion se quedaron en 3.2.0.0 por error humano
+         (la sincronizacion "a mano" de la que habla el comentario de arriba fallo esta vez).
+         Assembly.GetExecutingAssembly().GetName().Version (MainViewModel.Actualizaciones.cs,
+         AboutViewModel.cs) lee AssemblyVersion, NUNCA Version - asi que la app instalada real de
+         la 3.2.1 seguia reportandose a si misma como "3.2.0" en Acerca de Y en la comprobacion de
+         actualizaciones, que por tanto detectaba SIEMPRE una actualizacion disponible (la propia
+         3.2.1 contra si misma) sin fin, incluso justo despues de una actualizacion real ya
+         instalada con exito. Confirmado real: FileVersion del TerrakeepSetup-3.2.1.exe YA
+         PUBLICADO en GitHub Releases es 3.2.0.0 (comprobado con Get-Item ... .VersionInfo.FileVersion
+         tras instalarlo de verdad) - ese instalador concreto seguira con el bug hasta que se
+         publique una release nueva con esto ya corregido (ver bitacora.md). -->
     <Version>3.2.1</Version>
-    <FileVersion>3.2.0.0</FileVersion>
-    <AssemblyVersion>3.2.0.0</AssemblyVersion>
+    <FileVersion>3.2.1.0</FileVersion>
+    <AssemblyVersion>3.2.1.0</AssemblyVersion>
   </PropertyGroup>
 
   <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de

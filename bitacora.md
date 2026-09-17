@@ -18340,4 +18340,48 @@ sin proceso `Terrakeep.exe` abierto que bloqueara la copia).
 **Commit local** (esta sesión): `Terrakeep.App/App.xaml.cs`, `Terrakeep.App/MainWindow.xaml.cs`,
 `Terrakeep.App.Tests/Program.cs`, `Terrakeep.Core/WldFormat/WorldSearch.cs`,
 `Terrakeep.Core.Tests/WldFormat/WorldSearchTests.cs`, y esta entrada de bitácora. `git status`
+
+## 18-sep-2026 - Bug real en producción: "Actualizar ahora" contra la release REAL (v3.2.1)
+
+El usuario probó de verdad "Actualizar ahora" (estando en v3.2.0 instalada, detectando la v3.2.1
+real ya publicada en GitHub Releases) y salió un error real: "No se pudo completar la
+actualización: The process cannot access the file '...TerrakeepSetup-3.2.1.exe' because it is
+being used by another process." Un segundo síntoma real apareció después: tras una actualización
+aparentemente completa (barra al 100%, app cerrada y reabierta), la app seguía anunciando "hay una
+versión nueva 3.2.1" - como si nunca se hubiera actualizado.
+
+**Investigación real completa (con la release real v3.2.1, nunca el instalador simulado de
+`DebugInyectarInstaladorFalso`) y el arreglo del componente compartido
+(`ComprobadorDeActualizaciones`, reintentos reales con backoff en el `Delete`/`Move` del instalador
+descargado + en `Start-Process` del guion de relanzamiento) están documentados a fondo en
+`ServidorKeep\bitacora.md` (18-sep-2026, mismo título) - no se duplica aquí. Resumen de la parte
+propia de este repo:**
+
+**Causa raíz real confirmada de "sigue diciendo que hay actualización" incluso tras un update
+real y completo**: `Terrakeep.App.csproj` tenía `<Version>3.2.1</Version>` pero
+`<FileVersion>3.2.0.0</FileVersion>`/`<AssemblyVersion>3.2.0.0</AssemblyVersion>` sin bumpear (el
+commit `628f97f6` bumpeó `Version` pero no los otros dos). `Assembly.GetExecutingAssembly()
+.GetName().Version` (usado tanto por `MainViewModel.Actualizaciones.cs` como por
+`AboutViewModel.cs`, que por tanto TAMBIÉN mostraba "3.2.0" en Acerca de con la 3.2.1 real
+instalada) lee `AssemblyVersion`, nunca `Version` - confirmado real descargando e instalando la
+v3.2.1 real desde GitHub: `FileVersion` del `.exe` instalado de verdad era `3.2.0.0`. Arreglado:
+`FileVersion`/`AssemblyVersion` ahora en `3.2.1.0`, sincronizados con `Version` (con un comentario
+real explicando el porqué para que no se repita en el próximo bump manual).
+
+**Build y test**: `dotnet test Terrakeep.slnx`: 568/568 (Core.Tests) + 492/492 (ViewModels.Tests,
+incluye `ActualizacionEnUnClicTests`) en verde, sin regresión. `dotnet test` de
+`ServidorKeep.Core.Tests` (75/75) y `Starvekeep.slnx` (203/203 + 117/117) también en verde - ver
+detalle completo en `ServidorKeep\bitacora.md`.
+
+**Recompilado y redesplegado**: `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe` (barra de
+tareas, `dotnet build`) y `AppData\Local\Programs\Terrakeep\` (instalado, vía
+`installer\install.ps1` real - publish Release autocontenido + copia) - `FileVersion` real
+confirmado `3.2.1.0` tras el redeploy con `Get-Item ... .VersionInfo.FileVersion`.
+
+**Pendiente real, sin forzar**: el asset `TerrakeepSetup-3.2.1.exe` YA PUBLICADO en GitHub
+Releases sigue llevando el `FileVersion` viejo (3.2.0.0) - solo esta máquina (rebuild local) tiene
+el fix. Cortar y publicar una release nueva (v3.2.2) requiere `git push`/`gh release`, explícitamente
+fuera del alcance de esta sesión (solo commit local).
+
+Commit local (nunca git push).
 comprobado antes, solo estos archivos por nombre exacto, nunca `git add -A`. Sin `git push`.
