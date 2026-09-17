@@ -108,6 +108,14 @@ internal static partial class Program
         var window = new MainWindow();
         swStartup.Stop();
         Console.WriteLine($"T-G-ARRANQUE: new MainWindow() (CharacterFileService + MainViewModel + XAML) tardo {swStartup.ElapsedMilliseconds}ms");
+        // ARRANQUE_SOLO=1 (17-sep-2026, cache de catalogos en disco): sale justo tras medir
+        // T-G-ARRANQUE, sin Show()/DoEvents ni el resto del arnes (miles de lineas, capturas...)
+        // - mismo criterio ya real de ARLAY_CANARIO_SOLO mas abajo, para poder medir el arranque
+        // en frio/caliente muchas veces seguidas sin pagar el arnes completo cada vez.
+        if (Environment.GetEnvironmentVariable("ARRANQUE_SOLO") == "1")
+        {
+            Environment.Exit(0);
+        }
         // T-G: HomeViewModel.RefreshAsync se lanza en el propio constructor (fire-and-forget,
         // Task.Run) - justo AL SALIR de new MainWindow(), antes de cualquier DoEvents() real,
         // el escaneo de disco todavia no ha podido completarse (esta corriendo en un hilo de

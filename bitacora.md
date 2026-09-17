@@ -18047,3 +18047,192 @@ tareas) y `C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (inst
 el agente paralelo con sus propias claves `update_*` y se dejo intacto -,
 `Terrakeep.App.Tests/AuditoriaTransicion.cs`/`PruebasSnapshotVisual.cs`), `git status` comprobado
 antes, nunca `git add -A`. Sin `git push`.
+
+## 17-sep-2026 - Caché persistente de la Librería en disco + actualización en un clic
+
+Encargo real: dos funciones técnicas. Investigado primero en los dos casos antes de tocar nada
+(regla explícita del encargo).
+
+### 1. Caché persistente de "la Librería de objetos (8000+)" en disco
+
+Medido de verdad ANTES de tocar nada (arnés `Terrakeep.App.Tests`, nueva bandera de diagnóstico
+`ARRANQUE_SOLO=1` - sale justo tras medir `new MainWindow()`, sin `Show()`/`DoEvents()` ni el
+resto del arnés, para poder repetir la medición muchas veces seguidas sin pagar capturas de
+pantalla): `new MainWindow()` (que construye `CharacterFileService` + `MainViewModel` + XAML)
+tarda 513-559ms reales, 3 muestras. Desglose real con `Stopwatch` temporal:
+`CharacterFileService()` completo (50 JSON, ~4.6MB) 115-123ms en la PRIMERA instancia de cada
+proceso, pero solo 44-45ms en la segunda instancia dentro del MISMO proceso (`CompareViewModel`
+construye su propio `CharacterFileService` independiente - necesario de verdad, no un bug: cada
+instancia lleva estado mutable propio como `EsPersonajeTModLoader`, ver su comentario real). La
+diferencia real (~70ms) es sobre todo coste de tipo/reflexión de `System.Text.Json` la primera vez
+que ve cada forma genérica en el proceso, no E/S de disco - confirmado midiendo `CalamityCatalog.
+LoadFromFile` (catalog.json, 954KB) aparte: 27-29ms en frío / 5-6ms en caliente.
+
+De ese total, `LibraryTreeBuilder.BuildItemTree` (el algoritmo REAL de agrupar/paginar los 8469
+objetos - lo que el encargo llama literalmente "la Librería de objetos 8000+") ya medía solo
+15-18ms - **LÍMITE REAL parcial**: el algoritmo de construcción del árbol en sí ya era rápido,
+cachearlo aparte no habría compensado nada. El coste real y evitable está en las dos cargas de
+catálogo que alimentan ese árbol: `CalamityCatalog` (954KB) y `VanillaItemCatalog` (4 JSON,
+~730KB) - 37-40ms en frío / 13-14ms en caliente entre las dos.
+
+**Caché real añadida**: `Terrakeep.Core/Data/CatalogBinaryCache.cs` (primitivas
+`BinaryWriter`/`BinaryReader` compartidas, huella SHA-256 real de nombre+tamaño+fecha de
+modificación UTC de cada fichero fuente - nunca un TTL arbitrario) +
+`Terrakeep.Core/Data/LibraryCatalogDiskCache.cs` (orquestador: un único fichero binario en
+`%LOCALAPPDATA%\Terrakeep\library-catalog-cache-v1.bin` que combina `VanillaItemCatalog` +
+`CalamityCatalog` + el árbol YA CONSTRUIDO de `CategoryTreeNodeData` - los tres dependen
+exactamente de los mismos 8 ficheros fuente, una sola huella real los cubre a la vez). Nunca es la
+única fuente de verdad: `TryLoad` devuelve `null` ante CUALQUIER fallo (fichero ausente, versión
+de formato antigua, huella que no coincide, bytes corruptos a medias) y `CharacterFileService`
+cae siempre a la carga real por JSON. `VanillaItemCatalog.WriteTo/ReadFrom` y
+`CalamityCatalog.WriteTo/ReadFrom` (nuevos, `internal`) vuelcan/reconstruyen los diccionarios
+crudos tal cual (sin releer JSON en el camino de caché - evita pagar el mismo coste de
+tipo/reflexión que se quiere evitar).
+
+`LibraryCategoryTreeBuilder.SeedFromDiskCache` siembra la caché EN MEMORIA ya existente
+(`_cachedData`, de la ronda T-G anterior) con el árbol leído del disco - ni siquiera el primer
+`Build()` real de la sesión tiene que llamar a `BuildItemTree`. El guardado (`SaveLibraryDiskCache
+IfNeeded`) corre en un hilo de fondo (`Task.Run`, nunca bloquea el arranque) la PRIMERA vez que
+`Build()` construye el árbol de verdad en un proceso sin caché válida.
+
+**Medido antes/después, arranque en frío real vs con caché ya construida** (arnés
+`ARRANQUE_SOLO=1`, cache borrada a mano antes de la primera tanda):
+- Sin caché en disco (primera vez): `CharacterFileService()` completo 120ms / 46ms (dos
+  instancias del mismo proceso) - `T-G-ARRANQUE` total 553-559ms.
+- Con caché ya en disco (arranques siguientes, 3 muestras): `LibraryCatalogDiskCache.TryLoad`
+  hit=True 8-17ms, `CharacterFileService()` completo baja a 110-113ms / 39-40ms -
+  `T-G-ARRANQUE` total 491-537ms (~40-50ms menos, ~8% del arranque total).
+
+Mejora real pero MODESTA, documentada con honestidad en vez de inflada: la hipótesis inicial (que
+leer un blob binario evitaría también el coste de JIT/reflexión de `System.Text.Json`, no solo la
+E/S) solo se confirmó en parte - `BinaryReader.ReadString`/`ReadInt32` en un bucle sobre miles de
+nodos del árbol tiene su propio coste real (los ~8-17ms del propio `TryLoad`), que compensa buena
+parte del ahorro. El resto del arranque (~400ms) es XAML/`InitializeComponent` y el resto de
+`MainViewModel` - fuera del alcance real de "la Librería de objetos", no tocado.
+
+Tests nuevos: `Terrakeep.Core.Tests/Data/LibraryCatalogDiskCacheTests.cs` (7 tests - round-trip
+fiel de los dos catálogos + el árbol, fichero ausente, huella que cambia tras tocar/borrar un
+fichero fuente, fichero truncado, cabecera inválida, `Save` a un directorio real imposible de
+crear nunca lanza). `dotnet test Terrakeep.Core.Tests`: 568/568 (561 previos + 7 nuevos).
+
+### 2. Actualización en un clic
+
+Investigado primero: el mecanismo de "aviso de versión nueva" (`ComprobadorDeActualizaciones.
+ComprobarAsync`, `ServidorKeep.Core` - compartido con ServidorKeep/Starvekeep) ya existía. Durante
+esta misma sesión, Starvekeep (mismo encargo real, X1) YA HABÍA EXTENDIDO ese mismo fichero
+compartido con la descarga real del instalador + verificación de huella sha256 + orquestación de
+instalación silenciosa/relanzado (`ActivoInstaladorReal`, `DescargarInstaladorAsync`,
+`LanzarInstaladorYRelanzar` - ver su propia bitácora, "ComprobadorDeActualizaciones: descarga real
++ instalación silenciosa", `ServidorKeep.Core.Tests`: 16/16 en verde, 7 tests nuevos con
+`HttpListener` real + procesos reales de Windows). Reutilizado tal cual - no se duplicó ningún
+mecanismo paralelo.
+
+**Lado real de Terrakeep** (`MainViewModel.Actualizaciones.cs`, `MainWindow.xaml`/`.xaml.cs` -
+estos dos últimos, ver nota de colisión de commits más abajo): `ActualizarAhoraCommand` nuevo -
+si no hay instalador adjunto en la release (`resultado.Instalador == null`), avisa y no hace
+nada; si hay cambios sin guardar (`IsDirty`), reutiliza el MISMO diálogo real Sí/No/Cancelar que
+ya usa `OnWindowClosing`/"cargar otro personaje" (`ConfirmDiscardChanges`, con "actualizar
+Terrakeep" como la acción) - un nuevo hook `ConfirmDiscardChangesForUpdate` en vez de forzar el ya
+existente. Descarga real con progreso real (`ProgresoActualizacion`/`ActualizacionEstadoTexto`,
+"Descargando la actualización... N%"), lanza el instalador real en modo silencioso
+(`/VERYSILENT /SUPPRESSMSGBOXES /NORESTART`, Terrakeep tiene `PrivilegesRequired=lowest`, nunca
+pide UAC) y cierra Terrakeep (`CerrarAppParaActualizar` -> `Close()`) SOLO una vez el instalador ya
+está lanzado y esperando de verdad a que este proceso muera (nunca antes - ver el comentario real
+de `LanzarInstaladorYRelanzar`). `_cerrandoParaActualizar` (nuevo, `MainWindow.xaml.cs`) evita que
+`OnWindowClosing` vuelva a preguntar por cambios sin guardar una SEGUNDA vez (ya se preguntó antes
+de lanzar el instalador) - sin esto, cancelar ese segundo aviso redundante dejaría al instalador
+esperando en vano contra el timeout real de `Wait-Process` (30s por defecto).
+
+Tarjeta de la esquina (`MainWindow.xaml`) extendida con un botón nuevo "Actualizar ahora" y un
+segundo estado excluyente (barra de progreso real + botón Cancelar) mientras
+`ActualizandoEnCurso` - nunca un diálogo modal aparte. `ActualizacionEstadoTexto` es visible
+SIEMPRE que tenga contenido (no solo mientras `ActualizandoEnCurso`), para que un error temprano
+("sin instalador adjunto", "no se pudo localizar el propio .exe") que ocurre ANTES de poner
+`ActualizandoEnCurso=true` no se quede escrito pero invisible.
+
+**Casos de borde reales, los tres pedidos explícitos del encargo**:
+- Descarga fallida (sin red/GitHub caído): la excepción real de `DescargarInstaladorAsync` se
+  captura, `ActualizacionEstadoTexto` muestra el mensaje real, `ActualizandoEnCurso` vuelve a
+  `false` - la tarjeta queda lista para reintentar con "Actualizar ahora" otra vez.
+- Usuario cancela a mitad: botón Cancelar real (`CancelarActualizacionCommand`) cancela el
+  `CancellationTokenSource` real - `DescargarInstaladorAsync` ya limpia el fichero parcial
+  (`.descargando`) sola, nunca llega a lanzar el instalador.
+- Cambios sin guardar: ver el diálogo Sí/No/Cancelar de arriba - Cancelar aborta ANTES de
+  descargar nada.
+
+**Verificado de verdad sin publicar ninguna release real en GitHub** (pedido explícito del
+encargo, "documenta cómo lo verificaste con honestidad"): seam de diagnóstico nuevo
+`MainViewModel.DebugInyectarInstaladorFalso` (mismo criterio YA real de
+`App.ShouldForceSoftwareRendering`/`CharacterFileService.DebugCorruptPlrBytesBeforeVerify` - sin
+`InternalsVisibleTo` hacia el arnés, público pero nunca llamado desde ningún camino real de la
+app, solo el test lo usa). `Terrakeep.App.ViewModels.Tests/ActualizacionEnUnClicTests.cs` (4 tests
+nuevos, mismo patrón real de `HttpListener` en localhost + `.bat` real haciendo de instalador que
+ya probó Starvekeep a nivel de `ServidorKeep.Core`):
+- Sin instalador adjunto: avisa, nunca pregunta por cambios sin guardar ni descarga nada.
+- Cambios sin guardar + usuario cancela el aviso: aborta ANTES de lanzar el instalador falso
+  (fichero marcador real, nunca aparece).
+- **Flujo completo real de punta a punta**: descarga real (HTTP real a localhost, progreso real
+  `0..1` reportado), lanza el instalador falso real (`.bat` real, recibe de verdad
+  `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART` como argumentos, confirmado leyendo el fichero que el
+  propio `.bat` escribe), y `CerrarAppParaActualizar` se invoca de verdad. Nota real: como el
+  "proceso que llama" en este test es el host de xUnit (no puede morir a mitad del test, a
+  diferencia de Terrakeep real), `Wait-Process` espera su timeout real completo (30s por defecto,
+  nunca personalizado desde `ActualizarAhora` - mismo criterio que Starvekeep) antes de lanzar el
+  instalador falso - el test espera hasta 40s reales, no es lento por accidente.
+- Cancelar a mitad de una descarga real (5MB a velocidad limitada, cancelación real a los 150ms):
+  vuelve a `ActualizandoEnCurso=false`, nunca llega a lanzar nada, `CerrarAppParaActualizar` NUNCA
+  se invoca (verificado con una excepción real si se llamara).
+
+`dotnet test Terrakeep.App.ViewModels.Tests`: 492/492 (488 previos + 4 nuevos), sin regresión.
+
+### Nota real sobre un cruce de commits con el agente paralelo (transiciones/modo compacto)
+
+`git status` comprobado antes de cada intento de commit, como pide la regla - pero el commit
+`ba012a7c` ("Añade transiciones sutiles entre pestañas principales y un modo compacto opcional en
+Ajustes", del agente paralelo que trabajaba a la vez en Terrakeep) terminó incluyendo TAMBIÉN mis
+cambios de `MainWindow.xaml`/`MainWindow.xaml.cs`/`Assets/strings_es.json`/`strings_en.json` (la
+tarjeta "Actualizar ahora", los hooks `ConfirmDiscardChangesForUpdate`/`CerrarAppParaActualizar`/
+`_cerrandoParaActualizar`, y las claves `update_now`/`update_downloading`/etc.) - confirmado
+comparando `git show ba012a7c` línea a línea contra lo escrito en esta sesión, coincide exacto,
+nada se perdió. El otro agente documentó en su propia bitácora que había comprobado `git status`
+y excluido a mano las claves `update_*` de `strings_*.json` (consciente de la colisión), pero
+`MainWindow.xaml`/`.xaml.cs` ya estaban modificados por las DOS sesiones a la vez en ese momento y
+un `git add` de esos archivos por nombre (no `-A`) los arrastró completos, con los dos conjuntos
+de cambios mezclados dentro. No hay nada que corregir (ambos conjuntos de cambios son reales,
+verificados, y ninguno pisa al otro) - solo queda documentado aquí para que quede constancia real
+de por qué el commit de esta sesión (más abajo) no incluye esos 4 ficheros, que ya viajaron en
+`ba012a7c`.
+
+### Build y test finales
+
+`dotnet build Terrakeep.slnx` (Debug): 0 avisos/0 errores. `dotnet test Terrakeep.Core.Tests`:
+568/568. `dotnet test Terrakeep.App.ViewModels.Tests`: 492/492. Sin regresión en ninguno.
+`dotnet test ServidorKeep.Core.Tests` (repo hermano, infraestructura compartida reutilizada):
+16/16, confirmado en verde antes de construir encima.
+
+**Recompilado y redesplegado**: `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe` (barra de
+tareas, `dotnet build Terrakeep.slnx -c Debug`) y
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (instalado, `installer\
+install.ps1` - publish Release autocontenido + copia, timestamp fresco confirmado, sin proceso
+`Terrakeep.exe` abierto que bloqueara la copia).
+
+**Commit local** (esta sesión, además de `ba012a7c` de más arriba): `Terrakeep.App.Tests/
+Program.cs` (bandera `ARRANQUE_SOLO=1` nueva), `Terrakeep.App/Services/CharacterFileService.cs`,
+`Terrakeep.App/Services/LibraryCategoryTreeBuilder.cs`,
+`Terrakeep.App/ViewModels/MainViewModel.Actualizaciones.cs`,
+`Terrakeep.Core/Data/CalamityCatalog.cs`, `Terrakeep.Core/Data/VanillaItemCatalog.cs`,
+`Terrakeep.Core/Data/CatalogBinaryCache.cs` (nuevo),
+`Terrakeep.Core/Data/LibraryCatalogDiskCache.cs` (nuevo),
+`Terrakeep.Core.Tests/Data/LibraryCatalogDiskCacheTests.cs` (nuevo),
+`Terrakeep.App.ViewModels.Tests/ActualizacionEnUnClicTests.cs` (nuevo), y esta entrada de
+bitácora. `git status` comprobado antes, solo estos archivos por nombre exacto, nunca
+`git add -A`. Sin `git push`.
+
+**Fuera de alcance, no tocado esta sesión**: `MainViewModel.IniciarComprobacionDeActualizacion`
+(ni antes de esta sesión ni con la tarjeta ampliada) no tiene ningún guardia real contra el modo
+`--captura`/snapshot visual de KeepQA - Starvekeep SÍ encontró y arregló este problema real
+(`App._modoDiagnostico`, "KeepQA encontró la tarjeta 'hay una versión nueva' colada en 3/3
+capturas"). Terrakeep no tiene ese guardia hoy - riesgo real latente para una ronda futura de
+capturas automáticas si la comprobación real de GitHub encuentra alguna vez una versión más
+reciente real durante una tanda de KeepQA. Documentado aquí, no arreglado (fuera del alcance de
+las dos funciones de este encargo).

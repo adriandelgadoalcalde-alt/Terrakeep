@@ -93,6 +93,11 @@ public sealed class CalamityCatalogEntry(CalamityCatalogEntryData data, int synt
         return string.IsNullOrWhiteSpace(picked) ? null : picked;
     }
     public string? EquipSlot => data.EquipSlot;
+
+    // Cache binaria en disco (17-sep-2026, ver LibraryCatalogDiskCache): acceso interno al dato
+    // crudo tal cual vino de catalog.json, para poder volcarlo campo a campo sin reconstruir un
+    // CalamityCatalogEntryData nuevo a mano.
+    internal CalamityCatalogEntryData RawData => data;
 }
 
 public sealed class CalamityCatalog
@@ -126,12 +131,101 @@ public sealed class CalamityCatalog
     {
         var raw = JsonSerializer.Deserialize<List<CalamityCatalogEntryData>>(stream)
             ?? throw new InvalidDataException("catalog.json no contiene un array valido.");
+        return FromRawEntries(raw);
+    }
 
-        // El orden del array IMPORTA - determina el id sintetico de cada objeto. No reordenar.
+    // El orden del array IMPORTA - determina el id sintetico de cada objeto. No reordenar.
+    // Compartido entre LoadFromStream (JSON real) y ReadFrom (cache binaria, ver mas abajo) para
+    // que las dos vias construyan el id sintetico exactamente igual.
+    private static CalamityCatalog FromRawEntries(List<CalamityCatalogEntryData> raw)
+    {
         var entries = new List<CalamityCatalogEntry>(raw.Count);
         for (int i = 0; i < raw.Count; i++)
             entries.Add(new CalamityCatalogEntry(raw[i], CalamityIds.ItemIdBase + i));
-
         return new CalamityCatalog(entries);
+    }
+
+    // Cache binaria en disco (17-sep-2026, ver LibraryCatalogDiskCache): vuelca los 10 campos
+    // reales de CalamityCatalogEntryData (mas los 7 de Stats, si existen) tal cual, en el mismo
+    // orden real del array - ReadFrom reconstruye exactamente los mismos ids sinteticos que
+    // LoadFromStream (FromRawEntries compartido). Nunca es la unica fuente de verdad: solo la usa
+    // LibraryCatalogDiskCache, que cae siempre a LoadFromFile (JSON real) si la cache no existe o
+    // esta corrupta.
+    internal void WriteTo(BinaryWriter w)
+    {
+        w.Write(_entries.Count);
+        foreach (var entry in _entries)
+        {
+            var d = entry.RawData;
+            w.Write(d.Internal);
+            w.Write(d.Mod);
+            w.Write(d.Category);
+            CatalogBinaryCache.WriteNullableString(w, d.DisplayNameEs);
+            CatalogBinaryCache.WriteNullableString(w, d.DisplayNameEn);
+            CatalogBinaryCache.WriteNullableString(w, d.DisplayNameFallback);
+            CatalogBinaryCache.WriteNullableString(w, d.Icon);
+            CatalogBinaryCache.WriteNullableString(w, d.EquipSlot);
+            CatalogBinaryCache.WriteNullableString(w, d.SetBonus);
+            CatalogBinaryCache.WriteNullableString(w, d.SetBonusEn);
+            w.Write(d.Stats != null);
+            if (d.Stats != null)
+            {
+                CatalogBinaryCache.WriteNullableInt(w, d.Stats.Damage);
+                CatalogBinaryCache.WriteNullableInt(w, d.Stats.UseTime);
+                CatalogBinaryCache.WriteNullableInt(w, d.Stats.Crit);
+                CatalogBinaryCache.WriteNullableDouble(w, d.Stats.KnockBack);
+                CatalogBinaryCache.WriteNullableInt(w, d.Stats.Mana);
+                CatalogBinaryCache.WriteNullableString(w, d.Stats.DamageType);
+                CatalogBinaryCache.WriteNullableInt(w, d.Stats.Defense);
+            }
+        }
+    }
+
+    internal static CalamityCatalog ReadFrom(BinaryReader r)
+    {
+        int n = r.ReadInt32();
+        var raw = new List<CalamityCatalogEntryData>(n);
+        for (int i = 0; i < n; i++)
+        {
+            string internalName = r.ReadString();
+            string mod = r.ReadString();
+            string category = r.ReadString();
+            string? displayEs = CatalogBinaryCache.ReadNullableString(r);
+            string? displayEn = CatalogBinaryCache.ReadNullableString(r);
+            string? displayFallback = CatalogBinaryCache.ReadNullableString(r);
+            string? icon = CatalogBinaryCache.ReadNullableString(r);
+            string? equipSlot = CatalogBinaryCache.ReadNullableString(r);
+            string? setBonus = CatalogBinaryCache.ReadNullableString(r);
+            string? setBonusEn = CatalogBinaryCache.ReadNullableString(r);
+            CalamityItemStats? stats = null;
+            if (r.ReadBoolean())
+            {
+                stats = new CalamityItemStats
+                {
+                    Damage = CatalogBinaryCache.ReadNullableInt(r),
+                    UseTime = CatalogBinaryCache.ReadNullableInt(r),
+                    Crit = CatalogBinaryCache.ReadNullableInt(r),
+                    KnockBack = CatalogBinaryCache.ReadNullableDouble(r),
+                    Mana = CatalogBinaryCache.ReadNullableInt(r),
+                    DamageType = CatalogBinaryCache.ReadNullableString(r),
+                    Defense = CatalogBinaryCache.ReadNullableInt(r),
+                };
+            }
+            raw.Add(new CalamityCatalogEntryData
+            {
+                Internal = internalName,
+                Mod = mod,
+                Category = category,
+                DisplayNameEs = displayEs,
+                DisplayNameEn = displayEn,
+                DisplayNameFallback = displayFallback,
+                Icon = icon,
+                Stats = stats,
+                EquipSlot = equipSlot,
+                SetBonus = setBonus,
+                SetBonusEn = setBonusEn,
+            });
+        }
+        return FromRawEntries(raw);
     }
 }

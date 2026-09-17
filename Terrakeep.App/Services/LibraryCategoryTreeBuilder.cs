@@ -40,11 +40,36 @@ public static class LibraryCategoryTreeBuilder
     public static List<CategoryNodeViewModel> Build(CharacterFileService service)
     {
         List<CategoryTreeNodeData> data;
+        bool builtNow = false;
         lock (_cacheLock)
-            data = _cachedData ??= LibraryTreeBuilder.BuildItemTree(
-                service.VanillaLibraryTree, service.LibraryLabels, service.CalamityCatalog,
-                id => ResolveIconPath(service, id));
+        {
+            if (_cachedData == null)
+            {
+                _cachedData = LibraryTreeBuilder.BuildItemTree(
+                    service.VanillaLibraryTree, service.LibraryLabels, service.CalamityCatalog,
+                    id => ResolveIconPath(service, id));
+                builtNow = true;
+            }
+            data = _cachedData;
+        }
+        // Cache persistente en disco (17-sep-2026, ver CatalogBinaryCache/LibraryCatalogDiskCache
+        // para las medidas reales): solo se guarda la PRIMERA vez que este proceso construye el
+        // arbol de verdad (builtNow) - si ya vino sembrado desde un acierto de cache real
+        // (CharacterFileService.SeedFromDiskCache, mas abajo) o de una llamada anterior en el
+        // mismo proceso, no hay nada nuevo que guardar. service.SaveLibraryDiskCacheIfNeeded ya
+        // comprueba ademas si hubo un acierto real al arrancar antes de escribir nada.
+        if (builtNow) service.SaveLibraryDiskCacheIfNeeded(data);
         return data.Select(ToViewModel).ToList();
+    }
+
+    // Llamado SOLO por el constructor de CharacterFileService cuando hay un acierto real de
+    // cache en disco (ver su comentario real) - siembra la cache EN MEMORIA (_cachedData) con el
+    // arbol ya leido del disco, para que ni siquiera el primer Build() real de este proceso tenga
+    // que llamar a BuildItemTree. `??=` a proposito (nunca sobrescribe un arbol que otro hilo ya
+    // hubiera construido de verdad mientras tanto - mismo candado real que el resto del metodo).
+    internal static void SeedFromDiskCache(List<CategoryTreeNodeData> tree)
+    {
+        lock (_cacheLock) { _cachedData ??= tree; }
     }
 
     // Unica forma real de resolver el icono de una carpeta en la app de escritorio: por debajo

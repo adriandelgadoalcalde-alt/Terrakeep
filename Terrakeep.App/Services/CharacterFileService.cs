@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Terrakeep.Core.Calamity;
 using Terrakeep.Core.Data;
 using Terrakeep.Core.Model;
@@ -91,21 +92,62 @@ public sealed class CharacterFileService
     // (LibraryViewModel, BuildsViewModel, ItemSlotViewModel) pasan esto en vez de 6 argumentos.
     public ItemTooltipCatalogs TooltipCatalogs { get; }
 
+    // Cache persistente de "la Libreria de objetos (8000+)" en disco (17-sep-2026, ver el
+    // comentario real de CatalogBinaryCache/LibraryCatalogDiskCache para las medidas y el porque
+    // de este alcance concreto - CalamityCatalog+VanillaItemCatalog+el arbol ya construido, no
+    // los otros ~44 JSON del resto de catalogos, cuyo coste medido no lo justificaba). Mismo
+    // sitio real que el resto de datos de usuario (WindowPlacementService, SettingsService...).
+    private static readonly string LibraryCachePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Terrakeep", "library-catalog-cache-v1.bin");
+
+    private readonly string[] _librarySourceFiles;
+    // Si hubo un acierto real de cache al arrancar, SaveLibraryDiskCacheIfNeeded no vuelve a
+    // escribir nada - ya esta al dia, reescribirla en cada arranque solo gastaria E-S sin
+    // ninguna ganancia real.
+    private readonly bool _libraryDiskCacheHit;
+
     public CharacterFileService()
     {
         string assetsDir = Path.Combine(AppContext.BaseDirectory, "Assets");
-        CalamityCatalog = CalamityCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "catalog.json"));
-        CalamityBuffCatalog = CalamityBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "buffs.json"), Path.Combine(assetsDir, "calamity_buff_descriptions.json"), Path.Combine(assetsDir, "calamity", "buff_debuffs.json"));
-        RoguePrefixCatalog = RoguePrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "rogue_prefixes.json"));
-        // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): los catalogos bilingues
-        // reciben aqui su cara inglesa. El idioma con el que responden lo lleva
-        // LocalizedContent.CurrentLanguage, que LocalizationService mantiene al dia.
-        VanillaCatalog = VanillaItemCatalog.LoadFromFile(
+        _librarySourceFiles =
+        [
+            Path.Combine(assetsDir, "calamity", "catalog.json"),
             Path.Combine(assetsDir, "vanilla_item_names.json"),
             Path.Combine(assetsDir, "vanilla_item_names_by_key.json"),
             Path.Combine(assetsDir, "vanilla_item_ids_by_key.json"),
             Path.Combine(assetsDir, "vanilla_item_names_en.json"),
-            Path.Combine(assetsDir, "vanilla_item_names_by_key_en.json"));
+            Path.Combine(assetsDir, "vanilla_item_names_by_key_en.json"),
+            Path.Combine(assetsDir, "vanilla_library_tree.json"),
+            Path.Combine(assetsDir, "vanilla_library_labels_es.json"),
+        ];
+        var libraryCache = LibraryCatalogDiskCache.TryLoad(LibraryCachePath, _librarySourceFiles);
+        _libraryDiskCacheHit = libraryCache != null;
+
+        // Ronda de traduccion del CONTENIDO del juego (6-sep-2026): los catalogos bilingues
+        // reciben aqui su cara inglesa. El idioma con el que responden lo lleva
+        // LocalizedContent.CurrentLanguage, que LocalizationService mantiene al dia.
+        if (libraryCache != null)
+        {
+            CalamityCatalog = libraryCache.CalamityCatalog;
+            VanillaCatalog = libraryCache.VanillaCatalog;
+            // El arbol ya construido se siembra en la cache EN MEMORIA de
+            // LibraryCategoryTreeBuilder (vive durante toda la vida del proceso, ver su
+            // comentario real T-G) - asi ni siquiera el primer LibraryViewModel/ResearchViewModel
+            // real de esta sesion tiene que llamar a BuildItemTree.
+            LibraryCategoryTreeBuilder.SeedFromDiskCache(libraryCache.Tree);
+        }
+        else
+        {
+            CalamityCatalog = CalamityCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "catalog.json"));
+            VanillaCatalog = VanillaItemCatalog.LoadFromFile(
+                Path.Combine(assetsDir, "vanilla_item_names.json"),
+                Path.Combine(assetsDir, "vanilla_item_names_by_key.json"),
+                Path.Combine(assetsDir, "vanilla_item_ids_by_key.json"),
+                Path.Combine(assetsDir, "vanilla_item_names_en.json"),
+                Path.Combine(assetsDir, "vanilla_item_names_by_key_en.json"));
+        }
+        CalamityBuffCatalog = CalamityBuffCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "buffs.json"), Path.Combine(assetsDir, "calamity_buff_descriptions.json"), Path.Combine(assetsDir, "calamity", "buff_debuffs.json"));
+        RoguePrefixCatalog = RoguePrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "rogue_prefixes.json"));
         VanillaPrefixCatalog = VanillaPrefixCatalog.LoadFromFile(Path.Combine(assetsDir, "calamity", "prefixes.json"));
         VanillaBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds.json"));
         CalamityBuilds = BuildsCatalog.LoadFromFile(Path.Combine(assetsDir, "builds_calamity.json"));
@@ -151,6 +193,26 @@ public sealed class CharacterFileService
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
         var codec = new CalamityItemCodec(CalamityCatalog, translator);
         _sync = new CalamityCharacterSync(codec, CalamityBuffCatalog);
+    }
+
+    // Llamada real por LibraryCategoryTreeBuilder.Build justo despues de construir el arbol por
+    // primera vez en este proceso (ver su comentario real) - nunca se llama si ya hubo un
+    // acierto de cache al arrancar (_libraryDiskCacheHit), y la escritura real a disco corre en
+    // un hilo de fondo (Task.Run) para no retrasar ni un milisegundo el arranque que la dispara -
+    // vanillaCatalog/calamityCatalog/tree son inmutables tras construirse (mismo criterio real
+    // que documenta LibraryCategoryTreeBuilder), seguros de serializar en otro hilo mientras la
+    // UI ya los esta usando en el hilo principal.
+    internal void SaveLibraryDiskCacheIfNeeded(IReadOnlyList<CategoryTreeNodeData> tree)
+    {
+        if (_libraryDiskCacheHit) return;
+        string[] sources = _librarySourceFiles;
+        var vanilla = VanillaCatalog;
+        var calamity = CalamityCatalog;
+        Task.Run(() =>
+        {
+            try { LibraryCatalogDiskCache.Save(LibraryCachePath, sources, vanilla, calamity, tree); }
+            catch { /* mejor esfuerzo real - ver el comentario de LibraryCatalogDiskCache.Save */ }
+        });
     }
 
     // Auditoria de Opus, I-1: unica fuente real de "donde vive normalmente un .plr" - antes

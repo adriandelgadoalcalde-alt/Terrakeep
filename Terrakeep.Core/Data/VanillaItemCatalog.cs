@@ -120,4 +120,28 @@ public sealed class VanillaItemCatalog
 
         return new VanillaItemCatalog(byId, byKey, idsByKey);
     }
+
+    // Cache binaria en disco (17-sep-2026, ver LibraryCatalogDiskCache): vuelca los 5
+    // diccionarios crudos tal cual (_keysById NO se persiste - es derivado, el constructor
+    // privado lo reconstruye solo a partir de _idsByKey, ver su comentario real). Nunca es la
+    // unica fuente de verdad: solo la usa LibraryCatalogDiskCache, que cae siempre a
+    // LoadFromFile (JSON real) si la cache no existe o esta corrupta.
+    internal void WriteTo(BinaryWriter w)
+    {
+        CatalogBinaryCache.WriteDict(w, _namesById);
+        CatalogBinaryCache.WriteDict(w, _namesByKey);
+        CatalogBinaryCache.WriteDict(w, _idsByKey);
+        CatalogBinaryCache.WriteDict(w, _namesByIdEn);
+        CatalogBinaryCache.WriteDict(w, _namesByKeyEn);
+    }
+
+    internal static VanillaItemCatalog ReadFrom(BinaryReader r)
+    {
+        var namesById = CatalogBinaryCache.ReadIntStringDict(r);
+        var namesByKey = CatalogBinaryCache.ReadStringStringDict(r);
+        var idsByKey = CatalogBinaryCache.ReadStringIntDict(r);
+        var namesByIdEn = CatalogBinaryCache.ReadIntStringDict(r);
+        var namesByKeyEn = CatalogBinaryCache.ReadStringStringDict(r);
+        return new VanillaItemCatalog(namesById, namesByKey, idsByKey, namesByIdEn, namesByKeyEn);
+    }
 }
