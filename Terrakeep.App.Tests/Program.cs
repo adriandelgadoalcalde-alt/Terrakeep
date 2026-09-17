@@ -5475,11 +5475,15 @@ internal static partial class Program
                         bool visible = marcador is { IsVisible: true };
                         double mx = marcador == null ? -1 : Canvas.GetLeft(marcador);
                         double my = marcador == null ? -1 : Canvas.GetTop(marcador);
-                        Console.WriteLine($"AR-13b: marcador del cofre en el mapa -> existe={marcador != null}, visible={visible}, en tile=({mx:0}, {my:0}) (esperado el mismo cofre), HasCurrentChest={vm.Exploration.HasCurrentChest}");
+                        // Bug real reportado por el usuario jugando (17-sep-2026, offset CONSTANTE en los
+                        // 358 cofres de un .wld real - ver bitacora.md): lejano.TileX/TileY es la esquina
+                        // superior-izquierda cruda del bloque 2x2 del cofre (WldChest.X/Y), no su centro -
+                        // el marcador (arreglado) tiene que caer en (TileX+1, TileY+1), no en la esquina.
+                        Console.WriteLine($"AR-13b: marcador del cofre en el mapa -> existe={marcador != null}, visible={visible}, en tile=({mx:0}, {my:0}) (esperado el centro real ({lejano.TileX + 1}, {lejano.TileY + 1})), HasCurrentChest={vm.Exploration.HasCurrentChest}");
                         if (!visible)
                             Console.WriteLine("FALLO: AR-13b - el cofre seleccionado no se marca en el mapa (nada que distinguir a simple vista)");
-                        else if (Math.Abs(mx - lejano.TileX) > 0.5 || Math.Abs(my - lejano.TileY) > 0.5)
-                            Console.WriteLine("FALLO: AR-13b - el marcador del cofre no cae sobre la casilla real del cofre");
+                        else if (Math.Abs(mx - (lejano.TileX + 1)) > 0.5 || Math.Abs(my - (lejano.TileY + 1)) > 0.5)
+                            Console.WriteLine("FALLO: AR-13b - el marcador del cofre no cae sobre el centro real del cofre (esquina+1, footprint 2x2)");
 
                         // Y se apaga con "Cerrar", que es el unico gesto real de "quita las marcas".
                         vm.Exploration.ClearOreMarksCommand.Execute(null);
@@ -5498,6 +5502,96 @@ internal static partial class Program
                     DoEvents();
                 }
                 catch (Exception ex) { Console.WriteLine("AR-13-EXCEPTION: " + ex); }
+
+                // AR-13d (17-sep-2026): Bug 1 real reportado por el usuario jugando - "el mapa no
+                // tiene ningun clic que abra el editor de cofres". Los marcadores de resultado de
+                // busqueda (WorldSearchResults) llevaban Cursor="Hand"/ToolTip pero SIN Command
+                // detras; el marcador de "cofre actual" llevaba IsHitTestVisible=False explicito.
+                // Arreglo real: MouseBinding en MainWindow.xaml reutiliza GoToWorldSearchHitCommand
+                // (marcadores de busqueda) y el nuevo EditCurrentChestOnMapCommand (marcador de
+                // "cofre actual") - los DOS abren el editor real (EditingChest/EditingChestSlots)
+                // del cofre CORRECTO, nunca otro. Verificado sobre Blando_Río.wld (mundo real del
+                // usuario, 358 cofres reales, el mismo que usa el canario de KeepQA
+                // verificarAlineacionMarcador.js para el Bug 2) con dos cofres reales de contenido
+                // distinto y conocido: cofre-7 (X=5579,Y=1036, contiene NetId 167/188/2350/282/73)
+                // y cofre-8 (X=5375,Y=803, contiene NetId 21/279/8/73 - comparte el 73 a proposito,
+                // para que "aparece 21" sea la prueba real de que se abrio el cofre EQUIVOCADO).
+                try
+                {
+                    string mundoCofres = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                    if (!File.Exists(mundoCofres))
+                        Console.WriteLine("AR-13d: no se encontro Blando_Río.wld (mundo real con los 358 cofres) - omitido");
+                    else
+                    {
+                        var carga = vm.Exploration.LoadFromPathAsync(mundoCofres);
+                        while (!carga.IsCompleted) { DoEvents(); Thread.Sleep(15); }
+                        DoEvents(); DoEvents();
+
+                        // WorldSearch.cs ya deja la posicion en el CENTRO real del cofre tras el
+                        // arreglo del Bug 2 (esquina+1 en cada eje) - el clic simulado usa ese mismo
+                        // centro, exactamente lo que un clic real sobre el marcador del mapa manda.
+                        var hitCofre7 = new WorldSearchHitRowViewModel(new WorldSearchHit(5580, 1037, "Barra de hierro", WorldSearchKind.ChestItem));
+                        vm.Exploration.GoToWorldSearchHitCommand.Execute(hitCofre7);
+                        DoEvents(); DoEvents();
+
+                        bool categoriaOk = vm.Exploration.SelectedCategory == WorldSearchCategory.Chests && vm.Exploration.ChestViewMode == 2;
+                        var editando7 = vm.Exploration.EditingChest;
+                        var netIds7 = vm.Exploration.EditingChestSlots.Select(s => s.Item.Id).Where(id => id != 0).ToHashSet();
+                        bool contenido7Ok = new[] { 167, 188, 2350, 282 }.All(netIds7.Contains) && !netIds7.Contains(21) && !netIds7.Contains(279);
+                        Console.WriteLine($"AR-13d: clic en marcador de cofre-7 -> categoria/modo OK={categoriaOk}, cofre abierto=({editando7?.TileX}, {editando7?.TileY}) (esperado (5579, 1036)), contenido real OK={contenido7Ok}, HasCurrentChest={vm.Exploration.HasCurrentChest}, marcador=({vm.Exploration.CurrentChestX},{vm.Exploration.CurrentChestY}) (esperado (5580, 1037))");
+                        if (!categoriaOk) Console.WriteLine("FALLO: AR-13d - el clic en el marcador del mapa no salta a 'Cofres > Cofre a cofre'");
+                        if (editando7 == null || editando7.TileX != 5579 || editando7.TileY != 1036)
+                            Console.WriteLine("FALLO: AR-13d - el clic en el marcador de cofre-7 no abre el editor de ESE cofre");
+                        if (!contenido7Ok)
+                            Console.WriteLine($"FALLO: AR-13d - el editor abierto no tiene el contenido REAL del cofre-7 (NetIds vistos: {string.Join(",", netIds7)})");
+                        if (!vm.Exploration.HasCurrentChest || vm.Exploration.CurrentChestX != 5580 || vm.Exploration.CurrentChestY != 1037)
+                            Console.WriteLine("FALLO: AR-13d - el marcador del mapa no queda sobre el centro real del cofre-7 tras el clic");
+
+                        // Segundo clic, sobre OTRO cofre real (cofre-8) - tiene que abrir ESE, no
+                        // quedarse con el anterior (la prueba mas directa de "abre el correcto").
+                        var hitCofre8 = new WorldSearchHitRowViewModel(new WorldSearchHit(5376, 804, "Hierro", WorldSearchKind.ChestItem));
+                        vm.Exploration.GoToWorldSearchHitCommand.Execute(hitCofre8);
+                        DoEvents(); DoEvents();
+                        var editando8 = vm.Exploration.EditingChest;
+                        var netIds8 = vm.Exploration.EditingChestSlots.Select(s => s.Item.Id).Where(id => id != 0).ToHashSet();
+                        bool contenido8Ok = new[] { 21, 279, 8 }.All(netIds8.Contains) && !netIds8.Contains(167);
+                        Console.WriteLine($"AR-13d: clic en marcador de cofre-8 -> cofre abierto=({editando8?.TileX}, {editando8?.TileY}) (esperado (5375, 803)), contenido real OK={contenido8Ok}");
+                        if (editando8 == null || editando8.TileX != 5375 || editando8.TileY != 803)
+                            Console.WriteLine("FALLO: AR-13d - el clic en el marcador de cofre-8 no abre el editor de ESE cofre (o se quedo en el anterior)");
+                        if (!contenido8Ok)
+                            Console.WriteLine($"FALLO: AR-13d - el editor abierto no tiene el contenido REAL del cofre-8 (NetIds vistos: {string.Join(",", netIds8)})");
+
+                        // Segunda mitad del Bug 1: el marcador de "cofre actual" (antes
+                        // IsHitTestVisible=False, ahora clicable) reabre el MISMO cofre ya marcado.
+                        vm.Exploration.CancelEditingChestCommand.Execute(null);
+                        DoEvents();
+                        bool marcadorSigueTrasCancel = vm.Exploration.HasCurrentChest && vm.Exploration.EditingChest == null;
+                        vm.Exploration.EditCurrentChestOnMapCommand.Execute(null);
+                        DoEvents();
+                        var editandoTrasMarcador = vm.Exploration.EditingChest;
+                        Console.WriteLine($"AR-13d: 'Cerrar editor' deja el marcador puesto={marcadorSigueTrasCancel} (esperado True); EditCurrentChestOnMap reabre=({editandoTrasMarcador?.TileX}, {editandoTrasMarcador?.TileY}) (esperado el mismo cofre-8, (5375, 803))");
+                        if (!marcadorSigueTrasCancel)
+                            Console.WriteLine("FALLO: AR-13d - cerrar el editor de cofre apaga tambien el marcador del mapa (deberian ser independientes)");
+                        if (editandoTrasMarcador == null || editandoTrasMarcador.TileX != 5375 || editandoTrasMarcador.TileY != 803)
+                            Console.WriteLine("FALLO: AR-13d - el marcador de 'cofre actual' del mapa no reabre el editor del cofre correcto");
+
+                        vm.Exploration.CancelEditingChestCommand.Execute(null);
+                        vm.Exploration.ClearOreMarksCommand.Execute(null);
+                        vm.Exploration.ChestViewMode = 0;
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        DoEvents();
+                    }
+
+                    // Al terminar se deja recargado el mundo de siempre, mismo criterio que AR-13c.
+                    string mundoDeSiempreAR13d = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                    if (File.Exists(mundoDeSiempreAR13d))
+                    {
+                        var vuelta = vm.Exploration.LoadFromPathAsync(mundoDeSiempreAR13d);
+                        while (!vuelta.IsCompleted) { DoEvents(); Thread.Sleep(15); }
+                        DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-13d-EXCEPTION: " + ex); }
 
                 // AR-13c: los NOMBRES reales de las filas de cofre, sobre un mundo que SI tiene
                 // cofres de mod (roca_negra no tiene ninguno: los 505 estan sobre tiles vanilla).

@@ -4946,12 +4946,22 @@
                                              el resultado activo de la busqueda: marco teal hueco de 24px y
                                              tamaño constante en pantalla via ScaleTransform inverso al
                                              Zoom, igual que sus vecinos. -->
-                                        <Canvas IsHitTestVisible="False">
+                                        <!-- Bug real reportado por el usuario jugando (17-sep-2026): este marcador
+                                             llevaba IsHitTestVisible="False" EXPLICITO en su Canvas contenedor -
+                                             nunca podia recibir clics, por diseño. Ahora hit-testable de verdad,
+                                             con el mismo cursor/tooltip que los demas marcadores clicables del
+                                             mapa y un MouseBinding que abre el editor de ESTE cofre (mismo
+                                             mecanismo real que la fila de la lista, ver EditCurrentChestOnMap). -->
+                                        <Canvas>
                                             <Rectangle x:Name="CurrentChestMarker" Width="24" Height="24" Margin="-12,-12,0,0"
                                                        Stroke="{StaticResource TealBrush}" StrokeThickness="2.5" Fill="Transparent"
                                                        Canvas.Left="{Binding Exploration.CurrentChestX}" Canvas.Top="{Binding Exploration.CurrentChestY}"
                                                        Visibility="{Binding Exploration.HasCurrentChest, Converter={StaticResource BoolToVis}}"
+                                                       Cursor="Hand" ToolTip="{Binding Loc[chest_edit_open], Mode=OneWay}"
                                                        Panel.ZIndex="4" RenderTransformOrigin="0.5,0.5">
+                                                <Rectangle.InputBindings>
+                                                    <MouseBinding MouseAction="LeftClick" Command="{Binding Exploration.EditCurrentChestOnMapCommand}" />
+                                                </Rectangle.InputBindings>
                                                 <Rectangle.RenderTransform>
                                                     <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                     ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
@@ -4994,7 +5004,20 @@
                                                      "actual" de Anterior/Siguiente sigue siendo el mas grande - gemelo
                                                      visual real de ShowCrosshair/GoToCurrentResult de TEdit. -->
                                                 <DataTemplate DataType="{x:Type vm:WorldSearchHitRowViewModel}">
+                                                    <!-- Bug real reportado por el usuario jugando (17-sep-2026): este
+                                                         marcador ya llevaba Cursor="Hand" y ToolTip (parecia clicable)
+                                                         pero SIN ningun Command detras - un clic no hacia nada. Mismo
+                                                         Command/parametro EXACTOS que ya usa la fila equivalente de la
+                                                         lista lateral (MainWindow.xaml, boton "RowClickButton" de
+                                                         WorldSearchResults) - reutilizado tal cual, no un mecanismo
+                                                         nuevo. GoToWorldSearchHit ya navega y, si el resultado es un
+                                                         cofre real, abre de paso su editor (OpenChestEditorIfApplicable). -->
                                                     <Grid ToolTip="{Binding Name}" Cursor="Hand">
+                                                        <Grid.InputBindings>
+                                                            <MouseBinding MouseAction="LeftClick"
+                                                                          Command="{Binding DataContext.Exploration.GoToWorldSearchHitCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                          CommandParameter="{Binding}" />
+                                                        </Grid.InputBindings>
                                                         <Grid.RenderTransform>
                                                             <ScaleTransform ScaleX="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                             ScaleY="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}" />

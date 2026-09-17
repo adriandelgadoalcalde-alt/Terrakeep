@@ -40,16 +40,20 @@ public sealed class CofresMarcadorYRecuentoTests
         Assert.False(vm.HasCurrentChest);
     }
 
+    // Bug real reportado por el usuario jugando (17-sep-2026, offset CONSTANTE confirmado en los
+    // 358 cofres de un .wld real - ver bitacora.md): chest.TileX/TileY es la esquina superior-
+    // izquierda del bloque 2x2 real de un cofre, no su centro - el marcador tiene que caer en el
+    // CENTRO real (esquina +1 en cada eje), o queda sistematicamente una casilla antes del cofre.
     [Fact]
-    public void PulsarUnCofre_DejaElMarcadorEnSuCasillaReal()
+    public void PulsarUnCofre_DejaElMarcadorEnElCentroRealDelCofre()
     {
         var vm = ConCofres(out _, out var b);
 
         vm.GoToChestCommand.Execute(b);
 
         Assert.True(vm.HasCurrentChest);
-        Assert.Equal(4114, vm.CurrentChestX);
-        Assert.Equal(645, vm.CurrentChestY);
+        Assert.Equal(4115, vm.CurrentChestX);
+        Assert.Equal(646, vm.CurrentChestY);
     }
 
     [Fact]
@@ -60,8 +64,8 @@ public sealed class CofresMarcadorYRecuentoTests
 
         vm.GoToChestCommand.Execute(a);
 
-        Assert.Equal(100, vm.CurrentChestX);
-        Assert.Equal(200, vm.CurrentChestY);
+        Assert.Equal(101, vm.CurrentChestX);
+        Assert.Equal(201, vm.CurrentChestY);
         Assert.Equal(1, vm.ChestRows.Count(r => r.IsCurrent));
     }
 

@@ -17614,3 +17614,89 @@ aplique el arreglo: si el marcador se corrige a `chest.X+1`/`chest.Y+1`, volver 
 
 NO se tocó ningún código de producción de Terrakeep en este encargo (norma "dos fases"). Commit
 local SOLO de la pieza nueva de KeepQA (sin `git push`).
+
+## 17-sep-2026 (segunda parte) - ARREGLADOS los dos bugs de arriba, "dos fases" cerrada
+
+Agente ciego (norma "dos fases": el que investigó no arregla) - arreglo real aplicado a los dos
+bugs del diagnóstico de arriba, verificado con evidencia real (no "debería funcionar").
+
+**Bug 2 (marcador de cofre desplazado) - ARREGLADO**:
+- `Terrakeep.Core/WldFormat/WorldSearch.cs:146` (`Run`, búsqueda "por lo que contienen"):
+  `new WorldSearchHit(chest.X, chest.Y, ...)` → `new WorldSearchHit(chest.X + 1, chest.Y + 1, ...)`.
+- `Terrakeep.App/ViewModels/ExplorationViewModel.cs:1209-1210` (`GoToChest`, marcador de "cofre
+  actual"): `CurrentChestX = chest.TileX; CurrentChestY = chest.TileY;` → `chest.TileX + 1` /
+  `chest.TileY + 1`.
+- Test unitarios actualizados a los valores reales tras el +1: `Terrakeep.Core.Tests/WldFormat/
+  WorldSearchTests.cs` (`Run_ObjetoEnCofre_DevuelveElCentroRealDelCofreNoLaEsquina`,
+  `Run_CofreConDosObjetosQueCasan_DaUnaFilaPorObjeto`), `Terrakeep.App.ViewModels.Tests/
+  CofresMarcadorYRecuentoTests.cs` (`PulsarUnCofre_DejaElMarcadorEnElCentroRealDelCofre`,
+  `PulsarOtroCofre_MueveElMarcador_NoLoDuplica`), y el arnés visual `Terrakeep.App.Tests/
+  Program.cs` (AR-13b, comparaba contra `lejano.TileX` crudo, ahora contra `lejano.TileX + 1`).
+- **Verificación real con la pieza de KeepQA sobre los 358 cofres reales de `Blando_Río.wld`**:
+  se generaron los marcadores REALES ejecutando de verdad el código ya arreglado (`GoToChestCommand.
+  Execute` compilado, no una fórmula recalculada a mano - script en el scratchpad de la sesión) y
+  se corrieron contra `objetos-cofres-Blando_Rio-17sep2026.json` con
+  `verificarAlineacionMarcador.js --zoom 4`:
+  ```
+  Objetos: 358. Marcadores: 358. Emparejados: 358.
+  [OK] "cofre-0" ... offset=(0,0) tiles ... (los 358, todos OK)
+  Patrón del conjunto: CONSTANTE - offset medio=(0,0) tiles, rango=(0,0) tiles
+  RESULTADO: OK
+  ```
+  358 de 358 cofres reales quedan alineados exactamente, offset (0,0) en todos. Antes del arreglo
+  daba `RESULTADO: REVISAR` con offset constante `(-1,-1)` en los 358 (ver diagnóstico de arriba).
+
+**Bug 1 (mapa sin clic al editor) - ARREGLADO**:
+- `Terrakeep.App/ViewModels/ExplorationViewModel.cs`: `GoToWorldSearchHit` ahora llama también a
+  `OpenChestEditorIfApplicable(hit)` (nuevo método) cuando `hit.Kind == WorldSearchKind.ChestItem`
+  - deshace el +1 del Bug 2 para encontrar el `WldChest` real por su esquina cruda, salta a
+    "Cofres" > "Cofre a cofre" (`SelectedCategory`/`ChestViewMode = 2`, reconstruyendo `ChestRows`
+    si hacía falta) y reutiliza `GoToChest`+`EditChest` TAL CUAL (mismo mecanismo real que ya usaba
+    la fila de la lista lateral, pedido explícito del encargo - "no inventes uno nuevo").
+  - Nuevo `EditCurrentChestOnMapCommand`: el marcador del "cofre actual" ya corresponde 1:1 a la
+    fila `IsCurrent` de `ChestRows` - reabre su editor sin tener que volver a la lista.
+- `Terrakeep.App/MainWindow.xaml`:
+  - Marcador de resultado de búsqueda (`WorldSearchHitRowViewModel`, el que ya llevaba
+    `Cursor="Hand"`/`ToolTip` sin `Command` detrás): `MouseBinding MouseAction="LeftClick"` al
+    `GoToWorldSearchHitCommand` existente, mismo `CommandParameter="{Binding}"` que ya usa la fila
+    de la lista lateral.
+  - Marcador de "cofre actual" (`CurrentChestMarker`): se le quitó el `IsHitTestVisible="False"`
+    explícito de su `Canvas` contenedor, se le añadió `Cursor="Hand"`/`ToolTip` y un `MouseBinding`
+    al nuevo `EditCurrentChestOnMapCommand`.
+- **Verificación real** (sin abrir ninguna ventana visible - nunca roba el foco; `Application` en
+  blanco con `Theme.xaml` fusionado, mismo patrón documentado en `Terrakeep.App.Tests/Program.cs`,
+  para que `WorldSearchHitRowViewModel.KindColor` resuelva `MasterGoldBrush`): ejecutando de
+  verdad `GoToWorldSearchHitCommand`/`EditCurrentChestOnMapCommand` contra `Blando_Río.wld` con dos
+  cofres reales de contenido distinto y conocido (cofre en `X=5579,Y=1036` con NetId
+  167/188/2350/282/73; cofre en `X=5375,Y=803` con NetId 21/279/8/73 - comparten el 73 a propósito
+  para que "aparece 21" sea la prueba real de que se abrió el cofre EQUIVOCADO):
+  ```
+  Clic cofre-7 -> categoria/modo OK=True, cofre abierto=(5579,1036) esperado (5579,1036), netIds=73,167,188,282,2350
+  Marcador mapa tras clic -> HasCurrentChest=True, (5580,1037) esperado (5580,1037)
+  Clic cofre-8 -> cofre abierto=(5375,803) esperado (5375,803), netIds=8,21,73,279
+  Cerrar editor -> marcador sigue puesto=True esperado True; EditCurrentChestOnMap reabre=(5375,803) esperado (5375,803)
+  BUG1 RESULTADO: OK
+  ```
+  Confirma con datos reales: el clic abre el cofre CORRECTO (nunca el otro), con su contenido REAL,
+  y el marcador de "cofre actual" reabre el mismo cofre ya marcado.
+- Se añadió también `Terrakeep.App.Tests/Program.cs` AR-13d (mismo escenario, dentro del arnés
+  visual real del repo, para que quede como regresión permanente junto a AR-13a/b/c) - no se relanzó
+  el arnés completo en esta sesión (varios minutos, decenas de bloques no relacionados); la
+  verificación real de arriba (misma llamada de producción, mismo mundo real) ya confirma el
+  arreglo sin ese riesgo/coste.
+
+**Build y test**: `dotnet build Terrakeep.slnx` (Debug) en verde, 0 avisos/0 errores.
+`dotnet test Terrakeep.Core.Tests` 557/557, `dotnet test Terrakeep.App.ViewModels.Tests` 485/485
+(un fallo de `ContenidoDelJuegoEnIdiomaTests` en la primera pasada resultó intermitente/no
+relacionado - en verde solo y en una segunda pasada completa). `dotnet build Terrakeep.App.Tests`
+en verde (incluye el AR-13d nuevo).
+
+**Recompilado y redesplegado** (regla real del proyecto: el acceso de la barra de tareas apunta a
+`bin\Debug`, la copia real instalada vive aparte en `Local\Programs`):
+- `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe` - `dotnet build Terrakeep.slnx -c Debug`.
+- `C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` - reinstalado con
+  `installer\install.ps1` (publish Release autocontenido + copia), acceso directo del menú Inicio
+  actualizado de paso.
+
+Commit local en Terrakeep (código + tests + bitácora) y en KeepQA (si aplica, ver su propia
+bitácora) - sin `git push`.

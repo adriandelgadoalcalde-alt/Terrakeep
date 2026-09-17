@@ -234,8 +234,13 @@ public class WorldSearchTests
 
     // ---- Fase 2: cofres y letreros ----
 
+    // Bug real reportado por el usuario jugando (17-sep-2026, offset CONSTANTE confirmado en los
+    // 358 cofres de un .wld real - ver bitacora.md): WldChest.X/Y es la esquina superior-izquierda
+    // del bloque 2x2 real de un cofre, no su centro - el resultado tiene que caer en el CENTRO
+    // real (esquina +1 en cada eje), o el marcador/la navegacion quedan sistematicamente una
+    // casilla antes del cofre real.
     [Fact]
-    public void Run_ObjetoEnCofre_DevuelveLaPosicionDelCofreNoDelObjeto()
+    public void Run_ObjetoEnCofre_DevuelveElCentroRealDelCofreNoLaEsquina()
     {
         var tiles = new WldTile[1, 1];
         tiles[0, 0] = WldTile.Empty;
@@ -249,8 +254,8 @@ public class WorldSearchTests
         var result = Run(world, new WorldSearchQuery { ChestItemIds = new HashSet<int> { 4 } }, itemNames: itemNames);
 
         var hit = Assert.Single(result.Hits);
-        Assert.Equal(30, hit.X);
-        Assert.Equal(40, hit.Y);
+        Assert.Equal(31, hit.X);
+        Assert.Equal(41, hit.Y);
         Assert.Equal("Espada larga de hierro", hit.Name);
         Assert.Equal(WorldSearchKind.ChestItem, hit.Kind);
     }
@@ -269,7 +274,7 @@ public class WorldSearchTests
         var result = Run(world, new WorldSearchQuery { ChestItemIds = new HashSet<int> { 4, 8 } });
 
         Assert.Equal(2, result.Hits.Count);
-        Assert.All(result.Hits, h => Assert.Equal((5, 5), (h.X, h.Y)));
+        Assert.All(result.Hits, h => Assert.Equal((6, 6), (h.X, h.Y)));
     }
 
     [Fact]

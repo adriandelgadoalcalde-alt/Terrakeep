@@ -1206,8 +1206,15 @@ public partial class ExplorationViewModel : ObservableObject
         //
         // Un marcador propio para el cofre actual (una sola posicion, no las 560 filas) - mismo
         // lenguaje visual que el resultado "actual" de la busqueda, y se apaga al cerrar/cambiar.
-        CurrentChestX = chest.TileX;
-        CurrentChestY = chest.TileY;
+        //
+        // Bug real reportado por el usuario jugando (17-sep-2026, offset CONSTANTE confirmado en
+        // los 358 cofres de un .wld real - ver bitacora.md): chest.TileX/TileY es la esquina
+        // superior-izquierda del bloque 2x2 real de un cofre (WldChest.X/Y tal cual lo guarda el
+        // .wld), nunca su centro - el CENTRO real es (TileX+1, TileY+1) (mitad del footprint 2x2,
+        // confirmado contra TileObjectData.cs decompilado). Sin este +1 el marco quedaba una
+        // casilla antes del cofre real en los dos ejes, siempre.
+        CurrentChestX = chest.TileX + 1;
+        CurrentChestY = chest.TileY + 1;
         HasCurrentChest = true;
         // Punto 4 del encargo (6-sep-2026): "Cofre a cofre" tiene su PROPIA casilla de acercar,
         // independiente de la global que comparten las demas secciones.
@@ -1668,6 +1675,62 @@ public partial class ExplorationViewModel : ObservableObject
         // busqueda que SI es un letrero real ademas abre su editor - mismo gesto que ya hace
         // GoToChest para "Cofre a cofre" (navegar Y preparar la edicion en un solo clic).
         OpenSignEditorIfApplicable(hit);
+        // Bug real reportado por el usuario jugando (17-sep-2026): los marcadores de "por lo que
+        // contienen" en el mapa llevaban Cursor="Hand" y ToolTip (parecian clicables) pero no
+        // tenian ningun Command cableado detras - un clic no hacia nada. Mismo gesto que el
+        // letrero de arriba: un resultado que SI es un objeto dentro de un cofre real abre de
+        // paso el editor de ESE cofre concreto.
+        OpenChestEditorIfApplicable(hit);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Bug real reportado por el usuario jugando (17-sep-2026): en el mapa no habia NINGUN clic
+    // que llevara al editor de cofres (ni el marcador de "cofre actual", con IsHitTestVisible=
+    // False explicito, ni los marcadores de resultado de busqueda, sin Command). "Cofre a cofre"
+    // (ChestViewMode==2) es el UNICO sitio que sabe editar un cofre real (EditChestCommand,
+    // necesita el ChestIndex real de _world.Chests) - un clic en el mapa reutiliza el MISMO
+    // mecanismo saltando a esa lista con el cofre correcto ya abierto, en vez de inventar un
+    // editor nuevo colgado del mapa.
+    // ---------------------------------------------------------------------------------------
+    private void OpenChestEditorIfApplicable(WorldSearchHitRowViewModel hit)
+    {
+        if (hit.Kind != WorldSearchKind.ChestItem || _world == null) return;
+        // WorldSearch.cs ya deja hit.TileX/TileY en el CENTRO real del cofre (esquina +1 en cada
+        // eje, ver el arreglo de offset de marcador) - deshacer el +1 aqui para volver a la
+        // esquina cruda que SI guarda el .wld (WldChest.X/Y) y poder encontrar el cofre real.
+        int chestX = hit.TileX - 1, chestY = hit.TileY - 1;
+        int index = -1;
+        for (int i = 0; i < _world.Chests.Count; i++)
+        {
+            if (_world.Chests[i].X == chestX && _world.Chests[i].Y == chestY) { index = i; break; }
+        }
+        if (index < 0) return;
+
+        // Salta a "Cofres" > "Cofre a cofre" (mismo estado que si el usuario hubiera pulsado el
+        // chip a mano) y fuerza una reconstruccion fresca de ChestRows - es una lista perezosa
+        // (RebuildChestByChest solo corre en ese modo, ver OnChestViewModeChanged) que puede
+        // no existir todavia si se llega aqui desde otro chip/categoria.
+        SelectedCategory = WorldSearchCategory.Chests;
+        ChestViewMode = 2;
+        RebuildChestInventory();
+
+        var row = ChestRows.FirstOrDefault(r => r.ChestIndex == index);
+        if (row == null) return;
+        // Mismo gesto EXACTO ya establecido para la lista lateral ("pulsar la fila navega+despliega,
+        // LUEGO el boton Editar" - ver comentario real de GoToChest) - reutilizado tal cual, no un
+        // mecanismo nuevo: marca el marcador/resaltado del mapa Y abre el editor de este cofre.
+        GoToChest(row);
+        EditChest(row);
+    }
+
+    // Gemelo real de OpenChestEditorIfApplicable, para el marcador del "cofre actual" del mapa
+    // (Bug 1, segunda mitad del encargo): ese marcador ya corresponde 1:1 a la fila marcada
+    // IsCurrent en ChestRows (lo deja GoToChest, mas abajo) - no hace falta buscar por posicion.
+    [RelayCommand]
+    private void EditCurrentChestOnMap()
+    {
+        var row = ChestRows.FirstOrDefault(r => r.IsCurrent);
+        if (row != null) EditChest(row);
     }
 
     // ---------------------------------------------------------------------------------------

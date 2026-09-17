@@ -136,6 +136,15 @@ public static class WorldSearch
         // Fase 2: la coordenada del resultado es la del CONTENEDOR, no la del objeto dentro -
         // mismo criterio real que TEdit (SearchContainers, ESPEC-buscador-mundo-tedit.md#1.2).
         // Un cofre con mas de un objeto que casa da mas de una fila, misma posicion las dos.
+        //
+        // Bug real reportado por el usuario jugando (17-sep-2026, confirmado con datos reales de
+        // 358 cofres de un .wld real, offset CONSTANTE en los 358 - ver bitacora.md): WldChest.X/Y
+        // es la esquina SUPERIOR-IZQUIERDA del bloque 2x2 que ocupa un cofre (TileObjectData:
+        // Style2x2 + Origin=(0,1), confirmado contra TileObjectData.cs decompilado Y contra la
+        // rejilla real del mundo), nunca su centro. Sumar la mitad del footprint (+1 tile en cada
+        // eje) para que el marcador/la navegacion caigan en el CENTRO real del cofre, no en su
+        // esquina - antes de este arreglo el marcador quedaba sistematicamente una casilla antes
+        // en X e Y en TODOS los cofres.
         if (query.ChestItemIds.Count > 0)
         {
             foreach (var chest in world.Chests)
@@ -143,7 +152,7 @@ public static class WorldSearch
                 ct.ThrowIfCancellationRequested();
                 foreach (var item in chest.Items)
                     if (query.ChestItemIds.Contains(item.NetId))
-                        Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(chest.X, chest.Y, itemNames.GetName(item.NetId), WorldSearchKind.ChestItem));
+                        Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(chest.X + 1, chest.Y + 1, itemNames.GetName(item.NetId), WorldSearchKind.ChestItem));
             }
         }
 
