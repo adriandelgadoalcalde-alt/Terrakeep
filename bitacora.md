@@ -18385,3 +18385,113 @@ fuera del alcance de esta sesión (solo commit local).
 
 Commit local (nunca git push).
 comprobado antes, solo estos archivos por nombre exacto, nunca `git add -A`. Sin `git push`.
+
+## 18-sep-2026 — Investigación (SOLO investigación, sin arreglo) del segundo reporte real del
+## usuario sobre el marcador de cofre: "sigue desplazado, pero MUCHO más que 1 tile" + "el clic
+## sobre el cofre real no hace nada"
+
+Norma de "dos fases" (ver `feedback_dos-fases-investigar-herramienta-luego-agente-ciego-arregla.md`
+en MEMORY.md): este encargo es SOLO investigación con evidencia real, medida sobre la app real
+corriendo. No se ha tocado ningún archivo de producción. Herramienta de medición construida y
+usada de forma temporal directamente dentro de `Terrakeep.App.Tests/Program.cs` (un bloque nuevo
+gateado por `MARCADOR_PIXEL_SOLO=1`, mismo patrón real que el resto del arnés) y **revertida con
+`git checkout` al terminar** — no queda como test permanente (a diferencia de AR-13b/AR-13d, que sí
+son regresión permanente).
+
+**Contexto real**: el 17-sep-2026 (commits `efa3e0c7`/`61669d7e`) se arregló un offset CONSTANTE de
+exactamente (+1,+1) TILE en el marcador de cofre (esquina del footprint 2x2 usada en vez del
+centro), verificado entonces con `verificarAlineacionMarcador.js` sobre los 358 cofres reales de
+`Blando_Río.wld` — pero esa verificación SOLO comparaba tiles (Canvas.Left/Canvas.Top lógicos),
+nunca la posición REAL en píxeles de pantalla tras el `LayoutTransform`/`RenderTransform` del mapa,
+ni un clic real de sistema operativo. El usuario reportó hoy, con captura real, un desfase MUCHO
+mayor que 1 tile ("varios tiles/varias decenas de píxeles"), y por separado que un clic directo
+sobre el sprite real del cofre tampoco abre el editor.
+
+**Método de medición real** (bloque temporal en `Terrakeep.App.Tests/Program.cs`, revertido tras
+usarlo): cargó `Blando_Río.wld` real, "Cofre a cofre", cofre-7 (esquina real `(5579,1036)`, centro
+real `(5580,1037)`, mismo cofre ya usado por AR-13d). A 2 niveles de zoom reales (`1.0` y `0.09`,
+este segundo representando la vista "bastante alejada" de la captura del usuario — `MinZoom` real
+de la app es `0.02`), tras `GoToChestCommand.Execute`, midió con
+`FrameworkElement.TransformToAncestor(window)` (geometría REAL post-transform, no
+`Canvas.GetLeft/Top` a secas) el centro real en pantalla del `Rectangle x:Name="CurrentChestMarker"`
+y lo comparó contra el cálculo esperado (`origenRealDeWorldMapImage + centroRealDelCofre * zoom`).
+
+**Resultado 1 — la POSICIÓN del marcador está bien, a los dos zooms, sin regresión**:
+`errorPx=(0,0)` y `errorTiles=(0,0)` EXACTOS en `zoom=1.0` Y en `zoom=0.09`. El arreglo de
+`efa3e0c7`/`61669d7e` sigue aplicado correctamente en el código actual (confirmado también
+leyendo `WorldSearch.cs:146/203`, `ExplorationViewModel.cs:1228-1229` y el consumo del `-1` inverso
+en `OpenChestEditorIfApplicable:1713` — los tres coherentes) y el `LayoutTransform`+
+`RenderTransform` inverso al zoom del propio marcador (`MainWindow.xaml:5006-5018`) NO introduce
+ningún error de escala ni al zoom por defecto ni muy alejado — descarta con datos reales tanto (a)
+regresión del arreglo de ayer como (b) un bug de escala del `RenderTransform`/zoom del control de
+mapa. **La causa del desfase grande que vio el usuario en su captura NO está en cómo se dibuja el
+marcador de cofre real** (al menos no para este cofre/mundo real probado a fondo) — sigue abierta
+la hipótesis (c): el usuario pudo estar viendo el marcador de OTRA categoría real de resultado
+(ore/letrero/etc., ver más abajo) cerca de un cofre real, no el marcador del cofre en sí. Un dato
+de diseño real relevante para esa hipótesis:
+`MainWindow.xaml:5085-5086` (`Rectangle x:Name="Marco"`, plantilla de `WorldSearchResults`) usa
+`Stroke="{StaticResource TealBrush}"` **HARDCODEADO para TODAS las categorías de resultado del
+buscador de mundo** (cofre, letrero, mineral, NPC...) — el color por categoría (`KindColor`:
+dorado para cofre, verde para letrero, naranja para pared...) SOLO se usa en la píldora de la
+lista lateral, nunca en el marcador del propio mapa. Un cuadrado hueco teal en el mapa puede ser
+CUALQUIER categoría de resultado, no solo un cofre — si el usuario tenía una búsqueda de
+"Minerales"/veta activa a la vez (`WorldSearchKind.OreVein`, posición = CENTROIDE real de un grupo
+de tiles contiguos, nunca "debajo" de ningún sprite concreto por diseño), un marcador lejos de
+cualquier sprite de tesoro sería un comportamiento CORRECTO, no un bug — haría falta la captura
+real o saber qué categoría/pestaña tenía activa el usuario para confirmar o descartar esto del
+todo (no se pudo reproducir sin la captura real).
+
+**Resultado 2 — bug REAL y CONFIRMADO, distinto del offset: un clic de ratón real sobre el
+marcador (posición pixel-perfecta) NO abre el editor**, a los dos zooms probados. Se comprobó con
+tres niveles de evidencia, de menos a más fiable:
+1. `VisualTreeHelper.HitTest` crudo dio resultados contradictorios/no fiables (encontraba un
+   `Border` de OTRO overlay -"Vista previa de mundo nuevo", `WorldPreviewViewModel`- con
+   `Visibility` sin ningún `Binding` real y `DataItem=null`, mientras `vm.WorldPreview.IsOpen` leído
+   directamente de la VM en el mismo instante daba `False` — un artefacto del propio
+   `VisualTreeHelper.HitTest` en este arnés headless sobre un `Collapsed` de tamaño 0x0, NO una
+   pista real; se documenta para que nadie repita esta vía de investigación dándola por buena.
+2. Capturando el evento REAL de WPF (`Mouse.DirectlyOver` + `e.OriginalSource` de un
+   `PreviewMouseLeftButtonDown` real en la ventana) durante un clic de SISTEMA OPERATIVO real
+   (`SetCursorPos`+`mouse_event`, con la ventana en primer plano real vía `ForzarPrimerPlano`): a
+   `zoom=1.0` el evento real SÍ identifica correctamente `Rectangle#CurrentChestMarker` como
+   `OriginalSource`/`DirectlyOver` — la posición y el hit-test de WPF son correctos — **y aun así el
+   editor de cofre NO se abre** tras el clic completo (down+up) real.
+3. **Causa raíz real, confirmada leyendo el código**: `MainWindow.xaml:4828`
+   (`PreviewMouseLeftButtonDown="OnWorldMapMouseDown"` en `WorldMapScroll`) llama, en
+   `MainWindow.xaml.cs:697-703` (`OnWorldMapMouseDown`), a `WorldMapScroll.CaptureMouse()` de forma
+   INCONDICIONAL en CUALQUIER botón izquierdo pulsado dentro del área del mapa — sin excluir los
+   marcadores. `UIElement.CaptureMouse()` usa `CaptureMode.Element` por defecto, cuyo comportamiento
+   documentado de WPF es "no se hace hit-testing real, solo el elemento con la captura recibe
+   eventos de ratón" — así que el `MouseLeftButtonUp` correspondiente (el segundo evento que
+   necesita reconocer `MouseBinding MouseAction="LeftClick"` para disparar el `Command`) NUNCA
+   llega al `Rectangle` (ni a ningún otro marcador clicable del mapa: `CurrentChestMarker`,
+   `WorldSearchResults`, NPCs...) — llega como si viniera de `WorldMapScroll` en su lugar, así que
+   el reconocimiento del "clic completo" sobre el marcador nunca se completa. Esto es un bug REAL,
+   INDEPENDIENTE del offset de posición y NO relacionado con el arreglo de ayer — existía ya antes,
+   y explica por qué el "Bug 1" (clic muerto) que se dio por cerrado en `efa3e0c7`/`61669d7e` sigue
+   fallando con un clic real de ratón: los tests que lo verificaron entonces (AR-13b/AR-13d)
+   invocan el `Command` directamente (`.Execute(...)`), nunca pasan por la captura de ratón real del
+   `ScrollViewer` — un hueco real y ya confirmado del propio arnés de regresión, no solo de la app.
+
+**Arreglo recomendado para el segundo agente (NO aplicado aquí)**: `OnWorldMapMouseDown` necesita
+distinguir "el clic empezó sobre un marcador clicable" (dejar pasar el evento sin capturar, para que
+su propio `MouseBinding` lo reconozca) de "el clic empezó sobre el mapa vacío" (capturar para
+arrastrar/pan, comportamiento actual). La forma más simple y menos invasiva: comprobar
+`e.OriginalSource`/hacer un `VisualTreeHelper.HitTest` real ANTES de capturar y no llamar a
+`CaptureMouse()` si el hit cae sobre un elemento con un `MouseBinding` propio (o, más simple aún,
+marcar esos elementos con una propiedad/Tag identificable y comprobarla). Alternativa más robusta:
+mover la lógica de "iniciar pan" a que solo capture tras detectar un desplazamiento real del cursor
+por encima de un umbral (patrón "arrastrar de verdad, no solo pulsar y soltar en el mismo sitio"),
+dejando que un clic estacionario (down+up sin movimiento) se resuelva como clic normal en el
+elemento bajo el cursor.
+
+**Herramienta usada**: bloque de diagnóstico temporal en `Terrakeep.App.Tests/Program.cs`
+(`MARCADOR_PIXEL_SOLO=1`), escrito, ejecutado y **revertido con `git checkout`** al terminar esta
+investigación — no hay commit de código de producción ni de test permanente en este repo por este
+encargo (solo esta entrada de bitácora). Si un agente futuro necesita repetir esta medición, el
+patrón real a reutilizar está documentado arriba (línea por línea, en este mismo apartado): cargar
+mundo real, `TransformToAncestor(window)` para posición real en pantalla, y SIEMPRE un clic real de
+sistema operativo (`SetCursorPos`+`mouse_event`) capturando `Mouse.DirectlyOver`/`e.OriginalSource`
+en un handler de `PreviewMouseLeftButtonDown` en la ventana — nunca fiarse de
+`VisualTreeHelper.HitTest` a secas en este arnés (ver el artefacto documentado arriba) ni de
+`Command.Execute()` a secas para verificar que un MouseBinding real funciona con un clic real.
