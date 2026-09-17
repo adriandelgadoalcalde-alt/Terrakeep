@@ -17441,3 +17441,20 @@ Sin `git push`. Commit local de `dotnet-tools.json` (manifiesto de herramienta l
 `Terrakeep.Core.Tests/stryker-config.json` (nuevo) y esta bitácora. Sin cambios de código fuente en
 este paso (ninguno de los supervivientes se arregló, documentado a propósito para un agente aparte
 según la norma de las dos fases del proyecto).
+
+## 17-sep-2026 - XamlStyler.Console instalado como gate de formato XAML (KeepQA)
+
+`xamlstyler.console` 3.2501.8 instalado como `dotnet tool` LOCAL (`dotnet-tools.json`, mismo patrón
+que ya trae `dotnet-stryker`). Usado por la pieza nueva de KeepQA
+`src/xaml-formato/verificarFormatoXaml.js` en modo `-p`/`--passive` (solo comprueba, nunca
+modifica). Resultado real contra los 3 `.xaml` de `Terrakeep.App` (`App.xaml`, `MainWindow.xaml`,
+`Styles/Theme.xaml`): los 3 en FAIL con la config por defecto de xstyler, y SIGUEN en FAIL incluso
+con una config ajustada a las dos únicas convenciones 100% constantes de la familia (primer
+atributo en la misma línea, sin reordenar atributos) - por BOM ausente (xstyler siempre lo añade,
+no configurable), reflujo de comentarios multilínea (tampoco configurable) y el agrupado artesanal
+de atributos en controles hoja de `MainWindow.xaml` (sin regla numérica fija - forzar el
+reformateo generaría ~16.400 líneas de diff sobre las 7.536 reales del archivo). Decisión: NO
+reformatear esta ronda, la pieza queda en modo informe (ver bitacora.md de KeepQA, entrada
+"Gate de formato XAML con XamlStyler.Console", para el detalle completo de la investigación).
+
+Sin `git push`. Commit local de `dotnet-tools.json` (único archivo tocado en este repo).
