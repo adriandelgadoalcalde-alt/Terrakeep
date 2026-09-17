@@ -17700,3 +17700,77 @@ en verde (incluye el AR-13d nuevo).
 
 Commit local en Terrakeep (código + tests + bitácora) y en KeepQA (si aplica, ver su propia
 bitácora) - sin `git push`.
+
+## 17-sep-2026 (misma noche) — ¿el bug de offset de marcador de cofres afecta a otras categorías?
+
+El usuario, jugando de verdad tras el arreglo de cofres de arriba, preguntó si el mismo problema
+(marcador en la esquina en vez del centro real) afecta también a minerales/gemas/tesoros/NPCs/
+líquidos/paredes del mismo mapa de Exploración. Investigado con datos reales (KeepQA,
+`verificarAlineacionMarcador.js` + un programa de volcado propio en el scratchpad que usa
+`Terrakeep.Core.WldFormat.WldReader` directamente sobre 4 `.wld` reales: `Blando_Río.wld`,
+`LLUIS-ADRI-PAU-WORLD.wld`, `adriandres.wld`, `825aa9c2-....wld`, estos tres últimos rescatados de
+`G:\PC VIEJO` porque los mundos activos/auto-generados de esta máquina no tenían tile entities ni
+letreros suficientes).
+
+**Tabla real por categoría:**
+
+| Categoría | ¿Mismo bug? | Footprint real medido | Datos reales | Estado |
+|---|---|---|---|---|
+| Minerales/gemas/tesoros/paredes/líquidos por tile individual | No aplica (por diseño) | 1x1 (cada hit YA es la celda escaneada, documentado a propósito en `WorldSearch.cs` como "no deduplica sprites multi-tile") | N/A | — |
+| Vetas (Minerales/Paredes/Líquidos agrupados, `OreVeinFinder`) | No aplica | N/A - usa un CENTROIDE real calculado (media de todos los tiles de la veta), no una esquina guardada | N/A | — |
+| NPCs | No aplica | N/A - `WldNpc.TileX/TileY` es una posición continua (redondeo de píxeles o home tile), no la esquina de un objeto de rejilla | N/A | — |
+| Cofres (`ChestItem`) | Sí (ya arreglado antes de esta pregunta) | 2x2 | 358 cofres reales (`Blando_Río.wld`) | Arreglado (sesión anterior) |
+| Letreros (`Sign`: Sign=55/Tombstones=85/AnnouncementBox=425) | Sí, mismo patrón exacto | 2x2 constante | 226 letreros reales en 3 mundos (1 fusión espuria de 2 lápidas contiguas por mi propia herramienta de medición, no un tamaño real distinto - descartada) | **Arreglado** (`sign.X+1, sign.Y+1`) |
+| TileEntity `DisplayDoll` (maniquí/womanniquí) | Sí, mismo patrón exacto | 2x3 constante | 125 maniquíes reales (`LLUIS-ADRI-PAU-WORLD.wld`) | **Arreglado** (`+1,+1`, división entera de 2/2 y 3/2) |
+| TileEntity `ItemFrame` (marco de objeto) | Sí (por fuente, no datos reales) | 2x2 (`TileObjectData.cs` decompilado, `Style2x2` sin overrides - mismo primitivo exacto que `Chest`) | 0 instancias reales en los 4 mundos disponibles | **Arreglado** (`+1,+1`) por alta confianza de fuente, aun sin dato real que medir |
+| TileEntity `TrainingDummy`/`LogicSensor`/`TeleportationPylon` | Bug presente en la fórmula pero INOFENSIVO | — | — | `WldReader.ReadTileEntities` nunca les rellena `Items` - jamás producen un `WorldSearchHit` real, no se tocan |
+| TileEntity `HatRack` | Desconocido | Probable 3x4 (`Style3x4`, ligado a `TEHatRack.Hook_AfterPlacement`) pero el ID numérico del `addTile` no cuadra sin ambigüedad con la constante `HatRack` de `TileID.cs` en el build decompilado usado | 0 instancias reales | **Pendiente**, no tocado |
+| TileEntity `WeaponRack`/`DeadCellsDisplayJar`/`KiteAnchor`/`CritterAnchor` | Desconocido | Sin confirmar | 0 instancias reales, sin `addTile` inequívoco encontrado | **Pendiente**, no tocado (documentado en el propio código, `TileEntityCenterOffset`) |
+
+**Arreglo real** (mismo mecanismo que los cofres, extensión mecánica autorizada por el propio
+encargo ya que el patrón causal es idéntico): `Terrakeep.Core/WldFormat/WorldSearch.cs` - Sign usa
+ahora `sign.X + 1, sign.Y + 1`; los hits de `TileEntityItem` usan
+`entity.X + offsetX, entity.Y + offsetY` con un nuevo `TileEntityCenterOffset(WldTileEntityKind)`
+que compensa SOLO `ItemFrame` y `DisplayDoll` (los dos únicos con evidencia real/fuente
+inequívoca esta sesión) y deja el resto en `(0,0)` a propósito, documentado en el propio método -
+nunca se fuerza un número inventado para los Kind sin verificar.
+
+`ExplorationViewModel.OpenSignEditorIfApplicable` actualizado para deshacer el `+1` antes de
+buscar el letrero real por coordenada cruda (mismo patrón que `OpenChestEditorIfApplicable` ya
+tenía para cofres). Los dos smoke-checks de `Terrakeep.App.Tests/Program.cs`
+(`BUSCADOR-MUNDO-COFRE`/`BUSCADOR-MUNDO-LETRERO`) que comparaban contra la esquina cruda del cofre/
+letrero en vez de su centro ya compensado también se corrigieron (el de cofre llevaba roto desde
+el arreglo anterior sin que nadie lo hubiera notado - no bloqueaba nada porque es un script de
+consola de aviso, no un assert de `dotnet test`).
+
+Test nuevo en `Terrakeep.Core.Tests/WldFormat/WorldSearchTests.cs`
+(`Run_ObjetoEnTileEntity_CompensaSoloLosKindConFootprintConfirmado`) que fija con 3 Kind a la vez
+(`ItemFrame`/`DisplayDoll` compensados, `WeaponRack` sin compensar) que la extensión no se vuelve
+"todo o nada" por accidente en el futuro. El test de letreros existente se actualizó al nuevo
+centro esperado (8,9 en vez de 7,8).
+
+**Build y test**: `dotnet build` en verde (`Terrakeep.Core`, `Terrakeep.App`) - 0 avisos/0 errores.
+`dotnet test Terrakeep.Core.Tests`: 560/561 en verde - el único fallo
+(`PlrFileVerifyRoundTripTests.VerifyRoundTrip_BytesIntactos_NoLanza`) es de un cambio en curso NO
+relacionado con esta investigación (trabajo de guardado de personaje ya presente sin commitear en
+el árbol de trabajo antes de empezar esta tarea) - no se toca ni se investiga aquí, fuera de
+alcance.
+
+**Recompilado y redesplegado**: `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe` (barra de
+tareas, `dotnet build Terrakeep.App -c Debug`) y
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (instalado, `dotnet publish
+Terrakeep.App -c Release -p:PublishProfile=win-x64` + copia manual del exe autocontenido, sin
+proceso `Terrakeep.exe` abierto que bloqueara la copia).
+
+**Commit**: solo los archivos de esta investigación (`WorldSearch.cs`, `WorldSearchTests.cs`,
+`Program.cs`, y el hunk concreto de `OpenSignEditorIfApplicable` en `ExplorationViewModel.cs`
+aislado con `git apply --cached` de un parche mínimo) - el árbol de trabajo tenía OTRO cambio
+grande sin commitear y sin relación (barra de progreso de carga + guardado de personaje/.plr,
+`PlrFile.cs`/`WldReader.cs`/`CharacterFileService.cs`/`WorldFileService.cs`/`MainWindow.xaml`/
+strings/`SaveAtomicoTests.cs` + 2 archivos de test nuevos) que se dejó intacto sin tocar ni
+commitear, no es de esta tarea. Sin `git push`.
+
+**Pendiente real para una ronda aparte** (documentado, no descartado): confirmar con un `.wld`
+real que tenga instancias de `HatRack`/`WeaponRack`/`DeadCellsDisplayJar`/`KiteAnchor`/
+`CritterAnchor` (ninguno de los 4 mundos reales disponibles en esta máquina los tenía) antes de
+extender `TileEntityCenterOffset` a esos 5 Kind.
