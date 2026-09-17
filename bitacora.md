@@ -17542,3 +17542,75 @@ Verificado con `dotnet build`/`dotnet run` reales en cada paso, nunca "debería 
 `Terrakeep.App.Tests/Terrakeep.App.Tests.csproj`, `Terrakeep.App.Tests/SnapshotVisual.cs`,
 `Terrakeep.App.Tests/PruebasSnapshotVisual.cs`, `Terrakeep.App.Tests/snapshots-visuales/*.verified.*`
 (las 3 referencias reales aprobadas).
+
+## 17-sep-2026 - Investigación real (sin arreglo, dos fases): editor de cofres no se encuentra + marcador de cofre desplazado en Exploración
+
+Encargo de investigación pura (norma "dos fases": quien detecta/cierra el hueco de herramienta
+nunca aplica también el arreglo visual - eso lo hace un segundo agente ciego aparte). Dos bugs
+reales reportados por el usuario JUGANDO de verdad con el editor de cofres/letreros (v1,
+15-sep-2026, "reutiliza el mismo editor de objetos del inventario").
+
+**Bug 1 - "no encuentro cómo activar el editor de un cofre"**: causa real confirmada leyendo
+`MainWindow.xaml`/`.xaml.cs` y `ExplorationViewModel.cs` de arriba a abajo, categoría (b) con un
+toque de (a) - el gesto real EXISTE pero vive completamente FUERA del mapa, y el mapa da una
+falsa pista de interactividad:
+- El editor (`EditChestCommand`/`EditingChest`, `MainWindow.xaml:1712-1732`) solo se abre desde la
+  lista lateral, y solo en el TERCER modo de "Cofres" (`ChestModeSelector`, `MainWindow.xaml:6152-
+  6168`, chip "Cofre a cofre" = `ChestViewMode==2`) - pulsando la fila del cofre en esa lista
+  (que navega+despliega) y LUEGO el botón "Editar" propio de esa fila. Nada de esto pasa por el
+  mapa.
+- El mapa NO tiene ningún clic que abra el editor. `OnWorldMapMouseDown/Up` (`MainWindow.xaml.cs:
+  669-681`) son solo para arrastrar/paneo. El único marcador de "cofre actual" en el mapa
+  (`CurrentChestMarker`, `MainWindow.xaml:4949-4959`) tiene **`IsHitTestVisible="False"` explícito**
+  en su `Canvas` contenedor - no puede recibir clics NUNCA, por diseño.
+- Los marcadores de resultado de búsqueda (`WorldSearchHitRowViewModel`, plantilla en
+  `MainWindow.xaml:4996-5014`) sí llevan `Cursor="Hand"` y `ToolTip="{Binding Name}"` - dan la
+  impresión visual de ser clicables - pero **no tienen ningún `Command` ni manejador de clic
+  cableado**, es puramente decorativo. Un usuario viendo el cuadradito con cursor de mano
+  intentando pulsarlo (que es justo lo que reportó) no consigue nada, sin ningún error ni pista de
+  por qué.
+- Gesto real completo, para quien arregle esto después: pestaña Exploración -> categoría "Cofres"
+  -> chip "Cofre a cofre" (3º de 3) -> pulsar la fila del cofre en la lista -> botón "Editar".
+
+**Bug 2 - "el cuadrado no está centrado sobre el cofre real, pasa con TODOS"**: causa real medida
+con datos REALES, no supuestos - confirmada por partida doble (código decompilado de Terraria +
+volcado real de un `.wld` real del usuario):
+- `TileObjectData.cs` (decompilado, `TerrariaVanilla\Terraria\ObjectData\TileObjectData.cs:3462-
+  3463`): el cofre normal es `Style2x2` con `Origin=(0,1)`. `Chest.AfterPlacement_Hook` (`Chest.cs:
+  553-556`) llama a `TileObjectData.OriginToTopLeft` antes de guardar la posición - confirma que
+  `Chest.x`/`Chest.y` (y por tanto `WldChest.X`/`Y` en el `.wld`) es la ESQUINA superior-izquierda
+  del bloque 2x2, nunca su centro.
+- Confirmado con datos reales: escrito un lector temporal (`Terrakeep.Core.WldFormat.WldReader`
+  contra `C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld`, mundo real del
+  usuario) que vuelca el bloque de tiles alrededor de cada cofre - los 358 cofres reales del mundo
+  confirman tile a tile el footprint 2x2 exacto anclado en (`chest.X`, `chest.Y`): columna
+  `dx=0`→U de la izquierda, `dx=1`→U de la derecha (mismo tipo, U distinto); fila `dy=0`→V=0,
+  `dy=1`→V=18. El CENTRO real del cofre es por tanto (`chest.X+1`, `chest.Y+1`), no (`chest.X`,
+  `chest.Y`).
+- `Terrakeep.App/ViewModels/ExplorationViewModel.cs:1209-1210` (`GoToChest`):
+  `CurrentChestX = chest.TileX; CurrentChestY = chest.TileY;` - usa la esquina cruda, sin sumar la
+  mitad del footprint.
+- `Terrakeep.Core/WldFormat/WorldSearch.cs:146` (búsqueda "por lo que contienen"):
+  `new WorldSearchHit(chest.X, chest.Y, ...)` - mismo problema, misma causa, sitio distinto.
+- **Medido con la pieza nueva de KeepQA (ver abajo) sobre los 358 cofres reales de
+  `Blando_Río.wld`: offset exacto `(-1,-1)` tile en los 358, rango `(0,0)` - patrón CONSTANTE al
+  100%**, no varía con el cofre, ni con el zoom, ni con el tamaño de ventana (es un error de
+  fórmula, no de dato). Arreglo real para quien lo aplique después: sumar `+1` a X e Y (o
+  `anchoTiles/2`/`altoTiles/2` de forma genérica) en los DOS sitios de arriba antes de usar la
+  coordenada como centro de marcador.
+
+**Pieza nueva de KeepQA** (KeepQA no tenía NINGUNA pieza que detectara desalineación
+marcador-vs-dato-real en un canvas/mapa - toda su geometría existente es sobre árboles de
+controles WPF/UIA): `src/mapa-marcadores/verificarAlineacionMarcador.js` (`keepqa-alineacion-
+marcador` en `package.json`, catalogada en `CATALOGO.md`/`piezas.json`). Dado un JSON de
+footprints reales (`objetos.json`) y un JSON de dónde dibuja el marcador el motor (`marcadores.
+json`, mismo `id`), mide el desplazamiento real en tiles/píxeles y clasifica el patrón CONSTANTE
+(fallo de fórmula) o VARIABLE (otra causa). `--autoprueba` con 3 casos sintéticos (offset
+constante tipo Terrakeep, marcador exacto sin falso positivo, offset variable con un solo dato
+roto) - los 3 en verde. Ejemplo real incluido en `src/mapa-marcadores/ejemplos/` (los 358 cofres
+reales de `Blando_Río.wld`, `LEEME.md` con el detalle) - sirve de canario para cuando otro agente
+aplique el arreglo: si el marcador se corrige a `chest.X+1`/`chest.Y+1`, volver a generar el
+`marcadores.json` con la fórmula corregida y esta misma pieza debe pasar a `RESULTADO: OK`.
+
+NO se tocó ningún código de producción de Terrakeep en este encargo (norma "dos fases"). Commit
+local SOLO de la pieza nueva de KeepQA (sin `git push`).
