@@ -4482,7 +4482,10 @@ internal static partial class Program
                         int netId = chestConObjeto.Items[0].NetId;
                         vm.Exploration.WorldSearchText = "#" + netId;
                         WaitForDispatcher(1500);
-                        bool encontrado = vm.Exploration.WorldSearchResults.Any(h => h.TileX == chestConObjeto.X && h.TileY == chestConObjeto.Y);
+                        // Bug real de offset de marcador (17-sep-2026): WorldSearch.cs ya deja el
+                        // hit en el CENTRO real del cofre (esquina +1 en cada eje, cofres 2x2),
+                        // no en la esquina cruda que guarda el .wld - comparar contra el centro.
+                        bool encontrado = vm.Exploration.WorldSearchResults.Any(h => h.TileX == chestConObjeto.X + 1 && h.TileY == chestConObjeto.Y + 1);
                         Console.WriteLine($"BUSCADOR-MUNDO-COFRE: '#{netId}' -> cofre real en ({chestConObjeto.X},{chestConObjeto.Y}) encontrado={encontrado} (esperado True, {vm.Exploration.WorldSearchResults.Count} resultado(s))");
                         if (!encontrado) Console.WriteLine("FALLO: Punto 4 Fase 2 - un objeto real de cofre no aparecio en el buscador");
                     }
@@ -4494,7 +4497,10 @@ internal static partial class Program
                         string fragmento = letreroReal.Text.Trim().Split(' ', '\n', '\r').FirstOrDefault(w => w.Length >= 3) ?? letreroReal.Text.Trim();
                         vm.Exploration.WorldSearchText = fragmento;
                         WaitForDispatcher(1500);
-                        bool encontrado = vm.Exploration.WorldSearchResults.Any(h => h.TileX == letreroReal.X && h.TileY == letreroReal.Y);
+                        // Mismo arreglo de offset que los cofres, extendido a letreros
+                        // (17-sep-2026, investigacion real del mismo bug): el hit ya cae en el
+                        // CENTRO real del letrero (esquina +1 en cada eje, letreros 2x2).
+                        bool encontrado = vm.Exploration.WorldSearchResults.Any(h => h.TileX == letreroReal.X + 1 && h.TileY == letreroReal.Y + 1);
                         Console.WriteLine($"BUSCADOR-MUNDO-LETRERO: '{fragmento}' -> letrero real en ({letreroReal.X},{letreroReal.Y}) encontrado={encontrado} (esperado True, {vm.Exploration.WorldSearchResults.Count} resultado(s))");
                         if (!encontrado) Console.WriteLine("FALLO: Punto 4 Fase 2 - un letrero real no aparecio en el buscador");
                     }

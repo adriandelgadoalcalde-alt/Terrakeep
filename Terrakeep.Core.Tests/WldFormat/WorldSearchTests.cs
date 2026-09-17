@@ -293,6 +293,35 @@ public class WorldSearchTests
         Assert.Equal("Item #99999", Assert.Single(result.Hits).Name);
     }
 
+    // Investigacion 17-sep-2026 (el usuario jugando pregunto si el bug de offset de los cofres
+    // afectaba tambien a otras categorias): TileEntityCenterOffset compensa esquina->centro SOLO
+    // para los Kind con footprint real confirmado esta sesion (ItemFrame por fuente decompilada
+    // inequivoca - Style2x2, mismo primitivo que el cofre; DisplayDoll con 125 instancias reales
+    // medidas, ver el comentario real de WorldSearch.cs). Un Kind SIN footprint confirmado
+    // (WeaponRack aqui) debe seguir devolviendo la esquina cruda tal cual - no forzar un centro
+    // inventado es tan importante como arreglar el que si esta confirmado.
+    [Fact]
+    public void Run_ObjetoEnTileEntity_CompensaSoloLosKindConFootprintConfirmado()
+    {
+        var tiles = new WldTile[1, 1];
+        tiles[0, 0] = WldTile.Empty;
+        var tileEntities = new List<WldTileEntity>
+        {
+            new() { Kind = WldTileEntityKind.ItemFrame, X = 10, Y = 20, Items = [new WldTileEntityItem(4, 1, 0)] },
+            new() { Kind = WldTileEntityKind.DisplayDoll, X = 50, Y = 60, Items = [new WldTileEntityItem(4, 1, 0)] },
+            new() { Kind = WldTileEntityKind.WeaponRack, X = 100, Y = 200, Items = [new WldTileEntityItem(4, 1, 0)] },
+        };
+        var world = MakeWorld(tiles, tileEntities: tileEntities);
+
+        var result = Run(world, new WorldSearchQuery { ChestItemIds = new HashSet<int> { 4 } });
+
+        Assert.Equal(3, result.Hits.Count);
+        Assert.All(result.Hits, h => Assert.Equal(WorldSearchKind.TileEntityItem, h.Kind));
+        Assert.Contains(result.Hits, h => h.X == 11 && h.Y == 21); // ItemFrame: Style2x2, +1/+1
+        Assert.Contains(result.Hits, h => h.X == 51 && h.Y == 61); // DisplayDoll: Style2xX (2x3), +1/+1
+        Assert.Contains(result.Hits, h => h.X == 100 && h.Y == 200); // WeaponRack: sin confirmar, esquina cruda
+    }
+
     [Fact]
     public void Run_Letrero_UsaElPredicadoRealYRecortaElTextoLargo()
     {
@@ -309,7 +338,12 @@ public class WorldSearchTests
 
         var result = Run(world, new WorldSearchQuery { SignTextPredicate = t => t.Contains("contraseña", StringComparison.OrdinalIgnoreCase) });
         var hit = Assert.Single(result.Hits);
-        Assert.Equal(7, hit.X);
+        // Bug real de offset de marcador (17-sep-2026, mismo patron que los cofres): un letrero
+        // real ocupa un bloque de 2x2 tiles (Style2x2, TileObjectData.cs decompilado + 226
+        // letreros reales medidos en 3 mundos jugados, ver el comentario real de WorldSearch.cs)
+        // - sign.X/Y (7,8) es la esquina superior-izquierda, el CENTRO real del marcador es (8,9).
+        Assert.Equal(8, hit.X);
+        Assert.Equal(9, hit.Y);
         Assert.Equal("La contraseña es 1234", hit.Name);
         Assert.Equal(WorldSearchKind.Sign, hit.Kind);
 

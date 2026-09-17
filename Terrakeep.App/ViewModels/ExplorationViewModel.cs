@@ -1749,7 +1749,12 @@ public partial class ExplorationViewModel : ObservableObject
     private void OpenSignEditorIfApplicable(WorldSearchHitRowViewModel hit)
     {
         if (hit.Kind != WorldSearchKind.Sign || _world == null) return;
-        var real = _world.Signs.FirstOrDefault(s => s.X == hit.TileX && s.Y == hit.TileY);
+        // WorldSearch.cs ya deja hit.TileX/TileY en el CENTRO real del letrero (esquina +1 en
+        // cada eje, mismo arreglo de offset de marcador que los cofres, 17-sep-2026) - deshacer
+        // el +1 aqui para volver a la esquina cruda que SI guarda el .wld (WldSign.X/Y) y poder
+        // encontrar el letrero real.
+        int signX = hit.TileX - 1, signY = hit.TileY - 1;
+        var real = _world.Signs.FirstOrDefault(s => s.X == signX && s.Y == signY);
         // WldSign es una clase (no struct) - default(WldSign) es null, comparacion segura.
         if (real == null) return;
         SelectedSignHit = hit;

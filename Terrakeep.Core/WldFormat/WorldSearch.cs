@@ -158,16 +158,27 @@ public static class WorldSearch
 
         // Fase 2b: mismo conjunto de ids que arriba, pero contra el contenido real de las tile
         // entities (marco de objeto/perchero/maniqui/bandeja/frasco/ancla) - la coordenada del
-        // resultado es la de la propia tile entity (su esquina real en el .wld), mismo criterio
-        // que los cofres.
+        // resultado es la de la propia tile entity.
+        //
+        // Bug real reportado por el usuario jugando (17-sep-2026, misma sesion que el arreglo de
+        // cofres de arriba): el usuario pregunto si el mismo problema afecta a otras categorias
+        // del buscador aparte de cofres. Investigado con datos reales (KeepQA,
+        // verificarAlineacionMarcador.js + Terrakeep.Core.WldFormat.WldReader sobre 4 .wld reales:
+        // Blando_Río.wld y LLUIS-ADRI-PAU-WORLD.wld, adriandres.wld,
+        // 825aa9c2-47f8-425b-ab77-aedba421d2b9.wld) - SI: exactamente el mismo patron (esquina
+        // cruda en vez de centro real), confirmado para los Kind con datos reales o fuente
+        // decompilada inequivoca disponibles esta sesion. TileEntityCenterOffset compensa SOLO
+        // esos Kind - ver su propio comentario para el detalle de cada uno y de por que el resto
+        // se deja sin tocar (0,0) a proposito.
         if (query.ChestItemIds.Count > 0)
         {
             foreach (var entity in world.TileEntities)
             {
                 ct.ThrowIfCancellationRequested();
+                var (offsetX, offsetY) = TileEntityCenterOffset(entity.Kind);
                 foreach (var item in entity.Items)
                     if (query.ChestItemIds.Contains(item.NetId))
-                        Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(entity.X, entity.Y, itemNames.GetName(item.NetId), WorldSearchKind.TileEntityItem));
+                        Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(entity.X + offsetX, entity.Y + offsetY, itemNames.GetName(item.NetId), WorldSearchKind.TileEntityItem));
             }
         }
 
@@ -176,13 +187,67 @@ public static class WorldSearch
             foreach (var sign in world.Signs)
             {
                 ct.ThrowIfCancellationRequested();
+                // Mismo bug/arreglo que arriba: un letrero real (Sign=55/GraveMarker "Tombstones"
+                // =85/AnnouncementBox=425/TatteredSign=573, ver WldSign.cs) ocupa un bloque de
+                // 2x2 tiles (TileObjectData.cs decompilado, Style2x2 sin ningun override de
+                // Origin/Width/Height para estos 4 ids) - confirmado ademas con datos reales:
+                // 226 letreros reales medidos tile a tile en 3 mundos jugados distintos (5 en
+                // LLUIS-ADRI-PAU-WORLD.wld tipo Sign=55, 13 en Blando_Río.wld y 43 en
+                // adriandres.wld tipo Tombstones=85, 179 en 825aa9c2-....wld tipo Sign=55/
+                // AnnouncementBox=425), footprint 2x2 en TODOS salvo una unica fusion espuria de
+                // dos lapidas contiguas del mismo estilo (artefacto de la propia medicion por
+                // tiles pegados, no un letrero real de otro tamaño - ver bitacora.md 17-sep-2026).
+                // sign.X/Y ya es la esquina superior-izquierda (igual criterio que WldChest.X/Y):
+                // +1 en cada eje para centrar el marcador, mismo calculo exacto que los cofres.
                 if (query.SignTextPredicate(sign.Text))
-                    Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(sign.X, sign.Y, TruncateSignText(sign.Text), WorldSearchKind.Sign));
+                    Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(sign.X + 1, sign.Y + 1, TruncateSignText(sign.Text), WorldSearchKind.Sign));
             }
         }
 
         return new WorldSearchResult(hits, total);
     }
+
+    // Compensacion esquina->centro por Kind de tile entity (mismo criterio que WldChest.X+1 de
+    // arriba: offset = footprint/2 con division ENTERA - para un footprint par el resultado es el
+    // centro real exacto -Style2x2 2/2=1, igual que el cofre-; para uno impar es la fila/columna
+    // central real -Style2xX alto 3, 3/2=1 (division entera), la casilla de en medio de 0,1,2-,
+    // la mejor aproximacion representable con coordenadas de tile enteras, a 0.5 tiles del centro
+    // geometrico continuo, inevitable sin coordenadas fraccionarias).
+    //
+    // SOLO se compensan los Kind con evidencia real y verificada esta sesion (17-sep-2026,
+    // bitacora.md de Terrakeep y de KeepQA):
+    //   - ItemFrame: Style2x2 puro, SIN ningun override de Origin/Width/Height
+    //     (TileObjectData.cs decompilado, addTile(395)) - el MISMO primitivo exacto que el cofre
+    //     ya arreglado arriba (tambien Style2x2), maxima confianza aunque este .wld concreto no
+    //     tuviera ningun marco de objeto real que medir.
+    //   - DisplayDoll (maniqui/womanniqui): Style2xX con Height=3 explicito (footprint 2x3) -
+    //     VERIFICADO CON DATOS REALES: 125 maniquies reales de
+    //     LLUIS-ADRI-PAU-WORLD.wld (KeepQA, verificarAlineacionMarcador.js), offset CONSTANTE en
+    //     los 125 (rango 0,0 tiles).
+    //
+    // Los demas Kind se dejan deliberadamente en (0,0), no por asumir que estan bien, sino porque
+    // esta sesion no tuvo forma de verificarlos con el mismo rigor y el proyecto no fuerza un
+    // numero inventado (ver bitacora.md, pendiente para una ronda aparte con datos reales de esos
+    // objetos concretos):
+    //   - TrainingDummy, LogicSensor, TeleportationPylon: WldReader.ReadTileEntities NUNCA les
+    //     rellena Items (dummy solo guarda su Npc, sensor solo guarda LogicCheck/On, pylon "sin
+    //     datos propios") - jamas pueden casar por ChestItemIds ni producir un WorldSearchHit
+    //     aqui, el offset es indiferente en la practica.
+    //   - HatRack: TileObjectData.cs decompilado lo liga (via TEHatRack.Hook_AfterPlacement) a un
+    //     addTile con Style3x4, pero el ID numerico de ese addTile no cuadra de forma inequivoca
+    //     con la constante HatRack de TileID.cs en este mismo build decompilado (posible
+    //     desfase de version entre ambos archivos) - footprint real probable 3x4 pero NO
+    //     confirmado con un dato real de esta sesion, se deja sin tocar a proposito.
+    //   - WeaponRack, DeadCellsDisplayJar, KiteAnchor, CritterAnchor: SI pueden producir un hit
+    //     real (leen items reales en WldReader.ReadTileEntities) pero ningun .wld real accesible
+    //     en esta maquina tenia una instancia real que medir, y la fuente decompilada no dejo
+    //     un addTile inequivoco para los 4 en el tiempo de esta sesion.
+    private static (int X, int Y) TileEntityCenterOffset(WldTileEntityKind kind) => kind switch
+    {
+        WldTileEntityKind.ItemFrame => (1, 1),
+        WldTileEntityKind.DisplayDoll => (1, 1),
+        _ => (0, 0),
+    };
 
     private static void Add(ref int total, List<WorldSearchHit> hits, int limit, WorldSearchHit hit)
     {
