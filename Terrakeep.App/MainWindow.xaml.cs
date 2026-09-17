@@ -72,7 +72,16 @@ public partial class MainWindow : Window
         // constructor de MainViewModel (contaminaria las decenas de tests headless del
         // proyecto). Se dispara aqui, una sola vez, en segundo plano (async void real dentro -
         // ver MainViewModel.Actualizaciones.cs), sin retrasar ni un milisegundo esta ventana.
-        _viewModel.IniciarComprobacionDeActualizacion();
+        //
+        // NUNCA en modo diagnostico (Terrakeep.App.Tests, App.ModoDiagnostico=true): es una
+        // llamada real de RED (GitHub) cuyo resultado llega en un instante no determinista
+        // respecto al temporizador de una captura - mismo bug real ya encontrado en Starvekeep
+        // (17-sep-2026, KeepQA/snapshot visual: la tarjeta "Hay una version nueva..." colada en
+        // 3/3 capturas sin ningun cambio real de la app de por medio). Ver el comentario completo
+        // en App.ModoDiagnostico. PruebasActualizacion.cs sigue verificando la tarjeta a proposito
+        // inyectando el estado a mano (HayActualizacionDisponible/MensajeActualizacion), nunca vía
+        // esta llamada de red real.
+        if (!App.ModoDiagnostico) _viewModel.IniciarComprobacionDeActualizacion();
         // H5-07: unico suscriptor real de CharacterLoaded - ver el comentario real del evento
         // en MainViewModel.cs (por que NO es una llamada directa dentro de LoadFromPath).
         _viewModel.CharacterLoaded += _viewModel.SaveSession;

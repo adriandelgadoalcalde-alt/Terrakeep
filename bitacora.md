@@ -18236,3 +18236,108 @@ capturas"). Terrakeep no tiene ese guardia hoy - riesgo real latente para una ro
 capturas automáticas si la comprobación real de GitHub encuentra alguna vez una versión más
 reciente real durante una tanda de KeepQA. Documentado aquí, no arreglado (fuera del alcance de
 las dos funciones de este encargo).
+
+## 17-sep-2026 (misma noche) — cierre de las dos deudas reales pendientes
+
+Encargo real aparte: cerrar la deuda del guardia de actualizaciones (documentada justo arriba) y
+la deuda de `HatRack`/`WeaponRack`/`DeadCellsDisplayJar`/`KiteAnchor`/`CritterAnchor` sin verificar
+del bug de marcador desplazado (documentada en "17-sep-2026 (misma noche) — ¿el bug de offset de
+marcador de cofres afecta a otras categorías?").
+
+**Deuda 1 — guardia de captura para el comprobador de actualizaciones: CERRADA.**
+
+Localizado el patrón real de Starvekeep (`Starvekeep.App/App.xaml.cs`): `_modoDiagnostico` (bool
+estático) se fija a `true` cuando el proceso arranca con `--captura`, y
+`Starvekeep.App/MainWindow.xaml.cs` guarda la llamada de red real con
+`if (!App._modoDiagnostico) vm.IniciarComprobacionDeActualizacion();`. Terrakeep no puede derivar
+el flag de la misma forma porque `Terrakeep.App.Tests/Program.cs` (el arnés real, decenas de miles
+de líneas) NUNCA pasa por `App.OnStartup` - monta su propio `System.Windows.Application` a pelo
+(mismo motivo ya documentado en `CLAUDE.md`, "un arnés que instancia `Terrakeep.App.App` y llama a
+`Run()` crea una SEGUNDA MainWindow fantasma"). Solución real, mismo espíritu, mecanismo adaptado:
+
+- `Terrakeep.App/App.xaml.cs`: propiedad pública `public static bool ModoDiagnostico { get; set; }`
+  (por defecto `false`, mismo patrón ya real de `ShouldForceSoftwareRendering` - público porque no
+  hay `InternalsVisibleTo` hacia el arnés).
+- `Terrakeep.App.Tests/Program.cs`: `Terrakeep.App.App.ModoDiagnostico = true;` como primera línea
+  real de `Main()`, antes de `new MainWindow()` - TODA ejecución de este arnés es diagnóstico, no
+  hace falta un flag más fino que un `--captura` (a diferencia de Starvekeep, este `Main()` nunca
+  se usa para producción real).
+- `Terrakeep.App/MainWindow.xaml.cs`: `if (!App.ModoDiagnostico) _viewModel.
+  IniciarComprobacionDeActualizacion();` en el mismo punto donde antes se llamaba sin guardia.
+
+**Verificado con evidencia real** (no solo lectura de código): instrumentación temporal
+(`Console.WriteLine` en la rama `else`, quitada después de confirmar) +
+`KEEPQA_SOLO=1 dotnet run --project Terrakeep.App.Tests` real. Log real:
+`VERIFICACION-TEMPORAL-DEUDA1: comprobacion de actualizacion SALTADA (App.ModoDiagnostico=true)`
+en la línea 3, antes de `new MainWindow()` en la línea 4 - la llamada de red nunca llega a
+dispararse en modo diagnóstico. Corrida completa en verde, sin excepciones
+(`DONE (KEEPQA_SOLO)`), captura real `inicio-lanzador.png` revisada a mano: ventana limpia, sin
+ninguna tarjeta de versión. `ACTUALIZACION_SOLO=1` (el escenario que SÍ verifica visualmente la
+tarjeta, inyectando el estado a mano vía `vm.HayActualizacionDisponible`/`vm.MensajeActualizacion`,
+nunca a través de la llamada de red real) sigue en verde tal cual - las dos capturas
+(`actualizacion-disponible.png`/`actualizacion-sin-aviso.png`) muestran la tarjeta con/sin aviso
+exactamente igual que antes, confirmando que el guardia nuevo no interfiere con ese camino de
+verificación manual.
+
+**Deuda 2 — footprint real de `HatRack`/`WeaponRack`/`DeadCellsDisplayJar`/`KiteAnchor`/
+`CritterAnchor`: CERRADA con evidencia de fuente decompilada inequívoca para los 5.**
+
+Investigado `TileObjectData.cs` decompilado (registro `addTile`/`addBaseTile`, campo
+`processedCoordinates` del `PlacementHook`) cruzado con el propio `Hook_AfterPlacement` de cada
+`TileEntity` real:
+
+| TileEntity | Tile ID real | Footprint (fuente) | `processedCoordinates` | Compensación aplicada |
+|---|---|---|---|---|
+| `HatRack` | `TileID.HatRack=475` (tModLoader) | 3x4 (`Style3x4`, `TileObjectData.cs:3398/3421`) | `false` - `TEHatRack.Hook_AfterPlacement` hace su propio `Place(x-1, y-3)` | `(+1, +2)` |
+| `WeaponRack` | `TileID.WeaponsRack2=471` (tModLoader) | 3x3 (`Style3x3Wall`, `TileObjectData.cs:4400/4425`) | `true` - `TEWeaponsRack.Hook_AfterPlacement` hace `Place(x, y)` sin ajuste | `(+1, +1)` |
+| `DeadCellsDisplayJar` | `TileID.DeadCellsDisplayJar=698` (**solo TerrariaVanilla 1.4.5.8**, no existe en tModLoader) | 1x2 (`Style1x2Top`, `TileObjectData.cs` de `TerrariaVanilla-Decompiled:2442/2503`) | `true` - `Hook_AfterPlacement` hace `Place(x, y)` sin ajuste | `(0, +1)` |
+| `KiteAnchor` | `TileID.KiteAnchor=723` (**solo TerrariaVanilla 1.4.5.8**) | 1x1 (`Style1x1`) | `true` | Ninguna - esquina=centro en un objeto 1x1, no aplica |
+| `CritterAnchor` | `TileID.CritterAnchor=724` (**solo TerrariaVanilla 1.4.5.8**) | 1x1 (`Style1x1`, `Width=1/Height=1/Origin=(0,0)` explícitos línea a línea) | `true` | Ninguna - mismo motivo que `KiteAnchor` |
+
+Hallazgo importante documentado (no solo un footprint más): la ambigüedad de la ronda anterior
+sobre `HatRack` ("el ID numérico del `addTile` no cuadra con la constante `HatRack` de `TileID.cs`")
+queda **resuelta**: `TileID.cs` tiene DOS constantes de rack - `WeaponsRack=334` (la reja legada
+pre-Journey's End, sin `TileEntity` real) y `WeaponsRack2=471` (la real, con `TEWeaponsRack`) - el
+`addTile(471)` con el hook de `TEWeaponsRack` sí cuadra exactamente, la ambigüedad era solo haber
+mirado la constante equivocada. Y `DeadCellsDisplayJar`/`KiteAnchor`/`CritterAnchor` NO existen en
+absoluto en el árbol decompilado de tModLoader (1.4.4.9, la versión real que juegan los usuarios de
+Terrakeep/Calamity) - son contenido vanilla 1.4.5.8 que tModLoader todavía no ha portado (0
+resultados buscando sus nombres en todo `tModLoader-Decompiled\tModLoader`). Solo existen en
+`TerrariaVanilla-Decompiled` (1.4.5.8) - alcanzables en Terrakeep únicamente si se carga un `.wld`
+vanilla crudo de esa versión (no generado por tModLoader), documentado con precisión en el propio
+comentario de `TileEntityCenterOffset`.
+
+`Terrakeep.Core/WldFormat/WorldSearch.cs`: `TileEntityCenterOffset` ampliado con `HatRack => (1,
+2)`, `WeaponRack => (1, 1)`, `DeadCellsDisplayJar => (0, 1)` (mismo criterio ya validado: división
+entera de footprint/2). `KiteAnchor`/`CritterAnchor` se quedan en `(0, 0)` a propósito, ahora
+documentados como "no aplica" (igual que minerales/gemas/NPCs) en vez de "pendiente". Comentario
+completo del método reescrito con la tabla real y las referencias de línea exactas de cada
+`addTile`/`addBaseTile`.
+
+`Terrakeep.Core.Tests/WldFormat/WorldSearchTests.cs`:
+`Run_ObjetoEnTileEntity_CompensaSoloLosKindConFootprintConfirmado` ampliado de 3 a 6 `Kind` a la
+vez (`ItemFrame`/`DisplayDoll`/`HatRack`/`WeaponRack`/`DeadCellsDisplayJar` compensados,
+`KiteAnchor` sin compensar a propósito) para seguir fijando que la extensión no se vuelve
+"todo o nada" por accidente en el futuro.
+
+**Sigue pendiente de verdad, documentado y no forzado**: ninguno de los 5 tuvo una instancia REAL
+en los 4 mundos disponibles en esta máquina (mismo límite ya documentado la ronda anterior) - los
+3 arreglos ampliados aquí (`HatRack`/`WeaponRack`/`DeadCellsDisplayJar`) se aplican por la misma
+confianza de fuente decompilada inequívoca ya usada con `ItemFrame`, nunca por dato real medido.
+
+**Build y test**: `dotnet build Terrakeep.slnx` en verde, 0 avisos/0 errores.
+`dotnet test Terrakeep.Core.Tests`: 568/568 en verde (incluye el test ampliado de esta sesión).
+`dotnet test Terrakeep.App.ViewModels.Tests`: 492/492 en verde (incluye
+`ActualizacionEnUnClicTests`, sin ninguna relación con el guardia de `ModoDiagnostico` porque
+ejercita `MainViewModel` directamente, nunca `MainWindow`).
+
+**Recompilado y redesplegado**: `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe` (barra de
+tareas, `dotnet build Terrakeep.App -c Debug`) y
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (instalado, `dotnet publish
+Terrakeep.App -c Release -p:PublishProfile=win-x64` + copia manual, timestamp fresco confirmado,
+sin proceso `Terrakeep.exe` abierto que bloqueara la copia).
+
+**Commit local** (esta sesión): `Terrakeep.App/App.xaml.cs`, `Terrakeep.App/MainWindow.xaml.cs`,
+`Terrakeep.App.Tests/Program.cs`, `Terrakeep.Core/WldFormat/WorldSearch.cs`,
+`Terrakeep.Core.Tests/WldFormat/WorldSearchTests.cs`, y esta entrada de bitácora. `git status`
+comprobado antes, solo estos archivos por nombre exacto, nunca `git add -A`. Sin `git push`.

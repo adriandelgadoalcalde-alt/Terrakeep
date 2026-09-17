@@ -65,6 +65,24 @@ public partial class App : Application
         GetSystemMetrics(SM_REMOTESESSION) != 0 ||
         Environment.GetEnvironmentVariable("TERRAKEEP_FORCE_SOFTWARE_RENDER") == "1";
 
+    // Deuda real detectada el 17-sep-2026 (KeepQA, snapshot visual de Starvekeep): una llamada de
+    // RED real (comprobar version nueva contra GitHub) puede resolver en un instante no
+    // determinista respecto al temporizador de una captura, colando la tarjeta "Hay una version
+    // nueva..." en capturas que no la estaban probando a proposito - visto de verdad en
+    // Starvekeep (3/3 capturas contaminadas), mismo mecanismo exacto aqui porque
+    // MainWindow.xaml.cs dispara la misma llamada real (ver IniciarComprobacionDeActualizacion).
+    //
+    // Mismo patron real que Starvekeep.App.App._modoDiagnostico, adaptado: alli se deriva de
+    // "--captura" en OnStartup porque el arnes de Starvekeep reutiliza el propio OnStartup de
+    // produccion. Aqui NO se puede derivar asi - Terrakeep.App.Tests nunca pasa por OnStartup
+    // (construye su propio System.Windows.Application a pelo, ver el comentario real de
+    // Program.cs) - asi que es una propiedad publica que el arnes fija a mano, a proposito, antes
+    // de construir la MainWindow real (Program.cs, inicio de Main()): TODA ejecucion de
+    // Terrakeep.App.Tests es diagnostico/prueba, nunca produccion real, no hace falta un flag mas
+    // fino que ese. En produccion real (Terrakeep.exe con StartupUri) esto se queda en su valor
+    // por defecto, false, y la comprobacion de actualizacion sigue disparandose como siempre.
+    public static bool ModoDiagnostico { get; set; }
+
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         LogAndShow(e.Exception);

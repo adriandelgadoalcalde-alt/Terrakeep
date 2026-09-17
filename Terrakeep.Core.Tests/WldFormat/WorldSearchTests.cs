@@ -295,11 +295,13 @@ public class WorldSearchTests
 
     // Investigacion 17-sep-2026 (el usuario jugando pregunto si el bug de offset de los cofres
     // afectaba tambien a otras categorias): TileEntityCenterOffset compensa esquina->centro SOLO
-    // para los Kind con footprint real confirmado esta sesion (ItemFrame por fuente decompilada
-    // inequivoca - Style2x2, mismo primitivo que el cofre; DisplayDoll con 125 instancias reales
-    // medidas, ver el comentario real de WorldSearch.cs). Un Kind SIN footprint confirmado
-    // (WeaponRack aqui) debe seguir devolviendo la esquina cruda tal cual - no forzar un centro
-    // inventado es tan importante como arreglar el que si esta confirmado.
+    // para los Kind con footprint real confirmado (ItemFrame/DisplayDoll de la primera ronda;
+    // HatRack/WeaponRack/DeadCellsDisplayJar de la ronda de cierre de deuda, misma noche - ver el
+    // comentario real de WorldSearch.cs para el addTile/Style/processedCoordinates exacto de cada
+    // uno). Un Kind sin footprint que compensar de verdad (KiteAnchor aqui: 1x1 real, Style1x1
+    // confirmado por fuente - esquina y centro son la MISMA casilla, no falta un dato) debe seguir
+    // devolviendo la esquina cruda tal cual - no forzar un centro donde no hace falta es tan
+    // importante como arreglar el que si lo necesita.
     [Fact]
     public void Run_ObjetoEnTileEntity_CompensaSoloLosKindConFootprintConfirmado()
     {
@@ -309,17 +311,23 @@ public class WorldSearchTests
         {
             new() { Kind = WldTileEntityKind.ItemFrame, X = 10, Y = 20, Items = [new WldTileEntityItem(4, 1, 0)] },
             new() { Kind = WldTileEntityKind.DisplayDoll, X = 50, Y = 60, Items = [new WldTileEntityItem(4, 1, 0)] },
+            new() { Kind = WldTileEntityKind.HatRack, X = 70, Y = 80, Items = [new WldTileEntityItem(4, 1, 0)] },
             new() { Kind = WldTileEntityKind.WeaponRack, X = 100, Y = 200, Items = [new WldTileEntityItem(4, 1, 0)] },
+            new() { Kind = WldTileEntityKind.DeadCellsDisplayJar, X = 300, Y = 400, Items = [new WldTileEntityItem(4, 1, 0)] },
+            new() { Kind = WldTileEntityKind.KiteAnchor, X = 500, Y = 600, Items = [new WldTileEntityItem(4, 1, 0)] },
         };
         var world = MakeWorld(tiles, tileEntities: tileEntities);
 
         var result = Run(world, new WorldSearchQuery { ChestItemIds = new HashSet<int> { 4 } });
 
-        Assert.Equal(3, result.Hits.Count);
+        Assert.Equal(6, result.Hits.Count);
         Assert.All(result.Hits, h => Assert.Equal(WorldSearchKind.TileEntityItem, h.Kind));
         Assert.Contains(result.Hits, h => h.X == 11 && h.Y == 21); // ItemFrame: Style2x2, +1/+1
         Assert.Contains(result.Hits, h => h.X == 51 && h.Y == 61); // DisplayDoll: Style2xX (2x3), +1/+1
-        Assert.Contains(result.Hits, h => h.X == 100 && h.Y == 200); // WeaponRack: sin confirmar, esquina cruda
+        Assert.Contains(result.Hits, h => h.X == 71 && h.Y == 82); // HatRack: Style3x4, +1/+2
+        Assert.Contains(result.Hits, h => h.X == 101 && h.Y == 201); // WeaponRack (WeaponsRack2=471): Style3x3Wall, +1/+1
+        Assert.Contains(result.Hits, h => h.X == 300 && h.Y == 401); // DeadCellsDisplayJar: Style1x2Top, +0/+1
+        Assert.Contains(result.Hits, h => h.X == 500 && h.Y == 600); // KiteAnchor: Style1x1, esquina=centro, sin compensar
     }
 
     [Fact]

@@ -214,8 +214,8 @@ public static class WorldSearch
     // la mejor aproximacion representable con coordenadas de tile enteras, a 0.5 tiles del centro
     // geometrico continuo, inevitable sin coordenadas fraccionarias).
     //
-    // SOLO se compensan los Kind con evidencia real y verificada esta sesion (17-sep-2026,
-    // bitacora.md de Terrakeep y de KeepQA):
+    // SOLO se compensan los Kind con evidencia real y verificada (17-sep-2026, bitacora.md de
+    // Terrakeep y de KeepQA; ronda de cierre de deuda, misma noche):
     //   - ItemFrame: Style2x2 puro, SIN ningun override de Origin/Width/Height
     //     (TileObjectData.cs decompilado, addTile(395)) - el MISMO primitivo exacto que el cofre
     //     ya arreglado arriba (tambien Style2x2), maxima confianza aunque este .wld concreto no
@@ -224,28 +224,59 @@ public static class WorldSearch
     //     VERIFICADO CON DATOS REALES: 125 maniquies reales de
     //     LLUIS-ADRI-PAU-WORLD.wld (KeepQA, verificarAlineacionMarcador.js), offset CONSTANTE en
     //     los 125 (rango 0,0 tiles).
+    //   - HatRack: la ambiguedad de la ronda anterior queda RESUELTA con datos reales de fuente:
+    //     TileID.cs (tModLoader, decompilado) tiene DOS constantes de rack de armas -
+    //     WeaponsRack=334 (la reja decorativa legada, pre-Journey's End, sin TileEntity) y
+    //     WeaponsRack2=471 (la real con TEWeaponsRack) - el "desfase" que parecia haber con
+    //     HatRack=475 no era tal: TileObjectData.cs decompilado registra addTile(475) con
+    //     newTile.CopyFrom(Style3x4) (Width=3/Height=4, TileObjectData.cs:3398 addBaseTile(out
+    //     Style3x4) confirma esos numeros) y
+    //     HookPostPlaceMyPlayer=TEHatRack.Hook_AfterPlacement con processedCoordinates:false -
+    //     coincide exactamente con que TEHatRack.Hook_AfterPlacement (linea 82) hace su propio
+    //     "Place(x + -1, y + -3)" (el hook recibe coordenadas SIN procesar y se autocorrige a la
+    //     esquina superior-izquierda real). Footprint 3x4 confirmado por fuente inequivoca -> 0
+    //     instancias reales en los 4 mundos disponibles, arreglado por confianza de fuente (mismo
+    //     criterio ya usado con ItemFrame).
+    //   - WeaponRack (WeaponsRack2=471, la real con TEWeaponsRack): TileObjectData.cs decompilado
+    //     registra addTile(471) con newTile.CopyFrom(Style3x3Wall) (Width=3/Height=3,
+    //     TileObjectData.cs:4392-4400 confirma Width=3/Height=3) y
+    //     HookPostPlaceMyPlayer=TEWeaponsRack.Hook_AfterPlacement con processedCoordinates:true -
+    //     coincide con que TEWeaponsRack.Hook_AfterPlacement (linea 72) llama "Place(x, y)" SIN
+    //     ningun ajuste propio (coordenadas ya normalizadas a la esquina por el propio motor de
+    //     colocacion antes de invocar el hook, mismo mecanismo que el cofre). Footprint 3x3
+    //     confirmado por fuente inequivoca -> 0 instancias reales en los 4 mundos disponibles,
+    //     arreglado por confianza de fuente.
+    //   - DeadCellsDisplayJar: NO existe en absoluto en el arbol decompilado de tModLoader
+    //     (1.4.4.9, el que de verdad juegan los usuarios de Terrakeep/Calamity) - es contenido
+    //     vanilla 1.4.5.8 que tModLoader todavia no ha portado (confirmado real: 0 resultados
+    //     buscando el nombre en todo tModLoader-Decompiled\tModLoader). Solo existe en
+    //     TerrariaVanilla-Decompiled (1.4.5.8): TileObjectData.cs decompilado (ese arbol) registra
+    //     addTile(698) con newTile.CopyFrom(Style1x2Top) (Width=1/Height=2, confirmado por
+    //     addBaseTile(out Style1x2Top) con Width=1/Height=2 explicitos) y
+    //     HookPostPlaceMyPlayer=TEDeadCellsDisplayJar.Hook_AfterPlacement con
+    //     processedCoordinates:true - coincide con que Hook_AfterPlacement llama "Place(x, y)" sin
+    //     ajuste propio. Footprint 1x2 confirmado por fuente inequivoca, aunque solo alcanzable
+    //     cargando un .wld vanilla 1.4.5.8 crudo (no generado por tModLoader) en Terrakeep -
+    //     arreglado igualmente por confianza de fuente, documentado el origen exacto del dato.
+    //   - KiteAnchor (723) y CritterAnchor (724): mismo origen que el anterior (SOLO en
+    //     TerrariaVanilla-Decompiled 1.4.5.8, no existen en tModLoader) - TileObjectData.cs de ese
+    //     arbol registra ambos con newTile.CopyFrom(Style1x1) (footprint 1x1 real, sin excepcion:
+    //     el propio addTile(724) fija ademas Width=1/Height=1/Origin=(0,0) explicitos linea a
+    //     linea) y processedCoordinates:true. Un objeto 1x1 NO tiene esquina distinta de su
+    //     centro (offset/2 con division entera siempre da 0 en ambos ejes) - NO APLICA, mismo
+    //     motivo exacto que minerales/gemas/NPCs de la tabla de arriba, no falta de datos.
     //
-    // Los demas Kind se dejan deliberadamente en (0,0), no por asumir que estan bien, sino porque
-    // esta sesion no tuvo forma de verificarlos con el mismo rigor y el proyecto no fuerza un
-    // numero inventado (ver bitacora.md, pendiente para una ronda aparte con datos reales de esos
-    // objetos concretos):
-    //   - TrainingDummy, LogicSensor, TeleportationPylon: WldReader.ReadTileEntities NUNCA les
-    //     rellena Items (dummy solo guarda su Npc, sensor solo guarda LogicCheck/On, pylon "sin
-    //     datos propios") - jamas pueden casar por ChestItemIds ni producir un WorldSearchHit
-    //     aqui, el offset es indiferente en la practica.
-    //   - HatRack: TileObjectData.cs decompilado lo liga (via TEHatRack.Hook_AfterPlacement) a un
-    //     addTile con Style3x4, pero el ID numerico de ese addTile no cuadra de forma inequivoca
-    //     con la constante HatRack de TileID.cs en este mismo build decompilado (posible
-    //     desfase de version entre ambos archivos) - footprint real probable 3x4 pero NO
-    //     confirmado con un dato real de esta sesion, se deja sin tocar a proposito.
-    //   - WeaponRack, DeadCellsDisplayJar, KiteAnchor, CritterAnchor: SI pueden producir un hit
-    //     real (leen items reales en WldReader.ReadTileEntities) pero ningun .wld real accesible
-    //     en esta maquina tenia una instancia real que medir, y la fuente decompilada no dejo
-    //     un addTile inequivoco para los 4 en el tiempo de esta sesion.
+    // TrainingDummy, LogicSensor, TeleportationPylon se dejan en (0,0) por un motivo distinto
+    // (no de footprint): WldReader.ReadTileEntities NUNCA les rellena Items (dummy solo guarda su
+    // Npc, sensor solo guarda LogicCheck/On, pylon "sin datos propios") - jamas pueden casar por
+    // ChestItemIds ni producir un WorldSearchHit aqui, el offset es indiferente en la practica.
     private static (int X, int Y) TileEntityCenterOffset(WldTileEntityKind kind) => kind switch
     {
         WldTileEntityKind.ItemFrame => (1, 1),
         WldTileEntityKind.DisplayDoll => (1, 1),
+        WldTileEntityKind.HatRack => (1, 2),
+        WldTileEntityKind.WeaponRack => (1, 1),
+        WldTileEntityKind.DeadCellsDisplayJar => (0, 1),
         _ => (0, 0),
     };
 

@@ -44,6 +44,14 @@ internal static partial class Program
     [STAThread]
     private static void Main()
     {
+        // Deuda real cerrada el 17-sep-2026 (mismo bug ya visto y arreglado en Starvekeep): TODA
+        // ejecucion de este arnes es diagnostico/prueba, nunca produccion real - fijar esto lo
+        // primero de todo, antes de "new MainWindow()" mas abajo, para que
+        // IniciarComprobacionDeActualizacion (llamada de RED real a GitHub, resultado no
+        // determinista) nunca se dispare y contamine una captura. Ver el comentario completo en
+        // Terrakeep.App.App.ModoDiagnostico y en MainWindow.xaml.cs.
+        Terrakeep.App.App.ModoDiagnostico = true;
+
         // Verificacion real de T-12 (auditoria de Opus, Bloque 3): sesion local normal (esta
         // maquina, sin RDP) -> false; con la variable de entorno puesta -> true. El propio
         // OnStartup de App.xaml.cs nunca se ejecuta en este arnes (crea un Application a pelo),
