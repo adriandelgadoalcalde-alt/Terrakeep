@@ -77,6 +77,51 @@ public sealed class SaveAtomicoTests
         File.Delete(bak);
     }
 
+    // Punto 3 de la lista de funciones nuevas (17-sep-2026, "validacion de integridad antes de
+    // guardar"): la mitad Core del guardia (PlrFile.VerifyRoundTrip, con corrupcion real de
+    // bytes) ya se prueba aislada en Terrakeep.Core.Tests/PlrFormat/PlrFileVerifyRoundTripTests.cs
+    // - esta prueba cierra el otro extremo, el que de verdad importa para el usuario: que
+    // CharacterFileService.Save, cableado con ese guardia, ABORTA DE VERDAD antes de tocar el
+    // archivo real cuando los bytes recien serializados llegan corruptos por CUALQUIER motivo
+    // (DebugCorruptPlrBytesBeforeVerify simula ese "cualquier motivo" - ver su comentario en
+    // CharacterFileService, mismo criterio ya real de App.xaml.cs.ShouldForceSoftwareRendering:
+    // sin InternalsVisibleTo configurado hacia el arnes, la unica forma honesta de forzar el
+    // camino de aborto es un seam publico y documentado, nunca un booleano fingido).
+    [Fact]
+    public void Guardar_ConBytesCorruptosInyectados_AbortaSinTocarElArchivoOriginal()
+    {
+        var service = new CharacterFileService();
+        string path = NuevaRutaTemporal();
+        byte[] bytesOriginales = PlrFile.Write(NuevoPersonaje("Original"));
+        File.WriteAllBytes(path, bytesOriginales);
+        var loaded = service.Load(path);
+        loaded.Character.Name = "Cambiado"; // edicion real en memoria - lo que se perderia si el guardado no abortara
+
+        CharacterFileService.DebugCorruptPlrBytesBeforeVerify = bytes =>
+        {
+            byte[] corrupto = (byte[])bytes.Clone();
+            corrupto[^1] ^= 0xFF; // ultimo byte del ultimo bloque AES-CBC -> padding PKCS7 invalido real
+            return corrupto;
+        };
+        try
+        {
+            var ex = Assert.Throws<InvalidOperationException>(() => service.Save(loaded));
+            Assert.Contains("relectura", ex.Message);
+        }
+        finally
+        {
+            CharacterFileService.DebugCorruptPlrBytesBeforeVerify = null; // nunca debe quedar puesto para otras pruebas
+        }
+
+        // El archivo real en disco es BYTE A BYTE el mismo de antes del intento de guardado - ni
+        // siquiera un .tmp a medias.
+        Assert.Equal(bytesOriginales, File.ReadAllBytes(path));
+        Assert.False(File.Exists(path + ".tmp"));
+        Assert.False(File.Exists(path + ".bak")); // WriteAtomic nunca llego a ejecutarse
+
+        File.Delete(path);
+    }
+
     [Fact]
     public void DeshacerUltimoGuardado_RestauraElEstadoAnteriorYRecarga()
     {

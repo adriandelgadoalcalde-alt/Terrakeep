@@ -1022,6 +1022,14 @@ internal static partial class Program
             EjecutarSnapshotVisualSolo(window, vm);
         }
 
+        // VERIF_3FUNC_SOLO=1 (17-sep-2026): cuerpo real en VerificacionFuncionesNuevas17Sep.cs.
+        // Mismo punto que SNAPSHOT_VISUAL_SOLO de arriba (personaje sintetico 'UIA-Test' recien
+        // cargado, determinista).
+        if (Environment.GetEnvironmentVariable("VERIF_3FUNC_SOLO") == "1")
+        {
+            EjecutarVerificacionFuncionesNuevas(window, vm);
+        }
+
         // BUILDCODE-CANEXECUTE (14-sep-2026): TERCERA vez que este mismo defecto se cuela (A-d,
         // luego BK, ahora OpenBuildCodeCommand) - un comando CanExecute=IsCharacterLoaded que se
         // queda fuera de la lista de NotifyCanExecuteChanged() de OnIsCharacterLoadedChanged dejaba

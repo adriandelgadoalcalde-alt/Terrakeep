@@ -262,9 +262,37 @@ public sealed class CharacterFileService
         return new LoadedCharacter(plrPath, hasTplr ? tplrPath : null, tplrRootName, character, tplrRoot, merged);
     }
 
+    // Punto 3 de la lista de funciones nuevas (17-sep-2026, "validacion de integridad antes de
+    // guardar"): SOLO para pruebas (Terrakeep.App.ViewModels.Tests - sin InternalsVisibleTo
+    // configurado hacia el arnes, mismo criterio real ya establecido por
+    // App.xaml.cs.ShouldForceSoftwareRendering). Simula que los bytes recien serializados
+    // llegaron corruptos por cualquier motivo real (bit volteado en memoria, un bug futuro del
+    // propio serializador...) justo antes de la verificacion, para poder forzar de verdad el
+    // camino de aborto sin tener que fabricar a mano un PlrCharacter que ya rompa PlrFile.Write
+    // por si solo. Null en cualquier uso real de la app - nunca se lee fuera de un test.
+    public static Func<byte[], byte[]>? DebugCorruptPlrBytesBeforeVerify { get; set; }
+
     public void Save(LoadedCharacter loaded)
     {
         var newTplrRoot = _sync.MaskAndSyncAll(loaded.Character, loaded.MergedContainers, loaded.TplrRoot);
+
+        byte[] plrBytes = PlrFile.Write(loaded.Character);
+        if (DebugCorruptPlrBytesBeforeVerify != null) plrBytes = DebugCorruptPlrBytesBeforeVerify(plrBytes);
+
+        // Punto 3 (17-sep-2026): nunca tocar el .plr real sin haber confirmado ANTES, en
+        // memoria, que los propios bytes que se van a escribir son releibles de verdad - ver el
+        // comentario completo de PlrFile.VerifyRoundTrip (Core). Si algo salio mal el guardado
+        // se aborta AQUI, antes de WriteAtomic: el archivo real en disco no se toca en absoluto,
+        // ni siquiera para dejar un .tmp a medias - el usuario se queda exactamente con la
+        // ultima version buena conocida en vez de un .plr corrupto encima de la suya.
+        try
+        {
+            PlrFile.VerifyRoundTrip(plrBytes, loaded.Character);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(LocalizationService.Instance.Format("character_save_reread_failed", ex.Message), ex);
+        }
 
         // T-C (segunda auditoria de Opus, Fable): WriteAllBytes directo sobre el fichero real
         // deja una ventana real donde un corte de luz/cierre forzado a mitad de escritura
@@ -273,7 +301,7 @@ public sealed class CharacterFileService
         // sistema de ficheros (File.Replace), que de paso ya genera el .bak (Bloque 0, T-23) en
         // la MISMA operacion atomica en vez de una copia previa por separado (ventana de carrera
         // real, aunque muy improbable en una app de un solo usuario).
-        WriteAtomic(loaded.PlrPath, PlrFile.Write(loaded.Character));
+        WriteAtomic(loaded.PlrPath, plrBytes);
 
         // T-C: antes se escribia SIEMPRE un .tplr, incluso para un personaje 100% vanilla que
         // nunca tuvo ni tendra un objeto/buff de Calamity - ensuciaba la carpeta real de
@@ -288,7 +316,23 @@ public sealed class CharacterFileService
             || loaded.Character.Buffs.Any(b => b.Id >= CalamityIds.BuffIdBase);
         if (yaTeniaTplr || tieneContenidoRealDeCalamity)
         {
-            WriteAtomic(tplrPath, TplrFile.Write(loaded.TplrRootName, newTplrRoot));
+            byte[] tplrBytes = TplrFile.Write(loaded.TplrRootName, newTplrRoot);
+            // Mismo criterio real que el .plr de arriba: el .tplr (NBT + gzip) tambien se relee
+            // en memoria ANTES de tocar el archivo - solo el nombre de la raiz (el propio
+            // formato no tiene mas metadatos estructurales reales que verificar sin acoplarse al
+            // contenido de Calamity concreto, que ya vive verificado en el .plr).
+            try
+            {
+                var (reReadRootName, _) = TplrFile.Read(tplrBytes);
+                if (reReadRootName != loaded.TplrRootName)
+                    throw new InvalidDataException($"El .tplr recien serializado relee una raiz distinta ('{reReadRootName}' vs '{loaded.TplrRootName}').");
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(LocalizationService.Instance.Format("character_save_reread_failed", ex.Message), ex);
+            }
+
+            WriteAtomic(tplrPath, tplrBytes);
             loaded.TplrRoot = newTplrRoot;
             loaded.TplrPath = tplrPath;
         }

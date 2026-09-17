@@ -13,27 +13,33 @@ namespace Terrakeep.App.Services;
 // el .bak en la MISMA operacion.
 public static class WorldFileService
 {
-    // Lee, parchea, escribe (atomico, con .bak) y RE-LEE DE VUELTA DESDE DISCO para verificar el
-    // round-trip completo antes de devolver el mundo actualizado - un archivo de mundo real es
-    // demasiado valioso para fiarse de que PatchGameMode no lanzo ninguna excepcion, hay que
-    // confirmar que lo que quedo escrito en el fichero de verdad es lo que se pidio.
+    // Punto 3 de la lista de funciones nuevas (17-sep-2026, "validacion de integridad antes de
+    // guardar"): las 6 verificaciones de abajo relean SIEMPRE `patched` (el array en memoria que
+    // WldWriter acaba de producir) y se ejecutan ANTES de WriteAtomic - antes releian el archivo
+    // YA escrito en disco, lo que confirmaba el round-trip de la ESCRITURA pero no evitaba tocar
+    // el .wld real si el propio patch hubiera quedado mal formado (WriteAtomic + el .bak ya lo
+    // hacian recuperable, pero "recuperable a mano" no es lo mismo que "nunca tocado" - mismo
+    // criterio ahora real tambien para el .plr, ver PlrFile.VerifyRoundTrip). Si la relectura en
+    // memoria falla o no cuadra, se lanza aqui y WriteAtomic no llega a ejecutarse nunca: el
+    // archivo real en disco se queda exactamente como estaba.
     public static WldWorld SaveGameMode(WldWorld world, string wldPath, int newGameMode)
     {
         byte[] original = File.ReadAllBytes(wldPath);
         byte[] patched = WldWriter.PatchGameMode(original, newGameMode);
-        WriteAtomic(wldPath, patched);
 
-        var reReadHeader = WldReader.ReadHeader(File.ReadAllBytes(wldPath));
+        var reReadHeader = WldReader.ReadHeader(patched);
         if (reReadHeader.GameMode != newGameMode)
             throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
 
+        WriteAtomic(wldPath, patched);
         return world.WithHeader(world.Header.WithGameMode(newGameMode));
     }
 
     // Editor de mundos v1 (14-sep-2026, guia real de bitacora.md 13-sep-2026): mismo patron
-    // exacto que SaveGameMode arriba (leer, parchear, escribir atomico con .bak, releer de
-    // disco para verificar el round-trip) para cada uno de los tres grupos nuevos - nunca un
-    // unico "guardar todo" que mezclaria varias escrituras atomicas distintas en una.
+    // exacto que SaveGameMode arriba (leer, parchear, releer en MEMORIA para verificar el
+    // round-trip, y solo entonces escribir atomico con .bak) para cada uno de los tres grupos
+    // nuevos - nunca un unico "guardar todo" que mezclaria varias escrituras atomicas distintas
+    // en una.
     public static WldWorld SaveSpawnPoint(WldWorld world, string wldPath, int newSpawnX, int newSpawnY)
     {
         if (newSpawnX < 0 || newSpawnX >= world.Header.TilesWide || newSpawnY < 0 || newSpawnY >= world.Header.TilesHigh)
@@ -41,12 +47,12 @@ public static class WorldFileService
 
         byte[] original = File.ReadAllBytes(wldPath);
         byte[] patched = WldWriter.PatchSpawnPoint(original, newSpawnX, newSpawnY);
-        WriteAtomic(wldPath, patched);
 
-        var reReadHeader = WldReader.ReadHeader(File.ReadAllBytes(wldPath));
+        var reReadHeader = WldReader.ReadHeader(patched);
         if (reReadHeader.SpawnX != newSpawnX || reReadHeader.SpawnY != newSpawnY)
             throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
 
+        WriteAtomic(wldPath, patched);
         return world.WithHeader(world.Header.WithSpawn(newSpawnX, newSpawnY));
     }
 
@@ -54,13 +60,13 @@ public static class WorldFileService
     {
         byte[] original = File.ReadAllBytes(wldPath);
         byte[] patched = WldWriter.PatchTimeAndMoon(original, newTime, newDayTime, newMoonPhase, newBloodMoon, newIsEclipse);
-        WriteAtomic(wldPath, patched);
 
-        var reReadHeader = WldReader.ReadHeader(File.ReadAllBytes(wldPath));
+        var reReadHeader = WldReader.ReadHeader(patched);
         if (Math.Abs(reReadHeader.Time - newTime) > 0.01 || reReadHeader.DayTime != newDayTime || reReadHeader.MoonPhase != newMoonPhase
             || reReadHeader.BloodMoon != newBloodMoon || reReadHeader.IsEclipse != newIsEclipse)
             throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
 
+        WriteAtomic(wldPath, patched);
         return world.WithHeader(world.Header.WithTimeAndMoon(newTime, newDayTime, newMoonPhase, newBloodMoon, newIsEclipse));
     }
 
@@ -68,9 +74,8 @@ public static class WorldFileService
     {
         byte[] original = File.ReadAllBytes(wldPath);
         byte[] patched = WldWriter.PatchBossFlags(original, patch);
-        WriteAtomic(wldPath, patched);
 
-        var reReadHeader = WldReader.ReadHeader(File.ReadAllBytes(wldPath));
+        var reReadHeader = WldReader.ReadHeader(patched);
         var newHeader = world.Header.WithBossFlags(
             patch.DownedBoss1EyeOfCthulhu ?? world.Header.DownedBoss1EyeOfCthulhu,
             patch.DownedBoss2EaterOfWorldsOrBrainOfCthulhu ?? world.Header.DownedBoss2EaterOfWorldsOrBrainOfCthulhu,
@@ -87,29 +92,48 @@ public static class WorldFileService
         if (reReadHeader.DownedBoss1EyeOfCthulhu != newHeader.DownedBoss1EyeOfCthulhu || reReadHeader.HardMode != newHeader.HardMode)
             throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
 
+        WriteAtomic(wldPath, patched);
         return world.WithHeader(newHeader);
     }
+
+    // Punto 3 (17-sep-2026), SOLO para pruebas (mismo criterio real que
+    // CharacterFileService.DebugCorruptPlrBytesBeforeVerify - sin InternalsVisibleTo configurado
+    // hacia el arnes): simula que `patched` llego corrupto por cualquier motivo real justo antes
+    // de la verificacion en memoria, para poder forzar de verdad el camino de aborto de
+    // SaveChestItems/SaveSignText sin tener que fabricar a mano un WldWriter que ya falle por si
+    // solo. Null en cualquier uso real de la app.
+    public static Func<byte[], byte[]>? DebugCorruptPatchedBytesBeforeVerify { get; set; }
 
     // Editor de cofres/letreros v1 (T1 del documento I+D real, "Terrakeep, editor de cofres/
     // letreros del .wld", 15-sep-2026): primer camino de escritura que NO parchea la cabecera -
     // WldWriter.WriteChestItems/WriteSignText reescriben una seccion entera y pueden CAMBIAR LA
-    // LONGITUD del archivo. Mismo patron atomico (WriteAtomic con .bak) y misma verificacion real
-    // releyendo DE DISCO tras guardar - aqui la verificacion es mas exigente todavia: no solo el
-    // dato editado, tambien que el NUMERO de cofres/letreros del archivo siga siendo el mismo (la
-    // señal mas barata y mas fiable de que la tabla de punteros no quedo desincronizada).
+    // LONGITUD del archivo. Misma verificacion real EN MEMORIA (patched, ver el comentario de
+    // cabecera de la clase) antes de WriteAtomic - aqui la verificacion es mas exigente todavia:
+    // no solo el dato editado, tambien que el NUMERO de cofres/letreros del archivo siga siendo
+    // el mismo (la señal mas barata y mas fiable de que la tabla de punteros no quedo
+    // desincronizada).
     public static WldWorld SaveChestItems(WldWorld world, string wldPath, int chestIndex, IReadOnlyList<WldChestItem> newItems)
     {
         byte[] original = File.ReadAllBytes(wldPath);
         byte[] patched = WldWriter.WriteChestItems(original, chestIndex, newItems);
-        WriteAtomic(wldPath, patched);
+        if (DebugCorruptPatchedBytesBeforeVerify != null) patched = DebugCorruptPatchedBytesBeforeVerify(patched);
 
-        var reReadWorld = WldReader.Read(File.ReadAllBytes(wldPath), readContainers: true);
+        WldWorld reReadWorld;
+        try
+        {
+            reReadWorld = WldReader.Read(patched, readContainers: true);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(LocalizationService.Instance.Format("world_save_reread_failed_detail", ex.Message), ex);
+        }
         if (reReadWorld.Chests.Count != world.Chests.Count)
             throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
         var editedChest = reReadWorld.Chests[chestIndex];
         if (editedChest.Items.Count != newItems.Count)
             throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
 
+        WriteAtomic(wldPath, patched);
         return world.WithChestItems(chestIndex, newItems);
     }
 
@@ -117,15 +141,24 @@ public static class WorldFileService
     {
         byte[] original = File.ReadAllBytes(wldPath);
         byte[] patched = WldWriter.WriteSignText(original, signX, signY, newText);
-        WriteAtomic(wldPath, patched);
+        if (DebugCorruptPatchedBytesBeforeVerify != null) patched = DebugCorruptPatchedBytesBeforeVerify(patched);
 
-        var reReadWorld = WldReader.Read(File.ReadAllBytes(wldPath), readContainers: true);
+        WldWorld reReadWorld;
+        try
+        {
+            reReadWorld = WldReader.Read(patched, readContainers: true);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(LocalizationService.Instance.Format("world_save_reread_failed_detail", ex.Message), ex);
+        }
         if (reReadWorld.Signs.Count != world.Signs.Count)
             throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
         var editedSign = reReadWorld.Signs.FirstOrDefault(s => s.X == signX && s.Y == signY);
         if (editedSign == null || editedSign.Text != newText)
             throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
 
+        WriteAtomic(wldPath, patched);
         int signIndex = world.Signs.ToList().FindIndex(s => s.X == signX && s.Y == signY);
         return signIndex < 0 ? world : world.WithSignText(signIndex, newText);
     }

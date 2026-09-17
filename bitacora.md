@@ -17774,3 +17774,105 @@ commitear, no es de esta tarea. Sin `git push`.
 real que tenga instancias de `HatRack`/`WeaponRack`/`DeadCellsDisplayJar`/`KiteAnchor`/
 `CritterAnchor` (ninguno de los 4 mundos reales disponibles en esta máquina los tenía) antes de
 extender `TileEntityCenterOffset` a esos 5 Kind.
+
+## 17-sep-2026 - Tres funciones nuevas reales de cara al usuario (indicador de cambios sin guardar, barra de progreso real, validación de integridad antes de guardar)
+
+Encargo real: añadir 3 funciones de alto valor y alcance contenido, investigando primero qué ya
+existía antes de construir nada nuevo (regla explícita del encargo).
+
+**1. Indicador de cambios sin guardar - YA EXISTÍA, verificado con capturas reales.**
+Investigado a fondo antes de tocar nada: `MainViewModel.IsDirty` (con `MarkDirty`/`_suppressDirty`),
+`UndoStack` completo y el punto "●" real en la cabecera global (`MainWindow.xaml` línea ~2051,
+`Visibility="{Binding IsDirty, Converter={StaticResource BoolToVis}}"`) más el mismo punto en
+`WindowTitle` ya existían desde el 3-sep-2026 (commit `2e805fb`, "Plan de Opus, Bloque 0: seguridad
+- copia al guardar + IsDirty real") y siguientes rondas de auditoría. No se duplicó ningún mecanismo
+paralelo. Verificado con capturas reales de esta sesión (`Terrakeep.App.Tests/
+VerificacionFuncionesNuevas17Sep.cs`, modo `VERIF_3FUNC_SOLO=1`): estado limpio (sin punto),
+tras un cambio real en Inventario (punto morado visible junto al nombre, `WindowTitle` con `●`),
+tras guardar (punto desaparece, "Guardado hace un momento"). Log real: `IsDirty=False` ->
+`IsDirty=True` -> `IsDirty=False`.
+
+**2. Barra de progreso real en la carga de un `.wld` - CONSTRUIDA.**
+Medido de antemano (comentario ya real en `ExplorationViewModel.cs`, X-7/T-13): decodificar la
+rejilla de tiles es el único tramo de coste real de toda la app (~1.4-2.1s en un mundo de
+11MB/8400x2400 = 20.160.000 tiles). Se sustituyó la `ProgressBar IsIndeterminate` generica por una
+real:
+- `Terrakeep.Core/WldFormat/WldReader.cs`: `Read`/`ReadTiles` aceptan un `Action<long,long>?
+  onTileProgress` opcional (nunca obligatorio para los llamadores existentes) que reporta
+  (tiles procesados, tiles totales) cada ~200 avisos a lo largo de la carga (throttle por
+  columna, para no saturar el Dispatcher).
+- `Terrakeep.App/ViewModels/ExplorationViewModel.cs`: `LoadProgressFraction`/`LoadProgressText`
+  nuevos, alimentados por un `IProgress<(long,long)>` (capturado en el hilo de UI antes del
+  `Task.Run`, marshaling automático - ojo real: `Progress<T>.Report` es una implementación
+  EXPLICITA de `IProgress<T>`, hace falta tipar la variable como `IProgress<T>`, no `var`, o no
+  compila).
+- `MainWindow.xaml`: la `ProgressBar` del overlay de carga pasa de indeterminada a determinada
+  (Minimum=0 Maximum=1, Value real) + texto real (`explore_loading_tiles_progress`, claves
+  nuevas en `strings_es.json`/`strings_en.json`: "Leyendo tile {0:N0} de {1:N0}...").
+- Verificado con el mundo real mas grande de esta maquina (`roca_negra.wld`, 11.3MB,
+  8400x2400 tiles): log real con decenas de lineas fraccion=X%, texto='Leyendo tile N de
+  20.160.000...' avanzando monotonamente de 0% a 100%, captura real de pantalla a mitad de carga
+  (2-progreso-intermedio-2.png) mostrando la barra a ~8.5% con el texto "Leyendo tile 1.716.000
+  de 20.160.000...", y captura final con el mundo ya cargado y pintado (505 cofres, 178 objetos,
+  23 vetas, 14 NPCs - sin regresion). Carga completa real: 2110ms.
+
+**3. Validación de integridad antes de guardar (releer EN MEMORIA antes de tocar el disco) - CONSTRUIDA.**
+Investigado primero: `WorldFileService` (`.wld`) ya tenía una relectura de verificación real desde
+antes de esta sesión, pero releía el archivo YA ESCRITO EN DISCO tras `WriteAtomic` (confirmaba el
+round-trip de la escritura, pero no evitaba tocar el archivo si el patch en sí hubiera quedado mal
+formado). `CharacterFileService.Save` (`.plr`) NO tenía ninguna verificación real - el hueco más
+importante.
+- `Terrakeep.Core/PlrFormat/PlrFile.cs`: `VerifyRoundTrip(bytes, original)` nuevo - relee los bytes
+  recien serializados con el mismo `Read()` de produccion (nunca un lector paralelo), dos capas:
+  1) `Read()` puede lanzar (padding PKCS7 invalido, stream corto...) -> se envuelve en
+  `InvalidDataException`; 2) aunque no lance, compara nombre/version/longitud de cada contenedor
+  (Inventario, Banco, Cofre, Caja fuerte, Fragua, Boveda del Vacio, Loadouts, Investigacion...)
+  contra el personaje original - un desajuste ahi es la señal mas barata de que algo se desalineo
+  en silencio. `Buffs.Count` se excluyo a proposito del comparador (es un tamaño FIJO derivado solo
+  de `Version`, compararlo no detecta nada nuevo y da un falso positivo con un `PlrCharacter`
+  recien construido a mano que nunca paso por un `Read()` real).
+- `Terrakeep.App/Services/CharacterFileService.cs`: `Save()` ahora serializa, `VerifyRoundTrip`
+  ANTES de `WriteAtomic` - si falla, se lanza `InvalidOperationException` (clave nueva
+  `character_save_reread_failed`) y el `.plr` real en disco no se toca en absoluto, ni siquiera
+  un `.tmp` a medias. Mismo tratamiento para el `.tplr` (NBT+gzip, se verifica el nombre de la
+  raiz).
+- `Terrakeep.App/Services/WorldFileService.cs`: las 6 funciones de guardado (`SaveGameMode`,
+  `SaveSpawnPoint`, `SaveTimeAndMoon`, `SaveBossFlags`, `SaveChestItems`, `SaveSignText`) se
+  reordenaron para releer `patched` (el array EN MEMORIA) antes de `WriteAtomic`, en vez de releer
+  el archivo ya escrito en disco - mismo criterio ahora real tambien para el `.plr`. Mensaje de
+  `world_save_reread_failed` actualizado para reflejar el orden real nuevo ("el archivo real NO se
+  ha tocado" en vez de "el archivo se escribio pero...").
+- Verificado forzando de verdad el caso de fallo (pedido explicito del encargo: inyecta un
+  dato invalido de prueba y confirma que el guardado se aborta sin tocar el archivo original): dos
+  seams de prueba publicos y documentados (`CharacterFileService.DebugCorruptPlrBytesBeforeVerify`,
+  `WorldFileService.DebugCorruptPatchedBytesBeforeVerify` - null en cualquier uso real de la app,
+  mismo criterio ya real de `App.xaml.cs.ShouldForceSoftwareRendering`: sin `InternalsVisibleTo`
+  configurado hacia el arnes, la unica forma honesta de forzar el camino de aborto es un seam
+  publico). Tests reales:
+  - `Terrakeep.Core.Tests/PlrFormat/PlrFileVerifyRoundTripTests.cs`: bytes intactos no lanza; el
+    ultimo bloque AES-CBC volteado rompe el padding PKCS7 real -> lanza; bytes de OTRO personaje
+    (perfectamente releibles, pero no coinciden) -> la comparacion estructural lo atrapa igual.
+  - `Terrakeep.App.ViewModels.Tests/SaveAtomicoTests.cs`
+    (`Guardar_ConBytesCorruptosInyectados_AbortaSinTocarElArchivoOriginal`): con el bit del ultimo
+    byte del `.plr` volteado, `service.Save()` lanza, y el archivo real en disco queda BYTE A BYTE
+    igual que antes del intento - sin `.tmp` ni `.bak` nuevo.
+  - `Terrakeep.App.ViewModels.Tests/WorldSaveVerifyBeforeWriteTests.cs`
+    (`SaveChestItems_ConBytesCorruptosInyectados_AbortaSinTocarElArchivoOriginal`): mismo
+    experimento sobre un `.wld` real de esta maquina (cabecera reventada a proposito) - aborta sin
+    tocar el archivo. Test hermano (`SaveChestItems_SinCorromper_PersisteEnDiscoTrasElReorden`)
+    confirma que el reordenamiento (verificar ANTES de escribir) no rompio el camino normal.
+
+**Build y test**: `dotnet build Terrakeep.slnx` (Debug) en verde, 0 avisos/0 errores.
+`dotnet test Terrakeep.Core.Tests` 561/561, `dotnet test Terrakeep.App.ViewModels.Tests` 488/488
+(488 = 485 previos + 3 tests nuevos de esta sesion).
+
+**Recompilado y redesplegado**:
+- `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe` - `dotnet build Terrakeep.slnx -c Debug`.
+- `C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` - reinstalado con
+  `installer\install.ps1` (publish Release autocontenido + copia), confirmado con timestamp fresco.
+
+Commit local en Terrakeep (codigo + tests + bitacora), sin `git push`. Nada que tocar en KeepQA
+esta vez (no se uso ningun verificador compartido nuevo - las 3 funciones son de dominio/
+serializacion, no de layout/UI nueva que necesite pasar por geometria/contraste compartidos; el
+indicador de "sin guardar" y la barra de progreso SI se verificaron con capturas reales de
+`RenderTargetBitmap`, mismo mecanismo que usa `SnapshotVisual.cs`).

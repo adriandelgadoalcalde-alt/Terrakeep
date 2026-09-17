@@ -5099,10 +5099,20 @@
                              lienzo ya vacio (primera carga) oscurecerlo no aporta nada. -->
                         <Border Background="#B0000000" CornerRadius="8"
                                 Visibility="{Binding Exploration.IsLoadingOverExistingWorld, Converter={StaticResource BoolToVis}}" />
+                        <!-- Punto 2 de la lista de funciones nuevas (17-sep-2026, "barra de progreso
+                             real"): la carga de un mundo grande es el unico freeze real medido de
+                             toda la app (ver ExplorationViewModel.IsLoading) - antes era una
+                             ProgressBar indeterminada que no decia nada de lo que pasaba de verdad.
+                             Determinada (Minimum/Maximum fijos, Value real) + texto real con el
+                             recuento de tiles (LoadProgressText, "Leyendo tile 4.000 de 250.000...",
+                             ya inicializado al arrancar la carga - ver LoadFromPathAsync - para que
+                             el overlay nunca se quede sin texto ni un instante). -->
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                                     Visibility="{Binding Exploration.IsLoading, Converter={StaticResource BoolToVis}}">
-                            <ProgressBar IsIndeterminate="True" Width="160" Height="6" Foreground="{StaticResource AccentBrush}" />
-                            <TextBlock Text="{Binding Loc[explore_loading_map], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,10,0,0" HorizontalAlignment="Center" />
+                            <ProgressBar Width="160" Height="6" Minimum="0" Maximum="1" Foreground="{StaticResource AccentBrush}"
+                                         Value="{Binding Exploration.LoadProgressFraction, Mode=OneWay}" />
+                            <TextBlock Text="{Binding Exploration.LoadProgressText, Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                       Margin="0,10,0,0" HorizontalAlignment="Center" />
                         </StackPanel>
 
                         <!-- F-8 (auditoria de Opus vs TEdit, E-05): "la unica referencia espacial

@@ -684,7 +684,19 @@ public partial class ExplorationViewModel : ObservableObject
         OnPropertyChanged(nameof(IsNotLoading));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(IsLoadingOverExistingWorld));
+        if (!value) { LoadProgressFraction = 0; LoadProgressText = null; } // no dejar el ultimo numero pegado tras terminar
     }
+
+    // Punto 2 de la lista de funciones nuevas (17-sep-2026, "barra de progreso real"): el freeze
+    // real medido arriba (~1.4s en un mundo de 11MB) esta dominado por decodificar la rejilla de
+    // tiles (WldReader.ReadTiles, el unico tramo con un total conocido de antemano) - la barra
+    // indeterminada de antes no decia nada de lo que de verdad estaba pasando. LoadProgressFraction
+    // (0..1, real, calculado con tiles YA decodificados / tiles totales del mundo) alimenta el
+    // ProgressBar determinado de MainWindow.xaml; LoadProgressText es la frase formateada real
+    // ("Leyendo tile 4.000 de 250.000") - null mientras no hay carga en curso, para que el overlay
+    // pueda distinguir "sin dato todavia" de "0%".
+    [ObservableProperty] private double _loadProgressFraction;
+    [ObservableProperty] private string? _loadProgressText;
 
     // P-8 (auditoria de Opus vs TEdit): "el overlay de carga tapa el mapa con #B0000000 opaco;
     // con lienzo vacio no aporta nada". IsWorldLoaded NO se resetea al empezar una carga (solo
@@ -2231,6 +2243,12 @@ public partial class ExplorationViewModel : ObservableObject
     public async Task LoadFromPathAsync(string wldPath)
     {
         IsLoading = true;
+        // Arranca en 0 con el texto generico de siempre - el primer aviso real de tileProgress
+        // (mas abajo) lo sustituye en cuanto ReadTiles procesa su primera tanda de columnas, pero
+        // el overlay nunca debe quedarse sin texto ni un instante mientras tanto (mundos pequeños
+        // pueden terminar de leer tiles antes de que llegue a pintarse un solo frame intermedio).
+        LoadProgressFraction = 0;
+        LoadProgressText = LocalizationService.Instance["explore_loading_map"];
         try
         {
             SetStatusMessage("status_reading_painting_map");
@@ -2240,9 +2258,21 @@ public partial class ExplorationViewModel : ObservableObject
             // este punto, el overlay de "Leyendo y pintando..." ya esta en pantalla (sin hueco
             // nuevo que tapar), y el sobrecoste medido es de decenas de milisegundos frente a los
             // ~1.4s que ya cuesta este paso completo.
+            // Progress<T> captura el SynchronizationContext de ESTE hilo (el de UI, todavia no
+            // hemos entrado en el Task.Run) - Report() reenvia cada aviso al hilo de UI solo,
+            // WldReader.ReadTiles (hilo de fondo) nunca toca una propiedad enlazada directamente.
+            // Tipado explicito como IProgress<T> (no `var`): Progress<T>.Report es una
+            // implementacion EXPLICITA de la interfaz (Progress<T> no expone Report como
+            // miembro publico propio) - sobre una variable `var` (tipo concreto Progress<T>)
+            // tileProgress.Report ni siquiera compila, hace falta el tipo de interfaz.
+            IProgress<(long Done, long Total)> tileProgress = new Progress<(long Done, long Total)>(p =>
+            {
+                LoadProgressFraction = p.Total > 0 ? (double)p.Done / p.Total : 0;
+                LoadProgressText = LocalizationService.Instance.Format("explore_loading_tiles_progress", p.Done, p.Total);
+            });
             var (world, image, presence, moddedChestNames) = await Task.Run(() =>
             {
-                var w = WldReader.Read(File.ReadAllBytes(wldPath));
+                var w = WldReader.Read(File.ReadAllBytes(wldPath), onTileProgress: (done, total) => tileProgress.Report((done, total)));
                 var img = WorldRenderer.Render(w, _mapColors);
                 var idx = WorldPresenceIndex.Build(w);
                 var modded = ResolveModdedChestTileNames(w, wldPath);

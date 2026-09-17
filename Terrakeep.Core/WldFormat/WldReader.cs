@@ -17,7 +17,13 @@ public static class WldReader
     // deliberadamente fuera de la Fase 2 original (el advisor no leyo TileEntity.Load campo a
     // campo) - Fase 2b: formato ya verificado byte a byte contra TileEntity.cs real de TEdit,
     // ver ReadTileEntities.
-    public static WldWorld Read(byte[] fileBytes, bool readContainers = true)
+    // Punto 2 de la lista de funciones nuevas (17-sep-2026, "barra de progreso real"): decodificar
+    // la rejilla de tiles es el UNICO tramo de coste real medido de toda la carga de un mundo (ver
+    // el comentario de ExplorationViewModel.LoadFromPathAsync, ~1.4s en un mundo de 11MB de esta
+    // maquina) - onTileProgress es opcional (null en cualquier llamada que no necesite progreso,
+    // ej. WorldFileService releyendo tras un guardado) para no obligar a ningun llamador existente
+    // a inventarse un callback que no le sirve de nada.
+    public static WldWorld Read(byte[] fileBytes, bool readContainers = true, Action<long, long>? onTileProgress = null)
     {
         using var stream = new MemoryStream(fileBytes);
         using var reader = new BinaryReader(stream);
@@ -25,7 +31,7 @@ public static class WldReader
         var header = ReadHeader(reader);
 
         stream.Position = header.TilesSectionOffset;
-        var tiles = ReadTiles(reader, header);
+        var tiles = ReadTiles(reader, header, onTileProgress);
 
         List<WldChest> chests = [];
         List<WldSign> signs = [];
@@ -284,9 +290,17 @@ public static class WldReader
         return result;
     }
 
-    private static WldTile[,] ReadTiles(BinaryReader reader, WldHeader header)
+    private static WldTile[,] ReadTiles(BinaryReader reader, WldHeader header, Action<long, long>? onTileProgress)
     {
         var tiles = new WldTile[header.TilesWide, header.TilesHigh];
+        // Reportar en CADA columna (hasta 8400 en un mundo Grande) es barato de calcular pero
+        // caro de RECIBIR si el llamador reenvia cada aviso al hilo de UI (WPF Dispatcher.Post
+        // por cada uno) - se limita a ~200 avisos reales a lo largo de la carga entera (mismo
+        // orden de magnitud que ya usa el muestreo de comparacion de tiles en
+        // WldWriterChestSignTests), de sobra para que una barra se vea fluida sin saturar la cola
+        // de mensajes del Dispatcher.
+        int step = Math.Max(1, header.TilesWide / 200);
+        long total = (long)header.TilesWide * header.TilesHigh;
         for (int x = 0; x < header.TilesWide; x++)
         {
             int y = 0;
@@ -297,6 +311,8 @@ public static class WldReader
                 for (int fillY = y; fillY < runEnd; fillY++) tiles[x, fillY] = tile;
                 y = runEnd;
             }
+            if (onTileProgress != null && (x % step == 0 || x == header.TilesWide - 1))
+                onTileProgress((long)(x + 1) * header.TilesHigh, total);
         }
         return tiles;
     }
