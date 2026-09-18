@@ -1,5 +1,20 @@
 [
   {
+    "version": "3.2.5",
+    "date": "19 de septiembre de 2026",
+    "date_en": "September 19, 2026",
+    "summary": "Encontrada por fin la causa raíz real del desfase de marcadores en el mapa de Exploración: no era un fallo de un tipo de objeto en concreto, afectaba por igual a cofres, vetas de mineral y objetos sueltos, y las verificaciones anteriores no lo habían detectado por pura casualidad (solo se habían medido los dos niveles de zoom donde el error resulta invisible). Comparado el enfoque real del editor de mundos TEdit para entender la causa exacta, y arreglado de verdad. Además, ahora sí se puede hacer clic sobre un marcador del mapa para abrir el editor del cofre correspondiente - esa función nunca había llegado a existir para los marcadores de búsqueda.",
+    "summary_en": "Finally found the real root cause of the marker offset on the Exploration map: it wasn't limited to one object type, it affected chests, ore veins and loose objects equally, and previous checks had missed it purely by chance (only the two zoom levels where the error happens to be invisible had been measured). Compared the real approach used by the TEdit world editor to understand the exact cause, and fixed it for real. Also, clicking a map search marker now actually opens the corresponding chest's editor - that function had never existed for search markers.",
+    "fixed": [
+      "El desfase de los marcadores del mapa de Exploración (cofres, minerales, objetos) tenía una causa única y real: el pivote de escala del marcador estaba anclado al tamaño de su propio contenedor en vez de al tile real, un error que crecía con el zoom y que las comprobaciones anteriores no habían detectado por medir solo los dos niveles de zoom donde por coincidencia el error no se nota.",
+      "Hacer clic sobre un marcador de búsqueda del mapa (cofre, mineral, objeto) nunca abría nada - no existía ninguna función real que lo conectara al editor. Ahora un clic sobre un cofre real localizado por búsqueda abre su editor correctamente."
+    ],
+    "fixed_en": [
+      "The Exploration map marker offset (chests, minerals, objects) had a single real cause: the marker's scale pivot was anchored to its own container's size instead of the real tile, an error that grew with zoom level and that previous checks had missed by only measuring the two zoom levels where the error happens not to show.",
+      "Clicking a map search marker (chest, mineral, object) never opened anything - no real function connected it to the editor. A click on a real chest found via search now correctly opens its editor."
+    ]
+  },
+  {
     "version": "3.2.4",
     "date": "18 de septiembre de 2026",
     "date_en": "September 18, 2026",

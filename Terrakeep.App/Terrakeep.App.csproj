@@ -80,9 +80,15 @@
     <!-- 3.2.4 (18-sep-2026): arreglo real de AR-LAY - el panel de Armadura/Accesorios perdia 18,9px
          de alto (recortados de verdad, sin scroll) en la vista Apariencia con la Libreria desplegada.
          Ver changelog.json y bitacora.md. -->
-    <Version>3.2.4</Version>
-    <FileVersion>3.2.4.0</FileVersion>
-    <AssemblyVersion>3.2.4.0</AssemblyVersion>
+    <!-- 3.2.5 (19-sep-2026): causa raiz real del desfase de marcadores en el mapa de Exploracion -
+         un pivote de escala mal anclado (RenderTransformOrigin 0.5,0.5 sobre el tamaño del propio
+         Grid, no sobre el tile) afectaba a cofres/vetas/objetos por igual, invisible solo en los dos
+         zooms que se habian medido antes por casualidad. Arreglado comparando el enfoque real de
+         TEdit (sin copiar codigo). Añadida ademas la funcion de clic para abrir el editor de cofre
+         desde un marcador del mapa, que nunca habia existido. Ver bitacora.md. -->
+    <Version>3.2.5</Version>
+    <FileVersion>3.2.5.0</FileVersion>
+    <AssemblyVersion>3.2.5.0</AssemblyVersion>
   </PropertyGroup>
 
   <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de
