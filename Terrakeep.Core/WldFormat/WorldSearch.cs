@@ -21,7 +21,23 @@ namespace Terrakeep.Core.WldFormat;
 // proximidad (opcion 2 del mismo documento) se descarta a proposito: fusionaria tambien
 // coincidencias REALES y distintas de un mismo tipo de bloque comun - preferible mostrar de
 // mas y ser exacto que fusionar con un umbral inventado.
-public readonly record struct WorldSearchHit(int X, int Y, string Name, WorldSearchKind Kind);
+// SubX/SubY (19-sep-2026, tercer reporte real de marcador desplazado): la parte FRACCIONARIA de
+// tile que hay que sumar a X/Y para obtener el centro geometrico real de lo que representa el
+// resultado. X/Y siguen siendo enteros y siguen significando exactamente lo de siempre (son la
+// coordenada con la que se navega y con la que se busca el cofre/letrero real en el .wld - no se
+// toca ni un consumidor), pero un entero NO puede expresar el centro de todos los casos:
+//   - algo de 1x1 en (x,y) ocupa [x, x+1) -> su centro es x + 0.5   (SubX = 0.5, el valor por
+//     defecto, que es el caso mayoritario: tiles, paredes, liquidos, NPCs, centroides de veta)
+//   - algo de 2x2 en la esquina (X,Y) ocupa [X, X+2) -> su centro es X + 1 EXACTO, que ya es
+//     entero y ya viene sumado en X/Y (cofres, letreros, marcos de objeto) -> SubX = 0
+//   - footprint IMPAR en un eje (el alto 3 del maniqui, el ancho 1 del frasco): el codigo ya
+//     guardaba footprint/2 con division ENTERA y el propio comentario de TileEntityCenterOffset
+//     reconocia que eso deja el marcador "a 0.5 tiles del centro geometrico, inevitable sin
+//     coordenadas fraccionarias". Esto es justo esa coordenada fraccionaria: ese medio tile deja
+//     de ser inevitable.
+// Un unico +0.5 global en la vista NO vale (se probo y se midio): arreglaria los 1x1 y romperia
+// por medio tile justo los cofres, que es la categoria que mas usa el usuario.
+public readonly record struct WorldSearchHit(int X, int Y, string Name, WorldSearchKind Kind, double SubX = 0.5, double SubY = 0.5);
 
 // OreVein va AL FINAL a proposito (el orden se refleja en KindLabel de la App - ver
 // ESPEC-ui-exploracion.md#14.2) - Fase 3/Minerales (advisor Opus): las vetas encontradas por
@@ -152,7 +168,7 @@ public static class WorldSearch
                 ct.ThrowIfCancellationRequested();
                 foreach (var item in chest.Items)
                     if (query.ChestItemIds.Contains(item.NetId))
-                        Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(chest.X + 1, chest.Y + 1, itemNames.GetName(item.NetId), WorldSearchKind.ChestItem));
+                        Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(chest.X + 1, chest.Y + 1, itemNames.GetName(item.NetId), WorldSearchKind.ChestItem, 0, 0));
             }
         }
 
@@ -175,10 +191,10 @@ public static class WorldSearch
             foreach (var entity in world.TileEntities)
             {
                 ct.ThrowIfCancellationRequested();
-                var (offsetX, offsetY) = TileEntityCenterOffset(entity.Kind);
+                var (offsetX, offsetY, subX, subY) = TileEntityCenterOffset(entity.Kind);
                 foreach (var item in entity.Items)
                     if (query.ChestItemIds.Contains(item.NetId))
-                        Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(entity.X + offsetX, entity.Y + offsetY, itemNames.GetName(item.NetId), WorldSearchKind.TileEntityItem));
+                        Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(entity.X + offsetX, entity.Y + offsetY, itemNames.GetName(item.NetId), WorldSearchKind.TileEntityItem, subX, subY));
             }
         }
 
@@ -200,7 +216,7 @@ public static class WorldSearch
                 // sign.X/Y ya es la esquina superior-izquierda (igual criterio que WldChest.X/Y):
                 // +1 en cada eje para centrar el marcador, mismo calculo exacto que los cofres.
                 if (query.SignTextPredicate(sign.Text))
-                    Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(sign.X + 1, sign.Y + 1, TruncateSignText(sign.Text), WorldSearchKind.Sign));
+                    Add(ref total, hits, query.DisplayLimit, new WorldSearchHit(sign.X + 1, sign.Y + 1, TruncateSignText(sign.Text), WorldSearchKind.Sign, 0, 0));
             }
         }
 
@@ -270,14 +286,21 @@ public static class WorldSearch
     // (no de footprint): WldReader.ReadTileEntities NUNCA les rellena Items (dummy solo guarda su
     // Npc, sensor solo guarda LogicCheck/On, pylon "sin datos propios") - jamas pueden casar por
     // ChestItemIds ni producir un WorldSearchHit aqui, el offset es indiferente en la practica.
-    private static (int X, int Y) TileEntityCenterOffset(WldTileEntityKind kind) => kind switch
+    // SubX/SubY = el medio tile que la division ENTERA de arriba tenia que tirar a la basura, por
+    // eje y por Kind (19-sep-2026 - ver el comentario de WorldSearchHit): 0 cuando el footprint de
+    // ese eje es PAR (footprint/2 ya es el centro exacto) y 0.5 cuando es IMPAR (footprint/2
+    // entero cae en la casilla del medio, cuyo centro esta medio tile mas alla).
+    //   ItemFrame 2x2 -> par/par              DisplayDoll 2x3 -> par/IMPAR (alto 3)
+    //   HatRack 2x4 -> par/par                WeaponRack 2x2 -> par/par
+    //   DeadCellsDisplayJar 1x2 -> IMPAR/par  resto: se tratan como 1x1 -> impar/impar
+    private static (int X, int Y, double SubX, double SubY) TileEntityCenterOffset(WldTileEntityKind kind) => kind switch
     {
-        WldTileEntityKind.ItemFrame => (1, 1),
-        WldTileEntityKind.DisplayDoll => (1, 1),
-        WldTileEntityKind.HatRack => (1, 2),
-        WldTileEntityKind.WeaponRack => (1, 1),
-        WldTileEntityKind.DeadCellsDisplayJar => (0, 1),
-        _ => (0, 0),
+        WldTileEntityKind.ItemFrame => (1, 1, 0, 0),
+        WldTileEntityKind.DisplayDoll => (1, 1, 0, 0.5),
+        WldTileEntityKind.HatRack => (1, 2, 0, 0),
+        WldTileEntityKind.WeaponRack => (1, 1, 0, 0),
+        WldTileEntityKind.DeadCellsDisplayJar => (0, 1, 0.5, 0),
+        _ => (0, 0, 0.5, 0.5),
     };
 
     private static void Add(ref int total, List<WorldSearchHit> hits, int limit, WorldSearchHit hit)

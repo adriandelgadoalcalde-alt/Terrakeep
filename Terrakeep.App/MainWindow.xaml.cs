@@ -694,6 +694,10 @@ public partial class MainWindow : Window
     // RenderTransform).
     private Point? _mapDragStart;
     private double _mapDragStartH, _mapDragStartV;
+    // Se pone a true en cuanto el raton se mueve mas que MapClickSlopPx con el boton pulsado:
+    // distingue "el usuario ha hecho clic" de "el usuario ha arrastrado el mapa" (ver
+    // OnWorldMapMouseUp).
+    private bool _mapDragMoved;
 
     // Bug real reportado por el usuario (18-sep-2026, ver bitacora.md "el clic sobre el cofre
     // real no hace nada"): este handler llamaba a WorldMapScroll.CaptureMouse() de forma
@@ -717,8 +721,14 @@ public partial class MainWindow : Window
         _mapDragStart = e.GetPosition(WorldMapScroll);
         _mapDragStartH = WorldMapScroll.HorizontalOffset;
         _mapDragStartV = WorldMapScroll.VerticalOffset;
+        _mapDragMoved = false;
         WorldMapScroll.CaptureMouse();
     }
+
+    // Umbral en pixeles de pantalla por debajo del cual un down+up cuenta como CLIC y no como
+    // arrastre. No es cero a proposito: un clic humano real casi nunca deja el cursor exactamente
+    // en el mismo pixel entre el down y el up, y sin margen el clic se perderia casi siempre.
+    private const double MapClickSlopPx = 4.0;
 
     // Sube el arbol visual/logico desde el elemento real que origino el evento (e.OriginalSource
     // de un evento tunneling SIEMPRE es el elemento mas interno, independientemente de que
@@ -749,8 +759,20 @@ public partial class MainWindow : Window
 
     private void OnWorldMapMouseUp(object sender, MouseButtonEventArgs e)
     {
+        bool fueClic = _mapDragStart is not null && !_mapDragMoved;
         _mapDragStart = null;
+        _mapDragMoved = false;
         WorldMapScroll.ReleaseMouseCapture();
+
+        // Tercer reporte real del usuario (19-sep-2026): "por mucho que clique un cofre por el
+        // mapa no me abre ni su contenido ni lo que es para editar". Era cierto y no existia -
+        // ver TryOpenChestAtTile en ExplorationViewModel. Va en el UP y solo si NO hubo arrastre,
+        // para no robarle nada al pan de siempre (que es lo que hace este mismo raton cuando el
+        // usuario mueve). GetPosition(WorldMapImage) ya devuelve pixel nativo de la imagen = tile
+        // real, exactamente igual que el tooltip de hover de OnWorldMapMouseMove.
+        if (!fueClic) return;
+        var pos = e.GetPosition(WorldMapImage);
+        _viewModel.Exploration.TryOpenChestAtTile((int)pos.X, (int)pos.Y);
     }
 
     // GetPosition(WorldMapImage) ya devuelve la posicion en el espacio de pixel NATIVO de la
@@ -766,6 +788,10 @@ public partial class MainWindow : Window
         if (_mapDragStart is { } start && e.LeftButton == MouseButtonState.Pressed)
         {
             var current = e.GetPosition(WorldMapScroll);
+            if (Math.Abs(current.X - start.X) > MapClickSlopPx || Math.Abs(current.Y - start.Y) > MapClickSlopPx)
+            {
+                _mapDragMoved = true;
+            }
             WorldMapScroll.ScrollToHorizontalOffset(_mapDragStartH - (current.X - start.X));
             WorldMapScroll.ScrollToVerticalOffset(_mapDragStartV - (current.Y - start.Y));
             MapTooltipBorder.SetCurrentValue(UIElement.VisibilityProperty, Visibility.Collapsed); // no molesta mientras se arrastra

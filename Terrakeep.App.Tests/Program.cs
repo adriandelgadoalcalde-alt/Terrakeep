@@ -385,6 +385,19 @@ internal static partial class Program
 
         var vm = (MainViewModel)window.DataContext;
 
+        // AR-MRK (19-sep-2026): medicion real de la geometria de los marcadores del mapa. Vive en
+        // PruebasMarcadoresMapa.cs y se puede correr SOLA con TERRAKEEP_SOLO_MRK=1 (el arnes
+        // completo son minutos por las decenas de RenderTargetBitmap, y este bloque hace falta
+        // repetirlo antes/despues de cada intento de arreglo). Sin la variable corre igual, como
+        // una prueba mas de la tirada completa.
+        if (Environment.GetEnvironmentVariable("TERRAKEEP_SOLO_MRK") == "1")
+        {
+            PruebasMarcadoresMapa(window, vm);
+            window.Close();
+            DoEvents();
+            return;
+        }
+
         // KEEPQA_SMOKE=1 (14-sep-2026, Fase 3 de KeepQA V2.0 - ver KeepQA\v2\PROPUESTA-UNIFICADA.md):
         // subconjunto MINIMO y aislado del arnes, pensado para terminar en <60s. El arnes completo
         // (KEEPQA_SOLO y el resto de modos de foco) tarda MINUTOS por las decenas de
@@ -5770,6 +5783,13 @@ internal static partial class Program
                     }
                 }
                 catch (Exception ex) { Console.WriteLine("AR-13e-EXCEPTION: " + ex); }
+
+                // AR-MRK (19-sep-2026): geometria real de TODOS los marcadores del mapa a 7 zooms
+                // + el clic sobre el tile de un cofre. Corre tambien en la tirada completa, no solo
+                // con TERRAKEEP_SOLO_MRK=1 (ese modo es solo para iterar rapido). Va justo aqui,
+                // pegado a AR-13d/AR-13e, porque comparte mundo real (Blando_Río.wld) y lo deja
+                // restaurado igual que ellos.
+                PruebasMarcadoresMapa(window, vm);
 
                 // AR-13c: los NOMBRES reales de las filas de cofre, sobre un mundo que SI tiene
                 // cofres de mod (roca_negra no tiene ninguno: los 505 estan sobre tiles vanilla).

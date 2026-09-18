@@ -228,6 +228,38 @@ public sealed class ResourceKeyToBrushConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+// Bug real reportado por el usuario con captura (19-sep-2026, tercer reporte de "el marcador no
+// cae donde deberia"): todos los marcadores del mapa de Exploracion anclaban en la ESQUINA
+// superior izquierda de su tile (Canvas.Left="{Binding TileX}" a secas), no en el centro de la
+// celda. Media casilla de desfase constante, pequeño pero real y muy visible con zoom alto, que
+// se sumaba al bug grande del pivote (ver el comentario de MainWindow.xaml en el marcador de
+// resultado de busqueda).
+//
+// El criterio correcto se comprobo contra el codigo REAL de TEdit (github.com/TEdit/
+// Terraria-Map-Editor, MIT), `src/TEdit/View/WorldRenderXna.xaml.cs`, metodo DrawFindCrosshair:
+// convierte tile -> pantalla con `(scroll + tile + 0.5f) * zoom` y solo DESPUES resta media
+// anchura del marcador, ya en pixeles de pantalla. El `+ 0.5` es exactamente esto: el centro de
+// la celda del tile, no su esquina. No es codigo portado (TEdit dibuja con SpriteBatch/XNA y
+// Terrakeep posiciona elementos WPF en un Canvas), solo el mismo criterio de anclaje.
+//
+// Instancia estatica + x:Static por el mismo motivo real ya documentado en InverseValueConverter
+// aqui abajo: estas plantillas viven en ItemsControl virtualizados y un StaticResource como
+// Converter revienta en caliente.
+public sealed class TileCenterConverter : IValueConverter
+{
+    public static readonly TileCenterConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) => value switch
+    {
+        int i => i + 0.5,
+        double d => d + 0.5,
+        _ => 0.0
+    };
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 public sealed class InverseValueConverter : IValueConverter
 {
     // Bug real encontrado al verificar (no en teoria): un StaticResource usado como

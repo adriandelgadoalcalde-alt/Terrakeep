@@ -4877,8 +4877,9 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemContainerStyle>
                                                 <Style TargetType="ContentPresenter">
-                                                    <Setter Property="Canvas.Left" Value="{Binding TileX}" />
-                                                    <Setter Property="Canvas.Top" Value="{Binding TileY}" />
+                                                    <!-- +0.5 = centro real de la celda (criterio de TEdit, ver TileCenterConverter). -->
+                                                    <Setter Property="Canvas.Left" Value="{Binding TileX, Converter={x:Static conv:TileCenterConverter.Instance}}" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding TileY, Converter={x:Static conv:TileCenterConverter.Instance}}" />
                                                     <!-- X-c (segunda auditoria de Opus, Fable): "el buscador de NPCs
                                                          oculta marcadores del mapa" - Npcs ya no se filtra (arriba,
                                                          siempre completo), esto RESALTA los que coinciden en vez de
@@ -4912,16 +4913,40 @@
                                                     <!-- F-2 (auditoria de Opus vs TEdit, E-03/P-3): mismo tratamiento de
                                                          tamaño constante que el marcador de resultado - ver el
                                                          comentario completo mas abajo, en WorldSearchHitRowViewModel. -->
-                                                    <Grid ToolTip="{Binding Name}" Cursor="Hand" RenderTransformOrigin="0.5,0.5">
+                                                    <!-- RenderTransformOrigin 0,0 (19-sep-2026): MISMO bug de pivote,
+                                                         misma causa y mismo arreglo que el marcador de resultado de
+                                                         busqueda - el comentario largo esta alli. Aqui el Grid mide
+                                                         8x8 (la cabeza de 16px con Margin -8), asi que el desfase era
+                                                         de hasta 4 tiles hacia un lado u otro segun el zoom. -->
+                                                    <!-- Contenedor de 0x0 con los hijos centrados (19-sep-2026): un panel
+                                                         sin tamaño propio deja su punto (0,0) EXACTAMENTE sobre el tile,
+                                                         y un hijo con HorizontalAlignment/VerticalAlignment="Center"
+                                                         queda centrado en el sea cual sea su tamaño REAL. Es lo que
+                                                         antes intentaba hacer un Margin negativo a mano (-8,-8 para una
+                                                         cabeza "de 16x16"), y fallaba: estas cabezas son Stretch="Uniform"
+                                                         con Width=16, asi que su ALTO real depende de la proporcion del
+                                                         sprite (medido: 10,67px, no 16) - la cabeza salia 2,67px por
+                                                         encima de su NPC a cualquier zoom. Centrando por alineacion no
+                                                         hay ningun numero que pueda quedarse desincronizado del sprite. -->
+                                                    <Grid ToolTip="{Binding Name}" Cursor="Hand" RenderTransformOrigin="0,0" Width="0" Height="0">
                                                         <Grid.RenderTransform>
                                                             <ScaleTransform ScaleX="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                             ScaleY="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}" />
                                                         </Grid.RenderTransform>
-                                                        <Image Source="{Binding HeadIconPath}" Width="16" Stretch="Uniform"
+                                                        <!-- Height="16" EXPLICITO, no solo Width (19-sep-2026): dentro de
+                                                             un contenedor de 0x0 el hijo se mide con una restriccion de
+                                                             0, y un Stretch="Uniform" sin alto propio deducia alto 0 -
+                                                             la cabeza desaparecia del mapa (regresion real detectada por
+                                                             AR-MRK-OTROS en esta misma sesion, no en teoria). Con caja
+                                                             cuadrada de 16x16 el sprite sigue SIN deformarse (Uniform lo
+                                                             encaja dentro y lo centra) y ademas queda centrado de verdad
+                                                             sobre su NPC, que era el bug que se venia a arreglar. -->
+                                                        <Image Source="{Binding HeadIconPath}" Width="16" Height="16" Stretch="Uniform"
                                                                RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                                               Margin="-8,-8,0,0"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                Visibility="{Binding HeadIconPath, Converter={StaticResource NullToVis}}" />
-                                                        <Ellipse Width="11" Height="11" Margin="-5.5,-5.5,0,0"
+                                                        <Ellipse Width="11" Height="11"
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                  Fill="Magenta" Stroke="White" StrokeThickness="1.5"
                                                                  Visibility="{Binding HeadIconPath, Converter={StaticResource NullToCollapsed}}" />
                                                     </Grid>
@@ -4940,8 +4965,9 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemContainerStyle>
                                                 <Style TargetType="ContentPresenter">
-                                                    <Setter Property="Canvas.Left" Value="{Binding TileX}" />
-                                                    <Setter Property="Canvas.Top" Value="{Binding TileY}" />
+                                                    <!-- +0.5 = centro real de la celda (criterio de TEdit, ver TileCenterConverter). -->
+                                                    <Setter Property="Canvas.Left" Value="{Binding TileX, Converter={x:Static conv:TileCenterConverter.Instance}}" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding TileY, Converter={x:Static conv:TileCenterConverter.Instance}}" />
                                                     <Setter Property="Panel.ZIndex" Value="2" />
                                                 </Style>
                                             </ItemsControl.ItemContainerStyle>
@@ -4950,17 +4976,24 @@
                                                     <!-- F-2 (auditoria de Opus vs TEdit, E-03/P-3): mismo tratamiento de
                                                          tamaño constante que el marcador de resultado (ver comentario
                                                          completo mas abajo, WorldSearchHitRowViewModel). -->
-                                                    <TextBlock Text="&#9733;" FontSize="18" Foreground="{StaticResource AccentBrush}"
-                                                               Margin="-9,-18,0,0" ToolTip="{Binding Label}" Cursor="Hand"
-                                                               RenderTransformOrigin="0.5,0.5">
-                                                        <TextBlock.RenderTransform>
+                                                    <!-- Mismo contenedor de 0x0 que la cabeza de NPC (19-sep-2026): el
+                                                         Margin="-9,-18" daba por hecho una caja de glifo de 18x18 que
+                                                         no existe (medida real de estos glifos a FontSize 18: ~10,9 x
+                                                         23,9 px), asi que la estrella caia varios tiles fuera de su
+                                                         spawn. Alineacion Bottom a proposito, no Center: este marcador
+                                                         señala con la PUNTA de abajo, como los pies del personaje. -->
+                                                    <Grid Width="0" Height="0" RenderTransformOrigin="0,0" ToolTip="{Binding Label}" Cursor="Hand">
+                                                        <Grid.RenderTransform>
                                                             <ScaleTransform ScaleX="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                             ScaleY="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}" />
-                                                        </TextBlock.RenderTransform>
-                                                        <TextBlock.Effect>
-                                                            <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
-                                                        </TextBlock.Effect>
-                                                    </TextBlock>
+                                                        </Grid.RenderTransform>
+                                                        <TextBlock Text="&#9733;" FontSize="18" Foreground="{StaticResource AccentBrush}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                                                            <TextBlock.Effect>
+                                                                <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
+                                                            </TextBlock.Effect>
+                                                        </TextBlock>
+                                                    </Grid>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -4982,33 +5015,45 @@
                                              Envueltos en su propio Canvas (mismo patron que los tres
                                              ItemsControl vecinos, cuyo ItemsPanel ya es un Canvas
                                              real), Canvas.Left/Top empiezan a posicionar de verdad. -->
+                                        <!-- 19-sep-2026: los dos pasan al mismo contenedor de 0x0 con el hijo
+                                             centrado por alineacion que ya usan la cabeza de NPC y la estrella
+                                             de spawn - el Margin="-9,-9" anterior daba por hecho un glifo de
+                                             18x18 que no es real (medido: ~10,9 x 23,9 px a FontSize 18), y los
+                                             dejaba 3,6 tiles a la izquierda y 3,0 tiles por debajo de su punto.
+                                             Ver el comentario largo del marcador de resultado de busqueda. -->
                                         <Canvas IsHitTestVisible="True">
-                                            <TextBlock Text="&#8962;" FontSize="18" Foreground="{StaticResource OrangeBrush}"
-                                                       Canvas.Left="{Binding Exploration.WorldSpawnX}" Canvas.Top="{Binding Exploration.WorldSpawnY}"
-                                                       Margin="-9,-9,0,0" ToolTip="{Binding Loc[explore_world_spawn], Mode=OneWay}" Cursor="Hand"
-                                                       Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
-                                                       Panel.ZIndex="2" RenderTransformOrigin="0.5,0.5">
-                                                <TextBlock.RenderTransform>
+                                            <Grid Width="0" Height="0" RenderTransformOrigin="0,0"
+                                                  Canvas.Left="{Binding Exploration.WorldSpawnX, Converter={x:Static conv:TileCenterConverter.Instance}}" Canvas.Top="{Binding Exploration.WorldSpawnY, Converter={x:Static conv:TileCenterConverter.Instance}}"
+                                                  ToolTip="{Binding Loc[explore_world_spawn], Mode=OneWay}" Cursor="Hand"
+                                                  Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
+                                                  Panel.ZIndex="2">
+                                                <Grid.RenderTransform>
                                                     <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                     ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
-                                                </TextBlock.RenderTransform>
-                                                <TextBlock.Effect>
-                                                    <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
-                                                </TextBlock.Effect>
-                                            </TextBlock>
-                                            <TextBlock Text="&#9671;" FontSize="18" Foreground="{StaticResource CalamityBrush}"
-                                                       Canvas.Left="{Binding Exploration.WorldDungeonX}" Canvas.Top="{Binding Exploration.WorldDungeonY}"
-                                                       Margin="-9,-9,0,0" ToolTip="{Binding Loc[explore_dungeon], Mode=OneWay}" Cursor="Hand"
-                                                       Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
-                                                       Panel.ZIndex="2" RenderTransformOrigin="0.5,0.5">
-                                                <TextBlock.RenderTransform>
+                                                </Grid.RenderTransform>
+                                                <TextBlock Text="&#8962;" FontSize="18" Foreground="{StaticResource OrangeBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock.Effect>
+                                                        <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
+                                                    </TextBlock.Effect>
+                                                </TextBlock>
+                                            </Grid>
+                                            <Grid Width="0" Height="0" RenderTransformOrigin="0,0"
+                                                  Canvas.Left="{Binding Exploration.WorldDungeonX, Converter={x:Static conv:TileCenterConverter.Instance}}" Canvas.Top="{Binding Exploration.WorldDungeonY, Converter={x:Static conv:TileCenterConverter.Instance}}"
+                                                  ToolTip="{Binding Loc[explore_dungeon], Mode=OneWay}" Cursor="Hand"
+                                                  Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
+                                                  Panel.ZIndex="2">
+                                                <Grid.RenderTransform>
                                                     <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                     ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
-                                                </TextBlock.RenderTransform>
-                                                <TextBlock.Effect>
-                                                    <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
-                                                </TextBlock.Effect>
-                                            </TextBlock>
+                                                </Grid.RenderTransform>
+                                                <TextBlock Text="&#9671;" FontSize="18" Foreground="{StaticResource CalamityBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock.Effect>
+                                                        <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
+                                                    </TextBlock.Effect>
+                                                </TextBlock>
+                                            </Grid>
                                         </Canvas>
                                         <!-- Bug real reportado por el usuario (6-sep-2026, captura): en
                                              "Cofre a cofre", con la casilla de acercar marcada, al
@@ -5057,8 +5102,14 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemContainerStyle>
                                                 <Style TargetType="ContentPresenter">
-                                                    <Setter Property="Canvas.Left" Value="{Binding TileX}" />
-                                                    <Setter Property="Canvas.Top" Value="{Binding TileY}" />
+                                                    <!-- MarkerX/MarkerY, no TileX/TileY (19-sep-2026): coordenada de tile
+                                                         FRACCIONARIA con el centro geometrico real de cada resultado.
+                                                         Un "+0.5" global aqui seria incorrecto - la mitad de los Kind
+                                                         (cofre, letrero, marco) ya traen su centro exacto en TileX/Y -
+                                                         y por eso la parte fraccionaria la decide quien SI conoce el
+                                                         footprint real: WorldSearchHit.SubX/SubY. -->
+                                                    <Setter Property="Canvas.Left" Value="{Binding MarkerX}" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding MarkerY}" />
                                                     <Setter Property="Panel.ZIndex" Value="3" />
                                                 </Style>
                                             </ItemsControl.ItemContainerStyle>
@@ -5098,7 +5149,31 @@
                                                             <ScaleTransform ScaleX="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                             ScaleY="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}" />
                                                         </Grid.RenderTransform>
-                                                        <Grid.RenderTransformOrigin>0.5,0.5</Grid.RenderTransformOrigin>
+                                                        <!-- Bug real reportado por el usuario con captura (19-sep-2026, el
+                                                             tercer reporte de marcador desplazado; medido en AR-MRK):
+                                                             esto era 0.5,0.5 y era LA causa raiz del desfase, compartida
+                                                             por TODAS las categorias de resultado (cofre, mineral,
+                                                             objeto, letrero...) porque todas salen de ESTA plantilla.
+                                                             El punto de tile es la esquina (0,0) de este Grid - lo fija
+                                                             Canvas.Left/Top del ContentPresenter de arriba - NO su
+                                                             centro: el Grid mide lo que le dejan sus hijos de margen
+                                                             negativo (Marco 10x10 con Margin -5 da un DesiredSize de
+                                                             5x5; 24x24 con Margin -12, o sea el resultado ACTIVO, da
+                                                             12x12). Escalar por 1/Zoom con el pivote en ese centro
+                                                             desplazaba el marcador `mitadDelGrid * (1 - 1/Zoom)` tiles:
+                                                             exactamente 0 a Zoom=1 (por eso la medicion del 18-sep, que
+                                                             solo probo Zoom 1.0 y 0.09 sobre OTRO marcador, lo dio por
+                                                             bueno) y hasta -61 tiles a Zoom 0.09 o +4.5 tiles a Zoom 6
+                                                             en el marcador grande - "varios tiles", justo lo que el
+                                                             usuario veia y rodeo en su captura.
+                                                             Con el pivote en 0,0 la escala gira alrededor del punto de
+                                                             tile REAL, asi que el ancla no se mueve a ningun zoom, y
+                                                             sigue siendo inmune al DesiredSize del Grid (que cambia solo
+                                                             con que el resultado pase a ser el activo). Mismo efecto que
+                                                             consigue TEdit por otro camino: calcula el centro en
+                                                             PIXELES de pantalla y solo entonces resta medio marcador,
+                                                             asi que su ancla tampoco depende del zoom. -->
+                                                        <Grid.RenderTransformOrigin>0,0</Grid.RenderTransformOrigin>
                                                         <!-- Anillo de pulso: invisible en reposo (Opacity=0), un solo ciclo
                                                              de Storyboard al llegar a ser el resultado activo. -->
                                                         <Rectangle x:Name="PulseRing" Width="10" Height="10" Margin="-5,-5,0,0"

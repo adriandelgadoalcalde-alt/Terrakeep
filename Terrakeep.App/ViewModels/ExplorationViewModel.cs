@@ -32,6 +32,12 @@ public sealed partial class WorldSearchHitRowViewModel(WorldSearchHit hit) : Obs
 
     public int TileX { get; } = hit.X;
     public int TileY { get; } = hit.Y;
+    // Posicion del MARCADOR en el mapa, en coordenadas de tile FRACCIONARIAS: el centro
+    // geometrico real de lo que representa el resultado (ver el comentario de WorldSearchHit
+    // para el porque de cada caso). TileX/TileY siguen siendo lo de siempre para navegar y para
+    // buscar el cofre/letrero real en el .wld - esto es SOLO donde se pinta.
+    public double MarkerX { get; } = hit.X + hit.SubX;
+    public double MarkerY { get; } = hit.Y + hit.SubY;
     public string Name { get; } = hit.Name;
     public string Position { get; } = $"({hit.X}, {hit.Y})";
     // Editor de letreros v1 (T1 del documento I+D real, 15-sep-2026): antes solo se usaba para
@@ -1704,6 +1710,45 @@ public partial class ExplorationViewModel : ObservableObject
     // mecanismo saltando a esa lista con el cofre correcto ya abierto, en vez de inventar un
     // editor nuevo colgado del mapa.
     // ---------------------------------------------------------------------------------------
+    // Tercer reporte real del usuario (19-sep-2026): "lo de editar cofre no lo veo por ningun
+    // lado y por mucho que clique un cofre por el mapa no me abre ni su contenido ni lo que es
+    // para editar". Comprobado leyendo el codigo: tenia toda la razon y NO era el bug de captura
+    // de raton ya arreglado en 3.2.3 - simplemente no existia. Hasta ahora lo UNICO clicable del
+    // mapa eran los MARCADORES (un resultado de busqueda o el cofre actual); un clic sobre el
+    // cofre que se ve dibujado en el propio mapa no hacia nada porque no habia ningun camino de
+    // codigo que lo escuchara. Con los marcadores ademas desplazados varios tiles (el bug de
+    // pivote arreglado hoy), el usuario no tenia practicamente forma de acertar en ninguno.
+    //
+    // Esto lo abre: dado un tile cualquiera del mapa, busca si hay un cofre real cuyo footprint
+    // 2x2 lo cubra y, si lo hay, abre su editor por el MISMO camino ya establecido
+    // (GoToChest + EditChest, igual que la fila de la lista y que el marcador) - ningun editor
+    // nuevo ni ningun mecanismo paralelo. Devuelve si encontro cofre, para que quien llama sepa
+    // si el clic se ha consumido.
+    public bool TryOpenChestAtTile(int tileX, int tileY)
+    {
+        if (_world == null) return false;
+
+        // Footprint real de un cofre: 2x2 desde su esquina superior-izquierda (WldChest.X/Y tal
+        // cual lo guarda el .wld) - el mismo criterio ya verificado en el arreglo de 17-sep.
+        int index = -1;
+        for (int i = 0; i < _world.Chests.Count; i++)
+        {
+            var c = _world.Chests[i];
+            if (tileX >= c.X && tileX <= c.X + 1 && tileY >= c.Y && tileY <= c.Y + 1) { index = i; break; }
+        }
+        if (index < 0) return false;
+
+        SelectedCategory = WorldSearchCategory.Chests;
+        ChestViewMode = 2;
+        RebuildChestInventory();
+        var row = ChestRows.FirstOrDefault(r => r.ChestIndex == index);
+        if (row == null) return false;
+
+        GoToChest(row);
+        EditChest(row);
+        return true;
+    }
+
     private void OpenChestEditorIfApplicable(WorldSearchHitRowViewModel hit)
     {
         if (hit.Kind != WorldSearchKind.ChestItem || _world == null) return;
