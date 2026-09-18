@@ -7,6 +7,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Media3D;
 using Microsoft.Win32;
 using Terrakeep.App.ViewModels;
 using Terrakeep.Core.Model;
@@ -694,12 +695,56 @@ public partial class MainWindow : Window
     private Point? _mapDragStart;
     private double _mapDragStartH, _mapDragStartV;
 
+    // Bug real reportado por el usuario (18-sep-2026, ver bitacora.md "el clic sobre el cofre
+    // real no hace nada"): este handler llamaba a WorldMapScroll.CaptureMouse() de forma
+    // INCONDICIONAL en cualquier boton izquierdo pulsado dentro del mapa (para poder
+    // arrastrar/paneear). CaptureMode.Element (el modo por defecto de CaptureMouse()) hace que
+    // el MouseLeftButtonUp correspondiente NUNCA llegue al elemento real bajo el cursor - asi
+    // que ningun MouseBinding LeftClick de un marcador del mapa (CurrentChestMarker,
+    // WorldSearchResults...) podia completar su ciclo down+up, aunque el hit-test de WPF
+    // identificara correctamente el marcador como Mouse.DirectlyOver/OriginalSource. Arreglo:
+    // si el clic empieza sobre un elemento con su propio MouseBinding (un marcador clicable
+    // real), no capturamos el raton y dejamos que el propio marcador reciba su ciclo de clic
+    // normal - solo capturamos para arrastrar/paneear cuando el clic empieza sobre mapa vacio,
+    // que sigue siendo el comportamiento de siempre.
     private void OnWorldMapMouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (OriginatesFromClickableMarker(e.OriginalSource as DependencyObject, WorldMapScroll))
+        {
+            return;
+        }
+
         _mapDragStart = e.GetPosition(WorldMapScroll);
         _mapDragStartH = WorldMapScroll.HorizontalOffset;
         _mapDragStartV = WorldMapScroll.VerticalOffset;
         WorldMapScroll.CaptureMouse();
+    }
+
+    // Sube el arbol visual/logico desde el elemento real que origino el evento (e.OriginalSource
+    // de un evento tunneling SIEMPRE es el elemento mas interno, independientemente de que
+    // ancestro maneje el Preview) hasta encontrar un UIElement con InputBindings propios (un
+    // marcador clicable real, ver MouseBinding MouseAction="LeftClick" en MainWindow.xaml) o
+    // hasta llegar al limite (el propio WorldMapScroll, mapa vacio). InputBindings es una
+    // coleccion perezosa: leerla en un elemento que nunca la uso en XAML no tiene efecto
+    // secundario, simplemente devuelve Count=0.
+    private static bool OriginatesFromClickableMarker(DependencyObject? source, DependencyObject boundary)
+    {
+        while (source is not null && !ReferenceEquals(source, boundary))
+        {
+            if (source is UIElement { InputBindings.Count: > 0 })
+            {
+                return true;
+            }
+
+            source = source switch
+            {
+                Visual or Visual3D => VisualTreeHelper.GetParent(source),
+                ContentElement contentElement => LogicalTreeHelper.GetParent(contentElement),
+                _ => null
+            };
+        }
+
+        return false;
     }
 
     private void OnWorldMapMouseUp(object sender, MouseButtonEventArgs e)

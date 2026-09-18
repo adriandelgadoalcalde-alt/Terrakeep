@@ -5623,6 +5623,154 @@ internal static partial class Program
                 }
                 catch (Exception ex) { Console.WriteLine("AR-13d-EXCEPTION: " + ex); }
 
+                // AR-13e (18-sep-2026): Bug 2 real, DISTINTO del Bug 1 ya cubierto en AR-13d - ver
+                // bitacora.md "desfase grande de marcadores" (investigacion del 18-sep-2026).
+                // AR-13d invoca GoToWorldSearchHitCommand.Execute(...) DIRECTAMENTE, sin pasar
+                // nunca por un clic de raton real - un hueco real y ya confirmado del propio
+                // arnes (documentado en bitacora.md): OnWorldMapMouseDown capturaba el raton de
+                // forma INCONDICIONAL en CUALQUIER boton izquierdo pulsado dentro del mapa
+                // (WorldMapScroll.CaptureMouse(), CaptureMode.Element por defecto), asi que el
+                // MouseLeftButtonUp que necesita el MouseBinding LeftClick del propio marcador
+                // NUNCA le llegaba - el editor de cofre no se abria con un clic real, aunque
+                // Mouse.DirectlyOver/e.OriginalSource confirmaran que el clic aterrizaba sobre el
+                // marcador real y aunque Command.Execute() directo (como en AR-13d) si funcionara.
+                // Arreglo real: OnWorldMapMouseDown ahora comprueba primero, subiendo el arbol
+                // visual desde e.OriginalSource, si el clic empieza sobre un elemento con su
+                // propio MouseBinding (OriginatesFromClickableMarker) y, si es asi, no captura -
+                // deja que el propio marcador reciba su ciclo de clic normal; solo captura para
+                // arrastrar/paneear cuando el clic empieza sobre mapa vacio. Esta prueba simula el
+                // ciclo COMPLETO de raton real (down+up, con SetCursorPos/mouse_event a nivel de
+                // SO, mismo patron ya real de AR-EX2-PAN/AR-EX2-MINIMAPA-CLIC mas abajo) sobre
+                // CurrentChestMarker - lo que AR-13d NUNCA pudo detectar - y, a continuacion, que
+                // un clic+arrastre que empieza sobre mapa VACIO sigue paneando igual que siempre
+                // (el mismo fix no debe robarle la captura al arrastre real).
+                try
+                {
+                    string mundoCofresClic = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                    if (!File.Exists(mundoCofresClic))
+                        Console.WriteLine("AR-13e: no se encontro Blando_Río.wld (mundo real con los 358 cofres) - omitido");
+                    else
+                    {
+                        var cargaClic = vm.Exploration.LoadFromPathAsync(mundoCofresClic);
+                        while (!cargaClic.IsCompleted) { DoEvents(); Thread.Sleep(15); }
+                        DoEvents(); DoEvents();
+
+                        // Mismo cofre-7 real ya usado en AR-13d (X=5579,Y=1036, centro (5580,1037),
+                        // contiene NetId 167/188/2350/282/73). Se navega una vez con el Command
+                        // (no es lo que se quiere probar aqui) solo para dejar el marcador visible
+                        // en su posicion real y centrado en el viewport (NavigateToTile real);
+                        // el editor se cierra enseguida (AR-13d ya confirmo que el marcador SIGUE
+                        // puesto tras cerrar) para que el clic REAL de abajo sea el UNICO camino
+                        // que lo vuelva a abrir.
+                        var hitCofre7Clic = new WorldSearchHitRowViewModel(new WorldSearchHit(5580, 1037, "Barra de hierro", WorldSearchKind.ChestItem));
+                        vm.Exploration.GoToWorldSearchHitCommand.Execute(hitCofre7Clic);
+                        DoEvents(); DoEvents();
+                        vm.Exploration.CancelEditingChestCommand.Execute(null);
+                        DoEvents(); DoEvents();
+
+                        var marcadorClic = Descendientes<System.Windows.Shapes.Rectangle>(window).FirstOrDefault(r => r.Name == "CurrentChestMarker");
+                        var mapaScrollClic = Descendientes<ScrollViewer>(window).FirstOrDefault(sv => sv.Name == "WorldMapScroll");
+                        if (marcadorClic == null || mapaScrollClic == null || !vm.Exploration.HasCurrentChest)
+                            Console.WriteLine("FALLO: AR-13e - no se encontro el marcador/ScrollViewer del mapa o el marcador no quedo visible tras navegar");
+                        else
+                        {
+                            marcadorClic.UpdateLayout();
+                            var centroMarcadorVentana = marcadorClic.TransformToAncestor(window)
+                                .Transform(new Point(marcadorClic.ActualWidth / 2, marcadorClic.ActualHeight / 2));
+                            var centroMarcadorPantalla = window.PointToScreen(centroMarcadorVentana);
+
+                            ForzarPrimerPlano(hwnd);
+                            DoEvents();
+                            SetCursorPos((int)centroMarcadorPantalla.X, (int)centroMarcadorPantalla.Y);
+                            Thread.Sleep(60);
+                            System.Windows.Input.Mouse.Synchronize();
+                            DoEvents();
+
+                            // Clic real de SISTEMA OPERATIVO, down+up en el MISMO sitio (sin
+                            // arrastre) - el ciclo completo real que un MouseBinding LeftClick
+                            // necesita para reconocerse, exactamente lo que AR-13d nunca ejercita.
+                            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+                            Thread.Sleep(50); DoEvents(); DoEvents();
+                            bool capturaDuranteElClic = System.Windows.Input.Mouse.Captured != null;
+                            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+                            Thread.Sleep(60); DoEvents(); DoEvents(); DoEvents();
+
+                            var editandoTrasClicReal = vm.Exploration.EditingChest;
+                            var netIdsTrasClicReal = vm.Exploration.EditingChestSlots.Select(s => s.Item.Id).Where(id => id != 0).ToHashSet();
+                            bool contenidoTrasClicRealOk = new[] { 167, 188, 2350, 282 }.All(netIdsTrasClicReal.Contains) && !netIdsTrasClicReal.Contains(21) && !netIdsTrasClicReal.Contains(279);
+                            Console.WriteLine($"AR-13e: clic REAL de SO (down+up) sobre el marcador de cofre-7 en pantalla ({centroMarcadorPantalla.X:0},{centroMarcadorPantalla.Y:0}) -> capturo el raton durante el clic={capturaDuranteElClic} (esperado False), editor abierto=({editandoTrasClicReal?.TileX}, {editandoTrasClicReal?.TileY}) (esperado (5579, 1036)), contenido real OK={contenidoTrasClicRealOk}, Mouse.Captured tras soltar={System.Windows.Input.Mouse.Captured}");
+                            if (capturaDuranteElClic)
+                                Console.WriteLine("FALLO: AR-13e - OnWorldMapMouseDown sigue capturando el raton en un clic que empieza sobre el marcador (CaptureMode.Element se roba el MouseLeftButtonUp del propio MouseBinding)");
+                            if (editandoTrasClicReal == null || editandoTrasClicReal.TileX != 5579 || editandoTrasClicReal.TileY != 1036)
+                                Console.WriteLine("FALLO: AR-13e - un clic REAL de raton (down+up) sobre el marcador del cofre no abre su editor (regresion del bug real reportado por el usuario, 'el clic sobre el cofre real no hace nada')");
+                            else if (!contenidoTrasClicRealOk)
+                                Console.WriteLine($"FALLO: AR-13e - el editor abierto por el clic real no tiene el contenido REAL del cofre-7 (NetIds vistos: {string.Join(",", netIdsTrasClicReal)})");
+                            if (System.Windows.Input.Mouse.Captured != null)
+                                Console.WriteLine($"FALLO: AR-13e - la captura del raton se quedo colgada tras soltar sobre el marcador ({System.Windows.Input.Mouse.Captured})");
+
+                            // Companero directo: el mismo fix no debe romper el arrastre/paneo del
+                            // mapa cuando el clic SI empieza sobre mapa vacio (comportamiento de
+                            // siempre) - down en un punto vacio, mover, up, y comprobar que la
+                            // vista se desplazo lo mismo que se movio el cursor de verdad (mismo
+                            // criterio real que AR-EX2-PAN, repetido aqui para dejar esta prueba
+                            // autocontenida junto al fix que verifica).
+                            vm.Exploration.CancelEditingChestCommand.Execute(null);
+                            DoEvents();
+                            vm.Exploration.Zoom = 1.0;
+                            mapaScrollClic.UpdateLayout();
+                            mapaScrollClic.ScrollToHorizontalOffset(1500);
+                            mapaScrollClic.ScrollToVerticalOffset(700);
+                            DoEvents(); mapaScrollClic.UpdateLayout(); DoEvents();
+                            double hAntesPanClic = mapaScrollClic.HorizontalOffset, vAntesPanClic = mapaScrollClic.VerticalOffset;
+                            // Esquina superior izquierda del viewport, bien lejos de cualquier
+                            // marcador real - mapa "vacio" de proposito.
+                            var puntoVacioVentana = new Point(20, 20);
+                            var puntoVacioPantalla = mapaScrollClic.PointToScreen(puntoVacioVentana);
+                            SetCursorPos((int)puntoVacioPantalla.X, (int)puntoVacioPantalla.Y);
+                            Thread.Sleep(50);
+                            System.Windows.Input.Mouse.Synchronize();
+                            DoEvents();
+                            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+                            Thread.Sleep(50); DoEvents(); DoEvents();
+                            bool capturoEnMapaVacio = System.Windows.Input.Mouse.Captured != null;
+                            var posAntesPanClic = System.Windows.Input.Mouse.GetPosition(mapaScrollClic);
+                            SetCursorPos((int)puntoVacioPantalla.X + 90, (int)puntoVacioPantalla.Y + 50);
+                            Thread.Sleep(90);
+                            System.Windows.Input.Mouse.Synchronize();
+                            DoEvents(); DoEvents(); DoEvents();
+                            var posDespuesPanClic = System.Windows.Input.Mouse.GetPosition(mapaScrollClic);
+                            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
+                            Thread.Sleep(50); DoEvents(); DoEvents();
+                            double dhPanClic = mapaScrollClic.HorizontalOffset - hAntesPanClic, dvPanClic = mapaScrollClic.VerticalOffset - vAntesPanClic;
+                            double movXPanClic = posDespuesPanClic.X - posAntesPanClic.X, movYPanClic = posDespuesPanClic.Y - posAntesPanClic.Y;
+                            Console.WriteLine($"AR-13e-PAN: sigue capturando en mapa vacio={capturoEnMapaVacio} (esperado True), cursor se movio de verdad ({movXPanClic:0},{movYPanClic:0})px -> el mapa se desplazo ({dhPanClic:0},{dvPanClic:0})px (esperado ({-movXPanClic:0},{-movYPanClic:0}))");
+                            if (!capturoEnMapaVacio)
+                                Console.WriteLine("FALLO: AR-13e-PAN - el fix de OnWorldMapMouseDown dejo de capturar tambien en mapa vacio (rompe el arrastre/paneo de siempre)");
+                            if (Math.Abs(movXPanClic) < 5 && Math.Abs(movYPanClic) < 5)
+                                Console.WriteLine("AR-13e-PAN: el cursor real no llego a moverse (raton compartido con otra ventana de esta misma maquina) - medicion omitida, no es un fallo de la app");
+                            else if (Math.Abs(dhPanClic + movXPanClic) > 4 || Math.Abs(dvPanClic + movYPanClic) > 4)
+                                Console.WriteLine($"FALLO: AR-13e-PAN - el arrastre sobre mapa vacio dejo de desplazar el mapa lo mismo que se movio el cursor: cursor ({movXPanClic:0},{movYPanClic:0}) -> mapa ({dhPanClic:0},{dvPanClic:0})");
+                            if (System.Windows.Input.Mouse.Captured != null)
+                                Console.WriteLine($"FALLO: AR-13e-PAN - la captura del raton se quedo colgada tras soltar en mapa vacio ({System.Windows.Input.Mouse.Captured})");
+                        }
+
+                        vm.Exploration.CancelEditingChestCommand.Execute(null);
+                        vm.Exploration.ClearOreMarksCommand.Execute(null);
+                        vm.Exploration.ChestViewMode = 0;
+                        vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                        DoEvents();
+                    }
+
+                    string mundoDeSiempreAR13e = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                    if (File.Exists(mundoDeSiempreAR13e))
+                    {
+                        var vuelta = vm.Exploration.LoadFromPathAsync(mundoDeSiempreAR13e);
+                        while (!vuelta.IsCompleted) { DoEvents(); Thread.Sleep(15); }
+                        DoEvents();
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine("AR-13e-EXCEPTION: " + ex); }
+
                 // AR-13c: los NOMBRES reales de las filas de cofre, sobre un mundo que SI tiene
                 // cofres de mod (roca_negra no tiene ninguno: los 505 estan sobre tiles vanilla).
                 //   - "Tile #-1" con 51 apariciones: -1 no es un id de tile, es "casilla vacia"
