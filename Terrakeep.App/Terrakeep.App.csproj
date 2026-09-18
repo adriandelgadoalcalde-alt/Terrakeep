@@ -77,9 +77,12 @@
          changelog.json y bitacora.md. Version/FileVersion/AssemblyVersion sincronizados a mano
          los TRES a la vez en el mismo cambio, para no repetir el error humano documentado arriba
          (3.2.1 solo actualizo Version y se quedo el bucle infinito de "hay actualizacion"). -->
-    <Version>3.2.3</Version>
-    <FileVersion>3.2.3.0</FileVersion>
-    <AssemblyVersion>3.2.3.0</AssemblyVersion>
+    <!-- 3.2.4 (18-sep-2026): arreglo real de AR-LAY - el panel de Armadura/Accesorios perdia 18,9px
+         de alto (recortados de verdad, sin scroll) en la vista Apariencia con la Libreria desplegada.
+         Ver changelog.json y bitacora.md. -->
+    <Version>3.2.4</Version>
+    <FileVersion>3.2.4.0</FileVersion>
+    <AssemblyVersion>3.2.4.0</AssemblyVersion>
   </PropertyGroup>
 
   <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de

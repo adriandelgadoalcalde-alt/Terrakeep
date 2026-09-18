@@ -1,5 +1,18 @@
 [
   {
+    "version": "3.2.4",
+    "date": "18 de septiembre de 2026",
+    "date_en": "September 18, 2026",
+    "summary": "El panel de Armadura/Accesorios perdía parte de su alto de verdad (recortado, sin ningún scroll que lo compensara) en la vista Apariencia con la Librería desplegada a la vez - encontrado en un barrido de maquetación por tamaño de ventana. Arreglado: el contenedor con scroll de seguridad ahora envuelve la fila completa, así que si alguna vez falta espacio aparece scroll real en vez de recortar contenido.",
+    "summary_en": "The Equipment/Accessories panel was losing part of its real height (clipped, with no scroll to compensate) in the Appearance view when the Library was expanded at the same time - found in a window-size layout sweep. Fixed: the safety-scroll container now wraps the whole row, so if space ever runs short it scrolls for real instead of clipping content.",
+    "fixed": [
+      "El panel de Armadura/Accesorios (pestaña Equipamiento) recortaba de verdad parte de sus filas en la vista Apariencia con la Librería desplegada, sin ningún scroll que lo compensara - el scroll de seguridad ya existente envolvía solo una parte interna que nunca llegaba a activarse. Ahora envuelve la fila entera y aparece scroll real cuando hace falta."
+    ],
+    "fixed_en": [
+      "The Equipment/Accessories panel (Equipment tab) was really clipping part of its rows in the Appearance view with the Library expanded, with no scroll to compensate - the existing safety scroll wrapped only an inner part that never actually triggered. It now wraps the whole row and shows real scroll when needed."
+    ]
+  },
+  {
     "version": "3.2.3",
     "date": "18 de septiembre de 2026",
     "date_en": "September 18, 2026",
