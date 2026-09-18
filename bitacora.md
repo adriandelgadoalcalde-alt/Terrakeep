@@ -18495,3 +18495,100 @@ sistema operativo (`SetCursorPos`+`mouse_event`) capturando `Mouse.DirectlyOver`
 en un handler de `PreviewMouseLeftButtonDown` en la ventana — nunca fiarse de
 `VisualTreeHelper.HitTest` a secas en este arnés (ver el artefacto documentado arriba) ni de
 `Command.Execute()` a secas para verificar que un MouseBinding real funciona con un clic real.
+
+## 18-sep-2026 — Arreglo REAL (agente ciego, segunda fase) del bug confirmado arriba: "el clic
+## sobre el cofre real no hace nada"
+
+Norma de "dos fases" (ver `feedback_dos-fases-investigar-herramienta-luego-agente-ciego-arregla.md`
+en MEMORY.md): la investigación de más arriba (mismo día, "sigue desplazado... el clic sobre el
+cofre real no hace nada") confirmó la causa raíz con evidencia real y dejó el arreglo recomendado
+sin aplicar. Este apartado es el segundo agente, que aplica el arreglo y lo verifica con evidencia
+real independiente.
+
+**Causa raíz** (ya confirmada arriba, repetida aquí en corto): `MainWindow.xaml.cs:697-703`
+(`OnWorldMapMouseDown`, `PreviewMouseLeftButtonDown` de `WorldMapScroll`) llamaba a
+`WorldMapScroll.CaptureMouse()` de forma INCONDICIONAL en cualquier clic dentro del mapa (para
+poder arrastrar/paneear). `CaptureMode.Element` (el modo por defecto) hace que el
+`MouseLeftButtonUp` correspondiente nunca llegue al elemento real bajo el cursor, así que ningún
+`MouseBinding MouseAction="LeftClick"` de un marcador del mapa (`CurrentChestMarker`,
+`WorldSearchResults`...) podía completar su ciclo down+up - el editor de cofre no se abría con un
+clic real, aunque el hit-test de WPF identificara correctamente el marcador.
+
+**Arreglo real aplicado** (`Terrakeep.App/MainWindow.xaml.cs`): `OnWorldMapMouseDown` ahora sube el
+árbol visual/lógico desde `e.OriginalSource` (método nuevo `OriginatesFromClickableMarker`,
+estático, reutilizable) buscando un `UIElement` con `InputBindings.Count > 0` - si lo encuentra (el
+clic empezó sobre un marcador clicable real, con su propio `MouseBinding`), el método vuelve sin
+capturar, dejando que el propio marcador reciba su ciclo de clic normal. Si no lo encuentra (el
+clic empezó sobre mapa vacío), captura igual que siempre, para que el arrastre/paneo siga
+funcionando. Genérico a propósito: cualquier marcador futuro del mapa con su propio `MouseBinding`
+queda cubierto sin tocar este método otra vez, no solo `CurrentChestMarker`.
+
+**Test nuevo permanente** (`Terrakeep.App.Tests/Program.cs`, bloque `AR-13e`/`AR-13e-PAN`, insertado
+justo después de `AR-13d`): la propia investigación de arriba señaló el hueco real del arnés -
+`AR-13d` invoca `GoToWorldSearchHitCommand.Execute(...)` DIRECTAMENTE, nunca pasa por un clic de
+ratón real, así que nunca pudo detectar este bug. `AR-13e` reproduce el ciclo COMPLETO de ratón
+real de sistema operativo (mismo patrón ya real de `AR-EX2-PAN`/`AR-EX2-MINIMAPA-CLIC`:
+`ForzarPrimerPlano` + `SetCursorPos` + `mouse_event` MOUSEEVENTF_LEFTDOWN/LEFTUP, nunca
+`Command.Execute()` a secas) sobre el `CurrentChestMarker` real del cofre-7 de `Blando_Río.wld`
+(mismo cofre ya usado en `AR-13d`, X=5579,Y=1036, centro (5580,1037), contiene NetId
+167/188/2350/282/73) tras cerrar su editor con `CancelEditingChestCommand` (el marcador queda
+puesto, sin editor abierto - así el ÚNICO camino que puede reabrirlo es el clic real que se está
+probando). `AR-13e-PAN`, inmediatamente después, comprueba que el mismo fix NO rompe el
+arrastre/paneo real cuando el clic SÍ empieza sobre mapa vacío (down+move+up con
+`SetCursorPos`/`mouse_event`, mismo criterio que `AR-EX2-PAN`).
+
+**Verificación real - evidencia textual de la ejecución real de `dotnet run --project
+Terrakeep.App.Tests -c Debug` (línea por línea, sin editar)**:
+```
+AR-13e: clic REAL de SO (down+up) sobre el marcador de cofre-7 en pantalla (1153,774) -> capturo el
+raton durante el clic=False (esperado False), editor abierto=(5579, 1036) (esperado (5579, 1036)),
+contenido real OK=True, Mouse.Captured tras soltar=
+AR-13e-PAN: sigue capturando en mapa vacio=True (esperado True), cursor se movio de verdad
+(90,50)px -> el mapa se desplazo (-90,-50)px (esperado (-90,-50))
+```
+Sin ninguna línea `FALLO: AR-13e` - el clic real (down+up) sobre el marcador abre el editor del
+cofre CORRECTO (5579,1036, el mismo tile del cofre-7, no otro), con su contenido real verificado
+por NetId, sin robarle la captura al ratón durante el clic (`capturo el raton durante el
+clic=False`) y sin dejarla colgada después (`Mouse.Captured tras soltar=` vacío = `null`). El
+arrastre sobre mapa vacío sigue paneando exactamente lo que se movió el cursor real
+((90,50)px de cursor -> (-90,-50)px de mapa, la relación inversa esperada) y SÍ sigue capturando
+en ese caso (`sigue capturando en mapa vacio=True`) - el fix no rompió el arrastre de siempre.
+
+En las 727 líneas de la tirada completa que dio tiempo a revisar (hasta `AR-EX4-PNG`, que incluye
+`AR-13d`, `AR-13e`, `AR-13e-PAN`, todo el bloque `AR-EX2` de gestos del mapa -zoom con rueda, pan,
+minimapa- y `AR-EX1b`) apareció el número de siempre de `FALLO` reales, TODOS de un área
+completamente distinta y ya conocida (recorte de layout a resoluciones pequeñas: `AR-14`
+Armadura/Accesorios, `AR-11f` barra lateral de Exploración, `AR-15` NPCs, `AR-EX1` panel de
+resultados) - ninguno en el área de este fix (captura de ratón del mapa), consistente con que el
+cambio de este apartado solo toca `OnWorldMapMouseDown`/`OriginatesFromClickableMarker`, un código
+ajeno por completo a esos otros paneles.
+
+**Límite real**: la tirada completa de `dotnet run --project Terrakeep.App.Tests -c Debug` (unas
+8.500 líneas de arnés, cientos de bloques) es MUY larga - ya documentado antes en este mismo
+archivo que corre "tres veces seguidas" en sesiones nocturnas. Se dejó corriendo casi 50 minutos
+(controladorEspera, timeout de 590s encadenado varias veces) sin que avanzara ni una línea más
+tras `AR-EX4-PNG`, con la CPU del proceso subiendo de verdad todo el rato (2126s -> 2672s de tiempo
+de CPU en ese tramo, `Responding=True`, 13 hilos) - no colgado, computando algo pesado sin salida
+por consola durante mucho rato (patrón ya visto en otros bloques de este mismo arnés, p.ej. el
+escaneo de 131.673 grupos de `AR-EX3-LEGIBILIDAD` un poco antes). Se dejó el proceso corriendo solo
+(PID 145612, log completo en el scratchpad de esta sesión) en vez de seguir bloqueando esta tarea
+de forma indefinida por bloques de UI que no tienen nada que ver con este fix - lo que SÍ hacía
+falta demostrar (clic real abre el cofre correcto, arrastre real sigue paneando, cero regresión de
+`dotnet test`) ya quedó demostrado arriba con evidencia real. Si algún agente futuro quiere el
+veredicto completo de esa tirada, el patrón para retomarla es el de siempre: `dotnet run --project
+Terrakeep.App.Tests -c Debug > log.txt 2>&1`, esperar con `controladorEspera log --patron "^DONE$"`.
+
+**Build y test**: `dotnet build Terrakeep.slnx -c Debug` limpio (0 avisos, 0 errores). `dotnet test
+Terrakeep.slnx`: 568/568 (`Terrakeep.Core.Tests`) + 492/492 (`Terrakeep.App.ViewModels.Tests`) en
+verde, sin regresión - el bug y su arreglo viven en code-behind de WPF (`MainWindow.xaml.cs`), fuera
+del alcance de estas suites xunit (por eso hizo falta el arnés real de `Terrakeep.App.Tests` de
+arriba para la verificación real con clic de ratón).
+
+**Recompilado y redesplegado**: `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe` (barra de
+tareas, `dotnet build`, `FileVersion` 3.2.2.0) y `AppData\Local\Programs\Terrakeep\` (instalado, vía
+`installer\install.ps1` real - publish Release autocontenido + copia, `FileVersion` 3.2.2.0
+confirmado en ambos con `Get-Item ... .VersionInfo.FileVersion`).
+
+Commit local (nunca `git push` - el usuario está dormido y no hay ninguna decisión suya pendiente
+sobre esto): solo `Terrakeep.App/MainWindow.xaml.cs` y `Terrakeep.App.Tests/Program.cs` por nombre
+exacto, nunca `git add -A`.
