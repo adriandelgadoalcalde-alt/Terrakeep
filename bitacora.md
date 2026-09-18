@@ -18858,3 +18858,163 @@ real - publish Release autocontenido + copia) - ambos con `FileVersion` `3.2.3.0
 Commit local (nunca `git push` - el usuario está dormido y no hay ninguna decisión suya pendiente
 sobre esto): `Terrakeep.App/MainWindow.xaml`, `Terrakeep.App.Tests/AuditoriaEquipamiento.cs` y
 `bitacora.md` por nombre exacto, nunca `git add -A`.
+
+## 19-sep-2026 (madrugada) — tercer reporte del marcador desplazado: ENCONTRADA la causa raíz real (pivote del zoom), más el clic sobre un cofre del mapa que nunca existió
+
+Reporte del usuario, con captura real: un cuadrado teal varios tiles lejos del bloque que debería
+señalar. Ampliado dos veces mientras se investigaba: **"pasa con los minerales y con cualquier
+objeto"** y **"sigue pasando también en los cofres"** — es decir, contradecía de frente la
+medición del 18-sep, que dio `errorPx=(0,0)`/`errorTiles=(0,0)` exactos. Y por separado: **"lo de
+editar cofre no lo veo por ningún lado y por mucho que clique un cofre por el mapa no me abre ni
+su contenido ni lo que es para editar, eso siempre estuvo roto y así sigue roto"**.
+
+### Por qué la medición del 18-sep dio 0 y aun así el usuario veía el desfase (los dos puntos ciegos)
+
+1. **Midió el marcador equivocado.** Midió `Rectangle x:Name="CurrentChestMarker"` — que resulta
+   ser el ÚNICO marcador del mapa correcto *por construcción*: su `ScaleTransform` inverso al zoom
+   cuelga del PROPIO `Rectangle`, cuyo `RenderTransformOrigin="0.5,0.5"` cae justo en su centro,
+   que por su `Margin="-12,-12,0,0"` coincide exactamente con el punto de tile. No podía detectar
+   nada. Lo que el usuario mira es otra cosa: los marcadores de `WorldSearchResults` (cofre,
+   mineral, objeto, letrero, pared, líquido... TODOS salen de la MISMA plantilla) y los de `Npcs`.
+2. **Midió los dos únicos zooms donde el bug es invisible o despreciable.** El error real resultó
+   ser `mitadDelGrid * (1 - 1/zoom)` tiles: vale **exactamente 0 a zoom 1.0** (uno de los dos
+   probados) y, a zoom 0.09 (el otro), son ~2px en pantalla pese a ser -25 tiles.
+
+### Causa raíz real, única y compartida por todas las categorías
+
+`MainWindow.xaml`, plantilla de `WorldSearchHitRowViewModel`: el `ScaleTransform` inverso al zoom
+(el que mantiene el marcador a tamaño constante en pantalla) se aplicaba sobre un `Grid` envoltorio
+con `RenderTransformOrigin="0.5,0.5"`. **El 0.5,0.5 de ese Grid NO es el punto de tile**: el punto
+de tile es su ESQUINA (0,0) — lo fija `Canvas.Left/Top` del `ContentPresenter` — y el Grid sólo
+mide lo que le dejan sus hijos de margen negativo (`Marco` de 10x10 con `Margin="-5"` → DesiredSize
+5x5; y **12x12 cuando el resultado pasa a ser el ACTIVO**, que es el cuadrado grande que el usuario
+rodeó en su captura). Escalar alrededor de ese centro desplaza el ancla.
+
+Medido de verdad, antes del arreglo (bloque nuevo `AR-MRK`, ver abajo), idéntico en COFRE, VETA y
+OBJETO — la prueba directa de que la causa es una sola y compartida, no lógica duplicada por tipo:
+
+| zoom | marcador normal | marcador activo (24px) |
+|------|-----------------|------------------------|
+| 0,09 | −25,78 tiles | **−61,17 tiles** |
+| 0,25 | −8,00 | −18,50 |
+| 0,50 | −3,00 | −6,50 |
+| 1,00 | −0,50 | −0,50 |
+| 2,00 | +0,75 | +2,50 |
+| 4,00 | +1,375 | +4,00 |
+| 6,00 | +1,583 | +4,50 |
+
+### Qué se aprendió del código real de TEdit (sin copiar ni una línea)
+
+`github.com/TEdit/Terraria-Map-Editor` (MIT), `src/TEdit/View/WorldRenderXna.xaml.cs`, método
+`DrawFindCrosshair` — el equivalente exacto de esto (su marcador de "resultado encontrado"):
+
+```
+float screenCenterX = (_scrollPosition.X + tileX + 0.5f) * _zoom;
+int crosshairSize = Math.Clamp((int)(_zoom * 3), 24, 48);
+int screenX = (int)(screenCenterX - crosshairSize / 2);
+```
+
+Dos cosas, las dos aplicables aunque el motor no tenga nada que ver (XNA/SpriteBatch vs WPF):
+
+- **El `+ 0.5f`**: ancla en el CENTRO de la celda del tile, no en su esquina. Terrakeep anclaba en
+  la esquina (`Canvas.Left="{Binding TileX}"` a secas) — de ahí el −0,5 residual que se ve arriba
+  en la fila de zoom 1,00, donde el bug del pivote es 0 y ese medio tile queda solo.
+- **El orden de las operaciones**: TEdit calcula el centro en PÍXELES DE PANTALLA y sólo *después*
+  resta medio marcador, también en píxeles. Por eso su ancla no puede depender del zoom. Terrakeep
+  hacía lo contrario: centraba con un `Margin` negativo en espacio de tile y *luego* escalaba
+  alrededor de un pivote que no era el ancla. El arreglo consigue la misma propiedad por la vía
+  WPF natural: **poner el pivote EN el ancla** (`RenderTransformOrigin="0,0"`), que además es
+  inmune al `DesiredSize` del Grid (que cambia solo con que el resultado pase a ser el activo).
+
+### Arreglo aplicado
+
+- `RenderTransformOrigin` de `0.5,0.5` → **`0,0`** en la plantilla de resultados de búsqueda y en
+  la de NPCs. Esta es la corrección de la causa raíz.
+- **Centro de celda por footprint REAL, no un `+0.5` global.** Un `+0.5` uniforme en la vista se
+  probó y se midió: arregla los 1x1 y **rompe por medio tile justo los cofres**, que ya vienen
+  centrados (`chest.X + 1` es el centro exacto de un 2x2). `WorldSearchHit` gana `SubX/SubY` (la
+  parte fraccionaria de tile, por defecto 0,5 = caso 1x1) y `TileEntityCenterOffset` pasa a
+  devolverla por eje: con eso **el medio tile que la división entera tenía que tirar a la basura
+  deja de perderse** (el propio comentario de ese método lo daba por "inevitable sin coordenadas
+  fraccionarias" — ya no lo es). Cofre/letrero/marco → 0; maniquí (alto 3) → 0,5 en Y; frasco
+  (ancho 1) → 0,5 en X.
+- **Contenedor de 0x0 con el hijo centrado por alineación** para la cabeza de NPC, la estrella de
+  spawn del personaje, la casa del spawn del mundo y el rombo de la mazmorra: sus `Margin`
+  negativos daban por hecho tamaños que **no son los reales** (medido: glifo a FontSize 18 =
+  10,9 x 23,9 px, no 18x18 → 3,56 tiles a la izquierda y 2,97 abajo, a CUALQUIER zoom; cabeza de
+  NPC = 16 x 10,67 px por ser `Stretch="Uniform"` sin alto propio, no 16x16 → 2,67px arriba). Con
+  alineación no hay ningún número que pueda quedarse desincronizado del sprite.
+
+### El otro síntoma: el clic sobre un cofre del mapa. El usuario tenía razón, y NO era el bug de 3.2.3
+
+Leído el código real: **no existía**. Lo único clicable del mapa eran los MARCADORES (un resultado
+de búsqueda, o el marcador de cofre actual, ambos con su `MouseBinding`); un clic sobre el cofre
+que se ve dibujado en el propio mapa no tenía ningún camino de código que lo escuchara —
+`OnWorldMapMouseDown` sólo capturaba el ratón para panear. Así que "eso siempre estuvo roto" era
+literal, y el arreglo de 3.2.3 (la captura de ratón) funcionaba exactamente como se diseñó sin
+resolver esto, porque son cosas distintas. Con los marcadores además desplazados varios tiles, el
+usuario no tenía prácticamente forma de acertar en ninguno.
+
+Añadido `ExplorationViewModel.TryOpenChestAtTile(x, y)`: busca un cofre real cuyo footprint 2x2
+cubra ese tile y abre su editor por el MISMO camino ya establecido (`GoToChest` + `EditChest`),
+sin ningún editor nuevo. Lo llama `OnWorldMapMouseUp` **sólo si no hubo arrastre** (umbral real de
+4px, `_mapDragMoved`) para no robarle nada al paneo de siempre.
+
+**Hipótesis descartada con evidencia, no por opinión**: se sospechó que el desfase visual hacía
+clicar en el sitio equivocado (marcador movido pero zona clicable en su sitio). Es FALSO: WPF
+mueve el hit-test junto con el `RenderTransform`, y un `InputHitTest` en el centro visual del
+marcador aterriza en su propio `Rectangle#Marco` → `Grid[MouseBinding]` a los 7 zooms, antes y
+después. Los dos síntomas eran bugs independientes; hicieron falta los dos arreglos.
+
+### AR-MRK: bloque nuevo y permanente del arnés (`Terrakeep.App.Tests/PruebasMarcadoresMapa.cs`)
+
+Corre en la tirada completa Y solo con `TERRAKEEP_SOLO_MRK=1` (para iterar en ~40s). Mide
+geometría REAL post-transform con `TransformToAncestor` a **7 zooms** (0,09/0,25/0,5/1/2/4/6 — los
+intermedios que nadie había probado) x 3 categorías, más los 4 marcadores restantes que **no se
+habían medido nunca**. Resultado tras el arreglo: **0,000 tiles en los 33 casos**, sin un solo
+`FALLO`.
+
+Tres trampas reales que costó ver y que quedan blindadas en la propia prueba:
+
+- **`VisualTreeHelper.HitTest` NO modela un ratón**: ignora `Visibility`, y aterrizaba felizmente
+  dentro de una pestaña `Collapsed` (medido). Hay que usar **`InputHitTest`**.
+- **El "esperado" no puede salir del código que se prueba.** Se deriva del mundo real (un cofre
+  2x2 en la esquina X ocupa `[X, X+2)` → su centro es `X+1,0`; un 1x1 en T → `T+0,5`), y aparte
+  `AR-MRK-SUB` lanza una búsqueda REAL sobre el `.wld` y comprueba que los hits de producción
+  traen el `Sub` correcto — sin eso, la prueba sólo demostraría que la plantilla pinta bien lo que
+  se le da.
+- **Un marcador que no se realiza tiene que ser `FALLO`, no "omitido".** El contenedor de 0x0
+  dejó la cabeza de NPC con alto 0 (un `Stretch="Uniform"` sin alto propio se mide contra una
+  restricción de 0) — **desapareció del mapa** y estuvo a punto de colarse como "medición en
+  verde" porque la prueba lo saltaba en silencio. Arreglado con `Height="16"` explícito (el sprite
+  sigue sin deformarse: `Uniform` lo encaja dentro y lo centra) y la prueba ahora falla a gritos.
+
+### Obstáculo real del entorno, para no volver a perder tiempo
+
+**El acceso directo de la BARRA DE TAREAS no apunta a la app instalada**: apunta a
+`Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe` (el build de depuración del repo), no a
+`%LocalAppData%\Programs\Terrakeep\`. Y todo el trabajo de esta sesión se compiló con
+`-p:BaseOutputPath=<temp>` (para no chocar con ficheros bloqueados), así que `bin\Debug` se habría
+quedado con el binario VIEJO y el usuario habría seguido viendo el bug pese al `install.ps1`.
+**Hay que redesplegar los DOS**: `installer\install.ps1` Y un `dotnet build Terrakeep.App -c Debug`
+sin `BaseOutputPath`. Verificados los dos a `3.2.4+f2ea189e`.
+
+### Estado
+
+`dotnet build` de la solución en verde (0 avisos, 0 errores). **568** tests de `Terrakeep.Core.Tests`
+y **492** de `Terrakeep.App.ViewModels.Tests` en verde. Tirada completa del arnés WPF **sin ningún
+`FALLO` nuevo**: los 5 que quedan (AR-11f, AR-14, AR-15, AR-EX1, AR-LAY) son de maquetación a
+ventana pequeña, previos y ajenos a esto.
+
+`AR-13e` falló en la 1ª tirada y pasó en la 2ª y la 3ª (clic real de SO abriendo el cofre correcto,
+`capturo el raton=False`): es la inestabilidad de ratón real ya documentada — el propio arnés se
+autodiagnostica ("el cursor real no llegó a moverse, ratón compartido con otra ventana"). Se
+descartó como regresión con evidencia aparte, no por repetir: `AR-MRK-13E` resuelve el mismo
+hit-test en frío, sin ratón, y da `Rectangle#CurrentChestMarker[MB] ... es el propio marcador=True`.
+
+Commit local `f2ea189e` (nunca `git push`: la decisión de publicar versión nueva es del
+coordinador). Pendiente de decidir por el usuario/coordinador: **el color único**. Sigue vigente
+que `Marco` usa `Stroke="{StaticResource TealBrush}"` para TODAS las categorías — no se ha tocado
+porque la causa real del reporte era la geometría, ya arreglada, y cambiarlo ahora mezclaría dos
+cosas; pero el `KindColor` por categoría ya existe en el ViewModel y sigue siendo una mejora real
+pendiente para no confundir un marcador de mineral con uno de cofre.
