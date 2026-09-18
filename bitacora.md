@@ -18626,3 +18626,123 @@ solo, sin matar. Ningún indicio real de que el fix de esta noche (captura de ra
 roto nada fuera de su propia área - toda la evidencia apunta a que, cuando termine, dará los mismos
 4 `FALLO` ya documentados como deuda conocida y ajena. Detalle completo (con los 3 volcados) en
 `bitacora.md` de KeepQA, misma fecha.
+
+## 18-sep-2026 (más tarde aún) - Investigados los 2 `FALLO` nuevos de la madrugada: `T-H/F2` cerrado (falso positivo del arnés, arreglado), `AR-LAY` documentado como bug real (sin tocar producto)
+
+Encargo del coordinador: de los 20 `FALLO` de la tirada completa de esta madrugada (18 ya conocidos
+y aceptados, ver entradas de arriba), investigar a fondo los 2 nuevos - `T-H/F2` y `AR-LAY` - con
+disciplina de dos fases (solo investigar y, si procede, arreglar el arnés; nunca el código de
+producto, eso queda para otro agente aparte). Reproducidos los dos de verdad, de forma aislada
+primero y con la tirada completa real después (`dotnet run --project Terrakeep.App.Tests -c Debug`,
+~2-3 min cada vez, log completo en el scratchpad de sesión).
+
+### `T-H/F2`: FALSO POSITIVO del arnés, cerrado y arreglado
+
+El bloque (`Program.cs` ~7209, "FocusVisualStyle no se aplica al enfocar por teclado") hace
+`AutomationElement.SetFocus()` sobre el botón "Guardar" y comprueba que WPF adjuntó un `Adorner` de
+`FocusVisualStyle`. Reproducido aislado (arnés mínimo temporal, personaje recién cargado, idioma
+es/en): el botón SÍ se encuentra, el foco SÍ se mueve de verdad
+(`Keyboard.FocusedElement`/`.IsKeyboardFocused`/`.IsFocused`, los tres en `True`), el
+`AdornerLayer` del elemento NO es nulo - pero `GetAdorners()` da SIEMPRE 0 cuando el foco se puso
+con `SetFocus()` de UI Automation a secas.
+
+Causa real (mecanismo interno de WPF, no un bug de Terrakeep): WPF solo pinta el `Adorner` de
+`FocusVisualStyle` cuando el teclado fue el ÚLTIMO dispositivo de entrada REAL que usó la app - una
+condición interna que solo se activa con un evento de teclado FÍSICO real, nunca con foco puesto
+por programa/UI Automation ni por un clic de ratón. Confirmado de forma aislante (misma disciplina
+de "verificar aislando la variable" ya documentada en este archivo): quitando el foco, enviando una
+pulsación FÍSICA real e inocua (Shift, vía `keybd_event` - no dispara ningún comando) y volviendo a
+enfocar el MISMO botón, el `Adorner` SÍ aparece (`GetAdorners()>0`) - la única variable que cambió
+fue esa pulsación física. O sea que el `FocusVisualStyle` real del tema SÍ funciona de verdad (lo
+que ve un usuario tabulando con el teclado de verdad); lo que fallaba era que
+`AutomationElement.SetFocus()` nunca simulaba una pulsación física real, y por eso este bloque
+nunca cumplía la condición interna de WPF - la misma familia de limitación ya documentada para
+`ForzarPrimerPlano` (Windows/WPF distinguen entrada síntetica de entrada física real en más de un
+sitio).
+
+**Arreglado en el propio arnés** (`Program.cs`, bloque `T-H/F2`): una pulsación de teclado FÍSICA
+real e inocua (Shift, vía `keybd_event`+`KEYEVENTF_KEYUP`) justo antes de `SetFocus()`, mismo patrón
+que el truco ALT de `ForzarPrimerPlano`. Verificado con la tirada completa real: `T-H-FOCO: foco
+real + adorner de FocusVisualStyle adjunto=True` y CERO `FALLO: T-H/F2` en el log. Nada de código de
+producto se tocó - el `FocusVisualStyle` del tema ya funcionaba bien.
+
+Por qué "regresionó" ahora sin que nadie tocara nada: no hay ninguna regresión real, es la primera
+vez que se corrió esta comprobación de forma aislada/con suficiente atención - antes "pasaba" en
+tiradas donde por casualidad un bloque anterior real (Ctrl+S, u otro atajo con `keybd_event`
+genuino) dejaba "el teclado fue el último dispositivo" en `True` por su cuenta antes de llegar
+aquí; la madrugada en que falló, la secuencia exacta de bloques anteriores no dejó ese estado
+activo (raton/UI Automation puros justo antes). El arreglo ya no depende de esa casualidad de orden.
+
+### `AR-LAY`: BUG REAL de producto, documentado, NO arreglado (para agente aparte)
+
+Reproducido con la tirada completa real, dos veces seguidas, mismo resultado exacto: `AR-LAY-PERDIDO
+x3 Personaje/Equipamiento 1080x700 [es]: SlotGridPanel pierde 4,4x18,9px (caja 216x84 en x=287,4
+y=368,7, zona pintada 287,4..499 x 368,7..433,8) sin scroll que lo alcance` - la rejilla central de
+Armadura/Accesorios (`SlotGridPanel`) de la fila fusionada de Equipamiento pierde de verdad 18,9px
+de alto por abajo, sin ningún `ScrollViewer` con margen real (`V:Auto vp=84 ext=84 scr=0` en los dos
+`ScrollViewer` anidados que la envuelven - los dos creen que ya tienen sitio de sobra, así que no
+hay escape real). También se ve en `1520x864 [en]` con `IsEquipmentExpanded=True` (SizeClass
+Amplio), no solo en Compacto.
+
+**Por qué `AR-14`/`AR-14d` (`AuditoriaEquipamiento.cs`), que SÍ vigilan a fondo esta misma fila
+fusionada, nunca lo ven**: instrumentado con un diagnóstico temporal (ya retirado) justo en el punto
+donde `AR-LAY` detecta la pérdida, confirmado con datos reales:
+`EquipmentGroup.SelectedKind=Social` (vista "Apariencia"/vanidad) e `IsLibraryCollapsed=False`
+(Librería de objetos DESPLEGADA) en las dos combinaciones que fallan. `AR-14` fuerza SIEMPRE
+`EquipmentKind.Items` antes de medir (`AuditoriaEquipamiento.cs:102-103`) y nunca despliega la
+Librería salvo que se le pida por variable de entorno (`AR14_LIBRERIA_PLEGADA`, que además solo
+sirve para FORZAR que esté plegada, no para desplegarla) - o sea que la combinación real que rompe
+(vista Apariencia/vanidad + Librería desplegada) está fuera de la superficie que `AR-14`/`AR-14d`
+barren, aunque midan la misma fila con mucho detalle.
+
+**La causa de fondo YA ESTABA DIAGNOSTICADA en un comentario real del propio código de producto**
+(`Terrakeep.App/MainWindow.xaml:2886-2903`, fechado 15-sep-2026): con la Librería desplegada
+(`IsLibraryCollapsed=False` le quita `MinHeight=200 + 2*` al presupuesto compartido de la pestaña)
+y un conjunto real equipado, la fila `*` con `MinHeight=84` de `SlotRowHost`
+(`MainWindow.xaml:2739`) "se queda hambrienta (147,4px de alto real en vez de los 190,1px que tiene
+con la Librería plegada) y la rejilla de Armadura/Accesorios pierde 18,9px por abajo" - **los
+números (147,4px / 18,9px) coinciden EXACTAMENTE con los medidos hoy, pixel a pixel**. El propio
+comentario describe como arreglo un `ScrollViewer` de seguridad nuevo (`Grid.Row="1"`,
+`VerticalScrollBarVisibility="Auto"`, `MainWindow.xaml:2904-2908`, envolviendo
+`EquipmentGroup.Current`) para que ese caso "nunca pierda contenido de verdad, un scroll vertical
+silencioso" - pero, a diferencia del comentario gemelo de la cabecera (líneas 2669-2682, que SÍ
+dice "Verificado con el propio AR-LAY tras el cambio: 0 elementos perdidos"), este NO tiene ninguna
+verificación posterior anotada, y la medición de hoy confirma que el escape por scroll no llega a
+funcionar de verdad en este caso concreto.
+
+Diagnóstico de por qué el `ScrollViewer` de seguridad no evita el recorte (razonado con la propia
+geometría medida, no solo mirado): el `ScrollViewer` de `Grid.Row="1"` vive DENTRO de la fila `*` de
+`SlotRowHost`, y esa fila SÍ recibe sus 84px completos según el propio reparto interno de
+`SlotRowHost` (confirmado: `SlotRowHost.filas=82,2/84`, suma 166,2px, autoconsistente) - el
+`ScrollViewer` mide `ext=84 vp=84 scr=0` porque, DESDE SU PROPIO PUNTO DE VISTA, tiene exactamente
+el sitio que pide. El recorte real (a 147,4px) lo aplica un ANCESTRO de `SlotRowHost` (el
+`Grid#templateRoot`/Border exterior de la pestaña, que es quien de verdad tiene menos presupuesto
+con la Librería desplegada), fuera del `ScrollViewer` de seguridad - el `MinHeight="84"` de la fila
+`*` garantiza que `SlotRowHost` "pida" 166,2px aunque su propio padre solo tenga 147,4px reales que
+darle, y ese desbordamiter se recorta por fuera del `ScrollViewer`, no dentro, así que la barra de
+scroll nunca llega a activarse ni a ofrecer el escape que se pretendía. Es la misma clase de trampa
+"Measure/Arrange recorta al tamaño ofrecido" ya documentada en `CLAUDE.md` de este proyecto, aplicada
+al revés: aquí es el `MinHeight` el que hace que el HIJO pida más de lo que el padre ofrece, y quien
+se come la diferencia es un ancestro por fuera del mecanismo de escape pensado para absorberla.
+
+**NO arreglado** (dos fases, código de producto fuera de mi alcance en esta ronda). Recomendación
+real para el agente que lo arregle: (1) extender `AR-14`/`AR-14d` para barrer también
+`EquipmentKind.Social`/`.Dyes` (no solo `.Items`) y con la Librería desplegada de verdad
+(`IsLibraryCollapsed=False` explícito, no solo "lo que hubiera antes"), así este hueco de cobertura
+no se vuelve a colar; (2) el arreglo de producto probablemente necesita que el escape de scroll viva
+en el ANCESTRO que de verdad tiene el presupuesto ajustado (fuera de `SlotRowHost`), no dentro de su
+propia fila `*` con `MinHeight` garantizado - o revisar si el `MinHeight="84"` de esa fila debe
+seguir siendo una garantía dura cuando el presupuesto exterior es más estrecho que eso más la
+cabecera.
+
+**Verificación real, tirada completa antes/después**: 20 `FALLO` → 19 `FALLO` (18 conocidos + este
+`AR-LAY`, el `T-H/F2` desapareció del log). Nada más cambió (mismos 18 `FALLO` de deuda de layout ya
+aceptada, mismo texto exacto línea a línea en las tres tiradas completas de esta ronda). Un
+`FALLO: Parte A - alguna fila de Cofres/Por tipo salio sin sprite real` apareció en la primera
+tirada de esta ronda y no en las dos siguientes (mismo binario, sin tocar esa área) - flaky
+preexistente, ajeno a esta investigación, fuera del encargo de hoy, no tocado.
+
+**Recompilado**: `Terrakeep.App.Tests` reconstruido (`dotnet build`) tras cada cambio; el binario de
+producto (`Terrakeep.App`) NO se tocó en esta ronda (solo arnés). Commit hecho (solo
+`Terrakeep.App.Tests/Program.cs` y `bitacora.md` por nombre exacto, nunca `git add -A`) - regla del
+proyecto de comitear tras cada cambio verificado.

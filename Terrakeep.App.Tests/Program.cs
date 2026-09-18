@@ -7212,6 +7212,28 @@ internal static partial class Program
         // boton "Guardar" + captura real, para comprobar de verdad que el nuevo FocusVisualStyle
         // se aplica (mismo criterio de la bitacora: min()/max() de CSS ya enseño que "no dio
         // ningun error" no es lo mismo que "se aplico de verdad").
+        //
+        // FALSO POSITIVO cerrado el 18-sep-2026 (investigacion de los 2 FALLO nuevos de la
+        // madrugada): reproducido aislado con un arnes minimo (personaje recien cargado, idioma
+        // es/en, ForzarPrimerPlano confirmado con GetForegroundWindow==hwnd) - el boton SE
+        // ENCUENTRA, el foco SI se mueve de verdad (Keyboard.FocusedElement/.IsKeyboardFocused/
+        // .IsFocused, los tres en True) y el AdornerLayer del elemento NO es nulo, pero
+        // GetAdorners() da 0 SIEMPRE que el foco se puso con AutomationElement.SetFocus() a
+        // secas. Causa real (mecanismo interno de WPF, no un bug de Terrakeep): el Adorner de
+        // FocusVisualStyle solo se pinta cuando el teclado fue el ULTIMO dispositivo de entrada
+        // real que uso la app (lo que WPF llama "keyboard most recent input device" - se activa
+        // con un evento de teclado FISICO real, nunca con foco puesto por programa/UI Automation
+        // ni por un clic de raton). Confirmado de forma aislante (misma leccion que "verificar
+        // aislando la variable"): quitando el foco, enviando una pulsacion FISICA real e inocua
+        // (Shift, via keybd_event - no dispara ningun comando) y volviendo a enfocar el MISMO
+        // boton, el Adorner SI aparece (GetAdorners()>0) - la unica variable que cambio fue esa
+        // pulsacion fisica. O sea que el FocusVisualStyle real del tema SI funciona de verdad
+        // (lo que ve un usuario real tabulando con el teclado); lo que fallaba era que
+        // AutomationElement.SetFocus() nunca simulaba una pulsacion fisica real, y por eso este
+        // bloque nunca cumplia la condicion interna de WPF. Arreglo real del ARNES (no del
+        // producto): una pulsacion de teclado FISICA real e inocua justo antes de SetFocus(),
+        // mismo patron de "ALT que desarma el foreground lock" que ya usa ForzarPrimerPlano mas
+        // abajo en este mismo fichero.
         try
         {
             // El foco visual real de WPF solo se pinta con la ventana ACTIVA (igual que el
@@ -7222,6 +7244,14 @@ internal static partial class Program
             var saveButton = root.FindFirst(TreeScope.Descendants, new AndCondition(
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
                 new PropertyCondition(AutomationElement.NameProperty, "Guardar")));
+            // Pulsacion fisica real e inocua (Shift, sin combinar con nada) ANTES de enfocar: sin
+            // esto WPF nunca cuenta el teclado como "ultimo dispositivo de entrada" y el Adorner
+            // de FocusVisualStyle no se pinta aunque el foco se haya movido de verdad - ver el
+            // comentario completo arriba.
+            const byte VK_SHIFT_THF2 = 0x10;
+            keybd_event(VK_SHIFT_THF2, 0, 0, UIntPtr.Zero);
+            keybd_event(VK_SHIFT_THF2, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            DoEvents(); DoEvents();
             saveButton?.SetFocus();
             DoEvents(); DoEvents();
             // Comprobacion real (no solo visual): el foco realmente se movio Y WPF realmente
