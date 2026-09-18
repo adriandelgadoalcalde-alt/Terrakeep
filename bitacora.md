@@ -18746,3 +18746,115 @@ preexistente, ajeno a esta investigación, fuera del encargo de hoy, no tocado.
 producto (`Terrakeep.App`) NO se tocó en esta ronda (solo arnés). Commit hecho (solo
 `Terrakeep.App.Tests/Program.cs` y `bitacora.md` por nombre exacto, nunca `git add -A`) - regla del
 proyecto de comitear tras cada cambio verificado.
+
+## 18-sep-2026 (más tarde aún) - `AR-LAY` arreglado de verdad en producto: `ScrollViewer` movido al ANCESTRO correcto (`MainWindow.xaml`), y `AR-14e` nuevo para que el hueco de cobertura no se vuelva a colar
+
+Encargo aparte del coordinador (fase 2 de la disciplina "investigar primero, arreglar después" -
+ver la entrada anterior, que dejó el bug diagnosticado pero sin tocar código de producto): aplicar
+el arreglo real en `Terrakeep.App/MainWindow.xaml` para el `AR-LAY` que perdía 18,9px del
+`SlotGridPanel` de Armadura/Accesorios con `EquipmentGroup.SelectedKind=Social` (vista Apariencia)
+o `IsEquipmentExpanded=True` (Amplio) a la vez que `IsLibraryCollapsed=False` (Librería
+desplegada), a 1080x700 [es] y 1520x864 [en].
+
+**Causa real** (ya diagnosticada por el agente anterior, confirmada aquí al leer el código):
+`SlotRowHost` (`MainWindow.xaml:2722`, un `Grid` normal, ver `Controls/SlotRowHost.cs`) tiene
+`ClipToBounds="True"` y dos filas, `Auto` (cabecera Loadout/Vista/Defensa, 82,2px reales) y `*`
+`MinHeight="84"` (la rejilla, línea 2764 tras el reindentado de este cambio). WPF SÍ respeta ese
+`MinHeight` internamente pase lo que pase (suma real 166,2px, autoconsistente), pero cuando el
+`Border` naranja que lo contiene sólo tiene 147,4px reales que darle (Librería desplegada le quita
+presupuesto a la fila compartida de la pestaña, `MainWindow.xaml:2623-2626`), WPF no encoge la
+rejilla por debajo de su `MinHeight` - en vez de eso, `SlotRowHost` se ARRANGEA al tamaño más
+pequeño que su ancestro le ofrece y su propio `ClipToBounds="True"` recorta en silencio los 18,9px
+que sobran, SIN que ningún `ScrollViewer` lo vea: el que ya existía (`Grid.Row="1"` dentro del
+propio `SlotRowHost`, pensado como red de seguridad, comentario `MainWindow.xaml:2808-2822` de una
+pasada anterior) vive DENTRO de la fila que ya recibió su `MinHeight` completo desde el punto de
+vista interno del propio `SlotRowHost` - `ext=vp=84 scr=0`, cree que le sobra sitio. El hambriento
+de verdad es un ANCESTRO por fuera de ese `ScrollViewer`, así que su escape nunca se activaba.
+
+**Arreglo aplicado**: mover el `ScrollViewer` de seguridad al ancestro correcto - envolver el
+`SlotRowHost` ENTERO (las 3 columnas completas: Mascota/Montura+Tinte | Armadura/Accesorios |
+Monedas/Munición, no sólo su fila central) en un `<ScrollViewer VerticalScrollBarVisibility="Auto"
+HorizontalScrollBarVisibility="Disabled">` nuevo, como único hijo del `Border` naranja
+(`MainWindow.xaml:2746`/`3031` tras el cambio; contenido reindentado +2 espacios completo, sin
+tocar ninguna línea de lógica). Mecanismo real: un `ScrollViewer` mide a su contenido con alto
+`PositiveInfinity` (comportamiento estándar de `ScrollContentPresenter`), así que `SlotRowHost`
+consigue medir y ARRANGEARSE a su alto real completo (166,2px, nada recortado por su propio
+`ClipToBounds`) - es el propio `ScrollViewer`, con un viewport real más pequeño que ese contenido
+sólo cuando el `Border` no tiene esos 166,2px, quien ofrece scroll vertical real para alcanzar el
+resto. Cuando SÍ hay sitio de sobra (caso sano de siempre: `Items`, o Librería plegada) el
+contenido cabe entero en el viewport y no aparece ninguna barra - visualmente idéntico a antes.
+Horizontal se deja en `Disabled` a propósito (mismo patrón ya usado en `CajaMascotasTintes`, la
+misma fila, unas líneas más arriba) - el ancho de las 3 columnas no cambia, sólo se le da salida
+real al alto. `ClipToBounds="True"` se deja en `SlotRowHost` (sigue siendo la red de seguridad
+horizontal ya documentada, ajena a este bug). Comentario nuevo dejado en el propio XAML
+(`MainWindow.xaml:2722-2745`) con la causa y la cifra real, mismo estilo que los comentarios
+`AR-14`/`AR-LAY` ya existentes en ese bloque.
+
+**Verificación real con el arnés** (`AR14_SOLO=1` sobre `Terrakeep.App.Tests`, modo de foco -
+`dotnet run --project Terrakeep.App.Tests -c Debug`, ~1 min cada vez, evidencia real de geometría
+del motor, no capturas): con el arreglo aplicado, `AR-14e` (nuevo, ver abajo) mide **0 celdas
+cortadas, 0px** en las dos combinaciones que antes perdían contenido:
+```
+AR-14e 1080x700 Kind=Social Amplio=False LibreriaDesplegada=True: celdas cortadas=0 peor=0px
+AR-14e 1520x864 Kind=Social Amplio=True LibreriaDesplegada=True: celdas cortadas=0 peor=0px
+```
+Y el barrido genérico (`AR_LAY_SOLO=Equipamiento`, el mismo canario `AR-LAY` real que descubrió el
+bug, acotado a la pantalla Personaje/Equipamiento - 26 combinaciones tamaño x idioma reales) ya NO
+reporta ningún `AR-LAY-PERDIDO` en el área tocada (Social/Dyes + Librería desplegada) en ninguna de
+las 26 combinaciones.
+
+**Sin regresión en los estados ya sanos**: `AR-14`/`AR-14d`/`AR-14b`/`AR-14c` (que SÍ cubren
+`EquipmentKind.Items` con Librería en su estado por defecto, colapsada) dieron el mismo resultado
+de siempre en la tirada de verificación - filas `82,2/280,3` (362,5px reales, muchísimo más que los
+166,2px necesarios) en todos los tamaños del barrido de siempre, cero `FALLO: AR-14`/`AR-14d` en
+esa parte. `dotnet test Terrakeep.slnx` (excluyendo el arnés de UI Automation, que no usa xunit):
+**568/568** (`Terrakeep.Core.Tests`) + **492/492** (`Terrakeep.App.ViewModels.Tests`) en verde, sin
+regresión.
+
+**Un `FALLO` preexistente y AJENO confirmado con contrafactual real** (leccion "verificar aislando
+la variable"): tanto el barrido `AR-14` de siempre como el `AR-LAY` genérico marcan un `FALLO` en
+`1520x860`/`1520x864` - EXACTAMENTE el umbral real de `SizeClass.Amplio` (`AmplioMinWidth=1520`,
+ver `MainViewModel`), un ancho a propósito fragil que el propio código ya documenta probar "a los
+dos lados de cada umbral real de SizeClass" porque cruzarlo reorganiza la fila entera. Antes de dar
+esto por bueno se comprobó con un contrafactual real: `git stash` sólo de `MainWindow.xaml`
+(dejando el `AR-14e` nuevo intacto), rebuild, misma tirada - **el mismo `FALLO` YA EXISTÍA en el
+código sin tocar**, tanto en `AR-14` (`0,7px` cortados a `1520x860`) como en el `AR-LAY` genérico
+(`AR-LAY-PERDIDO x2 Personaje/Equipamiento 1520x864 [en]: ... pierde 1,2x0px ... sin scroll`) - ya
+era un `FALLO` real ANTES de este cambio, sólo que con otra magnitud/idioma exactos (con el
+arreglo: `6,4px`/`[es]`; sin él: `0,7px`/`[es]` en `AR-14` y `1,2px`/`[en]` en `AR-LAY`). Es la
+categoría de deuda `AR-14` ya conocida y aceptada en la entrada de arriba ("recorte de layout...
+`AR-14` Armadura/Accesorios"), fragilidad de redondeo de punto flotante justo EN el pixel exacto
+del umbral, no una regresión nueva de este cambio - la magnitud se movió unos pixeles por el propio
+cambio de ruta de medición (`ScrollViewer` midiendo con alto infinito en vez de finito), pero la
+categoría, la localización (`1520`, el umbral exacto) y que "0 invisibles del todo" siguen siendo
+las mismas. Fuera del alcance de este encargo (era del `AR-LAY` de Librería desplegada, no del
+umbral de `SizeClass`) - queda igual de documentado que antes, sin tocar.
+
+**`AR-14e` nuevo** (`Terrakeep.App.Tests/AuditoriaEquipamiento.cs`, tras el bloque `AR-14b`):
+cobertura acotada (NO repite el barrido completo de `AR-14`, ya caro de por sí) que fuerza
+`EquipmentKind.Social` + `IsLibraryCollapsed=false` explícito en los dos tamaños reales donde se
+midió el recorte (1080x700, 1520x864) y mide con los mismos helpers reales de `AR-LAY`
+(`RectCompleto`/`ZonaVisible`/`AlcanzableConScroll`) si alguna celda de la rejilla central pierde
+alto sin escape - exactamente la combinación (`Social`/Amplio + Librería desplegada) que `AR-14`/
+`AR-14d` nunca ejercitaban (siempre fuerzan `Items`, línea ~102, y sólo pliegan Librería por
+variable de entorno, nunca la despliegan a propósito) y que dejó este bug sin detectar pese a que
+esas comprobaciones miden la misma fila con mucho detalle. Con el arreglo aplicado da `FALLO: 0` en
+ambos; el propio código documenta que si algún día ese hueco se vuelve a colar, `AR-14e` lo cazará
+sin depender de la tirada completa de `AR-LAY`.
+
+**Build y test**: `dotnet build Terrakeep.slnx -c Debug` limpio (0 avisos, 0 errores). `dotnet test`
+en verde (568+492, ver arriba) - el arnés de UI Automation (`Terrakeep.App.Tests`) no es xunit, se
+verificó con `AR14_SOLO=1`/`AR_LAY_SOLO=Equipamiento` como se detalla arriba, más rápido y acotado
+al área tocada en vez de la tirada completa (50-100+ min) - decisión razonada: el cambio vive
+enteramente dentro del subárbol de `SlotRowHost`, usado sólo en la pestaña Equipamiento, y el
+barrido `AR_LAY_SOLO=Equipamiento` ya cubre las 26 combinaciones tamaño x idioma reales de esa
+pantalla completa, no sólo los dos puntos críticos.
+
+**Recompilado y redesplegado**: `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe` (barra de
+tareas, `dotnet build`) y `AppData\Local\Programs\Terrakeep\` (instalado, `installer\install.ps1`
+real - publish Release autocontenido + copia) - ambos con `FileVersion` `3.2.3.0` confirmado con
+`Get-Item ... .VersionInfo.FileVersion` en los dos.
+
+Commit local (nunca `git push` - el usuario está dormido y no hay ninguna decisión suya pendiente
+sobre esto): `Terrakeep.App/MainWindow.xaml`, `Terrakeep.App.Tests/AuditoriaEquipamiento.cs` y
+`bitacora.md` por nombre exacto, nunca `git add -A`.

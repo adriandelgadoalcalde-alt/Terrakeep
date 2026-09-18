@@ -354,6 +354,58 @@ internal static partial class Program
                     Console.WriteLine($"FALLO: AR-14b - el propio bloque no restauro el reparto ({centroAntes:0.#} -> {centroVuelta:0.#}), contamina lo que venga despues");
             }
 
+            // AR-14e (18-sep-2026, tras el arreglo real de AR-LAY - ver MainWindow.xaml y
+            // bitacora.md, misma fecha): AR-14/AR-14d de arriba fuerzan SIEMPRE
+            // EquipmentKind.Items (linea ~102) y solo pliegan la Libreria si se les pide por
+            // variable de entorno, nunca la despliegan a proposito - asi que la combinacion real
+            // que rompio (vista Apariencia/vanidad -Social- CON la Libreria DESPLEGADA a la vez)
+            // quedaba fuera de lo que esta auditoria barre, aunque mida la misma fila fusionada
+            // con mucho detalle. Ese hueco de cobertura es justo lo que dejo el bug sin detectar
+            // tanto tiempo pese a que el propio codigo YA tenia un intento de arreglo documentado.
+            // No repite el barrido completo de arriba (esta auditoria ya es cara de por si, ver
+            // AR14_BARRIDO_FINO): solo los dos tamaños reales donde se midio el recorte (1080x700
+            // Compacto y 1520x864 Amplio), con la MISMA vista y el MISMO estado de Libreria que lo
+            // causaban, para que esta combinacion concreta nunca se vuelva a colar sin que salte
+            // un FALLO aqui mismo.
+            foreach (var (w, h) in new[] { (1080.0, 700.0), (1520.0, 864.0) })
+            {
+                FijarTamaño(window, w, h);
+                vm.IsLibraryCollapsed = false; // Libreria DESPLEGADA a proposito - el estado que rompia
+                vm.SelectedTabIndex = 1;
+                vm.PersonajeInnerTabIndex = 0;
+                vm.ObjetosSubTabIndex = 0; // Equipamiento
+                DoEvents();
+                var opcionSocial = vm.EquipmentGroup?.KindOptions.FirstOrDefault(o => o.Value == (int)EquipmentKind.Social);
+                if (opcionSocial != null) vm.EquipmentGroup!.SelectKindCommand.Execute(opcionSocial);
+                DoEvents(); DoEvents();
+
+                var hostE = Descendientes<SlotRowHost>(window).FirstOrDefault();
+                if (hostE == null) { Console.WriteLine($"FALLO: AR-14e - a {w:0}x{h:0} no hay SlotRowHost en el arbol visual"); continue; }
+
+                // Mismo filtro que AR-14 de arriba (col==1/row==1, IsVisible): en Compacto es el
+                // ScrollViewer con EquipmentGroup.Current (la vista Social ya seleccionada); en
+                // Amplio (IsEquipmentExpanded) es el Grid de 3 columnas Items/Social/Dyes - las
+                // DOS viven en la misma celda, mutuamente exclusivas por Visibility, asi que este
+                // filtro vale para las dos sin distinguir el SizeClass a mano.
+                var celdaCentral = hostE.Children.OfType<FrameworkElement>()
+                    .FirstOrDefault(hijo => hijo.IsVisible && Grid.GetColumn(hijo) == 1 && Grid.GetRow(hijo) == 1);
+                if (celdaCentral == null) { Console.WriteLine($"FALLO: AR-14e - a {w:0}x{h:0} no se encuentra la celda central (col1/fila1) de SlotRowHost"); continue; }
+
+                int cortados = 0; double peor = 0;
+                foreach (var sgp in Descendientes<SlotGridPanel>(celdaCentral))
+                    foreach (var celda in sgp.Children.OfType<FrameworkElement>())
+                    {
+                        var rc = RectCompleto(celda, window);
+                        var zc = ZonaVisible(celda, window);
+                        double faltaY = zc.IsEmpty ? rc.Height : Math.Min(rc.Height, Math.Max(0, zc.Top - rc.Top) + Math.Max(0, rc.Bottom - zc.Bottom));
+                        if (faltaY > 1 && AlcanzableConScroll(celda, window, horizontal: false)) faltaY = 0;
+                        if (faltaY > 1) { cortados++; peor = Math.Max(peor, faltaY); }
+                    }
+                Console.WriteLine($"AR-14e {w:0}x{h:0} Kind=Social Amplio={vm.IsEquipmentExpanded} LibreriaDesplegada=True: celdas cortadas={cortados} peor={peor:0.#}px");
+                if (cortados > 0)
+                    Console.WriteLine($"FALLO: AR-14e - a {w:0}x{h:0} con Social/Libreria desplegada, {cortados} celda(s) de la rejilla central pierden hasta {peor:0.#}px de alto sin scroll que las alcance (el hueco de cobertura que dejo pasar AR-LAY, ver bitacora 18-sep-2026)");
+            }
+
             // Deja el estado como estaba (misma leccion que LOADOUT-PILDORAS/AR-13c): vista de
             // Equipamiento original y tamaño base del arnes.
             var kindVuelta = vm.EquipmentGroup?.KindOptions.FirstOrDefault(o => o.Value == kindOriginal);
