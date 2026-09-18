@@ -73,9 +73,13 @@
          PUBLICADO en GitHub Releases es 3.2.0.0 (comprobado con Get-Item ... .VersionInfo.FileVersion
          tras instalarlo de verdad) - ese instalador concreto seguira con el bug hasta que se
          publique una release nueva con esto ya corregido (ver bitacora.md). -->
-    <Version>3.2.2</Version>
-    <FileVersion>3.2.2.0</FileVersion>
-    <AssemblyVersion>3.2.2.0</AssemblyVersion>
+    <!-- 3.2.3 (18-sep-2026): arreglo real del clic sobre marcadores del mapa de Exploracion - ver
+         changelog.json y bitacora.md. Version/FileVersion/AssemblyVersion sincronizados a mano
+         los TRES a la vez en el mismo cambio, para no repetir el error humano documentado arriba
+         (3.2.1 solo actualizo Version y se quedo el bucle infinito de "hay actualizacion"). -->
+    <Version>3.2.3</Version>
+    <FileVersion>3.2.3.0</FileVersion>
+    <AssemblyVersion>3.2.3.0</AssemblyVersion>
   </PropertyGroup>
 
   <!-- Auditoria final de Opus (5-sep-2026): la build de Release generaba .pdb (simbolos de

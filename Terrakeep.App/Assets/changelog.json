@@ -1,5 +1,18 @@
 [
   {
+    "version": "3.2.3",
+    "date": "18 de septiembre de 2026",
+    "date_en": "September 18, 2026",
+    "summary": "La posición del marcador de cofres en el mapa ya estaba bien desde la 3.2.2, pero hacer clic directamente sobre un cofre real seguía sin abrir nada: el propio mapa capturaba el ratón en cualquier clic (para poder arrastrar la vista) y le robaba el evento al marcador antes de que pudiera reconocer el clic. Ahora el mapa distingue si el clic empieza sobre un marcador clicable o sobre mapa vacío, y solo captura el ratón en el segundo caso.",
+    "summary_en": "The chest marker's map position was already correct since 3.2.2, but clicking directly on a real chest still opened nothing: the map itself captured the mouse on any click (to allow dragging the view) and stole the event from the marker before it could register the click. The map now tells apart a click that starts on a clickable marker from one that starts on empty map, and only captures the mouse in the second case.",
+    "fixed": [
+      "Un clic real sobre un marcador del mapa de Exploración (cofre, letrero, maniquí, marco de objeto) no abría su editor - el mapa capturaba el ratón de forma incondicional en cualquier clic para permitir el arrastre, y eso le robaba el evento de soltar el clic al marcador antes de que pudiera completarlo. Ahora el mapa distingue: si el clic empieza sobre un marcador clicable, no captura el ratón y lo deja recibir su clic normal; si empieza sobre mapa vacío, captura igual que siempre para poder arrastrar la vista."
+    ],
+    "fixed_en": [
+      "A real click on an Exploration map marker (chest, sign, mannequin, item frame) didn't open its editor - the map unconditionally captured the mouse on any click to allow dragging, which stole the mouse-up event from the marker before it could complete its click. The map now tells apart the two cases: a click starting on a clickable marker no longer captures the mouse, letting it receive its normal click; a click starting on empty map still captures it as before, so dragging the view keeps working."
+    ]
+  },
+  {
     "version": "3.2.2",
     "date": "18 de septiembre de 2026",
     "date_en": "September 18, 2026",
