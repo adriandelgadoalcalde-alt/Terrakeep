@@ -18592,3 +18592,35 @@ confirmado en ambos con `Get-Item ... .VersionInfo.FileVersion`).
 Commit local (nunca `git push` - el usuario está dormido y no hay ninguna decisión suya pendiente
 sobre esto): solo `Terrakeep.App/MainWindow.xaml.cs` y `Terrakeep.App.Tests/Program.cs` por nombre
 exacto, nunca `git add -A`.
+
+## 18-sep-2026 (más tarde) - Retomado el PID 145612 de arriba: LÍMITE REAL, sin llegar a DONE, sin indicio de bug nuevo
+
+Encargo aparte del coordinador (barrido de deuda de toda la familia): retomar la espera de este
+mismo proceso (`dotnet run --project Terrakeep.App.Tests -c Debug`, PID 145612, log real en el
+scratchpad de sesión mencionado arriba) y confirmar si los 4 `FALLO` ya conocidos tras `AR-EX4-PNG`
+(`AR-11f`/`AR-15`/`AR-EX1`/`AR-LAY`, recorte de layout ajeno a este fix) seguían siendo los mismos.
+
+Esperado de forma bloqueante y real (`controladorEspera.js proceso --pid 145612 --estado muerto`,
+encadenado varias veces) **más de 100 minutos en total** sin que el log avanzara ni una línea más de
+las 727 ya documentadas arriba, con la CPU del proceso subiendo sin parar todo ese tiempo (~1
+núcleo casi al 100 % sostenido) - muy por encima de los ~5 minutos que fue el peor caso medido el
+16-sep-2026 (ver esa entrada, más arriba en este mismo fichero: "El cuelgue reproducible tras
+AR-EX4-PNG... NO es un cuelgue").
+
+Se tomaron **3 volcados reales de `dotnet-dump`** (no solo esperar a ciegas) sobre el hilo de UI en
+tres momentos distintos: el primero lo encontró DENTRO de trabajo real y pesado de WPF
+(`TextBlock.OnRender`→`FullTextLine`→`LoCreateLine`, formateo de texto/glifos real, misma familia
+exacta de pila que ya documentó el volcado del 16-sep), los otros dos (75s y más de 15 min después)
+lo encontraron IDLE en `GetMessageW` mientras el proceso seguía consumiendo CPU real en otro hilo -
+el proceso SIGUE avanzando entre estados distintos, no está clavado en un único punto (la misma
+prueba que en su día descartó la hipótesis de "cuelgue"). Se vieron dos procesos `MSBuild` ajenos
+corriendo en paralelo parte del tiempo (consistente con "A8-02 / Punto 4" sobre la sensibilidad de
+este tramo a la carga del sistema), lo que explicaría al menos parte de la lentitud anómala de esta
+madrugada.
+
+**LÍMITE REAL, no forzado**: no se llegó a ver `DONE` ni el veredicto final de los `FALLO`
+posteriores a `AR-EX4-PNG` dentro del tiempo dedicado a esta ronda. El proceso se dejó corriendo
+solo, sin matar. Ningún indicio real de que el fix de esta noche (captura de ratón del mapa) haya
+roto nada fuera de su propia área - toda la evidencia apunta a que, cuando termine, dará los mismos
+4 `FALLO` ya documentados como deuda conocida y ajena. Detalle completo (con los 3 volcados) en
+`bitacora.md` de KeepQA, misma fecha.
