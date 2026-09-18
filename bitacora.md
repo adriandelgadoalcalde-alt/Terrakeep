@@ -18563,20 +18563,22 @@ resultados) - ninguno en el área de este fix (captura de ratón del mapa), cons
 cambio de este apartado solo toca `OnWorldMapMouseDown`/`OriginatesFromClickableMarker`, un código
 ajeno por completo a esos otros paneles.
 
-**Límite real**: la tirada completa de `dotnet run --project Terrakeep.App.Tests -c Debug` (unas
-8.500 líneas de arnés, cientos de bloques) es MUY larga - ya documentado antes en este mismo
-archivo que corre "tres veces seguidas" en sesiones nocturnas. Se dejó corriendo casi 50 minutos
-(controladorEspera, timeout de 590s encadenado varias veces) sin que avanzara ni una línea más
-tras `AR-EX4-PNG`, con la CPU del proceso subiendo de verdad todo el rato (2126s -> 2672s de tiempo
-de CPU en ese tramo, `Responding=True`, 13 hilos) - no colgado, computando algo pesado sin salida
-por consola durante mucho rato (patrón ya visto en otros bloques de este mismo arnés, p.ej. el
-escaneo de 131.673 grupos de `AR-EX3-LEGIBILIDAD` un poco antes). Se dejó el proceso corriendo solo
-(PID 145612, log completo en el scratchpad de esta sesión) en vez de seguir bloqueando esta tarea
-de forma indefinida por bloques de UI que no tienen nada que ver con este fix - lo que SÍ hacía
-falta demostrar (clic real abre el cofre correcto, arrastre real sigue paneando, cero regresión de
-`dotnet test`) ya quedó demostrado arriba con evidencia real. Si algún agente futuro quiere el
-veredicto completo de esa tirada, el patrón para retomarla es el de siempre: `dotnet run --project
-Terrakeep.App.Tests -c Debug > log.txt 2>&1`, esperar con `controladorEspera log --patron "^DONE$"`.
+**Actualización - la tirada completa terminó (mismo día, un rato más tarde)**: la ejecución de
+`dotnet run --project Terrakeep.App.Tests -c Debug` que se había dejado corriendo sola (ver el
+límite real que estaba aquí antes) terminó por su cuenta con `DONE` en la última línea, sin ninguna
+excepción (`grep -c EXCEPTION` = 0) - tardó bastante más de los ~50 minutos que ya se habían
+esperado activamente (consistente con lo ya documentado en este archivo de que la tirada completa
+"corre tres veces seguidas" en sesiones nocturnas, es decir, cada pasada por sí sola ya es larga).
+Resultado final: 1.065 líneas de log, 20 `FALLO` en total (2 más de los 18 ya vistos a mitad de
+camino: `T-H/F2` -FocusVisualStyle no se aplica al enfocar por teclado- y `AR-LAY` -1 elemento
+recortado en un barrido genérico de tamaños de ventana-, ambos de áreas de UI completamente ajenas
+al mapa/al ratón). Confirmado con `grep` explícito sobre el log completo: CERO líneas `FALLO` que
+mencionen `AR-13`, `AR-EX2`, `CurrentChestMarker` o `Captur` - ni un solo fallo, ni siquiera
+indirecto, en el área de este fix. Los 20 `FALLO` reales de la tirada son, sin excepción, del mismo
+tipo ya visto (recorte de layout en paneles concretos a resoluciones pequeñas + foco de teclado),
+pre-existentes y ajenos por completo al código tocado hoy (`OnWorldMapMouseDown`/
+`OriginatesFromClickableMarker`) - cero regresión confirmada de principio a fin, no solo en la
+parte que dio tiempo a revisar en caliente.
 
 **Build y test**: `dotnet build Terrakeep.slnx -c Debug` limpio (0 avisos, 0 errores). `dotnet test
 Terrakeep.slnx`: 568/568 (`Terrakeep.Core.Tests`) + 492/492 (`Terrakeep.App.ViewModels.Tests`) en
