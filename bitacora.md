@@ -19018,3 +19018,99 @@ que `Marco` usa `Stroke="{StaticResource TealBrush}"` para TODAS las categorías
 porque la causa real del reporte era la geometría, ya arreglada, y cambiarlo ahora mezclaría dos
 cosas; pero el `KindColor` por categoría ya existe en el ViewModel y sigue siendo una mejora real
 pendiente para no confundir un marcador de mineral con uno de cofre.
+
+## 20-sep-2026 — Catálogo de ideas Keep (funciones) y catálogo de rediseño visual: primera pasada real sobre Terrakeep
+
+Encargo del coordinador (autorización ya dada, sin publicar nada): implementar de verdad todo lo
+aplicable a Terrakeep de dos documentos vivos nuevos (Claude Docs) — catálogo de FUNCIONES (10
+ideas, sección "1. Terrakeep") y catálogo de REDISEÑO VISUAL (T1-T10 de Terrakeep, más la
+radiografía compartida de la familia y la tabla de prioridad/orden sugerido al final). Encadenar
+sin parar hasta agotar lo real, pero **sin publicar**: nada de versión nueva, `changelog.json`,
+instalador Release para distribuir, `git push` ni `gh release`.
+
+### Lo que se hizo de verdad esta ronda (implementado, verificado, comiteado, redesplegado)
+
+- **T10 · Tipografía que crece con el ancho** (`Theme.xaml`): `BodyText`/`CaptionText` suben un
+  escalón real (12.5→13.5 / 11→12) SOLO en `WindowSizeClass.Extra` (≥1920px), vía `DataTrigger`
+  sobre `DataContext.SizeClass` del `Window` ancestro (mismo patrón real ya usado en
+  `MainWindow.xaml` para `DataContext.Settings.IsCompactMode`). Recupera parte del 28-39% de
+  ancho que el propio comentario de `WindowSizeClass.Extra` (R-10/H-09) ya reconocía sin usar.
+- **T5 · Escala de espaciado declarada** (`Theme.xaml`): `Sp1..Sp6` (`Thickness` uniforme,
+  4/8/12/16/24/32) y `SpD1..SpD6` (mismos valores en `Double`, porque WPF no admite una clave
+  compartida por dos tipos), documentada con la misma disciplina de comentario que la escala
+  tipográfica ya existente (línea 129). El barrido de los +100 sitios existentes que aún usan un
+  número suelto (`Margin="0,10,0,24"` etc., citados literalmente en el propio catálogo) **queda
+  pendiente a propósito** — el catálogo lo marca como coste M "barrido guiado por KeepQA",
+  retocar cada uno a mano sin medir geometría real uno a uno sería el mismo barrido mecánico que
+  el comentario de tipografía de al lado ya rechaza.
+
+**Verificación real (regla de cierre del catálogo, dos fases):** bloque nuevo `TIPO_SOLO=1` en
+`Terrakeep.App.Tests/Program.cs` (mismo patrón real que `VITALS_SOLO`: anchos reales, idioma
+real, `DoEvents` entre cada uno). Primera pasada dio un `FALLO` real: `CaptionText` no subía a
+12pt en el primer `TextBlock` encontrado. Investigado antes de tocar nada más — no era un bug de
+`Theme.xaml`: ese `TextBlock` (`DifficultyLabel`, "Clásico") tiene `FontSize="10"` LOCAL en
+`MainWindow.xaml:1451`, y un valor local en WPF siempre gana a cualquier `Setter`/`DataTrigger`
+de `Style` (comportamiento correcto y ya documentado a propósito en el comentario de tipografía:
+"las variantes locales que ya existen ahí NO son descuido"). Arreglado el propio arnés para
+excluir `TextBlock` con `FontSize` local (`ReadLocalValue`) y exigir que estén de verdad en
+pantalla (`IsVisible` + `TransformToAncestor` sin excepción, no dentro de un Popup/ToolTip
+desconectado) — con eso, **0 FALLO** en los tres anchos (1900/1920/2500px) y en los 6 recursos
+`Sp*`/`SpD*`. `dotnet build` de la solución en verde (0/0). `Terrakeep.Core.Tests` 568/568 y
+`Terrakeep.App.ViewModels.Tests` 492/492 en verde (sin regresión). Redesplegado en local con el
+binario real: `dotnet build` a `bin\Debug` (el que abre el acceso directo de la barra de tareas,
+ver nota de la ronda 3.2.4 más arriba) y `installer\install.ps1` (Release autocontenido) a
+`%LocalAppData%\Programs\Terrakeep`. Commit `ca2ac1ba`, sin `git push` (decisión de publicar es
+del coordinador).
+
+### Hallazgo real: T8 (slot de Calamity por forma) YA ESTABA IMPLEMENTADO
+
+El catálogo describe T8 ("borde `CalamityBrush` al 45% + punto de 5px en la esquina, en vez de
+solo el texto en rojo") como pendiente, con un "Antes" que ya no es real. Comprobado en el código
+(`MainWindow.xaml` l.478-491, comentario de la "Auditoria de Opus, octava pasada, T-4/E-1"): el
+mismo cambio, con el mismo motivo (bug real encontrado entonces: un objeto de Calamity equipado
+se pintaba siempre verde, nunca rojo, por orden de triggers), ya se hizo — el borde significa
+UNA sola cosa (seleccionado), "equipado" vive en el fondo (mancha verde) y "Calamity" en un
+`Ellipse` real en la esquina (confirmado con `grep IsCalamity` en `MainWindow.xaml`: 8 sitios,
+incluida esa esquina). **No hace falta ninguna acción — el catálogo describía un estado ya
+superado por el propio proyecto.** Sin cambio de código para esto.
+
+### Lo que queda pendiente, con motivo real (LÍMITE REAL de esta ronda, no descartado)
+
+El resto de T1-T4/T6/T7/T9 (visual) y las 10 ideas del catálogo de funciones son **todas de coste
+Grande** (rediseño de arquitectura de pantalla completa, o un panel/ViewModel nuevo de principio
+a fin) sobre un `MainWindow.xaml` de 7555 líneas con un historial real y ya documentado de bugs
+sutiles por prisa (T-4/E-1 arriba, y el propio `AR-LAY`/`AR-MRK` de la ronda 3.2.4-3.2.5: geometría
+que "parece verde" en una mirada rápida y no lo está tras medir de verdad). Aplicarlos a medias
+en una sola pasada, sin el ciclo completo de dos fases + KeepQA + recompilar que la propia "Regla
+de cierre" del catálogo exige para CADA propuesta, violaría el listón de calidad fijo de la
+familia (profundidad y pulido, no a medias) más que ayudar. Quedan documentados aquí para que la
+siguiente ronda no tenga que releer los catálogos desde cero:
+
+- **T7 · Sistema único de toasts** (`Sistema`, coste S en el catálogo, pero real: confirmado con
+  `grep -rn "Toast"` que NO existe ningún sistema unificado hoy — hay al menos 3 banners
+  independientes con Storyboard propio, `SaveConfirmationVisible`/`DispatcherTimer` (l.6997-7167
+  de `MainWindow.xaml`). Migrar los tres sin romper la animación/accesibilidad ya afinada de cada
+  uno es más trabajo real que "coste S" y necesita su propia sesión de dos fases.
+- **T1-T4, T6, T9** (todos `Grande`/`L`): reestructuración real de Personaje (3 niveles de
+  pestañas → tablero), cabecera, Inicio y Exploración (mapa a pantalla completa). Bien
+  especificados en el catálogo (líneas/archivos citados verificados como reales), pero cada uno
+  toca docenas de bindings/triggers existentes.
+- **Catálogo de funciones (10 ideas)**: comprobado que las clases de Core que cada idea cita
+  existen de verdad (no es una lista aspiracional) — `WldBestiary`
+  (`Terrakeep.Core/WldFormat/WldBestiary.cs`), `NpcIconResolver`
+  (`Terrakeep.App/Services/NpcIconResolver.cs`), `VanillaTownNpcRoster`, `ItemStatsInfo`,
+  `PrefixEffectCatalog`, `PrefixSuggester`, `VanillaArmorSetCatalog`, `CalamityArmorSetCatalog`
+  (el catálogo la llama `CalamitySetBonusInfo`, nombre real distinto pero el concepto existe).
+  Cada una sigue siendo un panel/ViewModel/pruebas nuevos de principio a fin — no hay ninguna que
+  sea "solo enganchar una UI a algo ya hecho". La más acotada para arrancar la próxima ronda es
+  el **Bestiario del mundo** (T-idea 4 del catálogo): el backend YA existe completo, solo falta
+  el panel en Exploración.
+- **K1-K4 (Keep.Wpf)**: fuera de alcance de esta sesión — viven en otro repo
+  (`Downloads\Keep\Keep.Wpf\`), no en Terrakeep.
+
+### Estado
+
+`dotnet build` en verde (0/0). `Terrakeep.Core.Tests` 568/568, `Terrakeep.App.ViewModels.Tests`
+492/492. `TIPO_SOLO=1` (nuevo) en verde, 0 FALLO. Commit local `ca2ac1ba`, nunca `git push` (la
+decisión de publicar versión nueva es del coordinador). Nada de lo anterior (changelog, versión,
+instalador de distribución) se ha tocado, por encargo explícito.
