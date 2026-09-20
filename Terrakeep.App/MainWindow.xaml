@@ -7828,6 +7828,18 @@
                                                             <TextBlock Text="{Binding SizeText}" Style="{StaticResource CaptionText}" Margin="8,0,0,0" VerticalAlignment="Center" />
                                                         </StackPanel>
                                                         <TextBlock Text="{Binding SummaryText}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                                        <!-- Idea 3 del catalogo de funciones (narracion real, 20-sep-2026,
+                                                             reconsiderada a peticion explicita del coordinador): antes este
+                                                             panel solo listaba copias con fecha/resumen suelto - ahora cada
+                                                             punto (salvo el mas antiguo) narra de verdad que cambio desde
+                                                             el punto anterior (vida/mana maximos, objetos, muertes,
+                                                             dificultad, tiempo jugado), con los MISMOS datos que
+                                                             SummaryText ya guardaba, comparando dos fotografias
+                                                             consecutivas - nunca un dato nuevo inventado. -->
+                                                        <TextBlock Text="{Binding ChangeNarrationText}" Style="{StaticResource CaptionText}"
+                                                                   Foreground="{StaticResource TextSecondaryBrush}" FontStyle="Italic"
+                                                                   TextWrapping="Wrap" Margin="0,2,0,0"
+                                                                   Visibility="{Binding ChangeNarrationText, Converter={StaticResource NullToVis}}" />
                                                     </StackPanel>
 
                                                     <!-- Boton normal: solo PIDE la confirmacion, nunca restaura de golpe. -->

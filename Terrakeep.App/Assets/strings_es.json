@@ -926,5 +926,14 @@
   "backup_summary_items": "{0} objetos",
   "backup_summary_tplr": "con .tplr",
   "backup_summary_legacy": "Copia del formato antiguo (sin resumen guardado)",
-  "backup_summary_unavailable": "No se pudo leer el resumen de esta copia"
+  "backup_summary_unavailable": "No se pudo leer el resumen de esta copia",
+  "backup_change_first": "Punto más antiguo del historial guardado - nada anterior con qué comparar",
+  "backup_change_none": "Sin cambios de estado desde el punto anterior",
+  "backup_change_health_max": "Vida máxima: {0} → {1}",
+  "backup_change_mana_max": "Maná máximo: {0} → {1}",
+  "backup_change_items_up": "+{0} objeto(s)",
+  "backup_change_items_down": "-{0} objeto(s)",
+  "backup_change_deaths": "+{0} muerte(s)",
+  "backup_change_difficulty": "Dificultad: {0} → {1}",
+  "backup_change_playtime": "+{0} jugado(s) desde entonces"
 }

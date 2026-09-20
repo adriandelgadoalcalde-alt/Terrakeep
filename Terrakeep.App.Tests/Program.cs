@@ -2054,16 +2054,31 @@ internal static partial class Program
                 Directory.CreateDirectory(tempRoot);
                 vm.BackupHistory.Service.BackupsRoot = tempRoot; // aisla del %LOCALAPPDATA% real, mismo criterio ya establecido
 
+                // Idea 3, narracion real (20-sep-2026, reconsiderada a peticion explicita del
+                // coordinador): a diferencia de la version anterior de esta prueba (bytes basura
+                // [1,2,3,4], SummaryAvailable=false a proposito, nunca comprobaba el CONTENIDO del
+                // resumen), aqui se escribe un .plr REAL y valido (PlrFile.Write) con HealthMax/
+                // ItemCount reales y DISTINTOS en cada instantanea - la unica forma honesta de
+                // demostrar que ChangeNarrationText compara dos fotografias reales, no que
+                // devuelve texto de relleno.
                 string plrFalso = Path.Combine(tempRoot, "Vivo.plr");
-                File.WriteAllBytes(plrFalso, [1, 2, 3, 4]);
-                var personajeFalso = new LoadedCharacter(plrFalso, null, "Player",
-                    new PlrCharacter { Version = 279, Name = "Vivo", PrimaryLoadout = PlrLoadout.CreateEmpty(true) }, null, []);
+                var personajeVivo = new PlrCharacter
+                {
+                    Version = 279, Name = "Vivo", PrimaryLoadout = PlrLoadout.CreateEmpty(true),
+                    Loadouts = [PlrLoadout.CreateEmpty(false), PlrLoadout.CreateEmpty(false), PlrLoadout.CreateEmpty(false)],
+                    HealthMax = 100, ManaMax = 20,
+                };
+                File.WriteAllBytes(plrFalso, PlrFile.Write(personajeVivo));
+                var personajeFalso = new LoadedCharacter(plrFalso, null, "Player", personajeVivo, null, []);
 
                 vm.BackupHistory.Service.SaveBackup(personajeFalso, Terrakeep.App.Services.BackupReason.Manual);
                 vm.BackupHistory.Open(plrFalso, "Vivo", isCurrentCharacter: false);
                 DoEvents(); DoEvents();
                 Console.WriteLine($"IDEA3_SOLO: tras abrir el panel con 1 instantanea real -> Points.Count={vm.BackupHistory.Points.Count} (esperado 1), IsOpen={vm.BackupHistory.IsOpen}");
                 if (vm.BackupHistory.Points.Count != 1) Console.WriteLine("FALLO: IDEA3_SOLO - el panel no recogio la instantanea real ya existente al abrir");
+                Console.WriteLine($"IDEA3_SOLO-NARRACION: punto mas antiguo (sin nada anterior) -> ChangeNarrationText='{vm.BackupHistory.Points[0].ChangeNarrationText}' (esperado la clave real 'backup_change_first')");
+                if (vm.BackupHistory.Points[0].ChangeNarrationText != vm.Loc["backup_change_first"])
+                    Console.WriteLine("FALLO: IDEA3_SOLO-NARRACION - el punto mas antiguo del historial deberia decir que no hay nada anterior con que comparar");
 
                 var metodoCheck = typeof(BackupHistoryViewModel).GetMethod("CheckForLiveUpdates", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 if (metodoCheck == null) Console.WriteLine("FALLO: IDEA3_SOLO - CheckForLiveUpdates no existe (reflexion)");
@@ -2081,13 +2096,34 @@ internal static partial class Program
 
                     // --- Rama "hay algo nuevo": simula al mod escribiendo OTRA instantanea real
                     // mientras el panel sigue abierto - nunca se llama a Reload() a mano aqui,
-                    // solo al metodo real que el Tick del temporizador dispara. ---
+                    // solo al metodo real que el Tick del temporizador dispara. Progreso REAL de
+                    // personaje simulado (vida/mana max subidos, 3 objetos reales metidos en el
+                    // inventario) para poder comprobar la narracion de verdad. ---
                     System.Threading.Thread.Sleep(1100); // nombre de fichero real con sello de segundo distinto, evita colision real de nombre
+                    personajeVivo.HealthMax = 180;
+                    personajeVivo.ManaMax = 40;
+                    personajeVivo.Inventory[0] = new PlrItemSlot(Id: 1, Count: 1, Prefix: 0, Favorited: false); // Pico de cobre, id vanilla real
+                    personajeVivo.Inventory[1] = new PlrItemSlot(Id: 3, Count: 1, Prefix: 0, Favorited: false); // Hacha de cobre
+                    personajeVivo.Inventory[2] = new PlrItemSlot(Id: 71, Count: 5, Prefix: 0, Favorited: false); // Frasco de vida menor
+                    File.WriteAllBytes(plrFalso, PlrFile.Write(personajeVivo));
                     vm.BackupHistory.Service.SaveBackup(personajeFalso, Terrakeep.App.Services.BackupReason.BeforeSave);
                     metodoCheck.Invoke(vm.BackupHistory, null);
                     DoEvents(); DoEvents();
                     Console.WriteLine($"IDEA3_SOLO: sondeo CON fichero nuevo real (simulando al mod guardando) -> Points.Count={vm.BackupHistory.Points.Count} (esperado 2)");
                     if (vm.BackupHistory.Points.Count != 2) Console.WriteLine("FALLO: IDEA3_SOLO - el sondeo en vivo NO recogio la instantanea nueva real sin cerrar/reabrir el panel");
+
+                    if (vm.BackupHistory.Points.Count == 2)
+                    {
+                        string? narracion = vm.BackupHistory.Points[0].ChangeNarrationText; // Points[0] = mas reciente
+                        Console.WriteLine($"IDEA3_SOLO-NARRACION: punto mas reciente (tras el progreso simulado) -> ChangeNarrationText='{narracion}'");
+                        bool tieneVida = narracion != null && narracion.Contains("100") && narracion.Contains("180");
+                        bool tieneMana = narracion != null && narracion.Contains("20") && narracion.Contains("40");
+                        bool tieneObjetos = narracion != null && narracion.Contains("+3");
+                        Console.WriteLine($"IDEA3_SOLO-NARRACION: menciona vida 100->180={tieneVida}, mana 20->40={tieneMana}, +3 objetos={tieneObjetos}");
+                        if (!tieneVida) Console.WriteLine("FALLO: IDEA3_SOLO-NARRACION - la narracion real no menciona el cambio real de vida maxima (100->180)");
+                        if (!tieneMana) Console.WriteLine("FALLO: IDEA3_SOLO-NARRACION - la narracion real no menciona el cambio real de mana maximo (20->40)");
+                        if (!tieneObjetos) Console.WriteLine("FALLO: IDEA3_SOLO-NARRACION - la narracion real no menciona los 3 objetos reales añadidos al inventario");
+                    }
                 }
 
                 vm.BackupHistory.CloseCommand.Execute(null);

@@ -195,6 +195,13 @@ public sealed partial class BackupHistoryViewModel : ObservableObject
         catch (Exception) { /* un fichero ilegible no debe impedir ver el historial: es cuando mas falta hace */ }
         foreach (var entry in _service.ListBackups(PlrPath))
             Points.Add(new BackupPointViewModel(entry));
+        // Idea 3 del catalogo de funciones (narracion real - bitacora.md 20-sep-2026, reconsiderada
+        // a peticion explicita del coordinador): ListBackups ya devuelve mas reciente primero
+        // (OrderByDescending), asi que el VECINO cronologicamente ANTERIOR de cada punto es el
+        // SIGUIENTE de la lista (i+1) - se lo pasamos para que cada fila pueda narrar que cambio
+        // desde ese punto, ver BackupPointViewModel.ChangeNarrationText.
+        for (int i = 0; i < Points.Count - 1; i++)
+            Points[i].PreviousInfo = Points[i + 1].Entry.Info;
         _orphans = _service.FindOrphanHistories();
         OnPropertyChanged(nameof(FooterText));
         OnPropertyChanged(nameof(HasOrphans));
@@ -364,9 +371,53 @@ public sealed partial class BackupPointViewModel : ObservableObject
         return t.TotalHours >= 1 ? $"{(int)t.TotalHours}h {t.Minutes}min" : $"{t.Minutes}min";
     }
 
+    // Idea 3 del catalogo de funciones ("Partida en vivo" - bitacora.md 20-sep-2026, reconsiderada
+    // a peticion explicita del coordinador: "el panel actual COMPARA instantaneas consecutivas y
+    // narra que cambio... o solo lista backups con timestamp?" - la ronda anterior solo hizo lo
+    // segundo). Comprobado que SI hay datos reales de sobra para narrar de verdad sin inventar
+    // nada ni tocar el formato: BackupSnapshotInfo ya guarda HealthMax/ManaMax/ItemCount/
+    // PveDeaths/PlayTimeTicks/Difficulty de cada fotografia (ver BackupSnapshotInfo, capturados
+    // desde el 13-sep-2026 para el resumen legible de SummaryText) - solo faltaba COMPARAR dos
+    // fotografias consecutivas, nunca leer nada nuevo del .plr. Fuera de alcance real y honesto:
+    // narrar el nombre EXACTO de un objeto nuevo o el jefe concreto derrotado exigiria guardar el
+    // inventario/las banderas de progreso enteras en cada snapshot (mucho mas pesado que el
+    // resumen actual, penseado a proposito para ser barato) - la narracion aqui es agregada
+    // (cuanta vida/mana/objetos/muertes/tiempo cambiaron), no item a item.
+    public BackupSnapshotInfo? PreviousInfo { get; set; }
+
+    public string? ChangeNarrationText
+    {
+        get
+        {
+            var loc = LocalizationService.Instance;
+            var actual = Entry.Info;
+            if (actual is not { SummaryAvailable: true }) return null;
+            if (PreviousInfo is not { SummaryAvailable: true } previo)
+                return loc["backup_change_first"]; // el punto mas antiguo del historial - no hay con que comparar
+            var partes = new List<string>();
+            if (actual.HealthMax != previo.HealthMax)
+                partes.Add(loc.Format("backup_change_health_max", previo.HealthMax, actual.HealthMax));
+            if (actual.ManaMax != previo.ManaMax)
+                partes.Add(loc.Format("backup_change_mana_max", previo.ManaMax, actual.ManaMax));
+            if (actual.ItemCount != previo.ItemCount)
+                partes.Add(loc.Format(actual.ItemCount > previo.ItemCount ? "backup_change_items_up" : "backup_change_items_down",
+                    Math.Abs(actual.ItemCount - previo.ItemCount)));
+            if (actual.PveDeaths > previo.PveDeaths)
+                partes.Add(loc.Format("backup_change_deaths", actual.PveDeaths - previo.PveDeaths));
+            if (actual.Difficulty != previo.Difficulty)
+                partes.Add(loc.Format("backup_change_difficulty",
+                    AppearanceViewModel.DifficultyLabelFor(previo.Difficulty), AppearanceViewModel.DifficultyLabelFor(actual.Difficulty)));
+            long ticksJugados = actual.PlayTimeTicks - previo.PlayTimeTicks;
+            if (ticksJugados > 0)
+                partes.Add(loc.Format("backup_change_playtime", HorasJugadas(ticksJugados)));
+            return partes.Count == 0 ? loc["backup_change_none"] : string.Join(" · ", partes);
+        }
+    }
+
     public void RefreshTexts()
     {
         OnPropertyChanged(nameof(ReasonText));
         OnPropertyChanged(nameof(SummaryText));
+        OnPropertyChanged(nameof(ChangeNarrationText));
     }
 }

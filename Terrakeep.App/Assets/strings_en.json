@@ -926,5 +926,14 @@
   "backup_summary_items": "{0} items",
   "backup_summary_tplr": "with .tplr",
   "backup_summary_legacy": "Old-format copy (no summary stored)",
-  "backup_summary_unavailable": "Could not read the summary of this copy"
+  "backup_summary_unavailable": "Could not read the summary of this copy",
+  "backup_change_first": "Oldest point in the saved history - nothing earlier to compare against",
+  "backup_change_none": "No state changes since the previous point",
+  "backup_change_health_max": "Max health: {0} → {1}",
+  "backup_change_mana_max": "Max mana: {0} → {1}",
+  "backup_change_items_up": "+{0} item(s)",
+  "backup_change_items_down": "-{0} item(s)",
+  "backup_change_deaths": "+{0} death(s)",
+  "backup_change_difficulty": "Difficulty: {0} → {1}",
+  "backup_change_playtime": "+{0} played since then"
 }
