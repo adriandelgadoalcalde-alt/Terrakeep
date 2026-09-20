@@ -1525,6 +1525,122 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // IDEA8_SOLO=1 (20-sep-2026, catalogo de funciones, idea 8 "Informe y comparador de
+        // mundos" - version real, tercera ronda tras la correccion del coordinador: el catalogo
+        // citaba WorldCreationSummaryBuilder como apoyo, que resulto ser para la vista previa de
+        // GENERACION (semilla/tamaño antes de crear un mundo), nunca para resumir un .wld ya
+        // real y guardado - camino real encontrado: extender BuildWorldReportText (el "informe"
+        // YA existia) con Estado/semilla especial/vetas, y construir el "comparador" nuevo de
+        // cero (WorldCompareViewModel) sobre WldReader+CompareStatRowViewModel, ya probados.
+        //
+        // Verificacion con "aislar la variable": la verdad de referencia (Title/Seed/HardMode/
+        // IsCrimson/jefes/Npcs/Chests/Signs reales) se lee AQUI con un WldReader.Read propio e
+        // independiente, nunca reutilizando el calculo del propio ViewModel bajo prueba - un test
+        // que solo comparara el ViewModel contra si mismo no demostraria nada.
+        if (Environment.GetEnvironmentVariable("IDEA8_SOLO") == "1")
+        {
+            try
+            {
+                string mundoA = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                string mundoB = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                if (!File.Exists(mundoA) || !File.Exists(mundoB))
+                {
+                    Console.WriteLine($"IDEA8_SOLO: AVISO - faltan mundos reales de prueba (A existe={File.Exists(mundoA)}, B existe={File.Exists(mundoB)}), se omite");
+                }
+                else
+                {
+                    // --- Parte 1: informe de UN mundo extendido (BuildWorldReportText) ---
+                    vm.SelectedTabIndex = 4; // Exploracion
+                    DoEvents();
+                    var taskLoad = vm.Exploration.LoadFromPathAsync(mundoA);
+                    while (!taskLoad.IsCompleted) DoEvents();
+                    DoEvents(); DoEvents();
+
+                    var verdadA = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(mundoA));
+                    var (jefesVerdad, totalVerdad) = Terrakeep.App.ViewModels.ExplorationViewModel.CountDownedBosses(verdadA.Header);
+                    string informe = vm.Exploration.BuildWorldReportText();
+                    Console.WriteLine($"IDEA8_SOLO: informe real generado, {informe.Length} caracteres");
+                    bool tieneEstado = informe.Contains("=== Estado ===") || informe.Contains("=== State ===");
+                    bool tieneJefes = informe.Contains($"{jefesVerdad}/{totalVerdad}");
+                    bool tieneModoDificil = informe.Contains(verdadA.Header.HardMode ? "Sí" : "No") || informe.Contains(verdadA.Header.HardMode ? "Yes" : "No");
+                    Console.WriteLine($"IDEA8_SOLO: verdad de referencia (WldReader propio) -> jefes derrotados real={jefesVerdad}/{totalVerdad}, HardMode real={verdadA.Header.HardMode}, IsCrimson real={verdadA.Header.IsCrimson}");
+                    Console.WriteLine($"IDEA8_SOLO: informe contiene seccion Estado={tieneEstado}, contiene '{jefesVerdad}/{totalVerdad}'={tieneJefes}");
+                    if (!tieneEstado) Console.WriteLine("FALLO: IDEA8_SOLO - BuildWorldReportText no incluye la nueva seccion Estado");
+                    if (!tieneJefes) Console.WriteLine($"FALLO: IDEA8_SOLO - el informe no refleja el recuento REAL de jefes derrotados ({jefesVerdad}/{totalVerdad})");
+                    if (!tieneModoDificil) Console.WriteLine("FALLO: IDEA8_SOLO - el informe no refleja el HardMode real del archivo");
+
+                    bool tieneVetas = informe.Contains("Top vetas") || informe.Contains("Top ore veins");
+                    Console.WriteLine($"IDEA8_SOLO: informe incluye seccion de vetas={tieneVetas}");
+                    if (!tieneVetas) Console.WriteLine("FALLO: IDEA8_SOLO - el informe no incluye la nueva seccion de vetas de mineral");
+
+                    // --- Parte 2: comparador de DOS mundos (WorldCompareViewModel) ---
+                    vm.Exploration.SelectedCategory = Terrakeep.App.ViewModels.WorldSearchCategory.Compare;
+                    DoEvents();
+                    var taskA = vm.WorldCompare.LoadAAsync(mundoA);
+                    while (!taskA.IsCompleted) DoEvents();
+                    var taskB = vm.WorldCompare.LoadBAsync(mundoB);
+                    while (!taskB.IsCompleted) DoEvents();
+                    DoEvents(); DoEvents();
+
+                    var verdadB = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(mundoB));
+                    Console.WriteLine($"IDEA8_SOLO: verdad de referencia B -> Title='{verdadB.Header.Title}', Npcs={verdadB.Npcs.Count}, Chests={verdadB.Chests.Count}, Signs={verdadB.Signs.Count}");
+                    Console.WriteLine($"IDEA8_SOLO: WorldCompare.HasBothLoaded={vm.WorldCompare.HasBothLoaded}, StatRows.Count={vm.WorldCompare.StatRows.Count}, DifferenceCount={vm.WorldCompare.DifferenceCount}");
+                    if (!vm.WorldCompare.HasBothLoaded) Console.WriteLine("FALLO: IDEA8_SOLO - el comparador no marca los dos mundos como cargados");
+                    if (vm.WorldCompare.StatRows.Count == 0) Console.WriteLine("FALLO: IDEA8_SOLO - el comparador no genero ninguna fila real");
+
+                    var filaTitulo = vm.WorldCompare.StatRows.FirstOrDefault(r => r.ValueA == verdadA.Header.Title);
+                    Console.WriteLine($"IDEA8_SOLO: fila de Titulo real encontrada={filaTitulo != null} (ValueA='{filaTitulo?.ValueA}' esperado='{verdadA.Header.Title}', ValueB='{filaTitulo?.ValueB}' esperado='{verdadB.Header.Title}')");
+                    if (filaTitulo == null || filaTitulo.ValueB != verdadB.Header.Title)
+                        Console.WriteLine("FALLO: IDEA8_SOLO - la fila de Titulo no refleja los valores REALES de los dos archivos");
+
+                    var filaNpcs = vm.WorldCompare.StatRows.FirstOrDefault(r => r.ValueA == verdadA.Npcs.Count.ToString());
+                    if (filaNpcs == null || filaNpcs.ValueB != verdadB.Npcs.Count.ToString())
+                        Console.WriteLine($"FALLO: IDEA8_SOLO - la fila de NPCs no refleja el recuento REAL (A={verdadA.Npcs.Count}, B={verdadB.Npcs.Count})");
+                    else
+                        Console.WriteLine($"IDEA8_SOLO: fila de NPCs correcta -> A={filaNpcs.ValueA}, B={filaNpcs.ValueB}");
+
+                    // Aisla la variable "de verdad detecta diferencias" de "de verdad detecta
+                    // IGUALDAD": cargar el MISMO archivo en los dos lados tiene que dar 0
+                    // diferencias exactas - si el comparador marcara todo como distinto siempre,
+                    // esto lo cazaria.
+                    var taskA2 = vm.WorldCompare.LoadAAsync(mundoA);
+                    while (!taskA2.IsCompleted) DoEvents();
+                    var taskB2 = vm.WorldCompare.LoadBAsync(mundoA);
+                    while (!taskB2.IsCompleted) DoEvents();
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"IDEA8_SOLO: mismo archivo en A y B -> DifferenceCount={vm.WorldCompare.DifferenceCount} (esperado 0)");
+                    if (vm.WorldCompare.DifferenceCount != 0)
+                        Console.WriteLine($"FALLO: IDEA8_SOLO - comparar un mundo consigo mismo da {vm.WorldCompare.DifferenceCount} diferencias, deberian ser 0");
+
+                    // Recarga los dos mundos reales distintos para la captura (el estado visual
+                    // que de verdad importa enseñar es el de "hay diferencias resaltadas").
+                    var taskA3 = vm.WorldCompare.LoadAAsync(mundoA);
+                    while (!taskA3.IsCompleted) DoEvents();
+                    var taskB3 = vm.WorldCompare.LoadBAsync(mundoB);
+                    while (!taskB3.IsCompleted) DoEvents();
+                    DoEvents(); DoEvents();
+
+                    var itemsControlCompare = Descendientes<System.Windows.Controls.ItemsControl>(window)
+                        .FirstOrDefault(ic => ic.ItemsSource == vm.WorldCompare.StatRows);
+                    Console.WriteLine($"IDEA8_SOLO: ItemsControl real de filas encontrado en el arbol visual={itemsControlCompare != null}, visible={itemsControlCompare?.IsVisible}");
+                    if (itemsControlCompare == null || !itemsControlCompare.IsVisible)
+                        Console.WriteLine("FALLO: IDEA8_SOLO - el panel del comparador de mundos no esta realmente en pantalla");
+
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(window);
+                    var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    string shot = Path.Combine(AppContext.BaseDirectory, "idea8-comparador-mundos.png");
+                    using (var fs = File.Create(shot)) enc.Save(fs);
+                    Console.WriteLine($"IDEA8_SOLO: captura real -> {shot}");
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("IDEA8_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (IDEA8_SOLO)");
+            Environment.Exit(0);
+        }
+
         // T2_SOLO=1 (20-sep-2026, catalogo de rediseño visual T2 "cabecera de una fila"):
         // verifica en frio, con la ventana real, que la fila de botones de la cabecera global YA
         // NO envuelve a una segunda linea al ancho de referencia real del catalogo (1180x860,

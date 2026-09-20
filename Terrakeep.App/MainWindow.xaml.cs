@@ -479,6 +479,32 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) await LoadWorldAndRestoreView(dialog.FileName);
     }
 
+    // Idea 8 (catalogo de funciones, "Informe y comparador de mundos" - bitacora.md
+    // 20-sep-2026): mismo dialogo/filtro que OnLoadWorldClick de arriba, pero contra el
+    // comparador independiente (WorldCompareViewModel) - nunca toca _viewModel.Exploration ni el
+    // mundo que pueda estar abierto ahi mismo.
+    private async void OnLoadWorldCompareAClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = Loc["dlg_load_world"],
+            Filter = Loc["dlg_filter_world"],
+            InitialDirectory = Services.CharacterFileService.GetDefaultWorldsDirectory(),
+        };
+        if (dialog.ShowDialog(this) == true) await _viewModel.WorldCompare.LoadAAsync(dialog.FileName);
+    }
+
+    private async void OnLoadWorldCompareBClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = Loc["dlg_load_world"],
+            Filter = Loc["dlg_filter_world"],
+            InitialDirectory = Services.CharacterFileService.GetDefaultWorldsDirectory(),
+        };
+        if (dialog.ShowDialog(this) == true) await _viewModel.WorldCompare.LoadBAsync(dialog.FileName);
+    }
+
     // F-10 (auditoria de Opus vs TEdit, E-10): alterna entre el ancho guardado y 0 - el ancho
     // "de antes de plegar" se recuerda aqui en memoria (no persistido aparte, no hace falta:
     // solo importa dentro de la MISMA sesion, entre un plegado y el siguiente despliegue).

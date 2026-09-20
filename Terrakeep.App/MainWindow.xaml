@@ -6147,6 +6147,15 @@
                                     </TextBlock.Text>
                                 </TextBlock>
                             </RadioButton>
+                            <!-- Idea 8 (catalogo de funciones, bitacora.md 20-sep-2026): a
+                                 diferencia de las 5 pildoras de arriba, "Comparar" NO exige un
+                                 mundo cargado en esta pestaña (compara dos mundos CUALQUIERA por
+                                 su cuenta, ver WorldCompareViewModel) - sin el IsEnabled/ToolTip
+                                 de "carga un mundo primero" que llevan las demas. -->
+                            <RadioButton Style="{StaticResource CategorySelector}" GroupName="ExploracionCategoria"
+                                         IsChecked="{Binding Exploration.SelectedCategory, Converter={StaticResource EnumEquals}, ConverterParameter=Compare}">
+                                <TextBlock Text="{Binding Loc[explore_category_compare], Mode=OneWay}" />
+                            </RadioButton>
                         </WrapPanel>
 
                         <!-- 9.2: cuadro de busqueda comun - UN SOLO TextBox, cambia de semantica
@@ -6871,6 +6880,96 @@
                                          VirtualizingPanel.IsVirtualizing="True"
                                          VirtualizingPanel.VirtualizationMode="Recycling"
                                          VirtualizingPanel.ScrollUnit="Pixel" />
+                            </DockPanel>
+
+                            <!-- Idea 8 (catalogo de funciones, "Informe y comparador de mundos" -
+                                 bitacora.md 20-sep-2026): comparador de DOS mundos, independiente
+                                 del mundo que pueda estar abierto arriba (ver el comentario de
+                                 cabecera real de WorldCompareViewModel). Mismas filas visuales que
+                                 el comparador de personajes (Compare.StatRows, T9) - misma idea de
+                                 "lado a lado, resalta lo que cambia". -->
+                            <DockPanel>
+                                <DockPanel.Style>
+                                    <Style TargetType="DockPanel">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Exploration.SelectedCategory}" Value="Compare">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DockPanel.Style>
+                                <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
+                                    <Button Tag="Ghost" Margin="0,0,3,0" Click="OnLoadWorldCompareAClick">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Loc[compare_world_load_a], Mode=OneWay}" TextAlignment="Center" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding WorldCompare.NameA, Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                                       TextAlignment="Center" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                                                       Visibility="{Binding WorldCompare.NameA, Converter={StaticResource NullToVis}}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Tag="Ghost" Margin="3,0,0,0" Click="OnLoadWorldCompareBClick">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Loc[compare_world_load_b], Mode=OneWay}" TextAlignment="Center" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding WorldCompare.NameB, Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                                       TextAlignment="Center" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                                                       Visibility="{Binding WorldCompare.NameB, Converter={StaticResource NullToVis}}" />
+                                        </StackPanel>
+                                    </Button>
+                                </UniformGrid>
+                                <TextBlock DockPanel.Dock="Top" Text="{Binding WorldCompare.ErrorMessage}" Foreground="{StaticResource PinkBrush}"
+                                           Style="{StaticResource BodyText}" TextWrapping="Wrap" Margin="0,0,0,8"
+                                           Visibility="{Binding WorldCompare.ErrorMessage, Converter={StaticResource NullToVis}}" />
+                                <TextBlock DockPanel.Dock="Top" Text="{Binding Loc[compare_world_hint], Mode=OneWay}"
+                                           Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding WorldCompare.HasBothLoaded}" Value="False" />
+                                                        <Condition Binding="{Binding WorldCompare.ErrorMessage}" Value="{x:Null}" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                              Visibility="{Binding WorldCompare.HasBothLoaded, Converter={StaticResource BoolToVis}}">
+                                    <ItemsControl ItemsSource="{Binding WorldCompare.StatRows}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:CompareStatRowViewModel}">
+                                                <Border CornerRadius="6" Padding="8,5" Margin="0,0,0,2">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="Transparent" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsDifferent}" Value="True">
+                                                                    <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="140" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding Label}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding ValueA}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
+                                                                   TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
+                                                        <TextBlock Grid.Column="2" Text="{Binding ValueB}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
+                                                                   TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
                             </DockPanel>
                         </Grid>
                         </Grid>

@@ -831,6 +831,11 @@ public partial class MainViewModel : ObservableObject
     // nuevas) - ver el comentario de cabecera real en CompareViewModel (por que lleva su PROPIO
     // CharacterFileService en vez de compartir _service).
     public CompareViewModel Compare { get; }
+    // Idea 8 del catalogo de funciones ("Informe y comparador de mundos" - bitacora.md
+    // 20-sep-2026): comparador de DOS mundos cualesquiera (no exige tener ninguno cargado en
+    // Exploracion), mismo patron/independencia que Compare de arriba - ver el comentario de
+    // cabecera real de WorldCompareViewModel.
+    public WorldCompareViewModel WorldCompare { get; } = new();
     // Vista previa de generacion de mundo (14-sep-2026, punto 9 de la lista confirmada del
     // 13-sep-2026) - ver el comentario de cabecera real en WorldPreviewViewModel. Overlay
     // independiente de todo personaje/mundo cargado, calculador puro.

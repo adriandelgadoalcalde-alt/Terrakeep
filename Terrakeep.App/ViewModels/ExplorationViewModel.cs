@@ -92,7 +92,13 @@ public sealed partial class WorldSearchHitRowViewModel(WorldSearchHit hit) : Obs
 // "manda": cada una muestra de entrada un inventario real de lo que el mundo cargado tiene, no
 // solo filtra un catalogo generico. "Todo" es el buscador de texto libre ya existente,
 // sin cambios de comportamiento.
-public enum WorldSearchCategory { All, Npcs, Chests, Ores, Objects }
+// Compare AL FINAL a proposito (idea 8, "Informe y comparador de mundos" - bitacora.md
+// 20-sep-2026): a diferencia de las demas categorias, no navega el mundo YA cargado en esta
+// pestaña - abre el panel del comparador (WorldCompareViewModel, dos mundos independientes) -
+// mismo enum solo porque comparte el mismo mecanismo de pildoras/Grid con Visibility exclusiva
+// que ya usa el resto (ver MainWindow.xaml, ExplorationCategoryContent), no por ser una vista
+// mas del mundo cargado.
+public enum WorldSearchCategory { All, Npcs, Chests, Ores, Objects, Compare }
 
 // Fila de inventario generica - reutilizada por Cofres (las dos vistas), Minerales y Objetos
 // (las tres vistas). NPCs sigue con su propio WorldNpcRowViewModel (ya existente, con icono real
@@ -428,13 +434,53 @@ public partial class ExplorationViewModel : ObservableObject
         OnPropertyChanged(nameof(CanUseGameModeJourney));
     }
 
-    private static string GameModeLabel(int gameMode) => gameMode switch
+    // public (no private): idea 8 del catalogo de funciones ("Informe y comparador de mundos",
+    // bitacora.md 20-sep-2026) reutiliza esta misma tabla desde WorldCompareViewModel - un modo
+    // de juego se llama igual compare el mundo que compare, no tiene sentido duplicar el switch.
+    // public en vez de solo internal: Terrakeep.App.Tests no tiene InternalsVisibleTo hacia
+    // Terrakeep.App (mismo motivo ya documentado en MainViewModel.RebuildIllegalPrefixDiagnostics)
+    // y IDEA8_SOLO necesita esta misma tabla como verdad de referencia INDEPENDIENTE del calculo
+    // del ViewModel bajo prueba.
+    public static string GameModeLabel(int gameMode) => gameMode switch
     {
         1 => LocalizationService.Instance["explore_gamemode_expert"],
         2 => LocalizationService.Instance["explore_gamemode_master"],
         3 => LocalizationService.Instance["explore_gamemode_journey"],
         _ => LocalizationService.Instance["explore_gamemode_classic"],
     };
+
+    // Idea 8 (mismo motivo que arriba): cuenta real de jefes derrotados sobre los campos que YA
+    // lee WldHeader (ver su propio comentario - los jefes tardios, Fishron/Martianos/Culto
+    // Lunatico/Lunatico, quedan fuera del formato leido a proposito, offset no fijo). El slime
+    // king solo cuenta si el mundo es lo bastante nuevo para tener el campo (version>=118) -
+    // Total refleja eso mismo, nunca un "9" o "10" fijo que mienta sobre mundos viejos.
+    public static (int Downed, int Total) CountDownedBosses(WldHeader h)
+    {
+        int total = 9 + (h.DownedSlimeKingBoss.HasValue ? 1 : 0);
+        int downed = 0;
+        if (h.DownedBoss1EyeOfCthulhu) downed++;
+        if (h.DownedBoss2EaterOfWorldsOrBrainOfCthulhu) downed++;
+        if (h.DownedBoss3Skeletron) downed++;
+        if (h.DownedQueenBee) downed++;
+        if (h.DownedMechBoss1TheDestroyer) downed++;
+        if (h.DownedMechBoss2TheTwins) downed++;
+        if (h.DownedMechBoss3SkeletronPrime) downed++;
+        if (h.DownedPlantBoss) downed++;
+        if (h.DownedGolemBoss) downed++;
+        if (h.DownedSlimeKingBoss == true) downed++;
+        return (downed, total);
+    }
+
+    // Idea 8: nombre real del efecto de semilla especial detectado (SpecialSeedCatalog.Detect,
+    // Terrakeep.Core.WorldGen) - "—" si la semilla no activa ninguno (el caso normal, mundos
+    // generados con una semilla aleatoria de verdad).
+    public static string SpecialSeedLabel(string? seedText)
+    {
+        var effects = Terrakeep.Core.WorldGen.SpecialSeedCatalog.Detect(seedText);
+        if (effects.Count == 0) return "—";
+        var loc = LocalizationService.Instance;
+        return string.Join(", ", effects.Select(e => loc[$"special_seed_{e.ToString().ToLowerInvariant()}"]));
+    }
 
     private bool CanSaveWorldGameMode() => IsWorldLoaded && _currentWorldPath != null && WorldGameMode != _savedWorldGameMode;
 
@@ -900,9 +946,27 @@ public partial class ExplorationViewModel : ObservableObject
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"{WorldTitle}");
         sb.AppendLine(loc.Format("report_seed", WorldSeedText));
+        string semillaEspecial = SpecialSeedLabel(_world.Header.Seed);
+        if (semillaEspecial != "—") sb.AppendLine(loc.Format("report_special_seed", semillaEspecial));
         sb.AppendLine(loc.Format("report_game_mode", WorldGameModeText));
         sb.AppendLine(loc.Format("report_size", WorldSizeText));
         sb.AppendLine(loc.Format("report_format_version", WorldVersionText));
+        sb.AppendLine();
+        // Idea 8 (catalogo de funciones, "Informe y comparador de mundos" - bitacora.md
+        // 20-sep-2026): "Estado" no existia en el informe de texto - jefes/dificil/bioma/luna ya
+        // eran editables en el panel de arriba (Editor de mundos v1) pero nunca se volcaban aqui.
+        // Todos estos campos son LECTURA del ultimo valor guardado en el archivo real (los mismos
+        // que ya usa el panel de edicion, _saved*), nunca del valor a medio editar en pantalla -
+        // un informe describe lo que HAY guardado, no un borrador sin guardar.
+        var h = _world.Header;
+        var (jefesDerrotados, jefesTotal) = CountDownedBosses(h);
+        sb.AppendLine(loc["report_state_header"]);
+        sb.AppendLine(loc.Format("report_hardmode", loc[h.HardMode ? "compare_yes" : "compare_no"]));
+        sb.AppendLine(loc.Format("report_evil_biome", loc[h.IsCrimson ? "worldpreview_evil_crimson" : "worldpreview_evil_corruption"]));
+        sb.AppendLine(loc.Format("report_bosses_downed", jefesDerrotados, jefesTotal));
+        sb.AppendLine(loc.Format("report_moon_phase", h.MoonPhase));
+        if (h.BloodMoon) sb.AppendLine(loc["report_blood_moon"]);
+        if (h.IsEclipse) sb.AppendLine(loc["report_eclipse"]);
         sb.AppendLine();
         sb.AppendLine(loc["report_census_header"]);
         sb.AppendLine(loc.Format("report_air", WorldAirPercentText));
@@ -916,6 +980,20 @@ public partial class ExplorationViewModel : ObservableObject
         long totalTiles = (long)_world.Header.TilesWide * _world.Header.TilesHigh;
         foreach (var (type, count) in _presence.TileCounts.OrderByDescending(kv => kv.Value).Take(10))
             sb.AppendLine($"{_tileNames.TileName(type)} [{type}]: {count:N0} ({(double)count / totalTiles:P2})");
+
+        // Idea 8: "Top vetas de mineral" - reutiliza OreVeinFinder (ya probado y con su propio
+        // coste medido, ver su comentario de cabecera) SOLO sobre los minerales que este mundo
+        // realmente tiene (OreTileCatalog.All + _presence.HasTile, mismo filtro que ya usa
+        // OresPillCount mas arriba) - nunca recorre tipos que no existen en este mundo.
+        var mineralesPresentes = OreTileCatalog.All.Where(_presence.HasTile).ToHashSet();
+        if (mineralesPresentes.Count > 0)
+        {
+            var vetas = OreVeinFinder.Find(_world, mineralesPresentes, limit: 10, out int totalVetas);
+            sb.AppendLine();
+            sb.AppendLine(loc.Format("report_top_veins_header", totalVetas));
+            foreach (var veta in vetas)
+                sb.AppendLine($"{_tileNames.TileName(veta.Type)}: {veta.TileCount} tiles ({veta.CenterX}, {veta.CenterY})");
+        }
         return sb.ToString();
     }
 
