@@ -1525,6 +1525,104 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // IDEA6_SOLO=1 (20-sep-2026, catalogo de funciones, idea 6 "Laboratorio de personajes" -
+        // version real, tercera ronda tras la correccion del coordinador: investigado a fondo
+        // que NO existe ninguna fabrica real de personaje "en blanco" (Core ni App) - LIMITE real
+        // documentado en el propio codigo de OnGenerateCharacterForBuildClick. Camino real SI
+        // viable probado aqui: duplicar el personaje cargado a un fichero nuevo, vaciarlo y
+        // aplicarle un build real via AutoEquipCommand (la MISMA logica que el boton real, sin
+        // el SaveFileDialog que no se puede automatizar sin interaccion real de Windows).
+        //
+        // Verificacion con "aislar la variable": el ORIGINAL debe quedar INTACTO (nunca tocado
+        // por vaciar/reequipar el duplicado) y el NUEVO fichero debe llevar EXACTAMENTE los
+        // ItemId ya resueltos por BuildsViewModel (verdad de referencia calculada ANTES de tocar
+        // nada, independiente del flujo bajo prueba).
+        if (Environment.GetEnvironmentVariable("IDEA6_SOLO") == "1")
+        {
+            string? rutaTemporal = null;
+            try
+            {
+                var personajeReal = vm.Home.Characters.FirstOrDefault(c => c.FilePath.Contains("tModLoader", StringComparison.OrdinalIgnoreCase) && c.FilePath.Contains("Eldelgas", StringComparison.OrdinalIgnoreCase))
+                    ?? vm.Home.Characters.FirstOrDefault();
+                if (personajeReal == null) { Console.WriteLine("IDEA6_SOLO: AVISO - no hay ningun personaje real de prueba, se omite"); }
+                else
+                {
+                    vm.Home.OpenCommand.Execute(personajeReal);
+                    DoEvents(); DoEvents();
+                    vm.SelectedTabIndex = 2; // Builds
+                    DoEvents();
+
+                    var clase = vm.Builds.VanillaStages.SelectMany(s => s.Classes).FirstOrDefault(c => c.Armor.Count > 0 && c.Weapons.Count > 0)
+                        ?? vm.Builds.CalamityStages.SelectMany(s => s.Classes).FirstOrDefault(c => c.Armor.Count > 0 && c.Weapons.Count > 0);
+                    if (clase == null) { Console.WriteLine("IDEA6_SOLO: AVISO - ningun build real tiene armadura+arma a la vez, se omite"); }
+                    else
+                    {
+                        Console.WriteLine($"IDEA6_SOLO: build real elegido -> clase='{clase.ClassName}', armadura={clase.Armor.Count}, armas={clase.Weapons.Count}, accesorios={clase.Accessories.Count}");
+                        var idsArmaduraEsperados = clase.Armor.Take(3).Select(a => a.ItemId).ToList();
+                        var idsAccesoriosEsperados = clase.Accessories.Take(5).Select(a => a.ItemId).ToList();
+
+                        // --- Verdad de referencia del ORIGINAL, antes de tocar nada ---
+                        var servicioAparte = new Terrakeep.App.Services.CharacterFileService();
+                        var originalAntes = servicioAparte.Load(personajeReal.FilePath);
+                        int itemsRealesOriginal = originalAntes.MergedContainers.Values.SelectMany(v => v).Count(i => !i.IsEmpty);
+                        Console.WriteLine($"IDEA6_SOLO: verdad de referencia -> el original tiene {itemsRealesOriginal} objeto(s) real(es) antes de nada");
+
+                        // --- Duplicar (mismo mecanismo real que OnGenerateCharacterForBuildClick,
+                        // sin el SaveFileDialog que no se puede automatizar) ---
+                        rutaTemporal = Path.Combine(Path.GetTempPath(), $"idea6-laboratorio-{Guid.NewGuid():N}.plr");
+                        File.Copy(personajeReal.FilePath, rutaTemporal, overwrite: true);
+                        string tplrSrc = Path.ChangeExtension(personajeReal.FilePath, ".tplr");
+                        if (File.Exists(tplrSrc)) File.Copy(tplrSrc, Path.ChangeExtension(rutaTemporal, ".tplr"), overwrite: true);
+
+                        vm.LoadFromPath(rutaTemporal);
+                        DoEvents(); DoEvents();
+
+                        if (vm.EquipmentGroup != null)
+                            foreach (var slot in vm.EquipmentGroup.CurrentItems.Slots) slot.UpdateFrom(Terrakeep.Core.Model.GameItem.Empty);
+                        var inventarioNuevo = vm.Containers.FirstOrDefault(c => c.Key == "inventory");
+                        if (inventarioNuevo != null)
+                            foreach (var slot in inventarioNuevo.Slots) slot.UpdateFrom(Terrakeep.Core.Model.GameItem.Empty);
+                        DoEvents();
+
+                        vm.AutoEquipCommand.Execute(clase.Source);
+                        DoEvents(); DoEvents();
+
+                        var idsArmaduraReales = vm.EquipmentGroup!.CurrentItems.Slots.Take(3).Select(s => s.ItemId).ToList();
+                        var idsAccesoriosReales = vm.EquipmentGroup.CurrentItems.Slots.Skip(3).Take(5).Select(s => s.ItemId).ToList();
+                        int armasColocadas = inventarioNuevo!.Slots.Count(s => !s.IsEmpty);
+                        Console.WriteLine($"IDEA6_SOLO: esperado armadura={string.Join(",", idsArmaduraEsperados)}, real={string.Join(",", idsArmaduraReales)}");
+                        Console.WriteLine($"IDEA6_SOLO: esperado accesorios={string.Join(",", idsAccesoriosEsperados)}, real={string.Join(",", idsAccesoriosReales)}");
+                        Console.WriteLine($"IDEA6_SOLO: armas reales colocadas en inventario={armasColocadas} (esperado <= {clase.Weapons.Count}, > 0)");
+
+                        if (!idsArmaduraEsperados.SequenceEqual(idsArmaduraReales))
+                            Console.WriteLine("FALLO: IDEA6_SOLO - la armadura real del personaje generado no coincide con el build elegido");
+                        if (!idsAccesoriosEsperados.SequenceEqual(idsAccesoriosReales))
+                            Console.WriteLine("FALLO: IDEA6_SOLO - los accesorios reales del personaje generado no coinciden con el build elegido");
+                        if (armasColocadas == 0 && clase.Weapons.Count > 0)
+                            Console.WriteLine("FALLO: IDEA6_SOLO - ninguna arma real quedo colocada en el inventario del personaje generado");
+
+                        // --- Aisla la variable: el ORIGINAL debe seguir intacto ---
+                        var originalDespues = servicioAparte.Load(personajeReal.FilePath);
+                        int itemsRealesDespues = originalDespues.MergedContainers.Values.SelectMany(v => v).Count(i => !i.IsEmpty);
+                        Console.WriteLine($"IDEA6_SOLO: el original tiene {itemsRealesDespues} objeto(s) real(es) DESPUES (esperado igual, {itemsRealesOriginal})");
+                        if (itemsRealesDespues != itemsRealesOriginal)
+                            Console.WriteLine("FALLO: IDEA6_SOLO - el personaje ORIGINAL cambio de verdad (el laboratorio deberia tocar solo el duplicado)");
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("IDEA6_SOLO-EXCEPTION: " + ex); }
+            finally
+            {
+                if (rutaTemporal != null)
+                {
+                    try { if (File.Exists(rutaTemporal)) File.Delete(rutaTemporal); } catch { }
+                    try { var t = Path.ChangeExtension(rutaTemporal, ".tplr"); if (File.Exists(t)) File.Delete(t); } catch { }
+                }
+            }
+            Console.WriteLine("DONE (IDEA6_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA5_SOLO=1 (20-sep-2026, catalogo de funciones, idea 5 "¿Donde esta? global,
         // multi-mundo y multi-personaje" - version real, tercera ronda tras la correccion del
         // coordinador: el catalogo citaba WorldPresenceIndex como apoyo, que resulto ser el

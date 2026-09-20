@@ -813,6 +813,17 @@
                             CommandParameter="{Binding Source}"
                             IsEnabled="{Binding DataContext.IsCharacterLoaded, RelativeSource={RelativeSource AncestorType=Window}}"
                             ToolTip="{Binding Loc[tt_auto_equip], Mode=OneWay}" />
+                    <!-- Idea 6 (catalogo de funciones, "Laboratorio de personajes" - bitacora.md
+                         20-sep-2026): duplica el personaje cargado a un fichero nuevo, lo vacia y
+                         le aplica este build - ver el comentario real de OnGenerateCharacterForBuildClick
+                         (MainWindow.xaml.cs) para el LIMITE documentado (sin fabrica de personaje
+                         "en blanco" real) y el camino real elegido. Click, no Command: pide un
+                         SaveFileDialog real (vista, no ViewModel). -->
+                    <Button DockPanel.Dock="Right" Content="{Binding Loc[action_generate_character], Mode=OneWay}" FontSize="11" Padding="7,2" Margin="0,0,4,0"
+                            Tag="Ghost"
+                            Click="OnGenerateCharacterForBuildClick"
+                            IsEnabled="{Binding DataContext.IsCharacterLoaded, RelativeSource={RelativeSource AncestorType=Window}}"
+                            ToolTip="{Binding Loc[tt_generate_character], Mode=OneWay}" />
                     <!-- Ronda de Libreria/Builds del 6-sep-2026: era {Binding ClassName}, o sea la
                          clave interna en bruto de builds.json ("melee"/"mage"/"rogue"...) a un
                          palmo de las pildoras de filtro, que en la MISMA pantalla ya decian

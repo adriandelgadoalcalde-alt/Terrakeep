@@ -505,6 +505,64 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) await _viewModel.WorldCompare.LoadBAsync(dialog.FileName);
     }
 
+    // Idea 6 (catalogo de funciones, "Laboratorio de personajes" - bitacora.md 20-sep-2026):
+    // investigado a fondo - no existe NINGUNA fabrica real de personaje "en blanco" en todo el
+    // proyecto (ni Core ni App): builds.json describe equipo, nunca un PlrCharacter valido desde
+    // cero (GUID, stats de partida, inventario inicial real...) - inventar ese formato entero es
+    // una pieza nueva y grande, LIMITE real de esta ronda, documentado aqui con evidencia (grep
+    // real a "NewCharacter"/"CreateCharacter"/"CrearPersonaje" en todo el repo: 0 resultados).
+    // Camino real SI viable, sin inventar ese formato: el personaje YA cargado sirve de
+    // PLANTILLA 100% valida (garantiza un .plr correcto, el mismo que ya pasa por Load/Save
+    // reales) - duplicarlo a un fichero nuevo (mismo mecanismo real que HomeViewModel.Duplicate),
+    // vaciar equipo+inventario y aplicar AutoEquipService.Apply (la MISMA regla de negocio que ya
+    // usa el boton "Auto-equipar" de Builds, reutilizada tal cual via AutoEquipCommand) entrega
+    // el resultado real que pide la idea: "un personaje listo para la etapa/clase elegida", sin
+    // fingir datos de partida inventados a mano.
+    private void OnGenerateCharacterForBuildClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: BuildClassGearViewModel classGear }) return;
+        string? sourcePath = _viewModel.Home.Characters.FirstOrDefault(c => c.IsCurrent)?.FilePath;
+        if (sourcePath == null) return; // IsCharacterLoaded ya lo garantiza via IsEnabled - doble comprobacion real
+
+        var dialog = new SaveFileDialog
+        {
+            Title = Loc["dlg_generate_character"],
+            Filter = Loc["dlg_filter_character"],
+            InitialDirectory = Services.CharacterFileService.GetDefaultPlayersDirectory(),
+            FileName = $"{_viewModel.CharacterName} - {classGear.ClassLabel}.plr",
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        if (!ConfirmDiscardChanges(Loc["dlg_action_load_other"])) return;
+
+        try
+        {
+            File.Copy(sourcePath, dialog.FileName, overwrite: true);
+            string tplrSrc = Path.ChangeExtension(sourcePath, ".tplr");
+            if (File.Exists(tplrSrc)) File.Copy(tplrSrc, Path.ChangeExtension(dialog.FileName, ".tplr"), overwrite: true);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, Loc.Format("error_duplicating", ex.Message));
+            return;
+        }
+
+        _viewModel.LoadFromPath(dialog.FileName);
+
+        // Vacia equipo puesto (3 armadura + 5 accesorios del loadout activo) + inventario entero
+        // - mismo criterio real documentado arriba: "listo para X" no debe arrastrar objetos
+        // sueltos de la plantilla que no tengan que ver con el build elegido, y deja hueco libre
+        // real para que AutoEquipService.Apply coloque las armas (usa "el primer hueco vacio").
+        if (_viewModel.EquipmentGroup != null)
+            foreach (var slot in _viewModel.EquipmentGroup.CurrentItems.Slots)
+                slot.UpdateFrom(GameItem.Empty);
+        var inventario = _viewModel.Containers.FirstOrDefault(c => c.Key == "inventory");
+        if (inventario != null)
+            foreach (var slot in inventario.Slots)
+                slot.UpdateFrom(GameItem.Empty);
+
+        _viewModel.AutoEquipCommand.Execute(classGear.Source);
+    }
+
     // Idea 5 (catalogo de funciones, "¿Donde esta? global, multi-mundo y multi-personaje" -
     // bitacora.md 20-sep-2026): un resultado de mundo NO selecciona el slot exacto en el mapa
     // (eso tocaria la zona de marcadores/AR-MRK, fuera de alcance de esta idea) - abre el mundo
