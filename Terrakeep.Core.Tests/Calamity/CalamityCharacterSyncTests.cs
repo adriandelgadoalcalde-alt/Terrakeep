@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text;
 using Terrakeep.Core.Calamity;
 using Terrakeep.Core.Data;
@@ -359,5 +360,68 @@ public class CalamityCharacterSyncTests
         var reCharacter = MakeBlankCharacter();
         var reMerged = sync.MergeAll(reCharacter, newTplrRoot);
         Assert.Equal(abaddonId, reMerged["loadout0Items"][3].Id);
+    }
+
+    // Catalogo de ideas Keep, idea 9 ("modo reparar personaje", segunda pasada, 20-sep-2026):
+    // FindOutOfRangeTplrSlots detecta EXACTAMENTE la misma condicion que MergeListInto usa para
+    // descartar en silencio (slot < 0 || slot >= capacidadReal), sin llegar a descartar nada -
+    // ver el comentario real de cabecera del metodo.
+    [Fact]
+    public void FindOutOfRangeTplrSlots_SlotFueraDeLaCapacidadReal_SeReporta()
+    {
+        var sync = MakeSync(out _);
+        var character = MakeBlankCharacter(); // Inventory tiene 50 slots reales (indices 0..49)
+
+        var tplrRoot = NbtCompound.Of(
+            ("inventory", new NbtList(NbtTagType.Compound, [
+                NbtCompound.Of(
+                    ("mod", new NbtString("CalamityMod")),
+                    ("name", new NbtString("Abaddon")),
+                    ("slot", new NbtShort(60)), // fuera de los 50 slots reales del .plr actual
+                    ("stack", new NbtInt(1))
+                )
+            ]))
+        );
+
+        var problemas = sync.FindOutOfRangeTplrSlots(character, tplrRoot);
+
+        var problema = Assert.Single(problemas);
+        Assert.Equal("inventory", problema.TplrKey);
+        Assert.Equal(60, problema.Slot);
+        Assert.Equal(50, problema.CapacidadReal);
+
+        // Y MergeListInto (el camino real de carga) de verdad lo descarta en silencio - la
+        // deteccion no es una aproximacion aparte que pudiera desincronizarse de lo que pasa al
+        // guardar/cargar de verdad.
+        var merged = sync.MergeAll(character, tplrRoot);
+        Assert.True(merged["inventory"].All(item => item.IsEmpty));
+    }
+
+    [Fact]
+    public void FindOutOfRangeTplrSlots_SlotDentroDeLaCapacidadReal_NoSeReporta()
+    {
+        var sync = MakeSync(out _);
+        var character = MakeBlankCharacter();
+
+        var tplrRoot = NbtCompound.Of(
+            ("inventory", new NbtList(NbtTagType.Compound, [
+                NbtCompound.Of(("mod", new NbtString("CalamityMod")), ("name", new NbtString("Abaddon")), ("slot", new NbtShort(7)))
+            ]))
+        );
+
+        var problemas = sync.FindOutOfRangeTplrSlots(character, tplrRoot);
+
+        Assert.Empty(problemas);
+    }
+
+    [Fact]
+    public void FindOutOfRangeTplrSlots_SinTplr_DevuelveVacio()
+    {
+        var sync = MakeSync(out _);
+        var character = MakeBlankCharacter();
+
+        var problemas = sync.FindOutOfRangeTplrSlots(character, tplrRoot: null);
+
+        Assert.Empty(problemas);
     }
 }

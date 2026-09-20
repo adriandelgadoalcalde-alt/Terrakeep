@@ -4585,9 +4585,11 @@
                                         Visibility="{Binding VersionEditor.DowngradeWarning, Converter={StaticResource NullToVis}}">
                                     <TextBlock Foreground="White" TextWrapping="Wrap" FontSize="12" Text="{Binding VersionEditor.DowngradeWarning}" />
                                 </Border>
-                                <!-- Catalogo de ideas Keep, idea 9 (20-sep-2026, "modo reparar personaje" -
-                                     version real reducida, diagnostico SOLO LECTURA, ver el LIMITE
-                                     documentado en MainViewModel.RebuildIllegalPrefixDiagnostics): objetos
+                                <!-- Catalogo de ideas Keep, idea 9 ("modo reparar personaje", diagnostico SOLO
+                                     LECTURA - ver el comentario real de cabecera en
+                                     MainViewModel.RebuildIllegalPrefixDiagnostics para el alcance final de
+                                     los 4 diagnosticos y por que "version desfasada" no tiene panel propio
+                                     aqui, ya vive en VersionEditor.DowngradeWarning justo encima). Objetos
                                      con un prefijo que PrefixRulesCatalog.IsLegal dice que ese objeto
                                      concreto no puede llevar - solo puede pasar en un .plr traido de fuera
                                      de Terrakeep (esta misma app ya impide crear la combinacion desde
@@ -4599,6 +4601,74 @@
                                         <TextBlock Text="{Binding Loc[repair_illegal_prefixes_desc], Mode=OneWay}" Style="{StaticResource CaptionText}"
                                                    Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
                                         <ItemsControl ItemsSource="{Binding IllegalPrefixItemNames}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Expander>
+                                <!-- Idea 9, segunda pasada (20-sep-2026): slots fantasma - id vanilla o
+                                     Calamity que ningun catalogo cargado reconoce. -->
+                                <Expander Header="{Binding Loc[repair_ghost_slots], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
+                                          Margin="0,0,0,14" IsExpanded="True"
+                                          Visibility="{Binding GhostSlotItemNames.Count, Converter={StaticResource CountToVis}}">
+                                    <StackPanel Margin="0,6,0,0">
+                                        <TextBlock Text="{Binding Loc[repair_ghost_slots_desc], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                                   Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                        <ItemsControl ItemsSource="{Binding GhostSlotItemNames}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Expander>
+                                <!-- Idea 9, segunda pasada: duraciones de buff desbordadas (negativas o por
+                                     encima del techo real del juego para esta version, ver
+                                     BuffDurationPresets.MaxTicksForVersion). -->
+                                <Expander Header="{Binding Loc[repair_buff_overflow], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
+                                          Margin="0,0,0,14" IsExpanded="True"
+                                          Visibility="{Binding OverflowingBuffNames.Count, Converter={StaticResource CountToVis}}">
+                                    <StackPanel Margin="0,6,0,0">
+                                        <TextBlock Text="{Binding Loc[repair_buff_overflow_desc], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                                   Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                        <ItemsControl ItemsSource="{Binding OverflowingBuffNames}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Expander>
+                                <!-- Idea 9, segunda pasada: .tplr huerfano (fichero .tplr sin .plr hermano en
+                                     la misma carpeta) y .tplr inconsistente (slots que se perderian en
+                                     silencio al guardar, ver CalamityCharacterSync.FindOutOfRangeTplrSlots). -->
+                                <Expander Header="{Binding Loc[repair_tplr_orphan], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
+                                          Margin="0,0,0,14" IsExpanded="True"
+                                          Visibility="{Binding OrphanTplrFileNames.Count, Converter={StaticResource CountToVis}}">
+                                    <StackPanel Margin="0,6,0,0">
+                                        <TextBlock Text="{Binding Loc[repair_tplr_orphan_desc], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                                   Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                        <ItemsControl ItemsSource="{Binding OrphanTplrFileNames}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Expander>
+                                <Expander Header="{Binding Loc[repair_tplr_inconsistent], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
+                                          Margin="0,0,0,14" IsExpanded="True"
+                                          Visibility="{Binding InconsistentTplrSlotNames.Count, Converter={StaticResource CountToVis}}">
+                                    <StackPanel Margin="0,6,0,0">
+                                        <TextBlock Text="{Binding Loc[repair_tplr_inconsistent_desc], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                                   Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                        <ItemsControl ItemsSource="{Binding InconsistentTplrSlotNames}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />

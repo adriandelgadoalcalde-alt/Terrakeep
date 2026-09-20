@@ -55,6 +55,38 @@ public sealed class CalamityCharacterSync(CalamityItemCodec itemCodec, CalamityB
         return result;
     }
 
+    // Catalogo de ideas Keep, idea 9 ("modo reparar personaje", bitacora.md 20-sep-2026,
+    // reconsiderada a peticion explicita del coordinador - antes solo cubria prefijos ilegales):
+    // MergeListInto (arriba) descarta en SILENCIO cualquier entrada del .tplr cuyo slot no quepa
+    // en el contenedor real del .plr actual (`if (slot < 0 || slot >= target.Length) continue;`) -
+    // el caso real que produce esto: un .tplr guardado con un .plr de OTRA version/loadout (mas
+    // slots de inventario/banco de los que este .plr concreto declara), o un .tplr copiado a mano
+    // sobre un .plr distinto. Hasta ahora esa perdida de datos era invisible - el objeto de
+    // Calamity simplemente "desaparecia" la siguiente vez que se guardaba, sin ningun aviso. Este
+    // metodo reutiliza el MISMO itemCodec/FlatContainers que ya usa MergeListInto (nunca una
+    // copia paralela de la logica) para detectar esos slots fuera de rango SIN llegar a
+    // descartarlos, solo para poder avisar.
+    public List<(string TplrKey, int Slot, int CapacidadReal)> FindOutOfRangeTplrSlots(PlrCharacter character, NbtCompound? tplrRoot)
+    {
+        var problemas = new List<(string, int, int)>();
+        if (tplrRoot == null) return problemas;
+        foreach (var (tplrKey, getSlots, _) in FlatContainers)
+        {
+            if (tplrRoot.Get(tplrKey) is not NbtList list) continue;
+            int capacidadReal = getSlots(character).Length;
+            foreach (var itemTag in list.Items)
+            {
+                if (itemTag is not NbtCompound entry) continue;
+                var decoded = itemCodec.Decode(entry);
+                if (decoded == null) continue;
+                var (slot, _) = decoded.Value;
+                if (slot < 0 || slot >= capacidadReal)
+                    problemas.Add((tplrKey, slot, capacidadReal));
+            }
+        }
+        return problemas;
+    }
+
     // Todos los loadouts en el mismo orden que usa la version JS (player.loadouts[0..3]):
     // indice 0 = PrimaryLoadout (mirror de lo puesto), 1..3 = Loadouts[0..2] (los 3 loadouts
     // reales). Si Version<269 (Loadouts vacio) solo existe el mirror - se degrada solo.

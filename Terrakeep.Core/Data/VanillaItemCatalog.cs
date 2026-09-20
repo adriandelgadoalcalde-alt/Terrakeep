@@ -44,6 +44,12 @@ public sealed class VanillaItemCatalog
     // comentario del campo _keysById.
     public string? GetKeyById(int itemId) => _keysById.TryGetValue(itemId, out var key) ? key : null;
 
+    // Catalogo de ideas Keep, idea 9 ("modo reparar personaje" - slots fantasma, bitacora.md
+    // 20-sep-2026): GetName de abajo YA distinguia un id conocido de uno desconocido (cae a
+    // "Item #{id}"), pero solo por dentro - hacia falta un booleano real, no comparar el texto
+    // de vuelta contra un formato de cadena (fragil ante un cambio futuro de ese texto).
+    public bool IsKnownId(int itemId) => _namesById.ContainsKey(itemId);
+
     public string GetName(int itemId) => GetName(itemId, LocalizedContent.CurrentLanguage);
 
     public string GetName(int itemId, string language)
