@@ -1,17 +1,512 @@
+using System.Collections;
+
 namespace Terrakeep.Core.WldFormat;
 
-// Primer (y unico, de momento) escritor real de .wld - hasta ahora el formato SOLO se leia
-// (WldReader); "Solo lectura" es un badge real en toda la UI de Exploracion, con un tooltip
-// explicito ("no se puede editar ni guardar desde aqui"). Pedido explicito del usuario
-// (5-sep-2026): poder cambiar la dificultad del mundo (Clasico/Experto/Maestro/Viaje, los 4
-// modos reales de Terraria - GameMode, ya leido por WldReader/F-14 pero nunca escrito).
+// Primer escritor real de .wld - hasta el 5-sep-2026 el formato SOLO se leia (WldReader);
+// "Solo lectura" es un badge real en toda la UI de Exploracion, con un tooltip explicito ("no
+// se puede editar ni guardar desde aqui"). Empezo como parcheador MINIMO de campos de ancho fijo
+// (GameMode/Spawn/Tiempo-luna/banderas de progreso, pedidos explicitos del usuario 5..14-sep) y
+// crecio a un escritor de secciones de ancho VARIABLE (cofres/letreros, T1 del editor, 15-sep) -
+// todo eso sigue exigiendo un archivo REAL ya existente que solo se edita en un tramo acotado.
 //
-// Alcance MINIMO a proposito: parchea UNICAMENTE el campo GameMode, en el MISMO formato/ancho
-// que ya usa WldReader segun la version del archivo - nunca cambia la longitud del archivo,
-// nunca toca ningun otro campo/seccion (tiles, NPCs, cofres...). Cualquier escritura mas
-// general es un salto de riesgo mucho mayor que no se ha pedido.
+// KeepQA (20-sep-2026, punto 6 del catalogo de funciones - "Bancos de datos extremos
+// compartidos"): WriteWorld de aqui abajo es la primera pieza que construye un `.wld` COMPLETO
+// desde CERO (sin partir de ningun archivo real), pensada para que el arnes de pruebas de KeepQA
+// pueda generar mundos "extremos" (tiles/NPCs/cofres en cantidad o con coordenadas fuera de lo
+// normal, banderas de progreso contradictorias) con las que hacer fuzz-testing del propio
+// WldReader. Alcance deliberadamente distinto del editor de mundos de Terrakeep (la app de
+// escritorio NUNCA sera un editor de mundos completo, ver ESPEC-auditoria-exploracion-tedit.md/
+// ESPEC-buscador-mundo-tedit.md - eso sigue intacto): esto es infraestructura de USO INTERNO del
+// arnes de pruebas, nunca expuesta como funcion de la app ni del usuario.
 public static class WldWriter
 {
+    // WriteWorld exige version >= 210 (Journey's End, el mismo suelo real que ya exige el
+    // Bestiario - WldHeader.BestiarySectionOffset) para poder escribir SIEMPRE el formato de
+    // cabecera "moderno" (GameMode Int32, WorldGUID de 16 bytes, DownedSlimeKingBoss...) sin
+    // tener que reimplementar tambien las 3 variantes MAS ANTIGUAS que ReadHeader sabe leer
+    // (bool de GameMode pre-209, ausencia de WorldGUID pre-181, ausencia de CreationTime
+    // pre-141...) - esas variantes viejas no aportan nada nuevo a un mundo generado desde cero
+    // para fuzzing (el arnes elige la version que quiere probar, no la hereda de un archivo real)
+    // y AMPLIAN mucho la superficie a mantener en sincronia con ReadHeader. Restriccion elegida y
+    // documentada, no un limite real del formato - se podria levantar mas adelante si hiciera
+    // falta generar un mundo mas antiguo.
+    private const int PointerCount = 10;
+
+    // Construye un `.wld` completo y valido (releible por WldReader.Read de principio a fin) a
+    // partir de un WldWorld en memoria - la inversa real de WldReader.Read para las secciones que
+    // el propio lector entiende (cabecera, tiles, cofres, letreros, NPCs, tile entities,
+    // bestiario). Deliberadamente NO escribe las secciones reales de TEdit que WldReader NUNCA
+    // lee (PressurePlate/TownManager/CreativePowers/Footer con firma de integridad) - se dejan de
+    // longitud CERO (sus punteros de cabecera apuntan todos al mismo offset, justo despues del
+    // Bestiario) porque no aportan nada a un round-trip contra ESTE lector y anadirlas sin poder
+    // verificarlas contra el juego real (no instalado en este arnes) seria simular una fidelidad
+    // que no se puede demostrar. Consecuencia honesta: el archivo resultante sirve para fuzzing
+    // real de WldReader/Terrakeep.Core, pero NO esta garantizado que el juego real o TEdit lo
+    // abran sin protestar - ver bitacora.md.
+    public static byte[] WriteWorld(WldWorld world)
+    {
+        var header = world.Header;
+        uint version = header.Version;
+        if (version < 210)
+            throw new NotSupportedException($"WldWriter.WriteWorld solo genera mundos de formato >=210 (Journey's End) - se pidio la version {version}. Ver el comentario de PointerCount.");
+
+        int wide = world.Tiles.GetLength(0);
+        int high = world.Tiles.GetLength(1);
+        if (wide != header.TilesWide || high != header.TilesHigh)
+            throw new ArgumentException($"Header.TilesWide/TilesHigh ({header.TilesWide}x{header.TilesHigh}) no coincide con las dimensiones reales de Tiles ({wide}x{high}) - sincronizalos antes de llamar a WriteWorld.");
+
+        // Paso 1: medir la longitud real de la cabecera completa - depende solo de la CANTIDAD de
+        // punteros (cada uno ocupa 4 bytes siempre) y del contenido real de Title/Seed/
+        // TileFrameImportant, nunca de los VALORES concretos de los punteros - mismo truco de dos
+        // pasadas que ya usa WldWriterChestSignTests.WriteHeaderTo (sintetico, de pruebas) y que
+        // aqui se hace real y general.
+        // leaveOpen: true en los dos BinaryWriter de aqui abajo - BinaryWriter.Dispose() cierra
+        // TAMBIEN el MemoryStream subyacente por defecto (a diferencia de StreamWriter, que la
+        // mayoria espera igual), asi que sin este flag measureMs.Length/finalMs.ToArray() de mas
+        // abajo lanzarian ObjectDisposedException nada mas salir del using. Bug real encontrado
+        // al ejecutar WldWriterWriteWorldTests por primera vez (20-sep-2026) - ver bitacora.md.
+        var measureMs = new MemoryStream();
+        using (var measureWriter = new BinaryWriter(measureMs, System.Text.Encoding.UTF8, leaveOpen: true))
+            WriteFullHeader(measureWriter, header, version, new int[PointerCount], out _);
+        int headerLength = (int)measureMs.Length;
+
+        byte[] tilesBytes = SerializeTiles(world.Tiles, version, header.TileFrameImportant);
+        byte[] chestsBytes = SerializeChests(world.Chests, version);
+        byte[] signsBytes = SerializeSignsSection(world.Signs);
+        byte[] npcsBytes = SerializeNpcsSection(world.Npcs, world.ShimmeredNpcTypes, version);
+        byte[] tileEntitiesBytes = SerializeTileEntitiesSection(world.TileEntities, version);
+        byte[] bestiaryBytes = SerializeBestiarySection(world.Bestiary, version);
+
+        int tilesOffset = headerLength;
+        int chestsOffset = tilesOffset + tilesBytes.Length;
+        int signsOffset = chestsOffset + chestsBytes.Length;
+        int npcsOffset = signsOffset + signsBytes.Length;
+        int tileEntitiesOffset = npcsOffset + npcsBytes.Length;
+        // PressurePlate/TownManager: ver el comentario de cabecera de WriteWorld - longitud CERO
+        // a proposito, los tres punteros caen en el mismo offset (justo tras TileEntities).
+        int pressurePlateOffset = tileEntitiesOffset + tileEntitiesBytes.Length;
+        int townManagerOffset = pressurePlateOffset;
+        int bestiaryOffset = townManagerOffset;
+        int afterBestiaryOffset = bestiaryOffset + bestiaryBytes.Length;
+
+        var pointers = new[]
+        {
+            headerLength, tilesOffset, chestsOffset, signsOffset, npcsOffset,
+            tileEntitiesOffset, pressurePlateOffset, townManagerOffset, bestiaryOffset, afterBestiaryOffset,
+        };
+
+        var finalMs = new MemoryStream();
+        using (var finalWriter = new BinaryWriter(finalMs, System.Text.Encoding.UTF8, leaveOpen: true))
+            WriteFullHeader(finalWriter, header, version, pointers, out _);
+        finalMs.Write(tilesBytes);
+        finalMs.Write(chestsBytes);
+        finalMs.Write(signsBytes);
+        finalMs.Write(npcsBytes);
+        finalMs.Write(tileEntitiesBytes);
+        finalMs.Write(bestiaryBytes);
+        return finalMs.ToArray();
+    }
+
+    // Escribe la cabecera ENTERA (tabla de punteros + tileFrameImportant + todo el tramo
+    // title..hardMode) - inversa campo a campo de WldReader.ReadHeader(BinaryReader) para
+    // version >= 210 (WriteWorld ya lo garantiza antes de llamar aqui). sectionHeaderEndOffset
+    // (posicion justo tras tileFrameImportant, antes de Title) es el "Pointers[0]" real de TEdit
+    // (World.FileV2.cs, SaveSectionHeader) - WldReader/WldHeader de este proyecto NUNCA lo usan
+    // (ninguna propiedad de WldHeader expone Pointers[0]), se calcula igualmente por fidelidad de
+    // formato y honestidad ("lo que se escribe en el archivo tiene que ser correcto, aunque nada
+    // de este proyecto lo lea despues").
+    private static void WriteFullHeader(BinaryWriter writer, WldHeader header, uint version, int[] pointers, out int sectionHeaderEndOffset)
+    {
+        writer.Write(version);
+        writer.Write("relogic".ToCharArray());
+        writer.Write((byte)2); // fileType = mundo
+        writer.Write((uint)1); // FileRevision - sin uso real fuera de este archivo
+        writer.Write((long)0); // banderas de favorito
+
+        writer.Write((short)pointers.Length);
+        foreach (int p in pointers) writer.Write(p);
+
+        // Inversa exacta de WldReader.ReadBitArray - mismo criterio ya establecido en el
+        // proyecto (ReadBitArray/ReadChests/ReadRawSigns) de reutilizar SIEMPRE la misma pieza
+        // real en vez de reimplementar el empaquetado de bits a mano en un segundo sitio.
+        var bits = new BitArray(header.TileFrameImportant);
+        int byteCount = (bits.Length + 7) / 8;
+        var raw = new byte[byteCount];
+        bits.CopyTo(raw, 0);
+        writer.Write((short)bits.Length);
+        writer.Write(raw);
+
+        sectionHeaderEndOffset = (int)writer.BaseStream.Position;
+
+        writer.Write(header.Title);
+        writer.Write(header.Seed); // version != 179 siempre (WriteWorld exige version >= 210)
+        writer.Write(new byte[8]); // WorldGenVersion, sin uso real conocido
+        writer.Write(new byte[16]); // WorldGUID (version >= 181, siempre cierto aqui)
+        writer.Write(header.WorldId);
+        writer.Write(0); writer.Write(header.TilesWide * 16); writer.Write(0); writer.Write(header.TilesHigh * 16); // Left/Right/Top/BottomWorld - plausibles, WldReader los descarta sin leerlos
+
+        writer.Write(header.TilesHigh);
+        writer.Write(header.TilesWide);
+
+        // GameMode: SIEMPRE el formato Int32 real (version >= 209, cierto para cualquier
+        // version >= 210) - mismo criterio de ancho por version que WldReader.ReadHeader/
+        // WldWriter.PatchGameMode, aqui sin las dos ramas bool mas antiguas (fuera de alcance,
+        // ver el comentario de PointerCount).
+        writer.Write(header.GameMode);
+        if (version >= 222) writer.Write(false);
+        if (version >= 227) writer.Write(false);
+        if (version >= 238) writer.Write(false);
+        if (version >= 239) writer.Write(false);
+        if (version >= 241) writer.Write(false);
+        if (version >= 249) writer.Write(false);
+        if (version >= 266) writer.Write(false);
+        if (version >= 267) writer.Write(false); // ZenithWorld
+        if (version >= 302) writer.Write(false);
+
+        if (version >= 141) writer.Write(new byte[8]); // CreationTime
+        if (version >= 284) writer.Write(new byte[8]); // LastPlayed
+        writer.Write((byte)0); // MoonType
+        writer.Write(new byte[4 * 3]); // TreeX
+        writer.Write(new byte[4 * 4]); // TreeStyle
+        writer.Write(new byte[4 * 3]); // CaveBackX
+        writer.Write(new byte[4 * 4]); // CaveBackStyle
+        writer.Write(new byte[4 * 3]); // Ice/Jungle/HellBackStyle
+
+        writer.Write(header.SpawnX);
+        writer.Write(header.SpawnY);
+        writer.Write(header.GroundLevel);
+        writer.Write(header.RockLevel);
+        writer.Write(header.Time);
+        writer.Write(header.DayTime);
+        writer.Write(header.MoonPhase);
+        writer.Write(header.BloodMoon);
+        writer.Write(header.IsEclipse);
+        writer.Write(header.DungeonX);
+        writer.Write(header.DungeonY);
+
+        writer.Write(header.IsCrimson);
+        writer.Write(header.DownedBoss1EyeOfCthulhu);
+        writer.Write(header.DownedBoss2EaterOfWorldsOrBrainOfCthulhu);
+        writer.Write(header.DownedBoss3Skeletron);
+        writer.Write(header.DownedQueenBee);
+        writer.Write(header.DownedMechBoss1TheDestroyer);
+        writer.Write(header.DownedMechBoss2TheTwins);
+        writer.Write(header.DownedMechBoss3SkeletronPrime);
+        // DownedMechBossAny: derivado, WldReader lo lee y lo descarta siempre (ver su comentario)
+        // - se escribe un valor plausible en vez de un false fijo, aunque no afecte a nada.
+        writer.Write(header.DownedMechBoss1TheDestroyer || header.DownedMechBoss2TheTwins || header.DownedMechBoss3SkeletronPrime);
+        writer.Write(header.DownedPlantBoss);
+        writer.Write(header.DownedGolemBoss);
+        // DownedSlimeKingBoss solo existe desde la version 118 (siempre cierto aqui) - null se
+        // escribe como false, mismo criterio que "lo que no se ha marcado, no esta derrotado".
+        writer.Write(header.DownedSlimeKingBoss ?? false);
+
+        writer.Write(false); // SavedGoblin
+        writer.Write(false); // SavedWizard
+        writer.Write(false); // SavedMech
+        writer.Write(false); // DownedGoblins
+        writer.Write(false); // DownedClown
+        writer.Write(false); // DownedFrost
+        writer.Write(false); // DownedPirates
+        writer.Write(false); // ShadowOrbSmashed
+        writer.Write(false); // SpawnMeteor
+        writer.Write((byte)0); // ShadowOrbCount
+        writer.Write(0); // AltarCount
+        writer.Write(header.HardMode);
+    }
+
+    // Inversa real de WldReader.ReadTiles/ReadOneTile, con el mismo algoritmo de compresion RLE
+    // por columna que World.FileV2.cs de TEdit (SaveTiles: escanea hacia adelante mientras el
+    // siguiente tile sea IGUAL, con tope de 32767 para poder codificar la longitud como Int16 con
+    // signo - igual que hace el propio juego real). Solo empaqueta los campos que WldTile
+    // conserva de verdad (tipo/pared/liquido/u/v) - wires/actuador/estilo de ladrillo/pintura NO
+    // se escriben nunca porque WldReader.ReadOneTile tampoco los guarda al leer (se limita a
+    // saltarlos), asi que un tile releido con WldReader.Read es indistinguible de haberlos
+    // escrito o no.
+    private static byte[] SerializeTiles(WldTile[,] tiles, uint version, bool[] tileFrameImportant)
+    {
+        int wide = tiles.GetLength(0);
+        int high = tiles.GetLength(1);
+
+        var ms = new MemoryStream();
+        using var writer = new BinaryWriter(ms);
+
+        for (int x = 0; x < wide; x++)
+        {
+            int y = 0;
+            while (y < high)
+            {
+                var tile = tiles[x, y];
+                int rle = 0;
+                while (y + 1 + rle < high && rle < 32767 && TilesEqualForRle(tile, tiles[x, y + 1 + rle]))
+                    rle++;
+
+                WriteOneTileForWrite(writer, tile, rle, version, tileFrameImportant);
+                y += 1 + rle;
+            }
+        }
+        return ms.ToArray();
+    }
+
+    private static bool TilesEqualForRle(WldTile a, WldTile b) =>
+        a.Type == b.Type && a.Wall == b.Wall && a.LiquidType == b.LiquidType &&
+        a.LiquidAmount == b.LiquidAmount && a.U == b.U && a.V == b.V;
+
+    // Orden de campos EXACTO al de WldReader.ReadOneTile (nunca reordenar): tipo+u/v, pared,
+    // liquido, y solo AL FINAL (si hace falta) el byte alto de una pared >255 - ese orden real
+    // (wallHigh va DESPUES de liquido, no justo detras del byte bajo de la pared) es la parte mas
+    // facil de acertar mal si se reconstruye de memoria en vez de leyendo el lector real linea a
+    // linea, ver el comentario de cabecera de este fichero.
+    private static void WriteOneTileForWrite(BinaryWriter writer, WldTile tile, int rle, uint version, bool[] tileFrameImportant)
+    {
+        byte header1 = 0, header2 = 0, header3 = 0;
+        var payload = new MemoryStream();
+        using (var pw = new BinaryWriter(payload))
+        {
+            if (tile.IsActive)
+            {
+                if (tile.Type is < 0 or > short.MaxValue)
+                    throw new ArgumentOutOfRangeException(nameof(tile), $"Type={tile.Type} fuera de rango representable (0..{short.MaxValue}).");
+
+                header1 |= 0x02;
+                if (tile.Type > 255)
+                {
+                    pw.Write((byte)(tile.Type & 0xFF));
+                    pw.Write((byte)((tile.Type >> 8) & 0xFF));
+                    header1 |= 0x20;
+                }
+                else
+                {
+                    pw.Write((byte)tile.Type);
+                }
+
+                bool framed = tile.Type < tileFrameImportant.Length ? tileFrameImportant[tile.Type] : true;
+                if (framed)
+                {
+                    pw.Write(tile.U);
+                    pw.Write(tile.V);
+                }
+            }
+
+            if (tile.Wall != 0)
+            {
+                if (tile.Wall > 255 && version < 222)
+                    throw new NotSupportedException($"Pared {tile.Wall} (>255) necesita version >= 222 para el byte alto - se pidio version {version}.");
+                header1 |= 0x04;
+                pw.Write((byte)(tile.Wall & 0xFF));
+            }
+
+            if (tile.LiquidAmount > 0 && tile.LiquidType != 0)
+            {
+                if (tile.LiquidType is < 1 or > 4)
+                    throw new ArgumentOutOfRangeException(nameof(tile), $"LiquidType={tile.LiquidType} fuera de rango real (1=agua,2=lava,3=miel,4=Shimmer sintetico).");
+                bool isShimmer = tile.LiquidType == 4;
+                if (isShimmer && version < 269)
+                    throw new NotSupportedException($"Shimmer (LiquidType=4) necesita version >= 269 - se pidio version {version}.");
+
+                byte diskCode = isShimmer ? (byte)3 : tile.LiquidType; // Shimmer comparte codigo de disco con miel (ver WldReader.ReadOneTile, H3-10)
+                header1 |= (byte)(diskCode << 3);
+                pw.Write(tile.LiquidAmount);
+                if (isShimmer) header3 |= 0x80;
+            }
+
+            if (tile.Wall > 255)
+            {
+                header3 |= 0x40;
+                pw.Write((byte)((tile.Wall >> 8) & 0xFF));
+            }
+        }
+
+        if (header3 != 0)
+        {
+            header2 = 0x01; // "hay header3"
+            header1 |= 0x01; // "hay header2"
+        }
+
+        byte[] payloadBytes = payload.ToArray();
+
+        if (rle > 0)
+        {
+            if (rle <= 255) header1 |= 0x40; // RLE de 1 byte
+            else header1 |= 0x80; // RLE de Int16
+        }
+
+        writer.Write(header1);
+        if ((header1 & 0x01) != 0) writer.Write(header2);
+        if ((header2 & 0x01) != 0) writer.Write(header3);
+        writer.Write(payloadBytes);
+
+        if (rle > 0)
+        {
+            if (rle <= 255) writer.Write((byte)rle);
+            else writer.Write((short)rle);
+        }
+    }
+
+    // Inversa real de WldReader.ReadRawSigns (el texto va PRIMERO, igual que WriteSignText) -
+    // aqui SIN letreros "fantasma" (ese concepto solo existe al EDITAR un archivo real ya
+    // existente, ver el comentario de WriteSignText); un mundo construido desde cero solo tiene
+    // los letreros que el propio llamador pida.
+    private static byte[] SerializeSignsSection(IReadOnlyList<WldSign> signs)
+    {
+        var ms = new MemoryStream();
+        using var writer = new BinaryWriter(ms);
+        writer.Write((short)signs.Count);
+        foreach (var sign in signs)
+        {
+            writer.Write(sign.Text);
+            writer.Write(sign.X);
+            writer.Write(sign.Y);
+        }
+        return ms.ToArray();
+    }
+
+    // Inversa real de WldReader.ReadNpcs. WldNpc solo guarda la posicion en TILES (no el x/y en
+    // PIXELES real del archivo) - se reconstruye un x/y en pixeles plausible (TileX*16, TileY*16)
+    // que hace que el propio WldReader vuelva a derivar el MISMO TileX/TileY si el NPC esta
+    // marcado Homeless (formula real: Math.Round(x/16.0)) y se escribe TAMBIEN homeTileX/Y
+    // identico para el caso no-Homeless - los dos caminos de lectura posibles quedan cubiertos
+    // con el mismo par de valores, sin necesidad de que WldNpc distinga los dos sistemas de
+    // coordenadas del archivo real.
+    private static byte[] SerializeNpcsSection(IReadOnlyList<WldNpc> npcs, IReadOnlySet<int> shimmeredTypes, uint version)
+    {
+        var ms = new MemoryStream();
+        using var writer = new BinaryWriter(ms);
+
+        if (version >= 268)
+        {
+            writer.Write(shimmeredTypes.Count);
+            foreach (int t in shimmeredTypes) writer.Write(t);
+        }
+
+        foreach (var npc in npcs)
+        {
+            writer.Write(true); // hay otro NPC mas
+            writer.Write(npc.Id);
+            writer.Write(npc.GivenName);
+            writer.Write((float)(npc.TileX * 16));
+            writer.Write((float)(npc.TileY * 16));
+            writer.Write(npc.Homeless);
+            writer.Write(npc.TileX);
+            writer.Write(npc.TileY);
+
+            if (version >= 213)
+            {
+                if (npc.VariationIndex != 0)
+                {
+                    writer.Write((byte)1);
+                    writer.Write(npc.VariationIndex);
+                }
+                else
+                {
+                    writer.Write((byte)0);
+                }
+            }
+            if (version >= 315) writer.Write(false); // homelessDespawn, no lo guarda WldNpc
+        }
+        writer.Write(false); // termina la lista de NPCs
+        return ms.ToArray();
+    }
+
+    // Inversa real de WldReader.ReadTileEntities para los 9 tipos cuyo formato es un unico slot
+    // (o ninguno) - encaja exactamente con lo que WldTileEntity.Items (una lista PLANA, sin
+    // distincion de slot/objeto-vs-tinte) puede representar sin ambiguedad. DisplayDoll/HatRack
+    // (los 2 tipos que de verdad tienen VARIOS slots con esa distincion) se rechazan explicitos
+    // en vez de escribir algo adivinado - "lo que no se puede reconstruir con fidelidad real, no
+    // se inventa", mismo criterio que el resto del proyecto. Ver bitacora.md.
+    private static byte[] SerializeTileEntitiesSection(IReadOnlyList<WldTileEntity> entities, uint version)
+    {
+        if (entities.Count > 0 && version < 122)
+            throw new NotSupportedException($"Los mundos de formato anterior a la version 122 no tienen seccion de tile entities - se pidio version {version} con {entities.Count} entidad(es).");
+
+        var ms = new MemoryStream();
+        using var writer = new BinaryWriter(ms);
+        if (version < 122) return ms.ToArray(); // sin seccion en absoluto, ver WldReader.ReadTileEntities
+
+        writer.Write(entities.Count);
+        int syntheticId = 0;
+        foreach (var entity in entities)
+        {
+            writer.Write((byte)entity.Kind);
+            writer.Write(syntheticId++); // Id interno correlativo - WldReader lo lee y lo descarta siempre
+            writer.Write((short)entity.X);
+            writer.Write((short)entity.Y);
+
+            switch (entity.Kind)
+            {
+                case WldTileEntityKind.TrainingDummy:
+                    writer.Write((short)0); // Npc del dummy - WldTileEntity no lo guarda
+                    break;
+                case WldTileEntityKind.ItemFrame:
+                case WldTileEntityKind.WeaponRack:
+                case WldTileEntityKind.FoodPlatter:
+                case WldTileEntityKind.DeadCellsDisplayJar:
+                    WriteStackFrom(writer, entity.Items, 0);
+                    break;
+                case WldTileEntityKind.LogicSensor:
+                    writer.Write((byte)0); // LogicCheck
+                    writer.Write(false);   // On
+                    break;
+                case WldTileEntityKind.TeleportationPylon:
+                    break; // sin datos propios
+                case WldTileEntityKind.CritterAnchor:
+                case WldTileEntityKind.KiteAnchor:
+                    writer.Write(entity.Items.Count > 0 ? (short)entity.Items[0].NetId : (short)0);
+                    break;
+                case WldTileEntityKind.DisplayDoll:
+                case WldTileEntityKind.HatRack:
+                    throw new NotSupportedException($"WldWriter.WriteWorld todavia no escribe tile entities de tipo {entity.Kind} - WldTileEntity.Items es una lista plana sin distincion de slot/objeto-vs-tinte, la unica que estos 2 tipos necesitan para reconstruirse con fidelidad real. Ver bitacora.md.");
+                default:
+                    throw new NotSupportedException($"Tipo de tile entity desconocido: {entity.Kind}");
+            }
+        }
+        return ms.ToArray();
+    }
+
+    // TileEntity.SaveStack real (inversa de WldReader.ReadStackInto): SIEMPRE 5 bytes
+    // (NetId Int16 + Prefix byte + Stack Int16), presente o no el objeto - un slot vacio se
+    // escribe como NetId=0/Prefix=0/Stack=0, igual que el juego real.
+    private static void WriteStackFrom(BinaryWriter writer, IReadOnlyList<WldTileEntityItem> items, int index)
+    {
+        if (index < items.Count)
+        {
+            var item = items[index];
+            writer.Write((short)item.NetId);
+            writer.Write(item.Prefix);
+            writer.Write(item.Stack);
+        }
+        else
+        {
+            writer.Write((short)0);
+            writer.Write((byte)0);
+            writer.Write((short)0);
+        }
+    }
+
+    // Inversa real de WldReader.ReadBestiary - solo se escribe si version >= 210 (WriteWorld ya
+    // lo exige siempre, asi que este `if` nunca es falso en la practica; se mantiene explicito
+    // por si algun dia se relaja la restriccion de PointerCount).
+    private static byte[] SerializeBestiarySection(WldBestiary? bestiary, uint version)
+    {
+        var ms = new MemoryStream();
+        using var writer = new BinaryWriter(ms);
+        if (version < 210) return ms.ToArray();
+
+        var kills = bestiary?.Kills ?? new Dictionary<string, int>();
+        writer.Write(kills.Count);
+        foreach (var (key, count) in kills) { writer.Write(key); writer.Write(count); }
+
+        var sighted = bestiary?.Sighted ?? new HashSet<string>();
+        writer.Write(sighted.Count);
+        foreach (var key in sighted) writer.Write(key);
+
+        var chatted = bestiary?.Chatted ?? new HashSet<string>();
+        writer.Write(chatted.Count);
+        foreach (var key in chatted) writer.Write(key);
+
+        return ms.ToArray();
+    }
+
     // Localiza el offset REAL de GameMode replicando exactamente la misma secuencia de
     // lecturas que WldReader.ReadHeader hasta llegar a el (titulo/semilla/GUID son de longitud
     // variable segun el propio contenido del archivo - no hay ningun offset fijo posible) y
