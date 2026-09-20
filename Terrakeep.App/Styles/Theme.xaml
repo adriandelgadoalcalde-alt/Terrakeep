@@ -1041,6 +1041,30 @@
          opacidad de por medio (por eso los DataTrigger de Opacity que hacian esto antes en
          MainWindow.xaml se han quitado). -->
 
+    <!-- Catálogo de rediseño visual T7 (20-sep-2026): "sistema único de avisos (toasts)". Antes
+         real: tres formas distintas para el mismo concepto (banner flotante degradado teal de
+         guardado, banner flotante plano CalamityBrush de error, tarjeta inline con borde
+         PinkBrush solo en Inicio) - la tarjeta de "hay actualización" quedaba ademas tapando la
+         pestaña Exploración/Apariencia en algunas resoluciones porque no compartia ningun
+         contenedor con las demas. Cambio real: un unico ToastHost (StackPanel abajo a la derecha,
+         ver el final de MainWindow.xaml, DENTRO del mismo StackPanel que la tarjeta de
+         actualizacion para que las dos pilas se apilen SIN solaparse nunca, se muestre la que se
+         muestre) con solo dos variantes reales necesarias hoy (extremos error/rosa y exito/teal;
+         "aviso/naranja" queda declarado aqui para el dia que haga falta un tercero, mismo
+         criterio que la escala de espaciado de arriba: declarar antes de que exista el primer
+         consumidor no es sobra, es la misma disciplina). Solo la parte VISUAL cambia - las
+         propiedades reales que disparan cada aviso (SaveConfirmationVisible/GlobalErrorMessage/
+         HomeViewModel.ActionErrorMessage) siguen siendo las mismas de siempre, sin tocar ninguna
+         de las docenas de sitios reales que ya las escriben. -->
+    <Style x:Key="ToastCardBase" TargetType="Border">
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="18,10" />
+        <Setter Property="Effect" Value="{StaticResource CardShadow}" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="MaxWidth" Value="360" />
+    </Style>
+
     <!-- Tarjeta compacta de slot - usada por los 9 contenedores reales de la app
          (Equipamiento/Inventario/Almacenes/Monturas/Monedas, tercera pasada de diseño tras
          feedback directo del usuario: "equipamiento no tiene el mismo formato que inventario y

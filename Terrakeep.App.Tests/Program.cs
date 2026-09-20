@@ -1419,6 +1419,91 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // T7_SOLO=1 (20-sep-2026, catalogo de rediseño visual T7 "sistema unico de avisos"):
+        // verifica en frio, con la ventana real, que los TRES avisos que antes tenian tres formas
+        // distintas (banner teal de guardado, banner plano de error, tarjeta inline de Inicio)
+        // ahora comparten el mismo ToastHost abajo a la derecha, apilados SIN solaparse entre si
+        // ni con la tarjeta de actualizacion, y que el de Inicio (antes solo visible en esa
+        // pestaña, INI-07) ahora se ve desde CUALQUIER pestaña (mismo criterio real que H-3/N-1).
+        // Dispara los avisos por la via mas directa que aisla de verdad la parte VISUAL (mismo
+        // criterio real de VITALS_SOLO/TIPO_SOLO): SaveConfirmationVisible/GlobalErrorMessage son
+        // propiedades observables publicas, se fuerzan directamente sin pasar por un Save() real
+        // completo; Home.ActionErrorMessage es de solo lectura (Home.SetActionError es privado),
+        // asi que se dispara por el camino real - RestoreBackupCommand sobre un personaje real sin
+        // .bak (rama "error_no_backup_to_restore", no toca ningun fichero, solo lee con
+        // File.Exists antes de nada).
+        if (Environment.GetEnvironmentVariable("T7_SOLO") == "1")
+        {
+            try
+            {
+                var pinkGradient = (System.Windows.Media.Brush)window.FindResource("PinkGradientBrush");
+                vm.SelectedTabIndex = 0; // Inicio: mismo sitio real de donde salia antes el aviso rosa
+                DoEvents(); DoEvents();
+
+                vm.SaveConfirmationVisible = true;
+                vm.GlobalErrorMessage = "T7_SOLO: error real de prueba (GlobalErrorMessage)";
+                var entrySinBak = vm.Home.Characters.FirstOrDefault(c => !File.Exists(c.FilePath + ".bak"));
+                if (entrySinBak != null) vm.Home.RestoreBackupCommand.Execute(entrySinBak);
+                else Console.WriteLine("T7_SOLO: ningun personaje real sin .bak - se omite la comprobacion de Home.ActionErrorMessage");
+                DoEvents(); DoEvents(); DoEvents();
+
+                bool EnPantallaBorde(FrameworkElement fe)
+                {
+                    if (!fe.IsVisible) return false;
+                    try { fe.TransformToAncestor(window); return true; }
+                    catch (InvalidOperationException) { return false; }
+                }
+                var toasts = Descendientes<Border>(window)
+                    .Where(b => b.Background == pinkGradient || (b.Background is System.Windows.Media.LinearGradientBrush lgb && lgb == window.FindResource("TealGradientBrush")))
+                    .Where(EnPantallaBorde)
+                    .ToList();
+                Console.WriteLine($"T7_SOLO: {toasts.Count} toast(s) real(es) en pantalla (esperado 2 o 3: guardado+error-global siempre, +error-Inicio si habia personaje sin .bak)");
+                if (toasts.Count < 2) Console.WriteLine($"FALLO: T7_SOLO - se esperaban al menos 2 toasts en pantalla, hay {toasts.Count}");
+
+                var rects = toasts.Select(t => t.TransformToAncestor(window).TransformBounds(new System.Windows.Rect(0, 0, t.ActualWidth, t.ActualHeight))).ToList();
+                for (int i = 0; i < rects.Count; i++)
+                {
+                    bool dentroDeLaVentana = rects[i].Right <= window.ActualWidth + 1 && rects[i].Bottom <= window.ActualHeight + 1 && rects[i].Left >= -1 && rects[i].Top >= -1;
+                    Console.WriteLine($"T7_SOLO: toast[{i}] rect={rects[i]} dentroDeLaVentana={dentroDeLaVentana} (esperado True)");
+                    if (!dentroDeLaVentana) Console.WriteLine($"FALLO: T7_SOLO - toast[{i}] se sale de la ventana: {rects[i]}");
+                    for (int j = i + 1; j < rects.Count; j++)
+                    {
+                        bool solapan = rects[i].IntersectsWith(rects[j]);
+                        if (solapan) Console.WriteLine($"FALLO: T7_SOLO - toast[{i}] y toast[{j}] SE SOLAPAN: {rects[i]} vs {rects[j]}");
+                    }
+                }
+
+                // El aviso de error de Inicio (antes inline, solo visible en esa pestaña) tiene
+                // que seguir viendose al cambiar de pestaña - la comprobacion real de T7.
+                if (entrySinBak != null)
+                {
+                    bool visibleEnInicio = !string.IsNullOrEmpty(vm.Home.ActionErrorMessage);
+                    vm.SelectedTabIndex = 1; // Personaje - cualquier pestaña que no sea Inicio
+                    DoEvents(); DoEvents();
+                    var toastInicioTrasCambiar = Descendientes<TextBlock>(window)
+                        .FirstOrDefault(t => t.Text == vm.Home.ActionErrorMessage && EnPantallaBorde(t));
+                    Console.WriteLine($"T7_SOLO: ActionErrorMessage='{vm.Home.ActionErrorMessage}' visibleEnInicio={visibleEnInicio}, tras cambiar a Personaje sigue en pantalla={toastInicioTrasCambiar != null} (esperado True en los dos, T7 lo saca de Inicio a nivel de ventana)");
+                    if (!visibleEnInicio) Console.WriteLine("FALLO: T7_SOLO - RestoreBackupCommand no puso Home.ActionErrorMessage");
+                    if (toastInicioTrasCambiar == null) Console.WriteLine("FALLO: T7_SOLO - el aviso de error de Inicio ya NO se ve tras cambiar de pestaña (regresion real de INI-07/T7)");
+                }
+
+                var rtbToast = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbToast.Render(window);
+                var encToast = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encToast.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbToast));
+                string shotToast = Path.Combine(AppContext.BaseDirectory, "toasthost-t7.png");
+                using (var fs = File.Create(shotToast)) encToast.Save(fs);
+                Console.WriteLine($"T7_SOLO: captura real -> {shotToast}");
+
+                vm.SaveConfirmationVisible = false;
+                vm.GlobalErrorMessage = null;
+            }
+            catch (Exception ex) { Console.WriteLine("T7_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (T7_SOLO)");
+            Environment.Exit(0);
+        }
+
         // KEEPQA_SOLO=1 (14-sep-2026, barrido FRESCO con el nuevo arsenal de KeepQA - contenido
         // adversarial y volcado de geometria para verificarAlineacion.js): mismo modo de foco que
         // los de arriba, personaje real ya cargado. El cuerpo real vive en AuditoriaKeepQA.cs

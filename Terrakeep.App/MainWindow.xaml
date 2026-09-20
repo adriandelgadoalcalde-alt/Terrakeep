@@ -2471,14 +2471,14 @@
                          "Empezar: cargar un personaje" y, al pulsarlo, abria el dialogo de fichero
                          - medido con 6 personajes reales listados justo encima. Aviso propio, sin
                          accion (no hay nada que pulsar: es una respuesta a algo que el usuario ya
-                         ha hecho), y con el color de atencion del tema para que se distinga del
-                         reclamo de acento de arriba. -->
-                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource PinkBrush}" BorderThickness="1"
-                            CornerRadius="8" Padding="14,11" Margin="0,0,0,26" HorizontalAlignment="Left"
-                            Visibility="{Binding Home.ActionErrorMessage, Converter={StaticResource NullToVis}}">
-                        <TextBlock Text="{Binding Home.ActionErrorMessage}" Style="{StaticResource BodyText}"
-                                   TextWrapping="Wrap" MaxWidth="560" HorizontalAlignment="Left" />
-                    </Border>
+                         ha hecho).
+                         Catalogo de rediseño visual T7 (20-sep-2026): la tarjeta propia inline
+                         que vivia aqui (borde PinkBrush, solo visible en Inicio) se ha movido al
+                         ToastHost unico a nivel de ventana (ver el final de MainWindow.xaml, junto
+                         al TabControl raiz) - Home.ActionErrorMessage sigue siendo la MISMA
+                         propiedad real (HomeViewModel.cs), solo cambia donde se PINTA: ahora se ve
+                         desde cualquier pestaña, no solo si sigues en Inicio, mismo criterio ya
+                         real de H-3 (GlobalErrorMessage) y N-1 (SaveConfirmationVisible). -->
 
                     <TextBlock Text="{Binding Loc[home_more_actions], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,12" />
                     <!-- I-c/F2 (segunda auditoria de Opus, Fable): MinHeight en vez de Height fijo
@@ -6992,94 +6992,6 @@
         </TabItem>
         </TabControl>
 
-        <!-- Confirmacion visual real de guardado (pedido explicito 2-sep-2026: "debe ser mas
-             visual que se allá confirmado el guardado no solamente un mensajito abajo a la
-             izquierda") - banner flotante con animacion de entrada real, aparte del
-             StatusMessage de siempre (que se queda para los errores, que no deben ser tan
-             efimeros). MainViewModel.Save() lo activa un momento tras un guardado con exito
-             real, ver SaveConfirmationVisible/DispatcherTimer ahi mismo. Auditoria de Opus,
-             N-1: movido de dentro de la pestaña Personaje a este nivel (hermano del TabControl
-             raiz, Grid.Row=1) - Guardar ya se puede pulsar desde cualquier pestaña via la
-             cabecera global, la confirmacion debe verse igual sea cual sea la pestaña activa. -->
-        <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0"
-                Background="{StaticResource TealGradientBrush}" CornerRadius="10" Padding="18,10"
-                Effect="{StaticResource CardShadow}" IsHitTestVisible="False"
-                Visibility="{Binding SaveConfirmationVisible, Converter={StaticResource BoolToVis}}"
-                RenderTransformOrigin="0.5,0.5" Panel.ZIndex="99">
-            <Border.RenderTransform>
-                <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
-            </Border.RenderTransform>
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Opacity" Value="0" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding SaveConfirmationVisible}" Value="True">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" />
-                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.18" />
-                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.18" />
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="&#10003;" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
-                <TextBlock Text="{Binding Loc[save_confirmation_title], Mode=OneWay}" FontSize="13.5" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" />
-            </StackPanel>
-        </Border>
-
-        <!-- H-3 (segunda auditoria de Opus, Fable): "Guardar ya funciona desde cualquier pestaña
-             (N-1) pero un error de guardado va a un TextBlock que 5 de 6 pestañas no ven" -
-             mismo nivel real que el banner de "Guardado" de arriba (hermano del TabControl raiz),
-             visible sea cual sea la pestaña activa. Solo errores reales (cargar/guardar/deshacer
-             fallido) - los exitos efimeros siguen siendo solo el banner verde de arriba, StatusMessage
-             se queda para el detalle informativo dentro de Personaje. Se cierra sola en el siguiente
-             exito real, o a mano con el boton "✕". -->
-        <!-- H4-12 (cuarta auditoria de Opus, Fable): este banner aparecia en seco (un salto de
-             Collapsed a Visible sin transicion) mientras su gemelo verde de arriba entra con una
-             animacion real - justo el aviso que MAS conviene que no aparezca "de golpe", al
-             reves de como estaba. Mismo Storyboard/RenderTransform real que el banner verde,
-             solo cambia el disparador (GlobalErrorMessage no vacio en vez de un bool). -->
-        <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0" MaxWidth="520"
-                Background="{StaticResource CalamityBrush}" CornerRadius="10" Padding="18,10"
-                Effect="{StaticResource CardShadow}"
-                Visibility="{Binding GlobalErrorMessage, Converter={StaticResource EmptyToCollapsed}}"
-                RenderTransformOrigin="0.5,0.5" Panel.ZIndex="99">
-            <Border.RenderTransform>
-                <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
-            </Border.RenderTransform>
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Opacity" Value="0" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding GlobalErrorMessage, Converter={StaticResource EmptyToCollapsed}}" Value="Visible">
-                            <DataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" />
-                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.18" />
-                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.18" />
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </DataTrigger.EnterActions>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="&#9888;" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
-                <TextBlock Text="{Binding GlobalErrorMessage}" FontSize="13.5" Foreground="White" VerticalAlignment="Center"
-                           TextWrapping="Wrap" MaxWidth="400" />
-                <Button Content="✕" Style="{StaticResource CircleCloseButton}" Foreground="White" Margin="10,0,0,0"
-                        Command="{Binding DismissGlobalErrorCommand}" ToolTip="{Binding Loc[close_notice_tooltip], Mode=OneWay}" />
-            </StackPanel>
-        </Border>
-
         <!-- Editor de letreros v1 (T1 del documento I+D real, "Terrakeep, editor de cofres/
              letreros del .wld", 15-sep-2026): overlay a nivel de ventana (mismo patron que los
              dos banners de arriba), visible SOLO cuando Exploracion tiene un letrero seleccionado
@@ -7702,18 +7614,150 @@
         </Grid>
         </Grid>
 
+        <!-- Catálogo de rediseño visual T7 (20-sep-2026, ver Theme.xaml ToastCardBase para el
+             porque): pila unica abajo a la derecha, ultimo hijo del Grid raiz a proposito (mismo
+             motivo real del comentario X1 de abajo: el orden de los hijos decide el orden de
+             pintado en WPF). Contiene, de arriba a abajo, el ToastHost (avisos efimeros reales,
+             pueden coexistir varios) y la tarjeta persistente de actualizacion - las dos pilas
+             comparten el mismo StackPanel asi que NUNCA se solapan entre si, este visible la que
+             este visible. -->
+        <StackPanel Grid.Row="0" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Margin="0,0,22,22" Panel.ZIndex="99">
+
+            <!-- ToastHost: avisos efimeros reales. Exito (guardado, TealGradientBrush, se
+                 autocierra solo - ver _saveConfirmationTimer en MainViewModel.cs, 6s reales tras
+                 este cambio) y error (PinkGradientBrush - antes CalamityBrush, corregido a
+                 proposito: CalamityBrush esta reservado para "esto es de Calamity" en toda la
+                 paleta, ver el comentario de DebuffColor en Theme.xaml, y un error generico de
+                 guardar/cargar no tiene nada que ver con Calamity - confundia las dos señales).
+                 GlobalErrorMessage (cualquier accion real de cargar/guardar/deshacer, visible
+                 desde cualquier pestaña, H-3) y Home.ActionErrorMessage (una accion fallida del
+                 menu contextual de Inicio, INI-07) son dos avisos de error INDEPENDIENTES - se
+                 apilan los dos a la vez si coinciden, nunca se pisan, mismo criterio real que ya
+                 aplicaba el resto de la app antes de esta ronda (ej. "equipado" y "Calamity" en
+                 el mismo slot, T-4/E-1). Ninguno de los dos se autocierra (regla real del propio
+                 catalogo: "auto-cierre 6s SALVO error"). -->
+            <Border Background="{StaticResource TealGradientBrush}"
+                    IsHitTestVisible="False"
+                    Visibility="{Binding SaveConfirmationVisible, Converter={StaticResource BoolToVis}}">
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
+                </Border.RenderTransform>
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ToastCardBase}">
+                        <Setter Property="Opacity" Value="0" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SaveConfirmationVisible}" Value="True">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" />
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.18" />
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.18" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <!-- Grid, NO StackPanel Orientation=Horizontal a proposito (bug real encontrado y
+                     arreglado en esta misma ronda, ver T7_SOLO/bitacora): un StackPanel mide sus
+                     hijos con ancho INFINITO en el eje de apilado, asi que un TextBlock con
+                     TextWrapping="Wrap" dentro nunca llega a envolver - se recorta contra el
+                     MaxWidth del Border SIN reflujo, cortando el texto a la mitad. Con Grid la
+                     columna de texto es "*" (el ancho real que sobra tras el icono/boton), asi
+                     que SI puede envolver de verdad. -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="&#10003;" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding Loc[save_confirmation_title], Mode=OneWay}" FontSize="13.5" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" TextWrapping="Wrap" />
+                </Grid>
+            </Border>
+
+            <Border Background="{StaticResource PinkGradientBrush}"
+                    Visibility="{Binding GlobalErrorMessage, Converter={StaticResource EmptyToCollapsed}}">
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
+                </Border.RenderTransform>
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ToastCardBase}">
+                        <Setter Property="Opacity" Value="0" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding GlobalErrorMessage, Converter={StaticResource EmptyToCollapsed}}" Value="Visible">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" />
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.18" />
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.18" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="&#9888;" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding GlobalErrorMessage}" FontSize="13.5" Foreground="White" VerticalAlignment="Center"
+                               TextWrapping="Wrap" />
+                    <Button Grid.Column="2" Content="✕" Style="{StaticResource CircleCloseButton}" Foreground="White" Margin="10,0,0,0" VerticalAlignment="Center"
+                            Command="{Binding DismissGlobalErrorCommand}" ToolTip="{Binding Loc[close_notice_tooltip], Mode=OneWay}" />
+                </Grid>
+            </Border>
+
+            <Border Background="{StaticResource PinkGradientBrush}"
+                    Visibility="{Binding Home.ActionErrorMessage, Converter={StaticResource NullToVis}}">
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="0.9" ScaleY="0.9" />
+                </Border.RenderTransform>
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource ToastCardBase}">
+                        <Setter Property="Opacity" Value="0" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Home.ActionErrorMessage, Converter={StaticResource NullToVis}}" Value="Visible">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" />
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.18" />
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.18" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="&#9888;" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding Home.ActionErrorMessage}" FontSize="13.5" Foreground="White" VerticalAlignment="Center"
+                               TextWrapping="Wrap" />
+                </Grid>
+            </Border>
+
         <!-- X1 (I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md, 16-sep-2026): aviso discreto de version
              nueva disponible en GitHub Releases - NUNCA un popup modal, una tarjeta pequeña en
              la esquina que se puede cerrar con un clic. Solo visible cuando la comprobacion real
              de fondo (MainViewModel.IniciarComprobacionDeActualizacion, disparada una vez desde
              MainWindow.xaml.cs) encuentra de verdad una version mas reciente publicada - nunca
-             se muestra "por si acaso" ni mientras se esta comprobando. Ultimo hijo del Grid raiz
-             a proposito: en WPF el orden de los hijos decide el orden de pintado, y esta tarjeta
-             tiene que quedar SIEMPRE por encima de las 6 pestañas, sea cual sea la activa. -->
-        <Border Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgElevatedBrush}"
+             se muestra "por si acaso" ni mientras se esta comprobando. -->
+        <Border Background="{StaticResource BgElevatedBrush}"
                 BorderBrush="{StaticResource AccentBrush}" BorderThickness="1" CornerRadius="8"
-                Padding="14,10" Margin="0,0,22,22" MaxWidth="360"
-                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Padding="14,10" MaxWidth="360"
                 Effect="{StaticResource CardShadow}"
                 Visibility="{Binding HayActualizacionDisponible, Converter={StaticResource BoolToVis}}">
             <StackPanel>
@@ -7763,5 +7807,6 @@
                 </Grid>
             </StackPanel>
         </Border>
+        </StackPanel>
     </Grid>
 </Window>

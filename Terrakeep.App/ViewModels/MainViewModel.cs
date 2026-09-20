@@ -37,8 +37,12 @@ public partial class MainViewModel : ObservableObject
     // Confirmacion visual real de guardado (pedido explicito 2-sep-2026: "debe ser mas visual
     // que se allá confirmado el guardado no solamente un mensajito abajo a la izquierda") -
     // se activa un momento tras un Save() con exito y se apaga sola; StatusMessage se queda
-    // para errores, que no deben ser tan efimeros. Ver el banner real en MainWindow.xaml.
-    private readonly DispatcherTimer _saveConfirmationTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
+    // para errores, que no deben ser tan efimeros. Ver el toast real en MainWindow.xaml
+    // (ToastHost, catalogo de rediseño visual T7). Intervalo subido de 1.5s a 6s (20-sep-2026,
+    // T7): "auto-cierre 6s salvo error" es la regla explicita del propio catalogo - 1.5s era
+    // demasiado corto para dar tiempo real a leerlo, sobre todo ahora que ya no esta siempre en
+    // el mismo sitio fijo arriba sino en una pila junto a otros avisos.
+    private readonly DispatcherTimer _saveConfirmationTimer = new() { Interval = TimeSpan.FromSeconds(6) };
 
     // H5-10 (quinta auditoria de Opus): "cuándo se guardó por última vez - en ninguna parte".
     // Se refresca solo (DispatcherTimer real, cada 30s) para que "hace X min" no se quede
