@@ -19452,3 +19452,91 @@ local (`bin\Debug` + instalador) tras cada pieza. Nunca se ha subido de versión
 changelog.json, compilado instalador de distribución, hecho `git push` ni `gh release` - todo el
 trabajo de las tres rondas queda comiteado en local para que el usuario lo revise antes de
 publicar nada.
+
+## 20-sep-2026 - WldWriter.WriteWorld: escritor completo de .wld desde cero, para KeepQA (punto 6)
+
+**Contexto real**: otro agente, esta misma noche, implementó el punto 6 del catálogo de
+funciones de KeepQA ("Bancos de datos extremos compartidos") para Don't Starve Together
+(`dst-jugador-extremo`) pero dejó el lado Terraria como "LÍMITE REAL", razonando que
+`WldWriter` era solo un parcheador mínimo de bytes (`PatchGameMode`/`PatchSpawnPoint`/
+`PatchTimeAndMoon`/`PatchBossFlags`), no un escritor general de `.wld` desde cero. El usuario
+pidió explícitamente reconsiderar ese límite antes de aceptarlo como definitivo ("infraestructura
+no construida todavía, no una imposibilidad técnica real").
+
+**Investigación real (antes de tocar nada)**: `WldReader.cs` (679 líneas) ya conocía el layout
+de campo EXACTO de todo lo que hacía falta escribir - cabecera de ancho fijo por versión, RLE de
+tiles, cofres, letreros, NPCs, tile entities polimórficas, bestiario. `WldWriter.cs` ya tenía
+`WriteOneChest`/`SerializeChests` (escritura de una sección desde cero, no solo parcheo) y
+`ReplaceSection` (recomposición de punteros de cabecera tras una sección de longitud variable) -
+demostración real de que "escribir secciones nuevas en este formato" ya se había hecho aquí
+antes, solo que a una escala menor. `World.FileV2.cs` de TEdit (2641 líneas, MIT, ya descargado
+en `Terrasavr-Calamity-Beta\resources\app\xnb-lzx-tool-refs\`) tenía el algoritmo RLE de tiles
+YA resuelto (`SaveTiles`, líneas 198-262) y el orden real de punteros de sección
+(`SaveV2`, líneas 117-196) que permitió confirmar que los índices de `WldHeader.Pointers`
+(`TilesSectionOffset=>[1]`, `ChestsSectionOffset=>[2]`... `BestiarySectionOffset=>[8]`) encajaban
+exactamente con el orden real de TEdit. **Conclusión real: esfuerzo razonable, no desproporcionado**
+- estimado y confirmado en ~450 líneas de código de producción + ~380 de pruebas, una sesión.
+
+**Decisión de alcance, documentada explícitamente en el propio código** (`WldWriter.cs`,
+comentario de cabecera de `WriteWorld`):
+- Restringido a `version >= 210` (Journey's End, el mismo suelo que ya exige el Bestiario) -
+  evita tener que replicar TAMBIÉN las 3 variantes de formato más antiguas que `ReadHeader` sabe
+  leer (GameMode como `bool` pre-209, ausencia de `WorldGUID` pre-181, ausencia de `CreationTime`
+  pre-141). Restricción elegida, no un límite real del formato.
+- Escribe SOLO las secciones que `WldReader` entiende de verdad (cabecera, tiles, cofres,
+  letreros, NPCs, tile entities, bestiario) - deliberadamente NO escribe las secciones reales de
+  TEdit que `WldReader` nunca lee (PressurePlate/TownManager/CreativePowers/Footer con firma de
+  integridad). Consecuencia honesta y documentada: el archivo resultante sirve para fuzzing real
+  de `WldReader`/Terrakeep.Core, pero NO hay garantía de que el juego real o TEdit lo abran sin
+  protestar - ni TEdit ni Terraria están instalados en este arnés, no se pudo verificar esa parte
+  y no se ha fingido que sí.
+- `DisplayDoll`/`HatRack` (2 de los 11 tipos de tile entity) se RECHAZAN explícitos
+  (`NotSupportedException`) en vez de adivinar: `WldTileEntity.Items` es una lista plana sin
+  distinción de slot/objeto-vs-tinte, la única información que esos 2 tipos necesitan para
+  reconstruirse con fidelidad real. Los otros 9 tipos sí se escriben (incluye
+  `CritterAnchor`/`KiteAnchor`/`ItemFrame`/`WeaponRack`/`FoodPlatter`/`DeadCellsDisplayJar`/
+  `LogicSensor`/`TrainingDummy`/`TeleportationPylon`).
+- Esto es infraestructura de USO INTERNO de KeepQA, nunca expuesta como función de la app ni del
+  usuario - Terrakeep (la app de escritorio) sigue sin ser un editor de mundos, decisión de
+  producto ya tomada en `ESPEC-auditoria-exploracion-tedit.md`/`ESPEC-buscador-mundo-tedit.md` y
+  completamente intacta.
+
+**Construido**: `Terrakeep.Core/WldFormat/WldWriter.cs` - `WriteWorld(WldWorld)` público +
+`WriteFullHeader`/`SerializeTiles`/`WriteOneTileForWrite`/`SerializeSignsSection`/
+`SerializeNpcsSection`/`SerializeTileEntitiesSection`/`SerializeBestiarySection` privados. Reusa
+`SerializeChests`/`ReplaceSection` ya existentes (nunca reimplementados).
+
+**Bug real encontrado y arreglado en el camino** (primera ejecución de las pruebas, 9/10 en
+rojo): `BinaryWriter.Dispose()` cierra TAMBIÉN el `MemoryStream` subyacente por defecto - la
+medición de `headerLength` en dos pasadas intentaba leer `measureMs.Length` DESPUÉS de que el
+`using` ya hubiera cerrado `measureMs`, lanzando `ObjectDisposedException` en todos los casos.
+Arreglo real: `leaveOpen: true` en los dos `BinaryWriter` de `WriteWorld` (medición + escritura
+final).
+
+**Verificación real**: `Terrakeep.Core.Tests/WldFormat/WldWriterWriteWorldTests.cs` (10 pruebas
+nuevas) - round-trip normal (construir → `WriteWorld` → `WldReader.Read`, byte a byte igual tras
+una SEGUNDA pasada, demostrando estabilidad real del formato) + 6 casos extremos reales que pide
+el punto 6 del catálogo: tile en la esquina extrema del mundo (`type=32767`, `wall=255`,
+`u/v` en los límites de `short`), pared >255 combinada con Shimmer en el mismo tile (el caso con
+más riesgo real de pisarse por el orden de bytes, confirmado que el byte alto de la pared va
+DESPUÉS del líquido, no justo tras el byte bajo), cofre con 200 objetos (por encima de los 40
+slots vanilla reales), 500 NPCs con coordenadas fuera del propio mundo, 300 tile entities con
+coordenadas corruptas (`short.MaxValue`/`short.MinValue`), banderas de progreso contradictorias
+(`HardMode=true` sin ningún jefe derrotado) - y un mundo de 4200x1200 (tamaño real "Mediano" de
+Terraria) que confirma que el RLE por columna colapsa de verdad (archivo <25% del tamaño de
+"1 byte por tile", verificado con `Assert.True(bytes.Length < wide*high/4, ...)`).
+
+Comando ejecutado: `dotnet test Terrakeep.Core.Tests/Terrakeep.Core.Tests.csproj -c Debug` →
+**578/578 pruebas en verde** (165 de ellas en `WldFormat`, incluidas las 10 nuevas), sin ninguna
+regresión en el resto del proyecto.
+
+**Commit real**: `05918323` - "WldWriter: escritor completo de .wld desde cero (WriteWorld),
+para el punto 6 de KeepQA" (`Terrakeep.Core/WldFormat/WldWriter.cs` +
+`Terrakeep.Core.Tests/WldFormat/WldWriterWriteWorldTests.cs`, 928 líneas insertadas). Solo esos
+dos archivos comiteados - había cambios sin relacionar de otra sesión en paralelo
+(`Terrakeep.App.Tests/Program.cs`, `Terrakeep.App/MainWindow.xaml`) que se dejaron intactos, sin
+tocar ni comitear.
+
+Siguiente paso real (fuera de este repo): usar `WldWriter.WriteWorld` desde
+`Keep\KeepQA\src\fuzzer-guardados\` para añadir un modo `wld-extremo` que genere estos mismos
+escenarios como archivos `.wld` reales en disco - ver la bitácora de KeepQA para el resultado.
