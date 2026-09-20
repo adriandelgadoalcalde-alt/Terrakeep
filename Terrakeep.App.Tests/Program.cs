@@ -1623,6 +1623,129 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // IDEA7_SOLO=1 (20-sep-2026, catalogo de funciones, idea 7 "Capa Guia sobre el mapa" -
+        // version real, tercera ronda tras la correccion del coordinador: investigado a fondo que
+        // la Zona de un paso de la Guia NUNCA es una coordenada de punto (la Guia describe
+        // requisitos, no ubicaciones) - de las 10 Zonas reales del catalogo, 5 SI tienen una
+        // posicion real sin escanear tiles ("Mazmorra" = WldDungeonX/Y ya leido; las 4 capas de
+        // profundidad = los mismos umbrales reales que ya pinta el fondo del mapa,
+        // WldHeader.ZoneFor). Las 5 restantes (biomas reales) exigirian un detector de bioma
+        // nuevo con datos que hoy no existen en el proyecto - LIMITE real, documentado en el
+        // propio codigo de ExplorationViewModel.
+        //
+        // Verificacion con "aislar la variable": la verdad de referencia de los limites de banda
+        // se calcula AQUI con un WldReader.Read PROPIO (nunca el _world interno del ViewModel), y
+        // el paso "objetivo actual" se fuerza a mano sobre un paso REAL ya existente en el arbol
+        // de la Guia (nunca inventado - GuidePasoViewModel tiene constructor internal, no se
+        // puede fabricar uno sintetico desde este proyecto de pruebas) para comprobar la
+        // Visibility real en los dos sentidos (aparece Y desaparece).
+        if (Environment.GetEnvironmentVariable("IDEA7_SOLO") == "1")
+        {
+            try
+            {
+                string mundoPath = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                if (!File.Exists(mundoPath)) { Console.WriteLine("IDEA7_SOLO: AVISO - falta el mundo real de prueba, se omite"); }
+                else
+                {
+                    var personajeReal = vm.Home.Characters.FirstOrDefault();
+                    if (personajeReal != null) { vm.Home.OpenCommand.Execute(personajeReal); DoEvents(); DoEvents(); }
+
+                    vm.SelectedTabIndex = 4; // Exploracion
+                    DoEvents();
+                    var taskCarga = vm.Exploration.LoadFromPathAsync(mundoPath);
+                    while (!taskCarga.IsCompleted) DoEvents();
+                    DoEvents(); DoEvents();
+
+                    // --- Verdad de referencia de las 4 bandas, WldReader propio ---
+                    var mundoVerdad = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(mundoPath));
+                    double groundLevel = mundoVerdad.Header.GroundLevel, rockLevel = mundoVerdad.Header.RockLevel;
+                    double infiernoTop = mundoVerdad.Header.TilesHigh - 192;
+                    Console.WriteLine($"IDEA7_SOLO: verdad de referencia -> GroundLevel={groundLevel}, RockLevel={rockLevel}, TilesHigh={mundoVerdad.Header.TilesHigh}, InfiernoTop={infiernoTop}");
+                    Console.WriteLine($"IDEA7_SOLO: bandas del ViewModel -> Superficie[{vm.Exploration.GuideBandSuperficieTop},{vm.Exploration.GuideBandSuperficieHeight}] Subterraneo[{vm.Exploration.GuideBandSubterraneoTop},{vm.Exploration.GuideBandSubterraneoHeight}] Cavernas[{vm.Exploration.GuideBandCavernasTop},{vm.Exploration.GuideBandCavernasHeight}] Infierno[{vm.Exploration.GuideBandInfiernoTop},{vm.Exploration.GuideBandInfiernoHeight}]");
+
+                    bool bandasOk = vm.Exploration.GuideBandSuperficieTop == 0.0 && vm.Exploration.GuideBandSuperficieHeight == groundLevel
+                        && vm.Exploration.GuideBandSubterraneoTop == groundLevel && vm.Exploration.GuideBandSubterraneoHeight == rockLevel - groundLevel
+                        && vm.Exploration.GuideBandCavernasTop == rockLevel && vm.Exploration.GuideBandCavernasHeight == infiernoTop - rockLevel
+                        && vm.Exploration.GuideBandInfiernoTop == infiernoTop && vm.Exploration.GuideBandInfiernoHeight == 192.0;
+                    if (!bandasOk) Console.WriteLine("FALLO: IDEA7_SOLO - las bandas de profundidad calculadas por el ViewModel no coinciden con la verdad de referencia real");
+                    else Console.WriteLine("IDEA7_SOLO: las 4 bandas coinciden EXACTAMENTE con la verdad de referencia real");
+
+                    // --- Navega a la Guia real para poblar vm.Guide.Tramos con pasos REALES ---
+                    vm.SelectedTabIndex = 6; // Guia
+                    DoEvents(); DoEvents();
+                    var pasoMazmorra = vm.Guide.Tramos.SelectMany(t => t.Pasos).FirstOrDefault(p => p.Zona == "Mazmorra");
+                    var pasoCapa = vm.Guide.Tramos.SelectMany(t => t.Pasos).FirstOrDefault(p => p.Zona is "Cavernas" or "Subterraneo" or "Superficie" or "Infierno");
+                    Console.WriteLine($"IDEA7_SOLO: paso real con Zona=Mazmorra encontrado={pasoMazmorra != null}, paso real con Zona de capa encontrado={pasoCapa != null} (Zona='{pasoCapa?.Zona}')");
+
+                    vm.SelectedTabIndex = 4; // vuelve a Exploracion para medir el mapa real
+                    DoEvents(); DoEvents();
+
+                    if (pasoMazmorra != null)
+                    {
+                        vm.Guide.ObjetivoPaso = pasoMazmorra;
+                        DoEvents(); DoEvents();
+                        var marcador = Descendientes<System.Windows.Controls.Grid>(window).FirstOrDefault(g => ReferenceEquals(g.ToolTip, null) == false && Equals(g.ToolTip, pasoMazmorra.Titulo));
+                        Console.WriteLine($"IDEA7_SOLO: marcador de objetivo (Mazmorra) encontrado={marcador != null}, visible={marcador?.IsVisible}");
+                        if (marcador == null || !marcador.IsVisible) Console.WriteLine("FALLO: IDEA7_SOLO - el marcador de objetivo de mazmorra no aparece con ObjetivoPaso real apuntando a Mazmorra");
+
+                        vm.Guide.ObjetivoPaso = null;
+                        DoEvents(); DoEvents();
+                        bool siguevisible = marcador != null && marcador.IsVisible;
+                        Console.WriteLine($"IDEA7_SOLO: tras quitar el objetivo, marcador sigue visible={siguevisible} (esperado False)");
+                        if (siguevisible) Console.WriteLine("FALLO: IDEA7_SOLO - el marcador de objetivo NO desaparece al quitar ObjetivoPaso (falso positivo permanente)");
+                    }
+                    else Console.WriteLine("IDEA7_SOLO: AVISO - ningun paso real del catalogo de Guia tiene Zona=Mazmorra, se omite esa comprobacion");
+
+                    if (pasoCapa != null)
+                    {
+                        vm.Guide.ObjetivoPaso = pasoCapa;
+                        DoEvents(); DoEvents();
+                        // La ventana entera tiene MUCHOS Rectangle visibles ajenos a esto
+                        // (bordes/decoracion de otros controles) - se aislan por las DOS señas
+                        // reales que solo llevan mis 4 bandas: IsHitTestVisible=False (puesto a
+                        // mano en el XAML, ningun otro Rectangle real de la app lo usa asi) Y el
+                        // mismo pincel real AccentMutedBrush.
+                        var accentMuted = System.Windows.Application.Current.TryFindResource("AccentMutedBrush");
+                        var rects = Descendientes<System.Windows.Shapes.Rectangle>(window)
+                            .Where(r => r.IsVisible && !r.IsHitTestVisible && Equals(r.Fill, accentMuted)).ToList();
+                        Console.WriteLine($"IDEA7_SOLO: rectangulos de banda VISIBLES tras fijar Zona='{pasoCapa.Zona}' -> {rects.Count} (esperado 1)");
+                        if (rects.Count != 1) Console.WriteLine($"FALLO: IDEA7_SOLO - se esperaba exactamente 1 banda visible para Zona='{pasoCapa.Zona}', hay {rects.Count}");
+                        else
+                        {
+                            double topReal = System.Windows.Controls.Canvas.GetTop(rects[0]);
+                            Console.WriteLine($"IDEA7_SOLO: Canvas.Top real de la banda visible = {topReal}");
+                        }
+
+                        vm.Guide.ObjetivoPaso = null;
+                        DoEvents(); DoEvents();
+                        int rectsDespues = Descendientes<System.Windows.Shapes.Rectangle>(window)
+                            .Count(r => r.IsVisible && !r.IsHitTestVisible && Equals(r.Fill, accentMuted));
+                        Console.WriteLine($"IDEA7_SOLO: bandas visibles tras quitar el objetivo = {rectsDespues} (esperado 0)");
+                        if (rectsDespues != 0) Console.WriteLine("FALLO: IDEA7_SOLO - una banda de profundidad sigue visible tras quitar ObjetivoPaso");
+                    }
+                    else Console.WriteLine("IDEA7_SOLO: AVISO - ningun paso real del catalogo de Guia tiene Zona de capa de profundidad, se omite esa comprobacion");
+
+                    if (pasoCapa != null)
+                    {
+                        vm.Guide.ObjetivoPaso = pasoCapa;
+                        DoEvents(); DoEvents(); DoEvents();
+                        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtb.Render(window);
+                        var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                        string shot = Path.Combine(AppContext.BaseDirectory, "idea7-capa-guia-mapa.png");
+                        using (var fs = File.Create(shot)) enc.Save(fs);
+                        Console.WriteLine($"IDEA7_SOLO: captura real -> {shot}");
+                        vm.Guide.ObjetivoPaso = null;
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("IDEA7_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (IDEA7_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA5_SOLO=1 (20-sep-2026, catalogo de funciones, idea 5 "¿Donde esta? global,
         // multi-mundo y multi-personaje" - version real, tercera ronda tras la correccion del
         // coordinador: el catalogo citaba WorldPresenceIndex como apoyo, que resulto ser el

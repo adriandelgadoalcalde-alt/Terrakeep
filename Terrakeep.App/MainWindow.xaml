@@ -5432,6 +5432,127 @@
                                                     </TextBlock.Effect>
                                                 </TextBlock>
                                             </Grid>
+
+                                            <!-- Idea 7 (catalogo de funciones, "Capa Guia sobre el mapa" - bitacora.md
+                                                 20-sep-2026): SOLO cuando el paso PENDIENTE actual de la Guia (Guide.
+                                                 ObjetivoPaso) apunta a la Zona "Mazmorra" - mismo punto real que el
+                                                 marcador de mazmorra de arriba, icono/color propios para distinguir
+                                                 "aqui esta tu proximo objetivo" de "aqui esta la mazmorra" a secas. -->
+                                            <Grid Width="0" Height="0" RenderTransformOrigin="0,0"
+                                                  Canvas.Left="{Binding Exploration.WorldDungeonX, Converter={x:Static conv:TileCenterConverter.Instance}}" Canvas.Top="{Binding Exploration.WorldDungeonY, Converter={x:Static conv:TileCenterConverter.Instance}}"
+                                                  ToolTip="{Binding Guide.ObjetivoPaso.Titulo, Mode=OneWay}" Cursor="Hand"
+                                                  Panel.ZIndex="3">
+                                                <Grid.Style>
+                                                    <Style TargetType="Grid">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
+                                                                    <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Mazmorra" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Grid.Style>
+                                                <Grid.RenderTransform>
+                                                    <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
+                                                                    ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
+                                                </Grid.RenderTransform>
+                                                <TextBlock Text="&#8853;" FontSize="20" Foreground="{StaticResource AccentBrush}"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <TextBlock.Effect>
+                                                        <DropShadowEffect ShadowDepth="0" BlurRadius="4" Color="Black" Opacity="0.95" />
+                                                    </TextBlock.Effect>
+                                                </TextBlock>
+                                            </Grid>
+
+                                        <!-- Idea 7: bandas de profundidad de la Guia - una franja horizontal
+                                             translucida por la Zona real del paso PENDIENTE actual (Superficie/
+                                             Subterraneo/Cavernas/Infierno), usando los MISMOS umbrales reales que ya
+                                             pinta el fondo del mapa (WldHeader.ZoneFor - ver el comentario real de
+                                             ExplorationViewModel.GuideBand*). Sin ScaleTransform inverso a proposito:
+                                             una banda representa una region REAL del mundo, tiene que escalar CON el
+                                             zoom igual que el propio mapa, no quedarse a tamaño de pantalla fijo como
+                                             los marcadores de punto de arriba. IsHitTestVisible=False: es una capa
+                                             puramente informativa, nunca debe robarle el clic al mapa de debajo. -->
+                                        <Rectangle Width="{Binding ElementName=WorldMapImage, Path=ActualWidth}" IsHitTestVisible="False" Panel.ZIndex="1"
+                                                   Fill="{StaticResource AccentMutedBrush}" Opacity="0.35">
+                                            <Rectangle.Style>
+                                                <Style TargetType="Rectangle">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding Exploration.GuideBandSuperficieTop}" />
+                                                    <Setter Property="Height" Value="{Binding Exploration.GuideBandSuperficieHeight}" />
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
+                                                                <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Superficie" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Rectangle.Style>
+                                        </Rectangle>
+                                        <Rectangle Width="{Binding ElementName=WorldMapImage, Path=ActualWidth}" IsHitTestVisible="False" Panel.ZIndex="1"
+                                                   Fill="{StaticResource AccentMutedBrush}" Opacity="0.35">
+                                            <Rectangle.Style>
+                                                <Style TargetType="Rectangle">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding Exploration.GuideBandSubterraneoTop}" />
+                                                    <Setter Property="Height" Value="{Binding Exploration.GuideBandSubterraneoHeight}" />
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
+                                                                <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Subterraneo" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Rectangle.Style>
+                                        </Rectangle>
+                                        <Rectangle Width="{Binding ElementName=WorldMapImage, Path=ActualWidth}" IsHitTestVisible="False" Panel.ZIndex="1"
+                                                   Fill="{StaticResource AccentMutedBrush}" Opacity="0.35">
+                                            <Rectangle.Style>
+                                                <Style TargetType="Rectangle">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding Exploration.GuideBandCavernasTop}" />
+                                                    <Setter Property="Height" Value="{Binding Exploration.GuideBandCavernasHeight}" />
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
+                                                                <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Cavernas" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Rectangle.Style>
+                                        </Rectangle>
+                                        <Rectangle Width="{Binding ElementName=WorldMapImage, Path=ActualWidth}" IsHitTestVisible="False" Panel.ZIndex="1"
+                                                   Fill="{StaticResource AccentMutedBrush}" Opacity="0.35">
+                                            <Rectangle.Style>
+                                                <Style TargetType="Rectangle">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Setter Property="Canvas.Top" Value="{Binding Exploration.GuideBandInfiernoTop}" />
+                                                    <Setter Property="Height" Value="{Binding Exploration.GuideBandInfiernoHeight}" />
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
+                                                                <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Infierno" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Rectangle.Style>
+                                        </Rectangle>
                                         </Canvas>
                                         <!-- Bug real reportado por el usuario (6-sep-2026, captura): en
                                              "Cofre a cofre", con la casilla de acercar marcada, al

@@ -77,6 +77,10 @@ public sealed partial class GuidePasoViewModel : ObservableObject
     public string Como => _textos.Text("Guia.Paso." + _paso.Clave + ".Como", LocalizationService.Instance.Language);
     public string ZonaLegible => string.IsNullOrEmpty(_paso.Zona)
         ? "" : _textos.Text("Guia.Zona." + _paso.Zona, LocalizationService.Instance.Language);
+    // Idea 7 (catalogo de funciones, "Capa Guia sobre el mapa" - bitacora.md 20-sep-2026): la
+    // clave CRUDA ("Mazmorra"/"Cavernas"/...), no el texto ya redactado de ZonaLegible - el mapa
+    // de Exploracion la usa para decidir que marcador/banda dibujar, nunca para mostrarla.
+    public string Zona => _paso.Zona;
 
     private void OnIdiomaCambiado(object? sender, PropertyChangedEventArgs e)
     {

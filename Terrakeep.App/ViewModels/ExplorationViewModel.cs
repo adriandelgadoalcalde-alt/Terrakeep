@@ -522,6 +522,35 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private int _worldDungeonY;
     [ObservableProperty] private bool _isWorldLoaded;
 
+    // Idea 7 (catalogo de funciones, "Capa Guia sobre el mapa" - bitacora.md 20-sep-2026):
+    // investigado que la "Zona" real de un paso de la Guia (guia_progresion.json: "Superficie"/
+    // "Subterraneo"/"Cavernas"/"Infierno"/"Mazmorra"/"Jungla"/"Desierto"/"Nieve"/
+    // "OceanoProfundo"/"TemploLihzahrd") NUNCA es una coordenada de punto - la Guia describe
+    // REQUISITOS (jefe derrotado, objeto conseguido...), no ubicaciones. De las 10, 5 SI tienen
+    // una posicion real ya disponible sin escanear ningun tile: "Mazmorra" (WldDungeonX/Y, ya
+    // leido) y las 4 capas de profundidad, cuyos limites Y son los MISMOS umbrales reales ya
+    // usados para el fondo del mapa (WldHeader.ZoneFor: Sky/Earth/Rock/Hell por GroundLevel/
+    // RockLevel/TilesHigh-192 - aqui replicados a proposito como bandas, no coordenadas, porque
+    // una capa de profundidad es una FRANJA horizontal, no un punto). Las 5 restantes (biomas
+    // reales: Jungla/Desierto/Nieve/OceanoProfundo/TemploLihzahrd) exigirian un detector de
+    // bioma nuevo (recorrer la rejilla agrupando por tipo de tile real de cada bioma, catalogo
+    // que HOY no existe en el proyecto - LIMITE real, distinto de "mas trabajo": faltaria curar
+    // los ids reales de tile por bioma contra el codigo decompilado antes de poder escribir ese
+    // detector, una pieza de datos nueva, no solo mas codigo reutilizando lo ya real) - quedan
+    // fuera de esta ronda, documentadas aqui para la siguiente.
+    //
+    // Cada banda es null sin mundo cargado (Visibility del marcador/banda en el XAML depende
+    // ademas de que Guide.ObjetivoPaso.Zona coincida con la banda exacta - no se muestran las 4 a
+    // la vez, solo la de la Zona real del paso pendiente actual).
+    public double? GuideBandSuperficieTop => _world == null ? null : 0.0;
+    public double? GuideBandSuperficieHeight => _world == null ? null : _world.Header.GroundLevel;
+    public double? GuideBandSubterraneoTop => _world == null ? null : _world.Header.GroundLevel;
+    public double? GuideBandSubterraneoHeight => _world == null ? null : _world.Header.RockLevel - _world.Header.GroundLevel;
+    public double? GuideBandCavernasTop => _world == null ? null : _world.Header.RockLevel;
+    public double? GuideBandCavernasHeight => _world == null ? null : (_world.Header.TilesHigh - 192) - _world.Header.RockLevel;
+    public double? GuideBandInfiernoTop => _world == null ? null : _world.Header.TilesHigh - 192;
+    public double? GuideBandInfiernoHeight => _world == null ? null : 192.0;
+
     // ===================================================================================
     // Editor de mundos v1 (14-sep-2026, guia real de bitacora.md 13-sep-2026: "spawn point,
     // hora/estacion guardada, banderas de progreso del mundo"). Mismo patron EXACTO que
@@ -2510,6 +2539,13 @@ public partial class ExplorationViewModel : ObservableObject
             WorldSpawnY = world.Header.SpawnY;
             WorldDungeonX = world.Header.DungeonX;
             WorldDungeonY = world.Header.DungeonY;
+            // Idea 7: las 8 bandas de profundidad son computadas (get puro sobre _world, ya
+            // asignado unas lineas mas arriba) - avisan aqui, mismo criterio que el resto de
+            // propiedades derivadas de esta carga.
+            OnPropertyChanged(nameof(GuideBandSuperficieTop)); OnPropertyChanged(nameof(GuideBandSuperficieHeight));
+            OnPropertyChanged(nameof(GuideBandSubterraneoTop)); OnPropertyChanged(nameof(GuideBandSubterraneoHeight));
+            OnPropertyChanged(nameof(GuideBandCavernasTop)); OnPropertyChanged(nameof(GuideBandCavernasHeight));
+            OnPropertyChanged(nameof(GuideBandInfiernoTop)); OnPropertyChanged(nameof(GuideBandInfiernoHeight));
 
             // Editor de mundos v1 (14-sep-2026): los tres grupos nuevos se inicializan con el
             // valor REAL del archivo entrante, tanto la copia "editable" como el "_savedXxx" de
