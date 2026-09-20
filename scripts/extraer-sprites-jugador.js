@@ -42,8 +42,9 @@
 // Uso: node scripts/extraer-sprites-jugador.js
 // (necesita NODE_PATH=...Terrasavr-Calamity-Beta\resources\app\node_modules para pngjs, igual
 // que extraer-sprites-armadura-vanilla.js)
-// Salida: Terrakeep.App/Assets/player/body{0..9}/{pieza}.png (compuestas 360x224 o tiras
-//         40x56 segun la pieza) + Terrakeep.App/Assets/player/hair/{0..227}.png
+// Salida: Terrakeep.App/Assets/player/body{0..9}/{pieza}.png (compuestas 360x224, tiras
+//         ANIMADAS 40x1120 para legskin/pants/shoes -idea 10- o tiras 40x56 frame0 para el
+//         resto) + Terrakeep.App/Assets/player/hair/{0..227}.png (frame0, sin cambios)
 
 'use strict';
 const fs = require('fs');
@@ -60,6 +61,15 @@ const SheetWidth = 360, SheetHeight = 224;
 // Y real de cada pieza (PlayerTextureID.cs, 16 constantes reales) y si es tira vertical
 // (frame0, 40x56) o rejilla compuesta (hoja entera, 360x224). "extra" (14) es el faldon del
 // vestido/abrigo (DrawPlayer_15_SkinLongCoat real) - solo lo tienen las variantes 3/7/8.
+// "animated" (idea 10 del catalogo, bitacora.md 20-sep-2026 - reconsiderada a peticion explicita
+// del coordinador): legskin/pants/shoes son las UNICAS piezas cuyo frame de verdad cambia
+// durante un ciclo de andar simple sin usar ningun objeto (Terraria/Player.cs real, PlayerFrame():
+// bodyFrame/headFrame/hairFrame SOLO cambian con itemAnimation>0 o estados especiales -
+// confirmado leyendo el metodo completo, permanecen en su frame de reposo mientras se anda sin
+// atacar/usar nada). Se guarda la tira 40x1120 ENTERA (mismo "fullSheet" que ya usan las piezas
+// composite) en vez de recortar solo la celda (0,0) - PlayerPreviewRenderer sigue leyendo esa
+// misma celda para el reposo (compatibilidad automatica) y ahora TAMBIEN puede leer cualquier
+// otra fila real (7..19, el ciclo de andar confirmado en Player.cs) para la animacion.
 const PIECES = [
   { y: 0, name: 'head', composite: false },
   { y: 1, name: 'eyewhites', composite: false },
@@ -71,9 +81,9 @@ const PIECES = [
   { y: 7, name: 'armskin', composite: true },
   { y: 8, name: 'armundershirt', composite: true },
   { y: 9, name: 'armhand', composite: true },
-  { y: 10, name: 'legskin', composite: false },
-  { y: 11, name: 'pants', composite: false },
-  { y: 12, name: 'shoes', composite: false },
+  { y: 10, name: 'legskin', composite: false, animated: true },
+  { y: 11, name: 'pants', composite: false, animated: true },
+  { y: 12, name: 'shoes', composite: false, animated: true },
   { y: 13, name: 'armshirt', composite: true },
   { y: 14, name: 'extra', composite: false },
 ];
@@ -143,7 +153,7 @@ for (const variant of VARIANTS) {
     if (propias.has(name)) {
       const xnbPath = path.join(STEAM_IMAGES, `Player_${variant}_${piece.y}.xnb`);
       if (!fs.existsSync(xnbPath)) { faltan++; console.log(`  falta: Player_${variant}_${piece.y}.xnb (${name})`); continue; }
-      const png = piece.composite ? fullSheet(xnbPath) : cropFrame0(xnbPath);
+      const png = (piece.composite || piece.animated) ? fullSheet(xnbPath) : cropFrame0(xnbPath);
       // Hallazgo real (comprobado a mano con xnb-to-png.js, no documentado en
       // PlayerDataInitializer.cs ni en la comprobacion previa de "que .xnb existen"):
       // Player_8_8.xnb (ArmUndershirt de MaleDress) es una tira 40x1120, NO la rejilla
@@ -152,7 +162,11 @@ for (const variant of VARIANTS) {
       // extraccion. Si la hoja "propia" no tiene la forma de rejilla esperada, se descarta y
       // se hereda de la base (0/4) en su lugar - mismo criterio "lo que no encaja no se usa a
       // ciegas" que ya aplica extraer-sprites-armadura-vanilla.js a las hojas mas pequeñas.
-      const formaValida = png && (piece.composite ? (png.width === SheetWidth && png.height === SheetHeight) : true);
+      // Piezas "animated" (idea 10): igual de estricto, pero con la forma real que les toca -
+      // ancho W (40) y un alto multiplo exacto de H (56, ninguna fila a medias).
+      const formaValida = png && (piece.composite
+        ? (png.width === SheetWidth && png.height === SheetHeight)
+        : (piece.animated ? (png.width === W && png.height % H === 0) : true));
       if (!formaValida) {
         console.log(`  Player_${variant}_${piece.y}.xnb (${name}) no tiene la forma esperada (${png ? png.width + 'x' + png.height : 'hoja mas pequeña'}) - se hereda de body${fallback} en su lugar`);
       } else {

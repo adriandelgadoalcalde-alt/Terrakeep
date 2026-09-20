@@ -4123,13 +4123,28 @@
                                 <CheckBox IsChecked="{Binding Appearance.ShowEquipment}" Margin="0,0,0,8">
                                     <TextBlock Text="{Binding Loc[appearance_show_equipment], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </CheckBox>
-                                <!-- Catalogo de ideas Keep, idea 10 (20-sep-2026, "vista previa
-                                     exportable" - version real y honesta de la idea, ver el
-                                     LIMITE documentado en AppearanceViewModel.ExportPreviewToPng:
-                                     sin animacion/giro, exporta el frame REAL que ya se ve aqui
-                                     mismo, mismo patron ya real de "Exportar a PNG" del mapa). -->
-                                <Button Content="{Binding Loc[action_export_preview], Mode=OneWay}" Click="OnExportPreviewClick"
-                                        Padding="8,4" Margin="0,0,0,8" HorizontalAlignment="Left" />
+                                <!-- Catalogo de ideas Keep, idea 10 ("vista previa animada del
+                                     personaje, exportable" - reconsiderada a peticion explicita del
+                                     coordinador el 20-sep-2026: el "limite real" anterior era en
+                                     realidad un recorte de la propia extraccion de sprites, no una
+                                     ausencia de datos del juego, ver el comentario real de cabecera
+                                     de PlayerPreviewRenderer.Render). "Andar"/"Detener" reproduce el
+                                     ciclo de andar REAL confirmado en Terraria/Player.cs (13
+                                     fotogramas, AppearanceViewModel.WalkCycleRows); "Girar" es un
+                                     espejo horizontal exacto del mismo fotograma. -->
+                                <WrapPanel Margin="0,0,0,8">
+                                    <Button Content="{Binding Appearance.WalkToggleLabel}"
+                                            Command="{Binding Appearance.ToggleWalkAnimationCommand}"
+                                            Padding="8,4" Margin="0,0,8,4" />
+                                    <Button Content="{Binding Loc[action_turn_around], Mode=OneWay}" Command="{Binding Appearance.ToggleFacingCommand}"
+                                            Padding="8,4" Margin="0,0,8,4" />
+                                </WrapPanel>
+                                <WrapPanel Margin="0,0,0,8">
+                                    <Button Content="{Binding Loc[action_export_preview], Mode=OneWay}" Click="OnExportPreviewClick"
+                                            Padding="8,4" Margin="0,0,8,4" />
+                                    <Button Content="{Binding Loc[action_export_preview_gif], Mode=OneWay}" Click="OnExportPreviewGifClick"
+                                            Padding="8,4" Margin="0,0,8,4" />
+                                </WrapPanel>
                                 <TextBlock Text="{Binding Loc[tt_appearance_preview], Mode=OneWay}"
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Width="240" />
                             </StackPanel>

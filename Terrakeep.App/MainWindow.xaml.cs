@@ -739,6 +739,20 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) _viewModel.Appearance.ExportPreviewToPng(dialog.FileName);
     }
 
+    // Catalogo de ideas Keep, idea 10 ("vista previa animada del personaje, exportable") - gemelo
+    // real de OnExportPreviewClick de arriba, para el ciclo de andar completo en GIF
+    // (AppearanceViewModel.ExportPreviewToGif).
+    private void OnExportPreviewGifClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = Loc["dlg_export_preview_gif"],
+            Filter = Loc["dlg_filter_gif"],
+            FileName = $"{_viewModel.CharacterName}-ciclo-de-andar.gif",
+        };
+        if (dialog.ShowDialog(this) == true) _viewModel.Appearance.ExportPreviewToGif(dialog.FileName);
+    }
+
     // H4-08 (cuarta auditoria de Opus, Fable): gemelo real de OnLoadWorldClick - una tarjeta del
     // lanzador de mundos ya trae su ruta real (DataContext), no hace falta el dialogo del
     // Explorador de archivos. Mismo ajuste de zoom real al terminar.

@@ -11,8 +11,9 @@
 //
 // Confirmado por muestra real antes de escribir este script (ver bitacora.md): las tres
 // hojas usan la MISMA convencion ya establecida para el cuerpo base - Head/Legs son tiras
-// verticales de 40 de ancho (frame0 = celda(0,0), sin cambios), Body es una rejilla 9x4 de
-// 360x224 (exactamente el mismo tamano que TorsoSkin).
+// verticales de 40 de ancho (Head sigue en frame0 = celda(0,0); Legs se guarda ENTERA desde la
+// idea 10 - ver el comentario real de la llamada a extraerGrupo('Legs', ...) mas abajo), Body es
+// una rejilla 9x4 de 360x224 (exactamente el mismo tamano que TorsoSkin).
 //
 // H6-01 (Opus, sexta pasada - "faltan los brazos"): Body YA NO se recorta a la celda (0,0) -
 // esa celda es solo el TORSO, el brazo/hombro real vive en otras celdas de la misma hoja
@@ -38,7 +39,8 @@ const LEGS_SINTETICOS_BODY_EXTENSION = [149, 150, 151, 160, 161, 162, 163, 164, 
 const HEAD_SINTETICOS_SET_MATCH = [202];
 
 // Uso: node scripts/extraer-sprites-armadura-vanilla.js
-// Salida: Terrakeep.App/Assets/player/armor_{head,legs}/{id}.png (40x56, sin cambios) y
+// Salida: Terrakeep.App/Assets/player/armor_head/{id}.png (40x56, frame0, sin cambios),
+//         Terrakeep.App/Assets/player/armor_legs/{id}.png (40x1120, tira ENTERA desde idea 10) y
 //         Terrakeep.App/Assets/player/armor_body/{id}.png (360x224, hoja entera)
 
 'use strict';
@@ -102,5 +104,15 @@ for (const id of [...LEGS_SINTETICOS_SET_MATCH_BODY, ...LEGS_SINTETICOS_SET_MATC
 console.log(`ids unicos referenciados: head=${headIds.size} (${headIds.size - antesHead} sinteticos de SetMatch) body=${bodyIds.size} legs=${legIds.size} (${legIds.size - antesLegs} sinteticos de SetMatch/GetMatchingBodyExtension)`);
 
 extraerGrupo('Head', headIds, (id) => path.join(STEAM_IMAGES, `Armor_Head_${id}.xnb`), path.join(OUT_ROOT, 'armor_head'), 'frame0');
-extraerGrupo('Legs', legIds, (id) => path.join(STEAM_IMAGES, `Armor_Legs_${id}.xnb`), path.join(OUT_ROOT, 'armor_legs'), 'frame0');
+// Idea 10 del catalogo de funciones ("vista previa animada", bitacora.md 20-sep-2026 -
+// reconsiderada a peticion explicita del coordinador: el "limite real" de la primera pasada era
+// en realidad la propia tira de extraccion recortando SIEMPRE a cropFrame0, no una ausencia de
+// datos reales del juego - confirmado leyendo Terraria/Player.cs real, PlayerFrame():
+// legFrame.Y = 0 en reposo, legFrame.Y = legFrame.Height*[7..19] durante el ciclo de andar real
+// (20 filas de 56px, 1120px de alto exactas, medido con xnb-to-png.js contra la instalacion real
+// de Steam). "hoja" (fullSheet, ya usado por Body) en vez de "frame0" - guarda la tira vertical
+// COMPLETA, PlayerPreviewRenderer sigue leyendo la celda (0,0) para el reposo (compatibilidad
+// automatica, ver LoadPngPixels40x56) y ahora TAMBIEN puede leer cualquier otra fila real para
+// el ciclo de andar (ver LoadStripRow/GetLegAnimationFrameRow).
+extraerGrupo('Legs', legIds, (id) => path.join(STEAM_IMAGES, `Armor_Legs_${id}.xnb`), path.join(OUT_ROOT, 'armor_legs'), 'hoja');
 extraerGrupo('Body', bodyIds, (id) => path.join(STEAM_IMAGES, 'Armor', `Armor_${id}.xnb`), path.join(OUT_ROOT, 'armor_body'), 'hoja');

@@ -1438,34 +1438,97 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
-        // IDEA10_SOLO=1 (20-sep-2026, catalogo de ideas Keep, idea 10 "vista previa exportable" -
-        // version real reducida, ver el LIMITE documentado en AppearanceViewModel.
-        // ExportPreviewToPng): comprueba que el boton real exporta de verdad un PNG con el frame
-        // que se ve en pantalla - no solo que el metodo "no lanza excepcion".
+        // IDEA10_SOLO=1 (catalogo de ideas Keep, idea 10 "vista previa animada, exportable").
+        // Tercera pasada (20-sep-2026, reconsiderada a peticion explicita del coordinador tras
+        // investigar a fondo Terraria/Player.cs real - ver el comentario de cabecera de
+        // PlayerPreviewRenderer.Render): ademas de la exportacion PNG ya cerrada, comprueba el
+        // ciclo de andar/reposo REAL con el DispatcherTimer de verdad bombeando (unico sitio del
+        // proyecto que puede hacerlo, ver AppearanceUndoTests para el mismo criterio ya
+        // establecido con el debounce de colores), "girar" y la exportacion a GIF.
         if (Environment.GetEnvironmentVariable("IDEA10_SOLO") == "1")
         {
             try
             {
                 vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 3; // Personaje > Apariencia
                 DoEvents(); DoEvents();
-                string ruta = Path.Combine(AppContext.BaseDirectory, "idea10-preview-export.png");
-                if (File.Exists(ruta)) File.Delete(ruta);
+
+                // --- PNG (ya cerrado en una pasada anterior, se conserva la comprobacion real). ---
+                string rutaPng = Path.Combine(AppContext.BaseDirectory, "idea10-preview-export.png");
+                if (File.Exists(rutaPng)) File.Delete(rutaPng);
                 Console.WriteLine($"IDEA10_SOLO: PreviewImage real antes de exportar -> {(vm.Appearance.PreviewImage != null ? $"{vm.Appearance.PreviewImage.PixelWidth}x{vm.Appearance.PreviewImage.PixelHeight}" : "NULL")}");
-                vm.Appearance.ExportPreviewToPng(ruta);
-                bool existe = File.Exists(ruta);
-                long tamaño = existe ? new FileInfo(ruta).Length : 0;
-                Console.WriteLine($"IDEA10_SOLO: fichero real creado={existe} en '{ruta}', tamaño={tamaño} bytes (esperado > 200 bytes, un PNG real de 40x56 no es cero)");
-                if (!existe) Console.WriteLine("FALLO: IDEA10_SOLO - ExportPreviewToPng no crea el fichero real");
-                else if (tamaño < 200) Console.WriteLine($"FALLO: IDEA10_SOLO - el PNG real pesa solo {tamaño} bytes, sospechoso de estar vacio");
+                vm.Appearance.ExportPreviewToPng(rutaPng);
+                bool existePng = File.Exists(rutaPng);
+                long tamañoPng = existePng ? new FileInfo(rutaPng).Length : 0;
+                Console.WriteLine($"IDEA10_SOLO: PNG real creado={existePng} en '{rutaPng}', tamaño={tamañoPng} bytes (esperado > 200 bytes)");
+                if (!existePng) Console.WriteLine("FALLO: IDEA10_SOLO - ExportPreviewToPng no crea el fichero real");
+                else if (tamañoPng < 200) Console.WriteLine($"FALLO: IDEA10_SOLO - el PNG real pesa solo {tamañoPng} bytes, sospechoso de estar vacio");
                 else
                 {
-                    // Decodifica el PNG real recien escrito y compara sus dimensiones contra el
-                    // PreviewImage real - prueba de que el contenido es el que se ve, no un
-                    // fichero cualquiera.
-                    var decoded = new System.Windows.Media.Imaging.PngBitmapDecoder(new Uri(ruta), System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad).Frames[0];
+                    var decoded = new System.Windows.Media.Imaging.PngBitmapDecoder(new Uri(rutaPng), System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad).Frames[0];
                     Console.WriteLine($"IDEA10_SOLO: PNG real decodificado -> {decoded.PixelWidth}x{decoded.PixelHeight} (esperado igual al PreviewImage real: {vm.Appearance.PreviewImage?.PixelWidth}x{vm.Appearance.PreviewImage?.PixelHeight})");
                     if (vm.Appearance.PreviewImage != null && (decoded.PixelWidth != vm.Appearance.PreviewImage.PixelWidth || decoded.PixelHeight != vm.Appearance.PreviewImage.PixelHeight))
                         Console.WriteLine("FALLO: IDEA10_SOLO - las dimensiones del PNG exportado no coinciden con la vista previa real");
+                }
+
+                // --- Ciclo de andar real, con el Dispatcher de verdad bombeando ticks. ---
+                byte[]? PixelsDe(System.Windows.Media.Imaging.WriteableBitmap? bmp)
+                {
+                    if (bmp == null) return null;
+                    var px = new byte[bmp.PixelHeight * bmp.PixelWidth * 4];
+                    bmp.CopyPixels(px, bmp.PixelWidth * 4, 0);
+                    return px;
+                }
+                var reposoPixels = PixelsDe(vm.Appearance.PreviewImage);
+                Console.WriteLine($"IDEA10_SOLO: IsWalkAnimationPlaying antes={vm.Appearance.IsWalkAnimationPlaying} (esperado false)");
+                if (vm.Appearance.IsWalkAnimationPlaying) Console.WriteLine("FALLO: IDEA10_SOLO - la animacion empieza reproduciendose sin que nadie pulse nada");
+
+                vm.Appearance.ToggleWalkAnimationCommand.Execute(null);
+                Console.WriteLine($"IDEA10_SOLO: tras pulsar '{vm.Loc["action_walk_start"]}' -> IsWalkAnimationPlaying={vm.Appearance.IsWalkAnimationPlaying} (esperado true)");
+                if (!vm.Appearance.IsWalkAnimationPlaying) Console.WriteLine("FALLO: IDEA10_SOLO - ToggleWalkAnimationCommand no activa la animacion");
+
+                // El DispatcherTimer real (90ms/fotograma) necesita el bucle de mensajes real
+                // bombeando para disparar - DoEvents() en bucle un tiempo real de sobra (mismo
+                // criterio de espera ya usado en el resto de este arnes para temporizadores).
+                var cronometro = System.Diagnostics.Stopwatch.StartNew();
+                while (cronometro.ElapsedMilliseconds < 500) { DoEvents(); System.Threading.Thread.Sleep(10); }
+                var andandoPixels = PixelsDe(vm.Appearance.PreviewImage);
+                bool cambioDeVerdad = reposoPixels != null && andandoPixels != null && !reposoPixels.SequenceEqual(andandoPixels);
+                Console.WriteLine($"IDEA10_SOLO: tras ~500ms reproduciendo -> el frame REAL en pantalla cambio de verdad={cambioDeVerdad} (esperado true, ~5-6 fotogramas reales a 90ms/u)");
+                if (!cambioDeVerdad) Console.WriteLine("FALLO: IDEA10_SOLO - el DispatcherTimer real no esta avanzando el frame de la animacion en pantalla");
+
+                vm.Appearance.ToggleWalkAnimationCommand.Execute(null);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"IDEA10_SOLO: tras pulsar '{vm.Loc["action_walk_stop"]}' -> IsWalkAnimationPlaying={vm.Appearance.IsWalkAnimationPlaying} (esperado false)");
+                if (vm.Appearance.IsWalkAnimationPlaying) Console.WriteLine("FALLO: IDEA10_SOLO - ToggleWalkAnimationCommand no detiene la animacion");
+                var quietoDeNuevoPixels = PixelsDe(vm.Appearance.PreviewImage);
+                bool vuelveAlReposo = reposoPixels != null && quietoDeNuevoPixels != null && reposoPixels.SequenceEqual(quietoDeNuevoPixels);
+                Console.WriteLine($"IDEA10_SOLO: tras detener -> vuelve exactamente al frame de reposo original={vuelveAlReposo} (esperado true)");
+                if (!vuelveAlReposo) Console.WriteLine("FALLO: IDEA10_SOLO - al detener la animacion no vuelve al mismo reposo de antes de empezar");
+
+                // --- Girar (espejo) real, boton real. ---
+                vm.Appearance.ToggleFacingCommand.Execute(null);
+                DoEvents(); DoEvents();
+                var espejadoPixels = PixelsDe(vm.Appearance.PreviewImage);
+                bool espejoDistinto = quietoDeNuevoPixels != null && espejadoPixels != null && !quietoDeNuevoPixels.SequenceEqual(espejadoPixels);
+                Console.WriteLine($"IDEA10_SOLO: IsFacingLeft={vm.Appearance.IsFacingLeft}, el frame REAL cambia al girar={espejoDistinto} (esperado true/true)");
+                if (!vm.Appearance.IsFacingLeft || !espejoDistinto) Console.WriteLine("FALLO: IDEA10_SOLO - ToggleFacingCommand no gira de verdad el frame en pantalla");
+                vm.Appearance.ToggleFacingCommand.Execute(null); // revierte para no dejar el arnes girado de cara a lo que corra despues
+                DoEvents(); DoEvents();
+
+                // --- Exportar como GIF, boton real. ---
+                string rutaGif = Path.Combine(AppContext.BaseDirectory, "idea10-preview-export.gif");
+                if (File.Exists(rutaGif)) File.Delete(rutaGif);
+                vm.Appearance.ExportPreviewToGif(rutaGif);
+                bool existeGif = File.Exists(rutaGif);
+                long tamañoGif = existeGif ? new FileInfo(rutaGif).Length : 0;
+                Console.WriteLine($"IDEA10_SOLO: GIF real creado={existeGif} en '{rutaGif}', tamaño={tamañoGif} bytes");
+                if (!existeGif) Console.WriteLine("FALLO: IDEA10_SOLO - ExportPreviewToGif no crea el fichero real");
+                else
+                {
+                    var decoderGif = new System.Windows.Media.Imaging.GifBitmapDecoder(new Uri(rutaGif), System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+                    int esperado = 1 + Terrakeep.App.ViewModels.AppearanceViewModel.WalkCycleRows.Length;
+                    Console.WriteLine($"IDEA10_SOLO: GIF real decodificado -> {decoderGif.Frames.Count} fotogramas (esperado {esperado})");
+                    if (decoderGif.Frames.Count != esperado) Console.WriteLine($"FALLO: IDEA10_SOLO - el GIF real no tiene los {esperado} fotogramas esperados");
                 }
             }
             catch (Exception ex) { Console.WriteLine("IDEA10_SOLO-EXCEPTION: " + ex); }

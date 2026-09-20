@@ -75,9 +75,20 @@ namespace Terrakeep.App.Services;
 //   del lienzo) + capa DELANTERA recortada a los 26px superiores reales. Solo objetos VANILLA
 //   (headSlot real); Calamity oculta el pelo por defecto.
 //
+// Idea 10 del catalogo de funciones ("vista previa animada", bitacora.md 20-sep-2026 -
+// reconsiderada a peticion explicita del coordinador tras una investigacion mas a fondo: el
+// "limite real" documentado antes -"ni animacion (solo el frame de reposo)"- resulto ser un
+// recorte de la propia tira de EXTRACCION (cropFrame0 en legskin/pants/shoes/armor_legs), no
+// una ausencia real de datos del juego - Terraria/Player.cs, PlayerFrame(), confirma que SI hay
+// 20 filas reales de animacion por pieza y que la unica pieza que de verdad cambia de frame al
+// andar SIN usar ningun objeto son las piernas (bodyFrame/headFrame/hairFrame se quedan fijos
+// en su frame de reposo mientras itemAnimation==0). "legAnimationFrame" (0=reposo, 7..19=ciclo
+// de andar real) + "mirror" (girar) son el resultado real de esa investigacion.
+//
 // ALCANCE DELIBERADO restante, documentado y no oculto: sin accesorios (alas, mochilas,
-// capas...), item en mano, monturas, ni animacion (solo el frame de reposo) - ver
-// ESPEC-dibujado-sprites.md#9 para el listado completo de huecos reales conocidos.
+// capas...), item en mano, monturas, ni animacion de torso/brazos/cabeza/pelo (fieles al juego
+// real - solo cambian con un objeto en uso, fuera de alcance de un doll sin item equipado) -
+// ver ESPEC-dibujado-sprites.md#9 para el listado completo de huecos reales conocidos.
 public static class PlayerPreviewRenderer
 {
     private const int Width = 40, Height = 56;
@@ -110,7 +121,20 @@ public static class PlayerPreviewRenderer
     private static readonly (int Col, int Row) FrontArm = (2, 0);
     private static readonly (int Col, int Row) BackArm = (2, 2);
 
-    public static WriteableBitmap Render(int hairStyle, byte skinVariant, PlayerColors colors, EquippedArmor armor = default)
+    // Idea 10 del catalogo de funciones ("vista previa animada", bitacora.md 20-sep-2026):
+    // legAnimationFrame es el indice REAL de fila (0-19) confirmado leyendo Terraria/Player.cs,
+    // PlayerFrame() (0 = reposo, 7..19 = ciclo de andar real, ver AppearanceViewModel.
+    // WalkCycleRows) - por defecto 0, exactamente el mismo pixel a pixel que antes de esta idea
+    // para CUALQUIER llamador que no pase el parametro (Home, comparador, etc). Solo afecta a
+    // las piezas cuyo frame de verdad cambia al andar sin usar nada (legskin/pants/shoes base y
+    // la pierna/falda equipada, ver el comentario de cabecera de la clase) - torso/brazos/
+    // cabeza/pelo se quedan en su frame de reposo siempre, fiel al juego real.
+    // "mirror" (idea 10, "girar"): el juego real dibuja los MISMOS fotogramas hacia el otro
+    // lado multiplicando los offsets por Player.direction (Terraria/Player.cs real) - el doll no
+    // tiene offsets propios que compensar (siempre centrado), asi que un espejo horizontal
+    // puro del lienzo compuesto final es fiel al resultado real sin tener que duplicar ninguna
+    // logica de dibujado. Por defecto false - ningun llamador existente cambia ni un pixel.
+    public static WriteableBitmap Render(int hairStyle, byte skinVariant, PlayerColors colors, EquippedArmor armor = default, int legAnimationFrame = 0, bool mirror = false)
     {
         bool male = PlayerVariantSets.IsMale(skinVariant);
         string variant = PlayerVariantSets.BodyFolder(skinVariant);
@@ -189,7 +213,7 @@ public static class PlayerPreviewRenderer
         // Paso 2-3 [12_Skin_Composite]: piel del torso y de las piernas, cada una solo si el
         // bodySlot/legSlot real puesto no la oculta (hidesTopSkin/hidesBottomSkin).
         if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "torsoskin", torsoCell), colors.Skin);
-        if (!hidesBottomSkin) Composite(canvas, LoadFrame0(variant, "legskin"), colors.Skin);
+        if (!hidesBottomSkin) Composite(canvas, LoadStripFrame(variant, "legskin", legAnimationFrame), colors.Skin);
 
         // Paso 4 [12_SkinComposite_BackArmShirt]: brazo TRASERO.
         if (hasBody)
@@ -216,12 +240,12 @@ public static class PlayerPreviewRenderer
         string? legsFileToUse = legsChangedBySetMatch ? VanillaPathIfExists("armor_legs", legsId) : armor.LegsFile;
         if (legsId > 0 && legsFileToUse != null)
         {
-            Composite(canvas, LoadFrame0Absolute(legsFileToUse), null);
+            Composite(canvas, LoadStripFrameAbsolute(legsFileToUse, legAnimationFrame), null);
         }
         else
         {
-            Composite(canvas, LoadFrame0(variant, "pants"), colors.Pants);
-            Composite(canvas, LoadFrame0(variant, "shoes"), colors.Shoes);
+            Composite(canvas, LoadStripFrame(variant, "pants", legAnimationFrame), colors.Pants);
+            Composite(canvas, LoadStripFrame(variant, "shoes", legAnimationFrame), colors.Shoes);
         }
 
         // Paso 6 [15_SkinLongCoat]: el faldon del vestido/abrigo (pieza 14) - solo variantes
@@ -234,7 +258,7 @@ public static class PlayerPreviewRenderer
         if (bodyExtension is int extId)
         {
             string? extPath = VanillaPathIfExists("armor_legs", extId);
-            if (extPath != null) Composite(canvas, LoadFrame0Absolute(extPath), null);
+            if (extPath != null) Composite(canvas, LoadStripFrameAbsolute(extPath, legAnimationFrame), null);
         }
 
         // Paso 8 [17_TorsoComposite]: con armadura/vanidad de cuerpo puesta, el juego real NO
@@ -302,10 +326,28 @@ public static class PlayerPreviewRenderer
             Composite(canvas, LoadBodyCell(variant, "shirt", frontShoulderCell), colors.Shirt);
         }
 
+        if (mirror) FlipHorizontal(canvas);
+
         var bitmap = new WriteableBitmap(Width, Height, 96, 96, PixelFormats.Bgra32, null);
         bitmap.WritePixels(new Int32Rect(0, 0, Width, Height), canvas, Width * 4, 0);
         bitmap.Freeze();
         return bitmap;
+    }
+
+    // Espejo horizontal in-place del lienzo YA compuesto (Width x Height, Bgra32) - invierte el
+    // orden de los 4 bytes de cada pixel dentro de cada fila, fila a fila.
+    private static void FlipHorizontal(byte[] canvas)
+    {
+        for (int y = 0; y < Height; y++)
+        {
+            int rowStart = y * Width * 4;
+            for (int xLeft = 0; xLeft < Width / 2; xLeft++)
+            {
+                int xRight = Width - 1 - xLeft;
+                int left = rowStart + xLeft * 4, right = rowStart + xRight * 4;
+                for (int b = 0; b < 4; b++) (canvas[left + b], canvas[right + b]) = (canvas[right + b], canvas[left + b]);
+            }
+        }
     }
 
     // Miniatura de un unico peinado (sin cuerpo) para el selector visual de Apariencia -
@@ -337,6 +379,59 @@ public static class PlayerPreviewRenderer
         LoadFrame0Absolute(Path.Combine(AppContext.BaseDirectory, "Assets", "player", variant, name + ".png"));
 
     private static byte[] LoadFrame0Absolute(string path) => LoadCached(path);
+
+    // Idea 10 ("vista previa animada"): gemelas de LoadFrame0/LoadFrame0Absolute, pero para una
+    // fila REAL cualquiera (no siempre la (0,0)) de una tira vertical - legskin/pants/shoes
+    // (extraer-sprites-jugador.js) y armor_legs (extraer-sprites-armadura-vanilla.js) se guardan
+    // ahora ENTERAS (40x1120, 20 filas reales) desde esta idea, mismo criterio ya establecido
+    // para las piezas "composite" (LoadBodyCell/LoadArmorCell). frameRow=0 produce el MISMO
+    // recorte exacto que LoadFrame0/LoadFrame0Absolute (compatibilidad real, no aproximada -
+    // el reposo no cambia ni un pixel para ningun llamador existente).
+    private static byte[] LoadStripFrame(string variant, string name, int frameRow) =>
+        SliceStripRow(LoadStripCached(Path.Combine(AppContext.BaseDirectory, "Assets", "player", variant, name + ".png")), frameRow);
+
+    private static byte[] LoadStripFrameAbsolute(string absolutePath, int frameRow) =>
+        SliceStripRow(LoadStripCached(absolutePath), frameRow);
+
+    // Cache separada de LoadCached/LoadSheetCached (mismo motivo real que su comentario: los
+    // tres decodifican el MISMO fichero de formas distintas - recorte fijo 40x56, rejilla
+    // 360x224 entera, o aqui una tira 40x(56*N) entera de alto REAL variable, nunca fijo).
+    private static byte[] LoadStripCached(string path) => Cache.GetOrAdd("strip:" + path, _ => LoadPngPixelsStripFull(path));
+
+    // A diferencia de LoadPngPixelsSheet (que asume SIEMPRE 360x224), esta lee el ancho/alto
+    // REALES del PNG decodificado - el alto varia de verdad entre piezas (20 filas=1120px para
+    // las del cuerpo base, pero un armor_legs concreto podria tener menos si su .xnb real
+    // tuviera menos filas; SliceStripRow acota el indice pedido al numero real de filas
+    // disponibles, nunca lee fuera del array).
+    private static byte[] LoadPngPixelsStripFull(string path)
+    {
+        using var stream = File.OpenRead(path);
+        var decoder = new PngBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        var frame = decoder.Frames[0];
+        var converted = new FormatConvertedBitmap(frame, PixelFormats.Bgra32, null, 0);
+        var pixels = new byte[frame.PixelWidth * frame.PixelHeight * 4];
+        converted.CopyPixels(pixels, frame.PixelWidth * 4, 0);
+        return pixels;
+    }
+
+    // Recorta la fila real "frameRow" (0-based, cada una de Height=56px) de una tira YA
+    // decodificada entera - acota al numero real de filas disponibles (nunca lee fuera del
+    // array, ver el comentario de LoadPngPixelsStripFull).
+    private static byte[] SliceStripRow(byte[] stripPixels, int frameRow)
+    {
+        var outPixels = new byte[Width * Height * 4];
+        int totalRows = stripPixels.Length / (Width * Height * 4);
+        if (totalRows <= 0) return outPixels; // tira mas pequeña que un solo fotograma - vacia, nunca revienta
+        int row = Math.Clamp(frameRow, 0, totalRows - 1);
+        int startY = row * Height;
+        for (int y = 0; y < Height; y++)
+        {
+            int srcOffset = (startY + y) * Width * 4;
+            int dstOffset = y * Width * 4;
+            Array.Copy(stripPixels, srcOffset, outPixels, dstOffset, Width * 4);
+        }
+        return outPixels;
+    }
 
     // Recorta la celda real de una pieza compuesta del CUERPO (360x224) - ver el mapa de celdas
     // en el comentario de la clase.

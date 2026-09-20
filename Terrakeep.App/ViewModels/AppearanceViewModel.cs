@@ -39,6 +39,51 @@ public partial class AppearanceViewModel : ObservableObject
     [ObservableProperty] private bool _showEquipment = true;
     partial void OnShowEquipmentChanged(bool value) => RefreshPreview();
 
+    // Catalogo de ideas Keep, idea 10 ("vista previa animada del personaje", bitacora.md
+    // 20-sep-2026 - ver el comentario real de cabecera en PlayerPreviewRenderer.Render para la
+    // investigacion que confirmo que el dato SI estaba disponible). WalkCycleRows: filas REALES
+    // (0-based, cada una de 56px) confirmadas leyendo Terraria/Player.cs, PlayerFrame() -
+    // legFrame.Y = legFrame.Height*7 en la primera pasada y sube de uno en uno hasta *19 antes
+    // de volver a *7 (el bucle real: "if (legFrame.Y > legFrame.Height*19) legFrame.Y =
+    // legFrame.Height*7"), 13 fotogramas reales de ciclo de andar. Publico y estatico para que
+    // el arnes de pruebas pueda verificar la secuencia exacta sin duplicarla a mano.
+    public static readonly int[] WalkCycleRows = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+
+    // Cadencia fija de la animacion (~90ms/fotograma, ritmo de paseo natural) - la vista previa
+    // no simula velocidad real (no hay Player.velocity aqui), a diferencia del juego real donde
+    // legFrameCounter avanza segun |velocity.X|*1.3. Aproximacion honesta y documentada, no un
+    // dato inventado: el AVANCE de fotograma a fotograma (que filas, en que orden) SI es el real.
+    private readonly DispatcherTimer _walkAnimationTimer = new() { Interval = TimeSpan.FromMilliseconds(90) };
+    private int _walkCycleIndex;
+
+    [ObservableProperty] private bool _isWalkAnimationPlaying;
+    partial void OnIsWalkAnimationPlayingChanged(bool value)
+    {
+        if (value) { _walkCycleIndex = 0; _walkAnimationTimer.Start(); }
+        else { _walkAnimationTimer.Stop(); _walkCycleIndex = 0; }
+        RefreshPreview();
+        OnPropertyChanged(nameof(WalkToggleLabel));
+    }
+
+    // Mismo criterio ya establecido en esta clase para HairDyeDisplayName - una propiedad
+    // calculada en vez de un converter, para que OnIdiomaCambiado (mas abajo) pueda refrescarla
+    // sin depender de que el binding en si cambie de valor (un converter atado a
+    // IsWalkAnimationPlaying nunca se reevaluaria solo por un cambio de idioma).
+    public string WalkToggleLabel => LocalizationService.Instance[IsWalkAnimationPlaying ? "action_walk_stop" : "action_walk_start"];
+
+    // "Girar" (idea 10) - espejo horizontal puro del mismo frame ya resuelto, ver el comentario
+    // real de PlayerPreviewRenderer.FlipHorizontal para por que es fiel al juego real.
+    [ObservableProperty] private bool _isFacingLeft;
+    partial void OnIsFacingLeftChanged(bool value) => RefreshPreview();
+
+    [RelayCommand]
+    private void ToggleWalkAnimation() => IsWalkAnimationPlaying = !IsWalkAnimationPlaying;
+
+    [RelayCommand]
+    private void ToggleFacing() => IsFacingLeft = !IsFacingLeft;
+
+    private int CurrentLegAnimationFrame => IsWalkAnimationPlaying ? WalkCycleRows[_walkCycleIndex] : 0;
+
     [ObservableProperty] private int _hairStyle;
     [ObservableProperty] private int _hairDye;
     [ObservableProperty] private string _hairDyeDisplayName = LocalizationService.Instance["hair_dye_none"];
@@ -53,6 +98,14 @@ public partial class AppearanceViewModel : ObservableObject
         {
             _hairOptionsDebounceTimer.Stop();
             if (IsHairPickerOpen) RebuildHairOptions();
+        };
+        // Idea 10 ("vista previa animada"): cada tick avanza una fila real del ciclo de andar
+        // (WalkCycleRows) y vuelve a pintar - RefreshPreview ya lee CurrentLegAnimationFrame, que
+        // depende de _walkCycleIndex, asi que solo hace falta avanzarlo aqui.
+        _walkAnimationTimer.Tick += (_, _) =>
+        {
+            _walkCycleIndex = (_walkCycleIndex + 1) % WalkCycleRows.Length;
+            RefreshPreview();
         };
         // Ronda de idioma del 6-sep-2026: HairDyeDisplayName arranca con el valor de
         // "hair_dye_none" leido UNA sola vez, y OnHairDyeChanged solo lo recompone cuando el
@@ -73,6 +126,9 @@ public partial class AppearanceViewModel : ObservableObject
         // CUALQUIER pestaña - si no avisa aqui se queda con el idioma anterior hasta el
         // siguiente cambio real de dificultad (que puede no llegar nunca).
         OnPropertyChanged(nameof(DifficultyLabel));
+        // Idea 10: mismo motivo real que DifficultyLabel de arriba - WalkToggleLabel es
+        // calculada, nadie la refresca sola con un cambio de idioma si no se avisa aqui.
+        OnPropertyChanged(nameof(WalkToggleLabel));
     }
 
     // Convencion vanilla estandar (Player.Male en Terraria): true = chico. La version binaria
@@ -563,25 +619,58 @@ public partial class AppearanceViewModel : ObservableObject
         // Starter solo puede darse antes de que LoadFrom termine de asignar _character.
         byte skinVariant = _character?.Gender
             ?? (IsMale ? Terrakeep.Core.Model.PlayerVariantSets.MaleStarter : Terrakeep.Core.Model.PlayerVariantSets.FemaleStarter);
-        PreviewImage = PlayerPreviewRenderer.Render(HairStyle, skinVariant, colors, armor);
+        PreviewImage = PlayerPreviewRenderer.Render(HairStyle, skinVariant, colors, armor, CurrentLegAnimationFrame, IsFacingLeft);
     }
 
     // Catalogo de ideas Keep, idea 10 (20-sep-2026, "vista previa animada del personaje,
-    // exportable"): alcance real reducido, documentado con honestidad - PlayerPreviewRenderer.
-    // Render SOLO pinta la pose de reposo (un unico frame fijo de la hoja de sprites compuesta,
-    // ver el comentario real de la clase: TorsoMale/TorsoFemale/etc son UNA sola celda cada uno,
-    // no un rango de celdas de ciclo de andar) - ni el ciclo de andar ni "girar" (vista de
-    // espaldas) existen hoy en ningun sitio del proyecto; añadirlos exigiria extraer y mapear
-    // fotogramas reales nuevos de las hojas de sprites de Terraria (el mismo tipo de trabajo de
-    // extraccion de datos que ya llevo sacar los 27 iconos de NPC de pueblo), LIMITE real
-    // documentado en bitacora.md para una ronda dedicada aparte. Lo que SI es honesto hoy, sin
-    // inventar ningun dato: exportar el frame REAL que ya se ve en pantalla, mismo patron ya
-    // real de ExplorationViewModel.ExportMapToPng (WriteableBitmap -> PngBitmapEncoder).
+    // exportable"): exporta el frame REAL que ya se ve en pantalla (reposo o el fotograma actual
+    // del ciclo de andar si esta reproduciendose) - mismo patron ya real de
+    // ExplorationViewModel.ExportMapToPng (WriteableBitmap -> PngBitmapEncoder).
     public void ExportPreviewToPng(string path)
     {
         if (PreviewImage == null) return;
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(PreviewImage));
+        using var stream = System.IO.File.Create(path);
+        encoder.Save(stream);
+    }
+
+    // Idea 10, segunda mitad ("...exportable" como GIF real, no solo PNG estatico) - renderiza
+    // los 14 fotogramas reales del ciclo completo (reposo + los 13 de WalkCycleRows, en orden)
+    // con el MISMO PlayerPreviewRenderer.Render que ya pinta la pantalla (nunca una imagen
+    // aparte), y los codifica con GifBitmapEncoder. WPF NO expone un API de alto nivel para la
+    // duracion por fotograma ni el bucle infinito de un GIF animado (confirmado: GifBitmapEncoder
+    // solo anade fotogramas, sin ninguna propiedad de "delay"/"loop") - se inyectan a mano los
+    // dos bloques reales del formato GIF89a que los controlan (documentado por Microsoft para
+    // System.Windows.Media.Imaging.BitmapMetadata sobre un GifBitmapFrame):
+    //   - "/grctlext/Delay" (Graphics Control Extension) en CADA fotograma: la duracion real en
+    //     centesimas de segundo (10 = 100ms, no el intervalo interno del timer de arriba en ms).
+    //   - "/appext/application"+"/appext/data" (Application Extension, bloque NETSCAPE2.0) SOLO
+    //     en el PRIMER fotograma: el bucle infinito real (byte 1 = introductor de sub-bloque,
+    //     bytes 2-3 = contador de repeticiones en little-endian, 0 = infinito).
+    public void ExportPreviewToGif(string path)
+    {
+        if (Swatches.Count < 7) return;
+        PlayerPreviewRenderer.Tint T(int i) => new((byte)Swatches[i].R, (byte)Swatches[i].G, (byte)Swatches[i].B);
+        var colors = new PlayerPreviewRenderer.PlayerColors(T(HairIdx), T(SkinIdx), T(EyesIdx), T(ShirtIdx), T(UnderIdx), T(PantsIdx), T(ShoesIdx));
+        var armor = ShowEquipment ? _liveArmor : default;
+        byte skinVariant = _character?.Gender
+            ?? (IsMale ? Terrakeep.Core.Model.PlayerVariantSets.MaleStarter : Terrakeep.Core.Model.PlayerVariantSets.FemaleStarter);
+
+        int[] fotogramas = [0, .. WalkCycleRows];
+        var encoder = new GifBitmapEncoder();
+        for (int i = 0; i < fotogramas.Length; i++)
+        {
+            var frame = PlayerPreviewRenderer.Render(HairStyle, skinVariant, colors, armor, fotogramas[i], IsFacingLeft);
+            var metadata = new BitmapMetadata("gif");
+            metadata.SetQuery("/grctlext/Delay", (ushort)9); // 9 centesimas = 90ms, mismo ritmo real que _walkAnimationTimer
+            if (i == 0)
+            {
+                metadata.SetQuery("/appext/application", new byte[] { 0x4E, 0x45, 0x54, 0x53, 0x43, 0x41, 0x50, 0x45, 0x32, 0x2E, 0x30 }); // "NETSCAPE2.0"
+                metadata.SetQuery("/appext/data", new byte[] { 0x03, 0x01, 0x00, 0x00, 0x00 }); // sub-bloque real: 3 bytes utiles, contador=0 (bucle infinito)
+            }
+            encoder.Frames.Add(BitmapFrame.Create(frame, null, metadata, null));
+        }
         using var stream = System.IO.File.Create(path);
         encoder.Save(stream);
     }
