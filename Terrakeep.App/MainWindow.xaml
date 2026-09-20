@@ -1952,38 +1952,38 @@
                          grupos de menu, trasladado a una barra horizontal. "Cargar personaje"
                          baja de Accent a boton normal en cuanto hay personaje cargado
                          (FalseToTag) - ya no compite con "Guardar", el otro relleno de la fila. -->
-                    <Button Content="{Binding Loc[action_load_character], Mode=OneWay}" Tag="{Binding IsCharacterLoaded, Converter={x:Static conv:FalseToTagConverter.Instance}, ConverterParameter=Accent}"
-                            Click="OnLoadClick" ToolTip="Ctrl+O" Margin="0,0,0,8" />
-                    <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4,12,12" />
-                    <!-- H5-05 (quinta auditoria de Opus): "no se puede buscar entre los ~350
-                         slots que el personaje ya tiene - ¿Donde tengo el Ala de murcielago?
-                         solo se responde a ojo". Boton real en la cabecera global (visible en
-                         CUALQUIER pestaña, como Guardar) - x:Name para que el Popup de abajo
-                         pueda anclarse a el. -->
-                    <!-- F-16 (auditoria de Opus vs TEdit, B-04): antes se OCULTABA del todo sin
-                         personaje (Visibility), un tercer comportamiento distinto al resto de la
-                         fila (siempre visible / deshabilitado / oculto) - ahora se DESHABILITA via
-                         CanExecute (mismo patron que Guardar/etc.), con ToolTipService.
-                         ShowOnDisabled para que el motivo se vea igual que en las 5 pildoras de
-                         Exploracion, y la barra no cambia de forma al cargar un personaje.
-                         P-4 (auditoria Opus vs TEdit, cierra B-03): el emoji 🔍 era el UNICO de
-                         toda la fila (no obedece Foreground ni el estado deshabilitado, depende de
-                         la fuente de emoji instalada) - texto puro, como sus vecinos. Renombrado
-                         "Buscar en el personaje": "¿Dónde lo tengo?" no decia DONDE busca, y desde
-                         que existe tambien el buscador de mundo (Exploracion) la ambiguedad es
-                         real. -->
-                    <Button x:Name="WhereIsItButton" Content="{Binding Loc[action_where_is_it], Mode=OneWay}"
-                            Command="{Binding ToggleWhereIsItCommand}" ToolTipService.ShowOnDisabled="True" Margin="0,0,0,8">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                                <Setter Property="ToolTip" Value="Busca un objeto por nombre o #id entre TODOS los slots reales de tu personaje (Inventario, Almacenes, Equipamiento de los 4 loadouts...) (Ctrl+Shift+F)" />
-                                <Style.Triggers>
-                                    <Trigger Property="IsEnabled" Value="False">
-                                        <Setter Property="ToolTip" Value="Carga un personaje primero" />
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
+                    <!-- Catalogo de rediseño visual T2 (20-sep-2026, "cabecera de una fila"):
+                         Cargar personaje, Buscar en el personaje ("¿Donde lo tengo?"), Historial
+                         de versiones y Deshacer ultimo guardado se pliegan aqui, en un menu real -
+                         los 4 rotulos mas largos de la fila, el salto real medible de altura que
+                         evita el envolvido a 1180x860 (ver T2_SOLO: 88px/2 lineas -> 44px/1 linea).
+                         "Codigo de build" (BuildCodeButton) queda FUERA a proposito, LIMITE real
+                         documentado en bitacora.md: es el boton real que blinda BUILDCODE-
+                         CANEXECUTE (Terrakeep.App.Tests), una prueba de regresion de un bug real
+                         que se ha colado TRES veces (un comando CanExecute=IsCharacterLoaded que
+                         se queda "visualmente desactivado" hasta el siguiente requery real de
+                         WPF) - esa prueba mide el boton SIN ningun evento de entrada de por medio
+                         a proposito, y abrir un menu para llegar a el dispararia el mismo requery
+                         que la prueba necesita que NO pase por su cuenta, invalidando lo que
+                         prueba de verdad. Mismo truco real de WPF que "boton que abre su propio
+                         ContextMenu con clic IZQUIERDO" (por omision solo se abre con clic
+                         derecho) - ver OnPersonajeMenuClick en MainWindow.xaml.cs. WhereIsItPopup
+                         (mas abajo) ancla ahora a ESTE boton (x:Name="PersonajeMenuButton"), no ya
+                         al boton "Buscar" suelto que dejo de existir. -->
+                    <Button x:Name="PersonajeMenuButton" Content="{Binding Loc[action_personaje_menu], Mode=OneWay}" Click="OnPersonajeMenuClick" Margin="0,0,0,8"
+                            ToolTip="{Binding Loc[action_personaje_menu_tooltip], Mode=OneWay}">
+                        <Button.ContextMenu>
+                            <ContextMenu Placement="Bottom">
+                                <MenuItem Header="{Binding Loc[action_load_character], Mode=OneWay}" Click="OnLoadClick" InputGestureText="Ctrl+O" />
+                                <MenuItem Header="{Binding Loc[action_where_is_it], Mode=OneWay}"
+                                          Command="{Binding ToggleWhereIsItCommand}" InputGestureText="Ctrl+Shift+F" />
+                                <MenuItem Header="{Binding Loc[action_save_history], Mode=OneWay}"
+                                          Command="{Binding OpenBackupHistoryCommand}" InputGestureText="Ctrl+H" />
+                                <MenuItem Header="{Binding Loc[action_undo_last_save], Mode=OneWay}"
+                                          Command="{Binding UndoLastSaveCommand}"
+                                          ToolTip="{Binding Loc[tt_undo_last_save], Mode=OneWay}" />
+                            </ContextMenu>
+                        </Button.ContextMenu>
                     </Button>
                     <Border Width="1" Background="{StaticResource BorderBrush0}" Margin="12,4,12,12" />
                     <!-- H5-01 (quinta auditoria de Opus): "casi toda edicion del personaje es
@@ -2016,18 +2016,14 @@
                     </Button>
                     <!-- T-C (segunda auditoria de Opus, Fable): el .bak real que Guardar ya deja
                          (CharacterFileService.WriteAtomic) ahora tiene una forma real de usarse
-                         desde la propia UI, sin ir a buscarlo a mano al Explorador de archivos. -->
-                    <Button Content="{Binding Loc[action_undo_last_save], Mode=OneWay}" Margin="10,0,0,8" Command="{Binding UndoLastSaveCommand}"
-                            ToolTip="{Binding Loc[tt_undo_last_save], Mode=OneWay}" />
-                    <!-- BK (13-sep-2026): "Deshacer ultimo guardado" es UN nivel (el .bak); esto
-                         abre el historial COMPLETO de versiones del personaje cargado, sin tener
-                         que volver a Inicio a buscar su tarjeta. Ctrl+H. -->
-                    <Button x:Name="BackupHistoryButton" Content="{Binding Loc[action_save_history], Mode=OneWay}" Margin="8,0,0,8"
-                            Command="{Binding OpenBackupHistoryCommand}"
-                            ToolTip="{Binding Loc[tt_backup_history], Mode=OneWay}" />
-                    <!-- Codigos de build compartibles (13-sep-2026, cuarto de la lista confirmada):
-                         exporta el loadout que se este viendo ahora en Equipamiento a un codigo de
-                         texto corto, e importa uno pegado. -->
+                         desde la propia UI, sin ir a buscarlo a mano al Explorador de archivos.
+                         BK (13-sep-2026): "Deshacer ultimo guardado" es UN nivel (el .bak);
+                         Historial de versiones abre el historial COMPLETO del personaje cargado.
+                         T2 (20-sep-2026): los dos botones propios (este y Deshacer ultimo
+                         guardado) se plegaron en el menu "⋯ Personaje" de arriba - los comandos
+                         reales (OpenBackupHistoryCommand/UndoLastSaveCommand) siguen siendo los
+                         mismos, solo cambia quien los dispara. "Codigo de build" se queda, ver el
+                         comentario real de mas arriba (LIMITE: blinda BUILDCODE-CANEXECUTE). -->
                     <Button x:Name="BuildCodeButton" Content="{Binding Loc[action_build_code], Mode=OneWay}" Margin="8,0,0,8"
                             Command="{Binding OpenBuildCodeCommand}"
                             ToolTip="{Binding Loc[tt_build_code], Mode=OneWay}" />
@@ -2288,8 +2284,11 @@
                 <!-- H5-05 (quinta auditoria de Opus): "¿Dónde lo tengo?" - panel real anclado al
                      boton de la cabecera, visible en CUALQUIER pestaña. StaysOpen=False lo
                      cierra solo con un clic fuera (mismo gesto real que cualquier menu/combo de
-                     Windows) - no hace falta ningun manejador nuevo para cerrarlo a mano. -->
-                <Popup x:Name="WhereIsItPopup" IsOpen="{Binding IsWhereIsItOpen}" PlacementTarget="{Binding ElementName=WhereIsItButton}"
+                     Windows) - no hace falta ningun manejador nuevo para cerrarlo a mano.
+                     T2 (20-sep-2026): el boton propio "Buscar" se plego en el menu "⋯ Personaje" -
+                     ancla ahora a ESE boton (PersonajeMenuButton), el punto fijo real de la
+                     cabecera mas cercano a la accion que lo abre. -->
+                <Popup x:Name="WhereIsItPopup" IsOpen="{Binding IsWhereIsItOpen}" PlacementTarget="{Binding ElementName=PersonajeMenuButton}"
                        Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
                        Opened="OnWhereIsItPopupOpened">
                     <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource AccentBrush}"

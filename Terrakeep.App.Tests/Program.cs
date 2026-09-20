@@ -1419,6 +1419,90 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // T2_SOLO=1 (20-sep-2026, catalogo de rediseño visual T2 "cabecera de una fila"):
+        // verifica en frio, con la ventana real, que la fila de botones de la cabecera global YA
+        // NO envuelve a una segunda linea al ancho de referencia real del catalogo (1180x860,
+        // "la cabecera mide ~100px de alto") - medido con ActualHeight del WrapPanel real
+        // (ItemHeight=44: una sola linea real mide 44px, dos lineas 88px+), no solo mirando una
+        // captura. Comprueba ademas que el menu real "⋯ Personaje" abre y trae los 2 items
+        // reales (Cargar personaje, Deshacer ultimo guardado) y que los tres botones NO tocados
+        // (Buscar/Historial/Codigo de build, con dependencias reales - WhereIsItPopup/
+        // BUILDCODE-CANEXECUTE/VITALS_SOLO) siguen ahi tal cual.
+        if (Environment.GetEnvironmentVariable("T2_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 1; // Personaje: la cabecera es identica en las 6 pestañas, pero aqui hay BuildCodeButton real para comparar
+                FijarTamaño(window, 1180, 860);
+                DoEvents(); DoEvents();
+
+                var wrapBotones = Descendientes<System.Windows.Controls.WrapPanel>(window).FirstOrDefault(w => w.ItemHeight == 44);
+                Console.WriteLine($"T2_SOLO: WrapPanel de botones encontrado={wrapBotones != null}, a 1180x860 ActualHeight={wrapBotones?.ActualHeight:0}px (esperado ~44px, UNA sola linea - antes de T2 envolvia a ~88px)");
+                if (wrapBotones == null) Console.WriteLine("FALLO: T2_SOLO - no se encuentra el WrapPanel real de botones de la cabecera");
+                else if (wrapBotones.ActualHeight > 60) Console.WriteLine($"FALLO: T2_SOLO - la fila de botones sigue envolviendo a mas de una linea a 1180x860 ({wrapBotones.ActualHeight:0}px)");
+
+                // BuildCodeButton es el UNICO de los 4 originales que se queda fuera del menu a
+                // proposito (blinda BUILDCODE-CANEXECUTE, ver el comentario real en MainWindow.
+                // xaml) - sigue ahi, visible y con su x:Name intacto. Buscar/Historial/Cargar
+                // personaje/Deshacer ultimo guardado ya NO son botones sueltos (viven dentro del
+                // menu "⋯ Personaje", comprobado mas abajo).
+                var codigoBuild = window.FindName("BuildCodeButton") as System.Windows.Controls.Button;
+                Console.WriteLine($"T2_SOLO: BuildCodeButton (el unico boton real que se queda fuera del menu a proposito) sigue ahi={codigoBuild != null} (esperado True)");
+                if (codigoBuild == null) Console.WriteLine("FALLO: T2_SOLO - BuildCodeButton ha desaparecido o perdido su x:Name (rompe BUILDCODE-CANEXECUTE)");
+                var buscarSuelto = window.FindName("WhereIsItButton");
+                var historialSuelto = window.FindName("BackupHistoryButton");
+                Console.WriteLine($"T2_SOLO: Buscar/Historial YA NO son botones sueltos -> WhereIsItButton={buscarSuelto != null}, BackupHistoryButton={historialSuelto != null} (esperado False los dos)");
+                if (buscarSuelto != null || historialSuelto != null) Console.WriteLine("FALLO: T2_SOLO - Buscar/Historial siguen siendo botones sueltos, no se plegaron de verdad");
+
+                // El menu real "⋯ Personaje" abre y trae los 4 items reales.
+                var botonMenu = window.FindName("PersonajeMenuButton") as System.Windows.Controls.Button;
+                Console.WriteLine($"T2_SOLO: boton '⋯ Personaje' (PersonajeMenuButton) encontrado={botonMenu != null}");
+                if (botonMenu == null) Console.WriteLine("FALLO: T2_SOLO - no se encuentra PersonajeMenuButton por su x:Name en la cabecera");
+                else
+                {
+                    botonMenu.ContextMenu.PlacementTarget = botonMenu;
+                    botonMenu.ContextMenu.IsOpen = true;
+                    DoEvents(); DoEvents();
+                    var items = botonMenu.ContextMenu.Items.OfType<System.Windows.Controls.MenuItem>().Select(m => m.Header as string).ToList();
+                    Console.WriteLine($"T2_SOLO: items reales del menu = [{string.Join(", ", items)}] (esperados 4: Cargar personaje, Buscar, Historial, Deshacer ultimo guardado)");
+                    if (items.Count != 4) Console.WriteLine($"FALLO: T2_SOLO - el menu '⋯ Personaje' trae {items.Count} items, esperados 4");
+                    botonMenu.ContextMenu.IsOpen = false;
+                    DoEvents(); DoEvents();
+                }
+
+                // WhereIsItPopup ahora ancla a PersonajeMenuButton (ya no existe WhereIsItButton) -
+                // comprobacion real de que el Popup sigue abriendo de verdad via el comando.
+                vm.ToggleWhereIsItCommand.Execute(null);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"T2_SOLO: tras ToggleWhereIsItCommand -> IsWhereIsItOpen={vm.IsWhereIsItOpen} (esperado True)");
+                if (!vm.IsWhereIsItOpen) Console.WriteLine("FALLO: T2_SOLO - ToggleWhereIsItCommand no abre el popup tras mover su anclaje a PersonajeMenuButton");
+                vm.ToggleWhereIsItCommand.Execute(null);
+                DoEvents(); DoEvents();
+
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(window);
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                string shot = Path.Combine(AppContext.BaseDirectory, "cabecera-t2-una-fila.png");
+                using (var fs = File.Create(shot)) enc.Save(fs);
+                Console.WriteLine($"T2_SOLO: captura real -> {shot}");
+
+                // Barrido real de anchos (mismo criterio que VITALS_SOLO) para confirmar que NO
+                // envuelve tampoco al ancho MINIMO real (1080).
+                foreach (double w in new double[] { 1080, 1180, 1320 })
+                {
+                    FijarTamaño(window, w, 860);
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"T2_SOLO: a {w}px -> ActualHeight de la fila de botones={wrapBotones?.ActualHeight:0}px (esperado ~44px)");
+                    if (wrapBotones != null && wrapBotones.ActualHeight > 60) Console.WriteLine($"FALLO: T2_SOLO - la fila de botones envuelve a {w}px ({wrapBotones.ActualHeight:0}px)");
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("T2_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (T2_SOLO)");
+            Environment.Exit(0);
+        }
+
         // T4_SOLO=1 (20-sep-2026, catalogo de rediseño visual T4 "Inicio como escritorio de
         // partida"): verifica en frio, con la ventana real, el parrafo de "solo primer arranque",
         // la tarjeta hero (doll 2x + KPIs Vida maxima/Tiempo jugado) y que solo quedan 3 tarjetas

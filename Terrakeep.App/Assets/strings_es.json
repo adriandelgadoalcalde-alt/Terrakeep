@@ -45,6 +45,8 @@
   "action_load_set": "Cargar conjunto",
   "action_move_all_to_storage": "Mover todo al almacén",
   "action_open_folder": "Abrir carpeta",
+  "action_personaje_menu": "⋯ Personaje",
+  "action_personaje_menu_tooltip": "Cargar personaje y deshacer el último guardado",
   "action_place": "Colocar",
   "action_remove": "Quitar",
   "action_remove_all_research": "Quitar toda la investigación",

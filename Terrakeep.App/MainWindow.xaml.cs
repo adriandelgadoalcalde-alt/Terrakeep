@@ -435,6 +435,19 @@ public partial class MainWindow : Window
         }
     }
 
+    // T2 (catalogo de rediseño visual, 20-sep-2026): un ContextMenu real de WPF solo se abre con
+    // clic DERECHO por omision - este es el truco real ya conocido para que un Button lo abra con
+    // clic IZQUIERDO normal, igual que cualquier boton de menu desplegable (Ctrl+O/el resto de la
+    // cabecera siguen intactos, este es solo el disparador del menu "⋯ Personaje").
+    private void OnPersonajeMenuClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.ContextMenu != null)
+        {
+            fe.ContextMenu.PlacementTarget = fe;
+            fe.ContextMenu.IsOpen = true;
+        }
+    }
+
     private void OnLoadClick(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
