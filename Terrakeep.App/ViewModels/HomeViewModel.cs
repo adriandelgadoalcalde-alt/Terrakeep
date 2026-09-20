@@ -141,6 +141,12 @@ public partial class HomeViewModel : ObservableObject
     private string? _currentPath;
 
     public event Action<string>? CharacterChosen;
+    // Catalogo de rediseño visual T4 (21-sep-2026): mismo patron real que CharacterChosen, dos
+    // eventos aparte porque cada uno aterriza en un sitio distinto real de la app - GuideRequested
+    // carga el personaje Y salta a la pestaña Guia (sugerencia "Te toca: X"), WorldChosen carga el
+    // mundo en Exploracion sin tocar el personaje activo ("Tu ultimo mundo").
+    public event Action<string>? GuideRequested;
+    public event Action<string>? WorldChosen;
 
     // Doll fiel al guardado (pedido explicito, 3-sep-2026) - ver EquipmentAppearanceResolver.
     private readonly EquipmentAppearanceResolver _equipmentAppearance;
@@ -194,12 +200,34 @@ public partial class HomeViewModel : ObservableObject
 
     [ObservableProperty] private string? _lastSessionGuideStage;
 
+    // Catalogo de rediseño visual T4 (21-sep-2026, sugerencia dinamica "Te toca: X" real - la
+    // 3ª de las 3 sugerencias contextuales del catalogo, junto a Builds/Exploracion ya
+    // existentes): mismo calculo real que LastSessionGuideStage, pero el TITULO del PASO
+    // concreto (no del tramo) - "Guia.Paso." + clave + ".Titulo", el mismo texto real que ya
+    // muestra GuidePasoViewModel.Titulo en la propia pestaña Guia.
+    [ObservableProperty] private string? _lastSessionGuideObjectiveTitle;
+
+    // Titulo YA formateado de la tarjeta ("Te toca: Plantera") - la propia clave de idioma trae
+    // el "{0}" a rellenar (LocalizationService.Format, mismo patron real ya usado por
+    // ExplorationViewModel.BestiarySummaryText), nunca concatenado a mano en el XAML (asi el
+    // orden/las palabras alrededor del nombre los decide el diccionario de idioma, no C#).
+    public string GuideObjectiveCardTitle => LastSessionGuideObjectiveTitle != null
+        ? LocalizationService.Instance.Format("home_card_guide_objective_title", LastSessionGuideObjectiveTitle)
+        : "";
+
+    partial void OnLastSessionGuideObjectiveTitleChanged(string? value) => OnPropertyChanged(nameof(GuideObjectiveCardTitle));
+
     // Sin mundo real asociado a "el ultimo personaje" (Inicio no rastrea que .wld usaba cada
     // personaje) - World=null en el contexto es HONESTO, no un dato a medias: los requisitos que
     // de verdad necesiten un mundo (NpcsDelPueblo, Zona) caen a NoEvaluable con su motivo real
     // (MotivoSinPartidaEnMarcha), igual que ya le pasa a cualquier personaje sin mundo cargado en
     // la propia pestaña Guia - nunca se inventa un tramo a partir de un dato que no existe.
-    private string? ComputeGuideStage(string plrPath)
+    //
+    // Mismo criterio real de "objetivo actual" que GuideViewModel.Refresh(): el primer PASO sin
+    // completar del primer TRAMO obligatorio (no opcional) sin completar, implementado,
+    // recorriendo por Orden - devuelve el Nombre del tramo Y el Titulo de ese paso concreto de
+    // un solo paso por el catalogo (nunca dos evaluaciones separadas que puedan desincronizarse).
+    private (string? tramo, string? paso) ComputeGuideObjective(string plrPath)
     {
         try
         {
@@ -211,23 +239,26 @@ public partial class HomeViewModel : ObservableObject
             var loaded = _guideDataService.Load(plrPath);
             bool hasCalamity = loaded.TplrPath != null; // mismo criterio real que MainViewModel.HasCalamityData
             var contexto = new GuideContext { Character = loaded.Character, MergedContainers = loaded.MergedContainers, World = null, HasCalamity = hasCalamity };
+            string idioma = LocalizationService.Instance.Language;
 
             foreach (var tramo in _guideCatalogo.Tramos)
             {
                 if (tramo.Ambito == AmbitoGuia.Calamity && !hasCalamity) continue;
                 if (!tramo.Implementado || tramo.Opcional) continue;
-                bool tramoCompletado = tramo.Pasos.Count > 0 && tramo.Pasos.All(p => _guideEvaluador.PasoCompletado(p, contexto));
-                if (!tramoCompletado)
-                    return textos.Text("Guia.Tramo." + tramo.Clave + ".Nombre", LocalizationService.Instance.Language);
+                foreach (var paso in tramo.Pasos)
+                {
+                    if (!_guideEvaluador.PasoCompletado(paso, contexto))
+                        return (textos.Text("Guia.Tramo." + tramo.Clave + ".Nombre", idioma), textos.Text("Guia.Paso." + paso.Clave + ".Titulo", idioma));
+                }
             }
-            return null; // Guia entera completada - sin objetivo pendiente real, nunca un texto inventado
+            return (null, null); // Guia entera completada - sin objetivo pendiente real, nunca un texto inventado
         }
         catch (Exception)
         {
             // Un .plr/.tplr corrupto, o los ficheros de la Guia sin encontrar - la tarjeta hero
-            // simplemente no enseña el 3er KPI (los otros 2, HealthMax/PlayTimeText, no dependen
-            // de esto y siguen intactos), nunca tumba Inicio entero.
-            return null;
+            // simplemente no enseña el 3er KPI/la sugerencia "Te toca" (los otros 2 KPI reales,
+            // HealthMax/PlayTimeText, no dependen de esto y siguen intactos), nunca tumba Inicio.
+            return (null, null);
         }
     }
 
@@ -238,15 +269,23 @@ public partial class HomeViewModel : ObservableObject
         {
             LastSessionCharacterName = null;
             LastSessionGuideStage = null;
+            LastSessionGuideObjectiveTitle = null;
             MarcarSesionCambiadaPorFuera(false);
             OnPropertyChanged(nameof(LastSessionCharacterEntry));
-            return;
         }
-        LastSessionCharacterName = session.LastCharacterName ?? Path.GetFileNameWithoutExtension(_lastSessionPath);
-        LastSessionGuideStage = ComputeGuideStage(_lastSessionPath);
-        var modificadoReal = File.GetLastWriteTimeUtc(_lastSessionPath);
-        MarcarSesionCambiadaPorFuera(session.LastCharacterModifiedUtc.HasValue && modificadoReal != session.LastCharacterModifiedUtc.Value);
-        OnPropertyChanged(nameof(LastSessionCharacterEntry));
+        else
+        {
+            LastSessionCharacterName = session.LastCharacterName ?? Path.GetFileNameWithoutExtension(_lastSessionPath);
+            (LastSessionGuideStage, LastSessionGuideObjectiveTitle) = ComputeGuideObjective(_lastSessionPath);
+            var modificadoReal = File.GetLastWriteTimeUtc(_lastSessionPath);
+            MarcarSesionCambiadaPorFuera(session.LastCharacterModifiedUtc.HasValue && modificadoReal != session.LastCharacterModifiedUtc.Value);
+            OnPropertyChanged(nameof(LastSessionCharacterEntry));
+        }
+
+        // Catalogo de rediseño visual T4 (21-sep-2026, "Tu ultimo mundo"): mismo mecanismo real
+        // que el personaje - null/fichero borrado = sugerencia simplemente no se enseña.
+        _lastWorldPath = session.LastWorldPath != null && File.Exists(session.LastWorldPath) ? session.LastWorldPath : null;
+        LastWorldName = _lastWorldPath != null ? (session.LastWorldName ?? Path.GetFileNameWithoutExtension(_lastWorldPath)) : null;
     }
 
     private void MarcarSesionCambiadaPorFuera(bool valor)
@@ -267,12 +306,34 @@ public partial class HomeViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ScanMessage));
         OnPropertyChanged(nameof(LastSessionStalenessWarning));
+        OnPropertyChanged(nameof(GuideObjectiveCardTitle));
     }
 
     [RelayCommand]
     private void Continue()
     {
         if (_lastSessionPath != null) CharacterChosen?.Invoke(_lastSessionPath);
+    }
+
+    // Catalogo de rediseño visual T4 (21-sep-2026), sugerencia dinamica real "Te toca: X": carga
+    // el personaje de la ultima sesion (si no es ya el activo) y aterriza en la pestaña Guia -
+    // mismo objetivo que LastSessionGuideObjectiveTitle ya muestra, ahora tambien accionable.
+    [RelayCommand]
+    private void ContinueToGuide()
+    {
+        if (_lastSessionPath != null) GuideRequested?.Invoke(_lastSessionPath);
+    }
+
+    // Catalogo de rediseño visual T4 (21-sep-2026), sugerencia real "Tu ultimo mundo": mismo
+    // patron que ContinueCommand, pero para Exploracion - null si nunca se cargo un mundo real
+    // en esta maquina o el fichero ya no existe (ver SetLastSession).
+    private string? _lastWorldPath;
+    [ObservableProperty] private string? _lastWorldName;
+
+    [RelayCommand]
+    private void ContinueWorld()
+    {
+        if (_lastWorldPath != null) WorldChosen?.Invoke(_lastWorldPath);
     }
 
     public HomeViewModel(EquipmentAppearanceResolver equipmentAppearance, BackupHistoryService backupHistory)

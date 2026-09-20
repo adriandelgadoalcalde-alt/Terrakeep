@@ -1084,6 +1084,24 @@ public partial class MainViewModel : ObservableObject
         // ahi dentro seria null en ese primer Refresh). CharacterLoaded/limpieza de personaje
         // vuelven a llamar a Refresh() mas abajo en este mismo constructor.
         Guide = new GuideViewModel(_service, () => _loaded, () => Exploration.CurrentWorld, () => HasCalamityData);
+        // Catalogo de rediseño visual T4 (21-sep-2026), sugerencia dinamica real "Te toca: X" de
+        // Inicio: carga el personaje de la ultima sesion (mismo aviso real de cambios sin
+        // guardar que ContinueCommand/CharacterChosen ya respeta) y aterriza en la pestaña Guia
+        // en vez de en Personaje - Guide.Refresh() ya lo dispara CharacterLoaded de mas abajo.
+        Home.GuideRequested += path =>
+        {
+            if (IsDirty && ConfirmDiscardChanges?.Invoke() == false) return;
+            LoadFromPath(path);
+            SelectedTabIndex = (int)AppTab.Guia;
+        };
+        // Catalogo de rediseño visual T4 (21-sep-2026), sugerencia real "Tu ultimo mundo": carga
+        // el mundo en Exploracion, SIN tocar el personaje activo (a diferencia de
+        // GuideRequested/CharacterChosen) - un mundo es independiente del personaje cargado.
+        Home.WorldChosen += path =>
+        {
+            SelectedTabIndex = (int)AppTab.Exploracion;
+            _ = Exploration.LoadFromPathAsync(path);
+        };
         Hosting = new HostingViewModel();
         // Cargar un personaje nuevo por encima es justo el momento en que la Guia mas cambia -
         // se re-evalua ya (ademas de al entrar en la pestaña, ver OnSelectedTabIndexChanged, por
@@ -1246,6 +1264,10 @@ public partial class MainViewModel : ObservableObject
             LastCharacterPath = _loaded?.PlrPath,
             LastCharacterName = _loaded?.Character.Name,
             LastCharacterModifiedUtc = _loaded != null && File.Exists(_loaded.PlrPath) ? File.GetLastWriteTimeUtc(_loaded.PlrPath) : null,
+            // Catalogo de rediseño visual T4 (21-sep-2026, "Tu ultimo mundo"): mismo mecanismo
+            // real que LastCharacterPath, ver ExplorationViewModel.CurrentWorldPath.
+            LastWorldPath = Exploration.CurrentWorldPath,
+            LastWorldName = Exploration.CurrentWorldPath != null ? Exploration.WorldTitle : null,
             SelectedTabIndex = SelectedTabIndex,
             PersonajeInnerTabIndex = PersonajeInnerTabIndex,
             ObjetosSubTabIndex = ObjetosSubTabIndex,

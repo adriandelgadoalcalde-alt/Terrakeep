@@ -14,6 +14,12 @@ public sealed class TerrakeepSession
     public string? LastCharacterName { get; set; }
     public DateTime? LastCharacterModifiedUtc { get; set; }
 
+    // Catalogo de rediseño visual T4 (21-sep-2026, "Tu ultimo mundo"): mismo mecanismo real que
+    // LastCharacterPath, para el ULTIMO .wld cargado con exito en Exploracion - ver
+    // ExplorationViewModel.CurrentWorldPath y MainViewModel.SaveSession.
+    public string? LastWorldPath { get; set; }
+    public string? LastWorldName { get; set; }
+
     // "Pestaña/sub-pestaña, preferencias de plegado, loadout y almacén seleccionados" - pedido
     // explicito del informe. Valores de fabrica reales (los mismos que ya tenia cada propiedad
     // en MainViewModel antes de que esto existiera) para que un session.json ausente/corrupto

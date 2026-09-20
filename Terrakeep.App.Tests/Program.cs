@@ -2888,6 +2888,110 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // HOMECARDS_SOLO=1 (21-sep-2026, catalogo de rediseño visual T4, tercer intento real -
+        // cierra las 2 sub-piezas menores que quedaban tras KPI3_SOLO: la sugerencia dinamica
+        // "Te toca: X" (HomeViewModel.GuideObjectiveCardTitle/ContinueToGuideCommand) y "Tu
+        // ultimo mundo" (HomeViewModel.LastWorldName/ContinueWorldCommand). Verifica de extremo a
+        // extremo: las 2 tarjetas aparecen con el texto real correcto, Y sus comandos reales
+        // navegan de verdad a donde dicen (Guia con el objetivo evaluado / Exploracion con el
+        // mundo cargado), no solo que el texto se vea bien.
+        if (Environment.GetEnvironmentVariable("HOMECARDS_SOLO") == "1")
+        {
+            try
+            {
+                string dirHc = Path.Combine(Path.GetTempPath(), $"terrakeep-homecards-{Guid.NewGuid():N}");
+                Directory.CreateDirectory(dirHc);
+                string plrPathHc = Path.Combine(dirHc, "PersonajeHomeCards.plr");
+                var personajeHc = new Terrakeep.Core.PlrFormat.PlrCharacter
+                {
+                    Name = "PersonajeHomeCards",
+                    Version = 279,
+                    PrimaryLoadout = Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: true),
+                    Loadouts = [Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false)],
+                };
+                File.WriteAllBytes(plrPathHc, Terrakeep.Core.PlrFormat.PlrFile.Write(personajeHc));
+                string wldPathHc = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+
+                vm.Settings.AddCharacterFolder(dirHc);
+                vm.Home.RefreshCommand.Execute(null);
+                while (vm.Home.IsScanning) DoEvents();
+                DoEvents(); DoEvents();
+
+                vm.Home.SetLastSession(new Terrakeep.App.Services.TerrakeepSession
+                {
+                    LastCharacterPath = plrPathHc, LastCharacterName = "PersonajeHomeCards",
+                    LastWorldPath = wldPathHc, LastWorldName = "roca_negra",
+                });
+                DoEvents(); DoEvents();
+
+                Console.WriteLine($"HOMECARDS_SOLO: LastSessionGuideObjectiveTitle real='{vm.Home.LastSessionGuideObjectiveTitle}', GuideObjectiveCardTitle real='{vm.Home.GuideObjectiveCardTitle}', LastWorldName real='{vm.Home.LastWorldName}'");
+                if (vm.Home.LastSessionGuideObjectiveTitle == null) Console.WriteLine("FALLO: HOMECARDS_SOLO - LastSessionGuideObjectiveTitle es null para un personaje limpio real");
+                if (vm.Home.GuideObjectiveCardTitle == "" || !vm.Home.GuideObjectiveCardTitle.Contains(vm.Home.LastSessionGuideObjectiveTitle ?? "\uFFFF"))
+                    Console.WriteLine($"FALLO: HOMECARDS_SOLO - GuideObjectiveCardTitle ('{vm.Home.GuideObjectiveCardTitle}') no contiene el objetivo real ('{vm.Home.LastSessionGuideObjectiveTitle}')");
+                if (vm.Home.LastWorldName != "roca_negra") Console.WriteLine($"FALLO: HOMECARDS_SOLO - LastWorldName real ('{vm.Home.LastWorldName}') no es el esperado");
+
+                vm.SelectedTabIndex = 0; // Inicio
+                FijarTamaño(window, 1600, 900);
+                DoEvents(); DoEvents();
+
+                var btnGuia = Descendientes<System.Windows.Controls.Button>(window)
+                    .FirstOrDefault(b => b.IsVisible && Descendientes<TextBlock>(b).Any(t => t.Text == vm.Home.GuideObjectiveCardTitle));
+                var btnMundo = Descendientes<System.Windows.Controls.Button>(window)
+                    .FirstOrDefault(b => b.IsVisible && Descendientes<TextBlock>(b).Any(t => (t.Text ?? "").Contains("roca_negra")));
+                Console.WriteLine($"HOMECARDS_SOLO: tarjeta real 'Te toca' encontrada y visible={btnGuia != null}, tarjeta real 'Tu ultimo mundo' encontrada y visible={btnMundo != null}");
+                if (btnGuia == null) Console.WriteLine("FALLO: HOMECARDS_SOLO - la tarjeta real 'Te toca: X' no aparece en Inicio pese a haber un objetivo real");
+                if (btnMundo == null) Console.WriteLine("FALLO: HOMECARDS_SOLO - la tarjeta real 'Tu ultimo mundo' no aparece en Inicio pese a haber un LastWorldName real");
+
+                DoEvents();
+                var rtbHc = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbHc.Render(window);
+                var encHc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encHc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbHc));
+                string shotHc = Path.Combine(AppContext.BaseDirectory, "homecards-te-toca-y-ultimo-mundo.png");
+                using (var fsHc = File.Create(shotHc)) encHc.Save(fsHc);
+                Console.WriteLine($"HOMECARDS_SOLO: captura real -> {shotHc}");
+
+                // Extremo a extremo real: invocar el comando REAL de la tarjeta "Te toca" (via
+                // su AutomationPeer, mismo camino que un clic real) y comprobar que de verdad
+                // carga el personaje y aterriza en Guia con un objetivo evaluado.
+                if (btnGuia != null)
+                {
+                    var peerGuia = new System.Windows.Automation.Peers.ButtonAutomationPeer(btnGuia);
+                    ((System.Windows.Automation.Provider.IInvokeProvider)peerGuia.GetPattern(System.Windows.Automation.Peers.PatternInterface.Invoke)!).Invoke();
+                    DoEvents(); DoEvents(); DoEvents();
+                    bool aterrizoEnGuia = vm.SelectedTabIndex == 3 && vm.IsCharacterLoaded && vm.CharacterName == "PersonajeHomeCards" && vm.Guide.ObjetivoPaso != null;
+                    Console.WriteLine($"HOMECARDS_SOLO: tras invocar 'Te toca' -> SelectedTabIndex={vm.SelectedTabIndex} (esperado 3, Guia), personaje cargado={vm.CharacterName}, Guide.ObjetivoPaso real={vm.Guide.ObjetivoPaso?.Titulo} -> {aterrizoEnGuia}");
+                    if (!aterrizoEnGuia) Console.WriteLine("FALLO: HOMECARDS_SOLO - invocar la tarjeta 'Te toca' no cargo el personaje real ni aterrizo en Guia con un objetivo real evaluado");
+                }
+
+                // Vuelta a Inicio para probar "Tu ultimo mundo" de forma aislada (el personaje ya
+                // cargado por el paso anterior no deberia importarle - un mundo es independiente).
+                vm.SelectedTabIndex = 0;
+                DoEvents(); DoEvents();
+                var btnMundo2 = Descendientes<System.Windows.Controls.Button>(window)
+                    .FirstOrDefault(b => b.IsVisible && Descendientes<TextBlock>(b).Any(t => (t.Text ?? "").Contains("roca_negra")));
+                if (btnMundo2 != null)
+                {
+                    var peerMundo = new System.Windows.Automation.Peers.ButtonAutomationPeer(btnMundo2);
+                    ((System.Windows.Automation.Provider.IInvokeProvider)peerMundo.GetPattern(System.Windows.Automation.Peers.PatternInterface.Invoke)!).Invoke();
+                    long limite = Environment.TickCount64 + 10_000;
+                    while (!vm.Exploration.IsWorldLoaded && Environment.TickCount64 < limite) DoEvents();
+                    DoEvents(); DoEvents();
+                    bool aterrizoEnMundo = vm.SelectedTabIndex == 4 && vm.Exploration.IsWorldLoaded;
+                    Console.WriteLine($"HOMECARDS_SOLO: tras invocar 'Tu ultimo mundo' -> SelectedTabIndex={vm.SelectedTabIndex} (esperado 4, Exploracion), IsWorldLoaded={vm.Exploration.IsWorldLoaded} -> {aterrizoEnMundo}");
+                    if (!aterrizoEnMundo) Console.WriteLine("FALLO: HOMECARDS_SOLO - invocar la tarjeta 'Tu ultimo mundo' no cargo el mundo real ni aterrizo en Exploracion");
+                }
+                else Console.WriteLine("FALLO: HOMECARDS_SOLO - 'Tu ultimo mundo' no se encontro en la segunda vuelta a Inicio");
+
+                vm.Settings.RemoveCharacterFolderCommand.Execute(dirHc);
+                try { Directory.Delete(dirHc, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            }
+            catch (Exception ex) { Console.WriteLine("HOMECARDS_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (HOMECARDS_SOLO)");
+            Environment.Exit(0);
+        }
+
         // T1RAIL_SOLO=1 (21-sep-2026, segundo intento real del catalogo de rediseño visual T1 -
         // la ronda anterior solo pinto los 2 filetes visuales sin reordenar de verdad las 8
         // pestañas; ver el comentario completo junto al enum AppTab en MainViewModel.cs). Verifica

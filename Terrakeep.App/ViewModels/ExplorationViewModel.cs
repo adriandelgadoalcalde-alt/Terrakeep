@@ -2223,6 +2223,13 @@ public partial class ExplorationViewModel : ObservableObject
     // resaltado". Mismo campo/patron real que HomeViewModel._currentPath.
     private string? _currentWorldPath;
 
+    // Catalogo de rediseño visual T4 (21-sep-2026, "Tu ultimo mundo" - tercer intento real):
+    // expuesto en publico para que MainViewModel.SaveSession pueda persistir el ULTIMO mundo
+    // real cargado (mismo mecanismo ya real que LastCharacterPath) y la tarjeta hero/sugerencias
+    // de Inicio puedan ofrecer "Continuar en tu ultimo mundo" sin inventar ningun dato - null
+    // si no hay ningun mundo cargado ahora mismo, nunca un valor a medias.
+    public string? CurrentWorldPath => _currentWorldPath;
+
     // F-11 (auditoria de Opus vs TEdit, E-11): offset de scroll pendiente de restaurar tras
     // cargar un mundo - null = sin vista guardada (el code-behind hace "Ajustar a la ventana"
     // en su lugar). El ScrollViewer no vive aqui, asi que el code-behind consume esto con

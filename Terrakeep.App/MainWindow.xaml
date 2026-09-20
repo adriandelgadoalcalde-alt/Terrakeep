@@ -2663,19 +2663,32 @@
                          Novedades/Acerca de/Guia/Servidor siguen alcanzables de siempre por la
                          rail, ahora agrupada e iconizada (T1) - nunca menos accesibles que antes,
                          solo sin la tarjeta duplicada aqui.
-                         LIMITE real documentado (no en silencio): el catalogo pide 3 sugerencias
-                         DINAMICAS ("Te toca: Plantera", "Builds de tu clase", "Tu ultimo mundo") -
-                         la primera exige la misma infraestructura de evaluacion de la Guia que la
-                         KPI que falta en la tarjeta hero de arriba (ver ese comentario), y la
-                         tercera exige un "ultimo mundo abierto" que Exploracion no rastrea
-                         todavia (ningun campo real lo guarda hoy). Se implementan las 3 tarjetas
-                         reales y honestas de hoy en vez de fingir personalizacion con datos que
-                         no existen; la version dinamica completa queda para una ronda dedicada
-                         aparte, con su propia verificacion. -->
+                         Catalogo de rediseño visual T4, cerrado del todo (21-sep-2026, tercer
+                         intento real): el catalogo pedia 3 sugerencias DINAMICAS ("Te toca:
+                         Plantera", "Builds de tu clase", "Tu ultimo mundo") - la ronda anterior
+                         las dejo como limite documentado por falta de infraestructura real. Esa
+                         infraestructura ya existe (ver HomeViewModel.ComputeGuideObjective, la
+                         misma que la 3ª KPI de la tarjeta hero) - "Te toca: X" y "Tu ultimo mundo"
+                         se añaden como tarjetas CONDICIONALES (solo se enseñan con un dato real
+                         detras, null = simplemente no aparecen, nunca un dato a medias). "Builds
+                         de tu clase" no aporta un destino distinto del que ya da la tarjeta
+                         "Builds" de abajo (mismo Command/pestaña) - se omite por ser pura
+                         duplicacion, no falta de datos. -->
                     <ItemsControl>
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
+                        <!-- "Te toca: X" (T4) - primera tarjeta a proposito, es la mas personal de
+                             las 5: el siguiente objetivo real de la Guia para tu ultimo personaje. -->
+                        <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
+                                Tag="Teal" Command="{Binding Home.ContinueToGuideCommand}"
+                                Visibility="{Binding Home.LastSessionGuideObjectiveTitle, Converter={StaticResource NullToVis}}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Home.GuideObjectiveCardTitle, Mode=OneWay}" Style="{StaticResource SectionText}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Loc[home_card_guide_objective_desc], Mode=OneWay}"
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                            </StackPanel>
+                        </Button>
                         <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
                                 Command="{Binding GoToTabCommand}" CommandParameter="Libreria">
                             <StackPanel>
@@ -2697,6 +2710,19 @@
                             <StackPanel>
                                 <TextBlock Text="{Binding Loc[home_card_exploration_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
                                 <TextBlock Text="{Binding Loc[home_card_exploration_desc], Mode=OneWay}"
+                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                            </StackPanel>
+                        </Button>
+                        <!-- "Tu ultimo mundo" (T4) - ultima tarjeta a proposito, la mas opcional
+                             (muchos usuarios no habran cargado ningun mundo todavia). -->
+                        <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
+                                Tag="Orange" Command="{Binding Home.ContinueWorldCommand}"
+                                Visibility="{Binding Home.LastWorldName, Converter={StaticResource NullToVis}}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionText}" TextWrapping="Wrap">
+                                    <Run Text="{Binding Loc[home_card_last_world_title], Mode=OneWay}" /><Run Text=": " /><Run Text="{Binding Home.LastWorldName, Mode=OneWay}" FontWeight="Normal" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Loc[home_card_last_world_desc], Mode=OneWay}"
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
                             </StackPanel>
                         </Button>
