@@ -19600,3 +19600,82 @@ extraído para accesorios en ningún catálogo del proyecto -, ninguna sin tocar
 real documentada), **las dos hojas de ruta de Terrakeep quedan agotadas de verdad**: el catálogo
 de rediseño visual 10/10 sin ningún límite pendiente, el catálogo de funciones con solo 2 huecos
 reales y precisos (dato/formato que de verdad no existe hoy, nunca "más trabajo").
+
+## Sexta ronda (20-sep-2026): reconsideradas idea 1 a fondo (con evidencia fresca, no de memoria)
++ verificación de la lectura de ServidorKeep
+
+Pedido del coordinador, mismo criterio que resolvió T3/T6: antes de aceptar como límite
+definitivo que un dato "de verdad no existe", comprobarlo fresco (no de memoria de rondas
+anteriores) porque "no existe donde lo buscamos la primera vez" no es lo mismo que "no existe en
+ningún sitio" - precedente real: el escritor de `.wld` que KeepQA construyó esta misma noche
+reutilizando el lector real como base (commit `05918323`, de otro agente de la familia).
+
+- **Idea 1, pieza A (banderas de invasión Goblinos/Legión Helada/Piratas)**: el límite de la
+  ronda anterior ("ningún campo real existe, haría falta ingeniería de formato nueva") era
+  incorrecto. Comprobación fresca contra `World.FileV2.cs` de TEdit y contra `WldReader.cs`
+  actual confirmó que los 3 campos YA se leían del header (mismo tramo de ancho fijo que los
+  jefes) y se descartaban en silencio (`reader.ReadBoolean()` sin capturar). Implementado
+  completo: `WldHeader`/`WldReader`/`WldWriter` (Core), `WorldFileService`/`ExplorationViewModel`/
+  `MainWindow.xaml`/claves Loc (App), 9 archivos de test arreglados/ampliados. "Marcianos"
+  (Martian Madness) sigue siendo límite real y preciso, distinto: bloqueado por el offset variable
+  detrás de la lista de Anglers, la misma barrera que ya bloquea los jefes tardíos. Verificado:
+  `Terrakeep.Core.Tests` 580/580, `Terrakeep.App.ViewModels.Tests` 491/491, arnés `IDEA1B_SOLO`
+  (lectura de 3 mundos reales con valores variados, flujo E2E completo de guardado/relectura/
+  casilla real en pantalla). Commit `cc1d4ddc`.
+- **Idea 1, pieza B (editar qué NPCs de pueblo han venido a vivir al mundo, antes solo lectura)**:
+  mismo error de límite que la pieza A. `SerializeNpcsSection` (la inversa real de
+  `WldReader.ReadNpcs`) ya existía y ya estaba probada por `WldWriter.WriteWorld` (el escritor de
+  KeepQA citado arriba) - solo hacía falta el mismo patrón de empalme de sección de ancho variable
+  que `WriteChestItems`/`WriteSignText` (T1, editor de cofres/letreros) para poder editar el
+  roster de un mundo REAL sin reescribirlo entero (eso sí habría sido un límite real - ver el
+  comentario de `WriteWorld`: `PressurePlate`/`TownManager`/`CreativePowers`/`Footer` se dejan
+  vacíos ahí a propósito porque `WldReader` nunca los lee). Implementado: `WldWriter.WriteNpcs`
+  (Core, parcheo in-place de `Pointers[4]..Pointers[5]`), `WldWorld.WithNpcs`,
+  `WorldFileService.SaveNpcRoster`, `ExplorationViewModel.AddTownNpcCommand`/
+  `RemoveTownNpcCommand` (un NPC añadido aparece en el spawn, sin casa, igual que uno real recién
+  mudado), botones reales "+"/"✕" en `MainWindow.xaml`. Bug real encontrado y arreglado con el
+  arnés (`IDEA1C_SOLO`): `RebuildNpcRows` con `preservarFiltro=true` solo refrescaba
+  `NpcSearchResults`, nunca `Npcs` (la colección real de los marcadores del MAPA) - las dos se
+  refrescan ahora explícitamente. Verificado: `Terrakeep.Core.Tests` 583/583 (3 pruebas nuevas,
+  incluida una contra un mundo real con guardado y relectura de disco),
+  `Terrakeep.App.ViewModels.Tests` 491/491, arnés `IDEA1C_SOLO` (flujo E2E completo sobre una
+  copia de `roca_negra.wld`: Añadir/Quitar reales, botones reales localizados en el árbol visual,
+  persistencia confirmada releyendo de disco). Commit `ec916e8b`.
+- **Idea 2 ("crítico total"/DPS) reconfirmada, esta vez con evidencia mucho más exhaustiva**: se
+  comprobó TODA fuente de datos actual del proyecto, no solo la revisada la primera vez. (1)
+  `vanilla_stats.json`: de 4046 entradas, solo 28 tienen `crit`, y las 28 tienen también `damage`
+  (son armas) salvo una (`Morning Star`, id 4679, un mangual/arma igualmente, no un accesorio).
+  (2) `calamity/catalog.json`: su propio esquema reserva un campo `stats.crit` en TODOS los
+  ítems, incluidos los 193 accesorios de Calamity - los 193 tienen el valor `null`, ni uno solo
+  con un valor real; solo las categorías de arma (`Weapons/*`) y `Tools` tienen `crit` no nulo.
+  (3) Cruce contra accesorios vanilla reales y conocidos con bonus de crítico real en el juego
+  (Avenger Emblem +10%, Ranger Emblem +10%, Sniper Scope +10%, Destroyer Emblem, Celestial
+  Emblem...) - ninguno tiene ningún campo relacionado con crítico en `vanilla_stats.json`, solo
+  `rare`. (4) El propio formato `.plr` (`PlrFile.cs`/`PlrCharacter.cs`) no persiste ningún campo
+  de crítico, ni base ni total - confirma que es estado calculado en tiempo real por el juego,
+  nunca guardado. Conclusión: el dato de "crítico total" genuinamente no existe en ninguna
+  estructura real del proyecto (ni vanilla ni Calamity, ni el catálogo de ítems ni el formato de
+  personaje) - límite real confirmado, esta vez con evidencia mucho más sólida que antes.
+- **Lectura de ServidorKeep ("mapa de mundo en vivo" bloqueado por `WldReader`/`WorldRenderer`/
+  `DibujanteDelMapa`)**: revisado el estado real de las dos piezas del lado de Terrakeep.
+  `WldReader` (y `MapColorCatalog`, necesario para resolver colores de tile/pared/líquido) ya
+  viven en `Terrakeep.Core` sin ninguna dependencia de WPF - listos HOY para que ServidorKeep los
+  use tal cual, referenciando `Terrakeep.Core.dll`, sin ningún trabajo adicional. `WorldRenderer`
+  en cambio NO está listo: vive en `Terrakeep.App.Services` (el proyecto WPF, no Core) y su firma
+  pública devuelve `System.Windows.Media.Imaging.WriteableBitmap`, un tipo atado a WPF que un
+  servidor headless como ServidorKeep no puede consumir sin arrastrar todo el runtime de
+  presentación. El hueco es concreto y arreglable (mover la lógica de mezcla de píxeles, que ya es
+  matemática pura sin nada de WPF salvo el contenedor de salida, a `Terrakeep.Core` devolviendo un
+  `byte[]` BGRA32 + ancho/alto, dejando que `Terrakeep.App` envuelva ese `byte[]` en un
+  `WriteableBitmap` en un adaptador fino del lado de la app) - no se toca aquí a propósito: el
+  propio `bitacora.md` de ServidorKeep documenta que hay agentes reales de la familia trabajando
+  en paralelo esta misma noche sobre estas piezas compartidas, y tocar `WldReader`/`WorldRenderer`
+  desde esta sesión arriesgaría el mismo choque de ediciones que ServidorKeep evitó a propósito
+  por la razón inversa. Queda documentado aquí con el detalle exacto para que la sesión que
+  retome el refactor (desde Terrakeep o desde ServidorKeep) sepa exactamente qué hace falta.
+
+**Estado final de esta ronda**: catálogo de funciones ahora 9/10 con código real (se suma la idea
+1, antes considerada parcial), 1/10 con hueco real preciso y ahora mucho más verificado (idea 2).
+Sin publicar nada (sin version bump, sin changelog.json, sin instalador de distribución, sin
+`git push`, sin `gh release`) - todo el trabajo de esta ronda queda comiteado en local
+(`cc1d4ddc`, `ec916e8b`) para que el usuario lo revise antes de publicar.
