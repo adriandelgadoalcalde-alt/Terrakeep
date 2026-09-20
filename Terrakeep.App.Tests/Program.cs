@@ -1454,6 +1454,77 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // IDEA9_SOLO=1 (20-sep-2026, catalogo de ideas Keep, idea 9 "modo reparar personaje" -
+        // version real reducida: solo el diagnostico de prefijos ilegales, ver el LIMITE
+        // documentado en MainViewModel.RebuildIllegalPrefixDiagnostics). Aisla la variable a mano
+        // (mismo criterio real de "verificar aislando la variable"): en vez de esperar que algun
+        // personaje real de este equipo YA traiga un prefijo ilegal (nadie lo garantiza), se
+        // fuerza uno real y conocido sobre un objeto real ya equipado, con
+        // PrefixRulesCatalog.LegalPrefixes real (nunca una suposicion) para elegir un id que SI
+        // es ilegal para ESE objeto concreto.
+        if (Environment.GetEnvironmentVariable("IDEA9_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; vm.ObjetosSubTabIndex = 0;
+                // El personaje sintetico UIA-Test (cargado por defecto en este arnes) no lleva
+                // ningun objeto vanilla real en el inventario - se carga uno real de este equipo
+                // (accion real, Home.OpenCommand) para tener con que de verdad.
+                var personajeReal = vm.Home.Characters.FirstOrDefault();
+                if (personajeReal != null) { vm.Home.OpenCommand.Execute(personajeReal); DoEvents(); DoEvents(); }
+                DoEvents(); DoEvents();
+                Console.WriteLine($"IDEA9_SOLO: diagnostico ANTES de forzar nada -> {vm.IllegalPrefixItemNames.Count} objeto(s) con prefijo ilegal (personaje real '{vm.CharacterName}' recien cargado, esperado normalmente 0)");
+
+                var servicioAparte = new Terrakeep.App.Services.CharacterFileService();
+                var slot = vm.InventoryContainer?.Slots.FirstOrDefault(s => !s.IsEmpty && !s.IsCalamity);
+                if (slot == null) Console.WriteLine("IDEA9_SOLO: sin ningun objeto vanilla real en el inventario de este personaje - se omite la comprobacion forzada");
+                else
+                {
+                    var legales = servicioAparte.PrefixRules.LegalPrefixes(slot.Item.Id);
+                    byte? idIlegal = null;
+                    for (byte candidato = 1; candidato <= 83; candidato++)
+                        if (!legales.Contains((int)candidato)) { idIlegal = candidato; break; }
+                    Console.WriteLine($"IDEA9_SOLO: objeto real elegido '{slot.DisplayName}' (id={slot.Item.Id}), {legales.Count} prefijo(s) legal(es) reales, id ilegal real elegido={idIlegal}");
+                    if (idIlegal == null) Console.WriteLine("IDEA9_SOLO: los 83 prefijos vanilla son legales para este objeto (raro pero no imposible) - se omite la comprobacion forzada");
+                    else
+                    {
+                        slot.SetPrefix(Terrakeep.Core.Model.ItemPrefix.Vanilla(idIlegal.Value));
+                        vm.RebuildIllegalPrefixDiagnostics();
+                        DoEvents(); DoEvents();
+                        Console.WriteLine($"IDEA9_SOLO: tras forzar el prefijo ilegal real -> IllegalPrefixItemNames=[{string.Join(", ", vm.IllegalPrefixItemNames)}] (esperado que contenga '{slot.DisplayName}')");
+                        if (!vm.IllegalPrefixItemNames.Contains(slot.DisplayName))
+                            Console.WriteLine($"FALLO: IDEA9_SOLO - el diagnostico NO detecta el prefijo ilegal real recien forzado sobre '{slot.DisplayName}'");
+
+                        // El Expander real vive en la pestaña Version (PersonajeInnerTab.Version=6) -
+                        // el arnes seguia en Objetos/Equipamiento, donde nunca se llega a realizar.
+                        vm.PersonajeInnerTabIndex = 6;
+                        DoEvents(); DoEvents();
+                        var expander = Descendientes<System.Windows.Controls.Expander>(window).FirstOrDefault(e => e.Header as string == vm.Loc["repair_illegal_prefixes"]);
+                        Console.WriteLine($"IDEA9_SOLO: Expander real 'Prefijos ilegales encontrados' en el arbol visual={expander != null}, visible={expander?.IsVisible}");
+                        if (expander == null || !expander.IsVisible) Console.WriteLine("FALLO: IDEA9_SOLO - el aviso real no esta en pantalla pese a haber un objeto con prefijo ilegal real");
+
+                        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtb.Render(window);
+                        var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                        string shot = Path.Combine(AppContext.BaseDirectory, "idea9-prefijos-ilegales.png");
+                        using (var fs = File.Create(shot)) enc.Save(fs);
+                        Console.WriteLine($"IDEA9_SOLO: captura real -> {shot}");
+
+                        // Deja el objeto real como estaba (nunca corromper el .plr real de este
+                        // equipo por una prueba - SetPrefix es solo en memoria, no se guarda, pero
+                        // se revierte igual por higiene del resto del arnes que corre despues).
+                        slot.SetPrefix(Terrakeep.Core.Model.ItemPrefix.None);
+                        vm.RebuildIllegalPrefixDiagnostics();
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("IDEA9_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (IDEA9_SOLO)");
+            Environment.Exit(0);
+        }
+
         // T2_SOLO=1 (20-sep-2026, catalogo de rediseño visual T2 "cabecera de una fila"):
         // verifica en frio, con la ventana real, que la fila de botones de la cabecera global YA
         // NO envuelve a una segunda linea al ancho de referencia real del catalogo (1180x860,

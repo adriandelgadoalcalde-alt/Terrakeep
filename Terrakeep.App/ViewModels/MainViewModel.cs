@@ -717,6 +717,54 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private ContainerViewModel? _coinsContainer;
     [ObservableProperty] private ContainerViewModel? _ammoContainer;
 
+    // Catalogo de ideas Keep, idea 9 (20-sep-2026, "modo reparar personaje" - version real
+    // reducida, alcance honesto documentado aqui): de los 4 diagnosticos reales que pide el
+    // catalogo (slots fantasma, prefijos ilegales, version desfasada, .tplr huerfano/duraciones
+    // de buff desbordadas), SOLO prefijos ilegales tiene hoy un backend real y ya probado -
+    // PrefixRulesCatalog.IsLegal (bug real ya cerrado el 1-sep-2026: "me esta permitiendo poner
+    // prefijo a objetos que no deberia" - esa tabla YA impide crear una combinacion ilegal desde
+    // dentro de Terrakeep, pero un .plr cargado de fuera - otra herramienta, una version antigua
+    // del juego, edicion manual - puede seguir trayendo una de antes). "TplrProbe"/
+    // "SaveAtomicoTests"/"BuffDurationOverflowTests" que cita el catalogo son en realidad
+    // ficheros de PRUEBA (validan invariantes reales del guardado atomico/duraciones de buff, no
+    // son una API de diagnostico reutilizable) - version desfasada YA tiene su propio editor
+    // real (VersionEditorViewModel, pestaña Version) sin necesitar un diagnostico aparte; slots
+    // fantasma y .tplr huerfano exigirian su propia investigacion de formato de fichero, LIMITE
+    // real documentado en bitacora.md para una ronda dedicada aparte. "Arreglo en un clic" NO se
+    // implementa (el catalogo pide un arreglo automatico por cada tipo de problema; esta ronda
+    // solo cubre el diagnostico REAL, que es la mitad dificil de verdad - la accion de arreglo
+    // real seria quitar el prefijo o dejar el objeto sin prefijo, una decision de UX que merece
+    // su propia verificacion, no una añadidura de ultima hora).
+    //
+    // Recorre TODOS los contenedores reales (Containers + EquipmentGroup.AllContainers, mismo
+    // conjunto exacto que SyncEditsBackToMerged usa para guardar - nunca una lista aparte que
+    // pueda quedarse corta) buscando un prefijo vanilla puesto que PrefixRulesCatalog.IsLegal
+    // dice que ese objeto concreto NO puede llevar. Objetos de Calamity/Rogue quedan fuera
+    // (PrefixRulesCatalog es solo vanilla, "desconocido = no se avisa" en vez de un falso
+    // positivo - mismo criterio de honestidad que el resto del proyecto).
+    public ObservableCollection<string> IllegalPrefixItemNames { get; } = [];
+
+    // Publico (no privado) a proposito, mismo criterio real que Guide.Refresh() de arriba: el
+    // arnes de pruebas (Terrakeep.App.Tests) no tiene InternalsVisibleTo configurado hacia esta
+    // App (ver App.xaml.cs), asi que verificar el recalculo real tras editar un prefijo a mano
+    // necesita un punto de entrada publico, no un metodo privado inalcanzable desde fuera.
+    public void RebuildIllegalPrefixDiagnostics()
+    {
+        IllegalPrefixItemNames.Clear();
+        if (_loaded == null) return;
+        var todosLosContenedores = Containers.AsEnumerable();
+        if (EquipmentGroup != null) todosLosContenedores = todosLosContenedores.Concat(EquipmentGroup.AllContainers);
+        foreach (var contenedor in todosLosContenedores)
+        {
+            foreach (var slot in contenedor.Slots)
+            {
+                if (slot.IsEmpty || slot.Item.IsCalamity || slot.Item.Prefix.IsNone || slot.Item.Prefix.IsCalamity) continue;
+                if (!_service.PrefixRules.IsLegal(slot.Item.Id, slot.Item.Prefix.VanillaId))
+                    IllegalPrefixItemNames.Add(slot.DisplayName);
+            }
+        }
+    }
+
     // Pregunta a Opus sobre el diseño (2-sep-2026): de los ~589px utiles de la pestaña
     // "Objetos", 270 vivian congelados en la fila de la Libreria (46% del alto) - mas robo de
     // espacio que las propias 9 pestañas. Plegada por defecto (con auto-despliegue al elegir
@@ -872,6 +920,10 @@ public partial class MainViewModel : ObservableObject
         // se re-evalua ya (ademas de al entrar en la pestaña, ver OnSelectedTabIndexChanged, por
         // si el usuario ya estaba mirandola cuando cargo otro personaje).
         CharacterLoaded += () => Guide.Refresh();
+        // Catalogo de ideas Keep, idea 9 (20-sep-2026, "modo reparar personaje" - version real
+        // reducida, ver el LIMITE documentado en RebuildIllegalPrefixDiagnostics): mismo momento
+        // real que el refresco de la Guia de arriba.
+        CharacterLoaded += RebuildIllegalPrefixDiagnostics;
         Library = new LibraryViewModel(_service);
         Research = new ResearchViewModel(_service);
         // C-15 (informe de pulido final, cierra A1): Apariencia empuja al MISMO UndoStack

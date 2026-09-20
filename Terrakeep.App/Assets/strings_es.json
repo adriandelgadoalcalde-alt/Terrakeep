@@ -542,6 +542,8 @@
   "reject_light_pet": "Este slot solo acepta mascotas de luz.",
   "reject_mount": "Este slot solo acepta monturas.",
   "reject_vanity_pet": "Este slot solo acepta mascotas.",
+  "repair_illegal_prefixes": "Prefijos ilegales encontrados",
+  "repair_illegal_prefixes_desc": "Estos objetos llevan un prefijo que este tipo de objeto no puede tener de verdad en el juego - probablemente vienen de un .plr editado por fuera de Terrakeep. Edítalos desde su ranura para quitarles el prefijo o ponerles uno legal.",
   "report_air": "Aire: {0}",
   "report_census_header": "=== Censo ===",
   "report_chests": "Cofres: {0}",

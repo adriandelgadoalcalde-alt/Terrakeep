@@ -542,6 +542,8 @@
   "reject_light_pet": "This slot only accepts light pets.",
   "reject_mount": "This slot only accepts mounts.",
   "reject_vanity_pet": "This slot only accepts pets.",
+  "repair_illegal_prefixes": "Illegal prefixes found",
+  "repair_illegal_prefixes_desc": "These items carry a prefix that this item type can't actually have in the real game - they probably come from a .plr edited outside Terrakeep. Edit them from their slot to remove the prefix or give them a legal one.",
   "report_air": "Air: {0}",
   "report_census_header": "=== Census ===",
   "report_chests": "Chests: {0}",

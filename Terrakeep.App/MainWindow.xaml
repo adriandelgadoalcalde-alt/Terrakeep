@@ -4551,6 +4551,28 @@
                                         Visibility="{Binding VersionEditor.DowngradeWarning, Converter={StaticResource NullToVis}}">
                                     <TextBlock Foreground="White" TextWrapping="Wrap" FontSize="12" Text="{Binding VersionEditor.DowngradeWarning}" />
                                 </Border>
+                                <!-- Catalogo de ideas Keep, idea 9 (20-sep-2026, "modo reparar personaje" -
+                                     version real reducida, diagnostico SOLO LECTURA, ver el LIMITE
+                                     documentado en MainViewModel.RebuildIllegalPrefixDiagnostics): objetos
+                                     con un prefijo que PrefixRulesCatalog.IsLegal dice que ese objeto
+                                     concreto no puede llevar - solo puede pasar en un .plr traido de fuera
+                                     de Terrakeep (esta misma app ya impide crear la combinacion desde
+                                     dentro, bug real cerrado el 1-sep-2026). -->
+                                <Expander Header="{Binding Loc[repair_illegal_prefixes], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
+                                          Margin="0,0,0,14" IsExpanded="True"
+                                          Visibility="{Binding IllegalPrefixItemNames.Count, Converter={StaticResource CountToVis}}">
+                                    <StackPanel Margin="0,6,0,0">
+                                        <TextBlock Text="{Binding Loc[repair_illegal_prefixes_desc], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                                   Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                        <ItemsControl ItemsSource="{Binding IllegalPrefixItemNames}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Expander>
                                 <TextBlock Text="{Binding Loc[version_raw_number], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,4" />
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                                     <TextBox Text="{Binding VersionEditor.RawVersion, UpdateSourceTrigger=PropertyChanged}"
