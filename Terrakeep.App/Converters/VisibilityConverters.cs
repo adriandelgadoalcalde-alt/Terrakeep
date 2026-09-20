@@ -235,6 +235,54 @@ public sealed class SidebarWidthToRightMarginConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+// Bug real reportado por el usuario en vivo (20-sep-2026, "los iconos de NPC han desaparecido
+// del mapa"): investigado a fondo con el arnes (BLANDO_RIO_SOLO) hasta la causa raiz real -
+// TODOS los marcadores del mapa (cabeza de NPC, estrella de spawn del personaje, casa de spawn
+// del mundo, rombo de mazmorra, objetivo de la Guia) viven dentro de un `Grid Width="0"
+// Height="0"` con su contenido centrado por HorizontalAlignment/VerticalAlignment="Center" (el
+// truco real que arreglo el desfase de posicion el 19-sep-2026). Confirmado con pruebas reales
+// del propio elemento YA en pantalla (RenderTargetBitmap.Render aislado, sin pasar por el resto
+// de la ventana): un Grid con Width/Height=0 aplica un RECORTE DE PINTADO AUTOMATICO a sus
+// propios 0x0 (un mecanismo interno de WPF, distinto del ClipToBounds publico - VisualTreeHelper.
+// GetClip devuelve null, no hay forma de verlo desde fuera) que recorta CUALQUIER hijo centrado
+// fuera de esos limites, aunque Measure/Arrange/TranslatePoint seguian reportando todo correcto
+// (el recorte actua en el PINTADO, nunca en el layout - por eso nunca se detecto antes: ningun
+// dato de posicion/tamaño delataba el problema). Prueba real y reproducible: dar al MISMO Grid ya
+// en pantalla un tamaño real (16x16 en vez de 0x0) sin tocar nada mas hace que el mismo Image
+// que antes no pintaba nada empiece a pintar. `Canvas` (a diferencia de `Grid`/`StackPanel`/
+// `DockPanel`) NUNCA aplica este recorte automatico - es el motivo real por el que los marcadores
+// se cambian de Grid a Canvas aqui, con Canvas.Left/Top en vez de HorizontalAlignment/
+// VerticalAlignment="Center" para seguir centrando SIN asumir el tamaño del contenido (el motivo
+// original, real, del propio truco de centrado: un glifo de texto mide lo que mide su fuente
+// real, nunca un numero inventado - ver el comentario de la estrella de spawn del personaje).
+// Este converter hace exactamente esa mitad-negativa, atado al ANCHO/ALTO REAL ya medido del
+// propio elemento (RelativeSource Self) - nunca un valor fijo que podria estar mal para un glifo
+// o idioma distinto.
+public sealed class NegativeHalfSizeConverter : IValueConverter
+{
+    public static readonly NegativeHalfSizeConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value is double d ? -d / 2.0 : 0.0;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+// Gemelo de NegativeHalfSizeConverter para el marcador de spawn del personaje (estrella): esta
+// señala con la PUNTA de abajo, no con el centro (VerticalAlignment="Bottom" original) - el
+// desplazamiento vertical real es el alto ENTERO del glifo hacia arriba, no la mitad.
+public sealed class NegativeValueConverter : IValueConverter
+{
+    public static readonly NegativeValueConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value is double d ? -d : 0.0;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 // Fase B (15-sep-2026): la pestaña Servidor pinta el estado de cada instancia (En escucha/
 // Arrancando/Fallida/Detenida) con el color real del tema - HostingInstanciaViewModel decide
 // la CLAVE del pincel (string, ej. "EquippedGreenBrush") desde C# porque ServidorKeep.Core no

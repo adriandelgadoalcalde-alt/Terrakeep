@@ -5273,38 +5273,44 @@
                                                          busqueda - el comentario largo esta alli. Aqui el Grid mide
                                                          8x8 (la cabeza de 16px con Margin -8), asi que el desfase era
                                                          de hasta 4 tiles hacia un lado u otro segun el zoom. -->
-                                                    <!-- Contenedor de 0x0 con los hijos centrados (19-sep-2026): un panel
-                                                         sin tamaño propio deja su punto (0,0) EXACTAMENTE sobre el tile,
-                                                         y un hijo con HorizontalAlignment/VerticalAlignment="Center"
-                                                         queda centrado en el sea cual sea su tamaño REAL. Es lo que
-                                                         antes intentaba hacer un Margin negativo a mano (-8,-8 para una
-                                                         cabeza "de 16x16"), y fallaba: estas cabezas son Stretch="Uniform"
-                                                         con Width=16, asi que su ALTO real depende de la proporcion del
-                                                         sprite (medido: 10,67px, no 16) - la cabeza salia 2,67px por
-                                                         encima de su NPC a cualquier zoom. Centrando por alineacion no
-                                                         hay ningun numero que pueda quedarse desincronizado del sprite. -->
-                                                    <Grid ToolTip="{Binding Name}" Cursor="Hand" RenderTransformOrigin="0,0" Width="0" Height="0">
-                                                        <Grid.RenderTransform>
+                                                    <!-- Bug real reportado por el usuario en vivo (20-sep-2026, "los
+                                                         iconos de NPC han desaparecido del mapa"): el contenedor de 0x0
+                                                         de aqui era un Grid, y un Grid (a diferencia de un Canvas)
+                                                         aplica un RECORTE DE PINTADO AUTOMATICO a sus propios limites
+                                                         declarados (0x0) - un mecanismo interno de WPF que Measure/
+                                                         Arrange/TranslatePoint nunca delatan (el recorte actua solo en
+                                                         el PINTADO), confirmado con el arnes forzando el MISMO Image ya
+                                                         en pantalla a pintar en cuanto su Grid padre dejaba de ser 0x0.
+                                                         Ver el comentario real de NegativeHalfSizeConverter. Cambiado a
+                                                         Canvas (nunca recorta por diseño) - el centrado por alineacion
+                                                         (19-sep-2026, ver el comentario de abajo, motivo real: nunca
+                                                         asumir el tamaño real del sprite) se conserva IGUAL de fiel,
+                                                         solo que ahora via Canvas.Left/Top atados al ancho/alto YA
+                                                         MEDIDO de cada hijo (RelativeSource Self) en vez de
+                                                         HorizontalAlignment/VerticalAlignment="Center" (que Canvas no
+                                                         interpreta como centrado, solo Grid/StackPanel/DockPanel lo
+                                                         hacen). -->
+                                                    <Canvas ToolTip="{Binding Name}" Cursor="Hand" RenderTransformOrigin="0,0" Width="0" Height="0">
+                                                        <Canvas.RenderTransform>
                                                             <ScaleTransform ScaleX="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                             ScaleY="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}" />
-                                                        </Grid.RenderTransform>
-                                                        <!-- Height="16" EXPLICITO, no solo Width (19-sep-2026): dentro de
-                                                             un contenedor de 0x0 el hijo se mide con una restriccion de
-                                                             0, y un Stretch="Uniform" sin alto propio deducia alto 0 -
-                                                             la cabeza desaparecia del mapa (regresion real detectada por
-                                                             AR-MRK-OTROS en esta misma sesion, no en teoria). Con caja
-                                                             cuadrada de 16x16 el sprite sigue SIN deformarse (Uniform lo
-                                                             encaja dentro y lo centra) y ademas queda centrado de verdad
-                                                             sobre su NPC, que era el bug que se venia a arreglar. -->
+                                                        </Canvas.RenderTransform>
+                                                        <!-- Height="16" EXPLICITO, no solo Width (19-sep-2026): con
+                                                             Stretch="Uniform" sin alto propio, el alto real deducido
+                                                             (10,67px, no 16 - la proporcion real del sprite) desviaba el
+                                                             centrado. Con caja cuadrada de 16x16 el sprite sigue SIN
+                                                             deformarse (Uniform lo encaja dentro y lo centra). -->
                                                         <Image Source="{Binding HeadIconPath}" Width="16" Height="16" Stretch="Uniform"
                                                                RenderOptions.BitmapScalingMode="NearestNeighbor"
-                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               Canvas.Left="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}"
+                                                               Canvas.Top="{Binding ActualHeight, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}"
                                                                Visibility="{Binding HeadIconPath, Converter={StaticResource NullToVis}}" />
                                                         <Ellipse Width="11" Height="11"
-                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                 Canvas.Left="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}"
+                                                                 Canvas.Top="{Binding ActualHeight, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}"
                                                                  Fill="Magenta" Stroke="White" StrokeThickness="1.5"
                                                                  Visibility="{Binding HeadIconPath, Converter={StaticResource NullToCollapsed}}" />
-                                                    </Grid>
+                                                    </Canvas>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -5331,24 +5337,28 @@
                                                     <!-- F-2 (auditoria de Opus vs TEdit, E-03/P-3): mismo tratamiento de
                                                          tamaño constante que el marcador de resultado (ver comentario
                                                          completo mas abajo, WorldSearchHitRowViewModel). -->
-                                                    <!-- Mismo contenedor de 0x0 que la cabeza de NPC (19-sep-2026): el
-                                                         Margin="-9,-18" daba por hecho una caja de glifo de 18x18 que
-                                                         no existe (medida real de estos glifos a FontSize 18: ~10,9 x
-                                                         23,9 px), asi que la estrella caia varios tiles fuera de su
-                                                         spawn. Alineacion Bottom a proposito, no Center: este marcador
-                                                         señala con la PUNTA de abajo, como los pies del personaje. -->
-                                                    <Grid Width="0" Height="0" RenderTransformOrigin="0,0" ToolTip="{Binding Label}" Cursor="Hand">
-                                                        <Grid.RenderTransform>
+                                                    <!-- Bug real (20-sep-2026, ver el comentario completo en el
+                                                         marcador de cabeza de NPC): Grid con Width/Height=0 recorta el
+                                                         pintado de sus hijos a esos 0x0 por diseño interno de WPF -
+                                                         cambiado a Canvas (nunca recorta). Centrado real conservado con
+                                                         Canvas.Left/Top atados al tamaño YA MEDIDO del propio glifo
+                                                         (RelativeSource Self) - Top usa el alto ENTERO (no la mitad,
+                                                         NegativeHalfSizeConverter*2 via -ActualHeight a secas) porque
+                                                         este marcador señala con la PUNTA de abajo (antes
+                                                         VerticalAlignment="Bottom"), no con el centro. -->
+                                                    <Canvas ToolTip="{Binding Label}" Cursor="Hand" RenderTransformOrigin="0,0" Width="0" Height="0">
+                                                        <Canvas.RenderTransform>
                                                             <ScaleTransform ScaleX="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                             ScaleY="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}" />
-                                                        </Grid.RenderTransform>
+                                                        </Canvas.RenderTransform>
                                                         <TextBlock Text="&#9733;" FontSize="18" Foreground="{StaticResource AccentBrush}"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                                                                   Canvas.Left="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}"
+                                                                   Canvas.Top="{Binding ActualHeight, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeValueConverter.Instance}}">
                                                             <TextBlock.Effect>
                                                                 <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
                                                             </TextBlock.Effect>
                                                         </TextBlock>
-                                                    </Grid>
+                                                    </Canvas>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -5377,50 +5387,58 @@
                                              dejaba 3,6 tiles a la izquierda y 3,0 tiles por debajo de su punto.
                                              Ver el comentario largo del marcador de resultado de busqueda. -->
                                         <Canvas IsHitTestVisible="True">
-                                            <Grid Width="0" Height="0" RenderTransformOrigin="0,0"
+                                            <!-- Bug real (20-sep-2026, ver el comentario completo en el marcador de
+                                                 cabeza de NPC): Grid con Width/Height=0 recorta el pintado de sus
+                                                 hijos a esos 0x0 por diseño interno de WPF - los 3 marcadores de
+                                                 aqui abajo (spawn del mundo/mazmorra/objetivo de la Guia) cambiados
+                                                 a Canvas (nunca recorta), mismo centrado real via Canvas.Left/Top
+                                                 atado al tamaño YA MEDIDO del propio glifo. -->
+                                            <Canvas Width="0" Height="0" RenderTransformOrigin="0,0"
                                                   Canvas.Left="{Binding Exploration.WorldSpawnX, Converter={x:Static conv:TileCenterConverter.Instance}}" Canvas.Top="{Binding Exploration.WorldSpawnY, Converter={x:Static conv:TileCenterConverter.Instance}}"
                                                   ToolTip="{Binding Loc[explore_world_spawn], Mode=OneWay}" Cursor="Hand"
                                                   Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
                                                   Panel.ZIndex="2">
-                                                <Grid.RenderTransform>
+                                                <Canvas.RenderTransform>
                                                     <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                     ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
-                                                </Grid.RenderTransform>
+                                                </Canvas.RenderTransform>
                                                 <TextBlock Text="&#8962;" FontSize="18" Foreground="{StaticResource OrangeBrush}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                           Canvas.Left="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}"
+                                                           Canvas.Top="{Binding ActualHeight, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}">
                                                     <TextBlock.Effect>
                                                         <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
                                                     </TextBlock.Effect>
                                                 </TextBlock>
-                                            </Grid>
-                                            <Grid Width="0" Height="0" RenderTransformOrigin="0,0"
+                                            </Canvas>
+                                            <Canvas Width="0" Height="0" RenderTransformOrigin="0,0"
                                                   Canvas.Left="{Binding Exploration.WorldDungeonX, Converter={x:Static conv:TileCenterConverter.Instance}}" Canvas.Top="{Binding Exploration.WorldDungeonY, Converter={x:Static conv:TileCenterConverter.Instance}}"
                                                   ToolTip="{Binding Loc[explore_dungeon], Mode=OneWay}" Cursor="Hand"
                                                   Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}"
                                                   Panel.ZIndex="2">
-                                                <Grid.RenderTransform>
+                                                <Canvas.RenderTransform>
                                                     <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                     ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
-                                                </Grid.RenderTransform>
+                                                </Canvas.RenderTransform>
                                                 <TextBlock Text="&#9671;" FontSize="18" Foreground="{StaticResource CalamityBrush}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                           Canvas.Left="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}"
+                                                           Canvas.Top="{Binding ActualHeight, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}">
                                                     <TextBlock.Effect>
                                                         <DropShadowEffect ShadowDepth="0" BlurRadius="3" Color="Black" Opacity="0.9" />
                                                     </TextBlock.Effect>
                                                 </TextBlock>
-                                            </Grid>
+                                            </Canvas>
 
                                             <!-- Idea 7 (catalogo de funciones, "Capa Guia sobre el mapa" - bitacora.md
                                                  20-sep-2026): SOLO cuando el paso PENDIENTE actual de la Guia (Guide.
                                                  ObjetivoPaso) apunta a la Zona "Mazmorra" - mismo punto real que el
                                                  marcador de mazmorra de arriba, icono/color propios para distinguir
                                                  "aqui esta tu proximo objetivo" de "aqui esta la mazmorra" a secas. -->
-                                            <Grid Width="0" Height="0" RenderTransformOrigin="0,0"
+                                            <Canvas Width="0" Height="0" RenderTransformOrigin="0,0"
                                                   Canvas.Left="{Binding Exploration.WorldDungeonX, Converter={x:Static conv:TileCenterConverter.Instance}}" Canvas.Top="{Binding Exploration.WorldDungeonY, Converter={x:Static conv:TileCenterConverter.Instance}}"
                                                   ToolTip="{Binding Guide.ObjetivoPaso.Titulo, Mode=OneWay}" Cursor="Hand"
                                                   Panel.ZIndex="3">
-                                                <Grid.Style>
-                                                    <Style TargetType="Grid">
+                                                <Canvas.Style>
+                                                    <Style TargetType="Canvas">
                                                         <Setter Property="Visibility" Value="Collapsed" />
                                                         <Style.Triggers>
                                                             <MultiDataTrigger>
@@ -5432,18 +5450,19 @@
                                                             </MultiDataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </Grid.Style>
-                                                <Grid.RenderTransform>
+                                                </Canvas.Style>
+                                                <Canvas.RenderTransform>
                                                     <ScaleTransform ScaleX="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                     ScaleY="{Binding Exploration.Zoom, Converter={x:Static conv:InverseValueConverter.Instance}}" />
-                                                </Grid.RenderTransform>
+                                                </Canvas.RenderTransform>
                                                 <TextBlock Text="&#8853;" FontSize="20" Foreground="{StaticResource AccentBrush}"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                           Canvas.Left="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}"
+                                                           Canvas.Top="{Binding ActualHeight, RelativeSource={RelativeSource Self}, Converter={x:Static conv:NegativeHalfSizeConverter.Instance}}">
                                                     <TextBlock.Effect>
                                                         <DropShadowEffect ShadowDepth="0" BlurRadius="4" Color="Black" Opacity="0.95" />
                                                     </TextBlock.Effect>
                                                 </TextBlock>
-                                            </Grid>
+                                            </Canvas>
 
                                         <!-- Idea 7: bandas de profundidad de la Guia - una franja horizontal
                                              translucida por la Zona real del paso PENDIENTE actual (Superficie/

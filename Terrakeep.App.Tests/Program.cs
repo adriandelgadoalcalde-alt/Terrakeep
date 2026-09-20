@@ -2691,10 +2691,85 @@ internal static partial class Program
                                 encCrop.Save(fsCrop);
                                 Console.WriteLine("BLANDO_RIO_SOLO: captura -> blando-rio-npc-recorte.png (recorte 80x80 centrado en la posicion real de la cabeza)");
 
-                                // Prueba definitiva: agranda la Image REAL del arbol visual a
-                                // 200x200 (sin tocar ningun otro elemento) para saber sin
-                                // ambiguedad si pinta algo (aunque sea en la posicion/escala que
-                                // sea) o si de verdad no pinta nada.
+                                // Prueba definitiva CORREGIDA: el primer intento (mismo dia, mas
+                                // temprano) agrandaba SOLO la Image a 200x200 pero el Grid padre
+                                // sigue teniendo su propio RenderTransform (ScaleTransform inverso
+                                // al Zoom, aqui Zoom=6 -> escala ~0.167) - deshacia el agrandado
+                                // sin que se notara, asi que aquella prueba NO era concluyente de
+                                // verdad. Ahora se neutraliza TAMBIEN el RenderTransform del Grid
+                                // (Identity) antes de agrandar la Image, para que 200x200 sea
+                                // 200x200 de verdad en pantalla.
+                                // Render aislado de la Image SIN modificar NADA (tamaño natural
+                                // real, antes de tocar Width/Height/RenderTransform) - descarta
+                                // que forzar el tamaño despues de ya estar medida/organizada en
+                                // el arbol vivo sea la causa de un cache de pintado obsoleto.
+                                try
+                                {
+                                    var rtbNatural = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                                        Math.Max(1, (int)Math.Ceiling(imagenReal.ActualWidth)), Math.Max(1, (int)Math.Ceiling(imagenReal.ActualHeight)),
+                                        96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                                    rtbNatural.Render(imagenReal);
+                                    var convNatural = new System.Windows.Media.Imaging.FormatConvertedBitmap(rtbNatural, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+                                    int strideNatural = convNatural.PixelWidth * 4;
+                                    var bufNatural = new byte[convNatural.PixelHeight * strideNatural];
+                                    convNatural.CopyPixels(bufNatural, strideNatural, 0);
+                                    bool naturalTieneContenido = false;
+                                    for (int i = 3; i < bufNatural.Length; i += 4) if (bufNatural[i] > 10) { naturalTieneContenido = true; break; }
+                                    Console.WriteLine($"BLANDO_RIO_SOLO-NATURAL: render aislado de la Image a su tamaño NATURAL ({imagenReal.ActualWidth:0.#}x{imagenReal.ActualHeight:0.#}, sin tocar nada) tiene algun pixel con alpha>10={naturalTieneContenido}");
+                                }
+                                catch (Exception exNatural) { Console.WriteLine("BLANDO_RIO_SOLO-NATURAL-EXCEPTION: " + exNatural); }
+
+                                // Render de una Image NUEVA (recien creada, mismo Source) fuera
+                                // del arbol vivo - descarta que el problema sea un estado
+                                // "envejecido" especifico de ESTA instancia ya usada en pantalla.
+                                try
+                                {
+                                    var imagenNueva = new Image { Source = imagenReal.Source, Width = 16, Height = 16, Stretch = System.Windows.Media.Stretch.Uniform };
+                                    imagenNueva.Measure(new Size(16, 16));
+                                    imagenNueva.Arrange(new Rect(0, 0, 16, 16));
+                                    var rtbNueva = new System.Windows.Media.Imaging.RenderTargetBitmap(16, 16, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                                    rtbNueva.Render(imagenNueva);
+                                    var convNueva = new System.Windows.Media.Imaging.FormatConvertedBitmap(rtbNueva, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+                                    int strideNueva = convNueva.PixelWidth * 4;
+                                    var bufNueva = new byte[convNueva.PixelHeight * strideNueva];
+                                    convNueva.CopyPixels(bufNueva, strideNueva, 0);
+                                    bool nuevaTieneContenido = false;
+                                    for (int i = 3; i < bufNueva.Length; i += 4) if (bufNueva[i] > 10) { nuevaTieneContenido = true; break; }
+                                    Console.WriteLine($"BLANDO_RIO_SOLO-NUEVA: Image NUEVA (fuera del arbol vivo, mismo Source, Measure+Arrange manual 16x16) tiene algun pixel con alpha>10={nuevaTieneContenido}");
+
+                                    // Hipotesis real: el Grid contenedor (Width="0" Height="0" a
+                                    // proposito, el truco de "centrado con hijos que sobresalen")
+                                    // puede llevar un CLIP AUTOMATICO de WPF (layout clip, interno,
+                                    // NO el ClipToBounds publico) a sus propios 0x0 - recortando el
+                                    // pintado de CUALQUIER hijo centrado fuera de esos limites,
+                                    // pese a que Measure/Arrange/TranslatePoint sigan reportando
+                                    // todo correcto (el clip actua en el PINTADO, no en el layout).
+                                    if (gridPadre != null)
+                                    {
+                                        var clipReal = System.Windows.Media.VisualTreeHelper.GetClip(gridPadre);
+                                        Console.WriteLine($"BLANDO_RIO_SOLO-CLIP: Grid padre -> Width={gridPadre.Width}, Height={gridPadre.Height}, ClipToBounds={gridPadre.ClipToBounds}, VisualTreeHelper.GetClip={(clipReal == null ? "(null)" : clipReal.Bounds.ToString())}");
+
+                                        // Prueba definitiva de la hipotesis "0x0 recorta el
+                                        // pintado de verdad": dar al MISMO Grid ya en pantalla un
+                                        // tamaño real (16x16, el mismo que la Image) en vez de
+                                        // 0x0, sin tocar nada mas, y volver a renderizar la MISMA
+                                        // Image (nunca una nueva) en aislado.
+                                        gridPadre.Width = 16; gridPadre.Height = 16;
+                                        DoEvents(); DoEvents(); DoEvents();
+                                        var rtbGridReal = new System.Windows.Media.Imaging.RenderTargetBitmap(16, 16, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                                        rtbGridReal.Render(imagenReal);
+                                        var convGridReal = new System.Windows.Media.Imaging.FormatConvertedBitmap(rtbGridReal, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+                                        int strideGridReal = convGridReal.PixelWidth * 4;
+                                        var bufGridReal = new byte[convGridReal.PixelHeight * strideGridReal];
+                                        convGridReal.CopyPixels(bufGridReal, strideGridReal, 0);
+                                        bool gridRealTieneContenido = false;
+                                        for (int i = 3; i < bufGridReal.Length; i += 4) if (bufGridReal[i] > 10) { gridRealTieneContenido = true; break; }
+                                        Console.WriteLine($"BLANDO_RIO_SOLO-GRIDREAL: con el Grid padre puesto a 16x16 (en vez de 0x0), la MISMA Image ya en pantalla ahora pinta algo (alpha>10)={gridRealTieneContenido}");
+                                    }
+                                }
+                                catch (Exception exNueva) { Console.WriteLine("BLANDO_RIO_SOLO-NUEVA-EXCEPTION: " + exNueva); }
+
+                                if (gridPadre != null) gridPadre.RenderTransform = System.Windows.Media.Transform.Identity;
                                 imagenReal.Width = 200; imagenReal.Height = 200;
                                 DoEvents(); DoEvents(); DoEvents();
                                 var puntoAgrandado = imagenReal.TranslatePoint(new Point(0, 0), window);
@@ -2707,6 +2782,33 @@ internal static partial class Program
                                 encAg.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbAgrandado));
                                 encAg.Save(fsAg);
                                 Console.WriteLine("BLANDO_RIO_SOLO-AGRANDADO: captura -> blando-rio-npc-agrandado.png (ventana completa, la Image real ahora mide 200x200)");
+
+                                // Renderizado AISLADO: capturar SOLO la Image (sin pasar por el
+                                // resto de la ventana/composicion) - si esto SI pinta algo, el
+                                // problema es de composicion dentro de la ventana; si tampoco
+                                // pinta nada, el problema esta en la propia Image/su Source.
+                                try
+                                {
+                                    var rtbAislado = new System.Windows.Media.Imaging.RenderTargetBitmap(200, 134, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                                    rtbAislado.Render(imagenReal);
+                                    using var fsAislado = File.Create(Path.Combine(AppContext.BaseDirectory, "blando-rio-npc-aislado.png"));
+                                    var encAislado = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                                    encAislado.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbAislado));
+                                    encAislado.Save(fsAislado);
+                                    Console.WriteLine("BLANDO_RIO_SOLO-AISLADO: captura -> blando-rio-npc-aislado.png (SOLO la Image, render directo)");
+
+                                    // Muestreo de pixel central de ESTE render aislado.
+                                    var convAislado = new System.Windows.Media.Imaging.FormatConvertedBitmap(rtbAislado, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+                                    int strideAislado = convAislado.PixelWidth * 4;
+                                    var bufAislado = new byte[convAislado.PixelHeight * strideAislado];
+                                    convAislado.CopyPixels(bufAislado, strideAislado, 0);
+                                    int offAislado = (67) * strideAislado + (100) * 4;
+                                    Console.WriteLine($"BLANDO_RIO_SOLO-AISLADO: pixel central (100,67) del render aislado -> #{bufAislado[offAislado + 2]:X2}{bufAislado[offAislado + 1]:X2}{bufAislado[offAislado + 0]:X2} alpha={bufAislado[offAislado + 3]}");
+                                    bool aisladoTieneContenido = false;
+                                    for (int i = 3; i < bufAislado.Length; i += 4) if (bufAislado[i] > 10) { aisladoTieneContenido = true; break; }
+                                    Console.WriteLine($"BLANDO_RIO_SOLO-AISLADO: el render aislado tiene algun pixel con alpha>10={aisladoTieneContenido}");
+                                }
+                                catch (Exception exAislado) { Console.WriteLine("BLANDO_RIO_SOLO-AISLADO-EXCEPTION: " + exAislado); }
                             }
                         }
                     }
@@ -2898,6 +3000,80 @@ internal static partial class Program
             }
             catch (Exception ex) { Console.WriteLine("BESTIARY_DPI_SOLO-EXCEPTION: " + ex); }
             Console.WriteLine("DONE (BESTIARY_DPI_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // NPC_ZORDER_SOLO=1 (20-sep-2026, continuacion de la investigacion de iconos de NPC
+        // desaparecidos - pedido explicito del coordinador de no dejarlo en "sin determinar").
+        // Comprueba con el MISMO metodo real ya usado y verificado esta noche para T6 (indice de
+        // hijo dentro del padre comun via VisualTreeHelper, mas fiable que HitTest en este
+        // arnes) si el ItemsControl de Npcs esta de verdad DETRAS de otro hermano opaco, y la
+        // cadena de Opacity efectiva de todos sus ancestros reales.
+        if (Environment.GetEnvironmentVariable("NPC_ZORDER_SOLO") == "1")
+        {
+            try
+            {
+                string ruta = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                if (!File.Exists(ruta)) { Console.WriteLine($"NPC_ZORDER_SOLO: AVISO - falta {ruta}"); Console.WriteLine("DONE (NPC_ZORDER_SOLO)"); Environment.Exit(0); }
+                FijarTamaño(window, 1600, 900);
+                DoEvents();
+                vm.SelectedTabIndex = 4;
+                DoEvents();
+                var tarea = vm.Exploration.LoadFromPathAsync(ruta);
+                while (!tarea.IsCompleted) DoEvents();
+                DoEvents(); DoEvents();
+                var fitMethod = typeof(MainWindow).GetMethod("OnFitToWindowClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                fitMethod?.Invoke(window, [window, new RoutedEventArgs()]);
+                DoEvents(); DoEvents();
+
+                var worldMapImage = window.FindName("WorldMapImage") as Image;
+                var itemsControlNpcs = Descendientes<System.Windows.Controls.ItemsControl>(window).FirstOrDefault(ic => ic.ItemsSource == vm.Exploration.Npcs);
+                Console.WriteLine($"NPC_ZORDER_SOLO: WorldMapImage encontrado={worldMapImage != null}, ItemsControl Npcs encontrado={itemsControlNpcs != null}");
+                if (worldMapImage != null && itemsControlNpcs != null)
+                {
+                    var padreImg = System.Windows.Media.VisualTreeHelper.GetParent(worldMapImage);
+                    var padreNpcs = System.Windows.Media.VisualTreeHelper.GetParent(itemsControlNpcs);
+                    Console.WriteLine($"NPC_ZORDER_SOLO: padre de WorldMapImage={padreImg?.GetType().Name}, padre de ItemsControl Npcs={padreNpcs?.GetType().Name}, mismo padre={ReferenceEquals(padreImg, padreNpcs)}");
+                    if (ReferenceEquals(padreImg, padreNpcs) && padreImg is Panel panelComun)
+                    {
+                        int idxImg = panelComun.Children.IndexOf(worldMapImage);
+                        int idxNpcs = panelComun.Children.IndexOf(itemsControlNpcs);
+                        Console.WriteLine($"NPC_ZORDER_SOLO: indice real en el padre comun -> WorldMapImage={idxImg}, ItemsControl Npcs={idxNpcs} (Npcs deberia pintarse ENCIMA: indice mayor)");
+                        if (idxNpcs < idxImg) Console.WriteLine("FALLO: NPC_ZORDER_SOLO - el ItemsControl de Npcs tiene indice MENOR que el mapa, se pinta DEBAJO");
+                    }
+
+                    // Cadena de Opacity efectiva real: multiplicar el Opacity de CADA ancestro
+                    // real desde el ItemsControl hasta la ventana - un 0.0 en cualquier escalon
+                    // deja todo lo de dentro invisible aunque cada Opacity individual "parezca"
+                    // normal vista aislada.
+                    double opacidadEfectiva = 1.0;
+                    var nodo = (DependencyObject)itemsControlNpcs;
+                    var cadena = new List<string>();
+                    while (nodo != null)
+                    {
+                        if (nodo is UIElement ui)
+                        {
+                            opacidadEfectiva *= ui.Opacity;
+                            cadena.Add($"{nodo.GetType().Name}(Opacity={ui.Opacity:0.##},Visibility={ui.Visibility})");
+                        }
+                        nodo = System.Windows.Media.VisualTreeHelper.GetParent(nodo);
+                    }
+                    Console.WriteLine($"NPC_ZORDER_SOLO: opacidad efectiva real desde ItemsControl Npcs hasta la ventana = {opacidadEfectiva:0.####}");
+                    Console.WriteLine($"NPC_ZORDER_SOLO: cadena real de ancestros -> {string.Join(" < ", cadena)}");
+                }
+
+                DoEvents();
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(window);
+                using var fs = File.Create(Path.Combine(AppContext.BaseDirectory, "npc-zorder-mapa-completo.png"));
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                enc.Save(fs);
+                Console.WriteLine("NPC_ZORDER_SOLO: captura -> npc-zorder-mapa-completo.png");
+            }
+            catch (Exception ex) { Console.WriteLine("NPC_ZORDER_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (NPC_ZORDER_SOLO)");
             Environment.Exit(0);
         }
 
