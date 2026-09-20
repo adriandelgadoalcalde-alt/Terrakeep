@@ -19230,3 +19230,70 @@ T5 ✅, T6 LÍMITE REAL (documentado), T7 ✅, T8 ya estaba hecho ✅, T9 ✅, T
 cerradas y verificadas con evidencia real; 2 documentadas con motivo real para ronda dedicada.
 
 Pasa ahora el catálogo de FUNCIONES (10 ideas, sección "1. Terrakeep"), sin tocar todavía.
+
+### 20-sep-2026 (cierre de la ronda) — Catálogo de ideas Keep (funciones): idea 4 cerrada, resto investigado y documentado
+
+**Idea 4 (Bestiario del mundo con sprites reales) cerrada y comiteada** (`775e3b68`): el panel YA
+existía (básico, solo nombre+muertes) pero tenía un **bug real** que dejaba TODOS los NPCs de
+pueblo invisibles (el único recorrido era `bestiary.Kills`, y los NPCs de pueblo no se "matan" en
+el curso normal del juego - nunca tenían entrada ahí pese a estar en `Sighted`/`Chatted`).
+Arreglado con la unión real de las tres claves. Mejora real añadida: icono por fila cuando existe
+(`NpcNameCatalog.TryGetIdByKey`, nuevo, + `NpcIconResolver`) y pastillas reales de Visto/Hablado.
+De paso, el barrido general AR-LAY (no una prueba propia de esta idea) encontró un bug real de
+**T1**: 4 de los 8 iconos de la rail se recortaban 2px - arreglado (Width 20→24,
+`MainViewModel.RailWidth` 56→60). Verificado con datos reales: 95 especies (20 antes invisibles),
+AR-LAY de 66 elementos recortados a 2 (los 2 restantes ya documentados como previos y ajenos).
+
+**Resto del catálogo de funciones (9 ideas) - investigado antes de decidir, con evidencia real de
+por qué cada una es más grande de lo que su propia cita de "se apoya en X" sugiere:**
+
+- **Idea 1 (Estado del mundo editable)**, **6 (Laboratorio de personajes)**, **9 (Reparar
+  personaje)**: backend citado parcialmente real (`PrefixRulesCatalog` existe; `TplrProbe` NO
+  existe con ese nombre exacto - lo más cercano es `TplrModSummary`, mismo patrón de nombres
+  aproximados ya visto con "CalamitySetBonusInfo"→`CalamityArmorSetCatalog`). Cada una es un
+  panel/flujo nuevo de principio a fin con su propia superficie de UI y lógica de negocio real.
+- **Idea 2 (Calculadora de build)**: pensada por el propio catálogo para vivir en el panel lateral
+  de T3 (aplazado con motivo real esta ronda) - haría falta decidir un sitio alternativo real.
+- **Idea 3 (Partida en vivo)**: depende de sincronización con TerrakeepMod (otro repo), fuera del
+  alcance de una sola sesión en Terrakeep.
+- **Idea 5 (¿Dónde está? global)**: comprobado que `WorldPresenceIndex` (citado como apoyo) es en
+  realidad una funcionalidad YA EXISTENTE pero DISTINTA (censo de un único mundo cargado, para
+  filtrar buscadores - nunca un índice multi-mundo persistente). La idea real exige indexar TODOS
+  los `.wld`/`.plr` del disco, infraestructura que no existe hoy.
+- **Idea 7 (Capa Guía sobre el mapa + exportar PNG con marcadores)**: comprobado que "Exportar a
+  PNG" YA EXISTE (`ExplorationViewModel.ExportMapToPng`) y ya compone el resaltado de minerales,
+  pero NO incluye los marcadores reales (spawn/mazmorra/cofre actual/resultados) - esos viven como
+  elementos WPF independientes (`Canvas` + `ScaleTransform` inverso al zoom para tamaño constante
+  en pantalla), no como parte del bitmap. Replicar su dibujo exacto en el exportador tocaría la
+  MISMA zona de coordenadas de marcadores que ya protagonizó la saga real de AR-MRK (pivote de
+  zoom, versión 3.2.5) - mismo criterio de LÍMITE real que T6.
+- **Idea 8 (Informe y comparador de mundos)**: comprobado que `WorldCreationSummaryBuilder` (citado
+  como apoyo) es en realidad para la VISTA PREVIA DE GENERACIÓN (antes de crear un mundo, a partir
+  de semilla/tamaño/dificultad) - NO resume un `.wld` ya real y guardado. La idea real necesitaría
+  una pieza nueva que sí lea el mundo cargado.
+- **Idea 10 (Vista previa animada)**: `PlayerPreviewRenderer` hoy solo pinta la pose de reposo (sin
+  animación) - un ciclo de andar real exigiría extraer los fotogramas reales de las hojas de
+  sprites de Terraria, trabajo de extracción de datos nuevo (mismo tipo de esfuerzo que ya llevó
+  extraer los 27 iconos de NPC de pueblo).
+
+Ninguna de las 9 se ha tocado en código - quedan documentadas aquí, con evidencia real de qué
+backend citado existe/no existe tal cual, para que la siguiente ronda no tenga que reinvestigar
+desde cero.
+
+### Estado final de la ronda completa (20-sep-2026)
+
+**Catálogo de rediseño visual** (10 ideas de Terrakeep): **8 cerradas y verificadas** (T1, T2, T4,
+T5, T7, T8-ya-estaba-hecho, T9, T10), **2 con LÍMITE REAL documentado** (T3, T6 - motivo real
+concreto, no tamaño).
+
+**Catálogo de ideas Keep** (10 ideas de Terrakeep): **1 cerrada** (idea 4, con 2 bugs reales
+encontrados y arreglados de propina), **9 investigadas y documentadas** con evidencia real de su
+alcance verdadero (mayor que su propia cita de apoyo en varios casos), sin tocar código.
+
+Commits de esta ronda completa: `ca2ac1ba`(T5) `1928a0c1`(T7) `e0a9688c`(T9) `6ddf8f53`(T1)
+`6bf60deb`(T4) `29c152c2`(T2) `775e3b68`(idea4) + bitácora. `dotnet build` de la solución en verde
+(0/0) en cada pieza, `Terrakeep.Core.Tests` 568/568 y `Terrakeep.App.ViewModels.Tests` 491/491 en
+el último punto de control. Todo redesplegado en local (bin\Debug + instalado) tras cada pieza.
+Nunca se ha subido de versión, tocado changelog.json, compilado instalador de distribución, hecho
+`git push` ni `gh release` - todo el trabajo queda comiteado en local para que el usuario lo revise
+antes de publicar nada, tal como se pidió.
