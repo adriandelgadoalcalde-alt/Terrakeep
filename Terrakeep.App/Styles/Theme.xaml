@@ -926,7 +926,24 @@
     </Style>
 
     <!-- Nav rail izquierda - indicador de seleccion = barra vertical de acento, fondo elevado
-         detras del item activo. -->
+         detras del item activo.
+         Catalogo de rediseño visual T1 (20-sep-2026, "rail con iconos, agrupada y colapsable"):
+           - GroupDivider: filete real (BorderBrush0) ANTES del item, mostrado solo cuando el
+             propio TabItem lleva Tag="GroupStart" (mismo mecanismo real ya usado en la app para
+             variantes de Button - Tag="Accent"/"Orange"/"Ghost" - aplicado aqui a agrupar la
+             rail sin tocar el ORDEN real de las 8 pestañas ni AppTab.cs: reordenar de verdad
+             (mover Novedades/Acerca de al pie) tocaria el enum AppTab, los atajos Ctrl+1..8 y
+             docenas de pruebas reales que asumen SelectedTabIndex por posicion - LIMITE real de
+             esta ronda, documentado en bitacora, no en silencio). Con el orden actual
+             (Inicio/Personaje/Builds/Novedades/Exploracion/AcercaDe/Guia/Servidor) el filete real
+             separa Novedades de Builds y Guia de AcercaDe - dos bloques reales en vez del unico
+             bloque plano de antes, sin ningun riesgo de reordenar nada.
+           - Label (el ContentPresenter de Header) se colapsa en WindowSizeClass.Compacto -
+             binding por DataContext.SizeClass del Window ancestro (mismo patron real ya usado en
+             T10/Theme.xaml), asi que el icono/texto que trae CADA TabItem.Header no necesita
+             saber nada de SizeClass el mismo (ContentPresenter no admite DataTrigger propio
+             sobre una propiedad ajena, asi que el colapso vive en el icono+texto de cada Header
+             en MainWindow.xaml, ver el Style NavRailLabel de abajo, no aqui). -->
     <Style x:Key="NavTabItem" TargetType="TabItem">
         <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
         <Setter Property="FontSize" Value="13" />
@@ -935,17 +952,24 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
-                    <Grid Margin="8,2">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="8"
-                                Padding="{TemplateBinding Padding}">
-                            <DockPanel>
-                                <Border x:Name="Indicator" DockPanel.Dock="Left" Width="3" CornerRadius="2"
-                                        Background="{StaticResource AccentBrush}" Margin="-16,-2,10,-2" Opacity="0" />
-                                <ContentPresenter ContentSource="Header" HorizontalAlignment="Left" VerticalAlignment="Center" />
-                            </DockPanel>
-                        </Border>
-                    </Grid>
+                    <StackPanel>
+                        <Border x:Name="GroupDivider" Height="1" Background="{StaticResource BorderBrush0}"
+                                Margin="16,6,16,7" Visibility="Collapsed" />
+                        <Grid Margin="8,2">
+                            <Border x:Name="Bd" Background="Transparent" CornerRadius="8"
+                                    Padding="{TemplateBinding Padding}">
+                                <DockPanel>
+                                    <Border x:Name="Indicator" DockPanel.Dock="Left" Width="3" CornerRadius="2"
+                                            Background="{StaticResource AccentBrush}" Margin="-16,-2,10,-2" Opacity="0" />
+                                    <ContentPresenter ContentSource="Header" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                                </DockPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="Tag" Value="GroupStart">
+                            <Setter TargetName="GroupDivider" Property="Visibility" Value="Visible" />
+                        </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgElevatedBrush}" />
                             <Setter TargetName="Indicator" Property="Opacity" Value="1" />
@@ -966,12 +990,38 @@
         </Setter>
     </Style>
 
+    <!-- Etiqueta de texto de cada item de la rail - el icono (20px) que va SIEMPRE visible vive
+         directo en el Header de cada TabItem en MainWindow.xaml (no hace falta un estilo propio,
+         es un TextBlock suelto sin FontSize de la escala normal). Esta se colapsa en
+         WindowSizeClass.Compacto (rail a 56px, MainViewModel.RailWidth) - queda solo el icono,
+         mismo criterio real que hace independiente del idioma a la rail en ese modo. -->
+    <Style x:Key="NavRailLabel" TargetType="TextBlock">
+        <Setter Property="Margin" Value="10,0,0,0" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding DataContext.SizeClass, RelativeSource={RelativeSource AncestorType=Window}}" Value="Compacto">
+                <Setter Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <Style x:Key="NavTabControl" TargetType="TabControl">
         <Setter Property="TabStripPlacement" Value="Left" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="ItemContainerStyle" Value="{StaticResource NavTabItem}" />
         <Setter Property="Padding" Value="0" />
+        <!-- T1: StackPanel en vez del TabPanel implicito por defecto - a TabStripPlacement=Left
+             el TabPanel de WPF solo aporta logica de solape/prioridad de ancho que aqui no hace
+             falta (la rail nunca compite por ancho horizontal entre pestañas, se apilan en
+             vertical sin mas) y NO admite Width fijo real sin ese mismo comportamiento raro; un
+             StackPanel vertical simple SI respeta Width="{Binding RailWidth}" de abajo tal cual. -->
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Vertical" Width="{Binding RailWidth}" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- Pestañas internas - pastilla real de Terrasavr (fondo alfa-tintado de acento + borde

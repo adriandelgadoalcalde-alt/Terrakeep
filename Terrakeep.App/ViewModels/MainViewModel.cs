@@ -560,6 +560,16 @@ public partial class MainViewModel : ObservableObject
     // (KEEPQA_VITALS_REAL=1) tras el cambio: ALINEADO en las 6 anchuras, 0 avisos.
     public double VitalsStripMaxWidth => SizeClass == WindowSizeClass.Compacto ? 210 : double.PositiveInfinity;
 
+    // Catalogo de rediseño visual T1 (20-sep-2026, "rail con iconos, agrupada y colapsable"):
+    // hasta hoy la rail (RootTabControl, TabStripPlacement=Left) era el UNICO elemento real de
+    // la app que ignoraba WindowSizeClass del todo (regalaba ~110px de ancho fijo al texto en
+    // Compacto, justo cuando "un unico panel a la vez" es la limitacion declarada de ese modo).
+    // double.NaN dice "sin ancho fijo" (WPF vuelve al auto-size normal por contenido) - mismo
+    // patron real de VitalsStripMaxWidth de arriba, pero en NaN en vez de PositiveInfinity porque
+    // TabControl.Width no acepta Infinity (a diferencia de WrapPanel.MaxWidth). 56 = 20 (icono) +
+    // 2*16 (Padding real de NavTabItem) + margen de sobra para el indicador de seleccion.
+    public double RailWidth => SizeClass == WindowSizeClass.Compacto ? 56 : double.NaN;
+
     // Auditoria de Opus, A-4: "Inventario y Almacenes viven en pestañas separadas - nunca se
     // pueden ver a la vez, y por eso arrastrar un objeto del uno al otro es literalmente
     // imposible" (el drop-target del otro contenedor ni siquiera existe en el arbol visual

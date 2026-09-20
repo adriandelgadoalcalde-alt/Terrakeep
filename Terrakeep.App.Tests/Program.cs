@@ -1419,6 +1419,94 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // T1_SOLO=1 (20-sep-2026, catalogo de rediseño visual T1 "rail con iconos, agrupada y
+        // colapsable"): verifica en frio, con la ventana real, que la rail (RootTabControl)
+        // reacciona de verdad a WindowSizeClass (antes era el UNICO elemento que lo ignoraba) -
+        // ancho real MENOR en Compacto que en Normal, etiquetas de texto colapsadas en Compacto
+        // (solo iconos), tooltip con el nombre completo disponible en los dos modos, los 8 iconos
+        // reales rendericen como glifo monocromo (ni tofu/caja vacia ni el problema real ya
+        // documentado de 🔍 en P-4 - "depende de la fuente de emoji instalada, no obedece
+        // Foreground" - medido con GlyphRun/FormattedText, no solo mirando una captura), y los 2
+        // filetes de grupo (Tag=GroupStart, Novedades/Guia) visibles.
+        if (Environment.GetEnvironmentVariable("T1_SOLO") == "1")
+        {
+            try
+            {
+                var rail = window.FindName("RootTabControl") as System.Windows.Controls.TabControl;
+                if (rail == null) { Console.WriteLine("FALLO: T1_SOLO - RootTabControl no encontrado"); }
+                else
+                {
+                    foreach (string idioma in new[] { "es", "en" })
+                    {
+                        vm.Settings.Language = idioma;
+                        foreach (var (w, esperadoSizeClass) in new (double w, WindowSizeClass sc)[] { (1080, WindowSizeClass.Compacto), (1400, WindowSizeClass.Normal) })
+                        {
+                            FijarTamaño(window, w, 800);
+                            DoEvents(); DoEvents();
+                            double anchoRail = rail.ActualWidth;
+                            Console.WriteLine($"T1_SOLO[{idioma}]: a {w}px SizeClass={vm.SizeClass} (esperado {esperadoSizeClass}) -> ancho real de la rail={anchoRail:0}px, RailWidth(VM)={vm.RailWidth}");
+                            if (vm.SizeClass != esperadoSizeClass) Console.WriteLine($"FALLO: T1_SOLO - SizeClass={vm.SizeClass} a {w}px, esperado {esperadoSizeClass}");
+
+                            var etiquetas = Descendientes<TextBlock>(rail).Where(t => t.Style == (System.Windows.Style)window.FindResource("NavRailLabel")).ToList();
+                            int visibles = etiquetas.Count(t => t.Visibility == System.Windows.Visibility.Visible);
+                            Console.WriteLine($"T1_SOLO[{idioma}]: a {w}px -> {etiquetas.Count} etiqueta(s) de texto en la rail, {visibles} visible(s) (esperado 0 en Compacto, 8 en Normal)");
+                            if (esperadoSizeClass == WindowSizeClass.Compacto && visibles != 0) Console.WriteLine($"FALLO: T1_SOLO - {visibles} etiquetas de texto siguen visibles en Compacto (la rail no se colapsa de verdad)");
+                            if (esperadoSizeClass == WindowSizeClass.Normal && visibles != 8) Console.WriteLine($"FALLO: T1_SOLO - solo {visibles}/8 etiquetas visibles en Normal");
+
+                            if (w == 1080)
+                            {
+                                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                                rtb.Render(window);
+                                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                                string shot = Path.Combine(AppContext.BaseDirectory, $"rail-compacta-{idioma}.png");
+                                using (var fs = File.Create(shot)) enc.Save(fs);
+                                Console.WriteLine($"T1_SOLO[{idioma}]: captura real de la rail compacta -> {shot}");
+                            }
+                        }
+                    }
+                    vm.Settings.Language = "es";
+                    FijarTamaño(window, 1600, 900);
+                    DoEvents(); DoEvents();
+
+                    // Los 8 iconos renderizan de verdad (glifo real, no tofu) - FormattedText mide
+                    // el ancho real del glifo tal cual lo pintaria WPF con la fuente real de la
+                    // rail; un caracter sin glifo en la fuente (tofu/caja) SIGUE midiendo algo
+                    // (WPF dibuja un rectangulo de sustitucion), asi que la prueba real no es
+                    // "ancho > 0" sino decodificar el glifo real via GlyphTypeface (ExistsGlyph
+                    // por codepoint) - mismo criterio que el resto del arnes, medir de verdad.
+                    var iconos = Descendientes<TextBlock>(rail).Where(t => t.FontSize == 16 && t.Width == 20).ToList();
+                    Console.WriteLine($"T1_SOLO: {iconos.Count} icono(s) de rail encontrados en el arbol (esperado 8)");
+                    if (iconos.Count != 8) Console.WriteLine($"FALLO: T1_SOLO - {iconos.Count}/8 iconos encontrados en la rail");
+                    // Comprobacion real de tofu: WPF hace fallback automatico de fuente por
+                    // caracter (el TextBlock real en pantalla NO se limita a la primera fuente de
+                    // AppFont) - mirar solo esa primera fuente da falsos FALLO (confirmado en esta
+                    // misma ronda: los 7 dingbats dieron "sin glifo" en Segoe UI Variable Display
+                    // pero la captura real de mas abajo los pinta limpios). "Segoe UI Symbol" es
+                    // la fuente real de fallback de Windows para Miscellaneous Symbols/Dingbats -
+                    // comprobar la CADENA (AppFont + Segoe UI Symbol), no un unico eslabon.
+                    var fuentesFallback = new[] { "Segoe UI Variable Display", "Segoe UI", "Segoe UI Symbol" };
+                    foreach (var icono in iconos)
+                    {
+                        int codepoint = char.ConvertToUtf32(icono.Text, 0);
+                        bool tieneGlifo = fuentesFallback.Any(nombreFuente =>
+                            new System.Windows.Media.Typeface(new System.Windows.Media.FontFamily(nombreFuente), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal)
+                                .TryGetGlyphTypeface(out var gt) && gt.CharacterToGlyphMap.ContainsKey(codepoint));
+                        Console.WriteLine($"T1_SOLO: icono '{icono.Text}' (U+{codepoint:X4}) tiene glifo real en la cadena de fallback={tieneGlifo} (esperado True - si no, tofu/caja vacia)");
+                        if (!tieneGlifo) Console.WriteLine($"FALLO: T1_SOLO - el icono '{icono.Text}' NO tiene glifo real en ninguna fuente real de la cadena (tofu)");
+                    }
+
+                    var divisores = Descendientes<System.Windows.Controls.Border>(rail).Where(b => b.Name == "GroupDivider" && b.Visibility == System.Windows.Visibility.Visible).ToList();
+                    Console.WriteLine($"T1_SOLO: {divisores.Count} filete(s) de grupo visible(s) (esperado 2 - Novedades y Guia)");
+                    if (divisores.Count != 2) Console.WriteLine($"FALLO: T1_SOLO - {divisores.Count}/2 filetes de grupo visibles");
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("T1_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (T1_SOLO)");
+            Environment.Exit(0);
+        }
+
         // T9_SOLO=1 (20-sep-2026, catalogo de rediseño visual T9 "Comparador como vista dividida,
         // no como modal de 1400x900"): verifica en frio, con la ventana real, que el Comparador
         // ya es una pestaña real de Personaje (PersonajeInnerTab.Comparar=7) y no un overlay -

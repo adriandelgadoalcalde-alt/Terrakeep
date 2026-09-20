@@ -2352,7 +2352,14 @@
         <!-- H5-14 (quinta auditoria de Opus): "Ctrl+1...6 para las 6 pestañas raiz, numero
              anunciado en el propio rotulo" - mismo criterio T-H/F1 (tooltip real, no un atajo
              que nadie descubre). -->
-        <TabItem Header="{Binding Loc[tab_home], Mode=OneWay}" ToolTip="Ctrl+1">
+        <TabItem ToolTip="{Binding Loc[tab_home], Mode=OneWay, StringFormat='{}{0} (Ctrl+1)'}"
+                 AutomationProperties.Name="{Binding Loc[tab_home], Mode=OneWay}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="⌂" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[tab_home], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
+                </StackPanel>
+            </TabItem.Header>
             <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="14">
                 <!-- I-c (segunda auditoria de Opus, Fable): MaxWidth dependiente de SizeClass -
                      en una ventana Amplia el WrapPanel de tarjetas de abajo tiene sitio real
@@ -2558,7 +2565,14 @@
         </TabItem>
 
         <!-- ===================== PERSONAJE ===================== -->
-        <TabItem Header="{Binding Loc[tab_character], Mode=OneWay}" ToolTip="Ctrl+2">
+        <TabItem ToolTip="{Binding Loc[tab_character], Mode=OneWay, StringFormat='{}{0} (Ctrl+2)'}"
+                 AutomationProperties.Name="{Binding Loc[tab_character], Mode=OneWay}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="⚔" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[tab_character], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
+                </StackPanel>
+            </TabItem.Header>
             <Grid>
             <DockPanel Margin="14">
                 <!-- Auditoria de Opus, N-1: Cargar/Guardar/nombre de personaje ya viven en la
@@ -4786,7 +4800,14 @@
         </TabItem>
 
         <!-- ===================== BUILDS ===================== -->
-        <TabItem Header="{Binding Loc[tab_builds], Mode=OneWay}" ToolTip="Ctrl+3">
+        <TabItem ToolTip="{Binding Loc[tab_builds], Mode=OneWay, StringFormat='{}{0} (Ctrl+3)'}"
+                 AutomationProperties.Name="{Binding Loc[tab_builds], Mode=OneWay}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="☰" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[tab_builds], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
+                </StackPanel>
+            </TabItem.Header>
             <DockPanel Margin="14">
                 <!-- Bd-d (segunda auditoria de Opus, Fable): "buscador/filtro por clase" - antes
                      una unica lista plana de TODAS las clases de TODAS las etapas de golpe. -->
@@ -4821,7 +4842,14 @@
         <!-- Pedido explicito del usuario (2-sep-2026): "dos pestañas, una con las novedades de
              Terraria vanilla y otra de tModLoader y Calamity Mod" - antes una unica lista
              mezclando las dos cosas bajo la etiqueta generica "JUEGO". -->
-        <TabItem Header="{Binding Loc[tab_whatsnew], Mode=OneWay}" ToolTip="Ctrl+4">
+        <TabItem Tag="GroupStart" ToolTip="{Binding Loc[tab_whatsnew], Mode=OneWay, StringFormat='{}{0} (Ctrl+4)'}"
+                 AutomationProperties.Name="{Binding Loc[tab_whatsnew], Mode=OneWay}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="☆" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[tab_whatsnew], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
+                </StackPanel>
+            </TabItem.Header>
             <DockPanel Margin="14">
                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10">
                     <Run Text="{Binding Loc[whatsnew_intro_1], Mode=OneWay}" />
@@ -4861,7 +4889,14 @@
         </TabItem>
 
         <!-- ===================== EXPLORACION ===================== -->
-        <TabItem Header="{Binding Loc[tab_exploration], Mode=OneWay}" ToolTip="Ctrl+5">
+        <TabItem ToolTip="{Binding Loc[tab_exploration], Mode=OneWay, StringFormat='{}{0} (Ctrl+5)'}"
+                 AutomationProperties.Name="{Binding Loc[tab_exploration], Mode=OneWay}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="⛰" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[tab_exploration], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
+                </StackPanel>
+            </TabItem.Header>
             <DockPanel Margin="14">
                 <!-- Auditoria de redimensionado, R-11/§4.11: endurecimiento SIN defecto medido -
                      un StackPanel horizontal nunca envuelve ni recorta, empuja fuera de la
@@ -6797,7 +6832,14 @@
              que el Changelog reparta en columnas reales con sitio (DetailCardColumns) - pero el
              texto corrido (creditos, intro) NO crece con el contenedor, MaxWidth propio de 680
              para mantener el tope de linea real por legibilidad (pedido explicito del informe). -->
-        <TabItem Header="{Binding Loc[tab_about], Mode=OneWay}" ToolTip="Ctrl+6">
+        <TabItem ToolTip="{Binding Loc[tab_about], Mode=OneWay, StringFormat='{}{0} (Ctrl+6)'}"
+                 AutomationProperties.Name="{Binding Loc[tab_about], Mode=OneWay}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="ℹ" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[tab_about], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
+                </StackPanel>
+            </TabItem.Header>
             <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
                 <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,20">
@@ -6941,7 +6983,14 @@
              Terrakeep.App/ViewModels/GuideViewModel.cs y Terrakeep.Core/Guia/ para la logica real
              y el detalle honesto de que se puede/no se puede comprobar desde un editor de
              ficheros estatico (requisitos "no evaluable" con motivo real, nunca un falso verde). -->
-        <TabItem Header="{Binding Loc[tab_guide], Mode=OneWay}" ToolTip="Ctrl+7">
+        <TabItem Tag="GroupStart" ToolTip="{Binding Loc[tab_guide], Mode=OneWay, StringFormat='{}{0} (Ctrl+7)'}"
+                 AutomationProperties.Name="{Binding Loc[tab_guide], Mode=OneWay}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="☞" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[tab_guide], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
+                </StackPanel>
+            </TabItem.Header>
             <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
                 <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
                     <TextBlock Text="{Binding Loc[tab_guide], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="26" Margin="0,4,0,4" />
@@ -7096,7 +7145,14 @@
         <!-- Fase B (15-sep-2026): hosting real de un servidor de Terraria/tModLoader, motor de
              ServidorKeep.Core reutilizado tal cual (Job Objects, Firewall automatico, mods
              reales) - ver Terrakeep.App/ViewModels/HostingViewModel.cs. -->
-        <TabItem Header="{Binding Loc[tab_hosting], Mode=OneWay}" ToolTip="Ctrl+8">
+        <TabItem ToolTip="{Binding Loc[tab_hosting], Mode=OneWay, StringFormat='{}{0} (Ctrl+8)'}"
+                 AutomationProperties.Name="{Binding Loc[tab_hosting], Mode=OneWay}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="☁" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[tab_hosting], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
+                </StackPanel>
+            </TabItem.Header>
             <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
                 <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
                     <TextBlock Text="{Binding Loc[tab_hosting], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="26" Margin="0,4,0,4" />
