@@ -505,6 +505,23 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) await _viewModel.WorldCompare.LoadBAsync(dialog.FileName);
     }
 
+    // Idea 5 (catalogo de funciones, "¿Donde esta? global, multi-mundo y multi-personaje" -
+    // bitacora.md 20-sep-2026): un resultado de mundo NO selecciona el slot exacto en el mapa
+    // (eso tocaria la zona de marcadores/AR-MRK, fuera de alcance de esta idea) - abre el mundo
+    // real y reutiliza el buscador YA existente de Exploracion (categoria Cofres, "Por lo que
+    // contienen", mismo texto) para que el usuario llegue al objeto con la misma navegacion/
+    // marcado que ya conoce, sin reimplementar nada de eso aqui.
+    private async void OnGlobalWorldHitClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: ViewModels.GlobalWorldHitViewModel hit }) return;
+        _viewModel.IsWhereIsItOpen = false;
+        await LoadWorldAndRestoreView(hit.FilePath);
+        _viewModel.SelectedTabIndex = 4; // Exploracion
+        _viewModel.Exploration.SelectedCategory = ViewModels.WorldSearchCategory.Chests;
+        _viewModel.Exploration.ChestViewMode = 1; // "Por lo que contienen"
+        _viewModel.Exploration.WorldSearchText = hit.ItemName;
+    }
+
     // F-10 (auditoria de Opus vs TEdit, E-10): alterna entre el ancho guardado y 0 - el ancho
     // "de antes de plegar" se recuerda aqui en memoria (no persistido aparte, no hace falta:
     // solo importa dentro de la MISMA sesion, entre un plegado y el siguiente despliegue).

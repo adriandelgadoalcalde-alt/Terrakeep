@@ -2333,6 +2333,71 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
+
+                            <!-- Idea 5 (catalogo de funciones, "¿Donde esta? global, multi-mundo
+                                 y multi-personaje" - bitacora.md 20-sep-2026): busqueda EXPLICITA
+                                 (boton propio, nunca como-tu-escribes - el coste real es cargar
+                                 CADA fichero completo, ver el comentario de cabecera real de
+                                 GlobalSearchViewModel), separada de los resultados locales de
+                                 arriba con su propia linea divisoria. -->
+                            <Border Height="1" Background="{StaticResource BorderBrush0}" Margin="0,10,0,10" />
+                            <Button Content="{Binding Loc[search_global_button], Mode=OneWay}" Tag="Ghost"
+                                    Command="{Binding RunGlobalSearchCommand}" HorizontalAlignment="Stretch" />
+                            <TextBlock Text="{Binding Loc[search_global_running], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                       Margin="0,6,0,0" Visibility="{Binding GlobalSearch.IsSearching, Converter={StaticResource BoolToVis}}" />
+                            <TextBlock Text="{Binding GlobalSearch.Summary}" Style="{StaticResource CaptionText}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                       Visibility="{Binding GlobalSearch.Summary, Converter={StaticResource EmptyToCollapsed}}" />
+
+                            <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0"
+                                          Visibility="{Binding GlobalSearch.CharacterHits.Count, Converter={StaticResource CountToVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Loc[search_global_characters_header], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                               FontWeight="SemiBold" Margin="0,0,0,4" />
+                                    <ItemsControl ItemsSource="{Binding GlobalSearch.CharacterHits}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:GlobalCharacterHitViewModel}">
+                                                <Button Style="{StaticResource RowClickButton}"
+                                                        Command="{Binding DataContext.NavigateToGlobalCharacterHitCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Image Source="{Binding IconPath}" Width="20" Height="20" Stretch="Uniform" Margin="0,0,8,0"
+                                                               RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                                               Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding ItemName}" Style="{StaticResource BodyText}" />
+                                                            <TextBlock Style="{StaticResource CaptionText}">
+                                                                <Run Text="{Binding CharacterName, Mode=OneWay}" />
+                                                                <Run Text="{Binding Loc[label_dash_slot], Mode=OneWay}" />
+                                                                <Run Text="{Binding ContainerLabel, Mode=OneWay}" />
+                                                            </TextBlock>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+
+                            <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0"
+                                          Visibility="{Binding GlobalSearch.WorldHits.Count, Converter={StaticResource CountToVis}}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Loc[search_global_worlds_header], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                               FontWeight="SemiBold" Margin="0,0,0,4" />
+                                    <ItemsControl ItemsSource="{Binding GlobalSearch.WorldHits}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:GlobalWorldHitViewModel}">
+                                                <Button Style="{StaticResource RowClickButton}" Click="OnGlobalWorldHitClick">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding ItemName}" Style="{StaticResource BodyText}" />
+                                                        <TextBlock Text="{Binding WorldTitle}" Style="{StaticResource CaptionText}" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
                         </StackPanel>
                     </Border>
                 </Popup>

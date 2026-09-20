@@ -875,6 +875,9 @@ public partial class MainViewModel : ObservableObject
         // referencia a "Compare" dentro de esas lambdas sea una referencia hacia adelante -
         // el propio compilador lo señala en caliente (CS8602) si se deja para despues.
         Compare = new CompareViewModel(Home.Characters);
+        // Idea 5 (ver el comentario real de GlobalSearch mas abajo): el boton "Buscar en todo"
+        // se deshabilita mientras la busqueda esta en curso (evita relanzarla a medio recorrer).
+        GlobalSearch.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(GlobalSearchViewModel.IsSearching)) RunGlobalSearchCommand.NotifyCanExecuteChanged(); };
         Home.CharacterChosen += path =>
         {
             if (IsDirty && ConfirmDiscardChanges?.Invoke() == false) return;
@@ -1124,8 +1127,37 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<WhereIsItResultViewModel> WhereIsItResults { get; } = [];
     private readonly DispatcherTimer _whereIsItDebounceTimer = new() { Interval = TimeSpan.FromMilliseconds(180) };
 
+    // Idea 5 del catalogo de funciones ("¿Donde esta? global, multi-mundo y multi-personaje" -
+    // bitacora.md 20-sep-2026): generaliza ApplyWhereIsItFilter (solo el personaje abierto) a
+    // TODOS los personajes/mundos ya escaneados - ver el comentario de cabecera real de
+    // GlobalSearchViewModel para el camino real encontrado (Home.Characters/Exploration.Worlds,
+    // nunca un indice persistente que no existe). Vive en el mismo popup que WhereIsIt, un boton
+    // aparte por debajo de los resultados locales (busqueda EXPLICITA, no como-tu-escribes - el
+    // coste real es cargar cada fichero completo).
+    public GlobalSearchViewModel GlobalSearch { get; } = new();
+
+    private bool CanRunGlobalSearch() => !string.IsNullOrWhiteSpace(WhereIsItSearchText) && !GlobalSearch.IsSearching;
+
+    [RelayCommand(CanExecute = nameof(CanRunGlobalSearch))]
+    private async Task RunGlobalSearchAsync() => await GlobalSearch.RunAsync(WhereIsItSearchText, Home.Characters, Exploration.Worlds);
+
+    // Home.OpenCommand YA hace todo lo que hace falta (evento CharacterChosen, cableado mas
+    // arriba en este constructor: confirma descarte de cambios sin guardar, carga el personaje
+    // real y navega a Personaje/Objetos) - este comando solo resuelve la entrada real de
+    // Home.Characters a partir del FilePath del resultado global y cierra el popup.
+    [RelayCommand]
+    private void NavigateToGlobalCharacterHit(GlobalCharacterHitViewModel? hit)
+    {
+        if (hit == null) return;
+        var entry = Home.Characters.FirstOrDefault(c => c.FilePath == hit.FilePath);
+        if (entry == null) return;
+        IsWhereIsItOpen = false;
+        Home.OpenCommand.Execute(entry);
+    }
+
     partial void OnWhereIsItSearchTextChanged(string value)
     {
+        RunGlobalSearchCommand.NotifyCanExecuteChanged();
         _whereIsItDebounceTimer.Stop();
         _whereIsItDebounceTimer.Start();
     }

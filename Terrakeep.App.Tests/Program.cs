@@ -1525,6 +1525,135 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // IDEA5_SOLO=1 (20-sep-2026, catalogo de funciones, idea 5 "¿Donde esta? global,
+        // multi-mundo y multi-personaje" - version real, tercera ronda tras la correccion del
+        // coordinador: el catalogo citaba WorldPresenceIndex como apoyo, que resulto ser el
+        // censo de UN mundo ya cargado, nunca un indice persistente multi-mundo - camino real
+        // encontrado: HomeViewModel.Characters + ExplorationViewModel.Worlds (las MISMAS listas
+        // ya escaneadas que usan los lanzadores de Inicio/Exploracion) recorridas por
+        // GlobalSearchViewModel.
+        //
+        // Verificacion con "aislar la variable": la verdad de referencia se calcula AQUI con un
+        // CharacterFileService/WldReader PROPIOS, nunca reutilizando el resultado del ViewModel
+        // bajo prueba - se elige a proposito un item REAL que el propio arnes encuentra primero
+        // en un personaje real y otro en un mundo real (nunca un nombre adivinado a mano).
+        if (Environment.GetEnvironmentVariable("IDEA5_SOLO") == "1")
+        {
+            try
+            {
+                int waitedHome = 0;
+                while (vm.Home.IsScanning && waitedHome < 100) { DoEvents(); System.Threading.Thread.Sleep(50); waitedHome++; }
+                vm.SelectedTabIndex = 4; // Exploracion (obliga a ExplorationViewModel.Worlds a escanear tambien)
+                DoEvents();
+                int waitedWorlds = 0;
+                while (vm.Exploration.Worlds.Count == 0 && waitedWorlds < 60) { DoEvents(); System.Threading.Thread.Sleep(50); waitedWorlds++; }
+                Console.WriteLine($"IDEA5_SOLO: Home.Characters={vm.Home.Characters.Count}, Exploration.Worlds={vm.Exploration.Worlds.Count}");
+
+                // --- Parte 1: verdad de referencia de UN item real en UN personaje real ---
+                var servicioAparte = new Terrakeep.App.Services.CharacterFileService();
+                string? nombreItemPersonaje = null; string? personajeConItem = null;
+                foreach (var entry in vm.Home.Characters)
+                {
+                    var loaded = servicioAparte.Load(entry.FilePath);
+                    var primerItem = loaded.MergedContainers.Values.SelectMany(items => items).FirstOrDefault(i => !i.IsEmpty && !i.IsCalamity);
+                    if (!primerItem.IsEmpty)
+                    {
+                        nombreItemPersonaje = servicioAparte.VanillaCatalog.GetName(primerItem.Id);
+                        personajeConItem = entry.Name;
+                        break;
+                    }
+                }
+                Console.WriteLine($"IDEA5_SOLO: verdad de referencia (personaje) -> item real='{nombreItemPersonaje}' en personaje '{personajeConItem}'");
+
+                // --- Parte 2: verdad de referencia de UN item real en UN mundo real (cofre) ---
+                string? nombreItemMundo = null; string? mundoConItem = null;
+                foreach (var entry in vm.Exploration.Worlds)
+                {
+                    var world = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(entry.FilePath));
+                    var itemsDelMundo = world.Chests.SelectMany(c => c.Items).Where(i => i.NetId != 0).ToList();
+                    if (itemsDelMundo.Count > 0)
+                    {
+                        nombreItemMundo = servicioAparte.VanillaCatalog.GetName(itemsDelMundo[0].NetId);
+                        mundoConItem = entry.Title;
+                        break;
+                    }
+                }
+                Console.WriteLine($"IDEA5_SOLO: verdad de referencia (mundo) -> item real='{nombreItemMundo}' en mundo '{mundoConItem}'");
+
+                if (nombreItemPersonaje == null && nombreItemMundo == null)
+                {
+                    Console.WriteLine("IDEA5_SOLO: AVISO - ningun personaje/mundo real de prueba tiene ningun item, se omite la comprobacion");
+                }
+                else
+                {
+                    // --- Parte 3: la busqueda global real, sobre el item de personaje ---
+                    if (nombreItemPersonaje != null)
+                    {
+                        var taskP = vm.GlobalSearch.RunAsync(nombreItemPersonaje, vm.Home.Characters, vm.Exploration.Worlds);
+                        while (!taskP.IsCompleted) DoEvents();
+                        DoEvents();
+                        Console.WriteLine($"IDEA5_SOLO: busqueda global de '{nombreItemPersonaje}' -> CharacterHits={vm.GlobalSearch.CharacterHits.Count}, WorldHits={vm.GlobalSearch.WorldHits.Count}, Summary='{vm.GlobalSearch.Summary}'");
+                        bool encontrado = vm.GlobalSearch.CharacterHits.Any(h => h.CharacterName == personajeConItem && h.ItemName == nombreItemPersonaje);
+                        if (!encontrado) Console.WriteLine($"FALLO: IDEA5_SOLO - la busqueda global NO encontro el item real '{nombreItemPersonaje}' en el personaje real '{personajeConItem}'");
+                        else Console.WriteLine($"IDEA5_SOLO: item real de personaje encontrado correctamente en CharacterHits");
+                    }
+
+                    // --- Parte 4: la busqueda global real, sobre el item de mundo ---
+                    if (nombreItemMundo != null)
+                    {
+                        var taskM = vm.GlobalSearch.RunAsync(nombreItemMundo, vm.Home.Characters, vm.Exploration.Worlds);
+                        while (!taskM.IsCompleted) DoEvents();
+                        DoEvents();
+                        Console.WriteLine($"IDEA5_SOLO: busqueda global de '{nombreItemMundo}' -> CharacterHits={vm.GlobalSearch.CharacterHits.Count}, WorldHits={vm.GlobalSearch.WorldHits.Count}");
+                        bool encontradoMundo = vm.GlobalSearch.WorldHits.Any(h => h.WorldTitle == mundoConItem && h.ItemName == nombreItemMundo);
+                        if (!encontradoMundo) Console.WriteLine($"FALLO: IDEA5_SOLO - la busqueda global NO encontro el item real '{nombreItemMundo}' en el mundo real '{mundoConItem}'");
+                        else Console.WriteLine($"IDEA5_SOLO: item real de mundo encontrado correctamente en WorldHits");
+                    }
+
+                    // --- Parte 5: query sin sentido real -> 0 resultados (aisla que el buscador
+                    // no marca todo como coincidencia siempre) ---
+                    var taskVacio = vm.GlobalSearch.RunAsync("zzz-consulta-sin-sentido-real-qwxyz-987", vm.Home.Characters, vm.Exploration.Worlds);
+                    while (!taskVacio.IsCompleted) DoEvents();
+                    Console.WriteLine($"IDEA5_SOLO: query sin sentido -> CharacterHits={vm.GlobalSearch.CharacterHits.Count}, WorldHits={vm.GlobalSearch.WorldHits.Count} (esperado 0, 0)");
+                    if (vm.GlobalSearch.CharacterHits.Count != 0 || vm.GlobalSearch.WorldHits.Count != 0)
+                        Console.WriteLine("FALLO: IDEA5_SOLO - una consulta sin sentido real devuelve resultados (falso positivo)");
+
+                    // --- Parte 6: captura real del popup con resultados globales visibles ---
+                    if (nombreItemPersonaje != null)
+                    {
+                        vm.WhereIsItSearchText = nombreItemPersonaje;
+                        var taskFinal = vm.GlobalSearch.RunAsync(nombreItemPersonaje, vm.Home.Characters, vm.Exploration.Worlds);
+                        while (!taskFinal.IsCompleted) DoEvents();
+                        vm.IsWhereIsItOpen = true;
+                        DoEvents(); DoEvents(); DoEvents();
+                        // El Popup vive en su propia PresentationSource (no es descendiente visual
+                        // de `window`) - RenderTargetBitmap(window) NUNCA lo captura (ver el mismo
+                        // hallazgo real ya documentado por LIBFILT mas arriba en este fichero).
+                        // popup.Child SI es un Visual real con su propio ActualWidth/ActualHeight
+                        // una vez IsOpen=true.
+                        var popupField = typeof(MainWindow).GetField("WhereIsItPopup", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                        var popup = popupField?.GetValue(window) as System.Windows.Controls.Primitives.Popup;
+                        var visualACapturar = popup?.Child is System.Windows.FrameworkElement popupChild && popupChild.ActualWidth > 1
+                            ? (System.Windows.Media.Visual)popupChild
+                            : window;
+                        var anchoReal = visualACapturar is System.Windows.FrameworkElement feReal ? feReal.ActualWidth : window.ActualWidth;
+                        var altoReal = visualACapturar is System.Windows.FrameworkElement feReal2 ? feReal2.ActualHeight : window.ActualHeight;
+                        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)anchoReal, (int)altoReal, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtb.Render(visualACapturar);
+                        var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                        string shot = Path.Combine(AppContext.BaseDirectory, "idea5-busqueda-global.png");
+                        using (var fs = File.Create(shot)) enc.Save(fs);
+                        Console.WriteLine($"IDEA5_SOLO: captura real -> {shot} (popup encontrado={popup?.Child != null}, {anchoReal}x{altoReal})");
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("IDEA5_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (IDEA5_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA8_SOLO=1 (20-sep-2026, catalogo de funciones, idea 8 "Informe y comparador de
         // mundos" - version real, tercera ronda tras la correccion del coordinador: el catalogo
         // citaba WorldCreationSummaryBuilder como apoyo, que resulto ser para la vista previa de
