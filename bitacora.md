@@ -19114,3 +19114,34 @@ siguiente ronda no tenga que releer los catálogos desde cero:
 492/492. `TIPO_SOLO=1` (nuevo) en verde, 0 FALLO. Commit local `ca2ac1ba`, nunca `git push` (la
 decisión de publicar versión nueva es del coordinador). Nada de lo anterior (changelog, versión,
 instalador de distribución) se ha tocado, por encargo explícito.
+
+### 20-sep-2026 (continuación) — el coordinador pide retomar la cadena, sin diferir por tamaño
+
+El coordinador corrigió la primera pasada de esta ronda: "coste Grande" no es motivo para
+aplazar un ítem a otra sesión - es el tamaño esperado de buena parte del trabajo de esta noche
+en toda la familia. Retomada la cadena uno a uno, con ciclo de verificación cerrado por pieza
+(commit real tras cada una, nunca "a medias"):
+
+- **T7 (ToastHost)** y **T9 (Comparador como pestaña)**: cerrados y comiteados, ver el detalle
+  completo de cada uno en sus propios commits (`1928a0c1` y `e0a9688c`) - resumen rápido:
+  - T7 unificó los tres avisos con formas distintas en un único ToastHost abajo a la derecha,
+    corrigió el color del error (CalamityBrush→PinkBrush, reservado para "Calamity") y encontró
+    Y arregló un bug real propio (texto sin envolver, StackPanel horizontal con ancho infinito).
+  - T9 convirtió el Comparador de overlay de 1400x900 a pestaña real de Personaje con cabecera
+    pegajosa, verificado con geometría real (mismo pixel antes/después de desplazar resultados).
+- **T8** seguía confirmado como ya hecho de antes (sin cambio de código, ver la ronda anterior).
+- **T5/T10** seguían en verde de la ronda anterior.
+
+**Obstáculo real del entorno (no bug de código, para no perder tiempo si se repite):** la máquina
+tiene otra build ajena corriendo a la vez (`TerrakeepTrainer` en Release, PID de otra sesión), lo
+que hizo que `dotnet test Terrakeep.App.ViewModels.Tests` (492/491 pruebas) tardara 34 minutos en
+vez de los 4-7 habituales, y que una salida en segundo plano se quedara en 0 bytes hasta el propio
+final (buffer completo sin flush intermedio cuando stdout no es un TTY - normal, no es un cuelgue
+real, confirmado con `Get-Process`/CPU creciendo poco a poco). Lección real: para verificar una
+pieza concreta sin esperar la tirada completa cada vez, usar `--filter` de `dotnet test` con
+`-p:BaseOutputPath=<aparte>` (evita el choque de fichero bloqueado con el `testhost` que sigue
+vivo de la tirada larga) y reservar la tirada completa sin filtrar para el cierre de cada bloque
+de piezas, no para cada commit individual.
+
+Sigue en la cadena: T1, T2, T3, T4, T6 (catálogo visual) y las 10 ideas del catálogo de funciones,
+sin excepción salvo LÍMITE REAL genuino.
