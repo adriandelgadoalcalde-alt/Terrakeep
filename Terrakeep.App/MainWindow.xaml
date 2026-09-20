@@ -2355,7 +2355,7 @@
                  AutomationProperties.Name="{Binding Loc[tab_home], Mode=OneWay}">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="⌂" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="⌂" FontSize="16" Width="24" TextAlignment="Center" />
                     <TextBlock Text="{Binding Loc[tab_home], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
                 </StackPanel>
             </TabItem.Header>
@@ -2588,7 +2588,7 @@
                  AutomationProperties.Name="{Binding Loc[tab_character], Mode=OneWay}">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="⚔" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="⚔" FontSize="16" Width="24" TextAlignment="Center" />
                     <TextBlock Text="{Binding Loc[tab_character], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
                 </StackPanel>
             </TabItem.Header>
@@ -4823,7 +4823,7 @@
                  AutomationProperties.Name="{Binding Loc[tab_builds], Mode=OneWay}">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="☰" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="☰" FontSize="16" Width="24" TextAlignment="Center" />
                     <TextBlock Text="{Binding Loc[tab_builds], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
                 </StackPanel>
             </TabItem.Header>
@@ -4865,7 +4865,7 @@
                  AutomationProperties.Name="{Binding Loc[tab_whatsnew], Mode=OneWay}">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="☆" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="☆" FontSize="16" Width="24" TextAlignment="Center" />
                     <TextBlock Text="{Binding Loc[tab_whatsnew], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
                 </StackPanel>
             </TabItem.Header>
@@ -4912,7 +4912,7 @@
                  AutomationProperties.Name="{Binding Loc[tab_exploration], Mode=OneWay}">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="⛰" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="⛰" FontSize="16" Width="24" TextAlignment="Center" />
                     <TextBlock Text="{Binding Loc[tab_exploration], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
                 </StackPanel>
             </TabItem.Header>
@@ -6008,18 +6008,44 @@
                                 <TextBlock Text="{Binding Exploration.BestiarySummaryText, Mode=OneWay}" Style="{StaticResource CaptionText}"
                                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
                                 <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <!-- Catalogo de ideas Keep, idea 4 (20-sep-2026, "Bestiario del
+                                         mundo con sprites reales"): icono real cuando existe
+                                         (NpcIconResolver, solo los 27 NPCs de pueblo reales -
+                                         Collapsed sin hueco reservado para el resto, nunca un
+                                         icono generico fingido) + pastillas reales de Visto/
+                                         Hablado (BestiaryRowViewModel.Sighted/Chatted, antes
+                                         calculados pero NUNCA pintados en esta fila). -->
                                     <ItemsControl ItemsSource="{Binding Exploration.BestiaryRows}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Grid Margin="0,0,0,3">
+                                                <Grid Margin="0,0,0,4">
                                                     <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" Style="{StaticResource CaptionText}"
-                                                               Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding Kills}" Style="{StaticResource CaptionText}"
-                                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="6,0,0,0" />
+                                                    <Image Grid.Column="0" Source="{Binding IconPath}" Width="18" Height="18" Margin="0,0,6,0"
+                                                           RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                                           Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource CaptionText}"
+                                                               Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                        <Border Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="4,1" Margin="0,0,3,0"
+                                                                Visibility="{Binding Sighted, Converter={StaticResource BoolToVis}}"
+                                                                ToolTip="{Binding Loc[explore_bestiary_sighted], Mode=OneWay}">
+                                                            <TextBlock Text="{Binding Loc[explore_bestiary_sighted_short], Mode=OneWay}"
+                                                                       Style="{StaticResource CaptionText}" FontSize="9.5" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                        </Border>
+                                                        <Border Background="{StaticResource AccentMutedBrush}" CornerRadius="3" Padding="4,1"
+                                                                Visibility="{Binding Chatted, Converter={StaticResource BoolToVis}}"
+                                                                ToolTip="{Binding Loc[explore_bestiary_chatted], Mode=OneWay}">
+                                                            <TextBlock Text="{Binding Loc[explore_bestiary_chatted_short], Mode=OneWay}"
+                                                                       Style="{StaticResource CaptionText}" FontSize="9.5" Foreground="{StaticResource AccentHoverBrush}" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="3" Text="{Binding Kills}" Style="{StaticResource CaptionText}"
+                                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="6,0,0,0" VerticalAlignment="Center" />
                                                 </Grid>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -6855,7 +6881,7 @@
                  AutomationProperties.Name="{Binding Loc[tab_about], Mode=OneWay}">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="ℹ" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="ℹ" FontSize="16" Width="24" TextAlignment="Center" />
                     <TextBlock Text="{Binding Loc[tab_about], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
                 </StackPanel>
             </TabItem.Header>
@@ -7006,7 +7032,7 @@
                  AutomationProperties.Name="{Binding Loc[tab_guide], Mode=OneWay}">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="☞" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="☞" FontSize="16" Width="24" TextAlignment="Center" />
                     <TextBlock Text="{Binding Loc[tab_guide], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
                 </StackPanel>
             </TabItem.Header>
@@ -7168,7 +7194,7 @@
                  AutomationProperties.Name="{Binding Loc[tab_hosting], Mode=OneWay}">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="☁" FontSize="16" Width="20" TextAlignment="Center" />
+                    <TextBlock Text="☁" FontSize="16" Width="24" TextAlignment="Center" />
                     <TextBlock Text="{Binding Loc[tab_hosting], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
                 </StackPanel>
             </TabItem.Header>

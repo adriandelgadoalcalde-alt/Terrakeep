@@ -1664,7 +1664,7 @@ internal static partial class Program
                     // (WPF dibuja un rectangulo de sustitucion), asi que la prueba real no es
                     // "ancho > 0" sino decodificar el glifo real via GlyphTypeface (ExistsGlyph
                     // por codepoint) - mismo criterio que el resto del arnes, medir de verdad.
-                    var iconos = Descendientes<TextBlock>(rail).Where(t => t.FontSize == 16 && t.Width == 20).ToList();
+                    var iconos = Descendientes<TextBlock>(rail).Where(t => t.FontSize == 16 && t.Width == 24).ToList();
                     Console.WriteLine($"T1_SOLO: {iconos.Count} icono(s) de rail encontrados en el arbol (esperado 8)");
                     if (iconos.Count != 8) Console.WriteLine($"FALLO: T1_SOLO - {iconos.Count}/8 iconos encontrados en la rail");
                     // Comprobacion real de tofu: WPF hace fallback automatico de fuente por
@@ -2319,6 +2319,18 @@ internal static partial class Program
                         Console.WriteLine($"WE-04: fila con mas muertes -> '{primera.Name}' x{primera.Kills} (orden descendente esperado)");
                         if (vm.Exploration.BestiaryRows.Count > 1 && vm.Exploration.BestiaryRows[1].Kills > primera.Kills)
                             Console.WriteLine("FALLO: WE-04 - las filas del bestiario no estan ordenadas de mas a menos muertes");
+
+                        // Catalogo de ideas Keep, idea 4 (20-sep-2026): comprobacion real de que
+                        // el arreglo de verdad trae filas con 0 muertes (antes invisibles del
+                        // todo) y de que al menos algunas tienen icono/pastillas reales.
+                        int conCeroMuertes = vm.Exploration.BestiaryRows.Count(r => r.Kills == 0);
+                        int conIcono = vm.Exploration.BestiaryRows.Count(r => r.IconPath != null);
+                        int vistos = vm.Exploration.BestiaryRows.Count(r => r.Sighted);
+                        int hablados = vm.Exploration.BestiaryRows.Count(r => r.Chatted);
+                        Console.WriteLine($"WE-04: filas con 0 muertes (antes invisibles del todo)={conCeroMuertes}, con icono real={conIcono}, Sighted=True={vistos}, Chatted=True={hablados}");
+                        if (conCeroMuertes == 0) Console.WriteLine("FALLO: WE-04 - ninguna fila con 0 muertes (el bug real de filas ausentes puede seguir ahi)");
+                        var ejemploIconoYHablado = vm.Exploration.BestiaryRows.FirstOrDefault(r => r.IconPath != null && r.Chatted);
+                        Console.WriteLine($"WE-04: ejemplo real con icono+Chatted -> {(ejemploIconoYHablado != null ? $"'{ejemploIconoYHablado.Name}' icono={ejemploIconoYHablado.IconPath}" : "NINGUNO encontrado")}");
                     }
 
                     // Capturas reales del panel "Editar mundo" desplegado, dos idiomas, tamaño minimo.

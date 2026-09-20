@@ -51,6 +51,14 @@ public sealed class NpcNameCatalog
     public string? TryGetNameByKey(string bestiaryKey, string language) =>
         _byKey.TryGetValue(bestiaryKey, out var e) ? e.DisplayNameFor(language) : null;
 
+    // Catalogo de ideas Keep, idea 4 (20-sep-2026, "Bestiario del mundo con sprites reales"): el
+    // .wld solo guarda la CLAVE de texto (ver el comentario real de arriba) - para pintar el
+    // sprite real hace falta el id numerico que NpcIconResolver.GetIconPath ya espera. Mismo
+    // criterio de honestidad que TryGetNameByKey: null si la clave es de un NPC modded (Calamity)
+    // que no esta en npc_names.json, nunca un id inventado.
+    public int? TryGetIdByKey(string bestiaryKey) =>
+        _byKey.TryGetValue(bestiaryKey, out var e) ? e.Id : null;
+
     // Punto 4 (advisor Opus, buscador de objetos del mundo): enumeracion real para resolver un
     // texto de busqueda libre contra el nombre de tipo de NPC (no el nombre propio que el
     // jugador le puso, ese vive en WldNpc.GivenName) - mismo motivo que AllTiles/AllWalls de

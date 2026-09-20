@@ -566,9 +566,12 @@ public partial class MainViewModel : ObservableObject
     // Compacto, justo cuando "un unico panel a la vez" es la limitacion declarada de ese modo).
     // double.NaN dice "sin ancho fijo" (WPF vuelve al auto-size normal por contenido) - mismo
     // patron real de VitalsStripMaxWidth de arriba, pero en NaN en vez de PositiveInfinity porque
-    // TabControl.Width no acepta Infinity (a diferencia de WrapPanel.MaxWidth). 56 = 20 (icono) +
-    // 2*16 (Padding real de NavTabItem) + margen de sobra para el indicador de seleccion.
-    public double RailWidth => SizeClass == WindowSizeClass.Compacto ? 56 : double.NaN;
+    // TabControl.Width no acepta Infinity (a diferencia de WrapPanel.MaxWidth).
+    // 60 = 24 (icono, subido de 20 tras el bug real AR-LAY-PERDIDO: 4 de los 8 glifos -⚔/⛰/ℹ/☁-
+    // se recortaban 2px dentro de un Width=20 fijo, encontrado por el barrido general de
+    // maquetacion, no por T1_SOLO propio - ver bitacora.md) + 2*16 (Padding real de NavTabItem) +
+    // margen de sobra para el indicador de seleccion.
+    public double RailWidth => SizeClass == WindowSizeClass.Compacto ? 60 : double.NaN;
 
     // Auditoria de Opus, A-4: "Inventario y Almacenes viven en pestañas separadas - nunca se
     // pueden ver a la vez, y por eso arrastrar un objeto del uno al otro es literalmente

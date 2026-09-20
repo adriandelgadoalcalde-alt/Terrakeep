@@ -274,12 +274,23 @@ public sealed partial class ChestRowViewModel(string variantName, string? chestN
 // Journey's End). Nombre traducido via NpcNameCatalog.TryGetNameByKey cuando la clave es un NPC
 // vanilla conocido; la clave CRUDA tal cual cuando no lo es (NPC modded/Calamity, fuera del
 // catalogo solo-vanilla) - nunca una traduccion inventada, ver el comentario real de WldBestiary.
-public sealed class BestiaryRowViewModel(string bestiaryKey, string? translatedName, int kills, bool sighted, bool chatted)
+public sealed class BestiaryRowViewModel(string bestiaryKey, string? translatedName, int kills, bool sighted, bool chatted, string? iconPath)
 {
+    // Bloque de idioma: esta fila se usa como DataContext dentro de un DataTemplate suelto (no
+    // hereda MainViewModel.Loc por binding normal) - mismo patron real ya usado en
+    // CharacterListEntryViewModel para el mismo caso exacto.
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+
     public string Name { get; } = translatedName ?? bestiaryKey;
     public int Kills { get; } = kills;
     public bool Sighted { get; } = sighted;
     public bool Chatted { get; } = chatted;
+    // Catalogo de ideas Keep, idea 4 (20-sep-2026, "Bestiario del mundo con sprites reales"):
+    // null para la inmensa mayoria de entradas a proposito - NpcIconResolver solo cubre los 27
+    // NPCs de pueblo reales (VanillaTownNpcRoster, los unicos extraidos de Terrasavr original),
+    // nunca un icono generico fingido para el resto (honestidad real, mismo criterio que Name
+    // cayendo a la clave cruda). La UI cae a texto solo cuando es null.
+    public string? IconPath { get; } = iconPath;
 }
 
 // Pestaña "Exploracion" - cargar un .wld real, pintarlo entero (WorldRenderer), listar sus
@@ -655,8 +666,24 @@ public partial class ExplorationViewModel : ObservableObject
         var bestiary = _world?.Bestiary;
         if (bestiary == null) { BestiarySummaryText = "—"; return; }
 
-        foreach (var (key, kills) in bestiary.Kills.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase))
-            BestiaryRows.Add(new BestiaryRowViewModel(key, _npcNames.TryGetNameByKey(key), kills, bestiary.Sighted.Contains(key), bestiary.Chatted.Contains(key)));
+        // BUG REAL encontrado y arreglado (catalogo de ideas Keep, idea 4, 20-sep-2026): antes
+        // solo se recorria bestiary.Kills - cualquier NPC visto/con el que se ha hablado con
+        // CERO muertes faltaba del todo en el panel, pese a tener entrada real en Sighted/
+        // Chatted. Caso real mas visible: los NPCs de pueblo (los UNICOS con sprite real, ver
+        // NpcIconResolver) no se "matan" en el curso normal del juego - Kills[clave] no existe
+        // para ninguno, asi que NINGUN NPC de pueblo aparecia nunca en este panel. Union real de
+        // las tres claves, no solo la de Kills.
+        var claves = new HashSet<string>(bestiary.Kills.Keys, StringComparer.OrdinalIgnoreCase);
+        claves.UnionWith(bestiary.Sighted);
+        claves.UnionWith(bestiary.Chatted);
+
+        foreach (string key in claves.OrderByDescending(k => bestiary.Kills.GetValueOrDefault(k)).ThenBy(k => k, StringComparer.OrdinalIgnoreCase))
+        {
+            int kills = bestiary.Kills.GetValueOrDefault(key);
+            int? npcId = _npcNames.TryGetIdByKey(key);
+            string? iconPath = npcId.HasValue ? Services.NpcIconResolver.GetIconPath(npcId.Value) : null;
+            BestiaryRows.Add(new BestiaryRowViewModel(key, _npcNames.TryGetNameByKey(key), kills, bestiary.Sighted.Contains(key), bestiary.Chatted.Contains(key), iconPath));
+        }
         BestiarySummaryText = LocalizationService.Instance.Format("explore_bestiary_summary", BestiaryRows.Count, bestiary.Kills.Values.Sum());
     }
 
