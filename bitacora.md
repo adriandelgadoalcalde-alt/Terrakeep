@@ -19145,3 +19145,38 @@ de piezas, no para cada commit individual.
 
 Sigue en la cadena: T1, T2, T3, T4, T6 (catálogo visual) y las 10 ideas del catálogo de funciones,
 sin excepción salvo LÍMITE REAL genuino.
+
+### 20-sep-2026 (continuación 2) — T1, T4, T9 cerrados; punto de control limpio
+
+Cerrados y comiteados en esta tanda: **T1** (`6ddf8f53`, rail con iconos/agrupada/colapsable -
+MainViewModel.RailWidth nuevo, NavRailLabel, filetes Tag="GroupStart"), **T9** (`e0a9688c`,
+Comparador de overlay a pestaña de Personaje, cabecera pegajosa verificada con geometria real) y
+**T4** (`6bf60deb`, Inicio como escritorio de partida - parrafo solo primer arranque, tarjeta hero
+con doll 2x + 2 KPI reales, 7 tarjetas de navegacion a 3).
+
+Dos bugs reales de METODOLOGIA propia encontrados y arreglados en la propia verificacion de estas
+piezas (documentados en detalle en cada commit): T1 marcaba 7/8 iconos como "tofu" comprobando
+solo la fuente primaria en vez de la cadena real de fallback de WPF; T4 capturaba la tarjeta hero
+en blanco por no esperar los 180ms reales de la animacion de cambio de pestaña
+(OnRootTabSelectionChanged) - DoEvents() bombea la cola de mensajes pero no avanza el reloj real
+de un Storyboard. Los dos se investigaron antes de dar nada por malo y quedaron con evidencia
+real tras el arreglo (0 FALLO, captura limpia).
+
+LIMITES reales documentados en el propio codigo (no en silencio), para no repetir la
+investigacion en la ronda dedicada que les toque:
+- **T1**: la agrupacion completa en 3 bloques + "Novedades/Acerca de al pie" exige reordenar de
+  verdad las 8 pestañas (enum AppTab, atajos Ctrl+1..8, docenas de pruebas por posicion). Se
+  implemento la agrupacion visual real (2 filetes) sin reordenar nada.
+- **T4**: la 3ª KPI de la tarjeta hero ("etapa de la Guia") y la sugerencia dinamica "Te toca:
+  Plantera" exigen una infraestructura de evaluacion de la Guia para un personaje NO cargado que
+  hoy no existe (GuideViewModel solo evalua el personaje ya cargado); "Tu ultimo mundo" exige un
+  rastreo de "ultimo mundo abierto" que Exploracion tampoco tiene. Se prefirio lo real y honesto
+  (2 KPI reales, 3 tarjetas estaticas) a fingir datos que no existen.
+
+**Punto de control acumulado** (tras T1/T4/T5/T7/T8/T9/T10 juntos): `dotnet build` de la solucion
+en verde (0/0), `Terrakeep.Core.Tests` 568/568, `Terrakeep.App.ViewModels.Tests` 491/491 - sin
+ninguna regresion real entre piezas.
+
+Sigue en la cadena: T2 (cabecera de una fila), T3 (Personaje sin tercer nivel de pestañas) y T6
+(Exploracion a pantalla completa) del catalogo visual - los tres de coste Grande/L restantes -,
+mas las 10 ideas del catalogo de funciones.
