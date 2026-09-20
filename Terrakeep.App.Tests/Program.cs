@@ -1492,7 +1492,7 @@ internal static partial class Program
                 var personajeReal = vm.Home.Characters.FirstOrDefault();
                 if (personajeReal != null) { vm.Home.OpenCommand.Execute(personajeReal); DoEvents(); DoEvents(); }
                 DoEvents(); DoEvents();
-                Console.WriteLine($"IDEA9_SOLO: diagnostico ANTES de forzar nada -> {vm.IllegalPrefixItemNames.Count} objeto(s) con prefijo ilegal (personaje real '{vm.CharacterName}' recien cargado, esperado normalmente 0)");
+                Console.WriteLine($"IDEA9_SOLO: diagnostico ANTES de forzar nada -> {vm.IllegalPrefixIssues.Count} objeto(s) con prefijo ilegal (personaje real '{vm.CharacterName}' recien cargado, esperado normalmente 0)");
 
                 var servicioAparte = new Terrakeep.App.Services.CharacterFileService();
                 var slot = vm.InventoryContainer?.Slots.FirstOrDefault(s => !s.IsEmpty && !s.IsCalamity);
@@ -1510,8 +1510,8 @@ internal static partial class Program
                         slot.SetPrefix(Terrakeep.Core.Model.ItemPrefix.Vanilla(idIlegal.Value));
                         vm.RebuildIllegalPrefixDiagnostics();
                         DoEvents(); DoEvents();
-                        Console.WriteLine($"IDEA9_SOLO: tras forzar el prefijo ilegal real -> IllegalPrefixItemNames=[{string.Join(", ", vm.IllegalPrefixItemNames)}] (esperado que contenga '{slot.DisplayName}')");
-                        if (!vm.IllegalPrefixItemNames.Contains(slot.DisplayName))
+                        Console.WriteLine($"IDEA9_SOLO: tras forzar el prefijo ilegal real -> IllegalPrefixIssues=[{string.Join(", ", vm.IllegalPrefixIssues.Select(i => i.DisplayName))}] (esperado que contenga '{slot.DisplayName}')");
+                        if (!vm.IllegalPrefixIssues.Any(i => i.DisplayName == slot.DisplayName))
                             Console.WriteLine($"FALLO: IDEA9_SOLO - el diagnostico NO detecta el prefijo ilegal real recien forzado sobre '{slot.DisplayName}'");
 
                         // El Expander real vive en la pestaña Version (PersonajeInnerTab.Version=6) -
@@ -1531,9 +1531,29 @@ internal static partial class Program
                         using (var fs = File.Create(shot)) enc.Save(fs);
                         Console.WriteLine($"IDEA9_SOLO: captura real -> {shot}");
 
-                        // Deja el objeto real como estaba (nunca corromper el .plr real de este
-                        // equipo por una prueba - SetPrefix es solo en memoria, no se guarda, pero
-                        // se revierte igual por higiene del resto del arnes que corre despues).
+                        // Idea 9, tercera pasada (20-sep-2026, "arreglo en un clic" confirmado como
+                        // parte real del alcance tras releer el texto literal del catalogo): el
+                        // boton real "Arreglar" tiene que existir en el arbol visual de verdad (no
+                        // solo el ViewModel) y su Command tiene que ser el FixCommand real de ESA
+                        // fila concreta - se localiza por DataContext (RepairIssueViewModel), nunca
+                        // por posicion, para no acertar por casualidad si hubiera mas de una fila.
+                        var botonArreglar = Descendientes<System.Windows.Controls.Button>(window)
+                            .FirstOrDefault(b => b.DataContext is Terrakeep.App.ViewModels.RepairIssueViewModel riv && riv.DisplayName == slot.DisplayName);
+                        Console.WriteLine($"IDEA9_SOLO: boton real 'Arreglar' en el arbol visual={botonArreglar != null}, habilitado={botonArreglar?.IsEnabled}");
+                        if (botonArreglar == null) Console.WriteLine("FALLO: IDEA9_SOLO - no se encuentra el boton real 'Arreglar' de la fila del prefijo ilegal forzado");
+                        else
+                        {
+                            botonArreglar.Command?.Execute(botonArreglar.CommandParameter);
+                            DoEvents(); DoEvents();
+                            Console.WriteLine($"IDEA9_SOLO: tras pulsar 'Arreglar' -> prefijo real del slot={slot.Item.Prefix}, IllegalPrefixIssues.Count={vm.IllegalPrefixIssues.Count} (esperado None y 0)");
+                            if (!slot.Item.Prefix.IsNone || vm.IllegalPrefixIssues.Count != 0)
+                                Console.WriteLine("FALLO: IDEA9_SOLO - el boton real 'Arreglar' no quito el prefijo ilegal real o no actualizo el diagnostico");
+                        }
+
+                        // Red de seguridad final (nunca corromper el .plr real de este equipo por
+                        // una prueba - SetPrefix es solo en memoria, no se guarda de todos modos,
+                        // pero se revierte igual por higiene del resto del arnes que corre despues):
+                        // si el boton de arriba ya lo dejo en None esto es un no-op real.
                         slot.SetPrefix(Terrakeep.Core.Model.ItemPrefix.None);
                         vm.RebuildIllegalPrefixDiagnostics();
                     }

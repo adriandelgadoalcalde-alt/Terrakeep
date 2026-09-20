@@ -736,28 +736,33 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private ContainerViewModel? _coinsContainer;
     [ObservableProperty] private ContainerViewModel? _ammoContainer;
 
-    // Catalogo de ideas Keep, idea 9 ("modo reparar personaje"). Primera pasada (20-sep-2026)
-    // solo cerraba prefijos ilegales y documentaba los otros 3 como limite real; el coordinador
-    // confirmo que el dato ya estaba disponible para los 3 (20-sep-2026, segunda pasada) y pidio
-    // cerrarlos ya - alcance final honesto de los 4 diagnosticos que pide el catalogo:
+    // Catalogo de ideas Keep, idea 9 ("modo reparar personaje"). Tercera pasada (20-sep-2026): el
+    // coordinador pidio releer el texto LITERAL de la idea en el documento real antes de darla
+    // por cerrada - confirmo que "arreglo en un clic" SI es parte real del alcance pedido (no una
+    // añadidura opcional que las dos pasadas anteriores habian descartado). Alcance final
+    // honesto de los 4 diagnosticos que pide el catalogo, cada uno con su arreglo real:
     //
-    // - Prefijos ilegales: PrefixRulesCatalog.IsLegal (ya cerrado, sin cambios en esta pasada).
+    // - Prefijos ilegales: PrefixRulesCatalog.IsLegal. Arreglo: slot.SetPrefix(ItemPrefix.None).
     // - Version desfasada/rebajada: YA estaba implementado antes de esta ronda, solo que en otro
     //   sitio - VersionEditorViewModel.DowngradeWarning/BuildDowngradeWarning, que se dispara solo
     //   al cargar (LoadFrom -> RawVersion = character.Version -> OnRawVersionChanged) y compara
     //   buffs por encima del limite/pesca completadas/equipos misc/objetos del vacio/investigacion/
     //   puntuacion de golf/objetos de loadout contra los umbrales reales de PlrBodySerializer para
-    //   esa version. No se duplica aqui - un segundo diagnostico que hiciera lo mismo dos veces
-    //   seria trabajo repetido, no una pieza nueva.
-    // - Slots fantasma: GhostSlotItemNames de abajo (id vanilla o Calamity que ningun catalogo
-    //   cargado reconoce).
-    // - Duraciones de buff desbordadas y .tplr huerfano/inconsistente: OverflowingBuffNames/
-    //   OrphanTplrFileNames/InconsistentTplrSlotNames de abajo.
+    //   esa version - y su "arreglo en un clic" YA existe tambien (los botones reales de
+    //   VersionEditor.SetVersionCommand). No se duplica aqui - un segundo diagnostico que hiciera
+    //   lo mismo dos veces seria trabajo repetido, no una pieza nueva.
+    // - Slots fantasma: GhostSlotIssues de abajo. Arreglo: slot.ClearCommand (vaciar la ranura).
+    // - Duraciones de buff desbordadas: OverflowingBuffIssues de abajo. Arreglo: recalcula
+    //   DurationSeconds sobre el BuffSlotViewModel real (dispara el mismo clamp real que ya usa
+    //   el editor de la pestaña Buffs al escribir un valor nuevo a mano).
+    // - .tplr huerfano: OrphanTplrIssues de abajo. Arreglo: File.Delete del fichero suelto.
+    // - .tplr inconsistente: InconsistentTplrIssues de abajo. Arreglo:
+    //   CalamityCharacterSync.PruneOutOfRangeTplrSlot (quirurgico, solo esa fila).
     //
-    // "Arreglo en un clic" sigue sin implementarse a proposito (el catalogo pide un arreglo
-    // automatico por cada tipo de problema; esto cubre el diagnostico REAL, que es la mitad
-    // dificil - la accion de arreglo es una decision de UX propia -quitar el prefijo, borrar el
-    // slot, borrar el .tplr huerfano...- que merece su propia verificacion, no una añadidura).
+    // Cada fila es un RepairIssueViewModel (nombre + accion real) en vez de un string suelto -
+    // ver su comentario de cabecera para por que. Cada Fix() vuelve a llamar a
+    // RebuildIllegalPrefixDiagnostics al terminar para que la fila arreglada desaparezca sola,
+    // sin que la UI tenga que saber nada de la logica de cada tipo de problema.
     //
     // Recorre TODOS los contenedores reales (Containers + EquipmentGroup.AllContainers, mismo
     // conjunto exacto que SyncEditsBackToMerged usa para guardar - nunca una lista aparte que
@@ -765,15 +770,15 @@ public partial class MainViewModel : ObservableObject
     // dice que ese objeto concreto NO puede llevar. Objetos de Calamity/Rogue quedan fuera
     // (PrefixRulesCatalog es solo vanilla, "desconocido = no se avisa" en vez de un falso
     // positivo - mismo criterio de honestidad que el resto del proyecto).
-    public ObservableCollection<string> IllegalPrefixItemNames { get; } = [];
+    public ObservableCollection<RepairIssueViewModel> IllegalPrefixIssues { get; } = [];
 
-    // Slots fantasma: mismo barrido de contenedores que IllegalPrefixItemNames, pero mirando si
+    // Slots fantasma: mismo barrido de contenedores que IllegalPrefixIssues, pero mirando si
     // el id del objeto existe de verdad en el catalogo que le corresponde - VanillaItemCatalog.
     // IsKnownId para vanilla, CalamityCatalog.BySyntheticId para Calamity (el mismo corte real
     // que GameItem.IsCalamity, Id >= CalamityIds.ItemIdBase, nunca confunde un catalogo con
     // otro). Un id que no existe en ninguno de los dos es un slot fantasma: dato guardado por
     // otra herramienta, una version del juego/mod mas nueva que este catalogo, o corrupcion.
-    public ObservableCollection<string> GhostSlotItemNames { get; } = [];
+    public ObservableCollection<RepairIssueViewModel> GhostSlotIssues { get; } = [];
 
     // Duraciones de buff desbordadas: Buff.Time negativo (desbordo silencioso de int, ver
     // BuffDurationOverflowTests, H3-12) o por encima del techo real del propio juego para la
@@ -781,7 +786,7 @@ public partial class MainViewModel : ObservableObject
     // editor de la pestaña Buffs ya impone al ESCRIBIR un valor nuevo desde dentro de Terrakeep).
     // Esto cubre el caso que ese limite de escritura no alcanza: un .plr cargado de fuera que YA
     // trae un valor imposible antes de que Terrakeep toque nada.
-    public ObservableCollection<string> OverflowingBuffNames { get; } = [];
+    public ObservableCollection<RepairIssueViewModel> OverflowingBuffIssues { get; } = [];
 
     // .tplr huerfano: ficheros ".tplr" sueltos en la MISMA carpeta que el .plr cargado, sin
     // ningun ".plr" hermano con el mismo nombre - mismo criterio de deteccion que
@@ -789,14 +794,14 @@ public partial class MainViewModel : ObservableObject
     // nombre en la misma carpeta"), aplicado al reves. Sobras de un personaje renombrado o
     // borrado a mano por fuera de Terrakeep (el .plr y el .tplr son dos ficheros independientes
     // en disco, borrar uno no borra el otro).
-    public ObservableCollection<string> OrphanTplrFileNames { get; } = [];
+    public ObservableCollection<RepairIssueViewModel> OrphanTplrIssues { get; } = [];
 
     // .tplr inconsistente: slots que CalamityCharacterSync.MergeListInto descartaria en
     // silencio al guardar por tener un indice fuera del tamaño real del contenedor destino - ver
     // CalamityCharacterSync.FindOutOfRangeTplrSlots, que reutiliza la MISMA condicion exacta que
     // el guardado real usa (nunca una aproximacion aparte que pudiera decir "todo bien" y luego
     // perder datos de verdad al guardar).
-    public ObservableCollection<string> InconsistentTplrSlotNames { get; } = [];
+    public ObservableCollection<RepairIssueViewModel> InconsistentTplrIssues { get; } = [];
 
     // Publico (no privado) a proposito, mismo criterio real que Guide.Refresh() de arriba: el
     // arnes de pruebas (Terrakeep.App.Tests) no tiene InternalsVisibleTo configurado hacia esta
@@ -807,11 +812,11 @@ public partial class MainViewModel : ObservableObject
     // vez de 4 suscripciones identicas a CharacterLoaded.
     public void RebuildIllegalPrefixDiagnostics()
     {
-        IllegalPrefixItemNames.Clear();
-        GhostSlotItemNames.Clear();
-        OverflowingBuffNames.Clear();
-        OrphanTplrFileNames.Clear();
-        InconsistentTplrSlotNames.Clear();
+        IllegalPrefixIssues.Clear();
+        GhostSlotIssues.Clear();
+        OverflowingBuffIssues.Clear();
+        OrphanTplrIssues.Clear();
+        InconsistentTplrIssues.Clear();
         if (_loaded == null) return;
 
         var todosLosContenedores = Containers.AsEnumerable();
@@ -823,26 +828,61 @@ public partial class MainViewModel : ObservableObject
                 if (slot.IsEmpty) continue;
                 if (!slot.Item.IsCalamity && !slot.Item.Prefix.IsNone && !slot.Item.Prefix.IsCalamity
                     && !_service.PrefixRules.IsLegal(slot.Item.Id, slot.Item.Prefix.VanillaId))
-                    IllegalPrefixItemNames.Add(slot.DisplayName);
+                {
+                    IllegalPrefixIssues.Add(new RepairIssueViewModel(slot.DisplayName, () =>
+                    {
+                        slot.SetPrefix(Terrakeep.Core.Model.ItemPrefix.None);
+                        RebuildIllegalPrefixDiagnostics();
+                    }));
+                }
 
                 bool esFantasma = slot.Item.IsCalamity
                     ? _service.CalamityCatalog.BySyntheticId(slot.Item.Id) is null
                     : !_service.VanillaCatalog.IsKnownId(slot.Item.Id);
-                if (esFantasma) GhostSlotItemNames.Add(slot.DisplayName);
+                if (esFantasma)
+                {
+                    GhostSlotIssues.Add(new RepairIssueViewModel(slot.DisplayName, () =>
+                    {
+                        slot.ClearCommand.Execute(null);
+                        RebuildIllegalPrefixDiagnostics();
+                    }));
+                }
             }
         }
 
         int techoBuff = BuffDurationPresets.MaxTicksForVersion(_loaded.Character.Version);
-        foreach (var buff in _loaded.Character.Buffs)
+        for (int i = 0; i < _loaded.Character.Buffs.Count; i++)
         {
+            var buff = _loaded.Character.Buffs[i];
             if (buff.Id == 0) continue;
             if (buff.Time >= 0 && buff.Time <= techoBuff) continue;
             string nombre = buff.Id >= CalamityIds.BuffIdBase
                 ? _service.CalamityBuffCatalog.BySyntheticId(buff.Id)?.DisplayName ?? $"Calamity #{buff.Id}"
                 : _service.VanillaBuffs.GetDisplayName(buff.Id);
-            OverflowingBuffNames.Add(buff.Time < 0
+            string etiqueta = buff.Time < 0
                 ? $"{nombre} (duracion negativa: {buff.Time})"
-                : $"{nombre} (duracion {buff.Time} > techo real {techoBuff})");
+                : $"{nombre} (duracion {buff.Time} > techo real {techoBuff})";
+            int indiceBuff = i; // captura por valor real, no la variable de bucle reutilizada
+            OverflowingBuffIssues.Add(new RepairIssueViewModel(etiqueta, () =>
+            {
+                // BuffsViewModel.Rebuild crea sus BuffSlotViewModel en el MISMO orden que
+                // character.Buffs (ver su comentario real), asi que el indice coincide 1:1 -
+                // nunca una busqueda aparte que pudiera desincronizarse si el orden cambiara.
+                var buffSlot = Buffs.Container?.Slots.ElementAtOrDefault(indiceBuff);
+                if (buffSlot != null)
+                {
+                    // NUNCA reasignar DurationSeconds a partir de si mismo (Buff.Time/60 con un
+                    // Time negativo o gigante trunca al MISMO numero de segundos que ya tenia
+                    // desde la carga - CommunityToolkit.Mvvm compara antes de escribir y, al no
+                    // detectar cambio, ni siquiera dispara OnDurationSecondsChanged, dejando el
+                    // buff intacto). SetDurationTicks si escribe Buff.Time sin ese guardia -
+                    // acotado aqui mismo a [0, techo real], el mismo rango que impone el editor
+                    // de la pestaña Buffs.
+                    int ticksArreglados = Math.Clamp(buffSlot.Buff.Time, 0, techoBuff);
+                    buffSlot.SetDurationTicks(ticksArreglados);
+                }
+                RebuildIllegalPrefixDiagnostics();
+            }));
         }
 
         try
@@ -852,15 +892,26 @@ public partial class MainViewModel : ObservableObject
             {
                 foreach (string rutaTplr in Directory.GetFiles(carpeta, "*.tplr"))
                 {
-                    if (!File.Exists(Path.ChangeExtension(rutaTplr, ".plr")))
-                        OrphanTplrFileNames.Add(Path.GetFileName(rutaTplr));
+                    if (File.Exists(Path.ChangeExtension(rutaTplr, ".plr"))) continue;
+                    OrphanTplrIssues.Add(new RepairIssueViewModel(Path.GetFileName(rutaTplr), () =>
+                    {
+                        try { File.Delete(rutaTplr); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+                        RebuildIllegalPrefixDiagnostics();
+                    }));
                 }
             }
         }
         catch (IOException) { } catch (UnauthorizedAccessException) { }
 
         foreach (var (tplrKey, slotIndex, capacidadReal) in _service.FindOutOfRangeTplrSlots(_loaded))
-            InconsistentTplrSlotNames.Add($"{tplrKey}[{slotIndex}] (capacidad real: {capacidadReal})");
+        {
+            string clave = tplrKey; int slotAEliminar = slotIndex; // captura por valor real
+            InconsistentTplrIssues.Add(new RepairIssueViewModel($"{clave}[{slotAEliminar}] (capacidad real: {capacidadReal})", () =>
+            {
+                _service.PruneOutOfRangeTplrSlot(_loaded, clave, slotAEliminar);
+                RebuildIllegalPrefixDiagnostics();
+            }));
+        }
     }
 
     // Pregunta a Opus sobre el diseño (2-sep-2026): de los ~589px utiles de la pestaña

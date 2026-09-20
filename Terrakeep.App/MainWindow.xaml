@@ -4585,78 +4585,100 @@
                                         Visibility="{Binding VersionEditor.DowngradeWarning, Converter={StaticResource NullToVis}}">
                                     <TextBlock Foreground="White" TextWrapping="Wrap" FontSize="12" Text="{Binding VersionEditor.DowngradeWarning}" />
                                 </Border>
-                                <!-- Catalogo de ideas Keep, idea 9 ("modo reparar personaje", diagnostico SOLO
-                                     LECTURA - ver el comentario real de cabecera en
+                                <!-- Catalogo de ideas Keep, idea 9 ("modo reparar personaje", diagnostico +
+                                     arreglo en un clic - ver el comentario real de cabecera en
                                      MainViewModel.RebuildIllegalPrefixDiagnostics para el alcance final de
                                      los 4 diagnosticos y por que "version desfasada" no tiene panel propio
-                                     aqui, ya vive en VersionEditor.DowngradeWarning justo encima). Objetos
-                                     con un prefijo que PrefixRulesCatalog.IsLegal dice que ese objeto
-                                     concreto no puede llevar - solo puede pasar en un .plr traido de fuera
-                                     de Terrakeep (esta misma app ya impide crear la combinacion desde
-                                     dentro, bug real cerrado el 1-sep-2026). -->
+                                     aqui, ya vive en VersionEditor.DowngradeWarning justo encima, con su
+                                     propio arreglo en un clic real - los botones de version de mas abajo).
+                                     Cada fila es un RepairIssueViewModel real (DisplayName + FixCommand),
+                                     nunca un string suelto - el boton "Arreglar" ejecuta la MISMA accion
+                                     real que el usuario haria a mano desde el slot/la pestaña Buffs/el
+                                     Explorador de archivos, solo que en un clic desde aqui. Objetos con un
+                                     prefijo que PrefixRulesCatalog.IsLegal dice que ese objeto concreto no
+                                     puede llevar - solo puede pasar en un .plr traido de fuera de Terrakeep
+                                     (esta misma app ya impide crear la combinacion desde dentro, bug real
+                                     cerrado el 1-sep-2026). -->
                                 <Expander Header="{Binding Loc[repair_illegal_prefixes], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
                                           Margin="0,0,0,14" IsExpanded="True"
-                                          Visibility="{Binding IllegalPrefixItemNames.Count, Converter={StaticResource CountToVis}}">
+                                          Visibility="{Binding IllegalPrefixIssues.Count, Converter={StaticResource CountToVis}}">
                                     <StackPanel Margin="0,6,0,0">
                                         <TextBlock Text="{Binding Loc[repair_illegal_prefixes_desc], Mode=OneWay}" Style="{StaticResource CaptionText}"
                                                    Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
-                                        <ItemsControl ItemsSource="{Binding IllegalPrefixItemNames}">
+                                        <ItemsControl ItemsSource="{Binding IllegalPrefixIssues}">
                                             <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                <DataTemplate DataType="{x:Type vm:RepairIssueViewModel}">
+                                                    <DockPanel Margin="0,0,0,3">
+                                                        <Button DockPanel.Dock="Right" Content="{Binding DataContext.Loc[action_repair_fix], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                                                Command="{Binding FixCommand}" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                    </DockPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </StackPanel>
                                 </Expander>
-                                <!-- Idea 9, segunda pasada (20-sep-2026): slots fantasma - id vanilla o
-                                     Calamity que ningun catalogo cargado reconoce. -->
+                                <!-- Idea 9: slots fantasma - id vanilla o Calamity que ningun catalogo
+                                     cargado reconoce. -->
                                 <Expander Header="{Binding Loc[repair_ghost_slots], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
                                           Margin="0,0,0,14" IsExpanded="True"
-                                          Visibility="{Binding GhostSlotItemNames.Count, Converter={StaticResource CountToVis}}">
+                                          Visibility="{Binding GhostSlotIssues.Count, Converter={StaticResource CountToVis}}">
                                     <StackPanel Margin="0,6,0,0">
                                         <TextBlock Text="{Binding Loc[repair_ghost_slots_desc], Mode=OneWay}" Style="{StaticResource CaptionText}"
                                                    Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
-                                        <ItemsControl ItemsSource="{Binding GhostSlotItemNames}">
+                                        <ItemsControl ItemsSource="{Binding GhostSlotIssues}">
                                             <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                <DataTemplate DataType="{x:Type vm:RepairIssueViewModel}">
+                                                    <DockPanel Margin="0,0,0,3">
+                                                        <Button DockPanel.Dock="Right" Content="{Binding DataContext.Loc[action_repair_fix], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                                                Command="{Binding FixCommand}" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                    </DockPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </StackPanel>
                                 </Expander>
-                                <!-- Idea 9, segunda pasada: duraciones de buff desbordadas (negativas o por
-                                     encima del techo real del juego para esta version, ver
+                                <!-- Idea 9: duraciones de buff desbordadas (negativas o por encima del techo
+                                     real del juego para esta version, ver
                                      BuffDurationPresets.MaxTicksForVersion). -->
                                 <Expander Header="{Binding Loc[repair_buff_overflow], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
                                           Margin="0,0,0,14" IsExpanded="True"
-                                          Visibility="{Binding OverflowingBuffNames.Count, Converter={StaticResource CountToVis}}">
+                                          Visibility="{Binding OverflowingBuffIssues.Count, Converter={StaticResource CountToVis}}">
                                     <StackPanel Margin="0,6,0,0">
                                         <TextBlock Text="{Binding Loc[repair_buff_overflow_desc], Mode=OneWay}" Style="{StaticResource CaptionText}"
                                                    Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
-                                        <ItemsControl ItemsSource="{Binding OverflowingBuffNames}">
+                                        <ItemsControl ItemsSource="{Binding OverflowingBuffIssues}">
                                             <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                <DataTemplate DataType="{x:Type vm:RepairIssueViewModel}">
+                                                    <DockPanel Margin="0,0,0,3">
+                                                        <Button DockPanel.Dock="Right" Content="{Binding DataContext.Loc[action_repair_fix], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                                                Command="{Binding FixCommand}" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                    </DockPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </StackPanel>
                                 </Expander>
-                                <!-- Idea 9, segunda pasada: .tplr huerfano (fichero .tplr sin .plr hermano en
-                                     la misma carpeta) y .tplr inconsistente (slots que se perderian en
-                                     silencio al guardar, ver CalamityCharacterSync.FindOutOfRangeTplrSlots). -->
+                                <!-- Idea 9: .tplr huerfano (fichero .tplr sin .plr hermano en la misma
+                                     carpeta) y .tplr inconsistente (slots que se perderian en silencio al
+                                     guardar, ver CalamityCharacterSync.FindOutOfRangeTplrSlots/
+                                     PruneOutOfRangeTplrSlot). -->
                                 <Expander Header="{Binding Loc[repair_tplr_orphan], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
                                           Margin="0,0,0,14" IsExpanded="True"
-                                          Visibility="{Binding OrphanTplrFileNames.Count, Converter={StaticResource CountToVis}}">
+                                          Visibility="{Binding OrphanTplrIssues.Count, Converter={StaticResource CountToVis}}">
                                     <StackPanel Margin="0,6,0,0">
                                         <TextBlock Text="{Binding Loc[repair_tplr_orphan_desc], Mode=OneWay}" Style="{StaticResource CaptionText}"
                                                    Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
-                                        <ItemsControl ItemsSource="{Binding OrphanTplrFileNames}">
+                                        <ItemsControl ItemsSource="{Binding OrphanTplrIssues}">
                                             <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                <DataTemplate DataType="{x:Type vm:RepairIssueViewModel}">
+                                                    <DockPanel Margin="0,0,0,3">
+                                                        <Button DockPanel.Dock="Right" Content="{Binding DataContext.Loc[action_repair_fix], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                                                Command="{Binding FixCommand}" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                    </DockPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -4664,14 +4686,18 @@
                                 </Expander>
                                 <Expander Header="{Binding Loc[repair_tplr_inconsistent], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"
                                           Margin="0,0,0,14" IsExpanded="True"
-                                          Visibility="{Binding InconsistentTplrSlotNames.Count, Converter={StaticResource CountToVis}}">
+                                          Visibility="{Binding InconsistentTplrIssues.Count, Converter={StaticResource CountToVis}}">
                                     <StackPanel Margin="0,6,0,0">
                                         <TextBlock Text="{Binding Loc[repair_tplr_inconsistent_desc], Mode=OneWay}" Style="{StaticResource CaptionText}"
                                                    Foreground="{StaticResource OrangeBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
-                                        <ItemsControl ItemsSource="{Binding InconsistentTplrSlotNames}">
+                                        <ItemsControl ItemsSource="{Binding InconsistentTplrIssues}">
                                             <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                                <DataTemplate DataType="{x:Type vm:RepairIssueViewModel}">
+                                                    <DockPanel Margin="0,0,0,3">
+                                                        <Button DockPanel.Dock="Right" Content="{Binding DataContext.Loc[action_repair_fix], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                                                Command="{Binding FixCommand}" Tag="Ghost" Padding="6,3" FontSize="10.5" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                                        <TextBlock Text="{Binding DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center" />
+                                                    </DockPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>

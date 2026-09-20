@@ -35,6 +35,7 @@
   "action_close": "Close",
   "action_duplicate_character": "Duplicate character",
   "action_edit": "Edit",
+  "action_repair_fix": "Fix",
   "action_edit_buff": "Edit buff",
   "action_empty_all": "Empty all",
   "action_empty_container": "Empty container",

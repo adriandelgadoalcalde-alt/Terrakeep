@@ -424,4 +424,50 @@ public class CalamityCharacterSyncTests
 
         Assert.Empty(problemas);
     }
+
+    // Idea 9, tercera pasada (20-sep-2026, "arreglo en un clic" confirmado como parte real del
+    // alcance tras releer el texto literal del catalogo): PruneOutOfRangeTplrSlot quita
+    // EXACTAMENTE la entrada que FindOutOfRangeTplrSlots reporta para ese (tplrKey, slot),
+    // quirurgico - nunca toca una entrada valida que comparta el mismo contenedor.
+    [Fact]
+    public void PruneOutOfRangeTplrSlot_QuitaSoloLaEntradaFueraDeRango_DejaLasValidasIntactas()
+    {
+        var sync = MakeSync(out var catalog);
+        var character = MakeBlankCharacter(); // Inventory: 50 slots reales (0..49)
+
+        var tplrRoot = NbtCompound.Of(
+            ("inventory", new NbtList(NbtTagType.Compound, [
+                NbtCompound.Of(("mod", new NbtString("CalamityMod")), ("name", new NbtString("Abaddon")), ("slot", new NbtShort(60))), // fuera de rango
+                NbtCompound.Of(("mod", new NbtString("CalamityMod")), ("name", new NbtString("Calamity")), ("slot", new NbtShort(5)))  // valida
+            ]))
+        );
+
+        bool quito = sync.PruneOutOfRangeTplrSlot(character, tplrRoot, "inventory", 60);
+
+        Assert.True(quito);
+        Assert.Empty(sync.FindOutOfRangeTplrSlots(character, tplrRoot));
+
+        // La entrada valida (slot 5) sigue ahi - fusiona sin problema.
+        var merged = sync.MergeAll(character, tplrRoot);
+        var calamityId = catalog.ByModAndInternal("CalamityMod", "Calamity")!.SyntheticId;
+        Assert.Equal(calamityId, merged["inventory"][5].Id);
+    }
+
+    [Fact]
+    public void PruneOutOfRangeTplrSlot_SlotQueNoExiste_DevuelveFalseYNoTocaNada()
+    {
+        var sync = MakeSync(out _);
+        var character = MakeBlankCharacter();
+
+        var tplrRoot = NbtCompound.Of(
+            ("inventory", new NbtList(NbtTagType.Compound, [
+                NbtCompound.Of(("mod", new NbtString("CalamityMod")), ("name", new NbtString("Abaddon")), ("slot", new NbtShort(60)))
+            ]))
+        );
+
+        bool quito = sync.PruneOutOfRangeTplrSlot(character, tplrRoot, "inventory", 99); // slot que no esta en la lista
+
+        Assert.False(quito);
+        Assert.Single(sync.FindOutOfRangeTplrSlots(character, tplrRoot)); // la entrada real sigue ahi
+    }
 }

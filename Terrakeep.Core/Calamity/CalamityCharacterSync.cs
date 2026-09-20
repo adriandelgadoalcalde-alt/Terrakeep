@@ -87,6 +87,35 @@ public sealed class CalamityCharacterSync(CalamityItemCodec itemCodec, CalamityB
         return problemas;
     }
 
+    // Idea 9, tercera pasada (20-sep-2026, "arreglo en un clic" confirmado como parte real del
+    // alcance tras releer el texto literal del catalogo): quita del .tplr EXACTAMENTE la entrada
+    // que FindOutOfRangeTplrSlots reporto para (tplrKey, slotAEliminar) - misma condicion real
+    // (slot < 0 || slot >= capacidadReal), nunca una copia paralela que pudiera desincronizarse.
+    // Deliberadamente quirurgico (un slot concreto, no "vaciar todo tplrKey") para que el boton
+    // "Arreglar" de una fila del diagnostico solo toque esa fila, nunca objetos de Calamity
+    // validos que compartan el mismo contenedor. Devuelve true si de verdad quito algo.
+    public bool PruneOutOfRangeTplrSlot(PlrCharacter character, NbtCompound? tplrRoot, string tplrKey, int slotAEliminar)
+    {
+        if (tplrRoot == null) return false;
+        foreach (var (thisKey, getSlots, _) in FlatContainers)
+        {
+            if (thisKey != tplrKey) continue;
+            if (tplrRoot.Get(tplrKey) is not NbtList list) return false;
+            int capacidadReal = getSlots(character).Length;
+            int antes = list.Items.Count;
+            list.Items.RemoveAll(itemTag =>
+            {
+                if (itemTag is not NbtCompound entry) return false;
+                var decoded = itemCodec.Decode(entry);
+                if (decoded == null) return false;
+                var (slot, _) = decoded.Value;
+                return slot == slotAEliminar && (slot < 0 || slot >= capacidadReal);
+            });
+            return list.Items.Count < antes;
+        }
+        return false;
+    }
+
     // Todos los loadouts en el mismo orden que usa la version JS (player.loadouts[0..3]):
     // indice 0 = PrimaryLoadout (mirror de lo puesto), 1..3 = Loadouts[0..2] (los 3 loadouts
     // reales). Si Version<269 (Loadouts vacio) solo existe el mirror - se degrada solo.

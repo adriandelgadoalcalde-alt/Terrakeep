@@ -31,11 +31,16 @@ public sealed class CharacterFileService
 
     // Catalogo de ideas Keep, idea 9 ("modo reparar personaje", bitacora.md 20-sep-2026): _sync
     // es privado a proposito (el orquestador de fusion no debe usarse a mano fuera de Load/Save,
-    // ver el comentario de cabecera de CalamityCharacterSync) - este envoltorio publico expone
-    // SOLO el diagnostico de solo lectura (FindOutOfRangeTplrSlots), nunca los metodos que
-    // tocan de verdad el personaje.
+    // ver el comentario de cabecera de CalamityCharacterSync) - estos envoltorios publicos
+    // exponen SOLO lo que el modo reparar necesita: el diagnostico de solo lectura
+    // (FindOutOfRangeTplrSlots) y, desde la tercera pasada (20-sep-2026, "arreglo en un clic"
+    // confirmado como parte real del alcance), el arreglo quirurgico de una fila concreta
+    // (PruneOutOfRangeTplrSlot) - nunca los metodos de fusion/enmascarado completos.
     public List<(string TplrKey, int Slot, int CapacidadReal)> FindOutOfRangeTplrSlots(LoadedCharacter loaded) =>
         _sync.FindOutOfRangeTplrSlots(loaded.Character, loaded.TplrRoot);
+
+    public bool PruneOutOfRangeTplrSlot(LoadedCharacter loaded, string tplrKey, int slot) =>
+        _sync.PruneOutOfRangeTplrSlot(loaded.Character, loaded.TplrRoot, tplrKey, slot);
 
     public CalamityCatalog CalamityCatalog { get; }
     public CalamityBuffCatalog CalamityBuffCatalog { get; }
