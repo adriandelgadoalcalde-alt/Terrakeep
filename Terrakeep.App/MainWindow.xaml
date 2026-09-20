@@ -2385,7 +2385,14 @@
                          refresca EN VIVO via PropertyChanged("Item[]") al cambiar el idioma en
                          Ajustes, sin reiniciar. ".plr"/".tplr" NO se traducen (son la extension
                          real del archivo, igual en cualquier idioma). -->
-                    <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,10,0,24" MaxWidth="700" HorizontalAlignment="Left">
+                    <!-- Catalogo de rediseño visual T4 (20-sep-2026, "Inicio como escritorio de
+                         partida"): este parrafo (4 lineas explicando que es Terrakeep) solo hace
+                         falta la PRIMERA vez real - a partir de la segunda es puro ruido antes de
+                         llegar a la tarjeta hero/tus personajes. Ver MainWindow.xaml.cs
+                         (Settings.MarkHomeIntroSeen, diferido a DispatcherPriority.Loaded para no
+                         marcarlo "visto" antes de que este mismo frame real se pinte una vez). -->
+                    <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,10,0,24" MaxWidth="700" HorizontalAlignment="Left"
+                               Visibility="{Binding Settings.HasSeenHomeIntro, Converter={StaticResource InverseBoolToVis}}">
                         <Run Text="{Binding Loc[home_description_part1], Mode=OneWay}" />
                         <Run Text=".plr" FontStyle="Italic" />
                         <Run Text="{Binding Loc[home_description_part2], Mode=OneWay}" />
@@ -2414,22 +2421,57 @@
                          destacada de la pantalla, antes que cualquier otra cosa - un clic real,
                          explicito, del usuario (Home.ContinueCommand -> CharacterChosen, mismo
                          camino real que elegir una tarjeta). -->
-                    <Border Background="{StaticResource AccentGradientBrush}" CornerRadius="10" Padding="18,14" Margin="0,0,0,20"
+                    <!-- Catalogo de rediseño visual T4 (20-sep-2026, "tarjeta hero"): el banner
+                         "Continuar con X" crece a tarjeta hero real - doll a 2x (mismo Preview ya
+                         renderizado para la tarjeta pequeña de mas abajo, Home.
+                         LastSessionCharacterEntry, cero trabajo nuevo) + dos KPI reales de la
+                         ultima sesion (Vida maxima, Tiempo jugado - los dos ya venian en el
+                         propio .plr que el escaneo YA lee entero). LIMITE real documentado (no en
+                         silencio): el catalogo pide una TERCERA KPI, "etapa de la Guia" - exige
+                         evaluar el catalogo completo de la Guia (GuideCatalog+GuideEvaluator)
+                         contra un personaje que puede no estar cargado en el editor principal,
+                         una pieza de infraestructura nueva que hoy no existe (GuideViewModel solo
+                         evalua el personaje YA cargado) y merece su propia ronda dedicada con
+                         verificacion propia, no una añadidura de ultima hora aqui. Doll/KPIs solo
+                         se enseñan si el personaje de la ultima sesion SIGUE en la lista escaneada
+                         (LastSessionCharacterEntry != null) - si no, el banner cae al texto solo,
+                         mismo comportamiento de siempre, nunca un dato a medias/inventado. -->
+                    <Border Background="{StaticResource AccentGradientBrush}" CornerRadius="10" Padding="18,16" Margin="0,0,0,20"
                             Effect="{StaticResource CardShadow}" Cursor="Hand"
                             Visibility="{Binding Home.LastSessionCharacterName, Converter={StaticResource NullToVis}}">
                         <Border.InputBindings>
                             <MouseBinding MouseAction="LeftClick" Command="{Binding Home.ContinueCommand}" />
                         </Border.InputBindings>
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="▶" FontSize="16" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                <TextBlock Style="{StaticResource SectionText}" Foreground="White" VerticalAlignment="Center">
-                                    <Run Text="{Binding Loc[home_continue_with], Mode=OneWay}" /><Run Text="{Binding Home.LastSessionCharacterName, Mode=OneWay}" FontWeight="Bold" />
-                                </TextBlock>
+                        <DockPanel>
+                            <Image DockPanel.Dock="Left" Source="{Binding Home.LastSessionCharacterEntry.Preview}" Width="104" Height="145.6"
+                                   Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" Margin="0,0,18,0" VerticalAlignment="Center"
+                                   Visibility="{Binding Home.LastSessionCharacterEntry, Converter={StaticResource NullToVis}}" />
+                            <StackPanel VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="▶" FontSize="16" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                    <TextBlock Style="{StaticResource SectionText}" FontSize="17" Foreground="White" VerticalAlignment="Center">
+                                        <Run Text="{Binding Loc[home_continue_with], Mode=OneWay}" /><Run Text="{Binding Home.LastSessionCharacterName, Mode=OneWay}" FontWeight="Bold" />
+                                    </TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="26,12,0,0"
+                                            Visibility="{Binding Home.LastSessionCharacterEntry, Converter={StaticResource NullToVis}}">
+                                    <Border Background="#26FFFFFF" CornerRadius="99" Padding="10,4" Margin="0,0,8,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="♥" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                            <TextBlock Text="{Binding Home.LastSessionCharacterEntry.HealthMax, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Background="#26FFFFFF" CornerRadius="99" Padding="10,4">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="◷" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                            <TextBlock Text="{Binding Home.LastSessionCharacterEntry.PlayTimeText, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Home.LastSessionStalenessWarning}" Foreground="White" FontSize="11" TextWrapping="Wrap" Margin="26,8,0,0"
+                                           Visibility="{Binding Home.LastSessionStalenessWarning, Converter={StaticResource NullToVis}}" />
                             </StackPanel>
-                            <TextBlock Text="{Binding Home.LastSessionStalenessWarning}" Foreground="White" FontSize="11" TextWrapping="Wrap" Margin="26,6,0,0"
-                                       Visibility="{Binding Home.LastSessionStalenessWarning, Converter={StaticResource NullToVis}}" />
-                        </StackPanel>
+                        </DockPanel>
                     </Border>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,26" Visibility="{Binding Home.IsScanning, Converter={StaticResource BoolToVis}}">
@@ -2489,9 +2531,26 @@
 
                     <TextBlock Text="{Binding Loc[home_more_actions], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,12" />
                     <!-- I-c/F2 (segunda auditoria de Opus, Fable): MinHeight en vez de Height fijo
-                         en las 5 tarjetas de abajo - un titulo/descripcion real que necesite mas
-                         de las 2 lineas habituales (ej. una traduccion mas larga) hace crecer la
-                         tarjeta en vez de recortarse contra un alto fijo. -->
+                         en las tarjetas de abajo - un titulo/descripcion real que necesite mas de
+                         las 2 lineas habituales (ej. una traduccion mas larga) hace crecer la
+                         tarjeta en vez de recortarse contra un alto fijo.
+                         Catalogo de rediseño visual T4 (20-sep-2026): 7 tarjetas del mismo peso
+                         real → 3. Antes de esta ronda repetian exactamente lo que la rail (T1,
+                         misma ronda) ya ofrece siempre visible - "el Inicio deja de repetir lo
+                         que ya dice la rail" es el motivo real que da el propio catalogo. Se
+                         quedan las 3 acciones de "hacer algo" (Libreria/Builds/Exploracion);
+                         Novedades/Acerca de/Guia/Servidor siguen alcanzables de siempre por la
+                         rail, ahora agrupada e iconizada (T1) - nunca menos accesibles que antes,
+                         solo sin la tarjeta duplicada aqui.
+                         LIMITE real documentado (no en silencio): el catalogo pide 3 sugerencias
+                         DINAMICAS ("Te toca: Plantera", "Builds de tu clase", "Tu ultimo mundo") -
+                         la primera exige la misma infraestructura de evaluacion de la Guia que la
+                         KPI que falta en la tarjeta hero de arriba (ver ese comentario), y la
+                         tercera exige un "ultimo mundo abierto" que Exploracion no rastrea
+                         todavia (ningun campo real lo guarda hoy). Se implementan las 3 tarjetas
+                         reales y honestas de hoy en vez de fingir personalizacion con datos que
+                         no existen; la version dinamica completa queda para una ronda dedicada
+                         aparte, con su propia verificacion. -->
                     <ItemsControl>
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -2517,45 +2576,6 @@
                             <StackPanel>
                                 <TextBlock Text="{Binding Loc[home_card_exploration_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
                                 <TextBlock Text="{Binding Loc[home_card_exploration_desc], Mode=OneWay}"
-                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
-                            </StackPanel>
-                        </Button>
-                        <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
-                                Tag="Teal" Command="{Binding GoToTabCommand}" CommandParameter="Novedades">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Loc[home_card_whatsnew_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
-                                <TextBlock Text="{Binding Loc[home_card_whatsnew_desc], Mode=OneWay}"
-                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
-                            </StackPanel>
-                        </Button>
-                        <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
-                                Tag="Orange" Command="{Binding GoToTabCommand}" CommandParameter="AcercaDe">
-                            <!-- N-c (segunda auditoria de Opus, Fable): esta tarjeta decia "¡Sobre esta
-                                 versión!" pero llevaba a una pestaña con la cabecera "Acerca de" - dos
-                                 nombres distintos para el MISMO destino. Se unifica con el nombre real de
-                                 la pestaña (la cabecera es la fuente de verdad); "¡Sobre esta versión!"
-                                 sigue vivo dentro, como titulo real de la subseccion del changelog. -->
-                            <StackPanel>
-                                <TextBlock Text="{Binding Loc[home_card_about_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
-                                <TextBlock Text="{Binding Loc[home_card_about_desc], Mode=OneWay}"
-                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
-                            </StackPanel>
-                        </Button>
-                        <!-- Fase B (15-sep-2026): tarjetas de Inicio para las dos pestañas nuevas -
-                             mismo patron real que las 5 de arriba (Loc[...] + GoToTabCommand). -->
-                        <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
-                                Tag="Pink" Command="{Binding GoToTabCommand}" CommandParameter="Guia">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Loc[home_card_guide_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
-                                <TextBlock Text="{Binding Loc[home_card_guide_desc], Mode=OneWay}"
-                                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
-                            </StackPanel>
-                        </Button>
-                        <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
-                                Tag="Teal" Command="{Binding GoToTabCommand}" CommandParameter="Hosting">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Loc[home_card_hosting_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
-                                <TextBlock Text="{Binding Loc[home_card_hosting_desc], Mode=OneWay}"
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
                             </StackPanel>
                         </Button>

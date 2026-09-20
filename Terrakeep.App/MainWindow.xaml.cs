@@ -54,6 +54,17 @@ public partial class MainWindow : Window
         // reescanean aqui, ahora que si lo estan, para que la primera pantalla real ya las
         // incluya.
         _viewModel.Settings.LoadFromDisk();
+        // T4 (catalogo de rediseño visual, 20-sep-2026): mismo motivo real que el comentario de
+        // arriba - marcar "ya visto" toca Settings.Persist(), que escribe a disco de verdad, asi
+        // que vive aqui (la View) y no en el constructor de MainViewModel, por el mismo riesgo
+        // real de contaminar los tests headless.
+        // BUG REAL encontrado en esta misma ronda (investigado antes de escribir el commit, no
+        // en produccion): marcarlo aqui EN LINEA, antes de que la ventana real se pinte una sola
+        // vez, dejaba HasSeenHomeIntro ya en true para cuando WPF evalua el binding de
+        // Visibility del parrafo por primera vez - el parrafo NUNCA llegaria a verse ni la
+        // primerisima vez. Dispatcher.BeginInvoke con prioridad Loaded difiere el marcado hasta
+        // DESPUES de que este frame real ya se haya pintado con el valor viejo (false).
+        Dispatcher.BeginInvoke(_viewModel.Settings.MarkHomeIntroSeen, System.Windows.Threading.DispatcherPriority.Loaded);
         // BK-4 (13-sep-2026): el cupo de copias es POR personaje, asi que una carpeta de
         // historial de un personaje que ya no existe no la retiraba nadie nunca - medido en esta
         // maquina antes de arreglarlo: 2.765 carpetas y 28 MB, casi todo de rutas temporales de

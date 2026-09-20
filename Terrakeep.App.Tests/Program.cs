@@ -1419,6 +1419,110 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // T4_SOLO=1 (20-sep-2026, catalogo de rediseño visual T4 "Inicio como escritorio de
+        // partida"): verifica en frio, con la ventana real, el parrafo de "solo primer arranque",
+        // la tarjeta hero (doll 2x + KPIs Vida maxima/Tiempo jugado) y que solo quedan 3 tarjetas
+        // de "Que mas puedes hacer" (antes 7).
+        if (Environment.GetEnvironmentVariable("T4_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 0; // Inicio
+                FijarTamaño(window, 1080, 900);
+                DoEvents(); DoEvents();
+
+                // Parrafo de "solo primer arranque": se aisla la variable a mano (mismo criterio
+                // real de "verificar aislando la variable") en vez de depender del estado
+                // acumulado real de settings.json en este equipo de otras tiradas del arnes.
+                vm.Settings.HasSeenHomeIntro = false;
+                DoEvents(); DoEvents();
+                var candidatosIntro = Descendientes<TextBlock>(window).Where(t => t.Text.Contains("Editor de personajes de Terraria")).ToList();
+                Console.WriteLine($"T4_SOLO: {candidatosIntro.Count} TextBlock(s) reales con el texto del parrafo de bienvenida (esperado 1 - si hay mas de uno, el segundo puede ser de otra pestaña ya realizada, ej. Acerca de)");
+                var parrafoIntro = candidatosIntro.FirstOrDefault(t => t.GetBindingExpression(System.Windows.UIElement.VisibilityProperty) != null) ?? candidatosIntro.FirstOrDefault();
+                bool visibleAntes = parrafoIntro != null && parrafoIntro.Visibility == System.Windows.Visibility.Visible;
+                Console.WriteLine($"T4_SOLO: con HasSeenHomeIntro=False -> parrafo de bienvenida encontrado={parrafoIntro != null}, visible={visibleAntes} (esperado True)");
+                if (!visibleAntes) Console.WriteLine("FALLO: T4_SOLO - el parrafo de bienvenida no se ve con HasSeenHomeIntro=False");
+
+                vm.Settings.HasSeenHomeIntro = true;
+                DoEvents(); DoEvents();
+                bool visibleDespues = parrafoIntro != null && parrafoIntro.Visibility == System.Windows.Visibility.Visible;
+                Console.WriteLine($"T4_SOLO: con HasSeenHomeIntro=True -> parrafo visible={visibleDespues} (esperado False)");
+                if (visibleDespues) Console.WriteLine("FALLO: T4_SOLO - el parrafo de bienvenida sigue visible tras marcarlo visto");
+
+                // Tarjeta hero: el personaje YA cargado en este arnes (UIA-Test, mas arriba en
+                // Main()) vive en una carpeta de prueba aislada, fuera de los directorios reales
+                // que escanea Inicio - session.json SI lo recordaria (LastSessionCharacterName se
+                // pondria bien), pero LastSessionCharacterEntry seguiria null a proposito (no
+                // esta en Home.Characters, mismo criterio real de "nunca un dato a medias" del
+                // comentario de MainWindow.xaml). Para probar la tarjeta hero de verdad hace
+                // falta que la "ultima sesion" sea un personaje que SI este en la lista escaneada
+                // - se abre uno real de Home.Characters (accion real de usuario, Home.
+                // OpenCommand) y se vuelve a mirar, sin inventar ningun dato sintetico.
+                if (vm.Home.Characters.Count > 0)
+                {
+                    vm.Home.OpenCommand.Execute(vm.Home.Characters[0]);
+                    DoEvents(); DoEvents();
+                    vm.RestoreSession();
+                    // Abrir un personaje real salta a Personaje (comportamiento real de siempre,
+                    // esperado) - hay que volver a Inicio para poder mirar la tarjeta hero, el
+                    // dato en si (Home.LastSessionCharacterEntry) no depende de que pestaña este
+                    // activa.
+                    vm.SelectedTabIndex = 0;
+                    // BUG REAL DE METODOLOGIA encontrado y arreglado en esta misma verificacion
+                    // (investigado antes de dar nada por malo): la primera captura salio EN
+                    // BLANCO pese a que los propios checks de mas abajo (IsVisible=True) daban
+                    // bien - MainWindow.xaml.cs anima cada cambio de pestaña principal con un
+                    // fade+slide real de 180ms (OnRootTabSelectionChanged), y DoEvents() solo
+                    // bombea la cola de mensajes, nunca avanza el reloj real que mueve un
+                    // Storyboard. Sin esperar el tiempo real de la animacion, la captura llegaba
+                    // con el contenido todavia a Opacity/TranslateY intermedios - IsVisible sigue
+                    // en True durante toda la animacion (no es lo mismo que "ya se ve"). Mismo
+                    // patron real ya usado en el resto del arnes (Thread.Sleep+DoEvents).
+                    for (int i = 0; i < 6; i++) { DoEvents(); System.Threading.Thread.Sleep(50); }
+                }
+                var entry = vm.Home.LastSessionCharacterEntry;
+                Console.WriteLine($"T4_SOLO: Home.LastSessionCharacterEntry={(entry != null ? entry.Name : "null")} (HealthMax={entry?.HealthMax}, PlayTimeText='{entry?.PlayTimeText}')");
+                if (entry != null)
+                {
+                    var dollHero = Descendientes<Image>(window).FirstOrDefault(i => i.Width == 104 && i.IsVisible);
+                    Console.WriteLine($"T4_SOLO: doll hero (104x145.6) en pantalla={dollHero != null} (esperado True)");
+                    if (dollHero == null) Console.WriteLine("FALLO: T4_SOLO - el doll a 2x de la tarjeta hero no esta en pantalla con un LastSessionCharacterEntry real");
+                    var chipVida = Descendientes<TextBlock>(window).FirstOrDefault(t => t.Text == entry.HealthMax.ToString() && t.IsVisible);
+                    var chipTiempo = Descendientes<TextBlock>(window).FirstOrDefault(t => t.Text == entry.PlayTimeText && t.IsVisible);
+                    Console.WriteLine($"T4_SOLO: chip Vida maxima ({entry.HealthMax}) en pantalla={chipVida != null}, chip Tiempo jugado ('{entry.PlayTimeText}') en pantalla={chipTiempo != null} (esperado True los dos)");
+                    if (chipVida == null) Console.WriteLine("FALLO: T4_SOLO - el KPI de Vida maxima no esta en pantalla");
+                    if (chipTiempo == null) Console.WriteLine("FALLO: T4_SOLO - el KPI de Tiempo jugado no esta en pantalla");
+                }
+                else Console.WriteLine("T4_SOLO: sin LastSessionCharacterEntry real en este equipo - se omite la comprobacion de la tarjeta hero (dato real, no sintetico)");
+
+                // Solo 3 tarjetas reales de "Que mas puedes hacer" (antes 7).
+                var botonesHome = Descendientes<System.Windows.Controls.Button>(window)
+                    .Where(b => b.Style == (System.Windows.Style)window.FindResource("NavCardButton") && b.IsVisible
+                        && b.CommandParameter is string p && (p == "Libreria" || p == "Builds" || p == "Exploracion" || p == "Novedades" || p == "AcercaDe" || p == "Guia" || p == "Hosting"))
+                    .Select(b => (string)b.CommandParameter).Distinct().ToList();
+                Console.WriteLine($"T4_SOLO: tarjetas reales de 'Que mas puedes hacer' en Inicio = [{string.Join(", ", botonesHome)}] (esperado exactamente Libreria, Builds, Exploracion - 3)");
+                if (botonesHome.Count != 3 || !botonesHome.Contains("Libreria") || !botonesHome.Contains("Builds") || !botonesHome.Contains("Exploracion"))
+                    Console.WriteLine($"FALLO: T4_SOLO - se esperaban exactamente 3 tarjetas (Libreria/Builds/Exploracion), hay {botonesHome.Count}: [{string.Join(", ", botonesHome)}]");
+
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(window);
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                string shot = Path.Combine(AppContext.BaseDirectory, "inicio-t4-hero.png");
+                using (var fs = File.Create(shot)) enc.Save(fs);
+                Console.WriteLine($"T4_SOLO: captura real -> {shot}");
+
+                // Deja el equipo real en el estado normal esperado tras un primer arranque de
+                // verdad (mismo criterio de siempre: los tests de este arnes leen/escriben el
+                // settings.json REAL de este equipo, no uno sintetico aparte).
+                vm.Settings.HasSeenHomeIntro = true;
+            }
+            catch (Exception ex) { Console.WriteLine("T4_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (T4_SOLO)");
+            Environment.Exit(0);
+        }
+
         // T1_SOLO=1 (20-sep-2026, catalogo de rediseño visual T1 "rail con iconos, agrupada y
         // colapsable"): verifica en frio, con la ventana real, que la rail (RootTabControl)
         // reacciona de verdad a WindowSizeClass (antes era el UNICO elemento que lo ignoraba) -

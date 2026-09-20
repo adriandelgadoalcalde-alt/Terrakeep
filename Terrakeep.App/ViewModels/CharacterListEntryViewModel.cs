@@ -61,6 +61,14 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     // comparando FilePath contra el personaje realmente cargado en MainViewModel.
     [ObservableProperty] private bool _isCurrent;
 
+    // Catalogo de rediseño visual T4 (20-sep-2026, "Inicio como escritorio de partida"): dos de
+    // los KPI reales de la tarjeta hero de "Continuar" (la tercera es la etapa de la Guia, que
+    // vive aparte en HomeViewModel.LastSessionGuideStage - necesita el catalogo completo de la
+    // Guia, no solo el .plr). Vida maxima y tiempo jugado SI son datos del propio character que
+    // este constructor YA recibe entero, sin ninguna lectura ni calculo extra.
+    public int HealthMax { get; }
+    public string PlayTimeText { get; }
+
     public CharacterListEntryViewModel(string plrPath, PlrCharacter character, bool isTModLoader,
         TplrModSummary? tplr, DateTime lastModifiedUtc, EquipmentAppearanceResolver equipmentAppearance)
     {
@@ -75,6 +83,13 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         IsCalamity = tplr?.HasCalamityContent == true;
         _usedMods = tplr?.UsedMods;
         LastModifiedText = lastModifiedUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
+        HealthMax = character.HealthMax;
+        // Misma formula real ya usada en BackupHistoryViewModel.HorasJugadas/CompareViewModel.
+        // FormatPlayTime (PlayTimeLow/High son dos UInt32 que juntos forman los ticks reales de
+        // .NET).
+        long totalTicksJugados = ((long)character.PlayTimeHigh << 32) | character.PlayTimeLow;
+        var tiempoJugado = TimeSpan.FromTicks(totalTicksJugados);
+        PlayTimeText = tiempoJugado.TotalHours >= 1 ? $"{(int)tiempoJugado.TotalHours}h {tiempoJugado.Minutes}min" : $"{tiempoJugado.Minutes}min";
 
         PlayerPreviewRenderer.Tint T(byte[] c) => new(c[0], c[1], c[2]);
         var colors = new PlayerPreviewRenderer.PlayerColors(

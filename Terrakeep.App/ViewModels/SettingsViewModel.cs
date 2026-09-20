@@ -43,6 +43,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     // CompactGapConverter (Converters/DensityConverters.cs) y los 4 usos reales de
     // SlotGridPanel en MainWindow.xaml. Nunca activado por defecto.
     [ObservableProperty] private bool _isCompactMode;
+    // T4 (20-sep-2026): ver el comentario real de TerrakeepSettings.HasSeenHomeIntro.
+    [ObservableProperty] private bool _hasSeenHomeIntro;
 
     // Arranca en modo "solo memoria" - Persist() (mas abajo) no toca disco hasta que
     // LoadFromDisk() lo activa explicitamente. Un test que construye "new MainViewModel()"
@@ -74,8 +76,20 @@ public sealed partial class SettingsViewModel : ObservableObject
         IsWindowSizePinned = WindowPlacementService.IsPinned();
         Language = _settings.Language;
         IsCompactMode = _settings.IsCompactMode;
+        HasSeenHomeIntro = _settings.HasSeenHomeIntro;
         ApplyToServices();
         _suppressPersist = false; // a partir de aqui, cualquier cambio real del usuario SI se persiste
+    }
+
+    // T4 (20-sep-2026): llamado UNA vez desde MainWindow.xaml.cs justo tras LoadFromDisk() - si
+    // esta es la primera vez real (el fichero no lo tenia a true todavia), lo marca y persiste
+    // ya en ESTA sesion, para que el parrafo de bienvenida de Inicio no vuelva a aparecer ni
+    // reabriendo la app en el mismo minuto. Si ya estaba visto, no hace nada (evita una escritura
+    // a disco de sobra en el caso normal, que es la inmensa mayoria de arranques).
+    public void MarkHomeIntroSeen()
+    {
+        if (HasSeenHomeIntro) return;
+        HasSeenHomeIntro = true;
     }
 
     // CharacterFileService.ExtraPlayerFolders/ExtraWorldFolders son estaticos (ver su propio
@@ -99,6 +113,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _settings.IsMinimapVisible = IsMinimapVisible;
         _settings.Language = Language;
         _settings.IsCompactMode = IsCompactMode;
+        _settings.HasSeenHomeIntro = HasSeenHomeIntro;
         SettingsService.Save(_settings);
         ApplyToServices();
     }
@@ -106,6 +121,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     partial void OnIsMinimapVisibleChanged(bool value) => Persist();
 
     partial void OnIsCompactModeChanged(bool value) => Persist();
+
+    partial void OnHasSeenHomeIntroChanged(bool value) => Persist();
 
     partial void OnLanguageChanged(string value)
     {

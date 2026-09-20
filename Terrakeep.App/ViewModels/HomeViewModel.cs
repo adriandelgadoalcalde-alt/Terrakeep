@@ -163,6 +163,17 @@ public partial class HomeViewModel : ObservableObject
 
     public string? LastSessionStalenessWarning => _lastSessionIsStale ? LocalizationService.Instance["home_stale_warning"] : null;
 
+    // Catalogo de rediseño visual T4 (20-sep-2026, "Inicio como escritorio de partida - tarjeta
+    // hero"): el personaje de la ultima sesion YA esta cargado entero en Characters (viene del
+    // mismo escaneo real de RefreshAsync) - reusar esa misma instancia (Preview, HealthMax,
+    // PlayTimeText) en vez de volver a leer el .plr del disco por separado. Null mientras el
+    // escaneo no ha terminado todavia o el personaje de la ultima sesion ya no esta en la lista
+    // (carpeta movida/borrado) - la tarjeta hero simplemente no se enseña en ese caso, nunca un
+    // dato a medias.
+    public CharacterListEntryViewModel? LastSessionCharacterEntry => _lastSessionPath == null
+        ? null
+        : Characters.FirstOrDefault(c => string.Equals(c.FilePath, _lastSessionPath, StringComparison.OrdinalIgnoreCase));
+
     public void SetLastSession(TerrakeepSession session)
     {
         _lastSessionPath = session.LastCharacterPath;
@@ -170,11 +181,13 @@ public partial class HomeViewModel : ObservableObject
         {
             LastSessionCharacterName = null;
             MarcarSesionCambiadaPorFuera(false);
+            OnPropertyChanged(nameof(LastSessionCharacterEntry));
             return;
         }
         LastSessionCharacterName = session.LastCharacterName ?? Path.GetFileNameWithoutExtension(_lastSessionPath);
         var modificadoReal = File.GetLastWriteTimeUtc(_lastSessionPath);
         MarcarSesionCambiadaPorFuera(session.LastCharacterModifiedUtc.HasValue && modificadoReal != session.LastCharacterModifiedUtc.Value);
+        OnPropertyChanged(nameof(LastSessionCharacterEntry));
     }
 
     private void MarcarSesionCambiadaPorFuera(bool valor)
@@ -256,6 +269,7 @@ public partial class HomeViewModel : ObservableObject
             var scanned = await Task.Run(() => ScanCharacters(dirs, _equipmentAppearance));
             if (myGeneration != _scanGeneration) return; // una vuelta MAS NUEVA ya esta en marcha - esta es obsoleta
             foreach (var entry in scanned) Characters.Add(entry);
+            OnPropertyChanged(nameof(LastSessionCharacterEntry)); // T4: la tarjeta hero depende de esta lista
             // INI-10 (misma oleada) - BUG REAL, encontrado al escribir el test de INI-08: un
             // escaneo que termina NO puede llevarse por delante el resultado de una accion que el
             // usuario acaba de pedir. El escaneo corre en segundo plano (T-G) y tarda lo que tarde

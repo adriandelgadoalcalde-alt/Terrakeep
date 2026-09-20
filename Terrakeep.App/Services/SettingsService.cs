@@ -30,6 +30,14 @@ public sealed class TerrakeepSettings
     // que quepa mas contenido de golpe. NUNCA activado por defecto (pedido explicito del
     // encargo) - false de fabrica, como el resto de esta clase.
     public bool IsCompactMode { get; set; }
+    // Catalogo de rediseño visual T4 (20-sep-2026, "Inicio como escritorio de partida"): el
+    // parrafo de descripcion de la app (4 lineas, "Editor de personajes de Terraria...") se
+    // enseñaba en CADA arranque, para siempre - util la primera vez, ruido a partir de la
+    // segunda (ya sabes lo que es Terrakeep). false de fabrica (se enseña la primera vez de
+    // verdad), se marca true en cuanto Settings.LoadFromDisk() termina de leer el fichero real
+    // (MainWindow.xaml.cs) - la MISMA sesion que lo enseña ya lo marca visto, nunca aparece dos
+    // veces ni siquiera reabriendo la app en el mismo minuto.
+    public bool HasSeenHomeIntro { get; set; }
 }
 
 public static class SettingsService
