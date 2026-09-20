@@ -7296,6 +7296,16 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
+                                <!-- Catalogo de ideas Keep, idea 8 ("Informe y comparador de mundos" -
+                                     "salida como tarjeta compartible (PNG/HTML)", reconsiderada a
+                                     peticion explicita del coordinador el 20-sep-2026). -->
+                                <WrapPanel DockPanel.Dock="Bottom" Margin="0,8,0,0"
+                                           Visibility="{Binding WorldCompare.HasBothLoaded, Converter={StaticResource BoolToVis}}">
+                                    <Button Content="{Binding Loc[action_export_card_html], Mode=OneWay}" Click="OnExportWorldCompareCardHtmlClick"
+                                            Padding="8,4" Margin="0,0,8,4" />
+                                    <Button Content="{Binding Loc[action_export_card_png], Mode=OneWay}" Click="OnExportWorldCompareCardPngClick"
+                                            Padding="8,4" Margin="0,0,8,4" />
+                                </WrapPanel>
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                               Visibility="{Binding WorldCompare.HasBothLoaded, Converter={StaticResource BoolToVis}}">
                                     <ItemsControl ItemsSource="{Binding WorldCompare.StatRows}">

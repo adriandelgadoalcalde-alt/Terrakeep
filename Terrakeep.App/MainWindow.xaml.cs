@@ -753,6 +753,30 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) _viewModel.Appearance.ExportPreviewToGif(dialog.FileName);
     }
 
+    // Catalogo de ideas Keep, idea 8 ("Informe y comparador de mundos", "salida como tarjeta
+    // compartible (PNG/HTML)") - mismo patron real de OnExportPreviewClick/OnExportPreviewGifClick.
+    private void OnExportWorldCompareCardHtmlClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = Loc["dlg_export_card_html"],
+            Filter = Loc["dlg_filter_html"],
+            FileName = $"{_viewModel.WorldCompare.NameA}-vs-{_viewModel.WorldCompare.NameB}.html",
+        };
+        if (dialog.ShowDialog(this) == true) _viewModel.WorldCompare.ExportCardToHtml(dialog.FileName);
+    }
+
+    private void OnExportWorldCompareCardPngClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = Loc["dlg_export_card_png"],
+            Filter = Loc["dlg_filter_png"],
+            FileName = $"{_viewModel.WorldCompare.NameA}-vs-{_viewModel.WorldCompare.NameB}.png",
+        };
+        if (dialog.ShowDialog(this) == true) _viewModel.WorldCompare.ExportCardToPng(dialog.FileName);
+    }
+
     // H4-08 (cuarta auditoria de Opus, Fable): gemelo real de OnLoadWorldClick - una tarjeta del
     // lanzador de mundos ya trae su ruta real (DataContext), no hace falta el dialogo del
     // Explorador de archivos. Mismo ajuste de zoom real al terminar.
