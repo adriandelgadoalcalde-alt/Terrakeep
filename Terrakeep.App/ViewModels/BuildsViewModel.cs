@@ -95,7 +95,13 @@ public sealed partial class BuildsViewModel : ObservableObject
         foreach (var c in _allClasses)
             c.IsVisible = option.Key == null || c.ClassName == option.Key;
         foreach (var s in _allStages)
+        {
             s.IsVisible = s.Classes.Any(c => c.IsVisible);
+            // Bug visual real (21-sep-2026, ver el comentario completo en BuildStageViewModel):
+            // la vista se une a VisibleClasses (ya filtrada), no a Classes+Visibility por item -
+            // hace falta avisar de verdad a WPF de que esa coleccion cambio en cada filtrado.
+            s.NotifyVisibleClassesChanged();
+        }
     }
 
     // Bd-d: "marcar lo que ya se posee" - por id real (vanilla o sintetico de Calamity), en

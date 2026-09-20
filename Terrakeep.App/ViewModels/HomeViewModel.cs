@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Terrakeep.App.Services;
 using Terrakeep.Core.Calamity;
+using Terrakeep.Core.Guia;
 using Terrakeep.Core.PlrFormat;
 
 namespace Terrakeep.App.ViewModels;
@@ -174,17 +175,75 @@ public partial class HomeViewModel : ObservableObject
         ? null
         : Characters.FirstOrDefault(c => string.Equals(c.FilePath, _lastSessionPath, StringComparison.OrdinalIgnoreCase));
 
+    // Catalogo de rediseño visual T4, segundo intento real (21-sep-2026 - la ronda del 20-sep
+    // dejo esto como LIMITE documentado: "GuideViewModel solo evalua el personaje YA cargado en
+    // el editor, no existe infraestructura para evaluar la Guia de un personaje que no esta
+    // abierto"). Investigado a fondo: esa infraestructura SI existe de verdad, solo que nunca se
+    // reutilizo aqui - GuideEvaluationEngine/GuideEvaluator (Terrakeep.Core/Guia) son PURAMENTE
+    // funcionales, reciben un GuideContext (Character/MergedContainers/World/HasCalamity) sin
+    // ninguna dependencia del personaje ACTIVO del editor. Lo unico que faltaba de verdad era
+    // construir ESE contexto para un .plr del disco sin pasar por MainViewModel.
+    //
+    // CharacterFileService PROPIO (mismo motivo real ya documentado en CompareViewModel.cs:
+    // Load() muta EsPersonajeTModLoader en la instancia - aislarlo evita que leer el .plr de la
+    // tarjeta hero corrompa la tabla de "mejor prefijo" del editor principal) + catalogo/textos
+    // de la Guia cargados una sola vez (mismos ficheros reales que ya usa GuideViewModel).
+    private readonly CharacterFileService _guideDataService = new();
+    private GuideCatalog? _guideCatalogo;
+    private GuideEvaluator? _guideEvaluador;
+
+    [ObservableProperty] private string? _lastSessionGuideStage;
+
+    // Sin mundo real asociado a "el ultimo personaje" (Inicio no rastrea que .wld usaba cada
+    // personaje) - World=null en el contexto es HONESTO, no un dato a medias: los requisitos que
+    // de verdad necesiten un mundo (NpcsDelPueblo, Zona) caen a NoEvaluable con su motivo real
+    // (MotivoSinPartidaEnMarcha), igual que ya le pasa a cualquier personaje sin mundo cargado en
+    // la propia pestaña Guia - nunca se inventa un tramo a partir de un dato que no existe.
+    private string? ComputeGuideStage(string plrPath)
+    {
+        try
+        {
+            string assetsGuia = Path.Combine(AppContext.BaseDirectory, "Assets", "guia");
+            _guideCatalogo ??= GuideCatalog.LoadFromFile(Path.Combine(assetsGuia, "guia_progresion.json"), _guideDataService.CalamityCatalog);
+            var textos = GuideTextCatalog.LoadFromFiles(Path.Combine(assetsGuia, "textos.es.json"), Path.Combine(assetsGuia, "textos.en.json"));
+            _guideEvaluador ??= new GuideEvaluator(_guideDataService.VanillaCatalog, _guideDataService.NpcNames, _guideDataService.CalamityCatalog);
+
+            var loaded = _guideDataService.Load(plrPath);
+            bool hasCalamity = loaded.TplrPath != null; // mismo criterio real que MainViewModel.HasCalamityData
+            var contexto = new GuideContext { Character = loaded.Character, MergedContainers = loaded.MergedContainers, World = null, HasCalamity = hasCalamity };
+
+            foreach (var tramo in _guideCatalogo.Tramos)
+            {
+                if (tramo.Ambito == AmbitoGuia.Calamity && !hasCalamity) continue;
+                if (!tramo.Implementado || tramo.Opcional) continue;
+                bool tramoCompletado = tramo.Pasos.Count > 0 && tramo.Pasos.All(p => _guideEvaluador.PasoCompletado(p, contexto));
+                if (!tramoCompletado)
+                    return textos.Text("Guia.Tramo." + tramo.Clave + ".Nombre", LocalizationService.Instance.Language);
+            }
+            return null; // Guia entera completada - sin objetivo pendiente real, nunca un texto inventado
+        }
+        catch (Exception)
+        {
+            // Un .plr/.tplr corrupto, o los ficheros de la Guia sin encontrar - la tarjeta hero
+            // simplemente no enseña el 3er KPI (los otros 2, HealthMax/PlayTimeText, no dependen
+            // de esto y siguen intactos), nunca tumba Inicio entero.
+            return null;
+        }
+    }
+
     public void SetLastSession(TerrakeepSession session)
     {
         _lastSessionPath = session.LastCharacterPath;
         if (_lastSessionPath == null || !File.Exists(_lastSessionPath))
         {
             LastSessionCharacterName = null;
+            LastSessionGuideStage = null;
             MarcarSesionCambiadaPorFuera(false);
             OnPropertyChanged(nameof(LastSessionCharacterEntry));
             return;
         }
         LastSessionCharacterName = session.LastCharacterName ?? Path.GetFileNameWithoutExtension(_lastSessionPath);
+        LastSessionGuideStage = ComputeGuideStage(_lastSessionPath);
         var modificadoReal = File.GetLastWriteTimeUtc(_lastSessionPath);
         MarcarSesionCambiadaPorFuera(session.LastCharacterModifiedUtc.HasValue && modificadoReal != session.LastCharacterModifiedUtc.Value);
         OnPropertyChanged(nameof(LastSessionCharacterEntry));

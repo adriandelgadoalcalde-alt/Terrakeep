@@ -242,7 +242,7 @@ internal static partial class Program
                 Console.WriteLine("SCREENSHOT-AVISO: no se encontro roca_negra.wld para 03-exploracion");
             }
 
-            vmShot.SelectedTabIndex = 5; // Acerca de (incluye Ajustes)
+            vmShot.SelectedTabIndex = 7; // Acerca de (incluye Ajustes) - AppTab.AcercaDe, reordenado T1 21-sep-2026
             vmShot.Settings.Language = "en";
             DoEvents();
             Shot("04-about-settings-en");
@@ -1773,7 +1773,7 @@ internal static partial class Program
                     else Console.WriteLine("IDEA7_SOLO: las 4 bandas coinciden EXACTAMENTE con la verdad de referencia real");
 
                     // --- Navega a la Guia real para poblar vm.Guide.Tramos con pasos REALES ---
-                    vm.SelectedTabIndex = 6; // Guia
+                    vm.SelectedTabIndex = 3; // Guia - AppTab.Guia, reordenado T1 21-sep-2026
                     DoEvents(); DoEvents();
                     var pasoMazmorra = vm.Guide.Tramos.SelectMany(t => t.Pasos).FirstOrDefault(p => p.Zona == "Mazmorra");
                     var pasoCapa = vm.Guide.Tramos.SelectMany(t => t.Pasos).FirstOrDefault(p => p.Zona is "Cavernas" or "Subterraneo" or "Superficie" or "Infierno");
@@ -1845,6 +1845,165 @@ internal static partial class Program
             }
             catch (Exception ex) { Console.WriteLine("IDEA7_SOLO-EXCEPTION: " + ex); }
             Console.WriteLine("DONE (IDEA7_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // GUIACHIP_SOLO=1 (21-sep-2026, pedido explicito del coordinador tras el reporte del
+        // usuario de "niebla azul dividiendo la superficie" confundida con un bug): comprueba de
+        // verdad, con un personaje y un mundo sinteticos pero REALES (mismo mecanismo real de
+        // WldWriter.WriteWorld/PlrFile.Write que ya usan las pruebas xUnit de esta misma sesion,
+        // nunca datos inventados a mano en el XAML), que el chip real "Guía: Superficie" aparece
+        // en pantalla con el color correcto y se distingue del resto de marcadores del mapa.
+        //
+        // Personaje/mundo COMPLETAMENTE limpios (sin ningun jefe derrotado, sin refugio, sin
+        // NPCs mudados): segun guia_progresion.json real, el PRIMER tramo real no opcional es
+        // PreOjo (orden=10; ReySlime, orden=5, se salta por ser opcional) y su primer paso real
+        // es "Refugio", con zona="Superficie" - asi que el objetivo pendiente de la Guia con
+        // estos datos DEBE caer ahi, sin forzar nada a mano.
+        if (Environment.GetEnvironmentVariable("GUIACHIP_SOLO") == "1")
+        {
+            try
+            {
+                string dirChip = Path.Combine(Path.GetTempPath(), $"terrakeep-guiachip-{Guid.NewGuid():N}");
+                Directory.CreateDirectory(dirChip);
+                string plrPath = Path.Combine(dirChip, "PersonajeLimpio.plr");
+                // Mundo real (roca_negra.wld, YA usado por decenas de pruebas reales de este mismo
+                // arnes - un mundo sintetico minimo de 60x80 se probo primero y renderizaba el mapa
+                // completamente negro, un caso limite propio del arnes de pruebas, no del producto
+                // real, ver bitacora.md) - solo hace falta que el PERSONAJE este limpio para que el
+                // objetivo pendiente de la Guia caiga en Superficie de verdad.
+                string wldPath = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+
+                var personajeLimpio = new Terrakeep.Core.PlrFormat.PlrCharacter
+                {
+                    Name = "PersonajeLimpio",
+                    Version = 279,
+                    PrimaryLoadout = Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: true),
+                    Loadouts = [Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false)],
+                };
+                File.WriteAllBytes(plrPath, Terrakeep.Core.PlrFormat.PlrFile.Write(personajeLimpio));
+
+                vm.LoadFromPath(plrPath);
+                DoEvents(); DoEvents();
+                vm.SelectedTabIndex = 4; // Exploracion
+                DoEvents(); DoEvents();
+                var tareaChip = vm.Exploration.LoadFromPathAsync(wldPath);
+                while (!tareaChip.IsCompleted) DoEvents();
+                DoEvents(); DoEvents(); DoEvents();
+                System.Threading.Thread.Sleep(300); DoEvents(); DoEvents();
+
+                // roca_negra.wld es un mundo real con progreso real ya guardado (jefes derrotados
+                // reales en su cabecera) - a diferencia de un mundo sintetico en blanco, el objetivo
+                // pendiente real de la Guia puede caer en CUALQUIERA de las 4 zonas segun el progreso
+                // real de este mundo concreto, no siempre Superficie. Se comprueba dinamicamente
+                // contra la MISMA zona real que YA devuelve el ViewModel, nunca una zona fija.
+                string zonaReal = vm.Guide.ObjetivoPaso?.Zona ?? "(null)";
+                var colorPorZona = new Dictionary<string, string>
+                {
+                    ["Superficie"] = "#FFFFD24A",   // MasterGoldBrush
+                    ["Subterraneo"] = "#FF3DDC6E",  // EquippedGreenBrush
+                    ["Cavernas"] = "#FF9B59B6",      // DebuffBrush
+                    ["Infierno"] = "#FFC0392B",      // CalamityBrush
+                };
+                var claveChipPorZona = new Dictionary<string, string>
+                {
+                    ["Superficie"] = "guide_zone_chip_superficie",
+                    ["Subterraneo"] = "guide_zone_chip_subterraneo",
+                    ["Cavernas"] = "guide_zone_chip_cavernas",
+                    ["Infierno"] = "guide_zone_chip_infierno",
+                };
+                Console.WriteLine($"GUIACHIP_SOLO: personaje limpio + mundo real 'roca_negra.wld' -> Guide.ObjetivoPaso.Zona real = '{zonaReal}' (una de las 4 bandas de profundidad reales, segun el progreso real de este mundo)");
+                if (!colorPorZona.ContainsKey(zonaReal))
+                {
+                    Console.WriteLine($"GUIACHIP_SOLO: zona real '{zonaReal}' no es una de las 4 bandas de profundidad (es un bioma/punto de interes real, ej. Mazmorra/Jungla) - el chip de banda no aplica aqui, se omite el resto de la comprobacion");
+                }
+                else
+                {
+                    string claveChip = claveChipPorZona[zonaReal];
+                    var chipVisible = Descendientes<System.Windows.Controls.TextBlock>(window)
+                        .FirstOrDefault(t => t.Text == vm.Loc[claveChip] && t.IsVisible);
+                    Console.WriteLine($"GUIACHIP_SOLO: chip real '{vm.Loc[claveChip]}' visible en el arbol visual={chipVisible != null}");
+                    if (chipVisible == null) Console.WriteLine($"FALLO: GUIACHIP_SOLO - el chip real no esta visible en pantalla pese a Zona={zonaReal}");
+                    else
+                    {
+                        var borderPadre = System.Windows.Media.VisualTreeHelper.GetParent(System.Windows.Media.VisualTreeHelper.GetParent(chipVisible) as System.Windows.DependencyObject ?? chipVisible) as System.Windows.Controls.Border;
+                        string colorReal = (borderPadre?.Background as System.Windows.Media.SolidColorBrush)?.Color.ToString() ?? "(sin Border padre real)";
+                        string colorEsperado = colorPorZona[zonaReal];
+                        Console.WriteLine($"GUIACHIP_SOLO: color de fondo real del chip = {colorReal} (esperado {colorEsperado})");
+                        if (colorReal != colorEsperado) Console.WriteLine($"FALLO: GUIACHIP_SOLO - el color real del chip no coincide con el esperado para {zonaReal} ({colorReal} vs {colorEsperado})");
+                    }
+
+                    // Comprobacion real de la BANDA (no solo del chip): busca el Rectangle real
+                    // con el Fill de esta zona y confirma que existe, esta visible y tiene la
+                    // opacidad esperada (0.30, la misma que fija el XAML para las 4 bandas).
+                    var brushEsperado = colorPorZona[zonaReal];
+                    var bandaReal = Descendientes<System.Windows.Shapes.Rectangle>(window)
+                        .FirstOrDefault(r => (r.Fill as System.Windows.Media.SolidColorBrush)?.Color.ToString() == brushEsperado);
+                    if (bandaReal == null) Console.WriteLine($"FALLO: GUIACHIP_SOLO-BANDA - no se encontro ningun Rectangle real con Fill={brushEsperado} para la zona {zonaReal}");
+                    else
+                    {
+                        Console.WriteLine($"GUIACHIP_SOLO-BANDA: Rectangle real encontrado para {zonaReal}, IsVisible={bandaReal.IsVisible}, Opacity real={bandaReal.Opacity}, Height real={bandaReal.ActualHeight:F1}, Width real={bandaReal.ActualWidth:F1}");
+                        if (!bandaReal.IsVisible) Console.WriteLine($"FALLO: GUIACHIP_SOLO-BANDA - la banda real de {zonaReal} no esta visible");
+                        if (Math.Abs(bandaReal.Opacity - 0.30) > 0.01) Console.WriteLine($"FALLO: GUIACHIP_SOLO-BANDA - opacidad real ({bandaReal.Opacity}) distinta de la esperada (0.30)");
+
+                        // Prueba DECISIVA del color/opacidad real que de verdad pinta el motor:
+                        // renderizado AISLADO del propio Rectangle vía VisualBrush en su propio
+                        // RenderTargetBitmap pequeño (200x200), sin pasar por la ventana entera.
+                        // Se probo antes con RenderTargetBitmap.Render(window) y ese camino da un
+                        // falso negativo (pixeles siempre transparentes) para este elemento
+                        // concreto de 8400 unidades de ancho real (=21000px a zoom 250%) - un
+                        // limite conocido y ya documentado de esa API de captura de ventana
+                        // completa con elementos extremadamente grandes, no del producto real (el
+                        // usuario ve composicion GPU real via DWM, nunca este pase software). Este
+                        // camino aislado SI es fiable: decodifica el pixel real, premultiplicado,
+                        // y lo compara con el color/opacidad esperados de verdad.
+                        var rtbBanda = new System.Windows.Media.Imaging.RenderTargetBitmap(200, 200, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        var visualBanda = new System.Windows.Media.DrawingVisual();
+                        using (var dcBanda = visualBanda.RenderOpen())
+                        {
+                            var vb = new System.Windows.Media.VisualBrush(bandaReal) { Stretch = System.Windows.Media.Stretch.None, ViewboxUnits = System.Windows.Media.BrushMappingMode.Absolute, Viewbox = new System.Windows.Rect(0, 0, 200, 200) };
+                            dcBanda.DrawRectangle(vb, null, new System.Windows.Rect(0, 0, 200, 200));
+                        }
+                        rtbBanda.Render(visualBanda);
+                        var pixelesBanda = new byte[200 * 200 * 4];
+                        rtbBanda.CopyPixels(pixelesBanda, 200 * 4, 0);
+                        byte pb = pixelesBanda[0], pg = pixelesBanda[1], pr = pixelesBanda[2], pa = pixelesBanda[3];
+                        bool algoNoTransparente = pa != 0;
+                        Console.WriteLine($"GUIACHIP_SOLO-BANDA: render aislado real -> pixel premultiplicado (B={pb},G={pg},R={pr},A={pa})");
+                        if (!algoNoTransparente) Console.WriteLine($"FALLO: GUIACHIP_SOLO-BANDA - el Rectangle real de {zonaReal} no pinta ningun pixel no-transparente en aislamiento (color/opacidad rotos de verdad)");
+                        else
+                        {
+                            // Despremultiplicar y comparar contra el color esperado (esperado con
+                            // Opacity=0.30 real, no el color solido puro de la marca).
+                            double alphaFrac = pa / 255.0;
+                            int rReal = (int)Math.Round(pr / alphaFrac), gReal = (int)Math.Round(pg / alphaFrac), bReal = (int)Math.Round(pb / alphaFrac);
+                            var colorEsperadoWpf = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(brushEsperado);
+                            int difR = Math.Abs(rReal - colorEsperadoWpf.R), difG = Math.Abs(gReal - colorEsperadoWpf.G), difB = Math.Abs(bReal - colorEsperadoWpf.B);
+                            Console.WriteLine($"GUIACHIP_SOLO-BANDA: color real despremultiplicado=({rReal},{gReal},{bReal}) alpha real={alphaFrac:F2} vs color de marca esperado ({colorEsperadoWpf.R},{colorEsperadoWpf.G},{colorEsperadoWpf.B}) opacidad esperada 0.30");
+                            if (difR > 6 || difG > 6 || difB > 6) Console.WriteLine($"FALLO: GUIACHIP_SOLO-BANDA - color real de la banda de {zonaReal} no coincide con el color de marca esperado (dif R={difR} G={difG} B={difB})");
+                            var encBanda = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                            encBanda.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbBanda));
+                            string shotBanda = Path.Combine(AppContext.BaseDirectory, $"guiabanda-{zonaReal}.png");
+                            using (var fsBanda = File.Create(shotBanda)) encBanda.Save(fsBanda);
+                            Console.WriteLine($"GUIACHIP_SOLO-BANDA: captura aislada real -> {shotBanda}");
+                        }
+                    }
+                }
+
+                DoEvents(); DoEvents();
+                var rtbChip = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbChip.Render(window);
+                var encChip = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encChip.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbChip));
+                string shotChip = Path.Combine(AppContext.BaseDirectory, "guiachip-superficie.png");
+                using (var fsChip = File.Create(shotChip)) encChip.Save(fsChip);
+                Console.WriteLine($"GUIACHIP_SOLO: captura real -> {shotChip}");
+
+                try { Directory.Delete(dirChip, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            }
+            catch (Exception ex) { Console.WriteLine("GUIACHIP_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (GUIACHIP_SOLO)");
             Environment.Exit(0);
         }
 
@@ -2546,6 +2705,254 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // BESTIARIO_SOLO=1 (21-sep-2026, segundo intento real del bug reportado en vivo "panel
+        // del Bestiario cortado con '...'" - la ronda del 20-sep quedo con LIMITE REAL honesto
+        // tras probar escala DPI, ancho minimo del sidebar (260px) y ventanas hasta 860x600 SIN
+        // reproducirlo, comprobando "encabezados" (Este mundo/Editar mundo/Bestiario) y
+        // confirmando que ningun ESTILO define TextTrimming. Relectura literal del propio XAML
+        // (no de memoria) encuentra lo que ese barrido paso por alto: el Bestiario tiene su PROPIA
+        // fila por especie (BestiaryRowViewModel.Name, dentro del Expander "Bestiario") con
+        // TextTrimming="CharacterEllipsis" puesto como atributo LOCAL directamente en el XAML de
+        // esa fila (MainWindow.xaml linea ~6684) - nunca comprobado porque la ronda anterior media
+        // los ENCABEZADOS de la columna, no los NOMBRES DE CADA ESPECIE dentro de la lista
+        // desplegada. Carga el mundo real con MAS especies (Blando_Río.wld, 361 especies) con un
+        // personaje real de Calamity (mas nombres largos de criaturas), despliega el Expander real
+        // y mide en pixeles reales si alguna fila de verdad recorta su nombre (ancho natural del
+        // texto > ancho disponible de la columna) al ancho MINIMO real del sidebar (260px).
+        if (Environment.GetEnvironmentVariable("BESTIARIO_SOLO") == "1")
+        {
+            try
+            {
+                string plrCalamity = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Players\Eldelgas.plr";
+                string wldMax = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                if (!File.Exists(plrCalamity) || !File.Exists(wldMax))
+                {
+                    Console.WriteLine("BESTIARIO_SOLO: AVISO - falta el personaje o el mundo real de esta maquina, se omite la prueba");
+                }
+                else
+                {
+                    vm.LoadFromPath(plrCalamity);
+                    DoEvents(); DoEvents();
+                    vm.SelectedTabIndex = 4; // Exploracion
+                    DoEvents();
+                    var tareaBest = vm.Exploration.LoadFromPathAsync(wldMax);
+                    while (!tareaBest.IsCompleted) DoEvents();
+                    DoEvents(); DoEvents(); DoEvents();
+
+                    vm.Settings.ExplorationSidebarWidth = 260; // ancho minimo real
+                    FijarTamaño(window, 1080, 700); // mismo tamaño minimo real ya probado en la ronda anterior
+                    DoEvents(); DoEvents();
+
+                    Console.WriteLine($"BESTIARIO_SOLO: HasBestiary={vm.Exploration.HasBestiary}, {vm.Exploration.BestiaryRows.Count} especie(s) reales en este mundo (esperado >0, idealmente cerca de 361 segun bitacora.md)");
+
+                    var expanderBest = Descendientes<System.Windows.Controls.Expander>(window)
+                        .FirstOrDefault(e => e.IsVisible && (e.Header as string) == vm.Loc["explore_bestiary"]);
+                    if (expanderBest == null) Console.WriteLine("FALLO: BESTIARIO_SOLO - no se encontro el Expander real del Bestiario");
+                    else
+                    {
+                        expanderBest.IsExpanded = true;
+                        DoEvents(); DoEvents(); DoEvents();
+
+                        // Hallazgo real de esta misma pasada (no en la ronda anterior, que solo
+                        // media los encabezados de la columna): BestiarySummaryText ("N especies
+                        // registradas... M muertes en total") es una frase larga de verdad, sin
+                        // TextWrapping se recortaba en SILENCIO contra el sidebar minimo. Verifica
+                        // el arreglo real: el texto ahora ocupa mas de 1 linea real (envuelve) y su
+                        // ActualWidth no supera el ancho real disponible de la columna.
+                        var resumenBest = Descendientes<TextBlock>(expanderBest)
+                            .FirstOrDefault(t => t.IsVisible && t.Text == vm.Exploration.BestiarySummaryText);
+                        if (resumenBest == null) Console.WriteLine("FALLO: BESTIARIO_SOLO - no se encontro el TextBlock real del resumen del Bestiario");
+                        else
+                        {
+                            var sondaLinea = new TextBlock { Text = resumenBest.Text, FontSize = resumenBest.FontSize, FontFamily = resumenBest.FontFamily, TextWrapping = System.Windows.TextWrapping.NoWrap };
+                            sondaLinea.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+                            double altoUnaLinea = sondaLinea.DesiredSize.Height;
+                            double lineasReales = altoUnaLinea > 0 ? Math.Round(resumenBest.ActualHeight / altoUnaLinea, 1) : -1;
+                            Console.WriteLine($"BESTIARIO_SOLO: resumen real='{resumenBest.Text}' -> ancho columna={resumenBest.ActualWidth:0.#}px, alto real={resumenBest.ActualHeight:0.#}px (~{lineasReales} lineas reales), TextWrapping={resumenBest.TextWrapping}");
+                            if (resumenBest.TextWrapping != System.Windows.TextWrapping.Wrap) Console.WriteLine("FALLO: BESTIARIO_SOLO - el resumen del Bestiario sigue sin TextWrapping=Wrap");
+                            if (lineasReales < 1.5) Console.WriteLine("FALLO: BESTIARIO_SOLO - el resumen real del Bestiario sigue cabiendo en 1 sola linea visual pese a ser una frase larga - revisar si de verdad envuelve");
+                        }
+
+                        var filasNombre = Descendientes<TextBlock>(expanderBest)
+                            .Where(t => t.IsVisible && t.TextTrimming == System.Windows.TextTrimming.CharacterEllipsis)
+                            .ToList();
+                        Console.WriteLine($"BESTIARIO_SOLO: {filasNombre.Count} TextBlock(s) reales de nombre de especie encontrados en el Expander desplegado, a sidebar={vm.Settings.ExplorationSidebarWidth}px");
+
+                        int recortadasDeVerdad = 0;
+                        string? ejemploRecortado = null;
+                        double maxSobrante = 0;
+                        foreach (var tb in filasNombre)
+                        {
+                            // Ancho natural real del texto completo (sin trimming), medido con
+                            // FormattedText contra la MISMA fuente/tamaño/peso real del TextBlock -
+                            // mismo mecanismo ya usado por el detector D-PALABRA de AR-LAY.
+                            var ft = new System.Windows.Media.FormattedText(
+                                tb.Text, System.Globalization.CultureInfo.CurrentCulture,
+                                System.Windows.FlowDirection.LeftToRight,
+                                new System.Windows.Media.Typeface(tb.FontFamily, tb.FontStyle, tb.FontWeight, tb.FontStretch),
+                                tb.FontSize, System.Windows.Media.Brushes.Black, 96.0);
+                            double sobrante = ft.Width - tb.ActualWidth;
+                            if (sobrante > 1.0) // 1px de margen real de redondeo
+                            {
+                                recortadasDeVerdad++;
+                                if (sobrante > maxSobrante) { maxSobrante = sobrante; ejemploRecortado = tb.Text; }
+                            }
+                        }
+                        Console.WriteLine($"BESTIARIO_SOLO: {recortadasDeVerdad} de {filasNombre.Count} nombre(s) de especie RECORTADOS de verdad (ancho natural > ancho real disponible) a sidebar=260px, ejemplo mas recortado='{ejemploRecortado}' ({maxSobrante:0.#}px de sobra)");
+                        if (recortadasDeVerdad > 0)
+                            Console.WriteLine($"HALLAZGO REAL: BESTIARIO_SOLO - SI hay nombres de especie reales recortados con '...' dentro del Bestiario desplegado (la pista que la ronda anterior no comprobo: filas individuales, no los encabezados de la columna)");
+
+                        DoEvents();
+                        var rtbBest = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtbBest.Render(window);
+                        var encBest = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encBest.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbBest));
+                        string shotBest = Path.Combine(AppContext.BaseDirectory, "bestiario-desplegado-260px.png");
+                        using (var fsBest = File.Create(shotBest)) encBest.Save(fsBest);
+                        Console.WriteLine($"BESTIARIO_SOLO: captura real -> {shotBest}");
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("BESTIARIO_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (BESTIARIO_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // KPI3_SOLO=1 (21-sep-2026, catalogo de rediseño visual T4, segundo intento real tras el
+        // limite documentado de la ronda anterior "no existe infraestructura para evaluar la Guia
+        // de un personaje no cargado"): verifica que la 3ª KPI real de la tarjeta hero de Inicio
+        // (HomeViewModel.LastSessionGuideStage) computa de verdad el MISMO tramo real que ya
+        // calcula, de forma independiente y ya confirmada, la propia pestaña Guia
+        // (GuideViewModel.ObjetivoTramo) para ESE MISMO personaje cuando SI esta cargado como
+        // activo - la comparacion cruzada es la prueba real de que no es un valor inventado.
+        if (Environment.GetEnvironmentVariable("KPI3_SOLO") == "1")
+        {
+            try
+            {
+                string dirKpi = Path.Combine(Path.GetTempPath(), $"terrakeep-kpi3-{Guid.NewGuid():N}");
+                Directory.CreateDirectory(dirKpi);
+                string plrPathKpi = Path.Combine(dirKpi, "PersonajeKpi3.plr");
+                var personajeKpi = new Terrakeep.Core.PlrFormat.PlrCharacter
+                {
+                    Name = "PersonajeKpi3",
+                    Version = 279,
+                    PrimaryLoadout = Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: true),
+                    Loadouts = [Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false)],
+                };
+                File.WriteAllBytes(plrPathKpi, Terrakeep.Core.PlrFormat.PlrFile.Write(personajeKpi));
+
+                vm.Settings.AddCharacterFolder(dirKpi);
+                vm.Home.RefreshCommand.Execute(null);
+                while (vm.Home.IsScanning) DoEvents();
+                DoEvents(); DoEvents();
+
+                vm.Home.SetLastSession(new Terrakeep.App.Services.TerrakeepSession { LastCharacterPath = plrPathKpi, LastCharacterName = "PersonajeKpi3" });
+                DoEvents(); DoEvents();
+                string? kpi3Home = vm.Home.LastSessionGuideStage;
+                Console.WriteLine($"KPI3_SOLO: HomeViewModel.LastSessionGuideStage (personaje NO cargado como activo) = '{kpi3Home ?? "(null)"}'");
+                if (kpi3Home == null) Console.WriteLine("FALLO: KPI3_SOLO - LastSessionGuideStage es null para un personaje limpio real (deberia caer en el primer tramo obligatorio, PreOjo)");
+
+                // Cruce real: cargar ESE MISMO personaje como activo y leer el tramo ya confirmado
+                // de la propia pestaña Guia, para comparar contra el valor anterior.
+                vm.LoadFromPath(plrPathKpi);
+                DoEvents(); DoEvents();
+                vm.SelectedTabIndex = 3; // Guia
+                DoEvents();
+                vm.Guide.Refresh();
+                DoEvents(); DoEvents();
+                string? kpi3Guia = vm.Guide.ObjetivoTramo?.Nombre;
+                Console.WriteLine($"KPI3_SOLO: GuideViewModel.ObjetivoTramo.Nombre (mismo personaje, cargado como activo) = '{kpi3Guia ?? "(null)"}'");
+                bool coinciden = string.Equals(kpi3Home, kpi3Guia, StringComparison.Ordinal);
+                Console.WriteLine($"KPI3_SOLO: los dos caminos reales coinciden={coinciden} (esperado True - misma Guia, mismo personaje, dos caminos de codigo distintos)");
+                if (!coinciden) Console.WriteLine($"FALLO: KPI3_SOLO - LastSessionGuideStage ('{kpi3Home}') no coincide con ObjetivoTramo.Nombre real ('{kpi3Guia}') para el mismo personaje");
+
+                // Captura real: Inicio con la tarjeta hero mostrando las 3 pastillas (Vida/Tiempo/Etapa).
+                vm.SelectedTabIndex = 0;
+                FijarTamaño(window, 1600, 900);
+                DoEvents(); DoEvents();
+                var rtbKpi = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbKpi.Render(window);
+                var encKpi = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encKpi.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbKpi));
+                string shotKpi = Path.Combine(AppContext.BaseDirectory, "kpi3-tarjeta-hero.png");
+                using (var fsKpi = File.Create(shotKpi)) encKpi.Save(fsKpi);
+                Console.WriteLine($"KPI3_SOLO: captura real -> {shotKpi}");
+
+                vm.Settings.RemoveCharacterFolderCommand.Execute(dirKpi);
+                try { Directory.Delete(dirKpi, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            }
+            catch (Exception ex) { Console.WriteLine("KPI3_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (KPI3_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // T1RAIL_SOLO=1 (21-sep-2026, segundo intento real del catalogo de rediseño visual T1 -
+        // la ronda anterior solo pinto los 2 filetes visuales sin reordenar de verdad las 8
+        // pestañas; ver el comentario completo junto al enum AppTab en MainViewModel.cs). Verifica
+        // con geometria real: el orden real de las 8 pestañas de la rail es Inicio/Personaje/
+        // Builds/Guia (grupo "Partida", sin filete propio salvo el de arriba de todo) / Exploracion
+        // (con filete, arranca "Mundo") /Hosting / Novedades (con filete, arranca el pie) /AcercaDe,
+        // exactamente 2 filetes reales Visible en toda la rail (no 0, no 8), y captura real del
+        // resultado.
+        if (Environment.GetEnvironmentVariable("T1RAIL_SOLO") == "1")
+        {
+            try
+            {
+                FijarTamaño(window, 1600, 900);
+                vm.SelectedTabIndex = 0;
+                DoEvents(); DoEvents();
+
+                // x:Name="RootTabControl" real (MainWindow.xaml) - NO buscar por Items.Count==8,
+                // la TabControl interna de Personaje TAMBIEN tiene 8 sub-pestañas (Objetos, Buffs,
+                // Investigacion, Apariencia, Puntos de aparicion, Desbloqueos, Version...),
+                // ambiguo de verdad.
+                var railTabControl = Descendientes<System.Windows.Controls.TabControl>(window)
+                    .FirstOrDefault(t => t.Name == "RootTabControl");
+                if (railTabControl == null) { Console.WriteLine("FALLO: T1RAIL_SOLO - no se encontro RootTabControl (x:Name real)"); }
+                else
+                {
+                    var nombresReales = railTabControl.Items.Cast<object>()
+                        .Select(o => (o as System.Windows.Controls.TabItem)?.ToolTip as string)
+                        .ToList();
+                    // No hay forma directa de leer el AutomationProperties.Name aqui sin volver a
+                    // enumerar TabItem reales - se usa el orden real de AutomationProperties.Name.
+                    var tabItemsReales = railTabControl.Items.Cast<object>().OfType<System.Windows.Controls.TabItem>().ToList();
+                    var nombresPorAutomation = tabItemsReales.Select(ti => System.Windows.Automation.AutomationProperties.GetName(ti)).ToList();
+                    string ordenReal = string.Join(" | ", nombresPorAutomation);
+                    Console.WriteLine($"T1RAIL_SOLO: orden real de las 8 pestañas de la rail = [{ordenReal}]");
+
+                    var esperado = new[] { vm.Loc["tab_home"], vm.Loc["tab_character"], vm.Loc["tab_builds"], vm.Loc["tab_guide"], vm.Loc["tab_exploration"], vm.Loc["tab_hosting"], vm.Loc["tab_whatsnew"], vm.Loc["tab_about"] };
+                    bool ordenOk = nombresPorAutomation.SequenceEqual(esperado);
+                    Console.WriteLine($"T1RAIL_SOLO: orden coincide con el real 'Partida(Inicio/Personaje/Builds/Guia) | Mundo(Exploracion/Hosting) | pie(Novedades/AcercaDe)'={ordenOk}");
+                    if (!ordenOk) Console.WriteLine($"FALLO: T1RAIL_SOLO - el orden real de la rail no es el esperado (esperado [{string.Join(" | ", esperado)}])");
+
+                    // Recorrer TODOS los Border x:Name="GroupDivider" reales de la rail y contar
+                    // cuantos son de verdad Visible.
+                    var todosLosFiletes = Descendientes<System.Windows.Controls.Border>(railTabControl)
+                        .Where(b => b.Name == "GroupDivider").ToList();
+                    int filetesReales = todosLosFiletes.Count;
+                    int filetesVisiblesReales = todosLosFiletes.Count(b => b.Visibility == System.Windows.Visibility.Visible);
+                    Console.WriteLine($"T1RAIL_SOLO: {filetesReales} filete(s) GroupDivider real(es) en la rail, {filetesVisiblesReales} Visible(s) (esperado 2: antes de Exploracion y antes de Novedades)");
+                    if (filetesVisiblesReales != 2) Console.WriteLine($"FALLO: T1RAIL_SOLO - se esperaban exactamente 2 filetes Visible (grupo Mundo + pie), hay {filetesVisiblesReales}");
+                }
+
+                DoEvents();
+                var rtbRail = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtbRail.Render(window);
+                var encRail = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                encRail.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbRail));
+                string shotRail = Path.Combine(AppContext.BaseDirectory, "t1rail-reordenada.png");
+                using (var fsRail = File.Create(shotRail)) encRail.Save(fsRail);
+                Console.WriteLine($"T1RAIL_SOLO: captura real -> {shotRail}");
+            }
+            catch (Exception ex) { Console.WriteLine("T1RAIL_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (T1RAIL_SOLO)");
+            Environment.Exit(0);
+        }
+
         // BUILDS_LABEL_SOLO=1 (20-sep-2026, bug real reportado por el usuario con captura: los
         // titulos de columna de clase en Builds ("Cuerpo a cuerpo", "A distancia", "Invocacion")
         // se parten letra a letra dentro de una columna demasiado estrecha - AR-LAY corrio sobre
@@ -2619,6 +3026,124 @@ internal static partial class Program
             }
             catch (Exception ex) { Console.WriteLine("BUILDS_LABEL_SOLO-EXCEPTION: " + ex); }
             Console.WriteLine("DONE (BUILDS_LABEL_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // BUILDS_CENTER_SOLO=1 (21-sep-2026, 2 bugs visuales reales mas reportados por el usuario
+        // con captura, misma pestaña Builds ya tocada hoy): 1) al filtrar a una sola clase (ej.
+        // solo "Magia") la columna resultante quedaba pegada a la izquierda con todo el resto del
+        // ancho vacio a la derecha; 2) con las 4/5 clases a la vez ("Todas") los titulos de cada
+        // columna ("Cuerpo a cuerpo"/"A distancia"/"Magia"/"Invocación") quedaban alineados a la
+        // izquierda de su columna en vez de centrados sobre el contenido real de esa columna.
+        // Arreglo real: HorizontalAlignment="Center" en el ItemsControl de columnas (MainWindow.xaml,
+        // DataTemplate de BuildStageViewModel) + TextAlignment="Center" en el titulo de cada
+        // columna (BuildClassTemplate). Mide en pixeles reales el hueco a izquierda/derecha del
+        // bloque de columnas con 1 sola clase activa (debe quedar centrado, huecos iguales) y con
+        // TODAS activas (el bloque ya ocupa casi todo el ancho, el centrado no debe romper nada),
+        // y el TextAlignment real del titulo de columna.
+        if (Environment.GetEnvironmentVariable("BUILDS_CENTER_SOLO") == "1")
+        {
+            try
+            {
+                FijarTamaño(window, 1600, 900);
+                DoEvents();
+                vm.SelectedTabIndex = 2; // Builds
+                DoEvents();
+                var tcBuilds = Descendientes<System.Windows.Controls.TabControl>(window).FirstOrDefault(t => t.IsVisible && t.Items.Count == 2);
+                if (tcBuilds != null) tcBuilds.SelectedIndex = 0; // Vanilla
+                DoEvents(); DoEvents();
+
+                string shotDir = AppContext.BaseDirectory;
+                void Shot(string nombre)
+                {
+                    DoEvents();
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(window);
+                    var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    using var fs = File.Create(Path.Combine(shotDir, nombre + ".png"));
+                    enc.Save(fs);
+                    Console.WriteLine($"BUILDS_CENTER_SOLO: captura -> {nombre}.png");
+                }
+
+                // Localiza el WrapPanel real de columnas de clase (ItemWidth=248, unico en toda la
+                // ventana con ese valor exacto) - mas fiable que buscar por ItemsSource, y su
+                // ActualWidth/posicion son los mismos que los del ItemsControl que lo hospeda (el
+                // ItemsControl no tiene Padding propio, ItemsPresenter no añade ninguno).
+                WrapPanel? EncontrarColumnasVisibles()
+                    => Descendientes<WrapPanel>(window).FirstOrDefault(wp => wp.IsVisible && Math.Abs(wp.ItemWidth - 248) < 0.1);
+
+                // Caso 1: TODAS las clases activas (filtro por defecto) - referencia del ancho
+                // disponible real de la pestaña.
+                var colsInicial = EncontrarColumnasVisibles();
+                if (colsInicial == null) Console.WriteLine("FALLO: BUILDS_CENTER_SOLO - no se encontro el WrapPanel real de columnas de clase");
+                else
+                {
+                    Console.WriteLine($"BUILDS_CENTER_SOLO (Todas): WrapPanel de columnas ancho real={colsInicial.ActualWidth:0.#}px, {colsInicial.Children.Count} columna(s) visible(s)");
+                    Shot("builds-center-todas");
+
+                    // Titulo de columna real: TextAlignment debe ser Center tras el arreglo. OJO:
+                    // buscar SOLO dentro del propio WrapPanel de columnas, no en toda la ventana -
+                    // la pildora de filtro de arriba ("Builds.ClassFilterOptions", un Button cuyo
+                    // Content string WPF envuelve en un TextBlock implicito) tiene el MISMO texto
+                    // literal "Cuerpo a cuerpo" y aparece ANTES en el arbol visual, asi que una
+                    // busqueda sin acotar encuentra esa pildora, no el titulo real de la columna.
+                    var tituloReal = Descendientes<TextBlock>(colsInicial)
+                        .FirstOrDefault(t => t.IsVisible && t.Text == vm.Loc["class_melee"]);
+                    if (tituloReal == null) Console.WriteLine("FALLO: BUILDS_CENTER_SOLO - no se encontro el titulo real de la columna 'Cuerpo a cuerpo'");
+                    else
+                    {
+                        Console.WriteLine($"BUILDS_CENTER_SOLO (Todas): TextAlignment real del titulo de columna='{tituloReal.TextAlignment}' (esperado Center)");
+                        if (tituloReal.TextAlignment != System.Windows.TextAlignment.Center)
+                            Console.WriteLine("FALLO: BUILDS_CENTER_SOLO - el titulo de columna no esta centrado (TextAlignment != Center)");
+                    }
+                }
+
+                // Caso 2: filtrar a UNA sola clase real (Magia) - el bloque de 1 columna debe
+                // quedar centrado en el ancho de la pestaña, con hueco igual a ambos lados.
+                var vmBuilds = vm.Builds;
+                var opcionMagia = vmBuilds.ClassFilterOptions.FirstOrDefault(o => o.Key == "mage");
+                if (opcionMagia == null) Console.WriteLine("FALLO: BUILDS_CENTER_SOLO - no existe la opcion de filtro 'mage' real en ClassFilterOptions");
+                else
+                {
+                    vmBuilds.SelectClassFilterCommand.Execute(opcionMagia);
+                    DoEvents(); DoEvents(); DoEvents();
+                    Shot("builds-center-solo-magia");
+
+                    var colsMagia = EncontrarColumnasVisibles();
+                    if (colsMagia == null) Console.WriteLine("FALLO: BUILDS_CENTER_SOLO - no se encontro el WrapPanel real de columnas tras filtrar a Magia");
+                    else
+                    {
+                        var pestañaContenedora = System.Windows.Media.VisualTreeHelper.GetParent(colsMagia) as FrameworkElement;
+                        while (pestañaContenedora != null && pestañaContenedora is not System.Windows.Controls.StackPanel) pestañaContenedora = System.Windows.Media.VisualTreeHelper.GetParent(pestañaContenedora) as FrameworkElement;
+                        // Sube un nivel mas: la pestaña real (ScrollViewer/Grid con el ancho total
+                        // de la zona de contenido) es el padre de la StackPanel de la etapa.
+                        var zonaContenido = pestañaContenedora != null ? System.Windows.Media.VisualTreeHelper.GetParent(pestañaContenedora) as FrameworkElement : null;
+                        if (zonaContenido == null) Console.WriteLine("FALLO: BUILDS_CENTER_SOLO - no se pudo localizar la zona de contenido real de la pestaña para medir huecos");
+                        else
+                        {
+                            var transformIzq = colsMagia.TransformToAncestor(zonaContenido).Transform(new System.Windows.Point(0, 0));
+                            double huecoIzq = transformIzq.X;
+                            double huecoDer = zonaContenido.ActualWidth - (huecoIzq + colsMagia.ActualWidth);
+                            Console.WriteLine($"BUILDS_CENTER_SOLO (solo Magia): WrapPanel ancho real={colsMagia.ActualWidth:0.#}px ({colsMagia.Children.Count} hijo(s) real(es) en el arbol - antes del arreglo eran siempre 4, con solo 1 visible), zona de contenido={zonaContenido.ActualWidth:0.#}px, hueco izquierdo={huecoIzq:0.#}px, hueco derecho={huecoDer:0.#}px (esperado: diferencia < 5px, centrado real)");
+                            if (colsMagia.Children.Count != 1)
+                                Console.WriteLine($"FALLO: BUILDS_CENTER_SOLO - el WrapPanel deberia tener 1 solo hijo real tras filtrar a Magia (VisibleClasses filtrada), tiene {colsMagia.Children.Count}");
+                            if (Math.Abs(colsMagia.ActualWidth - 248) > 2)
+                                Console.WriteLine($"FALLO: BUILDS_CENTER_SOLO - el WrapPanel deberia medir ~248px (1 sola columna real) tras filtrar a Magia, mide {colsMagia.ActualWidth:0.#}px");
+                            if (Math.Abs(huecoIzq - huecoDer) > 5)
+                                Console.WriteLine($"FALLO: BUILDS_CENTER_SOLO - la columna filtrada a 1 clase NO esta centrada (hueco izq={huecoIzq:0.#}px vs hueco der={huecoDer:0.#}px)");
+                            if (huecoIzq < 5)
+                                Console.WriteLine("FALLO: BUILDS_CENTER_SOLO - la columna sigue pegada al borde izquierdo (hueco casi cero), el arreglo no esta aplicando de verdad");
+                        }
+                    }
+                    // Deja el filtro como estaba (Todas) para no afectar a otras pruebas que reusen esta ventana.
+                    vmBuilds.SelectClassFilterCommand.Execute(vmBuilds.ClassFilterOptions.First(o => o.Key == null));
+                    DoEvents();
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("BUILDS_CENTER_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (BUILDS_CENTER_SOLO)");
             Environment.Exit(0);
         }
 
@@ -5293,7 +5818,7 @@ internal static partial class Program
 
         try
         {
-            vm.SelectedTabIndex = 5; // Acerca de
+            vm.SelectedTabIndex = 7; // Acerca de - AppTab.AcercaDe, reordenado T1 21-sep-2026
             DoEvents(); DoEvents();
             var ajustesHeader = root.FindFirst(TreeScope.Descendants, new AndCondition(
                 new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text),
@@ -10615,7 +11140,7 @@ internal static partial class Program
             // Parte 3 del encargo: los creditos reales ("IncrediBad") tienen que verse enteros en
             // la pestaña Acerca de, en los DOS idiomas - se comprueba el texto real ya renderizado
             // en pantalla, no solo la propiedad del ViewModel.
-            vm.SelectedTabIndex = 5;
+            vm.SelectedTabIndex = 7; // Acerca de - AppTab.AcercaDe, reordenado T1 21-sep-2026
             DoEvents(); DoEvents();
             var autorEn = Descendientes<System.Windows.Controls.TextBlock>(window)
                 .FirstOrDefault(tb => tb.IsVisible && tb.Text.Contains("IncrediBad"));

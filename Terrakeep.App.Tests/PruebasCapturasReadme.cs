@@ -126,7 +126,7 @@ internal static partial class Program
                 // 05-guia.png (NUEVA - README no mostraba esta pestaña, integrada esta misma
                 // noche): objetivo actual + arbol de tramos evaluados de verdad contra el
                 // personaje Calamity y el mundo reales ya cargados.
-                vm.SelectedTabIndex = 6;
+                vm.SelectedTabIndex = 3; // Guia - AppTab.Guia, reordenado T1 21-sep-2026
                 DoEvents();
                 vm.Guide.Refresh();
                 DoEvents(); DoEvents();
@@ -137,7 +137,7 @@ internal static partial class Program
             // 04-about-settings-en.png: pestaña "Acerca de" en ingles (mismo criterio que la
             // captura ya existente - la version/changelog/autoria reales, en el segundo idioma).
             vm.Settings.Language = "en";
-            vm.SelectedTabIndex = 5;
+            vm.SelectedTabIndex = 7; // Acerca de - AppTab.AcercaDe, reordenado T1 21-sep-2026
             DoEvents(); DoEvents();
             Capturar("04-about-settings-en.png");
             vm.Settings.Language = "es";
@@ -148,7 +148,7 @@ internal static partial class Program
             // lanza una instancia REAL corta por el mismo camino que pulsaria un usuario
             // (Hosting.IniciarCommand) y espera a EnEscucha para que la captura muestre el estado
             // "en escucha" real, no solo el formulario vacio - mas presentable y mas honesto.
-            vm.SelectedTabIndex = 7;
+            vm.SelectedTabIndex = 5; // Hosting/Servidor - AppTab.Hosting, reordenado T1 21-sep-2026
             DoEvents();
             Console.WriteLine($"README_SHOTS: Hosting -> TerrariaDetectado={vm.Hosting.TerrariaDetectado}");
             if (vm.Hosting.TerrariaDetectado)

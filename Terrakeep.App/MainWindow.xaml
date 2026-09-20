@@ -814,7 +814,12 @@
                      los 220px enteros para el solo, nunca menos que la palabra mas larga de las 5
                      categorias reales), los dos botones bajan a una segunda fila propia debajo -
                      ahi SI caben comodos (197.7px de 220px), sin competir por espacio con nada. -->
-                <TextBlock Text="{Binding ClassLabel, Mode=OneWay}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                <!-- Bug visual real reportado por el usuario con captura (21-sep-2026, "Todas" las
+                     clases a la vez): el titulo de columna quedaba alineado a la izquierda de sus
+                     220px en vez de centrado sobre el contenido real de la columna de abajo
+                     (iconos+nombres de Armadura/Armas/Accesorios). TextAlignment="Center" centra
+                     tambien cada linea cuando el nombre envuelve a dos lineas (ClassLabel largo). -->
+                <TextBlock Text="{Binding ClassLabel, Mode=OneWay}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,6" />
                 <DockPanel Margin="0,0,0,6" LastChildFill="False">
                     <!-- Bug real encontrado 2-sep-2026 ("el boton apenas se diferencia con el
                          fondo"): Background/Foreground puestos a mano aqui NO HACEN NADA - la
@@ -853,7 +858,20 @@
         <DataTemplate DataType="{x:Type vm:BuildStageViewModel}">
             <StackPanel Margin="0,0,0,28" Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
                 <TextBlock Text="{Binding Label}" Style="{StaticResource TitleText}" Margin="0,0,0,10" />
-                <ItemsControl ItemsSource="{Binding Classes}" ItemTemplate="{StaticResource BuildClassTemplate}">
+                <!-- Bug visual real reportado por el usuario con captura (21-sep-2026): al filtrar
+                     a una sola clase (ej. solo "Magia"), la columna resultante quedaba pegada a la
+                     izquierda con todo el resto del ancho vacio a la derecha. Causa real: el
+                     WrapPanel de abajo mide su DesiredSize como el ancho real ocupado por las
+                     columnas visibles (una sola columna con pocos elementos = ancho pequeño), y el
+                     ItemsControl (HorizontalAlignment por defecto = Stretch) lo estiraba a lo ancho
+                     de toda la pestaña, dejando el WrapPanel (que no centra su propio contenido)
+                     pegado a la izquierda de ese hueco. HorizontalAlignment="Center" aqui hace que
+                     el ItemsControl se dimensione a su DesiredSize real (el de las columnas
+                     visibles) y lo centre dentro de la pestaña: con 1-2 columnas activas quedan
+                     centradas con espacio igual a ambos lados; con las 4-5 columnas reales
+                     ocupando ya casi todo el ancho disponible el efecto visual es practicamente el
+                     mismo de antes (no hay hueco que centrar). -->
+                <ItemsControl ItemsSource="{Binding VisibleClasses}" ItemTemplate="{StaticResource BuildClassTemplate}" HorizontalAlignment="Center">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate><WrapPanel ItemWidth="248" /></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
@@ -2511,21 +2529,23 @@
                          destacada de la pantalla, antes que cualquier otra cosa - un clic real,
                          explicito, del usuario (Home.ContinueCommand -> CharacterChosen, mismo
                          camino real que elegir una tarjeta). -->
-                    <!-- Catalogo de rediseño visual T4 (20-sep-2026, "tarjeta hero"): el banner
-                         "Continuar con X" crece a tarjeta hero real - doll a 2x (mismo Preview ya
-                         renderizado para la tarjeta pequeña de mas abajo, Home.
-                         LastSessionCharacterEntry, cero trabajo nuevo) + dos KPI reales de la
-                         ultima sesion (Vida maxima, Tiempo jugado - los dos ya venian en el
-                         propio .plr que el escaneo YA lee entero). LIMITE real documentado (no en
-                         silencio): el catalogo pide una TERCERA KPI, "etapa de la Guia" - exige
-                         evaluar el catalogo completo de la Guia (GuideCatalog+GuideEvaluator)
-                         contra un personaje que puede no estar cargado en el editor principal,
-                         una pieza de infraestructura nueva que hoy no existe (GuideViewModel solo
-                         evalua el personaje YA cargado) y merece su propia ronda dedicada con
-                         verificacion propia, no una añadidura de ultima hora aqui. Doll/KPIs solo
-                         se enseñan si el personaje de la ultima sesion SIGUE en la lista escaneada
+                    <!-- Catalogo de rediseño visual T4 (20-sep-2026, "tarjeta hero"; 3er KPI
+                         cerrado de verdad 21-sep-2026, segundo intento real tras el limite
+                         documentado de la ronda anterior): el banner "Continuar con X" crece a
+                         tarjeta hero real - doll a 2x (mismo Preview ya renderizado para la
+                         tarjeta pequeña de mas abajo, Home.LastSessionCharacterEntry, cero
+                         trabajo nuevo) + TRES KPI reales de la ultima sesion (Vida maxima, Tiempo
+                         jugado - del propio .plr - y ahora tambien la etapa real de la Guia,
+                         Home.LastSessionGuideStage, evaluada de verdad con
+                         GuideCatalog+GuideEvaluator contra ESE personaje aunque no este cargado
+                         en el editor principal, ver el comentario completo junto a
+                         HomeViewModel.ComputeGuideStage). Doll/KPIs solo se enseñan si el
+                         personaje de la ultima sesion SIGUE en la lista escaneada
                          (LastSessionCharacterEntry != null) - si no, el banner cae al texto solo,
-                         mismo comportamiento de siempre, nunca un dato a medias/inventado. -->
+                         mismo comportamiento de siempre, nunca un dato a medias/inventado. La
+                         etapa de la Guia tiene su PROPIA visibilidad ademas (LastSessionGuideStage
+                         puede ser null con personaje real: Guia entera completada, o un fallo real
+                         de lectura de la Guia - nunca se enseña un texto inventado en su lugar). -->
                     <Border Background="{StaticResource AccentGradientBrush}" CornerRadius="10" Padding="18,16" Margin="0,0,0,20"
                             Effect="{StaticResource CardShadow}" Cursor="Hand"
                             Visibility="{Binding Home.LastSessionCharacterName, Converter={StaticResource NullToVis}}">
@@ -2551,10 +2571,21 @@
                                             <TextBlock Text="{Binding Home.LastSessionCharacterEntry.HealthMax, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Border>
-                                    <Border Background="#26FFFFFF" CornerRadius="99" Padding="10,4">
+                                    <Border Background="#26FFFFFF" CornerRadius="99" Padding="10,4" Margin="0,0,8,0">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="◷" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
                                             <TextBlock Text="{Binding Home.LastSessionCharacterEntry.PlayTimeText, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                    <!-- 3er KPI real (T4, 21-sep-2026): etapa de la Guia. Visibilidad
+                                         PROPIA - null es un caso real (Guia completada o fallo de
+                                         lectura ajeno al personaje), no se enseña la pastilla vacia. -->
+                                    <Border Background="#26FFFFFF" CornerRadius="99" Padding="10,4"
+                                            Visibility="{Binding Home.LastSessionGuideStage, Converter={StaticResource NullToVis}}"
+                                            ToolTip="{Binding Loc[home_hero_kpi_guide_stage_tooltip], Mode=OneWay}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="☗" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                            <TextBlock Text="{Binding Home.LastSessionGuideStage, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
@@ -5031,58 +5062,174 @@
             </DockPanel>
         </TabItem>
 
-        <!-- ===================== NOVEDADES ===================== -->
-        <!-- Pedido explicito del usuario (2-sep-2026): "dos pestañas, una con las novedades de
-             Terraria vanilla y otra de tModLoader y Calamity Mod" - antes una unica lista
-             mezclando las dos cosas bajo la etiqueta generica "JUEGO". -->
-        <TabItem Tag="GroupStart" ToolTip="{Binding Loc[tab_whatsnew], Mode=OneWay, StringFormat='{}{0} (Ctrl+4)'}"
-                 AutomationProperties.Name="{Binding Loc[tab_whatsnew], Mode=OneWay}">
+        <!-- ===================== GUIA ===================== -->
+        <!-- Fase B (integracion de la Guia, 15-sep-2026): mismo arbol/evaluador que TerrakeepMod,
+             evaluado aqui contra el personaje/mundo REALES ya cargados en Terrakeep - sin
+             necesitar tModLoader instalado (pedido explicito del usuario: "para poder jugar la
+             version mas pura vanilla... sin depender de tener el mod instalado"). Ver
+             Terrakeep.App/ViewModels/GuideViewModel.cs y Terrakeep.Core/Guia/ para la logica real
+             y el detalle honesto de que se puede/no se puede comprobar desde un editor de
+             ficheros estatico (requisitos "no evaluable" con motivo real, nunca un falso verde). -->
+        <TabItem ToolTip="{Binding Loc[tab_guide], Mode=OneWay, StringFormat='{}{0} (Ctrl+4)'}"
+                 AutomationProperties.Name="{Binding Loc[tab_guide], Mode=OneWay}">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="☆" FontSize="16" Width="24" TextAlignment="Center" />
-                    <TextBlock Text="{Binding Loc[tab_whatsnew], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
+                    <TextBlock Text="☞" FontSize="16" Width="24" TextAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[tab_guide], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
                 </StackPanel>
             </TabItem.Header>
-            <DockPanel Margin="14">
-                <TextBlock DockPanel.Dock="Top" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10">
-                    <Run Text="{Binding Loc[whatsnew_intro_1], Mode=OneWay}" />
-                    <Run Text="{Binding Loc[whatsnew_intro_game], Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                    <Run Text="{Binding Loc[whatsnew_intro_2], Mode=OneWay}" />
-                    <Run Text="{Binding Loc[whatsnew_intro_link], Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
-                    <Run Text="." />
-                </TextBlock>
-                <TabControl Style="{StaticResource InnerTabControl}">
-                    <!-- H5-09: MaxWidth compartido (DetailContentMaxWidth) + las tarjetas de version
-                         pasan de tira unica a UniformGrid de verdad (DetailCardColumns, 2 en Amplio)
-                         en vez de "una tira unica" (texto literal del hallazgo). -->
-                    <TabItem Header="Terraria">
-                        <ScrollViewer Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
-                            <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
-                                <ItemsControl ItemsSource="{Binding WhatsNew.VanillaEntries}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><UniformGrid Columns="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
+            <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+                    <TextBlock Text="{Binding Loc[tab_guide], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="26" Margin="0,4,0,4" />
+                    <TextBlock Text="{Binding Loc[guide_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,4" />
+                    <TextBlock Text="{Binding Loc[guide_desktop_notice], Mode=OneWay}" Style="{StaticResource CaptionText}" FontStyle="Italic" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,18" />
+
+                    <!-- Aviso de Calamity detectado - mismo texto real que ya usa el mod. -->
+                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource CalamityBrush}" BorderThickness="1" CornerRadius="8"
+                            Padding="14,11" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                            Visibility="{Binding Guide.MostrarAvisoCalamity, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Guide.TextoAvisoCalamityTitulo, Mode=OneWay}" Style="{StaticResource SectionText}" Foreground="{StaticResource CalamityBrush}" />
+                            <TextBlock Text="{Binding Guide.TextoAvisoCalamity, Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Sin personaje ni mundo cargados: no hay nada que evaluar todavia. -->
+                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="8" Padding="16,14" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                            Visibility="{Binding Guide.HasAnyData, Converter={StaticResource InverseBoolToVis}}">
+                        <TextBlock Text="{Binding Loc[guide_empty_state], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+                    </Border>
+
+                    <!-- Mundo cargado, SIN personaje: bug real reportado en directo (16-sep-2026)
+                         - la mayoria de requisitos (Objeto/Gancho, necesitan el .plr) se ven "no
+                         evaluable" y antes solo se explicaba letra pequeña, uno por uno, bajo cada
+                         linea - facil de no leer entre docenas de requisitos identicos. Un aviso
+                         unico y visible lo dice una sola vez, arriba de todo. -->
+                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="1" CornerRadius="8"
+                            Padding="14,11" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                            Visibility="{Binding Guide.MostrarAvisoSinPersonaje, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding Guide.TextoAvisoSinPersonaje, Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                    </Border>
+
+                    <!-- Objetivo actual - la tarjeta destacada, mismo tratamiento visual que el
+                         "Continuar con..." de Inicio (degradado de acento + sombra). -->
+                    <StackPanel Margin="0,0,0,10" Visibility="{Binding Guide.ObjetivoPaso, Converter={StaticResource NullToVis}}">
+                        <TextBlock Text="{Binding Guide.TextoObjetivoActual, Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
+                        <Border Background="{StaticResource AccentGradientBrush}" CornerRadius="10" Padding="18,14" Effect="{StaticResource CardShadow}"
+                                MaxWidth="680" HorizontalAlignment="Left">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Guide.ObjetivoTramo.Nombre, Mode=OneWay}" Foreground="White" FontSize="12" Opacity="0.85" />
+                                <TextBlock Text="{Binding Guide.ObjetivoPaso.Titulo, Mode=OneWay}" Foreground="White" FontSize="20" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,8" />
+                                <TextBlock Foreground="White" Opacity="0.85" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2">
+                                    <Run Text="{Binding Guide.TextoPorQue, Mode=OneWay}" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Guide.ObjetivoPaso.Porque, Mode=OneWay}" Foreground="White" TextWrapping="Wrap" Margin="0,0,0,8" />
+                                <TextBlock Foreground="White" Opacity="0.85" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2">
+                                    <Run Text="{Binding Guide.TextoComo, Mode=OneWay}" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Guide.ObjetivoPaso.Como, Mode=OneWay}" Foreground="White" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                <TextBlock Foreground="White" Opacity="0.85" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4">
+                                    <Run Text="{Binding Guide.TextoQueTeFalta, Mode=OneWay}" />
+                                </TextBlock>
+                                <ItemsControl ItemsSource="{Binding Guide.ObjetivoPaso.Requisitos}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,2,0,4">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Icono}" Foreground="White" FontWeight="Bold" Width="18" VerticalAlignment="Top" />
+                                                    <TextBlock Text="{Binding Linea}" Foreground="White" TextWrapping="Wrap" MaxWidth="560">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Recomendado}" Value="True">
+                                                                        <Setter Property="Opacity" Value="0.7" />
+                                                                        <Setter Property="FontStyle" Value="Italic" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Motivo}" Foreground="White" Opacity="0.65" FontSize="10" FontStyle="Italic" TextWrapping="Wrap"
+                                                           MaxWidth="540" Margin="24,1,0,0" Visibility="{Binding Motivo, Converter={StaticResource EmptyToCollapsed}}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="tModLoader / Calamity Mod">
-                        <ScrollViewer Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
-                            <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
-                                <ItemsControl ItemsSource="{Binding WhatsNew.CalamityEntries}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><UniformGrid Columns="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-                </TabControl>
-            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Guide.TextoSinObjetivo, Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left"
+                               Margin="0,0,0,10" Visibility="{Binding Guide.ObjetivoPaso, Converter={StaticResource NullToCollapsed}}" />
+
+                    <!-- Arbol completo, como hoja de ruta - un Expander por tramo (colapsado por
+                         defecto, mismo patron ya usado en Exploracion para no abrir la pantalla
+                         entera de golpe con 46 tramos reales). -->
+                    <TextBlock Text="{Binding Loc[guide_all_tracks_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,16,0,10" />
+                    <ItemsControl ItemsSource="{Binding Guide.Tramos}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1"
+                                        CornerRadius="8" Padding="12,8" Margin="0,0,0,8" MaxWidth="680" HorizontalAlignment="Left">
+                                    <Expander Foreground="{StaticResource TextPrimaryBrush}" IsExpanded="False">
+                                        <Expander.Header>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Icono}" FontWeight="Bold" Width="18"
+                                                           Foreground="{StaticResource EquippedGreenBrush}" />
+                                                <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="380" />
+                                                <Border Background="{StaticResource TealBrush}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
+                                                        Visibility="{Binding EsOpcional, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DataContext.Loc[guide_optional_badge], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" FontSize="9" Foreground="White" />
+                                                </Border>
+                                                <Border Background="{StaticResource CalamityBrush}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
+                                                        Visibility="{Binding EsCalamity, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DataContext.Loc[guide_calamity_badge], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" FontSize="9" Foreground="White" />
+                                                </Border>
+                                                <Border Background="{StaticResource BgHoverBrush}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
+                                                        Visibility="{Binding Implementado, Converter={StaticResource InverseBoolToVis}}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DataContext.Loc[guide_not_implemented_badge], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                </Border>
+                                            </StackPanel>
+                                        </Expander.Header>
+                                        <StackPanel Margin="26,8,0,4">
+                                            <TextBlock Text="{Binding Resumen}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                                            <ItemsControl ItemsSource="{Binding Pasos}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Margin="0,0,0,10">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Icono}" FontWeight="Bold" Width="16" Foreground="{StaticResource EquippedGreenBrush}" />
+                                                                <TextBlock Text="{Binding Titulo}" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="500" />
+                                                                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                                    <Run Text="{Binding PreparacionPct, Mode=OneWay}" /><Run Text="%" />
+                                                                </TextBlock>
+                                                            </StackPanel>
+                                                            <ItemsControl ItemsSource="{Binding Requisitos}" Margin="24,2,0,0">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,1,0,1">
+                                                                            <TextBlock Text="{Binding Icono}" Width="16" />
+                                                                            <TextBlock Text="{Binding Linea}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="480" />
+                                                                        </StackPanel>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Expander>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
         </TabItem>
 
         <!-- ===================== EXPLORACION ===================== -->
-        <TabItem ToolTip="{Binding Loc[tab_exploration], Mode=OneWay, StringFormat='{}{0} (Ctrl+5)'}"
+        <TabItem Tag="GroupStart" ToolTip="{Binding Loc[tab_exploration], Mode=OneWay, StringFormat='{}{0} (Ctrl+5)'}"
                  AutomationProperties.Name="{Binding Loc[tab_exploration], Mode=OneWay}">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
@@ -5583,9 +5730,23 @@
                                              una banda representa una region REAL del mundo, tiene que escalar CON el
                                              zoom igual que el propio mapa, no quedarse a tamaño de pantalla fijo como
                                              los marcadores de punto de arriba. IsHitTestVisible=False: es una capa
-                                             puramente informativa, nunca debe robarle el clic al mapa de debajo. -->
+                                             puramente informativa, nunca debe robarle el clic al mapa de debajo.
+                                             Bug real reportado por el usuario en vivo (21-sep-2026, "niebla azul
+                                             dividiendo la superficie" - confundida con un bug): el mecanismo SI es
+                                             real e intencional, pero el diseño tenia dos fallos reales genuinos -
+                                             las 4 bandas usaban el MISMO color (AccentMutedBrush), indistinguibles
+                                             entre si salvo por la posicion, Y no habia ninguna etiqueta en pantalla
+                                             que dijera "esto es el indicador de zona de la Guia" - nada explicaba
+                                             la niebla, asi que leerla como un bug era razonable. Arreglado con
+                                             evidencia real pedida por el coordinador: color DISTINTO por banda,
+                                             reutilizando brushes YA reales de Theme.xaml (nunca inventados) y
+                                             ninguno coincide con los de los marcadores de PUNTO de aparicion ya en
+                                             el mapa (AccentBrush=estrella de Spawn Points del personaje,
+                                             OrangeBrush=casa de spawn del mundo) - ver tambien el chip real
+                                             "Guia: <Zona>" añadido mas abajo, mismos 4 colores, misma condicion
+                                             real de visibilidad. -->
                                         <Rectangle Width="{Binding ElementName=WorldMapImage, Path=ActualWidth}" IsHitTestVisible="False" Panel.ZIndex="1"
-                                                   Fill="{StaticResource AccentMutedBrush}" Opacity="0.35">
+                                                   Fill="{StaticResource MasterGoldBrush}" Opacity="0.30">
                                             <Rectangle.Style>
                                                 <Style TargetType="Rectangle">
                                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -5604,7 +5765,7 @@
                                             </Rectangle.Style>
                                         </Rectangle>
                                         <Rectangle Width="{Binding ElementName=WorldMapImage, Path=ActualWidth}" IsHitTestVisible="False" Panel.ZIndex="1"
-                                                   Fill="{StaticResource AccentMutedBrush}" Opacity="0.35">
+                                                   Fill="{StaticResource EquippedGreenBrush}" Opacity="0.30">
                                             <Rectangle.Style>
                                                 <Style TargetType="Rectangle">
                                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -5623,7 +5784,7 @@
                                             </Rectangle.Style>
                                         </Rectangle>
                                         <Rectangle Width="{Binding ElementName=WorldMapImage, Path=ActualWidth}" IsHitTestVisible="False" Panel.ZIndex="1"
-                                                   Fill="{StaticResource AccentMutedBrush}" Opacity="0.35">
+                                                   Fill="{StaticResource DebuffBrush}" Opacity="0.30">
                                             <Rectangle.Style>
                                                 <Style TargetType="Rectangle">
                                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -5642,7 +5803,7 @@
                                             </Rectangle.Style>
                                         </Rectangle>
                                         <Rectangle Width="{Binding ElementName=WorldMapImage, Path=ActualWidth}" IsHitTestVisible="False" Panel.ZIndex="1"
-                                                   Fill="{StaticResource AccentMutedBrush}" Opacity="0.35">
+                                                   Fill="{StaticResource CalamityBrush}" Opacity="0.30">
                                             <Rectangle.Style>
                                                 <Style TargetType="Rectangle">
                                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -5842,6 +6003,131 @@
                                         <TextBlock Text="{Binding Exploration.HoverInfo}" Style="{StaticResource CaptionText}" />
                                     </Border>
                                 </Canvas>
+                                <!-- Chip real "Guia: <Zona>" (pedido explicito del coordinador el 21-sep-2026,
+                                     tras el reporte del usuario de "niebla azul" confundida con un bug):
+                                     identifica en pantalla, con texto+icono, la banda de profundidad que se ve
+                                     en cada momento - misma condicion de visibilidad y mismo color que su
+                                     banda real (ver el comentario completo mas arriba, junto a las 4
+                                     Rectangle). Anclado al VIEWPORT (hijo directo de este Grid, fuera del
+                                     ScrollViewer/LayoutTransform de zoom) para quedarse fijo en la esquina
+                                     mientras se hace scroll/zoom, mismo criterio que MapStatusBar/el resto de
+                                     chips flotantes de esta pantalla. IsHitTestVisible=False: informativo,
+                                     nunca roba el clic.
+                                     Esquina SUPERIOR IZQUIERDA, no derecha (verificado con captura real,
+                                     GUIACHIP_SOLO): el panel real "Buscar en el mundo" (T6, mas abajo en este
+                                     mismo Grid, se pinta ENCIMA por orden de declaracion) ocupa la esquina
+                                     derecha entera y tapaba el chip ahi - la izquierda esta libre de verdad. -->
+                                <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0"
+                                        CornerRadius="99" Padding="10,5" IsHitTestVisible="False" Effect="{StaticResource CardShadow}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
+                                                        <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Superficie" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Setter Property="Background" Value="{StaticResource MasterGoldBrush}" />
+                                                </MultiDataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
+                                                        <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Subterraneo" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Setter Property="Background" Value="{StaticResource EquippedGreenBrush}" />
+                                                </MultiDataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
+                                                        <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Cavernas" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Setter Property="Background" Value="{StaticResource DebuffBrush}" />
+                                                </MultiDataTrigger>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding Exploration.IsWorldLoaded}" Value="True" />
+                                                        <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Infierno" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Setter Property="Background" Value="{StaticResource CalamityBrush}" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#9678;" FontSize="13" Foreground="White" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <!-- 4 TextBlock mutuamente excluyentes con DataTrigger (mismo criterio ya
+                                             establecido en toda esta pantalla para "muestra esto solo si la Zona
+                                             es X" - ver las 4 Rectangle de arriba) - cada uno ya trae su texto
+                                             final formateado ("Guía: <Zona>"), sin resolver nada en C#. -->
+                                        <!-- Bug real encontrado verificando con captura (GUIACHIP_SOLO, 21-sep-2026):
+                                             Visibility="Collapsed" puesto como atributo LOCAL del TextBlock (en vez
+                                             de dentro del propio Style, como valor por defecto) gana SIEMPRE sobre
+                                             el Setter del DataTrigger - un valor local nunca lo pisa un trigger de
+                                             Style, es una regla fija de WPF. El chip pintaba el fondo (el Border
+                                             de fuera SI usa el patron correcto) pero el texto se quedaba
+                                             invisible siempre, pasara lo que pasara la Zona real. Arreglo real:
+                                             Visibility="Collapsed" como Setter DENTRO del Style (igual que ya
+                                             hacen el propio Border y las 4 Rectangle de las bandas), nunca como
+                                             atributo local del elemento. -->
+                                        <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Text="{Binding Loc[guide_zone_chip_superficie], Mode=OneWay}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Superficie">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Text="{Binding Loc[guide_zone_chip_subterraneo], Mode=OneWay}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Subterraneo">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Text="{Binding Loc[guide_zone_chip_cavernas], Mode=OneWay}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Cavernas">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Text="{Binding Loc[guide_zone_chip_infierno], Mode=OneWay}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Infierno">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
                             </Grid>
                         </DockPanel>
 
@@ -6371,8 +6657,19 @@
                                   Margin="0,0,0,8" IsExpanded="False"
                                   Visibility="{Binding Exploration.HasBestiary, Converter={StaticResource BoolToVis}}">
                             <StackPanel Margin="0,6,0,0">
+                                <!-- Bug real reportado en vivo ("panel del Bestiario cortado") - segundo
+                                     intento real (21-sep-2026), tras el limite documentado de la ronda
+                                     anterior (que solo midio los ENCABEZADOS de la columna, nunca este
+                                     resumen). CaptionText no fija TextWrapping (por diseño, la mayoria
+                                     de sus usos son textos cortos de una linea) y este texto real
+                                     concreto ("N especies registradas (vistas, con las que has hablado
+                                     o que has matado) · M muertes en total") es una frase larga de
+                                     verdad - sin Wrap se recortaba en SILENCIO (sin "...", sin aviso)
+                                     contra el ancho minimo real del sidebar (260px), confirmado con
+                                     BESTIARIO_SOLO y el mundo/personaje reales de mas especies de esta
+                                     maquina (Blando_Río.wld, 361 especies, captura real). -->
                                 <TextBlock Text="{Binding Exploration.BestiarySummaryText, Mode=OneWay}" Style="{StaticResource CaptionText}"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
+                                           Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,4" />
                                 <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                     <!-- Catalogo de ideas Keep, idea 4 (20-sep-2026, "Bestiario del
                                          mundo con sprites reales"): icono real cuando existe
@@ -7370,12 +7667,187 @@
             </DockPanel>
         </TabItem>
 
+        <!-- ===================== SERVIDOR ===================== -->
+        <!-- Fase B (15-sep-2026): hosting real de un servidor de Terraria/tModLoader, motor de
+             ServidorKeep.Core reutilizado tal cual (Job Objects, Firewall automatico, mods
+             reales) - ver Terrakeep.App/ViewModels/HostingViewModel.cs. -->
+        <TabItem ToolTip="{Binding Loc[tab_hosting], Mode=OneWay, StringFormat='{}{0} (Ctrl+6)'}"
+                 AutomationProperties.Name="{Binding Loc[tab_hosting], Mode=OneWay}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="☁" FontSize="16" Width="24" TextAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[tab_hosting], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
+                </StackPanel>
+            </TabItem.Header>
+            <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+                    <TextBlock Text="{Binding Loc[tab_hosting], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="26" Margin="0,4,0,4" />
+                    <TextBlock Text="{Binding Loc[hosting_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,18" />
+
+                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource PinkBrush}" BorderThickness="1" CornerRadius="8"
+                            Padding="14,11" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                            Visibility="{Binding Hosting.TerrariaDetectado, Converter={StaticResource InverseBoolToVis}}">
+                        <TextBlock Text="{Binding Loc[hosting_not_detected], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
+                    </Border>
+
+                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="10" Padding="18,16" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
+                            Effect="{StaticResource CardShadow}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding Loc[hosting_name], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <TextBox Text="{Binding Hosting.NombreInstancia, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                                    <TextBlock Text="{Binding Loc[hosting_world_name], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <TextBox Text="{Binding Hosting.NombreMundo, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                                    <TextBlock Text="{Binding Loc[hosting_world_size], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <!-- Mismo patron real ya usado para el idioma en Ajustes -
+                                         RadioButton.IsChecked de doble via a un enum via
+                                         EnumEquals (Enum.Parse contra ConverterParameter). -->
+                                    <UniformGrid Columns="3" Margin="0,2,0,8">
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Pequeño" Margin="0,0,2,0"
+                                                     IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Pequeno}" />
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Mediano" Margin="2,0,2,0"
+                                                     IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Mediano}" />
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Grande" Margin="2,0,0,0"
+                                                     IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Grande}" />
+                                    </UniformGrid>
+                                    <TextBlock Text="{Binding Loc[hosting_difficulty], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <UniformGrid Columns="2" Margin="0,2,0,8">
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Normal" Margin="0,0,2,2"
+                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Normal}" />
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Experto" Margin="2,0,0,2"
+                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Experto}" />
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Maestro" Margin="0,2,2,0"
+                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Maestro}" />
+                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Creativo" Margin="2,2,0,0"
+                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Creativo}" />
+                                    </UniformGrid>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="{Binding Loc[hosting_max_players], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <TextBox Text="{Binding Hosting.MaxJugadores, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                                    <TextBlock Text="{Binding Loc[hosting_port], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <TextBox Text="{Binding Hosting.Puerto, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                                    <TextBlock Text="{Binding Loc[hosting_password], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                                    <TextBox Text="{Binding Hosting.Password, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
+                                    <CheckBox Content="{Binding Loc[hosting_use_tmodloader], Mode=OneWay}" IsChecked="{Binding Hosting.UsarTModLoader}" Margin="0,10,0,0" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <StackPanel Visibility="{Binding Hosting.UsarTModLoader, Converter={StaticResource BoolToVis}}" Margin="0,4,0,8">
+                                <TextBlock Text="{Binding Loc[hosting_mods_title], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="13" Margin="0,0,0,4" />
+                                <TextBlock Text="{Binding Loc[hosting_mods_none], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
+                                           Visibility="{Binding Hosting.ModsDisponibles.Count, Converter={StaticResource CountToCollapsed}}" />
+                                <ItemsControl ItemsSource="{Binding Hosting.ModsDisponibles}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding Nombre}" IsChecked="{Binding Seleccionado}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,1,0,1">
+                                                <CheckBox.ToolTip>
+                                                    <TextBlock Text="{Binding TamanoTexto}" />
+                                                </CheckBox.ToolTip>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding Hosting.ErrorMessage}" Foreground="{StaticResource CalamityBrush}" TextWrapping="Wrap" Margin="0,4,0,8"
+                                       Visibility="{Binding Hosting.ErrorMessage, Converter={StaticResource EmptyToCollapsed}}" />
+
+                            <Button Content="{Binding Loc[hosting_start], Mode=OneWay}" Tag="Accent" Command="{Binding Hosting.IniciarCommand}"
+                                    HorizontalAlignment="Left" Padding="16,7" IsEnabled="{Binding Hosting.TerrariaDetectado}" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="{Binding Loc[hosting_active_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
+                    <TextBlock Text="{Binding Loc[hosting_no_instances], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                               Visibility="{Binding Hosting.Instancias.Count, Converter={StaticResource CountToCollapsed}}" />
+                    <ItemsControl ItemsSource="{Binding Hosting.Instancias}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1"
+                                        CornerRadius="8" Padding="14,10" Margin="0,0,0,10" MaxWidth="680" HorizontalAlignment="Left">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="10" Height="10" Fill="{Binding EstadoColorKey, Converter={StaticResource ResourceKeyToBrush}}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                            <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding EstadoTexto}" Foreground="{Binding EstadoColorKey, Converter={StaticResource ResourceKeyToBrush}}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                            <TextBlock VerticalAlignment="Center" Margin="8,0,0,0" Style="{StaticResource CaptionText}">
+                                                <Run Text="puerto " /><Run Text="{Binding Puerto, Mode=OneWay}" />
+                                            </TextBlock>
+                                            <Button Content="{Binding DataContext.Loc[hosting_stop], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                                                    Command="{Binding DetenerCommand}" Margin="16,0,0,0" Padding="10,3" HorizontalAlignment="Left" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding RecursosTexto}" Style="{StaticResource CaptionText}" Margin="18,4,0,0" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <!-- ===================== NOVEDADES ===================== -->
+        <!-- Pedido explicito del usuario (2-sep-2026): "dos pestañas, una con las novedades de
+             Terraria vanilla y otra de tModLoader y Calamity Mod" - antes una unica lista
+             mezclando las dos cosas bajo la etiqueta generica "JUEGO". -->
+        <TabItem Tag="GroupStart" ToolTip="{Binding Loc[tab_whatsnew], Mode=OneWay, StringFormat='{}{0} (Ctrl+7)'}"
+                 AutomationProperties.Name="{Binding Loc[tab_whatsnew], Mode=OneWay}">
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="☆" FontSize="16" Width="24" TextAlignment="Center" />
+                    <TextBlock Text="{Binding Loc[tab_whatsnew], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
+                </StackPanel>
+            </TabItem.Header>
+            <DockPanel Margin="14">
+                <TextBlock DockPanel.Dock="Top" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,10">
+                    <Run Text="{Binding Loc[whatsnew_intro_1], Mode=OneWay}" />
+                    <Run Text="{Binding Loc[whatsnew_intro_game], Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                    <Run Text="{Binding Loc[whatsnew_intro_2], Mode=OneWay}" />
+                    <Run Text="{Binding Loc[whatsnew_intro_link], Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                    <Run Text="." />
+                </TextBlock>
+                <TabControl Style="{StaticResource InnerTabControl}">
+                    <!-- H5-09: MaxWidth compartido (DetailContentMaxWidth) + las tarjetas de version
+                         pasan de tira unica a UniformGrid de verdad (DetailCardColumns, 2 en Amplio)
+                         en vez de "una tira unica" (texto literal del hallazgo). -->
+                    <TabItem Header="Terraria">
+                        <ScrollViewer Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
+                            <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+                                <ItemsControl ItemsSource="{Binding WhatsNew.VanillaEntries}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><UniformGrid Columns="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                    <TabItem Header="tModLoader / Calamity Mod">
+                        <ScrollViewer Margin="0,10,0,0" VerticalScrollBarVisibility="Auto">
+                            <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
+                                <ItemsControl ItemsSource="{Binding WhatsNew.CalamityEntries}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><UniformGrid Columns="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                </TabControl>
+            </DockPanel>
+        </TabItem>
+
         <!-- ===================== ACERCA DE ===================== -->
         <!-- H5-09 (quinta auditoria de Opus): MaxWidth compartido (DetailContentMaxWidth) para
              que el Changelog reparta en columnas reales con sitio (DetailCardColumns) - pero el
              texto corrido (creditos, intro) NO crece con el contenedor, MaxWidth propio de 680
              para mantener el tope de linea real por legibilidad (pedido explicito del informe). -->
-        <TabItem ToolTip="{Binding Loc[tab_about], Mode=OneWay, StringFormat='{}{0} (Ctrl+6)'}"
+        <TabItem ToolTip="{Binding Loc[tab_about], Mode=OneWay, StringFormat='{}{0} (Ctrl+8)'}"
                  AutomationProperties.Name="{Binding Loc[tab_about], Mode=OneWay}">
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal">
@@ -7513,297 +7985,6 @@
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><UniformGrid Columns="{Binding DetailCardColumns}" /></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
-                    </ItemsControl>
-                </StackPanel>
-            </ScrollViewer>
-        </TabItem>
-
-        <!-- ===================== GUIA ===================== -->
-        <!-- Fase B (integracion de la Guia, 15-sep-2026): mismo arbol/evaluador que TerrakeepMod,
-             evaluado aqui contra el personaje/mundo REALES ya cargados en Terrakeep - sin
-             necesitar tModLoader instalado (pedido explicito del usuario: "para poder jugar la
-             version mas pura vanilla... sin depender de tener el mod instalado"). Ver
-             Terrakeep.App/ViewModels/GuideViewModel.cs y Terrakeep.Core/Guia/ para la logica real
-             y el detalle honesto de que se puede/no se puede comprobar desde un editor de
-             ficheros estatico (requisitos "no evaluable" con motivo real, nunca un falso verde). -->
-        <TabItem Tag="GroupStart" ToolTip="{Binding Loc[tab_guide], Mode=OneWay, StringFormat='{}{0} (Ctrl+7)'}"
-                 AutomationProperties.Name="{Binding Loc[tab_guide], Mode=OneWay}">
-            <TabItem.Header>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="☞" FontSize="16" Width="24" TextAlignment="Center" />
-                    <TextBlock Text="{Binding Loc[tab_guide], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
-                </StackPanel>
-            </TabItem.Header>
-            <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
-                <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
-                    <TextBlock Text="{Binding Loc[tab_guide], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="26" Margin="0,4,0,4" />
-                    <TextBlock Text="{Binding Loc[guide_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,4" />
-                    <TextBlock Text="{Binding Loc[guide_desktop_notice], Mode=OneWay}" Style="{StaticResource CaptionText}" FontStyle="Italic" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,18" />
-
-                    <!-- Aviso de Calamity detectado - mismo texto real que ya usa el mod. -->
-                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource CalamityBrush}" BorderThickness="1" CornerRadius="8"
-                            Padding="14,11" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
-                            Visibility="{Binding Guide.MostrarAvisoCalamity, Converter={StaticResource BoolToVis}}">
-                        <StackPanel>
-                            <TextBlock Text="{Binding Guide.TextoAvisoCalamityTitulo, Mode=OneWay}" Style="{StaticResource SectionText}" Foreground="{StaticResource CalamityBrush}" />
-                            <TextBlock Text="{Binding Guide.TextoAvisoCalamity, Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,4,0,0" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Sin personaje ni mundo cargados: no hay nada que evaluar todavia. -->
-                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="8" Padding="16,14" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
-                            Visibility="{Binding Guide.HasAnyData, Converter={StaticResource InverseBoolToVis}}">
-                        <TextBlock Text="{Binding Loc[guide_empty_state], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
-                    </Border>
-
-                    <!-- Mundo cargado, SIN personaje: bug real reportado en directo (16-sep-2026)
-                         - la mayoria de requisitos (Objeto/Gancho, necesitan el .plr) se ven "no
-                         evaluable" y antes solo se explicaba letra pequeña, uno por uno, bajo cada
-                         linea - facil de no leer entre docenas de requisitos identicos. Un aviso
-                         unico y visible lo dice una sola vez, arriba de todo. -->
-                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="1" CornerRadius="8"
-                            Padding="14,11" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
-                            Visibility="{Binding Guide.MostrarAvisoSinPersonaje, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="{Binding Guide.TextoAvisoSinPersonaje, Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
-                    </Border>
-
-                    <!-- Objetivo actual - la tarjeta destacada, mismo tratamiento visual que el
-                         "Continuar con..." de Inicio (degradado de acento + sombra). -->
-                    <StackPanel Margin="0,0,0,10" Visibility="{Binding Guide.ObjetivoPaso, Converter={StaticResource NullToVis}}">
-                        <TextBlock Text="{Binding Guide.TextoObjetivoActual, Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
-                        <Border Background="{StaticResource AccentGradientBrush}" CornerRadius="10" Padding="18,14" Effect="{StaticResource CardShadow}"
-                                MaxWidth="680" HorizontalAlignment="Left">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Guide.ObjetivoTramo.Nombre, Mode=OneWay}" Foreground="White" FontSize="12" Opacity="0.85" />
-                                <TextBlock Text="{Binding Guide.ObjetivoPaso.Titulo, Mode=OneWay}" Foreground="White" FontSize="20" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,8" />
-                                <TextBlock Foreground="White" Opacity="0.85" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2">
-                                    <Run Text="{Binding Guide.TextoPorQue, Mode=OneWay}" />
-                                </TextBlock>
-                                <TextBlock Text="{Binding Guide.ObjetivoPaso.Porque, Mode=OneWay}" Foreground="White" TextWrapping="Wrap" Margin="0,0,0,8" />
-                                <TextBlock Foreground="White" Opacity="0.85" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2">
-                                    <Run Text="{Binding Guide.TextoComo, Mode=OneWay}" />
-                                </TextBlock>
-                                <TextBlock Text="{Binding Guide.ObjetivoPaso.Como, Mode=OneWay}" Foreground="White" TextWrapping="Wrap" Margin="0,0,0,10" />
-                                <TextBlock Foreground="White" Opacity="0.85" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4">
-                                    <Run Text="{Binding Guide.TextoQueTeFalta, Mode=OneWay}" />
-                                </TextBlock>
-                                <ItemsControl ItemsSource="{Binding Guide.ObjetivoPaso.Requisitos}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Margin="0,2,0,4">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Icono}" Foreground="White" FontWeight="Bold" Width="18" VerticalAlignment="Top" />
-                                                    <TextBlock Text="{Binding Linea}" Foreground="White" TextWrapping="Wrap" MaxWidth="560">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding Recomendado}" Value="True">
-                                                                        <Setter Property="Opacity" Value="0.7" />
-                                                                        <Setter Property="FontStyle" Value="Italic" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                </StackPanel>
-                                                <TextBlock Text="{Binding Motivo}" Foreground="White" Opacity="0.65" FontSize="10" FontStyle="Italic" TextWrapping="Wrap"
-                                                           MaxWidth="540" Margin="24,1,0,0" Visibility="{Binding Motivo, Converter={StaticResource EmptyToCollapsed}}" />
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                    <TextBlock Text="{Binding Guide.TextoSinObjetivo, Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left"
-                               Margin="0,0,0,10" Visibility="{Binding Guide.ObjetivoPaso, Converter={StaticResource NullToCollapsed}}" />
-
-                    <!-- Arbol completo, como hoja de ruta - un Expander por tramo (colapsado por
-                         defecto, mismo patron ya usado en Exploracion para no abrir la pantalla
-                         entera de golpe con 46 tramos reales). -->
-                    <TextBlock Text="{Binding Loc[guide_all_tracks_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,16,0,10" />
-                    <ItemsControl ItemsSource="{Binding Guide.Tramos}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1"
-                                        CornerRadius="8" Padding="12,8" Margin="0,0,0,8" MaxWidth="680" HorizontalAlignment="Left">
-                                    <Expander Foreground="{StaticResource TextPrimaryBrush}" IsExpanded="False">
-                                        <Expander.Header>
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Icono}" FontWeight="Bold" Width="18"
-                                                           Foreground="{StaticResource EquippedGreenBrush}" />
-                                                <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="380" />
-                                                <Border Background="{StaticResource TealBrush}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
-                                                        Visibility="{Binding EsOpcional, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding DataContext.Loc[guide_optional_badge], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" FontSize="9" Foreground="White" />
-                                                </Border>
-                                                <Border Background="{StaticResource CalamityBrush}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
-                                                        Visibility="{Binding EsCalamity, Converter={StaticResource BoolToVis}}" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding DataContext.Loc[guide_calamity_badge], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" FontSize="9" Foreground="White" />
-                                                </Border>
-                                                <Border Background="{StaticResource BgHoverBrush}" CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
-                                                        Visibility="{Binding Implementado, Converter={StaticResource InverseBoolToVis}}" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding DataContext.Loc[guide_not_implemented_badge], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}" FontSize="9" Foreground="{StaticResource TextSecondaryBrush}" />
-                                                </Border>
-                                            </StackPanel>
-                                        </Expander.Header>
-                                        <StackPanel Margin="26,8,0,4">
-                                            <TextBlock Text="{Binding Resumen}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,8" />
-                                            <ItemsControl ItemsSource="{Binding Pasos}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <StackPanel Margin="0,0,0,10">
-                                                            <StackPanel Orientation="Horizontal">
-                                                                <TextBlock Text="{Binding Icono}" FontWeight="Bold" Width="16" Foreground="{StaticResource EquippedGreenBrush}" />
-                                                                <TextBlock Text="{Binding Titulo}" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="500" />
-                                                                <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center">
-                                                                    <Run Text="{Binding PreparacionPct, Mode=OneWay}" /><Run Text="%" />
-                                                                </TextBlock>
-                                                            </StackPanel>
-                                                            <ItemsControl ItemsSource="{Binding Requisitos}" Margin="24,2,0,0">
-                                                                <ItemsControl.ItemTemplate>
-                                                                    <DataTemplate>
-                                                                        <StackPanel Orientation="Horizontal" Margin="0,1,0,1">
-                                                                            <TextBlock Text="{Binding Icono}" Width="16" />
-                                                                            <TextBlock Text="{Binding Linea}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="480" />
-                                                                        </StackPanel>
-                                                                    </DataTemplate>
-                                                                </ItemsControl.ItemTemplate>
-                                                            </ItemsControl>
-                                                        </StackPanel>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </StackPanel>
-                                    </Expander>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </ScrollViewer>
-        </TabItem>
-
-        <!-- ===================== SERVIDOR ===================== -->
-        <!-- Fase B (15-sep-2026): hosting real de un servidor de Terraria/tModLoader, motor de
-             ServidorKeep.Core reutilizado tal cual (Job Objects, Firewall automatico, mods
-             reales) - ver Terrakeep.App/ViewModels/HostingViewModel.cs. -->
-        <TabItem ToolTip="{Binding Loc[tab_hosting], Mode=OneWay, StringFormat='{}{0} (Ctrl+8)'}"
-                 AutomationProperties.Name="{Binding Loc[tab_hosting], Mode=OneWay}">
-            <TabItem.Header>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="☁" FontSize="16" Width="24" TextAlignment="Center" />
-                    <TextBlock Text="{Binding Loc[tab_hosting], Mode=OneWay}" Style="{StaticResource NavRailLabel}" />
-                </StackPanel>
-            </TabItem.Header>
-            <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto">
-                <StackPanel MaxWidth="{Binding DetailContentMaxWidth}" HorizontalAlignment="Left">
-                    <TextBlock Text="{Binding Loc[tab_hosting], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="26" Margin="0,4,0,4" />
-                    <TextBlock Text="{Binding Loc[hosting_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left" Margin="0,0,0,18" />
-
-                    <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource PinkBrush}" BorderThickness="1" CornerRadius="8"
-                            Padding="14,11" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
-                            Visibility="{Binding Hosting.TerrariaDetectado, Converter={StaticResource InverseBoolToVis}}">
-                        <TextBlock Text="{Binding Loc[hosting_not_detected], Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" />
-                    </Border>
-
-                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="10" Padding="18,16" Margin="0,0,0,20" MaxWidth="680" HorizontalAlignment="Left"
-                            Effect="{StaticResource CardShadow}">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                    <TextBlock Text="{Binding Loc[hosting_name], Mode=OneWay}" Style="{StaticResource CaptionText}" />
-                                    <TextBox Text="{Binding Hosting.NombreInstancia, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
-                                    <TextBlock Text="{Binding Loc[hosting_world_name], Mode=OneWay}" Style="{StaticResource CaptionText}" />
-                                    <TextBox Text="{Binding Hosting.NombreMundo, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
-                                    <TextBlock Text="{Binding Loc[hosting_world_size], Mode=OneWay}" Style="{StaticResource CaptionText}" />
-                                    <!-- Mismo patron real ya usado para el idioma en Ajustes -
-                                         RadioButton.IsChecked de doble via a un enum via
-                                         EnumEquals (Enum.Parse contra ConverterParameter). -->
-                                    <UniformGrid Columns="3" Margin="0,2,0,8">
-                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Pequeño" Margin="0,0,2,0"
-                                                     IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Pequeno}" />
-                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Mediano" Margin="2,0,2,0"
-                                                     IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Mediano}" />
-                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="TamanoMundoHosting" Content="Grande" Margin="2,0,0,0"
-                                                     IsChecked="{Binding Hosting.TamanoMundo, Converter={StaticResource EnumEquals}, ConverterParameter=Grande}" />
-                                    </UniformGrid>
-                                    <TextBlock Text="{Binding Loc[hosting_difficulty], Mode=OneWay}" Style="{StaticResource CaptionText}" />
-                                    <UniformGrid Columns="2" Margin="0,2,0,8">
-                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Normal" Margin="0,0,2,2"
-                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Normal}" />
-                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Experto" Margin="2,0,0,2"
-                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Experto}" />
-                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Maestro" Margin="0,2,2,0"
-                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Maestro}" />
-                                        <RadioButton Style="{StaticResource ViewSelector}" GroupName="DificultadHosting" Content="Creativo" Margin="2,2,0,0"
-                                                     IsChecked="{Binding Hosting.Dificultad, Converter={StaticResource EnumEquals}, ConverterParameter=Creativo}" />
-                                    </UniformGrid>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                                    <TextBlock Text="{Binding Loc[hosting_max_players], Mode=OneWay}" Style="{StaticResource CaptionText}" />
-                                    <TextBox Text="{Binding Hosting.MaxJugadores, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
-                                    <TextBlock Text="{Binding Loc[hosting_port], Mode=OneWay}" Style="{StaticResource CaptionText}" />
-                                    <TextBox Text="{Binding Hosting.Puerto, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
-                                    <TextBlock Text="{Binding Loc[hosting_password], Mode=OneWay}" Style="{StaticResource CaptionText}" />
-                                    <TextBox Text="{Binding Hosting.Password, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" />
-                                    <CheckBox Content="{Binding Loc[hosting_use_tmodloader], Mode=OneWay}" IsChecked="{Binding Hosting.UsarTModLoader}" Margin="0,10,0,0" Foreground="{StaticResource TextPrimaryBrush}" />
-                                </StackPanel>
-                            </Grid>
-
-                            <StackPanel Visibility="{Binding Hosting.UsarTModLoader, Converter={StaticResource BoolToVis}}" Margin="0,4,0,8">
-                                <TextBlock Text="{Binding Loc[hosting_mods_title], Mode=OneWay}" Style="{StaticResource SectionText}" FontSize="13" Margin="0,0,0,4" />
-                                <TextBlock Text="{Binding Loc[hosting_mods_none], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap"
-                                           Visibility="{Binding Hosting.ModsDisponibles.Count, Converter={StaticResource CountToCollapsed}}" />
-                                <ItemsControl ItemsSource="{Binding Hosting.ModsDisponibles}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <CheckBox Content="{Binding Nombre}" IsChecked="{Binding Seleccionado}" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,1,0,1">
-                                                <CheckBox.ToolTip>
-                                                    <TextBlock Text="{Binding TamanoTexto}" />
-                                                </CheckBox.ToolTip>
-                                            </CheckBox>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-
-                            <TextBlock Text="{Binding Hosting.ErrorMessage}" Foreground="{StaticResource CalamityBrush}" TextWrapping="Wrap" Margin="0,4,0,8"
-                                       Visibility="{Binding Hosting.ErrorMessage, Converter={StaticResource EmptyToCollapsed}}" />
-
-                            <Button Content="{Binding Loc[hosting_start], Mode=OneWay}" Tag="Accent" Command="{Binding Hosting.IniciarCommand}"
-                                    HorizontalAlignment="Left" Padding="16,7" IsEnabled="{Binding Hosting.TerrariaDetectado}" />
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="{Binding Loc[hosting_active_title], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
-                    <TextBlock Text="{Binding Loc[hosting_no_instances], Mode=OneWay}" Style="{StaticResource CaptionText}"
-                               Visibility="{Binding Hosting.Instancias.Count, Converter={StaticResource CountToCollapsed}}" />
-                    <ItemsControl ItemsSource="{Binding Hosting.Instancias}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{StaticResource BgElevatedBrush}" BorderBrush="{StaticResource BorderBrush0}" BorderThickness="1"
-                                        CornerRadius="8" Padding="14,10" Margin="0,0,0,10" MaxWidth="680" HorizontalAlignment="Left">
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="10" Height="10" Fill="{Binding EstadoColorKey, Converter={StaticResource ResourceKeyToBrush}}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                            <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                            <TextBlock Text="{Binding EstadoTexto}" Foreground="{Binding EstadoColorKey, Converter={StaticResource ResourceKeyToBrush}}" Margin="8,0,0,0" VerticalAlignment="Center" />
-                                            <TextBlock VerticalAlignment="Center" Margin="8,0,0,0" Style="{StaticResource CaptionText}">
-                                                <Run Text="puerto " /><Run Text="{Binding Puerto, Mode=OneWay}" />
-                                            </TextBlock>
-                                            <Button Content="{Binding DataContext.Loc[hosting_stop], RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
-                                                    Command="{Binding DetenerCommand}" Margin="16,0,0,0" Padding="10,3" HorizontalAlignment="Left" />
-                                        </StackPanel>
-                                        <TextBlock Text="{Binding RecursosTexto}" Style="{StaticResource CaptionText}" Margin="18,4,0,0" />
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
             </ScrollViewer>

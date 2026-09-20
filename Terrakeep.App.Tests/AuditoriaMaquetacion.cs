@@ -625,10 +625,10 @@ internal static partial class Program
             ("Personaje/Version", () => { vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 6; }),
             ("Builds/Vanilla", () => { vm.SelectedTabIndex = 2; DoEvents(); HojaAnidada(window, 0); }),
             ("Builds/Calamity", () => { vm.SelectedTabIndex = 2; DoEvents(); HojaAnidada(window, 1); }),
-            ("Novedades/Terraria", () => { vm.SelectedTabIndex = 3; DoEvents(); HojaAnidada(window, 0); }),
-            ("Novedades/tModLoader", () => { vm.SelectedTabIndex = 3; DoEvents(); HojaAnidada(window, 1); }),
+            ("Novedades/Terraria", () => { vm.SelectedTabIndex = 6; DoEvents(); HojaAnidada(window, 0); }), // AppTab.Novedades, reordenado T1 21-sep-2026
+            ("Novedades/tModLoader", () => { vm.SelectedTabIndex = 6; DoEvents(); HojaAnidada(window, 1); }), // AppTab.Novedades, reordenado T1 21-sep-2026
             ("Exploracion", () => { vm.SelectedTabIndex = 4; }),
-            ("AcercaDe+Ajustes", () => { vm.SelectedTabIndex = 5; }),
+            ("AcercaDe+Ajustes", () => { vm.SelectedTabIndex = 7; }), // AppTab.AcercaDe, reordenado T1 21-sep-2026
         };
     }
 

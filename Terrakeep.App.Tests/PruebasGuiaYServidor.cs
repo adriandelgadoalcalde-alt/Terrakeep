@@ -50,7 +50,7 @@ internal static partial class Program
                 Console.WriteLine($"GUIA_SOLO: mundo cargado -> IsWorldLoaded={vm.Exploration.IsWorldLoaded}");
             }
 
-            vm.SelectedTabIndex = 6; // AppTab.Guia
+            vm.SelectedTabIndex = 3; // AppTab.Guia, reordenado T1 21-sep-2026
             DoEvents();
             vm.Guide.Refresh();
             DoEvents();
@@ -123,7 +123,7 @@ internal static partial class Program
     // porque no mide un bug de Terrakeep si el motor tarda mas de lo esperado.
     private static void EjecutarHostingReal(MainWindow window, MainViewModel vm)
     {
-        vm.SelectedTabIndex = 7; // AppTab.Hosting
+        vm.SelectedTabIndex = 5; // AppTab.Hosting, reordenado T1 21-sep-2026
         DoEvents(); DoEvents();
 
         // Evidencia CON NOMBRE de la pestaña Hosting (16-sep-2026, sesgo S1 de KeepQA -

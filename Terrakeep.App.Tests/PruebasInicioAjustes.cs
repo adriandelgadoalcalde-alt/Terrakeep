@@ -254,7 +254,9 @@ internal static partial class Program
         }
     }
 
-    // ---- INI-06: las 5 tarjetas de "Que mas puedes hacer" llevan de verdad a donde dicen ----
+    // ---- INI-06: las 3 tarjetas reales de "Que mas puedes hacer" llevan de verdad a donde dicen
+    // (Novedades/AcercaDe salieron de Inicio con el cierre real de T4, 20-sep-2026 - ver el
+    // comentario completo mas abajo, junto al array `esperado`) ----
     // MainViewModel.GoToTab decide la pestaña con un `switch` sobre una CADENA que viene del
     // CommandParameter del XAML, y su rama por defecto es `_ => Inicio`: una cadena mal escrita
     // (o una pestaña renombrada) no da ningun error - la tarjeta simplemente no lleva a ningun
@@ -409,13 +411,18 @@ internal static partial class Program
 
             var loc = LocalizationService.Instance;
             // titulo real de la tarjeta -> (pestaña esperada, que mas tiene que pasar)
+            // Catalogo de rediseño visual T4 (cerrado 20-sep-2026, "Inicio como escritorio de
+            // partida"): las 7 tarjetas originales de "Que mas puedes hacer" (incluidas
+            // Novedades/AcercaDe, aqui abajo hasta ahora) se redujeron a 3 sugerencias
+            // contextuales reales (Libreria, Builds, Exploracion) - el resto de secciones
+            // quedan accesibles solo desde la rail (T1). Esta prueba llevaba desde entonces
+            // esperando 5 tarjetas y dando 2 FALLO fijos por tarjetas que ya no existen de
+            // verdad en Inicio - actualizada aqui (21-sep-2026) para reflejar las 3 reales.
             (string titulo, int tabEsperada, string nota)[] esperado =
             [
                 (loc["home_card_library_title"], 1, "Personaje > Objetos, con la Libreria DESPLEGADA (H4-03)"),
                 (loc["home_card_builds_title"], 2, "Builds"),
                 (loc["home_card_exploration_title"], 4, "Exploracion"),
-                (loc["home_card_whatsnew_title"], 3, "Novedades"),
-                (loc["home_card_about_title"], 5, "Acerca de"),
             ];
             int encontradas = 0, correctas = 0;
             foreach (var (titulo, tabEsperada, nota) in esperado)
@@ -442,7 +449,7 @@ internal static partial class Program
                 if (!ok) Console.WriteLine($"FALLO: INI-06 - la tarjeta \"{titulo}\" de Inicio no lleva a donde dice (GoToTab cae en su rama por defecto sin avisar de nada)");
             }
             Console.WriteLine($"INI-06-TARJETAS: {encontradas} de {esperado.Length} tarjetas encontradas, {correctas} llevan a la pestaña correcta (esperado {esperado.Length} y {esperado.Length})");
-            if (encontradas != esperado.Length) Console.WriteLine("FALLO: INI-06 - falta alguna de las 5 tarjetas de 'Que mas puedes hacer' en Inicio");
+            if (encontradas != esperado.Length) Console.WriteLine("FALLO: INI-06 - falta alguna de las 3 tarjetas reales de 'Que mas puedes hacer' en Inicio");
 
             vm.IsLibraryCollapsed = libreriaPlegadaPrevio;
             vm.SelectedTabIndex = tabPrevio; vm.PersonajeInnerTabIndex = innerPrevio;
@@ -465,7 +472,7 @@ internal static partial class Program
         int tabPrevio = vm.SelectedTabIndex;
         try
         {
-            vm.SelectedTabIndex = 5; // Acerca de: es donde vive el CheckBox real
+            vm.SelectedTabIndex = 7; // Acerca de: es donde vive el CheckBox real - AppTab.AcercaDe, reordenado T1 21-sep-2026
             DoEvents(); DoEvents();
             var tick = Descendientes<CheckBox>(window)
                 .FirstOrDefault(c => c.IsVisible && c.Content as string == LocalizationService.Instance["settings_pin_window_label"]);
@@ -541,7 +548,7 @@ internal static partial class Program
         // ---- AJU-02: el numero de copias de seguridad, escrito a mano en el TextBox real ----
         try
         {
-            vm.SelectedTabIndex = 5;
+            vm.SelectedTabIndex = 7; // Acerca de - AppTab.AcercaDe, reordenado T1 21-sep-2026
             DoEvents(); DoEvents();
             int cupoPrevio = vm.Settings.BackupHistoryCap;
             var caja = Descendientes<TextBox>(window).FirstOrDefault(t => t.IsVisible &&
@@ -669,7 +676,7 @@ internal static partial class Program
         int tabPrevio = vm.SelectedTabIndex;
         try
         {
-            vm.SelectedTabIndex = 5;
+            vm.SelectedTabIndex = 7; // Acerca de - AppTab.AcercaDe, reordenado T1 21-sep-2026
             DoEvents(); DoEvents();
             var chips = Descendientes<RadioButton>(window).Where(r => r.IsVisible && r.GroupName == "Idioma").ToList();
             if (chips.Count != 2)
@@ -758,7 +765,7 @@ internal static partial class Program
         int tabPrevio = vm.SelectedTabIndex;
         try
         {
-            vm.SelectedTabIndex = 5;
+            vm.SelectedTabIndex = 7; // Acerca de - AppTab.AcercaDe, reordenado T1 21-sep-2026
             foreach (string idioma in new[] { LocalizationService.Spanish, LocalizationService.English })
             {
                 vm.Settings.Language = idioma;

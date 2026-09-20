@@ -136,11 +136,23 @@ public partial class MainViewModel : ObservableObject
     // algun dia no desincronice esto en silencio) - el binding de WPF sigue siendo a un int
     // (`SelectedTabIndex`/`PersonajeInnerTabIndex`, TabControl.SelectedIndex no admite otra
     // cosa), el cast a `(int)AppTab.X` vive SOLO en el punto de asignacion.
-    // Fase B (15-sep-2026): Guia=6/Hosting=7 añadidas al final a proposito - no reordenar los
-    // valores 0-5 (SelectedTabIndex ya se guarda/restaura en session.json real de la maquina,
-    // ver "El arnes HEREDA la sesion" en bitacora.md; cambiar un valor existente desplazaria a
-    // la pestaña equivocada a cualquiera que reabra la app con una sesion vieja en disco).
-    private enum AppTab { Inicio = 0, Personaje = 1, Builds = 2, Novedades = 3, Exploracion = 4, AcercaDe = 5, Guia = 6, Hosting = 7 }
+    // Catalogo de rediseño visual T1 (21-sep-2026, segundo intento real tras el limite
+    // documentado de la ronda anterior): agrupacion COMPLETA en 3 bloques de la rail
+    // ("Partida": Inicio/Personaje/Builds/Guia, "Mundo": Exploracion/Hosting, pie:
+    // Novedades/AcercaDe) exige reordenar los valores del enum de verdad, no solo pintar
+    // los 2 filetes visuales (eso ya se hizo en la ronda anterior). Comprobado ANTES de
+    // tocar nada (motivo real de por que esto es seguro ahora, algo que la advertencia
+    // vieja de aqui mismo no tenia en cuenta): SelectedTabIndex SI se guarda en
+    // session.json (MainViewModel.SaveSession) pero NUNCA se restaura de vuelta a
+    // navegacion real - MainViewModel.RestoreSession (pedido explicito del usuario,
+    // 4-sep-2026, "nunca inicia en el inicio" resuelto invirtiendo el comportamiento: la
+    // app SIEMPRE arranca en Inicio) deja ese campo del session.json cargado sin usar,
+    // solo Home.SetLastSession(session) lo lee y ESE metodo no toca SelectedTabIndex en
+    // ningun punto (grep real, sin resultados). Ningun valor guardado en disco por una
+    // version anterior de la app puede desincronizar nada: no hay ningun camino de
+    // codigo real que lo vuelva a leer para navegar. Ctrl+1..8 tampoco depende de estos
+    // valores concretos (MainWindow.xaml.cs: `SelectedTabIndex = e.Key - Key.D1`, generico).
+    private enum AppTab { Inicio = 0, Personaje = 1, Builds = 2, Guia = 3, Exploracion = 4, Hosting = 5, Novedades = 6, AcercaDe = 7 }
 
     // Indice de la pestaña INTERNA dentro de Personaje - la Libreria vive ahora DENTRO de la
     // propia pestaña Objetos, siempre visible debajo del inventario (pedido explicito
