@@ -573,6 +573,25 @@ internal static partial class Program
             Environment.Exit(huboExcepcionChaos ? 1 : 0);
         }
 
+        // KEEPQA_UIA_RECORD=1 (20-sep-2026, KeepQA V3 - amplia/corrige el limite documentado del
+        // punto 8 del catalogo: "Grabar y reproducir sesiones reales" - ver GrabadorSesionUia.cs
+        // (misma clase parcial) para el porque completo y los gaps reales documentados. Un
+        // listener de eventos de UI Automation ACOTADO a esta ventana (Automation.
+        // AddAutomationEventHandler/AddAutomationPropertyChangedEventHandler, TreeScope.Subtree
+        // desde `root` - la MISMA AutomationElement.FromHandle(hwnd) que ya usan KEEPQA_SMOKE/
+        // KEEPQA_UIA_TREE/KEEPQA_CHAOS arriba), estructuralmente incapaz de fugarse a otro proceso
+        // o capturar teclado/raton fuera de esta ventana - distinto en naturaleza de un hook
+        // global de sistema. Va aqui, mismo criterio de posicion que KEEPQA_CHAOS arriba (justo
+        // tras tener `vm`/`root`/`hwnd`, antes de fabricar ningun dato sintetico).
+        if (Environment.GetEnvironmentVariable("KEEPQA_UIA_RECORD") == "1")
+        {
+            EjecutarUiaRecord(window, root, vm);
+            window.Close();
+            DoEvents();
+            Console.WriteLine("DONE (KEEPQA_UIA_RECORD)");
+            Environment.Exit(0);
+        }
+
         // KEEPQA_MEMORIA=1 (14-sep-2026, Fase 6 de KeepQA V2.0 - ver
         // KeepQA\v2\PROPUESTA-UNIFICADA.md, Bloque A): el "Memory testing" real de la
         // especificacion. Este arnes ya corre EN PROCESO (mismo Application/MainWindow que el

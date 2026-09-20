@@ -19832,3 +19832,109 @@ coordinador de "no dejarlos en sin determinar")
   usuario: la causa real sigue sin encontrarse pese a agotar las pistas concretas dadas, y haría
   falta información que solo el usuario tiene (idioma real de su sesión, fuente/escala exacta del
   sistema, o quizás el ancho de ventana real en el momento exacto de la captura) para seguir.
+
+## 20-sep-2026 - KEEPQA_UIA_RECORD=1: nuevo modo del arnés, la mitad "grabar" del punto 8 del
+catálogo de KeepQA (amplía el límite documentado en `reproducirComoRegresion.js`, commit `cc62585`)
+
+### Encargo real
+KeepQA había dejado documentado un límite para el punto 8 de su catálogo ("Grabar y reproducir
+sesiones reales"): "GRABAR una sesión RAW real del usuario (hook global de teclado/ratón mientras
+juega de verdad) sigue sin existir - fuera de alcance de esta ronda a propósito (riesgo real de
+tocar la entrada del sistema mientras el usuario la usa)". El usuario tiene una norma fija: antes
+de aceptar un límite como definitivo, investigar si hay un camino real evitando el riesgo concreto
+que lo motivó, no el límite entero.
+
+### Investigación real (antes de tocar nada)
+El riesgo real que motivó el límite es un hook GLOBAL de sistema (`SetWindowsHookEx
+WH_KEYBOARD_LL`/`WH_MOUSE_LL`) que capturaría teclado/ratón de CUALQUIER aplicación, no solo
+Terrakeep - la misma clase de riesgo que ya interrumpió una partida real de Overwatch (ver
+`feedback_arneses-forzar-foco-comprobar-primer-plano.md` en la memoria global). Pero Windows UI
+Automation tiene un modelo de eventos distinto en su naturaleza:
+`Automation.AddAutomationEventHandler`/`AddAutomationPropertyChangedEventHandler` se suscriben con
+un `AutomationElement` de origen concreto y un `TreeScope` - con `TreeScope.Subtree` desde la raíz
+de una ventana concreta (`AutomationElement.FromHandle(hwnd)`, la misma que ya usan
+`KEEPQA_SMOKE`/`KEEPQA_UIA_TREE`/`KEEPQA_CHAOS` en `Program.cs`, línea 355), el propio modelo de
+UI Automation de Windows filtra en el proveedor de automatización del elemento de origen - solo
+entrega eventos cuyo origen es esa ventana o un descendiente real de SU propio árbol, nunca de
+otro proceso ni pulsaciones físicas de sistema. Es una propiedad estructural del modelo de
+eventos de UIA, no una promesa del código. Confirmado que esto NO reintroduce el riesgo real
+(comprobado antes de escribir nada, mismo criterio de "verificar aislando la variable"): el
+listener se suscribe únicamente con `root` de la ventana como elemento de origen, nunca con
+`AutomationElement.RootElement` (el escritorio completo).
+
+Gaps reales encontrados y documentados (no ocultos): un gesto de ratón que no invoca ningún patrón
+UIA (mover sin clic, arrastrar sin soltar sobre un control con patrón real) no dispara nada
+capturable; el tecleo carácter a carácter solo se captura si el control dispara
+`ValuePattern.ValueProperty` en cada pulsación (algunos `TextBox` de WPF solo lo hacen al perder
+el foco).
+
+### Construido
+- `Terrakeep.App.Tests/GrabadorSesionUia.cs` (nuevo): `EjecutarUiaRecord(window, root, vm)` -
+  suscribe `AddAutomationEventHandler(InvokePattern.InvokedEvent, root, TreeScope.Subtree, ...)`,
+  `AddAutomationEventHandler(SelectionItemPattern.ElementSelectedEvent, root, TreeScope.Subtree,
+  ...)` y `AddAutomationPropertyChangedEventHandler(root, TreeScope.Subtree, ...,
+  ValuePattern.ValueProperty, TogglePattern.ToggleStateProperty,
+  ExpandCollapsePattern.ExpandCollapseStateProperty)`. Con el listener ya suscrito, dispara una
+  secuencia FIJA y pequeña de acciones reales usando el MISMO vocabulario que `KEEPQA_CHAOS` ya
+  sabe reproducir (`SelectionItemPattern.Select()` para "cambiar_pestana" x2,
+  `RealClickAt` - mouse_event real de SO - para "clic_rapido") - el listener observa y registra
+  de verdad los eventos UIA reales que esas acciones disparan, nunca se escribe un evento "a
+  mano". Vuelca `eventosCapturados`/`accionesEjecutadas` a
+  `keepqa-evidencia\uia-record.json`.
+- `Program.cs`: nuevo bloque `KEEPQA_UIA_RECORD=1` (justo tras `KEEPQA_CHAOS`, mismo criterio de
+  posición que el resto de modos hermanos - ya tiene `vm`/`root`/`hwnd` disponibles, antes de
+  fabricar ningún dato sintético).
+
+### Verificación real hecha
+- `dotnet build Terrakeep.App.Tests`: el build COMPLETO del proyecto falla hoy por 3 errores
+  `CS1061` en `Program.cs` líneas 1495/1513/1514 (`MainViewModel` no contiene
+  `IllegalPrefixItemNames`) - **NO relacionado con este cambio**: `git status`/`git diff --stat`
+  confirman que hay trabajo SIN COMMITEAR de otra sesión en curso sobre `MainViewModel.cs`,
+  `CharacterFileService.cs`, `CalamityCharacterSync.cs`, `MainWindow.xaml` y los `strings_*.json`
+  (probablemente la idea 9 del catálogo, "cierra slots fantasma/.tplr huérfano", commit
+  `ad69a40f` ya hecho pero con más cambios encima sin commitear todavía) - no es código mío ni
+  algo que me corresponda arreglar (es WIP activo de otra sesión, no un bug cerrado). El propio
+  log de compilación, sin embargo, SÍ confirma que `GrabadorSesionUia.cs` y el bloque nuevo de
+  `Program.cs` (líneas ~576-592) compilan limpios: el compilador de Roslyn reporta TODOS los
+  errores de todos los ficheros en una sola pasada, y ninguno de los 3 errores reales menciona
+  este fichero ni esas líneas.
+- Lado KeepQA (`src/input-recorder/grabarSesionUia.js`): autoprueba offline nueva (7 casos,
+  `node grabarSesionUia.js --autoprueba`, todos OK) cubre `normalizarUiaRecord()`/
+  `mapearAObjetivoSemantico()` con un crudo sintético que respeta el esquema EXACTO que produce
+  `GrabadorSesionUia.cs` (confirmado leyendo el código C# real, no supuesto). Verificación
+  adicional a nivel CLI (proceso Node separado, no solo en memoria): una grabación normalizada de
+  demo se pasó por `reproducirComoRegresion.js <grabacion.json> --salida-secuencia <ruta>` (sin
+  `--ejecutar`) y extrajo la secuencia real `cambiar_pestana -> cambiar_pestana -> clic_rapido`
+  con exit 0 - confirma que el formato que produce el grabador nuevo es consumible de verdad por
+  la pieza "reproducir" ya existente, sin ningún cambio de contrato.
+- **Bug real encontrado y cerrado DURANTE esta misma construcción** (dos fases respetadas: se
+  encontró revisando la autoprueba antes de darla por buena, nunca se llegó a dejar en
+  producción): `System.Text.Json` sin `PropertyNamingPolicy` serializa las propiedades de
+  `EventoUiaCapturado` en su PascalCase declarado tal cual (`TipoEvento`/`ControlType`/`Name`/
+  `AutomationId`/`BoundingRectangle`/`ValorNuevo` - mismo criterio ya real de
+  `AuditoriaUiaTree.cs`/`NodoUiaTree` para `uia-tree.json`), pero la primera versión de
+  `normalizarUiaRecord()` en `grabarSesionUia.js` leía esos campos en camelCase - habría dejado
+  la normalización vacía en silencio en producción (ningún evento se habría mapeado nunca).
+  Corregido antes de cualquier commit; la autoprueba quedó con un caso específico
+  (`lee el casing PascalCase real de cada evento...`) para que esto no pueda volver a colarse sin
+  que el canario lo grite.
+
+### LÍMITE REAL pendiente, honesto (no una imposibilidad técnica - un bloqueo ambiental)
+La verificación EN VIVO de punta a punta (lanzar `dotnet run --project Terrakeep.App.Tests` con
+`KEEPQA_UIA_RECORD=1` de verdad, con una ventana real de Terrakeep y eventos UIA reales
+capturados por el listener de un proceso real) **no se ha hecho todavía**, por DOS bloqueos reales
+independientes, ninguno de los dos alcanza el nivel de "hay que renunciar al diseño":
+1. `guardiaEntradaGrafica.js` dice NO SEGURO ahora mismo (comprobado dos veces durante esta ronda,
+   la segunda vez con `dontstarve_dedicated_server_nullrenderer_x64` y `Overwatch` ambos abiertos,
+   inactividad 0 s, primer plano `Overwatch`) - el usuario está jugando de verdad. Esto es la
+   guardia haciendo exactamente su trabajo (regla fija de la familia,
+   `feedback_arneses-forzar-foco-comprobar-primer-plano.md`) - NO se ha usado `--sin-guardia` para
+   saltársela, ni se lanzará mientras siga así.
+2. Independientemente de la guardia, el `dotnet build` completo del proyecto falla hoy por el WIP
+   sin commitear de otra sesión (ver arriba) - hasta que esa sesión termine/commitee su trabajo (o
+   alguien arregle `IllegalPrefixItemNames`), ni siquiera `dotnet run` llegaría a arrancar.
+Para retomar cuando ambos se resuelvan: `cd C:\Users\adrian\Downloads\Keep\KeepQA && node
+src/input-recorder/grabarSesionUia.js --json` (comprueba la guardia sola, lanza el arnés real,
+normaliza y valida contra el contrato de la Sección 46 - código de salida 0 si todo fue bien).
+Commits: ver bitácora de KeepQA (`C:\Users\adrian\Downloads\Keep\KeepQA\bitacora.md`, misma
+fecha) para el hash real de ambos repos.
