@@ -19540,3 +19540,63 @@ tocar ni comitear.
 Siguiente paso real (fuera de este repo): usar `WldWriter.WriteWorld` desde
 `Keep\KeepQA\src\fuzzer-guardados\` para añadir un modo `wld-extremo` que genere estos mismos
 escenarios como archivos `.wld` reales en disco - ver la bitácora de KeepQA para el resultado.
+
+### 20-sep-2026 (cuarta ronda) — T3 y T6 reabiertos y cerrados de verdad: no eran límite técnico real
+
+El coordinador corrigió el cierre de T3/T6 del catálogo de rediseño visual: "8 rondas de arreglo
+real en esta zona" y el historial de AR-MRK son cautela real, **no** evidencia de imposibilidad
+técnica (a diferencia de un límite técnico real como MoonSharp en otro proyecto de la familia) - el
+propio informe que documentó T3/T6 como LÍMITE ya reconocía que ambos eran viables, solo que la
+zona con más rondas de arreglo de toda la app. El usuario pidió un intento real con el mismo ciclo
+iterativo de verificación en máquina (cambios pequeños, verificar en real cada paso), tomándose el
+tiempo que hiciera falta, documentando solo un riesgo CONCRETO (no genérico) si aparecía uno de
+verdad. Ninguno apareció - los dos se cerraron con código real, verificado, comiteado.
+
+**T3 (`7e2ae0b3`, Personaje: tablero con panel lateral)**: el TabControl de Equipamiento/
+Inventario/Almacenes (3 pestañas EXCLUYENTES) era la MISMA zona de AR-14/AR-14c/H4-02/FALLO-1/
+FALLO-2/H5-08. Estrategia real de riesgo mínimo: mover el contenido interno (Border/Grid/
+SlotRowHost/MinHeight/MinWidth, todo lo calibrado en esas rondas) BYTE A BYTE sin tocarlo - solo
+cambia el contenedor exterior, de TabControl a Grid+ScrollViewer con las 3 secciones seguidas en
+un StackPanel. Cabecera pegajosa real (barra fija que muestra la sección activa, actualizada por
+`OnObjetosBoardScrollChanged`) y navegación real (`MainViewModel.RequestObjetosSection` hace scroll
+de verdad, ya no cambia un índice de TabControl muerto). Verificado con `git stash` (comparación
+directa contra el código ORIGINAL sin tocar): el único hallazgo de AR-LAY tras el cambio es
+IDÉNTICO al del código original (mismo elemento, mismo tamaño, mismos píxeles) - confirmado bug
+preexistente, no una regresión. `T3_SOLO`: 20+ comprobaciones reales (orden de secciones,
+`ScrollableHeight`, cabecera pegajosa en los dos sentidos x 3 secciones, navegación real WhereIsIt
+→ scroll). `Terrakeep.App.ViewModels.Tests` 491/491 (un test que probaba el guardia H4-02
+retirado se actualizó para probar la nueva realidad, no se omitió).
+
+**T6 (`0211e071`, Exploración a pantalla completa)**: investigado que "flotar el panel lateral
+sobre el mapa" NO exige tocar el zoom/pan (AR-MRK) ni el `MinHeight` calibrado de la columna
+(590→652→800, AR-11a/AR-11f/AR-15/AR-EX1/FALLO-3) - es un cambio ADITIVO. Un `Grid` de WPF no
+recorta a sus hijos por defecto y el orden de declaración en XAML decide el z-order: `Grid.
+ColumnSpan="3"` en el Border del mapa (se pinta de borde a borde, ancho real medido
+820px→1203px en una ventana de 1400px) + el Grid del panel lateral (contenido interno SIN TOCAR)
+envuelto en una tarjeta flotante real (fondo sólido + sombra), declarada DESPUÉS del mapa en el
+mismo Grid padre. El plegado/reapertura (mecanismo ya existente, con su propio historial real de
+"sin manera de volver") sigue funcionando idéntico. `VisualTreeHelper.HitTest` se intentó para
+verificar que el panel se queda con los clics y se DESCARTÓ con evidencia real: un canario contra
+un botón YA EXISTENTE sin tocar tampoco resuelve en este arnés concreto - límite del método de
+prueba, no del producto (sustituido por una verificación real de z-order,
+`VisualTreeHelper.GetChildrenCount`/`GetChild` sobre el padre común). `T6_SOLO` con un mundo real
+cargado: mapa >80% del ancho de la ventana, panel dentro del área del mapa, z-order confirmado,
+capturas reales del resultado.
+
+**Estado final REAL del catálogo de rediseño visual: 10 de 10 piezas cerradas y verificadas.**
+Ya no queda ningún LÍMITE documentado en Terrakeep para este catálogo - T1/T2/T3/T4/T5/T6/T7/
+T8/T9/T10 completos. `dotnet build` de la solución en verde en cada pieza,
+`Terrakeep.App.ViewModels.Tests` 491/491 y `Terrakeep.Core.Tests` 568/568 sin regresiones en el
+último punto de control. Redesplegado en local (`bin\Debug` + instalador) tras cada commit. Sin
+publicar nada (sin version bump, sin changelog.json, sin instalador de distribución, sin
+`git push`, sin `gh release`) - todo el trabajo de esta ronda y las anteriores queda comiteado en
+local para que el usuario lo revise antes de publicar.
+
+Junto con el catálogo de funciones (rondas anteriores, ver más arriba: 8/10 ideas cerradas con
+código real - 3, 4, 5, 6, 7, 8, 9, 10 -, y 2/10 confirmadas ya-mayormente-implementadas con el
+hueco real preciso documentado - idea 1: banderas de invasión y edición de NPCs de pueblo, ningún
+campo real existe hoy en `WldHeader`; idea 2: "crítico total"/DPS, el dato de crítico no está
+extraído para accesorios en ningún catálogo del proyecto -, ninguna sin tocar ni sin una decisión
+real documentada), **las dos hojas de ruta de Terrakeep quedan agotadas de verdad**: el catálogo
+de rediseño visual 10/10 sin ningún límite pendiente, el catálogo de funciones con solo 2 huecos
+reales y precisos (dato/formato que de verdad no existe hoy, nunca "más trabajo").
