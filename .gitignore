@@ -3,6 +3,13 @@ obj/
 .vs/
 *.user
 *.suo
+
+# BaseOutputPath aislados de sesiones concurrentes de KeepQA (21-sep-2026, mismo motivo que
+# bin/obj de arriba: artefacto de build, nunca fuente). Convencion real: "bin_<algo>/" cuando una
+# sesion necesita construir sin chocar con el bin/ compartido de otra sesion activa en paralelo
+# (visto de verdad con `bin_diag/` y `bin_uia_record/` la noche del 20/21-sep-2026).
+bin_*/
+obj_*/
 # Instalador generado por Inno Setup (installer/TerrakeepSetup.iss) - binario de build, no
 # fuente. Se regenera con ISCC.exe, nunca se comitea (misma politica que bin/).
 installer/output/
