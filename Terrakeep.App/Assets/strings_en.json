@@ -893,6 +893,7 @@
   "tt_backup_history": "Every saved version of this character - you can go back to any of them, not only the last one (Ctrl+H)",
   "backup_panel_title": "Version history",
   "backup_panel_subtitle": "— every save leaves a full copy of the previous file here. Restoring overwrites the real character file.",
+  "backup_live_notice": "If this character is being played right now from TerrakeepMod, new versions show up here by themselves while this screen stays open - no need to close and reopen it.",
   "backup_empty": "No saved version of this character yet. One is created automatically right before every save, and you can create one right now with \"Back up now\".",
   "backup_restore": "Restore",
   "backup_confirm_question": "Overwrite the current file with this version? A copy of the current state will be saved first.",

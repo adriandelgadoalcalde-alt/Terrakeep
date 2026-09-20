@@ -893,6 +893,7 @@
   "tt_backup_history": "Todas las versiones guardadas de este personaje - se puede volver a cualquiera, no solo a la última (Ctrl+H)",
   "backup_panel_title": "Historial de versiones",
   "backup_panel_subtitle": "— cada guardado deja aquí una copia íntegra del archivo anterior. Restaurar sobrescribe el archivo real del personaje.",
+  "backup_live_notice": "Si este personaje se está jugando ahora mismo desde TerrakeepMod, las nuevas versiones aparecen aquí solas mientras esta pantalla siga abierta - no hace falta cerrar y volver a abrir.",
   "backup_empty": "Todavía no hay ninguna versión guardada de este personaje. Se crea una automáticamente justo antes de cada guardado, y puedes crear una ahora mismo con «Crear copia ahora».",
   "backup_restore": "Restaurar",
   "backup_confirm_question": "¿Sobrescribir el archivo actual con esta versión? Antes se guardará una copia del estado de ahora.",

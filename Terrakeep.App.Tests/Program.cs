@@ -1746,6 +1746,80 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // IDEA3_SOLO=1 (20-sep-2026, catalogo de funciones, idea 3 "Partida en vivo" - version
+        // real, tercera ronda tras la correccion del coordinador: investigado a fondo
+        // (SincronizacionEscritorio.cs, TerrakeepMod, otro repo) que la sincronizacion REAL entre
+        // el mod y Terrakeep de escritorio YA EXISTE y ya funciona hoy - TerrakeepMod fotografia
+        // el .plr al mismo formato .tkbak en la MISMA carpeta que BackupHistoryService ya lee, en
+        // cada guardado real de Terraria durante la partida (SincronizacionSystem.
+        // ComprobarGuardado, vigila LastWriteTimeUtc). Lo unico que de verdad faltaba: el panel
+        // solo releia al ABRIRSE, asi que con Terrakeep abierto MIENTRAS se juega, las
+        // instantaneas nuevas no aparecian sin cerrar/reabrir - _liveTimer (BackupHistoryViewModel)
+        // cierra ese hueco con un sondeo barato mientras el panel sigue abierto.
+        //
+        // Verificacion con "aislar la variable": en vez de esperar el intervalo real (4s, lento e
+        // inestable en CI), se invoca CheckForLiveUpdates por reflexion - la MISMA logica real que
+        // dispara el Tick del temporizador, aislada de tener que esperar tiempo real de reloj. Dos
+        // ramas comprobadas por separado: SI hay un fichero nuevo en disco (debe recargar) y NO lo
+        // hay (debe saltarse el Reload, comprobado con un marcador real - IsConfirmingRestore que
+        // solo sobrevive si Reload() NO se disparo).
+        if (Environment.GetEnvironmentVariable("IDEA3_SOLO") == "1")
+        {
+            string? tempRoot = null;
+            try
+            {
+                tempRoot = Path.Combine(Path.GetTempPath(), "terrakeep-idea3-partida-en-vivo-" + Guid.NewGuid().ToString("N")[..8]);
+                Directory.CreateDirectory(tempRoot);
+                vm.BackupHistory.Service.BackupsRoot = tempRoot; // aisla del %LOCALAPPDATA% real, mismo criterio ya establecido
+
+                string plrFalso = Path.Combine(tempRoot, "Vivo.plr");
+                File.WriteAllBytes(plrFalso, [1, 2, 3, 4]);
+                var personajeFalso = new LoadedCharacter(plrFalso, null, "Player",
+                    new PlrCharacter { Version = 279, Name = "Vivo", PrimaryLoadout = PlrLoadout.CreateEmpty(true) }, null, []);
+
+                vm.BackupHistory.Service.SaveBackup(personajeFalso, Terrakeep.App.Services.BackupReason.Manual);
+                vm.BackupHistory.Open(plrFalso, "Vivo", isCurrentCharacter: false);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"IDEA3_SOLO: tras abrir el panel con 1 instantanea real -> Points.Count={vm.BackupHistory.Points.Count} (esperado 1), IsOpen={vm.BackupHistory.IsOpen}");
+                if (vm.BackupHistory.Points.Count != 1) Console.WriteLine("FALLO: IDEA3_SOLO - el panel no recogio la instantanea real ya existente al abrir");
+
+                var metodoCheck = typeof(BackupHistoryViewModel).GetMethod("CheckForLiveUpdates", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (metodoCheck == null) Console.WriteLine("FALLO: IDEA3_SOLO - CheckForLiveUpdates no existe (reflexion)");
+                else
+                {
+                    // --- Rama "nada nuevo": el sondeo NO debe recargar (marcador real que solo
+                    // sobrevive si Reload() no se disparo, Reload() pone IsConfirmingRestore=false
+                    // a TODOS los puntos al reconstruir la lista entera de cero). ---
+                    if (vm.BackupHistory.Points.Count > 0) vm.BackupHistory.Points[0].IsConfirmingRestore = true;
+                    metodoCheck.Invoke(vm.BackupHistory, null);
+                    DoEvents();
+                    bool marcadorSobrevivio = vm.BackupHistory.Points.Count > 0 && vm.BackupHistory.Points[0].IsConfirmingRestore;
+                    Console.WriteLine($"IDEA3_SOLO: sondeo SIN fichero nuevo -> marcador real sobrevive={marcadorSobrevivio} (esperado True, prueba de que NO se recargo sin necesidad)");
+                    if (!marcadorSobrevivio) Console.WriteLine("FALLO: IDEA3_SOLO - el sondeo recargo la lista aunque no habia ninguna instantanea nueva en disco");
+
+                    // --- Rama "hay algo nuevo": simula al mod escribiendo OTRA instantanea real
+                    // mientras el panel sigue abierto - nunca se llama a Reload() a mano aqui,
+                    // solo al metodo real que el Tick del temporizador dispara. ---
+                    System.Threading.Thread.Sleep(1100); // nombre de fichero real con sello de segundo distinto, evita colision real de nombre
+                    vm.BackupHistory.Service.SaveBackup(personajeFalso, Terrakeep.App.Services.BackupReason.BeforeSave);
+                    metodoCheck.Invoke(vm.BackupHistory, null);
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"IDEA3_SOLO: sondeo CON fichero nuevo real (simulando al mod guardando) -> Points.Count={vm.BackupHistory.Points.Count} (esperado 2)");
+                    if (vm.BackupHistory.Points.Count != 2) Console.WriteLine("FALLO: IDEA3_SOLO - el sondeo en vivo NO recogio la instantanea nueva real sin cerrar/reabrir el panel");
+                }
+
+                vm.BackupHistory.CloseCommand.Execute(null);
+                Console.WriteLine($"IDEA3_SOLO: tras cerrar el panel -> IsOpen={vm.BackupHistory.IsOpen} (esperado False)");
+            }
+            catch (Exception ex) { Console.WriteLine("IDEA3_SOLO-EXCEPTION: " + ex); }
+            finally
+            {
+                try { if (tempRoot != null && Directory.Exists(tempRoot)) Directory.Delete(tempRoot, recursive: true); } catch { }
+            }
+            Console.WriteLine("DONE (IDEA3_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA5_SOLO=1 (20-sep-2026, catalogo de funciones, idea 5 "¿Donde esta? global,
         // multi-mundo y multi-personaje" - version real, tercera ronda tras la correccion del
         // coordinador: el catalogo citaba WorldPresenceIndex como apoyo, que resulto ser el

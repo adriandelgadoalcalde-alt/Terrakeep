@@ -35,10 +35,49 @@ public sealed partial class BackupHistoryViewModel : ObservableObject
     // (ver el comentario BK-4 de BackupHistoryService).
     public BackupHistoryService Service => _service;
 
+    // Idea 3 del catalogo de funciones ("Partida en vivo" - bitacora.md 20-sep-2026):
+    // investigado a fondo que TerrakeepMod (SincronizacionEscritorio.GuardarInstantanea, otro
+    // repo, ComprobarGuardado real de SincronizacionSystem) YA fotografia el .plr en el MISMO
+    // formato .tkbak y en la MISMA carpeta (%LOCALAPPDATA%\Terrakeep\Backups\{personaje}-
+    // {huella}) que este historial YA lee - la sincronizacion real entre las dos herramientas ya
+    // existe y ya funciona hoy sin tocar nada. Lo que de verdad faltaba para que esto se sintiera
+    // "en vivo" y no solo "leer una carpeta compartida": este panel solo releia al abrirse
+    // (Open/Reload), asi que con Terrakeep de escritorio abierto MIENTRAS se juega en el mod, las
+    // instantaneas nuevas nunca aparecian sin cerrar y reabrir el panel a mano. Sondeo periodico
+    // MIENTRAS el panel esta abierto (_liveTimer), barato (Directory.GetFiles.Length, no reabre
+    // ningun .tkbak) - solo dispara el Reload() real (que si abre y parsea cada meta.json) cuando
+    // el recuento de ficheros en disco cambia de verdad, para no interrumpir sin necesidad
+    // ninguna confirmacion de restaurar a medio hacer en pantalla.
+    private readonly System.Windows.Threading.DispatcherTimer _liveTimer = new() { Interval = TimeSpan.FromSeconds(4) };
+    private int _lastKnownSnapshotCount = -1;
+
     public BackupHistoryViewModel(BackupHistoryService service)
     {
         _service = service;
         System.ComponentModel.PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
+        _liveTimer.Tick += (_, _) => CheckForLiveUpdates();
+    }
+
+    private void CheckForLiveUpdates()
+    {
+        if (PlrPath == null) return;
+        int actual = CurrentSnapshotCountOnDisk();
+        // -1 (fallo de E/S real al contar) nunca dispara un Reload por su cuenta - mismo criterio
+        // de siempre: un problema de disco no debe interrumpir lo que ya hay en pantalla.
+        if (actual < 0 || actual == _lastKnownSnapshotCount) return;
+        _lastKnownSnapshotCount = actual;
+        Reload();
+    }
+
+    private int CurrentSnapshotCountOnDisk()
+    {
+        if (PlrPath == null) return -1;
+        try
+        {
+            string dir = _service.HistoryDirectoryFor(PlrPath);
+            return Directory.Exists(dir) ? Directory.GetFiles(dir, "*" + BackupHistoryService.SnapshotExtension).Length : 0;
+        }
+        catch { return -1; }
     }
 
     // Mismo criterio real (y mismo motivo) que HomeViewModel.OnIdiomaCambiado: evento DEBIL y
@@ -121,7 +160,9 @@ public sealed partial class BackupHistoryViewModel : ObservableObject
         IsCurrentCharacter = isCurrentCharacter;
         ClearStatus();
         Reload();
+        _lastKnownSnapshotCount = CurrentSnapshotCountOnDisk();
         IsOpen = true;
+        _liveTimer.Start(); // idea 3: sondeo real mientras el panel siga abierto, ver el comentario de cabecera
     }
 
     // El velo de fondo del panel cierra al hacer clic; un clic DENTRO de la tarjeta no debe
@@ -135,6 +176,7 @@ public sealed partial class BackupHistoryViewModel : ObservableObject
     private void Close()
     {
         IsOpen = false;
+        _liveTimer.Stop();
         foreach (var p in Points) p.IsConfirmingRestore = false;
     }
 

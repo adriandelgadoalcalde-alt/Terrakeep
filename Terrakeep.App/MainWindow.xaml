@@ -7714,6 +7714,14 @@
                                 <Run Text="{Binding BackupHistory.CharacterName, Mode=OneWay}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
                                 <Run Text="{Binding Loc[backup_panel_subtitle], Mode=OneWay}" />
                             </TextBlock>
+                            <!-- Idea 3 (catalogo de funciones, "Partida en vivo" - bitacora.md
+                                 20-sep-2026): TerrakeepMod YA escribe instantaneas reales en esta
+                                 misma carpeta mientras se juega (SincronizacionEscritorio.
+                                 GuardarInstantanea, ComprobarGuardado - otro repo) - este panel
+                                 las recoge solo mientras esta abierto (BackupHistoryViewModel.
+                                 _liveTimer), aviso real de que no hace falta cerrar/reabrir. -->
+                            <TextBlock Text="{Binding Loc[backup_live_notice], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                       Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="620" />
                         </StackPanel>
                         <Button Content="✕" Style="{StaticResource CircleCloseButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
                                 Command="{Binding BackupHistory.CloseCommand}" ToolTip="{Binding Loc[close_notice_tooltip], Mode=OneWay}" />
