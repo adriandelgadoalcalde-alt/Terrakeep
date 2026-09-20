@@ -2802,6 +2802,105 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // BESTIARY_DPI_SOLO=1 (20-sep-2026, pedido explicito del coordinador tras confirmar que
+        // el usuario SI vio el panel del Bestiario cortado en su maquina real): prueba con la
+        // escala de interfaz REAL (VisualTreeHelper.SetRootDpi, mismo mecanismo real de WPF que
+        // usa un monitor con escala no estandar - TerrakeepTrainer encontro 1,4666667 en otra
+        // app) en vez de solo ventanas mas pequeñas (ya probado sin reproducir). Tambien usa el
+        // mundo real con MAS especies de bestiario de los 5 disponibles en esta maquina, mas
+        // cerca de las 361 reales del usuario que un mundo de pruebas pequeño.
+        if (Environment.GetEnvironmentVariable("BESTIARY_DPI_SOLO") == "1")
+        {
+            try
+            {
+                string[] mundos =
+                [
+                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld",
+                    @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld",
+                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld",
+                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\adriandres.wld",
+                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\El_Musgo_de_Accidentes.wld",
+                ];
+                string? mejorRuta = null; int mejorCuenta = -1;
+                foreach (string ruta in mundos)
+                {
+                    if (!File.Exists(ruta)) continue;
+                    var w = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(ruta), readContainers: false);
+                    if (w.Bestiary == null) continue;
+                    var claves = new HashSet<string>(w.Bestiary.Kills.Keys, StringComparer.OrdinalIgnoreCase);
+                    claves.UnionWith(w.Bestiary.Sighted);
+                    claves.UnionWith(w.Bestiary.Chatted);
+                    Console.WriteLine($"BESTIARY_DPI_SOLO: '{Path.GetFileName(ruta)}' -> {claves.Count} especies reales de bestiario");
+                    if (claves.Count > mejorCuenta) { mejorCuenta = claves.Count; mejorRuta = ruta; }
+                }
+                if (mejorRuta == null) { Console.WriteLine("BESTIARY_DPI_SOLO: AVISO - ningun mundo real con bestiario en esta maquina"); Console.WriteLine("DONE (BESTIARY_DPI_SOLO)"); Environment.Exit(0); }
+                Console.WriteLine($"BESTIARY_DPI_SOLO: usando '{Path.GetFileName(mejorRuta)}' ({mejorCuenta} especies, el mundo real con mas de los 5 disponibles - el usuario reporto 361)");
+
+                vm.SelectedTabIndex = 4;
+                DoEvents();
+                var tareaCarga = vm.Exploration.LoadFromPathAsync(mejorRuta);
+                while (!tareaCarga.IsCompleted) DoEvents();
+                DoEvents(); DoEvents();
+
+                void ShotDpi(string nombre)
+                {
+                    DoEvents();
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(window);
+                    var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    using var fs = File.Create(Path.Combine(AppContext.BaseDirectory, nombre + ".png"));
+                    enc.Save(fs);
+                    Console.WriteLine($"BESTIARY_DPI_SOLO: captura -> {nombre}.png");
+                }
+
+                // Escenario real posible: monitor pequeño + escala alta de Windows puede dejar
+                // MENOS espacio logico del que la app declara como MinWidth (1080) - Windows
+                // respeta el tamaño de pantalla real por encima del MinWidth de la ventana si no
+                // hay sitio fisico. Se fuerza aqui directamente (bypass del MinWidth real) para
+                // simular ese caso limite, ya que 1080x700 (el minimo declarado) no reprodujo el
+                // corte.
+                foreach (var (w, h) in new[] { (1600.0, 900.0), (1080.0, 700.0), (950.0, 650.0), (860.0, 600.0) })
+                {
+                    FijarTamaño(window, w, h);
+                    DoEvents(); DoEvents();
+
+                    foreach (double dpiFactor in new[] { 1.0, 1.4666667 })
+                    {
+                        var raiz = System.Windows.PresentationSource.FromVisual(window) is { } src ? (System.Windows.Media.Visual)src.RootVisual! : window;
+                        try { System.Windows.Media.VisualTreeHelper.SetRootDpi(raiz, new System.Windows.DpiScale(dpiFactor, dpiFactor)); }
+                        catch (Exception exDpi) { Console.WriteLine($"BESTIARY_DPI_SOLO: SetRootDpi fallo ({exDpi.GetType().Name}: {exDpi.Message}) - probando via window directamente"); try { System.Windows.Media.VisualTreeHelper.SetRootDpi(window, new System.Windows.DpiScale(dpiFactor, dpiFactor)); } catch (Exception ex2) { Console.WriteLine($"BESTIARY_DPI_SOLO: tambien fallo sobre window: {ex2.GetType().Name}: {ex2.Message}"); } }
+                        DoEvents(); DoEvents(); DoEvents();
+
+                        ShotDpi($"bestiary-dpi{dpiFactor:0.0000}-{w:0}x{h:0}");
+
+                        var expandersReales = Descendientes<Expander>(window).Where(e => e.IsVisible).ToList();
+                        foreach (var exp in expandersReales)
+                        {
+                            var headerPresenter = Descendientes<TextBlock>(exp).FirstOrDefault(t => t.Text == (exp.Header as string));
+                            Console.WriteLine($"BESTIARY_DPI_SOLO dpi={dpiFactor:0.0000} {w:0}x{h:0}: Expander Header='{exp.Header}' ActualWidth={exp.ActualWidth:0.#}, headerTextBlock encontrado={headerPresenter != null}, TextTrimming={headerPresenter?.GetValue(TextBlock.TextTrimmingProperty)}");
+                            // Busqueda AMPLIA: cualquier AccessText (control interno real que usa
+                            // el ControlTemplate por defecto de Expander en el tema Aero2/Fluent
+                            // de Windows para el Header - NO hereda de TextBlock, mi busqueda
+                            // anterior lo pasaba por alto) con el mismo texto.
+                            var accessTextReal = Descendientes<System.Windows.Controls.AccessText>(exp).FirstOrDefault(a => a.Text == (exp.Header as string));
+                            if (accessTextReal != null)
+                                Console.WriteLine($"BESTIARY_DPI_SOLO dpi={dpiFactor:0.0000} {w:0}x{h:0}: AccessText real encontrado -> ActualWidth={accessTextReal.ActualWidth:0.#}, TextTrimming={accessTextReal.TextTrimming}, DesiredSize={accessTextReal.DesiredSize.Width:0.#}");
+                            // El propio toggle de expandir/contraer (chevron) resta ancho real al
+                            // header - cuanto le queda de verdad al texto tras su chrome interno.
+                            var headerContentPresenter = Descendientes<ContentPresenter>(exp).FirstOrDefault();
+                            if (headerContentPresenter != null)
+                                Console.WriteLine($"BESTIARY_DPI_SOLO dpi={dpiFactor:0.0000} {w:0}x{h:0}: primer ContentPresenter real -> ActualWidth={headerContentPresenter.ActualWidth:0.#}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("BESTIARY_DPI_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (BESTIARY_DPI_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA8_SOLO=1 (20-sep-2026, catalogo de funciones, idea 8 "Informe y comparador de
         // mundos" - version real, tercera ronda tras la correccion del coordinador: el catalogo
         // citaba WorldCreationSummaryBuilder como apoyo, que resulto ser para la vista previa de
@@ -10537,6 +10636,46 @@ internal static partial class Program
     // forma de detectarlo es comparar el ancho natural del texto con el ancho real de la caja.
     private static bool TextoRecortado(TextBlock tb) =>
         tb.TextWrapping == TextWrapping.NoWrap && AnchoNaturalDelTexto(tb) > tb.ActualWidth + 0.5;
+
+    // D-PALABRA (20-sep-2026, bug real de Builds - "Cuerpo a cuerpo" partido letra a letra/silaba
+    // a silaba dentro de una columna de 220px): AGUJERO REAL confirmado en TextoRecortado de
+    // arriba - su propio comentario da por sentado que "con Wrap el texto pasa a la linea
+    // siguiente y no se pierde nada", que es cierto SOLO si el ancho disponible alcanza para la
+    // palabra mas larga. Cuando NO alcanza, WPF no pierde texto (nada se recorta, nada se
+    // truncan con "...") pero lo parte DENTRO de una palabra - técnicamente "cabe" (crece en
+    // ALTO en vez de desbordar en ANCHO) y por eso ni D1 (recorte) ni D2 (solape) ni el D3 de
+    // arriba (TextTrimming activo) lo detectaban nunca: es una CUARTA categoria de fallo con
+    // vocabulario propio, la razon real por la que Builds paso desapercibido hasta que el usuario
+    // lo vio con sus propios ojos. Mismo criterio de medicion que AnchoNaturalDelTexto (misma
+    // fuente/tamaño/estilo reales, FormattedText) pero por PALABRA suelta en vez del texto
+    // entero.
+    private static double AnchoNaturalDePalabra(TextBlock tb, string palabra)
+    {
+        var ft = new System.Windows.Media.FormattedText(
+            palabra, System.Globalization.CultureInfo.CurrentCulture, tb.FlowDirection,
+            new System.Windows.Media.Typeface(tb.FontFamily, tb.FontStyle, tb.FontWeight, tb.FontStretch),
+            tb.FontSize, System.Windows.Media.Brushes.Black,
+            System.Windows.Media.VisualTreeHelper.GetDpi(tb).PixelsPerDip);
+        return ft.WidthIncludingTrailingWhitespace;
+    }
+
+    // ¿Este TextBlock (con Wrap real, nunca NoWrap) tiene alguna palabra suelta mas ancha que su
+    // propia caja? Si la tiene, WPF va a partirla dentro de si misma SI O SI - no hay forma de
+    // que un renderizador de texto real "envuelva" una palabra sin espacios en mitad de una
+    // palabra sin partirla, es matematicamente inevitable con ese ancho. out palabra/ancho: la
+    // PEOR (mas ancha) de las que no caben, para el mensaje real del detalle.
+    private static bool TextoPartidoDentroDePalabra(TextBlock tb, out string peorPalabra, out double peorAncho)
+    {
+        peorPalabra = ""; peorAncho = 0;
+        if (tb.TextWrapping == TextWrapping.NoWrap) return false;
+        if (tb.ActualWidth < 1) return false;
+        foreach (string palabra in tb.Text.Split([' ', '\n', '\t', '\r'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            double ancho = AnchoNaturalDePalabra(tb, palabra);
+            if (ancho > tb.ActualWidth + 0.5 && ancho > peorAncho) { peorPalabra = palabra; peorAncho = ancho; }
+        }
+        return peorAncho > 0;
+    }
 
     // AR-15: el rectangulo de este elemento que de verdad se esta VIENDO ahora mismo, en
     // coordenadas de `raiz`, despues de aplicarle el recorte de TODOS sus ancestros. Hace falta

@@ -112,6 +112,13 @@ internal static partial class Program
         var perdidos = new Dictionary<string, (int veces, string peor, double peorFalta)>();
         var solapes = new Dictionary<string, (int veces, string peor, double peorArea)>();
         var truncados = new Dictionary<string, (int veces, string peor)>();
+        // D-PALABRA (20-sep-2026, bug real de Builds): un TextBlock con TextWrapping="Wrap" cuya
+        // palabra mas larga no cabe en su propio ancho - WPF la parte DENTRO de si misma
+        // (ilegible), sin que D1/D2/D3 de arriba lo detecten nunca (no desborda, no se solapa, no
+        // lleva TextTrimming activo). A diferencia de "truncados" (informativo: "..." es una
+        // decision de diseño valida), esto SI es un FALLO real siempre - no existe ningun caso
+        // legitimo donde partir una palabra dentro de si misma sea el comportamiento deseado.
+        var palabrasPartidas = new Dictionary<string, (int veces, string peor)>();
         int layoutsMedidos = 0, elementosMedidos = 0;
 
         // Limites CONOCIDOS y medidos: se siguen listando en la salida, pero no cuentan como
@@ -228,14 +235,24 @@ internal static partial class Program
             }
     
             // ---- D3: texto truncado con puntos suspensivos (informativo) ----
+            // ---- D-PALABRA: texto con Wrap partido DENTRO de una palabra (FALLO real siempre) ----
             foreach (var tb in Descendientes<TextBlock>(window))
             {
                 if (!tb.IsVisible || tb.ActualWidth < 1 || string.IsNullOrWhiteSpace(tb.Text)) continue;
-                if (!TextoRecortado(tb)) continue;
-                string firma = $"{contexto.Split(' ')[0]} | {(tb.Text.Length > 40 ? tb.Text[..40] : tb.Text)}";
-                string detalle = $"{contexto}: \"{(tb.Text.Length > 60 ? tb.Text[..60] + "..." : tb.Text)}\" necesita {AnchoNaturalDelTexto(tb):0}px y tiene {tb.ActualWidth:0}px";
-                if (!truncados.ContainsKey(firma)) truncados[firma] = (1, detalle);
-                else truncados[firma] = (truncados[firma].veces + 1, truncados[firma].peor);
+                if (TextoRecortado(tb))
+                {
+                    string firma = $"{contexto.Split(' ')[0]} | {(tb.Text.Length > 40 ? tb.Text[..40] : tb.Text)}";
+                    string detalle = $"{contexto}: \"{(tb.Text.Length > 60 ? tb.Text[..60] + "..." : tb.Text)}\" necesita {AnchoNaturalDelTexto(tb):0}px y tiene {tb.ActualWidth:0}px";
+                    if (!truncados.ContainsKey(firma)) truncados[firma] = (1, detalle);
+                    else truncados[firma] = (truncados[firma].veces + 1, truncados[firma].peor);
+                }
+                if (TextoPartidoDentroDePalabra(tb, out string peorPalabra, out double peorAncho))
+                {
+                    string firma = $"{contexto.Split(' ')[0]} | PALABRA-PARTIDA | {(tb.Text.Length > 40 ? tb.Text[..40] : tb.Text)}";
+                    string detalle = $"{contexto}: \"{tb.Text}\" (TextWrapping={tb.TextWrapping}) - la palabra \"{peorPalabra}\" necesita {peorAncho:0}px pero el TextBlock solo tiene {tb.ActualWidth:0}px de ancho -> se parte DENTRO de la palabra, ilegible";
+                    if (!palabrasPartidas.ContainsKey(firma)) palabrasPartidas[firma] = (1, detalle);
+                    else palabrasPartidas[firma] = (palabrasPartidas[firma].veces + 1, palabrasPartidas[firma].peor);
+                }
             }
         }
     
@@ -302,6 +319,7 @@ internal static partial class Program
         Console.WriteLine($"AR-LAY: {layoutsMedidos} combinaciones pantalla x tamaño x idioma medidas ({elementosMedidos} elementos), {swArLay.ElapsedMilliseconds}ms");
         Console.WriteLine($"AR-LAY: contenido PERDIDO (recortado y sin scroll que lo alcance)={perdidosNuevos.Count} firmas (esperado 0), " +
                           $"SOLAPES entre celdas disjuntas de un Grid={solapes.Count} firmas (esperado 0), " +
+                          $"PALABRAS PARTIDAS dentro de si mismas con Wrap={palabrasPartidas.Count} firmas (esperado 0), " +
                           $"textos truncados con '...'={truncados.Count} firmas (informativo), " +
                           $"limites ya conocidos y documentados={perdidosConocidos} (informativo, no es fallo)");
         foreach (var kv in perdidosNuevos.OrderByDescending(k => k.Value.peorFalta).Take(30))
@@ -310,10 +328,13 @@ internal static partial class Program
             Console.WriteLine($"   AR-LAY-LIMITE-CONOCIDO x{kv.Value.veces} {kv.Value.peor}");
         foreach (var kv in solapes.OrderByDescending(k => k.Value.peorArea).Take(30))
             Console.WriteLine($"   AR-LAY-SOLAPE x{kv.Value.veces} {kv.Value.peor}");
+        foreach (var kv in palabrasPartidas.OrderByDescending(k => k.Value.veces).Take(30))
+            Console.WriteLine($"   AR-LAY-PALABRA-PARTIDA x{kv.Value.veces} {kv.Value.peor}");
         foreach (var kv in truncados.OrderByDescending(k => k.Value.veces).Take(25))
             Console.WriteLine($"   AR-LAY-TRUNCADO x{kv.Value.veces} {kv.Value.peor}");
         if (perdidosNuevos.Count > 0) Console.WriteLine($"FALLO: AR-LAY - {perdidosNuevos.Count} elementos quedan recortados sin ninguna forma de alcanzarlos en algun tamaño de ventana");
         if (solapes.Count > 0) Console.WriteLine($"FALLO: AR-LAY - {solapes.Count} pares de elementos de celdas disjuntas se solapan en algun tamaño de ventana");
+        if (palabrasPartidas.Count > 0) Console.WriteLine($"FALLO: AR-LAY - {palabrasPartidas.Count} textos con Wrap tienen una palabra que no cabe en su propio ancho y se parte dentro de si misma (ilegible)");
     
         vm.Settings.Language = idiomaPrevio;
         FijarTamaño(window, anchoPrevio, altoPrevio);
@@ -396,11 +417,18 @@ internal static partial class Program
         gridD2Trivial.Children.Add(cajaPropia);
         gridD2Trivial.Children.Add(cajaVecinaOk);
 
+        // ---- D-PALABRA: un Wrap con una palabra-sin-espacios mas ancha que su caja TIENE que
+        // detectarse; el mismo texto con espacios normales en una caja ancha de sobra NO ----
+        var textoPalabraImposible = new TextBlock { Text = new string('M', 40), FontSize = 20, TextWrapping = TextWrapping.Wrap, Width = 40 };
+        var textoPalabraTrivial = new TextBlock { Text = "Cuerpo a cuerpo", FontSize = 13, TextWrapping = TextWrapping.Wrap, Width = 300 };
+
         var raiz = new StackPanel();
         raiz.Children.Add(cajaRecortada);
         raiz.Children.Add(textoTrivial);
         raiz.Children.Add(gridD2);
         raiz.Children.Add(gridD2Trivial);
+        raiz.Children.Add(textoPalabraImposible);
+        raiz.Children.Add(textoPalabraTrivial);
 
         var ventana = new Window
         {
@@ -491,10 +519,29 @@ internal static partial class Program
             ok = false;
         }
 
+        // --- D-PALABRA, caso imposible (una "palabra" de 40 M mayusculas en una caja de 40px) ---
+        if (!TextoPartidoDentroDePalabra(textoPalabraImposible, out string peorPalabraCanario, out double peorAnchoCanario))
+        {
+            Console.WriteLine("FALLO: AR-LAY-CANARIO - una palabra de 40 caracteres en un TextBlock de 40px de ancho (Wrap) NO se detecta como partida dentro de si misma. D-PALABRA no esta comprobando de verdad.");
+            ok = false;
+        }
+        else if (string.IsNullOrEmpty(peorPalabraCanario) || peorAnchoCanario <= 0)
+        {
+            Console.WriteLine("FALLO: AR-LAY-CANARIO - D-PALABRA detecto el caso imposible pero sin datos reales de la palabra/ancho.");
+            ok = false;
+        }
+
+        // --- D-PALABRA, caso trivial ("Cuerpo a cuerpo" en una caja de 300px, sobra de sitio) ---
+        if (TextoPartidoDentroDePalabra(textoPalabraTrivial, out _, out _))
+        {
+            Console.WriteLine("FALLO: AR-LAY-CANARIO - \"Cuerpo a cuerpo\" en un TextBlock de 300px (Wrap) se detecta como partido dentro de una palabra. D-PALABRA esta dando falsos positivos.");
+            ok = false;
+        }
+
         ventana.Close();
         DoEvents();
 
-        if (ok) Console.WriteLine("AR-LAY-CANARIO: OK - D1 distingue un recorte imposible de un caso trivial, y D2 distingue un solape real de dos celdas respetadas.");
+        if (ok) Console.WriteLine("AR-LAY-CANARIO: OK - D1 distingue un recorte imposible de un caso trivial, D2 distingue un solape real de dos celdas respetadas, y D-PALABRA distingue una palabra partida imposible de un texto con Wrap normal.");
         return ok;
     }
 
