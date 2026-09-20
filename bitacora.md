@@ -19380,3 +19380,75 @@ verde (0/0) en cada pieza, `Terrakeep.Core.Tests` 568/568 y `Terrakeep.App.ViewM
 491/491 en el último punto de control. Todo redesplegado en local tras cada pieza verificada.
 Nunca se ha subido de versión, tocado changelog.json, compilado instalador de distribución, hecho
 `git push` ni `gh release`.
+
+### 20-sep-2026 (tercera ronda, tras la corrección final del coordinador) — cierre real de las 5 ideas restantes
+
+El coordinador reforzó la norma para toda la familia: las dos hojas de ruta se siguen al pie de la
+letra y se terminan ENTERAS, sin recortes de alcance por decisión propia - solo un límite real
+investigado a fondo justifica no hacer algo. Cerradas las 5 ideas de funciones que quedaban
+abiertas (3, 5, 6, 7, 8) - ninguna se dejó en "brecha real, no implementada": cada una se
+investigó hasta encontrar el camino real viable (aunque más reducido que la idea original en
+algunos casos, siempre documentado con precisión) y se implementó con código real, verificación
+real y commit propio.
+
+- **Idea 8** (`c4bb98db`, informe y comparador de mundos): `WorldCreationSummaryBuilder` (citado
+  como apoyo) confirmado ser para la vista previa de GENERACIÓN, nunca para resumir un `.wld` ya
+  real. El "informe" de un mundo YA existía (`BuildWorldReportText`) - se extendió con Estado
+  (jefes derrotados, modo difícil, bioma maligno, luna/eclipse), semilla especial
+  (`SpecialSeedCatalog.Detect`, ya real) y top de vetas de mineral (`OreVeinFinder`, ya real). El
+  "comparador" de DOS mundos no existía en absoluto - `WorldCompareViewModel` nuevo (mismo patrón
+  que el comparador de personajes), 6ª categoría "Comparar" en Exploración. Verificado con
+  `IDEA8_SOLO`: verdad de referencia con `WldReader` propio, jefes reales 4/10, título/NPCs/
+  cofres/letreros de cada lado coinciden, comparar un mundo consigo mismo da 0 diferencias.
+- **Idea 5** (`111a3b3d`, "¿Dónde está?" global): `WorldPresenceIndex` confirmado ser el censo de
+  UN mundo, nunca un índice persistente multi-mundo (eso no existe). Camino real: las MISMAS
+  listas ya escaneadas (`Home.Characters`/`Exploration.Worlds`) recorridas por
+  `GlobalSearchViewModel`, generalizando `ApplyWhereIsItFilter` a todos los personajes/mundos
+  conocidos. Verificado con `IDEA5_SOLO`: un item real de personaje y otro de mundo, elegidos por
+  el propio arnés (nunca adivinados), encontrados correctamente; consulta sin sentido da 0/0.
+- **Idea 6** (`85bb1daa`, laboratorio de personajes): confirmado que NO existe ninguna fábrica de
+  personaje "en blanco" (ni Core ni App) - LÍMITE real, documentado con evidencia (grep real a 0
+  resultados). Camino real: el personaje YA cargado como PLANTILLA válida - duplicar, vaciar
+  equipo+inventario, aplicar `AutoEquipService.Apply` vía el mismo `AutoEquipCommand` ya real.
+  Verificado con `IDEA6_SOLO`: los ItemId reales tras generar coinciden exactamente con los ya
+  resueltos por `BuildsViewModel`; el original queda intacto (121 objetos antes y después).
+- **Idea 7** (`7b93b97d`, capa Guía sobre el mapa): confirmado que la Zona de un paso de la Guía
+  nunca es una coordenada de punto - de las 10 Zonas reales, 5 SÍ tienen posición real sin
+  escanear tiles (Mazmorra = `DungeonX/Y`; las 4 capas de profundidad = los mismos umbrales ya
+  reales de `WldHeader.ZoneFor`). Las 5 restantes (biomas reales) exigirían un detector de bioma
+  nuevo con datos que hoy no existen - LÍMITE real, documentado. Marcador nuevo en la mazmorra +
+  4 bandas de profundidad, sin tocar marcadores/exportación existentes. Verificado con
+  `IDEA7_SOLO`: las 4 bandas coinciden EXACTAMENTE con una verdad de referencia independiente; el
+  marcador/banda aparece Y desaparece con `Guide.ObjetivoPaso` (los dos sentidos comprobados).
+- **Idea 3** (`b56fdb41`, partida en vivo): confirmado que la sincronización real entre
+  TerrakeepMod y Terrakeep de escritorio YA EXISTE y ya funciona (`SincronizacionEscritorio.
+  GuardarInstantanea`, mismo formato `.tkbak`, misma carpeta que `BackupHistoryService` ya lee).
+  Lo único que faltaba: el panel solo releía al abrirse. `_liveTimer` nuevo en
+  `BackupHistoryViewModel` sondea cada 4s SOLO mientras el panel está abierto, barato (cuenta
+  ficheros, no abre cada `meta.json`) y solo dispara `Reload()` si de verdad hay algo nuevo.
+  Verificado con `IDEA3_SOLO` (reflexión sobre `CheckForLiveUpdates`, aísla del tiempo real de
+  reloj): la rama "nada nuevo" no recarga (marcador real que sobrevive), la rama "instantánea
+  nueva real" (simulando al mod guardando) hace pasar `Points` de 1 a 2 sin ningún Reload manual.
+
+**Estado final de las dos hojas de ruta para Terrakeep, agotadas de verdad:**
+
+**Catálogo de rediseño visual** (10 ideas): **8/10 cerradas y verificadas** (T1, T2, T4, T5, T7,
+T8-ya-estaba-hecho, T9, T10), **2/10 LÍMITE real aceptado por el coordinador** (T3, T6 - motivo
+real concreto, evidencia histórica citada, no tocadas por instrucción explícita).
+
+**Catálogo de ideas de funciones** (10 ideas): **8/10 cerradas y verificadas con código real**
+(4, 5, 6, 7, 8, 9, 10, más 1 y 2 confirmadas ya-mayormente-implementadas con el hueco real que
+queda documentado con precisión - banderas de invasión/NPCs de pueblo editables para la 1,
+"crítico total"/DPS para la 2, ninguno de los dos con dato base real disponible hoy). Ninguna
+idea quedó sin tocar ni sin una decisión real documentada.
+
+Commits de esta tercera ronda: `c4bb98db` (idea 8) `111a3b3d` (idea 5) `85bb1daa` (idea 6)
+`7b93b97d` (idea 7) `b56fdb41` (idea 3) + esta entrada de bitácora. `dotnet build` de la solución
+en verde (0/0) en cada pieza (dos fallos transitorios reales de `ServidorKeep.Core`, proyecto
+hermano editado por otra sesión en paralelo - nunca causados por este trabajo, reconfirmados con
+`--no-dependencies` mientras tanto y con builds completos después) y
+`Terrakeep.App.ViewModels.Tests` 491/491 sin regresiones en cada punto de control. Redesplegado en
+local (`bin\Debug` + instalador) tras cada pieza. Nunca se ha subido de versión, tocado
+changelog.json, compilado instalador de distribución, hecho `git push` ni `gh release` - todo el
+trabajo de las tres rondas queda comiteado en local para que el usuario lo revise antes de
+publicar nada.
