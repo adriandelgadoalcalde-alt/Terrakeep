@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:controls="clr-namespace:Terrakeep.App.Controls">
+                    xmlns:controls="clr-namespace:Terrakeep.App.Controls"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
     <!-- Paleta REAL de Terrasavr (2-sep-2026, segunda pasada estetica pedida explicitamente
          tras comprobar que la primera no captaba bien el espiritu del original) - no inventada
@@ -126,6 +127,34 @@
         <Setter Property="KeyboardNavigation.DirectionalNavigation" Value="Contained" />
     </Style>
 
+    <!-- Catálogo de rediseño visual T5 (20-sep-2026): "escala de espaciado declarada" - a
+         diferencia de tipografia/radios (comentario de abajo), Theme.xaml nunca tuvo una escala
+         de margenes con nombre; Inicio por si sola mezcla 10, 12, 14, 16, 18, 20, 24 y 26 en la
+         misma pestaña (comprobado real: MainWindow.xaml, Margin="0,10,0,24" l.2381, "0,0,0,26"
+         y "0,0,0,12" varias veces l.2428-2570, "0,0,14,14" en las 7 tarjetas NavCardButton,
+         "16,0,0,0" en cabeceras con doll). Sp1..Sp6 = 4/8/12/16/24/32 (progresion x2 real, no
+         arbitraria) en dos sabores porque WPF no permite una clave compartida por dos tipos:
+         Sp1..Sp6 como Thickness UNIFORME (uso directo en Margin/Padding="{StaticResource SpN}")
+         y SpD1..SpD6 como Double (uso en Width/Height/CornerRadius/espaciados sueltos que no son
+         Thickness). CUALQUIER margen/padding NUEVO debe partir de esta escala, igual que
+         CUALQUIER FontSize nuevo parte de la de abajo - el barrido de los +100 sitios EXISTENTES
+         que aun usan un numero suelto queda pendiente a proposito (coste M, "barrido guiado por
+         KeepQA" segun el propio catalogo: retocar cada uno a mano sin verificar geometria real
+         uno a uno seria el mismo barrido mecanico sin verificar que el comentario de tipografia
+         de abajo ya rechaza). -->
+    <Thickness x:Key="Sp1">4</Thickness>
+    <Thickness x:Key="Sp2">8</Thickness>
+    <Thickness x:Key="Sp3">12</Thickness>
+    <Thickness x:Key="Sp4">16</Thickness>
+    <Thickness x:Key="Sp5">24</Thickness>
+    <Thickness x:Key="Sp6">32</Thickness>
+    <sys:Double x:Key="SpD1">4</sys:Double>
+    <sys:Double x:Key="SpD2">8</sys:Double>
+    <sys:Double x:Key="SpD3">12</sys:Double>
+    <sys:Double x:Key="SpD4">16</sys:Double>
+    <sys:Double x:Key="SpD5">24</sys:Double>
+    <sys:Double x:Key="SpD6">32</sys:Double>
+
     <!-- Tipografia. Auditoria de Opus, Bloque 5 (T-6/T-7/T-8): escala real, documentada aqui a
          proposito - los 4 pasos con nombre son la fuente de verdad (24/14/12.5/11), y deben
          preferirse siempre a un FontSize suelto nuevo en MainWindow.xaml. Las variantes locales
@@ -151,15 +180,37 @@
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
+    <!-- Catálogo de rediseño visual T10 (20-sep-2026): "tipografía que crece con el ancho" - el
+         propio comentario de WindowSizeClass.Extra (arriba, R-10/H-09) ya reconocia que a 1920px+
+         quedaba un 28-39% del ancho real sin usar; hasta hoy la escala de 4 pasos (linea 130) era
+         fija a cualquier ancho. BodyText/CaptionText (los dos pasos mas usados, cientos de sitios)
+         suben UN escalon real en WindowSizeClass.Extra via DataTrigger; TitleText/SectionText se
+         dejan tal cual a proposito (24/14 ya leen bien a cualquier ancho, y son los que menos
+         sitio ocupan). El binding sube por DataContext.SizeClass desde el Window ancestro (mismo
+         patron real ya usado en MainWindow.xaml, ej. DataContext.Settings.IsCompactMode) en vez de
+         asumir que el DataContext local expone SizeClass - funciona igual venga el TextBlock de
+         donde venga en el arbol visual. Verificado con TIPO_SOLO=1 (Terrakeep.App.Tests/
+         Program.cs): FontSize real medido a 1900px (Amplio, sin cambio) y 1920px/2500px (Extra,
+         13.5/12) - ver bitacora.md. -->
     <Style x:Key="BodyText" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
         <Setter Property="FontSize" Value="12.5" />
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding DataContext.SizeClass, RelativeSource={RelativeSource AncestorType=Window}}" Value="Extra">
+                <Setter Property="FontSize" Value="13.5" />
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
     <Style x:Key="CaptionText" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
         <Setter Property="FontSize" Value="11" />
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding DataContext.SizeClass, RelativeSource={RelativeSource AncestorType=Window}}" Value="Extra">
+                <Setter Property="FontSize" Value="12" />
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Ventana / controles base -->

@@ -1352,6 +1352,73 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // TIPO_SOLO=1 (20-sep-2026, catalogo de rediseño visual T5/T10): verifica en frio, con la
+        // ventana real, los dos cambios declarativos de Theme.xaml de esta ronda - mismo modo de
+        // foco real que VITALS_SOLO de arriba (widths reales, DoEvents entre cada uno).
+        //   T10: BodyText/CaptionText suben un escalon real (12.5->13.5 / 11->12) SOLO en
+        //     WindowSizeClass.Extra (>=1920px, ExtraMinWidth arriba). Se localiza el TextBlock
+        //     real por identidad de Style (mismo objeto Style compartido, no por texto/x:Name) y
+        //     se lee FontSize YA resuelto por WPF (Setter del DataTrigger, no el valor base).
+        //   T5: Sp1..Sp6 (Thickness) y SpD1..SpD6 (Double) existen en el ResourceDictionary real
+        //     de la app (Application.Resources, via MergedDictionaries) y valen 4/8/12/16/24/32.
+        if (Environment.GetEnvironmentVariable("TIPO_SOLO") == "1")
+        {
+            try
+            {
+                var bodyStyle = (System.Windows.Style)window.FindResource("BodyText");
+                var captionStyle = (System.Windows.Style)window.FindResource("CaptionText");
+                vm.SelectedTabIndex = 0; // Inicio: tiene TextBlocks reales de BodyText y CaptionText
+                DoEvents(); DoEvents();
+                foreach (double w in new double[] { 1900, 1920, 2500 })
+                {
+                    FijarTamaño(window, w, 900);
+                    DoEvents(); DoEvents();
+                    // Solo TextBlocks REALMENTE en pantalla (visibles Y conectados de verdad al
+                    // arbol visual de `window`, no dentro de un Popup/ToolTip/ContextMenu con su
+                    // propia raiz de presentacion - TransformToAncestor lanza si estan
+                    // desconectados, mismo criterio que RectCompleto en el resto del arnes) Y SIN
+                    // un FontSize LOCAL propio (ReadLocalValue) - el comentario de Theme.xaml ya
+                    // deja escrito a proposito que sitios concretos (ej. DifficultyLabel,
+                    // FontSize="10" local en la tarjeta de personaje de Inicio) tienen un ajuste
+                    // MAS PEQUEÑO que el paso estandar y NO deben escalar (un valor local en WPF
+                    // siempre gana a cualquier Setter/DataTrigger de Style, es la regla real del
+                    // motor, no un bug) - de lo contrario la primera coincidencia hallada seria
+                    // ese hueco pequeño y el trigger real quedaria sin comprobar.
+                    bool EnPantalla(TextBlock t)
+                    {
+                        if (!t.IsVisible) return false;
+                        if (t.ReadLocalValue(TextBlock.FontSizeProperty) != DependencyProperty.UnsetValue) return false;
+                        try { t.TransformToAncestor(window); return true; }
+                        catch (InvalidOperationException) { return false; }
+                    }
+                    var body = Descendientes<TextBlock>(window).FirstOrDefault(t => t.Style == bodyStyle && EnPantalla(t));
+                    var caption = Descendientes<TextBlock>(window).FirstOrDefault(t => t.Style == captionStyle && EnPantalla(t));
+                    bool extra = vm.SizeClass == WindowSizeClass.Extra;
+                    double esperadoBody = extra ? 13.5 : 12.5;
+                    double esperadoCaption = extra ? 12 : 11;
+                    Console.WriteLine($"TIPO_SOLO[T10]: a {w}px SizeClass={vm.SizeClass} -> BodyText('{body?.Text}').FontSize={(body != null ? body.FontSize.ToString() : "NO-FOUND")} (esperado {esperadoBody}), CaptionText('{caption?.Text}').FontSize={(caption != null ? caption.FontSize.ToString() : "NO-FOUND")} (esperado {esperadoCaption})");
+                    if (body == null) Console.WriteLine($"FALLO: TIPO_SOLO - ningun TextBlock real con Style=BodyText encontrado en pantalla en Inicio a {w}px");
+                    else if (body.FontSize != esperadoBody) Console.WriteLine($"FALLO: TIPO_SOLO - BodyText.FontSize={body.FontSize} a {w}px (SizeClass={vm.SizeClass}, esperado {esperadoBody})");
+                    if (caption == null) Console.WriteLine($"FALLO: TIPO_SOLO - ningun TextBlock real con Style=CaptionText encontrado en pantalla en Inicio a {w}px");
+                    else if (caption.FontSize != esperadoCaption) Console.WriteLine($"FALLO: TIPO_SOLO - CaptionText.FontSize={caption.FontSize} a {w}px (SizeClass={vm.SizeClass}, esperado {esperadoCaption})");
+                }
+
+                foreach (var (clave, valor) in new (string clave, double valor)[] { ("Sp1", 4), ("Sp2", 8), ("Sp3", 12), ("Sp4", 16), ("Sp5", 24), ("Sp6", 32) })
+                {
+                    var th = (System.Windows.Thickness)window.FindResource(clave);
+                    var dobleClave = "SpD" + clave.Substring(2);
+                    var dd = (double)window.FindResource(dobleClave);
+                    Console.WriteLine($"TIPO_SOLO[T5]: {clave}={th} {dobleClave}={dd} (esperado {valor} uniforme en los dos)");
+                    if (th.Left != valor || th.Top != valor || th.Right != valor || th.Bottom != valor)
+                        Console.WriteLine($"FALLO: TIPO_SOLO - {clave} no es {valor} uniforme de verdad, es {th}");
+                    if (dd != valor) Console.WriteLine($"FALLO: TIPO_SOLO - {dobleClave} no es {valor}, es {dd}");
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("TIPO_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (TIPO_SOLO)");
+            Environment.Exit(0);
+        }
+
         // KEEPQA_SOLO=1 (14-sep-2026, barrido FRESCO con el nuevo arsenal de KeepQA - contenido
         // adversarial y volcado de geometria para verificarAlineacion.js): mismo modo de foco que
         // los de arriba, personaje real ya cargado. El cuerpo real vive en AuditoriaKeepQA.cs
