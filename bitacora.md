@@ -19986,9 +19986,6 @@ releer literalmente el código real (no de memoria).
   (fuera de alcance, no es "cortado"): el NPC de evento `DD2GoblinT1` no tiene nombre en el
   catálogo y se enseña como `($NPCName.DD2GoblinT1)` - mismo criterio honesto de "nunca
   inventar" ya establecido, un hueco de cobertura real del catálogo de NPCs modded/evento.
-- **T4, residual documentado (ya NO técnicamente bloqueado)**: "Te toca: Plantera" (sugerencia
-  dinámica) y "Tu último mundo" siguen sin construir - la pieza dura (evaluar la Guía sin
-  personaje activo) ya está resuelta y reutilizable, esto es alcance/tiempo, no límite real.
 - **T5 (escala de espaciado)**: reconfirmado cerrado de verdad, sin tocar nada -
   `Sp1..Sp6`/`SpD1..SpD6` existen en `Theme.xaml` y `KeepQA/src/espaciado/
   verificarRitmoEspaciado.js` existe de verdad.
@@ -20001,3 +19998,33 @@ ViewModels.Tests` 518/518. Redesplegado en local (`bin\Debug` + instalador Relea
 `%LocalAppData%\Programs\Terrakeep`) tras confirmar `Terrakeep.exe` no en ejecución. Sin
 publicar nada (sin version bump/changelog.json/instalador de distribución/`git push`/`gh
 release`).
+
+### 21-sep-2026 (continuación) - T4 cerrado del todo: "Te toca: X" y "Tu último mundo"
+(commit `c0e2cab0`)
+
+Pedido explícito del usuario ("que no quede nada, ni siquiera lo pequeño"): cerradas las 2
+sub-piezas menores de T4 que quedaban documentadas como residual tras la 3ª KPI.
+`HomeViewModel.ComputeGuideObjective` (antes `ComputeGuideStage`) devuelve ahora también el
+título del PASO concreto en la misma pasada del catálogo. "Te toca: X" es una tarjeta
+condicional nueva en Inicio (visible solo con un objetivo real evaluado) + un evento nuevo
+`HomeViewModel.GuideRequested` (mismo patrón que `CharacterChosen`) que carga el personaje
+y aterriza en Guía. "Tu último mundo" expone `ExplorationViewModel.CurrentWorldPath` en
+público, lo persiste `MainViewModel.SaveSession` en `session.json`
+(`TerrakeepSession.LastWorldPath/LastWorldName`, mismo mecanismo que `LastCharacterPath`) y
+un evento `WorldChosen` carga el mundo en Exploración sin tocar el personaje activo. "Builds
+de tu clase" (3ª sugerencia nombrada en el catálogo) se omite a propósito: mismo destino que
+la tarjeta "Builds" ya existente, pura duplicación.
+
+Verificado de extremo a extremo (`HOMECARDS_SOLO`): las 2 tarjetas aparecen con el texto
+real correcto y sus comandos reales navegan de verdad (invocados vía `AutomationPeer`) -
+"Te toca" carga el personaje y aterriza en Guía con `Guide.ObjetivoPaso` ya evaluado; "Tu
+último mundo" aterriza en Exploración con `IsWorldLoaded=True`. Regresión completa repetida
+dos veces seguidas: 22 `FALLO` estables (los 21 ya conocidos + `AR-MRK-13E`, intermitente ya
+documentado el 6-sep-2026); 4 líneas de `LOADOUT-PILDORAS` que aparecieron en la primera
+tirada desaparecieron en la segunda sin tocar nada - mismo mecanismo real ya documentado
+("el arnés hereda `session.json` de la ejecución anterior", 6-sep-2026), confirmado como
+flakiness del propio arnés, no una regresión. Redesplegado en local una última vez
+(`bin\Debug` + instalador Release real) tras confirmar `Terrakeep.exe` no en ejecución. Sin
+publicar nada.
+
+**Catálogo de rediseño visual: T1-T10 completos de verdad, sin ningún residual pendiente.**
