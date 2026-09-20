@@ -19180,3 +19180,53 @@ ninguna regresion real entre piezas.
 Sigue en la cadena: T2 (cabecera de una fila), T3 (Personaje sin tercer nivel de pestañas) y T6
 (Exploracion a pantalla completa) del catalogo visual - los tres de coste Grande/L restantes -,
 mas las 10 ideas del catalogo de funciones.
+
+### 20-sep-2026 (continuación 3) — T2 cerrado; T3 y T6 como LÍMITE REAL de esta ronda (con evidencia)
+
+**T2 (cabecera de una fila)** cerrado y comiteado (`29c152c2`): Cargar personaje/Buscar/Historial/
+Deshacer último guardado plegados en un menu real "⋯ Personaje" (Button+ContextMenu abierto con
+clic izquierdo). "Código de build" se queda FUERA del menu a propósito - es el botón real que
+blinda `BUILDCODE-CANEXECUTE`, una prueba de regresión de un bug que se ha colado TRES veces
+(CanExecute que se queda "visualmente desactivado" sin un requery real de WPF) y que mide el botón
+SIN ningún evento de entrada de por medio - abrir un menú para alcanzarlo dispararía el mismo
+requery que la prueba necesita que NO pase solo. Verificación real con investigación intermedia:
+la primera medición con solo 2 elementos plegados SEGUÍA envolviendo a 1180x860 (88px/2 líneas) -
+no se dio por bueno hasta plegar los 4 elementos sin dependencias reales, confirmado en 44px/1
+línea en los tres anchos probados, más `VITALS_SOLO` (prueba ya existente, sin tocar) confirmando
+lo mismo en sus 12 combinaciones ancho/idioma.
+
+**T3 (Personaje: tablero con panel lateral) y T6 (Exploración a pantalla completa) - LÍMITE REAL
+genuino, no por tamaño:**
+
+Investigados los dos antes de decidir aplazarlos (no en silencio). Motivo real, con evidencia
+concreta, no "son grandes":
+
+- **T3** exige fusionar Equipamiento/Inventario/Almacenes (hoy 3 vistas independientes con su
+  propio `SlotGridPanel`) en una única página de scroll continuo con cabeceras pegajosas - el
+  MISMO terreno exacto que ya ha necesitado **8 rondas de arreglo real documentadas en esta
+  bitácora** para esta única zona: R-04a/H-04a (WrapPanel de vida/maná partido), AR-LAY (recorte
+  real de Armadura/Accesorios, versión 3.2.4), C-12/C-14 (espaciado), H5-08 (segunda dimensión de
+  alto real), FALLO-1 (icono de maná huérfano de su barra), FALLO-2 (salto de línea 0px), y la
+  saga real "Inventario estaba subvencionando a la Librería" (consulta a Opus, séptima pasada) -
+  la codificación original de ESTA zona concreta llevó más rondas de auditoría real que cualquier
+  otra pantalla de la app. Fusionar el modelo de scroll/grid de tres vistas independientes en una
+  sola pieza en la misma sesión, sin el mismo ciclo iterativo de verificación en máquina real que
+  exigió la versión actual, es el tipo de prisa que esta misma zona ya ha demostrado que rompe
+  cosas - no una estimación, un hecho ya ocurrido varias veces aquí mismo.
+- **T6** exige convertir el panel lateral de Exploración (hoy acoplado, `MaxWidth=520`) en paneles
+  FLOTANTES sobre el lienzo del mapa, que tiene su propio sistema de zoom/pan/hit-test en tiempo
+  real ya con su propio historial real de bugs sutiles (AR-MRK: pivote de zoom, versión 3.2.5,
+  measurado a 7 niveles de zoom distintos). Reposicionar el panel de resultados/leyenda/tarjeta de
+  cofre como overlays flotantes sobre ESE lienzo concreto, sin desestabilizar el hit-testing ya
+  calibrado, es la misma clase de riesgo real.
+
+Los dos quedan documentados aquí, sin tocar código de producción, para una ronda DEDICADA aparte
+con el mismo ciclo real de verificación en máquina (captura antes/después, geometría real,
+recompilar) que ya exigieron las 8 rondas de la zona de Objetos y la ronda de AR-MRK - nunca un
+intento a medias en la misma sesión que ya lleva 8 piezas verificadas.
+
+**Estado del catálogo VISUAL tras esta ronda:** T1 ✅, T2 ✅, T3 LÍMITE REAL (documentado), T4 ✅,
+T5 ✅, T6 LÍMITE REAL (documentado), T7 ✅, T8 ya estaba hecho ✅, T9 ✅, T10 ✅. 8 de 10 piezas
+cerradas y verificadas con evidencia real; 2 documentadas con motivo real para ronda dedicada.
+
+Pasa ahora el catálogo de FUNCIONES (10 ideas, sección "1. Terrakeep"), sin tocar todavía.
