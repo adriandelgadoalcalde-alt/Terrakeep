@@ -1819,27 +1819,111 @@ public partial class ExplorationViewModel : ObservableObject
     // aqui solo la composicion+codificacion. Si hay resaltado de mineral activo (WorldHighlight,
     // "Marcar en el mapa") se mezcla ENCIMA del mapa base - exportar justo lo que se esta viendo,
     // no solo el mapa desnudo.
+    // Catalogo de ideas Keep, idea 7 ("Capa Guia sobre el mapa + exportar el mapa a PNG con
+    // marcadores" - reconsiderada a peticion explicita del coordinador el 20-sep-2026: "añade
+    // los marcadores (NPCs/spawn/dungeon/resultados) a ExportMapToPng, no solo mapa+minerales").
+    // Los 4 grupos reales que pide el catalogo, siempre en el MISMO espacio de pixeles que
+    // WorldImage/WorldHighlight (1 pixel = 1 tile, confirmado por TileCenterConverter/MarkerX-Y
+    // ya usados en pantalla - nunca una escala inventada aparte):
+    //   - Npcs (cabeza real via HeadIconPath, o el punto magenta de siempre sin icono).
+    //   - Spawn: los Spawn Points del personaje (CharacterSpawns, estrella) y la aparicion
+    //     principal del MUNDO (WorldSpawnX/Y, casa).
+    //   - Dungeon: WorldDungeonX/Y (rombo).
+    //   - Resultados: WorldSearchResults (marco hueco, mas grande si es el resultado activo).
+    // Reutiliza los MISMOS glifos/colores que la plantilla real de pantalla (MainWindow.xaml,
+    // ver el comentario de cabecera de cada bloque abajo con la referencia exacta) - nunca un
+    // segundo lenguaje visual solo para la exportacion.
     public void ExportMapToPng(string path)
     {
         var mapa = WorldImage;
         if (mapa == null) return;
-        BitmapSource final = mapa;
-        if (WorldHighlight is { } resaltado)
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
         {
-            var visual = new DrawingVisual();
-            using (var dc = visual.RenderOpen())
-            {
-                dc.DrawImage(mapa, new System.Windows.Rect(0, 0, mapa.PixelWidth, mapa.PixelHeight));
+            dc.DrawImage(mapa, new System.Windows.Rect(0, 0, mapa.PixelWidth, mapa.PixelHeight));
+            if (WorldHighlight is { } resaltado)
                 dc.DrawImage(resaltado, new System.Windows.Rect(0, 0, mapa.PixelWidth, mapa.PixelHeight));
-            }
-            var compuesto = new RenderTargetBitmap(mapa.PixelWidth, mapa.PixelHeight, mapa.DpiX, mapa.DpiY, PixelFormats.Pbgra32);
-            compuesto.Render(visual);
-            final = compuesto;
+            DrawMarkersForExport(dc);
         }
+        var compuesto = new RenderTargetBitmap(mapa.PixelWidth, mapa.PixelHeight, mapa.DpiX, mapa.DpiY, PixelFormats.Pbgra32);
+        compuesto.Render(visual);
         var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(final));
+        encoder.Frames.Add(BitmapFrame.Create(compuesto));
         using var stream = File.Create(path);
         encoder.Save(stream);
+    }
+
+    private static readonly Typeface MarkerTypeface = new("Segoe UI");
+
+    // Glifo centrado en (tileX+0.5, tileY+0.5) - mismo criterio de "cabeza sin pies con la que
+    // anclar" que usan el marcador de spawn del mundo/mazmorra en pantalla.
+    private static void DrawCenteredGlyph(DrawingContext dc, string glifo, double fontSize, Brush color, double tileX, double tileY)
+    {
+        var texto = new FormattedText(glifo, System.Globalization.CultureInfo.CurrentUICulture,
+            System.Windows.FlowDirection.LeftToRight, MarkerTypeface, fontSize, color, 1.0);
+        dc.DrawText(texto, new System.Windows.Point(tileX + 0.5 - texto.Width / 2, tileY + 0.5 - texto.Height / 2));
+    }
+
+    // MainWindow.xaml, marcador de CharacterSpawns (estrella): ancla por la PUNTA de abajo, no
+    // por el centro - Canvas.Top real usa el alto ENTERO del glifo, no la mitad.
+    private static void DrawBottomAnchoredGlyph(DrawingContext dc, string glifo, double fontSize, Brush color, double tileX, double tileY)
+    {
+        var texto = new FormattedText(glifo, System.Globalization.CultureInfo.CurrentUICulture,
+            System.Windows.FlowDirection.LeftToRight, MarkerTypeface, fontSize, color, 1.0);
+        dc.DrawText(texto, new System.Windows.Point(tileX + 0.5 - texto.Width / 2, tileY + 0.5 - texto.Height));
+    }
+
+    // Mismo color real que Theme.xaml (Styles/Theme.xaml: AccentColor/OrangeColor/CalamityColor/
+    // TealColor) - Application.Current puede ser null fuera de la app real en marcha (arnes de
+    // pruebas xUnit, sin ningun Application host), asi que el respaldo literal es el MISMO color
+    // hexadecimal, nunca uno inventado aparte.
+    private static Brush ThemeBrushOrFallback(string key, string hexRespaldo) =>
+        System.Windows.Application.Current?.Resources[key] as Brush
+        ?? new SolidColorBrush((Color)ColorConverter.ConvertFromString(hexRespaldo)!);
+
+    private void DrawMarkersForExport(DrawingContext dc)
+    {
+        var accent = ThemeBrushOrFallback("AccentBrush", "#6C63FF");
+        var orange = ThemeBrushOrFallback("OrangeBrush", "#ffb84d");
+        var calamity = ThemeBrushOrFallback("CalamityBrush", "#C0392B");
+        var teal = ThemeBrushOrFallback("TealBrush", "#00d2a6");
+
+        // --- NPCs (MainWindow.xaml ~5340: cabeza 16x16 centrada, o punto magenta 11px sin icono). ---
+        foreach (var npc in Npcs)
+        {
+            if (npc.HeadIconPath is { } iconPath)
+            {
+                try
+                {
+                    var icono = new BitmapImage(new Uri(iconPath));
+                    dc.DrawImage(icono, new System.Windows.Rect(npc.TileX + 0.5 - 8, npc.TileY + 0.5 - 8, 16, 16));
+                }
+                catch (IOException) { } catch (NotSupportedException) { } // icono real ausente/invalido - se omite, nunca revienta la exportacion
+            }
+            else
+            {
+                dc.DrawEllipse(Brushes.Magenta, new Pen(Brushes.White, 1.5), new System.Windows.Point(npc.TileX + 0.5, npc.TileY + 0.5), 5.5, 5.5);
+            }
+        }
+
+        // --- Spawn: Spawn Points del personaje (estrella) + aparicion del mundo (casa). ---
+        foreach (var spawn in CharacterSpawns)
+            DrawBottomAnchoredGlyph(dc, "★", 18, accent, spawn.TileX, spawn.TileY); // ★
+        if (IsWorldLoaded)
+            DrawCenteredGlyph(dc, "⌂", 18, orange, WorldSpawnX, WorldSpawnY); // ⌂
+
+        // --- Dungeon (WorldDungeonX/Y, rombo). ---
+        if (IsWorldLoaded)
+            DrawCenteredGlyph(dc, "◇", 18, calamity, WorldDungeonX, WorldDungeonY); // ◇
+
+        // --- Resultados (WorldSearchResults, marco hueco - mas grande si es el activo). ---
+        foreach (var hit in WorldSearchResults)
+        {
+            double lado = hit.IsCurrent ? 24 : 10;
+            double mitad = lado / 2;
+            dc.DrawRectangle(null, new Pen(teal, 1.5),
+                new System.Windows.Rect(hit.MarkerX - mitad, hit.MarkerY - mitad, lado, lado));
+        }
     }
 
     [RelayCommand]

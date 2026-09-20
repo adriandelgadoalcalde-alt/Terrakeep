@@ -7019,17 +7019,67 @@ internal static partial class Program
                         vm.Exploration.ExportMapToPng(pngTemporal);
                         bool existe = File.Exists(pngTemporal);
                         int anchoPng = 0, altoPng = 0;
+                        System.Windows.Media.Imaging.BitmapSource? exportado = null;
                         if (existe)
                         {
                             var bytesPng = File.ReadAllBytes(pngTemporal);
                             using var msPng = new MemoryStream(bytesPng);
                             var decoder = new System.Windows.Media.Imaging.PngBitmapDecoder(msPng, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
-                            anchoPng = decoder.Frames[0].PixelWidth;
-                            altoPng = decoder.Frames[0].PixelHeight;
+                            exportado = decoder.Frames[0];
+                            anchoPng = exportado.PixelWidth;
+                            altoPng = exportado.PixelHeight;
                         }
                         Console.WriteLine($"F-12: PNG exportado existe={existe}, {anchoPng}x{altoPng} (esperado {hdrReal.TilesWide}x{hdrReal.TilesHigh})");
                         if (!existe || anchoPng != hdrReal.TilesWide || altoPng != hdrReal.TilesHigh)
                             Console.WriteLine("FALLO: F-12 - el PNG exportado no existe o no tiene las dimensiones reales del mundo");
+
+                        // Idea 7, segunda mitad (catalogo de funciones, "exportar el mapa entero a
+                        // imagen con los marcadores del usuario" - reconsiderada a peticion
+                        // explicita del coordinador el 20-sep-2026: "añade los marcadores (NPCs/
+                        // spawn/dungeon/resultados) a ExportMapToPng, no solo mapa+minerales").
+                        // Compara una region real alrededor de cada marcador contra el mapa BASE
+                        // (Exploration.WorldImage, sin marcadores) - si el PNG exportado es
+                        // IGUAL ahi, el marcador no se dibujo de verdad.
+                        if (exportado != null && vm.Exploration.WorldImage is { } mapaBase)
+                        {
+                            bool RegionDistinta(int cx, int cy, int radio)
+                            {
+                                int x0 = Math.Max(0, cx - radio), y0 = Math.Max(0, cy - radio);
+                                int w = Math.Min(radio * 2, anchoPng - x0), h = Math.Min(radio * 2, altoPng - y0);
+                                if (w <= 0 || h <= 0) return false;
+                                var pxExport = new byte[w * h * 4];
+                                var pxBase = new byte[w * h * 4];
+                                new System.Windows.Media.Imaging.CroppedBitmap(exportado, new System.Windows.Int32Rect(x0, y0, w, h)).CopyPixels(pxExport, w * 4, 0);
+                                new System.Windows.Media.Imaging.CroppedBitmap(mapaBase, new System.Windows.Int32Rect(x0, y0, w, h)).CopyPixels(pxBase, w * 4, 0);
+                                return !pxExport.SequenceEqual(pxBase);
+                            }
+
+                            bool dungeonMarcado = RegionDistinta(hdrReal.DungeonX, hdrReal.DungeonY, 10);
+                            Console.WriteLine($"IDEA7_MARCADORES: region del rombo de mazmorra ({hdrReal.DungeonX},{hdrReal.DungeonY}) distinta del mapa base={dungeonMarcado} (esperado True)");
+                            if (!dungeonMarcado) Console.WriteLine("FALLO: idea 7 - el marcador de mazmorra no aparece en el PNG exportado");
+
+                            bool spawnMundoMarcado = RegionDistinta(hdrReal.SpawnX, hdrReal.SpawnY, 10);
+                            Console.WriteLine($"IDEA7_MARCADORES: region de la casa de spawn del mundo ({hdrReal.SpawnX},{hdrReal.SpawnY}) distinta del mapa base={spawnMundoMarcado} (esperado True)");
+                            if (!spawnMundoMarcado) Console.WriteLine("FALLO: idea 7 - el marcador de spawn del mundo no aparece en el PNG exportado");
+
+                            if (vm.Exploration.Npcs.Count > 0)
+                            {
+                                var npc = vm.Exploration.Npcs[0];
+                                bool npcMarcado = RegionDistinta(npc.TileX, npc.TileY, 10);
+                                Console.WriteLine($"IDEA7_MARCADORES: region del NPC '{npc.Name}' ({npc.TileX},{npc.TileY}) distinta del mapa base={npcMarcado} (esperado True)");
+                                if (!npcMarcado) Console.WriteLine($"FALLO: idea 7 - el marcador del NPC '{npc.Name}' no aparece en el PNG exportado");
+                            }
+                            else Console.WriteLine("IDEA7_MARCADORES: este mundo real no tiene ningun NPC de pueblo, omitido");
+
+                            if (vm.Exploration.WorldSearchResults.Count > 0)
+                            {
+                                var hit = vm.Exploration.WorldSearchResults[0];
+                                bool resultadoMarcado = RegionDistinta((int)hit.MarkerX, (int)hit.MarkerY, 10);
+                                Console.WriteLine($"IDEA7_MARCADORES: region del resultado de busqueda '{hit.Name}' ({hit.MarkerX},{hit.MarkerY}) distinta del mapa base={resultadoMarcado} (esperado True)");
+                                if (!resultadoMarcado) Console.WriteLine($"FALLO: idea 7 - el marcador del resultado '{hit.Name}' no aparece en el PNG exportado");
+                            }
+                            else Console.WriteLine("IDEA7_MARCADORES: WorldSearchResults esta vacio en este punto del arnes, omitido");
+                        }
                     }
                     finally { if (File.Exists(pngTemporal)) File.Delete(pngTemporal); }
 
