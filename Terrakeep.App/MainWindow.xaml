@@ -2756,9 +2756,31 @@
                                      pestaña interna (Equipamiento=0/Inventario=1/Almacenes=2) no tenia
                                      SelectedIndex enlazado - MainViewModel.OnSizeClassChanged mueve la
                                      seleccion a Inventario si Almacenes (ahora oculta) era la activa. -->
-                                <TabControl Grid.Column="0" Style="{StaticResource InnerTabControl}" Margin="0,0,10,0"
-                                            SelectedIndex="{Binding ObjetosSubTabIndex}">
-                                    <TabItem Header="{Binding Loc[char_tab_equipment], Mode=OneWay}">
+                                <!-- T3 (catalogo de rediseño visual, "Personaje: tablero con panel lateral" -
+                                     bitacora.md 20-sep-2026): reabierto por instruccion explicita del
+                                     coordinador/usuario tras documentarlo como LIMITE-por-riesgo-historico (no
+                                     tecnico real) - "8 rondas de arreglo real en esta zona" seguia siendo un
+                                     motivo generico de cautela, no evidencia de que fusionar las 3 pestañas sea
+                                     imposible. PASO 1 (estructural, cambio pequeño y verificado antes de seguir,
+                                     mismo ciclo real de la zona): TabControl (3 pestañas EXCLUYENTES, una
+                                     medida/pintada a la vez con SelectedIndex) -> Grid+ScrollViewer con las 3
+                                     secciones SEGUIDAS en un StackPanel - tablero de scroll continuo real, no
+                                     una simulacion. Contenido INTERNO de cada seccion sin tocar ni un pixel (los
+                                     Border/Grid/SlotRowHost ya calibrados en las 8 rondas siguen exactamente
+                                     igual) - solo cambia el CONTENEDOR exterior que las alojaba. -->
+                                <!-- T3 PASO 2: cabecera pegajosa real - Grid con dos hijos SUPERPUESTOS (el
+                                     ScrollViewer entero + una barra fija encima, ZIndex mas alto) en vez de
+                                     intentar mover la cabecera NATURAL de cada seccion (que seguiria viviendo
+                                     dentro del contenido que se desplaza) - la barra fija muestra el nombre de
+                                     la seccion cuya cabecera natural ya salio del viewport por arriba,
+                                     actualizada en vivo por OnObjetosBoardScrollChanged (MainWindow.xaml.cs). -->
+                                <Grid Grid.Column="0" Margin="0,0,10,0">
+                                <ScrollViewer x:Name="ObjetosBoardScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                              ScrollChanged="OnObjetosBoardScrollChanged">
+                                <StackPanel x:Name="ObjetosBoardStack">
+                                    <Border x:Name="ObjetosSeccionEquipamiento">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Loc[char_tab_equipment], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
                                         <!-- Fusion con Monturas/Monedas como laterales (pregunta a Opus
                                              sobre el diseño, quinta pasada: "yo juntaría la página de
                                              munición mascotas gancho... y dinero en equipamiento en una
@@ -3139,7 +3161,8 @@
                                               </controls:SlotRowHost>
                                             </ScrollViewer>
                                         </Border>
-                                    </TabItem>
+                                    </StackPanel>
+                                    </Border>
                                     <!-- Antes: 9 pestañas planas aqui dentro, luego 5 (pregunta a Opus
                                          sobre el diseño, 2-sep-2026 y quinta pasada) - Monturas/Monedas
                                          se fusionaron dentro de Equipamiento (arriba) como laterales,
@@ -3147,11 +3170,18 @@
                                          ContainerViewModel siguen siendo los MISMOS de siempre
                                          (MainViewModel.Containers) - riesgo cero para guardar/cargar,
                                          ver StorageGroupViewModel.cs. -->
-                                    <TabItem Header="{Binding Loc[char_tab_inventory], Mode=OneWay}">
-                                        <Grid>
+                                    <!-- T3 PASO 1: seccion Inventario - se retira el bloque de dos columnas
+                                         "Inventario + Almacen seleccionado" (IsStorageExpanded=True, vivia aqui
+                                         duplicando la cabecera y los 3 botones de conjunto) porque Almacenes YA
+                                         tiene su propia seccion permanente mas abajo en el mismo scroll - ya no
+                                         hace falta fusionarlo aqui para verlo "a la vez", el tablero entero ya
+                                         lo muestra siempre. Border SIN Visibility condicionada: unico camino
+                                         real ahora, a cualquier tamaño de ventana. -->
+                                    <Border x:Name="ObjetosSeccionInventario" Margin="0,14,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Loc[char_tab_inventory], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0"
-                                                Visibility="{Binding IsStorageExpanded, Converter={StaticResource InverseBoolToVis}}">
+                                                Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
                                             <!-- A-c (segunda auditoria de Opus, Fable): "Inventario (47/50) seria
                                                  igual de util y no existe en ningun sitio" - la vista Amplia (mas
                                                  abajo) ya tenia esta cabecera, la normal/compacta no tenia
@@ -3228,135 +3258,29 @@
                                             </DockPanel>
                                         </Border>
 
-                                        <!-- Auditoria de Opus, A-4: Inventario + el Almacen seleccionado lado
-                                             a lado, con sitio real - arrastrar de un lado al otro ya
-                                             funciona solo (ver el comentario real en MainViewModel.
-                                             IsStorageExpanded), esto solo pone a ambos a la vista de golpe. -->
-                                        <Grid Visibility="{Binding IsStorageExpanded, Converter={StaticResource BoolToVis}}">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <Border Grid.Column="0" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                                    Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,4,0">
-                                                <DockPanel>
-                                                    <!-- AR-LAY (6-sep-2026): Grid con titulo=Auto y botones=*, no DockPanel -
-                                                         ver el comentario completo en la cabecera gemela de arriba. ESTA es
-                                                         la copia que de verdad reprodujo el bug: a 1545x860 el titulo
-                                                         "Inventario (47/50)" se quedaba en 0,3px visibles, o sea desaparecia
-                                                         entero, y no se ve ni al ancho minimo ni maximizada - solo en una
-                                                         franja de ~20px medida px a px. Las dos cabeceras son copias a mano
-                                                         la una de la otra (R-01/H-01 ya documenta que eso costo perder tres
-                                                         botones enteros), asi que el arreglo va en las dos. -->
-                                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="Auto" />
-                                                            <ColumnDefinition Width="*" />
-                                                        </Grid.ColumnDefinitions>
-                                                        <!-- Auditoria de redimensionado, R-01/H-01 (el hallazgo mas grave del
-                                                             informe): esta copia a mano de la cabecera de arriba se dejo
-                                                             fuera "Guardar conjunto...", "Cargar..." y "Añadir..." - a partir
-                                                             de 1500px de ancho (IsStorageExpanded=True) NO HABIA FORMA de
-                                                             guardar/cargar un conjunto de objetos del Inventario, ni un aviso
-                                                             en pantalla de por que. Restaurados aqui, WrapPanel para que
-                                                             quepan en la mitad del ancho sin recortar nada. -->
-                                                        <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
-                                                            <Button Content="{Binding Loc[action_save_set], Mode=OneWay}" Click="OnSaveInventorySetClick"
-                                                                    ToolTip="{Binding Loc[tt_save_inventory_json], Mode=OneWay}"
-                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
-                                                            <Button Content="{Binding Loc[action_load_ellipsis], Mode=OneWay}" Click="OnLoadInventorySetClick"
-                                                                    ToolTip="{Binding Loc[tt_load_inventory_replace], Mode=OneWay}"
-                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
-                                                            <Button Content="{Binding Loc[action_add_ellipsis], Mode=OneWay}" Click="OnAppendInventorySetClick"
-                                                                    ToolTip="{Binding Loc[tt_add_inventory_fill], Mode=OneWay}"
-                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
-                                                            <Button Content="{Binding Loc[action_move_all_to_storage], Mode=OneWay}" Command="{Binding MoveInventoryToStorageCommand}"
-                                                                    ToolTip="{Binding Loc[tt_move_all_storage_right], Mode=OneWay}"
-                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
-                                                            <Button Content="{Binding Loc[action_sort], Mode=OneWay}" Command="{Binding InventoryContainer.SortCommand}"
-                                                                    ToolTip="{Binding Loc[tt_sort_by_id], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
-                                                            <Button Content="{Binding Loc[action_empty_container], Mode=OneWay}" Command="{Binding InventoryContainer.ClearAllCommand}"
-                                                                    ToolTip="{Binding Loc[tt_empty_inventory], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" />
-                                                        </WrapPanel>
-                                                        <!-- Auditoria de redimensionado, AR-08/H-08: el WrapPanel de R-01 ya reduce
-                                                         mucho el recorte (de ~660px de una fila sin envolver a un residual real
-                                                         de 14px a 1080px, medido - el hueco restante entre los 6 botones ya en 2
-                                                         filas y este titulo sigue siendo mas estrecho de lo que hace falta a ese
-                                                         ancho concreto). TextTrimming honesto en vez de un corte seco silencioso -
-                                                         parche previsto explicitamente en el propio informe para este residual. -->
-                                                    <TextBlock Grid.Column="0" Text="{Binding InventoryContainer.DisplayName}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
-                                                    </Grid>
-                                                    <ContentControl Content="{Binding InventoryContainer}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                </DockPanel>
-                                            </Border>
-                                            <Border Grid.Column="1" BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
-                                                    Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="4,6,0,0"
-                                                    DataContext="{Binding StorageGroup}">
-                                                <DockPanel>
-                                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                                        <!-- Auditoria de redimensionado, R-01/H-01: mismo hallazgo que la
-                                                             mitad Inventario de al lado - esta copia se dejo fuera los 3
-                                                             botones de conjunto del almacen (H5-03), y ademas la pestaña
-                                                             "Almacenes" que SI los tenia se oculta entera en Amplio
-                                                             (linea de arriba, IsStorageExpanded). Restaurados con los
-                                                             MISMOS handlers reales que ya usa esa pestaña
-                                                             (OnSaveStorageSetClick/OnLoadStorageSetClick/
-                                                             OnAppendStorageSetClick, que leen el DataContext=StorageGroup
-                                                             heredado del Border de arriba - identico aqui). -->
-                                                        <!-- OBJ-07 (oleada de Objetos, 6-sep-2026): Dock="Top", no "Right". Con
-                                                             los dos bloques compartiendo la MISMA fila, a esta mitad de la
-                                                             pantalla (la mitad derecha de "Inventario" en Amplio) los 5
-                                                             botones se llevan lo que necesitan y a las 4 pildoras de almacen
-                                                             les quedaban 114px medidos - "Fragua del Defensor (15/40)" pide
-                                                             137 y se cortaba en seco (45px perdidos a 1520x864, medido), y
-                                                             "Bóveda del Vacío (0/40)" otros 25. Un WrapPanel envuelve entre
-                                                             hijos, pero NUNCA encoge un hijo que no cabe: si a la pildora no
-                                                             le dan su ancho, se corta y punto. Apilados, los dos reciben el
-                                                             ancho entero y ninguno puede cortarse. Ese recorte no existia
-                                                             antes de esta misma oleada solo porque los 5 botones estaban
-                                                             MUDOS (12px de padding cada uno, ver OBJ-01) - o sea que el
-                                                             hueco lo daba otro bug, no el reparto. -->
-                                                        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                                                            <Button Content="{Binding Loc[action_save_set], Mode=OneWay}" Click="OnSaveStorageSetClick"
-                                                                    ToolTip="{Binding Loc[tt_save_storage_json], Mode=OneWay}"
-                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
-                                                            <Button Content="{Binding Loc[action_load_ellipsis], Mode=OneWay}" Click="OnLoadStorageSetClick"
-                                                                    ToolTip="{Binding Loc[tt_load_storage_replace], Mode=OneWay}"
-                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
-                                                            <Button Content="{Binding Loc[action_add_ellipsis], Mode=OneWay}" Click="OnAppendStorageSetClick"
-                                                                    ToolTip="{Binding Loc[tt_add_storage_fill], Mode=OneWay}"
-                                                                    Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
-                                                            <Button Content="{Binding Loc[action_sort], Mode=OneWay}" Command="{Binding Current.SortCommand}"
-                                                                    ToolTip="{Binding Loc[tt_sort_by_id], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" Margin="0,0,6,0" />
-                                                            <Button Content="{Binding Loc[action_empty_container], Mode=OneWay}" Command="{Binding Current.ClearAllCommand}"
-                                                                    ToolTip="{Binding Loc[tt_empty_storage], Mode=OneWay}" Tag="Ghost" Padding="6,3" FontSize="10.5" />
-                                                        </WrapPanel>
-                                                        <ItemsControl ItemsSource="{Binding Options}">
-                                                            <ItemsControl.ItemsPanel>
-                                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                                            </ItemsControl.ItemsPanel>
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate DataType="{x:Type vm:EquipmentOptionViewModel}">
-                                                                    <Button Content="{Binding DisplayLabel}" Style="{StaticResource PrefixMetaButton}"
-                                                                            Command="{Binding DataContext.StorageGroup.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                            CommandParameter="{Binding}" />
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </DockPanel>
-                                                    <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
-                                                </DockPanel>
-                                            </Border>
-                                        </Grid>
-                                        </Grid>
-                                    </TabItem>
-                                    <!-- A-a (segunda auditoria de Opus, Fable): con la ventana Amplia, la pestaña
-                                         "Inventario" YA muestra el Almacen seleccionado al lado (A-4, arriba) - esta
-                                         pestaña quedaba como un segundo camino redundante al MISMO StorageGroup,
-                                         visible y clicable a la vez que su duplicado. Se oculta (no se borra: en
-                                         Compacto/Normal sigue siendo el unico camino real). -->
-                                    <TabItem Header="{Binding Loc[char_tab_storage], Mode=OneWay}" Visibility="{Binding IsStorageExpanded, Converter={StaticResource InverseBoolToVis}}">
+                                        <!-- T3 PASO 1: el bloque real "Inventario + Almacen seleccionado lado a
+                                             lado" (Auditoria de Opus, A-4, IsStorageExpanded) se retira aqui -
+                                             Almacenes ya tiene su propia seccion permanente en este mismo scroll
+                                             (justo debajo), asi que fusionarlo A LA FUERZA dentro de Inventario
+                                             para "verlo a la vez" ya no aporta nada que el tablero no de gratis.
+                                             CODIGO REAL RETIRADO (nunca comentado a medias - el bloque completo,
+                                             ~117 lineas, vivia aqui: Grid de 2 columnas con una copia MANUAL de
+                                             la cabecera+botones de Inventario a la izquierda y el selector de
+                                             Almacen a la derecha, historial real: A-4 lo creo, R-01/H-01 tuvo que
+                                             restaurarle 3 botones que se habian quedado fuera en la copia manual -
+                                             ver el commit real de esta pieza para el texto integro si hiciera
+                                             falta recuperarlo). -->
+                                    </StackPanel>
+                                    </Border>
+                                    <!-- T3 PASO 1: seccion Almacenes - antes vivia como pestaña propia SOLO en
+                                         Compacto/Normal (se ocultaba entera en Amplio, donde el bloque de dos
+                                         columnas ahora retirado la duplicaba dentro de Inventario). Con el
+                                         tablero de scroll continuo ya no hace falta elegir entre los dos caminos:
+                                         esta es la UNICA representacion real de Almacenes, siempre visible, a
+                                         cualquier tamaño de ventana. -->
+                                    <Border x:Name="ObjetosSeccionAlmacenes" Margin="0,14,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Loc[char_tab_storage], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10" Margin="0,6,0,0">
                                             <DockPanel DataContext="{Binding StorageGroup}">
@@ -3401,8 +3325,27 @@
                                                 <ContentControl Content="{Binding Current}" ContentTemplate="{StaticResource ContainerCompactTemplate}" />
                                             </DockPanel>
                                         </Border>
-                                    </TabItem>
-                                </TabControl>
+                                    </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                                </ScrollViewer>
+                                <!-- T3 PASO 2: la barra pegajosa real - Border independiente, SIBLING del
+                                     ScrollViewer dentro del mismo Grid (nunca dentro del contenido que se
+                                     desplaza), VerticalAlignment=Top + Panel.ZIndex por encima para quedar
+                                     fija en pantalla. Empieza Collapsed (arriba del todo, la cabecera NATURAL
+                                     de Equipamiento ya esta a la vista - mostrar la barra ahi seria duplicar
+                                     el mismo rotulo dos veces). IsHitTestVisible=False: puramente informativa,
+                                     nunca le roba el clic a los botones reales que hay justo debajo. -->
+                                <Border x:Name="ObjetosStickyBar" VerticalAlignment="Top" Panel.ZIndex="4" IsHitTestVisible="False"
+                                        Background="{StaticResource BgSecondaryBrush}" CornerRadius="0,0,8,8" Padding="10,6"
+                                        BorderBrush="{StaticResource OrangeBrush}" BorderThickness="0,0,0,2"
+                                        Visibility="Collapsed">
+                                    <Border.Effect>
+                                        <DropShadowEffect ShadowDepth="2" BlurRadius="6" Opacity="0.4" Direction="270" />
+                                    </Border.Effect>
+                                    <TextBlock x:Name="ObjetosStickyBarText" Style="{StaticResource SectionText}" />
+                                </Border>
+                                </Grid>
 
                                 <Border Grid.Column="1" Style="{StaticResource SidePanelCard}">
                                     <ContentControl Content="{Binding ItemEdit}" ContentTemplate="{StaticResource ItemEditTemplate}" />

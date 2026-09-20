@@ -43,6 +43,12 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel;
+        // T3 PASO 3 (catalogo de rediseño visual, "Personaje: tablero con panel lateral" -
+        // bitacora.md 20-sep-2026, reabierto por instruccion explicita del coordinador/usuario):
+        // los 3 sitios reales que antes hacian "saltar de pestaña" (WhereIsIt/busqueda global)
+        // ahora piden un scroll real del tablero via MainViewModel.RequestObjetosSection - solo la
+        // Vista sabe medir/mover un ScrollViewer real, ver el comentario de cabecera del evento.
+        _viewModel.ObjetosSectionRequested += ScrollToObjetosSection;
         // H5-07 (quinta auditoria de Opus): "carpetas adicionales" y "ultimo personaje/pestaña"
         // real de la sesion anterior - deliberadamente NO dentro de MainViewModel() (ver el
         // comentario real de RestoreSession/SettingsViewModel.LoadFromDisk: un fichero real en
@@ -616,6 +622,78 @@ public partial class MainWindow : Window
         bool quedaScrollPendiente = e.ExtentHeight - e.ViewportHeight > 2
                                      && e.VerticalOffset < e.ExtentHeight - e.ViewportHeight - 2;
         ExplorationScrollHint.Visibility = quedaScrollPendiente ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // T3 PASO 2 (catalogo de rediseño visual, "Personaje: tablero con panel lateral" - bitacora.md
+    // 20-sep-2026, reabierto por instruccion explicita del coordinador/usuario): cabecera pegajosa
+    // real del tablero de Objetos. Cada seccion (Equipamiento/Inventario/Almacenes) se traduce a
+    // coordenadas ESTABLES respecto de ObjetosBoardStack (el StackPanel que las contiene, nunca se
+    // mueve el solo) - la seccion "activa" es la ULTIMA cuyo origen ya quedo por encima del
+    // VerticalOffset actual, mismo criterio real que cualquier lista con cabeceras de grupo
+    // (Contactos, Ajustes...). La barra solo se enseña cuando YA se ha desplazado mas alla de la
+    // cabecera NATURAL de Equipamiento (offset>4) - mostrarla desde el primer pixel duplicaria el
+    // mismo rotulo que ya esta a la vista arriba del todo.
+    private void OnObjetosBoardScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (ObjetosStickyBar == null || ObjetosBoardStack == null) return;
+        if (ObjetosSeccionEquipamiento == null || ObjetosSeccionInventario == null || ObjetosSeccionAlmacenes == null) return;
+
+        double offset = e.VerticalOffset;
+        (FrameworkElement el, string clave)[] secciones =
+        [
+            (ObjetosSeccionEquipamiento, "char_tab_equipment"),
+            (ObjetosSeccionInventario, "char_tab_inventory"),
+            (ObjetosSeccionAlmacenes, "char_tab_storage"),
+        ];
+
+        string? claveActiva = null;
+        foreach (var (el, clave) in secciones)
+        {
+            double y;
+            try { y = el.TranslatePoint(new System.Windows.Point(0, 0), ObjetosBoardStack).Y; }
+            catch (InvalidOperationException) { continue; } // desconectado del arbol a media medicion, ver el mismo patron real de AR-LAY
+            if (y <= offset + 4) claveActiva = clave;
+        }
+
+        if (claveActiva == null || offset <= 4)
+        {
+            ObjetosStickyBar.Visibility = Visibility.Collapsed;
+            return;
+        }
+        ObjetosStickyBarText.Text = Loc[claveActiva];
+        ObjetosStickyBar.Visibility = Visibility.Visible;
+    }
+
+    // T3 PASO 3: ejecuta de verdad el scroll que MainViewModel.RequestObjetosSection pide (0=
+    // Equipamiento/1=Inventario/2=Almacenes) - mismo mapeo de indices real que ya tenian los 3
+    // TabItem originales (H4-02), ahora aplicado a secciones de un unico tablero. Dispatcher.
+    // BeginInvoke con prioridad Loaded (mismo patron real ya usado por HasSeenHomeIntro en el
+    // constructor de esta clase): quien llama a RequestObjetosSection tambien puede estar
+    // cambiando PersonajeInnerTabIndex a Objetos EN LA MISMA LLAMADA (ver
+    // NavigateToWhereIsItResult) - si la pestaña Objetos estaba oculta un instante antes, WPF
+    // todavia no ha medido/colocado sus elementos y TranslatePoint devolveria una posicion
+    // invalida o lanzaria InvalidOperationException. Diferir hasta despues de que ese layout real
+    // ya haya ocurrido es lo que hace fiable el calculo.
+    private void ScrollToObjetosSection(int index)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (ObjetosBoardScroll == null || ObjetosBoardStack == null) return;
+            FrameworkElement? seccion = index switch
+            {
+                0 => ObjetosSeccionEquipamiento,
+                1 => ObjetosSeccionInventario,
+                2 => ObjetosSeccionAlmacenes,
+                _ => null,
+            };
+            if (seccion == null) return;
+            try
+            {
+                double y = seccion.TranslatePoint(new System.Windows.Point(0, 0), ObjetosBoardStack).Y;
+                ObjetosBoardScroll.ScrollToVerticalOffset(y);
+            }
+            catch (InvalidOperationException) { /* desconectado del arbol visual todavia - nunca un fallo visible por un salto de navegacion */ }
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     // F-14 (auditoria de Opus vs TEdit, E-16/E-17): dialogo real en la View (mismo criterio que

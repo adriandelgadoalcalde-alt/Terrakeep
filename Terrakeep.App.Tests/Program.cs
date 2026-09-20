@@ -1746,6 +1746,151 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // T3_SOLO=1 (20-sep-2026, catalogo de rediseño visual, "Personaje: tablero con panel
+        // lateral" - PASO 1, reabierto por instruccion explicita del coordinador/usuario tras
+        // documentarlo como LIMITE-por-riesgo-historico: el usuario aclaro que 8 rondas de
+        // arreglo real en esta zona es cautela, no evidencia de imposibilidad tecnica, y pidio
+        // un intento real con el mismo ciclo de verificacion en maquina). Verifica que las 3
+        // cabeceras de seccion (Equipamiento/Inventario/Almacenes) existen en el arbol visual
+        // real y que el tablero es de verdad UN SOLO scroll continuo (Equipamiento/Inventario/
+        // Almacenes visibles/alcanzables desde el MISMO ScrollViewer, nunca 3 paginas
+        // excluyentes).
+        if (Environment.GetEnvironmentVariable("T3_SOLO") == "1")
+        {
+            try
+            {
+                var personajeReal = vm.Home.Characters.FirstOrDefault(c => c.FilePath.Contains("tModLoader", StringComparison.OrdinalIgnoreCase) && c.FilePath.Contains("Eldelgas", StringComparison.OrdinalIgnoreCase))
+                    ?? vm.Home.Characters.FirstOrDefault();
+                if (personajeReal != null) { vm.Home.OpenCommand.Execute(personajeReal); DoEvents(); DoEvents(); }
+                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0;
+                FijarTamaño(window, 1180, 860);
+                DoEvents(); DoEvents(); DoEvents();
+
+                var scroll = window.FindName("ObjetosBoardScroll") as System.Windows.Controls.ScrollViewer;
+                Console.WriteLine($"T3_SOLO: ObjetosBoardScroll encontrado={scroll != null}, ExtentHeight={scroll?.ExtentHeight:0.#}, ViewportHeight={scroll?.ViewportHeight:0.#}, ScrollableHeight={scroll?.ScrollableHeight:0.#}");
+                if (scroll == null) Console.WriteLine("FALLO: T3_SOLO - no se encuentra el ScrollViewer real del tablero de Objetos");
+                else if (scroll.ScrollableHeight <= 0) Console.WriteLine("FALLO: T3_SOLO - el tablero no tiene contenido real que desplazar (ScrollableHeight<=0) - ¿las 3 secciones se están midiendo de verdad?");
+
+                var secEquip = window.FindName("ObjetosSeccionEquipamiento") as FrameworkElement;
+                var secInv = window.FindName("ObjetosSeccionInventario") as FrameworkElement;
+                var secAlm = window.FindName("ObjetosSeccionAlmacenes") as FrameworkElement;
+                Console.WriteLine($"T3_SOLO: las 3 secciones reales existen -> Equipamiento={secEquip != null}, Inventario={secInv != null}, Almacenes={secAlm != null}");
+                if (secEquip == null || secInv == null || secAlm == null) Console.WriteLine("FALLO: T3_SOLO - falta alguna de las 3 secciones reales del tablero");
+                else
+                {
+                    // Aisla que de verdad es UN SOLO scroll continuo: las 3 secciones son
+                    // descendientes del MISMO ScrollViewer, en orden vertical creciente real
+                    // (Equipamiento arriba, Inventario en medio, Almacenes abajo) - no 3 paneles
+                    // sueltos que solo coinciden de nombre.
+                    double yEquip = secEquip.TranslatePoint(new Point(0, 0), scroll!).Y;
+                    double yInv = secInv.TranslatePoint(new Point(0, 0), scroll).Y;
+                    double yAlm = secAlm.TranslatePoint(new Point(0, 0), scroll).Y;
+                    Console.WriteLine($"T3_SOLO: posicion Y real dentro del scroll -> Equipamiento={yEquip:0.#}, Inventario={yInv:0.#}, Almacenes={yAlm:0.#} (esperado orden creciente)");
+                    if (!(yEquip < yInv && yInv < yAlm))
+                        Console.WriteLine("FALLO: T3_SOLO - las 3 secciones no estan en el orden vertical esperado dentro del mismo scroll continuo");
+                }
+
+                // Cabeceras de seccion reales (Style SectionText, mismo texto que antes tenian
+                // las pestañas) - localizadas por su Text real, no solo por existir un TextBlock
+                // cualquiera.
+                var textos = Descendientes<TextBlock>(window).Select(t => t.Text).ToHashSet();
+                bool tieneEquip = textos.Contains(vm.Loc["char_tab_equipment"]);
+                bool tieneInv = textos.Contains(vm.Loc["char_tab_inventory"]);
+                bool tieneAlm = textos.Contains(vm.Loc["char_tab_storage"]);
+                Console.WriteLine($"T3_SOLO: cabeceras reales de seccion en pantalla -> Equipamiento={tieneEquip}, Inventario={tieneInv}, Almacenes={tieneAlm}");
+                if (!tieneEquip || !tieneInv || !tieneAlm) Console.WriteLine("FALLO: T3_SOLO - falta el texto real de alguna cabecera de seccion");
+
+                string shot1 = Path.Combine(AppContext.BaseDirectory, "t3-tablero-objetos-arriba.png");
+                var rtb1 = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb1.Render(window);
+                var enc1 = new System.Windows.Media.Imaging.PngBitmapEncoder(); enc1.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb1));
+                using (var fs = File.Create(shot1)) enc1.Save(fs);
+                Console.WriteLine($"T3_SOLO: captura real (arriba del todo) -> {shot1}");
+
+                // Barra pegajosa real (T3 PASO 2): arriba del todo (offset=0) NO debe verse - seria
+                // duplicar la cabecera natural de Equipamiento, que ya esta a la vista.
+                var stickyBar = window.FindName("ObjetosStickyBar") as Border;
+                Console.WriteLine($"T3_SOLO: barra pegajosa a offset=0 -> encontrada={stickyBar != null}, visible={stickyBar?.Visibility}");
+                if (stickyBar == null) Console.WriteLine("FALLO: T3_SOLO - no existe la barra pegajosa real");
+                else if (stickyBar.Visibility != Visibility.Collapsed) Console.WriteLine("FALLO: T3_SOLO - la barra pegajosa se ve arriba del todo (deberia estar oculta, duplicaria la cabecera natural de Equipamiento)");
+
+                if (scroll != null && scroll.ScrollableHeight > 0 && stickyBar != null)
+                {
+                    var stickyText = window.FindName("ObjetosStickyBarText") as TextBlock;
+
+                    // Offset intermedio, DESPUES de la cabecera natural de Equipamiento (y=0) pero
+                    // ANTES de la de Inventario (y=450,4 medido antes en este mismo bloque) - la
+                    // barra tiene que decir "Equipamiento", no otra cosa.
+                    scroll.ScrollToVerticalOffset(200);
+                    scroll.UpdateLayout();
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"T3_SOLO: offset=200 -> barra visible={stickyBar.Visibility}, texto='{stickyText?.Text}' (esperado '{vm.Loc["char_tab_equipment"]}')");
+                    if (stickyBar.Visibility != Visibility.Visible || stickyText?.Text != vm.Loc["char_tab_equipment"])
+                        Console.WriteLine("FALLO: T3_SOLO - la barra pegajosa no dice 'Equipamiento' con el scroll a mitad de esa seccion");
+                    string shotMid = Path.Combine(AppContext.BaseDirectory, "t3-tablero-objetos-barra-pegajosa.png");
+                    var rtbMid = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbMid.Render(window);
+                    var encMid = new System.Windows.Media.Imaging.PngBitmapEncoder(); encMid.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbMid));
+                    using (var fs = File.Create(shotMid)) encMid.Save(fs);
+                    Console.WriteLine($"T3_SOLO: captura real (barra pegajosa, offset=200) -> {shotMid}");
+
+                    // Offset avanzado, ya dentro de Inventario (450,4 < offset < 896,5) - la barra
+                    // tiene que haber cambiado de verdad a "Inventario".
+                    scroll.ScrollToVerticalOffset(600);
+                    scroll.UpdateLayout();
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"T3_SOLO: offset=600 -> barra visible={stickyBar.Visibility}, texto='{stickyText?.Text}' (esperado '{vm.Loc["char_tab_inventory"]}')");
+                    if (stickyBar.Visibility != Visibility.Visible || stickyText?.Text != vm.Loc["char_tab_inventory"])
+                        Console.WriteLine("FALLO: T3_SOLO - la barra pegajosa no cambio a 'Inventario' al desplazarse dentro de esa seccion");
+
+                    scroll.ScrollToVerticalOffset(scroll.ScrollableHeight); // abajo del todo, Almacenes real
+                    scroll.UpdateLayout();
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"T3_SOLO: offset=fondo -> barra visible={stickyBar.Visibility}, texto='{stickyText?.Text}' (esperado '{vm.Loc["char_tab_storage"]}')");
+                    if (stickyBar.Visibility != Visibility.Visible || stickyText?.Text != vm.Loc["char_tab_storage"])
+                        Console.WriteLine("FALLO: T3_SOLO - la barra pegajosa no dice 'Almacenes' con el scroll al fondo del todo");
+                    string shot2 = Path.Combine(AppContext.BaseDirectory, "t3-tablero-objetos-abajo.png");
+                    var rtb2 = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb2.Render(window);
+                    var enc2 = new System.Windows.Media.Imaging.PngBitmapEncoder(); enc2.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb2));
+                    using (var fs = File.Create(shot2)) enc2.Save(fs);
+                    Console.WriteLine($"T3_SOLO: captura real (scroll al fondo) -> {shot2}");
+
+                    // Vuelve arriba del todo y confirma que la barra desaparece de nuevo (aisla los
+                    // dos sentidos, no solo "aparece y se queda" - mismo criterio ya usado en
+                    // IDEA7_SOLO para el marcador/banda de la Guia).
+                    scroll.ScrollToVerticalOffset(0);
+                    scroll.UpdateLayout();
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"T3_SOLO: de vuelta a offset=0 -> barra visible={stickyBar.Visibility} (esperado Collapsed)");
+                    if (stickyBar.Visibility != Visibility.Collapsed)
+                        Console.WriteLine("FALLO: T3_SOLO - la barra pegajosa no desaparece al volver arriba del todo");
+
+                    // --- T3 PASO 3: navegacion real (WhereIsIt) hace scroll de verdad, no solo
+                    // cambia un indice muerto - se aisla forzando el scroll a Almacenes primero (a
+                    // mano) y comprobando que "saltar a Equipamiento" desde un resultado real de
+                    // busqueda lo devuelve arriba del todo. ---
+                    scroll.ScrollToVerticalOffset(scroll.ScrollableHeight);
+                    scroll.UpdateLayout();
+                    DoEvents();
+                    var slotEquipoReal = vm.EquipmentGroup?.CurrentItems.Slots.FirstOrDefault(s => !s.IsEmpty);
+                    if (slotEquipoReal != null)
+                    {
+                        var resultado = new WhereIsItResultViewModel(slotEquipoReal, "loadout0Items");
+                        vm.NavigateToWhereIsItResultCommand.Execute(resultado);
+                        DoEvents(); DoEvents(); DoEvents(); DoEvents();
+                        Console.WriteLine($"T3_SOLO: navegacion real 'saltar a Equipamiento' desde WhereIsIt -> VerticalOffset={scroll.VerticalOffset:0.#} (esperado cerca de 0, partiendo del fondo)");
+                        if (scroll.VerticalOffset > 50)
+                            Console.WriteLine("FALLO: T3_SOLO - NavigateToWhereIsItResult (loadout) no desplazo de verdad el tablero hasta Equipamiento");
+                    }
+                    else Console.WriteLine("T3_SOLO: AVISO - el personaje de prueba no tiene ningun slot de equipo real puesto, se omite la comprobacion de navegacion a Equipamiento");
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("T3_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (T3_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA3_SOLO=1 (20-sep-2026, catalogo de funciones, idea 3 "Partida en vivo" - version
         // real, tercera ronda tras la correccion del coordinador: investigado a fondo
         // (SincronizacionEscritorio.cs, TerrakeepMod, otro repo) que la sincronizacion REAL entre

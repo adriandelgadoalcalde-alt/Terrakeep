@@ -593,15 +593,35 @@ public partial class MainViewModel : ObservableObject
     public bool IsStorageExpanded => SizeClass >= WindowSizeClass.Amplio;
 
     // H4-02 (cuarta auditoria de Opus, Fable): "Almacenes seleccionada y luego oculta en Amplio
-    // deja un contenido huerfano sin pestaña activa" - la pestaña interna Equipamiento(0)/
-    // Inventario(1)/Almacenes(2) nunca tenia SelectedIndex enlazado, asi que WPF se quedaba
-    // apuntando a un TabItem ya Collapsed (IsStorageExpanded oculta "Almacenes" en Amplio, ver
-    // el binding real de Visibility) - la vista lado a lado de A-4 (el motivo real de ocultarla)
-    // tampoco llegaba a verse en ese caso. Los indices 0/1/2 son un orden REAL y estable de las
-    // 3 unicas pestañas de este TabControl (ver MainWindow.xaml, sin enum propio - lo mismo que
-    // ya hace SelectedTabIndex/PersonajeInnerTabIndex con AppTab/PersonajeInnerTab, aqui no
-    // hacia falta un enum nuevo para 3 valores usados en un unico sitio).
+    // deja un contenido huerfano sin pestaña activa" - historico real de cuando Equipamiento(0)/
+    // Inventario(1)/Almacenes(2) eran 3 TabItem EXCLUYENTES de un TabControl (H4-02, 14-sep-2026).
+    // T3 (catalogo de rediseño visual, "Personaje: tablero con panel lateral" - bitacora.md
+    // 20-sep-2026, reabierto por instruccion explicita del coordinador/usuario): el TabControl se
+    // fusiono en un unico tablero de scroll continuo (MainWindow.xaml, ObjetosBoardScroll) con las
+    // 3 secciones SIEMPRE visibles - ya no hay "pestaña seleccionada" de verdad. Esta propiedad se
+    // conserva con el MISMO significado 0/1/2 (los sitios que ya la usaban para "saltar a X" no se
+    // tocan) pero pasa a significar "desplaza el tablero hasta esta seccion" - el evento
+    // ObjetosSectionRequested (mas abajo) es lo que de verdad ejecuta ese scroll real
+    // (MainWindow.xaml.cs se suscribe en el constructor).
     [ObservableProperty] private int _objetosSubTabIndex;
+
+    // T3: la Vista (MainWindow.xaml.cs) se suscribe en su constructor y hace scroll real del
+    // tablero hasta la seccion pedida - mismo patron ya usado por BackupHistoryViewModel.
+    // ReloadRequested (una Accion/evento que la ViewModel dispara y solo la Vista sabe ejecutar,
+    // porque requiere medir/mover un ScrollViewer real, algo que MainViewModel headless no puede
+    // hacer). RequestObjetosSection (metodo, no el setter de la propiedad a secas) es a proposito:
+    // el setter generado por [ObservableProperty] SOLO dispara OnObjetosSubTabIndexChanged si el
+    // valor CAMBIA (igualdad real de CommunityToolkit.Mvvm) - "saltar a Equipamiento" una segunda
+    // vez desde otro resultado de busqueda, con el usuario ya desplazado a mano a Almacenes
+    // mientras tanto, tiene que volver a desplazar el tablero aunque el indice siga siendo 0 desde
+    // la vez anterior. Los 3 sitios reales que antes hacian "ObjetosSubTabIndex = N" para saltar
+    // de pestaña llaman ahora a este metodo.
+    public event Action<int>? ObjetosSectionRequested;
+    public void RequestObjetosSection(int index)
+    {
+        ObjetosSubTabIndex = index;
+        ObjetosSectionRequested?.Invoke(index);
+    }
 
     // I-c (segunda auditoria de Opus, Fable): "anchos fijos en una pantalla que es puro
     // WrapPanel - en una ventana de 1920px, Inicio usa 880px y deja 1.000px negros". Mismo
@@ -686,13 +706,12 @@ public partial class MainViewModel : ObservableObject
         // real de IsLibraryVisible/IsBuffLibraryVisible arriba).
         OnPropertyChanged(nameof(IsLibraryVisible));
         OnPropertyChanged(nameof(IsBuffLibraryVisible));
-        // H4-02: si "Almacenes" (indice 2) era la pestaña activa justo cuando se oculta (Amplio
-        // real, IsStorageExpanded=true), mover la seleccion a "Inventario" (1) - el mismo
-        // StorageGroup ya esta a la vista ahi, lado a lado con el Inventario (A-4).
-        // Auditoria de redimensionado, R-10: >= por si el salto de tamaño va DIRECTO de Normal a
-        // Extra sin pasar por un evento intermedio en Amplio (poco probable arrastrando el borde
-        // a mano, pero real si algo fija el ancho de un salto, ej. un test).
-        if (value >= WindowSizeClass.Amplio && ObjetosSubTabIndex == 2) ObjetosSubTabIndex = 1;
+        // H4-02 (HISTORICO, ya no aplica): "si Almacenes (indice 2) era la pestaña activa justo
+        // cuando se oculta (Amplio, IsStorageExpanded=true), mover la seleccion a Inventario (1)".
+        // T3 (bitacora.md 20-sep-2026, reabierto por instruccion explicita del coordinador/
+        // usuario): Almacenes ya NO se oculta nunca - es su propia seccion permanente del tablero
+        // de scroll continuo a cualquier SizeClass, asi que ya no puede quedar "seleccionada" una
+        // pestaña que dejo de existir. Guardia retirada a proposito, no solo comentada.
     }
 
     // H5-08: la segunda mitad de la misma constante ciega - "el auto-revelado de la Libreria
@@ -1250,13 +1269,16 @@ public partial class MainViewModel : ObservableObject
         string key = result.ContainerKey;
         if (key is "bank" or "bank2" or "bank3" or "bank4")
         {
-            ObjetosSubTabIndex = IsStorageExpanded ? 1 : 2; // H4-02: en Amplio, Almacenes vive junto a Inventario, no como pestaña propia
+            // T3 (bitacora.md 20-sep-2026): Almacenes es SIEMPRE su propia seccion del tablero
+            // ahora (nunca se fusiona con Inventario, ver el comentario real de OnSizeClassChanged
+            // mas arriba) - indice 2 fijo, ya no depende de IsStorageExpanded.
+            RequestObjetosSection(2);
             int indice = key switch { "bank" => 0, "bank2" => 1, "bank3" => 2, _ => 3 };
             if (StorageGroup != null) StorageGroup.SelectCommand.Execute(StorageGroup.Options[indice]);
         }
         else if (key.StartsWith("loadout", StringComparison.Ordinal))
         {
-            ObjetosSubTabIndex = 0; // Equipamiento
+            RequestObjetosSection(0); // Equipamiento
             if (EquipmentGroup != null)
             {
                 int loadout = key["loadout".Length] - '0';
@@ -1270,7 +1292,7 @@ public partial class MainViewModel : ObservableObject
         }
         else
         {
-            ObjetosSubTabIndex = 1; // Inventario (tambien Monedas/Municion, que viven dentro de ese mismo panel)
+            RequestObjetosSection(1); // Inventario (tambien Monedas/Municion, que viven dentro de ese mismo panel)
         }
 
         SelectSlot(result.Slot);
