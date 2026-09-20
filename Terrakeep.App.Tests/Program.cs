@@ -2408,6 +2408,400 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // BUILDS_LABEL_SOLO=1 (20-sep-2026, bug real reportado por el usuario con captura: los
+        // titulos de columna de clase en Builds ("Cuerpo a cuerpo", "A distancia", "Invocacion")
+        // se parten letra a letra dentro de una columna demasiado estrecha - AR-LAY corrio sobre
+        // esta pantalla (52 combinaciones) y no lo detecto (0 recortado, 0 solapes). Diagnostico
+        // DEDICADO: mide en pixeles reales, para las 5 categorias reales, el ancho disponible del
+        // DockPanel de cada columna, el ancho que piden los dos botones y el que le queda al
+        // titulo - para entender el mecanismo exacto antes de arreglar nada.
+        if (Environment.GetEnvironmentVariable("BUILDS_LABEL_SOLO") == "1")
+        {
+            try
+            {
+                FijarTamaño(window, 1600, 900);
+                DoEvents();
+                vm.SelectedTabIndex = 2; // Builds
+                DoEvents();
+                var tcBuilds = Descendientes<System.Windows.Controls.TabControl>(window).FirstOrDefault(t => t.IsVisible && t.Items.Count == 2);
+                if (tcBuilds != null) tcBuilds.SelectedIndex = 0; // Vanilla
+                DoEvents(); DoEvents();
+
+                string shotDir = AppContext.BaseDirectory;
+                void Shot(string nombre)
+                {
+                    DoEvents();
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(window);
+                    var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    using var fs = File.Create(Path.Combine(shotDir, nombre + ".png"));
+                    enc.Save(fs);
+                    Console.WriteLine($"BUILDS_LABEL_SOLO: captura -> {nombre}.png");
+                }
+                Shot("builds-label-1600x900-antes");
+
+                var botonesAutoEquipar = Descendientes<System.Windows.Controls.Button>(window)
+                    .Where(b => b.IsVisible && (b.Content as string) == vm.Loc["action_auto_equip"]).ToList();
+                Console.WriteLine($"BUILDS_LABEL_SOLO: {botonesAutoEquipar.Count} columnas de clase reales encontradas en pantalla (esperado >=5, las 5 categorias de la etapa Pre-Hardmode)");
+
+                // Tras el arreglo (20-sep-2026): la etiqueta vive en su PROPIA fila, ya no
+                // comparte DockPanel con los botones - se localiza subiendo al StackPanel de la
+                // columna (padre comun de la etiqueta y del DockPanel de botones) y buscando el
+                // primer TextBlock real de ese StackPanel.
+                foreach (var btnAuto in botonesAutoEquipar)
+                {
+                    var dockPanelBotones = System.Windows.Media.VisualTreeHelper.GetParent(btnAuto) as System.Windows.Controls.DockPanel;
+                    var columna = dockPanelBotones != null ? System.Windows.Media.VisualTreeHelper.GetParent(dockPanelBotones) as StackPanel : null;
+                    if (dockPanelBotones == null || columna == null) continue;
+                    var btnGenerar = dockPanelBotones.Children.OfType<System.Windows.Controls.Button>()
+                        .FirstOrDefault(b => (b.Content as string) == vm.Loc["action_generate_character"]);
+                    var etiqueta = columna.Children.OfType<TextBlock>().FirstOrDefault();
+                    if (btnGenerar == null || etiqueta == null) continue;
+
+                    // Contar lineas reales: altura natural de UNA linea (misma fuente/tamaño,
+                    // medida con TextWrapping=NoWrap sobre el mismo texto) vs la altura YA
+                    // renderizada con Wrap - el cociente es el numero real de lineas que ocupo.
+                    var sondaUnaLinea = new TextBlock
+                    {
+                        Text = etiqueta.Text, FontSize = etiqueta.FontSize, FontFamily = etiqueta.FontFamily,
+                        FontWeight = etiqueta.FontWeight, TextWrapping = System.Windows.TextWrapping.NoWrap,
+                    };
+                    sondaUnaLinea.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                    double altoUnaLinea = sondaUnaLinea.DesiredSize.Height;
+                    double lineasReales = altoUnaLinea > 0 ? Math.Round(etiqueta.ActualHeight / altoUnaLinea, 1) : -1;
+
+                    Console.WriteLine($"BUILDS_LABEL_SOLO: '{etiqueta.Text}' -> columna={columna.ActualWidth:0.#}px, boton'Auto-equipar'={btnAuto.ActualWidth:0.#}px, boton'Generar...'={btnGenerar.ActualWidth:0.#}px, etiqueta={etiqueta.ActualWidth:0.#}x{etiqueta.ActualHeight:0.#}px (~{lineasReales} lineas reales, 1 linea mide {altoUnaLinea:0.#}px), DockPanelBotones={dockPanelBotones.ActualWidth:0.#}x{dockPanelBotones.ActualHeight:0.#}px");
+                    if (lineasReales > 1.5)
+                        Console.WriteLine($"FALLO: BUILDS_LABEL_SOLO - '{etiqueta.Text}' se esta partiendo en ~{lineasReales} lineas, deberia caber en 1 sola linea en una columna de 220px");
+                    if (dockPanelBotones.ActualHeight > 40)
+                        Console.WriteLine($"FALLO: BUILDS_LABEL_SOLO - la fila de botones mide {dockPanelBotones.ActualHeight:0.#}px de alto, deberia ser una fila compacta normal (~24-30px)");
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("BUILDS_LABEL_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (BUILDS_LABEL_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // BLANDO_RIO_SOLO=1 (20-sep-2026, 3 bugs reales reportados por el usuario en vivo sobre
+        // 'Blando Rio': 1) iconos de NPC desaparecidos del mapa, 2) niebla azulada en la linea de
+        // superficie, 3) panel del Bestiario cortado por el borde de la ventana. Diagnostico
+        // dedicado: carga el mundo real, mide Npcs.Count/HeadIconPath reales, toma una captura
+        // real del mapa Y del panel de Exploracion completo (incluido el lateral derecho) para
+        // los tres a la vez.
+        if (Environment.GetEnvironmentVariable("BLANDO_RIO_SOLO") == "1")
+        {
+            try
+            {
+                string ruta = @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld";
+                if (!File.Exists(ruta)) { Console.WriteLine($"BLANDO_RIO_SOLO: AVISO - falta {ruta}"); Console.WriteLine("DONE (BLANDO_RIO_SOLO)"); Environment.Exit(0); }
+
+                FijarTamaño(window, 1600, 900);
+                DoEvents();
+                vm.SelectedTabIndex = 4; // Exploracion
+                DoEvents();
+                var tarea = vm.Exploration.LoadFromPathAsync(ruta);
+                while (!tarea.IsCompleted) DoEvents();
+                DoEvents(); DoEvents();
+
+                var fitMethod = typeof(MainWindow).GetMethod("OnFitToWindowClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                fitMethod?.Invoke(window, [window, new RoutedEventArgs()]);
+                DoEvents(); DoEvents();
+
+                Console.WriteLine($"BLANDO_RIO_SOLO: mundo cargado -> Npcs.Count={vm.Exploration.Npcs.Count}, WorldImage nulo={vm.Exploration.WorldImage == null}");
+                Console.WriteLine($"BLANDO_RIO_SOLO-GUIA: Guide.ObjetivoPaso={vm.Guide?.ObjetivoPaso}, Zona={vm.Guide?.ObjetivoPaso?.Zona}, GroundLevel={vm.Exploration.GuideBandSuperficieHeight}");
+                foreach (var npc in vm.Exploration.Npcs.Take(20))
+                    Console.WriteLine($"BLANDO_RIO_SOLO: NPC '{npc.Name}' Id={npc.Id} Tile=({npc.TileX},{npc.TileY}) HeadIconPath={npc.HeadIconPath ?? "(null)"} IconPath={npc.IconPath ?? "(null)"}");
+
+                var itemsControlNpcs = Descendientes<System.Windows.Controls.ItemsControl>(window)
+                    .FirstOrDefault(ic => ic.ItemsSource == vm.Exploration.Npcs);
+                Console.WriteLine($"BLANDO_RIO_SOLO: ItemsControl real de Npcs encontrado={itemsControlNpcs != null}, IsVisible={itemsControlNpcs?.IsVisible}, ActualWidth={itemsControlNpcs?.ActualWidth:0.#}, Items generados={itemsControlNpcs?.Items.Count}");
+                if (itemsControlNpcs != null)
+                {
+                    var presentadores = Descendientes<System.Windows.Controls.ContentPresenter>(itemsControlNpcs).ToList();
+                    Console.WriteLine($"BLANDO_RIO_SOLO: ContentPresenter reales generados por el ItemsControl de Npcs={presentadores.Count} (esperado = Npcs.Count)");
+                    if (presentadores.Count > 0)
+                    {
+                        var p0 = presentadores[0];
+                        Console.WriteLine($"BLANDO_RIO_SOLO: primer marcador real -> Canvas.Left={System.Windows.Controls.Canvas.GetLeft(p0)}, Canvas.Top={System.Windows.Controls.Canvas.GetTop(p0)}, Opacity={p0.Opacity}, Visibility={p0.Visibility}, ActualWidth={p0.ActualWidth:0.#}x{p0.ActualHeight:0.#}");
+
+                        // Recorte INICIAL (estado "Ajustar a la ventana" recien cargado, SIN
+                        // cambiar Zoom ni categoria) - evita cualquier problema de sincronizacion
+                        // de scroll/zoom propio de GoToNpcCommand, mide el estado real que ve el
+                        // usuario nada mas cargar el mundo.
+                        var img0 = Descendientes<Image>(p0).FirstOrDefault();
+                        Console.WriteLine($"BLANDO_RIO_SOLO-INICIAL: Image real encontrada={img0 != null} (Visibility={img0?.Visibility}, ActualWidth={img0?.ActualWidth:0.#}x{img0?.ActualHeight:0.#})");
+                        if (img0 != null && img0.IsVisible)
+                        {
+                            DoEvents();
+                            var puntoInicial = img0.TranslatePoint(new Point(8, 8), window); // centro real del icono de 16x16
+                            Console.WriteLine($"BLANDO_RIO_SOLO-INICIAL: posicion real en pantalla -> ({puntoInicial.X:0.#},{puntoInicial.Y:0.#}) (ventana {window.ActualWidth:0.#}x{window.ActualHeight:0.#})");
+
+                            var rtbInicial = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                                (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                            rtbInicial.Render(window);
+                            int cs = 500;
+                            int cix = Math.Max(0, Math.Min((int)window.ActualWidth - cs, (int)puntoInicial.X - cs / 2));
+                            int ciy = Math.Max(0, Math.Min((int)window.ActualHeight - cs, (int)puntoInicial.Y - cs / 2));
+                            var recorteInicial = new System.Windows.Media.Imaging.CroppedBitmap(rtbInicial, new System.Windows.Int32Rect(cix, ciy, cs, cs));
+                            var encInicial = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                            encInicial.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(recorteInicial));
+                            using var fsInicial = File.Create(Path.Combine(AppContext.BaseDirectory, "blando-rio-npc-inicial-recorte.png"));
+                            encInicial.Save(fsInicial);
+                            Console.WriteLine("BLANDO_RIO_SOLO-INICIAL: captura -> blando-rio-npc-inicial-recorte.png");
+
+                            // Muestreo real de color de pixel en el centro exacto del icono (y una
+                            // pequeña rejilla alrededor) - para saber si de verdad se pinta algo
+                            // (colores variados del sprite) o queda todo negro/vacio/igual al fondo.
+                            var conv = new System.Windows.Media.Imaging.FormatConvertedBitmap(rtbInicial, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+                            int stride = conv.PixelWidth * 4;
+                            var buffer = new byte[conv.PixelHeight * stride];
+                            conv.CopyPixels(buffer, stride, 0);
+                            for (int dy = -6; dy <= 6; dy += 3)
+                            {
+                                var fila = new System.Text.StringBuilder();
+                                for (int dx = -6; dx <= 6; dx += 3)
+                                {
+                                    int px = (int)puntoInicial.X + dx, py = (int)puntoInicial.Y + dy;
+                                    if (px < 0 || py < 0 || px >= conv.PixelWidth || py >= conv.PixelHeight) { fila.Append(" fuera  "); continue; }
+                                    int off = py * stride + px * 4;
+                                    fila.Append($" #{buffer[off + 2]:X2}{buffer[off + 1]:X2}{buffer[off + 0]:X2}");
+                                }
+                                Console.WriteLine($"BLANDO_RIO_SOLO-PIXELES: dy={dy,3} ->{fila}");
+                            }
+                        }
+                    }
+                }
+
+                void Shot(string nombre)
+                {
+                    DoEvents();
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(window);
+                    var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    using var fs = File.Create(Path.Combine(AppContext.BaseDirectory, nombre + ".png"));
+                    enc.Save(fs);
+                    Console.WriteLine($"BLANDO_RIO_SOLO: captura -> {nombre}.png");
+                }
+                Shot("blando-rio-exploracion-1600x900");
+
+                // Panel del Bestiario - misma diagnosis que Builds: lo activamos y capturamos.
+                var expanderBestiario = vm.Exploration.SelectedCategory;
+                vm.Exploration.SelectedCategory = WorldSearchCategory.All; // "Todo" por defecto, el bestiario vive en su propio bloque lateral
+                DoEvents(); DoEvents();
+                Shot("blando-rio-lateral-1600x900");
+
+                // Ancho MINIMO real del panel lateral (260px, ver SettingsViewModel.
+                // OnExplorationSidebarWidthChanged) - reproduce el recorte de cabeceras
+                // reportado por el usuario ("Solo lo que...", "Este e...", "Edita...",
+                // "Bestia...").
+                vm.Settings.ExplorationSidebarWidth = 260;
+                DoEvents(); DoEvents();
+                Shot("blando-rio-lateral-260px");
+                var expanders260 = Descendientes<Expander>(window).Where(e => e.IsVisible).ToList();
+                foreach (var exp in expanders260)
+                    Console.WriteLine($"BLANDO_RIO_SOLO-260: Expander Header='{exp.Header}' ActualWidth={exp.ActualWidth:0.#}");
+
+                // Ventana mas estrecha (1080x700, tamaño real minimo documentado de la app) con
+                // el mismo sidebar a 260px - puede que el recorte solo aparezca cuando la
+                // VENTANA entera, no solo el sidebar, se queda corta.
+                FijarTamaño(window, 1080, 700);
+                DoEvents(); DoEvents();
+                Shot("blando-rio-lateral-1080x700");
+                var expandersEstrecho = Descendientes<Expander>(window).Where(e => e.IsVisible).ToList();
+                foreach (var exp in expandersEstrecho)
+                    Console.WriteLine($"BLANDO_RIO_SOLO-1080: Expander Header='{exp.Header}' ActualWidth={exp.ActualWidth:0.#}");
+
+                // Acercamiento real a la posicion de un NPC concreto (zoom alto) para ver si el
+                // icono de cabeza se pinta de verdad o solo el punto magenta de reserva.
+                // DIAG: SelectedCategory=Npcs comentado a proposito - probando si activar la
+                // categoria de busqueda es lo que tapa el icono con una capa opaca.
+                // vm.Exploration.SelectedCategory = WorldSearchCategory.Npcs;
+                DoEvents();
+                var npcCercano = vm.Exploration.Npcs.FirstOrDefault();
+                if (npcCercano != null)
+                {
+                    vm.Exploration.Zoom = 8.0;
+                    vm.Exploration.GoToNpcCommand.Execute(npcCercano);
+                    DoEvents(); DoEvents(); DoEvents();
+                    Console.WriteLine($"BLANDO_RIO_SOLO: centrado en '{npcCercano.Name}' con Zoom={vm.Exploration.Zoom}");
+                    Shot("blando-rio-zoom-npc");
+
+                    // Diagnostico preciso: el Image real (dentro del Grid 0x0) para ESTE NPC
+                    // concreto - tamaño ya calculado tras layout, y si su BitmapImage cargo de
+                    // verdad (PixelWidth/Height reales) o fallo en silencio.
+                    var itemsControlNpcs2 = Descendientes<System.Windows.Controls.ItemsControl>(window)
+                        .FirstOrDefault(ic => ic.ItemsSource == vm.Exploration.Npcs);
+                    if (itemsControlNpcs2 != null)
+                    {
+                        var contenedorGenerator = itemsControlNpcs2.ItemContainerGenerator;
+                        var contenedor = contenedorGenerator.ContainerFromItem(npcCercano) as System.Windows.Controls.ContentPresenter;
+                        Console.WriteLine($"BLANDO_RIO_SOLO: contenedor real de '{npcCercano.Name}' encontrado={contenedor != null}");
+                        if (contenedor != null)
+                        {
+                            var imagenReal = Descendientes<Image>(contenedor).FirstOrDefault();
+                            var elipseReal = Descendientes<System.Windows.Shapes.Ellipse>(contenedor).FirstOrDefault();
+                            Console.WriteLine($"BLANDO_RIO_SOLO: Image real encontrada={imagenReal != null} (Visibility={imagenReal?.Visibility}, ActualWidth={imagenReal?.ActualWidth:0.#}x{imagenReal?.ActualHeight:0.#}), Ellipse-fallback encontrada={elipseReal != null} (Visibility={elipseReal?.Visibility})");
+                            if (imagenReal?.Source is System.Windows.Media.Imaging.BitmapImage bmp)
+                                Console.WriteLine($"BLANDO_RIO_SOLO: BitmapImage real -> PixelWidth={bmp.PixelWidth}, PixelHeight={bmp.PixelHeight}, UriSource={bmp.UriSource}");
+                            else
+                                Console.WriteLine($"BLANDO_RIO_SOLO: imagenReal.Source tipo real={imagenReal?.Source?.GetType().FullName ?? "(null)"}");
+                            var gridPadre = Descendientes<Grid>(contenedor).FirstOrDefault();
+                            Console.WriteLine($"BLANDO_RIO_SOLO: Grid contenedor -> ActualWidth={gridPadre?.ActualWidth:0.#}x{gridPadre?.ActualHeight:0.#}, RenderTransform={gridPadre?.RenderTransform}");
+
+                            // Muestreo DIRECTO del BitmapSource ya decodificado (sin pasar por
+                            // render-target-bitmap ni por ningun transform) - descarta que el
+                            // problema sea de decodificacion en vez de composicion/pintado.
+                            if (imagenReal?.Source is System.Windows.Media.Imaging.BitmapSource bmpSrc)
+                            {
+                                Console.WriteLine($"BLANDO_RIO_SOLO: BitmapSource real -> PixelWidth={bmpSrc.PixelWidth}, PixelHeight={bmpSrc.PixelHeight}, Format={bmpSrc.Format}");
+                                var convSrc = new System.Windows.Media.Imaging.FormatConvertedBitmap(bmpSrc, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+                                int strideSrc = convSrc.PixelWidth * 4;
+                                var bufSrc = new byte[convSrc.PixelHeight * strideSrc];
+                                convSrc.CopyPixels(bufSrc, strideSrc, 0);
+                                int cxSrc = convSrc.PixelWidth / 2, cySrc = convSrc.PixelHeight / 2;
+                                int offSrc = cySrc * strideSrc + cxSrc * 4;
+                                Console.WriteLine($"BLANDO_RIO_SOLO: pixel central del sprite decodificado ({cxSrc},{cySrc}) -> #{bufSrc[offSrc + 2]:X2}{bufSrc[offSrc + 1]:X2}{bufSrc[offSrc + 0]:X2} alpha={bufSrc[offSrc + 3]}");
+                                bool algoNoTransparente = false;
+                                for (int i = 3; i < bufSrc.Length; i += 4) if (bufSrc[i] > 10) { algoNoTransparente = true; break; }
+                                Console.WriteLine($"BLANDO_RIO_SOLO: el sprite decodificado tiene algun pixel con alpha>10={algoNoTransparente} (esperado True - el PNG de origen SI tiene contenido visible)");
+                            }
+
+                            if (imagenReal != null && imagenReal.IsVisible)
+                            {
+                                var puntoReal = imagenReal.TranslatePoint(new Point(0, 0), window);
+                                Console.WriteLine($"BLANDO_RIO_SOLO: posicion real en pantalla de la Image -> ({puntoReal.X:0.#},{puntoReal.Y:0.#})");
+
+                                DoEvents();
+                                var rtbFull = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                                rtbFull.Render(window);
+                                int cropSize = 260;
+                                int cx = Math.Max(0, (int)puntoReal.X - cropSize / 2);
+                                int cy = Math.Max(0, (int)puntoReal.Y - cropSize / 2);
+                                cropSize = Math.Min(cropSize, Math.Min((int)window.ActualWidth - cx, (int)window.ActualHeight - cy));
+                                var recorte = new System.Windows.Int32Rect(cx, cy, cropSize, cropSize);
+                                var croppedBmp = new System.Windows.Media.Imaging.CroppedBitmap(rtbFull, recorte);
+                                var encCrop = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                                encCrop.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(croppedBmp));
+                                using var fsCrop = File.Create(Path.Combine(AppContext.BaseDirectory, "blando-rio-npc-recorte.png"));
+                                encCrop.Save(fsCrop);
+                                Console.WriteLine("BLANDO_RIO_SOLO: captura -> blando-rio-npc-recorte.png (recorte 80x80 centrado en la posicion real de la cabeza)");
+
+                                // Prueba definitiva: agranda la Image REAL del arbol visual a
+                                // 200x200 (sin tocar ningun otro elemento) para saber sin
+                                // ambiguedad si pinta algo (aunque sea en la posicion/escala que
+                                // sea) o si de verdad no pinta nada.
+                                imagenReal.Width = 200; imagenReal.Height = 200;
+                                DoEvents(); DoEvents(); DoEvents();
+                                var puntoAgrandado = imagenReal.TranslatePoint(new Point(0, 0), window);
+                                Console.WriteLine($"BLANDO_RIO_SOLO-AGRANDADO: nueva posicion -> ({puntoAgrandado.X:0.#},{puntoAgrandado.Y:0.#}), ActualSize={imagenReal.ActualWidth:0.#}x{imagenReal.ActualHeight:0.#}");
+                                var rtbAgrandado = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                                rtbAgrandado.Render(window);
+                                using var fsAg = File.Create(Path.Combine(AppContext.BaseDirectory, "blando-rio-npc-agrandado.png"));
+                                var encAg = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                                encAg.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbAgrandado));
+                                encAg.Save(fsAg);
+                                Console.WriteLine("BLANDO_RIO_SOLO-AGRANDADO: captura -> blando-rio-npc-agrandado.png (ventana completa, la Image real ahora mide 200x200)");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("BLANDO_RIO_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (BLANDO_RIO_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // AUDIT_SOLO=1 (20-sep-2026, dos bugs reales de la auditoria visual independiente):
+        // 1) "Sin personaje cargadoSin mundo cargado" pegados sin espacio (sin personaje ni
+        //    mundo, cualquier ancho).
+        // 2) "Sin mundo cargado" (overlay grande centrado de T6) se corta como "Sin m" a
+        //    1080x700 por el panel lateral flotante encima.
+        if (Environment.GetEnvironmentVariable("AUDIT_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 4; // Exploracion, sin cargar nada (ni personaje ni mundo)
+                DoEvents();
+
+                void Shot(string nombre)
+                {
+                    DoEvents();
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(window);
+                    var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    using var fs = File.Create(Path.Combine(AppContext.BaseDirectory, nombre + ".png"));
+                    enc.Save(fs);
+                    Console.WriteLine($"AUDIT_SOLO: captura -> {nombre}.png");
+                }
+
+                foreach (var (w, h) in new[] { (1080.0, 700.0), (1600.0, 900.0), (2200.0, 1300.0) })
+                {
+                    FijarTamaño(window, w, h);
+                    DoEvents(); DoEvents();
+                    Shot($"audit-vacio-{w:0}x{h:0}");
+
+                    var tbPersonaje = Descendientes<TextBlock>(window).FirstOrDefault(t => t.IsVisible && t.Text == vm.Loc["label_no_character_loaded"]);
+                    var tbMundo = Descendientes<TextBlock>(window).Where(t => t.IsVisible && t.Text == vm.Loc["explore_no_world_loaded"]).ToList();
+                    Console.WriteLine($"AUDIT_SOLO {w:0}x{h:0}: tbPersonaje encontrado={tbPersonaje != null}, tbMundo.Count={tbMundo.Count}, IsCharacterLoaded={vm.IsCharacterLoaded}");
+                    // El arnes ya tiene un personaje real cargado a esta altura de Main() (bootstrap
+                    // temprano, no condicional) - "Sin personaje cargado" no es alcanzable aqui sin
+                    // desmontar ese bootstrap. Verificacion estructural equivalente y suficiente: el
+                    // WrapPanel de estado de Exploracion (Grid.Column="1") lleva de verdad el margen
+                    // izquierdo real que separa su contenido de la columna de personaje - antes NO
+                    // llevaba ninguno (causa real del bug, confirmada leyendo el XAML).
+                    var wrapPanelMundo = tbMundo.Count > 0 ? System.Windows.Media.VisualTreeHelper.GetParent(tbMundo[0]) as WrapPanel : null;
+                    if (wrapPanelMundo != null)
+                        Console.WriteLine($"AUDIT_SOLO {w:0}x{h:0}: WrapPanel de estado de Exploracion -> Margin={wrapPanelMundo.Margin} (esperado Left>=10)");
+                    if (tbPersonaje != null && tbMundo.Count > 0)
+                    {
+                        var rectPersonaje = new Rect(tbPersonaje.TranslatePoint(new Point(0, 0), window), new Size(tbPersonaje.ActualWidth, tbPersonaje.ActualHeight));
+                        foreach (var tbM in tbMundo)
+                        {
+                            var rectMundo = new Rect(tbM.TranslatePoint(new Point(0, 0), window), new Size(tbM.ActualWidth, tbM.ActualHeight));
+                            double gapX = rectMundo.Left - rectPersonaje.Right;
+                            bool mismaFila = Math.Abs(rectMundo.Top - rectPersonaje.Top) < 10;
+                            Console.WriteLine($"AUDIT_SOLO {w:0}x{h:0}: '{tbPersonaje.Text}' termina en X={rectPersonaje.Right:0.#}, '{tbM.Text}' (FontSize={tbM.FontSize}) empieza en X={rectMundo.Left:0.#} -> gap={gapX:0.#}px, misma fila={mismaFila}");
+                            if (mismaFila && gapX < 4)
+                                Console.WriteLine($"FALLO: AUDIT_SOLO - a {w:0}x{h:0} '{tbPersonaje.Text}' y '{tbM.Text}' quedan pegados (gap={gapX:0.#}px, se esperaba >=4px)");
+                        }
+                    }
+
+                    // Bug 2: el overlay grande (TitleText FontSize=18) no debe quedar bajo el
+                    // panel lateral flotante (T6) - oclusion por un HERMANO opaco encima, no un
+                    // recorte de ancestro (ZonaVisible/AR-LAY no cazan esto, ver el comentario
+                    // real mas abajo sobre generalizar el detector). Comprobacion DIRECTA:
+                    // interseccion real de rectangulos entre el texto y la tarjeta flotante.
+                    var overlayGrande = tbMundo.FirstOrDefault(t => Math.Abs(t.FontSize - 18) < 0.5);
+                    var tarjetaFlotante = window.FindName("ExplorationSidebarFloatingCard") as FrameworkElement;
+                    if (overlayGrande != null && tarjetaFlotante != null && tarjetaFlotante.IsVisible)
+                    {
+                        var rectTexto = new Rect(overlayGrande.TranslatePoint(new Point(0, 0), window), new Size(overlayGrande.ActualWidth, overlayGrande.ActualHeight));
+                        var rectTarjeta = new Rect(tarjetaFlotante.TranslatePoint(new Point(0, 0), window), new Size(tarjetaFlotante.ActualWidth, tarjetaFlotante.ActualHeight));
+                        var interseccion = Rect.Intersect(rectTexto, rectTarjeta);
+                        double solapeX = interseccion.IsEmpty ? 0 : interseccion.Width;
+                        Console.WriteLine($"AUDIT_SOLO {w:0}x{h:0}: overlay grande 'Sin mundo cargado' texto=({rectTexto.X:0.#},{rectTexto.Y:0.#},{rectTexto.Width:0.#}x{rectTexto.Height:0.#}), tarjeta=({rectTarjeta.X:0.#},{rectTarjeta.Y:0.#},{rectTarjeta.Width:0.#}x{rectTarjeta.Height:0.#}) -> solapeX={solapeX:0.#}px");
+                        if (solapeX > 2)
+                            Console.WriteLine($"FALLO: AUDIT_SOLO - a {w:0}x{h:0} el overlay grande 'Sin mundo cargado' se solapa {solapeX:0.#}px con el panel lateral flotante (T6) - queda tapado");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"AUDIT_SOLO {w:0}x{h:0}: overlayGrande={overlayGrande != null}, tarjetaFlotante={tarjetaFlotante != null} (IsVisible={tarjetaFlotante?.IsVisible})");
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("AUDIT_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (AUDIT_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA8_SOLO=1 (20-sep-2026, catalogo de funciones, idea 8 "Informe y comparador de
         // mundos" - version real, tercera ronda tras la correccion del coordinador: el catalogo
         // citaba WorldCreationSummaryBuilder como apoyo, que resulto ser para la vista previa de

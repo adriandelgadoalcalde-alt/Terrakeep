@@ -800,7 +800,22 @@
                  Ancho fijo aqui + WrapPanel.ItemWidth a juego (ver el ItemsControl de abajo) -
                  mismo hueco que antes el Margin de 24, ahora repartido por el propio WrapPanel. -->
             <StackPanel Margin="0,0,0,16" Width="220" Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
-                <DockPanel Margin="0,0,0,6">
+                <!-- Bug real reportado por el usuario con captura (20-sep-2026): el titulo de
+                     clase ("Cuerpo a cuerpo"/"A distancia"/"Invocacion"...) se partia letra a
+                     letra/silaba a silaba, y el boton "Auto-equipar" se veia como un rectangulo
+                     enorme mal dimensionado. Causa real medida con el arnes (BUILDS_LABEL_SOLO):
+                     los DOS botones a la derecha en el MISMO DockPanel que el titulo pedian
+                     ~198px de los 220px totales de la columna (80.7px "Auto-equipar" + 113px
+                     "Generar personaje..." + margen), dejando solo ~22px para el titulo - menos
+                     que el ancho de una sola letra, así que CUALQUIER palabra se veia forzada a
+                     partirse dentro de si misma. El alto disparatado del boton "Auto-equipar" era
+                     consecuencia del mismo problema: la fila entera heredaba la altura del titulo
+                     ya partido en 6 lineas. Arreglo real: el titulo pasa a su PROPIA fila (con
+                     los 220px enteros para el solo, nunca menos que la palabra mas larga de las 5
+                     categorias reales), los dos botones bajan a una segunda fila propia debajo -
+                     ahi SI caben comodos (197.7px de 220px), sin competir por espacio con nada. -->
+                <TextBlock Text="{Binding ClassLabel, Mode=OneWay}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                <DockPanel Margin="0,0,0,6" LastChildFill="False">
                     <!-- Bug real encontrado 2-sep-2026 ("el boton apenas se diferencia con el
                          fondo"): Background/Foreground puestos a mano aqui NO HACEN NADA - la
                          plantilla real de Button (Theme.xaml) ignora la propiedad Background
@@ -824,13 +839,6 @@
                             Click="OnGenerateCharacterForBuildClick"
                             IsEnabled="{Binding DataContext.IsCharacterLoaded, RelativeSource={RelativeSource AncestorType=Window}}"
                             ToolTip="{Binding Loc[tt_generate_character], Mode=OneWay}" />
-                    <!-- Ronda de Libreria/Builds del 6-sep-2026: era {Binding ClassName}, o sea la
-                         clave interna en bruto de builds.json ("melee"/"mage"/"rogue"...) a un
-                         palmo de las pildoras de filtro, que en la MISMA pantalla ya decian
-                         "Cuerpo a cuerpo"/"Magia"/"Pícaro". Ver BuildClassGearViewModel.ClassLabel.
-                         TextWrapping porque "Cuerpo a cuerpo" es bastante mas largo que "melee" y
-                         la columna es de ancho FIJO (220px, ver el StackPanel de arriba). -->
-                    <TextBlock Text="{Binding ClassLabel, Mode=OneWay}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" TextWrapping="Wrap" />
                 </DockPanel>
                 <TextBlock Text="{Binding Loc[label_armor], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,4,0,2" />
                 <ItemsControl ItemsSource="{Binding Armor}" />
@@ -2250,7 +2258,14 @@
                      campos que ya calcula F-6/P-1 para la franja de estado del mapa (asi la
                      info sigue disponible incluso con la barra lateral plegada en el futuro,
                      F-10). -->
-                <WrapPanel Grid.Column="1" VerticalAlignment="Center"
+                <!-- Bug real reportado por el usuario (auditoria visual independiente, 20-sep-2026):
+                     "Sin personaje cargadoSin mundo cargado" pegados sin espacio, reproducible sin
+                     personaje ni mundo cargados. Causa real: ni el TextBlock de la columna 0 (arriba,
+                     "Sin personaje cargado") ni este WrapPanel llevaban ningun margen que los separara -
+                     con contenido normal en ambas columnas la separacion la daban otros elementos
+                     intermedios, pero con los dos en su fallback mas corto quedaban pegados. Margen
+                     izquierdo real, mismo valor que ya usan los hijos de este WrapPanel entre si. -->
+                <WrapPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0"
                             Visibility="{Binding IsExplorationTabActive, Converter={StaticResource BoolToVis}}">
                     <!-- AR-LAY (6-sep-2026): los cinco datos son hijos DIRECTOS del WrapPanel, no
                          de un StackPanel Horizontal intermedio. Un WrapPanel solo puede envolver
@@ -5777,7 +5792,16 @@
                              este overlay se queda solo con el aviso "Sin mundo cargado" y el boton de
                              carga directa, tal y como el informe pide explicitamente para el primer
                              arranque. -->
+                        <!-- Bug real reportado por el usuario (auditoria visual independiente,
+                             20-sep-2026, consecuencia directa de T6): centrar aqui sobre el ANCHO
+                             TOTAL del Border (Grid.ColumnSpan="3", mapa+splitter+sidebar) hacia
+                             que a 1080x700 (minimo real) el centro calculado cayera bajo el panel
+                             lateral flotante y el texto se viera cortado ("Sin m..."). Margen
+                             derecho real igual al hueco que de verdad ocupa el panel (ver el
+                             comentario de SidebarWidthToRightMarginConverter) - el centrado pasa
+                             a calcularse sobre el ancho REALMENTE visible sin el panel encima. -->
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="640"
+                                    Margin="{Binding Settings.ExplorationSidebarWidth, Converter={x:Static conv:SidebarWidthToRightMarginConverter.Instance}}"
                                     Visibility="{Binding Exploration.IsEmpty, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="{Binding Loc[explore_no_world_loaded], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="18"
                                        HorizontalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,14" />

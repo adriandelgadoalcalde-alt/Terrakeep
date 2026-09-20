@@ -212,6 +212,29 @@ public sealed class DoubleToGridLengthConverter : IValueConverter
         value is GridLength g ? g.Value : 0.0;
 }
 
+// Bug real reportado por el usuario (auditoria visual independiente, 20-sep-2026): el overlay
+// "Sin mundo cargado" (StackPanel centrado, MaxWidth=640) se corta como "Sin m" a 1080x700 -
+// consecuencia directa de T6 (bitacora.md 20-sep-2026): el Border del mapa gano
+// Grid.ColumnSpan="3" para pintarse de borde a borde, y el panel lateral flotante pasó a
+// pintarse ENCIMA sin tocar su columna real - pero el StackPanel del overlay se queda
+// centrando sobre el ANCHO TOTAL de las 3 columnas (mapa + splitter + sidebar), nunca sobre el
+// ancho REALMENTE visible sin el panel flotante encima. A 1600x900/2200x1300 sobra sitio de
+// sobra y no se nota; a 1080x700 (minimo real de la app) el centro calculado cae bajo el panel
+// y el texto queda tapado. +9 = GridSplitter real (Width=5) + margen derecho real de
+// ExplorationSidebarFloatingCard (Margin="0,0,4,4") - mismo criterio que
+// DoubleToGridLengthConverter de arriba, misma fuente de verdad (Settings.
+// ExplorationSidebarWidth) que ya mueve la columna real, nunca un numero inventado aparte.
+public sealed class SidebarWidthToRightMarginConverter : IValueConverter
+{
+    public static readonly SidebarWidthToRightMarginConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        new Thickness(0, 0, value is double d && d > 0 ? d + 9 : 0, 0);
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 // Fase B (15-sep-2026): la pestaña Servidor pinta el estado de cada instancia (En escucha/
 // Arrancando/Fallida/Detenida) con el color real del tema - HostingInstanciaViewModel decide
 // la CLAVE del pincel (string, ej. "EquippedGreenBrush") desde C# porque ServidorKeep.Core no
