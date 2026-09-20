@@ -19297,3 +19297,86 @@ el último punto de control. Todo redesplegado en local (bin\Debug + instalado) 
 Nunca se ha subido de versión, tocado changelog.json, compilado instalador de distribución, hecho
 `git push` ni `gh release` - todo el trabajo queda comiteado en local para que el usuario lo revise
 antes de publicar nada, tal como se pidió.
+
+### 20-sep-2026 (segunda ronda, tras corrección del coordinador) — brecha real, no motivo para no implementar
+
+El coordinador corrigió el cierre anterior: que el backend citado por el catálogo sea más pequeño
+o distinto de lo esperado no es motivo para no implementar una idea - es información para adaptar
+el alcance con honestidad, construyendo lo que SÍ es viable y documentando con precisión qué parte
+queda fuera y por qué (backend que de verdad no existe, nunca "es más trabajo"). Retomada la
+cadena por las ideas con menos brecha real.
+
+**Cerradas y comiteadas esta ronda:**
+- **Idea 10** (`fe77df9e`, vista previa exportable): `PlayerPreviewRenderer` solo pinta la pose de
+  reposo (ni ciclo de andar ni girar existen) - LIMITE real documentado. Lo honesto SÍ implementado:
+  exportar el frame real a PNG (`AppearanceViewModel.ExportPreviewToPng`), mismo patrón que
+  "Exportar mapa a PNG". Verificado: el PNG real decodificado tiene las mismas dimensiones que la
+  vista previa en pantalla.
+- **Idea 9** (`6275dfff`, diagnóstico de prefijos ilegales): `PrefixRulesCatalog.IsLegal` es real y
+  ya usado para IMPEDIR crear combinaciones ilegales desde dentro de la app; faltaba detectar las
+  que ya vienen de fuera. `MainViewModel.RebuildIllegalPrefixDiagnostics` recorre TODOS los
+  contenedores reales (mismo conjunto que usa el guardado) y avisa en la pestaña Versión. Verificado
+  forzando un prefijo real conocido-ilegal sobre un objeto real - Y el diagnóstico encontró de
+  propina un problema REAL YA EXISTENTE sin forzar nada: 'Guante de Berserker' en el personaje real
+  'Eldelgas' de este equipo.
+
+**Investigadas a fondo, con hallazgos reales de que la brecha es MENOR de lo que parecía:**
+- **Idea 1 (Estado del mundo editable)**: resultó estar CASI COMPLETA ya como "Editor de mundos v1"
+  (`ExplorationViewModel`): hora, fase lunar, luna de sangre, eclipse, punto de aparición y los 10
+  jefes derrotados + modo difícil, TODO editable y ya escribiéndose de verdad en el `.wld`
+  (`WldWriter.PatchBossFlags`/`WldWriter.WorldFlagsPatch`). Confirmado ademas que la Guía SÍ se
+  reevalúa en vivo (no hacía falta tocar nada: `MainViewModel.OnSelectedTabIndexChanged` ya llama
+  `Guide.Refresh()` al entrar en la pestaña Guía, cubre el flujo real completo). Lo que de verdad
+  falta: banderas de invasión (Ejército Goblin/Piratas/Marcianos/Legión Helada - ningún campo
+  real existe hoy en `WldHeader`, haría falta ingeniería de formato nueva) y edición de qué NPCs
+  de pueblo han venido a vivir al mundo (hoy solo lectura). LIMITE real de estas 2 piezas
+  concretas, documentado para una ronda dedicada aparte - el resto de la idea YA es real.
+- **Idea 2 (Calculadora de build)**: Defensa total y bono de set activo YA estaban implementados de
+  antes (`EquipmentGroupViewModel.TotalDefense`/`ActiveSetBonusText`, visibles en la cabecera). Se
+  intentó un "crítico total" real sumando `VanillaItemStats.Crit` de los 10 slots del loadout - Y SE
+  REVIRTIÓ tras comprobar los datos reales: los 28 objetos con campo `crit` en `vanilla_stats.json`
+  son TODOS armas (llevan además `damage`+`useTime`), ninguno vive en armadura/accesorios, y un
+  accesorio real conocido por dar crítico (Avenger Emblem, id 2277) no tiene el campo en absoluto -
+  sumar sobre los 10 slots de armadura habría dado SIEMPRE 0, código muerto disfrazado de función.
+  LIMITE real MÁS PRECISO que "falta un método": el propio dato no está extraído en ningún catálogo
+  del proyecto. "DPS del loadout" tampoco es viable: no hay un único "arma del loadout" real en
+  Terraria (el arma activa es la ranura del hotbar, fuera del equipo) y el DPS real exige
+  multiplicadores de clase que solo aplica una partida en marcha - mismo límite ya aceptado en
+  `DesktopGuideStateProvider.DanoDelMejorArma`.
+- **Idea 5 (¿Dónde está? global)**: `WorldPresenceIndex` (citado como apoyo) es en realidad una
+  funcionalidad YA EXISTENTE pero DISTINTA - censo de UN único mundo cargado para filtrar
+  buscadores, nunca un índice multi-mundo persistente. La idea real (indexar TODOS los `.wld`/
+  `.plr` del disco) exige infraestructura de indexado que no existe hoy - LIMITE real.
+- **Idea 8 (Informe y comparador de mundos)**: `WorldCreationSummaryBuilder` (citado como apoyo) es
+  en realidad para la VISTA PREVIA DE GENERACIÓN (antes de crear un mundo nuevo, a partir de
+  semilla/tamaño/dificultad) - NO resume un `.wld` ya real y guardado. La idea real necesitaría una
+  pieza nueva que sí lea el mundo cargado (`OreVeinFinder`/`WorldSearch`/`world.Npcs`/
+  `world.Chests` SÍ son reales y reutilizables) - viable mas no implementado esta ronda por tiempo
+  real de sesión, no por falta de camino.
+
+**Sin investigar a fondo esta ronda** (tiempo real de sesión, no LÍMITE): idea 3 (Partida en vivo,
+depende de sincronización con TerrakeepMod, otro repo), idea 6 (Laboratorio de personajes,
+backend real confirmado - `AutoEquipService`/`BuildsCatalog`/`GuideCatalog` - camino viable para
+una próxima ronda), idea 7 (Capa Guía sobre el mapa - viable como marcador nuevo sin tocar los
+existentes; exportar PNG con marcadores tocaría la zona de coordenadas de AR-MRK, más arriesgado).
+
+### Estado final de la ronda completa (20-sep-2026, las dos pasadas)
+
+**Catálogo de rediseño visual**: 8/10 cerradas y verificadas (T1,T2,T4,T5,T7,T8-ya-hecho,T9,T10),
+2/10 LÍMITE real documentado (T3, T6).
+
+**Catálogo de ideas Keep**: 3/10 cerradas y verificadas con código real (idea 4, 9, 10 - con 3 bugs
+reales de producción encontrados y arreglados de propina: bestiario ocultando NPCs de pueblo,
+iconos de rail recortados, y el hallazgo real de un prefijo ilegal preexistente en un personaje
+real del usuario), 2/10 confirmadas YA MAYORMENTE implementadas de antes con hallazgos reales
+(idea 1, idea 2), 3/10 investigadas con evidencia real de que el backend citado sirve para algo
+distinto (ideas 5, 8) o coste real confirmado, 2/10 (3, 6, 7) sin investigación profunda por
+tiempo real de sesión - quedan como punto de partida real (rutas/clases confirmadas) para la
+siguiente ronda, nunca "imposible".
+
+Commits totales de la sesión completa: `ca2ac1ba` `1928a0c1` `e0a9688c` `6ddf8f53` `6bf60deb`
+`29c152c2` `775e3b68` `fe77df9e` `6275dfff` + bitácora en cada punto de control. `dotnet build` en
+verde (0/0) en cada pieza, `Terrakeep.Core.Tests` 568/568 y `Terrakeep.App.ViewModels.Tests`
+491/491 en el último punto de control. Todo redesplegado en local tras cada pieza verificada.
+Nunca se ha subido de versión, tocado changelog.json, compilado instalador de distribución, hecho
+`git push` ni `gh release`.
