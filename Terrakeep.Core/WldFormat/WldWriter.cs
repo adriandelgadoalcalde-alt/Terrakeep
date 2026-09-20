@@ -965,4 +965,28 @@ public static class WldWriter
 
         return ReplaceSection(fileBytes, table, table.Pointers[3], table.Pointers[4], newSignsBytes);
     }
+
+    // Idea 1 del catalogo de funciones (segunda pieza, bitacora.md 20-sep-2026, quinta ronda):
+    // "editar que NPCs de pueblo han venido a vivir al mundo (hoy solo lectura)". El limite
+    // anterior era erroneo por el mismo motivo que las banderas de invasion - SerializeNpcsSection
+    // (la inversa real de WldReader.ReadNpcs) ya existia y ya estaba probada por WriteWorld: solo
+    // hacia falta el MISMO patron de empalme de seccion de ancho variable que WriteChestItems/
+    // WriteSignText de arriba, nunca reescribir el mundo entero (eso SI seria un limite real - ver
+    // el comentario de cabecera de WriteWorld: PressurePlate/TownManager/CreativePowers/Footer se
+    // dejan vacios a proposito ahi porque WldReader nunca los lee, algo que aqui NO pasa: tiles,
+    // cofres, letreros, tile entities, bestiario y el resto de la cabecera viajan intactos, byte a
+    // byte, sin pasar nunca por WriteWorld). Anade o quita NPCs de pueblo (newNpcs es la lista
+    // COMPLETA final, igual que WriteChestItems recibe los objetos finales de un cofre) - el
+    // llamador decide que instancias sobreviven, cuales se quitan y cuales son nuevas.
+    public static byte[] WriteNpcs(byte[] fileBytes, IReadOnlyList<WldNpc> newNpcs, IReadOnlySet<int> shimmeredTypes)
+    {
+        var table = ReadPointerTable(fileBytes);
+        byte[] newNpcsBytes = SerializeNpcsSection(newNpcs, shimmeredTypes, table.Version);
+
+        // Mundos MUY antiguos (pointerCount<=5, ver WldHeader.TileEntitiesSectionOffset) no
+        // tienen un puntero explicito de "fin de NPCs" (nunca tuvieron TileEntities) - en ese
+        // caso NPCs es la ULTIMA seccion real del archivo, su fin es el propio EOF.
+        int npcsEnd = table.Pointers.Length > 5 ? table.Pointers[5] : fileBytes.Length;
+        return ReplaceSection(fileBytes, table, table.Pointers[4], npcsEnd, newNpcsBytes);
+    }
 }

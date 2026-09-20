@@ -2307,6 +2307,107 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // IDEA1C_SOLO=1 (20-sep-2026, catalogo de funciones, idea 1 "editar que NPCs de pueblo
+        // han venido a vivir al mundo (hoy solo lectura)" - segunda pieza, quinta ronda,
+        // reconsiderada a peticion explicita del coordinador/usuario tras confirmar con evidencia
+        // real - SerializeNpcsSection ya existia y ya estaba probada por WriteWorld - que SI es
+        // alcanzable con el mismo patron de empalme de seccion de ancho variable que WriteChestItems/
+        // WriteSignText). Flujo real E2E completo: cargar una COPIA de un mundo real, anadir un NPC
+        // real que falta (boton real "+"), guardar de verdad, releer de disco, quitar un NPC real
+        // presente (boton real "✕"), guardar de verdad, releer de disco - nunca solo en memoria.
+        if (Environment.GetEnvironmentVariable("IDEA1C_SOLO") == "1")
+        {
+            try
+            {
+                string original = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                if (!File.Exists(original)) { Console.WriteLine($"IDEA1C_SOLO: AVISO - falta {original}, no hay nada que verificar"); Console.WriteLine("DONE (IDEA1C_SOLO)"); Environment.Exit(0); }
+
+                var mundoOriginal = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(original));
+                Console.WriteLine($"IDEA1C_SOLO: '{mundoOriginal.Header.Title}' -> {mundoOriginal.Npcs.Count} NPCs reales presentes (verdad real, sin forzar nada)");
+
+                string copia = Path.Combine(Path.GetTempPath(), $"idea1c-copia-{Guid.NewGuid():N}.wld");
+                File.Copy(original, copia);
+                try
+                {
+                    vm.SelectedTabIndex = 4; // Exploracion
+                    DoEvents();
+                    var tareaCarga = vm.Exploration.LoadFromPathAsync(copia);
+                    while (!tareaCarga.IsCompleted) DoEvents();
+                    DoEvents(); DoEvents();
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Npcs;
+                    DoEvents(); DoEvents();
+
+                    int npcsAntes = vm.Exploration.Npcs.Count;
+                    int faltantesAntes = vm.Exploration.MissingNpcs.Count;
+                    Console.WriteLine($"IDEA1C_SOLO: tras cargar -> Npcs={npcsAntes}, MissingNpcs={faltantesAntes}");
+                    if (faltantesAntes == 0) { Console.WriteLine("IDEA1C_SOLO: AVISO - este mundo real ya tiene el roster completo, no hay ningun NPC que anadir para probar"); }
+                    else
+                    {
+                        var faltante = vm.Exploration.MissingNpcs[0];
+                        string nombreFaltante = faltante.Name;
+                        var tareaAnadir = vm.Exploration.AddTownNpcCommand.ExecuteAsync(faltante);
+                        while (!tareaAnadir.IsCompleted) DoEvents();
+                        DoEvents(); DoEvents();
+
+                        Console.WriteLine($"IDEA1C_SOLO: tras Anadir '{nombreFaltante}' -> Npcs={vm.Exploration.Npcs.Count} (esperado {npcsAntes + 1}), MissingNpcs={vm.Exploration.MissingNpcs.Count} (esperado {faltantesAntes - 1})");
+                        if (vm.Exploration.Npcs.Count != npcsAntes + 1) Console.WriteLine("FALLO: IDEA1C_SOLO - Anadir NPC no aumento la lista real de NPCs del mundo");
+                        if (vm.Exploration.MissingNpcs.Any(m => m.Name == nombreFaltante)) Console.WriteLine("FALLO: IDEA1C_SOLO - el NPC anadido sigue apareciendo en 'NPCs que faltan'");
+
+                        var releidoTrasAnadir = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(copia));
+                        Console.WriteLine($"IDEA1C_SOLO: releido del disco tras Anadir -> {releidoTrasAnadir.Npcs.Count} NPCs (esperado {mundoOriginal.Npcs.Count + 1})");
+                        if (releidoTrasAnadir.Npcs.Count != mundoOriginal.Npcs.Count + 1)
+                            Console.WriteLine("FALLO: IDEA1C_SOLO - el guardado real (boton +, WorldFileService.SaveNpcRoster) no escribio el NPC nuevo en el archivo");
+
+                        // Boton real "+" en el arbol visual del panel de NPCs que faltan - el
+                        // Expander empieza colapsado (MissingNpcsExpander, IsExpanded="False" por
+                        // defecto), hay que desplegarlo primero (mismo criterio que ya usa
+                        // IDEA1B_SOLO con expanderEditar). Ahora con un elemento menos, comprobamos
+                        // que el patron de fila sigue existiendo para lo que quede.
+                        var expanderFaltan = Descendientes<Expander>(window).FirstOrDefault(e => e.Header as string == vm.Loc["explore_missing_npcs"]);
+                        if (expanderFaltan != null) expanderFaltan.IsExpanded = true;
+                        DoEvents(); DoEvents();
+                        var botonAnadirReal = Descendientes<System.Windows.Controls.Button>(window)
+                            .FirstOrDefault(b => b.Content as string == "+" && b.Command == vm.Exploration.AddTownNpcCommand);
+                        Console.WriteLine($"IDEA1C_SOLO: boton real '+' de anadir NPC encontrado en el arbol visual={botonAnadirReal != null}");
+                        if (botonAnadirReal == null) Console.WriteLine("FALLO: IDEA1C_SOLO - no se encuentra ningun boton real '+' con AddTownNpcCommand en el arbol visual");
+                    }
+
+                    // Quitar un NPC real presente (boton "✕") - usa el primero de la lista actual,
+                    // nunca el que se acaba de anadir (para probar el camino independiente).
+                    if (vm.Exploration.Npcs.Count > 0)
+                    {
+                        var npcsAntesDeQuitar = vm.Exploration.Npcs.Count;
+                        var presente = vm.Exploration.Npcs[0];
+                        int idQuitado = presente.Id;
+                        var tareaQuitar = vm.Exploration.RemoveTownNpcCommand.ExecuteAsync(presente);
+                        while (!tareaQuitar.IsCompleted) DoEvents();
+                        DoEvents(); DoEvents();
+
+                        Console.WriteLine($"IDEA1C_SOLO: tras Quitar '{presente.Name}' (id={idQuitado}) -> Npcs={vm.Exploration.Npcs.Count} (esperado {npcsAntesDeQuitar - 1})");
+                        if (vm.Exploration.Npcs.Count != npcsAntesDeQuitar - 1) Console.WriteLine("FALLO: IDEA1C_SOLO - Quitar NPC no redujo la lista real de NPCs del mundo");
+                        if (vm.Exploration.Npcs.Any(n => n.Id == idQuitado)) Console.WriteLine("FALLO: IDEA1C_SOLO - el NPC quitado sigue en la lista real de NPCs");
+
+                        var releidoTrasQuitar = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(copia));
+                        Console.WriteLine($"IDEA1C_SOLO: releido del disco tras Quitar -> {releidoTrasQuitar.Npcs.Count} NPCs, contiene id={idQuitado}={releidoTrasQuitar.Npcs.Any(n => n.Id == idQuitado)} (esperado False)");
+                        if (releidoTrasQuitar.Npcs.Any(n => n.Id == idQuitado))
+                            Console.WriteLine("FALLO: IDEA1C_SOLO - el guardado real (boton ✕, WorldFileService.SaveNpcRoster) no quito el NPC del archivo");
+
+                        var botonQuitarReal = Descendientes<System.Windows.Controls.Button>(window)
+                            .FirstOrDefault(b => b.Content as string == "✕" && b.Command == vm.Exploration.RemoveTownNpcCommand);
+                        Console.WriteLine($"IDEA1C_SOLO: boton real '✕' de quitar NPC encontrado en el arbol visual={botonQuitarReal != null}");
+                        if (botonQuitarReal == null) Console.WriteLine("FALLO: IDEA1C_SOLO - no se encuentra ningun boton real '✕' con RemoveTownNpcCommand en el arbol visual");
+                    }
+                }
+                finally
+                {
+                    try { File.Delete(copia); } catch { }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("IDEA1C_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (IDEA1C_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA8_SOLO=1 (20-sep-2026, catalogo de funciones, idea 8 "Informe y comparador de
         // mundos" - version real, tercera ronda tras la correccion del coordinador: el catalogo
         // citaba WorldCreationSummaryBuilder como apoyo, que resulto ser para la vista previa de

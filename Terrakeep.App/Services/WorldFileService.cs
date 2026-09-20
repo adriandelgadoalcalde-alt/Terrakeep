@@ -168,6 +168,36 @@ public static class WorldFileService
         return signIndex < 0 ? world : world.WithSignText(signIndex, newText);
     }
 
+    // Idea 1 del catalogo de funciones (segunda pieza, 20-sep-2026): mismo criterio exacto que
+    // SaveChestItems/SaveSignText - WriteNpcs puede cambiar la longitud del archivo, asi que la
+    // verificacion en memoria confirma tambien el NUMERO final de NPCs (no solo que el releido no
+    // reviente), la señal mas barata y fiable de que la tabla de punteros no quedo desincronizada.
+    public static WldWorld SaveNpcRoster(WldWorld world, string wldPath, IReadOnlyList<WldNpc> newNpcs)
+    {
+        byte[] original = File.ReadAllBytes(wldPath);
+        byte[] patched = WldWriter.WriteNpcs(original, newNpcs, world.ShimmeredNpcTypes);
+        if (DebugCorruptPatchedBytesBeforeVerify != null) patched = DebugCorruptPatchedBytesBeforeVerify(patched);
+
+        WldWorld reReadWorld;
+        try
+        {
+            reReadWorld = WldReader.Read(patched, readContainers: true);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(LocalizationService.Instance.Format("world_save_reread_failed_detail", ex.Message), ex);
+        }
+        if (reReadWorld.Npcs.Count != newNpcs.Count)
+            throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
+        var idsEsperados = newNpcs.Select(n => n.Id).OrderBy(id => id).ToList();
+        var idsReleidos = reReadWorld.Npcs.Select(n => n.Id).OrderBy(id => id).ToList();
+        if (!idsEsperados.SequenceEqual(idsReleidos))
+            throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
+
+        WriteAtomic(wldPath, patched);
+        return world.WithNpcs(newNpcs);
+    }
+
     private static void WriteAtomic(string path, byte[] bytes)
     {
         string tmpPath = path + ".tmp";

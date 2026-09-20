@@ -6724,6 +6724,11 @@
                                     <ToggleButton Style="{StaticResource ViewSelector}" Content="{Binding Loc[explore_npc_homeless], Mode=OneWay}" IsChecked="{Binding Exploration.NpcFilterHomeless}" />
                                     <ToggleButton Style="{StaticResource ViewSelector}" Content="{Binding Loc[explore_npc_underground], Mode=OneWay}" IsChecked="{Binding Exploration.NpcFilterUnderground}"
                                                   ToolTip="{Binding Loc[explore_sort_by_depth_tooltip], Mode=OneWay}" />
+                                    <!-- Idea 1 del catalogo de funciones (segunda pieza, 20-sep-2026): estado real de
+                                         Anadir/Quitar NPC de pueblo - mismo patron que Exploration.FlagsSaveStatus. -->
+                                    <TextBlock Text="{Binding Exploration.NpcRosterStatus}" Style="{StaticResource CaptionText}"
+                                               VerticalAlignment="Center" Margin="8,0,0,0" TextWrapping="Wrap"
+                                               Visibility="{Binding Exploration.NpcRosterStatus, Converter={StaticResource NullToCollapsed}}" />
                                 </WrapPanel>
 
                                 <!-- X-f: "NPCs que faltan" empieza colapsado - vive dentro de esta
@@ -6739,15 +6744,24 @@
                                     <ItemsControl x:Name="MissingNpcsList" ItemsSource="{Binding Exploration.MissingNpcs}" Margin="0,6,0,0">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type vm:MissingNpcRowViewModel}">
-                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                                <!-- Idea 1 del catalogo de funciones (segunda pieza, 20-sep-2026): "editar que NPCs
+                                                     de pueblo han venido a vivir al mundo (hoy solo lectura)" - antes esta fila era
+                                                     puramente informativa (StackPanel sin interaccion), ahora tiene un boton real
+                                                     de anadir, mismo patron/estilo que las carpetas extra de Ajustes
+                                                     (CircleCloseButton, aqui con "+" en vez de "✕"). -->
+                                                <DockPanel Margin="0,0,0,3" LastChildFill="True">
+                                                    <Button DockPanel.Dock="Right" Content="+" Style="{StaticResource CircleCloseButton}"
+                                                            ToolTip="{Binding Loc[explore_npc_add_tooltip], Mode=OneWay}"
+                                                            Command="{Binding DataContext.Exploration.AddTownNpcCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}" VerticalAlignment="Center" />
                                                     <Image Source="{Binding IconPath}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,5,0"
                                                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
                                                     <!-- P-8 (auditoria Opus vs TEdit): CalamityBrush (rojo) significa "Calamity/peligro"
                                                          en el resto del tema - para "todavia no lo tienes" (nada peligroso) encaja mejor
                                                          el mismo tono neutro que ya usa la propia pildora de recuento de arriba. -->
-                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource CaptionText}"
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource CaptionText}" VerticalAlignment="Center"
                                                                Foreground="{StaticResource TextSecondaryBrush}" />
-                                                </StackPanel>
+                                                </DockPanel>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
@@ -6780,6 +6794,14 @@
                                                              la derecha (el hueco que estaba vacio), nombre con el resto
                                                              y envolviendo. -->
                                                         <DockPanel LastChildFill="True">
+                                                            <!-- Idea 1 del catalogo de funciones (segunda pieza, 20-sep-2026): boton real
+                                                                 de quitar - anidado dentro del Button grande de "ir a esta posicion" de
+                                                                 arriba, patron WPF seguro y ya usado en el proyecto (un click en un Button
+                                                                 hijo queda Handled y nunca dispara el Command del Button padre). -->
+                                                            <Button DockPanel.Dock="Right" Content="✕" Style="{StaticResource CircleCloseButton}"
+                                                                    ToolTip="{Binding Loc[explore_npc_remove_tooltip], Mode=OneWay}"
+                                                                    Command="{Binding DataContext.Exploration.RemoveTownNpcCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    CommandParameter="{Binding}" VerticalAlignment="Center" Margin="6,0,0,0" />
                                                             <Image DockPanel.Dock="Left" Source="{Binding IconPath}" Width="28" Height="28" Stretch="Uniform" Margin="0,0,8,0"
                                                                    VerticalAlignment="Center"
                                                                    Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />

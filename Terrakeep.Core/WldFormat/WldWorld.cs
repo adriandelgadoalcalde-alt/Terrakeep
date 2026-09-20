@@ -62,4 +62,13 @@ public sealed class WldWorld
             TileEntities = TileEntities, ShimmeredNpcTypes = ShimmeredNpcTypes, Bestiary = Bestiary,
         };
     }
+
+    // Idea 1 del catalogo de funciones (segunda pieza, 20-sep-2026): mismo patron exacto que
+    // WithChestItems/WithSignText, tras un guardado real via WldWriter.WriteNpcs - newNpcs es la
+    // lista COMPLETA final (con NPCs anadidos o quitados), nunca un delta.
+    public WldWorld WithNpcs(IReadOnlyList<WldNpc> newNpcs) => new()
+    {
+        Header = Header, Tiles = Tiles, Npcs = newNpcs, Chests = Chests, Signs = Signs,
+        TileEntities = TileEntities, ShimmeredNpcTypes = ShimmeredNpcTypes, Bestiary = Bestiary,
+    };
 }

@@ -205,6 +205,13 @@ public sealed class CharacterSpawnRowViewModel(string label, int x, int y)
 // posicion (no esta en el mundo).
 public sealed class MissingNpcRowViewModel(int id, string name)
 {
+    // Idea 1 del catalogo de funciones (segunda pieza, 20-sep-2026): Id publico - antes solo se
+    // usaba dentro del constructor para resolver el icono, hacia falta ademas como parametro real
+    // del boton "Anadir" (AddTownNpcCommand, ver MainWindow.xaml). Loc: mismo motivo exacto que
+    // WorldNpcRowViewModel.Loc de arriba (este objeto es el DataContext de una fila dentro de un
+    // ItemsControl, ninguna otra via de Loc lo alcanza desde ahi).
+    public Services.LocalizationService Loc => Services.LocalizationService.Instance;
+    public int Id { get; } = id;
     public string Name { get; } = name;
     public string? IconPath { get; } = NpcIconResolver.GetIconPath(id);
 }
@@ -2192,11 +2199,7 @@ public partial class ExplorationViewModel : ObservableObject
     {
         if (_world is not { } world) return;
         RebuildNpcRows(world, preservarFiltro: true);
-        MissingNpcs.Clear();
-        var encontrados = world.Npcs.Select(n => n.Id).ToHashSet();
-        foreach (int id in VanillaTownNpcRoster.Ids)
-            if (!encontrados.Contains(id))
-                MissingNpcs.Add(new MissingNpcRowViewModel(id, _npcNames.GetName(id)));
+        RebuildMissingNpcs(world);
         RebuildInventory();
         // Editor de mundos v1 (14-sep-2026): mismo motivo exacto que MissingNpcs/RebuildNpcRows
         // de arriba - BestiaryRowViewModel.Name tambien se resuelve UNA vez al construirse
@@ -2230,6 +2233,71 @@ public partial class ExplorationViewModel : ObservableObject
         if (preservarFiltro) { ApplyNpcFilter(); return; }
         Npcs.Clear();
         foreach (var npc in _allNpcs) Npcs.Add(npc);
+    }
+
+    // Extraido de LoadFromPathAsync/RefrescarNombresDeContenido (antes duplicado dos veces) -
+    // idea 1 del catalogo de funciones (segunda pieza, 20-sep-2026): tambien reutilizado por
+    // Anadir/Quitar NPC (abajo) para que la lista de "faltan" quede siempre en el MISMO orden
+    // real (el de VanillaTownNpcRoster.Ids) tras cualquiera de los tres caminos que la tocan.
+    private void RebuildMissingNpcs(WldWorld world)
+    {
+        MissingNpcs.Clear();
+        var encontrados = world.Npcs.Select(n => n.Id).ToHashSet();
+        foreach (int id in VanillaTownNpcRoster.Ids)
+            if (!encontrados.Contains(id))
+                MissingNpcs.Add(new MissingNpcRowViewModel(id, _npcNames.GetName(id)));
+    }
+
+    // Idea 1 del catalogo de funciones (segunda pieza, bitacora.md 20-sep-2026, quinta ronda):
+    // "editar que NPCs de pueblo han venido a vivir al mundo (hoy solo lectura)" - limite anterior
+    // erroneo, ver el comentario real de WldWriter.WriteNpcs. Posicion por defecto de un NPC
+    // recien "llegado": el punto de aparicion del mundo, Homeless=true (igual que un NPC real que
+    // se acaba de mudar y el jugador todavia no le asigno una casa) - mismo criterio que usa el
+    // propio juego para un NPC nuevo sin casa.
+    private string? _npcRosterStatusKey; private object?[] _npcRosterStatusArgs = [];
+    public string? NpcRosterStatus => _npcRosterStatusKey is null ? null : LocalizationService.Instance.Format(_npcRosterStatusKey, _npcRosterStatusArgs);
+    private void SetNpcRosterStatus(string? clave, params object?[] args) { _npcRosterStatusKey = clave; _npcRosterStatusArgs = args; OnPropertyChanged(nameof(NpcRosterStatus)); }
+
+    [RelayCommand]
+    private async Task AddTownNpcAsync(MissingNpcRowViewModel? row)
+    {
+        if (_world is not { } world || _currentWorldPath is not { } ruta || row == null) return;
+        SetNpcRosterStatus("status_saving");
+        try
+        {
+            var nuevo = new WldNpc { Id = row.Id, GivenName = "", TileX = world.Header.SpawnX, TileY = world.Header.SpawnY, Homeless = true, VariationIndex = 0 };
+            var nuevaLista = world.Npcs.Append(nuevo).ToList();
+            var mundoActualizado = await Task.Run(() => WorldFileService.SaveNpcRoster(world, ruta, nuevaLista));
+            _world = mundoActualizado;
+            // Bug real encontrado con el arnes (IDEA1C_SOLO, 20-sep-2026): RebuildNpcRows con
+            // preservarFiltro=true SOLO refresca NpcSearchResults (via ApplyNpcFilter) - Npcs (la
+            // coleccion de los marcadores del MAPA, ver el ItemsControl real de MainWindow.xaml)
+            // se queda con los objetos VIEJOS, asi que anadir/quitar un NPC no lo movia del mapa
+            // hasta recargar el mundo entero. Las dos colecciones necesitan refrescarse aqui.
+            RebuildNpcRows(mundoActualizado);
+            ApplyNpcFilter();
+            RebuildMissingNpcs(mundoActualizado);
+            SetNpcRosterStatus("status_saved_backup", Path.GetFileName(ruta));
+        }
+        catch (Exception ex) { SetNpcRosterStatus("status_save_failed", ex.Message); }
+    }
+
+    [RelayCommand]
+    private async Task RemoveTownNpcAsync(WorldNpcRowViewModel? row)
+    {
+        if (_world is not { } world || _currentWorldPath is not { } ruta || row == null) return;
+        SetNpcRosterStatus("status_saving");
+        try
+        {
+            var nuevaLista = world.Npcs.Where(n => n.Id != row.Id).ToList();
+            var mundoActualizado = await Task.Run(() => WorldFileService.SaveNpcRoster(world, ruta, nuevaLista));
+            _world = mundoActualizado;
+            RebuildNpcRows(mundoActualizado);
+            ApplyNpcFilter();
+            RebuildMissingNpcs(mundoActualizado);
+            SetNpcRosterStatus("status_saved_backup", Path.GetFileName(ruta));
+        }
+        catch (Exception ex) { SetNpcRosterStatus("status_save_failed", ex.Message); }
     }
 
     public ExplorationViewModel(CharacterFileService service)
@@ -2538,11 +2606,7 @@ public partial class ExplorationViewModel : ObservableObject
             HasCurrentChest = false;
             RebuildInventory();
 
-            var foundIds = world.Npcs.Select(n => n.Id).ToHashSet();
-            MissingNpcs.Clear();
-            foreach (int id in VanillaTownNpcRoster.Ids)
-                if (!foundIds.Contains(id))
-                    MissingNpcs.Add(new MissingNpcRowViewModel(id, _npcNames.GetName(id)));
+            RebuildMissingNpcs(world);
 
             WorldTitle = world.Header.Title;
             WorldSizeText = $"{world.Header.TilesWide}×{world.Header.TilesHigh}";
