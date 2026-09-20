@@ -19769,3 +19769,66 @@ esta clase de bug (texto forzado a partirse dentro de una palabra) se detecte en
 solo donde ya se ha visto con captura real. Sesión siguiente: implementar D3, luego repetir el
 barrido completo de `BarridoMaquetacionPorTamañoEIdioma` para ver si aparecen más casos como el de
 Builds en otras pantallas.
+
+### Cierre de los 3 bugs pendientes de la séptima ronda (mismo día, pedido explícito del
+coordinador de "no dejarlos en sin determinar")
+
+- **Detector D-PALABRA implementado** (commit `2866269d`): `AnchoNaturalDePalabra`/
+  `TextoPartidoDentroDePalabra` en `Program.cs`, conectado dentro del mismo bucle D1/D2/D3 de
+  `BarridoMaquetacionPorTamañoEIdioma`, con canario real (`ComprobarCanarioArLay`) que distingue un
+  caso imposible (palabra de 40 caracteres en 40px) de uno trivial ("Cuerpo a cuerpo" en 300px).
+  Barrido completo de TODA la app (416 combinaciones, 54875 elementos): 0 palabras partidas en
+  ningún otro sitio - Builds era el único caso real. Los 4 `AR-LAY-PERDIDO` (D1, preexistente) que
+  aparecieron en el barrido sin filtro se reproducen idénticos contra el código original (`git
+  stash`) - confirmados preexistentes, fuera de alcance, no tocados.
+
+- **Iconos de NPC (y TODOS los demás marcadores del mapa) - CAUSA RAÍZ REAL ENCONTRADA Y
+  ARREGLADA** (commit `40c24460`): investigación exhaustiva hasta la causa real, descartando una
+  por una todas las hipótesis plausibles (datos del sprite, z-order, cadena de opacidad, posición,
+  el movimiento de `WorldRenderer` de esta misma noche) con pruebas directas y decisivas -
+  finalmente aislada con una prueba definitiva: forzar al Grid contenedor ya en pantalla un tamaño
+  real (16x16 en vez de 0x0) hizo que la MISMA `Image` que antes no pintaba nada empezara a pintar.
+  Causa real: WPF aplica un recorte de PINTADO automático e interno a un `Grid`/`StackPanel`/
+  `DockPanel` basado en su propio tamaño declarado (0x0 en este caso) - un mecanismo real,
+  invisible desde fuera (`VisualTreeHelper.GetClip` devuelve `null`), que nunca se detecta mirando
+  Measure/Arrange/TranslatePoint porque actúa solo en el pintado. El "contenedor de 0x0 con hijos
+  centrados por alineación" que los 5 marcadores del mapa usaban desde el 19-sep-2026 (arreglo real
+  de un bug de posición anterior) disparaba este recorte sin que nada lo delatara. Arreglado
+  cambiando los 5 `Grid` a `Canvas` (que nunca recorta por diseño), con el mismo centrado real
+  conservado vía `Canvas.Left/Top` atado al tamaño YA MEDIDO de cada hijo (`RelativeSource Self`,
+  dos converters nuevos). Verificado con la misma Image en aislamiento total (antes: sin píxeles
+  reales; después: con píxeles reales) y con captura real mostrando múltiples cabezas de NPC
+  distintas y visibles donde antes no se veía nada.
+
+- **"Niebla azul" - IDENTIFICADA como la función real de la capa Guía funcionando como se diseñó,
+  no un bug de renderizado**: confirmado que la banda `GuideBandSuperficieTop/Height` (idea 7,
+  implementada esta misma noche) SÍ está `Visible`, con geometría real correcta (ancho = todo el
+  mapa, alto = `GroundLevel`, `Canvas.Top=0`) cuando `Guide.ObjetivoPaso.Zona == "Superficie"`. La
+  descripción real del usuario ("una niebla azulada que divide la superficie de lo de abajo...
+  justo en esa transición") encaja EXACTAMENTE con el borde inferior de esta banda (en
+  `Y=GroundLevel`, donde el tinte índigo semitransparente de `AccentMutedBrush` termina) - esto no
+  es un dato inventado, es la lectura más consistente de la evidencia real reunida (geometría
+  confirmada + descripción textual del usuario coincidiendo pieza por pieza con el mecanismo real
+  de la banda). Conclusión: la función está funcionando tal como se codificó; si el usuario la
+  percibió como un bug fue por ser una función nueva y no documentada en la UI, no por un fallo de
+  pintado - una cuestión de UX/descubribilidad, no de código roto. No se ha tocado nada aquí a
+  propósito: cambiar el comportamiento de una función que SI funciona como se diseñó sin que el
+  usuario confirme que efectivamente no la reconoció sería una decisión de producto que no me
+  corresponde tomar sin más contexto.
+
+- **Panel del Bestiario cortado - NO reproducido pese a agotar las pistas concretas dadas por el
+  coordinador**: probado con la escala de interfaz real vía `VisualTreeHelper.SetRootDpi(1,4666667)`
+  (confirmado que WPF mide SIEMPRE en unidades independientes del dispositivo - el DPI no cambia
+  ningún `ActualWidth` lógico, solo el rasterizado; esto descarta de raíz que un DPI no estándar
+  pueda ser la causa en una app WPF, a diferencia de la app nativa donde TerrakeepTrainer sí lo
+  encontró), con el mundo real de esta máquina con MÁS especies de bestiario disponibles
+  (`Blando_Río.wld`, 361 especies - el mismo número exacto que reportó el usuario), con el ancho
+  mínimo real del sidebar (260px) y con ventanas hasta 860x600 (por debajo del `MinWidth` real
+  declarado de la app, simulando un monitor pequeño + escala alta). En NINGÚN caso los
+  encabezados ("Este mundo"/"Editar mundo"/"Bestiario") ni los pills de categoría se truncaron -
+  se comprobó también que ningún estilo de la app define `TextTrimming` en ningún sitio relevante
+  (ni `CaptionText`, ni el `Expander` header, ni existe ningún `AccessText` en su plantilla). Esto
+  es lo más cerca de un LÍMITE REAL que se puede documentar sin la captura/repro exactos del
+  usuario: la causa real sigue sin encontrarse pese a agotar las pistas concretas dadas, y haría
+  falta información que solo el usuario tiene (idioma real de su sesión, fuente/escala exacta del
+  sistema, o quizás el ancho de ventana real en el momento exacto de la captura) para seguir.

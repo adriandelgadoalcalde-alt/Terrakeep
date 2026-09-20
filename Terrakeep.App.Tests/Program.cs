@@ -2511,6 +2511,11 @@ internal static partial class Program
 
                 Console.WriteLine($"BLANDO_RIO_SOLO: mundo cargado -> Npcs.Count={vm.Exploration.Npcs.Count}, WorldImage nulo={vm.Exploration.WorldImage == null}");
                 Console.WriteLine($"BLANDO_RIO_SOLO-GUIA: Guide.ObjetivoPaso={vm.Guide?.ObjetivoPaso}, Zona={vm.Guide?.ObjetivoPaso?.Zona}, GroundLevel={vm.Exploration.GuideBandSuperficieHeight}");
+                {
+                    var bandaSuperficie = Descendientes<System.Windows.Shapes.Rectangle>(window)
+                        .FirstOrDefault(r => Math.Abs(r.Opacity - 0.35) < 0.01);
+                    Console.WriteLine($"BLANDO_RIO_SOLO-BANDA: banda de Superficie encontrada={bandaSuperficie != null}, Visibility={bandaSuperficie?.Visibility}, ActualWidth={bandaSuperficie?.ActualWidth:0.#}, ActualHeight={bandaSuperficie?.ActualHeight:0.#}, Canvas.Top={(bandaSuperficie != null ? System.Windows.Controls.Canvas.GetTop(bandaSuperficie) : double.NaN)}");
+                }
                 foreach (var npc in vm.Exploration.Npcs.Take(20))
                     Console.WriteLine($"BLANDO_RIO_SOLO: NPC '{npc.Name}' Id={npc.Id} Tile=({npc.TileX},{npc.TileY}) HeadIconPath={npc.HeadIconPath ?? "(null)"} IconPath={npc.IconPath ?? "(null)"}");
 
