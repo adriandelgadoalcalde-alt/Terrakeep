@@ -19679,3 +19679,27 @@ reutilizando el lector real como base (commit `05918323`, de otro agente de la f
 Sin publicar nada (sin version bump, sin changelog.json, sin instalador de distribución, sin
 `git push`, sin `gh release`) - todo el trabajo de esta ronda queda comiteado en local
 (`cc1d4ddc`, `ec916e8b`) para que el usuario lo revise antes de publicar.
+
+### Movido `WorldRenderer` a Core (mismo día, tras confirmar que el riesgo de colisión ya no existe)
+
+El coordinador confirmó que la sesión concurrente que motivó NO tocar `WldReader`/`WorldRenderer`
+ya terminó - esta sesión es la única trabajando en `Terrakeep.Core`/`Terrakeep.App` ahora mismo, y
+el resto de su propio catálogo (visual + funciones) ya está cerrado. Hecho el arreglo concreto ya
+identificado arriba: `Terrakeep.Core/Rendering/WorldPixelRenderer.cs` (nuevo) tiene el mismo
+algoritmo de mezcla de píxeles (ni una línea de lógica cambiada), sin ninguna dependencia de WPF,
+devolviendo `byte[]` BGRA32 + ancho/alto/stride en vez de `WriteableBitmap`.
+`Terrakeep.App/Services/WorldRenderer.cs` se queda como envoltorio fino (llama a
+`WorldPixelRenderer.Render` y envuelve el resultado en un `WriteableBitmap` real) - firma pública
+idéntica, el único llamador (`ExplorationViewModel.LoadFromPathAsync`) no cambió ni una línea.
+
+Verificado: `Terrakeep.Core.Tests` 583/583, `Terrakeep.App.ViewModels.Tests` 491/491,
+`Terrakeep.Core` compila limpio en AMBOS targets (net8.0 y net10.0 - prueba automática real de
+que no quedó ninguna dependencia de WPF, ya que net8.0 no podría referenciar tipos de WPF),
+captura real del mapa (`TERRAKEEP_SCREENSHOTS=1`, mundo real `roca_negra.wld`,
+`03-exploracion.png`) idéntica visualmente a como se veía antes del movimiento. Redesplegado en
+`bin\Debug` y en la copia instalada. Commit `404a1a3e`.
+
+Con esto, `Terrakeep.Core.dll` expone `WldReader` + `MapColorCatalog` + `WorldPixelRenderer` sin
+ninguna dependencia de WPF - ServidorKeep puede construir su función 2 ("mapa de mundo en vivo")
+referenciando esta pieza tal cual, sin trabajo adicional del lado de Terrakeep. Queda pendiente
+solo `DibujanteDelMapa` de Starvekeep, fuera del alcance de esta sesión (proyecto distinto).
