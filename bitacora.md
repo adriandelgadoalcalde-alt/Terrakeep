@@ -19703,3 +19703,69 @@ Con esto, `Terrakeep.Core.dll` expone `WldReader` + `MapColorCatalog` + `WorldPi
 ninguna dependencia de WPF - ServidorKeep puede construir su función 2 ("mapa de mundo en vivo")
 referenciando esta pieza tal cual, sin trabajo adicional del lado de Terrakeep. Queda pendiente
 solo `DibujanteDelMapa` de Starvekeep, fuera del alcance de esta sesión (proyecto distinto).
+
+## Séptima ronda (20-sep-2026, mismo día): 5 bugs visuales reales reportados en vivo (captura del
+usuario + auditoría visual independiente)
+
+Tres cerrados con evidencia real, dos investigados a fondo sin cierre concluyente por tiempo -
+documentados aquí con precisión para que una sesión futura no tenga que repetir la investigación.
+
+**Cerrados (commit `1f8ba6e1`)**:
+1. **Builds, título de clase partido letra a letra** ("Cu erp o a cu erp o", etc.): causa real
+   medida con el arnés (`BUILDS_LABEL_SOLO`) - los botones "Auto-equipar"+"Generar personaje..."
+   vivían en el mismo `DockPanel` horizontal que el título de la columna (220px), pidiendo ~198px
+   de los 220 y dejando ~22px para el título - menos que una letra. Arreglo: título en su propia
+   fila, botones en la fila de abajo. **Por qué AR-LAY no lo detectó**: el detector solo comprueba
+   D1 (recorte sin scroll) y D2 (solape entre celdas disjuntas) - un `TextWrapping="Wrap"` que se
+   parte en 6 líneas dentro de una columna estrecha NO desborda (crece en ALTO) ni se solapa con
+   nada - una tercera categoría de fallo sin vocabulario propio en el detector. **Pendiente real**:
+   generalizar el detector con una comprobación D3 (¿el ancho disponible es menor que el ancho de
+   la palabra más larga del texto, medido con `FormattedText`? - eso garantiza partición dentro de
+   palabra, la señal real de "wrap ilegible") - identificado pero NO implementado todavía por
+   tiempo, ver el punto pendiente más abajo.
+2. **"Sin personaje cargadoSin mundo cargado" pegados sin espacio**: ni el `TextBlock` de la
+   columna de personaje ni el `WrapPanel` vecino de estado de Exploración llevaban margen que los
+   separara. Margen izquierdo real añadido al `WrapPanel`.
+3. **Overlay "Sin mundo cargado" cortado como "Sin m" a 1080x700**: consecuencia directa de T6
+   (Border del mapa con `Grid.ColumnSpan="3"`) - el `StackPanel` centrado calculaba su centro sobre
+   el ancho TOTAL (mapa+splitter+sidebar) en vez del ancho realmente visible sin el panel lateral
+   flotante encima. Nuevo converter `SidebarWidthToRightMarginConverter` (misma fuente de verdad,
+   `Settings.ExplorationSidebarWidth`, que ya mueve la columna real).
+
+**Investigados a fondo, SIN cierre concluyente por tiempo (documentado con precisión, no
+descartado)**:
+4. **Iconos de NPC desaparecidos del mapa** (mundo real "Blando Río"): confirmado REAL con
+   evidencia exhaustiva - el `Image` del marcador está en el árbol visual (`Visible`, con un
+   `BitmapSource` decodificado con contenido real y no-transparente, confirmado con muestreo
+   directo de píxeles del bitmap decodificado), pero NO pinta nada en pantalla ni agrandado a
+   propósito a 200x200 (prueba definitiva: el rectángulo forzado a ese tamaño sigue vacío). Se
+   descartó como causa el movimiento de `WorldRenderer`→`WorldPixelRenderer` de esta misma noche
+   (algoritmo de tiles sin cambios, código de marcadores de NPC en un pipeline WPF totalmente
+   distinto sin tocar) y la categoría de búsqueda activa (mismo resultado con `SelectedCategory`
+   en "Todo"). Candatos investigados y descartados: solape con el marco hueco de resultado de
+   búsqueda (ZIndex 3, pero sin `Fill`, no debería ocultar nada). Mecanismo exacto de por qué no
+   pinta SIN determinar. Necesita retomarse con más tiempo, probablemente inspeccionando la cadena
+   de opacidad efectiva o si hay otro elemento opaco de tamaño real cubriéndolo que no se ha
+   localizado aún.
+5. **"Niebla azul" en la línea de superficie**: candidato identificado con criterio real - las
+   bandas de profundidad de la Guía (idea 7 de esta misma noche, `GuideBandSuperficieTop/Height`)
+   cubren TODO el rango `Y:0..GroundLevel` (no una franja fina) con `AccentMutedBrush` a
+   `Opacity="0.35"` cuando `Guide.ObjetivoPaso.Zona == "Superficie"` - mecanismo que encaja con la
+   descripción del bug ("una capa mal pintada... en esa transición"). Confirmado que esa condición
+   SÍ estaba activa en la sesión de prueba (`Zona=Superficie`), pero la captura real tomada NO
+   mostró ningún tinte azul visible sobre el cielo/superficie - sin confirmación visual
+   concluyente. Puede ser: (a) el candidato es incorrecto y el bug es otra cosa, (b) el tinte es
+   real pero demasiado sutil para verse en una captura a 22% de zoom, o (c) alguna otra condición
+   del mundo/sesión real del usuario que esta prueba no reprodujo. Sin cerrar.
+6. **Panel del Bestiario cortado con "..."**: NO reproducido pese a probar el ancho mínimo real
+   del sidebar (260px, `Settings.ExplorationSidebarWidth`) y ventanas de 1600x900 y 1080x700 - en
+   todos los casos "Este mundo"/"Editar mundo"/"Bestiario" se ven completos. Puede requerir un
+   idioma distinto (inglés, textos más largos), un tamaño de ventana más extremo que el probado, o
+   un estado de la app (fuente/escala del sistema) no reproducido aquí. Sin cerrar.
+
+**Pendiente explícito de esta ronda, no descartado, solo diferido por tiempo**: generalizar
+AR-LAY con la comprobación D3 (palabra más larga vs ancho disponible, ver punto 1 arriba) para que
+esta clase de bug (texto forzado a partirse dentro de una palabra) se detecte en TODA la app, no
+solo donde ya se ha visto con captura real. Sesión siguiente: implementar D3, luego repetir el
+barrido completo de `BarridoMaquetacionPorTamañoEIdioma` para ver si aparecen más casos como el de
+Builds en otras pantallas.
