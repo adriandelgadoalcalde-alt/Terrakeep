@@ -5112,7 +5112,26 @@
                                           MinWidth="0" MaxWidth="520" />
                     </Grid.ColumnDefinitions>
 
-                    <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,10,0">
+                    <!-- T6 (catalogo de rediseño visual, "Exploracion a pantalla completa" - bitacora.md
+                         20-sep-2026): reabierto por instruccion explicita del coordinador/usuario tras
+                         documentarlo como LIMITE-por-riesgo-historico (no tecnico real) - el propio
+                         zoom/pan/hit-test del mapa (AR-MRK) y esta columna lateral (calibrada en MinHeight
+                         590->652->800, AR-11a/AR-11f/AR-15/AR-EX1/FALLO-3) tienen su propio historial real,
+                         pero "flotar el panel lateral sobre el mapa" NO exige tocar ninguno de los dos
+                         mecanismos: es un cambio ADITIVO (una capa visual mas encima), no una reescritura
+                         del zoom/pan ni del calculo de alto de la columna.
+                         Estrategia de riesgo minimo, verificada antes de escribir el resto del comentario:
+                         un Grid NO recorta a sus hijos por defecto (mismo hecho real que ya documentan
+                         SlotRowHost/ClipToBounds en otras zonas de este fichero) y el orden de declaracion
+                         en XAML decide el z-order (lo declarado DESPUES se pinta ENCIMA) - dandole a este
+                         Border del mapa un ColumnSpan que cubra las 3 columnas, se PINTA de borde a borde
+                         (el mapa real usa TODO el ancho, "pantalla completa" de verdad), mientras que el
+                         GridSplitter y el panel lateral (declarados mas abajo en este mismo Grid, SIN
+                         tocarlos) siguen ocupando su columna real de siempre y por tanto se ven ENCIMA,
+                         flotando - ni su ancho (Settings.ExplorationSidebarWidth), ni su plegado/GridSplitter,
+                         ni el alto de su ScrollViewer interno (calibrado contra el viewport real de esa
+                         MISMA columna, que no cambia) se tocan. -->
+                    <Border Grid.Column="0" Grid.ColumnSpan="3" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8">
                         <Grid>
                         <DockPanel>
                             <!-- P-1 (auditoria de Opus vs TEdit, cierra E-01 estetico): antes esta
@@ -5930,7 +5949,17 @@
                          arnes) al viewport cuando esta visible. Mismo principio ya aceptado en este
                          fichero para MinHeight="800": un poco menos de sitio para el contenido a
                          cambio de honestidad visual, nunca ocultar nada. -->
-                    <Grid Grid.Column="2">
+                    <!-- T6: tarjeta flotante real - Background solido (nunca transparente, para que se
+                         lea sobre el mapa que ahora sigue pintandose por debajo, ver el comentario real
+                         del Border del mapa mas arriba) + sombra + separacion real de los bordes de la
+                         ventana (Margin), mismo lenguaje visual que cualquier otra tarjeta de esta app
+                         (SidePanelCard/BgSecondaryBrush). El Grid interior (alto/ancho/plegado/GridSplitter/
+                         scroll) sigue exactamente igual, solo gano un envoltorio visual. -->
+                    <Border x:Name="ExplorationSidebarFloatingCard" Grid.Column="2" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Margin="0,0,4,4" Padding="10">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="3" Opacity="0.45" Direction="270" />
+                        </Border.Effect>
+                    <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
@@ -7136,6 +7165,7 @@
                         </StackPanel>
                     </Border>
                     </Grid>
+                    </Border>
                 </Grid>
             </DockPanel>
         </TabItem>

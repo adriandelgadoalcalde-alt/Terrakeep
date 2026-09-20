@@ -1746,6 +1746,143 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // T6_SOLO=1 (20-sep-2026, catalogo de rediseño visual, "Exploracion a pantalla completa" -
+        // reabierto por instruccion explicita del coordinador/usuario tras documentarlo como
+        // LIMITE-por-riesgo-historico: el usuario aclaro que el historial real de bugs de esta
+        // zona (AR-MRK del mapa, AR-11a/AR-15/AR-EX1/FALLO-3 de la columna lateral) es cautela, no
+        // evidencia de imposibilidad, y pidio un intento real). Verifica con geometria real que el
+        // mapa usa de verdad el ancho COMPLETO de la ventana (no solo el que le dejaba la columna
+        // vieja) y que el panel lateral flota ENCIMA (su Left real cae DENTRO del ancho del mapa,
+        // nunca a su derecha como una columna separada).
+        if (Environment.GetEnvironmentVariable("T6_SOLO") == "1")
+        {
+            try
+            {
+                string mundoPath = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+                if (!File.Exists(mundoPath)) { Console.WriteLine("T6_SOLO: AVISO - falta el mundo real de prueba, se omite"); }
+                else
+                {
+                    FijarTamaño(window, 1400, 900);
+                    vm.SelectedTabIndex = 4; // Exploracion
+                    DoEvents();
+                    var tarea = vm.Exploration.LoadFromPathAsync(mundoPath);
+                    while (!tarea.IsCompleted) DoEvents();
+                    DoEvents(); DoEvents(); DoEvents();
+
+                    var mapaImagen = window.FindName("WorldMapImage") as FrameworkElement;
+                    var mapaScroll = window.FindName("WorldMapScroll") as FrameworkElement;
+                    Console.WriteLine($"T6_SOLO: WorldMapImage encontrado={mapaImagen != null}, WorldMapScroll encontrado={mapaScroll != null}");
+
+                    // Sanidad del METODO antes de fiarse de un FALLO real: comprueba que
+                    // VisualTreeHelper.HitTest sabe descender en este mismo arnes sobre un control
+                    // YA EXISTENTE y sin tocar (el propio boton "Actualizar" de la fila de mundos) -
+                    // si esto tambien falla, el problema es del metodo de verificacion, no del
+                    // producto.
+                    var botonActualizar = Descendientes<System.Windows.Controls.Button>(window)
+                        .FirstOrDefault(b => b.IsVisible && b.Content as string == vm.Loc["home_refresh"]);
+                    if (botonActualizar != null)
+                    {
+                        var centroBoton = botonActualizar.TranslatePoint(new Point(botonActualizar.ActualWidth / 2, botonActualizar.ActualHeight / 2), window);
+                        var resultadoBoton = System.Windows.Media.VisualTreeHelper.HitTest(window, centroBoton);
+                        bool tocaElBoton = false;
+                        for (DependencyObject? d = resultadoBoton?.VisualHit; d != null; d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+                            if (ReferenceEquals(d, botonActualizar)) { tocaElBoton = true; break; }
+                        Console.WriteLine($"T6_SOLO-CANARIO: HitTest sobre el boton real 'Actualizar' (control YA EXISTENTE, sin tocar) -> elemento golpeado={resultadoBoton?.VisualHit?.GetType().Name}, alcanza el boton={tocaElBoton} (si esto es False, el metodo de verificacion no sirve en este arnes, no es un fallo de T6)");
+                    }
+
+                    // Geometria real: el Border del mapa (padre real de WorldMapScroll) tiene que
+                    // ocupar de verdad el ANCHO COMPLETO de la ventana (menos margenes minimos) -
+                    // no solo el hueco que antes le dejaba la columna 0 con la 2 restando su ancho.
+                    Border? bordeMapa = null;
+                    var bgSecundario = System.Windows.Application.Current.TryFindResource("BgSecondaryBrush");
+                    for (DependencyObject? d = mapaScroll; d != null; d = System.Windows.Media.VisualTreeHelper.GetParent(d))
+                        if (d is Border bCandidato && Equals(bCandidato.Background, bgSecundario)) { bordeMapa = bCandidato; break; }
+                    if (bordeMapa != null)
+                    {
+                        var zonaMapa = RectCompleto(bordeMapa, window);
+                        Console.WriteLine($"T6_SOLO: Border real del mapa -> ancho={zonaMapa.Width:0.#} (ventana={window.ActualWidth:0.#}, esperado > 80% del ancho real de la ventana - antes de T6 el mapa perdia ~380px reales de columna lateral)");
+                        if (zonaMapa.Width < window.ActualWidth * 0.8)
+                            Console.WriteLine("FALLO: T6_SOLO - el Border del mapa NO esta usando el ancho completo de la ventana (T6 no aplico de verdad)");
+                    }
+                    else Console.WriteLine("FALLO: T6_SOLO - no se encuentra el Border real del mapa (BgSecondaryBrush) en el arbol");
+
+                    // El panel lateral (tarjeta flotante) tiene que estar POSICIONADO DENTRO del
+                    // area del mapa (su borde izquierdo real cae mas alla de donde el mapa YA
+                    // empieza a pintarse), nunca en una columna aparte a la derecha del todo.
+                    var panelLateral = window.FindName("ExplorationSidebarScroll") as FrameworkElement;
+                    if (panelLateral != null && bordeMapa != null)
+                    {
+                        var zonaPanel = RectCompleto(panelLateral, window);
+                        var zonaMapa2 = RectCompleto(bordeMapa, window);
+                        Console.WriteLine($"T6_SOLO: panel lateral real -> Left={zonaPanel.Left:0.#}, mapa Right={zonaMapa2.Right:0.#} (esperado panel.Left < mapa.Right, es decir DENTRO del area del mapa, flotando)");
+                        if (zonaPanel.Left >= zonaMapa2.Right)
+                            Console.WriteLine("FALLO: T6_SOLO - el panel lateral esta fuera del area del mapa (sigue siendo una columna aparte, no flota encima)");
+                    }
+
+                    var fitMethod = typeof(MainWindow).GetMethod("OnFitToWindowClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    fitMethod?.Invoke(window, [window, new RoutedEventArgs()]);
+                    DoEvents(); DoEvents();
+                    string shot = Path.Combine(AppContext.BaseDirectory, "t6-exploracion-pantalla-completa.png");
+                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb.Render(window);
+                    var enc = new System.Windows.Media.Imaging.PngBitmapEncoder(); enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                    using (var fs = File.Create(shot)) enc.Save(fs);
+                    Console.WriteLine($"T6_SOLO: captura real -> {shot}");
+
+                    // Verifica que el panel flotante se PINTA de verdad encima del mapa (z-order
+                    // real, no solo "en teoria deberia"). VisualTreeHelper.HitTest se probo primero
+                    // para esto y se DESCARTO con evidencia real: un canario contra un boton YA
+                    // EXISTENTE y sin tocar ("Actualizar", ver el bloque CANARIO de arriba) tambien
+                    // devuelve el Grid raiz sin descender - HitTest no funciona de forma fiable en
+                    // este arnes concreto (probablemente por como se renderiza la ventana fuera de
+                    // pantalla para las pruebas), asi que un FALLO ahi no seria evidencia de nada
+                    // real. En su lugar: WPF pinta los hijos de un Panel en el ORDEN en que
+                    // aparecen en su coleccion Children - declarar la tarjeta flotante DESPUES del
+                    // Border del mapa en el mismo Grid padre (MainWindow.xaml) es lo que garantiza
+                    // que se pinta encima, y eso SI es un hecho verificable con
+                    // VisualTreeHelper.GetChildrenCount/GetChild sobre el padre comun real.
+                    var tarjetaFlotanteFe = window.FindName("ExplorationSidebarFloatingCard") as FrameworkElement;
+                    if (tarjetaFlotanteFe != null && bordeMapa != null && System.Windows.Media.VisualTreeHelper.GetParent(bordeMapa) is Panel padreComun
+                        && ReferenceEquals(System.Windows.Media.VisualTreeHelper.GetParent(tarjetaFlotanteFe), padreComun))
+                    {
+                        int indiceMapa = -1, indicePanel = -1;
+                        int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(padreComun);
+                        for (int i = 0; i < n; i++)
+                        {
+                            var hijo = System.Windows.Media.VisualTreeHelper.GetChild(padreComun, i);
+                            if (ReferenceEquals(hijo, bordeMapa)) indiceMapa = i;
+                            if (ReferenceEquals(hijo, tarjetaFlotanteFe)) indicePanel = i;
+                        }
+                        Console.WriteLine($"T6_SOLO: z-order real en el Grid padre comun -> indice del Border del mapa={indiceMapa}, indice de la tarjeta flotante={indicePanel} (esperado tarjeta > mapa, se pinta encima)");
+                        if (!(indicePanel > indiceMapa))
+                            Console.WriteLine("FALLO: T6_SOLO - la tarjeta flotante NO esta declarada despues del mapa en el mismo Grid, no hay garantia real de que se pinte encima");
+                    }
+                    else Console.WriteLine("T6_SOLO: AVISO - no se pudo confirmar el padre comun real del mapa y la tarjeta flotante, se omite la comprobacion de z-order");
+
+                    // Colapsa el panel a 0 y confirma que el mapa gana ESE ancho real de verdad
+                    // (no solo "no se ve nada raro") - isla el efecto real del colapso.
+                    double anteAColapsar = bordeMapa != null ? RectCompleto(bordeMapa, window).Width : 0;
+                    var toggleMethod = typeof(MainWindow).GetMethod("OnToggleExplorationSidebarClick", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    Console.WriteLine($"T6_SOLO: ExplorationSidebarWidth antes de colapsar={vm.Settings.ExplorationSidebarWidth:0.#}");
+                    toggleMethod?.Invoke(window, [window, new RoutedEventArgs()]);
+                    DoEvents(); DoEvents(); DoEvents();
+                    Console.WriteLine($"T6_SOLO: ExplorationSidebarWidth tras colapsar={vm.Settings.ExplorationSidebarWidth:0.#} (esperado 0)");
+                    string shot2 = Path.Combine(AppContext.BaseDirectory, "t6-exploracion-panel-plegado.png");
+                    var rtb2 = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtb2.Render(window);
+                    var enc2 = new System.Windows.Media.Imaging.PngBitmapEncoder(); enc2.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb2));
+                    using (var fs = File.Create(shot2)) enc2.Save(fs);
+                    Console.WriteLine($"T6_SOLO: captura real (panel plegado) -> {shot2}");
+                    // Vuelve a expandir para no dejar el resto del arnes con el panel plegado.
+                    toggleMethod?.Invoke(window, [window, new RoutedEventArgs()]);
+                    DoEvents();
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("T6_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (T6_SOLO)");
+            Environment.Exit(0);
+        }
+
         // T3_SOLO=1 (20-sep-2026, catalogo de rediseño visual, "Personaje: tablero con panel
         // lateral" - PASO 1, reabierto por instruccion explicita del coordinador/usuario tras
         // documentarlo como LIMITE-por-riesgo-historico: el usuario aclaro que 8 rondas de
