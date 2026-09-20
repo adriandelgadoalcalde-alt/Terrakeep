@@ -4089,6 +4089,13 @@
                                 <CheckBox IsChecked="{Binding Appearance.ShowEquipment}" Margin="0,0,0,8">
                                     <TextBlock Text="{Binding Loc[appearance_show_equipment], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </CheckBox>
+                                <!-- Catalogo de ideas Keep, idea 10 (20-sep-2026, "vista previa
+                                     exportable" - version real y honesta de la idea, ver el
+                                     LIMITE documentado en AppearanceViewModel.ExportPreviewToPng:
+                                     sin animacion/giro, exporta el frame REAL que ya se ve aqui
+                                     mismo, mismo patron ya real de "Exportar a PNG" del mapa). -->
+                                <Button Content="{Binding Loc[action_export_preview], Mode=OneWay}" Click="OnExportPreviewClick"
+                                        Padding="8,4" Margin="0,0,0,8" HorizontalAlignment="Left" />
                                 <TextBlock Text="{Binding Loc[tt_appearance_preview], Mode=OneWay}"
                                            Style="{StaticResource CaptionText}" TextWrapping="Wrap" Width="240" />
                             </StackPanel>

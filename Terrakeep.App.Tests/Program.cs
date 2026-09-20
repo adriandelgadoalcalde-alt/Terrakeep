@@ -1419,6 +1419,41 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // IDEA10_SOLO=1 (20-sep-2026, catalogo de ideas Keep, idea 10 "vista previa exportable" -
+        // version real reducida, ver el LIMITE documentado en AppearanceViewModel.
+        // ExportPreviewToPng): comprueba que el boton real exporta de verdad un PNG con el frame
+        // que se ve en pantalla - no solo que el metodo "no lanza excepcion".
+        if (Environment.GetEnvironmentVariable("IDEA10_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 3; // Personaje > Apariencia
+                DoEvents(); DoEvents();
+                string ruta = Path.Combine(AppContext.BaseDirectory, "idea10-preview-export.png");
+                if (File.Exists(ruta)) File.Delete(ruta);
+                Console.WriteLine($"IDEA10_SOLO: PreviewImage real antes de exportar -> {(vm.Appearance.PreviewImage != null ? $"{vm.Appearance.PreviewImage.PixelWidth}x{vm.Appearance.PreviewImage.PixelHeight}" : "NULL")}");
+                vm.Appearance.ExportPreviewToPng(ruta);
+                bool existe = File.Exists(ruta);
+                long tamaño = existe ? new FileInfo(ruta).Length : 0;
+                Console.WriteLine($"IDEA10_SOLO: fichero real creado={existe} en '{ruta}', tamaño={tamaño} bytes (esperado > 200 bytes, un PNG real de 40x56 no es cero)");
+                if (!existe) Console.WriteLine("FALLO: IDEA10_SOLO - ExportPreviewToPng no crea el fichero real");
+                else if (tamaño < 200) Console.WriteLine($"FALLO: IDEA10_SOLO - el PNG real pesa solo {tamaño} bytes, sospechoso de estar vacio");
+                else
+                {
+                    // Decodifica el PNG real recien escrito y compara sus dimensiones contra el
+                    // PreviewImage real - prueba de que el contenido es el que se ve, no un
+                    // fichero cualquiera.
+                    var decoded = new System.Windows.Media.Imaging.PngBitmapDecoder(new Uri(ruta), System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad).Frames[0];
+                    Console.WriteLine($"IDEA10_SOLO: PNG real decodificado -> {decoded.PixelWidth}x{decoded.PixelHeight} (esperado igual al PreviewImage real: {vm.Appearance.PreviewImage?.PixelWidth}x{vm.Appearance.PreviewImage?.PixelHeight})");
+                    if (vm.Appearance.PreviewImage != null && (decoded.PixelWidth != vm.Appearance.PreviewImage.PixelWidth || decoded.PixelHeight != vm.Appearance.PreviewImage.PixelHeight))
+                        Console.WriteLine("FALLO: IDEA10_SOLO - las dimensiones del PNG exportado no coinciden con la vista previa real");
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("IDEA10_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (IDEA10_SOLO)");
+            Environment.Exit(0);
+        }
+
         // T2_SOLO=1 (20-sep-2026, catalogo de rediseño visual T2 "cabecera de una fila"):
         // verifica en frio, con la ventana real, que la fila de botones de la cabecera global YA
         // NO envuelve a una segunda linea al ancho de referencia real del catalogo (1180x860,

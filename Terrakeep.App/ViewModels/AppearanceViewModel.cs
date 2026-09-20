@@ -565,4 +565,24 @@ public partial class AppearanceViewModel : ObservableObject
             ?? (IsMale ? Terrakeep.Core.Model.PlayerVariantSets.MaleStarter : Terrakeep.Core.Model.PlayerVariantSets.FemaleStarter);
         PreviewImage = PlayerPreviewRenderer.Render(HairStyle, skinVariant, colors, armor);
     }
+
+    // Catalogo de ideas Keep, idea 10 (20-sep-2026, "vista previa animada del personaje,
+    // exportable"): alcance real reducido, documentado con honestidad - PlayerPreviewRenderer.
+    // Render SOLO pinta la pose de reposo (un unico frame fijo de la hoja de sprites compuesta,
+    // ver el comentario real de la clase: TorsoMale/TorsoFemale/etc son UNA sola celda cada uno,
+    // no un rango de celdas de ciclo de andar) - ni el ciclo de andar ni "girar" (vista de
+    // espaldas) existen hoy en ningun sitio del proyecto; añadirlos exigiria extraer y mapear
+    // fotogramas reales nuevos de las hojas de sprites de Terraria (el mismo tipo de trabajo de
+    // extraccion de datos que ya llevo sacar los 27 iconos de NPC de pueblo), LIMITE real
+    // documentado en bitacora.md para una ronda dedicada aparte. Lo que SI es honesto hoy, sin
+    // inventar ningun dato: exportar el frame REAL que ya se ve en pantalla, mismo patron ya
+    // real de ExplorationViewModel.ExportMapToPng (WriteableBitmap -> PngBitmapEncoder).
+    public void ExportPreviewToPng(string path)
+    {
+        if (PreviewImage == null) return;
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(PreviewImage));
+        using var stream = System.IO.File.Create(path);
+        encoder.Save(stream);
+    }
 }

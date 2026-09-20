@@ -546,6 +546,20 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) _viewModel.Exploration.ExportMapToPng(dialog.FileName);
     }
 
+    // Catalogo de ideas Keep, idea 10 (20-sep-2026): mismo patron real que OnExportMapClick de
+    // arriba - dialogo real en la View (MainViewModel headless), export en si en el ViewModel.
+    private void OnExportPreviewClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.Appearance.PreviewImage == null) return;
+        var dialog = new SaveFileDialog
+        {
+            Title = Loc["dlg_export_preview"],
+            Filter = Loc["dlg_filter_png"],
+            FileName = $"{_viewModel.CharacterName}-vista-previa.png",
+        };
+        if (dialog.ShowDialog(this) == true) _viewModel.Appearance.ExportPreviewToPng(dialog.FileName);
+    }
+
     // H4-08 (cuarta auditoria de Opus, Fable): gemelo real de OnLoadWorldClick - una tarjeta del
     // lanzador de mundos ya trae su ruta real (DataContext), no hace falta el dialogo del
     // Explorador de archivos. Mismo ajuste de zoom real al terminar.
