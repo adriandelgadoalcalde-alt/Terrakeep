@@ -283,6 +283,32 @@ public sealed partial class ResearchViewModel : CatalogBrowserViewModel<Research
         ApplyFilter();
     }
 
+    // Catalogo de ideas Keep, idea 6 ("Laboratorio de personajes" - "investigacion coherente",
+    // reconsiderada a peticion explicita del coordinador el 20-sep-2026): al generar un
+    // personaje "listo para X" desde un build real, tiene sentido que YA tenga investigados los
+    // objetos que se le acaban de equipar (Modo Viaje deja fabricar libremente lo investigado -
+    // un personaje recien salido de la plantilla con el equipo puesto pero SIN investigarlo
+    // seria una incoherencia real). Reutiliza la MISMA resolucion de Pid que ya usa
+    // ResolveResearchedCounts (vanilla = nombre interno sin "/", Calamity = "Mod/Internal") -
+    // los "pid" de builds.json/builds_calamity.json usan exactamente ese mismo formato real
+    // (confirmado: builds_calamity.json documenta "los pids de Calamity llevan el prefijo
+    // 'CalamityMod/'"), asi que no hace falta ninguna traduccion aparte. Un Pid que no resuelve
+    // a ningun catalogo real (objeto retirado, mod ausente) se ignora en silencio - mismo
+    // criterio de "lo que no se encuentra no se inventa" que el resto del proyecto.
+    public void MarkResearchedByPid(IEnumerable<string> pids)
+    {
+        bool huboAlguno = false;
+        foreach (string pid in pids)
+        {
+            int? id = pid.Contains('/') ? ResolveCalamityId(pid) : _service.VanillaCatalog.GetIdByKey(pid);
+            if (id is not int idReal) continue;
+            int full = FullResearchCount(idReal);
+            if (_researchedCounts.GetValueOrDefault(idReal) < full) _researchedCounts[idReal] = full;
+            huboAlguno = true;
+        }
+        if (huboAlguno) { ApplyFilter(); ResearchChanged?.Invoke(); }
+    }
+
     private void RefreshSummaryAndProgress()
     {
         ResultsSummary = LocalizationService.Instance.Format("research_summary_all", _researchedCounts.Count, _totalKnownObjects);

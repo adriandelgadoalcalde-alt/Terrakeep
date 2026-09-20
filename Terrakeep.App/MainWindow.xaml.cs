@@ -511,7 +511,8 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) await _viewModel.WorldCompare.LoadBAsync(dialog.FileName);
     }
 
-    // Idea 6 (catalogo de funciones, "Laboratorio de personajes" - bitacora.md 20-sep-2026):
+    // Idea 6 (catalogo de funciones, "Laboratorio de personajes" - bitacora.md 20-sep-2026,
+    // segunda pasada 20-sep-2026 reconsiderada a peticion explicita del coordinador):
     // investigado a fondo - no existe NINGUNA fabrica real de personaje "en blanco" en todo el
     // proyecto (ni Core ni App): builds.json describe equipo, nunca un PlrCharacter valido desde
     // cero (GUID, stats de partida, inventario inicial real...) - inventar ese formato entero es
@@ -522,8 +523,30 @@ public partial class MainWindow : Window
     // reales) - duplicarlo a un fichero nuevo (mismo mecanismo real que HomeViewModel.Duplicate),
     // vaciar equipo+inventario y aplicar AutoEquipService.Apply (la MISMA regla de negocio que ya
     // usa el boton "Auto-equipar" de Builds, reutilizada tal cual via AutoEquipCommand) entrega
-    // el resultado real que pide la idea: "un personaje listo para la etapa/clase elegida", sin
-    // fingir datos de partida inventados a mano.
+    // "equipo recomendado... con su mejor prefijo".
+    //
+    // "investigacion coherente" (segunda pasada): SI hay dato real y sin ambiguedad - los mismos
+    // objetos que se acaban de equipar, marcados como investigados (ResearchViewModel.
+    // MarkResearchedByPid, reutiliza los "pid" YA reales de BuildItemRef, mismo formato exacto
+    // que PlrResearchEntry.Pid). Un personaje "listo para X" con el equipo puesto pero sin
+    // investigarlo seria una incoherencia real en Modo Viaje.
+    //
+    // "vida/mana minimos del tramo": investigado a fondo, NO se implementa - motivo real
+    // distinto para cada uno, ninguno de los dos es pereza:
+    //   - Mana: TipoRequisitoGuia (Terrakeep.Core/Guia/GuideModel.cs) no tiene NINGUN tipo de
+    //     requisito de mana, y guia_progresion.json (46 tramos reales) no menciona mana en
+    //     ningun sitio - Terraria real no gatea la progresion por mana (mecanica opcional, solo
+    //     relevante para magos), asi que no hay ningun dato que "vida/mana" pudiera estar
+    //     escondiendo - ausencia real, no un hueco de extraccion.
+    //   - Vida: SI existe un dato real (TipoRequisitoGuia.CristalesVida/VidaMaxima), pero
+    //     SOLO en 6 de los 46 tramos reales (grep exacto a guia_progresion.json: "cristales_vida"
+    //     x5, "vida_maxima" x1 - Terraria real no gatea el 90% de los jefes por vida explicita).
+    //     Ademas, builds.json agrupa en 3 ETAPAS AMPLIAS ("prehardmode"/"hardmode"/"postml") sin
+    //     ningun campo que las relacione con un tramo CONCRETO de los 46 (un boss por tramo) -
+    //     inventar esa correspondencia (que tramo de vida usar para "listo para hardmode" a
+    //     secas, cuando hardmode tiene mas de 20 tramos reales) seria adivinar, no leer un dato
+    //     real. LIMITE real, distinto del de mana: aqui el dato existe pero es demasiado disperso/
+    //     de grano mas fino que builds.json para mapearlo sin inventar la correspondencia.
     private void OnGenerateCharacterForBuildClick(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { DataContext: BuildClassGearViewModel classGear }) return;
@@ -567,6 +590,14 @@ public partial class MainWindow : Window
                 slot.UpdateFrom(GameItem.Empty);
 
         _viewModel.AutoEquipCommand.Execute(classGear.Source);
+
+        // "investigacion coherente" (idea 6, segunda pasada) - ver el comentario real de
+        // cabecera de este metodo. Los mismos Pid reales que builds.json/builds_calamity.json ya
+        // traen para el equipo recien puesto, marcados como investigados.
+        var source = classGear.Source;
+        var pidsDelEquipo = source.Armor.Concat(source.Weapons).Concat(source.Accessories)
+            .Select(item => item.Pid).Where(pid => !string.IsNullOrEmpty(pid))!;
+        _viewModel.Research.MarkResearchedByPid(pidsDelEquipo!);
     }
 
     // Idea 5 (catalogo de funciones, "¿Donde esta? global, multi-mundo y multi-personaje" -
