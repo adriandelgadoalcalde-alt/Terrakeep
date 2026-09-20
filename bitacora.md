@@ -19938,3 +19938,66 @@ src/input-recorder/grabarSesionUia.js --json` (comprueba la guardia sola, lanza 
 normaliza y valida contra el contrato de la Sección 46 - código de salida 0 si todo fue bien).
 Commits: ver bitácora de KeepQA (`C:\Users\adrian\Downloads\Keep\KeepQA\bitacora.md`, misma
 fecha) para el hash real de ambos repos.
+
+## 21-sep-2026 - Niebla azul cerrada de verdad, 2 bugs reales de Builds, y T1/T4/Bestiario
+reabiertos con evidencia (commit `3c3c4022`)
+
+Pedido explícito del usuario/coordinador: ningún "límite real" se acepta sin un último
+intento a fondo de investigarlo y resolverlo - reabiertos T1, T4 y el Bestiario tras
+releer literalmente el código real (no de memoria).
+
+- **"Niebla azul"**: identificada la ronda anterior como la función REAL de las bandas de
+  profundidad de la Guía (no un bug), pero sin explicación clara ni forma de comprobarla.
+  Ahora tiene chip real por zona ("Guía: Superficie" + icono, esquina del mapa) y color
+  distinto por banda (paleta ya existente: MasterGold/EquippedGreen/Debuff/Calamity a
+  Opacity=0.30, sin coincidir con el color de los puntos de aparición). 2 bugs reales
+  encontrados al implementarlo: el chip quedaba tapado por el panel de búsqueda flotante
+  (posición), y el texto de zona nunca se pintaba por precedencia de WPF (`Visibility`
+  como atributo LOCAL siempre gana a un `Setter` de `Style` dentro de un `DataTrigger`).
+  Verificado con arnés propio (`GUIACHIP_SOLO`): chip visible+color correcto, color/
+  opacidad real de la banda confirmado con un render AISLADO (VisualBrush en su propio
+  `RenderTargetBitmap`) tras comprobar que la captura de ventana completa da un falso
+  negativo con este elemento de 21000px reales de ancho a zoom 250%.
+- **Builds, 2 bugs visuales reales con captura**: con 1 sola clase filtrada la columna
+  quedaba pegada a la izquierda (causa real: `WrapPanel.ItemWidth` fijo reserva hueco
+  también para los items `Collapsed` - arreglo real: `BuildStageViewModel.VisibleClasses`,
+  la vista se une a una colección YA FILTRADA, no a `Classes`+`Visibility` por item); con
+  4-5 clases los títulos de columna no estaban centrados (`TextAlignment="Center"`).
+- **T1 (rail agrupada e iconizada)** cerrado del todo: la ronda anterior solo pintó los 2
+  filetes visuales sin reordenar las 8 pestañas de verdad (límite: "toca `AppTab` y
+  `session.json`"). Investigado a fondo: `SelectedTabIndex` se guarda en `session.json`
+  pero NUNCA se vuelve a leer para navegar (la app siempre arranca en Inicio desde el
+  4-sep) - sin riesgo real. Reordenadas de verdad: Partida (Inicio/Personaje/Builds/Guía),
+  Mundo (Exploración/Servidor), pie (Novedades/AcercaDe). ~20 referencias numéricas del
+  arnés remapeadas una a una (`T1RAIL_SOLO` confirma orden+filetes reales).
+- **T4 (3ª KPI "etapa de la Guía")** cerrado: `GuideEvaluationEngine`/`GuideEvaluator` son
+  puramente funcionales (un `GuideContext`, sin depender del personaje activo) - solo
+  faltaba construirlo para un `.plr` del disco. `HomeViewModel.ComputeGuideStage` con un
+  `CharacterFileService` PROPIO (mismo motivo que `CompareViewModel`: no corromper
+  `EsPersonajeTModLoader` del servicio compartido). Verificado cruzando el resultado
+  contra `GuideViewModel.ObjetivoTramo` del MISMO personaje cargado como activo - coinciden
+  exactamente (`KPI3_SOLO`).
+- **Bestiario "cortado"**: la ronda anterior no lo reprodujo probando los ENCABEZADOS de la
+  columna (Este mundo/Editar mundo/Bestiario). Relectura literal del XAML encuentra lo que
+  faltaba comprobar: `BestiarySummaryText` (frase larga real) no tenía `TextWrapping` y se
+  recortaba en SILENCIO contra el sidebar mínimo (260px). `TextWrapping="Wrap"` añadido,
+  verificado con el mundo real de más especies de esta máquina (Blando_Río, 361 especies) -
+  el resumen ahora envuelve a 3 líneas (`BESTIARIO_SOLO`). Hallazgo aparte, NO arreglado
+  (fuera de alcance, no es "cortado"): el NPC de evento `DD2GoblinT1` no tiene nombre en el
+  catálogo y se enseña como `($NPCName.DD2GoblinT1)` - mismo criterio honesto de "nunca
+  inventar" ya establecido, un hueco de cobertura real del catálogo de NPCs modded/evento.
+- **T4, residual documentado (ya NO técnicamente bloqueado)**: "Te toca: Plantera" (sugerencia
+  dinámica) y "Tu último mundo" siguen sin construir - la pieza dura (evaluar la Guía sin
+  personaje activo) ya está resuelta y reutilizable, esto es alcance/tiempo, no límite real.
+- **T5 (escala de espaciado)**: reconfirmado cerrado de verdad, sin tocar nada -
+  `Sp1..Sp6`/`SpD1..SpD6` existen en `Theme.xaml` y `KeepQA/src/espaciado/
+  verificarRitmoEspaciado.js` existe de verdad.
+
+Barrido completo de maquetación (`BarridoMaquetacionPorTamañoEIdioma`, varios anchos incl.
+el mínimo) tras todos los cambios: 21 `FALLO`, todos pre-existentes y ya documentados en
+esta bitácora (AR-14/AR-15/AR-MRK/AR-EX1/AR-11f/OBJ-07/H5-05/A8-06/A10-IDIOMA-BARRIDO),
+ninguno introducido esta noche. `Terrakeep.Core.Tests` 588/588, `Terrakeep.App.
+ViewModels.Tests` 518/518. Redesplegado en local (`bin\Debug` + instalador Release real en
+`%LocalAppData%\Programs\Terrakeep`) tras confirmar `Terrakeep.exe` no en ejecución. Sin
+publicar nada (sin version bump/changelog.json/instalador de distribución/`git push`/`gh
+release`).
