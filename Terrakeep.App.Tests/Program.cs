@@ -2231,6 +2231,82 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // IDEA1B_SOLO=1 (20-sep-2026, catalogo de funciones, idea 1 "Estado del mundo editable" -
+        // quinta ronda, reconsiderado a peticion explicita del coordinador/usuario: confirma con
+        // datos REALES (no solo sinteticos) que las 3 banderas de invasion nuevas
+        // (DownedGoblinArmy/DownedFrostLegion/DownedPirates) leen valores reales y creibles de
+        // varios mundos jugados de verdad de este equipo, nunca solo basura o siempre false.
+        if (Environment.GetEnvironmentVariable("IDEA1B_SOLO") == "1")
+        {
+            try
+            {
+                string[] mundosReales =
+                [
+                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld",
+                    @"C:\Users\adrian\Documents\My Games\Terraria\Worlds\Blando_Río.wld",
+                    @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\Afueras_de_Larvas_de_gusano.wld",
+                ];
+                foreach (string ruta in mundosReales)
+                {
+                    if (!File.Exists(ruta)) { Console.WriteLine($"IDEA1B_SOLO: AVISO - falta {ruta}, se omite"); continue; }
+                    var world = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(ruta));
+                    Console.WriteLine($"IDEA1B_SOLO: '{world.Header.Title}' -> DownedGoblinArmy={world.Header.DownedGoblinArmy}, DownedFrostLegion={world.Header.DownedFrostLegion}, DownedPirates={world.Header.DownedPirates}, HardMode={world.Header.HardMode} (verdad real, sin forzar nada)");
+                }
+
+                // --- Flujo real E2E: cargar una COPIA (nunca el mundo real del usuario), marcar
+                // la casilla real en pantalla, pulsar Guardar de verdad, releer del disco. ---
+                string original = mundosReales[0];
+                if (File.Exists(original))
+                {
+                    string copia = Path.Combine(Path.GetTempPath(), $"idea1b-copia-{Guid.NewGuid():N}.wld");
+                    File.Copy(original, copia);
+                    try
+                    {
+                        vm.SelectedTabIndex = 4; // Exploracion
+                        DoEvents();
+                        var tarea = vm.Exploration.LoadFromPathAsync(copia);
+                        while (!tarea.IsCompleted) DoEvents();
+                        DoEvents(); DoEvents();
+
+                        bool valorAntes = vm.Exploration.EditDownedFrostLegion;
+                        vm.Exploration.EditDownedFrostLegion = !valorAntes;
+                        DoEvents();
+                        Console.WriteLine($"IDEA1B_SOLO: casilla real 'Legion Helada' cambiada de {valorAntes} a {vm.Exploration.EditDownedFrostLegion} -> SaveBossFlagsCommand.CanExecute={vm.Exploration.SaveBossFlagsCommand.CanExecute(null)}");
+                        if (!vm.Exploration.SaveBossFlagsCommand.CanExecute(null)) Console.WriteLine("FALLO: IDEA1B_SOLO - el boton real de Guardar no se activa al cambiar la casilla de invasion");
+
+                        var tareaGuardar = vm.Exploration.SaveBossFlagsCommand.ExecuteAsync(null);
+                        while (!tareaGuardar.IsCompleted) DoEvents();
+                        DoEvents(); DoEvents();
+
+                        var releido = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(copia));
+                        Console.WriteLine($"IDEA1B_SOLO: releido del disco tras Guardar real -> DownedFrostLegion={releido.Header.DownedFrostLegion} (esperado {!valorAntes})");
+                        if (releido.Header.DownedFrostLegion != !valorAntes)
+                            Console.WriteLine("FALLO: IDEA1B_SOLO - el guardado real (boton Guardar, WorldFileService.SaveBossFlags) no escribio la bandera de invasion en el archivo");
+                        // Aisla que las OTRAS 2 banderas de invasion no se tocaron de rebote.
+                        var originalBytes = Terrakeep.Core.WldFormat.WldReader.Read(File.ReadAllBytes(original));
+                        if (releido.Header.DownedGoblinArmy != originalBytes.Header.DownedGoblinArmy || releido.Header.DownedPirates != originalBytes.Header.DownedPirates)
+                            Console.WriteLine("FALLO: IDEA1B_SOLO - guardar UNA bandera de invasion cambio alguna de las otras dos sin pedirlo");
+
+                        // Verifica el checkbox real en pantalla (no solo la propiedad del ViewModel).
+                        var expanderEditar = Descendientes<Expander>(window).FirstOrDefault(e => e.Header as string == vm.Loc["explore_edit_world"]);
+                        if (expanderEditar != null) expanderEditar.IsExpanded = true;
+                        DoEvents(); DoEvents();
+                        var casillaReal = Descendientes<System.Windows.Controls.CheckBox>(window)
+                            .FirstOrDefault(c => c.IsVisible && Descendientes<TextBlock>(c).Any(t => t.Text == vm.Loc["explore_invasion_frost"]));
+                        Console.WriteLine($"IDEA1B_SOLO: casilla real 'Legion Helada' en el arbol visual encontrada={casillaReal != null}, marcada={casillaReal?.IsChecked}");
+                        if (casillaReal == null) Console.WriteLine("FALLO: IDEA1B_SOLO - la casilla real de Legion Helada no esta en el arbol visual del panel Editar mundo");
+                    }
+                    finally
+                    {
+                        try { File.Delete(copia); } catch { }
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("IDEA1B_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (IDEA1B_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA8_SOLO=1 (20-sep-2026, catalogo de funciones, idea 8 "Informe y comparador de
         // mundos" - version real, tercera ronda tras la correccion del coordinador: el catalogo
         // citaba WorldCreationSummaryBuilder como apoyo, que resulto ser para la vista previa de

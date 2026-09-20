@@ -207,6 +207,28 @@ public class WldWriterProgressPatchTests
         Assert.True(header.HardMode);
     }
 
+    // Idea 1 del catalogo de funciones ("Estado del mundo editable" - bitacora.md 20-sep-2026,
+    // quinta ronda: reconsiderado a peticion explicita del coordinador/usuario tras confirmar con
+    // evidencia real, xnb-lzx-tool-refs/World.FileV2.cs, que las 3 banderas viven en el MISMO
+    // tramo de ancho fijo que los jefes principales - WldReader ya las leia y las descartaba).
+    [Fact]
+    public void PatchBossFlags_BanderasDeInvasion_SoloCambianLoPedidoYElRestoQuedaIgual()
+    {
+        byte[] original = BuildHeaderBytes(version: 279);
+        var patch = new WldWriter.WorldFlagsPatch(DownedGoblinArmy: true, DownedFrostLegion: true, DownedPirates: true);
+        byte[] patched = WldWriter.PatchBossFlags(original, patch);
+        var header = WldReader.ReadHeader(patched);
+
+        Assert.True(header.DownedGoblinArmy);
+        Assert.True(header.DownedFrostLegion);
+        Assert.True(header.DownedPirates);
+        Assert.False(header.DownedBoss1EyeOfCthulhu); // no tocado, sigue false
+        Assert.False(header.HardMode);                // no tocado, sigue false
+
+        Assert.Equal(original.Length, patched.Length);
+        Assert.True(CountDiffBytes(original, patched) <= 3, "solo 3 bytes deberian cambiar - los 3 campos pedidos, ninguno mas");
+    }
+
     [Fact]
     public void PatchBossFlags_SlimeKingEnMundoAnteriorA118_Lanza()
     {

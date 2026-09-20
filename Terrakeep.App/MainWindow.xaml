@@ -6180,6 +6180,20 @@
                                           Visibility="{Binding Exploration.HasSlimeKingField, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="{Binding Loc[explore_boss_slimeking], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </CheckBox>
+                                <!-- Idea 1 del catalogo de funciones ("Estado del mundo editable" -
+                                     bitacora.md 20-sep-2026, quinta ronda: reconsiderado a peticion
+                                     explicita del coordinador/usuario). "Marcianos" queda fuera a
+                                     proposito, sigue siendo LIMITE real (ver el comentario de
+                                     ExplorationViewModel.EditDownedGoblinArmy). -->
+                                <CheckBox IsChecked="{Binding Exploration.EditDownedGoblinArmy}" Margin="0,0,0,4">
+                                    <TextBlock Text="{Binding Loc[explore_invasion_goblin], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding Exploration.EditDownedFrostLegion}" Margin="0,0,0,4">
+                                    <TextBlock Text="{Binding Loc[explore_invasion_frost], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding Exploration.EditDownedPirates}" Margin="0,0,0,4">
+                                    <TextBlock Text="{Binding Loc[explore_invasion_pirates], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </CheckBox>
                                 <Border Height="1" Background="{StaticResource BorderBrush0}" Margin="0,6" />
                                 <CheckBox IsChecked="{Binding Exploration.EditHardMode}" Margin="0,0,0,4">
                                     <TextBlock Text="{Binding Loc[explore_boss_hardmode], Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" />

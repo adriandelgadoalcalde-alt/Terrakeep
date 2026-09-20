@@ -87,9 +87,14 @@ public static class WorldFileService
             patch.DownedPlantBoss ?? world.Header.DownedPlantBoss,
             patch.DownedGolemBoss ?? world.Header.DownedGolemBoss,
             patch.DownedSlimeKingBoss ?? world.Header.DownedSlimeKingBoss,
-            patch.HardMode ?? world.Header.HardMode);
+            patch.HardMode ?? world.Header.HardMode,
+            patch.DownedGoblinArmy ?? world.Header.DownedGoblinArmy,
+            patch.DownedFrostLegion ?? world.Header.DownedFrostLegion,
+            patch.DownedPirates ?? world.Header.DownedPirates);
 
-        if (reReadHeader.DownedBoss1EyeOfCthulhu != newHeader.DownedBoss1EyeOfCthulhu || reReadHeader.HardMode != newHeader.HardMode)
+        if (reReadHeader.DownedBoss1EyeOfCthulhu != newHeader.DownedBoss1EyeOfCthulhu || reReadHeader.HardMode != newHeader.HardMode
+            || reReadHeader.DownedGoblinArmy != newHeader.DownedGoblinArmy || reReadHeader.DownedFrostLegion != newHeader.DownedFrostLegion
+            || reReadHeader.DownedPirates != newHeader.DownedPirates)
             throw new InvalidOperationException(LocalizationService.Instance["world_save_reread_failed"]);
 
         WriteAtomic(wldPath, patched);

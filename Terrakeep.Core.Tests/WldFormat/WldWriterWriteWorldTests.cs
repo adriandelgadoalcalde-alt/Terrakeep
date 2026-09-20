@@ -54,6 +54,9 @@ public class WldWriterWriteWorldTests
             DownedGolemBoss = o.DownedGolem,
             DownedSlimeKingBoss = o.DownedSlimeKing,
             HardMode = o.HardMode,
+            DownedGoblinArmy = o.DownedGoblinArmy,
+            DownedFrostLegion = o.DownedFrostLegion,
+            DownedPirates = o.DownedPirates,
         };
     }
 
@@ -76,6 +79,7 @@ public class WldWriterWriteWorldTests
         public bool DownedPlant, DownedGolem;
         public bool? DownedSlimeKing = false;
         public bool HardMode;
+        public bool DownedGoblinArmy, DownedFrostLegion, DownedPirates;
     }
 
     private static WldTile[,] BuildTiles(int wide, int high, Func<int, int, WldTile> factory)
@@ -136,6 +140,36 @@ public class WldWriterWriteWorldTests
         byte[] bytes2 = WldWriter.WriteWorld(worldForRewrite);
         Assert.Equal(bytes.Length, bytes2.Length);
         Assert.Equal(bytes, bytes2);
+    }
+
+    // Idea 1 del catalogo de funciones ("Estado del mundo editable" - bitacora.md 20-sep-2026,
+    // quinta ronda: reconsiderado a peticion explicita del coordinador/usuario). Round-trip real
+    // de las 3 banderas de invasion nuevas (Ejercito Goblin/Legion Helada/Piratas) - aisla que de
+    // verdad viajan por WriteWorld->Read, no solo que su valor por defecto (false) coincide por
+    // casualidad con el resto de las pruebas de esta clase (todas usan BuildHeader sin configure,
+    // o sea false para las tres). true en las tres a proposito, el caso mas exigente.
+    [Fact]
+    public void WriteWorld_BanderasDeInvasion_ViajanIntactasPorElRoundTrip()
+    {
+        int wide = 10, high = 10;
+        var tiles = BuildTiles(wide, high, (x, y) => WldTile.Empty);
+        var world = new WldWorld
+        {
+            Header = BuildHeader(wide, high, o => { o.DownedGoblinArmy = true; o.DownedFrostLegion = true; o.DownedPirates = true; }),
+            Tiles = tiles, Npcs = [], Chests = [], Signs = [], TileEntities = [],
+            ShimmeredNpcTypes = new HashSet<int>(), Bestiary = null,
+        };
+
+        byte[] bytes = WldWriter.WriteWorld(world);
+        var reread = WldReader.Read(bytes);
+
+        Assert.True(reread.Header.DownedGoblinArmy);
+        Assert.True(reread.Header.DownedFrostLegion);
+        Assert.True(reread.Header.DownedPirates);
+        // Aisla que HardMode (el campo INMEDIATAMENTE despues en el archivo real) no se
+        // contamino por el desplazamiento - si el offset de escritura estuviera mal, este
+        // seria el primer campo en romperse de forma silenciosa (leeria el byte de otro campo).
+        Assert.False(reread.Header.HardMode);
     }
 
     // ---------------------------------------------------------------------------------------
@@ -411,6 +445,7 @@ public class WldWriterWriteWorldTests
             DownedBoss2EaterOfWorldsOrBrainOfCthulhu = false, DownedBoss3Skeletron = false, DownedQueenBee = false,
             DownedMechBoss1TheDestroyer = false, DownedMechBoss2TheTwins = false, DownedMechBoss3SkeletronPrime = false,
             DownedPlantBoss = false, DownedGolemBoss = false, DownedSlimeKingBoss = false, HardMode = false,
+            DownedGoblinArmy = false, DownedFrostLegion = false, DownedPirates = false,
         };
         var world = new WldWorld
         {

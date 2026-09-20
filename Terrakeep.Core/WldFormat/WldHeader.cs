@@ -75,6 +75,23 @@ public sealed class WldHeader
     public bool? DownedSlimeKingBoss { get; init; }
     public required bool HardMode { get; init; }
 
+    // Idea 1 del catalogo de funciones ("Estado del mundo editable" - bitacora.md 20-sep-2026,
+    // quinta ronda: reconsiderado a peticion explicita del coordinador/usuario, que señalo con
+    // razon que "no encontrado la primera vez" no es lo mismo que "no existe en ningun sitio",
+    // igual que paso con WldWriter.WriteWorld). Confirmado byte a byte contra World.FileV2.cs de
+    // TEdit (LoadWorld real, xnb-lzx-tool-refs/World.FileV2.cs lineas 2107-2113): estos 3 campos
+    // viven en el MISMO tramo contiguo de ancho fijo que los jefes principales, entre
+    // DownedSlimeKingBoss y HardMode - WldReader.ReadHeader YA los leia (y los descartaba, ver su
+    // comentario real "SavedGoblin"/"DownedGoblins"/"DownedFrost"/"DownedPirates") para poder
+    // seguir avanzando hasta HardMode. Exponerlos es ampliar lo que ya se leia, no ingenieria de
+    // formato nueva. "Marcianos" (Martian Madness) queda FUERA a proposito y sigue siendo un
+    // LIMITE real, distinto: su bandera vive muy por delante, detras de la lista de Anglers
+    // (string[], longitud variable) y de las banderas DD2 (Ejercito Viejo Uno) - mismo motivo real
+    // que ya bloquea a los jefes tardios (Fishron/Culto Lunatico/Lunatico), documentado arriba.
+    public required bool DownedGoblinArmy { get; init; }
+    public required bool DownedFrostLegion { get; init; }
+    public required bool DownedPirates { get; init; }
+
     public int TilesSectionOffset => Pointers[1];
     // Punto 4 (advisor Opus), Fase 2: confirmado directamente contra World.FileV2.cs de TEdit
     // (LoadWorld real) - Pointers[N] es donde EMPIEZA la seccion N (= donde termina la anterior),
@@ -124,19 +141,22 @@ public sealed class WldHeader
         bool newDownedBoss1EyeOfCthulhu, bool newDownedBoss2EaterOfWorldsOrBrainOfCthulhu, bool newDownedBoss3Skeletron,
         bool newDownedQueenBee, bool newDownedMechBoss1TheDestroyer, bool newDownedMechBoss2TheTwins,
         bool newDownedMechBoss3SkeletronPrime, bool newDownedPlantBoss, bool newDownedGolemBoss,
-        bool? newDownedSlimeKingBoss, bool newHardMode) => CopyWith(
+        bool? newDownedSlimeKingBoss, bool newHardMode,
+        bool newDownedGoblinArmy, bool newDownedFrostLegion, bool newDownedPirates) => CopyWith(
             downedBoss1: newDownedBoss1EyeOfCthulhu, downedBoss2: newDownedBoss2EaterOfWorldsOrBrainOfCthulhu,
             downedBoss3: newDownedBoss3Skeletron, downedQueenBee: newDownedQueenBee, downedMech1: newDownedMechBoss1TheDestroyer,
             downedMech2: newDownedMechBoss2TheTwins, downedMech3: newDownedMechBoss3SkeletronPrime,
             downedPlant: newDownedPlantBoss, downedGolem: newDownedGolemBoss, downedSlimeKing: newDownedSlimeKingBoss,
-            hardMode: newHardMode);
+            hardMode: newHardMode, downedGoblinArmy: newDownedGoblinArmy, downedFrostLegion: newDownedFrostLegion,
+            downedPirates: newDownedPirates);
 
     private WldHeader CopyWith(
         int? gameMode = null, int? spawnX = null, int? spawnY = null,
         double? time = null, bool? dayTime = null, int? moonPhase = null, bool? bloodMoon = null, bool? isEclipse = null,
         bool? downedBoss1 = null, bool? downedBoss2 = null, bool? downedBoss3 = null, bool? downedQueenBee = null,
         bool? downedMech1 = null, bool? downedMech2 = null, bool? downedMech3 = null, bool? downedPlant = null,
-        bool? downedGolem = null, bool? downedSlimeKing = null, bool? hardMode = null) => new()
+        bool? downedGolem = null, bool? downedSlimeKing = null, bool? hardMode = null,
+        bool? downedGoblinArmy = null, bool? downedFrostLegion = null, bool? downedPirates = null) => new()
     {
         Version = Version, Pointers = Pointers, TileFrameImportant = TileFrameImportant, Title = Title,
         WorldId = WorldId, TilesHigh = TilesHigh, TilesWide = TilesWide,
@@ -156,6 +176,9 @@ public sealed class WldHeader
         DownedGolemBoss = downedGolem ?? DownedGolemBoss,
         DownedSlimeKingBoss = downedSlimeKing ?? DownedSlimeKingBoss,
         HardMode = hardMode ?? HardMode,
+        DownedGoblinArmy = downedGoblinArmy ?? DownedGoblinArmy,
+        DownedFrostLegion = downedFrostLegion ?? DownedFrostLegion,
+        DownedPirates = downedPirates ?? DownedPirates,
     };
 
     // Ver el comentario de WldReader.Read sobre por que este puntero (y no Pointers[9], el

@@ -35,6 +35,7 @@ public sealed class WorldHighlightRendererTests
             DownedBoss3Skeletron = false, DownedQueenBee = false, DownedMechBoss1TheDestroyer = false,
             DownedMechBoss2TheTwins = false, DownedMechBoss3SkeletronPrime = false, DownedPlantBoss = false,
             DownedGolemBoss = false, DownedSlimeKingBoss = false, HardMode = false,
+            DownedGoblinArmy = false, DownedFrostLegion = false, DownedPirates = false,
         },
         Tiles = tiles,
         Npcs = [],

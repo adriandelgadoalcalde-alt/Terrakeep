@@ -204,10 +204,10 @@ public static class WldWriter
         writer.Write(false); // SavedGoblin
         writer.Write(false); // SavedWizard
         writer.Write(false); // SavedMech
-        writer.Write(false); // DownedGoblins
+        writer.Write(header.DownedGoblinArmy);
         writer.Write(false); // DownedClown
-        writer.Write(false); // DownedFrost
-        writer.Write(false); // DownedPirates
+        writer.Write(header.DownedFrostLegion);
+        writer.Write(header.DownedPirates);
         writer.Write(false); // ShadowOrbSmashed
         writer.Write(false); // SpawnMeteor
         writer.Write((byte)0); // ShadowOrbCount
@@ -605,7 +605,7 @@ public static class WldWriter
         uint Version, long SpawnX, long SpawnY, long Time, long DayTime, long MoonPhase, long BloodMoon, long IsEclipse,
         long IsCrimson, long DownedBoss1, long DownedBoss2, long DownedBoss3, long DownedQueenBee,
         long DownedMech1, long DownedMech2, long DownedMech3, long DownedPlant, long DownedGolem,
-        long? DownedSlimeKing, long HardMode);
+        long? DownedSlimeKing, long DownedGoblinArmy, long DownedFrostLegion, long DownedPirates, long HardMode);
 
     private static HeaderOffsets ComputeHeaderOffsets(byte[] fileBytes)
     {
@@ -697,10 +697,10 @@ public static class WldWriter
         reader.ReadBoolean(); // SavedGoblin
         reader.ReadBoolean(); // SavedWizard
         reader.ReadBoolean(); // SavedMech
-        reader.ReadBoolean(); // DownedGoblins
+        long downedGoblinArmyOffset = stream.Position; reader.ReadBoolean(); // DownedGoblins
         reader.ReadBoolean(); // DownedClown
-        reader.ReadBoolean(); // DownedFrost
-        reader.ReadBoolean(); // DownedPirates
+        long downedFrostLegionOffset = stream.Position; reader.ReadBoolean(); // DownedFrost
+        long downedPiratesOffset = stream.Position; reader.ReadBoolean(); // DownedPirates
         reader.ReadBoolean(); // ShadowOrbSmashed
         reader.ReadBoolean(); // SpawnMeteor
         reader.ReadByte();    // ShadowOrbCount
@@ -710,7 +710,8 @@ public static class WldWriter
         return new HeaderOffsets(version, spawnXOffset, spawnYOffset, timeOffset, dayTimeOffset, moonPhaseOffset,
             bloodMoonOffset, isEclipseOffset, isCrimsonOffset, downedBoss1Offset, downedBoss2Offset, downedBoss3Offset,
             downedQueenBeeOffset, downedMech1Offset, downedMech2Offset, downedMech3Offset, downedPlantOffset,
-            downedGolemOffset, downedSlimeKingOffset, hardModeOffset);
+            downedGolemOffset, downedSlimeKingOffset, downedGoblinArmyOffset, downedFrostLegionOffset,
+            downedPiratesOffset, hardModeOffset);
     }
 
     // Punto de aparicion del mundo (WorldGen.spawnTile real) - un Int32 par, sin ninguna
@@ -756,7 +757,10 @@ public static class WldWriter
         bool? DownedBoss1EyeOfCthulhu = null, bool? DownedBoss2EaterOfWorldsOrBrainOfCthulhu = null,
         bool? DownedBoss3Skeletron = null, bool? DownedQueenBee = null, bool? DownedMechBoss1TheDestroyer = null,
         bool? DownedMechBoss2TheTwins = null, bool? DownedMechBoss3SkeletronPrime = null, bool? DownedPlantBoss = null,
-        bool? DownedGolemBoss = null, bool? DownedSlimeKingBoss = null, bool? HardMode = null);
+        bool? DownedGolemBoss = null, bool? DownedSlimeKingBoss = null, bool? HardMode = null,
+        // Idea 1 (bitacora.md 20-sep-2026, quinta ronda): mismo tramo de ancho fijo que los jefes
+        // principales - ver el comentario real de WldHeader.DownedGoblinArmy.
+        bool? DownedGoblinArmy = null, bool? DownedFrostLegion = null, bool? DownedPirates = null);
 
     public static byte[] PatchBossFlags(byte[] fileBytes, WorldFlagsPatch patch)
     {
@@ -776,6 +780,9 @@ public static class WldWriter
         Write(o.DownedPlant, patch.DownedPlantBoss);
         Write(o.DownedGolem, patch.DownedGolemBoss);
         if (o.DownedSlimeKing is long slimeKingOffset) Write(slimeKingOffset, patch.DownedSlimeKingBoss);
+        Write(o.DownedGoblinArmy, patch.DownedGoblinArmy);
+        Write(o.DownedFrostLegion, patch.DownedFrostLegion);
+        Write(o.DownedPirates, patch.DownedPirates);
         Write(o.HardMode, patch.HardMode);
         return patched;
     }

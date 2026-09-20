@@ -667,12 +667,21 @@ public partial class ExplorationViewModel : ObservableObject
     [ObservableProperty] private bool _editDownedGolem;
     [ObservableProperty] private bool _editDownedSlimeKing;
     [ObservableProperty] private bool _editHardMode;
+    // Idea 1 del catalogo de funciones ("Estado del mundo editable" - bitacora.md 20-sep-2026,
+    // quinta ronda: reconsiderado a peticion explicita del coordinador/usuario tras confirmar con
+    // evidencia real - xnb-lzx-tool-refs/World.FileV2.cs, WldReader ya leia estos 3 bytes y los
+    // descartaba - que "banderas de invasion" SI son alcanzables, mismo tramo de ancho fijo que
+    // los jefes principales, ver WldHeader.DownedGoblinArmy). "Marcianos" queda fuera a proposito,
+    // sigue siendo LIMITE real (offset variable, detras de la lista de Anglers).
+    [ObservableProperty] private bool _editDownedGoblinArmy;
+    [ObservableProperty] private bool _editDownedFrostLegion;
+    [ObservableProperty] private bool _editDownedPirates;
     // null = este mundo (version<118) no tiene el campo del Rey Slime en absoluto - la casilla
     // correspondiente se oculta en vez de dejar marcar algo que no se podria guardar nunca.
     public bool HasSlimeKingField => _world?.Header.DownedSlimeKingBoss != null;
     private bool _savedDownedBoss1, _savedDownedBoss2, _savedDownedBoss3, _savedDownedQueenBee,
         _savedDownedMech1, _savedDownedMech2, _savedDownedMech3, _savedDownedPlant, _savedDownedGolem,
-        _savedDownedSlimeKing, _savedHardMode;
+        _savedDownedSlimeKing, _savedHardMode, _savedDownedGoblinArmy, _savedDownedFrostLegion, _savedDownedPirates;
     private string? _flagsSaveStatusKey; private object?[] _flagsSaveStatusArgs = [];
     public string? FlagsSaveStatus => _flagsSaveStatusKey is null ? null : LocalizationService.Instance.Format(_flagsSaveStatusKey, _flagsSaveStatusArgs);
     private void SetFlagsSaveStatus(string? clave, params object?[] args) { _flagsSaveStatusKey = clave; _flagsSaveStatusArgs = args; OnPropertyChanged(nameof(FlagsSaveStatus)); }
@@ -687,12 +696,17 @@ public partial class ExplorationViewModel : ObservableObject
     partial void OnEditDownedGolemChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
     partial void OnEditDownedSlimeKingChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
     partial void OnEditHardModeChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedGoblinArmyChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedFrostLegionChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
+    partial void OnEditDownedPiratesChanged(bool value) => SaveBossFlagsCommand.NotifyCanExecuteChanged();
 
     private bool CanSaveBossFlags() => IsWorldLoaded && _currentWorldPath != null && (
         EditDownedBoss1 != _savedDownedBoss1 || EditDownedBoss2 != _savedDownedBoss2 || EditDownedBoss3 != _savedDownedBoss3 ||
         EditDownedQueenBee != _savedDownedQueenBee || EditDownedMech1 != _savedDownedMech1 || EditDownedMech2 != _savedDownedMech2 ||
         EditDownedMech3 != _savedDownedMech3 || EditDownedPlant != _savedDownedPlant || EditDownedGolem != _savedDownedGolem ||
-        (HasSlimeKingField && EditDownedSlimeKing != _savedDownedSlimeKing) || EditHardMode != _savedHardMode);
+        (HasSlimeKingField && EditDownedSlimeKing != _savedDownedSlimeKing) || EditHardMode != _savedHardMode ||
+        EditDownedGoblinArmy != _savedDownedGoblinArmy || EditDownedFrostLegion != _savedDownedFrostLegion ||
+        EditDownedPirates != _savedDownedPirates);
 
     [RelayCommand(CanExecute = nameof(CanSaveBossFlags))]
     private async Task SaveBossFlagsAsync()
@@ -711,7 +725,10 @@ public partial class ExplorationViewModel : ObservableObject
             DownedPlantBoss: EditDownedPlant != _savedDownedPlant ? EditDownedPlant : null,
             DownedGolemBoss: EditDownedGolem != _savedDownedGolem ? EditDownedGolem : null,
             DownedSlimeKingBoss: HasSlimeKingField && EditDownedSlimeKing != _savedDownedSlimeKing ? EditDownedSlimeKing : null,
-            HardMode: EditHardMode != _savedHardMode ? EditHardMode : null);
+            HardMode: EditHardMode != _savedHardMode ? EditHardMode : null,
+            DownedGoblinArmy: EditDownedGoblinArmy != _savedDownedGoblinArmy ? EditDownedGoblinArmy : null,
+            DownedFrostLegion: EditDownedFrostLegion != _savedDownedFrostLegion ? EditDownedFrostLegion : null,
+            DownedPirates: EditDownedPirates != _savedDownedPirates ? EditDownedPirates : null);
 
         var mundoActual = _world; string ruta = _currentWorldPath;
         SetFlagsSaveStatus("status_saving");
@@ -724,6 +741,7 @@ public partial class ExplorationViewModel : ObservableObject
             _savedDownedMech3 = EditDownedMech3; _savedDownedPlant = EditDownedPlant; _savedDownedGolem = EditDownedGolem;
             if (HasSlimeKingField) _savedDownedSlimeKing = EditDownedSlimeKing;
             _savedHardMode = EditHardMode;
+            _savedDownedGoblinArmy = EditDownedGoblinArmy; _savedDownedFrostLegion = EditDownedFrostLegion; _savedDownedPirates = EditDownedPirates;
             SetFlagsSaveStatus("status_saved_backup", Path.GetFileName(ruta));
         }
         catch (Exception ex) { SetFlagsSaveStatus("status_save_failed", ex.Message); }
@@ -2567,10 +2585,13 @@ public partial class ExplorationViewModel : ObservableObject
             _savedDownedMech3 = world.Header.DownedMechBoss3SkeletronPrime; _savedDownedPlant = world.Header.DownedPlantBoss;
             _savedDownedGolem = world.Header.DownedGolemBoss; _savedDownedSlimeKing = world.Header.DownedSlimeKingBoss ?? false;
             _savedHardMode = world.Header.HardMode;
+            _savedDownedGoblinArmy = world.Header.DownedGoblinArmy; _savedDownedFrostLegion = world.Header.DownedFrostLegion;
+            _savedDownedPirates = world.Header.DownedPirates;
             EditDownedBoss1 = _savedDownedBoss1; EditDownedBoss2 = _savedDownedBoss2; EditDownedBoss3 = _savedDownedBoss3;
             EditDownedQueenBee = _savedDownedQueenBee; EditDownedMech1 = _savedDownedMech1; EditDownedMech2 = _savedDownedMech2;
             EditDownedMech3 = _savedDownedMech3; EditDownedPlant = _savedDownedPlant; EditDownedGolem = _savedDownedGolem;
             EditDownedSlimeKing = _savedDownedSlimeKing; EditHardMode = _savedHardMode;
+            EditDownedGoblinArmy = _savedDownedGoblinArmy; EditDownedFrostLegion = _savedDownedFrostLegion; EditDownedPirates = _savedDownedPirates;
             OnPropertyChanged(nameof(HasSlimeKingField));
             SetFlagsSaveStatus(null);
 

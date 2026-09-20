@@ -225,10 +225,13 @@ public static class WldReader
         reader.ReadBoolean(); // SavedGoblin
         reader.ReadBoolean(); // SavedWizard
         reader.ReadBoolean(); // SavedMech
-        reader.ReadBoolean(); // DownedGoblins
+        // Idea 1 (bitacora.md 20-sep-2026, quinta ronda): estos 3 SI se capturan ahora (antes se
+        // leian y se descartaban igual que sus vecinos) - ver el comentario real de WldHeader
+        // sobre por que "no encontrado la primera vez" no era "no existe en ningun sitio".
+        bool downedGoblinArmy = reader.ReadBoolean(); // DownedGoblins
         reader.ReadBoolean(); // DownedClown
-        reader.ReadBoolean(); // DownedFrost
-        reader.ReadBoolean(); // DownedPirates
+        bool downedFrostLegion = reader.ReadBoolean(); // DownedFrost
+        bool downedPirates = reader.ReadBoolean(); // DownedPirates
         reader.ReadBoolean(); // ShadowOrbSmashed
         reader.ReadBoolean(); // SpawnMeteor
         reader.ReadByte();    // ShadowOrbCount
@@ -269,6 +272,9 @@ public static class WldReader
             DownedGolemBoss = downedGolem,
             DownedSlimeKingBoss = downedSlimeKing,
             HardMode = hardMode,
+            DownedGoblinArmy = downedGoblinArmy,
+            DownedFrostLegion = downedFrostLegion,
+            DownedPirates = downedPirates,
         };
     }
 
