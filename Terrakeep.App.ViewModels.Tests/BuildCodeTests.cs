@@ -55,16 +55,21 @@ public sealed class BuildCodeMainViewModelTests
     }
 
     [Fact]
-    public void CerrarYReabrirDesdeOtroPanel_NuncaLosDosOverlaysALaVez()
+    public void AbrirComparadorDesdeCodigoDeBuild_CierraElOverlayYSeleccionaLaPestañaComparar()
     {
+        // T9 (catalogo de rediseño visual, 20-sep-2026): el Comparador dejo de ser un overlay
+        // (ya no tiene Compare.IsOpen) - OpenCompareCommand ahora cierra cualquier overlay real
+        // que siga abierto (Codigo de build incluido, mismo criterio de siempre: nunca un modal
+        // de fondo mientras se navega a otro sitio) y selecciona la pestaña Comparar de verdad.
         var vm = CargarPersonajeConCascoReal();
         vm.OpenBuildCodeCommand.Execute(null);
         Assert.True(vm.IsBuildCodeOpen);
 
         vm.OpenCompareCommand.Execute(null);
 
-        Assert.False(vm.IsBuildCodeOpen); // el Comparador lo cierra al abrirse, mismo criterio que BackupHistory
-        Assert.True(vm.Compare.IsOpen);
+        Assert.False(vm.IsBuildCodeOpen); // el Comparador lo cierra al navegar, mismo criterio que BackupHistory
+        Assert.Equal(1, vm.SelectedTabIndex); // AppTab.Personaje
+        Assert.Equal(7, vm.PersonajeInnerTabIndex); // PersonajeInnerTab.Comparar
     }
 
     [Fact]

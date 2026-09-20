@@ -1419,6 +1419,87 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // T9_SOLO=1 (20-sep-2026, catalogo de rediseño visual T9 "Comparador como vista dividida,
+        // no como modal de 1400x900"): verifica en frio, con la ventana real, que el Comparador
+        // ya es una pestaña real de Personaje (PersonajeInnerTab.Comparar=7) y no un overlay -
+        // los dos selectores tienen que quedar FIJOS (cabecera pegajosa, fuera del ScrollViewer
+        // de resultados) mientras el cuerpo de resultados SI se desplaza, y todo el contenido
+        // tiene que caber en el ancho MINIMO real de la ventana (1080, MainWindow.xaml MinWidth)
+        // sin desbordar - la razon real de negocio de T9 (antes exigia 1400px de overlay).
+        if (Environment.GetEnvironmentVariable("T9_SOLO") == "1")
+        {
+            try
+            {
+                FijarTamaño(window, 1080, 700);
+                vm.SelectedTabIndex = 1; // Personaje
+                vm.PersonajeInnerTabIndex = 7; // PersonajeInnerTab.Comparar
+                DoEvents(); DoEvents();
+
+                Console.WriteLine($"T9_SOLO: {vm.Home.Characters.Count} personaje(s) reales en Inicio (esperado >= 2 para poder comparar de verdad)");
+                if (vm.Home.Characters.Count >= 2)
+                {
+                    vm.Compare.SelectedA = vm.Home.Characters[0];
+                    vm.Compare.SelectedB = vm.Home.Characters[1];
+                }
+                DoEvents(); DoEvents(); DoEvents();
+
+                Console.WriteLine($"T9_SOLO: HasBothSelected={vm.Compare.HasBothSelected} (esperado True), ShowResults={vm.Compare.ShowResults} (esperado True), DifferenceCount={vm.Compare.DifferenceCount}, StatRows={vm.Compare.StatRows.Count} (esperado 9)");
+                if (!vm.Compare.ShowResults) Console.WriteLine("FALLO: T9_SOLO - ShowResults sigue en False tras elegir los dos personajes reales");
+
+                // Geometria real: los dos selectores (Border dentro de Grid.Row=1) tienen que
+                // seguir en el MISMO sitio en pantalla ANTES y DESPUES de desplazar el
+                // ScrollViewer de resultados - esa es la comprobacion real de "cabecera pegajosa"
+                // que pide el catalogo, no solo "se ve arriba en la primera captura".
+                var comboA = Descendientes<System.Windows.Controls.ComboBox>(window)
+                    .FirstOrDefault(c => c.ItemsSource == vm.Compare.AvailableCharacters && c.SelectedItem == vm.Compare.SelectedA);
+                var sv = window.FindName("CompareResultsScrollViewer") as System.Windows.Controls.ScrollViewer;
+                if (comboA == null || sv == null)
+                {
+                    Console.WriteLine($"FALLO: T9_SOLO - no se encuentra el combo del selector A ({comboA != null}) o CompareResultsScrollViewer ({sv != null}) en el arbol visual real");
+                }
+                else
+                {
+                    var antes = comboA.TransformToAncestor(window).Transform(new System.Windows.Point(0, 0));
+                    sv.ScrollToVerticalOffset(sv.ScrollableHeight); // al final del todo, si hay algo que desplazar
+                    DoEvents(); DoEvents();
+                    var despues = comboA.TransformToAncestor(window).Transform(new System.Windows.Point(0, 0));
+                    Console.WriteLine($"T9_SOLO: selector A en pantalla antes={antes} despues de desplazar el ScrollViewer={despues} (esperado identico -> cabecera pegajosa real), ScrollableHeight={sv.ScrollableHeight:0}");
+                    if (Math.Abs(antes.Y - despues.Y) > 0.5) Console.WriteLine($"FALLO: T9_SOLO - el selector A se movio {Math.Abs(antes.Y - despues.Y):0.0}px al desplazar los resultados (la cabecera NO es pegajoza de verdad)");
+                    sv.ScrollToHome();
+                    DoEvents(); DoEvents();
+                }
+
+                // Nada se sale de la ventana a 1080px (suelo real de MainWindow.xaml MinWidth) -
+                // mismo detector Recorte() ya usado en el resto del arnes (AR-04/VITALS_SOLO).
+                var personajeTab = Descendientes<System.Windows.Controls.TabItem>(window)
+                    .FirstOrDefault(t => t.IsSelected && t.Parent is System.Windows.Controls.TabControl tc && tc.Name == "RootTabControl");
+                if (personajeTab?.Content is FrameworkElement contenidoPersonaje)
+                {
+                    var (rx, ry) = Recorte(contenidoPersonaje);
+                    Console.WriteLine($"T9_SOLO: recorte real del contenido de Personaje a 1080px=({rx:0},{ry:0}) (esperado 0,0)");
+                    if (rx > 0 || ry > 0) Console.WriteLine($"FALLO: T9_SOLO - el contenido de Personaje/Comparar se recorta {rx:0}x{ry:0}px a 1080px de ancho");
+                }
+
+                var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                    (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                rtb.Render(window);
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                string shot = Path.Combine(AppContext.BaseDirectory, "comparador-pestaña-t9.png");
+                using (var fs = File.Create(shot)) enc.Save(fs);
+                Console.WriteLine($"T9_SOLO: captura real -> {shot}");
+
+                // La ruta de entrada real (OpenCompareCommand) tiene que llevar exactamente aqui.
+                vm.SelectedTabIndex = 0;
+                vm.OpenCompareCommand.Execute(null);
+                Console.WriteLine($"T9_SOLO: tras OpenCompareCommand -> SelectedTabIndex={vm.SelectedTabIndex} (esperado 1), PersonajeInnerTabIndex={vm.PersonajeInnerTabIndex} (esperado 7)");
+                if (vm.SelectedTabIndex != 1 || vm.PersonajeInnerTabIndex != 7) Console.WriteLine("FALLO: T9_SOLO - OpenCompareCommand no navega a Personaje > Comparar");
+            }
+            catch (Exception ex) { Console.WriteLine("T9_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (T9_SOLO)");
+            Environment.Exit(0);
+        }
+
         // T7_SOLO=1 (20-sep-2026, catalogo de rediseño visual T7 "sistema unico de avisos"):
         // verifica en frio, con la ventana real, que los TRES avisos que antes tenian tres formas
         // distintas (banner teal de guardado, banner plano de error, tarjeta inline de Inicio)
@@ -1842,7 +1923,6 @@ internal static partial class Program
                     string shotPath = Path.Combine(AppContext.BaseDirectory, archivo);
                     using (var fs = File.Create(shotPath)) encoder.Save(fs);
                     Console.WriteLine($"COMPARE: captura real ({idioma}, 1080x{alto:0}, {vm.Compare.DifferenceCount} diferencia(s) reales) -> {shotPath}");
-                    vm.Compare.CloseCommand.Execute(null);
                 }
                 // Minima real (1080x700, el suelo de la ventana) Y una alta (2000) para ver de
                 // un vistazo los bloques de Equipo/Inventario enteros sin depender del scroll -
@@ -1877,7 +1957,6 @@ internal static partial class Program
                 string shotPathInv = Path.Combine(AppContext.BaseDirectory, "comparador-es-inventario.png");
                 using (var fs = File.Create(shotPathInv)) encInv.Save(fs);
                 Console.WriteLine($"COMPARE: captura real del bloque Inventario (desplazada al final) -> {shotPathInv}");
-                vm.Compare.CloseCommand.Execute(null);
             }
             catch (Exception ex) { Console.WriteLine("COMPARE-EXCEPTION: " + ex); }
 

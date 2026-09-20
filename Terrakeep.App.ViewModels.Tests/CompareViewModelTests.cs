@@ -190,16 +190,11 @@ public sealed class CompareViewModelTests
         Limpiar(pathA); Limpiar(pathB);
     }
 
-    [Fact]
-    public void CerrarYAbrirElPanel_AlternaIsOpen()
-    {
-        var vm = new CompareViewModel([]);
-        Assert.False(vm.IsOpen);
-
-        vm.OpenCommand.Execute(null);
-        Assert.True(vm.IsOpen);
-
-        vm.CloseCommand.Execute(null);
-        Assert.False(vm.IsOpen);
-    }
+    // CerrarYAbrirElPanel_AlternaIsOpen (probaba IsOpen/Open/Close/Noop) se retira en el catalogo
+    // de rediseño visual T9 (20-sep-2026): CompareViewModel ya no es un overlay con estado
+    // abierto/cerrado propio - es una pestaña mas de Personaje (PersonajeInnerTab.Comparar), su
+    // visibilidad la da el propio TabControl al seleccionarla. La comprobacion real equivalente
+    // (MainViewModel.OpenCompareCommand selecciona esa pestaña y cierra cualquier overlay real
+    // que siga abierto) vive en Terrakeep.App.ViewModels.Tests/BuildCodeTests.cs
+    // (AbrirComparadorDesdeCodigoDeBuild_CierraElOverlayYSeleccionaLaPestañaComparar).
 }

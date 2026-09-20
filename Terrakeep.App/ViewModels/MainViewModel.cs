@@ -151,7 +151,11 @@ public partial class MainViewModel : ObservableObject
     // D-e (segunda auditoria de Opus, Fable): se completan los 5 valores que faltaban (ya
     // usados como literal a secas en el arnes UIA) - Desbloqueos hace falta con nombre real
     // para OnPersonajeInnerTabIndexChanged, aqui abajo.
-    private enum PersonajeInnerTab { Objetos = 0, Buffs = 1, Investigacion = 2, Apariencia = 3, SpawnPoints = 4, Desbloqueos = 5, Version = 6 }
+    // Comparar = 7 (catalogo de rediseño visual T9, 20-sep-2026): anadido AL FINAL a proposito -
+    // los 7 valores de arriba son ordinales reales que ya usaba el arnes UIA como literal a
+    // secas (D-e); insertarlo en medio habria desplazado Desbloqueos/Version sin que el
+    // compilador avisara de nada.
+    private enum PersonajeInnerTab { Objetos = 0, Buffs = 1, Investigacion = 2, Apariencia = 3, SpawnPoints = 4, Desbloqueos = 5, Version = 6, Comparar = 7 }
 
     [ObservableProperty] private string _statusMessage = LocalizationService.Instance["status_no_character_loaded_dot"];
     [ObservableProperty] private string? _characterName;
@@ -829,7 +833,6 @@ public partial class MainViewModel : ObservableObject
         };
         Home.BackupHistoryRequested += (path, nombre) =>
         {
-            if (Compare.IsOpen) Compare.CloseCommand.Execute(null);
             BackupHistory.Open(path, nombre, isCurrentCharacter: _loaded != null &&
                 string.Equals(_loaded.PlrPath, path, StringComparison.OrdinalIgnoreCase));
         };
@@ -1423,30 +1426,37 @@ public partial class MainViewModel : ObservableObject
         if (_loaded == null) return;
         // Los overlays de nivel de ventana comparten el mismo velo opaco - abrir uno encima de
         // otro se veria mal y Escape solo cerraria el de arriba, dejando el otro abierto por
-        // detras sin que se note. Nunca dos a la vez, a proposito.
-        if (Compare.IsOpen) Compare.CloseCommand.Execute(null);
+        // detras sin que se note. Nunca dos a la vez, a proposito. El Comparador YA NO es uno de
+        // estos overlays (catalogo de rediseño visual T9, 20-sep-2026: paso a ser una pestaña
+        // mas dentro de Personaje, ver OpenCompare mas abajo), asi que no hace falta cerrarlo
+        // aqui - convive sin problema con cualquier overlay real.
         if (IsBuildCodeOpen) CloseBuildCodeCommand.Execute(null);
         if (WorldPreview.IsOpen) WorldPreview.CloseCommand.Execute(null);
         BackupHistory.Open(_loaded.PlrPath, CharacterName, isCurrentCharacter: true);
     }
 
-    // Comparador (13-sep-2026): mismo motivo real que arriba, en el sentido contrario.
+    // Comparador (13-sep-2026, convertido de overlay a pestaña real de Personaje en el catalogo
+    // de rediseño visual T9, 20-sep-2026 - "vista A | B dentro de Personaje... libera el patron
+    // overlay para lo que de verdad es modal"): cierra cualquier overlay real que siga abierto
+    // (navegar de pestaña con un velo modal por encima seria confuso) y selecciona la pestaña
+    // Comparar, sin ObservableProperty de "abierto/cerrado" propia - la selecciona el usuario
+    // como cualquier otra pestaña de Personaje.
     [RelayCommand]
     private void OpenCompare()
     {
         if (BackupHistory.IsOpen) BackupHistory.CloseCommand.Execute(null);
         if (IsBuildCodeOpen) CloseBuildCodeCommand.Execute(null);
         if (WorldPreview.IsOpen) WorldPreview.CloseCommand.Execute(null);
-        Compare.OpenCommand.Execute(null);
+        SelectedTabIndex = (int)AppTab.Personaje;
+        PersonajeInnerTabIndex = (int)PersonajeInnerTab.Comparar;
     }
 
-    // Vista previa de generacion de mundo (14-sep-2026): mismo motivo real que los tres de
-    // arriba. Sin CanExecute - no exige ningun personaje/mundo cargado (calculador puro).
+    // Vista previa de generacion de mundo (14-sep-2026): mismo motivo real que arriba. Sin
+    // CanExecute - no exige ningun personaje/mundo cargado (calculador puro).
     [RelayCommand]
     private void OpenWorldPreview()
     {
         if (BackupHistory.IsOpen) BackupHistory.CloseCommand.Execute(null);
-        if (Compare.IsOpen) Compare.CloseCommand.Execute(null);
         if (IsBuildCodeOpen) CloseBuildCodeCommand.Execute(null);
         WorldPreview.OpenCommand.Execute(null);
     }
@@ -1678,10 +1688,10 @@ public partial class MainViewModel : ObservableObject
     private void OpenBuildCode()
     {
         if (EquipmentGroup == null) return;
-        // Mismo criterio real ya establecido para BackupHistory/Compare: los tres son overlays
-        // de nivel de ventana con el mismo velo opaco, nunca dos a la vez.
+        // Mismo criterio real ya establecido para BackupHistory: overlays de nivel de ventana
+        // con el mismo velo opaco, nunca dos a la vez (el Comparador ya no es uno de ellos desde
+        // T9, 20-sep-2026 - es una pestaña real de Personaje).
         if (BackupHistory.IsOpen) BackupHistory.CloseCommand.Execute(null);
-        if (Compare.IsOpen) Compare.CloseCommand.Execute(null);
         if (WorldPreview.IsOpen) WorldPreview.CloseCommand.Execute(null);
         BuildCodeImportText = string.Empty;
         BuildCodeImportMessage = null;

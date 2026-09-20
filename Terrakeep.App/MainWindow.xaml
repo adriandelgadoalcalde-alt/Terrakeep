@@ -4561,6 +4561,225 @@
                             </StackPanel>
                         </ScrollViewer>
                     </TabItem>
+
+                    <!-- Catalogo de rediseño visual T9 (20-sep-2026): "Comparador como vista
+                         dividida, no como modal de 1400x900... libera el patron overlay para lo
+                         que de verdad es modal (Historial, Codigo de build)". Pestaña real de
+                         Personaje en vez de overlay de nivel de ventana - cabecera pegajosa con
+                         los dos selectores (Grid.Row=1, FUERA del ScrollViewer de mas abajo) y el
+                         cuerpo con scroll debajo (Grid.Row=2). Mismo CompareViewModel de siempre,
+                         sin IsOpen/Open/Close/Noop (ya no hacen falta: la pestaña VISIBLE es el
+                         propio "abierto", MainViewModel.OpenCompareCommand solo selecciona esta
+                         pestaña). Fondos de tarjeta subidos de BgPrimaryBrush a BgSecondaryBrush:
+                         dentro del overlay antiguo (fondo BgSecondaryBrush) BgPrimaryBrush
+                         quedaba mas oscuro que su alrededor a proposito; aqui el fondo real ya es
+                         BgPrimaryBrush (el de toda la ventana, Theme.xaml Window), asi que la
+                         misma tarjeta con BgPrimaryBrush se habria fundido con el fondo sin
+                         ningun contraste - BgSecondaryBrush es el que SI se distingue, mismo
+                         criterio ya usado por SidePanelCard. -->
+                    <TabItem Header="{Binding Loc[char_tab_compare], Mode=OneWay}">
+                        <Grid Margin="14">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="{Binding Loc[compare_panel_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}"
+                                       TextWrapping="Wrap" Margin="0,0,0,10" />
+
+                            <!-- Selectores: dos personajes reales de la MISMA lista ya escaneada
+                                 por Inicio (Compare.AvailableCharacters=Home.Characters, sin
+                                 volver a recorrer el disco). -->
+                            <Grid Grid.Row="1" Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="10">
+                                    <DockPanel>
+                                        <Image DockPanel.Dock="Left" Source="{Binding Compare.SelectedA.Preview}" Width="36" Height="36" Margin="0,0,10,0"
+                                               Visibility="{Binding Compare.SelectedA, Converter={StaticResource NullToVis}}" />
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Loc[compare_pick_a], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                            <ComboBox ItemsSource="{Binding Compare.AvailableCharacters}" ItemTemplate="{StaticResource CompareCharacterPickerItemTemplate}"
+                                                      SelectedItem="{Binding Compare.SelectedA}" MinWidth="200" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                                <Border Grid.Column="2" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="10">
+                                    <DockPanel>
+                                        <Image DockPanel.Dock="Left" Source="{Binding Compare.SelectedB.Preview}" Width="36" Height="36" Margin="0,0,10,0"
+                                               Visibility="{Binding Compare.SelectedB, Converter={StaticResource NullToVis}}" />
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Loc[compare_pick_b], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
+                                            <ComboBox ItemsSource="{Binding Compare.AvailableCharacters}" ItemTemplate="{StaticResource CompareCharacterPickerItemTemplate}"
+                                                      SelectedItem="{Binding Compare.SelectedB}" MinWidth="200" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- Cuerpo: cuatro estados reales posibles, mutuamente excluyentes
+                                 (NeedsMoreCharacters/sin elegir los dos/error de carga/resultados). -->
+                            <Grid Grid.Row="2">
+                                <TextBlock Text="{Binding Loc[compare_button_need_two], Mode=OneWay}" Style="{StaticResource BodyText}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="400"
+                                           Visibility="{Binding Compare.NeedsMoreCharacters, Converter={StaticResource BoolToVis}}" />
+
+                                <TextBlock Text="{Binding Loc[compare_pick_prompt], Mode=OneWay}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="400">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding Compare.NeedsMoreCharacters}" Value="False" />
+                                                        <Condition Binding="{Binding Compare.HasBothSelected}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <TextBlock Text="{Binding Compare.ErrorMessage}" Foreground="{StaticResource PinkBrush}" Style="{StaticResource BodyText}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="500"
+                                           Visibility="{Binding Compare.ErrorMessage, Converter={StaticResource NullToVis}}" />
+
+                                <ScrollViewer x:Name="CompareResultsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                              Visibility="{Binding Compare.ShowResults, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel>
+                                        <Border Background="{StaticResource AccentMutedBrush}" CornerRadius="99" Padding="10,4"
+                                                HorizontalAlignment="Left" Margin="0,0,0,10">
+                                            <TextBlock Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+                                                        <Setter Property="Text">
+                                                            <Setter.Value>
+                                                                <MultiBinding Converter="{StaticResource LocFormat}">
+                                                                    <Binding Path="Loc[compare_difference_count]" Mode="OneWay" />
+                                                                    <Binding Path="Compare.DifferenceCount" Mode="OneWay" />
+                                                                </MultiBinding>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Compare.DifferenceCount}" Value="0">
+                                                                <Setter Property="Text" Value="{Binding Loc[compare_no_differences], Mode=OneWay}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+
+                                        <!-- Bloque Estadisticas -->
+                                        <TextBlock Text="{Binding Loc[compare_section_stats], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                                        <ItemsControl ItemsSource="{Binding Compare.StatRows}" Margin="0,0,0,16">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:CompareStatRowViewModel}">
+                                                    <Border CornerRadius="6" Padding="8,5" Margin="0,0,0,2">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Background" Value="Transparent" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsDifferent}" Value="True">
+                                                                        <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="220" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Label}" Style="{StaticResource BodyText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding ValueA}" Style="{StaticResource BodyText}" VerticalAlignment="Center"
+                                                                       TextWrapping="Wrap" HorizontalAlignment="Center" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding ValueB}" Style="{StaticResource BodyText}" VerticalAlignment="Center"
+                                                                       TextWrapping="Wrap" HorizontalAlignment="Center" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Bloque Equipo -->
+                                        <TextBlock Text="{Binding Loc[compare_section_equipment], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                                        <ItemsControl ItemsSource="{Binding Compare.EquipmentRows}" Margin="0,0,0,16">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:CompareEquipmentRowViewModel}">
+                                                    <Border CornerRadius="6" Padding="8,6" Margin="0,0,0,2">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Background" Value="Transparent" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsDifferent}" Value="True">
+                                                                        <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="150" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Label}" Style="{StaticResource BodyText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                            <ContentPresenter Grid.Column="1" Content="{Binding ItemA}" ContentTemplate="{StaticResource CompareItemCellTemplate}" HorizontalAlignment="Center" />
+                                                            <ContentPresenter Grid.Column="2" Content="{Binding ItemB}" ContentTemplate="{StaticResource CompareItemCellTemplate}" HorizontalAlignment="Center" />
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Bloque Inventario: 50 celdas por lado, en rejilla que
+                                             se ajusta sola al ancho real (WrapPanel), nunca
+                                             desbordando. -->
+                                        <TextBlock Text="{Binding Loc[compare_section_inventory], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
+                                        <Grid Margin="0,0,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="12" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="6">
+                                                <ItemsControl ItemsSource="{Binding Compare.InventoryA}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:CompareInventorySlotViewModel}">
+                                                            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource CompareInventoryCellTemplate}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Border>
+                                            <Border Grid.Column="2" Background="{StaticResource BgSecondaryBrush}" CornerRadius="8" Padding="6">
+                                                <ItemsControl ItemsSource="{Binding Compare.InventoryB}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type vm:CompareInventorySlotViewModel}">
+                                                            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource CompareInventoryCellTemplate}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
+                        </Grid>
+                    </TabItem>
                 </TabControl>
             </DockPanel>
             </Grid>
@@ -7173,242 +7392,6 @@
                                     ToolTip="{Binding Loc[backup_create_now_tip], Mode=OneWay}"
                                     Command="{Binding BackupHistory.CreateManualBackupCommand}" />
                         </StackPanel>
-                    </Grid>
-                </Grid>
-            </Border>
-        </Grid>
-
-        <!-- Comparador de personajes/builds (13-sep-2026, primero de la lista confirmada de
-             funciones nuevas): "seleccionar dos personajes/builds y ver lado a lado sus
-             diferencias - equipo, stats, prefijos, inventario - resalta lo que cambia". Mismo
-             lenguaje visual que el panel de Historial de versiones justo arriba (velo opaco +
-             panel centrado + Escape/clic fuera lo cierra) - MaxWidth (no un Width fijo) porque
-             este panel necesita mucho mas ancho real para "lado a lado" que el de Historial, y
-             tiene que seguir cabiendo entero en el ancho MINIMO real de la ventana (1080,
-             MainWindow.xaml MinWidth) sin desbordar ni un pixel. -->
-        <Grid Panel.ZIndex="200" Background="#CC0B0D16"
-              Visibility="{Binding Compare.IsOpen, Converter={StaticResource BoolToVis}}">
-            <Grid.InputBindings>
-                <MouseBinding MouseAction="LeftClick" Command="{Binding Compare.CloseCommand}" />
-            </Grid.InputBindings>
-            <Border Background="{StaticResource BgSecondaryBrush}" BorderBrush="{StaticResource BorderStrongBrush}"
-                    BorderThickness="1" CornerRadius="12" Effect="{StaticResource CardShadowHover}"
-                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                    MaxWidth="1400" MaxHeight="900" Margin="20">
-                <Border.InputBindings>
-                    <MouseBinding MouseAction="LeftClick" Command="{Binding Compare.NoopCommand}" />
-                </Border.InputBindings>
-                <Grid Margin="20">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <!-- Cabecera -->
-                    <Grid Grid.Row="0" Margin="0,0,0,10">
-                        <StackPanel HorizontalAlignment="Left">
-                            <TextBlock Text="{Binding Loc[compare_panel_title], Mode=OneWay}" Style="{StaticResource TitleText}" FontSize="19" />
-                            <TextBlock Text="{Binding Loc[compare_panel_subtitle], Mode=OneWay}" Style="{StaticResource CaptionText}"
-                                       TextWrapping="Wrap" MaxWidth="720" HorizontalAlignment="Left" />
-                        </StackPanel>
-                        <Button Content="✕" Style="{StaticResource CircleCloseButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
-                                Command="{Binding Compare.CloseCommand}" ToolTip="{Binding Loc[close_notice_tooltip], Mode=OneWay}" />
-                    </Grid>
-
-                    <!-- Selectores: dos personajes reales de la MISMA lista ya escaneada por
-                         Inicio (Compare.AvailableCharacters=Home.Characters, sin volver a
-                         recorrer el disco). El doll pequeño de cada combo es el mismo Preview
-                         real ya generado para la tarjeta de Inicio (PlayerPreviewRenderer) - cero
-                         trabajo nuevo, reconocer un personaje por su aspecto es mas rapido que
-                         leer solo el nombre cuando hay varios con el mismo. -->
-                    <Grid Grid.Row="1" Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="20" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" Padding="10">
-                            <DockPanel>
-                                <Image DockPanel.Dock="Left" Source="{Binding Compare.SelectedA.Preview}" Width="36" Height="36" Margin="0,0,10,0"
-                                       Visibility="{Binding Compare.SelectedA, Converter={StaticResource NullToVis}}" />
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Loc[compare_pick_a], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                                    <ComboBox ItemsSource="{Binding Compare.AvailableCharacters}" ItemTemplate="{StaticResource CompareCharacterPickerItemTemplate}"
-                                              SelectedItem="{Binding Compare.SelectedA}" MinWidth="200" />
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-                        <Border Grid.Column="2" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" Padding="10">
-                            <DockPanel>
-                                <Image DockPanel.Dock="Left" Source="{Binding Compare.SelectedB.Preview}" Width="36" Height="36" Margin="0,0,10,0"
-                                       Visibility="{Binding Compare.SelectedB, Converter={StaticResource NullToVis}}" />
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Loc[compare_pick_b], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                                    <ComboBox ItemsSource="{Binding Compare.AvailableCharacters}" ItemTemplate="{StaticResource CompareCharacterPickerItemTemplate}"
-                                              SelectedItem="{Binding Compare.SelectedB}" MinWidth="200" />
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
-                    </Grid>
-
-                    <!-- Cuerpo: cuatro estados reales posibles, mutuamente excluyentes
-                         (NeedsMoreCharacters/sin elegir los dos/error de carga/resultados). -->
-                    <Grid Grid.Row="2">
-                        <TextBlock Text="{Binding Loc[compare_button_need_two], Mode=OneWay}" Style="{StaticResource BodyText}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="400"
-                                   Visibility="{Binding Compare.NeedsMoreCharacters, Converter={StaticResource BoolToVis}}" />
-
-                        <TextBlock Text="{Binding Loc[compare_pick_prompt], Mode=OneWay}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="400">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding Compare.NeedsMoreCharacters}" Value="False" />
-                                                <Condition Binding="{Binding Compare.HasBothSelected}" Value="False" />
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </MultiDataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-
-                        <TextBlock Text="{Binding Compare.ErrorMessage}" Foreground="{StaticResource PinkBrush}" Style="{StaticResource BodyText}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="500"
-                                   Visibility="{Binding Compare.ErrorMessage, Converter={StaticResource NullToVis}}" />
-
-                        <ScrollViewer x:Name="CompareResultsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                      Visibility="{Binding Compare.ShowResults, Converter={StaticResource BoolToVis}}">
-                            <StackPanel>
-                                <Border Background="{StaticResource AccentMutedBrush}" CornerRadius="99" Padding="10,4"
-                                        HorizontalAlignment="Left" Margin="0,0,0,10">
-                                    <TextBlock Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
-                                                <Setter Property="Text">
-                                                    <Setter.Value>
-                                                        <MultiBinding Converter="{StaticResource LocFormat}">
-                                                            <Binding Path="Loc[compare_difference_count]" Mode="OneWay" />
-                                                            <Binding Path="Compare.DifferenceCount" Mode="OneWay" />
-                                                        </MultiBinding>
-                                                    </Setter.Value>
-                                                </Setter>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Compare.DifferenceCount}" Value="0">
-                                                        <Setter Property="Text" Value="{Binding Loc[compare_no_differences], Mode=OneWay}" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </Border>
-
-                                <!-- Bloque Estadisticas -->
-                                <TextBlock Text="{Binding Loc[compare_section_stats], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
-                                <ItemsControl ItemsSource="{Binding Compare.StatRows}" Margin="0,0,0,16">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type vm:CompareStatRowViewModel}">
-                                            <Border CornerRadius="6" Padding="8,5" Margin="0,0,0,2">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="Transparent" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsDifferent}" Value="True">
-                                                                <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="220" />
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0" Text="{Binding Label}" Style="{StaticResource BodyText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding ValueA}" Style="{StaticResource BodyText}" VerticalAlignment="Center"
-                                                               TextWrapping="Wrap" HorizontalAlignment="Center" />
-                                                    <TextBlock Grid.Column="2" Text="{Binding ValueB}" Style="{StaticResource BodyText}" VerticalAlignment="Center"
-                                                               TextWrapping="Wrap" HorizontalAlignment="Center" />
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-
-                                <!-- Bloque Equipo -->
-                                <TextBlock Text="{Binding Loc[compare_section_equipment], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
-                                <ItemsControl ItemsSource="{Binding Compare.EquipmentRows}" Margin="0,0,0,16">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type vm:CompareEquipmentRowViewModel}">
-                                            <Border CornerRadius="6" Padding="8,6" Margin="0,0,0,2">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="Transparent" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsDifferent}" Value="True">
-                                                                <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="150" />
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0" Text="{Binding Label}" Style="{StaticResource BodyText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                    <ContentPresenter Grid.Column="1" Content="{Binding ItemA}" ContentTemplate="{StaticResource CompareItemCellTemplate}" HorizontalAlignment="Center" />
-                                                    <ContentPresenter Grid.Column="2" Content="{Binding ItemB}" ContentTemplate="{StaticResource CompareItemCellTemplate}" HorizontalAlignment="Center" />
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-
-                                <!-- Bloque Inventario: 50 celdas por lado, en rejilla que se
-                                     ajusta sola al ancho real (WrapPanel), nunca desbordando -
-                                     mismo motivo que la MaxWidth de arriba: tiene que caber
-                                     entero a 1080px de ancho de ventana. -->
-                                <TextBlock Text="{Binding Loc[compare_section_inventory], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
-                                <Grid Margin="0,0,0,4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="12" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" Padding="6">
-                                        <ItemsControl ItemsSource="{Binding Compare.InventoryA}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type vm:CompareInventorySlotViewModel}">
-                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource CompareInventoryCellTemplate}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </Border>
-                                    <Border Grid.Column="2" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" Padding="6">
-                                        <ItemsControl ItemsSource="{Binding Compare.InventoryB}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type vm:CompareInventorySlotViewModel}">
-                                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource CompareInventoryCellTemplate}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </Border>
-                                </Grid>
-                            </StackPanel>
-                        </ScrollViewer>
                     </Grid>
                 </Grid>
             </Border>

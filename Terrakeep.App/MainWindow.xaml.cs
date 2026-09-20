@@ -258,10 +258,9 @@ public partial class MainWindow : Window
             // (velo opaco que bloquea el editor de detras) - si esta abierto, Escape es suyo
             // antes que de nada, que es lo que espera cualquiera.
             if (_viewModel.BackupHistory.IsOpen) _viewModel.BackupHistory.CloseCommand.Execute(null);
-            // Comparador (13-sep-2026): mismo overlay de nivel de ventana que el historial de
-            // versiones (velo opaco) - nunca los dos a la vez (ver OpenCompare/OpenBackupHistory
-            // en MainViewModel), pero se comprueba igual por si acaso.
-            else if (_viewModel.Compare.IsOpen) _viewModel.Compare.CloseCommand.Execute(null);
+            // Comparador: ya NO es un overlay (catalogo de rediseño visual T9, 20-sep-2026 - es
+            // una pestaña real de Personaje), Escape no tiene nada que cerrar ahi, igual que en
+            // cualquier otra pestaña de la app.
             // Codigos de build (13-sep-2026): mismo overlay, mismo criterio.
             else if (_viewModel.IsBuildCodeOpen) _viewModel.CloseBuildCodeCommand.Execute(null);
             // Vista previa de generacion de mundo (14-sep-2026): mismo overlay, mismo criterio.

@@ -10,11 +10,17 @@ namespace Terrakeep.App.ViewModels;
 
 // Comparador de dos personajes/builds (encargo del usuario, 13-sep-2026, primero de la lista
 // confirmada de funciones nuevas): "seleccionar dos personajes/builds y ver lado a lado sus
-// diferencias (equipo, stats, prefijos, inventario) - resalta lo que cambia". Overlay de nivel
-// de ventana, mismo mecanismo real ya usado por BackupHistoryViewModel (velo opaco + panel
-// centrado + Escape/clic fuera lo cierra) - reutiliza ese lenguaje visual en vez de inventar
-// uno nuevo, y no exige tener ningun personaje cargado en el editor principal para usarlo (se
-// abre desde Inicio, sobre la lista de personajes ya escaneada).
+// diferencias (equipo, stats, prefijos, inventario) - resalta lo que cambia". No exige tener
+// ningun personaje cargado en el editor principal para usarlo (compara dos personajes CUALQUIERA
+// de la lista ya escaneada de Inicio, via su propio CharacterFileService aislado).
+//
+// Catalogo de rediseño visual T9 (20-sep-2026): "vista A | B dentro de Personaje, no modal de
+// 1400x900 - libera el patron overlay para lo que de verdad es modal (Historial, Codigo de
+// build)". Antes era un overlay de nivel de ventana (mismo mecanismo que BackupHistoryViewModel:
+// velo opaco + panel centrado + Escape/clic fuera lo cierra); ahora es una pestaña mas dentro de
+// Personaje (MainWindow.xaml, PersonajeInnerTab.Comparar) - por eso ya NO tiene IsOpen/Open/
+// Close/Noop, la visibilidad la da el propio TabControl al seleccionarla, igual que Objetos o
+// Buffs. MainViewModel.OpenCompareCommand selecciona esa pestaña en vez de abrir un overlay.
 //
 // CharacterFileService PROPIO (no el de MainViewModel): Load() muta EsPersonajeTModLoader en la
 // propia instancia del servicio (que tabla de "mejor prefijo" usar) - comparar dos personajes
@@ -32,7 +38,6 @@ public sealed partial class CompareViewModel : ObservableObject
     private LoadedCharacter? _loadedA;
     private LoadedCharacter? _loadedB;
 
-    [ObservableProperty] private bool _isOpen;
     [ObservableProperty] private CharacterListEntryViewModel? _selectedA;
     [ObservableProperty] private CharacterListEntryViewModel? _selectedB;
     [ObservableProperty] private string? _errorMessage;
@@ -81,21 +86,6 @@ public sealed partial class CompareViewModel : ObservableObject
         System.ComponentModel.PropertyChangedEventManager.AddHandler(
             LocalizationService.Instance, (_, _) => { if (HasBothSelected) RebuildRows(); }, "Item[]");
     }
-
-    [RelayCommand]
-    private void Open()
-    {
-        IsOpen = true;
-    }
-
-    [RelayCommand]
-    private void Close()
-    {
-        IsOpen = false;
-    }
-
-    [RelayCommand]
-    private void Noop() { } // traga el clic DENTRO del panel, mismo patron que BackupHistoryViewModel.Noop
 
     partial void OnSelectedAChanged(CharacterListEntryViewModel? value) => TryLoadAndCompare();
     partial void OnSelectedBChanged(CharacterListEntryViewModel? value) => TryLoadAndCompare();
