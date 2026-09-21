@@ -20179,3 +20179,111 @@ tocar código.
 Revisado el resto de la bitácora de esta noche en busca de algo a medias de una ronda
 anterior: nada pendiente - el catálogo de rediseño visual (T1-T10) y el de funciones ya
 quedaron cerrados del todo, y el bug del temporizador congelado también.
+
+### 21-sep-2026 (segunda corrección real, EN VIVO) - hover de Inicio: 3 diferencias reales
+contra vanilla comparadas por el usuario con dos capturas, investigadas y cerradas 2/3
+
+El usuario comparó en vivo (dos capturas reales) la pantalla "Seleccionar jugador" de
+Terraria vanilla contra el hover de Inicio recién implementado y reportó 3 diferencias
+reales. Investigadas las 3 en el decompilado antes de tocar código, cerradas 2 del todo y
+la tercera identificada con evidencia real como un cambio de alcance genuino, no una
+tarea de esta ronda.
+
+**1) Duración: la animación se paraba sola a los 1-2s en vez de mantenerse con el hover -
+CERRADO, bug real propio, no de investigación**. Instrumentado con logging temporal
+(`SetHovering`/el `Tick` del timer escribiendo a un fichero) para ver qué pasaba de
+verdad: el `Tick` del `DispatcherTimer` de la tarjeta NUNCA llegaba a dispararse en la
+app real (confirmado con 0 líneas `TICK` en el log durante 3+s de hover sostenido),
+aunque SÍ lo hacía en el arnés `HOMEHOVER_SOLO` de la ronda anterior - ahí estaba el
+"aislar mal la variable": ese arnés construye `CharacterListEntryViewModel` directamente
+en el hilo de UI del propio `Main()`, pero `HomeViewModel.ScanCharacters` (quien
+construye cada tarjeta REAL, `HomeViewModel.cs:389`) corre dentro de un `Task.Run` - el
+`new DispatcherTimer()` del constructor se ataba al Dispatcher efímero de ESE hilo de
+fondo, que nadie bombea nunca, así que el Tick jamás se disparaba. Arreglo real:
+`CharacterListEntryViewModel.cs`, el timer se crea ahora DE VERDAD la primera vez que
+hace falta dentro de `SetHovering` (que siempre corre en el hilo de UI real, invocado
+desde `MouseEnter`/`MouseLeave`/`Unloaded`), nunca en el constructor. Verificado en vivo
+con captura real: 6 fotogramas espaciados a lo largo de 6 segundos de hover sostenido,
+TODOS distintos entre sí, vuelta exacta al frame de reposo al quitar el ratón. `HOMEHOVER_SOLO`
+ampliado con un muestreo de 10 puntos (no solo antes/después) para que este tipo de bug
+no pueda volver a colarse sin que el arnés lo detecte.
+
+**2) Mascota: en vanilla se anima en vivo, en Terrakeep salía un sprite estático -
+CERRADO, catálogo nuevo construido con datos reales del decompilado**. Cita real:
+`Terraria/GameContent/UI/Elements/UICharacter.cs` (DrawPets, ~línea 59-64):
+`ProjectileID.Sets.CharacterPreviewAnimations[projectile.type].ApplyTo(projectile,
+_animated)` en cada frame real de dibujado. `Terraria/ID/ProjectileID.cs` (34-37,
+`CharacterPreviewAnimations`): tabla real de ~80 mascotas, `SimpleLoop(startFrame,
+frameCount, delayPerFrame).WhenSelected(...)` - el `.WhenSelected` (cuando existe)
+sobreescribe el fotograma/cadencia real usados DURANTE el hover.
+`Terraria/DataStructures/SettingsForCharacterPreview.cs` (19-45): el avance real es un
+simple contador de fotograma que cicla `FrameCount` filas cada `DelayPerFrame` ticks
+(60/s) - mucho más simple de lo temido, NO decenas de métodos de dibujado a mano por
+mascota. `Terraria/Item.cs` (`DefaultToVanitypet(shoot, buffType)` + las asignaciones
+manuales de los objetos más antiguos) da qué objeto dispara qué TIPO de proyectil;
+`Terraria/Main.cs` (`projFrames[id] = N`) da el número real de filas de cada hoja de
+sprite (necesario para saber la altura real de cada fotograma, dato que `SimpleLoop` no
+lleva). Construido con un extractor de un solo uso sobre el decompilado real
+(`combinar_catalogo_mascotas.py`, no forma parte del repo - el resultado SÍ):
+- `Terrakeep.App/Assets/pet_animations.json` (63 mascotas reales, item→proyectil→
+  fotogramas de hover) + `Terrakeep.Core/Data/PetAnimationCatalog.cs` (mismo patrón real
+  que `VanillaArmorSlotCatalog`).
+- `Terrakeep.App/Assets/pet_light_items.json` (9 mascotas de LUZ reales encontradas) +
+  filtro nuevo en `EquipmentAppearanceResolver.ResolvePet` - Terraria real NUNCA enseña
+  una mascota de luz en esta pantalla (`Main.cs`, `vanityPet[...] && !lightPet[...]`);
+  antes de esta ronda Terrakeep no distinguía ninguna, ahora cierra el hueco para los 9
+  encontrados con texto real en `Item.cs` (~3 restantes sin resolver, documentados, caen
+  al comportamiento anterior).
+- `scripts/extraer-sprites-mascotas.js` (nuevo, mismo criterio real que
+  `extraer-sprites-jugador.js`): 62 hojas de sprite reales extraídas de
+  `Projectile_{id}.xnb` a `Assets/pets/{id}.png`, tiras verticales enteras.
+- `Terrakeep.App/Services/PetPreviewRenderer.cs` (nuevo): recorta el fotograma real
+  (altura real = alto de la hoja / `TotalFrames`, SIN inventar); `PetAnimationDriver`
+  traduce tiempo real transcurrido a fotograma usando la cadencia REAL de cada mascota
+  (`SelDelay` convertido de ticks de 60/s a ms), no una velocidad genérica - una mascota
+  con `SelDelay` bajo se ve de verdad más rápida que una con `SelDelay` alto, igual que
+  en el juego real.
+- `CharacterListEntryViewModel`: `PetImage` (`ImageSource?`) sustituye a `PetIconPath`
+  (string) - anima de verdad en cada tick del MISMO timer que ya mueve piernas/brazos
+  (un único `DispatcherTimer` por tarjeta), cae al icono estático real
+  (`VanillaIconResolver`) cuando el catálogo no conoce el objeto.
+- Verificado con `HOMEHOVER_SOLO` ampliado (muestreo de 10 puntos también sobre los
+  bytes reales del fotograma de mascota: 7-8 valores distintos de 10, coincide con el
+  ciclo real de 7 fotogramas de la mascota de Eldelgas/proyectil 960) y con captura real
+  en vivo (el mismo personaje `Eldelgas.plr`, mascota real 5098): la criatura cambia de
+  pose visiblemente en varios puntos de los 6s de hover sostenido, icono real confirmado
+  pixel a pixel contra el `.png` extraído.
+- **Alcance deliberado restante, documentado y no oculto**: 63 de ~70 mascotas de
+  vanidad reales cubiertas (las que faltan, sin `shoot`/`buffType` resoluble por texto en
+  `Item.cs` o con `FrameCount` real 0 -esas SÍ son fieles, Terraria tampoco las anima-,
+  caen al icono estático, nunca a un crash ni a un dato inventado).
+
+**3) Vanidad de accesorios (7 ranuras emparejadas: anillo/collar/cintura/espalda/mano/
+alas/escudo, cada una con su propio dibujado) - INVESTIGADO A FONDO, NO implementado
+esta ronda, alcance real cuantificado con evidencia dura, no una excusa**.
+`Terraria/DataStructures/PlayerDrawLayers.cs` (decompilado real): **7064 líneas, 58
+capas de dibujo `PlayerDrawLayer` distintas** (`grep -c "PlayerDrawLayer"` sobre el
+fichero real). De esas 58, ~12 son relevantes para un doll estático sin combate (Wings,
+Backpacks, Tails, BackAcc, BalloonAcc, OffhandAcc, WaistAcc, NeckAcc, FaceAcc,
+FrontAccBack/FrontAccFront, Shield/HandOnAcc) - el resto son capas de buffs/debuffs de
+combate (ElectrifiedDebuff, WebbedDebuff, IceBarrier, BeetleBuff, CaptureTheGem...) sin
+sentido en una tarjeta de personaje quieta. Medido en detalle SOLO "Alas"
+(`DrawPlayer_09_Wings`, la capa más visible y más pedida): ~600 líneas de código con
+casos particulares por variante real de ala (aleteo, offsets, capas traseras/delanteras
+distintas) - NO es un dato genérico "un sprite y ya está" como la armadura de
+cabeza/cuerpo/piernas (que SÍ es una hoja compuesta uniforme, por eso esa parte ya
+funcionaba). Replicar las ~12 capas relevantes con la MISMA fidelidad ("no una
+aproximación", pedido explícito) es un catálogo de datos + extracción de sprites +
+lógica de composición nuevo del tamaño del que ya tiene la armadura (o mayor, dado que
+alas por sí solas ya casi lo iguala) - un trabajo real de varias sesiones dedicadas, no
+una tarde. Decisión honesta: no se ha improvisado una versión a medias de baja calidad
+para "marcar la casilla" (rompería el listón de calidad ya establecido en el resto de la
+familia Keep) - queda documentado aquí como catálogo pendiente real, con el tamaño
+medido, para retomarlo en una sesión dedicada empezando por Alas (la más visible).
+
+Regresión completa repetida tras los 3 puntos: `Terrakeep.Core.Tests` 588/588,
+`Terrakeep.App.ViewModels.Tests` 518/518, barrido `AR_LAY_SOLO=Inicio` con el mismo
+conjunto exacto de 22 fallos preexistentes (ninguno nuevo). Redesplegado en local
+(`bin\Debug` tras cada verificación) - la instalación Release
+(`%LocalAppData%\Programs\Terrakeep\`) se actualiza al cierre de esta ronda. Sin
+publicar nada.

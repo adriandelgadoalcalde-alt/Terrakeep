@@ -27,15 +27,30 @@ namespace Terrakeep.App.Services;
 // (no compensaba el riesgo de esconder o mostrar la pieza equivocada por una lectura de bit
 // erronea). Un personaje que use ese toggle poco frecuente vera su pieza dibujada aunque el
 // juego real la esconda - hueco real, ya conocido, no un bug silencioso.
+// Resultado real de ResolvePet: AnimationEntry (si PetAnimationCatalog conoce el objeto) manda
+// sobre IconPath - CharacterListEntryViewModel anima con PetPreviewRenderer cuando hay
+// AnimationEntry, y cae al icono estatico (IconPath) cuando no.
+public sealed record PetPreview(PetAnimationEntry? AnimationEntry, string? IconPath);
+
 public sealed class EquipmentAppearanceResolver
 {
     private readonly VanillaArmorSlotCatalog _vanillaSlots;
     private readonly CalamityCatalog _calamity;
+    private readonly PetAnimationCatalog _petAnimations;
+    private readonly HashSet<int> _lightPetItemIds;
 
-    public EquipmentAppearanceResolver(VanillaArmorSlotCatalog vanillaSlots, CalamityCatalog calamity)
+    public EquipmentAppearanceResolver(VanillaArmorSlotCatalog vanillaSlots, CalamityCatalog calamity, PetAnimationCatalog petAnimations)
     {
         _vanillaSlots = vanillaSlots;
         _calamity = calamity;
+        _petAnimations = petAnimations;
+        // Lista real de items de mascota de LUZ (Main.cs real, lightPet[] - ver el comentario
+        // completo de ResolvePet mas abajo) - fichero pequeño, se carga aqui mismo sin montar
+        // una clase de catalogo aparte solo para un array de ids.
+        string lightPath = Path.Combine(AppContext.BaseDirectory, "Assets", "pet_light_items.json");
+        _lightPetItemIds = File.Exists(lightPath)
+            ? new HashSet<int>(System.Text.Json.JsonSerializer.Deserialize<int[]>(File.ReadAllText(lightPath)) ?? [])
+            : [];
     }
 
     public PlayerPreviewRenderer.EquippedArmor Resolve(PlrLoadout loadout)
@@ -61,8 +76,9 @@ public sealed class EquipmentAppearanceResolver
     private static PlrItemSlot Visible(PlrLoadout loadout, int index) =>
         loadout.Social[index].IsEmpty ? loadout.Items[index] : loadout.Social[index];
 
-    // Hover en Inicio ("mascotas... deben aparecer en la vista previa" - bitacora.md
-    // 21-sep-2026). Terraria/GameContent/UI/Elements/UICharacter.cs real, PreparePetProjectiles()
+    // Hover en Inicio ("mascotas... deben aparecer en la vista previa, EN VIVO, animadas de
+    // verdad" - bitacora.md 21-sep-2026, corregido tras comparacion real del usuario contra
+    // vanilla). Terraria/GameContent/UI/Elements/UICharacter.cs real, PreparePetProjectiles()
     // (linea 59): "Item item = _player.miscEquips[0]" - el slot 0 de miscEquips (pet/mascota) es
     // el UNICO que la propia pantalla de seleccion de Terraria muestra (miscEquips[1..4] son
     // montura/minecart/gancho, sin capa visual en esa pantalla real). PlrBodySerializer.cs real
@@ -71,23 +87,26 @@ public sealed class EquipmentAppearanceResolver
     // de 8 slots"), asi que EquipmentItems[0] es el slot real a leer aqui, sin loadout de por
     // medio (a diferencia de armadura/vanidad, la mascota NO es por loadout en el juego real).
     //
-    // ALCANCE DELIBERADO, documentado y no oculto (dos huecos reales, no arreglados aqui):
-    // 1) Terraria real dibuja la mascota como un PROYECTIL vivo (Projectile.xnb, con su propia
-    //    animacion) en Main.vanityPet[item.buffType] - aqui se usa el ICONO REAL del objeto
-    //    (VanillaIconResolver, mismo catalogo ya usado en toda la app) en su lugar: Terrakeep no
-    //    tiene ninguna tabla item->buffType->Projectile.xnb todavia (construirla para las ~80
-    //    mascotas reales es un catalogo nuevo entero, fuera de alcance de esta pasada) - un
-    //    icono real y fiel al objeto guardado, aunque no sea la MISMA tecnica de dibujado.
-    // 2) UICharacter.cs real filtra el slot con "Main.vanityPet[...] && !Main.lightPet[...]"
-    //    (Main.cs:9378-9458, ~70 mascotas de vanidad + ~12 mascotas de luz, las dos tablas
-    //    indexadas por buffType) - sin una tabla item->buffType en Terrakeep, esta distincion no
-    //    se replica: CUALQUIER objeto puesto en el slot de mascota se enseña, incluida una
-    //    mascota de luz (Terraria real la esconderia en esta pantalla concreta). "Lo que no se
-    //    encuentra no se inventa" - mejor un dato real ligeramente mas amplio que uno inventado.
-    public string? ResolvePet(PlrItemSlot[] equipmentItems) =>
-        equipmentItems.Length > 0 && !equipmentItems[0].IsEmpty
-            ? VanillaIconResolver.GetIconPath(equipmentItems[0].Id)
-            : null;
+    // UICharacter.cs real filtra el slot con "Main.vanityPet[item.buffType] &&
+    // !Main.lightPet[item.buffType]" (Main.cs:9378-9458) - las mascotas de LUZ NO se enseñan
+    // NUNCA en esta pantalla, ni animadas ni como icono. _lightPetItemIds (ver el constructor,
+    // generado con el mismo criterio real que PetAnimationCatalog) cierra ese hueco para los 9
+    // items de luz reales encontrados con texto en Item.cs.
+    //
+    // ALCANCE DELIBERADO restante, documentado y no oculto: PetAnimationCatalog cubre 63 de las
+    // ~70 mascotas de VANIDAD reales (ver el comentario de esa clase) - las que no tienen
+    // entrada ahi (icono real igualmente correcto, VanillaIconResolver) caen al icono estatico,
+    // nunca a un crash ni a un dato inventado.
+    public PetPreview? ResolvePet(PlrItemSlot[] equipmentItems)
+    {
+        if (equipmentItems.Length == 0 || equipmentItems[0].IsEmpty) return null;
+        int itemId = equipmentItems[0].Id;
+        if (_lightPetItemIds.Contains(itemId)) return null;
+
+        var animated = _petAnimations.ByItemId(itemId);
+        string? iconPath = VanillaIconResolver.GetIconPath(itemId);
+        return animated is null && iconPath is null ? null : new PetPreview(animated, iconPath);
+    }
 
     private string? ResolveHead(PlrItemSlot slot) => Resolve(slot, "Head", e => e.Head, "armor_head");
     private string? ResolveBody(PlrItemSlot slot) => Resolve(slot, "Body", e => e.Body, "armor_body");

@@ -91,6 +91,7 @@ public sealed class CharacterFileService
     public VanillaBuffDurationCatalog VanillaBuffDurations { get; }
     public VanillaResearchCountCatalog VanillaResearchCounts { get; }
     public VanillaArmorSlotCatalog VanillaArmorSlots { get; }
+    public PetAnimationCatalog PetAnimations { get; }
     // Doll de cuerpo completo fiel al guardado (pedido explicito, 3-sep-2026) - ver
     // EquipmentAppearanceResolver.
     public EquipmentAppearanceResolver EquipmentAppearance { get; }
@@ -200,7 +201,8 @@ public sealed class CharacterFileService
         VanillaResearchCounts = VanillaResearchCountCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_research_counts.json"));
         TooltipCatalogs = new ItemTooltipCatalogs(VanillaStats, CalamityCatalog, VanillaCategories, VanillaItemTooltips, VanillaArmorSets, CalamityArmorSets, PrefixEffects);
         VanillaArmorSlots = VanillaArmorSlotCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_armor_slots.json"));
-        EquipmentAppearance = new EquipmentAppearanceResolver(VanillaArmorSlots, CalamityCatalog);
+        PetAnimations = PetAnimationCatalog.LoadFromFile(Path.Combine(assetsDir, "pet_animations.json"));
+        EquipmentAppearance = new EquipmentAppearanceResolver(VanillaArmorSlots, CalamityCatalog, PetAnimations);
         BackupHistory = new BackupHistoryService();
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);

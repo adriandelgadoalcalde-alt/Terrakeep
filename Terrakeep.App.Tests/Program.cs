@@ -1664,8 +1664,11 @@ internal static partial class Program
                     "sintetico-homehover.plr", personajeHover, isTModLoader: false, tplr: null,
                     DateTime.UtcNow, fileService.EquipmentAppearance);
 
-                Console.WriteLine($"HOMEHOVER_SOLO: PetIconPath resuelto={entry.PetIconPath ?? "(null)"} (esperado no-null, icono real de la mascota 5098)");
-                if (entry.PetIconPath is null) Console.WriteLine("FALLO: HOMEHOVER_SOLO - PetIconPath deberia resolver un icono real para la mascota 5098");
+                // 5098 (item 5098 -> proyectil 960) SI esta en PetAnimationCatalog (ver
+                // Terrakeep.App/Assets/pet_animations.json) - PetImage tiene que resolver el
+                // PRIMER fotograma real animado, no el icono estatico de reserva.
+                Console.WriteLine($"HOMEHOVER_SOLO: PetImage resuelto={(entry.PetImage is not null ? entry.PetImage.GetType().Name : "(null)")} (esperado no-null, fotograma real de la mascota 5098/proyectil 960)");
+                if (entry.PetImage is null) Console.WriteLine("FALLO: HOMEHOVER_SOLO - PetImage deberia resolver un fotograma real para la mascota 5098");
 
                 var frameReposo = PixelsDeCard(entry.Preview);
 
@@ -1687,15 +1690,34 @@ internal static partial class Program
                 // seguro porque compara ANTES/DESPUES de un evento discreto, no un ciclo
                 // periodico que puede volver a un valor ya visto).
                 var sumasCiclo = new List<int>();
+                // Mascota EN VIVO (correccion real 21-sep-2026, usuario comparando con vanilla):
+                // mismo criterio de muestreo robusto de varios puntos, sobre los bytes REALES
+                // del fotograma de la mascota (PetPreviewRenderer.RenderFrame, WriteableBitmap
+                // congelado) - no basta con comparar la REFERENCIA del objeto (una nueva
+                // instancia podria contener los MISMOS bytes por coincidencia si el ciclo esta
+                // en una franja "quieta" real del proyectil, igual que con el doll).
+                var sumasMascota = new List<int>();
+                int? PixelsDeMascota()
+                {
+                    if (entry.PetImage is not System.Windows.Media.Imaging.WriteableBitmap wb) return null;
+                    var px = new byte[wb.PixelHeight * wb.PixelWidth * 4];
+                    wb.CopyPixels(px, wb.PixelWidth * 4, 0);
+                    return px.Sum(b => (int)b);
+                }
                 for (int muestra = 0; muestra < 10; muestra++)
                 {
                     BombeaMsCard(140);
                     var px = PixelsDeCard(entry.Preview);
                     sumasCiclo.Add(px == null ? -1 : px.Sum(b => (int)b));
+                    sumasMascota.Add(PixelsDeMascota() ?? -1);
                 }
                 bool avanzaDeVerdad = sumasCiclo.Distinct().Count() > 1;
                 Console.WriteLine($"HOMEHOVER_SOLO: tras ~1400ms con el Dispatcher real bombeando (10 muestras cada 140ms) -> valores distintos vistos={sumasCiclo.Distinct().Count()} de 10 (esperado > 1, el ciclo real tiene que avanzar)");
                 if (!avanzaDeVerdad) Console.WriteLine("FALLO: HOMEHOVER_SOLO - el ciclo de andar no avanza de verdad a lo largo del tiempo");
+
+                bool mascotaAvanzaDeVerdad = sumasMascota.Distinct().Count() > 1;
+                Console.WriteLine($"HOMEHOVER_SOLO: mascota (proyectil 960) en el mismo muestreo -> valores distintos vistos={sumasMascota.Distinct().Count()} de 10 (esperado > 1, la mascota real de Eldelgas tiene 7 fotogramas reales en su ciclo de hover)");
+                if (!mascotaAvanzaDeVerdad) Console.WriteLine("FALLO: HOMEHOVER_SOLO - la mascota deberia animarse EN VIVO durante el hover, no quedarse en un fotograma fijo");
 
                 // --- 2) SetHovering(false) lo para YA (mismo criterio anti-fuga que WALKFREEZE_SOLO) ---
                 entry.SetHovering(false);

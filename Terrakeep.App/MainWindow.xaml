@@ -1476,18 +1476,18 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <Grid Grid.Column="0" Width="52" Height="72.8" VerticalAlignment="Top">
-                        <!-- Mascota real equipada (idea del catalogo, 21-sep-2026): capa DETRAS
-                             del doll, mismo orden real que Terraria vanilla - UICharacter.cs real,
-                             DrawSelf(): DrawPets(spriteBatch) se dibuja ANTES que
-                             Main.PlayerRenderer.DrawPlayer(...) (linea 123 antes de la 127), la
-                             mascota queda por debajo/detras del personaje. Ver
-                             EquipmentAppearanceResolver.ResolvePet para el icono real usado y el
-                             alcance deliberado documentado (icono del objeto, no el proyectil
-                             animado en vivo). -->
-                        <Image Source="{Binding PetIconPath}" Width="20" Height="20" Stretch="Uniform"
+                        <!-- Mascota real equipada, ANIMADA de verdad durante el hover (correccion
+                             real 21-sep-2026, usuario comparando en vivo contra Terraria
+                             vanilla) - capa DETRAS del doll, mismo orden real que Terraria
+                             vanilla - UICharacter.cs real, DrawSelf(): DrawPets(spriteBatch) se
+                             dibuja ANTES que Main.PlayerRenderer.DrawPlayer(...) (linea 123 antes
+                             que la 127), la mascota queda por debajo/detras del personaje. Ver
+                             CharacterListEntryViewModel.PetImage/RefreshPetImage y
+                             PetPreviewRenderer/PetAnimationDriver para el detalle real completo. -->
+                        <Image Source="{Binding PetImage}" Width="20" Height="20" Stretch="Uniform"
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                               Visibility="{Binding PetIconPath, Converter={StaticResource NullToVis}}"
+                               Visibility="{Binding PetImage, Converter={StaticResource NullToVis}}"
                                ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}" />
                         <Image Source="{Binding Preview}" Stretch="Uniform"
                                RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top" />

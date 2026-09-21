@@ -1,3 +1,4 @@
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -73,11 +74,14 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     private readonly PlayerPreviewRenderer.PlayerColors _colors;
     private readonly PlayerPreviewRenderer.EquippedArmor _armor;
 
-    // Icono real de la mascota puesta (VanillaIconResolver, mismo catalogo que el resto de la
-    // app) - ver EquipmentAppearanceResolver.ResolvePet para el detalle real y el alcance
-    // deliberado documentado. Null si no hay mascota puesta o si el objeto no tiene icono
-    // extraido (mismo criterio "lo que no se encuentra no se inventa" que el resto del resolver).
-    public string? PetIconPath { get; }
+    // Mascota real equipada - ANIMADA de verdad durante el hover cuando PetAnimationCatalog
+    // conoce el objeto (PetPreviewRenderer + PetAnimationDriver, ver el comentario real de esas
+    // clases para la cita completa del decompilado), icono estatico (VanillaIconResolver) como
+    // reserva cuando no. Ver EquipmentAppearanceResolver.ResolvePet para el alcance deliberado
+    // documentado (mascotas de luz excluidas, igual que vanilla).
+    [ObservableProperty] private ImageSource? _petImage;
+    private readonly PetPreview? _petPreview;
+    private readonly PetAnimationDriver? _petAnimationDriver;
 
     // Timer PROPIO de esta tarjeta, arrancado SOLO mientras el raton esta encima y parado de
     // verdad al salir (MainWindow.xaml: MouseEnter/MouseLeave + Unloaded como red de seguridad
@@ -85,7 +89,21 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     // StopWalkAnimation, "Terrakeep congelado" 8h+ por un DispatcherTimer que no se paraba solo,
     // ver bitacora.md 21-sep-2026 madrugada) NUNCA se repite aqui: un timer por tarjeta, parado
     // en cuanto deja de estar en hover, sin ningun camino donde pueda quedar corriendo solo.
-    private readonly DispatcherTimer _hoverWalkTimer = new() { Interval = TimeSpan.FromMilliseconds(90) };
+    //
+    // Bug real encontrado EN VIVO (usuario, comparando con vanilla): la animacion se congelaba
+    // en el primer fotograma de andar a los pocos cientos de ms, sin volver a avanzar nunca -
+    // instrumentado con logging temporal (diag-hover.log) que confirmo que el Tick del timer NO
+    // se disparaba NUNCA en la app real (aunque SI lo hacia en el arnes HOMEHOVER_SOLO, que
+    // aislaba mal la variable - ver el comentario de esa prueba). Causa real: este campo se
+    // inicializaba en el CONSTRUCTOR de la clase, y HomeViewModel.ScanCharacters (que construye
+    // cada CharacterListEntryViewModel, HomeViewModel.cs:389) corre dentro de un `Task.Run` en
+    // un hilo de FONDO (RefreshAsync) - "new DispatcherTimer()" alli se ataba al Dispatcher
+    // efimero de ESE hilo del pool, que nunca se bombea, asi que el Tick jamas llegaba a
+    // dispararse. Arreglo real: el timer se crea DE VERDAD la primera vez que hace falta, dentro
+    // de SetHovering (que SIEMPRE corre en el hilo de UI real, invocado desde MouseEnter/
+    // MouseLeave/Unloaded en MainWindow.xaml.cs) - "new DispatcherTimer()" alli se ata al
+    // Dispatcher real de la ventana, el que si esta bombeando siempre.
+    private DispatcherTimer? _hoverWalkTimer;
     private int _walkCycleIndex;
     private bool _isHovering;
 
@@ -96,19 +114,52 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         if (hovering)
         {
             _walkCycleIndex = 0;
-            _hoverWalkTimer.Start();
+            _petAnimationDriver?.Reiniciar();
+            EnsureHoverWalkTimer().Start();
         }
         else
         {
-            _hoverWalkTimer.Stop();
+            _hoverWalkTimer?.Stop();
+            _petAnimationDriver?.Reiniciar();
         }
         RefreshPreview();
+        RefreshPetImage();
+    }
+
+    private DispatcherTimer EnsureHoverWalkTimer()
+    {
+        if (_hoverWalkTimer != null) return _hoverWalkTimer;
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(90) };
+        timer.Tick += (_, _) =>
+        {
+            _walkCycleIndex = (_walkCycleIndex + 1) % AppearanceViewModel.WalkCycleRows.Length;
+            // Mascota EN VIVO durante el hover (correccion real 21-sep-2026, usuario comparando
+            // con vanilla): avanza su propio ciclo real (PetAnimationDriver, cadencia real de
+            // SelDelay, NO generica) en cada tick del mismo timer que ya anima piernas/brazos -
+            // un unico DispatcherTimer por tarjeta, sin montar uno aparte solo para la mascota.
+            _petAnimationDriver?.Avanzar(90);
+            RefreshPreview();
+            RefreshPetImage();
+        };
+        _hoverWalkTimer = timer;
+        return timer;
     }
 
     private void RefreshPreview()
     {
         int frame = _isHovering ? AppearanceViewModel.WalkCycleRows[_walkCycleIndex] : 0;
         Preview = PlayerPreviewRenderer.Render(_hairStyle, _skinVariant, _colors, _armor, frame);
+    }
+
+    private void RefreshPetImage()
+    {
+        if (_petPreview?.AnimationEntry is { } entry && _petAnimationDriver is not null)
+        {
+            var frame = PetPreviewRenderer.RenderFrame(entry, _petAnimationDriver.FrameActualEnCiclo);
+            if (frame is not null) { PetImage = frame; return; }
+        }
+        // Sin animacion real conocida (o el fotograma fallo al recortar) - icono estatico fijo,
+        // ya resuelto una unica vez en el constructor y guardado en _petPreview.IconPath.
     }
 
     // I-a (segunda auditoria de Opus, Fable): "No se distingue que personaje esta cargado - las
@@ -161,13 +212,29 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         _skinVariant = character.Gender;
         _colors = colors;
         _armor = armor;
-        PetIconPath = equipmentAppearance.ResolvePet(character.EquipmentItems);
         _preview = PlayerPreviewRenderer.Render(_hairStyle, _skinVariant, colors, armor);
 
-        _hoverWalkTimer.Tick += (_, _) =>
+        _petPreview = equipmentAppearance.ResolvePet(character.EquipmentItems);
+        if (_petPreview?.AnimationEntry is { } petEntry)
         {
-            _walkCycleIndex = (_walkCycleIndex + 1) % AppearanceViewModel.WalkCycleRows.Length;
-            RefreshPreview();
-        };
+            _petAnimationDriver = new PetAnimationDriver(petEntry);
+            _petImage = PetPreviewRenderer.RenderFrame(petEntry, 0);
+        }
+        // Icono estatico de reserva (objeto de mascota real sin animacion catalogada, o el
+        // recorte del primer fotograma fallo) - un BitmapImage normal, congelado para poder
+        // construirse aqui (este constructor corre en el hilo de FONDO del escaneo,
+        // HomeViewModel.cs:389 - mismo motivo real que obligo a hacer perezoso
+        // _hoverWalkTimer mas arriba, ver su comentario) y usarse despues sin problema en el
+        // hilo de UI.
+        if (_petImage is null && _petPreview?.IconPath is { } iconPath)
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.UriSource = new Uri(iconPath, UriKind.Absolute);
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.EndInit();
+            bitmap.Freeze();
+            _petImage = bitmap;
+        }
     }
 }
