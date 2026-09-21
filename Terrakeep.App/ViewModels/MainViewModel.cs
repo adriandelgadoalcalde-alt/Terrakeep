@@ -463,6 +463,12 @@ public partial class MainViewModel : ObservableObject
     partial void OnPersonajeInnerTabIndexChanged(int value)
     {
         if (value == (int)PersonajeInnerTab.Desbloqueos) Flags.RefreshVersionWarning();
+        // Bug real reportado en vivo (21-sep-2026, "Terrakeep congelado" - confirmado con
+        // dotnet-dump que era _walkAnimationTimer corriendo sin parar durante horas): la
+        // animacion de "Andar" solo tiene sentido real mientras se ve el doll grande de
+        // Apariencia - al salir de esa sub-pestaña (a cualquier otra, incluida Objetos/Buffs) se
+        // para sola, sin depender de que el usuario pulse "Detener" a mano.
+        if (value != (int)PersonajeInnerTab.Apariencia) Appearance.StopWalkAnimation();
     }
     [ObservableProperty] private bool _saveConfirmationVisible;
 
@@ -1122,6 +1128,12 @@ public partial class MainViewModel : ObservableObject
         // Undo/Redo real (UndoEdit/RedoEdit son el UNICO sitio que llama a UndoStack.UndoLast/
         // RedoLast, y los dos ya envuelven la llamada en _suppressUndoRecording=true/false).
         Appearance = new AppearanceViewModel(_service, PushAppearanceUndo, () => _suppressUndoRecording);
+        // Bug real reportado en vivo (21-sep-2026, ver el comentario completo en
+        // OnPersonajeInnerTabIndexChanged): cargar CUALQUIER personaje encima (el mismo de
+        // vuelta o uno distinto) tiene que parar una animacion de "Andar" que quedara corriendo
+        // del personaje anterior - construido DESPUES de Appearance a proposito (referencia
+        // hacia adelante nula si no).
+        CharacterLoaded += Appearance.StopWalkAnimation;
         Library.ItemPlaced += () =>
         {
             SelectedTabIndex = (int)AppTab.Personaje;

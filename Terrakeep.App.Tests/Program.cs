@@ -1536,6 +1536,88 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // WALKFREEZE_SOLO=1 (21-sep-2026, bug real reportado EN VIVO por el usuario: "Terrakeep
+        // congelado", confirmado con un volcado dotnet-dump del proceso real del usuario - 8h+ de
+        // CPU acumulado sin ningun deadlock, causa real: AppearanceViewModel._walkAnimationTimer
+        // (90ms) nunca se paraba solo al salir de Apariencia ni al cargar otro personaje, solo
+        // "Detener" manual lo apagaba - y el doll pequeño de la cabecera esta enlazado al mismo
+        // PreviewImage, visible en CUALQUIER pestaña). Arreglo real: AppearanceViewModel.
+        // StopWalkAnimation() llamado desde MainViewModel.OnPersonajeInnerTabIndexChanged (al
+        // salir de Apariencia) y desde CharacterLoaded (al cargar cualquier personaje). Verifica
+        // con el Dispatcher real bombeando ticks (mismo patron ya probado en IDEA10_SOLO) que:
+        // 1) la animacion arranca y el frame SI avanza de verdad, 2) cambiar de sub-pestaña la
+        // para sola (IsWalkAnimationPlaying pasa a false Y el frame deja de avanzar), 3) cargar
+        // OTRO personaje encima tambien la para si se habia vuelto a activar.
+        if (Environment.GetEnvironmentVariable("WALKFREEZE_SOLO") == "1")
+        {
+            try
+            {
+                byte[]? PixelsDe(System.Windows.Media.Imaging.WriteableBitmap? bmp)
+                {
+                    if (bmp == null) return null;
+                    var px = new byte[bmp.PixelHeight * bmp.PixelWidth * 4];
+                    bmp.CopyPixels(px, bmp.PixelWidth * 4, 0);
+                    return px;
+                }
+                void BombeaMs(int ms)
+                {
+                    var cr = System.Diagnostics.Stopwatch.StartNew();
+                    while (cr.ElapsedMilliseconds < ms) { DoEvents(); System.Threading.Thread.Sleep(10); }
+                }
+
+                vm.SelectedTabIndex = 1; // Personaje
+                vm.PersonajeInnerTabIndex = 3; // PersonajeInnerTab.Apariencia (enum privado real, MainViewModel.cs)
+                DoEvents(); DoEvents();
+
+                // --- 1) La animacion arranca y el frame SI avanza de verdad ---
+                vm.Appearance.ToggleWalkAnimationCommand.Execute(null);
+                DoEvents();
+                Console.WriteLine($"WALKFREEZE_SOLO: tras activar 'Andar' en Apariencia -> IsWalkAnimationPlaying={vm.Appearance.IsWalkAnimationPlaying} (esperado True)");
+                var frame1 = PixelsDe(vm.Appearance.PreviewImage);
+                BombeaMs(500);
+                var frame2 = PixelsDe(vm.Appearance.PreviewImage);
+                bool avanzaDeVerdad = frame1 != null && frame2 != null && !frame1.SequenceEqual(frame2);
+                Console.WriteLine($"WALKFREEZE_SOLO: tras ~500ms con el Dispatcher real bombeando -> el frame avanzo de verdad={avanzaDeVerdad} (esperado True)");
+                if (!vm.Appearance.IsWalkAnimationPlaying || !avanzaDeVerdad) Console.WriteLine("FALLO: WALKFREEZE_SOLO - la animacion real no arranco/no avanzo, no se puede verificar que el arreglo la pare de verdad");
+
+                // --- 2) Salir de Apariencia la para SOLA ---
+                vm.PersonajeInnerTabIndex = 0; // Objetos
+                DoEvents(); DoEvents();
+                Console.WriteLine($"WALKFREEZE_SOLO: tras salir de Apariencia (a Objetos) SIN pulsar 'Detener' -> IsWalkAnimationPlaying={vm.Appearance.IsWalkAnimationPlaying} (esperado False)");
+                if (vm.Appearance.IsWalkAnimationPlaying) Console.WriteLine("FALLO: WALKFREEZE_SOLO - salir de Apariencia no para la animacion sola (regresion del arreglo)");
+                var frame3 = PixelsDe(vm.Appearance.PreviewImage);
+                BombeaMs(500);
+                var frame4 = PixelsDe(vm.Appearance.PreviewImage);
+                bool siguioAvanzando = frame3 != null && frame4 != null && !frame3.SequenceEqual(frame4);
+                Console.WriteLine($"WALKFREEZE_SOLO: tras otros ~500ms bombeando FUERA de Apariencia -> el frame siguio avanzando={siguioAvanzando} (esperado False - el timer real ya no dispara)");
+                if (siguioAvanzando) Console.WriteLine("FALLO: WALKFREEZE_SOLO - el DispatcherTimer real sigue disparando (renderizando) pese a IsWalkAnimationPlaying=False - fuga real de CPU en segundo plano");
+
+                // --- 3) Reactivar y cargar OTRO personaje encima tambien la para ---
+                vm.PersonajeInnerTabIndex = 3; // vuelve a Apariencia
+                DoEvents();
+                vm.Appearance.ToggleWalkAnimationCommand.Execute(null);
+                DoEvents();
+                Console.WriteLine($"WALKFREEZE_SOLO: reactivada para la prueba 3 -> IsWalkAnimationPlaying={vm.Appearance.IsWalkAnimationPlaying} (esperado True)");
+                string plrOtro = Path.Combine(Path.GetTempPath(), $"terrakeep-walkfreeze-{Guid.NewGuid():N}.plr");
+                var personajeOtro = new Terrakeep.Core.PlrFormat.PlrCharacter
+                {
+                    Name = "PersonajeWalkfreeze",
+                    Version = 279,
+                    PrimaryLoadout = Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: true),
+                    Loadouts = [Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false)],
+                };
+                File.WriteAllBytes(plrOtro, Terrakeep.Core.PlrFormat.PlrFile.Write(personajeOtro));
+                vm.LoadFromPath(plrOtro);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"WALKFREEZE_SOLO: tras cargar OTRO personaje real encima ('{vm.CharacterName}') -> IsWalkAnimationPlaying={vm.Appearance.IsWalkAnimationPlaying} (esperado False)");
+                if (vm.Appearance.IsWalkAnimationPlaying) Console.WriteLine("FALLO: WALKFREEZE_SOLO - cargar otro personaje encima no para la animacion del anterior (regresion del arreglo)");
+                try { File.Delete(plrOtro); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            }
+            catch (Exception ex) { Console.WriteLine("WALKFREEZE_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (WALKFREEZE_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA9_SOLO=1 (20-sep-2026, catalogo de ideas Keep, idea 9 "modo reparar personaje" -
         // version real reducida: solo el diagnostico de prefijos ilegales, ver el LIMITE
         // documentado en MainViewModel.RebuildIllegalPrefixDiagnostics). Aisla la variable a mano

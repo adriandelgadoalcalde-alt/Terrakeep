@@ -79,6 +79,21 @@ public partial class AppearanceViewModel : ObservableObject
     [RelayCommand]
     private void ToggleWalkAnimation() => IsWalkAnimationPlaying = !IsWalkAnimationPlaying;
 
+    // Bug real reportado en vivo por el usuario (21-sep-2026, "Terrakeep congelado"):
+    // _walkAnimationTimer (90ms) nunca se paraba solo al salir de Apariencia ni al cargar otro
+    // personaje encima - solo "Detener animacion" manual lo apagaba. El doll pequeño de la
+    // cabecera (MainWindow.xaml, Width=28) esta enlazado al MISMO PreviewImage y es visible en
+    // CUALQUIER pestaña, asi que un render real completo (PlayerPreviewRenderer.Render, varias
+    // capas de sprites) cada 90ms sin parar nunca, potencialmente durante horas, es justo la
+    // causa real confirmada con un volcado en vivo (dotnet-dump) del proceso del usuario: 8h+ de
+    // CPU acumulado, sin ningun deadlock - trabajo real repetido para siempre. Llamado desde
+    // MainViewModel al salir de Apariencia (OnPersonajeInnerTabIndexChanged) y al cargar
+    // cualquier personaje (CharacterLoaded) - idempotente si ya estaba parado.
+    public void StopWalkAnimation()
+    {
+        if (IsWalkAnimationPlaying) IsWalkAnimationPlaying = false;
+    }
+
     [RelayCommand]
     private void ToggleFacing() => IsFacingLeft = !IsFacingLeft;
 
