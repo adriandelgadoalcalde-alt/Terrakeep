@@ -20028,3 +20028,45 @@ flakiness del propio arnés, no una regresión. Redesplegado en local una últim
 publicar nada.
 
 **Catálogo de rediseño visual: T1-T10 completos de verdad, sin ningún residual pendiente.**
+
+### 21-sep-2026 (madrugada) - "Terrakeep congelado" en vivo: el temporizador de Andar corría
+sin parar desde hacía 8+ horas (commit `b6503855`)
+
+Aviso en vivo del usuario ("Terrakeep está congelado AHORA MISMO"), justo tras el
+redespliegue de esta misma ronda. Investigado sobre el proceso REAL del usuario (PID
+27292), sin tocarlo: `Get-Process` -> `Responding=True` (no es un deadlock clásico); 2
+volcados de memoria en vivo con `dotnet-dump collect` (solo lectura, sin matar el
+proceso) separados por segundos muestran el hilo de UI avanzando de verdad (fase Measure
+-> fase Arrange de WPF) - no atascado en el mismo punto; los otros 15 hilos, todos
+ociosos. Re-chequeo minutos después: el proceso llevaba ya 8h+ de vida real con ~29800s
+de CPU acumulado - eso sí es la firma real de un bug, no de una lentitud puntual.
+
+Causa real en el código: `AppearanceViewModel._walkAnimationTimer` (`DispatcherTimer` de
+90ms, de la función "vista previa animada" añadida antes esta misma noche) solo se
+paraba con el botón "Detener" manual - nunca al salir de Apariencia ni al cargar otro
+personaje. Cada tick renderiza de verdad (`PlayerPreviewRenderer.Render`, varias capas
+de sprites) y el resultado está enlazado en DOS sitios, uno de ellos el doll pequeño de
+la **cabecera global**, visible en cualquier pestaña - si el usuario activó "Andar" en
+algún momento, el timer seguía disparando un render completo cada 90ms para siempre, sin
+importar dónde navegara.
+
+Arreglo real: `AppearanceViewModel.StopWalkAnimation()` llamado desde
+`MainViewModel.OnPersonajeInnerTabIndexChanged` (al salir de Apariencia) y desde el
+evento `CharacterLoaded` (al cargar cualquier personaje). Verificado con el Dispatcher
+real bombeando ticks (`WALKFREEZE_SOLO`): la animación arranca y avanza de verdad, salir
+de Apariencia la para SOLA y el frame deja de avanzar (prueba real de que el
+`DispatcherTimer` deja de disparar, no solo que cambió un flag), y cargar otro personaje
+encima también la para. Regresión completa: 21 `FALLO`, exactamente el conjunto
+pre-existente, ninguno nuevo. Redesplegado una última vez, verificado con hash SHA256
+idéntico entre el exe instalado y el recién publicado.
+
+**El PID 27292 que tenía abierto el usuario no se tocó en ningún momento** - solo 2
+volcados de solo lectura para diagnosticar, nunca `Stop-Process`. Esa decisión (cerrarlo
+o dejarlo) quedó para el usuario, tal y como se pidió explícitamente.
+
+Hallazgo aparte de la misma investigación (no relacionado con el bug de arriba, pero real
+y corregido de paso): el icono anclado en la barra de tareas (`Quick Launch\User Pinned\
+TaskBar\Terrakeep.lnk`) apuntaba al build crudo de `Terrakeep.App\bin\Debug\...`, nunca a
+la copia instalada real en `%LocalAppData%\Programs\Terrakeep\` (los accesos del Menú
+Inicio sí apuntaban bien) - reescrito en el mismo sitio (mismo icono anclado, sin
+recrearlo) para que apunte a la instalación real.
