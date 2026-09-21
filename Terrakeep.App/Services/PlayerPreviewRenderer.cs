@@ -86,9 +86,13 @@ namespace Terrakeep.App.Services;
 // de andar real) + "mirror" (girar) son el resultado real de esa investigacion.
 //
 // ALCANCE DELIBERADO restante, documentado y no oculto: sin accesorios (alas, mochilas,
-// capas...), item en mano, monturas, ni animacion de torso/brazos/cabeza/pelo (fieles al juego
-// real - solo cambian con un objeto en uso, fuera de alcance de un doll sin item equipado) -
-// ver ESPEC-dibujado-sprites.md#9 para el listado completo de huecos reales conocidos.
+// capas...), item en mano, monturas, ni animacion de torso/cabeza/pelo (torso/hombros
+// confirmados FIJOS durante el andar real, ver WalkArmColumn) - ver ESPEC-dibujado-sprites.md#9
+// para el listado completo de huecos reales conocidos. CORRECCION 21-sep-2026 (hover en Inicio,
+// bitacora.md): esta nota decia antes que el BRAZO tambien se quedaba fijo "fiel al juego real,
+// solo cambia con un objeto en uso" - error real de investigacion de la pasada anterior,
+// corregido con cita exacta (Player.cs:36038-36042 + PlayerDrawSet.cs:2942/2993-3028/3037-3038,
+// ver WalkArmColumn arriba): el brazo SI cambia de celda durante el ciclo de andar simple.
 public static class PlayerPreviewRenderer
 {
     private const int Width = 40, Height = 56;
@@ -120,6 +124,31 @@ public static class PlayerPreviewRenderer
     private static readonly (int Col, int Row) BackShoulderFemale = (1, 3);
     private static readonly (int Col, int Row) FrontArm = (2, 0);
     private static readonly (int Col, int Row) BackArm = (2, 2);
+
+    // Hover en Inicio ("que ande solo, con brazos" - bitacora.md 21-sep-2026): el "ALCANCE
+    // DELIBERADO" documentado en el comentario de la clase ("ni animacion de... brazos... fieles
+    // al juego real - solo cambian con un objeto en uso") resulto ser un error de investigacion
+    // de la pasada anterior, corregido aqui con cita real. Terraria/Player.cs real,
+    // PlayerFrame() (36038-36042): durante el andar simple SIN item activo (legs!=140,
+    // velocity.X!=0, sin itemAnimation/montura/nado/salto), "bodyFrame.Y = legFrame.Y" - el
+    // brazo SI se sincroniza con la pierna. Terraria/DataStructures/PlayerDrawSet.cs real,
+    // CreateCompositeData (2942: "num = bodyFrame.Y/bodyFrame.Height"; switch(num) 2993-3028)
+    // confirma QUE cambia: frameIndex2.X (columna del brazo FRENTE, mismo sheet 9x4 360x224 que
+    // ya carga LoadBodyCell/LoadArmorCell) segun el frame real de la pierna, fila SIEMPRE 1
+    // durante el ciclo de andar (distinta de la fila de reposo, 0). El brazo TRASERO reusa la
+    // MISMA columna (3037: "frameIndex.X = frameIndex2.X") con fila 3 (3038: "frameIndex.Y =
+    // frameIndex2.Y + 2"). Torso y hombros (pt3/pt/pt2 en el codigo real) NO aparecen en ningun
+    // case de ese rango - se quedan fijos en su celda de reposo durante el andar, confirmado no
+    // tocarlos aqui. Solo cubre 6..19 (el rango real que WalkCycleRows/legAnimationFrame usan
+    // aqui) - los casos 0-5 (salto/caida/nado) del mismo switch no aplican a un doll estatico sin
+    // gravedad y no se portan.
+    private static readonly System.Collections.Generic.Dictionary<int, int> WalkArmColumn = new()
+    {
+        [6] = 3, [7] = 4, [8] = 4, [9] = 4, [10] = 4,
+        [11] = 3, [12] = 3, [13] = 3,
+        [14] = 5, [15] = 6, [16] = 6, [17] = 5,
+        [18] = 3, [19] = 3,
+    };
 
     // Idea 10 del catalogo de funciones ("vista previa animada", bitacora.md 20-sep-2026):
     // legAnimationFrame es el indice REAL de fila (0-19) confirmado leyendo Terraria/Player.cs,
@@ -193,6 +222,17 @@ public static class PlayerPreviewRenderer
         }
         bool backHairDraw = HairDrawProfile.IsBackHairDraw(hairStyle);
 
+        // Ver el comentario real de WalkArmColumn: solo el brazo cambia de celda durante el
+        // ciclo de andar (legAnimationFrame 0 = reposo, celdas FrontArm/BackArm de siempre, sin
+        // cambios de pixel para ningun llamador existente - compatibilidad byte a byte).
+        (int Col, int Row) frontArmCell = FrontArm;
+        (int Col, int Row) backArmCell = BackArm;
+        if (legAnimationFrame != 0 && WalkArmColumn.TryGetValue(legAnimationFrame, out int walkArmCol))
+        {
+            frontArmCell = (walkArmCol, 1);
+            backArmCell = (walkArmCol, 3);
+        }
+
         // ESPEC-dibujado-sprites.md#7.2 punto 3: si SetMatch sustituyo el headSlot (unico caso
         // real: 201 -> 202 en femenino), hay que dibujar el sprite REAL sustituido, no el del
         // objeto puesto - la ruta ya resuelta por EquipmentAppearanceResolver corresponde al
@@ -218,17 +258,17 @@ public static class PlayerPreviewRenderer
         // Paso 4 [12_SkinComposite_BackArmShirt]: brazo TRASERO.
         if (hasBody)
         {
-            if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", BackArm), colors.Skin);
-            if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "hands", BackArm), colors.Skin);
+            if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", backArmCell), colors.Skin);
+            if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "hands", backArmCell), colors.Skin);
             if (armor.BodyFile is { } bodyBackShoulderArmor) Composite(canvas, LoadArmorCell(bodyBackShoulderArmor, backShoulderCell), null);
-            if (armor.BodyFile is { } bodyBackArmArmor) Composite(canvas, LoadArmorCell(bodyBackArmArmor, BackArm), null);
+            if (armor.BodyFile is { } bodyBackArmArmor) Composite(canvas, LoadArmorCell(bodyBackArmArmor, backArmCell), null);
         }
         else
         {
-            if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", BackArm), colors.Skin);
-            if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "hands", BackArm), colors.Skin);
-            Composite(canvas, LoadBodyCell(variant, "armundershirt", BackArm), colors.Under);
-            Composite(canvas, LoadBodyCell(variant, "armshirt", BackArm), colors.Shirt);
+            if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", backArmCell), colors.Skin);
+            if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "hands", backArmCell), colors.Skin);
+            Composite(canvas, LoadBodyCell(variant, "armundershirt", backArmCell), colors.Under);
+            Composite(canvas, LoadBodyCell(variant, "armshirt", backArmCell), colors.Shirt);
         }
 
         // Paso 5 [13_Leggings/14_Shoes]: perneras. El orden zapatos/perneras que invierte
@@ -307,18 +347,18 @@ public static class PlayerPreviewRenderer
         // respecto a la version anterior de este renderer.
         if (hasBody)
         {
-            if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", FrontArm), colors.Skin);
+            if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", frontArmCell), colors.Skin);
             // 10b usa la pieza 9 (ArmHand), NO la 5 (Hands) - PlayerDrawLayers.cs:3735.
-            if (missingHand && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armhand", FrontArm), colors.Skin);
-            if (armor.BodyFile is { } bodyFrontArmArmor) Composite(canvas, LoadArmorCell(bodyFrontArmArmor, FrontArm), null);
+            if (missingHand && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armhand", frontArmCell), colors.Skin);
+            if (armor.BodyFile is { } bodyFrontArmArmor) Composite(canvas, LoadArmorCell(bodyFrontArmArmor, frontArmCell), null);
             if (armor.BodyFile is { } bodyFrontShoulderArmor) Composite(canvas, LoadArmorCell(bodyFrontShoulderArmor, frontShoulderCell), null);
         }
         else
         {
-            if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", FrontArm), colors.Skin);
-            Composite(canvas, LoadBodyCell(variant, "armundershirt", FrontArm), colors.Under);
-            Composite(canvas, LoadBodyCell(variant, "armshirt", FrontArm), colors.Shirt);
-            Composite(canvas, LoadBodyCell(variant, "shirt", FrontArm), colors.Shirt);
+            if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", frontArmCell), colors.Skin);
+            Composite(canvas, LoadBodyCell(variant, "armundershirt", frontArmCell), colors.Under);
+            Composite(canvas, LoadBodyCell(variant, "armshirt", frontArmCell), colors.Shirt);
+            Composite(canvas, LoadBodyCell(variant, "shirt", frontArmCell), colors.Shirt);
 
             if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", frontShoulderCell), colors.Skin);
             Composite(canvas, LoadBodyCell(variant, "armundershirt", frontShoulderCell), colors.Under);

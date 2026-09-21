@@ -61,6 +61,34 @@ public sealed class EquipmentAppearanceResolver
     private static PlrItemSlot Visible(PlrLoadout loadout, int index) =>
         loadout.Social[index].IsEmpty ? loadout.Items[index] : loadout.Social[index];
 
+    // Hover en Inicio ("mascotas... deben aparecer en la vista previa" - bitacora.md
+    // 21-sep-2026). Terraria/GameContent/UI/Elements/UICharacter.cs real, PreparePetProjectiles()
+    // (linea 59): "Item item = _player.miscEquips[0]" - el slot 0 de miscEquips (pet/mascota) es
+    // el UNICO que la propia pantalla de seleccion de Terraria muestra (miscEquips[1..4] son
+    // montura/minecart/gancho, sin capa visual en esa pantalla real). PlrBodySerializer.cs real
+    // confirma que PlrCharacter.EquipmentItems[0..4] es la MISMA tabla miscEquips serializada
+    // 1:1 (comentario propio: "pet/mascota 'miscEquips'... vive solo dentro del loadout primario
+    // de 8 slots"), asi que EquipmentItems[0] es el slot real a leer aqui, sin loadout de por
+    // medio (a diferencia de armadura/vanidad, la mascota NO es por loadout en el juego real).
+    //
+    // ALCANCE DELIBERADO, documentado y no oculto (dos huecos reales, no arreglados aqui):
+    // 1) Terraria real dibuja la mascota como un PROYECTIL vivo (Projectile.xnb, con su propia
+    //    animacion) en Main.vanityPet[item.buffType] - aqui se usa el ICONO REAL del objeto
+    //    (VanillaIconResolver, mismo catalogo ya usado en toda la app) en su lugar: Terrakeep no
+    //    tiene ninguna tabla item->buffType->Projectile.xnb todavia (construirla para las ~80
+    //    mascotas reales es un catalogo nuevo entero, fuera de alcance de esta pasada) - un
+    //    icono real y fiel al objeto guardado, aunque no sea la MISMA tecnica de dibujado.
+    // 2) UICharacter.cs real filtra el slot con "Main.vanityPet[...] && !Main.lightPet[...]"
+    //    (Main.cs:9378-9458, ~70 mascotas de vanidad + ~12 mascotas de luz, las dos tablas
+    //    indexadas por buffType) - sin una tabla item->buffType en Terrakeep, esta distincion no
+    //    se replica: CUALQUIER objeto puesto en el slot de mascota se enseña, incluida una
+    //    mascota de luz (Terraria real la esconderia en esta pantalla concreta). "Lo que no se
+    //    encuentra no se inventa" - mejor un dato real ligeramente mas amplio que uno inventado.
+    public string? ResolvePet(PlrItemSlot[] equipmentItems) =>
+        equipmentItems.Length > 0 && !equipmentItems[0].IsEmpty
+            ? VanillaIconResolver.GetIconPath(equipmentItems[0].Id)
+            : null;
+
     private string? ResolveHead(PlrItemSlot slot) => Resolve(slot, "Head", e => e.Head, "armor_head");
     private string? ResolveBody(PlrItemSlot slot) => Resolve(slot, "Body", e => e.Body, "armor_body");
     private string? ResolveLegs(PlrItemSlot slot) => Resolve(slot, "Legs", e => e.Legs, "armor_legs");

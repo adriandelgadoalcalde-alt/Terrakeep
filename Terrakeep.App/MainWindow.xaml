@@ -1379,7 +1379,18 @@
             <Border Padding="12" CornerRadius="8" Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
                     Width="240" Margin="0,0,14,14" Cursor="Hand"
                     Effect="{StaticResource CardShadow}"
-                    Tag="{Binding DataContext.Home, RelativeSource={RelativeSource AncestorType=Window}}">
+                    Tag="{Binding DataContext.Home, RelativeSource={RelativeSource AncestorType=Window}}"
+                    MouseEnter="OnCharacterCardMouseEnter" MouseLeave="OnCharacterCardMouseLeave"
+                    Unloaded="OnCharacterCardUnloaded">
+                <!-- Hover ("que ande solo al pasar el raton" - bitacora.md 21-sep-2026, ver el
+                     comentario real de CharacterListEntryViewModel.SetHovering): MouseEnter/
+                     MouseLeave sobre la TARJETA ENTERA (no solo el doll), igual que Terraria
+                     vanilla real (UICharacterListItem hereda de UIPanel, el hover es del panel
+                     entero). Unloaded es la red de seguridad adicional del mismo criterio que ya
+                     cerro el bug real de "Terrakeep congelado" en Apariencia: si la tarjeta
+                     desaparece del arbol visual (rescan) mientras el raton seguia encima, el
+                     timer se para igual, nunca puede quedar corriendo solo. -->
+
                 <!-- C-13 (informe de pulido final, cierra H2): mismo "levanta al pasar" real de
                      NavCardButton (Theme.xaml, TranslateTransform Y 0->-3 en 150ms) - a
                      proposito SIN el ColorAnimation del borde a acento que si tiene NavCardButton,
@@ -1464,8 +1475,23 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Image Grid.Column="0" Source="{Binding Preview}" Width="52" Height="72.8" Stretch="Uniform"
-                           RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top" />
+                    <Grid Grid.Column="0" Width="52" Height="72.8" VerticalAlignment="Top">
+                        <!-- Mascota real equipada (idea del catalogo, 21-sep-2026): capa DETRAS
+                             del doll, mismo orden real que Terraria vanilla - UICharacter.cs real,
+                             DrawSelf(): DrawPets(spriteBatch) se dibuja ANTES que
+                             Main.PlayerRenderer.DrawPlayer(...) (linea 123 antes de la 127), la
+                             mascota queda por debajo/detras del personaje. Ver
+                             EquipmentAppearanceResolver.ResolvePet para el icono real usado y el
+                             alcance deliberado documentado (icono del objeto, no el proyectil
+                             animado en vivo). -->
+                        <Image Source="{Binding PetIconPath}" Width="20" Height="20" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor"
+                               HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                               Visibility="{Binding PetIconPath, Converter={StaticResource NullToVis}}"
+                               ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}" />
+                        <Image Source="{Binding Preview}" Stretch="Uniform"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top" />
+                    </Grid>
                     <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                         <DockPanel>
                             <TextBlock Text="✓" DockPanel.Dock="Right" Foreground="{StaticResource AccentBrush}" FontWeight="Bold" Margin="4,0,0,0"

@@ -20070,3 +20070,112 @@ TaskBar\Terrakeep.lnk`) apuntaba al build crudo de `Terrakeep.App\bin\Debug\...`
 la copia instalada real en `%LocalAppData%\Programs\Terrakeep\` (los accesos del Menú
 Inicio sí apuntaban bien) - reescrito en el mismo sitio (mismo icono anclado, sin
 recrearlo) para que apunte a la instalación real.
+
+## 21-sep-2026 (continuación) - Inicio: tarjeta de personaje que anda sola al pasar el
+ratón, con brazos, mascota y vanidad (encargo real vía prompt-master, catálogo de ideas
+Keep)
+
+Encargo explícito: reproducir el comportamiento EXACTO de la pantalla de selección de
+personaje de Terraria vanilla en las tarjetas de Inicio - hover en vez de botón manual,
+brazos moviéndose (no solo piernas), mascota y vanidad visibles - investigando primero en
+el decompilado real (`Downloads\tModLoader-Decompiled\`) y citando archivo:línea antes de
+tocar código.
+
+**Investigación real (los 3 comportamientos, con cita exacta)**:
+1. **Trigger = hover, no clic**: `Terraria/GameContent/UI/Elements/UICharacterListItem.cs`
+   (338-362), `MouseOver`/`MouseOut` de la tarjeta entera llaman
+   `_playerPanel.SetAnimated(animated: true/false)`. `UICharacter.cs` (93-103, `UpdateAnim`)
+   confirma la fórmula real del ciclo (`(int)(Main.GlobalTimeWrappedHourly/0.07f)%14+6`) -
+   ya replicada en Terrakeep desde la idea 10 (`AppearanceViewModel.WalkCycleRows`).
+2. **Los brazos SÍ se mueven al andar simple, sin objeto activo** - la implementación
+   anterior (comentario de cabecera de `PlayerPreviewRenderer.cs`, escrito la noche
+   anterior) decía lo contrario ("bodyFrame se queda fijo... solo cambia con un objeto en
+   uso") citando `Player.cs, PlayerFrame()` - **error real de investigación de esa pasada**,
+   confirmado releyendo el método completo: `Terraria/Player.cs` (36038-36042), rama
+   `else if (velocity.X != 0f) { ... } else { bodyFrame.Y = legFrame.Y; }` (andar llano, sin
+   itemAnimation activo, `legs != 140`) - el brazo SÍ se sincroniza con la pierna.
+   `Terraria/DataStructures/PlayerDrawSet.cs` (2942: `num = bodyFrame.Y/bodyFrame.Height`;
+   2993-3028: `switch(num)` que fija la COLUMNA del brazo delantero según el frame de
+   pierna, fila SIEMPRE 1 durante el ciclo de andar real; 3037-3038: el brazo trasero reusa
+   la MISMA columna con fila 3) confirma que solo el BRAZO cambia de celda - torso y hombros
+   (`pt3`/`pt`/`pt2` en el código real) se quedan fijos en su celda de reposo durante todo el
+   ciclo de andar, ningún `case` del rango 6-19 los toca.
+3. **Mascota**: `UICharacter.cs` (55-66, `PreparePetProjectiles`) lee
+   `_player.miscEquips[0]` - `PlrBodySerializer.cs` (148-164, comentario real ya existente
+   "pet/mascota 'miscEquips'... vive solo dentro del loadout primario de 8 slots") confirma
+   que `PlrCharacter.EquipmentItems[0]` es la MISMA tabla ya parseada 1:1, sin tocar el
+   parser. **Vanidad** (cabeza/cuerpo/piernas): ya estaba bien resuelta de antes
+   (`EquipmentAppearanceResolver.cs:61-62`, `Visible()` prefiere `Social` sobre `Items`) -
+   sin cambios, solo verificado en vivo.
+
+**Implementado**:
+- `Terrakeep.App/Services/PlayerPreviewRenderer.cs`: tabla real `WalkArmColumn` (frame de
+  pierna 6-19 -> columna del brazo, sacada línea a línea del `switch` real de
+  `PlayerDrawSet.cs`) - cuando `legAnimationFrame != 0`, las 8 llamadas reales a
+  `LoadBodyCell`/`LoadArmorCell` con `FrontArm`/`BackArm` pasan a usar celdas dinámicas
+  `frontArmCell`/`backArmCell` (fila 1/3 durante el ciclo, en vez de la fila de reposo
+  0/2). Con `legAnimationFrame == 0` el resultado es BYTE A BYTE idéntico a antes (probado,
+  ver abajo) - torso/hombros no se tocan (confirmado que no hace falta).
+- `Terrakeep.App/Services/EquipmentAppearanceResolver.cs`: `ResolvePet(EquipmentItems)`
+  nuevo - icono real del objeto puesto en el slot de mascota vía `VanillaIconResolver` (el
+  mismo catálogo de ~6134 iconos ya usado en toda la app). Alcance deliberado documentado en
+  el propio código: usa el ICONO del objeto (no el proyectil animado en vivo que dibuja
+  Terraria real - Terrakeep no tiene ninguna tabla objeto->buffType->Projectile.xnb, construir
+  una para las ~80 mascotas reales es un catálogo nuevo entero fuera de alcance de esta
+  pasada) y no distingue mascota de vanidad vs mascota de luz (`Main.cs:9378-9458`,
+  `vanityPet[]`/`lightPet[]` están indexadas por buffType, que Terrakeep tampoco tiene por
+  objeto) - cualquier objeto en el slot se enseña, más amplio que vanilla pero nunca
+  inventado.
+- `Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs`: `Preview` pasa a
+  `[ObservableProperty]`; `PetIconPath` nuevo; `SetHovering(bool)` con un
+  `DispatcherTimer` PROPIO por tarjeta (90ms, mismo `AppearanceViewModel.WalkCycleRows`
+  reusado, nunca duplicado) que solo corre mientras el ratón está encima - parado
+  explícitamente en `SetHovering(false)`, mismo criterio que ya cerró el bug real
+  "Terrakeep congelado" de esta misma noche (nunca puede quedar corriendo solo).
+- `Terrakeep.App/MainWindow.xaml` (`CharacterCardTemplate`) + `MainWindow.xaml.cs`:
+  `MouseEnter`/`MouseLeave` sobre la tarjeta ENTERA (no solo el doll, igual que vanilla) +
+  `Unloaded` como red de seguridad adicional (si la tarjeta desaparece del árbol por un
+  rescan mientras el ratón seguía encima). Icono de mascota nuevo (20x20, esquina inferior
+  izquierda del doll, capa DETRÁS del personaje - mismo orden real que
+  `UICharacter.DrawSelf()`, `DrawPets()` antes que `DrawPlayer()`). El botón manual
+  "Andar"/"Girar" de Apariencia se queda intacto, esto es un añadido en Inicio.
+- Claves de idioma nuevas `tt_pet_preview` (es/en, tooltip del icono de mascota).
+
+**Verificación real hecha (varias capas, no solo "compila")**:
+- `Terrakeep.Core.Tests` 588/588, `Terrakeep.App.ViewModels.Tests` 518/518 (incluye los
+  tests YA existentes de la idea 10 que fijan el frame de reposo byte a byte).
+- **Arnés nuevo `HOMEHOVER_SOLO`** (`Terrakeep.App.Tests/Program.cs`, mismo patrón real que
+  `WALKFREEZE_SOLO` - Dispatcher real bombeando, sin UI Automation): con un personaje
+  sintético (mascota real 5098, el mismo id confirmado en `Eldelgas.plr`) - `PetIconPath`
+  resuelve a un icono real; el hover cambia el frame de inmediato; en 10 muestras a lo largo
+  de >1 ciclo completo se ven 7-8 valores DISTINTOS de suma de bytes (el ciclo avanza de
+  verdad); `SetHovering(false)` vuelve EXACTAMENTE al frame de reposo y el timer deja de
+  disparar (comprobado con ~500ms más de bombeo sin cambios). 2 pasadas seguidas, 0 FALLO -
+  **hallazgo real de la propia verificación**: una comparación de solo DOS puntos
+  (antes/después de un `BombeaMs(1300)` de una sola tacada) alaseó una vez (dos fotogramas
+  distintos con la MISMA suma de bytes por coincidencia) - corregido a 10 muestras
+  espaciadas antes de dar la prueba por buena, documentado en el propio comentario del
+  arnés para que no vuelva a pasar desapercibido.
+- **Captura real en vivo** (pywinauto, ventana real de `Terrakeep.exe`, personaje real
+  `Eldelgas.plr` - mascota 5098 + vanidad Social[0/1]=1819/1820, vestido de la muerte): el
+  icono real de la mascota (una cría en un palo, comprobado pixel a pixel contra el .png
+  extraído) aparece en la esquina del doll en reposo Y en hover; reposo vs primer fotograma
+  de hover muestran una silueta visiblemente distinta (brazo+pierna); a lo largo de ~1.5s de
+  hover sostenido la región del doll cambia varias veces más (t=600-850ms y t=850-1100ms),
+  igual que predice la tabla real (columnas de brazo agrupadas 7-10/11-13/14/15-16/17/18-19).
+- **Barrido completo de KeepQA** (`AR_LAY_SOLO=Inicio`, terminó cubriendo la app entera):
+  22 FALLO, el mismo conjunto EXACTO ya documentado como preexistente (AR-14/AR-15/AR-MRK/
+  AR-EX1/AR-11f/OBJ-07/H5-05/A8-06/A10-IDIOMA-BARRIDO + AR-MRK-13E intermitente ya
+  documentado) - ninguno nuevo, nada relacionado con Inicio/mascota/hover.
+- Redesplegado en local: `dotnet build Terrakeep.App -c Debug` +
+  `installer\install.ps1` (Release autocontenido) sobre `%LocalAppData%\Programs\Terrakeep\`
+  tras confirmar `Terrakeep.exe` no en ejecución; relanzado el instalado y confirmado que
+  arranca (ventana real detectada por UI Automation). Acceso directo anclado en la barra de
+  tareas reconfirmado apuntando a la instalación real (`%LocalAppData%\Programs\Terrakeep\
+  Terrakeep.exe`, el mismo arreglo de la ronda anterior, sin tocarlo de nuevo porque ya
+  estaba bien). Sin publicar nada (sin version bump/changelog.json/instalador de
+  distribución/`git push`/`gh release`).
+
+Revisado el resto de la bitácora de esta noche en busca de algo a medias de una ronda
+anterior: nada pendiente - el catálogo de rediseño visual (T1-T10) y el de funciones ya
+quedaron cerrados del todo, y el bug del temporizador congelado también.

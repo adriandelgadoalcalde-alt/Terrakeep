@@ -1118,6 +1118,36 @@ public partial class MainWindow : Window
         MapTooltipBorder.SetCurrentValue(UIElement.VisibilityProperty, Visibility.Collapsed);
     }
 
+    // Hover en Inicio ("que ande solo al pasar el raton" - bitacora.md 21-sep-2026, catalogo de
+    // ideas Keep). Real vanilla: UICharacterListItem.cs, MouseOver/MouseOut de la tarjeta entera
+    // llaman SetAnimated(true/false) sobre el doll - aqui el equivalente WPF real es MouseEnter/
+    // MouseLeave del propio Border de la tarjeta (mismo criterio de codigo-detras ya usado en
+    // OnWorldMapMouseLeave arriba). DataContext puede no ser el ViewModel esperado en un evento
+    // de enrutado (burbujea desde hijos con otro DataContext, p.ej. el ContextMenu) - "as" +
+    // comprobacion null, nunca un cast directo.
+    private void OnCharacterCardMouseEnter(object sender, MouseEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is CharacterListEntryViewModel entry)
+            entry.SetHovering(true);
+    }
+
+    private void OnCharacterCardMouseLeave(object sender, MouseEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is CharacterListEntryViewModel entry)
+            entry.SetHovering(false);
+    }
+
+    // Red de seguridad adicional (mismo criterio que ya cerro el bug real "Terrakeep congelado"
+    // de Apariencia, ver AppearanceViewModel.StopWalkAnimation): si la tarjeta desaparece del
+    // arbol visual (rescan de Inicio) mientras el raton seguia encima, WPF no siempre llega a
+    // disparar MouseLeave a tiempo - parar aqui tambien garantiza que el timer de esa tarjeta
+    // nunca pueda quedar corriendo solo.
+    private void OnCharacterCardUnloaded(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is CharacterListEntryViewModel entry)
+            entry.SetHovering(false);
+    }
+
     // Centra el mapa sobre la posicion de un NPC (pedido desde ExplorationViewModel via
     // NavigateToTileRequested al pulsar un NPC en la lista) - los offsets del ScrollViewer ya
     // estan en espacio post-zoom, igual que en el arrastre.

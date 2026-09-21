@@ -1618,6 +1618,103 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // HOMEHOVER_SOLO=1 (21-sep-2026, catalogo de ideas Keep - "que la tarjeta de Inicio ande
+        // sola al pasar el raton, con brazos, mascota y vanidad" - ver el comentario real de
+        // CharacterListEntryViewModel.SetHovering para la cita exacta del decompilado que
+        // confirma el trigger real (UICharacterListItem.cs, MouseOver/MouseOut) y de
+        // PlayerPreviewRenderer.WalkArmColumn para la cita real del brazo (Player.cs +
+        // PlayerDrawSet.cs). Mismo patron de Dispatcher real bombeando que WALKFREEZE_SOLO arriba
+        // - aqui sobre CharacterListEntryViewModel directamente (sin depender de las carpetas
+        // reales de Documents\...\Players del usuario, mismo criterio de "aislar la variable" que
+        // WALKFREEZE_SOLO ya aplica con su personaje sintetico): 1) SetHovering(true) hace que el
+        // frame avance de verdad con el Dispatcher real bombeando (no solo un flag), 2)
+        // SetHovering(false) lo para YA (mismo criterio anti-fuga que WALKFREEZE_SOLO), 3)
+        // PetIconPath resuelve a un icono real cuando el slot de mascota tiene un objeto real
+        // puesto (5098, el mismo id real de mascota confirmado en Documents\...\Eldelgas.plr).
+        if (Environment.GetEnvironmentVariable("HOMEHOVER_SOLO") == "1")
+        {
+            try
+            {
+                byte[]? PixelsDeCard(System.Windows.Media.Imaging.WriteableBitmap? bmp)
+                {
+                    if (bmp == null) return null;
+                    var px = new byte[bmp.PixelHeight * bmp.PixelWidth * 4];
+                    bmp.CopyPixels(px, bmp.PixelWidth * 4, 0);
+                    return px;
+                }
+                void BombeaMsCard(int ms)
+                {
+                    var cr = System.Diagnostics.Stopwatch.StartNew();
+                    while (cr.ElapsedMilliseconds < ms) { DoEvents(); System.Threading.Thread.Sleep(10); }
+                }
+
+                var fileService = new Terrakeep.App.Services.CharacterFileService();
+                var personajeHover = new Terrakeep.Core.PlrFormat.PlrCharacter
+                {
+                    Name = "PersonajeHomeHover",
+                    Version = 279,
+                    PrimaryLoadout = Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: true),
+                    Loadouts = [Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false), Terrakeep.Core.PlrFormat.PlrLoadout.CreateEmpty(isPrimary: false)],
+                };
+                // 5098: id real de mascota (confirmado en Eldelgas.plr, un personaje real de este
+                // equipo) - EquipmentItems[0] es el mismo slot real que Terraria.Player.miscEquips[0].
+                personajeHover.EquipmentItems[0] = new Terrakeep.Core.PlrFormat.PlrItemSlot(5098, 1, 0, false);
+
+                var entry = new Terrakeep.App.ViewModels.CharacterListEntryViewModel(
+                    "sintetico-homehover.plr", personajeHover, isTModLoader: false, tplr: null,
+                    DateTime.UtcNow, fileService.EquipmentAppearance);
+
+                Console.WriteLine($"HOMEHOVER_SOLO: PetIconPath resuelto={entry.PetIconPath ?? "(null)"} (esperado no-null, icono real de la mascota 5098)");
+                if (entry.PetIconPath is null) Console.WriteLine("FALLO: HOMEHOVER_SOLO - PetIconPath deberia resolver un icono real para la mascota 5098");
+
+                var frameReposo = PixelsDeCard(entry.Preview);
+
+                // --- 1) SetHovering(true) hace que el frame avance de verdad (Dispatcher real) ---
+                entry.SetHovering(true);
+                DoEvents();
+                var frameHoverInicial = PixelsDeCard(entry.Preview);
+                bool reposoVsHoverDistinto = frameReposo != null && frameHoverInicial != null && !frameReposo.SequenceEqual(frameHoverInicial);
+                Console.WriteLine($"HOMEHOVER_SOLO: reposo vs primer fotograma de hover -> distinto={reposoVsHoverDistinto} (esperado True)");
+                if (!reposoVsHoverDistinto) Console.WriteLine("FALLO: HOMEHOVER_SOLO - el hover deberia cambiar el doll de reposo a andando de inmediato");
+
+                // Muestreo en VARIOS puntos (no solo un antes/despues) a lo largo de mas de un
+                // ciclo completo (13 fotogramas x 90ms = ~1170ms) - un unico par de muestras
+                // puede "aliasear" (caer justo en dos fotogramas que dan la MISMA suma de bytes
+                // por coincidencia, medido de verdad en esta misma ronda: un BombeaMsCard(1300)
+                // de una sola tacada aliaseo una vez) sin que eso signifique que el timer no
+                // avanza - varias muestras espaciadas es la version robusta del mismo criterio
+                // real "avanza de verdad" que WALKFREEZE_SOLO ya usa con dos puntos (ahi es
+                // seguro porque compara ANTES/DESPUES de un evento discreto, no un ciclo
+                // periodico que puede volver a un valor ya visto).
+                var sumasCiclo = new List<int>();
+                for (int muestra = 0; muestra < 10; muestra++)
+                {
+                    BombeaMsCard(140);
+                    var px = PixelsDeCard(entry.Preview);
+                    sumasCiclo.Add(px == null ? -1 : px.Sum(b => (int)b));
+                }
+                bool avanzaDeVerdad = sumasCiclo.Distinct().Count() > 1;
+                Console.WriteLine($"HOMEHOVER_SOLO: tras ~1400ms con el Dispatcher real bombeando (10 muestras cada 140ms) -> valores distintos vistos={sumasCiclo.Distinct().Count()} de 10 (esperado > 1, el ciclo real tiene que avanzar)");
+                if (!avanzaDeVerdad) Console.WriteLine("FALLO: HOMEHOVER_SOLO - el ciclo de andar no avanza de verdad a lo largo del tiempo");
+
+                // --- 2) SetHovering(false) lo para YA (mismo criterio anti-fuga que WALKFREEZE_SOLO) ---
+                entry.SetHovering(false);
+                DoEvents();
+                var frameTrasParar1 = PixelsDeCard(entry.Preview);
+                bool volvioAReposo = frameReposo != null && frameTrasParar1 != null && frameReposo.SequenceEqual(frameTrasParar1);
+                Console.WriteLine($"HOMEHOVER_SOLO: tras SetHovering(false) -> volvio EXACTAMENTE al frame de reposo={volvioAReposo} (esperado True)");
+                if (!volvioAReposo) Console.WriteLine("FALLO: HOMEHOVER_SOLO - dejar de hacer hover deberia volver al frame de reposo exacto");
+                BombeaMsCard(500);
+                var frameTrasParar2 = PixelsDeCard(entry.Preview);
+                bool siguioAvanzandoParado = frameTrasParar1 != null && frameTrasParar2 != null && !frameTrasParar1.SequenceEqual(frameTrasParar2);
+                Console.WriteLine($"HOMEHOVER_SOLO: tras otros ~500ms bombeando SIN hover -> el frame siguio avanzando={siguioAvanzandoParado} (esperado False - el timer de esta tarjeta ya no dispara)");
+                if (siguioAvanzandoParado) Console.WriteLine("FALLO: HOMEHOVER_SOLO - el DispatcherTimer de la tarjeta sigue disparando tras SetHovering(false) - misma clase de fuga que WALKFREEZE_SOLO ya cerro en Apariencia");
+            }
+            catch (Exception ex) { Console.WriteLine("HOMEHOVER_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (HOMEHOVER_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA9_SOLO=1 (20-sep-2026, catalogo de ideas Keep, idea 9 "modo reparar personaje" -
         // version real reducida: solo el diagnostico de prefijos ilegales, ver el LIMITE
         // documentado en MainViewModel.RebuildIllegalPrefixDiagnostics). Aisla la variable a mano

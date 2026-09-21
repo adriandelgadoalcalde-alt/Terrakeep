@@ -815,6 +815,7 @@
   "tt_no_mods_no_tplr": "Sin ningún mod: este personaje no tiene un archivo .tplr al lado",
   "tt_tmodloader_badge": "Personaje de tModLoader: tiene un archivo .tplr con datos de mods al lado",
   "tt_or_drag_card": "O arrastra la tarjeta hasta cualquier hueco.",
+  "tt_pet_preview": "Mascota equipada",
   "tt_redo_plain": "Rehacer (Ctrl+Y)",
   "tt_redo_with_label": "Rehacer: {0} (Ctrl+Y)",
   "tt_remove_all_research": "Quita TODA la investigación real del personaje - equivalente real de 'Remove All' del Terrasavr original",

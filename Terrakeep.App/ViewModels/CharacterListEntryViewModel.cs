@@ -1,4 +1,5 @@
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Terrakeep.App.Services;
 using Terrakeep.Core.Calamity;
@@ -54,7 +55,61 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
 
     private readonly IReadOnlyList<string>? _usedMods;
     public string LastModifiedText { get; }
-    public WriteableBitmap Preview { get; }
+    [ObservableProperty] private WriteableBitmap _preview;
+
+    // Hover en Inicio ("que ande solo al pasar el raton, con brazos" - bitacora.md 21-sep-2026).
+    // Terraria/GameContent/UI/Elements/UICharacterListItem.cs real, MouseOver/MouseOut (338-362):
+    // "_playerPanel.SetAnimated(animated: true/false)" - el trigger real es el HOVER de la propia
+    // tarjeta (MouseOver/MouseOut de UIPanel), nunca un boton manual (ese es un añadido aparte de
+    // Apariencia, AppearanceViewModel.ToggleWalkAnimation, que se queda igual). Reusa el MISMO
+    // ciclo de 13 filas reales (AppearanceViewModel.WalkCycleRows) y la MISMA cadencia (90ms) que
+    // ya tiene Apariencia, para no duplicar ninguna secuencia a mano.
+    //
+    // Datos crudos guardados aqui (no solo en el constructor) porque re-renderizar en cada tick
+    // necesita los MISMOS argumentos reales que PlayerPreviewRenderer.Render ya recibio una vez -
+    // sin volver a leer el .plr, sin ningun dato nuevo.
+    private readonly int _hairStyle;
+    private readonly byte _skinVariant;
+    private readonly PlayerPreviewRenderer.PlayerColors _colors;
+    private readonly PlayerPreviewRenderer.EquippedArmor _armor;
+
+    // Icono real de la mascota puesta (VanillaIconResolver, mismo catalogo que el resto de la
+    // app) - ver EquipmentAppearanceResolver.ResolvePet para el detalle real y el alcance
+    // deliberado documentado. Null si no hay mascota puesta o si el objeto no tiene icono
+    // extraido (mismo criterio "lo que no se encuentra no se inventa" que el resto del resolver).
+    public string? PetIconPath { get; }
+
+    // Timer PROPIO de esta tarjeta, arrancado SOLO mientras el raton esta encima y parado de
+    // verdad al salir (MainWindow.xaml: MouseEnter/MouseLeave + Unloaded como red de seguridad
+    // adicional) - mismo bug real ya cerrado en Apariencia (AppearanceViewModel.
+    // StopWalkAnimation, "Terrakeep congelado" 8h+ por un DispatcherTimer que no se paraba solo,
+    // ver bitacora.md 21-sep-2026 madrugada) NUNCA se repite aqui: un timer por tarjeta, parado
+    // en cuanto deja de estar en hover, sin ningun camino donde pueda quedar corriendo solo.
+    private readonly DispatcherTimer _hoverWalkTimer = new() { Interval = TimeSpan.FromMilliseconds(90) };
+    private int _walkCycleIndex;
+    private bool _isHovering;
+
+    public void SetHovering(bool hovering)
+    {
+        if (_isHovering == hovering) return;
+        _isHovering = hovering;
+        if (hovering)
+        {
+            _walkCycleIndex = 0;
+            _hoverWalkTimer.Start();
+        }
+        else
+        {
+            _hoverWalkTimer.Stop();
+        }
+        RefreshPreview();
+    }
+
+    private void RefreshPreview()
+    {
+        int frame = _isHovering ? AppearanceViewModel.WalkCycleRows[_walkCycleIndex] : 0;
+        Preview = PlayerPreviewRenderer.Render(_hairStyle, _skinVariant, _colors, _armor, frame);
+    }
 
     // I-a (segunda auditoria de Opus, Fable): "No se distingue que personaje esta cargado - las
     // tarjetas se ven identicas al volver a Inicio". HomeViewModel.UpdateCurrentPath la fija
@@ -102,6 +157,17 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         // H6-02/H6-01-b: Gender ES el skinVariant real (0-11, no un booleano) - se pasa entero
         // para que el doll de Inicio use la carpeta de sprites/reglas SetMatch reales de la
         // variante puesta (caso "Eldelgas": Gender=8/MaleDress), no solo Chico/Chica.
-        Preview = PlayerPreviewRenderer.Render(character.HairStyle, character.Gender, colors, armor);
+        _hairStyle = character.HairStyle;
+        _skinVariant = character.Gender;
+        _colors = colors;
+        _armor = armor;
+        PetIconPath = equipmentAppearance.ResolvePet(character.EquipmentItems);
+        _preview = PlayerPreviewRenderer.Render(_hairStyle, _skinVariant, colors, armor);
+
+        _hoverWalkTimer.Tick += (_, _) =>
+        {
+            _walkCycleIndex = (_walkCycleIndex + 1) % AppearanceViewModel.WalkCycleRows.Length;
+            RefreshPreview();
+        };
     }
 }

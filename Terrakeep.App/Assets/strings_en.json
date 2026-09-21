@@ -815,6 +815,7 @@
   "tt_no_mods_no_tplr": "No mods: this character has no .tplr file alongside it",
   "tt_tmodloader_badge": "tModLoader character: it has a .tplr file with mod data alongside it",
   "tt_or_drag_card": "Or drag the card to any slot.",
+  "tt_pet_preview": "Equipped pet",
   "tt_redo_plain": "Redo (Ctrl+Y)",
   "tt_redo_with_label": "Redo: {0} (Ctrl+Y)",
   "tt_remove_all_research": "Removes ALL of the character's real research - the real equivalent of 'Remove All' from the original Terrasavr",
