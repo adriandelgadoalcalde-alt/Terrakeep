@@ -20287,3 +20287,120 @@ conjunto exacto de 22 fallos preexistentes (ninguno nuevo). Redesplegado en loca
 (`bin\Debug` tras cada verificación) - la instalación Release
 (`%LocalAppData%\Programs\Terrakeep\`) se actualiza al cierre de esta ronda. Sin
 publicar nada.
+
+## Investigación (24-sep-2026): botón de cabecera "⋯ Personaje" sin indicador visual de
+## estado abierto/cerrado - agente investigador-bug, handoff e5eaea9e-c261-4199-8e7d-060b6054f58d
+
+Encargo del usuario: el botón de cabecera se lee "··· Personaje" (puntos suspensivos
+DELANTE, sin flecha) en las capturas de la revisión integral - pidió un patrón
+convencional "Personaje [flecha abajo]" / "Personaje [flecha arriba]" al abrir, con los
+"···" (si tienen sentido) a la derecha, nunca sustituyendo al indicador de desplegable, y
+revisar los 6 estados normal/hover/pressed/abierto/cerrado/keyboard-focus. Rol de este
+agente: SOLO investigar y cerrar el hueco de cobertura del arnés - el arreglo real de
+XAML lo aplica `aplicador-fix` después, sin tocar aquí ningún `.xaml`/`.cs` de producción.
+
+**Control real, único, reutilizado en las 6 pestañas** (no hay copias por pantalla):
+`Terrakeep.App/MainWindow.xaml:2036-2050`, `Button x:Name="PersonajeMenuButton"`, dentro
+del `WrapPanel Grid.Column="2"` de la cabecera global (fuera del `TabControl`, visible en
+CUALQUIER pestaña - confirmado también por el comentario real de T2_SOLO en
+`Terrakeep.App.Tests/Program.cs`, "la cabecera es identica en las 6 pestañas"). Texto real
+del botón: `Loc[action_personaje_menu]` = `"⋯ Personaje"` (es) / `"⋯ Character"` (en) -
+`Terrakeep.App/Assets/strings_es.json:57` / `strings_en.json:57`. El clic IZQUIERDO abre
+el `ContextMenu` a mano vía `OnPersonajeMenuClick` (`MainWindow.xaml.cs:448-455`,
+`fe.ContextMenu.IsOpen = true` - un `ContextMenu` normal de WPF solo se abre con clic
+DERECHO por omisión, así que este es un truco deliberado, no un bug).
+
+**Qué hacen hoy los "···" (leído en código, no supuesto)**: el `ContextMenu`
+(`MainWindow.xaml:2038-2048`) trae 4 `MenuItem` reales, ninguno de gestión del personaje
+(no hay renombrar/duplicar/eliminar):
+1. "Cargar personaje (.plr)..." (Ctrl+O) → `OnLoadClick`
+2. "Buscar en el personaje" (Ctrl+Shift+F) → `ToggleWhereIsItCommand`
+3. "Historial de versiones" (Ctrl+H) → `OpenBackupHistoryCommand`
+4. "Deshacer último guardado" → `UndoLastSaveCommand`
+
+Son 4 acciones de cargar/localizar/deshacer que antes eran botones sueltos y T2 (comentario
+en `MainWindow.xaml:2018-2035`, 20-sep-2026) plegó aquí para que la fila de cabecera no
+envolviera a 2 líneas a 1180×860 - el nombre "Personaje" del botón es genérico porque no
+describe una sola acción, describe el GRUPO ("todo lo relacionado con cargar/localizar
+este personaje").
+
+**Inventario real de los 6 estados, con evidencia medida** (bloque nuevo del arnés,
+`PERSONAJEMENU_ESTADOS_SOLO=1`, ver más abajo - capturas reales en
+`Terrakeep.App.Tests/bin/Debug/net10.0-windows/personajemenu-estado-*.png`):
+- **Normal**: fondo `#FF1E2233` (`BgElevatedColor`, `Theme.xaml` estilo base
+  `TargetType="Button"` línea 300-329, el mismo estilo implícito de TODOS los botones sin
+  `Tag`, sin nada propio de este botón).
+- **Hover**: `Theme.xaml:331-348`, anima `BdBrush` a `BgHoverColor` en 0.12s (confirmado
+  en código, no en captura - mismo trigger genérico).
+- **Pressed**: `Theme.xaml:349-366`, anima a `BgPressedColor` en 0.05s (confirmado en
+  código, mismo trigger genérico).
+- **Keyboard-focus**: SÍ funciona - rectángulo punteado violeta (`AccentBrush`,
+  `SystemParameters.FocusVisualStyleKey`, `Theme.xaml:109-118`, aplicado automáticamente a
+  cualquier control). Confirmado con evidencia real: adorner de foco medido
+  (`AdornerLayer.GetAdorners().Length > 0` = `True`) y captura real
+  `personajemenu-estado-2-foco-teclado.png` con el rectángulo punteado visible alrededor
+  del botón completo (recorte en `crop2-foco-real.png`). LECCIÓN DE ARNÉS reaplicada de
+  T-H/F2 (línea ~10631 de este mismo bitácora/Program.cs): `Keyboard.Focus()` a secas NO
+  pinta el adorner (WPF solo lo hace si el teclado fue el ÚLTIMO dispositivo de entrada
+  FÍSICO) - hizo falta `ForzarPrimerPlano` + una pulsación física inocua (Shift) antes de
+  `Keyboard.Focus()`, igual que ya resuelto en T-H/F2.
+- **Abierto (ContextMenu.IsOpen=True) vs Cerrado**: **BUG REAL CONFIRMADO CON MEDICIÓN**.
+  El color de `BdBrush` es EXACTAMENTE `#FF1E2233` en los 4 estados medidos - cerrado
+  normal, con foco de teclado, con el menú REALMENTE abierto (`ContextMenu.IsOpen=True`
+  confirmado por código) y de nuevo cerrado tras abrir. Las 4 capturas
+  (`personajemenu-estado-1-cerrado-normal.png` .. `-4-cerrado-tras-abrir.png`) son
+  pixel-idénticas en la zona del botón (recortes `crop-personajemenu-estado-*.png`,
+  120×40px ampliados a 480×160). Causa real: el `Button` no tiene NINGÚN trigger que
+  reaccione a que su propio `ContextMenu` esté abierto (ni `IsSubmenuOpen`, ni un
+  `ToggleButton`/`IsChecked` enlazado a nada - es un `Button` normal con `Style` genérico,
+  el `ContextMenu.IsOpen` vive fuera del árbol de triggers del botón). El propio
+  `ContextMenu` desplegado tampoco aparece en la captura porque `RenderTargetBitmap.
+  Render(window)` solo pinta el árbol visual de la ventana principal, no la ventana/HWND
+  top-level separada donde WPF renderiza un `ContextMenu` real - LÍMITE REAL de la técnica
+  de captura del arnés (no oculta el bug: el color medido con `BdBrush.Color` es directo
+  sobre el objeto real del árbol de la ventana principal, sin pasar por el HWND del menú).
+
+**Hueco de cobertura KeepQA cerrado**: `Terrakeep.App.Tests/Program.cs`, bloque nuevo
+`PERSONAJEMENU_ESTADOS_SOLO=1` (justo después de `T2_SOLO`, antes de `T4_SOLO`) - T2_SOLO
+ya existía y abre/cierra el mismo `ContextMenu`, pero SOLO cuenta sus 4 items y cierra el
+menú ANTES de su única captura (nunca dejaba constancia visual del estado abierto). El
+bloque nuevo captura y mide los 4 estados de arriba, con un `FALLO-REAL` explícito si
+`colorCerrado == colorAbierto` (ya en rojo ahora mismo, hasta que se arregle) - así, si se
+vuelve a colar el mismo patrón (un dropdown sin indicador de abierto/cerrado) en cualquier
+botón futuro que reutilice este mecanismo, queda detectado con evidencia medida, no solo
+"debería fallar". Ejecutar con
+`cd Terrasavr-Win\Terrasavr-Native && PERSONAJEMENU_ESTADOS_SOLO=1 dotnet run --project
+Terrakeep.App.Tests`. Caso de regresión documentado también en
+`KeepQA/src/regresion/casos/terrakeep-cabecera-personaje-menu-sin-indicador-desplegable.json`.
+
+**Propuesta concreta de diseño para `aplicador-fix`** (NO aplicada aquí, a propósito):
+1. Cambiar `Loc[action_personaje_menu]` (`strings_es.json:57` / `strings_en.json:57`) de
+   `"⋯ Personaje"` a `"Personaje"` a secas (quitar los tres puntos de delante).
+2. Sustituir el indicador por una flecha real (glifo `▾`/`▼` en un `TextBlock` aparte
+   dentro del `Button.Content`, o mejor un `Border`+`StackPanel` con dos `TextBlock` -
+   "Personaje" a la izquierda y la flecha a la derecha, como ya hace el patrón real de
+   combo/desplegable de Windows) que rote 180° (`RotateTransform`, mismo mecanismo real ya
+   usado en otros sitios de `Theme.xaml` para animaciones, o un `DataTrigger` sobre
+   `ContextMenu.IsOpen`) entre `▾` cerrado y `▲` abierto - ESTO ADEMÁS RESUELVE EL BUG
+   MEDIDO ARRIBA (da al botón un indicador visual real de abierto/cerrado, que hoy no
+   tiene NINGUNO).
+3. Si se conservan los "···" (justificación real: agrupan acciones secundarias de
+   cargar/buscar/deshacer, no son ruido), van DESPUÉS de "Personaje" y ANTES o DESPUÉS de
+   la flecha, nunca sustituyéndola - ej. `Personaje ··· ▾` o `Personaje ▾ ···`, a decidir
+   por el propio agente de aplicación mirando el espaciado real disponible en el
+   `WrapPanel` (`ItemHeight="44"`, ver comentario T2 de línea 2018).
+4. El trigger de "abierto" más simple y coherente con el resto de `Theme.xaml` (que ya
+   anima `IsMouseOver`/`IsPressed` sobre `BdBrush`) es un `DataTrigger` o `EventTrigger`
+   ligado a `ContextMenu.IsOpen` del propio botón (vía `Button.ContextMenu.IsOpen`, sólo
+   accesible con un `MultiDataTrigger`/binding relativo, o más simple: exponer un booleano
+   `IsPersonajeMenuOpen` en el code-behind/ViewModel que se ponga a `True` en
+   `OnPersonajeMenuClick` y a `False` en el evento `Closed` del `ContextMenu` - mismo
+   patrón ya usado en la app para otros popups, ver `IsWhereIsItOpen`) que anime `BdBrush`
+   al mismo `BgHoverColor`/`BgPressedColor` ya existente (coherencia visual: "abierto" se
+   ve como "pressed mantenido", lenguaje ya establecido en el resto de la cabecera) y rote
+   la flecha.
+5. No hace falta tocar `OnPersonajeMenuClick` en su mecanismo de apertura (clic izquierdo
+   real, ya correcto) - solo añadir el `Closed`/`Opened` del `ContextMenu` para mantener el
+   nuevo booleano en sincronía, y el `Content` del `Button` (hoy un `string` simple vía
+   `Content="{Binding Loc[...]}"`) pasa a ser un `StackPanel` con 2-3 elementos en vez de
+   un solo `TextBlock` implícito.

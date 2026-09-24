@@ -52,6 +52,15 @@ internal static partial class Program
         // Terrakeep.App.App.ModoDiagnostico y en MainWindow.xaml.cs.
         Terrakeep.App.App.ModoDiagnostico = true;
 
+        // Complementacion bidireccional (24-sep-2026): Terrakeep conserva su arnes WPF/UIA
+        // nativo; KEEPQA_COMPLEMENTO_SOLO permite que ese mismo arnes invoque los gates
+        // compartidos de KeepQA sin duplicar su logica. KeepQA, a su vez, sigue pudiendo lanzar
+        // este proyecto como extractor/runner nativo. Dos capas, una sola fuente de verdad por regla.
+        if (Environment.GetEnvironmentVariable("KEEPQA_COMPLEMENTO_SOLO") == "1")
+        {
+            Environment.Exit(EjecutarComplementoKeepQA());
+        }
+
         // Verificacion real de T-12 (auditoria de Opus, Bloque 3): sesion local normal (esta
         // maquina, sin RDP) -> false; con la variable de entorno puesta -> true. El propio
         // OnStartup de App.xaml.cs nunca se ejecuta en este arnes (crea un Application a pelo),
@@ -2208,6 +2217,17 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // BADGES_ESTADO_SOLO=1 (24-sep-2026, investigador-bug, cierra el hueco de cobertura real
+        // que dejo pasar el reporte del usuario sobre "67 diferencia(s)" en Comparar, imagen4.png):
+        // cuerpo real en AuditoriaBadgesEstado.cs - mide y compara la geometria real (CornerRadius/
+        // Padding/Background) de los badges/status-pills NO interactivos de la app (el pill de
+        // Comparar, "Solo lectura" y "Guia: <Zona>" de Exploracion), algo que ningun modo anterior
+        // de este arnes comprobaba JUNTO.
+        if (Environment.GetEnvironmentVariable("BADGES_ESTADO_SOLO") == "1")
+        {
+            EjecutarBadgesEstadoSolo(window, vm);
+        }
+
         // T6_SOLO=1 (20-sep-2026, catalogo de rediseño visual, "Exploracion a pantalla completa" -
         // reabierto por instruccion explicita del coordinador/usuario tras documentarlo como
         // LIMITE-por-riesgo-historico: el usuario aclaro que el historial real de bugs de esta
@@ -2490,6 +2510,33 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // NAV123_SOLO=1 / LIBCARD_CLIP_SOLO=1 (24-sep-2026, revision-correccion-integral-familia-Keep,
+        // bloque "imagen2" - Personaje>Objetos): canarios reales de investigador-bug (patron de 2
+        // fases), ver el comentario largo de cabecera en CanarioNav123YClipCardsLibreria.cs.
+        if (Environment.GetEnvironmentVariable("NAV123_SOLO") == "1")
+        {
+            EjecutarNav123Solo(window, vm);
+            Console.WriteLine("DONE (NAV123_SOLO)");
+            Environment.Exit(0);
+        }
+        if (Environment.GetEnvironmentVariable("LIBCARD_CLIP_SOLO") == "1")
+        {
+            EjecutarLibCardClipSolo(window, vm);
+            Console.WriteLine("DONE (LIBCARD_CLIP_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // HOMEBANNER_SOLO=1 (24-sep-2026, revision-correccion-integral-familia-Keep, bloque
+        // "imagen1" - Inicio: banner "Continuar con X" + tarjetas): canario real de
+        // investigador-bug (patron de 2 fases), ver el comentario largo de cabecera en
+        // CanarioHomeBannerMascota.cs.
+        if (Environment.GetEnvironmentVariable("HOMEBANNER_SOLO") == "1")
+        {
+            EjecutarHomeBannerMascotaSolo(window, vm);
+            Console.WriteLine("DONE (HOMEBANNER_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA3_SOLO=1 (20-sep-2026, catalogo de funciones, idea 3 "Partida en vivo" - version
         // real, tercera ronda tras la correccion del coordinador: investigado a fondo
         // (SincronizacionEscritorio.cs, TerrakeepMod, otro repo) que la sincronizacion REAL entre
@@ -2631,7 +2678,7 @@ internal static partial class Program
                 {
                     var loaded = servicioAparte.Load(entry.FilePath);
                     var primerItem = loaded.MergedContainers.Values.SelectMany(items => items).FirstOrDefault(i => !i.IsEmpty && !i.IsCalamity);
-                    if (!primerItem.IsEmpty)
+                    if (primerItem is not null && !primerItem.IsEmpty)
                     {
                         nombreItemPersonaje = servicioAparte.VanillaCatalog.GetName(primerItem.Id);
                         personajeConItem = entry.Name;
@@ -4247,6 +4294,94 @@ internal static partial class Program
             }
             catch (Exception ex) { Console.WriteLine("T2_SOLO-EXCEPTION: " + ex); }
             Console.WriteLine("DONE (T2_SOLO)");
+            Environment.Exit(0);
+        }
+
+        // KEEPQA-GAP: PERSONAJEMENU_ESTADOS_SOLO=1 (24-sep-2026, investigacion del bug real "boton
+        // de cabecera '... Personaje' sin indicador de desplegable claro", handoff de tarea
+        // e5eaea9e-c261-4199-8e7d-060b6054f58d): T2_SOLO (arriba) abre el ContextMenu, cuenta sus
+        // items y lo CIERRA antes de la unica captura que guarda (linea ~4225) - nunca deja
+        // constancia real de como se ve PersonajeMenuButton con su menu REALMENTE abierto, ni
+        // compara ese aspecto contra el estado cerrado/con foco de teclado. Este bloque cierra ese
+        // hueco de cobertura: mide el color real (no supuesto) del Border/SolidColorBrush internos
+        // ("Bd"/"BdBrush", ver Theme.xaml TargetType="Button" L.300-349, unico estilo que usa este
+        // boton) en cerrado / foco de teclado / abierto, y guarda una captura real de cada uno.
+        if (Environment.GetEnvironmentVariable("PERSONAJEMENU_ESTADOS_SOLO") == "1")
+        {
+            try
+            {
+                vm.SelectedTabIndex = 1;
+                FijarTamaño(window, 1180, 860);
+                DoEvents(); DoEvents();
+
+                var botonMenu = window.FindName("PersonajeMenuButton") as System.Windows.Controls.Button;
+                Console.WriteLine($"PERSONAJEMENU_ESTADOS: PersonajeMenuButton encontrado={botonMenu != null}");
+                if (botonMenu == null)
+                {
+                    Console.WriteLine("FALLO: PERSONAJEMENU_ESTADOS - no se encuentra el boton por su x:Name en la cabecera");
+                }
+                else
+                {
+                    Console.WriteLine($"PERSONAJEMENU_ESTADOS: Content real del boton='{botonMenu.Content}' (se comprueba a ojo si incluye algun glifo de flecha ademas de los tres puntos)");
+
+                    botonMenu.ApplyTemplate();
+                    var bdBrush = botonMenu.Template.FindName("BdBrush", botonMenu) as System.Windows.Media.SolidColorBrush;
+                    Console.WriteLine($"PERSONAJEMENU_ESTADOS: BdBrush (color real de fondo del boton) encontrado en el template={bdBrush != null}");
+
+                    void Capturar(string etiqueta, out System.Windows.Media.Color? colorFondo)
+                    {
+                        DoEvents(); DoEvents();
+                        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtb.Render(window);
+                        var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+                        string shot = Path.Combine(AppContext.BaseDirectory, $"personajemenu-estado-{etiqueta}.png");
+                        using (var fs = File.Create(shot)) enc.Save(fs);
+                        colorFondo = bdBrush?.Color;
+                        Console.WriteLine($"PERSONAJEMENU_ESTADOS: estado={etiqueta} -> BdBrush.Color={colorFondo} | captura real={shot}");
+                    }
+
+                    // 1) Cerrado, sin hover ni foco - estado real por omision al entrar en la pestaña.
+                    Capturar("1-cerrado-normal", out var colorCerrado);
+
+                    // 2) Foco real de teclado (Tab), menu todavia cerrado. Keyboard.Focus() a secas
+                    // NO pinta el Adorner de FocusVisualStyle (leccion ya documentada en T-H/F2,
+                    // linea ~10631: WPF solo lo pinta si el teclado fue el ULTIMO dispositivo de
+                    // entrada FISICO) - mismo mecanismo real ya validado ahi: ventana en primer
+                    // plano + pulsacion fisica inocua (Shift) + SetFocus().
+                    ForzarPrimerPlano(hwnd);
+                    const byte VK_SHIFT_PM = 0x10;
+                    keybd_event(VK_SHIFT_PM, 0, 0, UIntPtr.Zero);
+                    keybd_event(VK_SHIFT_PM, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    DoEvents(); DoEvents();
+                    System.Windows.Input.Keyboard.Focus(botonMenu);
+                    DoEvents(); DoEvents();
+                    bool adornerFocoReal = System.Windows.Documents.AdornerLayer.GetAdornerLayer(botonMenu)?.GetAdorners(botonMenu)?.Length > 0;
+                    Console.WriteLine($"PERSONAJEMENU_ESTADOS: tras foco real de teclado -> IsKeyboardFocused={botonMenu.IsKeyboardFocused}, adorner de FocusVisualStyle adjunto={adornerFocoReal} (esperado True los dos)");
+                    if (!adornerFocoReal) Console.WriteLine("FALLO-REAL: PERSONAJEMENU_ESTADOS - el FocusVisualStyle del tema no se adjunto a PersonajeMenuButton al enfocarlo por teclado");
+                    Capturar("2-foco-teclado", out _);
+
+                    // 3) Abierto de verdad - mismo mecanismo real que OnPersonajeMenuClick (MainWindow.xaml.cs).
+                    botonMenu.ContextMenu.PlacementTarget = botonMenu;
+                    botonMenu.ContextMenu.IsOpen = true;
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"PERSONAJEMENU_ESTADOS: ContextMenu.IsOpen={botonMenu.ContextMenu.IsOpen}");
+                    Capturar("3-abierto", out var colorAbierto);
+
+                    bool identicos = colorCerrado.HasValue && colorAbierto.HasValue && colorCerrado.Value == colorAbierto.Value;
+                    Console.WriteLine($"PERSONAJEMENU_ESTADOS: colorCerrado={colorCerrado} vs colorAbierto={colorAbierto} -> {(identicos ? "IDENTICOS" : "DISTINTOS")}");
+                    if (identicos) Console.WriteLine("FALLO-REAL: PERSONAJEMENU_ESTADOS - PersonajeMenuButton no cambia de aspecto cuando su propio menu esta abierto (falta indicador visual de estado abierto/cerrado, aparte del ContextMenu mismo)");
+
+                    // 4) Vuelve a cerrado (tras haber estado abierto) - confirma que el cierre real no deja rastro visual distinto del (1).
+                    botonMenu.ContextMenu.IsOpen = false;
+                    DoEvents(); DoEvents();
+                    Capturar("4-cerrado-tras-abrir", out var colorCerradoTrasAbrir);
+                    Console.WriteLine($"PERSONAJEMENU_ESTADOS: colorCerrado(1)={colorCerrado} vs colorCerradoTrasAbrir(4)={colorCerradoTrasAbrir} -> {(colorCerrado == colorCerradoTrasAbrir ? "IDENTICOS (coherente)" : "DISTINTOS (inesperado)")}");
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("PERSONAJEMENU_ESTADOS-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (PERSONAJEMENU_ESTADOS_SOLO)");
             Environment.Exit(0);
         }
 
