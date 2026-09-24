@@ -17597,6 +17597,194 @@ volcado real de un `.wld` real del usuario):
   100%**, no varía con el cofre, ni con el zoom, ni con el tamaño de ventana (es un error de
   fórmula, no de dato). Arreglo real para quien lo aplique después: sumar `+1` a X e Y (o
   `anchoTiles/2`/`altoTiles/2` de forma genérica) en los DOS sitios de arriba antes de usar la
+
+## 24-sep-2026 - Inventario de badges/status-pills para unificación visual (investigador-bug,
+TASK CONTEXT `e5eaea9e-c261-4199-8e7d-060b6054f58d`, misión "67 diferencia(s), Solo lectura, Guía:
+Superficie y equivalentes")
+
+Encargo real del usuario (captura real inspeccionada, `Downloads\Keep\Arreglos familia
+keep\imagen4.png`): el badge morado "67 diferencia(s)" de Personaje > Comparar no le convence, y
+ese mismo lenguaje visual (badge/status-pill) aparece en más sitios de la app - pide inventario +
+identificar cuál de los estilos actuales ya funciona bien + unificar, sin caer en un sistema
+genérico que pierda la personalidad de Terrakeep. Este bloque es SOLO investigación/inventario -
+ningún `.xaml`/`.cs` de producción se tocó (la unificación real la hacen `revisor-visual` +
+`aplicador-fix` después).
+
+**Toda la UI vive en un único fichero** - verificado listando el proyecto real
+(`Terrakeep.App\*.xaml` recursivo): solo `App.xaml`, `MainWindow.xaml` (~8300 líneas) y
+`Styles\Theme.xaml`. No hay ventanas/controles XAML separados donde buscar.
+
+### Inventario real (archivo:línea, valores leídos del XAML, nunca aproximados)
+
+1. **"N diferencia(s)"** (Personaje > Comparar) - `MainWindow.xaml:4946-4967`.
+   `<Border Background="{StaticResource AccentMutedBrush}" CornerRadius="99" Padding="10,4"
+   HorizontalAlignment="Left" Margin="0,0,0,10">` con un `TextBlock` `BasedOn="{StaticResource
+   CaptionText}"`, `Foreground="{StaticResource AccentBrush}"`, `FontWeight="SemiBold"` (explícito).
+   Medido en vivo (ver canario nuevo más abajo): `CornerRadius=99,99,99,99` `Padding=10,4,10,4`
+   `Fondo=#FF2A2856` (`AccentMutedColor`) `TextoColor=#FF6C63FF` (`AccentColor`) `FontSize=11`.
+
+2. **"Solo lectura\*"** (Exploración, cabecera, badge visible solo con mundo cargado) -
+   `MainWindow.xaml:5322-5326`. `<Border Background="{StaticResource BgElevatedBrush}"
+   CornerRadius="99" Padding="9,3" Margin="10,0,0,0" ToolTip="{Binding
+   Loc[explore_readonly_tooltip]}">` con un `TextBlock Style="{StaticResource CaptionText}"` SIN
+   `Foreground`/`FontWeight` propios (hereda). Medido en vivo: `CornerRadius=99,99,99,99`
+   `Padding=9,3,9,3` `Fondo=#FF1E2233` (`BgElevatedColor`, neutro, NO de acento)
+   `TextoColor=#FF8A8FA3` (`TextSecondaryColor`) `FontSize=11`. Texto real:
+   `strings_es.json:349` = `"Solo lectura*"` (el `*` remite al tooltip,
+   `strings_es.json:350`, que explica la única excepción real: la dificultad es editable).
+   Nota real encontrada con el canario: el `FontWeight` medido en vivo sale `SemiBold`, pero NO
+   por diseño propio de este badge - es heredado del `Trigger IsSelected="True"` del `TabItem` de
+   la rail (`Theme.xaml:973-978`, `Setter Property="FontWeight" Value="SemiBold"`, propiedad
+   heredable) porque la pestaña Exploración está activa. Sin ese trigger de fondo este badge
+   sería `Normal`. Es decir: de los tres badges citados por el usuario, SOLO 2 de 3
+   (`"N diferencia(s)"` y `"Guía: <Zona>"`) declaran `FontWeight="SemiBold"` a propósito - "Solo
+   lectura" coincide por accidente de herencia, no por estilo compartido real.
+
+3. **"Guía: <Zona>"** (mapa de Exploración, 4 variantes mutuamente excluyentes según la banda de
+   profundidad) - `MainWindow.xaml:6072-6182`. `<Border CornerRadius="99" Padding="10,5"
+   IsHitTestVisible="False" Effect="{StaticResource CardShadow}">` (el ÚNICO de los tres con
+   sombra) con `Background` puesto por `MultiDataTrigger` según la zona real:
+   `MasterGoldBrush` (`#FFFFD24A`, Superficie) / `EquippedGreenBrush` (`#FF3DDC6E`, Subterráneo) /
+   `DebuffBrush` (`#FF9B59B6`, Cavernas) / `CalamityBrush` (`#FFC0392B`, Infierno) - colores
+   SEMÁNTICOS ya establecidos en el resto de la app (ver `Theme.xaml:38-53`), no inventados para
+   este chip. Contenido: icono `"◎"` + `TextBlock Foreground="White" FontSize="12"
+   FontWeight="SemiBold"` (explícito, uno de los 4 textos ya formados por zona,
+   `guide_zone_chip_superficie` = `"Guía: Superficie"`, `strings_es.json:919`). Medido en vivo con
+   Zona=Superficie: `CornerRadius=99,99,99,99` `Padding=10,5,10,5` `Fondo=#FFFFD24A`
+   `TextoColor=#FFFFFFFF` `FontSize=12`.
+
+4. **3 pastillas KPI de la tarjeta hero "Continuar con..."** (Inicio) -
+   `MainWindow.xaml:2594,2600,2609`. Mismo patrón (`CornerRadius="99" Padding="10,4"`) pero
+   `Background="#26FFFFFF"` HEXADECIMAL SUELTO (blanco 15% opacidad), NUNCA un `StaticResource` de
+   `Theme.xaml` - el único de los 6 badges de este inventario que no usa la paleta con nombre.
+   Texto/icono siempre `Foreground="White"`. Corresponde a "48h 52min"/vida máx./etapa de Guía que
+   el coordinador citó de imagen1/imagen2.
+
+5. **"Solo válidos para <Slot>"** (Librería, selector de prefijo) - `MainWindow.xaml:3659-3670`.
+   `<Border Background="{StaticResource AccentMutedBrush}" CornerRadius="99" Padding="10,4"
+   Margin="0,0,0,6" HorizontalAlignment="Left">` + `TextBlock Style="{StaticResource CaptionText}"
+   Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold"` - **RECETA IDÉNTICA, byte a
+   byte, a la del badge Nº1 ("N diferencia(s)")**: mismo `Background`, mismo `CornerRadius`, mismo
+   `Padding`, mismo `Foreground`, mismo `FontWeight`, mismo patrón de `TextBlock` basado en
+   `CaptionText`. Es la prueba de que ESTE es el lenguaje visual "bueno" ya establecido en dos
+   sitios reales de la app, no uno solo.
+
+6. **Badge de tipo de resultado** (Exploración, lista de "Buscar en el mundo") -
+   `MainWindow.xaml:7146-7148`. `<Border Background="{Binding KindColor}" CornerRadius="99"
+   Padding="6,1" Margin="6,0,0,0">` + `TextBlock FontSize="9.5" Foreground="White"` - la variante
+   MÁS pequeña (padding casi nulo, fuente 9.5), pensada para caber en una fila de lista densa, no
+   como badge de cabecera. `KindColor` sale de `ExplorationViewModel.cs:69` (switch sobre
+   `Application.Current.Resources`, misma paleta con nombre que el resto).
+
+### Precedente real ya documentado en el propio repo (contexto que `revisor-visual` necesita)
+
+`Theme.xaml:1390-1405` documenta un encargo previo del usuario (4-sep-2026) que rechazó
+explícitamente la forma de "píldora completa" (`CornerRadius="99"`) para los chips DE FILTRO/
+SELECCIÓN interactivos (`CategoryPill`/`CategoryChip`, antecesores de `CategorySelector`/
+`ViewSelector`) por no parecerse a ningún otro botón de la app - se sustituyeron por
+`CornerRadius="8"`, igual que el `Button` base (`Theme.xaml:300-321`). **Esto NO contradice la
+unificación pedida aquí**: aquel rechazo fue sobre controles INTERACTIVOS/clicables (botones de
+filtro), mientras que los 6 badges de este inventario son indicadores de SOLO LECTURA, no
+clicables. El propio `Theme.xaml:167-170` documenta la escala de `CornerRadius` como decisión de
+diseño deliberada, no accidental: *"99, para píldoras/círculos"* es explícitamente el radio
+reservado para esto - es decir, `CornerRadius="99"` para un badge NO interactivo ya es, hoy
+mismo, el lenguaje visual "bueno" y validado de Terrakeep (5 de los 6 badges YA lo usan; el único
+outlier de forma sería uno que decidiera apartarse de 99).
+
+### Qué ya es consistente y qué es outlier real (evidencia medida, no visual a ojo)
+
+- **CornerRadius=99 en los 6**: ya consistente en el 100% de los badges encontrados. NO es la
+  causa real de que "67 diferencia(s)" se vea distinto de "Solo lectura"/"Guía: Superficie".
+- **Padding real distinto en los 3 badges que el usuario citó explícitamente**: `10,4` (Comparar)
+  vs `9,3` (Solo lectura) vs `10,5` (Guía) - tres valores de padding DIFERENTES para el mismo tipo
+  de elemento, sin ningún recurso compartido (`SpDn`/`SpN` de la escala ya declarada en
+  `Theme.xaml:130-156` no se usa en ninguno de los 6).
+- **Background sin criterio único**: Nº1/Nº5 usan `AccentMutedBrush` (violeta de marca, "de la
+  familia del acento pero secundario" - mismo criterio que `Tag="AccentSoft"` ya documentado);
+  Nº2 usa `BgElevatedBrush` (neutro, ni siquiera semántico); Nº3/Nº6 usan color SEMÁNTICO sólido
+  (zona/tipo) + texto blanco; Nº4 usa un hex suelto fuera de la paleta con nombre.
+  Resultado: 4 recetas de color distintas para 6 badges - EL outlier real es la falta de UNA
+  única fuente de verdad (`Style` compartido), no un color "feo" en particular.
+- **El candidato real a "generalizar"**: la receta de Nº1/Nº5 (`AccentMutedBrush` + `AccentBrush`
+  + `CaptionText` + `FontWeight="SemiBold"` explícito) ya se repite IDÉNTICA en dos sitios reales
+  sin que nadie lo haya declarado como `Style` compartido (los dos la escriben inline, letra por
+  letra) - es la prueba más fuerte de cuál es el lenguaje "bueno" ya validado por el propio uso
+  repetido, no una elección arbitraria de esta sesión.
+- Nº3 (`Guía: <Zona>`) y Nº6 (tipo de resultado) tienen una razón real para NO ser
+  violeta-siempre: codifican SEMÁNTICA propia (zona de profundidad / tipo de objeto) con la
+  paleta de colores con nombre que la app ya reserva para eso (`MasterGoldBrush`,
+  `EquippedGreenBrush`, etc., `Theme.xaml:38-53`) - esa diferencia de COLOR es intencional y no
+  debe perderse al unificar (perdería información real). Lo que sí debería unificarse en ellos es
+  `Padding`/tipografía/uso de `CaptionText` como base, no el color.
+
+### Hueco de cobertura KeepQA cerrado
+
+**Antes de hoy, ningún modo de `Terrakeep.App.Tests` comprobaba estos badges JUNTOS ni comparaba
+su geometría real entre sí** - cada uno se probaba aislado (`COMPARE_SOLO` solo hace capturas de
+pantalla del comparador sin medir el pill de recuento; `GUIACHIP_SOLO` mide el chip "Guía: <Zona>"
+pero nunca lo compara con "Solo lectura", que vive a su lado en la misma barra;
+`SNAPSHOT_VISUAL_SOLO` nunca visita Comparar ni Exploración con un mundo cargado). Por eso el "67
+diferencia(s)" reportado por el usuario pudo llevar un `Padding`/`Background` distinto de "Solo
+lectura"/"Guía: Superficie" sin que ningún canario lo marcara nunca.
+
+Nuevo modo real: `BADGES_ESTADO_SOLO=1` (`Terrakeep.App.Tests\AuditoriaBadgesEstado.cs`, cableado
+en `Program.cs` justo después del bloque `GUIACHIP_SOLO`). Determinista y sintético en las dos
+rutas (nunca personajes/mundos reales de este equipo, salvo `roca_negra.wld` de solo lectura, ya
+reutilizado por decenas de pruebas de este mismo arnés):
+- Dos personajes sintéticos `BadgeTestA`/`BadgeTestB` (Dificultad/Vida/Maná reales distintos) para
+  forzar `Compare.DifferenceCount > 0` y medir el badge Nº1 de verdad en pantalla.
+- El mismo personaje limpio sintético + `roca_negra.wld` real que ya usa `GUIACHIP_SOLO`, para
+  medir los badges Nº2 y Nº3 en la misma pantalla.
+- Mide `CornerRadius`/`Padding`/`Background`/`Foreground`/`FontSize`/`FontWeight` REALES de cada
+  uno (vía `VisualTreeHelper`, nunca inventados) y deja capturas reales (`badges-comparar.png`,
+  `badges-exploracion.png`).
+- Termina con `BADGES_ESTADO_SOLO-CONSISTENCIA`: compara la geometría medida entre badges y
+  **falla a propósito HOY** con la evidencia numérica de arriba - es el mismo canario que
+  `revisor-visual`/`aplicador-fix` deben dejar en VERDE tras unificar. Si algún día alguien
+  vuelve a apartarse del `Style` compartido nuevo, este canario lo vuelve a detectar.
+
+**Ejecutado de verdad, no solo escrito** (`cd Terrasavr-Win\Terrasavr-Native && BADGES_ESTADO_SOLO=1
+dotnet run --project Terrakeep.App.Tests -c Debug --no-build`), salida real:
+```
+BADGES_ESTADO_SOLO: Compare.DifferenceCount real = 3 (esperado > 0 con estos dos personajes sinteticos)
+BADGES_ESTADO_SOLO: Exploration.IsWorldLoaded=True
+BADGES_ESTADO_SOLO: geometria real medida de cada badge/status-pill encontrado en pantalla:
+  - Comparar: pill "N diferencia(s)" (MainWindow.xaml:4946): texto='3 diferencia(s)' CornerRadius=99,99,99,99 Padding=10,4,10,4 Fondo=#FF2A2856 TextoColor=#FF6C63FF FontSize=11 FontWeight=SemiBold
+  - Exploracion: badge "Solo lectura" (MainWindow.xaml:5322): texto='Solo lectura*' CornerRadius=99,99,99,99 Padding=9,3,9,3 Fondo=#FF1E2233 TextoColor=#FF8A8FA3 FontSize=11 FontWeight=SemiBold
+  - Exploracion: chip "Guia: Superficie" (MainWindow.xaml:6072): texto='Guía: Superficie' CornerRadius=99,99,99,99 Padding=10,5,10,5 Fondo=#FFFFD24A TextoColor=#FFFFFFFF FontSize=12 FontWeight=SemiBold
+FALLO: BADGES_ESTADO_SOLO-CONSISTENCIA - los badges/status-pills medidos NO comparten CornerRadius/Padding reales entre si...
+```
+Nota real: los badges Nº4/Nº5/Nº6 NO quedan cubiertos por este canario todavía (Nº4 exige forzar
+`HomeViewModel._lastSessionPath`, campo privado sin setter público accesible desde el arnés sin
+reflexión; Nº5 exige abrir el popup de restricción de slot de la Librería con un slot real
+seleccionado; Nº6 exige una búsqueda de mundo con resultados) - inventariados con evidencia de
+código (archivo:línea + valores leídos del XAML) pero SIN canario de geometría en vivo todavía.
+Queda pendiente para quien retome este arnés después de la unificación.
+
+### Recomendación técnica para `revisor-visual`/`aplicador-fix` (NO aplicada aquí)
+
+1. Crear un `Style x:Key="StatusPillCaption" TargetType="Border"` nuevo en `Theme.xaml` (junto a
+   `SidePanelCard`/`ItemSlotCardCompact`, mismo bloque de "tarjetas") con
+   `CornerRadius="99"` + `Padding="{StaticResource SpD2},{StaticResource SpD1}"` (o el par de la
+   escala `Sp1..Sp6` ya declarada en `Theme.xaml:145-156` que más se acerque a `10,4` - **usar la
+   escala con nombre en vez de otro número suelto nuevo**, el propio `Theme.xaml:130-144` ya pide
+   esto para cualquier margen/padding nuevo) - unificando ESTE valor entre los 3 badges citados
+   por el usuario (y de paso Nº5/Nº6, que ya comparten la forma).
+2. Reservar el color: `AccentMutedBrush`+`AccentBrush` (receta ya validada por Nº1/Nº5) para
+   badges "neutros/de acento" (recuento, restricción de slot); dejar el color SEMÁNTICO propio
+   (Nº3/Nº6) para los que codifican una categoría real (zona/tipo) - documentarlo como dos
+   variantes con `Tag` del mismo `Style` base (mismo mecanismo ya usado en `NavCardButton`/
+   `VersionOptionButton` con `Tag="Teal"/"Pink"/"Orange"`), no dos `Style` sueltos sin relación.
+3. Badge Nº2 ("Solo lectura"): pasar de `BgElevatedBrush` neutro a la variante de acento
+   (`AccentMutedBrush`/`AccentBrush`) O declarar explícitamente que es una tercera variante
+   "informativa neutra" con su propio `Tag` - pero en cualquier caso development el `FontWeight`
+   a propósito en vez de dejarlo a la herencia accidental del `TabItem` seleccionado (ver nota de
+   la entrada Nº2 arriba) para que no cambie de peso si algún día deja de ser el tab activo.
+4. Mantener SIEMPRE el `TextBlock` interior basado en `{StaticResource CaptionText}` (ya lo hacen
+   4 de los 6) en vez de escribir `FontFamily`/`FontSize` sueltos.
+5. Tras aplicar, `BADGES_ESTADO_SOLO=1 dotnet run --project Terrakeep.App.Tests` debe imprimir
+   `BADGES_ESTADO_SOLO-CONSISTENCIA: ... SI comparten CornerRadius/Padding reales entre si.` (hoy
+   imprime `FALLO:`) - es el criterio objetivo de "unificación terminada" para este encargo.
   coordenada como centro de marcador.
 
 **Pieza nueva de KeepQA** (KeepQA no tenía NINGUNA pieza que detectara desalineación
@@ -20404,3 +20592,132 @@ Terrakeep.App.Tests`. Caso de regresión documentado también en
    nuevo booleano en sincronía, y el `Content` del `Button` (hoy un `string` simple vía
    `Content="{Binding Loc[...]}"`) pasa a ser un `StackPanel` con 2-3 elementos en vez de
    un solo `TextBlock` implícito.
+
+## 24-sep-2026: navegación Equipamiento/Inventario/Almacenes por scroll + cards de Librería/
+Buffs/Investigación con el hover superior cortado (imagen2)
+
+Encargo del coordinador (revisión integral familia Keep, handoff
+`e5eaea9e-c261-4199-8e7d-060b6054f58d`, misión "imagen2"): investigar dos hallazgos de
+`Personaje > Objetos` a partir de la captura real `Arreglos familia keep\imagen2.png`. Rol
+`investigador-bug` (patrón de 2 fases): SOLO se toca el arnés (`Terrakeep.App.Tests`) y
+`KeepQA/src/regresion/casos/`, ni una línea de producción. El arreglo real lo aplica después
+`aplicador-fix`.
+
+### Bug A: navegación por scroll continuo, sin selector directo
+
+Reproducido con evidencia medida real (canario nuevo `NAV123_SOLO=1`, ver más abajo), no
+"debería fallar". `Personaje > Objetos` (`MainWindow.xaml:2876-3379`) es un único
+`ScrollViewer` (`x:Name="ObjetosBoardScroll"`) con un `StackPanel` (`ObjetosBoardStack`) que
+contiene las 3 secciones seguidas (`ObjetosSeccionEquipamiento`/`ObjetosSeccionInventario`/
+`ObjetosSeccionAlmacenes` - rediseño T3 PASO 1, 20-sep-2026, ver el comentario largo en
+`MainWindow.xaml:2857-2868`). No existe ningún selector directo: la única pieza de UI que
+indica la sección activa es una barra pegajosa (`ObjetosStickyBar`, `MainWindow.xaml:3437`)
+con `IsHitTestVisible="False"` - un rótulo, no un control. Medido a 1180x700 (mismo tamaño
+mínimo real que ya usa `T3_SOLO`): Equipamiento `y=0` (alto real 405,1px), Inventario
+`y=419,1px`, Almacenes `y=865,2px`, `ScrollableHeight=967,8px`, `ViewportHeight=293,6px`.
+Forzando `VerticalOffset=397,1` (fin real de Equipamiento menos 8px, sin pasar por ningún
+control - el `ScrollViewer` no impide ningún offset intermedio) Equipamiento queda con solo
+8px visibles de sus 405,1px reales mientras Inventario ya ocupa 271,6px de los 293,6px del
+viewport (92%) - estado **idéntico** al de `imagen2.png` (captura real guardada en
+`nav123-estado-intermedio-roto.png`, comparada a ojo con el original: mismo aspecto exacto,
+franja naranja de Equipamiento colapsada a una línea con el título "Inventario" ya pisándola).
+Confirmado además que 0 `ToggleButton`/`RadioButton` con contenido `"1"`/`"2"`/`"3"` existen
+hoy junto al tablero.
+
+El código para el arreglo YA existe, sólo no está expuesto a un control real: `MainWindow.
+xaml.cs:708 ScrollToObjetosSection(int index)` (0=Equipamiento/1=Inventario/2=Almacenes) ya
+calcula el offset exacto de cada sección y llama a `ScrollToVerticalOffset` - hoy sólo lo
+invoca `MainViewModel.RequestObjetosSection` (`MainViewModel.cs:638`) desde la navegación
+"Dónde está" (`NavigateToWhereIsItResultCommand`), nunca desde algo que el usuario pueda
+pulsar. `OnObjetosBoardScrollChanged` (`MainWindow.xaml.cs:667`) ya calcula en vivo cuál de
+las 3 secciones está activa mientras el usuario hace scroll libre - la misma lógica sirve
+para mantener sincronizado el `SelectedIndex` de un selector nuevo.
+
+**Propuesta concreta de diseño para `aplicador-fix`** (coherente con el lenguaje visual ya
+establecido en Terrakeep - pastillas tipo `PrefixGroupButton`/`LibraryFilterChipButton`,
+`Theme.xaml:1187-1204`, degradado+sombra+animación heredados del `Button` base vía
+`BasedOn`, nunca pintar `Background` a mano):
+1. Un grupo de 3 `RadioButton`/`ToggleButton` con `BasedOn="{StaticResource {x:Type
+   Button}}"` (mismo mecanismo real que `PrefixGroupButton`), contenido únicamente `"1"`/
+   `"2"`/`"3"` (sin iconos, pedido explícito del usuario - "visualmente muy sencillo"),
+   `Tag="AccentSoft"` cuando está seleccionado (mismo criterio ya usado para "varios botones
+   del mismo grupo compitiendo por atención", `Theme.xaml:1183-1194`) para que quede claro
+   cuál está activo sin gritar tanto como `Accent` sólido.
+2. Ubicación: junto a `ObjetosStickyBar` (`MainWindow.xaml:3437`, dentro del mismo `Grid` con
+   hijos superpuestos ZIndex alto) o en la cabecera de la columna del tablero (`Grid.Column
+   ="0"`, línea 2875) - siempre visible, sin necesidad de hacer scroll para encontrarlo.
+3. Cada botón, `Command="{Binding ...}"` a un método nuevo del `MainViewModel` que llame
+   internamente a `RequestObjetosSection(0/1/2)` (ya existe, cero lógica de scroll nueva) -
+   o si se prefiere resolverlo en code-behind, `Click` directo a `ScrollToObjetosSection`
+   (también ya existe, `MainWindow.xaml.cs:708`).
+4. Sincronización en el sentido contrario (el usuario sigue pudiendo hacer scroll libre, no
+   hace falta bloquearlo): `OnObjetosBoardScrollChanged` (línea 667) ya calcula `claveActiva`
+   con el mismo criterio "última sección cuyo origen ya pasó por encima del offset actual" -
+   reutilizar ese cálculo para poner el número correcto como seleccionado mientras el usuario
+   scrollea a mano, en vez de sólo actualizar el texto de la barra pegajosa.
+5. El punto crítico pedido explícitamente por el usuario: los 3 destinos deben aterrizar
+   EXACTOS en `yEquip`/`yInv`/`yAlm` (ya son los mismos 3 números que usa
+   `ScrollToObjetosSection`) - ningún estado intermedio debe ser alcanzable pulsando 1/2/3,
+   sólo por el scroll libre (que se conserva como opción secundaria, no principal).
+
+### Bug B: cards de Librería/Buffs/Investigación con el hover superior cortado
+
+Reproducido con evidencia medida real (canario nuevo `LIBCARD_CLIP_SOLO=1`, ver más abajo).
+Causa raíz: `NavCardButton` (`Theme.xaml:1231-1269`, el Style compartido de "tarjeta de
+navegación clicable") sube su `Border` interno (`x:Name="Bd"`, línea 1238) -3px en hover vía
+un `TranslateTransform` (`x:Name="BdLift"`, línea 1244, `DoubleAnimation To="-3"` en el
+trigger `IsMouseOver`, línea 1255) y a la vez anima el `BorderBrush` al color de acento
+(línea 1256-1257) - es ESE borde animado, no una sombra, el que se ve "cortado" en la
+captura. Las 3 rejillas de "tarjetas de carpeta raíz" que reutilizan este Style -
+`MainWindow.xaml:3690` (Librería de objetos), `:3906` (Librería de Buffs), `:4067`
+(Investigación) - meten su `ItemsControl`/`WrapPanel` dentro de un `ScrollViewer` **sin
+ningún `Padding`/`Margin` superior de reserva** (el `TextBlock` `ResultsSummary` justo antes
+sólo tiene `Margin="0,0,0,4"`, sin compensar nada por debajo). Con `VerticalOffset=0` (estado
+normal al abrir cualquiera de las 3), la fila 1 ya está pegada al borde exacto del viewport
+que el propio `ScrollViewer` recorta - los -3px del lift caen fuera de esa zona y se cortan.
+
+Medido con el mismo par de herramientas AR-15 que ya venía encontrando otros recortes reales
+en este proyecto (`RectCompleto` vs `RectVisible`, `Program.cs`), simulando el valor FINAL
+real de la animación de hover (mismo -3px que la propia `DoubleAnimation`, sin depender de
+mover el ratón de verdad): **exactamente 3,00px de recorte superior en la fila 1, el mismo
+número en las 3 superficies** (confirma que es la misma causa estructural, no una
+coincidencia) - Librería de objetos ("Materiales", `RectCompleto.Top=658,12` vs
+`RectVisible.Top=661,12`), Librería de Buffs ("Utilidad (17)", mismos 3px), Investigación
+("Materiales", mismos 3px). Control real: la fila 2 (con el margen entre filas de 12px,
+`Margin="0,0,12,12"`) mide **0px** de recorte en las 3 superficies - aísla que el problema es
+posicional (sólo la fila pegada al borde del `ScrollViewer`), no un defecto genérico de la
+tarjeta. Capturas reales del estado normal (sin hover, ya se ve el margen de sólo unos pocos
+px por encima de "Materiales") en `libcard-clip-libreria-objetos.png` /
+`libcard-clip-libreria-buffs.png` / `libcard-clip-investigacion.png` - visualmente idénticas
+al recorte de `imagen2.png`.
+
+Hallazgo adicional pedido por el encargo ("comprobar también otros catálogos"): "Objetos por
+ID"/"Jefes & Eventos"/"Categorías"/"Calamity (mod)" NO son rejillas separadas - son cards
+DENTRO de esta misma rejilla de Librería de objetos (fila 2 en adelante a 1080px de ancho),
+por eso NO están afectadas (confirmado con el mismo canario, 0px de recorte en fila 2). El
+problema es exclusivo de la fila 1 de las 3 superficies que comparten `NavCardButton` dentro
+de un `ScrollViewer` sin clearance superior.
+
+**Propuesta concreta para `aplicador-fix`**: reservar clearance real ANTES del
+`ItemsControl` en los 3 `ScrollViewer` (`MainWindow.xaml:3690`/`:3906`/`:4067`) - por ejemplo
+`Padding="0,4,0,0"` en el propio `ScrollViewer` (mínimo 3-4px para no recortar, algo más para
+que también quede aire visual coherente con el margen de 12px entre filas). Arreglo
+estructural pedido explícitamente por el usuario - NO bajar el lift a 0 ni esconder el borde
+con un `Clip`/`Effect` nuevo, eso camuflaría el síntoma sin arreglar el espaciado real. Aplicar
+los 3 cambios a la vez (misma causa, mismo Style compartido).
+
+### Cobertura cerrada en este bloque (arnés, no producción)
+
+- `Terrakeep.App.Tests/CanarioNav123YClipCardsLibreria.cs` (fichero nuevo, mismo patrón
+  `partial class Program` que el resto del arnés): dos modos nuevos, ambos canarios ROJOS a
+  propósito hoy (deben pasar a OK sin tocar este fichero cuando `aplicador-fix` aplique el
+  arreglo real):
+  - `NAV123_SOLO=1` - reproduce el estado intermedio roto con offsets reales del
+    `ScrollViewer` y confirma la ausencia del selector 1/2/3.
+  - `LIBCARD_CLIP_SOLO=1` - mide el recorte real de 3px en la fila 1 de las 3 superficies
+    (Librería de objetos/Buffs/Investigación) con control de fila 2.
+  - Ejecutar con `cd Terrasavr-Win\Terrasavr-Native && NAV123_SOLO=1 dotnet run --project
+    Terrakeep.App.Tests` / `LIBCARD_CLIP_SOLO=1 dotnet run --project Terrakeep.App.Tests`.
+  - Registrados también en `KeepQA/src/regresion/casos/
+    terrakeep-objetos-navegacion-scroll-sin-selector-123.json` y
+    `terrakeep-libreria-cards-hover-borde-superior-cortado.json`.
