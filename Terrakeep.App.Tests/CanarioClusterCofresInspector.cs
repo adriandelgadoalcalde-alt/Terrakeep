@@ -350,6 +350,79 @@ internal static partial class Program
             }
             catch (Exception exVisual) { Console.WriteLine("COFRES-INSPECTOR-VISUAL-EXCEPTION: " + exVisual); }
 
+            // ================= ExploracionRediseno Fase B: ExplorationSidebarMode (25-sep-2026) =================
+            // Canario del aplicador-fix (patron de 2 fases) - modelo de estado del sidebar,
+            // fundacional para el rediseno estructural posterior (ver bitacora.md, gap analysis
+            // "ExploracionRediseno FaseA"). SidebarMode se mantiene SOLO desde
+            // OnEditingChestChanged (ExplorationViewModel.cs) - confirma las 3 rutas REALES de
+            // apertura (boton "Editar" de la fila, marcador del mapa via TryOpenChestAtTile,
+            // resultado de busqueda via GoToWorldSearchHitCommand->OpenChestEditorIfApplicable,
+            // exactamente los mismos 3 caminos ya verificados por AR-13d/AR-13e mas arriba en
+            // Program.cs) y las 2 de cierre (Guardar, Cancelar). Fase B es SOLO ViewModel: no hay
+            // ningun binding en XAML que consuma SidebarMode todavia, por eso no hace falta medir
+            // nada visual aqui.
+            try
+            {
+                vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                vm.Exploration.ChestViewMode = 2; // Cofre a cofre - mismo estado que el resto del cluster
+                DoEvents(); DoEvents();
+
+                Console.WriteLine($"COFRES-INSPECTOR-FASEB: SidebarMode antes de abrir ningun cofre={vm.Exploration.SidebarMode} (esperado Browse)");
+                if (vm.Exploration.SidebarMode != ExplorationSidebarMode.Browse)
+                    Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEB - SidebarMode no arranca en Browse");
+
+                // --- Ruta 1: boton "Editar" de la fila (EditChestCommand), cierre por Cancelar ---
+                var filaFaseB = vm.Exploration.ChestRows.FirstOrDefault();
+                if (filaFaseB == null)
+                    Console.WriteLine("COFRES-INSPECTOR-FASEB-R1: AVISO - no hay ninguna fila de cofre real para probar la ruta 1");
+                else
+                {
+                    vm.Exploration.EditChestCommand.Execute(filaFaseB);
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"COFRES-INSPECTOR-FASEB-R1: tras EditChestCommand (fila 'Editar') -> SidebarMode={vm.Exploration.SidebarMode} (esperado ChestInspector)");
+                    if (vm.Exploration.SidebarMode != ExplorationSidebarMode.ChestInspector)
+                        Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEB-R1 - abrir un cofre desde la fila 'Editar' no pone SidebarMode=ChestInspector");
+
+                    vm.Exploration.CancelEditingChestCommand.Execute(null);
+                    DoEvents(); DoEvents();
+                    Console.WriteLine($"COFRES-INSPECTOR-FASEB-R1: tras CancelEditingChestCommand -> SidebarMode={vm.Exploration.SidebarMode} (esperado Browse)");
+                    if (vm.Exploration.SidebarMode != ExplorationSidebarMode.Browse)
+                        Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEB-R1 - CancelEditingChest no vuelve SidebarMode a Browse");
+                }
+
+                // --- Ruta 2: marcador del mapa (TryOpenChestAtTile), mismo cofre-7 real que AR-13d/AR-13e
+                // (X=5579,Y=1036, Blando_Río.wld) - cierre por Guardar (SaveEditingChestAsync) esta vez,
+                // para cubrir tambien esa ruta de salida (Ruta 1 ya cubrio Cancelar).
+                bool abrioCofre7 = vm.Exploration.TryOpenChestAtTile(5579, 1036);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"COFRES-INSPECTOR-FASEB-R2: TryOpenChestAtTile(5579,1036) -> encontro cofre={abrioCofre7}, SidebarMode={vm.Exploration.SidebarMode} (esperado True/ChestInspector)");
+                if (!abrioCofre7 || vm.Exploration.SidebarMode != ExplorationSidebarMode.ChestInspector)
+                    Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEB-R2 - TryOpenChestAtTile no pone SidebarMode=ChestInspector");
+
+                var tareaGuardarFaseB = vm.Exploration.SaveEditingChestCommand.ExecuteAsync(null);
+                while (!tareaGuardarFaseB.IsCompleted) DoEvents();
+                DoEvents(); DoEvents();
+                Console.WriteLine($"COFRES-INSPECTOR-FASEB-R2: tras SaveEditingChestAsync -> SidebarMode={vm.Exploration.SidebarMode} (esperado Browse), EditingChest={(vm.Exploration.EditingChest == null ? "null" : "NO-NULL")}");
+                if (vm.Exploration.SidebarMode != ExplorationSidebarMode.Browse)
+                    Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEB-R2 - SaveEditingChestAsync no vuelve SidebarMode a Browse");
+
+                // --- Ruta 3: resultado de busqueda (GoToWorldSearchHitCommand -> OpenChestEditorIfApplicable),
+                // mismo hit real ya usado por AR-13e (centro del cofre-7, (5580,1037)) - cierre por Cancelar.
+                var hitFaseB = new WorldSearchHitRowViewModel(new WorldSearchHit(5580, 1037, "Barra de hierro", WorldSearchKind.ChestItem));
+                vm.Exploration.GoToWorldSearchHitCommand.Execute(hitFaseB);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"COFRES-INSPECTOR-FASEB-R3: tras GoToWorldSearchHitCommand (resultado ChestItem) -> SidebarMode={vm.Exploration.SidebarMode} (esperado ChestInspector), EditingChest=({vm.Exploration.EditingChest?.TileX},{vm.Exploration.EditingChest?.TileY}) (esperado (5579, 1036))");
+                if (vm.Exploration.SidebarMode != ExplorationSidebarMode.ChestInspector)
+                    Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEB-R3 - un resultado de busqueda ChestItem no pone SidebarMode=ChestInspector");
+
+                vm.Exploration.CancelEditingChestCommand.Execute(null);
+                DoEvents(); DoEvents();
+                Console.WriteLine($"COFRES-INSPECTOR-FASEB-R3: tras CancelEditingChestCommand -> SidebarMode={vm.Exploration.SidebarMode} (esperado Browse)");
+                if (vm.Exploration.SidebarMode != ExplorationSidebarMode.Browse)
+                    Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEB-R3 - CancelEditingChest no vuelve SidebarMode a Browse tras la ruta de busqueda");
+            }
+            catch (Exception exFaseB) { Console.WriteLine("COFRES-INSPECTOR-FASEB-EXCEPTION: " + exFaseB); }
+
             // Deja recargado el mundo de siempre del resto del arnes, mismo criterio que AR-13d/AR-13e.
             vm.Exploration.ClearOreMarksCommand.Execute(null);
             vm.Exploration.ChestViewMode = 0;

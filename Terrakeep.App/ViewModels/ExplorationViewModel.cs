@@ -100,6 +100,16 @@ public sealed partial class WorldSearchHitRowViewModel(WorldSearchHit hit) : Obs
 // mas del mundo cargado.
 public enum WorldSearchCategory { All, Npcs, Chests, Ores, Objects, Compare }
 
+// ExploracionRediseno Fase B (fundacional, ver bitacora.md): estado del panel lateral de
+// Exploracion, independiente de WorldSearchCategory de arriba (esa es la categoria de busqueda
+// DENTRO del sidebar; esta es el "modo" general de toda la pestaña). Browse = navegacion normal
+// (lista/mapa). ChestInspector = un cofre concreto abierto para editar (ver
+// OnEditingChestChanged mas abajo, unico sitio que lo cambia). WorldTools = "Mundo" (Este mundo/
+// Editar mundo/Bestiario) - solo declarado en esta fase, sin ningun trigger todavia (lo cablea
+// Fase F cuando mueva los 3 Expanders correspondientes). Fase B es SOLO estado: 0 cambio visual,
+// nada en XAML consume esta propiedad todavia.
+public enum ExplorationSidebarMode { Browse, ChestInspector, WorldTools }
+
 // Fila de inventario generica - reutilizada por Cofres (las dos vistas), Minerales y Objetos
 // (las tres vistas). NPCs sigue con su propio WorldNpcRowViewModel (ya existente, con icono real
 // y estado de mapa) - un inventario generico no le aporta nada que no tenga ya.
@@ -1415,6 +1425,12 @@ public partial class ExplorationViewModel : ObservableObject
     // indice) porque la plantilla necesita poder comparar "es esta fila la que esta editando"
     // para pintar el boton "Editar" como activo.
     [ObservableProperty] private ChestRowViewModel? _editingChest;
+
+    // ExploracionRediseno Fase B: modo actual del sidebar - lo mantiene sincronizado
+    // OnEditingChestChanged (unico sitio que lo toca en esta fase, ver mas abajo). Arranca en
+    // Browse porque la pestaña siempre entra en navegacion normal, nunca con un cofre ya abierto.
+    [ObservableProperty] private ExplorationSidebarMode _sidebarMode = ExplorationSidebarMode.Browse;
+
     public ObservableCollection<ItemSlotViewModel> EditingChestSlots { get; } = [];
     // Mensaje real de "Guardado"/error tras pulsar Guardar - mismo patron EXACTO ya establecido
     // por SetSpawnSaveStatus/SpawnSaveStatus (clave+args guardados, nunca el texto ya redactado,
@@ -1437,6 +1453,14 @@ public partial class ExplorationViewModel : ObservableObject
     {
         if (oldValue != null) oldValue.IsEditing = false;
         if (newValue != null) newValue.IsEditing = true;
+
+        // ExploracionRediseno Fase B: las 3 rutas reales de apertura (EditChest desde la fila,
+        // TryOpenChestAtTile desde el marcador del mapa, OpenChestEditorIfApplicable desde un
+        // resultado de busqueda) y las 2 de cierre (SaveEditingChestAsync, CancelEditingChest)
+        // convergen todas aqui via EditingChest - un unico sitio para el modo del sidebar, igual
+        // que ya pasa con IsEditing arriba.
+        if (newValue != null) SidebarMode = ExplorationSidebarMode.ChestInspector;
+        else if (oldValue != null) SidebarMode = ExplorationSidebarMode.Browse;
     }
 
     [RelayCommand]
