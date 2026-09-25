@@ -679,21 +679,34 @@ public partial class MainWindow : Window
         if (ObjetosSeccionEquipamiento == null || ObjetosSeccionInventario == null || ObjetosSeccionAlmacenes == null) return;
 
         double offset = e.VerticalOffset;
-        (FrameworkElement el, string clave)[] secciones =
+        (FrameworkElement el, string clave, int indice)[] secciones =
         [
-            (ObjetosSeccionEquipamiento, "char_tab_equipment"),
-            (ObjetosSeccionInventario, "char_tab_inventory"),
-            (ObjetosSeccionAlmacenes, "char_tab_storage"),
+            (ObjetosSeccionEquipamiento, "char_tab_equipment", 0),
+            (ObjetosSeccionInventario, "char_tab_inventory", 1),
+            (ObjetosSeccionAlmacenes, "char_tab_storage", 2),
         ];
 
         string? claveActiva = null;
-        foreach (var (el, clave) in secciones)
+        int indiceActivo = 0;
+        foreach (var (el, clave, indice) in secciones)
         {
             double y;
             try { y = el.TranslatePoint(new System.Windows.Point(0, 0), ObjetosBoardStack).Y; }
             catch (InvalidOperationException) { continue; } // desconectado del arbol a media medicion, ver el mismo patron real de AR-LAY
-            if (y <= offset + 4) claveActiva = clave;
+            if (y <= offset + 4) { claveActiva = clave; indiceActivo = indice; }
         }
+
+        // T3 PASO 4 (imagen2/NAV123_SOLO): sincroniza el selector 1/2/3 en sentido inverso mientras
+        // el usuario hace scroll libre a mano - mismo criterio "ultima seccion cuyo origen ya paso
+        // por encima del offset actual" que el calculo de arriba, sin logica nueva. El scroll libre
+        // sigue funcionando como via secundaria; el selector siempre refleja donde esta de verdad.
+        var radioActivo = indiceActivo switch
+        {
+            1 => ObjetosNavToggle2,
+            2 => ObjetosNavToggle3,
+            _ => ObjetosNavToggle1,
+        };
+        if (radioActivo != null && radioActivo.IsChecked != true) radioActivo.IsChecked = true;
 
         if (claveActiva == null || offset <= 4)
         {
@@ -702,6 +715,15 @@ public partial class MainWindow : Window
         }
         ObjetosStickyBarText.Text = Loc[claveActiva];
         ObjetosStickyBar.Visibility = Visibility.Visible;
+    }
+
+    // T3 PASO 4 (imagen2/NAV123_SOLO): las 3 pastillas 1/2/3 invocan directamente el mismo scroll
+    // exacto que ya usaba la navegacion "Donde esta" - cero logica de scroll nueva, los 3 destinos
+    // aterrizan EXACTOS en yEquip/yInv/yAlm (ScrollToObjetosSection ya lo calcula asi).
+    private void OnObjetosNavToggleClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton rb && rb.Tag is string tag && int.TryParse(tag, out int indice))
+            ScrollToObjetosSection(indice);
     }
 
     // T3 PASO 3: ejecuta de verdad el scroll que MainViewModel.RequestObjetosSection pide (0=

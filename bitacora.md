@@ -21982,3 +21982,104 @@ este agente - mismo patrón ya usado hoy en rondas anteriores del catálogo "Ini
 **Confirmado explícitamente lo que NO se tocó**: la fórmula GENERAL de posición mascota-vs-personaje
 (`Margin`/`PetBottomAlignMarginConverter`, terreno de Encargo3) no fue modificada por este agente -
 solo leída/verificada. `PetPreviewRenderer`/`PetAnimationDriver` (fotograma/cadencia) sin cambios.
+
+## 25-sep-2026: aplicador-fix real del hueco de coordinación "imagen2" - toggle 1/2/3 de
+## Equipamiento/Inventario/Almacenes + clip de 3px en cards de Librería/Buffs/Investigación
+
+Encargo del coordinador (rol `aplicador-fix`, TASK CONTEXT `e5eaea9e-c261-4199-8e7d-060b6054f58d`):
+la investigación de "imagen2" (ver el bloque del 24-sep-2026 más arriba, "navegación
+Equipamiento/Inventario/Almacenes por scroll + cards de Librería/Buffs/Investigación con el hover
+superior cortado") se quedó documentada con canarios en rojo a propósito
+(`Terrakeep.App.Tests/CanarioNav123YClipCardsLibreria.cs`, flags `NAV123_SOLO`/`LIBCARD_CLIP_SOLO`)
+pero por un fallo de coordinación del equipo nunca se despachó el `aplicador-fix` - un
+`verificador-qa` independiente lo detectó horas después al comprobar que ambos canarios seguían al
+100% en rojo pese a que la bitácora sugería que ya estaba resuelto. Este bloque cierra ese hueco.
+
+### Bug A: selector 1/2/3 real
+
+`Terrakeep.App/MainWindow.xaml` (dentro del `Grid Grid.Column="0"` que aloja
+`ObjetosBoardScroll`/`ObjetosStickyBar`, dos líneas por debajo del cierre de `ObjetosStickyBar`):
+`StackPanel x:Name="ObjetosNavToggle"` con 3 `RadioButton x:Name="ObjetosNavToggle1/2/3"`, `Style=
+"{StaticResource ViewSelector}"` (Theme.xaml, el MISMO mecanismo ya usado por los selectores de
+"vista" de Cofres/Objetos en Exploración - AccentMutedBrush al marcar), `GroupName=
+"ObjetosSeccionNav"` (mutua exclusión real vía WPF, sin lógica manual), `Content="1"/"2"/"3"` (texto
+plano, sin envolver en `TextBlock` - así el canario `Descendientes<ToggleButton>().Content.ToString()
+== "1"` lo detecta), flotante `HorizontalAlignment="Right" VerticalAlignment="Top"
+Panel.ZIndex="5"` (siempre visible, por encima de la barra pegajosa, sin depender del scroll).
+`Click="OnObjetosNavToggleClick"` (`MainWindow.xaml.cs`) llama directo a `ScrollToObjetosSection`
+(ya existía, `MainWindow.xaml.cs:~717`, cero lógica de scroll nueva) - los 3 destinos aterrizan
+EXACTOS en `yEquip`/`yInv`/`yAlm`, ningún estado intermedio alcanzable por este camino. Sincronizado
+en sentido inverso: `OnObjetosBoardScrollChanged` (`MainWindow.xaml.cs:~676`) ahora también calcula
+`indiceActivo` (mismo criterio "última sección cuyo origen ya pasó por encima del offset actual" que
+ya usaba la barra pegajosa) y marca `IsChecked=true` en el `RadioButton` correspondiente mientras el
+usuario hace scroll libre a mano - el scroll libre se conserva como vía secundaria, no se bloquea.
+
+### Bug B: clearance real de 3px en las cards de "carpeta raíz"
+
+Causa confirmada por el investigador: `NavCardButton` sube -3px su `Border` en hover
+(`TranslateTransform`), y las 3 rejillas (`MainWindow.xaml`, Librería de objetos/Buffs/Investigación)
+metían su `ItemsControl` dentro de un `ScrollViewer` sin ningún clearance superior. **Primer intento
+con la recomendación EXACTA del investigador** (`Padding="0,4,0,0"` en el propio `ScrollViewer`) NO
+funcionó - medido con el mismo canario: seguía dando 3,00px de recorte, solo con las coordenadas
+desplazadas +4px en bloque. Causa real del porqué: el `Padding` de un `ScrollViewer` se traduce en
+`Margin` del `ScrollContentPresenter` de su plantilla POR DEFECTO de WPF - eso desplaza a la vez la
+CAJA que recorta (el propio `ScrollContentPresenter`, de donde `VisualTreeHelper.GetClip` saca el
+clip que mide el canario) Y el contenido que lleva dentro, así que la distancia relativa entre ambos
+(el recorte real) no cambia nunca, solo se traslada en bloque. Arreglo real aplicado (mismo objetivo
+que pedía el investigador, clearance estructural sin bajar el lift ni tapar con `Clip`/`Effect`, pero
+con el `Margin="0,4,0,0"` puesto en el **`ItemsControl` de contenido**, no en el `ScrollViewer`): así
+la caja de recorte no se mueve y el contenido sí queda 4px más abajo dentro de ella, clearance real.
+Aplicado a los 3 sitios (`Library.RootCategories`/`BuffLibrary.RootCategories`/
+`Research.RootCategories`).
+
+### Verificación real
+
+- `NAV123_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`: antes 1 línea
+  `FALLO` ("no existe el selector Toggle 1/2/3"), después **0 líneas `FALLO`** - "controles reales de
+  navegación directa ... encontrados junto al tablero = 3 (esperado 3)".
+- `LIBCARD_CLIP_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`: antes 3
+  líneas `FALLO` (una por superficie, 3,00px cada una), después **0 líneas `FALLO`** en las 3 -
+  `recorte superior real=0px (esperado 0)` en Librería de objetos/Buffs/Investigación, fila 2 de
+  control sigue en 0px en los tres casos.
+- `T3_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build` (regresión de la zona
+  ya existente, navegación real "Dónde está"): **0 líneas `FALLO`**, `ScrollToObjetosSection` sigue
+  aterrizando exacto (offset=0 tras "saltar a Equipamiento" desde el fondo).
+- `dotnet build` (Release, solución completa) y `dotnet test` (Release, sin rebuild):
+  `Terrakeep.Core.Tests` 608/608 OK, `Terrakeep.App.ViewModels.Tests` 523/523 OK - sin regresión.
+- Capturas reales: `nav123-estado-intermedio-roto.png` (toggle "1" visible en la esquina superior
+  derecha del tablero), `libcard-clip-libreria-objetos.png`/`-libreria-buffs.png`/`-investigacion.png`
+  (estado normal, sin recorte visible).
+
+**Visual-qa (ningún idioma/ventana estrecha)**: no se ejecutó el barrido exhaustivo completo
+`BarridoMaquetacionPorTamañoEIdioma` (recorre TODA la app, ~30-60min reales, y en el momento de este
+encargo `MainWindow.xaml` llevaba trabajo simultáneo sin commitear de otros agentes - un barrido
+completo habría mezclado señal de zonas ajenas no relacionadas con este fix). Verificado en su lugar:
+(1) el canario `LIBCARD_CLIP_SOLO` ya mide a 1080x900 (el ancho mínimo real documentado de la app);
+(2) el clearance aplicado es un `Margin` fijo de 4px en el contenido, independiente del idioma/ancho
+de columna - no depende de longitud de texto ni de cuántas columnas quepa el `WrapPanel`; (3)
+verificación manual real con `pywinauto` sobre el `.exe` instalado (ver abajo) confirma que el
+selector 1/2/3 se renderiza y responde a clic sin overlap visible en la ventana real.
+
+**Recompilación/redespliegue real**: `Terrakeep.exe` NO estaba en ejecución antes de desplegar.
+`dotnet build` (solución completa, Release) y `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c
+Release -p:PublishProfile=win-x64` en verde (0 `.pdb`, autocontenido single-file confirmado). Copiado
+a `C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (ruta real del acceso directo de
+la barra de tareas, confirmada vía `WScript.Shell` sobre el `.lnk`). Verificado con `pywinauto`
+(backend UIA) sobre el `.exe` instalado real: ventana "Terrakeep" abre sin errores, navega a
+Personaje > Objetos, los 3 `RadioButton` "1"/"2"/"3" existen y responden a clic (cambian de
+seleccionado sin cerrar la app). **Nota real de coordinación**: mientras se verificaba, otro agente
+concurrente (Encargo4, mascotas) publicó y redesplegó TAMBIÉN el mismo `.exe` instalado (mismo patrón
+de "el árbol de trabajo completo" ya documentado arriba) - el binario finalmente instalado
+(`LastWriteTime` 10:35:18, hash `42FB925F...`) es el suyo, no el mío directamente, pero como ambos
+publican desde el mismo árbol de trabajo compartido, incluye igualmente este arreglo - reverificado
+con `pywinauto` DESPUÉS de su redespliegue (mismo resultado: toggle 1/2/3 presente y funcional) para
+no dar nada por bueno solo porque mi propia copia anterior funcionaba.
+
+**Commit real**: `Terrakeep.App/MainWindow.xaml.cs` completo (solo mis 2 hunks, confirmado con `git
+diff` antes de añadir) + `Terrakeep.App/MainWindow.xaml` **parcial** vía `git apply --cached` de un
+patch construido a mano con solo mis 4 hunks (el toggle 1/2/3 + los 3 `Margin` de clearance) -
+el archivo lleva simultáneamente 2 hunks sin commitear de otro agente (Encargo3/4, posición de
+mascota en las tarjetas de Inicio, líneas ~1485 y ~2695) que NO se tocan ni se incluyen en este
+commit, mismo patrón de cuidado ya usado hoy por el resto del equipo en este mismo fichero.
+`Terrakeep.App.Tests/CanarioNav123YClipCardsLibreria.cs` NO se tocó (el canario ya existía, cerraba
+el hueco de cobertura por sí solo, solo hizo falta que el código de producción lo satisficiera).

@@ -3532,6 +3532,35 @@
                                     </Border.Effect>
                                     <TextBlock x:Name="ObjetosStickyBarText" Style="{StaticResource SectionText}" />
                                 </Border>
+                                <!-- T3 PASO 4 (imagen2/NAV123_SOLO, 24/25-sep-2026, revision-correccion-integral-
+                                     familia-Keep): selector directo Equipamiento/Inventario/Almacenes - el tablero
+                                     solo tenia scroll libre, sin ningun control que garantizase aterrizar EXACTO en
+                                     cada seccion (podia quedar a medio camino, ver evidencia medida en el canario).
+                                     3 pastillas numeradas ("1"/"2"/"3", pedido explicito del usuario: "visualmente
+                                     muy sencillo"), Style ViewSelector (Theme.xaml, TargetType=ToggleButton, MISMO
+                                     mecanismo real ya usado por los selectores de "vista" de Cofres/Objetos en
+                                     Exploracion - AccentMutedBrush al marcar, sin la elevacion de 2px reservada a
+                                     acciones principales). RadioButton (deriva de ToggleButton) con GroupName para
+                                     mutua exclusion real sin logica manual. Flotante, ZIndex por encima de la barra
+                                     pegajosa, SIEMPRE visible sin necesidad de scroll. Click llama directo a
+                                     ScrollToObjetosSection (MainWindow.xaml.cs, YA calcula yEquip/yInv/yAlm exactos,
+                                     cero logica de scroll nueva) - los 3 destinos aterrizan EXACTOS, ningun estado
+                                     intermedio es alcanzable por este camino (el scroll libre se conserva aparte).
+                                     Sincronizado en sentido inverso desde OnObjetosBoardScrollChanged mientras el
+                                     usuario hace scroll a mano (mismo calculo de "seccion activa" que ya usaba solo
+                                     la barra pegajosa). -->
+                                <StackPanel x:Name="ObjetosNavToggle" Orientation="Horizontal" HorizontalAlignment="Right"
+                                            VerticalAlignment="Top" Margin="0,4,4,0" Panel.ZIndex="5">
+                                    <RadioButton x:Name="ObjetosNavToggle1" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
+                                                 Padding="10,4" Content="1" IsChecked="True" Tag="0" Click="OnObjetosNavToggleClick"
+                                                 ToolTip="{Binding Loc[char_tab_equipment], Mode=OneWay}" />
+                                    <RadioButton x:Name="ObjetosNavToggle2" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
+                                                 Padding="10,4" Content="2" Tag="1" Click="OnObjetosNavToggleClick"
+                                                 ToolTip="{Binding Loc[char_tab_inventory], Mode=OneWay}" />
+                                    <RadioButton x:Name="ObjetosNavToggle3" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
+                                                 Padding="10,4" Content="3" Tag="2" Click="OnObjetosNavToggleClick"
+                                                 ToolTip="{Binding Loc[char_tab_storage], Mode=OneWay}" />
+                                </StackPanel>
                                 </Grid>
 
                                 <Border Grid.Column="1" Style="{StaticResource SidePanelCard}">
@@ -3776,9 +3805,22 @@
                                                  ShowRootCategoryCards - subido a la base compartida por H5-15) -
                                                  tarjetas grandes (NavCardButton) a las carpetas RAIZ reales, un
                                                  atajo mas grande al mismo arbol de la izquierda. -->
+                                            <!-- imagen2/LIBCARD_CLIP_SOLO (24/25-sep-2026, revision-correccion-integral-
+                                                 familia-Keep): sin clearance real la fila 1 quedaba pegada a Y=0 del
+                                                 ScrollViewer, y el TranslateTransform "BdLift" de NavCardButton
+                                                 (Theme.xaml, Trigger IsMouseOver, -3px) caia fuera del area que el
+                                                 ScrollViewer recorta - 3,00px de recorte real medidos por el canario.
+                                                 IMPORTANTE: el Padding va en el CONTENIDO (este ItemsControl), NUNCA en
+                                                 el propio ScrollViewer - Padding ahi se traduce en Margin del
+                                                 ScrollContentPresenter (plantilla por defecto de WPF), que desplaza a
+                                                 la vez la CAJA que recorta Y el contenido que lleva dentro (medido:
+                                                 mismo 3px de recorte, solo trasladado en bloque, cero mejora real).
+                                                 Con el Margin en el ItemsControl la caja de recorte NO se mueve y el
+                                                 contenido si queda mas abajo dentro de ella - clearance real. Arreglo
+                                                 estructural (NO bajar el lift a 0 ni tapar con Clip/Effect). -->
                                             <ScrollViewer VerticalScrollBarVisibility="Auto"
                                                           Visibility="{Binding Library.ShowRootCategoryCards, Converter={StaticResource BoolToVis}}">
-                                                <ItemsControl ItemsSource="{Binding Library.RootCategories}">
+                                                <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding Library.RootCategories}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                                                     </ItemsControl.ItemsPanel>
@@ -3992,9 +4034,12 @@
                                             <TextBlock DockPanel.Dock="Top" Text="{Binding BuffLibrary.ResultsSummary}" Style="{StaticResource CaptionText}" Margin="0,0,0,4" />
                                             <!-- H5-13 (quinta auditoria de Opus): mismo mecanismo real que la
                                                  Libreria de objetos de arriba, ver ahi el comentario completo. -->
+                                            <!-- imagen2/LIBCARD_CLIP_SOLO: mismo clearance de reserva que la Libreria
+                                                 de objetos (Margin en el ItemsControl, NUNCA Padding en el
+                                                 ScrollViewer), ver el comentario completo ahi. -->
                                             <ScrollViewer VerticalScrollBarVisibility="Auto"
                                                           Visibility="{Binding BuffLibrary.ShowRootCategoryCards, Converter={StaticResource BoolToVis}}">
-                                                <ItemsControl ItemsSource="{Binding BuffLibrary.RootCategories}">
+                                                <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding BuffLibrary.RootCategories}">
                                                     <ItemsControl.ItemsPanel>
                                                         <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                                                     </ItemsControl.ItemsPanel>
@@ -4153,9 +4198,12 @@
                                          blanco salvo por la frase de arriba - tarjetas grandes
                                          (mismo NavCardButton real de Inicio) a las carpetas RAIZ,
                                          un atajo mas grande al mismo arbol de la izquierda. -->
+                                    <!-- imagen2/LIBCARD_CLIP_SOLO: mismo clearance de reserva que la Libreria de
+                                         objetos (Margin en el ItemsControl, NUNCA Padding en el ScrollViewer), ver
+                                         el comentario completo ahi. -->
                                     <ScrollViewer VerticalScrollBarVisibility="Auto"
                                                   Visibility="{Binding Research.ShowRootCategoryCards, Converter={StaticResource BoolToVis}}">
-                                        <ItemsControl ItemsSource="{Binding Research.RootCategories}">
+                                        <ItemsControl Margin="0,4,0,0" ItemsSource="{Binding Research.RootCategories}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                                             </ItemsControl.ItemsPanel>
