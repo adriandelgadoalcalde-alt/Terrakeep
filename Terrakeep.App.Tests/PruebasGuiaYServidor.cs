@@ -128,12 +128,24 @@ internal static partial class Program
             // entera" (EjercitoGoblin/ArmaParaElEjercitoGoblin, Objeto id=361, Assets/vanilla/
             // icons) y "Cualquier arma con algo de alcance" (DesertScourge/ArmaParaDesertScourge,
             // Objeto Calamity via idMod CalamityMod/DesertMedallion, Assets/calamity/icons) - las
-            // TRES categorias reales que cubre ResolverIconoDelHito salvo "jefe con sprite de NPC
-            // de pueblo": confirmado por lectura directa de los ~20 ids de jefe del catalogo contra
-            // los 40 ficheros reales de Assets/npc_icons que NINGUNO coincide (la inmensa mayoria
-            // de jefes no son NPC de pueblo, tal cual documenta el propio comentario de
-            // ResolverIconoDelHito) - no hay ningun ejemplo real de ese caso en el catalogo actual,
-            // asi que no se fuerza uno inventado.
+            // TRES categorias reales que cubria ResolverIconoDelHito en ese momento salvo "jefe con
+            // sprite de NPC de pueblo": confirmado por lectura directa de los ~20 ids de jefe del
+            // catalogo contra los 40 ficheros reales de Assets/npc_icons que NINGUNO coincide (la
+            // inmensa mayoria de jefes no son NPC de pueblo) - no habia ningun ejemplo real de ese
+            // caso en el catalogo de entonces, asi que no se forzo uno inventado.
+            //
+            // Guia Encargo4 (25-sep-2026, mismo handoff): hueco cerrado - BossIconResolver (nuevo,
+            // Assets/boss_icons/{npcType}.png extraido de Images/NPC_{type}.xnb real) le da sprite
+            // de cuerpo entero al caso "jefe" de ResolverIconoDelHito, asi que ahora SI hay
+            // ejemplos reales que cubrir. Cinco filas de jefe reales elegidas a mano (ids
+            // confirmados por lectura directa del catalogo): "Llamarlo tú, en vez de esperarlo"
+            // (PreOjo/InvocarElOjo, jefe=4 Ojo de Cthulhu, EXPLICITAMENTE con sprite en tira de
+            // animacion - el caso pedido) y "Derrotarlo/Derrotarla (opcional)" de Rey Slime
+            // (jefe=50), Deerclops (jefe=668, hoja en rejilla) y Reina Abeja (jefe=222), mas
+            // "Derrotarla" de Plantera (jefe=262, tramo obligatorio no opcional) - todas ellas
+            // añadidas al MISMO array `objetivos` de abajo, reutilizando tal cual el bucle generico
+            // ya existente (icono no nulo, fichero real en disco, Expander real, BringIntoView(),
+            // medicion de recorte/overflow y captura individual) sin necesidad de duplicar logica.
             static IEnumerable<FrameworkElement> Descendientes(DependencyObject raiz)
             {
                 int n = VisualTreeHelper.GetChildrenCount(raiz);
@@ -157,6 +169,12 @@ internal static partial class Program
                 ("Antes del primer jefe", "Cuatro vecinos", "Npc (vecino real, id 17 Merchant)"),
                 ("El Ejército Goblin (opcional)", "Un arma que aguante una oleada entera", "Objeto vanilla (id 361)"),
                 ("El Desert Scourge (opcional, Calamity)", "Cualquier arma con algo de alcance", "Objeto Calamity (idMod DesertMedallion)"),
+                // Guia Encargo4 (25-sep-2026): cinco filas de jefe reales, BossIconResolver nuevo.
+                ("Antes del primer jefe", "Llamarlo tú, en vez de esperarlo", "Jefe (Ojo de Cthulhu, jefe=4, sprite en tira animada)"),
+                ("El Rey Slime (opcional)", "Derrotarlo (opcional)", "Jefe (Rey Slime, jefe=50)"),
+                ("Deerclops (opcional)", "Derrotarlo (opcional)", "Jefe (Deerclops, jefe=668, hoja en rejilla)"),
+                ("La Reina Abeja (opcional)", "Derrotarla (opcional)", "Jefe (Reina Abeja, jefe=222)"),
+                ("Plantera", "Derrotarla", "Jefe (Plantera, jefe=262)"),
             };
 
             int filasConIconoVisible = 0;
@@ -239,11 +257,19 @@ internal static partial class Program
 
                 // Captura INDIVIDUAL de esta fila (ademas de la general de mas abajo) - con
                 // BringIntoView() ya hecho arriba, esta fila concreta queda dentro del viewport
-                // capturado, evidencia fotografica real de las tres categorias por separado
-                // (Npc-vecino / Objeto vanilla / Objeto Calamity), no solo la medicion numerica.
+                // capturado, evidencia fotografica real de cada categoria por separado (Npc-vecino
+                // / Objeto vanilla / Objeto Calamity / Jefe), no solo la medicion numerica.
+                // Guia Encargo4 (25-sep-2026): el nombre de archivo incluye tambien el tramo, no
+                // solo el titulo del paso - varios jefes opcionales comparten literalmente el mismo
+                // titulo ("Derrotarlo (opcional)"/"Derrotarla (opcional)", solo distinguibles por
+                // tramo), y con solo el titulo la segunda captura pisaba a la primera en disco
+                // (comprobado real: Deerclops sobrescribia a Rey Slime en la primera pasada de esta
+                // misma ronda).
                 try
                 {
-                    string nombreArchivo = "guia-fila-icono-" + string.Concat(tituloPaso.Where(char.IsLetterOrDigit)).ToLowerInvariant();
+                    string nombreArchivo = "guia-fila-icono-"
+                        + string.Concat(nombreTramo.Where(char.IsLetterOrDigit)).ToLowerInvariant() + "-"
+                        + string.Concat(tituloPaso.Where(char.IsLetterOrDigit)).ToLowerInvariant();
                     CapturaVentanaKeepQa(window, nombreArchivo);
                     Console.WriteLine($"GUIA_SOLO ICONOS: captura real individual -> keepqa-evidencia\\{nombreArchivo}.png");
                 }
@@ -319,6 +345,28 @@ internal static partial class Program
                     Console.WriteLine("GUIA_SOLO ICONOS: captura real del banner con icono -> keepqa-evidencia\\guia-banner-con-icono.png");
                 }
                 catch (Exception ex) { Console.WriteLine("GUIA_SOLO ICONOS: captura del banner fallo - " + ex.Message); }
+            }
+
+            // Guia Encargo4 (25-sep-2026): la captura de arriba demuestra el banner con icono de
+            // NPC-vecino (caso ya cubierto por Encargo3) - el pedido explicito de esta ronda es "el
+            // banner objetivo actual... muestre el sprite real del jefe", asi que se deja TAMBIEN
+            // una captura real del mismo banner apuntado a un paso de jefe (mismo mecanismo:
+            // ObjetivoTramo/ObjetivoPaso reasignados a un GuidePasoViewModel real ya evaluado
+            // arriba, mismo binding/convertidor de produccion).
+            var conIconoJefe = EncontrarPaso("Plantera", "Derrotarla");
+            if (conIconoJefe != null)
+            {
+                vm.Guide.ObjetivoTramo = conIconoJefe.Value.tramo;
+                vm.Guide.ObjetivoPaso = conIconoJefe.Value.paso;
+                DoEvents(); DoEvents();
+                if (window.FindName("GuideObjetivoBanner") is FrameworkElement bannerJefe) bannerJefe.BringIntoView();
+                DoEvents(); DoEvents();
+                try
+                {
+                    CapturaVentanaKeepQa(window, "guia-banner-con-icono-jefe");
+                    Console.WriteLine("GUIA_SOLO ICONOS: captura real del banner con icono DE JEFE (Plantera) -> keepqa-evidencia\\guia-banner-con-icono-jefe.png");
+                }
+                catch (Exception ex) { Console.WriteLine("GUIA_SOLO ICONOS: captura del banner de jefe fallo - " + ex.Message); }
             }
 
             var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(

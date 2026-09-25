@@ -22412,3 +22412,234 @@ esa zona.
 `git diff` antes de añadir - nada mas del fichero, que llevaba trabajo simultaneo de otros agentes
 en la carpeta) + `Terrakeep.App.Tests/CanarioNav123YClipCardsLibreria.cs` (85 lineas nuevas, el
 bloque de ampliacion de `NAV123_SOLO`). Sin `git push`.
+
+---
+
+## 25-sep-2026 - Guia Encargo2: defensa total real conectada a la Guia (aplicador-fix, TASK
+CONTEXT `e5eaea9e-c261-4199-8e7d-060b6054f58d`)
+
+Segunda fase del patron de 2 fases sobre el hallazgo YA investigado por `arquitecto-keep` (ver
+"Guia Encargo1" mas arriba en esta misma bitacora para el precedente exacto que este encargo
+replica): `EquipmentGroupViewModel.RecomputeDefenseAndBonus` (`Terrakeep.App/ViewModels/
+EquipmentGroupViewModel.cs`) ya calculaba la defensa total estatica (armadura+prefijos) para la
+pestaña Equipamiento, pero `DesktopGuideStateProvider.Defensa` (`Terrakeep.Core/Guia/
+DesktopGuideStateProvider.cs`) devolvia SIEMPRE 0 - quedaba detras del gate `HasLiveGameData`
+(fijo a `false` en escritorio), asi que el requisito `defensa` de `guia_progresion.json` nunca era
+evaluable en la Guia.
+
+### Arreglo real aplicado
+
+- **`Terrakeep.Core/Model/DefenseCalculator.cs`** (nuevo, estatico, sin dependencias de WPF/
+  ViewModels): `Total(IEnumerable<GameItem>, VanillaItemStatsCatalog?, CalamityCatalog?,
+  PrefixEffectCatalog?)` - EXACTAMENTE el mismo bucle que antes vivia solo dentro de
+  `RecomputeDefenseAndBonus` (item base vanilla/Calamity + bono de prefijo vanilla real
+  Warding/Guarding/Menacing/Hardy/Armored, "desconocido=0" nunca inventado, mismo criterio H3-08
+  ya documentado ahi). Catalogos nullable (`?`) para que las pruebas que no necesitan Defensa
+  sigan sin tener que fabricar catalogos reales.
+- **`EquipmentGroupViewModel.RecomputeDefenseAndBonus`**: el bucle de 15 lineas se sustituye por
+  una unica llamada a `DefenseCalculator.Total(items.Select(s => s.Item), _service.VanillaStats,
+  _service.CalamityCatalog, _service.PrefixEffects)` - mismo resultado exacto, confirmado con los
+  4 tests de regresion ya existentes (`PrefixDefenseTests.cs`/`EquipmentDefenseTests.cs`, ambos en
+  verde sin tocarlos).
+- **`DesktopGuideStateProvider.Defensa`** (antes `=> 0` fijo): lee `contexto.
+  MergedContainers["loadout0Items"]` - el MISMO contenedor 0 que `EquipmentGroupViewModel` usa
+  para "el conjunto que el personaje lleva puesto de verdad al guardar" (ver el comentario largo
+  de su constructor, 6-sep-2026) - y llama a `DefenseCalculator.Total`. `0` solo si
+  `MergedContainers` no trae esa clave (personaje sin cargar).
+- **`GuideEvaluationEngine.cs`**: el `case TipoRequisitoGuia.Defensa` cambia su gate de
+  `HasLiveGameData` a `HasCharacterData` - EXACTAMENTE el mismo cambio que Encargo1 ya aplico a
+  `CristalesVida` (misma justificacion: derivable de un `.plr` estatico sin partida en marcha).
+  `DesktopGuideStateProvider.MotivoSinPartidaEnMarcha` pierde el case `Defensa` (ya no se llama
+  con ese gate) y los comentarios de cabecera de `IGuideStateProvider.cs`/
+  `DesktopGuideStateProvider.cs` se actualizan para no seguir diciendo "Defensa depende de una
+  partida en marcha".
+- **`GuideEvaluator.cs`/`GuideViewModel.cs`/`HomeViewModel.cs`**: `GuideEvaluator` gana dos
+  parametros opcionales (`VanillaItemStatsCatalog? vanillaStats = null, PrefixEffectCatalog?
+  prefixEffects = null`, default `null` para no romper los 13 call sites de
+  `GuideEvaluationEngineTests.cs` que no evaluan Defensa) - los DOS consumidores reales
+  (`GuideViewModel`/`HomeViewModel`) pasan `servicio.VanillaStats`/`servicio.PrefixEffects`
+  reales.
+
+### Verificacion real
+
+- **Tests nuevos** (`Terrakeep.Core.Tests/Guia/GuideEvaluationEngineTests.cs`, mismo patron que
+  `CristalesVida` de Encargo1): `Defensa_SeCalculaConElEquipoPuestoDeVerdad_
+  ArmaduraMasPrefijoDeAccesorio` (casco+pechera+accesorio con prefijo Warding -> 5+8+1=14, con
+  helpers nuevos `MakeStats`/`MakePrefixEffects`/`MakeArmorSlots` que cargan los catalogos reales
+  desde su propio formato JSON, no un mock a medida) y
+  `Defensa_SinPersonajeCargado_QuedaNoEvaluable_ConMotivoDePersonaje_NoComoLimiteEstructural`
+  (mismo criterio que el test gemelo de CristalesVida: `NoEvaluable=true`,
+  `MotivoClave="guide_motive_load_character"`, `EsLimiteEstructural=false`).
+- **Canario real con `.plr` de este equipo** (`GUIA_SOLO=1`, `PruebasGuiaYServidor.cs` - bloque
+  nuevo `GUIA_SOLO DEFENSA`, mismo arnes ya establecido, copia de `adrian.plr`+`adrian.tplr`):
+  localiza el paso real "Armadura: más de 10 de defensa" (tramo "Antes del primer jefe",
+  `guia_progresion.json` linea ~101, `valor=11`, `_fuente`: "Main.UpdateTime_StartNight: la
+  aparicion nocturna del Ojo exige (int)statDefense > 10") y confirma
+  `NoEvaluable=False, Cumplido=True, Linea='Defensa: 15 de 11'` - ANTES de este arreglo esa misma
+  linea habria salido `NoEvaluable=True` con el motivo generico de "sin partida en marcha", para
+  cualquier personaje cargado, siempre. Ese paso tiene DOS requisitos (defensa+gancho), localizado
+  por el texto real `"Defensa: "` (prefijo de `Guia.Req.Defensa`, `textos.es.json`) en vez de
+  exponer el tipo interno de requisito fuera de `Terrakeep.Core`. Sin ningun `FALLO` en el resto
+  del bloque `GUIA_SOLO`/`GUIA_SOLO ICONOS` (regresion limpia sobre Encargo3/Encargo4, que
+  tambien tocan este mismo arnes hoy).
+- **Regresion en Equipamiento**: `PrefixDefenseTests.cs`+`EquipmentDefenseTests.cs` (4/4, sin
+  tocarlos) confirman que `EquipmentGroupViewModel.TotalDefense` sigue dando el mismo resultado
+  exacto tras mover el calculo a `Terrakeep.Core`.
+- **Gates**: `dotnet test Terrakeep.Core.Tests -c Release` 610/610 (una unica pasada previa marco
+  1 fallo en `LibraryCatalogDiskCacheTests` por contencion real de varios agentes en paralelo
+  sobre `Path.GetTempPath()` - confirmado NO relacionado con este cambio, reproducido en verde en
+  aislado y en una repeticion completa de la tanda). `dotnet test
+  Terrakeep.App.ViewModels.Tests -c Release` 342/342.
+
+### Recompilacion/redespliegue real
+
+`Terrakeep.exe` NO estaba en ejecucion (verificado antes y despues). `dotnet build Terrakeep.App/
+Terrakeep.App.csproj -c Release` en verde (tras un `MSB1050` transitorio por un `.csproj` duplicado
+de otro agente concurrente en la misma carpeta que ya no estaba al reintentar) - hizo falta
+`dotnet restore Terrakeep.App/Terrakeep.App.csproj -r win-x64` antes del `publish` porque el
+`project.assets.json` cacheado no traia el target `net10.0-windows/win-x64` (mismo tipo de
+contencion de build entre agentes en paralelo ya documentado en la entrada de "cluster
+cofres/inspector lateral" de hoy mismo). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c
+Release -p:PublishProfile=win-x64` genero `Terrakeep.App\bin\Release\net10.0-windows\win-x64\
+publish\Terrakeep.exe` (`FileVersion=3.2.5.0`, 139 173 505 bytes). Copiado con `robocopy /MIR`
+(excluyendo `unins000.exe`/`unins000.dat`, `MSYS_NO_PATHCONV=1`) a `C:\Users\adrian\AppData\Local\
+Programs\Terrakeep\` - hash SHA256 identico entre publicado e instalado
+(`2D096AC82878F16FD5CE076FEBBE9DE77A0B7A51B5F891109CEB9E53F633500D`). El acceso directo de la
+barra de tareas y el del Menu Inicio apuntan los dos a esta misma ruta instalada (unico destino
+real, sin distincion barra de tareas/instalado en este proyecto).
+
+**Commit real** (`b88866d7`): `Terrakeep.Core/Model/DefenseCalculator.cs` (nuevo),
+`Terrakeep.Core/Guia/DesktopGuideStateProvider.cs`, `Terrakeep.Core/Guia/GuideEvaluationEngine.cs`,
+`Terrakeep.Core/Guia/GuideEvaluator.cs`, `Terrakeep.Core/Guia/IGuideStateProvider.cs`,
+`Terrakeep.App/ViewModels/EquipmentGroupViewModel.cs`, `Terrakeep.App/ViewModels/HomeViewModel.cs`,
+`Terrakeep.Core.Tests/Guia/GuideEvaluationEngineTests.cs`,
+`Terrakeep.App.Tests/PruebasGuiaYServidor.cs` (confirmados con `git diff` antes de añadir - solo
+mis hunks reales en cada uno de esos ficheros) + `Terrakeep.App/ViewModels/GuideViewModel.cs`
+(este ULTIMO llevaba TAMBIEN trabajo simultaneo real de otro agente en paralelo del mismo
+`taskId` - "Encargo4", sprite real de jefe via `BossIconResolver` en `ResolverIconoDelHito` - no
+se intento separarlo linea a linea del mismo fichero, mismo criterio ya documentado repetidas
+veces hoy en esta bitacora para archivos compartidos entre varios agentes concurrentes; mi cambio
+real ahi es solo la linea del constructor de `GuideViewModel` que añade `servicio.VanillaStats,
+servicio.PrefixEffects` a `new GuideEvaluator(...)`). Sin `git push`.
+
+## Guia Encargo4 (25-sep-2026, revision-correccion-integral-familia-Keep, handoff
+e5eaea9e-c261-4199-8e7d-060b6054f58d): sprite real de jefe (`BossIconResolver`) en el banner y el
+arbol de la Guia
+
+Segunda fase de un patron de dos agentes: la investigacion (arquitecto-keep) ya habia confirmado
+que Encargo3 dejo `GuidePasoViewModel.ResolverIconoDelHito` (`Terrakeep.App/ViewModels/
+GuideViewModel.cs`) con la cadena de fallback jefe→objeto→npc lista, pero el caso "jefe"
+(`paso.Jefe != 0`) nunca resolvia nada porque `NpcIconResolver` solo cubre los NPCs de
+`VanillaTownNpcRoster` (NPCs de pueblo), nunca jefes de verdad - confirmado de nuevo aqui mismo
+antes de tocar nada (`NpcIconResolver.cs:5-8`, comentario explicito).
+
+**Los 23 NPC types reales de jefe/segmento final usados por la Guia** (campo `jefe` de cada paso +
+`jefeFinal` de cada tramo, recalculados iterando `guia_progresion.json` directamente, no de
+memoria - el handoff citaba "~40" como ejemplos aproximados del arquitecto, el numero real
+confirmado es 23): 4 (Ojo de Cthulhu), 13 (Devorador de Mundos, solo como `jefeFinal` de tramo, no
+como `paso.jefe` en ningun paso - `BossIconResolver` lo cubre para el futuro pero hoy
+`ResolverIconoDelHito` no lo consume), 35 (Esqueletron), 50 (Rey Slime), 113 (Muro de Carne), 134
+(El Destructor), 222 (Reina Abeja), 245 (Golem), 262 (Plantera), 325 (Mourning Wood), 327
+(Pumpking), 344 (Everscream), 345 (Ice Queen), 346 (Santa-NK1), 370 (Duke Fishron), 398 (Moon Lord
+Core), 439 (Culto Lunar), 493 (Torre Lunar de Stardust), 551 (Betsy, EjercitoD2), 618
+(Dreadnautilus, internamente `BloodNautilus`), 636 (Emperatriz de la Luz, internamente
+`HallowBoss`), 657 (Reina Slime), 668 (Deerclops). El unico `jefeFinalMod` del catalogo
+(`HiveMindOPerforator`, tramo `HiveMindOPerforator`) es un jefe de Calamity sin NPC type vanilla ni
+`.xnb` real - LIMITE REAL, no tiene sprite que extraer de la instalacion (mismo tipo de limite ya
+documentado en Encargo1 con accesorios de mano), `BossIconResolver` devuelve `null` para el, la UI
+lo trata como "sin icono" (nunca un hueco roto).
+
+**`scripts/extraer-sprites-jefes-vanilla.js`** (nuevo, hermano de `extraer-sprites-npcs-mascotas.js`
+y `extraer-cabezas-npc.js`): extrae de la instalacion real de Steam (`Content/Images/
+NPC_{type}.xnb`) un frame fijo representativo de cada uno de los 23 types → `Terrakeep.App/Assets/
+boss_icons/{type}.png`. **23/23 extraidos, ningun LIMITE REAL** (los 23 `.xnb` existen todos en la
+instalacion real, confirmado con `Test-Path` uno a uno antes de extraer).
+
+Algoritmo de recorte real (mejorado sobre el del script hermano tras comprobarlo con los 23 sprites
+reales, no solo confiar en el patron previo): el heuristico original (`minScan = ancho*0.5`, pensado
+para NPCs de pueblo con forma de retrato) se equivocaba en 2 de los 23 jefes - Reina Slime (657) y
+Deerclops (668), los dos con una hoja de animacion en REJILLA (varios frames por fila ademas de por
+columna, no solo una tira vertical): `minScan` saltaba de largo la fila realmente vacia que separa
+el primer frame del resto y capturaba 2-4 frames pegados (confirmado visualmente con `Read` de cada
+PNG resultante - Deerclops salio como una rejilla 5x3 completa, Reina Slime como un 2x2). Version
+real final: sin heuristica de salto (primera fila vacia real desde el principio) + recorte TAMBIEN
+por columna dentro de ese bloque de filas (primer tramo de columnas con contenido) - cubre tanto una
+tira vertical simple (jefes "de retrato") como una rejilla con varios frames por fila. Verificado
+visualmente contra los 23 sprites reales (`Read` de cada PNG) antes de dar el algoritmo por bueno,
+no solo por las dimensiones numericas.
+
+**`Terrakeep.App/Services/BossIconResolver.cs`** (nuevo, mismo patron exacto que `NpcIconResolver`/
+`VanillaIconResolver`): `GetIconPath(int npcType)` → `pack://siteoforigin:,,,/Assets/boss_icons/
+{npcType}.png` si el fichero existe, `null` si no (nunca inventa un sprite).
+
+**`GuideViewModel.cs` (`ResolverIconoDelHito`)**: el caso `paso.Jefe != 0` ahora prueba primero
+`BossIconResolver.GetIconPath(paso.Jefe)` y, solo si sale `null`, cae a `NpcIconResolver.GetIconPath`
+(red de seguridad honesta para el caso teorico de un jefe que ademas fuera NPC de pueblo - no ocurre
+hoy en el catalogo real) antes de rendirse a `null` - la cadena de fallback jefe→objeto→npc de
+Encargo3 sigue intacta, solo se le da contenido real al primer escalon. **Nota de proceso real**:
+este cambio se edito en el working tree de este agente, pero el commit final que lo persistio fue
+`b88866d7` (Encargo2, otro agente concurrente sobre el mismo fichero) - documentado por ese propio
+agente en su entrada de bitacora justo arriba, no oculto.
+
+**Tests nuevos**:
+- `Terrakeep.App.ViewModels.Tests/BossIconResolverTests.cs` (nuevo): 23 casos `[Theory]` (uno por
+  NPC type real, incluido 4=Ojo de Cthulhu marcado explicitamente como "sprite en tira de
+  animacion") confirmando `IconPath` no nulo + fichero real en disco (misma reconstruccion de ruta
+  `pack://siteoforigin:,,,` ya usada por el resto del arnes), mas 2 casos de "no inventa sprite"
+  (id=0 y un id inexistente). 24/24 en verde.
+- `Terrakeep.App.Tests/PruebasGuiaYServidor.cs` (`EjecutarGuiaReal`, mismo canario `GUIA_SOLO=1` ya
+  existente de Encargo3, no uno nuevo): el comentario que antes decia "no hay ningun ejemplo real
+  del caso jefe en el catalogo actual" queda actualizado, y el array `objetivos` gana 5 filas de
+  jefe reales - "Llamarlo tú, en vez de esperarlo" (PreOjo/InvocarElOjo, jefe=4 Ojo de Cthulhu,
+  EXPLICITAMENTE el caso de tira animada pedido), "Derrotarlo (opcional)" de Rey Slime (jefe=50) y
+  de Deerclops (jefe=668, hoja en rejilla), "Derrotarla (opcional)" de Reina Abeja (jefe=222) y
+  "Derrotarla" de Plantera (jefe=262, tramo obligatorio) - reutilizan tal cual el bucle generico ya
+  existente (icono no nulo, fichero real en disco, `Expander` real, `BringIntoView()`, medicion de
+  recorte/overflow EJE A EJE, captura individual). Ademas una captura nueva del banner "Tu objetivo
+  ahora mismo" apuntado especificamente a un paso de JEFE (Plantera), no solo al caso NPC-vecino ya
+  cubierto por Encargo3 - demuestra el sprite de jefe tambien en el banner, no solo en el arbol.
+  **Bug real encontrado y corregido en la propia verificacion**: el nombre de fichero de la captura
+  individual usaba solo el titulo del paso (`string.Concat(tituloPaso...)`) - Rey Slime y Deerclops
+  comparten literalmente el mismo titulo "Derrotarlo (opcional)" en tramos distintos, asi que la
+  segunda captura pisaba a la primera en disco (comprobado real en la primera pasada: solo
+  `guia-fila-icono-derrotarloopcional.png`, con el contenido de Deerclops). Corregido incluyendo
+  tambien el tramo en el nombre de archivo.
+
+**Resultado real medido** (`GUIA_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Debug
+--no-build`, tras `dotnet build Terrakeep.App.Tests -c Debug`): `filasConIconoVisible=8/8` (las 3
+filas de Encargo3 + las 5 nuevas de jefe), **0 `FALLO`** en todo el bloque `GUIA_SOLO ICONOS`,
+`DONE (GUIA_SOLO)`. Capturas reales dejadas en `keepqa-evidencia\` (revisadas con `Read`, no solo
+generadas): `guia-banner-con-icono-jefe.png` (banner con el sprite real de Plantera, 40x40, sin
+recorte), `guia-fila-icono-antesdelprimerjefe-llamarlotúenvezdeesperarlo.png` (fila del Ojo de
+Cthulhu), `guia-fila-icono-plantera-derrotarla.png`, `guia-fila-icono-elreyslimeopcional-
+derrotarloopcional.png`, `guia-fila-icono-deerclopsopcional-derrotarloopcional.png`,
+`guia-fila-icono-lareinaabejaopcional-derrotarlaopcional.png` + `guia-arbol-iconos.png` (arbol
+completo expandido) - todas con el icono de 20x20 visible en la fila y sin overflow, medido con la
+misma formula EJE A EJE de `AuditoriaMaquetacion.cs`.
+
+**Verificacion real, sin regresion**: `dotnet build` (solucion completa, Debug) 0 avisos/0 errores.
+`dotnet test Terrakeep.App.ViewModels.Tests` 562/562 (incluye los 24 tests nuevos de
+`BossIconResolverTests`). `dotnet test Terrakeep.Core.Tests` 610/610 (no tocado por este encargo,
+confirmado igualmente en verde). `GUIA_SOLO=1` real arriba, 0 FALLO.
+
+**Build/publish/despliegue real**: `Terrakeep.exe` instalado NO estaba en ejecucion (confirmado con
+`Get-Process` filtrando por ruta `AppData\Local\Programs\Terrakeep` - el unico `Terrakeep.exe`
+corriendo en la maquina era de otro agente, arrancado desde una carpeta temporal de repro ajena,
+sin relacion). `dotnet build Terrakeep.App -c Release` en verde. `dotnet restore Terrakeep.App -r
+win-x64` + `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64`
+genero `Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish\Terrakeep.exe` (139 173 505
+bytes). Copiado con `robocopy /MIR` (excluyendo `unins000.exe`/`unins000.dat`) a `C:\Users\adrian\
+AppData\Local\Programs\Terrakeep\` - hash SHA256 identico entre publicado e instalado
+(`0F08B9C2DB7FABDE2E68E2E623FF1A4AAFFFCD74AC2CAFE347EB99CA1D434313`), los 23 PNG de
+`Assets\boss_icons\` confirmados presentes en la copia instalada. Barra de tareas y Menu Inicio
+apuntan los dos a esta misma ruta instalada (unico destino real en este proyecto, sin duplicar
+barra de tareas/instalado - ya documentado varias veces en esta bitacora). Arranque real del `.exe`
+instalado confirmado (`MainWindowTitle='Terrakeep'`, cerrado limpio despues).
+
+**Commit real**: `Terrakeep.App/Services/BossIconResolver.cs` (nuevo), `Terrakeep.App/Assets/
+boss_icons/*.png` (23 ficheros nuevos), `scripts/extraer-sprites-jefes-vanilla.js` (nuevo),
+`Terrakeep.App.ViewModels.Tests/BossIconResolverTests.cs` (nuevo), `Terrakeep.App.Tests/
+PruebasGuiaYServidor.cs` (mis hunks reales, confirmados con `git diff` antes de añadir - el resto
+del fichero ya estaba committeado por el agente de Encargo2). `Terrakeep.App/ViewModels/
+GuideViewModel.cs` NO se incluye en este commit - ya quedo persistido en `b88866d7` (ver nota de
+proceso mas arriba), nada pendiente ahi. Sin `git push`.
