@@ -20721,3 +20721,316 @@ los 3 cambios a la vez (misma causa, mismo Style compartido).
   - Registrados también en `KeepQA/src/regresion/casos/
     terrakeep-objetos-navegacion-scroll-sin-selector-123.json` y
     `terrakeep-libreria-cards-hover-borde-superior-cortado.json`.
+
+## 24/25-sep-2026 - Investigación real (sin arreglo): cluster cofres/inspector lateral (imagen5+6) - "Editar cofre" por hover, tabs cortadas, rectángulo vacío
+
+Encargo de investigación pura del patrón de 2 fases (revision-correccion-integral-familia-Keep,
+24-sep-2026): 4 puntos reportados por el usuario sobre capturas reales anotadas a mano
+(`imagen5.png`/`imagen 6.png` en `Downloads\Keep\Arreglos familia keep\`), pestaña Exploración >
+Cofres. NO se tocó ningún código de producción (`.cs`/`.xaml` de `Terrakeep.App`/`Terrakeep.Core`)
+- eso lo hará después `aplicador-fix` con la evidencia de abajo. Sesión cortada por el límite
+semanal de la API entre el 24 y el 25-sep; retomada el 25-sep con la ventana de investigación ya
+avanzada (código leído) pero la parte de medición en vivo pendiente - completada ahora con el
+canario ya escrito (`Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`), ejecutado de verdad.
+
+### Punto 1 - "Editar cofre" prácticamente inalcanzable por pérdida de hover: NO REPRODUCIBLE en el código actual
+
+Leído `MainWindow.xaml`/`ExplorationViewModel.cs` de arriba a abajo buscando cualquier
+`IsMouseOver`/`MouseEnter`/`MouseLeave` ligado a la edición de cofres: no existe ninguno. Las TRES
+vías reales para abrir el editor de un cofre son, hoy:
+
+- Botón "Editar" de la fila en "Cofre a cofre" (`ChestRowTemplate`, `MainWindow.xaml:1814-1829`) -
+  **SIEMPRE visible**, sin ningún trigger de `IsMouseOver` (el propio comentario del XAML,
+  `MainWindow.xaml:1809-1813`, documenta la decisión: "no hace falta desplegar antes... SIEMPRE
+  visible").
+- Marcador "cofre actual" en el mapa (`CurrentChestMarker`, `MainWindow.xaml:5896-5909`) - clicable
+  DIRECTAMENTE (`MouseBinding MouseAction="LeftClick"` → `EditCurrentChestOnMapCommand`), sin hover
+  previo.
+- Fila de un resultado de búsqueda con un cofre (`WorldSearchHitRowViewModel`,
+  `ExplorationViewModel.GoToWorldSearchHit` → `OpenChestEditorIfApplicable`) - también clic directo.
+
+Los tres se arreglaron/verificaron ya en sesiones anteriores de este mismo proyecto (bitácora
+17-sep-2026 "editor de cofres no se encuentra + marcador desplazado" y 18/19-sep-2026 "el clic
+sobre un cofre del mapa que nunca existió"), con regresión real ya cubierta por `AR-13d`
+(invocación directa del comando) y `AR-13e` (**clic REAL de sistema operativo, `SetCursorPos`+
+`mouse_event` down/up, sin arrastre**, sobre `CurrentChestMarker` - `Terrakeep.App.Tests/
+Program.cs`). Los dos binarios reales del equipo son POSTERIORES a esos arreglos
+(`Terrakeep.App\bin\Debug\...\Terrakeep.exe` recompilado 24-sep 11:53; `%LocalAppData%\Programs\
+Terrakeep\Terrakeep.exe` instalado 21-sep) - point 1 no encaja con ningún camino real hoy.
+
+**Verificación real añadida** (`COFRES_INSPECTOR_SOLO=1`, ver abajo), ejecutada de verdad contra
+`Blando_Río.wld` (358 cofres reales) el 25-sep tras recuperar la ventana de investigación:
+
+```
+COFRES-INSPECTOR-P1: CurrentChestMarker IsHitTestVisible=True, tiene MouseBinding LeftClick directo=True
+COFRES-INSPECTOR-P1: boton 'Editar' (ChestRowTemplate, fila real ya realizada) Visibility=Visible sin ningun IsMouseOver simulado
+COFRES-INSPECTOR-P1: Style del boton 'Editar' con trigger IsMouseOver sobre Visibility/Opacity=False
+```
+
+Los tres esperados, cero `FALLO`. **LÍMITE REAL**: no se pudo reproducir con el RATÓN físico del
+usuario en el momento de la investigación (24-sep) - la guardia de entrada gráfica de KeepQA
+(`comprobarSeguroParaEntrada`) bloqueó la automatización porque el usuario estaba usando el equipo
+activamente (Steam primero, luego ChatGPT); al recuperar la sesión el 25-sep el equipo llevaba
+>150s de inactividad y la guardia dio verde, pero solo permitió repetir la comprobación ESTÁTICA de
+arriba (sin robar el foco al usuario con clics reales de SO en este momento - se evitó a propósito
+relanzar `AR-13e` completo por ser una sesión de investigación, no de verificación de regresión). Si
+el bug persiste en vivo, lo más probable es (a) el reporte del usuario es anterior al arreglo del
+17/18-sep y no se ha vuelto a probar con la build actual, o (b) hay una variante no capturada por
+ninguna de las tres rutas de arriba (p. ej. un problema de timing con la virtualización de
+`ChestByChestList` al expandir una fila que empuja el botón fuera de la posición del cursor a mitad
+de layout) que ninguna lectura de código puede confirmar sin un clic real - recomendado a
+`aplicador-fix`/coordinador pedir al usuario una repetición en vivo o un vídeo corto si el síntoma
+sigue apareciendo con la build de hoy.
+
+### Punto 3 - rectángulo vacío en la parte inferior del panel: CONFIRMADO y MEDIDO en vivo (90px)
+
+Causa real: `ExplorationResultsBlock` (`Border`, `MainWindow.xaml:6946`) solo se colapsa para
+`SelectedCategory=="Npcs"` (`MainWindow.xaml:6950-6952`) - nunca para Cofres. Dentro, su `Grid`
+(`MainWindow.xaml:6963-6972`) tiene 7 filas; las 6 primeras se ocultan de verdad según
+`WorldSearchResults.Count`/estado, pero la ÚLTIMA (el `ListBox` real de resultados,
+`MainWindow.xaml:6971`, `<RowDefinition Height="*" MinHeight="70" />`) reserva **70px
+INCONDICIONALES**, estén o no `Collapsed` sus hijos. Sumado al `Padding="10"` (20px) y
+`Margin="0,8,0,0"` (8px) del propio `Border`, la fórmula del código da un suelo real de ~98px.
+`RebuildChestInventory` (`ExplorationViewModel.cs:1078-1097`) NUNCA escribe en
+`WorldSearchResults` para `ChestViewMode==2` ("Cofre a cofre") - el bloque queda muerto el 100% del
+tiempo en ese modo; en los modos 0/1 ("Por tipo"/"Por lo que contienen") solo se rellena tras pulsar
+"Buscar seleccionados" (`SearchCheckedInventoryCommand`). Encima, `ShowZeroResultsState`
+(`ExplorationViewModel.cs:891`) exige `SelectedCategory == WorldSearchCategory.All` - Cofres queda
+EXCLUIDO a propósito del mensaje amistoso "sin resultados", así que el hueco tampoco explica nada.
+
+**Medido en vivo** (`COFRES_INSPECTOR_SOLO=1`, `Blando_Río.wld`, ventana real 1180×860):
+
+```
+COFRES-INSPECTOR-P3: modo 'Cofre a cofre' -> WorldSearchResults.Count=0, ChestRows.Count=359,
+  ExplorationResultsBlock.Visibility=Visible, ActualHeight real medido=90px
+FALLO: COFRES-INSPECTOR-P3 - ExplorationResultsBlock ocupa 90px reales VACIO...
+COFRES-INSPECTOR-P3: modo 'Por tipo de cofre' (sin buscar aun) -> WorldSearchResults.Count=0,
+  ActualHeight real medido=90px
+FALLO: COFRES-INSPECTOR-P3 - mismo hueco vacio real en 'Por tipo de cofre' antes de buscar (90px)
+```
+
+90px reales, idénticos en los dos modos mostrados por el usuario (imagen5.png en "Cofre a cofre",
+imagen6.png en "Por tipo de cofre") - coincide con la posición y el tamaño del óvalo rojo dibujado
+a mano en ambas capturas.
+
+### Punto 2 - tabs "Bibliotecas/Positivos/Negativos" y "Mejor/Daño/Crítico" cortadas: CONFIRMADO y MEDIDO en vivo
+
+Causa real: el `ContentControl` que aloja `ItemEditTemplate` DENTRO del editor de cofre
+(`MainWindow.xaml:1882`) lleva `MaxHeight="320"` - tope que NO existe en la OTRA instancia de la
+MISMA plantilla, usada en Personaje/Inventario (`MainWindow.xaml:3449`, sin `MaxHeight`). Dentro de
+`ItemEditTemplate` (`MainWindow.xaml:25-236`), el selector de prefijo de 3 niveles - Metas
+("Biblioteca"/"Positivos"/"Negativos", líneas 174-185), Groups ("Mejor"/"Daño"/"Crítico"/etc.,
+líneas 187-198), Prefixes (líneas 200-232) - va DESPUÉS del bloque Icono+Nombre+Índice+Cantidad+
+Prefijo(id) (líneas 62-168), que por sí solo ya ocupa varios cientos de px reales.
+
+**Medido en vivo** (mismo cofre real de `Blando_Río.wld`, objeto con `CanHavePrefix=True`,
+`Items.Count=16`):
+
+```
+COFRES-INSPECTOR-P2: ContentControl (host de ItemEditTemplate dentro del cofre) ActualHeight real=320px
+COFRES-INSPECTOR-P2: WrapPanel 'Metas' ... posicion real relativa al ContentControl=(0; 285,9; 151; 55,26)
+FALLO: COFRES-INSPECTOR-P2 - el WrapPanel 'Metas' termina en Y=341,2px, MAS ALLA de los 320px
+COFRES-INSPECTOR-P2: WrapPanel 'Groups' ... posicion real relativa al ContentControl=(0; 347,2; 151; 53,9)
+FALLO: COFRES-INSPECTOR-P2 - el WrapPanel 'Groups' termina en Y=401,1px, MAS ALLA de los 320px
+```
+
+`ContentControl.ActualHeight` clavado exactamente en 320px (confirma el clamp activo, no una
+coincidencia de medida). "Metas" (Biblioteca/Positivos/Negativos, lo que se ve parcialmente cortado
+como "Bibliot..."/"Positivos" en `imagen5.png`) empieza a Y=285,9 y termina a Y=341,2 - **21,2px por
+debajo del límite real**, exactamente el corte a media altura que muestra la captura. "Groups"
+(Mejor/Daño/Crítico) queda COMPLETO por debajo del límite (Y=347,2 a 401,1px) - invisible del todo
+sin desplazar el `ScrollViewer` interno de la propia plantilla (`MainWindow.xaml:33`), que además
+queda anidado dentro del `ScrollViewer` del `ListBox` de cofres y del `ScrollViewer` general de la
+barra lateral (3 niveles) - alcanzable en teoría con scroll, pero nada evidente ni descubrible sin
+saber que está ahí.
+
+### Punto 4 - probado
+
+Ventana 1180×860 (tamaño de arranque real): confirmado con `FijarTamaño` antes de medir. Texto
+largo/listas largas: mundo real con 359 cofres (`Blando_Río.wld`), lista virtualizada, cofre real
+con 16 objetos reales. Todos los modos de búsqueda de cofres: "Cofre a cofre" (modo 2) y "Por tipo
+de cofre" (modo 0) medidos ambos en el punto 3; "Por lo que contienen" (modo 1) comparte la MISMA
+causa de código (mismo `ExplorationResultsBlock`, mismo `RebuildChestInventory` sin tocar
+`WorldSearchResults` hasta buscar) - no remedido aparte por ser idéntica la fórmula, ya
+documentado como tal en el propio código. **LÍMITE REAL no cubierto en esta ronda**: ventana muy
+BAJA (recorte adicional a 700px de alto, ya documentado como deuda conocida `AR-11f`/`AR-EX1` en
+entradas anteriores de esta bitácora) y DPI≠100% no se remidieron aparte en este cluster - el
+mecanismo de causa (MinHeight/MaxHeight fijos en px) es el mismo que ya tiene deuda documentada por
+esas entradas, así que es previsible que el problema empeore a tamaños/DPI extremos, pero no se ha
+medido el número exacto aquí para no duplicar AR-11f/AR-EX1.
+
+### Cobertura cerrada en este bloque (arnés, no producción)
+
+`Terrakeep.App.Tests/CanarioClusterCofresInspector.cs` (fichero nuevo) + hook `COFRES_INSPECTOR_SOLO`
+en `Program.cs` (junto a `TERRAKEEP_SOLO_MRK`, mismo patrón): un solo modo que cubre los 3 puntos
+reproducibles de este cluster con datos/geometría REALES sobre `Blando_Río.wld` (358 cofres reales):
+
+- Guarda estática de regresión del punto 1 (sin robar el foco/ratón real): confirma que el botón
+  "Editar" de `ChestRowTemplate` está `Visible` sin hover y que su `Style` no tiene ningún
+  `Trigger` de `IsMouseOver` sobre `Visibility`/`Opacity`; confirma que `CurrentChestMarker` sigue
+  siendo `IsHitTestVisible` con `MouseBinding LeftClick` directo. Si alguien reintroduce una
+  dependencia de hover en cualquiera de los dos, este bloque pasa a `FALLO` sin necesitar un clic
+  real de SO (complementa, no repite, a `AR-13d`/`AR-13e`, que sí hacen el clic real).
+- Punto 3: mide `ExplorationResultsBlock.ActualHeight` real en "Cofre a cofre" y "Por tipo de
+  cofre" con `WorldSearchResults.Count==0` - `FALLO` si queda `Visible` y >40px (hoy: **90px** en
+  los dos modos).
+- Punto 2: abre el editor de un cofre real con un objeto prefijable, localiza los `WrapPanel` de
+  `Metas`/`Groups` por su `ItemsSource` real (`ChestItemEdit.Metas`/`.Groups`) y mide su posición
+  real (`TransformToAncestor`) contra el `ActualHeight` del `ContentControl` que los aloja -
+  `FALLO` si su borde inferior supera el `ActualHeight` (hoy: Metas +21,2px, Groups totalmente
+  fuera).
+
+Ejecutar con `cd Terrasavr-Win\Terrasavr-Native && COFRES_INSPECTOR_SOLO=1 dotnet run --project
+Terrakeep.App.Tests -c Debug --no-build` (tras un `dotnet build Terrakeep.App.Tests` previo).
+Ejecutado de verdad el 25-sep-2026 tras confirmar con la guardia de entrada gráfica de KeepQA que
+el equipo llevaba >150s inactivo - los 4 `FALLO` de arriba (P3×2 + P2×2) son reales y reproducibles,
+los 3 `OK` de P1 también.
+
+Registrado también en `KeepQA/src/regresion/casos/
+terrakeep-exploracion-cofres-bloque-resultados-vacio-90px.json` (punto 3) y
+`terrakeep-exploracion-editor-cofre-metas-groups-recortados-maxheight320.json` (punto 2), con la
+propuesta concreta de arreglo para `aplicador-fix` en el campo `notas` de cada uno.
+
+**Build**: `dotnet build Terrakeep.slnx -c Debug` en verde (0 avisos/0 errores) tras añadir el
+fichero nuevo y el hook - no se tocó ningún `.cs`/`.xaml` de `Terrakeep.App`/`Terrakeep.Core`. No
+se relanzó la batería xUnit completa (`Terrakeep.Core.Tests`/`Terrakeep.App.ViewModels.Tests`) por
+no haberse tocado ningún archivo de esos dos proyectos.
+
+Commit local (código de arnés + bitácora, nunca `git push`).
+
+## 25-sep-2026: Inicio, mascotas ocultas y banner sin hover (imagen1) - agente
+investigador-bug, mismo handoff e5eaea9e-c261-4199-8e7d-060b6054f58d
+
+Encargo del usuario (captura real `Arreglos familia keep/imagen1.png`, pantalla Inicio):
+"las mascotas quedan visualmente detrás del personaje y prácticamente desaparecen" +
+"pasar el ratón por el banner no produce la misma respuesta/animación que el selector de
+personaje". Rol de este agente: SOLO investigar y cerrar el hueco de cobertura del arnés -
+el arreglo real de XAML lo aplica `aplicador-fix` después, sin tocar aquí ningún
+`.xaml`/`.cs` de producción.
+
+**Primero, lo importante: NO es una regresión de los commits del 21-sep.** Comprobado con
+`git show --stat`/`git show -- MainWindow.xaml` sobre `3d723f6c` ("la tarjeta de personaje
+anda sola...", 21-sep 11:26) y `63e9cf05` ("mascota animada en vivo...", 21-sep 14:52): sus
+diffs de `MainWindow.xaml` tocan EXCLUSIVAMENTE las líneas ~1379-1493
+(`CharacterCardTemplate`, la tarjeta pequeña) - ni un carácter del banner "Continuar con X"
+(líneas 2575+). Y fue el PROPIO `3d723f6c` quien introdujo el `Image` de mascota a tamaño
+fijo `20x20` dentro de la misma `Grid` del doll (entonces `PetIconPath`, hoy `PetImage` tras
+`63e9cf05`, que solo cambió el icono estático por el fotograma animado real, sin tocar
+layout/tamaño/posición un solo píxel). Es decir: la captura de `imagen1.png` (22-sep 15:50,
+posterior a ambos commits) no muestra un bug reintroducido - muestra el MISMO hueco de
+diseño que quedó abierto desde que la mascota se compuso por primera vez, nunca cerrado.
+
+**Causa raíz A - z-order/tamaño roto en las tarjetas pequeñas, `MainWindow.xaml:1478-1494`**:
+el orden de pintado en sí es CORRECTO (`Image` de `PetImage` en la línea 1487 se declara
+ANTES que la `Image` de `Preview` en la 1492-1493, dentro del mismo `Grid` sin
+`Panel.ZIndex` explícito - en WPF, sin `ZIndex`, el último hijo declarado se pinta ENCIMA,
+así que el doll queda delante de la mascota, fiel a `UICharacter.cs` real donde `DrawPets`
+se llama antes que `DrawPlayer`). El bug real no es el ORDEN, es el TAMAÑO/POSICIÓN: la
+`Image` de `PetImage` está forzada a `Width="20" Height="20"` (línea 1487), ancorada
+`HorizontalAlignment="Left" VerticalAlignment="Bottom"`, compartiendo la MISMA celda de
+`52x72,8px` que el doll (`Image` de `Preview`, sin `Width`/`Height` explícitos - ocupa toda
+la `Grid`, `Stretch="Uniform"`) pinta justo encima, sin ningún recorte/margen/offset que
+reserve hueco real a la mascota. Medido con datos reales, no estimados: el fotograma real de
+la mascota es bastante MAYOR que 20x20 en origen (`Assets/pets/960.png` = 46x960px, 20 filas
+→ 48px de alto real por fotograma; `Assets/pets/1003.png` = 50x832px, 16 filas → 52px de
+alto real por fotograma - dimensiones leídas de la cabecera PNG con un script de una línea,
+no supuestas) - forzarlo a 20x20 ya lo encoge a la mitad, y encima esa esquina inferior
+izquierda es EXACTAMENTE donde caen los pies/piernas del doll (la zona con más píxeles
+opacos de cualquier sprite de personaje de pie). Medido el ocultamiento real, en píxeles, con
+el canario nuevo (`HOMEBANNER_SOLO`, ver más abajo) sobre 2 personajes reales de este equipo
+con mascota real equipada: **Eldelgas, 40,0% de los píxeles propios de su mascota tapados
+por el doll** (145 píxeles propios reales, 58 tapados) - **Terrariano, solo 0,7%** (145
+píxeles propios, 1 tapado) - la severidad depende de la silueta/pose concreta del doll, no
+es un número fijo por mascota (confirma el "probar con distintas alturas/mascotas" del
+encargo: el mismo mecanismo puede ser casi invisible con un personaje/mascota y gravísimo
+con otro). Corroborado visualmente recortando/ampliando `imagen1.png` con PIL (4x-6x nearest
+neighbor): en la tarjeta "Terrariano" se ve un hocico/orejas asomando a la izquierda de la
+pierna (poco tapado, consistente con 0,7%); en la tarjeta "Eldelgas" solo un par de patitas
+naranjas asoman bajo la túnica oscura (muy tapado, consistente con 40,0%).
+
+**Causa raíz B - el banner "Continuar con X" no tiene NADA de esto, ni z-order que arreglar
+ni hover que disparar, `MainWindow.xaml:2575-2622`**: confirmado con `grep` sobre el fichero
+entero - la cadena `PetImage` aparece SOLO en las líneas 1485/1487/1490 (dentro de
+`CharacterCardTemplate`), CERO veces dentro del bloque del banner. El único `Image` del
+banner (línea 2582) está ligado a `Home.LastSessionCharacterEntry.Preview` - el doll, nada
+más. Y el propio `Border` del banner (línea 2575) no tiene `MouseEnter`/`MouseLeave` (solo
+`Border.InputBindings` con un `MouseBinding` de `LeftClick` → `Home.ContinueCommand`,
+líneas 2578-2580) - a diferencia del `Border` de la tarjeta (línea 1383,
+`MouseEnter="OnCharacterCardMouseEnter" MouseLeave="OnCharacterCardMouseLeave"`,
+manejadores reales en `MainWindow.xaml.cs:1128-1138`). Esto NO es una limitación técnica:
+`Home.LastSessionCharacterEntry` es del tipo `CharacterListEntryViewModel?`
+(`HomeViewModel.cs:180`) - EXACTAMENTE la misma clase que la tarjeta ya anima con éxito
+(`PetImage`/`SetHovering()`/`Preview` ya expuestos), solo que el XAML del banner nunca llegó
+a engancharse a ninguno de los dos. Confirmado en vivo con el canario nuevo: simular un
+`MouseEnter` real sobre el `Border` del banner y bombear el `Dispatcher` real ~1400ms (10
+muestras de 140ms, mismo criterio anti-aliasing que ya usa `HOMEHOVER_SOLO`) da 1 solo valor
+distinto de 10 (`avanzoDeVerdad=False`) - cero reacción, mientras que el mismo muestreo sobre
+la tarjeta YA está en verde desde `HOMEHOVER_SOLO` (21-sep-2026).
+
+**Hueco de cobertura KeepQA cerrado**: `Terrakeep.App.Tests/CanarioHomeBannerMascota.cs`
+(fichero nuevo, mismo patrón `partial class Program` del resto del arnés) - un único modo
+nuevo, canario ROJO a propósito hoy en sus 4 aserciones (debe pasar a OK sin tocar este
+fichero cuando `aplicador-fix` aplique el arreglo real):
+- `HOMEBANNER_SOLO=1` - (A) confirma con el árbol visual REAL de la ventana que el banner no
+  compone ninguna `Image` ligada a `PetImage` (`bannerTienePetImage=False`); (B) simula un
+  `MouseEnter`/`MouseLeave` real sobre el `Border` del banner y mide si el doll de
+  `Home.LastSessionCharacterEntry.Preview` avanza de verdad (no lo hace,
+  `avanzoDeVerdad=False`); (C) renderiza la MISMA `Grid` de `52x72,8px` de cada tarjeta con
+  mascota real DOS veces (con y sin el doll visible, alternando `Visibility` en vivo sobre el
+  objeto real vía `SetCurrentValue`, sin tocar XAML) y cuenta qué porcentaje de los píxeles
+  propios y no-transparentes de la mascota cambian de verdad en el render compuesto - `FALLO`
+  explícito si ese porcentaje es ≥30% (umbral real, no inventado: Eldelgas mide 40,0% en este
+  mismo canario). Necesita un `session.json` real en
+  `%LocalAppData%\Terrakeep\session.json` con `LastCharacterPath` apuntando a un `.plr` real
+  ya escaneado para poder medir A/B (si no, sale `INCONCLUSIVE` con aviso explícito, nunca
+  fabrica un PASS) - en este equipo ese fichero apuntaba a un `.plr` sintético de una corrida
+  anterior del arnés (`uia-harness-test.plr`, ya no existe), así que se corrigió a
+  `Eldelgas.plr` (personaje real de este equipo) antes de medir; efecto colateral inocuo
+  documentado aquí a propósito (no es dato de usuario, es caché de sesión de la propia app,
+  se regenera solo con el próximo uso real). Ejecutar con
+  `cd Terrasavr-Win\Terrasavr-Native && HOMEBANNER_SOLO=1 dotnet run --project
+  Terrakeep.App.Tests`. Registrado también en `KeepQA/src/regresion/casos/
+  terrakeep-home-banner-mascota-oculta-sin-hover.json`.
+
+**Propuesta concreta de enganche para `aplicador-fix`** (NO aplicada aquí, a propósito, y
+NO es el port completo del sistema de vanidad de accesorios - eso sigue siendo el catálogo
+pendiente documentado el 21-sep-2026 más arriba):
+1. **Banner - añadir la mascota**: una `Image` nueva ligada a
+   `Home.LastSessionCharacterEntry.PetImage` dentro del `DockPanel` del banner
+   (`MainWindow.xaml:2581-2584`), espejando la de la tarjeta (líneas 1487-1491) - mismo
+   `Stretch`/`RenderOptions.BitmapScalingMode`, tamaño a decidir junto con el punto 3.
+2. **Banner - cablear el hover**: añadir `MouseEnter="OnCharacterCardMouseEnter"
+   MouseLeave="OnCharacterCardMouseLeave"` al `Border` del banner (línea 2575) - son los
+   MISMOS manejadores que ya usa la tarjeta, cero código C# nuevo. El único punto real a
+   decidir es cómo llega el `CharacterListEntryViewModel` al `DataContext` que esos
+   manejadores leen (`(sender as FrameworkElement)?.DataContext is CharacterListEntryViewModel
+   entry`): opción A, poner `DataContext="{Binding Home.LastSessionCharacterEntry}"` en el
+   propio `Border`/`DockPanel` del banner y re-atar los bindings que hoy cuelgan de `Home.*`
+   directamente (`HealthMax`/`PlayTimeText`/`Preview`/`PetImage` YA están expuestos tal cual
+   en `CharacterListEntryViewModel`, el `KPI` de la etapa de la Guía y el
+   `ContinueCommand`/aviso de "cambiado por fuera" seguirían necesitando
+   `RelativeSource AncestorType=Window` porque viven en `HomeViewModel`, no en la entrada);
+   opción B, un par de manejadores propios y pequeños del banner que lean
+   `vm.Home.LastSessionCharacterEntry` sin tocar el `DataContext` existente - más código pero
+   cero riesgo de romper los bindings de `Home.*` que ya funcionan ahí. Decisión de diseño
+   real para `aplicador-fix`, no forzada aquí.
+3. **Tarjeta y banner - dejar de aplastar la mascota**: la causa real (ver Causa raíz A) es
+   el `Width="20" Height="20"` fijo de la línea 1487 compartiendo bounding box con el doll
+   sin ningún offset. Portar el criterio real de vanilla (`UICharacter.cs`: la mascota se
+   dibuja en SU propia posición relativa al personaje, nunca aplastada dentro del bounding
+   box exacto del doll) exige o bien ensanchar la `Grid`/columna de la tarjeta para que la
+   mascota pueda asomar fuera del ancho de 52px sin recortarse (acceptance explícito del
+   encargo: "no cortar sprites"), o bien usar el tamaño nativo real de cada fotograma (ya
+   disponible sin cambios: `WriteableBitmap.PixelWidth`/`PixelHeight` del resultado de
+   `PetPreviewRenderer.RenderFrame`) en vez del `20x20` fijo, con un desplazamiento que la
+   aparte de la zona que el doll ya cubre de píxeles opacos (típicamente piernas/pies).
+   Aplicar el MISMO criterio en banner y tarjeta (pedido explícito: "misma lógica de
+   animación en tarjeta y banner") - probar con al menos Eldelgas y Terrariano (las dos
+   combinaciones reales ya medidas arriba, 40,0% y 0,7% de ocultamiento) antes de dar el
+   arreglo por bueno, y confirmar con `HOMEBANNER_SOLO` en verde.
+
+**Confirmación de integridad del catálogo/sprites de mascotas (21-sep-2026, sigue igual
+hoy)**: `Terrakeep.App/Assets/pet_animations.json` tiene 63 entradas reales (contadas de
+verdad, `JSON.parse` + `.length`); `Terrakeep.App/Assets/pets/` tiene 62 `.png` reales
+(contados con `ls | wc -l`) - mismo conteo documentado el 21-sep-2026, nada se ha perdido ni
+corrompido entre entonces y hoy.
