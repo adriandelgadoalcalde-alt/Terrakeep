@@ -111,6 +111,91 @@ internal static partial class Program
             if (candidatos.Count < 3)
                 Console.WriteLine("FALLO: NAV123_SOLO - no existe el selector Toggle 1/2/3 pedido por el usuario para Equipamiento/Inventario/Almacenes. Hoy la UNICA forma real de moverse entre secciones es el scroll libre de 'ObjetosBoardScroll' (MainWindow.xaml linea ~2876-2878), que permite (reproducido arriba con evidencia real) quedar detenido en cualquier offset intermedio visualmente roto. Canario ROJO a proposito: debe pasar a OK cuando el selector real exista y sus 3 destinos aterricen en offsets exactos (yEquip/yInv/yAlm medidos arriba), sin estados intermedios alcanzables por ese camino.");
 
+            // ============================================================================
+            // AMPLIACION 25-sep-2026 (aplicador-fix, TASK CONTEXT e5eaea9e-c261-4199-8e7d-
+            // 060b6054f58d): el bloque de arriba solo comprobaba que los 3 controles EXISTAN, nunca
+            // el ciclo de clic real con datos reales de personaje - un verificador-qa independiente
+            // encontro asi un segundo bug que este canario no cerraba: con un personaje real cuyo
+            // contenido de "Almacenes" no llena el resto del scroll (menos ScrollableHeight que
+            // yAlm), ScrollViewer CLAMPA el offset real a un valor menor que "y" - la sincronizacion
+            // inversa (OnObjetosBoardScrollChanged, MainWindow.xaml.cs:~676) recalculaba entonces la
+            // seccion activa a partir de ese offset ya clampado, que cae dentro del rango de
+            // "Inventario" en vez de "Almacenes" aunque el usuario pulso "3". Se reproduce aqui el
+            // mecanismo REAL (agrandando la ventana hasta que el propio ScrollViewer clampe de
+            // verdad, con el mismo personaje real de arriba, no una simulacion sintetica) y se
+            // verifica el ciclo 1->2->3->1 completo mirando IsChecked real de cada RadioButton (la
+            // misma propiedad que expone SelectionItemPattern.IsSelected via UIA para un
+            // RadioButton - equivalente real, verificado ademas por separado contra el .exe
+            // instalado con pywinauto/UIA, ver bitacora.md).
+            var t1candidato = window.FindName("ObjetosNavToggle1") as RadioButton;
+            var t2candidato = window.FindName("ObjetosNavToggle2") as RadioButton;
+            var t3candidato = window.FindName("ObjetosNavToggle3") as RadioButton;
+            if (t1candidato is RadioButton t1 && t2candidato is RadioButton t2 && t3candidato is RadioButton t3)
+            {
+                // Agranda la ventana hasta que ScrollableHeight quede por debajo de yAlmacenes -
+                // clamp real de ScrollViewer, mismo mecanismo exacto que activa el bug (crece de
+                // 100 en 100px, techo razonable de sobra para cualquier tablero real).
+                double alturaUsada = window.ActualHeight;
+                bool clampReal = false;
+                for (double alto = 700; alto <= 2600; alto += 100)
+                {
+                    window.Width = 1180; window.Height = alto;
+                    DoEvents(); DoEvents(); DoEvents();
+                    scroll.UpdateLayout();
+                    double yAlmAhora = secAlm.TranslatePoint(new Point(0, 0), scroll).Y;
+                    alturaUsada = window.ActualHeight;
+                    if (yAlmAhora > scroll.ScrollableHeight + 1) { clampReal = true; break; }
+                }
+                Console.WriteLine($"NAV123-CICLO: ventana 1180x{alturaUsada:0} -> ScrollableHeight={scroll.ScrollableHeight:0.#}, yAlmacenes={secAlm.TranslatePoint(new Point(0, 0), scroll).Y:0.#} (clamp real conseguido={clampReal})");
+                if (!clampReal)
+                    Console.WriteLine("NAV123-CICLO: AVISO - no se consiguio clampar Almacenes con este personaje ni siquiera a 2600px de alto; el ciclo se ejecuta igual pero no ejercita la condicion de clamp real esta vez.");
+
+                void ClicYVerifica(RadioButton objetivo, string nombreSeccion)
+                {
+                    objetivo.IsChecked = true; // como el clic real: primero cambia el estado del control...
+                    objetivo.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); // ...y luego avisa (OnObjetosNavToggleClick)
+                    DoEvents(); DoEvents();
+                    scroll.UpdateLayout();
+                    DoEvents();
+                    bool marcaCorrecta = objetivo.IsChecked == true
+                        && (objetivo == t1 || t1.IsChecked != true)
+                        && (objetivo == t2 || t2.IsChecked != true)
+                        && (objetivo == t3 || t3.IsChecked != true);
+                    Console.WriteLine($"NAV123-CICLO: clic en '{nombreSeccion}' -> VerticalOffset real={scroll.VerticalOffset:0.#}, IsChecked(1/2/3)=({t1.IsChecked},{t2.IsChecked},{t3.IsChecked}) (esperado solo '{nombreSeccion}' marcado)");
+                    if (!marcaCorrecta)
+                        Console.WriteLine($"FALLO: NAV123_SOLO-CICLO - tras un clic real en '{nombreSeccion}' el indicador 1/2/3 no queda marcado en esa seccion (IsChecked real: 1={t1.IsChecked}, 2={t2.IsChecked}, 3={t3.IsChecked}). Si Almacenes esta clampado, la causa real es OnObjetosBoardScrollChanged recalculando la seccion activa a partir de un offset ya clampado por ScrollViewer, en vez de respetar la seccion que el usuario pidio con el clic.");
+                }
+
+                ClicYVerifica(t1, "1 (Equipamiento)");
+                ClicYVerifica(t2, "2 (Inventario)");
+                ClicYVerifica(t3, "3 (Almacenes)");
+                ClicYVerifica(t1, "1 (Equipamiento, vuelta)");
+
+                // --- Control real: el scroll LIBRE (sin clic explicito) tiene que seguir
+                // sincronizando el indicador con normalidad tras el arreglo - mismo criterio que
+                // T3_SOLO ya verifica para la barra pegajosa, repetido aqui para el selector 1/2/3.
+                scroll.ScrollToVerticalOffset(0);
+                scroll.UpdateLayout(); DoEvents();
+                double offsetLibreDentroDeInventario = Math.Max(0, Math.Min(scroll.ScrollableHeight, yInv + 10));
+                scroll.ScrollToVerticalOffset(offsetLibreDentroDeInventario);
+                scroll.UpdateLayout();
+                DoEvents(); DoEvents();
+                bool scrollLibreOk = t2.IsChecked == true && t1.IsChecked != true && t3.IsChecked != true;
+                Console.WriteLine($"NAV123-CICLO: scroll LIBRE (sin clic) a offset={scroll.VerticalOffset:0.#} (dentro de Inventario) -> IsChecked(1/2/3)=({t1.IsChecked},{t2.IsChecked},{t3.IsChecked}) (esperado solo '2' marcado)");
+                if (!scrollLibreOk)
+                    Console.WriteLine("FALLO: NAV123_SOLO-CICLO - el scroll libre (sin clic explicito) dejo de sincronizar el indicador 1/2/3 despues del arreglo del clamp");
+
+                // Restaura tamaño y posicion para el resto del arnes.
+                scroll.ScrollToVerticalOffset(0);
+                scroll.UpdateLayout(); DoEvents();
+                FijarTamaño(window, 1180, 700);
+                DoEvents(); DoEvents();
+            }
+            else
+            {
+                Console.WriteLine("NAV123-CICLO: AVISO - no se encontraron los 3 RadioButton reales (ObjetosNavToggle1/2/3) para ejecutar el ciclo de clic; se omite (ya se reporto FALLO arriba si faltan).");
+            }
+
             // Deja el tablero como lo encontro.
             scroll.ScrollToVerticalOffset(0);
             scroll.UpdateLayout();

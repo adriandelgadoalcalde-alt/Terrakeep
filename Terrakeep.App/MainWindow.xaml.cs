@@ -39,6 +39,16 @@ public partial class MainWindow : Window
     // pregunto lo mismo un momento antes, antes de lanzar el instalador).
     private bool _cerrandoParaActualizar;
 
+    // Bug real "toggle 3 desincronizado" (25-sep-2026, verificador-qa independiente, personaje
+    // real con pocos objetos en Almacenes): cuando el usuario pulsa el selector 1/2/3 de forma
+    // EXPLICITA, el indicador debe reflejar SIEMPRE la seccion pedida - nunca la que
+    // OnObjetosBoardScrollChanged recalcule a partir del offset real ya aplicado, que
+    // ScrollViewer puede CLAMPAR por debajo de "y" cuando el contenido de la seccion destino no
+    // llena el resto del scroll (Almacenes con pocos objetos, por ejemplo). Vivo solo durante la
+    // llamada sincrona de ScrollToObjetosSection (ver el try/finally de ahi); el scroll libre
+    // posterior del usuario (flag=null) sigue recalculando con el criterio normal.
+    private int? _objetosNavIndiceExplicito;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -696,6 +706,16 @@ public partial class MainWindow : Window
             if (y <= offset + 4) { claveActiva = clave; indiceActivo = indice; }
         }
 
+        // Clic explicito en el selector 1/2/3 en curso (ver _objetosNavIndiceExplicito): ignora
+        // el recalculo por offset - si Almacenes (u otra seccion corta) no tiene contenido
+        // suficiente para llegar a su "y" exacto, ScrollViewer clampa el offset real y el bucle
+        // de arriba lo colocaria en la seccion ANTERIOR aunque el usuario pidio la de verdad.
+        if (_objetosNavIndiceExplicito is int indiceForzado && indiceForzado >= 0 && indiceForzado < secciones.Length)
+        {
+            indiceActivo = indiceForzado;
+            claveActiva = secciones[indiceForzado].clave;
+        }
+
         // T3 PASO 4 (imagen2/NAV123_SOLO): sincroniza el selector 1/2/3 en sentido inverso mientras
         // el usuario hace scroll libre a mano - mismo criterio "ultima seccion cuyo origen ya paso
         // por encima del offset actual" que el calculo de arriba, sin logica nueva. El scroll libre
@@ -752,7 +772,17 @@ public partial class MainWindow : Window
             try
             {
                 double y = seccion.TranslatePoint(new System.Windows.Point(0, 0), ObjetosBoardStack).Y;
-                ObjetosBoardScroll.ScrollToVerticalOffset(y);
+                // Ver _objetosNavIndiceExplicito: mientras dura esta llamada sincrona (UpdateLayout
+                // fuerza el ScrollChanged real ya mismo, en vez de esperar al siguiente paso de
+                // layout) OnObjetosBoardScrollChanged debe marcar SIEMPRE "index" en el selector
+                // 1/2/3, ni siquiera si ScrollViewer clampa "y" por falta de contenido debajo.
+                _objetosNavIndiceExplicito = index;
+                try
+                {
+                    ObjetosBoardScroll.ScrollToVerticalOffset(y);
+                    ObjetosBoardScroll.UpdateLayout();
+                }
+                finally { _objetosNavIndiceExplicito = null; }
             }
             catch (InvalidOperationException) { /* desconectado del arbol visual todavia - nunca un fallo visible por un salto de navegacion */ }
         }), System.Windows.Threading.DispatcherPriority.Loaded);
