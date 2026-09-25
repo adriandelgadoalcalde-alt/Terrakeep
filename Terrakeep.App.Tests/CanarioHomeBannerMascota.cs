@@ -13,13 +13,17 @@
 //      tarjeta, MainWindow.xaml:1383, con OnCharacterCardMouseEnter/OnCharacterCardMouseLeave) -
 //      pasar el raton por encima no dispara ninguna animacion, medido reutilizando el MISMO
 //      CharacterListEntryViewModel real que la tarjeta ya anima con exito (HOMEHOVER_SOLO).
-//   C) Ademas, en las tarjetas SI se compone una mascota (z-order correcto, PetImage detras del
-//      doll, mismo orden real que UICharacter.cs) pero queda mayormente OCULTA por el doll de
-//      encima - medido en pixeles reales, no estimado: renderiza la MISMA Grid de 52x72,8 real
-//      (MainWindow.xaml:1478) dos veces (con y sin el doll visible) sobre uno o mas personajes
-//      reales de este equipo que tengan una mascota real equipada, y cuenta que porcentaje de los
-//      pixeles PROPIOS de la mascota (alpha>20 en el render "solo mascota") cambian de verdad en
-//      el render compuesto (el doll pintado encima los tapa).
+//   C/D) Ademas, en las tarjetas y en el banner la mascota tiene que quedar en la posicion REAL
+//      que manda Terraria (PortSeleccion Encargo3, 25-sep-2026, SUSTITUYE la verificacion anterior
+//      de este mismo bloque - un umbral de "% de pixeles tapados" solo demuestra que se VE algo,
+//      nunca que este en el sitio correcto): borde inferior de la mascota alineado con el borde
+//      inferior del doll, y desplazada 20px de juego reales (escalados al tamaño real del lienzo)
+//      a la derecha del doll YA retranqueado - formula real, decompilado real,
+//      Terraria/GameContent/UI/Elements/UICharacter.cs (GetPlayerPosition/DrawPets). Medido con
+//      TransformToAncestor sobre el arbol visual REAL (funciona igual sea Margin o RenderTransform
+//      el mecanismo usado para desplazar el doll, no asume ninguno concreto) - ver el comentario
+//      completo de Terrakeep.App/Converters/PetPositionConverters.cs para la cita exacta y el
+//      razonamiento completo.
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -40,17 +44,6 @@ internal static partial class Program
             {
                 var px = new byte[bmp.PixelHeight * bmp.PixelWidth * 4];
                 bmp.CopyPixels(px, bmp.PixelWidth * 4, 0);
-                return px;
-            }
-
-            byte[] PixelesDeVisual(Visual visual, double anchoPx, double altoPx)
-            {
-                int w = Math.Max(1, (int)Math.Round(anchoPx));
-                int h = Math.Max(1, (int)Math.Round(altoPx));
-                var rtb = new RenderTargetBitmap(w, h, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-                rtb.Render(visual);
-                var px = new byte[w * h * 4];
-                rtb.CopyPixels(px, w * 4, 0);
                 return px;
             }
 
@@ -125,18 +118,18 @@ internal static partial class Program
                 DoEvents();
             }
 
-            // === C: ocultamiento real mascota/doll DENTRO de la tarjeta (varias combinaciones reales) ===
+            // === C: formula real de posicion mascota/doll DENTRO de la tarjeta (varias combinaciones reales) ===
             var conMascota = vm.Home.Characters.Where(c => c.PetImage != null).ToList();
             Console.WriteLine($"HOMEBANNER_SOLO: personajes reales escaneados con PetImage no-null en este equipo = {conMascota.Count} de {vm.Home.Characters.Count}");
             if (conMascota.Count == 0)
-                Console.WriteLine("HOMEBANNER_SOLO: INCONCLUSIVE - ningun personaje real de este equipo tiene una mascota de vanidad resuelta ahora mismo, no se puede medir el ocultamiento en tarjetas.");
+                Console.WriteLine("HOMEBANNER_SOLO: INCONCLUSIVE - ningun personaje real de este equipo tiene una mascota de vanidad resuelta ahora mismo, no se puede medir la formula real en tarjetas.");
 
             foreach (var c in conMascota)
             {
                 var cardBorder = Descendientes<Border>(window).FirstOrDefault(b => ReferenceEquals(b.DataContext, c));
                 if (cardBorder == null)
                 {
-                    Console.WriteLine($"HOMEBANNER_SOLO: {c.Name} - AVISO, no se pudo ubicar su tarjeta real en el arbol visual (fuera del viewport/WrapPanel) - se omite la medicion de ocultamiento para este personaje.");
+                    Console.WriteLine($"HOMEBANNER_SOLO: {c.Name} - AVISO, no se pudo ubicar su tarjeta real en el arbol visual (fuera del viewport/WrapPanel) - se omite la medicion de posicion para este personaje.");
                     continue;
                 }
                 var imgPet = Descendientes<Image>(cardBorder).FirstOrDefault(img =>
@@ -156,37 +149,73 @@ internal static partial class Program
                     continue;
                 }
 
-                var compuesto = PixelesDeVisual(grid, w, h);
-                var visibilidadDollAntes = imgDoll.Visibility;
-                imgDoll.SetCurrentValue(UIElement.VisibilityProperty, Visibility.Collapsed);
-                DoEvents();
-                var soloMascota = PixelesDeVisual(grid, w, h);
-                imgDoll.SetCurrentValue(UIElement.VisibilityProperty, visibilidadDollAntes);
-                DoEvents();
+                VerificarFormulaRealMascota(c.Name, grid, imgPet, imgDoll, w, c.PetOffsetX, c.PetOffsetY);
+            }
 
-                int pxMascotaTotal = 0, pxOcultos = 0;
-                for (int i = 0; i + 3 < soloMascota.Length; i += 4)
+            // === D: formula real de posicion mascota/doll DENTRO del banner "Continuar con X" (2x real) ===
+            var entryBanner = vm.Home.LastSessionCharacterEntry;
+            if (entryBanner?.PetImage == null)
+            {
+                Console.WriteLine("HOMEBANNER_SOLO: INCONCLUSIVE (banner) - LastSessionCharacterEntry sin mascota real equipada en este equipo ahora mismo, no se puede medir la formula real en el banner.");
+            }
+            else
+            {
+                var imgPetBanner = Descendientes<Image>(window).FirstOrDefault(img =>
+                    ReferenceEquals(img.DataContext, entryBanner) &&
+                    BindingOperations.GetBindingExpression(img, Image.SourceProperty)?.ParentBinding?.Path?.Path == "PetImage");
+                var imgDollBanner = imagenPreviewBanner; // ya localizado arriba (A+B), Path=="Home.LastSessionCharacterEntry.Preview"
+                if (imgPetBanner == null || imgDollBanner == null || VisualTreeHelper.GetParent(imgPetBanner) is not Grid gridBanner)
                 {
-                    byte alphaMascota = soloMascota[i + 3];
-                    if (alphaMascota < 20) continue; // pixel real y no-transparente del sprite de la mascota
-                    pxMascotaTotal++;
-                    bool distinto = Math.Abs(compuesto[i] - soloMascota[i]) > 12
-                        || Math.Abs(compuesto[i + 1] - soloMascota[i + 1]) > 12
-                        || Math.Abs(compuesto[i + 2] - soloMascota[i + 2]) > 12
-                        || Math.Abs(compuesto[i + 3] - soloMascota[i + 3]) > 12;
-                    if (distinto) pxOcultos++;
+                    Console.WriteLine("HOMEBANNER_SOLO: AVISO (banner) - no se pudo ubicar la pareja Image(PetImage)/Image(Preview) del banner dentro de la misma Grid - se omite.");
                 }
-                double pctOculto = pxMascotaTotal == 0 ? -1 : 100.0 * pxOcultos / pxMascotaTotal;
-                Console.WriteLine($"HOMEBANNER_SOLO: {c.Name} (Grid real {w:0.#}x{h:0.#}px) - pixeles PROPIOS reales de la mascota={pxMascotaTotal}, tapados de verdad por el doll de encima={pxOcultos} ({pctOculto:F1}%)");
-                // Umbral real (no inventado): 30% ya es un ocultamiento claramente visible - medido
-                // de verdad en este mismo canario, Eldelgas da 40,0% (imagen1.png, "casi tapada" del
-                // encargo del usuario) y Terrariano 0,7% (el mismo par PetImage/Preview, personaje
-                // distinto) - la variacion real confirma que depende de la pose/silueta del doll, no
-                // es un numero fijo por mascota.
-                if (pctOculto >= 30)
-                    Console.WriteLine($"FALLO: HOMEBANNER_SOLO - la mascota real de {c.Name} queda tapada en un {pctOculto:F1}% medido por el doll de la MISMA tarjeta (MainWindow.xaml:1478-1494: Grid 52x72,8 con una Image ligada a PetImage de 20x20 anclada abajo-izquierda, y una Image ligada a Preview de tamaño completo pintada DESPUES/ENCIMA sin ningun recorte/desplazamiento que reserve hueco a la mascota)");
+                else
+                {
+                    double wBanner = gridBanner.ActualWidth;
+                    if (wBanner <= 0)
+                        Console.WriteLine("HOMEBANNER_SOLO: AVISO (banner) - Grid real sin medida (ActualWidth<=0) - se omite.");
+                    else
+                        VerificarFormulaRealMascota($"{entryBanner.Name} (banner)", gridBanner, imgPetBanner, imgDollBanner, wBanner, entryBanner.PetOffsetX, entryBanner.PetOffsetY);
+                }
             }
         }
         catch (Exception ex) { Console.WriteLine("HOMEBANNER_SOLO-EXCEPTION: " + ex); }
+    }
+
+    // Verificacion geometrica real de la formula de Terraria (Terrakeep.App/Converters/
+    // PetPositionConverters.cs, PortSeleccion Encargo3 25-sep-2026) - comun a tarjeta y banner
+    // (mismo criterio pedido explicitamente). "40.0" es PlayerPreviewRenderer.Width, el ancho
+    // NATIVO real del lienzo del doll (internal, sin InternalsVisibleTo hacia este arnes - mismo
+    // patron real ya documentado en varios sitios de este mismo proyecto, ej.
+    // ExplorationViewModel.cs/MainViewModel.cs) - "canvasScale" se MIDE de verdad
+    // (grid.ActualWidth/40.0, nunca un "1.3"/"2.6" fijo a mano) para que este canario siga
+    // midiendo lo correcto aunque cambie el tamaño real de la tarjeta/banner en el futuro.
+    //
+    // petOffsetX/petOffsetY (CharacterListEntryViewModel.PetOffsetX/PetOffsetY, PortSeleccion
+    // Encargo4 25-sep-2026, capa DISTINTA y complementaria ya documentada en MainWindow.xaml
+    // ~1505): el ajuste fino REAL propio de cada mascota (SettingsForCharacterPreview.Offset) se
+    // aplica ENCIMA de la formula generica de Encargo3 via el mismo RenderTransform - la posicion
+    // renderizada real que mide TransformToAncestor es la SUMA de las dos capas, asi que la
+    // posicion "esperada" aqui tiene que incluir tambien este offset real y documentado (leido de
+    // la propia ViewModel, nunca un numero a mano) para no confundir "el ajuste fino de Encargo4
+    // esta activo" con "la formula generica de Encargo3 esta rota".
+    private static void VerificarFormulaRealMascota(string etiqueta, Grid grid, Image imgPet, Image imgDoll, double anchoGridReal, double petOffsetX, double petOffsetY)
+    {
+        Point petTopLeft = imgPet.TransformToAncestor(grid).Transform(new Point(0, 0));
+        Point dollTopLeft = imgDoll.TransformToAncestor(grid).Transform(new Point(0, 0));
+        double petBottom = petTopLeft.Y + imgPet.ActualHeight;
+        double dollBottom = dollTopLeft.Y + imgDoll.ActualHeight;
+        double canvasScale = anchoGridReal / 40.0;
+
+        double deltaBottom = Math.Abs(petBottom - dollBottom - petOffsetY);
+        double offsetXReal = petTopLeft.X - dollTopLeft.X;
+        double offsetXEsperado = 20.0 * canvasScale + petOffsetX;
+        double deltaOffsetX = Math.Abs(offsetXReal - offsetXEsperado);
+
+        Console.WriteLine($"HOMEBANNER_SOLO: {etiqueta} (canvasScale={canvasScale:0.###}, ajuste fino Encargo4 PetOffsetX={petOffsetX:0.##}/PetOffsetY={petOffsetY:0.##}) - borde inferior mascota={petBottom:0.##}, borde inferior doll={dollBottom:0.##} (delta={deltaBottom:0.##}px, tolerancia 1.5px), offsetX real mascota-doll={offsetXReal:0.##}px (esperado {offsetXEsperado:0.##}px segun formula, delta={deltaOffsetX:0.##}px)");
+
+        if (deltaBottom > 1.5)
+            Console.WriteLine($"FALLO: HOMEBANNER_SOLO - {etiqueta}: el borde inferior de la mascota ({petBottom:0.##}) no esta alineado con el borde inferior del doll ({dollBottom:0.##}) mas el ajuste fino real (PetOffsetY={petOffsetY:0.##}) - formula real de Terraria rota (UICharacter.cs, DrawPets: playerPosition+(0,player.height)+(0,-projectile.height))");
+        if (deltaOffsetX > 1.5)
+            Console.WriteLine($"FALLO: HOMEBANNER_SOLO - {etiqueta}: el desplazamiento horizontal real de la mascota respecto al doll ({offsetXReal:0.##}px) no coincide con los 20px de juego reales escalados mas el ajuste fino real ({offsetXEsperado:0.##}px, PetOffsetX={petOffsetX:0.##}) - formula real de Terraria rota (UICharacter.cs, GetPlayerPosition/DrawPets: -10f de retranqueo + (20,0) de offset)");
     }
 }

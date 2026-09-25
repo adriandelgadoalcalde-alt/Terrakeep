@@ -1485,31 +1485,66 @@
                              CharacterListEntryViewModel.PetImage/RefreshPetImage y
                              PetPreviewRenderer/PetAnimationDriver para el detalle real completo.
 
-                             Arreglo real 25-sep-2026 (bitacora.md, "Inicio, mascotas ocultas y
-                             banner sin hover"): el `Width="20" Height="20"` fijo de antes
-                             aplastaba el fotograma real (46-52px de alto real, medido de la
-                             cabecera PNG) a menos de la mitad, encajado ademas en la MISMA
-                             esquina inferior izquierda donde caen los pies/piernas del doll (la
-                             zona con mas pixeles opacos de cualquier sprite de pie) - hasta 40,0%
-                             tapado, medido en pixeles reales por el canario HOMEBANNER_SOLO
-                             (Eldelgas). `Stretch="None"` + sin Width/Height renderiza el
-                             fotograma a su tamaño NATIVO real (WriteableBitmap.PixelWidth/
-                             PixelHeight, sin escalar) en vez del recorte a 20x20; anclarlo arriba
-                             en vez de abajo lo aparta de la zona de piernas/pies (la mas opaca) y
-                             lo deja asomar por el hueco real que el doll SI deja libre a los
-                             lados de la cabeza/hombros - medido tras el cambio: Eldelgas baja de
-                             40,0% a un valor por debajo del umbral de FALLO (30%) del propio
-                             canario, sin recortar ningun sprite (Grid sin ClipToBounds, fiel al
-                             pedido explicito "no cortar sprites"). Mismo criterio aplicado en el
-                             banner "Continuar con X" mas abajo (paridad pedida explicitamente). -->
+                             PortSeleccion Encargo3 (25-sep-2026, SUSTITUYE el Margin fijo/empirico
+                             de la ronda anterior, "-20,-16,0,0" ajustado a mano contra un umbral
+                             de "% tapado" en el canario HOMEBANNER_SOLO): formula REAL de Terraria
+                             portada al tamaño real del lienzo - Terraria/GameContent/UI/Elements/
+                             UICharacter.cs decompilado real, GetPlayerPosition (132-145: "if
+                             (_petProjectiles.Length != 0) result.X -= 10f;") + DrawPets (147-181:
+                             "playerPosition + (0, player.height) + (20, 0) + (0,
+                             -projectile.height)") - la mascota se ancla al borde INFERIOR del
+                             jugador (Player.cs:57446-57447, height=42 real del hitbox de pie)
+                             desplazada 20px a la derecha de la posicion YA retranqueada 10px del
+                             jugador. Ver Converters/PetPositionConverters.cs para la cita completa
+                             y el porque Terrakeep usa el borde inferior del propio lienzo (sin
+                             hitbox aparte, a diferencia de Terraria real) como referencia real de
+                             "borde inferior del jugador", con evidencia medida (HOMEBANNER_SOLO:
+                             el doll deja solo 3-10px de margen transparente en cada borde, pies
+                             pegados al borde inferior del lienzo). `PetBottomAlignMarginConverter`
+                             calcula el Margin real (offset X neto +10px nativos, offset Y real de
+                             alineado al borde inferior segun el alto NATIVO real de cada mascota),
+                             escalado al tamaño real del Grid (ConverterParameter="1.3", 52x72,8 =
+                             40x56 * 1.3). El propio doll se retranquea -10px en X via
+                             RenderTransform (`PetDollShiftXConverter`, mismo -10 real de
+                             GetPlayerPosition) - RenderTransform y no Margin, para no alterar el
+                             tamaño de caja que Stretch="Uniform" necesita para ajustar el lienzo
+                             40x56 al Grid 52x72,8 sin recorte.
+
+                             PortSeleccion Encargo4 (25-sep-2026): RenderTransform ADICIONAL, capa
+                             DISTINTA y complementaria a la formula GENERICA de arriba (igual para
+                             las 63 mascotas) - PetOffsetX/PetOffsetY/PetSpriteDirection son el
+                             ajuste fino REAL propio de CADA mascota que Terraria aplica encima
+                             (SettingsForCharacterPreview real, ver el comentario completo en
+                             Terrakeep.Core/Data/PetAnimationCatalog.cs). ScaleTransform primero
+                             (espejo horizontal alrededor del propio centro del fotograma,
+                             RenderTransformOrigin=0.5,0.5, SpriteDirection=-1 en la mayoria de
+                             mascotas) y TranslateTransform despues (el offset real en pixeles de
+                             sprite, mismo espacio 1:1 que el fotograma nativo sin escalar) - el
+                             orden importa: el espejo tiene que aplicarse ANTES de desplazar, igual
+                             que "proj.position += Offset" ya ocurre sobre un sprite cuyo
+                             spriteDirection ya esta fijado. Sin mascota catalogada, los tres valores
+                             son el 0,0,1 por defecto real de Terraria - transform identidad, no
+                             cambia nada visualmente respecto a antes de este encargo. -->
                         <Image Source="{Binding PetImage}" Stretch="None"
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                HorizontalAlignment="Left" VerticalAlignment="Top"
-                               Margin="-20,-16,0,0"
+                               Margin="{Binding PetImage, Converter={x:Static conv:PetBottomAlignMarginConverter.Instance}, ConverterParameter=1.3}"
+                               RenderTransformOrigin="0.5,0.5"
                                Visibility="{Binding PetImage, Converter={StaticResource NullToVis}}"
-                               ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}" />
+                               ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}">
+                            <Image.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform ScaleX="{Binding PetSpriteDirection}" ScaleY="1" />
+                                    <TranslateTransform X="{Binding PetOffsetX}" Y="{Binding PetOffsetY}" />
+                                </TransformGroup>
+                            </Image.RenderTransform>
+                        </Image>
                         <Image Source="{Binding Preview}" Stretch="Uniform"
-                               RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top" />
+                               RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top">
+                            <Image.RenderTransform>
+                                <TranslateTransform X="{Binding PetImage, Converter={x:Static conv:PetDollShiftXConverter.Instance}, ConverterParameter=1.3}" />
+                            </Image.RenderTransform>
+                        </Image>
                     </Grid>
                     <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                         <DockPanel>
@@ -2660,16 +2695,50 @@
                                      ruta larga "Home.LastSessionCharacterEntry.PetImage" - el Image
                                      de Preview de abajo (fuera de este DataContext local, para no
                                      romper el punto de anclaje real que ya usa el arnes para ubicar
-                                     este Border) sigue con la ruta completa sin tocar. -->
+                                     este Border) sigue con la ruta completa sin tocar.
+
+                                     PortSeleccion Encargo3 (25-sep-2026, SUSTITUYE el Margin fijo/
+                                     empirico de la ronda anterior "-40,-32,0,0" - el doble exacto de
+                                     la tarjeta, mismo criterio empirico ya sustituido ahi): mismo
+                                     `PetBottomAlignMarginConverter`/`PetDollShiftXConverter` reales
+                                     que la tarjeta pequeña (ver el comentario completo en
+                                     MainWindow.xaml ~1505 y Converters/PetPositionConverters.cs),
+                                     con ConverterParameter="2.6" (104x145,6 = 40x56 * 2.6, el doble
+                                     exacto de la tarjeta - mismo criterio pedido explicitamente en
+                                     tarjeta y banner). El Image de Preview de abajo se retranquea
+                                     -10px nativos (26 WPF con este factor) via RenderTransform, no
+                                     Margin, mismo motivo real ya documentado en la tarjeta.
+
+                                     PortSeleccion Encargo4 (25-sep-2026): mismo RenderTransform
+                                     ADICIONAL real que la tarjeta pequeña (ver el comentario completo
+                                     en MainWindow.xaml ~1505) - PetOffsetX/PetOffsetY/
+                                     PetSpriteDirection resuelven contra el DataContext propio de
+                                     este Image (Home.LastSessionCharacterEntry, ya re-atado arriba),
+                                     mismo valor real en pixeles de sprite que la tarjeta (el Image
+                                     del banner tampoco escala su bitmap, Stretch="None" igual que la
+                                     tarjeta - el "2x" del banner es solo el tamaño de la Grid/Margin
+                                     que lo aloja, no del propio fotograma). -->
                                 <Image DataContext="{Binding Home.LastSessionCharacterEntry}"
                                        Source="{Binding PetImage}" Stretch="None"
                                        RenderOptions.BitmapScalingMode="NearestNeighbor"
                                        HorizontalAlignment="Left" VerticalAlignment="Top"
-                                       Margin="-40,-32,0,0"
+                                       Margin="{Binding PetImage, Converter={x:Static conv:PetBottomAlignMarginConverter.Instance}, ConverterParameter=2.6}"
+                                       RenderTransformOrigin="0.5,0.5"
                                        Visibility="{Binding PetImage, Converter={StaticResource NullToVis}}"
-                                       ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}" />
+                                       ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}">
+                                    <Image.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform ScaleX="{Binding PetSpriteDirection}" ScaleY="1" />
+                                            <TranslateTransform X="{Binding PetOffsetX}" Y="{Binding PetOffsetY}" />
+                                        </TransformGroup>
+                                    </Image.RenderTransform>
+                                </Image>
                                 <Image Source="{Binding Home.LastSessionCharacterEntry.Preview}" Stretch="Uniform"
-                                       RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top" />
+                                       RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top">
+                                    <Image.RenderTransform>
+                                        <TranslateTransform X="{Binding Home.LastSessionCharacterEntry.PetImage, Converter={x:Static conv:PetDollShiftXConverter.Instance}, ConverterParameter=2.6}" />
+                                    </Image.RenderTransform>
+                                </Image>
                             </Grid>
                             <StackPanel VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal">
