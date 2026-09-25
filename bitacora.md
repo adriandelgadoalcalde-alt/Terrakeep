@@ -21034,3 +21034,84 @@ hoy)**: `Terrakeep.App/Assets/pet_animations.json` tiene 63 entradas reales (con
 verdad, `JSON.parse` + `.length`); `Terrakeep.App/Assets/pets/` tiene 62 `.png` reales
 (contados con `ls | wc -l`) - mismo conteo documentado el 21-sep-2026, nada se ha perdido ni
 corrompido entre entonces y hoy.
+
+## 25-sep-2026 - Guía Encargo 1: downedGoblins/downedFrost/downedPirates + cristales_vida real (aplicador-fix)
+
+Encargo ya investigado por `arquitecto-keep` (I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md): dos huecos
+reales en la Guía de escritorio.
+
+**Causa 1 confirmada y arreglada**: `GuideFlags._deMundo` (`Terrakeep.Core/Guia/GuideFlags.cs`)
+no incluía `downedGoblins`/`downedFrost`/`downedPirates` aunque `WldHeader.cs:91-93`
+(`DownedGoblinArmy`/`DownedFrostLegion`/`DownedPirates`) y `WldReader.cs:231-234` ya los
+parseaban del bloque de ancho fijo del `.wld`. Añadidas las tres entradas con las mismas
+claves de texto que `BanderasGuia.cs` del mod (`"downedGoblins"`/`"downedFrost"`/
+`"downedPirates"` - el nombre real de campo de `NPC.cs` es más corto que el de `WldHeader.cs`).
+
+**Causa 2 confirmada y arreglada, con un matiz real sobre la recomendación original**:
+`DesktopGuideStateProvider.CristalesVida` devolvía siempre 0. Implementada la fórmula real del
+motor (`Player.cs` del tModLoader decompilado, ~línea 56437/55952:
+`ConsumedLifeCrystals = (statLifeMax - 100) / 20`) como
+`Math.Clamp((VidaMaxima - 100) / 20, 0, 15)`. PERO solo implementar la fórmula no bastaba: el
+requisito `CristalesVida` en `GuideEvaluationEngine.cs` estaba detrás del gate
+`ds.HasLiveGameData`, que en Terrakeep de escritorio es **fijo a `false` siempre** (documentado
+así a propósito en `IGuideStateProvider.cs`, tratando cristales de vida igual que
+Defensa/DanoArma/NpcActivo, que sí exigen partida en marcha de verdad). Con ese gate sin tocar,
+la fórmula habría sido código muerto: nunca se habría llamado. Cristales de vida es distinto -
+se deriva enteramente de `VidaMaxima`/`HealthMax`, que SÍ está en el `.plr` estático - así que
+se cambió el gate a `HasCharacterData` (el mismo que ya usa `VidaMaxima`), con motivo
+`"guide_motive_load_character"` en vez de `"guide_motive_life_crystals"` (ese string de
+`strings_es.json`/`strings_en.json` queda sin uso, no se tocó el JSON por mantener el alcance
+acotado). Documentado el porqué en los cuatro archivos tocados
+(`GuideFlags.cs`/`DesktopGuideStateProvider.cs`/`GuideEvaluationEngine.cs`/
+`IGuideStateProvider.cs`) para que quede claro que es una excepción deliberada, no un descuido.
+Verificado que el mismo cambio no afecta a TerrakeepMod: `ProveedorEstadoGuiaMod.cs` tiene
+`HasCharacterData` y `HasLiveGameData` con la MISMA expresión (`!EsJugadorRemoto ||
+_jugador.active`), así que el comportamiento en vivo no cambia.
+
+**Tests nuevos** (`Terrakeep.Core.Tests/Guia/GuideEvaluationEngineTests.cs` - el archivo no
+tenía ninguna prueba de `GuideFlags` antes de esta ronda, hueco de cobertura real cerrado
+ahora): banderas `downedGoblins`/`downedFrost`/`downedPirates` conocidas
+(`GuideFlags.Existe`), un mundo sintético con las tres a `true` (las tres salen cumplidas) y
+otro con las tres a `false` (salen no cumplidas, nunca "no evaluable"); 6 casos de
+`CristalesVida` con distintos `HealthMax` reales (100→0, 120→1, 180→4, 190→4 con resto,
+500→15 tope, 700→15 clamp por encima del tope), más el caso sin personaje cargado (no
+evaluable con motivo `guide_motive_load_character`, y explícitamente `EsLimiteEstructural =
+false` para no repetir el bug real de dano_arma del 16-sep-2026 que bloqueaba un paso para
+siempre). `dotnet test Terrakeep.Core.Tests`: **601/601 en verde** (21 de ellos de
+`GuideEvaluationEngineTests`, antes 8), sin regresión.
+
+**Verificación con datos reales de esta máquina** (más allá de los sintéticos): escrito un
+mini-programa de consola en el scratchpad (`ProjectReference` a `Terrakeep.Core.csproj`,
+descartado tras la verificación, nunca formó parte del repo) que lee de verdad
+`Documents\My Games\Terraria\Worlds\Blando_Río.wld` - los tres campos crudos del header
+(`DownedGoblinArmy`/`DownedFrostLegion`/`DownedPirates`) están a `true` en ese mundo real, y
+`GuideFlags.Existe`/`Valor` los devuelve correctamente como `true` los tres (antes de este
+arreglo `Existe` habría dado `false` para los tres, al no estar en el diccionario). También leído
+`Documents\My Games\Terraria\tModLoader\Players\adrian.plr` (personaje real con Calamity,
+`HealthMax=100`, base sin cristales) contra `GuideEvaluator.Evaluar` completo (API pública, no
+solo la propiedad): `CristalesVida` sale `0`, `NoEvaluable=False` - confirma que ahora se evalúa
+de verdad solo con el personaje cargado, sin partida en marcha.
+
+**Build**: `dotnet build Terrakeep.slnx -c Release` - 0 avisos, 0 errores.
+
+**Recompilado y redesplegado**: `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe` (barra
+de tareas, `dotnet build Terrakeep.App -c Debug`) y
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (instalado, `dotnet publish
+Terrakeep.App -c Release -p:PublishProfile=win-x64` + copia manual del exe autocontenido - no
+había proceso `Terrakeep.exe` abierto que bloqueara la copia, confirmado con `Get-Process`
+antes de copiar). Arranque real del exe instalado confirmado tras la copia (`Start-Process` +
+`MainWindowTitle="Terrakeep"` antes de cerrarlo).
+
+**Commit**: `660a2ec1`, solo los 5 archivos de este encargo (`GuideFlags.cs`,
+`DesktopGuideStateProvider.cs`, `GuideEvaluationEngine.cs`, `IGuideStateProvider.cs`,
+`GuideEvaluationEngineTests.cs`). Nota real de proceso: un primer intento de `git commit
+--amend` (para añadir las líneas de atribución que se me olvidaron en el primer commit) se
+llevó por delante SIN QUERER dos archivos de otro agente en paralelo
+(`Terrakeep.App.Tests/CanarioClusterCofresInspector.cs` nuevo y cambios en
+`Terrakeep.App.Tests/Program.cs`, ya en el índice de git por ese otro agente en ese momento -
+`--amend` usa el índice actual, no el diff del commit original). Detectado inmediatamente por
+el `--stat` del commit resultante, corregido con `git reset --soft HEAD~1` (deshace el commit
+sin tocar ningún archivo del árbol de trabajo) + `git restore --staged` solo de esos dos
+archivos ajenos (vuelven a quedar exactamente como los había dejado el otro agente: uno sin
+trackear, el otro modificado sin stagear) + commit limpio solo con mis 5 archivos. Sin
+`git push`.
