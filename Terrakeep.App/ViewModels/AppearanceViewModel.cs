@@ -562,6 +562,13 @@ public partial class AppearanceViewModel : ObservableObject
         RefreshPreview();
     }
 
+    // ParidadPersonaje Fase1 (25-sep-2026): SOLO para pruebas (Terrakeep.App.ViewModels.Tests -
+    // sin InternalsVisibleTo configurado hacia el arnes, mismo criterio real ya establecido por
+    // CharacterFileService.DebugCorruptPlrBytesBeforeVerify) - gemela real de
+    // CharacterListEntryViewModel.AccesoriosParaPruebas, para comparar el EquippedAccessories que
+    // de verdad llega al preview en vivo de Personaje > Apariencia contra el del doll de Inicio.
+    public EquippedAccessories? AccesoriosParaPruebas => _liveAccessories;
+
     // C-15 (informe de pulido final, cierra A1): "casi toda edicion del personaje es
     // irreversible" - Apariencia era la unica pestaña real de edicion sin Deshacer/Rehacer (el
     // patron ya existe y es agnostico del dominio, ExplorationViewModel/MainViewModel.

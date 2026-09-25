@@ -79,6 +79,14 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     // arriba, guardado para poder re-renderizar en cada tick del hover sin volver a resolver.
     private readonly EquippedAccessories _accessories;
 
+    // ParidadPersonaje Fase1 (25-sep-2026): SOLO para pruebas (Terrakeep.App.ViewModels.Tests -
+    // sin InternalsVisibleTo configurado hacia el arnes, mismo criterio real ya establecido por
+    // CharacterFileService.DebugCorruptPlrBytesBeforeVerify) - deja comparar de verdad el
+    // EquippedAccessories resultante de este camino (Inicio) contra el de
+    // AppearanceViewModel.AccesoriosParaPruebas (Personaje > Apariencia) en el mismo test de
+    // integracion, en vez de solo comparar pixeles renderizados.
+    public EquippedAccessories AccesoriosParaPruebas => _accessories;
+
     // Mascota real equipada - ANIMADA de verdad durante el hover cuando PetAnimationCatalog
     // conoce el objeto (PetPreviewRenderer + PetAnimationDriver, ver el comentario real de esas
     // clases para la cita completa del decompilado), icono estatico (VanillaIconResolver) como
