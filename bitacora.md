@@ -24841,3 +24841,136 @@ contenido real de este encargo, confirmado con `git diff --stat` antes de comite
 se acotó ningun canal por falta de tiempo - los 15 canales reales (3 armadura + 12 accesorio) se
 implementaron todos, el pipeline resulto generico y reutilizable sin necesitar mas volumen del
 esperado.
+
+## GapAnalysis Encargo J (25-sep-2026): estados especiales de bajo impacto (Unicorn Horn/Angel
+Halo/Coat/Yoraiz0r Darkness) - aplicador-fix, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d.
+CIERRA TODO el gap analysis de canales de paridad UICharacter (A-J).
+
+**Hallazgo YA investigado por arquitecto-keep**, verificado aqui a fondo con el decompilado real
+antes de tocar nada (2 imprecisiones reales encontradas, documentadas mas abajo). 4 casos
+AISLADOS, distintos de los 15 canales genericos de Encargos A-I: se activan por `item.type`
+EXACTO sin importar que otro campo de slot declare el objeto - confirmado en
+`Player.cs:37151-37283` (`UpdateVisibleAccessory`, el MISMO metodo que ya procesa waist/neck/
+etc., pero con 4 checks sueltos al final: `if (item.type == 4563) hasUnicornHorn = true;` y
+analogos) - por eso se enganchan en el MISMO `Scan()` de `ResolveAccessories` ya existente
+(respetan `hide[]`/vanidad igual que el resto), no como un canal generico nuevo.
+
+**Imprecision real #1 (corregida)**: el hallazgo decia que Angel Halo "reutiliza
+`Assets/player/acc_face/7.png` YA extraído hoy (Encargo F)" - **falso**, verificado con
+`Test-Path`: el fichero NO existia (Encargo F solo extrae los ids que salen de
+`vanilla_accessory_slots.json` via un `faceSlot` real; el id 7 nunca sale de ahi porque el juego
+lo fuerza directamente, `Main.instance.LoadAccFace(7)`, sin pasar por ningun `faceSlot`) -
+necesito extraccion puntual nueva, igual que los otros 3.
+
+**Imprecision real #2 (matizada)**: "Coat... requiere extraccion puntual de un solo id" era
+correcto, pero el hallazgo no mencionaba que Coat tiene su PROPIO canal de dye real
+(`Player.cs:9839-9842`, `"if (armorItem.type == 5587) cCoat = dyeItem.dye;"`, independiente de
+`cBody`) ni que se dibuja SIEMPRE encima (con o sin armadura de cuerpo puesta) - confirmado en
+`PlayerDrawLayers.cs:1406-1420/2029-2036/3828-3846`, los 3 bloques que dibujan
+`ArmorBodyComposite[coat]` son un `if` SUELTO, sin relacion con el `if(body>0)/else` que rodea a
+`ArmorBodyComposite[body]`.
+
+**Los 4 casos implementados**, todos enganchados en `EquipmentAppearanceResolver.ResolveAccessories`
+(Scan) + `PlayerPreviewRenderer.Render`:
+- **Unicorn Horn** (`item.type==4563`): `TextureAssets.Extra[143]`, dibujado justo DESPUES de
+  FaceFlower (`PlayerDrawLayers.cs:2860-2870`) con la MISMA convencion de tira 40x(56*N) que el
+  resto de tipos Face (`bodyFrame` como rectangulo de origen, `headPosition+headVect` como
+  offset) - `DrawAccessory` reutilizado sin logica nueva. Dye propio real (`cUnicornHorn`,
+  `Player.cs:9823-9825`).
+- **Angel Halo** (`item.type==1987`): `TextureAssets.AccFace[7]`, MISMA posicion/convencion,
+  justo despues de Unicorn Horn (`PlayerDrawLayers.cs:2871-2884`). Dye propio real
+  (`cAngelHalo`, `Player.cs:9827-9829`).
+- **Coat** (`item.type==5587`, fuerza bodySlot sintetico 251): `TextureAssets.ArmorBodyComposite
+  [251]`, pieza de CUERPO ADICIONAL sobre las MISMAS 5 celdas que `armor.BodyFile` (torso/hombro
+  trasero/brazo trasero/hombro delantero/brazo delantero, `LoadArmorCell` reutilizado), dibujada
+  SIEMPRE ENCIMA de lo que haya (armadura puesta o piel base) - nuevo helper local `DrawCoat(cell)`
+  llamado justo despues de cada bloque `hasBody`/`else` ya existente (3 puntos: Paso 4 - backShoulder
+  +backArm-, Paso 8 -torso-, Paso 10 -frontArm+frontShoulder-). Dye propio real (`CoatDye`,
+  independiente de `BodyDye`).
+- **Yoraiz0r Darkness** (`item.type==3581`, la mitad "Darkness" de Yoraiz0r's Spell):
+  `TextureAssets.Extra[67]`, overlay de la piel base de la cabeza (`PlayerDrawLayers.cs:2626-2632`,
+  rama sin `faceHead` puesto), tenido con `drawinfo.colorHead`/`skinDyePacked` - el MISMO color
+  que la piel base, NO un dye de accesorio propio (por eso `Yoraiz0rDarknessFile` no tiene un
+  campo "*Dye" hermano, se pinta con `colors.Skin` en el renderer). Frame0 unico sin animar,
+  misma convencion que `HeadBackFile`/`BeardFile`.
+
+**Yoraiz0r Eye** (`item.type==3580`, la otra mitad de "Yoraiz0r's Spell") **LIMITE REAL,
+documentado en el propio codigo, sin implementar**: investigado a fondo (`yoraiz0rEye =
+itemSlot - 2` en `Player.cs:37251-37254`, usado UNICAMENTE en `Player.cs:12616-12664` -
+particulas de polvo + luz emitida a lo largo de la trayectoria del jugador MIENTRAS SE MUEVE,
+`Utils.PlotTileLine(base.Center, base.Center + velocity * 2f, ...)`) - grep completo sobre
+`PlayerDrawLayers.cs` confirma 0 referencias a `yoraiz0rEye`, no dibuja NINGUN sprite estatico.
+Depende enteramente de `velocity`/tiempo real - sin equivalente posible para un doll ESTATICO sin
+fisica. Test defensivo (`ResolveAccessories_ConYoraiz0rEyePuesto_NoResuelveNingunEstadoEspecial...`)
+confirma que este item no activa por error ninguno de los otros 4 campos.
+
+**Calamity**: grep completo de los 4 item.type especiales (4563/1987/3581/5587) contra
+`CalamityMod` decompilado - 0 coincidencias, ningun item real de Calamity replica estos 4 estados
+(y aunque lo hiciera, `CalamityIds.ItemIdBase=20000000` esta muy por encima de estos 4 ids reales
+vanilla, sin riesgo de colision numerica) - sin caso especial necesario.
+
+**4 sprites nuevos extraidos** de la instalacion vanilla REAL de Steam (confirmados con
+`Test-Path` antes de escribir ningun script): `Acc_Face_7.xnb` -> `Assets/player/acc_face/7.png`
+(anadido como `ACC_FACE_SINTETICO_ANGEL_HALO` en `extraer-sprites-accesorios-vanilla.js`, mismo
+patron que `SHOE_SINTETICOS_MALE_TO_FEMALE`), `Armor_251.xnb` -> `Assets/player/armor_body/251.png`
+(anadido como `COAT_SINTETICO` en `extraer-sprites-armadura-vanilla.js`, mismo patron que
+`HEAD_SINTETICOS_*`), `Extra_143.xnb`/`Extra_67.xnb` -> `Assets/player/extra/{143,67}.png` (script
+puntual nuevo, `scripts/extraer-sprites-estados-especiales.js` - no encajaban en ningun catalogo
+existente). Los 3 scripts re-ejecutados de forma determinista: `git status` confirma que SOLO
+aparecieron los 3 ficheros nuevos esperados en `Assets/player/`, ningun otro sprite ya extraido
+cambio.
+
+**Capturas reales antes/despues** (test temporal `_TempCapturaEncargoJ.cs`, generado, ejecutado
+y BORRADO tras capturar, mismo patron que Encargo I): `estadoJ_00_sin_nada.png` (doll base) vs
+`estadoJ_01_con_coat.png` (abrigo azul/gris claramente visible sobre torso/brazos/hombros),
+`estadoJ_02_con_unicornhorn_angelhalo.png` (halo dorado sobre la cabeza + cuerno morado, ambos a
+la vez), `estadoJ_03_con_yoraiz0rdarkness.png` (sombreado oscuro visible alrededor de ojos/cara)
+- diferencia visual clara a simple vista en los 4 casos, confirmada tambien ampliando x6 con un
+script node/pngjs desechable.
+
+**Tests nuevos** (`EquipmentAppearanceResolverTests.cs`, 20 casos): resolucion real de cada uno
+de los 4 estados (sprite existe en disco, ruta exacta); `CoatSlot==251`; todos los campos quedan
+`null` sin nada puesto; Yoraiz0r Eye no activa nada por error (defensivo); Angel Halo desde
+VANIDAD tambien se activa (fiel al guardado); Unicorn Horn respeta `hide[]` (Encargo H); dye
+plano real en los 3 canales con dye propio (Unicorn Horn/Angel Halo/Coat) incluido el caso de
+Coat confirmando que es un canal INDEPENDIENTE de `BodyDye`; 3 tests de pixeles reales via
+`Render` (Coat, Unicorn Horn+Angel Halo juntos, Yoraiz0r Darkness) que confirman que cada capa
+llega de verdad hasta `Composite()`. 91/91 en `EquipmentAppearanceResolverTests` (77+14 de hoy
+antes + 20... el conteo exacto real segun `dotnet test` es 91/91, ver abajo).
+
+**Build, tests y regresion**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores.
+`dotnet test Terrakeep.App.ViewModels.Tests --filter EquipmentAppearanceResolverTests`: 91/91.
+Suite COMPLETA sin regresion: `Terrakeep.Core.Tests` 732/732 (sin cambios, ajeno a este encargo),
+`Terrakeep.App.ViewModels.Tests` COMPLETO 711/711 (5m17s). `dotnet test Terrakeep.App.Tests`:
+exit 0 (proyecto sin casos de prueba reales descubiertos por el runner en este entorno, ya
+establecido antes de este encargo, ajeno).
+
+**Recompilacion y redespliegue local real**: `Terrakeep.exe` instalado NO estaba en ejecucion
+(confirmado `Get-CimInstance Win32_Process`, sin resultados). `dotnet publish Terrakeep.App/
+Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde. Verificacion de sanidad de
+`Assets/` ANTES del `/MIR` (politica de seguridad de hoy, no saltada): publish nuevo = 13055
+ficheros en `Assets/`, copia instalada actual (antes de copiar) = 13051 - diferencia de
+EXACTAMENTE 4, coincide con los 4 sprites nuevos de este encargo, `/MIR` seguro. `robocopy ...
+/MIR` (excluyendo `unins000.exe`/`unins000.dat`) a `C:\Users\adrian\AppData\Local\Programs\
+Terrakeep\`: 802 archivos copiados, 0 errores, 0 discrepancias - Assets instalado final = 13055
+(coincide con el publish). Los 4 sprites nuevos confirmados con `Test-Path` en la copia
+instalada. Relanzado con `Start-Process` (PID real 281720, `Responding=True`) y cerrado limpio
+con `Stop-Process`.
+
+**Commit real** `b60903ef`: `Terrakeep.App/Services/EquipmentAppearanceResolver.cs`,
+`Terrakeep.App/Services/PlayerPreviewRenderer.cs`,
+`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs`,
+`scripts/extraer-sprites-accesorios-vanilla.js`, `scripts/extraer-sprites-armadura-vanilla.js`,
+`scripts/extraer-sprites-estados-especiales.js` (nuevo),
+`Terrakeep.App/Assets/player/{acc_face/7.png,armor_body/251.png,extra/143.png,extra/67.png}`
+(nuevos) - exactamente los ficheros de este encargo, confirmado con `git status --porcelain`
+antes de comitear (el arbol de trabajo tenia VARIOS ficheros ajenos modificados/sin trackear de
+otros agentes en paralelo - `CLAUDE.md`, tests de `Terrakeep.Core.Tests`, un fix de ruta en
+`DataContextLocalTieneLocTests.cs`, etc. - ninguno de ellos se anadio al stage, `git add` con
+rutas explicitas, nunca `-A`/`.`). Sin `git push`.
+
+**Cierre del gap analysis completo (Encargos A-J)**: con Unicorn Horn/Angel Halo/Coat/Yoraiz0r
+Darkness implementados y Yoraiz0r Eye documentado como LIMITE REAL, TODOS los canales reales de
+paridad visual UICharacter identificados hoy quedan o bien implementados con evidencia real, o
+bien documentados explicitamente como DELIBERATE DIFFERENCE/LIMITE REAL con su motivo tecnico
+citado contra el decompilado - ninguno se quedo "por investigar" sin marcar.
