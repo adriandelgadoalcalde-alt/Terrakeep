@@ -19735,6 +19735,95 @@ queda documentado con precisión - banderas de invasión/NPCs de pueblo editable
 "crítico total"/DPS para la 2, ninguno de los dos con dato base real disponible hoy). Ninguna
 idea quedó sin tocar ni sin una decisión real documentada.
 
+### 25-sep-2026 - CORRECCIÓN a la sección "5. Bug real reportado en vivo... arrastrar un objeto o
+### un buff desde su slot no mostraba ningún sprite" (14-sep-2026, más arriba en este mismo
+### fichero): el arreglo de esa fecha era necesario pero NO suficiente - causa raíz real
+### encontrada y medida ahora (investigador-bug, patrón de 2 fases, TASK CONTEXT
+### `e5eaea9e-c261-4199-8e7d-060b6054f58d`)
+
+La entrada del 14-sep documentaba honestamente que la verificación visual real nunca se completó
+("el mismo obstáculo de foco robado por otros agentes... impidió completar un arrastre real de
+extremo a extremo con captura" - "confianza en el arreglo por revisión de código"). Esa confianza
+por revisión de código era la parte equivocada: el mecanismo SÍ arranca (`StartCardDrag` se llama,
+`AdornerLayer` se encuentra, `DragDrop.DoDragDrop` se invoca, `GiveFeedback` se dispara con
+normalidad), pero el ghost nunca se ve porque la posición que usa para dibujarse se congela casi
+de inmediato en un valor roto, fuera de la ventana.
+
+**Reproducido de verdad esta vez**, con dos métodos independientes que coinciden:
+
+1. **Arrastre físico real vía SendInput** (pywinauto, fuera del proceso) contra un `Terrakeep.exe`
+   compilado desde un `git worktree` aislado (nunca el árbol de trabajo real, que en este momento
+   tiene cambios sin commitear de otro agente en `Terrakeep.Core/Guia/` que rompen el build - no
+   tocados). Con pasos de arrastre GRUESOS (~35px) el ghost nunca se veía Y además
+   `OnLibraryCardMouseMove` no volvía a dispararse tras el primer `MouseDown` (el cursor salta
+   fuera de la tarjeta de 40×40px en un solo salto sintético sin pasar por ningún punto
+   intermedio - limitación real de la técnica, no del código de producción). Con pasos FINOS
+   (~2px) el mecanismo sí se ejercita de verdad.
+2. **Instrumentación temporal de diagnóstico** (SOLO en el `git worktree` aislado, nunca en este
+   repo - revertida por completo, cero rastro en `MainWindow.xaml.cs` real) con `File.
+   AppendAllText` en `StartCardDrag`/`OnFeedback`/`DragAdorner.OnRender`: confirma que
+   `GiveFeedback` se disparó 479 veces en una pasada real, con los 2 primeros `Mouse.
+   GetPosition(element)` correctos (~15,17 relativo a la tarjeta) y las 477 restantes
+   CONGELADAS en el mismo valor exacto, `(-649.6,-1000.1)` - fuera de la ventana por completo.
+   `DragAdorner.OnRender` dibuja ahí mismo (`_left=pos.X+12`, `_top=pos.Y+12`), invisible el resto
+   del arrastre.
+
+**Causa exacta**: `Terrakeep.App/MainWindow.xaml.cs`, método `StartCardDrag` (línea ~1381), función
+local `OnFeedback` (línea ~1393-1397):
+```csharp
+void OnFeedback(object? s, GiveFeedbackEventArgs e)
+{
+    var pos = Mouse.GetPosition(element);       // <- linea 1395, la causa real
+    adorner.UpdatePosition(pos.X + 12, pos.Y + 12);
+}
+```
+`Mouse.GetPosition(element)` lee la posición cacheada de WPF para ese `PresentationSource`, que
+deja de actualizarse en cuanto el bucle modal OLE de `DragDrop.DoDragDrop` toma el control real del
+ratón (mecanismo ya documentado en la comunidad WPF para este problema concreto - no es una
+peculiaridad de esta máquina ni de la entrada sintética: `GiveFeedback` SÍ se sigue disparando con
+normalidad, sólo la posición que devuelve `Mouse.GetPosition` deja de tener sentido). Afecta a
+`StartCardDrag` para TODOS sus llamantes por igual - confirmado el mismo mecanismo en una segunda
+pasada automatizada (ver canario nuevo abajo) con la tarjeta de la Librería de objetos; por
+construcción del código (mismo método, mismo `OnFeedback`, sin ninguna rama distinta), afecta
+igual a la Librería de Buffs (`OnBuffLibraryCardMouseMove`) y a los slots (`OnItemSlotMouseMove`/
+`OnBuffSlotMouseMove`) - el bug real que motivó el arreglo del 14-sep en primer lugar.
+
+**Drop permitido/no permitido**: SÍ existe ya, es un mecanismo aparte y funciona con normalidad -
+`OnItemSlotDragOver`/`OnBuffSlotDragOver` cambian el cursor del sistema a "prohibido"
+(`DragEventArgs.Effects = DragDropEffects.None`) ANTES de soltar, confirmado disparándose con
+normalidad durante los arrastres reales de esta investigación (no es lo que falla). El hueco real
+es SOLO el sprite/ghost visual, no la semántica de aceptar/rechazar.
+
+**Hueco de cobertura cerrado en el arnés** (no se tocó ni un carácter de código de producción):
+`Terrakeep.App.Tests/CanarioDragGhostLibreria.cs` nuevo + 12 líneas de alta en `Program.cs`
+(`DRAG_GHOST_LIBRERIA_SOLO=1`) - canario 100% automático (nunca "esperando interacción externa"
+como el intento del 14-sep), arrastre real por hilo aparte (`SetCursorPos`/`mouse_event` ya
+existentes en este mismo arnés, pasos finos de 2px), midiendo `Mouse.GetPosition(element)` con un
+SEGUNDO suscriptor independiente del mismo evento público `FrameworkElement.GiveFeedback` (sin
+reflexión, sin tocar nada privado). Verificado en 2 pasadas consecutivas sobre el worktree aislado:
+FALLO real y determinista las dos veces, mismo patrón exacto (293 llamadas a `GiveFeedback`, solo
+2 valores distintos de posición, las últimas 5 idénticas bit a bit). Ejecutar con:
+`DRAG_GHOST_LIBRERIA_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Debug`.
+
+**Para `aplicador-fix`** (propuesta técnica, no aplicada aquí): sustituir `Mouse.GetPosition
+(element)` por la posición real del cursor vía Win32 - `GetCursorPos` (P/Invoke) +
+`element.PointFromScreen(new Point(screenPt.X, screenPt.Y))` - que SÍ sigue al cursor durante todo
+el ciclo de vida real de un `DoDragDrop` OLE (patrón estándar para este problema concreto de WPF).
+Tras el arreglo, `DRAG_GHOST_LIBRERIA_SOLO=1` debe pasar a OK (posiciones dentro de un rango
+comparable a la distancia real recorrida, sin congelarse) - no hace falta tocar el canario mismo.
+Verificar también visualmente una vez arreglado (captura real durante el arrastre, objetos vanilla
+Y Calamity Y buffs) antes de dar el bug por cerrado del todo - este canario prueba el mecanismo de
+POSICIÓN, no sustituye a mirar la captura real con los propios ojos.
+
+**LÍMITE real**: no se consiguió una captura de pantalla real mostrando el ghost en el lugar
+correcto NI en el lugar roto (los intentos con `pywinauto`/`ImageGrab` chocaron repetidamente con
+otras ventanas de otros agentes de la familia robando el primer plano en este mismo escritorio,
+igual que ya documentó el 14-sep) - la evidencia real de esta investigación es por MEDICIÓN
+instrumentada (posiciones numéricas exactas, logueadas), no por captura visual. Suficiente para
+localizar y confirmar la causa con certeza (números exactos, dos pasadas independientes,
+coherentes entre sí), pero `aplicador-fix` debería intentar una captura visual real tras el
+arreglo si el entorno lo permite, no solo confiar en que el canario pase a OK.
+
 Commits de esta tercera ronda: `c4bb98db` (idea 8) `111a3b3d` (idea 5) `85bb1daa` (idea 6)
 `7b93b97d` (idea 7) `b56fdb41` (idea 3) + esta entrada de bitácora. `dotnet build` de la solución
 en verde (0/0) en cada pieza (dos fallos transitorios reales de `ServidorKeep.Core`, proyecto

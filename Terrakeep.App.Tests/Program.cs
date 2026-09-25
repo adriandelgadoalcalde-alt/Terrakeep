@@ -2554,6 +2554,17 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // DRAG_GHOST_LIBRERIA_SOLO=1 (25-sep-2026, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d,
+        // "drag ghost blanco/vacio al arrastrar objetos/buffs desde la Libreria"): canario real de
+        // investigador-bug (patron de 2 fases), ver el comentario largo de cabecera en
+        // CanarioDragGhostLibreria.cs.
+        if (Environment.GetEnvironmentVariable("DRAG_GHOST_LIBRERIA_SOLO") == "1")
+        {
+            EjecutarDragGhostLibreriaSolo(window, vm);
+            Console.WriteLine("DONE (DRAG_GHOST_LIBRERIA_SOLO)");
+            Environment.Exit(0);
+        }
+
         // HOMEBANNER_SOLO=1 (24-sep-2026, revision-correccion-integral-familia-Keep, bloque
         // "imagen1" - Inicio: banner "Continuar con X" + tarjetas): canario real de
         // investigador-bug (patron de 2 fases), ver el comentario largo de cabecera en
