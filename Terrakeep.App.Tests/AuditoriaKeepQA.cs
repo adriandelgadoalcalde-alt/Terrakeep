@@ -622,7 +622,7 @@ internal static partial class Program
                                   $"{nResultados} resultados reales de '{filaEstaño.Name}'; bloque de resultados={alturaBloqueResultados:0}px, contenido de categoria={alturaCategoria:0}px; " +
                                   $"fila del Grid para el ListBox={alturaFilaGrid:0}px, ListBox.ActualHeight={alturaListaReal:0}px (sin MaxHeight, quitado por el Fallo 3) -> " +
                                   $"HUECO SIN APROVECHAR bajo el ListBox = {(alturaFilaGrid >= 0 ? alturaFilaGrid - alturaListaReal : -1):0}px | " +
-                                  $"ScrollViewer.ViewportHeight={svLat.ViewportHeight:0}px ExtentHeight={svLat.ExtentHeight:0}px | ExplorationSidebarPanel.ActualHeight={panelSidebar?.ActualHeight:0}px (MinHeight=800)");
+                                  $"ScrollViewer.ViewportHeight={svLat.ViewportHeight:0}px ExtentHeight={svLat.ExtentHeight:0}px | ExplorationSidebarPanel.ActualHeight={panelSidebar?.ActualHeight:0}px (MinHeight=1000, ExploracionRediseno Fase D subio de 800 a 1000)");
 
                 filaEstaño.IsChecked = false;
                 WaitForDispatcher(500);

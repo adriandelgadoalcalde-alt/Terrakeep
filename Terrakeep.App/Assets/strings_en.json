@@ -322,6 +322,7 @@
   "explore_gamemode_master": "Master",
   "explore_gems": "Gems",
   "explore_goto_position": "Go to its position on the map",
+  "explore_inspector_back": "← Chests",
   "explore_inspector_placeholder": "Chest editor (temporary placeholder — coming in the next phase)",
   "explore_liquids": "Liquids",
   "explore_load_first": "Load a world first",

@@ -6659,6 +6659,25 @@
                          (de 1 a 2 filas visibles, MEJORA). Mismo coste aceptado que el parrafo de
                          arriba: mas scroll para llegar al fondo, nunca contenido inalcanzable.
 
+                         ExploracionRediseno Fase D (25-sep-2026, aplicador-fix): subido de 800 a
+                         1000 - mismo mecanismo otra vez, esta vez para el Inspector de cofre real
+                         (movido desde ChestRowTemplate a esta MISMA columna, ver
+                         ExplorationSidebarChestInspectorPlaceholder mas abajo). Medido con el arnes
+                         (COFRES_INSPECTOR_SOLO=1) a 1180x860 (tamaño por defecto), cofre real de 40
+                         slots (Math.Max(chest.MaxItems, chest.Items.Count) - TODOS los cofres
+                         reales usan 40 salvo modded, ver ExplorationViewModel.EditChest) con un
+                         objeto de 17 prefijos legales colocado (mismo caso limite que Fase C/las
+                         rondas anteriores): con MinHeight=800 los botones Guardar/Cancelar
+                         quedaban en Y=848,5-873,1px, MAS ALLA del DockPanel.ActualHeight=800px
+                         real - clipados de verdad, inalcanzables con scroll (ScrollableHeight tope
+                         en 800-viewport, comprobado con VerticalOffset/ScrollableHeight tras
+                         ScrollToBottom() real). Redondeado a 1000 con margen real para el
+                         TextBlock de estado (ChestEditStatus) que solo aparece tras guardar, y para
+                         sidebars mas estrechos que el default (menos columnas reales por fila del
+                         WrapPanel de slots = mas filas = mas alto). Mismo coste ya aceptado 3 veces
+                         en este fichero (590->652->800): un poco mas de scroll a cambio de que nada
+                         quede inalcanzable de verdad.
+
                          PENDIENTE cerrado (14-sep-2026, ronda de cierre): el propio FALLO-3 dejo
                          anotado un limite honesto SIN arreglar - al tamaño MINIMO real de la
                          ventana (1080x700) el viewport del ScrollViewer (397px medidos) no llega a
@@ -6710,7 +6729,7 @@
                                   ScrollChanged="OnExplorationSidebarScrollChanged">
                     <DockPanel x:Name="ExplorationSidebarPanel"
                                Height="{Binding ViewportHeight, ElementName=ExplorationSidebarScroll, Mode=OneWay}"
-                               MinHeight="800">
+                               MinHeight="1000">
                         <!-- Punto 4 (advisor Opus, "una nueva barra lateral... que ya no solo salgan
                              los npc, eso se traslada dentro de una rama madre donde salgan varios
                              botones" - ver ESPEC-ui-exploracion.md#9). Rediseño completo: la lista de

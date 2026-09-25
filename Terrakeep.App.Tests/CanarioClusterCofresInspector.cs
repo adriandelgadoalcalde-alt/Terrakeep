@@ -521,6 +521,228 @@ internal static partial class Program
             }
             catch (Exception exFaseC) { Console.WriteLine("COFRES-INSPECTOR-FASEC-EXCEPTION: " + exFaseC); }
 
+            // ================= ExploracionRediseno Fase D: editor real movido al Inspector (25-sep-2026) =================
+            // Canario del aplicador-fix - Fase D saca el editor real de ChestRowTemplate y rellena el
+            // placeholder de Fase C. Reubica exactamente la misma medicion de Metas/Groups del punto 2
+            // (mas arriba, "COFRES-INSPECTOR-P2") pero ahora sobre el ANCHO COMPLETO del sidebar (antes
+            // vivia indentado 33px dentro de una fila de ListBox), con el mismo objeto de 17 prefijos
+            // reales ("Hacha Arrojadiza de Adamantita", RogueDamageClass, rogue_prefixes.json
+            // "weapon":17) ya usado en la ronda anterior. Confirma tambien que ChestRowTemplate YA NO
+            // tiene ningun Border condicionado a IsEditing (el bloque se movio, no se duplico) y que
+            // ItemEditTemplate/ChestItemEdit siguen siendo la MISMA instancia de recurso/propiedad que
+            // usa Personaje (nunca duplicados).
+            try
+            {
+                var placeholderFaseD = window.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
+                var browseFaseD = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
+                if (placeholderFaseD == null || browseFaseD == null)
+                    Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED - no se encuentra ExplorationSidebarChestInspectorPlaceholder/ExplorationSidebarBrowseContent en el arbol visual");
+                else
+                {
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                    vm.Exploration.ChestViewMode = 2; // Cofre a cofre
+                    DoEvents(); DoEvents();
+
+                    // ---- No-duplicacion: ChestRowTemplate ya no tiene ningun Border IsEditing ----
+                    // Antes de abrir nada, confirma leyendo el arbol de la propia lista de filas que
+                    // ningun descendiente de ChestByChestList tiene un binding Content a ChestItemEdit
+                    // (si lo tuviera, seria el editor DUPLICADO reintroducido por error).
+                    var listaFilasFaseD = window.FindName("ChestByChestList") as ItemsControl;
+                    bool editorDuplicadoEnFila = listaFilasFaseD != null && Descendientes<ContentControl>(listaFilasFaseD).Any(cc =>
+                        (BindingOperations.GetBindingExpression(cc, ContentControl.ContentProperty)?.ParentBinding?.Path?.Path)?.Contains("ChestItemEdit") == true);
+                    Console.WriteLine($"COFRES-INSPECTOR-FASED: ChestByChestList encontrada={listaFilasFaseD != null}, ContentControl->ChestItemEdit DUPLICADO dentro de la fila={editorDuplicadoEnFila} (esperado False)");
+                    if (editorDuplicadoEnFila)
+                        Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED - ChestRowTemplate todavia tiene un ContentControl propio hacia ChestItemEdit - el editor se duplico en vez de moverse");
+
+                    // ---- Ruta 1: boton "Editar" de la fila -> Inspector real relleno ----
+                    var filaFaseD = vm.Exploration.ChestRows.FirstOrDefault(r => r.Items.Count > 0) ?? vm.Exploration.ChestRows.FirstOrDefault();
+                    if (filaFaseD == null)
+                        Console.WriteLine("COFRES-INSPECTOR-FASED: AVISO - no hay fila de cofre real para abrir el Inspector");
+                    else
+                    {
+                        vm.Exploration.EditChestCommand.Execute(filaFaseD);
+                        DoEvents(); DoEvents(); window.UpdateLayout();
+
+                        Console.WriteLine($"COFRES-INSPECTOR-FASED-R1: SidebarMode={vm.Exploration.SidebarMode} (esperado ChestInspector), Placeholder.Visibility={placeholderFaseD.Visibility} (esperado Visible)");
+                        if (vm.Exploration.SidebarMode != ExplorationSidebarMode.ChestInspector || placeholderFaseD.Visibility != Visibility.Visible)
+                            Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED-R1 - abrir un cofre desde la fila 'Editar' no deja el Inspector real visible");
+
+                        // Cabecera real: boton "<- Cofres" + titulo dinamico (VariantName/coords).
+                        var botonVolverFaseD = Descendientes<Button>(placeholderFaseD).FirstOrDefault(b =>
+                            (BindingOperations.GetBindingExpression(b, Button.CommandProperty)?.ParentBinding?.Path?.Path) == "Exploration.CancelEditingChestCommand");
+                        var contentControlFaseD = Descendientes<ContentControl>(placeholderFaseD).FirstOrDefault(cc =>
+                            ReferenceEquals(cc.Content, vm.Exploration.ChestItemEdit) && cc.ContentTemplate != null);
+                        var slotsFaseD = Descendientes<ItemsControl>(placeholderFaseD).FirstOrDefault(ic =>
+                            ReferenceEquals(ic.ItemsSource, vm.Exploration.EditingChestSlots));
+                        Console.WriteLine($"COFRES-INSPECTOR-FASED-R1: boton '<- Cofres' encontrado={botonVolverFaseD != null}, IsVisible={botonVolverFaseD?.IsVisible}, ContentControl(ItemEditTemplate) encontrado={contentControlFaseD != null}, rejilla de slots encontrada={slotsFaseD != null}, ancho real del ContentControl={contentControlFaseD?.ActualWidth:0.#}px, ancho real del Placeholder={placeholderFaseD.ActualWidth:0.#}px");
+                        if (botonVolverFaseD == null || !botonVolverFaseD.IsVisible)
+                            Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED-R1 - no se encuentra el boton real '<- Cofres' (CancelEditingChestCommand) en la cabecera del Inspector");
+                        if (contentControlFaseD == null || slotsFaseD == null)
+                            Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED-R1 - el Inspector no tiene ya el ContentControl real de ItemEditTemplate y/o la rejilla real de slots (EditingChestSlots) - el bloque no se movio de verdad");
+
+                        var tituloFaseD = Descendientes<TextBlock>(placeholderFaseD).FirstOrDefault(t => t.Text == filaFaseD.VariantName);
+                        Console.WriteLine($"COFRES-INSPECTOR-FASED-R1: titulo dinamico encontrado (Text==VariantName '{filaFaseD.VariantName}')={tituloFaseD != null}");
+                        if (tituloFaseD == null)
+                            Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED-R1 - la cabecera del Inspector no muestra el VariantName real del cofre abierto");
+
+                        // Ancho completo: el Placeholder debe ocupar el MISMO ancho real de contenido
+                        // que ya usa Browse en este sidebar (documentado en bitacora Fase C: "230-245px
+                        // de contenido de categoria" a tamaño de ventana por defecto, 320px de columna
+                        // menos el Padding=10 de la tarjeta flotante y la barra de scroll vertical real)
+                        // - NUNCA el ~185-196px que dejaba vivir el editor indentado 33px + Padding=8
+                        // dentro de una fila de ListBox (Margin="33,0,..." de ChestRowTemplate, ya
+                        // eliminado). Umbral real: >=220px (por debajo de eso volveria a ser el ancho
+                        // estrecho de antes, no "ancho completo").
+                        if (placeholderFaseD.ActualWidth < 220)
+                            Console.WriteLine($"FALLO: COFRES-INSPECTOR-FASED-R1 - el Inspector mide solo {placeholderFaseD.ActualWidth:0.#}px de ancho real, por debajo del ancho real de contenido de Browse en este mismo sidebar (230-245px) - no parece estar aprovechando el ancho completo");
+
+                        vm.Exploration.CancelEditingChestCommand.Execute(null);
+                        DoEvents(); DoEvents();
+                        Console.WriteLine($"COFRES-INSPECTOR-FASED-R1: tras boton '<- Cofres' (CancelEditingChestCommand) -> SidebarMode={vm.Exploration.SidebarMode} (esperado Browse)");
+                        if (vm.Exploration.SidebarMode != ExplorationSidebarMode.Browse)
+                            Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED-R1 - el boton '<- Cofres' no vuelve SidebarMode a Browse");
+                    }
+
+                    // ---- Reubica la medicion de Metas/Groups (punto 2) al Inspector con el objeto de 17 prefijos ----
+                    vm.Library.SearchText = "Hacha Arrojadiza de Adamantita";
+                    WaitForDispatcher(300);
+                    var picaroFaseD = vm.Library.Results.FirstOrDefault();
+                    vm.Library.SearchText = string.Empty;
+                    DoEvents();
+
+                    if (picaroFaseD == null)
+                        Console.WriteLine("COFRES-INSPECTOR-FASED-PICARO: AVISO - no se encontro el arma Picaro de prueba en la Libreria - se omite la remedicion");
+                    else
+                    {
+                        var filaParaPicaroFaseD = vm.Exploration.ChestRows.FirstOrDefault(r => r.Items.Count > 0);
+                        if (filaParaPicaroFaseD == null)
+                            Console.WriteLine("COFRES-INSPECTOR-FASED-PICARO: AVISO - ningun cofre real tiene contenido para alojar el Picaro de prueba");
+                        else
+                        {
+                            vm.Exploration.EditChestCommand.Execute(filaParaPicaroFaseD);
+                            DoEvents(); DoEvents();
+                            var slotDestinoFaseD = vm.Exploration.EditingChestSlots.FirstOrDefault();
+                            if (slotDestinoFaseD == null)
+                                Console.WriteLine("COFRES-INSPECTOR-FASED-PICARO: AVISO - el cofre elegido no tiene ningun slot real editable");
+                            else
+                            {
+                                vm.Exploration.SelectChestSlot(slotDestinoFaseD);
+                                DoEvents();
+                                slotDestinoFaseD.ItemId = picaroFaseD.Id;
+                                DoEvents(); DoEvents(); window.UpdateLayout();
+
+                                Console.WriteLine($"COFRES-INSPECTOR-FASED-PICARO: objeto real colocado='{picaroFaseD.DisplayName}' (Id={picaroFaseD.Id}), CanHavePrefix={vm.Exploration.ChestItemEdit.CanHavePrefix}, Groups.Count={vm.Exploration.ChestItemEdit.Groups.Count} (esperado 17 prefijos legales reales)");
+
+                                // Captura de la parte de ARRIBA del Inspector (cabecera "<- Cofres" +
+                                // titulo dinamico + rejilla de slots). El bloque COFRES-INSPECTOR-P2-
+                                // PICARO de mas arriba (investigacion original, antes de Fase C/D) ya
+                                // hizo su propio BringIntoView sobre Groups sobre esta MISMA instancia
+                                // real del editor (ahora vive en el Inspector) - el ScrollViewer
+                                // exterior (ExplorationSidebarScroll) queda con ese scroll aplicado, asi
+                                // que hace falta volver arriba de verdad antes de esta captura o se
+                                // repetiria el mismo recorte que motivo esta fase.
+                                if (window.FindName("ExplorationSidebarScroll") is ScrollViewer scrollInspectorFaseD)
+                                {
+                                    scrollInspectorFaseD.ScrollToTop();
+                                    DoEvents(); DoEvents(); window.UpdateLayout();
+                                }
+                                string rutaFaseDArriba = CapturaVentanaKeepQa(window, "fased-inspector-cabecera-y-rejilla");
+                                Console.WriteLine($"COFRES-INSPECTOR-FASED: captura real de la cabecera+rejilla del Inspector (sin scroll forzado) -> {rutaFaseDArriba}");
+
+                                var contentControlPicaroFaseD = Descendientes<ContentControl>(window).FirstOrDefault(cc =>
+                                    ReferenceEquals(cc.Content, vm.Exploration.ChestItemEdit) && cc.ContentTemplate != null);
+                                var metasPicaroFaseD = Descendientes<ItemsControl>(window).FirstOrDefault(ic =>
+                                    ReferenceEquals(ic.ItemsSource, vm.Exploration.ChestItemEdit.Metas));
+                                var groupsPicaroFaseD = Descendientes<ItemsControl>(window).FirstOrDefault(ic =>
+                                    ReferenceEquals(ic.ItemsSource, vm.Exploration.ChestItemEdit.Groups));
+                                if (contentControlPicaroFaseD != null && metasPicaroFaseD != null && groupsPicaroFaseD != null)
+                                {
+                                    var rectMetasFaseD = new Rect(metasPicaroFaseD.TransformToAncestor(contentControlPicaroFaseD).Transform(new Point(0, 0)), new Size(metasPicaroFaseD.ActualWidth, metasPicaroFaseD.ActualHeight));
+                                    var rectGroupsFaseD = new Rect(groupsPicaroFaseD.TransformToAncestor(contentControlPicaroFaseD).Transform(new Point(0, 0)), new Size(groupsPicaroFaseD.ActualWidth, groupsPicaroFaseD.ActualHeight));
+                                    Console.WriteLine($"COFRES-INSPECTOR-FASED-PICARO: ContentControl.ActualWidth={contentControlPicaroFaseD.ActualWidth:0.#}px (ancho completo del Inspector, antes ~250px indentado en la fila), ContentControl.ActualHeight={contentControlPicaroFaseD.ActualHeight:0.#}px, Metas.Bottom={rectMetasFaseD.Bottom:0.#}px, Groups.Bottom={rectGroupsFaseD.Bottom:0.#}px (esperado: los dos DENTRO del ContentControl, sin corte)");
+                                    if (rectMetasFaseD.Bottom > contentControlPicaroFaseD.ActualHeight + 1 || rectGroupsFaseD.Bottom > contentControlPicaroFaseD.ActualHeight + 1)
+                                        Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED-PICARO - con el caso real mas exigente (17 prefijos) YA en el Inspector de ancho completo, Metas/Groups siguen cortandose");
+
+                                    groupsPicaroFaseD.BringIntoView();
+                                    DoEvents(); DoEvents(); window.UpdateLayout();
+                                }
+
+                                string rutaFaseD = CapturaVentanaKeepQa(window, "fased-inspector-completo-picaro");
+                                Console.WriteLine($"COFRES-INSPECTOR-FASED: captura real del Inspector con Metas/Groups (17 prefijos, objeto real) -> {rutaFaseD}");
+
+                                // Tercera captura: baja del todo el ScrollViewer exterior para dejar
+                                // constancia real de la lista de Prefixes (los 17 prefijos legales
+                                // individuales) y de los botones Guardar/Cancelar, ambos por debajo del
+                                // viewport en las 2 capturas anteriores.
+                                if (window.FindName("ExplorationSidebarScroll") is ScrollViewer scrollInspectorFaseD2)
+                                {
+                                    Console.WriteLine($"COFRES-INSPECTOR-FASED-SCROLLDEBUG: antes de ScrollToBottom -> VerticalOffset={scrollInspectorFaseD2.VerticalOffset:0.#}, ScrollableHeight={scrollInspectorFaseD2.ScrollableHeight:0.#}, ExtentHeight={scrollInspectorFaseD2.ExtentHeight:0.#}, ViewportHeight={scrollInspectorFaseD2.ViewportHeight:0.#}");
+                                    scrollInspectorFaseD2.ScrollToBottom();
+                                    DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
+                                    Console.WriteLine($"COFRES-INSPECTOR-FASED-SCROLLDEBUG: despues de ScrollToBottom -> VerticalOffset={scrollInspectorFaseD2.VerticalOffset:0.#}, ScrollableHeight={scrollInspectorFaseD2.ScrollableHeight:0.#}, ExtentHeight={scrollInspectorFaseD2.ExtentHeight:0.#}, ViewportHeight={scrollInspectorFaseD2.ViewportHeight:0.#}");
+                                    string rutaFaseDAbajo = CapturaVentanaKeepQa(window, "fased-inspector-prefijos-guardar-cancelar");
+                                    Console.WriteLine($"COFRES-INSPECTOR-FASED: captura real del final del Inspector (Prefixes de los 17 reales + Guardar/Cancelar) -> {rutaFaseDAbajo}");
+
+                                    // Guarda de regresion real (no solo debug): las filas Guardar/Cancelar
+                                    // deben quedar DENTRO del DockPanel.ActualHeight real (MinHeight=1000,
+                                    // ExploracionRediseno Fase D - subido de 800 tras medir aqui mismo que
+                                    // un cofre real de 40 slots con un objeto de 17 prefijos las dejaba en
+                                    // Y=848,5-873,1px, mas alla de los 800px de entonces, inalcanzables con
+                                    // scroll). Si ActualHeight de cada hijo NUNCA se encoge por el recorte
+                                    // del padre (solo se deja de pintar mas alla de el), comparar Bottom
+                                    // contra panelFaseD.ActualHeight detecta el mismo recorte real si
+                                    // volviera a reproducirse con contenido aun mas alto.
+                                    if (window.FindName("ExplorationSidebarPanel") is FrameworkElement panelFaseD)
+                                    {
+                                        var botonesGuardarCancelarFaseD = Descendientes<System.Windows.Controls.Primitives.UniformGrid>(placeholderFaseD).FirstOrDefault();
+                                        if (botonesGuardarCancelarFaseD != null)
+                                        {
+                                            var esquinaBotones = botonesGuardarCancelarFaseD.TransformToAncestor(panelFaseD).Transform(new Point(0, 0));
+                                            double bottomBotonesFaseD = esquinaBotones.Y + botonesGuardarCancelarFaseD.ActualHeight;
+                                            Console.WriteLine($"COFRES-INSPECTOR-FASED: Guardar/Cancelar real (natural, sin recortar) -> Y={esquinaBotones.Y:0.#}px, Bottom={bottomBotonesFaseD:0.#}px, DockPanel.ActualHeight={panelFaseD.ActualHeight:0.#}px (MinHeight XAML=1000)");
+                                            if (bottomBotonesFaseD > panelFaseD.ActualHeight + 1)
+                                                Console.WriteLine($"FALLO: COFRES-INSPECTOR-FASED - Guardar/Cancelar quedan en Bottom={bottomBotonesFaseD:0.#}px, MAS ALLA del DockPanel.ActualHeight={panelFaseD.ActualHeight:0.#}px real - inalcanzables con scroll, regresion del ajuste de MinHeight");
+                                        }
+                                    }
+                                }
+                            }
+
+                            // ---- Ruta de cierre 2: Guardar (SaveEditingChestAsync) ----
+                            var tareaGuardarFaseD = vm.Exploration.SaveEditingChestCommand.ExecuteAsync(null);
+                            while (!tareaGuardarFaseD.IsCompleted) DoEvents();
+                            DoEvents(); DoEvents();
+                            Console.WriteLine($"COFRES-INSPECTOR-FASED-R-GUARDAR: tras Guardar -> SidebarMode={vm.Exploration.SidebarMode} (esperado Browse), EditingChest={(vm.Exploration.EditingChest == null ? "null" : "NO-NULL")}");
+                            if (vm.Exploration.SidebarMode != ExplorationSidebarMode.Browse)
+                                Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED-R-GUARDAR - Guardar no vuelve SidebarMode a Browse desde el Inspector real");
+                        }
+                    }
+
+                    // ---- Ruta 2 (marcador del mapa) y Ruta 3 (resultado de busqueda) - regresion AR-13d/AR-13e,
+                    // deben abrir ahora el Inspector REAL (con su cabecera/rejilla real), no el placeholder de Fase C.
+                    bool abrioCofre7FaseD = vm.Exploration.TryOpenChestAtTile(5579, 1036);
+                    DoEvents(); DoEvents(); window.UpdateLayout();
+                    var cabeceraTrasMapaFaseD = Descendientes<Button>(placeholderFaseD).FirstOrDefault(b =>
+                        (BindingOperations.GetBindingExpression(b, Button.CommandProperty)?.ParentBinding?.Path?.Path) == "Exploration.CancelEditingChestCommand");
+                    Console.WriteLine($"COFRES-INSPECTOR-FASED-R2: TryOpenChestAtTile(5579,1036) -> encontro={abrioCofre7FaseD}, SidebarMode={vm.Exploration.SidebarMode} (esperado ChestInspector), cabecera real '<- Cofres' presente={cabeceraTrasMapaFaseD != null}");
+                    if (!abrioCofre7FaseD || vm.Exploration.SidebarMode != ExplorationSidebarMode.ChestInspector || cabeceraTrasMapaFaseD == null)
+                        Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED-R2 - abrir el cofre real desde el marcador del mapa no deja el Inspector REAL (con cabecera) visible - regresion de AR-13d/AR-13e");
+                    vm.Exploration.CancelEditingChestCommand.Execute(null);
+                    DoEvents(); DoEvents();
+
+                    var hitFaseD = new WorldSearchHitRowViewModel(new WorldSearchHit(5580, 1037, "Barra de hierro", WorldSearchKind.ChestItem));
+                    vm.Exploration.GoToWorldSearchHitCommand.Execute(hitFaseD);
+                    DoEvents(); DoEvents(); window.UpdateLayout();
+                    var cabeceraTrasBusquedaFaseD = Descendientes<Button>(placeholderFaseD).FirstOrDefault(b =>
+                        (BindingOperations.GetBindingExpression(b, Button.CommandProperty)?.ParentBinding?.Path?.Path) == "Exploration.CancelEditingChestCommand");
+                    Console.WriteLine($"COFRES-INSPECTOR-FASED-R3: GoToWorldSearchHitCommand (ChestItem) -> SidebarMode={vm.Exploration.SidebarMode} (esperado ChestInspector), cabecera real '<- Cofres' presente={cabeceraTrasBusquedaFaseD != null}");
+                    if (vm.Exploration.SidebarMode != ExplorationSidebarMode.ChestInspector || cabeceraTrasBusquedaFaseD == null)
+                        Console.WriteLine("FALLO: COFRES-INSPECTOR-FASED-R3 - un resultado de busqueda ChestItem no deja el Inspector REAL visible - regresion de AR-13e");
+                    vm.Exploration.CancelEditingChestCommand.Execute(null);
+                    DoEvents(); DoEvents();
+                }
+            }
+            catch (Exception exFaseD) { Console.WriteLine("COFRES-INSPECTOR-FASED-EXCEPTION: " + exFaseD); }
+
             // Deja recargado el mundo de siempre del resto del arnes, mismo criterio que AR-13d/AR-13e.
             vm.Exploration.ClearOreMarksCommand.Execute(null);
             vm.Exploration.ChestViewMode = 0;
