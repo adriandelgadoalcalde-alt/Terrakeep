@@ -85,10 +85,12 @@ namespace Terrakeep.App.Services;
 // en su frame de reposo mientras itemAnimation==0). "legAnimationFrame" (0=reposo, 7..19=ciclo
 // de andar real) + "mirror" (girar) son el resultado real de esa investigacion.
 //
-// ALCANCE DELIBERADO restante, documentado y no oculto: sin accesorios (alas, mochilas,
-// capas...), item en mano, monturas, ni animacion de torso/cabeza/pelo (torso/hombros
-// confirmados FIJOS durante el andar real, ver WalkArmColumn) - ver ESPEC-dibujado-sprites.md#9
-// para el listado completo de huecos reales conocidos. CORRECCION 21-sep-2026 (hover en Inicio,
+// ALCANCE DELIBERADO restante, documentado y no oculto: item en mano, monturas, ni animacion de
+// torso/cabeza/pelo (torso/hombros confirmados FIJOS durante el andar real, ver WalkArmColumn) -
+// ver ESPEC-dibujado-sprites.md#9 para el listado completo de huecos reales conocidos. Wings
+// Encargo1 (25-sep-2026): "alas" sale de esta lista - ver LoadWingFrame/WingDrawTable para la
+// capa base estatica ya portada (sin animacion/particulas, ver el ALCANCE DELIBERADO propio de
+// WingDrawTable). CORRECCION 21-sep-2026 (hover en Inicio,
 // bitacora.md): esta nota decia antes que el BRAZO tambien se quedaba fijo "fiel al juego real,
 // solo cambia con un objeto en uso" - error real de investigacion de la pasada anterior,
 // corregido con cita exacta (Player.cs:36038-36042 + PlayerDrawSet.cs:2942/2993-3028/3037-3038,
@@ -247,6 +249,48 @@ public static class PlayerPreviewRenderer
             Composite(canvas, LoadHandAccessoryFrame(file, armCell, legAnimationFrame), null);
         }
 
+        // GapAnalysis Encargo E (25-sep-2026): accessories?.FrontFile (item.frontSlot,
+        // Player.cs:37185-37188) NO es una capa unica "encima de todo" - es el MISMO sprite
+        // recortado en 2 mitades (PlayerDrawLayers.cs:3908-3993,
+        // DrawPlayer_32_FrontAcc_FrontPart/_BackPart): FrontPart = mitad IZQUIERDA de la tira
+        // (bodyFrame.Width -= num, num = bodyFrame.Width/2, arranca en X=0), BackPart = mitad
+        // DERECHA (mismo ancho recortado, bodyFrame.X += num). La tira en si SIGUE la
+        // convencion estandar 40x(56*N) alineada al lienzo (TextureAssets.AccFront usa
+        // drawPlayer.bodyFrame directamente, PlayerDrawLayers.cs:3897-3904 - NO el ancho
+        // variable de Shield, se reutiliza LoadStripFrameAbsolute/SliceStripRow sin cambios), lo
+        // UNICO nuevo es el recorte de mitad sobre el frame YA resuelto por fila (MaskHalf).
+        // Posicion real de cada mitad (confirmado linea a linea: `vector` en ambos metodos usa
+        // SIEMPRE `drawinfo.drawPlayer.bodyFrame` completo, NO la copia local ya recortada, y
+        // `bodyVect`/origin solo se desplaza -num cuando SpriteEffects.FlipHorizontally esta
+        // activo - orientacion que este renderer NUNCA usa por capa, compone siempre "normal" y
+        // espeja el LIENZO COMPLETO al final, FlipHorizontal, mismo criterio ya establecido para
+        // el resto de capas) - en la orientacion normal cada mitad del ORIGEN se compone en la
+        // MISMA mitad de posicion del lienzo (izquierda->izquierda, derecha->derecha), sin
+        // desplazamiento extra que portar aqui.
+        //
+        // Condicion real de incompatibilidad (PlayerDrawLayers.cs:3910/3953, identica en los 2
+        // metodos): "front<=0 || front>=Count || (DontDrawIfWearingAScarfOrCape[front] &&
+        // (neck>0 && IsAScarf[neck] || back>0 && IsACape[back]))" - transcrita en
+        // PlayerBodyDrawTables.FrontDontDrawIfWearingScarfOrCape/NeckIsAScarf/BackIsACape (ver
+        // su comentario real para la correccion importante encontrada: NINGUN accesorio Front
+        // REAL alcanza nunca el unico frontId con la condicion activa - LIMITE REAL documentado
+        // ahi, la tabla se porta igual, fiel y completa). accessories?.FrontSlot es null para
+        // Calamity (numeracion propia no compartida) - sin FrontSlot conocido, NUNCA se aplica
+        // la incompatibilidad (fiel-por-defecto, mismo criterio que ShoesSlot/HeadSlot null en
+        // el resto de este metodo). NeckSlot/BackSlot ya estan en scope (EquippedAccessories) -
+        // BackSlot en concreto es EXACTAMENTE "player.back" real (el canal Back NORMAL, ya
+        // reclasificado por EquipmentAppearanceResolver - Backpack/Tail vacian BackSlot a null,
+        // igual que en el juego real solo el canal Back normal alimenta esta comprobacion).
+        bool frontHidden = accessories?.FrontSlot is int frontIdForCheck
+            && PlayerBodyDrawTables.FrontDontDrawIfWearingScarfOrCape(frontIdForCheck)
+            && ((accessories?.NeckSlot is int neckIdForCheck && PlayerBodyDrawTables.NeckIsAScarf(neckIdForCheck))
+                || (accessories?.BackSlot is int backIdForCheck && PlayerBodyDrawTables.BackIsACape(backIdForCheck)));
+        void DrawFrontHalf(bool leftHalf)
+        {
+            if (frontHidden || accessories?.FrontFile is not { } frontFile) return;
+            Composite(canvas, MaskHalf(LoadStripFrameAbsolute(frontFile, legAnimationFrame), leftHalf), null);
+        }
+
         // ESPEC-dibujado-sprites.md#7.2: cadena real de SetMatch (Player.cs:36053-36092), tres
         // llamadas encadenadas que pueden sustituir legs/head. `bodyId`/`legsId` en 0 quiere
         // decir "sin bodySlot/legSlot vanilla conocido" (slot vacio o pieza de Calamity) - las
@@ -327,10 +371,23 @@ public static class PlayerPreviewRenderer
         // sprite YA resuelto. Los 3 canales comparten la MISMA textura real TextureAssets.AccBack
         // (PlayerDrawLayers.cs:484 Backpack, :584 Tail, ya portado para BackAcc) - misma tira
         // vertical 40x(56*N), DrawAccessory reutilizado sin logica nueva. Orden real
-        // (LegacyPlayerRenderer.cs:178/180/182/184/185): Backpacks -> Tails ->
-        // Wings(fuera de alcance) -> BackHair -> BackAcc - por eso van ANTES del pelo trasero.
+        // (LegacyPlayerRenderer.cs:178/180/182/184/185): Backpacks -> Tails -> Wings -> BackHair
+        // -> BackAcc - por eso van ANTES del pelo trasero.
         DrawAccessory(accessories?.BackpackFile);
         DrawAccessory(accessories?.TailFile);
+
+        // Paso 1a-2 [09_Wings]: Wings Encargo1 (25-sep-2026) - capa BASE de alas, un unico
+        // fotograma fijo (frame 0/"reposo"), sin animacion/particulas/glow (ver el ALCANCE
+        // DELIBERADO real completo en el comentario de clase de WingDrawTable). Posicion real
+        // ENTRE Tails y BackHair (LegacyPlayerRenderer.cs:178-184 real:
+        // DrawPlayer_08_Backpacks -> _08_1_Tails -> _09_Wings -> _01_BackHair -> _10_BackAcc),
+        // NO junto al resto de accesorios de tira simple (DrawAccessory) - LoadWingFrame tiene la
+        // cita real completa de la formula de posicion/recorte (PlayerDrawLayers.cs:655-1105).
+        // wingId=0 (o cualquier id de Calamity, WingSlot siempre null ahi) usa la posicion
+        // GENERICA de WingDrawTable, fiel-por-defecto, mismo criterio ya establecido para
+        // BodySlot/LegsSlot/etc.
+        if (accessories?.WingFile is { } wingFile)
+            Composite(canvas, LoadWingFrame(wingFile, accessories?.WingSlot ?? 0), null);
 
         // DrawPlayer_01_BackHair real: la capa TRASERA de un peinado largo se dibuja la
         // PRIMERISIMA de todas (antes incluso de piernas/torso), para que el resto del cuerpo
@@ -339,9 +396,9 @@ public static class PlayerPreviewRenderer
             Composite(canvas, hatHair ? LoadHairAlt(hairStyle) : LoadHair(hairStyle), colors.Hair);
 
         // Paso 1b [10_BackAcc]: capa/mochila trasera - PlayerDrawLayers.cs real, BackAcc va justo
-        // despues de HairBack y antes de la piel (Wings queda fuera de alcance - Tails/Backpack
-        // ya portados arriba, GapAnalysis Encargo A; HeadBack justo debajo, GapAnalysis Encargo B;
-        // Balloons justo debajo de HeadBack, GapAnalysis Encargo C).
+        // despues de HairBack y antes de la piel (Wings ya portado arriba, Wings Encargo1; Tails/
+        // Backpack ya portados arriba, GapAnalysis Encargo A; HeadBack justo debajo, GapAnalysis
+        // Encargo B; Balloons justo debajo de HeadBack, GapAnalysis Encargo C).
         DrawAccessory(accessories?.BackFile);
 
         // Paso 1c [11_BackHead]: GapAnalysis Encargo B (25-sep-2026) - version "de espaldas" del
@@ -478,6 +535,38 @@ public static class PlayerPreviewRenderer
         Composite(canvas, LoadFrame0("body0", "eyewhites"), null); // ya blanco en el sprite real
         Composite(canvas, LoadFrame0("body0", "eyes"), colors.Eyes);
 
+        // GapAnalysis Encargo F (25-sep-2026): FaceHead (item.faceSlot clasificado en
+        // ArmorIDs.Face.Sets.DrawInFaceHeadLayer, ver FaceAccessoryLayerTable) se dibuja DENTRO
+        // de la cabeza, ANTES del pelo/casco - PlayerDrawLayers.cs real,
+        // DrawPlayer_21_Head_TheFace (llamada al PRINCIPIO de DrawPlayer_21_Head, linea 2098,
+        // rama "faceHead>0" en 2592-2596). Usa la MISMA tira 40x(56*N) que el resto de tipos de
+        // accesorio (TextureAssets.AccFace, `drawinfo.drawPlayer.bodyFrame` como rectangulo de
+        // origen) - DrawAccessory reutilizado sin logica nueva. ALCANCE DELIBERADO: el juego real
+        // SUSTITUYE la piel base de la cabeza por este sprite en esa rama (NO dibuja
+        // TextureAssets.Players[skinVar,0]) - este renderer no reproduce esa sustitucion (la piel
+        // base de arriba se dibuja siempre, capa ya existente antes de este encargo), asi que
+        // FaceHead se compone ENCIMA de la piel en vez de reemplazarla; hueco real, documentado,
+        // no oculto (mismo criterio que el resto de "ALCANCE DELIBERADO" de esta clase).
+        DrawAccessory(accessories?.FaceHeadFile);
+
+        // Face bajo el pelo: excepcion real ArmorIDs.Face.Sets.DrawInFaceUnderHairLayer (unico
+        // caso real, faceSlot=5/Blindfold) - PlayerDrawLayers.cs real,
+        // DrawPlayer_21_Head_TheFace lineas 2598-2613 (con faceHead puesto a la vez) / 2633-2638
+        // (sin faceHead) - se dibuja aqui, ANTES del pelo/casco, en vez de en su posicion
+        // habitual (Paso 9b, junto a FaceMask/FaceFlower/Shield). FaceSlot es el indice REAL
+        // vanilla ya resuelto por ResolveAccessories (null para Calamity/vacio, nunca entra aqui).
+        bool faceUnderHair = accessories?.FaceSlot is int faceSlotForHair && FaceAccessoryLayerTable.IsUnderHairLayer(faceSlotForHair);
+        if (faceUnderHair) DrawAccessory(accessories?.FaceFile);
+
+        // FaceMask bajo el casco: excepcion real ArmorIDs.Head.Sets.DrawFaceMaskUnderHeadLayer -
+        // a diferencia de la de arriba, esta tabla esta indexada por HEADSLOT, no por faceSlot
+        // (ver PlayerBodyDrawTables.DrawFaceMaskUnderHeadLayer) - PlayerDrawLayers.cs real,
+        // DrawPlayer_21_Head lineas 2126-2142 (flag5), justo antes del pelo/casco. Cuando esta
+        // tabla es true para el headSlot puesto, PreventFaceMaskDraw NO se consulta (confirmado
+        // en el propio flag5 real - la condicion solo mira DrawFaceMaskUnderHeadLayer).
+        bool faceMaskUnderHead = PlayerBodyDrawTables.DrawFaceMaskUnderHeadLayer(headId);
+        if (faceMaskUnderHead) DrawAccessory(accessories?.FaceMaskFile);
+
         void DrawHair()
         {
             if (hideHair) return;
@@ -496,9 +585,58 @@ public static class PlayerPreviewRenderer
         if (fullHair) { DrawHelmet(); DrawHair(); }
         else { DrawHair(); DrawHelmet(); }
 
-        // Paso 9b [22_FaceAcc]: accesorio de cara (gafas, mascaras...), justo despues de la
-        // cabeza/pelo/casco (FrontAccBack queda fuera de alcance de este encargo).
-        DrawAccessory(accessories?.FaceFile);
+        // Paso 9a2 [21_Beard]: GapAnalysis Encargo G (25-sep-2026) - accessories?.BeardFile,
+        // canal beardSlot (Player.cs:37243-37246: "if (item.beardSlot > 0) beard =
+        // item.beardSlot;"). Se dibuja DENTRO de la capa Head, DESPUES de casco/pelo
+        // (PlayerDrawLayers.cs:2428-2444 real: "bool flag7 = drawinfo.drawPlayer.head < 0 ||
+        // !ArmorIDs.Head.Sets.PreventBeardDraw[drawinfo.drawPlayer.head]; ... if
+        // ((drawinfo.drawPlayer.beard > 0) & flag7) { ... }") - mismo orden real que
+        // DrawHelmet()/DrawHair() de arriba, ANTES de FaceAcc. PreventBeardDraw(headSlot)
+        // oculta la barba para 47 cascos reales (mascaras/cascos completos, ver
+        // PlayerBodyDrawTables.PreventBeardDraw) - headSlot desconocido (pieza de Calamity o
+        // sin casco puesto, armor.HeadSlot==null) NUNCA la oculta, mismo criterio real
+        // "head<0 siempre deja pasar la barba" del motor. Sprite via LoadFrame0Absolute
+        // (frame0, sin animar) - mismo criterio ya establecido para HeadFile/HeadBackFile
+        // arriba (la cabeza/pelo/casco de este doll se quedan siempre en su frame de reposo,
+        // ver el comentario de cabecera de la clase).
+        // Tinte real (PlayerDrawLayers.cs:2436-2440, cita completa): "Color color6 =
+        // drawinfo.colorArmorHead; if (ArmorIDs.Beard.Sets.UseHairColor[drawinfo.drawPlayer.
+        // beard]) { color6 = drawinfo.colorHair; }" - los 3 "Wilson beards" (textura gris, sin
+        // color propio) se tiñen con el COLOR DE PELO REAL del personaje (colors.Hair), NO con
+        // un dye de armadura ni un color fijo; GingerBeard (textura ya naranja de por si) usa
+        // colorArmorHead, que en un doll de reposo sin buffs/dyes equivale a blanco puro (sin
+        // tinte añadido) - ver PlayerBodyDrawTables.BeardUsesHairColor para la cita completa de
+        // por que se decidio aplicar el color de pelo real aqui mismo (encaja en el canal
+        // Beard en si, no en el pipeline de dyes por canal completo del Encargo I aparte).
+        if (accessories?.BeardFile is { } beardFile)
+        {
+            bool preventBeardDraw = armor.HeadSlot is int beardHeadSlot && PlayerBodyDrawTables.PreventBeardDraw(beardHeadSlot);
+            if (!preventBeardDraw)
+            {
+                Tint? beardTint = accessories.BeardSlot is int beardId && PlayerBodyDrawTables.BeardUsesHairColor(beardId)
+                    ? colors.Hair
+                    : null;
+                Composite(canvas, LoadFrame0Absolute(beardFile), beardTint);
+            }
+        }
+
+        // Paso 9b [22_FaceAcc]: Face/FaceMask/FaceFlower en su posicion normal, salvo las
+        // excepciones ya resueltas arriba (Face bajo el pelo, FaceMask bajo el casco) - GapAnalysis
+        // Encargo F (25-sep-2026), PlayerDrawLayers.cs real DrawPlayer_22_FaceAcc (linea 2803 en
+        // adelante). FaceMask normal se suprime del todo si ArmorIDs.Head.Sets.
+        // PreventFaceMaskDraw[headSlot] (y no se dibujo ya bajo el casco); FaceFlower se suprime
+        // del todo si PreventFaceFlowerDraw[headSlot] - ninguna de las 2 tiene una posicion
+        // alternativa para ese caso, simplemente no se dibuja en ningun sitio (fiel al juego real).
+        if (!faceUnderHair) DrawAccessory(accessories?.FaceFile);
+        if (!faceMaskUnderHead && !PlayerBodyDrawTables.PreventFaceMaskDraw(headId)) DrawAccessory(accessories?.FaceMaskFile);
+        if (!PlayerBodyDrawTables.PreventFaceFlowerDraw(headId)) DrawAccessory(accessories?.FaceFlowerFile);
+
+        // Paso 9b2 [32_FrontAcc_BackPart]: GapAnalysis Encargo E (25-sep-2026) - mitad DERECHA
+        // real de Front, posicion FIJA (LegacyPlayerRenderer.cs real: justo despues de FaceAcc/
+        // MountFront/Pulley/JimsDroneRadio -que este doll no modela, sin diferencia visible en un
+        // doll estatico sin montura- y ANTES de Shield) - a diferencia de FrontPart (mas abajo),
+        // BackPart SIEMPRE va aqui, sin condicion de posicion alternativa.
+        DrawFrontHalf(leftHalf: false);
 
         // Paso 9c [25_Shield]: escudo, despues de FaceAcc y antes del brazo delantero (orden real
         // PlayerDrawLayers.cs) - ancho real variable, ver LoadShieldFrame.
@@ -531,9 +669,29 @@ public static class PlayerPreviewRenderer
         }
 
         // Paso 10b [29_OnhandAcc]: accesorio "en mano" (guantes/garras puestos como accesorio,
-        // no como arma), ultimo de los 7 tipos - despues del brazo/hombro delantero (FrontAccFront
-        // queda fuera de alcance de este encargo).
+        // no como arma), tras el brazo/hombro delantero.
         DrawHandAccessory(accessories?.HandOnFile, frontArmCell);
+
+        // Paso 10c [32_FrontAcc_FrontPart]: GapAnalysis Encargo E (25-sep-2026) - mitad
+        // IZQUIERDA real de Front, la ULTIMA capa real de accesorio de este renderer (orden real
+        // LegacyPlayerRenderer.cs: "...OnhandAcc(); BladedGlove(); if
+        // (!drawFrontAccInNeckAccLayer) FrontAcc_FrontPart(); extra_TorsoMinus(); ..." -
+        // BladedGlove no se modela, sin diferencia visible). `drawFrontAccInNeckAccLayer`
+        // (PlayerDrawSet.cs:1798-1809 real) solo se activa si
+        // ArmorIDs.Front.Sets.DrawsInNeckLayerRegardlessOfPlayerFrame[front] o
+        // (bodyFrame.Y/bodyFrame.Height==5 && DrawsInNeckLayer[front]) - investigado a fondo
+        // contra el decompilado real: los UNICOS indices reales con alguna de esas 2 tablas a
+        // true son 6 (TaxCollectorsSuit) y 13 (DeadCellsBeheadedBody), y NINGUN accesorio Front
+        // real (item.frontSlot) alcanza nunca esos 2 valores - solo se alcanzan via
+        // ArmorIDs.Body.Sets.IncludedCapeFront/IncludeCapeFrontAndBack (Player.cs:36126-36141,
+        // "front" DERIVADO de la ARMADURA DE CUERPO puesta, no de item.frontSlot) - un mecanismo
+        // COMPLETAMENTE DISTINTO, fuera de alcance de este encargo ("portar frontSlot"). Para
+        // TODOS los Front reales que este encargo cubre, drawFrontAccInNeckAccLayer es SIEMPRE
+        // false - FrontPart va SIEMPRE en esta posicion normal, sin rama alternativa que portar.
+        // DELIBERATE DIFFERENCE documentada: un futuro "Front derivado de body" tendria que
+        // reconsiderar esta posicion fija para esos 2 ids concretos - no reproducible con
+        // item.frontSlot solo, LIMITE REAL.
+        DrawFrontHalf(leftHalf: true);
 
         if (mirror) FlipHorizontal(canvas);
 
@@ -638,6 +796,26 @@ public static class PlayerPreviewRenderer
             int srcOffset = (startY + y) * Width * 4;
             int dstOffset = y * Width * 4;
             Array.Copy(stripPixels, srcOffset, outPixels, dstOffset, Width * 4);
+        }
+        return outPixels;
+    }
+
+    // GapAnalysis Encargo E (25-sep-2026): recorta una MITAD (izquierda o derecha) de un frame
+    // YA resuelto por SliceStripRow/LoadStripFrameAbsolute (siempre Width=40 fijo, a diferencia
+    // de Shield) - portado de DrawPlayer_32_FrontAcc_FrontPart/_BackPart
+    // (PlayerDrawLayers.cs:3908-3993), ver el comentario real completo de DrawFrontHalf en
+    // Render(). num=Width/2=20 (entero, igual que el juego real "bodyFrame.Width -= num" sobre
+    // un ancho par de 40) - ambas mitades miden exactamente 20px, sin resto que repartir.
+    private static byte[] MaskHalf(byte[] framePixels, bool leftHalf)
+    {
+        var outPixels = new byte[Width * Height * 4];
+        int num = Width / 2;
+        int startX = leftHalf ? 0 : num;
+        int halfWidth = Width - num;
+        for (int y = 0; y < Height; y++)
+        {
+            int rowStart = y * Width * 4;
+            Array.Copy(framePixels, rowStart + startX * 4, outPixels, rowStart + startX * 4, halfWidth * 4);
         }
         return outPixels;
     }
@@ -766,6 +944,67 @@ public static class PlayerPreviewRenderer
             int dstY = y + offsetY;
             if (dstY < 0 || dstY >= Height) continue;
             int srcRowStart = y * realWidth * 4;
+            for (int x = 0; x < realWidth; x++)
+            {
+                int dstX = x + offsetX;
+                if (dstX < 0 || dstX >= Width) continue;
+                Array.Copy(stripPixels, srcRowStart + x * 4, outPixels, (dstY * Width + dstX) * 4, 4);
+            }
+        }
+        return outPixels;
+    }
+
+    // Wings Encargo1 (25-sep-2026): gemelo de LoadBalloonFrame/SliceBalloonFrame0 (misma forma -
+    // hoja REAL de tamaño variable, recorte de UN solo fotograma ya en su posicion final dentro
+    // de un lienzo Width x Height), pero CADA wingId real tiene su PROPIA anchor/divisor/
+    // fotograma (WingDrawTable, transcripcion+derivacion completa de
+    // Terraria.DataStructures.PlayerDrawLayers.DrawPlayer_09_Wings - ver el comentario de esa
+    // clase para la cita linea a linea) - a diferencia de Balloon (offset FIJO -6,-4 para
+    // cualquier globo, origin no relacionado con el tamaño real del sprite), Wings SIEMPRE centra
+    // el frame recortado sobre su propio anchor (origin = mitad del ancho/alto real del
+    // fotograma, igual en las 51 IDs vanilla reales) - por eso el calculo de offsetX/offsetY aqui
+    // depende del ANCHO/ALTO REAL del PNG decodificado (realWidth/frameHeight), no de una
+    // constante como en Balloon.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (byte[] Pixels, int RealWidth, int RealHeight)> WingCache = new();
+
+    private static byte[] LoadWingFrame(string absolutePath, int wingId)
+    {
+        var (pixels, w, h) = WingCache.GetOrAdd(absolutePath, LoadWingStrip);
+        return SliceWingFrame(pixels, w, h, WingDrawTable.Resolve(wingId));
+    }
+
+    private static (byte[] Pixels, int RealWidth, int RealHeight) LoadWingStrip(string path)
+    {
+        using var stream = File.OpenRead(path);
+        var decoder = new PngBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        var frame = decoder.Frames[0];
+        var converted = new FormatConvertedBitmap(frame, PixelFormats.Bgra32, null, 0);
+        var pixels = new byte[frame.PixelWidth * frame.PixelHeight * 4];
+        converted.CopyPixels(pixels, frame.PixelWidth * 4, 0);
+        return (pixels, frame.PixelWidth, frame.PixelHeight);
+    }
+
+    // Recorta el fotograma real "frame.FrameIndex" (0-based, cada uno de alto real/frame.Divisor
+    // - "reposo" para las 50 de las 51 IDs vanilla reales, salvo el 40 - ver el comentario de
+    // WingDrawTable) y lo compone YA centrado sobre "frame.AnchorX/AnchorY" dentro de un lienzo
+    // Width x Height - recorta/deja transparente lo que cae fuera (un ala real puede dibujarse
+    // parcialmente fuera del lienzo, fiel al juego real, que tampoco la recorta al hitbox del
+    // jugador).
+    private static byte[] SliceWingFrame(byte[] stripPixels, int realWidth, int realHeight, WingFrame frame)
+    {
+        var outPixels = new byte[Width * Height * 4];
+        if (realWidth <= 0 || realHeight <= 0 || frame.Divisor <= 0) return outPixels;
+        int frameHeight = realHeight / frame.Divisor;
+        if (frameHeight <= 0) return outPixels;
+        int frameIndex = Math.Clamp(frame.FrameIndex, 0, frame.Divisor - 1);
+        int srcY = frameIndex * frameHeight;
+        int offsetX = frame.AnchorX - realWidth / 2;
+        int offsetY = frame.AnchorY - frameHeight / 2;
+        for (int y = 0; y < frameHeight; y++)
+        {
+            int dstY = y + offsetY;
+            if (dstY < 0 || dstY >= Height) continue;
+            int srcRowStart = (srcY + y) * realWidth * 4;
             for (int x = 0; x < realWidth; x++)
             {
                 int dstX = x + offsetX;

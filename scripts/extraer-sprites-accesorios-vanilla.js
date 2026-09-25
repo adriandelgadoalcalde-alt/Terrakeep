@@ -1,11 +1,18 @@
-// Extrae los sprites REALES de los 9 tipos de accesorio funcional/vanidad (Waist/Neck/
-// HandOn/HandOff/Back/Shield/Face/Shoe/Balloon) para el doll de cuerpo completo - PortSeleccion
-// Encargo1 (25-sep-2026), extension del mismo criterio ya usado para armadura (ver
+// Extrae los sprites REALES de los 11 tipos de accesorio funcional/vanidad (Waist/Neck/
+// HandOn/HandOff/Back/Shield/Face/Shoe/Balloon/Beard/Front) para el doll de cuerpo completo -
+// PortSeleccion Encargo1 (25-sep-2026), extension del mismo criterio ya usado para armadura (ver
 // extraer-sprites-armadura-vanilla.js, hermano directo de este script - NO reinventar
 // xnbToPng/la deteccion de "no cabe en el lienzo esperado"). GapAnalysis Encargo D
 // (25-sep-2026): ampliado con el 8º tipo, Shoe (shoeSlot) - mismo patron exacto. GapAnalysis
 // Encargo C (25-sep-2026): ampliado ademas con el 9º tipo, Balloon (balloonSlot) - mismo
-// patron exacto.
+// patron exacto. GapAnalysis Encargo G (25-sep-2026): ampliado ademas con el 10º tipo, Beard
+// (beardSlot) - solo 4 ids reales en total (1-4, ArmorIDs.Beard.Count=5 con el 0="sin barba"),
+// mismo patron de extraccion exacto (hoja completa sin recortar). GapAnalysis Encargo E
+// (25-sep-2026): ampliado ademas con el 11º tipo, Front (frontSlot) - 11 ids reales
+// (1,2,3,4,5,8,11,12,15,16,17 - ver vanilla_accessory_slots.json/scripts/extraer-slots-
+// accesorios-vanilla.py), misma tira 40x(56*N) alineada al lienzo (TextureAssets.AccFront usa
+// drawPlayer.bodyFrame directamente, PlayerDrawLayers.cs:3897-3904 - NO el ancho variable de
+// Shield ni el offset propio de Balloon), mismo patron de extraccion exacto.
 //
 // Confirmado en el decompilado real (Terraria.DataStructures.PlayerDrawLayers.cs) que
 // nombre de fichero real y textura usa cada capa:
@@ -19,12 +26,19 @@
 //   DrawPlayer_14_Shoes     -> TextureAssets.AccShoes[player.shoe]   -> Images/Acc_Shoes_N.xnb
 //   (Balloon, DrawPlayer_11_Balloons/_12_1_BalloonFronts)-> TextureAssets.AccBalloon[player.
 //     balloon/.balloonFront] -> Images/Acc_Balloon_N.xnb
+//   (Beard, dentro de la capa Head, DESPUES de casco/pelo)-> TextureAssets.AccBeard[player.
+//     beard] -> Images/Acc_Beard_N.xnb
+//   DrawPlayer_32_FrontAcc(_FrontPart/_BackPart) -> TextureAssets.AccFront[player.front] ->
+//     Images/Acc_Front_N.xnb
 // (rutas de fichero confirmadas independientemente en Terraria.Initializers.AssetInitializer.cs,
 // bucles de LoadAsset<Texture2D>("Images/Acc_X_" + n) - mismo patron que Armor_Head_N/
 // Armor_Legs_N ya usado por el script hermano; AccShoes concretamente en AssetInitializer.cs:
 // "TextureAssets.AccShoes[num18] = LoadAsset<Texture2D>("Images/Acc_Shoes_" + num18, ...)";
 // AccBalloon analogo, "TextureAssets.AccBalloon[num23] = LoadAsset<Texture2D>("Images/
-// Acc_Balloon_" + num23, ...)").
+// Acc_Balloon_" + num23, ...)"; AccBeard analogo, AssetInitializer.cs:538,
+// "TextureAssets.AccBeard[num24] = LoadAsset<Texture2D>("Images/Acc_Beard_" + num24, ...)");
+// AccFront analogo, AssetInitializer.cs:508-510, "TextureAssets.AccFront[num17] =
+// LoadAsset<Texture2D>("Images/Acc_Front_" + num17, ...)").
 //
 // A diferencia de Head/Body/Legs (donde el indice de PlrLoadout.Items/Social YA ES el tipo:
 // 0=cabeza/1=cuerpo/2=piernas), los 9 accesorios funcionales/vanidad de Terraria son slots
@@ -51,8 +65,8 @@
 //
 // Uso: node scripts/extraer-sprites-accesorios-vanilla.js
 // Salida: Terrakeep.App/Assets/player/acc_waist/{id}.png, acc_neck/, acc_handon/, acc_handoff/,
-//         acc_back/, acc_shield/, acc_face/, acc_shoes/, acc_balloon/ - hoja XNB->PNG real, sin
-//         recorte.
+//         acc_back/, acc_shield/, acc_face/, acc_shoes/, acc_balloon/, acc_beard/, acc_front/ -
+//         hoja XNB->PNG real, sin recorte.
 
 'use strict';
 const fs = require('fs');
@@ -75,6 +89,8 @@ const TIPOS = {
   fc: ['Face', 'Acc_Face_', 'acc_face'],
   sh: ['Shoe', 'Acc_Shoes_', 'acc_shoes'],
   bl: ['Balloon', 'Acc_Balloon_', 'acc_balloon'],
+  bd: ['Beard', 'Acc_Beard_', 'acc_beard'],
+  fr: ['Front', 'Acc_Front_', 'acc_front'],
 };
 
 function fullSheet(xnbPath) {
@@ -101,7 +117,7 @@ function extraerTipo(clave, ids) {
 
 const slots = JSON.parse(fs.readFileSync(SLOTS_JSON, 'utf8'));
 
-const idsPorTipo = { w: new Set(), n: new Set(), ho: new Set(), hf: new Set(), bk: new Set(), s: new Set(), fc: new Set(), sh: new Set(), bl: new Set() };
+const idsPorTipo = { w: new Set(), n: new Set(), ho: new Set(), hf: new Set(), bk: new Set(), s: new Set(), fc: new Set(), sh: new Set(), bl: new Set(), bd: new Set(), fr: new Set() };
 for (const entry of Object.values(slots)) {
   for (const clave of Object.keys(idsPorTipo)) {
     if (entry[clave] !== undefined) idsPorTipo[clave].add(entry[clave]);

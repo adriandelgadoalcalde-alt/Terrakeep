@@ -5,7 +5,8 @@ namespace Terrakeep.Core.Data;
 
 // Indice real de sprite de ACCESORIO por id de objeto vanilla - PortSeleccion Encargo1
 // (25-sep-2026), hermano directo de VanillaArmorSlotCatalog (mismo criterio, extendido a los
-// 7 tipos de accesorio funcional/vanidad: waist/neck/handOn/handOff/back/shield/face).
+// 7 tipos de accesorio funcional/vanidad: waist/neck/handOn/handOff/back/shield/face -
+// ampliado despues a shoe/balloon/beard, ver comentarios de GapAnalysis Encargo D/C/G mas abajo).
 // Fuente real: scripts/extraer-slots-accesorios-vanilla.py, valores LITERALES de
 // waistSlot/neckSlot/handOnSlot/handOffSlot/backSlot/shieldSlot/faceSlot/shoeSlot de Item.cs
 // (decompilado real) - el indice que Terraria usa para cargar Acc_Waist_N.xnb/Acc_Neck_N.xnb/
@@ -44,6 +45,38 @@ public sealed class VanillaAccessorySlotEntry
     // de accesorio, mismo patron exacto que los anteriores. Ver BalloonAccessoryLayerTable
     // para la clasificacion real Balloon/BalloonFront de este mismo valor.
     [JsonPropertyName("bl")] public int? Balloon { get; init; }
+    // GapAnalysis Encargo G (25-sep-2026): beardSlot real (Player.cs:37243-37246, "if
+    // (item.beardSlot > 0) beard = item.beardSlot;") - 10º tipo de accesorio, EXACTAMENTE 4
+    // objetos vanilla reales en todo el juego (GingerBeard=1, WilsonBeardShort=2,
+    // WilsonBeardLong=3, WilsonBeardMagnificent=4 - ArmorIDs.Beard.cs). A diferencia de los 9
+    // anteriores, scripts/extraer-slots-accesorios-vanilla.py transcribe estos 4 valores a mano
+    // (BEARD_MANUAL) en vez de usar el escaner generico - ver el comentario real de ese script
+    // para la justificacion completa (switch anidado + fallthrough con expresion no literal).
+    [JsonPropertyName("bd")] public int? Beard { get; init; }
+    // GapAnalysis Encargo E (25-sep-2026): frontSlot real (Player.cs:37185-37188, "if
+    // (item.frontSlot > 0) front = item.frontSlot;") - 11º tipo de accesorio, 11 objetos
+    // vanilla reales en total (CrimsonCloak/MysteriousCape/RedCape/WinterCape/ManaCloak/
+    // HunterCloak/PrinceCape/ShimmerCloak/ChippysWings/LunasCloak/DruidicSerpentCloak). A
+    // diferencia de la mayoria de los anteriores, 7 de los 11 SI entran por el escaner generico
+    // - los otros 4 (CrimsonCloak..WinterCape, valor via expresion "1 + type - 2284") y otros 3
+    // mas (ChippysWings/LunasCloak/DruidicSerpentCloak, dentro de un switch anidado) se
+    // transcriben a mano (FRONT_MANUAL/FRONT_MANUAL_NESTED en el script) - ver el comentario
+    // real de extraer-slots-accesorios-vanilla.py para la justificacion completa.
+    [JsonPropertyName("fr")] public int? Front { get; init; }
+    // Wings Encargo1 (25-sep-2026): wingSlot real (Player.cs, UpdateVisibleAccessory: "if
+    // (item.wingSlot > 0) wings = item.wingSlot;" - mismo patron exacto que los 11 anteriores).
+    // 12º tipo de accesorio, el indice que Terraria usa para cargar Wings_N.xnb - a diferencia de
+    // los otros 11 (Acc_X_N.xnb), el prefijo de fichero real de Wings NO lleva "Acc_" (confirmado
+    // en Terraria.Initializers.AssetInitializer.cs real: "TextureAssets.Wings[num] =
+    // LoadAsset<Texture2D>("Images/Wings_" + num, ...)"). 46 de los 51 sprites reales (Wings_1..
+    // Wings_51.xnb existen los 51 en la instalacion de Steam) tienen un item vanilla real que los
+    // asigna en la version de Item.cs que usa este catalogo (tModLoader 1.4.4.9, la misma que el
+    // resto del proyecto - ver CLAUDE.md) - wingSlot 47-51 NO estan asignados a ningun item real
+    // en esa version (confirmado con un escaneo completo de "wingSlot = " en Item.cs, ningun
+    // literal ni expresion llega a 47+), asi que hoy son inalcanzables desde un .plr real de este
+    // catalogo - limite real, documentado, no oculto (WingDrawTable SI modela su anchor/divisor
+    // real, por si el catalogo de items se amplia en el futuro o un .plr editado a mano los usa).
+    [JsonPropertyName("wg")] public int? Wing { get; init; }
 }
 
 public sealed class VanillaAccessorySlotCatalog

@@ -180,4 +180,101 @@ public static class PlayerBodyDrawTables
         25 => 26, // GlassSlipperMale -> GlassSlipperFemale
         _ => null,
     };
+
+    // GapAnalysis Encargo F (25-sep-2026): 3 tablas reales de ArmorIDs.Head.Sets, indexadas por
+    // HEADSLOT (no por faceSlot, a diferencia de FaceAccessoryLayerTable) - controlan como se
+    // dibuja el accesorio de FaceMask/FaceFlower ya resuelto, segun el CASCO puesto. Transcritas
+    // LITERAL de ArmorIDs.cs:20/22/24 del decompilado real:
+    //
+    //   ArmorIDs.cs:20 - DrawFaceMaskUnderHeadLayer = Factory.CreateBoolSet(false, 26, 51, 289,
+    //     81, 92, 106, 291, 10, 12, 178, 198, 267, 279, 160, 52, 53, 71, 55, 166, 167, 278, 203);
+    //   ArmorIDs.cs:22 - PreventFaceFlowerDraw = Factory.CreateBoolSet(false, 92, 275);
+    //   ArmorIDs.cs:24 - PreventFaceMaskDraw = Factory.CreateBoolSet(false, 27, 20, 107, 108,
+    //     127, 162, 168, 118, 123, 164, 155, 150, 137, 186, 125, 136, 153, 154, 169, 148, 165,
+    //     151, 173, 146, 147, 175, 193, 271, 268, 260, 221, 236, 208, 209, 207, 187, 192, 188,
+    //     276, 270, 58, 77, 142, 152, 241, 210, 22, 196);
+    //
+    // Uso real (PlayerDrawLayers.cs, DrawPlayer_21_Head:2126-2142 y DrawPlayer_22_FaceAcc:
+    // 2820-2828/2841-2847): si DrawFaceMaskUnderHeadLayer[headSlot] es true, la mascara se
+    // dibuja DENTRO de la cabeza (antes del pelo/casco) SIN mirar PreventFaceMaskDraw (la
+    // condicion real solo comprueba la tabla "under head"); si es false, se dibuja en su
+    // posicion normal (junto a Shield) salvo que PreventFaceMaskDraw[headSlot] sea true, en cuyo
+    // caso no se dibuja en ningun sitio. PreventFaceFlowerDraw es mas simple: si es true para el
+    // headSlot puesto, la flor no se dibuja en ningun sitio (no existe una posicion "bajo el
+    // casco" real para FaceFlower).
+    private static readonly HashSet<int> FaceMaskUnderHeadIds =
+    [
+        26, 51, 289, 81, 92, 106, 291, 10, 12, 178, 198, 267, 279, 160, 52, 53, 71, 55, 166, 167,
+        278, 203,
+    ];
+    private static readonly HashSet<int> PreventFaceFlowerDrawIds = [92, 275];
+    private static readonly HashSet<int> PreventFaceMaskDrawIds =
+    [
+        27, 20, 107, 108, 127, 162, 168, 118, 123, 164, 155, 150, 137, 186, 125, 136, 153, 154,
+        169, 148, 165, 151, 173, 146, 147, 175, 193, 271, 268, 260, 221, 236, 208, 209, 207, 187,
+        192, 188, 276, 270, 58, 77, 142, 152, 241, 210, 22, 196,
+    ];
+
+    public static bool DrawFaceMaskUnderHeadLayer(int head) => FaceMaskUnderHeadIds.Contains(head);
+    public static bool PreventFaceFlowerDraw(int head) => PreventFaceFlowerDrawIds.Contains(head);
+    public static bool PreventFaceMaskDraw(int head) => PreventFaceMaskDrawIds.Contains(head);
+
+    // GapAnalysis Encargo G (25-sep-2026): Terraria.ID.ArmorIDs.Head.Sets.PreventBeardDraw
+    // (ArmorIDs.cs:26 del decompilado real: "Factory.CreateBoolSet(false, 118, 119, 107, 129,
+    // 127, 125, 136, 162, 168, 210, 213, 28, 135, 31, 17, 261, 169, 186, 47, 22, 105, 102, 120,
+    // 137, 199, 207, 260, 132, 155, 179, 108, 153, 164, 172, 208, 241, 271, 48, 154, 188, 187,
+    // 209, 46, 123, 269, 185, 276)" - transcripcion literal, 47 headSlot reales que ocultan la
+    // barba (cascos completos/mascaras que tapan la cara). Consultada en Player.cs:37243-37246
+    // via PlayerDrawLayers.cs:2428 ("bool flag7 = drawinfo.drawPlayer.head < 0 ||
+    // !ArmorIDs.Head.Sets.PreventBeardDraw[drawinfo.drawPlayer.head];") - headSlot<0 (sin casco
+    // real conocido, incluido cualquier pieza de Calamity) SIEMPRE deja pasar la barba, mismo
+    // criterio que el resto de esta clase (headId==0 aqui, ver el llamador real en
+    // PlayerPreviewRenderer.Render).
+    private static readonly HashSet<int> PreventBeardDrawHeads =
+    [
+        118, 119, 107, 129, 127, 125, 136, 162, 168, 210, 213, 28, 135, 31, 17, 261, 169, 186,
+        47, 22, 105, 102, 120, 137, 199, 207, 260, 132, 155, 179, 108, 153, 164, 172, 208, 241,
+        271, 48, 154, 188, 187, 209, 46, 123, 269, 185, 276,
+    ];
+    public static bool PreventBeardDraw(int head) => PreventBeardDrawHeads.Contains(head);
+
+    // GapAnalysis Encargo G (25-sep-2026): Terraria.ID.ArmorIDs.Beard.Sets.UseHairColor
+    // (ArmorIDs.cs:2321 del decompilado real: "Factory.CreateBoolSet(false, 2, 3, 4)" -
+    // transcripcion literal, keyed por BEARD id (1=GingerBeard/2=WilsonBeardShort/
+    // 3=WilsonBeardLong/4=WilsonBeardMagnificent, ArmorIDs.cs:2315-2332), NO por headSlot ni por
+    // item id). Consultada en PlayerDrawLayers.cs:2437 ("Color color6 = drawinfo.colorArmorHead;
+    // if (ArmorIDs.Beard.Sets.UseHairColor[drawinfo.drawPlayer.beard]) { color6 =
+    // drawinfo.colorHair; }") - los 3 "Wilson beards" (grises, sin color propio en la textura)
+    // se tiñen con el COLOR DE PELO real del personaje; GingerBeard (id 1, textura ya
+    // naranja/ginger de por si) usa colorArmorHead, que en el doll de reposo sin buffs/dyes
+    // equivale a blanco puro (sin tinte añadido, ver PlayerDrawSet.cs:451/1531/1554 - Color.White
+    // salvo inmunidad/dyes) - false aqui es la señal de "sin tinte especial, usar el color por
+    // defecto sin recolorear" para el llamador.
+    public static bool BeardUsesHairColor(int beard) => beard is 2 or 3 or 4;
+
+    // GapAnalysis Encargo E (25-sep-2026): 3 tablas reales de ArmorIDs.cs para la condicion de
+    // incompatibilidad real de Front con scarf/cape (PlayerDrawLayers.cs:3910/3953, identica en
+    // DrawPlayer_32_FrontAcc_FrontPart/_BackPart):
+    //
+    //   ArmorIDs.cs:1819 - Front.Sets.DontDrawIfWearingAScarfOrCape = Factory.CreateBoolSet(false, 13)
+    //   ArmorIDs.cs:2140 - Neck.Sets.IsAScarf = Factory.CreateBoolSet(false, 8, 9)        // WormScarf/ApprenticeScarf
+    //   ArmorIDs.cs:1721 - Back.Sets.IsACape = Factory.CreateBoolSet(false, 1,2,3,4,5,6,14,24,34,36,39,41)
+    //
+    // CORRECCION IMPORTANTE al hallazgo original (investigada linea a linea contra Item.cs, no
+    // anticipada): el UNICO frontId real con DontDrawIfWearingAScarfOrCape=true es 13
+    // (ArmorIDs.Front.DeadCellsBeheadedBody) - y NINGUN accesorio real declara
+    // item.frontSlot=13 (grep completo de "frontSlot = " en Item.cs: solo 1,2,3,4,5,8,11,12,15,
+    // 16,17 aparecen via accesorio real, ver VanillaAccessorySlotEntry.Front). El id 13 SOLO se
+    // alcanza cuando el jugador lleva puesta la ARMADURA DE CUERPO "DeadCellsBeheadedBody"
+    // (bodySlot 248 -> Player.cs:36126-36133, ArmorIDs.Body.Sets.IncludedCapeFront[248]=13) - un
+    // mecanismo COMPLETAMENTE DISTINTO (derivado de "body", no de "item.frontSlot") que este
+    // encargo ("portar frontSlot") NO cubre - LIMITE REAL documentado, no oculto (ver el
+    // comentario real de DrawFrontHalf en PlayerPreviewRenderer.Render). Para los 11 accesorios
+    // reales de Front que SI entran por item.frontSlot, esta condicion NUNCA se dispara hoy
+    // (frontId nunca vale 13) - se transcribe la tabla COMPLETA y fiel igualmente (no solo el
+    // subconjunto alcanzable hoy), para no dejar un dato incompleto y para que un futuro encargo
+    // de "Front derivado de body" no tenga que rehacerla.
+    public static bool FrontDontDrawIfWearingScarfOrCape(int front) => front == 13;
+    public static bool NeckIsAScarf(int neck) => neck is 8 or 9;
+    public static bool BackIsACape(int back) => back is 1 or 2 or 3 or 4 or 5 or 6 or 14 or 24 or 34 or 36 or 39 or 41;
 }

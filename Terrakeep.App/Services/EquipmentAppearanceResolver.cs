@@ -69,6 +69,51 @@ public sealed record PetPreview(PetAnimationEntry? AnimationEntry, string? IconP
 // ResolveAccessorySprite ya eran genericos por tipo desde PortSeleccion Encargo1, lo unico que
 // faltaba era el DATO (CalamityCatalogEntry.EquipSlot poblado para estos 9 tipos, ver
 // scripts/extraer-slot-armadura-calamity.js). Sin cambios en el renderer.
+// GapAnalysis Encargo G (25-sep-2026): BeardFile/BeardSlot - 10º tipo de accesorio real
+// (beardSlot, Player.cs:37243-37246, "if (item.beardSlot > 0) beard = item.beardSlot;"). A
+// diferencia de Back/Balloon (que se reclasifican en 2 canales posibles cada uno) la barba es
+// un canal UNICO, sin reclasificacion - se resuelve exactamente igual que Waist/Neck/Face
+// (ResolveAccessorySprite generico). Calamity NO tiene ningun item real que declare
+// EquipType.Beard (confirmado a mano: 0 coincidencias de "AutoloadEquip" con "Beard" en todo
+// CalamityMod decompilado - scripts/extraer-slot-armadura-calamity.js ya documentaba esto en su
+// cabecera, "Wings/Front/Beard quedan FUERA a proposito... 0 items reales de Calamity los
+// declaran") - BeardSlot se queda a null para Calamity, mismo criterio ya establecido para el
+// resto de canales. La capa se dibuja DENTRO de "Head" (PlayerPreviewRenderer.Render), despues
+// de casco/pelo - ver el comentario real ahi con la cita completa de PlayerDrawLayers.cs.
+// GapAnalysis Encargo F (25-sep-2026): FaceHeadFile/FaceMaskFile/FaceFlowerFile - 3 canales mas
+// en los que EquipmentAppearanceResolver puede reclasificar el mismo sprite ya resuelto para
+// "Face" (ver FaceAccessoryLayerTable, tabla real de ArmorIDs.cs:2184-2190) - mismo patron
+// exacto que BackpackFile/TailFile (Encargo A) y BalloonFrontFile (Encargo C). FaceFile/FaceSlot
+// se quedan representando SOLO el 4º canal real ("Face" normal, cuando faceSlot no cae en
+// ninguna de las otras 3 tablas) tras la reclasificacion. Objetos de Calamity (faceSlotId
+// siempre null, numeracion propia no compartida) se quedan en "Face" - fiel-por-defecto, mismo
+// criterio ya establecido para Calamity en el resto del resolver (los 6 items reales de
+// Calamity con EquipSlot=="Face" no tienen ninguna variante FaceHead/FaceMask/FaceFlower propia
+// en su catalogo, confirmado en Assets/calamity/catalog.json - solo existe el string "Face").
+// GapAnalysis Encargo E (25-sep-2026): FrontFile/FrontSlot - 11º tipo de accesorio real
+// (frontSlot, Player.cs:37185-37188, "if (item.frontSlot > 0) front = item.frontSlot;"). Igual
+// que Beard (Encargo G), es un canal UNICO sin reclasificacion aqui - se resuelve exactamente
+// igual que Waist/Neck/Face (ResolveAccessorySprite generico). La condicion real de
+// incompatibilidad con scarf/cape (ArmorIDs.Front.Sets.DontDrawIfWearingAScarfOrCape, consulta
+// ademas Neck/Back) y el recorte en 2 mitades (FrontPart/BackPart) se aplican en
+// PlayerPreviewRenderer.Render, que ya tiene NeckSlot/BackSlot en scope - mismo patron ya
+// establecido ahi para ShoeMaleToFemaleID/SetMatchHead. Calamity: 0 items reales confirmados
+// (grep completo de "AutoloadEquip" con "EquipType.Front" en todo CalamityMod decompilado, 0
+// coincidencias - ver tambien scripts/extraer-slot-armadura-calamity.js, cabecera) - el mismo
+// canal generico se cablea igual por consistencia (calamitySuffix "Front", nombre crudo del
+// enum), sin datos que lo activen hoy; si Calamity anade en el futuro un item con
+// EquipType.Front, funcionaria sin mas cambios de codigo aqui.
+// Wings Encargo1 (25-sep-2026): WingFile/WingSlot - 12º tipo de accesorio real (wingSlot,
+// Player.cs, "if (item.wingSlot > 0) wings = item.wingSlot;"), canal UNICO sin reclasificacion
+// (igual que Beard/Front) - se resuelve igual que Waist/Neck/Face (ResolveAccessorySprite
+// generico, directorio "acc_wing", ver scripts/extraer-sprites-alas-vanilla.js). A diferencia de
+// los otros 11 tipos, el sprite NO se dibuja con DrawAccessory/LoadStripFrameAbsolute (recorte
+// alineado 1:1 al lienzo, fila = legAnimationFrame) - las alas tienen su PROPIA posicion/recorte
+// por id real (WingDrawTable, ver PlayerPreviewRenderer.LoadWingFrame para la cita completa de
+// PlayerDrawLayers.DrawPlayer_09_Wings). Calamity: 16 items reales confirmados con
+// EquipType.Wings (ver scripts/extraer-slot-armadura-calamity.js) - WingSlot se queda null para
+// ellos (numeracion propia no compartida, mismo criterio ya establecido para el resto de
+// canales), y PlayerPreviewRenderer usa la posicion GENERICA de WingDrawTable (fiel-por-defecto).
 public sealed record EquippedAccessories(
     string? WaistFile, string? NeckFile, string? HandOnFile, string? HandOffFile,
     string? BackFile, string? ShieldFile, string? FaceFile,
@@ -78,7 +123,12 @@ public sealed record EquippedAccessories(
     int? BackpackSlot = null, int? TailSlot = null,
     string? ShoesFile = null, int? ShoesSlot = null,
     string? BalloonFile = null, string? BalloonFrontFile = null,
-    int? BalloonSlot = null, int? BalloonFrontSlot = null);
+    int? BalloonSlot = null, int? BalloonFrontSlot = null,
+    string? BeardFile = null, int? BeardSlot = null,
+    string? FaceHeadFile = null, string? FaceMaskFile = null, string? FaceFlowerFile = null,
+    int? FaceHeadSlot = null, int? FaceMaskSlot = null, int? FaceFlowerSlot = null,
+    string? FrontFile = null, int? FrontSlot = null,
+    string? WingFile = null, int? WingSlot = null);
 
 public sealed class EquipmentAppearanceResolver
 {
@@ -152,7 +202,7 @@ public sealed class EquipmentAppearanceResolver
     // conocido, no un bug silencioso.
     public EquippedAccessories ResolveAccessories(PlrLoadout loadout)
     {
-        PlrItemSlot? waist = null, neck = null, handOn = null, handOff = null, back = null, shield = null, face = null, shoes = null, balloon = null;
+        PlrItemSlot? waist = null, neck = null, handOn = null, handOff = null, back = null, shield = null, face = null, shoes = null, balloon = null, beard = null, front = null, wing = null;
 
         void Scan(PlrItemSlot[] slots)
         {
@@ -179,6 +229,15 @@ public sealed class EquipmentAppearanceResolver
                 if (IsAccessoryType(s, e => e.Shoe, "Shoes")) shoes = s;
                 // GapAnalysis Encargo C (25-sep-2026): balloonSlot, mismo patron exacto.
                 if (IsAccessoryType(s, e => e.Balloon, "Balloon")) balloon = s;
+                // GapAnalysis Encargo G (25-sep-2026): beardSlot, mismo patron exacto. Calamity
+                // no declara EquipType.Beard en ningun item real (ver comentario de
+                // EquippedAccessories) - calamitySuffix "Beard" nunca hace match ahi, sin
+                // riesgo de falso positivo.
+                if (IsAccessoryType(s, e => e.Beard, "Beard")) beard = s;
+                // GapAnalysis Encargo E (25-sep-2026): frontSlot, mismo patron exacto.
+                if (IsAccessoryType(s, e => e.Front, "Front")) front = s;
+                // Wings Encargo1 (25-sep-2026): wingSlot, mismo patron exacto.
+                if (IsAccessoryType(s, e => e.Wing, "Wings")) wing = s;
             }
         }
         Scan(loadout.Items);
@@ -195,6 +254,12 @@ public sealed class EquipmentAppearanceResolver
         // regla de sexo real (MaleToFemaleID) se aplica despues, en PlayerPreviewRenderer.Render.
         var (shoesFile, shoesSlotId) = ResolveAccessorySprite(shoes, "Shoes", e => e.Shoe, "acc_shoes");
         var (balloonFile, balloonSlotId) = ResolveAccessorySprite(balloon, "Balloon", e => e.Balloon, "acc_balloon");
+        var (beardFile, beardSlotId) = ResolveAccessorySprite(beard, "Beard", e => e.Beard, "acc_beard");
+        var (frontFile, frontSlotId) = ResolveAccessorySprite(front, "Front", e => e.Front, "acc_front");
+        // Wings Encargo1 (25-sep-2026): wingSlot, mismo patron exacto - calamitySuffix "Wings"
+        // (nombre crudo del enum, igual que HandsOn/HandsOff/Shoes, ver scripts/
+        // extraer-slot-armadura-calamity.js).
+        var (wingFile, wingSlotId) = ResolveAccessorySprite(wing, "Wings", e => e.Wing, "acc_wing");
 
         // GapAnalysis Encargo A (25-sep-2026): reclasifica el resultado de "Back" YA resuelto en
         // los otros 2 canales reales posibles (Player.cs:37169-37184, UpdateVisibleAccessory) -
@@ -229,12 +294,43 @@ public sealed class EquipmentAppearanceResolver
             (balloonFile, balloonSlotId) = (null, null);
         }
 
+        // GapAnalysis Encargo F (25-sep-2026): reclasifica el resultado de "Face" YA resuelto en
+        // los otros 3 canales reales posibles (Player.cs:37213-37231, UpdateVisibleAccessory) -
+        // el sprite es el mismo (acc_face/{faceSlotId}.png), solo cambia a que campo va. Objetos
+        // de Calamity (faceSlotId siempre null, numeracion propia no compartida) se quedan en
+        // "Face" - fiel-por-defecto, mismo criterio ya establecido para Calamity en el resto del
+        // resolver. Orden real de comprobacion (Player.cs:37215-37229, if/else if encadenados):
+        // FaceHead primero, FaceMask despues, FaceFlower al final - un faceSlot solo puede caer
+        // en UNA de las 3 tablas en la practica (FaceAccessoryLayerTable las transcribe
+        // literales, sin solaparse hoy), pero se respeta el orden real por si acaso.
+        string? faceHeadFile = null, faceMaskFile = null, faceFlowerFile = null;
+        int? faceHeadSlotId = null, faceMaskSlotId = null, faceFlowerSlotId = null;
+        if (faceSlotId is int faceHeadId && FaceAccessoryLayerTable.IsFaceHeadLayer(faceHeadId))
+        {
+            (faceHeadFile, faceHeadSlotId) = (faceFile, faceSlotId);
+            (faceFile, faceSlotId) = (null, null);
+        }
+        else if (faceSlotId is int faceMaskId && FaceAccessoryLayerTable.IsFaceMaskLayer(faceMaskId))
+        {
+            (faceMaskFile, faceMaskSlotId) = (faceFile, faceSlotId);
+            (faceFile, faceSlotId) = (null, null);
+        }
+        else if (faceSlotId is int faceFlowerId && FaceAccessoryLayerTable.IsFaceFlowerLayer(faceFlowerId))
+        {
+            (faceFlowerFile, faceFlowerSlotId) = (faceFile, faceSlotId);
+            (faceFile, faceSlotId) = (null, null);
+        }
+
         return new EquippedAccessories(
             waistFile, neckFile, handOnFile, handOffFile, backFile, shieldFile, faceFile,
             waistSlotId, neckSlotId, handOnSlotId, handOffSlotId, backSlotId, shieldSlotId, faceSlotId,
             backpackFile, tailFile, backpackSlotId, tailSlotId,
             shoesFile, shoesSlotId,
-            balloonFile, balloonFrontFile, balloonSlotId, balloonFrontSlotId);
+            balloonFile, balloonFrontFile, balloonSlotId, balloonFrontSlotId,
+            beardFile, beardSlotId,
+            faceHeadFile, faceMaskFile, faceFlowerFile, faceHeadSlotId, faceMaskSlotId, faceFlowerSlotId,
+            frontFile, frontSlotId,
+            wingFile, wingSlotId);
     }
 
     // Un item real de Terraria solo declara UNO de los 7 campos de accesorio en la practica,

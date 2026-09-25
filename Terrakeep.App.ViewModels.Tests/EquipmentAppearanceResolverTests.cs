@@ -636,6 +636,171 @@ public sealed class EquipmentAppearanceResolverTests
         Assert.NotEqual(pixelesSin, pixelesCon);
     }
 
+    // GapAnalysis Encargo G (25-sep-2026): beardSlot es un canal UNICO (sin reclasificacion,
+    // a diferencia de Back/Balloon) - EXACTAMENTE 4 objetos vanilla reales en todo el juego
+    // (confirmados a mano en Item.cs y transcritos en scripts/extraer-slots-accesorios-
+    // vanilla.js, BEARD_MANUAL): GingerBeard=2501/beardSlot=1, WilsonBeardShort=5104/
+    // beardSlot=2, WilsonBeardLong=5105/beardSlot=3, WilsonBeardMagnificent=5106/beardSlot=4.
+    private const int GingerBeard = 2501;
+    private const int WilsonBeardLong = 5105;
+
+    [Fact]
+    public void BeardSlot_GingerBeard_ResuelveUnSpriteRealQueExisteEnDisco()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, GingerBeard));
+
+        Assert.NotNull(acc.BeardFile);
+        Assert.True(File.Exists(acc.BeardFile));
+        Assert.EndsWith("acc_beard" + Path.DirectorySeparatorChar + "1.png", acc.BeardFile);
+        Assert.Equal(1, acc.BeardSlot);
+    }
+
+    [Fact]
+    public void BeardSlot_WilsonBeardLong_ResuelveElIdRealTranscritoAMano_NoElEscanerGenerico()
+    {
+        // WilsonBeardLong (5105) es uno de los 2 ids reales que el escaner generico NUNCA
+        // captura (fallthrough de "case 5104: case 5105: case 5106:" con un valor no literal,
+        // ver BEARD_MANUAL en scripts/extraer-slots-accesorios-vanilla.py) - si algun dia se
+        // "arregla" el escaner sin revisar este caso especial, esta prueba lo detecta.
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, WilsonBeardLong));
+
+        Assert.NotNull(acc.BeardFile);
+        Assert.True(File.Exists(acc.BeardFile));
+        Assert.EndsWith("acc_beard" + Path.DirectorySeparatorChar + "3.png", acc.BeardFile);
+        Assert.Equal(3, acc.BeardSlot);
+    }
+
+    [Fact]
+    public void SlotVacio_NoResuelveNingunaBarba()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+
+        Assert.Null(acc.BeardFile);
+        Assert.Null(acc.BeardSlot);
+    }
+
+    [Fact]
+    public void RenderConBeardFileDaUnaImagenDistintaASinEl_AislandoSoloEsaCapa()
+    {
+        string beardPath = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "acc_beard", "1.png");
+        Assert.True(File.Exists(beardPath));
+
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var sinAcc = new EquippedAccessories(null, null, null, null, null, null, null);
+        var conBarba = sinAcc with { BeardFile = beardPath, BeardSlot = 1 };
+
+        var renderSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: sinAcc);
+        var renderCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: conBarba);
+
+        var pixelesSin = new byte[renderSin.PixelHeight * renderSin.PixelWidth * 4];
+        renderSin.CopyPixels(pixelesSin, renderSin.PixelWidth * 4, 0);
+        var pixelesCon = new byte[renderCon.PixelHeight * renderCon.PixelWidth * 4];
+        renderCon.CopyPixels(pixelesCon, renderCon.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSin, pixelesCon);
+    }
+
+    [Fact]
+    public void RenderConWilsonBeard_CambiaElColorDePeloYElResultadoCambia_UseHairColorReal()
+    {
+        // PlayerDrawLayers.cs:2436-2440 real: "if (ArmorIDs.Beard.Sets.UseHairColor[beard])
+        // color6 = drawinfo.colorHair;" - WilsonBeardShort (beardSlot=2) SI usa el color de pelo
+        // real; si Render deja de aplicar ese tinte por un refactor descuidado, cambiar SOLO
+        // colors.Hair dejaria de cambiar el resultado y esta prueba lo detecta. HeadSlot=1
+        // (Casco de cobre - confirmado en PlayerBodyDrawTablesTests que NO esta en
+        // PreventBeardDraw) oculta el PELO (hideHair=true, headSlot fuera de FullHair/HatHair -
+        // ver HairDrawProfile), sin dibujar ningun casco real (armor.HeadFile queda null) - esto
+        // AISLA el cambio de pixeles al canal Beard en si, evitando el falso positivo real de
+        // que el propio PELO (tambien tenido con colors.Hair) cambiara el resultado por su
+        // cuenta si se dejara visible.
+        string beardPath = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "acc_beard", "2.png");
+        Assert.True(File.Exists(beardPath));
+
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, BeardFile: beardPath, BeardSlot: 2);
+        var armorSinPeloVisible = new PlayerPreviewRenderer.EquippedArmor(HeadFile: null, BodyFile: null, LegsFile: null, HeadSlot: 1);
+
+        var colorsPeloCastano = new PlayerPreviewRenderer.PlayerColors(
+            new(120, 70, 30), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+        var colorsPeloAzul = colorsPeloCastano with { Hair = new(30, 60, 220) };
+
+        var renderCastano = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colorsPeloCastano, armor: armorSinPeloVisible, accessories: acc);
+        var renderAzul = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colorsPeloAzul, armor: armorSinPeloVisible, accessories: acc);
+
+        byte[] Pix(System.Windows.Media.Imaging.WriteableBitmap b)
+        {
+            var p = new byte[b.PixelHeight * b.PixelWidth * 4];
+            b.CopyPixels(p, b.PixelWidth * 4, 0);
+            return p;
+        }
+
+        Assert.NotEqual(Pix(renderCastano), Pix(renderAzul));
+    }
+
+    [Fact]
+    public void RenderConGingerBeard_CambiarElColorDePeloNoCambiaElResultado_NoUsaHairColor()
+    {
+        // Gemela real de la prueba de arriba, pero para GingerBeard (beardSlot=1, FUERA de
+        // ArmorIDs.Beard.Sets.UseHairColor) - color6 se queda en colorArmorHead (blanco puro en
+        // este doll de reposo sin buffs/dyes, ver PlayerBodyDrawTables.BeardUsesHairColor), asi
+        // que cambiar SOLO colors.Hair NO debe cambiar ni un pixel del resultado. Mismo
+        // HeadSlot=1 (pelo oculto, sin casco real dibujado) para aislar el canal Beard.
+        string beardPath = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "acc_beard", "1.png");
+        Assert.True(File.Exists(beardPath));
+
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, BeardFile: beardPath, BeardSlot: 1);
+        var armorSinPeloVisible = new PlayerPreviewRenderer.EquippedArmor(HeadFile: null, BodyFile: null, LegsFile: null, HeadSlot: 1);
+
+        var colorsPeloCastano = new PlayerPreviewRenderer.PlayerColors(
+            new(120, 70, 30), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+        var colorsPeloAzul = colorsPeloCastano with { Hair = new(30, 60, 220) };
+
+        var renderCastano = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colorsPeloCastano, armor: armorSinPeloVisible, accessories: acc);
+        var renderAzul = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colorsPeloAzul, armor: armorSinPeloVisible, accessories: acc);
+
+        byte[] Pix(System.Windows.Media.Imaging.WriteableBitmap b)
+        {
+            var p = new byte[b.PixelHeight * b.PixelWidth * 4];
+            b.CopyPixels(p, b.PixelWidth * 4, 0);
+            return p;
+        }
+
+        Assert.Equal(Pix(renderCastano), Pix(renderAzul));
+    }
+
+    [Fact]
+    public void RenderConCascoQuePreventBeardDraw_LaBarbaNoSeDibujaAunqueHayaBeardFile()
+    {
+        // ArmorIDs.Head.Sets.PreventBeardDraw real (ArmorIDs.cs:26) - headSlot=118 esta en la
+        // tabla (PlayerBodyDrawTablesTests.PreventBeardDraw_IdsRealesDeLaTabla) - con ese
+        // headSlot puesto, el render CON BeardFile debe ser IDENTICO al render SIN el, aunque
+        // el sprite/slot esten resueltos con normalidad (armor.HeadSlot es lo unico que decide).
+        string beardPath = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "acc_beard", "1.png");
+        Assert.True(File.Exists(beardPath));
+
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, BeardFile: beardPath, BeardSlot: 1);
+        var armorConCascoQuePrevieneLaBarba = new PlayerPreviewRenderer.EquippedArmor(HeadFile: null, BodyFile: null, LegsFile: null, HeadSlot: 118);
+
+        byte[] Pix(System.Windows.Media.Imaging.WriteableBitmap b)
+        {
+            var p = new byte[b.PixelHeight * b.PixelWidth * 4];
+            b.CopyPixels(p, b.PixelWidth * 4, 0);
+            return p;
+        }
+
+        var renderConBarba = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, armor: armorConCascoQuePrevieneLaBarba, accessories: acc);
+        var renderSinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, armor: armorConCascoQuePrevieneLaBarba, accessories: null);
+
+        Assert.Equal(Pix(renderSinAccesorios), Pix(renderConBarba));
+    }
+
     // CalamityAccesorios (25-sep-2026, gap analysis paridad UICharacter): los 9 canales de
     // accesorio real de Calamity (Waist/Neck/HandsOn/HandsOff/Back/Shield/Face/Balloon/Shoes) -
     // IsAccessoryType/ResolveAccessorySprite ya eran genericos por tipo, lo que faltaba era
@@ -779,5 +944,240 @@ public sealed class EquipmentAppearanceResolverTests
         Assert.NotNull(acc.WaistFile);
         Assert.Null(acc.HandOnFile);
         Assert.Null(acc.HandOffFile);
+    }
+
+    // GapAnalysis Encargo F (25-sep-2026): item.faceSlot se clasifica en 4 canales reales
+    // (Player.cs:37213-37231, UpdateVisibleAccessory - ver FaceAccessoryLayerTable, tabla real de
+    // ArmorIDs.cs:2184-2190). Ids reales confirmados a mano en Item.cs (tModLoader decompilado,
+    // el mismo arbol 1.4.4.9 que usa scripts/extraer-slots-accesorios-vanilla.py): Obsidian Skull
+    // (id 193, faceSlot=12, DrawInFaceHeadLayer), Nature's Gift (id 223, faceSlot=1,
+    // DrawInFaceFlowerLayer), Blindfold (id 888, faceSlot=5, DrawInFaceUnderHairLayer - NO se
+    // reclasifica, se queda en "Face" normal, solo cambia de POSICION de dibujado en
+    // PlayerPreviewRenderer.Render), Spectre Goggles (id 4409, faceSlot=14, ninguna de las 3
+    // tablas - Face normal sin excepciones). Los 4 con sprite ya extraido en Assets/player/
+    // acc_face/. faceSlot=22 (WeldingMask, DrawInFaceMaskLayer) no tiene item real extraible
+    // todavia en este PC - ver FaceAccessoryLayerTableTests para la prueba directa de esa tabla.
+    private const int CascoDeObsidiana = 193;  // faceSlot=12 -> FaceHead
+    private const int RegaloDeLaNaturaleza = 223; // faceSlot=1 -> FaceFlower
+    private const int Antifaz = 888;            // faceSlot=5 -> Face normal, bajo el pelo
+    private const int GafasDeEspectro = 4409;    // faceSlot=14 -> Face normal, sin excepciones
+
+    [Fact]
+    public void FaceSlotEnTablaDeFaceHead_SeReclasificaComoFaceHeadNoComoFace()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, CascoDeObsidiana));
+
+        Assert.NotNull(acc.FaceHeadFile);
+        Assert.True(File.Exists(acc.FaceHeadFile));
+        Assert.EndsWith("acc_face" + Path.DirectorySeparatorChar + "12.png", acc.FaceHeadFile);
+        Assert.Equal(12, acc.FaceHeadSlot);
+        Assert.Null(acc.FaceFile);
+        Assert.Null(acc.FaceSlot);
+        Assert.Null(acc.FaceMaskFile);
+        Assert.Null(acc.FaceFlowerFile);
+    }
+
+    [Fact]
+    public void FaceSlotEnTablaDeFaceFlower_SeReclasificaComoFaceFlowerNoComoFace()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, RegaloDeLaNaturaleza));
+
+        Assert.NotNull(acc.FaceFlowerFile);
+        Assert.True(File.Exists(acc.FaceFlowerFile));
+        Assert.EndsWith("acc_face" + Path.DirectorySeparatorChar + "1.png", acc.FaceFlowerFile);
+        Assert.Equal(1, acc.FaceFlowerSlot);
+        Assert.Null(acc.FaceFile);
+        Assert.Null(acc.FaceSlot);
+        Assert.Null(acc.FaceHeadFile);
+        Assert.Null(acc.FaceMaskFile);
+    }
+
+    [Fact]
+    public void FaceSlotBajoElPelo_NoSeReclasifica_SigueSiendoFaceNormal()
+    {
+        // DrawInFaceUnderHairLayer (faceSlot=5) NO es un canal de campo independiente en
+        // EquippedAccessories - a diferencia de FaceHead/FaceMask/FaceFlower, solo cambia la
+        // POSICION de dibujado (ver PlayerPreviewRenderer.Render), el campo sigue siendo FaceFile.
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, Antifaz));
+
+        Assert.NotNull(acc.FaceFile);
+        Assert.True(File.Exists(acc.FaceFile));
+        Assert.EndsWith("acc_face" + Path.DirectorySeparatorChar + "5.png", acc.FaceFile);
+        Assert.Equal(5, acc.FaceSlot);
+        Assert.Null(acc.FaceHeadFile);
+        Assert.Null(acc.FaceMaskFile);
+        Assert.Null(acc.FaceFlowerFile);
+    }
+
+    [Fact]
+    public void FaceSlotFueraDeLasTresTablas_SigueSiendoFaceNormal()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, GafasDeEspectro));
+
+        Assert.NotNull(acc.FaceFile);
+        Assert.EndsWith("acc_face" + Path.DirectorySeparatorChar + "14.png", acc.FaceFile);
+        Assert.Equal(14, acc.FaceSlot);
+        Assert.Null(acc.FaceHeadFile);
+        Assert.Null(acc.FaceMaskFile);
+        Assert.Null(acc.FaceFlowerFile);
+    }
+
+    [Fact]
+    public void VanidadDeFaceHeadTapaAlFuncionalDeFaceNormal_FielAlGuardado()
+    {
+        // Funcional: Spectre Goggles (Face normal) en el hueco 3. Vanidad: Obsidian Skull
+        // (FaceHead) en el hueco 7 - el juego real muestra el de VANIDAD, aunque caiga en OTRO
+        // canal (FaceHead en vez de Face), mismo criterio "vanidad tapa a funcional" ya
+        // verificado para el resto de tipos (Back/Balloon).
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(GafasDeEspectro, 1, 0, false);
+        loadout.Social[7] = new PlrItemSlot(CascoDeObsidiana, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.FaceHeadFile);
+        Assert.EndsWith("acc_face" + Path.DirectorySeparatorChar + "12.png", acc.FaceHeadFile);
+        Assert.Null(acc.FaceFile);
+    }
+
+    [Fact]
+    public void CalamityFace_Los6ItemsRealesSeQuedanEnElCanalFaceNormal_NingunoTieneVarianteFaceHeadMaskOFlower()
+    {
+        // Confirmado en Assets/calamity/catalog.json (25-sep-2026): 6 items reales con
+        // EquipSlot=="Face" (Abaddon, AbyssalDivingGear, FeatherCrown, MoonstoneCrown,
+        // OccultSkullCrown, LucisSight) - ninguno declara un EquipSlot "FaceHead"/"FaceMask"/
+        // "FaceFlower" (ese matiz no existe en el catalogo de Calamity, solo "Face"), y
+        // faceSlotId es siempre null para Calamity (numeracion propia no compartida) -
+        // FaceAccessoryLayerTable nunca se consulta para estos objetos, fiel-por-defecto al
+        // canal Face normal, mismo criterio ya establecido para Back/Balloon en Calamity.
+        foreach (var entry in Service.CalamityCatalog.Entries.Where(e => e.EquipSlot == "Face"))
+        {
+            var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+            Assert.NotNull(acc.FaceFile);
+            Assert.True(File.Exists(acc.FaceFile));
+            Assert.Null(acc.FaceSlot);
+            Assert.Null(acc.FaceHeadFile);
+            Assert.Null(acc.FaceMaskFile);
+            Assert.Null(acc.FaceFlowerFile);
+        }
+    }
+
+    [Fact]
+    public void CalamityWaist_NuncaResuelveNingunCanalDeBarba_0ItemsRealesDeCalamityDeclaranBeard()
+    {
+        // Defensa real contra un falso positivo: confirmado a mano (grep del decompilado real
+        // de CalamityMod, "AutoloadEquip" + "Beard") que NINGUN item real de Calamity declara
+        // EquipType.Beard - ver el comentario de EquippedAccessories/ResolveAccessories. Un
+        // item real de otro tipo (Waist) nunca debe colarse en BeardFile.
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Waist");
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.Null(acc.BeardFile);
+        Assert.Null(acc.BeardSlot);
+    }
+
+    // ---- FrontFile/FrontSlot (GapAnalysis Encargo E, 25-sep-2026) ----
+    // item.frontSlot (Player.cs:37185-37188), canal UNICO sin reclasificacion (mismo patron
+    // exacto que Beard). Ids reales confirmados en scripts/extraer-slots-accesorios-vanilla.py:
+    // CrimsonCloak=2284/frontSlot=1, HunterCloak=4744/frontSlot=8 (vanity=true), ChippysWings
+    // =5627/frontSlot=15 (uno de los 3 ids que el escaner generico NUNCA captura, ver
+    // FRONT_MANUAL_NESTED).
+    private const int CrimsonCloak = 2284;
+    private const int HunterCloak = 4744;
+    private const int ChippysWings = 5627;
+
+    [Fact]
+    public void FrontSlot_CrimsonCloak_ResuelveUnSpriteRealQueExisteEnDisco()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, CrimsonCloak));
+
+        Assert.NotNull(acc.FrontFile);
+        Assert.True(File.Exists(acc.FrontFile));
+        Assert.EndsWith("acc_front" + Path.DirectorySeparatorChar + "1.png", acc.FrontFile);
+        Assert.Equal(1, acc.FrontSlot);
+    }
+
+    [Fact]
+    public void FrontSlot_ChippysWings_ResuelveElIdRealTranscritoAMano_NoElEscanerGenerico()
+    {
+        // ChippysWings (5627) es uno de los 3 ids reales que el escaner generico NUNCA captura
+        // (switch anidado real, ver FRONT_MANUAL_NESTED en scripts/extraer-slots-accesorios-
+        // vanilla.py) - si algun dia se "arregla" el escaner sin revisar este caso especial,
+        // esta prueba lo detecta.
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, ChippysWings));
+
+        Assert.NotNull(acc.FrontFile);
+        Assert.True(File.Exists(acc.FrontFile));
+        Assert.EndsWith("acc_front" + Path.DirectorySeparatorChar + "15.png", acc.FrontFile);
+        Assert.Equal(15, acc.FrontSlot);
+    }
+
+    [Fact]
+    public void SlotVacio_NoResuelveNingunFront()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+
+        Assert.Null(acc.FrontFile);
+        Assert.Null(acc.FrontSlot);
+    }
+
+    [Fact]
+    public void VanidadDeHunterCloakTapaAlFuncionalDeOtroTipo_FielAlGuardado()
+    {
+        // Funcional: Reloj de cobre (Waist) en el hueco 3. Vanidad: HunterCloak (Front) en el
+        // hueco 7 - confirma que Front participa del mismo escaneo "vanidad tapa a funcional"
+        // ya verificado para el resto de tipos, sin canal propio especial.
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(RelojCobre, 1, 0, false);
+        loadout.Social[7] = new PlrItemSlot(HunterCloak, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.FrontFile);
+        Assert.EndsWith("acc_front" + Path.DirectorySeparatorChar + "8.png", acc.FrontFile);
+        Assert.Equal(8, acc.FrontSlot);
+        Assert.NotNull(acc.WaistFile); // el funcional de OTRO tipo no desaparece
+    }
+
+    [Fact]
+    public void RenderConFrontFileDaUnaImagenDistintaASinEl_AislandoSoloEsaCapa()
+    {
+        string frontPath = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "acc_front", "1.png");
+        Assert.True(File.Exists(frontPath));
+
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var sinAcc = new EquippedAccessories(null, null, null, null, null, null, null);
+        var conFront = sinAcc with { FrontFile = frontPath, FrontSlot = 1 };
+
+        var renderSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: sinAcc);
+        var renderCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: conFront);
+
+        var pixelesSin = new byte[renderSin.PixelHeight * renderSin.PixelWidth * 4];
+        renderSin.CopyPixels(pixelesSin, renderSin.PixelWidth * 4, 0);
+        var pixelesCon = new byte[renderCon.PixelHeight * renderCon.PixelWidth * 4];
+        renderCon.CopyPixels(pixelesCon, renderCon.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSin, pixelesCon);
+    }
+
+    [Fact]
+    public void CalamityWaist_NuncaResuelveNingunCanalDeFront_0ItemsRealesDeCalamityDeclaranFront()
+    {
+        // Defensa real contra un falso positivo: confirmado a mano (grep completo de
+        // "AutoloadEquip" + "EquipType.Front" en todo CalamityMod decompilado, 0 coincidencias)
+        // que NINGUN item real de Calamity declara EquipType.Front - ver el comentario de
+        // EquippedAccessories/ResolveAccessories. Un item real de otro tipo (Waist) nunca debe
+        // colarse en FrontFile.
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Waist");
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.Null(acc.FrontFile);
+        Assert.Null(acc.FrontSlot);
     }
 }
