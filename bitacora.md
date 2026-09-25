@@ -24029,13 +24029,16 @@ distinto) ejecutando la MISMA suite pesada de renderizado WPF a la vez en la mis
 confirmado con `Get-CimInstance Win32_Process` listando las lineas de comando completas de
 cada `dotnet test`/`testhost.exe` concurrente. Termine mi propio proceso (`Stop-Process`) tras
 ~96 min para no seguir contribuyendo a la contencion que afectaba a los demas agentes, y
-reintente una vez mas en aislado (`bin_encargoF2`) sin llegar tampoco a completar en otros 9
-min. La cobertura real que SI se confirmo en verde: los tests exactos que toca este encargo
-(filtrados, Debug) + la suite hermana completa (`Core.Tests`, Release) + 2 builds completos de
-la solucion combinada (con el codigo de Encargo E/G ya presente) sin advertencias ni errores -
-no hay ninguna señal real (ni en el codigo ni en la ejecucion parcial observada) de que algun
-test de la suite completa fuera a fallar, pero la confirmacion formal de los 700+ tests
-completos queda pendiente por este limite del entorno, no por el codigo.
+reintente una vez mas en aislado (`bin_encargoF2`), dejandolo corriendo en segundo plano sin
+seguir bloqueando el resto del encargo. **Actualizacion real (mismo dia, tras cerrar el resto
+del encargo)**: esa ronda SI termino, con notificacion real del sistema -
+`Correctas! - Con error: 0, Superado: 683, Omitido: 0, Total: 683, Duracion: 56 m 9 s` - 56
+minutos reales de duracion para una suite que historicamente tardaba 5-6 min, confirmando de
+verdad la magnitud de la contencion documentada arriba, y 0 fallos reales en los 683 tests
+completos de `Terrakeep.App.ViewModels.Tests` (incluye los 6 mios de
+`EquipmentAppearanceResolverTests` + los 10 de `PlayerPreviewRendererAccessoriesTests` + los
+del resto de encargos en paralelo del mismo dia) - la sospecha de "ninguna señal real de
+fallo" queda confirmada con el gate formal completo, sin regresion.
 
 **Incidente real durante el redespliegue (autonomia tecnica, detectado y reparado en el
 momento)**: `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
