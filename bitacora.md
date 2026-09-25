@@ -24554,3 +24554,141 @@ Relanzado con `Start-Process` (PID real 273224, `Responding=True`) y cerrado lim
 (Encargo F, combinado). Verificado con `git diff`/`git show HEAD:` antes del commit que ningun
 fichero exclusivo de Wings (`WingDrawTable.cs`, `acc_wing/`, `extraer-sprites-alas-vanilla.js`) ni
 de Face (`FaceAccessoryLayerTable.cs`) entro en este commit. Sin `git push`.
+
+## GapAnalysis Encargo H (25-sep-2026): Hide[] (hideVisibleAccessory) se aplica de verdad
+
+**Bug de datos real confirmado** (ya investigado por el arquitecto-keep, verificado aqui con
+Read/Grep antes de tocar nada): `PlrLoadout.CreateEmpty(isPrimary: true)` fija `Hide = null`
+siempre (`PlrLoadout.cs:22`) - `loadouts[0]` (`PrimaryLoadout`) es un mirror que el propio
+cliente de Terraria nunca serializa con `Hide`. El array real de 10 bits vive en
+`PlrCharacter.Loadouts[CurrentLoadout].Hide` (confirmado en `PlrBodySerializer.cs:543-548/561-565`,
+se lee/escribe como 10 bytes solo para loadouts no-primarios). `CharacterListEntryViewModel.cs`
+pasaba literalmente `character.PrimaryLoadout` a `ResolveAccessories` sin ningun `Hide` - el
+toggle "ocultar accesorio" del panel de vanidad real nunca se reflejaba en el doll de Inicio.
+
+**Confirmacion contra `Player.cs` real decompilado** (`TerrariaVanilla\Terraria\Player.cs`):
+`UpdateVisibleAccessories` (linea ~37034) itera SOLO `i=3..9` (huecos FUNCIONALES,
+`loadout.Items` aqui) comprobando `hideVisibleAccessory[i]` antes de `UpdateVisibleAccessory`;
+el segundo bucle (vanidad, `j=13..19`, `loadout.Social` aqui) llama a `UpdateVisibleAccessory`
+SIN ningun chequeo del array - la vanidad puesta se ve siempre, el toggle solo esconde la
+visual del accesorio FUNCIONAL. Wings tiene una excepcion real (linea 37063-37074): las alas
+ocultas SI se ven si el jugador esta cayendo de verdad (`velocity.Y != 0f && !mount.Active`).
+
+**Arreglo aplicado** (`Terrakeep.App/Services/EquipmentAppearanceResolver.cs`):
+- `ResolveAccessories(PlrLoadout loadout, bool[]? hide = null)` - nuevo parametro opcional.
+- `Scan(slots, respectHide)`: al escanear `loadout.Items` (`respectHide: true`), si
+  `hide[i]==true` se salta el hueco entero (mismo efecto que el `continue` real del juego);
+  al escanear `loadout.Social` (`respectHide: false`) nunca se consulta `hide` - fiel al bucle
+  real de vanidad sin chequeo.
+- **DELIBERATE DIFFERENCE (Wings)**, documentada en el propio codigo: esta app dibuja un doll
+  ESTATICO (nunca "cayendo", `velocity.Y` siempre equivalente a 0 y sin montura) - bajo esa
+  condicion la propia formula real del juego colapsa a "oculto = no se ve" sin excepcion, asi
+  que Wings se trata aqui igual que los otros 9 tipos de accesorio, sin replicar la rama de
+  "cayendo". Decision explicita, comentada en el codigo, no una simplificacion oculta.
+- Doc-comment de `Resolve()` (cabeza/cuerpo/piernas) ampliado explicando por que
+  DELIBERADAMENTE no toca Hide - confirmado en el propio `Player.cs` que el bucle de
+  `hideVisibleAccessory[]` NUNCA itera `i=0..2` (esos indices los gobiernan
+  `HideVisual1`/`HideVisual2`/`HideMisc`, mecanismo distinto, ya documentado como hueco real
+  aparte, fuera de alcance de este encargo).
+- `CharacterListEntryViewModel.cs`: `var hide = character.Loadouts.ElementAtOrDefault(
+  character.CurrentLoadout)?.Hide;` combinado con `PrimaryLoadout` al llamar a
+  `ResolveAccessories` - `ElementAtOrDefault` vuelve `null` de forma segura si `Loadouts` esta
+  vacio (version<269) o `CurrentLoadout` cae fuera de rango, mismo comportamiento que antes del
+  arreglo para esos casos.
+- `MainViewModel.RefreshAppearanceEquipment` (preview EN VIVO del panel de Apariencia):
+  **INCONCLUSIVE**, documentado en el propio codigo - se investigo `EquipmentGroupViewModel.cs`
+  a fondo (grep real de `"Hide"`/`"Ocultar"`/`"checkbox"` en todo `Terrakeep.App/ViewModels`, 0
+  coincidencias) y no existe HOY ningun control de UI equivalente al toggle de "ocultar" del
+  panel de vanidad real - `loadout0` (sintetico, reconstruido desde `EquipmentGroup.
+  EquippedItems/EquippedSocial`) no tiene de donde sacar un `Hide[]` real mientras se edita.
+  `hide=null` (comportamiento ya existente) se mantiene sin inventar un toggle de UI nuevo.
+
+**Tests nuevos** (`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs`, 6 casos,
+todos verdes): `Hide[i]=true` oculta el accesorio funcional (Reloj de cobre, waistSlot);
+`Hide[i]=false` lo deja visible con su sprite real; sin el parametro `hide` (sobrecarga con
+default) el comportamiento es identico al de antes del encargo (regresion); `Hide[i]=true` en
+ButterflyWings (id real 749, wingSlot=5, sprite `acc_wing/5.png` verificado en disco) oculta las
+alas, confirmando la DELIBERATE DIFFERENCE con el doll en reposo; `Hide[i]=false` en el mismo
+item resuelve el sprite real; y un caso que confirma que `Hide[i]=true` en el hueco funcional
+NUNCA oculta la vanidad puesta en el mismo indice (fiel al bucle real sin chequeo de vanidad).
+
+### Incidente real: perdida de un bloque de tests de Encargo I (Dyes) durante la verificacion aislada
+
+Con Encargo I trabajando en paralelo sobre `EquipmentAppearanceResolver.cs`/
+`PlayerPreviewRenderer.cs`/`MainViewModel.cs` (mismo working tree compartido, sin aislamiento de
+proceso), esos 3 ficheros llegaron a tener AMBOS encargos mezclados de forma inseparable a nivel
+de linea (Encargo I convirtio `PlrItemSlot? waist` en un `record struct AccessoryMatch` dentro
+del mismo `Scan()` que yo modificaba para `respectHide`). Commitear el estado mezclado tal cual
+habria exigido comitear tambien los ficheros EXCLUSIVOS de Encargo I (`DyeShaderCatalog.cs`,
+`DyeShaderCatalogTests.cs`) para no dejar HEAD roto (`ResolveDye` llama a
+`DyeShaderCatalog.PlainColor`) - eso habria ampliado el alcance a Dyes, fuera de mi encargo.
+
+Para evitar ambas cosas (HEAD roto O amplify de alcance), reconstrui una version "solo Encargo H"
+de cada fichero compartido tomando `git show HEAD:<archivo>` (el commit real antes de que
+cualquiera de los dos encargos tocara nada) y reaplicando EXACTAMENTE mis propias ediciones ya
+hechas (mismos `old_string`/`new_string`) sobre esa base limpia - verificado con `diff -u` contra
+HEAD que el resultado contenia UNICAMENTE mis cambios. Compile y probe esa version aislada
+(`dotnet build`/`dotnet test` con `-p:BaseOutputPath` propio para evitar la contencion de
+procesos ya documentada hoy) antes de comitear, y DESPUES del commit restaure `PlayerPreviewRenderer.cs`/`EquipmentAppearanceResolver.cs`/`MainViewModel.cs` a su estado
+mezclado (con Dyes) desde una copia de seguridad tomada antes de la reconstruccion - el trabajo
+de Encargo I en esos 3 ficheros quedo intacto en el working tree, ahora como diff sin comitear
+sobre mi nuevo commit (confirmado con `dotnet build`/`dotnet test` del arbol combinado final: 0
+errores, 69/69 tests de `EquipmentAppearanceResolverTests` en verde).
+
+**El fallo real**: para `Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs` NO
+tome esa misma precaucion de "copia de seguridad del estado mezclado antes de sobrescribir" -
+cuando reconstrui la version "solo Encargo H" (tomando `git show HEAD:` + reaplicando mi propio
+bloque de tests) y la escribi al working tree para compilar/probar, Encargo I YA habia anadido
+~120 lineas de tests reales de Dyes al FINAL de ese mismo fichero (confirmado por `wc -l`/`grep`
+antes de sobrescribir: el fichero tenia 1413 lineas, con tests como
+`Resolve_ConDyePlanoRealEnCabeza_ResuelveElTinteExacto`/`CalamityWaist...` visibles en un `Read`
+parcial previo) - esas ~120 lineas NO se guardaron en ningun sitio antes de la sobrescritura y
+NO son recuperables desde disco (intentado: Volumen de instantaneas de Windows real via
+`vssadmin list shadows` - la instantanea mas reciente del volumen C: es de las 18:56 de hoy,
+insuficiente/incierta para el momento exacto en que Encargo I escribio ese bloque; no hay
+historial de editor tipo VS Code Local History porque los agentes escriben directo a disco, sin
+IDE de por medio). El fichero quedo, y sigue, en mi version "solo Encargo H" (1293 lineas,
+terminada en mi ultimo test) - committeada asi en `0c12b676`.
+
+**Que se perdio exactamente**: solo las ~120 lineas de TESTS de Dyes anadidas a
+`EquipmentAppearanceResolverTests.cs` (constantes `TinteRojo`/`TinteArcoiris`, tests como
+`Resolve_ConDyePlanoRealEnCabeza_ResuelveElTinteExacto`/`Resolve_SinDye_HeadDyeEsNull` y varios
+mas sobre `acc.WaistDye`/`acc.BackDye`/`acc.BackpackDye`). El CODIGO DE PRODUCCION de Dyes
+(`DyeShaderCatalog.cs`, `DyeShaderCatalogTests.cs` en `Terrakeep.Core.Tests`,
+`EquipmentAppearanceResolver.ResolveDye`/`AccessoryMatch`, los cambios de
+`PlayerPreviewRenderer.cs`/`MainViewModel.cs`/`EquipmentGroupViewModel.cs`) esta INTACTO en el
+working tree, restaurado tal cual estaba - Encargo I no perdio ninguna linea de produccion, solo
+ese bloque de tests especifico en ESE fichero necesita volver a escribirse. Documentado aqui con
+el maximo detalle real para que Encargo I (o el coordinador) pueda regenerarlo sin tener que
+redescubrir la causa.
+
+### Build, tests y despliegue real
+
+Build aislado ("solo Encargo H", sin ningun fichero de Encargo I necesario para compilar,
+`-p:BaseOutputPath` propio): `dotnet build Terrakeep.slnx -c Release` en verde (0 avisos, 0
+errores) + `dotnet test` de `EquipmentAppearanceResolverTests` (69/69) y `Terrakeep.Core.Tests`
+(732/732 - este ultimo ya incluye `DyeShaderCatalogTests.cs` de Encargo I, ajeno a Terrakeep.App,
+verde sin relacion con mi cambio). Build del arbol COMBINADO final (mi commit + el resto de
+Encargo I restaurado): tambien verde, `EquipmentAppearanceResolverTests` 69/69 otra vez.
+
+`Get-Process Terrakeep` sin resultado antes de publicar. `dotnet publish Terrakeep.App/
+Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde. Verificacion de sanidad de
+`Assets/` ANTES del `/MIR` (pedida explicitamente, tras el incidente real de hoy de 13051
+archivos borrados por una copia parcial fallida bajo contencion): publish nuevo = 13051 archivos
+en `Assets/`, copia instalada actual = 13051 archivos - coinciden, `/MIR` seguro. `robocopy ...
+/MIR` (excluyendo `unins000.exe`/`unins000.dat`, `MSYS_NO_PATHCONV=1`) a `C:\Users\adrian\
+AppData\Local\Programs\Terrakeep\`: solo 1 archivo copiado (`Terrakeep.exe`; el resto ya estaba
+al dia por publishes previos de otros encargos), 13056 omitidos (ya identicos), 0 errores.
+Relanzado con `Start-Process` (PID real 225136, `Responding=True`) y cerrado limpio con
+`Stop-Process`.
+
+### Commit real
+
+`0c12b676`: `Terrakeep.App/Services/EquipmentAppearanceResolver.cs`,
+`Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs`,
+`Terrakeep.App/ViewModels/MainViewModel.cs`,
+`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs` - exactamente mi codigo,
+verificado con `diff -u` contra `git show HEAD:` antes de comitear que no contenia ni una linea
+de Encargo I. `PlayerPreviewRenderer.cs`/`EquipmentGroupViewModel.cs`/`DyeShaderCatalog.cs`/
+`DyeShaderCatalogTests.cs` (exclusivos de Encargo I) NO se tocaron ni se comitearon. Sin
+`git push`.
