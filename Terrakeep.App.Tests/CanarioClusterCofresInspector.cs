@@ -704,6 +704,47 @@ internal static partial class Program
                                                 Console.WriteLine($"FALLO: COFRES-INSPECTOR-FASED - Guardar/Cancelar quedan en Bottom={bottomBotonesFaseD:0.#}px, MAS ALLA del DockPanel.ActualHeight={panelFaseD.ActualHeight:0.#}px real - inalcanzables con scroll, regresion del ajuste de MinHeight");
                                         }
                                     }
+
+                                    // ExploracionRediseno Fase H (26-sep-2026, aplicador-fix): el punto 5
+                                    // del encargo pide repetir esta MISMA comprobacion a la ventana MINIMA
+                                    // real (1080x700, Window.MinWidth/MinHeight de MainWindow.xaml:12) -
+                                    // antes de Fase H el Inspector compartia el MinHeight=1000 de
+                                    // ExplorationSidebarPanel (protegia el caso 1180x860 nada mas); ahora
+                                    // ExplorationSidebarChestInspectorPlaceholder vive en Auto/natural
+                                    // (sin Height/MinHeight propios) dentro del MISMO ScrollViewer
+                                    // exterior (ExplorationSidebarScroll) - nada debe quedar inalcanzable
+                                    // tampoco al tamaño mas pequeño real que la ventana permite.
+                                    if (window.FindName("ExplorationSidebarScroll") is ScrollViewer scrollInspectorFaseHMin)
+                                    {
+                                        FijarTamaño(window, 1080, 700);
+                                        DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
+                                        scrollInspectorFaseHMin.ScrollToBottom();
+                                        DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
+                                        Console.WriteLine($"COFRES-INSPECTOR-FASEH-MIN1080x700: tras ScrollToBottom -> VerticalOffset={scrollInspectorFaseHMin.VerticalOffset:0.#}px, ScrollableHeight={scrollInspectorFaseHMin.ScrollableHeight:0.#}px, ExtentHeight={scrollInspectorFaseHMin.ExtentHeight:0.#}px, ViewportHeight={scrollInspectorFaseHMin.ViewportHeight:0.#}px (esperado VerticalOffset≈ScrollableHeight)");
+                                        if (Math.Abs(scrollInspectorFaseHMin.VerticalOffset - scrollInspectorFaseHMin.ScrollableHeight) > 1)
+                                            Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEH-MIN1080x700 - ScrollToBottom no deja VerticalOffset≈ScrollableHeight en ExplorationSidebarScroll a 1080x700");
+
+                                        var botonesGuardarCancelarFaseHMin = Descendientes<System.Windows.Controls.Primitives.UniformGrid>(placeholderFaseD).FirstOrDefault();
+                                        if (botonesGuardarCancelarFaseHMin == null)
+                                            Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEH-MIN1080x700 - no se encuentra el UniformGrid real de Guardar/Cancelar a 1080x700");
+                                        else
+                                        {
+                                            var rectBotonesFaseHMin = botonesGuardarCancelarFaseHMin.TransformToAncestor(window)
+                                                .TransformBounds(new Rect(0, 0, botonesGuardarCancelarFaseHMin.ActualWidth, botonesGuardarCancelarFaseHMin.ActualHeight));
+                                            bool alcanzableEnPantalla = rectBotonesFaseHMin.Top >= -1 && rectBotonesFaseHMin.Bottom <= window.ActualHeight + 1;
+                                            Console.WriteLine($"COFRES-INSPECTOR-FASEH-MIN1080x700: Guardar/Cancelar rect real tras ScrollToBottom={rectBotonesFaseHMin}, ventana={window.ActualWidth:0}x{window.ActualHeight:0} -> alcanzableEnPantalla={alcanzableEnPantalla} (esperado True)");
+                                            if (!alcanzableEnPantalla)
+                                                Console.WriteLine($"FALLO: COFRES-INSPECTOR-FASEH-MIN1080x700 - Guardar/Cancelar quedan fuera de la ventana tras ScrollToBottom a 1080x700: {rectBotonesFaseHMin}");
+                                            else
+                                            {
+                                                string rutaFaseHMin = CapturaVentanaKeepQa(window, "faseh-inspector-1080x700-guardar-cancelar");
+                                                Console.WriteLine($"COFRES-INSPECTOR-FASEH-MIN1080x700: captura real a 1080x700 -> {rutaFaseHMin}");
+                                            }
+                                        }
+
+                                        FijarTamaño(window, 1180, 860);
+                                        DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
+                                    }
                                 }
                             }
 
@@ -839,6 +880,45 @@ internal static partial class Program
                     string rutaWorldToolsFaseF = Path.Combine(outDirFaseF, "fasef-worldtools-3-expanders-desplegados.png");
                     using (var fsWorldToolsFaseF = File.Create(rutaWorldToolsFaseF)) encWorldToolsFaseF.Save(fsWorldToolsFaseF);
                     Console.WriteLine($"EXPLORACION-FASEF: captura real de WorldTools (3 Expanders desplegados, Browse oculto) -> {rutaWorldToolsFaseF}");
+
+                    // ExploracionRediseno Fase H (26-sep-2026, aplicador-fix): el punto 6 del encargo
+                    // pide confirmar VISUALMENTE que WorldTools (sus 3 Expander ya desplegados, mismo
+                    // estado de arriba) no pierde contenido inalcanzable a la ventana MINIMA real
+                    // (1080x700) - WorldToolsContent vive en Auto/natural (sin Height/MinHeight propios,
+                    // mismo motivo real que ExplorationSidebarChestInspectorPlaceholder mas arriba) dentro
+                    // del MISMO ScrollViewer exterior, asi que el fondo real del DockPanel (tras "Bestiario",
+                    // el ultimo de los 3 Expander) debe seguir cayendo DENTRO de la ventana tras bajar el
+                    // scroll del todo.
+                    if (window.FindName("ExplorationSidebarScroll") is ScrollViewer scrollFaseHWorldToolsMin)
+                    {
+                        FijarTamaño(window, 1080, 700);
+                        DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
+                        scrollFaseHWorldToolsMin.ScrollToBottom();
+                        DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
+                        Console.WriteLine($"EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: tras ScrollToBottom -> VerticalOffset={scrollFaseHWorldToolsMin.VerticalOffset:0.#}px, ScrollableHeight={scrollFaseHWorldToolsMin.ScrollableHeight:0.#}px, ExtentHeight={scrollFaseHWorldToolsMin.ExtentHeight:0.#}px, ViewportHeight={scrollFaseHWorldToolsMin.ViewportHeight:0.#}px (esperado VerticalOffset≈ScrollableHeight)");
+                        if (Math.Abs(scrollFaseHWorldToolsMin.VerticalOffset - scrollFaseHWorldToolsMin.ScrollableHeight) > 1)
+                            Console.WriteLine("FALLO: EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700 - ScrollToBottom no deja VerticalOffset≈ScrollableHeight en ExplorationSidebarScroll a 1080x700");
+
+                        var rectWorldToolsFaseHMin = worldToolsFaseF.TransformToAncestor(window)
+                            .TransformBounds(new Rect(0, 0, worldToolsFaseF.ActualWidth, worldToolsFaseF.ActualHeight));
+                        bool worldToolsAlcanzable = rectWorldToolsFaseHMin.Bottom <= window.ActualHeight + 1;
+                        Console.WriteLine($"EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: WorldToolsContent rect real tras ScrollToBottom={rectWorldToolsFaseHMin}, ventana={window.ActualWidth:0}x{window.ActualHeight:0} -> alcanzableEnPantalla={worldToolsAlcanzable} (esperado True)");
+                        if (!worldToolsAlcanzable)
+                            Console.WriteLine($"FALLO: EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700 - el fondo real de WorldToolsContent (Bottom={rectWorldToolsFaseHMin.Bottom:0.#}px) queda fuera de la ventana (alto={window.ActualHeight:0}px) tras ScrollToBottom a 1080x700 - contenido inalcanzable");
+
+                        var rtbWorldToolsFaseHMin = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtbWorldToolsFaseHMin.Render(window);
+                        var encWorldToolsFaseHMin = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encWorldToolsFaseHMin.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbWorldToolsFaseHMin));
+                        string rutaWorldToolsFaseHMin = Path.Combine(outDirFaseF, "faseh-worldtools-1080x700-fondo.png");
+                        using (var fsWorldToolsFaseHMin = File.Create(rutaWorldToolsFaseHMin)) encWorldToolsFaseHMin.Save(fsWorldToolsFaseHMin);
+                        Console.WriteLine($"EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700: captura real a 1080x700 (fondo del scroll) -> {rutaWorldToolsFaseHMin}");
+
+                        FijarTamaño(window, 1180, 860);
+                        DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
+                        scrollFaseHWorldToolsMin.ScrollToTop();
+                        DoEvents(); DoEvents(); window.UpdateLayout();
+                    }
 
                     // ---- Interaccion WorldTools <-> ChestInspector: Mundo debe cancelar un cofre en edicion ----
                     // ChestRows SOLO se rellena en ChestViewMode==2 ("Cofre a cofre",

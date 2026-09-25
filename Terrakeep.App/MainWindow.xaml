@@ -6708,7 +6708,40 @@
                          contenido, solo le resta una franja fija y pequeña (~24px, medida con el
                          arnes) al viewport cuando esta visible. Mismo principio ya aceptado en este
                          fichero para MinHeight="800": un poco menos de sitio para el contenido a
-                         cambio de honestidad visual, nunca ocultar nada. -->
+                         cambio de honestidad visual, nunca ocultar nada.
+
+                         ExploracionRediseno Fase H (26-sep-2026, aplicador-fix): CAUSA REAL de que
+                         este numero se subiera 4 veces (590->652->800->1000) confirmada por el
+                         arquitecto - ExplorationSidebarPanel (el DockPanel de aqui abajo) es
+                         COMPARTIDO por los 3 modos MUTUAMENTE EXCLUSIVOS del sidebar (Browse/
+                         ChestInspector/WorldTools, Grid x:Name="ExplorationSidebarBrowseInspectorHost"
+                         mas abajo), asi que cada vez que UN modo crecia (Editor de mundos v1 en Fase
+                         D antigua, Inspector de cofre en la Fase D de este mismo dia) el suelo subia
+                         para los 3 aunque los otros 2 no lo necesitaran. Prohibido explicitamente por
+                         el usuario volver a subir este numero - el arreglo es estructural, no otra
+                         recalibracion: el Height/MinHeight de aqui SE QUITA del DockPanel compartido
+                         (pasa a tamaño natural) y se mueve, con el MISMO mecanismo, a
+                         ExplorationSidebarBrowseContent (el UNICO de los 3 modos con listas grandes
+                         virtualizadas - ChestByChestList, las listas de categoria, el
+                         ExplorationResultsBlock de aqui arriba - que de verdad necesita un alto
+                         finito para no romper VirtualizingPanel, la misma razon real de todo este
+                         comentario). ChestInspectorPlaceholder y WorldToolsContent se quedan en Auto/
+                         natural sin Height ni MinHeight propios: ninguno de los dos tiene listas
+                         virtualizadas (el editor de cofre es un WrapPanel/ItemsControl de slots, y
+                         los 3 Expander de WorldTools ya llevan su propio ScrollViewer MaxHeight
+                         interno), asi que no corren el riesgo que este mecanismo existe para evitar.
+                         MinHeight nuevo de ExplorationSidebarBrowseContent, MEDIDO de verdad (no
+                         reutilizado a ciegas): FALLO3_SOLO=1 con 1000 resultados reales de "Piedra
+                         infernal" (peor caso real de esta maquina) en el combo mas estrecho posible
+                         (ventana MINIMA 1080x700, sidebar en su minimo real 260px) da contenido de
+                         categoria=250px y bloque de resultados=242px SIN restriccion de altura -
+                         redondeado a 300 (margen real de ~50-58px, mismo criterio de margen ya usado
+                         arriba para 1000). Verificado con el mismo FALLO3_SOLO=1 en los 3 combos ya
+                         cubiertos (1180x860 sidebar 320/520, 1080x700 sidebar 260): 0 FALLO, las 3
+                         categorias de la re-verificacion AR-EX1 (Cofres/Por tipo, Cofres/Cofre a
+                         cofre, Objetos) siguen mostrando >=1 fila entera visible en los tres, y el
+                         indicador ExplorationScrollHint sigue apareciendo/desapareciendo con la
+                         cantidad de scroll real que corresponde en los tres. -->
                     <!-- T6: tarjeta flotante real - Background solido (nunca transparente, para que se
                          lea sobre el mapa que ahora sigue pintandose por debajo, ver el comentario real
                          del Border del mapa mas arriba) + sombra + separacion real de los bordes de la
@@ -6727,9 +6760,7 @@
                     <ScrollViewer Grid.Row="0" x:Name="ExplorationSidebarScroll"
                                   VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                   ScrollChanged="OnExplorationSidebarScrollChanged">
-                    <DockPanel x:Name="ExplorationSidebarPanel"
-                               Height="{Binding ViewportHeight, ElementName=ExplorationSidebarScroll, Mode=OneWay}"
-                               MinHeight="1000">
+                    <DockPanel x:Name="ExplorationSidebarPanel">
                         <!-- Punto 4 (advisor Opus, "una nueva barra lateral... que ya no solo salgan
                              los npc, eso se traslada dentro de una rama madre donde salgan varios
                              botones" - ver ESPEC-ui-exploracion.md#9). Rediseño completo: la lista de
@@ -6801,6 +6832,8 @@
                              por espacio con el contenido de Browse). -->
                         <Grid x:Name="ExplorationSidebarBrowseInspectorHost">
                         <DockPanel x:Name="ExplorationSidebarBrowseContent"
+                                   Height="{Binding ViewportHeight, ElementName=ExplorationSidebarScroll, Mode=OneWay}"
+                                   MinHeight="300"
                                    Visibility="{Binding Exploration.SidebarMode, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=Browse}">
                         <!-- 9.1: selector de categoria - RadioButton real (GroupName real de WPF),
                              IsChecked de doble via con EnumEquals (el proyecto no tiene un

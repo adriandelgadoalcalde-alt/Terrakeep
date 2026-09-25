@@ -39,6 +39,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using Terrakeep.App;
 using Terrakeep.App.ViewModels;
 
@@ -415,6 +416,187 @@ internal static partial class Program
             }
         }
         catch (Exception ex) { Console.WriteLine("VIEWPORT-exploracion_resultados-EXCEPTION: " + ex); }
+
+        // ---------------------------------------------------------------------------------
+        // 6. ExploracionRediseno Fase H (26-sep-2026, aplicador-fix): 8 ScrollViewer de Exploracion
+        //    que hasta ahora no estaban instrumentados aqui, mas los 2 permitidos por diseno
+        //    (scrollHorizontalPorDiseno=true, nunca generan hallazgo en verificarDesbordamientoHorizontal.js)
+        //    - localizados por REFERENCIA real de ItemsSource/posicion estructural, nunca por un
+        //    x:Name nuevo anadido a produccion solo para este arnes (mismo criterio ya fijado en la
+        //    cabecera de este fichero). Reutiliza roca_negra.wld (mismo mundo que el bloque 5).
+        // ---------------------------------------------------------------------------------
+        try
+        {
+            string worldPathFaseH = @"C:\Users\adrian\Documents\My Games\Terraria\tModLoader\Worlds\roca_negra.wld";
+            if (!File.Exists(worldPathFaseH))
+            {
+                Console.WriteLine("VIEWPORT-faseH: mundo real roca_negra.wld no encontrado - omitido");
+            }
+            else
+            {
+                vm.SelectedTabIndex = 4; // Exploracion
+                DoEvents();
+                if (!vm.Exploration.IsWorldLoaded)
+                {
+                    var taskFaseH = vm.Exploration.LoadFromPathAsync(worldPathFaseH);
+                    while (!taskFaseH.IsCompleted) DoEvents();
+                    if (taskFaseH.IsFaulted) throw taskFaseH.Exception!;
+                    DoEvents();
+                }
+
+                var scrollLateralFaseH = window.FindName("ExplorationSidebarScroll") as ScrollViewer;
+                if (scrollLateralFaseH == null)
+                {
+                    Console.WriteLine("VIEWPORT-faseH: ExplorationSidebarScroll no encontrado - se omite todo el bloque");
+                }
+                else
+                {
+                    // Volcado SOLO del propio ScrollViewer (extent/viewport, ejes vertical+horizontal) -
+                    // a diferencia de VolcarViewport, no depende de encontrar un unico ItemsControl real
+                    // (varios de los 8 de aqui envuelven mas de una lista, o ninguna con ItemsSource
+                    // propio) y basta por si solo para la via A (extent) de verificarDesbordamientoHorizontal.js.
+                    void VolcarSoloScroll(string id, string tipo, ScrollViewer? sv, bool permitido = false)
+                    {
+                        if (sv == null) { Console.WriteLine($"VIEWPORT-{id}: ScrollViewer real no encontrado - omitido"); return; }
+                        sv.ScrollToEnd();
+                        DoEvents(); DoEvents();
+                        Rect r;
+                        try { r = RectCompleto(sv, window); }
+                        catch (InvalidOperationException ex) { Console.WriteLine($"VIEWPORT-{id}: RectCompleto fallo - {ex.Message}"); return; }
+                        elementos.Add(new
+                        {
+                            id,
+                            tipo,
+                            padre_id = (string?)null,
+                            x = r.X,
+                            y = r.Y,
+                            ancho = r.Width,
+                            alto = r.Height,
+                            grupo = (string?)null,
+                            orden_z = OrdenZ(sv),
+                            capa = "panel",
+                            viewportAlto = sv.ViewportHeight,
+                            viewportAncho = sv.ViewportWidth,
+                            extentAncho = sv.ExtentWidth,
+                            scrollHorizontalPorDiseno = permitido,
+                        });
+                        Console.WriteLine($"VIEWPORT-{id}: ScrollViewer real, ViewportHeight={sv.ViewportHeight:0.#}px ScrollableHeight={sv.ScrollableHeight:0.#}px ViewportWidth={sv.ViewportWidth:0.#}px ExtentWidth={sv.ExtentWidth:0.#}px ScrollableWidth={sv.ScrollableWidth:0.#}px (permitido={permitido})");
+                    }
+
+                    // ---- 6a. ExplorationSidebarScroll en Browse, una vez por cada una de las 5 categorias reales ----
+                    vm.Exploration.ShowSidebarBrowseCommand.Execute(null);
+                    DoEvents(); DoEvents();
+                    foreach (var cat in new[] { WorldSearchCategory.All, WorldSearchCategory.Npcs, WorldSearchCategory.Chests, WorldSearchCategory.Ores, WorldSearchCategory.Objects })
+                    {
+                        vm.Exploration.SelectedCategory = cat;
+                        DoEvents(); DoEvents();
+                        VolcarSoloScroll($"ExplorationSidebarScroll_Browse_{cat}", "scrollviewer_sidebar", scrollLateralFaseH);
+                    }
+
+                    // ---- 6b. ExplorationSidebarScroll en ChestInspector, cofre con 17 prefijos legales (peor caso ya usado en COFRES_INSPECTOR_SOLO) ----
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                    vm.Exploration.ChestViewMode = 2; // Cofre a cofre
+                    DoEvents(); DoEvents();
+                    var filaChestFaseH = vm.Exploration.ChestRows.FirstOrDefault(r => r.Items.Count > 0);
+                    if (filaChestFaseH == null)
+                    {
+                        Console.WriteLine("VIEWPORT-ExplorationSidebarScroll_ChestInspector_17prefijos: sin fila de cofre real - omitido");
+                    }
+                    else
+                    {
+                        vm.Exploration.EditChestCommand.Execute(filaChestFaseH);
+                        DoEvents(); DoEvents();
+                        vm.Library.SearchText = "Hacha Arrojadiza de Adamantita"; // arma Picaro real, 17 prefijos legales (rogue_prefixes.json "weapon":17)
+                        WaitForDispatcher(300);
+                        var picaroFaseH = vm.Library.Results.FirstOrDefault();
+                        vm.Library.SearchText = string.Empty;
+                        DoEvents();
+                        var slotFaseH = vm.Exploration.EditingChestSlots.FirstOrDefault();
+                        if (picaroFaseH != null && slotFaseH != null)
+                        {
+                            vm.Exploration.SelectChestSlot(slotFaseH);
+                            DoEvents();
+                            slotFaseH.ItemId = picaroFaseH.Id;
+                            DoEvents(); DoEvents(); window.UpdateLayout();
+                        }
+                        else
+                        {
+                            Console.WriteLine("VIEWPORT-ExplorationSidebarScroll_ChestInspector_17prefijos: AVISO - no se pudo colocar el Picaro de 17 prefijos, se mide el Inspector vacio");
+                        }
+                        VolcarSoloScroll("ExplorationSidebarScroll_ChestInspector_17prefijos", "scrollviewer_sidebar", scrollLateralFaseH);
+                        vm.Exploration.CancelEditingChestCommand.Execute(null);
+                        DoEvents(); DoEvents();
+                    }
+
+                    // ---- 6c. ExplorationSidebarScroll en WorldTools, 3 Expanders desplegados ----
+                    vm.Exploration.ShowSidebarWorldToolsCommand.Execute(null);
+                    DoEvents(); DoEvents();
+                    VolcarSoloScroll("ExplorationSidebarScroll_WorldTools", "scrollviewer_sidebar", scrollLateralFaseH);
+
+                    // ---- 6d. Los 3 ScrollViewer internos de WorldTools (Este mundo/Editar mundo/Bestiario) ----
+                    var worldToolsFaseH = window.FindName("ExplorationSidebarWorldToolsContent") as FrameworkElement;
+                    if (worldToolsFaseH == null)
+                    {
+                        Console.WriteLine("VIEWPORT-faseH: ExplorationSidebarWorldToolsContent no encontrado - se omiten los 3 ScrollViewer internos");
+                    }
+                    else
+                    {
+                        var expanderEsteMundoFaseH = Descendientes<Expander>(worldToolsFaseH).FirstOrDefault(e =>
+                            (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_this_world]");
+                        var scrollEsteMundoFaseH = expanderEsteMundoFaseH == null ? null : Descendientes<ScrollViewer>(expanderEsteMundoFaseH).FirstOrDefault();
+                        VolcarSoloScroll("WorldTools_EsteMundo", "scrollviewer_expander", scrollEsteMundoFaseH);
+
+                        var expanderEditarMundoFaseH = Descendientes<Expander>(worldToolsFaseH).FirstOrDefault(e =>
+                            (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_edit_world]");
+                        var scrollEditarMundoFaseH = expanderEditarMundoFaseH == null ? null : Descendientes<ScrollViewer>(expanderEditarMundoFaseH).FirstOrDefault();
+                        VolcarSoloScroll("WorldTools_EditarMundo", "scrollviewer_expander", scrollEditarMundoFaseH);
+
+                        var expanderBestiarioFaseH = Descendientes<Expander>(worldToolsFaseH).FirstOrDefault(e =>
+                            (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_bestiary]");
+                        // Localizado por REFERENCIA real (Exploration.BestiaryRows) - dentro del Expander
+                        // de Bestiario solo hay un ScrollViewer real, pero mismo criterio que el resto de
+                        // este fichero (ReferenceEquals, nunca texto/posicion fragil).
+                        var icBestiarioFaseH = expanderBestiarioFaseH == null ? null : Descendientes<ItemsControl>(expanderBestiarioFaseH).FirstOrDefault(ic => ReferenceEquals(ic.ItemsSource, vm.Exploration.BestiaryRows));
+                        var scrollBestiarioFaseH = BuscarScrollViewerAncestro(icBestiarioFaseH);
+                        VolcarViewport("WorldTools_Bestiario", "scrollviewer_expander", scrollBestiarioFaseH, icBestiarioFaseH, "contenido");
+                    }
+
+                    // ---- 6e. MissingNpcsScroll (Expander "NPCs que faltan") y NpcResultsList - ambos ya con x:Name real ----
+                    vm.Exploration.ShowSidebarBrowseCommand.Execute(null);
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Npcs;
+                    DoEvents(); DoEvents();
+                    var missingExpanderFaseH = window.FindName("MissingNpcsExpander") as Expander;
+                    if (missingExpanderFaseH != null) { missingExpanderFaseH.IsExpanded = true; DoEvents(); DoEvents(); }
+                    var missingScrollFaseH = window.FindName("MissingNpcsScroll") as ScrollViewer;
+                    var missingListFaseH = window.FindName("MissingNpcsList") as ItemsControl;
+                    VolcarViewport("MissingNpcsScroll", "scrollviewer_expander", missingScrollFaseH, missingListFaseH, "contenido");
+
+                    var npcResultsScrollFaseH = window.FindName("NpcResultsList") as ScrollViewer;
+                    var icNpcResultsFaseH = npcResultsScrollFaseH == null ? null : Descendientes<ItemsControl>(npcResultsScrollFaseH).FirstOrDefault(ic => ReferenceEquals(ic.ItemsSource, vm.Exploration.NpcSearchResults));
+                    VolcarViewport("NpcResultsList", "scrollviewer_sidebar", npcResultsScrollFaseH, icNpcResultsFaseH, "contenido");
+
+                    // ---- 6f. ScrollViewer de categoria Minerales sin x:Name (localizado por Exploration.OreMetals) ----
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Ores;
+                    DoEvents(); DoEvents();
+                    var icOreMetalsFaseH = Descendientes<ItemsControl>(window).FirstOrDefault(ic => ic.IsVisible && ReferenceEquals(ic.ItemsSource, vm.Exploration.OreMetals));
+                    var scrollMineralesFaseH = BuscarScrollViewerAncestro(icOreMetalsFaseH);
+                    VolcarViewport("Minerales_ScrollSinNombre", "scrollviewer_categoria", scrollMineralesFaseH, icOreMetalsFaseH, "contenido");
+
+                    // ---- 6g. PERMITIDOS por diseno: tira horizontal de WorldPillTemplate y WorldMapScroll ----
+                    var icWorldsFaseH = Descendientes<ItemsControl>(window).FirstOrDefault(ic => ReferenceEquals(ic.ItemsSource, vm.Exploration.Worlds));
+                    var scrollWorldsFaseH = BuscarScrollViewerAncestro(icWorldsFaseH);
+                    VolcarSoloScroll("WorldPillTemplate_TiraMundos", "scrollviewer_tira", scrollWorldsFaseH, permitido: true);
+
+                    var scrollMapaFaseH = window.FindName("WorldMapScroll") as ScrollViewer;
+                    VolcarSoloScroll("WorldMapScroll", "scrollviewer_mapa", scrollMapaFaseH, permitido: true);
+
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.All;
+                    vm.Exploration.ShowSidebarBrowseCommand.Execute(null);
+                    DoEvents();
+                }
+            }
+        }
+        catch (Exception ex) { Console.WriteLine("VIEWPORT-faseH-EXCEPTION: " + ex); }
 
         string volcadoPath = Path.Combine(outDir, "volcado-viewport-scroll.json");
         File.WriteAllText(volcadoPath, JsonSerializer.Serialize(elementos, new JsonSerializerOptions { WriteIndented = true }));
