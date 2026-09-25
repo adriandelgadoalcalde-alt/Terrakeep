@@ -25653,3 +25653,106 @@ incrustado dentro de la fila - resuelve directamente "todo aparece metido dentro
 del encargo original del usuario. Pendiente real para una fase futura: repetir el clic simulado de
 SO de AR-13e sobre el marcador del mapa en un recorrido completo del arnés (no se pudo en esta
 ronda, ver el LÍMITE REAL de arriba).
+
+## ExploracionRediseno Fase F (25-sep-2026, aplicador-fix): separa los 3 Expanders de Mundo del
+## flujo permanente de Buscar
+
+**Diseño ya aprobado (ver el propio comentario que Fase C dejó en `MainWindow.xaml` junto a
+`ExplorationSidebarBrowseInspectorHost`, "los movera Fase F")**: los 3 `Expander` reales ("Este
+mundo"/`explore_this_world`, "Editar mundo"/`explore_edit_world`, "Bestiario"/`explore_bestiary`,
+`MainWindow.xaml`, antiguas líneas 6765/6847/6976 antes de este cambio) vivían en
+`DockPanel.Dock="Top"` permanente de `ExplorationSidebarPanel`, ANTES del contenido de Browse -
+contribuían altura fija a la cabecera de TODOS los modos (Browse/ChestInspector) aunque estuvieran
+colapsados por defecto (`IsExpanded="False"`). Fase C ya había dejado el enum
+`ExplorationSidebarMode { Browse, ChestInspector, WorldTools }` con `WorldTools` reservado sin usar.
+
+**Cambio real**: los 3 `Expander` se movieron TAL CUAL (cero línea de su contenido interno tocada -
+`SaveSpawnPointCommand`/`SaveTimeAndMoonCommand`/`SaveBossFlagsCommand`/`BestiaryRows` intactos) a
+un `DockPanel` nuevo (`ExplorationSidebarWorldToolsContent`, `MainWindow.xaml`), condicionado a
+`SidebarMode==WorldTools` vía el mismo converter `EnumEqualsToVis` ya usado por Fase C/D - 3er hijo
+superpuesto de `ExplorationSidebarBrowseInspectorHost`, junto al `DockPanel` de Browse (Fase C) y el
+Inspector de cofre real (Fase D). Al reutilizar un `DockPanel` (en vez de `Grid`) como contenedor de
+WorldTools, los 3 `Expander` conservan su propio `DockPanel.Dock="Top"` SIN modificar ni una línea -
+mudanza literal de bloque. Decisión de UX documentada en el propio XAML: en su contexto WorldTools
+ya no compiten por espacio con nada, así que arrancan `IsExpanded="True"` (antes `False`) - único
+cambio de atributo dentro del bloque movido. Cada `Expander` conserva su propio `ScrollViewer
+MaxHeight` interno tal cual (200/360/220px) - no se unificó en un scroll único porque ya viven
+dentro del mismo `ScrollViewer` exterior que envuelve todo `ExplorationSidebarPanel`
+(`ExplorationSidebarScroll`), unificarlos no aportaba nada real y arriesgaba tocar comportamiento ya
+medido de cada uno en fases anteriores.
+
+**Selector real "Buscar"/"Mundo"** nuevo en la cabecera fija (antes del `Grid` de reparto de los 3
+modos), mismo estilo visual `CategorySelector`/`GroupName` ya usado por el selector de categoría de
+Browse (9.1) pero SIN el `IsChecked` de doble vía directo con `EnumEquals` que usa ese selector: el
+cambio de modo real necesita lógica extra (cancelar un cofre en edición antes de saltar a Mundo) que
+un binding de propiedad simple no puede expresar. Se resolvió con `IsChecked` `Mode=OneWay` (solo
+pinta el estado actual) + `Command` real (`ShowSidebarBrowseCommand`/`ShowSidebarWorldToolsCommand`,
+`ExplorationViewModel.cs`) que decide y aplica la transición - la propia `SidebarMode` dispara el
+próximo `PropertyChanged` que repinta el `RadioButton` correcto. **Decisión real documentada sobre
+la interacción WorldTools↔ChestInspector** (recomendación del arquitecto, aplicada tal cual): si hay
+un cofre en edición (`SidebarMode==ChestInspector`) al pulsar cualquiera de los 2 botones, los 2
+comandos cancelan primero (`CancelEditingChest()`, mismo camino real que el botón "<- Cofres" de
+Fase D) antes de aplicar el modo pedido - nunca deja `EditingChest` colgado detrás de otro modo sin
+guardar ni cancelar explícitamente.
+
+**Verificado con el canario real** `COFRES_INSPECTOR_SOLO=1 dotnet run --project
+Terrakeep.App.Tests -c Debug` (bloque nuevo `EXPLORACION-FASEF*`, mismo fichero
+`CanarioClusterCofresInspector.cs` que ya cubre Fase B/C/D de este mismo rediseño, mundo real
+`Blando_Río.wld`): selector 'Buscar'/'Mundo' encontrados en el árbol visual real, estado inicial
+Browse con selector Buscar marcado y WorldTools `Collapsed`; tras `ShowSidebarWorldToolsCommand` ->
+`SidebarMode=WorldTools`, selector Mundo marcado, `BrowseContent.Visibility=Collapsed` Y
+`BrowseContent.IsVisible=False` (colapsado de verdad, no solo la propiedad local - confirma que
+nunca comparte viewport con Cofres/Minerales/Objetos); los 3 `Expander` localizados dentro de
+`ExplorationSidebarWorldToolsContent` con `IsExpanded=True` los 3; abrir un cofre real
+(`EditChestCommand`) deja `SidebarMode=ChestInspector`/`EditingChest` NO-NULL, y pulsar "Mundo"
+justo después deja `SidebarMode=WorldTools`/`EditingChest=null` (cancelado primero, tal como se
+documentó). **Guardado real ida y vuelta** (mundo de prueba `Blando_Río.wld`, nunca el mundo real
+del usuario) para los 3 botones del editor de mundo: `SaveSpawnPointCommand` (bump
+X+1 -> `WorldSpawnX` actualizado con mensaje real "Guardado en el archivo..." -> vuelta al valor
+original, confirmado), `SaveTimeAndMoonCommand` (fase lunar `(N+1)%8` ida y vuelta) y
+`SaveBossFlagsCommand` (`EditDownedGoblinArmy` ida y vuelta) - los 3 con mensaje de éxito real y el
+mundo de prueba restaurado exactamente a su estado original tras la segunda escritura. 0 FALLO
+propio de Fase F en el log completo (el único `FALLO` del run es
+`COFRES-INSPECTOR-FASED-R1` - ancho del Inspector 218,8px vs 230-245px esperados -, preexistente de
+Fase D, en una zona del fichero que Fase F no tocó, confirmado con `git diff` acotado a las líneas
+6756-8034 de `MainWindow.xaml`). Capturas reales guardadas en `keepqa-evidencia\
+fasef-browse-sin-expanders.png` (selector "Buscar" activo, WrapPanel de categorías/buscador/
+resultados de cofres visibles, SIN los 3 Expanders) y `keepqa-evidencia\
+fasef-worldtools-3-expanders-desplegados.png` (selector "Mundo" activo, "Este mundo"/"Editar
+mundo"/"Bestiario" desplegados con datos reales del mundo, SIN rastro del contenido de Browse).
+
+**Build/test sin regresión**: `dotnet build` (Debug, `Terrakeep.App`+`Terrakeep.App.Tests`) 0
+avisos/0 errores. `dotnet test -c Debug` completo: `Terrakeep.Core.Tests` 732/732,
+`Terrakeep.App.ViewModels.Tests` 711/711 - mismo baseline que Fase D/G, sin regresión.
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` instalado NO estaba en ejecución antes
+de empezar (`Get-CimInstance Win32_Process`, sin resultados). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde (tras un
+`dotnet restore -r win-x64` previo, el primer intento de publish falló con `NETSDK1047` por
+`project.assets.json` sin el target `win-x64` restaurado de una build Debug anterior sin RID).
+Sanidad de `Assets/` ANTES del `/MIR`: publish = 13055 ficheros, instalado ANTES = 13055 - sin
+discrepancia, `/MIR` seguro. `robocopy .../publish .../Terrakeep /MIR /XF unins000.exe
+unins000.dat`: 3 archivos copiados (`Terrakeep.exe` + los 2 JSON de idioma con
+`explore_sidebar_mode_search`/`explore_sidebar_mode_world`), 13058 omitidos (ya idénticos), 0
+extras, 0 errores (código de robocopy=1, "copiado correctamente", no un fallo). Sanidad de
+`Assets/` DESPUÉS del `/MIR`: instalado = 13055 - sin discrepancia. Confirmado con `grep` que la
+copia instalada de `strings_es.json`/`strings_en.json` ya tiene las 2 claves nuevas en los 2
+idiomas. Relanzado el `.exe` instalado (PID 198412, `Responding=True`) y cerrado limpio con
+`Stop-Process` - confirmado sin proceso residual (`Get-CimInstance` vacío tras cerrar).
+
+**Commit real** `adf13835`: `Terrakeep.App/MainWindow.xaml` (mudanza de los 3 Expanders + selector
+nuevo + comentarios actualizados), `Terrakeep.App/ViewModels/ExplorationViewModel.cs`
+(`ShowSidebarBrowseCommand`/`ShowSidebarWorldToolsCommand`), `Terrakeep.App/Assets/
+strings_en.json`/`strings_es.json` (`explore_sidebar_mode_search`/`explore_sidebar_mode_world`),
+`Terrakeep.App.Tests/CanarioClusterCofresInspector.cs` (bloque `EXPLORACION-FASEF*` completo).
+`eec5c03f` (Fase E, resultados de búsqueda) ya era HEAD antes de empezar este encargo - confirmado
+con `git merge-base --is-ancestor eec5c03f HEAD` que no hubo ningún riesgo de pisar ese commit ni
+trabajo sin comitear del mismo agente (nada de Fase E quedaba sin comitear en el árbol de trabajo).
+El árbol de trabajo tenía numerosos ficheros ajenos modificados por otros agentes en paralelo
+(`Terrakeep.Core.Tests/**`, `Terrakeep.App.ViewModels.Tests/**`, `CLAUDE.md`, `scripts/**`, etc.) -
+ninguno se añadió al stage, `git add` con rutas explícitas, nunca `-A`. Sin `git push`.
+
+**Fase F queda cerrada**: WorldTools separado de verdad del flujo permanente de Buscar, con
+selector real y decisión documentada de interacción con ChestInspector. Pendiente real: el hallazgo
+preexistente de Fase D (ancho del Inspector 218,8px vs 230-245px esperados) sigue sin investigar,
+fuera del alcance de este encargo.
