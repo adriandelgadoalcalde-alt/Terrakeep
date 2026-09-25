@@ -21692,3 +21692,64 @@ accesorios de vanidad completo, etc.) sigue exactamente igual que antes - esto f
 acotado de z-order/tamaño de la mascota + el hover del banner que ya pedía el encargo original
 (imagen1), nada más amplio. Ese port completo sigue pendiente y fuera de alcance, tal como ya
 documentó `investigador-bug`.
+
+## 25-sep-2026 - PortSeleccion Encargo6: hover de tarjetas de Inicio, BackgroundColor/BorderColor
+## - YA CUMPLIDO, sin cambios de código - aplicador-fix, handoff e5eaea9e-c261-4199-8e7d-060b6054f58d
+
+Encargo recibido de `arquitecto-keep` marcado INCONCLUSIVE: había confirmado que
+`CharacterCardTemplate` (`MainWindow.xaml`, ~línea 1450-1463) anima `TranslateTransform.Y` en hover
+("levanta al pasar", paridad con `NavCardButton`) pero no había llegado a revisar el resto del
+`Style.Triggers` para confirmar si también cambia `BackgroundColor`/`BorderColor`, como sí hace
+Terraria real (`UICharacterListItem.cs:338-362`, `MouseOver`/`MouseOut`: `BackgroundColor = new
+Color(73, 94, 171)` / `BorderColor = new Color(89, 116, 213)` al entrar, ambos atenuados a 0.7f al
+salir).
+
+**Leído el `Style.Triggers` completo de `CharacterCardTemplate`
+(`Terrakeep.App/MainWindow.xaml:1434-1470`) - conclusión con certeza, sin tocar código**:
+- **`Background` SÍ cambia en hover** (`MainWindow.xaml:1439`): `Setter Property="Background"
+  Value="{StaticResource BgHoverBrush}"`, dentro del mismo `Trigger Property="IsMouseOver"
+  Value="True"` que ya anima el `TranslateTransform.Y`. `BgHoverBrush` (`Styles/Theme.xaml:58`) es
+  el pincel de hover estándar de TODA la app - reutilizado literalmente en otros 11 sitios de
+  `Theme.xaml` (botones, filas de lista, etc.), no un color inventado para esta tarjeta.
+- **`BorderBrush` NO cambia en hover, DELIBERADAMENTE, ya documentado en el propio XAML**
+  (comentario `MainWindow.xaml:1394-1399`, "C-13"): en `CharacterCardTemplate`, `BorderBrush` ya
+  tiene un significado propio - lo fija el `DataTrigger Binding="{Binding IsCurrent}"`
+  (`MainWindow.xaml:1466-1469`) a `AccentBrush` + grosor 2 para marcar "personaje actualmente
+  cargado". Animar también `BorderBrush` en hover reproduciría el bug real **L-6** (ya encontrado y
+  arreglado en este mismo proyecto, ver bitácora 4-sep-2026, línea ~3587: `LibraryCardTemplate`
+  tenía el mismo conflicto - hover y estado peleando por el mismo `Setter` de `BorderBrush`, el
+  hover se volvía invisible sobre una tarjeta ya marcada). Confirmado que el patrón
+  "`BorderBrush`=indicador de estado, nunca de hover" es consistente en TODA la app, no solo aquí:
+  el mismo `DataTrigger Binding="{Binding IsCurrent}"` sobre `BorderBrush` aparece también en
+  `MainWindow.xaml:221`, `1608` y `1757` (otras tarjetas de personaje/mundo), ninguna anima
+  `BorderBrush` en hover tampoco.
+- Terraria real no tiene ningún concepto equivalente a "personaje actualmente cargado" en
+  `UICharacterListItem` (no hay un segundo estado disputando `BorderColor`), así que en vanilla
+  animar ambos en hover no genera ningún conflicto - la divergencia de Terrakeep es una adaptación
+  real y razonada al hecho nuevo que sí tiene (marcar el personaje cargado), no un hueco sin cubrir.
+
+**Verificación real (sin canario nuevo - no hacía falta, es un cambio de estilo declarativo XAML
+ya aplicado, con evidencia de código suficiente + confirmación visual en vivo)**: `dotnet build
+Terrakeep.App -c Debug` en verde (0 advertencias, 0 errores). Lanzado el binario Debug real
+(`Terrakeep.App/bin/Debug/net10.0-windows/Terrakeep.exe`, PID real, sin tocar la copia instalada) y
+capturado con `pywinauto` (backend UIA) sobre la ventana real de Inicio con los 6 personajes reales
+ya escaneados en este equipo:
+- Reposo: todas las tarjetas con el mismo fondo oscuro (`BgElevatedBrush`).
+- Hover sobre la tarjeta "Zenith": fondo visiblemente más claro/azulado (`BgHoverBrush`), borde sin
+  cambio apreciable - coincide exactamente con lo leído en el código.
+Capturas reales (scratchpad de sesión, no forman parte del repo):
+`home-tarjeta-reposo.png` / `home-tarjeta-hover.png`. Proceso de prueba cerrado al terminar
+(`Stop-Process`), sin dejar nada corriendo.
+
+**Sin regresión posible**: no se modificó ningún archivo de producción (`git diff` confirma que
+`MainWindow.xaml` no lleva ningún cambio mío - el único diff pendiente en ese fichero es de otro
+agente en paralelo, "PortSeleccion Encargo4", offset/espejo de mascota, zona totalmente distinta a
+`Style.Triggers`). No hace falta recompilar Release ni redesplegar la copia instalada
+(`%LocalAppData%\Programs\Terrakeep\`) porque no hay ningún cambio real que desplegar. Sin commit
+(no hay ningún archivo tocado que commitear).
+
+**Conclusión para el coordinador**: Encargo6 cerrado como **ya cumplido, sin cambios necesarios**.
+El hover de `CharacterCardTemplate` ya replica la parte con sentido real de Terraria vanilla
+(cambio de fondo) y omite a propósito, con criterio documentado y consistente en toda la app, la
+parte que en Terrakeep generaría un conflicto real con una función que vanilla no tiene (indicador
+de personaje cargado).
