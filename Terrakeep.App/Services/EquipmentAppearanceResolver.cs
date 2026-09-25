@@ -133,6 +133,51 @@ public sealed record PetPreview(PetAnimationEntry? AnimationEntry, string? IconP
 // reclasificacion que su File/Slot hermano (Back->Backpack/Tail, Balloon->BalloonFront,
 // Face->FaceHead/FaceMask/FaceFlower): el dye viaja junto al sprite ya resuelto, nunca se
 // recalcula aparte.
+//
+// GapAnalysis Encargo J (25-sep-2026): 4 estados especiales de bajo impacto, CASOS AISLADOS -
+// a diferencia de los 12 tipos de arriba (un accesorio cualquiera DECLARA el tipo via
+// item.waistSlot/.faceSlot/etc), estos 4 se activan por item.type EXACTO sin importar que otro
+// campo declare el objeto (confirmado en Player.cs real, UpdateVisibleAccessory:37151-37283,
+// MISMO metodo que ya procesa waist/neck/etc, pero estos 4 checks van sueltos al final sin
+// relacion con ningun campo de slot: "if (item.type == 4563) hasUnicornHorn = true;" etc.) -
+// escaneados en el MISMO Scan() de abajo, con el MISMO respeto a hide[]/vanidad que el resto.
+// - UnicornHornFile (item.type==4563, "Unicorn Horn"): TextureAssets.Extra[143],
+//   PlayerDrawLayers.cs:2860-2870 - dibujado en DrawPlayer_22_FaceAcc, justo DESPUES de
+//   FaceFlower, con la MISMA convencion de tira 40x(56*N) que el resto de tipos Face (bodyFrame
+//   como rectangulo de origen, headPosition+headVect como offset) - ver Assets/player/extra/143.png
+//   (scripts/extraer-sprites-estados-especiales.js).
+// - AngelHaloFile (item.type==1987, "Angel Halo"): TextureAssets.AccFace[7],
+//   PlayerDrawLayers.cs:2871-2884 - MISMA posicion/convencion que UnicornHorn, justo despues de
+//   este en el orden real. Id 7 NUNCA sale de ningun faceSlot real (el juego lo fuerza
+//   directamente) - ver ACC_FACE_SINTETICO_ANGEL_HALO en extraer-sprites-accesorios-vanilla.js.
+// - Yoraiz0rDarknessFile (item.type==3581, "Yoraiz0r's Spell", la MITAD "Darkness"):
+//   TextureAssets.Extra[67], PlayerDrawLayers.cs:2626-2632 (DrawPlayer_21_Head_TheFace, rama de
+//   la piel base SIN faceHead puesto) - tenido con `drawinfo.colorHead`/`skinDyePacked` (el
+//   MISMO tinte que la piel base de la cabeza, NO un dye de accesorio propio - por eso este
+//   canal no tiene su propio campo "*Dye", se tiñe con PlayerColors.Skin en el renderer, igual
+//   que Players[skinVar,0]). Frame0 unico (40x56, sin animar) - misma convencion que
+//   HeadBackFile/BeardFile, ver Assets/player/extra/67.png.
+// - CoatSlot (item.type==5587, "Coat"): fuerza SIEMPRE bodySlot sintetico 251
+//   (Player.cs:37279-37282, "if (item.type == 5587) coat = 251;") - se dibuja como pieza de
+//   CUERPO ADICIONAL (TextureAssets.ArmorBodyComposite[251], PlayerDrawLayers.cs:1406-1420/
+//   2029-2036/3828-3846, MISMAS 5 celdas -torso/hombro trasero/brazo trasero/hombro delantero/
+//   brazo delantero- que armor.BodyFile, dibujada SIEMPRE ENCIMA, independiente de si hay
+//   armadura de cuerpo puesta o no - confirmado que los 3 bloques reales que dibujan
+//   ArmorBodyComposite[coat] son un `if` SUELTO, sin relacion con el `if`/`else` de
+//   ArmorBodyComposite[body]/piel base). Tiene su PROPIO canal de dye real (Player.cs:9839-9842,
+//   "if (armorItem.type == 5587) cCoat = dyeItem.dye;" - shader independiente de cBody, de ahi
+//   CoatDye aparte de BodyDye) - ver Assets/player/armor_body/251.png
+//   (COAT_SINTETICO en extraer-sprites-armadura-vanilla.js).
+//
+// Yoraiz0r Eye (item.type==3580, la otra mitad de "Yoraiz0r's Spell") queda FUERA A PROPOSITO,
+// LIMITE REAL: no dibuja NINGUN sprite estatico - Player.cs:37251-37254 solo fija
+// "yoraiz0rEye = itemSlot - 2" (usado UNICAMENTE en UpdateWaterMakeStuff/luz de estela real,
+// Player.cs:12616-12664 - la unica capa de PlayerDrawLayers.cs que referencia yoraiz0rEye es
+// 0 resultados, confirmado con grep completo sobre el decompilado) - depende enteramente de
+// `velocity`/`base.Center` en tiempo real (particulas de polvo + luz emitida a lo largo de la
+// trayectoria del jugador mientras se mueve), algo que no existe ni tiene sentido para un doll
+// ESTATICO sin fisica. No hay ningun sprite que extraer ni ninguna capa que dibujar - documentado
+// aqui, sin campo en EquippedAccessories para este item.
 public sealed record EquippedAccessories(
     string? WaistFile, string? NeckFile, string? HandOnFile, string? HandOffFile,
     string? BackFile, string? ShieldFile, string? FaceFile,
@@ -158,7 +203,12 @@ public sealed record EquippedAccessories(
     PlayerPreviewRenderer.Tint? BeardDye = null,
     PlayerPreviewRenderer.Tint? FaceHeadDye = null, PlayerPreviewRenderer.Tint? FaceMaskDye = null, PlayerPreviewRenderer.Tint? FaceFlowerDye = null,
     PlayerPreviewRenderer.Tint? FrontDye = null,
-    PlayerPreviewRenderer.Tint? WingDye = null);
+    PlayerPreviewRenderer.Tint? WingDye = null,
+    // GapAnalysis Encargo J (25-sep-2026): ver el comentario de cabecera de esta clase.
+    string? UnicornHornFile = null, PlayerPreviewRenderer.Tint? UnicornHornDye = null,
+    string? AngelHaloFile = null, PlayerPreviewRenderer.Tint? AngelHaloDye = null,
+    string? Yoraiz0rDarknessFile = null,
+    string? CoatFile = null, int? CoatSlot = null, PlayerPreviewRenderer.Tint? CoatDye = null);
 
 public sealed class EquipmentAppearanceResolver
 {
@@ -283,6 +333,9 @@ public sealed class EquipmentAppearanceResolver
     public EquippedAccessories ResolveAccessories(PlrLoadout loadout, bool[]? hide = null)
     {
         AccessoryMatch? waist = null, neck = null, handOn = null, handOff = null, back = null, shield = null, face = null, shoes = null, balloon = null, beard = null, front = null, wing = null;
+        // GapAnalysis Encargo J (25-sep-2026): los 4 estados especiales de bajo impacto - ver el
+        // comentario de cabecera de EquippedAccessories para la cita real completa de cada uno.
+        AccessoryMatch? unicornHorn = null, angelHalo = null, yoraiz0rDarkness = null, coat = null;
 
         void Scan(PlrItemSlot[] slots, bool respectHide)
         {
@@ -323,6 +376,16 @@ public sealed class EquipmentAppearanceResolver
                 if (IsAccessoryType(s, e => e.Front, "Front")) front = match;
                 // Wings Encargo1 (25-sep-2026): wingSlot, mismo patron exacto.
                 if (IsAccessoryType(s, e => e.Wing, "Wings")) wing = match;
+                // GapAnalysis Encargo J (25-sep-2026): los 4 estados especiales - item.type EXACTO,
+                // sin relacion con ningun campo de slot (ver el comentario real completo de
+                // EquippedAccessories). "Ultimo en escribir gana" vale igual aqui: si dos items
+                // funcionales/de vanidad con el MISMO item.type especial llegaran a coexistir (no
+                // posible hoy, solo existe 1 item real de cada), el de indice mas alto pisaria al
+                // anterior, igual que el resto de canales.
+                if (s.Id == 4563) unicornHorn = match;
+                if (s.Id == 1987) angelHalo = match;
+                if (s.Id == 3581) yoraiz0rDarkness = match;
+                if (s.Id == 5587) coat = match;
             }
         }
         Scan(loadout.Items, respectHide: true);
@@ -421,6 +484,20 @@ public sealed class EquipmentAppearanceResolver
             (faceFile, faceSlotId, faceDye) = (null, null, null);
         }
 
+        // GapAnalysis Encargo J (25-sep-2026): resuelve la ruta fija real de cada estado especial
+        // (null si el item no esta puesto en ningun hueco) - ver el comentario de cabecera de
+        // EquippedAccessories para la cita completa de cada uno. "lo que no se encuentra no se
+        // inventa" (FixedVanillaPath ya comprueba File.Exists), mismo criterio que el resto del
+        // resolver.
+        string? unicornHornFile = unicornHorn is not null ? FixedVanillaPath("extra", 143) : null;
+        var unicornHornDye = ResolveDye(unicornHorn?.Dye ?? PlrItemSlot.Empty);
+        string? angelHaloFile = angelHalo is not null ? FixedVanillaPath("acc_face", 7) : null;
+        var angelHaloDye = ResolveDye(angelHalo?.Dye ?? PlrItemSlot.Empty);
+        string? yoraiz0rDarknessFile = yoraiz0rDarkness is not null ? FixedVanillaPath("extra", 67) : null;
+        string? coatFile = coat is not null ? FixedVanillaPath("armor_body", 251) : null;
+        int? coatSlotId = coat is not null ? 251 : null;
+        var coatDye = ResolveDye(coat?.Dye ?? PlrItemSlot.Empty);
+
         return new EquippedAccessories(
             waistFile, neckFile, handOnFile, handOffFile, backFile, shieldFile, faceFile,
             waistSlotId, neckSlotId, handOnSlotId, handOffSlotId, backSlotId, shieldSlotId, faceSlotId,
@@ -433,7 +510,19 @@ public sealed class EquipmentAppearanceResolver
             wingFile, wingSlotId,
             waistDye, neckDye, handOnDye, handOffDye, backDye, shieldDye, faceDye,
             backpackDye, tailDye, shoesDye, balloonDye, balloonFrontDye, beardDye,
-            faceHeadDye, faceMaskDye, faceFlowerDye, frontDye, wingDye);
+            faceHeadDye, faceMaskDye, faceFlowerDye, frontDye, wingDye,
+            unicornHornFile, unicornHornDye, angelHaloFile, angelHaloDye, yoraiz0rDarknessFile,
+            coatFile, coatSlotId, coatDye);
+    }
+
+    // GapAnalysis Encargo J (25-sep-2026): resuelve una ruta de sprite con un id FIJO (no
+    // dependiente de una tabla de catalogo, a diferencia de ResolveVanillaPath/
+    // ResolveAccessorySprite) - "lo que no se encuentra no se inventa", mismo criterio que el
+    // resto del resolver.
+    private static string? FixedVanillaPath(string dir, int id)
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "Assets", "player", dir, id + ".png");
+        return File.Exists(path) ? path : null;
     }
 
     // Un item real de Terraria solo declara UNO de los 7 campos de accesorio en la practica,

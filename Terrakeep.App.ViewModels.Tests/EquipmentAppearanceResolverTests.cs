@@ -1438,4 +1438,222 @@ public sealed class EquipmentAppearanceResolverTests
         Assert.NotNull(acc.BackpackFile);
         Assert.Equal(new PlayerPreviewRenderer.Tint(255, 0, 0), acc.BackpackDye);
     }
+
+    // GapAnalysis Encargo J (25-sep-2026): estados especiales de bajo impacto, CASOS AISLADOS por
+    // item.type EXACTO (ver el comentario real completo de EquippedAccessories en
+    // EquipmentAppearanceResolver.cs). Ids reales confirmados en Player.cs decompilado
+    // (UpdateVisibleAccessory:37151-37283/UpdateItemDye:9823-9841).
+    private const int UnicornHorn = 4563;
+    private const int AngelHalo = 1987;
+    private const int Yoraiz0rDarkness = 3581;
+    private const int Coat = 5587;     // "Familiar's Robe"-like, fuerza bodySlot sintetico 251
+    private const int Yoraiz0rEye = 3580; // LIMITE REAL: sin sprite estatico, ver el comentario real
+
+    [Fact]
+    public void ResolveAccessories_ConUnicornHornPuesto_ResuelveElSpriteRealDeExtra143()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, UnicornHorn));
+
+        Assert.NotNull(acc.UnicornHornFile);
+        Assert.True(File.Exists(acc.UnicornHornFile));
+        Assert.EndsWith("extra" + Path.DirectorySeparatorChar + "143.png", acc.UnicornHornFile);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConAngelHaloPuesto_ResuelveElSpriteRealDeAccFace7()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, AngelHalo));
+
+        Assert.NotNull(acc.AngelHaloFile);
+        Assert.True(File.Exists(acc.AngelHaloFile));
+        Assert.EndsWith("acc_face" + Path.DirectorySeparatorChar + "7.png", acc.AngelHaloFile);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConYoraiz0rDarknessPuesto_ResuelveElSpriteRealDeExtra67()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, Yoraiz0rDarkness));
+
+        Assert.NotNull(acc.Yoraiz0rDarknessFile);
+        Assert.True(File.Exists(acc.Yoraiz0rDarknessFile));
+        Assert.EndsWith("extra" + Path.DirectorySeparatorChar + "67.png", acc.Yoraiz0rDarknessFile);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConCoatPuesto_ResuelveElSpriteRealDeArmorBody251YElSlotSintetico()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, Coat));
+
+        Assert.NotNull(acc.CoatFile);
+        Assert.True(File.Exists(acc.CoatFile));
+        Assert.EndsWith("armor_body" + Path.DirectorySeparatorChar + "251.png", acc.CoatFile);
+        Assert.Equal(251, acc.CoatSlot);
+    }
+
+    [Fact]
+    public void ResolveAccessories_SinNingunEstadoEspecial_LosCamposQuedanNull()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+
+        Assert.Null(acc.UnicornHornFile);
+        Assert.Null(acc.AngelHaloFile);
+        Assert.Null(acc.Yoraiz0rDarknessFile);
+        Assert.Null(acc.CoatFile);
+        Assert.Null(acc.CoatSlot);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConYoraiz0rEyePuesto_NoResuelveNingunEstadoEspecial_LimiteRealSinSprite()
+    {
+        // Yoraiz0r Eye (item.type==3580) NO dibuja ningun sprite estatico real (solo particulas
+        // de luz/polvo en tiempo real ligadas a la velocidad del jugador, Player.cs:12616-12664) -
+        // LIMITE REAL documentado en EquippedAccessories. Este objeto no debe activar NINGUNO de
+        // los otros 4 campos por error (defensa real contra un typo de id en el resolver).
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, Yoraiz0rEye));
+
+        Assert.Null(acc.UnicornHornFile);
+        Assert.Null(acc.AngelHaloFile);
+        Assert.Null(acc.Yoraiz0rDarknessFile);
+        Assert.Null(acc.CoatFile);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConAngelHaloDeVanidad_TambienSeActiva_FielAlGuardado()
+    {
+        // Los 4 estados especiales se escanean en el MISMO Scan() que el resto de tipos - un
+        // item de VANIDAD (Social) tiene que activar el estado igual que uno funcional (Items),
+        // mismo criterio ya establecido para el resto de canales.
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Social[5] = new PlrItemSlot(AngelHalo, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.AngelHaloFile);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConUnicornHornOcultoPorHide_NoSeResuelve()
+    {
+        // GapAnalysis Encargo H (hide[] real) tiene que seguir aplicando aqui - estos 4 estados
+        // se escanean en el hueco FUNCIONAL con el mismo respectHide del resto de tipos.
+        var hide = new bool[10];
+        hide[3] = true;
+        var loadout = LoadoutConAccesorioYHide(3, UnicornHorn, hide);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout, hide);
+
+        Assert.Null(acc.UnicornHornFile);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConDyePlanoRealEnUnicornHorn_ResuelveElTinteExacto()
+    {
+        var loadout = LoadoutConAccesorio(3, UnicornHorn);
+        loadout.Dyes[3] = new PlrItemSlot(TinteRojo, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.Equal(new PlayerPreviewRenderer.Tint(255, 0, 0), acc.UnicornHornDye);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConDyePlanoRealEnAngelHalo_ResuelveElTinteExacto()
+    {
+        var loadout = LoadoutConAccesorio(3, AngelHalo);
+        loadout.Dyes[3] = new PlrItemSlot(TinteRojo, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.Equal(new PlayerPreviewRenderer.Tint(255, 0, 0), acc.AngelHaloDye);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConDyePlanoRealEnCoat_ResuelveElTinteExactoEnSuPropioCanal()
+    {
+        // Player.cs:9839-9842 real: "if (armorItem.type == 5587) cCoat = dyeItem.dye;" - un canal
+        // de dye REAL propio, independiente de BodyDye (armor.BodyDye = dye[1], el de la
+        // armadura de cuerpo normal - Coat no tiene por que llevar el mismo tinte).
+        var loadout = LoadoutConAccesorio(3, Coat);
+        loadout.Dyes[3] = new PlrItemSlot(TinteRojo, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.Equal(new PlayerPreviewRenderer.Tint(255, 0, 0), acc.CoatDye);
+    }
+
+    [Fact]
+    public void RenderConCoatReal_CambiaLosPixelesRespectoASinCoat()
+    {
+        // Verificacion de extremo a extremo real (mismo patron que
+        // RenderConArmaduraRealDaUnaImagenDistintaASinArmadura): Coat tiene que llegar de verdad
+        // hasta Composite() en las 5 celdas reales (torso/hombro trasero/brazo trasero/hombro
+        // delantero/brazo delantero), no solo resolverse en el modelo intermedio.
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var accSin = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+        var accCon = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, Coat));
+
+        var renderSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: accSin);
+        var renderCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: accCon);
+
+        var pixelesSin = new byte[renderSin.PixelHeight * renderSin.PixelWidth * 4];
+        renderSin.CopyPixels(pixelesSin, renderSin.PixelWidth * 4, 0);
+        var pixelesCon = new byte[renderCon.PixelHeight * renderCon.PixelWidth * 4];
+        renderCon.CopyPixels(pixelesCon, renderCon.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSin, pixelesCon);
+    }
+
+    [Fact]
+    public void RenderConUnicornHornYAngelHaloReal_CambiaLosPixelesRespectoASinNada()
+    {
+        // Gemelo real del test de Coat de arriba, pero para la capa de CABEZA (DrawAccessory,
+        // tira 40x(56*N)) - ambos a la vez porque los dos comparten exactamente la misma seccion
+        // del renderer (justo despues de FaceFlower).
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var accSin = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(UnicornHorn, 1, 0, false);
+        loadout.Items[4] = new PlrItemSlot(AngelHalo, 1, 0, false);
+        var accCon = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        var renderSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: accSin);
+        var renderCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: accCon);
+
+        var pixelesSin = new byte[renderSin.PixelHeight * renderSin.PixelWidth * 4];
+        renderSin.CopyPixels(pixelesSin, renderSin.PixelWidth * 4, 0);
+        var pixelesCon = new byte[renderCon.PixelHeight * renderCon.PixelWidth * 4];
+        renderCon.CopyPixels(pixelesCon, renderCon.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSin, pixelesCon);
+    }
+
+    [Fact]
+    public void RenderConYoraiz0rDarknessReal_CambiaLosPixelesRespectoASinNada()
+    {
+        // Gemelo real de los dos de arriba, pero para la capa DENTRO de la piel base (
+        // LoadFrame0Absolute, justo despues de eyes/eyewhites) - confirma que llega hasta
+        // Composite() tambien en esa seccion del metodo.
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var accSin = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+        var accCon = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, Yoraiz0rDarkness));
+
+        var renderSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: accSin);
+        var renderCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: accCon);
+
+        var pixelesSin = new byte[renderSin.PixelHeight * renderSin.PixelWidth * 4];
+        renderSin.CopyPixels(pixelesSin, renderSin.PixelWidth * 4, 0);
+        var pixelesCon = new byte[renderCon.PixelHeight * renderCon.PixelWidth * 4];
+        renderCon.CopyPixels(pixelesCon, renderCon.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSin, pixelesCon);
+    }
 }

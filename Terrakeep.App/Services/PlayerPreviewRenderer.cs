@@ -260,6 +260,21 @@ public static class PlayerPreviewRenderer
             Composite(canvas, LoadHandAccessoryFrame(file, armCell, legAnimationFrame), tint);
         }
 
+        // GapAnalysis Encargo J (25-sep-2026): Coat (item.type==5587, bodySlot sintetico 251) -
+        // pieza de cuerpo ADICIONAL, MISMA hoja compuesta 360x224 y MISMAS celdas que
+        // armor.BodyFile (LoadArmorCell reutilizado sin logica nueva), dibujada SIEMPRE ENCIMA de
+        // lo que haya (armadura de cuerpo puesta o piel base) - confirmado en el decompilado real
+        // que los 3 bloques que dibujan ArmorBodyComposite[coat]
+        // (PlayerDrawLayers.cs:1406-1420/2029-2036/3828-3846) son un `if` SUELTO, sin relacion con
+        // el `if(body>0)/else` que rodea a armor.BodyFile - por eso se llama DESPUES de cada
+        // bloque hasBody/else, nunca dentro de el. CoatDye es un canal de dye REAL propio
+        // (Player.cs:9839-9842, "cCoat = dyeItem.dye"), independiente de BodyDye - ver el
+        // comentario real completo de EquippedAccessories.
+        void DrawCoat((int Col, int Row) cell)
+        {
+            if (accessories?.CoatFile is { } coatFile) Composite(canvas, LoadArmorCell(coatFile, cell), accessories?.CoatDye);
+        }
+
         // GapAnalysis Encargo E (25-sep-2026): accessories?.FrontFile (item.frontSlot,
         // Player.cs:37185-37188) NO es una capa unica "encima de todo" - es el MISMO sprite
         // recortado en 2 mitades (PlayerDrawLayers.cs:3908-3993,
@@ -472,6 +487,11 @@ public static class PlayerPreviewRenderer
             DrawAccessory(accessories?.BalloonFrontFile, accessories?.BalloonFrontDye);
             Composite(canvas, LoadBodyCell(variant, "armshirt", backArmCell), colors.Shirt);
         }
+        // GapAnalysis Encargo J: Coat, SIEMPRE despues del bloque hasBody/else de arriba (ver el
+        // comentario real completo de DrawCoat) - orden real (PlayerDrawLayers.cs:1406-1420):
+        // hombro trasero primero, brazo trasero despues.
+        DrawCoat(backShoulderCell);
+        DrawCoat(backArmCell);
 
         // Paso 5 [13_Leggings/14_Shoes]: perneras + GapAnalysis Encargo D (25-sep-2026) - el
         // accesorio REAL de zapatos (shoeSlot, canal COMPLETAMENTE DISTINTO de los zapatos BASE
@@ -542,6 +562,8 @@ public static class PlayerPreviewRenderer
             Composite(canvas, LoadBodyCell(variant, "undershirt", torsoCell), colors.Under);
             Composite(canvas, LoadBodyCell(variant, "shirt", torsoCell), colors.Shirt);
         }
+        // GapAnalysis Encargo J: Coat en el torso, SIEMPRE despues (PlayerDrawLayers.cs:2029-2036).
+        DrawCoat(torsoCell);
 
         // Paso 8b [18/19/20_OffhandAcc/WaistAcc/NeckAcc]: los tres accesorios de torso que van
         // ANTES de la cabeza en el orden real (PlayerDrawLayers.cs, ids de capa 18/19/20 - HandOff
@@ -557,6 +579,17 @@ public static class PlayerPreviewRenderer
         Composite(canvas, LoadFrame0("body0", "head"), colors.Skin);
         Composite(canvas, LoadFrame0("body0", "eyewhites"), null); // ya blanco en el sprite real
         Composite(canvas, LoadFrame0("body0", "eyes"), colors.Eyes);
+
+        // GapAnalysis Encargo J (25-sep-2026): Yoraiz0r Darkness (item.type==3581), justo despues
+        // de la piel base de la cabeza - PlayerDrawLayers.cs:2626-2632 real
+        // (DrawPlayer_21_Head_TheFace, rama sin faceHead puesto): "drawData = new
+        // DrawData(TextureAssets.Extra[67].Value, ..., drawinfo.colorHead, ...); drawData.shader =
+        // drawinfo.skinDyePacked;" - tenido con el MISMO color que la piel base (colorHead, aqui
+        // colors.Skin), NO con un dye de accesorio propio (ver el comentario real completo de
+        // EquippedAccessories - por eso no hay un campo "Yoraiz0rDarknessDye" separado). Frame0
+        // unico (sin animar), misma convencion que HeadBackFile/BeardFile mas abajo.
+        if (accessories?.Yoraiz0rDarknessFile is { } yoraiz0rDarknessFile)
+            Composite(canvas, LoadFrame0Absolute(yoraiz0rDarknessFile), colors.Skin);
 
         // GapAnalysis Encargo F (25-sep-2026): FaceHead (item.faceSlot clasificado en
         // ArmorIDs.Face.Sets.DrawInFaceHeadLayer, ver FaceAccessoryLayerTable) se dibuja DENTRO
@@ -657,6 +690,13 @@ public static class PlayerPreviewRenderer
         if (!faceMaskUnderHead && !PlayerBodyDrawTables.PreventFaceMaskDraw(headId)) DrawAccessory(accessories?.FaceMaskFile, accessories?.FaceMaskDye);
         if (!PlayerBodyDrawTables.PreventFaceFlowerDraw(headId)) DrawAccessory(accessories?.FaceFlowerFile, accessories?.FaceFlowerDye);
 
+        // GapAnalysis Encargo J (25-sep-2026): Unicorn Horn/Angel Halo, justo DESPUES de
+        // FaceFlower - PlayerDrawLayers.cs:2860-2884 real, MISMA seccion/convencion que
+        // Face/FaceMask/FaceFlower (tira 40x(56*N), bodyFrame como rectangulo de origen) - ver el
+        // comentario real completo de EquippedAccessories.
+        DrawAccessory(accessories?.UnicornHornFile, accessories?.UnicornHornDye);
+        DrawAccessory(accessories?.AngelHaloFile, accessories?.AngelHaloDye);
+
         // Paso 9b2 [32_FrontAcc_BackPart]: GapAnalysis Encargo E (25-sep-2026) - mitad DERECHA
         // real de Front, posicion FIJA (LegacyPlayerRenderer.cs real: justo despues de FaceAcc/
         // MountFront/Pulley/JimsDroneRadio -que este doll no modela, sin diferencia visible en un
@@ -693,6 +733,11 @@ public static class PlayerPreviewRenderer
             Composite(canvas, LoadBodyCell(variant, "armshirt", frontShoulderCell), colors.Shirt);
             Composite(canvas, LoadBodyCell(variant, "shirt", frontShoulderCell), colors.Shirt);
         }
+        // GapAnalysis Encargo J: Coat, SIEMPRE despues (PlayerDrawLayers.cs:3828-3846) - MISMO
+        // orden brazo/hombro real ya establecido arriba para armor.BodyFile (num2/num3, brazo
+        // primero).
+        DrawCoat(frontArmCell);
+        DrawCoat(frontShoulderCell);
 
         // Paso 10b [29_OnhandAcc]: accesorio "en mano" (guantes/garras puestos como accesorio,
         // no como arma), tras el brazo/hombro delantero.

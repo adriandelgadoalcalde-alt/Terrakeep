@@ -63,6 +63,15 @@
 // PlayerPreviewRenderer.LoadBalloonFrame para la cita completa) - se guarda igual la hoja
 // entera sin recortar, el recorte/posicionado real lo hace el renderer, no este script.
 //
+// GapAnalysis Encargo J (25-sep-2026): ACC_FACE_SINTETICO_ANGEL_HALO - mismo patron exacto que
+// SHOE_SINTETICOS_MALE_TO_FEMALE (mas abajo). Angel Halo (item.type==1987, Player.cs:37271-37274,
+// "if (item.type == 1987) hasAngelHalo = true;") NUNCA declara item.faceSlot=7 - el juego real
+// fuerza directamente `Main.instance.LoadAccFace(7); TextureAssets.AccFace[7]`
+// (PlayerDrawLayers.cs:2871-2884) sin pasar por ningun faceSlot real, asi que el id 7 no sale
+// nunca de vanilla_accessory_slots.json (confirmado: 0 entradas reales con fc=7 en ese fichero).
+// Confirmado que Acc_Face_7.xnb SI existe en la instalacion real de Steam.
+const ACC_FACE_SINTETICO_ANGEL_HALO = [7];
+//
 // Uso: node scripts/extraer-sprites-accesorios-vanilla.js
 // Salida: Terrakeep.App/Assets/player/acc_waist/{id}.png, acc_neck/, acc_handon/, acc_handoff/,
 //         acc_back/, acc_shield/, acc_face/, acc_shoes/, acc_balloon/, acc_beard/, acc_front/ -
@@ -135,6 +144,7 @@ for (const entry of Object.values(slots)) {
 // existe en la instalacion real de Steam.
 const SHOE_SINTETICOS_MALE_TO_FEMALE = [26];
 for (const id of SHOE_SINTETICOS_MALE_TO_FEMALE) idsPorTipo.sh.add(id);
+for (const id of ACC_FACE_SINTETICO_ANGEL_HALO) idsPorTipo.fc.add(id);
 
 console.log(`ids unicos referenciados por tipo: ${Object.entries(idsPorTipo).map(([k, v]) => `${TIPOS[k][0]}=${v.size}`).join(' ')}`);
 

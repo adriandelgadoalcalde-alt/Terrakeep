@@ -45,6 +45,14 @@ const HEAD_SINTETICOS_SET_MATCH = [202];
 // con un barrido real: Armor_Head_{246,247,248,249,252,253}.xnb SI existen en la instalacion
 // real de Steam, ver PlayerBodyDrawTables.HeadFrontToBackID para la tabla completa).
 const HEAD_SINTETICOS_FRONT_TO_BACK = [246, 247, 248, 249, 252, 253];
+// GapAnalysis Encargo J (25-sep-2026): COAT_SINTETICO - mismo patron exacto que los sinteticos de
+// arriba. "Coat" (item.type==5587, Player.cs:37279-37282, "if (item.type == 5587) coat = 251;")
+// fuerza SIEMPRE el bodySlot 251, ningun item real declara bodySlot=251 directamente (0 entradas
+// reales con "b":251 en vanilla_armor_slots.json) - se dibuja como pieza de cuerpo ADICIONAL
+// (TextureAssets.ArmorBodyComposite[251], PlayerDrawLayers.cs:1406-1420/2029-2036/3828-3846,
+// mismo formato de hoja 360x224 que el resto de armor_body). Confirmado que Armor_251.xnb SI
+// existe en la instalacion real de Steam.
+const COAT_SINTETICO = [251];
 
 // Uso: node scripts/extraer-sprites-armadura-vanilla.js
 // Salida: Terrakeep.App/Assets/player/armor_head/{id}.png (40x56, frame0, sin cambios),
@@ -109,6 +117,7 @@ const antesHead = headIds.size, antesLegs = legIds.size;
 for (const id of HEAD_SINTETICOS_SET_MATCH) headIds.add(id);
 for (const id of HEAD_SINTETICOS_FRONT_TO_BACK) headIds.add(id);
 for (const id of [...LEGS_SINTETICOS_SET_MATCH_BODY, ...LEGS_SINTETICOS_SET_MATCH_LEGS, ...LEGS_SINTETICOS_BODY_EXTENSION]) legIds.add(id);
+for (const id of COAT_SINTETICO) bodyIds.add(id);
 
 console.log(`ids unicos referenciados: head=${headIds.size} (${headIds.size - antesHead} sinteticos de SetMatch) body=${bodyIds.size} legs=${legIds.size} (${legIds.size - antesLegs} sinteticos de SetMatch/GetMatchingBodyExtension)`);
 
