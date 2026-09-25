@@ -122,8 +122,16 @@ public static class PlayerPreviewRenderer
     // EquipmentAppearanceResolver.ResolveHeadBack DERIVANDO el sprite "de espaldas" del propio
     // HeadSlot (via ArmorIDs.Head.Sets.FrontToBackID) - null en la inmensa mayoria de cascos
     // reales, que no tienen sprite "de espaldas" (ver PlayerBodyDrawTables.HeadFrontToBackID).
+    // GapAnalysis Encargo I (25-sep-2026): HeadDye/BodyDye/LegsDye - tinte PLANO real
+    // (EquipmentAppearanceResolver.ResolveDye, dye[0]/dye[1]/dye[2] del loadout) o null (sin
+    // dye puesto, dye ANIMADO/SHADER real o dye de Calamity - los 3 casos "sin tinte", ver
+    // DyeShaderCatalog). A diferencia del comentario de cabecera de la clase ("la armadura real
+    // NUNCA se tinta con los colores del PERSONAJE" - Hair/Skin/Eyes/etc, PlayerColors), un dye
+    // SI tiñe la armadura - son 2 mecanismos de tinte reales y distintos del juego (colorArmorX
+    // vs colorHair/colorSkin/etc, Player.cs real), sin contradiccion.
     public readonly record struct EquippedArmor(string? HeadFile, string? BodyFile, string? LegsFile,
-        int? HeadSlot = null, int? BodySlot = null, int? LegsSlot = null, string? HeadBackFile = null);
+        int? HeadSlot = null, int? BodySlot = null, int? LegsSlot = null, string? HeadBackFile = null,
+        Tint? HeadDye = null, Tint? BodyDye = null, Tint? LegsDye = null);
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> Cache = new();
 
@@ -217,10 +225,13 @@ public static class PlayerPreviewRenderer
         // inventa nada, la capa simplemente no se dibuja. Waist/Neck/HandOn/HandOff/Back/Face
         // comparten esta misma tira vertical 40x(56*N) - ver el comentario real de la firma de
         // Render para la cita completa. Shield usa LoadShieldFrame aparte (ancho real variable).
-        void DrawAccessory(string? file)
+        // GapAnalysis Encargo I (25-sep-2026): "tint" opcional (default null, byte a byte
+        // identico para cualquier llamador existente que no lo pase) - el tinte PLANO real ya
+        // resuelto por EquipmentAppearanceResolver para el canal de ESTE accesorio.
+        void DrawAccessory(string? file, Tint? tint = null)
         {
             if (file is null) return;
-            Composite(canvas, LoadStripFrameAbsolute(file, legAnimationFrame), null);
+            Composite(canvas, LoadStripFrameAbsolute(file, legAnimationFrame), tint);
         }
 
         // CalamityAccesorios (25-sep-2026): HandOn/HandOff son un caso real MIXTO, a diferencia
@@ -243,10 +254,10 @@ public static class PlayerPreviewRenderer
         // por el origen vanilla/Calamity, para no romper ni el contrato existente de esos 24
         // sprites ni las pruebas "orden" (PNG sinteticos 40x56 de
         // PlayerPreviewRendererAccessoriesTests, tambien caen en la rama tira).
-        void DrawHandAccessory(string? file, (int Col, int Row) armCell)
+        void DrawHandAccessory(string? file, (int Col, int Row) armCell, Tint? tint = null)
         {
             if (file is null) return;
-            Composite(canvas, LoadHandAccessoryFrame(file, armCell, legAnimationFrame), null);
+            Composite(canvas, LoadHandAccessoryFrame(file, armCell, legAnimationFrame), tint);
         }
 
         // GapAnalysis Encargo E (25-sep-2026): accessories?.FrontFile (item.frontSlot,
@@ -288,7 +299,7 @@ public static class PlayerPreviewRenderer
         void DrawFrontHalf(bool leftHalf)
         {
             if (frontHidden || accessories?.FrontFile is not { } frontFile) return;
-            Composite(canvas, MaskHalf(LoadStripFrameAbsolute(frontFile, legAnimationFrame), leftHalf), null);
+            Composite(canvas, MaskHalf(LoadStripFrameAbsolute(frontFile, legAnimationFrame), leftHalf), accessories?.FrontDye);
         }
 
         // ESPEC-dibujado-sprites.md#7.2: cadena real de SetMatch (Player.cs:36053-36092), tres
@@ -373,8 +384,8 @@ public static class PlayerPreviewRenderer
         // vertical 40x(56*N), DrawAccessory reutilizado sin logica nueva. Orden real
         // (LegacyPlayerRenderer.cs:178/180/182/184/185): Backpacks -> Tails -> Wings -> BackHair
         // -> BackAcc - por eso van ANTES del pelo trasero.
-        DrawAccessory(accessories?.BackpackFile);
-        DrawAccessory(accessories?.TailFile);
+        DrawAccessory(accessories?.BackpackFile, accessories?.BackpackDye);
+        DrawAccessory(accessories?.TailFile, accessories?.TailDye);
 
         // Paso 1a-2 [09_Wings]: Wings Encargo1 (25-sep-2026) - capa BASE de alas, un unico
         // fotograma fijo (frame 0/"reposo"), sin animacion/particulas/glow (ver el ALCANCE
@@ -387,7 +398,7 @@ public static class PlayerPreviewRenderer
         // GENERICA de WingDrawTable, fiel-por-defecto, mismo criterio ya establecido para
         // BodySlot/LegsSlot/etc.
         if (accessories?.WingFile is { } wingFile)
-            Composite(canvas, LoadWingFrame(wingFile, accessories?.WingSlot ?? 0), null);
+            Composite(canvas, LoadWingFrame(wingFile, accessories?.WingSlot ?? 0), accessories?.WingDye);
 
         // DrawPlayer_01_BackHair real: la capa TRASERA de un peinado largo se dibuja la
         // PRIMERISIMA de todas (antes incluso de piernas/torso), para que el resto del cuerpo
@@ -399,18 +410,23 @@ public static class PlayerPreviewRenderer
         // despues de HairBack y antes de la piel (Wings ya portado arriba, Wings Encargo1; Tails/
         // Backpack ya portados arriba, GapAnalysis Encargo A; HeadBack justo debajo, GapAnalysis
         // Encargo B; Balloons justo debajo de HeadBack, GapAnalysis Encargo C).
-        DrawAccessory(accessories?.BackFile);
+        DrawAccessory(accessories?.BackFile, accessories?.BackDye);
 
         // Paso 1c [11_BackHead]: GapAnalysis Encargo B (25-sep-2026) - version "de espaldas" del
         // casco actual, DERIVADA del propio HeadSlot (ver el comentario real de
         // EquipmentAppearanceResolver.ResolveHeadBack) - no es un slot/objeto independiente.
         // Orden real (LegacyPlayerRenderer.cs real, ~linea 186): Backpacks -> Tails -> Wings ->
         // BackHair -> BackAcc -> BackHead -> Balloons - justo despues de BackAcc, antes de
-        // Balloons (GapAnalysis Encargo C, Paso 1d justo debajo). Mismo criterio "la armadura
-        // real NUNCA se tinta con los colores del personaje" que DrawHelmet() mas abajo - tint
-        // null, sin recortar (frame0 40x56, misma convencion que HeadFile/armor_head).
+        // Balloons (GapAnalysis Encargo C, Paso 1d justo debajo). Sin recortar (frame0 40x56,
+        // misma convencion que HeadFile/armor_head). GapAnalysis Encargo I (25-sep-2026):
+        // HeadDye (dye[0], MISMO canal que el propio casco - HeadBack no es un item
+        // independiente, es la textura "de espaldas" DERIVADA del mismo headSlot, ver el
+        // comentario real de ResolveHeadBack) - antes de este encargo se dibujaba con tint null
+        // porque el pipeline de dyes por canal todavia no existia, no porque la armadura no se
+        // tiña nunca (ese criterio es solo para PlayerColors/Hair-Skin-etc, ver el comentario de
+        // cabecera de la clase).
         if (armor.HeadBackFile is { } headBackFile)
-            Composite(canvas, LoadFrame0Absolute(headBackFile), null);
+            Composite(canvas, LoadFrame0Absolute(headBackFile), armor.HeadDye);
 
         // Paso 1d [11_Balloons]: GapAnalysis Encargo C (25-sep-2026) - accessories?.BalloonFile,
         // canal NORMAL de item.balloonSlot (Player.cs:37232-37241, ver
@@ -420,7 +436,7 @@ public static class PlayerPreviewRenderer
         // 40x(56*N) alineada al lienzo, DrawAccessory), AccBalloon NO sigue esa convencion para
         // este canal - LoadBalloonFrame tiene la cita real completa de la formula de posicion.
         if (accessories?.BalloonFile is { } balloonFile)
-            Composite(canvas, LoadBalloonFrame(balloonFile), null);
+            Composite(canvas, LoadBalloonFrame(balloonFile), accessories?.BalloonDye);
 
         // Paso 2-3 [12_Skin_Composite]: piel del torso y de las piernas, cada una solo si el
         // bodySlot/legSlot real puesto no la oculta (hidesTopSkin/hidesBottomSkin).
@@ -444,16 +460,16 @@ public static class PlayerPreviewRenderer
         {
             if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", backArmCell), colors.Skin);
             if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "hands", backArmCell), colors.Skin);
-            if (armor.BodyFile is { } bodyBackShoulderArmor) Composite(canvas, LoadArmorCell(bodyBackShoulderArmor, backShoulderCell), null);
-            DrawAccessory(accessories?.BalloonFrontFile);
-            if (armor.BodyFile is { } bodyBackArmArmor) Composite(canvas, LoadArmorCell(bodyBackArmArmor, backArmCell), null);
+            if (armor.BodyFile is { } bodyBackShoulderArmor) Composite(canvas, LoadArmorCell(bodyBackShoulderArmor, backShoulderCell), armor.BodyDye);
+            DrawAccessory(accessories?.BalloonFrontFile, accessories?.BalloonFrontDye);
+            if (armor.BodyFile is { } bodyBackArmArmor) Composite(canvas, LoadArmorCell(bodyBackArmArmor, backArmCell), armor.BodyDye);
         }
         else
         {
             if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", backArmCell), colors.Skin);
             if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "hands", backArmCell), colors.Skin);
             Composite(canvas, LoadBodyCell(variant, "armundershirt", backArmCell), colors.Under);
-            DrawAccessory(accessories?.BalloonFrontFile);
+            DrawAccessory(accessories?.BalloonFrontFile, accessories?.BalloonFrontDye);
             Composite(canvas, LoadBodyCell(variant, "armshirt", backArmCell), colors.Shirt);
         }
 
@@ -477,14 +493,18 @@ public static class PlayerPreviewRenderer
             string altShoesPath = VanillaPath("acc_shoes", femaleShoesId);
             if (File.Exists(altShoesPath)) shoesFileToUse = altShoesPath;
         }
-        void DrawShoesAccessory() => DrawAccessory(shoesFileToUse);
+        void DrawShoesAccessory() => DrawAccessory(shoesFileToUse, accessories?.ShoesDye);
 
         bool legsChangedBySetMatch = legsId != originalLegsId;
         string? legsFileToUse = legsChangedBySetMatch ? VanillaPathIfExists("armor_legs", legsId) : armor.LegsFile;
         if (wearsRobe) DrawShoesAccessory();
         if (legsId > 0 && legsFileToUse != null)
         {
-            Composite(canvas, LoadStripFrameAbsolute(legsFileToUse, legAnimationFrame), null);
+            // GapAnalysis Encargo I (25-sep-2026): LegsDye (dye[2]) - si SetMatch sustituyo el
+            // legSlot por el de un set distinto (wearsRobe/legsChangedBySetMatch), el dye SIGUE
+            // siendo el del propio personaje (dye[2] real, no cambia con SetMatch, mismo criterio
+            // que headIdAfterSetMatch/headFileToUse arriba - solo cambia el SPRITE, nunca el dye).
+            Composite(canvas, LoadStripFrameAbsolute(legsFileToUse, legAnimationFrame), armor.LegsDye);
         }
         else
         {
@@ -503,14 +523,17 @@ public static class PlayerPreviewRenderer
         if (bodyExtension is int extId)
         {
             string? extPath = VanillaPathIfExists("armor_legs", extId);
-            if (extPath != null) Composite(canvas, LoadStripFrameAbsolute(extPath, legAnimationFrame), null);
+            // GapAnalysis Encargo I (25-sep-2026): BodyDye - el faldon largo es una EXTENSION de
+            // la armadura de CUERPO (GetMatchingBodyExtension usa el bodyId, ver el comentario
+            // real de arriba), se tiñe con el mismo dye[1] que el resto del torso/hombros/brazos.
+            if (extPath != null) Composite(canvas, LoadStripFrameAbsolute(extPath, legAnimationFrame), armor.BodyDye);
         }
 
         // Paso 8 [17_TorsoComposite]: con armadura/vanidad de cuerpo puesta, el juego real NO
         // dibuja la ropa base (bug #1 del caso "Eldelgas") - solo la armadura, en el torso.
         if (hasBody)
         {
-            if (armor.BodyFile is { } bodyTorso) Composite(canvas, LoadArmorCell(bodyTorso, torsoCell), null);
+            if (armor.BodyFile is { } bodyTorso) Composite(canvas, LoadArmorCell(bodyTorso, torsoCell), armor.BodyDye);
         }
         else
         {
@@ -523,9 +546,9 @@ public static class PlayerPreviewRenderer
         // Paso 8b [18/19/20_OffhandAcc/WaistAcc/NeckAcc]: los tres accesorios de torso que van
         // ANTES de la cabeza en el orden real (PlayerDrawLayers.cs, ids de capa 18/19/20 - HandOff
         // primero, Waist, Neck ultimo de los tres).
-        DrawHandAccessory(accessories?.HandOffFile, backArmCell);
-        DrawAccessory(accessories?.WaistFile);
-        DrawAccessory(accessories?.NeckFile);
+        DrawHandAccessory(accessories?.HandOffFile, backArmCell, accessories?.HandOffDye);
+        DrawAccessory(accessories?.WaistFile, accessories?.WaistDye);
+        DrawAccessory(accessories?.NeckFile, accessories?.NeckDye);
 
         // Paso 9 [21_Head]: cabeza/ojos/pelo/casco. Orden real: casco ANTES que el pelo cuando
         // el casco es "fullHair" (:2143-2161, invertido respecto a la version anterior de este
@@ -547,7 +570,7 @@ public static class PlayerPreviewRenderer
         // base de arriba se dibuja siempre, capa ya existente antes de este encargo), asi que
         // FaceHead se compone ENCIMA de la piel en vez de reemplazarla; hueco real, documentado,
         // no oculto (mismo criterio que el resto de "ALCANCE DELIBERADO" de esta clase).
-        DrawAccessory(accessories?.FaceHeadFile);
+        DrawAccessory(accessories?.FaceHeadFile, accessories?.FaceHeadDye);
 
         // Face bajo el pelo: excepcion real ArmorIDs.Face.Sets.DrawInFaceUnderHairLayer (unico
         // caso real, faceSlot=5/Blindfold) - PlayerDrawLayers.cs real,
@@ -556,7 +579,7 @@ public static class PlayerPreviewRenderer
         // habitual (Paso 9b, junto a FaceMask/FaceFlower/Shield). FaceSlot es el indice REAL
         // vanilla ya resuelto por ResolveAccessories (null para Calamity/vacio, nunca entra aqui).
         bool faceUnderHair = accessories?.FaceSlot is int faceSlotForHair && FaceAccessoryLayerTable.IsUnderHairLayer(faceSlotForHair);
-        if (faceUnderHair) DrawAccessory(accessories?.FaceFile);
+        if (faceUnderHair) DrawAccessory(accessories?.FaceFile, accessories?.FaceDye);
 
         // FaceMask bajo el casco: excepcion real ArmorIDs.Head.Sets.DrawFaceMaskUnderHeadLayer -
         // a diferencia de la de arriba, esta tabla esta indexada por HEADSLOT, no por faceSlot
@@ -565,7 +588,7 @@ public static class PlayerPreviewRenderer
         // tabla es true para el headSlot puesto, PreventFaceMaskDraw NO se consulta (confirmado
         // en el propio flag5 real - la condicion solo mira DrawFaceMaskUnderHeadLayer).
         bool faceMaskUnderHead = PlayerBodyDrawTables.DrawFaceMaskUnderHeadLayer(headId);
-        if (faceMaskUnderHead) DrawAccessory(accessories?.FaceMaskFile);
+        if (faceMaskUnderHead) DrawAccessory(accessories?.FaceMaskFile, accessories?.FaceMaskDye);
 
         void DrawHair()
         {
@@ -579,7 +602,10 @@ public static class PlayerPreviewRenderer
         }
         void DrawHelmet()
         {
-            if (headFileToUse is { } headFile) Composite(canvas, LoadFrame0Absolute(headFile), null);
+            // GapAnalysis Encargo I (25-sep-2026): HeadDye (dye[0]) - si SetMatch sustituyo el
+            // headSlot (headFileToUse != armor.HeadFile), el dye SIGUE siendo el del propio
+            // personaje (mismo criterio que LegsDye arriba: solo cambia el SPRITE, nunca el dye).
+            if (headFileToUse is { } headFile) Composite(canvas, LoadFrame0Absolute(headFile), armor.HeadDye);
         }
 
         if (fullHair) { DrawHelmet(); DrawHair(); }
@@ -627,9 +653,9 @@ public static class PlayerPreviewRenderer
         // PreventFaceMaskDraw[headSlot] (y no se dibujo ya bajo el casco); FaceFlower se suprime
         // del todo si PreventFaceFlowerDraw[headSlot] - ninguna de las 2 tiene una posicion
         // alternativa para ese caso, simplemente no se dibuja en ningun sitio (fiel al juego real).
-        if (!faceUnderHair) DrawAccessory(accessories?.FaceFile);
-        if (!faceMaskUnderHead && !PlayerBodyDrawTables.PreventFaceMaskDraw(headId)) DrawAccessory(accessories?.FaceMaskFile);
-        if (!PlayerBodyDrawTables.PreventFaceFlowerDraw(headId)) DrawAccessory(accessories?.FaceFlowerFile);
+        if (!faceUnderHair) DrawAccessory(accessories?.FaceFile, accessories?.FaceDye);
+        if (!faceMaskUnderHead && !PlayerBodyDrawTables.PreventFaceMaskDraw(headId)) DrawAccessory(accessories?.FaceMaskFile, accessories?.FaceMaskDye);
+        if (!PlayerBodyDrawTables.PreventFaceFlowerDraw(headId)) DrawAccessory(accessories?.FaceFlowerFile, accessories?.FaceFlowerDye);
 
         // Paso 9b2 [32_FrontAcc_BackPart]: GapAnalysis Encargo E (25-sep-2026) - mitad DERECHA
         // real de Front, posicion FIJA (LegacyPlayerRenderer.cs real: justo despues de FaceAcc/
@@ -641,7 +667,7 @@ public static class PlayerPreviewRenderer
         // Paso 9c [25_Shield]: escudo, despues de FaceAcc y antes del brazo delantero (orden real
         // PlayerDrawLayers.cs) - ancho real variable, ver LoadShieldFrame.
         if (accessories?.ShieldFile is { } shieldFile)
-            Composite(canvas, LoadShieldFrame(shieldFile, legAnimationFrame), null);
+            Composite(canvas, LoadShieldFrame(shieldFile, legAnimationFrame), accessories?.ShieldDye);
 
         // Paso 10 [28_ArmOverItemComposite]: brazo DELANTERO, encima de todo lo anterior.
         // Orden real: BRAZO primero, HOMBRO despues (PlayerDrawSet.cs: compShoulderOverFrontArm
@@ -652,8 +678,8 @@ public static class PlayerPreviewRenderer
             if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", frontArmCell), colors.Skin);
             // 10b usa la pieza 9 (ArmHand), NO la 5 (Hands) - PlayerDrawLayers.cs:3735.
             if (missingHand && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armhand", frontArmCell), colors.Skin);
-            if (armor.BodyFile is { } bodyFrontArmArmor) Composite(canvas, LoadArmorCell(bodyFrontArmArmor, frontArmCell), null);
-            if (armor.BodyFile is { } bodyFrontShoulderArmor) Composite(canvas, LoadArmorCell(bodyFrontShoulderArmor, frontShoulderCell), null);
+            if (armor.BodyFile is { } bodyFrontArmArmor) Composite(canvas, LoadArmorCell(bodyFrontArmArmor, frontArmCell), armor.BodyDye);
+            if (armor.BodyFile is { } bodyFrontShoulderArmor) Composite(canvas, LoadArmorCell(bodyFrontShoulderArmor, frontShoulderCell), armor.BodyDye);
         }
         else
         {
@@ -670,7 +696,7 @@ public static class PlayerPreviewRenderer
 
         // Paso 10b [29_OnhandAcc]: accesorio "en mano" (guantes/garras puestos como accesorio,
         // no como arma), tras el brazo/hombro delantero.
-        DrawHandAccessory(accessories?.HandOnFile, frontArmCell);
+        DrawHandAccessory(accessories?.HandOnFile, frontArmCell, accessories?.HandOnDye);
 
         // Paso 10c [32_FrontAcc_FrontPart]: GapAnalysis Encargo E (25-sep-2026) - mitad
         // IZQUIERDA real de Front, la ULTIMA capa real de accesorio de este renderer (orden real

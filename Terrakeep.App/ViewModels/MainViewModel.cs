@@ -286,7 +286,11 @@ public partial class MainViewModel : ObservableObject
         {
             Items = ItemsRow(EquipmentGroup.EquippedItems),
             Social = ItemsRow(EquipmentGroup.EquippedSocial),
-            // Dyes se deja en su default (Resolve()/ResolveAccessories() nunca lo leen).
+            // GapAnalysis Encargo I (25-sep-2026): Dyes YA SE LEE de verdad - Resolve()/
+            // ResolveAccessories() ahora resuelven el tinte PLANO real por canal (ver
+            // EquipmentAppearanceResolver.ResolveDye/DyeShaderCatalog). Mismo helper generico
+            // que ItemsRow (10 slots reales, PlrItemSlot.Empty si el contenedor trae menos).
+            Dyes = ItemsRow(EquipmentGroup.EquippedDyes),
         };
         Appearance.UpdateEquippedArmor(_service.EquipmentAppearance.Resolve(loadout0));
         // GapAnalysis Encargo H (25-sep-2026): INCONCLUSIVE para este preview en vivo - se

@@ -269,9 +269,20 @@ public sealed class EquipmentAppearanceResolver
     // mount.Active tampoco aplica, un doll no tiene montura). Por eso Wings se resuelve aqui con
     // el MISMO chequeo generico que el resto de los 9 tipos (hide[i] oculta el slot entero, tal
     // cual), sin replicar la rama de "cayendo" - decision explicita, no una simplificacion oculta.
+    // GapAnalysis Encargo I (25-sep-2026): dye REAL emparejado con el ganador de cada canal -
+    // Player.cs:9691-9697/9702 (UpdateDyes/UpdateItemDye real): "int num = i % 10;
+    // UpdateItemDye(i < 10, hideVisibleAccessory[num], GetEffectiveArmor(i),
+    // GetEffectiveDye(num));" - el bucle real recorre los 20 slots (0..9 funcional, 10..19
+    // vanidad) y usa dye[i % 10] SIEMPRE, tanto para el hueco funcional i como para su gemelo de
+    // vanidad i+10 - el MISMO indice de dye sirve para los dos. Por eso Scan() guarda, junto al
+    // item que gana cada canal, el dye emparejado con SU MISMO indice de slot (loadout.Dyes[i]),
+    // sin importar si vino de Items o de Social - "ultimo en escribir gana" ya vale igual para
+    // el dye que para el sprite, porque ambos se sobrescriben juntos en el mismo if.
+    private readonly record struct AccessoryMatch(PlrItemSlot Item, PlrItemSlot Dye);
+
     public EquippedAccessories ResolveAccessories(PlrLoadout loadout, bool[]? hide = null)
     {
-        PlrItemSlot? waist = null, neck = null, handOn = null, handOff = null, back = null, shield = null, face = null, shoes = null, balloon = null, beard = null, front = null, wing = null;
+        AccessoryMatch? waist = null, neck = null, handOn = null, handOff = null, back = null, shield = null, face = null, shoes = null, balloon = null, beard = null, front = null, wing = null;
 
         void Scan(PlrItemSlot[] slots, bool respectHide)
         {
@@ -283,8 +294,9 @@ public sealed class EquipmentAppearanceResolver
                 if (respectHide && hide is not null && i < hide.Length && hide[i]) continue;
                 var s = slots[i];
                 if (s.IsEmpty) continue;
-                if (IsAccessoryType(s, e => e.Waist, "Waist")) waist = s;
-                if (IsAccessoryType(s, e => e.Neck, "Neck")) neck = s;
+                var match = new AccessoryMatch(s, loadout.Dyes[i]);
+                if (IsAccessoryType(s, e => e.Waist, "Waist")) waist = match;
+                if (IsAccessoryType(s, e => e.Neck, "Neck")) neck = match;
                 // CalamityAccesorios (25-sep-2026): el sufijo real de Calamity es el nombre CRUDO
                 // del enum EquipType (HandsOn/HandsOff/Shoes, confirmado en el propio
                 // EquipType.cs decompilado Y en los ficheros reales ya extraidos de
@@ -293,46 +305,58 @@ public sealed class EquipmentAppearanceResolver
                 // e.Shoe, VanillaAccessorySlotEntry) ni los directorios acc_handon/acc_shoes.
                 // Los dos sufijos son independientes a proposito: calamitySuffix solo se usa
                 // dentro de la rama Calamity de IsAccessoryType/ResolveAccessorySprite.
-                if (IsAccessoryType(s, e => e.HandOn, "HandsOn")) handOn = s;
-                if (IsAccessoryType(s, e => e.HandOff, "HandsOff")) handOff = s;
-                if (IsAccessoryType(s, e => e.Back, "Back")) back = s;
-                if (IsAccessoryType(s, e => e.Shield, "Shield")) shield = s;
-                if (IsAccessoryType(s, e => e.Face, "Face")) face = s;
+                if (IsAccessoryType(s, e => e.HandOn, "HandsOn")) handOn = match;
+                if (IsAccessoryType(s, e => e.HandOff, "HandsOff")) handOff = match;
+                if (IsAccessoryType(s, e => e.Back, "Back")) back = match;
+                if (IsAccessoryType(s, e => e.Shield, "Shield")) shield = match;
+                if (IsAccessoryType(s, e => e.Face, "Face")) face = match;
                 // GapAnalysis Encargo D (25-sep-2026): shoeSlot, mismo patron exacto.
-                if (IsAccessoryType(s, e => e.Shoe, "Shoes")) shoes = s;
+                if (IsAccessoryType(s, e => e.Shoe, "Shoes")) shoes = match;
                 // GapAnalysis Encargo C (25-sep-2026): balloonSlot, mismo patron exacto.
-                if (IsAccessoryType(s, e => e.Balloon, "Balloon")) balloon = s;
+                if (IsAccessoryType(s, e => e.Balloon, "Balloon")) balloon = match;
                 // GapAnalysis Encargo G (25-sep-2026): beardSlot, mismo patron exacto. Calamity
                 // no declara EquipType.Beard en ningun item real (ver comentario de
                 // EquippedAccessories) - calamitySuffix "Beard" nunca hace match ahi, sin
                 // riesgo de falso positivo.
-                if (IsAccessoryType(s, e => e.Beard, "Beard")) beard = s;
+                if (IsAccessoryType(s, e => e.Beard, "Beard")) beard = match;
                 // GapAnalysis Encargo E (25-sep-2026): frontSlot, mismo patron exacto.
-                if (IsAccessoryType(s, e => e.Front, "Front")) front = s;
+                if (IsAccessoryType(s, e => e.Front, "Front")) front = match;
                 // Wings Encargo1 (25-sep-2026): wingSlot, mismo patron exacto.
-                if (IsAccessoryType(s, e => e.Wing, "Wings")) wing = s;
+                if (IsAccessoryType(s, e => e.Wing, "Wings")) wing = match;
             }
         }
         Scan(loadout.Items, respectHide: true);
         Scan(loadout.Social, respectHide: false);
 
-        var (waistFile, waistSlotId) = ResolveAccessorySprite(waist, "Waist", e => e.Waist, "acc_waist");
-        var (neckFile, neckSlotId) = ResolveAccessorySprite(neck, "Neck", e => e.Neck, "acc_neck");
-        var (handOnFile, handOnSlotId) = ResolveAccessorySprite(handOn, "HandsOn", e => e.HandOn, "acc_handon");
-        var (handOffFile, handOffSlotId) = ResolveAccessorySprite(handOff, "HandsOff", e => e.HandOff, "acc_handoff");
-        var (backFile, backSlotId) = ResolveAccessorySprite(back, "Back", e => e.Back, "acc_back");
-        var (shieldFile, shieldSlotId) = ResolveAccessorySprite(shield, "Shield", e => e.Shield, "acc_shield");
-        var (faceFile, faceSlotId) = ResolveAccessorySprite(face, "Face", e => e.Face, "acc_face");
+        var (waistFile, waistSlotId) = ResolveAccessorySprite(waist?.Item, "Waist", e => e.Waist, "acc_waist");
+        var waistDye = ResolveDye(waist?.Dye ?? PlrItemSlot.Empty);
+        var (neckFile, neckSlotId) = ResolveAccessorySprite(neck?.Item, "Neck", e => e.Neck, "acc_neck");
+        var neckDye = ResolveDye(neck?.Dye ?? PlrItemSlot.Empty);
+        var (handOnFile, handOnSlotId) = ResolveAccessorySprite(handOn?.Item, "HandsOn", e => e.HandOn, "acc_handon");
+        var handOnDye = ResolveDye(handOn?.Dye ?? PlrItemSlot.Empty);
+        var (handOffFile, handOffSlotId) = ResolveAccessorySprite(handOff?.Item, "HandsOff", e => e.HandOff, "acc_handoff");
+        var handOffDye = ResolveDye(handOff?.Dye ?? PlrItemSlot.Empty);
+        var (backFile, backSlotId) = ResolveAccessorySprite(back?.Item, "Back", e => e.Back, "acc_back");
+        var backDye = ResolveDye(back?.Dye ?? PlrItemSlot.Empty);
+        var (shieldFile, shieldSlotId) = ResolveAccessorySprite(shield?.Item, "Shield", e => e.Shield, "acc_shield");
+        var shieldDye = ResolveDye(shield?.Dye ?? PlrItemSlot.Empty);
+        var (faceFile, faceSlotId) = ResolveAccessorySprite(face?.Item, "Face", e => e.Face, "acc_face");
+        var faceDye = ResolveDye(face?.Dye ?? PlrItemSlot.Empty);
         // GapAnalysis Encargo D (25-sep-2026): guarda el id MASCULINO/neutro tal cual - la
         // regla de sexo real (MaleToFemaleID) se aplica despues, en PlayerPreviewRenderer.Render.
-        var (shoesFile, shoesSlotId) = ResolveAccessorySprite(shoes, "Shoes", e => e.Shoe, "acc_shoes");
-        var (balloonFile, balloonSlotId) = ResolveAccessorySprite(balloon, "Balloon", e => e.Balloon, "acc_balloon");
-        var (beardFile, beardSlotId) = ResolveAccessorySprite(beard, "Beard", e => e.Beard, "acc_beard");
-        var (frontFile, frontSlotId) = ResolveAccessorySprite(front, "Front", e => e.Front, "acc_front");
+        var (shoesFile, shoesSlotId) = ResolveAccessorySprite(shoes?.Item, "Shoes", e => e.Shoe, "acc_shoes");
+        var shoesDye = ResolveDye(shoes?.Dye ?? PlrItemSlot.Empty);
+        var (balloonFile, balloonSlotId) = ResolveAccessorySprite(balloon?.Item, "Balloon", e => e.Balloon, "acc_balloon");
+        var balloonDye = ResolveDye(balloon?.Dye ?? PlrItemSlot.Empty);
+        var (beardFile, beardSlotId) = ResolveAccessorySprite(beard?.Item, "Beard", e => e.Beard, "acc_beard");
+        var beardDye = ResolveDye(beard?.Dye ?? PlrItemSlot.Empty);
+        var (frontFile, frontSlotId) = ResolveAccessorySprite(front?.Item, "Front", e => e.Front, "acc_front");
+        var frontDye = ResolveDye(front?.Dye ?? PlrItemSlot.Empty);
         // Wings Encargo1 (25-sep-2026): wingSlot, mismo patron exacto - calamitySuffix "Wings"
         // (nombre crudo del enum, igual que HandsOn/HandsOff/Shoes, ver scripts/
         // extraer-slot-armadura-calamity.js).
-        var (wingFile, wingSlotId) = ResolveAccessorySprite(wing, "Wings", e => e.Wing, "acc_wing");
+        var (wingFile, wingSlotId) = ResolveAccessorySprite(wing?.Item, "Wings", e => e.Wing, "acc_wing");
+        var wingDye = ResolveDye(wing?.Dye ?? PlrItemSlot.Empty);
 
         // GapAnalysis Encargo A (25-sep-2026): reclasifica el resultado de "Back" YA resuelto en
         // los otros 2 canales reales posibles (Player.cs:37169-37184, UpdateVisibleAccessory) -
@@ -342,15 +366,16 @@ public sealed class EquipmentAppearanceResolver
         // resolver (sin SetMatch/hidesTopSkin, ver PlayerPreviewRenderer.Render).
         string? backpackFile = null, tailFile = null;
         int? backpackSlotId = null, tailSlotId = null;
+        PlayerPreviewRenderer.Tint? backpackDye = null, tailDye = null;
         if (backSlotId is int backId && BackAccessoryLayerTable.IsBackpackLayer(backId))
         {
-            (backpackFile, backpackSlotId) = (backFile, backSlotId);
-            (backFile, backSlotId) = (null, null);
+            (backpackFile, backpackSlotId, backpackDye) = (backFile, backSlotId, backDye);
+            (backFile, backSlotId, backDye) = (null, null, null);
         }
         else if (backSlotId is int tailId && BackAccessoryLayerTable.IsTailLayer(tailId))
         {
-            (tailFile, tailSlotId) = (backFile, backSlotId);
-            (backFile, backSlotId) = (null, null);
+            (tailFile, tailSlotId, tailDye) = (backFile, backSlotId, backDye);
+            (backFile, backSlotId, backDye) = (null, null, null);
         }
 
         // GapAnalysis Encargo C (25-sep-2026): reclasifica el resultado de "Balloon" YA resuelto
@@ -361,10 +386,11 @@ public sealed class EquipmentAppearanceResolver
         // el resto del resolver.
         string? balloonFrontFile = null;
         int? balloonFrontSlotId = null;
+        PlayerPreviewRenderer.Tint? balloonFrontDye = null;
         if (balloonSlotId is int balloonId && BalloonAccessoryLayerTable.IsFrontLayer(balloonId))
         {
-            (balloonFrontFile, balloonFrontSlotId) = (balloonFile, balloonSlotId);
-            (balloonFile, balloonSlotId) = (null, null);
+            (balloonFrontFile, balloonFrontSlotId, balloonFrontDye) = (balloonFile, balloonSlotId, balloonDye);
+            (balloonFile, balloonSlotId, balloonDye) = (null, null, null);
         }
 
         // GapAnalysis Encargo F (25-sep-2026): reclasifica el resultado de "Face" YA resuelto en
@@ -378,20 +404,21 @@ public sealed class EquipmentAppearanceResolver
         // literales, sin solaparse hoy), pero se respeta el orden real por si acaso.
         string? faceHeadFile = null, faceMaskFile = null, faceFlowerFile = null;
         int? faceHeadSlotId = null, faceMaskSlotId = null, faceFlowerSlotId = null;
+        PlayerPreviewRenderer.Tint? faceHeadDye = null, faceMaskDye = null, faceFlowerDye = null;
         if (faceSlotId is int faceHeadId && FaceAccessoryLayerTable.IsFaceHeadLayer(faceHeadId))
         {
-            (faceHeadFile, faceHeadSlotId) = (faceFile, faceSlotId);
-            (faceFile, faceSlotId) = (null, null);
+            (faceHeadFile, faceHeadSlotId, faceHeadDye) = (faceFile, faceSlotId, faceDye);
+            (faceFile, faceSlotId, faceDye) = (null, null, null);
         }
         else if (faceSlotId is int faceMaskId && FaceAccessoryLayerTable.IsFaceMaskLayer(faceMaskId))
         {
-            (faceMaskFile, faceMaskSlotId) = (faceFile, faceSlotId);
-            (faceFile, faceSlotId) = (null, null);
+            (faceMaskFile, faceMaskSlotId, faceMaskDye) = (faceFile, faceSlotId, faceDye);
+            (faceFile, faceSlotId, faceDye) = (null, null, null);
         }
         else if (faceSlotId is int faceFlowerId && FaceAccessoryLayerTable.IsFaceFlowerLayer(faceFlowerId))
         {
-            (faceFlowerFile, faceFlowerSlotId) = (faceFile, faceSlotId);
-            (faceFile, faceSlotId) = (null, null);
+            (faceFlowerFile, faceFlowerSlotId, faceFlowerDye) = (faceFile, faceSlotId, faceDye);
+            (faceFile, faceSlotId, faceDye) = (null, null, null);
         }
 
         return new EquippedAccessories(
@@ -403,7 +430,10 @@ public sealed class EquipmentAppearanceResolver
             beardFile, beardSlotId,
             faceHeadFile, faceMaskFile, faceFlowerFile, faceHeadSlotId, faceMaskSlotId, faceFlowerSlotId,
             frontFile, frontSlotId,
-            wingFile, wingSlotId);
+            wingFile, wingSlotId,
+            waistDye, neckDye, handOnDye, handOffDye, backDye, shieldDye, faceDye,
+            backpackDye, tailDye, shoesDye, balloonDye, balloonFrontDye, beardDye,
+            faceHeadDye, faceMaskDye, faceFlowerDye, frontDye, wingDye);
     }
 
     // Un item real de Terraria solo declara UNO de los 7 campos de accesorio en la practica,

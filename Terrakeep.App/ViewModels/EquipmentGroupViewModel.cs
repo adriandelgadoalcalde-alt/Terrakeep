@@ -128,6 +128,11 @@ public partial class EquipmentGroupViewModel : ObservableObject
     // armadura/vanidad real puesta del doll de Apariencia, independientemente de que loadout
     // este mirando el usuario en la pantalla (SelectedLoadout).
     public ContainerViewModel EquippedSocial => _byKey[(0, EquipmentKind.Social)];
+    // GapAnalysis Encargo I (25-sep-2026): gemelo real de EquippedItems/EquippedSocial para los
+    // 10 slots de TINTE del loadout 0 - MainViewModel.RefreshAppearanceEquipment lo necesita para
+    // resolver el tinte real puesto del doll de Apariencia (antes se dejaba en su default, ver
+    // el comentario de cabecera de ese metodo).
+    public ContainerViewModel EquippedDyes => _byKey[(0, EquipmentKind.Dyes)];
 
     public ObservableCollection<EquipmentOptionViewModel> LoadoutOptions { get; } = [];
     public ObservableCollection<EquipmentOptionViewModel> KindOptions { get; } =

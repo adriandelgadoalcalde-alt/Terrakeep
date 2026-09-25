@@ -1290,4 +1290,152 @@ public sealed class EquipmentAppearanceResolverTests
         Assert.NotNull(acc.WaistFile);
         Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
     }
+
+    // GapAnalysis Encargo I (25-sep-2026): dyes reales, PLANO vs ANIMADO/SHADER (ver
+    // DyeShaderCatalog para la cita completa contra DyeInitializer.cs decompilado). RedDye
+    // (id 1007, color base exacto 1,0,0 -> Tint(255,0,0)) y RainbowDye (id 1066,
+    // "ArmorColoredRainbow", animado real - excluido a proposito) son los mismos 2 items reales
+    // ya usados como spot-check en DyeShaderCatalogTests.
+    private const int TinteRojo = 1007;    // RedDye, PLANO real
+    private const int TinteArcoiris = 1066; // RainbowDye, ANIMADO real (fuera de alcance)
+
+    [Fact]
+    public void Resolve_ConDyePlanoRealEnCabeza_ResuelveElTinteExacto()
+    {
+        var loadout = LoadoutConCabeza(CascoCobre);
+        loadout.Dyes[0] = new PlrItemSlot(TinteRojo, 1, 0, false);
+
+        var armor = Service.EquipmentAppearance.Resolve(loadout);
+
+        Assert.Equal(new PlayerPreviewRenderer.Tint(255, 0, 0), armor.HeadDye);
+    }
+
+    [Fact]
+    public void Resolve_SinDye_HeadDyeEsNull()
+    {
+        var armor = Service.EquipmentAppearance.Resolve(LoadoutConCabeza(CascoCobre));
+
+        Assert.Null(armor.HeadDye);
+    }
+
+    [Fact]
+    public void RenderConDyeRealEnCabeza_CambiaLosPixelesRespectoASinDye()
+    {
+        // Verificacion de extremo a extremo real (mismo patron que
+        // RenderConArmaduraRealDaUnaImagenDistintaASinArmadura): el dye PLANO tiene que llegar
+        // de verdad hasta Composite() y cambiar pixeles reales del doll, no solo resolverse en
+        // el modelo intermedio.
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var loadoutSinDye = LoadoutConCabeza(CascoCobre);
+        var loadoutConDye = LoadoutConCabeza(CascoCobre);
+        loadoutConDye.Dyes[0] = new PlrItemSlot(TinteRojo, 1, 0, false);
+
+        var armorSinDye = Service.EquipmentAppearance.Resolve(loadoutSinDye);
+        var armorConDye = Service.EquipmentAppearance.Resolve(loadoutConDye);
+
+        var sinDye = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, armorSinDye);
+        var conDye = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, armorConDye);
+
+        var pixelesSin = new byte[sinDye.PixelHeight * sinDye.PixelWidth * 4];
+        sinDye.CopyPixels(pixelesSin, sinDye.PixelWidth * 4, 0);
+        var pixelesCon = new byte[conDye.PixelHeight * conDye.PixelWidth * 4];
+        conDye.CopyPixels(pixelesCon, conDye.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSin, pixelesCon);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConDyePlanoRealEnWaist_ResuelveElTinteExacto()
+    {
+        var loadout = LoadoutConAccesorio(3, RelojCobre);
+        loadout.Dyes[3] = new PlrItemSlot(TinteRojo, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.Equal(new PlayerPreviewRenderer.Tint(255, 0, 0), acc.WaistDye);
+    }
+
+    [Fact]
+    public void RenderConDyeRealEnAccesorio_CambiaLosPixelesRespectoASinDye()
+    {
+        // Gemelo real del test de armadura de arriba, pero para un CANAL DE ACCESORIO (Waist) -
+        // verifica que el tinte llega de verdad hasta Composite() tambien en DrawAccessory, no
+        // solo en el pipeline de armadura.
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var loadoutSinDye = LoadoutConAccesorio(3, RelojCobre);
+        var loadoutConDye = LoadoutConAccesorio(3, RelojCobre);
+        loadoutConDye.Dyes[3] = new PlrItemSlot(TinteRojo, 1, 0, false);
+
+        var accSinDye = Service.EquipmentAppearance.ResolveAccessories(loadoutSinDye);
+        var accConDye = Service.EquipmentAppearance.ResolveAccessories(loadoutConDye);
+
+        var sinDye = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: accSinDye);
+        var conDye = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: accConDye);
+
+        var pixelesSin = new byte[sinDye.PixelHeight * sinDye.PixelWidth * 4];
+        sinDye.CopyPixels(pixelesSin, sinDye.PixelWidth * 4, 0);
+        var pixelesCon = new byte[conDye.PixelHeight * conDye.PixelWidth * 4];
+        conDye.CopyPixels(pixelesCon, conDye.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSin, pixelesCon);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConDyePlanoRealEnVanidad_ResuelveElMismoDyeDelIndiceCompartido()
+    {
+        // Player.cs:9691-9697 real (UpdateDyes): "int num = i % 10; UpdateItemDye(i < 10,
+        // hideVisibleAccessory[num], GetEffectiveArmor(i), GetEffectiveDye(num));" - el dye del
+        // indice i sirve TANTO para el hueco funcional i como para su gemelo de vanidad i+10.
+        // Reloj de plata (waistSlot=7, MISMO TIPO que RelojCobre) puesto de VANIDAD en el hueco
+        // generico 3 (no funcional) - el dye[3] real sigue aplicando aunque el sprite ganador
+        // venga de Social, no de Items.
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Social[3] = new PlrItemSlot(RelojPlata, 1, 0, false);
+        loadout.Dyes[3] = new PlrItemSlot(TinteRojo, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.Equal(new PlayerPreviewRenderer.Tint(255, 0, 0), acc.WaistDye);
+    }
+
+    [Fact]
+    public void ResolveAccessories_ConDyeAnimadoReal_SeIgnoraLimpiamente_SinTinteYSinRomperElSprite()
+    {
+        // "mejor sin tinte que un tinte incorrecto" - un dye ANIMADO/SHADER real (RainbowDye) no
+        // debe romper la resolucion del sprite ni inventarse un color: WaistFile se sigue
+        // resolviendo normal, WaistDye se queda null.
+        var loadout = LoadoutConAccesorio(3, RelojCobre);
+        loadout.Dyes[3] = new PlrItemSlot(TinteArcoiris, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
+        Assert.Null(acc.WaistDye);
+    }
+
+    [Fact]
+    public void ResolveAccessories_DyeReclasificadoDeBackABackpack_ElTinteViajaConElSprite()
+    {
+        // GapAnalysis Encargo A: Magic Quiver (backSlot=7, DrawInBackpackLayer) se reclasifica
+        // de Back a Backpack - el dye emparejado con el mismo indice de slot tiene que viajar
+        // CON el sprite reclasificado, no quedarse huerfano en BackDye (que se vacia a null a
+        // la vez que BackFile).
+        var loadout = LoadoutConAccesorio(3, MagicQuiver);
+        loadout.Dyes[3] = new PlrItemSlot(TinteRojo, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.Null(acc.BackFile);
+        Assert.Null(acc.BackDye);
+        Assert.NotNull(acc.BackpackFile);
+        Assert.Equal(new PlayerPreviewRenderer.Tint(255, 0, 0), acc.BackpackDye);
+    }
 }
