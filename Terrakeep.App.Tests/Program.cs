@@ -4868,6 +4868,20 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // EXPLORATION_LAYOUT_SOLO=1 (26-sep-2026, ExploracionRediseno FaseI): iteracion rapida
+        // aislada del canario PERMANENTE de layout del sidebar de Exploracion (los 3 modos Browse/
+        // ChestInspector/WorldTools, en 1180x860 y 1080x700). A DIFERENCIA de los modos _SOLO de
+        // arriba, esta misma funcion TAMBIEN se invoca de forma incondicional mas abajo en la
+        // secuencia normal (justo despues de PruebasMejorPrefijo) para que corra en CADA pasada
+        // completa del arnes, no solo bajo demanda - ver el comentario real de cabecera en
+        // CanarioExploracionLayoutPermanente.cs (misma clase parcial).
+        if (Environment.GetEnvironmentVariable("EXPLORATION_LAYOUT_SOLO") == "1")
+        {
+            EjecutarCanarioExploracionLayoutPermanente(window, vm);
+            Console.WriteLine("DONE (EXPLORATION_LAYOUT_SOLO)");
+            Environment.Exit(0);
+        }
+
         // PB_SOLO=1 (6-sep-2026): modo de FOCO - corre solo los bloques PB-* (Personaje >
         // Buffs/Apariencia/Investigacion/Spawn Points/Desbloqueos/Version) sobre el personaje
         // real ya cargado, y sale. Misma idea que AR_LAY_SOLO, por un motivo real medido: el
@@ -11713,6 +11727,18 @@ internal static partial class Program
         // Objetos a proposito: coloca y quita armas en el hueco 0 del Inventario (y lo deja
         // como estaba), asi que no debe correr antes que OBJ-*.
         PruebasMejorPrefijo(vm, window);
+
+        // ExploracionRediseno FaseI (26-sep-2026, aplicador-fix): canario PERMANENTE de layout del
+        // sidebar de Exploracion (los 3 modos Browse/ChestInspector/WorldTools, 1180x860 y
+        // 1080x700) - cuerpo real en CanarioExploracionLayoutPermanente.cs, otra parte de esta
+        // misma clase. Se llama aqui de forma INCONDICIONAL (a diferencia de EXPLORATION_LAYOUT_SOLO
+        // de mas arriba, que solo corre bajo demanda) para que corra en CADA pasada completa del
+        // arnes - guardia anti-regresion del antipatron MinHeight=900/1000 que el usuario prohibio
+        // explicitamente y confirmacion de 0 overflow horizontal real, ademas de que
+        // Guardar/Cancelar del Inspector siguen alcanzables por scroll. Autocontenida (carga su
+        // propio mundo si hace falta, restaura tamano de ventana/pestaña/estado de Exploracion al
+        // terminar) - no depende de que ningun bloque anterior haya dejado un estado concreto.
+        EjecutarCanarioExploracionLayoutPermanente(window, vm);
 
         // Oleada del 6-sep-2026, area "Inicio, Ajustes, Novedades, Acerca de" - el cuerpo real
         // vive en PruebasInicioAjustes.cs, otra parte de esta misma clase (ver el comentario de
