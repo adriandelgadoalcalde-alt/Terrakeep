@@ -15690,6 +15690,12 @@ detrás. Reproducir esos números a mano sería fingir una precisión que no exi
   `.wld`). Las banderas de Calamity (`CalamityMod.DownedBossSystem`) NO son evaluables - Calamity
   guarda su estado de jefes en datos de MOD dentro del `.wld` que Terrakeep no parsea en
   absoluto hoy (su soporte de Calamity es solo de OBJETOS) - documentado, no forzado.
+  **CORREGIDO el 25-sep-2026 (Guia Encargo A "GuiaCalamity", ver la entrada de esa fecha mas abajo
+  en esta misma bitácora): la premisa de este párrafo era imprecisa en un punto concreto - esos
+  datos de mod NO viven "dentro del `.wld`", viven en el `.twld` HERMANO (fichero aparte, mismo
+  formato gzip+NBT que un `.tplr`) - y Terrakeep SÍ los lee ya, para las 31 banderas que
+  `guia_progresion.json` referencia. Se deja el párrafo original tal cual por honestidad histórica
+  (así era el estado real el 15-sep-2026), esta nota es la corrección real posterior.**
 - `NpcsPueblo`/`Npc`: `WldWorld.Npcs` (la sección NPCs del `.wld` SÍ persiste posición de los NPC
   del pueblo reales).
 - `VidaMaxima`: `PlrCharacter.HealthMax` directo.
@@ -23480,3 +23486,453 @@ roto por los 2 de orden con PNGs sintéticos), `Terrakeep.App/Assets/player/acc_
 (`VanillaAccessorySlotCatalog.cs`/`EquipmentAppearanceResolver.cs`/
 `PlayerPreviewRenderer.cs`/scripts/`EquipmentAppearanceResolverTests.cs`/
 `vanilla_accessory_slots.json`) ya estaba en `2ef72eb1` (Encargo C). Sin `git push`.
+
+## 25-sep-2026 - Guia Encargo A "GuiaCalamity": parser de `modData`/DownedBossSystem via el .twld
+## hermano, 31 banderas de jefe/evento de Calamity conectadas a la Guia (aplicador-fix, TASK
+## CONTEXT `e5eaea9e-c261-4199-8e7d-060b6054f58d`)
+
+Segunda fase del patron de 2 fases sobre el hallazgo YA investigado por `arquitecto-keep`: Calamity
+NO guarda su progreso de jefes derrotados dentro del `.wld` (limitacion documentada desde el
+15-sep-2026, ver mas arriba en esta bitácora) - lo guarda en el `.twld` HERMANO
+(`CalamityMod.DownedBossSystem.SaveWorldData`, confirmado en el decompilado real
+`tModLoader-Decompiled\CalamityMod\CalamityMod\DownedBossSystem.cs`), el mismo fichero que
+`TwldReader.cs` ya sabe leer desde el 15-sep-2026 pero solo para `tiles`/nombres de mod, nunca para
+`modData`.
+
+### Tabla de 31 mapeos: 3 errores reales encontrados y corregidos contra el codigo fuente
+
+El hallazgo del arquitecto traia una tabla de 31 mapeos "clave guardada -> propiedad canonica"
+transcrita de memoria contra `DownedBossSystem.cs`, con el aviso explicito de verificarla antes de
+aplicarla. Se releyo el archivo real linea a linea (`SaveWorldData`/`LoadWorldData`, ~1130-1180) y
+se encontraron **3 errores reales de transcripcion**, corregidos antes de escribir una sola linea
+de codigo:
+
+- `plaguebringer` → `downedPlaguebringer` estaba MAL: la clave real que el mod guarda es
+  `plaguebringerGoliath` (`list.Contains("plaguebringerGoliath")`, linea real del `LoadWorldData`),
+  no `plaguebringer` (esa cadena no existe en ningun sitio del archivo real).
+- `astrumDeus` → `downedAstrumDeus` estaba MAL: la clave real es `starGod`
+  (`downedAstrumDeus = list.Contains("starGod")`) - `astrumDeus` tampoco existe como clave
+  guardada en ningun sitio.
+- `dog` → `downedDoG` estaba MAL: la clave real es `devourerOfGods`
+  (`downedDoG = list.Contains("devourerOfGods")`).
+
+Los 28 mapeos restantes se confirmaron correctos tal cual. Las banderas realmente usadas como
+`"tipo":"bandera"` en los 25 tramos `"ambito":"calamity"` de `guia_progresion.json` se extrajeron
+programáticamente del propio JSON: 32 nombres unicos en total, de los cuales 2 son vanilla
+(`downedBoss1`, ya resuelto por `GuideFlags._deMundo`; `downedAncientCultist`, NINGUNA de las dos
+tablas lo resuelve hoy - vive en la seccion de ancho variable del `.wld` que Terrakeep todavia no
+atraviesa, limitacion ya documentada, fuera de alcance de este encargo) y 30 son de Calamity de
+verdad. Las 31 del hallazgo cubren esas 30 al completo mas `downedPerforator` de mas (incluida por
+completitud del propio `DownedBossSystem` real, aunque ningun tramo actual la use directamente
+como `"bandera"` en solitario).
+
+### Arreglo real aplicado
+
+- **`Terrakeep.Core/WldFormat/TwldReader.cs`**: `CalamityDownedFlagMap` (nuevo, `Dictionary<string,
+  string>` privado, las 31 entradas YA corregidas) + `CalamityCanonicalFlagNames` (público,
+  `IReadOnlySet<string>`, unica fuente de verdad reutilizada por `GuideFlags`) +
+  `ReadCalamityDownedFlags(byte[] twldBytes)` (público): navega `root["modData"]` (lista real de
+  `TagCompound{mod,name,data}` que `WorldIO.SaveModData`/`LoadModData` escriben de verdad,
+  confirmado en el decompilado), filtra `mod=="CalamityMod" && name=="DownedBossSystem"`, traduce
+  cada cadena de `data["downedFlags"]` via la tabla - una clave guardada que no esta en la tabla
+  (ej. `horribleHog`, real pero sin ningun tramo que la use) se ignora sin romper nada, mismo
+  criterio "lo que no se encuentra no se inventa" ya establecido en el resto del archivo.
+- **`Terrakeep.Core/Guia/GuideContext.cs`**: nuevo campo `IReadOnlySet<string>? CalamityDownedFlags`
+  - mismo contrato que `World`: `null` = "sin mundo cargado, no se puede saber" (banderas quedan
+    `NoEvaluable`); con mundo cargado, SIEMPRE un set real (vacio si no hay `.twld`/DownedBossSystem
+    de verdad, nunca `null` en ese caso - un mundo sin Calamity de verdad tiene 0 jefes de Calamity
+    derrotados, eso es un dato real, no una ausencia de dato).
+- **`Terrakeep.Core/Guia/GuideFlags.cs`**: `Existe`/`Valor` ganan una tercera rama (ademas de
+  `_deMundo` y `downedDD2EventAnyDifficulty`) que reutiliza `TwldReader.CalamityCanonicalFlagNames`
+  para "reconocida" y `contexto.CalamityDownedFlags?.Contains(nombre)` para el valor real. Cabecera
+  del archivo reescrita (antes decia, con precision perdida, que Calamity "no se parsea en
+  absoluto" - ver tambien la nota añadida el 25-sep-2026 sobre la entrada del 15-sep-2026 mas
+  arriba en esta misma bitácora).
+- **`Terrakeep.App/ViewModels/GuideViewModel.cs`**: nuevo parametro de constructor `Func<string?>
+  worldPath` + campo `_worldPath`; `Refresh()` calcula `CalamityDownedFlags` con un helper nuevo,
+  `ResolveCalamityDownedFlags(string? wldPath)` - mismo patron EXACTO ya usado por
+  `ExplorationViewModel.ResolveModdedChestTileNames` (`Path.ChangeExtension(..,".twld")`,
+  `File.Exists` primero, try/catch que nunca rompe la Guia por un `.twld` ausente/corrupto).
+- **`Terrakeep.App/ViewModels/MainViewModel.cs`**: unico call site real de `new GuideViewModel(...)`
+  actualizado con `() => Exploration.CurrentWorldPath` (la misma propiedad que ya exponia
+  `ExplorationViewModel` desde T3, sin tocarla).
+- **`Terrakeep.App/Assets/strings_es.json`/`strings_en.json`**: texto de
+  `guide_motive_flag_calamity` corregido (decia "Terrakeep todavía no lee los datos de mod del
+  .wld" - ahora SI los lee para las 31 banderas de la tabla; el mensaje solo aparece hoy para una
+  bandera de Calamity real que NINGUN tramo referencia, ej. `downedHorribleHog`).
+
+### Verificacion real
+
+- **Tests nuevos** (`Terrakeep.Core.Tests/WldFormat/TwldReaderCalamityFlagsTests.cs`, 7 tests,
+  fixture NBT SINTETICA construida a mano con `NbtCompound`/`NbtList`/`TplrFile.Write` - mismo
+  formato real, nunca un blob opaco): traduccion de claves reales, canario especifico de los 3
+  mapeos corregidos (`ReadCalamityDownedFlags_CorrigeLosTresMapeosQueElArquitectoTranscribioMal`),
+  clave real fuera de tabla ignorada sin romper, `modData` ausente/sin DownedBossSystem/lista
+  vacia (3 casos), y las 31 claves completas traducidas 1:1 contra
+  `TwldReader.CalamityCanonicalFlagNames`.
+- **Por que fixture sintetica y no 100% real**: se escaneraron los 53 `.twld` reales disponibles en
+  esta maquina (ServidorKeep + todos los mundos de tModLoader/tModLoader-Terrakeep*) decodificando
+  `downedFlags` a mano - NINGUNO tiene puesta a `true` ninguna de las 31 banderas que la Guia
+  necesita. El unico con una bandera real puesta es `Documents\...\tModLoader\Worlds\
+  adriandres.twld` (`horribleHog`, fuera de la tabla a proposito) - se uso igualmente como test
+  REAL adicional (`TwldReaderRealFileTests.
+  ReadCalamityDownedFlags_MundoRealConDownedBossSystem_NoLanzaYNoInventaBanderasFueraDeTabla`) para
+  probar el parseo de `modData` contra bytes de verdad, no solo la fixture.
+- **`Terrakeep.Core.Tests/Guia/GuideFlagsCalamityTests.cs`** (6 tests, wiring completo
+  `GuideContext`→`GuideFlags`→`GuideEvaluator`, mismo patron que las pruebas de
+  `downedGoblins`/`downedFrost`/`downedPirates` de Guia Encargo1): bandera puesta en el set sale
+  `Cumplido=true`; bandera de Calamity NO puesta sale `Cumplido=false` pero evaluable (nunca
+  `NoEvaluable`); sin mundo cargado sale `NoEvaluable` con motivo `guide_motive_load_data`; mundo
+  cargado sin `.twld` valido (set vacio real) sale `false` evaluable, nunca `NoEvaluable`; las 31
+  banderas son todas conocidas por `GuideFlags.Existe`; una bandera fuera de tabla
+  (`downedHorribleHog`) sigue "no reconocida" de verdad.
+- **`GUIA_SOLO=1` real** (`adrian.plr`+`roca_negra.wld`, Calamity real cargado, `.twld` real con
+  `DownedBossSystem` presente pero 0 banderas puestas): sin ningun `FALLO`, `Tramos.Count=46`,
+  `MostrarAvisoCalamity=True`, 0 textos sin resolver, algun requisito evaluable de verdad - misma
+  salida limpia que antes de este cambio, confirmando que un mundo Calamity SIN progreso guardado
+  sigue funcionando exactamente igual (set vacio real, nunca un crash ni una regresion).
+- **Gates**: `dotnet build Terrakeep.slnx -c Release` en verde (0 avisos, 0 errores). `dotnet test
+  Terrakeep.Core.Tests -c Release` 645/645. `dotnet test Terrakeep.App.ViewModels.Tests -c Release`
+  638/638 (sin tocar ningun test existente, todo en verde incluyendo el trabajo en paralelo de
+  otros agentes ya presente en el working tree).
+
+### Correccion honesta al hallazgo del arquitecto-keep
+
+El hallazgo citaba "3 sitios dicen 'dentro del .wld'" a corregir: `GuideCatalog.cs:12-17`,
+`GuideFlags.cs:21-24` y la entrada de bitácora del 15-sep-2026. Al releer `GuideCatalog.cs` real
+(15-sep-2026, comentario de resolucion de `idMod`/`jefeMod`) esa cita no encaja - ese archivo nunca
+menciona donde vive el progreso de Calamity, solo como se resuelven los ids de objeto. Solo se
+encontraron 2 sitios reales con esa imprecision (`GuideFlags.cs` y la bitácora), los dos ya
+corregidos arriba.
+
+### Recompilacion/redespliegue real
+
+`Terrakeep.exe` NO estaba en ejecución (`Get-Process Terrakeep` sin resultado, confirmado antes de
+copiar). `dotnet restore Terrakeep.App/Terrakeep.App.csproj -r win-x64` + `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde -> `Terrakeep.App\
+bin\Release\net10.0-windows\win-x64\publish\Terrakeep.exe` (139 190 913 bytes, compilado del
+working tree completo, que en este momento YA incluye trabajo en paralelo de otros agentes sin
+comitear todavia - mismo patron ya documentado en la entrada de Encargo2 de mas arriba). `robocopy
+... /MIR` hacia `C:\Users\adrian\AppData\Local\Programs\Terrakeep\` (33 archivos distintos, incluye
+`calamity_boss_icons\` de otro encargo en paralelo) - hash SHA256 identico entre publicado e
+instalado (`8339013C3D2F31A2CA0134C5664D63FF2D9269210916A5A42B27E98822AE94`). Unico destino real
+(barra de tareas y Menú Inicio apuntan los dos ahi, sin distincion en este proyecto).
+
+### Commit real
+
+Solo los ficheros de este encargo (`git diff`/`git status` confirmados antes de `git add`, nunca
+`git add -A` - working tree con trabajo real de varios agentes en paralelo sobre otros archivos):
+`Terrakeep.Core/WldFormat/TwldReader.cs`, `Terrakeep.Core/Guia/GuideContext.cs`,
+`Terrakeep.Core/Guia/GuideFlags.cs`, `Terrakeep.App/ViewModels/GuideViewModel.cs`,
+`Terrakeep.App/ViewModels/MainViewModel.cs`, `Terrakeep.App/Assets/strings_es.json`,
+`Terrakeep.App/Assets/strings_en.json`, `Terrakeep.Core.Tests/WldFormat/
+TwldReaderCalamityFlagsTests.cs` (nuevo), `Terrakeep.Core.Tests/WldFormat/
+TwldReaderRealFileTests.cs`, `Terrakeep.Core.Tests/Guia/GuideFlagsCalamityTests.cs` (nuevo). Esta
+misma nota de bitácora se deja SIN comitear en este mismo commit (el archivo tiene ahora mismo
+trabajo en paralelo de otros agentes en otras secciones no relacionadas - se documenta aqui para
+que quede constancia, el commit del texto de bitácora queda para una ronda de consolidacion
+posterior). Sin `git push`.
+
+## GuiaCalamity Encargo B (25-sep-2026, revision-correccion-integral-familia-Keep, handoff
+e5eaea9e-c261-4199-8e7d-060b6054f58d): sprite real de jefe de CALAMITY (`CalamityBossIconResolver`)
+en el arbol y el banner de la Guia
+
+Segunda fase del mismo patron ya cerrado hoy para vanilla (Encargo4, `BossIconResolver`): el
+hallazgo YA investigado por arquitecto-keep confirmaba que `CalamityMod.tmod` trae, para casi todos
+los jefes, un icono de cabeza REAL ya recortado (formato `.rawimg`, el mismo que usa la barra de
+vida de jefe del propio juego), convencion de ruta `NPCs/<Carpeta>/<InternalName>_Head_Boss.rawimg`
+- verificado de nuevo aqui mismo antes de tocar nada, listando las 60 entradas reales
+`*_Head_Boss.rawimg` del `.tmod` instalado v2.2.2 con `tmod-extract.js` (el mismo lector real de
+`.tmod`, ya en produccion en `Terrasavr-Calamity-Beta`, siguiendo `Terraria.ModLoader.Core.
+TmodFile.cs` decompilado campo a campo).
+
+**Los 29 pids reales `jefeMod`/`jefeFinalMod`/`jefeFinalModCarmesi` usados en los 25 tramos de
+`guia_progresion.json`** (recalculados iterando el JSON real, no de memoria): confirmado el numero
+exacto del handoff. 27 de esos 29 aparecen como `jefeMod` de algun PASO real (y quedan conectados
+de verdad a un icono en pantalla via `ResolverIconoDelHito`); los otros 2
+(`CalamityMod/HiveMind` y `CalamityMod/PerforatorHive`, ambos solo como `jefeFinalMod`/
+`jefeFinalModCarmesi` del tramo `HiveMindOPerforator`, sin ningun paso propio con ese jefeMod) se
+extraen igualmente para el futuro pero hoy ningun paso los consume - MISMO patron ya documentado en
+Encargo4 para `jefeFinal=13` (Devorador de Mundos) del lado vanilla, ninguna sorpresa nueva.
+
+**Los 3 casos de mapeo manual del hallazgo, confirmados aqui contra el codigo decompilado real de
+`CalamityMod.dll` v2.2.2 (ilspycmd) antes de escribir nada**: `Cryogen` (`Cryogen.cs:87,91` -
+`Texture => "CalamityMod/NPCs/Cryogen/Cryogen_Phase1"`, el `AddBossHeadTexture` real usa
+`"...Cryogen_Phase1_Head_Boss"`), `Dragonfolly` (`Bumblebirb/Dragonfolly.cs:44,46` -
+`BossHeadTexture => "CalamityMod/NPCs/Bumblebirb/Birb_Head_Boss"`, vive en la carpeta/clase interna
+"Bumblebirb", no "Dragonfolly") y `SupremeCalamitas` (`SupremeCalamitas.cs:451,456` - NO usa la
+convencion `_Head_Boss` en absoluto, registra 3 iconos de cabeza a mano via `AddBossHeadTexture`
+con rutas explicitas, el primero/por defecto es `"...SupremeCalamitas/HoodedHeadIcon"`).
+
+**Diferencia real con el algoritmo de Encargo4 (vanilla)**: aqui NO hace falta ningun recorte de
+hoja de animacion - confirmado decodificando 5 `.rawimg` `_Head_Boss` reales a mano antes de escribir
+el script (incluido Providence, 82x30, forma ancha real de dragon, no una tira: `Providence.cs` no
+llama a `AddBossHeadTexture` en su `Load()`, usa el `BossHeadTexture` por defecto de `ModNPC` - la
+imagen YA es su unico icono de cabeza). Los iconos de cabeza de jefe de Calamity son SIEMPRE una
+imagen unica ya recortada por el propio mod, nunca una tira.
+
+**`scripts/extraer-sprites-jefes-calamity.js`** (nuevo, hermano directo de
+`extraer-sprites-jefes-vanilla.js`): busca cada uno de los 29 `InternalName` por SUFIJO real de
+archivo (`/<InternalName>_Head_Boss.rawimg`) sobre la lista real de 10610 archivos del `.tmod`
+instalado (mas robusto que reconstruir la carpeta a mano, ya que la carpeta NO siempre coincide con
+el `InternalName` - ej. `AresBody` vive en `NPCs/ExoMechs/Ares/`, `CalamitasClone` en
+`NPCs/CalClone/`, `RavagerBody` en `NPCs/Ravager/` - confirmado con los 29 reales, no solo los 3 ya
+avisados por el hallazgo), con los 3 overrides manuales confirmados arriba para los casos que no
+siguen esa convencion. Decodifica cada `.rawimg` con el MISMO formato real ya usado en produccion
+por `reemplazar-iconos.js` (int32 version=1 + int32 ancho + int32 alto + ancho\*alto\*4 bytes RGBA
+crudo) hacia `Terrakeep.App/Assets/calamity_boss_icons/{InternalName}.png`. **29/29 extraidos, CERO
+LIMITE REAL** (confirmado real con la salida completa del script, sin ningun fallo).
+
+**`Terrakeep.Core/Guia/GuideModel.cs` (`PasoGuia`)**: nuevo campo `JefeMod` (`string?`,
+`[JsonPropertyName("jefeMod")]`) - antes el JSON traia este dato por cada paso pero
+`System.Text.Json` lo ignoraba en silencio (ninguna propiedad lo leia), asi que ResolverIconoDelHito
+nunca podia siquiera intentar resolverlo. A diferencia de `Jefe` (int, NPC type vanilla), este
+NUNCA se resuelve a un numero aqui - se deja crudo tal cual (mismo motivo ya documentado en
+`GuideCatalog.cs:12-17`: Terrakeep no tiene ninguna partida en marcha de la que preguntar un NPC
+type real de Calamity) para que el resolver nuevo lo consuma directamente por nombre de fichero.
+
+**`Terrakeep.App/Services/CalamityBossIconResolver.cs`** (nuevo, mismo contrato exacto que
+`BossIconResolver`/`NpcIconResolver`): `GetIconPath(string? pid)` -> extrae el `InternalName` tras
+la barra del pid crudo (`"CalamityMod/InternalName"`) y devuelve `pack://siteoforigin:,,,/Assets/
+calamity_boss_icons/{InternalName}.png` si el fichero existe de verdad en disco, `null` en cualquier
+otro caso (pid vacio/nulo, sin barra real, o `InternalName` sin sprite extraido) - nunca inventa un
+sprite.
+
+**`GuideViewModel.cs` (`ResolverIconoDelHito`)**: entre el caso 1 (`paso.Jefe != 0`, vanilla) y el
+caso de "primer objeto del paso" ya existentes, se inserta el caso nuevo: si `paso.JefeMod` no esta
+vacio, `CalamityBossIconResolver.GetIconPath(paso.JefeMod)` - si no resuelve, NO cae al siguiente
+escalon (mismo criterio honesto que el caso vanilla, mezclar "el jefe de este paso" con "el primer
+objeto que pide" seria enganoso). **Nota de proceso real**: `GuideViewModel.cs` tenia trabajo
+simultaneo real de otro agente en paralelo del mismo `taskId` ("GuiaCalamity Encargo A", parser de
+banderas de Calamity - `_worldPath`/`ResolveCalamityDownedFlags`/`GuideContext.
+CalamityDownedFlags`, tres hunks distintos en zonas distintas del mismo fichero) - para no mezclar
+su trabajo sin comitear con el mio en un commit que solo describiera el mio, se aislo el hunk propio
+con `git diff` + `git apply --cached` sobre un patch de un unico hunk (confirmado con `git diff
+--cached`/`git diff` que el index solo contenia mi hunk de `ResolverIconoDelHito` y el working tree
+conservaba intactos, sin comitear, los 3 hunks reales de Encargo A). Antes de terminar de comitear
+el resto de ficheros de esta ronda, Encargo A comiteo su propio trabajo (`af46351f`, "Guia Encargo A
+'GuiaCalamity': lee CalamityMod.DownedBossSystem via el .twld hermano") sobre el fichero completo
+(su flujo real de `git add`/`git commit` recogio el estado ENTERO del working tree en ese momento,
+que ya incluia tambien mi hunk aislado) - confirmado con `git show af46351f -- Terrakeep.App/
+ViewModels/GuideViewModel.cs`: el diff de ese commit contiene los 4 hunks reales (los 3 de Encargo A
++ el mio de `ResolverIconoDelHito`), nada perdido ni duplicado. `GuideViewModel.cs` por tanto NO
+forma parte del commit propio de este encargo (mas abajo) - ya quedo persistido integro en
+`af46351f`, mismo patron ya documentado repetidas veces hoy en esta bitacora para ficheros
+compartidos entre agentes concurrentes.
+
+**Tests nuevos**:
+- `Terrakeep.App.ViewModels.Tests/CalamityBossIconResolverTests.cs` (nuevo): espejo directo de
+  `BossIconResolverTests.cs` - 29 casos `[Theory]` (uno por pid real, incluidos explicitamente los 3
+  de mapeo manual) confirmando `IconPath` no nulo + fichero real en disco, mas 5 casos de "no
+  inventa sprite" (`null`, `""`, pid inexistente, pid sin barra, pid con barra pero `InternalName`
+  vacio). Ejecutado dentro de la ronda completa de `Terrakeep.App.ViewModels.Tests`: **629/629 en
+  verde, 0 errores** (incluye los 34 tests nuevos de este encargo mas el resto del arnes, sin tocar
+  ningun test existente).
+- `Terrakeep.App.Tests/PruebasGuiaYServidor.cs` (`EjecutarGuiaReal`, mismo canario `GUIA_SOLO=1` ya
+  existente de Encargo3/Encargo4, no uno nuevo): el array `objetivos` gana 5 filas de jefe de
+  Calamity reales - "Derrotarlo (opcional)" de Desert Scourge (`DesertScourgeHead`, convencion
+  directa) y Crabulon (convencion directa), "Derrotarlo (opcional)" de Cryogen y Dragonfolly (los
+  DOS mapeos manuales de fase/carpeta) y "Derrotarla: el final del arbol de Calamity" de
+  Supreme Calamitas (el mapeo manual sin sufijo `_Head_Boss`) - reutilizan tal cual el mismo bucle
+  generico ya existente (icono no nulo, fichero real en disco, `Expander` real, `BringIntoView()`,
+  medicion de recorte/overflow EJE A EJE, captura individual).
+
+**Resultado real medido** (`GUIA_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Debug
+--no-build`, tras `dotnet build Terrakeep.App.Tests -c Debug`): `filasConIconoVisible=13/13` (las 8
+filas ya existentes de Encargo3/Encargo4 + las 5 nuevas de jefe de Calamity), **0 `FALLO`** en todo
+el log completo (confirmado con `grep FALLO`, sin resultados), `DONE (GUIA_SOLO)`. Capturas reales
+dejadas en `keepqa-evidencia\` (revisadas con `Read`, no solo generadas):
+`guia-fila-icono-eldesertscourgeopcionalcalamity-derrotarloopcional.png`,
+`guia-fila-icono-crabulonopcionalcalamity-derrotarloopcional.png`,
+`guia-fila-icono-cryogenopcionalcalamity-derrotarloopcional.png` (icono azul de cristal visible),
+`guia-fila-icono-dragonfollyopcionalcalamity-derrotarloopcional.png` (icono de ave visible),
+`guia-fila-icono-exomechsysupremewitchcalamitaselfinal-derrotarlaelfinaldelarboldecalamity.png`
+(icono de mascara con capucha visible) + `guia-arbol-iconos.png` (arbol completo expandido) - todas
+con el icono real visible en la fila y sin recorte/overflow, medido con la misma formula EJE A EJE
+de `AuditoriaMaquetacion.cs`.
+
+**Verificacion real, sin regresion**: `dotnet build` (solucion completa, Debug, con el trabajo en
+paralelo de Encargo A ya presente en el working tree) 0 avisos/0 errores. `dotnet test
+Terrakeep.App.ViewModels.Tests` 629/629. `dotnet test Terrakeep.Core.Tests` 645/645 (incluye el
+campo `JefeMod` nuevo de `GuideModel.cs`, sin romper nada - `System.Text.Json` deserializa
+propiedades nuevas de forma aditiva). `GUIA_SOLO=1` real arriba, 0 FALLO.
+
+**Build/publish/despliegue real**: `Terrakeep.exe` instalado NO estaba en ejecucion (confirmado con
+`Get-CimInstance Win32_Process -Filter "Name='Terrakeep.exe'"`, sin resultados). `dotnet build
+Terrakeep.App -c Release` en verde. `dotnet restore Terrakeep.App -r win-x64` + `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` genero `Terrakeep.App\bin\
+Release\net10.0-windows\win-x64\publish\Terrakeep.exe`. `robocopy ... /MIR` hacia `C:\Users\adrian\
+AppData\Local\Programs\Terrakeep\` (solo 1 archivo distinto de 12984 - Encargo A ya habia
+redesplegado el mismo working tree combinado un momento antes, mismo hash real confirmado: SHA256
+`8339013C3D2F31A2CA0134C5664D63FF2D9269210916A5A42B27E98822AE9479` identico entre publicado e
+instalado, los 29 PNG de `Assets\calamity_boss_icons\` confirmados presentes en la copia instalada).
+Arranque real del `.exe` instalado confirmado (`MainWindowTitle='Terrakeep'`, cerrado limpio
+despues). Unico destino real en este proyecto (barra de tareas y Menu Inicio apuntan los dos ahi).
+
+**Commit real**: `Terrakeep.Core/Guia/GuideModel.cs`, `Terrakeep.App/Services/
+CalamityBossIconResolver.cs` (nuevo), `Terrakeep.App/Assets/calamity_boss_icons/*.png` (29 ficheros
+nuevos), `scripts/extraer-sprites-jefes-calamity.js` (nuevo), `Terrakeep.App.ViewModels.Tests/
+CalamityBossIconResolverTests.cs` (nuevo), `Terrakeep.App.Tests/PruebasGuiaYServidor.cs` (mis hunks
+reales, confirmados con `git diff` antes de añadir). `Terrakeep.App/ViewModels/GuideViewModel.cs`
+NO se incluye en este commit - mi hunk (`ResolverIconoDelHito`) ya quedo persistido integro dentro
+de `af46351f` (commit real de Encargo A sobre el fichero completo, ver nota de proceso real mas
+arriba), nada pendiente ahi. Esta misma nota de bitácora se deja tambien SIN comitear en este commit
+(mismo motivo que la entrada de Encargo A justo arriba: el archivo tiene trabajo en paralelo de
+otros agentes en otras secciones). Sin `git push`.
+
+## CalamityAccesorios (25-sep-2026): paridad Calamity real para los 9 canales EquipType de
+## accesorio (Waist/Neck/HandsOn/HandsOff/Back/Shield/Face/Balloon/Shoes) - aplicador-fix,
+## TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d
+
+Encargo del coordinador (hallazgo YA investigado por arquitecto-keep): los sprites "puestos" de
+Calamity para estos 9 canales YA estaban en `Assets/calamity/icons/` (volcado del .tmod) y
+`EquipmentAppearanceResolver.ResolveAccessorySprite`/`IsAccessoryType` ya eran genericos por tipo
+desde PortSeleccion Encargo1 - lo unico que faltaba era el DATO (`CalamityCatalogEntry.EquipSlot`
+poblado para estos 9 tipos). `scripts/extraer-slot-armadura-calamity.js` tenia 3 problemas reales:
+ruta `CALAMITY_SRC` obsoleta (sin `Keep\`, ya no existe en disco), filtro `category.startsWith
+('Armor')` que perdia items reales fuera de esa categoria (`StygianShield`, categoria real
+"Weapons/Melee"), y el regex solo capturaba el PRIMER `EquipType` del atributo (6 guantes reales
+declaran `HandsOn`+`HandsOff` a la vez).
+
+**Correccion real sobre la tabla de normalizacion del hallazgo** (evidencia nueva, no en la
+investigacion original): el hallazgo proponia normalizar `HandsOn->HandOn`/`HandsOff->HandOff`/
+`Shoes->Shoe` (nombres cortos). Verificado con `ls` real contra `Assets/calamity/icons/` ANTES de
+tocar nada: los sufijos reales de fichero son el nombre CRUDO del enum `EquipType` (confirmado en
+`tModLoader/Terraria/ModLoader/EquipType.cs` decompilado) - `BloodstainedGlove_HandsOn.png`/
+`_HandsOff.png` (no `_HandOn`), `AngelTreads_Shoes.png` (no `_Shoe`), igual que los ya existentes
+`*_Body.png`/`*_Head.png`/`*_Legs.png`. Se uso el nombre CRUDO del enum en `equipSlot`/
+`equipSlotSecondary` y se corrigieron los 4 sitios de `EquipmentAppearanceResolver.cs` que ya
+usaban el alias corto ("HandOn"/"HandOff"/"Shoe") para las llamadas `IsAccessoryType`/
+`ResolveAccessorySprite` de HandOn/HandOff/Shoe (cablearon mal desde GapAnalysis Encargo A/D
+porque nunca se habia poblado el dato de Calamity para esos 3 tipos, asi que el error nunca se
+manifesto hasta ahora) - los campos C# (`HandOnFile`/`ShoesFile`) y los directorios vanilla
+(`acc_handon`/`acc_shoes`) NO se tocaron, siguen con el alias corto de siempre.
+
+**Decision de diseno (multi-slot)**: campo nuevo `CalamityCatalogEntryData.EquipSlotSecondary`
+(string?, `Terrakeep.Core/Data/CalamityCatalog.cs`) en vez de convertir `EquipSlot` a
+`string[]?`/`List<string>?` - menos invasivo (6 consumidores reales de `EquipSlot` en todo el
+repo, todos con comparaciones `== "X"`/switch de un unico valor - `ItemSlotViewModel.AcceptsItem`,
+`ItemEquipSlotClassifier`, `CalamityArmorSetCatalog`, `EquipmentAppearanceResolver` x3 sitios -
+convertir a array habria obligado a reescribir los 6 sin necesidad real, ya que el 100% de
+armadura y el 92% de accesorios (33/36) solo tienen UN tipo). `IsAccessoryType`/
+`ResolveAccessorySprite` comparan `EquipSlot == calamitySuffix || EquipSlotSecondary ==
+calamitySuffix`. Cache binaria (`LibraryCatalogDiskCache`) con `FormatVersion` v2->v3 (mismo
+patron ya establecido para el bump anterior).
+
+**Filtro de categoria eliminado** (no solo ampliado): el script ahora escanea los 2709 objetos
+completos del catalogo, sin pre-filtrar por `category`, indexando por nombre de clase real via el
+atributo `AutoloadEquip` tal cual esta escrito (mismo criterio que `extraer-defensa-calamity.js`).
+Efecto secundario real, no buscado pero correcto: ademas de `StygianShield` (Shield), tambien
+aparecio `AbandonedWulfrumHelmet` (categoria real "Accessories/Vanity", `equipSlot="Head"`, sprite
+`_Head.png` ya en disco) - una pieza de armadura de cabeza real que la version anterior del script
+tambien perdia por el mismo motivo, confirmando que quitar el filtro (no solo ampliarlo a mano)
+era la correccion correcta.
+
+**Hallazgo real no cubierto por el hallazgo original**: 15 items reales de Calamity SI declaran
+`EquipType.Wings` (`AureateBooster`, `ElysianWings`, `ExodusWings`, `HadalMantle`,
+`HadarianWings`, `MOAB`, `SeraphTracers`, `SilvaWings`, `SkylineWings`, `SoulofCryogen`,
+`StarlightWings`, `TarragonWings`, `TiredTail`, `VoidStriders`, `WingsofRebirth`) - la afirmacion
+del hallazgo ("0 items reales... usan Wings") era inexacta, verificado a mano contra el volcado
+real del script. La DECISION de dejarlos fuera sigue siendo correcta (`PlayerPreviewRenderer` no
+tiene ningun canal de Wings, fuera de alcance de este encargo, documentado con honestidad aqui en
+vez de silenciarlo) - solo se corrige el dato de respaldo, no la decision.
+
+**Conteo real tras el arreglo** (`node scripts/extraer-slot-armadura-calamity.js`): 222 entradas
+con `equipSlot` (186 armadura Head/Body/Legs, +1 sobre las 185 anteriores por
+`AbandonedWulfrumHelmet`; 36 accesorios unicos de los 9 canales nuevos), 6 con
+`equipSlotSecondary` (los 6 guantes). Desglose real por canal, EXACTO contra la tabla que trajo el
+hallazgo: Waist=1, Neck=7, HandsOn=6, HandsOff=6, Back=5, Shield=7 (incluye StygianShield),
+Face=6, Balloon=1, Shoes=3 (42 declaraciones, 36 unicas - el resumen "~30/~36" del hallazgo era una
+aproximacion, la tabla por canal SI coincide exacta). `git diff` de `catalog.json` limpio: 37 lineas
+`equipSlot` + 6 `equipSlotSecondary` nuevas, ninguna reordenacion, ningun valor ya existente
+tocado.
+
+**Bug real encontrado y arreglado DURANTE la propia verificacion visual, no anticipado por el
+hallazgo**: `EquipmentAppearanceResolver` ya resolvia bien el sprite de HandOn/HandOff de Calamity
+(`File.Exists`=true, ruta correcta) pero `PlayerPreviewRenderer.Render` lo pintaba con
+`DrawAccessory`/`LoadStripFrameAbsolute` (tira 40x(56*N)) - los sprites reales de los 6 guantes
+miden 360x224 (hoja compuesta, MISMA convencion que `armor.BodyFile`), no una tira. Confirmado en
+el motor real (`Terraria.ID.ArmorIDs.HandOn/HandOff.Sets.UsesNewFramingCode`,
+`EquipLoader.cs`: "case EquipType.HandsOn: ArmorIDs.HandOn.Sets.UsesNewFramingCode[key] = true;"
+para CUALQUIER item de mod registrado en HandsOn/HandsOff, sin excepcion) que estos 2 tipos se
+dibujan igual que `armor.BodyFile` (`DrawCompositeArmorPiece`,
+`PlayerDrawLayers.cs:298-299`: `FrontArmAccessory=>EquipType.HandsOn`,
+`BackArmAccessory=>EquipType.HandsOff`), nunca con la tira simple. Con el codigo sin cambios el
+render salia PIXEL A PIXEL IDENTICO a "sin nada puesto" (`SliceStripRow` asume ancho de tira fijo
+40px, corrompe en silencio el recorte de una hoja de 360px de ancho real) - atrapado comparando
+capturas reales antes/despues (`ImageChops`/numpy, 140 pixeles reales de diferencia tras el
+arreglo en la region del guante, 0 antes), NO solo confiando en que "el test de File.Exists pasa".
+Arreglo real: `PlayerPreviewRenderer.cs` - nuevo `DrawHandAccessory(file, armCell)` (local a
+`Render`) + `LoadHandAccessoryFrame`/`GetPngDimensions`/`PngDimensionsCache` (nuevos, estaticos):
+detecta por el TAMAÑO REAL del PNG decodificado (360x224 = hoja compuesta -> `LoadArmorCell` con
+`frontArmCell`/`backArmCell`, ya en scope; cualquier otro tamaño = tira -> `LoadStripFrameAbsolute`
+sin cambios) - nunca por el origen vanilla/Calamity, para no romper los 24 sprites vanilla ya
+extraidos (`acc_handon`/`acc_handoff`, SI miden 40x1120) ni las pruebas "orden" (PNG sinteticos
+40x56 de `PlayerPreviewRendererAccessoriesTests`). Posicion de la capa en la secuencia de
+composicion SIN cambios (`HandOffFile` sigue en Paso 8b, `HandOnFile` en Paso 10b) - solo cambio
+el mecanismo de RECORTE del sprite, no el orden real ya verificado.
+
+**Verificado con objetos reales** (capturas PNG reales x6/x10 escala, test temporal en
+`Terrakeep.App.ViewModels.Tests` creado, ejecutado y BORRADO antes del commit - no parte del
+repo, mismo criterio ya establecido en GapAnalysis Encargo C): `DepthCharm` (Waist, franja verde
+visible en el cinturon), `StygianShield` (Shield, escudo grande verde/blanco visible en el brazo,
+el spot-check real del arreglo del filtro de categoria), `BloodstainedGlove` (HandsOn+HandsOff,
+un unico item puesto resuelve LOS DOS canales - guante oscuro visible en delante Y detras del
+brazo tras el arreglo del renderer, antes invisible), `Abaddon` (Face). Los 3-4 renders
+visualmente distintos y coherentes.
+
+**Tests nuevos** (11 reales, todos en verde): `EquipmentAppearanceResolverTests.cs` (+9, uno por
+canal real: Waist/Neck/Back/Shield-StygianShield/Face/Balloon/Shoes/HandsOn+HandsOff-doble/
+defensa-contra-falso-positivo-de-EquipSlotSecondary) - todos piden el item real al catalogo
+dinamicamente (`Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "X")`), nunca un id
+hardcodeado. `PlayerPreviewRendererAccessoriesTests.cs` (+2): wiring real de extremo a extremo
+del guante (pixeles distintos con/sin, aislado por canal HandOn/HandOff por separado) - el test
+que de verdad cierra el hueco de cobertura que dejaba pasar el bug del renderer (los 9 tests de
+`EquipmentAppearanceResolverTests` solo comprobaban `File.Exists`+ruta, nunca el render real).
+
+**Build y regresion**: `dotnet build Terrakeep.slnx -c Release`: 0 advertencias, 0 errores.
+`dotnet test Terrakeep.Core.Tests -c Release`: 645/645 (incluye tests nuevos de otros agentes en
+paralelo, GuideFlagsCalamity/TwldReaderCalamityFlags). `dotnet test
+Terrakeep.App.ViewModels.Tests -c Release`: 639/639 (5m). Sin regresion.
+
+**Obstaculo real encontrado y resuelto (autonomia tecnica)**: `testhost.exe`/`dotnet` colgados
+repetidas veces tras varias rondas de `dotnet test` (mismo bug real de VSTest en Windows ya
+documentado hoy) - confirmado con `Get-CimInstance Win32_Process` que la cadena de PIDs
+correspondia a mis propias rondas anteriores (mismo `CommandLine`, mismo proyecto), nunca a otro
+agente; `taskkill /F /T` los resolvio. Para el test de diagnostico visual temporal se uso
+`-p:BaseOutputPath=bin_calamityaccesorios` (aislado del `bin/` compartido, mismo patron ya
+documentado hoy por Encargo D) para evitar la carrera de bloqueo mientras el `bin/` por defecto
+seguia con actividad de otros agentes.
+
+**Trabajo en paralelo real sobre los MISMOS ficheros**: `EquipmentAppearanceResolver.cs`/
+`EquipmentAppearanceResolverTests.cs`/`catalog.json` no mostraron cambios ajenos intercalados en
+esta ronda (`git diff` limpio, coincide exactamente con lo editado) - a diferencia de rondas
+anteriores del mismo dia, esta vez no hizo falta `git add -p`.
+
+**Recompilacion y redespliegue local**: `Terrakeep.exe` instalado NO estaba en ejecucion
+(confirmado `Get-CimInstance Win32_Process -Filter "Name='Terrakeep.exe'"`, sin resultados).
+`dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en
+verde. `robocopy ... /MIR` hacia `C:\Users\adrian\AppData\Local\Programs\Terrakeep\` (unico
+destino real, barra de tareas y Menu Inicio apuntan ahi).
+
+**Confirmacion de los 3 scripts menores de ruta obsoleta**: los 3 (`extraer-bonos-set-
+calamity.js:59` +`VANILLA_LOC_ES`/`VANILLA_LOC_ES_MAIN`:62-63, `extraer-defensa-calamity.js:15`,
+`generar-mejor-prefijo.py:126` +`VANILLA`/`TMODLOADER`:120-121) tenian de verdad la misma raiz
+obsoleta `Downloads\tModLoader-Decompiled\` (confirmado con `ls` real, ENOENT - la ruta vieja no
+es symlink, a diferencia de otras rutas "Keep" documentadas en CLAUDE.md que si lo son) - arreglo
+aditivo de solo la constante de ruta, sin reejecutar ninguno de los 3 (`extraer-bonos-set-
+calamity.js` ya tenia una edicion EN VIVO de otro agente en `TMOD_EXTRACT`, misma linea de
+trabajo, no revertida). Verificado `node --check`/`python -m py_compile` en verde en los 4
+ficheros de script tocados.
+
+**Commit real**: `Terrakeep.Core/Data/CalamityCatalog.cs`, `Terrakeep.Core/Data/
+LibraryCatalogDiskCache.cs`, `Terrakeep.App/Services/EquipmentAppearanceResolver.cs`,
+`Terrakeep.App/Services/PlayerPreviewRenderer.cs`, `Terrakeep.App.ViewModels.Tests/
+EquipmentAppearanceResolverTests.cs`, `Terrakeep.App.ViewModels.Tests/
+PlayerPreviewRendererAccessoriesTests.cs`, `Terrakeep.App/Assets/calamity/catalog.json`,
+`scripts/extraer-slot-armadura-calamity.js`, `scripts/extraer-bonos-set-calamity.js`,
+`scripts/extraer-defensa-calamity.js`, `scripts/generar-mejor-prefijo.py` - confirmado con `git
+diff --stat` antes de `git add` que cada fichero staged coincidia EXACTAMENTE con mis ediciones
+reales, sin contenido ajeno intercalado. Esta nota de bitacora se deja SIN comitear en este commit
+(mismo motivo que las 2 entradas justo arriba: el archivo tiene trabajo en paralelo de otros
+agentes en otras secciones que aun no han comiteado). Sin `git push`.
