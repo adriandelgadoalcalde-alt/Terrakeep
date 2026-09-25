@@ -394,6 +394,20 @@ internal static partial class Program
 
         var vm = (MainViewModel)window.DataContext;
 
+        // COFRES_INSPECTOR_SOLO (24-sep-2026, revision-correccion-integral-familia-Keep, cluster
+        // "imagen5+imagen6" - Exploracion/cofres/inspector lateral). Vive en
+        // CanarioClusterCofresInspector.cs (misma clase parcial) - ver su cabecera para el detalle
+        // completo de los 4 puntos del encargo y la causa real ya confirmada por lectura de codigo
+        // de los puntos 2/3. Igual que TERRAKEEP_SOLO_MRK arriba: aislado para poder repetirlo
+        // rapido, corre igual dentro de la tirada completa si no se pasa la variable.
+        if (Environment.GetEnvironmentVariable("COFRES_INSPECTOR_SOLO") == "1")
+        {
+            EjecutarClusterCofresInspectorSolo(window, vm);
+            window.Close();
+            DoEvents();
+            return;
+        }
+
         // AR-MRK (19-sep-2026): medicion real de la geometria de los marcadores del mapa. Vive en
         // PruebasMarcadoresMapa.cs y se puede correr SOLA con TERRAKEEP_SOLO_MRK=1 (el arnes
         // completo son minutos por las decenas de RenderTargetBitmap, y este bloque hace falta
