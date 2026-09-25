@@ -26677,3 +26677,125 @@ respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKe
 `KEEPQA-INTEGRACION.md` no tocados. **`MainWindow.xaml`/`MainWindow.xaml.cs` NO aparecen en mi
 `git diff`/commit** - confirmado explícitamente, alcance respetado (la parte XAML del árbol
 completo queda para el encargo siguiente). Sin `git push`.
+
+## ExploracionRediseno FaseI (26-sep-2026, aplicador-fix) - canario permanente de layout del sidebar
+
+**Encargo**: tras FaseH (elimina el `MinHeight` compartido de `ExplorationSidebarPanel`, ver más
+arriba), montar un canario PERMANENTE que corra en CADA pasada completa del arnés (no solo bajo
+demanda) para que la causa real de FaseH no pueda volver sin que el arnés lo cace, y confirmar que
+ningún canario existente de la familia de Exploración quedó roto por el cambio de layout.
+
+**Arreglo/pieza real aplicada**: `Terrakeep.App.Tests/CanarioExploracionLayoutPermanente.cs`
+(nuevo) - función `EjecutarCanarioExploracionLayoutPermanente(window, vm)`, autocontenida (carga su
+propio mundo si hace falta - `roca_negra.wld` -, restaura tamaño de ventana/pestaña/estado de
+Exploración al terminar, no depende de qué haya dejado ningún bloque anterior del arnés). A
+diferencia de `FALLO3_SOLO`/`COFRES_INSPECTOR_SOLO`/`NAV123_SOLO` (mismo patrón de fichero
+dedicado, pero SOLO corren bajo demanda con su variable de entorno y terminan el proceso), esta
+función se invoca DOS VECES: `EXPLORATION_LAYOUT_SOLO=1` (`Program.cs`, junto a `KEEPQA_VIEWPORT_
+SOLO`/`FALLO3_SOLO`) para iteración rápida aislada, Y de forma INCONDICIONAL en la secuencia normal
+de `Program.cs` (justo después de `PruebasMejorPrefijo`, antes de `PruebasInicioAjustesNovedadesAce
+rcaDe`) para que corra en toda pasada completa - mismo patrón real ya usado por
+`PruebasPersonajeBuffsAparienciaVersion` (llamada tanto en su bloque `PB_SOLO` como sin condición
+más abajo).
+
+Para los 3 modos del sidebar (Browse/ChestInspector/WorldTools) en 1180x860 (por defecto) y 1080x700
+(mínimo real, `MainWindow.xaml:12`), el canario comprueba:
+1. **Cero overflow horizontal real** (`ScrollableWidth<=0.5px`, tolerancia de redondeo) en
+   `ExplorationSidebarScroll` y en los 3 `ScrollViewer` internos de WorldTools (Este mundo/Editar
+   mundo/Bestiario) - `ScrollableWidth=Max(0,ExtentWidth-ViewportWidth)`, fiable incluso con
+   `HorizontalScrollBarVisibility="Disabled"` (ya lo demostró AR-EX-HSCROLL: mide overflow real
+   aunque la barra nunca se vea).
+2. **Guardar/Cancelar del Inspector alcanzables por scroll** en el peor caso real (cofre con un
+   arma Pícaro de Calamity, 17 prefijos legales reales - mismo objeto ya usado en
+   `COFRES_INSPECTOR_SOLO`/`AuditoriaViewportScroll.cs` Fase H): `ScrollToBottom()` real +
+   `VerticalOffset≈ScrollableHeight` + rect del `UniformGrid` de botones dentro de los límites de
+   la ventana.
+3. **Guardia anti-regresión explícita del `MinHeight`**: `ExplorationSidebarBrowseContent.MinHeight`
+   leído directamente de la propiedad en runtime, `FALLO` si supera 350px - contra el antipatrón
+   `MinHeight=900/1000` que el usuario prohibió explícitamente volver a subir. Verificada de
+   verdad, no solo teórica: subí el XAML a `MinHeight="900"` a propósito, confirmé que el canario
+   da `FALLO: EXPLORATION_LAYOUT-MINHEIGHT` real, y revertí antes de seguir.
+4. **Contenido real (no vacío)** en los 3 modos: Browse (pastillas de categoría reales visibles),
+   ChestInspector (cabecera `'<- Cofres'` visible), WorldTools (los 3 `Expander` visibles Y
+   desplegados - forzado explícitamente con `IsExpanded=true` antes de medir, ver limitación real
+   más abajo).
+
+**Limitación real encontrada y corregida durante la propia verificación** (no solo teórica): en la
+primera pasada completa, los 2 checks de `WorldTools_EsteMundo` salieron "omitido" (ScrollViewer no
+encontrado) en vez de medir de verdad - causa real: el `Expander` "Este mundo" es visible pero
+`IsExpanded` es una propiedad LOCAL mutable (no ligada al ViewModel), y algún otro bloque de los
+miles de líneas que corren antes en la misma pasada lo había dejado colapsado, así que su
+`ScrollViewer` interno no estaba realizado en el árbol visual. Arreglo real: forzar
+`IsExpanded=true` en los 3 Expanders (mismo criterio que `AuditoriaViewportScroll.cs` ya usa con
+`MissingNpcsExpander`) antes de medir - segunda pasada completa confirmó las 24 líneas
+`EXPLORATION_LAYOUT-*` completas, sin ningún "omitido".
+
+**Verificación real**:
+- `EXPLORATION_LAYOUT_SOLO=1` (aislado): 0 `FALLO`, las 24 líneas informativas esperadas en los 2
+  tamaños × 3 modos (repetido dos veces, antes y después del arreglo del Expander).
+- Guardia del `MinHeight` probada activamente (ver arriba): detecta el antipatrón cuando se
+  reintroduce, no solo cuando está ausente.
+- **Pasada COMPLETA del arnés** (`Terrakeep.App.Tests.exe` sin variable de entorno, batería entera,
+  ~195s hasta el `DONE` final) ejecutada DOS VECES (antes y después del arreglo del Expander): las
+  24 líneas `EXPLORATION_LAYOUT-*` aparecen en ambas, **0 `FALLO` nuevo** en las dos. `diff` byte a
+  byte de las 17 líneas `FALLO:` totales entre las dos pasadas: **0 diferencias** - exactamente el
+  mismo conjunto de 17 fallos preexistentes ya documentados en FaseH (`H5-05`, `A8-06`, `AR-14`×4,
+  `OBJ-07`, `A8-01`, `AR-11f`, `AR-MRK-CLIC`, `AR-MRK-OTROS`×5, `AR-EX5-DIFICULTAD`,
+  `A10-IDIOMA-BARRIDO`), ninguno relacionado con este canario ni con Exploración/layout.
+- `FALLO3_SOLO=1` y `COFRES_INSPECTOR_SOLO=1`: **0 `FALLO`** en los dos - ningún canario existente
+  de la familia de Exploración quedó roto por FaseH/FaseI. No hizo falta ajustar ninguna expectativa
+  numérica de ningún canario existente (a diferencia de lo que anticipaba el encargo como
+  posibilidad) - todos siguen midiendo lo mismo que medían y siguen en verde tal cual, FaseH ya dejó
+  el layout en un estado que no rompe ninguno de sus supuestos.
+- `dotnet build Terrakeep.slnx -c Debug`: verde, 0 errores. `dotnet test Terrakeep.Core.Tests`:
+  **742/742**. `dotnet test Terrakeep.App.ViewModels.Tests`: **742/742** (el baseline documentado en
+  el encargo decía 732/732 - subió a 742/742 por trabajo en paralelo de otro agente el mismo día,
+  mismo patrón ya visto en FaseH; 0 fallos en cualquier caso, sin regresión real).
+
+**Commit real** (`2b20659`): `Terrakeep.App.Tests/CanarioExploracionLayoutPermanente.cs` (nuevo) +
+`Terrakeep.App.Tests/Program.cs` (las 2 inserciones: el bloque `EXPLORATION_LAYOUT_SOLO` y la
+llamada incondicional) - los 2 únicos ficheros del working set real de este encargo, `git add` con
+rutas explícitas, nunca `-A` (numerosos ficheros ajenos de otros agentes en paralelo en `git
+status`: `Terrakeep.App.Tests/AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`,
+`Terrakeep.App/Services/EquipmentAppearanceResolver.cs`/`PlayerPreviewRenderer.cs`,
+`Terrakeep.Core.Tests/**`, `Terrakeep.App/Assets/player/extra/105.png` nuevo sin comitear, etc.,
+ninguno tocado ni comiteado). `doNotTouch` respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/
+`Terrakeep.App.Tests/ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md` no tocados.
+`MainWindow.xaml` SÍ se tocó temporalmente durante la verificación activa de la guardia del
+`MinHeight` (subida a 900 y revertida a 300 en el mismo turno, antes de cualquier build/commit
+real) - `git diff`/commit confirman 0 cambio neto en ese fichero. Bloqueo `terrakeep-mainwindow-xaml`
+reservado antes de esa verificación y liberado al terminar. Sin `git push`.
+
+**Despliegue real - ALARMA del DEPLOY_LOCK documentada de nuevo, lock NO liberado a propósito**
+(mismo patrón que FaseH, causa distinta): `Get-CimInstance Win32_Process` confirmó `Terrakeep.exe`
+cerrado antes de publicar. `node deployLock.js adquirir Terrakeep` + `antes` (snapshot real:
+`...\Programs\Terrakeep\Assets`, 13055 ficheros, hash `bd47412a...` - coincide exacto con el
+`despues` que dejó FaseH, confirmando que el ciclo de deploy de la Guía FaseA que se documenta justo
+arriba en esta bitácora ya había dejado el instalado al día). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde. `robocopy
+.../publish .../Terrakeep //MIR //XF unins000.exe unins000.dat`: 4 archivos copiados, 13058
+omitidos (sin cambio), 0 errores, 0 extras (código de salida 1 de robocopy = éxito con copia, no
+error). `node deployLock.js despues Terrakeep ...Assets`: **ALARMA** - 13055→13056 ficheros, hash
+cambió.
+
+**Investigación real de la alarma** (antes de decidir nada, mismo protocolo que FaseH): `git status`
+confirma exactamente **1 fichero nuevo sin comitear bajo `Assets/`**:
+`Terrakeep.App/Assets/player/extra/105.png` (13055+1=13056, coincide exacto con la aritmética de la
+alarma - no hay purga, es la recogida de un asset real de OTRO agente en paralelo que tocó
+`Terrakeep.App/Services/EquipmentAppearanceResolver.cs`/`PlayerPreviewRenderer.cs`/
+`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs` el mismo día, sin comitear
+todavía). Mi `dotnet publish` lee el árbol de trabajo real, no `git HEAD`, así que recogió ese
+asset nuevo igual que FaseH recogió las 2 claves de localización de la Guía. Contenido benigno (1
+sprite nuevo real, no rompe nada), pero exactamente el tipo de mezcla que el protocolo pide escalar
+en vez de decidir por mi cuenta. Siguiendo el protocolo al pie de la letra: **el `DEPLOY_LOCK` de
+Terrakeep queda RESERVADO a propósito, sin liberar**, a la espera de que el coordinador decida
+(comitear el trabajo de `EquipmentAppearanceResolver` del otro agente, o liberar el lock
+manualmente con `--forzar` tras confirmar que la mezcla es aceptable). El binario/asset instalado SÍ
+refleja ya el arreglo real de FaseI (el `/MIR` copió el `.exe`/`.dll` actualizados de verdad, 4
+archivos), así que el despliegue funcional de este encargo está completo; lo pendiente es solo la
+higiene del lock/coordinación entre agentes, no el arreglo en sí.
+
+**Pendiente para el coordinador, fuera de mi alcance (documentado, no ejecutado por mí)**: pedido
+explícito del encargo - una vez cerrada FaseI, despachar `revisor-visual` y `verificador-qa` sobre
+Exploración completa (Fases B-I) antes de dar el rediseño por cerrado, ninguno de los dos roles se
+ha usado todavía en este rediseño.
