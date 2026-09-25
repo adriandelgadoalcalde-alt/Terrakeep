@@ -140,8 +140,21 @@
                                Visibility="{Binding Slot.RejectionMessage, Converter={StaticResource NullToVis}}" />
 
                     <TextBlock Text="{Binding Loc[label_quantity], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
-                    <TextBox Text="{Binding Slot.Count, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,8"
+                    <TextBox Text="{Binding Slot.Count, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,0,6"
                              Background="{StaticResource BgElevatedBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                    <!-- Controles rapidos de stack (encargo Keep 25-sep-2026): "+10"/"+100"/"MAX"
+                         junto a la Cantidad, sin sustituir la edicion manual de arriba. Mismo
+                         lenguaje visual ya usado en los botones de Prefijo (Tag="Ghost", misma
+                         Padding/FontSize que "Quitar" un poco mas abajo) - MaxStack real de cada
+                         objeto (ItemSlotViewModel.MaxStack), nunca un tope fijo. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Button Content="{Binding Loc[action_add_ten], Mode=OneWay}" Command="{Binding Slot.AddTenToCountCommand}"
+                                ToolTip="{Binding Loc[tt_add_ten_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" FontSize="11" />
+                        <Button Content="{Binding Loc[action_add_hundred], Mode=OneWay}" Command="{Binding Slot.AddHundredToCountCommand}"
+                                ToolTip="{Binding Loc[tt_add_hundred_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
+                        <Button Content="{Binding Loc[action_set_max], Mode=OneWay}" Command="{Binding Slot.SetCountToMaxCommand}"
+                                ToolTip="{Binding Loc[tt_set_max_stack], Mode=OneWay}" Tag="Ghost" Padding="6,2" Margin="6,0,0,0" FontSize="11" />
+                    </StackPanel>
 
                     <TextBlock Text="{Binding Loc[label_prefix_id], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,0,3" />
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">

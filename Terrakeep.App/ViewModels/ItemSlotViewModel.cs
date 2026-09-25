@@ -159,6 +159,19 @@ public partial class ItemSlotViewModel : ObservableObject
     // algo real (1 unidad no necesita rotularse, igual que hace el propio Terraria).
     public bool ShowCount => !IsEmpty && Count > 1;
 
+    // Tope real de apilado del objeto colocado en este slot (encargo Keep 25-sep-2026,
+    // "+10/+100/MAX en el editor de objeto, respetando el maxStack real de cada objeto") - vanilla
+    // via VanillaMaxStackCatalog (Assets/vanilla_max_stack.json, extraido de SetDefaults1..5 de
+    // Item.cs), Calamity via CalamityCatalog (catalog.json, "stats.maxStack"). 1 para un slot
+    // vacio o cualquier id sin apilado especial - el default real del motor (ver el comentario de
+    // cabecera de VanillaMaxStackCatalog), nunca un numero fijo tipo 9999. Se recalcula en cada
+    // lectura (barato, un solo lookup de diccionario) en vez de cachearse, para no tener que
+    // sincronizar un campo mas cada vez que Item/IsCalamity cambian.
+    public int MaxStack => IsEmpty ? 1
+        : IsCalamity
+            ? _service.CalamityCatalog.BySyntheticId(Item.Id)?.Stats?.MaxStack ?? 1
+            : _service.VanillaMaxStack.Get(Item.Id);
+
     public ItemSlotViewModel(CharacterFileService service, int slotIndex, string containerName, GameItem item, Action<ItemSlotViewModel>? requestPick = null, bool isEquipped = false,
         SlotKind acceptedKind = SlotKind.None, string? ghostIcon = null, bool isExpertAccessorySlot = false, bool isMasterAccessorySlot = false,
         Action<ItemSlotViewModel, GameItem, GameItem>? onItemChanged = null, bool supportsFavorite = true)
@@ -326,6 +339,9 @@ public partial class ItemSlotViewModel : ObservableObject
         IsEmpty = item.IsEmpty;
         IsCalamity = item.IsCalamity;
         IsFavorited = item.Favorited;
+        // MaxStack depende de IsEmpty/IsCalamity/Item.Id, los tres ya asignados en este punto -
+        // notificar aqui cubre los dos caminos de salida de abajo (vacio y con contenido).
+        OnPropertyChanged(nameof(MaxStack));
 
         _suppressCountWriteback = true;
         Count = item.Count;
@@ -465,6 +481,31 @@ public partial class ItemSlotViewModel : ObservableObject
     [RelayCommand]
     private void Clear() => UpdateFrom(GameItem.Empty);
 
+    // Controles rapidos de stack (encargo Keep 25-sep-2026): "+10", "+100" y "MAX" junto al
+    // campo de Cantidad ya editable a mano. Los 3 reutilizan el Count=... existente en vez de
+    // reimplementar el clamp - OnCountChanged ya topa a MaxStack real (ver su comentario), asi
+    // que estos comandos no necesitan saber el tope de memoria, solo pedir el valor que quieren.
+    [RelayCommand]
+    private void AddTenToCount()
+    {
+        if (Item.IsEmpty) return;
+        Count += 10;
+    }
+
+    [RelayCommand]
+    private void AddHundredToCount()
+    {
+        if (Item.IsEmpty) return;
+        Count += 100;
+    }
+
+    [RelayCommand]
+    private void SetCountToMax()
+    {
+        if (Item.IsEmpty) return;
+        Count = MaxStack;
+    }
+
     [RelayCommand]
     private void ChooseFromLibrary() => _requestPick?.Invoke(this);
 
@@ -494,8 +535,10 @@ public partial class ItemSlotViewModel : ObservableObject
         if (_suppressCountWriteback || Item.IsEmpty) return;
         var before = Item.Clone();
         // Un objeto real siempre tiene al menos 1 unidad - 0 significaria vaciar el slot,
-        // para eso ya esta el boton "Vaciar" explicito.
-        int clamped = Math.Clamp(value, 1, 9999);
+        // para eso ya esta el boton "Vaciar" explicito. Tope real de MaxStack (encargo Keep
+        // 25-sep-2026): antes 9999 fijo para CUALQUIER objeto (una espada con maxStack real 1
+        // se podia dejar en "5" a mano sin ningun aviso) - ver el comentario real de MaxStack.
+        int clamped = Math.Clamp(value, 1, MaxStack);
         Item.Count = clamped;
         if (clamped != value)
         {

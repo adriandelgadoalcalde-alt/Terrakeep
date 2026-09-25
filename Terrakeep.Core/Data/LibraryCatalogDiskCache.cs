@@ -23,7 +23,14 @@ namespace Terrakeep.Core.Data;
 public static class LibraryCatalogDiskCache
 {
     private const string Magic = "TKLC1"; // Terrakeep Library Cache
-    public const int FormatVersion = 1;
+    // v2 (encargo Keep 25-sep-2026, "+10/+100/MAX en el editor de objeto"): CalamityItemStats
+    // gano un campo mas (MaxStack) en WriteTo/ReadFrom - una cache v1 en disco tiene menos bytes
+    // por objeto de los que v2 espera leer. El fingerprint de origen (catalog.json cambio de
+    // contenido con este mismo encargo) ya habria invalidado cualquier cache vieja por su cuenta,
+    // pero bump explicito de todas formas: es el mecanismo real que este fichero ya reserva para
+    // exactamente este caso, no hay que depender solo de la coincidencia de que el fingerprint
+    // tambien cambiara.
+    public const int FormatVersion = 2;
 
     public sealed record LoadedCache(
         VanillaItemCatalog VanillaCatalog,

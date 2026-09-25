@@ -408,6 +408,20 @@ internal static partial class Program
             return;
         }
 
+        // MAXSTACK_SOLO=1 (25-sep-2026, encargo Keep "+10/+100/MAX en el editor de objeto"). Vive
+        // en CanarioControlesRapidosStack.cs (misma clase parcial) - visual-QA real de los 3
+        // botones nuevos (sin overflow/clipping en ningun idioma) + verificacion de que MAX/Count
+        // respetan el maxStack real de cada objeto. Mismo criterio que el resto de bloques _SOLO:
+        // aislado para poder repetirlo rapido, corre igual dentro de la tirada completa si no se
+        // pasa la variable.
+        if (Environment.GetEnvironmentVariable("MAXSTACK_SOLO") == "1")
+        {
+            EjecutarMaxStackSolo(window, vm);
+            window.Close();
+            DoEvents();
+            return;
+        }
+
         // AR-MRK (19-sep-2026): medicion real de la geometria de los marcadores del mapa. Vive en
         // PruebasMarcadoresMapa.cs y se puede correr SOLA con TERRAKEEP_SOLO_MRK=1 (el arnes
         // completo son minutos por las decenas de RenderTargetBitmap, y este bloque hace falta

@@ -18,6 +18,12 @@ public sealed class CalamityItemStats
     // cada objeto, ver scripts/extraer-defensa-calamity.js - null para lo que de verdad no
     // tiene (armaduras vanity, la mayoria de accesorios), nunca inventado ni puesto a 0.
     [JsonPropertyName("defense")] public int? Defense { get; init; }
+    // Tope real de apilado (encargo Keep 25-sep-2026, "+10/+100/MAX en el editor de objeto") -
+    // extraido de verdad de Item.maxStack en el SetDefaults() real de cada clase de CalamityMod,
+    // ver scripts/extraer-max-stack-calamity.js. null = sin asignacion explicita real (el
+    // default real del motor, 1 - ver el comentario de cabecera de VanillaMaxStackCatalog),
+    // nunca un numero inventado ni una copia del limite vanilla.
+    [JsonPropertyName("maxStack")] public int? MaxStack { get; init; }
 }
 
 public sealed class CalamityCatalogEntryData
@@ -177,6 +183,7 @@ public sealed class CalamityCatalog
                 CatalogBinaryCache.WriteNullableInt(w, d.Stats.Mana);
                 CatalogBinaryCache.WriteNullableString(w, d.Stats.DamageType);
                 CatalogBinaryCache.WriteNullableInt(w, d.Stats.Defense);
+                CatalogBinaryCache.WriteNullableInt(w, d.Stats.MaxStack);
             }
         }
     }
@@ -209,6 +216,7 @@ public sealed class CalamityCatalog
                     Mana = CatalogBinaryCache.ReadNullableInt(r),
                     DamageType = CatalogBinaryCache.ReadNullableString(r),
                     Defense = CatalogBinaryCache.ReadNullableInt(r),
+                    MaxStack = CatalogBinaryCache.ReadNullableInt(r),
                 };
             }
             raw.Add(new CalamityCatalogEntryData

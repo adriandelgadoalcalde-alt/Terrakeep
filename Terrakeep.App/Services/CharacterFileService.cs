@@ -80,6 +80,11 @@ public sealed class CharacterFileService
     public VanillaCategoryCatalog VanillaCategories { get; }
     public VanillaSlotKindCatalog VanillaSlotKinds { get; }
     public VanillaItemStatsCatalog VanillaStats { get; }
+    // Tope real de apilado por id vanilla (encargo Keep 25-sep-2026, "+10/+100/MAX en el editor
+    // de objeto") - ver el comentario real de cabecera de VanillaMaxStackCatalog. El lado
+    // Calamity vive directamente en CalamityCatalog (CalamityCatalogEntry.Stats.MaxStack), igual
+    // que ya hace el resto de estadisticas de Calamity - no hace falta un catalogo aparte ahi.
+    public VanillaMaxStackCatalog VanillaMaxStack { get; }
     public PrefixRulesCatalog PrefixRules { get; }
     public HairDyeCatalog HairDyes { get; }
     public VanillaLibraryTreeCatalog VanillaLibraryTree { get; }
@@ -188,6 +193,7 @@ public sealed class CharacterFileService
         VanillaCategories = VanillaCategoryCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_categories.json"));
         VanillaSlotKinds = VanillaSlotKindCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_slot_kind.json"));
         VanillaStats = VanillaItemStatsCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_stats.json"));
+        VanillaMaxStack = VanillaMaxStackCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_max_stack.json"));
         PrefixRules = PrefixRulesCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_prefix_rules.json"));
         HairDyes = HairDyeCatalog.LoadFromFile(Path.Combine(assetsDir, "hair_dyes.json"));
         VanillaLibraryTree = VanillaLibraryTreeCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_library_tree.json"));
