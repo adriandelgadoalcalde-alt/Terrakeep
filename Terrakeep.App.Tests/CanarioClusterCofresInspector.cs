@@ -256,6 +256,100 @@ internal static partial class Program
                 DoEvents();
             }
 
+            // ================= Evidencia visual real (aplicador-fix, 25-sep-2026) =================
+            // Capturas reales (RenderTargetBitmap, mismo patron que AuditoriaTransicion.cs) de los
+            // 3 modos de busqueda de cofres visibles en las capturas del usuario (imagen5="Cofre a
+            // cofre", imagen6="Por tipo de cofre"; "Por lo que contienen" comparte la MISMA causa de
+            // codigo, confirmado aqui con el mismo dato real) + del editor con el caso mas exigente
+            // real: un arma Picaro de Calamity con sus 17 prefijos legales reales
+            // (Assets/calamity/rogue_prefixes.json, "weapon": 17) - confirma que Groups/Prefixes
+            // siguen siendo descubribles a simple vista tras quitar el MaxHeight=320, sin depender
+            // del ScrollViewer interno oculto (ItemEditTemplate linea ~33).
+            try
+            {
+                vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                vm.Exploration.ChestViewMode = 2;
+                DoEvents(); DoEvents(); window.UpdateLayout();
+                CapturaVentanaKeepQa(window, "cofres-p3-cofre-a-cofre");
+
+                vm.Exploration.ChestViewMode = 0;
+                DoEvents(); DoEvents(); window.UpdateLayout();
+                CapturaVentanaKeepQa(window, "cofres-p3-por-tipo");
+
+                vm.Exploration.ChestViewMode = 1;
+                DoEvents(); DoEvents(); window.UpdateLayout();
+                var bloqueResultadosPorContenido = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+                Console.WriteLine($"COFRES-INSPECTOR-P3: modo 'Por lo que contienen' (misma causa, sin buscar aun) -> WorldSearchResults.Count={vm.Exploration.WorldSearchResults.Count} (esperado 0), ExplorationResultsBlock.Visibility={bloqueResultadosPorContenido?.Visibility}, ActualHeight real medido={bloqueResultadosPorContenido?.ActualHeight:0.#}px");
+                if (vm.Exploration.WorldSearchResults.Count == 0 && bloqueResultadosPorContenido?.Visibility == Visibility.Visible && bloqueResultadosPorContenido.ActualHeight > 40)
+                    Console.WriteLine($"FALLO: COFRES-INSPECTOR-P3 - mismo hueco vacio real en 'Por lo que contienen' antes de buscar ({bloqueResultadosPorContenido.ActualHeight:0.#}px)");
+                CapturaVentanaKeepQa(window, "cofres-p3-por-lo-que-contienen");
+
+                vm.Exploration.ChestViewMode = 2;
+                DoEvents(); DoEvents();
+
+                // Arma Picaro real de Calamity (RogueDamageClass.Instance en catalog.json real,
+                // 149 armas comparten el mismo catalogo de 17 prefijos legales) - localizada por la
+                // Libreria (mismo camino real que usaria el usuario), no un id inventado.
+                vm.Library.SearchText = "Hacha Arrojadiza de Adamantita";
+                WaitForDispatcher(300); // L-c: debounce real de 180ms antes de que Results se rellene (Program.cs)
+                var picaro = vm.Library.Results.FirstOrDefault();
+                vm.Library.SearchText = string.Empty;
+                DoEvents();
+
+                if (picaro == null)
+                    Console.WriteLine("COFRES-INSPECTOR-P2-PICARO: AVISO - no se encontro el arma Picaro de prueba en la Libreria (¿cambio el nombre real?) - se omite la captura del caso de 17 prefijos");
+                else
+                {
+                    var filaParaPicaro = vm.Exploration.ChestRows.FirstOrDefault(r => r.Items.Count > 0);
+                    if (filaParaPicaro == null)
+                        Console.WriteLine("COFRES-INSPECTOR-P2-PICARO: AVISO - ningun cofre real tiene contenido para alojar el Picaro de prueba");
+                    else
+                    {
+                        vm.Exploration.EditChestCommand.Execute(filaParaPicaro);
+                        DoEvents(); DoEvents();
+                        var slotDestino = vm.Exploration.EditingChestSlots.FirstOrDefault();
+                        if (slotDestino == null)
+                            Console.WriteLine("COFRES-INSPECTOR-P2-PICARO: AVISO - el cofre elegido no tiene ningun slot real editable");
+                        else
+                        {
+                            vm.Exploration.SelectChestSlot(slotDestino);
+                            DoEvents();
+                            slotDestino.ItemId = picaro.Id; // mismo camino real que escribir el id a mano en el TextBox (OnItemIdChanged -> PlaceItem)
+                            DoEvents(); DoEvents(); window.UpdateLayout();
+
+                            Console.WriteLine($"COFRES-INSPECTOR-P2-PICARO: objeto real colocado='{picaro.DisplayName}' (Id={picaro.Id}), CanHavePrefix={vm.Exploration.ChestItemEdit.CanHavePrefix}, Groups.Count={vm.Exploration.ChestItemEdit.Groups.Count}, Prefixes.Count={vm.Exploration.ChestItemEdit.Prefixes.Count} (esperado 17 prefijos legales reales, rogue_prefixes.json 'weapon':17)");
+
+                            var contentControlPicaro = Descendientes<ContentControl>(window).FirstOrDefault(cc =>
+                                ReferenceEquals(cc.Content, vm.Exploration.ChestItemEdit) && cc.ContentTemplate != null);
+                            var metasPicaro = Descendientes<ItemsControl>(window).FirstOrDefault(ic =>
+                                ReferenceEquals(ic.ItemsSource, vm.Exploration.ChestItemEdit.Metas));
+                            var groupsPicaro = Descendientes<ItemsControl>(window).FirstOrDefault(ic =>
+                                ReferenceEquals(ic.ItemsSource, vm.Exploration.ChestItemEdit.Groups));
+                            if (contentControlPicaro != null && metasPicaro != null && groupsPicaro != null)
+                            {
+                                var rectMetasPicaro = new Rect(metasPicaro.TransformToAncestor(contentControlPicaro).Transform(new Point(0, 0)), new Size(metasPicaro.ActualWidth, metasPicaro.ActualHeight));
+                                var rectGroupsPicaro = new Rect(groupsPicaro.TransformToAncestor(contentControlPicaro).Transform(new Point(0, 0)), new Size(groupsPicaro.ActualWidth, groupsPicaro.ActualHeight));
+                                Console.WriteLine($"COFRES-INSPECTOR-P2-PICARO: ContentControl.ActualHeight={contentControlPicaro.ActualHeight:0.#}px, Metas.Bottom={rectMetasPicaro.Bottom:0.#}px, Groups.Bottom={rectGroupsPicaro.Bottom:0.#}px (esperado: los dos DENTRO o el ContentControl ya crecio para alojarlos - sin corte a media altura)");
+                                if (rectMetasPicaro.Bottom > contentControlPicaro.ActualHeight + 1 || rectGroupsPicaro.Bottom > contentControlPicaro.ActualHeight + 1)
+                                    Console.WriteLine("FALLO: COFRES-INSPECTOR-P2-PICARO - con el caso real mas exigente (17 prefijos), Metas/Groups siguen cortandose");
+
+                                // Desplaza el ScrollViewer real de la barra lateral (3 niveles
+                                // anidados, ver comentario de arriba) hasta que Groups quede dentro
+                                // del viewport, para que la captura de pantalla muestre de verdad el
+                                // caso sin cortes - no solo lo confirme la geometria numerica.
+                                groupsPicaro.BringIntoView();
+                                DoEvents(); DoEvents(); window.UpdateLayout();
+                            }
+
+                            CapturaVentanaKeepQa(window, "cofres-p2-picaro-17-prefijos");
+                        }
+                        vm.Exploration.CancelEditingChestCommand.Execute(null);
+                        DoEvents();
+                    }
+                }
+            }
+            catch (Exception exVisual) { Console.WriteLine("COFRES-INSPECTOR-VISUAL-EXCEPTION: " + exVisual); }
+
             // Deja recargado el mundo de siempre del resto del arnes, mismo criterio que AR-13d/AR-13e.
             vm.Exploration.ClearOreMarksCommand.Execute(null);
             vm.Exploration.ChestViewMode = 0;
