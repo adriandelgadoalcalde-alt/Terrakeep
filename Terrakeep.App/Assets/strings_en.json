@@ -365,6 +365,8 @@
   "explore_search_subtitle": "Only what exists in this world",
   "explore_search_title": "Search the world",
   "explore_seed_label": "Seed: ",
+  "explore_sidebar_mode_search": "Search",
+  "explore_sidebar_mode_world": "World",
   "explore_signs_label": " · Signs: ",
   "explore_sort_by_depth_tooltip": "Also sorts by depth - the most hidden first",
   "explore_sort_by_spawn_distance": "Sort by distance to spawn",

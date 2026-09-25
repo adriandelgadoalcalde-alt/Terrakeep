@@ -1598,6 +1598,25 @@ public partial class ExplorationViewModel : ObservableObject
         SetChestEditStatus(null);
     }
 
+    // ExploracionRediseno Fase F: selector real "Buscar"/"Mundo" de la cabecera fija del sidebar.
+    // Si hay un cofre en edicion (SidebarMode==ChestInspector) lo cancela PRIMERO - mismo camino
+    // real que el boton "<- Cofres" (CancelEditingChest ya deja SidebarMode=Browse via
+    // OnEditingChestChanged) - antes de saltar al modo pedido, para nunca dejar EditingChest
+    // colgado detras de otro modo sin guardar ni cancelar explicitamente.
+    [RelayCommand]
+    private void ShowSidebarBrowse()
+    {
+        if (EditingChest != null) CancelEditingChest();
+        SidebarMode = ExplorationSidebarMode.Browse;
+    }
+
+    [RelayCommand]
+    private void ShowSidebarWorldTools()
+    {
+        if (EditingChest != null) CancelEditingChest();
+        SidebarMode = ExplorationSidebarMode.WorldTools;
+    }
+
     // Marcador real del cofre seleccionado en "Cofre a cofre" (ver GoToChest). Coordenadas de
     // TILE, mismo espacio que Canvas.Left/Top de las demas capas del mapa (NPCs, spawns,
     // resultados de busqueda).

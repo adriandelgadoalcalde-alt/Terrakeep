@@ -365,6 +365,8 @@
   "explore_search_subtitle": "Solo lo que existe en este mundo",
   "explore_search_title": "Buscar en el mundo",
   "explore_seed_label": "Semilla: ",
+  "explore_sidebar_mode_search": "Buscar",
+  "explore_sidebar_mode_world": "Mundo",
   "explore_signs_label": " · Letreros: ",
   "explore_sort_by_depth_tooltip": "Ordena además por profundidad - el más escondido primero",
   "explore_sort_by_spawn_distance": "Ordenar por distancia al spawn",

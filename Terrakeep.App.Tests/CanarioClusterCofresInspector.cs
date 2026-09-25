@@ -743,6 +743,207 @@ internal static partial class Program
             }
             catch (Exception exFaseD) { Console.WriteLine("COFRES-INSPECTOR-FASED-EXCEPTION: " + exFaseD); }
 
+            // ================= ExploracionRediseno Fase F: WorldTools separado de Buscar (25-sep-2026) =================
+            // Canario del aplicador-fix - los 3 Expanders de "Mundo" (Este mundo/Editar mundo/Bestiario)
+            // se movieron TAL CUAL desde su Dock="Top" permanente de la cabecera a un DockPanel nuevo
+            // (ExplorationSidebarWorldToolsContent) condicionado a SidebarMode==WorldTools, 3er hijo
+            // superpuesto de ExplorationSidebarBrowseInspectorHost (junto a BrowseContent de Fase C y el
+            // Inspector real de Fase D). Selector real "Buscar"/"Mundo" nuevo en la cabecera fija
+            // (ShowSidebarBrowseCommand/ShowSidebarWorldToolsCommand, ExplorationViewModel). Confirma:
+            // (1) el Grid/selector real existe y sus RadioButton reflejan SidebarMode via EnumEquals
+            // OneWay; (2) WorldTools oculta Browse por completo (nunca comparten viewport); (3) los 3
+            // Expanders arrancan desplegados en su propio contexto; (4) ChestInspector->Mundo cancela el
+            // cofre en edicion antes de saltar (decision real documentada en el XAML); (5) los 3 botones
+            // de guardado del editor de mundo (Spawn/Tiempo-Luna/Banderas) siguen escribiendo el .wld
+            // real - ida y vuelta reversible sobre el mismo mundo de prueba ya cargado (Blando_Río.wld,
+            // nunca el mundo real del usuario).
+            try
+            {
+                string outDirFaseF = Path.Combine(AppContext.BaseDirectory, "keepqa-evidencia");
+                Directory.CreateDirectory(outDirFaseF);
+
+                var selectorBuscar = Descendientes<RadioButton>(window).FirstOrDefault(r =>
+                    (BindingOperations.GetBindingExpression(r, RadioButton.CommandProperty)?.ParentBinding?.Path?.Path) == "Exploration.ShowSidebarBrowseCommand");
+                var selectorMundo = Descendientes<RadioButton>(window).FirstOrDefault(r =>
+                    (BindingOperations.GetBindingExpression(r, RadioButton.CommandProperty)?.ParentBinding?.Path?.Path) == "Exploration.ShowSidebarWorldToolsCommand");
+                var browseFaseF = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
+                var worldToolsFaseF = window.FindName("ExplorationSidebarWorldToolsContent") as FrameworkElement;
+                Console.WriteLine($"EXPLORACION-FASEF: selector 'Buscar' encontrado={selectorBuscar != null}, selector 'Mundo' encontrado={selectorMundo != null}, ExplorationSidebarWorldToolsContent encontrado={worldToolsFaseF != null}, ExplorationSidebarBrowseContent encontrado={browseFaseF != null}");
+                if (selectorBuscar == null || selectorMundo == null || worldToolsFaseF == null || browseFaseF == null)
+                    Console.WriteLine("FALLO: EXPLORACION-FASEF - falta el selector real 'Buscar'/'Mundo' o alguno de los 2 contenedores de modo en el arbol visual (MainWindow.xaml)");
+                else
+                {
+                    // Asegura estado de partida real: Browse, mundo Blando_Río.wld ya cargado por Fase D.
+                    if (vm.Exploration.EditingChest != null) vm.Exploration.CancelEditingChestCommand.Execute(null);
+                    vm.Exploration.SidebarMode = ExplorationSidebarMode.Browse;
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                    vm.Exploration.ChestViewMode = 0;
+                    DoEvents(); DoEvents(); window.UpdateLayout();
+
+                    Console.WriteLine($"EXPLORACION-FASEF: estado inicial -> SidebarMode={vm.Exploration.SidebarMode} (esperado Browse), selector Buscar.IsChecked={selectorBuscar.IsChecked} (esperado True), selector Mundo.IsChecked={selectorMundo.IsChecked} (esperado False), Browse.Visibility={browseFaseF.Visibility} (esperado Visible), WorldTools.Visibility={worldToolsFaseF.Visibility} (esperado Collapsed)");
+                    if (selectorBuscar.IsChecked != true || selectorMundo.IsChecked == true || browseFaseF.Visibility != Visibility.Visible || worldToolsFaseF.Visibility != Visibility.Collapsed)
+                        Console.WriteLine("FALLO: EXPLORACION-FASEF - el estado inicial (Browse) no deja el selector/los 2 contenedores en el estado esperado");
+
+                    // Vuelve arriba del todo antes de capturar - FaseD (mas arriba en este mismo canario)
+                    // deja el ScrollViewer exterior desplazado al fondo (ScrollToBottom real), y esa
+                    // posicion sobrevive al cambio de modo (el ScrollViewer es exterior a los 3 Grids
+                    // de SidebarMode) - sin esto la captura no mostraria la cabecera real con el
+                    // selector Buscar/Mundo.
+                    if (window.FindName("ExplorationSidebarScroll") is ScrollViewer scrollFaseFBrowse)
+                    { scrollFaseFBrowse.ScrollToTop(); DoEvents(); DoEvents(); window.UpdateLayout(); }
+
+                    var rtbBrowseFaseF = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbBrowseFaseF.Render(window);
+                    var encBrowseFaseF = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encBrowseFaseF.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbBrowseFaseF));
+                    string rutaBrowseFaseF = Path.Combine(outDirFaseF, "fasef-browse-sin-expanders.png");
+                    using (var fsBrowseFaseF = File.Create(rutaBrowseFaseF)) encBrowseFaseF.Save(fsBrowseFaseF);
+                    Console.WriteLine($"EXPLORACION-FASEF: captura real de Browse (sin los 3 Expanders de Mundo compartiendo viewport) -> {rutaBrowseFaseF}");
+
+                    // ---- Cambio real de modo via el Command (mismo camino real que pulsar el RadioButton) ----
+                    vm.Exploration.ShowSidebarWorldToolsCommand.Execute(null);
+                    DoEvents(); DoEvents(); window.UpdateLayout();
+
+                    Console.WriteLine($"EXPLORACION-FASEF: tras ShowSidebarWorldToolsCommand -> SidebarMode={vm.Exploration.SidebarMode} (esperado WorldTools), selector Buscar.IsChecked={selectorBuscar.IsChecked} (esperado False), selector Mundo.IsChecked={selectorMundo.IsChecked} (esperado True), Browse.Visibility={browseFaseF.Visibility} (esperado Collapsed), WorldTools.Visibility={worldToolsFaseF.Visibility} (esperado Visible)");
+                    if (vm.Exploration.SidebarMode != ExplorationSidebarMode.WorldTools || selectorBuscar.IsChecked == true || selectorMundo.IsChecked != true || browseFaseF.Visibility != Visibility.Collapsed || worldToolsFaseF.Visibility != Visibility.Visible)
+                        Console.WriteLine("FALLO: EXPLORACION-FASEF - ShowSidebarWorldToolsCommand no deja el selector/los 2 contenedores en el estado esperado (WorldTools)");
+
+                    var expanderEsteMundo = Descendientes<Expander>(worldToolsFaseF).FirstOrDefault(e =>
+                        (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_this_world]");
+                    var expanderEditarMundo = Descendientes<Expander>(worldToolsFaseF).FirstOrDefault(e =>
+                        (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_edit_world]");
+                    var expanderBestiario = Descendientes<Expander>(worldToolsFaseF).FirstOrDefault(e =>
+                        (BindingOperations.GetBindingExpression(e, HeaderedContentControl.HeaderProperty)?.ParentBinding?.Path?.Path) == "Loc[explore_bestiary]");
+                    Console.WriteLine($"EXPLORACION-FASEF: los 3 Expanders dentro de WorldTools -> 'Este mundo' encontrado={expanderEsteMundo != null}, IsExpanded={expanderEsteMundo?.IsExpanded}; 'Editar mundo' encontrado={expanderEditarMundo != null}, IsExpanded={expanderEditarMundo?.IsExpanded}; 'Bestiario' encontrado={expanderBestiario != null}, IsExpanded={expanderBestiario?.IsExpanded} (los 3 esperados True/True/IsExpanded=True)");
+                    if (expanderEsteMundo == null || expanderEsteMundo.IsExpanded != true
+                        || expanderEditarMundo == null || expanderEditarMundo.IsExpanded != true
+                        || expanderBestiario == null || expanderBestiario.IsExpanded != true)
+                        Console.WriteLine("FALLO: EXPLORACION-FASEF - alguno de los 3 Expanders de Mundo no esta dentro de WorldTools ya desplegado por defecto (IsExpanded=True)");
+
+                    // Ningun elemento real de Browse (WrapPanel de categorias, buscador, resultados) debe
+                    // seguir ocupando espacio del viewport mientras WorldTools esta activo - confirma que
+                    // ya NO comparten viewport (motivo real de esta fase).
+                    var wrapCategoriasFaseF = browseFaseF as DockPanel;
+                    Console.WriteLine($"EXPLORACION-FASEF: BrowseContent.IsVisible={browseFaseF.IsVisible} (esperado False, colapsado de verdad, no solo Visibility local)");
+                    if (browseFaseF.IsVisible)
+                        Console.WriteLine("FALLO: EXPLORACION-FASEF - BrowseContent sigue IsVisible=True con WorldTools activo, seguiria compartiendo viewport con Cofres/Minerales/Objetos");
+
+                    // Igual que arriba: vuelve a la cabecera real antes de esta segunda captura.
+                    if (window.FindName("ExplorationSidebarScroll") is ScrollViewer scrollFaseFWorldTools)
+                    { scrollFaseFWorldTools.ScrollToTop(); DoEvents(); DoEvents(); window.UpdateLayout(); }
+
+                    var rtbWorldToolsFaseF = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbWorldToolsFaseF.Render(window);
+                    var encWorldToolsFaseF = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encWorldToolsFaseF.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbWorldToolsFaseF));
+                    string rutaWorldToolsFaseF = Path.Combine(outDirFaseF, "fasef-worldtools-3-expanders-desplegados.png");
+                    using (var fsWorldToolsFaseF = File.Create(rutaWorldToolsFaseF)) encWorldToolsFaseF.Save(fsWorldToolsFaseF);
+                    Console.WriteLine($"EXPLORACION-FASEF: captura real de WorldTools (3 Expanders desplegados, Browse oculto) -> {rutaWorldToolsFaseF}");
+
+                    // ---- Interaccion WorldTools <-> ChestInspector: Mundo debe cancelar un cofre en edicion ----
+                    // ChestRows SOLO se rellena en ChestViewMode==2 ("Cofre a cofre",
+                    // RebuildChestByChest) - lo deja fijado aqui, no en 0 (el usado arriba solo para
+                    // la captura de Browse), o esta lista real estaria vacia y la interaccion no se
+                    // probaria de verdad.
+                    vm.Exploration.ShowSidebarBrowseCommand.Execute(null);
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                    vm.Exploration.ChestViewMode = 2;
+                    DoEvents(); DoEvents();
+                    var filaFaseF = vm.Exploration.ChestRows.FirstOrDefault();
+                    if (filaFaseF == null)
+                        Console.WriteLine("EXPLORACION-FASEF-CHESTINSPECTOR: AVISO - no hay fila de cofre real para probar la interaccion WorldTools<->ChestInspector");
+                    else
+                    {
+                        vm.Exploration.EditChestCommand.Execute(filaFaseF);
+                        DoEvents(); DoEvents();
+                        Console.WriteLine($"EXPLORACION-FASEF-CHESTINSPECTOR: cofre abierto -> SidebarMode={vm.Exploration.SidebarMode} (esperado ChestInspector), EditingChest={(vm.Exploration.EditingChest == null ? "null" : "NO-NULL")} (esperado NO-NULL)");
+
+                        vm.Exploration.ShowSidebarWorldToolsCommand.Execute(null);
+                        DoEvents(); DoEvents(); window.UpdateLayout();
+                        Console.WriteLine($"EXPLORACION-FASEF-CHESTINSPECTOR: tras pulsar 'Mundo' con un cofre en edicion -> SidebarMode={vm.Exploration.SidebarMode} (esperado WorldTools), EditingChest={(vm.Exploration.EditingChest == null ? "null" : "NO-NULL")} (esperado null, cancelado primero)");
+                        if (vm.Exploration.SidebarMode != ExplorationSidebarMode.WorldTools || vm.Exploration.EditingChest != null)
+                            Console.WriteLine("FALLO: EXPLORACION-FASEF-CHESTINSPECTOR - 'Mundo' no cancelo el cofre en edicion antes de saltar a WorldTools (EditingChest quedo colgado)");
+                    }
+
+                    // ================= Guardado real: Spawn/Tiempo-Luna/Banderas siguen escribiendo el .wld =================
+                    // Ida y vuelta reversible sobre Blando_Río.wld (mundo de prueba, nunca el real del
+                    // usuario) - cada bloque cambia un valor, guarda de verdad (misma llamada real a
+                    // WorldFileService.SaveXxx que usa el usuario), confirma el mensaje de exito real y
+                    // el estado en memoria actualizado, y restaura el valor original con una segunda
+                    // escritura real - el archivo queda exactamente como estaba.
+                    try
+                    {
+                        int spawnXOriginal = vm.Exploration.WorldSpawnX, spawnYOriginal = vm.Exploration.WorldSpawnY;
+                        vm.Exploration.EditSpawnX = spawnXOriginal + 1;
+                        vm.Exploration.EditSpawnY = spawnYOriginal;
+                        var guardarSpawnIda = vm.Exploration.SaveSpawnPointCommand.ExecuteAsync(null);
+                        while (!guardarSpawnIda.IsCompleted) DoEvents();
+                        DoEvents(); DoEvents();
+                        bool spawnIdaOk = vm.Exploration.WorldSpawnX == spawnXOriginal + 1 && (vm.Exploration.SpawnSaveStatus ?? "").Length > 0;
+                        Console.WriteLine($"EXPLORACION-FASEF-GUARDADO-SPAWN: ida -> WorldSpawnX={vm.Exploration.WorldSpawnX} (esperado {spawnXOriginal + 1}), SpawnSaveStatus='{vm.Exploration.SpawnSaveStatus}'");
+                        if (!spawnIdaOk) Console.WriteLine("FALLO: EXPLORACION-FASEF-GUARDADO-SPAWN - SaveSpawnPointCommand no escribio el nuevo valor real (WorldTools, ida)");
+
+                        vm.Exploration.EditSpawnX = spawnXOriginal;
+                        vm.Exploration.EditSpawnY = spawnYOriginal;
+                        var guardarSpawnVuelta = vm.Exploration.SaveSpawnPointCommand.ExecuteAsync(null);
+                        while (!guardarSpawnVuelta.IsCompleted) DoEvents();
+                        DoEvents(); DoEvents();
+                        bool spawnVueltaOk = vm.Exploration.WorldSpawnX == spawnXOriginal && vm.Exploration.WorldSpawnY == spawnYOriginal;
+                        Console.WriteLine($"EXPLORACION-FASEF-GUARDADO-SPAWN: vuelta -> WorldSpawnX={vm.Exploration.WorldSpawnX}, WorldSpawnY={vm.Exploration.WorldSpawnY} (esperado {spawnXOriginal},{spawnYOriginal} - mundo de prueba restaurado)");
+                        if (!spawnVueltaOk) Console.WriteLine("FALLO: EXPLORACION-FASEF-GUARDADO-SPAWN - no se pudo restaurar el spawn original del mundo de prueba tras la escritura real");
+                    }
+                    catch (Exception exSpawnFaseF) { Console.WriteLine("EXPLORACION-FASEF-GUARDADO-SPAWN-EXCEPTION: " + exSpawnFaseF); }
+
+                    try
+                    {
+                        int faseOriginal = vm.Exploration.EditMoonPhase;
+                        int faseNueva = (faseOriginal + 1) % 8;
+                        vm.Exploration.EditMoonPhase = faseNueva;
+                        var guardarTiempoIda = vm.Exploration.SaveTimeAndMoonCommand.ExecuteAsync(null);
+                        while (!guardarTiempoIda.IsCompleted) DoEvents();
+                        DoEvents(); DoEvents();
+                        Console.WriteLine($"EXPLORACION-FASEF-GUARDADO-TIEMPO: ida -> EditMoonPhase={vm.Exploration.EditMoonPhase} (esperado {faseNueva}), TimeSaveStatus='{vm.Exploration.TimeSaveStatus}'");
+                        if (vm.Exploration.EditMoonPhase != faseNueva || string.IsNullOrEmpty(vm.Exploration.TimeSaveStatus))
+                            Console.WriteLine("FALLO: EXPLORACION-FASEF-GUARDADO-TIEMPO - SaveTimeAndMoonCommand no escribio la fase lunar nueva (WorldTools, ida)");
+
+                        vm.Exploration.EditMoonPhase = faseOriginal;
+                        var guardarTiempoVuelta = vm.Exploration.SaveTimeAndMoonCommand.ExecuteAsync(null);
+                        while (!guardarTiempoVuelta.IsCompleted) DoEvents();
+                        DoEvents(); DoEvents();
+                        Console.WriteLine($"EXPLORACION-FASEF-GUARDADO-TIEMPO: vuelta -> EditMoonPhase={vm.Exploration.EditMoonPhase} (esperado {faseOriginal} - mundo de prueba restaurado)");
+                        if (vm.Exploration.EditMoonPhase != faseOriginal)
+                            Console.WriteLine("FALLO: EXPLORACION-FASEF-GUARDADO-TIEMPO - no se pudo restaurar la fase lunar original del mundo de prueba tras la escritura real");
+                    }
+                    catch (Exception exTiempoFaseF) { Console.WriteLine("EXPLORACION-FASEF-GUARDADO-TIEMPO-EXCEPTION: " + exTiempoFaseF); }
+
+                    try
+                    {
+                        bool goblinOriginal = vm.Exploration.EditDownedGoblinArmy;
+                        vm.Exploration.EditDownedGoblinArmy = !goblinOriginal;
+                        var guardarFlagsIda = vm.Exploration.SaveBossFlagsCommand.ExecuteAsync(null);
+                        while (!guardarFlagsIda.IsCompleted) DoEvents();
+                        DoEvents(); DoEvents();
+                        Console.WriteLine($"EXPLORACION-FASEF-GUARDADO-BANDERAS: ida -> EditDownedGoblinArmy={vm.Exploration.EditDownedGoblinArmy} (esperado {!goblinOriginal}), FlagsSaveStatus='{vm.Exploration.FlagsSaveStatus}'");
+                        if (vm.Exploration.EditDownedGoblinArmy != !goblinOriginal || string.IsNullOrEmpty(vm.Exploration.FlagsSaveStatus))
+                            Console.WriteLine("FALLO: EXPLORACION-FASEF-GUARDADO-BANDERAS - SaveBossFlagsCommand no escribio la bandera nueva (WorldTools, ida)");
+
+                        vm.Exploration.EditDownedGoblinArmy = goblinOriginal;
+                        var guardarFlagsVuelta = vm.Exploration.SaveBossFlagsCommand.ExecuteAsync(null);
+                        while (!guardarFlagsVuelta.IsCompleted) DoEvents();
+                        DoEvents(); DoEvents();
+                        Console.WriteLine($"EXPLORACION-FASEF-GUARDADO-BANDERAS: vuelta -> EditDownedGoblinArmy={vm.Exploration.EditDownedGoblinArmy} (esperado {goblinOriginal} - mundo de prueba restaurado)");
+                        if (vm.Exploration.EditDownedGoblinArmy != goblinOriginal)
+                            Console.WriteLine("FALLO: EXPLORACION-FASEF-GUARDADO-BANDERAS - no se pudo restaurar la bandera original del mundo de prueba tras la escritura real");
+                    }
+                    catch (Exception exFlagsFaseF) { Console.WriteLine("EXPLORACION-FASEF-GUARDADO-BANDERAS-EXCEPTION: " + exFlagsFaseF); }
+
+                    // Vuelve a Browse para dejar el estado limpio de cara al resto del arnes.
+                    vm.Exploration.ShowSidebarBrowseCommand.Execute(null);
+                    DoEvents(); DoEvents();
+                }
+            }
+            catch (Exception exFaseF) { Console.WriteLine("EXPLORACION-FASEF-EXCEPTION: " + exFaseF); }
+
             // Deja recargado el mundo de siempre del resto del arnes, mismo criterio que AR-13d/AR-13e.
             vm.Exploration.ClearOreMarksCommand.Execute(null);
             vm.Exploration.ChestViewMode = 0;
