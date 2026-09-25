@@ -23346,3 +23346,137 @@ vanilla.py`, `scripts/extraer-sprites-accesorios-vanilla.js`, `Terrakeep.App/Ass
 acc_balloon/{1-12,18,19}.png` (14 sprites reales nuevos) - ver la nota de arriba sobre el
 contenido real incluido (Encargo C completo + `shoeSlot` de Encargo D intercalado en 7 de esos
 ficheros, sin forma real de separarlo con `git add -p`). Sin `git push`.
+
+## GapAnalysis Encargo D: cierra el canal Shoes (shoeSlot) tras el commit combinado de Encargo C
+## (aplicador-fix, handoff e5eaea9e-c261-4199-8e7d-060b6054f58d) (25-sep-2026)
+
+Encargo del coordinador (hallazgo YA investigado por arquitecto-keep): añadir el canal
+`shoeSlot` (accesorio real de zapatos, `Player.cs:37193-37200`) + la regla de sexo
+`ArmorIDs.Shoe.Sets.MaleToFemaleID`. El grueso de este trabajo (resolución del sprite, capa de
+dibujado con el orden real `wearsRobe`, extracción de los 26 sprites reales `acc_shoes/`)
+**se hizo en paralelo con Encargo C (Balloon)** sobre los MISMOS ficheros y quedó ya incluido en
+su commit `2ef72eb1` (documentado ahí mismo, "shoeSlot de Encargo D intercalado en 7 de esos
+ficheros, sin forma real de separarlo con `git add -p`") - ver ese apartado para el detalle
+completo de `VanillaAccessorySlotCatalog.cs`/`EquipmentAppearanceResolver.cs`/
+`PlayerPreviewRenderer.cs`/scripts/`EquipmentAppearanceResolverTests.cs`.
+
+**Confirmación real de si hizo falta extracción nueva**: SÍ - `acc_shoes/` NO existía en
+`Terrakeep.App/Assets/player/` antes de este encargo (comprobado con `ls`, la asunción "sin
+extracción nueva" del arquitecto NO aplicaba - confirmado explícitamente). **26 sprites reales
+extraídos** (`Acc_Shoes_{1..26}.xnb` de la instalación real de Steam, 0 faltantes, incluido el
+id sintético 26 - ver más abajo) ampliando `scripts/extraer-slots-accesorios-vanilla.py` (campo
+`sh`/`shoeSlot`) y `scripts/extraer-sprites-accesorios-vanilla.js` (tipo `sh: ['Shoe',
+'Acc_Shoes_', 'acc_shoes']`), mismo patrón exacto que los otros 7 tipos ya existentes.
+
+**Tabla real transcrita** (`ArmorIDs.cs:1869`, clase `Shoe.Sets`): `MaleToFemaleID =
+Factory.CreateIntSet(-1, 25, 26)` - `SetFactory.CreateIntSet(defaultState, pares
+índice/valor...)`, un ÚNICO par real: `shoeSlot 25 (GlassSlipperMale, item 5077 "Glass
+Slipper") -> 26 (GlassSlipperFemale)`. Aplicada en `Player.cs:37193-37200` ("if
+(item.shoeSlot > 0) { shoe = item.shoeSlot; if (!Male &&
+ArmorIDs.Shoe.Sets.MaleToFemaleID[shoe] > 0) shoe = ...MaleToFemaleID[shoe]; }"). El sprite
+femenino real (id 26) no lo usa NINGÚN item real como `shoeSlot` "de frente" - es puramente
+derivado en tiempo de render, mismo patrón exacto ya establecido por
+`HEAD_SINTETICOS_FRONT_TO_BACK` (Encargo B): ampliado a mano en
+`extraer-sprites-accesorios-vanilla.js` (`SHOE_SINTETICOS_MALE_TO_FEMALE = [26]`), confirmado
+que `Acc_Shoes_26.xnb` SÍ existe en la instalación real de Steam.
+
+**Confirmación de dónde se resuelve el sexo del personaje en Terrakeep**: `PlayerVariantSets.
+IsMale(skinVariant)` (ya usado por todo `PlayerPreviewRenderer.Render`, "bool male = ..." en la
+primera línea del método) - reutilizado tal cual, sin mecanismo nuevo.
+
+**Arreglo real aplicado (diseño elegido, mismo patrón que `SetMatchHead`/`headIdAfterSetMatch`
+ya establecido en el propio `Render`)**: `EquipmentAppearanceResolver.ResolveAccessories`
+resuelve `ShoesFile`/`ShoesSlot` con el id MASCULINO/neutro SIN aplicar la regla de sexo (no
+tiene "male" en su firma, igual que `Resolve()` no lo tiene para cabeza/cuerpo/piernas) - la
+sustitución se aplica DESPUÉS, dentro de `PlayerPreviewRenderer.Render`, que ya calcula `male`
+en su primera línea:
+```csharp
+string? shoesFileToUse = accessories?.ShoesFile;
+if (!male && accessories?.ShoesSlot is int shoesId && PlayerBodyDrawTables.ShoeMaleToFemaleID(shoesId) is int femaleShoesId)
+{
+    string altShoesPath = VanillaPath("acc_shoes", femaleShoesId);
+    if (File.Exists(altShoesPath)) shoesFileToUse = altShoesPath;
+}
+```
+- `PlayerBodyDrawTables.ShoeMaleToFemaleID(int shoe)` (nuevo, este encargo): transcripción
+  literal de la tabla de arriba.
+- Capa de dibujado (`DrawShoesAccessory`, dentro de "Paso 5 [13_Leggings/14_Shoes]"): reutiliza
+  `DrawAccessory` (misma tira vertical 40x(56*N), fila = `legAnimationFrame`) - fiel a
+  `DrawPlayer_14_Shoes` real (`PlayerDrawLayers.cs:1758-1777`), que usa `drawinfo.drawPlayer.
+  legFrame` como rectángulo de origen, **NO `bodyFrame`** (confirmado leyendo el código real -
+  la advertencia del hallazgo era exacta). Orden real invertido por `wearsRobe`
+  (`LegacyPlayerRenderer.cs:195-204`, "if (wearsRobe && body != 166) { Shoes; Leggings; } else
+  { Leggings; Shoes; }") - `wearsRobe` ya calculado arriba en `Render` por
+  `SetMatchBodyToLegs`, reutilizado sin lógica nueva.
+
+**Hallazgo real durante la propia verificación (no anticipado)**: la primera versión de la
+prueba `ConWearsRobeReal_...` (ver más abajo, `598/599` en el commit de Encargo C) asumía que
+"con wearsRobe=true, los zapatos siguen cambiando el resultado" - FALSO en general: con un
+`legSlot` REAL de tipo robe/vestido (`armor_legs/88.png`, `body=15`), la propia falda es OPACA
+justo donde caen los pies, así que aunque `DrawShoesAccessory()` se ejecuta correctamente
+ANTES que la pernera (orden real confirmado), la pernera se compone DESPUÉS y la TAPA por
+completo - exactamente fiel al juego real (una falda/robe larga oculta visualmente el accesorio
+de zapatos que lleva debajo), no un fallo del código. Corregido sustituyendo esa prueba por 2
+pruebas de ORDEN con PNGs sintéticos que aíslan el contrato sin depender de la transparencia
+real de un sprite vanilla concreto:
+- `Orden_SinWearsRobe_PernerasAntesQueShoes` (`PlayerPreviewRendererAccessoriesTests.cs`):
+  `LegsSlot=999` (sintético, fuera de cualquier tabla de `SetMatch`) fuerza
+  `legsChangedBySetMatch=false`, así `Render` usa `armor.LegsFile` TAL CUAL (el PNG sólido) -
+  confirma que sin `wearsRobe`, Shoes (verde) pisa a Leggings (rojo) en la esquina.
+- `Orden_ConWearsRobeReal_PernerasCubrenAZapatos`: `LegsSlot=88` A PROPÓSITO (coincide con el
+  valor real que la propia tabla `SetMatchBodyToLegs(15,...)` iba a poner) - así
+  `legsChangedBySetMatch` también queda en `false` (88==88) y `Render` usa el PNG sólido
+  sintético en vez de ir a buscar el sprite real - confirma que CON `wearsRobe`, Leggings/robe
+  (rojo) pisa a Shoes (verde), orden invertido real.
+
+**Tests nuevos** (6 reales, verificados en verde, `EquipmentAppearanceResolverTests.cs` +
+`PlayerPreviewRendererAccessoriesTests.cs` + `PlayerBodyDrawTablesTests.cs`):
+`AccesorioDeZapatosVanilla_ResuelveUnSpriteRealQueExisteEnDisco` (Hermes Boots, id 54,
+shoeSlot=6), `ResolveAccessories_NuncaAplicaLaRegulaDeSexo_GuardaElIdMasculinoNeutroTalCual` y
+`PersonajeFemenino_ConGlassSlipper_RenderSustituyeAlSpriteFemenino25A26_MaleToFemaleID` (Glass
+Slipper, id 5077, shoeSlot=25 - prueba AISLADA: el render femenino con el objeto ORIGINAL
+-25.png sin sustituir a mano- tiene que ser PIXEL A PIXEL IDÉNTICO a forzar directamente el
+sprite femenino -26.png-, y el masculino con el MISMO objeto NO debe coincidir con forzar ese
+mismo sprite femenino, confirmando que la condición real `!Male` participa de verdad), más las
+2 pruebas de orden de arriba y `ShoeMaleToFemaleID_*` (6 casos, Core.Tests: la única entrada
+real + 5 ids sin entrada, incluido el propio 26 para dejar constancia de que no hace un bucle).
+
+**Build y regresión**: `dotnet build Terrakeep.slnx -c Release` (con `-p:BaseOutputPath=
+bin_encargoD` para no chocar con los `testhost.exe` en vivo de Encargo C en el mismo working
+tree, mismo motivo ya documentado por Encargo C con `git stash`): 0 advertencias, 0 errores.
+`dotnet test Terrakeep.Core.Tests -c Release`: 626/626. `dotnet test
+Terrakeep.App.ViewModels.Tests -c Release`: 599/599 (el fallo `598/599` que dejó el commit de
+Encargo C queda cerrado).
+
+**Obstáculo real encontrado y resuelto**: al comitear, `VanillaAccessorySlotCatalog.cs`/
+`EquipmentAppearanceResolver.cs`/`PlayerPreviewRenderer.cs`/scripts/
+`EquipmentAppearanceResolverTests.cs`/`vanilla_accessory_slots.json` ya habían sido comiteados
+por Encargo C (`2ef72eb1`, con mi `shoeSlot` intercalado, según su propio mensaje de commit) -
+pero ESE commit dejó HEAD con un **build roto de verdad**: `PlayerPreviewRenderer.cs` ya llamaba
+a `PlayerBodyDrawTables.ShoeMaleToFemaleID` pero esa función todavía no existía en
+`PlayerBodyDrawTables.cs` (seguía sin comitear, confirmado con `git show HEAD:...|grep`), y los
+26 sprites reales de `Assets/player/acc_shoes/` seguían sin trackear (`??` en `git status`).
+Cerrado con un commit adicional (`abc0faeb`) que añade exactamente esos 4 elementos - ver
+"Commit real" más abajo. Lección para encargos futuros en paralelo sobre los mismos ficheros:
+comprobar `git show HEAD:<archivo> | grep <símbolo nuevo>` antes de dar el commit combinado de
+otro encargo por completo, no asumir que "ya está todo" solo porque el propio fichero dejó de
+aparecer en `git status`.
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` NO estaba en ejecución (`Get-Process
+Terrakeep` sin resultado). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde. `robocopy ... /MIR` hacia
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\` - solo 1 archivo distinto (`Terrakeep.exe`,
+el resto ya estaba al día porque Encargo C había publicado ya el working tree combinado, que
+para ese momento YA incluía mi `ShoeMaleToFemaleID` sin comitear todavía - `dotnet publish`
+compila del working tree, no de git HEAD) - `LastWriteTime` del `.exe` actualizado a
+25/09/2026 14:34:58, confirmado con `Get-Item`.
+
+### Commit real
+`abc0faeb`: `Terrakeep.Core/Model/PlayerBodyDrawTables.cs` (`ShoeMaleToFemaleID`),
+`Terrakeep.Core.Tests/Model/PlayerBodyDrawTablesTests.cs` (6 tests nuevos),
+`Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs` (sustituye el test
+roto por los 2 de orden con PNGs sintéticos), `Terrakeep.App/Assets/player/acc_shoes/{1-26}.png`
+(26 sprites reales, sin trackear hasta ahora). El resto del código real de Shoes
+(`VanillaAccessorySlotCatalog.cs`/`EquipmentAppearanceResolver.cs`/
+`PlayerPreviewRenderer.cs`/scripts/`EquipmentAppearanceResolverTests.cs`/
+`vanilla_accessory_slots.json`) ya estaba en `2ef72eb1` (Encargo C). Sin `git push`.
