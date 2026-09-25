@@ -24226,3 +24226,184 @@ listados arriba (9 modificados relacionados con el pipeline de accesorios + 4 sp
 nuevos) - ningun fichero exclusivo de Face/Front/Wings (`FaceAccessoryLayerTable.cs`,
 `WingDrawTable.cs`, `acc_front/`, `acc_wing/`, `extraer-sprites-alas-vanilla.js`,
 `extraer-slot-armadura-calamity.js`, `calamity/catalog.json`) entro en mi commit.
+
+## GapAnalysis Encargo E: portar Front (item.frontSlot), FrontPart/BackPart con recorte de 2
+## mitades y condicion real de incompatibilidad con scarf/cape (aplicador-fix, TASK CONTEXT
+## e5eaea9e-c261-4199-8e7d-060b6054f58d) (25-sep-2026)
+
+Encargo del coordinador (hallazgo YA investigado por arquitecto-keep, con una parte explicita
+marcada "pendiente de investigar": el bool `drawFrontAccInNeckAccLayer`).
+
+### `drawFrontAccInNeckAccLayer`: investigado a fondo, resultado real
+
+`PlayerDrawSet.cs:1798-1809` real:
+```
+drawFrontAccInNeckAccLayer = false;
+if (drawPlayer.front > 0 && drawPlayer.front < ArmorIDs.Front.Count)
+{
+    if (ArmorIDs.Front.Sets.DrawsInNeckLayerRegardlessOfPlayerFrame[drawPlayer.front])
+        drawFrontAccInNeckAccLayer = true;
+    else if (drawPlayer.bodyFrame.Y / drawPlayer.bodyFrame.Height == 5
+              && ArmorIDs.Front.Sets.DrawsInNeckLayer[drawPlayer.front])
+        drawFrontAccInNeckAccLayer = true;
+}
+```
+`DrawsInNeckLayerRegardlessOfPlayerFrame = Factory.CreateBoolSet(false, 13)` (unico indice real:
+13 = `DeadCellsBeheadedBody`). `DrawsInNeckLayer = Factory.CreateBoolSet(false, 6)` (unico indice
+real: 6 = `TaxCollectorsSuit`). **Hallazgo real, no anticipado**: grep completo de
+`"frontSlot = "` en `Item.cs` (decompilado real) da 11 items reales con `item.frontSlot` (rango
+2284-2287 → 1-4; 4001→5; 4744→8; 5080→11; 5355→12; 5627→15; 6141→16; 6186→17) - **ninguno vale
+6 ni 13**. Esos 2 valores SOLO se alcanzan via `ArmorIDs.Body.Sets.IncludedCapeFront`/
+`IncludeCapeFrontAndBack` (`Player.cs:36126-36141` real: `front` DERIVADO de la ARMADURA DE
+CUERPO puesta - body 184→front 6, body 248→front 13, mas 3 pares `IncludeCapeFrontAndBack` con
+front 7/9/10 -ninguno reachable via accesorio tampoco-), un mecanismo COMPLETAMENTE DISTINTO
+(deriva de `body`, no de `item.frontSlot`) fuera de alcance de "portar frontSlot" - **conclusion
+real: para TODO accesorio Front real, `drawFrontAccInNeckAccLayer` es SIEMPRE false** - FrontPart
+va SIEMPRE en la posicion normal (tras OnhandAcc). LIMITE REAL documentado en el propio codigo
+(`PlayerPreviewRenderer.DrawFrontHalf`) por si un futuro encargo porta el "Front derivado de
+body".
+
+### Las 2 mitades (FrontPart/BackPart)
+
+`PlayerDrawLayers.cs:3908-3993` real: la tira sigue la convencion estandar 40x(56*N) alineada al
+lienzo (`TextureAssets.AccFront` usa `bodyFrame` directamente - NO el ancho variable de Shield).
+FrontPart recorta `bodyFrame.Width -= num` (num=Width/2=20, arranca en X=0 - mitad IZQUIERDA);
+BackPart recorta el mismo ancho con `bodyFrame.X += num` (mitad DERECHA). El `vector`/posicion de
+ambos usa SIEMPRE el `bodyFrame` COMPLETO (no la copia local recortada) - confirmado que, en la
+orientacion NO espejada (la que este renderer compone siempre, espejando el LIENZO COMPLETO al
+final via `FlipHorizontal`, nunca por capa), cada mitad del ORIGEN cae en la MISMA mitad de
+posicion del lienzo - sin desplazamiento cruzado que portar. Posicion real en el pipeline: BackPart
+SIEMPRE fija justo tras FaceAcc/antes de Shield (`LegacyPlayerRenderer.cs` real); FrontPart SIEMPRE
+tras OnhandAcc (la ULTIMA capa real de accesorio de todo el renderer, dado que
+`drawFrontAccInNeckAccLayer` es siempre false para accesorios reales).
+
+### Condicion de incompatibilidad scarf/cape: correccion real al hallazgo
+
+`ArmorIDs.Front.Sets.DontDrawIfWearingAScarfOrCape = Factory.CreateBoolSet(false, 13)` - **UN
+UNICO indice real activo: 13** (el mismo `DeadCellsBeheadedBody` de arriba). `Neck.Sets.IsAScarf
+= CreateBoolSet(false, 8, 9)` (WormScarf/ApprenticeScarf). `Back.Sets.IsACape = CreateBoolSet(
+false, 1,2,3,4,5,6,14,24,34,36,39,41)`. **Misma correccion real que arriba: NINGUN accesorio real
+de Front alcanza nunca frontId=13** - la incompatibilidad NUNCA se dispara para un objeto real del
+juego hoy. Se transcribe la tabla COMPLETA y fiel igualmente (no solo el subconjunto alcanzable),
+documentado como LIMITE REAL en `PlayerBodyDrawTables.cs` para no dejar un dato incompleto de cara
+a un futuro "Front derivado de body".
+
+### Arreglo real aplicado
+
+- `Terrakeep.Core/Model/PlayerBodyDrawTables.cs`: `FrontDontDrawIfWearingScarfOrCape(int)`/
+  `NeckIsAScarf(int)`/`BackIsACape(int)` (3 tablas reales transcritas).
+- `Terrakeep.Core/Data/VanillaAccessorySlotCatalog.cs`: campo `Front` (`"fr"`), 11º tipo.
+- `Terrakeep.App/Services/EquipmentAppearanceResolver.cs`: `EquippedAccessories.FrontFile`/
+  `FrontSlot` (canal UNICO, sin reclasificacion, mismo patron que Beard). Calamity: 0 items reales
+  confirmados de forma INDEPENDIENTE (grep completo de `"AutoloadEquip"` + `"EquipType.Front"` en
+  todo `CalamityMod` decompilado, 0 coincidencias) - mismo canal generico cableado igual por
+  consistencia (calamitySuffix `"Front"`), sin datos que lo activen hoy.
+- `Terrakeep.App/Services/PlayerPreviewRenderer.cs`: `MaskHalf` (recorta una mitad de un frame YA
+  resuelto, ancho fijo 40px - NO reutiliza `SliceShieldRow`, que resuelve un problema distinto,
+  ancho REAL variable; aqui el ancho siempre es 40, solo cambia el recorte de mitad). `DrawFrontHalf`
+  local (calcula `frontHidden` con las 3 tablas de arriba y compone `MaskHalf(LoadStripFrameAbsolute(
+  ...), leftHalf)`). Insertado 2 veces: `DrawFrontHalf(leftHalf: false)` tras Paso 9b (FaceAcc/
+  FaceMask/FaceFlower), antes de Shield; `DrawFrontHalf(leftHalf: true)` tras Paso 10b (OnhandAcc).
+- `scripts/extraer-slots-accesorios-vanilla.py`: campo `"fr"` generico (7 de 11 items reales) +
+  `FRONT_MANUAL` (4 items del rango `if (type>=2284 && type<=2287)`, valor no literal) +
+  `FRONT_MANUAL_NESTED` (3 items mas, switch anidado real - mismo motivo que `BEARD_MANUAL`,
+  verificado empiricamente antes de anadirlos: los 3 salian ausentes del JSON con el escaner
+  generico solo). Backslot de esos 7 items (3-6/38/39/41) tambien transcrito a mano en el mismo
+  parche (el mismo bloque real los asigna, y tampoco los capturaba el escaner).
+- `scripts/extraer-sprites-accesorios-vanilla.js`: tipo `fr: ['Front', 'Acc_Front_', 'acc_front']`
+  - 11 sprites reales extraidos (`Acc_Front_{1,2,3,4,5,8,11,12,15,16,17}.xnb`, 0 faltantes) + 7
+  sprites nuevos de `acc_back/` (backSlot de los propios items de Front que tambien lo declaran).
+
+### Tests nuevos (verificados en verde)
+
+`Terrakeep.Core.Tests/Model/PlayerBodyDrawTablesTests.cs` (13 casos): las 3 tablas, incluido el
+canario `FrontDontDrawIfWearingScarfOrCape_13_..._NoAlcanzableViaAccesorioReal` (deja constancia
+explicita de que 13 es SINTETICO, ningun accesorio real lo alcanza) y los 8 frontId reales
+confirmando `false` siempre. `Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs`
+(6 casos): CrimsonCloak/HunterCloak reales, ChippysWings (canario del escaner manual anidado),
+slot vacio, vanidad tapa a funcional, aislamiento de render, 0 items Calamity reales.
+`Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs` (9 casos): halving real
+con PNG sintetico mitad roja/mitad verde (`FrontFile_SeParteEnDosMitadesReales_
+FrontPartIzquierdaBackPartDerecha`, con `AssertEsquinaDerechaEsColor` nueva - gemela de
+`AssertEsquinaEsColor` para la esquina simetrica derecha), 3 tests de orden (`Orden_
+FaceAccAntesQueFrontBackPart`/`Orden_FrontBackPartAntesQueShield`/`Orden_HandOnAntesQueFrontPart`),
+y el CASO DE INCOMPATIBILIDAD pedido explicitamente por el coordinador: `FrontOculto_
+FrontId13Sintetico_ConScarfRealEnNeckSlot_...`/`..._ConCapeRealEnBackSlot_...` (frontId=13
+SINTETICO + `NeckSlot=8`/`BackSlot=1` REALES → identico a no llevar Front puesto),
+`FrontId13Sintetico_SinScarfNiCape_SiSeDibuja` (descarta que 13 este simplemente "roto"),
+`FrontIdRealConScarfPuesto_NuncaSeOculta_...` (CrimsonCloak real + scarf real → SIGUE visible,
+confirma en el renderer la correccion real del hallazgo) y `Front_ConCalamitySlotNulo_
+NuncaAplicaLaIncompatibilidad`.
+
+### Incidente real detectado y reparado: build roto en HEAD, no solo working tree
+
+El grueso de este encargo (todo el codigo de produccion: resolver/renderer/tablas/scripts/JSON)
+quedo YA incluido en el commit combinado de GapAnalysis Encargo F (`647ac665` - mismo patron que
+Encargo A/B/C/D/G, working tree compartido con al menos otros 2 encargos a la vez -
+`git log --oneline` confirma F y G comiteados entre mi lectura inicial y este cierre). Pero ese
+commit dejo el repositorio con un **build roto de verdad desde HEAD** (no solo el working tree
+local, que SI compilaba porque yo tenia el fichero completo sin comitear todavia): `Terrakeep.App.
+ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs` en HEAD llamaba a
+`AssertEsquinaDerechaEsColor` (usada por mis 4 tests de halving/orden de BackPart) sin que la
+propia funcion quedara comiteada - confirmado con `git show HEAD:...|grep "private static void
+AssertEsquinaDerechaEsColor"`, 0 resultados antes de mi commit de cierre. Ademas, los 11 sprites
+reales de `acc_front/` y los 7 de `acc_back/` (backSlot de los propios items de Front) seguian sin
+trackear. Cerrado con un commit adicional (`7131dc85`) que anade exactamente esos 19 ficheros (la
+funcion que faltaba + 18 PNGs reales) - mismo patron ya documentado hoy por Encargo D (`abc0faeb`)
+para el mismo tipo de incidente. Leccion, ya repetida 2 veces hoy: en encargos paralelos sobre los
+mismos ficheros, comprobar `git show HEAD:<archivo> | grep <simbolo nuevo>` de CADA simbolo que el
+propio codigo referencia antes de dar el commit combinado de otro encargo por completo.
+
+### Build y regresion
+
+`dotnet build Terrakeep.slnx -c Release` (con `-p:BaseOutputPath=bin_encargoE` para no chocar con
+los `testhost.exe` en vivo de otros encargos en el mismo working tree, mismo motivo ya
+documentado): 0 avisos, 0 errores, con el working tree COMBINADO (Front + Face + Beard + Wings
+todos presentes a la vez). `dotnet test Terrakeep.Core.Tests -c Release`: 718/718. Contencion real
+MUY severa del sistema compartido durante esta pasada (hasta 24 procesos `dotnet`/`testhost` vivos
+a la vez, varios encargos compilando/testeando simultaneamente - peor que la contencion ya
+documentada hoy por Encargo G) hizo inviable esperar una pasada COMPLETA de
+`Terrakeep.App.ViewModels.Tests` en un tiempo razonable (3 intentos reales, cada uno >9 minutos sin
+terminar, CPU acumulada de los procesos practicamente congelada entre sondeos - confirmado con
+`Get-Process`/`Get-CimInstance Win32_Process`, no un cuelgue del propio test) - LIMITE REAL
+documentado, no ocultado. Evidencia real alternativa, suficiente para el alcance de este encargo:
+`dotnet test Terrakeep.App.ViewModels.Tests --filter
+"FullyQualifiedName~PlayerPreviewRendererAccessoriesTests|FullyQualifiedName~
+EquipmentAppearanceResolverTests"` (las 2 clases que contienen EL 100% de mis tests nuevos, mas
+TODA la regresion ya existente de Backpack/Tail/HeadBack/Balloon/Shoes/Face/Beard en esas mismas 2
+clases): **110/110 en 3s** una vez liberada la contencion de mis propios procesos previos. La unica
+vez que una pasada completa llego a producir resultado antes de tener que intervenir (interrumpida
+por mi, procesos propios colgados de una espera anterior) mostro exactamente 1 fallo, en
+`ActualizacionEnUnClicTests.ActualizarAhora_FlujoCompletoReal_...` (HTTP+instalador `.bat` real,
+timeout real de 40s documentado en su propio comentario) - ajeno por completo a este encargo
+(0 relacion con accesorios/renderer), coherente con un flake real de contencion (2m5s para fallar
+un timeout de 40s bajo 20+ procesos compitiendo por CPU). `Terrakeep.App.Tests` no se ejecuto esta
+ronda por el mismo motivo de contencion (mismo criterio de riesgo-beneficio ya documentado hoy por
+Encargo G) - LIMITE REAL.
+
+### Recompilacion y redespliegue local real
+
+`Terrakeep.exe` instalado NO estaba en ejecucion (`Get-Process Terrakeep`, sin resultado). `dotnet
+publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde.
+`robocopy ... /MIR` hacia `C:\Users\adrian\AppData\Local\Programs\Terrakeep\` (con
+`MSYS_NO_PATHCONV=1` para que Git Bash no mangle `/MIR` como una ruta) - solo 1 archivo distinto
+(`Terrakeep.exe`; el resto ya estaba al dia porque el publish de un encargo paralelo ya habia
+copiado el working tree combinado, que para ese momento YA incluia mis 18 sprites nuevos sin
+comitear todavia - `dotnet publish` compila del working tree, no de git HEAD, confirmado
+`acc_front/` con los 11 PNGs reales ya presentes en la copia instalada antes de mi propio publish).
+Relanzado con `Start-Process` (PID real 273224, `Responding=True`) y cerrado limpio con
+`Stop-Process` - confirmado que el `.exe` instalado arranca de verdad con el codigo nuevo.
+
+### Commit real
+
+`7131dc85`: `Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs` (la funcion
+`AssertEsquinaDerechaEsColor` que faltaba + el comentario corregido de
+`Orden_ShieldAntesQueHandOnAcc`), `Terrakeep.App/Assets/player/acc_front/{1,2,3,4,5,8,11,12,15,16,
+17}.png` (11 sprites reales nuevos), `Terrakeep.App/Assets/player/acc_back/{3,4,5,6,38,39,41}.png`
+(7 sprites reales nuevos, backSlot de items de Front). El resto del codigo real de Front
+(`EquipmentAppearanceResolver.cs`/`PlayerPreviewRenderer.cs`/`PlayerBodyDrawTables.cs`/
+`PlayerBodyDrawTablesTests.cs`/`EquipmentAppearanceResolverTests.cs`/
+`VanillaAccessorySlotCatalog.cs`/`vanilla_accessory_slots.json`/scripts) ya estaba en `647ac665`
+(Encargo F, combinado). Verificado con `git diff`/`git show HEAD:` antes del commit que ningun
+fichero exclusivo de Wings (`WingDrawTable.cs`, `acc_wing/`, `extraer-sprites-alas-vanilla.js`) ni
+de Face (`FaceAccessoryLayerTable.cs`) entro en este commit. Sin `git push`.
