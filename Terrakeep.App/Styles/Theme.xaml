@@ -367,6 +367,32 @@
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
                         </Trigger>
+                        <!-- Bug real arreglado 25-sep-2026 (handoff e5eaea9e-c261-4199-8e7d-060b6054f58d):
+                             PersonajeMenuButton (MainWindow.xaml) abre su propio ContextMenu con clic
+                             izquierdo pero no tenia NINGUN trigger que reaccionara a que ese menu
+                             estuviera abierto (medido: BdBrush.Color identico en cerrado/abierto).
+                             "Abierto" se lee visualmente como "pressed mantenido" - mismo lenguaje ya
+                             establecido arriba (IsPressed). Tag="Open" via TrueToTagConverter
+                             (IsPersonajeMenuOpen), mismo mecanismo real de Tag que ya usan las
+                             variantes de color de abajo - ningun otro boton de la app usa este valor. -->
+                        <Trigger Property="Tag" Value="Open">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource BgPressedColor}" Duration="0:0:0.08" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BdBrush" Storyboard.TargetProperty="Color"
+                                                         To="{StaticResource BgElevatedColor}" Duration="0:0:0.15" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
                         <Trigger Property="Tag" Value="Accent">
                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentGradientBrush}" />
                             <Setter Property="Foreground" Value="White" />
@@ -1151,6 +1177,56 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
         <Setter Property="Padding" Value="12" />
+    </Style>
+
+    <!-- Style compartido "StatusPillCaption" (24-sep-2026, TASK CONTEXT e5eaea9e-c261-4199-8e7d-
+         060b6054f58d, unificacion de badges/status-pills pedida por el usuario tras el reporte de
+         "67 diferencia(s)" desentonando - ver bitacora.md, inventario completo con archivo:linea
+         de los 6 sitios reales). Antes de este Style, "N diferencia(s)" (Comparar,
+         MainWindow.xaml) y "Solo valido para <Slot>" (Libreria) ya compartian la MISMA receta
+         letra por letra (AccentMutedBrush+AccentBrush+CaptionText+FontWeight SemiBold explicito)
+         escrita inline en dos sitios sin ningun recurso compartido - la prueba real de que ese ya
+         era el lenguaje "bueno" validado por uso repetido, no una eleccion arbitraria de hoy. El
+         resto de badges tenia un Padding distinto sin ningun criterio (9,3 / 10,5 / 6,1) y "Solo
+         lectura" llevaba un FontWeight heredado POR ACCIDENTE del TabItem activo (Theme.xaml,
+         Trigger IsSelected de la rail) en vez de declarado - el hueco real que
+         BADGES_ESTADO_SOLO (Terrakeep.App.Tests/AuditoriaBadgesEstado.cs) detecto y deja en rojo
+         a proposito hasta este cambio.
+         Mismo mecanismo Tag ya usado en NavCardButton/VersionOptionButton (Trigger sobre
+         Property="Tag" en vez de duplicar el Style entero): la GEOMETRIA (CornerRadius/Padding,
+         lo unico que el canario mide) es UNICA para los 6 badges; el color es la unica variacion
+         real, con 3 variantes:
+         - Tag no puesto o "Acento" (por defecto): recuento/restriccion (Comparar, Libreria) -
+           violeta de marca, la receta ya validada arriba.
+         - Tag="Informativa": estado neutro de solo lectura (Exploracion) - fondo neutro
+           (BgElevatedBrush), a proposito distinto del acento para no competir visualmente con un
+           badge de recuento/metrica real; el TextBlock interior fija su FontWeight a proposito en
+           el propio sitio de uso en vez de heredarlo.
+         - Tag="Overlay": las 3 pastillas KPI de la tarjeta hero de Inicio, que viven ENCIMA de
+           AccentGradientBrush (violeta) - blanco translucido por contraste real, nunca violeta
+           sobre violeta.
+         Los badges SEMANTICOS por zona/tipo ("Guia: <Zona>", tipo de resultado de busqueda de
+         mundo) heredan este Style con BasedOn para el CornerRadius/Padding compartido, pero
+         pintan su propio Background dinamico via (Multi)DataTrigger/Binding tal cual ya hacian -
+         ese color es informacion real (banda de profundidad / tipo de objeto), no se unifica ni
+         se pierde.
+         Padding="8,4" = SpD2,SpD1 de la escala ya declarada mas arriba (Theme.xaml:145-156, el
+         punto medio real entre los 10,4/9,3/10,5 que ya existian) - XAML no permite concatenar
+         dos StaticResource en un unico atributo Thickness (Padding="{StaticResource
+         SpD2},{StaticResource SpD1}" no es sintaxis valida), de ahi el literal en vez de la
+         referencia con nombre. -->
+    <Style x:Key="StatusPillCaption" TargetType="Border">
+        <Setter Property="CornerRadius" Value="99" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="Background" Value="{StaticResource AccentMutedBrush}" />
+        <Style.Triggers>
+            <Trigger Property="Tag" Value="Informativa">
+                <Setter Property="Background" Value="{StaticResource BgElevatedBrush}" />
+            </Trigger>
+            <Trigger Property="Tag" Value="Overlay">
+                <Setter Property="Background" Value="#26FFFFFF" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Botones "meta" (Biblioteca/Positivos/Negativos) y "grupo" (Cuerpo a cuerpo +/...) del

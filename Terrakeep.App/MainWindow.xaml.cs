@@ -454,6 +454,15 @@ public partial class MainWindow : Window
         }
     }
 
+    // Bug real arreglado 25-sep-2026 (handoff e5eaea9e-c261-4199-8e7d-060b6054f58d): un ContextMenu,
+    // a diferencia de un Popup normal, no expone IsOpen como binding de doble via util aqui (se abre
+    // a mano en OnPersonajeMenuClick) - estos dos eventos son el unico punto real donde WPF avisa de
+    // verdad de que se abrio/cerro, y son los que mantienen IsPersonajeMenuOpen en sincronia para que
+    // el boton (Tag="Open" + flecha ▾/▲, ver MainWindow.xaml) refleje el estado real.
+    private void OnPersonajeMenuOpened(object sender, RoutedEventArgs e) => _viewModel.IsPersonajeMenuOpen = true;
+
+    private void OnPersonajeMenuClosed(object sender, RoutedEventArgs e) => _viewModel.IsPersonajeMenuOpen = false;
+
     private void OnLoadClick(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
@@ -1136,6 +1145,21 @@ public partial class MainWindow : Window
         if ((sender as FrameworkElement)?.DataContext is CharacterListEntryViewModel entry)
             entry.SetHovering(false);
     }
+
+    // Arreglo real 25-sep-2026 (bitacora.md, "Inicio, mascotas ocultas y banner sin hover",
+    // handoff e5eaea9e-c261-4199-8e7d-060b6054f58d): el banner "Continuar con X" comparte el
+    // MISMO CharacterListEntryViewModel que ya anima con exito en las tarjetas
+    // (Home.LastSessionCharacterEntry, HomeViewModel.cs:180), pero su DataContext real es el
+    // MainViewModel entero (el Border del banner vive fuera de CharacterCardTemplate) - reusar
+    // OnCharacterCardMouseEnter/Leave a pelo aqui leeria (sender as FrameworkElement)?.DataContext
+    // como MainViewModel, no como CharacterListEntryViewModel, y el cast fallaria en silencio (sin
+    // excepcion, simplemente sin animar nada). Opcion B documentada por el investigador
+    // (bitacora.md): un par de manejadores propios que leen _viewModel.Home.
+    // LastSessionCharacterEntry directamente - cero riesgo de romper los bindings de Home.* que
+    // ya cuelgan del DataContext real de la ventana en ese mismo Border.
+    private void OnHomeBannerMouseEnter(object sender, MouseEventArgs e) => _viewModel.Home.LastSessionCharacterEntry?.SetHovering(true);
+
+    private void OnHomeBannerMouseLeave(object sender, MouseEventArgs e) => _viewModel.Home.LastSessionCharacterEntry?.SetHovering(false);
 
     // Red de seguridad adicional (mismo criterio que ya cerro el bug real "Terrakeep congelado"
     // de Apariencia, ver AppearanceViewModel.StopWalkAnimation): si la tarjeta desaparece del

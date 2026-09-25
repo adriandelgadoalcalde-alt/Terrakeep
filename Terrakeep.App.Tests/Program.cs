@@ -4392,6 +4392,33 @@ internal static partial class Program
                     DoEvents(); DoEvents();
                     Capturar("4-cerrado-tras-abrir", out var colorCerradoTrasAbrir);
                     Console.WriteLine($"PERSONAJEMENU_ESTADOS: colorCerrado(1)={colorCerrado} vs colorCerradoTrasAbrir(4)={colorCerradoTrasAbrir} -> {(colorCerrado == colorCerradoTrasAbrir ? "IDENTICOS (coherente)" : "DISTINTOS (inesperado)")}");
+
+                    // 5)/6) Verificacion visual-qa añadida por aplicador-fix (25-sep-2026, mismo
+                    // handoff): el Content del boton paso de un TextBlock implicito a un StackPanel
+                    // ("Personaje"/"Character" + flecha) - confirma que NO se recorta ni en ES/EN ni
+                    // en la ventana mas estrecha real de la app (MinWidth="1080" en MainWindow.xaml).
+                    // Ademas de la captura para revisar a ojo, mide clipping real: un Button sin
+                    // Width fijo que se recortara tendria su ContentPresenter interno mas ancho que
+                    // el propio ActualWidth del boton (DesiredSize gana al espacio disponible).
+                    FijarTamaño(window, 1080, 700);
+                    DoEvents(); DoEvents();
+                    var contentPresenterEstrecho = Descendientes<System.Windows.Controls.ContentPresenter>(botonMenu).FirstOrDefault();
+                    bool sinRecorteEs = botonMenu.ActualWidth > 0 && (contentPresenterEstrecho == null || contentPresenterEstrecho.ActualWidth <= botonMenu.ActualWidth + 0.5);
+                    Console.WriteLine($"PERSONAJEMENU_ESTADOS: ventana estrecha (1080x700) ES -> PersonajeMenuButton.ActualWidth={botonMenu.ActualWidth:0.0}, ContentPresenter.ActualWidth={contentPresenterEstrecho?.ActualWidth:0.0}, sinRecorte={sinRecorteEs} (esperado True)");
+                    if (!sinRecorteEs) Console.WriteLine("FALLO-REAL: PERSONAJEMENU_ESTADOS - el nuevo Content (texto+flecha) se recorta en la ventana mas estrecha real de la app (ES)");
+                    Capturar("5-estrecho-es", out _);
+
+                    vm.Settings.Language = "en";
+                    DoEvents(); DoEvents();
+                    var contentPresenterEn = Descendientes<System.Windows.Controls.ContentPresenter>(botonMenu).FirstOrDefault();
+                    bool sinRecorteEn = botonMenu.ActualWidth > 0 && (contentPresenterEn == null || contentPresenterEn.ActualWidth <= botonMenu.ActualWidth + 0.5);
+                    Console.WriteLine($"PERSONAJEMENU_ESTADOS: ventana estrecha (1080x700) EN -> PersonajeMenuButton.ActualWidth={botonMenu.ActualWidth:0.0}, ContentPresenter.ActualWidth={contentPresenterEn?.ActualWidth:0.0}, sinRecorte={sinRecorteEn} (esperado True)");
+                    if (!sinRecorteEn) Console.WriteLine("FALLO-REAL: PERSONAJEMENU_ESTADOS - el nuevo Content (texto+flecha) se recorta en la ventana mas estrecha real de la app (EN)");
+                    Capturar("6-estrecho-en", out _);
+
+                    vm.Settings.Language = "es"; // el resto del arnes asume español
+                    FijarTamaño(window, 1180, 860);
+                    DoEvents(); DoEvents();
                 }
             }
             catch (Exception ex) { Console.WriteLine("PERSONAJEMENU_ESTADOS-EXCEPTION: " + ex); }

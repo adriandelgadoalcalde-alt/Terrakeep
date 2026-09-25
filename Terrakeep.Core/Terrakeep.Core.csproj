@@ -20,6 +20,23 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Obstaculo real de build encontrado y resuelto 25-sep-2026 (aplicador-fix, handoff
+       e5eaea9e-c261-4199-8e7d-060b6054f58d, autonomia tecnica ya concedida en CLAUDE.md): con
+       varios agentes construyendo este mismo proyecto en paralelo con su propia carpeta de salida
+       aislada (`-p:BaseIntermediateOutputPath=obj_<algo>/`, convencion ya documentada en
+       bitacora.md desde antes de hoy - ej. bin_keepqaDebug), el SDK solo excluye por defecto la
+       carpeta "obj/" LITERAL del glob implicito `**/*.cs` (via $(BaseIntermediateOutputPath),
+       "obj\**" de serie) - nunca las carpetas "obj_algo/"/"bin_algo/" de OTROS agentes, que
+       tambien viven dentro de este mismo directorio de proyecto. El `Terrakeep.Core.AssemblyInfo.
+       cs` autogenerado que cada una de esas carpetas stray deja atras se colaba entonces en
+       CUALQUIER build (incluido el build por defecto de cualquier agente, sin importar que
+       carpeta de salida use el suyo propio) y chocaba por duplicado (CS0579) contra el
+       AssemblyInfo.cs real de la compilacion en curso. Exclusion generica por patron (no una lista
+       fija de nombres, que quedaria obsoleta en cuanto otro agente use un nombre nuevo). -->
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj_*/**;bin_*/**;**/obj_*/**;**/bin_*/**</DefaultItemExcludes>
+  </PropertyGroup>
+
   <!-- KeepQA (16-sep-2026, paso 1 de la integracion de analisis estatico externo): analizadores
        de .NET de serie (ya vienen con el SDK, sin paquete NuGet) + Roslynator.Analyzers
        (github.com/dotnet/roslynator, Apache-2.0) como segunda pasada de reglas independiente.

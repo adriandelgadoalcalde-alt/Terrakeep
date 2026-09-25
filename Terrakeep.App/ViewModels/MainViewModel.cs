@@ -1317,6 +1317,14 @@ public partial class MainViewModel : ObservableObject
     // ya esta resuelto (Bd-d, BuildsViewModel.RefreshOwnership recorre exactamente estos mismos
     // contenedores) - aqui solo faltaba ENSEÑARLO donde de verdad hace falta.
     [ObservableProperty] private bool _isWhereIsItOpen;
+
+    // Bug real arreglado 25-sep-2026 (handoff e5eaea9e-c261-4199-8e7d-060b6054f58d, investigado por
+    // investigador-bug): PersonajeMenuButton (MainWindow.xaml) no daba NINGUN indicador visual de
+    // que su propio ContextMenu estuviera abierto (BdBrush.Color medido identico en cerrado y
+    // abierto, ver PERSONAJEMENU_ESTADOS_SOLO). Mismo patron ya establecido arriba por
+    // IsWhereIsItOpen - se sincroniza desde MainWindow.xaml.cs via los eventos Opened/Closed del
+    // ContextMenu (un ContextMenu no tiene un binding de doble via a IsOpen como un Popup normal).
+    [ObservableProperty] private bool _isPersonajeMenuOpen;
     [ObservableProperty] private string _whereIsItSearchText = string.Empty;
     [ObservableProperty] private string _whereIsItSummary = string.Empty;
     public ObservableCollection<WhereIsItResultViewModel> WhereIsItResults { get; } = [];

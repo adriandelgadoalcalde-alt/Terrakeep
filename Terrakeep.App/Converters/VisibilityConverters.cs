@@ -198,6 +198,23 @@ public sealed class FalseToTagConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+// Gemelo inverso de FalseToTagConverter: true -> ConverterParameter, false/null -> null. Bug real
+// arreglado 25-sep-2026 (handoff e5eaea9e-c261-4199-8e7d-060b6054f58d): PersonajeMenuButton
+// (MainWindow.xaml) no cambiaba de aspecto cuando su propio ContextMenu estaba abierto - reutiliza
+// el mismo mecanismo de Tag ya usado por Accent/Teal/Pink/Orange/AccentSoft/Ghost en Theme.xaml
+// (Trigger Property="Tag" Value="Open") en vez de inventar un mecanismo nuevo.
+public sealed class TrueToTagConverter : IValueConverter
+{
+    // Misma razon real ya documentada en FalseToTagConverter: instancia estatica + x:Static.
+    public static readonly TrueToTagConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value is true ? parameter as string : null;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 // F-10 (auditoria de Opus vs TEdit, E-10): ColumnDefinition.Width es GridLength, no double -
 // bidireccional de verdad (ConvertBack real) para que arrastrar el GridSplitter escriba el
 // ancho nuevo de vuelta en la propiedad persistida (Settings.ExplorationSidebarWidth).
