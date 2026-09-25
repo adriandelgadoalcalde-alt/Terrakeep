@@ -18806,6 +18806,111 @@ el proceso SIGUE avanzando entre estados distintos, no está clavado en un únic
 prueba que en su día descartó la hipótesis de "cuelgue"). Se vieron dos procesos `MSBuild` ajenos
 corriendo en paralelo parte del tiempo (consistente con "A8-02 / Punto 4" sobre la sensibilidad de
 este tramo a la carga del sistema), lo que explicaría al menos parte de la lentitud anómala de esta
+
+## 25-sep-2026 - PortSeleccion Encargo1: EquipmentAppearanceResolver extendido a los 7 slots de accesorio + extracción real de sprites (aplicador-fix)
+
+Primer encargo de la serie de 7 de PortSeleccion (coordinador, taskId `e5eaea9e-c261-4199-8e7d-
+060b6054f58d`): extender `EquipmentAppearanceResolver.cs` (hasta hoy solo cabeza/cuerpo/piernas,
+índices 0..2) a los 7 slots de accesorio funcional/vanidad (índices 3..9 de `PlrLoadout.Items`/
+`Social`) - base que el Encargo2 (dibujado en el doll) necesita para consumir sin bloqueos. Este
+encargo NO dibuja nada nuevo en el doll, solo resuelve+extrae.
+
+**Investigación real en el decompilado** (`Terraria.DataStructures.PlayerDrawLayers.cs` +
+`Terraria.Player.cs`, `Downloads\Keep\tModLoader-Decompiled\tModLoader\` - ruta corregida hoy, la
+vieja sin `Keep\` ya no existe, confirmado con `Test-Path`): los 7 tipos (Waist/Neck/HandOn/
+HandOff/Back/Shield/Face) usan `TextureAssets.AccWaist[player.waist]` etc., cargadas de
+`Images/Acc_Waist_N.xnb`/`Acc_Neck_N.xnb`/`Acc_HandsOn_N.xnb`/`Acc_HandsOff_N.xnb`/
+`Acc_Back_N.xnb`/`Acc_Shield_N.xnb`/`Acc_Face_N.xnb` (confirmado en
+`Terraria.Initializers.AssetInitializer.cs`, mismo patrón ya usado por `Armor_Head_N`/
+`Armor_Legs_N`). El índice real por objeto es `Item.waistSlot`/`neckSlot`/`handOnSlot`/
+`handOffSlot`/`backSlot`/`shieldSlot`/`faceSlot` (mismo patrón literal que headSlot/bodySlot/
+legSlot, `Item.cs`, `SetDefaultsN`).
+
+**Diferencia real de fondo frente a cabeza/cuerpo/piernas** (por eso este encargo no fue solo
+"copiar y pegar" el patrón de `Resolve()`): head/body/legs tienen el TIPO fijado por la POSICIÓN
+(índice 0/1/2 = ese tipo siempre). Los 7 slots de accesorio son GENÉRICOS - cualquiera de
+`Items[3..9]`/`Social[3..9]` puede llevar CUALQUIER tipo, y es el propio objeto quien declara de
+qué tipo es. Confirmado en `Player.cs` real (`UpdateVisibleAccessories`/`UpdateVisibleAccessory`,
+líneas ~36174-36329): recorre primero los 7 huecos FUNCIONALES en orden 3→9 ("`if
+(item.waistSlot > 0) waist = item.waistSlot;`" y análogo para los otros 6 - último en escribir
+gana si dos items del mismo tipo coinciden) y LUEGO los 7 huecos de VANIDAD en el mismo orden, que
+pisan cualquier valor funcional del mismo TIPO. `ResolveAccessories(loadout)` reproduce
+exactamente esa doble pasada por TIPO (no por índice compartido como `Visible()`).
+
+**Extracción real de datos y sprites** (dos scripts nuevos, hermanos directos de los ya existentes
+para armadura, mismo criterio "lo que no se encuentra no se inventa"):
+- `scripts/extraer-slots-accesorios-vanilla.py`: mismo escáner `split_by_case` ya depurado en
+  `extraer-slots-armadura-vanilla.py` (NO reinventado), ahora sobre `waistSlot`/`neckSlot`/
+  `handOnSlot`/`handOffSlot`/`backSlot`/`shieldSlot`/`faceSlot` → `Terrakeep.App/Assets/
+  vanilla_accessory_slots.json` (95 objetos reales con algún slot de accesorio: waist=17,
+  neck=12, handOn=26, handOff=18, back=18, shield=8, face=16). Spot-check real verificado a mano
+  contra el propio `Item.cs` antes de ejecutar: id 15 (Copper Watch) → waistSlot=2, id 156
+  (Cobalt Shield) → shieldSlot=1 - ambos coincidieron.
+- `scripts/extraer-sprites-accesorios-vanilla.js`: mismo `xnbToPng` ya usado por
+  `extraer-sprites-armadura-vanilla.js`, hoja completa sin recortar (modo "hoja", igual que ya se
+  hace para `armor_legs`/`armor_body` - Shield en concreto NO sigue la rejilla estándar de 40x56,
+  `PlayerDrawLayers.cs:4958-4961` sustituye el ancho por el de la propia textura, así que recortar
+  a un tamaño fijo habría sido inventar un recorte que no aplica a los 7 tipos por igual) →
+  `Terrakeep.App/Assets/player/acc_{waist,neck,handon,handoff,back,shield,face}/{id}.png`.
+  Resultado real contra la instalación de Steam de este PC: **103 sprites reales extraídos**
+  (waist 16/16, neck 12/12, back 18/18, shield 8/8, face 16/16, handOn 20/23, handOff 13/15).
+
+**LÍMITE REAL, documentado, no oculto**: 3 ids de HandOn (22/23/24) y 2 de HandOff (14/15) no
+tienen `.xnb` real en la instalación de Steam de este PC (decompilado real=1.4.4.9, instalación
+puede ser una versión ligeramente distinta) - mismo criterio que los `armor_head`/`armor_legs`
+faltantes ya documentados: el resolver simplemente no encuentra el fichero (`File.Exists`) y
+devuelve `null` para ese hueco en vez de inventar una ruta que no existe, no un bug silencioso.
+Los objetos de Calamity NO tienen todavía `EquipSlot` poblado para tipos de accesorio (el
+extractor `extraer-slot-armadura-calamity.js` solo cubrió Head/Body/Legs, 185 entradas) - el
+código de `ResolveAccessories`/`IsAccessoryType` SÍ contempla la rama Calamity de forma genérica
+(mismo patrón `entry.EquipSlot == calamitySuffix` ya usado en armadura), pero hoy no resuelve
+ningún accesorio de Calamity por falta de datos, no por un hueco de código - extraer esos datos
+(vía `[AutoloadEquip(new EquipType[] { EquipType.X })]`, confirmado real en el mismo Item.cs) es
+trabajo aparte, fuera del alcance de este encargo concreto.
+
+**Código de producción tocado**:
+- `Terrakeep.Core/Data/VanillaAccessorySlotCatalog.cs` (nuevo) - hermano de
+  `VanillaArmorSlotCatalog`, entrada con las 7 claves opcionales (`w`/`n`/`ho`/`hf`/`bk`/`s`/`fc`).
+- `Terrakeep.App/Services/EquipmentAppearanceResolver.cs` - nuevo record `EquippedAccessories`
+  (7 rutas + 7 índices de slot vanilla reales, `null` si vacío o Calamity), nuevo método público
+  `ResolveAccessories(PlrLoadout loadout)` + helpers privados `IsAccessoryType`/
+  `ResolveAccessorySprite`; constructor ahora recibe también `VanillaAccessorySlotCatalog`.
+- `Terrakeep.App/Services/CharacterFileService.cs` - nueva propiedad `VanillaAccessorySlots`,
+  cargada y pasada al resolver junto a `VanillaArmorSlots`.
+
+**Tests nuevos** (`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs`, mismo
+patrón de ids reales + fichero real en disco ya usado por los tests de cabeza/cuerpo/piernas): 7
+tests nuevos - sprite real funcional resuelto y existe en disco; vanidad en un ÍNDICE GENÉRICO
+DISTINTO tapa al funcional del MISMO TIPO (la prueba clave de fidelidad real, distinta del caso
+armadura porque aquí NO hay índice compartido); slot vacío → los 7 `null`; tres tipos distintos en
+tres huecos distintos se resuelven de forma independiente sin cruzarse; una pieza de armadura de
+Calamity puesta en un hueco de accesorio no se cuela como accesorio (defensivo). **Resultado real:
+`dotnet test --filter FullyQualifiedName~EquipmentAppearanceResolverTests` → 11/11 en verde** (4
+ya existentes + 7 nuevos).
+
+**Build y test completos**: `dotnet build Terrakeep.slnx -c Debug` limpio (0 avisos, 0 errores).
+`dotnet test Terrakeep.slnx`: **608/608** (`Terrakeep.Core.Tests`) + **523/523**
+(`Terrakeep.App.ViewModels.Tests`) en verde, sin regresión. `dotnet build Terrakeep.slnx -c
+Release` falla, pero por `Terrakeep.App.Tests/CanarioHomeBannerMascota.cs` (`VerificarFormulaReal
+Mascota` no existe) - fichero modificado en caliente por otro agente en paralelo (PortSeleccion
+Encargo3, confirmado con `git status`/`git log`, sin relación con este encargo, nunca tocado aquí).
+Compilación en Release del alcance real de este cambio, aislada (`dotnet build
+Terrakeep.App/Terrakeep.App.csproj -c Release`, arrastra `Terrakeep.Core`): **limpia, 0 avisos, 0
+errores**.
+
+**Sin redespliegue**: no hace falta (pedido explícito del encargo) - no hay cambio visual todavía
+hasta que el Encargo2 dibuje estos sprites en el doll; `EquipmentAppearance.ResolveAccessories(...)`
+no se llama todavía desde ningún ViewModel/vista real.
+
+Commit local (nunca `git add -A`, puede haber trabajo de otros agentes en paralelo en el resto del
+árbol): `Terrakeep.Core/Data/VanillaAccessorySlotCatalog.cs`,
+`Terrakeep.App/Services/EquipmentAppearanceResolver.cs`,
+`Terrakeep.App/Services/CharacterFileService.cs`,
+`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs`,
+`Terrakeep.App/Assets/vanilla_accessory_slots.json`,
+`Terrakeep.App/Assets/player/acc_waist/`, `acc_neck/`, `acc_handon/`, `acc_handoff/`, `acc_back/`,
+`acc_shield/`, `acc_face/` (103 PNG reales), `scripts/extraer-slots-accesorios-vanilla.py`,
+`scripts/extraer-sprites-accesorios-vanilla.js`.
 madrugada.
 
 **LÍMITE REAL, no forzado**: no se llegó a ver `DONE` ni el veredicto final de los `FALLO`

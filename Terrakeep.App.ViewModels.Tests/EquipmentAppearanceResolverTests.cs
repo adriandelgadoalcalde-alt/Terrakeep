@@ -116,4 +116,108 @@ public sealed class EquipmentAppearanceResolverTests
 
         Assert.NotEqual(pixelesSin, pixelesCon);
     }
+
+    // PortSeleccion Encargo1 (25-sep-2026): ResolveAccessories, los 7 slots de accesorio
+    // funcional/vanidad (indices 3..9, genericos - ver el comentario real de la clase). Ids
+    // reales, spot-check ya hecho a mano en Item.cs antes de escribir extraer-slots-
+    // accesorios-vanilla.py: Copper Watch (id 15, waistSlot=2), Silver Watch (id 16,
+    // waistSlot=7), Cobalt Shield (id 156, shieldSlot=1), Cross Necklace (id 554, neckSlot=2).
+    private const int RelojCobre = 15;   // waistSlot=2
+    private const int RelojPlata = 16;   // waistSlot=7 (mismo TIPO que RelojCobre, otro slot)
+    private const int EscudoCobalto = 156; // shieldSlot=1
+    private const int ColgantePlata = 554; // neckSlot=2
+
+    private static PlrLoadout LoadoutConAccesorio(int itemsIndex, int itemsId, int? socialIndex = null, int socialId = 0)
+    {
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[itemsIndex] = new PlrItemSlot(itemsId, 1, 0, false);
+        if (socialIndex is int si) loadout.Social[si] = new PlrItemSlot(socialId, 1, 0, false);
+        return loadout;
+    }
+
+    [Fact]
+    public void AccesorioVanillaFuncional_ResuelveUnSpriteRealQueExisteEnDisco()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, RelojCobre));
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.True(File.Exists(acc.WaistFile));
+        Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
+        Assert.Equal(2, acc.WaistSlot);
+    }
+
+    [Fact]
+    public void VanidadEnOtroHuecoGenerico_TapaAlFuncionalDelMismoTipo_FielAlGuardado()
+    {
+        // Funcional: Reloj de cobre (waistSlot=2) en el hueco generico 3. Vanidad: Reloj de
+        // plata (waistSlot=7, MISMO TIPO, distinto valor) en el hueco generico 7 - un indice
+        // totalmente distinto del funcional, porque los 7 huecos de accesorio son genericos
+        // (a diferencia de cabeza/cuerpo/piernas, NO hay correspondencia 1:1 de indice). El
+        // juego real muestra el de VANIDAD por TIPO, no por indice compartido.
+        var loadout = LoadoutConAccesorio(3, RelojCobre, socialIndex: 7, socialId: RelojPlata);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "7.png", acc.WaistFile);
+        Assert.Equal(7, acc.WaistSlot);
+    }
+
+    [Fact]
+    public void SlotVacio_NoResuelveNingunAccesorio()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+
+        Assert.Null(acc.WaistFile);
+        Assert.Null(acc.NeckFile);
+        Assert.Null(acc.HandOnFile);
+        Assert.Null(acc.HandOffFile);
+        Assert.Null(acc.BackFile);
+        Assert.Null(acc.ShieldFile);
+        Assert.Null(acc.FaceFile);
+    }
+
+    [Fact]
+    public void TresTiposDistintosEnHuecosDistintos_ResuelvenIndependientemente()
+    {
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(RelojCobre, 1, 0, false);      // waist
+        loadout.Items[4] = new PlrItemSlot(EscudoCobalto, 1, 0, false);   // shield
+        loadout.Items[5] = new PlrItemSlot(ColgantePlata, 1, 0, false);   // neck
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
+        Assert.NotNull(acc.ShieldFile);
+        Assert.EndsWith("acc_shield" + Path.DirectorySeparatorChar + "1.png", acc.ShieldFile);
+        Assert.NotNull(acc.NeckFile);
+        Assert.EndsWith("acc_neck" + Path.DirectorySeparatorChar + "2.png", acc.NeckFile);
+        Assert.Null(acc.HandOnFile);
+        Assert.Null(acc.HandOffFile);
+        Assert.Null(acc.BackFile);
+        Assert.Null(acc.FaceFile);
+    }
+
+    [Fact]
+    public void ObjetoDeArmaduraCalamityEnHuecoDeAccesorio_NoSeCuelaComoAccesorio()
+    {
+        // Una pieza de armadura de CUERPO de Calamity (EquipSlot=="Body") puesta en un hueco
+        // GENERICO de accesorio (dato incoherente, no deberia darse en un .plr real, pero el
+        // resolver no debe inventarse un sprite igualmente - mismo criterio defensivo que
+        // ObjetoCalamityDeUnSlotDistinto_NoSeCuelaEnOtroHueco para armadura).
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Body");
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(entry.SyntheticId, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.Null(acc.WaistFile);
+        Assert.Null(acc.NeckFile);
+        Assert.Null(acc.HandOnFile);
+        Assert.Null(acc.HandOffFile);
+        Assert.Null(acc.BackFile);
+        Assert.Null(acc.ShieldFile);
+        Assert.Null(acc.FaceFile);
+    }
 }

@@ -91,6 +91,9 @@ public sealed class CharacterFileService
     public VanillaBuffDurationCatalog VanillaBuffDurations { get; }
     public VanillaResearchCountCatalog VanillaResearchCounts { get; }
     public VanillaArmorSlotCatalog VanillaArmorSlots { get; }
+    // PortSeleccion Encargo1 (25-sep-2026): hermano de VanillaArmorSlots para los 7 tipos de
+    // accesorio (waist/neck/handOn/handOff/back/shield/face) - ver EquipmentAppearanceResolver.
+    public VanillaAccessorySlotCatalog VanillaAccessorySlots { get; }
     public PetAnimationCatalog PetAnimations { get; }
     // Doll de cuerpo completo fiel al guardado (pedido explicito, 3-sep-2026) - ver
     // EquipmentAppearanceResolver.
@@ -201,8 +204,9 @@ public sealed class CharacterFileService
         VanillaResearchCounts = VanillaResearchCountCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_research_counts.json"));
         TooltipCatalogs = new ItemTooltipCatalogs(VanillaStats, CalamityCatalog, VanillaCategories, VanillaItemTooltips, VanillaArmorSets, CalamityArmorSets, PrefixEffects);
         VanillaArmorSlots = VanillaArmorSlotCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_armor_slots.json"));
+        VanillaAccessorySlots = VanillaAccessorySlotCatalog.LoadFromFile(Path.Combine(assetsDir, "vanilla_accessory_slots.json"));
         PetAnimations = PetAnimationCatalog.LoadFromFile(Path.Combine(assetsDir, "pet_animations.json"));
-        EquipmentAppearance = new EquipmentAppearanceResolver(VanillaArmorSlots, CalamityCatalog, PetAnimations);
+        EquipmentAppearance = new EquipmentAppearanceResolver(VanillaArmorSlots, VanillaAccessorySlots, CalamityCatalog, PetAnimations);
         BackupHistory = new BackupHistoryService();
 
         var translator = new CalamityPrefixTranslator(RoguePrefixCatalog);
