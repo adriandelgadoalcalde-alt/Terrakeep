@@ -22083,3 +22083,116 @@ mascota en las tarjetas de Inicio, líneas ~1485 y ~2695) que NO se tocan ni se 
 commit, mismo patrón de cuidado ya usado hoy por el resto del equipo en este mismo fichero.
 `Terrakeep.App.Tests/CanarioNav123YClipCardsLibreria.cs` NO se tocó (el canario ya existía, cerraba
 el hueco de cobertura por sí solo, solo hizo falta que el código de producción lo satisficiera).
+
+## 25-sep-2026 - PortSeleccion Encargo3: fórmula real de Terraria en vez del Margin empírico de la
+## mascota (aplicador-fix, handoff e5eaea9e-c261-4199-8e7d-060b6054f58d)
+
+**SUSTITUYE de verdad, no complementa**, el Margin fijo del arreglo de hoy más arriba ("Inicio,
+mascotas ocultas y banner sin hover", commits `e4bf368c`/`119eedb4`/`1770822e`) - ese parche ajustó
+`Margin="-20,-16,0,0"` (tarjeta) / `"-40,-32,0,0"` (banner) a mano contra un umbral de "% tapado"
+del canario. El arquitecto confirmó explícitamente que había que superarlo con la fórmula real, no
+conservarlo como base.
+
+**Fórmula real portada** (decompilado real, `Terraria/GameContent/UI/Elements/UICharacter.cs`,
+verificada línea a línea antes de tocar nada):
+- `GetPlayerPosition` (132-145): `if (_petProjectiles.Length != 0) result.X -= 10f;` - el JUGADOR
+  (no la mascota) se retranquea 10px en X cuando hay mascota equipada.
+- `DrawPets` (147-181): `playerPosition + (0, player.height) + (20, 0) + (0, -projectile.height)` -
+  la mascota se ancla al borde INFERIOR del jugador (`Player.cs:57446-57447`, `height=42` real del
+  hitbox de pie) desplazada 20px a la derecha de la posición YA retranqueada del jugador.
+
+Terrakeep no modela un hitbox aparte del sprite compuesto (`PlayerPreviewRenderer.Render` llena el
+lienzo COMPLETO 40x56 sin ningún margen de hitbox interno) - "el jugador"/"borde inferior del
+jugador" es aquí directamente el propio lienzo del doll tal y como se dibuja. Confirmado con datos
+reales ya medidos por el propio canario: el doll deja solo 3-10px de margen realmente transparente
+en cada borde con `Stretch=Uniform` llenando el 100% del lienzo - los pies están pegados al borde
+INFERIOR del lienzo (no a la mitad, que dejaría un hueco de 14px muy por encima de lo medido).
+
+**Arreglo real aplicado**:
+- `Terrakeep.App/Converters/PetPositionConverters.cs` (nuevo): `PetBottomAlignMarginConverter`
+  (Margin real de la mascota: `Left = 10*canvasScale` neto, `-10` del retranqueo del jugador + `20`
+  del offset real; `Top = PlayerPreviewRenderer.Height*canvasScale - pet.PixelHeight`, clamped ≥0,
+  para el alineado real al borde inferior) y `PetDollShiftXConverter` (el propio retranqueo de
+  `-10*canvasScale` del doll, vía `RenderTransform`/`TranslateTransform` - NO Margin, para no
+  alterar el tamaño de caja que `Stretch="Uniform"` necesita para ajustar el lienzo 40x56 al Grid
+  real sin recorte). `canvasScale` es `ConverterParameter`: `"1.3"` en la tarjeta (52x72,8 =
+  40x56*1.3) y `"2.6"` en el banner (104x145,6 = 40x56*2.6, el doble exacto ya documentado).
+- `Terrakeep.App/Services/PlayerPreviewRenderer.cs`: `Width`/`Height` pasan de `private` a
+  `internal` (únicamente eso - el resto del fichero tiene trabajo EN CURSO de otro agente en
+  paralelo, PortSeleccion Encargo2/accesorios, dejado sin tocar a propósito, ver la nota de commit
+  más abajo).
+- `Terrakeep.App/MainWindow.xaml`: tarjeta (`CharacterCardTemplate`, ~1478-1537) y banner
+  (~2679-2726) - el `Image` de `PetImage` pasa de `Margin` fijo a
+  `Margin="{Binding PetImage, Converter={x:Static conv:PetBottomAlignMarginConverter.Instance}, ConverterParameter=...}"`;
+  el `Image` de `Preview`/doll gana un `RenderTransform`/`TranslateTransform` nuevo con
+  `PetDollShiftXConverter`. El `RenderTransform` YA existente de `PortSeleccion Encargo4` (mismo
+  handoff, ajuste fino por mascota real - `PetOffsetX`/`PetOffsetY`/`PetSpriteDirection`) se deja
+  intacto sin tocar, capa complementaria que se suma encima de la fórmula genérica.
+
+**Canario `HOMEBANNER_SOLO` actualizado** (`Terrakeep.App.Tests/CanarioHomeBannerMascota.cs`,
+bloque C/D, el mismo fichero que ya existía - no se creó ninguno nuevo): sustituido el umbral de
+"% de píxeles tapados" (un umbral así solo demuestra que la mascota SE VE, nunca que esté en el
+sitio correcto) por una verificación GEOMÉTRICA real de la fórmula, vía
+`TransformToAncestor` sobre el árbol visual real (funciona igual sea `Margin` o `RenderTransform`
+el mecanismo usado, no asume ninguno concreto):
+- Borde inferior de la mascota alineado con el borde inferior del doll (tolerancia 1,5px).
+- Offset X real mascota-doll = `20*canvasScale` (medido de verdad como `grid.ActualWidth/40`, nunca
+  un `"1.3"/"2.6"` fijo a mano) MÁS el ajuste fino real de `PortSeleccion Encargo4`
+  (`PetOffsetX`/`PetOffsetY`, leído de la propia `CharacterListEntryViewModel`, nunca ignorado ni
+  asumido en cero) - necesario porque la posición renderizada real es la SUMA de las dos capas.
+- Añadido un bloque D nuevo para el banner (antes solo se medía en tarjetas) - mismo criterio,
+  `ConverterParameter="2.6"`.
+
+**Verificado con 4 combinaciones reales** (equipo real, `session.json` reapuntado temporalmente a
+`Eldelgas.plr` con `attrib +R` para medir el banner, restaurado a `Zenith.plr` al terminar - mismo
+criterio ya usado el 25-sep por el investigador/aplicador-fix de la ronda anterior):
+```
+HOMEBANNER_SOLO: Eldelgas (canvasScale=1,3, ajuste fino Encargo4 PetOffsetX=4/PetOffsetY=0) - borde inferior mascota=72,8, borde inferior doll=72,8 (delta=0px), offsetX real=30px (esperado 30px, delta=0px)
+HOMEBANNER_SOLO: Terrariano (canvasScale=1,3, ajuste fino Encargo4 PetOffsetX=4/PetOffsetY=0) - borde inferior mascota=72,8, borde inferior doll=72,8 (delta=0px), offsetX real=30px (esperado 30px, delta=0px)
+HOMEBANNER_SOLO: Eldelgas (canvasScale=1,3, ...) - borde inferior mascota=72,8, borde inferior doll=72,8 (delta=0px), offsetX real=30px (esperado 30px, delta=0px)
+HOMEBANNER_SOLO: Eldelgas (banner) (canvasScale=2,6, ...) - borde inferior mascota=145,6, borde inferior doll=145,6 (delta=0px), offsetX real=56px (esperado 56px, delta=0px)
+DONE (HOMEBANNER_SOLO)
+```
+Cero líneas `FALLO`. Nota real de proceso: la primera medición sin escalar el ajuste fino de
+Encargo4 daba `FALLO` con un delta constante de 4px (30px real vs 26px esperado) - investigado
+antes de tocar el canario a ciegas: el delta era EXACTO al `PetOffsetX=4` real de esas mascotas
+(`CharacterListEntryViewModel.PetOffsetX`, capa de Encargo4), no un error de la fórmula - corregido
+leyendo ese valor real del propio ViewModel en vez de asumirlo en cero.
+
+**No regresión**: `dotnet build` (Debug y Release) de `Terrakeep.App`/`Terrakeep.App.Tests` en
+verde, 0 avisos, 0 errores. `Terrakeep.Core.Tests`: 608/608 OK (subió de 601 desde la última ronda,
+trabajo de otros agentes en paralelo, ninguno mío). `Terrakeep.App.ViewModels.Tests`: el subconjunto
+relevante para este encargo (`CharacterListEntry`/`Home`) da 7/7 OK; la suite COMPLETA no pudo
+correr limpia esta ronda por la carga real de varios agentes trabajando en paralelo sobre el mismo
+repo ahora mismo (un intento dio 198 fallos, TODOS en áreas fuera de mi working set -
+`PlrBodySerializer`/`BuffsAparienciaRoundTrip`, ficheros que otro agente tenía a medio editar en ese
+mismo instante; dos intentos más se abortaron con "Proceso de host de pruebas bloqueado" sin ningún
+`FALLO` real entre los tests que sí llegaron a correr, 301/301 y 23/23) - limitación real del
+entorno en este momento, documentada aquí en vez de forzar un verde no fiable, no una regresión de
+este cambio.
+
+**Recompilación/redespliegue real**: `Terrakeep.exe` NO estaba en ejecución (confirmado antes y
+después). `dotnet build Terrakeep.App -c Release` en verde. `installer\install.ps1` completo
+(publish autocontenido + copia a `%LocalAppData%\Programs\Terrakeep\` + acceso directo del Menú
+Inicio) - el acceso directo de la barra de tareas y el del Menú Inicio ya apuntan los dos a esa
+misma ruta instalada (confirmado con `WScript.Shell` sobre los `.lnk` reales, mismo patrón que el
+resto de la familia). Arranque real del exe instalado confirmado (`MainWindowTitle="Terrakeep"`)
+antes de cerrarlo.
+
+**Obstáculo real encontrado y resuelto (mismo patrón ya documentado hoy por otros agentes)**: el
+primer `git add`/commit de `Terrakeep.App/Services/PlayerPreviewRenderer.cs` se llevó por delante,
+SIN QUERER, el trabajo EN CURSO de otro agente en paralelo (`PortSeleccion Encargo2`, accesorios -
+`EquippedAccessories`/`LoadShieldFrame`/etc., ~110 líneas ajenas) porque ese fichero llevaba
+simultáneamente mi único hunk real (`Width`/`Height` privado→internal) y los 7 hunks de Encargo2 sin
+commitear. Detectado inmediatamente revisando `git show --stat` del commit resultante (+119 líneas
+en un fichero donde yo solo había tocado 7). Corregido con `git reset --soft HEAD~1` (deshace el
+commit sin tocar el árbol de trabajo) + `git restore --staged` del fichero completo +
+`git add -p` (solo `y` en mi propio hunk, `n` en el resto) + commit limpio - confirmado con
+`git show --stat` que el commit final solo lleva `+9/-1` líneas en ese fichero, y que el árbol de
+trabajo conserva intacto el resto del trabajo de Encargo2 (`LoadShieldFrame`/`EquippedAccessories`
+siguen presentes, sin commitear, listos para que ese agente los cierre por su cuenta).
+
+**Commit real**: `7058c42b`, 4 archivos exactos (`Terrakeep.App/MainWindow.xaml`,
+`Terrakeep.App/Services/PlayerPreviewRenderer.cs` con solo mi hunk real,
+`Terrakeep.App/Converters/PetPositionConverters.cs` nuevo,
+`Terrakeep.App.Tests/CanarioHomeBannerMascota.cs`). Sin `git push`.
