@@ -1099,7 +1099,7 @@ public partial class MainViewModel : ObservableObject
         // Exploration.CurrentWorld a traves del delegado de abajo (una referencia hacia adelante
         // ahi dentro seria null en ese primer Refresh). CharacterLoaded/limpieza de personaje
         // vuelven a llamar a Refresh() mas abajo en este mismo constructor.
-        Guide = new GuideViewModel(_service, () => _loaded, () => Exploration.CurrentWorld, () => HasCalamityData);
+        Guide = new GuideViewModel(_service, () => _loaded, () => Exploration.CurrentWorld, () => HasCalamityData, () => Exploration.CurrentWorldPath);
         // Catalogo de rediseño visual T4 (21-sep-2026), sugerencia dinamica real "Te toca: X" de
         // Inicio: carga el personaje de la ultima sesion (mismo aviso real de cambios sin
         // guardar que ContinueCommand/CharacterChosen ya respeta) y aterriza en la pestaña Guia

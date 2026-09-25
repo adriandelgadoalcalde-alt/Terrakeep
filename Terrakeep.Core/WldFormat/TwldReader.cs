@@ -62,6 +62,99 @@ public sealed class TwldModContent
 
 public static class TwldReader
 {
+    // Guia Encargo A "GuiaCalamity" (25-sep-2026): tabla real confirmada linea a linea contra
+    // CalamityMod.DownedBossSystem.SaveWorldData/LoadWorldData (decompilado v2.2.2,
+    // tModLoader-Decompiled\CalamityMod\CalamityMod\DownedBossSystem.cs) - clave corta que el
+    // propio mod GUARDA en `data["downedFlags"]` (List<string>, ver SaveWorldData real) -> nombre
+    // CANONICO de la propiedad publica downedXxx que usa el resto de Terrakeep/TerrakeepMod
+    // (BanderasGuia.cs del mod) y guia_progresion.json ("tipo":"bandera"). NO es una transcripcion
+    // de memoria: cada entrada se leyo directamente del codigo real de SaveWorldData/LoadWorldData,
+    // que a veces usa una clave DISTINTA del nombre de la propiedad C# (ej. "plaguebringerGoliath"
+    // -> downedPlaguebringer, "starGod" -> downedAstrumDeus, "devourerOfGods" -> downedDoG - los
+    // tres casos donde una primera transcripcion previa se equivoco, corregidos aqui contra el
+    // fuente real antes de aplicar el arreglo). Cubre las 31 banderas que `guia_progresion.json`
+    // referencia en sus 25 tramos de ambito "calamity" (algunos tramos comparten bandera, ej.
+    // TrioPostProvidence = ceaselessVoid+stormWeaver+signus) - DownedBossSystem guarda mas
+    // banderas de las que aqui aparecen (ej. "horribleHog"->downedHorribleHog, "betsy"->downedBetsy,
+    // "leviathan"->downedLeviathan...) que NINGUN tramo de la Guia referencia hoy: quedan fuera a
+    // proposito (una clave del .twld real que no esta en esta tabla simplemente se ignora al leer,
+    // ver ReadCalamityDownedFlags - nunca se inventa ni se cuenta un jefe que la Guia no pregunta).
+    private static readonly IReadOnlyDictionary<string, string> CalamityDownedFlagMap = new Dictionary<string, string>
+    {
+        ["desertScourge"] = "downedDesertScourge",
+        ["clam"] = "downedCLAM",
+        ["crabulon"] = "downedCrabulon",
+        ["hiveMind"] = "downedHiveMind",
+        ["perforator"] = "downedPerforator",
+        ["slimeGod"] = "downedSlimeGod",
+        ["dreadnautilus"] = "downedDreadnautilus",
+        ["cryogen"] = "downedCryogen",
+        ["aquaticScourge"] = "downedAquaticScourge",
+        ["brimstoneElemental"] = "downedBrimstoneElemental",
+        ["cragmawMire"] = "downedCragmawMire",
+        ["astrageldon"] = "downedAstrumAureus",
+        ["calamitas"] = "downedCalamitasClone",
+        ["greatSandShark"] = "downedGSS",
+        ["scavenger"] = "downedRavager",
+        ["plaguebringerGoliath"] = "downedPlaguebringer", // CORREGIDO: NO es "plaguebringer"
+        ["bumblebirb"] = "downedDragonfolly",
+        ["adultEidolonWyrm"] = "downedPrimordialWyrm",
+        ["polterghast"] = "downedPolterghast",
+        ["mauler"] = "downedMauler",
+        ["starGod"] = "downedAstrumDeus", // CORREGIDO: NO es "astrumDeus"
+        ["guardians"] = "downedGuardians",
+        ["providence"] = "downedProvidence",
+        ["ceaselessVoid"] = "downedCeaselessVoid",
+        ["stormWeaver"] = "downedStormWeaver",
+        ["signus"] = "downedSignus",
+        ["oldDuke"] = "downedBoomerDuke",
+        ["devourerOfGods"] = "downedDoG", // CORREGIDO: NO es "dog"
+        ["yharon"] = "downedYharon",
+        ["exoMechs"] = "downedExoMechs",
+        ["supremeCalamitas"] = "downedCalamitas",
+    };
+
+    // Unica fuente de verdad de "que nombres canonicos de bandera de Calamity sabe leer Terrakeep"
+    // - GuideFlags.Existe la reutiliza tal cual, para no mantener la misma lista dos veces.
+    public static readonly IReadOnlySet<string> CalamityCanonicalFlagNames = CalamityDownedFlagMap.Values.ToHashSet();
+
+    // Guia Encargo A "GuiaCalamity" (25-sep-2026): lee `modData` (lista de TagCompound
+    // {mod,name,data} que WorldIO.SaveModData/LoadModData escriben de verdad, confirmado contra el
+    // decompilado real) buscando la entrada de CalamityMod.DownedBossSystem, y traduce cada clave
+    // guardada de `data["downedFlags"]` a su nombre canonico via CalamityDownedFlagMap. Nunca lanza
+    // por un `.twld` de formato inesperado (mismo criterio que Read: seccion/entrada ausente o de
+    // tipo distinto simplemente no aporta banderas) - el try/catch alrededor de la lectura del
+    // fichero real vive en el llamador (mismo patron que ExplorationViewModel.
+    // ResolveModdedChestTileNames), aqui solo se navega el arbol NBT ya parseado con comprobaciones
+    // de tipo explicitas.
+    public static IReadOnlySet<string> ReadCalamityDownedFlags(byte[] twldBytes)
+    {
+        var (_, root) = TplrFile.Read(twldBytes);
+        var result = new HashSet<string>();
+
+        if (root.Get("modData") is not NbtList modData) return result;
+
+        foreach (var item in modData.Items)
+        {
+            if (item is not NbtCompound entry) continue;
+            string mod = (entry.Get("mod") as NbtString)?.Value ?? "";
+            string name = (entry.Get("name") as NbtString)?.Value ?? "";
+            if (mod != "CalamityMod" || name != "DownedBossSystem") continue;
+
+            if (entry.Get("data") is NbtCompound data && data.Get("downedFlags") is NbtList flags)
+            {
+                foreach (var flagTag in flags.Items)
+                {
+                    if (flagTag is NbtString s && CalamityDownedFlagMap.TryGetValue(s.Value, out string? canonico))
+                        result.Add(canonico);
+                }
+            }
+            break; // solo puede haber una entrada real de DownedBossSystem por mundo
+        }
+
+        return result;
+    }
+
     // `tilesWide`/`tilesHigh` TIENEN que ser los mismos que `WldHeader.TilesWide/TilesHigh` del
     // `.wld` hermano (tileData/wallData son una rejilla densa sin ninguna marca de tamaño propia,
     // el tamaño lo fija Main.maxTilesX/Y en el momento de guardar - el mismo mundo, la misma

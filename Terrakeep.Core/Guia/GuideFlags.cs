@@ -18,10 +18,17 @@ namespace Terrakeep.Core.Guia;
 // alcance de esta ronda de integracion - ver bitacora.md). Añadirlas es extender WldReader/
 // WldHeader, no este archivo.
 //
-// Las de Calamity (banderas de CalamityMod.DownedBossSystem) tampoco estan aqui: Calamity guarda
-// su propio estado de jefes derrotados en datos de MOD dentro del .wld (TileEntities/ModData),
-// que Terrakeep no parsea en absoluto hoy (su soporte de Calamity es solo de OBJETOS, ver
-// Calamity/CalamityCharacterSync.cs) - se documenta como pendiente real, no se inventa.
+// Las de Calamity (banderas de CalamityMod.DownedBossSystem) SI estan aqui desde el 25-sep-2026
+// (Guia Encargo A "GuiaCalamity"): a diferencia de lo que decia esta misma cabecera antes, sus
+// datos de mod NO viven "dentro del .wld" - viven en un fichero HERMANO separado, el `.wld.twld`
+// (gzip+NBT, mismo formato que el `.tplr` de un personaje), que WorldIO.cs del tModLoader real
+// escribe aparte para que el `.wld` normal se pueda seguir abriendo con Terraria vainilla sin
+// mods. Terrakeep ya sabe leer ese `.twld` desde el 15-sep-2026 (TwldReader.cs, hasta ahora solo
+// para nombres de tile/pared de mod) - GuideContext.CalamityDownedFlags trae esas banderas ya
+// traducidas a nombre canonico (ver TwldReader.CalamityDownedFlagMap, tabla confirmada contra el
+// decompilado real de DownedBossSystem.SaveWorldData/LoadWorldData). Existe/Valor de abajo
+// reutilizan TwldReader.CalamityCanonicalFlagNames tal cual como lista de "nombres reconocidos" -
+// una unica fuente de verdad, sin mantener la misma lista dos veces en este archivo.
 public static class GuideFlags
 {
     // Las 9 banderas de jefe + HardMode que WldHeader.cs ya parsea de verdad (bloque de ancho
@@ -64,7 +71,8 @@ public static class GuideFlags
     /// si HAY mundo/personaje cargado ahora mismo (eso lo decide <see cref="Valor"/>).</summary>
     public static bool Existe(string nombre) =>
         !string.IsNullOrEmpty(nombre) &&
-        (_deMundo.ContainsKey(nombre) || nombre == "downedDD2EventAnyDifficulty");
+        (_deMundo.ContainsKey(nombre) || nombre == "downedDD2EventAnyDifficulty" ||
+         TwldReader.CalamityCanonicalFlagNames.Contains(nombre));
 
     /// <summary>Valor real, o null si no se puede comprobar ahora (bandera desconocida, o
     /// conocida pero sin el mundo/personaje que la guarda cargado).</summary>
@@ -80,6 +88,15 @@ public static class GuideFlags
 
         if (_deMundo.TryGetValue(nombre, out var leer))
             return contexto.World != null ? leer(contexto.World.Header) : null;
+
+        // Guia Encargo A "GuiaCalamity" (25-sep-2026): mismo contrato que _deMundo de arriba, pero
+        // la fuente es GuideContext.CalamityDownedFlags (ya traducido a nombre canonico por
+        // TwldReader) en vez de WldHeader. Null (sin mundo cargado, o mundo cargado sin `.twld`
+        // valido con DownedBossSystem - ver el comentario de CalamityDownedFlags en GuideContext)
+        // se propaga tal cual como "sin datos todavia"; un HashSet ya resuelto (vacio o no)
+        // contesta con un true/false real, nunca inventado.
+        if (TwldReader.CalamityCanonicalFlagNames.Contains(nombre))
+            return contexto.CalamityDownedFlags?.Contains(nombre);
 
         return null;
     }

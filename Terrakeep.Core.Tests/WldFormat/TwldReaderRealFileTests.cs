@@ -76,4 +76,24 @@ public class TwldReaderRealFileTests(ITestOutputHelper output)
         Assert.Empty(content.ModTileTypeAt);
         Assert.Empty(content.ModWallTypeAt);
     }
+
+    // Guia Encargo A "GuiaCalamity" (25-sep-2026): "adriandres.twld" (otro mundo real de este
+    // mismo equipo, distinto del de arriba) es el UNICO `.twld` real disponible en esta maquina
+    // cuyo DownedBossSystem trae una bandera puesta ("horribleHog", confirmado leyendo el NBT en
+    // crudo antes de escribir este test) - sirve para probar el parseo real de modData/
+    // DownedBossSystem contra bytes de verdad (no solo la fixture sintetica de
+    // TwldReaderCalamityFlagsTests), aunque esa bandera concreta quede fuera de la tabla de 31 que
+    // la Guia necesita (ningun tramo de guia_progresion.json la referencia - ver el comentario de
+    // TwldReader.CalamityDownedFlagMap) y por tanto el resultado esperado es un conjunto VACIO, no
+    // un crash ni una bandera inventada.
+    [Fact]
+    public void ReadCalamityDownedFlags_MundoRealConDownedBossSystem_NoLanzaYNoInventaBanderasFueraDeTabla()
+    {
+        string twldPath = Path.Combine(WorldsDir, "adriandres.twld");
+        if (!File.Exists(twldPath)) return; // LIMITE REAL: mundo no disponible en esta maquina
+
+        var flags = TwldReader.ReadCalamityDownedFlags(File.ReadAllBytes(twldPath));
+
+        Assert.Empty(flags);
+    }
 }

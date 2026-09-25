@@ -100,28 +100,38 @@ public sealed partial class GuidePasoViewModel : ObservableObject
         OnPropertyChanged(nameof(ZonaLegible));
     }
 
-    // Encargo3/Encargo4: cadena de fallback real, calculable con datos ya presentes en el propio
-    // paso (no inventa nada) - "hito" = lo que de verdad marca este paso como superado:
-    // 1) paso.Jefe (!=0): el paso es una pelea de jefe - Encargo4 (25-sep-2026) le da sprite real
-    //    de cuerpo entero via BossIconResolver (Assets/boss_icons/{type}.png, extraido de
-    //    Images/NPC_{type}.xnb - ver scripts/extraer-sprites-jefes-vanilla.js), que cubre los 23
-    //    NPC types de jefe/segmento final REALMENTE usados en guia_progresion.json. Si el jefe
-    //    ademas fuese un NPC de pueblo (no ocurre hoy, pero es una red de seguridad honesta, no un
-    //    invento) cae a NpcIconResolver antes de rendirse a null - null sigue siendo el resultado
-    //    esperado para el unico jefe de mod real del catalogo sin .xnb vanilla
-    //    (HiveMindOPerforator/CalamityMod), nunca se cae al siguiente escalon (mezclar "el jefe de
-    //    este paso" con "el primer objeto que pide" seria enganoso, no un fallback razonable).
-    // 2) Si no hay jefe: el primer requisito Objeto/ObjetoCualquiera del paso (por orden real del
+    // Encargo3/Encargo4/GuiaCalamity Encargo B: cadena de fallback real, calculable con datos ya
+    // presentes en el propio paso (no inventa nada) - "hito" = lo que de verdad marca este paso
+    // como superado:
+    // 1) paso.Jefe (!=0): el paso es una pelea de jefe VANILLA - Encargo4 (25-sep-2026) le da
+    //    sprite real de cuerpo entero via BossIconResolver (Assets/boss_icons/{type}.png,
+    //    extraido de Images/NPC_{type}.xnb - ver scripts/extraer-sprites-jefes-vanilla.js), que
+    //    cubre los 23 NPC types de jefe/segmento final REALMENTE usados en guia_progresion.json.
+    //    Si el jefe ademas fuese un NPC de pueblo (no ocurre hoy, pero es una red de seguridad
+    //    honesta, no un invento) cae a NpcIconResolver antes de rendirse a null.
+    // 2) Si no, paso.JefeMod (pid no vacio): el paso es una pelea de jefe de CALAMITY -
+    //    GuiaCalamity Encargo B (25-sep-2026) le da sprite real de icono de cabeza via
+    //    CalamityBossIconResolver (Assets/calamity_boss_icons/{InternalName}.png, extraido
+    //    directamente del .rawimg de icono de cabeza real del .tmod - ver
+    //    scripts/extraer-sprites-jefes-calamity.js), que cubre 27 de los 29 pids
+    //    jefeMod/jefeFinalMod REALMENTE usados en guia_progresion.json (los 2 restantes,
+    //    HiveMind/PerforatorHive, solo aparecen como jefeFinalMod de TRAMO, sin ningun paso
+    //    propio - null es el resultado honesto para ellos, igual que jefeFinal=13 en Encargo4).
+    //    Nunca se cae al siguiente escalon si el pid no resuelve (mezclar "el jefe de este paso"
+    //    con "el primer objeto que pide" seria enganoso, no un fallback razonable) - mismo
+    //    criterio que el caso 1.
+    // 3) Si no hay jefe: el primer requisito Objeto/ObjetoCualquiera del paso (por orden real del
     //    catalogo) via LibraryCategoryTreeBuilder.ResolveIconPath - el MISMO resolver que ya usa la
     //    Libreria/Investigacion para vanilla (Assets/vanilla/icons) y Calamity (Assets/calamity/
     //    icons, via CalamityCatalog.BySyntheticId) - los ids de RequisitoGuia.Id/Ids YA vienen
     //    resueltos a esa misma numeracion por GuideCatalog.ResolverReferenciasDeMod.
-    // 3) Si tampoco hay objeto: el primer requisito Npc/NpcActivo del paso via NpcIconResolver.
-    // 4) Ninguno de los tres: null, la UI lo trata como "sin icono" (converter NullToVis ya usado
+    // 4) Si tampoco hay objeto: el primer requisito Npc/NpcActivo del paso via NpcIconResolver.
+    // 5) Ninguno de los cuatro: null, la UI lo trata como "sin icono" (converter NullToVis ya usado
     //    en toda la app), nunca un hueco roto.
     private static string? ResolverIconoDelHito(PasoGuia paso, CharacterFileService servicio)
     {
         if (paso.Jefe != 0) return BossIconResolver.GetIconPath(paso.Jefe) ?? NpcIconResolver.GetIconPath(paso.Jefe);
+        if (!string.IsNullOrEmpty(paso.JefeMod)) return CalamityBossIconResolver.GetIconPath(paso.JefeMod);
 
         var objeto = paso.Requisitos.FirstOrDefault(r =>
             r.Tipo == TipoRequisitoGuia.Objeto || r.Tipo == TipoRequisitoGuia.ObjetoCualquiera);
@@ -184,18 +194,23 @@ public sealed partial class GuideViewModel : ObservableObject
     private readonly Func<LoadedCharacter?> _character;
     private readonly Func<WldWorld?> _world;
     private readonly Func<bool> _hasCalamity;
+    // Guia Encargo A "GuiaCalamity" (25-sep-2026): ruta real del .wld cargado (la misma que ya
+    // expone ExplorationViewModel.CurrentWorldPath) - hace falta para localizar el `.twld` hermano
+    // y leer las banderas de jefe de Calamity, ver ResolveCalamityDownedFlags.
+    private readonly Func<string?> _worldPath;
     // Encargo3 (24-sep-2026): guardado tal cual (antes solo vivia como parametro local del
     // constructor) - Refresh() lo necesita en cada vuelta para resolver el icono real de cada
     // GuidePasoViewModel (ver ResolverIconoDelHito), mismos catalogos ya cargados en memoria que
     // usa el resto de Terrakeep, sin volver a leer nada de disco.
     private readonly CharacterFileService _servicio;
 
-    public GuideViewModel(CharacterFileService servicio, Func<LoadedCharacter?> character, Func<WldWorld?> world, Func<bool> hasCalamity)
+    public GuideViewModel(CharacterFileService servicio, Func<LoadedCharacter?> character, Func<WldWorld?> world, Func<bool> hasCalamity, Func<string?> worldPath)
     {
         _servicio = servicio;
         _character = character;
         _world = world;
         _hasCalamity = hasCalamity;
+        _worldPath = worldPath;
 
         string assetsGuia = Path.Combine(AppContext.BaseDirectory, "Assets", "guia");
         _catalogo = GuideCatalog.LoadFromFile(Path.Combine(assetsGuia, "guia_progresion.json"), servicio.CalamityCatalog);
@@ -266,6 +281,10 @@ public sealed partial class GuideViewModel : ObservableObject
             MergedContainers = loaded?.MergedContainers,
             World = world,
             HasCalamity = hasCalamity,
+            // Guia Encargo A "GuiaCalamity" (25-sep-2026): null exactamente cuando no hay mundo
+            // cargado (mismo contrato documentado en GuideContext.CalamityDownedFlags) - con
+            // mundo cargado, SIEMPRE un set real (vacio si no hay `.twld`/DownedBossSystem).
+            CalamityDownedFlags = world != null ? ResolveCalamityDownedFlags(_worldPath()) : null,
         };
 
         HasAnyData = loaded != null || world != null;
@@ -314,5 +333,27 @@ public sealed partial class GuideViewModel : ObservableObject
 
         ObjetivoTramo = objetivoTramo;
         ObjetivoPaso = objetivoPaso;
+    }
+
+    // Guia Encargo A "GuiaCalamity" (25-sep-2026): mismo patron ya usado por
+    // ExplorationViewModel.ResolveModdedChestTileNames - .twld hermano del .wld cargado, NUNCA
+    // lanza (un .twld ausente/corrupto/sin DownedBossSystem simplemente no aporta ninguna bandera,
+    // jamas rompe la Guia por esto). Devuelve SIEMPRE un set no nulo (vacio si no hay nada que
+    // leer) - distinto de null, que GuideContext.CalamityDownedFlags reserva para "sin mundo
+    // cargado" (ver Refresh(), que solo llama a esto cuando world != null).
+    private static IReadOnlySet<string> ResolveCalamityDownedFlags(string? wldPath)
+    {
+        if (string.IsNullOrEmpty(wldPath)) return new HashSet<string>();
+        string twldPath = Path.ChangeExtension(wldPath, ".twld");
+        if (!File.Exists(twldPath)) return new HashSet<string>();
+
+        try
+        {
+            return TwldReader.ReadCalamityDownedFlags(File.ReadAllBytes(twldPath));
+        }
+        catch (Exception)
+        {
+            return new HashSet<string>();
+        }
     }
 }

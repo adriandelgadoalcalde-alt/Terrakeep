@@ -23,5 +23,15 @@ public sealed class GuideContext
     // (MainViewModel.HasCalamityData: existe un .tplr real junto al .plr).
     public bool HasCalamity { get; init; }
 
+    // Guia Encargo A "GuiaCalamity" (25-sep-2026): banderas de jefe/evento de CalamityMod.
+    // DownedBossSystem YA traducidas a nombre canonico ("downedXxx", ver
+    // TwldReader.ReadCalamityDownedFlags/CalamityDownedFlagMap) - leidas del `.twld` hermano del
+    // `.wld` cargado, NUNCA del propio `.wld` (los datos de mod viven aparte, ver TwldReader.cs).
+    // Mismo contrato que World: null = "no hay mundo cargado, no se puede saber" (GuideFlags.Valor
+    // devuelve null, "carga un mundo"); un HashSet VACIO (con mundo cargado pero sin `.twld`/sin
+    // esta seccion) es un dato real y distinto: "cargado, cero banderas puestas" (false), igual que
+    // le pasaria a TerrakeepMod con NPC.downedXxx=false en una partida sin esos jefes derrotados.
+    public IReadOnlySet<string>? CalamityDownedFlags { get; init; }
+
     public static readonly GuideContext Empty = new();
 }
