@@ -22952,3 +22952,122 @@ Tests/AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`, `Terrakeep.App.Tests/Comple
 (nuevo, sin trackear), `Terrakeep.App.Tests/KEEPQA-INTEGRACION.md` (nuevo, sin trackear), etc.,
 todos verificados con `git status`/`git diff --stat` como ajenos y dejados intactos). Sin
 `git push`.
+
+## 25-sep-2026 - aplicador-fix real: GapAnalysis Encargo A, canales Backpack/Tail de backSlot
+## (aplicador-fix, handoff e5eaea9e-c261-4199-8e7d-060b6054f58d)
+
+Encargo del coordinador (hallazgo YA investigado por arquitecto-keep, gap analysis paridad
+UICharacter de hoy): PortSeleccion Encargo2 solo portó el canal "Back" normal de `item.backSlot`
+- faltaban los otros 2 canales reales que el propio juego distingue (Backpack/Tail), documentados
+como "fuera de alcance" en ese mismo encargo.
+
+**Causa/regla real confirmada** (`Terraria/Player.cs:37169-37184`, `UpdateVisibleAccessory`,
+decompilado real en `Downloads\tModLoader-Decompiled\TerrariaVanilla\`):
+```
+if (item.backSlot > 0)
+{
+    if (ArmorIDs.Back.Sets.DrawInBackpackLayer[item.backSlot]) backpack = item.backSlot;
+    else if (ArmorIDs.Back.Sets.DrawInTailLayer[item.backSlot]) tail = item.backSlot;
+    else { back = item.backSlot; front = -1; }
+}
+```
+
+**Tabla real transcrita** (`Terraria/ID/ArmorIDs.cs:1717/1719`, clase `Back.Sets`):
+- `DrawInBackpackLayer = {7, 8, 9, 10, 15, 16, 32, 33}` (MagicQuiver, ArchitectGizmoPack, HivePack,
+  AnglerTackleBag, MoltenQuiver, StalkersQuiver, FloretProtecterChestplate, LavaproofTackleBag).
+- `DrawInTailLayer = {18, 19, 21, 25, 26, 27, 28}` (SpaceCreatureShirt, FoxShirt, CatShirt,
+  DogTail, FoxTail, LizardTail, BunnyTail).
+- Transcrita literal en `Terrakeep.Core/Model/BackAccessoryLayerTable.cs` (nuevo,
+  `IsBackpackLayer`/`IsTailLayer`), mismo patrón que `HairDrawProfile`/`PlayerBodyDrawTables`.
+
+Los 3 canales comparten la MISMA textura real `TextureAssets.AccBack`
+(`PlayerDrawLayers.cs:484` Backpack, `:584` Tail, ya portada para BackAcc) - Terrakeep ya tenía los
+sprites extraídos en `Assets/player/acc_back/`, así que no hizo falta extracción nueva.
+
+**Arreglo aplicado**:
+- `Terrakeep.App/Services/EquipmentAppearanceResolver.cs`: `EquippedAccessories` amplía con
+  `BackpackFile`/`TailFile`/`BackpackSlot`/`TailSlot` (parámetros opcionales al final, compatible
+  con todos los constructores posicionales existentes). `ResolveAccessories` reclasifica el
+  resultado de "Back" YA resuelto (mismo sprite, `acc_back/{backSlotId}.png`) contra la tabla
+  DESPUÉS de resolverlo, sin duplicar la lógica de resolución funcional→vanidad ya existente.
+  Objetos de Calamity (backSlotId siempre `null`) se quedan en "Back" - fiel-por-defecto, mismo
+  criterio ya establecido para Calamity en el resto del resolver.
+- `Terrakeep.App/Services/PlayerPreviewRenderer.cs`: 2 llamadas nuevas a `DrawAccessory`
+  (`accessories?.BackpackFile`/`TailFile`) insertadas ANTES del pelo trasero (`DrawPlayer_01_
+  BackHair`), que a su vez va antes de `BackFile` (BackAcc) - orden real confirmado en
+  `LegacyPlayerRenderer.cs:178-185` (`DrawPlayer_08_Backpacks` → `DrawPlayer_08_1_Tails` →
+  `DrawPlayer_09_Wings` (fuera de alcance) → `DrawPlayer_01_BackHair` → `DrawPlayer_10_BackAcc`).
+
+**Verificado con objetos reales** (ids confirmados cruzando `vanilla_accessory_slots.json` contra
+`vanilla_item_names_en.json` de este PC): Magic Quiver (id 1321, backSlot=7, `DrawInBackpackLayer`,
+sprite `acc_back/7.png` ya extraído), Dog Tail (id 4769, backSlot=25, `DrawInTailLayer`, sprite
+`acc_back/25.png` ya extraído), Bee Cloak (id 1247, backSlot=1, ninguna tabla - confirma que el
+canal "Back" normal de PortSeleccion Encargo2 sigue intacto, sprite `acc_back/1.png`).
+
+**Tests nuevos** (todos en verde): `EquipmentAppearanceResolverTests.cs` (+8) - reclasificación a
+Backpack/Tail, objeto fuera de ambas tablas sigue en Back, vanidad tapando a funcional cuando cae
+en un canal DISTINTO del funcional (Backpack tapa a Back, Tail tapa a Backpack), slot vacío no
+resuelve ninguno de los 2 canales nuevos. `PlayerPreviewRendererAccessoriesTests.cs` (+4) - wiring
+real de extremo a extremo (píxeles distintos con Magic Quiver/Dog Tail puestos) + contrato de orden
+de composición (`Orden_BackpackAntesQueTail`, `Orden_TailAntesQueBackNormal`, mismo criterio de
+esquina (0,0) ya usado por las 6 capas de PortSeleccion Encargo2).
+
+**Build y regresión**: `dotnet build Terrakeep.slnx -c Release`: 0 advertencias, 0 errores.
+`dotnet test Terrakeep.App.ViewModels.Tests -c Release --filter` (solo mis 2 ficheros de test):
+36/36. Regresión completa: `Terrakeep.Core.Tests` 610/610, `Terrakeep.App.ViewModels.Tests`
+579/579 (esta cifra ya incluye los tests nuevos de Encargo B/HeadBack, verificados juntos - ver
+más abajo). `Terrakeep.App.Tests` (arnés WPF/UIA) no se relanzó completo esta ronda, mismo motivo
+ya documentado hoy repetidas veces: no toca XAML/UI, solo `Services`, y otro agente seguía
+trabajando en vivo sobre los mismos ficheros de `Services`.
+
+**Obstáculo real encontrado y resuelto**: `dotnet build` post-staging falló con `MSB3027`
+("The process cannot access the file... locked by testhost (40600)") - mismo bug real ya
+documentado hoy (VSTest deja `testhost.exe` colgado en Windows tras `dotnet test`). Confirmado con
+`Get-CimInstance Win32_Process` que el proceso colgado y su `dotnet` padre (116448) correspondían
+EXACTAMENTE a mi propia ronda de `dotnet test Terrakeep.slnx` de hacía unos minutos (mismo
+timestamp de creación), no a otro agente - `Stop-Process -Force` sobre los 2 resolvió el bloqueo,
+build en verde de nuevo.
+
+**Trabajo en paralelo real sobre los MISMOS ficheros (Encargo B, HeadBack)**: mientras investigaba
+y editaba, `EquipmentAppearanceResolver.cs`/`PlayerPreviewRenderer.cs`/
+`EquipmentAppearanceResolverTests.cs` cambiaron en disco varias veces (avisos reales del propio
+entorno) - confirmado con `git diff`/`Read` que eran los cambios de HeadBack del Encargo B, nunca
+pisando ni revirtiendo mis ediciones. Para el commit, `git diff` de cada fichero compartido dio
+hunks LIMPIAMENTE separables (mío vs. suyo) salvo un hunk mixto en `PlayerPreviewRenderer.cs`
+(mi edición de un comentario + su bloque nuevo `DrawPlayer_01_3_BackHead`, contiguos) - usé
+`git add -p` con selección hunk a hunk (`y`/`n` exactos) para stagear solo los míos, dejando los
+de Encargo B sin stagear (visibles en `git status` como parcialmente modificados). **Fallo real NO
+anticipado**: `git commit -m "..." -- <rutas>` NO respeta esa selección parcial - listar rutas
+explícitas hace que git commitee el contenido REAL del working tree para esas rutas (ignorando el
+índice), no solo lo staged. Confirmado a posteriori con `git show HEAD -- EquipmentAppearanceResolver.cs`:
+61 líneas (58 inserciones) en vez de las 33 que había stageado - el commit final SÍ incluye el
+`ResolveHeadBack` completo del Encargo B en `EquipmentAppearanceResolver.cs` y su capa `Paso 1c
+[11_BackHead]` en `PlayerPreviewRenderer.cs`, aunque el mensaje del commit describe solo el trabajo
+de este encargo (A). Mismo patrón ya documentado hoy para Encargo3/Encargo4 ("Descubierto en el
+propio git blame, no provocado por mi") - no se reescribió el commit para "arreglarlo" (arriesgaría
+perder el checkpoint del Encargo B si seguía editando en el momento) - se documenta aquí con
+honestidad: el código de ambos encargos está verificado junto (build+tests en verde con el estado
+combinado, antes Y después del commit), correcto y sin pérdida de trabajo, solo mal atribuido en el
+mensaje. Si Encargo B va a comprometer estos mismos ficheros después, encontrará que ya están en
+`HEAD` sin su propio commit - debería documentarlo igual que aquí, sin reescribir historia.
+`BackAccessoryLayerTable.cs` (nuevo, 100% mío) y `PlayerPreviewRendererAccessoriesTests.cs`
+(100% mío, sin contenido de Encargo B) sí quedaron exactamente como se stagearon.
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` NO estaba en ejecución (`Get-Process
+Terrakeep` sin resultado). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde. Copiado a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (ruta real confirmada de nuevo vía
+el `.lnk` de la barra de tareas) - `LastWriteTime` 25/09/2026 13:56:54. `Assets\` resincronizado con
+`robocopy /MIR` (632 ficheros copiados/actualizados - incluye los sprites nuevos `armor_head/
+246-253.png` del Encargo B, exit code 1 = éxito con copias, no error). No se relanzó el `.exe`
+instalado con `pywinauto` esta ronda (mismo motivo de minimizar interferencia con Encargo B activo
+sobre los mismos ficheros de `Services`) - verificación visual real hecha exportando pixeles del
+propio `WriteableBitmap` de `PlayerPreviewRenderer.Render` (mismo código de producción), no narrada
+de memoria.
+
+**Commit real**: `47240093` - `Terrakeep.Core/Model/BackAccessoryLayerTable.cs` (nuevo),
+`Terrakeep.App/Services/EquipmentAppearanceResolver.cs`, `Terrakeep.App/Services/
+PlayerPreviewRenderer.cs`, `Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs`,
+`Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs` - ver la nota de arriba
+sobre el contenido real incluido (Encargo A completo + Encargo B/HeadBack ya presente en el
+working tree en el momento del commit). Sin `git push`.
