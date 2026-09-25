@@ -167,6 +167,24 @@ public sealed class PlayerPreviewRendererAccessoriesTests : IDisposable
         }
     }
 
+    // GapAnalysis Encargo E (25-sep-2026): gemela de AssertEsquinaEsColor pero para la esquina
+    // SUPERIOR DERECHA (simetrica) - hace falta para probar BackPart, que solo ocupa la mitad
+    // DERECHA del lienzo (x>=Width/2) y por tanto NUNCA toca la esquina izquierda (0,0). Por
+    // simetria con la esquina izquierda (confirmada transparente en TODA capa real del cuerpo,
+    // ver el comentario de cabecera de la clase), la esquina derecha tampoco la pisa ninguna capa
+    // real del cuerpo.
+    private static void AssertEsquinaDerechaEsColor(WriteableBitmap bmp, byte r, byte g, byte b)
+    {
+        var pixels = Pixels(bmp);
+        int w = bmp.PixelWidth;
+        foreach (var (x, y) in new[] { (w - 1, 0), (w - 2, 0), (w - 1, 1) })
+        {
+            int idx = (y * w + x) * 4;
+            Assert.True(pixels[idx + 2] == r && pixels[idx + 1] == g && pixels[idx + 0] == b,
+                $"Esquina derecha ({x},{y}): esperaba RGB({r},{g},{b}), salio RGB({pixels[idx + 2]},{pixels[idx + 1]},{pixels[idx + 0]}) - alpha={pixels[idx + 3]}.");
+        }
+    }
+
     [Fact]
     public void Orden_BackAntesQueOffhandAcc()
     {
@@ -218,7 +236,10 @@ public sealed class PlayerPreviewRendererAccessoriesTests : IDisposable
         string shield = CrearPngSolido(255, 0, 0), handOn = CrearPngSolido(0, 255, 0);
         var acc = new EquippedAccessories(null, null, handOn, null, null, shield, null);
         var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: acc);
-        AssertEsquinaEsColor(bmp, 0, 255, 0); // HandOn (verde) pisa a Shield (rojo) - es la ULTIMA capa real de accesorio
+        AssertEsquinaEsColor(bmp, 0, 255, 0); // HandOn (verde) pisa a Shield (rojo) - la ULTIMA capa real de accesorio
+        // de esta subsecuencia; GapAnalysis Encargo E (25-sep-2026) anade FrontPart TODAVIA MAS
+        // tarde (ver Orden_HandOnAntesQueFrontPart mas abajo), asi que "HandOn" dejo de ser la
+        // ultima capa real de accesorio del renderer completo.
     }
 
     // GapAnalysis Encargo A (25-sep-2026): Backpack/Tail, los 2 canales que reclasifica
