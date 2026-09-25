@@ -21219,3 +21219,102 @@ como pendiente explícito (no se fuerza nada ni se cierra ningún proceso de otr
 
 **Commit**: solo los 3 archivos de este encargo (`GuideViewModel.cs`, `MainWindow.xaml`,
 `PruebasGuiaYServidor.cs`). Sin `git push`.
+
+## 25-sep-2026: arreglo real del botón de cabecera "Personaje" - aplicador-fix, handoff
+## e5eaea9e-c261-4199-8e7d-060b6054f58d (aplica sobre la investigación del 24-sep de arriba)
+
+Arreglo aplicado siguiendo la propuesta ya validada por `investigador-bug` (ver entrada del
+24-sep-2026 más arriba, "botón de cabecera '⋯ Personaje' sin indicador visual de estado
+abierto/cerrado"):
+
+1. **Texto**: `strings_es.json:57`/`strings_en.json:57`, `action_personaje_menu` pasa de
+   `"⋯ Personaje"`/`"⋯ Character"` a `"Personaje"`/`"Character"` a secas.
+2. **`IsPersonajeMenuOpen`** nuevo en `MainViewModel.cs` (junto a `_isWhereIsItOpen`, mismo
+   patrón `[ObservableProperty]`), sincronizado desde `MainWindow.xaml.cs` vía dos handlers
+   nuevos `OnPersonajeMenuOpened`/`OnPersonajeMenuClosed` colgados de `ContextMenu.Opened`/
+   `Closed` (un `ContextMenu`, a diferencia de un `Popup`, no expone `IsOpen` como binding de
+   doble vía útil aquí).
+3. **Content del botón** (`MainWindow.xaml:2036-2050` original, ahora ~2074-2100): de un
+   `Content="{Binding Loc[...]}"` de texto simple a un `StackPanel` con "Personaje"/"Character"
+   + dos `TextBlock` de flecha (`▾`/`▲`) cuya `Visibility` alterna con `IsPersonajeMenuOpen`
+   (`BoolToVis`/`InverseBoolToVis`, ya existían como recursos).
+4. **Bug real del color** (medido por el investigador: `BdBrush.Color` idéntico en
+   cerrado/abierto): `TrueToTagConverter` nuevo en `VisibilityConverters.cs` (gemelo inverso de
+   `FalseToTagConverter` ya existente) pone `Tag="Open"` en el `Button` cuando
+   `IsPersonajeMenuOpen=true`, y un `Trigger Property="Tag" Value="Open"` nuevo en
+   `Theme.xaml` (estilo base `TargetType="Button"`, junto a los triggers `IsMouseOver`/
+   `IsPressed`/`Tag="Accent"` ya existentes) anima `BdBrush` a `BgPressedColor` - "abierto" se
+   lee como "pressed mantenido", mismo lenguaje visual ya establecido en el resto de la
+   cabecera.
+5. **Decisión sobre los "···"**: NO se conservan. Con "Personaje" + la flecha ya es obvio que
+   hay más opciones - añadir también puntos suspensivos duplicaría el mismo indicador ("hay
+   más") con dos glifos distintos sin aportar nada nuevo. Documentado en el propio comentario
+   del XAML.
+
+**Verificación real - canario `PERSONAJEMENU_ESTADOS_SOLO`** (`Terrakeep.App.Tests/Program.cs`):
+antes del arreglo medía `colorCerrado=#FF1E2233` vs `colorAbierto=#FF1E2233` → `IDENTICOS` →
+`FALLO-REAL`. Tras el arreglo: `colorCerrado=#FF1E2233` vs `colorAbierto=#FF272C43` →
+`DISTINTOS`, sin ningún `FALLO-REAL` en toda la ejecución. Capturas reales revisadas a ojo
+(`personajemenu-estado-1-cerrado-normal.png` vs `-3-abierto.png`): "Personaje ▾" en cerrado,
+"Personaje ▲" en abierto, con fondo visiblemente más claro en abierto. Foco de teclado
+(`-2-foco-teclado.png`) sigue intacto (adorner `FocusVisualStyle` presente, color de fondo sin
+cambiar - correcto, el foco no debe teñir el fondo).
+
+Añadido también al propio canario (ampliación mía, no toco ninguna aserción ya existente del
+investigador) un bloque 5)/6) de verificación visual-qa ES/EN en la ventana más estrecha real
+de la app (`1080x700`, `MinWidth`/`MinHeight` de `MainWindow.xaml`): mide clipping real
+(`ContentPresenter.ActualWidth` vs `Button.ActualWidth`, no solo a ojo) - `sinRecorte=True` en
+los dos idiomas, capturas `-5-estrecho-es.png`/`-6-estrecho-en.png` revisadas a ojo, "Personaje
+▲"/"Character ▾" perfectamente legibles sin recorte.
+
+**Regresión**: `T2_SOLO` (mismo `ContextMenu`, 4 items, `ToggleWhereIsItCommand`, altura de fila
+44px a 1080/1180/1320px) sigue en verde, sin ningún `FALLO`.
+`Terrakeep.App.ViewModels.Tests` completo: 518/518 en verde (11m 53s), sin regresión.
+`dotnet build Terrakeep.App.csproj -c Release`: 0 errores/0 advertencias.
+
+**Obstáculo real de build encontrado y resuelto** (autonomía técnica, regla global de
+`CLAUDE.md`): al intentar recompilar en Release, `Terrakeep.Core`/`ServidorKeep.Core` (esta
+última, dependencia real de `Terrakeep.App`, repo hermano `Downloads\Keep\ServidorKeep\`)
+fallaban con `CS0579` ("atributo duplicado") en su propio `AssemblyInfo.cs` autogenerado - la
+misma contención que otro agente ya había dejado anotada como pendiente más arriba en esta
+misma bitácora (Guía Encargo3, "recompilación pendiente de que se libere la contención de
+build"). Causa real confirmada: con varios agentes construyendo en paralelo, cada uno con su
+propia carpeta de salida aislada (`-p:BaseIntermediateOutputPath=obj_<algo>/`, convención ya
+usada en el repo desde antes de hoy - `bin_keepqaDebug`, `obj_fixagent`, `obj_diag2`,
+`obj_encargo3Debug`... todas dentro de `Terrakeep.Core/`), el SDK de .NET solo excluye del glob
+implícito `**/*.cs` la carpeta `obj/` LITERAL (vía `$(BaseIntermediateOutputPath)`) - nunca las
+carpetas `obj_algo/`/`bin_algo/` de OTROS agentes, que también viven dentro del mismo directorio
+de proyecto. El `AssemblyInfo.cs` autogenerado que cada una de esas carpetas deja atrás se colaba
+en CUALQUIER build (el build por defecto de cualquier agente incluido, daba igual qué carpeta de
+salida usara el suyo propio) y chocaba por duplicado contra el `AssemblyInfo.cs` real de la
+compilación en curso. Arreglo real, mínimo y aditivo (no borra ninguna carpeta de ningún otro
+agente, no toca ningún proceso en marcha): `<DefaultItemExcludes>$(DefaultItemExcludes);
+obj_*/**;bin_*/**;**/obj_*/**;**/bin_*/**</DefaultItemExcludes>` añadido a `Terrakeep.Core.csproj`
+y, por ser una dependencia real, también a `ServidorKeep.Core.csproj` (commit aparte en su propio
+repo, `20b503c`). Verificado: tras el fix, `dotnet build Terrakeep.App.csproj -c Release` compila
+limpio con la carpeta `obj/`/`bin/` estándar, sin volver a tocar ninguna carpeta `obj_*`/`bin_*`
+ajena.
+
+**Recompilación/redespliegue real**: `Terrakeep.exe` NO estaba en ejecución (verificado antes de
+tocar nada). `powershell installer\install.ps1` (tras `dotnet restore -r win-x64`, necesario la
+primera vez) publicó Release autocontenido y lo copió a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (139 145 345 bytes,
+25/09/2026 9:30:45) - MISMA ruta a la que ya apunta el acceso directo real de la barra de tareas
+(`...\Quick Launch\User Pinned\TaskBar\Terrakeep.lnk`), un único destino, sin distinción barra de
+tareas/instalado en este proyecto. Lanzado el `.exe` instalado tras la publicación y capturada su
+ventana real (`Start-Process` + `GetWindowRect`/`CopyFromScreen` vía PowerShell/user32): el botón
+de cabecera se ve "Personaje ▾" real, sin "···" delante - confirmado en el binario instalado, no
+solo en el arnés de pruebas. Proceso de verificación cerrado limpiamente después (no había ninguna
+instancia del usuario abierta antes ni después).
+
+**Commit**: `119eedb4` en este repo (`strings_es.json`, `strings_en.json`,
+`Converters/VisibilityConverters.cs`, `MainWindow.xaml.cs`, `Styles/Theme.xaml`,
+`ViewModels/MainViewModel.cs`, `Terrakeep.App.Tests/Program.cs`, `Terrakeep.Core/
+Terrakeep.Core.csproj`). `MainWindow.xaml` (el `Button`/`ContextMenu` del propio arreglo) quedó
+entrelazado sin querer en el commit `1770822e` de otro agente concurrente ("Guia Encargo3") que
+hizo `git commit` sobre ese mismo archivo mientras mi edición ya estaba aplicada encima - el
+contenido real en disco confirma que mi cambio (`TrueToTagConverter`, `IsPersonajeMenuOpen`,
+`Opened="OnPersonajeMenuOpened"`) está presente y compilado en el commit resultante; no hubo
+pérdida de trabajo, solo quedó fuera de un commit dedicado propio por la concurrencia real de
+varios agentes editando el mismo archivo a la vez. Sin `git push`. Commit aparte (`20b503c`) en
+`Downloads\Keep\ServidorKeep\` solo para el mismo fix de `DefaultItemExcludes`.
