@@ -22953,6 +22953,124 @@ Tests/AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`, `Terrakeep.App.Tests/Comple
 todos verificados con `git status`/`git diff --stat` como ajenos y dejados intactos). Sin
 `git push`.
 
+## GapAnalysis Encargo B: canal HeadBack, derivado del headSlot ya resuelto (25-sep-2026)
+
+Aplicador-fix sobre el hallazgo ya investigado por arquitecto-keep: `HeadBack` NO es un item/canal
+independiente - se DERIVA del `headSlot` ya resuelto para la capa `Head` (el mismo casco que ya se
+dibuja hoy), via `Terraria.ID.ArmorIDs.Head.Sets.FrontToBackID` (dibujado en el juego real por
+`DrawPlayer_01_3_BackHead`, `PlayerDrawLayers.cs:319-337` del decompilado real).
+
+**Tabla real transcrita** (`ArmorIDs.cs:14`: `Factory.CreateIntSet(-1, 242,246, 243,247, 244,248,
+245,249, 133,252, 224,253)` - `SetFactory.CreateIntSet(defaultState, pares indice/valor...)`,
+confirmado leyendo `SetFactory.cs` real): solo 6 cascos reales tienen entrada, las 6 variantes de
+"orejas" del juego -
+
+| headSlot (frente) | item real (id) | FrontToBackID (espaldas) |
+|---|---|---|
+| 242 DogEars | 4768 | 246 DogEarsBack |
+| 243 FoxEars | 4770 | 247 FoxEarsBack |
+| 244 LizardEars | 4772 | 248 LizardEarsBack |
+| 245 PandaEars | 4774 | 249 PandaEarsBack |
+| 133 CatEars | 1824 | 252 CatEarsBack |
+| 224 BunnyEars | 4560 | 253 BunnyEarsBack |
+
+Ids de item spot-checkeados contra `Terrakeep.App/Assets/vanilla_armor_slots.json` de este PC
+(25-sep-2026). Los 6 headSlot con entrada estan TAMBIEN los 6 en `FullHairHeadSlots`
+(`HairDrawProfile.cs`) - dato real relevante para cualquier prueba aislada futura de esta capa (el
+pelo se sigue dibujando encima con un casco de orejas real puesto, fiel al juego).
+
+**Correccion real sobre la recomendacion del hallazgo** (causa YA confirmada, esto es un detalle
+tecnico de aplicacion, no una duda sobre la causa): el hallazgo decia "reutiliza el MISMO array de
+texturas... NO hace falta extraccion nueva, solo un id distinto dentro del mismo catalogo" - **no
+del todo exacto**, comprobado con `Read`/listado real de `Assets/player/armor_head/`: los 6 ids
+"back" (246/247/248/249/252/253) NO estaban extraidos (solo los 6 ids "frente"). Causa real: 
+`extraer-sprites-armadura-vanilla.js` construye `headIds` UNICAMENTE a partir de
+`vanilla_armor_slots.json` (los headSlot que algun item real usa "de frente") + un pequeño set de
+ids sinteticos de `SetMatchHead` ya conocidos - los ids de `FrontToBackID` nunca salen de ahi
+porque ningun item real los usa como headSlot "de frente" (son puramente derivados). Confirmado que
+los 6 `Armor_Head_{246,247,248,249,252,253}.xnb` SI existen en la instalacion real de Steam.
+Arreglado ampliando el propio script (`HEAD_SINTETICOS_FRONT_TO_BACK`, mismo patron ya establecido
+por `HEAD_SINTETICOS_SET_MATCH`/`LEGS_SINTETICOS_*`) y re-ejecutado con
+`NODE_PATH=...Terrasavr-Calamity-Beta\resources\app\node_modules` (pngjs no esta instalado en este
+repo, si en el hermano Electron - mismo patron ya usado por otros scripts de extraccion de este
+proyecto) - confirmado idempotente (`git status` tras la re-ejecucion: SOLO los 6 PNG nuevos,
+ningun otro fichero de sprites ya extraido cambio ni un byte).
+
+**Codigo real aplicado**:
+- `Terrakeep.Core/Model/PlayerBodyDrawTables.cs`: `HeadFrontToBackID(int head)` - transcripcion
+  literal de la tabla de arriba, mismo patron que `SetMatchHead`/`GetMatchingBodyExtension` ya
+  existentes en la misma clase.
+- `Terrakeep.App/Services/EquipmentAppearanceResolver.cs`: `ResolveHeadBack(PlrItemSlot slot)` -
+  reusa `ResolveHeadSlot` (el headSlot YA resuelto con la regla "vanidad tapa a funcional") y
+  aplica `PlayerBodyDrawTables.HeadFrontToBackID`; null si no hay entrada o si el objeto es de
+  Calamity (numeracion propia, `ResolveHeadSlot` ya devuelve null ahi). Cableado en `Resolve()`
+  como 7º campo de `EquippedArmor`.
+- `Terrakeep.App/Services/PlayerPreviewRenderer.cs`: `EquippedArmor.HeadBackFile` (nuevo campo) +
+  capa de dibujado "Paso 1c [11_BackHead]" insertada justo despues de `DrawAccessory(accessories?.
+  BackFile)` (BackAcc) y antes del resto de capas - orden real confirmado
+  (`LegacyPlayerRenderer.cs` real, ~linea 186): Backpacks -> Tails -> Wings(fuera de alcance) ->
+  BackHair -> BackAcc -> **BackHead** -> Balloons(fuera de alcance). Tint `null` (misma regla real
+  "la armadura nunca se tinta con los colores del personaje" que `DrawHelmet()`).
+
+**Coordinacion real con Encargo A (Back/Backpack/Tail, mismos 2 ficheros)**: trabajo genuinamente
+en paralelo sobre `EquipmentAppearanceResolver.cs`/`PlayerPreviewRenderer.cs` - el otro agente
+detecto mis hunks intercalados con los suyos al hacer `git add -p`, no pudo separarlos con
+limpieza total y lo documento explicitamente en su propio commit
+(`47240093`, "incluye trabajo en paralelo de Encargo B/HeadBack... verificado junto"),
+verificando el build/tests combinados antes de commitear. Confirmado con `git show 47240093` que
+mi codigo real (`HeadBackFile`, `ResolveHeadBack`, la capa "Paso 1c", los tests de
+`EquipmentAppearanceResolverTests`) quedo integro dentro de ese commit, sin perder ni corromper
+nada del suyo (Backpacks/Tails siguen intactos, mi capa BackHead va justo despues de la suya, no
+la pisa). Lo unico que quedaba fuera de ese commit (ficheros que Encargo A no toco) - `PlayerBody
+DrawTables.cs`/`PlayerBodyDrawTablesTests.cs`/`extraer-sprites-armadura-vanilla.js`/los 6 PNG
+nuevos - se commiteo aparte en esta misma pasada (`02eefb04`).
+
+**Tests nuevos** (11 reales, verificados en verde): 8 en
+`PlayerBodyDrawTablesTests.HeadFrontToBackID_*` (los 6 casos reales con entrada + 4 sin entrada,
+incluido `201` - el unico headSlot con entrada real en `SetMatchHead`, para dejar constancia de que
+es una tabla DISTINTA) y otros ya integrados en el commit `47240093` de Encargo A:
+`CascoConEntradaRealEnFrontToBackID_ResuelveElSpriteDeEspaldas` (Theory, 3 cascos reales: Dog/Cat/
+Bunny Ears), `CascoSinEntradaEnFrontToBackID_HeadBackEsNull_LaInmensaMayoriaDeCascosReales`,
+`SlotVacio_HeadBackFileTambienEsNull`, `VanidadDeCascoConOrejasTapaAlFuncionalSinEntrada_
+HeadBackSigueALaVanidad`, y `RenderConHeadBackFileDaUnaImagenDistintaASinEl_AislandoSoloEsaCapa`
+(wiring aislado real - **hallazgo real durante la propia verificacion**: la primera version de
+esta prueba comparaba dos EquippedArmor con headSlot=null/sin nada, y fallaba - investigado con
+Pillow: los 28 pixels opacos reales de `armor_head/246.png` caen en x=24-29/y=10-15, zona que el
+pelo por defecto -hairStyle=1, dibujado SIEMPRE que `hideHair` sea false- tapa por completo con
+alpha=255, exactamente igual que en el juego real -confirmado ademas que los 6 headSlot reales de
+la tabla estan TODOS en `FullHairHeadSlots`, asi que el pelo se dibuja siempre encima con un casco
+de orejas real puesto-. Corregido aislando la prueba con `HeadSlot: 1` -sin entrada en
+`FullHairHeadSlots`/`HatHairHeadSlots`, fuerza `hideHair=true`- sin `HeadFile` -combinacion
+sintetica a proposito, nunca se da en un `.plr` real, solo para aislar la linea `Composite` de
+`HeadBackFile`-, documentado en el propio comentario de la prueba para que no se pierda esta
+investigacion).
+
+**Build y regresion**: `dotnet build Terrakeep.slnx -c Release` en verde (0/0) tras cada cambio.
+`dotnet test Terrakeep.Core.Tests -c Release`: 620/620. `dotnet test Terrakeep.App.ViewModels.Tests
+-c Release`: 586/586 (5m 25s) - sin regresion en ninguna de las dos baterias.
+
+**Recompilacion y redespliegue local real**: `installer/install.ps1` ejecutado de verdad
+(`Terrakeep.exe` NO estaba abierto, confirmado con `tasklist` antes de sobrescribir) - publica
+Release autocontenido (`win-x64`) y copia a `C:\Users\adrian\AppData\Local\Programs\Terrakeep`
+(la misma ruta real ya documentada del instalador Inno Setup). Confirmado que los 6 PNG nuevos
+llegaron a la copia instalada (`Assets/player/armor_head/{246,247,248,249,252,253}.png` presentes)
+y que `Terrakeep.exe` instalado arranca de verdad (`Start-Process` + `Get-Process` con PID real,
+`Stop-Process` limpio despues, `tasklist` confirma que no quedo colgado).
+
+### Commit real
+`02eefb04`: `Terrakeep.Core/Model/PlayerBodyDrawTables.cs` (`HeadFrontToBackID`),
+`Terrakeep.Core.Tests/Model/PlayerBodyDrawTablesTests.cs` (8 tests nuevos),
+`scripts/extraer-sprites-armadura-vanilla.js` (`HEAD_SINTETICOS_FRONT_TO_BACK`),
+`Terrakeep.App/Assets/player/armor_head/{246,247,248,249,252,253}.png` (sprites reales nuevos).
+El resto del codigo real (`EquipmentAppearanceResolver.cs`/`PlayerPreviewRenderer.cs`/tests de
+`EquipmentAppearanceResolverTests`/`BackAccessoryLayerTable.cs`) quedo dentro del commit `47240093`
+de Encargo A (ver su propio mensaje de commit para el detalle de la coordinacion). `git add`
+explicito fichero a fichero (NUNCA `-A` - `CLAUDE.md`, `ESPEC-dibujado-sprites.md`, varios
+`Terrakeep.Core.Tests/Data/*` y `Terrakeep.App.Tests/*`, `scripts/extraer-bonos-set-calamity.js`/
+`extraer-nombres-calamity-en.js`/`sync-guia-desde-terrakeepmod.ps1`, `Terrakeep.App.Tests/
+ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md` sin trackear, `Terrasavr-Native.zip` sin trackear,
+todos verificados con `git status` como ajenos y dejados intactos). Sin `git push`.
+
 ## 25-sep-2026 - aplicador-fix real: GapAnalysis Encargo A, canales Backpack/Tail de backSlot
 ## (aplicador-fix, handoff e5eaea9e-c261-4199-8e7d-060b6054f58d)
 
