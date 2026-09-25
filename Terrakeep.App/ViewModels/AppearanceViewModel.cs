@@ -545,9 +545,20 @@ public partial class AppearanceViewModel : ObservableObject
     // ver UpdateEquippedArmor.
     private PlayerPreviewRenderer.EquippedArmor _liveArmor;
 
+    // PortSeleccion Encargo2 (25-sep-2026): gemelo real de _liveArmor, para los 7 sprites de
+    // accesorio - MainViewModel.RefreshAppearanceEquipment empuja los dos juntos (misma fuente,
+    // el mismo loadout0 sintetico construido a partir de EquipmentGroup EN VIVO).
+    private EquippedAccessories? _liveAccessories;
+
     public void UpdateEquippedArmor(PlayerPreviewRenderer.EquippedArmor armor)
     {
         _liveArmor = armor;
+        RefreshPreview();
+    }
+
+    public void UpdateEquippedAccessories(EquippedAccessories? accessories)
+    {
+        _liveAccessories = accessories;
         RefreshPreview();
     }
 
@@ -627,6 +638,8 @@ public partial class AppearanceViewModel : ObservableObject
         // H6-06: "Ver sin equipo" pasa EquippedArmor por defecto (todo null, sin overlay),
         // nunca inventa nada.
         var armor = ShowEquipment ? _liveArmor : default;
+        // H6-06 igual que _liveArmor: "Ver sin equipo" tampoco dibuja accesorios.
+        var accessories = ShowEquipment ? _liveAccessories : null;
         // H6-01-b (advisor Opus): el doll necesita el skinVariant REAL (0-11, puede ser una
         // variante alternativa como el 8/MaleDress del caso "Eldelgas") para elegir la carpeta
         // de sprites correcta - IsMale por si sola solo distingue Chico/Chica, no la variante.
@@ -634,7 +647,7 @@ public partial class AppearanceViewModel : ObservableObject
         // Starter solo puede darse antes de que LoadFrom termine de asignar _character.
         byte skinVariant = _character?.Gender
             ?? (IsMale ? Terrakeep.Core.Model.PlayerVariantSets.MaleStarter : Terrakeep.Core.Model.PlayerVariantSets.FemaleStarter);
-        PreviewImage = PlayerPreviewRenderer.Render(HairStyle, skinVariant, colors, armor, CurrentLegAnimationFrame, IsFacingLeft);
+        PreviewImage = PlayerPreviewRenderer.Render(HairStyle, skinVariant, colors, armor, CurrentLegAnimationFrame, IsFacingLeft, accessories);
     }
 
     // Catalogo de ideas Keep, idea 10 (20-sep-2026, "vista previa animada del personaje,
@@ -669,6 +682,7 @@ public partial class AppearanceViewModel : ObservableObject
         PlayerPreviewRenderer.Tint T(int i) => new((byte)Swatches[i].R, (byte)Swatches[i].G, (byte)Swatches[i].B);
         var colors = new PlayerPreviewRenderer.PlayerColors(T(HairIdx), T(SkinIdx), T(EyesIdx), T(ShirtIdx), T(UnderIdx), T(PantsIdx), T(ShoesIdx));
         var armor = ShowEquipment ? _liveArmor : default;
+        var accessories = ShowEquipment ? _liveAccessories : null;
         byte skinVariant = _character?.Gender
             ?? (IsMale ? Terrakeep.Core.Model.PlayerVariantSets.MaleStarter : Terrakeep.Core.Model.PlayerVariantSets.FemaleStarter);
 
@@ -676,7 +690,7 @@ public partial class AppearanceViewModel : ObservableObject
         var encoder = new GifBitmapEncoder();
         for (int i = 0; i < fotogramas.Length; i++)
         {
-            var frame = PlayerPreviewRenderer.Render(HairStyle, skinVariant, colors, armor, fotogramas[i], IsFacingLeft);
+            var frame = PlayerPreviewRenderer.Render(HairStyle, skinVariant, colors, armor, fotogramas[i], IsFacingLeft, accessories);
             var metadata = new BitmapMetadata("gif");
             metadata.SetQuery("/grctlext/Delay", (ushort)9); // 9 centesimas = 90ms, mismo ritmo real que _walkAnimationTimer
             if (i == 0)

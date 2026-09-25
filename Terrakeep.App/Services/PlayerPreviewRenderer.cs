@@ -170,7 +170,26 @@ public static class PlayerPreviewRenderer
     // tiene offsets propios que compensar (siempre centrado), asi que un espejo horizontal
     // puro del lienzo compuesto final es fiel al resultado real sin tener que duplicar ninguna
     // logica de dibujado. Por defecto false - ningun llamador existente cambia ni un pixel.
-    public static WriteableBitmap Render(int hairStyle, byte skinVariant, PlayerColors colors, EquippedArmor armor = default, int legAnimationFrame = 0, bool mirror = false)
+    //
+    // PortSeleccion Encargo2 (25-sep-2026): "accessories" (EquipmentAppearanceResolver.
+    // ResolveAccessories, hermano de EquippedArmor) - los 7 sprites reales de accesorio
+    // funcional/vanidad (waist/neck/handOn/handOff/back/shield/face). Citado en
+    // PlayerDrawLayers.cs real (DrawPlayer_10_BackAcc:1236, _18_OffhandAcc:3374,
+    // _19_WaistAcc:3425, _20_NeckAcc:3444, _22_FaceAcc:4484/4490, _25_Shield:4955-4961,
+    // _29_OnhandAcc:6161): las 6 primeras (todas salvo Waist) usan SIEMPRE
+    // `drawinfo.drawPlayer.bodyFrame` como rectangulo de origen sobre su PROPIA textura -
+    // Waist usa `drawinfo.drawPlayer.legFrame` (o bodyFrame si el set real
+    // ArmorIDs.Waist.Sets.UsesTorsoFraming lo pide, dato que este proyecto no tiene catalogado -
+    // limite real documentado, ver el comentario de DrawWaist). bodyFrame.Y == legFrame.Y
+    // durante el andar simple (Player.cs:36041, ya citado en el comentario de WalkArmColumn) -
+    // los 7 tipos comparten entonces la MISMA fila real que ya modela legAnimationFrame (0 en
+    // reposo), asi que cada sprite de accesorio se trata como una tira vertical 40x(56*N) igual
+    // que legskin/pants/shoes/armor_legs (LoadStripFrameAbsolute, ya existente) - sin
+    // duplicar ninguna logica de recorte nueva. UNICA excepcion real: Shield NO sigue el ancho
+    // fijo de 40px (PlayerDrawLayers.cs:4958-4961, "bodyFrame.Width = shield.Value.Width" -
+    // confirmado en los sprites extraidos, varios escudos vanilla miden 42/44px) - ver
+    // LoadShieldFrame para el recorte dedicado, centrado sobre el lienzo de 40px.
+    public static WriteableBitmap Render(int hairStyle, byte skinVariant, PlayerColors colors, EquippedArmor armor = default, int legAnimationFrame = 0, bool mirror = false, EquippedAccessories? accessories = null)
     {
         bool male = PlayerVariantSets.IsMale(skinVariant);
         string variant = PlayerVariantSets.BodyFolder(skinVariant);
@@ -179,6 +198,17 @@ public static class PlayerPreviewRenderer
         var backShoulderCell = male ? BackShoulderMale : BackShoulderFemale;
 
         var canvas = new byte[Height * Width * 4];
+
+        // Compone (si hay sprite real) una capa de accesorio generica - null significa "vacio o
+        // sin sprite extraible de esta instalacion" (ver EquipmentAppearanceResolver), nunca se
+        // inventa nada, la capa simplemente no se dibuja. Waist/Neck/HandOn/HandOff/Back/Face
+        // comparten esta misma tira vertical 40x(56*N) - ver el comentario real de la firma de
+        // Render para la cita completa. Shield usa LoadShieldFrame aparte (ancho real variable).
+        void DrawAccessory(string? file)
+        {
+            if (file is null) return;
+            Composite(canvas, LoadStripFrameAbsolute(file, legAnimationFrame), null);
+        }
 
         // ESPEC-dibujado-sprites.md#7.2: cadena real de SetMatch (Player.cs:36053-36092), tres
         // llamadas encadenadas que pueden sustituir legs/head. `bodyId`/`legsId` en 0 quiere
@@ -257,6 +287,11 @@ public static class PlayerPreviewRenderer
         if (!hideHair && backHairDraw)
             Composite(canvas, hatHair ? LoadHairAlt(hairStyle) : LoadHair(hairStyle), colors.Hair);
 
+        // Paso 1b [10_BackAcc]: capa/mochila trasera - PlayerDrawLayers.cs real, BackAcc va justo
+        // despues de HairBack y antes de la piel (Wings/Tails/HeadBack/BalloonAcc quedan fuera de
+        // alcance de este encargo, ver el resumen de PortSeleccion Encargo2).
+        DrawAccessory(accessories?.BackFile);
+
         // Paso 2-3 [12_Skin_Composite]: piel del torso y de las piernas, cada una solo si el
         // bodySlot/legSlot real puesto no la oculta (hidesTopSkin/hidesBottomSkin).
         if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "torsoskin", torsoCell), colors.Skin);
@@ -322,6 +357,13 @@ public static class PlayerPreviewRenderer
             Composite(canvas, LoadBodyCell(variant, "shirt", torsoCell), colors.Shirt);
         }
 
+        // Paso 8b [18/19/20_OffhandAcc/WaistAcc/NeckAcc]: los tres accesorios de torso que van
+        // ANTES de la cabeza en el orden real (PlayerDrawLayers.cs, ids de capa 18/19/20 - HandOff
+        // primero, Waist, Neck ultimo de los tres).
+        DrawAccessory(accessories?.HandOffFile);
+        DrawAccessory(accessories?.WaistFile);
+        DrawAccessory(accessories?.NeckFile);
+
         // Paso 9 [21_Head]: cabeza/ojos/pelo/casco. Orden real: casco ANTES que el pelo cuando
         // el casco es "fullHair" (:2143-2161, invertido respecto a la version anterior de este
         // renderer); en cualquier otro caso (hatHair o sin casco) el pelo va primero, como ya
@@ -348,6 +390,15 @@ public static class PlayerPreviewRenderer
         if (fullHair) { DrawHelmet(); DrawHair(); }
         else { DrawHair(); DrawHelmet(); }
 
+        // Paso 9b [22_FaceAcc]: accesorio de cara (gafas, mascaras...), justo despues de la
+        // cabeza/pelo/casco (FrontAccBack queda fuera de alcance de este encargo).
+        DrawAccessory(accessories?.FaceFile);
+
+        // Paso 9c [25_Shield]: escudo, despues de FaceAcc y antes del brazo delantero (orden real
+        // PlayerDrawLayers.cs) - ancho real variable, ver LoadShieldFrame.
+        if (accessories?.ShieldFile is { } shieldFile)
+            Composite(canvas, LoadShieldFrame(shieldFile, legAnimationFrame), null);
+
         // Paso 10 [28_ArmOverItemComposite]: brazo DELANTERO, encima de todo lo anterior.
         // Orden real: BRAZO primero, HOMBRO despues (PlayerDrawSet.cs: compShoulderOverFrontArm
         // = true, el bucle real dibuja primero i==num3/brazo y luego i==num2/hombro) - invertido
@@ -372,6 +423,11 @@ public static class PlayerPreviewRenderer
             Composite(canvas, LoadBodyCell(variant, "armshirt", frontShoulderCell), colors.Shirt);
             Composite(canvas, LoadBodyCell(variant, "shirt", frontShoulderCell), colors.Shirt);
         }
+
+        // Paso 10b [29_OnhandAcc]: accesorio "en mano" (guantes/garras puestos como accesorio,
+        // no como arma), ultimo de los 7 tipos - despues del brazo/hombro delantero (FrontAccFront
+        // queda fuera de alcance de este encargo).
+        DrawAccessory(accessories?.HandOnFile);
 
         if (mirror) FlipHorizontal(canvas);
 
@@ -476,6 +532,58 @@ public static class PlayerPreviewRenderer
             int srcOffset = (startY + y) * Width * 4;
             int dstOffset = y * Width * 4;
             Array.Copy(stripPixels, srcOffset, outPixels, dstOffset, Width * 4);
+        }
+        return outPixels;
+    }
+
+    // PortSeleccion Encargo2 (25-sep-2026): gemelo de LoadStripFrameAbsolute/SliceStripRow, SOLO
+    // para Shield - el unico de los 7 tipos de accesorio cuyo ancho real puede no ser 40px
+    // (PlayerDrawLayers.cs:4958-4961, "bodyFrame.Width = shield.Value.Width"; confirmado en los
+    // sprites extraidos de este PC: la mayoria de escudos vanilla miden 40px pero varios miden
+    // 42/44px). SliceStripRow asume ancho fijo Width(40) para toda la tira - reutilizarlo aqui
+    // desalinearia cada fila para un escudo con otro ancho. Aproximacion documentada: se centra
+    // horizontalmente sobre el lienzo de 40px (el juego real desplaza bodyVect.X para mantenerlo
+    // centrado sobre el cuerpo, PlayerDrawLayers.cs:4961) - no es una reimplementacion completa
+    // del vector de posicionado real, pero es fiel para el caso comun y nunca lee fuera de los
+    // arrays reales (recorta si el escudo es mas ancho que el lienzo, rellena transparente si es
+    // mas estrecho).
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (byte[] Pixels, int RealWidth)> ShieldCache = new();
+
+    private static byte[] LoadShieldFrame(string absolutePath, int frameRow)
+    {
+        var (pixels, realWidth) = ShieldCache.GetOrAdd(absolutePath, LoadShieldStrip);
+        return SliceShieldRow(pixels, realWidth, frameRow);
+    }
+
+    private static (byte[] Pixels, int RealWidth) LoadShieldStrip(string path)
+    {
+        using var stream = File.OpenRead(path);
+        var decoder = new PngBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        var frame = decoder.Frames[0];
+        var converted = new FormatConvertedBitmap(frame, PixelFormats.Bgra32, null, 0);
+        var pixels = new byte[frame.PixelWidth * frame.PixelHeight * 4];
+        converted.CopyPixels(pixels, frame.PixelWidth * 4, 0);
+        return (pixels, frame.PixelWidth);
+    }
+
+    private static byte[] SliceShieldRow(byte[] stripPixels, int realWidth, int frameRow)
+    {
+        var outPixels = new byte[Width * Height * 4];
+        if (realWidth <= 0) return outPixels;
+        int totalRows = stripPixels.Length / (realWidth * Height * 4);
+        if (totalRows <= 0) return outPixels;
+        int row = Math.Clamp(frameRow, 0, totalRows - 1);
+        int startY = row * Height;
+        int offsetX = (Width - realWidth) / 2; // negativo si el escudo es mas ancho que el lienzo
+        for (int y = 0; y < Height; y++)
+        {
+            int srcRowStart = (startY + y) * realWidth * 4;
+            for (int x = 0; x < realWidth; x++)
+            {
+                int dstX = x + offsetX;
+                if (dstX < 0 || dstX >= Width) continue;
+                Array.Copy(stripPixels, srcRowStart + x * 4, outPixels, (y * Width + dstX) * 4, 4);
+            }
         }
         return outPixels;
     }

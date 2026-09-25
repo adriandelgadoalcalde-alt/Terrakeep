@@ -22196,3 +22196,130 @@ siguen presentes, sin commitear, listos para que ese agente los cierre por su cu
 `Terrakeep.App/Services/PlayerPreviewRenderer.cs` con solo mi hunk real,
 `Terrakeep.App/Converters/PetPositionConverters.cs` nuevo,
 `Terrakeep.App.Tests/CanarioHomeBannerMascota.cs`). Sin `git push`.
+
+## 25-sep-2026 - PortSeleccion Encargo2: capas de accesorio reales en PlayerPreviewRenderer.Render
+## (aplicador-fix, handoff e5eaea9e-c261-4199-8e7d-060b6054f58d)
+
+Consume de verdad `EquipmentAppearanceResolver.ResolveAccessories` (Encargo1, commit `5025fdbc`) e
+inserta las 7 capas de accesorio (waist/neck/handOn/handOff/back/shield/face) en su posicion EXACTA
+dentro de la secuencia de composicion ya existente de `PlayerPreviewRenderer.Render`, sin reordenar
+ninguna de las capas de piel/ropa/armadura/brazos/cabeza ya correctas.
+
+**Orden real citado** (`Terraria/DataStructures/PlayerDrawLayers.cs` decompilado, lineas exactas):
+`DrawPlayer_10_BackAcc:1155-1238`, `_18_OffhandAcc:3361-3378`, `_19_WaistAcc:3403-3429`,
+`_20_NeckAcc:3431-3448`, `_22_FaceAcc:4403-4500`, `_25_Shield:4833-5015`, `_29_OnhandAcc:6148-6165`.
+Las 6 primeras (todas salvo Waist) usan SIEMPRE `drawinfo.drawPlayer.bodyFrame` como rectangulo de
+origen sobre su PROPIA textura; Waist usa `drawinfo.drawPlayer.legFrame` (salvo el set real
+`ArmorIDs.Waist.Sets.UsesTorsoFraming`, no catalogado en este proyecto - limite real documentado en
+el comentario de la firma de `Render`). `bodyFrame.Y == legFrame.Y` durante el andar simple
+(`Player.cs:36041`, ya citado por `WalkArmColumn`) - los 7 tipos comparten entonces la MISMA fila
+real que ya modela `legAnimationFrame`, asi que cada sprite de accesorio se trata como una tira
+vertical 40x(56*N) igual que legskin/pants/shoes/armor_legs (`LoadStripFrameAbsolute`, ya existente,
+reusado sin duplicar logica). Posiciones de insercion reales dentro de la secuencia ya existente:
+`BackAcc` justo antes de la piel (Paso 1b, tras `HairBack`); `OffhandAcc`→`WaistAcc`→`NeckAcc` entre
+Torso (Paso 8) y Head (Paso 9); `FaceAcc`→`Shield` entre Head/pelo/casco y el brazo delantero (Paso
+10); `HandOnAcc` justo despues del brazo/hombro delantero (ultima capa real de accesorio).
+
+**Unica excepcion real de formato**: Shield NO sigue el ancho fijo 40px
+(`PlayerDrawLayers.cs:4958-4961`, `bodyFrame.Width = shield.Value.Width`) - confirmado en los
+sprites reales extraidos de este PC (`Assets/player/acc_shield/*.png`: la mayoria mide 40px pero
+varios miden 42/44px). `LoadShieldFrame`/`SliceShieldRow` (nuevas) decodifican con el ancho REAL del
+fichero y centran el resultado sobre el lienzo de 40px - aproximacion documentada (el juego real
+desplaza `bodyVect.X` para mantenerlo centrado sobre el cuerpo), no una reimplementacion completa del
+vector de posicionado, pero fiel al caso comun y sin leer nunca fuera de los arrays reales.
+
+**Bug real encontrado y arreglado durante este mismo encargo, ANTES de cualquier prueba manual**:
+`EquippedAccessories` es un `record` normal (tipo REFERENCIA, no `record struct` como
+`EquippedArmor`) - `EquippedAccessories accessories = default` en la firma de `Render` habria dado
+`null` como valor por defecto (no una instancia vacia con los 7 campos en `null`), y cualquier
+llamador existente que no pasara el parametro habria lanzado `NullReferenceException` en el primer
+`accessories.BackFile`. Atrapado por el propio warning `CS8625` del compilador antes de ejecutar
+nada - parametro cambiado a `EquippedAccessories? accessories = null` + acceso con `?.` en las 7
+capas; test `SinAccesorios_ElParametroPorDefectoNoLanzaYEsIdenticoAPasarNull` deja el contrato fijo.
+
+**Cableado real, no solo la firma**: los 3 sitios donde `PlayerPreviewRenderer.Render` se llama de
+verdad quedan conectados a `ResolveAccessories`, no solo el nuevo parametro opcional:
+- `CharacterListEntryViewModel` (doll de Inicio, hover animado incluido) - `_accessories` resuelto
+  una vez en el constructor igual que `_armor`, reusado en cada tick de `RefreshPreview`.
+- `AppearanceViewModel` (pestaña Apariencia, preview en vivo + exportar PNG/GIF) - `_liveAccessories`
+  gemelo real de `_liveArmor`, con el mismo apagado de "Ver sin equipo".
+- `MainViewModel.RefreshAppearanceEquipment` - el loadout sintetico que construye a partir de
+  `EquipmentGroup` EN VIVO pasaba antes solo 3 slots (cabeza/cuerpo/piernas); `ResolveAccessories`
+  necesita los 10 reales (indices 3..9 = los 7 accesorios) - `ItemsRow` extendido a 10 slots
+  (`PlrLoadout` se modela siempre como "10+10+10 en memoria", confirmado citando el comentario real
+  de `PlrBodySerializer.GetLoadoutSlotCounts`), `Math.Min` como red de seguridad si algun dia trae
+  menos.
+
+**Verificacion real con personajes reales de este PC** (Documents\My Games\Terraria\Players):
+volcado real de `ResolveAccessories` contra los 3 `.plr` que pidio el encargo -
+`adrian.plr` (item 4978 en el hueco 3, sin tipo de accesorio reconocido - Calamity o sin sprite
+extraible, los 7 campos salen `null`, LIMITE REAL ya conocido, no un bug de este encargo),
+`Eldelgas.plr` (HandOn=slot6, HandOff=slot1, Shield=slot4 reales) y `Terrariano.plr` (Neck=slot8,
+HandOn=slot6, HandOff=slot1, Shield=slot5 reales - el mas completo de los tres). Capturas reales
+(escala x8, `Render` con y sin accesorios) en el scratchpad de esta sesion confirman visualmente el
+orden correcto: escudo detras del torso, collar rodeando el cuello, objeto en la mano por delante -
+sin overlays fuera de lugar. No se probo con datos sinteticos por falta de personajes reales: los 3
+personajes que pidio el encargo ya cubrian 4 de los 7 tipos con sprite real.
+
+**Tests nuevos** (`Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs`, 15
+casos, todos en verde): (a) 7 objetos vanilla reales (uno por tipo, con sprite ya extraido en este
+PC - ids 15/49/156/193/211/532/554) confirman wiring real de extremo a extremo (pixeles distintos
+con/sin el accesorio); (b) contrato de orden de composicion - 6 pares de PNG 40x56 SINTETICOS
+solidos (opacos enteros) compuestos en la esquina (0,0) del lienzo, confirmada real y ESTABLE como
+territorio "nunca pintado" por ninguna capa del cuerpo (peinado 1/MaleStarter/sin armadura - mapa de
+pixeles capturado durante la investigacion). Los 6 pares (`Back<OffhandAcc`, `OffhandAcc<WaistAcc`,
+`WaistAcc<NeckAcc`, `NeckAcc<FaceAcc`, `FaceAcc<Shield`, `Shield<HandOnAcc`) cubren la subsecuencia
+COMPLETA declarada por el arquitecto - si dos capas se invirtieran en `Render`, el par adyacente
+correspondiente fallaria; (c) escudo real (id 156) confirma que `LoadShieldFrame` no revienta con un
+ancho real distinto de 40px.
+
+**No regresion real**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos, 0 errores (solucion
+completa: `Terrakeep.Core`, `Terrakeep.App`, los 3 proyectos de test). `dotnet test Terrakeep.slnx -c
+Release --no-build`: `Terrakeep.Core.Tests` 608/608 OK, `Terrakeep.App.ViewModels.Tests` 538/538 OK
+(523 previas + 15 nuevas) - sin regresion. `Terrakeep.App.Tests` (arnes WPF/UIA de KeepQA) no se
+relanzo completo esta ronda a proposito: no toca XAML/UI, solo `Services`/`ViewModels` de backend de
+render, y otros agentes seguian trabajando en vivo sobre `MainWindow.xaml`/mascota - relanzar el
+arnes completo (que abre el `.exe` real) habria arriesgado interferir con su verificacion en curso
+sin aportar señal nueva relevante a este encargo.
+
+**Obstaculo real encontrado y resuelto**: dos `testhost.exe` quedaron colgados de rondas anteriores
+de `dotnet test` de esta misma sesion (comportamiento conocido de VSTest en Windows, no relacionado
+con otros agentes) y bloqueaban la copia de `Terrakeep.dll`/`Terrakeep.Core.dll` al recompilar
+`Terrakeep.App.ViewModels.Tests` - confirmado con `Get-CimInstance Win32_Process` que el proceso
+colgado apuntaba al propio `.dll` de este proyecto de test (no al de otro agente) antes de terminarlo
+con `Stop-Process -Force`.
+
+**Descubierto en el propio `git blame`, no provocado por mi**: `CharacterListEntryViewModel.cs` (el
+doll de Inicio) YA lleva mis 3 cambios reales (`_accessories`, `ResolveAccessories` en el
+constructor, `accessories:` en las dos llamadas a `Render`) - pero dentro del commit `bbf27de1`
+("PortSeleccion Encargo4: OffsetX/OffsetY/SpriteDirection reales por mascota"), NO en un commit mio.
+Ese agente concurrente debio commitear con mis ediciones ya presentes en el fichero compartido en ese
+instante (mismo riesgo real que Encargo3 detecto y corrigio mas arriba, aqui sin corregir). Contenido
+verificado igual, sin perdida de trabajo ni conflicto - documentado aqui en vez de reescribir historia
+ajena (`git commit --amend`/`git reset` sobre un commit que no es mio esta fuera de las reglas fijas
+de este encargo). Consecuencia real: el commit de este encargo NO incluye ese fichero (ya esta en
+`HEAD` desde antes).
+
+**Recompilacion/redespliegue real**: `Terrakeep.exe` NO estaba en ejecucion (confirmado antes y
+despues, `Get-Process Terrakeep` sin resultado los dos momentos). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde (autocontenido
+single-file, 0 `.pdb`). Copiado a `C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe`
+(ruta real confirmada con `WScript.Shell` sobre los dos `.lnk`, barra de tareas y Menu Inicio, mismo
+destino unico ya documentado en rondas anteriores) - `LastWriteTime` 25/09/2026 10:50:44, hash
+SHA256 `447D4F49...`. `Assets\` re-sincronizado con `robocopy /MIR` desde el publish (exit 0, sin
+cambios reales - los sprites de accesorio ya estaban extraidos de una ronda anterior, este encargo
+no añade ningun PNG nuevo). No se relanzo el `.exe` instalado con `pywinauto` esta ronda (mismo
+motivo que el arnes WPF completo arriba: minimizar interferencia con otros agentes activos sobre
+`MainWindow.xaml`) - la verificacion visual real se hizo exportando el `WriteableBitmap` de
+`PlayerPreviewRenderer.Render` a PNG directamente (mismo codigo de produccion que usa Inicio), no
+narrada de memoria.
+
+**Fuera de alcance, documentado, no un fallo silencioso**: `Tails`/`Wings`/`HeadBack`/`BalloonAcc`
+(Wings/Tails no tienen sprite extraido en este proyecto - confirmado que Encargo1 tampoco los
+extrajo) y `FrontAccBack`/`FrontAccFront` (variantes de renderizado de accesorio que Terraria solo
+usa para casos especiales sin dato real catalogado aqui) quedan fuera de esta pasada - pendiente real
+para un encargo futuro aparte si se decide dar prioridad a mochilas/alas/globos en el doll de menu.
+
+**Commit real**: `Terrakeep.App/Services/PlayerPreviewRenderer.cs`,
+`Terrakeep.App/ViewModels/AppearanceViewModel.cs`, `Terrakeep.App/ViewModels/MainViewModel.cs`,
+`Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs` (nuevo). Sin `git push`.

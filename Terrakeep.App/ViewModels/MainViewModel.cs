@@ -263,13 +263,22 @@ public partial class MainViewModel : ObservableObject
     // Items+Social), sin tocar el modelo real del personaje.
     private void RefreshAppearanceEquipment()
     {
-        if (EquipmentGroup == null) { Appearance.UpdateEquippedArmor(default); return; }
+        if (EquipmentGroup == null) { Appearance.UpdateEquippedArmor(default); Appearance.UpdateEquippedAccessories(null); return; }
 
+        // PortSeleccion Encargo2 (25-sep-2026): antes solo se copiaban los 3 slots de armadura
+        // (cabeza/cuerpo/piernas) - ResolveAccessories necesita los 10 slots reales del loadout
+        // (indices 3..9 son los 7 accesorios) para poder resolver en vivo mientras se edita
+        // Equipamiento. EquipmentGroup.EquippedItems/EquippedSocial SIEMPRE traen 10 slots
+        // (PlrLoadout se modela "siempre como 10+10+10 en memoria", ver el comentario real de
+        // PlrBodySerializer.GetLoadoutSlotCounts) - Math.Min es solo una red de seguridad si
+        // algun dia el contenedor real trajera menos.
         PlrItemSlot[] ItemsRow(ContainerViewModel container)
         {
-            var slots = new PlrItemSlot[3];
-            for (int i = 0; i < 3; i++)
+            var slots = new PlrItemSlot[10];
+            int count = Math.Min(10, container.Slots.Count);
+            for (int i = 0; i < count; i++)
                 slots[i] = container.Slots[i].ItemId == 0 ? PlrItemSlot.Empty : new PlrItemSlot(container.Slots[i].ItemId, 1, 0, false);
+            for (int i = count; i < 10; i++) slots[i] = PlrItemSlot.Empty;
             return slots;
         }
 
@@ -277,9 +286,10 @@ public partial class MainViewModel : ObservableObject
         {
             Items = ItemsRow(EquipmentGroup.EquippedItems),
             Social = ItemsRow(EquipmentGroup.EquippedSocial),
-            // Dyes se deja en su default (Resolve() nunca lo lee - solo cabeza/cuerpo/piernas).
+            // Dyes se deja en su default (Resolve()/ResolveAccessories() nunca lo leen).
         };
         Appearance.UpdateEquippedArmor(_service.EquipmentAppearance.Resolve(loadout0));
+        Appearance.UpdateEquippedAccessories(_service.EquipmentAppearance.ResolveAccessories(loadout0));
     }
 
     // Envuelve una operacion en bloque real (Auto-equipar, Mover todo al almacen...) en UNA
