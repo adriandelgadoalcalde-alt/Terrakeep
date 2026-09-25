@@ -116,8 +116,12 @@ public static class PlayerPreviewRenderer
     // HeadSlot/BodySlot/LegsSlot (H6-07/H6-01-b) son los indices REALES de esos slots
     // (Terraria.Player.head/body/legs, misma tabla que armor_{head,body,legs}/{slot}.png) -
     // null si el slot esta vacio o es un objeto de Calamity (numeracion propia, no compartida).
+    // GapAnalysis Encargo B (25-sep-2026): HeadBackFile NO es un slot independiente - lo calcula
+    // EquipmentAppearanceResolver.ResolveHeadBack DERIVANDO el sprite "de espaldas" del propio
+    // HeadSlot (via ArmorIDs.Head.Sets.FrontToBackID) - null en la inmensa mayoria de cascos
+    // reales, que no tienen sprite "de espaldas" (ver PlayerBodyDrawTables.HeadFrontToBackID).
     public readonly record struct EquippedArmor(string? HeadFile, string? BodyFile, string? LegsFile,
-        int? HeadSlot = null, int? BodySlot = null, int? LegsSlot = null);
+        int? HeadSlot = null, int? BodySlot = null, int? LegsSlot = null, string? HeadBackFile = null);
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> Cache = new();
 
@@ -189,6 +193,13 @@ public static class PlayerPreviewRenderer
     // fijo de 40px (PlayerDrawLayers.cs:4958-4961, "bodyFrame.Width = shield.Value.Width" -
     // confirmado en los sprites extraidos, varios escudos vanilla miden 42/44px) - ver
     // LoadShieldFrame para el recorte dedicado, centrado sobre el lienzo de 40px.
+    //
+    // GapAnalysis Encargo A (25-sep-2026): "accessories.BackpackFile"/"TailFile" - 2 canales mas
+    // en los que EquipmentAppearanceResolver puede reclasificar el mismo sprite ya resuelto para
+    // "Back" (ver BackAccessoryLayerTable, tabla real de ArmorIDs.cs:1717/1719). Citado en
+    // PlayerDrawLayers.cs real (DrawPlayer_08_Backpacks:479-484, DrawPlayer_08_1_Tails:568-584):
+    // ambos usan la MISMA textura TextureAssets.AccBack y el MISMO `drawinfo.drawPlayer.bodyFrame`
+    // que BackAcc - misma tira vertical 40x(56*N), DrawAccessory reutilizado sin logica nueva.
     public static WriteableBitmap Render(int hairStyle, byte skinVariant, PlayerColors colors, EquippedArmor armor = default, int legAnimationFrame = 0, bool mirror = false, EquippedAccessories? accessories = null)
     {
         bool male = PlayerVariantSets.IsMale(skinVariant);
@@ -281,6 +292,20 @@ public static class PlayerPreviewRenderer
             if (File.Exists(altPath)) headFileToUse = altPath;
         }
 
+        // Paso 1a [08_Backpacks/08_1_Tails]: GapAnalysis Encargo A (25-sep-2026) - Terraria real
+        // clasifica backSlot en 3 canales posibles (Player.cs:37169-37184,
+        // UpdateVisibleAccessory): Backpack/Tail si el id cae en
+        // ArmorIDs.Back.Sets.DrawInBackpackLayer/DrawInTailLayer (ArmorIDs.cs:1717/1719, tabla
+        // real transcrita en BackAccessoryLayerTable), Back normal si no -
+        // EquipmentAppearanceResolver.ResolveAccessories ya hace esa reclasificacion sobre el
+        // sprite YA resuelto. Los 3 canales comparten la MISMA textura real TextureAssets.AccBack
+        // (PlayerDrawLayers.cs:484 Backpack, :584 Tail, ya portado para BackAcc) - misma tira
+        // vertical 40x(56*N), DrawAccessory reutilizado sin logica nueva. Orden real
+        // (LegacyPlayerRenderer.cs:178/180/182/184/185): Backpacks -> Tails ->
+        // Wings(fuera de alcance) -> BackHair -> BackAcc - por eso van ANTES del pelo trasero.
+        DrawAccessory(accessories?.BackpackFile);
+        DrawAccessory(accessories?.TailFile);
+
         // DrawPlayer_01_BackHair real: la capa TRASERA de un peinado largo se dibuja la
         // PRIMERISIMA de todas (antes incluso de piernas/torso), para que el resto del cuerpo
         // la tape por delante de forma natural al componer encima.
@@ -288,9 +313,21 @@ public static class PlayerPreviewRenderer
             Composite(canvas, hatHair ? LoadHairAlt(hairStyle) : LoadHair(hairStyle), colors.Hair);
 
         // Paso 1b [10_BackAcc]: capa/mochila trasera - PlayerDrawLayers.cs real, BackAcc va justo
-        // despues de HairBack y antes de la piel (Wings/Tails/HeadBack/BalloonAcc quedan fuera de
-        // alcance de este encargo, ver el resumen de PortSeleccion Encargo2).
+        // despues de HairBack y antes de la piel (Wings/BalloonAcc quedan fuera de alcance de
+        // este encargo, ver el resumen de PortSeleccion Encargo2 - Tails/Backpack ya portados
+        // arriba, GapAnalysis Encargo A; HeadBack justo debajo, GapAnalysis Encargo B).
         DrawAccessory(accessories?.BackFile);
+
+        // Paso 1c [11_BackHead]: GapAnalysis Encargo B (25-sep-2026) - version "de espaldas" del
+        // casco actual, DERIVADA del propio HeadSlot (ver el comentario real de
+        // EquipmentAppearanceResolver.ResolveHeadBack) - no es un slot/objeto independiente.
+        // Orden real (LegacyPlayerRenderer.cs real, ~linea 186): Backpacks -> Tails -> Wings ->
+        // BackHair -> BackAcc -> BackHead -> Balloons - justo despues de BackAcc, antes de
+        // Balloons (fuera de alcance, no implementado). Mismo criterio "la armadura real NUNCA
+        // se tinta con los colores del personaje" que DrawHelmet() mas abajo - tint null, sin
+        // recortar (frame0 40x56, misma convencion que HeadFile/armor_head).
+        if (armor.HeadBackFile is { } headBackFile)
+            Composite(canvas, LoadFrame0Absolute(headBackFile), null);
 
         // Paso 2-3 [12_Skin_Composite]: piel del torso y de las piernas, cada una solo si el
         // bodySlot/legSlot real puesto no la oculta (hidesTopSkin/hidesBottomSkin).

@@ -184,6 +184,60 @@ public sealed class PlayerPreviewRendererAccessoriesTests : IDisposable
         AssertEsquinaEsColor(bmp, 0, 255, 0); // HandOn (verde) pisa a Shield (rojo) - es la ULTIMA capa real de accesorio
     }
 
+    // GapAnalysis Encargo A (25-sep-2026): Backpack/Tail, los 2 canales que reclasifica
+    // EquipmentAppearanceResolver.ResolveAccessories (ver BackAccessoryLayerTable) - misma
+    // textura real AccBack que Back, solo cambia el campo. Ids reales con sprite ya extraido:
+    // Magic Quiver (1321, backSlot=7, Backpack), Dog Tail (4769, backSlot=25, Tail).
+    private const int MagicQuiver = 1321;
+    private const int DogTail = 4769;
+
+    [Fact]
+    public void ObjetoRealDeBackpack_CambiaElResultadoRespectoASinAccesorios()
+    {
+        var accesorios = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(MagicQuiver));
+        Assert.NotNull(accesorios.BackpackFile);
+
+        var sinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conAccesorio = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
+
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
+    }
+
+    [Fact]
+    public void ObjetoRealDeTail_CambiaElResultadoRespectoASinAccesorios()
+    {
+        var accesorios = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(DogTail));
+        Assert.NotNull(accesorios.TailFile);
+
+        var sinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conAccesorio = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
+
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
+    }
+
+    // Contrato de orden real (LegacyPlayerRenderer.cs:178/180/185): Backpacks -> Tails -> ... ->
+    // BackAcc - mismo criterio de esquina (0,0) ya usado para las 6 capas de PortSeleccion
+    // Encargo2, extendido con los 2 canales nuevos.
+    [Fact]
+    public void Orden_BackpackAntesQueTail()
+    {
+        string backpack = CrearPngSolido(255, 0, 0), tail = CrearPngSolido(0, 255, 0);
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null,
+            BackpackFile: backpack, TailFile: tail);
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: acc);
+        AssertEsquinaEsColor(bmp, 0, 255, 0); // Tail (verde) pisa a Backpack (rojo)
+    }
+
+    [Fact]
+    public void Orden_TailAntesQueBackNormal()
+    {
+        string tail = CrearPngSolido(255, 0, 0), back = CrearPngSolido(0, 255, 0);
+        var acc = new EquippedAccessories(null, null, null, null, back, null, null,
+            TailFile: tail);
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: acc);
+        AssertEsquinaEsColor(bmp, 0, 255, 0); // Back normal (verde) pisa a Tail (rojo)
+    }
+
     [Fact]
     public void SoloAccesorioDeShield_NoRevientaAunqueElAnchoRealNoSeaLosCuarentaPx()
     {

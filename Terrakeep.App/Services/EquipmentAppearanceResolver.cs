@@ -1,6 +1,7 @@
 using System.IO;
 using Terrakeep.Core.Calamity;
 using Terrakeep.Core.Data;
+using Terrakeep.Core.Model;
 using Terrakeep.Core.PlrFormat;
 
 namespace Terrakeep.App.Services;
@@ -41,11 +42,19 @@ public sealed record PetPreview(PetAnimationEntry? AnimationEntry, string? IconP
 // no compartida, igual que HeadSlot/BodySlot/LegsSlot en EquippedArmor). Este encargo NO
 // dibuja nada en el doll (eso es el Encargo2 de PortSeleccion) - solo resuelve que sprite real
 // le corresponde a cada tipo, fiel al guardado.
+// GapAnalysis Encargo A (25-sep-2026): BackpackFile/TailFile - hermanos de BackFile para los
+// otros 2 canales reales en los que puede caer un backSlot (ver BackAccessoryLayerTable, tabla
+// real transcrita de ArmorIDs.cs). Reusan el mismo sprite ya resuelto para "Back" (misma
+// textura vanilla real AccBack, ver el comentario de PlayerPreviewRenderer.Render) - nunca se
+// resuelven los 3 a la vez para un mismo objeto, ResolveAccessories reclasifica el resultado de
+// Back DESPUES de resolverlo, sin duplicar logica de resolucion.
 public sealed record EquippedAccessories(
     string? WaistFile, string? NeckFile, string? HandOnFile, string? HandOffFile,
     string? BackFile, string? ShieldFile, string? FaceFile,
     int? WaistSlot = null, int? NeckSlot = null, int? HandOnSlot = null, int? HandOffSlot = null,
-    int? BackSlot = null, int? ShieldSlot = null, int? FaceSlot = null);
+    int? BackSlot = null, int? ShieldSlot = null, int? FaceSlot = null,
+    string? BackpackFile = null, string? TailFile = null,
+    int? BackpackSlot = null, int? TailSlot = null);
 
 public sealed class EquipmentAppearanceResolver
 {
@@ -87,7 +96,11 @@ public sealed class EquipmentAppearanceResolver
             // como ruta) para poder aplicar SetMatch/hidesTopSkin/hidesBottomSkin/
             // GetMatchingBodyExtension en PlayerPreviewRenderer (ver PlayerBodyDrawTables).
             ResolveBodySlot(bodySlot),
-            ResolveLegsSlot(legsSlot));
+            ResolveLegsSlot(legsSlot),
+            // GapAnalysis Encargo B (25-sep-2026): HeadBack NO es un item independiente - se
+            // DERIVA del headSlot YA resuelto arriba (ver ResolveHeadBack para la cita real
+            // completa de ArmorIDs.Head.Sets.FrontToBackID/DrawPlayer_01_3_BackHead).
+            ResolveHeadBack(headSlot));
     }
 
     private static PlrItemSlot Visible(PlrLoadout loadout, int index) =>
@@ -143,9 +156,29 @@ public sealed class EquipmentAppearanceResolver
         var (shieldFile, shieldSlotId) = ResolveAccessorySprite(shield, "Shield", e => e.Shield, "acc_shield");
         var (faceFile, faceSlotId) = ResolveAccessorySprite(face, "Face", e => e.Face, "acc_face");
 
+        // GapAnalysis Encargo A (25-sep-2026): reclasifica el resultado de "Back" YA resuelto en
+        // los otros 2 canales reales posibles (Player.cs:37169-37184, UpdateVisibleAccessory) -
+        // el sprite es el mismo (acc_back/{backSlotId}.png), solo cambia a que campo va. Objetos
+        // de Calamity (backSlotId siempre null, numeracion propia no compartida) se quedan en
+        // "Back" - fiel-por-defecto, mismo criterio ya establecido para Calamity en el resto del
+        // resolver (sin SetMatch/hidesTopSkin, ver PlayerPreviewRenderer.Render).
+        string? backpackFile = null, tailFile = null;
+        int? backpackSlotId = null, tailSlotId = null;
+        if (backSlotId is int backId && BackAccessoryLayerTable.IsBackpackLayer(backId))
+        {
+            (backpackFile, backpackSlotId) = (backFile, backSlotId);
+            (backFile, backSlotId) = (null, null);
+        }
+        else if (backSlotId is int tailId && BackAccessoryLayerTable.IsTailLayer(tailId))
+        {
+            (tailFile, tailSlotId) = (backFile, backSlotId);
+            (backFile, backSlotId) = (null, null);
+        }
+
         return new EquippedAccessories(
             waistFile, neckFile, handOnFile, handOffFile, backFile, shieldFile, faceFile,
-            waistSlotId, neckSlotId, handOnSlotId, handOffSlotId, backSlotId, shieldSlotId, faceSlotId);
+            waistSlotId, neckSlotId, handOnSlotId, handOffSlotId, backSlotId, shieldSlotId, faceSlotId,
+            backpackFile, tailFile, backpackSlotId, tailSlotId);
     }
 
     // Un item real de Terraria solo declara UNO de los 7 campos de accesorio en la practica,
@@ -228,6 +261,28 @@ public sealed class EquipmentAppearanceResolver
     {
         if (slot.IsEmpty || slot.Id >= CalamityIds.ItemIdBase) return null;
         return _vanillaSlots.ById(slot.Id)?.Head;
+    }
+
+    // GapAnalysis Encargo B (25-sep-2026): HeadBack no es un item/canal independiente - se
+    // DERIVA del headSlot YA resuelto por ResolveHeadSlot (el mismo casco que ya se resuelve
+    // para la capa Head) via Terraria.ID.ArmorIDs.Head.Sets.FrontToBackID (ArmorIDs.cs:14 del
+    // decompilado real, transcrita literal en PlayerBodyDrawTables.HeadFrontToBackID). Se
+    // dibuja en DrawPlayer_01_3_BackHead (PlayerDrawLayers.cs:319-337 real), que reutiliza el
+    // MISMO array de texturas que ya usa el casco normal (TextureAssets.ArmorHead ->
+    // Assets/player/armor_head/{id}.png) - los 6 ids "back" reales (246/247/248/249/252/253) se
+    // ampliaron a la extraccion real en scripts/extraer-sprites-armadura-vanilla.js
+    // (HEAD_SINTETICOS_FRONT_TO_BACK) porque ningun item real los usa como headSlot "de frente",
+    // asi que no salian nunca de vanilla_armor_slots.json. Devuelve null si el headSlot actual no
+    // tiene entrada en la tabla (la inmensa mayoria de cascos reales - solo 6 variantes de
+    // "orejas" la tienen) o si el objeto es de Calamity (ResolveHeadSlot ya devuelve null en ese
+    // caso, numeracion propia no compartida).
+    private string? ResolveHeadBack(PlrItemSlot slot)
+    {
+        if (ResolveHeadSlot(slot) is not int headSlotId) return null;
+        if (PlayerBodyDrawTables.HeadFrontToBackID(headSlotId) is not int backId) return null;
+        string path = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "armor_head", backId + ".png");
+        // "lo que no se encuentra no se inventa" - mismo criterio ya establecido en Resolve().
+        return File.Exists(path) ? path : null;
     }
 
     // Calamity no comparte la numeracion de bodySlot/legSlot vanilla (registra sus propios

@@ -175,6 +175,8 @@ public sealed class EquipmentAppearanceResolverTests
         Assert.Null(acc.BackFile);
         Assert.Null(acc.ShieldFile);
         Assert.Null(acc.FaceFile);
+        Assert.Null(acc.BackpackFile);
+        Assert.Null(acc.TailFile);
     }
 
     [Fact]
@@ -199,6 +201,106 @@ public sealed class EquipmentAppearanceResolverTests
         Assert.Null(acc.FaceFile);
     }
 
+    // GapAnalysis Encargo A (25-sep-2026): backSlot se clasifica en 3 canales reales posibles
+    // (Player.cs:37169-37184, UpdateVisibleAccessory - ver BackAccessoryLayerTable, tabla real
+    // de ArmorIDs.cs:1717/1719). Ids reales confirmados en vanilla_accessory_slots.json contra
+    // vanilla_item_names_en.json de este PC (25-sep-2026): Magic Quiver (id 1321, backSlot=7,
+    // DrawInBackpackLayer), Dog Tail (id 4769, backSlot=25, DrawInTailLayer), Bee Cloak (id 1247,
+    // backSlot=1, ninguna de las 2 tablas - Back normal), los 3 con sprite ya extraido en
+    // Assets/player/acc_back/.
+    private const int MagicQuiver = 1321; // backSlot=7 -> Backpack
+    private const int DogTail = 4769;     // backSlot=25 -> Tail
+    private const int BeeCloak = 1247;    // backSlot=1 -> Back normal (ninguna tabla)
+
+    [Fact]
+    public void BackSlotEnTablaDeBackpack_SeReclasificaComoBackpackNoComoBack()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, MagicQuiver));
+
+        Assert.NotNull(acc.BackpackFile);
+        Assert.True(File.Exists(acc.BackpackFile));
+        Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "7.png", acc.BackpackFile);
+        Assert.Equal(7, acc.BackpackSlot);
+        Assert.Null(acc.BackFile);
+        Assert.Null(acc.BackSlot);
+        Assert.Null(acc.TailFile);
+    }
+
+    [Fact]
+    public void BackSlotEnTablaDeTail_SeReclasificaComoTailNoComoBack()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, DogTail));
+
+        Assert.NotNull(acc.TailFile);
+        Assert.True(File.Exists(acc.TailFile));
+        Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "25.png", acc.TailFile);
+        Assert.Equal(25, acc.TailSlot);
+        Assert.Null(acc.BackFile);
+        Assert.Null(acc.BackSlot);
+        Assert.Null(acc.BackpackFile);
+    }
+
+    [Fact]
+    public void BackSlotFueraDeAmbasTablas_SigueSiendoBackNormal()
+    {
+        // Tercer canal - el ya portado por PortSeleccion Encargo1, no debe romperse.
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, BeeCloak));
+
+        Assert.NotNull(acc.BackFile);
+        Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "1.png", acc.BackFile);
+        Assert.Equal(1, acc.BackSlot);
+        Assert.Null(acc.BackpackFile);
+        Assert.Null(acc.TailFile);
+    }
+
+    [Fact]
+    public void VanidadDeBackpackTapaAlFuncionalDeBack_FielAlGuardado()
+    {
+        // Funcional: Bee Cloak (Back normal) en el hueco 3. Vanidad: Magic Quiver (Backpack) en
+        // el hueco 7 - el juego real muestra el de VANIDAD, aunque caiga en un canal distinto
+        // (Backpack en vez de Back), mismo criterio "vanidad tapa a funcional" ya verificado
+        // para el resto de tipos.
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(BeeCloak, 1, 0, false);
+        loadout.Social[7] = new PlrItemSlot(MagicQuiver, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.BackpackFile);
+        Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "7.png", acc.BackpackFile);
+        Assert.Null(acc.BackFile);
+        Assert.Null(acc.TailFile);
+    }
+
+    [Fact]
+    public void VanidadDeTailTapaAlFuncionalDeBackpack_FielAlGuardado()
+    {
+        // Funcional: Magic Quiver (Backpack) en el hueco 3. Vanidad: Dog Tail (Tail) en el hueco
+        // 8 - el juego real muestra el de VANIDAD, aunque caiga en OTRO canal (Tail en vez de
+        // Backpack).
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(MagicQuiver, 1, 0, false);
+        loadout.Social[8] = new PlrItemSlot(DogTail, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.TailFile);
+        Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "25.png", acc.TailFile);
+        Assert.Null(acc.BackFile);
+        Assert.Null(acc.BackpackFile);
+    }
+
+    [Fact]
+    public void SlotVacio_NoResuelveNingunBackpackNiTail()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+
+        Assert.Null(acc.BackpackFile);
+        Assert.Null(acc.TailFile);
+        Assert.Null(acc.BackpackSlot);
+        Assert.Null(acc.TailSlot);
+    }
+
     [Fact]
     public void ObjetoDeArmaduraCalamityEnHuecoDeAccesorio_NoSeCuelaComoAccesorio()
     {
@@ -219,5 +321,104 @@ public sealed class EquipmentAppearanceResolverTests
         Assert.Null(acc.BackFile);
         Assert.Null(acc.ShieldFile);
         Assert.Null(acc.FaceFile);
+    }
+
+    // GapAnalysis Encargo B (25-sep-2026): HeadBack no es un item/canal independiente - se
+    // DERIVA del headSlot YA resuelto via ArmorIDs.Head.Sets.FrontToBackID (ver
+    // ResolveHeadBack/PlayerBodyDrawTables.HeadFrontToBackID para la cita real completa). Ids
+    // vanilla reales confirmados contra vanilla_armor_slots.json de este PC (25-sep-2026): Dog
+    // Ears (id 4768, headSlot=242), Cat Ears (id 1824, headSlot=133), Bunny Ears (id 4560,
+    // headSlot=224) - los 3 con entrada real en FrontToBackID y sprite "de espaldas" ya
+    // extraido en Assets/player/armor_head/ (246/252/253.png, ampliado en esta misma pasada por
+    // extraer-sprites-armadura-vanilla.js/HEAD_SINTETICOS_FRONT_TO_BACK).
+    private const int OrejasDePerro = 4768; // headSlot=242 -> FrontToBackID=246
+    private const int OrejasDeGato = 1824;  // headSlot=133 -> FrontToBackID=252
+    private const int OrejasDeConejo = 4560; // headSlot=224 -> FrontToBackID=253
+
+    [Theory]
+    [InlineData(OrejasDePerro, 246)]
+    [InlineData(OrejasDeGato, 252)]
+    [InlineData(OrejasDeConejo, 253)]
+    public void CascoConEntradaRealEnFrontToBackID_ResuelveElSpriteDeEspaldas(int itemId, int backIdEsperado)
+    {
+        var armor = Service.EquipmentAppearance.Resolve(LoadoutConCabeza(itemId));
+
+        Assert.NotNull(armor.HeadBackFile);
+        Assert.True(File.Exists(armor.HeadBackFile));
+        Assert.EndsWith("armor_head" + Path.DirectorySeparatorChar + backIdEsperado + ".png", armor.HeadBackFile);
+    }
+
+    [Fact]
+    public void CascoSinEntradaEnFrontToBackID_HeadBackEsNull_LaInmensaMayoriaDeCascosReales()
+    {
+        // El Casco de cobre (headSlot=1) NO tiene sprite "de espaldas" real - confirma que el
+        // camino "sin entrada" no revienta ni inventa un fichero, mismo criterio "lo que no se
+        // encuentra no se inventa" del resto del resolver.
+        var armor = Service.EquipmentAppearance.Resolve(LoadoutConCabeza(CascoCobre));
+
+        Assert.Null(armor.HeadBackFile);
+    }
+
+    [Fact]
+    public void SlotVacio_HeadBackFileTambienEsNull()
+    {
+        var armor = Service.EquipmentAppearance.Resolve(PlrLoadout.CreateEmpty(isPrimary: true));
+
+        Assert.Null(armor.HeadBackFile);
+    }
+
+    [Fact]
+    public void VanidadDeCascoConOrejasTapaAlFuncionalSinEntrada_HeadBackSigueALaVanidad()
+    {
+        // Funcional: Casco de cobre (sin FrontToBackID) en el slot 0. Vanidad: Orejas de perro
+        // (headSlot=242, CON FrontToBackID) en el slot de vanidad - el juego real muestra la
+        // vanidad, y HeadBack tiene que derivarse del headSlot VISIBLE (el de vanidad), no del
+        // funcional tapado - mismo criterio "vanidad tapa a funcional" ya verificado para
+        // HeadFile/BodyFile/LegsFile.
+        var armor = Service.EquipmentAppearance.Resolve(LoadoutConCabeza(CascoCobre, OrejasDePerro));
+
+        Assert.NotNull(armor.HeadBackFile);
+        Assert.EndsWith("armor_head" + Path.DirectorySeparatorChar + "246.png", armor.HeadBackFile);
+    }
+
+    [Fact]
+    public void RenderConHeadBackFileDaUnaImagenDistintaASinEl_AislandoSoloEsaCapa()
+    {
+        // Verificacion de extremo a extremo real y AISLADA (no solo que la ruta se calcule
+        // bien): las dos EquippedArmor de aqui son IDENTICAS salvo HeadBackFile - si algun dia
+        // PlayerPreviewRenderer.Render deja de leer ese campo por un refactor descuidado, esta
+        // prueba lo pilla en seco (a diferencia de comparar dos cascos DISTINTOS, que tambien
+        // diferirian por HeadFile aunque HeadBackFile no se dibujara nunca).
+        //
+        // HeadSlot=1 (Casco de cobre) SIN HeadFile es una combinacion sintetica a proposito
+        // (no se da nunca en un .plr real, donde HeadSlot y HeadFile siempre se resuelven
+        // juntos): fuerza hideHair=true (1 no esta en FullHairHeadSlots/HatHairHeadSlots, ver
+        // HairDrawProfile) sin dibujar ningun casco encima - los 28 pixels reales del sprite
+        // "de espaldas" (armor_head/246.png, coordenadas x=24-29/y=10-15, comprobado con Pillow
+        // contra este PC) caen en una zona que body0/head.png deja transparente, asi que solo
+        // se ven si NINGUNA otra capa opaca los tapa. Los 6 headSlot reales que SI tienen
+        // entrada en FrontToBackID (ver CascoConEntradaRealEnFrontToBackID_...) estan TODOS en
+        // FullHairHeadSlots (fullHair=true) - el pelo real se dibuja encima igualmente, por eso
+        // esta prueba aislada no reutiliza esos ids, solo necesita comprobar que Render lee el
+        // campo HeadBackFile de verdad.
+        string headBackPath = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "armor_head", "246.png");
+        Assert.True(File.Exists(headBackPath));
+
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var sinHeadBack = new PlayerPreviewRenderer.EquippedArmor(HeadFile: null, BodyFile: null, LegsFile: null, HeadSlot: 1);
+        var conHeadBack = new PlayerPreviewRenderer.EquippedArmor(HeadFile: null, BodyFile: null, LegsFile: null, HeadSlot: 1, HeadBackFile: headBackPath);
+
+        var renderSinHeadBack = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, sinHeadBack);
+        var renderConHeadBack = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, conHeadBack);
+
+        var pixelesSinHeadBack = new byte[renderSinHeadBack.PixelHeight * renderSinHeadBack.PixelWidth * 4];
+        renderSinHeadBack.CopyPixels(pixelesSinHeadBack, renderSinHeadBack.PixelWidth * 4, 0);
+        var pixelesConHeadBack = new byte[renderConHeadBack.PixelHeight * renderConHeadBack.PixelWidth * 4];
+        renderConHeadBack.CopyPixels(pixelesConHeadBack, renderConHeadBack.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSinHeadBack, pixelesConHeadBack);
     }
 }
