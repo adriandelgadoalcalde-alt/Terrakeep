@@ -47,6 +47,17 @@ public static class GuideFlags
         { "downedGolemBoss", h => h.DownedGolemBoss },
         { "downedSlimeKing", h => h.DownedSlimeKingBoss },
         { "hardMode", h => h.HardMode },
+
+        // Auditoria 24-sep-2026 (I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md, Encargo 1): estas tres SI
+        // viven en el mismo tramo de ancho FIJO que las de arriba (confirmado en WldHeader.cs y
+        // WldReader.cs, no en las secciones de ancho variable que el comentario de cabecera dice
+        // que Terrakeep todavia no atraviesa) - simplemente faltaba conectarlas aqui. Mismas
+        // claves de texto que BanderasGuia.cs del mod ("downedGoblins"/"downedFrost"/
+        // "downedPirates", NO "downedGoblinArmy"/"downedFrostLegion" - el nombre de campo de
+        // NPC.cs real es mas corto que el de WldHeader.cs).
+        { "downedGoblins", h => h.DownedGoblinArmy },
+        { "downedFrost", h => h.DownedFrostLegion },
+        { "downedPirates", h => h.DownedPirates },
     };
 
     /// <summary>true si Terrakeep sabe (en principio) leer esta bandera - independientemente de

@@ -22,7 +22,11 @@ public static class GuideEvaluationEngine
         switch (requisito.Tipo)
         {
             case TipoRequisitoGuia.CristalesVida:
-                if (!ds.HasLiveGameData) { NoEvaluableFijo(r, ds.MotivoSinPartidaEnMarcha(requisito.Tipo)); break; }
+                // A diferencia de Defensa/DanoArma/NpcActivo, CristalesVida SI se puede derivar de
+                // un dato estatico ya cargado (VidaMaxima/HealthMax del .plr) - por eso usa el
+                // mismo gate que VidaMaxima (HasCharacterData), no HasLiveGameData. Auditoria
+                // 24-sep-2026, I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md, Encargo 1.
+                if (!ds.HasCharacterData) { NoEvaluableSinDatos(r, "guide_motive_load_character"); break; }
                 Contar(r, ds.CristalesVida, requisito.Valor, "Guia.Req.CristalesVida");
                 break;
 

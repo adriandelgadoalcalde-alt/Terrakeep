@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Terrakeep.Core.Data;
 using Terrakeep.Core.Guia;
+using Terrakeep.Core.PlrFormat;
 using Terrakeep.Core.WldFormat;
 using Xunit;
 
@@ -34,7 +35,9 @@ public class GuideEvaluationEngineTests
         return NpcNameCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(json)));
     }
 
-    private static WldWorld MakeWorld(bool downedBoss1 = false, bool downedBoss2 = false, IReadOnlyList<WldNpc>? npcs = null) => new()
+    private static WldWorld MakeWorld(
+        bool downedBoss1 = false, bool downedBoss2 = false, IReadOnlyList<WldNpc>? npcs = null,
+        bool downedGoblinArmy = false, bool downedFrostLegion = false, bool downedPirates = false) => new()
     {
         Header = new WldHeader
         {
@@ -58,7 +61,7 @@ public class GuideEvaluationEngineTests
             DownedBoss3Skeletron = false, DownedQueenBee = false, DownedMechBoss1TheDestroyer = false,
             DownedMechBoss2TheTwins = false, DownedMechBoss3SkeletronPrime = false, DownedPlantBoss = false,
             DownedGolemBoss = false, DownedSlimeKingBoss = false, HardMode = false,
-            DownedGoblinArmy = false, DownedFrostLegion = false, DownedPirates = false,
+            DownedGoblinArmy = downedGoblinArmy, DownedFrostLegion = downedFrostLegion, DownedPirates = downedPirates,
         },
         Tiles = new WldTile[1, 1],
         Npcs = npcs ?? [],
@@ -66,6 +69,14 @@ public class GuideEvaluationEngineTests
         Signs = [],
         TileEntities = [],
         ShimmeredNpcTypes = new HashSet<int>(),
+    };
+
+    private static PlrCharacter MakeCharacter(int healthMax) => new()
+    {
+        Version = 279,
+        Name = "Personaje de prueba",
+        PrimaryLoadout = PlrLoadout.CreateEmpty(isPrimary: true),
+        HealthMax = healthMax,
     };
 
     private static RequisitoGuia Req(TipoRequisitoGuia tipo, int id = 0, int cantidad = 1, string bandera = "") => new()
@@ -240,5 +251,119 @@ public class GuideEvaluationEngineTests
         // de preparacion se quedaba bloqueado para siempre y ocultaba el progreso real.
         Assert.True(evaluador.PasoCompletado(pasoPreparacion, contexto));
         Assert.True(evaluador.PasoCompletado(pasoVencer, contexto));
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Encargo 1 (I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md, auditoria 24-sep-2026): downedGoblins/
+    // downedFrost/downedPirates ya se parseaban en WldHeader.cs/WldReader.cs pero GuideFlags.
+    // _deMundo (este mismo namespace) no los conectaba - la Guia los marcaba SIEMPRE no
+    // evaluable/desconocidos aunque el .wld real dijera lo contrario. Regresion real de
+    // GuideFlags.Valor/Existe contra un WldHeader sintetico con las tres banderas nuevas, en
+    // true y en false (hueco de cobertura real: este archivo no tenia NINGUNA prueba de
+    // GuideFlags antes de esta ronda).
+    // ---------------------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("downedGoblins")]
+    [InlineData("downedFrost")]
+    [InlineData("downedPirates")]
+    public void BanderasDeEventoTardio_SonConocidasPorGuideFlags(string bandera)
+    {
+        Assert.True(GuideFlags.Existe(bandera));
+    }
+
+    [Fact]
+    public void MundoConLosTresEventosTardiosDerrotados_LasTresBanderasSalenCumplidas()
+    {
+        var evaluador = new GuideEvaluator(MakeItemNames(), MakeNpcNames(), null);
+        var mundo = MakeWorld(downedGoblinArmy: true, downedFrostLegion: true, downedPirates: true);
+        var contexto = new GuideContext { Character = null, MergedContainers = null, World = mundo };
+
+        var goblins = evaluador.Evaluar(Req(TipoRequisitoGuia.Bandera, bandera: "downedGoblins"), contexto);
+        var frost = evaluador.Evaluar(Req(TipoRequisitoGuia.Bandera, bandera: "downedFrost"), contexto);
+        var piratas = evaluador.Evaluar(Req(TipoRequisitoGuia.Bandera, bandera: "downedPirates"), contexto);
+
+        Assert.False(goblins.NoEvaluable);
+        Assert.True(goblins.Cumplido);
+        Assert.False(frost.NoEvaluable);
+        Assert.True(frost.Cumplido);
+        Assert.False(piratas.NoEvaluable);
+        Assert.True(piratas.Cumplido);
+    }
+
+    [Fact]
+    public void MundoSinDerrotarLosTresEventosTardios_LasTresBanderasSalenNoCumplidas_NuncaNoEvaluables()
+    {
+        var evaluador = new GuideEvaluator(MakeItemNames(), MakeNpcNames(), null);
+        // MakeWorld() por defecto ya deja los tres campos a false - un mundo real donde todavia
+        // no se han invocado esos eventos.
+        var contexto = new GuideContext { Character = null, MergedContainers = null, World = MakeWorld() };
+
+        var goblins = evaluador.Evaluar(Req(TipoRequisitoGuia.Bandera, bandera: "downedGoblins"), contexto);
+        var frost = evaluador.Evaluar(Req(TipoRequisitoGuia.Bandera, bandera: "downedFrost"), contexto);
+        var piratas = evaluador.Evaluar(Req(TipoRequisitoGuia.Bandera, bandera: "downedPirates"), contexto);
+
+        Assert.False(goblins.NoEvaluable);
+        Assert.False(goblins.Cumplido);
+        Assert.False(frost.NoEvaluable);
+        Assert.False(frost.Cumplido);
+        Assert.False(piratas.NoEvaluable);
+        Assert.False(piratas.Cumplido);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Encargo 1: cristales_vida derivado de HealthMax (formula real del motor vanilla,
+    // Player.cs ~linea 56437/55952 del tModLoader decompilado: "ConsumedLifeCrystals =
+    // (statLifeMax - 100) / 20"). Antes de esta ronda CristalesVida devolvia SIEMPRE 0 y
+    // ademas quedaba detras del gate HasLiveGameData (fijo a false en escritorio) - dos
+    // fallos independientes, cubiertos aqui: el valor calculado Y que ahora SI se evalua con
+    // solo un personaje cargado (sin partida en marcha).
+    // ---------------------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData(100, 0)]   // base sin cristales consumidos
+    [InlineData(120, 1)]   // un cristal exacto
+    [InlineData(180, 4)]   // varios cristales, division exacta
+    [InlineData(190, 4)]   // resto que no llega al siguiente cristal (division entera)
+    [InlineData(500, 15)]  // 400 de vida maxima extra = tope real de 15 cristales
+    [InlineData(700, 15)]  // por encima del tope (Vida Suprema/Calamity) - clamp, nunca > 15
+    public void CristalesVida_SeCalculaConLaFormulaRealDelMotor(int healthMax, int cristalesEsperados)
+    {
+        var evaluador = new GuideEvaluator(MakeItemNames(), MakeNpcNames(), null);
+        var contexto = new GuideContext { Character = MakeCharacter(healthMax), MergedContainers = null, World = null };
+
+        var resultado = evaluador.Evaluar(Req(TipoRequisitoGuia.CristalesVida, cantidad: cristalesEsperados), contexto);
+
+        Assert.False(resultado.NoEvaluable);
+        Assert.Equal(cristalesEsperados, resultado.Actual);
+    }
+
+    [Fact]
+    public void CristalesVida_ConVidaMaximaBase_NoCumpleUnRequisitoDeUnCristal_SinQuedarNoEvaluable()
+    {
+        var evaluador = new GuideEvaluator(MakeItemNames(), MakeNpcNames(), null);
+        var contexto = new GuideContext { Character = MakeCharacter(100), MergedContainers = null, World = null };
+
+        var resultado = evaluador.Evaluar(Req(TipoRequisitoGuia.CristalesVida, cantidad: 1), contexto);
+
+        Assert.False(resultado.NoEvaluable);
+        Assert.False(resultado.Cumplido);
+        Assert.Equal(0, resultado.Actual);
+    }
+
+    [Fact]
+    public void CristalesVida_SinPersonajeCargado_QuedaNoEvaluable_ConMotivoDePersonaje_NoComoLimiteEstructural()
+    {
+        var evaluador = new GuideEvaluator(MakeItemNames(), MakeNpcNames(), null);
+        var contexto = new GuideContext { Character = null, MergedContainers = null, World = null };
+
+        var resultado = evaluador.Evaluar(Req(TipoRequisitoGuia.CristalesVida, cantidad: 1), contexto);
+
+        Assert.True(resultado.NoEvaluable);
+        Assert.Equal("guide_motive_load_character", resultado.MotivoClave);
+        // A diferencia de dano_arma (limite ESTRUCTURAL: jamas evaluable en escritorio),
+        // cristales_vida SI se resuelve solo cargando el personaje - no debe bloquear un paso
+        // para siempre como el bug real de dano_arma cerrado el 16-sep-2026.
+        Assert.False(resultado.EsLimiteEstructural);
     }
 }

@@ -27,10 +27,20 @@ internal sealed class DesktopGuideStateProvider(
     // vez de inventado. Por eso esto es SIEMPRE false aqui (y siempre true en TerrakeepMod).
     public bool HasLiveGameData => false;
 
-    // Los cuatro de abajo solo se leen cuando HasLiveGameData/HasCharacterData son true; aqui
-    // CristalesVida/Defensa no se llaman nunca (HasLiveGameData es fijo a false), se dejan a 0 por
-    // higiene de la interfaz.
-    public int CristalesVida => 0;
+    // Defensa nunca se llama (HasLiveGameData es fijo a false: exige buffs/equipo en combate real,
+    // que un .plr estatico no guarda), se deja a 0 por higiene de la interfaz.
+    //
+    // CristalesVida es DISTINTO, auditoria 24-sep-2026 (I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md,
+    // Encargo 1): a diferencia de Defensa/DanoArma/NpcActivo, el numero de cristales de vida
+    // consumidos SI es derivable de un dato ya parseado del .plr sin partida en marcha -
+    // PlrCharacter.HealthMax (VidaMaxima, linea de abajo). Formula real del motor vanilla
+    // (Player.cs del tModLoader decompilado, ~linea 56437/55952:
+    // "ConsumedLifeCrystals = (statLifeMax - 100) / 20"): cada cristal sube 20 de vida maxima
+    // sobre la base de 100, hasta el tope de 15 cristales (400 de vida maxima extra). Clamp por
+    // si HealthMax viniera fuera de rango (personaje recien creado con 100 exactos da 0, nunca
+    // negativo). Ver el cambio de gate correspondiente en GuideEvaluationEngine (HasCharacterData,
+    // no HasLiveGameData) - sin ese cambio esta formula seria codigo muerto igual que antes.
+    public int CristalesVida => Math.Clamp((VidaMaxima - 100) / 20, 0, 15);
     public int VidaMaxima => contexto.Character?.HealthMax ?? 0;
     public int Defensa => 0;
 
@@ -77,7 +87,9 @@ internal sealed class DesktopGuideStateProvider(
 
     public string MotivoSinPartidaEnMarcha(TipoRequisitoGuia tipo) => tipo switch
     {
-        TipoRequisitoGuia.CristalesVida => "guide_motive_life_crystals",
+        // CristalesVida ya NO pasa por aqui (24-sep-2026): usa el gate de HasCharacterData/
+        // "guide_motive_load_character", igual que VidaMaxima - ver GuideEvaluationEngine y el
+        // comentario de CristalesVida mas arriba en este archivo.
         TipoRequisitoGuia.Defensa => "guide_motive_defense",
         TipoRequisitoGuia.DanoArma => "guide_motive_weapon_damage",
         TipoRequisitoGuia.NpcActivo => "guide_motive_active_npc",
