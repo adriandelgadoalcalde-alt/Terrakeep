@@ -24692,3 +24692,152 @@ verificado con `diff -u` contra `git show HEAD:` antes de comitear que no conten
 de Encargo I. `PlayerPreviewRenderer.cs`/`EquipmentGroupViewModel.cs`/`DyeShaderCatalog.cs`/
 `DyeShaderCatalogTests.cs` (exclusivos de Encargo I) NO se tocaron ni se comitearon. Sin
 `git push`.
+
+## GapAnalysis Encargo I (25-sep-2026): dyes reales por canal (armadura + accesorios), solo dyes
+PLANOS - aplicador-fix, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d
+
+**Hallazgo YA investigado por arquitecto-keep** (verificado aqui antes de tocar nada):
+`MainViewModel.cs` dejaba `PlrLoadout.Dyes` en su default con un comentario explicito
+("Resolve()/ResolveAccessories() nunca lo leen") - `Dyes` ya existia como array de 10 slots
+(mismo tamaño que `Items`/`Social`, `PlrLoadout.cs:12`), simplemente nunca se resolvia. `dye` no
+es un color RGB simple - es un indice de shader (`Terraria.Graphics.Shaders.GameShaders.Armor`).
+
+**Catalogo real de dyes vanilla, transcrito de `Terraria.Initializers.DyeInitializer.
+LoadArmorDyes()` decompilado** (`tModLoader-Decompiled\TerrariaVanilla\Terraria\Initializers\
+DyeInitializer.cs:13-141`, no una estimacion): **120 items reales registrados**, clasificados por
+el NOMBRE DEL EFECTO `.fx` que cada `BindShader` usa -
+- **57 PLANOS** (recolor estatico, `pixel_final = pixel_sprite * color`, SIEMPRE el mismo color,
+  sin ruido/tiempo/segundo color/equipo/vida/mana): 4 efectos reales -
+  `ArmorColored`/`ArmorColoredAndBlack`/`ArmorBrightnessColored`/`ArmorColoredAndSilverTrim` - 52
+  de `LoadBasicColorDyes()` (12 colores base x4 variantes real/negro/brillante/plata, mismos
+  offsets EXACTOS del juego real `base+12/+31/+44`, spot-check `RedDye=1007 ->
+  RedandBlackDye=1019 -> BrightRedDye=1038 -> RedandSilverDye=1051` confirmado contra
+  `ItemID.cs`) + `BrownDye` con sus 4 ids EXPLICITOS (2874-2877, unico color base sin offsets) +
+  5 sueltos (`BlackDye`/`SilverDye`/`BrightSilverDye`/`ShadowDye`/`SilverAndBlackDye`).
+- **63 ANIMADOS/SHADER** (gradientes de 2 colores en el tiempo, arcoiris, fuego/oceano/wisp
+  "vivos", texturas de ruido animadas -Acid/Gel/Fog/Mushroom/Phase/Twilight/ShiftingSands/
+  Mirage/Polarized/Hades/Loki/Solar/Nebula/Vortex/Stardust/Void/Martian/HallowBoss-, reflejo de
+  escena en tiempo real, color dependiente del EQUIPO del jugador -Team, dinamico por
+  definicion-, inversion de color, o `ColorOnly` sin `UseColor` conocido): **EXCLUIDOS a
+  proposito de este encargo** - "mejor sin tinte que un tinte incorrecto", ninguno tiene un color
+  fijo real que extraer sin replicar el shader `.fx` completo. Calamity (mas de 40 dyes propios
+  con sus propios shaders, no decompilados aqui) tambien fuera de alcance - LIMITE REAL
+  documentado en el propio codigo, mismo criterio ya establecido para el resto de canales sin
+  datos de Calamity.
+
+**Canales realmente teñibles, confirmados contra `Player.cs:9673-9831` decompilado**
+(`UpdateDyes`/`UpdateItemDye` real): **TODOS** los canales de armadura/accesorio ya portados en
+Terrakeep tienen un dye real en el juego - `cHead`/`cBody`/`cLegs` (dye[0]/dye[1]/dye[2] directo,
+"cLegs = cBody" si `wearsRobe`) y los 12 tipos de accesorio (Waist/Neck/HandOn/HandOff/Back
+-incluye Backpack/Tail-/Shield/Face -incluye FaceHead/FaceMask/FaceFlower-/Shoes/Balloon -incluye
+BalloonFront-/Beard/Front/Wing), cada uno con su propio `cX = dyeItem.dye`. Ningun canal quedo
+fuera por "no ser teñible" - la unica exclusion real es por tipo de DYE (animado/Calamity), no
+por canal.
+
+**Detalle real del emparejamiento dye<->slot** (`Player.cs:9691-9697/9702`, cita completa: `"int
+num = i % 10; UpdateItemDye(i < 10, hideVisibleAccessory[num], GetEffectiveArmor(i),
+GetEffectiveDye(num));"`): el dye del indice `i` (0..9) sirve TANTO para el hueco funcional `i`
+como para su gemelo de vanidad `i+10` - el MISMO indice de dye vale para los dos. Para
+armadura (indices 0-2) esto es directo: `dye[headSlot]` sin pasar por `Visible()` (a diferencia
+del sprite, el dye NO distingue funcional/vanidad). Para accesorios (indices 3-9, genericos por
+TIPO no por indice) hizo falta que `EquipmentAppearanceResolver.Scan()` guarde, junto al item que
+GANA cada canal, el `Dyes[i]` de ESE MISMO indice (`AccessoryMatch(Item, Dye)` en vez de solo
+`PlrItemSlot?`) - "ultimo en escribir gana" ya vale igual para el dye que para el sprite, porque
+ambos se sobrescriben juntos en el mismo `if`. El dye viaja con la reclasificacion ya existente
+(Back->Backpack/Tail, Balloon->BalloonFront, Face->FaceHead/FaceMask/FaceFlower) - mismo patron
+que su `File`/`Slot` hermano, verificado con test dedicado (`DyeReclasificadoDeBackABackpack_
+ElTinteViajaConElSprite`).
+
+**Implementacion real**:
+- `Terrakeep.Core/Data/DyeShaderCatalog.cs` (nuevo): `PlainColor(itemId)`/`IsKnownPlainDye`/
+  `PlainDyeCount` - tabla construida reproduciendo EXACTAMENTE la formula real de
+  `LoadBasicColorDye` (incluida la formula del "brillante", `r*0.5f+0.5f`), valores `float 0..1`
+  convertidos a `byte` multiplicando por 255 con `Math.Clamp`+`MathF.Round`.
+- `EquipmentAppearanceResolver.ResolveDye(PlrItemSlot dyeSlot)`: `null` si vacio, Calamity
+  (`Id >= CalamityIds.ItemIdBase`) o `DyeShaderCatalog.PlainColor` no lo reconoce (dye animado) -
+  "sin tinte" siempre el resultado seguro.
+- `Resolve()`: 3 campos nuevos en `PlayerPreviewRenderer.EquippedArmor` (`HeadDye`/`BodyDye`/
+  `LegsDye`).
+- `ResolveAccessories()`: 18 campos nuevos en `EquippedAccessories` (uno por canal ya portado).
+- `PlayerPreviewRenderer.Render`: reutiliza el mecanismo `Tint`/`Composite` YA EXISTENTE (usado
+  hoy para Hair/Skin/Eyes/Shirt/Under/Pants/Shoes) - `DrawAccessory`/`DrawHandAccessory` ganan un
+  parametro `Tint? tint = null` (compatibilidad total con cualquier llamador que no lo pase), y
+  cada capa de armadura/accesorio pasa su `*Dye` resuelto en vez de `null` fijo. Casos especiales
+  documentados en el propio codigo: `HeadDye` tambien tiñe `HeadBackFile` (misma pieza,
+  "de espaldas") y sobrevive a la sustitucion de `SetMatch` (solo cambia el sprite, nunca el
+  dye, mismo criterio para `LegsDye`); `BodyDye` tambien tiñe el faldon largo `ArmorLongCoat`
+  (extension real de la armadura de cuerpo); Beard NO se tiñe con su propio `BeardDye` -
+  confirmado en el decompilado (`PlayerDrawLayers.cs:2436-2440`) que el juego real usa
+  `colorArmorHead`/`colorHair`, nunca `colorBeard`, para esa capa - ya portado fielmente en el
+  Encargo G, sin cambios aqui.
+- `MainViewModel.RefreshAppearanceEquipment`/`EquipmentGroupViewModel.EquippedDyes` (nuevo,
+  gemelo de `EquippedItems`/`EquippedSocial`): el loadout sintetico del preview en vivo de
+  Apariencia ya lee los 10 slots reales de tinte, cerrando el hueco documentado en el propio
+  comentario de `MainViewModel.cs`.
+
+**Capturas reales antes/despues** (test temporal `_TempCapturaDyeEncargoI.cs`, generado,
+ejecutado y BORRADO tras capturar): `scratchpad/dyeI_01_cabeza_sin_dye.png` (casco de cobre sin
+tinte) vs `dyeI_02_cabeza_con_reddye.png` (mismo casco, visiblemente ROJO con RedDye real) -
+diferencia visual clara a simple vista; `dyeI_03_waist_sin_dye.png` vs
+`dyeI_04_waist_con_bluedye.png` (Reloj de cobre con BlueDye, accesorio pequeño en el lienzo de
+40x56 - diferencia confirmada a nivel de bytes del PNG, no solo visualmente).
+
+**Tests nuevos**: `DyeShaderCatalogTests` (Terrakeep.Core.Tests, 8 casos) - color base exacto de
+RedDye, formula real del "brillante", mismo color base en variantes negro/plata, caso especial
+BrownDye, BlackDye, 6 dyes animados reales que NUNCA devuelven color (Rainbow/Flame/Team/
+Reflective/ColorOnly/Invert), objeto que no es dye, conteo real de 57. `EquipmentAppearanceResolverTests`
+(9 casos): dye plano real en cabeza (resolucion + pixeles reales antes/despues con `Render`), sin
+dye = null, dye plano real en accesorio Waist (resolucion + pixeles reales antes/despues), dye
+real emparejado por indice cuando el item ganador viene de VANIDAD (no funcional), dye animado
+real ignorado limpiamente (sprite intacto, sin tinte inventado), dye reclasificado de Back a
+Backpack viaja con el sprite. 17 pruebas nuevas reales en total.
+
+**Build y regresion**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores. `dotnet test
+Terrakeep.Core.Tests -c Release`: 732/732. `dotnet test Terrakeep.App.ViewModels.Tests -c
+Release` COMPLETO: 697/697, 3m46s - sin regresion.
+
+**Incidente real durante la ejecucion (documentado con detalle completo en la seccion de
+GapAnalysis Encargo H de arriba, "Incidente real: perdida de un bloque de tests")**: con Encargo
+H trabajando en paralelo sobre los MISMOS 3 ficheros (`EquipmentAppearanceResolver.cs`/
+`PlayerPreviewRenderer.cs`/`MainViewModel.cs`, sin aislamiento de proceso), la reconstruccion
+aislada que hizo Encargo H para comitear limpio su propio trabajo (`git show HEAD:` + reaplicar
+solo sus ediciones) sobrescribio TEMPORALMENTE mis cambios en esos 3 ficheros MAS
+`EquipmentAppearanceResolverTests.cs` mientras mi `dotnet test` de 6 minutos seguia corriendo en
+segundo plano - confirmado con `grep -c "GapAnalysis Encargo I"` = 0 en los 4 ficheros justo
+despues. El codigo de produccion se restauro solo (Encargo H tomo una copia de seguridad
+"mezclada" antes de sobrescribir y la restauro tras su commit, ver su nota), pero
+`EquipmentAppearanceResolverTests.cs` NO tuvo esa proteccion - las ~120 lineas de tests de Dyes
+de ese fichero se perdieron de verdad (confirmado: intento de recuperacion via `vssadmin list
+shadows`, instantanea mas reciente insuficiente/incierta para el momento exacto). Reescribi los 9
+tests desde cero (mismo contenido real, mas 1 test nuevo de pixeles reales en un canal de
+ACCESORIO que no existia en la version perdida) - verificado de nuevo en verde (77/77 en
+`EquipmentAppearanceResolverTests`) antes de comitear. Sin perdida real de trabajo final, solo
+tiempo de re-escritura.
+
+**Recompilacion y redespliegue local**: `Terrakeep.exe` instalado NO estaba en ejecucion
+(confirmado `Get-CimInstance Win32_Process -Filter "Name='Terrakeep.exe'"`, sin resultados).
+`dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en
+verde (`FileVersion=3.2.5.0`). Verificacion de sanidad de `Assets/` ANTES del `/MIR` (pedida
+explicitamente, tras el incidente real de hoy de 13051 archivos borrados por una copia parcial
+fallida bajo contencion): publish nuevo = 13051 archivos en `Assets/`, copia instalada actual =
+13051 archivos - coinciden, `/MIR` seguro. `robocopy ... /MIR` (excluyendo `unins000.exe`/
+`unins000.dat`) a `C:\Users\adrian\AppData\Local\Programs\Terrakeep\`: 1 archivo copiado
+(`Terrakeep.exe`, el resto ya al dia por publishes previos de otros encargos), 13056 omitidos,
+0 errores - `LastWriteTime` del `.exe` instalado y del publish identico (19:14:55).
+
+**Commit real** `56db2d11`: `Terrakeep.Core/Data/DyeShaderCatalog.cs` (nuevo),
+`Terrakeep.Core.Tests/Data/DyeShaderCatalogTests.cs` (nuevo),
+`Terrakeep.App/Services/EquipmentAppearanceResolver.cs`,
+`Terrakeep.App/Services/PlayerPreviewRenderer.cs`,
+`Terrakeep.App/ViewModels/MainViewModel.cs`,
+`Terrakeep.App/ViewModels/EquipmentGroupViewModel.cs`,
+`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs` - los 7 ficheros con
+contenido real de este encargo, confirmado con `git diff --stat` antes de comitear. Sin
+`git push`.
+
+**Que quedo fuera de alcance, documentado explicitamente**: los 63 dyes ANIMADOS/SHADER reales
+(sin tinte, DELIBERATE DIFFERENCE); los dyes de Calamity (sin decompilar, fuera de alcance);
+`Hide[]` (ya cubierto por Encargo H, sin relacion); estados especiales (Encargo J, sin tocar). No
+se acotó ningun canal por falta de tiempo - los 15 canales reales (3 armadura + 12 accesorio) se
+implementaron todos, el pipeline resulto generico y reutilizable sin necesitar mas volumen del
+esperado.
