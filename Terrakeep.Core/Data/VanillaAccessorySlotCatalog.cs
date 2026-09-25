@@ -7,13 +7,21 @@ namespace Terrakeep.Core.Data;
 // (25-sep-2026), hermano directo de VanillaArmorSlotCatalog (mismo criterio, extendido a los
 // 7 tipos de accesorio funcional/vanidad: waist/neck/handOn/handOff/back/shield/face).
 // Fuente real: scripts/extraer-slots-accesorios-vanilla.py, valores LITERALES de
-// waistSlot/neckSlot/handOnSlot/handOffSlot/backSlot/shieldSlot/faceSlot de Item.cs
+// waistSlot/neckSlot/handOnSlot/handOffSlot/backSlot/shieldSlot/faceSlot/shoeSlot de Item.cs
 // (decompilado real) - el indice que Terraria usa para cargar Acc_Waist_N.xnb/Acc_Neck_N.xnb/
-// Acc_HandsOn_N.xnb/Acc_HandsOff_N.xnb/Acc_Back_N.xnb/Acc_Shield_N.xnb/Acc_Face_N.xnb. Los
-// sprites en si ya estan extraidos (sin recortar, hoja XNB->PNG real) en
-// Assets/player/acc_{waist,neck,handon,handoff,back,shield,face}/{N}.png (scripts/
+// Acc_HandsOn_N.xnb/Acc_HandsOff_N.xnb/Acc_Back_N.xnb/Acc_Shield_N.xnb/Acc_Face_N.xnb/
+// Acc_Shoes_N.xnb. Los sprites en si ya estan extraidos (sin recortar, hoja XNB->PNG real) en
+// Assets/player/acc_{waist,neck,handon,handoff,back,shield,face,shoes}/{N}.png (scripts/
 // extraer-sprites-accesorios-vanilla.js) - este catalogo solo resuelve QUE numero le
 // corresponde a cada objeto y de QUE TIPO es, nunca el propio sprite.
+//
+// GapAnalysis Encargo D (25-sep-2026): shoeSlot (campo "sh") es el accesorio REAL de zapatos
+// (Player.cs:37193-37200, "if (item.shoeSlot > 0) shoe = item.shoeSlot;") - un canal
+// COMPLETAMENTE DISTINTO de los zapatos BASE de la piel/pantalon del personaje (ya portados
+// como parte de legskin/pants/shoes en PlayerPreviewRenderer, ver el comentario de cabecera de
+// PlayerPreviewRenderer.cs). La regla de sexo real (ArmorIDs.Shoe.Sets.MaleToFemaleID) se
+// aplica en PlayerPreviewRenderer.Render (mismo patron que SetMatchHead/headIdAfterSetMatch),
+// no aqui - este catalogo solo guarda el id MASCULINO/neutro tal cual lo declara el objeto.
 //
 // A diferencia de VanillaArmorSlotCatalog (donde el TIPO ya lo decide la posicion 0/1/2 del
 // loadout), aqui el TIPO lo decide el propio objeto (confirmado en Player.cs real,
@@ -31,6 +39,11 @@ public sealed class VanillaAccessorySlotEntry
     [JsonPropertyName("bk")] public int? Back { get; init; }
     [JsonPropertyName("s")] public int? Shield { get; init; }
     [JsonPropertyName("fc")] public int? Face { get; init; }
+    [JsonPropertyName("sh")] public int? Shoe { get; init; }
+    // GapAnalysis Encargo C (25-sep-2026): balloonSlot real (Player.cs:37232-37241) - 9º tipo
+    // de accesorio, mismo patron exacto que los anteriores. Ver BalloonAccessoryLayerTable
+    // para la clasificacion real Balloon/BalloonFront de este mismo valor.
+    [JsonPropertyName("bl")] public int? Balloon { get; init; }
 }
 
 public sealed class VanillaAccessorySlotCatalog

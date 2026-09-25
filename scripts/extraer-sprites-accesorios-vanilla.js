@@ -1,8 +1,11 @@
-// Extrae los sprites REALES de los 7 tipos de accesorio funcional/vanidad (Waist/Neck/
-// HandOn/HandOff/Back/Shield/Face) para el doll de cuerpo completo - PortSeleccion Encargo1
-// (25-sep-2026), extension del mismo criterio ya usado para armadura (ver
+// Extrae los sprites REALES de los 9 tipos de accesorio funcional/vanidad (Waist/Neck/
+// HandOn/HandOff/Back/Shield/Face/Shoe/Balloon) para el doll de cuerpo completo - PortSeleccion
+// Encargo1 (25-sep-2026), extension del mismo criterio ya usado para armadura (ver
 // extraer-sprites-armadura-vanilla.js, hermano directo de este script - NO reinventar
-// xnbToPng/la deteccion de "no cabe en el lienzo esperado").
+// xnbToPng/la deteccion de "no cabe en el lienzo esperado"). GapAnalysis Encargo D
+// (25-sep-2026): ampliado con el 8º tipo, Shoe (shoeSlot) - mismo patron exacto. GapAnalysis
+// Encargo C (25-sep-2026): ampliado ademas con el 9º tipo, Balloon (balloonSlot) - mismo
+// patron exacto.
 //
 // Confirmado en el decompilado real (Terraria.DataStructures.PlayerDrawLayers.cs) que
 // nombre de fichero real y textura usa cada capa:
@@ -13,29 +16,43 @@
 //   DrawPlayer_10_BackAcc   -> TextureAssets.AccBack[player.back]     -> Images/Acc_Back_N.xnb
 //   (Shield, capa "Shield")-> TextureAssets.AccShield[player.shield] -> Images/Acc_Shield_N.xnb
 //   DrawPlayer_22_FaceAcc   -> TextureAssets.AccFace[player.face/.faceFlower] -> Images/Acc_Face_N.xnb
+//   DrawPlayer_14_Shoes     -> TextureAssets.AccShoes[player.shoe]   -> Images/Acc_Shoes_N.xnb
+//   (Balloon, DrawPlayer_11_Balloons/_12_1_BalloonFronts)-> TextureAssets.AccBalloon[player.
+//     balloon/.balloonFront] -> Images/Acc_Balloon_N.xnb
 // (rutas de fichero confirmadas independientemente en Terraria.Initializers.AssetInitializer.cs,
 // bucles de LoadAsset<Texture2D>("Images/Acc_X_" + n) - mismo patron que Armor_Head_N/
-// Armor_Legs_N ya usado por el script hermano).
+// Armor_Legs_N ya usado por el script hermano; AccShoes concretamente en AssetInitializer.cs:
+// "TextureAssets.AccShoes[num18] = LoadAsset<Texture2D>("Images/Acc_Shoes_" + num18, ...)";
+// AccBalloon analogo, "TextureAssets.AccBalloon[num23] = LoadAsset<Texture2D>("Images/
+// Acc_Balloon_" + num23, ...)").
 //
 // A diferencia de Head/Body/Legs (donde el indice de PlrLoadout.Items/Social YA ES el tipo:
-// 0=cabeza/1=cuerpo/2=piernas), los 7 accesorios funcionales/vanidad de Terraria son slots
+// 0=cabeza/1=cuerpo/2=piernas), los 9 accesorios funcionales/vanidad de Terraria son slots
 // GENERICOS (Player.cs, UpdateVisibleAccessory: "if (item.waistSlot > 0) waist = ...", igual
-// para los otros 6 campos) - cualquiera de los 7 items en armor[3..9] puede llevar CUALQUIER
-// tipo de accesorio. Por eso este script extrae por TIPO (todo lo referenciado en
-// vanilla_accessory_slots.json bajo cada clave), y el resolver (EquipmentAppearanceResolver.cs)
-// es quien escanea los 7 huecos del loadout buscando a que tipo pertenece cada item real.
+// para los otros 8 campos, balloonSlot incluido) - cualquiera de los 7 items en armor[3..9]
+// puede llevar CUALQUIER tipo de accesorio. Por eso este script extrae por TIPO (todo lo
+// referenciado en vanilla_accessory_slots.json bajo cada clave), y el resolver
+// (EquipmentAppearanceResolver.cs) es quien escanea los 7 huecos del loadout buscando a que
+// tipo pertenece cada item real.
 //
 // Se guarda la hoja REAL tal cual sale del XNB, sin recortar a un frame concreto - mismo
 // criterio "hoja completa" ya usado para armor_legs/armor_body (extraer-sprites-armadura-
 // vanilla.js, modo 'hoja'): la mayoria de estos accesorios se dibujan recortando bodyFrame/
-// legFrame de su propia hoja (animan con el personaje, ver PlayerDrawLayers.cs), y Shield en
-// concreto NO sigue la rejilla estandar (su propio ancho real sustituye a bodyFrame.Width,
-// PlayerDrawLayers.cs:4958-4961) - guardar la hoja entera sin recortar es lo unico correcto
-// para los 7 tipos a la vez sin inventar un tamano de recorte que no aplica a todos.
+// legFrame de su propia hoja (animan con el personaje, ver PlayerDrawLayers.cs; Shoes en
+// concreto usa legFrame, PlayerDrawLayers.cs:1758-1777 - misma fila que las perneras, NO
+// bodyFrame), y Shield en concreto NO sigue la rejilla estandar (su propio ancho real
+// sustituye a bodyFrame.Width, PlayerDrawLayers.cs:4958-4961) - guardar la hoja entera sin
+// recortar es lo unico correcto para los 9 tipos a la vez sin inventar un tamano de recorte
+// que no aplica a todos. Balloon en particular NO sigue la convencion bodyFrame/legFrame de
+// ninguno de los otros 8 tipos (posicion propia via Main.OffsetsPlayerOffhand + 4 fotogramas
+// reales de animacion propia, Height/4 - ver el comentario real de
+// PlayerPreviewRenderer.LoadBalloonFrame para la cita completa) - se guarda igual la hoja
+// entera sin recortar, el recorte/posicionado real lo hace el renderer, no este script.
 //
 // Uso: node scripts/extraer-sprites-accesorios-vanilla.js
 // Salida: Terrakeep.App/Assets/player/acc_waist/{id}.png, acc_neck/, acc_handon/, acc_handoff/,
-//         acc_back/, acc_shield/, acc_face/ - hoja XNB->PNG real, sin recorte.
+//         acc_back/, acc_shield/, acc_face/, acc_shoes/, acc_balloon/ - hoja XNB->PNG real, sin
+//         recorte.
 
 'use strict';
 const fs = require('fs');
@@ -56,6 +73,8 @@ const TIPOS = {
   bk: ['Back', 'Acc_Back_', 'acc_back'],
   s: ['Shield', 'Acc_Shield_', 'acc_shield'],
   fc: ['Face', 'Acc_Face_', 'acc_face'],
+  sh: ['Shoe', 'Acc_Shoes_', 'acc_shoes'],
+  bl: ['Balloon', 'Acc_Balloon_', 'acc_balloon'],
 };
 
 function fullSheet(xnbPath) {
@@ -82,12 +101,24 @@ function extraerTipo(clave, ids) {
 
 const slots = JSON.parse(fs.readFileSync(SLOTS_JSON, 'utf8'));
 
-const idsPorTipo = { w: new Set(), n: new Set(), ho: new Set(), hf: new Set(), bk: new Set(), s: new Set(), fc: new Set() };
+const idsPorTipo = { w: new Set(), n: new Set(), ho: new Set(), hf: new Set(), bk: new Set(), s: new Set(), fc: new Set(), sh: new Set(), bl: new Set() };
 for (const entry of Object.values(slots)) {
   for (const clave of Object.keys(idsPorTipo)) {
     if (entry[clave] !== undefined) idsPorTipo[clave].add(entry[clave]);
   }
 }
+
+// GapAnalysis Encargo D (25-sep-2026): mismo patron exacto que HEAD_SINTETICOS_FRONT_TO_BACK
+// (extraer-sprites-armadura-vanilla.js) - shoeSlot 26 (GlassSlipperFemale) es la variante
+// femenina REAL de shoeSlot 25 (GlassSlipperMale, ArmorIDs.cs:1869,
+// "MaleToFemaleID = Factory.CreateIntSet(-1, 25, 26)"), aplicada en runtime por
+// PlayerPreviewRenderer.Render (PlayerBodyDrawTables.ShoeMaleToFemaleID) - ningun item real
+// declara shoeSlot=26 directamente (solo el 25, id 5077 "Glass Slipper"), asi que sin este
+// id sintetico nunca saldria de vanilla_accessory_slots.json y el personaje femenino se
+// quedaria sin sprite al llevar puesto ese accesorio. Confirmado que Acc_Shoes_26.xnb SI
+// existe en la instalacion real de Steam.
+const SHOE_SINTETICOS_MALE_TO_FEMALE = [26];
+for (const id of SHOE_SINTETICOS_MALE_TO_FEMALE) idsPorTipo.sh.add(id);
 
 console.log(`ids unicos referenciados por tipo: ${Object.entries(idsPorTipo).map(([k, v]) => `${TIPOS[k][0]}=${v.size}`).join(' ')}`);
 

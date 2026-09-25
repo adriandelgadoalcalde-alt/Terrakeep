@@ -177,6 +177,7 @@ public sealed class EquipmentAppearanceResolverTests
         Assert.Null(acc.FaceFile);
         Assert.Null(acc.BackpackFile);
         Assert.Null(acc.TailFile);
+        Assert.Null(acc.ShoesFile); // GapAnalysis Encargo D (25-sep-2026)
     }
 
     [Fact]
@@ -420,5 +421,218 @@ public sealed class EquipmentAppearanceResolverTests
         renderConHeadBack.CopyPixels(pixelesConHeadBack, renderConHeadBack.PixelWidth * 4, 0);
 
         Assert.NotEqual(pixelesSinHeadBack, pixelesConHeadBack);
+    }
+
+    // GapAnalysis Encargo D (25-sep-2026): shoeSlot - el accesorio REAL de zapatos
+    // (Player.cs:37193-37200), canal COMPLETAMENTE DISTINTO de los zapatos BASE de la piel/
+    // pantalon del personaje. Ids reales confirmados en vanilla_accessory_slots.json contra
+    // Item.cs de este PC (25-sep-2026): Hermes Boots (id 54, shoeSlot=6, SIN entrada en
+    // MaleToFemaleID) y Glass Slipper (id 5077, shoeSlot=25, UNICA entrada real:
+    // MaleToFemaleID[25]=26 -> GlassSlipperFemale).
+    private const int HermesBoots = 54;  // shoeSlot=6
+    private const int GlassSlipper = 5077; // shoeSlot=25 -> 26 en femenino
+
+    [Fact]
+    public void AccesorioDeZapatosVanilla_ResuelveUnSpriteRealQueExisteEnDisco()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, HermesBoots));
+
+        Assert.NotNull(acc.ShoesFile);
+        Assert.True(File.Exists(acc.ShoesFile));
+        Assert.EndsWith("acc_shoes" + Path.DirectorySeparatorChar + "6.png", acc.ShoesFile);
+        Assert.Equal(6, acc.ShoesSlot);
+    }
+
+    [Fact]
+    public void ResolveAccessories_NuncaAplicaLaRegulaDeSexo_GuardaElIdMasculinoNeutroTalCual()
+    {
+        // ResolveAccessories no conoce el sexo del personaje (no tiene ese parametro) - la
+        // sustitucion MaleToFemaleID se aplica DESPUES, en PlayerPreviewRenderer.Render (ver
+        // PlayerBodyDrawTablesTests.ShoeMaleToFemaleID_* para la tabla). Glass Slipper siempre
+        // declara shoeSlot=25 en el .plr real, sin importar el sexo del personaje.
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, GlassSlipper));
+
+        Assert.NotNull(acc.ShoesFile);
+        Assert.EndsWith("acc_shoes" + Path.DirectorySeparatorChar + "25.png", acc.ShoesFile);
+        Assert.Equal(25, acc.ShoesSlot);
+    }
+
+    [Fact]
+    public void SlotVacio_NoResuelveNingunAccesorioDeZapatos()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+
+        Assert.Null(acc.ShoesFile);
+        Assert.Null(acc.ShoesSlot);
+    }
+
+    [Fact]
+    public void PersonajeFemenino_ConGlassSlipper_RenderSustituyeAlSpriteFemenino25A26_MaleToFemaleID()
+    {
+        // Verificacion de extremo a extremo AISLADA (mismo criterio que
+        // RenderConHeadBackFileDaUnaImagenDistintaASinEl_AislandoSoloEsaCapa): el objeto real
+        // SIEMPRE resuelve a acc_shoes/25.png (confirmado arriba) - si Render aplica de verdad
+        // la regla de sexo, el resultado FEMENINO con el objeto original (25.png) tiene que ser
+        // PIXEL A PIXEL IDENTICO al de pasar directamente el sprite femenino (26.png) a mano, y
+        // el MASCULINO con el mismo objeto NO debe coincidir con forzar el sprite femenino (el
+        // "!Male" del codigo real tiene que participar de verdad, no solo "cualquier cambio").
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, GlassSlipper));
+        Assert.Equal(25, acc.ShoesSlot);
+
+        string femaleSpritePath = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "acc_shoes", "26.png");
+        Assert.True(File.Exists(femaleSpritePath));
+        var accConSpriteFemeninoForzado = acc with { ShoesFile = femaleSpritePath, ShoesSlot = null };
+
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var femConObjetoOriginal = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.FemaleStarter, colors, accessories: acc);
+        var femConSpriteFemeninoDirecto = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.FemaleStarter, colors, accessories: accConSpriteFemeninoForzado);
+        var masConObjetoOriginal = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: acc);
+        var masConSpriteFemeninoForzado = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: accConSpriteFemeninoForzado);
+
+        byte[] Pix(System.Windows.Media.Imaging.WriteableBitmap b)
+        {
+            var p = new byte[b.PixelHeight * b.PixelWidth * 4];
+            b.CopyPixels(p, b.PixelWidth * 4, 0);
+            return p;
+        }
+
+        // Femenino: el objeto original (25.png, sin sustituir a mano) da EXACTAMENTE el mismo
+        // resultado que forzar 26.png - la sustitucion real ocurrio dentro de Render.
+        Assert.Equal(Pix(femConSpriteFemeninoDirecto), Pix(femConObjetoOriginal));
+        // Masculino: el mismo objeto (shoeSlot=25) NO se sustituye - forzar el sprite femenino
+        // SI cambia el resultado, confirmando que la condicion real "!Male" participa.
+        Assert.NotEqual(Pix(masConSpriteFemeninoForzado), Pix(masConObjetoOriginal));
+    }
+
+    // El orden real con wearsRobe=true (Shoes ANTES que Leggings, LegacyPlayerRenderer.cs:
+    // 195-204) se verifica en PlayerPreviewRendererAccessoriesTests.Orden_ConWearsRobeReal_
+    // PernerasCubrenAZapatos (requiere PNGs sinteticos para aislar el orden con certeza -
+    // hallazgo real de esta misma investigacion: con un legSlot REAL tipo robe/vestido
+    // -armor_legs/88.png, body=15- el propio sprite de la falda es opaco donde caen los pies,
+    // asi que "sigue cambiando el pixel" NO es una aserción valida ahi - lo fiel es que la
+    // pernera se compone DESPUES y por tanto LA TAPA, exactamente igual que en el juego real).
+
+    // GapAnalysis Encargo C (25-sep-2026): balloonSlot se clasifica en 2 canales reales posibles
+    // (Player.cs:37232-37241, UpdateVisibleAccessory - ver BalloonAccessoryLayerTable, tabla real
+    // de ArmorIDs.cs:2252). Ids reales confirmados en vanilla_accessory_slots.json contra Item.cs
+    // de este PC (25-sep-2026): Shiny Red Balloon (id 159, balloonSlot=8, SIN entrada en
+    // DrawInFrontOfBackArmLayer - canal Balloon normal), Royal Scepter (id 5076, balloonSlot=18,
+    // el UNICO balloonSlot real con DrawInFrontOfBackArmLayer=true - canal BalloonFront), los 2
+    // con sprite ya extraido en Assets/player/acc_balloon/.
+    private const int GloboRojoBrillante = 159; // balloonSlot=8 -> Balloon normal
+    private const int CetroReal = 5076;         // balloonSlot=18 -> BalloonFront (unico real)
+
+    [Fact]
+    public void BalloonSlotFueraDeLaTablaDeFrente_SigueSiendoBalloonNormal()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, GloboRojoBrillante));
+
+        Assert.NotNull(acc.BalloonFile);
+        Assert.True(File.Exists(acc.BalloonFile));
+        Assert.EndsWith("acc_balloon" + Path.DirectorySeparatorChar + "8.png", acc.BalloonFile);
+        Assert.Equal(8, acc.BalloonSlot);
+        Assert.Null(acc.BalloonFrontFile);
+        Assert.Null(acc.BalloonFrontSlot);
+    }
+
+    [Fact]
+    public void BalloonSlotEnLaTablaDeFrente_SeReclasificaComoBalloonFrontNoComoBalloon()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, CetroReal));
+
+        Assert.NotNull(acc.BalloonFrontFile);
+        Assert.True(File.Exists(acc.BalloonFrontFile));
+        Assert.EndsWith("acc_balloon" + Path.DirectorySeparatorChar + "18.png", acc.BalloonFrontFile);
+        Assert.Equal(18, acc.BalloonFrontSlot);
+        Assert.Null(acc.BalloonFile);
+        Assert.Null(acc.BalloonSlot);
+    }
+
+    [Fact]
+    public void SlotVacio_NoResuelveNingunGlobo()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(PlrLoadout.CreateEmpty(isPrimary: true));
+
+        Assert.Null(acc.BalloonFile);
+        Assert.Null(acc.BalloonFrontFile);
+        Assert.Null(acc.BalloonSlot);
+        Assert.Null(acc.BalloonFrontSlot);
+    }
+
+    [Fact]
+    public void VanidadDeBalloonFrontTapaAlFuncionalDeBalloonNormal_FielAlGuardado()
+    {
+        // Funcional: Shiny Red Balloon (Balloon normal) en el hueco 3. Vanidad: Royal Scepter
+        // (BalloonFront, vanity=true real - Item.cs:45307) en el hueco 7 - el juego real muestra
+        // la vanidad, aunque caiga en OTRO canal (BalloonFront en vez de Balloon), mismo criterio
+        // "vanidad tapa a funcional" ya verificado para Back/Backpack/Tail (Encargo A).
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(GloboRojoBrillante, 1, 0, false);
+        loadout.Social[7] = new PlrItemSlot(CetroReal, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.BalloonFrontFile);
+        Assert.EndsWith("acc_balloon" + Path.DirectorySeparatorChar + "18.png", acc.BalloonFrontFile);
+        Assert.Null(acc.BalloonFile);
+    }
+
+    [Fact]
+    public void RenderConBalloonFileDaUnaImagenDistintaASinEl_AislandoSoloEsaCapa()
+    {
+        // Verificacion de extremo a extremo AISLADA (mismo criterio que
+        // RenderConHeadBackFileDaUnaImagenDistintaASinEl_AislandoSoloEsaCapa): dos
+        // EquippedAccessories IDENTICOS salvo BalloonFile - si algun dia Render deja de leer ese
+        // campo por un refactor descuidado, esta prueba lo pilla en seco.
+        string balloonPath = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "acc_balloon", "8.png");
+        Assert.True(File.Exists(balloonPath));
+
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var sinAcc = new EquippedAccessories(null, null, null, null, null, null, null);
+        var conBalloon = sinAcc with { BalloonFile = balloonPath };
+
+        var renderSinBalloon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: sinAcc);
+        var renderConBalloon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: conBalloon);
+
+        var pixelesSin = new byte[renderSinBalloon.PixelHeight * renderSinBalloon.PixelWidth * 4];
+        renderSinBalloon.CopyPixels(pixelesSin, renderSinBalloon.PixelWidth * 4, 0);
+        var pixelesCon = new byte[renderConBalloon.PixelHeight * renderConBalloon.PixelWidth * 4];
+        renderConBalloon.CopyPixels(pixelesCon, renderConBalloon.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSin, pixelesCon);
+    }
+
+    [Fact]
+    public void RenderConBalloonFrontFileDaUnaImagenDistintaASinEl_AislandoSoloEsaCapa()
+    {
+        // Gemela real de la prueba de arriba, pero para el canal BalloonFront (AccBalloon_18,
+        // RoyalScepter - el UNICO real, tira 40x1120 "alineada al lienzo", ver el comentario real
+        // de PlayerPreviewRenderer.Render/Paso 4). Sin BodyFile (rama "sin cuerpo" de Paso 4, mismo
+        // criterio que ConWearsRobeReal_LaCapaDeZapatosSigueDibujandoseSinRevantar de arriba).
+        string balloonFrontPath = Path.Combine(AppContext.BaseDirectory, "Assets", "player", "acc_balloon", "18.png");
+        Assert.True(File.Exists(balloonFrontPath));
+
+        var colors = new PlayerPreviewRenderer.PlayerColors(
+            new(150, 90, 50), new(255, 220, 177), new(80, 50, 30),
+            new(130, 60, 60), new(200, 180, 160), new(70, 70, 120), new(90, 60, 40));
+
+        var sinAcc = new EquippedAccessories(null, null, null, null, null, null, null);
+        var conBalloonFront = sinAcc with { BalloonFrontFile = balloonFrontPath };
+
+        var renderSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: sinAcc);
+        var renderCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, colors, accessories: conBalloonFront);
+
+        var pixelesSin = new byte[renderSin.PixelHeight * renderSin.PixelWidth * 4];
+        renderSin.CopyPixels(pixelesSin, renderSin.PixelWidth * 4, 0);
+        var pixelesCon = new byte[renderCon.PixelHeight * renderCon.PixelWidth * 4];
+        renderCon.CopyPixels(pixelesCon, renderCon.PixelWidth * 4, 0);
+
+        Assert.NotEqual(pixelesSin, pixelesCon);
     }
 }

@@ -48,13 +48,32 @@ public sealed record PetPreview(PetAnimationEntry? AnimationEntry, string? IconP
 // textura vanilla real AccBack, ver el comentario de PlayerPreviewRenderer.Render) - nunca se
 // resuelven los 3 a la vez para un mismo objeto, ResolveAccessories reclasifica el resultado de
 // Back DESPUES de resolverlo, sin duplicar logica de resolucion.
+// GapAnalysis Encargo D (25-sep-2026): ShoesFile/ShoesSlot - 8º canal de accesorio real
+// (shoeSlot, Player.cs:37193-37200), un canal COMPLETAMENTE DISTINTO de los zapatos BASE de
+// la piel/pantalon del personaje (ya portados como parte de legskin/pants/shoes, ver el
+// comentario de cabecera de PlayerPreviewRenderer.cs) - se resuelve aqui exactamente igual que
+// los otros 7 tipos (ResolveAccessorySprite), SIN aplicar todavia la regla de sexo real
+// (ArmorIDs.Shoe.Sets.MaleToFemaleID): ShoesSlot guarda el id MASCULINO/neutro tal cual lo
+// declara el objeto - la sustitucion por la variante femenina se aplica en
+// PlayerPreviewRenderer.Render (que ya tiene "male" en scope), mismo patron ya establecido ahi
+// para SetMatchHead/headIdAfterSetMatch. Calamity no comparte esta numeracion (ResolveAccessorySprite
+// deja ShoesSlot a null para sus piezas, igual que el resto de los 7 tipos).
+// GapAnalysis Encargo C (25-sep-2026): BalloonFile/BalloonFrontFile - 9º tipo de accesorio real
+// (balloonSlot, Player.cs:37232-37241), reclasificado en 2 canales reales POSIBLES (mismo
+// patron que Back/Backpack/Tail de Encargo A - ver BalloonAccessoryLayerTable, tabla real de
+// ArmorIDs.cs:2252): resuelto una vez como "Balloon" (ResolveAccessorySprite) y reclasificado
+// DESPUES a "BalloonFront" si BalloonAccessoryLayerTable.IsFrontLayer(balloonSlotId), mismo
+// sprite (acc_balloon/{balloonSlotId}.png), sin duplicar logica de resolucion.
 public sealed record EquippedAccessories(
     string? WaistFile, string? NeckFile, string? HandOnFile, string? HandOffFile,
     string? BackFile, string? ShieldFile, string? FaceFile,
     int? WaistSlot = null, int? NeckSlot = null, int? HandOnSlot = null, int? HandOffSlot = null,
     int? BackSlot = null, int? ShieldSlot = null, int? FaceSlot = null,
     string? BackpackFile = null, string? TailFile = null,
-    int? BackpackSlot = null, int? TailSlot = null);
+    int? BackpackSlot = null, int? TailSlot = null,
+    string? ShoesFile = null, int? ShoesSlot = null,
+    string? BalloonFile = null, string? BalloonFrontFile = null,
+    int? BalloonSlot = null, int? BalloonFrontSlot = null);
 
 public sealed class EquipmentAppearanceResolver
 {
@@ -128,7 +147,7 @@ public sealed class EquipmentAppearanceResolver
     // conocido, no un bug silencioso.
     public EquippedAccessories ResolveAccessories(PlrLoadout loadout)
     {
-        PlrItemSlot? waist = null, neck = null, handOn = null, handOff = null, back = null, shield = null, face = null;
+        PlrItemSlot? waist = null, neck = null, handOn = null, handOff = null, back = null, shield = null, face = null, shoes = null, balloon = null;
 
         void Scan(PlrItemSlot[] slots)
         {
@@ -143,6 +162,10 @@ public sealed class EquipmentAppearanceResolver
                 if (IsAccessoryType(s, e => e.Back, "Back")) back = s;
                 if (IsAccessoryType(s, e => e.Shield, "Shield")) shield = s;
                 if (IsAccessoryType(s, e => e.Face, "Face")) face = s;
+                // GapAnalysis Encargo D (25-sep-2026): shoeSlot, mismo patron exacto.
+                if (IsAccessoryType(s, e => e.Shoe, "Shoe")) shoes = s;
+                // GapAnalysis Encargo C (25-sep-2026): balloonSlot, mismo patron exacto.
+                if (IsAccessoryType(s, e => e.Balloon, "Balloon")) balloon = s;
             }
         }
         Scan(loadout.Items);
@@ -155,6 +178,10 @@ public sealed class EquipmentAppearanceResolver
         var (backFile, backSlotId) = ResolveAccessorySprite(back, "Back", e => e.Back, "acc_back");
         var (shieldFile, shieldSlotId) = ResolveAccessorySprite(shield, "Shield", e => e.Shield, "acc_shield");
         var (faceFile, faceSlotId) = ResolveAccessorySprite(face, "Face", e => e.Face, "acc_face");
+        // GapAnalysis Encargo D (25-sep-2026): guarda el id MASCULINO/neutro tal cual - la
+        // regla de sexo real (MaleToFemaleID) se aplica despues, en PlayerPreviewRenderer.Render.
+        var (shoesFile, shoesSlotId) = ResolveAccessorySprite(shoes, "Shoe", e => e.Shoe, "acc_shoes");
+        var (balloonFile, balloonSlotId) = ResolveAccessorySprite(balloon, "Balloon", e => e.Balloon, "acc_balloon");
 
         // GapAnalysis Encargo A (25-sep-2026): reclasifica el resultado de "Back" YA resuelto en
         // los otros 2 canales reales posibles (Player.cs:37169-37184, UpdateVisibleAccessory) -
@@ -175,10 +202,26 @@ public sealed class EquipmentAppearanceResolver
             (backFile, backSlotId) = (null, null);
         }
 
+        // GapAnalysis Encargo C (25-sep-2026): reclasifica el resultado de "Balloon" YA resuelto
+        // en el otro canal real posible (Player.cs:37232-37241, UpdateVisibleAccessory) - el
+        // sprite es el mismo (acc_balloon/{balloonSlotId}.png), solo cambia a que campo va.
+        // Objetos de Calamity (balloonSlotId siempre null, numeracion propia no compartida) se
+        // quedan en "Balloon" - fiel-por-defecto, mismo criterio ya establecido para Calamity en
+        // el resto del resolver.
+        string? balloonFrontFile = null;
+        int? balloonFrontSlotId = null;
+        if (balloonSlotId is int balloonId && BalloonAccessoryLayerTable.IsFrontLayer(balloonId))
+        {
+            (balloonFrontFile, balloonFrontSlotId) = (balloonFile, balloonSlotId);
+            (balloonFile, balloonSlotId) = (null, null);
+        }
+
         return new EquippedAccessories(
             waistFile, neckFile, handOnFile, handOffFile, backFile, shieldFile, faceFile,
             waistSlotId, neckSlotId, handOnSlotId, handOffSlotId, backSlotId, shieldSlotId, faceSlotId,
-            backpackFile, tailFile, backpackSlotId, tailSlotId);
+            backpackFile, tailFile, backpackSlotId, tailSlotId,
+            shoesFile, shoesSlotId,
+            balloonFile, balloonFrontFile, balloonSlotId, balloonFrontSlotId);
     }
 
     // Un item real de Terraria solo declara UNO de los 7 campos de accesorio en la practica,

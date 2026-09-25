@@ -313,9 +313,9 @@ public static class PlayerPreviewRenderer
             Composite(canvas, hatHair ? LoadHairAlt(hairStyle) : LoadHair(hairStyle), colors.Hair);
 
         // Paso 1b [10_BackAcc]: capa/mochila trasera - PlayerDrawLayers.cs real, BackAcc va justo
-        // despues de HairBack y antes de la piel (Wings/BalloonAcc quedan fuera de alcance de
-        // este encargo, ver el resumen de PortSeleccion Encargo2 - Tails/Backpack ya portados
-        // arriba, GapAnalysis Encargo A; HeadBack justo debajo, GapAnalysis Encargo B).
+        // despues de HairBack y antes de la piel (Wings queda fuera de alcance - Tails/Backpack
+        // ya portados arriba, GapAnalysis Encargo A; HeadBack justo debajo, GapAnalysis Encargo B;
+        // Balloons justo debajo de HeadBack, GapAnalysis Encargo C).
         DrawAccessory(accessories?.BackFile);
 
         // Paso 1c [11_BackHead]: GapAnalysis Encargo B (25-sep-2026) - version "de espaldas" del
@@ -323,23 +323,46 @@ public static class PlayerPreviewRenderer
         // EquipmentAppearanceResolver.ResolveHeadBack) - no es un slot/objeto independiente.
         // Orden real (LegacyPlayerRenderer.cs real, ~linea 186): Backpacks -> Tails -> Wings ->
         // BackHair -> BackAcc -> BackHead -> Balloons - justo despues de BackAcc, antes de
-        // Balloons (fuera de alcance, no implementado). Mismo criterio "la armadura real NUNCA
-        // se tinta con los colores del personaje" que DrawHelmet() mas abajo - tint null, sin
-        // recortar (frame0 40x56, misma convencion que HeadFile/armor_head).
+        // Balloons (GapAnalysis Encargo C, Paso 1d justo debajo). Mismo criterio "la armadura
+        // real NUNCA se tinta con los colores del personaje" que DrawHelmet() mas abajo - tint
+        // null, sin recortar (frame0 40x56, misma convencion que HeadFile/armor_head).
         if (armor.HeadBackFile is { } headBackFile)
             Composite(canvas, LoadFrame0Absolute(headBackFile), null);
+
+        // Paso 1d [11_Balloons]: GapAnalysis Encargo C (25-sep-2026) - accessories?.BalloonFile,
+        // canal NORMAL de item.balloonSlot (Player.cs:37232-37241, ver
+        // BalloonAccessoryLayerTable/EquipmentAppearanceResolver.ResolveAccessories). Orden real
+        // (LegacyPlayerRenderer.cs real, linea 188): "...BackHead(); ...; Balloons();" - justo
+        // despues de BackHead, ANTES de la piel. A diferencia del resto de accesorios (tira
+        // 40x(56*N) alineada al lienzo, DrawAccessory), AccBalloon NO sigue esa convencion para
+        // este canal - LoadBalloonFrame tiene la cita real completa de la formula de posicion.
+        if (accessories?.BalloonFile is { } balloonFile)
+            Composite(canvas, LoadBalloonFrame(balloonFile), null);
 
         // Paso 2-3 [12_Skin_Composite]: piel del torso y de las piernas, cada una solo si el
         // bodySlot/legSlot real puesto no la oculta (hidesTopSkin/hidesBottomSkin).
         if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "torsoskin", torsoCell), colors.Skin);
         if (!hidesBottomSkin) Composite(canvas, LoadStripFrame(variant, "legskin", legAnimationFrame), colors.Skin);
 
-        // Paso 4 [12_SkinComposite_BackArmShirt]: brazo TRASERO.
+        // Paso 4 [12_SkinComposite_BackArmShirt]: brazo TRASERO. GapAnalysis Encargo C
+        // (25-sep-2026): accessories?.BalloonFrontFile - canal FRONT de item.balloonSlot, citado
+        // LITERALMENTE en este mismo metodo real (DrawPlayer_12_SkinComposite_BackArmShirt,
+        // PlayerDrawLayers.cs:1364/1402: "DrawPlayer_12_1_BalloonFronts(ref drawinfo);") - por
+        // eso va aqui y no junto a BalloonFile normal (Paso 1d). En la rama hasBody (linea 1364
+        // real) va justo despues del hombro trasero y ANTES del brazo trasero; en la rama sin
+        // cuerpo (linea 1400-1403 real) va entre la camiseta interior y la exterior del brazo.
+        // AccBalloon_18 (RoyalScepter, el UNICO balloonFront real - ver BalloonAccessoryLayerTable)
+        // SI sigue la convencion "tira alineada al lienzo" (UsesTorsoFraming=true,
+        // PlayerDrawLayers.cs:1114-1120 - misma formula que DrawAccessory ya usa para el resto de
+        // tipos, confirmado ademas con el sprite real ya extraido: acc_balloon/18.png mide 40x1120,
+        // 20 filas, la MISMA convencion que Waist/Neck/HandOn/HandOff/Back/Face/Shoe) - reutiliza
+        // DrawAccessory tal cual, sin logica nueva.
         if (hasBody)
         {
             if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", backArmCell), colors.Skin);
             if (missingArm && !hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "hands", backArmCell), colors.Skin);
             if (armor.BodyFile is { } bodyBackShoulderArmor) Composite(canvas, LoadArmorCell(bodyBackShoulderArmor, backShoulderCell), null);
+            DrawAccessory(accessories?.BalloonFrontFile);
             if (armor.BodyFile is { } bodyBackArmArmor) Composite(canvas, LoadArmorCell(bodyBackArmArmor, backArmCell), null);
         }
         else
@@ -347,16 +370,35 @@ public static class PlayerPreviewRenderer
             if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "armskin", backArmCell), colors.Skin);
             if (!hidesTopSkin) Composite(canvas, LoadBodyCell(variant, "hands", backArmCell), colors.Skin);
             Composite(canvas, LoadBodyCell(variant, "armundershirt", backArmCell), colors.Under);
+            DrawAccessory(accessories?.BalloonFrontFile);
             Composite(canvas, LoadBodyCell(variant, "armshirt", backArmCell), colors.Shirt);
         }
 
-        // Paso 5 [13_Leggings/14_Shoes]: perneras. El orden zapatos/perneras que invierte
-        // wearsRobe no tiene efecto visual en el doll (el slot de zapatos, `shoeSlot`, esta
-        // fuera de alcance - ESPEC-dibujado-sprites.md#8 punto 6), asi que solo se dibuja el
-        // grupo de perneras: la pieza de armadura/vanidad si SetMatch la puso o el jugador la
-        // llevaba, o pantalones+zapatos base si no hay ninguna.
+        // Paso 5 [13_Leggings/14_Shoes]: perneras + GapAnalysis Encargo D (25-sep-2026) - el
+        // accesorio REAL de zapatos (shoeSlot, canal COMPLETAMENTE DISTINTO de los zapatos BASE
+        // de la piel/pantalon ya dibujados en el bloque de abajo). Orden real
+        // (LegacyPlayerRenderer.cs:195-204): "if (wearsRobe && body != 166) { Shoes; Leggings; }
+        // else { Leggings; Shoes; }" - wearsRobe ya calculado arriba (SetMatchBodyToLegs).
+        // DrawAccessory (misma tira vertical 40x(56*N), fila = legAnimationFrame) es fiel a
+        // DrawPlayer_14_Shoes real, que usa `drawinfo.drawPlayer.legFrame` como rectangulo de
+        // origen - NO bodyFrame (confirmado en PlayerDrawLayers.cs:1758-1777, la formula de
+        // posicion es identica a la de las perneras, LoadStripFrame_Legs mas arriba).
+        //
+        // Regla de sexo real (Player.cs:37193-37200, ArmorIDs.Shoe.Sets.MaleToFemaleID): si el
+        // personaje es FEMENINO y el shoeSlot real tiene entrada en esa tabla (unico caso real:
+        // 25 GlassSlipperMale -> 26 GlassSlipperFemale), se sustituye el sprite - mismo patron
+        // ya establecido arriba para headIdAfterSetMatch/headFileToUse.
+        string? shoesFileToUse = accessories?.ShoesFile;
+        if (!male && accessories?.ShoesSlot is int shoesId && PlayerBodyDrawTables.ShoeMaleToFemaleID(shoesId) is int femaleShoesId)
+        {
+            string altShoesPath = VanillaPath("acc_shoes", femaleShoesId);
+            if (File.Exists(altShoesPath)) shoesFileToUse = altShoesPath;
+        }
+        void DrawShoesAccessory() => DrawAccessory(shoesFileToUse);
+
         bool legsChangedBySetMatch = legsId != originalLegsId;
         string? legsFileToUse = legsChangedBySetMatch ? VanillaPathIfExists("armor_legs", legsId) : armor.LegsFile;
+        if (wearsRobe) DrawShoesAccessory();
         if (legsId > 0 && legsFileToUse != null)
         {
             Composite(canvas, LoadStripFrameAbsolute(legsFileToUse, legAnimationFrame), null);
@@ -366,6 +408,7 @@ public static class PlayerPreviewRenderer
             Composite(canvas, LoadStripFrame(variant, "pants", legAnimationFrame), colors.Pants);
             Composite(canvas, LoadStripFrame(variant, "shoes", legAnimationFrame), colors.Shoes);
         }
+        if (!wearsRobe) DrawShoesAccessory();
 
         // Paso 6 [15_SkinLongCoat]: el faldon del vestido/abrigo (pieza 14) - solo variantes
         // 3/7/8, y solo sin armadura/vanidad de cuerpo puesta.
@@ -620,6 +663,88 @@ public static class PlayerPreviewRenderer
                 int dstX = x + offsetX;
                 if (dstX < 0 || dstX >= Width) continue;
                 Array.Copy(stripPixels, srcRowStart + x * 4, outPixels, (y * Width + dstX) * 4, 4);
+            }
+        }
+        return outPixels;
+    }
+
+    // GapAnalysis Encargo C (25-sep-2026): AccBalloon (canal NORMAL, no BalloonFront - ver el
+    // comentario del Paso 1d en Render()) NO sigue la convencion "tira 40x(56*N) alineada al
+    // lienzo" del resto de accesorios (DrawAccessory/LoadStripFrameAbsolute) - confirmado con los
+    // sprites reales ya extraidos (scripts/extraer-sprites-accesorios-vanilla.js): salvo el 18
+    // (RoyalScepter, canal BalloonFront, tira 40x1120 normal), los otros 13 sprites reales miden
+    // 52x224 (4 fotogramas propios de 56px de alto cada uno - animacion temporal real del globo
+    // "flotando", DateTime.Now.Millisecond%800/200 en PlayerDrawLayers.cs - fotograma 0 = reposo,
+    // igual que el resto de capas fijas de este renderer, ninguna otra pieza anima por tiempo).
+    //
+    // Terraria real (PlayerDrawLayers.cs:1121-1137, DrawPlayer_11_Balloons rama else - la MISMA
+    // formula exacta que DrawPlayer_12_1_BalloonFronts usa en su propia rama else, salvo el canal
+    // de tinte) posiciona el globo con un ancla PROPIA, no con bodyFrame:
+    //
+    //   vector = Main.OffsetsPlayerOffhand[bodyFrame.Y / 56];              // Main.cs:483, fila 0 = (14,20)
+    //   if (direction != 1) vector.X = width - vector.X;                   // direction=1 en este renderer (ver FlipHorizontal)
+    //   if (gravDir != 1f) vector.Y -= height;                             // gravDir=1 en este renderer (sin gravedad)
+    //   vector2 = new Vector2(0,8) + new Vector2(0,6);                     // = (0,14), literal real
+    //   vector3 = Position - screenPosition + vector + (0, height-bodyFrame.Height) + vector2;
+    //   origin  = (26 + direction*4, 28 + gravDir*6);                      // = (30,34) con direction=1/gravDir=1
+    //
+    // "Position - screenPosition" (K) no esta modelado aqui como variable propia - se despeja
+    // ALGEBRAICAMENTE de la MISMA formula base que ya usan HandOff/Neck/Back/Face (DrawAccessory,
+    // ver el comentario de Render): esas capas dibujan su textura entera alineada 1:1 con el
+    // lienzo (offset final 0,0) con "posicion = K + width/2 + bodyPosition, origen = bodyVect" -
+    // con bodyVect=(Width/2,Height/2)=(20,28) real (PlayerDrawSet.cs:1757, "legFrame.Width*0.5,
+    // legFrame.Height*0.5") y bodyPosition=Vector2.Zero real (Player.cs:37866/39203, estado de
+    // reposo), despejar K da (10,10) exactamente - width/height aqui son
+    // Player.defaultWidth/defaultHeight (20/42, Player.cs:1829/1831, constantes reales del
+    // hitbox que este renderer no modela aparte, ver el comentario de Width/Height arriba).
+    // Con K=(10,10) y bodyFrame.Y=0 (fila de reposo - el torso de este renderer NUNCA cambia de
+    // fila, ver WalkArmColumn) el desplazamiento final resultante (posicion - origen) es EXACTO:
+    // (24,30) - (30,34) = (-6,-4) respecto al origen (0,0) del lienzo que ya usan las 6 capas
+    // alineadas - por eso hace falta un compositor con offset propio (SliceBalloonFrame0) en vez
+    // de reusar Composite/LoadStripFrameAbsolute (que asumen offset 0,0 y ancho fijo 40px, ninguna
+    // de las dos cosas es cierta aqui: ancho real 52px, offset real negativo).
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (byte[] Pixels, int RealWidth, int RealHeight)> BalloonCache = new();
+
+    private static byte[] LoadBalloonFrame(string absolutePath)
+    {
+        var (pixels, w, h) = BalloonCache.GetOrAdd(absolutePath, LoadBalloonStrip);
+        return SliceBalloonFrame0(pixels, w, h);
+    }
+
+    private static (byte[] Pixels, int RealWidth, int RealHeight) LoadBalloonStrip(string path)
+    {
+        using var stream = File.OpenRead(path);
+        var decoder = new PngBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        var frame = decoder.Frames[0];
+        var converted = new FormatConvertedBitmap(frame, PixelFormats.Bgra32, null, 0);
+        var pixels = new byte[frame.PixelWidth * frame.PixelHeight * 4];
+        converted.CopyPixels(pixels, frame.PixelWidth * 4, 0);
+        return (pixels, frame.PixelWidth, frame.PixelHeight);
+    }
+
+    // Recorta SOLO el primer fotograma real (fila 0 de 4, alto/4 - "reposo") y lo compone YA en
+    // su posicion real dentro de un lienzo del mismo tamano que Width x Height (offset real fijo
+    // -6,-4, ver el comentario de la clase de arriba) - a diferencia de SliceStripRow/
+    // SliceShieldRow, el resultado ya sale del tamano exacto del lienzo, recortando/dejando
+    // transparente lo que cae fuera (el globo real se dibuja parcialmente fuera del lienzo por
+    // arriba/izquierda - fiel al juego real, que tampoco lo recorta al hitbox del jugador).
+    private static byte[] SliceBalloonFrame0(byte[] stripPixels, int realWidth, int realHeight)
+    {
+        var outPixels = new byte[Width * Height * 4];
+        if (realWidth <= 0 || realHeight <= 0) return outPixels;
+        int frameHeight = realHeight / 4;
+        if (frameHeight <= 0) return outPixels;
+        const int offsetX = -6, offsetY = -4; // ver la derivacion real completa arriba
+        for (int y = 0; y < frameHeight; y++)
+        {
+            int dstY = y + offsetY;
+            if (dstY < 0 || dstY >= Height) continue;
+            int srcRowStart = y * realWidth * 4;
+            for (int x = 0; x < realWidth; x++)
+            {
+                int dstX = x + offsetX;
+                if (dstX < 0 || dstX >= Width) continue;
+                Array.Copy(stripPixels, srcRowStart + x * 4, outPixels, (dstY * Width + dstX) * 4, 4);
             }
         }
         return outPixels;
