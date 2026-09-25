@@ -25895,3 +25895,153 @@ Npcs y Cofres-sin-resultados. Pendiente real, fuera de este encargo: el ancho de
 cofre (218,8px vs 220px esperado, ver arriba) y el límite ya documentado de Fase B/C/D sobre el
 tamaño mínimo real de la ventana (1080x700, ninguna fila de categoría se ve entera con o sin este
 arreglo - ya era así antes de tocar nada hoy, no es una regresión de esta ronda).
+
+## 25-sep-2026 (mismo día) - ParidadPersonaje Fase2: `ResolveAccessories` reescrito como máquina de
+## estados secuencial fiel a `Player.UpdateVisibleAccessory`
+
+Encargo del coordinador (patrón de 2 fases, rol aplicador-fix) - el hallazgo y el diseño completo
+ya venían aprobados por arquitecto-keep en el propio handoff (evidencia re-verificada aquí antes de
+tocar nada, `Player.cs` decompilado real, `tModLoader-Decompiled\TerrariaVanilla\` 1.4.5.8).
+
+**El bug de MODELO (confirmado, no una opinión)**: `EquipmentAppearanceResolver.Scan()` (antes de
+hoy) declaraba UNA variable `AccessoryMatch?` por FAMILIA (`back`, `face`, `balloon`) y las
+reclasificaba DESPUÉS de escanear todos los items (Back→Backpack/Tail, Balloon→BalloonFront,
+Face→FaceHead/FaceMask/FaceFlower). Eso modela 3 canales reales como una ÚNICA ranura repartida
+entre salidas EXCLUYENTES. `Player.cs:37169-37184`/`37213-37231`/`37232-37241` (real,
+`UpdateVisibleAccessory`) los modela como CAMPOS INDEPENDIENTES del objeto `Player` - cualquier item
+puede setear el suyo sin relación con los otros, y PUEDEN COEXISTIR. Caso real que expone el bug
+(ya verificado por el arquitecto, re-confirmado aquí con el arnés real): Bee Cloak (funcional,
+backSlot=1, Back normal) + Magic Quiver (vanidad, backSlot=7, Backpack) -> Terraria real muestra
+`back=1` Y `backpack=7` A LA VEZ - el resolver viejo solo podía producir uno de los dos.
+
+**`VisiblePlayerState`** (`Terrakeep.App/Services/EquipmentAppearanceResolver.cs`, clase privada
+anidada dentro de `EquipmentAppearanceResolver`, justo antes de `AccessoryMatch`): un campo
+`AccessoryMatch?` por cada uno de los ~20 canales reales (`Back`/`Backpack`/`Tail`/`Front`/
+`HandOn`/`HandOff`/`Waist`/`Shield`/`Neck`/`Shoe`/`Beard`/`Wing`/`Face`/`FaceHead`/`FaceMask`/
+`FaceFlower`/`Balloon`/`BalloonFront`/`UnicornHorn`/`AngelHalo`/`Yoraiz0rDarkness`/`Coat`). Su
+único método real, `Apply(PlrItemSlot item, PlrItemSlot dye, VanillaAccessorySlotEntry? vEntry,
+CalamityCatalogEntry? calEntry, bool isCalamity)`, es fiel CAMPO A CAMPO a
+`Player.cs:37151-37283` (`UpdateVisibleAccessory`) EN ESE ORDEN: handOn/handOff, luego backSlot
+(reclasifica AHÍ MISMO a Back/Backpack/Tail y limpia `Front=null` si es Back normal - el
+`front = -1` real, efecto secundario, no una regla aparte), luego frontSlot (puede restablecer el
+Front que el propio backSlot de ESTE MISMO item acaba de limpiar, mismo orden real), shoeSlot,
+waistSlot, shieldSlot, neckSlot, faceSlot (reclasifica a FaceHead/FaceMask/FaceFlower/Face),
+balloonSlot (reclasifica a Balloon/BalloonFront), beardSlot, wingSlot, y los 4 estados especiales
+de `item.type` exacto (Encargo J, sin tocar). `isSitting` (`Player.cs:37189-37192`) queda fuera a
+propósito, mismo criterio ya documentado para Wings/`velocity.Y` - doll estático sin físicas.
+
+**`ResolveAccessories`** (mismo fichero, reescrito): construye un único `VisiblePlayerState`,
+resuelve `bodySlotId`/`legsSlotId` (mismos que ya calcula `Resolve()` para cabeza/cuerpo/piernas,
+necesarios para las reglas A de abajo), y recorre `Items[3..9]` (respeta `hide[]`) y luego
+`Social[3..9]` (sin `hide[]`), llamando `ScanOne` por cada slot no vacío - que aplica 2 filtros
+PREVIOS a `Apply()` (fiel a `Player.cs:37034-37086`, los 2 bucles reales):
+- `IsItemSlotUnlockedAndUsable` (`Player.cs:12668-12693`): en el contexto de un doll ESTÁTICO en la
+  pantalla de selección (equivalente real a `Main.gameMenu==true`), la fórmula real colapsa a
+  "siempre true" salvo el slot local 8 (real `armor[8]`/`armor[18]`, gateado por
+  `PlrCharacter.ExtraAccessory`) - el slot local 9 (`armor[9]`/`armor[19]`, Modo Maestro) también
+  colapsa a "siempre true" en `gameMenu==true` sin importar `masterMode`, confirmado línea a línea
+  contra el decompilado y ya coherente con el comentario existente de
+  `ItemSlotViewModel.IsMasterAccessorySlot` ("el 7º no tiene NINGÚN dato al que condicionarse") -
+  por eso el ÚNICO filtro real nuevo es "slot local 8 gateado por `extraAccessoryUnlocked`", nuevo
+  parámetro opcional de `ResolveAccessories` con default `true` (backward-compatible con el resto
+  de la clase, que no conocía `PlrCharacter.ExtraAccessory` hasta hoy).
+- `ItemIsVisuallyIncompatible`, reglas A (`Player.cs:37117-37140`) - de las 5 reglas reales solo 3
+  son aplicables a un doll estático (las otras 2 dependen de estado de combate en tiempo real,
+  `eocDash`/`shieldRaised`/comida sostenida, fuera de alcance): `body==96 && backSlot en
+  DrawInTailLayer`, `legs con IncompatibleWithFrogLeg (nueva tabla `LegsIncompatibleWithFrogLeg`,
+  7 ids reales transcritos de `ArmorIDs.cs:1105`) && shoeSlot==15`, y `balloonSlot==18 && body en
+  {93,83}`. Solo vanilla (Calamity no comparte esa numeración, fiel-por-defecto). A diferencia de
+  `hide[]`, aplica a LOS 2 bucles (Player.cs llama a `ItemIsVisuallyIncompatible` en ambos, sin
+  excepción para vanidad) - el item ENTERO se salta (`continue` real), no solo el campo que la
+  regla menciona.
+
+**Llamadores reales actualizados** para pasar `character.ExtraAccessory`/
+`_loaded.Character.ExtraAccessory` (antes el parámetro no existía, nadie podía pasarlo):
+`CharacterListEntryViewModel.cs:253` y `MainViewModel.cs:305-310`. Este último tenía un solape real
+con la Fase1 concurrente (mismo bloque, el comentario "GapAnalysis Encargo H... INCONCLUSIVE" ya
+había sido sustituido por Fase1 por el comentario "ParidadPersonaje Fase1" + la lectura de `hide` -
+mi cambio añade 4 líneas justo a continuación, sin ninguna línea sin tocar de por medio, así que
+`git diff` lo ve como UN ÚNICO hunk inseparable - se comiteó junto (contenido verificado real y
+correcto con `dotnet build`/tests después del commit), documentado aquí con honestidad, mismo
+mecanismo exacto que ya sufrieron Fase C/Fase G/Fase D entre sí más arriba en esta bitácora.
+`CharacterListEntryViewModel.cs` sí tenía 2 hunks SEPARABLES (la propiedad `AccesoriosParaPruebas`
+de Fase1 arriba del todo, mi cambio de `ResolveAccessories` más abajo) - separados con `git add -p`,
+solo se comiteó el segundo, el de Fase1 se dejó intacto sin comitear para ese agente.
+
+**Los 4 tests corregidos** (`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs`,
+nombres conservados tal cual pidió el encargo, solo se corrigieron las aserciones y el comentario):
+`VanidadDeBackpackTapaAlFuncionalDeBack_FielAlGuardado`,
+`VanidadDeTailTapaAlFuncionalDeBackpack_FielAlGuardado`,
+`VanidadDeBalloonFrontTapaAlFuncionalDeBalloonNormal_FielAlGuardado`,
+`VanidadDeFaceHeadTapaAlFuncionalDeFaceNormal_FielAlGuardado` - los 4 esperaban `Assert.Null` en el
+canal "tapado"; ahora esperan `Assert.NotNull` en AMBOS canales simultáneos (con su sprite real
+verificado por sufijo de fichero). Los 2 tests que SÍ eran correctos
+(`VanidadEnOtroHuecoGenerico_TapaAlFuncionalDelMismoTipo_FielAlGuardado`/
+`VanidadPuesta_TapaAlObjetoFuncional_FielAlGuardado`) no se tocaron.
+
+**Tests nuevos añadidos** (mismo fichero, ids reales verificados contra
+`vanilla_accessory_slots.json`/`vanilla_armor_slots.json` de este PC antes de escribir cada uno):
+- Interacción Front/Back:
+  `FrontDeUnItemPosteriorSeAplicaTrasElBackNormalDelMismoItem_ElOrdenRealDentroDeUnMismoObjeto`
+  (Crimson Cloak solo - `fr=1`/`bk=3`, Back Y Front resueltos a la vez desde el MISMO item) y
+  `BackNormalDeUnItemPosteriorLimpiaElFrontDeclaradoPorUnItemAnterior_FielAlOrdenReal` (Crimson
+  Cloak en hueco 3 + Bee Cloak en hueco 4 - Bee Cloak, procesado después, limpia el Front que
+  Crimson Cloak había dejado puesto). LÍMITE REAL: los 11 items reales que declaran `frontSlot`
+  TAMBIÉN declaran `backSlot` a la vez (confirmado en el catálogo - ninguno declara SOLO
+  `frontSlot`), así que no hay forma de probar "un Front puro restablecido por un item distinto"
+  con datos 100% reales - adaptado con el propio comportamiento intra-item + Bee Cloak como
+  segundo item de Back normal puro, documentado con honestidad en el comentario del test.
+- Gateo del slot 8: `Slot8SinExtraAccessoryDesbloqueado_ElHuecoNoSeResuelve_IsItemSlotUnlockedAndUsable`,
+  `Slot8ConExtraAccessoryDesbloqueado_ElHuecoSeResuelveNormal`,
+  `Slot8SinPasarExtraAccessoryUnlocked_PorDefectoSigueResolviendo_SinRegresion` (confirma el
+  default `true`, backward-compatible) y `Slot9NuncaSeGatea_SinDatoAlQueCondicionarseEnEsteContexto`.
+- Las 3 reglas de `ItemIsVisuallyIncompatible`: `ReglaA1_Body96ConBackSlotDeTail_...`/su gemela
+  "sin body96", `ReglaA2_LegsIncompatibleConFrogLegMasShoeSlot15_ElItemEnteroDesaparece` (con Mouse
+  Cage, id 2191, el único item real de este catálogo con `shoeSlot=15` confirmado - declara
+  TAMBIÉN handOn/handOff/wing a la vez, la prueba confirma que el item ENTERO desaparece, no solo
+  el zapato)/su gemela, y `ReglaA3_Body93ConBalloonSlot18_...`/su gemela. Ids reales nuevos:
+  `SpaceCreatureShirt` (1839, bodySlot=96), `ReaperRobe` (1820, bodySlot=93), `FlowerBoyPants`
+  (3735, legSlot=138), `MouseCage` (2191).
+
+**Ajuste real sobre el diseño original del arquitecto** (documentado con honestidad): el diseño
+proponía un campo `FrontExplicitlyCleared` en `VisiblePlayerState` para distinguir "Front=null
+porque nadie lo puso" de "Front=null porque un backSlot normal lo limpió" - no hace falta, el
+propio `Player.cs` tampoco tiene ese distingo (solo hace `front = -1`) y el resultado final es
+idéntico en ambos casos; se omitió sin perder fidelidad de comportamiento (confirmado con los 2
+tests de interacción Front/Back de arriba).
+
+**Verificación real**: `dotnet build Terrakeep.slnx -c Release` en verde (0/0), dos veces (antes y
+después de añadir los tests). `dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build
+--filter FullyQualifiedName~EquipmentAppearanceResolverTests`: 103/103 (incluye los 4 corregidos,
+los tests nuevos, y TODOS los casos Calamity existentes de este fichero -
+`CalamityWaist`/`Neck`/`Back`/`Shield`/`Face`/`Balloon`/`Shoes`/`HandsOnYHandsOff` - ninguna
+numeración Calamity se reutilizó por error). `dotnet test Terrakeep.App.ViewModels.Tests -c Release
+--no-build` COMPLETO (sin filtro): 724/724, 7m54s, sin regresión. `dotnet test Terrakeep.Core.Tests
+-c Release --no-build`: 732/732, mismo baseline, sin regresión.
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` instalado NO estaba en ejecución
+(`Get-CimInstance Win32_Process`, sin resultados). `dotnet publish Terrakeep.App/Terrakeep.App.csproj
+-c Release -p:PublishProfile=win-x64` en verde. Sanidad de `Assets/` ANTES del `/MIR`: publish =
+13055 ficheros, origen `Terrakeep.App/Assets` = 13056 (misma diferencia de 1 ya documentada y ajena
+a este encargo), instalado ANTES de copiar = 13055 - sin discrepancia. `robocopy ... /MIR /XF
+unins000.exe unins000.dat` a `C:\Users\adrian\AppData\Local\Programs\Terrakeep\`: 1 archivo copiado
+(`Terrakeep.exe`, único con contenido distinto - los Assets ya los había sincronizado un `/MIR`
+anterior de otro agente en esta misma sesión), 13060 omitidos, 0 errores. Sanidad de `Assets/`
+DESPUÉS del `/MIR`: instalado = 13055 - sin discrepancia. Relanzado el `.exe` instalado (PID 80348,
+`Responding=True`) y cerrado limpio con `Stop-Process`.
+
+**Commit real** `422b5a16`: `Terrakeep.App/Services/EquipmentAppearanceResolver.cs`,
+`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs`,
+`Terrakeep.App/ViewModels/MainViewModel.cs` (completo, hunk inseparable con Fase1, ver arriba),
+`Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs` (solo el hunk propio, vía `git add -p`).
+`git status` revisado con cuidado antes de comitear - numerosos ficheros ajenos de otros agentes en
+paralelo (`Terrakeep.Core.Tests/**`, `CLAUDE.md`, `AppearanceViewModel.cs`,
+`ParidadPersonajeHideAccesoriosTests.cs` nuevo de Fase1, `scripts/**`, etc.), ninguno añadido al
+stage, `git add` con rutas explícitas (nunca `-A`). Sin `git push`.
+
+**Fase2 queda cerrada**: `ResolveAccessories` ya no reclasifica por familia al final de un scan -
+es una máquina de estados secuencial fiel a `Player.UpdateVisibleAccessory`, campo a campo, con
+Back/Backpack/Tail, Balloon/BalloonFront y Face/FaceHead/FaceMask/FaceFlower pudiendo coexistir
+cada uno con su propio item, exactamente como el juego real. Pendiente para Fase3 (FaceHead
+sustituye piel) y Fase4/5 (favoritos cross-loadout, dyes shader, estados especiales) - fuera de
+alcance de este encargo, no tocado.
