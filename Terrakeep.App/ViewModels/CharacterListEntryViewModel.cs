@@ -239,7 +239,10 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         // si CurrentLoadout cae fuera de rango - ResolveAccessories ya trata hide=null como "sin
         // nada oculto", el mismo comportamiento de antes del arreglo para esos casos.
         var hide = character.Loadouts.ElementAtOrDefault(character.CurrentLoadout)?.Hide;
-        var accessories = equipmentAppearance.ResolveAccessories(character.PrimaryLoadout, hide);
+        // ParidadPersonaje Fase2 (25-sep-2026): el slot 8 real (armor[8]/armor[18]) solo esta
+        // desbloqueado con el Corazon de Demonio/Carmesi (PlrCharacter.ExtraAccessory) - ver
+        // IsItemSlotUnlockedAndUsable en el comentario real de ResolveAccessories.
+        var accessories = equipmentAppearance.ResolveAccessories(character.PrimaryLoadout, hide, character.ExtraAccessory);
         // H6-02/H6-01-b: Gender ES el skinVariant real (0-11, no un booleano) - se pasa entero
         // para que el doll de Inicio use la carpeta de sprites/reglas SetMatch reales de la
         // variante puesta (caso "Eldelgas": Gender=8/MaleDress), no solo Chico/Chica.

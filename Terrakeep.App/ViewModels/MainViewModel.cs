@@ -293,18 +293,22 @@ public partial class MainViewModel : ObservableObject
             Dyes = ItemsRow(EquipmentGroup.EquippedDyes),
         };
         Appearance.UpdateEquippedArmor(_service.EquipmentAppearance.Resolve(loadout0));
-        // GapAnalysis Encargo H (25-sep-2026): INCONCLUSIVE para este preview en vivo - se
-        // investigo EquipmentGroupViewModel a fondo (grep real de "Hide"/"Ocultar"/"checkbox" en
-        // Terrakeep.App/ViewModels, 0 coincidencias) y no existe hoy NINGUN control de UI en el
-        // panel de Equipamiento equivalente al toggle "ocultar accesorio" del panel de vanidad
-        // real del juego - por eso loadout0 (sintetico, ver el comentario de cabecera de este
-        // metodo) no tiene forma real de saber que slots estan ocultos mientras se edita.
-        // hide=null (por defecto) es el comportamiento correcto mientras tanto: "nada oculto",
-        // igual que antes de este encargo. Hide[] SI se aplica de verdad en el doll de "Inicio"
-        // (ver CharacterListEntryViewModel, que lee el Hide real de
-        // character.Loadouts[CurrentLoadout]) - no se inventa aqui un toggle de UI nuevo sin que
-        // se pida explicitamente.
-        Appearance.UpdateEquippedAccessories(_service.EquipmentAppearance.ResolveAccessories(loadout0));
+        // ParidadPersonaje Fase1 (25-sep-2026): el razonamiento anterior (comentario ya retirado,
+        // "no hay control de UI para ocultar accesorio, hide=null es correcto") era incorrecto -
+        // la ausencia de un editor para ese toggle no justifica ignorar el Hide[] YA GUARDADO del
+        // personaje. loadout0 es sintetico (solo Items/Social/Dyes EN VIVO de lo que se esta
+        // editando, ver el comentario de cabecera de este metodo) y no lleva Hide propio, pero el
+        // array de 10 bits real vive en character.Loadouts[CurrentLoadout].Hide (mismo dato que ya
+        // lee CharacterListEntryViewModel para el doll de Inicio, ver su comentario junto a
+        // ResolveAccessories) - se lee de ahi y se pasa igual, para que el preview en vivo de
+        // Personaje>Apariencia coincida con Inicio en vez de mostrar siempre "nada oculto".
+        var hide = _loaded?.Character.Loadouts.ElementAtOrDefault(_loaded.Character.CurrentLoadout)?.Hide;
+        // ParidadPersonaje Fase2 (25-sep-2026): mismo criterio que CharacterListEntryViewModel -
+        // el slot 8 real solo esta desbloqueado con ExtraAccessory. ?? true (no ?? false) es a
+        // proposito: si _loaded fuera null (no deberia pasar aqui, este metodo edita un personaje
+        // ya cargado) el valor seguro es "no filtrar nada", igual que el resto de esta clase.
+        bool extraAccessoryUnlocked = _loaded?.Character.ExtraAccessory ?? true;
+        Appearance.UpdateEquippedAccessories(_service.EquipmentAppearance.ResolveAccessories(loadout0, hide, extraAccessoryUnlocked));
     }
 
     // Envuelve una operacion en bloque real (Auto-equipar, Mover todo al almacen...) en UNA

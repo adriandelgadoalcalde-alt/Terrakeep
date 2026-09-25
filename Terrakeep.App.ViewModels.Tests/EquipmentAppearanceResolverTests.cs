@@ -257,38 +257,44 @@ public sealed class EquipmentAppearanceResolverTests
     [Fact]
     public void VanidadDeBackpackTapaAlFuncionalDeBack_FielAlGuardado()
     {
-        // Funcional: Bee Cloak (Back normal) en el hueco 3. Vanidad: Magic Quiver (Backpack) en
-        // el hueco 7 - el juego real muestra el de VANIDAD, aunque caiga en un canal distinto
-        // (Backpack en vez de Back), mismo criterio "vanidad tapa a funcional" ya verificado
-        // para el resto de tipos.
+        // ParidadPersonaje Fase2 (25-sep-2026): esta prueba esperaba, hasta hoy, que la vanidad
+        // "tapara" al funcional aqui - INCORRECTO, confirmado contra Player.cs real
+        // (Player.cs:37169-37184): Back y Backpack son 2 CAMPOS INDEPENDIENTES del objeto Player,
+        // no una unica ranura repartida entre salidas excluyentes. Funcional: Bee Cloak (Back
+        // normal) en el hueco 3. Vanidad: Magic Quiver (Backpack) en el hueco 7 - el juego real
+        // muestra los DOS A LA VEZ (back=1 Y backpack=7 simultaneos, caso real ya verificado por
+        // el arquitecto-keep), ninguno tapa al otro porque caen en canales de dibujado DISTINTOS.
         var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
         loadout.Items[3] = new PlrItemSlot(BeeCloak, 1, 0, false);
         loadout.Social[7] = new PlrItemSlot(MagicQuiver, 1, 0, false);
 
         var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
 
+        Assert.NotNull(acc.BackFile);
+        Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "1.png", acc.BackFile);
         Assert.NotNull(acc.BackpackFile);
         Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "7.png", acc.BackpackFile);
-        Assert.Null(acc.BackFile);
         Assert.Null(acc.TailFile);
     }
 
     [Fact]
     public void VanidadDeTailTapaAlFuncionalDeBackpack_FielAlGuardado()
     {
-        // Funcional: Magic Quiver (Backpack) en el hueco 3. Vanidad: Dog Tail (Tail) en el hueco
-        // 8 - el juego real muestra el de VANIDAD, aunque caiga en OTRO canal (Tail en vez de
-        // Backpack).
+        // ParidadPersonaje Fase2 (25-sep-2026): mismo criterio que el test hermano de arriba -
+        // Backpack y Tail son 2 campos independientes, coexisten fiel al guardado. Funcional:
+        // Magic Quiver (Backpack) en el hueco 3. Vanidad: Dog Tail (Tail) en el hueco 8 - el
+        // juego real muestra los DOS A LA VEZ.
         var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
         loadout.Items[3] = new PlrItemSlot(MagicQuiver, 1, 0, false);
         loadout.Social[8] = new PlrItemSlot(DogTail, 1, 0, false);
 
         var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
 
+        Assert.NotNull(acc.BackpackFile);
+        Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "7.png", acc.BackpackFile);
         Assert.NotNull(acc.TailFile);
         Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "25.png", acc.TailFile);
         Assert.Null(acc.BackFile);
-        Assert.Null(acc.BackpackFile);
     }
 
     [Fact]
@@ -565,19 +571,20 @@ public sealed class EquipmentAppearanceResolverTests
     [Fact]
     public void VanidadDeBalloonFrontTapaAlFuncionalDeBalloonNormal_FielAlGuardado()
     {
-        // Funcional: Shiny Red Balloon (Balloon normal) en el hueco 3. Vanidad: Royal Scepter
-        // (BalloonFront, vanity=true real - Item.cs:45307) en el hueco 7 - el juego real muestra
-        // la vanidad, aunque caiga en OTRO canal (BalloonFront en vez de Balloon), mismo criterio
-        // "vanidad tapa a funcional" ya verificado para Back/Backpack/Tail (Encargo A).
+        // ParidadPersonaje Fase2 (25-sep-2026): igual que Back/Backpack/Tail - Balloon y
+        // BalloonFront son 2 campos independientes (Player.cs:37232-37241), coexisten. Funcional:
+        // Shiny Red Balloon (Balloon normal) en el hueco 3. Vanidad: Royal Scepter (BalloonFront,
+        // vanity=true real - Item.cs:45307) en el hueco 7 - el juego real muestra los DOS A LA VEZ.
         var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
         loadout.Items[3] = new PlrItemSlot(GloboRojoBrillante, 1, 0, false);
         loadout.Social[7] = new PlrItemSlot(CetroReal, 1, 0, false);
 
         var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
 
+        Assert.NotNull(acc.BalloonFile);
+        Assert.EndsWith("acc_balloon" + Path.DirectorySeparatorChar + "8.png", acc.BalloonFile);
         Assert.NotNull(acc.BalloonFrontFile);
         Assert.EndsWith("acc_balloon" + Path.DirectorySeparatorChar + "18.png", acc.BalloonFrontFile);
-        Assert.Null(acc.BalloonFile);
     }
 
     [Fact]
@@ -1025,19 +1032,20 @@ public sealed class EquipmentAppearanceResolverTests
     [Fact]
     public void VanidadDeFaceHeadTapaAlFuncionalDeFaceNormal_FielAlGuardado()
     {
-        // Funcional: Spectre Goggles (Face normal) en el hueco 3. Vanidad: Obsidian Skull
-        // (FaceHead) en el hueco 7 - el juego real muestra el de VANIDAD, aunque caiga en OTRO
-        // canal (FaceHead en vez de Face), mismo criterio "vanidad tapa a funcional" ya
-        // verificado para el resto de tipos (Back/Balloon).
+        // ParidadPersonaje Fase2 (25-sep-2026): igual que Back/Backpack/Tail y Balloon/
+        // BalloonFront - Face y FaceHead son 2 campos independientes (Player.cs:37213-37231),
+        // coexisten. Funcional: Spectre Goggles (Face normal) en el hueco 3. Vanidad: Obsidian
+        // Skull (FaceHead) en el hueco 7 - el juego real muestra los DOS A LA VEZ.
         var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
         loadout.Items[3] = new PlrItemSlot(GafasDeEspectro, 1, 0, false);
         loadout.Social[7] = new PlrItemSlot(CascoDeObsidiana, 1, 0, false);
 
         var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
 
+        Assert.NotNull(acc.FaceFile);
+        Assert.EndsWith("acc_face" + Path.DirectorySeparatorChar + "14.png", acc.FaceFile);
         Assert.NotNull(acc.FaceHeadFile);
         Assert.EndsWith("acc_face" + Path.DirectorySeparatorChar + "12.png", acc.FaceHeadFile);
-        Assert.Null(acc.FaceFile);
     }
 
     [Fact]
@@ -1289,6 +1297,192 @@ public sealed class EquipmentAppearanceResolverTests
 
         Assert.NotNull(acc.WaistFile);
         Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
+    }
+
+    // ParidadPersonaje Fase2 (25-sep-2026): interaccion real Front<->Back (Player.cs:37169-37188,
+    // dentro de UpdateVisibleAccessory) - un backSlot "normal" (ni Backpack ni Tail) limpia el
+    // Front vigente ("front = -1" real) justo antes de que se procese el frontSlot del MISMO item
+    // (si lo tiene, lo restablece acto seguido). Los 11 items reales que declaran frontSlot
+    // TAMBIEN declaran backSlot a la vez (confirmado en vanilla_accessory_slots.json, ninguno
+    // declara SOLO frontSlot) - CrimsonCloak (2284, fr=1/bk=3, backSlot=3 NO esta en
+    // DrawInBackpackLayer/DrawInTailLayer, o sea "Back normal") es el spot-check real ya usado
+    // arriba (FrontSlot_CrimsonCloak_...).
+    [Fact]
+    public void FrontDeUnItemPosteriorSeAplicaTrasElBackNormalDelMismoItem_ElOrdenRealDentroDeUnMismoObjeto()
+    {
+        // Un unico CrimsonCloak: su propio backSlot (normal, bk=3) limpia Front, y su propio
+        // frontSlot (fr=1) lo restablece INMEDIATAMENTE despues, dentro del MISMO Apply() - Back
+        // Y Front terminan resueltos a la vez, ambos con el mismo item (fiel al orden real
+        // Player.cs:37169-37188, backSlot se procesa ANTES que frontSlot).
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, CrimsonCloak));
+
+        Assert.NotNull(acc.BackFile);
+        Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "3.png", acc.BackFile);
+        Assert.NotNull(acc.FrontFile);
+        Assert.EndsWith("acc_front" + Path.DirectorySeparatorChar + "1.png", acc.FrontFile);
+    }
+
+    [Fact]
+    public void BackNormalDeUnItemPosteriorLimpiaElFrontDeclaradoPorUnItemAnterior_FielAlOrdenReal()
+    {
+        // CrimsonCloak (hueco 3, Front=si mismo) procesado ANTES que Bee Cloak (hueco 4, Back
+        // normal, SIN frontSlot) - el orden real del bucle (Player.cs, 3..9 ascendente) hace que
+        // Bee Cloak se aplique DESPUES: su backSlot normal limpia el Front que Crimson Cloak habia
+        // dejado puesto, y como Bee Cloak no tiene frontSlot propio, nada lo restablece. Back
+        // termina siendo Bee Cloak (el ultimo en escribir ese canal), Front termina en null -
+        // demuestra "un backSlot normal posterior borra el Front vigente", con 2 items REALES
+        // distintos (no el mismo objeto restableciendose a si mismo, ver el test hermano de arriba).
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(CrimsonCloak, 1, 0, false);
+        loadout.Items[4] = new PlrItemSlot(BeeCloak, 1, 0, false);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.BackFile);
+        Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "1.png", acc.BackFile); // Bee Cloak, backSlot=1
+        Assert.Null(acc.FrontFile);
+    }
+
+    // ParidadPersonaje Fase2 (25-sep-2026): slot 8 real (armor[8]/armor[18]) gateado por
+    // IsItemSlotUnlockedAndUsable (Player.cs:12668-12693, case 8/18) - en el contexto de doll
+    // ESTATICO de la pantalla de seleccion (equivalente real a Main.gameMenu==true), la formula
+    // colapsa a "extraAccessory tal cual" (ver el comentario real completo de cabecera de
+    // ResolveAccessories). extraAccessoryUnlocked=true por defecto (backward-compatible, ver el
+    // resto de esta clase).
+    [Fact]
+    public void Slot8SinExtraAccessoryDesbloqueado_ElHuecoNoSeResuelve_IsItemSlotUnlockedAndUsable()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(8, RelojCobre), hide: null, extraAccessoryUnlocked: false);
+
+        Assert.Null(acc.WaistFile);
+        Assert.Null(acc.WaistSlot);
+    }
+
+    [Fact]
+    public void Slot8ConExtraAccessoryDesbloqueado_ElHuecoSeResuelveNormal()
+    {
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(8, RelojCobre), hide: null, extraAccessoryUnlocked: true);
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
+    }
+
+    [Fact]
+    public void Slot8SinPasarExtraAccessoryUnlocked_PorDefectoSigueResolviendo_SinRegresion()
+    {
+        // Regresion real: el parametro nuevo es opcional con default=true (nadie que ya llamara
+        // a ResolveAccessories sin conocer este parametro debe ver cambiar el hueco 8).
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(8, RelojCobre));
+
+        Assert.NotNull(acc.WaistFile);
+    }
+
+    [Fact]
+    public void Slot9NuncaSeGatea_SinDatoAlQueCondicionarseEnEsteContexto()
+    {
+        // Slot 9 real (armor[9]/armor[19], Modo Maestro) - IsItemSlotUnlockedAndUsable(9/19) real
+        // colapsa igual a "siempre true" en gameMenu==true, SIN IMPORTAR masterMode (case 9/19:
+        // "if (!masterMode) return gameMenu; return true;") - no hay ningun parametro que lo
+        // bloquee, mismo criterio ya documentado en ItemSlotViewModel.IsMasterAccessorySlot ("el
+        // 7º no tiene NINGUN dato al que condicionarse").
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(9, RelojCobre), hide: null, extraAccessoryUnlocked: false);
+
+        Assert.NotNull(acc.WaistFile);
+    }
+
+    // ParidadPersonaje Fase2 (25-sep-2026): ItemIsVisuallyIncompatible, las 3 reglas A aplicables
+    // a un doll ESTATICO (Player.cs:37117-37140) - filtros PREVIOS a Apply(), el item entero se
+    // salta (no solo el campo concreto que la regla menciona), fiel al "continue" real del bucle.
+    // Ids reales: SpaceCreatureShirt (1839, bodySlot=96), ReaperRobe (1820, bodySlot=93),
+    // FlowerBoyPants (3735, legSlot=138, IncompatibleWithFrogLeg real), MouseCage (2191, el UNICO
+    // item real de este catalogo con shoeSlot=15 confirmado - declara TAMBIEN handOnSlot=17/
+    // handOffSlot=10/wingSlot=24 a la vez, por eso la regla A2 se comprueba en los 4 campos: el
+    // item ENTERO desaparece, no solo el zapato).
+    private const int SpaceCreatureShirt = 1839; // bodySlot=96
+    private const int ReaperRobe = 1820;         // bodySlot=93
+    private const int FlowerBoyPants = 3735;     // legSlot=138, IncompatibleWithFrogLeg
+    private const int MouseCage = 2191;          // handOn=17/handOff=10/shoeSlot=15/wing=24
+
+    [Fact]
+    public void ReglaA1_Body96ConBackSlotDeTail_ElAccesorioDeColaDesaparece()
+    {
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[1] = new PlrItemSlot(SpaceCreatureShirt, 1, 0, false); // body=96
+        loadout.Items[3] = new PlrItemSlot(DogTail, 1, 0, false);            // backSlot=25, DrawInTailLayer
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.Null(acc.TailFile);
+        Assert.Null(acc.BackFile);
+        Assert.Null(acc.BackpackFile);
+    }
+
+    [Fact]
+    public void ReglaA1_SinBody96_LaColaSeResuelveNormal_ConfirmaQueLaReglaNoSeAplicaSiempre()
+    {
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(DogTail, 1, 0, false); // sin ningun body puesto
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.TailFile);
+        Assert.EndsWith("acc_back" + Path.DirectorySeparatorChar + "25.png", acc.TailFile);
+    }
+
+    [Fact]
+    public void ReglaA2_LegsIncompatibleConFrogLegMasShoeSlot15_ElItemEnteroDesaparece()
+    {
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[2] = new PlrItemSlot(FlowerBoyPants, 1, 0, false); // legSlot=138
+        loadout.Items[3] = new PlrItemSlot(MouseCage, 1, 0, false);      // shoeSlot=15
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        // El item ENTERO se salta, no solo ShoesFile - MouseCage tambien declara HandOn/HandOff/Wing.
+        Assert.Null(acc.ShoesFile);
+        Assert.Null(acc.HandOnFile);
+        Assert.Null(acc.HandOffFile);
+        Assert.Null(acc.WingFile);
+    }
+
+    [Fact]
+    public void ReglaA2_SinLegsIncompatible_ElAccesorioDeShoeSlot15SeResuelveNormal()
+    {
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(MouseCage, 1, 0, false); // sin ningun leg puesto
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.ShoesFile);
+        Assert.EndsWith("acc_shoes" + Path.DirectorySeparatorChar + "15.png", acc.ShoesFile);
+        Assert.NotNull(acc.HandOnFile);
+        Assert.NotNull(acc.HandOffFile);
+        Assert.NotNull(acc.WingFile);
+    }
+
+    [Fact]
+    public void ReglaA3_Body93ConBalloonSlot18_ElAccesorioDesaparece()
+    {
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[1] = new PlrItemSlot(ReaperRobe, 1, 0, false); // body=93
+        loadout.Items[3] = new PlrItemSlot(CetroReal, 1, 0, false);  // balloonSlot=18
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.Null(acc.BalloonFrontFile);
+        Assert.Null(acc.BalloonFile);
+    }
+
+    [Fact]
+    public void ReglaA3_SinBodyEnLaLista_ElRoyalScepterSeResuelveNormal()
+    {
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(CetroReal, 1, 0, false); // sin ningun body puesto
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout);
+
+        Assert.NotNull(acc.BalloonFrontFile);
+        Assert.EndsWith("acc_balloon" + Path.DirectorySeparatorChar + "18.png", acc.BalloonFrontFile);
     }
 
     // GapAnalysis Encargo I (25-sep-2026): dyes reales, PLANO vs ANIMADO/SHADER (ver

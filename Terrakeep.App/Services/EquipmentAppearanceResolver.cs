@@ -279,36 +279,200 @@ public sealed class EquipmentAppearanceResolver
     private static PlrItemSlot Visible(PlrLoadout loadout, int index) =>
         loadout.Social[index].IsEmpty ? loadout.Items[index] : loadout.Social[index];
 
-    // PortSeleccion Encargo1 (25-sep-2026): resuelve los 7 sprites de accesorio funcional/
-    // vanidad reales (Waist/Neck/HandOn/HandOff/Back/Shield/Face), aplicando la misma regla
-    // "vanidad tapa a funcional" que Resolve() ya aplica para cabeza/cuerpo/piernas - pero por
-    // TIPO en vez de por INDICE, porque los 7 huecos de accesorio (indices 3..9 de
-    // PlrLoadout.Items/Social) son GENERICOS: cualquiera de ellos puede llevar cualquiera de
-    // los 7 tipos (confirmado en Player.cs real, UpdateVisibleAccessory: "if
-    // (item.waistSlot > 0) waist = item.waistSlot;" y analogo para los otros 6 campos, sin
-    // relacion con la posicion del item dentro del array).
+    // ParidadPersonaje Fase2 (25-sep-2026): REESCRITO por completo - el modelo anterior (una
+    // UNICA variable por FAMILIA -back/face/balloon-, reclasificada DESPUES de escanear TODOS los
+    // items, ver el comentario que este metodo tenia hasta hoy) trataba Back/Backpack/Tail (y
+    // Face/FaceHead/FaceMask/FaceFlower, y Balloon/BalloonFront) como una UNICA ranura repartida
+    // entre salidas EXCLUYENTES. Bug de MODELO confirmado contra Player.cs real
+    // (UpdateVisibleAccessory, Player.cs:37151-37283): son CAMPOS INDEPENDIENTES del objeto
+    // Player, cualquier item puede setear el suyo sin relacion con los otros, y PUEDEN COEXISTIR -
+    // "if (item.backSlot > 0) { if (...DrawInBackpackLayer) backpack = ...; else if
+    // (...DrawInTailLayer) tail = ...; else { back = ...; front = -1; } }" (mismo patron exacto
+    // para balloon/balloonFront, Player.cs:37232-37241, y face/faceHead/faceMask/faceFlower,
+    // Player.cs:37213-37231). Prueba real que expuso el bug (arquitecto-keep, 25-sep-2026): Bee
+    // Cloak (funcional, backSlot=1, Back normal) + Magic Quiver (vanidad, backSlot=7, Backpack) ->
+    // el juego real muestra back=1 Y backpack=7 A LA VEZ - el resolver viejo solo podia producir
+    // uno de los dos (ver VanidadDeBackpackTapaAlFuncionalDeBack_FielAlGuardado, que hasta hoy
+    // esperaba erroneamente que uno tapara al otro).
     //
-    // Fidelidad real al juego (Player.cs, UpdateVisibleAccessories): recorre PRIMERO los 7
-    // huecos funcionales en orden 3..9 (si dos items funcionales declaran el mismo tipo, el de
-    // indice mas alto pisa al anterior - "ultimo en escribir gana", igual que el bucle real) y
+    // VisiblePlayerState.Apply() es ahora la MAQUINA DE ESTADOS SECUENCIAL fiel: cada item se
+    // aplica UNA vez, EN SU ORDEN REAL, y solo muta los campos que el propio item declare -
+    // exactamente el mismo mecanismo que Player.UpdateVisibleAccessory (un metodo, llamado una
+    // vez por item, que va mutando los campos de Player uno a uno). La reclasificacion de
+    // Back/Balloon/Face ya NO ocurre "al final del scan" sobre una unica variable ganadora - ocurre
+    // DENTRO de Apply(), por item, exactamente como en el juego real.
+    private sealed class VisiblePlayerState
+    {
+        public AccessoryMatch? Back, Backpack, Tail;
+        public AccessoryMatch? Front;
+        public AccessoryMatch? HandOn, HandOff, Waist, Shield, Neck, Shoe, Beard, Wing;
+        public AccessoryMatch? Face, FaceHead, FaceMask, FaceFlower;
+        public AccessoryMatch? Balloon, BalloonFront;
+        // GapAnalysis Encargo J (25-sep-2026): los 4 estados especiales de bajo impacto - ver el
+        // comentario de cabecera de EquippedAccessories para la cita real completa de cada uno.
+        public AccessoryMatch? UnicornHorn, AngelHalo, Yoraiz0rDarkness, Coat;
+
+        // Fiel CAMPO A CAMPO a Player.cs:37151-37283 (UpdateVisibleAccessory), EN ESE ORDEN - el
+        // orden importa de verdad: backSlot se procesa ANTES que frontSlot dentro del MISMO item,
+        // asi que un backSlot normal (rama "else") puede limpiar (Front = null, el "front = -1"
+        // real) el Front que el propio item declare justo despues, y ese mismo frontSlot lo
+        // restablece acto seguido si el item lo tiene - ver
+        // FrontDeUnItemPosteriorSeAplicaTrasElBackNormalDelMismoItem_ElOrdenRealDentroDeUnMismoObjeto/
+        // BackNormalDeUnItemPosteriorLimpiaElFrontDeclaradoPorUnItemAnterior_FielAlOrdenReal.
+        //
+        // isSitting (Player.cs:37189-37192, "if (sitting.isSitting) back = -1;") queda FUERA a
+        // proposito - mismo criterio ya documentado en este fichero para Wings/velocity.Y: un doll
+        // ESTATICO sin fisica no tiene el estado "sentado" de verdad, no hay nada que replicar.
+        //
+        // Ajuste real sobre el diseno original del arquitecto: la propuesta incluia un campo
+        // "FrontExplicitlyCleared" aparte para distinguir "Front=null porque ningun item lo puso"
+        // de "Front=null porque un backSlot normal lo limpio" - no hace falta: el propio Player.cs
+        // NO tiene ese distingo (solo hace "front = -1"), y aqui el resultado final es identico en
+        // los dos casos (Front=null), la mutacion secuencial YA basta sin ningun flag adicional -
+        // simplificacion deliberada, sin perder fidelidad de comportamiento.
+        public void Apply(PlrItemSlot item, PlrItemSlot dye, VanillaAccessorySlotEntry? vEntry, CalamityCatalogEntry? calEntry, bool isCalamity)
+        {
+            var match = new AccessoryMatch(item, dye);
+            // CalamityAccesorios (25-sep-2026): el sufijo real de Calamity es el nombre CRUDO del
+            // enum EquipType (HandsOn/HandsOff/Shoes/Wings, ver el comentario real ya existente en
+            // ResolveAccessorySprite) - NO el alias corto que usan los campos vanilla (e.HandOn/
+            // e.Shoe/e.Wing). EquipSlotSecondary cubre los 6 guantes reales con 2 canales a la vez.
+            bool Cal(string suffix) => isCalamity && calEntry is not null && (calEntry.EquipSlot == suffix || calEntry.EquipSlotSecondary == suffix);
+
+            // handOnSlot / handOffSlot (Player.cs:37161-37167)
+            if (Cal("HandsOn") || (!isCalamity && vEntry?.HandOn is not null)) HandOn = match;
+            if (Cal("HandsOff") || (!isCalamity && vEntry?.HandOff is not null)) HandOff = match;
+
+            // backSlot (Player.cs:37169-37184) - reclasifica AQUI, POR ITEM, nunca al final de un
+            // scan completo (ese era exactamente el bug de modelo, ver el comentario de arriba).
+            // Calamity no comparte la numeracion backSlot (fiel-por-defecto, se queda siempre en
+            // "Back" - mismo criterio ya establecido para el resto del resolver).
+            if (isCalamity)
+            {
+                if (Cal("Back")) { Back = match; Front = null; }
+            }
+            else if (vEntry?.Back is int backId)
+            {
+                if (BackAccessoryLayerTable.IsBackpackLayer(backId)) Backpack = match;
+                else if (BackAccessoryLayerTable.IsTailLayer(backId)) Tail = match;
+                else { Back = match; Front = null; } // "front = -1" real - efecto secundario, no una regla aparte.
+            }
+
+            // frontSlot (Player.cs:37185-37188) - PUEDE restablecer el Front que el backSlot de
+            // ESTE MISMO item acabe de limpiar arriba, exactamente en ese orden real.
+            if (Cal("Front") || (!isCalamity && vEntry?.Front is not null)) Front = match;
+
+            // shoeSlot (Player.cs:37193-37200) - la regla de sexo real (MaleToFemaleID) se aplica
+            // DESPUES, en PlayerPreviewRenderer.Render (ya tiene "male" en scope).
+            if (Cal("Shoes") || (!isCalamity && vEntry?.Shoe is not null)) Shoe = match;
+
+            if (Cal("Waist") || (!isCalamity && vEntry?.Waist is not null)) Waist = match;
+            if (Cal("Shield") || (!isCalamity && vEntry?.Shield is not null)) Shield = match;
+            if (Cal("Neck") || (!isCalamity && vEntry?.Neck is not null)) Neck = match;
+
+            // faceSlot (Player.cs:37213-37231) - reclasifica igual que backSlot, POR ITEM. Orden
+            // real de comprobacion (if/else if encadenados): FaceHead primero, FaceMask despues,
+            // FaceFlower al final.
+            if (isCalamity)
+            {
+                if (Cal("Face")) Face = match;
+            }
+            else if (vEntry?.Face is int faceId)
+            {
+                if (FaceAccessoryLayerTable.IsFaceHeadLayer(faceId)) FaceHead = match;
+                else if (FaceAccessoryLayerTable.IsFaceMaskLayer(faceId)) FaceMask = match;
+                else if (FaceAccessoryLayerTable.IsFaceFlowerLayer(faceId)) FaceFlower = match;
+                else Face = match;
+            }
+
+            // balloonSlot (Player.cs:37232-37241) - idem, reclasifica POR ITEM.
+            if (isCalamity)
+            {
+                if (Cal("Balloon")) Balloon = match;
+            }
+            else if (vEntry?.Balloon is int balloonId)
+            {
+                if (BalloonAccessoryLayerTable.IsFrontLayer(balloonId)) BalloonFront = match;
+                else Balloon = match;
+            }
+
+            // beardSlot (Player.cs:37243-37246). Calamity no declara EquipType.Beard en ningun
+            // item real (ver comentario de EquippedAccessories) - "Beard" nunca hace match ahi.
+            if (Cal("Beard") || (!isCalamity && vEntry?.Beard is not null)) Beard = match;
+            // wingSlot (Player.cs:37247-37250, tambien Player.cs:37063-37074 en el bucle exterior
+            // real - ver el comentario de ResolveAccessories mas abajo, "DELIBERATE DIFFERENCE
+            // (Wings)", ya cubierto por el filtro hide[] previo a llamar a Apply()).
+            if (Cal("Wings") || (!isCalamity && vEntry?.Wing is not null)) Wing = match;
+
+            // GapAnalysis Encargo J (25-sep-2026): los 4 estados especiales, item.type EXACTO, sin
+            // relacion con ningun campo de slot (Player.cs:37255-37282).
+            if (item.Id == 3581) Yoraiz0rDarkness = match;
+            if (item.Id == 4563) UnicornHorn = match;
+            if (item.Id == 1987) AngelHalo = match;
+            if (item.Id == 5587) Coat = match;
+        }
+    }
+
+    private readonly record struct AccessoryMatch(PlrItemSlot Item, PlrItemSlot Dye);
+
+    // ItemIsVisuallyIncompatible, regla A2 (Player.cs:37131-37134/ArmorIDs.cs:1105): "legs > 0 &&
+    // ArmorIDs.Legs.Sets.IncompatibleWithFrogLeg[legs] && item.shoeSlot == 15" - tabla real
+    // transcrita LITERAL (7 legSlot reales: FlowerBoyPants=138, LamiaPants=143, MoonLordLegs=217,
+    // TimelessTravelerBottom=222, CapricornTail=226, RoyalDressBottom=228, y el legSlot real de
+    // Mermaid Tail=106, sin item vanilla extraible en el catalogo de este PC - ver
+    // ItemIsVisuallyIncompatibleReglaA2_MermaidTailPendingItem en los tests). No hace falta una
+    // clase de tabla aparte (como BackAccessoryLayerTable/BalloonAccessoryLayerTable/
+    // FaceAccessoryLayerTable) porque solo la consulta ESTA regla, en un unico sitio.
+    private static readonly HashSet<int> LegsIncompatibleWithFrogLeg = [106, 143, 217, 222, 226, 228, 138];
+
+    // PortSeleccion Encargo1 (25-sep-2026): resuelve los 12 tipos de accesorio funcional/vanidad
+    // reales (Waist/Neck/HandOn/HandOff/Back+Backpack+Tail/Front/Shield/Face+FaceHead+FaceMask+
+    // FaceFlower/Shoes/Balloon+BalloonFront/Beard/Wing), aplicando la misma regla "vanidad tapa a
+    // funcional" que Resolve() ya aplica para cabeza/cuerpo/piernas - pero por TIPO en vez de por
+    // INDICE, porque los 7 huecos de accesorio (indices 3..9 de PlrLoadout.Items/Social) son
+    // GENERICOS: cualquiera de ellos puede llevar cualquiera de los tipos.
+    //
+    // Fidelidad real al juego (Player.cs:37034-37115, UpdateVisibleAccessories): recorre PRIMERO
+    // los 7 huecos funcionales en orden 3..9 (si dos items funcionales declaran el mismo tipo, el
+    // de indice mas alto pisa al anterior - "ultimo en escribir gana", igual que el bucle real,
+    // salvo Back/Balloon/Face que ahora se reclasifican POR ITEM, ver VisiblePlayerState.Apply) y
     // LUEGO los 7 huecos de vanidad en el mismo orden, que pisan cualquier valor funcional del
-    // mismo tipo si hay un item de vanidad de ese tipo puesto - el mismo comportamiento que un
-    // objeto de vanidad "tapa" al funcional en Resolve(), solo que aqui la correspondencia es
-    // por TIPO de accesorio, no por indice de slot compartido.
+    // MISMO CANAL (no ya de la misma "familia" - Back normal y Backpack son canales distintos que
+    // coexisten, ver el comentario de cabecera de VisiblePlayerState).
     //
-    // GapAnalysis Encargo H (25-sep-2026): hide[] ahora SI se respeta - cierra el hueco real
-    // documentado antes aqui ("ALCANCE DELIBERADO... no respeta hideVisibleAccessory"). Bug de
-    // datos real encontrado por el arquitecto-keep: el array de 10 bits real (hideVisibleAccessory
-    // en Player.cs) vive en PlrCharacter.Loadouts[CurrentLoadout].Hide, NUNCA en
-    // PlrCharacter.PrimaryLoadout (PlrLoadout.CreateEmpty(isPrimary:true) fija Hide=null siempre,
-    // ver PlrLoadout.cs - loadouts[0] es un mirror que el propio cliente de Terraria no serializa
-    // con Hide) - el llamador es responsable de pasar el Hide REAL del loadout activo (ver
-    // CharacterListEntryViewModel), este metodo solo aplica el array que recibe.
+    // GapAnalysis Encargo H (25-sep-2026): hide[] se respeta - el array de 10 bits real
+    // (hideVisibleAccessory en Player.cs) vive en PlrCharacter.Loadouts[CurrentLoadout].Hide,
+    // NUNCA en PlrCharacter.PrimaryLoadout (PlrLoadout.CreateEmpty(isPrimary:true) fija Hide=null
+    // siempre) - el llamador es responsable de pasar el Hide REAL del loadout activo (ver
+    // CharacterListEntryViewModel), este metodo solo aplica el array que recibe. Regla real: el
+    // toggle SOLO gatea el hueco FUNCIONAL (i=3..9 de loadout.Items) - el bucle de vanidad
+    // (armor[13..19] real, loadout.Social aqui) NO tiene ningun chequeo, la vanidad puesta se ve
+    // SIEMPRE.
     //
-    // Regla real (Player.cs, UpdateVisibleAccessories): el toggle SOLO gatea el hueco FUNCIONAL
-    // (i=3..9 de loadout.Items) - el bucle de vanidad (armor[13..19] real, loadout.Social aqui)
-    // NO tiene ningun chequeo de hideVisibleAccessory, la vanidad puesta se ve SIEMPRE. Por eso
-    // "hide" solo se consulta al escanear loadout.Items, nunca loadout.Social.
+    // ParidadPersonaje Fase2 (25-sep-2026), filtros PREVIOS a Apply() (Player.cs:37034-37086,
+    // ambos bucles):
+    // - IsItemSlotUnlockedAndUsable (Player.cs:12668-12693): en un doll ESTATICO de la pantalla de
+    //   seleccion de personaje (equivalente real a Main.gameMenu==true), la formula real colapsa
+    //   a "siempre true" salvo el slot 8/18 (case 8/18 real: "if (extraAccessory) { if
+    //   (!expertMode) return gameMenu; return true; } return false;" - en gameMenu==true, el
+    //   UNICO factor que cambia el resultado es extraAccessory) y a "siempre true" tambien para el
+    //   slot 9/19 (case 9/19 real: "if (!masterMode) return gameMenu; return true;" - en
+    //   gameMenu==true da true sin importar masterMode, exactamente lo que ya documentaba
+    //   IsMasterAccessorySlot en ItemSlotViewModel.cs, "el 7º no tiene NINGUN dato al que
+    //   condicionarse"). Por eso el UNICO filtro real que hace falta aqui es "slot local 8 gateado
+    //   por extraAccessoryUnlocked" - nuevo parametro opcional, default true (backward-compatible
+    //   con todo el resto de esta clase, que no conocia PlrCharacter.ExtraAccessory hasta hoy);
+    //   los llamadores reales (MainViewModel/CharacterListEntryViewModel) pasan el valor real del
+    //   personaje.
+    // - ItemIsVisuallyIncompatible, reglas A (Player.cs:37117-37140) - de las 5 reglas reales solo
+    //   3 son aplicables a un doll ESTATICO (las otras 2 dependen de estado de combate en tiempo
+    //   real - eocDash/shieldRaised, comida sostenida - sin sentido para un doll sin fisica, fuera
+    //   de alcance, igual que isSitting/velocity.Y en otros sitios de este fichero): body==96 +
+    //   backSlot en DrawInTailLayer, legs con IncompatibleWithFrogLeg + shoeSlot==15, y
+    //   balloonSlot==18 + body en {93,83}. Solo vanilla (Calamity no comparte backSlot/shoeSlot/
+    //   balloonSlot, fiel-por-defecto). A diferencia de hide[], este filtro APLICA A LOS DOS
+    //   BUCLES (funcional Y vanidad) - Player.cs llama a ItemIsVisuallyIncompatible en ambos
+    //   (37059/37081), sin excepcion para vanidad.
     //
     // DELIBERATE DIFFERENCE (Wings): el juego real tiene una excepcion en el propio bucle
     // funcional (Player.cs:37063-37074) - "if (hideVisibleAccessory[i] && (velocity.Y == 0f ||
@@ -317,186 +481,119 @@ public sealed class EquipmentAppearanceResolver
     // fisica real (siempre "en reposo", equivalente a velocity.Y==0f) - bajo esa condicion la
     // propia formula real del juego colapsa a "si esta oculto, no se ve" sin excepcion (el OR con
     // mount.Active tampoco aplica, un doll no tiene montura). Por eso Wings se resuelve aqui con
-    // el MISMO chequeo generico que el resto de los 9 tipos (hide[i] oculta el slot entero, tal
+    // el MISMO chequeo generico que el resto de los tipos (hide[i] oculta el slot entero, tal
     // cual), sin replicar la rama de "cayendo" - decision explicita, no una simplificacion oculta.
+    //
     // GapAnalysis Encargo I (25-sep-2026): dye REAL emparejado con el ganador de cada canal -
     // Player.cs:9691-9697/9702 (UpdateDyes/UpdateItemDye real): "int num = i % 10;
     // UpdateItemDye(i < 10, hideVisibleAccessory[num], GetEffectiveArmor(i),
     // GetEffectiveDye(num));" - el bucle real recorre los 20 slots (0..9 funcional, 10..19
     // vanidad) y usa dye[i % 10] SIEMPRE, tanto para el hueco funcional i como para su gemelo de
-    // vanidad i+10 - el MISMO indice de dye sirve para los dos. Por eso Scan() guarda, junto al
-    // item que gana cada canal, el dye emparejado con SU MISMO indice de slot (loadout.Dyes[i]),
-    // sin importar si vino de Items o de Social - "ultimo en escribir gana" ya vale igual para
-    // el dye que para el sprite, porque ambos se sobrescriben juntos en el mismo if.
-    private readonly record struct AccessoryMatch(PlrItemSlot Item, PlrItemSlot Dye);
-
-    public EquippedAccessories ResolveAccessories(PlrLoadout loadout, bool[]? hide = null)
+    // vanidad i+10 - el MISMO indice de dye sirve para los dos. Por eso cada item se aplica junto
+    // al dye emparejado con SU MISMO indice de slot (loadout.Dyes[i]), sin importar si vino de
+    // Items o de Social.
+    public EquippedAccessories ResolveAccessories(PlrLoadout loadout, bool[]? hide = null, bool extraAccessoryUnlocked = true)
     {
-        AccessoryMatch? waist = null, neck = null, handOn = null, handOff = null, back = null, shield = null, face = null, shoes = null, balloon = null, beard = null, front = null, wing = null;
-        // GapAnalysis Encargo J (25-sep-2026): los 4 estados especiales de bajo impacto - ver el
-        // comentario de cabecera de EquippedAccessories para la cita real completa de cada uno.
-        AccessoryMatch? unicornHorn = null, angelHalo = null, yoraiz0rDarkness = null, coat = null;
+        var state = new VisiblePlayerState();
 
-        void Scan(PlrItemSlot[] slots, bool respectHide)
+        // body/legs YA resueltos (con la misma regla vanidad-tapa-a-funcional que Resolve()) -
+        // hacen falta para las 3 reglas de ItemIsVisuallyIncompatible de arriba.
+        int? bodySlotId = ResolveBodySlot(Visible(loadout, 1));
+        int? legsSlotId = ResolveLegsSlot(Visible(loadout, 2));
+
+        void ScanOne(PlrItemSlot s, PlrItemSlot dye, int localIndex, bool respectHide)
         {
-            for (int i = 3; i <= 9; i++)
-            {
-                // Solo el hueco FUNCIONAL (loadout.Items) respeta hide[i] - ver el comentario
-                // real de cabecera de este metodo (UpdateVisibleAccessories real, bucle de
-                // vanidad sin chequeo de hideVisibleAccessory).
-                if (respectHide && hide is not null && i < hide.Length && hide[i]) continue;
-                var s = slots[i];
-                if (s.IsEmpty) continue;
-                var match = new AccessoryMatch(s, loadout.Dyes[i]);
-                if (IsAccessoryType(s, e => e.Waist, "Waist")) waist = match;
-                if (IsAccessoryType(s, e => e.Neck, "Neck")) neck = match;
-                // CalamityAccesorios (25-sep-2026): el sufijo real de Calamity es el nombre CRUDO
-                // del enum EquipType (HandsOn/HandsOff/Shoes, confirmado en el propio
-                // EquipType.cs decompilado Y en los ficheros reales ya extraidos de
-                // Assets/calamity/icons/, ej. BloodstainedGlove_HandsOn.png) - NO el alias corto
-                // "HandOn"/"HandOff"/"Shoe" que usan los campos vanilla de abajo (e.HandOn/
-                // e.Shoe, VanillaAccessorySlotEntry) ni los directorios acc_handon/acc_shoes.
-                // Los dos sufijos son independientes a proposito: calamitySuffix solo se usa
-                // dentro de la rama Calamity de IsAccessoryType/ResolveAccessorySprite.
-                if (IsAccessoryType(s, e => e.HandOn, "HandsOn")) handOn = match;
-                if (IsAccessoryType(s, e => e.HandOff, "HandsOff")) handOff = match;
-                if (IsAccessoryType(s, e => e.Back, "Back")) back = match;
-                if (IsAccessoryType(s, e => e.Shield, "Shield")) shield = match;
-                if (IsAccessoryType(s, e => e.Face, "Face")) face = match;
-                // GapAnalysis Encargo D (25-sep-2026): shoeSlot, mismo patron exacto.
-                if (IsAccessoryType(s, e => e.Shoe, "Shoes")) shoes = match;
-                // GapAnalysis Encargo C (25-sep-2026): balloonSlot, mismo patron exacto.
-                if (IsAccessoryType(s, e => e.Balloon, "Balloon")) balloon = match;
-                // GapAnalysis Encargo G (25-sep-2026): beardSlot, mismo patron exacto. Calamity
-                // no declara EquipType.Beard en ningun item real (ver comentario de
-                // EquippedAccessories) - calamitySuffix "Beard" nunca hace match ahi, sin
-                // riesgo de falso positivo.
-                if (IsAccessoryType(s, e => e.Beard, "Beard")) beard = match;
-                // GapAnalysis Encargo E (25-sep-2026): frontSlot, mismo patron exacto.
-                if (IsAccessoryType(s, e => e.Front, "Front")) front = match;
-                // Wings Encargo1 (25-sep-2026): wingSlot, mismo patron exacto.
-                if (IsAccessoryType(s, e => e.Wing, "Wings")) wing = match;
-                // GapAnalysis Encargo J (25-sep-2026): los 4 estados especiales - item.type EXACTO,
-                // sin relacion con ningun campo de slot (ver el comentario real completo de
-                // EquippedAccessories). "Ultimo en escribir gana" vale igual aqui: si dos items
-                // funcionales/de vanidad con el MISMO item.type especial llegaran a coexistir (no
-                // posible hoy, solo existe 1 item real de cada), el de indice mas alto pisaria al
-                // anterior, igual que el resto de canales.
-                if (s.Id == 4563) unicornHorn = match;
-                if (s.Id == 1987) angelHalo = match;
-                if (s.Id == 3581) yoraiz0rDarkness = match;
-                if (s.Id == 5587) coat = match;
-            }
-        }
-        Scan(loadout.Items, respectHide: true);
-        Scan(loadout.Social, respectHide: false);
+            // IsItemSlotUnlockedAndUsable(8/18) real - ver el comentario de cabecera de este
+            // metodo. Aplica a los 2 bucles por igual (funcional Y vanidad).
+            if (localIndex == 8 && !extraAccessoryUnlocked) return;
+            // Solo el hueco FUNCIONAL (loadout.Items) respeta hide[i] - el bucle de vanidad no
+            // tiene ningun chequeo de hideVisibleAccessory real.
+            if (respectHide && hide is not null && localIndex < hide.Length && hide[localIndex]) return;
+            if (s.IsEmpty) return;
 
-        var (waistFile, waistSlotId) = ResolveAccessorySprite(waist?.Item, "Waist", e => e.Waist, "acc_waist");
-        var waistDye = ResolveDye(waist?.Dye ?? PlrItemSlot.Empty);
-        var (neckFile, neckSlotId) = ResolveAccessorySprite(neck?.Item, "Neck", e => e.Neck, "acc_neck");
-        var neckDye = ResolveDye(neck?.Dye ?? PlrItemSlot.Empty);
-        var (handOnFile, handOnSlotId) = ResolveAccessorySprite(handOn?.Item, "HandsOn", e => e.HandOn, "acc_handon");
-        var handOnDye = ResolveDye(handOn?.Dye ?? PlrItemSlot.Empty);
-        var (handOffFile, handOffSlotId) = ResolveAccessorySprite(handOff?.Item, "HandsOff", e => e.HandOff, "acc_handoff");
-        var handOffDye = ResolveDye(handOff?.Dye ?? PlrItemSlot.Empty);
-        var (backFile, backSlotId) = ResolveAccessorySprite(back?.Item, "Back", e => e.Back, "acc_back");
-        var backDye = ResolveDye(back?.Dye ?? PlrItemSlot.Empty);
-        var (shieldFile, shieldSlotId) = ResolveAccessorySprite(shield?.Item, "Shield", e => e.Shield, "acc_shield");
-        var shieldDye = ResolveDye(shield?.Dye ?? PlrItemSlot.Empty);
-        var (faceFile, faceSlotId) = ResolveAccessorySprite(face?.Item, "Face", e => e.Face, "acc_face");
-        var faceDye = ResolveDye(face?.Dye ?? PlrItemSlot.Empty);
+            bool isCalamity = s.Id >= CalamityIds.ItemIdBase;
+            VanillaAccessorySlotEntry? vEntry = isCalamity ? null : _vanillaAccessorySlots.ById(s.Id);
+            CalamityCatalogEntry? calEntry = isCalamity ? _calamity.BySyntheticId(s.Id) : null;
+
+            // ItemIsVisuallyIncompatible, reglas A - ver el comentario de cabecera. Solo vanilla.
+            if (!isCalamity && vEntry is not null)
+            {
+                if (bodySlotId == 96 && vEntry.Back is int backIdA && BackAccessoryLayerTable.IsTailLayer(backIdA)) return;
+                if (legsSlotId is int legs && LegsIncompatibleWithFrogLeg.Contains(legs) && vEntry.Shoe == 15) return;
+                if (vEntry.Balloon == 18 && (bodySlotId == 93 || bodySlotId == 83)) return;
+            }
+
+            state.Apply(s, dye, vEntry, calEntry, isCalamity);
+        }
+
+        for (int i = 3; i <= 9; i++) ScanOne(loadout.Items[i], loadout.Dyes[i], i, respectHide: true);
+        for (int i = 3; i <= 9; i++) ScanOne(loadout.Social[i], loadout.Dyes[i], i, respectHide: false);
+
+        var (waistFile, waistSlotId) = ResolveAccessorySprite(state.Waist?.Item, "Waist", e => e.Waist, "acc_waist");
+        var waistDye = ResolveDye(state.Waist?.Dye ?? PlrItemSlot.Empty);
+        var (neckFile, neckSlotId) = ResolveAccessorySprite(state.Neck?.Item, "Neck", e => e.Neck, "acc_neck");
+        var neckDye = ResolveDye(state.Neck?.Dye ?? PlrItemSlot.Empty);
+        var (handOnFile, handOnSlotId) = ResolveAccessorySprite(state.HandOn?.Item, "HandsOn", e => e.HandOn, "acc_handon");
+        var handOnDye = ResolveDye(state.HandOn?.Dye ?? PlrItemSlot.Empty);
+        var (handOffFile, handOffSlotId) = ResolveAccessorySprite(state.HandOff?.Item, "HandsOff", e => e.HandOff, "acc_handoff");
+        var handOffDye = ResolveDye(state.HandOff?.Dye ?? PlrItemSlot.Empty);
+        var (shieldFile, shieldSlotId) = ResolveAccessorySprite(state.Shield?.Item, "Shield", e => e.Shield, "acc_shield");
+        var shieldDye = ResolveDye(state.Shield?.Dye ?? PlrItemSlot.Empty);
         // GapAnalysis Encargo D (25-sep-2026): guarda el id MASCULINO/neutro tal cual - la
         // regla de sexo real (MaleToFemaleID) se aplica despues, en PlayerPreviewRenderer.Render.
-        var (shoesFile, shoesSlotId) = ResolveAccessorySprite(shoes?.Item, "Shoes", e => e.Shoe, "acc_shoes");
-        var shoesDye = ResolveDye(shoes?.Dye ?? PlrItemSlot.Empty);
-        var (balloonFile, balloonSlotId) = ResolveAccessorySprite(balloon?.Item, "Balloon", e => e.Balloon, "acc_balloon");
-        var balloonDye = ResolveDye(balloon?.Dye ?? PlrItemSlot.Empty);
-        var (beardFile, beardSlotId) = ResolveAccessorySprite(beard?.Item, "Beard", e => e.Beard, "acc_beard");
-        var beardDye = ResolveDye(beard?.Dye ?? PlrItemSlot.Empty);
-        var (frontFile, frontSlotId) = ResolveAccessorySprite(front?.Item, "Front", e => e.Front, "acc_front");
-        var frontDye = ResolveDye(front?.Dye ?? PlrItemSlot.Empty);
+        var (shoesFile, shoesSlotId) = ResolveAccessorySprite(state.Shoe?.Item, "Shoes", e => e.Shoe, "acc_shoes");
+        var shoesDye = ResolveDye(state.Shoe?.Dye ?? PlrItemSlot.Empty);
+        var (beardFile, beardSlotId) = ResolveAccessorySprite(state.Beard?.Item, "Beard", e => e.Beard, "acc_beard");
+        var beardDye = ResolveDye(state.Beard?.Dye ?? PlrItemSlot.Empty);
+        var (frontFile, frontSlotId) = ResolveAccessorySprite(state.Front?.Item, "Front", e => e.Front, "acc_front");
+        var frontDye = ResolveDye(state.Front?.Dye ?? PlrItemSlot.Empty);
         // Wings Encargo1 (25-sep-2026): wingSlot, mismo patron exacto - calamitySuffix "Wings"
         // (nombre crudo del enum, igual que HandsOn/HandsOff/Shoes, ver scripts/
         // extraer-slot-armadura-calamity.js).
-        var (wingFile, wingSlotId) = ResolveAccessorySprite(wing?.Item, "Wings", e => e.Wing, "acc_wing");
-        var wingDye = ResolveDye(wing?.Dye ?? PlrItemSlot.Empty);
+        var (wingFile, wingSlotId) = ResolveAccessorySprite(state.Wing?.Item, "Wings", e => e.Wing, "acc_wing");
+        var wingDye = ResolveDye(state.Wing?.Dye ?? PlrItemSlot.Empty);
 
-        // GapAnalysis Encargo A (25-sep-2026): reclasifica el resultado de "Back" YA resuelto en
-        // los otros 2 canales reales posibles (Player.cs:37169-37184, UpdateVisibleAccessory) -
-        // el sprite es el mismo (acc_back/{backSlotId}.png), solo cambia a que campo va. Objetos
-        // de Calamity (backSlotId siempre null, numeracion propia no compartida) se quedan en
-        // "Back" - fiel-por-defecto, mismo criterio ya establecido para Calamity en el resto del
-        // resolver (sin SetMatch/hidesTopSkin, ver PlayerPreviewRenderer.Render).
-        string? backpackFile = null, tailFile = null;
-        int? backpackSlotId = null, tailSlotId = null;
-        PlayerPreviewRenderer.Tint? backpackDye = null, tailDye = null;
-        if (backSlotId is int backId && BackAccessoryLayerTable.IsBackpackLayer(backId))
-        {
-            (backpackFile, backpackSlotId, backpackDye) = (backFile, backSlotId, backDye);
-            (backFile, backSlotId, backDye) = (null, null, null);
-        }
-        else if (backSlotId is int tailId && BackAccessoryLayerTable.IsTailLayer(tailId))
-        {
-            (tailFile, tailSlotId, tailDye) = (backFile, backSlotId, backDye);
-            (backFile, backSlotId, backDye) = (null, null, null);
-        }
+        // GapAnalysis Encargo A (25-sep-2026): Back/Backpack/Tail YA vienen reclasificados POR
+        // ITEM desde VisiblePlayerState.Apply (ParidadPersonaje Fase2) - los 3 pueden estar
+        // rellenos A LA VEZ, cada uno con su propio item (ver el comentario de cabecera de
+        // VisiblePlayerState). Los 3 comparten el mismo sprite real (acc_back/{id}.png, e.Back).
+        var (backFile, backSlotId) = ResolveAccessorySprite(state.Back?.Item, "Back", e => e.Back, "acc_back");
+        var backDye = ResolveDye(state.Back?.Dye ?? PlrItemSlot.Empty);
+        var (backpackFile, backpackSlotId) = ResolveAccessorySprite(state.Backpack?.Item, "Back", e => e.Back, "acc_back");
+        var backpackDye = ResolveDye(state.Backpack?.Dye ?? PlrItemSlot.Empty);
+        var (tailFile, tailSlotId) = ResolveAccessorySprite(state.Tail?.Item, "Back", e => e.Back, "acc_back");
+        var tailDye = ResolveDye(state.Tail?.Dye ?? PlrItemSlot.Empty);
 
-        // GapAnalysis Encargo C (25-sep-2026): reclasifica el resultado de "Balloon" YA resuelto
-        // en el otro canal real posible (Player.cs:37232-37241, UpdateVisibleAccessory) - el
-        // sprite es el mismo (acc_balloon/{balloonSlotId}.png), solo cambia a que campo va.
-        // Objetos de Calamity (balloonSlotId siempre null, numeracion propia no compartida) se
-        // quedan en "Balloon" - fiel-por-defecto, mismo criterio ya establecido para Calamity en
-        // el resto del resolver.
-        string? balloonFrontFile = null;
-        int? balloonFrontSlotId = null;
-        PlayerPreviewRenderer.Tint? balloonFrontDye = null;
-        if (balloonSlotId is int balloonId && BalloonAccessoryLayerTable.IsFrontLayer(balloonId))
-        {
-            (balloonFrontFile, balloonFrontSlotId, balloonFrontDye) = (balloonFile, balloonSlotId, balloonDye);
-            (balloonFile, balloonSlotId, balloonDye) = (null, null, null);
-        }
+        // GapAnalysis Encargo C (25-sep-2026): Balloon/BalloonFront, idem - reclasificados POR
+        // ITEM, pueden coexistir cada uno con su propio item.
+        var (balloonFile, balloonSlotId) = ResolveAccessorySprite(state.Balloon?.Item, "Balloon", e => e.Balloon, "acc_balloon");
+        var balloonDye = ResolveDye(state.Balloon?.Dye ?? PlrItemSlot.Empty);
+        var (balloonFrontFile, balloonFrontSlotId) = ResolveAccessorySprite(state.BalloonFront?.Item, "Balloon", e => e.Balloon, "acc_balloon");
+        var balloonFrontDye = ResolveDye(state.BalloonFront?.Dye ?? PlrItemSlot.Empty);
 
-        // GapAnalysis Encargo F (25-sep-2026): reclasifica el resultado de "Face" YA resuelto en
-        // los otros 3 canales reales posibles (Player.cs:37213-37231, UpdateVisibleAccessory) -
-        // el sprite es el mismo (acc_face/{faceSlotId}.png), solo cambia a que campo va. Objetos
-        // de Calamity (faceSlotId siempre null, numeracion propia no compartida) se quedan en
-        // "Face" - fiel-por-defecto, mismo criterio ya establecido para Calamity en el resto del
-        // resolver. Orden real de comprobacion (Player.cs:37215-37229, if/else if encadenados):
-        // FaceHead primero, FaceMask despues, FaceFlower al final - un faceSlot solo puede caer
-        // en UNA de las 3 tablas en la practica (FaceAccessoryLayerTable las transcribe
-        // literales, sin solaparse hoy), pero se respeta el orden real por si acaso.
-        string? faceHeadFile = null, faceMaskFile = null, faceFlowerFile = null;
-        int? faceHeadSlotId = null, faceMaskSlotId = null, faceFlowerSlotId = null;
-        PlayerPreviewRenderer.Tint? faceHeadDye = null, faceMaskDye = null, faceFlowerDye = null;
-        if (faceSlotId is int faceHeadId && FaceAccessoryLayerTable.IsFaceHeadLayer(faceHeadId))
-        {
-            (faceHeadFile, faceHeadSlotId, faceHeadDye) = (faceFile, faceSlotId, faceDye);
-            (faceFile, faceSlotId, faceDye) = (null, null, null);
-        }
-        else if (faceSlotId is int faceMaskId && FaceAccessoryLayerTable.IsFaceMaskLayer(faceMaskId))
-        {
-            (faceMaskFile, faceMaskSlotId, faceMaskDye) = (faceFile, faceSlotId, faceDye);
-            (faceFile, faceSlotId, faceDye) = (null, null, null);
-        }
-        else if (faceSlotId is int faceFlowerId && FaceAccessoryLayerTable.IsFaceFlowerLayer(faceFlowerId))
-        {
-            (faceFlowerFile, faceFlowerSlotId, faceFlowerDye) = (faceFile, faceSlotId, faceDye);
-            (faceFile, faceSlotId, faceDye) = (null, null, null);
-        }
+        // GapAnalysis Encargo F (25-sep-2026): Face/FaceHead/FaceMask/FaceFlower, idem.
+        var (faceFile, faceSlotId) = ResolveAccessorySprite(state.Face?.Item, "Face", e => e.Face, "acc_face");
+        var faceDye = ResolveDye(state.Face?.Dye ?? PlrItemSlot.Empty);
+        var (faceHeadFile, faceHeadSlotId) = ResolveAccessorySprite(state.FaceHead?.Item, "Face", e => e.Face, "acc_face");
+        var faceHeadDye = ResolveDye(state.FaceHead?.Dye ?? PlrItemSlot.Empty);
+        var (faceMaskFile, faceMaskSlotId) = ResolveAccessorySprite(state.FaceMask?.Item, "Face", e => e.Face, "acc_face");
+        var faceMaskDye = ResolveDye(state.FaceMask?.Dye ?? PlrItemSlot.Empty);
+        var (faceFlowerFile, faceFlowerSlotId) = ResolveAccessorySprite(state.FaceFlower?.Item, "Face", e => e.Face, "acc_face");
+        var faceFlowerDye = ResolveDye(state.FaceFlower?.Dye ?? PlrItemSlot.Empty);
 
         // GapAnalysis Encargo J (25-sep-2026): resuelve la ruta fija real de cada estado especial
         // (null si el item no esta puesto en ningun hueco) - ver el comentario de cabecera de
         // EquippedAccessories para la cita completa de cada uno. "lo que no se encuentra no se
         // inventa" (FixedVanillaPath ya comprueba File.Exists), mismo criterio que el resto del
         // resolver.
-        string? unicornHornFile = unicornHorn is not null ? FixedVanillaPath("extra", 143) : null;
-        var unicornHornDye = ResolveDye(unicornHorn?.Dye ?? PlrItemSlot.Empty);
-        string? angelHaloFile = angelHalo is not null ? FixedVanillaPath("acc_face", 7) : null;
-        var angelHaloDye = ResolveDye(angelHalo?.Dye ?? PlrItemSlot.Empty);
-        string? yoraiz0rDarknessFile = yoraiz0rDarkness is not null ? FixedVanillaPath("extra", 67) : null;
-        string? coatFile = coat is not null ? FixedVanillaPath("armor_body", 251) : null;
-        int? coatSlotId = coat is not null ? 251 : null;
-        var coatDye = ResolveDye(coat?.Dye ?? PlrItemSlot.Empty);
+        string? unicornHornFile = state.UnicornHorn is not null ? FixedVanillaPath("extra", 143) : null;
+        var unicornHornDye = ResolveDye(state.UnicornHorn?.Dye ?? PlrItemSlot.Empty);
+        string? angelHaloFile = state.AngelHalo is not null ? FixedVanillaPath("acc_face", 7) : null;
+        var angelHaloDye = ResolveDye(state.AngelHalo?.Dye ?? PlrItemSlot.Empty);
+        string? yoraiz0rDarknessFile = state.Yoraiz0rDarkness is not null ? FixedVanillaPath("extra", 67) : null;
+        string? coatFile = state.Coat is not null ? FixedVanillaPath("armor_body", 251) : null;
+        int? coatSlotId = state.Coat is not null ? 251 : null;
+        var coatDye = ResolveDye(state.Coat?.Dye ?? PlrItemSlot.Empty);
 
         return new EquippedAccessories(
             waistFile, neckFile, handOnFile, handOffFile, backFile, shieldFile, faceFile,
