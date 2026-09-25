@@ -146,6 +146,18 @@ internal static partial class Program
             // añadidas al MISMO array `objetivos` de abajo, reutilizando tal cual el bucle generico
             // ya existente (icono no nulo, fichero real en disco, Expander real, BringIntoView(),
             // medicion de recorte/overflow y captura individual) sin necesidad de duplicar logica.
+            //
+            // GuiaCalamity Encargo B (25-sep-2026, mismo handoff): hueco cerrado - paso.JefeMod
+            // (nuevo campo, "CalamityMod/InternalName" sin resolver) + CalamityBossIconResolver
+            // (nuevo, Assets/calamity_boss_icons/{InternalName}.png extraido DIRECTAMENTE del
+            // .rawimg de icono de cabeza real del .tmod, ver scripts/
+            // extraer-sprites-jefes-calamity.js) le dan sprite real al caso "jefe de Calamity" de
+            // ResolverIconoDelHito, antes sin resolver (0/29 pids). Cinco filas de jefe de Calamity
+            // reales añadidas al MISMO array `objetivos`, reutilizando el mismo bucle generico: dos
+            // que siguen la convencion directa (DesertScourgeHead, Crabulon) y los TRES casos de
+            // mapeo manual confirmados contra el codigo decompilado real de CalamityMod.dll v2.2.2
+            // (Cryogen -> Cryogen_Phase1_Head_Boss, Dragonfolly -> Bumblebirb/Birb_Head_Boss,
+            // SupremeCalamitas -> HoodedHeadIcon sin sufijo _Head_Boss).
             static IEnumerable<FrameworkElement> Descendientes(DependencyObject raiz)
             {
                 int n = VisualTreeHelper.GetChildrenCount(raiz);
@@ -175,6 +187,15 @@ internal static partial class Program
                 ("Deerclops (opcional)", "Derrotarlo (opcional)", "Jefe (Deerclops, jefe=668, hoja en rejilla)"),
                 ("La Reina Abeja (opcional)", "Derrotarla (opcional)", "Jefe (Reina Abeja, jefe=222)"),
                 ("Plantera", "Derrotarla", "Jefe (Plantera, jefe=262)"),
+                // GuiaCalamity Encargo B (25-sep-2026): cinco filas de jefe de CALAMITY reales,
+                // CalamityBossIconResolver nuevo - dos que siguen la convencion directa
+                // (DesertScourgeHead, Crabulon) y los TRES casos de mapeo manual confirmados contra
+                // el codigo decompilado real (Cryogen, Dragonfolly, SupremeCalamitas).
+                ("El Desert Scourge (opcional, Calamity)", "Derrotarlo (opcional)", "Jefe Calamity (DesertScourgeHead, convencion directa)"),
+                ("Crabulon (opcional, Calamity)", "Derrotarlo (opcional)", "Jefe Calamity (Crabulon, convencion directa)"),
+                ("Cryogen (opcional, Calamity)", "Derrotarlo (opcional)", "Jefe Calamity (Cryogen, MAPEO MANUAL Cryogen_Phase1_Head_Boss)"),
+                ("Dragonfolly (opcional, Calamity)", "Derrotarlo (opcional)", "Jefe Calamity (Dragonfolly, MAPEO MANUAL Bumblebirb/Birb_Head_Boss)"),
+                ("Exo Mechs y Supreme Witch, Calamitas: el final", "Derrotarla: el final del arbol de Calamity", "Jefe Calamity (SupremeCalamitas, MAPEO MANUAL HoodedHeadIcon sin sufijo)"),
             };
 
             int filasConIconoVisible = 0;

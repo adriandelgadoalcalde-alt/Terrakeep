@@ -77,6 +77,12 @@ public sealed class PasoGuia
     [JsonPropertyName("zona")] public string Zona { get; set; } = "";
     [JsonPropertyName("capa")] public string CapaBruta { get; set; } = "";
     [JsonPropertyName("jefe")] public int Jefe { get; set; }
+    // GuiaCalamity Encargo B (25-sep-2026): el .json TAMBIEN trae "jefeMod" ("CalamityMod/
+    // InternalName") para los pasos de jefe de Calamity - a diferencia de Jefe (int, NPC type
+    // vanilla), este NUNCA se resuelve a un type numerico aqui (Terrakeep no tiene partida en
+    // marcha de la que preguntar, ver GuideCatalog.cs:12-17) - se deja crudo tal cual para que
+    // CalamityBossIconResolver lo consuma directamente por pid (nombre de fichero, no numero).
+    [JsonPropertyName("jefeMod")] public string? JefeMod { get; set; }
     [JsonPropertyName("requisitos")] public List<RequisitoGuia> Requisitos { get; set; } = [];
 
     [JsonIgnore] public string Tramo { get; set; } = "";
