@@ -26307,3 +26307,113 @@ respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKe
 renderer, fiel al juego real. Pendiente real, fuera de este encargo: el deploy del `.exe` instalado
 (ver arriba) y Fase4/5 (favoritos cross-loadout, dyes shader, estados especiales) que Fase2 ya
 documentó como pendientes.
+
+## ParidadPersonaje Fase4 (26-sep-2026): BugD (favoritos cross-loadout) + BugH (Hide de formato
+## antiguo)
+
+Encargo del arquitecto-keep de la reapertura (aab15032) - dos hallazgos YA investigados, aplicados
+directamente sin reinvestigar la causa.
+
+**BugD - favoritos cross-loadout no modelado (afecta cabeza/cuerpo/piernas Y accesorios)**:
+confirmado con `Player.GetEffectiveArmor`/`CanShareArmor` reales
+(`Keep\tModLoader-Decompiled\TerrariaVanilla\Terraria\Player.cs:5678-5734`): si el slot de un
+INDICE dado está vacío en el loadout activo (`armor[slot].IsAir`), el juego real busca un objeto
+FAVORITO (`item.favorited`) en el MISMO índice de cualquiera de los otros loadouts guardados
+(`Loadouts[]`), en orden, y lo "presta" visualmente - se detiene en el primer favorito que
+aparece, se use o no (rama `break` real si `CanShareArmor` falla). Terrakeep no modelaba esto en
+absoluto - ni para accesorios ni para head/body/legs, tal como decía el hallazgo.
+
+Arreglo real: `EquipmentAppearanceResolver.Resolve`/`ResolveAccessories` ganan un parámetro
+opcional `otherLoadouts` (`IReadOnlyList<PlrLoadout>?`, default `null` - compatible con todos los
+llamadores/tests que ya existían). Nuevo método privado `ResolveEffectiveSlot` porta la mecánica
+real: si el slot propio está vacío, escanea `otherLoadouts` en orden buscando el primer item NO
+vacío Y favorito en ese mismo índice; los no favoritos se saltan, el primer favorito que aparece
+corta la búsqueda (se resuelva o no a un sprite real). Se aplica por separado a `Items[]`
+(funcional) y `Social[]` (vanidad) de cada índice - antes de que la vanidad tape a lo funcional
+(`Visible()`), igual que el juego real resuelve `GetEffectiveArmor(0)` y `GetEffectiveArmor(10)`
+de forma independiente. **Alcance deliberado documentado**: no porta la parte (b) de
+`CanShareArmor` real (`CanEquipBothAccessories`/duplicado por tipo entre accesorios YA
+equipados) - el mismo resultado visual final ya lo produce `VisiblePlayerState` de forma natural
+(el último item que escribe un canal desplaza al anterior); portarla aparte habría duplicado esa
+lógica sin cambiar nada visible. Tampoco porta el favorito cross-loadout de `GetEffectiveDye`
+(dyes) - el hallazgo confirmado hablaba solo de `GetEffectiveArmor` (piezas de sprite).
+
+`CharacterListEntryViewModel` (doll de Inicio, "PlayerFrame" citado en el hallazgo) y
+`MainViewModel.RefreshAppearanceEquipment` (preview en vivo de Personaje>Apariencia) pasan ahora
+`character.Loadouts`/`_loaded.Character.Loadouts` como `otherLoadouts`. LÍMITE REAL documentado en
+el propio comentario de `MainViewModel`: durante una sesión de edición en curso, refleja el estado
+de los OTROS loadouts tal como se cargó el personaje (o tras el último guardado), no ediciones sin
+guardar hechas esa misma sesión en las píldoras 2/3 de Equipamiento - mismo alcance que ya tenía
+`hide` antes de este encargo.
+
+**BugH - HideVisual1/HideVisual2 parseados pero 0 usos en producción (formato antiguo pre-Loadout)**:
+confirmado en `PlrBodySerializer.Read` (`Terrakeep.Core/PlrFormat/PlrBodySerializer.cs:82-86` y
+`230-237`): `HideVisual1`/`HideVisual2` se leen para `version>=83` SIEMPRE, pero
+`character.Loadouts` solo se rellena para `version>=269` (`if (version >= 269) { Loadouts = new
+PlrLoadout[3]; ... }`) - en un personaje anterior a esa versión `Loadouts` queda `[]` para
+siempre, y `Loadouts.ElementAtOrDefault(CurrentLoadout)?.Hide` (lo que leían
+`CharacterListEntryViewModel`/`MainViewModel` hasta hoy) devolvía `null` siempre, perdiendo la
+información real de "ocultar accesorio" en cualquier .plr viejo. Confirmado bit a bit contra
+`Player.cs:55831-55841` real (`LoadPlayer`): el byte `HideVisual1` mapea 1:1 a los índices 0..7
+del mismo array de 10 bits `hideVisibleAccessory` que usa el formato moderno, `HideVisual2` a los
+índices 8..9 - es el MISMO dato, solo empaquetado distinto según el formato del archivo.
+
+Arreglo real: `PlrCharacter.ResolveActiveHide()` (nuevo método) devuelve
+`Loadouts[CurrentLoadout].Hide` cuando `Loadouts` existe (formato moderno, comportamiento
+idéntico a antes - sin regresión), y si no, reconstruye el array de 10 bits desde
+`HideVisual1`/`HideVisual2` con el mismo mapeo bit a bit real. `CharacterListEntryViewModel`/
+`MainViewModel` llaman a este método en vez de leer `Loadouts[...]?.Hide` a mano.
+
+**Tests reales**: 7 nuevos en `EquipmentAppearanceResolverTests` (BugD - favorito visible con
+hueco propio vacío, favorito ignorado si el hueco propio tiene algo, no-favorito no se cuela,
+"rompe la búsqueda" en el primer favorito no compatible sin mirar el segundo loadout, favorito de
+vanidad tapa a lo funcional, versión para accesorio genérico, regresión con `otherLoadouts=null`)
++ 5 nuevos en `Terrakeep.Core.Tests/PlrFormat/PlrCharacterResolveActiveHideTests` (BugH -
+HideVisual1 bit a bit, HideVisual2 índices 8/9, sin nada oculto por defecto, formato moderno sin
+regresión, `CurrentLoadout` fuera de rango sin regresión).
+
+**Verificación real**: `dotnet build Terrakeep.slnx -c Debug` y `-c Release` en verde (0
+advertencias, 0 errores). `dotnet test Terrakeep.Core.Tests`: 737/737 (732 baseline + 5 nuevos),
+Debug y Release, sin regresión. `dotnet test Terrakeep.App.ViewModels.Tests`: 732/732 (725
+baseline + 7 nuevos), Debug (12m20s) y Release (10m16s), sin regresión.
+
+**Recompilación y redespliegue local**: `Terrakeep.exe` instalado NO estaba en ejecución al
+empezar (`tasklist` sin resultados) - se pudo completar el deploy entero, sin `LÍMITE REAL`
+pendiente esta vez. `DEPLOY_LOCK` adquirido (`deployLock.js adquirir Terrakeep`). Sanidad de
+`Assets/` instalado ANTES del `/MIR` (`deployLock.js antes Terrakeep
+.../AppData/Local/Programs/Terrakeep/Assets`): 13055 ficheros, hash registrado. `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde. `robocopy
+.../publish .../Terrakeep /MIR /XF unins000.exe unins000.dat`: 1 archivo copiado (el `.exe`/dll
+cambiado), 13060 omitidos (ya sincronizados por un `/MIR` anterior), 0 errores, 0 extras. Sanidad
+de `Assets/` DESPUÉS (`deployLock.js despues Terrakeep ...`): 13055 ficheros, mismo hash que ANTES
+- "Assets/ de Terrakeep idéntico antes y después del /MIR - deploy seguro". `DEPLOY_LOCK`
+liberado. `LastWriteTime` del `.exe` instalado y del `.exe` recién publicado coinciden
+(26/09/2026 1:07:04, 139.235.969 bytes) - deploy real confirmado, no solo el publish intermedio.
+Único destino real de este proyecto (barra de tareas y Menú Inicio apuntan los dos ahí, ya
+documentado arriba varias veces) - nada pendiente de sincronizar aparte.
+
+**Commit real** `9dbaa741`: `Terrakeep.App/Services/EquipmentAppearanceResolver.cs` +
+`Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs` +
+`Terrakeep.App/ViewModels/MainViewModel.cs` + `Terrakeep.Core/PlrFormat/PlrCharacter.cs` +
+`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs` +
+`Terrakeep.Core.Tests/PlrFormat/PlrCharacterResolveActiveHideTests.cs` (nuevo). `git status`
+revisado con cuidado antes del `git add` - numerosos ficheros ajenos de otros agentes en paralelo
+(`CLAUDE.md`, `MainWindow.xaml`, `Terrakeep.Core.Tests/Data/**`, `Terrakeep.App.Tests/**`,
+`scripts/**`, etc.), ninguno añadido al stage - `git add` con rutas explícitas de mis 6 ficheros,
+nunca `-A`. `doNotTouch` respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/
+`Terrakeep.App.Tests/ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md` no tocados ni comiteados. No se
+tocó `MainWindow.xaml`/`MainWindow.xaml.cs`/`ExplorationViewModel.cs` (coordinación real con los
+2 agentes en paralelo sobre esos ficheros). Sin `git push`.
+
+**Nota honesta sobre `CharacterListEntryViewModel.cs`**: no estaba en la lista explícita de
+ficheros del encargo ("EquipmentAppearanceResolver.cs/MainViewModel.cs/CharacterFileService.cs/
+PlrFormat"), pero el propio hallazgo de BugD cita literalmente "PlayerFrame usa
+GetEffectiveArmor" - el doll de Inicio que construye este fichero es exactamente ese consumidor
+real; sin tocarlo, el arreglo de BugD nunca habría llegado a producción para el síntoma reportado.
+Cambio mínimo y quirúrgico (2 líneas de resolución de datos, mismo patrón ya usado ahí), sin tocar
+nada de `MainWindow.xaml`/`.xaml.cs`/`ExplorationViewModel.cs`.
+
+**Fase4 queda cerrada**: BugD y BugH arreglados con evidencia real y tests que cierran el hueco de
+cobertura. Pendiente real, fuera de este encargo: Fase5 (dyes shader/animados, estados especiales
+restantes) que Fase2/Fase3 ya documentaron como pendientes; el favorito cross-loadout de dyes
+(`GetEffectiveDye`), fuera de alcance deliberado de este encargo (ver arriba).
