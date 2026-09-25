@@ -22643,3 +22643,138 @@ PruebasGuiaYServidor.cs` (mis hunks reales, confirmados con `git diff` antes de 
 del fichero ya estaba committeado por el agente de Encargo2). `Terrakeep.App/ViewModels/
 GuideViewModel.cs` NO se incluye en este commit - ya quedo persistido en `b88866d7` (ver nota de
 proceso mas arriba), nada pendiente ahi. Sin `git push`.
+
+## 25-sep-2026 - Editor de objeto: controles rapidos +10/+100/MAX respetando el maxStack real
+## (aplicador-fix, encargo directo del usuario, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d)
+
+Encargo literal del usuario: "EDITOR DE OBJETO. Actualmente están bien: prefijo; cantidad; ID;
+quitar. Mantener edición manual de cantidad, pero añadir controles rápidos de stack: +10, +100,
+MAX. MAX debe respetar el maxStack real del objeto, no un número fijo. +10/+100 tampoco deben
+sobrepasar el máximo permitido." Sin investigacion previa (el encargo ya especifica el
+comportamiento exacto) - pero la premisa del encargo ("Terrakeep ya debe tener esta informacion
+en su catalogo... confirmalo con Read/Grep, no asumas un valor fijo") resulto ser FALSA: medido
+con Grep antes de tocar nada, ni `VanillaItemStatsCatalog` (`vanilla_stats.json`) ni
+`CalamityItemStats` (`calamity/catalog.json`) tenian NUNCA maxStack - el propio comentario real de
+`ContainerViewModel.cs` (~linea 145, "Ordenar") ya documentaba que ese limite estaba "aparcado"
+desde el 2-sep-2026 por falta exactamente de esta extraccion. Ampliar el alcance a extraerla de
+verdad (nunca fingirla) era la unica forma honesta de cumplir el encargo tal cual esta escrito.
+
+### Causa real del "9999 fijo" que el encargo señalaba
+`ItemSlotViewModel.OnCountChanged` (linea ~498, antes del arreglo) topaba SIEMPRE a
+`Math.Clamp(value, 1, 9999)` - tanto la edicion manual del campo Cantidad como cualquier control
+nuevo heredarian ese mismo techo falso. Una espada real (maxStack=1) se podia dejar en cualquier
+numero hasta 9999 sin ningun aviso.
+
+### Extraccion real del maxStack (nuevo hueco de datos, cerrado)
+- **Vanilla**: `scripts/extraer-max-stack-vanilla.py` (nuevo, mismo escaner de bloques
+  `SetDefaults1..5` con recursion a `switch(type){...}` anidados ya verificado en
+  `extraer-estadisticas-vanilla.py`) lee `Item.cs` decompilado real
+  (`tModLoader-Decompiled\tModLoader\Terraria\Item.cs`). `Item.maxStack` se resetea a 1 en cada
+  `ResetStats(Type)` real (comentario XML del propio campo: "Defaults to 1.") y solo se reasigna
+  en el bloque del id concreto que apila de verdad - measurable en esta version: solo 3 valores
+  reales existen, `CommonMaxStack` (constante real, 9999), `100` (las 3 monedas convertibles) y
+  `1` (equipables, redundante con el default). **Hallazgo real durante la extraccion** (no
+  cubierto por un escaner ingenuo de la linea "maxStack = "): ~390 ids reales llaman al metodo
+  auxiliar `DefaultToPlaceableTile(...)` (y 7 hermanos mas -
+  `DefaultToPlaceableWall/DefaultToThrownWeapon/DefaultToFood/DefaultToHealingPotion/
+  DefaultToSeaShell/DefaultToCapturedCritter/DefaultToSolution`) SIN una linea "maxStack = " propia
+  - ese helper fija `maxStack = CommonMaxStack` DENTRO de su propio cuerpo (confirmado leyendo
+  `Item.cs:48681-48695`). Sin detectar tambien esas llamadas, ~580 ids reales (la mayoria bloques
+  colocables añadidos tras 1.3) se habrian quedado incorrectamente en el default 1. Salida:
+  `Terrakeep.App/Assets/vanilla_max_stack.json` (3315 ids con maxStack explicito real, 328 via el
+  helper). Spot-checks reales: id 14 (Bala de mosquete) -> 9999, id 71 (Moneda de cobre) -> 100,
+  id 4041 (bloque via `DefaultToPlaceableTile` puro, sin linea propia) -> 9999.
+- **Calamity**: `scripts/extraer-max-stack-calamity.js` (nuevo, mismo indice de clases por nombre
+  de fichero + "primer candidato con dato real" ante colision ya usado por
+  `extraer-defensa-calamity.js`) sobre `tModLoader-Decompiled\CalamityMod`. Mismo hallazgo real de
+  los 8 helpers (936 de las 1108 entradas con maxStack real vinieron via helper, no via linea
+  propia - ej. `AstralBar.cs`: `base.Item.DefaultToPlaceableTile(...)`, sin ninguna linea
+  "Item.maxStack = "). Escribe `stats.maxStack` directo en `calamity/catalog.json` (mismo patron
+  ya usado por `defense`). **Limite real documentado, no ignorado**: 23 clases de Calamity usan
+  `Item.CloneDefaults(idVanilla)` para heredar TODOS los stats (incluido maxStack) de un objeto
+  vanilla existente - ni este script ni `extraer-defensa-calamity.js` (mismo punto ciego ya
+  existente) resuelven esa herencia dinamica; esas 23 clases se quedan con maxStack ausente
+  (default real 1) aunque el objeto clonado tenga otro valor - documentado en la cabecera del
+  script en vez de fingir cobertura total. Spot-checks reales: `BloodfireArrow` -> 9999,
+  `EncryptedSchematicHell` -> 1 (via linea propia), `AstralBar` -> 9999 (via helper).
+
+### Arreglo real aplicado
+- `Terrakeep.Core/Data/VanillaMaxStackCatalog.cs` (nuevo): `Get(id)` devuelve el valor real o 1
+  (el default real del motor, nunca un numero inventado).
+- `Terrakeep.Core/Data/CalamityCatalog.cs`: `CalamityItemStats.MaxStack` (nuevo campo nullable) +
+  `WriteTo`/`ReadFrom` de la cache binaria actualizados (un campo mas por entrada).
+- `Terrakeep.Core/Data/LibraryCatalogDiskCache.cs`: `FormatVersion` 1 -> 2 (formato binario
+  cambiado - el fingerprint de origen ya habria invalidado una cache vieja por su cuenta al
+  cambiar `catalog.json`, pero bump explicito de todas formas, es el mecanismo real que este
+  fichero ya reserva para esto).
+- `Terrakeep.App/Services/CharacterFileService.cs`: carga `VanillaMaxStack` desde
+  `Assets/vanilla_max_stack.json` (mismo patron que el resto de catalogos).
+- `Terrakeep.App/ViewModels/ItemSlotViewModel.cs`:
+  - `MaxStack` (propiedad nueva, computada, sin cachear): `IsEmpty ? 1 :
+    IsCalamity ? CalamityCatalog.BySyntheticId(Item.Id)?.Stats?.MaxStack ?? 1 :
+    VanillaMaxStack.Get(Item.Id)`.
+  - `OnCountChanged`: `Math.Clamp(value, 1, 9999)` -> `Math.Clamp(value, 1, MaxStack)` - la
+    edicion manual del campo Cantidad (ya existente) ahora respeta el mismo tope real, cerrando
+    tambien el bug de raiz que el propio encargo señalaba.
+  - 3 comandos nuevos (`AddTenToCountCommand`/`AddHundredToCountCommand`/`SetCountToMaxCommand`),
+    delgados a proposito: solo tocan `Count`, el clamp real vive en un unico sitio
+    (`OnCountChanged`), nunca duplicado.
+- `Terrakeep.App/MainWindow.xaml` (~linea 142-158, `ItemEditTemplate` - reutilizada tal cual en
+  Personaje/Inventario Y en el editor de cofre de Exploracion, misma plantilla): 3 botones
+  `Tag="Ghost"` (mismo lenguaje visual ya usado por "Quitar"/★ un poco mas abajo, Padding="6,2"
+  FontSize="11"), debajo del `TextBox` de Cantidad existente, sin tocar su edicion manual.
+- `Terrakeep.App/Assets/strings_es.json`/`strings_en.json`: 3 claves de accion
+  (`action_add_ten`/`action_add_hundred`/`action_set_max`) + 3 tooltips
+  (`tt_add_ten_stack`/`tt_add_hundred_stack`/`tt_set_max_stack`), en los dos idiomas.
+
+### Verificacion real
+- **Pruebas xUnit nuevas** (`Terrakeep.App.ViewModels.Tests/StackQuickControlsTests.cs`, 7 casos):
+  espada vanilla (maxStack=1, los 3 controles se quedan en 1), Tierra vanilla (maxStack=9999,
+  +10/+100 suman de verdad y MAX llega a 9999 sin pasarse), Moneda de cobre vanilla (maxStack=100,
+  **+100 desde 11 se queda en 100, no en 111** - el caso real que demuestra que el tope no es un
+  numero fijo), Flecha de Calamity (BloodfireArrow, maxStack=9999 real del catalogo), Sombrero de
+  Aerospec de Calamity (armadura, sin maxStack explicito -> default real 1), regresion de la
+  edicion manual (escribir `Count=9999` en una espada ahora se clampa a 1, no a 9999) y slot vacio
+  (los 3 comandos no hacen nada). **7/7 en verde**
+  (`dotnet test Terrakeep.App.ViewModels.Tests -c Release --filter
+  FullyQualifiedName~StackQuickControlsTests`).
+- **Canario visual nuevo** (`Terrakeep.App.Tests/CanarioControlesRapidosStack.cs`,
+  `MAXSTACK_SOLO=1`): coloca los mismos 3 objetos reales (espada/tierra/moneda) en un personaje
+  sintetico, selecciona cada uno en el panel Editar, mide con `VisibleEntero`/`RectVisible`
+  (mismos helpers reales AR-15/AR-11 ya usados por el resto del arnes UIA) que los 3 botones
+  nuevos quedan ENTEROS dentro de la ventana - en español **e ingles** (label mas largo,
+  "Cantidad"/"Quantity") - y confirma `MaxStack`/`Count tras MAX` reales por objeto. Capturas
+  reales revisadas con `Read` (`maxstack-{es,en}-{espada,tierra,moneda-cobre}-maxstack-*.png`):
+  fila "+10  +100  MAX" bien alineada bajo Cantidad, sin recorte ni desborde, en los 3 casos y los
+  2 idiomas. Resultado real medido: `MAXSTACK_SOLO: OK - 3 objetos x 2 idiomas, sin
+  overflow/clipping, MAX/Count reales correctos`, 0 lineas `FALLO`.
+- **Sin regresion**: `dotnet build Terrakeep.slnx -c Release` 0 avisos/0 errores.
+  `dotnet test Terrakeep.slnx -c Release`: `Terrakeep.Core.Tests` 610/610, `Terrakeep.App.
+  ViewModels.Tests` 569/569 (562 previas + 7 nuevas).
+
+### Recompilacion/redespliegue real
+`Terrakeep.exe` instalado NO estaba en ejecucion (`Get-Process -Name Terrakeep` vacio - seguro
+sobrescribir). `dotnet build Terrakeep.App -c Debug` (barra de tareas/dev, referencia real de
+`herramientas.json`) en verde. `installer\install.ps1` (script real ya existente del proyecto:
+`dotnet publish -c Release -p:PublishProfile=win-x64` autocontenido + copia a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\` + accesos directos) completado sin errores -
+`FileVersion` real tras el redeploy: `3.2.5.0`, `vanilla_max_stack.json` confirmado presente en
+`Assets\` de la copia instalada. El acceso directo real de la barra de tareas
+(`WScript.Shell.CreateShortcut` sobre el `.lnk` de la Quick Launch) apunta directamente a esta
+misma ruta instalada - un unico destino real que actualizar, sin duplicar.
+
+### Commit real
+`Terrakeep.App.Tests/CanarioControlesRapidosStack.cs` (nuevo), `Terrakeep.App.Tests/Program.cs`
+(solo el hook de 14 lineas de `MAXSTACK_SOLO`, confirmado con `git diff --stat` antes de añadir -
+el resto del fichero tenia cambios ajenos de otro agente en paralelo, NO incluidos),
+`Terrakeep.App.ViewModels.Tests/StackQuickControlsTests.cs` (nuevo), `Terrakeep.App/Assets/
+calamity/catalog.json`, `Terrakeep.App/Assets/strings_en.json`, `Terrakeep.App/Assets/
+strings_es.json`, `Terrakeep.App/Assets/vanilla_max_stack.json` (nuevo), `Terrakeep.App/
+MainWindow.xaml`, `Terrakeep.App/Services/CharacterFileService.cs`, `Terrakeep.App/ViewModels/
+ItemSlotViewModel.cs`, `Terrakeep.Core/Data/CalamityCatalog.cs`, `Terrakeep.Core/Data/
+LibraryCatalogDiskCache.cs`, `Terrakeep.Core/Data/VanillaMaxStackCatalog.cs` (nuevo),
+`scripts/extraer-max-stack-calamity.js` (nuevo), `scripts/extraer-max-stack-vanilla.py` (nuevo).
+`git add` explicito fichero a fichero (NUNCA `-A`, hay bastante trabajo de otros agentes en
+paralelo sin commitear en este mismo repo ahora mismo - `CLAUDE.md`, varios `Terrakeep.Core.Tests/
+Data/*`, `Terrakeep.App.Tests/AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`, etc., todos
+verificados con `git status`/`git diff --stat` como ajenos y dejados intactos). Sin `git push`.
