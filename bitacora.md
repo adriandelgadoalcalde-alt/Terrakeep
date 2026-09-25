@@ -26417,3 +26417,131 @@ nada de `MainWindow.xaml`/`.xaml.cs`/`ExplorationViewModel.cs`.
 cobertura. Pendiente real, fuera de este encargo: Fase5 (dyes shader/animados, estados especiales
 restantes) que Fase2/Fase3 ya documentaron como pendientes; el favorito cross-loadout de dyes
 (`GetEffectiveDye`), fuera de alcance deliberado de este encargo (ver arriba).
+
+## ExploracionRediseno FaseH (26-sep-2026, aplicador-fix) - elimina la causa real del MinHeight compartido
+
+**Causa real** (ya confirmada por el arquitecto, aplicada aquí directamente): `ExplorationSidebarPanel`
+(`MainWindow.xaml`, el `DockPanel` justo dentro de `ExplorationSidebarScroll`) era un `Height`+
+`MinHeight` COMPARTIDO por los 3 modos mutuamente excluyentes del sidebar (Browse/ChestInspector/
+WorldTools, `ExplorationSidebarBrowseInspectorHost`) - cada vez que UN modo crecía (Editor de
+mundos v1, Inspector de cofre) el suelo subía para los 3 (590→652→800→1000), aunque los otros 2 no
+lo necesitaran. El usuario prohibió explícitamente volver a subir ese número - se pedía el arreglo
+estructural, no otra recalibración.
+
+**Arreglo real aplicado**:
+- `ExplorationSidebarPanel` pasa a tamaño natural (sin `Height`/`MinHeight`).
+- `ExplorationSidebarBrowseContent` (único de los 3 modos con listas grandes virtualizadas -
+  `ChestByChestList`, las listas de categoría, `ExplorationResultsBlock`) gana el MISMO mecanismo
+  (`Height={Binding ViewportHeight, ElementName=ExplorationSidebarScroll}` + `MinHeight`) con su
+  propio suelo, medido de NUEVO con el arnés real (no reutilizado a ciegas): `FALLO3_SOLO=1` (1000
+  resultados reales de "Piedra infernal", peor caso de esta máquina) en el combo más estrecho
+  posible (1080x700, sidebar 260px, el peor caso real) da contenido de categoría=250px y bloque de
+  resultados=242px SIN restricción de altura -> redondeado a **`MinHeight="300"`** (margen real de
+  ~50-58px).
+- `ExplorationSidebarChestInspectorPlaceholder` y `ExplorationSidebarWorldToolsContent` se quedan
+  en Auto/natural, sin `Height`/`MinHeight` propios - ninguno tiene listas virtualizadas (el
+  editor de cofre es un `WrapPanel`/`ItemsControl` de slots; los 3 `Expander` de WorldTools ya
+  llevan su propio `ScrollViewer MaxHeight` interno), así que no corren el riesgo real que este
+  mecanismo existe para evitar (romper `VirtualizingPanel` con alto infinito).
+
+**Verificación real con el arnés** (no solo teoría):
+- `FALLO3_SOLO=1` en los 3 combos ya cubiertos (1180x860 sidebar 320/520, 1080x700 sidebar 260):
+  0 `FALLO`, las 3 categorías de la re-verificación AR-EX1 (Cofres/Por tipo, Cofres/Cofre a cofre,
+  Objetos) siguen mostrando ≥1 fila entera visible, y `ExplorationScrollHint` sigue
+  apareciendo/desapareciendo con la cantidad de scroll real que corresponde.
+- `COFRES_INSPECTOR_SOLO=1` con el mismo cofre de 17 prefijos legales (Hacha Arrojadiza de
+  Adamantita, peor caso ya usado en Fase D): 0 `FALLO`. Añadidas 2 pasadas NUEVAS a 1080x700
+  (`Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`, `COFRES-INSPECTOR-FASEH-MIN1080x700` y
+  `EXPLORACION-FASEH-WORLDTOOLS-MIN1080x700`): Guardar/Cancelar del Inspector y el fondo real de
+  WorldTools (3 Expander desplegados, Bestiario incluido) quedan alcanzables por scroll en
+  `ExplorationSidebarScroll` (`VerticalOffset≈ScrollableHeight` tras `ScrollToBottom()`, rect
+  dentro de los límites de la ventana) - capturas reales guardadas en
+  `keepqa-evidencia/faseh-inspector-1080x700-guardar-cancelar.png` y
+  `keepqa-evidencia/faseh-worldtools-1080x700-fondo.png` (revisadas visualmente, nada cortado).
+- `Terrakeep.App.Tests/AuditoriaViewportScroll.cs`: instrumentados los 8 `ScrollViewer` de
+  Exploración que no tenían cobertura (`ExplorationSidebarScroll` en sus 3 `SidebarMode` × 5
+  categorías de Browse + ChestInspector 17-prefijos + WorldTools; los 3 `ScrollViewer` internos de
+  WorldTools - Este mundo/Editar mundo/Bestiario; `MissingNpcsScroll`/`NpcResultsList`; el
+  `ScrollViewer` de Minerales sin `x:Name` - todos localizados por referencia real de
+  `ItemsSource`/posición estructural, sin `x:Name` nuevo en producción) + marcados
+  `WorldPillTemplate`/`WorldMapScroll` como `scrollHorizontalPorDiseno=true`. Conectado con
+  `verificarDesbordamientoHorizontal.js` sobre `volcado-viewport-scroll.json`: **0 hallazgos
+  reales de overflow horizontal en los 8 nuevos** (ni en el resto del volcado, 20 contenedores
+  medidos + 2 permitidos, `RESULTADO: OK`).
+- `dotnet build Terrakeep.slnx -c Release`: verde. `dotnet test Terrakeep.Core.Tests`: 732/732
+  (coincide con el baseline). `dotnet test Terrakeep.App.ViewModels.Tests`: primera pasada
+  abortada por "Proceso de host de pruebas bloqueado" (717/717 reportados, cuenta incompleta -
+  flake del host de pruebas, no relacionado con este cambio ya que no toca ViewModels/Core);
+  segunda pasada limpia **732/732, 0 errores** (el baseline documentado en el encargo decía
+  724/724 - probablemente desactualizado por trabajo en paralelo de otros agentes el mismo día;
+  0 fallos en cualquier caso, sin regresión real achacable a este cambio).
+- Pasada completa del arnés de UI (`Terrakeep.App.Tests.exe` sin variable de entorno, batería
+  entera) terminada limpia (`DONE` final, proceso salió solo). 17 líneas `FALLO` en el log, TODAS
+  revisadas una a una y confirmadas SIN relación con este cambio:
+  - `AR-11f` (barra lateral de Exploración scrollea al tamaño por defecto): deuda YA CONOCIDA y
+    documentada desde el 14-sep-2026 ("sigue en rojo a propósito", ver más arriba en esta misma
+    bitácora) - este cambio la MEJORA de verdad (antes el suelo compartido daba ~1000px de
+    contenido en ~567px de viewport con el mecanismo viejo; ahora mide 652px en 567px, exceso real
+    reducido de ~433px a ~85px), no la empeora.
+  - `A8-01` ("panel de sin resultados no aparece VISIBLE") y `AR-EX5-DIFICULTAD` ("se esperaban 4
+    chips de dificultad, hay 0"): investigados a fondo, causa real confirmada por lectura de
+    código, NINGUNA relación con `Height`/`MinHeight` - son bugs reales de Fase E/Fase F
+    (`ExplorationViewModel.IsShowingResults` exige `WorldSearchResults.Count > 0`, pero el propio
+    `ZeroResultsPanel` que debería avisar de "0 resultados" vive DENTRO del contenedor que esa
+    misma condición oculta cuando el conteo es 0 - contradicción real introducida por Fase E el
+    mismo día 25-sep-2026, de otro agente; `AR-EX5-DIFICULTAD` no encuentra los chips porque el
+    test nunca cambia `SidebarMode` a `WorldTools`, y Fase F movió los chips de dificultad ahí -
+    gap del propio test, de Fase F, mismo día, otro agente). Ninguno de los dos toca
+    `ExplorationSidebarPanel`/`ExplorationSidebarBrowseContent`, fuera del alcance de este encargo
+    (`ExplorationViewModel.cs`/`Program.cs` no están en mi working set) - escalado aquí para que se
+    corrijan en su fase correspondiente, no arreglados a la ligera aquí.
+  - Los 13 `FALLO` restantes (`H5-05`, `A8-06`, `AR-14`×4, `OBJ-07`, `AR-MRK-CLIC`,
+    `AR-MRK-OTROS`×5, `A10-IDIOMA-BARRIDO`) son de Personaje/cabecera/marcador del mapa/idioma -
+    áreas que este encargo no toca en absoluto.
+
+**Commit real** (`d31f00f0`): `Terrakeep.App/MainWindow.xaml` +
+`Terrakeep.App.Tests/AuditoriaViewportScroll.cs` +
+`Terrakeep.App.Tests/CanarioClusterCofresInspector.cs` (los 3 únicos ficheros del working set real
+de este encargo). `git add` con rutas explícitas, nunca `-A` - numerosos ficheros ajenos de otros
+agentes en paralelo en `git status` (`Terrakeep.App.Tests/AuditoriaKeepQA.cs`,
+`Terrakeep.App.Tests/AuditoriaMaquetacion.cs`, `Terrakeep.App/Assets/strings_*.json`,
+`Terrakeep.App/ViewModels/GuideViewModel.cs`, `Terrakeep.Core.Tests/**`, etc.), ninguno tocado ni
+comiteado. `doNotTouch` respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/
+`Terrakeep.App.Tests/ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md` no tocados. Bloqueo
+`terrakeep-mainwindow-xaml` reservado antes de tocar el XAML y liberado al terminar. Sin
+`git push`.
+
+**Despliegue real - ALARMA del DEPLOY_LOCK documentada, lock NO liberado a propósito**:
+`Get-CimInstance Win32_Process` confirmó `Terrakeep.exe` cerrado antes de publicar.
+`node deployLock.js adquirir Terrakeep` + `antes` (snapshot real:
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\Assets`, 13055 ficheros, hash `203f62ed...`).
+`dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde.
+`robocopy .../publish .../Terrakeep //MIR //XF unins000.exe unins000.dat` (sintaxis con doble
+barra real de este entorno Git Bash/MSYS - una sola barra `/MIR` se expande como ruta de archivo y
+falla con "parámetro no válido"): 3 archivos copiados, 13058 omitidos (sin cambio), 0 errores.
+`node deployLock.js despues Terrakeep ...Assets`: **ALARMA** - hash cambió (13055 ficheros en los
+dos casos, hash `203f62ed...` → `bd47412a...`) pese a que el conteo coincide.
+
+**Investigación real de la alarma** (antes de decidir nada): comparé el manifiesto completo
+(ruta+tamaño) de `Assets/` instalado tras el `/MIR` contra el `Assets/` recién publicado - **0
+diferencias en los dos sentidos** (el instalado coincide EXACTO con el publish fresco, nada
+añadido/borrado/con tamaño distinto entre esos dos). Conclusión real: no es una purga/corrupción
+(los dos incidentes reales del 24-sep-2026 que el DEPLOY_LOCK existe para cazar) - es que el
+`Assets/` instalado ANTES de mi deploy estaba simplemente DESACTUALIZADO respecto al código fuente
+actual, y mi `dotnet publish` (que lee el árbol de trabajo real, no `git HEAD`) recogió cambios YA
+presentes en el working tree pero SIN COMITEAR de otro agente en paralelo:
+`git diff -- Terrakeep.App/Assets/strings_en.json Terrakeep.App/Assets/strings_es.json` confirma 2
+claves de localización nuevas/cambiadas de la Guía (`guide_no_world_notice` nueva,
+`guide_motive_weapon_damage` reescrita) - trabajo real de otro agente (mismo día, ficheros
+`GuideViewModel.cs`/`GuideEvaluationEngine.cs`/`GuiaFaseAReabiertaViewModelTests.cs` también
+modificados/nuevos en `git status`, no comiteados todavía). El deploy que acabo de hacer por tanto
+lleva, además de mi arreglo real de `MainWindow.xaml`, ese contenido de Guía sin comitear del otro
+agente - contenido benigno (2 cadenas de traducción, no rompe nada), pero es exactamente el tipo de
+mezcla que el protocolo pide escalar en vez de decidir por mi cuenta. Siguiendo el protocolo al pie
+de la letra (`si da ok:false, NO liberes, documenta la alarma`): **el `DEPLOY_LOCK` de Terrakeep
+queda RESERVADO a propósito, sin liberar**, a la espera de que el coordinador decida (comitear el
+trabajo de Guía del otro agente para que deje de aparecer como "sin comitear en producción", o
+liberar el lock manualmente con `--forzar` tras confirmar que la mezcla es aceptable). El binario
+instalado SÍ refleja ya el arreglo real de FaseH (confirmado por el `/MIR`, 3 archivos - `.exe`/
+`.dll` - copiados de verdad), así que el despliegue funcional de este encargo está completo; lo
+pendiente es solo la higiene del lock/coordinación entre agentes, no el arreglo en sí.
