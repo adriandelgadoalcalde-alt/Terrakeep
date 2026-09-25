@@ -40,6 +40,20 @@ namespace Terrakeep.Core.Data;
 // resoluble por texto en Item.cs, o con FrameCount=0 real - esas ULTIMAS SI son fieles, Terraria
 // tampoco las anima) caen al icono estatico ya existente, nunca a un crash ni a un dato
 // inventado.
+//
+// OffsetX/OffsetY/SpriteDirection (25-sep-2026, PortSeleccion Encargo4): ademas de la formula
+// GENERICA de posicion mascota-vs-personaje (MainWindow.xaml, capa aparte), Terraria real aplica
+// un offset ADICIONAL propio de cada mascota y un espejo horizontal, via
+// Terraria/DataStructures/SettingsForCharacterPreview.cs (ApplyTo, linea 64:
+// "proj.position += Offset"; lineas 65-66: "proj.spriteDirection = SpriteDirection" - casi
+// siempre -1, espejo respecto al frame base del sprite sheet). Tabla real completa en
+// Terraria/ID/ProjectileID.cs (34-37, CharacterPreviewAnimations), ".WithOffset(x, y)"/
+// ".WithSpriteDirection(d)" por TIPO de proyectil, cruzada aqui por el mismo "shoot" que ya usa
+// el catalogo. Las 63 mascotas catalogadas SI tienen entrada explicita en la tabla real (ninguna
+// cae al valor por defecto) - el valor por defecto real de Terraria cuando un proyectil no esta
+// en la tabla es Offset=(0,0)/SpriteDirection=1 (SettingsForCharacterPreview.cs, campos sin
+// inicializar salvo SpriteDirection=1 por defecto de la clase), documentado aqui por si el
+// catalogo crece en el futuro con una mascota sin entrada real.
 public sealed class PetAnimationEntry
 {
     [JsonPropertyName("shoot")] public required int Shoot { get; init; }
@@ -48,6 +62,9 @@ public sealed class PetAnimationEntry
     [JsonPropertyName("selCount")] public required int SelCount { get; init; }
     [JsonPropertyName("selDelay")] public required int SelDelay { get; init; }
     [JsonPropertyName("totalFrames")] public required int TotalFrames { get; init; }
+    [JsonPropertyName("offsetX")] public double OffsetX { get; init; }
+    [JsonPropertyName("offsetY")] public double OffsetY { get; init; }
+    [JsonPropertyName("spriteDirection")] public int SpriteDirection { get; init; } = 1;
 }
 
 public sealed class PetAnimationCatalog

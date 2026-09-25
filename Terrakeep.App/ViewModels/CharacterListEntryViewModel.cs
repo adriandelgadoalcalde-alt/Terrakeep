@@ -73,6 +73,10 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     private readonly byte _skinVariant;
     private readonly PlayerPreviewRenderer.PlayerColors _colors;
     private readonly PlayerPreviewRenderer.EquippedArmor _armor;
+    // PortSeleccion Encargo2 (25-sep-2026): los 7 sprites de accesorio real ya resueltos por
+    // EquipmentAppearanceResolver.ResolveAccessories (Encargo1) - mismo criterio que _armor de
+    // arriba, guardado para poder re-renderizar en cada tick del hover sin volver a resolver.
+    private readonly EquippedAccessories _accessories;
 
     // Mascota real equipada - ANIMADA de verdad durante el hover cuando PetAnimationCatalog
     // conoce el objeto (PetPreviewRenderer + PetAnimationDriver, ver el comentario real de esas
@@ -82,6 +86,22 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     [ObservableProperty] private ImageSource? _petImage;
     private readonly PetPreview? _petPreview;
     private readonly PetAnimationDriver? _petAnimationDriver;
+
+    // Offset ADICIONAL propio de cada mascota + espejo horizontal (PortSeleccion Encargo4,
+    // 25-sep-2026) - capa DISTINTA y complementaria a la formula GENERICA de posicion
+    // mascota-vs-personaje que vive en MainWindow.xaml (Margin fijo del Image de PetImage): esa
+    // formula genérica es la misma para las 63 mascotas, esta de aqui es el ajuste fino REAL por
+    // mascota que Terraria aplica encima (SettingsForCharacterPreview.ApplyTo, decompilado real:
+    // "proj.position += Offset"/"proj.spriteDirection = SpriteDirection"). Constantes (no
+    // ObservableProperty): se resuelven una unica vez en el constructor a partir del catalogo, no
+    // cambian nunca durante la vida de la tarjeta (a diferencia de PetImage, que si avanza fotograma
+    // a fotograma). Sin mascota animada catalogada (icono estatico de reserva), quedan en el valor
+    // por defecto real de Terraria: Offset=(0,0), SpriteDirection=1 - nunca un valor inventado.
+    public double PetOffsetX { get; }
+    public double PetOffsetY { get; }
+    // Expuesto como double (1 o -1), listo para bindear directo a ScaleTransform.ScaleX en vez de
+    // un bool + converter - es literalmente el mismo campo "SpriteDirection" del decompilado.
+    public double PetSpriteDirection { get; } = 1;
 
     // Timer PROPIO de esta tarjeta, arrancado SOLO mientras el raton esta encima y parado de
     // verdad al salir (MainWindow.xaml: MouseEnter/MouseLeave + Unloaded como red de seguridad
@@ -148,7 +168,7 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     private void RefreshPreview()
     {
         int frame = _isHovering ? AppearanceViewModel.WalkCycleRows[_walkCycleIndex] : 0;
-        Preview = PlayerPreviewRenderer.Render(_hairStyle, _skinVariant, _colors, _armor, frame);
+        Preview = PlayerPreviewRenderer.Render(_hairStyle, _skinVariant, _colors, _armor, frame, accessories: _accessories);
     }
 
     private void RefreshPetImage()
@@ -205,6 +225,9 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         // vanidad REAL puesta en loadouts[0] (el mirror de "lo que lleva puesto de verdad"),
         // no solo los 7 colores base.
         var armor = equipmentAppearance.Resolve(character.PrimaryLoadout);
+        // PortSeleccion Encargo2: mismo criterio que armor arriba, pero para los 7 tipos de
+        // accesorio (waist/neck/handOn/handOff/back/shield/face) - ver EquippedAccessories.
+        var accessories = equipmentAppearance.ResolveAccessories(character.PrimaryLoadout);
         // H6-02/H6-01-b: Gender ES el skinVariant real (0-11, no un booleano) - se pasa entero
         // para que el doll de Inicio use la carpeta de sprites/reglas SetMatch reales de la
         // variante puesta (caso "Eldelgas": Gender=8/MaleDress), no solo Chico/Chica.
@@ -212,13 +235,17 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         _skinVariant = character.Gender;
         _colors = colors;
         _armor = armor;
-        _preview = PlayerPreviewRenderer.Render(_hairStyle, _skinVariant, colors, armor);
+        _accessories = accessories;
+        _preview = PlayerPreviewRenderer.Render(_hairStyle, _skinVariant, colors, armor, accessories: accessories);
 
         _petPreview = equipmentAppearance.ResolvePet(character.EquipmentItems);
         if (_petPreview?.AnimationEntry is { } petEntry)
         {
             _petAnimationDriver = new PetAnimationDriver(petEntry);
             _petImage = PetPreviewRenderer.RenderFrame(petEntry, 0);
+            PetOffsetX = petEntry.OffsetX;
+            PetOffsetY = petEntry.OffsetY;
+            PetSpriteDirection = petEntry.SpriteDirection;
         }
         // Icono estatico de reserva (objeto de mascota real sin animacion catalogada, o el
         // recorte del primer fotograma fallo) - un BitmapImage normal, congelado para poder
