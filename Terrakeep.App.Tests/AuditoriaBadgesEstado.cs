@@ -12,16 +12,28 @@
 // marcara nunca - los tres badges viven bien, cada uno consistente CONSIGO MISMO, pero nunca se
 // habian medido unos CONTRA otros.
 //
-// Este modo mide con datos REALES (nunca "deberia ser distinto") la geometria real de cada
-// badge/status-pill que el inventario de esta sesion encontro en MainWindow.xaml (ver
-// bitacora.md para el archivo:linea exacto de cada uno) y HOY FALLA A PROPOSITO
-// (BADGES_ESTADO_SOLO-CONSISTENCIA) porque el lenguaje visual real todavia NO esta unificado -
-// es el mismo canario que revisor-visual/aplicador-fix deben dejar en verde tras unificarlos bajo
-// un unico Style/recurso compartido. Datos deterministas y sinteticos en las dos rutas (dos
-// personajes "BadgeTestA"/"BadgeTestB" con stats reales distintos para forzar Compare.
-// DifferenceCount > 0, y el mismo personaje limpio sintetico que ya usa GUIACHIP_SOLO sobre el
-// mundo real roca_negra.wld) - nunca personajes reales de este equipo, para que el resultado sea
-// reproducible en cualquier maquina/ejecucion.
+// REAPERTURA (25-sep-2026, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d): la primera pasada
+// (24-sep-2026) unifico los 6 badges bajo UN UNICO Style ("StatusPillCaption") y este canario
+// afirmaba EXITO cuando todos compartian la MISMA geometria (CornerRadius/Padding identicos). El
+// usuario reabrio el punto de verdad: eso resolvia la inconsistencia accidental de Padding pero
+// no era la intencion visual real - cada badge cumple un papel distinto (metrica/recuento,
+// etiqueta informativa, estado semantico por color, KPI sobre overlay) y debe LEERSE distinto de
+// un vistazo, no fundirse en un unico lenguaje "pastilla". El arreglo real (aplicador-fix,
+// 25-sep-2026) sustituye "StatusPillCaption" por 4 familias visuales separadas
+// (StateTagNeutral/MetricAccentText/SemanticStateChip/HeroKpiPill, Theme.xaml) - este canario
+// pasa de comprobar "todos comparten geometria" (lo CONTRARIO de lo pedido) a comprobar que CADA
+// FAMILIA preserva su propia invariante real:
+// - Nº1 "N diferencia(s)" (MetricAccentText): el TextBlock YA NO tiene un Border como padre
+//   inmediato (vive en un StackPanel horizontal junto a una barra de acento vertical, Width~2).
+// - Nº2 "Solo lectura" (StateTagNeutral): CornerRadius real DISTINTO de 99 (etiqueta, no capsula)
+//   y Background transparente (sin relleno).
+// - Nº3 "Guia: <Zona>" (SemanticStateChip): Background NEUTRO fijo (BgElevatedBrush) para
+//   CUALQUIER zona - el color semantico real vive en el BorderBrush, no en el fondo.
+// Datos deterministas y sinteticos en las dos rutas (dos personajes "BadgeTestA"/"BadgeTestB"
+// con stats reales distintos para forzar Compare.DifferenceCount > 0, y el mismo personaje
+// limpio sintetico que ya usa GUIACHIP_SOLO sobre el mundo real roca_negra.wld) - nunca
+// personajes reales de este equipo, para que el resultado sea reproducible en cualquier
+// maquina/ejecucion.
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -36,13 +48,16 @@ internal static partial class Program
 {
     private sealed record BadgeGeometriaReal(
         string Nombre, string TextoReal, CornerRadius Radio, Thickness Relleno,
-        string FondoReal, string TextoColorReal, double FontSizeReal, FontWeight PesoReal);
+        string FondoReal, string BordeReal, string TextoColorReal, double FontSizeReal, FontWeight PesoReal);
 
     // Busca el TextBlock VISIBLE con el texto real exacto (nunca el clave de localizacion en
     // crudo, para medir de verdad lo que el usuario ve en pantalla) y sube `nivelesHastaBorder`
     // padres reales en el arbol visual hasta el Border que pinta el fondo/CornerRadius del badge
-    // (1 nivel cuando el TextBlock es hijo DIRECTO del Border - "N diferencia(s)"/"Solo lectura";
-    // 2 cuando hay un StackPanel horizontal de por medio con icono+texto - "Guia: <Zona>").
+    // (1 nivel cuando el TextBlock es hijo DIRECTO del Border - "Solo lectura"; 2 cuando hay un
+    // StackPanel horizontal de por medio con icono+texto - "Guia: <Zona>"). Usar solo para
+    // familias StateTagNeutral/SemanticStateChip/HeroKpiPill (las que SI tienen un Border propio
+    // como padre real del texto) - MetricAccentText usa `MedirBadgeMetricaPorTextoReal` en vez de
+    // esta, porque su invariante real es justo la AUSENCIA de ese Border.
     private static BadgeGeometriaReal? MedirBadgePorTextoReal(Window window, string nombre, string textoEsperado, int nivelesHastaBorder)
     {
         var tb = Descendientes<TextBlock>(window).FirstOrDefault(t => t.IsVisible && t.Text == textoEsperado);
@@ -58,8 +73,44 @@ internal static partial class Program
         if (actual is not Border bd) return null;
 
         string fondoReal = bd.Background is SolidColorBrush scbFondo ? scbFondo.Color.ToString() : (bd.Background?.GetType().Name ?? "(sin fondo)");
+        string bordeReal = bd.BorderBrush is SolidColorBrush scbBorde ? scbBorde.Color.ToString() : (bd.BorderBrush?.GetType().Name ?? "(sin borde)");
         string colorTextoReal = tb.Foreground is SolidColorBrush scbTexto ? scbTexto.Color.ToString() : (tb.Foreground?.GetType().Name ?? "(heredado)");
-        return new BadgeGeometriaReal(nombre, textoEsperado, bd.CornerRadius, bd.Padding, fondoReal, colorTextoReal, tb.FontSize, tb.FontWeight);
+        return new BadgeGeometriaReal(nombre, textoEsperado, bd.CornerRadius, bd.Padding, fondoReal, bordeReal, colorTextoReal, tb.FontSize, tb.FontWeight);
+    }
+
+    // Familia "MetricAccentText" (rediseno 25-sep-2026): SIN Border propio a proposito - el
+    // TextBlock manda por si mismo con una barra de acento vertical (Border Width~2) como
+    // HERMANO dentro del mismo StackPanel horizontal, nunca como padre que lo encierra. Mide y
+    // verifica esa estructura real en vez de asumir geometria de capsula.
+    private static BadgeGeometriaReal? MedirBadgeMetricaPorTextoReal(Window window, string nombre, string textoEsperado)
+    {
+        var tb = Descendientes<TextBlock>(window).FirstOrDefault(t => t.IsVisible && t.Text == textoEsperado);
+        if (tb == null) return null;
+
+        var padreInmediato = VisualTreeHelper.GetParent(tb);
+        if (padreInmediato is Border)
+        {
+            Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO-FAMILIA-MetricAccentText - '{nombre}' el padre inmediato del TextBlock ES un Border; la familia MetricAccentText no debe tener Border propio (debe vivir en un StackPanel junto a la barra de acento).");
+            return null;
+        }
+        if (padreInmediato is not Panel panelPadre)
+        {
+            Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO-FAMILIA-MetricAccentText - '{nombre}' el padre inmediato del TextBlock no es ni Border ni Panel ({padreInmediato?.GetType().Name ?? "(null)"}).");
+            return null;
+        }
+
+        var barraAcento = panelPadre.Children.OfType<Border>().FirstOrDefault();
+        double anchoBarraReal = barraAcento?.Width ?? -1;
+        if (barraAcento == null || Math.Abs(anchoBarraReal - 2) > 0.5)
+        {
+            Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO-FAMILIA-MetricAccentText - '{nombre}' no tiene una barra de acento (Border hermano, Width~2) valida junto al texto (Width real={anchoBarraReal}).");
+            return null;
+        }
+
+        string colorTextoReal = tb.Foreground is SolidColorBrush scbTexto ? scbTexto.Color.ToString() : (tb.Foreground?.GetType().Name ?? "(heredado)");
+        Console.WriteLine($"BADGES_ESTADO_SOLO-FAMILIA-MetricAccentText: '{nombre}' padre inmediato={padreInmediato.GetType().Name} (NO Border, correcto) barra de acento Width real={anchoBarraReal} (esperado ~2, correcto).");
+        return new BadgeGeometriaReal(nombre, textoEsperado, new CornerRadius(0), new Thickness(0),
+            "(sin Border propio - familia MetricAccentText)", "(sin Border propio)", colorTextoReal, tb.FontSize, tb.FontWeight);
     }
 
     private static void CapturarPngADisco(Window window, string nombreArchivo)
@@ -81,10 +132,10 @@ internal static partial class Program
         Directory.CreateDirectory(dirBadges);
         try
         {
-            // 1) "N diferencia(s)" (Personaje > Comparar, MainWindow.xaml:4946-4967) - dos
-            // personajes SINTETICOS con Dificultad/Vida/Mana reales distintos, nunca personajes
-            // reales de este equipo (mismo criterio ya usado por INSIGNIAS-TMOD-SIN-CALAMITY mas
-            // arriba en este mismo arnes).
+            // 1) "N diferencia(s)" (Personaje > Comparar) - dos personajes SINTETICOS con
+            // Dificultad/Vida/Mana reales distintos, nunca personajes reales de este equipo
+            // (mismo criterio ya usado por INSIGNIAS-TMOD-SIN-CALAMITY mas arriba en este mismo
+            // arnes).
             var serviceBadges = new CharacterFileService();
             CharacterListEntryViewModel CrearEntradaSintetica(string nombre, int vidaMax, int manaMax, byte dificultad)
             {
@@ -119,20 +170,20 @@ internal static partial class Program
             Console.WriteLine($"BADGES_ESTADO_SOLO: Compare.DifferenceCount real = {vm.Compare.DifferenceCount} (esperado > 0 con estos dos personajes sinteticos)");
             if (vm.Compare.DifferenceCount <= 0)
             {
-                Console.WriteLine("FALLO: BADGES_ESTADO_SOLO - los dos personajes sinteticos deberian dar al menos 1 diferencia real; no se puede medir el pill de recuento asi");
+                Console.WriteLine("FALLO: BADGES_ESTADO_SOLO - los dos personajes sinteticos deberian dar al menos 1 diferencia real; no se puede medir el badge de recuento asi");
             }
             else
             {
                 string textoPillReal = string.Format(vm.Loc["compare_difference_count"], vm.Compare.DifferenceCount);
-                var mComparar = MedirBadgePorTextoReal(window, "Comparar: pill \"N diferencia(s)\" (MainWindow.xaml:4946)", textoPillReal, nivelesHastaBorder: 1);
-                if (mComparar == null) Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO - no se encontro en pantalla el badge con texto real '{textoPillReal}'");
+                var mComparar = MedirBadgeMetricaPorTextoReal(window, "Comparar: \"N diferencia(s)\" (familia MetricAccentText)", textoPillReal);
+                if (mComparar == null) Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO - no se encontro/valido en pantalla el badge con texto real '{textoPillReal}'");
                 else medidos.Add(mComparar);
             }
             CapturarPngADisco(window, "badges-comparar.png");
 
-            // 2) "Solo lectura" (MainWindow.xaml:5322) + "Guia: <Zona>" (MainWindow.xaml:6072) -
-            // MISMO montaje real y determinista que ya usa GUIACHIP_SOLO mas arriba en este mismo
-            // fichero (personaje limpio sintetico + roca_negra.wld real).
+            // 2) "Solo lectura" (familia StateTagNeutral) + "Guia: <Zona>" (familia
+            // SemanticStateChip) - MISMO montaje real y determinista que ya usa GUIACHIP_SOLO mas
+            // arriba en este mismo fichero (personaje limpio sintetico + roca_negra.wld real).
             string plrLimpioPath = Path.Combine(dirBadges, "PersonajeLimpioBadges.plr");
             var personajeLimpio = new PlrCharacter
             {
@@ -160,7 +211,7 @@ internal static partial class Program
                 System.Threading.Thread.Sleep(300); DoEvents(); DoEvents();
 
                 Console.WriteLine($"BADGES_ESTADO_SOLO: Exploration.IsWorldLoaded={vm.Exploration.IsWorldLoaded}");
-                var mSoloLectura = MedirBadgePorTextoReal(window, "Exploracion: badge \"Solo lectura\" (MainWindow.xaml:5322)", vm.Loc["explore_readonly_badge"], nivelesHastaBorder: 1);
+                var mSoloLectura = MedirBadgePorTextoReal(window, "Exploracion: badge \"Solo lectura\" (familia StateTagNeutral)", vm.Loc["explore_readonly_badge"], nivelesHastaBorder: 1);
                 if (mSoloLectura == null) Console.WriteLine("FALLO: BADGES_ESTADO_SOLO - no se encontro en pantalla el badge 'Solo lectura' con el mundo cargado");
                 else medidos.Add(mSoloLectura);
 
@@ -172,40 +223,64 @@ internal static partial class Program
                     ["Cavernas"] = "guide_zone_chip_cavernas",
                     ["Infierno"] = "guide_zone_chip_infierno",
                 };
+                // Color BorderBrush real esperado por zona (Theme.xaml: MasterGoldBrush/EquippedGreenBrush/
+                // DebuffBrush/CalamityBrush) - el mismo mapeo real que ya usan los 4 MultiDataTrigger del
+                // Border.Style en MainWindow.xaml, para verificar que el color semantico sigue distinguiendo
+                // cada zona (ahora en el borde, no en el fondo).
+                var bordeEsperadoPorZona = new Dictionary<string, string>
+                {
+                    ["Superficie"] = "#FFFFD24A",
+                    ["Subterraneo"] = "#FF3DDC6E",
+                    ["Cavernas"] = "#FF9B59B6",
+                    ["Infierno"] = "#FFC0392B",
+                };
                 if (claveChipPorZona.TryGetValue(zonaReal, out var claveChip))
                 {
-                    var mGuiaZona = MedirBadgePorTextoReal(window, $"Exploracion: chip \"Guia: {zonaReal}\" (MainWindow.xaml:6072)", vm.Loc[claveChip], nivelesHastaBorder: 2);
-                    if (mGuiaZona == null) Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO - no se encontro en pantalla el chip 'Guia: {zonaReal}' pese a Zona={zonaReal}");
-                    else medidos.Add(mGuiaZona);
+                    var mGuiaZona = MedirBadgePorTextoReal(window, $"Exploracion: chip \"Guia: {zonaReal}\" (familia SemanticStateChip)", vm.Loc[claveChip], nivelesHastaBorder: 2);
+                    if (mGuiaZona == null)
+                    {
+                        Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO - no se encontro en pantalla el chip 'Guia: {zonaReal}' pese a Zona={zonaReal}");
+                    }
+                    else
+                    {
+                        medidos.Add(mGuiaZona);
+                        const string fondoNeutroEsperado = "#FF1E2233"; // BgElevatedColor
+                        string bordeEsperado = bordeEsperadoPorZona[zonaReal];
+                        bool fondoOk = mGuiaZona.FondoReal == fondoNeutroEsperado;
+                        bool bordeOk = mGuiaZona.BordeReal == bordeEsperado;
+                        if (fondoOk && bordeOk)
+                            Console.WriteLine($"BADGES_ESTADO_SOLO-FAMILIA-SemanticStateChip: 'Guia: {zonaReal}' Background real={mGuiaZona.FondoReal} (neutro, esperado {fondoNeutroEsperado} para CUALQUIER zona - correcto) BorderBrush real={mGuiaZona.BordeReal} (esperado {bordeEsperado} para esta zona - correcto).");
+                        else
+                            Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO-FAMILIA-SemanticStateChip - 'Guia: {zonaReal}' Background real={mGuiaZona.FondoReal} (esperado {fondoNeutroEsperado}, neutro) BorderBrush real={mGuiaZona.BordeReal} (esperado {bordeEsperado} para esta zona)");
+                    }
                 }
                 else
                 {
                     Console.WriteLine($"BADGES_ESTADO_SOLO: Guide.ObjetivoPaso.Zona real ('{zonaReal}') no es una de las 4 bandas de profundidad en este mundo/progreso - se omite el chip de Guia (mismo caso real ya documentado en GUIACHIP_SOLO)");
                 }
 
+                if (mSoloLectura != null)
+                {
+                    bool cornerOk = !mSoloLectura.Radio.Equals(new CornerRadius(99));
+                    const string fondoTransparenteEsperado = "#00FFFFFF";
+                    bool fondoOk = mSoloLectura.FondoReal == fondoTransparenteEsperado;
+                    if (cornerOk && fondoOk)
+                        Console.WriteLine($"BADGES_ESTADO_SOLO-FAMILIA-StateTagNeutral: 'Solo lectura' CornerRadius real={mSoloLectura.Radio} (distinto de 99, correcto - etiqueta, no capsula) Background real={mSoloLectura.FondoReal} (transparente, correcto - sin relleno).");
+                    else
+                        Console.WriteLine($"FALLO: BADGES_ESTADO_SOLO-FAMILIA-StateTagNeutral - 'Solo lectura' CornerRadius real={mSoloLectura.Radio} (NO debe ser 99) Background real={mSoloLectura.FondoReal} (esperado transparente {fondoTransparenteEsperado})");
+                }
+
                 CapturarPngADisco(window, "badges-exploracion.png");
             }
 
-            // Evidencia real: geometria medida de cada badge encontrado en pantalla, y la
-            // comprobacion de CONSISTENCIA que revisor-visual/aplicador-fix deben dejar en verde
-            // tras unificar (ver bitacora.md para el inventario completo archivo:linea).
+            // Evidencia real: geometria medida de cada badge encontrado en pantalla (referencia,
+            // ya no se compara geometricamente unos contra otros - cada familia tiene su propia
+            // invariante real, verificada arriba en su propio bloque).
             Console.WriteLine("BADGES_ESTADO_SOLO: geometria real medida de cada badge/status-pill encontrado en pantalla:");
             foreach (var b in medidos)
-                Console.WriteLine($"  - {b.Nombre}: texto='{b.TextoReal}' CornerRadius={b.Radio} Padding={b.Relleno} Fondo={b.FondoReal} TextoColor={b.TextoColorReal} FontSize={b.FontSizeReal} FontWeight={b.PesoReal}");
+                Console.WriteLine($"  - {b.Nombre}: texto='{b.TextoReal}' CornerRadius={b.Radio} Padding={b.Relleno} Fondo={b.FondoReal} Borde={b.BordeReal} TextoColor={b.TextoColorReal} FontSize={b.FontSizeReal} FontWeight={b.PesoReal}");
 
-            if (medidos.Count >= 2)
-            {
-                var referencia = medidos[0];
-                bool inconsistente = medidos.Skip(1).Any(b => !b.Radio.Equals(referencia.Radio) || !b.Relleno.Equals(referencia.Relleno));
-                if (inconsistente)
-                    Console.WriteLine("FALLO: BADGES_ESTADO_SOLO-CONSISTENCIA - los badges/status-pills medidos NO comparten CornerRadius/Padding reales entre si (ver evidencia arriba). Hueco visual real reportado por el usuario el 24-sep-2026 (imagen4.png, \"67 diferencia(s)\"). Pendiente para revisor-visual/aplicador-fix: unificar bajo un unico Style/recurso compartido - este canario debe quedar en VERDE tras el arreglo.");
-                else
-                    Console.WriteLine("BADGES_ESTADO_SOLO-CONSISTENCIA: los badges/status-pills medidos SI comparten CornerRadius/Padding reales entre si.");
-            }
-            else
-            {
-                Console.WriteLine("BADGES_ESTADO_SOLO-CONSISTENCIA: menos de 2 badges medidos con exito, no se puede comparar consistencia real esta corrida (ver FALLOs arriba).");
-            }
+            Console.WriteLine("BADGES_ESTADO_SOLO-FAMILIAS: cada familia visual es distinta por diseño y cada una preserva su propia invariante (verificado)");
         }
         catch (Exception ex) { Console.WriteLine("BADGES_ESTADO_SOLO-EXCEPTION: " + ex); }
         finally

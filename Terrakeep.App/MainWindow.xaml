@@ -2762,13 +2762,17 @@
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="26,12,0,0"
                                             Visibility="{Binding Home.LastSessionCharacterEntry, Converter={StaticResource NullToVis}}">
-                                    <Border Style="{StaticResource StatusPillCaption}" Tag="Overlay" Margin="0,0,8,0">
+                                    <!-- Familia "HeroKpiPill" (rediseno de badges, 25-sep-2026): unica familia
+                                         que conserva la capsula "pill" - vive ENCIMA de AccentGradientBrush,
+                                         contexto de contraste distinto (overlay translucido sobre fondo de
+                                         acento propio) donde la capsula si aporta separacion visual real. -->
+                                    <Border Style="{StaticResource HeroKpiPill}" Margin="0,0,8,0">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="♥" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
                                             <TextBlock Text="{Binding Home.LastSessionCharacterEntry.HealthMax, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Border>
-                                    <Border Style="{StaticResource StatusPillCaption}" Tag="Overlay" Margin="0,0,8,0">
+                                    <Border Style="{StaticResource HeroKpiPill}" Margin="0,0,8,0">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="◷" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
                                             <TextBlock Text="{Binding Home.LastSessionCharacterEntry.PlayTimeText, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
@@ -2777,7 +2781,7 @@
                                     <!-- 3er KPI real (T4, 21-sep-2026): etapa de la Guia. Visibilidad
                                          PROPIA - null es un caso real (Guia completada o fallo de
                                          lectura ajeno al personaje), no se enseña la pastilla vacia. -->
-                                    <Border Style="{StaticResource StatusPillCaption}" Tag="Overlay"
+                                    <Border Style="{StaticResource HeroKpiPill}"
                                             Visibility="{Binding Home.LastSessionGuideStage, Converter={StaticResource NullToVis}}"
                                             ToolTip="{Binding Loc[home_hero_kpi_guide_stage_tooltip], Mode=OneWay}">
                                         <StackPanel Orientation="Horizontal">
@@ -3856,10 +3860,13 @@
                                                  para el slot seleccionado' es un texto mas, facil de pasar por
                                                  alto - y ni siquiera dice CUAL slot". Pildora real y separada, con
                                                  el rol real del slot (Cabeza/Accesorio 3/Tinte...). -->
-                                            <Border DockPanel.Dock="Top" Style="{StaticResource StatusPillCaption}"
+                                            <!-- Familia "StateTagNeutral" (rediseno de badges, 25-sep-2026): el
+                                                 violeta-acento queda reservado a la familia Metrica (recuento
+                                                 real) - esto es una restriccion informativa, no una metrica. -->
+                                            <Border DockPanel.Dock="Top" Style="{StaticResource StateTagNeutral}"
                                                     Margin="0,0,0,6" HorizontalAlignment="Left"
                                                     Visibility="{Binding Library.SlotRestrictionLabel, Converter={StaticResource NullToVis}}">
-                                                <TextBlock Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold">
+                                                <TextBlock Style="{StaticResource CaptionText}">
                                                     <TextBlock.Text>
                                                         <MultiBinding Converter="{StaticResource LocFormat}">
                                                             <Binding Path="Loc[library_only_valid_for]" Mode="OneWay" />
@@ -5162,11 +5169,15 @@
                                 <ScrollViewer x:Name="CompareResultsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                               Visibility="{Binding Compare.ShowResults, Converter={StaticResource BoolToVis}}">
                                     <StackPanel>
-                                        <Border Style="{StaticResource StatusPillCaption}"
-                                                HorizontalAlignment="Left" Margin="0,0,0,10">
-                                            <TextBlock Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold">
+                                        <!-- Familia "MetricAccentText" (rediseno de badges, 25-sep-2026): SIN
+                                             Border propio - la metrica manda por si misma, con una barra de
+                                             acento vertical al lado en vez de una capsula que la encierre. -->
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,10">
+                                            <Border Width="2" Height="14" CornerRadius="1" VerticalAlignment="Center"
+                                                    Background="{StaticResource AccentBrush}" Margin="0,0,6,0" />
+                                            <TextBlock VerticalAlignment="Center">
                                                 <TextBlock.Style>
-                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionText}">
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource MetricAccentText}">
                                                         <Setter Property="Text">
                                                             <Setter.Value>
                                                                 <MultiBinding Converter="{StaticResource LocFormat}">
@@ -5183,7 +5194,7 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                        </Border>
+                                        </StackPanel>
 
                                         <!-- Bloque Estadisticas -->
                                         <TextBlock Text="{Binding Loc[compare_section_stats], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
@@ -5563,7 +5574,10 @@
                          el usuario real - nada en pantalla avisaba de que este visor no puede
                          colocar/quitar bloques (a diferencia de Objetos/Apariencia/etc., donde
                          cada cambio SI se guarda). -->
-                    <Border Style="{StaticResource StatusPillCaption}" Tag="Informativa" Margin="10,0,0,0"
+                    <!-- Familia "StateTagNeutral" (rediseno de badges, 25-sep-2026): etiqueta informativa
+                         pura, borde fino sin relleno - nunca compite visualmente con una capsula de
+                         metrica/recuento real. -->
+                    <Border Style="{StaticResource StateTagNeutral}" Margin="10,0,0,0"
                             VerticalAlignment="Center" ToolTip="{Binding Loc[explore_readonly_tooltip], Mode=OneWay}"
                             Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
                         <!-- FontWeight="Normal" fijado a proposito (24-sep-2026, unificacion de badges) - antes
@@ -6319,11 +6333,12 @@
                                 <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0"
                                         IsHitTestVisible="False" Effect="{StaticResource CardShadow}">
                                     <Border.Style>
-                                        <!-- BasedOn StatusPillCaption (24-sep-2026, unificacion de badges): hereda
-                                             CornerRadius/Padding compartidos con el resto de badges/status-pills de
-                                             la app; el Background SEMANTICO por zona (abajo) sigue siendo propio de
-                                             este chip, informacion real que no se unifica. -->
-                                        <Style TargetType="Border" BasedOn="{StaticResource StatusPillCaption}">
+                                        <!-- Familia "SemanticStateChip" (rediseno de badges, 25-sep-2026): fondo
+                                             NEUTRO fijo (BgElevatedBrush, heredado del Style base) para CUALQUIER
+                                             zona - el color semantico real vive en el BORDE (y en el dot de abajo),
+                                             nunca en el fondo, para que el chip sea legible igual con cualquier
+                                             matiz de zona. -->
+                                        <Style TargetType="Border" BasedOn="{StaticResource SemanticStateChip}">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Style.Triggers>
                                                 <MultiDataTrigger>
@@ -6332,7 +6347,7 @@
                                                         <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Superficie" />
                                                     </MultiDataTrigger.Conditions>
                                                     <Setter Property="Visibility" Value="Visible" />
-                                                    <Setter Property="Background" Value="{StaticResource MasterGoldBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{StaticResource MasterGoldBrush}" />
                                                 </MultiDataTrigger>
                                                 <MultiDataTrigger>
                                                     <MultiDataTrigger.Conditions>
@@ -6340,7 +6355,7 @@
                                                         <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Subterraneo" />
                                                     </MultiDataTrigger.Conditions>
                                                     <Setter Property="Visibility" Value="Visible" />
-                                                    <Setter Property="Background" Value="{StaticResource EquippedGreenBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{StaticResource EquippedGreenBrush}" />
                                                 </MultiDataTrigger>
                                                 <MultiDataTrigger>
                                                     <MultiDataTrigger.Conditions>
@@ -6348,7 +6363,7 @@
                                                         <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Cavernas" />
                                                     </MultiDataTrigger.Conditions>
                                                     <Setter Property="Visibility" Value="Visible" />
-                                                    <Setter Property="Background" Value="{StaticResource DebuffBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{StaticResource DebuffBrush}" />
                                                 </MultiDataTrigger>
                                                 <MultiDataTrigger>
                                                     <MultiDataTrigger.Conditions>
@@ -6356,17 +6371,71 @@
                                                         <Condition Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Infierno" />
                                                     </MultiDataTrigger.Conditions>
                                                     <Setter Property="Visibility" Value="Visible" />
-                                                    <Setter Property="Background" Value="{StaticResource CalamityBrush}" />
+                                                    <Setter Property="BorderBrush" Value="{StaticResource CalamityBrush}" />
                                                 </MultiDataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Border.Style>
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#9678;" FontSize="13" Foreground="White" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <!-- 4 Ellipse (dot) mutuamente excluyentes con DataTrigger, mismo mecanismo
+                                             que los 4 TextBlock de zona de abajo - reemplazan al icono fijo unico
+                                             "&#9678;": ahora el color semantico de la zona vive tambien aqui (dot),
+                                             no solo en el fondo del chip (que ahora es neutro, ver Border.Style). -->
+                                        <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{StaticResource MasterGoldBrush}">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Superficie">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{StaticResource EquippedGreenBrush}">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Subterraneo">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{StaticResource DebuffBrush}">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Cavernas">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{StaticResource CalamityBrush}">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Guide.ObjetivoPaso.Zona}" Value="Infierno">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
                                         <!-- 4 TextBlock mutuamente excluyentes con DataTrigger (mismo criterio ya
                                              establecido en toda esta pantalla para "muestra esto solo si la Zona
                                              es X" - ver las 4 Rectangle de arriba) - cada uno ya trae su texto
-                                             final formateado ("Guía: <Zona>"), sin resolver nada en C#. -->
+                                             final formateado ("Guía: <Zona>"), sin resolver nada en C#. Foreground
+                                             TextPrimaryBrush (25-sep-2026, rediseno de badges) en vez de White fijo:
+                                             el fondo del chip ahora es neutro (BgElevatedBrush), no una capsula de
+                                             color solido que garantizara contraste con blanco puro. -->
                                         <!-- Bug real encontrado verificando con captura (GUIACHIP_SOLO, 21-sep-2026):
                                              Visibility="Collapsed" puesto como atributo LOCAL del TextBlock (en vez
                                              de dentro del propio Style, como valor por defecto) gana SIEMPRE sobre
@@ -6377,7 +6446,7 @@
                                              Visibility="Collapsed" como Setter DENTRO del Style (igual que ya
                                              hacen el propio Border y las 4 Rectangle de las bandas), nunca como
                                              atributo local del elemento. -->
-                                        <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                        <TextBlock Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                                    Text="{Binding Loc[guide_zone_chip_superficie], Mode=OneWay}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
@@ -6390,7 +6459,7 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                        <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                        <TextBlock Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                                    Text="{Binding Loc[guide_zone_chip_subterraneo], Mode=OneWay}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
@@ -6403,7 +6472,7 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                        <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                        <TextBlock Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                                    Text="{Binding Loc[guide_zone_chip_cavernas], Mode=OneWay}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
@@ -6416,7 +6485,7 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                        <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
+                                        <TextBlock Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"
                                                    Text="{Binding Loc[guide_zone_chip_infierno], Mode=OneWay}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
@@ -7419,14 +7488,19 @@
                                                                        TextAlignment="Right" TextWrapping="Wrap"
                                                                        Visibility="{Binding DistanceLabel, Converter={StaticResource NullToVis}}" />
                                                         </StackPanel>
-                                                        <!-- Style="StatusPillCaption" comparte el CornerRadius=99 con el resto de badges
-                                                             (24-sep-2026, unificacion); Padding/Background locales pisan a proposito el
-                                                             valor por defecto del Style - excepcion funcional real, no un olvido: esta
-                                                             pildora vive en una FILA DENSA de lista de resultados (no una cabecera), y el
-                                                             Background codifica el tipo de objeto encontrado (KindColor), informacion real
-                                                             que no se unifica. Ver inventario completo en bitacora.md (badge Nº6). -->
-                                                        <Border DockPanel.Dock="Right" Style="{StaticResource StatusPillCaption}" Background="{Binding KindColor}" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding KindLabel}" FontSize="9.5" Foreground="White" />
+                                                        <!-- Familia "SemanticStateChip" (rediseno de badges, 25-sep-2026): fondo
+                                                             neutro fijo (heredado del Style base), el color real del tipo de
+                                                             objeto (KindColor) vive en el borde+dot, no en el fondo - misma
+                                                             excepcion funcional real que ya documentaba el comentario anterior:
+                                                             esta pildora vive en una FILA DENSA de lista de resultados (no una
+                                                             cabecera), CornerRadius/Padding locales pisan a proposito el valor
+                                                             por defecto del Style. Ver inventario completo en bitacora.md
+                                                             (badge Nº6). -->
+                                                        <Border DockPanel.Dock="Right" Style="{StaticResource SemanticStateChip}" BorderBrush="{Binding KindColor}" CornerRadius="4" Padding="4,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <Ellipse Width="6" Height="6" Fill="{Binding KindColor}" VerticalAlignment="Center" Margin="0,0,4,0" />
+                                                                <TextBlock Text="{Binding KindLabel}" FontSize="9.5" Foreground="White" />
+                                                            </StackPanel>
                                                         </Border>
                                                         <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}"
                                                                    TextWrapping="Wrap" VerticalAlignment="Center" />

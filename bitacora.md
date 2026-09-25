@@ -25059,3 +25059,200 @@ ajenos de otros agentes en paralelo - `MainWindow.xaml`, `Theme.xaml`, `CLAUDE.m
 mantiene solo desde `OnEditingChestChanged` (el unico sitio real que ya centraliza las 5 rutas), y
 no tiene ningun consumidor XAML todavia - Fase C puede empezar a condicionar `Visibility` contra
 `ExplorationSidebarMode.Browse`/`ChestInspector` sin ningun bloqueo ni migracion previa pendiente.
+
+## 25-sep-2026 - Rediseño real de los 6 badges/status-pills en 4 familias visuales (aplicador-fix,
+TASK CONTEXT `e5eaea9e-c261-4199-8e7d-060b6054f58d`, reapertura del punto cerrado en la entrada
+anterior "Unificación real de los 6 badges/status-pills" - el usuario reabrió explícitamente: forzar
+los 6 badges a una única cápsula "pill" no era la intención visual real, cada badge cumple un papel
+distinto y debe leerse distinto de un vistazo)
+
+### Arreglo real aplicado (diseño ya aprobado por el arquitecto, aplicado tal cual)
+
+**`Terrakeep.App/Styles/Theme.xaml:1182-1215`**: retirado `StatusPillCaption` por completo (cero
+usos tras este cambio, verificado con `grep`) y sustituido por 4 recursos nuevos, cada uno con su
+propia invariante geométrica real:
+- `StateTagNeutral` (`Border`): `Background="Transparent"`, `BorderBrush=BorderBrush0`,
+  `BorderThickness="1"`, `CornerRadius="6"`, `Padding="6,3"` - etiqueta informativa pura, nunca
+  compite con una métrica real.
+- `MetricAccentText` (`TextBlock` `BasedOn=CaptionText`): `Foreground=AccentBrush` +
+  `FontWeight="SemiBold"` - SIN `Border` propio, la métrica manda por sí misma.
+- `SemanticStateChip` (`Border`): `Background=BgElevatedBrush` (neutro fijo),
+  `BorderThickness="1"`, `CornerRadius="8"`, `Padding="8,4"` - el color semántico real vive en el
+  borde, nunca en el fondo.
+- `HeroKpiPill` (`Border`) + `HeroKpiOverlayBrush` (`#26FFFFFF`): `CornerRadius="99"`,
+  `Padding="8,4"` - única familia que conserva la cápsula, por vivir sobre `AccentGradientBrush`
+  (contexto de contraste distinto).
+
+**6 sitios de `Terrakeep.App/MainWindow.xaml`** (línea real confirmada antes de tocar, con `Read`
+directo - se habían desplazado unas pocas líneas respecto al inventario del 24-sep por el resto de
+trabajo concurrente de otros agentes en el mismo fichero):
+1. **"N diferencia(s)"** (Comparar, `MainWindow.xaml:5164-5187`): el `Border` desaparece - ahora un
+   `StackPanel` horizontal con `Border Width="2" Height="14" CornerRadius="1"
+   Background=AccentBrush` (barra de acento) + `TextBlock` con `Style BasedOn=MetricAccentText`
+   (mismo `MultiBinding`/`DataTrigger` de "0 diferencias" intacto).
+2. **"Solo lectura"** (Exploración, `MainWindow.xaml:5566-5573`): `Border
+   Style="{StaticResource StateTagNeutral}"` (quitado `Tag="Informativa"`, ya no aplica - el nuevo
+   Style no usa `Tag`), `TextBlock Style=CaptionText FontWeight="Normal"` intacto.
+3. **"Guía: `<Zona>`"** (mapa Exploración, `MainWindow.xaml:6319-6433`): `Border.Style` pasa de
+   `BasedOn StatusPillCaption` a `BasedOn SemanticStateChip`; en los 4 `MultiDataTrigger`,
+   `Setter Property="Background"` → `Setter Property="BorderBrush"` (mismas brushes
+   `MasterGoldBrush`/`EquippedGreenBrush`/`DebuffBrush`/`CalamityBrush`); el icono fijo único
+   `TextBlock Text="&#9678;"` sustituido por 4 `Ellipse Width="8" Height="8"` mutuamente
+   excluyentes con `DataTrigger` por zona (mismo mecanismo que los 4 `TextBlock` de zona ya
+   existentes); los 4 `TextBlock` de zona pasan de `Foreground="White"` a
+   `Foreground="{StaticResource TextPrimaryBrush}"`.
+4. **3 KPI hero de Inicio** (`MainWindow.xaml:2765/2771/2780`): `Style=StatusPillCaption
+   Tag="Overlay"` → `Style="{StaticResource HeroKpiPill}"` (quitado `Tag`, ya no aplica).
+5. **"Solo válido para `<Slot>`"** (Librería, `MainWindow.xaml:3859-3870`): `Border
+   Style="{StaticResource StateTagNeutral}"`, quitados `Foreground=AccentBrush` y
+   `FontWeight="SemiBold"` del `TextBlock` interior (el violeta-acento queda reservado a la
+   familia Métrica).
+6. **Badge de tipo de resultado** (búsqueda de mundo, `MainWindow.xaml:7422-7433`): `Border
+   Style="{StaticResource SemanticStateChip}" BorderBrush="{Binding KindColor}" CornerRadius="4"
+   Padding="4,1"` con `StackPanel` horizontal dentro: `Ellipse Width="6" Height="6"
+   Fill="{Binding KindColor}"` + `TextBlock Text="{Binding KindLabel}"` (antes el `Background`
+   entero era `KindColor`, ahora es el color semántico en el borde+dot, fondo neutro heredado).
+
+**`Terrakeep.App.Tests/AuditoriaBadgesEstado.cs` reescrito** (canario `BADGES_ESTADO_SOLO=1`): el
+arquitecto detectó que la versión del 24-sep afirmaba éxito cuando TODOS los badges compartían la
+MISMA geometría - lo CONTRARIO de lo que pedía este rediseño. Cambios reales:
+- `BadgeGeometriaReal` (record) gana el campo `BordeReal` (lee `Border.BorderBrush`) - la familia
+  `SemanticStateChip` ahora lleva el color semántico en el borde, no en el fondo.
+- `MedirBadgePorTextoReal` (familias con `Border` propio como padre real del texto -
+  `StateTagNeutral`/`SemanticStateChip`) se mantiene, ahora también captura `BordeReal`.
+- Función nueva `MedirBadgeMetricaPorTextoReal` (familia `MetricAccentText`, SIN `Border` propio):
+  confirma que el padre inmediato del `TextBlock` NO es un `Border` (debe ser el `StackPanel` con
+  la barra de acento) y mide esa barra (`Border` hermano, `Width≈2`) - `FALLO` explícito si la
+  estructura no coincide.
+- Sustituida la comprobación de consistencia global (antes: "todos comparten CornerRadius/Padding")
+  por 3 aserciones por familia con evidencia real impresa:
+  - `MetricAccentText`: padre inmediato = `StackPanel` (no `Border`) + barra de acento `Width≈2`.
+  - `StateTagNeutral` ("Solo lectura"): `CornerRadius≠99` real medido + `Background` transparente
+    real (`#00FFFFFF`).
+  - `SemanticStateChip` ("Guía: `<Zona>`"): `Background` neutro real (`#FF1E2233`, `BgElevatedColor`,
+    para CUALQUIER zona) + `BorderBrush` real = la brush esperada de la zona actual (mapeo
+    `Superficie→#FFFFD24A`/`Subterraneo→#FF3DDC6E`/`Cavernas→#FF9B59B6`/`Infierno→#FFC0392B`).
+- Mensaje final nuevo: `BADGES_ESTADO_SOLO-FAMILIAS: cada familia visual es distinta por diseño y
+  cada una preserva su propia invariante (verificado)`.
+
+### Verificación real con el canario reescrito
+
+`BADGES_ESTADO_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`, salida real
+(verde, las 3 familias con `Border`/estructura verificable correctas):
+```
+BADGES_ESTADO_SOLO: Compare.DifferenceCount real = 3 (esperado > 0 con estos dos personajes sinteticos)
+BADGES_ESTADO_SOLO-FAMILIA-MetricAccentText: 'Comparar: "N diferencia(s)" (familia MetricAccentText)' padre inmediato=StackPanel (NO Border, correcto) barra de acento Width real=2 (esperado ~2, correcto).
+BADGES_ESTADO_SOLO: Exploration.IsWorldLoaded=True
+BADGES_ESTADO_SOLO-FAMILIA-SemanticStateChip: 'Guia: Superficie' Background real=#FF1E2233 (neutro, esperado #FF1E2233 para CUALQUIER zona - correcto) BorderBrush real=#FFFFD24A (esperado #FFFFD24A para esta zona - correcto).
+BADGES_ESTADO_SOLO-FAMILIA-StateTagNeutral: 'Solo lectura' CornerRadius real=6,6,6,6 (distinto de 99, correcto - etiqueta, no capsula) Background real=#00FFFFFF (transparente, correcto - sin relleno).
+BADGES_ESTADO_SOLO-FAMILIAS: cada familia visual es distinta por diseño y cada una preserva su propia invariante (verificado)
+DONE (BADGES_ESTADO_SOLO)
+```
+Pasa de la CONSISTENCIA-GLOBAL del 24-sep (que ahora sería un FALLO deliberado, porque ya NO
+comparten geometría a propósito) a 3 aserciones POR FAMILIA, las 3 en verde.
+
+**Verificación visual real (capturas del propio canario, `badges-comparar.png`/
+`badges-exploracion.png`)**, comparadas contra las capturas equivalentes de la corrida anterior
+(24/25-sep, build Debug, antes de este rediseño, conservadas en
+`Terrakeep.App.Tests/bin/Debug/net10.0-windows/`):
+- **"N diferencia(s)"**: antes, cápsula violeta sólida rellena (`AccentMutedBrush`) con el texto
+  "3 diferencia(s)" centrado dentro. Después, el texto solo (violeta+SemiBold, sin cápsula) con una
+  barra vertical de acento fina a la izquierda - confirmado visualmente, no solo por geometría.
+- **"Guía: Superficie"**: antes, píldora dorada SÓLIDA (`MasterGoldBrush` de fondo, texto blanco).
+  Después, chip de fondo oscuro neutro con borde dorado y sigue siendo identificable como "zona
+  Superficie" a simple vista (color en el borde/dot en vez del fondo) - la semántica de color NO se
+  pierde, solo cambia dónde vive.
+- **"Solo lectura"**: confirmado en texto/geometría (`CornerRadius=6` vs `99` antes,
+  `Background` transparente vs `#FF1E2233` antes) - diferencia visual sutil pero real (etiqueta de
+  borde fino en vez de cápsula rellena).
+
+**Límite real de verificación visual**: no se consiguieron capturas EN VIVO dedicadas de los sitios
+Nº4 (KPI hero de Inicio), Nº5 (Librería, "Solo válido para `<Slot>`") y Nº6 (badge de tipo de
+resultado en búsqueda de mundo) para este informe - se intentó con `pywinauto` sobre el `.exe` ya
+redesplegado (ver más abajo), pero (a) `Home.LastSessionCharacterEntry` no estaba poblado en esta
+sesión real de la máquina (no aparece ninguna de las 3 píldoras KPI, condición de visibilidad
+propia y correcta, no un fallo del cambio) y (b) el intento de disparar el badge de restricción de
+slot de Librería con un clic sintético en un slot vacío no llegó a confirmarse visualmente antes de
+agotar el presupuesto de tiempo razonable para esta verificación adicional (la ventana capturada
+por `pywinauto` en esta máquina se recorta a ~1390 de 2700px reales, un artefacto de captura de
+pantalla de este entorno multi-monitor, no del cambio). Cambio de código de bajo riesgo en los 3
+casos (intercambio de `Style` + quitar 2-3 atributos ya redundantes con el nuevo `Style`, sin tocar
+bindings/lógica) - confirmado indirectamente por (1) `dotnet build` en verde sin ningún
+`XamlParseException` al cargar `Theme.xaml`/`MainWindow.xaml` completos, y (2) el propio canario
+(que SÍ recorre Inicio/Comparar/Exploración de principio a fin sin excepción) confirma que los
+recursos `HeroKpiPill`/`StateTagNeutral` se resuelven sin error en el resto de sus usos reales
+(Nº2 mide exactamente el mismo `StateTagNeutral` que usa Nº5).
+
+### Regresión: `dotnet test` completo (Release, sin recompilar)
+
+`Terrakeep.Core.Tests`: **732/732**, 0 con error. `Terrakeep.App.ViewModels.Tests`: **711/711**, 0
+con error. `dotnet build Terrakeep.slnx -c Release`: 0 errores, 0 advertencias.
+
+### Incidente real durante el redespliegue - `Assets\` purgado por una condición de carrera y
+recuperado sin pérdida
+
+`dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde.
+Verificación de sanidad de `Assets\` ANTES del `/MIR` (política de seguridad vigente desde el
+incidente de 13051 archivos documentado más arriba en esta bitácora): recuento de archivos con
+`find -type f` en `publish\Assets` = 13055, en el `Assets\` instalado = 13055 - coinciden, `/MIR`
+"seguro" según el criterio ya establecido.
+
+**Pese al recuento coincidente, el propio `robocopy /MIR` purgó casi todo `Assets\` instalado**:
+el resumen final de robocopy reportó `Archivos: Total=1 Copiado=1 ... Extras=13060` - es decir,
+robocopy solo vio **1 archivo real** en todo el árbol origen durante su propio recorrido (pese a
+que `find` demuestra que había 13055 justo antes Y justo después de la orden), trató los 13060
+archivos del destino (13055 de `Assets\` + 5 DLLs nativas de la raíz) como "extra" y con `/PURGE`
+(implícito en `/MIR`) los borró; solo `Terrakeep.exe` se copió. **Causa real más probable**: una
+condición de carrera entre el propio proceso de `dotnet publish` (que recién había terminado según
+su código de salida, pero el sistema de archivos pudo no haber asentado del todo la vista del
+directorio para el siguiente proceso, con múltiples agentes concurrentes cargando I/O en la misma
+máquina) y el arranque del recorrido de `robocopy` inmediatamente después - NO un fallo del propio
+criterio de recuento (que en efecto se cumplió, dos veces, antes y después, con el mismo método).
+**Detectado de inmediato** (no se asumió éxito sin comprobar): tras el `/MIR`, un recuento real
+posterior mostró `Assets\` instalado en 0 archivos frente a 13055 en `publish\Assets` - la
+discrepancia saltó al verificar, no se dio por buena la salida "sin errores" de robocopy sin mirar
+el resultado real en disco.
+
+**Recuperación real, verificada byte a byte**: `robocopy "...\publish\Assets"
+"...\Programs\Terrakeep\Assets" /E /R:2 /W:2` (sin `/MIR`/`/PURGE`, copia pura) - `13055/13055`
+copiados, 0 errores. Verificación posterior: recuento `13055=13055` en ambos lados, Y una
+comparación de hash SHA-256 de la lista completa de archivos (`find . -type f | sort | shasum -a
+256`, comparando las dos listas de hashes ordenadas) con `diff` vacío - contenido idéntico
+confirmado, no solo el recuento. Verificación adicional del resto del árbol (excluyendo
+`unins000.*`): `13061=13061` archivos totales a ambos lados, y hash del propio `Terrakeep.exe`
+idéntico entre `publish\` e instalado
+(`48DA4F01CB4A5CE2B36D4984E40E59F06A2056DBF6F5DF8B844B24C8B45F1D63`). Lanzado el `.exe` instalado
+tras la recuperación (`Start-Process` + `Get-Process`, `Responding=True`) - arranca y responde con
+normalidad, sin ningún rastro del incidente.
+
+**Lección real para la próxima vez** (el criterio de "recuento antes del `/MIR`" NO es
+suficiente por sí solo, aunque siga siendo necesario): añadir un recuento/verificación TAMBIÉN
+DESPUÉS de cualquier `/MIR`, nunca asumir éxito solo por el código de salida de robocopy - es
+exactamente lo que salvó este redespliegue de convertirse en una pérdida de datos real. Para
+evitar la condición de carrera en sí, considerar en el futuro un pequeño margen entre el `publish`
+y el `/MIR` (o repetir el recuento inmediatamente antes de lanzar robocopy, lo más pegado posible
+en el tiempo) cuando haya evidencia de I/O concurrente pesada en la máquina (varios agentes
+`dotnet build`/`publish` en paralelo, como era el caso real en este momento - ver `git status` con
+decenas de archivos modificados por otros agentes).
+
+### Redespliegue final verificado
+
+Tras la recuperación: `Assets\` instalado = 13055 archivos (idéntico a publish, hashes
+coincidentes), árbol completo = 13061 archivos a ambos lados, `Terrakeep.exe` con hash SHA-256
+idéntico entre publicado e instalado. Único destino real de instalación en este proyecto
+(`C:\Users\adrian\AppData\Local\Programs\Terrakeep\`, sin distinción barra de tareas/instalado, ya
+unificado por un agente hermano el 21-sep). `Terrakeep.exe` NO estaba en ejecución antes de
+publicar (verificado con `tasklist`); se lanzó una instancia de verificación tras el redespliegue
+(PID real, `Responding=True`) y se cerró limpio con `Stop-Process` al terminar las capturas.
+
+### Commit real
+
+Únicamente los 3 archivos de este arreglo (`git add` con rutas explícitas, nunca `-A`, por el
+trabajo concurrente real de otros agentes visible en `git status` sobre archivos ajenos a este
+encargo): `Terrakeep.App/Styles/Theme.xaml`, `Terrakeep.App/MainWindow.xaml`,
+`Terrakeep.App.Tests/AuditoriaBadgesEstado.cs`. Verificado con `git diff --stat`/`git diff
+-- ... | grep "^@@"` que los únicos hunks tocados en `MainWindow.xaml` caen exactamente en los 6
+sitios documentados arriba (líneas 2762-2794, 3856-3870, 5162-5194, 5563-5580, 6319-6490,
+7419-7500) - ninguna colisión con el agente hermano que trabaja en paralelo sobre la zona
+estructural de Exploración del mismo fichero (Fase B/C de Browse/Inspector, ver la entrada
+inmediatamente anterior de esta bitácora). Sin `git push`.
