@@ -111,6 +111,13 @@ internal static partial class Program
         // ESPEC-ui-exploracion.md#9.1): mismo motivo real que el resto de converters de arriba -
         // se olvido la primera vez que se probo esta tanda, mismo bug real ya documentado.
         app.Resources["EnumEquals"] = new EnumEqualsConverter();
+        // ExploracionRediseno Fase C (25-sep-2026): mismo motivo real que todos los de arriba
+        // (H4-01) - converter nuevo de SidebarMode (Browse/ChestInspector); sin registrarlo aqui
+        // el arnes revienta al montar la ventana (XamlParseException, "No se puede encontrar el
+        // recurso EnumEqualsToVis") aunque la app real (que si carga App.xaml) vaya bien.
+        // Detectado al verificar IDEA8_SOLO (comparador de mundos, Fase G) - bloqueaba
+        // CUALQUIER canario de este arnes que monte MainWindow, no solo el de Comparar.
+        app.Resources["EnumEqualsToVis"] = new EnumEqualsToVisibilityConverter();
         // Ronda de idioma del 6-sep-2026: mismo motivo real que todos los de arriba - este
         // converter sustituye a los StringFormat en español fijo del XAML, y sin registrarlo aqui
         // el arnes reventaria al montar la ventana aunque la app real funcione.

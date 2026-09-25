@@ -942,6 +942,14 @@ public partial class ExplorationViewModel : ObservableObject
     // NPCs sigue usando Npcs/NpcSearchResults (ya existente); Cofres/Minerales/Objetos usan
     // Inventory (u OreMetals/OreGems/OreTargets para Minerales, que necesita 3 grupos).
     [ObservableProperty] private WorldSearchCategory _selectedCategory = WorldSearchCategory.All;
+    // ExploracionRediseno Fase G (25-sep-2026): "Comparar" sigue siendo un valor real de
+    // SelectedCategory (la pildora del selector no cambia, sigue siendo un RadioButton mas del
+    // mismo grupo, MainWindow.xaml linea ~7161) - decision deliberada de riesgo minimo, mismo
+    // patron ya usado por SidebarMode en la Fase B (OnEditingChestChanged centraliza el derivado
+    // en el UNICO sitio real que cambia la causa, sin tocar los emisores). Lo unico nuevo es este
+    // flag derivado, que MainWindow.xaml usa para tapar el mapa con la vista amplia del
+    // comparador en vez de encajarlo en la columna estrecha del sidebar.
+    [ObservableProperty] private bool _isShowingWorldCompare;
     partial void OnSelectedCategoryChanged(WorldSearchCategory value)
     {
         // Cambiar de categoria es empezar de cero - mismo criterio que cargar otro mundo ya
@@ -953,6 +961,7 @@ public partial class ExplorationViewModel : ObservableObject
         RebuildInventory();
         OnPropertyChanged(nameof(ShowZeroResultsState));
         OnPropertyChanged(nameof(ShowCompactSummary));
+        IsShowingWorldCompare = value == WorldSearchCategory.Compare;
     }
 
     public ObservableCollection<WorldInventoryRowViewModel> Inventory { get; } = [];

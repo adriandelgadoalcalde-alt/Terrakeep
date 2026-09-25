@@ -530,6 +530,17 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) == true) await _viewModel.WorldCompare.LoadBAsync(dialog.FileName);
     }
 
+    // ExploracionRediseno Fase G (25-sep-2026): "Volver al mapa" de la vista amplia del
+    // comparador - vuelve a All (mismo reset real que ya usa otras rutas de la Exploracion,
+    // ej. LoadFromPathAsync) en vez de a un WorldSearchCategory.None inexistente. Cambiar
+    // SelectedCategory dispara OnSelectedCategoryChanged (ExplorationViewModel), que ya pone
+    // IsShowingWorldCompare=false y ademas desmarca la pildora "Comparar" del selector (misma
+    // fuente real, sin estado duplicado). WorldCompare es independiente del mundo cargado en
+    // Exploracion (WorldCompareViewModel.cs:31-39, _worldA/_worldB propios) - no hay nada que
+    // recargar ni destruir aqui, solo un cambio de categoria.
+    private void OnCloseWorldCompareClick(object sender, RoutedEventArgs e)
+        => _viewModel.Exploration.SelectedCategory = WorldSearchCategory.All;
+
     // Idea 6 (catalogo de funciones, "Laboratorio de personajes" - bitacora.md 20-sep-2026,
     // segunda pasada 20-sep-2026 reconsiderada a peticion explicita del coordinador):
     // investigado a fondo - no existe NINGUNA fabrica real de personaje "en blanco" en todo el
