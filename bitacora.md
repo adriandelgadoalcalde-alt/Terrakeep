@@ -24974,3 +24974,88 @@ Darkness implementados y Yoraiz0r Eye documentado como LIMITE REAL, TODOS los ca
 paridad visual UICharacter identificados hoy quedan o bien implementados con evidencia real, o
 bien documentados explicitamente como DELIBERATE DIFFERENCE/LIMITE REAL con su motivo tecnico
 citado contra el decompilado - ninguno se quedo "por investigar" sin marcar.
+
+### ExploracionRediseno Fase B - modelo de estado del sidebar (ExplorationSidebarMode), 25-sep-2026
+
+Encargo del coordinador (patron de 2 fases, rol aplicador-fix) dentro del gap analysis
+"ExploracionRediseno FaseA" (8 fases de rediseno estructural de la pestaña Exploracion) - Fase B es
+fundacional, SOLO ViewModel, 0 cambio XAML/visual todavia (eso empieza en Fase C).
+
+**Arreglo real aplicado**, exactamente segun el diseño ya aprobado por el arquitecto:
+- `ExplorationViewModel.cs:104` (tras `WorldSearchCategory`): nuevo enum
+  `ExplorationSidebarMode { Browse, ChestInspector, WorldTools }`. `WorldTools` solo declarado en
+  esta fase (sin trigger de entrada/salida todavia - lo cablea Fase F al mover los 3 Expanders de
+  "Mundo").
+- `ExplorationViewModel.cs:1430`: `[ObservableProperty] private ExplorationSidebarMode _sidebarMode
+  = ExplorationSidebarMode.Browse;`, junto a `EditingChest`.
+- `ExplorationViewModel.cs:1456-1463` (dentro de `OnEditingChestChanged`, sin reescribir el metodo
+  existente, solo 2 lineas nuevas al final): `newValue != null` -> `SidebarMode =
+  ExplorationSidebarMode.ChestInspector`; `oldValue != null && newValue == null` -> `SidebarMode =
+  ExplorationSidebarMode.Browse`. Cubre automaticamente las 3 rutas reales de apertura
+  (`EditChest` desde la fila, `TryOpenChestAtTile` desde el marcador del mapa,
+  `OpenChestEditorIfApplicable` desde un resultado de busqueda - las 3 convergen en
+  `EditingChest = row`) y las 2 de cierre (`SaveEditingChestAsync`, `CancelEditingChest` - ambas
+  ponen `EditingChest = null`), sin tocar ninguno de esos 5 metodos.
+
+**Verificacion real** (canario nuevo, extiende `Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`,
+bloque `COFRES-INSPECTOR-FASEB*`, corre dentro de `COFRES_INSPECTOR_SOLO=1`): las 3 rutas de entrada
+ejercitadas con las mismas convenciones reales ya usadas por AR-13d/AR-13e (mundo real
+`Blando_Río.wld`, cofre-7 real `X=5579,Y=1036`) - `EditChestCommand.Execute(fila)`,
+`TryOpenChestAtTile(5579,1036)`, `GoToWorldSearchHitCommand.Execute(hit ChestItem)` - las 3 dejan
+`SidebarMode=ChestInspector`; `CancelEditingChestCommand` (probado 2 veces, rutas 1 y 3) y
+`SaveEditingChestCommand.ExecuteAsync` (ruta 2) dejan `SidebarMode=Browse`. Ejecutado de verdad
+(`COFRES_INSPECTOR_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Debug --no-build`, tras
+confirmar la guardia de entrada grafica de KeepQA en verde, 536s de inactividad real): las 6 lineas
+`COFRES-INSPECTOR-FASEB*` con el valor esperado, 0 `FALLO`/`EXCEPTION` en todo el log (los puntos
+P1/P2/P3 del mismo canario, cluster "imagen5+imagen6" investigado el 24-sep, tambien salieron 0
+`FALLO` esta vez - ya arreglados por otro agente en paralelo trabajando sobre XAML/Theme, ajeno a
+este encargo). Confirmado tambien que ningun XAML referencia `SidebarMode` (`grep` sobre
+`MainWindow.xaml`/`Theme.xaml`: 0 coincidencias) - cero cambio visual, tal como pide la Fase B.
+
+**Build y regresion**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores.
+`dotnet test Terrakeep.Core.Tests -c Release --no-build`: 732/732 (sin cambios, mismo conteo que el
+baseline). `dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build` COMPLETO: 711/711
+(5m20s, mismo conteo que el baseline - esta fase no añade ningun test xunit nuevo, la cobertura
+nueva vive en el harness `Terrakeep.App.Tests`).
+
+**Recompilacion y redespliegue local real**: `Terrakeep.exe` instalado NO estaba en ejecucion
+(confirmado `Get-CimInstance Win32_Process`, sin resultados) - relanzado despues como sanity check,
+`Responding=True`, cerrado limpio. `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64`: el PRIMER intento fallo real (`MSB4018`, `GenerateBundle`/
+`Manifest.AddEntry`, "It is forbidden to change Manifest state after it was written" - contencion de
+E/S real por otros agentes construyendo en paralelo sobre el mismo repo, el riesgo ya documentado en
+el TASK CONTEXT de hoy); reintentado en verde. El publish resultante tenia `Assets/` con la
+estructura de carpetas creada pero **0 ficheros dentro** (medido con `Get-ChildItem -Recurse -File`,
+la misma contencion de E/S del intento anterior dejo la copia de contenido a medias sin que MSBuild
+lo marcara como error) - detectado ANTES del `/MIR` por la politica de sanidad de hoy, evitado a
+tiempo. Reparado borrando `publish/` (`Remove-Item -Recurse -Force`, comprobado que no habia
+`robocopy`/`Terrakeep.exe` activos, solo nodos `MSBuild.exe` inactivos por `nodeReuse`) y
+republicando desde cero: `publish/Assets` = 13055 ficheros, coincide con el intermedio `bin/.../
+win-x64/Assets` (13055) y con el origen `Terrakeep.App/Assets` (13056, la diferencia de 1 es un
+patron de exclusion ya existente, ajeno a este encargo). **Falsa alarma aparte durante la misma
+comprobacion**: `Get-ChildItem -Recurse -File` sobre la copia YA INSTALADA (antes de tocarla) dio 0
+ficheros dos veces seguidas (parecia un cofre-Assets real vaciado por otro agente concurrente) -
+investigado a fondo antes de actuar (sin `robocopy`/`Terrakeep.exe` corriendo, conteo estatico en el
+tiempo) y descartado como incidente real: el propio `robocopy /MIR` real, al ejecutarse, reporto
+13055 de 13061 archivos ya "Omitido" (identicos, preexistentes) y una pasada posterior en modo lista
+(`/L`, sin copiar) confirmo 0 diferencias - `Get-ChildItem -Recurse -File` fallaba de forma
+intermitente sobre esa jerarquia concreta (muchas subcarpetas, nombres largos) y se corrigio solo en
+una repeticion posterior (13055). Ninguna perdida de datos real en ningun momento - documentado aqui
+para que quede claro que la "alarma" fue un falso positivo de la propia herramienta de medicion, no
+un incidente de despliegue concurrente. `robocopy .../publish .../Terrakeep /MIR /XF unins000.exe
+unins000.dat`: 6 archivos copiados (Terrakeep.exe + los pocos con fecha distinta), 13055 omitidos
+(ya identicos), 0 errores; pasada de verificacion en modo lista (`/L`) tras el copiado: 13061/13061
+"Omitido", 0 diferencias. Relanzado el `.exe` instalado tras el despliegue (`Responding=True`),
+cerrado limpio.
+
+**Commit real** `b7835fb4`: `Terrakeep.App/ViewModels/ExplorationViewModel.cs`,
+`Terrakeep.App.Tests/CanarioClusterCofresInspector.cs` - exactamente los 2 ficheros de este encargo,
+confirmado con `git status --porcelain` antes de comitear (el arbol de trabajo tenia varios ficheros
+ajenos de otros agentes en paralelo - `MainWindow.xaml`, `Theme.xaml`, `CLAUDE.md`, varios
+`Terrakeep.Core.Tests/**`, etc. - ninguno se añadio al stage, `git add` con rutas explicitas). Sin
+`git push`.
+
+**Fase B queda lista para Fase C** (separar Browse/Inspector en XAML): `SidebarMode` existe, se
+mantiene solo desde `OnEditingChestChanged` (el unico sitio real que ya centraliza las 5 rutas), y
+no tiene ningun consumidor XAML todavia - Fase C puede empezar a condicionar `Visibility` contra
+`ExplorationSidebarMode.Browse`/`ChestInspector` sin ningun bloqueo ni migracion previa pendiente.
