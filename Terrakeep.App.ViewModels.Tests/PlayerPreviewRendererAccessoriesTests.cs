@@ -394,6 +394,49 @@ public sealed class PlayerPreviewRendererAccessoriesTests : IDisposable
         Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
     }
 
+    // ParidadPersonaje Fase3 - BugG (26-sep-2026): canario real de la SUSTITUCION, no solo de que
+    // "algo cambia". Un FaceHead SOLIDO (como el de arriba) no sirve para esto - al ser opaco,
+    // tapa visualmente la piel de la cabeza este o no dibujada debajo, el bug sigue invisible a un
+    // simple `NotEqual`. Aqui el FaceHeadFile es TOTALMENTE TRANSPARENTE (alpha=0 en los 40x56
+    // pixeles) - no aporta NINGUN pixel visible por si mismo, asi que el UNICO efecto observable
+    // de tener el campo relleno es si la piel base de la cabeza (Players[skinVar,0/1/2],
+    // "head"/"eyewhites"/"eyes") se sigue dibujando o no debajo. Antes del arreglo (FaceHead
+    // compuesto ENCIMA de la piel, ver el comentario que tenia Render() hasta hoy) este render
+    // salia PIXEL A PIXEL IDENTICO al de "sin accesorios" (la capa transparente no cambia nada
+    // visible, la piel base seguia ahi) - el bug quedaba invisible a
+    // FaceHeadReal_CambiaElResultadoRespectoASinAccesorios de arriba porque esa prueba usa un
+    // FaceHead OPACO, que oculta la piel esté o no dibujada. Tras el arreglo (if/else-if/else
+    // mutuamente excluyente fiel a PlayerDrawLayers.cs:2574-2640,
+    // DrawPlayer_21_Head_TheFace real), con faceHead>0 la piel/ojos NUNCA se dibujan - el
+    // resultado debe DIFERIR del de "sin accesorios" (la cabeza queda transparente donde antes
+    // habia piel), confirmando la sustitucion real.
+    [Fact]
+    public void FaceHeadReal_SustituyeLaPielBase_NoLaSuperpone()
+    {
+        string faceHeadTransparente = CrearPngTransparente();
+        var accesorios = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(CascoDeObsidiana))
+            with { FaceHeadFile = faceHeadTransparente };
+
+        var sinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conFaceHeadInvisible = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
+
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(conFaceHeadInvisible));
+    }
+
+    private string CrearPngTransparente()
+    {
+        Directory.CreateDirectory(_tempDir);
+        string path = Path.Combine(_tempDir, $"transparente_{Guid.NewGuid():N}.png");
+        const int w = 40, h = 56;
+        var pixels = new byte[w * h * 4]; // todo en 0 = Bgra32 con alpha=0, sin ningun pixel visible
+        var bmp = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgra32, null, pixels, w * 4);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bmp));
+        using var stream = File.Create(path);
+        encoder.Save(stream);
+        return path;
+    }
+
     [Fact]
     public void FaceFlowerReal_CambiaElResultadoRespectoASinAccesorios()
     {

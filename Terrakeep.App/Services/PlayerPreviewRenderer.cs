@@ -576,34 +576,41 @@ public static class PlayerPreviewRenderer
         // el casco es "fullHair" (:2143-2161, invertido respecto a la version anterior de este
         // renderer); en cualquier otro caso (hatHair o sin casco) el pelo va primero, como ya
         // hacia el renderer antes de esta pasada.
-        Composite(canvas, LoadFrame0("body0", "head"), colors.Skin);
-        Composite(canvas, LoadFrame0("body0", "eyewhites"), null); // ya blanco en el sprite real
-        Composite(canvas, LoadFrame0("body0", "eyes"), colors.Eyes);
+        //
+        // ParidadPersonaje Fase3 - BugG (26-sep-2026): FaceHead SUSTITUYE la piel base de la
+        // cabeza, no se superpone a ella - fiel a PlayerDrawLayers.cs:2574-2640 real
+        // (DrawPlayer_21_Head_TheFace), un if/else-if/else MUTUAMENTE EXCLUYENTE entre 3 ramas
+        // (mountHandlesHeadDraw queda fuera de alcance, un doll sin montura nunca toma esa rama):
+        // con faceHead>0 (rama real 2592-2614, "else if (!flag && drawinfo.drawPlayer.faceHead >
+        // 0 ...)") se dibuja UNICAMENTE TextureAssets.AccFace[faceHead] - Players[skinVar,0/1/2]
+        // (piel/ojos blancos/ojos) y Extra[67] (Yoraiz0rDarkness, ambos dentro de la rama "else if
+        // (!invis && !flag)" real, 2615-2639) NO se dibujan en absoluto en esa rama. Arreglo real
+        // del hueco que este mismo comentario documentaba hasta hoy ("FaceHead se compone ENCIMA
+        // de la piel en vez de reemplazarla") - ver
+        // PlayerPreviewRendererAccessoriesTests.FaceHeadReal_SustituyeLaPielBase_NoLaSuperpone.
+        if (accessories?.FaceHeadFile is { } faceHeadFile)
+        {
+            DrawAccessory(faceHeadFile, accessories?.FaceHeadDye);
+        }
+        else
+        {
+            Composite(canvas, LoadFrame0("body0", "head"), colors.Skin);
+            Composite(canvas, LoadFrame0("body0", "eyewhites"), null); // ya blanco en el sprite real
+            Composite(canvas, LoadFrame0("body0", "eyes"), colors.Eyes);
 
-        // GapAnalysis Encargo J (25-sep-2026): Yoraiz0r Darkness (item.type==3581), justo despues
-        // de la piel base de la cabeza - PlayerDrawLayers.cs:2626-2632 real
-        // (DrawPlayer_21_Head_TheFace, rama sin faceHead puesto): "drawData = new
-        // DrawData(TextureAssets.Extra[67].Value, ..., drawinfo.colorHead, ...); drawData.shader =
-        // drawinfo.skinDyePacked;" - tenido con el MISMO color que la piel base (colorHead, aqui
-        // colors.Skin), NO con un dye de accesorio propio (ver el comentario real completo de
-        // EquippedAccessories - por eso no hay un campo "Yoraiz0rDarknessDye" separado). Frame0
-        // unico (sin animar), misma convencion que HeadBackFile/BeardFile mas abajo.
-        if (accessories?.Yoraiz0rDarknessFile is { } yoraiz0rDarknessFile)
-            Composite(canvas, LoadFrame0Absolute(yoraiz0rDarknessFile), colors.Skin);
-
-        // GapAnalysis Encargo F (25-sep-2026): FaceHead (item.faceSlot clasificado en
-        // ArmorIDs.Face.Sets.DrawInFaceHeadLayer, ver FaceAccessoryLayerTable) se dibuja DENTRO
-        // de la cabeza, ANTES del pelo/casco - PlayerDrawLayers.cs real,
-        // DrawPlayer_21_Head_TheFace (llamada al PRINCIPIO de DrawPlayer_21_Head, linea 2098,
-        // rama "faceHead>0" en 2592-2596). Usa la MISMA tira 40x(56*N) que el resto de tipos de
-        // accesorio (TextureAssets.AccFace, `drawinfo.drawPlayer.bodyFrame` como rectangulo de
-        // origen) - DrawAccessory reutilizado sin logica nueva. ALCANCE DELIBERADO: el juego real
-        // SUSTITUYE la piel base de la cabeza por este sprite en esa rama (NO dibuja
-        // TextureAssets.Players[skinVar,0]) - este renderer no reproduce esa sustitucion (la piel
-        // base de arriba se dibuja siempre, capa ya existente antes de este encargo), asi que
-        // FaceHead se compone ENCIMA de la piel en vez de reemplazarla; hueco real, documentado,
-        // no oculto (mismo criterio que el resto de "ALCANCE DELIBERADO" de esta clase).
-        DrawAccessory(accessories?.FaceHeadFile, accessories?.FaceHeadDye);
+            // GapAnalysis Encargo J (25-sep-2026): Yoraiz0r Darkness (item.type==3581), justo
+            // despues de la piel base de la cabeza - PlayerDrawLayers.cs:2626-2632 real, DENTRO de
+            // la MISMA rama sin faceHead (confirmado arriba: con faceHead>0 nunca se llega aqui,
+            // exactamente como en el juego real): "drawData = new DrawData(TextureAssets.
+            // Extra[67].Value, ..., drawinfo.colorHead, ...); drawData.shader =
+            // drawinfo.skinDyePacked;" - tenido con el MISMO color que la piel base (colorHead,
+            // aqui colors.Skin), NO con un dye de accesorio propio (ver el comentario real
+            // completo de EquippedAccessories - por eso no hay un campo "Yoraiz0rDarknessDye"
+            // separado). Frame0 unico (sin animar), misma convencion que HeadBackFile/BeardFile
+            // mas abajo.
+            if (accessories?.Yoraiz0rDarknessFile is { } yoraiz0rDarknessFile)
+                Composite(canvas, LoadFrame0Absolute(yoraiz0rDarknessFile), colors.Skin);
+        }
 
         // Face bajo el pelo: excepcion real ArmorIDs.Face.Sets.DrawInFaceUnderHairLayer (unico
         // caso real, faceSlot=5/Blindfold) - PlayerDrawLayers.cs real,
