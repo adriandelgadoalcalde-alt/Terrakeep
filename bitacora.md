@@ -25256,3 +25256,116 @@ sitios documentados arriba (líneas 2762-2794, 3856-3870, 5162-5194, 5563-5580, 
 7419-7500) - ninguna colisión con el agente hermano que trabaja en paralelo sobre la zona
 estructural de Exploración del mismo fichero (Fase B/C de Browse/Inspector, ver la entrada
 inmediatamente anterior de esta bitácora). Sin `git push`.
+
+### ExploracionRediseno Fase C - separar Browse/Inspector en el XAML (SidebarMode), 25-sep-2026
+
+Encargo del coordinador (patrón de 2 fases, rol aplicador-fix) - Fase C del rediseño estructural de
+la pestaña Exploración (8 fases, "ExploracionRediseno FaseA"). Diseño ya aprobado por el
+arquitecto, confirmado antes de tocar nada con `Read`/`Grep` sobre el árbol real (los números de
+línea del encargo se habían desplazado desde el gap analysis - re-localizados aquí).
+
+**Arreglo real aplicado**, exactamente según el diseño aprobado:
+- `Terrakeep.App/Converters/VisibilityConverters.cs`: converter nuevo
+  `EnumEqualsToVisibilityConverter` - gemelo de `EnumEqualsConverter` ya existente (usado por las
+  RadioButton de categoría) pero devolviendo `Visibility` en vez de `bool`. Confirmado con Grep
+  antes de crearlo que no existía ya ningún converter enum->Visibility en el proyecto - no se
+  reutiliza `EnumEqualsConverter` tal cual porque encadenar dos converters no es nativo en un
+  Binding simple de WPF (haría falta un `MultiBinding` solo para esto).
+- `Terrakeep.App/App.xaml`: registrado como `EnumEqualsToVis` (mismo patrón `x:Key` que el resto
+  de converters de la app).
+- `Terrakeep.App/MainWindow.xaml:7092` (número real, desplazado desde el ~7027 del gap analysis):
+  el contenido de Browse (WrapPanel de categorías, buscador, separador de 1px, y el Grid de reparto
+  categoría/resultados con `ExplorationResultsBlock` + `ExplorationCategoryContent`) se envuelve tal
+  cual, SIN reescribir su lógica interna, dentro de un `DockPanel x:Name="ExplorationSidebarBrowseContent"`
+  con `Visibility` condicionada a `Exploration.SidebarMode==Browse` (vía `EnumEqualsToVis`) - un
+  nivel más anidado, mismo `DockPanel.Dock="Top"` que ya usaban WrapPanel/TextBox/Border, y el Grid
+  de reparto sigue siendo el último hijo con fill implícito. Ese `DockPanel` y su hermano
+  (placeholder) viven dentro de un `Grid x:Name="ExplorationSidebarBrowseInspectorHost"` nuevo, que
+  es ahora el último hijo real de `ExplorationSidebarPanel` (reemplaza el rol de fill que antes
+  tenía el Grid de reparto directamente). Los 3 Expanders de "Mundo" (Este mundo/Editar mundo/
+  Bestiario, líneas 6817-7090) se quedan FUERA de este Grid, tal como pedía el encargo - sin
+  condicionar todavía, visibles siempre en Browse hasta que Fase F los mueva a un modo World propio.
+- Placeholder temporal de `ChestInspector`: `Grid x:Name="ExplorationSidebarChestInspectorPlaceholder"`,
+  hermano del `DockPanel` de Browse dentro del mismo host, con `Visibility` condicionada a
+  `SidebarMode==ChestInspector` y un único `TextBlock` con clave de idioma real
+  `explore_inspector_placeholder` (añadida a `Assets/strings_en.json`/`strings_es.json`, patrón
+  bilingüe real de la app, nunca texto fijo) - temporal, Fase D lo rellena con el editor real movido
+  desde `ChestRowTemplate`.
+
+**Verificación real** (canario nuevo, extiende `Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`,
+bloque `COFRES-INSPECTOR-FASEC*`, corre dentro de `COFRES_INSPECTOR_SOLO=1`, guardia de entrada
+gráfica de KeepQA confirmada en verde antes - 641s/710s de inactividad real en dos pasadas): con
+`SidebarMode=Browse` (estado inicial), `ExplorationSidebarBrowseContent.Visibility=Visible` y el
+placeholder `Collapsed`, con el WrapPanel de categorías y `ExplorationCategoryContent` realmente
+`IsVisible` dentro del envoltorio nuevo. Capturas reales (`RenderTargetBitmap`) de las 4 categorías
+pedidas por el encargo (Cofres/Minerales/Objetos/NPCs) en Browse, revisadas a ojo - contenido
+idéntico al de antes de este cambio (mapa+cabecera+pildoras+lista, sin ningún hueco ni recorte
+nuevo), tal como se esperaba de un cambio puramente de contenedor. Abrir un cofre real (ruta 1,
+`EditChestCommand`) deja `SidebarMode=ChestInspector`, `BrowseContent.Visibility=Collapsed` y el
+placeholder `Visible` con su texto real (`'Editor de cofre (marcador temporal - llega en la próxima
+fase)'`) - captura real confirma que el editor incrustado de `ChestRowTemplate` YA NO se ve (vive
+dentro del `DockPanel` de Browse, ahora colapsado) - comportamiento ESPERADO de esta fase, no una
+regresión, documentado también en el propio comentario del XAML. `CancelEditingChestCommand` vuelve
+a dejar `SidebarMode=Browse` y el placeholder `Collapsed`. Ejecutado de verdad
+(`dotnet Terrakeep.App.Tests.dll` con la variable puesta, sin `dotnet run` por velocidad): 0
+`FALLO`/`EXCEPTION` en todo el log, incluidos los puntos P1/P2/P3/FASEB previos del mismo canario.
+
+**Regresión geométrica real** (no había canario nuevo que midiera "pixel-idéntico" en px reales, así
+que se reutilizó la prueba real equivalente ya existente): `FALLO3_SOLO=1` (investigación dedicada
+de AR-EX1/Fallo-3, mide en vivo el alto real de `ExplorationCategoryContent`/`ExplorationResultsBlock`
+y si Cofres/Minerales/Objetos siguen mostrando al menos una fila entera, a 3 tamaños de ventana
+reales incluido el mínimo 1080x700) - ejecutado tras el cambio de esta fase: 0 `FALLO`, mismas cifras
+ya documentadas en la investigación original (230-245px de contenido de categoría, 267-286px de
+bloque de resultados según el ancho del sidebar) - confirma que el `Grid`+`DockPanel` nuevos (sin
+margen/padding propios) no movieron ni un píxel real del contenido de Browse.
+
+**Build y regresión**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores.
+`dotnet test Terrakeep.Core.Tests -c Release --no-build`: 732/732 (mismo baseline que Fase B,
+incluye `ContenidoBilingueRealTests` validando que las 2 claves de idioma nuevas existen en ambos
+idiomas). `dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build`: 711/711 (3m27s, mismo
+baseline que Fase B).
+
+**Incidente real durante la verificación, ya resuelto por un agente hermano**: la primera ejecución
+del canario reventó con `XamlParseException` ("No se puede encontrar el recurso EnumEqualsToVis")
+al montar `MainWindow` - el arnés de pruebas (`Program.cs`) NO carga `App.xaml`, replica a mano su
+registro de recursos (patrón "H4-01" ya documentado: construye una `Application` en blanco y añade
+cada converter uno a uno). El agente hermano de Fase G ("Comparar a vista amplia"), que comparte el
+mismo árbol de trabajo y se topó con el mismo bloqueo al intentar montar su propia ventana, ya había
+añadido el registro que faltaba (`Program.cs:120`, mismo nombre de clase real) antes de que se
+repitiera la ejecución aquí - sin necesidad de tocarlo. Dejado sin comitear en este encargo (no es
+un fichero mío, lo comiteará ese agente).
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` instalado NO estaba en ejecución
+(confirmado con `Get-CimInstance Win32_Process`, sin resultados). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde. Sanidad de
+`Assets/` ANTES del `/MIR`: publish = 13055 ficheros (origen `Terrakeep.App/Assets` = 13056, misma
+diferencia de 1 ya documentada y ajena a este encargo), instalado ANTES de copiar = 13055 - sin
+discrepancia (este encargo no añade ningún Asset nuevo, solo 2 claves de idioma dentro de JSON ya
+existentes), `/MIR` seguro. `robocopy ... //MIR //XF unins000.exe unins000.dat` (con `//` para que
+Git Bash no reinterprete la ruta - `/MIR` a secas falló una vez con "parámetro no válido #3" por esa
+razón, corregido en el acto) a `C:\Users\adrian\AppData\Local\Programs\Terrakeep\`: 3 archivos
+copiados (`Terrakeep.exe` + los 2 JSON de idioma), 13058 omitidos (ya idénticos), 0 errores.
+Confirmado con `grep` que la copia instalada de `strings_es.json`/`strings_en.json` ya tiene la
+clave nueva. Relanzado el `.exe` instalado (PID real, `Responding=True`) y cerrado limpio con
+`Stop-Process`.
+
+**Commit real** `99c9cbbd`: `Terrakeep.App/Converters/VisibilityConverters.cs`,
+`Terrakeep.App/App.xaml`, `Terrakeep.App/Assets/strings_en.json`, `Terrakeep.App/Assets/strings_es.json`,
+`Terrakeep.App/MainWindow.xaml` (parcial, ver abajo), `Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`.
+El árbol de trabajo tenía numerosos ficheros ajenos modificados por otros agentes en paralelo
+(`Terrakeep.App.Tests/Program.cs`/`AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`,
+`Terrakeep.App/MainWindow.xaml.cs`, `Terrakeep.App/ViewModels/ExplorationViewModel.cs`, varios
+`Terrakeep.Core.Tests/**`, etc.) - ninguno se añadió al stage, `git add` con rutas explícitas, nunca
+`-A`. Caso especial real: `MainWindow.xaml` tenía 3 hunks de diff, uno 100% mío (apertura del
+envoltorio, línea 7092), uno 100% del agente de Fase G (su nuevo `Border` de vista amplia del
+comparador, ~línea 8071, sin tocar) y uno MIXTO (la región donde Fase G eliminó el bloque "Comparar"
+que antes vivía dentro de Browse justo al lado de donde yo cerraba mi envoltorio - textualmente
+inseparable en un único hunk de `git diff`, confirmado con `git diff -U3` línea a línea). Resuelto
+con `git add -p`: el hunk 100% mío y el hunk mixto se stagearon (`y`/`y` - el mixto incluye la
+eliminación de Fase G porque es literalmente imposible separarla de mi cierre de `DockPanel` con
+granularidad de línea, ya verificado en build+test+canario que el resultado combinado es correcto),
+el hunk 100% de Fase G se dejó sin stagear (`n`) para que lo comitee ese agente. Sin `git push`.
+
+**Fase C queda lista para Fase D** (mover el editor de cofre real al placeholder) y no pisa el
+trabajo de Fase G (su hunk de vista amplia del comparador se dejó intacto y sin comitear, para que
+lo integre ese agente).
