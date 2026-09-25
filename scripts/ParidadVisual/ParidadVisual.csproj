@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ParidadPersonaje Fase0 (25-sep-2026): arnes de comparacion visual pixel-real, lado
+       "terrakeep" del par vanilla.png/terrakeep.png/diff.png. Consola independiente (NO parte del
+       .sln principal de produccion) que referencia Terrakeep.App directamente para reutilizar el
+       pipeline REAL sin duplicar logica: EquipmentAppearanceResolver.Resolve/ResolveAccessories +
+       PlayerPreviewRenderer.Render, el mismo camino exacto que usa CharacterListEntryViewModel.cs
+       para la tarjeta de personaje de Inicio. Ver bitacora.md "ParidadPersonaje Fase0" para el
+       diseno completo y scripts/ParidadVisual/README.md para el modo de uso. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>ParidadVisual</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Terrakeep.App\Terrakeep.App.csproj" />
+  </ItemGroup>
+
+</Project>

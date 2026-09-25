@@ -22688,6 +22688,99 @@ agente en su entrada de bitacora justo arriba, no oculto.
   jefe reales - "Llamarlo tú, en vez de esperarlo" (PreOjo/InvocarElOjo, jefe=4 Ojo de Cthulhu,
   EXPLICITAMENTE el caso de tira animada pedido), "Derrotarlo (opcional)" de Rey Slime (jefe=50) y
   de Deerclops (jefe=668, hoja en rejilla), "Derrotarla (opcional)" de Reina Abeja (jefe=222) y
+
+## ParidadPersonaje Fase0: arnes de comparacion visual pixel-real vs Terraria 1.4.5.8 real +
+## Caso 1 resuelto (aplicador-fix, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d) (25-sep-2026)
+
+Encargo del coordinador: construir el arnes de comparacion visual pixel-real (Fase0, BLOQUEANTE
+para el resto de fases de ParidadPersonaje segun `ParidadPersonaje-Investigacion(arquitecto-keep
+aab15032)`) y resolver con certeza el Caso 1 (personaje base sin nada puesto, el "misterio del
+suelo": INCONCLUSIVE en la investigacion previa entre "arte original del pie descalzo" vs "bug de
+extraccion de shoes.png recortado corto"). Detalle completo, con todas las imagenes de evidencia,
+en `scripts/ParidadVisual/README.md` - aqui solo el resumen real.
+
+**Arnes construido** (`scripts/ParidadVisual/`, proyecto NUEVO fuera de `Terrakeep.slnx`, no
+toca codigo de produccion):
+- `ParidadVisual.csproj`/`Program.cs` (consola .NET 10, referencia `Terrakeep.App.csproj`):
+  `renderizar <plr> <png>` genera el lado "terrakeep" reutilizando el pipeline REAL de
+  produccion (`EquipmentAppearanceResolver.Resolve`/`ResolveAccessories` +
+  `PlayerPreviewRenderer.Render`, transcripcion 1:1 de
+  `CharacterListEntryViewModel.cs:221-251`, la MISMA tarjeta de Inicio) - sin duplicar logica.
+  `preparar-caso <plantilla> <destino> --nombre <n> [--limpiar]` deriva un `.plr` nuevo de una
+  plantilla real - ver el hallazgo real de abajo sobre su limitacion.
+- `capturar_vanilla.py` (Python 3.14 + pywinauto 0.6.9 + pywin32 + Pillow, ya presentes en esta
+  maquina): clase `SesionTerraria` - backup/restore real de `config.json` del usuario (nunca
+  queda modificado, ni con fallos a medias), lanza Terraria real en ventana 1280x720/UIScale=1.0
+  deterministica, navega menus con `win32api.mouse_event` de bajo nivel (ver hallazgo abajo) y
+  vuelca la ventana con `PIL.ImageGrab`. `recortar_bbox_personaje` aisla el personaje del fondo
+  del panel por heuristica de color.
+
+**Hallazgo real no anticipado (fuera de alcance de esta fase, documentado para un encargo
+futuro)**: `pywinauto.mouse.click`/`w.click_input` NO son recogidos por la ventana real de
+Terraria (XNA/FNA) - el clic se registra como hover pero nunca como "press" (confirmado con
+capturas sucesivas identicas). Arreglo real: `win32api.SetCursorPos` + `mouse_event` de bajo
+nivel SI funciona. Ademas, `win32gui.SetForegroundWindow` puede fallar con
+`pywintypes.error "No error message is available"` justo tras lanzar el proceso (bloqueo de
+foco de primer plano de Windows) - resuelto con un toque de ALT sintetico
+(`keybd_event(VK_MENU,...)`) + `BringWindowToTop`/`ShowWindow` antes de reintentar
+(`SesionTerraria._foreground`).
+
+**Segundo hallazgo real, mas importante (bug de PRODUCCION real, fuera de alcance de esta fase,
+NO arreglado aqui)**: `ParidadVisual.exe preparar-caso` reutiliza `Terrakeep.Core.PlrFormat.
+PlrFile.Write` (el mismo escritor que usa `CharacterFileService.Save` en produccion). El `.plr`
+que produce vuelve a leerlo bien el propio Terrakeep (`PlrFile.VerifyRoundTrip` en verde), pero
+**el juego real lo rechaza** - aparece en la lista de personajes como `(UnknownError) <nombre>`
+y el juego sustituye TODA la apariencia por la de un `Player` nuevo por defecto (confirmado
+leyendo `Player.cs:55716-55792` real, `LoadPlayer`: cualquier excepcion durante `Deserialize`
+hace `catch {} player2 = new Player(); loadStatus = UnknownError`). Reproducido incluso con una
+copia CASI IDENTICA de un `.plr` real que SI carga (`Eldelgas.plr`, solo el nombre cambiado) -
+descarta que sea el flag `--limpiar`. Se investigo y DESCARTO la hipotesis de padding AES (el
+decompilado real confirma que `SavePlayer` cifra con PKCS7 por defecto, igual que
+`PlrCrypto`, y que `LoadPlayer` solo fija `PaddingMode.None` en el DESCIFRADO para no perder los
+bytes de relleno finales - no puede romper una lectura a mitad del archivo). La causa real esta
+en otro punto de `PlrBodySerializer` para `Version=326`, no identificado - **recomendado como
+encargo propio para un agente futuro** (afecta potencialmente a `CharacterFileService.Save` en
+produccion, aunque el uso normal de la app lleva meses funcionando sin que el usuario reportara
+esto, por lo que el disparador real puede ser mas sutil que "cualquier guardado"). Mientras
+tanto, el lado vanilla de cualquier caso se genera con el propio juego (`crear_personaje_nuevo`
+o equipar a mano en una partida real), nunca con `preparar-caso`.
+
+**Caso 1 (personaje base, nada equipado) - VEREDICTO: fiel a vanilla, NO es bug de extraccion**.
+Evidencia completa en `scripts/ParidadVisual/capturas/caso01/` (`evidencia_captura_juego_real.png`
++ `vanilla.png`/`terrakeep.png`/`diff.png` + inspeccion directa de los sprites fuente
+`shoes.png`/`pants.png`/`legskin.png` de `body0`, sin pasar por renderer ni captura de pantalla).
+`shoes.png` real es una silueta de 2 pies separados por un hueco (confirmado con el `.plr`
+`ZZCaso1Real.plr`, creado con el "Nuevo" REAL del juego para evitar el bug de escritura de
+arriba). `pants.png`/`legskin.png` comparten la misma base ancha en su fila inferior (mas ancha
+que `shoes.png`) - frame0 y frame1 de la tira animada son PIXEL IDENTICOS (descarta sangrado
+entre fotogramas). La sensacion de "suelo"/barra ancha viene de que esa base de
+`pants`/`legskin` (dibujada DEBAJO de `shoes`, orden real ya correcto en
+`PlayerPreviewRenderer.cs`) asoma a los lados del hueco entre los 2 pies de `shoes` - presente
+en AMBOS lados (captura real del juego Y render de Terrakeep), no exclusivo de Terrakeep. Limite
+real: no se consiguio un `diff.png` cuantitativo con el fondo perfectamente normalizado (panel
+real con degradado/antialiasing de pantalla vs canvas transparente de bordes nitidos de
+`PlayerPreviewRenderer`) - la evidencia decisiva es la comparacion visual directa + la
+inspeccion de sprites fuente, documentada con las imagenes reales, no un numero AE en bruto.
+
+**Casos 2-18**: no completados por tiempo (Fase0 es infraestructura - prioridad real ya cumplida:
+mecanismo funcionando + Caso 1 resuelto con certeza). El mecanismo es reutilizable tal cual para
+el resto (ver README.md de la carpeta, seccion "Casos 2-18").
+
+**Build**: `dotnet build Terrakeep.slnx -c Release` (proyecto de produccion completo, sin tocar):
+0 advertencias, 0 errores - `ParidadVisual.csproj` no forma parte del `.slnx`, no puede
+regresionarlo. `dotnet build scripts/ParidadVisual/ParidadVisual.csproj -c Release`: 0/0 tambien.
+No aplica ningun canario/test nuevo de produccion (esta fase no toca codigo de produccion) - la
+"prueba" real es la evidencia de imagenes generada con el pipeline de produccion real
+(`PlayerPreviewRenderer.Render` sin modificar) + el juego real sin modificar.
+
+**Limpieza real**: `config.json`/Players/ REALES del usuario restaurados a su estado original
+tras cada sesion de captura (`ZZKeepQAParidadCaso1.plr`/`ZZKeepQATestCopia.plr`/`ZZCaso1Real.plr`
+borrados de `Documents\My Games\Terraria\Players\` al terminar - confirmado el listado final
+identico al inicial, 12 ficheros). Terraria.exe no quedo en ejecucion.
+
+**Commit real**: solo `scripts/ParidadVisual/` (csproj/Program.cs/capturar_vanilla.py/README.md/
+capturas/caso01/*.png) + esta entrada de bitacora. Sin tocar ningun fichero de produccion. Sin
+`git push`.
   "Derrotarla" de Plantera (jefe=262, tramo obligatorio) - reutilizan tal cual el bucle generico ya
   existente (icono no nulo, fichero real en disco, `Expander` real, `BringIntoView()`, medicion de
   recorte/overflow EJE A EJE, captura individual). Ademas una captura nueva del banner "Tu objetivo
