@@ -189,4 +189,28 @@ public class PlayerBodyDrawTablesTests
         Assert.Equal(239, PlayerBodyDrawTables.GetMatchingBodyExtensionBack(251));
         Assert.Null(PlayerBodyDrawTables.GetMatchingBodyExtensionBack(200));
     }
+
+    // ---- HeadFrontToBackID (ArmorIDs.cs:14 - GapAnalysis Encargo B, 25-sep-2026) ----
+
+    [Theory]
+    [InlineData(242, 246)] // DogEars -> DogEarsBack
+    [InlineData(243, 247)] // FoxEars -> FoxEarsBack
+    [InlineData(244, 248)] // LizardEars -> LizardEarsBack
+    [InlineData(245, 249)] // PandaEars -> PandaEarsBack
+    [InlineData(133, 252)] // CatEars -> CatEarsBack
+    [InlineData(224, 253)] // BunnyEars -> BunnyEarsBack
+    public void HeadFrontToBackID_Los6CascosRealesConEntrada(int head, int esperado)
+    {
+        Assert.Equal(esperado, PlayerBodyDrawTables.HeadFrontToBackID(head));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)] // Casco de cobre, headSlot real usado en EquipmentAppearanceResolverTests
+    [InlineData(89)]
+    [InlineData(201)] // el unico headSlot con entrada real en SetMatchHead - tabla distinta, sin FrontToBackID
+    public void HeadFrontToBackID_CascoSinEntradaReal_DevuelveNull(int head)
+    {
+        Assert.Null(PlayerBodyDrawTables.HeadFrontToBackID(head));
+    }
 }

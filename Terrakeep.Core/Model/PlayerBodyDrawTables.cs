@@ -144,4 +144,24 @@ public static class PlayerBodyDrawTables
     // en reposo (solo se usa para la capa trasera de un abrigo largo con animacion), se deja
     // aqui documentado por si se necesita en el futuro, no consumido todavia.
     public static int? GetMatchingBodyExtensionBack(int body) => body == 251 ? 239 : null;
+
+    // GapAnalysis Encargo B (25-sep-2026): Terraria.ID.ArmorIDs.Head.Sets.FrontToBackID
+    // (ArmorIDs.cs:14 del decompilado real: "Factory.CreateIntSet(-1, 242, 246, 243, 247, 244,
+    // 248, 245, 249, 133, 252, 224, 253)" - SetFactory.CreateIntSet(defaultState, pares...),
+    // transcripcion literal). HeadBack NO es un item independiente - se DERIVA del headSlot YA
+    // resuelto (el mismo casco que ya se dibuja para la capa Head), dibujado en
+    // DrawPlayer_01_3_BackHead (PlayerDrawLayers.cs:319-337 real: "int num =
+    // ArmorIDs.Head.Sets.FrontToBackID[drawinfo.drawPlayer.head]; if (num >= 0) ..."). Solo 6
+    // cascos reales tienen entrada - las 6 variantes de "orejas" del juego (el resto de cascos
+    // devuelve null, sin capa "de espaldas" real, fiel al -1 por defecto de la tabla real).
+    public static int? HeadFrontToBackID(int head) => head switch
+    {
+        242 => 246, // DogEars -> DogEarsBack
+        243 => 247, // FoxEars -> FoxEarsBack
+        244 => 248, // LizardEars -> LizardEarsBack
+        245 => 249, // PandaEars -> PandaEarsBack
+        133 => 252, // CatEars -> CatEarsBack
+        224 => 253, // BunnyEars -> BunnyEarsBack
+        _ => null,
+    };
 }

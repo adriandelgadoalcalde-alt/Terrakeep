@@ -37,6 +37,14 @@ const LEGS_SINTETICOS_SET_MATCH_LEGS = [117, 120, 135, 137, 147, 155, 157, 179, 
 const LEGS_SINTETICOS_BODY_EXTENSION = [149, 150, 151, 160, 161, 162, 163, 164, 169, 170, 171,
   172, 173, 174, 175, 176, 177, 178, 181, 182, 186, 195, 200, 201, 206, 221, 223, 238, 239];
 const HEAD_SINTETICOS_SET_MATCH = [202];
+// GapAnalysis Encargo B (25-sep-2026): ArmorIDs.Head.Sets.FrontToBackID (ArmorIDs.cs:14 del
+// decompilado real) - los 6 ids "de espaldas" reales (DogEarsBack/FoxEarsBack/LizardEarsBack/
+// PandaEarsBack/CatEarsBack/BunnyEarsBack), derivados de un headSlot ya resuelto (242/243/244/
+// 245/133/224) pero SIN item propio que los use como headSlot "de frente" - por eso no salian
+// nunca de vanilla_armor_slots.json y faltaban en el catalogo antes de este encargo (confirmado
+// con un barrido real: Armor_Head_{246,247,248,249,252,253}.xnb SI existen en la instalacion
+// real de Steam, ver PlayerBodyDrawTables.HeadFrontToBackID para la tabla completa).
+const HEAD_SINTETICOS_FRONT_TO_BACK = [246, 247, 248, 249, 252, 253];
 
 // Uso: node scripts/extraer-sprites-armadura-vanilla.js
 // Salida: Terrakeep.App/Assets/player/armor_head/{id}.png (40x56, frame0, sin cambios),
@@ -99,6 +107,7 @@ for (const entry of Object.values(slots)) {
 
 const antesHead = headIds.size, antesLegs = legIds.size;
 for (const id of HEAD_SINTETICOS_SET_MATCH) headIds.add(id);
+for (const id of HEAD_SINTETICOS_FRONT_TO_BACK) headIds.add(id);
 for (const id of [...LEGS_SINTETICOS_SET_MATCH_BODY, ...LEGS_SINTETICOS_SET_MATCH_LEGS, ...LEGS_SINTETICOS_BODY_EXTENSION]) legIds.add(id);
 
 console.log(`ids unicos referenciados: head=${headIds.size} (${headIds.size - antesHead} sinteticos de SetMatch) body=${bodyIds.size} legs=${legIds.size} (${legIds.size - antesLegs} sinteticos de SetMatch/GetMatchingBodyExtension)`);
