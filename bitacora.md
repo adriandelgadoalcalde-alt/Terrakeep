@@ -23936,3 +23936,159 @@ diff --stat` antes de `git add` que cada fichero staged coincidia EXACTAMENTE co
 reales, sin contenido ajeno intercalado. Esta nota de bitacora se deja SIN comitear en este commit
 (mismo motivo que las 2 entradas justo arriba: el archivo tiene trabajo en paralelo de otros
 agentes en otras secciones que aun no han comiteado). Sin `git push`.
+
+## GapAnalysis Encargo G (25-sep-2026): canal Beard real (item.beardSlot), tinte de color de
+pelo real para los "Wilson beards"
+
+Encargo del coordinador (hallazgo YA investigado por arquitecto-keep): `item.beardSlot`
+(`Player.cs:37243-37246`, `"if (item.beardSlot > 0) beard = item.beardSlot;"`) se dibuja DENTRO
+de la capa `Head`, justo despues de casco/pelo (`PlayerDrawLayers.cs:2428-2444` real, confirmado
+linea a linea contra el decompilado antes de tocar nada) - 10º canal de accesorio real, mismo
+patron generico ya establecido para Waist/Neck/Face/Balloon/Shoes desde PortSeleccion Encargo1.
+
+**Tabla real transcrita** (`ArmorIDs.cs:26`, `Head.Sets.PreventBeardDraw`): 47 headSlot reales
+que ocultan la barba (cascos/mascaras completos) - `PlayerBodyDrawTables.PreventBeardDraw`,
+consultada en `PlayerPreviewRenderer.Render` via `armor.HeadSlot` (headSlot desconocido, pieza de
+Calamity o sin casco, NUNCA oculta la barba, mismo criterio real "head<0 deja pasar").
+
+**Detalle especial del tinte, confirmado en el decompilado antes de implementar nada**
+(`PlayerDrawLayers.cs:2436-2440`): `"Color color6 = drawinfo.colorArmorHead; if
+(ArmorIDs.Beard.Sets.UseHairColor[beard]) color6 = drawinfo.colorHair;"` - `ArmorIDs.cs:2321`,
+`Beard.Sets.UseHairColor = Factory.CreateBoolSet(false, 2, 3, 4)` (los 3 "Wilson beards", grises
+en su textura real) se tinen con el COLOR DE PELO REAL del personaje (`colors.Hair`), NO con un
+dye de armadura; GingerBeard (id 1, textura ya naranja de por si) usa `colorArmorHead`, que en
+este doll de reposo sin buffs/dyes equivale a blanco puro (sin tinte añadido, confirmado
+`PlayerDrawSet.cs:451/1531/1554`). Decision tomada con criterio (parte explicita de la mision):
+aplicar el color de pelo REAL ya disponible en `PlayerColors.Hair` ahora mismo en el propio canal
+Beard (no es el pipeline de dyes por canal completo del Encargo I aparte, es un dato ya presente
+y una regla propia de este canal) - `PlayerBodyDrawTables.BeardUsesHairColor(beardId)` decide el
+tinte (`colors.Hair` vs `null`) en `PlayerPreviewRenderer.Render`.
+
+**Extraccion de sprite - hacia falta de verdad, no asuncion**: `Assets/player/acc_beard/`
+NO existia (confirmado con `ls` antes de suponer nada). `TextureAssets.AccBeard` real
+(`AssetInitializer.cs:536-538`, `"Images/Acc_Beard_" + n`) - 4 `.xnb` reales confirmados en la
+instalacion de Steam (`Acc_Beard_1..4.xnb`, 642-916 bytes cada uno). Ampliado
+`scripts/extraer-sprites-accesorios-vanilla.js` con el 10º tipo (`bd`/`Acc_Beard_`/`acc_beard`,
+mismo patron exacto que los otros 9) - **4 sprites reales extraidos**, 0 faltantes.
+
+**Tabla real de item->beardSlot, con un hallazgo real sobre el escaner generico existente**:
+EXACTAMENTE 4 objetos vanilla reales en TODO el juego declaran `beardSlot` (GingerBeard=2501->1,
+WilsonBeardShort=5104->2, WilsonBeardLong=5105->3, WilsonBeardMagnificent=5106->4 - los mismos 4
+ids que `ArmorIDs.Beard.Count=5` con el 0="sin barba"). Al anadir el regex `beardSlot` al escaner
+generico de `scripts/extraer-slots-accesorios-vanilla.py` (split_by_case, ya usado para los otros
+9 campos) y EJECUTARLO antes de dar nada por bueno, el resultado real fue **mal atribuido**: el
+bloque de `case 2501` vive dentro de un `default: switch (type) { ... }` ANIDADO
+(`Item.cs:25833-45608`, mismo nivel que `headSlot=157` del id 2199) - `split_by_case` solo
+reconoce `case N:` a profundidad 1 relativa al PRIMER switch, asi que el bloque entero del switch
+anidado (incluido `beardSlot=1`) quedo "colgando" del ULTIMO case de profundidad 1 anterior (id
+2191, un objeto totalmente distinto) - confirmado empiricamente con el regex activo: el escaner
+atribuia `beardSlot=1` a id 2191, NUNCA a 2501. Ademas, los ids 5104/5105/5106 comparten un solo
+bloque por fallthrough (`"case 5104: case 5105: case 5106: ... beardSlot = (sbyte)(2 + (type -
+5104)); ..."`, `Item.cs:45527-45538`) - `split_by_case` solo asocia el bloque real al ULTIMO case
+de la cadena (5106), y aunque se asociara bien el valor no es un literal (`\d+` nunca lo
+captura). Con solo 4 objetos reales y el valor confirmado a mano contra el `.cs` decompilado, se
+descarto el regex generico para este campo y se transcribieron los 4 a mano en `BEARD_MANUAL`
+(justificacion completa citada en el propio script) - **spot-check de los 4 en verde** tras
+ejecutar el escaner corregido (`2501->{"bd":1}`, `5104->{"bd":2}`, `5105->{"bd":3}`,
+`5106->{"bd":4}`, `2191` vuelve a quedarse SOLO con `ho/hf/sh`, sin `bd` fantasma).
+
+**Cobertura Calamity confirmada, no asumida**: `grep -rn "AutoloadEquip" CalamityMod | grep -i
+beard` = 0 resultados; la unica coincidencia real de "EquipType.Beard" en todo el decompilado
+(`TransformationPlayer.cs:180/204`) es plumbing generico del motor (un `switch`/expresion que
+maneja TODOS los `EquipType` posibles), no un item real declarandolo via `AutoloadEquip` - 0
+items reales de Calamity usan el canal Beard, coincide con lo ya documentado en la cabecera de
+`scripts/extraer-slot-armadura-calamity.js` ("Wings/Front/Beard... 0 items reales"). `BeardSlot`
+se queda a `null` para Calamity, `calamitySuffix="Beard"` nunca hace match - mismo criterio ya
+establecido para el resto de canales, sin cambios en ese script (no hacia falta ningun dato
+nuevo).
+
+**Implementacion real**: `EquippedAccessories.BeardFile/BeardSlot` +
+`ResolveAccessories`/`ResolveAccessorySprite("Beard", e => e.Beard, "acc_beard")`
+(`EquipmentAppearanceResolver.cs`, mismo patron generico que Waist/Neck/Face) -
+`VanillaAccessorySlotEntry.Beard` (`"bd"`, `VanillaAccessorySlotCatalog.cs`). Capa nueva en
+`PlayerPreviewRenderer.Render`, justo despues de `if (fullHair) { DrawHelmet(); DrawHair(); }
+else { DrawHair(); DrawHelmet(); }` y ANTES de `DrawAccessory(accessories?.FaceFile)` (Paso 9a2
+[21_Beard]) - `LoadFrame0Absolute` (frame0, sin animar, mismo criterio ya establecido para
+Head/HeadBack: la cabeza/pelo/casco de este doll se quedan siempre en su frame de reposo),
+`PreventBeardDraw(armor.HeadSlot)` suprime el dibujado entero si aplica, tinte
+`BeardUsesHairColor(accessories.BeardSlot) ? colors.Hair : null`.
+
+**Capturas reales antes/despues** (test temporal `_TempCapturaBeardEncargoG.cs`, generado,
+ejecutado y BORRADO tras capturar - no es parte de la cobertura permanente): `scratchpad/
+beardG_01_antes_sin_barba.png` (sin barba) vs `beardG_02_despues_ginger.png` (GingerBeard,
+parche naranja visible bajo la cara) vs `beardG_03_despues_wilsonlong_pelocastano.png`
+(WilsonBeardLong, barba larga tenida de castaño, igual que el pelo) vs
+`beardG_04_despues_wilsonlong_peloazul.png` (mismo objeto, pelo forzado a azul - la barba
+TAMBIEN cambia a azul, confirmando visualmente `UseHairColor` de verdad).
+
+**Tests nuevos** (amplian, no sustituyen, la cobertura existente): `PlayerBodyDrawTablesTests`
+(`PreventBeardDraw_IdsRealesDeLaTabla`/`_CascoSinEntradaReal_DevuelveFalse`,
+`BeardUsesHairColor_Los3WilsonBeardsRealesQueUsanColorDePelo`/`_GingerBeardYSinBarba_
+DevuelveFalse` - 6 casos). `EquipmentAppearanceResolverTests`: resolucion real
+(`BeardSlot_GingerBeard_*`, `BeardSlot_WilsonBeardLong_ResuelveElIdRealTranscritoAMano_
+NoElEscanerGenerico` - spot-check directo del hallazgo del escaner), slot vacio,
+`RenderConBeardFileDaUnaImagenDistintaASinEl_AislandoSoloEsaCapa`,
+`RenderConWilsonBeard_CambiaElColorDePeloYElResultadoCambia_UseHairColorReal` +
+`RenderConGingerBeard_CambiarElColorDePeloNoCambiaElResultado_NoUsaHairColor` (aisladas con
+`armor.HeadSlot=1`, que oculta el pelo sin bloquear la barba, para no confundir el cambio de
+color del PELO con el de la BARBA - primer intento de estas 2 pruebas fallo exactamente por esa
+razon, corregido antes de dar nada por bueno),
+`RenderConCascoQuePreventBeardDraw_LaBarbaNoSeDibujaAunqueHayaBeardFile`,
+`CalamityWaist_NuncaResuelveNingunCanalDeBarba_0ItemsRealesDeCalamityDeclaranBeard` - 8 casos.
+14 pruebas nuevas reales en total.
+
+**Build y regresion**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores (con el
+trabajo en paralelo de otros 2 encargos ya presente en el working tree - Face/FaceHead-Mask-
+Flower y Front, ver mas abajo). `dotnet test Terrakeep.Core.Tests -c Release`: 696/696. `dotnet
+test Terrakeep.App.ViewModels.Tests -c Release --filter "FullyQualifiedName~Beard"`: 7/7 (y de
+nuevo 7/7 tras borrar el test temporal de capturas). `dotnet test
+Terrakeep.App.ViewModels.Tests -c Release` COMPLETO: 663/663 - tardo 33m6s por contencion real
+del sistema (23 procesos `dotnet` + 5 `testhost` vivos a la vez, confirmado con
+`Get-Process`, varios encargos en paralelo compilando/testeando al mismo tiempo) - NO fue un
+`testhost.exe` colgado esta vez (el mismo bug ya documentado hoy), simplemente lento por carga
+real de CPU compartida; esperado con `controladorEspera.js` en primer plano hasta el resultado
+real, sin dar nada por bueno a ciegas. `Terrakeep.App.Tests` NO se ejecuto esta ronda (las 3
+referencias reales a `PlayerPreviewRenderer`/`EquipmentAppearanceResolver`/
+`PlayerBodyDrawTables` en ese proyecto son solo un comentario y una constante
+`PlayerPreviewRenderer.HairStyleCount` sin relacion con `beardSlot` - riesgo de regresion real
+minimo, y el coste de otra ronda de 30+ min bajo la misma contencion no compensaba frente a la
+cobertura ya verificada en Core.Tests/App.ViewModels.Tests) - LIMITE REAL, documentado.
+
+**Recompilacion y redespliegue local**: `Terrakeep.exe` instalado NO estaba en ejecucion
+(confirmado `Get-CimInstance Win32_Process -Filter "Name='Terrakeep.exe'"`, sin resultados).
+`dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en
+verde (`FileVersion=3.2.5.0`, 139.208.321 bytes). `robocopy ... /MIR` hacia `C:\Users\adrian\
+AppData\Local\Programs\Terrakeep\` (unico destino real, barra de tareas y Menu Inicio apuntan
+ahi) - 219 archivos copiados/actualizados (incluye `acc_beard/1..4.png` nuevos), confirmado
+`Length`/`LastWriteTime` identicos entre el publish y la copia instalada.
+
+**Trabajo en paralelo real sobre los MISMOS ficheros** (3 encargos a la vez, no solo 2):
+`EquipmentAppearanceResolver.cs`/`PlayerPreviewRenderer.cs`/`Terrakeep.Core/Model/
+PlayerBodyDrawTables.cs`/`Terrakeep.Core.Tests/Model/PlayerBodyDrawTablesTests.cs`/
+`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs`/`Terrakeep.Core/Data/
+VanillaAccessorySlotCatalog.cs`/`scripts/extraer-slots-accesorios-vanilla.py`/`scripts/
+extraer-sprites-accesorios-vanilla.js`/`Terrakeep.App/Assets/vanilla_accessory_slots.json`
+tenian cambios REALES de otro(s) encargo(s) en paralelo (FaceHead/FaceMask/FaceFlower - canal
+Face reclasificado en 3 sub-canales, `FaceAccessoryLayerTable.cs` nuevo - y frontSlot/Front, con
+al menos un tercer encargo de Wings tocando `scripts/extraer-slot-armadura-calamity.js`/
+`Terrakeep.App/Assets/calamity/catalog.json` que se dejo FUERA de mi commit por no tener nada mio
+dentro) intercalados en la mayoria de esos ficheros - build errors reales y transitorios vistos
+en vivo mientras esos encargos seguian editando (`FrontDontDrawIfWearingScarfOrCape`/
+`NeckIsAScarf`/`BackIsACape`/`MaskHalf` sin definir un momento, resueltos solos tras esperar con
+`controladorEspera.js` a que el otro agente terminara su hunk) - mismo patron ya documentado hoy
+para Encargo A/B/C/D: NO separable con `git add -p` de forma fiable dado el volumen de hunks
+entrelazados, se comiteo el estado COMBINADO tras verificar build+tests en verde con ese estado
+exacto. Ficheros SIN nada mio (`CLAUDE.md`, `ESPEC-dibujado-sprites.md`, `Terrakeep.App.Tests/*`,
+la mayoria de `Terrakeep.Core.Tests/Data/*.cs`, `scripts/extraer-nombres-calamity-en.js`,
+`scripts/sync-guia-desde-terrakeepmod.ps1`, `scripts/extraer-slot-armadura-calamity.js`,
+`Terrakeep.App/Assets/calamity/catalog.json`, `Terrakeep.App.ViewModels.Tests/
+PlayerPreviewRendererAccessoriesTests.cs`, `WingDrawTable.cs`, `FaceAccessoryLayerTable*.cs`,
+`acc_front/`, `acc_wing/`) se dejaron FUERA del staging a proposito (confirmado con `git diff`
+que ninguno tenia contenido mio) - commit real `e3a51b68`. Sin `git push`.
+
+**No pise el trabajo de otros encargos**: `git diff` de cada fichero staged, tras el commit,
+confirmado con `git show e3a51b68 --stat` que los 13 ficheros del commit son exactamente los
+listados arriba (9 modificados relacionados con el pipeline de accesorios + 4 sprites `acc_beard/`
+nuevos) - ningun fichero exclusivo de Face/Front/Wings (`FaceAccessoryLayerTable.cs`,
+`WingDrawTable.cs`, `acc_front/`, `acc_wing/`, `extraer-sprites-alas-vanilla.js`,
+`extraer-slot-armadura-calamity.js`, `calamity/catalog.json`) entro en mi commit.
