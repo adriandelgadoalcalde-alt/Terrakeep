@@ -25369,3 +25369,133 @@ el hunk 100% de Fase G se dejó sin stagear (`n`) para que lo comitee ese agente
 **Fase C queda lista para Fase D** (mover el editor de cofre real al placeholder) y no pisa el
 trabajo de Fase G (su hunk de vista amplia del comparador se dejó intacto y sin comitear, para que
 lo integre ese agente).
+
+## 25-sep-2026 (mismo día) - ExploracionRediseno Fase G: Comparar pasa de columna estrecha a vista amplia
+
+Encargo del coordinador (independiente de las Fases C-F, mismo `MainWindow.xaml` en paralelo con la
+Fase C de arriba - confirmado con `git diff`/`git status` antes de cada paso, ver el propio relato
+de Fase C sobre el hunk mixto que dejó a propósito sin comitear para esta misma Fase G).
+
+**De dónde cuelga `WorldCompare` (confirmado con Grep antes de tocar nada)**:
+`MainViewModel.cs:1030` (`public WorldCompareViewModel WorldCompare { get; } = new();`), root
+DataContext de la ventana - por eso el binding en XAML es `{Binding WorldCompare.NameA}` sin
+prefijo `Exploration.`. Totalmente independiente del mundo cargado en Exploración
+(`WorldCompareViewModel.cs:38-39`, `_worldA`/`_worldB` propios) - confirmado también con el propio
+canario (recarga los mismos 2 mundos 3 veces seguidas sin tocar `vm.Exploration`).
+
+**Decisión SelectedCategory vs vista amplia**: "Comparar" SIGUE siendo un valor real de
+`WorldSearchCategory` (`ExplorationViewModel.cs:101`) y la pildora del selector
+(`MainWindow.xaml`, RadioButton `ConverterParameter=Compare`) no se tocó - riesgo mínimo, mismo
+patrón ya usado por `SidebarMode` en la Fase B (un flag derivado nuevo, centralizado en el ÚNICO
+sitio real que cambia la causa). Añadido `ExplorationViewModel.cs:948`
+(`[ObservableProperty] private bool _isShowingWorldCompare`) y cableado en
+`OnSelectedCategoryChanged` (línea ~967): `IsShowingWorldCompare = value ==
+WorldSearchCategory.Compare`. "← Volver al mapa" (`MainWindow.xaml.cs`,
+`OnCloseWorldCompareClick`) pone `SelectedCategory = WorldSearchCategory.All` - mismo reset ya
+usado en otras rutas reales de Exploración, sin inventar un `WorldSearchCategory.None`.
+
+**Contenido movido, no duplicado**: el `DockPanel` que vivía dentro de
+`ExplorationCategoryContent` (columna estrecha del sidebar, activo con
+`SelectedCategory==Compare`) se sustituyó por un comentario que documenta el traslado; el
+contenido real (mismos bindings/handlers, `OnLoadWorldCompareA/BClick`,
+`OnExportWorldCompareCardHtml/PngClick`, sin tocar `WorldCompareViewModel`) se reconstruyó como
+`Border` nuevo, hermano DECLARADO EL ÚLTIMO del `Grid` de 3 columnas que ya usa el mapa (mismo
+patrón T6, `Grid.Column="0" Grid.ColumnSpan="3"`, "lo declarado después se pinta encima") -
+condicionado por `Exploration.IsShowingWorldCompare`, tapa el mapa Y el panel lateral flotante,
+no solo el mapa.
+
+**`MinWidth` real de la columna de etiqueta** (antes `Width="140"` fija, ahora `Width="*"
+MinWidth="112"`): medido con `FormattedText` real (mismo mecanismo que
+`WorldCompareViewModel.ExportCardToPng` usa para medir texto), fuente/tamaño reales de
+`CaptionText` (`Theme.xaml:205-214`, "Segoe UI Variable Display, Segoe UI" 11px, es-ES) sobre las
+12 etiquetas reales de `WorldCompareViewModel.RebuildRows` (`strings_es.json`: Título, Semilla,
+Semilla especial, Tamaño, Versión de formato, Modo de juego, Modo difícil, Bioma maligno, Jefes
+derrotados, NPCs, Cofres, Letreros - NO las de `CompareViewModel`/personajes, que son otra lista).
+Máximo real: "Versión de formato" = 92,19px. Con `SizeClass=Extra` (`CaptionText` sube a 12px) sube
+a ~100,5px - +margen de respiro visual -> 112 de suelo. Medido con un proyecto WPF real desechable
+en el scratchpad de la sesión (`net10.0-windows`, `FormattedText` con la misma fuente/cultura),
+nunca a ojo.
+
+**Bug real encontrado y arreglado al verificar (ajeno a esta Fase, de la Fase C concurrente)**:
+`IDEA8_SOLO` reventaba con `XamlParseException: No se puede encontrar el recurso
+'EnumEqualsToVis'` al montar `MainWindow` - la Fase C registró el converter en `App.xaml` pero
+olvidó replicarlo en `Terrakeep.App.Tests/Program.cs` (el arnés construye una `Application` en
+blanco a mano, nunca carga `App.xaml`, mismo motivo ya documentado H4-01 varias veces en este
+mismo fichero). Bloqueaba CUALQUIER canario de este arnés que monte `MainWindow`, no solo el de
+Comparar. Arreglado con una línea (`app.Resources["EnumEqualsToVis"] = new
+EnumEqualsToVisibilityConverter();`), mismo patrón exacto ya establecido.
+
+**Verificación real**: `dotnet build Terrakeep.slnx -c Release` en verde (0/0). Canario real
+`IDEA8_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`: carga 2 mundos
+reales (`roca_negra.wld`/`Blando_Río.wld`), `WorldCompare.HasBothLoaded=True`, `StatRows.Count=12`,
+`DifferenceCount=8`, fila de Título y NPCs con los valores reales verificados contra un
+`WldReader.Read` independiente, mismo archivo en A y B da `DifferenceCount=0`, `ItemsControl` real
+de filas encontrado en el árbol visual Y visible=True - 0 `FALLO`/`EXCEPTION`, captura real
+(`idea8-comparador-mundos.png`) confirma la vista amplia funcionando con datos reales ("← Volver al
+mapa", 12 filas sin necesidad de scroll, columna de etiqueta ya no cortada a 140px). Comparada con
+la captura real ANTERIOR a este cambio (`bin/Debug/.../idea8-comparador-mundos.png`, 20-sep-2026):
+antes la tabla no cabía entera ("Hay más contenido, desliza hacia abajo ↓") en la columna estrecha;
+ahora las 12 filas caben en una vista de ancho completo. `T6_SOLO=1` (mismo `Grid` de 3 columnas
+que toca esta Fase) sigue en verde: z-order real `indiceMapa=0 < indicePanel=3` (el nuevo `Border`
+de Comparar añade un hijo más al final, sin invalidar el orden relativo mapa/panel lateral que
+verifica el canario). `dotnet test Terrakeep.Core.Tests -c Release --no-build`: 732/732 (igual que
+el baseline). `dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build` COMPLETO: 711/711
+(5m26s, igual que el baseline) - incluye `WorldCompareCardExportTests` (3/3), que prueba
+`ExportCardToHtml`/`ExportCardToPng` directamente sobre el ViewModel con mundos sintéticos reales,
+sin depender del layout visual - confirma que la exportación HTML/PNG sigue produciendo el mismo
+resultado (el método real nunca lee nada del árbol visual, solo `StatRows`/`NameA`/`NameB`, ya
+confirmado leyendo `WorldCompareViewModel.cs` antes de tocar nada).
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` instalado NO estaba en ejecución
+(`Get-CimInstance Win32_Process`, sin resultados). `dotnet publish Terrakeep.App/Terrakeep.App.csproj
+-c Release -p:PublishProfile=win-x64` en verde. Sanidad de `Assets/` ANTES del `/MIR`: publish =
+13055 ficheros, origen `Terrakeep.App/Assets` = 13056 (misma diferencia de 1 ya documentada y ajena
+a este encargo) - sin discrepancia real, `/MIR` seguro. `robocopy ... /MIR /XF unins000.exe
+unins000.dat` (con `MSYS_NO_PATHCONV=1` para que Git Bash no reinterprete `/MIR` como una ruta) a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\`: 1 archivo copiado (`Terrakeep.exe`, único con
+contenido distinto - los 2 JSON de idioma y el resto de `Assets/` ya los sincronizó el `/MIR` de la
+Fase C minutos antes), 13060 omitidos (ya idénticos), 0 errores. Relanzado el `.exe` instalado
+(PID real, `Responding=True`) y cerrado limpio con `Stop-Process`.
+
+**Nota de transparencia sobre el trabajo concurrente en el mismo fichero** (confirmado con `git
+show`/`git log`, no una suposición): la Fase C (commit `99c9cbbd`, ver su propio relato arriba)
+usó `git add -p` para separar con cuidado sus hunks de los míos en `MainWindow.xaml` - stageó el
+suyo (envoltorio Browse/Inspector) y el hunk MIXTO (donde mi eliminación del bloque "Comparar"
+viejo quedaba textualmente inseparable de su cierre de `DockPanel`), y dejó sin comitear a
+propósito mi hunk 100% propio (el nuevo `Border` de vista amplia). Ese mismo commit `99c9cbbd`
+también arrastró sin querer mis 2 claves de idioma (`explore_back_to_map` en `strings_es.json`/
+`strings_en.json`, ya escritas en el árbol de trabajo en ese momento) porque `git add
+Terrakeep.App/MainWindow.xaml` con ruta explícita no evita que un commit posterior de otro agente
+recoja ficheros DISTINTOS que ya estaban modificados sin comitear - confirmado con `git show
+99c9cbbd -- Terrakeep.App/Assets/strings_es.json`, el contenido es exactamente el mío, intacto.
+Ninguna pérdida de trabajo real, solo una atribución de commit distinta a la esperada - documentado
+aquí para que quede claro por qué el commit de esta Fase G no incluye esos 2 JSON (ya estaban en
+`HEAD`) ni la mitad "eliminación" del cambio en `MainWindow.xaml` (idem).
+
+**Commit real** `7e6914f1`: `Terrakeep.App/MainWindow.xaml`, `Terrakeep.App/MainWindow.xaml.cs`
+(`OnCloseWorldCompareClick`), `Terrakeep.App/ViewModels/ExplorationViewModel.cs`
+(`IsShowingWorldCompare`), `Terrakeep.App.Tests/Program.cs` (registro del converter que faltaba).
+`git status --porcelain` revisado antes de comitear - varios ficheros ajenos de otros agentes en
+paralelo (`Terrakeep.Core.Tests/**`, `scripts/**`, `CLAUDE.md`, etc.), ninguno añadido al stage,
+`git add` con rutas explícitas (nunca `-A`). Sin `git push`.
+
+**Incidente real detectado DESPUÉS de comitear (transparencia, mismo espíritu que la nota de Fase C
+de arriba)**: el `diff --stat` del commit mostró `330` líneas tocadas en `MainWindow.xaml` (94
+borradas), muchas más de las esperadas para el `Border` nuevo de esta Fase (que solo AÑADE). Revisado
+con `git show 7e6914f1 -- Terrakeep.App/MainWindow.xaml`: el commit arrastró TAMBIÉN un bloque real
+de la Fase D concurrente ("relleno real del Inspector de cofre", el editor movido desde
+`ChestRowTemplate` al placeholder de `ExplorationSidebarChestInspectorPlaceholder`) que otro agente
+escribió en el árbol de trabajo DESPUÉS de mi última comprobación de `git diff` (hecha antes de la
+tanda larga de `dotnet publish`/sanidad de `Assets`/`robocopy`) y ANTES de mi `git add` con ruta
+explícita - `git add <fichero>` stagea el ESTADO ACTUAL del fichero en ese instante, no un hunk
+concreto, así que un cambio ajeno concurrente en el MISMO fichero se cuela igual aunque la ruta sea
+explícita. Mismo mecanismo exacto que ya sufrió Fase C al revés (ver su nota de arriba), esta vez en
+sentido contrario. Contenido verificado real y correcto (no basura ni a medias): `dotnet build
+Terrakeep.slnx -c Release` sigue en 0/0 DESPUÉS del commit, con el contenido de Fase D ya incluido.
+Regla de la familia respetada: nunca se hizo `git commit --amend` (el commit ya había tenido éxito,
+enmendarlo iría contra la regla explícita) - se documenta aquí en su lugar, sin tocar el historial.
+Ningún dato se perdió ni se corrompió; el único efecto real es que ese bloque de Fase D quedó
+atribuido al mensaje de commit de Fase G en vez de al suyo propio.
+
+**Fase G queda cerrada**: Comparar tiene vista amplia real, con datos reales verificados y sin
+regresión medida en ningún gate del proyecto.
