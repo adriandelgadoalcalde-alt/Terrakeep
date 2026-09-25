@@ -345,4 +345,449 @@ public sealed class PlayerPreviewRendererAccessoriesTests : IDisposable
 
         AssertEsquinaEsColor(bmp, 255, 0, 0); // Leggings/robe (rojo) pisa a Shoes (verde) - orden invertido real
     }
+
+    // GapAnalysis Encargo F (25-sep-2026): FaceHead/FaceMask/FaceFlower - 3 canales reales mas
+    // en los que EquipmentAppearanceResolver.ResolveAccessories reclasifica "Face" (ver
+    // FaceAccessoryLayerTable) - a diferencia del resto de tipos de accesorio, sus posiciones de
+    // dibujado NO son todas la misma (Paso 9b/22_FaceAcc): FaceHead siempre se dibuja DENTRO de
+    // la cabeza (antes del pelo/casco); FaceMask depende del HEADSLOT puesto
+    // (ArmorIDs.Head.Sets.DrawFaceMaskUnderHeadLayer - antes del pelo/casco si el casco esta en
+    // esa tabla, si no, en su posicion normal salvo PreventFaceMaskDraw); FaceFlower siempre en
+    // su posicion normal salvo PreventFaceFlowerDraw (headSlot), que la suprime del todo. Ids
+    // reales con sprite ya extraido: Obsidian Skull (193, faceSlot=12, FaceHead), Nature's Gift
+    // (223, faceSlot=1, FaceFlower) - FaceMask no tiene item real extraible en este PC (ver
+    // FaceAccessoryLayerTableTests), se prueba con EquippedAccessories construido a mano
+    // (FaceMaskFile sintetico), igual de valido para el CONTRATO de orden/render.
+    private const int CascoDeObsidiana = 193;      // faceSlot=12 -> FaceHead
+    private const int RegaloDeLaNaturaleza = 223;  // faceSlot=1 -> FaceFlower
+
+    [Fact]
+    public void FaceHeadReal_CambiaElResultadoRespectoASinAccesorios()
+    {
+        var accesorios = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(CascoDeObsidiana));
+        Assert.NotNull(accesorios.FaceHeadFile);
+
+        var sinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conAccesorio = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
+
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
+    }
+
+    [Fact]
+    public void FaceFlowerReal_CambiaElResultadoRespectoASinAccesorios()
+    {
+        var accesorios = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(RegaloDeLaNaturaleza));
+        Assert.NotNull(accesorios.FaceFlowerFile);
+
+        var sinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conAccesorio = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
+
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
+    }
+
+    [Fact]
+    public void FaceMaskSintetico_CambiaElResultadoRespectoASinAccesorios()
+    {
+        // Sin item real extraible en este PC para faceSlot=22 (ver el comentario de cabecera) -
+        // FaceMaskFile construido a mano, igual de valido para confirmar que Render lee de
+        // verdad ese campo nuevo (mismo criterio "orden"/family 2 del resto de esta clase).
+        string faceMask = CrearPngSolido(10, 20, 30);
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, FaceMaskFile: faceMask);
+
+        var sinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conAccesorio = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: acc);
+
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
+    }
+
+    [Fact]
+    public void Orden_FaceHeadAntesQueCasco()
+    {
+        // Sin HeadSlot (numeracion vanilla desconocida, igual que un casco de Calamity) - hideHair
+        // queda true y headFileToUse = armor.HeadFile tal cual, DrawHelmet() se ejecuta DESPUES de
+        // FaceHead en el orden real de Render (ver el comentario real de ese bloque).
+        string faceHead = CrearPngSolido(255, 0, 0), casco = CrearPngSolido(0, 255, 0);
+        var armor = new PlayerPreviewRenderer.EquippedArmor(HeadFile: casco, BodyFile: null, LegsFile: null);
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, FaceHeadFile: faceHead);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor, accessories: acc);
+
+        AssertEsquinaEsColor(bmp, 0, 255, 0); // Casco (verde) pisa a FaceHead (rojo)
+    }
+
+    [Fact]
+    public void Orden_FaceBajoElPeloAntesQueCasco_FaceSlotEnLaTablaRealDeUnderHair()
+    {
+        // faceSlot=5 real (Blindfold, DrawInFaceUnderHairLayer) - FaceFile se dibuja ANTES del
+        // pelo/casco (mismo criterio que FaceHead de arriba), en vez de en su posicion normal.
+        string face = CrearPngSolido(255, 0, 0), casco = CrearPngSolido(0, 255, 0);
+        var armor = new PlayerPreviewRenderer.EquippedArmor(HeadFile: casco, BodyFile: null, LegsFile: null);
+        var acc = new EquippedAccessories(null, null, null, null, null, null, face, FaceSlot: 5);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor, accessories: acc);
+
+        AssertEsquinaEsColor(bmp, 0, 255, 0); // Casco (verde) pisa a Face-bajo-el-pelo (rojo)
+    }
+
+    [Fact]
+    public void Orden_FaceMaskBajoElCascoAntesQueCasco_HeadSlotEnLaTablaReal()
+    {
+        // headSlot=26 real (primer id de ArmorIDs.Head.Sets.DrawFaceMaskUnderHeadLayer) - la
+        // mascara se dibuja ANTES del pelo/casco, no en su posicion normal.
+        string faceMask = CrearPngSolido(255, 0, 0), casco = CrearPngSolido(0, 255, 0);
+        var armor = new PlayerPreviewRenderer.EquippedArmor(HeadFile: casco, BodyFile: null, LegsFile: null, HeadSlot: 26);
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, FaceMaskFile: faceMask);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor, accessories: acc);
+
+        AssertEsquinaEsColor(bmp, 0, 255, 0); // Casco (verde) pisa a FaceMask-bajo-el-casco (rojo)
+    }
+
+    [Fact]
+    public void Orden_FaceMaskNormalDespuesDelCasco_HeadSlotFueraDeLaTablaDeUnderHead()
+    {
+        // headSlot=999 sintetico (fuera de cualquier tabla real, mismo patron ya usado en
+        // Orden_SinWearsRobe_PernerasAntesQueShoes) - FaceMask se dibuja en su posicion NORMAL,
+        // despues del pelo/casco (Paso 9b, mismo sitio que ya prueba Orden_FaceAccAntesQueShield).
+        string casco = CrearPngSolido(255, 0, 0), faceMask = CrearPngSolido(0, 255, 0);
+        var armor = new PlayerPreviewRenderer.EquippedArmor(HeadFile: casco, BodyFile: null, LegsFile: null, HeadSlot: 999);
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, FaceMaskFile: faceMask);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor, accessories: acc);
+
+        AssertEsquinaEsColor(bmp, 0, 255, 0); // FaceMask normal (verde) pisa al Casco (rojo)
+    }
+
+    [Fact]
+    public void Orden_FaceFlowerDespuesDelCasco_HeadSlotSinPreventFaceFlowerDraw()
+    {
+        // headSlot=999 sintetico (fuera de PreventFaceFlowerDraw) - FaceFlower SIEMPRE se dibuja
+        // en su posicion normal (no existe una posicion "bajo el casco" real para este tipo).
+        string casco = CrearPngSolido(255, 0, 0), faceFlower = CrearPngSolido(0, 255, 0);
+        var armor = new PlayerPreviewRenderer.EquippedArmor(HeadFile: casco, BodyFile: null, LegsFile: null, HeadSlot: 999);
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, FaceFlowerFile: faceFlower);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor, accessories: acc);
+
+        AssertEsquinaEsColor(bmp, 0, 255, 0); // FaceFlower (verde) pisa al Casco (rojo)
+    }
+
+    [Fact]
+    public void FaceMaskSeSuprimeDelTodo_HeadSlotEnPreventFaceMaskDrawYFueraDeUnderHead()
+    {
+        // headSlot=27 real (primer id de ArmorIDs.Head.Sets.PreventFaceMaskDraw, NO esta en
+        // DrawFaceMaskUnderHeadLayer) - la mascara no se dibuja en NINGUN sitio, el render debe
+        // ser IDENTICO a no llevarla puesta (mismo criterio que
+        // SinAccesorios_ElParametroPorDefectoNoLanzaYEsIdenticoAPasarNull).
+        string faceMask = CrearPngSolido(255, 0, 0);
+        var armor = new PlayerPreviewRenderer.EquippedArmor(HeadFile: null, BodyFile: null, LegsFile: null, HeadSlot: 27);
+        var sinFaceMask = new EquippedAccessories(null, null, null, null, null, null, null);
+        var conFaceMask = new EquippedAccessories(null, null, null, null, null, null, null, FaceMaskFile: faceMask);
+
+        var bmpSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor, accessories: sinFaceMask);
+        var bmpCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor, accessories: conFaceMask);
+
+        Assert.Equal(Pixels(bmpSin), Pixels(bmpCon));
+    }
+
+    [Fact]
+    public void FaceFlowerSeSuprimeDelTodo_HeadSlotEnPreventFaceFlowerDraw()
+    {
+        // headSlot=92 real (primer id de ArmorIDs.Head.Sets.PreventFaceFlowerDraw) - la flor no
+        // se dibuja en NINGUN sitio, el render debe ser IDENTICO a no llevarla puesta.
+        string faceFlower = CrearPngSolido(255, 0, 0);
+        var armor = new PlayerPreviewRenderer.EquippedArmor(HeadFile: null, BodyFile: null, LegsFile: null, HeadSlot: 92);
+        var sinFaceFlower = new EquippedAccessories(null, null, null, null, null, null, null);
+        var conFaceFlower = new EquippedAccessories(null, null, null, null, null, null, null, FaceFlowerFile: faceFlower);
+
+        var bmpSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor, accessories: sinFaceFlower);
+        var bmpCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor, accessories: conFaceFlower);
+
+        Assert.Equal(Pixels(bmpSin), Pixels(bmpCon));
+    }
+
+    // GapAnalysis Encargo E (25-sep-2026): Front (item.frontSlot) NO es una capa unica "encima
+    // de todo" - es el MISMO sprite recortado en 2 mitades (FrontPart/BackPart), cada una en su
+    // propia posicion del pipeline real - ver el comentario completo de DrawFrontHalf en
+    // PlayerPreviewRenderer.cs.
+
+    private string CrearPngMitadColor(byte rIzq, byte gIzq, byte bIzq, byte rDer, byte gDer, byte bDer)
+    {
+        Directory.CreateDirectory(_tempDir);
+        string path = Path.Combine(_tempDir, $"mitad_{Guid.NewGuid():N}.png");
+        const int w = 40, h = 56;
+        var pixels = new byte[w * h * 4];
+        for (int y = 0; y < h; y++)
+        for (int x = 0; x < w; x++)
+        {
+            int i = (y * w + x) * 4;
+            bool izquierda = x < w / 2;
+            pixels[i + 0] = izquierda ? bIzq : bDer;
+            pixels[i + 1] = izquierda ? gIzq : gDer;
+            pixels[i + 2] = izquierda ? rIzq : rDer;
+            pixels[i + 3] = 255;
+        }
+        var bmp = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgra32, null, pixels, w * 4);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bmp));
+        using var stream = File.Create(path);
+        encoder.Save(stream);
+        return path;
+    }
+
+    [Fact]
+    public void FrontFile_SeParteEnDosMitadesReales_FrontPartIzquierdaBackPartDerecha()
+    {
+        // PlayerDrawLayers.cs:3908-3993: FrontPart recorta la mitad IZQUIERDA de la tira
+        // (arranca en X=0), BackPart la mitad DERECHA (X += num) - PNG sintetico mitad roja/
+        // mitad verde confirma que cada metodo dibuja SOLO su propia mitad del ORIGEN en la
+        // MISMA mitad de posicion del lienzo (sin desplazamiento cruzado).
+        string front = CrearPngMitadColor(255, 0, 0, 0, 255, 0); // izquierda roja, derecha verde
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, FrontFile: front, FrontSlot: 5);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: acc);
+
+        AssertEsquinaEsColor(bmp, 255, 0, 0);        // FrontPart (mitad izquierda del sprite) en la esquina izquierda
+        AssertEsquinaDerechaEsColor(bmp, 0, 255, 0); // BackPart (mitad derecha del sprite) en la esquina derecha
+    }
+
+    [Fact]
+    public void Orden_FaceAccAntesQueFrontBackPart()
+    {
+        // Orden real: BackPart va justo despues de FaceAcc (LegacyPlayerRenderer.cs real) -
+        // PNG solido (ambas mitades del mismo color) para aislar el ORDEN sin depender de la
+        // halving (ya probada arriba).
+        string face = CrearPngSolido(255, 0, 0), front = CrearPngSolido(0, 255, 0);
+        var acc = new EquippedAccessories(null, null, null, null, null, null, face, FrontFile: front, FrontSlot: 5);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: acc);
+
+        AssertEsquinaDerechaEsColor(bmp, 0, 255, 0); // BackPart (verde, mitad derecha) pisa a FaceAcc (rojo)
+    }
+
+    [Fact]
+    public void Orden_FrontBackPartAntesQueShield()
+    {
+        string front = CrearPngSolido(255, 0, 0), shield = CrearPngSolido(0, 255, 0);
+        var acc = new EquippedAccessories(null, null, null, null, null, shield, null, FrontFile: front, FrontSlot: 5);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: acc);
+
+        AssertEsquinaDerechaEsColor(bmp, 0, 255, 0); // Shield (verde, realWidth=40=Width, cubre toda la fila) pisa a BackPart (rojo)
+    }
+
+    [Fact]
+    public void Orden_HandOnAntesQueFrontPart()
+    {
+        // FrontPart es la capa MAS TARDIA de todo el renderer (tras OnhandAcc, ver el comentario
+        // real de DrawFrontHalf) - HandOn (verde) se pinta primero y FrontPart (rojo) lo pisa.
+        string handOn = CrearPngSolido(0, 255, 0), front = CrearPngSolido(255, 0, 0);
+        var acc = new EquippedAccessories(null, null, handOn, null, null, null, null, FrontFile: front, FrontSlot: 5);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: acc);
+
+        AssertEsquinaEsColor(bmp, 255, 0, 0); // FrontPart (rojo) pisa a HandOn (verde) - la ULTIMA capa real de accesorio
+    }
+
+    // Condicion real de incompatibilidad (ArmorIDs.Front.Sets.DontDrawIfWearingAScarfOrCape,
+    // ver PlayerBodyDrawTables.FrontDontDrawIfWearingScarfOrCape) - SOLO el frontId 13 la tiene
+    // activa en la tabla real, y NINGUN accesorio real de item.frontSlot llega nunca a valer 13
+    // (ver el comentario real de esa tabla, LIMITE REAL documentado). Se prueba aqui con el
+    // valor SINTETICO 13 (el propio indice real de la tabla) para confirmar el CABLEADO
+    // completo Render -> PlayerBodyDrawTables, dejando constancia explicita de que no hay hoy
+    // ningun objeto real de Front que reproduzca este caso en el juego.
+
+    [Fact]
+    public void FrontOculto_FrontId13Sintetico_ConScarfRealEnNeckSlot_NoSeDibujaNiFrontPartNiBackPart()
+    {
+        string front = CrearPngSolido(255, 0, 0);
+        var sinFront = new EquippedAccessories(null, null, null, null, null, null, null);
+        var conFrontYScarf = new EquippedAccessories(null, null, null, null, null, null, null,
+            NeckSlot: 8, // WormScarf real (ArmorIDs.Neck.Sets.IsAScarf)
+            FrontFile: front, FrontSlot: 13);
+
+        var bmpSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: sinFront);
+        var bmpCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: conFrontYScarf);
+
+        Assert.Equal(Pixels(bmpSin), Pixels(bmpCon)); // el scarf anula el Front por completo, identico a no llevarlo
+    }
+
+    [Fact]
+    public void FrontOculto_FrontId13Sintetico_ConCapeRealEnBackSlot_NoSeDibujaNiFrontPartNiBackPart()
+    {
+        string front = CrearPngSolido(255, 0, 0);
+        var sinFront = new EquippedAccessories(null, null, null, null, null, null, null);
+        var conFrontYCape = new EquippedAccessories(null, null, null, null, null, null, null,
+            BackSlot: 1, // BeeCloak real (ArmorIDs.Back.Sets.IsACape)
+            FrontFile: front, FrontSlot: 13);
+
+        var bmpSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: sinFront);
+        var bmpCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: conFrontYCape);
+
+        Assert.Equal(Pixels(bmpSin), Pixels(bmpCon)); // la cape anula el Front por completo, identico a no llevarlo
+    }
+
+    [Fact]
+    public void FrontId13Sintetico_SinScarfNiCape_SiSeDibuja()
+    {
+        // Confirma que el frontId=13 en si NO esta "roto" - solo se oculta cuando de verdad hay
+        // un scarf/cape puesto (descarta el falso positivo de "13 nunca se dibuja").
+        string front = CrearPngSolido(255, 0, 0);
+        var sinFront = new EquippedAccessories(null, null, null, null, null, null, null);
+        var conFront = new EquippedAccessories(null, null, null, null, null, null, null, FrontFile: front, FrontSlot: 13);
+
+        var bmpSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: sinFront);
+        var bmpCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: conFront);
+
+        Assert.NotEqual(Pixels(bmpSin), Pixels(bmpCon));
+    }
+
+    [Fact]
+    public void FrontIdRealConScarfPuesto_NuncaSeOculta_LaIncompatibilidadNoAplicaAAccesoriosReales()
+    {
+        // CrimsonCloak real (frontSlot=1) CON un scarf real puesto (neckSlot=8) - la tabla real
+        // (DontDrawIfWearingAScarfOrCape) solo tiene el indice 13 activo, nunca el 1, asi que el
+        // Front real SIGUE dibujandose - confirma en el renderer la correccion real documentada
+        // en PlayerBodyDrawTables (ningun accesorio real de Front es incompatible con scarf/cape
+        // en la practica del juego).
+        string front = CrearPngSolido(255, 0, 0);
+        var sinFront = new EquippedAccessories(null, null, null, null, null, null, null, NeckSlot: 8);
+        var conFront = new EquippedAccessories(null, null, null, null, null, null, null, NeckSlot: 8, FrontFile: front, FrontSlot: 1);
+
+        var bmpSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: sinFront);
+        var bmpCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: conFront);
+
+        Assert.NotEqual(Pixels(bmpSin), Pixels(bmpCon)); // el Front real SIGUE visible pese al scarf
+    }
+
+    [Fact]
+    public void Front_ConCalamitySlotNulo_NuncaAplicaLaIncompatibilidad()
+    {
+        // FrontSlot=null (objeto de Calamity, numeracion propia no compartida) - fiel-por-
+        // defecto, la comprobacion de scarf/cape ni se evalua (mismo criterio ya establecido
+        // para ShoesSlot/HeadSlot null en el resto de este renderer).
+        string front = CrearPngSolido(255, 0, 0);
+        var sinFront = new EquippedAccessories(null, null, null, null, null, null, null, NeckSlot: 8, BackSlot: 1);
+        var conFront = new EquippedAccessories(null, null, null, null, null, null, null, NeckSlot: 8, BackSlot: 1, FrontFile: front, FrontSlot: null);
+
+        var bmpSin = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: sinFront);
+        var bmpCon = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: conFront);
+
+        Assert.NotEqual(Pixels(bmpSin), Pixels(bmpCon));
+    }
+
+    // ---- Familia 4: Wings Encargo1 (25-sep-2026) - capa base estatica de alas ----
+    //
+    // 4 casos reales, cubriendo las 4 formas reales de WingDrawTable (ver su comentario de clase
+    // para la cita completa de PlayerDrawLayers.DrawPlayer_09_Wings): 1 id puramente generico
+    // (Default, wingId sin entrada en Overrides), 1 con offset-tweak (num12/num13 dentro de la
+    // rama generica), 1 de los 11 bloques propios ("early return", formula/divisor propios), y 1
+    // item real de Calamity (numeracion propia, sin WingSlot vanilla - posicion GENERICA de
+    // WingDrawTable, fiel-por-defecto, mismo criterio ya establecido para el resto del resolver).
+    private const int DemonWings = 492;      // wingSlot=1, generico puro (Default: anchor=(11,33), div=4)
+    private const int ButterflyWings = 749;  // wingSlot=5, offset-tweak (anchor=(15,29), div=4)
+    private const int Hoverboard = 1866;     // wingSlot=22, bloque propio/early-return (anchor=(11,57), div=7)
+
+    [Fact]
+    public void WingGenerico_CambiaElResultadoRespectoASinAccesorios()
+    {
+        var accesorios = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(DemonWings));
+        Assert.NotNull(accesorios.WingFile);
+        Assert.Equal(1, accesorios.WingSlot);
+
+        var sinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conAccesorio = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
+
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
+    }
+
+    [Fact]
+    public void WingConOffsetTweak_DaUnResultadoDistintoDeWingGenerico_ConfirmaLaTablaPorId()
+    {
+        // Confirma que WingDrawTable.Resolve(5) (anchor=(15,29), distinto del Default (11,33)) se
+        // usa de verdad - el resultado es DISTINTO del generico con la UNICA variable siendo el
+        // wingId (mismo hairStyle/color/nada mas puesto en los dos renders).
+        var generico = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(DemonWings));
+        var tweak = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(ButterflyWings));
+        Assert.NotNull(tweak.WingFile);
+        Assert.Equal(5, tweak.WingSlot);
+
+        var renderGenerico = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: generico);
+        var renderTweak = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: tweak);
+
+        Assert.NotEqual(Pixels(renderGenerico), Pixels(renderTweak));
+    }
+
+    [Fact]
+    public void WingConBloquePropio_CambiaElResultadoRespectoASinAccesorios_DivisorPropioDistinto()
+    {
+        // Hoverboard (wingSlot=22): uno de los 11 ids con formula/divisor PROPIO real
+        // (Height()/7, no el /4 generico) - confirma que LoadWingFrame usa de verdad
+        // WingDrawTable.Resolve(22) (anchor=(11,57), divisor=7), no el valor por defecto.
+        var accesorios = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(Hoverboard));
+        Assert.NotNull(accesorios.WingFile);
+        Assert.Equal(22, accesorios.WingSlot);
+
+        var sinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conAccesorio = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
+
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
+    }
+
+    [Fact]
+    public void CalamityWingReal_CambiaElResultadoRespectoASinAccesorios_IncluidoElTamanoDistinto()
+    {
+        // HadarianWings: unico de los 16 items reales de Calamity con EquipType.Wings cuyo
+        // sprite real NO mide 86x248 (mide 64x144, ver el comentario real de LoadWingFrame/
+        // WingDrawTable) - confirma que SliceWingFrame usa el ANCHO/ALTO REAL del PNG decodificado
+        // (LoadWingStrip), no una constante, y que WingSlot vanilla queda null para Calamity
+        // (posicion GENERICA de WingDrawTable, fiel-por-defecto, mismo criterio ya establecido
+        // para el resto de canales de este resolver).
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Wings" && e.Internal == "HadarianWings");
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(entry.SyntheticId, 1, 0, false);
+        var accesorios = Service.EquipmentAppearance.ResolveAccessories(loadout);
+        Assert.NotNull(accesorios.WingFile);
+        Assert.Null(accesorios.WingSlot);
+
+        var sinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conAccesorio = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
+
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
+    }
+
+    // Contrato de orden real (LegacyPlayerRenderer.cs:178-184): Backpacks -> Tails -> Wings ->
+    // BackHair -> BackAcc - Wings se compone DESPUES de Tail. PNG sintetico de ala
+    // deliberadamente MUCHO mayor que el lienzo (200x800 - con el anchor real Default (11,33) y
+    // divisor 4, el fotograma recortado (200x200) cubre sobradamente la esquina (0,0) sin
+    // depender de un calculo fino de offset) para que el contrato de esquina ya usado en el resto
+    // de esta clase (AssertEsquinaEsColor) sea observable sin ambiguedad.
+    [Fact]
+    public void Orden_TailAntesQueWing_PngSinteticoDeAlaGrandeQueCubreLaEsquina()
+    {
+        string tail = CrearPngSolido(255, 0, 0);
+        string wing = CrearPngSolidoTamano(0, 255, 0, 200, 800);
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, TailFile: tail, WingFile: wing);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: acc);
+
+        AssertEsquinaEsColor(bmp, 0, 255, 0); // Wing (verde) pisa a Tail (rojo)
+    }
+
+    private string CrearPngSolidoTamano(byte r, byte g, byte b, int w, int h)
+    {
+        Directory.CreateDirectory(_tempDir);
+        string path = Path.Combine(_tempDir, $"wing_{r}_{g}_{b}_{w}x{h}_{Guid.NewGuid():N}.png");
+        var pixels = new byte[w * h * 4];
+        for (int i = 0; i < pixels.Length; i += 4)
+        {
+            pixels[i + 0] = b; pixels[i + 1] = g; pixels[i + 2] = r; pixels[i + 3] = 255; // Bgra32, opaco
+        }
+        var bmp = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgra32, null, pixels, w * 4);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bmp));
+        using var stream = File.Create(path);
+        encoder.Save(stream);
+        return path;
+    }
 }
