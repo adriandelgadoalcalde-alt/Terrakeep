@@ -23189,3 +23189,160 @@ PlayerPreviewRenderer.cs`, `Terrakeep.App.ViewModels.Tests/EquipmentAppearanceRe
 `Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs` - ver la nota de arriba
 sobre el contenido real incluido (Encargo A completo + Encargo B/HeadBack ya presente en el
 working tree en el momento del commit). Sin `git push`.
+
+## GapAnalysis Encargo C: canales Balloon y BalloonFront reales (balloonSlot), con extracción
+## nueva (aplicador-fix, handoff e5eaea9e-c261-4199-8e7d-060b6054f58d) (25-sep-2026)
+
+Encargo del coordinador (hallazgo YA investigado por arquitecto-keep): `item.balloonSlot` se
+clasifica en 2 canales reales (`Player.cs:37232-37241`, `UpdateVisibleAccessory`):
+
+```
+if (item.balloonSlot > 0)
+{
+    if (ArmorIDs.Balloon.Sets.DrawInFrontOfBackArmLayer[item.balloonSlot])
+        balloonFront = item.balloonSlot;
+    else
+        balloon = item.balloonSlot;
+}
+```
+
+**Tabla real transcrita** (`ArmorIDs.cs:2252`, clase `Balloon.Sets`):
+`DrawInFrontOfBackArmLayer = Factory.CreateBoolSet(false, 18)` - `SetFactory.CreateBoolSet(bool
+defaultState, params int[] types)` pone los ÍNDICES de `types` a `!defaultState`
+(`SetFactory.cs:97-109`, confirmado leyendo el código real) - un único índice real, **18 =
+RoyalScepter** (`Item.cs:45311-45319`: `balloonSlot = 18; vanity = true;`), el ÚNICO
+`balloonSlot` real con `true` entre las 19 variantes de globo reales del juego
+(`ArmorIDs.Balloon.Count=20`).
+
+**Confirmación real de si hizo falta extracción nueva**: SÍ - `acc_balloon/` NO existía en
+`Terrakeep.App/Assets/player/` antes de este encargo (comprobado con `ls` antes de tocar nada,
+la asunción "sin extracción nueva" del arquitecto NO aplicaba aquí porque nunca se investigó,
+a diferencia de Encargo A que sí reutilizaba `acc_back/`). **14 sprites reales extraídos**
+(`Acc_Balloon_{1..12,18,19}.xnb` de la instalación real de Steam, 0 faltantes) ampliando
+`scripts/extraer-slots-accesorios-vanilla.py` (nuevo campo `bl`/`balloonSlot`, regex
+`\bballoonSlot\s*=\s*(\d+)\s*;`) y `scripts/extraer-sprites-accesorios-vanilla.js` (nuevo tipo
+`bl: ['Balloon', 'Acc_Balloon_', 'acc_balloon']`), mismo patrón exacto que los 8 tipos ya
+existentes (Waist/Neck/HandOn/HandOff/Back/Shield/Face/Shoe).
+
+**Hallazgo real durante la propia extracción, no anticipado por el arquitecto**: los 14 sprites
+reales NO comparten un único formato. Comprobado con Pillow (`Image.size`): **solo
+`acc_balloon/18.png` (RoyalScepter) mide 40x1120** (tira de 20 filas, la MISMA convención
+"alineada al lienzo" que Waist/Neck/HandOn/HandOff/Back/Face/Shoe) - **los otros 13 sprites
+reales miden 52x224** (4 fotogramas propios de 56px cada uno, animación temporal real del globo
+"flotando" - `DateTime.Now.Millisecond%800/200` en `PlayerDrawLayers.cs`, NINGUNA otra pieza de
+este renderer anima por tiempo). Investigado el motivo real: `ArmorIDs.cs:2254`,
+`UsesTorsoFraming = Factory.CreateBoolSet(false, 18)` - el MISMO único índice 18 - confirma que
+`DrawPlayer_12_1_BalloonFronts`/`DrawPlayer_11_Balloons` reales (`PlayerDrawLayers.cs:1107-1171`)
+tienen 2 ramas de dibujado completamente distintas por `UsesTorsoFraming`, y que en la práctica
+del juego vanilla real **"BalloonFront" es SIEMPRE la rama alineada al lienzo** (único item real,
+RoyalScepter) y **"Balloon" normal es SIEMPRE la rama de posición propia** (los otros 18 reales) -
+coincidencia real del juego, no inventada, documentada con honestidad en
+`BalloonAccessoryLayerTable.cs` por si cambiara en el futuro.
+
+**Corrección real sobre la posición del hallazgo original**: el hallazgo situaba BalloonFront
+"tras FaceAcc, ~línea parcial 220-225" - investigado a fondo y NO es exacto: los 2 únicos sitios
+reales donde `DrawPlayer_12_1_BalloonFronts` se invoca en todo el decompilado
+(`PlayerDrawLayers.cs:1364/1402`) están DENTRO de `DrawPlayer_12_Skin_Composite`/
+`DrawPlayer_12_SkinComposite_BackArmShirt` - el mismo método real que Terrakeep ya modela como
+"Paso 4 [12_SkinComposite_BackArmShirt]" (brazo trasero), no cerca de FaceAcc. `Balloon` normal
+SÍ coincide con el hallazgo original (tras BackHead, `LegacyPlayerRenderer.cs:188`).
+
+**Arreglo real aplicado**:
+- `Terrakeep.Core/Model/BalloonAccessoryLayerTable.cs` (nuevo): `IsFrontLayer(int balloonSlot)`,
+  tabla real transcrita (`HashSet<int> FrontBalloonSlots = [18]`), mismo patrón que
+  `BackAccessoryLayerTable`.
+- `Terrakeep.Core/Data/VanillaAccessorySlotCatalog.cs`: campo `Balloon` (`"bl"`) en
+  `VanillaAccessorySlotEntry`, 9º tipo.
+- `Terrakeep.App/Services/EquipmentAppearanceResolver.cs`: `EquippedAccessories` amplía con
+  `BalloonFile`/`BalloonFrontFile`/`BalloonSlot`/`BalloonFrontSlot`. `ResolveAccessories` escanea
+  el tipo `Balloon` igual que los otros 8 (`IsAccessoryType`/`ResolveAccessorySprite`) y
+  reclasifica el resultado YA resuelto contra `BalloonAccessoryLayerTable.IsFrontLayer` DESPUÉS
+  de resolverlo, sin duplicar lógica - mismo patrón exacto que Back/Backpack/Tail (Encargo A).
+- `Terrakeep.App/Services/PlayerPreviewRenderer.cs`:
+  - **Canal `BalloonFile`** (Paso 1d, justo tras `HeadBackFile`/antes de la piel - orden real
+    `LegacyPlayerRenderer.cs:188`): `LoadBalloonFrame` (nuevo) - NO reutiliza `DrawAccessory`
+    (el sprite real de 52x224 no es una tira 40x(56*N), reutilizarlo habría corrompido el
+    recorte). Posición real derivada ALGEBRAICAMENTE de la fórmula real
+    (`PlayerDrawLayers.cs:1121-1137`, rama sin `UsesTorsoFraming`) usando bloques YA reales y
+    verificados de este mismo renderer (`bodyVect=(20,28)` real, `PlayerDrawSet.cs:1757`;
+    `bodyPosition=Vector2.Zero` real, `Player.cs:37866/39203`; `defaultWidth=20`/
+    `defaultHeight=42` reales, `Player.cs:1829/1831`; `Main.OffsetsPlayerOffhand[0]=(14,20)`
+    real, `Main.cs:483`) despejando la constante de alineación K=(10,10) contra la MISMA fórmula
+    base que ya usan Waist/Neck/HandOff/Back/Face (`DrawAccessory`, ya verificados en pasadas
+    anteriores) - desplazamiento final real **(-6,-4)** respecto al lienzo, implementado en
+    `SliceBalloonFrame0` (compositor con offset propio, clip seguro en los 4 bordes, primer
+    fotograma real = reposo).
+  - **Canal `BalloonFrontFile`** (Paso 4, dentro de `DrawAccessory` insertado en las 2 ramas -
+    tras el hombro trasero/antes del brazo trasero si `hasBody`, entre camiseta interior/exterior
+    si no - posiciones reales exactas de `PlayerDrawLayers.cs:1364`/`1400-1403`): SÍ reutiliza
+    `DrawAccessory` sin lógica nueva (tira 40x1120 real, misma convención que el resto).
+
+**Tests nuevos** (8 reales, verificados en verde): `EquipmentAppearanceResolverTests.cs` -
+Shiny Red Balloon (id 159, balloonSlot=8, canal Balloon normal), Royal Scepter (id 5076,
+balloonSlot=18, canal BalloonFront - el ÚNICO real), slot vacío, vanidad de BalloonFront tapando
+al funcional de Balloon normal (canales DISTINTOS, mismo criterio ya verificado para
+Back/Backpack/Tail), y 2 pruebas de render AISLADAS (`RenderConBalloonFileDaUnaImagenDistintaASinEl_
+AislandoSoloEsaCapa`/`RenderConBalloonFrontFileDaUnaImagenDistintaASinEl_AislandoSoloEsaCapa`,
+mismo criterio que `RenderConHeadBackFileDaUnaImagenDistintaASinEl...` de Encargo B - dos
+`EquippedAccessories` IDÉNTICOS salvo el campo Balloon/BalloonFront en cuestión).
+
+**Verificación visual real con objetos reales** (script de diagnóstico aparte en el scratchpad de
+sesión, NO parte del repo - referencia `Terrakeep.dll`/`Terrakeep.Core.dll` ya publicados y los
+`Assets/` reales, mismo código de producción, capturas reales guardadas como PNG x6 escala):
+personaje sin nada, con Shiny Red Balloon (globo rojo flotando tras la espalda con su cordel,
+`BalloonFile` resuelto a `acc_balloon/8.png`, `BalloonFrontFile` vacío) y con Royal Scepter
+(cetro sostenido junto a la mano/brazo, `BalloonFrontFile` resuelto a `acc_balloon/18.png`,
+`BalloonFile` vacío) - los 3 renders visualmente distintos y coherentes con el comportamiento
+real esperado del juego (el arreglo se ve, no solo pasa los asserts).
+
+**Build y regresión**: `dotnet build Terrakeep.slnx -c Release`: 0 advertencias, 0 errores.
+`dotnet test Terrakeep.App.ViewModels.Tests -c Release`: 598/599 (5m 5s) - el único fallo,
+`ConWearsRobeReal_LaCapaDeZapatosSigueDibujandoseSinRevantar`, es AJENO (Encargo D/Shoes, en
+paralelo sobre los mismos ficheros - confirmado con `git diff` que este encargo no toca la rama
+de código real de esa prueba, `testhost.exe` de Encargo D corriendo con `-p:BaseOutputPath=
+bin_encargoD`, aislado del mío). `dotnet test Terrakeep.Core.Tests -c Release`: 626/626, sin
+regresión.
+
+**Obstáculo real encontrado y resuelto (autonomía técnica, ver CLAUDE.md global)**: `git stash`
+para intentar aislar el estado antes de mis cambios se llevó también los cambios EN VIVO de
+Encargo D (mismo working tree compartido, sin forma de aislar solo los míos con `stash`) - error
+real, corregido de inmediato con `git stash pop` (recuperado íntegro en <1 minuto, verificado con
+`git status`/`grep` que todo el contenido de ambos encargos seguía presente byte a byte). Lección
+para encargos futuros en paralelo: **nunca usar `git stash` con otro agente activo en el mismo
+working tree** - usar `git diff`/`git show HEAD:<ruta>` para comparar contra una versión anterior
+sin tocar el working tree real.
+
+**Trabajo en paralelo real sobre los MISMOS ficheros (Encargo D, Shoes)**: mismo patrón ya
+documentado hoy para Encargo A/B - `EquipmentAppearanceResolver.cs`/`PlayerPreviewRenderer.cs`/
+`VanillaAccessorySlotCatalog.cs`/`EquipmentAppearanceResolverTests.cs`/
+`vanilla_accessory_slots.json`/`extraer-slots-accesorios-vanilla.py`/
+`extraer-sprites-accesorios-vanilla.js` tenían cambios de Encargo D (shoeSlot) intercalados
+LÍNEA A LÍNEA (declaraciones/firmas de récord/`return` compartidos, no solo bloques de comentario
+separables - a diferencia de Encargo A/B, que sí lograron hunks limpios) - `git add -p` no pudo
+separarlos con limpieza total, así que el commit de este encargo incluye TAMBIÉN el `shoeSlot`
+real de Encargo D en esos ficheros (verificado build+tests con el estado COMBINADO, las cifras de
+arriba ya lo incluyen, documentado explícitamente en el propio mensaje de commit).
+`Terrakeep.Core/Model/BalloonAccessoryLayerTable.cs` y `Assets/player/acc_balloon/*.png` (100%
+míos) quedaron exactamente como se stagearon. `Assets/player/acc_shoes/` (100% de Encargo D) se
+dejó sin stagear a propósito.
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` NO estaba en ejecución (`Get-Process
+Terrakeep` sin resultado). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde. Copiado a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (ruta real ya documentada del
+instalador) - `LastWriteTime` 25/09/2026 14:23:28. `Assets\` resincronizado con `robocopy /MIR`
+(144 ficheros copiados/actualizados, incluye los 14 PNG nuevos de `acc_balloon/` y los de
+`acc_shoes/` de Encargo D, ambos en el mismo publish). Relanzado con `Start-Process` (PID real
+179584, `Responding=True`) y cerrado limpio con `Stop-Process` - confirmado que el `.exe`
+instalado arranca de verdad con el código nuevo.
+
+### Commit real
+`2ef72eb1`: `Terrakeep.Core/Model/BalloonAccessoryLayerTable.cs` (nuevo),
+`Terrakeep.Core/Data/VanillaAccessorySlotCatalog.cs`, `Terrakeep.App/Services/
+EquipmentAppearanceResolver.cs`, `Terrakeep.App/Services/PlayerPreviewRenderer.cs`,
+`Terrakeep.App.ViewModels.Tests/EquipmentAppearanceResolverTests.cs`,
+`Terrakeep.App/Assets/vanilla_accessory_slots.json`, `scripts/extraer-slots-accesorios-
+vanilla.py`, `scripts/extraer-sprites-accesorios-vanilla.js`, `Terrakeep.App/Assets/player/
+acc_balloon/{1-12,18,19}.png` (14 sprites reales nuevos) - ver la nota de arriba sobre el
+contenido real incluido (Encargo C completo + `shoeSlot` de Encargo D intercalado en 7 de esos
+ficheros, sin forma real de separarlo con `git add -p`). Sin `git push`.
