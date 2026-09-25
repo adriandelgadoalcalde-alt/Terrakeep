@@ -21199,26 +21199,37 @@ se pinta sin recorte/overflow. Bloque nuevo que:
 
 **Build**: `dotnet build Terrakeep.App/Terrakeep.App.csproj -c Debug` y `dotnet build
 Terrakeep.App.Tests/Terrakeep.App.Tests.csproj -c Debug` - 0 avisos, 0 errores, repetido varias
-veces durante la ronda. **Límite real de esta sesión concreta** (no del cambio en sí): en el
-tramo final de la ronda, un `dotnet build`/`dotnet test` de la solución completa o de
-`Terrakeep.Core`/`ServidorKeep.Core` en solitario empezó a fallar de forma reproducible con
-`CS0579 Atributo ... duplicado` en los `AssemblyInfo.cs` GENERADOS de esos dos proyectos
-compartidos - confirmado por lectura directa de los mensajes de error que es contención real
-entre VARIOS agentes en paralelo escribiendo al mismo `obj\` compartido en este mismo instante
-(se ven rutas `obj_fixagent\` y `obj_personajemenu\` de otros agentes activos, ademas del `obj\`
-por defecto corrompiéndose de nuevo segundos después de cada `dotnet clean` propio). Ninguno de
-los dos proyectos afectados (`Terrakeep.Core`, `ServidorKeep.Core`) forma parte del diff de este
-encargo (los tres archivos tocados son `Terrakeep.App/ViewModels/GuideViewModel.cs`,
-`Terrakeep.App/MainWindow.xaml`, `Terrakeep.App.Tests/PruebasGuiaYServidor.cs`) - la evidencia de
-no-regresión real es la compilación limpia repetida de `Terrakeep.App`/`Terrakeep.App.Tests` (que
-SÍ incluyen mi diff) más la ejecución end-to-end correcta del canario `GUIA_SOLO` arriba.
+veces durante la ronda. **Contención real de build encontrada y resuelta durante la sesión** (no
+del cambio en sí, y no arreglada por este agente): en el tramo intermedio de la ronda, un `dotnet
+build` de la solución completa o de `Terrakeep.Core`/`ServidorKeep.Core` en solitario fallaba de
+forma reproducible con `CS0579 Atributo ... duplicado` en los `AssemblyInfo.cs` GENERADOS de esos
+dos proyectos compartidos - confirmado que era contención real entre VARIOS agentes en paralelo
+de este mismo taskId (`e5eaea9e-c261-4199-8e7d-060b6054f58d`) escribiendo carpetas de salida
+aisladas (`obj_fixagent\`, `obj_personajemenu\`, `obj_guia3encargo\` de este propio agente) que el
+glob implícito `**/*.cs` de `Terrakeep.Core.csproj` recogía como código fuente ADEMÁS del
+`AssemblyInfo.cs` real de cada build en curso. El agente hermano del botón "Personaje" (ver
+entrada siguiente, mismo taskId) ya diagnosticó y arregló la causa raíz de verdad en
+`Terrakeep.Core.csproj` (`DefaultItemExcludes` con patrón `obj_*/**;bin_*/**` en vez de una lista
+fija de nombres) mientras esta ronda seguía en marcha - tras esa exclusión + `dotnet clean` de
+`Terrakeep.Core`/`ServidorKeep.Core` una vez más, `dotnet build Terrakeep.slnx -c Debug` y `dotnet
+build Terrakeep.App -c Release` volvieron a compilar limpios (0/0) de forma estable. Evidencia de
+no-regresión real completa: `dotnet build Terrakeep.slnx -c Debug` (0 avisos/0 errores),
+`Terrakeep.Core.Tests` 601/601 verdes, `Terrakeep.App.ViewModels.Tests` 518/518 verdes, más la
+ejecución end-to-end correcta del canario `GUIA_SOLO` (arriba, filasConIconoVisible=3/3).
 
-**Recompilación/redespliegue de producción**: pendiente de que se libere la contención de build
-descrita arriba - se reintentará antes de cerrar el encargo; si sigue bloqueado, queda anotado
-como pendiente explícito (no se fuerza nada ni se cierra ningún proceso de otro agente).
+**Recompilado y redesplegado**: `dotnet build Terrakeep.App -c Debug` (barra de tareas de
+desarrollo, `Terrakeep.App\bin\Debug\net10.0-windows\Terrakeep.exe`) y `dotnet publish
+Terrakeep.App -c Release -p:PublishProfile=win-x64` + `robocopy /MIR` de
+`Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish\` a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\` (destino real del acceso directo de la barra
+de tareas, resuelto por COM `WScript.Shell.CreateShortcut` sobre `...\Quick Launch\User Pinned\
+TaskBar\Terrakeep.lnk` antes de copiar - nunca a ciegas). No había proceso `Terrakeep.exe` abierto
+que bloqueara la copia (`Get-Process` antes de copiar). Arranque real del exe instalado
+confirmado tras la copia (`Start-Process` + `MainWindowTitle="Terrakeep"`, cerrado limpio
+después).
 
-**Commit**: solo los 3 archivos de este encargo (`GuideViewModel.cs`, `MainWindow.xaml`,
-`PruebasGuiaYServidor.cs`). Sin `git push`.
+**Commit**: `1770822e`, solo los 3 archivos de este encargo + esta bitácora
+(`GuideViewModel.cs`, `MainWindow.xaml`, `PruebasGuiaYServidor.cs`). Sin `git push`.
 
 ## 25-sep-2026: arreglo real del botón de cabecera "Personaje" - aplicador-fix, handoff
 ## e5eaea9e-c261-4199-8e7d-060b6054f58d (aplica sobre la investigación del 24-sep de arriba)
