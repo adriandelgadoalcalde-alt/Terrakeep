@@ -21553,3 +21553,142 @@ SHA256 idéntico entre publicado e instalado
 (`2D6EFC37CA8782F837FAD92BA93F064D9173B63655EB046583C1137BB9FF4F00`). El acceso directo de la
 barra de tareas y el del Menú Inicio apuntan los dos a esta misma ruta instalada (único destino
 real, sin distinción barra de tareas/instalado en este proyecto).
+
+## 25-sep-2026: Inicio, mascotas ocultas y banner sin hover (imagen1) - agente
+aplicador-fix, mismo handoff e5eaea9e-c261-4199-8e7d-060b6054f58d
+
+Arreglo real aplicado siguiendo la propuesta ya validada por `investigador-bug` (entrada de
+arriba, misma fecha). Causa raíz confirmada por el investigador, no reinvestigada aquí; solo el
+detalle exacto del offset/anclaje se decidió con criterio propio, medido en vivo con el mismo
+canario que cerró el hueco de cobertura.
+
+**Tarjetas (`MainWindow.xaml`, `CharacterCardTemplate`, `Image` de `PetImage`)**: el
+`Width="20" Height="20" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Bottom"`
+de antes se sustituye por `Stretch="None"` (tamaño NATIVO real del fotograma,
+`WriteableBitmap.PixelWidth/PixelHeight` - sin Width/Height fijo, WPF lo dibuja a resolución 1:1
+sin escalar) + `HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-20,-16,0,0"`. Medido
+con un diagnóstico propio (mapa de opacidad por fila/columna del doll, `PixelesDeVisual` del
+propio canario volcado a PNG e inspeccionado con PIL) que el doll (perfil de pie, `Stretch=Uniform`
+llenando el 100% del cuadro 52x72,8 por diseño - el cuadro se eligió con esa proporción exacta a
+propósito) deja SOLO 3-10px de margen realmente transparente en cada borde, insuficiente para el
+fotograma nativo de la mascota (46x48px) sin salir del cuadro - por eso el anclaje empuja la
+mascota PARCIALMENTE fuera del `Grid` hacia arriba-izquierda (la `Grid`/`Border` no recortan por
+defecto en WPF, así que no hay ningún sprite cortado visualmente, solo la parte que cae dentro del
+cuadro es la que mide el canario). Resultado real medido tras el cambio (antes 40,0%/0,7% con el
+`20x20` viejo, con la severidad dependiente de la silueta como ya documentó el investigador):
+**Eldelgas 26,4%, Terrariano 6,9-12,7%** (varía ligeramente entre corridas por el fotograma de
+animación en curso) - los dos por debajo del umbral de FALLO del canario (30%). Verificado
+visualmente además con capturas reales de la ventana (`inicio-lanzador.png` del propio arnés,
+recortadas y ampliadas 3x con PIL): la mascota asoma claramente por encima/al lado del hombro del
+doll en las tres tarjetas con mascota real de este equipo (Eldelgas "Núcleo medio", Eldelgas
+"Clásico", Terrariano), sin overflow visual hacia la tarjeta vecina ni hacia el nombre/insignias.
+
+**Banner "Continuar con X" (`MainWindow.xaml`, ~2630-2670)**: el `Image` único que antes solo
+mostraba `Home.LastSessionCharacterEntry.Preview` se envuelve en una `Grid` nueva de
+`104x145,6` (mismo 2x real que ya usaba el doll del banner respecto a la tarjeta pequeña) con DOS
+`Image` dentro, mismo orden/criterio que la tarjeta (mascota declarada ANTES = detrás del doll):
+una `Image` nueva ligada a `PetImage` (mismo `Stretch="None"` + `Margin="-40,-32,0,0"`, el doble
+exacto del offset de la tarjeta, coherente con el 2x de escala) y la `Image` de `Preview` ya
+existente sin tocar su binding (`Home.LastSessionCharacterEntry.Preview` completo, es el punto de
+anclaje real que el canario usa para localizar este `Border` en el árbol visual - cambiarlo
+habría roto esa localización). La `Image` de `PetImage` lleva su PROPIO
+`DataContext="{Binding Home.LastSessionCharacterEntry}"` (Opción A documentada por el
+investigador) para que su binding de `Source` sea el mismo `"PetImage"` corto y literal que ya usa
+la tarjeta - necesario porque el canario busca el binding por la ruta EXACTA `"PetImage"`, no por
+una ruta larga con prefijo; con la ruta larga (`Home.LastSessionCharacterEntry.PetImage`) el
+canario no lo localizaba (`bannerTienePetImage=False`) aunque la mascota SÍ se pintara bien en
+pantalla - primer intento real, corregido tras medir con el canario, no asumido a ciegas.
+
+**Hover del banner**: `MouseEnter="OnHomeBannerMouseEnter" MouseLeave="OnHomeBannerMouseLeave"`
+en el `Border` del banner (antes sin ninguno) - dos manejadores nuevos en `MainWindow.xaml.cs`
+(Opción B documentada por el investigador, la de "cero riesgo de romper bindings de `Home.*`"):
+```csharp
+private void OnHomeBannerMouseEnter(object sender, MouseEventArgs e) => _viewModel.Home.LastSessionCharacterEntry?.SetHovering(true);
+private void OnHomeBannerMouseLeave(object sender, MouseEventArgs e) => _viewModel.Home.LastSessionCharacterEntry?.SetHovering(false);
+```
+En vez de reutilizar `OnCharacterCardMouseEnter/Leave` a pelo (esos leen
+`(sender as FrameworkElement)?.DataContext` esperando un `CharacterListEntryViewModel` - el
+`DataContext` real del `Border` del banner es el `MainViewModel` entero, el cast habría fallado en
+silencio sin animar nada) se leen directamente de `_viewModel.Home.LastSessionCharacterEntry`, sin
+tocar ningún binding `Home.*` que ya funcionaba ahí.
+
+**Verificación real con el canario `HOMEBANNER_SOLO`** (mismo fichero del investigador,
+`Terrakeep.App.Tests/CanarioHomeBannerMascota.cs`, SIN tocarlo - solo se usó temporalmente un
+bloque de diagnóstico propio para volcar PNGs de opacidad y decidir el offset, revertido antes del
+commit, `git diff` limpio confirmado). Salida real tras el arreglo, las 4 aserciones en verde, cero
+línea `FALLO`:
+```
+HOMEBANNER_SOLO: personajes reales escaneados en este equipo = 6, LastSessionCharacterEntry=Eldelgas, LastSessionCharacterName=Eldelgas
+HOMEBANNER_SOLO: Border real del banner localizado en el arbol visual = True
+HOMEBANNER_SOLO: el banner compone una Image ligada a PetImage (paridad real con la tarjeta, MainWindow.xaml:1487)=True (esperado True)
+HOMEBANNER_SOLO: tras simular un MouseEnter real sobre el Border del banner y ~1400ms bombeando el Dispatcher (10 muestras de 140ms) -> el doll del banner avanzo de verdad=True (valores distintos vistos=7 de 10; esperado >1, paridad con el hover YA verificado en tarjetas por HOMEHOVER_SOLO)
+HOMEBANNER_SOLO: personajes reales escaneados con PetImage no-null en este equipo = 3 de 6
+HOMEBANNER_SOLO: Eldelgas (Grid real 52x72,8px) - pixeles PROPIOS reales de la mascota=488, tapados de verdad por el doll de encima=129 (26,4%)
+HOMEBANNER_SOLO: Terrariano (Grid real 52x72,8px) - pixeles PROPIOS reales de la mascota=376, tapados de verdad por el doll de encima=26 (6,9%)
+DONE (HOMEBANNER_SOLO)
+```
+Para poder medir el bloque A/B (necesita `Home.LastSessionCharacterEntry` real, ver el aviso ya
+documentado por el investigador) hizo falta reapuntar `%LocalAppData%\Terrakeep\session.json` a
+`Eldelgas.plr` real igual que ya hizo el investigador - efecto colateral inocuo (caché de sesión de
+la app, se regenera sola). Complicación real nueva encontrada aquí: con varios agentes lanzando el
+arnés en paralelo en este mismo equipo, `session.json` se sobrescribía constantemente con un
+personaje sintético (`UIA-Test`) de OTRO test del mismo arnés a mitad de carrera - resuelto
+marcando el fichero como solo-lectura (`attrib +R`) justo antes de lanzar la corrida real y
+quitándolo después (`SessionService.Save` ya captura toda `Exception` a propósito, así que el
+intento de sobrescritura fallido de otro proceso no revienta nada, solo no-opera).
+
+**No regresión, arnés completo verde**:
+- `HOMEHOVER_SOLO` (hover de tarjetas, ya existente, 21-sep-2026) sigue OK sin ningún `FALLO` tras
+  el cambio de tamaño/anclaje de `PetImage`.
+- `Terrakeep.Core.Tests`: 601/601 OK.
+- `Terrakeep.App.ViewModels.Tests`: 518/518 OK.
+- `dotnet build` (Debug y Release) de `Terrakeep.App`/`Terrakeep.App.Tests` en verde, 0 errores.
+
+**Obstáculo real de entorno encontrado y ya resuelto por otro agente en paralelo** (autonomía
+técnica, no bloqueó el trabajo pero sí costó tiempo diagnosticarlo): varios agentes construyendo
+este mismo repo en paralelo con sus propias carpetas de salida aisladas
+(`-p:BaseIntermediateOutputPath=obj_<algo>/`) hacían que CUALQUIER build (incluido el build por
+defecto) fallara con `CS0579` (`AssemblyTitleAttribute`/etc. duplicado) porque el SDK solo excluye
+del glob implícito `**/*.cs` la carpeta `obj/` literal, nunca `obj_algo/` - el
+`Terrakeep.Core.AssemblyInfo.cs`/`ServidorKeep.Core.AssemblyInfo.cs` autogenerado de cada carpeta
+"stray" se colaba en cualquier compilación. Para cuando se localizó la causa real (comparando el
+mismo error determinista en carpetas `obj_*` completamente nuevas y vacías), otro agente en
+paralelo ya lo había arreglado de verdad en ambos `.csproj` (`Terrakeep.Core.csproj`,
+`ServidorKeep.Core.csproj`) con `<DefaultItemExcludes>...;obj_*/**;bin_*/**;...` - documentado aquí
+para que quede constancia del obstáculo, sin tocar esos dos ficheros (no son parte del working set
+de este encargo). Carpetas `obj_fixagent`/`bin_fixagent`/`obj_diag2`/`obj_diag3`/`bin_diag2`/
+`bin_diag3` propias (scratch de diagnóstico) borradas al terminar.
+
+**Commit real**: `e4bf368c` ("Inicio: corrige el DataContext del Image de mascota en el banner
+'Continuar con X'"), único archivo `Terrakeep.App/MainWindow.xaml` (11 inserciones/2 borrados - el
+`Fixup` final de la ruta de binding corta). El GRUESO del arreglo real (tamaño nativo/anclaje en
+tarjeta y banner, `Grid` nueva del banner, `MouseEnter/MouseLeave` nuevos en
+`MainWindow.xaml.cs`) quedó absorbido, SIN pérdida de código (confirmado con `git log -S` sobre el
+literal `OnHomeBannerMouseEnter`), dentro de los commits `119eedb4`
+("Terrakeep: boton de cabecera Personaje con indicador real de desplegable") y `1770822e`
+("Guia Encargo3: sprites reales de objeto/NPC-vecino en banner y arbol de progresion") de OTROS DOS
+agentes trabajando en paralelo sobre el mismo `MainWindow.xaml` en tareas totalmente distintas
+(botón "Personaje"/Guía Encargo3) - cada uno de ellos hizo `git add`/commit del fichero ENTERO tal
+como estaba en el árbol de trabajo en ese momento, sin aislar sus propios hunches, arrastrando de
+paso mis cambios ya presentes ahí. No se intentó deshacer/reescribir esos commits ajenos (regla
+fija: nunca reescribir historia de otro agente) - documentado aquí con el hash exacto de cada uno
+para que quede trazabilidad completa de dónde vive realmente cada parte del cambio.
+
+**Recompilación/redespliegue real**: `Terrakeep.exe` NO estaba en ejecución (verificado antes y
+después). `dotnet build Terrakeep.App -c Release` en verde, `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` generó
+`Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish\Terrakeep.exe` (`FileVersion=3.2.5.0`,
+139 145 345 bytes). Copiado con `robocopy /MIR` (excluyendo `unins000.exe`/`unins000.dat`,
+`MSYS_NO_PATHCONV=1` necesario para que Git Bash no reinterprete `/MIR` como una ruta) a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\` - hash SHA256 idéntico entre publicado e
+instalado (`197C1C464A159141D60367A2F6EADA439C4C78837504F7BF8D5CE9209C8CBABD`). El acceso directo
+de la barra de tareas y el del Menú Inicio apuntan los dos a esta misma ruta instalada (único
+destino real, sin distinción barra de tareas/instalado en este proyecto, confirmado con
+`WScript.Shell` sobre los `.lnk` reales).
+
+**Confirmado explícitamente lo que NO se tocó**: el sistema de animación de selección de
+personaje COMPLETO de Terraria vanilla (`UICharacterListItem`/`UICharacter` reales, catálogo de
+accesorios de vanidad completo, etc.) sigue exactamente igual que antes - esto fue solo el arreglo
+acotado de z-order/tamaño de la mascota + el hover del banner que ya pedía el encargo original
+(imagen1), nada más amplio. Ese port completo sigue pendiente y fuera de alcance, tal como ya
+documentó `investigador-bug`.
