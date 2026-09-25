@@ -2653,11 +2653,20 @@
                                  aqui con o sin hover. -->
                             <Grid DockPanel.Dock="Left" Width="104" Height="145.6" Margin="0,0,18,0" VerticalAlignment="Center"
                                   Visibility="{Binding Home.LastSessionCharacterEntry, Converter={StaticResource NullToVis}}">
-                                <Image Source="{Binding Home.LastSessionCharacterEntry.PetImage}" Stretch="None"
+                                <!-- DataContext propio (Option A del investigador, bitacora.md
+                                     25-sep-2026): re-atado a Home.LastSessionCharacterEntry para
+                                     que el binding de Source sea el mismo "PetImage" corto y literal
+                                     que ya usa la tarjeta (MainWindow.xaml linea ~1487) en vez de la
+                                     ruta larga "Home.LastSessionCharacterEntry.PetImage" - el Image
+                                     de Preview de abajo (fuera de este DataContext local, para no
+                                     romper el punto de anclaje real que ya usa el arnes para ubicar
+                                     este Border) sigue con la ruta completa sin tocar. -->
+                                <Image DataContext="{Binding Home.LastSessionCharacterEntry}"
+                                       Source="{Binding PetImage}" Stretch="None"
                                        RenderOptions.BitmapScalingMode="NearestNeighbor"
                                        HorizontalAlignment="Left" VerticalAlignment="Top"
                                        Margin="-40,-32,0,0"
-                                       Visibility="{Binding Home.LastSessionCharacterEntry.PetImage, Converter={StaticResource NullToVis}}"
+                                       Visibility="{Binding PetImage, Converter={StaticResource NullToVis}}"
                                        ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}" />
                                 <Image Source="{Binding Home.LastSessionCharacterEntry.Preview}" Stretch="Uniform"
                                        RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top" />
