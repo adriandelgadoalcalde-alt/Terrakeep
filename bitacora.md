@@ -24227,6 +24227,150 @@ nuevos) - ningun fichero exclusivo de Face/Front/Wings (`FaceAccessoryLayerTable
 `WingDrawTable.cs`, `acc_front/`, `acc_wing/`, `extraer-sprites-alas-vanilla.js`,
 `extraer-slot-armadura-calamity.js`, `calamity/catalog.json`) entro en mi commit.
 
+## Wings Encargo1 (25-sep-2026): capa base estatica de alas, vanilla (51 IDs) y Calamity
+## (16 items) - aplicador-fix, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d
+
+Encargo del coordinador (hallazgo YA investigado por arquitecto-keep): punto de conexion real
+confirmado en `PlayerPreviewRenderer.cs` (entre `DrawAccessory(TailFile)` y el `Composite` de
+`BackHair`), tabla real de offsets del arquitecto con 28 ids con algo "especial" (17 con
+override real de posicion/divisor + 11 mencionados dos veces en su resumen). Verificacion propia
+releyendo `PlayerDrawLayers.cs:655-1105` linea a linea (no solo el resumen del arquitecto):
+confirmados los 17 overrides REALES de posicion/divisor (6 con tweak `num12/num13/num14` dentro
+de la rama generica + 11 con bloque propio "early return") - la cifra correcta de ids con
+formula/divisor DISTINTOS del generico es 17, no 28 (28 era la cuenta de MENCIONES en el bloque
+935-1105, incluyendo 7 ids que solo cambian de COLOR/alpha sin mover la posicion - 6/9/10/11/29/
+31/32/36/38 -, ignorados aqui a proposito, ver el ALCANCE DELIBERADO mas abajo).
+
+**Formula real y derivacion K=(10,10)**: `DrawPlayer_09_Wings` usa
+`vector = Position - screenPosition + (width/2, height-bodyFrame.Height/2) + (0,7)`, con
+`Position - screenPosition` (K) sin modelar en este renderer (el doll no tiene camara) - se
+despejo ALGEBRAICAMENTE, igual que ya hizo `LoadBalloonFrame` para su propio caso, pero
+verificado aqui de NUEVO por una via independiente: igualando la formula real de
+`DrawPlayer_20_NeckAcc` (`PlayerDrawLayers.cs:2083-2091`) a "alineado 1:1 con el lienzo" (offset
+final 0,0) da K=(10,10) - el MISMO valor ya usado por Balloon, confirmando que es una constante
+real de este renderer, no un dato especifico de un tipo de accesorio. Con K=(10,10), la formula
+generica da `anchor=(11,33)`, divisor=4 (`WingDrawTable.Default`). Los 17 overrides (tabla
+completa con la cita linea a linea de cada uno, ids reales y offsets derivados con el mismo
+metodo) estan documentados en el comentario de clase de `WingDrawTable.cs`.
+
+**Hallazgo real nuevo, no anticipado por la investigacion previa**: `Player.
+ShouldDrawWingsThatAreAlwaysAnimated()` (`Player.cs:30967-30978` real) devuelve `false` salvo
+`velocity.Y != 0f` (jugador en el aire) - las 6 IDs 22/28/34/39/45/48 estan condicionadas a esa
+funcion en el JUEGO REAL, lo que significa que en el juego real, un personaje QUIETO EN EL SUELO
+(como el doll, siempre "en reposo") NO dibuja esas 6 alas EN ABSOLUTO. DELIBERATE DIFFERENCE
+documentada en el codigo (comentario de clase de `WingDrawTable`): se ignora ese gate a proposito
+y se dibuja siempre el fotograma de reposo, fiel al PROPOSITO del doll (mostrar que alas llevas
+puestas) en vez de al gate de animacion del juego real.
+
+**ALCANCE DELIBERADO completo (documentado en el codigo, `WingDrawTable.cs`)**: capa base
+ESTATICA, un unico fotograma fijo (frame 0, salvo el id 40 - ver mas abajo), SIN ninguna de las
+capas/efectos secundarios reales para las 51 alas vanilla: aleteo/animacion real, particulas/
+estelas (llamas del 22, nube de plumas del 40, estela arcoiris del 45, polvo del 34/9/29), glow
+masks/overlays adicionales (43/44/47/27/30/32/36/38), colores/alpha que pulsan con el tiempo (31/
+36/51), y el gate `ShouldDrawWingsThatAreAlwaysAnimated` de las 6 IDs de arriba. Caso especial id
+40 (Ghostar's Wings): particulas puras sin sprite base distinguible - se toma UN fotograma
+representativo (frameIndex=8 de 14), el MISMO que el juego real usa para un jugador quieto en el
+suelo (`num7=8` cuando `velocity.Y==0f`), no el fotograma 0 (documentado explicitamente en
+`WingDrawTable.Overrides[40]`). Caso especial de Calamity `WingsofRebirth`: tiene su PROPIA
+`PlayerDrawLayer` (`CalPlayer/DrawLayers/WingsofRebirthLayer.cs`) con una textura extra encima -
+fuera de alcance, documentado en el codigo (comentario de `EquippedAccessories.WingFile` y en el
+comentario de clase de `WingDrawTable`), solo se dibuja la capa base generica.
+
+**Extraccion vanilla real** (`scripts/extraer-sprites-alas-vanilla.js`, nuevo, hermano de
+`extraer-sprites-accesorios-vanilla.js` pero con rango FIJO 1-51 en vez de escanear
+`vanilla_accessory_slots.json` - el prefijo de fichero real de Wings NO lleva "Acc_", confirmado
+en `AssetInitializer.cs` real): 51/51 `Wings_N.xnb` reales extraidos a `Assets/player/acc_wing/
+{id}.png`, 0 faltantes. Dimensiones reales confirmadas divisibles limpiamente entre el divisor de
+`WingDrawTable` (id1 248/4=62, id5 264/4=66, id22 210/7=30, id40 1204/14=86, id51 496/8=62).
+
+**wingSlot real, campo nuevo "wg"** (`scripts/extraer-slots-accesorios-vanilla.py`,
+`VanillaAccessorySlotCatalog.cs`): 46 de los 51 ids vanilla reales tienen un item real que los
+asigna en la version de `Item.cs` que usa este catalogo (tModLoader 1.4.4.9); wingSlot 47-51 NO
+tienen ningun item real en esa version (escaneo completo confirmado, "wingSlot = " nunca llega a
+47+) - limite real documentado (no oculto) en `VanillaAccessorySlotEntry.Wing` y en
+`WingDrawTable.Overrides`. El escaner generico (`split_by_case`) perdia 7 de los 46 items reales
+por 2 motivos ya conocidos en este script (mismo problema que `BEARD_MANUAL`/`FRONT_MANUAL`):
+4 ids (WingsSolar/Vortex/Nebula/Stardust, 3468-3471) comparten un fallthrough con expresion NO
+literal (`wingSlot = (sbyte)(29 + type - 3468)`), y 3 ids (FinWings/FishronWings/MothronWings,
+2494/2609/2770, wingSlot 25/26/27) tienen valor literal pero viven dentro de un switch ANIDADO
+(depth 2) - `WING_MANUAL` (nuevo, mismo patron) transcribe los 7 a mano. Spot-checks reales:
+id 492 (Demon Wings) -> wg=1, id 749 (Butterfly Wings) -> wg=5, id 1866 (Hoverboard) -> wg=22,
+id 3469 (WingsVortex) -> wg=30, id 2494 (Fin Wings) -> wg=25 - todos correctos.
+
+**Calamity, correccion real sobre el propio comentario del script** (`extraer-slot-armadura-
+calamity.js`): `TIPOS_SOPORTADOS` gana `'Wings'`. El comentario anterior del script decia
+"Wings/Front/Beard... 0 items reales de Calamity los declaran" - INEXACTO para Wings, ya
+detectado y documentado por el propio agente de `CalamityAccesorios` horas antes (bitacora.md,
+mismo dia) sin corregir el renderer todavia. Conteo real tras el arreglo: **16** items (no 15
+como decia el hallazgo) - los 15 puros (AureateBooster, ElysianWings, ExodusWings, HadalMantle,
+HadarianWings, MOAB, SeraphTracers, SilvaWings, SkylineWings, SoulofCryogen, StarlightWings,
+TarragonWings, TiredTail, VoidStriders, WingsofRebirth) + `MoonWalkers` (16º, real, no anticipado
+por el hallazgo) que declara `EquipType.Wings` Y `EquipType.Shoes` a la vez (mismo patron dual ya
+establecido para los 6 guantes de `CalamityAccesorios`) - `equipSlot="Wings"`,
+`equipSlotSecondary="Shoes"`, sin romper su resolucion existente como zapato (`IsAccessoryType`/
+`ResolveAccessorySprite` ya comprueban los 2 campos). `HadarianWings_Wings.png` confirmado 64x144
+(el unico de los 16 que no mide 86x248), 144/4=36 exacto.
+
+**Modelo/renderer** (`Terrakeep.Core/Model/WingDrawTable.cs` nuevo, `EquipmentAppearanceResolver.
+cs`/`PlayerPreviewRenderer.cs` - estos 2 ya quedaron committeados dentro de `e3a51b68`/`647ac665`,
+trabajo en paralelo real de otros agentes que barrieron el working tree completo en su momento,
+ver sus propias notas de bitacora arriba): `WingFile`/`WingSlot` en `EquippedAccessories`,
+resueltos con el mismo `ResolveAccessorySprite` generico ya existente (no hizo falta un
+`ResolveWing` dedicado - criterio propio de ingenieria, Wings es un canal UNICO sin
+reclasificacion, exactamente igual que Beard/Front, reusar el metodo generico es menos codigo que
+duplicar logica). `LoadWingFrame`/`SliceWingFrame` (gemelos de `LoadBalloonFrame`/
+`SliceBalloonFrame0`, pero centrando el frame recortado sobre `WingDrawTable.Resolve(wingId)` en
+vez de un offset fijo) insertados en el punto real confirmado, entre `TailFile` y `BackHair` -
+comentarios "(fuera de alcance)" quitados, comentario de cabecera de la clase actualizado.
+
+**Tests nuevos** (5, `PlayerPreviewRendererAccessoriesTests.cs` - tambien quedaron committeados
+en `647ac665`): `WingGenerico_...` (Demon Wings, id 492, tabla Default), `WingConOffsetTweak_...`
+(Butterfly Wings, id 749, confirma que el resultado es DISTINTO del generico), `WingConBloquePropio_
+..._DivisorPropioDistinto` (Hoverboard, id 1866, uno de los 11 early-return), `CalamityWingReal_
+..._IncluidoElTamanoDistinto` (HadarianWings real de Calamity, 64x144, WingSlot null), y
+`Orden_TailAntesQueWing_PngSinteticoDeAlaGrandeQueCubreLaEsquina` (PNG sintetico 200x800 para
+garantizar cobertura de la esquina (0,0) con el anchor real Default, confirma el orden real
+Tail->Wings). Ejecutados con filtro dedicado: **7/7 en verde** (los 5 + los 2 de Calamity ya
+existentes que tambien matcheaban el filtro).
+
+**Build y regresion**: `dotnet build Terrakeep.slnx` (Debug y Release) 0 avisos/0 errores.
+`Terrakeep.Core.Tests`: **718/718** en verde. `Terrakeep.App.ViewModels.Tests` (suite COMPLETA,
+no solo el filtro): **683/683** en verde, 0 errores - tardo **1h34m** real (vs los ~5-7min
+historicos) por contencion extrema de CPU: hasta **21 procesos `dotnet.exe`/`testhost.exe`
+simultaneos** confirmados con `Get-CimInstance Win32_Process` durante la espera (multiples
+agentes en paralelo, cada uno con su propia ronda completa de `dotnet test` sobre el mismo
+proyecto de ~680 tests, algunos con `BaseOutputPath` aislado) - confirmado que el proceso seguia
+"Responding" y con CPU creciendo de forma constante durante toda la espera (no colgado, solo
+lento por contencion real), esperado con `controladorEspera.js` en varias tandas encadenadas
+segun la cabecera obligatoria. `Terrakeep.App.Tests` NO es un proyecto xunit estandar
+(`OutputType=Exe`, arnes propio invocado con `dotnet run` + variables de entorno como
+`GUIA_SOLO=1`/`SNAPSHOT_VISUAL_SOLO`, no con `dotnet test`) - confirmado que `dotnet test` sobre
+el produce 0 tests/0 salida con exit 0, no es el gate real de ese proyecto y no forma parte del
+working set de este encargo (ningun fichero suyo tocado).
+
+**Build/publish/despliegue real**: `Terrakeep.exe` instalado NO estaba en ejecucion en ningun
+momento del encargo (confirmado antes y despues). `dotnet build Terrakeep.App -c Release` +
+`dotnet restore -r win-x64` + `dotnet publish -p:PublishProfile=win-x64` en verde, generando
+`Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish\` con los 51 `acc_wing/*.png` reales
+presentes. `robocopy ... /MIR` hacia `C:\Users\adrian\AppData\Local\Programs\Terrakeep\` (unico
+destino real, barra de tareas y Menu Inicio apuntan ahi) - confirmado con una segunda pasada
+`/MIR /L` (solo listar) tras el commit: **0 archivos distintos**, la copia instalada ya reflejaba
+el build completo. Arranque real del `.exe` instalado confirmado (reintentado hasta obtener
+`MainWindowTitle='Terrakeep'`, `HasExited=False`, cerrado limpio despues).
+
+**Commit real** (`ee637b52`): `Terrakeep.App/Assets/calamity/catalog.json`, `scripts/
+extraer-slot-armadura-calamity.js`, `Terrakeep.Core/Model/WingDrawTable.cs` (nuevo), `Terrakeep.
+App/Assets/player/acc_wing/*.png` (51 ficheros nuevos), `scripts/extraer-sprites-alas-vanilla.js`
+(nuevo) - confirmado con `git diff --stat`/`git diff HEAD` antes de `git add` que estos eran los
+UNICOS ficheros con contenido mio todavia sin comitear (los otros 5 ficheros reales del encargo -
+`EquipmentAppearanceResolver.cs`, `PlayerPreviewRenderer.cs`, `VanillaAccessorySlotCatalog.cs`,
+`vanilla_accessory_slots.json`, `scripts/extraer-slots-accesorios-vanilla.py`, y los 5 tests de
+`PlayerPreviewRendererAccessoriesTests.cs` - ya habian quedado committeados enteros dentro de
+`e3a51b68`/`647ac665`, working tree compartido con otros agentes en paralelo que hicieron
+`git add`/`git commit` sobre el estado COMPLETO del arbol en ese momento, mismo patron ya
+documentado repetidas veces hoy en esta bitacora - verificado con `git diff HEAD` = vacio en los
+5 ficheros antes de decidir no volver a comitearlos). Sin `git push`.
+
 ## GapAnalysis Encargo E: portar Front (item.frontSlot), FrontPart/BackPart con recorte de 2
 ## mitades y condicion real de incompatibilidad con scarf/cape (aplicador-fix, TASK CONTEXT
 ## e5eaea9e-c261-4199-8e7d-060b6054f58d) (25-sep-2026)
