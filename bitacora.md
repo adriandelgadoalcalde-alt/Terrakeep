@@ -26138,3 +26138,87 @@ Back/Backpack/Tail, Balloon/BalloonFront y Face/FaceHead/FaceMask/FaceFlower pud
 cada uno con su propio item, exactamente como el juego real. Pendiente para Fase3 (FaceHead
 sustituye piel) y Fase4/5 (favoritos cross-loadout, dyes shader, estados especiales) - fuera de
 alcance de este encargo, no tocado.
+
+### ParidadPersonaje Fase1 - test de integración real + verificación del fix de Hide[] en Apariencia, 25-sep-2026
+
+Encargo de aplicación directa sobre el hallazgo ya investigado por el arquitecto-keep (`GapAnalysis
+Encargo H`, ver arriba): `MainViewModel.RefreshAppearanceEquipment()` llamaba `ResolveAccessories`
+SIN el `Hide[]` real del personaje, dejando el preview en vivo de Personaje > Apariencia en "nada
+oculto" siempre, mientras que el doll de Inicio (`CharacterListEntryViewModel`) sí lo respetaba.
+
+**Arreglo aplicado** (confirmado con `Read`/`Grep` antes de tocar nada, tal como manda la causa ya
+investigada): `MainViewModel.cs`, dentro de `RefreshAppearanceEquipment()` - `var hide =
+_loaded?.Character.Loadouts.ElementAtOrDefault(_loaded.Character.CurrentLoadout)?.Hide;` pasado a
+`ResolveAccessories(loadout0, hide)`, mismo patrón exacto que ya usaba
+`CharacterListEntryViewModel.cs:241-242`. **Solape real con Fase2, documentado con honestidad**: al
+llegar a comitear, este arreglo YA estaba integrado en `HEAD` como parte del commit `422b5a16`
+(Fase2, agente en paralelo sobre el mismo método) - confirmado con `git show 422b5a16 --
+Terrakeep.App/ViewModels/MainViewModel.cs` que el hunk de Fase1 (comentario "ParidadPersonaje
+Fase1" + la línea de `hide`) está íntegro, sin pérdida ni reescritura silenciosa; Fase2 solo añadió
+el tercer parámetro `extraAccessoryUnlocked` a continuación. No se ha vuelto a comitear
+`MainViewModel.cs` por separado (nada que comitear ahí, `git status` limpio para ese fichero).
+
+**Test de INTEGRACIÓN real nuevo** (pedido explícito, no basta el unitario de
+`EquipmentAppearanceResolverTests.HideTrueEnHuecoFuncional_...` que ya existía):
+`Terrakeep.App.ViewModels.Tests/ParidadPersonajeHideAccesoriosTests.cs` -
+`InicioYAparienciaProducenElMismoEquippedAccessories_ConHideYVanidadReales`. Carga el MISMO `.plr`
+real (escrito con `PlrFile.Write`/leído con `PlrFile.Read`, mismo patrón que el resto del arnés) por
+los dos caminos completos de la app: `CharacterListEntryViewModel` (Inicio) y
+`MainViewModel.LoadFromPath` + `AppearanceViewModel` (Personaje > Apariencia). Personaje de prueba:
+Reloj de cobre (id 15, waist funcional) en `Items[3]` con `Hide[3]=true` + Reloj de plata (id 16,
+mismo tipo) de vanidad en `Social[7]` (confirma que Hide no rompe el caso normal de vanidad tapando
+al funcional), y Colgante de plata (id 554, neck funcional) en `Items[4]` con `Hide[4]=true` SIN
+ninguna vanidad de respaldo en ese canal (el caso que de verdad diverge según si el `Hide[]` llega o
+no - con vanidad presente en el mismo canal el resultado final es idéntico gane o pierda el bug,
+porque el scan de vanidad se ejecuta siempre después y sin mirar `hide`, así que por sí solo no
+habría detectado nada). Para poder comparar el `EquippedAccessories` real (no solo píxeles
+renderizados) se añadieron dos propiedades SOLO para pruebas -
+`CharacterListEntryViewModel.AccesoriosParaPruebas`/`AppearanceViewModel.AccesoriosParaPruebas` -,
+mismo criterio ya establecido por `CharacterFileService.DebugCorruptPlrBytesBeforeVerify` (sin
+`InternalsVisibleTo` configurado hacia el arnés).
+
+**Verificación real, con canario propio**: `dotnet test --filter
+FullyQualifiedName~ParidadPersonajeHideAccesoriosTests` en verde (1/1) tanto ANTES como DESPUÉS del
+commit `422b5a16` de Fase2 (se re-ejecutó tras la reescritura de `ResolveAccessories` a máquina de
+estados para confirmar que seguía pasando contra el resolver nuevo, no solo el viejo). Canario
+manual real: se revirtió temporalmente la línea a `ResolveAccessories(loadout0, null,
+extraAccessoryUnlocked)` (simulando el bug original) y el test FALLÓ de inmediato con la diferencia
+exacta esperada (`NeckFile` presente en Apariencia cuando debía ser `null`, `Actual` vs `Expected`
+del propio xUnit mostrando el colgante fantasma) - confirma que el test detecta de verdad el
+defecto, no solo que los dos caminos coincidan por casualidad. Restaurado el arreglo real de
+inmediato tras confirmar el fallo.
+
+**`dotnet test` completo sin regresión** (Debug, tras restaurar el arreglo, con el árbol de trabajo
+COMBINADO Fase1+Fase2+resto de agentes en paralelo): `Terrakeep.Core.Tests` 732/732,
+`Terrakeep.App.ViewModels.Tests` 724/724 - mismo baseline que el resto de encargos de hoy, sin
+regresión. `Terrakeep.App.Tests` (arnés gráfico manual, no vía `dotnet test`) no se tocó ni se
+ejecutó en esta pasada - fuera del alcance de este encargo (sin cambios en zonas que ese arnés
+cubre).
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` instalado NO estaba en ejecución en
+ningún momento de este encargo (`Get-CimInstance Win32_Process`, sin resultados). Dos rondas de
+`dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde
+(la segunda, redundante a propósito, para garantizar que el binario instalado refleja el estado
+`HEAD` exacto tras el commit `422b5a16` de Fase2, confirmado sin diff pendiente en
+`EquipmentAppearanceResolver.cs`/`MainViewModel.cs` en ese momento). Sanidad de `Assets/` ANTES del
+`/MIR` en las dos rondas: publish = 13055, instalado ANTES = 13055 - sin discrepancia. `robocopy
+.../publish .../Terrakeep /MIR /XF unins000.exe unins000.dat` (con `MSYS_NO_PATHCONV=1`): 1 archivo
+copiado (`Terrakeep.exe`) en cada ronda, ~13060 omitidos, 0 errores. Sanidad de `Assets/` DESPUÉS del
+`/MIR`: instalado = 13055 en las dos rondas - sin discrepancia. Relanzado el `.exe` instalado tras
+cada ronda (`Responding=True`, `MainWindowTitle=Terrakeep`, PIDs reales 45660 y 356420) y cerrado
+limpio con `Stop-Process` - confirmado `ResidualCount=0` las dos veces.
+
+**Commit real** `9dc4608e`: `Terrakeep.App/ViewModels/AppearanceViewModel.cs` +
+`Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs` (las dos propiedades
+`AccesoriosParaPruebas`, SOLO para pruebas) + `Terrakeep.App.ViewModels.Tests/
+ParidadPersonajeHideAccesoriosTests.cs` (nuevo). `MainViewModel.cs` NO se volvió a comitear (ya
+integrado en `422b5a16` de Fase2, `git status` limpio para ese fichero en el momento de comitear).
+`git status` revisado con cuidado antes del `git add`: numerosos ficheros ajenos de otros agentes en
+paralelo (`CLAUDE.md`, `Terrakeep.Core.Tests/**`, `scripts/**`, `Terrakeep.App.Tests/**`, etc.),
+ninguno añadido al stage - `git add` con rutas explícitas de mis 3 ficheros, nunca `-A`. Sin `git
+push`.
+
+**Fase1 queda cerrada**: el preview en vivo de Personaje > Apariencia y el doll de Inicio producen
+ahora el mismo `EquippedAccessories` para el mismo estado de personaje, confirmado con datos reales
+(no solo por inspección de código). Pendiente real, fuera de este encargo: Fase2 ya documentó sus
+propios pendientes (Fase3/4/5) arriba.
