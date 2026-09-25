@@ -1850,4 +1850,123 @@ public sealed class EquipmentAppearanceResolverTests
 
         Assert.NotEqual(pixelesSin, pixelesCon);
     }
+
+    // ParidadPersonaje Fase4 (26-sep-2026): GapAnalysis BugD - favoritos cross-loadout real
+    // (Player.GetEffectiveArmor, Player.cs:5678-5734 decompilado) - ver el comentario completo
+    // en EquipmentAppearanceResolver.ResolveEffectiveSlot. Reusa CascoCobre/CascoCobreScale
+    // (headSlot=1/2) y RelojCobre (waistSlot=2) ya usados arriba como spot-check real.
+    private static PlrLoadout OtroLoadoutConCabezaFavorita(int headId, bool favorited = true)
+    {
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: false);
+        loadout.Items[0] = new PlrItemSlot(headId, 1, 0, favorited);
+        return loadout;
+    }
+
+    [Fact]
+    public void FavoritoDeOtroLoadout_SeVeEnCabezaDelLoadoutActivoConEseHuecoVacio_GapAnalysisBugD()
+    {
+        // Loadout activo SIN cabeza puesta, pero con un Casco de cobre FAVORITO en otro loadout
+        // guardado, mismo indice (0) - el juego real "presta" ese objeto para el doll.
+        var activo = PlrLoadout.CreateEmpty(isPrimary: true);
+        var otro = OtroLoadoutConCabezaFavorita(CascoCobre);
+
+        var armor = Service.EquipmentAppearance.Resolve(activo, otherLoadouts: [otro]);
+
+        Assert.NotNull(armor.HeadFile);
+        Assert.True(File.Exists(armor.HeadFile));
+        Assert.EndsWith("armor_head" + Path.DirectorySeparatorChar + "1.png", armor.HeadFile);
+    }
+
+    [Fact]
+    public void SinFavoritoEnOtroLoadout_HuecoVacioSigueVacio_GapAnalysisBugD()
+    {
+        // Mismo escenario que arriba pero SIN marcar favorito - el bucle real solo actua sobre
+        // items favoritos, este se salta igual que si el otro loadout no existiera.
+        var activo = PlrLoadout.CreateEmpty(isPrimary: true);
+        var otro = OtroLoadoutConCabezaFavorita(CascoCobre, favorited: false);
+
+        var armor = Service.EquipmentAppearance.Resolve(activo, otherLoadouts: [otro]);
+
+        Assert.Null(armor.HeadFile);
+    }
+
+    [Fact]
+    public void HuecoPropioConAlgoPuesto_IgnoraLosFavoritosDeOtrosLoadouts_GapAnalysisBugD()
+    {
+        // Player.cs real: "if (armor[slot].IsAir)" - el favorito cross-loadout SOLO se consulta
+        // si el hueco propio esta vacio. Aqui el activo YA lleva puesto CascoCobreScale
+        // (headSlot=2); el favorito del otro loadout (headSlot=1, MISMO indice) no debe pisarlo.
+        var activo = LoadoutConCabeza(CascoCobreScale);
+        var otro = OtroLoadoutConCabezaFavorita(CascoCobre);
+
+        var armor = Service.EquipmentAppearance.Resolve(activo, otherLoadouts: [otro]);
+
+        Assert.NotNull(armor.HeadFile);
+        Assert.EndsWith("armor_head" + Path.DirectorySeparatorChar + "2.png", armor.HeadFile);
+    }
+
+    [Fact]
+    public void PrimerFavoritoQueApareceCortaLaBusqueda_NoMiraElSiguienteLoadout_GapAnalysisBugD()
+    {
+        // Reproduce fielmente el "break" real dentro de CanShareArmor: el primer loadout con un
+        // item FAVORITO en ese indice corta la busqueda ahi mismo, se use o no - aunque el
+        // SEGUNDO loadout tenga un candidato perfectamente valido, nunca llega a mirarse. Una
+        // pieza de CUERPO real de Calamity favorita en el indice 0 (cabeza) nunca resuelve a
+        // HeadFile (mismo criterio ya probado en ObjetoCalamityDeUnSlotDistinto_...).
+        var bodyEntry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Body");
+        var activo = PlrLoadout.CreateEmpty(isPrimary: true);
+        var primerLoadout = PlrLoadout.CreateEmpty(isPrimary: false);
+        primerLoadout.Items[0] = new PlrItemSlot(bodyEntry.SyntheticId, 1, 0, true);
+        var segundoLoadout = OtroLoadoutConCabezaFavorita(CascoCobre);
+
+        var armor = Service.EquipmentAppearance.Resolve(activo, otherLoadouts: [primerLoadout, segundoLoadout]);
+
+        Assert.Null(armor.HeadFile);
+    }
+
+    [Fact]
+    public void FavoritoDeOtroLoadoutEnVanidad_TapaAlFuncionalPropio_ResueltoPorSeparadoDeLoCorrecto_GapAnalysisBugD()
+    {
+        // El favorito cross-loadout se resuelve por SEPARADO para cada mitad (funcional/vanidad,
+        // ver el comentario real completo en ResolveEffectiveSlot) ANTES de que la vanidad tape
+        // a lo funcional - aqui el activo lleva puesto un casco FUNCIONAL propio (headSlot=2) y
+        // otro loadout tiene un casco de VANIDAD favorito (headSlot=1, mismo indice 0): el
+        // resultado final tiene que ser el de vanidad, igual que "VanidadPuesta_TapaAlObjetoFuncional".
+        var activo = LoadoutConCabeza(CascoCobreScale);
+        var otro = PlrLoadout.CreateEmpty(isPrimary: false);
+        otro.Social[0] = new PlrItemSlot(CascoCobre, 1, 0, true);
+
+        var armor = Service.EquipmentAppearance.Resolve(activo, otherLoadouts: [otro]);
+
+        Assert.EndsWith("armor_head" + Path.DirectorySeparatorChar + "1.png", armor.HeadFile);
+    }
+
+    [Fact]
+    public void FavoritoDeOtroLoadout_SeVeEnAccesorioDelLoadoutActivoConEseHuecoVacio_GapAnalysisBugD()
+    {
+        // Mismo mecanismo que armadura, pero para un accesorio generico (indices 3..9) - el bug
+        // confirmado por el arquitecto era "afecta TAMBIEN a head/body/legs no solo accesorios",
+        // dejando claro que los accesorios YA estaban dentro del alcance esperado tambien.
+        var activo = PlrLoadout.CreateEmpty(isPrimary: true);
+        var otro = PlrLoadout.CreateEmpty(isPrimary: false);
+        otro.Items[3] = new PlrItemSlot(RelojCobre, 1, 0, true);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(activo, otherLoadouts: [otro]);
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.True(File.Exists(acc.WaistFile));
+        Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
+    }
+
+    [Fact]
+    public void SinOtherLoadouts_MismoComportamientoQueAntesDelEncargoBugD_SinRegresion()
+    {
+        // Regression real: el parametro nuevo por defecto (null) no debe cambiar NADA del
+        // comportamiento ya verificado por el resto de esta clase.
+        var armor = Service.EquipmentAppearance.Resolve(LoadoutConCabeza(CascoCobre));
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, RelojCobre));
+
+        Assert.EndsWith("armor_head" + Path.DirectorySeparatorChar + "1.png", armor.HeadFile);
+        Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
+    }
 }

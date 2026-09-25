@@ -292,7 +292,15 @@ public partial class MainViewModel : ObservableObject
             // que ItemsRow (10 slots reales, PlrItemSlot.Empty si el contenedor trae menos).
             Dyes = ItemsRow(EquipmentGroup.EquippedDyes),
         };
-        Appearance.UpdateEquippedArmor(_service.EquipmentAppearance.Resolve(loadout0));
+        // ParidadPersonaje Fase4 (26-sep-2026): GapAnalysis BugD - character.Loadouts se pasa
+        // como "otherLoadouts" para el favorito cross-loadout real (mismo dato que ya lee
+        // CharacterListEntryViewModel para el doll de Inicio, ver su comentario). LIMITE REAL
+        // documentado a proposito: refleja el estado de los OTROS loadouts tal como se cargo el
+        // personaje (o tras el ultimo guardado), no ediciones sin guardar hechas esta misma
+        // sesion en las pildoras 2/3 de Equipamiento - mismo alcance que ya tenia "hide" mas
+        // abajo antes de este encargo (tampoco reflejaba ediciones en vivo de otros loadouts).
+        var otherLoadouts = _loaded?.Character.Loadouts;
+        Appearance.UpdateEquippedArmor(_service.EquipmentAppearance.Resolve(loadout0, otherLoadouts));
         // ParidadPersonaje Fase1 (25-sep-2026): el razonamiento anterior (comentario ya retirado,
         // "no hay control de UI para ocultar accesorio, hide=null es correcto") era incorrecto -
         // la ausencia de un editor para ese toggle no justifica ignorar el Hide[] YA GUARDADO del
@@ -302,13 +310,16 @@ public partial class MainViewModel : ObservableObject
         // lee CharacterListEntryViewModel para el doll de Inicio, ver su comentario junto a
         // ResolveAccessories) - se lee de ahi y se pasa igual, para que el preview en vivo de
         // Personaje>Apariencia coincida con Inicio en vez de mostrar siempre "nada oculto".
-        var hide = _loaded?.Character.Loadouts.ElementAtOrDefault(_loaded.Character.CurrentLoadout)?.Hide;
+        // ParidadPersonaje Fase4 (26-sep-2026): GapAnalysis BugH - ResolveActiveHide() (ver
+        // PlrCharacter.cs) cubre TAMBIEN el formato antiguo pre-Loadout (HideVisual1/HideVisual2),
+        // mismo arreglo que CharacterListEntryViewModel.
+        var hide = _loaded?.Character.ResolveActiveHide();
         // ParidadPersonaje Fase2 (25-sep-2026): mismo criterio que CharacterListEntryViewModel -
         // el slot 8 real solo esta desbloqueado con ExtraAccessory. ?? true (no ?? false) es a
         // proposito: si _loaded fuera null (no deberia pasar aqui, este metodo edita un personaje
         // ya cargado) el valor seguro es "no filtrar nada", igual que el resto de esta clase.
         bool extraAccessoryUnlocked = _loaded?.Character.ExtraAccessory ?? true;
-        Appearance.UpdateEquippedAccessories(_service.EquipmentAppearance.ResolveAccessories(loadout0, hide, extraAccessoryUnlocked));
+        Appearance.UpdateEquippedAccessories(_service.EquipmentAppearance.ResolveAccessories(loadout0, hide, extraAccessoryUnlocked, otherLoadouts));
     }
 
     // Envuelve una operacion en bloque real (Auto-equipar, Mover todo al almacen...) en UNA

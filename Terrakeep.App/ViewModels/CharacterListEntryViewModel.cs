@@ -233,24 +233,29 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         // Doll fiel al guardado (pedido explicito del usuario, 3-sep-2026): la armadura/
         // vanidad REAL puesta en loadouts[0] (el mirror de "lo que lleva puesto de verdad"),
         // no solo los 7 colores base.
-        var armor = equipmentAppearance.Resolve(character.PrimaryLoadout);
+        // ParidadPersonaje Fase4 (26-sep-2026): GapAnalysis BugD - character.Loadouts (los otros
+        // loadouts guardados) se pasa para el favorito cross-loadout real (Player.
+        // GetEffectiveArmor) - ver el comentario completo en
+        // EquipmentAppearanceResolver.ResolveEffectiveSlot. Vacio en un personaje sin loadouts,
+        // el resolver ya lo trata como "sin datos de otros loadouts" (mismo resultado que antes).
+        var armor = equipmentAppearance.Resolve(character.PrimaryLoadout, character.Loadouts);
         // PortSeleccion Encargo2: mismo criterio que armor arriba, pero para los 7 tipos de
         // accesorio (waist/neck/handOn/handOff/back/shield/face) - ver EquippedAccessories.
         // GapAnalysis Encargo H (25-sep-2026): bug de datos real corregido aqui - el Hide[] real
         // (hideVisibleAccessory del juego) NUNCA vive en PrimaryLoadout (el mirror que se pasa
         // arriba para la armadura/vanidad SI tiene el equipo correcto, pero
         // PlrLoadout.CreateEmpty(isPrimary:true) fija su propio Hide=null siempre) - el array de
-        // 10 bits real vive en character.Loadouts[character.CurrentLoadout].Hide. Antes de este
-        // arreglo, ResolveAccessories no recibia ningun Hide (parametro inexistente) y el toggle
-        // de "ocultar accesorio" no se reflejaba nunca en el doll de Inicio. ElementAtOrDefault
-        // vuelve null de forma segura si Loadouts esta vacio (version<269, ver PlrCharacter.cs) o
-        // si CurrentLoadout cae fuera de rango - ResolveAccessories ya trata hide=null como "sin
-        // nada oculto", el mismo comportamiento de antes del arreglo para esos casos.
-        var hide = character.Loadouts.ElementAtOrDefault(character.CurrentLoadout)?.Hide;
+        // 10 bits real vive en character.Loadouts[character.CurrentLoadout].Hide.
+        // ParidadPersonaje Fase4 (26-sep-2026): GapAnalysis BugH - character.ResolveActiveHide()
+        // (ver PlrCharacter.cs) ya cubre TAMBIEN el formato antiguo pre-Loadout (HideVisual1/
+        // HideVisual2), que antes se perdia siempre porque Loadouts esta vacio en esos personajes
+        // (version<269) y este metodo devolvia null sin mirar los 2 bytes que
+        // PlrBodySerializer.Read YA parseaba fielmente.
+        var hide = character.ResolveActiveHide();
         // ParidadPersonaje Fase2 (25-sep-2026): el slot 8 real (armor[8]/armor[18]) solo esta
         // desbloqueado con el Corazon de Demonio/Carmesi (PlrCharacter.ExtraAccessory) - ver
         // IsItemSlotUnlockedAndUsable en el comentario real de ResolveAccessories.
-        var accessories = equipmentAppearance.ResolveAccessories(character.PrimaryLoadout, hide, character.ExtraAccessory);
+        var accessories = equipmentAppearance.ResolveAccessories(character.PrimaryLoadout, hide, character.ExtraAccessory, character.Loadouts);
         // H6-02/H6-01-b: Gender ES el skinVariant real (0-11, no un booleano) - se pasa entero
         // para que el doll de Inicio use la carpeta de sprites/reglas SetMatch reales de la
         // variante puesta (caso "Eldelgas": Gender=8/MaleDress), no solo Chico/Chica.

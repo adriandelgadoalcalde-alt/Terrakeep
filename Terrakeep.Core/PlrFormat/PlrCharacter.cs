@@ -134,4 +134,34 @@ public sealed class PlrCharacter
     // Bytes finales no reconocidos (de una version futura que este lector no entiende) - se
     // preservan tal cual para no perder datos al re-guardar. Vacio si no habia ninguno.
     public byte[] Trail { get; set; } = [];
+
+    // ParidadPersonaje Fase4 (26-sep-2026): GapAnalysis BugH - resuelve el Hide[] REAL
+    // (hideVisibleAccessory del juego) del loadout activo, con fallback al formato ANTIGUO
+    // pre-Loadout (HideVisual1/HideVisual2) cuando el personaje no tiene Loadouts todavia.
+    //
+    // Loadouts SOLO existe desde version>=269 (PlrBodySerializer.Read: "character.Loadouts = new
+    // PlrLoadout[3]" solo dentro de ese if, vacio en cualquier otro caso) - antes de esa version
+    // el juego real no tenia multiples loadouts, solo UN equipo puesto con UN unico array de 10
+    // bits (hideVisibleAccessory), serializado en 2 bytes sueltos: HideVisual1 cubre los indices
+    // 0..7 y HideVisual2 los indices 8..9 (Player.cs:55831-55841 real, LoadPlayer - exactamente
+    // el mismo array de 10 bits que Loadouts[i].Hide en el formato moderno, solo que empaquetado
+    // distinto). PlrBodySerializer.Read YA parseaba estos 2 bytes fielmente para version>=83
+    // desde el principio - lo que faltaba era conectar ese dato ya parseado a la resolucion de
+    // apariencia, que hasta este encargo solo miraba Loadouts[CurrentLoadout].Hide (siempre null
+    // en un personaje de formato antiguo, porque Loadouts esta vacio) y se quedaba sin nada que
+    // ocultar aunque el .plr SI tuviera accesorios marcados como ocultos.
+    //
+    // Devuelve null si Loadouts existe pero CurrentLoadout cae fuera de rango (mismo
+    // comportamiento seguro que ya tenian los llamadores antes de este encargo -
+    // ResolveAccessories ya trata hide=null como "nada oculto").
+    public bool[]? ResolveActiveHide()
+    {
+        if (Loadouts.Length > 0)
+            return Loadouts.ElementAtOrDefault(CurrentLoadout)?.Hide;
+
+        var legacyHide = new bool[10];
+        for (int i = 0; i < 8; i++) legacyHide[i] = (HideVisual1 & (1 << i)) != 0;
+        for (int i = 0; i < 2; i++) legacyHide[8 + i] = (HideVisual2 & (1 << i)) != 0;
+        return legacyHide;
+    }
 }

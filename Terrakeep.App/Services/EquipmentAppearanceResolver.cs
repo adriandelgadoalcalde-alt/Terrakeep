@@ -233,11 +233,17 @@ public sealed class EquipmentAppearanceResolver
             : [];
     }
 
-    public PlayerPreviewRenderer.EquippedArmor Resolve(PlrLoadout loadout)
+    // ParidadPersonaje Fase4 (26-sep-2026): GapAnalysis BugD - "otherLoadouts" es
+    // PlrCharacter.Loadouts (los otros loadouts guardados, o vacio/null en un personaje sin
+    // loadouts) - se usa SOLO para el favorito cross-loadout de ResolveEffectiveSlot (ver su
+    // comentario). Parametro opcional para no romper compatibilidad con los llamadores/tests que
+    // ya existian antes de este encargo: null se comporta EXACTAMENTE igual que antes (sin datos
+    // de otros loadouts, ResolveEffectiveSlot devuelve el slot propio tal cual).
+    public PlayerPreviewRenderer.EquippedArmor Resolve(PlrLoadout loadout, IReadOnlyList<PlrLoadout>? otherLoadouts = null)
     {
-        var headSlot = Visible(loadout, 0);
-        var bodySlot = Visible(loadout, 1);
-        var legsSlot = Visible(loadout, 2);
+        var headSlot = Visible(loadout, 0, otherLoadouts);
+        var bodySlot = Visible(loadout, 1, otherLoadouts);
+        var legsSlot = Visible(loadout, 2, otherLoadouts);
         return new(
             ResolveHead(headSlot),
             ResolveBody(bodySlot),
@@ -276,8 +282,66 @@ public sealed class EquipmentAppearanceResolver
         return DyeShaderCatalog.PlainColor(dyeSlot.Id) is { } c ? new PlayerPreviewRenderer.Tint(c.R, c.G, c.B) : null;
     }
 
-    private static PlrItemSlot Visible(PlrLoadout loadout, int index) =>
-        loadout.Social[index].IsEmpty ? loadout.Items[index] : loadout.Social[index];
+    private static PlrItemSlot Visible(PlrLoadout loadout, int index, IReadOnlyList<PlrLoadout>? otherLoadouts = null)
+    {
+        var social = ResolveEffectiveSlot(loadout.Social, otherLoadouts, index, vanity: true);
+        return social.IsEmpty ? ResolveEffectiveSlot(loadout.Items, otherLoadouts, index, vanity: false) : social;
+    }
+
+    // ParidadPersonaje Fase4 (26-sep-2026): GapAnalysis BugD - puerto real de Player.
+    // GetEffectiveArmor (Player.cs:5678-5734, decompilado real): "si el slot de este INDICE esta
+    // vacio en el loadout activo (aqui: loadout, PrimaryLoadout del llamador), busca un objeto
+    // FAVORITO (Item.favorited) en el MISMO indice de CUALQUIERA de los otros loadouts guardados
+    // (Loadouts[] real, aqui otherLoadouts), en orden, y lo 'presta' visualmente". Cita real
+    // completa:
+    //   if (armor[slot].IsAir) { for (i=0..Loadouts.Length) { item = Loadouts[i].Armor[slot];
+    //     if (!item.IsAir && item.favorited) { if (!CanShareArmor(item, slot)) break;
+    //       sharedFromLoadout = i; return item; } } } return armor[slot];
+    // Los items NO favoritos de otros loadouts en ese mismo indice se SALTAN (el bucle real solo
+    // actua "if (!item.IsAir && item.favorited)", si no se cumple sigue con el siguiente
+    // loadout) - el primer item FAVORITO que aparece corta la busqueda ahi (se use o no, por eso
+    // el "break" real no sigue mirando mas loadouts si CanShareArmor falla).
+    //
+    // Aplica por igual a slots de armadura (indices 0..2, cabeza/cuerpo/piernas - el bug real
+    // confirmado por el arquitecto: "afecta TAMBIEN a head/body/legs no solo accesorios,
+    // PlayerFrame usa GetEffectiveArmor") y de accesorio (indices 3..9), y por separado a cada
+    // MITAD (funcional via Items[], vanidad via Social[] aqui - la doble llamada real
+    // GetEffectiveArmor(10)/GetEffectiveArmor(0) en PlayerFileData/PlayerHooks confirma que el
+    // favorito se resuelve para las DOS mitades de forma independiente, ANTES de que la vanidad
+    // tape a lo funcional).
+    //
+    // ALCANCE DELIBERADO: CanShareArmor real (Player.cs:5706-5734) tiene 2 partes - (a) el
+    // candidato debe encajar de verdad en ESE canal (ItemSlot.CanEquipInArmorSlot: headSlot/
+    // bodySlot/legSlot >= 0 para armadura, item.accessory==true para accesorios) y (b) para
+    // accesorios, ademas no puede chocar por TIPO con ningun otro accesorio ya equipado
+    // (CanEquipBothAccessories/AccessoryIncompatibilityType/DualEquipArmor de wings), algo que
+    // depende del estado COMPLETO y EN VIVO de los otros 6 slots del jugador real. Este resolver
+    // no porta (b) aparte: el mismo resultado visual final (el ultimo item que escribe un canal
+    // desplaza al anterior) ya lo produce VisiblePlayerState de forma natural cuando dos items
+    // coinciden en tipo dentro del MISMO escaneo, portar (b) por separado solo duplicaria esa
+    // logica sin cambiar nada visible. La parte (a) SI se porta, mas simple y ya cubierta por el
+    // resto de este fichero: si el candidato favorito no resuelve a un sprite real en el canal
+    // pedido (Resolve/ResolveAccessorySprite ya devuelven null para eso, "lo que no se encuentra
+    // no se inventa"), no se muestra nada - mismo resultado final que el "break" real seguido de
+    // "return armor[slot]" (que en ese punto es Air).
+    //
+    // El favorito de DYE (Player.GetEffectiveDye, mismo mecanismo, item.favorited en
+    // loadout.Dyes) queda FUERA de este encargo - el hallazgo confirmado por el arquitecto habla
+    // solo de GetEffectiveArmor (piezas de sprite), no de tinte; portarlo tambien habria sido
+    // ampliar alcance sin evidencia nueva.
+    private static PlrItemSlot ResolveEffectiveSlot(PlrItemSlot[] activeSlots, IReadOnlyList<PlrLoadout>? otherLoadouts, int index, bool vanity)
+    {
+        var own = activeSlots[index];
+        if (!own.IsEmpty || otherLoadouts is null) return own;
+
+        foreach (var other in otherLoadouts)
+        {
+            var candidate = vanity ? other.Social[index] : other.Items[index];
+            if (candidate.IsEmpty || !candidate.Favorited) continue;
+            return candidate;
+        }
+        return PlrItemSlot.Empty;
+    }
 
     // ParidadPersonaje Fase2 (25-sep-2026): REESCRITO por completo - el modelo anterior (una
     // UNICA variable por FAMILIA -back/face/balloon-, reclasificada DESPUES de escanear TODOS los
@@ -492,14 +556,17 @@ public sealed class EquipmentAppearanceResolver
     // vanidad i+10 - el MISMO indice de dye sirve para los dos. Por eso cada item se aplica junto
     // al dye emparejado con SU MISMO indice de slot (loadout.Dyes[i]), sin importar si vino de
     // Items o de Social.
-    public EquippedAccessories ResolveAccessories(PlrLoadout loadout, bool[]? hide = null, bool extraAccessoryUnlocked = true)
+    // ParidadPersonaje Fase4 (26-sep-2026): GapAnalysis BugD - otherLoadouts, mismo parametro y
+    // mismo criterio de compatibilidad hacia atras (default null) que Resolve() - ver su
+    // comentario y el de ResolveEffectiveSlot.
+    public EquippedAccessories ResolveAccessories(PlrLoadout loadout, bool[]? hide = null, bool extraAccessoryUnlocked = true, IReadOnlyList<PlrLoadout>? otherLoadouts = null)
     {
         var state = new VisiblePlayerState();
 
         // body/legs YA resueltos (con la misma regla vanidad-tapa-a-funcional que Resolve()) -
         // hacen falta para las 3 reglas de ItemIsVisuallyIncompatible de arriba.
-        int? bodySlotId = ResolveBodySlot(Visible(loadout, 1));
-        int? legsSlotId = ResolveLegsSlot(Visible(loadout, 2));
+        int? bodySlotId = ResolveBodySlot(Visible(loadout, 1, otherLoadouts));
+        int? legsSlotId = ResolveLegsSlot(Visible(loadout, 2, otherLoadouts));
 
         void ScanOne(PlrItemSlot s, PlrItemSlot dye, int localIndex, bool respectHide)
         {
@@ -526,8 +593,13 @@ public sealed class EquipmentAppearanceResolver
             state.Apply(s, dye, vEntry, calEntry, isCalamity);
         }
 
-        for (int i = 3; i <= 9; i++) ScanOne(loadout.Items[i], loadout.Dyes[i], i, respectHide: true);
-        for (int i = 3; i <= 9; i++) ScanOne(loadout.Social[i], loadout.Dyes[i], i, respectHide: false);
+        // GapAnalysis BugD (26-sep-2026): cada indice pasa por ResolveEffectiveSlot ANTES de
+        // llegar a ScanOne - si el hueco propio esta vacio, puede venir "prestado" de un
+        // favorito de otro loadout (ver el comentario real completo en ResolveEffectiveSlot).
+        // El dye (loadout.Dyes[i]) se queda SIEMPRE en el del loadout activo, sin favorito
+        // propio - alcance deliberado, ver el mismo comentario.
+        for (int i = 3; i <= 9; i++) ScanOne(ResolveEffectiveSlot(loadout.Items, otherLoadouts, i, vanity: false), loadout.Dyes[i], i, respectHide: true);
+        for (int i = 3; i <= 9; i++) ScanOne(ResolveEffectiveSlot(loadout.Social, otherLoadouts, i, vanity: true), loadout.Dyes[i], i, respectHide: false);
 
         var (waistFile, waistSlotId) = ResolveAccessorySprite(state.Waist?.Item, "Waist", e => e.Waist, "acc_waist");
         var waistDye = ResolveDye(state.Waist?.Dye ?? PlrItemSlot.Empty);
