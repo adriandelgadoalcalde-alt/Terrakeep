@@ -1180,4 +1180,114 @@ public sealed class EquipmentAppearanceResolverTests
         Assert.Null(acc.FrontFile);
         Assert.Null(acc.FrontSlot);
     }
+
+    // GapAnalysis Encargo H (25-sep-2026): Hide[] (hideVisibleAccessory del juego real). Bug de
+    // datos real ya corregido en CharacterListEntryViewModel (el Hide real vive en
+    // Loadouts[CurrentLoadout], nunca en PrimaryLoadout) - estas pruebas verifican directamente
+    // el nuevo parametro de ResolveAccessories, sin depender del ViewModel. ButterflyWings (id
+    // real 749, wingSlot=5, ver WingDrawTable.cs) es el spot-check real ya usado para confirmar
+    // que Assets/player/acc_wing/5.png existe de verdad en disco.
+    private const int ButterflyWings = 749; // wingSlot=5
+
+    private static PlrLoadout LoadoutConAccesorioYHide(int itemsIndex, int itemsId, bool[] hide)
+    {
+        // PlrLoadout es una clase sellada normal (no un record) - Hide es "init", se fija aqui
+        // mismo en la construccion, no con "with" despues. Items/Social/Dyes por defecto ya son
+        // arrays de 10 PlrItemSlot con Id=0 (IsEmpty=true, ver PlrItemSlot.Empty), equivalente a
+        // CreateEmpty(isPrimary:false) salvo que aqui se controla el Hide[] directamente.
+        var loadout = new PlrLoadout { Hide = hide };
+        loadout.Items[itemsIndex] = new PlrItemSlot(itemsId, 1, 0, false);
+        return loadout;
+    }
+
+    [Fact]
+    public void HideTrueEnHuecoFuncional_OcultaElAccesorio_CierraElHuecoDeDatosRealDelEncargoH()
+    {
+        var hide = new bool[10];
+        hide[3] = true;
+        var loadout = LoadoutConAccesorioYHide(3, RelojCobre, hide);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout, hide);
+
+        Assert.Null(acc.WaistFile);
+        Assert.Null(acc.WaistSlot);
+    }
+
+    [Fact]
+    public void HideFalseEnHuecoFuncional_ElAccesorioSigueVisibleComoAntes()
+    {
+        var hide = new bool[10]; // todo false, ninguno oculto
+        var loadout = LoadoutConAccesorioYHide(3, RelojCobre, hide);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout, hide);
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.True(File.Exists(acc.WaistFile));
+        Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
+    }
+
+    [Fact]
+    public void HideNoPasado_MismoComportamientoQueAntesDelEncargoH_SinRegresion()
+    {
+        // Regression real: la sobrecarga con hide=null por defecto (parametro nuevo, opcional)
+        // no debe cambiar NADA del comportamiento ya verificado por el resto de esta clase.
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(3, RelojCobre));
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
+    }
+
+    [Fact]
+    public void HideTrue_EnAlas_LasAlasSeOcultan_DeliberateDifferenceDollEnReposo()
+    {
+        // Caso especial real documentado en EquipmentAppearanceResolver.ResolveAccessories: el
+        // juego real (Player.cs:37063-37074) tiene una excepcion para Wings si el jugador esta
+        // CAYENDO de verdad (velocity.Y != 0f && !mount.Active) - un doll ESTATICO de esta app no
+        // tiene fisica real, esta siempre "en reposo" (equivalente a velocity.Y==0f), y bajo esa
+        // condicion la propia formula real del juego colapsa a "oculto = no se ve" sin excepcion.
+        // Esta prueba simula ese estado de reposo (no hay parametro de velocity/mount que simular
+        // de verdad - el doll NUNCA tiene otro estado) y confirma la decision tomada: Wings se
+        // oculta igual que cualquier otro tipo de accesorio.
+        var hide = new bool[10];
+        hide[3] = true;
+        var loadout = LoadoutConAccesorioYHide(3, ButterflyWings, hide);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout, hide);
+
+        Assert.Null(acc.WingFile);
+        Assert.Null(acc.WingSlot);
+    }
+
+    [Fact]
+    public void HideFalse_EnAlas_LasAlasSeResuelvenConSuSpriteReal()
+    {
+        var hide = new bool[10]; // todo false
+        var loadout = LoadoutConAccesorioYHide(3, ButterflyWings, hide);
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout, hide);
+
+        Assert.NotNull(acc.WingFile);
+        Assert.True(File.Exists(acc.WingFile));
+        Assert.EndsWith("acc_wing" + Path.DirectorySeparatorChar + "5.png", acc.WingFile);
+        Assert.Equal(5, acc.WingSlot);
+    }
+
+    [Fact]
+    public void HideTrueEnHuecoFuncional_NuncaOcultaLaVanidadDelMismoIndice_FielAlBucleRealSinChequeo()
+    {
+        // Regla real (Player.cs, UpdateVisibleAccessories): hideVisibleAccessory[] SOLO gatea el
+        // bucle FUNCIONAL (armor[3..9]) - el bucle de vanidad (armor[13..19] real, loadout.Social
+        // aqui) no tiene NINGUN chequeo del array, la vanidad puesta se ve SIEMPRE. hide[3]=true
+        // oculta el funcional del hueco 3, pero el mismo indice 3 en Social no es el mismo
+        // "slot" real (13, fuera del array de 10) - no debe verse afectado.
+        var hide = new bool[10];
+        hide[3] = true;
+        var loadout = new PlrLoadout { Hide = hide };
+        loadout.Social[3] = new PlrItemSlot(RelojCobre, 1, 0, false); // vanidad, no funcional
+
+        var acc = Service.EquipmentAppearance.ResolveAccessories(loadout, hide);
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.EndsWith("acc_waist" + Path.DirectorySeparatorChar + "2.png", acc.WaistFile);
+    }
 }

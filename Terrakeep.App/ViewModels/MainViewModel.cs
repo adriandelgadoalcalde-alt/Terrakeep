@@ -289,6 +289,17 @@ public partial class MainViewModel : ObservableObject
             // Dyes se deja en su default (Resolve()/ResolveAccessories() nunca lo leen).
         };
         Appearance.UpdateEquippedArmor(_service.EquipmentAppearance.Resolve(loadout0));
+        // GapAnalysis Encargo H (25-sep-2026): INCONCLUSIVE para este preview en vivo - se
+        // investigo EquipmentGroupViewModel a fondo (grep real de "Hide"/"Ocultar"/"checkbox" en
+        // Terrakeep.App/ViewModels, 0 coincidencias) y no existe hoy NINGUN control de UI en el
+        // panel de Equipamiento equivalente al toggle "ocultar accesorio" del panel de vanidad
+        // real del juego - por eso loadout0 (sintetico, ver el comentario de cabecera de este
+        // metodo) no tiene forma real de saber que slots estan ocultos mientras se edita.
+        // hide=null (por defecto) es el comportamiento correcto mientras tanto: "nada oculto",
+        // igual que antes de este encargo. Hide[] SI se aplica de verdad en el doll de "Inicio"
+        // (ver CharacterListEntryViewModel, que lee el Hide real de
+        // character.Loadouts[CurrentLoadout]) - no se inventa aqui un toggle de UI nuevo sin que
+        // se pida explicitamente.
         Appearance.UpdateEquippedAccessories(_service.EquipmentAppearance.ResolveAccessories(loadout0));
     }
 

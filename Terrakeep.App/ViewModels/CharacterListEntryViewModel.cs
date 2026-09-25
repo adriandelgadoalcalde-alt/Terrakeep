@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -227,7 +228,18 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         var armor = equipmentAppearance.Resolve(character.PrimaryLoadout);
         // PortSeleccion Encargo2: mismo criterio que armor arriba, pero para los 7 tipos de
         // accesorio (waist/neck/handOn/handOff/back/shield/face) - ver EquippedAccessories.
-        var accessories = equipmentAppearance.ResolveAccessories(character.PrimaryLoadout);
+        // GapAnalysis Encargo H (25-sep-2026): bug de datos real corregido aqui - el Hide[] real
+        // (hideVisibleAccessory del juego) NUNCA vive en PrimaryLoadout (el mirror que se pasa
+        // arriba para la armadura/vanidad SI tiene el equipo correcto, pero
+        // PlrLoadout.CreateEmpty(isPrimary:true) fija su propio Hide=null siempre) - el array de
+        // 10 bits real vive en character.Loadouts[character.CurrentLoadout].Hide. Antes de este
+        // arreglo, ResolveAccessories no recibia ningun Hide (parametro inexistente) y el toggle
+        // de "ocultar accesorio" no se reflejaba nunca en el doll de Inicio. ElementAtOrDefault
+        // vuelve null de forma segura si Loadouts esta vacio (version<269, ver PlrCharacter.cs) o
+        // si CurrentLoadout cae fuera de rango - ResolveAccessories ya trata hide=null como "sin
+        // nada oculto", el mismo comportamiento de antes del arreglo para esos casos.
+        var hide = character.Loadouts.ElementAtOrDefault(character.CurrentLoadout)?.Hide;
+        var accessories = equipmentAppearance.ResolveAccessories(character.PrimaryLoadout, hide);
         // H6-02/H6-01-b: Gender ES el skinVariant real (0-11, no un booleano) - se pasa entero
         // para que el doll de Inicio use la carpeta de sprites/reglas SetMatch reales de la
         // variante puesta (caso "Eldelgas": Gender=8/MaleDress), no solo Chico/Chica.

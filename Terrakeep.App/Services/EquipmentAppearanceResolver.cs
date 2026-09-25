@@ -20,14 +20,22 @@ namespace Terrakeep.App.Services;
 //
 // loadouts[0] (PrimaryLoadout, el "mirror" de lo puesto de verdad) es el que hay que pasar
 // aqui, NUNCA loadouts[1..3] - esos son los 3 loadouts guardados, no necesariamente el que
-// esta activo.
+// esta activo. La ARMADURA/vanidad SIEMPRE se lee de PrimaryLoadout (es "lo puesto de verdad",
+// el mirror del cliente real) - el Hide[] real (ver ResolveAccessories mas abajo) es la unica
+// excepcion: ese array vive en Loadouts[CurrentLoadout], nunca en PrimaryLoadout
+// (PlrLoadout.CreateEmpty(isPrimary:true) fija Hide=null siempre), asi que el llamador tiene
+// que combinar los dos objetos - ver CharacterListEntryViewModel.
 //
-// ALCANCE DELIBERADO, documentado y no oculto: no respeta los 3 bytes de "ocultar equipo"
-// del panel de vanidad del juego real (HideVisual1/HideVisual2/HideMisc en PlrCharacter) -
-// el bit exacto que le corresponde a cada slot dentro de esos bytes no se investigo a fondo
-// (no compensaba el riesgo de esconder o mostrar la pieza equivocada por una lectura de bit
-// erronea). Un personaje que use ese toggle poco frecuente vera su pieza dibujada aunque el
-// juego real la esconda - hueco real, ya conocido, no un bug silencioso.
+// ALCANCE DELIBERADO, documentado y no oculto: Resolve() (cabeza/cuerpo/piernas, indices 0..2)
+// NUNCA respeta ningun toggle de "ocultar equipo" - confirmado en Player.cs real
+// (UpdateVisibleAccessories, el bucle que consulta hideVisibleAccessory[] solo itera i=3..9,
+// jamas 0..2). La visibilidad de cabeza/cuerpo/piernas la gobierna un mecanismo COMPLETAMENTE
+// distinto (los 3 bytes HideVisual1/HideVisual2/HideMisc en PlrCharacter) - el bit exacto que
+// le corresponde a cada slot dentro de esos bytes no se investigo a fondo (no compensaba el
+// riesgo de esconder o mostrar la pieza equivocada por una lectura de bit erronea). Un
+// personaje que use ese toggle (distinto de Hide[], distinto de este GapAnalysis Encargo H)
+// vera su pieza dibujada aunque el juego real la esconda - hueco real, ya conocido, no cubierto
+// por este encargo, no un bug silencioso.
 // Resultado real de ResolvePet: AnimationEntry (si PetAnimationCatalog conoce el objeto) manda
 // sobre IconPath - CharacterListEntryViewModel anima con PetPreviewRenderer cuando hay
 // AnimationEntry, y cae al icono estatico (IconPath) cuando no.
@@ -114,6 +122,17 @@ public sealed record PetPreview(PetAnimationEntry? AnimationEntry, string? IconP
 // EquipType.Wings (ver scripts/extraer-slot-armadura-calamity.js) - WingSlot se queda null para
 // ellos (numeracion propia no compartida, mismo criterio ya establecido para el resto de
 // canales), y PlayerPreviewRenderer usa la posicion GENERICA de WingDrawTable (fiel-por-defecto).
+//
+// GapAnalysis Encargo I (25-sep-2026): un campo "*Dye" mas por cada canal, hermano real de su
+// "*File"/"*Slot" - el tinte PLANO ya resuelto (DyeShaderCatalog.PlainColor) del dye que Terraria
+// empareja con el MISMO indice de slot (0..9) que gano ese canal en Scan() (Player.cs real,
+// UpdateItemDye: "dyeItem = GetEffectiveDye(i % 10)", el mismo indice que el item funcional/
+// vanidad que puso el sprite - ver el comentario real completo mas abajo, en ResolveAccessories).
+// null = sin dye puesto, dye ANIMADO/SHADER real (fuera de alcance, ver DyeShaderCatalog) o dye
+// de Calamity (fuera de alcance) - "sin tinte" es siempre el resultado seguro. Sigue la MISMA
+// reclasificacion que su File/Slot hermano (Back->Backpack/Tail, Balloon->BalloonFront,
+// Face->FaceHead/FaceMask/FaceFlower): el dye viaja junto al sprite ya resuelto, nunca se
+// recalcula aparte.
 public sealed record EquippedAccessories(
     string? WaistFile, string? NeckFile, string? HandOnFile, string? HandOffFile,
     string? BackFile, string? ShieldFile, string? FaceFile,
@@ -128,7 +147,18 @@ public sealed record EquippedAccessories(
     string? FaceHeadFile = null, string? FaceMaskFile = null, string? FaceFlowerFile = null,
     int? FaceHeadSlot = null, int? FaceMaskSlot = null, int? FaceFlowerSlot = null,
     string? FrontFile = null, int? FrontSlot = null,
-    string? WingFile = null, int? WingSlot = null);
+    string? WingFile = null, int? WingSlot = null,
+    PlayerPreviewRenderer.Tint? WaistDye = null, PlayerPreviewRenderer.Tint? NeckDye = null,
+    PlayerPreviewRenderer.Tint? HandOnDye = null, PlayerPreviewRenderer.Tint? HandOffDye = null,
+    PlayerPreviewRenderer.Tint? BackDye = null, PlayerPreviewRenderer.Tint? ShieldDye = null,
+    PlayerPreviewRenderer.Tint? FaceDye = null,
+    PlayerPreviewRenderer.Tint? BackpackDye = null, PlayerPreviewRenderer.Tint? TailDye = null,
+    PlayerPreviewRenderer.Tint? ShoesDye = null,
+    PlayerPreviewRenderer.Tint? BalloonDye = null, PlayerPreviewRenderer.Tint? BalloonFrontDye = null,
+    PlayerPreviewRenderer.Tint? BeardDye = null,
+    PlayerPreviewRenderer.Tint? FaceHeadDye = null, PlayerPreviewRenderer.Tint? FaceMaskDye = null, PlayerPreviewRenderer.Tint? FaceFlowerDye = null,
+    PlayerPreviewRenderer.Tint? FrontDye = null,
+    PlayerPreviewRenderer.Tint? WingDye = null);
 
 public sealed class EquipmentAppearanceResolver
 {
@@ -174,7 +204,26 @@ public sealed class EquipmentAppearanceResolver
             // GapAnalysis Encargo B (25-sep-2026): HeadBack NO es un item independiente - se
             // DERIVA del headSlot YA resuelto arriba (ver ResolveHeadBack para la cita real
             // completa de ArmorIDs.Head.Sets.FrontToBackID/DrawPlayer_01_3_BackHead).
-            ResolveHeadBack(headSlot));
+            ResolveHeadBack(headSlot),
+            // GapAnalysis Encargo I (25-sep-2026): dye[0]/dye[1]/dye[2] real (Player.cs:9679-9681,
+            // "cHead = GetEffectiveDye(0).dye; cBody = GetEffectiveDye(1).dye; cLegs =
+            // GetEffectiveDye(2).dye;") - el mismo indice de slot que cabeza/cuerpo/piernas,
+            // SIN pasar por Visible() (a diferencia del sprite, el dye no distingue funcional/
+            // vanidad - el juego real usa siempre dye[indice], nunca dye[indice+10]).
+            ResolveDye(loadout.Dyes[0]),
+            ResolveDye(loadout.Dyes[1]),
+            ResolveDye(loadout.Dyes[2]));
+    }
+
+    // GapAnalysis Encargo I (25-sep-2026): resuelve el tinte PLANO real (o null) de un slot de
+    // dye - DyeShaderCatalog.PlainColor ya distingue PLANO (recolor estatico) de ANIMADO/SHADER
+    // (excluido a proposito, ver su comentario de cabecera). Los dyes de Calamity (numeracion
+    // propia, item.Id >= CalamityIds.ItemIdBase) quedan FUERA DE ALCANCE de este encargo -
+    // fiel-por-defecto, mismo criterio ya establecido para el resto del resolver.
+    private static PlayerPreviewRenderer.Tint? ResolveDye(PlrItemSlot dyeSlot)
+    {
+        if (dyeSlot.IsEmpty || dyeSlot.Id >= CalamityIds.ItemIdBase) return null;
+        return DyeShaderCatalog.PlainColor(dyeSlot.Id) is { } c ? new PlayerPreviewRenderer.Tint(c.R, c.G, c.B) : null;
     }
 
     private static PlrItemSlot Visible(PlrLoadout loadout, int index) =>
@@ -197,17 +246,41 @@ public sealed class EquipmentAppearanceResolver
     // objeto de vanidad "tapa" al funcional en Resolve(), solo que aqui la correspondencia es
     // por TIPO de accesorio, no por indice de slot compartido.
     //
-    // Mismo ALCANCE DELIBERADO ya documentado en Resolve(): no respeta hideVisibleAccessory
-    // (el toggle de "ocultar" del panel de vanidad, Hide[] en PlrLoadout) - hueco real, ya
-    // conocido, no un bug silencioso.
-    public EquippedAccessories ResolveAccessories(PlrLoadout loadout)
+    // GapAnalysis Encargo H (25-sep-2026): hide[] ahora SI se respeta - cierra el hueco real
+    // documentado antes aqui ("ALCANCE DELIBERADO... no respeta hideVisibleAccessory"). Bug de
+    // datos real encontrado por el arquitecto-keep: el array de 10 bits real (hideVisibleAccessory
+    // en Player.cs) vive en PlrCharacter.Loadouts[CurrentLoadout].Hide, NUNCA en
+    // PlrCharacter.PrimaryLoadout (PlrLoadout.CreateEmpty(isPrimary:true) fija Hide=null siempre,
+    // ver PlrLoadout.cs - loadouts[0] es un mirror que el propio cliente de Terraria no serializa
+    // con Hide) - el llamador es responsable de pasar el Hide REAL del loadout activo (ver
+    // CharacterListEntryViewModel), este metodo solo aplica el array que recibe.
+    //
+    // Regla real (Player.cs, UpdateVisibleAccessories): el toggle SOLO gatea el hueco FUNCIONAL
+    // (i=3..9 de loadout.Items) - el bucle de vanidad (armor[13..19] real, loadout.Social aqui)
+    // NO tiene ningun chequeo de hideVisibleAccessory, la vanidad puesta se ve SIEMPRE. Por eso
+    // "hide" solo se consulta al escanear loadout.Items, nunca loadout.Social.
+    //
+    // DELIBERATE DIFFERENCE (Wings): el juego real tiene una excepcion en el propio bucle
+    // funcional (Player.cs:37063-37074) - "if (hideVisibleAccessory[i] && (velocity.Y == 0f ||
+    // mount.Active)) continue;" - unas alas ocultas SI se siguen mostrando si el jugador esta
+    // cayendo de verdad (velocity.Y != 0) y no esta montado. Esta app dibuja un doll ESTATICO sin
+    // fisica real (siempre "en reposo", equivalente a velocity.Y==0f) - bajo esa condicion la
+    // propia formula real del juego colapsa a "si esta oculto, no se ve" sin excepcion (el OR con
+    // mount.Active tampoco aplica, un doll no tiene montura). Por eso Wings se resuelve aqui con
+    // el MISMO chequeo generico que el resto de los 9 tipos (hide[i] oculta el slot entero, tal
+    // cual), sin replicar la rama de "cayendo" - decision explicita, no una simplificacion oculta.
+    public EquippedAccessories ResolveAccessories(PlrLoadout loadout, bool[]? hide = null)
     {
         PlrItemSlot? waist = null, neck = null, handOn = null, handOff = null, back = null, shield = null, face = null, shoes = null, balloon = null, beard = null, front = null, wing = null;
 
-        void Scan(PlrItemSlot[] slots)
+        void Scan(PlrItemSlot[] slots, bool respectHide)
         {
             for (int i = 3; i <= 9; i++)
             {
+                // Solo el hueco FUNCIONAL (loadout.Items) respeta hide[i] - ver el comentario
+                // real de cabecera de este metodo (UpdateVisibleAccessories real, bucle de
+                // vanidad sin chequeo de hideVisibleAccessory).
+                if (respectHide && hide is not null && i < hide.Length && hide[i]) continue;
                 var s = slots[i];
                 if (s.IsEmpty) continue;
                 if (IsAccessoryType(s, e => e.Waist, "Waist")) waist = s;
@@ -240,8 +313,8 @@ public sealed class EquipmentAppearanceResolver
                 if (IsAccessoryType(s, e => e.Wing, "Wings")) wing = s;
             }
         }
-        Scan(loadout.Items);
-        Scan(loadout.Social);
+        Scan(loadout.Items, respectHide: true);
+        Scan(loadout.Social, respectHide: false);
 
         var (waistFile, waistSlotId) = ResolveAccessorySprite(waist, "Waist", e => e.Waist, "acc_waist");
         var (neckFile, neckSlotId) = ResolveAccessorySprite(neck, "Neck", e => e.Neck, "acc_neck");
