@@ -348,6 +348,24 @@ public sealed class TileCenterConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+// ExploracionRediseno Fase C (25-sep-2026, aplicador-fix): gemelo de EnumEqualsConverter para
+// Visibility en vez de bool - separar Browse/ChestInspector en el XAML (SidebarMode,
+// ExplorationViewModel, ya modelado en Fase B) necesita un converter de UNA VIA (Visibility no
+// tiene sentido de vuelta) que compare el enum contra ConverterParameter, igual que ya hace
+// EnumEqualsConverter para el IsChecked de doble via de las RadioButton de categoria - no se
+// reutiliza EnumEqualsConverter tal cual porque su Convert devuelve bool, no Visibility, y
+// encadenar dos converters no es nativo en un Binding simple de WPF (haria falta un
+// MultiBinding solo para esto). Confirmado con Grep (25-sep-2026) que no existe ya ningun
+// converter enum->Visibility en el proyecto antes de crear este.
+public sealed class EnumEqualsToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object parameter, CultureInfo culture) =>
+        value?.ToString() == parameter as string ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 public sealed class InverseValueConverter : IValueConverter
 {
     // Bug real encontrado al verificar (no en teoria): un StaticResource usado como

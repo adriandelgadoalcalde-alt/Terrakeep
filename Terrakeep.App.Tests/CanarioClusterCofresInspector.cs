@@ -423,6 +423,104 @@ internal static partial class Program
             }
             catch (Exception exFaseB) { Console.WriteLine("COFRES-INSPECTOR-FASEB-EXCEPTION: " + exFaseB); }
 
+            // ================= ExploracionRediseno Fase C: separar Browse/Inspector en XAML (25-sep-2026) =================
+            // Canario del aplicador-fix - confirma que el Grid nuevo (ExplorationSidebarBrowseInspectorHost,
+            // MainWindow.xaml) con sus 2 hijos superpuestos (DockPanel Browse / Grid placeholder
+            // ChestInspector) responde de verdad a SidebarMode (Fase B, ya verificado arriba) via el
+            // converter EnumEqualsToVis, y que el contenido de Browse (WrapPanel de categorias,
+            // buscador, ExplorationCategoryContent, ExplorationResultsBlock) sigue viendose IGUAL que
+            // antes de este cambio - el envoltorio nuevo (Grid+DockPanel, sin margen/padding propios)
+            // es puramente estructural, nunca deberia cambiar ni un pixel del contenido de Browse.
+            // Capturas reales (RenderTargetBitmap) de las 4 categorias reales pedidas por el encargo
+            // (Cofres/Minerales/Objetos/NPCs) + la de abrir un cofre real (debe verse el placeholder
+            // temporal, no el editor incrustado de ChestRowTemplate - comportamiento ESPERADO de esta
+            // fase, Fase D lo sustituye).
+            try
+            {
+                string outDirFaseC = Path.Combine(AppContext.BaseDirectory, "keepqa-evidencia");
+                Directory.CreateDirectory(outDirFaseC);
+
+                var hostFaseC = window.FindName("ExplorationSidebarBrowseInspectorHost") as FrameworkElement;
+                var browseFaseC = window.FindName("ExplorationSidebarBrowseContent") as FrameworkElement;
+                var placeholderFaseC = window.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
+                var wrapCategoriasFaseC = Descendientes<WrapPanel>(window).FirstOrDefault();
+                var contenidoCatFaseC = window.FindName("ExplorationCategoryContent") as FrameworkElement;
+                var bloqueResFaseC = window.FindName("ExplorationResultsBlock") as FrameworkElement;
+                if (hostFaseC == null || browseFaseC == null || placeholderFaseC == null)
+                    Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEC - no se encuentra ExplorationSidebarBrowseInspectorHost/ExplorationSidebarBrowseContent/ExplorationSidebarChestInspectorPlaceholder en el arbol visual (MainWindow.xaml)");
+                else
+                {
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                    vm.Exploration.ChestViewMode = 0; // "Por tipo" - Browse completo (WrapPanel+buscador+categorias) visible en la captura
+                    DoEvents(); DoEvents();
+
+                    Console.WriteLine($"COFRES-INSPECTOR-FASEC: SidebarMode={vm.Exploration.SidebarMode} (esperado Browse) -> BrowseContent.Visibility={browseFaseC.Visibility} (esperado Visible), Placeholder.Visibility={placeholderFaseC.Visibility} (esperado Collapsed)");
+                    if (vm.Exploration.SidebarMode != ExplorationSidebarMode.Browse || browseFaseC.Visibility != Visibility.Visible || placeholderFaseC.Visibility != Visibility.Collapsed)
+                        Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEC - en modo Browse, BrowseContent deberia ser Visible y el placeholder Collapsed");
+                    if (wrapCategoriasFaseC == null || contenidoCatFaseC == null || bloqueResFaseC == null || !wrapCategoriasFaseC.IsVisible || !contenidoCatFaseC.IsVisible)
+                        Console.WriteLine($"FALLO: COFRES-INSPECTOR-FASEC - el contenido real de Browse (WrapPanel categorias/ExplorationCategoryContent) no esta visible dentro del envoltorio nuevo (wrapCategorias={wrapCategoriasFaseC != null}, IsVisible={wrapCategoriasFaseC?.IsVisible}, contenidoCat.IsVisible={contenidoCatFaseC?.IsVisible})");
+
+                    // Capturas reales de las 4 categorias del encargo - pixel-identicas a antes de este
+                    // cambio porque el envoltorio nuevo no añade margen/padding/tamaño propio (mismo
+                    // Grid de reparto, mismo DockPanel.Dock="Top", solo un nivel mas anidado).
+                    foreach (var (cat, chestMode, etiqueta) in new (WorldSearchCategory, int?, string)[]
+                             { (WorldSearchCategory.Chests, 0, "cofres"), (WorldSearchCategory.Ores, null, "minerales"), (WorldSearchCategory.Objects, null, "objetos"), (WorldSearchCategory.Npcs, null, "npcs") })
+                    {
+                        vm.Exploration.SelectedCategory = cat;
+                        if (chestMode.HasValue) vm.Exploration.ChestViewMode = chestMode.Value;
+                        DoEvents(); DoEvents();
+                        var rtbFaseC = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtbFaseC.Render(window);
+                        var encFaseC = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encFaseC.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbFaseC));
+                        string rutaFaseC = Path.Combine(outDirFaseC, $"fasec-browse-{etiqueta}.png");
+                        using (var fsFaseC = File.Create(rutaFaseC)) encFaseC.Save(fsFaseC);
+                        Console.WriteLine($"COFRES-INSPECTOR-FASEC: captura real Browse/{etiqueta} -> {rutaFaseC}");
+                    }
+
+                    // Abrir un cofre real (ruta 1, boton "Editar") - ahora DEBE mostrar el placeholder,
+                    // NO el editor incrustado (comportamiento ESPERADO de esta fase, ver comentario del
+                    // XAML). Vuelve a dejar ChestViewMode=2 para que ChestRows tenga filas reales.
+                    vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                    vm.Exploration.ChestViewMode = 2;
+                    DoEvents(); DoEvents();
+                    var filaFaseC = vm.Exploration.ChestRows.FirstOrDefault();
+                    if (filaFaseC == null)
+                        Console.WriteLine("COFRES-INSPECTOR-FASEC: AVISO - no hay fila de cofre real para probar la captura del placeholder");
+                    else
+                    {
+                        vm.Exploration.EditChestCommand.Execute(filaFaseC);
+                        DoEvents(); DoEvents();
+
+                        Console.WriteLine($"COFRES-INSPECTOR-FASEC: cofre abierto -> SidebarMode={vm.Exploration.SidebarMode} (esperado ChestInspector), BrowseContent.Visibility={browseFaseC.Visibility} (esperado Collapsed), Placeholder.Visibility={placeholderFaseC.Visibility} (esperado Visible)");
+                        if (vm.Exploration.SidebarMode != ExplorationSidebarMode.ChestInspector || browseFaseC.Visibility != Visibility.Collapsed || placeholderFaseC.Visibility != Visibility.Visible)
+                            Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEC - al abrir un cofre, BrowseContent deberia colapsarse y el placeholder hacerse Visible");
+
+                        var textoPlaceholder = Descendientes<TextBlock>(placeholderFaseC).FirstOrDefault(t => !string.IsNullOrWhiteSpace(t.Text));
+                        Console.WriteLine($"COFRES-INSPECTOR-FASEC: texto real del placeholder='{textoPlaceholder?.Text}' (esperado no vacio, Loc[explore_inspector_placeholder])");
+                        if (textoPlaceholder == null)
+                            Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEC - el placeholder no tiene ningun texto real visible");
+
+                        var rtbInspFaseC = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                            (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                        rtbInspFaseC.Render(window);
+                        var encInspFaseC = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                        encInspFaseC.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbInspFaseC));
+                        string rutaInspFaseC = Path.Combine(outDirFaseC, "fasec-inspector-placeholder.png");
+                        using (var fsInspFaseC = File.Create(rutaInspFaseC)) encInspFaseC.Save(fsInspFaseC);
+                        Console.WriteLine($"COFRES-INSPECTOR-FASEC: captura real del placeholder abierto -> {rutaInspFaseC}");
+
+                        vm.Exploration.CancelEditingChestCommand.Execute(null);
+                        DoEvents(); DoEvents();
+                        Console.WriteLine($"COFRES-INSPECTOR-FASEC: tras Cancelar -> SidebarMode={vm.Exploration.SidebarMode} (esperado Browse), BrowseContent.Visibility={browseFaseC.Visibility} (esperado Visible), Placeholder.Visibility={placeholderFaseC.Visibility} (esperado Collapsed)");
+                        if (vm.Exploration.SidebarMode != ExplorationSidebarMode.Browse || browseFaseC.Visibility != Visibility.Visible || placeholderFaseC.Visibility != Visibility.Collapsed)
+                            Console.WriteLine("FALLO: COFRES-INSPECTOR-FASEC - tras cerrar el cofre, BrowseContent deberia volver a Visible y el placeholder a Collapsed");
+                    }
+                }
+            }
+            catch (Exception exFaseC) { Console.WriteLine("COFRES-INSPECTOR-FASEC-EXCEPTION: " + exFaseC); }
+
             // Deja recargado el mundo de siempre del resto del arnes, mismo criterio que AR-13d/AR-13e.
             vm.Exploration.ClearOreMarksCommand.Execute(null);
             vm.Exploration.ChestViewMode = 0;

@@ -20,6 +20,9 @@
             <conv:CountToGridLengthConverter x:Key="CountToGridLength" />
             <conv:BoolToDoubleConverter x:Key="BoolToDouble" />
             <conv:EnumEqualsConverter x:Key="EnumEquals" />
+            <!-- ExploracionRediseno Fase C (25-sep-2026): gemelo de EnumEquals para Visibility, ver
+                 el comentario real de la clase. -->
+            <conv:EnumEqualsToVisibilityConverter x:Key="EnumEqualsToVis" />
             <!-- Ronda de idioma del 6-sep-2026: sustituto BINDEABLE de StringFormat (que es texto
                  fijo del XAML y por eso se quedo sin traducir en 19 sitios) - ver el comentario
                  real de la propia clase. -->
