@@ -7216,52 +7216,30 @@
                              alcance de "un arreglo pequeño y claro" de hoy. Anotado en bitacora.md de
                              Terrakeep para una ronda futura. -->
                         <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*" MinHeight="120" />
-                                <RowDefinition Height="{Binding Exploration.WorldSearchResults.Count, Converter={StaticResource CountToGridLength}, ConverterParameter=1.2}" />
-                            </Grid.RowDefinitions>
+                        <!-- ExploracionRediseno Fase E (25-sep-2026): esta columna era un Grid de
+                             DOS filas ("*" MinHeight=120 para la categoria + 1.2* para resultados,
+                             historial completo de calibracion AR-EX1/FALLO-3 en bitacora.md y en el
+                             historial de git de este fichero, ya obsoleto) que se repartian el alto
+                             SIEMPRE, compitiendo entre si incluso cuando solo uno de los dos tenia
+                             contenido real que enseñar. Ahora es un Grid con 2 estados EXCLUSIVOS
+                             superpuestos (Visibility siempre opuesta, nunca los dos visibles a la
+                             vez) - el que este activo ocupa TODA la altura disponible, sin repartir
+                             nada con el otro. Exploration.IsShowingResults centraliza la condicion
+                             (antes repartida/parcial en 6 sitios de este fichero: Npcs colapsaba
+                             siempre, Chests solo colapsaba con 0 resultados, Minerales/Objetos/Todo
+                             nunca colapsaban) - ver su comentario real en ExplorationViewModel.cs. -->
 
-                        <!-- Bloque de resultados COMPARTIDO (distancia al spawn, resumen, ‹/›,
-                             lista) - identico al que ya habia, solo oculto en NPCs (que muestra su
-                             propia lista, NpcSearchResults, mas abajo).
-                             P-2: Border con BgPrimaryBrush (un escalon POR DEBAJO del fondo de
-                             panel) en vez de StackPanel a secas - "lo que ha salido" se lee de un
-                             vistazo, frente a "lo que estoy pidiendo" (cuadro+pildoras de arriba). -->
-                        <Border x:Name="ExplorationResultsBlock" Grid.Row="1" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" Padding="10" Margin="0,8,0,0">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Exploration.SelectedCategory}" Value="Npcs">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                        <!-- Punto 3 del cluster "cofres/inspector lateral" (imagen5+6,
-                                             24/25-sep-2026, aplicador-fix): este bloque solo se
-                                             colapsaba para Npcs - nunca para Cofres, pese a que
-                                             RebuildChestInventory (ExplorationViewModel.cs) NUNCA
-                                             rellena WorldSearchResults en "Cofre a cofre", y en "Por
-                                             tipo"/"Por lo que contienen" solo despues de pulsar
-                                             "Buscar seleccionados". Medido en vivo: 90px reales VACIOS
-                                             en los dos modos que muestran las capturas del usuario,
-                                             idem "Por lo que contienen" (misma causa). Colapsar aqui,
-                                             igual que ya se hace para Npcs (mismo patron probado), en
-                                             vez de solo achicar el MinHeight de la fila de abajo: el
-                                             hueco que libera es justo el que necesita el editor de
-                                             cofre (ver el MaxHeight quitado mas arriba) para mostrar
-                                             Metas/Groups sin cortarse. En cuanto WorldSearchResults SI
-                                             tiene datos (tras "Buscar seleccionados"), vuelve a verse
-                                             con normalidad - el bloque sigue siendo el mismo para los
-                                             3 modos, solo deja de reservar espacio cuando esta vacio de
-                                             verdad. -->
-                                        <MultiDataTrigger>
-                                            <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding Exploration.SelectedCategory}" Value="Chests" />
-                                                <Condition Binding="{Binding Exploration.WorldSearchResults.Count}" Value="0" />
-                                            </MultiDataTrigger.Conditions>
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </MultiDataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
+                        <!-- Estado B: resultados de la categoria ACTUAL activos (WorldSearchResults
+                             con datos que de verdad pertenecen a SelectedCategory - ver
+                             IsShowingResults, que ya excluye Npcs y "Cofre a cofre" por su cuenta) -
+                             REEMPLAZA a la lista base, no vive debajo compitiendo por alto. Mismo
+                             bloque compartido de siempre (distancia al spawn, resumen, ‹/›, lista);
+                             los 2 triggers que antes colapsaban este Border a mano (Npcs siempre,
+                             Chests con 0 resultados) desaparecen aqui - redundantes con la
+                             Visibility de este DockPanel, que ya cubre exactamente los mismos 2
+                             casos (y los generaliza a las 5 categorias). -->
+                        <DockPanel Visibility="{Binding Exploration.IsShowingResults, Converter={StaticResource BoolToVis}}">
+                        <Border x:Name="ExplorationResultsBlock" Background="{StaticResource BgPrimaryBrush}" CornerRadius="8" Padding="10" Margin="0,8,0,0">
                             <!-- AR-EX1: Grid de filas en vez de StackPanel. Un StackPanel mide a
                                  sus hijos con alto INFINITO, asi que este bloque pedia siempre sus
                                  363px enteros y, cuando recibe menos (la fila proporcional de
@@ -7476,14 +7454,16 @@
                                 </ListBox>
                             </Grid>
                         </Border>
+                        </DockPanel>
 
-                        <!-- Contenido especifico de cada categoria, superpuesto y con visibilidad
-                             exclusiva por SelectedCategory (DataTrigger de cadena - WPF convierte
-                             el texto al valor del enum solo con el TypeConverter nativo, sin falta
-                             ningun converter). AR-EX1: fila 0 del Grid de reparto (antes era el
-                             relleno del DockPanel, que cobraba lo que sobrara del bloque de
-                             resultados - o sea 30px con resultados abiertos). -->
-                        <Grid x:Name="ExplorationCategoryContent" Grid.Row="0">
+                        <!-- Estado A: sin busqueda activa (o resultados de OTRA categoria/vista,
+                             que IsShowingResults ya descarta) - contenido especifico de cada
+                             categoria, superpuesto y con visibilidad exclusiva por SelectedCategory
+                             (DataTrigger de cadena - WPF convierte el texto al valor del enum solo
+                             con el TypeConverter nativo, sin falta ningun converter), a la altura
+                             completa que antes competia con el bloque de resultados. -->
+                        <DockPanel Visibility="{Binding Exploration.IsShowingResults, Converter={StaticResource InverseBoolToVis}}">
+                        <Grid x:Name="ExplorationCategoryContent">
                             <!-- NPCs: chips + lista propia (ya existente) + "NPCs que faltan".
                                  Bug real reportado por el usuario probando la app (6-sep-2026): "la
                                  lista de NPCs que faltan SOLO se ve completa con la ventana a
@@ -7921,6 +7901,7 @@
                                  deliberadamente vacio mientras esa categoria este activa, la vista
                                  amplia ya cubre visualmente todo el mapa+sidebar. -->
                         </Grid>
+                        </DockPanel>
                         </Grid>
                         </DockPanel>
                         <!-- ExploracionRediseno Fase D (25-sep-2026, aplicador-fix): relleno real del

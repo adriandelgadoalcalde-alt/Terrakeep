@@ -905,6 +905,33 @@ public partial class ExplorationViewModel : ObservableObject
     public bool ShowCompactSummary => !string.IsNullOrEmpty(WorldSearchSummary) && !ShowZeroResultsState;
     public ObservableCollection<WorldSearchHitRowViewModel> WorldSearchResults { get; } = [];
 
+    // ExploracionRediseno Fase E (25-sep-2026): antes "resultados" y "lista base de la categoria"
+    // convivian en dos filas de un mismo Grid, repartiendose el alto (ver el comentario de
+    // MainWindow.xaml junto al Grid que este cambio sustituye por 2 estados EXCLUSIVOS). Esta
+    // propiedad centraliza la condicion que decide cual de los dos mostrar - hasta ahora estaba
+    // repetida/parcial en 6 sitios distintos del XAML (solo Npcs y "Cofres sin resultados"
+    // colapsaban, Minerales/Objetos/Todo nunca lo hacian).
+    //
+    // WorldSearchResults SOBREVIVE a un cambio de categoria a proposito (ver FALLO3_SOLO,
+    // Terrakeep.App.Tests/AuditoriaKeepQA.cs: marca Minerales, pasea por Cofres/Objetos y vuelve -
+    // la lista de Minerales sigue intacta) - por eso "Count>0" a secas NO basta: hace falta ademas
+    // que la categoria activa sea la MISMA que produjo esos resultados de verdad
+    // (_worldSearchResultsCategory, marcado por ApplyWorldSearchOrder, el UNICO sitio real que
+    // escribe WorldSearchResults) - si no, cambiar de categoria con resultados residuales de OTRA
+    // taparia la lista base nueva con datos ajenos (regresion real de AR-EX1, reproducida a mano
+    // antes de este arreglo). NPCs nunca escribe WorldSearchResults (usa NpcSearchResults, su
+    // propia columna de texto) asi que ya queda excluido solo por esta comparacion, sin
+    // hardcodear el enum aqui. "Cofre a cofre" (ChestViewMode==2) SI necesita exclusion explicita:
+    // es la unica sub-vista de Cofres que jamas produce resultados propios, pero comparte
+    // SelectedCategory==Chests con "Por tipo"/"Por lo que contienen" (que si los producen) - sin
+    // esto, cambiar de vista DENTRO de Cofres (que no toca SelectedCategory, asi que no limpia
+    // nada por su cuenta) dejaria resultados de "Por tipo" tapando ChestRows.
+    public bool IsShowingResults =>
+        WorldSearchResults.Count > 0
+        && SelectedCategory == _worldSearchResultsCategory
+        && !(SelectedCategory == WorldSearchCategory.Chests && ChestViewMode == 2);
+    private WorldSearchCategory? _worldSearchResultsCategory;
+
     // Fase 3 (ESPEC-buscador-mundo-tedit.md#5.3 puntos 4/5): navegacion circular anterior/
     // siguiente (misma logica real que NavigateNext/NavigatePrevious de TEdit, con modulo) y
     // distancia opcional al spawn (CalculateDistance real, apagada por defecto -
@@ -961,6 +988,10 @@ public partial class ExplorationViewModel : ObservableObject
         RebuildInventory();
         OnPropertyChanged(nameof(ShowZeroResultsState));
         OnPropertyChanged(nameof(ShowCompactSummary));
+        // Fase E: IsShowingResults depende de SelectedCategory (via _worldSearchResultsCategory) -
+        // sin este aviso, el XAML nuevo (Visibility exclusiva por IsShowingResults) no se
+        // refrescaria al cambiar de pildora.
+        OnPropertyChanged(nameof(IsShowingResults));
         IsShowingWorldCompare = value == WorldSearchCategory.Compare;
     }
 
@@ -980,7 +1011,14 @@ public partial class ExplorationViewModel : ObservableObject
     // ESPEC-ui-exploracion.md#9.3-C: "Por tipo de cofre" (0, por defecto) / "Por lo que
     // contienen" (1). #9.3-E: "Tiles" (0, por defecto) / "Paredes" (1) / "Liquidos" (2).
     [ObservableProperty] private int _chestViewMode;
-    partial void OnChestViewModeChanged(int value) => RebuildChestInventory();
+    partial void OnChestViewModeChanged(int value)
+    {
+        RebuildChestInventory();
+        // Fase E: IsShowingResults excluye explicitamente ChestViewMode==2 ("Cofre a cofre") -
+        // cambiar de vista DENTRO de Cofres no dispara OnSelectedCategoryChanged (SelectedCategory
+        // no cambia), asi que hace falta este aviso propio para que el XAML se refresque.
+        OnPropertyChanged(nameof(IsShowingResults));
+    }
     [ObservableProperty] private int _objectsViewMode;
     partial void OnObjectsViewModeChanged(int value) => RebuildObjectsInventory();
 
@@ -2152,6 +2190,11 @@ public partial class ExplorationViewModel : ObservableObject
     // estando despues, aunque haya cambiado de indice).
     private void ApplyWorldSearchOrder()
     {
+        // Fase E: unico sitio real que escribe WorldSearchResults (ver RunWorldSearchAsyncWithQuery
+        // y ApplyGroupedSearchResult, ambos terminan aqui) - marca de que categoria son de verdad
+        // estos resultados, para que IsShowingResults no los muestre bajo una categoria distinta a
+        // la que los produjo (ver el comentario largo de IsShowingResults).
+        _worldSearchResultsCategory = SelectedCategory;
         var currentRow = _worldSearchCurrentIndex >= 0 && _worldSearchCurrentIndex < WorldSearchResults.Count
             ? WorldSearchResults[_worldSearchCurrentIndex] : null;
 
@@ -2458,6 +2501,15 @@ public partial class ExplorationViewModel : ObservableObject
             _highlightDebounceTimer.Stop();
             _ = SelectedCategory == WorldSearchCategory.Ores ? MarkOresOnMap() : MarkObjectsOnMap();
         };
+
+        // Fase E: IsShowingResults depende de WorldSearchResults.Count, pero es una propiedad
+        // COMPUTADA de la ViewModel (no la propia coleccion) - el binding de MainWindow.xaml a
+        // "Exploration.IsShowingResults" solo se refresca si ella misma avisa. ApplyWorldSearchOrder
+        // (el unico sitio que puebla la coleccion) usa Clear()+Add() en vez de reemplazar la
+        // instancia, y ClearOreMarksCommand/RunWorldSearchAsyncWithQuery (query vacia) llaman
+        // WorldSearchResults.Clear() directamente sin pasar por ApplyWorldSearchOrder - CollectionChanged
+        // es el UNICO evento real que cubre los 3 caminos a la vez.
+        WorldSearchResults.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsShowingResults));
     }
 
     // H5-11: gemelo real de HomeViewModel.UpdateCurrentPath - se llama tras cargar un mundo con
