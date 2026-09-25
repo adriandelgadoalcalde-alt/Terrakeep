@@ -21858,3 +21858,127 @@ El hover de `CharacterCardTemplate` ya replica la parte con sentido real de Terr
 (cambio de fondo) y omite a propósito, con criterio documentado y consistente en toda la app, la
 parte que en Terrakeep generaría un conflicto real con una función que vanilla no tiene (indicador
 de personaje cargado).
+
+## 25-sep-2026 - PortSeleccion Encargo4: OffsetX/OffsetY/SpriteDirection reales por mascota
+(aplicador-fix, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d)
+
+Hallazgo ya investigado por `arquitecto-keep`: además de la fórmula GENERAL de posición
+mascota-vs-personaje (Encargo3, en paralelo), Terraria real aplica un offset ADICIONAL propio de
+cada mascota y un espejo horizontal vía `SettingsForCharacterPreview` (decompilado real,
+`Terraria/DataStructures/SettingsForCharacterPreview.cs:48-79`, `ApplyTo`: `proj.position +=
+Offset; proj.spriteDirection = SpriteDirection;`), tabla real en
+`Terraria/ID/ProjectileID.cs:34-37` (`CharacterPreviewAnimations`, `.WithOffset(x,
+y).WithSpriteDirection(d)` por TIPO de proyectil). Confirmado antes de tocar nada: `pet_animations.
+json` (63 entradas) y `PetAnimationCatalog`/`PetAnimationEntry` solo llevaban campos de
+fotograma/cadencia, sin offset/dirección; `PetPreviewRenderer` no aplicaba ningún offset ni espejo.
+
+**Tabla real extraída** (cruzando el `shoot` de cada una de las 63 entradas contra
+`CharacterPreviewAnimations`, ninguna cae al valor por defecto 0,0,1 - las 63 tienen entrada
+explícita real): valores no-triviales destacados, `(itemId: shoot -> offsetX,offsetY,dir)`:
+`4603: 815 -> -20,-30,-1` (el offset más grande de las 63), `4425: 774 -> -14,-24,-1`, `1170: 198 ->
+-8,-20,-1`, `994: 175 -> -4,-6,1` (citado en el encargo, sin espejo), `3857: 703 -> 4,-10,1`. El
+resto sigue el mismo patrón (offsets pequeños entre -20 y +6 en X, -30 a 0 en Y, `SpriteDirection=-1`
+en 38 de las 63, `=1` en las 25 restantes) - tabla completa fijada en
+`Terrakeep.Core.Tests/Data/PetAnimationCatalogTests.cs`.
+
+**Cambios reales**:
+- `Terrakeep.App/Assets/pet_animations.json`: 3 campos nuevos (`offsetX`/`offsetY`/
+  `spriteDirection`) añadidos a las 63 entradas, resto de campos sin tocar (verificado con diff
+  campo a campo contra el JSON anterior, 0 discrepancias).
+- `Terrakeep.Core/Data/PetAnimationCatalog.cs`: `PetAnimationEntry` gana `OffsetX`/`OffsetY`
+  (`double`)/`SpriteDirection` (`int`, default 1 - el valor por defecto real de Terraria si algún
+  día se cataloga una mascota sin entrada explícita).
+- `Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs`: `PetOffsetX`/`PetOffsetY`/
+  `PetSpriteDirection` (propiedades simples, no `ObservableProperty` - se resuelven una única vez en
+  el constructor desde el catálogo, nunca cambian durante la vida de la tarjeta), rellenadas desde
+  `petEntry.OffsetX/OffsetY/SpriteDirection` junto al resto de datos de mascota ya existentes.
+  `PetSpriteDirection` expuesto como `double` (1/-1) listo para bindear directo a
+  `ScaleTransform.ScaleX`.
+- `Terrakeep.App/MainWindow.xaml` (tarjeta ~1505 y banner ~2688): `RenderTransform` ADICIONAL sobre
+  el `Image` de `PetImage` - `TransformGroup` con `ScaleTransform(PetSpriteDirection, 1)` primero
+  (espejo horizontal alrededor del propio centro, `RenderTransformOrigin=0.5,0.5`) y
+  `TranslateTransform(PetOffsetX, PetOffsetY)` después (el orden importa: el espejo se aplica ANTES
+  de desplazar, igual que en el decompilado). Sin mascota catalogada, los tres valores son el 0,0,1
+  por defecto real - transform identidad, sin cambio visual.
+
+**Verificado con capturas reales antes/después** (5 mascotas, diagnóstico temporal en
+`Terrakeep.App.Tests/Program.cs` - compone el mismo `Grid`+`Image` que la tarjeta real reutilizando
+`PetPreviewRenderer.RenderFrame` real, revertido antes del commit): 994 (offset pequeño, sin
+espejo, sprite prácticamente simétrico así que la diferencia visible es solo el desplazamiento),
+1170 (offset moderado + `SpriteDirection=-1` - **espejo horizontal claramente visible**, el sprite
+de la abeja pasa de mirar a la derecha a mirar a la izquierda además de desplazarse), 4603 (el
+offset más grande, -20,-30 - confirma que el sprite NO se recorta/desaparece, WPF no clipea por
+defecto, solo se desplaza fuera del cuadro nominal 52x72,8, mismo criterio ya aceptado en el fix de
+z-order/tamaño del 25-sep-2026 anterior).
+
+**Tests nuevos**: `Terrakeep.Core.Tests/Data/PetAnimationCatalogTests.cs` (7 tests) - tabla completa
+de 63 entradas fijada numéricamente contra el JSON real (`RealFile_Tiene63EntradasConLosOffsets
+RealesDeCadaMascota`), 5 casos `[Theory]` con las mascotas citadas en el encargo (994/4603/1170/
+4425/3857), caso de item desconocido → `null`. `dotnet test Terrakeep.Core.Tests`: **608/608 OK**
+(601 previas + 7 nuevas). `dotnet test Terrakeep.App.ViewModels.Tests`: 523/523 OK (sin relación con
+este cambio, confirma que no hay regresión cruzada). `dotnet build` (Debug y Release) de
+`Terrakeep.App`/`Terrakeep.App.Tests` en verde, 0 errores.
+
+**Interacción real medida con Encargo3, documentada con honestidad (no oculta)**: mientras se
+verificaba con el canario `HOMEBANNER_SOLO` existente (mismo umbral de "% de mascota tapada por el
+doll" ya usado por el fix de z-order/tamaño del 25-sep-2026), aplicar el offset real (+4,0, sin
+espejo) del proyectil 960 (mascota real equipada por Eldelgas/Terrariano en este equipo) SOBRE el
+`Margin="-20,-16,0,0"` **empírico y fijo** que existía en ese momento (tuneado sin conocer ningún
+offset real, efectivamente calibrado para offset=(0,0)) subió el ocultamiento medido de Eldelgas de
+26,4% a **35,6%** - por encima del umbral de FALLO (30%) de ese canario. Investigado con una prueba
+de aislamiento real (revertir el `RenderTransform` a identidad reproduce EXACTAMENTE el 26,4%/12,7%
+documentado, confirmando que el offset real es la causa, no un efecto de otro cambio concurrente) y
+con una captura a lienzo ampliado (confirma que el offset no "hace desaparecer" el sprite, solo lo
+desplaza fuera del cuadro nominal - un offset grande como el de la mascota 815 llega a desplazarse
+~40-46px fuera del cuadro 52x72,8). Causa real: el `Margin` fijo de la ronda anterior era una
+fórmula EMPÍRICA ajustada solo para offset=(0,0) (el catálogo no tenía offsets hasta este mismo
+encargo) - cualquier offset real no-cero, según su signo, o bien se suma a esa fórmula (mejora el
+resultado) o bien la contrarresta (lo empeora), matemáticamente esperable, no un bug de este
+encargo. **Resuelto sin que este agente tocara la fórmula general** (fuera de alcance, terreno de
+Encargo3): mientras se investigaba, Encargo3 aterrizó en paralelo (mismo `MainWindow.xaml`, sin
+solape de líneas con este cambio) su propia fórmula real basada en
+`PetBottomAlignMarginConverter`/`PetDollShiftXConverter` (ver su comentario completo en
+`MainWindow.xaml` y `Converters/PetPositionConverters.cs`) - una fórmula que ancla la mascota al
+borde inferior real del personaje en vez de un `Margin` fijo, y que **lee directamente
+`PetOffsetX`/`PetOffsetY`/`PetSpriteDirection` de este mismo encargo** (integración limpia,
+verificada, no reescrita por ninguno de los dos agentes). Re-verificado tras el aterrizaje de
+Encargo3 con el `HOMEBANNER_SOLO` actualizado (mismo canario, aserciones nuevas de Encargo3): **0
+líneas `FALLO`**, `delta=0px` en las comparaciones borde-inferior-mascota-vs-doll para Eldelgas y
+Terrariano, offset neto medido = offset esperado según la fórmula real. `HOMEHOVER_SOLO` también
+verificado en verde tras el aterrizaje (una excepción vista a mitad del proceso resultó ser un
+guardado a medias de OTRO agente concurrente y no volátil - reproducida y descartada con un
+rebuild).
+
+**Commit real**: `bbf27de1` ("PortSeleccion Encargo4: OffsetX/OffsetY/SpriteDirection reales por
+mascota en PetAnimationCatalog") - 4 archivos exactos de este encargo (`pet_animations.json`,
+`PetAnimationCatalog.cs`, `CharacterListEntryViewModel.cs`, `PetAnimationCatalogTests.cs` nuevo).
+**`MainWindow.xaml` deliberadamente NO incluido en este commit**: en el momento de cerrar este
+encargo, ese fichero lleva simultáneamente trabajo sin commitear de VARIOS agentes en paralelo
+totalmente ajenos a mascotas (Encargo3/mascotas ya integrado y verificado arriba, pero también un
+selector de navegación Equipamiento/Inventario/Almacenes nuevo y un arreglo de recorte de tarjetas
+de Librería, ninguno de los dos tocado ni verificado por este agente) - commitear el fichero entero
+arrastraría ese trabajo ajeno bajo este commit, exactamente el patrón que ya causó confusión hoy
+mismo en rondas anteriores (ver el commit `e4bf368c` de más arriba). El cambio real de
+`RenderTransform` de este encargo SÍ está presente y verificado en el árbol de trabajo (confirmado
+con los canarios en verde de arriba) - queda pendiente de que lo commitee el agente que cierre esa
+ronda de `MainWindow.xaml` (Encargo3 u otro), o el coordinador si prefiere agruparlo.
+
+**Recompilación/redespliegue real**: `Terrakeep.exe` NO estaba en ejecución (verificado antes y
+después). `dotnet build Terrakeep.App -c Release` en verde. `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` (tras un `dotnet restore
+-r win-x64` explícito - el primer intento de publish falló con `NETSDK1047`, `project.assets.json`
+sin destino para `net10.0-windows/win-x64`, restaurado con normalidad después) generó
+`Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish\Terrakeep.exe`. Copiado con `robocopy
+/MIR` (excluyendo `unins000.exe`/`unins000.dat`) a `C:\Users\adrian\AppData\Local\Programs\
+Terrakeep\` - hash SHA256 idéntico entre publicado e instalado
+(`42FB925F5329DA310BECBB95F1636C9F5B4FB6ADCFAFB507CC2887EA8299DDE0`). Accesos directos de barra de
+tareas y Menú Inicio confirmados apuntando a esa misma ruta instalada (`WScript.Shell` sobre los
+`.lnk` reales). **Nota real sobre el binario desplegado**: como `MainWindow.xaml` lleva trabajo de
+varios agentes en paralelo sin commitear (ver arriba), el `.exe` desplegado en este paso refleja el
+estado COMPLETO del árbol de trabajo en el momento de publicar (incluye Encargo3 ya integrado, el
+selector de navegación nuevo y el arreglo de recorte de Librería) y no solo el commit `bbf27de1` de
+este agente - mismo patrón ya usado hoy en rondas anteriores del catálogo "Inicio".
+
+**Confirmado explícitamente lo que NO se tocó**: la fórmula GENERAL de posición mascota-vs-personaje
+(`Margin`/`PetBottomAlignMarginConverter`, terreno de Encargo3) no fue modificada por este agente -
+solo leída/verificada. `PetPreviewRenderer`/`PetAnimationDriver` (fotograma/cadencia) sin cambios.
