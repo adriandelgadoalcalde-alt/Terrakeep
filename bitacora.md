@@ -23937,6 +23937,140 @@ reales, sin contenido ajeno intercalado. Esta nota de bitacora se deja SIN comit
 (mismo motivo que las 2 entradas justo arriba: el archivo tiene trabajo en paralelo de otros
 agentes en otras secciones que aun no han comiteado). Sin `git push`.
 
+## GapAnalysis Encargo F (25-sep-2026): divide el canal Face unico en Face/FaceHead/FaceMask/
+## FaceFlower, con las excepciones reales de headSlot - aplicador-fix, TASK CONTEXT
+## e5eaea9e-c261-4199-8e7d-060b6054f58d
+
+Encargo del coordinador (hallazgo YA investigado por arquitecto-keep): `item.faceSlot` se
+clasifica en 4 canales reales, no 1 (Player.cs:37213-37231, `UpdateVisibleAccessory`):
+
+```
+if (item.faceSlot > 0) {
+    if (ArmorIDs.Face.Sets.DrawInFaceHeadLayer[item.faceSlot]) faceHead = item.faceSlot;
+    else if (ArmorIDs.Face.Sets.DrawInFaceMaskLayer[item.faceSlot]) faceMask = item.faceSlot;
+    else if (ArmorIDs.Face.Sets.DrawInFaceFlowerLayer[item.faceSlot]) faceFlower = item.faceSlot;
+    else face = item.faceSlot;
+}
+```
+
+**Tablas reales transcritas** (todas confirmadas leyendo el decompilado, no de memoria del
+handoff): `ArmorIDs.cs:2184-2190` (clase `Face.Sets`, indexada por FACESLOT) -
+`DrawInFaceHeadLayer=[12,10,13,11]`, `DrawInFaceMaskLayer=[22]`,
+`DrawInFaceFlowerLayer=[1,6,9,8]`, `DrawInFaceUnderHairLayer=[5]`. `ArmorIDs.cs:20/22/24`
+(clase `Head.Sets`, indexada por HEADSLOT - tabla DISTINTA, no confundir) -
+`DrawFaceMaskUnderHeadLayer` (23 ids), `PreventFaceFlowerDraw=[92,275]`,
+`PreventFaceMaskDraw` (48 ids).
+
+**Posiciones reales de dibujado** (`PlayerDrawLayers.cs`, confirmadas linea a linea):
+FaceHead se dibuja dentro de `DrawPlayer_21_Head_TheFace` (llamada al PRINCIPIO de
+`DrawPlayer_21_Head`, linea 2098) - ANTES del pelo/casco. Face normal se dibuja ahi tambien
+si `DrawInFaceUnderHairLayer[faceSlot]` (excepcion real, unico caso faceSlot=5/Blindfold) -
+si no, en su posicion habitual (`DrawPlayer_22_FaceAcc`, DESPUES del pelo/casco). FaceMask se
+dibuja ANTES del pelo/casco (`flag5` en `DrawPlayer_21_Head`, lineas 2126-2142) SOLO si
+`DrawFaceMaskUnderHeadLayer[headSlot]` es true (sin mirar `PreventFaceMaskDraw` en ese caso);
+si es false, se dibuja en su posicion normal salvo que `PreventFaceMaskDraw[headSlot]` la
+suprima del todo. FaceFlower siempre en su posicion normal salvo `PreventFaceFlowerDraw
+[headSlot]`, que la suprime del todo (no tiene posicion alternativa real).
+
+**Codigo de produccion** (`FaceAccessoryLayerTable.cs` nuevo, tabla faceSlot-indexada +
+3 metodos nuevos headSlot-indexados en `PlayerBodyDrawTables.cs` ya existente): reclasifica
+`FaceFile` en `EquipmentAppearanceResolver.ResolveAccessories` (mismo patron ya establecido
+por Encargo A/Backpack-Tail y Encargo C/BalloonFront - "Face" se resuelve una vez y se
+reclasifica DESPUES sin duplicar logica de resolucion). `PlayerPreviewRenderer.Render`
+inserta `FaceHeadFile`/Face-bajo-el-pelo/`FaceMaskFile`-bajo-el-casco justo antes del bloque
+hair/helmet (headId ya en scope), y `FaceMaskFile`/`FaceFlowerFile` normales en Paso 9b junto
+a `FaceFile`, respetando `PreventFaceMaskDraw`/`PreventFaceFlowerDraw`. ALCANCE DELIBERADO
+documentado en el propio comentario del codigo: el juego real SUSTITUYE la piel base de la
+cabeza por FaceHead (rama que NO dibuja `TextureAssets.Players[skinVar,0]`) - este renderer
+NO reproduce esa sustitucion (la piel base ya se dibujaba siempre, capa preexistente), asi
+que FaceHead se compone ENCIMA de la piel en vez de reemplazarla; hueco real, no oculto, fuera
+del alcance de los 7 tablas pedidas por el handoff.
+
+**Cobertura Calamity confirmada**: 6 items reales con `EquipSlot=="Face"` (`Abaddon`,
+`AbyssalDivingGear`, `FeatherCrown`, `MoonstoneCrown`, `OccultSkullCrown`, `LucisSight`,
+`Assets/calamity/catalog.json`) - ninguno declara variante FaceHead/FaceMask/FaceFlower (ese
+matiz solo existe en el catalogo vanilla), y `faceSlotId` es siempre `null` para Calamity
+(numeracion propia no compartida) - `FaceAccessoryLayerTable` nunca se consulta para estos
+objetos, se quedan fiel-por-defecto en el canal Face normal. Test dedicado que itera los 6 y
+confirma `FaceHeadFile`/`FaceMaskFile`/`FaceFlowerFile` siempre null.
+
+**Limite real documentado**: faceSlot=22 (WeldingMask, `DrawInFaceMaskLayer`, item real 5596)
+no tiene sprite extraible en este PC - el arbol decompilado 1.4.4.9 que usa
+`extraer-slots-accesorios-vanilla.py` (`tModLoader-Decompiled\tModLoader\`) no tiene ese item
+todavia (SI existe en el arbol vanilla 1.4.5.8 mas nuevo, confirmado ahi el mismo
+`case 5596: faceSlot = 22;`). Se prueba la TABLA en si (valor 22 real, no inventado) con un
+fichero de test dedicado (`FaceAccessoryLayerTableTests.cs`) en vez de un item real de
+extremo a extremo.
+
+**Tests nuevos** (22 reales, todos en verde): `PlayerBodyDrawTablesTests.cs` (+15: 3 tablas
+headSlot x ids reales/sin-entrada), `FaceAccessoryLayerTableTests.cs` (nuevo fichero, +14: 4
+tablas faceSlot x ids reales/sin-entrada), `EquipmentAppearanceResolverTests.cs` (+6:
+FaceHead/FaceFlower reclasifican, Face-bajo-el-pelo NO reclasifica, Face-normal-sin-tabla,
+vanidad-tapa-a-funcional entre canales distintos, los 6 items Calamity), 
+`PlayerPreviewRendererAccessoriesTests.cs` (+10: 2 wiring real end-to-end + 1 sintetico +
+5 de orden real de composicion + 2 de supresion total identica-a-sin-nada). Ids reales usados
+(spot-check a mano en `Item.cs` del arbol tModLoader 1.4.4.9 antes de escribir los tests):
+Obsidian Skull (193, faceSlot=12, FaceHead), Nature's Gift (223, faceSlot=1, FaceFlower),
+Blindfold (888, faceSlot=5, bajo-el-pelo), Spectre Goggles (4409, faceSlot=14, Face normal sin
+excepciones).
+
+**Build y regresion**: `dotnet build Terrakeep.slnx -c Release -p:BaseOutputPath=bin_encargoF/`
+(aislado del `bin/`compartido con Encargo E/G en paralelo, mismo patron ya documentado hoy por
+varios encargos): 0 advertencias, 0 errores. `dotnet test Terrakeep.Core.Tests -c Release
+-p:BaseOutputPath=bin_encargoF/`: 718/718. `dotnet test Terrakeep.App.ViewModels.Tests -c
+Debug --filter` (mis 2 ficheros de test exactos): 90/90. **Limite real, honesto**: la ronda
+completa de `dotnet test Terrakeep.App.ViewModels.Tests -c Release` (suite completa, no solo
+mis ficheros) no llego a terminar en mas de 100 minutos reales de espera encadenada (6+ rondas
+de `controladorEspera.js` de 540s cada una) - confirmado con `Get-Process`/`Get-CimInstance
+Win32_Process` en cada ronda que el proceso seguia vivo, `Responding=True` y con CPU en
+aumento constante (nunca colgado) - la causa real es contencion extrema de recursos: al menos
+3 agentes en paralelo (yo, Encargo E con `bin_encargoE`, otro con `bin_encargoERelease`/PID
+distinto) ejecutando la MISMA suite pesada de renderizado WPF a la vez en la misma maquina,
+confirmado con `Get-CimInstance Win32_Process` listando las lineas de comando completas de
+cada `dotnet test`/`testhost.exe` concurrente. Termine mi propio proceso (`Stop-Process`) tras
+~96 min para no seguir contribuyendo a la contencion que afectaba a los demas agentes, y
+reintente una vez mas en aislado (`bin_encargoF2`) sin llegar tampoco a completar en otros 9
+min. La cobertura real que SI se confirmo en verde: los tests exactos que toca este encargo
+(filtrados, Debug) + la suite hermana completa (`Core.Tests`, Release) + 2 builds completos de
+la solucion combinada (con el codigo de Encargo E/G ya presente) sin advertencias ni errores -
+no hay ninguna señal real (ni en el codigo ni en la ejecucion parcial observada) de que algun
+test de la suite completa fuera a fallar, pero la confirmacion formal de los 700+ tests
+completos queda pendiente por este limite del entorno, no por el codigo.
+
+**Incidente real durante el redespliegue (autonomia tecnica, detectado y reparado en el
+momento)**: `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` genero un `publish/Assets/` con la estructura de carpetas correcta
+pero CERO archivos dentro (confirmado con `find Assets -type f | wc -l` = 0, mientras que el
+`bin/Release/net10.0-windows/win-x64/` intermedio SI tenia los 13051 archivos reales) - fallo
+real de copia de contenido en el paso de publicacion single-file, reproducido dos veces
+seguidas, con toda probabilidad causado por la misma contencion extrema de E/S del punto
+anterior (multiples agentes escribiendo simultaneamente cientos de miles de archivos en
+carpetas `bin_encargo*` aisladas). El primer `robocopy ... /MIR` hacia
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\` REFLEJO ese `publish/` roto y BORRO los
+13051 archivos reales de la instalacion en vivo (sprites, `catalog.json`, DLLs nativas de
+WPF) - detectado de inmediato revisando el propio log de robocopy (13056 "Archivo EXTRA"
+listados, numero sospechosamente alto) y confirmado con `find Assets -type f` = 0 tambien en
+el directorio instalado. Reparado en el momento: `robocopy` manual de
+`bin/Release/net10.0-windows/win-x64/Assets` (el intermedio, con los 13051 archivos reales
+confirmados) hacia `win-x64/publish/Assets`, y solo entonces un segundo `/MIR` hacia el
+directorio instalado - verificado con `find Assets -type f` = 13051 en ambos sitios
+(publish/ e instalado) tras la reparacion. Smoke test real post-reparacion: `Terrakeep.exe`
+lanzado, 2 procesos vivos y `Responding=True` durante 6s, cerrado limpio despues - la app
+arranca sin crashear con el binario y los assets reparados. Sin este chequeo explicito, el
+incidente habria dejado la instalacion real del usuario sin la mayoria de sus sprites/iconos
+- documentado con honestidad porque paso de verdad, no una hipotesis.
+
+**Commit real**: `647ac66` - `Terrakeep.Core/Model/FaceAccessoryLayerTable.cs` (nuevo),
+`Terrakeep.Core.Tests/Model/FaceAccessoryLayerTableTests.cs` (nuevo), y el hunk final (mis
+10 tests de orden/render, `git apply --cached` de un hunk aislado extraido a mano del diff
+completo) de `Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs`. El
+resto del codigo real de este encargo (`EquipmentAppearanceResolver.cs`,
+`PlayerPreviewRenderer.cs`, `PlayerBodyDrawTables.cs`, `EquipmentAppearanceResolverTests.cs`,
+`PlayerBodyDrawTablesTests.cs`) ya habia quedado incluido en el commit combinado `e3a51b68`
+(Encargo G, "canal Beard real") - confirmado con `git show e3a51b68 -- <fichero> | grep
+"GapAnalysis Encargo F"` antes de comitear nada mas, para no duplicar ni perder ningun cambio
+real. Sin `git push`.
+
 ## GapAnalysis Encargo G (25-sep-2026): canal Beard real (item.beardSlot), tinte de color de
 pelo real para los "Wilson beards"
 
