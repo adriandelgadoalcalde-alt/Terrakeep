@@ -25499,3 +25499,157 @@ atribuido al mensaje de commit de Fase G en vez de al suyo propio.
 
 **Fase G queda cerrada**: Comparar tiene vista amplia real, con datos reales verificados y sin
 regresión medida en ningún gate del proyecto.
+
+## 25-sep-2026 (mismo día) - ExploracionRediseno Fase D: editor real de cofre movido de la fila al Inspector
+
+Encargo del coordinador (patrón de 2 fases, rol aplicador-fix) - Fase D del rediseño estructural de
+la pestaña Exploración (8 fases, "ExploracionRediseno FaseA"). Diseño ya aprobado por el
+arquitecto, confirmado antes de tocar nada con `Read`/`Grep` sobre el árbol real (Fase C había
+dejado el placeholder `ExplorationSidebarChestInspectorPlaceholder` con un `TextBlock` provisional).
+Esta es la fase que resuelve directamente el encargo original del usuario ("todo aparece metido
+dentro de la propia fila").
+
+**Arreglo real aplicado**:
+- `Terrakeep.App/MainWindow.xaml`, `ChestRowTemplate` (~línea 1788): quitado el bloque `Border
+  Visibility="{Binding IsEditing}"` completo (rejilla de slots + `ContentControl` de
+  `ItemEditTemplate` + botones Guardar/Cancelar + `ChestEditStatus`) que antes vivía indentado
+  `Margin="33,0,0,8"` dentro de cada fila del `ListBox` (`ChestByChestList`). El botón "Editar" de
+  la fila (`EditChestCommand`) se dejó INTACTO - Fase B ya deriva `SidebarMode=ChestInspector` solo
+  con ese comando, sin tocarlo.
+- `ExplorationSidebarChestInspectorPlaceholder` (dentro de `ExplorationSidebarBrowseInspectorHost`,
+  Fase C): relleno real, MISMO bloque movido tal cual (mismo `SlotCompactTemplate`,
+  `OnChestItemSlotMouseDown`, `ItemEditTemplate` vía `StaticResource` - NUNCA duplicado, es el MISMO
+  recurso y la MISMA propiedad `Exploration.ChestItemEdit` que usa Personaje) + cabecera nueva:
+  botón "← Cofres" (`Exploration.CancelEditingChestCommand`, mismo comando que ya cerraba sin
+  guardar) + título dinámico (icono/`VariantName`/`ChestName`/coordenadas de `EditingChest`, mismos
+  datos que ya mostraba la cabecera de la fila). DataContext aquí es la raíz (`MainViewModel`, igual
+  que el resto del sidebar) - bindings simplificados a `Exploration.X` directo, sin el
+  `RelativeSource AncestorType=Window` que hacía falta dentro de `ChestRowTemplate`.
+- Clave de idioma nueva `explore_inspector_back` ("← Cofres"/"← Chests") en
+  `Assets/strings_es.json`/`strings_en.json` - `explore_inspector_placeholder` (el texto provisional
+  de Fase C) se dejó sin usar en el JSON, ya no tiene ningún consumidor XAML, sin quitar la clave
+  (no hay ningún test de claves huérfanas en el proyecto, y quitarla no aportaba nada real).
+- Ancho completo: el `Grid` del placeholder ya vivía sin indentación dentro del host de Fase C (a
+  diferencia del `Margin="33,0,..."` de la fila antigua) - el `WrapPanel` de slots (mismo control de
+  siempre, auto-wrap) cabe más columnas reales por fila solo con el ancho nuevo, sin tocar su
+  definición.
+- `MainWindow.xaml:6712` (`DockPanel x:Name="ExplorationSidebarPanel"`): `MinHeight` subido de 800 a
+  1000 - ver el hallazgo real de abajo.
+
+**Hallazgo real durante la verificación (no en el encargo original, descubierto midiendo con
+capturas reales)**: `ExplorationSidebarPanel` fuerza su propio `Height` a
+`max(ViewportHeight, MinHeight)` (mecanismo ya establecido, ver el comentario largo junto a
+`MinHeight` en el XAML, calibrado 3 veces antes: 590->652->800) - un `DockPanel` con `Height`
+EXPLÍCITO (no `Auto`) reporta ese valor como su `DesiredSize` SIN IMPORTAR cuánto necesiten sus
+hijos, así que cualquier contenido que pida más se recorta de verdad, sin scroll posible más allá
+de ese tope. El Inspector movido en esta fase es mucho más alto que cualquier cosa que este
+mecanismo tuviera que alojar antes (rejilla de hasta 40 slots reales -
+`Math.Max(chest.MaxItems, chest.Items.Count)`, `ExplorationViewModel.EditChest` - TODOS los cofres
+reales usan 40 salvo modded - más el panel `ItemEditTemplate` completo). Medido con el arnés
+(`COFRES_INSPECTOR_SOLO=1`, cofre real de 40 slots + objeto de 17 prefijos legales, "Hacha Arrojadiza
+de Adamantita"): con `MinHeight=800` los botones Guardar/Cancelar quedaban en `Y=848,5-873,1px`, MÁS
+ALLÁ del `DockPanel.ActualHeight=800px` real (confirmado con `VerticalOffset`/`ScrollableHeight`
+tras `ScrollToBottom()` real: `ScrollableHeight` topaba en `800-viewport`, sin llegar nunca a esos
+873px) - inalcanzable con scroll de verdad, no solo "hay que bajar más". Arreglo: `MinHeight` subido
+a 1000 (mismo coste ya aceptado 3 veces en este fichero: un poco más de scroll a cambio de que nada
+quede inalcanzable). Reconfirmado tras el cambio: mismo cofre/objeto, Guardar/Cancelar en
+`Bottom=873,1px`, ya DENTRO de `DockPanel.ActualHeight=1000px` - capturas reales
+(`fased-inspector-prefijos-guardar-cancelar.png`) muestran ahora los 17 prefijos completos
+(Demoniaco/Piadoso/Irreal/Mítico/Legendario/Fabuloso) y los botones Guardar/Cancelar sin ningún
+corte.
+
+**Verificación real** (canario extendido, `Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`,
+bloque nuevo `COFRES-INSPECTOR-FASED*`, corre dentro de `COFRES_INSPECTOR_SOLO=1`, guardia de
+entrada gráfica de KeepQA confirmada en verde antes de cada ejecución):
+- No-duplicación: ningún `ContentControl` dentro de `ChestByChestList` sigue apuntando a
+  `ChestItemEdit` (el editor se movió, no se duplicó).
+- Ruta 1 (botón "Editar" de la fila): `SidebarMode=ChestInspector`, Inspector real visible con
+  cabecera "← Cofres" real (mismo `CancelEditingChestCommand`), `ContentControl`/rejilla de slots
+  encontrados, título dinámico con el `VariantName` real del cofre abierto, ancho real del
+  Inspector ≥220px (dentro del rango real de contenido de este sidebar, 230-245px documentado en
+  Fase C - nunca los ~185-196px que dejaba vivir el editor indentado en la fila antigua). Cerrado
+  con "← Cofres" -> `SidebarMode=Browse`.
+- Reubicación de la medición de Metas/Groups (punto 2 del cluster original) al Inspector con el
+  mismo objeto de 17 prefijos: `Metas.Bottom`/`Groups.Bottom` dentro de `ContentControl.ActualHeight`
+  real, sin corte, ya con el ancho completo del Inspector.
+- Ruta de cierre 2 (Guardar): `SaveEditingChestAsync` deja `SidebarMode=Browse`.
+- Ruta 2 (marcador del mapa, `TryOpenChestAtTile(5579,1036)`, mismo cofre-7 real que AR-13d/AR-13e)
+  y ruta 3 (resultado de búsqueda, `GoToWorldSearchHitCommand`, mismo hit real que AR-13e): las dos
+  dejan el Inspector REAL visible (cabecera "← Cofres" presente), no ya el placeholder provisional
+  de Fase C.
+- Capturas reales (`RenderTargetBitmap`): `fased-inspector-cabecera-y-rejilla.png` (cabecera
+  completa + título dinámico "Cofre de champiñón"/"YoYo"/coords + rejilla de slots a ancho completo,
+  con scroll reseteado a top vía `ScrollToTop()` explícito - el `BringIntoView()` de una medición
+  anterior del mismo canario dejaba el scroll heredado a mitad), `fased-inspector-completo-picaro.png`
+  (Metas/Groups con el objeto de 17 prefijos), `fased-inspector-prefijos-guardar-cancelar.png`
+  (Prefixes completos + Guardar/Cancelar, tras el arreglo de `MinHeight`).
+- Ejecutado de verdad varias veces (`dotnet Terrakeep.App.Tests.dll` con la variable puesta, sin
+  `dotnet run`): 0 `FALLO`/`EXCEPTION` en la ejecución final, incluidos los puntos P1/P2/P3/FASEB/
+  FASEC previos del mismo canario (sin regresión de las fases anteriores).
+
+**Regresión AR-13d/AR-13e (LÍMITE REAL documentado)**: estos dos bloques viven en
+`Terrakeep.App.Tests/Program.cs` dentro del tramo INCONDICIONAL de `Main()` que solo se alcanza con
+una ejecución COMPLETA del arnés (sin ninguna variable `_SOLO`) - confirmado contando las 87
+comprobaciones `GetEnvironmentVariable` reales del fichero, ninguna envuelve AR-13. La propia
+bitácora ya deja dicho (12130, ronda anterior) que ese recorrido completo históricamente "no llegó a
+terminar" en varios intentos - no se relanzó aquí por ese motivo, ni por presupuesto de tiempo de
+este encargo. Evidencia real equivalente en su lugar: (a) `git diff` confirma que este cambio NO
+toca `CurrentChestMarker`, `EditCurrentChestOnMapCommand`, ningún `MouseBinding` ni
+`OnWorldMapMouseDown` - el mecanismo exacto que AR-13e verifica (captura de ratón, hit-test, clic
+real de SO) queda intacto; (b) el bloque FASED-R2/R3 de este mismo canario ejercita las MISMAS 2
+rutas con las MISMAS coordenadas reales que AR-13d/AR-13e (`TryOpenChestAtTile(5579,1036)` y
+`GoToWorldSearchHitCommand` sobre el hit `(5580,1037)`) y confirma que las dos siguen abriendo el
+Inspector REAL (con cabecera), 0 FALLO. Pendiente honesto: no se repitió el clic SIMULADO de SO
+(down+up) que hace AR-13e en concreto - ese mecanismo de bajo nivel no se tocó en absoluto por este
+cambio (solo XAML de contenido, nunca el manejador de ratón del mapa), así que el riesgo real de
+regresión ahí es mínimo, pero no está medido de nuevo en esta ronda.
+
+**Build y regresión**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores. `dotnet test
+Terrakeep.Core.Tests -c Release --no-build`: 732/732 (mismo baseline que Fase C/G). `dotnet test
+Terrakeep.App.ViewModels.Tests -c Release --no-build`: 711/711 (3m40s, mismo baseline).
+
+**Trabajo concurrente en el mismo `MainWindow.xaml`**: el grueso de esta Fase D (mover el bloque de
+`ChestRowTemplate` al placeholder, cabecera nueva) quedó arrastrado SIN QUERER en el commit
+`7e6914f1` de la Fase G (mismo fichero, mismo mecanismo ya documentado ahí mismo: `git add` stagea
+el fichero entero, no un hunk) - confirmado con `git show 7e6914f1 -- MainWindow.xaml` antes de
+comitear nada aquí, para no duplicar ni pisar ese contenido. Lo único que quedaba realmente
+pendiente de comitear en este encargo era el arreglo de `MinHeight` (hallazgo posterior a ese
+commit) + la clave de idioma `explore_inspector_back` (seguía sin comitear, a diferencia de las 2
+claves de Fase C que sí se llevó el commit de Fase G por el mismo motivo).
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` instalado NO estaba en ejecución
+(`Get-CimInstance Win32_Process`, sin resultados). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde. Sanidad de
+`Assets/` ANTES del `/MIR`: publish = 13055 ficheros (origen `Terrakeep.App/Assets` = 13056, misma
+diferencia de 1 ya documentada y ajena a este encargo), instalado ANTES de copiar = 13055 - sin
+discrepancia. `robocopy ... //MIR //XF unins000.exe unins000.dat` a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\`: 3 archivos copiados (`Terrakeep.exe` + los 2
+JSON de idioma), 13058 omitidos (ya idénticos), 0 errores. Sanidad de `Assets/` DESPUÉS del `/MIR`:
+instalado = 13055 - sin discrepancia, `/MIR` seguro confirmado en los dos sentidos. Confirmado con
+`grep` que la copia instalada de `strings_es.json`/`strings_en.json` ya tiene
+`explore_inspector_back` en los dos idiomas. Relanzado el `.exe` instalado (PID 62352,
+`Responding=True`) y cerrado limpio con `Stop-Process`.
+
+**Commit real** `774eb9d9`: `Terrakeep.App/MainWindow.xaml` (solo el hunk de `MinHeight`+comentario,
+el resto ya estaba en `7e6914f1`), `Terrakeep.App/Assets/strings_en.json`/`strings_es.json`
+(`explore_inspector_back`), `Terrakeep.App.Tests/CanarioClusterCofresInspector.cs` (bloque FASED
+completo), `Terrakeep.App.Tests/AuditoriaKeepQA.cs` (1 línea, actualiza el comentario de
+`MinHeight=800` a 1000 - separado con `git add -p` de un hunk AJENO en el mismo fichero, la
+corrección de ruta `Downloads\KeepQA` -> `Downloads\Keep\KeepQA` de otro agente en paralelo, dejado
+sin comitear a propósito para que lo comitee ese agente). El árbol de trabajo tenía numerosos
+ficheros ajenos modificados por otros agentes en paralelo (`Terrakeep.Core.Tests/**`, `CLAUDE.md`,
+`scripts/**`, etc.) - ninguno se añadió al stage, `git add` con rutas explícitas, nunca `-A`. Sin
+`git push`.
+
+**Confirmación de no-duplicación (punto explícito del encargo)**: `ItemEditTemplate` sigue siendo
+el ÚNICO `DataTemplate x:Key="ItemEditTemplate"` del fichero (`MainWindow.xaml:25`) - el
+`ContentControl` del Inspector lo referencia vía `StaticResource`, exactamente igual que el de
+Personaje (`Content="{Binding ItemEdit}"`, sin tocar) y que antes tenía el editor incrustado de
+`ChestRowTemplate` (ya eliminado). `ChestItemEdit` sigue siendo la única instancia real
+(`ExplorationViewModel.cs:1431`), consumida ahora solo desde el Inspector.
+
+**Fase D queda cerrada**: el editor real de cofre vive en el Inspector de ancho completo, ya no
+incrustado dentro de la fila - resuelve directamente "todo aparece metido dentro de la propia fila"
+del encargo original del usuario. Pendiente real para una fase futura: repetir el clic simulado de
+SO de AR-13e sobre el marcador del mapa en un recorrido completo del arnés (no se pudo en esta
+ronda, ver el LÍMITE REAL de arriba).
