@@ -26222,3 +26222,88 @@ push`.
 ahora el mismo `EquippedAccessories` para el mismo estado de personaje, confirmado con datos reales
 (no solo por inspección de código). Pendiente real, fuera de este encargo: Fase2 ya documentó sus
 propios pendientes (Fase3/4/5) arriba.
+
+### ParidadPersonaje Fase3 - BugG: FaceHead sustituye la piel base, no se superpone (26-sep-2026)
+
+Encargo de aplicación directa (TASK CONTEXT `e5eaea9e-c261-4199-8e7d-060b6054f58d`) sobre el hallazgo
+ya investigado por el arquitecto-keep de la reapertura (`aab15032`): "FaceHead debe SUSTITUIR piel
+base no superponerla (`PlayerDrawLayers.cs:2574-2640` confirma if/else-if/else mutuamente
+excluyente)".
+
+**Confirmación real del estado tras Fase2**: se leyó `EquipmentAppearanceResolver.cs`
+(`VisiblePlayerState.Apply`/`ResolveAccessories`) y `PlayerPreviewRenderer.cs` con los propios ojos
+- el resolver ya clasifica bien FaceHead/FaceMask/FaceFlower (Fase2 no tocó ese hueco, no era su
+alcance). El bug SÍ seguía presente en el renderer: el propio comentario que llevaba el código hasta
+hoy lo documentaba explícitamente como "ALCANCE DELIBERADO... FaceHead se compone ENCIMA de la piel
+en vez de reemplazarla; hueco real, documentado, no oculto" - la reescritura de Fase2 no tocó esta
+zona (`Render()`, no `ResolveAccessories()`), así que el hueco sobrevivió intacto.
+
+**Causa confirmada contra el decompilado real** (`Keep\tModLoader-Decompiled\TerrariaVanilla\
+Terraria\DataStructures\PlayerDrawLayers.cs:2574-2640`, `DrawPlayer_21_Head_TheFace`): 3 ramas
+`if/else-if/else` MUTUAMENTE EXCLUYENTES (descartada `mountHandlesHeadDraw`, no aplica a un doll sin
+montura) - con `faceHead > 0` (línea 2592) se dibuja ÚNICAMENTE `TextureAssets.AccFace[faceHead]`;
+`Players[skinVar,0/1/2]` (piel/ojos blancos/ojos) y `Extra[67]` (Yoraiz0r Darkness) viven DENTRO de
+la rama `else if (!invis && !flag)` (línea 2615), nunca se alcanzan si `faceHead>0`.
+
+**Arreglo aplicado** (`Terrakeep.App/Services/PlayerPreviewRenderer.cs`, Paso 9 `[21_Head]`): el
+bloque que antes dibujaba `head`/`eyewhites`/`eyes`/`Yoraiz0rDarknessFile` siempre y luego
+`DrawAccessory(FaceHeadFile)` encima, ahora es un `if (accessories?.FaceHeadFile is { } faceHeadFile)
+{ DrawAccessory(...); } else { /* piel base + eyewhites + eyes + Yoraiz0rDarkness */ }` - fiel al
+if/else-if/else real, mutuamente excluyente. `EquipmentAppearanceResolver.cs` no se tocó (su
+clasificación de FaceHead ya era correcta, el hueco era solo de dibujado).
+
+**Canario real nuevo**: `PlayerPreviewRendererAccessoriesTests.
+FaceHeadReal_SustituyeLaPielBase_NoLaSuperpone`. El test ya existente
+(`FaceHeadReal_CambiaElResultadoRespectoASinAccesorios`) no servía de canario porque usa un item real
+con sprite OPACO - un FaceHead opaco tapa visualmente la piel esté o no dibujada debajo, así que
+`Assert.NotEqual` pasaba con o sin el bug. El canario nuevo usa un `FaceHeadFile` sintético
+TOTALMENTE TRANSPARENTE (alpha=0 en los 40x56 píxeles, helper `CrearPngTransparente`) para aislar el
+único efecto observable: si la piel base se sigue dibujando debajo o no. Confirmado manualmente con
+`git stash` del arreglo real (revirtiendo solo `PlayerPreviewRenderer.cs`): el canario FALLA contra
+el código previo (`Assert.NotEqual() Failure: Collections are equal` - arrays de píxeles idénticos,
+la piel base seguía ahí bajo el FaceHead invisible) y PASA con el arreglo restaurado - confirma que
+detecta de verdad el defecto, no solo que "algo cambió".
+
+**Verificación real**: `dotnet build Terrakeep.slnx -c Release` en verde (0 advertencias, 0 errores).
+`dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build`: 725/725 (724 baseline de Fase2 +
+1 test nuevo), sin regresión. `dotnet test Terrakeep.Core.Tests -c Release --no-build`: 732/732,
+mismo baseline, sin regresión (no se tocó `Terrakeep.Core`).
+
+**Recompilación y redespliegue local**: `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde. Sanidad de `Assets/` ANTES del `/MIR`
+(`deployLock.js antes Terrakeep`): 13055 ficheros, hash registrado. `DEPLOY_LOCK` adquirido
+(`deployLock.js adquirir Terrakeep`) antes de tocar nada. **`Terrakeep.exe` instalado ESTABA en
+ejecución** (`Get-CimInstance Win32_Process`, PID 474772,
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe`) - el `robocopy /MIR` se quedó
+reintentando `ERROR 32 (El proceso no tiene acceso al archivo porque está siendo utilizado por otro
+proceso)` cada 30s sobre el único fichero que de verdad cambió (`Terrakeep.exe`, los ~13060 Assets ya
+estaban sincronizados por un `/MIR` anterior de otro agente). **No se forzó el cierre de la ventana
+del usuario** - se detuvo el proceso `robocopy` en bucle (mío, de infraestructura, no la app del
+usuario) tras confirmar que nunca iba a progresar mientras el `.exe` siguiera abierto. Sanidad de
+`Assets/` DESPUÉS (`deployLock.js despues Terrakeep`): 13055 ficheros, mismo hash que ANTES - "Assets/
+de Terrakeep idéntico antes y después del /MIR - deploy seguro", `DEPLOY_LOCK` liberado
+(`deployLock.js liberar Terrakeep`) porque la comprobación dio `ok:true` (ningún dato corrompido ni a
+medias, solo el `.exe` quedó sin copiar).
+
+**PENDIENTE REAL - deploy del binario instalado no se completó**: `Terrakeep.exe` en
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\` sigue siendo el build ANTERIOR a este arreglo
+(`LastWriteTime` 25-sep-2026 23:45, el publish nuevo es de 26-sep-2026 00:26) porque el proceso
+(PID 474772) estaba abierto durante todo este encargo y se dejó así a propósito. Para completar el
+despliegue: cerrar `Terrakeep.exe` (el usuario, o un agente futuro con permiso explícito para
+cerrarlo) y repetir `robocopy .../publish .../Terrakeep /MIR /XF unins000.exe unins000.dat` (el
+publish ya está listo en `Terrakeep.App/bin/Release/net10.0-windows/win-x64/publish/`, no hace falta
+repetir `dotnet publish`) - o simplemente relanzar la app normalmente si el propio instalador/updater
+de Terrakeep ya gestiona esa sustitución en el próximo arranque.
+
+**Commit real** `99793a56`: `Terrakeep.App/Services/PlayerPreviewRenderer.cs` +
+`Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs`. `git status` revisado con
+cuidado antes del `git add` - numerosos ficheros ajenos de otros agentes en paralelo (`CLAUDE.md`,
+`MainWindow.xaml`, `Terrakeep.Core.Tests/**`, `Terrakeep.App.Tests/**`, `scripts/**`, etc.), ninguno
+añadido al stage - `git add` con rutas explícitas de mis 2 ficheros, nunca `-A`. `doNotTouch`
+respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKeepQA.cs`/
+`KEEPQA-INTEGRACION.md` no tocados ni comiteados. Sin `git push`.
+
+**Fase3 (BugG) queda cerrada**: FaceHead sustituye de verdad la piel base de la cabeza en el
+renderer, fiel al juego real. Pendiente real, fuera de este encargo: el deploy del `.exe` instalado
+(ver arriba) y Fase4/5 (favoritos cross-loadout, dyes shader, estados especiales) que Fase2 ya
+documentó como pendientes.
