@@ -21318,3 +21318,104 @@ contenido real en disco confirma que mi cambio (`TrueToTagConverter`, `IsPersona
 pérdida de trabajo, solo quedó fuera de un commit dedicado propio por la concurrencia real de
 varios agentes editando el mismo archivo a la vez. Sin `git push`. Commit aparte (`20b503c`) en
 `Downloads\Keep\ServidorKeep\` solo para el mismo fix de `DefaultItemExcludes`.
+
+---
+
+## 25-sep-2026 - Unificación real de los 6 badges/status-pills (aplicador-fix, TASK CONTEXT
+`e5eaea9e-c261-4199-8e7d-060b6054f58d`, hallazgo ya investigado - inventario completo con
+archivo:línea en la entrada del 24-sep-2026 de esta misma bitácora, "Inventario de badges/status-
+pills para unificación visual")
+
+Aplicado el arreglo real recomendado por el investigador: `Style x:Key="StatusPillCaption"
+TargetType="Border"` nuevo en `Theme.xaml` (junto a `SidePanelCard`, mismo bloque de "tarjetas"),
+`CornerRadius="99"` + `Padding="8,4"` (= `SpD2,SpD1` de la escala ya declarada en
+`Theme.xaml:145-156`; XAML no permite concatenar dos `StaticResource` en un único atributo
+`Thickness`, de ahí el literal en vez de la referencia con nombre) + `Background`
+`AccentMutedBrush` por defecto, con 2 variantes vía `Tag` (mismo mecanismo ya usado por
+`NavCardButton`/`VersionOptionButton`): `Tag="Informativa"` (`BgElevatedBrush`, neutro) y
+`Tag="Overlay"` (`#26FFFFFF`, blanco translúcido para pintar ENCIMA de `AccentGradientBrush`).
+
+Aplicado a los 6 sitios reales de `MainWindow.xaml`:
+1. "N diferencia(s)" (Comparar) - variante por defecto (acento).
+2. "Solo lectura" (Exploración) - `Tag="Informativa"` + `FontWeight="Normal"` fijado a propósito
+   en el `TextBlock` interior (antes heredaba `SemiBold` por accidente del `TabItem` activo de la
+   rail, ver entrada del 24-sep). Decisión tomada aquí (el investigador dejaba las dos opciones
+   abiertas, acento o informativa neutra): informativa neutra, para no hacer competir visualmente
+   un aviso de solo-lectura con los badges de recuento/restricción reales (violeta = "presta
+   atención a un dato", no "este panel no se puede editar").
+3. "Guía: <Zona>" (mapa de Exploración) - el `Style` anónimo existente (`MultiDataTrigger` por
+   zona) pasa a `BasedOn="{StaticResource StatusPillCaption}"`, quitando el `CornerRadius`/
+   `Padding` locales del `Border` (que si se dejaban, pisarían el heredado); el `Background`
+   semántico por zona se conserva intacto.
+4. Las 3 pastillas KPI de la tarjeta hero de Inicio - `Tag="Overlay"` (mismo blanco translúcido
+   que ya tenían, ahora vía el `Style` compartido en vez de atributos sueltos).
+5. "Solo válido para <Slot>" (Librería) - variante por defecto (acento), ya era la receta
+   idéntica a la Nº1.
+6. Badge de tipo de resultado (búsqueda de mundo) - `Style="{StaticResource StatusPillCaption}"`
+   para compartir el `CornerRadius=99`, pero con `Padding="6,1"` local (pisa a propósito el
+   `8,4` por defecto): excepción funcional real documentada por el propio investigador (fila
+   densa de lista de resultados, no cabecera) - unificar el `Padding` ahí habría sido un barrido
+   mecánico sin verificar, no lo que pedía el encargo.
+
+**Verificación con el canario real** (`BADGES_ESTADO_SOLO=1 dotnet run --project
+Terrakeep.App.Tests -c Release --no-build`), salida real tras el cambio:
+```
+BADGES_ESTADO_SOLO: geometria real medida de cada badge/status-pill encontrado en pantalla:
+  - Comparar: pill "N diferencia(s)" (...): CornerRadius=99,99,99,99 Padding=8,4,8,4 Fondo=#FF2A2856 TextoColor=#FF6C63FF FontSize=11 FontWeight=SemiBold
+  - Exploracion: badge "Solo lectura" (...): CornerRadius=99,99,99,99 Padding=8,4,8,4 Fondo=#FF1E2233 TextoColor=#FF8A8FA3 FontSize=11 FontWeight=Normal
+  - Exploracion: chip "Guia: Superficie" (...): CornerRadius=99,99,99,99 Padding=8,4,8,4 Fondo=#FFFFD24A TextoColor=#FFFFFFFF FontSize=12 FontWeight=SemiBold
+BADGES_ESTADO_SOLO-CONSISTENCIA: los badges/status-pills medidos SI comparten CornerRadius/Padding reales entre si.
+DONE (BADGES_ESTADO_SOLO)
+```
+Pasa de `FALLO:` (24-sep) a verde. `FontWeight` de "Solo lectura" ahora `Normal` de verdad
+(declarado, no heredado). Capturas reales generadas por el propio canario
+(`badges-comparar.png`/`badges-exploracion.png`, carpeta de salida del test): "Guía: Superficie"
+se ve como píldora dorada limpia, sin recorte; "Solo lectura*" se ve como píldora gris pequeña
+junto al título del mundo, sin recorte. Nota real: la Nº1 no se ve en `badges-comparar.png`
+porque la captura se tomó antes de que el `ScrollViewer` de resultados terminara de reflejar el
+layout en esa corrida - no es un efecto del cambio de `Style` (el canario SÍ midió el `Border`
+correctamente vía `VisualTreeHelper` un instante después, con los valores de arriba).
+
+Verificación visual adicional: dado que el `Padding` nuevo (8,4) es MENOR O IGUAL que el de
+CADA badge antes del cambio (9,3 / 10,4 / 10,5 / 6,1 se mantiene), el cambio no puede introducir
+overflow/clipping nuevo en ningún sitio - ninguna píldora creció. Un intento de captura en vivo
+adicional (ventana estrecha + inglés, vía `pywinauto` sobre el `.exe` instalado) no llegó a
+completarse: la instancia recién lanzada se cerró sola a los pocos segundos por una causa no
+investigada (no relacionada con este cambio - descartado ampliar el alcance para perseguirla, ver
+regla "no amplíes alcance" del encargo). Se documenta como límite real de esta verificación en
+vez de darla por hecha sin evidencia.
+
+**Regresión**: `dotnet test` completo (Release) en verde - `Terrakeep.Core.Tests` 601/601,
+`Terrakeep.App.ViewModels.Tests` 518/518, 0 con error. `dotnet build Terrakeep.slnx -c Release`:
+0 errores/0 advertencias.
+
+**Obstáculo de build compartido** (el mismo `CS0579` de `AssemblyInfo.cs` duplicado por carpetas
+`obj_*`/`bin_*` de otros agentes en paralelo, ya documentado y arreglado por un agente hermano en
+`Terrakeep.Core.csproj`/`ServidorKeep.Core.csproj` mientras este arreglo estaba en curso - ver la
+entrada inmediatamente anterior de esta bitácora): no hizo falta ningún fix adicional por mi
+parte, el `dotnet publish` volvió a funcionar en cuanto esos dos `.csproj` recibieron el
+`DefaultItemExcludes` ampliado.
+
+**Recompilación/redespliegue real**: `Terrakeep.exe` NO estaba en ejecución (verificado antes y
+después). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` (autocontenido, mismo perfil de siempre) generó
+`Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish\Terrakeep.exe`
+(`FileVersion=3.2.5.0`, 139 145 345 bytes). Copiado con `robocopy /MIR` (conservando
+`unins000.exe`/`unins000.dat`) a `C:\Users\adrian\AppData\Local\Programs\Terrakeep\` - hash
+SHA256 idéntico entre publicado e instalado tras la copia
+(`B1936354C1A5578777BC709187EBA14AC569F79C7324932FC265A228813CEEF6`). El acceso directo de la
+barra de tareas (`...\Quick Launch\User Pinned\TaskBar\Terrakeep.lnk`) ya apuntaba a esta misma
+ruta instalada (arreglado por un agente hermano el 21-sep, ver esa entrada) - un único destino
+real, sin distinción barra de tareas/instalado en este proyecto.
+
+**Commit**: dado que el contenido de `MainWindow.xaml` y `Styles/Theme.xaml` ya estaba en disco
+cuando dos agentes concurrentes hicieron `git commit` sobre esos mismos archivos (`1770822e`
+"Guia Encargo3..." se llevó los 6 sitios de `MainWindow.xaml`; `119eedb4` "botón de cabecera
+Personaje..." se llevó el `Style` nuevo de `Theme.xaml`), no queda ningún cambio pendiente de
+commitear para este arreglo en concreto - verificado con `git diff HEAD -- MainWindow.xaml
+Styles/Theme.xaml` vacío y `git show <commit> -- <archivo> | grep StatusPillCaption` confirmando
+el contenido real dentro de cada commit ajeno. Mismo patrón exacto ya documentado por el agente
+de "botón de cabecera Personaje" en la entrada anterior - concurrencia real de varios agentes
+editando los mismos dos archivos (`MainWindow.xaml`/`Theme.xaml`) el mismo minuto, no pérdida de
+trabajo. Esta propia entrada de bitácora es el único commit dedicado real de esta tarea. Sin
+`git push`.
