@@ -21419,3 +21419,126 @@ de "botón de cabecera Personaje" en la entrada anterior - concurrencia real de 
 editando los mismos dos archivos (`MainWindow.xaml`/`Theme.xaml`) el mismo minuto, no pérdida de
 trabajo. Esta propia entrada de bitácora es el único commit dedicado real de esta tarea. Sin
 `git push`.
+
+## 25-sep-2026 - Arreglo aplicado: cluster cofres/inspector lateral (imagen5+6), puntos 2 y 3
+
+Segunda fase del patrón de 2 fases (`aplicador-fix`) sobre el hallazgo ya investigado y
+documentado el 24/25-sep-2026 más arriba ("cluster cofres/inspector lateral"). Alcance exacto:
+puntos 2 (tabs Metas/Groups cortadas) y 3 (rectángulo vacío de 90px), NUNCA el punto 1 (ya
+confirmado resuelto por el investigador, fuera de alcance).
+
+### Arreglo real aplicado
+
+- **Punto 2** (`MainWindow.xaml`, `ContentControl` del editor de cofre dentro de
+  `ChestRowTemplate`): quitado el `MaxHeight="320"` por completo (no solo subido) - iguala
+  exactamente el patrón ya usado en la instancia gemela de la misma `ItemEditTemplate` en
+  Personaje (`Content="{Binding ItemEdit}"`, sin ningún tope), que vive en un contexto igual de
+  "altura libre + `ScrollViewer` de seguridad interno". La fila crece igual que ya crecía sin
+  problema la lista de solo-lectura de objetos del cofre (`ItemsControl` justo encima, tampoco
+  con tope), y `ChestByChestList` (el `ListBox` que aloja la fila entera) ya tiene su propio
+  scroll real (`VirtualizingPanel.ScrollUnit="Pixel"`) para absorber filas más altas.
+- **Punto 3** (`MainWindow.xaml`, `Border x:Name="ExplorationResultsBlock"`): añadido un
+  `MultiDataTrigger` (junto al `DataTrigger` ya existente para Npcs) que colapsa el bloque
+  entero cuando `SelectedCategory==Chests` **y** `WorldSearchResults.Count==0` - mismo patrón ya
+  probado (colapso total, no solo achicar `MinHeight`), así que no deja ni el `Padding`/`Margin`
+  del `Border` como resto visual. Cubre los 3 sub-modos de `ChestViewMode` (Cofre a cofre nunca
+  rellena `WorldSearchResults`; Por tipo/Por lo que contienen solo tras "Buscar seleccionados"),
+  porque la condición es sobre la categoría+recuento, no sobre el modo. En cuanto el usuario SÍ
+  busca y hay resultados, el bloque reaparece con normalidad - no se ha tocado su comportamiento
+  para ninguna otra categoría.
+- **Decisión de diseño para el espacio liberado**: ambos cambios se coordinaron como una sola
+  redistribución (pedido explícito del encargo, "no quiero simplemente comprimir, quiero más
+  aire"). Colapsar el bloque de resultados vacío en Cofres libera altura real dentro del mismo
+  `ScrollViewer` de la barra lateral; esa altura es exactamente la que permite que el editor de
+  cofre (punto 2) crezca sin necesitar ningún tope artificial. No se dejó el bloque colapsado
+  "a secas" como parche aislado: es la MISMA causa (espacio reservado sin función) resuelta una
+  vez, con efecto en los dos síntomas reportados.
+
+### Verificación real (canario ya existente + ampliado)
+
+`Terrakeep.App.Tests/CanarioClusterCofresInspector.cs` (`COFRES_INSPECTOR_SOLO=1`, mundo real
+`Blando_Río.wld`, 358 cofres reales, ventana 1180×860):
+
+```
+COFRES-INSPECTOR-P3: modo 'Cofre a cofre' -> ExplorationResultsBlock.Visibility=Collapsed, ActualHeight real medido=0px
+COFRES-INSPECTOR-P3: modo 'Por tipo de cofre' (sin buscar aun) -> ActualHeight real medido=0px
+COFRES-INSPECTOR-P3: modo 'Por lo que contienen' (misma causa, sin buscar aun) -> ExplorationResultsBlock.Visibility=Collapsed, ActualHeight real medido=0px
+COFRES-INSPECTOR-P2: ContentControl (host de ItemEditTemplate dentro del cofre) ActualHeight real=391,9px (antes 320px con clamp activo)
+COFRES-INSPECTOR-P2: WrapPanel 'Metas' ... ContentControl.ActualHeight=391,9px (antes terminaba en Y=341,2px, MAS ALLA de 320px)
+COFRES-INSPECTOR-P2: WrapPanel 'Groups' ... (antes completamente fuera, Y=347,2 a 401,1px)
+```
+
+0 `FALLO` en las 4 aserciones que antes fallaban (P3×2, P2×2) - confirmado con dos ejecuciones
+consecutivas idénticas.
+
+**Ampliación visual-qa** (mismo canario, bloque nuevo guardado con el mismo `COFRES_INSPECTOR_SOLO`):
+caso más exigente real - arma Pícaro de Calamity localizada por la Librería real (`vm.Library.
+SearchText`, con el debounce real de 180ms respetado vía `WaitForDispatcher`, no `DoEvents` a
+secas - primer intento sin la espera dio 0 resultados, corregido), "Hacha Arrojadiza de
+Adamantita" (`RogueDamageClass.Instance`, catalog.json real; las 149 armas Pícaro del catálogo
+comparten el mismo set de 17 prefijos legales reales, `Assets/calamity/rogue_prefixes.json`,
+`"weapon": 17`), colocada en un cofre real (mismo camino que escribir el id a mano:
+`slot.ItemId = picaro.Id` dispara `OnItemIdChanged`→`PlaceItem`) y editada de verdad:
+
+```
+COFRES-INSPECTOR-P2-PICARO: objeto real colocado='Hacha Arrojadiza de Adamantita' (Id=20002398), CanHavePrefix=True, Groups.Count=3, Prefixes.Count=7
+COFRES-INSPECTOR-P2-PICARO: ContentControl.ActualHeight=544,5px, Metas.Bottom=395px, Groups.Bottom=428px
+```
+
+Metas/Groups quedan dentro del `ContentControl` (que ahora crece a 544,5px en vez de cortar a
+320px) sin ningún corte - 0 `FALLO`. (`Prefixes.Count=7` no es una discrepancia: `Prefixes` es
+el 3er nivel del selector, un subconjunto filtrado por el Grupo actualmente seleccionado de los
+17 totales - Metas/Groups, los dos niveles que SÍ importaban para el punto 2, se comprueban
+completos.)
+
+Capturas reales (`RenderTargetBitmap`, `CapturaVentanaKeepQa`) dejadas en
+`Terrakeep.App.Tests\bin\Debug\net10.0-windows\keepqa-evidencia\`: `cofres-p3-cofre-a-cofre.png`,
+`cofres-p3-por-tipo.png`, `cofres-p3-por-lo-que-contienen.png` (los 3 modos, sin ningún
+rectángulo vacío al final del panel) y `cofres-p2-picaro-17-prefijos.png` (editor real con el
+objeto de 17 prefijos, "Biblioteca"/"Positivos"/"Negativos" completos y legibles, sin cortarse a
+media palabra como en `imagen5.png`). Solo capturas "después" reales - no se generaron capturas
+"antes" en PNG (el estado "antes" ya quedó medido en px reales en la entrada de investigación de
+más arriba, y regenerar deliberadamente el bug con `git checkout` del commit anterior sobre el
+mismo árbol de trabajo compartido con otros agentes activos se descartó por riesgo de interferir
+con su trabajo en curso).
+
+### Obstáculo real de build durante esta ronda (ya resuelto, no por mí)
+
+`dotnet build`/`dotnet test` fallaron de forma intermitente con `CS0579` (atributos de
+ensamblado duplicados) sobre `ServidorKeep.Core`/`Terrakeep.Core` - diagnosticado en profundidad
+(no una simple carrera): el glob implícito `**/*.cs` de esos dos `.csproj` recogía también los
+`AssemblyInfo.cs` autogenerados dentro de carpetas `obj_fixagent/`, `obj_encargo3Debug/`,
+`obj_personajemenu/`, etc. - restos de sesiones aisladas (`-p:BaseIntermediateOutputPath=obj_X`)
+de **otros agentes trabajando en paralelo sobre el mismo árbol de trabajo** (confirmado con
+timestamps: varias carpetas con escritura a las 09:2x del mismo día). Un agente hermano
+("botón de cabecera Personaje", ver commit `119eedb4`) ya lo diagnosticó igual y lo arregló de
+raíz añadiendo `DefaultItemExcludes` ampliado a `Terrakeep.Core.csproj`/`ServidorKeep.Core.csproj`
+mientras esta misma ronda estaba en curso - en cuanto ese commit llegó, mis builds volvieron a
+funcionar sin que yo tocara esos `.csproj`. `Terrakeep.App.ViewModels.Tests` quedó aparte
+bloqueado por un `testhost.exe` de otro agente con el `.dll` de salida abierto en ese momento
+(proceso vivo, no atascado) - no se forzó su cierre; `Terrakeep.Core.Tests` (601/601) y el propio
+canario de este arreglo sí corrieron limpios y son la evidencia real de no-regresión.
+
+### Commit
+
+Mismo patrón exacto que la entrada inmediatamente anterior de esta bitácora: el contenido de
+`MainWindow.xaml` con los 2 cambios de este arreglo (comentarios "Punto 2 del cluster.../Punto 3
+del cluster..." incluidos, verificado con `git show 1770822e -- Terrakeep.App/MainWindow.xaml`)
+quedó absorbido dentro del commit `1770822e` ("Guia Encargo3: sprites reales de objeto/NPC-vecino
+en banner y árbol de progresión") de otro agente concurrente sobre el mismo árbol de trabajo -
+no queda diff pendiente de `MainWindow.xaml` para este arreglo en concreto. Commit propio real de
+esta ronda: `490d90ac` ("Cofres/inspector: verificación visual real del arreglo (17 prefijos) +
+nota del deploy"), con el único archivo que sí era mío de verdad,
+`Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`. Sin `git push`.
+
+### Recompilación/redespliegue real
+
+`Terrakeep.exe` NO estaba en ejecución (verificado antes y después). `dotnet build Terrakeep.App
+-c Release` en verde, `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` generó `Terrakeep.App\bin\Release\net10.0-windows\win-x64\publish\
+Terrakeep.exe` (`FileVersion=3.2.5.0`, 139 145 345 bytes). Copiado con `robocopy /MIR` (excluyendo
+`unins000.exe`/`unins000.dat`) a `C:\Users\adrian\AppData\Local\Programs\Terrakeep\` - hash
+SHA256 idéntico entre publicado e instalado
+(`2D6EFC37CA8782F837FAD92BA93F064D9173B63655EB046583C1137BB9FF4F00`). El acceso directo de la
+barra de tareas y el del Menú Inicio apuntan los dos a esta misma ruta instalada (único destino
+real, sin distinción barra de tareas/instalado en este proyecto).
