@@ -3541,7 +3541,8 @@
     "displayName_es": "Propulsor Áureo",
     "displayName_fallback": "Aureate Booster",
     "icon": "AureateBooster.png",
-    "displayName_en": "Aureate Booster"
+    "displayName_en": "Aureate Booster",
+    "equipSlot": "Wings"
   },
   {
     "internal": "ElysianWings",
@@ -3550,7 +3551,8 @@
     "displayName_es": "Alas Elíseas",
     "displayName_fallback": "Elysian Wings",
     "icon": "ElysianWings.png",
-    "displayName_en": "Elysian Wings"
+    "displayName_en": "Elysian Wings",
+    "equipSlot": "Wings"
   },
   {
     "internal": "ExodusWings",
@@ -3559,7 +3561,8 @@
     "displayName_es": "Alas del Éxodo",
     "displayName_fallback": "Exodus Wings",
     "icon": "ExodusWings.png",
-    "displayName_en": "Exodus Wings"
+    "displayName_en": "Exodus Wings",
+    "equipSlot": "Wings"
   },
   {
     "internal": "HadalMantle",
@@ -3568,7 +3571,8 @@
     "displayName_es": "Manto Hadal",
     "displayName_fallback": "Hadal Mantle",
     "icon": "HadalMantle.png",
-    "displayName_en": "Hadal Mantle"
+    "displayName_en": "Hadal Mantle",
+    "equipSlot": "Wings"
   },
   {
     "internal": "HadarianWings",
@@ -3577,7 +3581,8 @@
     "displayName_es": "Alas Hadarianas",
     "displayName_fallback": "Hadarian Wings",
     "icon": "HadarianWings.png",
-    "displayName_en": "Hadarian Wings"
+    "displayName_en": "Hadarian Wings",
+    "equipSlot": "Wings"
   },
   {
     "internal": "MOAB",
@@ -3586,7 +3591,8 @@
     "displayName_es": "MOAB",
     "displayName_fallback": "MOAB",
     "icon": "MOAB.png",
-    "displayName_en": "MOAB"
+    "displayName_en": "MOAB",
+    "equipSlot": "Wings"
   },
   {
     "internal": "MoonWalkers",
@@ -3596,7 +3602,8 @@
     "displayName_fallback": "Moon Walkers",
     "icon": "MoonWalkers.png",
     "displayName_en": "Moon Walkers",
-    "equipSlot": "Shoes"
+    "equipSlot": "Wings",
+    "equipSlotSecondary": "Shoes"
   },
   {
     "internal": "SeraphTracers",
@@ -3605,7 +3612,8 @@
     "displayName_es": "Deportivas de Serafín",
     "displayName_fallback": "Seraph Tracers",
     "icon": "SeraphTracers.png",
-    "displayName_en": "Seraph Tracers"
+    "displayName_en": "Seraph Tracers",
+    "equipSlot": "Wings"
   },
   {
     "internal": "SilvaWings",
@@ -3614,7 +3622,8 @@
     "displayName_es": "Alas de Silva",
     "displayName_fallback": "Silva Wings",
     "icon": "SilvaWings.png",
-    "displayName_en": "Silva Wings"
+    "displayName_en": "Silva Wings",
+    "equipSlot": "Wings"
   },
   {
     "internal": "SkylineWings",
@@ -3623,7 +3632,8 @@
     "displayName_es": "Alas del Horizonte",
     "displayName_fallback": "Skyline Wings",
     "icon": "SkylineWings.png",
-    "displayName_en": "Skyline Wings"
+    "displayName_en": "Skyline Wings",
+    "equipSlot": "Wings"
   },
   {
     "internal": "SoulofCryogen",
@@ -3632,7 +3642,8 @@
     "displayName_es": "Alma de Criógeno",
     "displayName_fallback": "Soulof Cryogen",
     "icon": "SoulofCryogen.png",
-    "displayName_en": "Soul of Cryogen"
+    "displayName_en": "Soul of Cryogen",
+    "equipSlot": "Wings"
   },
   {
     "internal": "StarlightWings",
@@ -3641,7 +3652,8 @@
     "displayName_es": "Alas de Luz Estelar",
     "displayName_fallback": "Starlight Wings",
     "icon": "StarlightWings.png",
-    "displayName_en": "Starlight Wings"
+    "displayName_en": "Starlight Wings",
+    "equipSlot": "Wings"
   },
   {
     "internal": "TarragonWings",
@@ -3650,7 +3662,8 @@
     "displayName_es": "Alas de Estragón",
     "displayName_fallback": "Tarragon Wings",
     "icon": "TarragonWings.png",
-    "displayName_en": "Tarragon Wings"
+    "displayName_en": "Tarragon Wings",
+    "equipSlot": "Wings"
   },
   {
     "internal": "TiredTail",
@@ -3659,7 +3672,8 @@
     "displayName_es": null,
     "displayName_fallback": "Tired Tail",
     "icon": "TiredTail.png",
-    "displayName_en": "Tired Tail"
+    "displayName_en": "Tired Tail",
+    "equipSlot": "Wings"
   },
   {
     "internal": "VoidStriders",
@@ -3668,7 +3682,8 @@
     "displayName_es": "Caminantes del Vacío",
     "displayName_fallback": "Void Striders",
     "icon": "VoidStriders.png",
-    "displayName_en": "Void Striders"
+    "displayName_en": "Void Striders",
+    "equipSlot": "Wings"
   },
   {
     "internal": "WingsofRebirth",
@@ -3677,7 +3692,8 @@
     "displayName_es": "Alas del Renacimiento",
     "displayName_fallback": "Wingsof Rebirth",
     "icon": "WingsofRebirth.png",
-    "displayName_en": "Wings of Rebirth"
+    "displayName_en": "Wings of Rebirth",
+    "equipSlot": "Wings"
   },
   {
     "internal": "AstralSolution",

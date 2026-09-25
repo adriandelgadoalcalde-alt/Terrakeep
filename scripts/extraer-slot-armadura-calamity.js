@@ -40,9 +40,20 @@
 // Head/Body/Legs - EquipmentAppearanceResolver.cs usa el MISMO sufijo crudo para construir la
 // ruta del icono y para comparar contra EquipSlot (ver su comentario real).
 //
-// Wings/Front/Beard quedan FUERA a proposito (documentado, no forzado): 0 items reales de
-// Calamity los declaran (confirmado con el volcado "otroTipo" de abajo) y
-// EquipmentAppearanceResolver no tiene ningun canal para ellos todavia.
+// Front/Beard quedan FUERA a proposito (documentado, no forzado): 0 items reales de Calamity
+// los declaran (confirmado con el volcado "otroTipo" de abajo) y EquipmentAppearanceResolver no
+// tiene ningun canal para ellos todavia.
+//
+// Wings Encargo1 (25-sep-2026): ampliado para cubrir TAMBIEN el canal Wings - correccion real
+// sobre el comentario anterior de este mismo script ("Wings/Front/Beard... 0 items reales de
+// Calamity los declaran"), que era INEXACTO para Wings, verificado a mano contra el volcado real
+// (ya detectado y documentado por CalamityAccesorios, 25-sep-2026, bitacora.md): 15 items reales
+// SI declaran EquipType.Wings (AureateBooster, ElysianWings, ExodusWings, HadalMantle,
+// HadarianWings, MOAB, SeraphTracers, SilvaWings, SkylineWings, SoulofCryogen, StarlightWings,
+// TarragonWings, TiredTail, VoidStriders, WingsofRebirth). EquipmentAppearanceResolver.
+// ResolveWing consulta `entry.EquipSlot == "Wings"` igual que el resto de canales - la decision
+// de dejar Wings fuera hasta hoy era solo de RENDERER (WingDrawTable/LoadWingFrame no existian
+// todavia), nunca por falta de dato real.
 //
 // Uso: node scripts/extraer-slot-armadura-calamity.js
 'use strict';
@@ -84,7 +95,7 @@ const RE_EQUIP_TOKEN = /EquipType\.(\w+)/g;
 // igual que el sufijo real de fichero en disco.
 const TIPOS_SOPORTADOS = new Set([
     'Head', 'Body', 'Legs',
-    'Waist', 'Neck', 'HandsOn', 'HandsOff', 'Back', 'Shield', 'Face', 'Balloon', 'Shoes',
+    'Waist', 'Neck', 'HandsOn', 'HandsOff', 'Back', 'Shield', 'Face', 'Balloon', 'Shoes', 'Wings',
 ]);
 
 let conSlot = 0, conSlotSecundario = 0, sinFichero = 0, sinAtributo = 0, otroTipo = 0, masDeDos = 0;
@@ -150,6 +161,7 @@ console.log(`catalog.json actualizado -> ${CATALOG_PATH}`);
 for (const [internal, esperado] of [
     ['AerospecBreastplate', 'Body'], ['EmpyreanMask', 'Head'], ['EmpyreanCuisses', 'Legs'],
     ['DepthCharm', 'Waist'], ['StygianShield', 'Shield'],
+    ['HadarianWings', 'Wings'], ['WingsofRebirth', 'Wings'],
 ]) {
     const check = catalog.find(e => e.internal === internal);
     console.log(`Spot-check ${internal}.equipSlot = ${check?.equipSlot} (esperado ${esperado})`);
