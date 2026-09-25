@@ -25756,3 +25756,142 @@ ninguno se añadió al stage, `git add` con rutas explícitas, nunca `-A`. Sin `
 selector real y decisión documentada de interacción con ChestInspector. Pendiente real: el hallazgo
 preexistente de Fase D (ancho del Inspector 218,8px vs 230-245px esperados) sigue sin investigar,
 fuera del alcance de este encargo.
+
+### ExploracionRediseno Fase E - los resultados de búsqueda REEMPLAZAN la lista base, 25-sep-2026
+
+Continuación de las 8 fases de rediseño estructural de la pestaña Exploración ("ExploracionRediseno
+FaseA"). Diseño ya aprobado por el arquitecto, confirmado antes de tocar nada con `Read`/`Grep`
+sobre el árbol real (commit `eec5c03f`, hecho ANTES que Fase F `adf13835` aunque esta entrada se
+escriba después en el fichero - ver la nota de Fase F de arriba, que confirma que encontró este
+commit ya en HEAD sin conflicto real).
+
+**Causa real confirmada**: la columna de la barra lateral era un `Grid` de DOS filas
+(`MainWindow.xaml`, dentro de `ExplorationSidebarBrowseContent`) - `RowDefinition Height="*"
+MinHeight="120"` para `ExplorationCategoryContent` (la lista base de la categoría) y
+`RowDefinition Height={Binding ...CountToGridLength, ConverterParameter=1.2}` para
+`ExplorationResultsBlock` (el bloque de resultados) - que se repartían el alto SIEMPRE, incluso
+cuando solo uno de los dos tenía contenido real (la causa de fondo de FALLO-3, investigado el
+14-sep-2026: a 1180x860 la lista de resultados solo llegaba a 70-148px reales). El colapso
+condicional que ya existía (`Border.Style` con `DataTrigger`/`MultiDataTrigger`) solo cubría Npcs
+(siempre oculto) y Cofres con `WorldSearchResults.Count==0` - Minerales/Objetos/Todo nunca
+colapsaban su lado vacío, así que sus 178-245px de categoría seguían compitiendo con los 70-148px
+de resultados sin necesidad real.
+
+**Arreglo real aplicado**, siguiendo el diseño con un ajuste de ingeniería propio justificado por
+evidencia real (regla 1 - la recomendación literal `WorldSearchResults.Count > 0` no bastaba, ver
+más abajo):
+
+- `ExplorationViewModel.cs:906` (tras la declaración de `WorldSearchResults`): nueva propiedad
+  observable `bool IsShowingResults`, centraliza la condición que antes vivía repartida/parcial en
+  6 sitios distintos del XAML.
+- **Por qué NO basta `Count > 0` a secas** (encontrado con evidencia real, no por sospecha):
+  `WorldSearchResults` SOBREVIVE a un cambio de categoría a propósito - `OnSelectedCategoryChanged`
+  solo limpia `WorldSearchText`/`NpcSearchText` y llama `RebuildInventory()`, nunca toca
+  `WorldSearchResults` - y el canario ya existente `FALLO3_SOLO` (`AuditoriaKeepQA.cs`) depende
+  exactamente de esa persistencia: marca 1000 resultados de Piedra Infernal en Minerales, se pasea
+  por Cofres/Por tipo, Cofres/Cofre a cofre y Objetos, y NUNCA desmarca ni cierra los resultados de
+  Minerales, para re-verificar la garantía AR-EX1 (¿la categoría nueva sigue mostrando su propia
+  lista con al menos 1 fila entera?). Con `Count > 0` puro, ese residuo de Minerales habría tapado
+  las listas de Cofres/Objetos con datos ajenos - regresión real reproducida a mano antes de
+  cerrar el arreglo. Solución: `_worldSearchResultsCategory` (nuevo campo privado), marcado por
+  `ApplyWorldSearchOrder` (el ÚNICO sitio real que escribe `WorldSearchResults`, tanto desde
+  `RunWorldSearchAsyncWithQuery` como desde `ApplyGroupedSearchResult`) con la `SelectedCategory`
+  activa en ese instante - `IsShowingResults` exige que la categoría actual COINCIDA con la que
+  produjo esos resultados de verdad. NPCs nunca escribe `WorldSearchResults` (usa
+  `NpcSearchResults`, columna de texto propia) así que queda excluido solo por esta comparación,
+  sin hardcodear el enum. "Cofre a cofre" (`ChestViewMode==2`) SÍ necesita exclusión explícita
+  aparte (`&& !(SelectedCategory==Chests && ChestViewMode==2)`): comparte `SelectedCategory==Chests`
+  con "Por tipo"/"Por lo que contienen" (que sí producen resultados), y cambiar de vista DENTRO de
+  Cofres no dispara `OnSelectedCategoryChanged` - sin la exclusión, resultados de "Por tipo"
+  seguirían tapando `ChestRows` al pasar a "Cofre a cofre" en la misma sesión de categoría.
+- Avisos de cambio manuales donde WPF no los infiere solo: `OnSelectedCategoryChanged` y
+  `OnChestViewModeChanged` llaman `OnPropertyChanged(nameof(IsShowingResults))`;
+  `WorldSearchResults.CollectionChanged` (suscrito en el constructor) hace lo mismo para los 3
+  caminos reales que tocan la colección (`ApplyWorldSearchOrder`, `ClearOreMarksCommand`,
+  `RunWorldSearchAsyncWithQuery` con query vacía).
+- `MainWindow.xaml`: el `Grid` de 2 filas pasa a un `Grid` sin `RowDefinitions` con 2 `DockPanel`
+  superpuestos de Visibility EXCLUSIVA (`BoolToVis`/`InverseBoolToVis` sobre `IsShowingResults`,
+  los 2 converters ya existían) - Estado A (`ExplorationCategoryContent`, sin `Grid.Row` ya) y
+  Estado B (`ExplorationResultsBlock`, sin `Grid.Row` ya). Los 2 triggers del `Border.Style` que
+  antes colapsaban a mano (Npcs siempre, Chests con 0 resultados) se ELIMINARON - redundantes con
+  la Visibility del `DockPanel` contenedor, que ya cubre exactamente los mismos 2 casos y los
+  generaliza a las 5 categorías (Todo/Npcs/Cofres/Minerales/Objetos). El `ListBox`/virtualización
+  interna de resultados no cambió, solo su contenedor - ahora hereda el alto COMPLETO del
+  `DockPanel` en vez de competir con la fila de categoría.
+
+**Verificación real** (`FALLO3_SOLO=1`, mundo real `roca_negra.wld`, categoría Minerales, 1000
+resultados de Piedra Infernal, tras confirmar la guardia de entrada gráfica de KeepQA en verde):
+0 `FALLO`/`EXCEPTION` en las 3 pasadas (1180x860 defecto, sidebar 520 máximo, 1080x700 mínimo).
+La lista de resultados pasa de 148px (Fase 14-sep) / 240px (`MaxHeight` fijo, ya quitado) a **610px
+reales** a 1180x860 (bloque de resultados=748px, contenido de categoría ANTES de este cambio no
+podía superar los 178-245px del reparto de filas). La re-verificación de la garantía AR-EX1
+(Cofres/Por tipo, Cofres/Cofre a cofre, Objetos con los 1000 resultados de Minerales SIN cerrar)
+confirma 0 regresión: 9/6/9 filas enteras visibles respectivamente a 1180x860, todas >0 cuando
+`totalFilas>0`. Captura real (`keepqa-evidencia/fallo3-exploracion-normal1180x860-sidebar320
+(defecto).png` y su par `scrollhint-...-arriba.png`) confirma visualmente que el bloque de
+resultados reemplaza POR COMPLETO el contenido de Minerales (pildoras/botones de "Marcar en el
+mapa" ya no se ven, solo cabecera de resultados + lista) - antes convivían los dos apretados.
+`COFRES_INSPECTOR_SOLO=1` (canario `COFRES-INSPECTOR-P3`, mundo `Blando_Río.wld`): "Cofre a cofre"
+sigue con `WorldSearchResults.Count=0` y `ChestRows.Count=359` mostrándose con normalidad (captura
+`cofres-p3-cofre-a-cofre.png` real, filas de "Cofre de champiñón" visibles) - la excepción
+documentada queda coherente, sin necesitar las 2 regiones a la vez. Capturas reales adicionales de
+Estado A a altura completa sin ninguna búsqueda activa: `fasec-browse-minerales.png` y
+`fasec-browse-objetos.png` (ambas listas llenan la columna entera hasta el indicador de scroll,
+donde antes competían con 60-100px de hueco fijo para un bloque de resultados vacío).
+
+**Build y regresión**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores.
+`dotnet test Terrakeep.Core.Tests -c Release --no-build`: 732/732 (mismo baseline). `dotnet test
+Terrakeep.App.ViewModels.Tests -c Release --no-build` COMPLETO: 711/711 (10m15s, mismo baseline -
+esta fase no añade tests xunit nuevos, la cobertura nueva vive en el harness gráfico
+`Terrakeep.App.Tests`).
+
+**Solape real con Fase F, documentado con honestidad**: al arrancar este encargo, `MainWindow.xaml`
+y `ExplorationViewModel.cs` YA tenían cambios sin comitear de un agente en paralelo (Fase F, "separa
+Mundo") - confirmado con `git diff`/`git show HEAD:<archivo>` que esos cambios (selector
+"Buscar"/"Mundo", `ShowSidebarBrowseCommand`/`ShowSidebarWorldToolsCommand`) vivían en zonas del
+fichero DISTINTAS a las que tocaba este encargo (cabecera del sidebar y `ExplorationSidebarBrowseInspectorHost`,
+vs. el `Grid` de reparto categoría/resultados de más abajo) y que mi texto objetivo (`old_string` de
+cada `Edit`) coincidía carácter a carácter con `HEAD`, es decir Fase F no había tocado esas líneas.
+Para comitear SOLO mis cambios sin arrastrar el trabajo sin comitear de Fase F (nunca `git add -A`,
+nunca pisar commits ajenos): reconstruí `HEAD + mis ediciones` en el scratchpad (aplicando las
+mismas 3 ediciones de XAML y 5 de C# sobre `git show HEAD:<archivo>`), confirmé con `diff` que la
+única diferencia entre esa reconstrucción y el árbol de trabajo real eran los hunks de Fase F (2
+hunks localizados, ninguno solapaba mi zona), escribí esa reconstrucción (con CRLF, mismo criterio
+que el resto del árbol) sobre los ficheros reales, comité SOLO esos 2 ficheros (`eec5c03f`), y
+restauré de inmediato el contenido combinado (Fase E + Fase F sin comitear) en disco para no perder
+el trabajo del otro agente. Confirmado después que Fase F comiteó su propio trabajo con normalidad
+sobre este commit (`adf13835`/`a75fd9fa`, ver más arriba) sin ningún conflicto.
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` instalado NO estaba en ejecución
+(`Get-CimInstance Win32_Process`, sin resultados). Sanidad de `Assets/` ANTES del `/MIR`: instalado
+= 13055 ficheros (igual que el publish intermedio de rondas anteriores). `dotnet publish
+Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde; publish/Assets =
+13055 (coincide con el origen `Terrakeep.App/Assets` = 13056, diferencia de 1 ya documentada,
+ajena a este encargo). `robocopy .../publish .../Terrakeep /MIR /XF unins000.exe unins000.dat`:
+1 archivo copiado (`Terrakeep.exe`), 13060 omitidos (ya idénticos), 0 errores. Sanidad de `Assets/`
+DESPUÉS del `/MIR`: instalado = 13055 - sin discrepancia. Relanzado el `.exe` instalado
+(`Responding=True`, `MainWindowTitle=Terrakeep`), cerrado limpio con `Stop-Process`.
+
+**LÍMITE REAL encontrado durante la verificación, NO causado por este encargo**: `COFRES_INSPECTOR_SOLO`
+reprodujo `FALLO: COFRES-INSPECTOR-FASED-R1 - el Inspector mide solo 218,8px de ancho real...` (el
+ancho del panel del editor de cofre de Fase D, por debajo del umbral de 220px esperado). Confirmado
+que NO lo causa este encargo: mi commit `eec5c03f` no toca ni un carácter de
+`ExplorationSidebarChestInspectorPlaceholder` ni de `ExplorationSidebarBrowseInspectorHost` (ver el
+diff aislado de arriba). El propio agente de Fase F encontró el MISMO hallazgo de forma
+independiente y lo documentó como pendiente fuera de su alcance (ver la entrada de Fase F, arriba) -
+coincidencia que apunta a que es un efecto lateral real de cómo Fase F reorganizó
+`ExplorationSidebarBrowseInspectorHost` (un tercer hijo `WorldTools` nuevo, cambia cuánto contenido
+hay y por tanto si aparece o no la barra de scroll vertical que le resta ~1-2px de ancho horizontal
+al resto), no de Fase D ni de Fase E. Anotado para que quien retome ese hallazgo lo investigue con
+el contexto correcto.
+
+**Commit real** `eec5c03f`: `Terrakeep.App/MainWindow.xaml`, `Terrakeep.App/ViewModels/
+ExplorationViewModel.cs` - exactamente los 2 ficheros de este encargo, aislados de Fase F con la
+técnica de reconstrucción explicada arriba. Sin `git push`.
+
+**Fase E queda cerrada**: las 5 categorías (Todo/Npcs/Cofres/Minerales/Objetos) comparten ahora el
+mismo patrón de 2 estados exclusivos, generalizado desde el colapso parcial que antes solo cubría
+Npcs y Cofres-sin-resultados. Pendiente real, fuera de este encargo: el ancho del Inspector de
+cofre (218,8px vs 220px esperado, ver arriba) y el límite ya documentado de Fase B/C/D sobre el
+tamaño mínimo real de la ventana (1080x700, ninguna fila de categoría se ve entera con o sin este
+arreglo - ya era así antes de tocar nada hoy, no es una regresión de esta ronda).
