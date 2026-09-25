@@ -234,7 +234,7 @@ public partial class HomeViewModel : ObservableObject
             string assetsGuia = Path.Combine(AppContext.BaseDirectory, "Assets", "guia");
             _guideCatalogo ??= GuideCatalog.LoadFromFile(Path.Combine(assetsGuia, "guia_progresion.json"), _guideDataService.CalamityCatalog);
             var textos = GuideTextCatalog.LoadFromFiles(Path.Combine(assetsGuia, "textos.es.json"), Path.Combine(assetsGuia, "textos.en.json"));
-            _guideEvaluador ??= new GuideEvaluator(_guideDataService.VanillaCatalog, _guideDataService.NpcNames, _guideDataService.CalamityCatalog, _guideDataService.VanillaStats, _guideDataService.PrefixEffects);
+            _guideEvaluador ??= new GuideEvaluator(_guideDataService.VanillaCatalog, _guideDataService.NpcNames, _guideDataService.CalamityCatalog, _guideDataService.VanillaStats, _guideDataService.PrefixEffects, _guideDataService.PrefixRules);
 
             var loaded = _guideDataService.Load(plrPath);
             bool hasCalamity = loaded.TplrPath != null; // mismo criterio real que MainViewModel.HasCalamityData

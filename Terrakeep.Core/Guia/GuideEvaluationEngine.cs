@@ -70,7 +70,13 @@ public static class GuideEvaluationEngine
                 break;
 
             case TipoRequisitoGuia.DanoArma:
-                if (!ds.HasLiveGameData) { NoEvaluableFijo(r, ds.MotivoSinPartidaEnMarcha(requisito.Tipo)); break; }
+                // Guia Fase A REABIERTA (26-sep-2026, arquitecto-keep a8c40689): a diferencia de
+                // NpcActivo (limite estructural REAL, ningun archivo estatico guarda un enemigo
+                // hostil activo), el daño base+prefijo del arma equipada/en inventario SI es
+                // derivable sin partida en marcha - mismo gate que Objeto/Gancho (HasInventoryData),
+                // no HasLiveGameData. Ver DesktopGuideStateProvider.DanoDelMejorArma para el
+                // calculo real y el alcance vanilla-only documentado ahi.
+                if (!ds.HasInventoryData) { NoEvaluableSinDatos(r, "guide_motive_load_character"); break; }
                 EvaluarDanoArma(r, requisito, ds);
                 break;
 
@@ -268,11 +274,26 @@ public static class GuideEvaluationEngine
     private static void EvaluarDanoArma(ResultadoRequisitoGuia r, RequisitoGuia requisito, IGuideStateProvider ds)
     {
         int dano = ds.DanoDelMejorArma(out var nombre);
+        if (string.IsNullOrEmpty(nombre))
+        {
+            // Guia Fase A REABIERTA (26-sep-2026): inventario SI cargado, pero ningun item
+            // califica como arma evaluable (ni vanilla con daño+categoria real, ni Calamity con
+            // daño base real) - NoEvaluable real con motivo claro, nunca un falso "0 de daño"
+            // que Fraccion contaria como progreso parcial real (0% cumplido de un requisito que
+            // en realidad no se pudo ni comprobar).
+            r.NoEvaluable = true;
+            r.Pedido = requisito.Valor;
+            r.TextoClave = "Guia.Req.DanoArmaSinArma";
+            r.TextoArgs = [requisito.Valor];
+            r.MotivoClave = "guide_motive_weapon_damage";
+            return;
+        }
+
         r.Actual = dano;
         r.Pedido = requisito.Valor;
         r.Cumplido = dano >= requisito.Valor;
-        r.TextoClave = string.IsNullOrEmpty(nombre) ? "Guia.Req.DanoArmaSinArma" : "Guia.Req.DanoArma";
-        r.TextoArgs = string.IsNullOrEmpty(nombre) ? [requisito.Valor] : [nombre, dano, requisito.Valor];
+        r.TextoClave = "Guia.Req.DanoArma";
+        r.TextoArgs = [nombre, dano, requisito.Valor];
     }
 
     private static void EvaluarGancho(ResultadoRequisitoGuia r, IGuideStateProvider ds)
@@ -302,7 +323,12 @@ public static class GuideEvaluationEngine
         bool? valor = ds.ValorBandera(requisito.Bandera);
         if (valor == null)
         {
-            NoEvaluableSinDatos(r, "guide_motive_load_data");
+            // Guia Fase A REABIERTA (26-sep-2026, arquitecto-keep a8c40689): una bandera (jefe
+            // derrotado, evento tardio...) SIEMPRE se lee del .wld/.twld, nunca del .plr - una
+            // bandera CONOCIDA sin valor resuelto solo puede significar "falta el mundo", nunca
+            // "falta el personaje". Antes usaba el motivo generico guide_motive_load_data
+            // ("carga un personaje/mundo"), impreciso para este caso concreto.
+            NoEvaluableSinDatos(r, "guide_motive_load_world");
             return;
         }
 

@@ -91,7 +91,12 @@ public class GuideFlagsCalamityTests
         var resultado = evaluador.Evaluar(Req("downedProvidence"), contexto);
 
         Assert.True(resultado.NoEvaluable);
-        Assert.Equal("guide_motive_load_data", resultado.MotivoClave);
+        // Guia Fase A REABIERTA (26-sep-2026, arquitecto-keep a8c40689): antes de esta ronda el
+        // motivo era el generico "guide_motive_load_data" ("carga un personaje/mundo"), pese a
+        // que el nombre de esta prueba YA decia "ConMotivoDeMundo" - una bandera (de Calamity o
+        // vanilla) SIEMPRE se lee del .wld/.twld, nunca del .plr, asi que el motivo real y
+        // especifico es "carga el mundo", nunca "falta el personaje".
+        Assert.Equal("guide_motive_load_world", resultado.MotivoClave);
     }
 
     [Fact]

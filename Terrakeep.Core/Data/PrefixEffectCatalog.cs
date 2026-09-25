@@ -42,6 +42,16 @@ public sealed class PrefixEffectCatalog
     public int GetDefenseBonus(int prefixId) =>
         _byId.TryGetValue(prefixId, out var e) ? (int)Math.Round(e.StatDefense ?? 0) : 0;
 
+    // Guia Fase A REABIERTA (26-sep-2026, arquitecto-keep a8c40689, I+D-PROXIMOS-PASOS-FAMILIA-
+    // KEEP.md): mismo patron exacto que GetDefenseBonus de arriba pero para el multiplicador de
+    // DAÑO de arma (Dmg, relativo a 1.0 - "Legendary"/"Sharp"/etc) - accesor numerico puro sin
+    // formatear a texto, para que DesktopGuideStateProvider.DanoDelMejorArma pueda calcular un
+    // daño real. 1.0 (neutro, sin cambio) si no hay prefijo o el prefijo no tiene multiplicador
+    // de daño real conocido - "desconocido cuenta como neutro, nunca inventado", igual que el
+    // resto de este catalogo.
+    public double GetDamageMultiplier(int prefixId) =>
+        _byId.TryGetValue(prefixId, out var e) ? e.Dmg ?? 1.0 : 1.0;
+
     // Efectos reales del prefijo, YA calculados pero SIN redactar: que estadistica toca cada uno
     // (ItemPrefixStat) y el numero con su signo y su "%" cuando toca ("+15%", "-10%", "+1"). La
     // frase entera ("+15% de daño" / "+15% damage") la compone la App con las claves de idioma -

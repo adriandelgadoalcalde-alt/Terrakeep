@@ -26,6 +26,15 @@ public sealed partial class GuideRequisitoViewModel : ObservableObject
         PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
 
+    // Guia Fase A REABIERTA (26-sep-2026): SOLO para pruebas (Terrakeep.App.ViewModels.Tests - sin
+    // InternalsVisibleTo configurado hacia el arnes, mismo criterio real ya establecido por
+    // CharacterListEntryViewModel.AccesoriosParaPruebas/CharacterFileService.
+    // DebugCorruptPlrBytesBeforeVerify) - deja probar el mapeo 1:1 de EsLimiteEstructural/etc.
+    // contra un ResultadoRequisitoGuia sintetico, sin depender de que el catalogo real de la Guia
+    // (guia_progresion.json) tenga HOY un requisito concreto en ese estado exacto.
+    public static GuideRequisitoViewModel ParaPruebas(ResultadoRequisitoGuia resultado, GuideTextCatalog textos) =>
+        new(resultado, textos);
+
     public bool Cumplido => _resultado.Cumplido;
     public bool Recomendado => _resultado.Requisito.Recomendado;
     public bool NoEvaluable => _resultado.NoEvaluable;
@@ -39,6 +48,13 @@ public sealed partial class GuideRequisitoViewModel : ObservableObject
     // (LocalizationService, strings_es.json/strings_en.json - mismo diccionario que el resto de
     // la interfaz, no el catalogo de la Guia sincronizado del mod).
     public string? Motivo => string.IsNullOrEmpty(_resultado.MotivoClave) ? null : LocalizationService.Instance[_resultado.MotivoClave];
+
+    // Guia Fase A REABIERTA (26-sep-2026, arquitecto-keep a8c40689): preparacion para la fase XAML
+    // siguiente - un requisito limite ESTRUCTURAL (p.ej. NpcActivo, jamas evaluable en escritorio,
+    // ver GuideEvaluationEngine.PasoCompletado/Preparacion) necesita distinguirse visualmente de
+    // uno "sin datos TODAVIA" (que SI se resolveria cargando personaje/mundo) - de momento solo
+    // expone el dato 1:1 desde el resultado real, sin cambiar ningun XAML todavia.
+    public bool EsLimiteEstructural => _resultado.EsLimiteEstructural;
 
     private void OnIdiomaCambiado(object? sender, PropertyChangedEventArgs e)
     {
@@ -215,7 +231,7 @@ public sealed partial class GuideViewModel : ObservableObject
         string assetsGuia = Path.Combine(AppContext.BaseDirectory, "Assets", "guia");
         _catalogo = GuideCatalog.LoadFromFile(Path.Combine(assetsGuia, "guia_progresion.json"), servicio.CalamityCatalog);
         _textos = GuideTextCatalog.LoadFromFiles(Path.Combine(assetsGuia, "textos.es.json"), Path.Combine(assetsGuia, "textos.en.json"));
-        _evaluador = new GuideEvaluator(servicio.VanillaCatalog, servicio.NpcNames, servicio.CalamityCatalog, servicio.VanillaStats, servicio.PrefixEffects);
+        _evaluador = new GuideEvaluator(servicio.VanillaCatalog, servicio.NpcNames, servicio.CalamityCatalog, servicio.VanillaStats, servicio.PrefixEffects, servicio.PrefixRules);
         PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
 
         Refresh();
@@ -245,6 +261,7 @@ public sealed partial class GuideViewModel : ObservableObject
         OnPropertyChanged(nameof(TextoAvisoCalamityTitulo));
         OnPropertyChanged(nameof(TextoAvisoCalamity));
         OnPropertyChanged(nameof(TextoAvisoSinPersonaje));
+        OnPropertyChanged(nameof(TextoAvisoSinMundo));
     }
 
     public ObservableCollection<GuideTramoViewModel> Tramos { get; } = [];
@@ -263,7 +280,14 @@ public sealed partial class GuideViewModel : ObservableObject
     // lo dice una sola vez, arriba de todo.
     [ObservableProperty] private bool _mostrarAvisoSinPersonaje;
 
+    // Guia Fase A REABIERTA (26-sep-2026, arquitecto-keep a8c40689): mismo aviso global que
+    // MostrarAvisoSinPersonaje de arriba, en espejo (personaje cargado, mundo NO) - preparacion
+    // para la fase XAML siguiente, que le añadira el bloque visible correspondiente (mismo patron
+    // que MostrarAvisoSinPersonaje ya tiene hoy).
+    [ObservableProperty] private bool _mostrarAvisoSinMundo;
+
     public string TextoAvisoSinPersonaje => LocalizationService.Instance["guide_no_character_notice"];
+    public string TextoAvisoSinMundo => LocalizationService.Instance["guide_no_world_notice"];
 
     /// <summary>Se llama tras cargar/cerrar un personaje y al entrar en la pestaña - vuelve a
     /// evaluar TODO el arbol contra el estado real actual (nunca cachea nada entre pasos: mismo
@@ -290,6 +314,10 @@ public sealed partial class GuideViewModel : ObservableObject
         HasAnyData = loaded != null || world != null;
         MostrarAvisoCalamity = hasCalamity;
         MostrarAvisoSinPersonaje = world != null && loaded == null;
+        // Guia Fase A REABIERTA (26-sep-2026): espejo exacto del aviso de arriba - mutuamente
+        // excluyentes por construccion (uno exige loaded==null, el otro loaded!=null), nunca
+        // ambos true a la vez.
+        MostrarAvisoSinMundo = world == null && loaded != null;
 
         Tramos.Clear();
         GuideTramoViewModel? objetivoTramo = null;

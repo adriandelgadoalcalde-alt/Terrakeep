@@ -14,7 +14,8 @@ namespace Terrakeep.Core.Guia;
 // como adaptador de compatibilidad).
 internal sealed class DesktopGuideStateProvider(
     VanillaItemCatalog vanillaItems, NpcNameCatalog npcNames, CalamityCatalog? calamityItems,
-    VanillaItemStatsCatalog? vanillaStats, PrefixEffectCatalog? prefixEffects, GuideContext contexto)
+    VanillaItemStatsCatalog? vanillaStats, PrefixEffectCatalog? prefixEffects, PrefixRulesCatalog? prefixRules,
+    GuideContext contexto)
     : IGuideStateProvider
 {
     public bool HasCharacterData => contexto.Character != null;
@@ -76,9 +77,68 @@ internal sealed class DesktopGuideStateProvider(
         return total;
     }
 
-    // Nunca se llaman (HasLiveGameData fijo a false): daño de arma real exige los multiplicadores
-    // de clase que solo aplica Player.GetWeaponDamage con una partida en marcha.
-    public int DanoDelMejorArma(out string nombre) { nombre = ""; return 0; }
+    // Guia Fase A REABIERTA (26-sep-2026, arquitecto-keep a8c40689, I+D-PROXIMOS-PASOS-FAMILIA-
+    // KEEP.md): el daño de arma REAL en combate (motor completo, multiplicadores de CLASE -
+    // Player.GetWeaponDamage) sigue exigiendo una partida en marcha - eso JAMAS lo tendra
+    // Terrakeep de escritorio (ver el comentario original de HasLiveGameData mas arriba). Pero el
+    // daño BASE+prefijo del arma equipada/en inventario SI es un dato 100% estatico, ya cargado
+    // (Item.damage del .json de estadisticas + el multiplicador real de prefijo,
+    // PrefixEffectCatalog.GetDamageMultiplier) - exactamente el mismo criterio ya aplicado a
+    // CristalesVida/Defensa (Encargo1/Encargo2). Por eso este metodo YA NO devuelve 0 fijo -
+    // ver el cambio de gate correspondiente en GuideEvaluationEngine (HasInventoryData, no
+    // HasLiveGameData).
+    //
+    // Filtro "es arma": reutiliza PrefixRulesCatalog.VanillaCategories, el MISMO mecanismo real
+    // que ya usa PrefixEligibility.For/el panel Editar para decidir que categorias de prefijo
+    // mostrar (nunca un filtro inventado a proposito) - cualquier categoria vanilla con
+    // Melee/Ranged/Magic/AnyWeapon cuenta como arma (los picos/hachas/martillos vanilla SI
+    // entran, exactamente igual que el juego real: pueden llevar prefijo de arma y rodar
+    // Sharp/Legendary/etc).
+    //
+    // Alcance vanilla-only, documentado explicitamente (PrefixEffectCatalog SOLO tiene datos
+    // reales de Terraria vanilla, ver su propia cabecera): un arma de Calamity SI entra en el
+    // calculo (no se descarta de golpe), pero solo con su daño BASE del catalogo de Calamity, SIN
+    // multiplicador de prefijo - una aproximacion honesta y documentada, mejor que dejar todo el
+    // tipo de requisito como limite estructural cuando SI hay un numero real que mostrar.
+    public int DanoDelMejorArma(out string nombre)
+    {
+        nombre = "";
+        var inventario = Inventario();
+        if (inventario == null) return 0;
+
+        int mejor = 0;
+        string mejorNombre = "";
+        foreach (var item in inventario)
+        {
+            if (item.IsEmpty) continue;
+
+            int? danoBase = item.IsCalamity
+                ? calamityItems?.BySyntheticId(item.Id)?.Stats?.Damage
+                : (EsArmaVanilla(item.Id) ? vanillaStats?.Get(item.Id)?.Damage : null);
+            if (danoBase is not int baseReal) continue;
+
+            int total = item.IsCalamity
+                ? baseReal
+                : (int)Math.Round(baseReal * (prefixEffects?.GetDamageMultiplier(item.Prefix.VanillaId) ?? 1.0));
+
+            if (total > mejor)
+            {
+                mejor = total;
+                mejorNombre = NombreDeObjeto(item.Id);
+            }
+        }
+        nombre = mejorNombre;
+        return mejor;
+    }
+
+    // Melee/Ranged/Magic/AnyWeapon: las 4 categorias vanilla reales que SI admiten prefijo de
+    // arma (Accessory queda fuera a proposito - un accesorio nunca tiene daño propio que evaluar
+    // aqui). Ver PrefixCategory (PrefixRulesCatalog.cs) para el origen real de cada flag.
+    private const PrefixCategory CategoriasDeArma =
+        PrefixCategory.Melee | PrefixCategory.Ranged | PrefixCategory.Magic | PrefixCategory.AnyWeapon;
+
+    private bool EsArmaVanilla(int itemId) =>
+        prefixRules != null && (prefixRules.VanillaCategories(itemId) & CategoriasDeArma) != PrefixCategory.None;
 
     public bool LlevaGancho(out string nombre)
     {
@@ -109,8 +169,10 @@ internal sealed class DesktopGuideStateProvider(
         // CristalesVida y Defensa ya NO pasan por aqui (24-sep-2026 y 25-sep-2026 respectivamente):
         // los dos usan el gate de HasCharacterData/"guide_motive_load_character", igual que
         // VidaMaxima - ver GuideEvaluationEngine y los comentarios de CristalesVida/Defensa mas
-        // arriba en este archivo.
-        TipoRequisitoGuia.DanoArma => "guide_motive_weapon_damage",
+        // arriba en este archivo. DanoArma TAMPOCO pasa ya por aqui (Guia Fase A REABIERTA,
+        // 26-sep-2026): usa el gate HasInventoryData/"guide_motive_load_character" igual que
+        // Objeto/Gancho, y su propio motivo real "arma no encontrada" via
+        // GuideEvaluationEngine.EvaluarDanoArma - ver DanoDelMejorArma mas arriba.
         TipoRequisitoGuia.NpcActivo => "guide_motive_active_npc",
         _ => "guide_motive_load_data",
     };

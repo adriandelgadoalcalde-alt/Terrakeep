@@ -18,8 +18,14 @@ namespace Terrakeep.Core.Guia;
 // defensa real del equipo puesto (Terrakeep.Core.Model.DefenseCalculator) - null solo en pruebas
 // que no evaluan Defensa; GuideViewModel/HomeViewModel (los dos consumidores reales) siempre pasan
 // los catalogos reales del personaje cargado.
+//
+// Guia Fase A REABIERTA (26-sep-2026, arquitecto-keep a8c40689): prefixRules se añade con el MISMO
+// criterio (OPCIONAL, default null) para que DesktopGuideStateProvider.DanoDelMejorArma pueda
+// filtrar "es un arma vanilla real" (PrefixRulesCatalog.VanillaCategories, el mismo mecanismo que
+// ya usa PrefixEligibility.For) - null solo en pruebas que no evaluan DanoArma con un arma vanilla
+// real; GuideViewModel/HomeViewModel siempre pasan servicio.PrefixRules (el catalogo real).
 public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatalog npcNames, CalamityCatalog? calamityItems,
-    VanillaItemStatsCatalog? vanillaStats = null, PrefixEffectCatalog? prefixEffects = null)
+    VanillaItemStatsCatalog? vanillaStats = null, PrefixEffectCatalog? prefixEffects = null, PrefixRulesCatalog? prefixRules = null)
 {
     public ResultadoRequisitoGuia Evaluar(RequisitoGuia requisito, GuideContext contexto)
         => GuideEvaluationEngine.Evaluar(requisito, Proveedor(contexto));
@@ -34,5 +40,5 @@ public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatal
         => GuideEvaluationEngine.Preparacion(paso, Proveedor(contexto), out cumplidos, out totalObligatorios);
 
     private DesktopGuideStateProvider Proveedor(GuideContext contexto)
-        => new(vanillaItems, npcNames, calamityItems, vanillaStats, prefixEffects, contexto);
+        => new(vanillaItems, npcNames, calamityItems, vanillaStats, prefixEffects, prefixRules, contexto);
 }

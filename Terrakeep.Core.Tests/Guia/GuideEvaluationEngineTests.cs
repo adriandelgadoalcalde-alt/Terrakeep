@@ -94,6 +94,35 @@ public class GuideEvaluationEngineTests
         return PrefixEffectCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(raw))));
     }
 
+    // Guia Fase A REABIERTA (26-sep-2026): helpers gemelos de MakeStats/MakePrefixEffects de
+    // arriba, pero para el campo real "damage"/"dmg" que usa DanoArma - mismo criterio de "solo
+    // campos JSON reales", nunca un mock a medida.
+    private static VanillaItemStatsCatalog MakeDamageStats(params (int Id, int Damage)[] items)
+    {
+        var raw = items.ToDictionary(i => i.Id.ToString(), i => new { damage = i.Damage });
+        return VanillaItemStatsCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(raw))));
+    }
+
+    private static PrefixEffectCatalog MakePrefixEffectsDmg(params (int Id, double Dmg)[] prefixes)
+    {
+        var raw = prefixes.ToDictionary(p => p.Id.ToString(), p => new Dictionary<string, double> { ["dmg"] = p.Dmg });
+        return PrefixEffectCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(raw))));
+    }
+
+    // Formato real de vanilla_prefix_rules.json (PrefixRulesCatalog.LoadFromStream): las 3
+    // propiedades son obligatorias, aunque esten vacias - prefixesByCategory/itemPool no hacen
+    // falta para DanoArma (solo VanillaCategories, via itemCategories).
+    private static PrefixRulesCatalog MakeRules(params (int Id, string[] Categorias)[] items)
+    {
+        var raw = new
+        {
+            prefixesByCategory = new Dictionary<string, int[]>(),
+            itemCategories = items.ToDictionary(i => i.Id.ToString(), i => i.Categorias),
+            itemPool = new Dictionary<string, string>(),
+        };
+        return PrefixRulesCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(raw))));
+    }
+
     // Los 10 slots reales de "Armadura/Accesorios" (Cabeza/Cuerpo/Piernas + 7 accesorios) que
     // MergedContainers["loadout0Items"] guarda para el equipo PUESTO de verdad - solo los primeros
     // items importan aqui, el resto queda vacio (GameItem.Empty, no aporta defensa).
@@ -224,25 +253,39 @@ public class GuideEvaluationEngineTests
     // Bug real reportado en directo el 16-sep-2026 (segundo hallazgo, con partida real
     // avanzada): "si pones un mundo que ya te has pasado o esta a mas de la mitad, la guia
     // sigue poniendo lo del Devorador de Mundos, que es incorrecto cuando el cae" - la Guia NO
-    // reflejaba el progreso real guardado en el mundo. Causa real: el paso de PREPARACION de
-    // cada tramo (p.ej. "ArmaContraLaMaldad") exige "dano_arma" como su UNICO requisito
-    // obligatorio, y dano_arma es SIEMPRE NoEvaluable en Terrakeep de escritorio (no simula
-    // combate) - antes de esta ronda eso bloqueaba el paso, y por tanto el tramo entero, PARA
-    // SIEMPRE, sin ninguna relacion con si el jefe estaba realmente muerto en el .wld.
+    // reflejaba el progreso real guardado en el mundo. Causa real ORIGINAL: el paso de
+    // PREPARACION de cada tramo (p.ej. "ArmaContraLaMaldad") exige "dano_arma" como su UNICO
+    // requisito obligatorio, y dano_arma era SIEMPRE NoEvaluable en Terrakeep de escritorio (no
+    // simulaba combate) - antes de esa ronda eso bloqueaba el paso, y por tanto el tramo entero,
+    // PARA SIEMPRE, sin ninguna relacion con si el jefe estaba realmente muerto en el .wld.
+    //
+    // Guia Fase A REABIERTA (26-sep-2026, arquitecto-keep a8c40689): DanoArma YA NO es un limite
+    // estructural fijo (ver DesktopGuideStateProvider.DanoDelMejorArma) - estos dos tests se
+    // actualizan para seguir demostrando el MISMO sintoma real arreglado (el paso no se queda
+    // bloqueado para siempre pese a que el jefe ya cayo en el .wld), pero ahora con el motivo
+    // CORRECTO: se completa porque el arma real del personaje SI llega al umbral pedido, no
+    // porque el requisito fuera estructuralmente imposible de comprobar. Sin personaje/inventario
+    // cargado, el mismo requisito SI bloquea de verdad ahora (honestidad: "sin datos TODAVIA" -
+    // ver los tests DanoArma_* de mas abajo).
     // ---------------------------------------------------------------------------------------
 
     [Fact]
-    public void PasoDePreparacion_ConSoloDanoArmaObligatorio_SeCompletaSolo_PorqueEsUnLimiteEstructuralNoUnaFalta()
+    public void PasoDePreparacion_ConDanoArmaObligatorioYArmaRealQueLlega_SeCompletaPorProgresoReal_YaNoPorLimiteEstructural()
     {
-        var evaluador = new GuideEvaluator(MakeItemNames(), MakeNpcNames(), null);
-        var contexto = new GuideContext { Character = null, MergedContainers = null, World = MakeWorld() };
+        var evaluador = new GuideEvaluator(MakeItemNames((4, "Espada larga de hierro")), MakeNpcNames(), null,
+            MakeDamageStats((4, 12)), MakePrefixEffectsDmg((5, 1.15)), MakeRules((4, ["melee", "anyWeapon"])));
+        var inventario = new Dictionary<string, Terrakeep.Core.Model.GameItem[]>
+        {
+            ["inventory"] = [new Terrakeep.Core.Model.GameItem { Id = 4, Prefix = Terrakeep.Core.Model.ItemPrefix.Vanilla(5) }],
+        };
+        var contexto = new GuideContext { Character = MakeCharacter(100), MergedContainers = inventario, World = MakeWorld() };
 
         var pasoPreparacion = new PasoGuia
         {
             Clave = "ArmaContraLaMaldadDePrueba",
             Requisitos =
             [
-                Req(TipoRequisitoGuia.DanoArma, cantidad: 20), // obligatorio, SIEMPRE NoEvaluable en escritorio
+                new RequisitoGuia { Tipo = TipoRequisitoGuia.DanoArma, Valor = 10 }, // obligatorio - el arma real da 14, llega
                 new() { Tipo = TipoRequisitoGuia.Bandera, Bandera = "shadowOrbSmashed", Recomendado = true },
             ],
         };
@@ -251,20 +294,29 @@ public class GuideEvaluationEngineTests
         float preparacion = evaluador.Preparacion(pasoPreparacion, contexto, out int cumplidos, out int totalObligatorios);
 
         Assert.True(completado);
-        Assert.Equal(0, totalObligatorios); // el unico obligatorio era un limite estructural - no cuenta ni bloquea
+        // Ya NO es un limite estructural: cuenta como obligatorio real, y esta CUMPLIDO de
+        // verdad (14 >= 10) - a diferencia de antes, que se completaba "vacuamente" sin ningun
+        // requisito obligatorio real contando.
+        Assert.Equal(1, totalObligatorios);
+        Assert.Equal(1, cumplidos);
     }
 
     [Fact]
-    public void MundoConElDevoradorYaDerrotado_ElPasoDeVencerloSaleCompletado_YElDePreparacionNoLoBloquea()
+    public void MundoConElDevoradorYaDerrotado_ElPasoDeVencerloSaleCompletado_YElDePreparacionSeCompletaConElArmaRealQueLlega()
     {
-        var evaluador = new GuideEvaluator(MakeItemNames(), MakeNpcNames(), null);
+        var evaluador = new GuideEvaluator(MakeItemNames((4, "Espada larga de hierro")), MakeNpcNames(), null,
+            MakeDamageStats((4, 12)), MakePrefixEffectsDmg((5, 1.15)), MakeRules((4, ["melee", "anyWeapon"])));
         var mundo = MakeWorld(downedBoss2: true); // el Devorador de Mundos/Cerebro YA derrotado en el .wld
-        var contexto = new GuideContext { Character = null, MergedContainers = null, World = mundo };
+        var inventario = new Dictionary<string, Terrakeep.Core.Model.GameItem[]>
+        {
+            ["inventory"] = [new Terrakeep.Core.Model.GameItem { Id = 4, Prefix = Terrakeep.Core.Model.ItemPrefix.Vanilla(5) }],
+        };
+        var contexto = new GuideContext { Character = MakeCharacter(100), MergedContainers = inventario, World = mundo };
 
         var pasoPreparacion = new PasoGuia
         {
             Clave = "ArmaContraLaMaldad",
-            Requisitos = [Req(TipoRequisitoGuia.DanoArma, cantidad: 20)],
+            Requisitos = [new RequisitoGuia { Tipo = TipoRequisitoGuia.DanoArma, Valor = 10 }],
         };
         var pasoVencer = new PasoGuia
         {
@@ -273,8 +325,10 @@ public class GuideEvaluationEngineTests
         };
 
         // Sintoma real reportado: con el jefe YA derrotado en el .wld, los dos pasos del tramo
-        // (preparacion Y derrota) tienen que poder marcarse completos - antes de esta ronda, el
-        // de preparacion se quedaba bloqueado para siempre y ocultaba el progreso real.
+        // (preparacion Y derrota) tienen que poder marcarse completos - antes de la ronda del
+        // 16-sep-2026, el de preparacion se quedaba bloqueado para siempre y ocultaba el progreso
+        // real. Ahora (Fase A REABIERTA) se completa por una razon MEJOR: el arma real del
+        // personaje de verdad llega al umbral pedido.
         Assert.True(evaluador.PasoCompletado(pasoPreparacion, contexto));
         Assert.True(evaluador.PasoCompletado(pasoVencer, contexto));
     }
@@ -440,5 +494,116 @@ public class GuideEvaluationEngineTests
         // Mismo criterio que CristalesVida: Defensa SI se resuelve solo cargando el personaje, no
         // debe bloquear el paso PARA SIEMPRE como un limite estructural real (dano_arma).
         Assert.False(resultado.EsLimiteEstructural);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Guia Fase A REABIERTA (26-sep-2026, arquitecto-keep a8c40689, I+D-PROXIMOS-PASOS-FAMILIA-
+    // KEEP.md): DanoArma SI se puede evaluar de forma real y util desde un .plr estatico (daño
+    // base+prefijo del arma equipada/en inventario) - ya NO es un limite estructural fijo. Oraculo
+    // real del primer test: Item.cs decompilado (tModLoader-Decompiled/tModLoader/Terraria/
+    // Item.cs) - SetDefaults case 4 = Iron Broadsword, damage=12; TryGetPrefixStatMultipliersFor
+    // Item case 5 = "Sharp" (PrefixID.Sharp=5), dmg=1.15f -> 12 * 1.15 = 13.8, redondeado (Math.
+    // Round, .8 siempre sube) a 14.
+    // ---------------------------------------------------------------------------------------
+
+    [Fact]
+    public void DanoArma_ConArmaVanillaYPrefijoReal_ActualCoincideConElDanoHorneadoRealDelDecompilado()
+    {
+        var evaluador = new GuideEvaluator(MakeItemNames((4, "Espada larga de hierro")), MakeNpcNames(), null,
+            MakeDamageStats((4, 12)), MakePrefixEffectsDmg((5, 1.15)), MakeRules((4, ["melee", "anyWeapon"])));
+        var inventario = new Dictionary<string, Terrakeep.Core.Model.GameItem[]>
+        {
+            ["inventory"] = [new Terrakeep.Core.Model.GameItem { Id = 4, Prefix = Terrakeep.Core.Model.ItemPrefix.Vanilla(5) }],
+        };
+        var contexto = new GuideContext { Character = MakeCharacter(100), MergedContainers = inventario, World = null };
+
+        var resultado = evaluador.Evaluar(new RequisitoGuia { Tipo = TipoRequisitoGuia.DanoArma, Valor = 10 }, contexto);
+
+        Assert.False(resultado.NoEvaluable);
+        Assert.False(resultado.EsLimiteEstructural);
+        Assert.Equal(14, resultado.Actual);
+        Assert.True(resultado.Cumplido);
+        Assert.Equal("Espada larga de hierro", resultado.TextoArgs[0]);
+    }
+
+    [Fact]
+    public void DanoArma_SinNingunArmaEnElInventario_QuedaNoEvaluable_ConMotivoClaro_NuncaComoLimiteEstructural()
+    {
+        // Inventario cargado de verdad (HasInventoryData=true), pero el unico item (una pocion)
+        // no es ningun arma real - VanillaCategories(50) = None, EsArmaVanilla descarta.
+        var evaluador = new GuideEvaluator(MakeItemNames((50, "Poción de vida")), MakeNpcNames(), null,
+            MakeDamageStats(), MakePrefixEffectsDmg(), MakeRules());
+        var inventario = new Dictionary<string, Terrakeep.Core.Model.GameItem[]>
+        {
+            ["inventory"] = [new Terrakeep.Core.Model.GameItem { Id = 50, Count = 1 }],
+        };
+        var contexto = new GuideContext { Character = MakeCharacter(100), MergedContainers = inventario, World = null };
+
+        var resultado = evaluador.Evaluar(new RequisitoGuia { Tipo = TipoRequisitoGuia.DanoArma, Valor = 10 }, contexto);
+
+        Assert.True(resultado.NoEvaluable);
+        // Distincion real de esta ronda: "arma no encontrada" es NoEvaluable normal (se resolveria
+        // llevando un arma real), nunca un limite ESTRUCTURAL (que bloquearia/desbloquearia el
+        // paso para siempre sin relacion con lo que el jugador lleve encima de verdad).
+        Assert.False(resultado.EsLimiteEstructural);
+        Assert.Equal("guide_motive_weapon_damage", resultado.MotivoClave);
+    }
+
+    [Fact]
+    public void Bandera_Conocida_SinMundoCargado_MotivoEsCargaElMundo_NoElGenericoDeAntes()
+    {
+        var evaluador = new GuideEvaluator(MakeItemNames(), MakeNpcNames(), null);
+        // Con personaje SI cargado (para descartar que el motivo real sea "falta el personaje")
+        // pero SIN mundo - una bandera de mundo NUNCA depende del .plr.
+        var contexto = new GuideContext { Character = MakeCharacter(100), MergedContainers = null, World = null };
+
+        var resultado = evaluador.Evaluar(Req(TipoRequisitoGuia.Bandera, bandera: "downedBoss1"), contexto);
+
+        Assert.True(resultado.NoEvaluable);
+        Assert.Equal("guide_motive_load_world", resultado.MotivoClave);
+    }
+
+    [Fact]
+    public void NpcActivo_SigueSiendoLimiteEstructuralSiempre_RegresionNoDebeCambiarConEsteEncargo()
+    {
+        var evaluador = new GuideEvaluator(MakeItemNames(), MakeNpcNames((4, "Ojo de Cthulhu")), null);
+        var contexto = new GuideContext { Character = null, MergedContainers = null, World = MakeWorld() };
+
+        var resultado = evaluador.Evaluar(Req(TipoRequisitoGuia.NpcActivo, id: 4), contexto);
+
+        Assert.True(resultado.NoEvaluable);
+        Assert.True(resultado.EsLimiteEstructural);
+        Assert.Equal("guide_motive_active_npc", resultado.MotivoClave);
+    }
+
+    [Fact]
+    public void PasoConDanoArmaYaEvaluable_YaNoCuentaComoLimiteEstructural_SumaProgresoParcialRealEnVezDeVacuo()
+    {
+        // Arma real que da 14 (mismo oraculo del primer test), pero el paso pide 20 - no llega.
+        var evaluador = new GuideEvaluator(MakeItemNames((4, "Espada larga de hierro")), MakeNpcNames(), null,
+            MakeDamageStats((4, 12)), MakePrefixEffectsDmg((5, 1.15)), MakeRules((4, ["melee", "anyWeapon"])));
+        var inventario = new Dictionary<string, Terrakeep.Core.Model.GameItem[]>
+        {
+            ["inventory"] = [new Terrakeep.Core.Model.GameItem { Id = 4, Prefix = Terrakeep.Core.Model.ItemPrefix.Vanilla(5) }],
+        };
+        var contexto = new GuideContext { Character = MakeCharacter(100), MergedContainers = inventario, World = null };
+        var paso = new PasoGuia
+        {
+            Clave = "PruebaDanoArmaEvaluable",
+            Requisitos = [new RequisitoGuia { Tipo = TipoRequisitoGuia.DanoArma, Valor = 20 }],
+        };
+
+        bool completado = evaluador.PasoCompletado(paso, contexto);
+        float preparacion = evaluador.Preparacion(paso, contexto, out int cumplidos, out int totalObligatorios);
+
+        // Antes de esta ronda, DanoArma SIEMPRE era limite estructural en escritorio: el paso se
+        // habria dado por completado solo (huboLimiteEstructural, sin ningun requisito obligatorio
+        // real) y Preparacion habria sido 1f (vacuo). Ahora es un requisito NORMAL: no completado
+        // (14 < 20) y con progreso PARCIAL real (14/20 = 0,7), el mismo criterio ya documentado en
+        // Preparacion ("3 de 4 vecinos son 0,75, no un cero").
+        Assert.False(completado);
+        Assert.Equal(1, totalObligatorios);
+        Assert.Equal(0, cumplidos);
+        Assert.Equal(0.7f, preparacion, 3);
     }
 }
