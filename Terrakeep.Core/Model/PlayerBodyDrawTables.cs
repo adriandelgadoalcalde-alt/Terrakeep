@@ -164,4 +164,20 @@ public static class PlayerBodyDrawTables
         224 => 253, // BunnyEars -> BunnyEarsBack
         _ => null,
     };
+
+    // GapAnalysis Encargo D (25-sep-2026): Terraria.ID.ArmorIDs.Shoe.Sets.MaleToFemaleID
+    // (ArmorIDs.cs:1869 del decompilado real: "Factory.CreateIntSet(-1, 25, 26)" -
+    // SetFactory.CreateIntSet(defaultState, pares...), transcripcion literal - un UNICO par
+    // real). Aplicada en Player.cs:37193-37200 ("if (item.shoeSlot > 0) { shoe =
+    // item.shoeSlot; if (!Male && ArmorIDs.Shoe.Sets.MaleToFemaleID[shoe] > 0) shoe =
+    // (sbyte)ArmorIDs.Shoe.Sets.MaleToFemaleID[shoe]; }") - el UNICO accesorio de zapatos real
+    // con variante femenina es shoeSlot 25 (GlassSlipperMale, item 5077 "Glass Slipper") ->
+    // shoeSlot 26 (GlassSlipperFemale). El "!Male" se comprueba en el llamador
+    // (PlayerPreviewRenderer.Render, mismo patron ya establecido para SetMatchHead/
+    // headIdAfterSetMatch) - esta funcion solo transcribe la tabla, sin logica de sexo.
+    public static int? ShoeMaleToFemaleID(int shoe) => shoe switch
+    {
+        25 => 26, // GlassSlipperMale -> GlassSlipperFemale
+        _ => null,
+    };
 }

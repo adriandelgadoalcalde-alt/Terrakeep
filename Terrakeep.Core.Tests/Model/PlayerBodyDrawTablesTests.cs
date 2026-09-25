@@ -213,4 +213,25 @@ public class PlayerBodyDrawTablesTests
     {
         Assert.Null(PlayerBodyDrawTables.HeadFrontToBackID(head));
     }
+
+    // ---- ShoeMaleToFemaleID (ArmorIDs.cs:1869 - GapAnalysis Encargo D, 25-sep-2026) ----
+    // "Factory.CreateIntSet(-1, 25, 26)" - SetFactory.CreateIntSet(defaultState, pares...):
+    // UN UNICO par real, shoeSlot 25 (GlassSlipperMale) -> 26 (GlassSlipperFemale).
+
+    [Fact]
+    public void ShoeMaleToFemaleID_GlassSlipper_UnicaEntradaRealDeLaTabla()
+    {
+        Assert.Equal(26, PlayerBodyDrawTables.ShoeMaleToFemaleID(25));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(6)]  // Hermes Boots, id real 54 - sin entrada en MaleToFemaleID
+    [InlineData(24)] // Terraspark Boots, sin entrada
+    [InlineData(26)] // la propia variante femenina no tiene entrada (evita un bucle infinito real)
+    [InlineData(30)] // RollerSkatesPink, ultimo shoeSlot real (Count=31), sin entrada
+    public void ShoeMaleToFemaleID_RestoDeCalzado_DevuelveNull_LaInmensaMayoriaDeZapatosReales(int shoe)
+    {
+        Assert.Null(PlayerBodyDrawTables.ShoeMaleToFemaleID(shoe));
+    }
 }

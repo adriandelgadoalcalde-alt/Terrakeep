@@ -250,4 +250,62 @@ public sealed class PlayerPreviewRendererAccessoriesTests : IDisposable
         var conEscudo = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
         Assert.NotEqual(Pixels(sinNada), Pixels(conEscudo));
     }
+
+    // GapAnalysis Encargo D (25-sep-2026): shoeSlot - accesorio REAL de zapatos
+    // (Player.cs:37193-37200/PlayerDrawLayers.cs:1758-1777), canal COMPLETAMENTE DISTINTO de
+    // los zapatos BASE ya cubiertos por "Paso 5" (pants/shoes tintados). Hermes Boots (id 54,
+    // shoeSlot=6, sprite ya extraido en Assets/player/acc_shoes/6.png).
+    private const int HermesBoots = 54;
+
+    [Fact]
+    public void ObjetoRealDeShoes_CambiaElResultadoRespectoASinAccesorios()
+    {
+        var accesorios = Service.EquipmentAppearance.ResolveAccessories(LoadoutConAccesorio(HermesBoots));
+        Assert.NotNull(accesorios.ShoesFile);
+
+        var sinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conAccesorio = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
+
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
+    }
+
+    [Fact]
+    public void Orden_SinWearsRobe_PernerasAntesQueShoes()
+    {
+        // Sin body/legs equipado (wearsRobe=false, el caso real mas comun) - orden real
+        // (LegacyPlayerRenderer.cs:202-204): "Leggings; Shoes;" - Shoes va DESPUES, pisa a las
+        // perneras en la esquina si ambas son opacas ahi. LegsSlot=999 (sintetico, fuera de
+        // cualquier tabla real de SetMatch/GetMatchingBodyExtension) fuerza legsChangedBySetMatch
+        // = false, asi que Render usa armor.LegsFile TAL CUAL (el PNG solido de aqui) en vez de
+        // ir a buscar un armor_legs/{id}.png real - mismo criterio de aislamiento que el resto
+        // de pruebas "Orden_*" de esta clase.
+        string leggings = CrearPngSolido(255, 0, 0), shoes = CrearPngSolido(0, 255, 0);
+        var armor = new PlayerPreviewRenderer.EquippedArmor(HeadFile: null, BodyFile: null, LegsFile: leggings, LegsSlot: 999);
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, ShoesFile: shoes);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor, accessories: acc);
+
+        AssertEsquinaEsColor(bmp, 0, 255, 0); // Shoes (verde) pisa a Leggings (rojo)
+    }
+
+    [Fact]
+    public void Orden_ConWearsRobeReal_PernerasCubrenAZapatos()
+    {
+        // body=15 real (Player.cs SetMatchBodyToLegs, PlayerBodyDrawTables: "15 => new(88,
+        // true)") -> wearsRobe=true real, invierte el orden a "Shoes; Leggings;"
+        // (LegacyPlayerRenderer.cs:195-204) - Shoes se dibuja PRIMERO y la pernera/robe lo
+        // TAPA despues, fiel al juego real (una falda/robe larga oculta visualmente el
+        // accesorio de zapatos que lleva debajo). LegsSlot=88 A PROPOSITO (coincide con el
+        // valor que la propia tabla SetMatchBodyToLegs ya iba a poner) - asi
+        // legsChangedBySetMatch queda en FALSE (88 == 88) y Render usa armor.LegsFile TAL
+        // CUAL (el PNG solido de aqui) en vez de ir a buscar armor_legs/88.png real, aislando
+        // el orden sin depender de la transparencia real de ese sprite.
+        string shoes = CrearPngSolido(0, 255, 0), leggings = CrearPngSolido(255, 0, 0);
+        var armor = new PlayerPreviewRenderer.EquippedArmor(HeadFile: null, BodyFile: null, LegsFile: leggings, BodySlot: 15, LegsSlot: 88);
+        var acc = new EquippedAccessories(null, null, null, null, null, null, null, ShoesFile: shoes);
+
+        var bmp = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, armor, accessories: acc);
+
+        AssertEsquinaEsColor(bmp, 255, 0, 0); // Leggings/robe (rojo) pisa a Shoes (verde) - orden invertido real
+    }
 }
