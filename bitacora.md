@@ -22323,3 +22323,92 @@ para un encargo futuro aparte si se decide dar prioridad a mochilas/alas/globos 
 **Commit real**: `Terrakeep.App/Services/PlayerPreviewRenderer.cs`,
 `Terrakeep.App/ViewModels/AppearanceViewModel.cs`, `Terrakeep.App/ViewModels/MainViewModel.cs`,
 `Terrakeep.App.ViewModels.Tests/PlayerPreviewRendererAccessoriesTests.cs` (nuevo). Sin `git push`.
+
+## 25-sep-2026 - aplicador-fix real: toggle 3 (Almacenes) desincronizado cuando ScrollViewer
+## clampa el offset del clic (aplicador-fix, handoff e5eaea9e-c261-4199-8e7d-060b6054f58d)
+
+Encargo del coordinador: un `verificador-qa` independiente detecto que el selector 1/2/3 de
+Personaje > Objetos (ver el bloque de hoy mas arriba, "Bug A: selector 1/2/3 real") tenia un
+segundo bug real que el canario `NAV123_SOLO` no cerraba: el contenido navegaba bien al pulsar
+"3" pero el indicador se quedaba marcado en "2". Reproducido 2/2 veces por el verificador con UIA
+(`SelectionItem.IsSelected`) contra un personaje real ("Eldelgas") con pocos objetos en Almacenes.
+
+**Causa raiz confirmada** (`Terrakeep.App/MainWindow.xaml.cs`): `ScrollToObjetosSection` (linea
+~759) calcula `y = seccion.TranslatePoint(...)` y llama `ObjetosBoardScroll.ScrollToVerticalOffset
+(y)` sin comprobar si ese offset cabe. Cuando el contenido de la seccion destino (Almacenes, u
+otra seccion corta) no llena el resto del `ScrollViewer`, este CLAMPA el offset real a un valor
+menor que "y". `OnObjetosBoardScrollChanged` (linea ~686), la sincronizacion inversa que recalcula
+que seccion esta activa a partir del `VerticalOffset` real (bucle "ultima seccion cuyo origen ya
+paso por encima del offset actual", linea ~701-707), recibe entonces ese offset ya clampado -
+que cae dentro del rango de la seccion ANTERIOR (Inventario) en vez de la pedida (Almacenes) - y
+marca el `RadioButton` equivocado, aunque el usuario pulso "3" de verdad.
+
+Reproducido AQUI tambien con el mismo mecanismo real (no una simulacion sintetica): agrandando la
+ventana del arnes hasta 1180x1600 con un personaje real (`Zenith`), `ScrollableHeight=427,8` cae
+por debajo de `yAlmacenes=468,1` - el mismo clamp real, sin necesidad de que el personaje tenga
+pocos objetos especificamente (cualquier situacion donde el contenido de la ultima seccion sea mas
+corto que el viewport dispara el mismo clamp - "pocos objetos en Almacenes" es solo una forma real
+de llegar a esa condicion, la ventana alta es otra).
+
+**Arreglo aplicado** (`Terrakeep.App/MainWindow.xaml.cs`): un campo `_objetosNavIndiceExplicito`
+(`int?`), vivo SOLO durante la llamada sincrona de `ScrollToObjetosSection` (fijado justo antes de
+`ScrollToVerticalOffset`+`UpdateLayout()` explicito -que fuerza el `ScrollChanged` real ya mismo,
+en vez de esperar al siguiente paso de layout-, limpiado en un `finally` justo despues). Mientras
+el flag esta activo, `OnObjetosBoardScrollChanged` ignora el recalculo por offset y fuerza
+`indiceActivo`/`claveActiva` a la seccion pedida por el clic, sin importar donde haya clampado
+ScrollViewer el offset real. El scroll LIBRE posterior del usuario (flag=`null`, la inmensa
+mayoria del tiempo) sigue recalculando con el criterio normal de siempre - no se toco esa rama.
+
+**Canario ampliado**: `Terrakeep.App.Tests/CanarioNav123YClipCardsLibreria.cs`, dentro de
+`NAV123_SOLO` (el modo ya existente solo comprobaba que los 3 `RadioButton` EXISTIERAN, nunca un
+ciclo de clic real - el hueco exacto que dejo pasar este bug). Bloque nuevo: agranda la ventana en
+pasos de 100px hasta conseguir el clamp real (confirmado con el numero exacto de `ScrollableHeight`
+vs `yAlmacenes`), simula 4 clics reales (`RadioButton.IsChecked=true` +
+`RaiseEvent(ButtonBase.ClickEvent)`, mismo patron ya usado por `PruebasInicioAjustes.cs:520-521`)
+en el ciclo 1->2->3->1, y verifica tras cada uno que `IsChecked` sea `true` SOLO en el boton
+esperado (la misma propiedad que expone `SelectionItemPattern.IsSelected` via UIA para un
+`RadioButton`). Termina con un control de scroll LIBRE (sin clic) para confirmar que la
+sincronizacion inversa normal sigue funcionando tras el arreglo.
+
+**Verificacion real**:
+- `NAV123_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`: `NAV123-CICLO:
+  ventana 1180x1600 -> ScrollableHeight=427,8, yAlmacenes=468,1 (clamp real conseguido=True)`,
+  seguido de los 4 clics del ciclo y el control de scroll libre - **0 lineas `FALLO`**:
+  - clic '1' -> `IsChecked(1/2/3)=(True,False,False)`
+  - clic '2' -> `IsChecked(1/2/3)=(False,True,False)`
+  - clic '3' -> `VerticalOffset real=427,8` (clampado, pedido 468,1) -> `IsChecked(1/2/3)=
+    (False,False,True)` - **el bug ya no aparece: el indicador refleja "3" aunque el offset real
+    quedo clampado por debajo del pedido**
+  - clic '1' (vuelta) -> `IsChecked(1/2/3)=(True,False,False)`
+  - scroll LIBRE a offset=427,8 (dentro del rango de Inventario) -> `IsChecked(1/2/3)=
+    (False,True,False)` - la sincronizacion inversa normal sigue funcionando sin cambios.
+- `T3_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build` (regresion de la
+  navegacion "Donde esta" ya existente, mismo fichero tocado): **0 lineas `FALLO`**.
+- `LIBCARD_CLIP_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build` (bug B del
+  mismo canario, no tocado por este arreglo): **0 lineas `FALLO`** en las 3 superficies.
+- `dotnet build` (Release, solucion completa) y `dotnet test` (Release, sin rebuild):
+  `Terrakeep.Core.Tests` 608/608 OK, `Terrakeep.App.ViewModels.Tests` 538/538 OK - sin regresion.
+
+**Recompilacion/redespliegue real**: `Terrakeep.exe` NO estaba en ejecucion (`Get-Process
+Terrakeep` sin resultado, antes y despues). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c
+Release -p:PublishProfile=win-x64` en verde (autocontenido single-file, 0 `.pdb`). Copiado a
+`C:\Users\adrian\AppData\Local\Programs\Terrakeep\Terrakeep.exe` (unico destino real, confirmado
+con `WScript.Shell` sobre los `.lnk` de Menu Inicio Y barra de tareas, mismos ambos) -
+`LastWriteTime` 25/09/2026 11:30:19, hash SHA256 `B8C344E7...`. Verificado con `pywinauto`
+(backend UIA) sobre el `.exe` instalado real: abre la ventana "Terrakeep", entra a un personaje
+real ("Zenith"), navega a la pestaña "Objetos", localiza los 3 `RadioButton` reales y hace un
+clic real en "3" - `SelectionItemPattern.CurrentIsSelected` pasa de `RADIO 1=1, RADIO 2=0, RADIO
+3=0` (estado inicial) a `RADIO 1=0, RADIO 2=0, RADIO 3=1` tras el clic - confirmacion real con UIA
+sobre el binario ya redesplegado, mismo metodo exacto que uso el verificador-qa para encontrar el
+bug. Proceso cerrado limpiamente al terminar (`app.kill()`, confirmado sin proceso huerfano con
+`Get-Process` despues).
+
+**Confirmado explicitamente lo que NO se toco**: el bloque "Bug B" (clip de 3px en las cards de
+Libreria/Buffs/Investigacion) del mismo encargo de hoy, ya cerrado en una ronda anterior - solo se
+reejecuto su canario (`LIBCARD_CLIP_SOLO`) como control de regresion, sin tocar ningun codigo de
+esa zona.
+
+**Commit real**: `Terrakeep.App/MainWindow.xaml.cs` (los 3 hunks reales del arreglo, confirmado con
+`git diff` antes de añadir - nada mas del fichero, que llevaba trabajo simultaneo de otros agentes
+en la carpeta) + `Terrakeep.App.Tests/CanarioNav123YClipCardsLibreria.cs` (85 lineas nuevas, el
+bloque de ampliacion de `NAV123_SOLO`). Sin `git push`.
