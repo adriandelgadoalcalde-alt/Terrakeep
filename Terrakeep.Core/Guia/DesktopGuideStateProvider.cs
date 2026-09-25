@@ -13,7 +13,8 @@ namespace Terrakeep.Core.Guia;
 // se inventa un valor - ver la cabecera original de GuideEvaluator.cs, ahora en GuideEvaluator.cs
 // como adaptador de compatibilidad).
 internal sealed class DesktopGuideStateProvider(
-    VanillaItemCatalog vanillaItems, NpcNameCatalog npcNames, CalamityCatalog? calamityItems, GuideContext contexto)
+    VanillaItemCatalog vanillaItems, NpcNameCatalog npcNames, CalamityCatalog? calamityItems,
+    VanillaItemStatsCatalog? vanillaStats, PrefixEffectCatalog? prefixEffects, GuideContext contexto)
     : IGuideStateProvider
 {
     public bool HasCharacterData => contexto.Character != null;
@@ -27,11 +28,8 @@ internal sealed class DesktopGuideStateProvider(
     // vez de inventado. Por eso esto es SIEMPRE false aqui (y siempre true en TerrakeepMod).
     public bool HasLiveGameData => false;
 
-    // Defensa nunca se llama (HasLiveGameData es fijo a false: exige buffs/equipo en combate real,
-    // que un .plr estatico no guarda), se deja a 0 por higiene de la interfaz.
-    //
     // CristalesVida es DISTINTO, auditoria 24-sep-2026 (I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md,
-    // Encargo 1): a diferencia de Defensa/DanoArma/NpcActivo, el numero de cristales de vida
+    // Encargo 1): a diferencia de DanoArma/NpcActivo, el numero de cristales de vida
     // consumidos SI es derivable de un dato ya parseado del .plr sin partida en marcha -
     // PlrCharacter.HealthMax (VidaMaxima, linea de abajo). Formula real del motor vanilla
     // (Player.cs del tModLoader decompilado, ~linea 56437/55952:
@@ -42,7 +40,28 @@ internal sealed class DesktopGuideStateProvider(
     // no HasLiveGameData) - sin ese cambio esta formula seria codigo muerto igual que antes.
     public int CristalesVida => Math.Clamp((VidaMaxima - 100) / 20, 0, 15);
     public int VidaMaxima => contexto.Character?.HealthMax ?? 0;
-    public int Defensa => 0;
+
+    // Guia Encargo2 (25-sep-2026, I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md): mismo criterio exacto que
+    // CristalesVida arriba - Defensa TAMBIEN es derivable de un dato ya parseado del .plr sin
+    // partida en marcha (el equipo puesto de verdad, MergedContainers["loadout0Items"] - el mismo
+    // contenedor 0 que EquipmentGroupViewModel usa para "el conjunto que el personaje lleva
+    // puesto de verdad al guardar", ver el comentario largo de su constructor). Es la defensa
+    // ESTATICA de armadura+accesorios+prefijos (Terrakeep.Core.Model.DefenseCalculator, la misma
+    // formula exacta que ya usaba la pestaña Equipamiento, movida aqui para no duplicarla) - nunca
+    // incluye buffs/pociones/set bonus en combate real, que solo existen con una partida en
+    // marcha. Ver el cambio de gate correspondiente en GuideEvaluationEngine (HasCharacterData, no
+    // HasLiveGameData, igual que CristalesVida).
+    public int Defensa
+    {
+        get
+        {
+            var equipoPuesto = ArmaduraActiva();
+            return equipoPuesto == null ? 0 : DefenseCalculator.Total(equipoPuesto, vanillaStats, calamityItems, prefixEffects);
+        }
+    }
+
+    private GameItem[]? ArmaduraActiva() =>
+        contexto.MergedContainers != null && contexto.MergedContainers.TryGetValue("loadout0Items", out var items) ? items : null;
 
     public int NpcsDelPueblo() => contexto.World?.Npcs.Count ?? 0;
     public bool HayNpc(int id) => contexto.World != null && contexto.World.Npcs.Any(n => n.Id == id);
@@ -87,10 +106,10 @@ internal sealed class DesktopGuideStateProvider(
 
     public string MotivoSinPartidaEnMarcha(TipoRequisitoGuia tipo) => tipo switch
     {
-        // CristalesVida ya NO pasa por aqui (24-sep-2026): usa el gate de HasCharacterData/
-        // "guide_motive_load_character", igual que VidaMaxima - ver GuideEvaluationEngine y el
-        // comentario de CristalesVida mas arriba en este archivo.
-        TipoRequisitoGuia.Defensa => "guide_motive_defense",
+        // CristalesVida y Defensa ya NO pasan por aqui (24-sep-2026 y 25-sep-2026 respectivamente):
+        // los dos usan el gate de HasCharacterData/"guide_motive_load_character", igual que
+        // VidaMaxima - ver GuideEvaluationEngine y los comentarios de CristalesVida/Defensa mas
+        // arriba en este archivo.
         TipoRequisitoGuia.DanoArma => "guide_motive_weapon_damage",
         TipoRequisitoGuia.NpcActivo => "guide_motive_active_npc",
         _ => "guide_motive_load_data",

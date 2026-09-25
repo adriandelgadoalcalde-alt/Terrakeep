@@ -18,11 +18,11 @@ namespace Terrakeep.Core.Guia;
 //     EvaluadorGuia.cs original del mod antes de esta consolidacion, que nunca marcaba nada
 //     NoEvaluable por falta de partida.
 //   - Terrakeep las calcula segun haya o no personaje/mundo/inventario cargados, y SIEMPRE false
-//     para lo que depende de una partida EN MARCHA (defensa, daño de arma, NPC hostil activo):
-//     ningun .plr/.wld estatico guarda eso - ver el porque caso por caso en
-//     DesktopGuideStateProvider.cs. Cristales de vida es la EXCEPCION (auditoria 24-sep-2026): se
-//     deriva por formula de VidaMaxima/HealthMax, que si esta en el .plr estatico - usa el mismo
-//     gate que VidaMaxima (HasCharacterData), no HasLiveGameData.
+//     para lo que depende de una partida EN MARCHA (daño de arma, NPC hostil activo): ningun
+//     .plr/.wld estatico guarda eso - ver el porque caso por caso en DesktopGuideStateProvider.cs.
+//     Cristales de vida y Defensa son la EXCEPCION (auditorias 24-sep-2026 y 25-sep-2026): se
+//     derivan de datos YA presentes en el .plr estatico (VidaMaxima/HealthMax; equipo puesto de
+//     verdad para Defensa) - los dos usan el gate de HasCharacterData, no HasLiveGameData.
 public interface IGuideStateProvider
 {
     /// <summary>true si se puede leer el personaje (vida maxima).</summary>
@@ -34,9 +34,10 @@ public interface IGuideStateProvider
     /// <summary>true si se puede leer el inventario (objeto, objeto_cualquiera, gancho).</summary>
     bool HasInventoryData { get; }
 
-    /// <summary>true si hay una partida EN MARCHA de verdad (defensa, daño de arma ya pasado por
-    /// el jugador, NPC hostil activo AHORA MISMO) - nunca cierto en un editor de ficheros
-    /// estaticos. Cristales de vida NO depende de esto (ver arriba): se deriva de VidaMaxima.</summary>
+    /// <summary>true si hay una partida EN MARCHA de verdad (daño de arma ya pasado por el
+    /// jugador, NPC hostil activo AHORA MISMO) - nunca cierto en un editor de ficheros estaticos.
+    /// Cristales de vida y Defensa NO dependen de esto (ver arriba): se derivan de datos ya
+    /// presentes en el .plr estatico.</summary>
     bool HasLiveGameData { get; }
 
     int CristalesVida { get; }
@@ -64,9 +65,10 @@ public interface IGuideStateProvider
     string NombreDeObjeto(int id);
     string NombreDeNpc(int id);
 
-    /// <summary>Clave de motivo para los tres tipos que SOLO se pueden leer con una partida en
-    /// marcha (<see cref="HasLiveGameData"/> = false) - Defensa, DanoArma, NpcActivo. CristalesVida
-    /// ya NO pasa por aqui (auditoria 24-sep-2026, ver <see cref="HasLiveGameData"/>). TerrakeepMod
-    /// nunca llega a llamarse (su HasLiveGameData es siempre true) y puede devolver lo que quiera.</summary>
+    /// <summary>Clave de motivo para los tipos que SOLO se pueden leer con una partida en marcha
+    /// (<see cref="HasLiveGameData"/> = false) - DanoArma, NpcActivo. CristalesVida y Defensa ya NO
+    /// pasan por aqui (auditorias 24-sep-2026 y 25-sep-2026, ver <see cref="HasLiveGameData"/>).
+    /// TerrakeepMod nunca llega a llamarse (su HasLiveGameData es siempre true) y puede devolver
+    /// lo que quiera.</summary>
     string MotivoSinPartidaEnMarcha(TipoRequisitoGuia tipo);
 }

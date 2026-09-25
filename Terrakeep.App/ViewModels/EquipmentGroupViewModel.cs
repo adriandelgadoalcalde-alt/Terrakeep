@@ -315,23 +315,11 @@ public partial class EquipmentGroupViewModel : ObservableObject
     private void RecomputeDefenseAndBonus()
     {
         var items = _byKey[(SelectedLoadout, EquipmentKind.Items)].Slots;
-        int total = 0;
-        foreach (var slot in items)
-        {
-            if (slot.IsEmpty) continue;
-            total += slot.IsCalamity
-                ? _service.CalamityCatalog.BySyntheticId(slot.Item.Id)?.Stats?.Defense ?? 0
-                : _service.VanillaStats.Get(slot.Item.Id)?.Defense ?? 0;
-            // H3-08 (tercera auditoria de Opus, Fable): "Defensa total" ignoraba la defensa de
-            // los prefijos de accesorio reales (Warding/Guarding/Menacing/Hardy/Armored, +1..+4
-            // segun Player.GrantPrefixBenefits) - un personaje real de endgame con varios
-            // accesorios "Protección" llevaba defensa real que el panel nunca contaba. Solo
-            // prefijos vanilla (Calamity/Rogue no tienen datos reales en este catalogo, mismo
-            // criterio de "desconocido = 0" ya usado en el resto de la app).
-            if (!slot.Item.Prefix.IsCalamity)
-                total += _service.PrefixEffects.GetDefenseBonus(slot.Item.Prefix.VanillaId);
-        }
-        TotalDefense = total;
+        // Guia Encargo2 (25-sep-2026): calculo movido a Terrakeep.Core.Model.DefenseCalculator
+        // (sin dependencias de WPF/ViewModels) para que DesktopGuideStateProvider lo reutilice
+        // tal cual en vez de duplicarlo - mismo resultado exacto que antes, ver la cabecera de
+        // esa clase para el detalle de H3-08 (defensa de prefijos de accesorio).
+        TotalDefense = DefenseCalculator.Total(items.Select(s => s.Item), _service.VanillaStats, _service.CalamityCatalog, _service.PrefixEffects);
 
         // BonusForEquipped real (VanillaArmorSetCatalog, ya existia sin usar) solo entiende
         // ids vanilla - una pieza de Calamity en cabeza/cuerpo/piernas nunca forma un set

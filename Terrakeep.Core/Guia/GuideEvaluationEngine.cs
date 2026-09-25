@@ -36,7 +36,11 @@ public static class GuideEvaluationEngine
                 break;
 
             case TipoRequisitoGuia.Defensa:
-                if (!ds.HasLiveGameData) { NoEvaluableFijo(r, ds.MotivoSinPartidaEnMarcha(requisito.Tipo)); break; }
+                // Guia Encargo2 (25-sep-2026): mismo gate que CristalesVida/VidaMaxima
+                // (HasCharacterData, no HasLiveGameData) - la defensa ESTATICA de armadura
+                // puesta+prefijos SI es derivable de un .plr ya cargado sin partida en marcha,
+                // ver DesktopGuideStateProvider.Defensa.
+                if (!ds.HasCharacterData) { NoEvaluableSinDatos(r, "guide_motive_load_character"); break; }
                 Contar(r, ds.Defensa, requisito.Valor, "Guia.Req.Defensa");
                 break;
 

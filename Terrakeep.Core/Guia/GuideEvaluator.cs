@@ -12,7 +12,14 @@ namespace Terrakeep.Core.Guia;
 // del despacho de requisitos y de Fraccion/Contar/Preparacion/PasoCompletado, identica funcion a
 // funcion a la de TerrakeepMod y sincronizada solo de memoria - ver GuideEvaluationEngine.cs para
 // el detalle completo del porque y el como.
-public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatalog npcNames, CalamityCatalog? calamityItems)
+//
+// Guia Encargo2 (25-sep-2026): vanillaStats/prefixEffects se añaden OPCIONALES (default null, sin
+// romper ningun call site existente) para que DesktopGuideStateProvider.Defensa pueda calcular la
+// defensa real del equipo puesto (Terrakeep.Core.Model.DefenseCalculator) - null solo en pruebas
+// que no evaluan Defensa; GuideViewModel/HomeViewModel (los dos consumidores reales) siempre pasan
+// los catalogos reales del personaje cargado.
+public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatalog npcNames, CalamityCatalog? calamityItems,
+    VanillaItemStatsCatalog? vanillaStats = null, PrefixEffectCatalog? prefixEffects = null)
 {
     public ResultadoRequisitoGuia Evaluar(RequisitoGuia requisito, GuideContext contexto)
         => GuideEvaluationEngine.Evaluar(requisito, Proveedor(contexto));
@@ -27,5 +34,5 @@ public sealed class GuideEvaluator(VanillaItemCatalog vanillaItems, NpcNameCatal
         => GuideEvaluationEngine.Preparacion(paso, Proveedor(contexto), out cumplidos, out totalObligatorios);
 
     private DesktopGuideStateProvider Proveedor(GuideContext contexto)
-        => new(vanillaItems, npcNames, calamityItems, contexto);
+        => new(vanillaItems, npcNames, calamityItems, vanillaStats, prefixEffects, contexto);
 }

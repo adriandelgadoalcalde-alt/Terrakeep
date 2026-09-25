@@ -258,6 +258,37 @@ internal static partial class Program
             }
             catch (Exception ex) { Console.WriteLine("GUIA_SOLO ICONOS: captura del arbol fallo - " + ex.Message); }
 
+            // Guia Encargo2 (25-sep-2026, I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md): requisito real
+            // "defensa" (paso "Armadura: mas de 10 de defensa", tramo "Antes del primer jefe",
+            // guia_progresion.json ~linea 101, valor pedido=11) - ANTES de este arreglo salia
+            // SIEMPRE NoEvaluable=true (Defensa.Get fijo a 0 tras el gate HasLiveGameData, fijo a
+            // false en escritorio). Ahora DesktopGuideStateProvider.Defensa lee el equipo puesto
+            // de verdad (MergedContainers["loadout0Items"]) via Terrakeep.Core.Model.
+            // DefenseCalculator - misma formula que ya usaba la pestaña Equipamiento. Confirma con
+            // el personaje real 'adrian' que el requisito ya NO es NoEvaluable.
+            var pasoDefensa = EncontrarPaso("Antes del primer jefe", "Armadura: más de 10 de defensa");
+            if (pasoDefensa == null)
+            {
+                Console.WriteLine("FALLO: GUIA_SOLO DEFENSA - no se encontro el paso real 'Armadura: más de 10 de defensa'.");
+            }
+            else
+            {
+                // Este paso tiene DOS requisitos reales (defensa + gancho, guia_progresion.json) -
+                // "Defensa: {0} de {1}" (Guia.Req.Defensa, textos.es.json) es la unica linea que
+                // empieza asi, se localiza por ese texto en vez de exponer el tipo interno.
+                var reqDefensa = pasoDefensa.Value.paso.Requisitos.FirstOrDefault(r => r.Linea.StartsWith("Defensa:", StringComparison.Ordinal));
+                if (reqDefensa == null)
+                {
+                    Console.WriteLine("FALLO: GUIA_SOLO DEFENSA - no se encontro el requisito 'Defensa: ...' dentro del paso real.");
+                }
+                else
+                {
+                    Console.WriteLine($"GUIA_SOLO DEFENSA: paso='Armadura: más de 10 de defensa' -> NoEvaluable={reqDefensa.NoEvaluable}, Cumplido={reqDefensa.Cumplido}, Linea='{reqDefensa.Linea}' (esperado NoEvaluable=False, Linea con la defensa real del equipo puesto de 'adrian')");
+                    if (reqDefensa.NoEvaluable)
+                        Console.WriteLine("FALLO: GUIA_SOLO DEFENSA - el requisito de defensa sigue NoEvaluable con un personaje real cargado (deberia leer el equipo puesto de verdad).");
+                }
+            }
+
             // Evidencia del BANNER "Tu objetivo ahora mismo" con icono real visible: el objetivo
             // ORGANICO de este personaje/mundo reales (evaluado arriba, "Cinco cristales de vida")
             // no tiene icono - resultado CORRECTO (CristalesVida no es Objeto/Npc/Jefe, sin datos

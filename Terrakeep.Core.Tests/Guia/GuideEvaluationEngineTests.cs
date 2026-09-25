@@ -79,6 +79,32 @@ public class GuideEvaluationEngineTests
         HealthMax = healthMax,
     };
 
+    // Encargo2 (25-sep-2026): helpers para Defensa, mismo criterio de "solo campos JSON reales"
+    // que MakeItemNames/MakeNpcNames de arriba - VanillaItemStatsCatalog/PrefixEffectCatalog se
+    // cargan desde su propio formato JSON real, nunca con un mock a medida.
+    private static VanillaItemStatsCatalog MakeStats(params (int Id, int Defense)[] items)
+    {
+        var raw = items.ToDictionary(i => i.Id.ToString(), i => new { defense = i.Defense });
+        return VanillaItemStatsCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(raw))));
+    }
+
+    private static PrefixEffectCatalog MakePrefixEffects(params (int Id, double StatDefense)[] prefixes)
+    {
+        var raw = prefixes.ToDictionary(p => p.Id.ToString(), p => new Dictionary<string, double> { ["statDefense"] = p.StatDefense });
+        return PrefixEffectCatalog.LoadFromStream(new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(raw))));
+    }
+
+    // Los 10 slots reales de "Armadura/Accesorios" (Cabeza/Cuerpo/Piernas + 7 accesorios) que
+    // MergedContainers["loadout0Items"] guarda para el equipo PUESTO de verdad - solo los primeros
+    // items importan aqui, el resto queda vacio (GameItem.Empty, no aporta defensa).
+    private static Terrakeep.Core.Model.GameItem[] MakeArmorSlots(params Terrakeep.Core.Model.GameItem[] puestos)
+    {
+        var slots = new Terrakeep.Core.Model.GameItem[10];
+        for (int i = 0; i < 10; i++)
+            slots[i] = i < puestos.Length ? puestos[i] : Terrakeep.Core.Model.GameItem.Empty;
+        return slots;
+    }
+
     private static RequisitoGuia Req(TipoRequisitoGuia tipo, int id = 0, int cantidad = 1, string bandera = "") => new()
     {
         Tipo = tipo,
@@ -364,6 +390,55 @@ public class GuideEvaluationEngineTests
         // A diferencia de dano_arma (limite ESTRUCTURAL: jamas evaluable en escritorio),
         // cristales_vida SI se resuelve solo cargando el personaje - no debe bloquear un paso
         // para siempre como el bug real de dano_arma cerrado el 16-sep-2026.
+        Assert.False(resultado.EsLimiteEstructural);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Guia Encargo2 (25-sep-2026, I+D-PROXIMOS-PASOS-FAMILIA-KEEP.md): defensa REAL, en vez de
+    // fija a 0 con gate HasLiveGameData (fijo a false en escritorio, ver el hallazgo original en
+    // bitacora.md). Mismo criterio que CristalesVida arriba - derivable de datos ya cargados del
+    // .plr (aqui: MergedContainers["loadout0Items"], el equipo PUESTO de verdad, via
+    // Terrakeep.Core.Model.DefenseCalculator, la misma formula ya usada por
+    // EquipmentGroupViewModel en la pestaña Equipamiento) - gate HasCharacterData, no
+    // HasLiveGameData.
+    // ---------------------------------------------------------------------------------------
+
+    [Fact]
+    public void Defensa_SeCalculaConElEquipoPuestoDeVerdad_ArmaduraMasPrefijoDeAccesorio()
+    {
+        var evaluador = new GuideEvaluator(MakeItemNames(), MakeNpcNames(), null,
+            MakeStats((1, 5), (2, 8)), MakePrefixEffects((62, 1))); // prefijo 62 = "Warding" real, +1 defensa
+
+        var casco = new Terrakeep.Core.Model.GameItem { Id = 1 };
+        var pechera = new Terrakeep.Core.Model.GameItem { Id = 2 };
+        var accesorio = new Terrakeep.Core.Model.GameItem { Id = 3, Prefix = Terrakeep.Core.Model.ItemPrefix.Vanilla(62) };
+        var merged = new Dictionary<string, Terrakeep.Core.Model.GameItem[]>
+        {
+            ["loadout0Items"] = MakeArmorSlots(casco, pechera, Terrakeep.Core.Model.GameItem.Empty, accesorio),
+        };
+        var contexto = new GuideContext { Character = MakeCharacter(100), MergedContainers = merged, World = null };
+
+        // 5 (casco) + 8 (pechera) + 1 (bono de prefijo Warding del accesorio) = 14.
+        var resultado = evaluador.Evaluar(Req(TipoRequisitoGuia.Defensa, cantidad: 14), contexto);
+
+        Assert.False(resultado.NoEvaluable);
+        Assert.Equal(14, resultado.Actual);
+        Assert.True(resultado.Cumplido);
+    }
+
+    [Fact]
+    public void Defensa_SinPersonajeCargado_QuedaNoEvaluable_ConMotivoDePersonaje_NoComoLimiteEstructural()
+    {
+        var evaluador = new GuideEvaluator(MakeItemNames(), MakeNpcNames(), null,
+            MakeStats((1, 5)), MakePrefixEffects());
+        var contexto = new GuideContext { Character = null, MergedContainers = null, World = null };
+
+        var resultado = evaluador.Evaluar(Req(TipoRequisitoGuia.Defensa, cantidad: 1), contexto);
+
+        Assert.True(resultado.NoEvaluable);
+        Assert.Equal("guide_motive_load_character", resultado.MotivoClave);
+        // Mismo criterio que CristalesVida: Defensa SI se resuelve solo cargando el personaje, no
+        // debe bloquear el paso PARA SIEMPRE como un limite estructural real (dano_arma).
         Assert.False(resultado.EsLimiteEstructural);
     }
 }

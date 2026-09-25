@@ -100,13 +100,17 @@ public sealed partial class GuidePasoViewModel : ObservableObject
         OnPropertyChanged(nameof(ZonaLegible));
     }
 
-    // Encargo3: cadena de fallback real, calculable con datos ya presentes en el propio paso (no
-    // inventa nada) - "hito" = lo que de verdad marca este paso como superado:
-    // 1) paso.Jefe (!=0): el paso es una pelea de jefe - se intenta su sprite de cuerpo entero via
-    //    NpcIconResolver (el mismo que ya usa la lista lateral de NPCs). La MAYORIA de jefes no son
-    //    NPC de pueblo y no tendran sprite en ese resolver (27 NPCs reales) - null es el resultado
-    //    HONESTO en ese caso, nunca se cae al siguiente escalon (mezclar "el jefe de este paso" con
-    //    "el primer objeto que pide" seria enganoso, no un fallback razonable).
+    // Encargo3/Encargo4: cadena de fallback real, calculable con datos ya presentes en el propio
+    // paso (no inventa nada) - "hito" = lo que de verdad marca este paso como superado:
+    // 1) paso.Jefe (!=0): el paso es una pelea de jefe - Encargo4 (25-sep-2026) le da sprite real
+    //    de cuerpo entero via BossIconResolver (Assets/boss_icons/{type}.png, extraido de
+    //    Images/NPC_{type}.xnb - ver scripts/extraer-sprites-jefes-vanilla.js), que cubre los 23
+    //    NPC types de jefe/segmento final REALMENTE usados en guia_progresion.json. Si el jefe
+    //    ademas fuese un NPC de pueblo (no ocurre hoy, pero es una red de seguridad honesta, no un
+    //    invento) cae a NpcIconResolver antes de rendirse a null - null sigue siendo el resultado
+    //    esperado para el unico jefe de mod real del catalogo sin .xnb vanilla
+    //    (HiveMindOPerforator/CalamityMod), nunca se cae al siguiente escalon (mezclar "el jefe de
+    //    este paso" con "el primer objeto que pide" seria enganoso, no un fallback razonable).
     // 2) Si no hay jefe: el primer requisito Objeto/ObjetoCualquiera del paso (por orden real del
     //    catalogo) via LibraryCategoryTreeBuilder.ResolveIconPath - el MISMO resolver que ya usa la
     //    Libreria/Investigacion para vanilla (Assets/vanilla/icons) y Calamity (Assets/calamity/
@@ -117,7 +121,7 @@ public sealed partial class GuidePasoViewModel : ObservableObject
     //    en toda la app), nunca un hueco roto.
     private static string? ResolverIconoDelHito(PasoGuia paso, CharacterFileService servicio)
     {
-        if (paso.Jefe != 0) return NpcIconResolver.GetIconPath(paso.Jefe);
+        if (paso.Jefe != 0) return BossIconResolver.GetIconPath(paso.Jefe) ?? NpcIconResolver.GetIconPath(paso.Jefe);
 
         var objeto = paso.Requisitos.FirstOrDefault(r =>
             r.Tipo == TipoRequisitoGuia.Objeto || r.Tipo == TipoRequisitoGuia.ObjetoCualquiera);
@@ -196,7 +200,7 @@ public sealed partial class GuideViewModel : ObservableObject
         string assetsGuia = Path.Combine(AppContext.BaseDirectory, "Assets", "guia");
         _catalogo = GuideCatalog.LoadFromFile(Path.Combine(assetsGuia, "guia_progresion.json"), servicio.CalamityCatalog);
         _textos = GuideTextCatalog.LoadFromFiles(Path.Combine(assetsGuia, "textos.es.json"), Path.Combine(assetsGuia, "textos.en.json"));
-        _evaluador = new GuideEvaluator(servicio.VanillaCatalog, servicio.NpcNames, servicio.CalamityCatalog);
+        _evaluador = new GuideEvaluator(servicio.VanillaCatalog, servicio.NpcNames, servicio.CalamityCatalog, servicio.VanillaStats, servicio.PrefixEffects);
         PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
 
         Refresh();
