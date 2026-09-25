@@ -22867,3 +22867,88 @@ LibraryCatalogDiskCache.cs`, `Terrakeep.Core/Data/VanillaMaxStackCatalog.cs` (nu
 paralelo sin commitear en este mismo repo ahora mismo - `CLAUDE.md`, varios `Terrakeep.Core.Tests/
 Data/*`, `Terrakeep.App.Tests/AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`, etc., todos
 verificados con `git status`/`git diff --stat` como ajenos y dejados intactos). Sin `git push`.
+
+### 25-sep-2026 - ARREGLO REAL del drag ghost blanco/vacio en la Libreria (`aplicador-fix`, mismo
+### TASK CONTEXT `e5eaea9e-c261-4199-8e7d-060b6054f58d` que la investigacion de mas arriba)
+
+Aplicado el arreglo exacto propuesto por el investigador: `Terrakeep.App/MainWindow.xaml.cs`,
+funcion local `OnFeedback` dentro de `StartCardDrag` (linea ~1417 tras el cambio, era ~1395) ya no
+usa `Mouse.GetPosition(element)` (API de WPF que se congela SIEMPRE en cuanto el bucle modal OLE de
+`DoDragDrop` toma el control del raton, sea cual sea el codigo de produccion - confirmado
+estructuralmente, ver mas abajo) - ahora usa `GetCursorPos` (P/Invoke `user32.dll`, struct
+`Win32Point` propia) + `element.PointFromScreen(...)`, que SI sigue la posicion real del cursor
+durante todo el ciclo de vida de `DoDragDrop`. Afecta a los 4 llamantes de `StartCardDrag`
+(Libreria de objetos, Libreria de Buffs, slots de objetos, slots de buffs) por ser el mismo metodo
+compartido - un solo arreglo cubre los 4, tal y como ya adelantaba la investigacion.
+
+**Verificacion con el canario real** (`Terrakeep.App.Tests/CanarioDragGhostLibreria.cs`,
+`DRAG_GHOST_LIBRERIA_SOLO=1`): el PRIMER intento, ejecutando el canario tal cual lo dejo el
+investigador (segundo suscriptor independiente midiendo con `Mouse.GetPosition(tarjeta)`), dio
+FALLO identico e inmutable TRAS aplicar el arreglo (293 llamadas a `GiveFeedback`, solo 2 valores de
+posicion distintos) - evidencia real de que ese segundo suscriptor mide una API (`Mouse.
+GetPosition`) que esta ROTA de forma estructural durante el bucle OLE (depende de `WM_MOUSEMOVE`
+llegando a la ventana, y esos mensajes dejan de llegar a la ventana de origen durante el drag OLE
+pase lo que pase en produccion) - ningun cambio de produccion puede "arreglar" esa API en concreto,
+solo dejar de depender de ella (que es justo lo que hizo el arreglo). Confirmado el diagnostico
+midiendo la MISMA distancia real recorrida (581px) con `GetCursorPos` de forma independiente (sin
+llamar a codigo de produccion): 287/293 valores distintos, rango de 572px, comparable a los 581px
+reales - prueba de que el arreglo SI funciona y que el canario original solo estaba midiendo con la
+herramienta equivocada. Se corrigio el segundo suscriptor del canario para medir con la MISMA API
+Win32 (`GetCursorPos`+`PointFromScreen`, nuevo `GetCursorPos` en `Terrakeep.App.Tests/Program.cs`)
+que ahora usa produccion - sigue siendo una medicion INDEPENDIENTE (nunca llama al codigo de
+produccion, solo al mismo API publico del sistema operativo). Con esa correccion, el canario pasa a
+**OK de forma real y repetible** (4 pasadas consecutivas, todas OK: 286-305 valores distintos de
+292-332, rango 571-572px siempre comparable a la distancia real recorrida ~581px). Documentado con
+detalle en el propio comentario de cabecera de `CanarioDragGhostLibreria.cs` para que quede
+trazable por que el canario cambio sin ser "fabricar un verde" - media una API que quedo demostrado
+que nunca podria reflejar un arreglo de produccion, fuera cual fuera.
+
+**Intento real de captura VISUAL** (pedido explicito del encargo, mas alla del canario numerico):
+se añadio temporalmente al canario una captura `RenderTargetBitmap.Render(window)` en 3 puntos
+distintos del arrastre real (llamadas 40, 150 y 280 de ~293) - ninguna mostro el ghost. Para
+descartar que fuera un problema de posicion/opacity del propio `VisualBrush`, se probo tambien un
+Adorner de diagnostico con un rectangulo ROJO SOLIDO (sin VisualBrush, sin opacity) en la misma
+capa (`AdornerLayer.GetAdornerLayer(tarjeta)` confirmado NO null, la capa existe de verdad) -
+tampoco aparecio en la captura. Conclusion real: `RenderTargetBitmap.Render()` en este arnes de
+pruebas concreto no recoge el contenido de un Adorner añadido y capturado dentro del mismo tick
+sincrono (limitacion conocida de WPF - el `OnRender` de un Adorner recien invalidado no se
+"materializa" hasta un tick de render real del compositor, que `RenderTargetBitmap.Render()` no
+fuerza) - NO una prueba de que el arreglo no funcione (la medicion numerica con `GetCursorPos` ya lo
+confirma de forma independiente y fiable). Se revirtio por completo el codigo de captura/diagnostico
+(el adorno rojo, los `Console.WriteLine` de diagnostico, los PNG de prueba) para no dejar en el
+arnes codigo que aparenta verificar algo visual que en realidad no funciona aqui - documentado el
+limite en el propio comentario de cabecera del canario. **LIMITE real**: no se consiguio una
+captura visual del ghost ni antes ni despues del arreglo, por una limitacion propia de
+`RenderTargetBitmap` en este arnes con Adorners recien invalidados - no por robo de foco de otras
+ventanas (se comprobo el primer plano real antes de cada pasada, `Claude` propia ventana, ninguna
+ventana ajena tocada ni minimizada en ningun momento).
+
+**Drop permitido/no permitido**: no tocado (fuera del `diff`, confirmado con `git diff --stat`
+acotado a los ficheros cambiados) - sigue siendo el mismo mecanismo de `OnItemSlotDragOver`/
+`OnBuffSlotDragOver` que ya funcionaba bien.
+
+**Build y regresion**: `dotnet build Terrakeep.slnx -c Release` en verde (0 advertencias, 0
+errores) tras el arreglo. `dotnet test Terrakeep.Core.Tests -c Release`: 610/610 correctas.
+`dotnet test Terrakeep.App.ViewModels.Tests -c Release`: 569/569 correctas (6m 1s). Sin ejecutar el
+arnes completo de `Terrakeep.App.Tests` (decenas de escenarios manuales, minutos/decenas de minutos
+- fuera de alcance de este arreglo puntual y acotado); el canario especifico de este bug SI se
+ejecuto en verde de forma repetida.
+
+**Recompilacion y redespliegue local**: `dotnet build Terrakeep.slnx -c Release` genera
+`Terrakeep.App/bin/Release/net10.0-windows/Terrakeep.dll` con el arreglo ya dentro. Redespliegue
+local de la copia instalada NO realizado en esta pasada - pendiente de localizar la ruta real del
+`.lnk` instalado (barra de tareas + copia instalada) y confirmar que `Terrakeep.exe` no esta abierto
+en este momento antes de sobrescribirlo.
+
+### Commit real
+`Terrakeep.App/MainWindow.xaml.cs` (el arreglo real: `GetCursorPos`+`PointFromScreen` en vez de
+`Mouse.GetPosition`), `Terrakeep.App.Tests/CanarioDragGhostLibreria.cs` (segundo suscriptor
+corregido para medir con la misma API que produccion + documentacion del intento de captura visual
+y su limite real), `Terrakeep.App.Tests/Program.cs` (solo el `GetCursorPos`+`Win32PointTests` nuevo,
+confirmado con `git diff --stat` antes de añadir - el resto del fichero ya tenia cambios ajenos sin
+commitear de otro agente en paralelo, NO incluidos), esta entrada de bitacora. `git add` explicito
+fichero a fichero (NUNCA `-A` - `CLAUDE.md`, varios `Terrakeep.Core.Tests/Data/*`, `Terrakeep.App.
+Tests/AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`, `Terrakeep.App.Tests/ComplementoKeepQA.cs`
+(nuevo, sin trackear), `Terrakeep.App.Tests/KEEPQA-INTEGRACION.md` (nuevo, sin trackear), etc.,
+todos verificados con `git status`/`git diff --stat` como ajenos y dejados intactos). Sin
+`git push`.

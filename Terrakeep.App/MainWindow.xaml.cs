@@ -1378,12 +1378,30 @@ public partial class MainWindow : Window
     // efecto permitido (Copy|Move para las tarjetas, que SIEMPRE colocan una copia nueva del
     // catalogo; solo Move para slot-a-slot, que intercambian el contenido de los dos) en vez de
     // duplicar el metodo entero.
+    // Bug real "drag ghost blanco/vacio en la Libreria" (25-sep-2026, investigador-bug, TASK
+    // CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d): Mouse.GetPosition(element) deja de reflejar
+    // la posicion real del cursor en cuanto DoDragDrop entra en su bucle modal OLE - WPF cachea
+    // la ultima posicion conocida del PresentationSource y ese bucle nativo no la actualiza,
+    // asi que el ghost se congela fuera de la ventana casi de inmediato (confirmado con
+    // instrumentacion real: 477 de 479 posiciones identicas bit a bit). GetCursorPos (Win32, la
+    // API real que SI sigue actualizandose durante el bucle OLE) + PointFromScreen es el patron
+    // estandar para este problema concreto de WPF.
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Win32Point
+    {
+        public int X;
+        public int Y;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out Win32Point point);
+
     private void StartCardDrag(FrameworkElement element, DataObject data, DragDropEffects allowedEffects = DragDropEffects.Copy | DragDropEffects.Move)
     {
         // AdornerLayer.GetAdornerLayer/DragAdorner anclados al PROPIO elemento arrastrado (no a
         // la ventana) - es el patron real de WPF: el layer que encuentra ya cubre toda la
         // ventana (el AdornerDecorator implicito del template por defecto de Window), y usar el
-        // mismo elemento como AdornedElement mantiene Mouse.GetPosition en el MISMO espacio de
+        // mismo elemento como AdornedElement mantiene la posicion en el MISMO espacio de
         // coordenadas que UpdatePosition, sin tener que reproyectar nada a mano.
         var layer = AdornerLayer.GetAdornerLayer(element);
         if (layer == null) { DragDrop.DoDragDrop(element, data, allowedEffects); return; }
@@ -1392,7 +1410,8 @@ public partial class MainWindow : Window
         layer.Add(adorner);
         void OnFeedback(object? s, GiveFeedbackEventArgs e)
         {
-            var pos = Mouse.GetPosition(element);
+            GetCursorPos(out var screenPt);
+            var pos = element.PointFromScreen(new Point(screenPt.X, screenPt.Y));
             adorner.UpdatePosition(pos.X + 12, pos.Y + 12);
         }
         element.GiveFeedback += OnFeedback;

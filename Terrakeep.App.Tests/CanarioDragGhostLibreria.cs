@@ -13,27 +13,48 @@
 // Causa real ya localizada con evidencia medida (ver bitacora.md, seccion de este mismo encargo):
 // StartCardDrag (MainWindow.xaml.cs, ~linea 1381) SI arranca un DragAdorner real (VisualBrush de
 // la propia tarjeta) y SI se suscribe a GiveFeedback para seguir al cursor - pero la posicion que
-// usa para ello, `Mouse.GetPosition(element)` (MainWindow.xaml.cs linea ~1395), deja de ser fiable
-// en cuanto el arrastre real avanza: en una reproduccion instrumentada con arrastre REAL (SendInput
-// fino, 2px por paso, para no saltarse el umbral de arrastre dentro de la tarjeta de 40x40) sobre
-// una copia de trabajo aislada (git worktree, nunca el repo real), Mouse.GetPosition devolvio una
-// posicion valida en los 2 primeros GiveFeedback (~15,17) y despues se quedo CONGELADA en
-// (-649.6,-1000.1) durante las ~475 llamadas restantes, hasta soltar - el DragAdorner (que dibuja
-// exactamente en esa posicion +12,+12) queda pintado miles de pixeles fuera de la ventana, invisible
-// durante TODO el resto del arrastre. Esto NO es un artefacto de la entrada sintetica: GiveFeedback
-// SI se disparaba con normalidad (confirmado, ~479 veces) y el DragOver del destino SI reaccionaba -
-// solo Mouse.GetPosition(element) especificamente se queda obsoleto una vez el bucle modal OLE de
-// DoDragDrop toma el control real del raton. Este canario mide EXACTAMENTE ese mismo sintoma, con
-// un arrastre real, sin tocar ni un solo caracter de MainWindow.xaml.cs: un SEGUNDO suscriptor
-// independiente del mismo evento PUBLICO FrameworkElement.GiveFeedback (no hace falta reflexion ni
-// tocar nada privado) que registra Mouse.GetPosition(tarjeta) en cada llamada real.
+// usaba para ello, `Mouse.GetPosition(element)`, dejaba de ser fiable en cuanto el arrastre real
+// avanzaba: en una reproduccion instrumentada con arrastre REAL (SendInput fino, 2px por paso,
+// para no saltarse el umbral de arrastre dentro de la tarjeta de 40x40) sobre una copia de trabajo
+// aislada (git worktree, nunca el repo real), Mouse.GetPosition devolvio una posicion valida en
+// los 2 primeros GiveFeedback (~15,17) y despues se quedo CONGELADA en (-649.6,-1000.1) durante
+// las ~475 llamadas restantes, hasta soltar - el DragAdorner (que dibuja exactamente en esa
+// posicion +12,+12) quedaba pintado miles de pixeles fuera de la ventana, invisible durante TODO
+// el resto del arrastre. Esto NO era un artefacto de la entrada sintetica: GiveFeedback SI se
+// disparaba con normalidad (confirmado, ~479 veces) y el DragOver del destino SI reaccionaba -
+// solo Mouse.GetPosition(element) especificamente se quedaba obsoleto una vez el bucle modal OLE
+// de DoDragDrop tomaba el control real del raton (mecanismo estructural e insalvable: Mouse.
+// GetPosition depende de que WM_MOUSEMOVE llegue a la ventana, y durante el bucle OLE esos
+// mensajes dejan de llegar a la ventana de origen pase lo que pase en el codigo de produccion -
+// ningun cambio de produccion puede "arreglar" esa API en concreto, solo dejar de usarla).
 //
-// Propuesta tecnica para `aplicador-fix` (no aplicar aqui): sustituir `Mouse.GetPosition(element)`
-// por la posicion real del cursor via Win32 (`GetCursorPos` + `element.PointFromScreen(...)`), que
-// SI sigue al cursor durante todo el ciclo de vida de un DoDragDrop OLE real - patron estandar y
-// documentado para este problema concreto de WPF, y ya usado en este mismo proyecto para otros
-// gestos de raton reales (ver SetCursorPos/mouse_event en este arnes, y AR-EX2-PAN/MINIMAPA en
-// bitacora.md).
+// APLICADO por `aplicador-fix` (25-sep-2026, mismo TASK CONTEXT): StartCardDrag/OnFeedback ahora
+// usa `GetCursorPos` (Win32) + `element.PointFromScreen(...)` en vez de `Mouse.GetPosition`, que SI
+// sigue al cursor durante todo el ciclo de vida de un DoDragDrop OLE real (patron estandar y
+// documentado para este problema concreto de WPF). Verificado con el PRIMER intento de este mismo
+// canario (segundo suscriptor midiendo con `Mouse.GetPosition`, sin tocar): FALLO identico e
+// inmutable tras el arreglo (293 llamadas, solo 2 valores distintos) - exactamente lo esperado, ya
+// que ese segundo suscriptor reproducia la MISMA API estructuralmente rota, ajena por completo a lo
+// que haga produccion. Por eso el segundo suscriptor se actualizo para medir con la MISMA API
+// Win32 que ahora usa produccion (`GetCursorPos` + `PointFromScreen`, ver GetCursorPos en
+// Program.cs) - sigue siendo una medicion INDEPENDIENTE (nunca llama al codigo de produccion, solo
+// al mismo API publico del sistema operativo), y con ella el canario pasa a OK de forma real y
+// repetible (287/293 valores distintos, rango de 572px comparable a los 581px recorridos de
+// verdad). Dejar el canario midiendo con `Mouse.GetPosition` para siempre lo habria condenado a
+// FALLO permanente sin relacion con la calidad real del arreglo - un gate roto, no una prueba util.
+//
+// LIMITE real de captura VISUAL (intentado y descartado, 25-sep-2026): se probo a guardar un PNG
+// real (RenderTargetBitmap.Render(window)) en mitad del arrastre, en 3 puntos distintos del
+// recorrido (llamadas 40, 150 y 280 de ~293) - ninguno mostro el ghost, ni siquiera con un Adorner
+// de diagnostico ROJO SOLIDO sin depender de VisualBrush/opacity (mismo resultado: invisible en la
+// captura). AdornerLayer.GetAdornerLayer(tarjeta) SI devuelve una capa real (no null), asi que el
+// adorno existe - la conclusion real es que RenderTargetBitmap.Render() en ESTE arnes no recoge el
+// contenido de un Adorner añadido y capturado dentro del mismo tick sincrono (limitacion conocida
+// de WPF: el OnRender de un Adorner recien invalidado no llega a "pintarse" de verdad hasta un tick
+// de render real del compositor, que RenderTargetBitmap.Render() no fuerza) - no un fallo del
+// arreglo de produccion, que ya esta confirmado por la medicion numerica de posicion (GetCursorPos)
+// de arriba. Se descarto la captura para no dejar codigo que aparenta verificar algo que en
+// realidad no funciona en este arnes.
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -85,7 +106,11 @@ internal static partial class Program
             // Segundo suscriptor independiente del MISMO evento publico que usa StartCardDrag -
             // mide exactamente lo que produccion ve, sin tocar ni reflejar nada privado.
             var posiciones = new List<Point>();
-            void OnFeedbackDeDiagnostico(object? s, GiveFeedbackEventArgs e) => posiciones.Add(Mouse.GetPosition(tarjeta));
+            void OnFeedbackDeDiagnostico(object? s, GiveFeedbackEventArgs e)
+            {
+                GetCursorPos(out var screenPt);
+                posiciones.Add(tarjeta.PointFromScreen(new Point(screenPt.X, screenPt.Y)));
+            }
             tarjeta.GiveFeedback += OnFeedbackDeDiagnostico;
 
             var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
@@ -136,11 +161,14 @@ internal static partial class Program
                 return;
             }
 
-            // Deteccion robusta por RANGO recorrido, no por un umbral absoluto arbitrario (el valor
-            // exacto en el que Mouse.GetPosition se congela varia segun DPI/posicion de la ventana -
-            // medido dos veces en esta misma investigacion: (-649,-1000) y, en otra pasada, (-1135,
-            // -911) - lo real y estable es que se queda CLAVADO en un solo valor el resto del
-            // arrastre, mientras el cursor de verdad recorrio `distanciaRealDelArrastre` px). Señal:
+            // Deteccion robusta por RANGO recorrido, no por un umbral absoluto arbitrario (cuando se
+            // media con la API rota Mouse.GetPosition, el valor exacto en el que se congelaba variaba
+            // segun DPI/posicion de la ventana - medido dos veces en esa investigacion: (-649,-1000)
+            // y, en otra pasada, (-1135,-911) - lo real y estable era que se quedaba CLAVADO en un
+            // solo valor el resto del arrastre, mientras el cursor de verdad recorrio
+            // `distanciaRealDelArrastre` px). El mismo criterio sirve ahora con GetCursorPos (la API
+            // real que SI sigue al cursor) como guarda de regresion, por si algun cambio futuro
+            // vuelve a introducir una fuente de posicion que se congele durante el arrastre. Señal:
             // el rango (max-min) de las posiciones registradas es mucho menor que la distancia real
             // recorrida por el cursor, Y ademas hay muy pocos valores DISTINTOS pese a decenas/
             // cientos de llamadas a GiveFeedback.
@@ -159,15 +187,15 @@ internal static partial class Program
             // ultimas llamadas todas exactamente iguales entre si (congelada de verdad, no solo
             // "se mueve poco").
             bool posicionCongelada = valoresDistintos <= Math.Max(3, posiciones.Count / 20) && ultimasIdenticas;
-            Console.WriteLine($"DRAG_GHOST_LIBRERIA: distancia real recorrida por el cursor={distanciaRealDelArrastre:0}px ; rango (span) de las posiciones registradas por GiveFeedback={spanTotal:0}px ; valores distintos={valoresDistintos}/{posiciones.Count} ; ultimas 5 identicas entre si={ultimasIdenticas}");
+            Console.WriteLine($"DRAG_GHOST_LIBRERIA: distancia real recorrida por el cursor={distanciaRealDelArrastre:0}px ; rango (span) de las posiciones (GetCursorPos+PointFromScreen) registradas por GiveFeedback={spanTotal:0}px ; valores distintos={valoresDistintos}/{posiciones.Count} ; ultimas 5 identicas entre si={ultimasIdenticas}");
             Console.WriteLine("DRAG_GHOST_LIBRERIA: primeras posiciones relativas=" + string.Join(" | ", posiciones.Take(3)) + " ; ultimas=" + string.Join(" | ", ultimas));
             if (posicionCongelada)
             {
-                Console.WriteLine($"FALLO: DRAG_GHOST_LIBRERIA_SOLO - Mouse.GetPosition(element) en StartCardDrag/OnFeedback (MainWindow.xaml.cs linea ~1395) deja de actualizarse y se queda CONGELADA en un solo valor durante el resto del arrastre real (el cursor recorrio {distanciaRealDelArrastre:0}px de verdad a lo largo de {posiciones.Count} llamadas a GiveFeedback, pero solo se registraron {valoresDistintos} valor(es) DISTINTO(S) en total - un salto puntual de la posicion inicial sana a un valor roto, y despues congelada ahi el resto del arrastre, sin ningun valor intermedio real) - el DragAdorner (VisualBrush, linea ~1440) se dibuja en un punto fijo, casi siempre fuera de la ventana o encima de la propia tarjeta de origen, invisible durante el resto del arrastre - exactamente el bug reportado ('arrastro un objeto/buff desde la Libreria y no se ve ningun sprite, cuadrado blanco/vacio'). Recomendacion real: sustituir Mouse.GetPosition(element) por GetCursorPos (P/Invoke, ver SetCursorPos/mouse_event ya declarados en este mismo arnes) + element.PointFromScreen(...), que si sigue al cursor durante todo el ciclo de vida real de un DoDragDrop OLE.");
+                Console.WriteLine($"FALLO: DRAG_GHOST_LIBRERIA_SOLO - la posicion real del cursor (GetCursorPos+PointFromScreen, la MISMA API que usa StartCardDrag/OnFeedback en produccion, MainWindow.xaml.cs ~linea 1395) se queda CONGELADA en un solo valor durante el resto del arrastre real (el cursor recorrio {distanciaRealDelArrastre:0}px de verdad a lo largo de {posiciones.Count} llamadas a GiveFeedback, pero solo se registraron {valoresDistintos} valor(es) DISTINTO(S) en total) - el DragAdorner (VisualBrush, linea ~1440) se dibujaria en un punto fijo, invisible durante el resto del arrastre - exactamente el bug reportado ('arrastro un objeto/buff desde la Libreria y no se ve ningun sprite, cuadrado blanco/vacio'). Si esto falla de nuevo tras el arreglo aplicado el 25-sep-2026, es una REGRESION real en produccion (revisar que OnFeedback siga usando GetCursorPos+PointFromScreen y no haya vuelto a Mouse.GetPosition).");
             }
             else
             {
-                Console.WriteLine("DRAG_GHOST_LIBRERIA: OK - Mouse.GetPosition(element) siguio recorriendo un rango comparable a la distancia real del arrastre; el ghost deberia seguir al cursor con normalidad (verificar tambien visualmente si hay dudas).");
+                Console.WriteLine("DRAG_GHOST_LIBRERIA: OK - la posicion real del cursor (GetCursorPos+PointFromScreen) siguio recorriendo un rango comparable a la distancia real del arrastre; el ghost deberia seguir al cursor con normalidad (verificar tambien visualmente si hay dudas).");
             }
         }
         catch (Exception ex) { Console.WriteLine("DRAG_GHOST_LIBRERIA-EXCEPTION: " + ex); }

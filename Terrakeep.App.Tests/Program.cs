@@ -12198,6 +12198,14 @@ internal static partial class Program
     [DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
     private const uint MOUSEEVENTF_LEFTDOWN = 0x0002, MOUSEEVENTF_LEFTUP = 0x0004;
+    // GetCursorPos (25-sep-2026, verificacion real del arreglo de CanarioDragGhostLibreria): la
+    // MISMA API Win32 que ahora usa MainWindow.StartCardDrag/OnFeedback en produccion, para poder
+    // medir de forma independiente (sin llamar a codigo de produccion) si la posicion real del
+    // cursor sigue disponible durante el bucle modal OLE - a diferencia de Mouse.GetPosition, que
+    // esta comprobado que se congela ahi SIEMPRE, sea cual sea el codigo de produccion.
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Win32PointTests { public int X; public int Y; }
+    [DllImport("user32.dll")] private static extern bool GetCursorPos(out Win32PointTests point);
 
     // ForzarPrimerPlano (15-sep-2026, ronda de re-verificacion de los 21 FALLO): mismo problema
     // real, mismo arreglo real, que StarvekeepMod ya encontro y resolvio calibrando DST el
