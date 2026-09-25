@@ -117,13 +117,17 @@ import json
 import os
 import re
 
-VANILLA = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\TerrariaVanilla\Terraria"
-TMODLOADER = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\tModLoader\Terraria"
+# CalamityAccesorios (25-sep-2026): rutas corregidas - Downloads\tModLoader-Decompiled\ sin
+# Keep\ ya no existe en disco (centralizacion 16-sep-2026, confirmado real con `ls`), mismo
+# arreglo aditivo ya aplicado en scripts/extraer-slot-armadura-calamity.js. Las 3 comparten la
+# misma raiz obsoleta (VANILLA/TMODLOADER/CALAMITY_SRC), no solo CALAMITY_SRC.
+VANILLA = r"C:\Users\adrian\Downloads\Keep\tModLoader-Decompiled\TerrariaVanilla\Terraria"
+TMODLOADER = r"C:\Users\adrian\Downloads\Keep\tModLoader-Decompiled\tModLoader\Terraria"
 ITEM_SRC = os.path.join(VANILLA, "Item.cs")
 LEGACY_SRC = os.path.join(VANILLA, "GameContent", "Prefixes", "PrefixLegacy.cs")
 ITEMID_SRC = os.path.join(VANILLA, "ID", "PrefixID.cs")
 ITEMIDS_SRC = os.path.join(VANILLA, "ID", "ItemID.cs")
-CALAMITY_SRC = r"C:\Users\adrian\Downloads\tModLoader-Decompiled\CalamityMod\CalamityMod\Items"
+CALAMITY_SRC = r"C:\Users\adrian\Downloads\Keep\tModLoader-Decompiled\CalamityMod\CalamityMod\Items"
 ASSETS = r"C:\Users\adrian\Downloads\Terrasavr-Win\Terrasavr-Native\Terrakeep.App\Assets"
 CATALOG = os.path.join(ASSETS, "calamity", "catalog.json")
 OUT = os.path.join(ASSETS, "calamity", "best_prefix.json")

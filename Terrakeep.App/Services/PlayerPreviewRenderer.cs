@@ -221,6 +221,32 @@ public static class PlayerPreviewRenderer
             Composite(canvas, LoadStripFrameAbsolute(file, legAnimationFrame), null);
         }
 
+        // CalamityAccesorios (25-sep-2026): HandOn/HandOff son un caso real MIXTO, a diferencia
+        // de los otros 8 tipos de accesorio (siempre tira 40x(56*N)) - confirmado en el motor
+        // real (Terraria.ID.ArmorIDs.HandOn/HandOff.Sets.UsesNewFramingCode, EquipLoader.cs:
+        // "case EquipType.HandsOn: ArmorIDs.HandOn.Sets.UsesNewFramingCode[key] = true;" para
+        // CUALQUIER item de mod registrado en HandsOn/HandsOff, sin excepcion) que estos 2 tipos
+        // se dibujan con la MISMA hoja compuesta 360x224 y frontArmCell/backArmCell que
+        // armor.BodyFile (DrawCompositeArmorPiece real, PlayerDrawLayers.cs:298-299:
+        // "FrontArmAccessory => (EquipType.HandsOn, ...)", "BackArmAccessory => (EquipType.
+        // HandsOff, ...)"), NO con la tira simple de DrawAccessory. Confirmado con los 6 guantes
+        // reales de Calamity (BloodstainedGlove, ElectriciansGlove, ElementalGauntlet,
+        // FilthyGlove, GloveOfPrecision, GloveOfRecklessness): sus 12 sprites ya extraidos miden
+        // 360x224 de verdad, NO 40x1120 (bug real atrapado por esta misma pasada: con
+        // DrawAccessory sin cambios, el guante se resolvia bien en EquipmentAppearanceResolver
+        // pero el render salia PIXEL A PIXEL IDENTICO a "sin nada puesto" - SliceStripRow asume
+        // ancho de tira fijo Width(40), corrompe silenciosamente el recorte de una hoja de
+        // 360px de ancho real). Los 24 sprites vanilla ya extraidos (acc_handon/acc_handoff) SI
+        // miden 40x1120 (tira) - se detecta por el ANCHO/ALTO REAL del PNG decodificado, nunca
+        // por el origen vanilla/Calamity, para no romper ni el contrato existente de esos 24
+        // sprites ni las pruebas "orden" (PNG sinteticos 40x56 de
+        // PlayerPreviewRendererAccessoriesTests, tambien caen en la rama tira).
+        void DrawHandAccessory(string? file, (int Col, int Row) armCell)
+        {
+            if (file is null) return;
+            Composite(canvas, LoadHandAccessoryFrame(file, armCell, legAnimationFrame), null);
+        }
+
         // ESPEC-dibujado-sprites.md#7.2: cadena real de SetMatch (Player.cs:36053-36092), tres
         // llamadas encadenadas que pueden sustituir legs/head. `bodyId`/`legsId` en 0 quiere
         // decir "sin bodySlot/legSlot vanilla conocido" (slot vacio o pieza de Calamity) - las
@@ -440,7 +466,7 @@ public static class PlayerPreviewRenderer
         // Paso 8b [18/19/20_OffhandAcc/WaistAcc/NeckAcc]: los tres accesorios de torso que van
         // ANTES de la cabeza en el orden real (PlayerDrawLayers.cs, ids de capa 18/19/20 - HandOff
         // primero, Waist, Neck ultimo de los tres).
-        DrawAccessory(accessories?.HandOffFile);
+        DrawHandAccessory(accessories?.HandOffFile, backArmCell);
         DrawAccessory(accessories?.WaistFile);
         DrawAccessory(accessories?.NeckFile);
 
@@ -507,7 +533,7 @@ public static class PlayerPreviewRenderer
         // Paso 10b [29_OnhandAcc]: accesorio "en mano" (guantes/garras puestos como accesorio,
         // no como arma), ultimo de los 7 tipos - despues del brazo/hombro delantero (FrontAccFront
         // queda fuera de alcance de este encargo).
-        DrawAccessory(accessories?.HandOnFile);
+        DrawHandAccessory(accessories?.HandOnFile, frontArmCell);
 
         if (mirror) FlipHorizontal(canvas);
 
@@ -760,6 +786,31 @@ public static class PlayerPreviewRenderer
     // las dos).
     private static byte[] LoadArmorCell(string absolutePath, (int Col, int Row) cell) =>
         SliceCell(LoadSheetCached(absolutePath), cell);
+
+    // CalamityAccesorios (25-sep-2026): ver el comentario real de DrawHandAccessory (dentro de
+    // Render) para la cita completa del motor real - HandOn/HandOff pueden venir como hoja
+    // compuesta 360x224 (los 6 guantes reales de Calamity) O como tira simple 40x(56*N) (los 24
+    // sprites vanilla ya extraidos) - se detecta por el tamaño REAL del PNG decodificado, cacheado
+    // aparte (solo cabecera, no los pixeles completos) para no pagar el coste dos veces por
+    // fichero.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (int Width, int Height)> PngDimensionsCache = new();
+
+    private static (int Width, int Height) GetPngDimensions(string path) =>
+        PngDimensionsCache.GetOrAdd(path, p =>
+        {
+            using var stream = File.OpenRead(p);
+            var decoder = new PngBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            var frame = decoder.Frames[0];
+            return (frame.PixelWidth, frame.PixelHeight);
+        });
+
+    private static byte[] LoadHandAccessoryFrame(string absolutePath, (int Col, int Row) cell, int frameRow)
+    {
+        var (w, h) = GetPngDimensions(absolutePath);
+        return w == SheetWidth && h == SheetHeight
+            ? LoadArmorCell(absolutePath, cell)
+            : LoadStripFrameAbsolute(absolutePath, frameRow);
+    }
 
     // H6-04: el id de HairStyle del .plr se usa tal cual como nombre de archivo (0-227, mismo
     // rango 0-based que el propio Player.hair real) - si el id no tiene archivo, cae al

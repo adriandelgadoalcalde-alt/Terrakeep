@@ -64,6 +64,11 @@ public sealed record PetPreview(PetAnimationEntry? AnimationEntry, string? IconP
 // ArmorIDs.cs:2252): resuelto una vez como "Balloon" (ResolveAccessorySprite) y reclasificado
 // DESPUES a "BalloonFront" si BalloonAccessoryLayerTable.IsFrontLayer(balloonSlotId), mismo
 // sprite (acc_balloon/{balloonSlotId}.png), sin duplicar logica de resolucion.
+// CalamityAccesorios (25-sep-2026): paridad Calamity real para los 9 canales de accesorio
+// (Waist/Neck/HandsOn/HandsOff/Back/Shield/Face/Balloon/Shoes) - IsAccessoryType/
+// ResolveAccessorySprite ya eran genericos por tipo desde PortSeleccion Encargo1, lo unico que
+// faltaba era el DATO (CalamityCatalogEntry.EquipSlot poblado para estos 9 tipos, ver
+// scripts/extraer-slot-armadura-calamity.js). Sin cambios en el renderer.
 public sealed record EquippedAccessories(
     string? WaistFile, string? NeckFile, string? HandOnFile, string? HandOffFile,
     string? BackFile, string? ShieldFile, string? FaceFile,
@@ -157,13 +162,21 @@ public sealed class EquipmentAppearanceResolver
                 if (s.IsEmpty) continue;
                 if (IsAccessoryType(s, e => e.Waist, "Waist")) waist = s;
                 if (IsAccessoryType(s, e => e.Neck, "Neck")) neck = s;
-                if (IsAccessoryType(s, e => e.HandOn, "HandOn")) handOn = s;
-                if (IsAccessoryType(s, e => e.HandOff, "HandOff")) handOff = s;
+                // CalamityAccesorios (25-sep-2026): el sufijo real de Calamity es el nombre CRUDO
+                // del enum EquipType (HandsOn/HandsOff/Shoes, confirmado en el propio
+                // EquipType.cs decompilado Y en los ficheros reales ya extraidos de
+                // Assets/calamity/icons/, ej. BloodstainedGlove_HandsOn.png) - NO el alias corto
+                // "HandOn"/"HandOff"/"Shoe" que usan los campos vanilla de abajo (e.HandOn/
+                // e.Shoe, VanillaAccessorySlotEntry) ni los directorios acc_handon/acc_shoes.
+                // Los dos sufijos son independientes a proposito: calamitySuffix solo se usa
+                // dentro de la rama Calamity de IsAccessoryType/ResolveAccessorySprite.
+                if (IsAccessoryType(s, e => e.HandOn, "HandsOn")) handOn = s;
+                if (IsAccessoryType(s, e => e.HandOff, "HandsOff")) handOff = s;
                 if (IsAccessoryType(s, e => e.Back, "Back")) back = s;
                 if (IsAccessoryType(s, e => e.Shield, "Shield")) shield = s;
                 if (IsAccessoryType(s, e => e.Face, "Face")) face = s;
                 // GapAnalysis Encargo D (25-sep-2026): shoeSlot, mismo patron exacto.
-                if (IsAccessoryType(s, e => e.Shoe, "Shoe")) shoes = s;
+                if (IsAccessoryType(s, e => e.Shoe, "Shoes")) shoes = s;
                 // GapAnalysis Encargo C (25-sep-2026): balloonSlot, mismo patron exacto.
                 if (IsAccessoryType(s, e => e.Balloon, "Balloon")) balloon = s;
             }
@@ -173,14 +186,14 @@ public sealed class EquipmentAppearanceResolver
 
         var (waistFile, waistSlotId) = ResolveAccessorySprite(waist, "Waist", e => e.Waist, "acc_waist");
         var (neckFile, neckSlotId) = ResolveAccessorySprite(neck, "Neck", e => e.Neck, "acc_neck");
-        var (handOnFile, handOnSlotId) = ResolveAccessorySprite(handOn, "HandOn", e => e.HandOn, "acc_handon");
-        var (handOffFile, handOffSlotId) = ResolveAccessorySprite(handOff, "HandOff", e => e.HandOff, "acc_handoff");
+        var (handOnFile, handOnSlotId) = ResolveAccessorySprite(handOn, "HandsOn", e => e.HandOn, "acc_handon");
+        var (handOffFile, handOffSlotId) = ResolveAccessorySprite(handOff, "HandsOff", e => e.HandOff, "acc_handoff");
         var (backFile, backSlotId) = ResolveAccessorySprite(back, "Back", e => e.Back, "acc_back");
         var (shieldFile, shieldSlotId) = ResolveAccessorySprite(shield, "Shield", e => e.Shield, "acc_shield");
         var (faceFile, faceSlotId) = ResolveAccessorySprite(face, "Face", e => e.Face, "acc_face");
         // GapAnalysis Encargo D (25-sep-2026): guarda el id MASCULINO/neutro tal cual - la
         // regla de sexo real (MaleToFemaleID) se aplica despues, en PlayerPreviewRenderer.Render.
-        var (shoesFile, shoesSlotId) = ResolveAccessorySprite(shoes, "Shoe", e => e.Shoe, "acc_shoes");
+        var (shoesFile, shoesSlotId) = ResolveAccessorySprite(shoes, "Shoes", e => e.Shoe, "acc_shoes");
         var (balloonFile, balloonSlotId) = ResolveAccessorySprite(balloon, "Balloon", e => e.Balloon, "acc_balloon");
 
         // GapAnalysis Encargo A (25-sep-2026): reclasifica el resultado de "Back" YA resuelto en
@@ -232,7 +245,10 @@ public sealed class EquipmentAppearanceResolver
         if (slot.Id >= CalamityIds.ItemIdBase)
         {
             var entry = _calamity.BySyntheticId(slot.Id);
-            return entry?.EquipSlot == calamitySuffix;
+            // CalamityAccesorios (25-sep-2026): 6 guantes reales declaran HandsOn+HandsOff a la
+            // vez - EquipSlotSecondary es el unico caso real con un segundo canal (ver su
+            // comentario en CalamityCatalog.cs).
+            return entry is not null && (entry.EquipSlot == calamitySuffix || entry.EquipSlotSecondary == calamitySuffix);
         }
         var vEntry = _vanillaAccessorySlots.ById(slot.Id);
         return vEntry is not null && vanillaPick(vEntry) is not null;
@@ -249,7 +265,7 @@ public sealed class EquipmentAppearanceResolver
         if (s.Id >= CalamityIds.ItemIdBase)
         {
             var entry = _calamity.BySyntheticId(s.Id);
-            if (entry is null || entry.EquipSlot != calamitySuffix) return (null, null);
+            if (entry is null || (entry.EquipSlot != calamitySuffix && entry.EquipSlotSecondary != calamitySuffix)) return (null, null);
             string calPath = Path.Combine(AppContext.BaseDirectory, "Assets", "calamity", "icons", entry.Internal + "_" + calamitySuffix + ".png");
             return (File.Exists(calPath) ? calPath : null, null);
         }

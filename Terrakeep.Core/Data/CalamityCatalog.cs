@@ -51,6 +51,17 @@ public sealed class CalamityCatalogEntryData
     // scripts/extraer-slot-armadura-calamity.js) - null para lo que no es una pieza de
     // armadura de cuerpo real (accesorios, armas, el resto de categorias).
     [JsonPropertyName("equipSlot")] public string? EquipSlot { get; init; }
+    // CalamityAccesorios (25-sep-2026): 6 items reales (guantes: BloodstainedGlove,
+    // ElectriciansGlove, ElementalGauntlet, FilthyGlove, GloveOfPrecision, GloveOfRecklessness)
+    // declaran [AutoloadEquip(new EquipType[] { EquipType.HandsOn, EquipType.HandsOff })] a la
+    // vez - un unico string EquipSlot no basta. Decision de diseno (menos invasiva que
+    // EquipSlot->string[]?, que habria obligado a reescribir todos los "== \"Body\""/switch ya
+    // existentes en ItemSlotViewModel/ItemEquipSlotClassifier/CalamityArmorSetCatalog): campo
+    // nuevo solo para el caso doble real. null para el 100% de piezas de armadura (Head/Body/
+    // Legs, siempre uno solo, 0 casos con mas de uno en Items/Armor) y para las 24 restantes de
+    // los 9 canales de accesorio que solo declaran un tipo. Ver scripts/extraer-slot-armadura-
+    // calamity.js.
+    [JsonPropertyName("equipSlotSecondary")] public string? EquipSlotSecondary { get; init; }
     // Bono de set completo real (pedido explicito del usuario tras el arreglo de defensa: "la
     // bonificacion por el set no [aparece]") - texto real resuelto del sistema de plantillas de
     // localizacion de tModLoader/Calamity (referencias {$Clave@N} anidadas, ver
@@ -99,6 +110,9 @@ public sealed class CalamityCatalogEntry(CalamityCatalogEntryData data, int synt
         return string.IsNullOrWhiteSpace(picked) ? null : picked;
     }
     public string? EquipSlot => data.EquipSlot;
+    // Ver el comentario real de CalamityCatalogEntryData.EquipSlotSecondary - solo relleno para
+    // los 6 guantes reales HandsOn+HandsOff.
+    public string? EquipSlotSecondary => data.EquipSlotSecondary;
 
     // Cache binaria en disco (17-sep-2026, ver LibraryCatalogDiskCache): acceso interno al dato
     // crudo tal cual vino de catalog.json, para poder volcarlo campo a campo sin reconstruir un
@@ -171,6 +185,7 @@ public sealed class CalamityCatalog
             CatalogBinaryCache.WriteNullableString(w, d.DisplayNameFallback);
             CatalogBinaryCache.WriteNullableString(w, d.Icon);
             CatalogBinaryCache.WriteNullableString(w, d.EquipSlot);
+            CatalogBinaryCache.WriteNullableString(w, d.EquipSlotSecondary);
             CatalogBinaryCache.WriteNullableString(w, d.SetBonus);
             CatalogBinaryCache.WriteNullableString(w, d.SetBonusEn);
             w.Write(d.Stats != null);
@@ -202,6 +217,7 @@ public sealed class CalamityCatalog
             string? displayFallback = CatalogBinaryCache.ReadNullableString(r);
             string? icon = CatalogBinaryCache.ReadNullableString(r);
             string? equipSlot = CatalogBinaryCache.ReadNullableString(r);
+            string? equipSlotSecondary = CatalogBinaryCache.ReadNullableString(r);
             string? setBonus = CatalogBinaryCache.ReadNullableString(r);
             string? setBonusEn = CatalogBinaryCache.ReadNullableString(r);
             CalamityItemStats? stats = null;
@@ -230,6 +246,7 @@ public sealed class CalamityCatalog
                 Icon = icon,
                 Stats = stats,
                 EquipSlot = equipSlot,
+                EquipSlotSecondary = equipSlotSecondary,
                 SetBonus = setBonus,
                 SetBonusEn = setBonusEn,
             });

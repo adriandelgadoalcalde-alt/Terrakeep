@@ -56,11 +56,14 @@ const LOC_LANG = MODO_INGLES ? 'en_US' : 'es_ES';
 // de extraer-tooltips-vanilla.py.
 const TEXTO_TECLA = MODO_INGLES ? '(configured key)' : '(tecla configurada)';
 
-const CALAMITY_SRC = 'C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\CalamityMod';
+// CalamityAccesorios (25-sep-2026): ruta corregida - Downloads\tModLoader-Decompiled\ sin
+// Keep\ ya no existe (centralizacion 16-sep-2026, confirmado real: `ls` sobre la ruta vieja da
+// ENOENT), mismo arreglo aditivo ya aplicado en scripts/extraer-slot-armadura-calamity.js.
+const CALAMITY_SRC = 'C:\\Users\\adrian\\Downloads\\Keep\\tModLoader-Decompiled\\CalamityMod';
 const TMOD_PATH = 'C:\\Users\\adrian\\Documents\\My Games\\Terraria\\tModLoader\\Mods\\2026.6CalamityMod.tmod';
-const TMOD_EXTRACT = 'C:\\Users\\adrian\\Downloads\\Terrasavr-Win\\Terrasavr-Calamity-Beta\\resources\\app\\tmod-extract.js';
-const VANILLA_LOC_ES = `C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\tModLoader\\Terraria.Localization.Content.${LOC_LANG}.tModLoader.json`;
-const VANILLA_LOC_ES_MAIN = `C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\tModLoader\\Terraria.Localization.Content.${LOC_LANG}.Main.json`;
+const TMOD_EXTRACT = 'C:\\Users\\adrian\\Downloads\\Keep\\Terrasavr-Win\\Terrasavr-Calamity-Beta\\resources\\app\\tmod-extract.js';
+const VANILLA_LOC_ES = `C:\\Users\\adrian\\Downloads\\Keep\\tModLoader-Decompiled\\tModLoader\\Terraria.Localization.Content.${LOC_LANG}.tModLoader.json`;
+const VANILLA_LOC_ES_MAIN = `C:\\Users\\adrian\\Downloads\\Keep\\tModLoader-Decompiled\\tModLoader\\Terraria.Localization.Content.${LOC_LANG}.Main.json`;
 const OUT_PATH = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity',
     MODO_INGLES ? 'set_bonus_en_real.json' : 'set_bonus_en.json');
 

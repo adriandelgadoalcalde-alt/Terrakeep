@@ -14,7 +14,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Abaddon"
+    "displayName_en": "Abaddon",
+    "equipSlot": "Face"
   },
   {
     "internal": "AbyssalDivingGear",
@@ -31,7 +32,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Abyssal Diving Gear"
+    "displayName_en": "Abyssal Diving Gear",
+    "equipSlot": "Face"
   },
   {
     "internal": "AbyssalDivingSuit",
@@ -235,7 +237,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Angel Treads"
+    "displayName_en": "Angel Treads",
+    "equipSlot": "Shoes"
   },
   {
     "internal": "AngelicAlliance",
@@ -372,7 +375,8 @@
       "damageType": null,
       "defense": 6
     },
-    "displayName_en": "Asgardian Aegis"
+    "displayName_en": "Asgardian Aegis",
+    "equipSlot": "Shield"
   },
   {
     "internal": "AsgardsValor",
@@ -390,7 +394,8 @@
       "damageType": null,
       "defense": 4
     },
-    "displayName_en": "Asgard's Valor"
+    "displayName_en": "Asgard's Valor",
+    "equipSlot": "Shield"
   },
   {
     "internal": "BadgeofBravery",
@@ -509,7 +514,9 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Bloodstained Glove"
+    "displayName_en": "Bloodstained Glove",
+    "equipSlot": "HandsOn",
+    "equipSlotSecondary": "HandsOff"
   },
   {
     "internal": "BloodyWormScarf",
@@ -527,7 +534,8 @@
       "damageType": null,
       "defense": 2
     },
-    "displayName_en": "Bloody Worm Scarf"
+    "displayName_en": "Bloody Worm Scarf",
+    "equipSlot": "Neck"
   },
   {
     "internal": "BloodyWormTooth",
@@ -698,7 +706,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Counter Scarf"
+    "displayName_en": "Counter Scarf",
+    "equipSlot": "Neck"
   },
   {
     "internal": "CrawCarapace",
@@ -886,7 +895,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Depths Charm"
+    "displayName_en": "Depths Charm",
+    "equipSlot": "Waist"
   },
   {
     "internal": "DiamondOfTheDeep",
@@ -903,7 +913,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Diamond of the Deep"
+    "displayName_en": "Diamond of the Deep",
+    "equipSlot": "Neck"
   },
   {
     "internal": "DivineProvidence",
@@ -1006,7 +1017,9 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Electrician's Glove"
+    "displayName_en": "Electrician's Glove",
+    "equipSlot": "HandsOn",
+    "equipSlotSecondary": "HandsOff"
   },
   {
     "internal": "ElementalGauntlet",
@@ -1023,7 +1036,9 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Elemental Gauntlet"
+    "displayName_en": "Elemental Gauntlet",
+    "equipSlot": "HandsOn",
+    "equipSlotSecondary": "HandsOff"
   },
   {
     "internal": "ElementalinaBottle",
@@ -1058,7 +1073,8 @@
       "damageType": null,
       "defense": 5
     },
-    "displayName_en": "Elysian Aegis"
+    "displayName_en": "Elysian Aegis",
+    "equipSlot": "Shield"
   },
   {
     "internal": "EnchantedPearl",
@@ -1126,7 +1142,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Evasion Scarf"
+    "displayName_en": "Evasion Scarf",
+    "equipSlot": "Neck"
   },
   {
     "internal": "EyeoftheStorm",
@@ -1177,7 +1194,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Feather Crown"
+    "displayName_en": "Feather Crown",
+    "equipSlot": "Face"
   },
   {
     "internal": "FilthyGlove",
@@ -1194,7 +1212,9 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Filthy Glove"
+    "displayName_en": "Filthy Glove",
+    "equipSlot": "HandsOn",
+    "equipSlotSecondary": "HandsOff"
   },
   {
     "internal": "FishStocks",
@@ -1382,7 +1402,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Giant Shell"
+    "displayName_en": "Giant Shell",
+    "equipSlot": "Back"
   },
   {
     "internal": "GiantTortoiseShell",
@@ -1433,7 +1454,9 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Glove of Precision"
+    "displayName_en": "Glove of Precision",
+    "equipSlot": "HandsOn",
+    "equipSlotSecondary": "HandsOff"
   },
   {
     "internal": "GloveOfRecklessness",
@@ -1450,7 +1473,9 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Glove of Recklessness"
+    "displayName_en": "Glove of Recklessness",
+    "equipSlot": "HandsOn",
+    "equipSlotSecondary": "HandsOff"
   },
   {
     "internal": "GrandGelatin",
@@ -1688,7 +1713,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Iron Boots"
+    "displayName_en": "Iron Boots",
+    "equipSlot": "Shoes"
   },
   {
     "internal": "JellyChargedBattery",
@@ -1825,7 +1851,8 @@
       "damageType": null,
       "defense": 2
     },
-    "displayName_en": "Marnite Repulsion Shield"
+    "displayName_en": "Marnite Repulsion Shield",
+    "equipSlot": "Back"
   },
   {
     "internal": "MirageMirror",
@@ -1859,7 +1886,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Moonstone Crown"
+    "displayName_en": "Moonstone Crown",
+    "equipSlot": "Face"
   },
   {
     "internal": "Nanotech",
@@ -1979,7 +2007,8 @@
       "damageType": null,
       "defense": 5
     },
-    "displayName_en": "Occult Skull Crown"
+    "displayName_en": "Occult Skull Crown",
+    "equipSlot": "Face"
   },
   {
     "internal": "OceanCrest",
@@ -2048,7 +2077,8 @@
       "damageType": null,
       "defense": 2
     },
-    "displayName_en": "Ornate Shield"
+    "displayName_en": "Ornate Shield",
+    "equipSlot": "Shield"
   },
   {
     "internal": "PearlofEnthrallment",
@@ -2201,7 +2231,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Quiver of Nihility"
+    "displayName_en": "Quiver of Nihility",
+    "equipSlot": "Back"
   },
   {
     "internal": "Radiance",
@@ -2270,7 +2301,8 @@
       "damageType": null,
       "defense": 8
     },
-    "displayName_en": "Rampart of Deities"
+    "displayName_en": "Rampart of Deities",
+    "equipSlot": "Shield"
   },
   {
     "internal": "ReaperToothNecklace",
@@ -2491,7 +2523,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Sea Spirit Amulet"
+    "displayName_en": "Sea Spirit Amulet",
+    "equipSlot": "Neck"
   },
   {
     "internal": "ShatteredCommunity",
@@ -2526,7 +2559,8 @@
       "damageType": "DamageClass.MeleeNoSpeed",
       "defense": 4
     },
-    "displayName_en": "Shield of the High Ruler"
+    "displayName_en": "Shield of the High Ruler",
+    "equipSlot": "Shield"
   },
   {
     "internal": "ShieldoftheOcean",
@@ -2723,7 +2757,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Statis' Blessing"
+    "displayName_en": "Statis' Blessing",
+    "equipSlot": "Neck"
   },
   {
     "internal": "StatisCurse",
@@ -2740,7 +2775,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Statis' Curse"
+    "displayName_en": "Statis' Curse",
+    "equipSlot": "Neck"
   },
   {
     "internal": "StatisNinjaBelt",
@@ -2895,7 +2931,8 @@
       "damageType": null,
       "defense": 10
     },
-    "displayName_en": "The Camper"
+    "displayName_en": "The Camper",
+    "equipSlot": "Back"
   },
   {
     "internal": "TheCommunity",
@@ -3235,7 +3272,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Warbanner of the Righteous"
+    "displayName_en": "Warbanner of the Righteous",
+    "equipSlot": "Balloon"
   },
   {
     "internal": "WulfrumAcrobaticsPack",
@@ -3252,7 +3290,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Wulfrum Acrobatics Pack"
+    "displayName_en": "Wulfrum Acrobatics Pack",
+    "equipSlot": "Back"
   },
   {
     "internal": "WulfrumBattery",
@@ -3304,7 +3343,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Abandoned Wulfrum Helmet"
+    "displayName_en": "Abandoned Wulfrum Helmet",
+    "equipSlot": "Head"
   },
   {
     "internal": "GhostBracelet",
@@ -3389,7 +3429,8 @@
       "mana": null,
       "damageType": null
     },
-    "displayName_en": "Luci's Sight"
+    "displayName_en": "Luci's Sight",
+    "equipSlot": "Face"
   },
   {
     "internal": "OracleHeadphones",
@@ -3554,7 +3595,8 @@
     "displayName_es": "Caminantes Lunares",
     "displayName_fallback": "Moon Walkers",
     "icon": "MoonWalkers.png",
-    "displayName_en": "Moon Walkers"
+    "displayName_en": "Moon Walkers",
+    "equipSlot": "Shoes"
   },
   {
     "internal": "SeraphTracers",
@@ -28924,7 +28966,8 @@
       "mana": null,
       "damageType": "DamageClass.MeleeNoSpeed"
     },
-    "displayName_en": "Stygian Shield"
+    "displayName_en": "Stygian Shield",
+    "equipSlot": "Shield"
   },
   {
     "internal": "SubmarineShocker",

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Terrakeep.App.Services;
@@ -81,6 +82,42 @@ public sealed class PlayerPreviewRendererAccessoriesTests : IDisposable
         var conAccesorio = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
 
         Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
+    }
+
+    // CalamityAccesorios (25-sep-2026): bug real atrapado en esta misma pasada, NO por
+    // inspeccion sino comparando capturas reales antes/despues - el wiring de arriba (7 tipos
+    // vanilla) usa DrawAccessory (tira 40x(56*N)), pero HandOn/HandOff de Calamity son sprites
+    // 360x224 (hoja compuesta, ver el comentario real de DrawHandAccessory en
+    // PlayerPreviewRenderer.cs) - con DrawAccessory sin cambios, EquipmentAppearanceResolver
+    // SI resolvia el sprite correcto pero el render salia PIXEL A PIXEL IDENTICO al de "nada
+    // puesto" (SliceStripRow asumia ancho de tira fijo 40px, corrompia el recorte en silencio).
+    // Un item real (guante) puesto UNA vez debe cambiar el render en AMBOS canales (HandOn Y
+    // HandOff se resuelven del mismo item, ver CalamityHandsOnYHandsOff_
+    // UnMismoGuanteResuelveLosDosCanalesALaVez en EquipmentAppearanceResolverTests).
+    [Fact]
+    public void CalamityGuanteReal_CambiaElResultadoRespectoASinAccesorios_HojaCompuesta360x224()
+    {
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "HandsOn" && e.EquipSlotSecondary == "HandsOff");
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(entry.SyntheticId, 1, 0, false);
+        var accesorios = Service.EquipmentAppearance.ResolveAccessories(loadout);
+        Assert.NotNull(accesorios.HandOnFile);
+        Assert.NotNull(accesorios.HandOffFile);
+
+        var sinAccesorios = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors);
+        var conAccesorio = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: accesorios);
+
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(conAccesorio));
+
+        // Aislado por canal (mismo criterio que RenderConBalloonFileDaUnaImagenDistintaASinEl_
+        // AislandoSoloEsaCapa): confirma que HandOnFile y HandOffFile pintan CADA UNO algo real
+        // por su cuenta, no solo que "el conjunto" cambia.
+        var soloHandOn = new EquippedAccessories(null, null, accesorios.HandOnFile, null, null, null, null);
+        var soloHandOff = new EquippedAccessories(null, null, null, accesorios.HandOffFile, null, null, null);
+        var renderSoloHandOn = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: soloHandOn);
+        var renderSoloHandOff = PlayerPreviewRenderer.Render(1, skinVariant: PlayerVariantSets.MaleStarter, Colors, accessories: soloHandOff);
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(renderSoloHandOn));
+        Assert.NotEqual(Pixels(sinAccesorios), Pixels(renderSoloHandOff));
     }
 
     [Fact]

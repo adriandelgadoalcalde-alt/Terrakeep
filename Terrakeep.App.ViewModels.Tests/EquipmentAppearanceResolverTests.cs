@@ -635,4 +635,149 @@ public sealed class EquipmentAppearanceResolverTests
 
         Assert.NotEqual(pixelesSin, pixelesCon);
     }
+
+    // CalamityAccesorios (25-sep-2026, gap analysis paridad UICharacter): los 9 canales de
+    // accesorio real de Calamity (Waist/Neck/HandsOn/HandsOff/Back/Shield/Face/Balloon/Shoes) -
+    // IsAccessoryType/ResolveAccessorySprite ya eran genericos por tipo, lo que faltaba era
+    // CalamityCatalogEntry.EquipSlot poblado para estos 9 tipos (ver scripts/extraer-slot-
+    // armadura-calamity.js). Un test por canal, pidiendo el item real al catalogo
+    // dinamicamente (nunca un id hardcodeado sin verificar que existe) - mismo criterio ya
+    // establecido en ObjetoCalamityRealConEquipSlot_ResuelveElSpriteRealYaExtraidoDelTmod.
+    private static PlrLoadout LoadoutConCalamityEnAccesorio(int syntheticId)
+    {
+        var loadout = PlrLoadout.CreateEmpty(isPrimary: true);
+        loadout.Items[3] = new PlrItemSlot(syntheticId, 1, 0, false);
+        return loadout;
+    }
+
+    [Fact]
+    public void CalamityWaist_ResuelveElIconoRealYaExtraidoDelTmod()
+    {
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Waist");
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.True(File.Exists(acc.WaistFile));
+        Assert.EndsWith(entry.Internal + "_Waist.png", acc.WaistFile);
+        Assert.Null(acc.WaistSlot); // numeracion propia de Calamity, no compartida con vanilla
+    }
+
+    [Fact]
+    public void CalamityNeck_ResuelveElIconoRealYaExtraidoDelTmod()
+    {
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Neck");
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+        Assert.NotNull(acc.NeckFile);
+        Assert.True(File.Exists(acc.NeckFile));
+        Assert.EndsWith(entry.Internal + "_Neck.png", acc.NeckFile);
+    }
+
+    [Fact]
+    public void CalamityBack_ResuelveElIconoRealYaExtraidoDelTmod()
+    {
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Back");
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+        Assert.NotNull(acc.BackFile);
+        Assert.True(File.Exists(acc.BackFile));
+        Assert.EndsWith(entry.Internal + "_Back.png", acc.BackFile);
+        // backSlotId es null para Calamity (numeracion propia) - BackAccessoryLayerTable nunca
+        // reclasifica a Backpack/Tail para estos objetos, se quedan en el canal Back normal.
+        Assert.Null(acc.BackpackFile);
+        Assert.Null(acc.TailFile);
+    }
+
+    [Fact]
+    public void CalamityShield_ResuelveElIconoRealYaExtraidoDelTmod_IncluidoStygianShieldFueraDeArmor()
+    {
+        // StygianShield es el spot-check real del arreglo del filtro de categoria (categoria
+        // real "Weapons/Melee", no "Armor/..." ni "Accessories" - el atributo AutoloadEquip real
+        // es la unica fuente de verdad, ver la cabecera del script).
+        var entry = Service.CalamityCatalog.Entries.First(e => e.Internal == "StygianShield");
+        Assert.Equal("Shield", entry.EquipSlot);
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+        Assert.NotNull(acc.ShieldFile);
+        Assert.True(File.Exists(acc.ShieldFile));
+        Assert.EndsWith("StygianShield_Shield.png", acc.ShieldFile);
+    }
+
+    [Fact]
+    public void CalamityFace_ResuelveElIconoRealYaExtraidoDelTmod()
+    {
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Face");
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+        Assert.NotNull(acc.FaceFile);
+        Assert.True(File.Exists(acc.FaceFile));
+        Assert.EndsWith(entry.Internal + "_Face.png", acc.FaceFile);
+    }
+
+    [Fact]
+    public void CalamityBalloon_ResuelveElIconoRealYaExtraidoDelTmod_SiempreCanalNormalNuncaFront()
+    {
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Balloon");
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+        Assert.NotNull(acc.BalloonFile);
+        Assert.True(File.Exists(acc.BalloonFile));
+        Assert.EndsWith(entry.Internal + "_Balloon.png", acc.BalloonFile);
+        // balloonSlotId es null para Calamity - BalloonAccessoryLayerTable.IsFrontLayer nunca se
+        // consulta, fiel-por-defecto al canal Balloon normal (ver el comentario real de
+        // EquipmentAppearanceResolver.ResolveAccessories).
+        Assert.Null(acc.BalloonFrontFile);
+    }
+
+    [Fact]
+    public void CalamityShoes_ResuelveElIconoRealYaExtraidoDelTmod_SufijoRealPluralNoSingular()
+    {
+        // Sufijo real de fichero = nombre CRUDO del enum EquipType.Shoes ("_Shoes.png"), no el
+        // alias corto "Shoe" que usan los campos/directorios vanilla (e.Shoe, acc_shoes/) - ver
+        // la cabecera real de scripts/extraer-slot-armadura-calamity.js.
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Shoes");
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+        Assert.NotNull(acc.ShoesFile);
+        Assert.True(File.Exists(acc.ShoesFile));
+        Assert.EndsWith(entry.Internal + "_Shoes.png", acc.ShoesFile);
+        Assert.Null(acc.ShoesSlot); // numeracion propia de Calamity - MaleToFemaleID nunca se aplica
+    }
+
+    [Fact]
+    public void CalamityHandsOnYHandsOff_UnMismoGuanteResuelveLosDosCanalesALaVez()
+    {
+        // 6 items reales (guantes) declaran EquipType.HandsOn Y EquipType.HandsOff a la vez -
+        // decision de diseno: CalamityCatalogEntry.EquipSlotSecondary (ver su comentario real en
+        // CalamityCatalog.cs). UN UNICO item en UN UNICO hueco (indice 3) debe resolver AMBOS
+        // canales, cada uno con su propio sprite real (BloodstainedGlove_HandsOn.png Y
+        // BloodstainedGlove_HandsOff.png son ficheros REALES distintos, ya extraidos).
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "HandsOn" && e.EquipSlotSecondary == "HandsOff");
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+        Assert.NotNull(acc.HandOnFile);
+        Assert.True(File.Exists(acc.HandOnFile));
+        Assert.EndsWith(entry.Internal + "_HandsOn.png", acc.HandOnFile);
+
+        Assert.NotNull(acc.HandOffFile);
+        Assert.True(File.Exists(acc.HandOffFile));
+        Assert.EndsWith(entry.Internal + "_HandsOff.png", acc.HandOffFile);
+    }
+
+    [Fact]
+    public void CalamityDeUnSoloTipo_NoResuelveNingunCanalDeGuanteQueNoDeclara()
+    {
+        // Defensa real contra un falso positivo del EquipSlotSecondary nuevo: los 6 items reales
+        // de guante son el UNICO caso real con EquipSlotSecondary relleno (confirmado con el
+        // volcado real del script) - cualquier otro objeto de un solo tipo (EquipSlotSecondary
+        // null) no debe colarse en HandOn/HandOff solo porque el operador "||" del IsAccessoryType
+        // nuevo compara tambien el campo secundario.
+        var entry = Service.CalamityCatalog.Entries.First(e => e.EquipSlot == "Waist");
+        Assert.Null(entry.EquipSlotSecondary);
+        var acc = Service.EquipmentAppearance.ResolveAccessories(LoadoutConCalamityEnAccesorio(entry.SyntheticId));
+
+        Assert.NotNull(acc.WaistFile);
+        Assert.Null(acc.HandOnFile);
+        Assert.Null(acc.HandOffFile);
+    }
 }

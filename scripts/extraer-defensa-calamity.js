@@ -12,7 +12,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const CALAMITY_SRC = 'C:\\Users\\adrian\\Downloads\\tModLoader-Decompiled\\CalamityMod';
+// CalamityAccesorios (25-sep-2026): ruta corregida, ver el comentario real de
+// scripts/extraer-slot-armadura-calamity.js (Downloads\tModLoader-Decompiled\ sin Keep\ ya no
+// existe en disco, centralizacion 16-sep-2026).
+const CALAMITY_SRC = 'C:\\Users\\adrian\\Downloads\\Keep\\tModLoader-Decompiled\\CalamityMod';
 const CATALOG_PATH = path.join(__dirname, '..', 'Terrakeep.App', 'Assets', 'calamity', 'catalog.json');
 
 // Indice real: nombre de clase (= nombre de fichero) -> ruta completa. Un solo recorrido del

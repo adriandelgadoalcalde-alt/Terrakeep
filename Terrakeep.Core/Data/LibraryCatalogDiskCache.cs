@@ -30,7 +30,10 @@ public static class LibraryCatalogDiskCache
     // pero bump explicito de todas formas: es el mecanismo real que este fichero ya reserva para
     // exactamente este caso, no hay que depender solo de la coincidencia de que el fingerprint
     // tambien cambiara.
-    public const int FormatVersion = 2;
+    // v3 (CalamityAccesorios, 25-sep-2026): CalamityCatalogEntryData gano EquipSlotSecondary
+    // (los 6 guantes reales HandsOn+HandsOff) en WriteTo/ReadFrom - mismo motivo que el bump v2
+    // de arriba, una cache v2 en disco tiene un campo menos por objeto de los que v3 espera leer.
+    public const int FormatVersion = 3;
 
     public sealed record LoadedCache(
         VanillaItemCatalog VanillaCatalog,
