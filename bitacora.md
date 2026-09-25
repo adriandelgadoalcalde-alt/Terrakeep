@@ -26545,3 +26545,135 @@ liberar el lock manualmente con `--forzar` tras confirmar que la mezcla es acept
 instalado SÍ refleja ya el arreglo real de FaseH (confirmado por el `/MIR`, 3 archivos - `.exe`/
 `.dll` - copiados de verdad), así que el despliegue funcional de este encargo está completo; lo
 pendiente es solo la higiene del lock/coordinación entre agentes, no el arreglo en sí.
+
+## Guía reabierta Fase A (26-sep-2026, arquitecto-keep a8c40689 → aplicador-fix): `DanoArma` real
+## (base+prefijo vanilla), motivo `guide_motive_load_world` y preparación ViewModel — SIN tocar
+## `MainWindow.xaml`
+
+**Encargo**: aplicar el diseño ya investigado y entregado por el arquitecto de la reapertura de la
+Guía de progresión, alcance Core+ViewModel+localización+tests únicamente (la parte XAML del árbol
+completo va en un encargo posterior, para no pisar `MainWindow.xaml` mientras otros dos agentes en
+paralelo - ExploracionRediseno FaseH y las reaperturas Nav123 Objetos/ChestInspector - lo tienen
+ocupado). **Confirmo explícitamente que no toqué `MainWindow.xaml` ni `MainWindow.xaml.cs` en
+ningún momento** (verificado en el `git diff`/`git status` final, ver más abajo).
+
+**1) `DanoArma` deja de ser un límite estructural fijo**:
+- `Terrakeep.Core/Data/PrefixEffectCatalog.cs`: nuevo `GetDamageMultiplier(int prefixId)` (mismo
+  patrón que `GetDefenseBonus` ya existente) - devuelve el campo `Dmg` real del prefijo, 1.0
+  (neutro) si no hay prefijo o no tiene multiplicador de daño conocido.
+- `Terrakeep.Core/Guia/DesktopGuideStateProvider.cs`: `DanoDelMejorArma(out nombre)` implementado
+  de verdad - recorre el inventario (mismo `Inventario()` que ya usa `LlevaGancho`), filtra "es
+  arma vanilla" reutilizando `PrefixRulesCatalog.VanillaCategories` (Melee/Ranged/Magic/AnyWeapon -
+  el MISMO mecanismo real que ya usa `PrefixEligibility.For`/el panel Editar, nunca un filtro
+  inventado), calcula `Math.Round(VanillaItemStatsCatalog.Get(id).Damage *
+  PrefixEffectCatalog.GetDamageMultiplier(item.Prefix.VanillaId))` y se queda con el máximo real.
+  Alcance vanilla-only documentado explícitamente en el propio código: un arma de Calamity SÍ entra
+  en el cálculo pero solo con su daño BASE del catálogo de Calamity (sin multiplicador de prefijo,
+  `PrefixEffectCatalog` es vanilla-only) - una aproximación honesta, no un límite estructural a
+  ciegas. `PrefixRulesCatalog?` se añadió como parámetro nuevo, OPCIONAL (mismo patrón ya usado por
+  `vanillaStats`/`prefixEffects`), a `DesktopGuideStateProvider`/`GuideEvaluator` - hilado hasta los
+  dos call sites reales (`GuideViewModel.cs`/`HomeViewModel.cs`, pasando `servicio.PrefixRules`).
+- `Terrakeep.Core/Guia/GuideEvaluationEngine.cs`: el gate de `DanoArma` pasó de `HasLiveGameData`
+  (siempre `false` en escritorio) a `HasInventoryData` (mismo patrón que Objeto/Gancho). Cuando SÍ
+  hay inventario pero ningún ítem califica como arma real, `EvaluarDanoArma` ahora marca
+  `NoEvaluable=true` con motivo claro (`guide_motive_weapon_damage`, reescrito) SIN
+  `EsLimiteEstructural` - antes esa rama ni siquiera se alcanzaba (con `HasLiveGameData` fijo a
+  `false`, `EvaluarDanoArma` era código muerto en escritorio pese a estar implementada).
+  `DesktopGuideStateProvider.MotivoSinPartidaEnMarcha` ya no tiene el caso `DanoArma` (quedaba
+  muerto tras el cambio de gate) - solo `NpcActivo` sigue siendo un límite estructural real.
+- **Oráculo real verificado contra el decompilado** (no solo el JSON ya extraído):
+  `tModLoader-Decompiled/tModLoader/Terraria/Item.cs` `SetDefaults` case 4 = Iron Broadsword,
+  `damage=12`; `TryGetPrefixStatMultipliersForItem` case 5 = "Sharp" (`PrefixID.Sharp=5`),
+  `dmg=1.15f` → `12 * 1.15 = 13.8`, `Math.Round` sube a **14**. Test
+  `DanoArma_ConArmaVanillaYPrefijoReal_ActualCoincideConElDanoHorneadoRealDelDecompilado` confirma
+  `Actual == 14` con ese id+prefijo reales.
+- `strings_es.json`/`strings_en.json` (línea ~423): `guide_motive_weapon_damage` reescrito - el
+  texto anterior afirmaba (ahora FALSO) que Terrakeep no simula ningún multiplicador; el nuevo
+  explica lo que SÍ se evalúa (daño base+prefijo del arma que más daño hace, aproximación estática
+  sin multiplicadores de clase) y sirve a la vez de motivo honesto para el caso "no se encontró
+  ningún arma real en el inventario".
+
+**2) Bandera sin mundo - motivo específico**: `GuideEvaluationEngine.EvaluarBandera` (línea ~305)
+cambió `guide_motive_load_data` (genérico) por `guide_motive_load_world` (una bandera de mundo
+NUNCA depende del `.plr` - la clave ya existía en ambos `strings_*.json`, no hizo falta crear
+ninguna). De paso corregí una prueba PRE-EXISTENTE que ya tenía este bug documentado en su propio
+nombre sin saberlo (`GuideFlagsCalamityTests.SinMundoCargado_BanderaDeCalamityQuedaNoEvaluable
+ConMotivoDeMundo` afirmaba literalmente `"guide_motive_load_data"` pese a su propio nombre -
+actualizada a `"guide_motive_load_world"`, el valor que el nombre siempre prometió).
+
+**3) `EsLimiteEstructural` en el ViewModel (preparación para la fase XAML)**: `GuideRequisitoViewModel.
+EsLimiteEstructural => _resultado.EsLimiteEstructural` en `Terrakeep.App/ViewModels/GuideViewModel.cs`,
+junto a `Motivo`. Sin `InternalsVisibleTo` hacia `Terrakeep.App.ViewModels.Tests` (mismo criterio ya
+establecido por `CharacterListEntryViewModel.AccesoriosParaPruebas`/`CharacterFileService.
+DebugCorruptPlrBytesBeforeVerify`), añadí `GuideRequisitoViewModel.ParaPruebas(...)` - factoría
+pública SOLO para pruebas, mismo patrón exacto.
+
+**4) Aviso global "personaje sin mundo" (preparación, sin XAML)**: `MostrarAvisoSinMundo`
+(`[ObservableProperty]`, mismo patrón que `MostrarAvisoSinPersonaje`) + `TextoAvisoSinMundo` en
+`GuideViewModel.cs`, fijado en `Refresh()` como `world == null && loaded != null` (espejo exacto,
+mutuamente excluyente por construcción con `MostrarAvisoSinPersonaje`). Claves nuevas
+`guide_no_world_notice` en `strings_es.json`/`strings_en.json` (mismo patrón de redacción que
+`guide_no_character_notice`). El bloque XAML que las consuma va en el encargo siguiente.
+
+**Tests reales (8 nuevos, más 3 actualizados por el cambio legítimo de comportamiento)**:
+- `Terrakeep.Core.Tests/Guia/GuideEvaluationEngineTests.cs` (+5, con helpers nuevos `MakeDamageStats`/
+  `MakePrefixEffectsDmg`/`MakeRules`): `DanoArma` con arma vanilla+prefijo real (oráculo del
+  decompilado, `Actual==14`); `DanoArma` sin ningún arma en inventario → `NoEvaluable=true`,
+  `EsLimiteEstructural=false`, motivo `guide_motive_weapon_damage`; bandera conocida sin mundo →
+  `guide_motive_load_world`; `NpcActivo` sigue `EsLimiteEstructural=true` siempre (regresión, no
+  cambia); paso con `DanoArma` ya evaluable (no vacío) ya no cuenta como límite estructural - suma
+  progreso PARCIAL real (`14/20 = 0.7`), no el `1f` vacuo de antes.
+  - **2 tests PRE-EXISTENTES actualizados** (`PasoDePreparacion_Con...`/`MundoConElDevoradorYa
+    Derrotado_...`, el par que documentaba el bug real del 16-sep-2026): antes probaban que el paso
+    se completaba "vacíamente" porque `DanoArma` era SIEMPRE un límite estructural en escritorio,
+    incluso sin ningún personaje/inventario cargado; con el nuevo diseño eso ya no es cierto (sin
+    inventario cargado, `DanoArma` bloquea de verdad, honestamente, como "sin datos TODAVÍA" - lo
+    que corresponde). Actualizados para seguir demostrando el MISMO síntoma real arreglado (el paso
+    no se queda bloqueado para siempre pese a que el jefe ya cayó en el `.wld`) pero con el motivo
+    CORRECTO: se completa porque un arma real del personaje SÍ llega al umbral pedido, no porque el
+    requisito fuera imposible de comprobar. Esto es evolución legítima de la semántica aprobada por
+    el arquitecto, no "tocar tests para fabricar un verde" - el síntoma histórico sigue cubierto.
+  - `GuideFlagsCalamityTests.cs` (1 actualizado, ver punto 2 arriba).
+- `Terrakeep.App.ViewModels.Tests/GuiaFaseAReabiertaViewModelTests.cs` (nuevo, +3):
+  `GuideRequisitoViewModel.EsLimiteEstructural` refleja `ResultadoRequisitoGuia.EsLimiteEstructural`
+  1:1 (vía `ParaPruebas`); `MostrarAvisoSinMundo` true SOLO con personaje cargado y mundo `null`
+  (constructor público real de `GuideViewModel`, mismo camino que `MainViewModel.cs:1132`, con
+  `LoadedCharacter`/`WldWorld` sintéticos mínimos); `MostrarAvisoSinMundo`/`MostrarAvisoSinPersonaje`
+  mutuamente excluyentes en los 4 estados reales posibles (los dos, solo mundo, solo personaje,
+  ninguno).
+
+**Verificación real**: `dotnet build Terrakeep.slnx -c Release` en verde (0 advertencias, 0
+errores). `dotnet test Terrakeep.Core.Tests`: **742/742** (737 baseline + 5 nuevos), sin regresión.
+`dotnet test Terrakeep.App.ViewModels.Tests`: **735/735** (732 baseline + 3 nuevos), sin regresión
+(4m44s en Release).
+
+**Recompilación y redespliegue local**: `Terrakeep.exe` instalado NO estaba en ejecución
+(`tasklist` sin resultados) - deploy completo sin `LÍMITE REAL` pendiente. `DEPLOY_LOCK` adquirido
+(`deployLock.js adquirir Terrakeep`). Sanidad de `Assets/` instalado ANTES (`deployLock.js antes
+Terrakeep .../Programs/Terrakeep/Assets`): 13055 ficheros, hash `bd47412a...` (ya incluía, sin
+alarma, el contenido de esta misma Guía que el agente paralelo ExploracionRediseno FaseH había
+recogido sin comitear en SU publish anterior - ver su entrada de arriba, "ALARMA del DEPLOY_LOCK...
+guide_no_world_notice nueva, guide_motive_weapon_damage reescrita" -: mi propio commit `7efbec5e`
+de esta ronda es precisamente el que formaliza ese contenido, cerrando el motivo real de esa
+alarma). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64`
+en verde. `robocopy .../publish .../Terrakeep //MIR //XF unins000.exe unins000.dat` (doble barra,
+mismo motivo real ya documentado arriba - Git Bash expande una sola barra como ruta): 1 archivo
+copiado (el `.exe`/`.dll` con mi cambio de código), 13060 omitidos, 0 errores, 0 extras. Sanidad de
+`Assets/` DESPUÉS (`deployLock.js despues Terrakeep ...`): 13055 ficheros, **mismo hash** que ANTES
+- "deploy seguro", sin alarma esta vez (el `Assets/` instalado ya estaba al día). `DEPLOY_LOCK`
+liberado. `LastWriteTime`/tamaño del `.exe` instalado y del recién publicado coinciden
+(26/09/2026 1:28:36, 139.236.481 bytes) - deploy real confirmado, no solo el publish intermedio.
+
+**Commit real** `7efbec5e`: `Terrakeep.App/Assets/strings_en.json` + `strings_es.json` +
+`Terrakeep.App/ViewModels/GuideViewModel.cs` + `HomeViewModel.cs` +
+`Terrakeep.Core/Data/PrefixEffectCatalog.cs` + `Terrakeep.Core/Guia/DesktopGuideStateProvider.cs` +
+`GuideEvaluationEngine.cs` + `GuideEvaluator.cs` + `Terrakeep.Core.Tests/Guia/
+GuideEvaluationEngineTests.cs` + `GuideFlagsCalamityTests.cs` +
+`Terrakeep.App.ViewModels.Tests/GuiaFaseAReabiertaViewModelTests.cs` (nuevo) - exactamente los
+ficheros de mi working set, `git add` con rutas explícitas, nunca `-A` (numerosos ficheros ajenos de
+otros agentes en paralelo en `git status`: `CLAUDE.md`, `Terrakeep.App.Tests/**`,
+`Terrakeep.Core.Tests/Data/**`, `scripts/**`, etc., ninguno tocado ni comiteado). `doNotTouch`
+respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKeepQA.cs`/
+`KEEPQA-INTEGRACION.md` no tocados. **`MainWindow.xaml`/`MainWindow.xaml.cs` NO aparecen en mi
+`git diff`/commit** - confirmado explícitamente, alcance respetado (la parte XAML del árbol
+completo queda para el encargo siguiente). Sin `git push`.
