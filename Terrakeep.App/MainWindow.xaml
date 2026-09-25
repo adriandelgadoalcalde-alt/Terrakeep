@@ -1483,10 +1483,29 @@
                              dibuja ANTES que Main.PlayerRenderer.DrawPlayer(...) (linea 123 antes
                              que la 127), la mascota queda por debajo/detras del personaje. Ver
                              CharacterListEntryViewModel.PetImage/RefreshPetImage y
-                             PetPreviewRenderer/PetAnimationDriver para el detalle real completo. -->
-                        <Image Source="{Binding PetImage}" Width="20" Height="20" Stretch="Uniform"
+                             PetPreviewRenderer/PetAnimationDriver para el detalle real completo.
+
+                             Arreglo real 25-sep-2026 (bitacora.md, "Inicio, mascotas ocultas y
+                             banner sin hover"): el `Width="20" Height="20"` fijo de antes
+                             aplastaba el fotograma real (46-52px de alto real, medido de la
+                             cabecera PNG) a menos de la mitad, encajado ademas en la MISMA
+                             esquina inferior izquierda donde caen los pies/piernas del doll (la
+                             zona con mas pixeles opacos de cualquier sprite de pie) - hasta 40,0%
+                             tapado, medido en pixeles reales por el canario HOMEBANNER_SOLO
+                             (Eldelgas). `Stretch="None"` + sin Width/Height renderiza el
+                             fotograma a su tamaño NATIVO real (WriteableBitmap.PixelWidth/
+                             PixelHeight, sin escalar) en vez del recorte a 20x20; anclarlo arriba
+                             en vez de abajo lo aparta de la zona de piernas/pies (la mas opaca) y
+                             lo deja asomar por el hueco real que el doll SI deja libre a los
+                             lados de la cabeza/hombros - medido tras el cambio: Eldelgas baja de
+                             40,0% a un valor por debajo del umbral de FALLO (30%) del propio
+                             canario, sin recortar ningun sprite (Grid sin ClipToBounds, fiel al
+                             pedido explicito "no cortar sprites"). Mismo criterio aplicado en el
+                             banner "Continuar con X" mas abajo (paridad pedida explicitamente). -->
+                        <Image Source="{Binding PetImage}" Stretch="None"
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
-                               HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                               HorizontalAlignment="Left" VerticalAlignment="Top"
+                               Margin="-20,-16,0,0"
                                Visibility="{Binding PetImage, Converter={StaticResource NullToVis}}"
                                ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}" />
                         <Image Source="{Binding Preview}" Stretch="Uniform"
@@ -1878,8 +1897,24 @@
                                  Prefijo, todos editables directamente sobre el slot seleccionado -
                                  ver ItemEditTemplate) - aqui apunta a Exploration.ChestItemEdit
                                  (instancia propia, nunca la de Personaje). -->
+                            <!-- Punto 2 del cluster "cofres/inspector lateral" (imagen5, 24/25-sep-2026,
+                                 aplicador-fix): este MaxHeight="320" cortaba a media altura los
+                                 WrapPanel Metas/Groups del selector de prefijo (medido en vivo:
+                                 Metas terminaba en Y=341,2px, 21,2px mas alla del limite; Groups
+                                 quedaba COMPLETO fuera, Y=347,2 a 401,1px) - un tope que la MISMA
+                                 plantilla (ItemEditTemplate) NO tiene en su otra instancia real, la
+                                 de Personaje (mas abajo, Content="{Binding ItemEdit}"). Quitado para
+                                 igualar ese patron: el ScrollViewer "de seguridad" que ya trae
+                                 ItemEditTemplate (linea ~33) sigue ahi para ventanas realmente
+                                 pequeñas, y esta fila, al vivir dentro de ChestByChestList (un
+                                 ListBox con su propio scroll real), crece igual que ya crece hoy la
+                                 lista de solo-lectura de objetos del cofre (ItemsControl de arriba,
+                                 sin ningun tope de altura tampoco). Ver tambien el colapso nuevo de
+                                 ExplorationResultsBlock (mas abajo) - el espacio que ese bloque deja
+                                 de reservar en "Cofre a cofre"/"Por tipo de cofre" sin resultados es
+                                 justo el que antes obligaba a comprimir este editor. -->
                             <ContentControl Content="{Binding DataContext.Exploration.ChestItemEdit, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            ContentTemplate="{StaticResource ItemEditTemplate}" Margin="0,6,0,0" MaxHeight="320" />
+                                            ContentTemplate="{StaticResource ItemEditTemplate}" Margin="0,6,0,0" />
 
                             <UniformGrid Columns="2" Margin="0,8,0,0">
                                 <Button Content="{Binding Loc[action_save], Mode=OneWay}" Tag="Accent" Margin="0,0,3,0" Padding="6,4"
@@ -2033,10 +2068,30 @@
                          derecho) - ver OnPersonajeMenuClick en MainWindow.xaml.cs. WhereIsItPopup
                          (mas abajo) ancla ahora a ESTE boton (x:Name="PersonajeMenuButton"), no ya
                          al boton "Buscar" suelto que dejo de existir. -->
-                    <Button x:Name="PersonajeMenuButton" Content="{Binding Loc[action_personaje_menu], Mode=OneWay}" Click="OnPersonajeMenuClick" Margin="0,0,0,8"
+                    <!-- Bug real arreglado 25-sep-2026 (handoff e5eaea9e-c261-4199-8e7d-060b6054f58d,
+                         pedido explicito del usuario): el texto llevaba "⋯ " DELANTE (sin indicador
+                         real de desplegable) y no comunicaba que hubiera mas opciones. Patron
+                         convencional ahora: "Personaje ▾" cerrado / "Personaje ▲" abierto -
+                         IsPersonajeMenuOpen (mismo mecanismo que IsWhereIsItOpen, sincronizado desde
+                         los eventos Opened/Closed de abajo) decide tanto la flecha como el Tag="Open"
+                         que anima BdBrush (ver Theme.xaml). Los "···" NO se conservan: con la
+                         etiqueta "Personaje" + la flecha ya es obvio que hay mas opciones - añadir
+                         tambien puntos suspensivos duplicaria el mismo indicador ("hay mas") con dos
+                         glifos distintos sin aportar informacion nueva, el motivo real por el que
+                         P-4/T2 los puso ahi (que el rotulo del GRUPO no describe una sola accion) ya
+                         lo resuelve el propio texto "Personaje" sin necesidad de puntuacion. -->
+                    <Button x:Name="PersonajeMenuButton" Click="OnPersonajeMenuClick" Margin="0,0,0,8"
+                            Tag="{Binding IsPersonajeMenuOpen, Converter={x:Static conv:TrueToTagConverter.Instance}, ConverterParameter=Open}"
                             ToolTip="{Binding Loc[action_personaje_menu_tooltip], Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Loc[action_personaje_menu], Mode=OneWay}" VerticalAlignment="Center" />
+                            <TextBlock Text="▾" FontSize="9" Margin="6,0,0,0" VerticalAlignment="Center"
+                                       Visibility="{Binding IsPersonajeMenuOpen, Converter={StaticResource InverseBoolToVis}}" />
+                            <TextBlock Text="▲" FontSize="9" Margin="6,0,0,0" VerticalAlignment="Center"
+                                       Visibility="{Binding IsPersonajeMenuOpen, Converter={StaticResource BoolToVis}}" />
+                        </StackPanel>
                         <Button.ContextMenu>
-                            <ContextMenu Placement="Bottom">
+                            <ContextMenu Placement="Bottom" Opened="OnPersonajeMenuOpened" Closed="OnPersonajeMenuClosed">
                                 <MenuItem Header="{Binding Loc[action_load_character], Mode=OneWay}" Click="OnLoadClick" InputGestureText="Ctrl+O" />
                                 <MenuItem Header="{Binding Loc[action_where_is_it], Mode=OneWay}"
                                           Command="{Binding ToggleWhereIsItCommand}" InputGestureText="Ctrl+Shift+F" />
@@ -2572,16 +2627,41 @@
                          etapa de la Guia tiene su PROPIA visibilidad ademas (LastSessionGuideStage
                          puede ser null con personaje real: Guia entera completada, o un fallo real
                          de lectura de la Guia - nunca se enseña un texto inventado en su lugar). -->
+                    <!-- Arreglo real 25-sep-2026 (bitacora.md, "Inicio, mascotas ocultas y banner sin
+                         hover"): MouseEnter/MouseLeave nuevos (ver el comentario completo junto a
+                         OnHomeBannerMouseEnter/Leave en MainWindow.xaml.cs) - el banner no tenia
+                         NINGUNO (a diferencia de CharacterCardTemplate mas abajo, linea ~1383) y por
+                         tanto pasar el raton por encima no disparaba ninguna animacion, medido con el
+                         canario HOMEBANNER_SOLO (avanzoDeVerdad=False antes de este cambio). -->
                     <Border Background="{StaticResource AccentGradientBrush}" CornerRadius="10" Padding="18,16" Margin="0,0,0,20"
                             Effect="{StaticResource CardShadow}" Cursor="Hand"
-                            Visibility="{Binding Home.LastSessionCharacterName, Converter={StaticResource NullToVis}}">
+                            Visibility="{Binding Home.LastSessionCharacterName, Converter={StaticResource NullToVis}}"
+                            MouseEnter="OnHomeBannerMouseEnter" MouseLeave="OnHomeBannerMouseLeave">
                         <Border.InputBindings>
                             <MouseBinding MouseAction="LeftClick" Command="{Binding Home.ContinueCommand}" />
                         </Border.InputBindings>
                         <DockPanel>
-                            <Image DockPanel.Dock="Left" Source="{Binding Home.LastSessionCharacterEntry.Preview}" Width="104" Height="145.6"
-                                   Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" Margin="0,0,18,0" VerticalAlignment="Center"
-                                   Visibility="{Binding Home.LastSessionCharacterEntry, Converter={StaticResource NullToVis}}" />
+                            <!-- Mascota real equipada, mismo criterio real que la tarjeta pequeña
+                                 (MainWindow.xaml ~1487-1500, ver el comentario completo ahi): capa
+                                 DETRAS del doll (declarada antes en la misma Grid, sin ZIndex, fiel a
+                                 UICharacter.cs real), Stretch="None" para su tamaño NATIVO real (sin
+                                 escalar) y anclada arriba-izquierda con desplazamiento negativo para
+                                 asomar por el hueco real que el doll (2x en el banner) deja libre
+                                 junto a la cabeza/hombros en vez de quedar aplastada bajo el doll -
+                                 antes el banner NO tenia NINGUNA Image ligada a PetImage (confirmado
+                                 con grep sobre el fichero entero), la mascota real nunca se dibujaba
+                                 aqui con o sin hover. -->
+                            <Grid DockPanel.Dock="Left" Width="104" Height="145.6" Margin="0,0,18,0" VerticalAlignment="Center"
+                                  Visibility="{Binding Home.LastSessionCharacterEntry, Converter={StaticResource NullToVis}}">
+                                <Image Source="{Binding Home.LastSessionCharacterEntry.PetImage}" Stretch="None"
+                                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                       HorizontalAlignment="Left" VerticalAlignment="Top"
+                                       Margin="-40,-32,0,0"
+                                       Visibility="{Binding Home.LastSessionCharacterEntry.PetImage, Converter={StaticResource NullToVis}}"
+                                       ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}" />
+                                <Image Source="{Binding Home.LastSessionCharacterEntry.Preview}" Stretch="Uniform"
+                                       RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Top" />
+                            </Grid>
                             <StackPanel VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="▶" FontSize="16" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0" />
@@ -2591,13 +2671,13 @@
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="26,12,0,0"
                                             Visibility="{Binding Home.LastSessionCharacterEntry, Converter={StaticResource NullToVis}}">
-                                    <Border Background="#26FFFFFF" CornerRadius="99" Padding="10,4" Margin="0,0,8,0">
+                                    <Border Style="{StaticResource StatusPillCaption}" Tag="Overlay" Margin="0,0,8,0">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="♥" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
                                             <TextBlock Text="{Binding Home.LastSessionCharacterEntry.HealthMax, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Border>
-                                    <Border Background="#26FFFFFF" CornerRadius="99" Padding="10,4" Margin="0,0,8,0">
+                                    <Border Style="{StaticResource StatusPillCaption}" Tag="Overlay" Margin="0,0,8,0">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="◷" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
                                             <TextBlock Text="{Binding Home.LastSessionCharacterEntry.PlayTimeText, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
@@ -2606,7 +2686,7 @@
                                     <!-- 3er KPI real (T4, 21-sep-2026): etapa de la Guia. Visibilidad
                                          PROPIA - null es un caso real (Guia completada o fallo de
                                          lectura ajeno al personaje), no se enseña la pastilla vacia. -->
-                                    <Border Background="#26FFFFFF" CornerRadius="99" Padding="10,4"
+                                    <Border Style="{StaticResource StatusPillCaption}" Tag="Overlay"
                                             Visibility="{Binding Home.LastSessionGuideStage, Converter={StaticResource NullToVis}}"
                                             ToolTip="{Binding Loc[home_hero_kpi_guide_stage_tooltip], Mode=OneWay}">
                                         <StackPanel Orientation="Horizontal">
@@ -3656,8 +3736,8 @@
                                                  para el slot seleccionado' es un texto mas, facil de pasar por
                                                  alto - y ni siquiera dice CUAL slot". Pildora real y separada, con
                                                  el rol real del slot (Cabeza/Accesorio 3/Tinte...). -->
-                                            <Border DockPanel.Dock="Top" Background="{StaticResource AccentMutedBrush}" CornerRadius="99"
-                                                    Padding="10,4" Margin="0,0,0,6" HorizontalAlignment="Left"
+                                            <Border DockPanel.Dock="Top" Style="{StaticResource StatusPillCaption}"
+                                                    Margin="0,0,0,6" HorizontalAlignment="Left"
                                                     Visibility="{Binding Library.SlotRestrictionLabel, Converter={StaticResource NullToVis}}">
                                                 <TextBlock Style="{StaticResource CaptionText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold">
                                                     <TextBlock.Text>
@@ -4943,7 +5023,7 @@
                                 <ScrollViewer x:Name="CompareResultsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                               Visibility="{Binding Compare.ShowResults, Converter={StaticResource BoolToVis}}">
                                     <StackPanel>
-                                        <Border Background="{StaticResource AccentMutedBrush}" CornerRadius="99" Padding="10,4"
+                                        <Border Style="{StaticResource StatusPillCaption}"
                                                 HorizontalAlignment="Left" Margin="0,0,0,10">
                                             <TextBlock Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold">
                                                 <TextBlock.Style>
@@ -5165,11 +5245,28 @@
 
                     <!-- Objetivo actual - la tarjeta destacada, mismo tratamiento visual que el
                          "Continuar con..." de Inicio (degradado de acento + sombra). -->
-                    <StackPanel Margin="0,0,0,10" Visibility="{Binding Guide.ObjetivoPaso, Converter={StaticResource NullToVis}}">
+                    <!-- x:Name real (Encargo3, 25-sep-2026) solo para que el arnes pueda
+                         BringIntoView() esta tarjeta antes de capturar evidencia - la pestaña Guia
+                         entera vive en un ScrollViewer y el banner puede quedar fuera del viewport
+                         tras expandir tramos mas abajo en la misma prueba. -->
+                    <StackPanel x:Name="GuideObjetivoBanner" Margin="0,0,0,10" Visibility="{Binding Guide.ObjetivoPaso, Converter={StaticResource NullToVis}}">
                         <TextBlock Text="{Binding Guide.TextoObjetivoActual, Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,10" />
                         <Border Background="{StaticResource AccentGradientBrush}" CornerRadius="10" Padding="18,14" Effect="{StaticResource CardShadow}"
                                 MaxWidth="680" HorizontalAlignment="Left">
-                            <StackPanel>
+                            <DockPanel>
+                                <!-- Encargo3 (24-sep-2026): sprite real del hito (jefe/objeto/NPC-vecino),
+                                     GuidePasoViewModel.IconPath - mismo tratamiento de pastilla
+                                     translucida ya usado en los KPI del hero de Inicio (#26FFFFFF,
+                                     MainWindow.xaml:2594/2600/2609). Visibilidad PROPIA: null es un
+                                     resultado real (paso sin objeto/NPC/jefe con sprite conocido, ver
+                                     ResolverIconoDelHito) - nunca un hueco roto. -->
+                                <Border DockPanel.Dock="Left" Background="#26FFFFFF" CornerRadius="8" Width="48" Height="48"
+                                        Margin="0,0,14,0" VerticalAlignment="Top"
+                                        Visibility="{Binding Guide.ObjetivoPaso.IconPath, Converter={StaticResource NullToVis}}">
+                                    <Image Source="{Binding Guide.ObjetivoPaso.IconPath}" Width="40" Height="40" Stretch="Uniform"
+                                           RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                                </Border>
+                                <StackPanel>
                                 <TextBlock Text="{Binding Guide.ObjetivoTramo.Nombre, Mode=OneWay}" Foreground="White" FontSize="12" Opacity="0.85" />
                                 <TextBlock Text="{Binding Guide.ObjetivoPaso.Titulo, Mode=OneWay}" Foreground="White" FontSize="20" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,8" />
                                 <TextBlock Foreground="White" Opacity="0.85" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,2">
@@ -5209,6 +5306,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </StackPanel>
+                            </DockPanel>
                         </Border>
                     </StackPanel>
                     <TextBlock Text="{Binding Guide.TextoSinObjetivo, Mode=OneWay}" Style="{StaticResource BodyText}" TextWrapping="Wrap" MaxWidth="680" HorizontalAlignment="Left"
@@ -5251,7 +5349,14 @@
                                                         <StackPanel Margin="0,0,0,10">
                                                             <StackPanel Orientation="Horizontal">
                                                                 <TextBlock Text="{Binding Icono}" FontWeight="Bold" Width="16" Foreground="{StaticResource EquippedGreenBrush}" />
-                                                                <TextBlock Text="{Binding Titulo}" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="500" />
+                                                                <!-- Encargo3 (24-sep-2026): sprite real del hito (jefe/objeto/NPC-vecino),
+                                                                     GuidePasoViewModel.IconPath, mismo resolver que el banner de arriba -
+                                                                     misma fila que ya usa este tamaño para icono+titulo en el resto de la app
+                                                                     (Width=20/Height=20, ver p.ej. linea 4146). -->
+                                                                <Image Source="{Binding IconPath}" Width="20" Height="20" Stretch="Uniform" Margin="0,0,6,0"
+                                                                       RenderOptions.BitmapScalingMode="NearestNeighbor" VerticalAlignment="Center"
+                                                                       Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
+                                                                <TextBlock Text="{Binding Titulo}" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="500" VerticalAlignment="Center" />
                                                                 <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center">
                                                                     <Run Text="{Binding PreparacionPct, Mode=OneWay}" /><Run Text="%" />
                                                                 </TextBlock>
@@ -5319,10 +5424,13 @@
                          el usuario real - nada en pantalla avisaba de que este visor no puede
                          colocar/quitar bloques (a diferencia de Objetos/Apariencia/etc., donde
                          cada cambio SI se guarda). -->
-                    <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="99" Padding="9,3" Margin="10,0,0,0"
+                    <Border Style="{StaticResource StatusPillCaption}" Tag="Informativa" Margin="10,0,0,0"
                             VerticalAlignment="Center" ToolTip="{Binding Loc[explore_readonly_tooltip], Mode=OneWay}"
                             Visibility="{Binding Exploration.IsWorldLoaded, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="{Binding Loc[explore_readonly_badge], Mode=OneWay}" Style="{StaticResource CaptionText}" />
+                        <!-- FontWeight="Normal" fijado a proposito (24-sep-2026, unificacion de badges) - antes
+                             heredaba SemiBold por accidente del Trigger IsSelected del TabItem activo de la
+                             rail (Theme.xaml), no por diseño propio de este badge; ver bitacora.md. -->
+                        <TextBlock Text="{Binding Loc[explore_readonly_badge], Mode=OneWay}" Style="{StaticResource CaptionText}" FontWeight="Normal" />
                     </Border>
                     <!-- AR-EX6 (15-sep-2026, ronda de cierre): este WrapPanel (arriba, sin ItemHeight
                          fijo) envuelve este StackPanel a una segunda linea con el mundo real
@@ -6070,9 +6178,13 @@
                                      mismo Grid, se pinta ENCIMA por orden de declaracion) ocupa la esquina
                                      derecha entera y tapaba el chip ahi - la izquierda esta libre de verdad. -->
                                 <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0"
-                                        CornerRadius="99" Padding="10,5" IsHitTestVisible="False" Effect="{StaticResource CardShadow}">
+                                        IsHitTestVisible="False" Effect="{StaticResource CardShadow}">
                                     <Border.Style>
-                                        <Style TargetType="Border">
+                                        <!-- BasedOn StatusPillCaption (24-sep-2026, unificacion de badges): hereda
+                                             CornerRadius/Padding compartidos con el resto de badges/status-pills de
+                                             la app; el Background SEMANTICO por zona (abajo) sigue siendo propio de
+                                             este chip, informacion real que no se unifica. -->
+                                        <Style TargetType="Border" BasedOn="{StaticResource StatusPillCaption}">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Style.Triggers>
                                                 <MultiDataTrigger>
@@ -6950,6 +7062,31 @@
                                         <DataTrigger Binding="{Binding Exploration.SelectedCategory}" Value="Npcs">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                         </DataTrigger>
+                                        <!-- Punto 3 del cluster "cofres/inspector lateral" (imagen5+6,
+                                             24/25-sep-2026, aplicador-fix): este bloque solo se
+                                             colapsaba para Npcs - nunca para Cofres, pese a que
+                                             RebuildChestInventory (ExplorationViewModel.cs) NUNCA
+                                             rellena WorldSearchResults en "Cofre a cofre", y en "Por
+                                             tipo"/"Por lo que contienen" solo despues de pulsar
+                                             "Buscar seleccionados". Medido en vivo: 90px reales VACIOS
+                                             en los dos modos que muestran las capturas del usuario,
+                                             idem "Por lo que contienen" (misma causa). Colapsar aqui,
+                                             igual que ya se hace para Npcs (mismo patron probado), en
+                                             vez de solo achicar el MinHeight de la fila de abajo: el
+                                             hueco que libera es justo el que necesita el editor de
+                                             cofre (ver el MaxHeight quitado mas arriba) para mostrar
+                                             Metas/Groups sin cortarse. En cuanto WorldSearchResults SI
+                                             tiene datos (tras "Buscar seleccionados"), vuelve a verse
+                                             con normalidad - el bloque sigue siendo el mismo para los
+                                             3 modos, solo deja de reservar espacio cuando esta vacio de
+                                             verdad. -->
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding Exploration.SelectedCategory}" Value="Chests" />
+                                                <Condition Binding="{Binding Exploration.WorldSearchResults.Count}" Value="0" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </MultiDataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
@@ -7143,7 +7280,13 @@
                                                                        TextAlignment="Right" TextWrapping="Wrap"
                                                                        Visibility="{Binding DistanceLabel, Converter={StaticResource NullToVis}}" />
                                                         </StackPanel>
-                                                        <Border DockPanel.Dock="Right" Background="{Binding KindColor}" CornerRadius="99" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                                        <!-- Style="StatusPillCaption" comparte el CornerRadius=99 con el resto de badges
+                                                             (24-sep-2026, unificacion); Padding/Background locales pisan a proposito el
+                                                             valor por defecto del Style - excepcion funcional real, no un olvido: esta
+                                                             pildora vive en una FILA DENSA de lista de resultados (no una cabecera), y el
+                                                             Background codifica el tipo de objeto encontrado (KindColor), informacion real
+                                                             que no se unifica. Ver inventario completo en bitacora.md (badge Nº6). -->
+                                                        <Border DockPanel.Dock="Right" Style="{StaticResource StatusPillCaption}" Background="{Binding KindColor}" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding KindLabel}" FontSize="9.5" Foreground="White" />
                                                         </Border>
                                                         <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}"

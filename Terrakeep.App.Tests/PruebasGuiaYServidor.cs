@@ -1,4 +1,8 @@
 using System.IO;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using Terrakeep.App;
 using Terrakeep.App.ViewModels;
 using ServidorKeep.Core.Instancias;
@@ -55,6 +59,21 @@ internal static partial class Program
             vm.Guide.Refresh();
             DoEvents();
 
+            // Encargo3 (25-sep-2026): estado ORGANICO real del banner ANTES de tocar nada -
+            // el objetivo real de este personaje/mundo (mas abajo: "Cinco cristales de vida") es un
+            // requisito CristalesVida, un tipo que ResolverIconoDelHito no resuelve a proposito (no
+            // es Jefe/Objeto/Npc, no hay nada real que enseñar) - asi que esta captura es la
+            // evidencia real del caso "sin icono" (Visibility Collapsed de la pastilla, sin hueco
+            // roto ni desplazamiento del texto). Se guarda ANTES de expandir tramos/forzar el
+            // objetivo mas abajo para que quede intacta, sin el scroll de las comprobaciones
+            // siguientes.
+            try
+            {
+                CapturaVentanaKeepQa(window, "guia-banner-sin-icono");
+                Console.WriteLine("GUIA_SOLO ICONOS: captura real del banner SIN icono (estado organico) -> keepqa-evidencia\\guia-banner-sin-icono.png");
+            }
+            catch (Exception ex) { Console.WriteLine("GUIA_SOLO ICONOS: captura del banner sin icono fallo - " + ex.Message); }
+
             Console.WriteLine($"GUIA_SOLO: Tramos.Count={vm.Guide.Tramos.Count} (esperado 46, el total real del .json sincronizado)");
             if (vm.Guide.Tramos.Count == 0)
                 Console.WriteLine("FALLO: GUIA_SOLO - el catalogo no cargo ningun tramo.");
@@ -96,6 +115,179 @@ internal static partial class Program
                 Console.WriteLine($"GUIA_SOLO: algun requisito evaluable de verdad con mundo+personaje reales cargados={algunaBanderaEvaluada} (esperado True)");
                 if (!algunaBanderaEvaluada)
                     Console.WriteLine("FALLO: GUIA_SOLO - con personaje y mundo reales cargados, TODOS los requisitos salen no-evaluables.");
+            }
+
+            // Encargo3 (25-sep-2026, revision-correccion-integral-familia-Keep, handoff
+            // e5eaea9e-c261-4199-8e7d-060b6054f58d): hueco de cobertura real cerrado aqui mismo -
+            // antes de esto NINGUN canario comprobaba que GuidePasoViewModel.IconPath resuelve un
+            // sprite real (ni que se pinta sin recorte/overflow), asi que un fallback roto o un
+            // <Image> mal atado en el XAML habria pasado en silencio. Tres filas reales elegidas a
+            // mano de guia_progresion.json (ids confirmados por lectura directa del catalogo, no
+            // inventados): "Cuatro vecinos" (PreOjo/PuebloDeCuatro, TipoRequisitoGuia.Npc id=17
+            // Merchant, con icono real en Assets/npc_icons), "Un arma que aguante una oleada
+            // entera" (EjercitoGoblin/ArmaParaElEjercitoGoblin, Objeto id=361, Assets/vanilla/
+            // icons) y "Cualquier arma con algo de alcance" (DesertScourge/ArmaParaDesertScourge,
+            // Objeto Calamity via idMod CalamityMod/DesertMedallion, Assets/calamity/icons) - las
+            // TRES categorias reales que cubre ResolverIconoDelHito salvo "jefe con sprite de NPC
+            // de pueblo": confirmado por lectura directa de los ~20 ids de jefe del catalogo contra
+            // los 40 ficheros reales de Assets/npc_icons que NINGUNO coincide (la inmensa mayoria
+            // de jefes no son NPC de pueblo, tal cual documenta el propio comentario de
+            // ResolverIconoDelHito) - no hay ningun ejemplo real de ese caso en el catalogo actual,
+            // asi que no se fuerza uno inventado.
+            static IEnumerable<FrameworkElement> Descendientes(DependencyObject raiz)
+            {
+                int n = VisualTreeHelper.GetChildrenCount(raiz);
+                for (int i = 0; i < n; i++)
+                {
+                    var hijo = VisualTreeHelper.GetChild(raiz, i);
+                    if (hijo is FrameworkElement fe) yield return fe;
+                    foreach (var nieto in Descendientes(hijo)) yield return nieto;
+                }
+            }
+
+            (GuideTramoViewModel tramo, GuidePasoViewModel paso)? EncontrarPaso(string nombreTramo, string tituloPaso)
+            {
+                var t = vm.Guide.Tramos.FirstOrDefault(x => x.Nombre == nombreTramo);
+                var p = t?.Pasos.FirstOrDefault(x => x.Titulo == tituloPaso);
+                return t != null && p != null ? (t, p) : null;
+            }
+
+            var objetivos = new (string tramo, string paso, string categoria)[]
+            {
+                ("Antes del primer jefe", "Cuatro vecinos", "Npc (vecino real, id 17 Merchant)"),
+                ("El Ejército Goblin (opcional)", "Un arma que aguante una oleada entera", "Objeto vanilla (id 361)"),
+                ("El Desert Scourge (opcional, Calamity)", "Cualquier arma con algo de alcance", "Objeto Calamity (idMod DesertMedallion)"),
+            };
+
+            int filasConIconoVisible = 0;
+            foreach (var (nombreTramo, tituloPaso, categoria) in objetivos)
+            {
+                var encontrado = EncontrarPaso(nombreTramo, tituloPaso);
+                if (encontrado == null)
+                {
+                    Console.WriteLine($"GUIA_SOLO ICONOS: FALLO - no se encontro el paso real '{tituloPaso}' en el tramo '{nombreTramo}'.");
+                    continue;
+                }
+                var (tramoVm, pasoVm) = encontrado.Value;
+                Console.WriteLine($"GUIA_SOLO ICONOS: [{categoria}] paso='{tituloPaso}' -> IconPath={pasoVm.IconPath ?? "(null)"}");
+                if (pasoVm.IconPath == null)
+                {
+                    Console.WriteLine($"FALLO: GUIA_SOLO ICONOS - '{tituloPaso}' deberia resolver un icono real ({categoria}) y salio null.");
+                    continue;
+                }
+                // "pack://siteoforigin:,,,/Assets/..." no es una ruta de disco directa (new
+                // Uri(...).LocalPath NO la resuelve, es un esquema propio de WPF) - se reconstruye
+                // la ruta real igual que hacen los propios resolvers (AppContext.BaseDirectory +
+                // todo lo que va despues de ",,,/"), para comprobar el fichero real en disco.
+                string rutaReal = Path.Combine(AppContext.BaseDirectory,
+                    pasoVm.IconPath[(pasoVm.IconPath.IndexOf(",,,/", StringComparison.Ordinal) + 4)..].Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(rutaReal))
+                {
+                    Console.WriteLine($"FALLO: GUIA_SOLO ICONOS - IconPath de '{tituloPaso}' apunta a un fichero que no existe: {pasoVm.IconPath}");
+                    continue;
+                }
+
+                // Expande el Expander real de este tramo (mismo control que el usuario pulsaria a
+                // mano) - IsExpanded no esta bindeado en el XAML (arranca en False a proposito para
+                // no abrir 46 tramos de golpe), asi que se localiza el control real por DataContext
+                // y se activa igual que un clic real lo haria.
+                var expander = Descendientes(window).OfType<Expander>().FirstOrDefault(e => ReferenceEquals(e.DataContext, tramoVm));
+                if (expander == null)
+                {
+                    Console.WriteLine($"FALLO: GUIA_SOLO ICONOS - no se encontro el Expander real del tramo '{nombreTramo}' en el arbol visual.");
+                    continue;
+                }
+                expander.IsExpanded = true;
+                DoEvents(); DoEvents();
+
+                var imagenFila = Descendientes(window).OfType<Image>().FirstOrDefault(im => ReferenceEquals(im.DataContext, pasoVm));
+                if (imagenFila == null)
+                {
+                    Console.WriteLine($"FALLO: GUIA_SOLO ICONOS - el Expander de '{nombreTramo}' se abrio pero no aparecio ningun <Image> real con DataContext=paso '{tituloPaso}'.");
+                    continue;
+                }
+                // La pestaña Guia entera vive dentro de un ScrollViewer (46 tramos reales no caben
+                // en pantalla) - sin desplazar la fila a la vista, ZonaVisible mediria un recorte
+                // real del propio scroll (el viewport SI recorta lo que esta fuera, eso es
+                // correcto) y lo confundiria con un bug. BringIntoView() es el mismo mecanismo real
+                // que usa el teclado/Ctrl+F de la propia app para llevar algo a la vista.
+                imagenFila.BringIntoView();
+                DoEvents(); DoEvents();
+
+                var rectCompleto = RectCompleto(imagenFila, window);
+                var rectVisible = ZonaVisible(imagenFila, window);
+                // Misma formula EJE A EJE que ya usa AuditoriaMaquetacion.cs (D1, "contenido
+                // perdido") - ZonaVisible devuelve la zona de clip completa de los ancestros
+                // (p.ej. el viewport entero del ScrollViewer), NO la interseccion con el propio
+                // elemento - comparar Width/Height en crudo contra esa zona (primer intento real de
+                // esta ronda) daba un falso recorte SIEMPRE, para cualquier icono de 20x20 dentro de
+                // un viewport de 1045x732. Lo correcto es cuanto de la caja completa cae FUERA de la
+                // zona pintada, eje a eje.
+                double faltaX = rectVisible.IsEmpty ? rectCompleto.Width
+                    : Math.Min(rectCompleto.Width, Math.Max(0, rectVisible.Left - rectCompleto.Left) + Math.Max(0, rectCompleto.Right - rectVisible.Right));
+                double faltaY = rectVisible.IsEmpty ? rectCompleto.Height
+                    : Math.Min(rectCompleto.Height, Math.Max(0, rectVisible.Top - rectCompleto.Top) + Math.Max(0, rectCompleto.Bottom - rectVisible.Bottom));
+                bool sinRecorte = faltaX <= 0.5 && faltaY <= 0.5;
+                bool dentroDeLaVentana = rectCompleto.Right <= window.ActualWidth + 0.5 && rectCompleto.Bottom <= window.ActualHeight + 0.5
+                    && rectCompleto.Left >= -0.5 && rectCompleto.Top >= -0.5;
+                Console.WriteLine($"GUIA_SOLO ICONOS: fila '{tituloPaso}' -> rect real={rectCompleto} visible={rectVisible} sinRecorte={sinRecorte} dentroDeLaVentana={dentroDeLaVentana} (esperado True, True)");
+                if (!sinRecorte)
+                    Console.WriteLine($"FALLO: GUIA_SOLO ICONOS - el icono de '{tituloPaso}' esta RECORTADO (QuienRecorta={QuienRecorta(imagenFila, window)}).");
+                if (!dentroDeLaVentana)
+                    Console.WriteLine($"FALLO: GUIA_SOLO ICONOS - el icono de '{tituloPaso}' se sale de la ventana (overflow real medido).");
+                if (sinRecorte && dentroDeLaVentana) filasConIconoVisible++;
+
+                // Captura INDIVIDUAL de esta fila (ademas de la general de mas abajo) - con
+                // BringIntoView() ya hecho arriba, esta fila concreta queda dentro del viewport
+                // capturado, evidencia fotografica real de las tres categorias por separado
+                // (Npc-vecino / Objeto vanilla / Objeto Calamity), no solo la medicion numerica.
+                try
+                {
+                    string nombreArchivo = "guia-fila-icono-" + string.Concat(tituloPaso.Where(char.IsLetterOrDigit)).ToLowerInvariant();
+                    CapturaVentanaKeepQa(window, nombreArchivo);
+                    Console.WriteLine($"GUIA_SOLO ICONOS: captura real individual -> keepqa-evidencia\\{nombreArchivo}.png");
+                }
+                catch (Exception ex) { Console.WriteLine($"GUIA_SOLO ICONOS: captura individual de '{tituloPaso}' fallo - " + ex.Message); }
+            }
+            Console.WriteLine($"GUIA_SOLO ICONOS: filas del arbol con icono real visible y sin recorte/overflow={filasConIconoVisible}/{objetivos.Length} (esperado {objetivos.Length}/{objetivos.Length})");
+
+            try
+            {
+                CapturaVentanaKeepQa(window, "guia-arbol-iconos");
+                Console.WriteLine("GUIA_SOLO ICONOS: captura real del arbol expandido -> keepqa-evidencia\\guia-arbol-iconos.png");
+            }
+            catch (Exception ex) { Console.WriteLine("GUIA_SOLO ICONOS: captura del arbol fallo - " + ex.Message); }
+
+            // Evidencia del BANNER "Tu objetivo ahora mismo" con icono real visible: el objetivo
+            // ORGANICO de este personaje/mundo reales (evaluado arriba, "Cinco cristales de vida")
+            // no tiene icono - resultado CORRECTO (CristalesVida no es Objeto/Npc/Jefe, sin datos
+            // que inventar, ver ResolverIconoDelHito) y ya confirmado limpio (sin hueco roto) en
+            // guia-real.png de arriba. Para dejar tambien evidencia real de la MISMA tarjeta con un
+            // icono presente, se apunta ObjetivoTramo/ObjetivoPaso (propiedades publicas reales del
+            // ViewModel) a uno de los tres GuidePasoViewModel YA evaluados de verdad arriba contra
+            // el personaje/mundo cargados - mismo objeto real, mismo binding/convertidor de
+            // produccion, solo se cambia CUAL paso ocupa el hueco de "objetivo" para la captura.
+            var conIcono = EncontrarPaso("Antes del primer jefe", "Cuatro vecinos");
+            if (conIcono != null)
+            {
+                vm.Guide.ObjetivoTramo = conIcono.Value.tramo;
+                vm.Guide.ObjetivoPaso = conIcono.Value.paso;
+                DoEvents(); DoEvents();
+                // La pestaña quedo desplazada tras BringIntoView() de las filas del arbol (mas
+                // abajo de la propia tarjeta) - sin esto la captura habria vuelto a salir con el
+                // banner fuera del viewport, tapado por el arbol scrolleado. x:Name real en el
+                // XAML (GuideObjetivoBanner) - FindName() en vez de un campo generado porque el
+                // campo del elemento nombrado sale "internal" (mismo motivo real por el que el
+                // resto de este arnes localiza controles recorriendo el arbol visual en vez de
+                // referenciarlos por campo, ver Descendientes() arriba).
+                if (window.FindName("GuideObjetivoBanner") is FrameworkElement banner) banner.BringIntoView();
+                DoEvents(); DoEvents();
+                try
+                {
+                    CapturaVentanaKeepQa(window, "guia-banner-con-icono");
+                    Console.WriteLine("GUIA_SOLO ICONOS: captura real del banner con icono -> keepqa-evidencia\\guia-banner-con-icono.png");
+                }
+                catch (Exception ex) { Console.WriteLine("GUIA_SOLO ICONOS: captura del banner fallo - " + ex.Message); }
             }
 
             var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(

@@ -53,7 +53,7 @@ public sealed partial class GuidePasoViewModel : ObservableObject
     private readonly GuideTextCatalog _textos;
 
     internal GuidePasoViewModel(PasoGuia paso, GuideTextCatalog textos, List<GuideRequisitoViewModel> requisitos,
-        bool completado, float preparacion, int cumplidos, int totalObligatorios)
+        bool completado, float preparacion, int cumplidos, int totalObligatorios, CharacterFileService servicio)
     {
         _paso = paso;
         _textos = textos;
@@ -62,6 +62,7 @@ public sealed partial class GuidePasoViewModel : ObservableObject
         PreparacionPct = (int)Math.Round(preparacion * 100.0);
         Cumplidos = cumplidos;
         TotalObligatorios = totalObligatorios;
+        IconPath = ResolverIconoDelHito(paso, servicio);
         PropertyChangedEventManager.AddHandler(LocalizationService.Instance, OnIdiomaCambiado, "Item[]");
     }
 
@@ -71,6 +72,15 @@ public sealed partial class GuidePasoViewModel : ObservableObject
     public int PreparacionPct { get; }
     public int Cumplidos { get; }
     public int TotalObligatorios { get; }
+    // Encargo3 (24-sep-2026, revision-correccion-integral-familia-Keep): sprite real del hito de
+    // este paso (jefe/objeto/NPC-vecino), NUNCA un icono inventado - reutiliza tal cual los
+    // resolvers ya existentes de la app de escritorio (LibraryCategoryTreeBuilder.ResolveIconPath
+    // para objetos vanilla/Calamity, NpcIconResolver para NPCs de pueblo/jefes con sprite de
+    // cuerpo entero real) - ver ResolverIconoDelHito para la cadena de fallback completa. Null es
+    // un resultado real y esperado (paso sin ningun requisito de objeto/NPC, o un jefe sin sprite
+    // en el roster de 27 NPCs de pueblo - la inmensa mayoria de jefes no lo son) - la UI lo trata
+    // como "sin icono", nunca como un hueco roto.
+    public string? IconPath { get; }
 
     public string Titulo => _textos.Text("Guia.Paso." + _paso.Clave + ".Titulo", LocalizationService.Instance.Language);
     public string Porque => _textos.Text("Guia.Paso." + _paso.Clave + ".Porque", LocalizationService.Instance.Language);
@@ -88,6 +98,38 @@ public sealed partial class GuidePasoViewModel : ObservableObject
         OnPropertyChanged(nameof(Porque));
         OnPropertyChanged(nameof(Como));
         OnPropertyChanged(nameof(ZonaLegible));
+    }
+
+    // Encargo3: cadena de fallback real, calculable con datos ya presentes en el propio paso (no
+    // inventa nada) - "hito" = lo que de verdad marca este paso como superado:
+    // 1) paso.Jefe (!=0): el paso es una pelea de jefe - se intenta su sprite de cuerpo entero via
+    //    NpcIconResolver (el mismo que ya usa la lista lateral de NPCs). La MAYORIA de jefes no son
+    //    NPC de pueblo y no tendran sprite en ese resolver (27 NPCs reales) - null es el resultado
+    //    HONESTO en ese caso, nunca se cae al siguiente escalon (mezclar "el jefe de este paso" con
+    //    "el primer objeto que pide" seria enganoso, no un fallback razonable).
+    // 2) Si no hay jefe: el primer requisito Objeto/ObjetoCualquiera del paso (por orden real del
+    //    catalogo) via LibraryCategoryTreeBuilder.ResolveIconPath - el MISMO resolver que ya usa la
+    //    Libreria/Investigacion para vanilla (Assets/vanilla/icons) y Calamity (Assets/calamity/
+    //    icons, via CalamityCatalog.BySyntheticId) - los ids de RequisitoGuia.Id/Ids YA vienen
+    //    resueltos a esa misma numeracion por GuideCatalog.ResolverReferenciasDeMod.
+    // 3) Si tampoco hay objeto: el primer requisito Npc/NpcActivo del paso via NpcIconResolver.
+    // 4) Ninguno de los tres: null, la UI lo trata como "sin icono" (converter NullToVis ya usado
+    //    en toda la app), nunca un hueco roto.
+    private static string? ResolverIconoDelHito(PasoGuia paso, CharacterFileService servicio)
+    {
+        if (paso.Jefe != 0) return NpcIconResolver.GetIconPath(paso.Jefe);
+
+        var objeto = paso.Requisitos.FirstOrDefault(r =>
+            r.Tipo == TipoRequisitoGuia.Objeto || r.Tipo == TipoRequisitoGuia.ObjetoCualquiera);
+        if (objeto != null)
+        {
+            int id = objeto.Tipo == TipoRequisitoGuia.Objeto ? objeto.Id : (objeto.Ids?.FirstOrDefault() ?? 0);
+            return LibraryCategoryTreeBuilder.ResolveIconPath(servicio, id);
+        }
+
+        var npc = paso.Requisitos.FirstOrDefault(r =>
+            r.Tipo == TipoRequisitoGuia.Npc || r.Tipo == TipoRequisitoGuia.NpcActivo);
+        return npc != null ? NpcIconResolver.GetIconPath(npc.Id) : null;
     }
 }
 
@@ -138,9 +180,15 @@ public sealed partial class GuideViewModel : ObservableObject
     private readonly Func<LoadedCharacter?> _character;
     private readonly Func<WldWorld?> _world;
     private readonly Func<bool> _hasCalamity;
+    // Encargo3 (24-sep-2026): guardado tal cual (antes solo vivia como parametro local del
+    // constructor) - Refresh() lo necesita en cada vuelta para resolver el icono real de cada
+    // GuidePasoViewModel (ver ResolverIconoDelHito), mismos catalogos ya cargados en memoria que
+    // usa el resto de Terrakeep, sin volver a leer nada de disco.
+    private readonly CharacterFileService _servicio;
 
     public GuideViewModel(CharacterFileService servicio, Func<LoadedCharacter?> character, Func<WldWorld?> world, Func<bool> hasCalamity)
     {
+        _servicio = servicio;
         _character = character;
         _world = world;
         _hasCalamity = hasCalamity;
@@ -238,7 +286,7 @@ public sealed partial class GuideViewModel : ObservableObject
                 var requisitos = resultados.Select(r => new GuideRequisitoViewModel(r, _textos)).ToList();
                 bool pasoCompletado = tramo.Implementado && _evaluador.PasoCompletado(paso, contexto);
                 float preparacion = _evaluador.Preparacion(paso, contexto, out int cumplidos, out int totalObligatorios);
-                var pasoVm = new GuidePasoViewModel(paso, _textos, requisitos, pasoCompletado, preparacion, cumplidos, totalObligatorios);
+                var pasoVm = new GuidePasoViewModel(paso, _textos, requisitos, pasoCompletado, preparacion, cumplidos, totalObligatorios, _servicio);
                 pasos.Add(pasoVm);
 
                 // Objetivo actual: el primer paso SIN completar del primer tramo OBLIGATORIO

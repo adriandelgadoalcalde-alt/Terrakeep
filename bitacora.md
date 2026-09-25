@@ -21115,3 +21115,107 @@ sin tocar ningún archivo del árbol de trabajo) + `git restore --staged` solo d
 archivos ajenos (vuelven a quedar exactamente como los había dejado el otro agente: uno sin
 trackear, el otro modificado sin stagear) + commit limpio solo con mis 5 archivos. Sin
 `git push`.
+
+## Guia Encargo3 (25-sep-2026): sprites reales de objeto/NPC-vecino en el banner y el árbol de progresión
+
+**Hallazgo ya investigado por arquitecto-keep, aplicado aquí**: la Guía (banner "Tu objetivo
+ahora mismo" + árbol de progresión completo) solo pintaba el glifo ✓/○/? de cada paso, nunca
+un sprite real - aunque `Terrakeep.App/Services/LibraryCategoryTreeBuilder.ResolveIconPath`
+(objetos vanilla/Calamity) y `NpcIconResolver.GetIconPath` (27 NPCs de pueblo) ya existían y se
+usan en Librería/Exploración. `GuideViewModel` tenía `CharacterFileService` disponible en su
+constructor pero no lo propagaba a `GuidePasoViewModel`/`GuideRequisitoViewModel`.
+
+**Arreglo real aplicado** (`Terrakeep.App\ViewModels\GuideViewModel.cs`):
+- Campo nuevo `_servicio` en `GuideViewModel` (antes solo vivía como parámetro local del
+  constructor) - se necesita en cada `Refresh()` para resolver el icono de cada paso.
+- `GuidePasoViewModel` gana un parámetro `CharacterFileService servicio` en su constructor y una
+  propiedad pública `IconPath` (string?), calculada con el método nuevo `ResolverIconoDelHito`
+  (privado, estático, dentro de la misma clase parcial): cadena de fallback EXACTA de la
+  investigación - `paso.Jefe` si !=0 (vía `NpcIconResolver.GetIconPath`, sin caer a otra cosa si
+  sale null - honestidad: mezclar "el jefe de este paso" con "el primer objeto que pide" sería
+  engañoso) → si no, el primer requisito `Objeto`/`ObjetoCualquiera` del paso (vía
+  `LibraryCategoryTreeBuilder.ResolveIconPath`, mismo resolver que Librería/Investigación, cubre
+  vanilla y Calamity porque `RequisitoGuia.Id`/`Ids` ya vienen resueltos a esa misma numeración
+  por `GuideCatalog.ResolverReferenciasDeMod`) → si no, el primer requisito `Npc`/`NpcActivo`
+  (vía `NpcIconResolver`) → si no, `null` (la UI lo trata como "sin icono", nunca un hueco roto).
+- Confirmado por lectura directa del catálogo (`guia_progresion.json`, ~20 ids de jefe reales)
+  contra los 40 ficheros reales de `Assets/npc_icons/`: NINGÚN jefe del catálogo actual tiene
+  sprite de NPC de pueblo (0 coincidencias) - la mayoría de jefes no son NPC de pueblo, tal cual
+  ya documentaba el comentario original de la investigación. No se fuerza ningún caso inventado.
+- `GuideRequisitoViewModel` NO se tocó (el icono es un concepto de "hito" = paso, no de cada
+  línea de requisito individual - el alcance visual pedido era banner + árbol, ambos a nivel de
+  paso).
+
+**XAML** (`Terrakeep.App\MainWindow.xaml`):
+- Banner "Tu objetivo ahora mismo": el `StackPanel` interior del `Border` con degradado de acento
+  pasa a `DockPanel`, con una pastilla nueva `Border` (48×48, `Background="#26FFFFFF"`, mismo
+  tratamiento translúcido ya usado en los KPI del hero de Inicio) a la izquierda, con un
+  `<Image Width="40" Height="40" Stretch="Uniform">` dentro, `Visibility` atada a
+  `Guide.ObjetivoPaso.IconPath` vía el converter `NullToVis` ya usado en toda la app (oculta sin
+  hueco roto cuando es null). El propio `StackPanel` del banner gana `x:Name="GuideObjetivoBanner"`
+  (solo para que el arnés pueda `BringIntoView()` la tarjeta - la pestaña Guía entera vive en un
+  `ScrollViewer`).
+- Árbol de progresión (fila de cada paso, dentro del `ItemsControl` de `Pasos`): `<Image
+  Source="{Binding IconPath}" Width="20" Height="20">` insertado entre el glifo ✓/○ y el título,
+  mismo tamaño ya usado en otras filas icono+título de la app (línea 4146 de referencia),
+  `RenderOptions.BitmapScalingMode="NearestNeighbor"` (sprites pixel-art) y el mismo patrón
+  `Visibility`+`NullToVis`.
+
+**Hueco de cobertura KeepQA cerrado**: `Terrakeep.App.Tests\PruebasGuiaYServidor.cs`
+(`EjecutarGuiaReal`, el mismo canario `GUIA_SOLO=1` ya existente, no uno nuevo por separado) -
+antes NINGÚN canario comprobaba que `GuidePasoViewModel.IconPath` resuelve un sprite real ni que
+se pinta sin recorte/overflow. Bloque nuevo que:
+1. Localiza 3 pasos reales elegidos a mano del catálogo real (ids confirmados por lectura directa
+   del `.json`, no inventados) cubriendo las 3 categorías reales que resuelve
+   `ResolverIconoDelHito`: "Cuatro vecinos" (`PreOjo/PuebloDeCuatro`, `Npc` id=17 Merchant,
+   `Assets/npc_icons/17.png`), "Un arma que aguante una oleada entera"
+   (`EjercitoGoblin/ArmaParaElEjercitoGoblin`, `Objeto` vanilla id=361,
+   `Assets/vanilla/icons/361.png`) y "Cualquier arma con algo de alcance"
+   (`DesertScourge/ArmaParaDesertScourge`, `Objeto` Calamity vía `idMod
+   CalamityMod/DesertMedallion`, `Assets/calamity/icons/DesertMedallion.png`).
+2. Para cada uno: confirma `IconPath` no nulo y el fichero real existe en disco (reconstruyendo
+   la ruta real desde el URI `pack://siteoforigin:,,,/...`, que `new Uri(...).LocalPath` NO
+   resuelve - es un esquema propio de WPF), expande el `Expander` real del tramo (mismo control
+   que pulsaría un usuario, localizado por `DataContext` en el árbol visual, `IsExpanded` no
+   estaba bindeado a propósito), `BringIntoView()` la fila (la pestaña entera vive en un
+   `ScrollViewer`) y mide el recorte real EJE A EJE con la misma fórmula que ya usa
+   `AuditoriaMaquetacion.cs` (`RectCompleto`/`ZonaVisible`/`QuienRecorta`, reutilizadas tal cual,
+   mismo `partial class Program`) - primer intento real de esta ronda comparaba anchos en crudo
+   contra la zona de clip completa del `ScrollViewer` y daba un falso recorte SIEMPRE para
+   cualquier icono pequeño dentro de un viewport grande, corregido a la fórmula real de "cuánto
+   de la caja completa cae fuera de la zona pintada".
+3. Deja evidencia fotográfica real en `keepqa-evidencia\`: `guia-banner-sin-icono.png` (estado
+   orgánico real de este personaje/mundo - objetivo actual es un requisito `CristalesVida`, sin
+   icono a propósito, confirma que el caso "sin icono" no rompe el layout), `guia-banner-con-icono.png`
+   (mismo banner con `Guide.ObjetivoTramo`/`ObjetivoPaso` apuntados manualmente a un paso YA
+   evaluado de verdad contra el personaje/mundo reales, para dejar constancia visual real del
+   caso "con icono" sin depender de qué paso le toque estar pendiente a este save concreto),
+   `guia-arbol-iconos.png` y una captura individual por cada una de las 3 filas
+   (`guia-fila-icono-*.png`).
+- Resultado real medido en la última pasada: `filasConIconoVisible=3/3`, sin ningún `FALLO` en
+  todo el bloque `GUIA_SOLO ICONOS`. Comando:
+  `cd Terrasavr-Win\Terrasavr-Native && GUIA_SOLO=1 dotnet run --project Terrakeep.App.Tests -c
+  Debug --no-build` (tras `dotnet build Terrakeep.App.Tests -c Debug`).
+
+**Build**: `dotnet build Terrakeep.App/Terrakeep.App.csproj -c Debug` y `dotnet build
+Terrakeep.App.Tests/Terrakeep.App.Tests.csproj -c Debug` - 0 avisos, 0 errores, repetido varias
+veces durante la ronda. **Límite real de esta sesión concreta** (no del cambio en sí): en el
+tramo final de la ronda, un `dotnet build`/`dotnet test` de la solución completa o de
+`Terrakeep.Core`/`ServidorKeep.Core` en solitario empezó a fallar de forma reproducible con
+`CS0579 Atributo ... duplicado` en los `AssemblyInfo.cs` GENERADOS de esos dos proyectos
+compartidos - confirmado por lectura directa de los mensajes de error que es contención real
+entre VARIOS agentes en paralelo escribiendo al mismo `obj\` compartido en este mismo instante
+(se ven rutas `obj_fixagent\` y `obj_personajemenu\` de otros agentes activos, ademas del `obj\`
+por defecto corrompiéndose de nuevo segundos después de cada `dotnet clean` propio). Ninguno de
+los dos proyectos afectados (`Terrakeep.Core`, `ServidorKeep.Core`) forma parte del diff de este
+encargo (los tres archivos tocados son `Terrakeep.App/ViewModels/GuideViewModel.cs`,
+`Terrakeep.App/MainWindow.xaml`, `Terrakeep.App.Tests/PruebasGuiaYServidor.cs`) - la evidencia de
+no-regresión real es la compilación limpia repetida de `Terrakeep.App`/`Terrakeep.App.Tests` (que
+SÍ incluyen mi diff) más la ejecución end-to-end correcta del canario `GUIA_SOLO` arriba.
+
+**Recompilación/redespliegue de producción**: pendiente de que se libere la contención de build
+descrita arriba - se reintentará antes de cerrar el encargo; si sigue bloqueado, queda anotado
+como pendiente explícito (no se fuerza nada ni se cierra ningún proceso de otro agente).
+
+**Commit**: solo los 3 archivos de este encargo (`GuideViewModel.cs`, `MainWindow.xaml`,
+`PruebasGuiaYServidor.cs`). Sin `git push`.
