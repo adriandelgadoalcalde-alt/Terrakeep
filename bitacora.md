@@ -28019,3 +28019,84 @@ los 5s, cerrado limpio con `Stop-Process -Force`. `DEPLOY_LOCK` liberado tras co
 via `MultiBinding`) + esta entrada de `bitacora.md` - unicos ficheros tocados, `git add` con
 rutas explicitas, nunca `-A`. `doNotTouch` respetado (`CLAUDE.md`, `Terrasavr-Native.zip`,
 `Terrakeep.App.Tests/ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md`). Sin `git push`.
+
+## ParidadPersonaje Fase6 (continuacion, 26-sep-2026 misma noche): reintento de verificacion del
+fix de Trail BLOQUEADO de nuevo - misma ventana en blanco, ahora con evidencia que debilita la
+hipotesis de contencion de E/S, TASK e5eaea9e
+
+**Encargo recibido**: aplicar el patron de "segundo agente" (arreglo ya investigado en Fase6,
+commit `67b13a6`, `Trail = plantilla.Trail` en `PrepararCaso`) y completar los 14 casos minimos de
+paridad visual pendientes. El fix en si NO se ha tocado (ya estaba aplicado y compilado desde
+`67b13a6`) - esta entrada documenta el intento de VERIFICARLO contra el juego real y por que sigue
+sin poder cerrarse.
+
+**Paso 1 - carga de `dotnet.exe` reevaluada** (el intento anterior atribuyo el bloqueo a contencion
+de E/S con "9+ procesos dotnet.exe"): al empezar esta sesion habia 5 procesos `dotnet.exe`
+(confirmado con `Get-CimInstance Win32_Process`, los 5 son nodos MSBuild reutilizables
+`/nodemode:1`, no builds activos pesados) - bajo el umbral de alarma. `dotnet build` del propio
+`ParidadVisual.csproj` termino en 15s sin contencion aparente.
+
+**Paso 2 - generacion del `.plr` sintetico**: `ParidadVisual.dll preparar-caso Eldelgas.plr
+ZZTrailFixVerif.plr --nombre ZZTrailFixVerif --limpiar` -> `OK ... version=326`, sin error (el fix
+de `Trail` sigue compilando y ejecutandose bien, coherente con lo ya documentado).
+
+**Paso 3 - intento de verificacion contra el juego real, BLOQUEADO de nuevo**: `capturar_vanilla.py`
+(`SesionTerraria` + `ir_a_seleccionar_personaje`) reprodujo EXACTAMENTE el mismo patron que el
+intento anterior: ventana de Terraria abierta, titulo cambia UNA vez de "Terraria" a un tip
+("Terraria: ¡Ahora, con sonido!") y se congela ahi durante todo el sondeo (6 intentos x 8s, ~48s),
+`ImageGrab`/`capturar_ventana_completa` siempre devuelve un rectangulo gris/blanco liso, sin rastro
+de menu ni de la lista de personajes.
+
+**Diagnostico adicional NUEVO (no hecho en el intento anterior) para descartar que fuera un
+artefacto de la tecnica de captura**: `win32gui.GetForegroundWindow()` en el momento del sondeo
+devuelve el MISMO `hwnd` que `s.ventana.handle` (Terraria SI esta en primer plano de verdad,
+`IsWindowVisible=1`, `IsIconic=0`, `rect=(632,341,1928,1100)` - coherente con 1280x720+chroma en
+2560x1440). Se repitio la captura con `PrintWindow(hwnd, hdc, PW_RENDERFULLCONTENT)` (API distinta
+a `BitBlt`/`ImageGrab`, pensada especificamente para ventanas con contenido acelerado por GPU que
+`BitBlt` no siempre captura) - `PrintWindow` devolvio exito (`result=1`) pero el bitmap resultante
+es IGUAL de blanco/gris que con `ImageGrab`. Se revisaron los registros de eventos de Windows
+(`Get-WinEvent` en `Application`/`System`, ultimos 10 minutos) buscando TDR/crash de driver grafico
+(`nvlddmkm`/`Display`/`dwm`) - **sin ningun evento**, descarta un crash de GPU driver detectado por
+el SO.
+
+**Conclusion honesta**: con foreground/visibilidad/tamano de ventana confirmados correctos, con dos
+tecnicas de captura distintas (BitBlt via `ImageGrab` y `PrintWindow` con render GPU forzado) dando
+el mismo resultado en blanco, y con la carga de `dotnet.exe` mucho mas baja que el intento anterior
+(5 procesos MSBuild inactivos vs 9+ builds activos), la hipotesis de "contencion de E/S de disco con
+otros agentes" del intento anterior queda DEBILITADA por esta evidencia (el problema se reproduce
+igual con mucha menos carga) sin poder confirmar una causa alternativa concreta - el juego realmente
+no esta pintando su superficie de render en absoluto durante el tiempo observado, algo mas alla de
+alcance de esta mision (verificacion QA, no depuracion de infraestructura Steam/DirectX/drivers del
+sistema). **LIMITE REAL** confirmado de nuevo: el fix de `Trail` sigue SIN verificar contra el juego
+real (solo evidencia estatica: compila, `PlrFile.VerifyRoundTrip` en verde, mismo criterio que
+Fase6). Los 14 casos minimos de paridad visual NO se pudieron generar (0 de los 13 pendientes mas
+alla del Caso1 ya cerrado en Fase0) - ningun caso nuevo requiere vanilla real, y sin vanilla real no
+hay comparacion pixel valida.
+
+**Limpieza real tras el intento**: `config.json` restaurado a los valores reales del usuario
+(confirmado con `Get-Content`: `Fullscreen=true`, `DisplayWidth=2560`, `DisplayHeight=1440`,
+`UIScale=1.4666667`), `ZZTrailFixVerif.plr` borrado de `Players/` real, sin proceso `Terraria.exe`
+huerfano (`Get-Process` vacio tras cerrar). Ningun dato del usuario tocado de forma permanente.
+
+**Pendiente real para el proximo intento**: dado que ya se descarto contencion de E/S (carga baja) y
+crash de GPU driver (sin eventos), y que la captura funciona igual de mal con dos tecnicas
+distintas, el siguiente paso mas prometedor NO es reintentar `capturar_vanilla.py` tal cual sino
+investigar si el problema es especifico de lanzar el juego de forma automatizada (`subprocess.Popen`
+sin sesion interactiva real de Steam en primer plano en el momento del lanzamiento) frente a un
+lanzamiento manual - o revisar si un cambio reciente de Steam/overlay/DRM esta interfiriendo. Fuera
+del alcance QA de esta mision, requiere un encargo especifico de infraestructura si se quiere seguir
+investigando. **Fase6 sigue sin cerrarse.** Caso1 (Fase0) sigue siendo la unica evidencia pixel real
+completa.
+
+**Sin cambios de codigo de produccion ni de arnes en esta entrada** (el fix de `Trail` ya estaba
+aplicado y comiteado en `67b13a6`) - `dotnet build`/`dotnet test` no vueltos a correr sobre
+`Terrakeep.slnx` por no haber tocado nada; el build de `ParidadVisual.csproj` (fuera de la solucion)
+si se confirmo en verde arriba. Sin despliegue de `Terrakeep.exe` (nada de produccion tocado). Sin
+`git push`.
+
+**Commit real**: unicamente esta entrada de `bitacora.md` (ningun fichero de codigo tocado en esta
+sesion). `doNotTouch` respetado. Ficheros ajenos modificados en paralelo por otros agentes (ver
+`git status` al inicio de la sesion: varios `Terrakeep.*.Tests/*.cs`, `CLAUDE.md`,
+`scripts/extraer-nombres-calamity-en.js`, `scripts/sync-guia-desde-terrakeepmod.ps1`,
+`Terrasavr-Native.zip`, `Terrakeep.App.Tests/ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md`) NO
+anadidos al stage.
