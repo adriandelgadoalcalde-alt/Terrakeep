@@ -1058,50 +1058,11 @@ public partial class MainWindow : Window
         MapTooltipBorder.SetCurrentValue(UIElement.VisibilityProperty, Visibility.Collapsed);
     }
 
-    // Hover en Inicio ("que ande solo al pasar el raton" - bitacora.md 21-sep-2026, catalogo de
-    // ideas Keep). Real vanilla: UICharacterListItem.cs, MouseOver/MouseOut de la tarjeta entera
-    // llaman SetAnimated(true/false) sobre el doll - aqui el equivalente WPF real es MouseEnter/
-    // MouseLeave del propio Border de la tarjeta (mismo criterio de codigo-detras ya usado en
-    // OnWorldMapMouseLeave arriba). DataContext puede no ser el ViewModel esperado en un evento
-    // de enrutado (burbujea desde hijos con otro DataContext, p.ej. el ContextMenu) - "as" +
-    // comprobacion null, nunca un cast directo.
-    private void OnCharacterCardMouseEnter(object sender, MouseEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.DataContext is CharacterListEntryViewModel entry)
-            entry.SetHovering(true);
-    }
-
-    private void OnCharacterCardMouseLeave(object sender, MouseEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.DataContext is CharacterListEntryViewModel entry)
-            entry.SetHovering(false);
-    }
-
-    // Arreglo real 25-sep-2026 (bitacora.md, "Inicio, mascotas ocultas y banner sin hover",
-    // handoff e5eaea9e-c261-4199-8e7d-060b6054f58d): el banner "Continuar con X" comparte el
-    // MISMO CharacterListEntryViewModel que ya anima con exito en las tarjetas
-    // (Home.LastSessionCharacterEntry, HomeViewModel.cs:180), pero su DataContext real es el
-    // MainViewModel entero (el Border del banner vive fuera de CharacterCardTemplate) - reusar
-    // OnCharacterCardMouseEnter/Leave a pelo aqui leeria (sender as FrameworkElement)?.DataContext
-    // como MainViewModel, no como CharacterListEntryViewModel, y el cast fallaria en silencio (sin
-    // excepcion, simplemente sin animar nada). Opcion B documentada por el investigador
-    // (bitacora.md): un par de manejadores propios que leen _viewModel.Home.
-    // LastSessionCharacterEntry directamente - cero riesgo de romper los bindings de Home.* que
-    // ya cuelgan del DataContext real de la ventana en ese mismo Border.
-    private void OnHomeBannerMouseEnter(object sender, MouseEventArgs e) => _viewModel.Home.LastSessionCharacterEntry?.SetHovering(true);
-
-    private void OnHomeBannerMouseLeave(object sender, MouseEventArgs e) => _viewModel.Home.LastSessionCharacterEntry?.SetHovering(false);
-
-    // Red de seguridad adicional (mismo criterio que ya cerro el bug real "Terrakeep congelado"
-    // de Apariencia, ver AppearanceViewModel.StopWalkAnimation): si la tarjeta desaparece del
-    // arbol visual (rescan de Inicio) mientras el raton seguia encima, WPF no siempre llega a
-    // disparar MouseLeave a tiempo - parar aqui tambien garantiza que el timer de esa tarjeta
-    // nunca pueda quedar corriendo solo.
-    private void OnCharacterCardUnloaded(object sender, RoutedEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.DataContext is CharacterListEntryViewModel entry)
-            entry.SetHovering(false);
-    }
+    // ADR-TERRAKEEP-016/026 (26-sep-2026): los manejadores de hover de Inicio
+    // (OnCharacterCardMouseEnter/Leave, OnCharacterCardUnloaded, OnHomeBannerMouseEnter/Leave)
+    // se MOVIERON a Terrakeep.App/Views/HomeView.xaml.cs junto con la DECIMA extraccion real de
+    // MainWindow.xaml (seccion INICIO) - ninguno se usaba fuera de esa seccion (grep confirmado
+    // antes de mover nada), ver el comentario real completo en HomeView.xaml.cs.
 
     // Centra el mapa sobre la posicion de un NPC (pedido desde ExplorationViewModel via
     // NavigateToTileRequested al pulsar un NPC en la lista) - los offsets del ScrollViewer ya

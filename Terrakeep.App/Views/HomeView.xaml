@@ -1,0 +1,583 @@
+<!-- ADR-TERRAKEEP-016/026 (26-sep-2026): DECIMA extraccion real de una seccion de
+     MainWindow.xaml a un UserControl, seccion INICIO (punto 4.7 del plan ADR-TERRAKEEP-016, 299
+     lineas, la unica pestaña top-level marcada por el propio plan como "puede hacerse en
+     paralelo en cualquier punto, bajo acoplamiento, Home.* autocontenido" - sin depender de
+     ninguna de las 9 extracciones anteriores).
+
+     HALLAZGO REAL (grep exhaustivo ANTES de mover nada, mismo criterio de rondas anteriores):
+     a diferencia de lo que el plan original daba por hecho ("Home.* autocontenido"), INICIO SI
+     referencia DOS recursos window-scoped directamente en su propio markup (x:Key SOLO en
+     Window.Resources de MainWindow.xaml antes de esta ronda):
+       1. BoolToVis (BooleanToVisibilityConverter) - 1 uso directo en el cuerpo (barra de progreso
+          de "escaneando personajes", Home.IsScanning) + 4 usos MAS dentro de CharacterCardTemplate
+          (ver punto 2). Mismo patron ya resuelto por HostingView/ADR-019, GuideView/ADR-021,
+          UnlocksView/ADR-024 y CompareView/ADR-025: <UserControl.Resources> LOCAL con clave propia
+          HomeBoolToVis (distinta de BoolToVis/GuideBoolToVis/HostingBoolToVis/UnlocksBoolToVis/
+          CompareBoolToVis, sin colision con ninguna ya usada), NUNCA promovido a
+          Application.Resources (revienta MainWindow.InitializeComponent() entero en runtime, ver
+          el hallazgo real completo de ADR-019).
+       2. CharacterCardTemplate (DataTemplate, DataType=CharacterListEntryViewModel, 215 lineas,
+          vivia en Window.Resources 1274-1488 ANTES de esta ronda) - grep confirmado: el UNICO
+          consumidor real en todo el archivo es el ItemsControl.ItemTemplate de "Tus personajes"
+          dentro de la propia pestaña INICIO (ninguna otra seccion del arbol la usa, ni Objetos ni
+          Exploracion ni nada mas) - mismo caso ya resuelto por CompareView/ADR-025 (plantillas
+          exclusivas de una sola seccion viajan JUNTAS a su UserControl, no se quedan huerfanas en
+          Window.Resources): la plantilla entera se mueve dentro de <UserControl.Resources> de este
+          mismo archivo, MISMA clave x:Key="CharacterCardTemplate" (sin necesidad de renombrarla,
+          no habia ninguna otra definicion con esa clave para colisionar).
+
+     HALLAZGO REAL adicional (code-behind, no solo recursos - primer caso real de este tipo desde
+     ACERCA DE/ADR-020): CharacterCardTemplate trae 3 manejadores de evento propios
+     (MouseEnter="OnCharacterCardMouseEnter", MouseLeave="OnCharacterCardMouseLeave",
+     Unloaded="OnCharacterCardUnloaded") y el banner "Continuar con X" del cuerpo de Inicio trae 2
+     mas (MouseEnter="OnHomeBannerMouseEnter", MouseLeave="OnHomeBannerMouseLeave") - los 5 vivian
+     en MainWindow.xaml.cs y NINGUNO se usa fuera de INICIO (grep confirmado) - MOVIDOS tal cual a
+     HomeView.xaml.cs (mismo patron ya establecido por AboutView/ADR-020: sin _viewModel de
+     MainWindow, sin "this" como Window, ver el comentario real de HomeView.xaml.cs).
+
+     CASO NUEVO no visto en ninguna ronda anterior (recurso DUAL, no solo window-scoped o
+     autocontenido): Click="OnLoadClick" aparece DOS VECES dentro de INICIO (boton "Cargar de otra
+     carpeta" y tarjeta "Empezar: cargar personaje") pero el MISMO nombre de metodo tambien se usa
+     FUERA de Inicio (MenuItem "Cargar personaje" del menu "Personaje ▾" de la cabecera global,
+     MainWindow.xaml linea ~1902, que se queda en MainWindow.xaml) - a diferencia de los 5 de
+     arriba, este NO se puede mover entero (seguiria haciendo falta en MainWindow.xaml.cs para ese
+     MenuItem). Resuelto con un OnLoadClick PROPIO en HomeView.xaml.cs (mismo nombre, clase
+     distinta, sin conflicto): mismo OpenFileDialog/Filter/Title que el original, pero
+     Window.GetWindow(this) en vez de "this" y ViewModel.ConfirmDiscardChanges (el Func<bool>?
+     publico que MainViewModel YA expone, MainWindow.xaml.cs:116 lo conecta exactamente a
+     ConfirmDiscardChanges(Loc["dlg_action_load_other"])) en vez del metodo privado
+     ConfirmDiscardChanges(string) de MainWindow (inaccesible desde un UserControl) - MISMO
+     delegado real que ya invoca la version de MainWindow, no una segunda logica reinventada.
+
+     El resto de recursos que usa esta seccion (NavRailLabel, TitleText, CaptionText, BodyText,
+     AccentGradientBrush, CardShadow, CardShadowHover, NullToVis, HeroKpiPill, CountToVis,
+     EmptyToCollapsed, SectionText, NavCardButton, AccentBrush, CalamityBrush, BgElevatedBrush,
+     BorderBrush0, BgHoverBrush, BorderStrongBrush, AccentMutedBrush, AccentHoverBrush,
+     TextSecondaryBrush) confirmados en Styles/Theme.xaml o App.xaml, ninguno mas window-scoped.
+
+     Contenido copiado BYTE A BYTE del TabItem "INICIO" (MainWindow.xaml, ScrollViewer completo)
+     y de CharacterCardTemplate (antes en Window.Resources) - solo re-indentado al moverse de
+     sitio y BoolToVis->HomeBoolToVis en los 5 sitios señalados, ningun otro caracter de contenido
+     cambiado. MainWindow.xaml queda con <views:HomeView /> dentro del TabItem INICIO (el
+     envoltorio TabItem.Header/ToolTip/AutomationProperties se queda en MainWindow.xaml, mismo
+     patron de las 9 rondas anteriores). -->
+<UserControl x:Class="Terrakeep.App.Views.HomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             xmlns:controls="clr-namespace:Terrakeep.App.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="HomeBoolToVis" />
+
+        <DataTemplate x:Key="CharacterCardTemplate" DataType="{x:Type vm:CharacterListEntryViewModel}">
+            <!-- GapAnalysis ParidadPersonaje (26-sep-2026, requirement 480a9bdd-6d5f-4fa6-935d-46f895e97514):
+                 Width sube de 240 a 312 - la nueva columna del preview (PlayerPetPreviewControl,
+                 ver mas abajo) reserva un ancho FIJO y PERMANENTE (PlayerPetPreviewLayout.
+                 ReserveColumnWidth(1.3), ~119.6px, el peor caso real medido de las 63 mascotas del
+                 catalogo, decision final del usuario: "que quepan todas sin recortar ninguna,
+                 igual en reposo y en hover") en vez de los 52px fijos de antes - sin este aumento,
+                 la columna de texto (WrapPanel de insignias/KPIs ya ajustado hoy mismo) se
+                 quedaria sin espacio legible. 312 = mismo padding(24)+gap(12) de siempre + preview
+                 nuevo(~120) + columna de texto (~156, ligeramente MAS ancha que antes, nunca
+                 menos). -->
+            <Border Padding="12" CornerRadius="8" Background="{StaticResource BgElevatedBrush}" BorderThickness="1"
+                    Width="312" Margin="0,0,14,14" Cursor="Hand"
+                    Effect="{StaticResource CardShadow}"
+                    Tag="{Binding DataContext.Home, RelativeSource={RelativeSource AncestorType=Window}}"
+                    MouseEnter="OnCharacterCardMouseEnter" MouseLeave="OnCharacterCardMouseLeave"
+                    Unloaded="OnCharacterCardUnloaded">
+                <!-- Hover ("que ande solo al pasar el raton" - bitacora.md 21-sep-2026, ver el
+                     comentario real de CharacterListEntryViewModel.SetHovering): MouseEnter/
+                     MouseLeave sobre la TARJETA ENTERA (no solo el doll), igual que Terraria
+                     vanilla real (UICharacterListItem hereda de UIPanel, el hover es del panel
+                     entero). Unloaded es la red de seguridad adicional del mismo criterio que ya
+                     cerro el bug real de "Terrakeep congelado" en Apariencia: si la tarjeta
+                     desaparece del arbol visual (rescan) mientras el raton seguia encima, el
+                     timer se para igual, nunca puede quedar corriendo solo. -->
+
+                <!-- C-13 (informe de pulido final, cierra H2): mismo "levanta al pasar" real de
+                     NavCardButton (Theme.xaml, TranslateTransform Y 0->-3 en 150ms) - a
+                     proposito SIN el ColorAnimation del borde a acento que si tiene NavCardButton,
+                     porque aqui el borde YA significa "personaje cargado" (IsCurrent, mas abajo) -
+                     animarlo tambien al pasar el raton reproduciria el bug real L-6 (color de
+                     estado y color de hover peleando por el mismo Setter). -->
+                <Border.RenderTransform>
+                    <TranslateTransform Y="0" />
+                </Border.RenderTransform>
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding DataContext.Home.OpenCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                </Border.InputBindings>
+                <!-- I-b (segunda auditoria de Opus, Fable): "Sin ninguna accion secundaria en la
+                     tarjeta - faltan las 3 obvias y baratas". Menu contextual real (clic derecho).
+                     Un ContextMenu real es un popup APARTE del arbol visual de la ventana -
+                     RelativeSource AncestorType=Window (el truco de arriba) no llega hasta aqui
+                     dentro, por eso HomeViewModel viaja en el propio Tag del Border (inerte, sitio
+                     real donde dejarlo) y PlacementTarget.Tag lo recupera desde el menu. -->
+                <Border.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="{Binding Loc[action_open_folder], Mode=OneWay}"
+                                  Command="{Binding PlacementTarget.Tag.OpenFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <MenuItem Header="{Binding Loc[action_duplicate_character], Mode=OneWay}"
+                                  Command="{Binding PlacementTarget.Tag.DuplicateCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                        <MenuItem Header="{Binding Loc[action_restore_backup], Mode=OneWay}"
+                                  Command="{Binding PlacementTarget.Tag.RestoreBackupCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  ToolTip="{Binding Loc[tt_restore_last_backup], Mode=OneWay}" />
+                        <!-- H5-04 / BK (13-sep-2026): antes era un SUBMENU que restauraba con un
+                             solo clic de menu, sin confirmacion y sin decir que habia dentro de
+                             cada version. Ahora abre el panel real de historial (ver el overlay
+                             "Historial de versiones" mas abajo en este mismo fichero), donde cada
+                             punto lleva su resumen legible y sobrescribir pide confirmacion. -->
+                        <MenuItem Header="{Binding Loc[action_save_history], Mode=OneWay}"
+                                  Command="{Binding PlacementTarget.Tag.ShowBackupHistoryCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    </ContextMenu>
+                </Border.ContextMenu>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush0}" />
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}" />
+                                <Setter Property="Effect" Value="{StaticResource CardShadowHover}" />
+                                <!-- Sin Storyboard.TargetName a proposito - MC4011 real ya
+                                     encontrado en este mismo proyecto (Theme.xaml, comentario de
+                                     NavCardButton): TargetName solo vale dentro de
+                                     ControlTemplate.Triggers, este es un Style.Triggers normal
+                                     sobre el propio Border. Sin TargetName, el Storyboard anima el
+                                     elemento con el propio Style (este Border) - la ruta con tipo
+                                     calificado llega hasta el TranslateTransform inline de
+                                     RenderTransform sin necesidad de nombrarlo. -->
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="-3" Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <!-- I-a: "No se distingue que personaje esta cargado - las tarjetas se
+                                 ven identicas al volver a Inicio". -->
+                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <!-- GapAnalysis ParidadPersonaje (26-sep-2026, requirement
+                         480a9bdd-6d5f-4fa6-935d-46f895e97514) - SUSTITUYE el Grid+2 Image+2
+                         converters anterior (PetBottomAlignMarginConverter/PetDollShiftXConverter,
+                         ver bitacora.md y el commit anterior de este mismo encargo para el detalle
+                         historico completo) por PlayerPetPreviewControl - un unico control
+                         parametrizado por CanvasScale que calcula las posiciones reales con
+                         PlayerPetPreviewLayout (Terrakeep.Core, motor puro sin WPF, ver el
+                         comentario de esa clase para la cita completa del decompilado). Mismo
+                         orden Z real que Terraria vanilla (mascota detras, jugador delante) ya
+                         garantizado DENTRO del control, no aqui. Causa raiz real del bug "Chester
+                         parece un suelo/plataforma bajo los pies": no era la formula de posicion
+                         (ya era correcta), era el CONTENEDOR - nunca reservaba hueco de sobra para
+                         que una mascota mas ancha que el propio doll no se recortase contra el
+                         borde de la tarjeta. Este control reserva ese hueco el mismo, con
+                         PlayerPetPreviewLayout.ReserveColumnWidth(1.3) (~120px, el peor caso real
+                         de las 63 mascotas del catalogo, ver PlayerPetPreviewCatalogWidthTests.cs)
+                         - por eso ya no necesita un Width/Height fijo aqui como el Grid anterior. -->
+                    <controls:PlayerPetPreviewControl Grid.Column="0" CanvasScale="1.3" VerticalAlignment="Top"
+                                                       PreviewSource="{Binding Preview}"
+                                                       PetImageSource="{Binding PetImage}"
+                                                       PetOffsetX="{Binding PetOffsetX}"
+                                                       PetOffsetY="{Binding PetOffsetY}"
+                                                       PetSpriteDirection="{Binding PetSpriteDirection}"
+                                                       PetRotationDegrees="{Binding PetRotationDegrees}"
+                                                       ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}" />
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <DockPanel>
+                            <TextBlock Text="✓" DockPanel.Dock="Right" Foreground="{StaticResource AccentBrush}" FontWeight="Bold" Margin="4,0,0,0"
+                                       ToolTip="{Binding Loc[tt_current_character], Mode=OneWay}"
+                                       Visibility="{Binding IsCurrent, Converter={StaticResource HomeBoolToVis}}" />
+                            <TextBlock Text="{Binding Name}" Style="{StaticResource SectionText}" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                        <!-- ParidadPersonaje Fase6 (26-sep-2026, GapAnalysis coordinador): la
+                             pantalla real "Seleccionar jugador" de Terraria SIEMPRE muestra
+                             vida/mana/tiempo jugado por personaje - esta tarjeta solo enseñaba
+                             LastModifiedText (fecha de edicion en Terrakeep, que Terraria ni
+                             siquiera muestra ahi). Fila compacta con los 3 datos reales, mismo
+                             estilo/color secundario que LastModifiedText de mas abajo (que se
+                             CONSERVA, sigue siendo un dato real distinto - fecha de edicion vs
+                             tiempo jugado). WrapPanel (no StackPanel) por el mismo motivo real
+                             que ya justifica el WrapPanel de insignias mas abajo (R-05/H-05): con
+                             HealthMax/ManaMax de varias cifras (mods/Expert/Master) esta fila
+                             tambien puede desbordar el Width=240 fijo de la tarjeta. -->
+                        <WrapPanel Margin="0,4,0,0">
+                            <TextBlock Text="♥" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,0,3,0" />
+                            <TextBlock Text="{Binding HealthMax}" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,0,10,0" />
+                            <TextBlock Text="★" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,0,3,0" />
+                            <TextBlock Text="{Binding ManaMax}" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,0,10,0" />
+                            <TextBlock Text="◷" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,0,3,0" />
+                            <TextBlock Text="{Binding PlayTimeText}" Style="{StaticResource CaptionText}" FontSize="10" />
+                        </WrapPanel>
+                        <!-- Auditoria de redimensionado, R-05/H-05: con 3 insignias nuevas
+                             (tModLoader/Calamity/Vanilla, 4-sep-2026) mas la de dificultad, la
+                             fila entera desbordaba el Width=240 de la tarjeta (linea de arriba) y
+                             el StackPanel horizontal recortaba la ultima en silencio - hasta 39 de
+                             40px, medido. WrapPanel deja que pase a una segunda linea cuando hace
+                             falta, sin perder ninguna. -->
+                        <!-- C-12 (auditoria de pulido final): las 4 insignias solo llevaban margen
+                             horizontal - a un ancho de tarjeta que fuerza el WrapPanel de arriba
+                             (R-05/H-05) a una segunda linea, la fila de abajo quedaba pegada a la
+                             de arriba sin ningun hueco vertical. Margen inferior en las 4. -->
+                        <WrapPanel Margin="0,4,0,0">
+                            <Border Background="{StaticResource BgHoverBrush}" CornerRadius="3" Padding="5,1" Margin="0,0,5,4">
+                                <TextBlock Text="{Binding DifficultyLabel}" Style="{StaticResource CaptionText}" FontSize="10" />
+                            </Border>
+
+                            <!-- Encargo del usuario 4-sep-2026: hasta hoy solo habia UNA insignia, roja, que decia
+                                 "Calamity" y en realidad solo significaba "tiene un .tplr al lado" (=cualquier mod).
+                                 Ahora son tres hechos separados, en orden de importancia de izquierda a derecha:
+                                 tModLoader (lo principal) -> Calamity (lo especifico, ADEMAS de la anterior, no en su
+                                 lugar) -> Vanilla (la ausencia de las dos). Ver ESPEC-sprites-botones-badges.md#C. -->
+
+                            <!-- "Vanilla": la mas callada de las tres a proposito (es la AUSENCIA de mods, no un rasgo
+                                 que reclame atencion). Solo contorno, mismo lenguaje visual que los selectores nuevos de
+                                 Exploracion - sin inventar ningun color nuevo del tema. -->
+                            <Border Background="Transparent" BorderBrush="{StaticResource BorderStrongBrush}" BorderThickness="1"
+                                    CornerRadius="3" Padding="5,1" Margin="0,0,5,4"
+                                    ToolTip="{Binding Loc[tt_no_mods_no_tplr], Mode=OneWay}"
+                                    Visibility="{Binding IsVanilla, Converter={StaticResource HomeBoolToVis}}">
+                                <TextBlock Text="Vanilla" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                            </Border>
+
+                            <!-- "tModLoader": la pareja AccentMuted/AccentHover, que en este tema ya significa "de la
+                                 familia del acento pero secundario" (Tag="AccentSoft", PrefixGroupButton). Va ANTES que
+                                 la de Calamity porque es el hecho principal, y su ToolTip lleva la lista real de mods
+                                 (usedMods del propio .tplr) cuando el fichero la trae. -->
+                            <Border Background="{StaticResource AccentMutedBrush}" CornerRadius="3" Padding="5,1" Margin="0,0,5,4"
+                                    ToolTip="{Binding UsedModsTooltip}"
+                                    Visibility="{Binding IsTModLoader, Converter={StaticResource HomeBoolToVis}}">
+                                <TextBlock Text="tModLoader" FontSize="10" Foreground="{StaticResource AccentHoverBrush}" FontWeight="SemiBold" />
+                            </Border>
+
+                            <!-- "Calamity": el rojo de siempre (CalamityBrush), pero ahora solo cuando hay contenido
+                                 REAL de Calamity dentro del .tplr, no por el mero hecho de que el .tplr exista. -->
+                            <Border Background="{StaticResource CalamityBrush}" CornerRadius="3" Padding="5,1" Margin="0,0,5,4"
+                                    ToolTip="{Binding Loc[tt_has_calamity_content], Mode=OneWay}"
+                                    Visibility="{Binding IsCalamity, Converter={StaticResource HomeBoolToVis}}">
+                                <TextBlock Text="Calamity" FontSize="10" Foreground="White" FontWeight="SemiBold" />
+                            </Border>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding LastModifiedText}" Style="{StaticResource CaptionText}" FontSize="10" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="14">
+        <!-- I-c (segunda auditoria de Opus, Fable): MaxWidth dependiente de SizeClass -
+             en una ventana Amplia el WrapPanel de tarjetas de abajo tiene sitio real
+             para repartirse en una fila mas ancha en vez de dejar ~1000px negros. -->
+        <StackPanel MaxWidth="{Binding InicioContentMaxWidth}" HorizontalAlignment="Left">
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,6">
+                <Image Source="pack://siteoforigin:,,,/Assets/branding/logo-128.png" Width="56" Height="56" />
+                <StackPanel VerticalAlignment="Center" Margin="16,0,0,0">
+                    <TextBlock Text="{Binding About.AppName}" Style="{StaticResource TitleText}" FontSize="26" />
+                    <TextBlock Text="{Binding Loc[about_tagline], Mode=OneWay}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" />
+                </StackPanel>
+            </StackPanel>
+            <!-- H4-09 (cuarta auditoria de Opus, Fable): MaxWidth sin HorizontalAlignment
+                 explicito deja el TextBlock en Stretch por omision - un hijo Stretch mas
+                 estrecho que su contenedor por el propio MaxWidth queda CENTRADO en vez
+                 de pegado a la izquierda (mismo defecto real ya corregido en Desbloqueos
+                 y en la pestaña Versión, D-a - aqui se habia quedado sin aplicar). -->
+            <!-- Bloque 1 del idioma (pedido explicito del usuario, 5-sep-2026): primer
+                 texto real migrado al diccionario Loc (LocalizationService), prueba de
+                 concepto de la infraestructura antes de migrar el resto de la app en
+                 bloques posteriores. Path="[clave]" es sintaxis real de WPF para
+                 indexadores - MainViewModel.Loc expone LocalizationService.Instance, que
+                 refresca EN VIVO via PropertyChanged("Item[]") al cambiar el idioma en
+                 Ajustes, sin reiniciar. ".plr"/".tplr" NO se traducen (son la extension
+                 real del archivo, igual en cualquier idioma). -->
+            <!-- Catalogo de rediseño visual T4 (20-sep-2026, "Inicio como escritorio de
+                 partida"): este parrafo (4 lineas explicando que es Terrakeep) solo hace
+                 falta la PRIMERA vez real - a partir de la segunda es puro ruido antes de
+                 llegar a la tarjeta hero/tus personajes. Ver MainWindow.xaml.cs
+                 (Settings.MarkHomeIntroSeen, diferido a DispatcherPriority.Loaded para no
+                 marcarlo "visto" antes de que este mismo frame real se pinte una vez). -->
+            <TextBlock Style="{StaticResource BodyText}" TextWrapping="Wrap" LineHeight="20" Margin="0,10,0,24" MaxWidth="700" HorizontalAlignment="Left"
+                       Visibility="{Binding Settings.HasSeenHomeIntro, Converter={StaticResource InverseBoolToVis}}">
+                <Run Text="{Binding Loc[home_description_part1], Mode=OneWay}" />
+                <Run Text=".plr" FontStyle="Italic" />
+                <Run Text="{Binding Loc[home_description_part2], Mode=OneWay}" />
+                <Run Text=".tplr" FontStyle="Italic" />
+                <Run Text="{Binding Loc[home_description_part3], Mode=OneWay}" />
+                <Run Text="{Binding Loc[home_description_color], Mode=OneWay}" Foreground="{StaticResource CalamityBrush}" FontWeight="SemiBold" />
+                <Run Text="{Binding Loc[home_description_part4], Mode=OneWay}" />
+            </TextBlock>
+
+            <!-- Auditoria de Opus, I-1: "Inicio" era una pagina de bienvenida estatica -
+                 ni un solo personaje real a la vista, obligaba a abrir el Explorador de
+                 archivos incluso para el caso normal (P1/P2). Lanzador real: si hay
+                 .plr en la carpeta real de tModLoader, aparecen aqui de un plumazo, con
+                 su doll/dificultad/insignia/fecha reales - un click carga y salta a
+                 Personaje. Si no hay ninguno (carpeta vacia o instalacion sin
+                 detectar), se cae al boton manual de siempre. -->
+            <!-- T-G (segunda auditoria de Opus, Fable): "IsScanning ya existia pero sin
+                 ningun binding real - un interruptor que nunca encendia nada". Ahora que
+                 el escaneo real es async (ver HomeViewModel.RefreshAsync), este hueco
+                 SI hace falta - mientras dura, Characters.Count sigue en 0 Y ScanMessage
+                 sigue vacio (nada del bloque de abajo ni del de "Empezar" seria visible
+                 todavia sin esto, una pantalla en blanco real durante el escaneo). -->
+            <!-- H5-07 (quinta auditoria de Opus): "Inicio ofrece 'Continuar con Nombre'
+                 como accion destacada (con aviso de fichero cambiado por fuera si la
+                 fecha no cuadra, nunca carga automatica silenciosa)". La accion MAS
+                 destacada de la pantalla, antes que cualquier otra cosa - un clic real,
+                 explicito, del usuario (Home.ContinueCommand -> CharacterChosen, mismo
+                 camino real que elegir una tarjeta). -->
+            <!-- Catalogo de rediseño visual T4 (20-sep-2026, "tarjeta hero"; 3er KPI
+                 cerrado de verdad 21-sep-2026, segundo intento real tras el limite
+                 documentado de la ronda anterior): el banner "Continuar con X" crece a
+                 tarjeta hero real - doll a 2x (mismo Preview ya renderizado para la
+                 tarjeta pequeña de mas abajo, Home.LastSessionCharacterEntry, cero
+                 trabajo nuevo) + TRES KPI reales de la ultima sesion (Vida maxima, Tiempo
+                 jugado - del propio .plr - y ahora tambien la etapa real de la Guia,
+                 Home.LastSessionGuideStage, evaluada de verdad con
+                 GuideCatalog+GuideEvaluator contra ESE personaje aunque no este cargado
+                 en el editor principal, ver el comentario completo junto a
+                 HomeViewModel.ComputeGuideStage). Doll/KPIs solo se enseñan si el
+                 personaje de la ultima sesion SIGUE en la lista escaneada
+                 (LastSessionCharacterEntry != null) - si no, el banner cae al texto solo,
+                 mismo comportamiento de siempre, nunca un dato a medias/inventado. La
+                 etapa de la Guia tiene su PROPIA visibilidad ademas (LastSessionGuideStage
+                 puede ser null con personaje real: Guia entera completada, o un fallo real
+                 de lectura de la Guia - nunca se enseña un texto inventado en su lugar). -->
+            <!-- Arreglo real 25-sep-2026 (bitacora.md, "Inicio, mascotas ocultas y banner sin
+                 hover"): MouseEnter/MouseLeave nuevos (ver el comentario completo junto a
+                 OnHomeBannerMouseEnter/Leave en MainWindow.xaml.cs) - el banner no tenia
+                 NINGUNO (a diferencia de CharacterCardTemplate mas abajo, linea ~1383) y por
+                 tanto pasar el raton por encima no disparaba ninguna animacion, medido con el
+                 canario HOMEBANNER_SOLO (avanzoDeVerdad=False antes de este cambio). -->
+            <Border Background="{StaticResource AccentGradientBrush}" CornerRadius="10" Padding="18,16" Margin="0,0,0,20"
+                    Effect="{StaticResource CardShadow}" Cursor="Hand"
+                    Visibility="{Binding Home.LastSessionCharacterName, Converter={StaticResource NullToVis}}"
+                    MouseEnter="OnHomeBannerMouseEnter" MouseLeave="OnHomeBannerMouseLeave">
+                <Border.InputBindings>
+                    <MouseBinding MouseAction="LeftClick" Command="{Binding Home.ContinueCommand}" />
+                </Border.InputBindings>
+                <DockPanel>
+                    <!-- Mascota real equipada, mismo criterio real que la tarjeta pequeña
+                         (MainWindow.xaml ~1487-1500, ver el comentario completo ahi): capa
+                         DETRAS del doll (declarada antes en la misma Grid, sin ZIndex, fiel a
+                         UICharacter.cs real), Stretch="None" para su tamaño NATIVO real (sin
+                         escalar) y anclada arriba-izquierda con desplazamiento negativo para
+                         asomar por el hueco real que el doll (2x en el banner) deja libre
+                         junto a la cabeza/hombros en vez de quedar aplastada bajo el doll -
+                         antes el banner NO tenia NINGUNA Image ligada a PetImage (confirmado
+                         con grep sobre el fichero entero), la mascota real nunca se dibujaba
+                         aqui con o sin hover. -->
+                    <!-- GapAnalysis ParidadPersonaje (26-sep-2026, requirement
+                         480a9bdd-6d5f-4fa6-935d-46f895e97514) - SUSTITUYE el Grid+2 Image+2
+                         converters anterior por PlayerPetPreviewControl, MISMO control real
+                         que la tarjeta pequeña (ver el comentario completo junto a su uso en
+                         CharacterCardTemplate mas arriba) - CanvasScale="2.6" (el doble
+                         exacto de la tarjeta, mismo criterio ya documentado en el resto del
+                         proyecto). DataContext propio (Home.LastSessionCharacterEntry) para
+                         poder usar los mismos nombres de propiedad cortos que la tarjeta. Ya
+                         no hace falta un Width/Height fijo en el Grid contenedor - el
+                         control reserva su propio ancho real
+                         (PlayerPetPreviewLayout.ReserveColumnWidth(2.6), ~239px, el peor
+                         caso real de las 63 mascotas del catalogo escalado al doble). -->
+                    <controls:PlayerPetPreviewControl DataContext="{Binding Home.LastSessionCharacterEntry}"
+                                                       DockPanel.Dock="Left" CanvasScale="2.6"
+                                                       Margin="0,0,18,0" VerticalAlignment="Center"
+                                                       Visibility="{Binding Converter={StaticResource NullToVis}}"
+                                                       PreviewSource="{Binding Preview}"
+                                                       PetImageSource="{Binding PetImage}"
+                                                       PetOffsetX="{Binding PetOffsetX}"
+                                                       PetOffsetY="{Binding PetOffsetY}"
+                                                       PetSpriteDirection="{Binding PetSpriteDirection}"
+                                                       PetRotationDegrees="{Binding PetRotationDegrees}"
+                                                       ToolTip="{Binding Loc[tt_pet_preview], Mode=OneWay}" />
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="▶" FontSize="16" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <TextBlock Style="{StaticResource SectionText}" FontSize="17" Foreground="White" VerticalAlignment="Center">
+                                <Run Text="{Binding Loc[home_continue_with], Mode=OneWay}" /><Run Text="{Binding Home.LastSessionCharacterName, Mode=OneWay}" FontWeight="Bold" />
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="26,12,0,0"
+                                    Visibility="{Binding Home.LastSessionCharacterEntry, Converter={StaticResource NullToVis}}">
+                            <!-- Familia "HeroKpiPill" (rediseno de badges, 25-sep-2026): unica familia
+                                 que conserva la capsula "pill" - vive ENCIMA de AccentGradientBrush,
+                                 contexto de contraste distinto (overlay translucido sobre fondo de
+                                 acento propio) donde la capsula si aporta separacion visual real. -->
+                            <Border Style="{StaticResource HeroKpiPill}" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="♥" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                    <TextBlock Text="{Binding Home.LastSessionCharacterEntry.HealthMax, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                            <!-- ParidadPersonaje Fase6 (26-sep-2026): 3er dato real que faltaba aqui -
+                                 mana, glifo real "★" (mismo glifo que usa Terraria en la pantalla real
+                                 "Seleccionar jugador"), bindeado a ManaMax (ya expuesto en
+                                 CharacterListEntryViewModel). -->
+                            <Border Style="{StaticResource HeroKpiPill}" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="★" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                    <TextBlock Text="{Binding Home.LastSessionCharacterEntry.ManaMax, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource HeroKpiPill}" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="◷" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                    <TextBlock Text="{Binding Home.LastSessionCharacterEntry.PlayTimeText, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                            <!-- 3er KPI real (T4, 21-sep-2026): etapa de la Guia. Visibilidad
+                                 PROPIA - null es un caso real (Guia completada o fallo de
+                                 lectura ajeno al personaje), no se enseña la pastilla vacia. -->
+                            <Border Style="{StaticResource HeroKpiPill}"
+                                    Visibility="{Binding Home.LastSessionGuideStage, Converter={StaticResource NullToVis}}"
+                                    ToolTip="{Binding Loc[home_hero_kpi_guide_stage_tooltip], Mode=OneWay}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="☗" FontSize="12" Foreground="White" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                    <TextBlock Text="{Binding Home.LastSessionGuideStage, Mode=OneWay}" Foreground="White" FontSize="11.5" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Home.LastSessionStalenessWarning}" Foreground="White" FontSize="11" TextWrapping="Wrap" Margin="26,8,0,0"
+                                   Visibility="{Binding Home.LastSessionStalenessWarning, Converter={StaticResource NullToVis}}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,26" Visibility="{Binding Home.IsScanning, Converter={StaticResource HomeBoolToVis}}">
+                <ProgressBar IsIndeterminate="True" Width="120" Height="4" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Loc[home_loading], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="10,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <StackPanel Visibility="{Binding Home.Characters.Count, Converter={StaticResource CountToVis}}" Margin="0,0,0,26">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <TextBlock Text="{Binding Loc[home_your_characters], Mode=OneWay}" Style="{StaticResource SectionText}" VerticalAlignment="Center" />
+                    <Button Content="{Binding Loc[home_refresh], Mode=OneWay}" FontSize="11" Padding="8,2" Margin="12,0,0,0"
+                            Command="{Binding Home.RefreshCommand}" />
+                    <Button Content="{Binding Loc[home_load_other_folder], Mode=OneWay}" FontSize="11" Padding="8,2" Margin="8,0,0,0"
+                            Click="OnLoadClick" />
+                    <!-- Comparador de personajes/builds (13-sep-2026, primero de la lista
+                         confirmada de funciones nuevas) - mismo sitio real que "Actualizar"/
+                         "Cargar de otra carpeta" (acciones sobre la lista de Inicio), no una
+                         pestaña nueva: se abre sobre la lista que YA esta en pantalla. -->
+                    <Button Content="{Binding Loc[compare_button], Mode=OneWay}" FontSize="11" Padding="8,2" Margin="8,0,0,0"
+                            Command="{Binding OpenCompareCommand}"
+                            ToolTip="{Binding Loc[compare_panel_subtitle], Mode=OneWay}" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding Home.Characters}" ItemTemplate="{StaticResource CharacterCardTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+
+            <Button Style="{StaticResource NavCardButton}" HorizontalAlignment="Left" Margin="0,0,0,26"
+                    Visibility="{Binding Home.ScanMessage, Converter={StaticResource EmptyToCollapsed}}"
+                    Click="OnLoadClick">
+                <StackPanel Orientation="Horizontal">
+                    <Border Width="4" Background="{StaticResource AccentBrush}" CornerRadius="2" Margin="0,0,16,0" />
+                    <StackPanel>
+                        <TextBlock Text="{Binding Loc[home_start_load_character], Mode=OneWay}" Style="{StaticResource SectionText}" Foreground="{StaticResource AccentBrush}" />
+                        <TextBlock Text="{Binding Home.ScanMessage}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" MaxWidth="520" Margin="0,3,0,0" />
+                    </StackPanel>
+                </StackPanel>
+            </Button>
+
+            <!-- INI-07 (oleada de Inicio/Ajustes, 6-sep-2026): el resultado FALLIDO de una
+                 accion del menu contextual (abrir carpeta, duplicar, restaurar copia) NO
+                 es lo mismo que "no encontre ningun personaje", y hasta ahora compartian
+                 el mismo campo y el mismo boton de arriba: el error salia titulado
+                 "Empezar: cargar un personaje" y, al pulsarlo, abria el dialogo de fichero
+                 - medido con 6 personajes reales listados justo encima. Aviso propio, sin
+                 accion (no hay nada que pulsar: es una respuesta a algo que el usuario ya
+                 ha hecho).
+                 Catalogo de rediseño visual T7 (20-sep-2026): la tarjeta propia inline
+                 que vivia aqui (borde PinkBrush, solo visible en Inicio) se ha movido al
+                 ToastHost unico a nivel de ventana (ver el final de MainWindow.xaml, junto
+                 al TabControl raiz) - Home.ActionErrorMessage sigue siendo la MISMA
+                 propiedad real (HomeViewModel.cs), solo cambia donde se PINTA: ahora se ve
+                 desde cualquier pestaña, no solo si sigues en Inicio, mismo criterio ya
+                 real de H-3 (GlobalErrorMessage) y N-1 (SaveConfirmationVisible). -->
+
+            <TextBlock Text="{Binding Loc[home_more_actions], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,12" />
+            <!-- MinHeight (nunca Height fijo): un titulo/descripcion mas largo hace crecer la tarjeta en vez de recortarse. Cabecera de Inicio reducida a 3 tarjetas reales de "hacer algo" (Libreria/Builds/Exploracion) - Novedades/Acerca de/Guia/Servidor siguen accesibles por la rail, sin duplicarlos aqui. "Te toca: X" y "Tu ultimo mundo" son condicionales (null=no aparecen, nunca a medias). Historial completo (por que 7 tarjetas bajaron a 3): ADR-TERRAKEEP-013. -->
+            <ItemsControl>
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <!-- "Te toca: X" (T4) - primera tarjeta a proposito, es la mas personal de
+                     las 5: el siguiente objetivo real de la Guia para tu ultimo personaje. -->
+                <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
+                        Tag="Teal" Command="{Binding Home.ContinueToGuideCommand}"
+                        Visibility="{Binding Home.LastSessionGuideObjectiveTitle, Converter={StaticResource NullToVis}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Home.GuideObjectiveCardTitle, Mode=OneWay}" Style="{StaticResource SectionText}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Loc[home_card_guide_objective_desc], Mode=OneWay}"
+                                   Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
+                        Command="{Binding GoToTabCommand}" CommandParameter="Libreria">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Loc[home_card_library_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
+                        <TextBlock Text="{Binding Loc[home_card_library_desc], Mode=OneWay}"
+                                   Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
+                        Command="{Binding GoToTabCommand}" CommandParameter="Builds">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Loc[home_card_builds_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
+                        <TextBlock Text="{Binding Loc[home_card_builds_desc], Mode=OneWay}"
+                                   Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
+                        Tag="Pink" Command="{Binding GoToTabCommand}" CommandParameter="Exploracion">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Loc[home_card_exploration_title], Mode=OneWay}" Style="{StaticResource SectionText}" />
+                        <TextBlock Text="{Binding Loc[home_card_exploration_desc], Mode=OneWay}"
+                                   Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                    </StackPanel>
+                </Button>
+                <!-- "Tu ultimo mundo" (T4) - ultima tarjeta a proposito, la mas opcional
+                     (muchos usuarios no habran cargado ningun mundo todavia). -->
+                <Button Style="{StaticResource NavCardButton}" Width="270" MinHeight="108" Margin="0,0,14,14"
+                        Tag="Orange" Command="{Binding Home.ContinueWorldCommand}"
+                        Visibility="{Binding Home.LastWorldName, Converter={StaticResource NullToVis}}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionText}" TextWrapping="Wrap">
+                            <Run Text="{Binding Loc[home_card_last_world_title], Mode=OneWay}" /><Run Text=": " /><Run Text="{Binding Home.LastWorldName, Mode=OneWay}" FontWeight="Normal" />
+                        </TextBlock>
+                        <TextBlock Text="{Binding Loc[home_card_last_world_desc], Mode=OneWay}"
+                                   Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,5,0,0" />
+                    </StackPanel>
+                </Button>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

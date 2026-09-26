@@ -30085,3 +30085,98 @@ KeepQA. Sin `git push`.
 grupo 4.5 (sub-tabs de PERSONAJE) queda COMPLETO - Spawnpoints/`ADR-022`, Version/`ADR-023`,
 Unlocks/`ADR-024` y Compare/`ADR-025`. Solo queda Objetos (911 lineas, la mas grande y acoplada de
 `MainWindow.xaml`), dejada deliberadamente para el final del grupo por el propio plan original.
+
+## Decima extraccion real de una seccion de MainWindow.xaml a UserControl - INICIO (26-sep-2026)
+
+`ADR-TERRAKEEP-026`, requirement `b108d4bf-f1a7-4466-b2f6-69fdb54bf603`. Seccion INICIO (299
+lineas, punto 4.7 del plan `ADR-TERRAKEEP-016` - la unica pestaña top-level marcada por el propio
+plan como "puede hacerse en cualquier punto, bajo acoplamiento, Home.* autocontenido, sin depender
+de ningun otro paso"). Contenido movido a `Terrakeep.App/Views/HomeView.xaml` +
+`HomeView.xaml.cs` (mismo patron de las 9 rondas anteriores). `MainWindow.xaml` queda con
+`<views:HomeView />` dentro del `TabItem` INICIO.
+
+**Hallazgo real** (corrige la prediccion "autocontenido" del plan original, grep exhaustivo ANTES
+de mover nada): INICIO SI referencia DOS recursos window-scoped directamente en su propio markup:
+1) `BoolToVis` (1 uso directo en el cuerpo, `Home.IsScanning`, + 4 dentro de
+`CharacterCardTemplate`) - mismo patron ya resuelto por `HostingView`/`ADR-019`,
+`GuideView`/`ADR-021`, `UnlocksView`/`ADR-024`, `CompareView`/`ADR-025`: `UserControl.Resources`
+LOCAL con clave propia `HomeBoolToVis`, NUNCA promovido a `Application.Resources`. 2)
+`CharacterCardTemplate` (`DataTemplate`, 215 lineas, vivia en `Window.Resources` 1274-1488) - grep
+confirmado: UNICO consumidor real de todo el archivo es el `ItemsControl.ItemTemplate` de "Tus
+personajes" dentro de la propia INICIO - la plantilla entera viajo con la seccion (mismo caso que
+las 3 plantillas de `CompareView`/`ADR-025`), MISMA clave `x:Key="CharacterCardTemplate"`.
+
+**Hallazgo real adicional** (code-behind, primer caso real de este tipo desde ACERCA DE/`ADR-020`):
+`CharacterCardTemplate` trae 3 manejadores de evento (`OnCharacterCardMouseEnter/Leave`,
+`OnCharacterCardUnloaded`) y el banner "Continuar con X" trae 2 mas (`OnHomeBannerMouseEnter/
+Leave`) - los 5 vivian en `MainWindow.xaml.cs` y NINGUNO se usaba fuera de INICIO (grep
+confirmado) - MOVIDOS tal cual a `HomeView.xaml.cs`, mismo mecanismo de `AboutView`/`ADR-020`
+(`Window.GetWindow(this)`, `(MainViewModel)DataContext`).
+
+**Caso nuevo, no visto en ninguna ronda anterior** (recurso event-handler DUAL, ni window-scoped
+puro ni autocontenido): `Click="OnLoadClick"` aparece DOS VECES dentro de INICIO pero el MISMO
+nombre de metodo tambien sigue haciendo falta FUERA de Inicio (`MenuItem` "Cargar personaje" del
+menu "Personaje" de la cabecera global, que se queda en `MainWindow.xaml`) - no se puede mover
+entero. Resuelto con un `OnLoadClick` PROPIO de `HomeView.xaml.cs` (mismo nombre, clase distinta):
+mismo `OpenFileDialog`, pero `Window.GetWindow(this)` en vez de `this` y
+`ViewModel.ConfirmDiscardChanges` (el `Func<bool>?` PUBLICO que `MainViewModel` ya expone,
+`MainWindow.xaml.cs` lo conecta exactamente a su metodo privado equivalente) en vez de reinventar
+la logica de confirmacion - invocar el delegado ya expuesto es el MISMO camino real que el
+original, no una copia que pueda desincronizarse. Regla nueva para el resto del plan: un
+event-handler usado DENTRO y FUERA de la seccion extraida no se puede mover entero ni dejar sin
+tocar - la solucion es una copia local minima que reutilice cualquier gancho ya PUBLICO del
+ViewModel.
+
+**Verificacion completa**: `dotnet build Terrakeep.slnx -c Release` 0/0 tras `dotnet clean`
+completo. `dotnet test Terrakeep.Core.Tests -c Release`: 782/782 (identico al baseline). `dotnet
+test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al baseline). Recorrido
+COMPLETO de `Terrakeep.App.Tests` (sin ningun `_SOLO`) ejecutado DOS VECES: primera pasada 16
+`FALLO`, segunda pasada 17 `FALLO` (unica diferencia: `A8-02b`, el flake de contencion de maquina
+ya documentado desde `ADR-020`/`ADR-025`) - mismas categorias preexistentes en las dos pasadas,
+CERO mencion de Home/Inicio/CharacterCard/HomeBanner/HomeView en ninguna.
+
+**`HOMEBANNER_SOLO`** (canario real dedicado de Inicio, `CanarioHomeBannerMascota.cs`, ya
+existente desde el 24-sep-2026): con el `session.json` real de esta maquina (el test-harness
+reescribe su propio personaje sintetico "UIA-Test" en cada pasada completa) las partes A/B/D
+quedaban `INCONCLUSIVE`. Fijado temporalmente `session.json` a un personaje real de esta maquina
+con mascota equipada (`Eldelgas.plr`) para forzar el camino completo: 0 `FALLO`, banner con
+`PlayerPetPreviewControl` con `PetImageSource` real=True, hover del banner SI anima el doll
+(`avanzoDeVerdad=True`, 6/10 muestras distintas), formula real mascota/doll de
+`PlayerPetPreviewLayout` con delta=0px en 3 tarjetas reales + el banner (`canvasScale=2.6`) -
+exactamente el codigo movido a `HomeView.xaml.cs` verificado end-to-end.
+
+**`SNAPSHOT_VISUAL_SOLO`**: `ventana-principal-inicio`/`ventana-principal-inicio-en` en `FALLO`
+(SSIM ~0.16) - investigado con `git stash` del working set completo: el MISMO `FALLO` con los
+MISMOS valores SSIM exactos (0,158180/0,158688) ocurre con el codigo ORIGINAL sin extraer -
+baseline `.verified.png` preexistente y desactualizado (toolbar vieja de botones sueltos, rail de
+texto en vez de iconos, sin mascotas en las tarjetas, personajes/fechas distintos), NO relacionado
+con esta extraccion. Revision visual directa del `.received.png` confirma el aspecto real actual
+correcto (tarjetas con mascota, 3 KPI del banner, toolbar "Personaje" consolidado). Pendiente para
+quien continue el plan: re-aprobar el snapshot (fuera del alcance de esta ronda, preexistente
+desde antes del 26-sep-2026).
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`) recompilado 0/0. Copia instalada real NO estaba en ejecucion antes del despliegue
+(`Get-Process -Name Terrakeep` sin resultados). `DEPLOY_LOCK` adquirido antes de tocar
+`Assets/`/publish (snapshot antes=13056 ficheros/hash `068603cc...`, identico al baseline de
+`ADR-020`-`ADR-025`, sin drift). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde. `robocopy .../publish "%LocalAppData%\Programs\Terrakeep"
+/MIR /XF unins000.exe unins000.dat` (via `MSYS_NO_PATHCONV=1`): 1 archivo copiado
+(`Terrakeep.exe`), 0 errores, 0 extras. `Assets/` identico antes/despues (13056 ficheros, mismo
+hash, confirmado por `deployLock.despuesDeMir`). Hash SHA256 identico entre el `.exe` publicado y
+el instalado (`2D495F7F850887691AEB2EBCD242089E5A0C06B468A1C37C226F9AA8AD6D271B` en ambos). Sanity
+check real: `Start-Process` del `.exe` instalado, `Responding=True` a los 5s, cerrado limpio
+(`Stop-Process`), sin proceso residual. `DEPLOY_LOCK` liberado.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/MainWindow.xaml.cs` (5 manejadores movidos), `Terrakeep.App/Views/HomeView.xaml` +
+`.xaml.cs` (nuevos) - nunca `git add -A`, seguia habiendo decenas de ficheros ajenos modificados
+en el arbol por otros agentes en paralelo. Registrado contra `requirement
+b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en KeepQA. Sin `git push`.
+
+**Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): con INICIO cerrado, el
+grupo 4.5 (sub-tabs de PERSONAJE) YA estaba completo desde `ADR-025` salvo Objetos (911 lineas,
+dejada deliberadamente para el final por el propio plan original) - unica extraccion top-level que
+queda de verdad pendiente ademas de Objetos es EXPLORACION (4.6, 2532 lineas, la mas grande y con
+mas code-behind/`FindName` reales de todo el plan), a abordar por partes segun el orden ya fijado
+por `ADR-016` (WorldTools -> ChestInspector -> Browse -> mapa+minimapa).
