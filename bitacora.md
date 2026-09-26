@@ -27041,3 +27041,99 @@ respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKe
 `KEEPQA-INTEGRACION.md` no tocados ni comiteados; numerosos ficheros ajenos (Core.Tests,
 ViewModels.Tests, `scripts/`) modificados/sin trackear en el working tree por otros agentes en
 paralelo, ninguno añadido al stage. Sin `git push`.
+
+## ParidadPersonaje Fase6 (26-sep-2026): causa real del hallazgo BLOCKED de Fase0 corregida en
+el arnés + verificación pixel real BLOQUEADA por un límite de entorno confirmado hoy - aplicador-fix,
+TASK e5eaea9e
+
+**Encargo recibido**: cerrar Fase6 (última fase de ParidadPersonaje) con comparación pixel real
+(`vanilla.png`/`terrakeep.png`/`diff.png`) para al menos 14 casos mínimos (base, armor, vanity,
+Hide[], Back+Backpack, Backpack+Tail, Front/Back order, Face variants, Balloon variants, wings,
+robe/shoes, dyes, Calamity, multi-capa). Solo Caso1 (el suelo, Fase0) tenía captura completa.
+
+**Causa REAL encontrada y corregida del hallazgo BLOCKED que Fase0 había dejado para "un agente
+futuro"** (`ParidadVisual.exe preparar-caso` generaba un `.plr` que el juego real rechazaba con
+`(UnknownError)`): `PlrCharacter.Trail` (`Terrakeep.Core/PlrFormat/PlrCharacter.cs:136`, "bytes
+finales no reconocidos... se preservan tal cual para no perder datos al re-guardar") - confirmado
+leyendo con `PlrFile.Read` los `.plr` reales de plantilla usados en Fase0: `Eldelgas.plr`/
+`Terrariano.plr` (`Version=326`, la misma versión de la plantilla que Fase0 usó) tienen
+`Trail.Length=13` (bytes reales no vacíos), mientras que `adrian.plr` (`Version=279`, más antiguo)
+tiene `Trail.Length=0` - coincide exactamente con el patrón "Version=326" que la propia
+investigación de Fase0 ya sospechaba sin identificar el campo exacto. `CharacterFileService.Save`
+(el camino de guardado real que SÍ funciona en producción, usado por cientos de guardados reales
+del usuario) nunca pierde este campo porque reutiliza el MISMO objeto `PlrCharacter` que devolvió
+`PlrFile.Read` (mutación in-place, `Terrakeep.App/Services/CharacterFileService.cs:362-366`) - en
+cambio `PrepararCaso` (`scripts/ParidadVisual/Program.cs`) construye un `PlrCharacter` NUEVO
+copiando ~50 campos a mano uno a uno y omitía `Trail`, dejándolo en `[]` por defecto. El juego real
+(`Player.cs` `LoadPlayer` decompilado, ya citado en el hallazgo de Fase0) interpreta la ausencia de
+esos bytes finales como archivo truncado a mitad de lectura y cae al `catch` genérico ->
+`UnknownError`. **Fix**: una línea, `Trail = plantilla.Trail,` en la construcción de `destino`
+(`scripts/ParidadVisual/Program.cs`, dentro de `PrepararCaso`) - QA harness, NO código de
+producción (`ParidadVisual` no forma parte de `Terrakeep.slnx`, `CharacterFileService.Save` nunca
+tuvo este bug).
+
+**LÍMITE REAL - verificación contra el juego real BLOQUEADA hoy**: no se pudo confirmar el fix
+contra Terraria 1.4.5.8 real. 4 intentos completos con `capturar_vanilla.py`/`SesionTerraria`
+(mismo arnés que SÍ produjo la evidencia real del Caso1 el 25-sep), cada uno con una técnica de
+diagnóstico distinta:
+1. Captura simple tras `ir_a_seleccionar_personaje()` - ventana en blanco (gris liso, sin
+   contenido real dibujado).
+2. Captura con `_foreground()` + minimizar/restaurar (forzar repintado) + mover el ratón dentro de
+   la ventana - sigue en blanco.
+3. Sondeo de 14 intentos x 8s (~112s) comprobando programáticamente si la captura deja de ser
+   "blanco liso" (heurística de color de 12 puntos de muestra) - nunca deja de estar en blanco.
+4. Sondeo de 30 intentos x 5s (~150s) midiendo el tiempo de CPU real consumido por el proceso
+   (`win32process.GetProcessTimes`) entre cada captura para descartar que estuviera colgado del
+   todo: el proceso SÍ consume CPU de forma sostenida (0.15-0.85s por intervalo de 5s, nunca 0) -
+   está vivo y trabajando, no bloqueado en un deadlock - pero el título de la ventana (que Terraria
+   cicla entre "tips" de carga) cambia UNA sola vez tras el arranque y luego se queda congelado en
+   el mismo tip durante los 150s completos, con la ventana siempre en blanco. Repetido una 4ª vez
+   tras dejar pasar varios minutos (para descartar un problema puntual de una única ejecución):
+   mismo patrón exacto, congelado en un tip distinto cada vez pero siempre solo uno.
+
+Descartadas 2 hipótesis con medición real antes de concluir que es un límite de entorno: (a)
+contención de CPU - la carga real de CPU (`Win32_Processor.LoadPercentage`) osciló entre 1% y 91%
+en los distintos intentos, sin correlación con el resultado (falló igual con CPU al 1-9% que al
+91%); (b) presión de memoria - 17GB libres de 31GB totales en el momento de los intentos, memoria
+compression alta por acumulado histórico pero RAM libre de sobra. La explicación más plausible con
+la evidencia disponible (no confirmada con certeza): contención de E/S de disco compartida con los
+9+ procesos `dotnet.exe` de otros agentes de la familia Keep trabajando en paralelo sobre el mismo
+disco físico en este mismo momento (Nav123 sobre `MainWindow.xaml`, posible trabajo sobre
+`EquipmentAppearanceResolver.cs`, ver TASK CONTEXT), o un estado de Steam/overlay degradado por los
+varios relanzamientos+`taskkill /F` encadenados de mis propios intentos de diagnóstico - no se
+investigó más a fondo por ir más allá del alcance de esta misión (verificación, no arreglo de
+infraestructura de Steam/SO). Entorno restaurado limpio tras cada intento: `config.json` real del
+usuario restaurado a sus valores reales (`Fullscreen=true`, `DisplayWidth=2560`, confirmado con
+`Get-Content`), sin proceso `Terraria.exe` huérfano (confirmado con `tasklist` tras cada cierre), el
+`.plr` de prueba (`ZZTrailFix.plr`) borrado del `Players/` real. Ningún dato del usuario tocado de
+forma permanente. Se comprobó tiempo de inactividad del usuario (`GetLastInputInfo`, 20-24 minutos
+en cada intento) antes de lanzar cualquier automatización de ratón/teclado real - ningún riesgo real
+de interferir con el usuario delante de la pantalla.
+
+**Consecuencia para Fase6**: con el juego real inutilizable en esta sesión, TODO el lado "vanilla"
+de cualquier caso nuevo (los 13 casos que faltan más allá del Caso1 ya cerrado en Fase0) queda
+bloqueado, incluida la generación de `.plr` sintéticos vía `preparar-caso` (el fix de `Trail` de
+arriba queda aplicado y compilado, pero SIN confirmar contra el juego real - solo con evidencia
+estática/de bytes, no con el canario real "el juego lo carga sin UnknownError"). No se intentó
+generar el lado `terrakeep.png` de casos nuevos sin su `vanilla.png` real emparejado, para no dejar
+capturas a medias que pudieran confundirse con evidencia completa. **Fase6 NO se da por cerrada.**
+Caso1 (Fase0, `scripts/ParidadVisual/capturas/caso01/`) sigue siendo la única evidencia pixel real
+completa. Pendiente real para el próximo agente: 1) reintentar `capturar_vanilla.py` cuando no haya
+varios agentes de la familia construyendo/testeando en paralelo sobre este mismo disco, para aislar
+si la contención de E/S era la causa real; 2) si el juego vuelve a renderizar con normalidad,
+confirmar primero el fix de `Trail` con un caso sintético simple (`preparar-caso --limpiar`) antes
+de generar los 13 casos restantes; 3) los otros 2 pendientes de despliegue ya documentados en
+`ACTIVE.json`/TASK CONTEXT (`Terrakeep.exe` instalado sin republicar del commit `99793a56` de
+Fase3) siguen abiertos, ajenos a este encargo.
+
+**Build/test**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores. `dotnet test
+Terrakeep.Core.Tests -c Release --no-build`: 742/742, sin regresión (`ParidadVisual` no forma parte
+de la solución, cambio sin riesgo para el resto del código). Sin despliegue de `Terrakeep.exe`
+(ningún cambio de producción en esta misión).
+
+**Commit real**: únicamente `scripts/ParidadVisual/Program.cs` (la línea `Trail = plantilla.Trail`)
++ esta entrada de `bitacora.md`. `doNotTouch` respetado (`CLAUDE.md`/`Terrasavr-Native.zip`/
+`Terrakeep.App.Tests/ComplementoKeepQA.cs`/`KEEPQA-INTEGRACION.md` no tocados). Ficheros ajenos
+modificados por otros agentes en paralelo (`scripts/extraer-nombres-calamity-en.js`,
+`scripts/sync-guia-desde-terrakeepmod.ps1`, varios `Terrakeep.*.Tests/*.cs`, `MainWindow.xaml*`)
+NO añadidos al stage. Sin `git push`.

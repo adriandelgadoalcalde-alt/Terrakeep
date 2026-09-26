@@ -204,6 +204,17 @@ static int PrepararCaso(string[] a)
         CreativePowers = plantilla.CreativePowers,
         SuperCartByte = plantilla.SuperCartByte,
         CurrentLoadout = plantilla.CurrentLoadout,
+        // Fase6 (26-sep-2026): causa REAL del hallazgo BLOCKED de Fase0 (el juego rechazaba con
+        // UnknownError cualquier .plr derivado por este comando). PlrCharacter.Trail son los
+        // bytes finales no modelados por este lector/escritor (PlrBodySerializer.cs:240,421-422)
+        // - en Eldelgas.plr/Terrariano.plr (Version=326, plantillas reales usadas en Fase0) son
+        // 13 bytes reales no vacios (confirmado leyendo el .plr real con PlrFile.Read), mientras
+        // que CharacterFileService.Save nunca pierde este campo porque reutiliza el MISMO objeto
+        // que devolvio PlrFile.Read (mutacion in-place) - este comando en cambio construye un
+        // PlrCharacter NUEVO copiando ~50 campos a mano y omitia este, dejando Trail=[] por
+        // defecto. El juego real interpreta la ausencia de esos bytes finales como un archivo
+        // truncado a mitad de lectura (Player.cs LoadPlayer, catch generico -> UnknownError).
+        Trail = plantilla.Trail,
     };
 
     byte[] bytes = PlrFile.Write(destino);
