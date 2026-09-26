@@ -29905,3 +29905,80 @@ sigue pendiente del grupo 4.5 Unlocks (124 lineas, unico sub-tab que SI necesita
 ronda) y Compare (206 lineas, usa 3 `DataTemplate` window-scoped confirmados por grep de
 `ADR-021` - dejar para una ronda dedicada aparte, dado que ya se sabe que es mas delicado).
 Objetos (911 lineas) se deja para el final del grupo.
+
+## Octava extraccion real de una seccion de MainWindow.xaml a UserControl - UNLOCKS/DESBLOQUEOS (26-sep-2026)
+
+`ADR-TERRAKEEP-024`, requirement `b108d4bf-f1a7-4466-b2f6-69fdb54bf603`. Tercera extraccion del
+grupo 4.5 (sub-tabs de PERSONAJE), tras VERSION/`ADR-023`. Unlocks (124 lineas) era el candidato
+que `ADR-023` ya habia confirmado por grep exhaustivo que SI necesitaria el patron
+`UserControl.Resources` local: usa `StaticResource BoolToVis` (window-scoped, `x:Key` SOLO en
+`Window.Resources` de `MainWindow.xaml`) 5 veces en su propio markup - los 5 avisos "este
+personaje es de una version anterior a X" de cada uno de los 4 grupos de flags (modo de
+dificultad, antorchas de bioma, consumibles permanentes, eventos/otros).
+
+Mismo caso ya resuelto por `ADR-TERRAKEEP-019`/`HostingView` y `ADR-TERRAKEEP-021`/`GuideView`:
+NUNCA promover el converter a `Application.Resources` (rompe `MainWindow.InitializeComponent()`
+entero en runtime, tabla BAML `OptimizedStaticResource` compartida por ensamblado); en su lugar
+un `<UserControl.Resources>` LOCAL con clave propia `UnlocksBoolToVis` (distinta de
+`BoolToVis`/`GuideBoolToVis`/`HostingBoolToVis` - sin colision con ninguna clave ya usada por
+otro `UserControl` extraido) resuelto durante el propio `InitializeComponent()` de este
+`UserControl`. Contenido movido a `Terrakeep.App/Views/UnlocksView.xaml` + `.xaml.cs`, copiado
+BYTE A BYTE salvo re-indentado y `BoolToVis`->`UnlocksBoolToVis` en los 5 sitios. `MainWindow.xaml`
+queda con `<views:UnlocksView />` dentro del `TabItem` UNLOCKS (124 lineas de markup reemplazadas
+por 2).
+
+Grep exhaustivo confirmado: cero `x:Name` dentro del bloque original (nada que resolver con el
+patron de `FindName` doble de GUIA/`ADR-021`) y cero `DataTemplate` propios. Los otros 4
+`StaticResource` usados (`CaptionText`, `OrangeBrush`, `BgSecondaryBrush`, `TextPrimaryBrush`) ya
+viven en `Styles/Theme.xaml`, ninguno window-scoped.
+
+**Canarios reales usados** (existentes, ninguno nuevo hizo falta): PB-11 de
+`Terrakeep.App.Tests/PruebasBuffsAparienciaVersion.cs` (sin `_SOLO`, corre siempre en el recorrido
+completo) - baja la version real a 100 (por debajo de TODOS los umbrales) y confirma 5/5 avisos
+activos, 0 casillas perdidas en las 4 resoluciones reales (1080x700/1180x860/1400x900/1520x864), y
+que "Marcar todos"/"Desmarcar todos" alcanzan las 13 casillas reales. Ademas S-d/D-b/D-d/D-e de
+`Program.cs` (tampoco gated, parte del flujo principal) - capturas reales
+`desbloqueos-db.png`/`desbloqueos-marcar-todos.png`/`desbloqueos-aviso-version.png`, las 3 en
+verde.
+
+**Verificacion completa**: `dotnet build Terrakeep.slnx -c Release` 0/0 tras `dotnet clean`
+completo. `dotnet test Terrakeep.Core.Tests -c Release`: 782/782 (identico al baseline).
+`dotnet test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al baseline).
+Recorrido COMPLETO de `Terrakeep.App.Tests` (`dotnet run -c Release --no-build`, sin ningun
+`_SOLO`) ejecutado DOS VECES: la primera dio 16 `FALLO`, exactamente las 9 categorias ya
+documentadas (H5-05x1, A8-06x1, AR-14x4, A8-01x1, AR-11fx1, AR-MRK-CLICx1, AR-MRK-OTROSx5,
+A10-IDIOMA-BARRIDOx1, AR-LAYx1), sin `A8-02b`; la segunda dio 17 `FALLO`, las mismas 9 categorias
+mas 1 aparicion de `A8-02b` - mismo flake de contencion de maquina ya documentado por
+`ADR-020`/`ADR-021`/`ADR-022`/`ADR-023` (orden invertido respecto a la ronda anterior, mismo
+patron real). CERO mencion de Unlocks/Desbloqueos/UnlocksView en el log de `FALLO` de ninguna de
+las dos pasadas.
+
+**Verificacion visual**: `desbloqueos-aviso-version.png` revisada a mano - pestaña "Desbloqueos"
+completa (resaltada como activa), los 5 avisos naranja visibles (los 5
+`UnlocksBoolToVis`/`Flags.*BelowVersion` con la version bajada a 100), las 13 casillas agrupadas
+en las 4 tarjetas reales ("Modo de dificultad", "Antorchas de bioma", "Consumibles permanentes",
+"Eventos y otros"), texto con word-wrap correcto, layout intacto.
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`) recompilado 0/0. Copia instalada real (`%LocalAppData%\Programs\Terrakeep\`,
+self-contained win-x64) NO estaba en ejecucion antes del despliegue (`Get-Process -Name
+Terrakeep` sin resultados). `DEPLOY_LOCK` adquirido antes de tocar `Assets/`/publish (snapshot
+antes=13056 ficheros/hash `068603cc...`, identico al baseline de `ADR-020`/`021`/`022`/`023`, sin
+drift). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde. `robocopy .../publish "%LocalAppData%\Programs\Terrakeep"
+/MIR /XF unins000.exe unins000.dat` (via `MSYS_NO_PATHCONV=1`): 1 archivo copiado
+(`Terrakeep.exe`), 0 errores, 0 extras. `Assets/` identico antes/despues (13056 ficheros, mismo
+hash, confirmado por `deployLock.despuesDeMir`). Hash SHA256 identico entre el `.exe` publicado y
+el instalado (`7f1e7214...` en ambos). Sanity check real: `Start-Process` del `.exe` instalado,
+`Responding=True` a los 5s, cerrado limpio (`Stop-Process`), sin proceso residual. `DEPLOY_LOCK`
+liberado.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/Views/UnlocksView.xaml` + `.xaml.cs` (nuevos) - nunca `git add -A`, seguia habiendo
+decenas de ficheros ajenos modificados en el arbol por otros agentes en paralelo. Registrado
+contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en KeepQA. Sin
+`git push`.
+
+**Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): del grupo 4.5 solo queda
+Compare (206 lineas, usa 3 `DataTemplate` window-scoped confirmados por grep de `ADR-021`, mas
+delicado - ronda dedicada aparte). Objetos (911 lineas) se deja para el final del grupo.
