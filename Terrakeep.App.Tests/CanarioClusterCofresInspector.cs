@@ -1024,6 +1024,143 @@ internal static partial class Program
             }
             catch (Exception exFaseF) { Console.WriteLine("EXPLORACION-FASEF-EXCEPTION: " + exFaseF); }
 
+            // ================= ChestInspector slots vacios REABIERTO (26-sep-2026, aplicador-fix) =================
+            // Causa real confirmada por el investigador: WrapPanel (MainWindow.xaml, ItemsPanelTemplate de
+            // Exploration.EditingChestSlots) sin ItemWidth fijo dejaba que WrapPanel.ArrangeOverride
+            // estirara cada hijo a la ALTURA maxima de su fila (heredada de vecinos con icono) pero al
+            // ANCHO propio del hijo (casi 0 para un slot vacio, sin IconPath/Count visibles que le den
+            // ancho natural) -> linea vertical estrecha en vez de celda cuadrada. Arreglo real aplicado:
+            // WrapPanel sustituido por controls:SlotGridPanel (mismo patron literal que la rejilla de la
+            // Libreria, MainWindow.xaml ~3890 - MinCell/MaxCell via CompactCellSizeConverter single-binding,
+            // SIN AvailableHeight porque este Inspector comparte ExplorationSidebarScroll con todo el
+            // sidebar y nunca tiene ScrollViewer propio). Este canario mide ActualWidth vs ActualHeight de
+            // CADA Border real (DataContext is ItemSlotViewModel) dentro de la rejilla de slots del
+            // Inspector, separando explicitamente vacios/ocupados, a los 2 tamanos reales de ventana
+            // (1180x860 por defecto y 1080x700 minimo real, MainWindow.xaml:12).
+            try
+            {
+                vm.Exploration.SelectedCategory = WorldSearchCategory.Chests;
+                vm.Exploration.ChestViewMode = 2; // Cofre a cofre
+                DoEvents(); DoEvents();
+
+                var filaSlotsVacios = vm.Exploration.ChestRows.FirstOrDefault(r => r.Items.Count > 0 && r.Items.Count < 40);
+                if (filaSlotsVacios == null)
+                    Console.WriteLine("COFRES-INSPECTOR-SLOTSVACIOS: AVISO - no se encontro ningun cofre real con objetos Y huecos vacios tras el ultimo objeto (Items.Count>0 y <40) para medir el caso real del bug");
+                else
+                {
+                    vm.Exploration.EditChestCommand.Execute(filaSlotsVacios);
+                    DoEvents(); DoEvents(); window.UpdateLayout();
+
+                    void MedirSlotsInspector(string etiquetaTamaño)
+                    {
+                        // Filtro real necesario: el DataTemplate de cada slot (MainWindow.xaml ~7780-7784)
+                        // tiene un Border EXTERIOR real (Style=ItemSlotCardCompact, hijo directo del
+                        // ContentPresenter que el ItemsControl genera para cada item) Y un Border INTERIOR
+                        // de resaltado de seleccion (BorderBrush=AccentBrush, dentro del Grid) que hereda el
+                        // MISMO DataContext por herencia normal de WPF - sin distinguir por el padre visual
+                        // se cuentan 2 Border por slot (confirmado: 80 encontrados para un cofre de 40
+                        // slots antes de este filtro). Solo el Border exterior (parent=ContentPresenter) es
+                        // el que realmente recibe el tamaño de celda de SlotGridPanel.Arrange.
+                        var placeholderSlotsVacios = window.FindName("ExplorationSidebarChestInspectorPlaceholder") as FrameworkElement;
+                        var bordesSlots = placeholderSlotsVacios == null
+                            ? Enumerable.Empty<Border>().ToList()
+                            : Descendientes<Border>(placeholderSlotsVacios)
+                                .Where(b => b.DataContext is ItemSlotViewModel && VisualTreeHelper.GetParent(b) is ContentPresenter)
+                                .ToList();
+                        Console.WriteLine($"COFRES-INSPECTOR-SLOTSVACIOS-{etiquetaTamaño}: {bordesSlots.Count} slots reales encontrados en el arbol visual del Inspector (esperado >0)");
+                        if (bordesSlots.Count == 0)
+                        {
+                            Console.WriteLine($"FALLO: COFRES-INSPECTOR-SLOTSVACIOS-{etiquetaTamaño} - no se encontro ningun Border de slot en el arbol visual del Inspector");
+                            return;
+                        }
+
+                        int vacios = 0, ocupados = 0;
+                        double minCellVacios = double.MaxValue, minCellOcupados = double.MaxValue;
+                        bool huboSlotDebajoDeMinCell = false;
+                        bool huboSlotFueraDeAncho = false;
+                        const double minCellEsperado = 40.0; // ContainerViewModel.cs:57, suelo universal real
+                        // El propio Border (MainWindow.xaml ~7783) lleva Margin="0,0,4,4" ya existente
+                        // ANTES de este arreglo (no se toco el DataTemplate, pedido explicito del encargo)
+                        // - WPF resta ese margen del Arrange real (cell x cell que da SlotGridPanel), asi
+                        // que el ActualWidth/Height renderizado real de MinCell=40 es 40-4=36, IGUAL en
+                        // ambas dimensiones (por eso sigue siendo cuadrado). El suelo real a comprobar es
+                        // MinCell-margen, no MinCell en crudo.
+                        const double margenPropioDelBorde = 4.0;
+                        double minCellRealEsperado = minCellEsperado - margenPropioDelBorde;
+                        // Guarda real de alcance horizontal (no solo tamaño/forma): con Columns literal
+                        // fijo y MinCell=40 como suelo, si el ancho real disponible del sidebar fuera
+                        // menor que Columns*MinCell+Gap*(Columns-1), SlotGridPanel.MeasureOverride
+                        // devolveria un ancho deseado MAYOR que el real (clamp de MinCell nunca reduce
+                        // por debajo, solo sube) - los slots de las ultimas columnas quedarian fuera del
+                        // ancho real del Inspector, invisibles/inalcanzables SIN ningun overflow visible
+                        // en pantalla (ExplorationSidebarScroll tiene HorizontalScrollBarVisibility=
+                        // Disabled, MainWindow.xaml:6766 - el mismo riesgo real ya documentado por
+                        // AR-EX-HSCROLL en ExploracionRediseno FaseI). Verificado aqui por posicion REAL
+                        // (TransformToAncestor) contra el ancho REAL del propio placeholder, no solo por
+                        // aritmetica teorica.
+                        foreach (var borde in bordesSlots)
+                        {
+                            var slot = (ItemSlotViewModel)borde.DataContext;
+                            double w = borde.ActualWidth, h = borde.ActualHeight;
+                            bool esCuadrado = Math.Abs(w - h) <= 1.0;
+
+                            Point esquinaSlot;
+                            try { esquinaSlot = borde.TransformToAncestor(placeholderSlotsVacios!).Transform(new Point(0, 0)); }
+                            catch (InvalidOperationException) { esquinaSlot = new Point(double.NaN, double.NaN); }
+                            if (!double.IsNaN(esquinaSlot.X))
+                            {
+                                double right = esquinaSlot.X + w;
+                                if (esquinaSlot.X < -1.0 || right > placeholderSlotsVacios!.ActualWidth + 1.0)
+                                    huboSlotFueraDeAncho = true;
+                            }
+
+                            if (slot.IsEmpty)
+                            {
+                                vacios++;
+                                minCellVacios = Math.Min(minCellVacios, Math.Min(w, h));
+                                Console.WriteLine($"COFRES-INSPECTOR-SLOTSVACIOS-{etiquetaTamaño}: slot VACIO ActualWidth={w:0.##}px ActualHeight={h:0.##}px cuadrado={esCuadrado} (tolerancia 1px)");
+                                if (!esCuadrado)
+                                    Console.WriteLine($"FALLO: COFRES-INSPECTOR-SLOTSVACIOS-{etiquetaTamaño} - slot vacio NO es cuadrado (Width={w:0.##}px, Height={h:0.##}px) - linea vertical estrecha reproducida");
+                            }
+                            else
+                            {
+                                ocupados++;
+                                minCellOcupados = Math.Min(minCellOcupados, Math.Min(w, h));
+                                if (!esCuadrado)
+                                    Console.WriteLine($"FALLO: COFRES-INSPECTOR-SLOTSVACIOS-{etiquetaTamaño} - slot OCUPADO NO es cuadrado (Width={w:0.##}px, Height={h:0.##}px)");
+                            }
+                            if (Math.Min(w, h) < minCellRealEsperado - 1.0)
+                                huboSlotDebajoDeMinCell = true;
+                        }
+                        Console.WriteLine($"COFRES-INSPECTOR-SLOTSVACIOS-{etiquetaTamaño}: vacios={vacios} (minCell real={(vacios > 0 ? minCellVacios : 0):0.##}px), ocupados={ocupados} (minCell real={(ocupados > 0 ? minCellOcupados : 0):0.##}px), MinCell esperado (tras margen propio del Border)>={minCellRealEsperado}px");
+                        if (vacios == 0)
+                            Console.WriteLine($"COFRES-INSPECTOR-SLOTSVACIOS-{etiquetaTamaño}: AVISO - el cofre elegido no dejo ningun slot IsEmpty=true en el arbol visual realizado - repetir con otro cofre para medir el caso vacio");
+                        if (huboSlotDebajoDeMinCell)
+                            Console.WriteLine($"FALLO: COFRES-INSPECTOR-SLOTSVACIOS-{etiquetaTamaño} - al menos un slot (vacio u ocupado) cayo por debajo del MinCell esperado ({minCellRealEsperado}px)");
+                        if (window.FindName("ExplorationSidebarScroll") is ScrollViewer scrollDiag)
+                            Console.WriteLine($"COFRES-INSPECTOR-SLOTSVACIOS-{etiquetaTamaño}-DIAG: ExplorationSidebarScroll ViewportWidth={scrollDiag.ViewportWidth:0.##}px ExtentWidth={scrollDiag.ExtentWidth:0.##}px ScrollableWidth={scrollDiag.ScrollableWidth:0.##}px");
+                        Console.WriteLine($"COFRES-INSPECTOR-SLOTSVACIOS-{etiquetaTamaño}: placeholder.ActualWidth={placeholderSlotsVacios?.ActualWidth:0.##}px, algun slot fuera del ancho real del placeholder={huboSlotFueraDeAncho} (esperado False)");
+                        if (huboSlotFueraDeAncho)
+                            Console.WriteLine($"FALLO: COFRES-INSPECTOR-SLOTSVACIOS-{etiquetaTamaño} - al menos un slot queda fuera del ancho real del Inspector (Left<0 o Right>ActualWidth) - con HorizontalScrollBarVisibility=Disabled (MainWindow.xaml:6766) quedaria invisible/inalcanzable sin ningun aviso visual, mismo riesgo real que AR-EX-HSCROLL");
+                    }
+
+                    MedirSlotsInspector("1180x860");
+                    CapturaVentanaKeepQa(window, "cofres-slotsvacios-1180x860");
+
+                    FijarTamaño(window, 1080, 700);
+                    DoEvents(); DoEvents(); window.UpdateLayout(); DoEvents(); DoEvents();
+                    MedirSlotsInspector("1080x700");
+                    CapturaVentanaKeepQa(window, "cofres-slotsvacios-1080x700");
+
+                    FijarTamaño(window, 1180, 860);
+                    DoEvents(); DoEvents(); window.UpdateLayout();
+
+                    vm.Exploration.CancelEditingChestCommand.Execute(null);
+                    DoEvents(); DoEvents();
+                }
+            }
+            catch (Exception exSlotsVacios) { Console.WriteLine("COFRES-INSPECTOR-SLOTSVACIOS-EXCEPTION: " + exSlotsVacios); }
+
             // Deja recargado el mundo de siempre del resto del arnes, mismo criterio que AR-13d/AR-13e.
             vm.Exploration.ClearOreMarksCommand.Execute(null);
             vm.Exploration.ChestViewMode = 0;

@@ -7746,9 +7746,58 @@
                                      control real que Personaje, con su propio manejador de clic
                                      (OnChestItemSlotMouseDown, NUNCA el de Personaje: este cofre tiene
                                      su propia seleccion, independiente de ItemEdit del personaje). -->
+                                <!-- ChestInspector slots vacios REABIERTO (26-sep-2026, causa
+                                     confirmada): el WrapPanel de arriba sin ItemWidth fijo dejaba
+                                     que WrapPanel.ArrangeOverride estirara cada hijo a la ALTURA
+                                     maxima de su fila (heredada de vecinos con icono) pero al
+                                     ANCHO propio del hijo (casi 0 para un slot vacio, sin
+                                     IconPath/Count visibles que le den ancho natural) -> linea
+                                     vertical estrecha en vez de celda cuadrada. Mismo patron
+                                     literal que la rejilla de la Libreria (linea ~3890, MinCell/
+                                     MaxCell via CompactCellSizeConverter single-binding, NUNCA el
+                                     MultiConverter de ContainerCompactTemplate que depende de un
+                                     ContainerViewModel que aqui no existe). CRITICO: sin
+                                     AvailableHeight (se queda en su default 0.0 adrede) - este
+                                     Inspector NUNCA tiene ScrollViewer propio (comparte
+                                     ExplorationSidebarScroll con todo el sidebar, ver comentario
+                                     arriba), y SlotGridPanel.MeasureOverride ya maneja
+                                     availH<=0 creciendo libre en vertical (parte de MaxCell*rows
+                                     hasta que el remedido real llegue) - exactamente lo correcto
+                                     aqui. Enlazar AvailableHeight contra el ScrollViewer exterior
+                                     (AncestorType=ScrollViewer) resolveria mal, contra el alto de
+                                     TODO el sidebar, no el de esta rejilla. -->
                                 <ItemsControl ItemsSource="{Binding Exploration.EditingChestSlots}">
                                     <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                        <ItemsPanelTemplate>
+                                            <!-- Columns=6, NO 10: medido con el canario real (TransformToAncestor de
+                                                 cada slot contra placeholderSlotsVacios.ActualWidth,
+                                                 CanarioClusterCofresInspector.cs "SLOTSVACIOS") - a Columns=10 el
+                                                 suelo MinCell=40 (Math.Clamp nunca baja de el) fuerza un ancho de
+                                                 contenido de 436px (10*40+9*4) que NUNCA cabe en el ancho real de
+                                                 este sidebar mas estrecho (296px por defecto, 279px al minimo real
+                                                 de ventana 1080x700) - SlotGridPanel.ArrangeOverride sigue
+                                                 colocando esas columnas de mas (offsetX se queda en 0 porque
+                                                 contentW>finalSize.Width), pero ExplorationSidebarScroll tiene
+                                                 HorizontalScrollBarVisibility="Disabled" (linea ~6766) - el
+                                                 ScrollContentPresenter las recorta en silencio, sin barra ni
+                                                 ScrollableWidth>0 que lo delate (mismo riesgo real ya documentado
+                                                 por AR-EX-HSCROLL en ExploracionRediseno FaseI): 12 de los 40
+                                                 slots (columnas 7-10 de cada fila logica de 10) quedaban
+                                                 invisibles e inalcanzables. Columns=6 es el maximo real que sigue
+                                                 cabiendo con MinCell=40 incluso en el ancho minimo real (279px:
+                                                 6*40+5*4=260px<=279px) - ReferenceColumns=10 se mantiene (mismo
+                                                 techo de escala que el resto de rejillas reales de la app,
+                                                 Inventario/Equipamiento/Libreria) para que el icono del slot se
+                                                 vea del mismo tamaño en todas partes; con Columns=6 domina de
+                                                 todos modos el mismo MinCell=40 real (cellFromReference tambien
+                                                 cae por debajo del suelo), asi que el tamaño de icono no cambia,
+                                                 solo cuantas columnas caben de verdad por fila. -->
+                                            <controls:SlotGridPanel Columns="6"
+                                                                     MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
+                                                                     MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
+                                                                     Gap="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactGapConverter.Instance}}"
+                                                                     ReferenceColumns="10" />
+                                        </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:ItemSlotViewModel}">
