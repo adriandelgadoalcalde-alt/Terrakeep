@@ -29184,3 +29184,83 @@ bloqueo de session.json compartido con otro agente concurrente, ajeno al propio 
 **Sin cambios de codigo de produccion ni de arnes** en esta entrada (solo lectura de .plr reales,
 ejecucion de tests/harnesses ya existentes, y una escritura temporal reversible de session.json
 ya restaurada). Terrakeep.exe cerrado limpio al terminar (sin proceso huerfano).
+
+## Personaje > Objetos: selector 1/2/3 "mas abajo de lo que deberian" - aplicador-fix FASE 2
+(26-sep-2026, arreglo real de produccion sobre la investigacion de arriba, commit `309e402e`)
+
+Encargo recibido con la causa YA confirmada por `investigador-bug` (bloque anterior de esta misma
+bitacora): `ObjetosNavToggle` (`MainWindow.xaml:3525-3526` en el commit `dfc7ebf5`) y el `TextBlock`
+de titulo de cada pagina (`Style="SectionText"`) son dos elementos anclados cada uno contra un
+origen distinto, delta de centros = 7.0px medido en Equipamiento, con la asimetria inversa
+(~10px) en Inventario/Almacenes por su `Margin="0,14,0,0"` no compartido con Equipamiento. No se
+reinvestigo la causa - se aplico el arreglo recomendado.
+
+**Arreglo real aplicado** (`Terrakeep.App/MainWindow.xaml`, unico fichero tocado):
+1. Se unifico el `Margin` de los 3 `Border` de contenido (`ObjetosSeccionEquipamiento`,
+   `ObjetosSeccionInventario`, `ObjetosSeccionAlmacenes`) - las 2 ultimas perdieron su
+   `Margin="0,14,0,0"` (sin ninguna justificacion documentada en el codigo, confirmado leyendo el
+   fichero completo alrededor de esas 2 lineas), quedando las 3 sin margen, igual que Equipamiento
+   ya tenia.
+2. En vez de retunear `ObjetosNavToggle` con OTRO offset a ojo (la recomendacion explicita del
+   informe descartaba esa via), se implemento centrado real declarativo con el mecanismo nativo de
+   WPF pensado exactamente para esto: `Grid.IsSharedSizeScope="True"` en el `Grid` compartido
+   (`Grid.Column="0"` que contiene `ObjetosPageHost` + `ObjetosNavToggle`), y un
+   `RowDefinition Height="Auto" SharedSizeGroup="ObjetosHeaderRow"` tanto en el `Grid` que envuelve
+   cada `TextBlock` de titulo (las 3 paginas) como en el `Grid` que ahora envuelve el `StackPanel`
+   de `ObjetosNavToggle` (x:Name paso del `StackPanel` al `Grid` que lo envuelve, para conservar el
+   mismo padre compartido con `ObjetosPageHost` que ya comprobaba el propio canario). Con ambas
+   filas compartiendo grupo, WPF sincroniza su alto real al maximo entre `ViewSelector` (~24.6px) y
+   `SectionText` (~18.6px) en tiempo de layout - `VerticalAlignment="Center"` en el `TextBlock` y en
+   el `StackPanel` interior hace el resto. Cero numeros magicos: si `SectionText`/`ViewSelector`
+   cambian de tamaño en el futuro, el centrado se recalcula solo (mismo principio que la geometria
+   de Chester corregida hoy mismo con centrado declarativo en vez de un offset ajustado a mano).
+
+**Verificacion con el canario real que cerro el hueco de cobertura** (mismo
+`DIAG_NAVTOGGLE_POS_SOLO=1`, tolerancia 3px sin tocar):
+`DIAG_NAVTOGGLE_POS_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build` - **0
+lineas `FALLO` reales** (confirmado contando yo mismo, no copiado del informe: `grep -c "FALLO:"`
+= 0) en los 6 tamaños de ventana que el canario mide de verdad (1080x700, 1080x900, 1600x900,
+900x700, 1180x860-guardado-usuario, 1476x1081-pinned-usuario - la cifra de "7" del informe de
+investigacion no coincide con el numero real de llamadas `Medir()` del propio fichero, contadas a
+mano: son 6; el propio investigador ya avisaba de "no copiar el numero" y aqui se verifico con el
+recuento real, sin que cambie la conclusion: antes eran FALLO en todas, ahora 0). Delta de centros
+= exactamente **0.0px** en las 6 (antes 7.0px constante). Las 2 paginas extra que el canario mide
+por separado (`MedirPagina`, informativo, sin assert): `Delta toggle.Y - seccion.Y = 0.0` en
+Inventario y en Almacenes (antes ~10px por encima, el defecto inverso reportado por el
+investigador) - las 3 paginas quedan alineadas entre si, no solo la reportada por el usuario.
+`padre real de ObjetosNavToggle == padre real de ObjetosPageHost -> True` (se conservo aposta al
+mover `x:Name` del `StackPanel` al `Grid` que lo envuelve).
+
+**Verificacion visual real** (capturas del propio canario, `Terrakeep.App.Tests/bin/Release/
+net10.0-windows/diag-navtoggle-pos-*.png`): revisadas a ojo `diag-navtoggle-pos-1080x700-min.png`,
+`diag-navtoggle-pos-1476x1081-pinned-usuario.png` (tamaño real guardado del usuario),
+`diag-navtoggle-pos-pagina-Inventario.png` y `diag-navtoggle-pos-pagina-Almacenes.png` - en las 4
+el selector "1"/"2"/"3" queda visualmente alineado con el titulo de su pagina ("Equipamiento"/
+"Inventario"/"Almacenes"), sin el desplazamiento reportado por el usuario.
+
+**Regresion**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores. `dotnet test
+Terrakeep.slnx -c Release --no-build`: `Terrakeep.Core.Tests` 782/782, `Terrakeep.App.ViewModels.
+Tests` 756/756 (igual que el baseline mas reciente de esta misma bitacora, sin regresion).
+`NAV123_SOLO=1 dotnet run --project Terrakeep.App.Tests -c Release --no-build`: 0 `FALLO` (el
+canario hermano de exclusividad/ciclo de clic de NAV123 sigue intacto tras mover `x:Name` y
+restructurar el `Grid`).
+
+**Recompilacion y redespliegue real**: `Terrakeep.exe` instalado NO estaba en ejecucion
+(`Get-CimInstance Win32_Process`, sin resultados) antes y despues del despliegue. `DEPLOY_LOCK`
+(`KeepQA\src\bloqueos\deployLock.js`) adquirido antes de tocar `Assets/`/publish, liberado despues
+de confirmar. `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde. `robocopy .../publish "%LocalAppData%\Programs\Terrakeep"
+/MIR /XF unins000.exe unins000.dat`: 1 archivo copiado (`Terrakeep.exe`, el unico con cambio real -
+este arreglo no toco ningun asset), 0 errores. Hash SHA256 identico entre el `.exe` publicado y el
+instalado (`AF521115...D974` en ambos). Sanity check real: `Start-Process` del `.exe` instalado,
+`Responding=True` a los 5s, cerrado limpio con `Stop-Process -Force`, sin proceso residual
+verificado despues.
+
+**Commit local** (`309e402e`): SOLO `Terrakeep.App/MainWindow.xaml` (working set exacto de esta
+tarea - `git status`/`git diff --stat` confirmados antes de comitear; nunca `git add -A` - habia
+decenas de ficheros ajenos modificados en el arbol por otros agentes en paralelo, incluido
+`CLAUDE.md`, `Terrakeep.App.Tests/AuditoriaKeepQA.cs`, `Terrakeep.App.Tests/AuditoriaMaquetacion.
+cs`, `Terrakeep.App.ViewModels.Tests/DataContextLocalTieneLocTests.cs`, todo `Terrakeep.Core.Tests/
+*` modificado, `scripts/*.js`/`*.ps1` y ficheros nuevos sin trackear - ninguno tocado). Esta entrada
+de `bitacora.md` va en un commit propio separado, tras confirmar el resultado real. Sin `git push`
+en ninguno de los dos.
