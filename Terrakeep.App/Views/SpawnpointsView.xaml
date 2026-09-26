@@ -1,0 +1,112 @@
+<!-- ADR-TERRAKEEP-016/022 (26-sep-2026): SEXTA extraccion real de una seccion de
+     MainWindow.xaml a un UserControl, primera del grupo de sub-tabs de PERSONAJE (punto 4.5
+     del plan, siguiente paso recomendado por ADR-TERRAKEEP-021 tras cerrar NOVEDADES/BUILDS/
+     SERVIDOR/ACERCA DE/GUIA). Sub-tab SPAWN POINTS elegido por ser el mas pequeno y aislado de
+     los cuatro candidatos (Spawnpoints 79 lineas, Unlocks 123, Version 201, Compare 206),
+     dejando Objetos (911 lineas, el mas grande y acoplado) para el final del grupo.
+
+     Contenido copiado BYTE A BYTE del TabItem "SPAWN POINTS" (el quinto sub-tab del
+     TabControl interno de PERSONAJE, SelectedIndex=4 - PersonajeInnerTabIndex, confirmado con
+     el canario real S-b/S-c/S-d de Terrakeep.App.Tests/Program.cs) en MainWindow.xaml - solo
+     re-indentado al moverse de sitio, ningun caracter de contenido cambiado. Sin FindName
+     conocidos (grep exhaustivo de x:Name dentro del bloque original: cero resultados) y sin
+     ningun recurso window-scoped (grep exhaustivo de los 7 StaticResource usados - CaptionText,
+     BgElevatedBrush, TextPrimaryBrush, BgPrimaryBrush, TextSecondaryBrush, CircleCloseButton, y
+     el converter CountToVis - contra Styles/Theme.xaml y App.xaml: los 7 viven ahi, ninguno
+     SOLO en Window.Resources de MainWindow.xaml), asi que no hizo falta ningun
+     UserControl.Resources local (mismo caso ya visto en NOVEDADES/ADR-017).
+
+     El UserControl no fija su propio DataContext, hereda el MainViewModel real del Window. Las
+     dos referencias a RelativeSource AncestorType=Window (RemoveEntryCommand/
+     ViewSpawnOnMapCommand) siguen funcionando sin cambios: Window sigue siendo un ancestro real
+     en el arbol visual aunque el contenido viva ahora dentro de un UserControl hijo (mismo
+     mecanismo ya confirmado por las extracciones anteriores que usan el mismo patron, p.ej.
+     HostingView/ADR-019). -->
+<UserControl x:Class="Terrakeep.App.Views.SpawnpointsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Terrakeep.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <!-- S-b (segunda auditoria de Opus, Fable): "anchos fijos de 494px
+         repetidos por fila + cabecera repetida en cada fila" - cada tarjeta
+         volvia a escribir "Nombre"/"Spawn X"/"Spawn Y"/"Id" como si fuera la
+         primera vez. Grid.IsSharedSizeScope aqui (en el ancestro comun real
+         de la cabecera Y de cada fila del ItemsControl) + SharedSizeGroup
+         por columna - una UNICA fila de cabecera de verdad, con las columnas
+         de cada tarjeta sincronizadas contra ella (no solo repitiendo el
+         mismo numero fijo a mano). -->
+    <DockPanel Margin="0,10,0,0" Grid.IsSharedSizeScope="True">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+            <TextBlock Text="{Binding Loc[spawn_points_intro], Mode=OneWay}"
+                       Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,8" />
+            <Button Content="{Binding Loc[action_add_spawnpoint], Mode=OneWay}" Tag="Accent" Command="{Binding Servers.AddEntryCommand}" HorizontalAlignment="Left" />
+        </StackPanel>
+        <Grid DockPanel.Dock="Top" Margin="12,0,12,6"
+              Visibility="{Binding Servers.Entries.Count, Converter={StaticResource CountToVis}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220" SharedSizeGroup="SpawnName" />
+                <ColumnDefinition Width="80" SharedSizeGroup="SpawnX" />
+                <ColumnDefinition Width="80" SharedSizeGroup="SpawnY" />
+                <ColumnDefinition Width="70" SharedSizeGroup="SpawnId" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="SpawnMap" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="SpawnRemove" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="{Binding Loc[label_name], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,14,0" />
+            <TextBlock Grid.Column="1" Text="{Binding Loc[label_spawn_x], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,14,0" />
+            <TextBlock Grid.Column="2" Text="{Binding Loc[label_spawn_y], Mode=OneWay}" Style="{StaticResource CaptionText}" Margin="0,0,14,0" />
+            <!-- S-d (segunda auditoria de Opus, Fable): "'Id' ocupa el mismo protagonismo
+                 que los campos utiles, pese a decir 'no suele hacer falta tocarlo'" - tono
+                 secundario real (TextSecondaryBrush) tambien en la cabecera. -->
+            <TextBlock Grid.Column="3" Text="{Binding Loc[label_id], Mode=OneWay}" Style="{StaticResource CaptionText}" Foreground="{StaticResource TextSecondaryBrush}"
+                       ToolTip="{Binding Loc[tt_world_internal_id], Mode=OneWay}" />
+        </Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Servers.Entries}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:ServerEntryRowViewModel}">
+                        <Border Background="{StaticResource BgElevatedBrush}" CornerRadius="6" Margin="0,0,0,8" Padding="12,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220" SharedSizeGroup="SpawnName" />
+                                    <ColumnDefinition Width="80" SharedSizeGroup="SpawnX" />
+                                    <ColumnDefinition Width="80" SharedSizeGroup="SpawnY" />
+                                    <ColumnDefinition Width="70" SharedSizeGroup="SpawnId" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="SpawnMap" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="SpawnRemove" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,14,0"
+                                         Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                <TextBox Grid.Column="1" Text="{Binding SpawnX, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,14,0"
+                                         Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                <TextBox Grid.Column="2" Text="{Binding SpawnY, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,14,0"
+                                         Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextPrimaryBrush}" BorderThickness="0" />
+                                <TextBox Grid.Column="3" Text="{Binding WorldId, UpdateSourceTrigger=PropertyChanged}" Padding="6,4" Margin="0,0,14,0" FontSize="11"
+                                         Background="{StaticResource BgPrimaryBrush}" Foreground="{StaticResource TextSecondaryBrush}" BorderThickness="0"
+                                         ToolTip="{Binding Loc[tt_world_internal_id], Mode=OneWay}" />
+                                <!-- S-c (segunda auditoria de Opus, Fable): "sin enlace al mapa de
+                                     Exploracion" - salta a Exploracion y centra el mapa en estas
+                                     coordenadas exactas (mismo mecanismo real ya usado por los NPCs). -->
+                                <Button Grid.Column="4" Content="{Binding Loc[action_view_on_map], Mode=OneWay}" FontSize="10.5" Padding="6,4" Margin="0,0,10,0"
+                                        VerticalAlignment="Center" Tag="Ghost"
+                                        ToolTip="{Binding Loc[tt_goto_map_spawn], Mode=OneWay}"
+                                        Command="{Binding DataContext.ViewSpawnOnMapCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                                <!-- T-F (segunda auditoria de Opus, Fable): CircleCloseButton (gira 90° y se tiñe
+                                     de rojo al pasar el raton, gesto real de Terrasavr) existia en Theme.xaml sin
+                                     que ningun boton "quitar" real lo usara todavia - este es el candidato real. -->
+                                <Button Grid.Column="5" Content="✕" Style="{StaticResource CircleCloseButton}" VerticalAlignment="Center"
+                                        ToolTip="{Binding Loc[tt_remove_spawnpoint], Mode=OneWay}"
+                                        Command="{Binding DataContext.Servers.RemoveEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

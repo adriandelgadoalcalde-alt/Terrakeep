@@ -29738,3 +29738,83 @@ pequeños y aislados (Spawnpoints 79 lineas, Unlocks 123, Version 201, Compare 2
 templates de comparacion window-scoped, confirmar con grep exhaustivo antes de asumir
 promocion-), dejando Objetos (911 lineas, el mas grande de los 8 sub-tabs) para el final de ese
 grupo.
+
+## Sexta extraccion real de una seccion de MainWindow.xaml a UserControl - SPAWN POINTS (26-sep-2026)
+
+`ADR-TERRAKEEP-022`, requirement `b108d4bf-f1a7-4466-b2f6-69fdb54bf603`. Primera extraccion del
+grupo 4.5 (sub-tabs de PERSONAJE), tal como recomendaba `ADR-TERRAKEEP-021`: se elige el sub-tab
+mas pequeño y aislado de los 4 candidatos pendientes - Spawn Points (79 lineas, MainWindow.xaml
+4354-4433 antes de la extraccion, indice 4 del `TabControl` interno de PERSONAJE via
+`PersonajeInnerTabIndex` - orden real confirmado: 0=Objetos, 1=Buffs, 2=Investigacion,
+3=Apariencia, 4=Spawn Points, 5=Desbloqueos, 6=Version, 7=Comparar). Unlocks (123)/Version
+(201)/Compare (206) quedan pendientes del mismo grupo, Objetos (911 lineas) se deja para el
+final.
+
+Contenido movido a `Terrakeep.App/Views/SpawnpointsView.xaml` + `.xaml.cs` (mismo patron de las
+5 rondas anteriores: carpeta `Views/`, sufijo `View.xaml`, sin `DataContext` propio, contenido
+copiado BYTE A BYTE salvo re-indentado). `MainWindow.xaml` queda con `<views:SpawnpointsView />`
+dentro del `TabItem` SPAWN POINTS.
+
+**Caso mas simple desde NOVEDADES/ADR-017**: grep exhaustivo confirmo cero `x:Name` dentro del
+bloque original (nada que resolver con el patron de `FindName` doble de GUIA/ADR-021) y los 7
+`StaticResource` que usa la seccion (`CaptionText`, `BgElevatedBrush`, `TextPrimaryBrush`,
+`BgPrimaryBrush`, `TextSecondaryBrush`, `CircleCloseButton`, y el converter `CountToVis` de
+`App.xaml`) ya viven en `Styles/Theme.xaml`/`App.xaml`, ninguno en `Window.Resources` de
+`MainWindow.xaml` - no hizo falta ningun `UserControl.Resources` local. Las 2 referencias a
+`RelativeSource AncestorType=Window` (`ViewSpawnOnMapCommand`/`Servers.RemoveEntryCommand`)
+siguen funcionando sin cambios: `Window` sigue siendo ancestro real en el arbol visual aunque el
+contenido viva dentro de un `UserControl` hijo (mismo mecanismo ya confirmado por
+HostingView/ADR-019).
+
+**Canario real usado** (existente, sin gate por env var - a diferencia de NOVEDADES/GUIA que
+usan `*_SOLO`, este vive dentro del recorrido normal de `Terrakeep.App.Tests/Program.cs`):
+bloque S-b/S-c/S-d que fija `vm.PersonajeInnerTabIndex=4` y captura 3 PNG reales, mas el
+ejercicio funcional S-C-MAPA (añade un Spawn Point real, pulsa `ViewSpawnOnMapCommand`, confirma
+`SelectedTabIndex=4` y `NavigateToTileRequested` con las coordenadas exactas),
+X-G-SPAWN-PERSONAJE/A9-08-SPAWNMUNDO (filtrado real por `WorldId`+`Name`) y PB-10-SPAWN (mide
+filas reales de la tabla en 4 tamaños de ventana, confirma 0 filas perdidas en los 4 - ejercita
+directamente el `Grid.IsSharedSizeScope`+`SharedSizeGroup`, la pieza mas fragil de esta seccion).
+
+**Verificacion completa**: `dotnet build Terrakeep.slnx -c Release` 0/0 tras `dotnet clean`
+completo. `dotnet test Terrakeep.Core.Tests -c Release`: 782/782 (identico al baseline).
+`dotnet test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al baseline).
+Recorrido COMPLETO de `Terrakeep.App.Tests` (`dotnet run -c Release`, sin ningun `_SOLO`)
+ejecutado DOS VECES: la primera dio 16 FALLO en exactamente las 9 categorias ya documentadas por
+`ADR-021` (H5-05x1, A8-06x1, AR-14x4, A8-01x1, AR-11fx1, AR-MRK-CLICx1, AR-MRK-OTROSx5,
+A10-IDIOMA-BARRIDOx1, AR-LAYx1), sin A8-02b. La segunda dio 17 FALLO, las mismas 9 categorias mas
+1 aparicion de A8-02b (`CancelWorldSearchCommand`/timing, codigo totalmente ajeno a
+Spawnpoints/UserControl) - el mismo flake de contencion de maquina ya documentado por
+`ADR-020`/`ADR-021` (varios `dotnet` de otras sesiones activos), no una regresion real. Ninguna
+de las dos pasadas menciona Spawnpoints/SpawnpointsView en su log de FALLO.
+
+**Verificacion visual**: `spawn-points-tabla-poblada.png` revisada a mano - pestaña "Puntos de
+aparición" correctamente seleccionada y resaltada, cabecera unica real (Nombre/Spawn X/Spawn
+Y/Id), fila con datos de prueba, botones "Ver en el mapa"/✕ visibles y alineados - layout
+identico al original.
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`) recompilado 0/0. Copia instalada real (`%LocalAppData%\Programs\Terrakeep\`,
+self-contained win-x64) NO estaba en ejecucion antes del despliegue (`Get-Process -Name
+Terrakeep` sin resultados). `DEPLOY_LOCK` adquirido antes de tocar `Assets/` (snapshot
+antes=13056 ficheros/hash `068603cc...`, identico al de `ADR-021`/`ADR-020`, sin drift). `dotnet
+publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde.
+`robocopy /MIR` (via `MSYS_NO_PATHCONV=1`): 1 archivo copiado (`Terrakeep.exe`), `Assets/`
+identico antes/despues (13056 ficheros, mismo hash). Hash SHA256 identico entre el `.exe`
+publicado y el instalado (`2a3ccc4b...` en ambos). Sanity check real: `Start-Process` del `.exe`
+instalado, `Responding=True` a los 5s, cerrado limpio, sin proceso residual. `DEPLOY_LOCK`
+liberado.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/Views/SpawnpointsView.xaml` + `.xaml.cs` (nuevos) - nunca `git add -A`, seguia
+habiendo decenas de ficheros ajenos modificados en el arbol por otros agentes en paralelo.
+Registrado contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en
+KeepQA. Sin `git push`.
+
+**Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): quedan pendientes del
+grupo 4.5 - Unlocks (123 lineas), Version (201 lineas, `DataTemplate` propios
+`VersionGroup`/`VersionOption` y `VersionOptionButton`, confirmar con grep exhaustivo si son
+window-scoped), Compare (206 lineas, usa 3 `DataTemplate` window-scoped ya confirmados por el
+grep de `ADR-021` - `CompareCharacterPickerItemTemplate`/`CompareItemCellTemplate`/
+`CompareInventoryCellTemplate` en `Window.Resources` lineas 264-304 - este SI necesitara
+promocion o `UserControl.Resources` local). Objetos (911 lineas) se deja para el final del
+grupo.
