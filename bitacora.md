@@ -29413,3 +29413,113 @@ proceso residual verificado despues.
 nunca `git add -A`, seguia habiendo decenas de ficheros ajenos modificados en el arbol por otros
 agentes en paralelo. Registrado contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603`
 (proyecto `Terrakeep`) en KeepQA. Sin `git push`.
+
+## Tercera extraccion real de una seccion de MainWindow.xaml a UserControl - SERVIDOR (26-sep-2026)
+
+Ejecucion real del siguiente paso del plan (`ADR-TERRAKEEP-016`, punto 4.3, recomendado por el
+propio `ADR-TERRAKEEP-018` tras NOVEDADES/BUILDS), requirement
+`b108d4bf-f1a7-4466-b2f6-69fdb54bf603`. Antes de tocar nada se confirmo con `git status`/`git log`
+que el arbol de Terrakeep seguia estable (decenas de ficheros modificados por otros agentes en
+paralelo, ninguno tocaba `MainWindow.xaml` ni la carpeta `Views/`). Detalle tecnico completo en
+`ADR-TERRAKEEP-019` (Decision Registry, mismo requirement) - resumen real aqui.
+
+**Resumen del arreglo real**: contenido del `TabItem` SERVIDOR (125 lineas, `MainWindow.xaml`
+7772-7896 antes de tocarla: formulario de hosting + lista de instancias activas) movido byte a
+byte a `Terrakeep.App/Views/HostingView.xaml` + `HostingView.xaml.cs` (mismo patron ya fijado por
+`ADR-017`/`ADR-018`: carpeta `Views/`, sufijo `View.xaml`, sin `DataContext` propio,
+`d:DesignInstance` para IntelliSense). `MainWindow.xaml` queda con `<views:HostingView />` dentro
+del `TabItem` SERVIDOR. Sin `x:Name` en la seccion, sin code-behind propio en
+`MainWindow.xaml.cs`.
+
+**Hallazgo real mas relevante de esta ronda (corrige el mecanismo de "promocion" que ADR-016/018
+daban por sentado)**: esta seccion SI referencia un recurso window-scoped directamente en su
+propio markup - `{StaticResource BoolToVis}` (`BooleanToVisibilityConverter`, `x:Key` solo en
+`Window.Resources` de `MainWindow.xaml`, usado ademas otras 120 veces en el resto del archivo, esa
+definicion NO se toca). Promoverlo a `Application.Resources` (`App.xaml`) - incluso probando con
+una clave `x:Key` DISTINTA a "BoolToVis" para evitar cualquier colision de nombre - revienta en
+RUNTIME la construccion de `MainWindow` ENTERA (no solo `HostingView`) con
+`XamlParseException: No se puede encontrar el recurso`, reproducido de forma determinista con
+`dotnet clean` + build limpio, y confirmado que ni siquiera hace falta tocar la pestaña Servidor
+para verlo: `NOVEDADES_SOLO`, que no la toca, revienta igual en cuanto `App.xaml` gana CUALQUIER
+entrada nueva. Sintoma real: `MainWindow.InitializeComponent()` lanza buscando la clave NUEVA que
+solo `HostingView.xaml` usaria, nunca una de las 121 referencias que `MainWindow.xaml` SI escribe
+- evidencia de que el compilador de marcado de WPF (`PresentationBuildTasks`) optimiza
+`StaticResource` a una tabla de claves compartida POR ENSAMBLADO entre TODAS las paginas XAML
+compiladas (BAML "OptimizedStaticResource"), y anadir una clave nueva a `Application.Resources`
+desestabiliza esa tabla tambien para `MainWindow.xaml`. NOVEDADES/BUILDS nunca ejercitaron este
+mecanismo porque ninguna de las dos necesito anadir nada a `App.xaml`. **Resuelto evitando tocar
+`Application.Resources` del todo**: `<UserControl.Resources>` LOCAL dentro de `HostingView.xaml`
+con su propia instancia de `BooleanToVisibilityConverter` (`x:Key="HostingBoolToVis"`, ambito
+propio del archivo, resuelto durante su propio `InitializeComponent()` sin depender de
+`Window.Resources` ni de `Application.Resources`) - patron WPF estandar, mas simple que "promover"
+nada, y el que de verdad corresponde cuando el unico consumidor es un solo `UserControl` aislado.
+Regla nueva para el resto de extracciones del plan: si una seccion referencia un recurso
+window-scoped DIRECTAMENTE en su propio markup, la solucion segura es un `UserControl.Resources`
+LOCAL con clave propia, nunca anadir nada a `Application.Resources` sin verificar antes contra
+este hallazgo.
+
+**Hallazgo real secundario (timing, no funcional)**: con la extraccion aplicada, el canario real
+`HOSTING_SOLO` capturaba `hosting-formulario.png` completamente EN BLANCO con los mismos 2
+`DoEvents()` que bastaban antes de la extraccion (confirmado por comparacion directa: `git stash`
+temporal de `MainWindow.xaml`/`App.xaml`/`Views/HostingView.*` reproduce la captura completa y
+correctamente rellena en el mismo punto exacto del test). Causa real: un `UserControl` recien
+CONSTRUIDO (su primer `InitializeComponent()` + layout, a diferencia de contenido que antes vivia
+ya realizado dentro del arbol cargado del Window) necesita un ciclo mas de bombeo del Dispatcher
+para completar su primera pasada de layout/render antes de que `RenderTargetBitmap` capture algo
+real - no es una regresion funcional (`TerrariaDetectado`/`ModsDisponibles` ya se leian bien con
+los mismos 2 `DoEvents()`, el servidor real arranca/para igual), solo del PINTADO a tiempo de una
+captura inmediata tras cambiar de pestaña. Arreglado subiendo esos 2 `DoEvents()` a 4 en
+`PruebasGuiaYServidor.cs` (`EjecutarHostingReal`) - con 4, `hosting-formulario.png` vuelve a ser
+pixel-identica a la captura de antes de la extraccion. Leccion para las extracciones que le
+queden a este plan: si añaden una captura inmediata tras seleccionar la pestaña, contar con un
+ciclo extra de `DoEvents()` para la primera realizacion del `UserControl`.
+
+**Canario real usado (existente, gated por env var, mismo patron que `NOVEDADES_SOLO`/`BUILDS`
+corriendo aparte del recorrido incondicional)**: `HOSTING_SOLO=1` en
+`Terrakeep.App.Tests/PruebasGuiaYServidor.cs` (`EjecutarHostingReal`) - arranca un servidor de
+Terraria vainilla REAL desde `Hosting.IniciarCommand` (mismo camino que pulsaria un usuario),
+espera a `EnEscucha` de verdad, conecta por TCP real a `127.0.0.1:puerto`, y lo detiene
+comprobando que el proceso muere. Verificado en verde tras el arreglo de `DoEvents`:
+`TerrariaDetectado=True`, `TModLoaderDetectado=True`, instancia real lanzada (PID real), estado
+`EnEscucha`, conexion TCP real OK, proceso muerto tras Detener. Capturas
+`hosting-formulario.png`/`hosting-instancia-activa.png` pixel-identicas a las mismas capturas
+tomadas ANTES de la extraccion (comparacion visual directa, `git stash` temporal).
+
+**Verificacion completa**: `dotnet build Terrakeep.slnx -c Release` 0/0 (antes y despues, incluido
+tras `dotnet clean` completo). `dotnet test Terrakeep.Core.Tests -c Release`: 782/782 (identico al
+baseline). `dotnet test Terrakeep.App.ViewModels.Tests -c Release`: 756/756 (identico al
+baseline). Recorrido COMPLETO de `Terrakeep.App.Tests` (`dotnet run -c Release`, SIN ningun
+`_SOLO`): 17 `FALLO:` en el log completo, mismas 9 categorias ya documentadas como preexistentes
+en esta bitacora antes de hoy (`AR-14`×4, `AR-MRK-CLIC`, `AR-MRK-OTROS`×5,
+`A10-IDIOMA-BARRIDO`, `AR-11f`, `AR-LAY`, `A8-01`, `A8-06`, `H5-05`×2 - conjunto identico al citado
+por el propio `ADR-018` y a otro barrido ya documentado en esta misma bitacora con el mismo total
+de 17), CERO mencion de Hosting/Servidor/HostingView en ningun `FALLO` del log completo (el
+recorrido incondicional no ejercita la pestaña Servidor, solo `HOSTING_SOLO` gated lo hace, y ese
+SI se ejecuto aparte en verde).
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`) recompilado con `dotnet build Terrakeep.App -c Debug`. Copia instalada real
+(`%LocalAppData%\Programs\Terrakeep\`, self-contained win-x64) NO estaba en ejecucion
+(`Get-Process -Name Terrakeep` sin resultados) antes del despliegue. `DEPLOY_LOCK`
+(`KeepQA\src\bloqueos\deployLock.js`) adquirido antes de tocar `Assets/`/publish, liberado
+despues. `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release
+-p:PublishProfile=win-x64` en verde. `robocopy .../publish "%LocalAppData%\Programs\Terrakeep"
+/MIR /XF unins000.exe unins000.dat`: 1 archivo copiado (`Terrakeep.exe`, el unico con cambio real
+- este arreglo no toco ningun asset), `Assets/` identico antes/despues (13056 ficheros, mismo
+hash). Hash SHA256 identico entre el `.exe` publicado y el instalado
+(`8EE487CB...890CD07` en ambos). Sanity check real: `Start-Process` del `.exe` instalado,
+`Responding=True` a los 5s, cerrado limpio con `Stop-Process -Force`, sin proceso residual
+verificado despues.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/Views/HostingView.xaml` + `.xaml.cs` (nuevos) y
+`Terrakeep.App.Tests/PruebasGuiaYServidor.cs` (ajuste de `DoEvents` del canario `HOSTING_SOLO`) -
+nunca `git add -A`, seguia habiendo decenas de ficheros ajenos modificados en el arbol por otros
+agentes en paralelo. Registrado contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603`
+(proyecto `Terrakeep`) en KeepQA (commit `4bf4f23d` enlazado). Sin `git push`.
+
+**Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): 4.3 ACERCA DE (142
+lineas, usa `CharacterCardTemplate` window-scoped - PRIMER caso real desde esta ronda que
+necesitaria aplicar la regla nueva de `UserControl.Resources` local si el `StaticResource` vive en
+el propio markup movido; confirmar con grep exhaustivo antes de asumirlo, sin repetir el error de
+intentar promover a `App.xaml` sin verificar contra este hallazgo real).
