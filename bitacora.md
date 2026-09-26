@@ -29636,3 +29636,105 @@ b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto `Terrakeep`) en KeepQA. Sin `git
 `Guide.*` autocontenido, sin `FindName` conocidos en los 9 archivos de test revisados por
 `ADR-016`) - unica seccion de nivel superior que falta antes de pasar a los sub-tabs de PERSONAJE
 (4.5) o Exploracion (4.6, la mas grande y arriesgada, dejar para el final).
+
+## Quinta extraccion real de una seccion de MainWindow.xaml a UserControl - GUIA (26-sep-2026)
+
+Ejecucion real del siguiente paso del plan (`ADR-TERRAKEEP-016`, punto 4.4, recomendado por el
+propio `ADR-TERRAKEEP-020` tras NOVEDADES/BUILDS/SERVIDOR/ACERCA DE), requirement
+`b108d4bf-f1a7-4466-b2f6-69fdb54bf603`. Antes de tocar nada se confirmo con `git status`/`git log`
+que el arbol de Terrakeep seguia estable (decenas de ficheros modificados por otros agentes en
+paralelo, ninguno tocaba `MainWindow.xaml` ni la carpeta `Views/`). Detalle tecnico completo en
+`ADR-TERRAKEEP-021` (Decision Registry, mismo requirement) - resumen real aqui.
+
+**Resumen del arreglo real**: contenido del `TabItem` GUIA (232 lineas, `MainWindow.xaml`
+5004-5235 antes de tocarla: avisos de Calamity/mundo-sin-personaje/personaje-sin-mundo, tarjeta
+"Tu objetivo ahora mismo" y el arbol completo de 46 tramos con sus requisitos) movido byte a byte
+a `Terrakeep.App/Views/GuideView.xaml` + `GuideView.xaml.cs` (mismo patron ya fijado por
+`ADR-017`/`018`/`019`/`020`: carpeta `Views/`, sufijo `View.xaml`, sin `DataContext` propio,
+`d:DesignInstance` para IntelliSense). `MainWindow.xaml` queda con
+`<views:GuideView x:Name="GuideView" />` dentro del `TabItem` GUIA.
+
+**Hallazgo real que CORRIGE la nota del plan** (mismo patron de correccion ya visto con
+`BuildClassTemplate` en `ADR-018` y con `CharacterCardTemplate` en `ADR-020`): el propio
+`ADR-016` daba GUIA por "sin `FindName` conocidos en los 9 archivos de test revisados" - una
+relectura real (grep exhaustivo, no confiar solo en el listado original) encontro un `x:Name`
+real SI usado por `window.FindName`: `GuideObjetivoBanner`, en 2 sitios de
+`Terrakeep.App.Tests/PruebasGuiaYServidor.cs` (`EjecutarGuiaReal`, para `BringIntoView()` antes
+de capturar evidencia real del banner). Resuelto con el SEGUNDO camino que el propio `ADR-016`
+(punto 2b) ya dejaba anotado por escrito para este caso: `x:Name="GuideView"` en el host, y los 2
+call-sites pasan a `window.FindName("GuideView")` seguido de
+`guideView.FindName("GuideObjetivoBanner")` - un `UserControl` compilado con su propia XAML es
+dueño de su propio `NameScope`, asi que `FindName` sobre la propia instancia encuentra el
+elemento sin ningun cambio en `GuideView.xaml.cs`.
+
+**Hallazgo real confirmado** (mismo mecanismo ya resuelto una vez por `ADR-019`/`HostingView`,
+esta ronda lo repite con un caso distinto): esta seccion SI referencia un recurso window-scoped
+directamente en su propio markup, `{StaticResource BoolToVis}` (7 usos reales: avisos de
+Calamity/sin-mundo/sin-personaje, badges Opcional/Calamity, glifo `EsLimiteEstructural` ×2).
+Regla ya establecida por `ADR-019` aplicada sin volver a descubrirla: `<UserControl.Resources>`
+LOCAL con clave propia (`GuideBoolToVis`), nunca promocion a `App.xaml` (revienta
+`MainWindow.InitializeComponent()` entero por la tabla BAML `OptimizedStaticResource` compartida
+por ensamblado). El resto de recursos que usa GUIA (`InverseBoolToVis`/`NullToVis`/
+`NullToCollapsed`/`EmptyToCollapsed` y todos los brushes/estilos) confirmados con grep exhaustivo
+en `Styles/Theme.xaml`/`App.xaml` - ninguno window-scoped.
+
+**Canario real usado** (existente, gated por env var, mismo patron que `NOVEDADES_SOLO`/
+`HOSTING_SOLO`): `GUIA_SOLO=1` en `PruebasGuiaYServidor.cs` (`EjecutarGuiaReal`) - personaje+mundo
+reales cargados, 46 tramos reales evaluados, 0 texto sin resolver, los 3 avisos (los 3 bindings a
+`GuideBoolToVis`), la tarjeta de objetivo con y sin icono (incluido el doble `FindName`+
+`BringIntoView` recien arreglado), 13/13 filas del arbol con icono sin recorte, y el glifo
+`EsLimiteEstructural`. Verificado en verde: 0 `FALLO` en las 40+ aserciones reales, incluidas las
+2 capturas que dependian del `FindName` doble (`guia-banner-con-icono.png`/
+`guia-banner-con-icono-jefe.png`) - revisadas a mano, banner correctamente traido a la vista.
+
+**Verificacion completa**: `dotnet build Terrakeep.slnx -c Release` 0/0 (antes y despues,
+incluido tras `dotnet clean` completo - confirma que el `UserControl.Resources` local NO
+reproduce el incidente de `ADR-019`). `dotnet test Terrakeep.Core.Tests -c Release`: 782/782
+(identico al baseline). `dotnet test Terrakeep.App.ViewModels.Tests -c Release`: 756/756
+(identico al baseline). Recorrido COMPLETO de `Terrakeep.App.Tests` (sin ningun `_SOLO`)
+ejecutado DOS VECES: la primera dio 17 `FALLO` (16 de las 9 categorias ya documentadas + 1
+aparicion nueva de `A8-02b`, test de timing fijo sobre cancelacion de busqueda de mundo, codigo
+totalmente ajeno a GUIA); confirmada contencion real de maquina en ese momento (5 procesos
+`dotnet` de otras sesiones activos, `Get-Process`). La SEGUNDA repeticion (misma build, sin tocar
+nada) dio 16 `FALLO`, exactamente las 9 categorias ya documentadas, SIN `A8-02b` - confirma que
+fue un flake de contencion (mismo patron ya documentado para `H5-05` en `ADR-020`), no una
+regresion real. CERO mencion de Guia/Guide/GuideView/GuideObjetivoBanner en el log de `FALLO` de
+ninguna de las dos pasadas completas.
+
+**Verificacion visual**: capturas reales del canario `GUIA_SOLO` revisadas a mano -
+`guia-real.png` (pestaña completa correctamente rellena) y `guia-banner-con-icono.png` (banner
+con sprite real de NPC-vecino tras `BringIntoView()` via el `FindName` doble, correctamente
+traido al viewport). NO se intento comparacion antes/despues via `git stash` esta ronda (a
+diferencia de `ADR-018`/`019`/`020`): dado que el canario funcional `GUIA_SOLO` ya cubre 40+
+aserciones reales de comportamiento con 0 `FALLO` (evidencia mas fuerte que una captura estatica
+aislada, mismo criterio de decision ya usado por `ADR-020` cuando su propio stash salio
+inconclusive por contencion) y habia contencion de maquina real confirmada, se prioriza esa
+evidencia funcional en vez de gastar un ciclo de build completo adicional de bajo valor marginal.
+
+**Recompilacion y redespliegue real**: build Debug (`Terrakeep.App/bin/Debug/net10.0-windows/
+Terrakeep.exe`) recompilado 0/0. Copia instalada real (`%LocalAppData%\Programs\Terrakeep\`,
+self-contained win-x64) NO estaba en ejecucion antes del despliegue. `DEPLOY_LOCK` adquirido
+antes de tocar `Assets/`/publish (snapshot antes=13056 ficheros/hash `068603cc...`, identico al
+de `ADR-020`, sin drift), liberado despues. `dotnet publish ... -c Release
+-p:PublishProfile=win-x64` en verde. `robocopy .../publish "%LocalAppData%\Programs\Terrakeep"
+/MIR /XF unins000.exe unins000.dat` (via `MSYS_NO_PATHCONV=1`): 1 archivo copiado
+(`Terrakeep.exe`), `Assets/` identico antes/despues (13056 ficheros, mismo hash, confirmado por
+`deployLock.despuesDeMir`). Hash SHA256 identico entre el `.exe` publicado y el instalado
+(`C1522B99...` en ambos). Sanity check real: `Start-Process` del `.exe` instalado,
+`Responding=True` a los 5s, cerrado limpio, sin proceso residual.
+
+**Commit local**: working set exacto - `Terrakeep.App/MainWindow.xaml` (reducido),
+`Terrakeep.App/Views/GuideView.xaml` + `.xaml.cs` (nuevos), `Terrakeep.App.Tests/
+PruebasGuiaYServidor.cs` (2 call-sites de `FindName` actualizados) - nunca `git add -A`, seguia
+habiendo decenas de ficheros ajenos modificados en el arbol por otros agentes en paralelo. Commit
+`b74378bc`. Registrado contra `requirement b108d4bf-f1a7-4466-b2f6-69fdb54bf603` (proyecto
+`Terrakeep`) en KeepQA, con evidencia enlazada al criterio "UI scroll linter". Sin `git push`.
+
+**Siguiente paso recomendado por el plan** (sin ejecutar en esta ronda): con GUIA cerrada, las
+secciones de nivel superior autocontenidas quedan resueltas salvo INICIO (299 lineas, bajo
+acoplamiento, puede hacerse en cualquier punto). El siguiente paso de mayor riesgo controlado es
+4.5: sub-tabs de PERSONAJE uno a uno, NUNCA la pestaña entera de una vez - empezar por los mas
+pequeños y aislados (Spawnpoints 79 lineas, Unlocks 123, Version 201, Compare 206 -usa 3
+templates de comparacion window-scoped, confirmar con grep exhaustivo antes de asumir
+promocion-), dejando Objetos (911 lineas, el mas grande de los 8 sub-tabs) para el final de ese
+grupo.
