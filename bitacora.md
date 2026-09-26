@@ -28636,16 +28636,29 @@ alcance):
   FALLO/0 EXCEPTION**, `WorldTools_{Overview,Edit,Bestiary}_ScrollInterno=0` en las 3.
 - `dotnet test Terrakeep.Core.Tests -c Release --no-build`: **773/773**, 6s, sin regresion (este
   cambio no toca `Terrakeep.Core`, incluido solo como parte de la suite completa pedida).
-- `dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build`: lanzado como parte de la
-  verificacion de suite completa - ver el resultado real mas abajo si ya quedo registrado en el
-  momento de leer esto, o completar manualmente si esta bitacora se consulta antes de que terminara
-  (proceso real, `testhost.exe`, con uso de memoria alto y normal para este proyecto segun ya
-  documentado arriba en esta misma bitacora - "34 minutos" es el peor caso ya visto, no lo tipico).
+- `dotnet test Terrakeep.App.ViewModels.Tests -c Release --no-build`: **753/753**, 6m8s, 0 errores,
+  0 omitidas - sin regresion (baseline ya documentado arriba en esta bitacora para el commit
+  anterior era 744; el numero real de tests sube por trabajo de otros agentes en paralelo sobre
+  este mismo repo, no por este cambio - este cambio no anade ningun test de ViewModel dedicado, la
+  logica nueva es pura navegacion de UI/enum sin comportamiento que amerite un test headless
+  propio, mismo criterio que Fase B/C/F ya establecieron para `SidebarMode`).
 
-**Redespliegue**: pendiente de confirmar si `Terrakeep.exe` (barra de tareas y/o copia instalada)
-esta en uso antes de sobrescribir - ver el resultado real al cierre de esta tarea.
+**Recompilacion y redespliegue real**: `Terrakeep.exe` instalado NO estaba en ejecucion
+(`Get-CimInstance Win32_Process`, sin resultados) - copia instalada real en `%LocalAppData%\
+Programs\Terrakeep\Terrakeep.exe` (destino unico, barra de tareas/Menu Inicio apuntan ahi). Este
+encargo no toca `Assets/`, pero se siguio el protocolo `DEPLOY_LOCK` igual (`KeepQA\src\bloqueos\
+deployLock.js`) por consistencia con el resto de la familia: `adquirir Terrakeep` sin contencion.
+`dotnet publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde.
+`robocopy .../publish .../Terrakeep //MIR //XF unins000.exe unins000.dat` (Git Bash, doble barra
+por el mismo motivo real ya documentado arriba - una sola barra `/MIR` se expande a una ruta): 1
+archivo copiado (`Terrakeep.exe`, el unico con cambio real - este encargo no toco ningun asset),
+13061 omitidos, 0 errores, 0 extras. `deployLock.js despues`: Assets/ identico antes y despues del
+`/MIR` (13056 ficheros, mismo hash) - "deploy seguro". `DEPLOY_LOCK` liberado tras confirmar.
+`LastWriteTime`/tamaño del `.exe` instalado y del publish identicos (26/09/2026 10:58,
+139.251.329 bytes). Sanity check real: `Start-Process`, `PID=1086292 Responding=True` a los 5s,
+cerrado limpio con `Stop-Process -Force`, sin proceso residual.
 
-Commit local: `Terrakeep.App/ViewModels/ExplorationViewModel.cs`,
+Commit local (arreglo): `Terrakeep.App/ViewModels/ExplorationViewModel.cs`,
 `Terrakeep.App/MainWindow.xaml`, `Terrakeep.App.Tests/CanarioExploracionLayoutPermanente.cs`,
 `Terrakeep.App.Tests/CanarioClusterCofresInspector.cs`,
 `Terrakeep.App.Tests/AuditoriaViewportScroll.cs`, `bitacora.md` (working set exacto de esta tarea -
@@ -28653,4 +28666,6 @@ nunca `git add -A`; habia decenas de ficheros ajenos modificados en el arbol por
 paralelo - incluido `CLAUDE.md`, `Terrakeep.App.Tests/AuditoriaKeepQA.cs`,
 `Terrakeep.App.Tests/AuditoriaMaquetacion.cs`, `Terrakeep.App.ViewModels.Tests/
 DataContextLocalTieneLocTests.cs`, todo `Terrakeep.Core.Tests/*` modificado, `scripts/*.js`/`*.ps1`
-y ficheros nuevos sin trackear - ninguno tocado). Sin `git push`.
+y ficheros nuevos sin trackear - ninguno tocado). Esta segunda entrada de `bitacora.md` (resultado
+final de test/redespliegue) va en un commit propio separado, tras confirmar el resultado real. Sin
+`git push` en ninguno de los dos.
