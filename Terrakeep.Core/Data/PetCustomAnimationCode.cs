@@ -42,17 +42,14 @@ namespace Terrakeep.Core.Data;
 // esta fuera de alcance de este encargo. Devuelve siempre (0,0) para no fingir un movimiento que
 // no es el real.
 //
-// LIMITE REAL pendiente (rotacion): "FloatAndSpinWhenWalking" SI aplica el mismo bob que "Float"
-// (implementado abajo con precision), pero la parte de "spin" (proj.rotation = 2*PI*(tiempo%20/20)
-// mientras camina, DelegateMethods.cs:119-130) necesitaria una RotateTransform en el
-// RenderTransform de la Image de mascota (Terrakeep.App/MainWindow.xaml) que HOY no existe (solo
-// hay ScaleTransform/TranslateTransform, ver el comentario real de PortSeleccion Encargo4 en ese
-// mismo XAML) - MainWindow.xaml esta fuera del working set de este encargo (otro agente lo esta
-// tocando en paralelo, ChestInspector) y tocarlo aqui habria roto la coordinacion real entre
-// agentes. Documentado como pendiente real para un encargo futuro que si pueda tocar ese XAML, NO
-// como "no es reproducible" (SI lo es, con un RotateTransform mas) - por eso Evaluate no intenta
-// aproximarlo con un valor falso, solo aplica el bob real y dice explicitamente en el nombre del
-// campo que la rotacion queda fuera.
+// PortSeleccion Encargo6 (26-sep-2026, cierra el pendiente real dejado por el Encargo5 de arriba):
+// "FloatAndSpinWhenWalking" ya aplicaba el mismo bob que "Float", pero le faltaba el "spin"
+// (proj.rotation = 2*PI*(tiempo%20/20) mientras camina, DelegateMethods.cs:119-130). Ahora
+// EvaluateRotationDegrees calcula ese angulo (en GRADOS, ver el comentario real de esa funcion
+// para la conversion) y Terrakeep.App/MainWindow.xaml lo bindea con un RotateTransform NUEVO
+// dentro del mismo TransformGroup que ya tenia ScaleTransform+TranslateTransform (PortSeleccion
+// Encargo4) - combinado, nunca sustituido. Para las otras 61 mascotas (sin este delegado) el
+// angulo siempre es 0, RotateTransform identidad, sin cambio visual respecto a antes.
 public static class PetCustomAnimationCode
 {
     public const string Float = "Float";
@@ -79,6 +76,27 @@ public static class PetCustomAnimationCode
             BerniePet => (6f, 0f),
             _ => (0f, 0f),
         };
+    }
+
+    // PortSeleccion Encargo6 (26-sep-2026): angulo de "spin" real, en GRADOS (RotateTransform.Angle
+    // de WPF espera grados, no radianes como el decompilado). Solo "FloatAndSpinWhenWalking" gira -
+    // las demas 61 mascotas catalogadas siempre devuelven 0 (RotateTransform identidad).
+    //
+    // Cita real, DelegateMethods.cs:119-130 (FloatAndSpinWhenWalking):
+    //   public static void FloatAndSpinWhenWalking(Projectile proj, bool walking) {
+    //     Float(proj, walking);
+    //     if (walking) { proj.rotation = (float)Math.PI * 2f * ((float)Main.timeForVisualEffects % 20f / 20f); }
+    //     else { proj.rotation = 0f; }
+    //   }
+    // "activo" hace de "walking" real (ver el comentario de clase, mismo criterio que en Evaluate).
+    // 2*PI radianes == 360 grados exactos, asi que "percent * 360f" reproduce la MISMA formula sin
+    // el redondeo extra de convertir por PI/180 - no es una aproximacion distinta, es la version en
+    // grados de la misma cuenta.
+    public static float EvaluateRotationDegrees(string? code, float elapsedTicksReal, bool activo)
+    {
+        if (code != FloatAndSpinWhenWalking || !activo) return 0f;
+        float percent = Mod(elapsedTicksReal, 20f) / 20f;
+        return percent * 360f;
     }
 
     // Cita real, DelegateMethods.cs:138-143 (Float):

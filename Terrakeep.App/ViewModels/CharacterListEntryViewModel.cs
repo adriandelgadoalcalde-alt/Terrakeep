@@ -117,6 +117,14 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
     [ObservableProperty] private double _petOffsetY;
     private readonly double _petBaseOffsetX;
     private readonly double _petBaseOffsetY;
+
+    // PortSeleccion Encargo6 (26-sep-2026): cierra el pendiente real dejado por el Encargo5 -
+    // angulo de "spin" de FloatAndSpinWhenWalking (PetCustomAnimationCode.EvaluateRotationDegrees,
+    // ver la cita real del decompilado ahi), en GRADOS listo para bindear directo a
+    // RotateTransform.Angle. Se recalcula en el mismo sitio que PetOffsetX/Y (RefreshPetOffset,
+    // constructor + cada tick del timer de hover) porque depende del mismo "elapsedTicks" real.
+    // Para las 61 mascotas sin este delegado siempre es 0 (RotateTransform identidad).
+    [ObservableProperty] private double _petRotationDegrees;
     // Expuesto como double (1 o -1), listo para bindear directo a ScaleTransform.ScaleX en vez de
     // un bool + converter - es literalmente el mismo campo "SpriteDirection" del decompilado.
     public double PetSpriteDirection { get; } = 1;
@@ -198,6 +206,9 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         var (dx, dy) = PetCustomAnimationCode.Evaluate(code, elapsedTicks, _isHovering);
         PetOffsetX = _petBaseOffsetX + dx;
         PetOffsetY = _petBaseOffsetY + dy;
+        // PortSeleccion Encargo6: mismo "elapsedTicks"/"_isHovering" que el offset de arriba, asi
+        // que el angulo avanza en el mismo tick exacto que el bob (ver comentario del campo).
+        PetRotationDegrees = PetCustomAnimationCode.EvaluateRotationDegrees(code, elapsedTicks, _isHovering);
     }
 
     private void RefreshPreview()

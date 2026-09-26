@@ -27560,3 +27560,106 @@ de otros agentes en paralelo: `CLAUDE.md`, varios `Terrakeep.Core.Tests/**`,
 **Pendiente explicito** (no hacerlo yo, pedido del usuario): `revisor-visual` + `verificador-qa`
 sobre este cierre de la Guia antes de darla por completamente cerrada - ninguno de los dos
 despachado todavia para este bloque.
+
+## PortSeleccion Encargo6 (26-sep-2026): RotateTransform real de FloatAndSpinWhenWalking - cierra
+## el pendiente dejado por PortSeleccion Encargo5
+
+Hallazgo YA investigado y confirmado por PortSeleccion Encargo5 (entrada de arriba): la parte de
+"spin" (rotacion) de `FloatAndSpinWhenWalking` (2 mascotas: 4801=SkeletronPetItem,
+4805=SkeletronPrimePetItem) se dejo sin aplicar porque `MainWindow.xaml` estaba ocupado por otro
+agente en paralelo en ese momento - el bob (offset) ya estaba implementado con precision. Este
+encargo cierra ese hueco, sin reabrir la investigacion de la causa (ya confirmada).
+
+**Cita real confirmada de nuevo contra el decompilado** (`Downloads\Keep\tModLoader-Decompiled\
+tModLoader\Terraria\DelegateMethods.cs:119-130`):
+```
+public static void FloatAndSpinWhenWalking(Projectile proj, bool walking) {
+    Float(proj, walking);
+    if (walking) { proj.rotation = (float)Math.PI * 2f * ((float)Main.timeForVisualEffects % 20f / 20f); }
+    else { proj.rotation = 0f; }
+}
+```
+`proj.rotation` esta en RADIANES; `RotateTransform.Angle` de WPF espera GRADOS - 2*PI rad == 360
+grados exactos, asi que `percent * 360f` reproduce la MISMA formula sin el redondeo extra de
+convertir por PI/180.
+
+**Arreglo real**:
+- `Terrakeep.Core/Data/PetCustomAnimationCode.cs`: nuevo metodo puro
+  `EvaluateRotationDegrees(code, elapsedTicksReal, activo)` - solo `FloatAndSpinWhenWalking`
+  devuelve un angulo distinto de 0 (las otras 61 mascotas catalogadas nunca giran, RotateTransform
+  identidad). Comentario de clase actualizado (ya no dice "pendiente", cita el cierre real).
+- `Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs`: nuevo `[ObservableProperty]
+  PetRotationDegrees`, recalculado en `RefreshPetOffset()` (mismo sitio y mismo `elapsedTicks`/
+  `_isHovering` que ya recalculan `PetOffsetX`/`PetOffsetY` desde el Encargo5 - se actualiza en
+  cada tick del `DispatcherTimer` de hover, igual que el bob).
+- `Terrakeep.App/MainWindow.xaml`: `RotateTransform` NUEVO añadido al `TransformGroup` YA existente
+  (`ScaleTransform`+`TranslateTransform` de PortSeleccion Encargo4) en los DOS sitios reales donde
+  se pinta la mascota (tarjeta pequeña de "Tus personajes" ~1541 y banner "Continuar con..."
+  ~2663) - COMBINADO, nunca sustituido. Orden real: Scale (espejo) -> Rotate (giro sobre el propio
+  centro, `RenderTransformOrigin=0.5,0.5`) -> Translate (desplazamiento final), mismo criterio
+  documentado ya para Scale->Translate. Bloqueo cooperativo `terrakeep-mainwindow-xaml`
+  comprobado/reservado antes de tocar el fichero (libre, sin colision) y liberado tras el commit.
+
+**Verificacion real**:
+- `Terrakeep.Core.Tests/Data/PetCustomAnimationCodeTests.cs`: 9 pruebas nuevas -
+  `EvaluateRotationDegrees_FloatAndSpinWhenWalking_ReproduceElAnguloRealEnGrados` (3 instantes
+  reales del periodo de 20 ticks: ticks=0->0°, ticks=5->90°, ticks=15->270°, calculados a mano
+  contra la cita del decompilado), periodicidad real cada 20 ticks, "activo=false"->0° (mismo
+  `else proj.rotation=0f` real), y las otras 4 codigos (`Float`/`SlimePet`/`BerniePet`/`WormPet`)
+  siempre en 0°. `dotnet test Terrakeep.Core.Tests -c Release`: **773/773** (baseline 764 + 9
+  nuevas, 0 regresion).
+- `dotnet test Terrakeep.App.ViewModels.Tests -c Release`: **744/744**, exactamente el mismo
+  numero que justo antes de este encargo (0 regresion; misma logica nueva sin test de ViewModel
+  dedicado, mismo criterio real ya establecido por Encargo4/Encargo5 - la formula vive y se prueba
+  en `Terrakeep.Core`).
+- **Captura real de las 2 mascotas** (nuevo modo `ROTACION_SOLO=1` en `Terrakeep.App.Tests/
+  Program.cs`, siguiendo el mismo patron real que `HOMEHOVER_SOLO`): inserta una
+  `CharacterListEntryViewModel` sintetica con el item 4801/4805 equipado directamente en
+  `vm.Home.Characters` de una `MainWindow` real, hace `SetHovering(true)` y muestrea
+  `entry.PetRotationDegrees` + captura `RenderTargetBitmap(window)` en 3 instantes reales
+  (~180/360/540ms de hover real). Resultado real (`ROTACION_SOLO=1 dotnet Terrakeep.App.Tests/
+  bin/Debug/net10.0-windows/Terrakeep.App.Tests.dll`, **0 lineas `FALLO`**, 0 excepciones):
+  - 4801 (Skeletron pet): reposo=0°, instante1=97.2°, instante2=194.4°, instante3=28.8° (dio la
+    vuelta), tras `SetHovering(false)` vuelve a 0°.
+  - 4805 (Skeletron Prime pet): reposo=0°, instante1=0.0°, instante2=0.0° (el `DispatcherTimer`
+    de esa tarjeta aun no habia disparado en esa ventana de muestreo, asincronia real esperada),
+    instante3=97.2°, tras `SetHovering(false)` vuelve a 0°.
+  Capturas guardadas en `Terrakeep.App.Tests/bin/Debug/net10.0-windows/keepqa-evidencia/
+  rotacion-mascota-{4801,4805}-{reposo,instante1,instante2,instante3}.png` - recortadas y
+  ampliadas a mano para revision visual: el craneo de Skeletron/Skeletron Prime gira de verdad
+  (vertical en instante1, boca abajo en instante2, ligero tilt en instante3), confirmado mirando
+  las capturas.
+
+**Recompilacion y redespliegue real**: `Terrakeep.exe` instalado NO estaba en ejecucion
+(`Get-CimInstance Win32_Process`, sin resultados). `DEPLOY_LOCK` adquirido sin contencion.
+Sanidad de `Assets/` ANTES: 13056 ficheros, hash `068603cc...` (coincide con el `despues` de la
+Guia reabierta Fase B, entrada de arriba). `dotnet publish Terrakeep.App/Terrakeep.App.csproj -c
+Release -p:PublishProfile=win-x64` en verde, `Assets/` del publish con 13056 ficheros (identico,
+este encargo no toco ningun asset). `robocopy .../publish .../Terrakeep /MIR /XF unins000.exe
+unins000.dat` (`MSYS_NO_PATHCONV=1`): 1 archivo copiado (`Terrakeep.exe`, unico cambio real -
+solo XAML/C#), 13061 omitidos, 0 errores, 0 extras. `node deployLock.js despues Terrakeep
+...Assets`: **sin alarma** ("Assets/ de Terrakeep identico antes y despues del /MIR, 13056
+ficheros"). Tamaño/`LastWriteTime` del `.exe` instalado idénticos al publish (139.247.233 bytes,
+26/09/2026 4:01). Sanity check real: `Start-Process`, `PID=489072 Responding=True` a los 5s,
+cerrado limpio con `Stop-Process`. `DEPLOY_LOCK` liberado tras confirmar.
+
+**Nota real sobre `dotnet build Terrakeep.slnx -c Release`**: el primer intento tras los tests
+fallo con `MSB3027`/`MSB3021` (bloqueo de fichero real, `Terrakeep.dll`/`ServidorKeep.Core.dll`
+retenidos por un proceso `testhost` de una tanda anterior de `dotnet test
+Terrakeep.App.ViewModels.Tests` que no habia terminado de cerrarse - la misma flakiness real ya
+documentada varias veces en esta bitacora). Investigado antes de decidir nada (`Get-Process -Id
+<pid>`, proceso vivo pero ya sin trabajo pendiente - los resultados de esa tanda ya se habian
+impreso), `Stop-Process -Force` del `testhost` colgado, build repetido: verde, 0 avisos/0 errores.
+Mismo `testhost` residual reapareció tras la SEGUNDA tanda de `dotnet test
+Terrakeep.App.ViewModels.Tests` (la de verificacion final, 744/744) - cerrado igual antes del
+deploy, sin dejar ningun proceso vivo pendiente.
+
+**Commit real**: `Terrakeep.Core/Data/PetCustomAnimationCode.cs` + `Terrakeep.Core.Tests/Data/
+PetCustomAnimationCodeTests.cs` + `Terrakeep.App/ViewModels/CharacterListEntryViewModel.cs` +
+`Terrakeep.App/MainWindow.xaml` + `Terrakeep.App.Tests/Program.cs` + esta entrada de
+`bitacora.md` - exactamente los ficheros de este encargo, `git add` con rutas explicitas, nunca
+`-A` (habia trabajo sin comitear de otros agentes en paralelo: `CLAUDE.md`,
+`ESPEC-dibujado-sprites.md`, varios `Terrakeep.Core.Tests/**` ajenos, `Terrakeep.App.Tests/
+AuditoriaKeepQA.cs`/`AuditoriaMaquetacion.cs`, `Terrakeep.App.ViewModels.Tests/
+DataContextLocalTieneLocTests.cs`, `scripts/**`, `Terrasavr-Native.zip`, `ComplementoKeepQA.cs`/
+`KEEPQA-INTEGRACION.md` - ninguno tocado). `doNotTouch` respetado. Sin `git push`.

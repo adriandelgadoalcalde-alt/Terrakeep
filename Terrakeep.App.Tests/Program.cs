@@ -1781,6 +1781,106 @@ internal static partial class Program
             Environment.Exit(0);
         }
 
+        // ROTACION_SOLO=1 (26-sep-2026, PortSeleccion Encargo6): cierra el pendiente real de
+        // PortSeleccion Encargo5 (RotateTransform de FloatAndSpinWhenWalking) - captura REAL de la
+        // tarjeta de Inicio en varios instantes del hover para confirmar que el angulo gira de
+        // verdad en pantalla, no solo en el ViewModel (eso ya lo cierra
+        // Terrakeep.Core.Tests/Data/PetCustomAnimationCodeTests.cs contra la formula exacta del
+        // decompilado). Las 2 mascotas reales catalogadas con "code":"FloatAndSpinWhenWalking" en
+        // pet_animations.json (ItemID.cs): 4801=SkeletronPetItem, 4805=SkeletronPrimePetItem.
+        if (Environment.GetEnvironmentVariable("ROTACION_SOLO") == "1")
+        {
+            try
+            {
+                string outDirRot = Path.Combine(AppContext.BaseDirectory, "keepqa-evidencia");
+                Directory.CreateDirectory(outDirRot);
+                void BombeaMsRot(int ms)
+                {
+                    var cr = System.Diagnostics.Stopwatch.StartNew();
+                    while (cr.ElapsedMilliseconds < ms) { DoEvents(); System.Threading.Thread.Sleep(10); }
+                }
+                void CapturaRot(string nombre)
+                {
+                    var rtbRot = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        (int)window.ActualWidth, (int)window.ActualHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                    rtbRot.Render(window);
+                    var encRot = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encRot.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtbRot));
+                    string shotPathRot = Path.Combine(outDirRot, nombre);
+                    using var fs = File.Create(shotPathRot);
+                    encRot.Save(fs);
+                    Console.WriteLine($"ROTACION_SOLO: Captura -> {shotPathRot}");
+                }
+
+                foreach (var (itemId, nombrePersonaje, proyectilReal) in new[]
+                {
+                    (4801, "PersonajeRotacionSkeletron", 885),
+                    (4805, "PersonajeRotacionSkeletronPrime", 889),
+                })
+                {
+                    var fileServiceRot = new CharacterFileService();
+                    var personajeRot = new PlrCharacter
+                    {
+                        Name = nombrePersonaje,
+                        Version = 279,
+                        PrimaryLoadout = PlrLoadout.CreateEmpty(isPrimary: true),
+                        Loadouts = [PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false)],
+                    };
+                    personajeRot.EquipmentItems[0] = new Terrakeep.Core.PlrFormat.PlrItemSlot(itemId, 1, 0, false);
+                    var entryRot = new CharacterListEntryViewModel(
+                        $"sintetico-rotacion-{itemId}.plr", personajeRot, isTModLoader: false, tplr: null,
+                        DateTime.UtcNow, fileServiceRot.EquipmentAppearance);
+
+                    // Si PetImage resuelve un fotograma real, el catalogo reconocio de verdad el
+                    // item (code="FloatAndSpinWhenWalking" en pet_animations.json).
+                    Console.WriteLine($"ROTACION_SOLO[{itemId}]: PetImage resuelto={(entryRot.PetImage is not null ? entryRot.PetImage.GetType().Name : "(null)")} (esperado no-null, fotograma real del proyectil {proyectilReal})");
+                    if (entryRot.PetImage is null) Console.WriteLine($"FALLO: ROTACION_SOLO[{itemId}] - PetImage deberia resolver un fotograma real");
+                    vm.Home.Characters.Insert(0, entryRot);
+                    DoEvents();
+                    DoEvents();
+
+                    double AnguloActualRot() => entryRot.PetRotationDegrees;
+
+                    double anguloReposo = AnguloActualRot();
+                    Console.WriteLine($"ROTACION_SOLO[{itemId}]: angulo en reposo (sin hover)={anguloReposo} (esperado 0, walking=false real del decompilado)");
+                    if (anguloReposo != 0) Console.WriteLine($"FALLO: ROTACION_SOLO[{itemId}] - fuera de hover el angulo deberia ser exactamente 0");
+                    CapturaRot($"rotacion-mascota-{itemId}-reposo.png");
+
+                    entryRot.SetHovering(true);
+                    DoEvents();
+                    var angulos = new List<double>();
+                    for (int muestra = 0; muestra < 3; muestra++)
+                    {
+                        BombeaMsRot(180);
+                        double angulo = AnguloActualRot();
+                        angulos.Add(angulo);
+                        Console.WriteLine($"ROTACION_SOLO[{itemId}]: instante {muestra + 1} (~{(muestra + 1) * 180}ms de hover real) -> PetRotationDegrees={angulo:F1} grados");
+                        CapturaRot($"rotacion-mascota-{itemId}-instante{muestra + 1}.png");
+                    }
+
+                    bool rangoValido = angulos.All(a => a >= 0f && a < 360f);
+                    Console.WriteLine($"ROTACION_SOLO[{itemId}]: los 3 angulos caen dentro de [0,360)={rangoValido} (esperado True, mismo rango real que 'percent*360f' en PetCustomAnimationCode.EvaluateRotationDegrees)");
+                    if (!rangoValido) Console.WriteLine($"FALLO: ROTACION_SOLO[{itemId}] - el angulo deberia quedar siempre dentro de [0,360)");
+
+                    bool giraDeVerdad = angulos.Distinct().Count() > 1;
+                    Console.WriteLine($"ROTACION_SOLO[{itemId}]: el angulo cambia de verdad entre los 3 instantes (valores distintos vistos={angulos.Distinct().Count()} de 3, esperado > 1 - la mascota gira EN VIVO durante el hover, igual que Float/SlimePet ya lo hacen con el bob)");
+                    if (!giraDeVerdad) Console.WriteLine($"FALLO: ROTACION_SOLO[{itemId}] - el RotateTransform deberia mostrar un angulo distinto en cada instante muestreado del hover");
+
+                    entryRot.SetHovering(false);
+                    DoEvents();
+                    double anguloTrasParar = AnguloActualRot();
+                    Console.WriteLine($"ROTACION_SOLO[{itemId}]: angulo tras SetHovering(false)={anguloTrasParar} (esperado 0, mismo 'else proj.rotation = 0f' real del decompilado)");
+                    if (anguloTrasParar != 0) Console.WriteLine($"FALLO: ROTACION_SOLO[{itemId}] - al salir del hover el angulo deberia volver exactamente a 0");
+
+                    vm.Home.Characters.Remove(entryRot);
+                    DoEvents();
+                }
+            }
+            catch (Exception ex) { Console.WriteLine("ROTACION_SOLO-EXCEPTION: " + ex); }
+            Console.WriteLine("DONE (ROTACION_SOLO)");
+            Environment.Exit(0);
+        }
+
         // IDEA9_SOLO=1 (20-sep-2026, catalogo de ideas Keep, idea 9 "modo reparar personaje" -
         // version real reducida: solo el diagnostico de prefijos ilegales, ver el LIMITE
         // documentado en MainViewModel.RebuildIllegalPrefixDiagnostics). Aisla la variable a mano

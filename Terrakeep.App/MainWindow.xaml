@@ -1537,7 +1537,19 @@
                              que "proj.position += Offset" ya ocurre sobre un sprite cuyo
                              spriteDirection ya esta fijado. Sin mascota catalogada, los tres valores
                              son el 0,0,1 por defecto real de Terraria - transform identidad, no
-                             cambia nada visualmente respecto a antes de este encargo. -->
+                             cambia nada visualmente respecto a antes de este encargo.
+
+                             PortSeleccion Encargo6 (26-sep-2026): RotateTransform NUEVO, añadido al
+                             mismo TransformGroup - COMBINADO con el ScaleTransform/TranslateTransform
+                             ya existentes, nunca sustituido. Bindea PetRotationDegrees (ver el
+                             comentario real de ese campo en CharacterListEntryViewModel.cs, cita del
+                             decompilado DelegateMethods.cs:119-130, FloatAndSpinWhenWalking). Va
+                             DESPUES del ScaleTransform (mismo motivo que el TranslateTransform:
+                             el espejo tiene que aplicarse antes) y ANTES del TranslateTransform
+                             (el giro tiene que ocurrir sobre el propio centro del fotograma,
+                             RenderTransformOrigin=0.5,0.5, antes de desplazarlo) - para las 61
+                             mascotas sin este delegado, el angulo siempre es 0, transform identidad,
+                             sin cambio visual respecto a antes de este encargo. -->
                         <Image Source="{Binding PetImage}" Stretch="None"
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                HorizontalAlignment="Left" VerticalAlignment="Top"
@@ -1548,6 +1560,7 @@
                             <Image.RenderTransform>
                                 <TransformGroup>
                                     <ScaleTransform ScaleX="{Binding PetSpriteDirection}" ScaleY="1" />
+                                    <RotateTransform Angle="{Binding PetRotationDegrees}" />
                                     <TranslateTransform X="{Binding PetOffsetX}" Y="{Binding PetOffsetY}" />
                                 </TransformGroup>
                             </Image.RenderTransform>
@@ -2659,7 +2672,12 @@
                                      mismo valor real en pixeles de sprite que la tarjeta (el Image
                                      del banner tampoco escala su bitmap, Stretch="None" igual que la
                                      tarjeta - el "2x" del banner es solo el tamaño de la Grid/Margin
-                                     que lo aloja, no del propio fotograma). -->
+                                     que lo aloja, no del propio fotograma).
+
+                                     PortSeleccion Encargo6 (26-sep-2026): mismo RotateTransform NUEVO
+                                     que la tarjeta pequeña (ver el comentario completo en
+                                     MainWindow.xaml ~1541), bindeado igual contra el DataContext
+                                     propio de este Image (Home.LastSessionCharacterEntry). -->
                                 <Image DataContext="{Binding Home.LastSessionCharacterEntry}"
                                        Source="{Binding PetImage}" Stretch="None"
                                        RenderOptions.BitmapScalingMode="NearestNeighbor"
@@ -2671,6 +2689,7 @@
                                     <Image.RenderTransform>
                                         <TransformGroup>
                                             <ScaleTransform ScaleX="{Binding PetSpriteDirection}" ScaleY="1" />
+                                            <RotateTransform Angle="{Binding PetRotationDegrees}" />
                                             <TranslateTransform X="{Binding PetOffsetX}" Y="{Binding PetOffsetY}" />
                                         </TransformGroup>
                                     </Image.RenderTransform>

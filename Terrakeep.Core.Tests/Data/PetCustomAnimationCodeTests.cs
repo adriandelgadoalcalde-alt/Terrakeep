@@ -71,8 +71,9 @@ public class PetCustomAnimationCodeTests
     }
 
     // FloatAndSpinWhenWalking llama a Float(proj, walking) SIEMPRE antes del if de spin
-    // (DelegateMethods.cs:121) - el bob real tiene que ser IDENTICO al de Float puro; el spin
-    // (rotacion) es el limite real documentado (ver el comentario de clase), no se reproduce.
+    // (DelegateMethods.cs:121) - el bob real tiene que ser IDENTICO al de Float puro. El spin
+    // (rotacion) se reproduce aparte en EvaluateRotationDegrees (PortSeleccion Encargo6, ver los
+    // tests de esa funcion mas abajo) - Evaluate (offset X/Y) sigue devolviendo solo el bob.
     [Fact]
     public void Evaluate_FloatAndSpinWhenWalking_ReproduceElMismoBobQueFloat()
     {
@@ -80,6 +81,58 @@ public class PetCustomAnimationCodeTests
         var (dxSpin, dySpin) = PetCustomAnimationCode.Evaluate(PetCustomAnimationCode.FloatAndSpinWhenWalking, elapsedTicksReal: 22f, activo: true);
         Assert.Equal(0f, dxSpin);
         Assert.Equal(dyFloat, dySpin, precision: 5);
+    }
+
+    // PortSeleccion Encargo6 (26-sep-2026): cierra el pendiente real del Encargo5 (RotateTransform
+    // en MainWindow.xaml). Cita real, DelegateMethods.cs:119-130 (FloatAndSpinWhenWalking):
+    //   if (walking) proj.rotation = (float)Math.PI * 2f * ((float)Main.timeForVisualEffects % 20f / 20f);
+    //   else proj.rotation = 0f;
+    // proj.rotation esta en RADIANES; EvaluateRotationDegrees devuelve GRADOS para bindear directo
+    // a RotateTransform.Angle (2*PI rad == 360 grados) - 3 instantes reales del periodo de 20 ticks:
+    //   ticks=0  -> percent=0    -> 0 grados
+    //   ticks=5  -> percent=0.25 -> 90 grados
+    //   ticks=15 -> percent=0.75 -> 270 grados
+    [Theory]
+    [InlineData(0f, 0f)]
+    [InlineData(5f, 90f)]
+    [InlineData(15f, 270f)]
+    public void EvaluateRotationDegrees_FloatAndSpinWhenWalking_ReproduceElAnguloRealEnGrados(float elapsedTicksReal, float gradosEsperados)
+    {
+        float grados = PetCustomAnimationCode.EvaluateRotationDegrees(PetCustomAnimationCode.FloatAndSpinWhenWalking, elapsedTicksReal, activo: true);
+        Assert.Equal(gradosEsperados, grados, precision: 3);
+    }
+
+    // Periodo real de 20 ticks (DelegateMethods.cs:124, "% 20f / 20f") - a los 20 ticks debe volver
+    // exactamente al angulo de ticks=0 (0 grados, no 360 - "Mod" normaliza al mismo rango que el
+    // decompilado real).
+    [Fact]
+    public void EvaluateRotationDegrees_FloatAndSpinWhenWalking_EsPeriodicoCada20Ticks()
+    {
+        float gradosInicial = PetCustomAnimationCode.EvaluateRotationDegrees(PetCustomAnimationCode.FloatAndSpinWhenWalking, elapsedTicksReal: 0f, activo: true);
+        float gradosUnaVueltaDespues = PetCustomAnimationCode.EvaluateRotationDegrees(PetCustomAnimationCode.FloatAndSpinWhenWalking, elapsedTicksReal: 20f, activo: true);
+        Assert.Equal(gradosInicial, gradosUnaVueltaDespues, precision: 3);
+    }
+
+    // Igual que Evaluate: sin hover ("activo=false" == "walking=false" del decompilado) el angulo
+    // real vuelve a 0 (DelegateMethods.cs:128, "else proj.rotation = 0f;").
+    [Fact]
+    public void EvaluateRotationDegrees_Inactivo_DevuelveCeroAunqueHayaTiempo()
+    {
+        float grados = PetCustomAnimationCode.EvaluateRotationDegrees(PetCustomAnimationCode.FloatAndSpinWhenWalking, elapsedTicksReal: 15f, activo: false);
+        Assert.Equal(0f, grados);
+    }
+
+    // Las otras 4 codigos reales (Float/SlimePet/BerniePet/WormPet) nunca giran - solo
+    // FloatAndSpinWhenWalking tiene "spin" en el decompilado real.
+    [Theory]
+    [InlineData(PetCustomAnimationCode.Float)]
+    [InlineData(PetCustomAnimationCode.SlimePet)]
+    [InlineData(PetCustomAnimationCode.BerniePet)]
+    [InlineData(PetCustomAnimationCode.WormPet)]
+    public void EvaluateRotationDegrees_OtrosDelegados_SiempreCero(string code)
+    {
+        float grados = PetCustomAnimationCode.EvaluateRotationDegrees(code, elapsedTicksReal: 15f, activo: true);
+        Assert.Equal(0f, grados);
     }
 
     // DelegateMethods.cs:54-61 (SlimePet):
