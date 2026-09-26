@@ -2970,16 +2970,24 @@
                                      una simulacion. Contenido INTERNO de cada seccion sin tocar ni un pixel (los
                                      Border/Grid/SlotRowHost ya calibrados en las 8 rondas siguen exactamente
                                      igual) - solo cambia el CONTENEDOR exterior que las alojaba. -->
-                                <!-- T3 PASO 2: cabecera pegajosa real - Grid con dos hijos SUPERPUESTOS (el
-                                     ScrollViewer entero + una barra fija encima, ZIndex mas alto) en vez de
-                                     intentar mover la cabecera NATURAL de cada seccion (que seguiria viviendo
-                                     dentro del contenido que se desplaza) - la barra fija muestra el nombre de
-                                     la seccion cuya cabecera natural ya salio del viewport por arriba,
-                                     actualizada en vivo por OnObjetosBoardScrollChanged (MainWindow.xaml.cs). -->
+                                <!-- NAV123 (25-sep-2026, aplicador-fix, TASK CONTEXT
+                                     e5eaea9e-c261-4199-8e7d-060b6054f58d): T3 PASO 2 (barra pegajosa + scroll
+                                     continuo, comentario historico de arriba) REABIERTO y sustituido - el
+                                     usuario exigio PAGINAS REALES, no un offset que ScrollViewer puede clampar
+                                     (bug real "toggle 3 desincronizado" con Almacenes con pocos objetos, ver
+                                     bitacora.md). ObjetosPageHost es un Grid de una sola celda con 3
+                                     ScrollViewer SUPERPUESTOS (uno por seccion, cada uno con su propio scroll
+                                     interno - Inventario y Almacenes lo necesitan igual que Equipamiento, ver
+                                     H3-18 mas arriba) cuya Visibility depende en EXCLUSIVA de
+                                     MainViewModel.ObjetosSubTabIndex via EnumEqualsToVis (converter ya
+                                     existente, mismo patron que ExplorationSidebarBrowseInspectorHost) -
+                                     exactamente 1 de las 3 paginas Visible en todo momento, cero estados
+                                     intermedios alcanzables (ni por scroll libre: cada pagina solo desplaza su
+                                     propio contenido, nunca "empuja" a la siguiente seccion). -->
                                 <Grid Grid.Column="0" Margin="0,0,10,0">
-                                <ScrollViewer x:Name="ObjetosBoardScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                              ScrollChanged="OnObjetosBoardScrollChanged">
-                                <StackPanel x:Name="ObjetosBoardStack">
+                                <Grid x:Name="ObjetosPageHost">
+                                <ScrollViewer x:Name="ObjetosPaginaEquipamiento" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                              Visibility="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=0}">
                                     <Border x:Name="ObjetosSeccionEquipamiento">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Loc[char_tab_equipment], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
@@ -3365,20 +3373,23 @@
                                         </Border>
                                     </StackPanel>
                                     </Border>
-                                    <!-- Antes: 9 pestañas planas aqui dentro, luego 5 (pregunta a Opus
-                                         sobre el diseño, 2-sep-2026 y quinta pasada) - Monturas/Monedas
-                                         se fusionaron dentro de Equipamiento (arriba) como laterales,
-                                         asi que solo quedan Inventario/Almacenes aqui. Los 9
-                                         ContainerViewModel siguen siendo los MISMOS de siempre
-                                         (MainViewModel.Containers) - riesgo cero para guardar/cargar,
-                                         ver StorageGroupViewModel.cs. -->
-                                    <!-- T3 PASO 1: seccion Inventario - se retira el bloque de dos columnas
-                                         "Inventario + Almacen seleccionado" (IsStorageExpanded=True, vivia aqui
-                                         duplicando la cabecera y los 3 botones de conjunto) porque Almacenes YA
-                                         tiene su propia seccion permanente mas abajo en el mismo scroll - ya no
-                                         hace falta fusionarlo aqui para verlo "a la vez", el tablero entero ya
-                                         lo muestra siempre. Border SIN Visibility condicionada: unico camino
-                                         real ahora, a cualquier tamaño de ventana. -->
+                                </ScrollViewer>
+                                <!-- Antes: 9 pestañas planas aqui dentro, luego 5 (pregunta a Opus
+                                     sobre el diseño, 2-sep-2026 y quinta pasada) - Monturas/Monedas
+                                     se fusionaron dentro de Equipamiento (arriba) como laterales,
+                                     asi que solo quedan Inventario/Almacenes aqui. Los 9
+                                     ContainerViewModel siguen siendo los MISMOS de siempre
+                                     (MainViewModel.Containers) - riesgo cero para guardar/cargar,
+                                     ver StorageGroupViewModel.cs. -->
+                                <!-- T3 PASO 1: seccion Inventario - se retira el bloque de dos columnas
+                                     "Inventario + Almacen seleccionado" (IsStorageExpanded=True, vivia aqui
+                                     duplicando la cabecera y los 3 botones de conjunto) porque Almacenes YA
+                                     tiene su propia pagina propia (NAV123) - ya no hace falta fusionarlo aqui
+                                     para verlo "a la vez". Border SIN Visibility condicionada propia (la
+                                     Visibility real de la pagina completa vive en el ScrollViewer que la
+                                     envuelve, ver arriba). -->
+                                <ScrollViewer x:Name="ObjetosPaginaInventario" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                              Visibility="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=1}">
                                     <Border x:Name="ObjetosSeccionInventario" Margin="0,14,0,0">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Loc[char_tab_inventory], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
@@ -3474,12 +3485,14 @@
                                              falta recuperarlo). -->
                                     </StackPanel>
                                     </Border>
-                                    <!-- T3 PASO 1: seccion Almacenes - antes vivia como pestaña propia SOLO en
-                                         Compacto/Normal (se ocultaba entera en Amplio, donde el bloque de dos
-                                         columnas ahora retirado la duplicaba dentro de Inventario). Con el
-                                         tablero de scroll continuo ya no hace falta elegir entre los dos caminos:
-                                         esta es la UNICA representacion real de Almacenes, siempre visible, a
-                                         cualquier tamaño de ventana. -->
+                                </ScrollViewer>
+                                <!-- T3 PASO 1: seccion Almacenes - antes vivia como pestaña propia SOLO en
+                                     Compacto/Normal (se ocultaba entera en Amplio, donde el bloque de dos
+                                     columnas ahora retirado la duplicaba dentro de Inventario). Con NAV123
+                                     esta es su propia pagina permanente, siempre alcanzable con el selector
+                                     3, a cualquier tamaño de ventana. -->
+                                <ScrollViewer x:Name="ObjetosPaginaAlmacenes" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                              Visibility="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEqualsToVis}, ConverterParameter=2}">
                                     <Border x:Name="ObjetosSeccionAlmacenes" Margin="0,14,0,0">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Loc[char_tab_storage], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,6" />
@@ -3529,51 +3542,43 @@
                                         </Border>
                                     </StackPanel>
                                     </Border>
-                                </StackPanel>
                                 </ScrollViewer>
-                                <!-- T3 PASO 2: la barra pegajosa real - Border independiente, SIBLING del
-                                     ScrollViewer dentro del mismo Grid (nunca dentro del contenido que se
-                                     desplaza), VerticalAlignment=Top + Panel.ZIndex por encima para quedar
-                                     fija en pantalla. Empieza Collapsed (arriba del todo, la cabecera NATURAL
-                                     de Equipamiento ya esta a la vista - mostrar la barra ahi seria duplicar
-                                     el mismo rotulo dos veces). IsHitTestVisible=False: puramente informativa,
-                                     nunca le roba el clic a los botones reales que hay justo debajo. -->
-                                <Border x:Name="ObjetosStickyBar" VerticalAlignment="Top" Panel.ZIndex="4" IsHitTestVisible="False"
-                                        Background="{StaticResource BgSecondaryBrush}" CornerRadius="0,0,8,8" Padding="10,6"
-                                        BorderBrush="{StaticResource OrangeBrush}" BorderThickness="0,0,0,2"
-                                        Visibility="Collapsed">
-                                    <Border.Effect>
-                                        <DropShadowEffect ShadowDepth="2" BlurRadius="6" Opacity="0.4" Direction="270" />
-                                    </Border.Effect>
-                                    <TextBlock x:Name="ObjetosStickyBarText" Style="{StaticResource SectionText}" />
-                                </Border>
-                                <!-- T3 PASO 4 (imagen2/NAV123_SOLO, 24/25-sep-2026, revision-correccion-integral-
-                                     familia-Keep): selector directo Equipamiento/Inventario/Almacenes - el tablero
-                                     solo tenia scroll libre, sin ningun control que garantizase aterrizar EXACTO en
-                                     cada seccion (podia quedar a medio camino, ver evidencia medida en el canario).
-                                     3 pastillas numeradas ("1"/"2"/"3", pedido explicito del usuario: "visualmente
-                                     muy sencillo"), Style ViewSelector (Theme.xaml, TargetType=ToggleButton, MISMO
-                                     mecanismo real ya usado por los selectores de "vista" de Cofres/Objetos en
-                                     Exploracion - AccentMutedBrush al marcar, sin la elevacion de 2px reservada a
-                                     acciones principales). RadioButton (deriva de ToggleButton) con GroupName para
-                                     mutua exclusion real sin logica manual. Flotante, ZIndex por encima de la barra
-                                     pegajosa, SIEMPRE visible sin necesidad de scroll. Click llama directo a
-                                     ScrollToObjetosSection (MainWindow.xaml.cs, YA calcula yEquip/yInv/yAlm exactos,
-                                     cero logica de scroll nueva) - los 3 destinos aterrizan EXACTOS, ningun estado
-                                     intermedio es alcanzable por este camino (el scroll libre se conserva aparte).
-                                     Sincronizado en sentido inverso desde OnObjetosBoardScrollChanged mientras el
-                                     usuario hace scroll a mano (mismo calculo de "seccion activa" que ya usaba solo
-                                     la barra pegajosa). -->
+                                </Grid>
+                                <!-- NAV123: selector directo Equipamiento/Inventario/Almacenes - reemplaza el
+                                     scroll libre + barra pegajosa (T3 PASO 2/3/4, retirados) que podia dejar el
+                                     tablero a medio camino entre dos secciones o desincronizar el indicador
+                                     cuando ScrollViewer clampaba el offset (bug real "toggle 3 desincronizado",
+                                     Almacenes con pocos objetos - ver bitacora.md). 3 pastillas numeradas
+                                     ("1"/"2"/"3", pedido explicito del usuario: "visualmente muy sencillo"),
+                                     Style ViewSelector (Theme.xaml, TargetType=ToggleButton, MISMO mecanismo
+                                     real ya usado por los selectores de "vista" de Cofres/Objetos en
+                                     Exploracion). RadioButton (deriva de ToggleButton) con GroupName para mutua
+                                     exclusion real sin logica manual. Flotante sobre ObjetosPageHost, ZIndex por
+                                     encima de las 3 paginas, SIEMPRE visible sin necesidad de scroll. Click
+                                     llama directo a MainViewModel.RequestObjetosSection (MainWindow.xaml.cs) -
+                                     que solo escribe ObjetosSubTabIndex; la Visibility de cada pagina reacciona
+                                     sola al binding, sin ningun calculo de offset/scroll de por medio. Ya no
+                                     existe sincronizacion inversa por scroll (cada pagina tiene su scroll
+                                     interno propio, nunca "avanza" a la seccion siguiente). -->
                                 <StackPanel x:Name="ObjetosNavToggle" Orientation="Horizontal" HorizontalAlignment="Right"
                                             VerticalAlignment="Top" Margin="0,4,4,0" Panel.ZIndex="5">
+                                    <!-- IsChecked ligado (TwoWay por defecto) a ObjetosSubTabIndex via EnumEquals
+                                         (mismo converter/patron ya usado por Exploration.ChestViewMode arriba en
+                                         este mismo fichero) - asi el selector refleja SIEMPRE la pagina real
+                                         incluso cuando quien la cambia no es un clic aqui (WhereIsIt/busqueda
+                                         global, via RequestObjetosSection). El Click sigue llamando a
+                                         RequestObjetosSection para no depender solo de ConvertBack. -->
                                     <RadioButton x:Name="ObjetosNavToggle1" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
-                                                 Padding="10,4" Content="1" IsChecked="True" Tag="0" Click="OnObjetosNavToggleClick"
+                                                 Padding="10,4" Content="1" Tag="0" Click="OnObjetosNavToggleClick"
+                                                 IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=0}"
                                                  ToolTip="{Binding Loc[char_tab_equipment], Mode=OneWay}" />
                                     <RadioButton x:Name="ObjetosNavToggle2" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
                                                  Padding="10,4" Content="2" Tag="1" Click="OnObjetosNavToggleClick"
+                                                 IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=1}"
                                                  ToolTip="{Binding Loc[char_tab_inventory], Mode=OneWay}" />
                                     <RadioButton x:Name="ObjetosNavToggle3" Style="{StaticResource ViewSelector}" GroupName="ObjetosSeccionNav"
                                                  Padding="10,4" Content="3" Tag="2" Click="OnObjetosNavToggleClick"
+                                                 IsChecked="{Binding ObjetosSubTabIndex, Converter={StaticResource EnumEquals}, ConverterParameter=2}"
                                                  ToolTip="{Binding Loc[char_tab_storage], Mode=OneWay}" />
                                 </StackPanel>
                                 </Grid>

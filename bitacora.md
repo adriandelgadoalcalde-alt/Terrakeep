@@ -26943,3 +26943,101 @@ se tocó `MainWindow.xaml`/`.xaml.cs`/`ExplorationViewModel.cs`/`MainViewModel.c
 real con el agente en paralelo de ExploracionRediseno FaseI - numerosos ficheros ajenos
 modificados/sin trackear en el working tree en el momento del staging, ninguno añadido). Sin
 `git push`.
+
+## Personaje > Objetos: selector 1/2/3 REABIERTO, NAV123 - aplicador-fix, TASK CONTEXT
+e5eaea9e-c261-4199-8e7d-060b6054f58d (26-sep-2026)
+
+**Causa real ya confirmada por el investigador (a117bca5), no reinvestigada**: el tablero de
+`Objetos` (T3, 20-sep-2026) era un scroll continuo con barra pegajosa - `ScrollToObjetosSection`
+(`MainWindow.xaml.cs`) medía la posición de cada sección con `TranslatePoint` y llamaba
+`ScrollToVerticalOffset`, que `ScrollViewer` CLAMPA cuando el contenido de la sección destino
+(Almacenes con pocos objetos) no llena el resto del scroll - `_objetosNavIndiceExplicito` solo
+maquillaba el indicador visual sin corregir la geometría real. El usuario exigió páginas reales,
+no offsets.
+
+**Arreglo real aplicado - NAV123, exactamente el diseño entregado**:
+- `MainViewModel.ObjetosSubTabIndex` (ya existente, int 0/1/2, ~30 call-sites intactos) sigue
+  siendo la ÚNICA fuente de verdad. `RequestObjetosSection(int)` se simplificó a un alias directo
+  del setter (`=> ObjetosSubTabIndex = index;`) - ya no dispara ningún evento de Vista.
+- `MainWindow.xaml`: el `ScrollViewer x:Name="ObjetosBoardScroll"` que envolvía las 3 secciones
+  apiladas en un `StackPanel` se sustituyó por `Grid x:Name="ObjetosPageHost"` con 3
+  `ScrollViewer` SUPERPUESTOS (`ObjetosPaginaEquipamiento`/`Inventario`/`Almacenes`, cada uno con
+  su propio scroll interno - Inventario y Almacenes lo necesitan igual que Equipamiento, ver
+  H3-18), `Visibility` ligada en exclusiva a `ObjetosSubTabIndex` via el converter YA EXISTENTE
+  `EnumEqualsToVis` (`ConverterParameter=0/1/2`, mismo patrón ya usado por
+  `ExplorationSidebarBrowseInspectorHost`). Contenido interno de cada `Border`
+  (`ObjetosSeccionEquipamiento`/`Inventario`/`Almacenes` - `SlotRowHost`, `ItemEdit`, comandos) sin
+  tocar ni una línea.
+- `ObjetosStickyBar`/`ObjetosStickyBarText` retirados del XAML por completo (con páginas
+  exclusivas, duplicaba el título que ya trae cada sección - el bug exacto que el usuario
+  reportó).
+- Selector 1/2/3 (`ObjetosNavToggle1/2/3`, `RadioButton`): además del `Click="OnObjetosNavToggleClick"`
+  (ahora `_viewModel.RequestObjetosSection(indice)` directo, sin `ScrollToObjetosSection`), se
+  añadió `IsChecked` ligado TwoWay a `ObjetosSubTabIndex` via el converter YA EXISTENTE
+  `EnumEquals` (mismo patrón ya probado por `Exploration.ChestViewMode`) - decisión de ingeniería
+  propia no listada explícitamente en el encargo: sin esto, una navegación que llama
+  `RequestObjetosSection` sin pasar por un clic (p.ej. `NavigateToWhereIsItResult`) dejaba el
+  contenido correcto pero el selector visualmente desincronizado, justo el defecto que NAV123
+  existe para cerrar.
+- Code-behind (`MainWindow.xaml.cs`): retirados `OnObjetosBoardScrollChanged`,
+  `ScrollToObjetosSection`, `_objetosNavIndiceExplicito` y la suscripción del constructor a
+  `ObjetosSectionRequested` (evento retirado de `MainViewModel.cs` - confirmado con `grep` que no
+  quedan más llamadores). `OnObjetosNavToggleClick` simplificado a una línea.
+
+**Canario `NAV123_SOLO` reescrito por completo** (`CanarioNav123YClipCardsLibreria.cs`,
+`EjecutarNav123Solo`) - verificación con código real, no visual: (A) exclusividad de `Visibility`
+por página para `ObjetosSubTabIndex=0/1/2` (exactamente 1 de 3 `Visible`, resto `Collapsed` -
+medido sobre los `ScrollViewer` `ObjetosPagina*` recién nombrados, NO sobre el `Border`
+`ObjetosSeccion*` interior: comprobarlo sobre el `Border` daba un falso "3 Visible" porque su
+`Visibility` local nunca cambia, solo la de su `ScrollViewer` ancestro se colapsa - descubierto en
+la primera pasada real del canario, documentado en el propio fichero para no repetir el error), (B)
+`window.FindName("ObjetosStickyBar")==null` (retirado del árbol, no solo oculto), (C) mismo
+personaje real con Inventario casi vacío (1 slot ocupado, `ClearAllCommand`+`PlaceItem`) y
+Almacenes lleno 40/40 (`foreach slot PlaceItem`, el caso real que antes clampaba el offset), (D)
+ciclo de clic real 1→2→3→1 verificando `IsChecked` + `Visibility` + tamaño de ventana estable (sin
+drift), (E) `vm.RequestObjetosSection(0/1/2)` llamado directo en el ViewModel (sin clic de UI)
+selecciona la página correcta y sincroniza el `RadioButton` via el binding TwoWay. **0 líneas
+`FALLO` en las 3 pasadas reales** (1180x700 la primera vez que reveló el bug de medición del
+propio canario contra el `Border`; 1080x700 -el mínimo real documentado, H3-18- las dos
+siguientes, ya en verde). Capturas reales revisadas a mano a 1080x700
+(`nav123-pagina-equipamiento.png`/`-inventario.png`/`-almacenes.png`): cada página muestra
+únicamente su propio contenido, el selector "1 2 3" marca la página activa, sin sticky duplicado,
+sin sección anterior/siguiente colándose, sin scrollbar exterior residual (el scroll interno
+propio de cada página es esperado - Almacenes 40/40 lo activa, por diseño).
+
+**`T3_SOLO` (arnés legacy) retirado** (`Program.cs`): verificaba `ObjetosBoardScroll`/
+`ObjetosStickyBar`, que ya no existen en producción - conservarlo habría dejado un canario
+permanentemente en rojo por un diseño ya superado, no una regresión real. Sustituido por un stub
+corto que, si alguien lo invoca por costumbre (`T3_SOLO=1`), imprime un mensaje claro señalando
+`NAV123_SOLO` en su lugar (nunca un `FindName` silencioso ni un cuelgue). Confirmado con `grep`
+que `ObjetosBoardScroll`/`ObjetosBoardStack`/`ObjetosStickyBar`/`ScrollToObjetosSection`/
+`OnObjetosBoardScrollChanged` no quedan referenciados en ningún otro sitio del arnés.
+
+**Build, tests y regresión**: `dotnet build Terrakeep.slnx -c Release`: 0 avisos/0 errores (4
+pasadas, una por cada ronda de ajuste). `dotnet test Terrakeep.Core.Tests -c Release --no-build`:
+742/742 (baseline sin cambio, ajeno a este encargo). `dotnet test
+Terrakeep.App.ViewModels.Tests -c Release --no-build`: 744/744 (baseline 742 + 2 nuevos de
+ParidadPersonaje Fase5, en paralelo - sin fallos). `EXPLORATION_LAYOUT_SOLO=1` (comparte
+`Program.cs`, ajeno a este cambio): 0 `FALLO`, sigue en verde tras retirar `T3_SOLO`.
+
+**Recompilación y redespliegue local real**: `Terrakeep.exe` instalado NO estaba en ejecución
+(`Get-CimInstance Win32_Process`, sin resultados). `DEPLOY_LOCK` adquirido sin contención
+(`deployLock.js adquirir Terrakeep`). Sanidad de `Assets/` ANTES: 13056 ficheros, hash registrado
+(sin discrepancia con el último despliegue de ParidadPersonaje Fase5, en paralelo). `dotnet
+publish Terrakeep.App/Terrakeep.App.csproj -c Release -p:PublishProfile=win-x64` en verde.
+`robocopy .../publish .../Terrakeep /MIR /XF unins000.exe unins000.dat` (Git Bash con
+`MSYS_NO_PATHCONV=1`): 1 archivo copiado (el `.exe` autocontenido, 132.78MB), 13061 omitidos, 0
+errores, 0 extras (código de salida 1 = éxito con copia). Sanidad de `Assets/` DESPUÉS: 13056
+ficheros, mismo hash - "deploy seguro". `DEPLOY_LOCK` liberado. `LastWriteTime`/tamaño del `.exe`
+instalado y del publish idénticos (26/09/2026 2:22:36, 139.236.481 bytes). Sanity check real:
+lanzado con `Start-Process`, `PID=517720 Responding=True` a los 6s, cerrado limpio con
+`Stop-Process`, sin proceso residual confirmado después.
+
+**Commit real**: `Terrakeep.App/MainWindow.xaml` + `Terrakeep.App/MainWindow.xaml.cs` +
+`Terrakeep.App/ViewModels/MainViewModel.cs` + `Terrakeep.App.Tests/CanarioNav123YClipCardsLibreria.cs`
++ `Terrakeep.App.Tests/Program.cs` - confirmado con `git diff --stat` que el contenido es
+EXCLUSIVAMENTE de este encargo, sin hunks entrelazados de otros agentes en paralelo. `doNotTouch`
+respetado: `CLAUDE.md`/`Terrasavr-Native.zip`/`Terrakeep.App.Tests/ComplementoKeepQA.cs`/
+`KEEPQA-INTEGRACION.md` no tocados ni comiteados; numerosos ficheros ajenos (Core.Tests,
+ViewModels.Tests, `scripts/`) modificados/sin trackear en el working tree por otros agentes en
+paralelo, ninguno añadido al stage. Sin `git push`.

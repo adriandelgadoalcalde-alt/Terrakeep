@@ -653,33 +653,22 @@ public partial class MainViewModel : ObservableObject
     // H4-02 (cuarta auditoria de Opus, Fable): "Almacenes seleccionada y luego oculta en Amplio
     // deja un contenido huerfano sin pestaña activa" - historico real de cuando Equipamiento(0)/
     // Inventario(1)/Almacenes(2) eran 3 TabItem EXCLUYENTES de un TabControl (H4-02, 14-sep-2026).
-    // T3 (catalogo de rediseño visual, "Personaje: tablero con panel lateral" - bitacora.md
-    // 20-sep-2026, reabierto por instruccion explicita del coordinador/usuario): el TabControl se
-    // fusiono en un unico tablero de scroll continuo (MainWindow.xaml, ObjetosBoardScroll) con las
-    // 3 secciones SIEMPRE visibles - ya no hay "pestaña seleccionada" de verdad. Esta propiedad se
-    // conserva con el MISMO significado 0/1/2 (los sitios que ya la usaban para "saltar a X" no se
-    // tocan) pero pasa a significar "desplaza el tablero hasta esta seccion" - el evento
-    // ObjetosSectionRequested (mas abajo) es lo que de verdad ejecuta ese scroll real
-    // (MainWindow.xaml.cs se suscribe en el constructor).
+    // T3 (catalogo de rediseño visual, 20-sep-2026) fusiono el TabControl en un tablero de scroll
+    // continuo con barra pegajosa - REABIERTO y sustituido por NAV123 (25-sep-2026, aplicador-fix,
+    // TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d): el usuario exigio PAGINAS REALES, no un
+    // offset de ScrollViewer que se podia clampar (bug real "toggle 3 desincronizado" con Almacenes
+    // con pocos objetos). Esta propiedad sigue siendo la UNICA fuente de verdad (mismo significado
+    // 0/1/2 de siempre, los ~30 sitios que ya la leian/escribian no se tocan) pero ahora decide de
+    // verdad, via binding directo (EnumEqualsToVis, MainWindow.xaml, ObjetosPageHost), cual de las
+    // 3 paginas exclusivas del tablero esta Visible - sin ningun scroll/offset que calcular.
     [ObservableProperty] private int _objetosSubTabIndex;
 
-    // T3: la Vista (MainWindow.xaml.cs) se suscribe en su constructor y hace scroll real del
-    // tablero hasta la seccion pedida - mismo patron ya usado por BackupHistoryViewModel.
-    // ReloadRequested (una Accion/evento que la ViewModel dispara y solo la Vista sabe ejecutar,
-    // porque requiere medir/mover un ScrollViewer real, algo que MainViewModel headless no puede
-    // hacer). RequestObjetosSection (metodo, no el setter de la propiedad a secas) es a proposito:
-    // el setter generado por [ObservableProperty] SOLO dispara OnObjetosSubTabIndexChanged si el
-    // valor CAMBIA (igualdad real de CommunityToolkit.Mvvm) - "saltar a Equipamiento" una segunda
-    // vez desde otro resultado de busqueda, con el usuario ya desplazado a mano a Almacenes
-    // mientras tanto, tiene que volver a desplazar el tablero aunque el indice siga siendo 0 desde
-    // la vez anterior. Los 3 sitios reales que antes hacian "ObjetosSubTabIndex = N" para saltar
-    // de pestaña llaman ahora a este metodo.
-    public event Action<int>? ObjetosSectionRequested;
-    public void RequestObjetosSection(int index)
-    {
-        ObjetosSubTabIndex = index;
-        ObjetosSectionRequested?.Invoke(index);
-    }
+    // NAV123: con paginas exclusivas por binding, "saltar a X" ya no necesita medir/mover ningun
+    // ScrollViewer real (la Vista no interviene) - los 3 sitios reales que antes hacian
+    // "ObjetosSubTabIndex = N" para saltar de pestaña siguen llamando a este metodo, ahora un
+    // simple alias del setter. Se conserva como metodo (no un setter a secas) para no romper esos
+    // call-sites ni la firma publica que ya usan los tests.
+    public void RequestObjetosSection(int index) => ObjetosSubTabIndex = index;
 
     // I-c (segunda auditoria de Opus, Fable): "anchos fijos en una pantalla que es puro
     // WrapPanel - en una ventana de 1920px, Inicio usa 880px y deja 1.000px negros". Mismo

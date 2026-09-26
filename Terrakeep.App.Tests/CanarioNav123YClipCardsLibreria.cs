@@ -1,16 +1,20 @@
 // CANARIO REAL (24-sep-2026, revision-correccion-integral-familia-Keep, bloque "Personaje >
 // Objetos"): dos huecos de cobertura reales cerrados por el mismo encargo, documentados en la
 // bitacora bajo "imagen2" - investigado por el agente investigador-bug del patron de 2 fases (NO
-// toca produccion, solo este arnes). Ambos modos son CANARIOS ROJOS A PROPOSITO hoy (reproducen
-// el bug real con evidencia medida/renderizada, no "deberia fallar") - se espera que pasen a OK
-// cuando `aplicador-fix` aplique el arreglo real, sin tocar este fichero.
+// toca produccion, solo este arnes). LIBCARD_CLIP_SOLO sigue siendo CANARIO ROJO A PROPOSITO.
 //
-// NAV123_SOLO (bug A): "la navegacion Equipamiento/Inventario/Almacenes es un scroll continuo
-// (MainWindow.xaml linea ~2876, ScrollViewer x:Name=ObjetosBoardScroll) sin ningun selector
-// directo - el usuario puede quedar a medio camino, con una seccion colapsada a una franja de
-// pocos pixeles mientras la siguiente ya ocupa el centro de la pantalla" (captura real del
-// coordinador, imagen2.png). Reproduce ese estado exacto con offsets reales del propio
-// ScrollViewer y confirma la AUSENCIA del selector 1/2/3 pedido.
+// NAV123_SOLO (bug A) REESCRITO de arriba a abajo (25-sep-2026, aplicador-fix, TASK CONTEXT
+// e5eaea9e-c261-4199-8e7d-060b6054f58d): el diseño original de este canario reproducia el bug del
+// scroll continuo (ObjetosBoardScroll, ya retirado) midiendo offsets. Con el arreglo real
+// aplicado (NAV123: ObjetosPageHost, 3 ScrollViewer superpuestos, Visibility de cada uno atada en
+// EXCLUSIVA a MainViewModel.ObjetosSubTabIndex via EnumEqualsToVis) ya no existe ningun offset que
+// reproducir - este canario verifica ahora el COMPORTAMIENTO REAL del arreglo, con codigo, no
+// visualmente: (A) exclusividad de Visibility por pagina (exactamente 1 de 3 Visible para
+// ObjetosSubTabIndex=0/1/2), (B) ausencia del sticky bar duplicado (ObjetosStickyBar retirado),
+// (C) funciona con pocos objetos (Inventario casi vacio) y muchos (Almacenes lleno 40/40, el caso
+// real que antes clampaba el offset), (D) ciclo de clics 1->2->3->1 sin drift geometrico, (E)
+// RequestObjetosSection(0/1/2) llamado directamente en el ViewModel (sin pasar por un clic de UI)
+// selecciona la pagina correcta.
 //
 // LIBCARD_CLIP_SOLO (bug B): "las cards de categoria de la Libreria (y de la Libreria de Buffs)
 // tienen el hover/borde superior cortado porque estan demasiado pegadas al limite superior de su
@@ -48,157 +52,140 @@ internal static partial class Program
             var personajeReal = vm.Home.Characters.FirstOrDefault();
             if (personajeReal != null) { vm.Home.OpenCommand.Execute(personajeReal); DoEvents(); DoEvents(); }
             vm.SelectedTabIndex = 1; vm.PersonajeInnerTabIndex = 0; // Personaje > Objetos
-            // 1180x700: mismo tamaño real que T3_SOLO ya usa para este mismo tablero (caso mas
-            // exigente documentado en MainWindow.xaml, "el minimo real de la ventana").
-            FijarTamaño(window, 1180, 700);
+            // 1080x700: el minimo real documentado de la ventana (H3-18, MainWindow.xaml) - el
+            // caso mas exigente para este tablero, pedido explicitamente para la verificacion
+            // visual de las 3 paginas (TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d).
+            FijarTamaño(window, 1080, 700);
             DoEvents(); DoEvents(); DoEvents();
 
-            var scroll = window.FindName("ObjetosBoardScroll") as ScrollViewer;
-            var secEquip = window.FindName("ObjetosSeccionEquipamiento") as FrameworkElement;
-            var secInv = window.FindName("ObjetosSeccionInventario") as FrameworkElement;
-            var secAlm = window.FindName("ObjetosSeccionAlmacenes") as FrameworkElement;
-            if (scroll == null || secEquip == null || secInv == null || secAlm == null)
+            // Las 3 paginas reales son los ScrollViewer con la Visibility ligada (ObjetosPaginaX) -
+            // NO el Border interior (ObjetosSeccionX, sin Visibility propia): comprobar la
+            // Visibility del Border daria siempre "Visible" (su valor local nunca cambia, solo el
+            // de su ScrollViewer ancestro se colapsa), un falso negativo de medicion, no un bug de
+            // produccion - confirmado comparando ambos durante el desarrollo de este canario.
+            var pagEquip = window.FindName("ObjetosPaginaEquipamiento") as FrameworkElement;
+            var pagInv = window.FindName("ObjetosPaginaInventario") as FrameworkElement;
+            var pagAlm = window.FindName("ObjetosPaginaAlmacenes") as FrameworkElement;
+            var t1 = window.FindName("ObjetosNavToggle1") as RadioButton;
+            var t2 = window.FindName("ObjetosNavToggle2") as RadioButton;
+            var t3 = window.FindName("ObjetosNavToggle3") as RadioButton;
+            if (pagEquip == null || pagInv == null || pagAlm == null || t1 == null || t2 == null || t3 == null)
             {
-                Console.WriteLine("NAV123: FALLO - no se encuentran el ScrollViewer/las 3 secciones reales del tablero de Objetos (ver T3_SOLO, mismo arbol)");
+                Console.WriteLine("FALLO: NAV123_SOLO - no se encuentran las 3 paginas/RadioButton reales del tablero de Objetos (ObjetosPagina*/ObjetosNavToggle1-3)");
                 return;
             }
 
-            // Posiciones reales de cada seccion dentro del scroll, con VerticalOffset=0 (mismo
-            // calculo/convencion exacta que T3_SOLO y que ScrollToObjetosSection en
-            // MainWindow.xaml.cs linea ~708 - los 3 numeros son validos para pasarselos tal
-            // cual a ScrollToVerticalOffset).
-            double yEquip = secEquip.TranslatePoint(new Point(0, 0), scroll).Y;
-            double yInv = secInv.TranslatePoint(new Point(0, 0), scroll).Y;
-            double yAlm = secAlm.TranslatePoint(new Point(0, 0), scroll).Y;
-            double alturaEquip = secEquip.ActualHeight;
-            Console.WriteLine($"NAV123: posiciones reales del tablero -> Equipamiento y={yEquip:0.#} (alto={alturaEquip:0.#}), Inventario y={yInv:0.#}, Almacenes y={yAlm:0.#}, ScrollableHeight={scroll.ScrollableHeight:0.#}, ViewportHeight={scroll.ViewportHeight:0.#}");
+            // --- B: la barra pegajosa (T3 PASO 2, duplicaba el titulo de la seccion activa - el
+            // bug real que el usuario reporto) tiene que haber desaparecido del arbol visual, no
+            // solo quedar oculta. ---
+            var stickyBar = window.FindName("ObjetosStickyBar");
+            Console.WriteLine($"NAV123: barra pegajosa retirada del arbol -> encontrada={stickyBar != null} (esperado null, no solo Collapsed)");
+            if (stickyBar != null)
+                Console.WriteLine("FALLO: NAV123_SOLO-STICKY - ObjetosStickyBar sigue existiendo en el arbol visual; con paginas exclusivas duplicaria el titulo que ya trae cada seccion.");
 
-            // --- REPRODUCCION del estado exacto de la captura del coordinador: un offset
-            // intermedio elegido para dejar solo un resto de pocos pixeles de Equipamiento
-            // visible mientras Inventario ya domina el viewport. ---
-            // yEquip+alturaEquip = fin real del contenido de Equipamiento (no yInv - hay un hueco
-            // real de margen, Margin="0,14,0,0" en ObjetosSeccionInventario, MainWindow.xaml linea
-            // 3278, entre el fin de una seccion y el comienzo visual de la siguiente).
-            double offsetRoto = Math.Max(0, yEquip + alturaEquip - 8);
-            scroll.ScrollToVerticalOffset(offsetRoto);
-            scroll.UpdateLayout();
+            // --- C: casos reales de pocos/muchos objetos con el mismo personaje. Inventario casi
+            // vacio (deja solo 1 slot ocupado). ---
+            int inventarioAntes = vm.InventoryContainer?.Slots.Count(s => !s.IsEmpty) ?? -1;
+            if (vm.InventoryContainer != null)
+            {
+                vm.InventoryContainer.ClearAllCommand.Execute(null);
+                vm.InventoryContainer.Slots.FirstOrDefault()?.PlaceItem(1);
+            }
+            // Almacenes lleno (el caso real que antes clampaba ScrollViewer - "toggle 3
+            // desincronizado" con Almacenes casi vacio esperaba menos scroll del que Equipamiento/
+            // Inventario ya habian consumido; con Almacenes LLENO, si algo del mecanismo antiguo
+            // hubiera sobrevivido a medias, seria aqui donde se notaria).
+            if (vm.StorageGroup != null)
+                foreach (var slot in vm.StorageGroup.Current.Slots) slot.PlaceItem(1);
             DoEvents(); DoEvents();
-            double pxEquipVisibles = Math.Max(0, (yEquip + alturaEquip) - scroll.VerticalOffset);
-            double pxInventarioEnViewport = Math.Max(0, scroll.ViewportHeight - Math.Max(0, yInv - scroll.VerticalOffset));
-            Console.WriteLine($"NAV123: estado intermedio reproducido -> VerticalOffset real={scroll.VerticalOffset:0.#} (pedido {offsetRoto:0.#}), Equipamiento visible={pxEquipVisibles:0.#}px de {alturaEquip:0.#}px totales, Inventario ya ocupa {pxInventarioEnViewport:0.#}px de los {scroll.ViewportHeight:0.#}px del viewport");
-            bool reproducidoElCasoDeLaCaptura = pxEquipVisibles > 0 && pxEquipVisibles < 40 && pxInventarioEnViewport > scroll.ViewportHeight * 0.4;
-            if (!reproducidoElCasoDeLaCaptura)
-                Console.WriteLine("NAV123: AVISO - con este ancho/alto concretos el offset elegido no deja a Equipamiento en una franja tan estrecha como la captura; el mecanismo (ver abajo) sigue siendo el mismo, ajustar el offset si el layout real cambio de altura.");
+            int inventarioDespues = vm.InventoryContainer?.Slots.Count(s => !s.IsEmpty) ?? -1;
+            int almacenesOcupados = vm.StorageGroup?.Current.Slots.Count(s => !s.IsEmpty) ?? -1;
+            int almacenesTotal = vm.StorageGroup?.Current.Slots.Count ?? -1;
+            Console.WriteLine($"NAV123: casos reales preparados -> Inventario ocupado antes={inventarioAntes}, despues={inventarioDespues} (esperado 1, casi vacio); Almacenes ocupado={almacenesOcupados}/{almacenesTotal} (esperado lleno, ocupado==total)");
+            if (inventarioDespues != 1)
+                Console.WriteLine("NAV123: AVISO - no se pudo dejar el Inventario casi vacio con este personaje/fixture real (¿ClearAllCommand o PlaceItem cambiaron de firma?)");
+            if (almacenesTotal <= 0 || almacenesOcupados != almacenesTotal)
+                Console.WriteLine("NAV123: AVISO - no se pudo dejar Almacenes lleno con este personaje/fixture real");
 
-            string shotRoto = Path.Combine(AppContext.BaseDirectory, "nav123-estado-intermedio-roto.png");
-            File.WriteAllBytes(shotRoto, CapturarPng(window, window.ActualWidth, window.ActualHeight));
-            Console.WriteLine($"NAV123: captura real del estado intermedio -> {shotRoto}");
-
-            // --- La UNICA pieza de navegacion no textual hoy es la barra pegajosa, y es
-            // deliberadamente NO interactiva (MainWindow.xaml linea 3437, IsHitTestVisible="False"
-            // - solo es un rotulo que dice en que seccion esta el usuario, no lo lleva a ningun
-            // sitio). ---
-            var stickyBar = window.FindName("ObjetosStickyBar") as Border;
-            Console.WriteLine($"NAV123: barra pegajosa -> encontrada={stickyBar != null}, IsHitTestVisible={stickyBar?.IsHitTestVisible} (False = solo rotulo, no es una forma real de navegar)");
-
-            // --- EL HUECO REAL: no existe ningun selector 1/2/3 (RadioButton/ToggleButton con 3
-            // opciones reales) que lleve EXACTAMENTE a yEquip/yInv/yAlm sin poder quedar a medio
-            // camino. Se busca cualquier candidato ya en el arbol visual. ---
-            var candidatos = Descendientes<ToggleButton>(window)
-                .Where(t => t.IsVisible && t.Content != null && (t.Content.ToString() == "1" || t.Content.ToString() == "2" || t.Content.ToString() == "3"))
-                .ToList();
-            Console.WriteLine($"NAV123: controles reales de navegacion directa (ToggleButton/RadioButton con contenido '1'/'2'/'3') encontrados junto al tablero = {candidatos.Count} (esperado 3)");
-            if (candidatos.Count < 3)
-                Console.WriteLine("FALLO: NAV123_SOLO - no existe el selector Toggle 1/2/3 pedido por el usuario para Equipamiento/Inventario/Almacenes. Hoy la UNICA forma real de moverse entre secciones es el scroll libre de 'ObjetosBoardScroll' (MainWindow.xaml linea ~2876-2878), que permite (reproducido arriba con evidencia real) quedar detenido en cualquier offset intermedio visualmente roto. Canario ROJO a proposito: debe pasar a OK cuando el selector real exista y sus 3 destinos aterricen en offsets exactos (yEquip/yInv/yAlm medidos arriba), sin estados intermedios alcanzables por ese camino.");
-
-            // ============================================================================
-            // AMPLIACION 25-sep-2026 (aplicador-fix, TASK CONTEXT e5eaea9e-c261-4199-8e7d-
-            // 060b6054f58d): el bloque de arriba solo comprobaba que los 3 controles EXISTAN, nunca
-            // el ciclo de clic real con datos reales de personaje - un verificador-qa independiente
-            // encontro asi un segundo bug que este canario no cerraba: con un personaje real cuyo
-            // contenido de "Almacenes" no llena el resto del scroll (menos ScrollableHeight que
-            // yAlm), ScrollViewer CLAMPA el offset real a un valor menor que "y" - la sincronizacion
-            // inversa (OnObjetosBoardScrollChanged, MainWindow.xaml.cs:~676) recalculaba entonces la
-            // seccion activa a partir de ese offset ya clampado, que cae dentro del rango de
-            // "Inventario" en vez de "Almacenes" aunque el usuario pulso "3". Se reproduce aqui el
-            // mecanismo REAL (agrandando la ventana hasta que el propio ScrollViewer clampe de
-            // verdad, con el mismo personaje real de arriba, no una simulacion sintetica) y se
-            // verifica el ciclo 1->2->3->1 completo mirando IsChecked real de cada RadioButton (la
-            // misma propiedad que expone SelectionItemPattern.IsSelected via UIA para un
-            // RadioButton - equivalente real, verificado ademas por separado contra el .exe
-            // instalado con pywinauto/UIA, ver bitacora.md).
-            var t1candidato = window.FindName("ObjetosNavToggle1") as RadioButton;
-            var t2candidato = window.FindName("ObjetosNavToggle2") as RadioButton;
-            var t3candidato = window.FindName("ObjetosNavToggle3") as RadioButton;
-            if (t1candidato is RadioButton t1 && t2candidato is RadioButton t2 && t3candidato is RadioButton t3)
+            // --- A: exclusividad de Visibility por pagina, para los 3 valores reales de
+            // ObjetosSubTabIndex - exactamente 1 de 3 Visible, las otras 2 Collapsed. ---
+            (bool ok, Visibility[] estados) VerificaExclusividad(int indice, string nombreEsperado)
             {
-                // Agranda la ventana hasta que ScrollableHeight quede por debajo de yAlmacenes -
-                // clamp real de ScrollViewer, mismo mecanismo exacto que activa el bug (crece de
-                // 100 en 100px, techo razonable de sobra para cualquier tablero real).
-                double alturaUsada = window.ActualHeight;
-                bool clampReal = false;
-                for (double alto = 700; alto <= 2600; alto += 100)
-                {
-                    window.Width = 1180; window.Height = alto;
-                    DoEvents(); DoEvents(); DoEvents();
-                    scroll.UpdateLayout();
-                    double yAlmAhora = secAlm.TranslatePoint(new Point(0, 0), scroll).Y;
-                    alturaUsada = window.ActualHeight;
-                    if (yAlmAhora > scroll.ScrollableHeight + 1) { clampReal = true; break; }
-                }
-                Console.WriteLine($"NAV123-CICLO: ventana 1180x{alturaUsada:0} -> ScrollableHeight={scroll.ScrollableHeight:0.#}, yAlmacenes={secAlm.TranslatePoint(new Point(0, 0), scroll).Y:0.#} (clamp real conseguido={clampReal})");
-                if (!clampReal)
-                    Console.WriteLine("NAV123-CICLO: AVISO - no se consiguio clampar Almacenes con este personaje ni siquiera a 2600px de alto; el ciclo se ejecuta igual pero no ejercita la condicion de clamp real esta vez.");
-
-                void ClicYVerifica(RadioButton objetivo, string nombreSeccion)
-                {
-                    objetivo.IsChecked = true; // como el clic real: primero cambia el estado del control...
-                    objetivo.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); // ...y luego avisa (OnObjetosNavToggleClick)
-                    DoEvents(); DoEvents();
-                    scroll.UpdateLayout();
-                    DoEvents();
-                    bool marcaCorrecta = objetivo.IsChecked == true
-                        && (objetivo == t1 || t1.IsChecked != true)
-                        && (objetivo == t2 || t2.IsChecked != true)
-                        && (objetivo == t3 || t3.IsChecked != true);
-                    Console.WriteLine($"NAV123-CICLO: clic en '{nombreSeccion}' -> VerticalOffset real={scroll.VerticalOffset:0.#}, IsChecked(1/2/3)=({t1.IsChecked},{t2.IsChecked},{t3.IsChecked}) (esperado solo '{nombreSeccion}' marcado)");
-                    if (!marcaCorrecta)
-                        Console.WriteLine($"FALLO: NAV123_SOLO-CICLO - tras un clic real en '{nombreSeccion}' el indicador 1/2/3 no queda marcado en esa seccion (IsChecked real: 1={t1.IsChecked}, 2={t2.IsChecked}, 3={t3.IsChecked}). Si Almacenes esta clampado, la causa real es OnObjetosBoardScrollChanged recalculando la seccion activa a partir de un offset ya clampado por ScrollViewer, en vez de respetar la seccion que el usuario pidio con el clic.");
-                }
-
-                ClicYVerifica(t1, "1 (Equipamiento)");
-                ClicYVerifica(t2, "2 (Inventario)");
-                ClicYVerifica(t3, "3 (Almacenes)");
-                ClicYVerifica(t1, "1 (Equipamiento, vuelta)");
-
-                // --- Control real: el scroll LIBRE (sin clic explicito) tiene que seguir
-                // sincronizando el indicador con normalidad tras el arreglo - mismo criterio que
-                // T3_SOLO ya verifica para la barra pegajosa, repetido aqui para el selector 1/2/3.
-                scroll.ScrollToVerticalOffset(0);
-                scroll.UpdateLayout(); DoEvents();
-                double offsetLibreDentroDeInventario = Math.Max(0, Math.Min(scroll.ScrollableHeight, yInv + 10));
-                scroll.ScrollToVerticalOffset(offsetLibreDentroDeInventario);
-                scroll.UpdateLayout();
+                vm.RequestObjetosSection(indice);
                 DoEvents(); DoEvents();
-                bool scrollLibreOk = t2.IsChecked == true && t1.IsChecked != true && t3.IsChecked != true;
-                Console.WriteLine($"NAV123-CICLO: scroll LIBRE (sin clic) a offset={scroll.VerticalOffset:0.#} (dentro de Inventario) -> IsChecked(1/2/3)=({t1.IsChecked},{t2.IsChecked},{t3.IsChecked}) (esperado solo '2' marcado)");
-                if (!scrollLibreOk)
-                    Console.WriteLine("FALLO: NAV123_SOLO-CICLO - el scroll libre (sin clic explicito) dejo de sincronizar el indicador 1/2/3 despues del arreglo del clamp");
-
-                // Restaura tamaño y posicion para el resto del arnes.
-                scroll.ScrollToVerticalOffset(0);
-                scroll.UpdateLayout(); DoEvents();
-                FijarTamaño(window, 1180, 700);
-                DoEvents(); DoEvents();
+                Visibility[] vis = [pagEquip.Visibility, pagInv.Visibility, pagAlm.Visibility];
+                string[] nombres = ["Equipamiento", "Inventario", "Almacenes"];
+                int idxEsperado = Array.IndexOf(nombres, nombreEsperado);
+                int visibles = vis.Count(v => v == Visibility.Visible);
+                bool ok = visibles == 1 && vis[idxEsperado] == Visibility.Visible;
+                Console.WriteLine($"NAV123: ObjetosSubTabIndex={indice} -> Visibility real = Equipamiento:{vis[0]}, Inventario:{vis[1]}, Almacenes:{vis[2]} (esperado SOLO '{nombreEsperado}' Visible)");
+                if (!ok)
+                    Console.WriteLine($"FALLO: NAV123_SOLO-EXCLUSIVIDAD - con ObjetosSubTabIndex={indice} se esperaba exactamente 1 pagina Visible ('{nombreEsperado}') y las otras 2 Collapsed; visibles reales={visibles}");
+                return (ok, vis);
             }
-            else
+
+            VerificaExclusividad(0, "Equipamiento");
+            string shotEquip = Path.Combine(AppContext.BaseDirectory, "nav123-pagina-equipamiento.png");
+            File.WriteAllBytes(shotEquip, CapturarPng(window, window.ActualWidth, window.ActualHeight));
+
+            VerificaExclusividad(1, "Inventario");
+            string shotInv = Path.Combine(AppContext.BaseDirectory, "nav123-pagina-inventario.png");
+            File.WriteAllBytes(shotInv, CapturarPng(window, window.ActualWidth, window.ActualHeight));
+
+            VerificaExclusividad(2, "Almacenes");
+            string shotAlm = Path.Combine(AppContext.BaseDirectory, "nav123-pagina-almacenes.png");
+            File.WriteAllBytes(shotAlm, CapturarPng(window, window.ActualWidth, window.ActualHeight));
+            Console.WriteLine($"NAV123: capturas reales de las 3 paginas exclusivas -> {shotEquip}, {shotInv}, {shotAlm}");
+
+            // --- D: ciclo de clic real 1->2->3->1 - IsChecked correcto + pagina Visible correcta +
+            // sin drift geometrico (tamaño de ventana estable, ninguna medicion de offset de por
+            // medio que pueda desplazar nada). ---
+            double anchoAntes = window.ActualWidth, altoAntes = window.ActualHeight;
+            void ClicYVerifica(RadioButton objetivo, string nombreSeccion, string nombreEsperado)
             {
-                Console.WriteLine("NAV123-CICLO: AVISO - no se encontraron los 3 RadioButton reales (ObjetosNavToggle1/2/3) para ejecutar el ciclo de clic; se omite (ya se reporto FALLO arriba si faltan).");
+                objetivo.IsChecked = true; // como el clic real: primero cambia el estado del control...
+                objetivo.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent)); // ...y luego avisa (OnObjetosNavToggleClick)
+                DoEvents(); DoEvents();
+                Visibility[] vis = [pagEquip.Visibility, pagInv.Visibility, pagAlm.Visibility];
+                string[] nombres = ["Equipamiento", "Inventario", "Almacenes"];
+                int idxEsperado = Array.IndexOf(nombres, nombreEsperado);
+                bool marcaCorrecta = objetivo.IsChecked == true
+                    && (objetivo == t1 || t1.IsChecked != true)
+                    && (objetivo == t2 || t2.IsChecked != true)
+                    && (objetivo == t3 || t3.IsChecked != true);
+                bool paginaCorrecta = vis.Count(v => v == Visibility.Visible) == 1 && vis[idxEsperado] == Visibility.Visible;
+                bool sinDrift = window.ActualWidth == anchoAntes && window.ActualHeight == altoAntes;
+                Console.WriteLine($"NAV123-CICLO: clic en '{nombreSeccion}' -> IsChecked(1/2/3)=({t1.IsChecked},{t2.IsChecked},{t3.IsChecked}), Visibility(Equip/Inv/Alm)=({vis[0]},{vis[1]},{vis[2]}), tamaño ventana sin cambios={sinDrift}");
+                if (!marcaCorrecta)
+                    Console.WriteLine($"FALLO: NAV123_SOLO-CICLO - tras un clic real en '{nombreSeccion}' el indicador 1/2/3 no queda marcado en esa seccion (IsChecked real: 1={t1.IsChecked}, 2={t2.IsChecked}, 3={t3.IsChecked})");
+                if (!paginaCorrecta)
+                    Console.WriteLine($"FALLO: NAV123_SOLO-CICLO - tras el clic en '{nombreSeccion}' la pagina Visible real no coincide con la esperada");
+                if (!sinDrift)
+                    Console.WriteLine($"FALLO: NAV123_SOLO-CICLO - drift geometrico real: el tamaño de ventana cambio tras el clic en '{nombreSeccion}' (antes {anchoAntes}x{altoAntes}, ahora {window.ActualWidth}x{window.ActualHeight})");
             }
+
+            ClicYVerifica(t1, "1 (Equipamiento)", "Equipamiento");
+            ClicYVerifica(t2, "2 (Inventario)", "Inventario");
+            ClicYVerifica(t3, "3 (Almacenes)", "Almacenes");
+            ClicYVerifica(t1, "1 (Equipamiento, vuelta)", "Equipamiento");
+
+            // --- E: RequestObjetosSection(0/1/2) llamado DIRECTAMENTE en el ViewModel (sin pasar
+            // por ningun clic de UI) tiene que seleccionar la pagina correcta - confirma que la
+            // Visibility de cada pagina reacciona sola al binding (ObjetosSubTabIndex via
+            // EnumEqualsToVis), no a un efecto secundario del manejador de clic. IsChecked del
+            // RadioButton 3 tambien se espera correcto: el binding TwoWay (EnumEquals) lo sincroniza
+            // solo, sin que el Click intervenga. ---
+            vm.RequestObjetosSection(2);
+            DoEvents(); DoEvents();
+            bool almacenesVisibleSinClic = pagAlm.Visibility == Visibility.Visible && pagEquip.Visibility == Visibility.Collapsed && pagInv.Visibility == Visibility.Collapsed;
+            Console.WriteLine($"NAV123: RequestObjetosSection(2) llamado directo en el ViewModel (sin clic de UI) -> Visibility(Equip/Inv/Alm)=({pagEquip.Visibility},{pagInv.Visibility},{pagAlm.Visibility}), toggle3.IsChecked={t3.IsChecked} (esperado solo Almacenes Visible y toggle3 marcado)");
+            if (!almacenesVisibleSinClic)
+                Console.WriteLine("FALLO: NAV123_SOLO-DIRECTO - RequestObjetosSection(2) llamado directamente en el ViewModel no selecciono en exclusiva la pagina de Almacenes");
+            if (t3.IsChecked != true)
+                Console.WriteLine("FALLO: NAV123_SOLO-DIRECTO - RequestObjetosSection(2) selecciono la pagina correcta pero el RadioButton 3 no quedo marcado (binding TwoWay EnumEquals roto)");
 
             // Deja el tablero como lo encontro.
-            scroll.ScrollToVerticalOffset(0);
-            scroll.UpdateLayout();
+            vm.RequestObjetosSection(0);
             DoEvents();
         }
         catch (Exception ex) { Console.WriteLine("NAV123-EXCEPTION: " + ex); }

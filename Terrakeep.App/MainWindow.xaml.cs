@@ -39,26 +39,14 @@ public partial class MainWindow : Window
     // pregunto lo mismo un momento antes, antes de lanzar el instalador).
     private bool _cerrandoParaActualizar;
 
-    // Bug real "toggle 3 desincronizado" (25-sep-2026, verificador-qa independiente, personaje
-    // real con pocos objetos en Almacenes): cuando el usuario pulsa el selector 1/2/3 de forma
-    // EXPLICITA, el indicador debe reflejar SIEMPRE la seccion pedida - nunca la que
-    // OnObjetosBoardScrollChanged recalcule a partir del offset real ya aplicado, que
-    // ScrollViewer puede CLAMPAR por debajo de "y" cuando el contenido de la seccion destino no
-    // llena el resto del scroll (Almacenes con pocos objetos, por ejemplo). Vivo solo durante la
-    // llamada sincrona de ScrollToObjetosSection (ver el try/finally de ahi); el scroll libre
-    // posterior del usuario (flag=null) sigue recalculando con el criterio normal.
-    private int? _objetosNavIndiceExplicito;
-
     public MainWindow()
     {
         InitializeComponent();
         DataContext = _viewModel;
-        // T3 PASO 3 (catalogo de rediseño visual, "Personaje: tablero con panel lateral" -
-        // bitacora.md 20-sep-2026, reabierto por instruccion explicita del coordinador/usuario):
-        // los 3 sitios reales que antes hacian "saltar de pestaña" (WhereIsIt/busqueda global)
-        // ahora piden un scroll real del tablero via MainViewModel.RequestObjetosSection - solo la
-        // Vista sabe medir/mover un ScrollViewer real, ver el comentario de cabecera del evento.
-        _viewModel.ObjetosSectionRequested += ScrollToObjetosSection;
+        // NAV123 (25-sep-2026): T3 PASO 3 suscribia aqui la Vista al evento ObjetosSectionRequested
+        // para medir/mover un ScrollViewer real - ya no hace falta, RequestObjetosSection solo
+        // escribe ObjetosSubTabIndex y el binding de Visibility de cada pagina (MainWindow.xaml,
+        // ObjetosPageHost) reacciona solo, sin ninguna intervencion de la Vista.
         // H5-07 (quinta auditoria de Opus): "carpetas adicionales" y "ultimo personaje/pestaña"
         // real de la sesion anterior - deliberadamente NO dentro de MainViewModel() (ver el
         // comentario real de RestoreSession/SettingsViewModel.LoadFromDisk: un fichero real en
@@ -685,118 +673,17 @@ public partial class MainWindow : Window
         ExplorationScrollHint.Visibility = quedaScrollPendiente ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    // T3 PASO 2 (catalogo de rediseño visual, "Personaje: tablero con panel lateral" - bitacora.md
-    // 20-sep-2026, reabierto por instruccion explicita del coordinador/usuario): cabecera pegajosa
-    // real del tablero de Objetos. Cada seccion (Equipamiento/Inventario/Almacenes) se traduce a
-    // coordenadas ESTABLES respecto de ObjetosBoardStack (el StackPanel que las contiene, nunca se
-    // mueve el solo) - la seccion "activa" es la ULTIMA cuyo origen ya quedo por encima del
-    // VerticalOffset actual, mismo criterio real que cualquier lista con cabeceras de grupo
-    // (Contactos, Ajustes...). La barra solo se enseña cuando YA se ha desplazado mas alla de la
-    // cabecera NATURAL de Equipamiento (offset>4) - mostrarla desde el primer pixel duplicaria el
-    // mismo rotulo que ya esta a la vista arriba del todo.
-    private void OnObjetosBoardScrollChanged(object sender, ScrollChangedEventArgs e)
-    {
-        if (ObjetosStickyBar == null || ObjetosBoardStack == null) return;
-        if (ObjetosSeccionEquipamiento == null || ObjetosSeccionInventario == null || ObjetosSeccionAlmacenes == null) return;
-
-        double offset = e.VerticalOffset;
-        (FrameworkElement el, string clave, int indice)[] secciones =
-        [
-            (ObjetosSeccionEquipamiento, "char_tab_equipment", 0),
-            (ObjetosSeccionInventario, "char_tab_inventory", 1),
-            (ObjetosSeccionAlmacenes, "char_tab_storage", 2),
-        ];
-
-        string? claveActiva = null;
-        int indiceActivo = 0;
-        foreach (var (el, clave, indice) in secciones)
-        {
-            double y;
-            try { y = el.TranslatePoint(new System.Windows.Point(0, 0), ObjetosBoardStack).Y; }
-            catch (InvalidOperationException) { continue; } // desconectado del arbol a media medicion, ver el mismo patron real de AR-LAY
-            if (y <= offset + 4) { claveActiva = clave; indiceActivo = indice; }
-        }
-
-        // Clic explicito en el selector 1/2/3 en curso (ver _objetosNavIndiceExplicito): ignora
-        // el recalculo por offset - si Almacenes (u otra seccion corta) no tiene contenido
-        // suficiente para llegar a su "y" exacto, ScrollViewer clampa el offset real y el bucle
-        // de arriba lo colocaria en la seccion ANTERIOR aunque el usuario pidio la de verdad.
-        if (_objetosNavIndiceExplicito is int indiceForzado && indiceForzado >= 0 && indiceForzado < secciones.Length)
-        {
-            indiceActivo = indiceForzado;
-            claveActiva = secciones[indiceForzado].clave;
-        }
-
-        // T3 PASO 4 (imagen2/NAV123_SOLO): sincroniza el selector 1/2/3 en sentido inverso mientras
-        // el usuario hace scroll libre a mano - mismo criterio "ultima seccion cuyo origen ya paso
-        // por encima del offset actual" que el calculo de arriba, sin logica nueva. El scroll libre
-        // sigue funcionando como via secundaria; el selector siempre refleja donde esta de verdad.
-        var radioActivo = indiceActivo switch
-        {
-            1 => ObjetosNavToggle2,
-            2 => ObjetosNavToggle3,
-            _ => ObjetosNavToggle1,
-        };
-        if (radioActivo != null && radioActivo.IsChecked != true) radioActivo.IsChecked = true;
-
-        if (claveActiva == null || offset <= 4)
-        {
-            ObjetosStickyBar.Visibility = Visibility.Collapsed;
-            return;
-        }
-        ObjetosStickyBarText.Text = Loc[claveActiva];
-        ObjetosStickyBar.Visibility = Visibility.Visible;
-    }
-
-    // T3 PASO 4 (imagen2/NAV123_SOLO): las 3 pastillas 1/2/3 invocan directamente el mismo scroll
-    // exacto que ya usaba la navegacion "Donde esta" - cero logica de scroll nueva, los 3 destinos
-    // aterrizan EXACTOS en yEquip/yInv/yAlm (ScrollToObjetosSection ya lo calcula asi).
+    // NAV123 (25-sep-2026, aplicador-fix, TASK CONTEXT e5eaea9e-c261-4199-8e7d-060b6054f58d):
+    // retirados OnObjetosBoardScrollChanged (cabecera pegajosa + sincronizacion inversa por
+    // offset) y ScrollToObjetosSection (scroll medido con TranslatePoint, clampable por
+    // ScrollViewer - la causa real del bug "toggle 3 desincronizado"). Las 3 paginas de
+    // ObjetosPageHost (MainWindow.xaml) son ahora exclusivas por Visibility ligada directamente a
+    // MainViewModel.ObjetosSubTabIndex (EnumEqualsToVis) - el clic solo tiene que escribir ese
+    // indice, sin medir ni mover nada.
     private void OnObjetosNavToggleClick(object sender, RoutedEventArgs e)
     {
         if (sender is RadioButton rb && rb.Tag is string tag && int.TryParse(tag, out int indice))
-            ScrollToObjetosSection(indice);
-    }
-
-    // T3 PASO 3: ejecuta de verdad el scroll que MainViewModel.RequestObjetosSection pide (0=
-    // Equipamiento/1=Inventario/2=Almacenes) - mismo mapeo de indices real que ya tenian los 3
-    // TabItem originales (H4-02), ahora aplicado a secciones de un unico tablero. Dispatcher.
-    // BeginInvoke con prioridad Loaded (mismo patron real ya usado por HasSeenHomeIntro en el
-    // constructor de esta clase): quien llama a RequestObjetosSection tambien puede estar
-    // cambiando PersonajeInnerTabIndex a Objetos EN LA MISMA LLAMADA (ver
-    // NavigateToWhereIsItResult) - si la pestaña Objetos estaba oculta un instante antes, WPF
-    // todavia no ha medido/colocado sus elementos y TranslatePoint devolveria una posicion
-    // invalida o lanzaria InvalidOperationException. Diferir hasta despues de que ese layout real
-    // ya haya ocurrido es lo que hace fiable el calculo.
-    private void ScrollToObjetosSection(int index)
-    {
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            if (ObjetosBoardScroll == null || ObjetosBoardStack == null) return;
-            FrameworkElement? seccion = index switch
-            {
-                0 => ObjetosSeccionEquipamiento,
-                1 => ObjetosSeccionInventario,
-                2 => ObjetosSeccionAlmacenes,
-                _ => null,
-            };
-            if (seccion == null) return;
-            try
-            {
-                double y = seccion.TranslatePoint(new System.Windows.Point(0, 0), ObjetosBoardStack).Y;
-                // Ver _objetosNavIndiceExplicito: mientras dura esta llamada sincrona (UpdateLayout
-                // fuerza el ScrollChanged real ya mismo, en vez de esperar al siguiente paso de
-                // layout) OnObjetosBoardScrollChanged debe marcar SIEMPRE "index" en el selector
-                // 1/2/3, ni siquiera si ScrollViewer clampa "y" por falta de contenido debajo.
-                _objetosNavIndiceExplicito = index;
-                try
-                {
-                    ObjetosBoardScroll.ScrollToVerticalOffset(y);
-                    ObjetosBoardScroll.UpdateLayout();
-                }
-                finally { _objetosNavIndiceExplicito = null; }
-            }
-            catch (InvalidOperationException) { /* desconectado del arbol visual todavia - nunca un fallo visible por un salto de navegacion */ }
-        }), System.Windows.Threading.DispatcherPriority.Loaded);
+            _viewModel.RequestObjetosSection(indice);
     }
 
     // F-14 (auditoria de Opus vs TEdit, E-16/E-17): dialogo real en la View (mismo criterio que
