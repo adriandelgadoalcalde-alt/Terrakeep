@@ -292,13 +292,13 @@ public sealed partial class CharacterListEntryViewModel : ObservableObject
         // GapAnalysis Encargo H (25-sep-2026): bug de datos real corregido aqui - el Hide[] real
         // (hideVisibleAccessory del juego) NUNCA vive en PrimaryLoadout (el mirror que se pasa
         // arriba para la armadura/vanidad SI tiene el equipo correcto, pero
-        // PlrLoadout.CreateEmpty(isPrimary:true) fija su propio Hide=null siempre) - el array de
-        // 10 bits real vive en character.Loadouts[character.CurrentLoadout].Hide.
-        // ParidadPersonaje Fase4 (26-sep-2026): GapAnalysis BugH - character.ResolveActiveHide()
-        // (ver PlrCharacter.cs) ya cubre TAMBIEN el formato antiguo pre-Loadout (HideVisual1/
-        // HideVisual2), que antes se perdia siempre porque Loadouts esta vacio en esos personajes
-        // (version<269) y este metodo devolvia null sin mirar los 2 bytes que
-        // PlrBodySerializer.Read YA parseaba fielmente.
+        // PlrLoadout.CreateEmpty(isPrimary:true) fija su propio Hide=null siempre).
+        // ParidadPersonaje Fase4 (26-sep-2026), corregido (requirement
+        // 480a9bdd-6d5f-4fa6-935d-46f895e97514): character.ResolveActiveHide() (ver
+        // PlrCharacter.cs) SIEMPRE construye el Hide[] activo desde HideVisual1/HideVisual2 -
+        // CON o SIN Loadouts. Loadouts[CurrentLoadout].Hide NUNCA es el estado activo fiable
+        // (EquipmentLoadout.Swap intercambia ese array al cambiar de loadout, no lo copia), asi
+        // que ResolveActiveHide ya no lo usa para nada activo.
         var hide = character.ResolveActiveHide();
         // ParidadPersonaje Fase2 (25-sep-2026): el slot 8 real (armor[8]/armor[18]) solo esta
         // desbloqueado con el Corazon de Demonio/Carmesi (PlrCharacter.ExtraAccessory) - ver

@@ -306,13 +306,13 @@ public partial class MainViewModel : ObservableObject
         // la ausencia de un editor para ese toggle no justifica ignorar el Hide[] YA GUARDADO del
         // personaje. loadout0 es sintetico (solo Items/Social/Dyes EN VIVO de lo que se esta
         // editando, ver el comentario de cabecera de este metodo) y no lleva Hide propio, pero el
-        // array de 10 bits real vive en character.Loadouts[CurrentLoadout].Hide (mismo dato que ya
-        // lee CharacterListEntryViewModel para el doll de Inicio, ver su comentario junto a
-        // ResolveAccessories) - se lee de ahi y se pasa igual, para que el preview en vivo de
-        // Personaje>Apariencia coincida con Inicio en vez de mostrar siempre "nada oculto".
-        // ParidadPersonaje Fase4 (26-sep-2026): GapAnalysis BugH - ResolveActiveHide() (ver
-        // PlrCharacter.cs) cubre TAMBIEN el formato antiguo pre-Loadout (HideVisual1/HideVisual2),
-        // mismo arreglo que CharacterListEntryViewModel.
+        // array de 10 bits real vive en HideVisual1/HideVisual2 (ver ResolveActiveHide) - se lee
+        // de ahi y se pasa igual, para que el preview en vivo de Personaje>Apariencia coincida
+        // con Inicio en vez de mostrar siempre "nada oculto".
+        // ParidadPersonaje Fase4 (26-sep-2026), corregido (requirement
+        // 480a9bdd-6d5f-4fa6-935d-46f895e97514): ResolveActiveHide() (ver PlrCharacter.cs) SIEMPRE
+        // construye el Hide[] activo desde HideVisual1/HideVisual2 - CON o SIN Loadouts. Mismo
+        // arreglo que CharacterListEntryViewModel.
         var hide = _loaded?.Character.ResolveActiveHide();
         // ParidadPersonaje Fase2 (25-sep-2026): mismo criterio que CharacterListEntryViewModel -
         // el slot 8 real solo esta desbloqueado con ExtraAccessory. ?? true (no ?? false) es a

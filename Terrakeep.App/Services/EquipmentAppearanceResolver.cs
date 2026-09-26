@@ -548,11 +548,15 @@ public sealed class EquipmentAppearanceResolver
     // MISMO CANAL (no ya de la misma "familia" - Back normal y Backpack son canales distintos que
     // coexisten, ver el comentario de cabecera de VisiblePlayerState).
     //
-    // GapAnalysis Encargo H (25-sep-2026): hide[] se respeta - el array de 10 bits real
-    // (hideVisibleAccessory en Player.cs) vive en PlrCharacter.Loadouts[CurrentLoadout].Hide,
-    // NUNCA en PlrCharacter.PrimaryLoadout (PlrLoadout.CreateEmpty(isPrimary:true) fija Hide=null
-    // siempre) - el llamador es responsable de pasar el Hide REAL del loadout activo (ver
-    // CharacterListEntryViewModel), este metodo solo aplica el array que recibe. Regla real: el
+    // GapAnalysis Encargo H (25-sep-2026), corregido (26-sep-2026, requirement
+    // 480a9bdd-6d5f-4fa6-935d-46f895e97514): hide[] se respeta - el array de 10 bits real
+    // (hideVisibleAccessory en Player.cs) vive SIEMPRE en HideVisual1/HideVisual2 (ver
+    // PlrCharacter.ResolveActiveHide), NUNCA en PlrCharacter.PrimaryLoadout (PlrLoadout.
+    // CreateEmpty(isPrimary:true) fija Hide=null siempre) ni en Loadouts[CurrentLoadout].Hide (ese
+    // array es el estado ALMACENADO de un loadout no activo, no el activo real - ver
+    // ResolveActiveHide) - el llamador es responsable de pasar el resultado de
+    // ResolveActiveHide() (ver CharacterListEntryViewModel/MainViewModel), este metodo solo
+    // aplica el array que recibe. Regla real: el
     // toggle SOLO gatea el hueco FUNCIONAL (i=3..9 de loadout.Items) - el bucle de vanidad
     // (armor[13..19] real, loadout.Social aqui) NO tiene ningun chequeo, la vanidad puesta se ve
     // SIEMPRE.

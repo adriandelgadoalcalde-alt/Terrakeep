@@ -10,16 +10,21 @@ namespace Terrakeep.App.ViewModels.Tests;
 // EquipmentAppearanceResolver.ResolveAccessories (ver
 // EquipmentAppearanceResolverTests.HideTrueEnHuecoFuncional_...). Aqui se carga el MISMO .plr
 // real por los DOS caminos completos de la app:
-//   - CharacterListEntryViewModel (doll de "Inicio", ya correcto ANTES de este arreglo - lee
-//     character.Loadouts[CurrentLoadout].Hide, ver su propio comentario).
-//   - MainViewModel + AppearanceViewModel (preview en vivo de "Personaje > Apariencia", el que
-//     arregla este encargo - MainViewModel.cs, RefreshAppearanceEquipment()).
+//   - CharacterListEntryViewModel (doll de "Inicio").
+//   - MainViewModel + AppearanceViewModel (preview en vivo de "Personaje > Apariencia").
 // y se compara el EquippedAccessories resultante con igualdad ESTRUCTURAL de record (no solo
-// pixeles renderizados). Antes de este arreglo, MainViewModel.RefreshAppearanceEquipment()
-// llamaba ResolveAccessories SIN el Hide[] real del personaje (hide=null siempre) - el preview de
-// Apariencia mostraba SIEMPRE "nada oculto" aunque el personaje guardado tuviera un accesorio
-// funcional oculto de verdad, mientras que Inicio SI lo respetaba: las dos tarjetas del mismo
-// personaje discrepaban entre si.
+// pixeles renderizados).
+//
+// Reescrito (26-sep-2026, requirement 480a9bdd-6d5f-4fa6-935d-46f895e97514): la version anterior
+// de este test fabricaba "new PlrLoadout { Hide = hide }" a mano y lo asignaba como
+// Loadouts[CurrentLoadout] - reproduciendo la MISMA interpretacion incorrecta que tenia el bug de
+// produccion (PlrCharacter.ResolveActiveHide leyendo Loadouts[CurrentLoadout].Hide como si fuera
+// el estado activo). Ese test seguia en verde incluso con el bug real, porque nunca ejercitaba el
+// camino real HideVisual1/HideVisual2 en un personaje CON Loadouts. Ahora representa la
+// serializacion real: HideVisual1/HideVisual2 con bits reales puestos (el estado activo real,
+// hideVisibleAccessory) y Loadouts[CurrentLoadout].Hide a todo-false (exactamente el caso real
+// observado en Terrariano.plr/Eldelgas.plr del usuario) - confirma que los dos caminos usan el
+// Hide derivado de HideVisual1/HideVisual2, ignorando el Hide (todo-false) del loadout.
 public sealed class ParidadPersonajeHideAccesoriosTests
 {
     private static readonly CharacterFileService Service = new();
@@ -37,13 +42,12 @@ public sealed class ParidadPersonajeHideAccesoriosTests
         primary.Items[4] = new PlrItemSlot(ColgantePlata, 1, 0, false);
         primary.Social[7] = new PlrItemSlot(RelojPlata, 1, 0, false);
 
-        var hide = new bool[10];
-        hide[3] = true; // oculta el reloj de cobre funcional (waist) - hay vanidad de respaldo
-        hide[4] = true; // oculta el colgante funcional (neck) - SIN vanidad de respaldo
-
-        // Loadouts[CurrentLoadout] real: PrimaryLoadout NUNCA lleva Hide (ver PlrLoadout.cs),
-        // el array de 10 bits real vive aqui - mismo dato que lee CharacterListEntryViewModel.
-        var loadoutActivo = new PlrLoadout { Hide = hide };
+        // Loadouts[CurrentLoadout].Hide a todo-false a proposito - el caso real observado en
+        // Terrariano.plr/Eldelgas.plr del usuario. El estado activo real (el que debe respetarse)
+        // vive SOLO en HideVisual1/HideVisual2 - si algun consumidor volviera a leer
+        // Loadouts[CurrentLoadout].Hide como si fuera el activo, este test lo detectaria (los dos
+        // accesorios funcionales apareceran visibles en vez de ocultos).
+        var loadoutActivo = new PlrLoadout { Hide = new bool[10] };
 
         return new PlrCharacter
         {
@@ -52,6 +56,7 @@ public sealed class ParidadPersonajeHideAccesoriosTests
             PrimaryLoadout = primary,
             Loadouts = [loadoutActivo, PlrLoadout.CreateEmpty(isPrimary: false), PlrLoadout.CreateEmpty(isPrimary: false)],
             CurrentLoadout = 0,
+            HideVisual1 = (1 << 3) | (1 << 4), // bits 3 (waist) y 4 (neck) activos: estado activo real
         };
     }
 
@@ -63,10 +68,10 @@ public sealed class ParidadPersonajeHideAccesoriosTests
         File.WriteAllBytes(path, PlrFile.Write(character));
         try
         {
-            // Camino de "Inicio" - ya correcto antes de este arreglo.
+            // Camino de "Inicio".
             var entry = new CharacterListEntryViewModel(path, PlrFile.Read(File.ReadAllBytes(path)), false, null, DateTime.UtcNow, EquipAppearance);
 
-            // Camino de "Personaje > Apariencia" - el que arregla este encargo.
+            // Camino de "Personaje > Apariencia".
             var vm = new MainViewModel();
             vm.LoadFromPath(path);
 
