@@ -572,46 +572,7 @@
                     <Image Source="{Binding GhostIconPath}" Stretch="Uniform" Margin="6" Opacity="0.35"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
-                    <!-- KeepQA KEEPQA_TRANSICION_SOLO (16-sep-2026, verificarTransicion.js sobre
-                         transicion-tamano.par.json, TR-01..TR-04): a 1180x860 el margen uniforme
-                         de 4px no tocaba ni al contador ni al punto de Calamity, pero a 1080x700
-                         (MinWidth/MinHeight reales) la celda de SlotGridPanel encoge y el sprite
-                         (Stretch=Uniform, siempre pegado al mismo margen fijo) crecia en relativo
-                         hasta pisar ambas esquinas - 4 casos reales medidos (hasta 9,64px de alto
-                         solapado). El contador/punto NO escalan con la celda (tamaño fijo en XAML,
-                         a proposito - deben seguir leyendose igual de nitidos a cualquier zoom), asi
-                         que el hueco tiene que reservarlo el icono: margen asimetrico (mas hueco
-                         arriba-derecha para el punto, abajo-derecha para el contador de 4 cifras)
-                         en vez de subir el margen uniforme entero (eso habria encogido el icono en
-                         TODOS los tamaños, no solo el minimo). Verificado: 0 hallazgos de
-                         verificarTransicion.js tras el cambio, mismo par antes/despues.
-
-                         SEGUNDA RONDA (16-sep-2026, tarde): el modo de "juego libre" de KeepQA
-                         (pywinauto/UIA externo, exploracion real sin guion) encontro un QUINTO
-                         solape que el arreglo de arriba no cubria - ni siquiera a MinWidth/
-                         MinHeight, sino ya al tamaño de ARRANQUE por defecto (1180x860, "no
-                         reducido") - entre el sprite y la estrella "★" de mejor prefijo sugerido
-                         (esquina SUPERIOR IZQUIERDA, ver el TextBlock de abajo con
-                         HasBestPrefixSuggestion). Motivo real: el margen de arriba solo crecio a la
-                         derecha/abajo (por el contador/punto), nunca a la izquierda/arriba - con
-                         Stretch=Uniform el icono se centra dentro de la caja YA reducida y
-                         descentrada que le deja el margen asimetrico, así que en vez de quedar
-                         alejado de la esquina superior-izquierda, quedaba mas PEGADO a ella que con
-                         el margen uniforme original de 4px. Confirmado con un arnes C# propio
-                         (KEEPQA_EQUIPINV_SOLO=1, ver Terrakeep.App.Tests/AuditoriaEquipInv.cs) +
-                         node KeepQA/src/geometria/verificarGeometria.js sobre el volcado real del
-                         personaje 'Eldelgas' a 1180x860: solape Image×TextBlock de ~3x5px en
-                         Equipamiento (ContentPresenter#3) y en Inventario (ContentPresenter#10 y
-                         #30) - la MISMA estrella superior-izquierda en los tres casos, geometria
-                         medida, no solo la captura de juego libre. Arreglo real: subir tambien
-                         Izquierda/Arriba a los mismos valores que ya tenian Derecha/Abajo (9/12,
-                         ambos ya probados sanos por el arreglo de la mañana) - la caja reservada
-                         para el icono queda simetrica (9,12,9,12) y demostrable por construccion:
-                         con Stretch=Uniform el icono jamas se sale de la caja que le deja el
-                         margen, así que si esa caja ya no invade el rectangulo de NINGUNA de las 4
-                         esquinas (Izquierda>=ancho de la estrella, Arriba>=alto de la estrella,
-                         mismo razonamiento ya validado para Derecha/Abajo con el contador/punto),
-                         el solape queda eliminado en TODO el rango de tamaños, no solo el minimo. -->
+                    <!-- Margin=9,12,9,12 simetrico (no solo Derecha/Abajo): con Stretch=Uniform el icono nunca sale de la caja que le deja el margen, asi que un margen simetrico >= al tamano de los indicadores de las 4 esquinas (contador, punto Calamity, estrella de prefijo) elimina el solape por construccion en todo el rango de tamanos de ventana. Historial completo (el arreglo asimetrico insuficiente y el 5o solape encontrado por juego libre de KeepQA): ADR-TERRAKEEP-004. -->
                     <Image Source="{Binding IconPath}" Stretch="Uniform" Margin="9,12,9,12"
                            RenderOptions.BitmapScalingMode="NearestNeighbor"
                            Visibility="{Binding IconPath, Converter={StaticResource NullToVis}}" />
@@ -1962,43 +1923,7 @@
                      distintos" de la escala del proyecto - sin este margen, a cualquier ancho
                      donde la franja central se estrecha, los botones de la derecha quedaban
                      pegados al ultimo dato vital (dinero/horas), leyendose como el mismo grupo. -->
-                <!-- AR-LAY (6-sep-2026): WrapPanel, no StackPanel Horizontal - con la columna ya en
-                     "*" (arriba), esto es lo que hace que la fila CEDA de verdad en vez de
-                     recortarse: lo que no cabe pasa a una segunda fila. Mismo arreglo exacto que
-                     R-01/H-08 hizo con los 6 botones de la cabecera de Inventario, y medido igual:
-                     dejando el StackPanel aqui, el reparto nuevo de columnas salva la franja vital
-                     pero son los BOTONES los que se cortan (81 firmas del barrido, con "Cargar
-                     personaje (.plr)..." perdiendo 157,9px), porque un StackPanel horizontal no
-                     tiene forma de ceder. Con WrapPanel no se pierde nada por ninguno de los dos
-                     lados.
-                     ItemHeight=36 es necesario y esta medido: un WrapPanel da a cada linea la
-                     altura de SU contenido, asi que la fila de abajo (donde cae "Guardar" solo, sin
-                     ningun separador que la eleve) quedaba a 32,6px contra los 36 de la de arriba y
-                     los botones dejaban de tener el mismo alto - la regresion que A8-06 vigila. 36
-                     es el alto real que ya tenian los 6 en una sola fila, no un numero inventado.
-                     FALLO-2 (reportado por el usuario, 14-sep-2026 - "Cargar personaje (.plr)...,
-                     Historial de versiones, Buscar en el personaje, Codigo de build estan demasiado
-                     juntos"): espaciado (Parte 8 de ESPEC-VISUAL-QA.md, Spacing Intelligence), NO
-                     contencion ni solape - `verificarGeometria.js` ya daba 0 solapes reales sobre
-                     esta barra, confirmando que el problema era el HUECO, algo que ninguna pieza
-                     mecanica de KeepQA comprobaba hasta hoy (pieza nueva de esta ronda:
-                     KeepQA/src/espaciado/verificarEspaciado.js). Volcado real de esta barra
-                     (Terrakeep.App.Tests/AuditoriaKeepQA.cs, grupo "cabecera_barra_botones") al
-                     tamaño NORMAL por defecto (1180x860): a ese ancho la barra YA envuelve a una
-                     segunda linea ("Historial de versiones"/"Codigo de build"/separador/"Guardar"
-                     caen debajo de la primera), y el salto entre esas dos lineas media EXACTAMENTE
-                     0px (la fila de abajo tocaba border a border con la de arriba) - confirmado con
-                     `verificarEspaciado.js`: hallazgo Spacing/High, "salto_de_linea" 0px, frente a
-                     una mediana real de 12px en el resto de huecos de la misma barra. Arreglo:
-                     ItemHeight sube de 36 a 44 (+8, el mismo orden de magnitud que el resto de
-                     huecos ya calibrados en esta misma barra - 8/10/12px, no un numero inventado)
-                     y CADA hijo directo gana 8px de margen inferior (ver cada Margin de abajo) -
-                     como Margin se resta del cell fijo de ItemHeight (confirmado con el propio
-                     volcado: el separador ya usaba este mismo mecanismo, Margin vertical 4+4 sobre
-                     ItemHeight=36 da su alto real de 28px), el alto VISIBLE de cada boton/separador
-                     se mantiene IDENTICO a antes (36/28px) y los 8px nuevos aparecen como hueco en
-                     blanco real al final de cada celda - exactamente entre lineas cuando envuelve,
-                     sin cambiar el tamaño de ningun boton. -->
+                <!-- WrapPanel (no StackPanel): cede a segunda linea en vez de recortar botones cuando no cabe todo. ItemHeight=44 (36 base + 8 de espaciado inferior en cada hijo via Margin, nunca cambia el alto visible) separa visualmente la 1a y 2a linea cuando envuelve - antes tocaban borde a borde (0px real medido). Historial completo (por que StackPanel fallaba, la calibracion 36->44 con verificarEspaciado.js): ADR-TERRAKEEP-006. -->
                 <WrapPanel Grid.Column="2" ItemHeight="44" VerticalAlignment="Center" Margin="20,0,0,0">
                     <!-- T-H/F1 (segunda auditoria de Opus, Fable): "N-3 esta bien hecho pero no se
                          anuncia en ningun sitio (sin ToolTip en la cabecera)... un atajo que nadie
@@ -2215,35 +2140,7 @@
                      envolveria por su cuenta. -->
                 <WrapPanel Grid.Column="1" VerticalAlignment="Center" MaxWidth="{Binding VitalsStripMaxWidth}"
                             Visibility="{Binding ShowVitalsStrip, Converter={StaticResource BoolToVis}}">
-                    <!-- FALLO-1 (reportado por el usuario, 14-sep-2026 - "la barra de vida/mana...
-                         estan desfasadas"): icono y barra de Vida, e icono y barra de Mana, eran
-                         CUATRO hijos DIRECTOS y sueltos del WrapPanel (icono, Grid, icono, Grid) -
-                         un WrapPanel envuelve cada hijo directo a su propia linea de forma
-                         independiente (a proposito, ver R-04a/H-04a mas abajo), asi que a un ancho
-                         real (confirmado: 1180px, el tamaño NORMAL por defecto de la ventana, no
-                         un extremo) el WrapPanel partia la pareja Mana en dos: el icono "✦" se
-                         quedaba en la linea 1 (junto a Vida) y su propia barra "0/0" caia SOLA a
-                         la linea 2 (junto a Defensa/Dinero/Horas) - el icono de Mana quedaba
-                         huerfano de su barra, y la franja de Defensa/Dinero/Horas parecia
-                         "desfasada" un icono entero hacia la izquierda porque en realidad estaba
-                         alineada con la barra de Mana, no con su icono.
-                         Encontrado con evidencia real, no a ojo: primer volcado de geometria de
-                         esta zona para KeepQA (Terrakeep.App.Tests/AuditoriaKeepQA.cs, grupo
-                         "cabecera_franja_vitales" - hasta hoy esta zona JAMAS se habia volcado,
-                         KeepQA/src/alineacion/verificarAlineacion.js nunca pudo verla) mas una
-                         captura real recortada de la cabecera a 1180x860 mostrando el icono "✦"
-                         solo al final de la linea 1. `verificarAlineacion.js` contra el volcado
-                         real: grupo "cabecera_franja_vitales", eje horizontal DESALINEADO, 20.62px
-                         de desvio real en el icono/barra de Vida y el icono de Mana frente al
-                         resto (que cae en la linea 2) - confirma la orientacion "ambiguo/grid" que
-                         la pieza asigna cuando un grupo se reparte en dos lineas de verdad.
-                         Arreglo: icono+barra de Vida (y de Mana) pasan a vivir dentro de su PROPIO
-                         StackPanel horizontal, exactamente el mismo patron ya usado mas abajo para
-                         Defensa/Horas ("un StackPanel de piezas que nunca deben separarse") - ahora
-                         son una unidad atomica para el WrapPanel, no puede volver a partirlos.
-                         Mismos margenes reales de antes (dcha 20/vida, dcha 14/mana, abajo 4 en
-                         todos - C-12/C-14), solo trasladados del hijo suelto al StackPanel nuevo
-                         que los envuelve, sin cambiar ningun numero de espaciado ya calibrado. -->
+                    <!-- Vida/Mana viven cada uno en su propio StackPanel horizontal (icono+barra), nunca como hijos sueltos del WrapPanel exterior: un WrapPanel envuelve cada hijo DIRECTO a su propia linea, y sueltos partia la pareja Mana entre 2 lineas a 1180px (icono en la linea 1, barra sola en la 2). Ahora son una unidad atomica que no puede volver a partirse. Historial completo (FALLO-1, medicion con verificarAlineacion.js): ADR-TERRAKEEP-009. -->
                     <!-- Vida -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,20,4" VerticalAlignment="Center">
                         <TextBlock Text="♥" FontSize="13" Foreground="{StaticResource CalamityBrush}" VerticalAlignment="Center" />
@@ -2743,29 +2640,7 @@
                          real de H-3 (GlobalErrorMessage) y N-1 (SaveConfirmationVisible). -->
 
                     <TextBlock Text="{Binding Loc[home_more_actions], Mode=OneWay}" Style="{StaticResource SectionText}" Margin="0,0,0,12" />
-                    <!-- I-c/F2 (segunda auditoria de Opus, Fable): MinHeight en vez de Height fijo
-                         en las tarjetas de abajo - un titulo/descripcion real que necesite mas de
-                         las 2 lineas habituales (ej. una traduccion mas larga) hace crecer la
-                         tarjeta en vez de recortarse contra un alto fijo.
-                         Catalogo de rediseño visual T4 (20-sep-2026): 7 tarjetas del mismo peso
-                         real → 3. Antes de esta ronda repetian exactamente lo que la rail (T1,
-                         misma ronda) ya ofrece siempre visible - "el Inicio deja de repetir lo
-                         que ya dice la rail" es el motivo real que da el propio catalogo. Se
-                         quedan las 3 acciones de "hacer algo" (Libreria/Builds/Exploracion);
-                         Novedades/Acerca de/Guia/Servidor siguen alcanzables de siempre por la
-                         rail, ahora agrupada e iconizada (T1) - nunca menos accesibles que antes,
-                         solo sin la tarjeta duplicada aqui.
-                         Catalogo de rediseño visual T4, cerrado del todo (21-sep-2026, tercer
-                         intento real): el catalogo pedia 3 sugerencias DINAMICAS ("Te toca:
-                         Plantera", "Builds de tu clase", "Tu ultimo mundo") - la ronda anterior
-                         las dejo como limite documentado por falta de infraestructura real. Esa
-                         infraestructura ya existe (ver HomeViewModel.ComputeGuideObjective, la
-                         misma que la 3ª KPI de la tarjeta hero) - "Te toca: X" y "Tu ultimo mundo"
-                         se añaden como tarjetas CONDICIONALES (solo se enseñan con un dato real
-                         detras, null = simplemente no aparecen, nunca un dato a medias). "Builds
-                         de tu clase" no aporta un destino distinto del que ya da la tarjeta
-                         "Builds" de abajo (mismo Command/pestaña) - se omite por ser pura
-                         duplicacion, no falta de datos. -->
+                    <!-- MinHeight (nunca Height fijo): un titulo/descripcion mas largo hace crecer la tarjeta en vez de recortarse. Cabecera de Inicio reducida a 3 tarjetas reales de "hacer algo" (Libreria/Builds/Exploracion) - Novedades/Acerca de/Guia/Servidor siguen accesibles por la rail, sin duplicarlos aqui. "Te toca: X" y "Tu ultimo mundo" son condicionales (null=no aparecen, nunca a medias). Historial completo (por que 7 tarjetas bajaron a 3): ADR-TERRAKEEP-013. -->
                     <ItemsControl>
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -2850,49 +2725,7 @@
                              una tarjeta de la Libreria hasta un slot visible sea posible de verdad. -->
                         <Grid>
                             <Grid.RowDefinitions>
-                                <!-- Antes fija en 270px SIEMPRE (46% del alto util de esta
-                                     pestaña) - pregunta a Opus sobre el diseño (2-sep-2026):
-                                     Auto dejaba que la cabecera colapsable de abajo decidiera
-                                     su propio alto real, pero un "Auto" con un hijo de 238px
-                                     fijo SIEMPRE cobra esos 238px primero, sea cual sea el alto
-                                     real disponible - la fila "*" de arriba (el contenido
-                                     principal, Inventario/Almacenes/Equipamiento) se quedaba
-                                     con lo que sobrara, hasta cero si hacia falta - "el
-                                     Inventario estaba subvencionando a la Libreria" (consulta a
-                                     Opus, septima pasada). Las DOS filas compiten de verdad por
-                                     el alto real disponible (ambas "*" cuando la Libreria esta
-                                     desplegada) - Objetos con prioridad y un suelo real (216px
-                                     = 5 filas de Inventario a 40px + huecos, el caso mas
-                                     exigente de los 3 sub-tabs que comparten esta fila).
-                                     Segunda auditoria de Opus (Fable), B-1 - BUG REAL
-                                     encontrado y arreglado ya una vez (octava pasada, commit
-                                     83fd33c) y perdido por un revert de rango demasiado ancho
-                                     (c38c960): al pasar de "Auto" a "*" para resolver lo de
-                                     arriba, PLEGAR la Libreria dejo de devolver espacio de
-                                     verdad - la fila seguia siendo "1*" con MinHeight=150
-                                     SIEMPRE, asi que plegada seguia dejando una banda vacia de
-                                     150-238px con forma de Libreria (el usuario la veia como
-                                     "expandida" aunque el boton dijera lo contrario).
-                                     Height/MinHeight de la fila de la Libreria ahora dependen
-                                     de IsLibraryVisible (ver MainViewModel) via
-                                     BoolToGridLength/BoolToDouble - colapsada de verdad,
-                                     Height=Auto MinHeight=0 (se encoge al alto real de la barra
-                                     "Librería ▼ Desplegar", ~34px, cero hueco muerto);
-                                     desplegada, "2*" con suelo 200. MaxHeight se queda fijo,
-                                     sin depender de la visibilidad (un techo generoso no
-                                     molesta estando colapsada, Auto ya no crece de mas por si
-                                     solo).
-                                     H3-18 (tercera auditoria de Opus, Fable, nota - no es un
-                                     arreglo de codigo): el MinHeight=216 de arriba se penso para
-                                     "5 filas de Inventario a 40px + huecos", pero cabeceras
-                                     añadidas DESPUES de esa medicion (contador real "Inventario
-                                     (N/50)", A-c) le restan alto real disponible - a 1080x700
-                                     (el minimo real de la ventana) con la Libreria desplegada,
-                                     la 5ª fila del Inventario ya NO cabe entera sin desplazar
-                                     (el ScrollViewer de seguridad de mas abajo ya lo cubre, sigue
-                                     siendo accesible). Documentado aqui a proposito para que no
-                                     se redescubra como una regresion nueva la proxima vez que se
-                                     mida - es una limitacion conocida y aceptada, no un bug. -->
+                                <!-- Las 2 filas compiten de verdad por el alto ("*" ambas cuando la Libreria esta desplegada): Objetos con MinHeight=216 (suelo real, 5 filas de Inventario) y Libreria con Height/MinHeight ligados a IsLibraryVisible (colapsada = Auto/0, desplegada = 2*/200) para que plegarla devuelva espacio de verdad. Limitacion conocida y aceptada: a 1080x700 con Libreria desplegada la 5a fila de Inventario ya no cabe entera sin el ScrollViewer de seguridad (accesible igualmente). Historial completo: ADR-TERRAKEEP-003. -->
                                 <RowDefinition Height="3*" MinHeight="216" />
                                 <RowDefinition Height="{Binding IsLibraryVisible, Converter={StaticResource BoolToGridLength}, ConverterParameter=2}"
                                                MinHeight="{Binding IsLibraryVisible, Converter={StaticResource BoolToDouble}, ConverterParameter=200}"
@@ -3002,67 +2835,8 @@
                                              perdidos en las 416 combinaciones. -->
                                         <Border BorderBrush="{StaticResource OrangeBrush}" BorderThickness="2" CornerRadius="10"
                                                 Background="{StaticResource BgSecondaryBrush}" Padding="10,6" Margin="0,2,0,0">
-                                            <!-- Columnas de ancho real, no proporciones puras (consulta a
-                                                 Opus, septima pasada): "2*/5*/4*" no guardaba ninguna
-                                                 relacion con los anchos minimos REALES de cada bloque (52/
-                                                 216/192px medidos) - a la resolucion minima de la propia
-                                                 ventana la columna central (Armadura/Accesorios, la que
-                                                 mas lo necesita) se quedaba corta y su contenido real
-                                                 (SlotGridPanel no recorta solo, WPF Panel no clipea a sus
-                                                 hijos por defecto) desbordaba visiblemente sobre el lateral
-                                                 de Monedas/Municion. Los laterales van a "Auto" con un
-                                                 MinWidth real (su contenido ya se autolimita via MinCell/
-                                                 ReferenceWidth, el MinWidth es solo la red de seguridad);
-                                                 el centro se queda con TODO el sobrante ("*"). ClipToBounds
-                                                 en el propio SlotRowHost como segunda red de seguridad -
-                                                 nunca deberia activarse ya con esto, pero si algun caso
-                                                 raro se escapa, prefiere recortar en silencio a solapar
-                                                 visiblemente encima de otro contenido.
-
-                                                 AR-14 (6-sep-2026, queja real del usuario: "los slots de
-                                                 accesorios se vuelven a solapar con las monedas/municion a
-                                                 pantalla mas pequeña"). Los DOS laterales tenian su MinWidth
-                                                 real desde la septima pasada; el centro, que es el unico que
-                                                 puede desbordar de verdad, se quedo SIN NINGUNO - o sea, sin
-                                                 ninguna garantia: se lleva "todo el sobrante", y lo que sobre
-                                                 puede ser cualquier cosa porque las dos laterales son "Auto"
-                                                 y crecen con su contenido. La cuenta que importa:
-                                                 SlotGridPanel congela la celda en MinCell (40) cuando el
-                                                 ancho no da para mas y devuelve igualmente
-                                                 5*40 + 4*Gap(4) = 216px - o sea que por debajo de 216px de
-                                                 columna la rejilla NO encoge, se sale, y el ScrollViewer de
-                                                 ContainerCompactTemplate (HorizontalScrollBarVisibility=
-                                                 "Disabled") la recorta en seco: el ultimo accesorio se ve
-                                                 CORTADO justo donde empieza la caja de Monedas, que es
-                                                 literalmente lo reportado. MinWidth=216 aqui convierte eso en
-                                                 imposible por construccion (WPF recorta antes las columnas
-                                                 Auto que el MinWidth de una columna estrella), sin fijar
-                                                 ningun ancho ni quitarle sitio a nadie mientras haya de
-                                                 sobra. -->
-                                            <!-- AR-LAY (18-sep-2026, arreglo real de producto tras la investigacion de
-                                                 la ronda anterior - ver bitacora.md, misma fecha): con Social/Dyes (vista
-                                                 Apariencia) o IsEquipmentExpanded=True y la Libreria DESPLEGADA a la vez,
-                                                 SlotRowHost pedia 166,2px (fila 0 Auto=82,2 + fila 1 MinHeight=84) pero el
-                                                 Border exterior solo le daba 147,4px reales - SlotRowHost SI respeta su
-                                                 propio MinHeight internamente (nunca encoge la rejilla por debajo de 84),
-                                                 asi que el sobrante de 18,9px se recortaba en silencio por su propio
-                                                 ClipToBounds, fuera del alcance del ScrollViewer que ya vivia DENTRO de su
-                                                 fila "*" (ese ScrollViewer interno solo ve su propia celda, que desde
-                                                 dentro ya "tiene sitio de sobra" - el hambriento es el ANCESTRO, no la
-                                                 celda). Este ScrollViewer, que envuelve el SlotRowHost ENTERO (en vez de
-                                                 vivir dentro de una de sus filas), mueve el escape de scroll al sitio
-                                                 correcto: al medir con alto infinito (como hace cualquier ScrollViewer con
-                                                 su contenido) SlotRowHost consigue su alto real completo (166,2px, nada
-                                                 recortado), y es el propio ScrollViewer -con un viewport real mas pequeño
-                                                 que ese contenido cuando el Border no tiene los 166,2px- quien ofrece un
-                                                 scroll vertical real para llegar al resto. Cuando SI hay sitio de sobra
-                                                 (caso sano de siempre: Items, o Libreria plegada) el contenido cabe entero
-                                                 en el viewport y no aparece ninguna barra - visualmente identico a antes.
-                                                 Horizontal sigue "Disabled" (mismo patron ya usado en CajaMascotasTintes,
-                                                 mas abajo en este fichero): el ancho de las 3 columnas no cambia, solo se
-                                                 le da salida real al alto. Verificado con BarridoMaquetacionPorTamañoEIdioma
-                                                 real (ver bitacora.md) - 0 elementos perdidos en el caso que fallaba, sin
-                                                 regresion en Items/Libreria plegada/otros tamaños ya sanos. -->
+                                            <!-- Columna central "*" con MinWidth=216 (5 slots MinCell=40 + gaps, el minimo real de SlotGridPanel cuando no le cabe mas): red de seguridad para que WPF recorte antes las columnas Auto de los laterales que el MinWidth de esta estrella, nunca al reves. Laterales van a Auto+MinWidth propio (su contenido ya se autolimita). Historial completo (por que "2*/5*/4*" no bastaba, el bug real de solape AR-14): ADR-TERRAKEEP-007. -->
+                                            <!-- ScrollViewer envuelve el SlotRowHost ENTERO (nunca dentro de una fila suya): mide con alto infinito y le da su DesiredSize real completo, y es el propio ScrollViewer (viewport mas pequeno que ese contenido cuando el Border ancestro no tiene sitio) el que ofrece scroll vertical real - antes el recorte lo hacia ClipToBounds del ANCESTRO, invisible al ScrollViewer interno de una fila. Horizontal Disabled: el ancho de columnas no cambia. Historial completo (caso real Social/Dyes + Libreria desplegada): ADR-TERRAKEEP-011. -->
                                             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                               <controls:SlotRowHost ClipToBounds="True">
                                                   <Grid.ColumnDefinitions>
@@ -3225,27 +2999,7 @@
                                                   </StackPanel>
                                                   </ScrollViewer>
 
-                                                  <!-- Centro: Equipamiento 5x2 real (Columns=5, ver
-                                                       EquipmentGroupViewModel.AddSlotSet). Un unico panel a
-                                                       la vez (pildoras "Vista:" de arriba) en Compacto/Normal.
-                                                       AR-LAY (15-sep-2026, ronda de re-verificacion de los 21
-                                                       FALLO): a 1080x700 [es], con la Libreria de abajo
-                                                       DESPLEGADA (IsLibraryVisible=True le quita MinHeight=200 +
-                                                       2* al presupuesto compartido de esta pestaña, ver las
-                                                       RowDefinitions de la Grid exterior mas arriba) y un
-                                                       conjunto real equipado, la fila "*" MinHeight=84 de este
-                                                       SlotRowHost se queda hambrienta (147,4px de alto real en
-                                                       vez de los 190,1px que tiene con la Libreria plegada) y la
-                                                       rejilla de Armadura/Accesorios pierde 18,9px por abajo -
-                                                       detectado por el barrido AR-LAY real, cero pixeles a ojo,
-                                                       un escenario real y nada raro (Libreria desplegada mientras
-                                                       se equipa es justo para lo que existe el boton). El lateral
-                                                       IZQUIERDO (Mascotas/Tintes, arriba en este mismo fichero) ya
-                                                       resolvia el mismo problema de fondo con su propio
-                                                       ScrollViewer de seguridad - el centro era la unica de las 3
-                                                       columnas de esta fila fusionada sin uno. Mismo patron aqui:
-                                                       nunca perder contenido de verdad, un scroll vertical
-                                                       silencioso es preferible a un recorte sin salida. -->
+                                                  <!-- ScrollViewer propio en el centro (mismo patron que el lateral Mascotas/Tintes): la fila "*" MinHeight=84 de este SlotRowHost se queda hambrienta cuando la Libreria esta desplegada a la vez (147,4px reales en vez de 190,1px), y sin scroll perdia 18,9px de Armadura/Accesorios por abajo. Nunca perder contenido de verdad: un scroll vertical silencioso es preferible a un recorte sin salida. Historial completo (medicion real del barrido AR-LAY): ADR-TERRAKEEP-015. -->
                                                   <ScrollViewer Grid.Column="1" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                                                 Visibility="{Binding IsEquipmentExpanded, Converter={StaticResource InverseBoolToVis}}">
                                                       <ContentControl Content="{Binding EquipmentGroup.Current}"
@@ -3286,45 +3040,7 @@
                                                       </StackPanel>
                                                   </Grid>
 
-                                                  <!-- Lateral derecho: Monedas + Municion, horizontal (ya lo
-                                                       estaba - Columns=10 por defecto, 4 slots caben en una
-                                                       unica fila corta) - pedido explicito "municion asi en
-                                                       horizontal esta bien".
-
-                                                       AR-14c (6-sep-2026, pedido explicito de arreglarlo "si o
-                                                       si" tras quedar como limite conocido de AR-LAY): esta caja
-                                                       se cortaba a 1080x700 - pedia 125,3px de ALTO y solo tenia
-                                                       103,7 utiles, o sea media fila de Municion partida y sin
-                                                       ningun scroll con el que alcanzarla. La clave que faltaba
-                                                       es que el corte es de ALTO, no de ancho: por eso los tres
-                                                       arreglos que se probaron sobre el reparto HORIZONTAL
-                                                       tuvieron todos un efecto colateral peor, medido:
-                                                         (a) ScrollViewer propio -> la barra vertical ensancha
-                                                             esta columna "Auto" de 200 a 209,2px y esos 9,2px
-                                                             salen de la CENTRAL: 2 slots de accesorios cortados
-                                                             otra vez (la regresion que AR-14 vigila);
-                                                         (b) MaxWidth=200 en la columna -> el Border (201px con
-                                                             su Margin) se sale y se corta la propia barra;
-                                                         (c) apilarla DEBAJO del centro ocupando todo el ancho
-                                                             (con Monedas y Municion uno al lado del otro) ->
-                                                             arregla esta caja pero la fila del centro cae de
-                                                             115,7 a 38,1px para una rejilla que necesita 84
-                                                             (2 filas de MinCell 40 + Gap): los 10 slots de
-                                                             Armadura/Accesorios se salen 45,9px por abajo y hay
-                                                             que scrollear para ver la segunda fila (AR-14d).
-                                                       Lo que si sobra es alto, y estaba ahi al lado sin usar: la
-                                                       franja del selector Loadout/Vista (fila 0, 82,2px) se
-                                                       estiraba por encima de esta caja con un ColumnSpan que no
-                                                       necesitaba. Con RowSpan="2" la caja ocupa las dos filas de
-                                                       su columna - exactamente lo que el lateral IZQUIERDO ya
-                                                       hacia desde la quinta pasada, y por el mismo motivo - y
-                                                       pasa de 115,7 a 197,9px de alto a 1080x700: 185,9 utiles
-                                                       para los 125,3 que pide, sin tocar ni un pixel del reparto
-                                                       horizontal (la columna sigue siendo Auto con MinWidth=200 y
-                                                       el centro conserva su MinWidth=216 intacto). Verificado en
-                                                       4.582 layouts reales entre 1080x700 y 2560x1440, incluido
-                                                       px a px en 1080-1320 y 1480-1600: 0 cortes por ninguno de
-                                                       los dos lados. -->
+                                                  <!-- Grid.RowSpan=2: esta caja ocupa las 2 filas de su columna (igual que el lateral izquierdo) para aprovechar el alto de la franja del selector Loadout/Vista que no necesita - el corte real que arreglaba era de ALTO a 1080x700, no de ancho, por eso ScrollViewer propio/MaxWidth/apilar debajo (probados y descartados) empeoraban otras columnas. Historial completo con los 3 intentos descartados y medidas reales: ADR-TERRAKEEP-005. -->
                                                   <Border x:Name="CajaMonedasMunicion" Grid.Column="2" Grid.Row="0" Grid.RowSpan="2" Background="{StaticResource BgPrimaryBrush}"
                                                           CornerRadius="8" Padding="6" Margin="8,0,0,0">
                                                       <!-- VerticalAlignment="Top" (13-sep-2026, auditoria de solapes/cajas): sin
@@ -6041,29 +5757,7 @@
                                                 </TextBlock>
                                             </Canvas>
 
-                                        <!-- Idea 7: bandas de profundidad de la Guia - una franja horizontal
-                                             translucida por la Zona real del paso PENDIENTE actual (Superficie/
-                                             Subterraneo/Cavernas/Infierno), usando los MISMOS umbrales reales que ya
-                                             pinta el fondo del mapa (WldHeader.ZoneFor - ver el comentario real de
-                                             ExplorationViewModel.GuideBand*). Sin ScaleTransform inverso a proposito:
-                                             una banda representa una region REAL del mundo, tiene que escalar CON el
-                                             zoom igual que el propio mapa, no quedarse a tamaño de pantalla fijo como
-                                             los marcadores de punto de arriba. IsHitTestVisible=False: es una capa
-                                             puramente informativa, nunca debe robarle el clic al mapa de debajo.
-                                             Bug real reportado por el usuario en vivo (21-sep-2026, "niebla azul
-                                             dividiendo la superficie" - confundida con un bug): el mecanismo SI es
-                                             real e intencional, pero el diseño tenia dos fallos reales genuinos -
-                                             las 4 bandas usaban el MISMO color (AccentMutedBrush), indistinguibles
-                                             entre si salvo por la posicion, Y no habia ninguna etiqueta en pantalla
-                                             que dijera "esto es el indicador de zona de la Guia" - nada explicaba
-                                             la niebla, asi que leerla como un bug era razonable. Arreglado con
-                                             evidencia real pedida por el coordinador: color DISTINTO por banda,
-                                             reutilizando brushes YA reales de Theme.xaml (nunca inventados) y
-                                             ninguno coincide con los de los marcadores de PUNTO de aparicion ya en
-                                             el mapa (AccentBrush=estrella de Spawn Points del personaje,
-                                             OrangeBrush=casa de spawn del mundo) - ver tambien el chip real
-                                             "Guia: <Zona>" añadido mas abajo, mismos 4 colores, misma condicion
-                                             real de visibilidad. -->
+                                        <!-- Banda de zona real (Superficie/Subterraneo/Cavernas/Infierno, mismos umbrales que WldHeader.ZoneFor), sin ScaleTransform inverso a proposito: representa una region real del mundo, escala CON el zoom igual que el mapa. IsHitTestVisible=False: capa puramente informativa, nunca roba el clic al mapa. Color DISTINTO por banda y ninguno coincide con los marcadores de punto ya existentes - sin esto se leia como un bug real ("niebla azul"). Historial completo: ADR-TERRAKEEP-014. -->
                                         <Rectangle Width="{Binding ElementName=WorldMapImage, Path=ActualWidth}" IsHitTestVisible="False" Panel.ZIndex="1"
                                                    Fill="{StaticResource MasterGoldBrush}" Opacity="0.30">
                                             <Rectangle.Style>
@@ -6235,30 +5929,7 @@
                                                             <ScaleTransform ScaleX="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}"
                                                                             ScaleY="{Binding DataContext.Exploration.Zoom, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:InverseValueConverter.Instance}}" />
                                                         </Grid.RenderTransform>
-                                                        <!-- Bug real reportado por el usuario con captura (19-sep-2026, el
-                                                             tercer reporte de marcador desplazado; medido en AR-MRK):
-                                                             esto era 0.5,0.5 y era LA causa raiz del desfase, compartida
-                                                             por TODAS las categorias de resultado (cofre, mineral,
-                                                             objeto, letrero...) porque todas salen de ESTA plantilla.
-                                                             El punto de tile es la esquina (0,0) de este Grid - lo fija
-                                                             Canvas.Left/Top del ContentPresenter de arriba - NO su
-                                                             centro: el Grid mide lo que le dejan sus hijos de margen
-                                                             negativo (Marco 10x10 con Margin -5 da un DesiredSize de
-                                                             5x5; 24x24 con Margin -12, o sea el resultado ACTIVO, da
-                                                             12x12). Escalar por 1/Zoom con el pivote en ese centro
-                                                             desplazaba el marcador `mitadDelGrid * (1 - 1/Zoom)` tiles:
-                                                             exactamente 0 a Zoom=1 (por eso la medicion del 18-sep, que
-                                                             solo probo Zoom 1.0 y 0.09 sobre OTRO marcador, lo dio por
-                                                             bueno) y hasta -61 tiles a Zoom 0.09 o +4.5 tiles a Zoom 6
-                                                             en el marcador grande - "varios tiles", justo lo que el
-                                                             usuario veia y rodeo en su captura.
-                                                             Con el pivote en 0,0 la escala gira alrededor del punto de
-                                                             tile REAL, asi que el ancla no se mueve a ningun zoom, y
-                                                             sigue siendo inmune al DesiredSize del Grid (que cambia solo
-                                                             con que el resultado pase a ser el activo). Mismo efecto que
-                                                             consigue TEdit por otro camino: calcula el centro en
-                                                             PIXELES de pantalla y solo entonces resta medio marcador,
-                                                             asi que su ancla tampoco depende del zoom. -->
+                                                        <!-- RenderTransformOrigin=0,0 (NUNCA 0.5,0.5): el punto de tile es la esquina (0,0) de este Grid (fijada por Canvas.Left/Top del ContentPresenter padre), no su centro - escalar por 1/Zoom con pivote en el centro desplazaba el marcador hasta 61 tiles a zoom extremo (bug real reportado 3 veces, causa raiz compartida por TODAS las categorias que usan esta plantilla). Mismo mecanismo que usa TEdit por otro camino. Historial completo con las medidas por zoom: ADR-TERRAKEEP-012. -->
                                                         <Grid.RenderTransformOrigin>0,0</Grid.RenderTransformOrigin>
                                                         <!-- Anillo de pulso: invisible en reposo (Opacity=0), un solo ciclo
                                                              de Storyboard al llegar a ser el resultado activo. -->
@@ -6677,148 +6348,7 @@
                         </Button.Style>
                     </Button>
 
-                    <!-- Bug real reportado por el usuario probando la app (6-sep-2026): "en todas
-                         las secciones de Exploracion se pierde contenido con el scroll". Causa real
-                         medida con el arnes (AR-11a/AR-11c): esta columna era un DockPanel PELADO,
-                         sin ninguna via de scroll. Un DockPanel sirve a sus hijos Dock=Top/Bottom
-                         PRIMERO y le deja al relleno (el contenido de la categoria: chips, botones y
-                         la lista real) solo lo que sobre - a 1080x700 con "Este mundo" desplegado
-                         eso eran 14px, y los chips "Por tipo de cofre"/"Por lo que contienen"/
-                         "Cofre a cofre", "Marcar en el mapa"/"Quitar marcas", "Buscar seleccionados"
-                         y "NPCs que faltan" quedaban recortados 14-17px SIN ninguna barra con la que
-                         llegar a ellos: contenido perdido de verdad, en las 5 categorias.
-                         El arreglo es un ScrollViewer con Height ligado al ViewportHeight del PROPIO
-                         ScrollViewer mas un MinHeight real:
-                           - Ventana con sitio: Height = viewport exacto -> reparto IDENTICO al de
-                             antes (listas estiradas, sin barra, nada cambia).
-                           - Ventana baja: gana MinHeight -> el contenido pasa a ser mas alto que el
-                             viewport y aparece la barra; nada se pierde.
-                         Height (no MinHeight a secas sobre el DockPanel) es deliberado: el
-                         ScrollViewer mide a su hijo con alto INFINITO, y un ListBox medido con
-                         infinito realiza TODOS sus contenedores - justo la virtualizacion que F-5
-                         monto para las listas largas (cientos de cofres). Con Height/MinHeight la
-                         medida es SIEMPRE finita y la virtualizacion sigue viva.
-                         MinHeight=590 no es un numero redondo al azar: es el viewport real de esta
-                         columna al tamaño por defecto del arnes (1180x860), menos un margen, y
-                         AR-11f comprueba de forma permanente que a ese tamaño NO aparece barra
-                         (con 640 aparecia por 14px - el scroll debe ser la red de seguridad, no
-                         el modo normal de usar la columna).
-                         AR-LAY (6-sep-2026): baja de 600 a 590. Ese 600 se calibro cuando el
-                         viewport eran 626px; la cabecera global ha ido creciendo desde entonces
-                         (botones nuevos, y el ItemHeight=36 de su WrapPanel) y hoy ese viewport
-                         son 597px medidos, con lo que el 600 hacia aparecer la barra por 3px
-                         justos - exactamente lo que AR-11f dice cuando falla ("el MinHeight es
-                         demasiado alto"). Es un numero calibrado contra la cabecera, asi que
-                         volver a medirlo cuando la cabecera cambia forma parte del trato.
-
-                         Editor de mundos v1 (14-sep-2026): subido de 590 a 652 - dos Expanders
-                         nuevos en esta MISMA columna ("Editar mundo"/"Bestiario", 23px + 8px de
-                         margen cada uno colapsado = 62px reales, medidos con el arnes) son
-                         contenido REAL que antes no existia, y sin subir el suelo el barrido
-                         AR-15/AR-EX1 encontraba filas de NPCs/Objetos genuinamente inalcanzables
-                         (perdidas de verdad, no solo "hay que hacer scroll") en varios tamaños de
-                         ventana - la regresion real que este numero existe para evitar. Efecto
-                         secundario aceptado y documentado en bitacora.md: con la cabecera global
-                         ya mas alta que cuando 590 se calibro (ver el parrafo de arriba) Y ahora
-                         MinHeight tambien mas alto, la barra lateral SI aparece de forma visible
-                         al tamaño por defecto del arnes (1180x860) aunque en teoria "sobre
-                         sitio" - una barra de scroll de mas es un coste menor y honesto frente a
-                         contenido de verdad inalcanzable, que es lo que este mecanismo existe
-                         para impedir.
-
-                         FALLO-3 (14-sep-2026, mas tarde): subido de 652 a 800 - mismo mecanismo
-                         que el parrafo de arriba, esta vez para el bloque de resultados (ver el
-                         comentario real y las cifras medidas junto al Grid de dos filas
-                         "categoria/resultados" mas abajo, "ARREGLO REAL"). Con mas suelo de scroll
-                         total, la categoria Y los resultados crecen A LA VEZ sin robarse espacio
-                         entre si - medido con el arnes (FALLO3_SOLO=1): a 1180x860 la lista de
-                         resultados pasa de 70 a 148px reales (+111%) y la categoria de 178 a 245px
-                         (de 1 a 2 filas visibles, MEJORA). Mismo coste aceptado que el parrafo de
-                         arriba: mas scroll para llegar al fondo, nunca contenido inalcanzable.
-
-                         ExploracionRediseno Fase D (25-sep-2026, aplicador-fix): subido de 800 a
-                         1000 - mismo mecanismo otra vez, esta vez para el Inspector de cofre real
-                         (movido desde ChestRowTemplate a esta MISMA columna, ver
-                         ExplorationSidebarChestInspectorPlaceholder mas abajo). Medido con el arnes
-                         (COFRES_INSPECTOR_SOLO=1) a 1180x860 (tamaño por defecto), cofre real de 40
-                         slots (Math.Max(chest.MaxItems, chest.Items.Count) - TODOS los cofres
-                         reales usan 40 salvo modded, ver ExplorationViewModel.EditChest) con un
-                         objeto de 17 prefijos legales colocado (mismo caso limite que Fase C/las
-                         rondas anteriores): con MinHeight=800 los botones Guardar/Cancelar
-                         quedaban en Y=848,5-873,1px, MAS ALLA del DockPanel.ActualHeight=800px
-                         real - clipados de verdad, inalcanzables con scroll (ScrollableHeight tope
-                         en 800-viewport, comprobado con VerticalOffset/ScrollableHeight tras
-                         ScrollToBottom() real). Redondeado a 1000 con margen real para el
-                         TextBlock de estado (ChestEditStatus) que solo aparece tras guardar, y para
-                         sidebars mas estrechos que el default (menos columnas reales por fila del
-                         WrapPanel de slots = mas filas = mas alto). Mismo coste ya aceptado 3 veces
-                         en este fichero (590->652->800): un poco mas de scroll a cambio de que nada
-                         quede inalcanzable de verdad.
-
-                         PENDIENTE cerrado (14-sep-2026, ronda de cierre): el propio FALLO-3 dejo
-                         anotado un limite honesto SIN arreglar - al tamaño MINIMO real de la
-                         ventana (1080x700) el viewport del ScrollViewer (397px medidos) no llega a
-                         cubrir ni la cabecera fija de esta columna (titulo+3 Expanders colapsados+
-                         pildoras+buscador) antes de necesitar scroll, y nada en pantalla avisaba de
-                         que habia que bajar. Reducir la cabecera de verdad exigiria QUITAR
-                         contenido real (el Editor de mundo/Bestiario/"Este mundo" ya estan
-                         colapsados por defecto, no hay margen ahi sin perder informacion) o volver
-                         a tocar los MinHeight ya calibrados arriba (652/800) - alto riesgo de
-                         reabrir AR-11f/AR-15/AR-EX1 para un problema que en realidad es de
-                         DESCUBRIBILIDAD, no de contenido inalcanzable (con scroll, todo se alcanza,
-                         ver FALLO3_SOLO). Arreglo real: indicador visual propio (Border
-                         "ExplorationScrollHint" mas abajo) que SOLO aparece mientras queda scroll
-                         pendiente (OnExplorationSidebarScrollChanged en MainWindow.xaml.cs,
-                         recalculado en cada ScrollChanged real - tamaño de ventana, ancho de
-                         sidebar o contenido nuevo lo disparan todos por igual).
-
-                         PRIMER INTENTO, DESCARTADO CON EVIDENCIA REAL: superponer el indicador
-                         (Grid.Column="2" a secas, VerticalAlignment=Bottom, IsHitTestVisible=False)
-                         encima del propio ScrollViewer - a 1080x700 quedaba sobre hueco vacio y se
-                         veia bien, pero la captura real a 1180x860 (tamaño POR DEFECTO de la app,
-                         keepqa-evidencia\scrollhint-normal1180x860-sidebar320(defecto)-arriba.png)
-                         demostro que TAPABA contenido real ya visible ("Ordenar por distancia al
-                         spawn" quedaba medio oculto detras de la pildora) - cambiaba un problema de
-                         descubribilidad por uno de contenido oculto, peor que el original. Arreglo
-                         real: fila propia (Grid.RowDefinitions, Auto) DEBAJO del ScrollViewer, no
-                         encima - nunca puede tapar nada porque ya no comparte espacio con el
-                         contenido, solo le resta una franja fija y pequeña (~24px, medida con el
-                         arnes) al viewport cuando esta visible. Mismo principio ya aceptado en este
-                         fichero para MinHeight="800": un poco menos de sitio para el contenido a
-                         cambio de honestidad visual, nunca ocultar nada.
-
-                         ExploracionRediseno Fase H (26-sep-2026, aplicador-fix): CAUSA REAL de que
-                         este numero se subiera 4 veces (590->652->800->1000) confirmada por el
-                         arquitecto - ExplorationSidebarPanel (el DockPanel de aqui abajo) es
-                         COMPARTIDO por los 3 modos MUTUAMENTE EXCLUSIVOS del sidebar (Browse/
-                         ChestInspector/WorldTools, Grid x:Name="ExplorationSidebarBrowseInspectorHost"
-                         mas abajo), asi que cada vez que UN modo crecia (Editor de mundos v1 en Fase
-                         D antigua, Inspector de cofre en la Fase D de este mismo dia) el suelo subia
-                         para los 3 aunque los otros 2 no lo necesitaran. Prohibido explicitamente por
-                         el usuario volver a subir este numero - el arreglo es estructural, no otra
-                         recalibracion: el Height/MinHeight de aqui SE QUITA del DockPanel compartido
-                         (pasa a tamaño natural) y se mueve, con el MISMO mecanismo, a
-                         ExplorationSidebarBrowseContent (el UNICO de los 3 modos con listas grandes
-                         virtualizadas - ChestByChestList, las listas de categoria, el
-                         ExplorationResultsBlock de aqui arriba - que de verdad necesita un alto
-                         finito para no romper VirtualizingPanel, la misma razon real de todo este
-                         comentario). ChestInspectorPlaceholder y WorldToolsContent se quedan en Auto/
-                         natural sin Height ni MinHeight propios: ninguno de los dos tiene listas
-                         virtualizadas (el editor de cofre es un WrapPanel/ItemsControl de slots, y
-                         los 3 Expander de WorldTools ya llevan su propio ScrollViewer MaxHeight
-                         interno), asi que no corren el riesgo que este mecanismo existe para evitar.
-                         MinHeight nuevo de ExplorationSidebarBrowseContent, MEDIDO de verdad (no
-                         reutilizado a ciegas): FALLO3_SOLO=1 con 1000 resultados reales de "Piedra
-                         infernal" (peor caso real de esta maquina) en el combo mas estrecho posible
-                         (ventana MINIMA 1080x700, sidebar en su minimo real 260px) da contenido de
-                         categoria=250px y bloque de resultados=242px SIN restriccion de altura -
-                         redondeado a 300 (margen real de ~50-58px, mismo criterio de margen ya usado
-                         arriba para 1000). Verificado con el mismo FALLO3_SOLO=1 en los 3 combos ya
-                         cubiertos (1180x860 sidebar 320/520, 1080x700 sidebar 260): 0 FALLO, las 3
-                         categorias de la re-verificacion AR-EX1 (Cofres/Por tipo, Cofres/Cofre a
-                         cofre, Objetos) siguen mostrando >=1 fila entera visible en los tres, y el
-                         indicador ExplorationScrollHint sigue apareciendo/desapareciendo con la
-                         cantidad de scroll real que corresponde en los tres. -->
+                    <!-- ExplorationSidebarPanel ya no fija Height/MinHeight aqui: el suelo de scroll para listas virtualizadas vive en ExplorationSidebarBrowseContent (unico de los 3 modos del sidebar con listas grandes), MinHeight=300 medido contra el peor caso real. Prohibido volver a subir un suelo aqui: este DockPanel es compartido por Browse/ChestInspector/WorldTools y penalizaba a los 2 que no lo necesitaban. Historial completo (590->652->800->1000 y la investigacion que llevo a moverlo): ADR-TERRAKEEP-001. -->
                     <!-- T6: tarjeta flotante real - Background solido (nunca transparente, para que se
                          lea sobre el mapa que ahora sigue pintandose por debajo, ver el comentario real
                          del Border del mapa mas arriba) + sombra + separacion real de los bordes de la
@@ -7007,73 +6537,7 @@
                              1px entre el cuadro de busqueda y el contenido de la categoria. -->
                         <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource BorderBrush0}" Margin="0,8,0,0" />
 
-                        <!-- AR-EX1 (bug real medido, 6-sep-2026): la mitad de abajo de esta columna
-                             (contenido de la categoria + bloque de resultados) deja de ser
-                             "Dock=Bottom + el relleno" y pasa a ser un Grid de DOS filas que se
-                             reparten el hueco. Motivo real: un DockPanel sirve a su hijo Dock
-                             ENTERO y con su DesiredSize completo ANTES de dejarle nada al relleno -
-                             el bloque de resultados pide 363px medidos (dos casillas + resumen +
-                             botones + ListBox de 240), asi que con resultados abiertos al contenido
-                             de la categoria le quedaban 100px a 1400x900, 60px a 1180x860 (el
-                             tamaño POR DEFECTO de la app) y 30px a 1080x700: ni UNA fila de
-                             Cofres/Minerales/Objetos se veia entera. Misma familia de bug que AR-15
-                             (el Expander Dock=Bottom de "NPCs que faltan") y mismo arreglo ya
-                             demostrado alli: dos filas que reparten proporcionalmente (y por tanto
-                             nunca desbordan), con suelo propio para la categoria. La fila de
-                             resultados solo pide su parte cuando de verdad hay algo que enseñar
-                             (CountToGridLength: lista vacia -> Auto, no roba un solo pixel - que es
-                             el estado con el que se midio AR-11a y no debe cambiar).
-
-                             FALLO-3 (reportado por el usuario, 14-sep-2026: "la caja de
-                             resultados... es muy pequeña y, al desplegar resultados de una
-                             categoria, se come casi todo el espacio disponible, mientras queda
-                             mucho espacio sin aprovechar"). Investigado con datos reales
-                             (Terrakeep.App.Tests/AuditoriaKeepQA.cs, FALLO3_SOLO=1, mundo real
-                             roca_negra.wld, categoria Minerales con 1000 resultados reales de
-                             Piedra Infernal - el tope real de resultados, el caso mas exigente):
-                             al tamaño POR DEFECTO de la app (1180x860) el bloque de resultados
-                             media 205px, de los que la LISTA que de verdad se desplaza (Grid.Row=6
-                             de mas abajo) solo se quedaba con 70px REALES - apenas 1-2 filas
-                             visibles de 1000 resultados reales.
-
-                             PRIMER INTENTO, DESCARTADO CON EVIDENCIA REAL (dejar constancia para no
-                             repetirlo): subir el peso de la fila de resultados (este RowDefinition,
-                             de 1.2 a 1.8) parecia el arreglo obvio - PERO reduce directamente lo que
-                             le queda a la categoria (de 178px a 140px reales), y una re-verificacion
-                             de la garantia real de AR-EX1 ("¿se ve al menos una fila entera de
-                             Cofres/Minerales/Objetos con resultados abiertos?", el mismo criterio
-                             que Program.cs ya vigila) confirmo una REGRESION real: Objetos pasaba de
-                             1 fila visible a 0. Subir MinHeight de esta fila en su lugar (probado
-                             hasta 220px) tampoco sirve: por como reparte espacio un Grid con filas
-                             "*", un MinHeight que supera el reparto natural por peso SE LO QUITA a
-                             la fila de resultados en vez de ganar hueco nuevo (bloque de resultados
-                             bajo de 205 a 163px) - el resultado neto era PEOR para el fallo que se
-                             queria arreglar.
-
-                             ARREGLO REAL: el hueco de verdad no estaba en la proporcion 1.2 (que ya
-                             estaba bien calibrada, tocarla es un juego de suma cero entre categoria
-                             y resultados) sino en el TOTAL disponible para repartir. Esta columna
-                             vive en un ScrollViewer cuyo contenido (`ExplorationSidebarPanel`, ver
-                             el `MinHeight` de mas arriba) fuerza un suelo de scroll fijo SIN importar
-                             el visor real - subido de 652 a 800 (mismo mecanismo ya usado el propio
-                             14-sep-2026 para los dos Expanders nuevos, +148px reales de margen).
-                             Con mas suelo total, LAS DOS filas ("*", mismo peso 1.2 sin tocar)
-                             crecen a la vez sin robarse espacio entre si: medido con el arnes,
-                             categoria sube de 178 a 245px (de 1 a 2 filas visibles - MEJORA, no solo
-                             "no rompe") y la lista de resultados sube de 70 a 148px (+111%). Ver
-                             tambien el MaxHeight del ListBox, mas abajo.
-
-                             LIMITE HONESTO encontrado en esta misma investigacion, FUERA de alcance
-                             de este fallo concreto: al tamaño MINIMO real de la ventana (1080x700),
-                             ninguna fila de categoria se ve entera CON O SIN este arreglo (confirmado
-                             que ya fallaba igual con el codigo tal cual estaba antes de tocar nada
-                             hoy - no es una regresion de esta ronda). El visor real del ScrollViewer
-                             a ese tamaño (397px) no llega a cubrir ni la cabecera fija de esta misma
-                             columna (titulo+Expander "Este mundo"+buscador+pildoras) antes de
-                             necesitar scroll - haria falta reducir esa cabecera fija o replantear el
-                             layout de la barra lateral a tamaños extremos, un cambio mayor fuera del
-                             alcance de "un arreglo pequeño y claro" de hoy. Anotado en bitacora.md de
-                             Terrakeep para una ronda futura. -->
+                        <!-- HISTORICO (superado por la Fase E, ver el comentario de justo abajo): esta columna fue un Grid de 2 filas "*"/1.2* que repartian el alto SIEMPRE entre categoria y resultados (AR-EX1, recalibrado en FALLO-3 subiendo el suelo de scroll del ScrollViewer padre). Ya no aplica - ahora es un Grid con 2 estados exclusivos superpuestos. Historial completo y los intentos descartados con evidencia real: ADR-TERRAKEEP-002. -->
                         <Grid>
                         <!-- ExploracionRediseno Fase E (25-sep-2026): esta columna era un Grid de
                              DOS filas ("*" MinHeight=120 para la categoria + 1.2* para resultados,
@@ -7323,39 +6787,7 @@
                              completa que antes competia con el bloque de resultados. -->
                         <DockPanel Visibility="{Binding Exploration.IsShowingResults, Converter={StaticResource InverseBoolToVis}}">
                         <Grid x:Name="ExplorationCategoryContent">
-                            <!-- NPCs: chips + lista propia (ya existente) + "NPCs que faltan".
-                                 Bug real reportado por el usuario probando la app (6-sep-2026): "la
-                                 lista de NPCs que faltan SOLO se ve completa con la ventana a
-                                 pantalla completa; con la ventana a un tamaño normal se corta y no
-                                 se ven todos". Medido con AR-15 sobre el mundo real de pruebas (26
-                                 de los 40 NPCs del roster vanilla faltan): maximizada 26/26, pero
-                                 1600x1000 23/26, 1400x900 18/26, 1180x860 (el tamaño por defecto)
-                                 16/26 y 1080x700 (el suelo real de la ventana) 15/26 - hasta 11
-                                 filas perdidas SIN ninguna barra con la que llegar a ellas.
-
-                                 Causa real, DOS piezas y ninguna es la del bug anterior de esta
-                                 misma columna:
-                                   1. El ItemsControl de "NPCs que faltan" no tenia ninguna via de
-                                      scroll propia. Cuando el Expander recibia menos alto del que
-                                      pedia, las filas de abajo simplemente dejaban de pintarse.
-                                      Ojo: AR-11c no podia verlo porque el recorte lo hacia un
-                                      ANCESTRO - una fila que cae por debajo del corte no lleva
-                                      clip propio, asi que VisualTreeHelper.GetClip sobre ella da
-                                      null y "no hay recorte" era mentira.
-                                   2. Era un DockPanel y el Expander iba Dock=Bottom: un DockPanel
-                                      sirve a sus hijos Dock PRIMERO y con su DesiredSize ENTERO -
-                                      desplegar "NPCs que faltan" se comia la categoria entera y
-                                      dejaba la lista de NPCs del mundo con 0px medidos en los
-                                      CINCO tamaños no maximizados (tambien medido por AR-15).
-                                 Grid con reparto real en su lugar: la lista del mundo se queda una
-                                 fila estrella con suelo propio y "NPCs que faltan", solo mientras
-                                 esta desplegado, otra de 2* (BoolToGridLength ya existente, el
-                                 mismo converter que usa la fila de la Libreria) - dos filas star
-                                 reparten SIEMPRE el hueco exacto, nunca desbordan, en cualquier
-                                 tamaño de ventana. Colapsado vuelve a Auto y todo queda como
-                                 estaba. Lo que no cabe se alcanza con el scroll propio de cada
-                                 lista, que es la misma red de seguridad que la ronda anterior le
-                                 puso a la columna entera y al bloque "Este mundo". -->
+                            <!-- Grid con 2 filas "*" (nunca DockPanel+Dock=Bottom): la lista de NPCs del mundo se queda con suelo propio y "NPCs que faltan" (2*, solo mientras desplegado, via BoolToGridLength) reparte el resto - asi ninguna de las dos se queda a 0px cuando la otra pide su DesiredSize entero. Colapsado vuelve a Auto. Cada lista lleva su propio scroll para lo que aun no quepa. Historial completo (perdida real de hasta 11 filas medida con AR-15): ADR-TERRAKEEP-008. -->
                             <Grid>
                                 <Grid.Style>
                                     <Style TargetType="Grid">
@@ -7841,35 +7273,7 @@
                                 <ItemsControl ItemsSource="{Binding Exploration.EditingChestSlots}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <!-- Columns=6 literal (pasada anterior) REABIERTO (26-sep-2026,
-                                                 investigador af9680e6, "Columns dinamico ChestInspector
-                                                 ExplorationSidebarWidth"): asumia el ancho de sidebar POR
-                                                 DEFECTO, pero Settings.ExplorationSidebarWidth
-                                                 (MainWindow.xaml:5709) es un eje INDEPENDIENTE, ajustable en
-                                                 caliente por el usuario (rango real 260-520px,
-                                                 SettingsViewModel.cs:138-139) - con un sidebar mas estrecho ya
-                                                 guardado (260/280px reales, cuantificado con el canario
-                                                 FLUJOCOFRES-SIDEBARWIDTH en Terrakeep.App.Tests: 260/280px->6
-                                                 slots de 40 fuera del area visible, 320px->0 fuera) 6 columnas a
-                                                 MinCell=40 (260px de contenido) ya no cabian en el ancho real
-                                                 disponible - SlotGridPanel.ArrangeOverride las seguia colocando
-                                                 de todos modos (offsetX=0 porque contentW>finalSize.Width), y
-                                                 ExplorationSidebarScroll (HorizontalScrollBarVisibility=
-                                                 "Disabled", linea ~6844) las recortaba en silencio, mismo
-                                                 mecanismo de recorte ya documentado antes contra el eje de
-                                                 tamaño de VENTANA (nunca probado hasta ahora contra este otro
-                                                 eje). Columns ahora se recalcula en vivo contra el ANCHO REAL
-                                                 disponible (ActualWidth del propio Grid
-                                                 "ExplorationSidebarChestInspectorPlaceholder", primer ancestro
-                                                 Grid real desde este panel - deliberadamente NO el valor crudo
-                                                 de Settings.ExplorationSidebarWidth, para no depender de
-                                                 adivinar el overhead real de padding/margen/scrollbar, ~41px
-                                                 medidos) via ChestInspectorColumnsConverter
-                                                 (DensityConverters.cs) cada vez que el usuario arrastra el
-                                                 GridSplitter o cambia el modo compacto. ReferenceColumns=10 se
-                                                 mantiene (mismo techo de escala que el resto de rejillas reales
-                                                 de la app, Inventario/Equipamiento/Libreria) para que el icono
-                                                 del slot se vea del mismo tamaño en todas partes. -->
+                                            <!-- Columns se recalcula en vivo (ChestInspectorColumnsConverter) contra el ANCHO REAL del Grid ancestro, nunca contra Settings.ExplorationSidebarWidth crudo (eje independiente ajustable 260-520px, sin el overhead real de padding/margen/scrollbar, ~41px). ReferenceColumns=10, mismo techo que el resto de rejillas de la app. Historial completo (por que Columns=6 literal se rompia con sidebar estrecho, canario FLUJOCOFRES-SIDEBARWIDTH): ADR-TERRAKEEP-010. -->
                                             <controls:SlotGridPanel
                                                 MinCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=40}"
                                                 MaxCell="{Binding DataContext.Settings.IsCompactMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static conv:CompactCellSizeConverter.Instance}, ConverterParameter=90}"
